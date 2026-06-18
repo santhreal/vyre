@@ -41,13 +41,34 @@ pub fn program_fingerprint(program: &vyre::ir::Program) -> Vec<u32> {
 ///
 /// P-CC-2: vyre-frontend-c gradient direction is the natural gradient.
 #[must_use]
+#[cfg(any(test, feature = "legacy-infallible"))]
 pub fn natural_gradient_step(
     m_inv_sqrt: &[f64],
     grad: &[f64],
     n: u32,
     learning_rate: f64,
 ) -> Vec<f64> {
-    vyre_runtime::megakernel::MegakernelLaunchPolicy::natural_gradient_autotune_step(
+    try_natural_gradient_step(m_inv_sqrt, grad, n, learning_rate).unwrap_or_else(|source| {
+        panic!(
+            "vyre-frontend-c natural-gradient step failed: {source}. Fix: validate autotune dimensions and shard the autotune surface."
+        )
+    })
+}
+
+/// Compute the natural-gradient autotune step for vyre-frontend-c's compile
+/// hyperparameter loop with fallible host staging.
+///
+/// # Errors
+///
+/// Returns [`vyre_driver::BackendError`] when the natural-gradient vector
+/// cannot be staged or the dimension does not fit host indexing.
+pub fn try_natural_gradient_step(
+    m_inv_sqrt: &[f64],
+    grad: &[f64],
+    n: u32,
+    learning_rate: f64,
+) -> Result<Vec<f64>, vyre_driver::BackendError> {
+    vyre_runtime::megakernel::MegakernelLaunchPolicy::try_natural_gradient_autotune_step(
         m_inv_sqrt,
         grad,
         n,

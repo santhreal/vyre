@@ -6,6 +6,11 @@ use crate::builder::{check_tensors, BuildOptions};
 use crate::tensor_ref::{TensorRef, TensorRefError};
 
 use super::program::{build_matmul_tiled_program, MatmulTiledProgramSpec};
+use super::mma_fragment::MmaCapabilityRecord;
+use super::shape::MatrixShape;
+use super::tensor_core_policy::{
+    plan_matmul_kernel, F32MatmulMode, MatmulKernelCapabilities, MatmulKernelPath,
+};
 
 const OP_ID: &str = "vyre-libs::math::matmul_tiled";
 const OP_ID_BIAS: &str = "vyre-libs::math::matmul_bias_tiled";
@@ -165,6 +170,7 @@ impl MatmulTiledCore {
             dtype,
             a_tile_name: "matmul_a_tile",
             b_tile_name: "matmul_b_tile",
+            mma_capabilities: MmaCapabilityRecord::ptx_sm80(),
         })
     }
 }
@@ -177,7 +183,17 @@ fn auto_tile_for(a: &TensorRef, b: &TensorRef) -> u32 {
     let m = a.shape[0];
     let k = a.shape[1];
     let n = b.shape[1];
-    if a.dtype == DataType::F16 && k >= 16 && m % 16 == 0 && n % 8 == 0 {
+    if plan_matmul_kernel(
+        &a.dtype,
+        MatrixShape { m, k, n },
+        16,
+        1,
+        F32MatmulMode::StrictF32,
+        MatmulKernelCapabilities::current_codegen(),
+    )
+    .selected_path
+        == MatmulKernelPath::TensorCoreF16M16N8K16
+    {
         return 16;
     }
 

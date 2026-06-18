@@ -11,13 +11,13 @@
           "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/Cargo.toml",
           "exists": true,
           "read_error": null,
-          "source_bytes": 2726
+          "source_bytes": 2781
         },
         {
           "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/lib.rs",
           "exists": true,
           "read_error": null,
-          "source_bytes": 3411
+          "source_bytes": 4182
         },
         {
           "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/README.md",
@@ -59,7 +59,7 @@
           "tree": "tests",
           "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests",
           "exists": true,
-          "source_bytes": 1172428,
+          "source_bytes": 1168533,
           "unreadable_file_count": 0
         },
         {
@@ -219,19 +219,19 @@
           "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/Cargo.toml",
           "exists": true,
           "read_error": null,
-          "source_bytes": 7024
+          "source_bytes": 7199
         },
         {
           "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/lib.rs",
           "exists": true,
           "read_error": null,
-          "source_bytes": 25306
+          "source_bytes": 25452
         },
         {
           "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/README.md",
           "exists": true,
           "read_error": null,
-          "source_bytes": 12317
+          "source_bytes": 12324
         }
       ],
       "required_terms": [
@@ -265,21 +265,21 @@
           "tree": "tests",
           "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests",
           "exists": true,
-          "source_bytes": 595121,
+          "source_bytes": 613848,
           "unreadable_file_count": 0
         },
         {
           "tree": "benches",
           "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/benches",
           "exists": true,
-          "source_bytes": 50613,
+          "source_bytes": 54610,
           "unreadable_file_count": 0
         },
         {
           "tree": "fuzz",
           "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz",
           "exists": true,
-          "source_bytes": 32987,
+          "source_bytes": 34759,
           "unreadable_file_count": 0
         }
       ],
@@ -288,23 +288,23 @@
     {
       "id": "surgec",
       "role": "Security compiler consumer integration surface",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/surge/surgec",
       "exists": true,
       "required_files": [
         {
-          "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/Cargo.toml",
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/surge/surgec/Cargo.toml",
           "exists": true,
           "read_error": null,
           "source_bytes": 3915
         },
         {
-          "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/lib.rs",
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/surge/surgec/src/lib.rs",
           "exists": true,
           "read_error": null,
-          "source_bytes": 4438
+          "source_bytes": 4533
         },
         {
-          "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/README.md",
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/surge/surgec/README.md",
           "exists": true,
           "read_error": null,
           "source_bytes": 5895
@@ -337,21 +337,21 @@
       "required_evidence_trees": [
         {
           "tree": "tests",
-          "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/tests",
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/surge/surgec/tests",
           "exists": true,
-          "source_bytes": 2660288,
+          "source_bytes": 2661271,
           "unreadable_file_count": 0
         },
         {
           "tree": "benches",
-          "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/benches",
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/surge/surgec/benches",
           "exists": true,
           "source_bytes": 23380,
           "unreadable_file_count": 0
         },
         {
           "tree": "fuzz",
-          "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/fuzz",
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/surge/surgec/fuzz",
           "exists": true,
           "source_bytes": 9310,
           "unreadable_file_count": 0
@@ -362,23 +362,23 @@
     {
       "id": "surgec-grammar-gen",
       "role": "Shared grammar generation substrate",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-grammar-gen",
       "exists": true,
       "required_files": [
         {
-          "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/Cargo.toml",
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-grammar-gen/Cargo.toml",
           "exists": true,
           "read_error": null,
           "source_bytes": 1249
         },
         {
-          "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/src/lib.rs",
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-grammar-gen/src/lib.rs",
           "exists": true,
           "read_error": null,
           "source_bytes": 2771
         },
         {
-          "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/README.md",
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-grammar-gen/README.md",
           "exists": true,
           "read_error": null,
           "source_bytes": 4836
@@ -411,21 +411,21 @@
       "required_evidence_trees": [
         {
           "tree": "tests",
-          "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/tests",
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-grammar-gen/tests",
           "exists": true,
           "source_bytes": 66357,
           "unreadable_file_count": 0
         },
         {
           "tree": "benches",
-          "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/benches",
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-grammar-gen/benches",
           "exists": true,
           "source_bytes": 245,
           "unreadable_file_count": 0
         },
         {
           "tree": "fuzz",
-          "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/fuzz",
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-grammar-gen/fuzz",
           "exists": true,
           "source_bytes": 260,
           "unreadable_file_count": 0

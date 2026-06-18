@@ -1,0 +1,40 @@
+# Public repository health governance for VX-1086, VX-1091, VX-1094, and VX-1098.
+# README, topics, security posture, supply-chain provenance, issue/PR surfaces, and repository boundary checks share one health map.
+
+schema = "vyre.release.public_repository_health_governance.v1"
+owner = "coordination"
+evidence_tokens = ["GITHUB_REPOSITORY_TOPICS", "OPENSSF_SCORECARD", "GITHUB_SECURITY_POLICY", "GITHUB_RELEASES"]
+
+required_fields = [
+  "health_id",
+  "readme_policy",
+  "topic_policy",
+  "security_policy_link",
+  "release_policy_link",
+  "supply_chain_policy_link",
+  "issue_pr_policy",
+  "repo_boundary_check",
+  "diagnostic",
+]
+
+[[health]]
+health_id = "public-vyre-repository-health"
+readme_policy = "readme-describes-public-vyre-install-usage-security-reporting-and-release-artifacts"
+topic_policy = "topics-match-public-product-scope-and-do-not-name-private-santh-worktree"
+security_policy_link = "REPOSITORY_SECURITY_DISCLOSURE_POLICY.toml"
+release_policy_link = "RELEASE_NOTES_CHANGELOG_GOVERNANCE.toml"
+supply_chain_policy_link = "PUBLIC_RELEASE_SUPPLY_CHAIN_PROVENANCE.toml"
+issue_pr_policy = "public-issues-and-prs-are-for-vyre-public-repo-not-santh-private-backup"
+repo_boundary_check = "REPO_BOUNDARY_PUBLICATION_CHECKS.toml"
+diagnostic = "VYRE_PUBLIC_REPOSITORY_HEALTH_OK"
+
+[[health]]
+health_id = "private-santh-boundary-health"
+readme_policy = "private-readmes-not-linked-from-public-package"
+topic_policy = "not-public"
+security_policy_link = "private-evidence-not-public-policy"
+release_policy_link = "not-public-release-source"
+supply_chain_policy_link = "local-private-evidence-row-only"
+issue_pr_policy = "not-public-issue-or-pr-authority"
+repo_boundary_check = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+diagnostic = "VYRE_PRIVATE_SANTH_HEALTH_EXCLUDED"

@@ -1,0 +1,43 @@
+# Recovery exercise evidence policy for VX-1292, VX-1294, VX-1295, VX-1296, and VX-1297.
+# Recovery exercises record scenario, source state, restore action, validation, SLO impact, rollback path, evidence, and publication boundary.
+
+schema = "vyre.ops.recovery_exercise_evidence_policy.v1"
+owner = "coordination"
+evidence_tokens = ["NIST_SP_800_34", "VELERO_RESTORE_REFERENCE", "ETCD_DISASTER_RECOVERY", "OPENSLO_SPEC"]
+
+required_fields = [
+  "exercise_id",
+  "scenario_policy",
+  "source_state_policy",
+  "restore_action_policy",
+  "validation_policy",
+  "slo_policy",
+  "rollback_policy",
+  "evidence_capture_policy",
+  "publication_boundary",
+  "diagnostic",
+]
+
+[[exercise]]
+exercise_id = "operator-state-restore-exercise"
+scenario_policy = "loss-of-operator-namespace-PVC-or-release-health-state-with-public-artifacts-still-available"
+source_state_policy = "backup-id-source-namespace-volume-snapshot-release-version-artifact-digest-and-state-schema-version-recorded"
+restore_action_policy = "restore-namespace-mapping-storage-class-image-remap-and-existing-resource-policy-recorded-before-apply"
+validation_policy = "operator-readiness-health-probes-release-health-feedback-artifact-integrity-and-alert-routing-state-verified-after-restore"
+slo_policy = "SLO-impact-and-error-budget-state-recorded-with-no-private-labels-or-secret-values"
+rollback_policy = "failed-restore-reverts-to-previous-verified-state-or-pauses-rollout-through-rollback-forward-fix-decision-policy"
+evidence_capture_policy = "capture-backup-digest-restore-name-resource-count-volume-snapshot-id-result-state-and-post-restore-SLI"
+publication_boundary = "public-recovery-report-includes-scenario-version-health-and-operator-impact-no-private-Santh-paths-or-secret-data"
+diagnostic = "VYRE_OPERATOR_STATE_RESTORE_EXERCISE_REQUIRED"
+
+[[exercise]]
+exercise_id = "cache-rebuild-after-restore-exercise"
+scenario_policy = "restored-operator-starts-with-empty-or-invalid-cache-after-artifact-and-rule-data-rehydration"
+source_state_policy = "source-descriptor-digests-rule-data-digests-backend-capability-digests-and-cache-policy-version-recorded"
+restore_action_policy = "delete-untrusted-cache-entries-rebuild-from-authoritative-source-and-record-cache-miss-reason"
+validation_policy = "rebuilt-cache-output-digest-reader-compatibility-performance-baseline-class-and-release-evidence-link-verified"
+slo_policy = "scan-latency-and-detection-health-SLIs-recorded-after-cache-rebuild"
+rollback_policy = "if-rebuild-fails-release-remains-paused-and-operator-uses-source-backed-non-cache-path-only-when-contract-allows"
+evidence_capture_policy = "capture-cache-id-invalidated-key-material-rebuild-result-artifact-digest-and-stale-read-refusal"
+publication_boundary = "public-cache-recovery-evidence-excludes-local-cache-roots-device-serials-and-private-corpus-names"
+diagnostic = "VYRE_CACHE_REBUILD_RECOVERY_EXERCISE_REQUIRED"

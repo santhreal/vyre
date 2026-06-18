@@ -63,6 +63,11 @@ fn platform_crate_docs_and_comments_do_not_name_consumers() {
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr).as_ref(),
+        "",
+        "platform consumer-doc boundary must be quiet on success"
+    );
 }
 
 #[test]
@@ -85,6 +90,11 @@ fn docs_index_covers_every_public_markdown_document() {
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr).as_ref(),
+        "",
+        "documentation index contract must be quiet on success"
+    );
 }
 
 #[test]
@@ -106,6 +116,11 @@ fn roadmap_status_and_changelog_are_separate_contracts() {
         "roadmap/status split contract failed.\nstdout:\n{}\nstderr:\n{}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr).as_ref(),
+        "",
+        "roadmap/status split contract must be quiet on success"
     );
 }
 

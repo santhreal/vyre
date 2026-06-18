@@ -2,24 +2,23 @@
 set -euo pipefail
 
 usage() {
-    cat >&2 <<'USAGE'
-Usage: scripts/check_metal_macbook.sh [driver|conformance|benchmark|all]
-
-Required environment:
-  VYRE_MACBOOK_SSH       SSH target for the Apple GPU host.
-  VYRE_MACBOOK_VYRE_ROOT Vyre workspace path on the Apple GPU host.
-
-Optional environment:
-  VYRE_MACBOOK_CARGO_TARGET_DIR Remote cargo target directory.
-  VYRE_MACBOOK_BENCH_OUTPUT_DIR Remote directory for benchmark smoke JSON reports.
-  VYRE_MACBOOK_CONNECT_TIMEOUT  SSH connect timeout in seconds, default 8.
-  VYRE_CARGO_RUNNER             Remote cargo runner override consumed by scripts/lib/cargo_runner.sh.
-
-Examples:
-  VYRE_MACBOOK_SSH=tt-macbook \
-  VYRE_MACBOOK_VYRE_ROOT=/Users/thiruthangarathinam/Santh/libs/performance/matching/vyre \
-  scripts/check_metal_macbook.sh conformance
-USAGE
+    printf '%s\n' \
+        'Usage: scripts/check_metal_macbook.sh [driver|conformance|benchmark|all]' \
+        '' \
+        'Required environment:' \
+        '  VYRE_MACBOOK_SSH       SSH target for the Apple GPU host.' \
+        '  VYRE_MACBOOK_VYRE_ROOT Vyre workspace path on the Apple GPU host.' \
+        '' \
+        'Optional environment:' \
+        '  VYRE_MACBOOK_CARGO_TARGET_DIR Remote cargo target directory.' \
+        '  VYRE_MACBOOK_BENCH_OUTPUT_DIR Remote directory for benchmark smoke JSON reports.' \
+        '  VYRE_MACBOOK_CONNECT_TIMEOUT  SSH connect timeout in seconds, default 8.' \
+        '  VYRE_CARGO_RUNNER             Remote cargo runner override consumed by scripts/lib/cargo_runner.sh.' \
+        '' \
+        'Examples:' \
+        '  VYRE_MACBOOK_SSH=tt-macbook \' \
+        '  VYRE_MACBOOK_VYRE_ROOT=/Users/thiruthangarathinam/Santh/libs/performance/matching/vyre \' \
+        '  scripts/check_metal_macbook.sh conformance' >&2
 }
 
 mode="${1:-all}"

@@ -399,8 +399,11 @@ pub fn dominator_frontier(
     seed: &str,
     out: &str,
 ) -> Program {
+    // Fail fast on an overflowing CSR launch shape rather than silently
+    // degrading to an inert empty kernel (silent recall loss). Use
+    // `try_dominator_frontier` for structured handling.
     try_dominator_frontier(node_count, dom_edge_count, pred_edge_count, seed, out)
-        .unwrap_or_else(|err| panic!("{err}"))
+        .unwrap_or_else(|error| panic!("{error}"))
 }
 
 /// Build a dominance-frontier Program with checked CSR launch-shape

@@ -49,6 +49,151 @@ pub enum MegakernelDispatchTopology {
     MemoryConstrained,
 }
 
+/// Schema version for topology evidence emitted by the megakernel launch policy.
+pub const TOPOLOGY_EVIDENCE_SCHEMA_VERSION: u32 = 1;
+
+/// Schema version for hot opcode/window promotion evidence emitted by policy.
+pub const HOT_WINDOW_PROMOTION_EVIDENCE_SCHEMA_VERSION: u32 = 1;
+
+/// GraphBLAS-style sparse/dense switch class for a selected launch topology.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum MegakernelGraphBlasSwitchClass {
+    /// Nothing is queued.
+    Empty,
+    /// Sparse frontier expansion is preferred.
+    Sparse,
+    /// Sparse and dense paths should both remain available.
+    Hybrid,
+    /// Dense propagation is preferred.
+    Dense,
+    /// Memory pressure overrides the sparse/dense frontier choice.
+    MemoryConstrained,
+}
+
+impl MegakernelGraphBlasSwitchClass {
+    /// Stable label for reports and bench output.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Empty => "empty",
+            Self::Sparse => "sparse",
+            Self::Hybrid => "hybrid",
+            Self::Dense => "dense",
+            Self::MemoryConstrained => "memory_constrained",
+        }
+    }
+}
+
+/// Evidence envelope that makes topology selection auditable by runtime benches.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct MegakernelTopologyEvidence {
+    /// Evidence schema version.
+    pub schema_version: u32,
+    /// Queue pressure that participated in the launch recommendation.
+    pub queue_pressure: MegakernelQueuePressure,
+    /// Active frontier density in basis points after policy-side inference.
+    pub frontier_density_bps: u16,
+    /// Semiring frontier density input used for GraphBLAS-style switching.
+    pub semiring_frontier_density_bps: u16,
+    /// Concrete topology selected by the launch policy.
+    pub selected_topology: MegakernelDispatchTopology,
+    /// Sparse/dense switch class corresponding to the selected topology.
+    pub graphblas_switch_class: MegakernelGraphBlasSwitchClass,
+    /// Resident device bytes reported by the caller after policy-side inference.
+    pub resident_device_bytes: u64,
+    /// Estimated peak resident bytes for the selected launch plan.
+    pub estimated_peak_device_bytes: u64,
+    /// True when benches must compare output parity across topology variants.
+    pub output_parity_required: bool,
+}
+
+impl MegakernelTopologyEvidence {
+    /// Return true when the evidence envelope contains bounded, versioned
+    /// fields that a parity bench can report without consulting hidden policy
+    /// state.
+    #[must_use]
+    pub fn is_complete(self) -> bool {
+        self.schema_version == TOPOLOGY_EVIDENCE_SCHEMA_VERSION
+            && self.frontier_density_bps <= 10_000
+            && self.semiring_frontier_density_bps <= 10_000
+            && self.output_parity_required
+    }
+}
+
+/// Interpreter/JIT promotion route selected from queue and hot-window signals.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum MegakernelPromotionRoute {
+    /// Stay on the generic interpreter path.
+    Interpreter,
+    /// Use JIT because the queue is large enough to amortize fused execution.
+    QueueJit,
+    /// Use JIT because opcode counters crossed the promotion threshold.
+    OpcodeJit,
+    /// Use JIT because repeated descriptor windows crossed the promotion threshold.
+    WindowJit,
+    /// Use JIT because both opcode and window promotion thresholds were crossed.
+    OpcodeAndWindowJit,
+}
+
+impl MegakernelPromotionRoute {
+    /// Stable label for reports and lowerer evidence.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Interpreter => "interpreter",
+            Self::QueueJit => "queue_jit",
+            Self::OpcodeJit => "opcode_jit",
+            Self::WindowJit => "window_jit",
+            Self::OpcodeAndWindowJit => "opcode_and_window_jit",
+        }
+    }
+}
+
+/// Evidence envelope that makes hot opcode/window promotion auditable.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct MegakernelPromotionEvidence {
+    /// Evidence schema version.
+    pub schema_version: u32,
+    /// Logical ring slots or work items queued for this launch.
+    pub queue_len: u32,
+    /// Queue length threshold that can trigger JIT without hot counters.
+    pub jit_queue_len_threshold: u32,
+    /// Hot opcode counter supplied to the policy.
+    pub hot_opcode_count: u32,
+    /// Hot opcode threshold configured on the policy.
+    pub hot_opcode_threshold: u32,
+    /// Hot descriptor-window counter supplied to the policy.
+    pub hot_window_count: u32,
+    /// Hot descriptor-window threshold configured on the policy.
+    pub hot_window_threshold: u32,
+    /// Interpreter or JIT route selected by the policy.
+    pub execution_mode: MegakernelExecutionMode,
+    /// True when opcode counters require fused opcode promotion.
+    pub promote_hot_opcodes: bool,
+    /// True when window counters require fused descriptor-window promotion.
+    pub promote_hot_windows: bool,
+    /// Stable promotion class for reports and lowerer input.
+    pub promotion_route: MegakernelPromotionRoute,
+    /// True when the lowerer should materialize fused descriptor windows.
+    pub fused_descriptor_window_required: bool,
+    /// True when benches must compare interpreter and fused-window outputs.
+    pub output_parity_required: bool,
+}
+
+impl MegakernelPromotionEvidence {
+    /// Return true when the promotion evidence carries all thresholds and
+    /// route fields needed by a lowerer or parity bench.
+    #[must_use]
+    pub fn is_complete(self) -> bool {
+        self.schema_version == HOT_WINDOW_PROMOTION_EVIDENCE_SCHEMA_VERSION
+            && self.jit_queue_len_threshold != 0
+            && self.hot_opcode_threshold != 0
+            && self.hot_window_threshold != 0
+            && self.fused_descriptor_window_required == self.promote_hot_windows
+            && self.output_parity_required
+    }
+}
+
 /// Thread-local launch recommendation cache telemetry.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MegakernelLaunchCacheStats {
@@ -170,21 +315,138 @@ pub struct PriorityRequeueAccounting {
     pub max_priority_age: u32,
 }
 
+/// Counter headroom at or below which schedulers should drain telemetry.
+pub const PRIORITY_COUNTER_DRAIN_HEADROOM: u64 = 1024;
+
+/// Stable operator fix for priority counter drain recommendations.
+pub const PRIORITY_COUNTER_DRAIN_FIX: &str =
+    "drain scheduler telemetry before counters reach u64::MAX";
+
+/// Reason a priority scheduler should drain telemetry into a launch request.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum PriorityDrainReason {
+    /// No priority telemetry is pending.
+    None,
+    /// Non-empty priority telemetry should be propagated to the policy.
+    PendingTelemetry,
+    /// The requeue counter is inside the configured drain headroom.
+    RequeueCounterNearLimit,
+    /// The aged-promotion counter is inside the configured drain headroom.
+    AgedPromotionCounterNearLimit,
+    /// The requeue counter is exhausted.
+    RequeueCounterExhausted,
+    /// The aged-promotion counter is exhausted.
+    AgedPromotionCounterExhausted,
+}
+
+impl PriorityDrainReason {
+    /// Stable label for tests, reports, and scheduler diagnostics.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::PendingTelemetry => "pending_telemetry",
+            Self::RequeueCounterNearLimit => "requeue_counter_near_limit",
+            Self::AgedPromotionCounterNearLimit => "aged_promotion_counter_near_limit",
+            Self::RequeueCounterExhausted => "requeue_counter_exhausted",
+            Self::AgedPromotionCounterExhausted => "aged_promotion_counter_exhausted",
+        }
+    }
+}
+
+/// Structured drain recommendation for priority scheduler counters.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PriorityDrainRecommendation {
+    /// True when the scheduler should drain telemetry before accepting more work.
+    pub should_drain: bool,
+    /// Concrete reason for the recommendation.
+    pub reason: PriorityDrainReason,
+    /// Requeue counter value included for propagation into launch telemetry.
+    pub requeue_count: u64,
+    /// Aged-promotion counter value included for propagation into launch telemetry.
+    pub aged_promotions: u64,
+    /// Largest priority age observed for any queued slot.
+    pub max_priority_age: u32,
+    /// Remaining requeue counter increments before exact overflow.
+    pub requeue_counter_headroom: u64,
+    /// Remaining aged-promotion counter increments before exact overflow.
+    pub aged_promotion_counter_headroom: u64,
+    /// Stable operator fix string to surface with drain diagnostics.
+    pub fix: &'static str,
+}
+
 impl PriorityRequeueAccounting {
+    /// Return a structured drain recommendation for scheduler telemetry.
+    #[must_use]
+    pub fn drain_recommendation(self) -> PriorityDrainRecommendation {
+        let requeue_counter_headroom = u64::MAX.saturating_sub(self.requeue_count);
+        let aged_promotion_counter_headroom = u64::MAX.saturating_sub(self.aged_promotions);
+        let reason = if self.requeue_count == u64::MAX {
+            PriorityDrainReason::RequeueCounterExhausted
+        } else if self.aged_promotions == u64::MAX {
+            PriorityDrainReason::AgedPromotionCounterExhausted
+        } else if requeue_counter_headroom <= PRIORITY_COUNTER_DRAIN_HEADROOM {
+            PriorityDrainReason::RequeueCounterNearLimit
+        } else if aged_promotion_counter_headroom <= PRIORITY_COUNTER_DRAIN_HEADROOM {
+            PriorityDrainReason::AgedPromotionCounterNearLimit
+        } else if self.requeue_count != 0 || self.aged_promotions != 0 || self.max_priority_age != 0
+        {
+            PriorityDrainReason::PendingTelemetry
+        } else {
+            PriorityDrainReason::None
+        };
+        PriorityDrainRecommendation {
+            should_drain: reason != PriorityDrainReason::None,
+            reason,
+            requeue_count: self.requeue_count,
+            aged_promotions: self.aged_promotions,
+            max_priority_age: self.max_priority_age,
+            requeue_counter_headroom,
+            aged_promotion_counter_headroom,
+            fix: PRIORITY_COUNTER_DRAIN_FIX,
+        }
+    }
+
     /// Record one requeue event.
     pub fn record_requeue(&mut self, age_ticks: u32) {
-        self.requeue_count = self.requeue_count.checked_add(1).unwrap_or_else(|| {
-            panic!("megakernel priority requeue_count overflowed u64. Fix: drain scheduler telemetry before counters reach u64::MAX.")
-        });
+        self.requeue_count = self.requeue_count.saturating_add(1);
         self.max_priority_age = self.max_priority_age.max(age_ticks);
+    }
+
+    /// Record one requeue event with exact overflow reporting.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`BackendError`] when the requeue counter would overflow.
+    pub fn try_record_requeue(&mut self, age_ticks: u32) -> Result<(), BackendError> {
+        self.requeue_count = self.requeue_count.checked_add(1).ok_or_else(|| {
+            BackendError::new(
+                "megakernel priority requeue_count overflowed u64. Fix: drain scheduler telemetry before counters reach u64::MAX.",
+            )
+        })?;
+        self.max_priority_age = self.max_priority_age.max(age_ticks);
+        Ok(())
     }
 
     /// Record one priority-aging promotion.
     pub fn record_aged_promotion(&mut self, age_ticks: u32) {
-        self.aged_promotions = self.aged_promotions.checked_add(1).unwrap_or_else(|| {
-            panic!("megakernel aged_promotions overflowed u64. Fix: drain scheduler telemetry before counters reach u64::MAX.")
-        });
+        self.aged_promotions = self.aged_promotions.saturating_add(1);
         self.max_priority_age = self.max_priority_age.max(age_ticks);
+    }
+
+    /// Record one priority-aging promotion with exact overflow reporting.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`BackendError`] when the aged-promotion counter would overflow.
+    pub fn try_record_aged_promotion(&mut self, age_ticks: u32) -> Result<(), BackendError> {
+        self.aged_promotions = self.aged_promotions.checked_add(1).ok_or_else(|| {
+            BackendError::new(
+                "megakernel aged_promotions overflowed u64. Fix: drain scheduler telemetry before counters reach u64::MAX.",
+            )
+        })?;
+        self.max_priority_age = self.max_priority_age.max(age_ticks);
+        Ok(())
     }
 }
 
@@ -202,6 +464,7 @@ impl PriorityRequeueAccounting {
 ///
 /// Returns the post-diffusion priority vector, same shape as input.
 #[must_use]
+#[cfg(any(test, feature = "legacy-infallible"))]
 pub fn diffuse_priority_across_siblings(
     priority_stalks: &[f64],
     restriction_diag: &[f64],
@@ -243,6 +506,7 @@ pub fn try_diffuse_priority_across_siblings(
 }
 
 /// Diffuse priority signals into caller-owned storage.
+#[cfg(any(test, feature = "legacy-infallible"))]
 pub fn diffuse_priority_across_siblings_into(
     priority_stalks: &[f64],
     restriction_diag: &[f64],
@@ -379,6 +643,36 @@ impl MegakernelLaunchPolicy {
         self.recommend_inner(request, None)
     }
 
+    /// Recommend a launch and emit topology evidence for parity benches.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`BackendError`] when the underlying recommendation cannot be
+    /// built from the request or adapter limits.
+    pub fn recommend_with_topology_evidence(
+        &self,
+        request: MegakernelLaunchRequest,
+    ) -> Result<(MegakernelLaunchRecommendation, MegakernelTopologyEvidence), BackendError> {
+        let (effective_request, recommendation) = self.recommend_with_effective_request(request)?;
+        let evidence = self.topology_evidence_for(effective_request, recommendation);
+        Ok((recommendation, evidence))
+    }
+
+    /// Recommend a launch and emit hot opcode/window promotion evidence.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`BackendError`] when the underlying recommendation cannot be
+    /// built from the request or adapter limits.
+    pub fn recommend_with_promotion_evidence(
+        &self,
+        request: MegakernelLaunchRequest,
+    ) -> Result<(MegakernelLaunchRecommendation, MegakernelPromotionEvidence), BackendError> {
+        let (effective_request, recommendation) = self.recommend_with_effective_request(request)?;
+        let evidence = self.promotion_evidence_for(effective_request, recommendation);
+        Ok((recommendation, evidence))
+    }
+
     /// Recommend a launch while preserving the previous topology inside a
     /// narrow hysteresis band.
     ///
@@ -498,6 +792,87 @@ impl MegakernelLaunchPolicy {
             });
         }
         Ok(recommendation)
+    }
+
+    fn recommend_with_effective_request(
+        &self,
+        request: MegakernelLaunchRequest,
+    ) -> Result<(MegakernelLaunchRequest, MegakernelLaunchRecommendation), BackendError> {
+        let effective_request = self.infer_missing_scale_signals(request)?;
+        let recommendation = self.recommend(effective_request)?;
+        Ok((effective_request, recommendation))
+    }
+
+    fn topology_evidence_for(
+        &self,
+        request: MegakernelLaunchRequest,
+        recommendation: MegakernelLaunchRecommendation,
+    ) -> MegakernelTopologyEvidence {
+        MegakernelTopologyEvidence {
+            schema_version: TOPOLOGY_EVIDENCE_SCHEMA_VERSION,
+            queue_pressure: recommendation.pressure,
+            frontier_density_bps: request.frontier_density_bps,
+            semiring_frontier_density_bps: request.frontier_density_bps,
+            selected_topology: recommendation.topology,
+            graphblas_switch_class: Self::graphblas_switch_class_for(recommendation.topology),
+            resident_device_bytes: request.resident_device_bytes,
+            estimated_peak_device_bytes: recommendation.estimated_peak_device_bytes,
+            output_parity_required: true,
+        }
+    }
+
+    fn promotion_evidence_for(
+        &self,
+        request: MegakernelLaunchRequest,
+        recommendation: MegakernelLaunchRecommendation,
+    ) -> MegakernelPromotionEvidence {
+        MegakernelPromotionEvidence {
+            schema_version: HOT_WINDOW_PROMOTION_EVIDENCE_SCHEMA_VERSION,
+            queue_len: request.queue_len,
+            jit_queue_len_threshold: self.jit_queue_len_threshold,
+            hot_opcode_count: request.hot_opcode_count,
+            hot_opcode_threshold: self.hot_opcode_threshold,
+            hot_window_count: request.hot_window_count,
+            hot_window_threshold: self.hot_window_threshold,
+            execution_mode: recommendation.execution_mode,
+            promote_hot_opcodes: recommendation.promote_hot_opcodes,
+            promote_hot_windows: recommendation.promote_hot_windows,
+            promotion_route: Self::promotion_route_for(recommendation),
+            fused_descriptor_window_required: recommendation.promote_hot_windows,
+            output_parity_required: true,
+        }
+    }
+
+    fn promotion_route_for(
+        recommendation: MegakernelLaunchRecommendation,
+    ) -> MegakernelPromotionRoute {
+        if recommendation.execution_mode == MegakernelExecutionMode::Interpreter {
+            return MegakernelPromotionRoute::Interpreter;
+        }
+        match (
+            recommendation.promote_hot_opcodes,
+            recommendation.promote_hot_windows,
+        ) {
+            (true, true) => MegakernelPromotionRoute::OpcodeAndWindowJit,
+            (true, false) => MegakernelPromotionRoute::OpcodeJit,
+            (false, true) => MegakernelPromotionRoute::WindowJit,
+            (false, false) => MegakernelPromotionRoute::QueueJit,
+        }
+    }
+
+    fn graphblas_switch_class_for(
+        topology: MegakernelDispatchTopology,
+    ) -> MegakernelGraphBlasSwitchClass {
+        match topology {
+            MegakernelDispatchTopology::Empty => MegakernelGraphBlasSwitchClass::Empty,
+            MegakernelDispatchTopology::SparseFrontier => MegakernelGraphBlasSwitchClass::Sparse,
+            MegakernelDispatchTopology::HybridFrontier => MegakernelGraphBlasSwitchClass::Hybrid,
+            MegakernelDispatchTopology::DenseFrontier
+            | MegakernelDispatchTopology::FusedDense => MegakernelGraphBlasSwitchClass::Dense,
+            MegakernelDispatchTopology::MemoryConstrained => {
+                MegakernelGraphBlasSwitchClass::MemoryConstrained
+            }
+        }
     }
 
     fn hit_capacity_for(&self, request: MegakernelLaunchRequest) -> Result<u32, BackendError> {
@@ -863,6 +1238,7 @@ impl MegakernelLaunchPolicy {
     /// descent converges 5-10× faster than plain gradient on the
     /// elongated-valley latency surfaces typical of GPU autotuning.
     #[must_use]
+    #[cfg(any(test, feature = "legacy-infallible"))]
     pub fn natural_gradient_autotune_step(
         m_inv_sqrt: &[f64],
         grad: &[f64],
@@ -901,6 +1277,7 @@ impl MegakernelLaunchPolicy {
     }
 
     /// Compute the natural-gradient autotune step into caller-owned storage.
+    #[cfg(any(test, feature = "legacy-infallible"))]
     pub fn natural_gradient_autotune_step_into(
         m_inv_sqrt: &[f64],
         grad: &[f64],
@@ -930,7 +1307,7 @@ impl MegakernelLaunchPolicy {
         learning_rate: f64,
         out: &mut Vec<f64>,
     ) -> Result<(), BackendError> {
-        let n = u32_to_usize_or_panic(n, "natural-gradient dimension");
+        let n = u32_to_usize_checked(n, "natural-gradient dimension")?;
         out.clear();
         let Some(required_matrix_len) = n.checked_mul(n) else {
             return Ok(());
@@ -995,29 +1372,20 @@ fn best_cost_index(costs: &[f64]) -> usize {
     best
 }
 
-fn u32_to_usize_or_panic(value: u32, label: &'static str) -> usize {
-    match usize::try_from(value) {
-        Ok(value) => value,
-        Err(error) => {
-            panic!("{label} cannot fit usize: {error}. Fix: shard the autotune surface.")
-        }
-    }
+fn u32_to_usize_checked(value: u32, label: &'static str) -> Result<usize, BackendError> {
+    usize::try_from(value).map_err(|error| {
+        BackendError::new(format!(
+            "{label} cannot fit usize: {error}. Fix: shard the autotune surface."
+        ))
+    })
 }
 
 fn hysteresis_add(value: u16, hysteresis: u16) -> u16 {
-    value.checked_add(hysteresis).unwrap_or_else(|| {
-        panic!(
-            "megakernel topology hysteresis upper bound overflowed u16. Fix: lower topology threshold or hysteresis."
-        )
-    })
+    value.saturating_add(hysteresis)
 }
 
 fn hysteresis_sub(value: u16, hysteresis: u16) -> u16 {
-    value.checked_sub(hysteresis).unwrap_or_else(|| {
-        panic!(
-            "megakernel topology hysteresis lower bound underflowed u16. Fix: lower hysteresis or raise topology threshold."
-        )
-    })
+    value.saturating_sub(hysteresis)
 }
 
 fn classify_pressure(

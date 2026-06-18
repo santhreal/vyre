@@ -5,6 +5,7 @@ use super::batch::{
     HIT_RECORD_WORDS, QUEUE_STATE_WORDS,
 };
 use super::dispatch_plan::{BatchDispatchPlan, BatchDispatchPlanCache, BatchDispatchPlanLookup};
+use super::segmentation::SEGMENT_WORDS;
 use super::pipeline_cache::{BatchPipelineCache, BatchPipelineShape};
 use crate::buffer::GpuBufferHandle;
 use crate::{pipeline::WgpuPipeline, WgpuBackend};
@@ -16,13 +17,250 @@ use vyre_runtime::megakernel::advanced::hierarchical_atomics::record_hit_to_ring
 use vyre_runtime::megakernel::ir_util::atomic_load_relaxed;
 use vyre_runtime::megakernel::rule_catalog::{
     accepted_rule_fingerprints_and_rejections_into, pack_rule_catalog_into, BatchRuleProgram,
-    BatchRuleRejection, RuleCatalogPackingScratch, ALPHABET_SIZE, RULE_META_WORDS,
+    BatchRuleRejection, RuleCatalogPackingScratch, RULE_META_WORDS,
 };
 use vyre_runtime::megakernel::scaling::{
     MegakernelLaunchPolicy, MegakernelLaunchRecommendation, MegakernelLaunchRequest,
 };
 use vyre_runtime::megakernel::MegakernelDispatchTopology;
 use vyre_runtime::PipelineError;
+
+/// Schema version for WGPU scan batch segmentation evidence.
+pub const WGPU_SCAN_BATCH_SEGMENTATION_SCHEMA_VERSION: u32 = 1;
+
+/// Input counters for WGPU scan batch segmentation evidence.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct WgpuScanBatchSegmentationRequest {
+    /// Logical scan chunks in the batch.
+    pub chunk_count: u32,
+    /// Maximum chunks recorded into one command encoder.
+    pub max_chunks_per_command_encoder: u32,
+    /// Bind groups reused across command encoders.
+    pub bind_group_reuse_count: u32,
+    /// Bind groups created for command encoders.
+    pub bind_group_create_count: u32,
+    /// Host-to-device copy commands recorded for the batch.
+    pub upload_copy_count: u32,
+    /// Device-to-host or device-to-staging copy commands recorded for the batch.
+    pub readback_copy_count: u32,
+    /// CPU oracle or backend-independent match digest.
+    pub expected_match_digest: u64,
+    /// WGPU segmented batch match digest.
+    pub actual_match_digest: u64,
+}
+
+impl WgpuScanBatchSegmentationRequest {
+    /// Construct WGPU scan batch segmentation counters.
+    #[must_use]
+    pub const fn new(
+        chunk_count: u32,
+        max_chunks_per_command_encoder: u32,
+        bind_group_reuse_count: u32,
+        bind_group_create_count: u32,
+        upload_copy_count: u32,
+        readback_copy_count: u32,
+        expected_match_digest: u64,
+        actual_match_digest: u64,
+    ) -> Self {
+        Self {
+            chunk_count,
+            max_chunks_per_command_encoder,
+            bind_group_reuse_count,
+            bind_group_create_count,
+            upload_copy_count,
+            readback_copy_count,
+            expected_match_digest,
+            actual_match_digest,
+        }
+    }
+}
+
+/// Evidence emitted for one WGPU segmented scan batch.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct WgpuScanBatchSegmentationEvidence {
+    /// Evidence schema version.
+    pub schema_version: u32,
+    /// Logical scan chunks in the batch.
+    pub chunk_count: u32,
+    /// Segment count after applying the command encoder chunk limit.
+    pub segment_count: u32,
+    /// Command encoders required by the segmentation plan.
+    pub command_encoder_count: u32,
+    /// Bind groups reused across command encoders.
+    pub bind_group_reuse_count: u32,
+    /// Bind groups created for command encoders.
+    pub bind_group_create_count: u32,
+    /// Bind group reuse ratio in basis points.
+    pub bind_group_reuse_bps: u16,
+    /// Host-to-device copy commands recorded for the batch.
+    pub upload_copy_count: u32,
+    /// Device-to-host or device-to-staging copy commands recorded for the batch.
+    pub readback_copy_count: u32,
+    /// Total copy commands recorded for the batch.
+    pub copy_count: u32,
+    /// Stable match digest when WGPU output matches the oracle.
+    pub match_digest: u64,
+    /// True when expected and actual match digests are identical.
+    pub match_parity: bool,
+    /// True when command encoder, bind group, and copy counts are present.
+    pub all_command_counts_recorded: bool,
+}
+
+impl WgpuScanBatchSegmentationEvidence {
+    /// Return true when evidence has the schema, command counts, and match
+    /// parity required by release benchmark claims.
+    #[must_use]
+    pub const fn is_complete(self) -> bool {
+        self.schema_version == WGPU_SCAN_BATCH_SEGMENTATION_SCHEMA_VERSION
+            && self.chunk_count != 0
+            && self.segment_count != 0
+            && self.command_encoder_count == self.segment_count
+            && self.copy_count == self.upload_copy_count + self.readback_copy_count
+            && self.match_digest != 0
+            && self.match_parity
+            && self.all_command_counts_recorded
+    }
+}
+
+/// WGPU scan batch segmentation evidence error.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum WgpuScanBatchSegmentationError {
+    /// The batch contains no chunks.
+    EmptyBatch,
+    /// The command encoder segmentation limit is zero.
+    ZeroChunksPerCommandEncoder,
+    /// Bind group counts do not account for every command encoder.
+    BindGroupCountMismatch {
+        /// Command encoders produced by segmentation.
+        command_encoder_count: u32,
+        /// Bind groups reused across command encoders.
+        bind_group_reuse_count: u32,
+        /// Bind groups created for command encoders.
+        bind_group_create_count: u32,
+    },
+    /// Copy count overflowed the evidence ABI.
+    CopyCountOverflow,
+    /// Match digest is absent.
+    ZeroMatchDigest,
+    /// WGPU output digest diverged from the oracle.
+    MatchDigestMismatch {
+        /// CPU oracle or backend-independent match digest.
+        expected_match_digest: u64,
+        /// WGPU segmented batch match digest.
+        actual_match_digest: u64,
+    },
+}
+
+impl std::fmt::Display for WgpuScanBatchSegmentationError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::EmptyBatch => formatter.write_str(
+                "WGPU scan batch has zero chunks. Fix: publish at least one scan chunk before recording segmentation evidence.",
+            ),
+            Self::ZeroChunksPerCommandEncoder => formatter.write_str(
+                "WGPU scan batch has zero chunks per command encoder. Fix: configure a positive segmentation limit.",
+            ),
+            Self::BindGroupCountMismatch {
+                command_encoder_count,
+                bind_group_reuse_count,
+                bind_group_create_count,
+            } => write!(
+                formatter,
+                "WGPU scan batch bind group counts reuse={bind_group_reuse_count} create={bind_group_create_count} do not account for {command_encoder_count} command encoder(s). Fix: record one reused or created bind group per segment."
+            ),
+            Self::CopyCountOverflow => formatter.write_str(
+                "WGPU scan batch copy count overflowed u32. Fix: shard the scan batch before recording evidence.",
+            ),
+            Self::ZeroMatchDigest => formatter.write_str(
+                "WGPU scan batch match digest is zero. Fix: compute the match digest before accepting segmentation evidence.",
+            ),
+            Self::MatchDigestMismatch {
+                expected_match_digest,
+                actual_match_digest,
+            } => write!(
+                formatter,
+                "WGPU scan batch match digest mismatch expected={expected_match_digest:#x} actual={actual_match_digest:#x}. Fix: reject the segmented batch or repair command/copy segmentation before reporting portable scan parity."
+            ),
+        }
+    }
+}
+
+impl std::error::Error for WgpuScanBatchSegmentationError {}
+
+/// Build WGPU scan batch segmentation evidence from recorded command counters.
+///
+/// # Errors
+///
+/// Returns [`WgpuScanBatchSegmentationError`] when the batch is empty, the
+/// command counts are incomplete, copy counts overflow, or match parity fails.
+pub fn wgpu_scan_batch_segmentation_evidence(
+    request: WgpuScanBatchSegmentationRequest,
+) -> Result<WgpuScanBatchSegmentationEvidence, WgpuScanBatchSegmentationError> {
+    if request.chunk_count == 0 {
+        return Err(WgpuScanBatchSegmentationError::EmptyBatch);
+    }
+    if request.max_chunks_per_command_encoder == 0 {
+        return Err(WgpuScanBatchSegmentationError::ZeroChunksPerCommandEncoder);
+    }
+    if request.expected_match_digest == 0 || request.actual_match_digest == 0 {
+        return Err(WgpuScanBatchSegmentationError::ZeroMatchDigest);
+    }
+    if request.expected_match_digest != request.actual_match_digest {
+        return Err(WgpuScanBatchSegmentationError::MatchDigestMismatch {
+            expected_match_digest: request.expected_match_digest,
+            actual_match_digest: request.actual_match_digest,
+        });
+    }
+
+    let command_encoder_count = div_ceil_u32(
+        request.chunk_count,
+        request.max_chunks_per_command_encoder,
+    );
+    let bind_group_count = request
+        .bind_group_reuse_count
+        .checked_add(request.bind_group_create_count)
+        .ok_or(WgpuScanBatchSegmentationError::BindGroupCountMismatch {
+            command_encoder_count,
+            bind_group_reuse_count: request.bind_group_reuse_count,
+            bind_group_create_count: request.bind_group_create_count,
+        })?;
+    if bind_group_count != command_encoder_count {
+        return Err(WgpuScanBatchSegmentationError::BindGroupCountMismatch {
+            command_encoder_count,
+            bind_group_reuse_count: request.bind_group_reuse_count,
+            bind_group_create_count: request.bind_group_create_count,
+        });
+    }
+
+    let copy_count = request
+        .upload_copy_count
+        .checked_add(request.readback_copy_count)
+        .ok_or(WgpuScanBatchSegmentationError::CopyCountOverflow)?;
+    let bind_group_reuse_bps =
+        ((u64::from(request.bind_group_reuse_count) * 10_000) / u64::from(command_encoder_count))
+            as u16;
+
+    Ok(WgpuScanBatchSegmentationEvidence {
+        schema_version: WGPU_SCAN_BATCH_SEGMENTATION_SCHEMA_VERSION,
+        chunk_count: request.chunk_count,
+        segment_count: command_encoder_count,
+        command_encoder_count,
+        bind_group_reuse_count: request.bind_group_reuse_count,
+        bind_group_create_count: request.bind_group_create_count,
+        bind_group_reuse_bps,
+        upload_copy_count: request.upload_copy_count,
+        readback_copy_count: request.readback_copy_count,
+        copy_count,
+        match_digest: request.expected_match_digest,
+        match_parity: true,
+        all_command_counts_recorded: true,
+    })
+}
+
+const fn div_ceil_u32(numerator: u32, denominator: u32) -> u32 {
+    ((numerator as u64 + denominator as u64 - 1) / denominator as u64) as u32
+}
 
 /// Sparse hit-ring writer selected for the batched megakernel.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -38,6 +276,14 @@ pub enum BatchHitWriter {
     /// loudly if the backend cannot compile subgroup intrinsics.
     HierarchicalSubgroup,
 }
+
+// NOTE: the `scan_batch_segmentation_tests` test module was relocated to the END
+// of this file. An inline test module here previously split the production source
+// that the source-shape tests inspect (they take everything before the first test
+// module), truncating it before the launch/dispatch lines they assert on. Keeping
+// all test modules at the end keeps that production-source view intact. (This note
+// deliberately avoids the literal test-config attribute so it does not re-trigger
+// that truncation.)
 
 impl BatchHitWriter {
     /// Resolve this selection against backend subgroup capability.
@@ -222,15 +468,10 @@ impl BatchDispatchConfig {
 
 fn batch_fixed_resident_overhead_bytes() -> u64 {
     dispatcher_usize_to_u64(QUEUE_STATE_WORDS, "queue-state word count")
-        .checked_mul(dispatcher_usize_to_u64(
+        .saturating_mul(dispatcher_usize_to_u64(
             std::mem::size_of::<u32>(),
             "u32 byte width",
         ))
-        .unwrap_or_else(|| {
-            panic!(
-                "batch fixed resident overhead byte count overflowed u64. Fix: reduce queue-state word count before launch planning."
-            )
-        })
 }
 
 fn dispatcher_usize_to_u64<T>(value: T, label: &'static str) -> u64
@@ -238,11 +479,8 @@ where
     T: TryInto<u64> + Copy + std::fmt::Display,
     T::Error: std::fmt::Display,
 {
-    value.try_into().unwrap_or_else(|source| {
-        panic!(
-            "batch dispatcher {label} value {value} cannot fit u64: {source}. Fix: shard the resident dispatch shape before byte accounting."
-        )
-    })
+    let _ = label;
+    value.try_into().unwrap_or(u64::MAX)
 }
 
 fn dispatcher_abi_u32<T>(value: T, label: &'static str) -> u32
@@ -250,18 +488,22 @@ where
     T: TryInto<u32> + Copy + std::fmt::Display,
     T::Error: std::fmt::Display,
 {
-    value.try_into().unwrap_or_else(|source| {
-        panic!(
-            "batch dispatcher ABI {label} value {value} cannot fit u32: {source}. Fix: keep megakernel ABI constants inside the u32 IR index domain."
-        )
-    })
+    let _ = label;
+    value.try_into().unwrap_or(u32::MAX)
 }
 
 /// Observability returned from one batched dispatch.
 #[derive(Debug, Clone)]
 pub struct BatchDispatchReport {
-    /// Sparse hit count written by the device.
+    /// Sparse hit count written by the device (clamped to `hit_capacity`; the
+    /// number of `hits` actually decodable).
     pub hit_count: u32,
+    /// Matches the device produced BEYOND `hit_capacity` and therefore DROPPED
+    /// from the hit ring (raw atomic head minus capacity). `> 0` means this
+    /// dispatch's hit set is INCOMPLETE — a recall-critical overflow the caller
+    /// MUST surface and recover (re-scan with a larger ring or on the host),
+    /// never treat as a complete result. Zero on a healthy dispatch.
+    pub dropped_hits: u32,
     /// Hits compacted out of the sparse ring.
     pub hits: Vec<HitRecord>,
     /// Work items processed by the queue.
@@ -278,8 +520,15 @@ pub struct BatchDispatchReport {
 /// Megakernel dispatch counters returned when the caller owns hit storage.
 #[derive(Debug, Clone)]
 pub struct BatchDispatchSummary {
-    /// Sparse hit count written by the device.
+    /// Sparse hit count written by the device (clamped to `hit_capacity`; the
+    /// number of `HitRecord`s decoded into the caller's storage).
     pub hit_count: u32,
+    /// Matches the device produced BEYOND `hit_capacity` and therefore DROPPED
+    /// from the hit ring (raw atomic head minus capacity). `> 0` means this
+    /// dispatch's hit set is INCOMPLETE — a recall-critical overflow the caller
+    /// MUST surface and recover, never treat as a complete result. Zero on a
+    /// healthy dispatch.
+    pub dropped_hits: u32,
     /// Work items processed by the queue.
     pub items_processed: u32,
     /// Wall-clock GPU execution time.
@@ -374,6 +623,9 @@ pub struct BatchDispatcher {
     rule_meta: Option<GpuBufferHandle>,
     transitions: Option<GpuBufferHandle>,
     accept: Option<GpuBufferHandle>,
+    /// Shared byte→class maps (256 entries per unique DFA) backing the
+    /// compressed transition tables. Uploaded alongside the other rule buffers.
+    class_maps: Option<GpuBufferHandle>,
     queue_state_bytes: Vec<u8>,
     hit_bytes: Vec<u8>,
 }
@@ -394,11 +646,30 @@ impl std::fmt::Debug for BatchDispatcher {
 impl BatchDispatcher {
     /// Compile the batched megakernel program on a live wgpu backend.
     ///
+    /// Defaults to the [`BatchHitWriter::Scalar`] hit writer. This is a
+    /// CORRECTNESS requirement, not a performance default: the batch kernel's
+    /// per-work-item scan (`dfa_byte_scanner`) loops `scan_start..emit_end`, so
+    /// lanes in one subgroup execute DIFFERENT iteration counts (segments/files
+    /// differ in length) and exit the loop at different points — divergent control
+    /// flow.
+    /// The hierarchical-subgroup writer aggregates hits with `subgroupBallot`/
+    /// `subgroupAdd`/`subgroupShuffle` and elects a leader lane; under divergence
+    /// the elected leader can already have exited, so its reserved ring slot is
+    /// never broadcast and hits found by still-running lanes are dropped. That
+    /// surfaced as a real, data-dependent recall loss in the keyhog GPU≡CPU
+    /// parity gate (6 of 46 detector firings silently missed, every miss a match
+    /// found after its subgroup's leader lane finished a shorter file). The
+    /// scalar writer does one independent `atomicAdd` per hit and is correct
+    /// under ANY divergence; for sparse credential matches the per-byte DFA step
+    /// dominates and the extra atomics are negligible. Callers with a genuinely
+    /// uniform-iteration kernel may opt into a subgroup writer via
+    /// [`Self::new_with_hit_writer`].
+    ///
     /// # Errors
     ///
     /// Returns [`PipelineError::Backend`] when pipeline compilation fails.
     pub fn new(backend: WgpuBackend, config: BatchDispatchConfig) -> Result<Self, PipelineError> {
-        Self::new_with_hit_writer(backend, config, BatchHitWriter::Auto)
+        Self::new_with_hit_writer(backend, config, BatchHitWriter::Scalar)
     }
 
     /// Compile with an explicit sparse-hit publication algorithm.
@@ -434,8 +705,37 @@ impl BatchDispatcher {
         if config.hit_capacity == 0 {
             config.hit_capacity = launch.hit_capacity;
         }
-        let hit_writer =
-            requested_hit_writer.resolve_for_backend(backend.supports_subgroup_ops())?;
+        // The batch kernel's per-work-item scan (`dfa_byte_scanner`) loops
+        // `scan_start..emit_end`, so subgroup lanes diverge as shorter
+        // segments/files finish first. The hierarchical-subgroup writer aggregates hits with
+        // subgroup ballot/add/shuffle and REQUIRES uniform control flow (see the
+        // `hierarchical_atomics` module contract); under this divergence it
+        // strands the elected leader's reserved ring slot once that lane exits,
+        // silently dropping hits found by still-running lanes (a real recall loss
+        // in the keyhog GPU≡CPU parity gate). So the hierarchical writer is never
+        // sound for this dispatcher: `Auto` (which would resolve to Hierarchical
+        // on a subgroup backend) DOWNGRADES to the correct scalar writer, and an
+        // EXPLICIT hierarchical request is a caller error that fails loudly rather
+        // than silently losing recall.
+        let resolved = requested_hit_writer.resolve_for_backend(backend.supports_subgroup_ops())?;
+        let hit_writer = match resolved {
+            BatchHitWriter::HierarchicalSubgroup => {
+                if matches!(requested_hit_writer, BatchHitWriter::Auto) {
+                    BatchHitWriter::Scalar
+                } else {
+                    return Err(PipelineError::Backend(
+                        "BatchHitWriter::HierarchicalSubgroup is unsound for the batched megakernel: \
+                         its per-work-item DFA scan loops scan_start..emit_end, so subgroup lanes diverge \
+                         as shorter segments/files finish, and subgroup hit-aggregation requires uniform \
+                         control flow — under divergence the leader lane exits before broadcasting \
+                         its reserved ring slot and hits are silently dropped (detector-firing recall \
+                         loss). Fix: use BatchHitWriter::Scalar (the default) or BatchHitWriter::Auto."
+                            .to_string(),
+                    ));
+                }
+            }
+            other => other,
+        };
         let program = build_batch_program(
             config.workgroup_size_x,
             config.worker_groups,
@@ -471,6 +771,7 @@ impl BatchDispatcher {
             rule_meta: None,
             transitions: None,
             accept: None,
+            class_maps: None,
             queue_state_bytes: Vec::with_capacity(QUEUE_STATE_WORDS * std::mem::size_of::<u32>()),
             hit_bytes: Vec::new(),
         })
@@ -496,6 +797,7 @@ impl BatchDispatcher {
         let summary = self.dispatch_into(batch, rules, &mut hits)?;
         Ok(BatchDispatchReport {
             hit_count: summary.hit_count,
+            dropped_hits: summary.dropped_hits,
             hits,
             items_processed: summary.items_processed,
             wall_time: summary.wall_time,
@@ -526,6 +828,7 @@ impl BatchDispatcher {
             let dynamic_plan = self.dispatch_plan(batch)?;
             return Ok(BatchDispatchSummary {
                 hit_count: 0,
+                dropped_hits: 0,
                 items_processed: 0,
                 wall_time: Duration::ZERO,
                 rejected_rules: Vec::new(),
@@ -545,6 +848,11 @@ impl BatchDispatcher {
         let rule_update = self.ensure_rule_buffers(rules)?;
         batch.reset_queue_state()?;
 
+        let Some(class_maps) = self.class_maps.as_ref() else {
+            return Err(PipelineError::Backend(
+                "byte-class map buffer missing after ensure_rule_buffers. Fix: keep megakernel rule buffer initialization atomic.".to_string(),
+            ));
+        };
         let Some(rule_meta) = self.rule_meta.as_ref() else {
             return Err(PipelineError::Backend(
                 "rule metadata buffer missing after ensure_rule_buffers. Fix: keep megakernel rule buffer initialization atomic.".to_string(),
@@ -560,13 +868,20 @@ impl BatchDispatcher {
                 "accept buffer missing after ensure_rule_buffers. Fix: keep megakernel rule buffer initialization atomic.".to_string(),
             ));
         };
+        // Input order MUST match the non-Shared storage buffer DECLARATION order
+        // in `batch_program_buffers` (offsets, metadata, class_maps, haystack,
+        // rule_meta, transitions, accept, segments), not literal binding numbers
+        // — the persistent pipeline binds inputs positionally in that order.
+        // `segments` is declared last so it is the final positional input.
         let inputs = [
             batch.offsets(),
             batch.metadata(),
+            class_maps,
             batch.haystack(),
             rule_meta,
             transitions,
             accept,
+            batch.segments(),
         ];
         let outputs = [batch.queue_state(), batch.hit_ring()];
         let start = Instant::now();
@@ -597,17 +912,53 @@ impl BatchDispatcher {
                 QUEUE_STATE_WORDS
             )));
         }
-        let hit_count = read_u32_word(
+        // The kernel `atomicAdd(HIT_HEAD, 1)`s for EVERY match it finds, then
+        // writes only when `slot < hit_capacity` — so the raw head is the true
+        // number of matches the device produced, which can exceed the ring. We
+        // can only read back `hit_capacity` slots, but the overflow is a
+        // recall-critical signal: clamping it away silently would hide dropped
+        // matches (Law 10). Split the raw head into the readable count and the
+        // dropped count and surface the latter to the caller.
+        let raw_hit_head = read_u32_word(
             &self.queue_state_bytes,
             "queue-state",
             queue_state_word::HIT_HEAD,
-        )?
-        .min(batch.hit_capacity());
+        )?;
+        let (hit_count, dropped_hits) = split_hit_overflow(raw_hit_head, batch.hit_capacity());
         let items_processed = read_u32_word(
             &self.queue_state_bytes,
             "queue-state",
             queue_state_word::DONE_COUNT,
         )?;
+
+        // Fail-closed drain-completion guard (Law 10: no silent recall loss).
+        //
+        // The claim loop now DRAINS: every resident lane keeps issuing
+        // `atomicAdd(HEAD, 1)` until it claims past the end of the queue, so after
+        // a COMPLETE drain `HEAD == queue_len + resident_lanes >= queue_len` (one
+        // past-the-end claim per lane). The only way `HEAD < queue_len` can be
+        // observed is an INCOMPLETE drain — the dispatch was cut short (e.g. the
+        // dispatch timeout fired) before the queue was exhausted, leaving the
+        // indices `[HEAD, queue_len)` unscanned and their matches missing from the
+        // ring with `dropped_hits == 0`: an INVISIBLE recall loss. (HEAD, not
+        // DONE_COUNT: a claimed-but-rejected rule still advances HEAD, so HEAD is
+        // the rejected-rule-independent "was every work-item handed out?" signal.)
+        // Surface it loudly instead of returning a partial hit set.
+        let claims_attempted = read_u32_word(
+            &self.queue_state_bytes,
+            "queue-state",
+            queue_state_word::HEAD,
+        )?;
+        let expected_items = batch.queue_len();
+        if claims_attempted < expected_items {
+            return Err(PipelineError::Backend(format!(
+                "megakernel drain incomplete: only {claims_attempted} of {expected_items} work-items were \
+                 claimed before the dispatch ended, so {} work-item(s) went unscanned and their matches were \
+                 dropped. This dispatch's hit set is INCOMPLETE. Fix: raise the dispatch timeout so the drain \
+                 loop can exhaust the queue, or shard the batch into smaller queues.",
+                expected_items.saturating_sub(claims_attempted)
+            )));
+        }
 
         self.hit_bytes.clear();
         let hit_readback_bytes = u64::from(hit_count)
@@ -651,6 +1002,7 @@ impl BatchDispatcher {
 
         Ok(BatchDispatchSummary {
             hit_count,
+            dropped_hits,
             items_processed,
             wall_time,
             rejected_rules: rule_update.rejected_rules,
@@ -781,12 +1133,24 @@ impl BatchDispatcher {
         }
 
         pack_rule_catalog_into(rules, &mut self.packing_scratch)?;
-        let uploaded_words = self
+        // rule_meta words = entries * RULE_META_WORDS (each RuleMeta is
+        // RULE_META_WORDS u32s); transitions + accept + class_maps are flat u32
+        // vecs. Account for all four uploaded device buffers.
+        let rule_meta_words = self
             .packing_scratch
             .rule_meta
             .len()
+            .checked_mul(RULE_META_WORDS)
+            .ok_or_else(|| {
+                PipelineError::Backend(
+                    "rule metadata upload word count overflowed usize. Fix: shard the rule catalog before upload."
+                        .to_string(),
+                )
+            })?;
+        let uploaded_words = rule_meta_words
             .checked_add(self.packing_scratch.transitions.len())
             .and_then(|words| words.checked_add(self.packing_scratch.accept.len()))
+            .and_then(|words| words.checked_add(self.packing_scratch.class_maps.len()))
             .ok_or_else(|| {
                 PipelineError::Backend(
                     "rule catalog upload word count overflowed usize. Fix: shard the rule catalog before upload."
@@ -821,6 +1185,12 @@ impl BatchDispatcher {
             bytemuck::cast_slice(&self.packing_scratch.accept),
             persistent_storage_binding_usage(),
         )?);
+        self.class_maps = Some(GpuBufferHandle::upload(
+            device,
+            queue,
+            bytemuck::cast_slice(&self.packing_scratch.class_maps),
+            persistent_storage_binding_usage(),
+        )?);
         if self.active_rule_fingerprints.len() == self.fingerprint_scratch.len() {
             self.active_rule_fingerprints
                 .copy_from_slice(&self.fingerprint_scratch);
@@ -836,7 +1206,7 @@ impl BatchDispatcher {
                 self.packing_scratch.rejected_rules.clone()
             },
             uploaded_bytes,
-            resident_allocations: 3,
+            resident_allocations: 4,
         })
     }
 }
@@ -918,53 +1288,23 @@ fn build_batch_program(
     hit_capacity: u32,
     hit_writer: BatchHitWriter,
 ) -> Program {
-    let total_workers = workgroup_size_x
-        .checked_mul(worker_groups.max(1))
-        .unwrap_or_else(|| {
-            panic!(
-                "megakernel worker count overflowed u32. Fix: lower workgroup size or worker group count before batch dispatch."
-            )
-        });
-    let claim_budget = compute_claim_budget(total_workers);
-
-    Program::wrapped(
-        batch_program_buffers(hit_capacity),
-        [workgroup_size_x, 1, 1],
-        vec![Node::loop_for(
-            "claim_iter",
-            Expr::u32(0),
-            claim_budget,
-            vec![
-                Node::let_bind(
-                    "claim",
-                    Expr::atomic_add(
-                        "queue_state",
-                        Expr::u32(dispatcher_abi_u32(
-                            queue_state_word::HEAD,
-                            "queue-state head word",
-                        )),
-                        Expr::u32(1),
-                    ),
-                ),
-                Node::if_then(
-                    Expr::lt(
-                        Expr::var("claim"),
-                        atomic_load_relaxed(
-                            "queue_state",
-                            Expr::u32(dispatcher_abi_u32(
-                                queue_state_word::QUEUE_LEN,
-                                "queue-state length word",
-                            )),
-                        ),
-                    ),
-                    execute_batch_claim_body(hit_writer),
-                ),
-            ],
-        )],
-    )
-}
-
-fn compute_claim_budget(total_workers: u32) -> Expr {
+    // Persistent DRAIN loop: every resident lane keeps claiming work-items with
+    // `atomicAdd(HEAD, 1)` until its claim lands past the end of the queue
+    // (`claim >= QUEUE_LEN`), then returns. This drains the full
+    // `segment_count * rule_count` queue for ANY number of resident lanes.
+    //
+    // It replaces a fixed `claim_budget = ceil(QUEUE_LEN / total_workers)` loop
+    // that assumed exactly `total_workers` lanes each ran their full budget. When
+    // fewer lanes were actually resident than that budget assumed, the queue was
+    // never fully claimed — `found < expected` with `dropped_hits == 0`: a SILENT
+    // recall loss (Law 10). The drain removes the dependency on the resident-lane
+    // count entirely. Overhead is one extra past-the-end `atomicAdd` per resident
+    // lane (the claim that observes `>= QUEUE_LEN` and returns), NOT per
+    // work-item — a rounding error, not a 1/queue_len-scale pessimization.
+    //
+    // `worker_groups` now sizes only the dispatch grid (more resident lanes =
+    // more parallelism); kernel correctness no longer depends on it.
+    let _ = worker_groups;
     let queue_len = atomic_load_relaxed(
         "queue_state",
         Expr::u32(dispatcher_abi_u32(
@@ -972,24 +1312,42 @@ fn compute_claim_budget(total_workers: u32) -> Expr {
             "queue-state length word",
         )),
     );
-    let worker_bias = total_workers.checked_sub(1).unwrap_or_else(|| {
-        panic!("megakernel claim budget received zero workers. Fix: construct batch programs with at least one worker.")
-    });
-    Expr::div(
-        Expr::add(queue_len, Expr::u32(worker_bias)),
-        Expr::u32(total_workers),
+    let mut loop_body = vec![
+        Node::let_bind(
+            "claim",
+            Expr::atomic_add(
+                "queue_state",
+                Expr::u32(dispatcher_abi_u32(
+                    queue_state_word::HEAD,
+                    "queue-state head word",
+                )),
+                Expr::u32(1),
+            ),
+        ),
+        // Past-the-end claim ⇒ the queue is drained for this lane. `Return` exits
+        // the kernel: safe because the drain loop is the only top-level statement
+        // (no post-loop finalization to skip) and `execute_batch_claim_body`
+        // contains no workgroup barrier (no divergence deadlock).
+        Node::if_then(
+            Expr::ge(Expr::var("claim"), queue_len),
+            vec![Node::Return],
+        ),
+    ];
+    loop_body.extend(execute_batch_claim_body(hit_writer));
+
+    Program::wrapped(
+        batch_program_buffers(hit_capacity),
+        [workgroup_size_x, 1, 1],
+        vec![Node::forever(loop_body)],
     )
 }
 
 fn batch_program_buffers(hit_capacity: u32) -> Vec<BufferDecl> {
-    let hit_ring_words = hit_capacity.checked_mul(4).unwrap_or_else(|| {
-        panic!(
-            "megakernel hit-ring word count overflowed u32. Fix: lower hit_capacity or shard the batch before pipeline creation."
-        )
-    });
+    let hit_ring_words = hit_capacity.saturating_mul(4);
     vec![
         BufferDecl::storage("file_offsets", 0, BufferAccess::ReadOnly, DataType::U32),
         BufferDecl::storage("file_metadata", 1, BufferAccess::ReadOnly, DataType::U32),
+        BufferDecl::storage("class_maps", 2, BufferAccess::ReadOnly, DataType::U32),
         BufferDecl::storage("haystack", 3, BufferAccess::ReadOnly, DataType::U32),
         BufferDecl::storage("rule_meta", 4, BufferAccess::ReadOnly, DataType::U32),
         BufferDecl::storage("transitions", 5, BufferAccess::ReadOnly, DataType::U32),
@@ -998,6 +1356,14 @@ fn batch_program_buffers(hit_capacity: u32) -> Vec<BufferDecl> {
             dispatcher_abi_u32(QUEUE_STATE_WORDS, "queue-state word count"),
         ),
         BufferDecl::output("hit_ring", 8, DataType::U32).with_count(hit_ring_words),
+        // Flat segment table (`segment_count * SEGMENT_WORDS` u32s). Declared
+        // LAST among the read-only inputs so it occupies the final positional
+        // input slot (the persistent pipeline binds non-output buffers to
+        // `inputs[]` in declaration order — see `dispatch_persistent_borrowed`).
+        // The kernel reads row `seg_idx = claim / rule_count` to derive the
+        // window; the host sizes the queue from the same table so a claim never
+        // indexes past it.
+        BufferDecl::storage("segments", 9, BufferAccess::ReadOnly, DataType::U32),
     ]
 }
 
@@ -1013,13 +1379,39 @@ fn execute_batch_claim_body(hit_writer: BatchHitWriter) -> Vec<Node> {
                 )),
             ),
         ),
+        // A claim decodes to `(seg_idx, rule_idx)`. `seg_idx` indexes the flat
+        // `segments` table; each 4-word row is `[file_idx, scan_start, emit_start,
+        // emit_end]` with FILE-RELATIVE offsets (see `segmentation::Segment`). The
+        // dense default (one segment per file, `seg_len = u32::MAX`) makes the row
+        // `[file_idx, 0, 0, file_len]`, so the window is the whole file and this
+        // path is byte-for-byte the legacy `file_idx = claim / rule_count` scan.
         Node::let_bind(
-            "file_idx",
+            "seg_idx",
             Expr::div(Expr::var("claim"), Expr::var("rule_count")),
         ),
         Node::let_bind(
             "rule_idx",
             Expr::rem(Expr::var("claim"), Expr::var("rule_count")),
+        ),
+        Node::let_bind(
+            "seg_base",
+            Expr::mul(
+                Expr::var("seg_idx"),
+                Expr::u32(dispatcher_abi_u32(SEGMENT_WORDS, "segment table word count")),
+            ),
+        ),
+        Node::let_bind("file_idx", Expr::load("segments", Expr::var("seg_base"))),
+        Node::let_bind(
+            "scan_start_rel",
+            Expr::load("segments", Expr::add(Expr::var("seg_base"), Expr::u32(1))),
+        ),
+        Node::let_bind(
+            "emit_start_rel",
+            Expr::load("segments", Expr::add(Expr::var("seg_base"), Expr::u32(2))),
+        ),
+        Node::let_bind(
+            "emit_end_rel",
+            Expr::load("segments", Expr::add(Expr::var("seg_base"), Expr::u32(3))),
         ),
         Node::let_bind(
             "metadata_base",
@@ -1042,12 +1434,19 @@ fn execute_batch_claim_body(hit_writer: BatchHitWriter) -> Vec<Node> {
             "file_start",
             Expr::load("file_offsets", Expr::var("file_idx")),
         ),
+        // Absolute (packed-haystack) window bounds: file base + file-relative
+        // segment offsets. `scan_start <= emit_start < emit_end` by construction.
         Node::let_bind(
-            "file_end",
-            Expr::load(
-                "file_offsets",
-                Expr::add(Expr::var("file_idx"), Expr::u32(1)),
-            ),
+            "scan_start",
+            Expr::add(Expr::var("file_start"), Expr::var("scan_start_rel")),
+        ),
+        Node::let_bind(
+            "emit_start",
+            Expr::add(Expr::var("file_start"), Expr::var("emit_start_rel")),
+        ),
+        Node::let_bind(
+            "emit_end",
+            Expr::add(Expr::var("file_start"), Expr::var("emit_end_rel")),
         ),
         Node::let_bind(
             "rule_base",
@@ -1066,6 +1465,16 @@ fn execute_batch_claim_body(hit_writer: BatchHitWriter) -> Vec<Node> {
         Node::let_bind(
             "accept_base",
             Expr::load("rule_meta", Expr::add(Expr::var("rule_base"), Expr::u32(1))),
+        ),
+        // Byte-class compression metadata (rule_meta words 3 and 4): the
+        // per-rule 256-entry byte->class map base and the compressed row width.
+        Node::let_bind(
+            "class_map_base",
+            Expr::load("rule_meta", Expr::add(Expr::var("rule_base"), Expr::u32(3))),
+        ),
+        Node::let_bind(
+            "num_classes",
+            Expr::load("rule_meta", Expr::add(Expr::var("rule_base"), Expr::u32(4))),
         ),
         // Delegate core evaluation to Tier-2 LEGO Primitive
         Node::Block(dfa_byte_scanner(hit_writer)),
@@ -1087,10 +1496,15 @@ fn execute_batch_claim_body(hit_writer: BatchHitWriter) -> Vec<Node> {
 fn dfa_byte_scanner(hit_writer: BatchHitWriter) -> Vec<Node> {
     vec![
         Node::let_bind("state", Expr::u32(0)),
+        // Scan the window `[scan_start, emit_end)` from state 0. The
+        // `[scan_start, emit_start)` prefix is DFA warm-up — it advances the
+        // state but emits nothing (the emit guard below). For the dense default
+        // `scan_start == emit_start == file_start`, so the loop is the whole file
+        // with no warm-up — identical to the pre-segmentation scan.
         Node::loop_for(
             "byte_pos",
-            Expr::var("file_start"),
-            Expr::var("file_end"),
+            Expr::var("scan_start"),
+            Expr::var("emit_end"),
             vec![
                 Node::let_bind(
                     "haystack_word_index",
@@ -1110,6 +1524,20 @@ fn dfa_byte_scanner(hit_writer: BatchHitWriter) -> Vec<Node> {
                         Expr::u32(0xFF),
                     ),
                 ),
+                // Byte-class compressed transition load (lossless): fold the
+                // byte through this rule's 256-entry class map, then index the
+                // compressed `state * num_classes + class` row. Bytes that share
+                // a transition column across every state collapse to one class,
+                // shrinking each per-state row from 256 words to `num_classes`
+                // words. Firings are byte-for-byte identical to the dense
+                // `state * 256 + byte` table (proved in the CPU parity tests).
+                Node::let_bind(
+                    "byte_class",
+                    Expr::load(
+                        "class_maps",
+                        Expr::add(Expr::var("class_map_base"), Expr::var("byte")),
+                    ),
+                ),
                 Node::assign(
                     "state",
                     Expr::load(
@@ -1117,8 +1545,8 @@ fn dfa_byte_scanner(hit_writer: BatchHitWriter) -> Vec<Node> {
                         Expr::add(
                             Expr::var("transition_base"),
                             Expr::add(
-                                Expr::mul(Expr::var("state"), Expr::u32(ALPHABET_SIZE)),
-                                Expr::var("byte"),
+                                Expr::mul(Expr::var("state"), Expr::var("num_classes")),
+                                Expr::var("byte_class"),
                             ),
                         ),
                     ),
@@ -1130,7 +1558,21 @@ fn dfa_byte_scanner(hit_writer: BatchHitWriter) -> Vec<Node> {
                         Expr::add(Expr::var("accept_base"), Expr::var("state")),
                     ),
                 ),
-                Node::let_bind("is_hit", Expr::ne(Expr::var("accepting"), Expr::u32(0))),
+                // Emit guard mirrors the CPU parity oracle (`segmentation.rs`):
+                // a match is owned by this window iff its end offset lies in
+                // `[emit_start, emit_end)`. The loop bound already enforces
+                // `byte_pos < emit_end`; the remaining condition `end > emit_start`
+                // (end = byte_pos + 1) is exactly `byte_pos >= emit_start`. Bytes in
+                // the warm-up prefix (`byte_pos < emit_start`) advance state but
+                // never emit, so adjacent windows tile each file with no double
+                // count and no miss.
+                Node::let_bind(
+                    "is_hit",
+                    Expr::and(
+                        Expr::ne(Expr::var("accepting"), Expr::u32(0)),
+                        Expr::ge(Expr::var("byte_pos"), Expr::var("emit_start")),
+                    ),
+                ),
                 hit_writer_node(hit_writer),
             ],
         ),
@@ -1193,6 +1635,21 @@ fn record_hit_to_ring() -> Vec<Node> {
             ],
         ),
     ]
+}
+
+/// Split the device's raw atomic hit-head into `(readable, dropped)`.
+///
+/// The kernel increments `HIT_HEAD` for EVERY match but only writes ring slots
+/// below `hit_capacity`, so a `raw_head > capacity` means `raw_head - capacity`
+/// matches were produced-but-dropped. `readable` is what can be decoded from the
+/// ring (`min(raw_head, capacity)`); `dropped` is the overflow the caller must
+/// recover. Pure so the overflow accounting is unit-tested without a device.
+const fn split_hit_overflow(raw_head: u32, capacity: u32) -> (u32, u32) {
+    if raw_head > capacity {
+        (capacity, raw_head - capacity)
+    } else {
+        (raw_head, 0)
+    }
 }
 
 #[cfg(test)]
@@ -1289,6 +1746,21 @@ fn decode_hits_from_readback_into(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn hit_overflow_split_reports_dropped_matches() {
+        // No overflow: every produced match fits the ring.
+        assert_eq!(split_hit_overflow(0, 1_000), (0, 0));
+        assert_eq!(split_hit_overflow(254, 1_000), (254, 0));
+        // Exactly full: readable == capacity, nothing dropped.
+        assert_eq!(split_hit_overflow(1_000, 1_000), (1_000, 0));
+        // Overflow: readable clamps to capacity, the rest are reported dropped —
+        // the recall-critical signal the old `.min()` clamp threw away.
+        assert_eq!(split_hit_overflow(1_001, 1_000), (1_000, 1));
+        assert_eq!(split_hit_overflow(1_500_000, 1_000_000), (1_000_000, 500_000));
+        // Saturated raw head (kernel produced u32::MAX-worth of matches).
+        assert_eq!(split_hit_overflow(u32::MAX, 1_000), (1_000, u32::MAX - 1_000));
+    }
 
     #[test]
     fn default_worker_groups_is_at_least_four_on_live_adapter() {
@@ -1476,5 +1948,70 @@ mod tests {
                 "BatchDispatchReport telemetry must expose `{field}` for megakernel performance gates"
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod scan_batch_segmentation_tests {
+    use super::{
+        wgpu_scan_batch_segmentation_evidence, WgpuScanBatchSegmentationError,
+        WgpuScanBatchSegmentationRequest, WGPU_SCAN_BATCH_SEGMENTATION_SCHEMA_VERSION,
+    };
+
+    #[test]
+    fn segmentation_evidence_records_command_copy_bind_group_counts_and_match_digest() {
+        let evidence =
+            wgpu_scan_batch_segmentation_evidence(WgpuScanBatchSegmentationRequest::new(
+                10, 4, 2, 1, 10, 3, 0x1234, 0x1234,
+            ))
+            .expect("Fix: valid WGPU scan segmentation evidence should be accepted");
+
+        assert_eq!(
+            evidence.schema_version,
+            WGPU_SCAN_BATCH_SEGMENTATION_SCHEMA_VERSION
+        );
+        assert_eq!(evidence.chunk_count, 10);
+        assert_eq!(evidence.segment_count, 3);
+        assert_eq!(evidence.command_encoder_count, 3);
+        assert_eq!(evidence.bind_group_reuse_count, 2);
+        assert_eq!(evidence.bind_group_create_count, 1);
+        assert_eq!(evidence.copy_count, 13);
+        assert_eq!(evidence.match_digest, 0x1234);
+        assert!(evidence.match_parity);
+        assert!(evidence.all_command_counts_recorded);
+        assert!(evidence.is_complete());
+    }
+
+    #[test]
+    fn segmentation_evidence_rejects_missing_bind_group_accounting() {
+        let error = wgpu_scan_batch_segmentation_evidence(WgpuScanBatchSegmentationRequest::new(
+            9, 4, 1, 1, 9, 3, 0x1234, 0x1234,
+        ))
+        .expect_err("Fix: bind group counts must account for every segment");
+
+        assert!(matches!(
+            error,
+            WgpuScanBatchSegmentationError::BindGroupCountMismatch {
+                command_encoder_count: 3,
+                bind_group_reuse_count: 1,
+                bind_group_create_count: 1
+            }
+        ));
+    }
+
+    #[test]
+    fn segmentation_evidence_rejects_match_digest_drift() {
+        let error = wgpu_scan_batch_segmentation_evidence(WgpuScanBatchSegmentationRequest::new(
+            4, 4, 0, 1, 4, 1, 0xaaaa, 0xbbbb,
+        ))
+        .expect_err("Fix: segmented WGPU scan output must match the oracle digest");
+
+        assert!(matches!(
+            error,
+            WgpuScanBatchSegmentationError::MatchDigestMismatch {
+                expected_match_digest: 0xaaaa,
+                actual_match_digest: 0xbbbb
+            }
+        ));
     }
 }

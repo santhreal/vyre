@@ -19,9 +19,11 @@ pub fn link_benchmark_backend_registrations() {
     );
     let wgpu_acquire: fn() -> Result<vyre_driver_wgpu::WgpuBackend, vyre_driver::BackendError> =
         vyre_driver_wgpu::WgpuBackend::acquire;
-    let metal_acquire: fn() -> Result<Box<dyn vyre_driver::VyreBackend>, vyre_driver::BackendError> =
+    let metal_acquire: fn()
+        -> Result<Box<dyn vyre_driver::VyreBackend>, vyre_driver::BackendError> =
         vyre_driver_metal::acquire;
-    let spirv_factory: fn() -> Result<Box<dyn vyre_driver::VyreBackend>, vyre_driver::BackendError> =
+    let spirv_factory: fn()
+        -> Result<Box<dyn vyre_driver::VyreBackend>, vyre_driver::BackendError> =
         vyre_driver_spirv::spirv_factory;
     std::hint::black_box(cpu_ref_id);
     std::hint::black_box(wgpu_acquire);

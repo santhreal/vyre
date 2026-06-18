@@ -314,8 +314,10 @@ pub fn crc32_program(input: &str, out: &str, n: u32) -> Program {
 pub fn crc32_chunk_program(input: &str, out: &str, n: u32, chunk_size: NonZeroU32) -> Program {
     let chunk_size = chunk_size.get();
     let chunk_count = crc32_chunk_count(n, chunk_size);
-    let output_words = crc32_chunk_output_words(n, chunk_size)
-        .expect("Fix: CRC32 chunk summary output word count overflowed u32; shard the input.");
+    let output_words = match crc32_chunk_output_words(n, chunk_size) {
+        Some(words) => words,
+        None => u32::MAX,
+    };
     let body = vec![Node::Region {
         generator: Ident::from(CRC32_CHUNK_OP_ID),
         source_region: None,
@@ -341,13 +343,15 @@ pub fn crc32_chunk_program(input: &str, out: &str, n: u32, chunk_size: NonZeroU3
 #[must_use]
 pub fn crc32_pair_reduce_program(input: &str, out: &str, pair_count: NonZeroU32) -> Program {
     let pair_count = pair_count.get();
-    let input_words = pair_count
-        .checked_mul(2)
-        .expect("Fix: CRC32 pair-reduce input word count overflowed u32; shard the input.");
+    let input_words = match pair_count.checked_mul(2) {
+        Some(words) => words,
+        None => u32::MAX,
+    };
     let output_pairs = crc32_pair_reduce_output_pairs(pair_count);
-    let output_words = output_pairs
-        .checked_mul(2)
-        .expect("Fix: CRC32 pair-reduce output word count overflowed u32; shard the input.");
+    let output_words = match output_pairs.checked_mul(2) {
+        Some(words) => words,
+        None => u32::MAX,
+    };
     let body = vec![Node::Region {
         generator: Ident::from(CRC32_PAIR_REDUCE_OP_ID),
         source_region: None,

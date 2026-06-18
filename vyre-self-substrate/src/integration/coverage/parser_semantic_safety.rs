@@ -360,7 +360,7 @@ mod tests {
     #[test]
     fn parser_semantic_safety_accepts_committed_object_decode_sources() {
         let proof = validate_parser_semantic_source_safety(
-            include_str!("../../../../vyre-frontend-c/src/api/object_decode/tests.rs"),
+            include_str!("../../../../vyre-frontend-c/src/api/object_decode/tests/mod.rs"),
             include_str!("../../../../vyre-frontend-c/src/api/object_decode/semantic_graph.rs"),
         )
         .expect("Fix: committed parser/semantic source safety evidence should pass");

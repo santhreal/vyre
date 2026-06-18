@@ -3,6 +3,19 @@
 //! WGPU buffer writes must be 4-byte aligned for the tail write paths used by
 //! vyre. Centralizing the prefix/tail split keeps hot upload paths consistent
 //! and prevents each caller from allocating or zero-filling differently.
+//!
+//! # Upload strategy
+//!
+//! `write_padded_and_zero_fill` is used for IN-PLACE updates of pre-existing
+//! GPU buffers (e.g. persistent pipeline outputs). The primary NEW-buffer
+//! upload path (`GpuBufferHandle::upload`) uses `write_padded_into_mapped`
+//! instead: the caller creates the destination buffer directly with
+//! `mapped_at_creation: true` (no extra `MAP_WRITE`/`COPY_SRC` usage and no
+//! separate staging buffer — `mapped_at_creation` is legal for any usage),
+//! obtains the mapped range, calls this function to fill it, then `unmap`s.
+//! That is a single host memcpy into HOST_VISIBLE / BAR memory, bypassing
+//! wgpu's internal per-write `StagingBelt` allocation entirely and writing at
+//! DRAM / PCIe-BAR speed instead of the ~90 MB/s staged path.
 
 use crate::numeric::usize_to_u64;
 use vyre_driver::BackendError;
@@ -68,5 +81,41 @@ fn write_zero_fill(
         );
         offset += chunk;
     }
+    Ok(())
+}
+
+/// Write `bytes` into a pre-mapped GPU buffer range and zero-fill the tail.
+///
+/// `mapped` must be the full allocation slice obtained from
+/// `buffer.slice(..).get_mapped_range_mut()` on a buffer created with
+/// `mapped_at_creation: true` (any usage flags — initial mapping does not
+/// require `MAP_WRITE`). Its length must be `>= bytes.len()` and must equal
+/// the allocation size passed to `create_buffer`.
+///
+/// This is the fast path for new-buffer uploads: the caller writes directly
+/// into BAR / HOST_VISIBLE memory without wgpu allocating a separate staging
+/// buffer, avoiding the per-upload `VkAllocateMemory` + `VkMapMemory` round-
+/// trip that causes ~90 MB/s throughput on large one-shot catalog uploads.
+///
+/// # Errors
+///
+/// Returns a backend error when `mapped.len() < bytes.len()`.
+pub(crate) fn write_padded_into_mapped(
+    mapped: &mut [u8],
+    bytes: &[u8],
+) -> Result<(), BackendError> {
+    if mapped.len() < bytes.len() {
+        return Err(BackendError::new(format!(
+            "write_padded_into_mapped: mapped slice is {} bytes but data is {} bytes. Fix: allocate the upload buffer with at least the padded data length.",
+            mapped.len(),
+            bytes.len(),
+        )));
+    }
+    mapped[..bytes.len()].copy_from_slice(bytes);
+    // Zero-fill the alignment tail so the GPU sees deterministic padding.
+    // The mapped range is already zeroed by the driver for MAP_WRITE buffers
+    // created with mapped_at_creation:true on most Vulkan implementations,
+    // but we zero it explicitly for correctness on all platforms.
+    mapped[bytes.len()..].fill(0);
     Ok(())
 }

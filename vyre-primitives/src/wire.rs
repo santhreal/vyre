@@ -680,6 +680,31 @@ where
     out
 }
 
+/// Read one little-endian `f32` word at `word_index` from a byte stream.
+///
+/// This is the canonical scalar companion to [`decode_f32_le_bytes_all`]
+/// for call sites that need one indexed word but still need the same checked
+/// bounds and actionable diagnostics as the bulk decoder.
+///
+/// # Errors
+/// Returns an error when `word_index * 4` overflows host indexing or when the
+/// requested word is not fully present in `bytes`.
+pub fn read_f32_le_word(bytes: &[u8], word_index: usize, label: &str) -> Result<f32, String> {
+    let start = word_index.checked_mul(core::mem::size_of::<f32>()).ok_or_else(|| {
+        format!("{label}: f32 word index {word_index} overflows host byte indexing. Fix: shard the decode.")
+    })?;
+    let end = start.checked_add(core::mem::size_of::<f32>()).ok_or_else(|| {
+        format!("{label}: f32 word index {word_index} overflows host byte indexing. Fix: shard the decode.")
+    })?;
+    let chunk = bytes.get(start..end).ok_or_else(|| {
+        format!(
+            "{label}: f32 word {word_index} requires bytes {start}..{end}, but stream has {} bytes. Fix: backend output is truncated.",
+            bytes.len()
+        )
+    })?;
+    Ok(f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
+}
+
 /// Read one little-endian `u32` word at `word_index` from a byte stream.
 ///
 /// This is the canonical scalar companion to [`decode_u32_le_bytes_all`]

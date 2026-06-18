@@ -1,0 +1,33 @@
+# Helper-intake records for VX-698.
+# New helpers require searched names, operation phrase, reused primitive or shared-crate movement, and rationale.
+
+schema = "vyre.dedup.helper_intake_record.v1"
+owner = "organization_dedup"
+evidence_tokens = ["MLIR_PASS"]
+
+required_fields = [
+  "searched_names",
+  "operation_phrase",
+  "reused_primitive",
+  "moved_shared_crate",
+  "new_helper_rationale",
+  "approval_record",
+]
+
+[[record]]
+id = "scan-construct-intent-reuse"
+searched_names = ["construct_intent", "scan_construct"]
+operation_phrase = "map scan constructs to lower intent"
+reused_primitive = "vyre_lower::construct_intent_for_op"
+moved_shared_crate = "none"
+new_helper_rationale = "none"
+approval_record = "reuse-existing-primitive"
+
+[[record]]
+id = "source-witness-shared-schema"
+searched_names = ["source_span", "witness_chain", "diagnostic_span"]
+operation_phrase = "connect transformed diagnostics to original source spans"
+reused_primitive = "source-span-witness-schema"
+moved_shared_crate = "vyre-libs"
+new_helper_rationale = "schema-only-boundary-record"
+approval_record = "shared-contract"

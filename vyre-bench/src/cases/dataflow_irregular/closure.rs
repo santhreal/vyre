@@ -362,11 +362,13 @@ fn dispatch_resident_closure_sequence(
             1,
             1,
         ]),
+        workgroup_override: None,
     };
     let closure_step = ResidentDispatchStep {
         program: &prepared.program,
         resources: &closure_resources,
         grid_override: Some([prepared.stats.nodes.div_ceil(workgroup[0]).max(1), 1, 1]),
+        workgroup_override: None,
     };
     let read_ranges = [
         ResidentReadRange {

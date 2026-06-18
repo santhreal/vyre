@@ -30,11 +30,15 @@ pub fn baseline_pool() -> &'static rayon::ThreadPool {
                     }
                     thread.run()
                 })
-                .unwrap();
-                Ok(())
+                .map(|_| ())
             })
             .build()
-            .unwrap()
+            .unwrap_or_else(|_| {
+                rayon::ThreadPoolBuilder::new()
+                    .num_threads(1)
+                    .build()
+                    .unwrap_or_else(|_| std::process::abort())
+            })
     })
 }
 
@@ -77,8 +81,9 @@ pub fn elementwise_add_f32_bytes_into(a: &[u8], b: &[u8], out: &mut [u8]) {
                     offset += F32X8_BYTES;
                 }
                 while offset < dst.len() {
-                    let value = f32::from_le_bytes(a[offset..offset + 4].try_into().unwrap())
-                        + f32::from_le_bytes(b[offset..offset + 4].try_into().unwrap());
+                    let word_index = offset / 4;
+                    let value =
+                        read_f32_word_or_zero(a, word_index) + read_f32_word_or_zero(b, word_index);
                     dst[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
                     offset += 4;
                 }
@@ -90,15 +95,25 @@ pub fn elementwise_add_f32_bytes_into(a: &[u8], b: &[u8], out: &mut [u8]) {
 fn read_f32x8(bytes: &[u8]) -> f32x8 {
     debug_assert_eq!(bytes.len(), F32X8_BYTES);
     f32x8::new([
-        f32::from_le_bytes(bytes[0..4].try_into().unwrap()),
-        f32::from_le_bytes(bytes[4..8].try_into().unwrap()),
-        f32::from_le_bytes(bytes[8..12].try_into().unwrap()),
-        f32::from_le_bytes(bytes[12..16].try_into().unwrap()),
-        f32::from_le_bytes(bytes[16..20].try_into().unwrap()),
-        f32::from_le_bytes(bytes[20..24].try_into().unwrap()),
-        f32::from_le_bytes(bytes[24..28].try_into().unwrap()),
-        f32::from_le_bytes(bytes[28..32].try_into().unwrap()),
+        read_f32_word_or_zero(bytes, 0),
+        read_f32_word_or_zero(bytes, 1),
+        read_f32_word_or_zero(bytes, 2),
+        read_f32_word_or_zero(bytes, 3),
+        read_f32_word_or_zero(bytes, 4),
+        read_f32_word_or_zero(bytes, 5),
+        read_f32_word_or_zero(bytes, 6),
+        read_f32_word_or_zero(bytes, 7),
     ])
+}
+
+#[inline]
+fn read_u32_word_or_zero(bytes: &[u8], word_index: usize) -> u32 {
+    vyre_primitives::wire::read_u32_le_word(bytes, word_index, "cpu baseline input").unwrap_or(0)
+}
+
+#[inline]
+fn read_f32_word_or_zero(bytes: &[u8], word_index: usize) -> f32 {
+    f32::from_bits(read_u32_word_or_zero(bytes, word_index))
 }
 
 #[inline]
@@ -114,7 +129,7 @@ pub fn reduce_sum_u32_bytes(values: &[u8]) -> Vec<u8> {
     baseline_pool().install(|| {
         let sum = values
             .par_chunks_exact(4)
-            .map(|chunk| u32::from_le_bytes(chunk.try_into().unwrap()))
+            .map(|chunk| u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
             .reduce(|| 0, u32::wrapping_add);
         sum.to_le_bytes().to_vec()
     })
@@ -123,12 +138,10 @@ pub fn reduce_sum_u32_bytes(values: &[u8]) -> Vec<u8> {
 pub fn matmul_f32_bytes(a: &[u8], b: &[u8], m: usize, n: usize, k: usize) -> Vec<u8> {
     baseline_pool().install(|| {
         let lhs = faer::Mat::<f32>::from_fn(m, k, |row, col| {
-            let offset = (row * k + col) * 4;
-            f32::from_le_bytes(a[offset..offset + 4].try_into().unwrap())
+            read_f32_word_or_zero(a, row * k + col)
         });
         let rhs = faer::Mat::<f32>::from_fn(k, n, |row, col| {
-            let offset = (row * n + col) * 4;
-            f32::from_le_bytes(b[offset..offset + 4].try_into().unwrap())
+            read_f32_word_or_zero(b, row * n + col)
         });
         let mut dst = faer::Mat::<f32>::zeros(m, n);
         faer::linalg::matmul::matmul(
@@ -157,13 +170,12 @@ pub fn attention_proxy_f32_bytes(q: &[u8], k: &[u8], v: &[u8], seq: usize, dim: 
             .enumerate()
             .for_each(|(row, row_bytes)| {
                 for col in 0..dim {
-                    let q_idx = (row * dim + col) * 4;
-                    let q = f32::from_le_bytes(q[q_idx..q_idx + 4].try_into().unwrap());
+                    let q = read_f32_word_or_zero(q, row * dim + col);
                     let mut acc = 0.0f32;
                     for kk in 0..seq {
-                        let idx = (kk * dim + col) * 4;
-                        let k_val = f32::from_le_bytes(k[idx..idx + 4].try_into().unwrap());
-                        let v_val = f32::from_le_bytes(v[idx..idx + 4].try_into().unwrap());
+                        let word_index = kk * dim + col;
+                        let k_val = read_f32_word_or_zero(k, word_index);
+                        let v_val = read_f32_word_or_zero(v, word_index);
                         acc += q * k_val * v_val;
                     }
                     let out_idx = col * 4;
@@ -175,10 +187,11 @@ pub fn attention_proxy_f32_bytes(q: &[u8], k: &[u8], v: &[u8], seq: usize, dim: 
 }
 
 pub fn dfa_vyre_match_count_bytes(text: &[u8]) -> Vec<u8> {
-    let matches: u32 = memchr::memmem::find_iter(text, b"vyre")
-        .count()
-        .try_into()
-        .expect("Fix: DFA benchmark input length must fit in u32 matches");
+    let matches = memchr::memmem::find_iter(text, b"vyre").count();
+    let matches = match u32::try_from(matches) {
+        Ok(value) => value,
+        Err(_) => u32::MAX,
+    };
     matches.to_le_bytes().to_vec()
 }
 
@@ -214,7 +227,7 @@ pub fn histogram_u32_256_bytes(values: &[u8]) -> Vec<u8> {
             .map(|chunk_bytes| {
                 let mut local = Box::new([0u32; 256]);
                 for chunk in chunk_bytes.chunks_exact(4) {
-                    let value = u32::from_le_bytes(chunk.try_into().unwrap()) as usize;
+                    let value = u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]) as usize;
                     local[value & 255] = local[value & 255].wrapping_add(1);
                 }
                 local
@@ -244,11 +257,7 @@ pub fn gather_u32_bytes(values: &[u8], indices: &[u8]) -> Vec<u8> {
         out.par_chunks_exact_mut(4)
             .enumerate()
             .for_each(|(lane, dst)| {
-                let idx_offset = lane * 4;
-                let index =
-                    u32::from_le_bytes(indices[idx_offset..idx_offset + 4].try_into().unwrap())
-                        as usize
-                        % value_count;
+                let index = read_u32_word_or_zero(indices, lane) as usize % value_count;
                 let src = index * 4;
                 dst.copy_from_slice(&values[src..src + 4]);
             });
@@ -269,11 +278,9 @@ pub fn stencil3_u32_bytes(values: &[u8]) -> Vec<u8> {
                 let left = (index - 1) * 4;
                 let mid = index * 4;
                 let right = (index + 1) * 4;
-                let value = u32::from_le_bytes(values[left..left + 4].try_into().unwrap())
-                    .wrapping_add(u32::from_le_bytes(values[mid..mid + 4].try_into().unwrap()))
-                    .wrapping_add(u32::from_le_bytes(
-                        values[right..right + 4].try_into().unwrap(),
-                    ));
+                let value = read_u32_word_or_zero(values, left / 4)
+                    .wrapping_add(read_u32_word_or_zero(values, mid / 4))
+                    .wrapping_add(read_u32_word_or_zero(values, right / 4));
                 dst.copy_from_slice(&value.to_le_bytes());
             });
         out

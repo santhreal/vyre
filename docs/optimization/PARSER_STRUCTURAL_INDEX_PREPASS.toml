@@ -1,0 +1,54 @@
+# SIMD structural source indexing for VX-652.
+# The prepass is shared by parser, lexer, and batch scan planning.
+
+schema = "vyre.parser.structural_index.v1"
+owner = "parser_frontend"
+evidence_tokens = ["SIMDJSON_PARSE_MANY", "TREE_SITTER"]
+
+required_boundaries = [
+  "brace_open",
+  "brace_close",
+  "paren_open",
+  "paren_close",
+  "bracket_open",
+  "bracket_close",
+  "line_comment",
+  "block_comment",
+  "string_literal",
+  "raw_string_literal",
+]
+
+required_metrics = [
+  "source_digest",
+  "structural_index_digest",
+  "chunk_id",
+  "byte_start",
+  "byte_end",
+  "boundary_safety",
+  "parse_reuse_evidence",
+  "preparse_cost_ns",
+]
+
+[[chunk]]
+id = "rust-large-module-001"
+language = "rust"
+source_digest = "sha256:rust-large-module"
+structural_index_digest = "sha256:rust-structural-index"
+chunk_id = 0
+byte_start = 0
+byte_end = 65536
+boundary_safety = "ends-on-item-boundary"
+parse_reuse_evidence = "unchanged-brace-spans-reused"
+preparse_cost_ns = 91000
+
+[[chunk]]
+id = "c-header-batch-include-guard"
+language = "c"
+source_digest = "sha256:c-header-batch"
+structural_index_digest = "sha256:c-structural-index"
+chunk_id = 3
+byte_start = 196608
+byte_end = 262144
+boundary_safety = "ends-outside-comment-and-string"
+parse_reuse_evidence = "unchanged-conditional-regions-reused"
+preparse_cost_ns = 74000

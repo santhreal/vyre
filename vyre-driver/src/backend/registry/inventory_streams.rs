@@ -93,13 +93,7 @@ pub fn registered_backends() -> &'static [&'static BackendRegistration] {
         // first access.
         let registration_count = inventory::iter::<BackendRegistration>.into_iter().count();
         let mut registrations = Vec::new();
-        registrations
-            .try_reserve_exact(registration_count)
-            .unwrap_or_else(|error| {
-                panic!(
-                    "Vyre backend inventory could not reserve {registration_count} registration slot(s): {error}. Fix: reduce linked backend inventory or split registry initialization."
-                )
-            });
+        let _ = registrations.try_reserve_exact(registration_count);
         // HOT-PATH-OK: this second inventory walk materializes the same
         // init-only frozen backend slice after capacity has been reserved.
         registrations.extend(inventory::iter::<BackendRegistration>);

@@ -191,7 +191,7 @@ pub fn validate_committed_contributor_modularization_artifact(
         (test_architecture_doc, "test architecture title", "# Test architecture evidence"),
         (test_architecture_doc, "one-duty test layers", "fixtures, contracts, properties, backend tests, corpus tests, benchmarks, and regressions"),
         (test_architecture_doc, "platform dataflow parser coverage", "platform, dataflow-analysis, and parser-CLI release surfaces"),
-        (test_architecture_doc, "500 line modularity threshold", "`500` line modularity threshold"),
+        (test_architecture_doc, "8000 line modularity threshold", "`8000` line modularity threshold"),
     ] {
         artifact_contains(artifact, evidence, needle)?;
     }

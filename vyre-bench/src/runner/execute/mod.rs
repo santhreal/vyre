@@ -17,7 +17,9 @@ use crate::api::case::{BenchContext, BenchError, Correctness, PerformanceContrac
 use crate::api::suite::SuiteKind;
 use crate::probes::environment::{capture_environment, EnvironmentData};
 use crate::registry::BenchRegistry;
-use crate::report::json::{CaseReport, ReportBackendProfile, ReportSchema, ReportSummary};
+use crate::report::json::{
+    benchmark_held_out_corpus_id, CaseReport, ReportBackendProfile, ReportSchema, ReportSummary,
+};
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -407,14 +409,20 @@ fn case_failure(
     let requirements = case.requirements();
     eprintln!("Case {} failed: {}", meta.id.0, reason);
     let case_id = meta.id.0;
+    let workload_fingerprint = format!("bench-case:{case_id}");
+    let device_signature = backend_id
+        .as_ref()
+        .map(|backend| format!("unprobed-backend:{backend}"));
     CaseReport {
         id: case_id.clone(),
-        workload_fingerprint: format!("bench-case:{case_id}"),
+        workload_fingerprint: workload_fingerprint.clone(),
         name: meta.name,
         owner_crate: meta.owner_crate,
         workload_class: format!("{:?}", meta.workload),
         tags: meta.tags,
         backend_id,
+        device_signature,
+        held_out_corpus_id: Some(benchmark_held_out_corpus_id(&workload_fingerprint)),
         needs_gpu: requirements.needs_gpu,
         min_vram_bytes: requirements.min_vram_bytes,
         min_input_bytes: requirements.min_input_bytes,

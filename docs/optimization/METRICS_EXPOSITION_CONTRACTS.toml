@@ -1,0 +1,43 @@
+# Metrics exposition contracts for VX-729 through VX-732.
+# Bench, runtime, and driver metrics use one schema with units, labels, counter class, and privacy bounds.
+
+schema = "vyre.metrics.exposition_contract.v1"
+owner = "bench_harness"
+evidence_tokens = ["OPENTELEMETRY_SEMCONV", "OPENMETRICS_PROMETHEUS"]
+
+required_fields = [
+  "metric_name",
+  "metric_type",
+  "unit",
+  "labels",
+  "sample_value_contract",
+  "counter_schema",
+  "privacy_class",
+  "cardinality_limit",
+]
+
+metric_types = [
+  "counter",
+  "gauge",
+  "histogram",
+]
+
+[[metric]]
+metric_name = "vyre_scan_candidates_total"
+metric_type = "counter"
+unit = "1"
+labels = ["backend", "route", "rule_class"]
+sample_value_contract = "monotonic-nonnegative"
+counter_schema = "CROSS_BACKEND_COUNTER_SCHEMA.toml"
+privacy_class = "no-path-labels"
+cardinality_limit = 128
+
+[[metric]]
+metric_name = "vyre_dispatch_duration_seconds"
+metric_type = "histogram"
+unit = "s"
+labels = ["backend", "route"]
+sample_value_contract = "finite-nonnegative"
+counter_schema = "CROSS_BACKEND_COUNTER_SCHEMA.toml"
+privacy_class = "no-secret-labels"
+cardinality_limit = 64

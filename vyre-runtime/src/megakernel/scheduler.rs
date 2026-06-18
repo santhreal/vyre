@@ -101,12 +101,7 @@ pub fn priority_partition_active_lane_count(partition_slots: u32, worker_width: 
 #[must_use]
 pub fn priority_partition_probe_budget(partition_slots: u32, worker_width: u32) -> u32 {
     priority_partition_active_lane_count(partition_slots, worker_width)
-        .checked_mul(priority_partition_probe_count(partition_slots, worker_width))
-        .unwrap_or_else(|| {
-            panic!(
-                "megakernel priority partition probe budget overflowed u32. Fix: shard partition slots or reduce worker width."
-            )
-        })
+        .saturating_mul(priority_partition_probe_count(partition_slots, worker_width))
 }
 
 /// Policy helper: check if a tenant has exceeded its fairness quota.

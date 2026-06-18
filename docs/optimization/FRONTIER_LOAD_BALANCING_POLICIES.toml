@@ -1,0 +1,40 @@
+# Frontier load-balancing policies for VX-664.
+# Advance, filter, two-phase, and work-stealing routes share one policy planner.
+
+schema = "vyre.graph.frontier_policy.v1"
+owner = "graph_flow_compiler"
+evidence_tokens = ["GUNROCK", "CUGRAPH"]
+
+policies = [
+  "advance",
+  "filter",
+  "two_phase",
+  "work_stealing",
+]
+
+required_metrics = [
+  "frontier_size",
+  "degree_skew",
+  "imbalance_counter",
+  "selected_policy",
+  "route_reason",
+  "traversal_digest",
+]
+
+[[case]]
+id = "scale-free-high-skew"
+frontier_size = 4096
+degree_skew = "high"
+imbalance_counter = "warp_idle_ratio:0.62"
+selected_policy = "work_stealing"
+route_reason = "high-degree-skew"
+traversal_digest = "sha256:scale-free-traversal"
+
+[[case]]
+id = "uniform-mid-frontier"
+frontier_size = 8192
+degree_skew = "low"
+imbalance_counter = "warp_idle_ratio:0.08"
+selected_policy = "advance"
+route_reason = "uniform-degree-distribution"
+traversal_digest = "sha256:uniform-frontier-traversal"

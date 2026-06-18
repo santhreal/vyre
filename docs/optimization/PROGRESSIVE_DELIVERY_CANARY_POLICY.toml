@@ -1,0 +1,43 @@
+# Progressive delivery canary and blue-green policy for VX-1266, VX-1267, VX-1270, and VX-1278.
+# Argo Rollouts-style delivery owns traffic steps and analysis gates while SLO, alert, and release-health registries remain the metric authorities.
+
+schema = "vyre.release.progressive_delivery_canary_policy.v1"
+owner = "dogfood_ux"
+evidence_tokens = ["ARGO_ROLLOUTS_CANARY", "ARGO_ROLLOUTS_BLUEGREEN", "PROMETHEUS_ALERTING_RULES", "OPENSLO_SPEC"]
+
+required_fields = [
+  "delivery_id",
+  "strategy",
+  "traffic_policy",
+  "analysis_policy",
+  "promotion_policy",
+  "abort_policy",
+  "service_policy",
+  "scale_policy",
+  "owner_route",
+  "diagnostic",
+]
+
+[[delivery]]
+delivery_id = "canary-analysis-gated-release"
+strategy = "canary"
+traffic_policy = "setWeight-steps-pause-durations-and-trafficRouting-provider-recorded-before-production-promotion"
+analysis_policy = "background-analysis-uses-SLO-alert-and-release-health-metrics-unsuccessful-analysis-aborts-rollout"
+promotion_policy = "promotion-requires-analysis-success-stable-service-health-artifact-identity-and-no-active-release-blocker"
+abort_policy = "abort-on-analysis-failure-SLO-burn-progress-deadline-exceeded-security-blocker-or-private-boundary-leak"
+service_policy = "canaryService-and-stableService-identify-traffic-targets-with-no-secret-or-private-path-labels"
+scale_policy = "maxSurge-maxUnavailable-dynamic-canary-scale-and-resource-budget-links-recorded"
+owner_route = "ALERT_ROUTING_ESCALATION_POLICY.toml"
+diagnostic = "VYRE_CANARY_ANALYSIS_GATE_REQUIRED"
+
+[[delivery]]
+delivery_id = "bluegreen-preview-gated-release"
+strategy = "blueGreen"
+traffic_policy = "activeService-remains-stable-while-previewService-targets-new-replica-set-before-promotion"
+analysis_policy = "prePromotionAnalysis-and-postPromotionAnalysis-use-redacted-public-metrics-and-release-health-feedback"
+promotion_policy = "manual-or-automated-promotion-allowed-only-after-preview-readiness-pre-promotion-analysis-and-owner-route-clear"
+abort_policy = "abort-before-activeService-switch-on-preview-failure-analysis-failure-or-artifact-identity-mismatch"
+service_policy = "activeService-previewService-and-previewReplicaCount-contract-recorded-for-operator-status"
+scale_policy = "scaleDownDelaySeconds-and-stable-replica-retention-recorded-before-old-replica-set-scale-down"
+owner_route = "MAINTAINER_OWNERSHIP_ESCALATION_MAP.toml"
+diagnostic = "VYRE_BLUEGREEN_PROMOTION_GATE_REQUIRED"

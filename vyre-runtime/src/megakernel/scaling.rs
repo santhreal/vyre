@@ -14,8 +14,10 @@ pub use super::planner::{
     worker_workgroup_size, FusionSelectionScratch, MegakernelGridLimits, MegakernelGridPlan,
     MegakernelGridRequest, MegakernelLaunchGeometry, MegakernelSizingPolicy,
 };
+#[cfg(any(test, feature = "legacy-infallible"))]
+pub use super::policy::{diffuse_priority_across_siblings, diffuse_priority_across_siblings_into};
 pub use super::policy::{
-    diffuse_priority_across_siblings, diffuse_priority_across_siblings_into,
+    try_diffuse_priority_across_siblings, try_diffuse_priority_across_siblings_into,
     MegakernelExecutionMode, MegakernelLaunchPolicy, MegakernelLaunchRecommendation,
     MegakernelLaunchRequest, MegakernelQueuePressure, PriorityRequeueAccounting,
 };

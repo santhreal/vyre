@@ -1,0 +1,43 @@
+# Node-API and WebAssembly binding policy for VX-1205, VX-1206, VX-1212, VX-1213, VX-1214, VX-1218, and VX-1219.
+# Node-API addons, npm package manifests, Wasm modules, component-model interfaces, host capabilities, and package boundaries share one JS/Wasm seam.
+
+schema = "vyre.release.node_wasm_binding_policy.v1"
+owner = "dogfood_ux"
+evidence_tokens = ["NODE_API_ABI", "NAPI_RS", "NPM_PACKAGE_JSON", "WEBASSEMBLY_CORE_SPEC", "WEBASSEMBLY_COMPONENT_MODEL"]
+
+required_fields = [
+  "binding_id",
+  "runtime_surface",
+  "abi_or_component_policy",
+  "package_manifest_policy",
+  "artifact_policy",
+  "host_capability_policy",
+  "api_mapping_policy",
+  "verification_policy",
+  "private_boundary_policy",
+  "diagnostic",
+]
+
+[[binding]]
+binding_id = "vyre-node-api-addon"
+runtime_surface = "node-js-native-addon"
+abi_or_component_policy = "Node-API-version-pinned-and-stable-ABI-boundary-wraps-public-safe-Vyre-API"
+package_manifest_policy = "package-json-name-version-files-bin-exports-and-engines-match-public-release"
+artifact_policy = "native-addon-artifacts-record-platform-arch-Node-API-version-digest-and-SBOM"
+host_capability_policy = "addon-does-not-access-network-filesystem-or-GPU-without-public-config-and-diagnostics"
+api_mapping_policy = "JavaScript-functions-map-to-public-Rust-API-snapshots-and-structured-errors"
+verification_policy = "native-addon-digest-signature-and-provenance-recorded-in-release-artifact-integrity-index"
+private_boundary_policy = "npm-package-files-postinstall-scripts-and-examples-exclude-private-Santh-and-secrets"
+diagnostic = "VYRE_NODE_API_BINDING_POLICY_REQUIRED"
+
+[[binding]]
+binding_id = "vyre-wasm-component"
+runtime_surface = "webassembly-component-or-core-module"
+abi_or_component_policy = "component-model-world-declares-imports-exports-memory-layout-and-host-call-boundaries"
+package_manifest_policy = "wasm-package-metadata-links-public-source-version-license-and-interface-version"
+artifact_policy = "wasm-binary-or-component-digest-size-interface-and-producer-metadata-recorded"
+host_capability_policy = "component-imports-deny-ambient-filesystem-network-clock-and-randomness-unless-declared"
+api_mapping_policy = "component-interface-maps-to-public-Rust-API-snapshot-and-error-contract"
+verification_policy = "wasm-artifact-digest-signature-provenance-and-SBOM-recorded-in-release-artifact-integrity-index"
+private_boundary_policy = "debug-names-producers-custom-sections-and-examples-exclude-private-Santh"
+diagnostic = "VYRE_WASM_COMPONENT_BINDING_POLICY_REQUIRED"

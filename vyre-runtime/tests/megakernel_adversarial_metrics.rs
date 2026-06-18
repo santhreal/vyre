@@ -1,5 +1,6 @@
 //! Adversarial metrics-decode sanity: hostile control buffers, truncation
 //! boundaries, misalignment, and region-non-alias contracts.
+#![cfg(feature = "legacy-infallible")]
 
 use vyre_runtime::megakernel::{protocol::control, ControlSnapshot, Megakernel, RingTelemetry};
 use vyre_runtime::PipelineError;

@@ -36,7 +36,8 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 pub const OP_ID: &str = "vyre-primitives::graph::dominator_tree";
 const INIT_PHASE_OP_ID: &str = "vyre-primitives::graph::dominator_tree::init_state";
 const DEPTH_PHASE_OP_ID: &str = "vyre-primitives::graph::dominator_tree::recompute_depth";
-const INTERSECT_PHASE_OP_ID: &str = "vyre-primitives::graph::dominator_tree::intersect_predecessors";
+const INTERSECT_PHASE_OP_ID: &str =
+    "vyre-primitives::graph::dominator_tree::intersect_predecessors";
 
 /// Sentinel stored in `idom_out` for unreachable nodes.
 pub const IDOM_NONE: u32 = u32::MAX;
@@ -228,10 +229,7 @@ pub fn try_dominator_tree_program(
                             Expr::var("p_start"),
                             Expr::var("p_end"),
                             vec![
-                                Node::let_bind(
-                                    "p",
-                                    Expr::load("pred_targets", Expr::var("p_idx")),
-                                ),
+                                Node::let_bind("p", Expr::load("pred_targets", Expr::var("p_idx"))),
                                 // if idom[p] != NONE
                                 Node::if_then(
                                     Expr::ne(
@@ -312,10 +310,7 @@ pub fn try_dominator_tree_program(
 
     let outer_loop = Node::loop_for("step", Expr::u32(0), Expr::u32(node_count), body);
 
-    let region_body = vec![Node::if_then(
-        lane0,
-        vec![init_state, outer_loop],
-    )];
+    let region_body = vec![Node::if_then(lane0, vec![init_state, outer_loop])];
 
     Ok(Program::wrapped(
         vec![

@@ -1,0 +1,64 @@
+[artifact]
+id = "INCREMENTAL_RESCAN_INVALIDATION_EVIDENCE"
+title = "Incremental rescan invalidation evidence policy"
+tranche = "VX-1541..VX-1560"
+owner = "runtime_io"
+status = "planned_contract"
+research_sources = [
+  "LINUX_INOTIFY",
+  "LINUX_FANOTIFY",
+  "SQLITE_WAL",
+  "BLAKE3_SPEC",
+]
+
+[scope]
+owns = [
+  "incremental-vs-full rescan decision evidence",
+  "watch overflow and repair outcome records",
+  "cache-hit truth metrics for corpus identity reuse",
+  "false-reuse prevention gates",
+  "operator-visible incremental disable reasons",
+]
+does_not_own = [
+  "profiling capture format, owned by BENCHMARK_PROFILING_CAPTURE_POLICY",
+  "statistical pass/fail math, owned by STATISTICAL_PERFORMANCE_GATES",
+  "output row provenance, owned by OUTPUT_SLAB_SCHEMA_PROVENANCE",
+  "dogfood issue lifecycle, owned by DOGFOOD_FINDING_LOOP",
+]
+
+[decision_records]
+required_per_root = [
+  "root_id",
+  "watch_backend",
+  "journal_epoch",
+  "last_checkpoint_sequence",
+  "events_replayed",
+  "overflow_events",
+  "repair_enumerations",
+  "incremental_candidates",
+  "full_rescan_candidates",
+  "cache_hits",
+  "cache_rejections",
+  "bytes_avoided",
+  "bytes_rescanned",
+]
+required_per_candidate = [
+  "candidate_identity",
+  "event_kind",
+  "metadata_snapshot_digest",
+  "content_digest_state",
+  "reuse_decision",
+  "rejection_reason",
+  "output_provenance_action",
+]
+
+[truth_gates]
+positive = "unchanged content with stable rule/config digest reuses prior scan output and records bytes avoided"
+negative = "changed content, changed rule digest, changed output schema, or watch overflow rejects reuse"
+adversarial = "rename storms, hard-link aliases, delete-create inode reuse, queue overflow, and metadata timestamp skew force conservative invalidation"
+cross_file = "imports, includes, archives, and multi-file rule context propagate invalidation through dependency edges owned by scanner-specific dependency contracts"
+
+[metrics]
+performance = ["events_per_second", "journal_replay_ns", "identity_lookup_ns", "bytes_avoided", "rescan_ratio"]
+correctness = ["false_reuse_count", "overflow_repairs", "stale_output_suppression_count", "dependency_invalidations"]
+operator = ["incremental_disabled_reason", "repair_action", "cache_rejection_top_reason", "watch_capacity_class"]

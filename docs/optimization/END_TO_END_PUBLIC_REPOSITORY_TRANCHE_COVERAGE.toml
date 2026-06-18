@@ -1,0 +1,29 @@
+# End-to-end public repository tranche coverage for VX-1081 through VX-1100.
+# Public repository identity, rulesets, disclosure, release notes, repository health, repo-boundary checks, and proof gate share one coverage row.
+
+schema = "vyre.release.end_to_end_public_repository_tranche_coverage.v1"
+owner = "coordination"
+evidence_tokens = ["GITHUB_REPOSITORY_RULESETS", "GITHUB_SECURITY_POLICY", "GITHUB_REPOSITORY_SECURITY_ADVISORIES", "GITHUB_RELEASES", "GITHUB_REPOSITORY_TOPICS", "KEEP_A_CHANGELOG"]
+
+required_fields = [
+  "vx_id_range",
+  "public_repository_identity_governance",
+  "repository_ruleset_release_protection",
+  "repository_security_disclosure_policy",
+  "release_notes_changelog_governance",
+  "public_repository_health_governance",
+  "repo_boundary_publication_checks",
+  "dedup_seam",
+  "proof_gate",
+]
+
+[[coverage]]
+vx_id_range = "VX-1081..VX-1100"
+public_repository_identity_governance = "PUBLIC_REPOSITORY_IDENTITY_GOVERNANCE.toml"
+repository_ruleset_release_protection = "REPOSITORY_RULESET_RELEASE_PROTECTION.toml"
+repository_security_disclosure_policy = "REPOSITORY_SECURITY_DISCLOSURE_POLICY.toml"
+release_notes_changelog_governance = "RELEASE_NOTES_CHANGELOG_GOVERNANCE.toml"
+public_repository_health_governance = "PUBLIC_REPOSITORY_HEALTH_GOVERNANCE.toml"
+repo_boundary_publication_checks = "REPO_BOUNDARY_PUBLICATION_CHECKS.toml"
+dedup_seam = "one-public-repository-identity-one-ruleset-release-protection-one-security-disclosure-policy-one-release-notes-policy-one-repository-health-map"
+proof_gate = "public_repository_governance.rs"

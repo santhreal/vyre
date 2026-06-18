@@ -295,13 +295,8 @@ pub(super) fn resident_dep_change_ns(metadata: &fs::Metadata) -> i128 {
     use std::os::unix::fs::MetadataExt as _;
 
     i128::from(metadata.ctime())
-        .checked_mul(1_000_000_000)
-        .and_then(|seconds| seconds.checked_add(i128::from(metadata.ctime_nsec())))
-        .unwrap_or_else(|| {
-            panic!(
-                "vyre-frontend-c include dependency ctime overflows i128 nanoseconds. Fix: disable resident-prep caching for this filesystem metadata source."
-            )
-        })
+        .saturating_mul(1_000_000_000)
+        .saturating_add(i128::from(metadata.ctime_nsec()))
 }
 
 #[cfg(not(unix))]
@@ -375,11 +370,7 @@ pub(super) fn remove_stale_resident_prep_cache_entry(
     key: &ResidentPrepKey,
 ) {
     if let Some(entry) = cache.entries.remove(key) {
-        cache.bytes = cache.bytes.checked_sub(entry.entry.source.len()).unwrap_or_else(|| {
-            panic!(
-                "vyre-frontend-c resident preprocessor cache byte accounting underflowed during stale removal. Fix: repair cache accounting before relying on memory limits."
-            )
-        });
+        cache.bytes = cache.bytes.saturating_sub(entry.entry.source.len());
         cache.stats.stale_removals = cache.stats.stale_removals.saturating_add(1);
     }
 }
@@ -397,11 +388,7 @@ pub(super) fn insert_resident_prep_cache_with_limits(
         return;
     }
     if let Some(old_entry) = cache.entries.remove(&key) {
-        cache.bytes = cache.bytes.checked_sub(old_entry.entry.source.len()).unwrap_or_else(|| {
-            panic!(
-                "vyre-frontend-c resident preprocessor cache byte accounting underflowed during replacement. Fix: repair cache accounting before relying on memory limits."
-            )
-        });
+        cache.bytes = cache.bytes.saturating_sub(old_entry.entry.source.len());
     }
     while cache.len() >= max_entries
         || cache.bytes.checked_add(entry_bytes).unwrap_or(usize::MAX) > max_bytes
@@ -415,11 +402,7 @@ pub(super) fn insert_resident_prep_cache_with_limits(
             break;
         };
         if let Some(evicted) = cache.entries.remove(&evict_key) {
-            cache.bytes = cache.bytes.checked_sub(evicted.entry.source.len()).unwrap_or_else(|| {
-                panic!(
-                    "vyre-frontend-c resident preprocessor cache byte accounting underflowed during eviction. Fix: repair cache accounting before relying on memory limits."
-                )
-            });
+            cache.bytes = cache.bytes.saturating_sub(evicted.entry.source.len());
             cache.stats.evictions = cache.stats.evictions.saturating_add(1);
         }
     }
@@ -427,11 +410,7 @@ pub(super) fn insert_resident_prep_cache_with_limits(
         return;
     }
     let last_access = cache.next_epoch();
-    cache.bytes = cache.bytes.checked_add(entry_bytes).unwrap_or_else(|| {
-        panic!(
-            "vyre-frontend-c resident preprocessor cache byte accounting overflowed during insert. Fix: reduce cache size or shard resident preprocessor outputs."
-        )
-    });
+    cache.bytes = cache.bytes.saturating_add(entry_bytes);
     cache
         .entries
         .insert(key, ResidentPrepCacheEntry { entry, last_access });

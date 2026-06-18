@@ -307,7 +307,7 @@ pub mod prelude {
         pack_f32_slice_into_uninit, pack_i32_slice, pack_i32_slice_into, pack_u16_slice,
         pack_u16_slice_into, pack_u32_slice, pack_u32_slice_into, pack_u32_slice_into_uninit,
         pack_u32_slice_min_words_into, pack_u64_slice, pack_u64_slice_into, unpack_f32_slice,
-        unpack_f32_slice_into, unpack_u32_slice_into,
+        unpack_f32_slice_into, unpack_u32_slice_into, read_f32_le_word, read_u32_le_word,
     };
 }
 

@@ -17,6 +17,12 @@ mod runtime;
 
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 pub use runtime::MetalBackend;
+#[cfg(any(target_os = "macos", target_os = "ios"))]
+pub use runtime::{
+    metal_resident_scan_resource_table, MetalResidentScanResourceEntry,
+    MetalResidentScanResourceError, MetalResidentScanResourceLifetime,
+    MetalResidentScanResourceTableEvidence, METAL_RESIDENT_SCAN_RESOURCE_TABLE_SCHEMA_VERSION,
+};
 
 /// Acquire the native Metal backend.
 ///
@@ -91,7 +97,9 @@ mod tests {
     fn non_apple_build_does_not_register_fake_backend() {
         let registered = vyre_driver::backend::registered_backends();
         assert!(
-            registered.iter().all(|backend| backend.id != METAL_BACKEND_ID),
+            registered
+                .iter()
+                .all(|backend| backend.id != METAL_BACKEND_ID),
             "non-Apple builds must not submit a fake `metal` backend registration"
         );
     }
@@ -203,6 +211,22 @@ mod tests {
                     .count()
                     >= 2,
             "Fix: compiled Metal dispatch paths must account allocation, host-copy, and readback counters into the same backend metric snapshot as direct dispatch."
+        );
+    }
+
+    #[test]
+    fn resident_scan_resource_table_has_argument_buffer_lifetime_contract() {
+        let source = include_str!("runtime.rs");
+        assert!(
+            source.contains("pub struct MetalResidentScanResourceEntry")
+                && source.contains("pub enum MetalResidentScanResourceLifetime")
+                && source.contains("pub fn metal_resident_scan_resource_table(")
+                && source.contains("argument_buffer_entry")
+                && source.contains("shared_scan_metadata_digest")
+                && source.contains("metal_resource_metadata_digest")
+                && source.contains("DuplicateArgumentBufferEntry")
+                && source.contains("LifetimeMismatch"),
+            "Fix: Metal resident scan tables must expose argument-buffer entry, metadata parity, and lifetime validation before resident scan dispatch."
         );
     }
 
@@ -344,11 +368,7 @@ mod tests {
                     .with_output_byte_range(1..2),
             ],
             [1, 1, 1],
-            vec![Node::store(
-                "word",
-                Expr::u32(0),
-                Expr::u32(0x1122_3344),
-            )],
+            vec![Node::store("word", Expr::u32(0), Expr::u32(0x1122_3344))],
         );
 
         let backend = acquire().expect(
@@ -356,7 +376,9 @@ mod tests {
         );
         let outputs = backend
             .dispatch(&program, &[], &DispatchConfig::default())
-            .expect("Fix: native Metal must honor shared empty and unaligned output layout planning.");
+            .expect(
+                "Fix: native Metal must honor shared empty and unaligned output layout planning.",
+            );
         assert_eq!(
             outputs,
             vec![Vec::new(), vec![0x33]],
@@ -596,9 +618,9 @@ mod tests {
             .upload_resident(&first, &[1, 2, 3, 4])
             .expect("Fix: native Metal full resident upload must accept bounded payloads.");
         assert_eq!(
-            backend
-                .download_resident(&first)
-                .expect("Fix: native Metal resident download must return logical allocation bytes."),
+            backend.download_resident(&first).expect(
+                "Fix: native Metal resident download must return logical allocation bytes."
+            ),
             vec![1, 2, 3, 4, 0, 0, 0, 0],
             "Fix: full resident upload must zero-pad unwritten allocation bytes."
         );
@@ -615,7 +637,9 @@ mod tests {
 
         backend
             .upload_resident_many(&[(&first, &[9, 8, 7, 6, 5, 4, 3, 2]), (&second, &[1, 2])])
-            .expect("Fix: native Metal resident batch upload must validate and stage every handle.");
+            .expect(
+                "Fix: native Metal resident batch upload must validate and stage every handle.",
+            );
         backend
             .upload_resident_at_many(&[(&first, 0, &[10, 11, 12, 13]), (&second, 2, &[3, 4])])
             .expect("Fix: native Metal resident ranged batch upload must validate and stage every range.");
@@ -626,7 +650,9 @@ mod tests {
                 &[(&first, 0, 4), (&second, 0, 4)],
                 &mut [&mut first_range, &mut second_range],
             )
-            .expect("Fix: native Metal resident batch ranged download must fill caller-owned buffers.");
+            .expect(
+                "Fix: native Metal resident batch ranged download must fill caller-owned buffers.",
+            );
         assert_eq!(first_range, vec![10, 11, 12, 13]);
         assert_eq!(second_range, vec![1, 2, 3, 4]);
 
@@ -651,13 +677,15 @@ mod tests {
         let backend = acquire().expect(
             "Fix: Apple Metal builds must acquire the system default MTLDevice before resident transfer negative tests.",
         );
-        let resource = backend
-            .allocate_resident(4)
-            .expect("Fix: native Metal must allocate resident buffers before negative range checks.");
+        let resource = backend.allocate_resident(4).expect(
+            "Fix: native Metal must allocate resident buffers before negative range checks.",
+        );
 
         let oversized_upload = backend
             .upload_resident(&resource, &[1, 2, 3, 4, 5])
-            .expect_err("Fix: native Metal must reject full resident uploads larger than the allocation.");
+            .expect_err(
+                "Fix: native Metal must reject full resident uploads larger than the allocation.",
+            );
         assert!(
             oversized_upload
                 .to_string()
@@ -667,7 +695,9 @@ mod tests {
 
         let ranged_upload = backend
             .upload_resident_at(&resource, 3, &[9, 9])
-            .expect_err("Fix: native Metal must reject ranged resident uploads that cross allocation end.");
+            .expect_err(
+                "Fix: native Metal must reject ranged resident uploads that cross allocation end.",
+            );
         assert!(
             ranged_upload
                 .to_string()
@@ -675,9 +705,9 @@ mod tests {
             "Fix: out-of-bounds resident ranged upload must name the invalid range and allocation: {ranged_upload}"
         );
 
-        let ranged_download = backend
-            .download_resident_range(&resource, 2, 3)
-            .expect_err("Fix: native Metal must reject ranged resident downloads that cross allocation end.");
+        let ranged_download = backend.download_resident_range(&resource, 2, 3).expect_err(
+            "Fix: native Metal must reject ranged resident downloads that cross allocation end.",
+        );
         assert!(
             ranged_download
                 .to_string()
@@ -820,7 +850,9 @@ mod tests {
                 &[input.clone(), output.clone()],
                 &DispatchConfig::default(),
             )
-            .expect("Fix: native Metal resident dispatch must bind resources in Program binding order.");
+            .expect(
+                "Fix: native Metal resident dispatch must bind resources in Program binding order.",
+            );
         assert_eq!(timed.outputs, vec![42u32.to_le_bytes().to_vec()]);
         assert!(
             timed.enqueue_ns.is_some() && timed.wait_ns.is_some() && timed.wall_ns > 0,
@@ -866,16 +898,24 @@ mod tests {
         let backend = acquire().expect(
             "Fix: Apple Metal builds must acquire the system default MTLDevice before resident dispatch negative tests.",
         );
-        let input = backend
-            .allocate_resident(4)
-            .expect("Fix: native Metal must allocate resident input before negative dispatch checks.");
+        let input = backend.allocate_resident(4).expect(
+            "Fix: native Metal must allocate resident input before negative dispatch checks.",
+        );
         backend
             .upload_resident(&input, &10u32.to_le_bytes())
-            .expect("Fix: native Metal must upload resident input before negative dispatch checks.");
+            .expect(
+                "Fix: native Metal must upload resident input before negative dispatch checks.",
+            );
 
         let wrong_count = backend
-            .dispatch_resident_timed(&program, std::slice::from_ref(&input), &DispatchConfig::default())
-            .expect_err("Fix: native Metal resident dispatch must reject missing output resources.");
+            .dispatch_resident_timed(
+                &program,
+                std::slice::from_ref(&input),
+                &DispatchConfig::default(),
+            )
+            .expect_err(
+                "Fix: native Metal resident dispatch must reject missing output resources.",
+            );
         assert!(
             wrong_count
                 .to_string()
@@ -883,9 +923,9 @@ mod tests {
             "Fix: resident dispatch wrong-count error must name expected and received resource counts: {wrong_count}"
         );
 
-        let stale_output = backend
-            .allocate_resident(4)
-            .expect("Fix: native Metal must allocate a resident output before stale-handle checks.");
+        let stale_output = backend.allocate_resident(4).expect(
+            "Fix: native Metal must allocate a resident output before stale-handle checks.",
+        );
         backend
             .free_resident(stale_output.clone())
             .expect("Fix: native Metal must free resident output before stale-handle checks.");
@@ -904,7 +944,9 @@ mod tests {
         let undersized_resources = [input.clone(), undersized_output.clone()];
         let undersized_error = backend
             .dispatch_resident_timed(&program, &undersized_resources, &DispatchConfig::default())
-            .expect_err("Fix: native Metal resident dispatch must reject undersized output handles.");
+            .expect_err(
+                "Fix: native Metal resident dispatch must reject undersized output handles.",
+            );
         assert!(
             undersized_error
                 .to_string()
@@ -944,8 +986,7 @@ mod tests {
         );
         let add_program = Program::wrapped(
             vec![
-                BufferDecl::storage("mid", 0, BufferAccess::ReadOnly, DataType::U32)
-                    .with_count(1),
+                BufferDecl::storage("mid", 0, BufferAccess::ReadOnly, DataType::U32).with_count(1),
                 BufferDecl::storage("out", 1, BufferAccess::WriteOnly, DataType::U32)
                     .with_count(1)
                     .with_output_byte_range(0..4),
@@ -1200,9 +1241,9 @@ mod tests {
         let after_policy = backend
             .pipeline_cache_snapshot()
             .expect("Fix: native Metal must expose cache counters after policy-change compile.");
-        let policy_hit_output = backend
-            .dispatch(&program, &[], &workgroup_policy)
-            .expect("Fix: repeated Metal workgroup-policy dispatch must hit the policy cache entry.");
+        let policy_hit_output = backend.dispatch(&program, &[], &workgroup_policy).expect(
+            "Fix: repeated Metal workgroup-policy dispatch must hit the policy cache entry.",
+        );
         let after_policy_hit = backend
             .pipeline_cache_snapshot()
             .expect("Fix: native Metal must expose cache counters after policy hit.");
@@ -1256,16 +1297,18 @@ mod tests {
         let backend = acquire().expect(
             "Fix: Apple Metal builds must acquire the system default MTLDevice before backend metric testing.",
         );
-        let resident = backend
-            .allocate_resident(16)
-            .expect("Fix: native Metal must allocate a resident buffer before metric snapshot testing.");
+        let resident = backend.allocate_resident(16).expect(
+            "Fix: native Metal must allocate a resident buffer before metric snapshot testing.",
+        );
         backend
             .upload_resident(&resident, &11u32.to_le_bytes())
             .expect("Fix: native Metal must upload resident bytes before metric snapshot testing.");
         let mut resident_readback = Vec::new();
         backend
             .download_resident_range_into(&resident, 0, 4, &mut resident_readback)
-            .expect("Fix: native Metal must download resident bytes before metric snapshot testing.");
+            .expect(
+                "Fix: native Metal must download resident bytes before metric snapshot testing.",
+            );
         assert_eq!(resident_readback, 11u32.to_le_bytes().to_vec());
         backend
             .dispatch(&program, &[], &DispatchConfig::default())
@@ -1289,7 +1332,9 @@ mod tests {
         );
         backend
             .dispatch(&changed_program, &[], &DispatchConfig::default())
-            .expect("Fix: Metal metric-snapshot program probe must compile a distinct Program key.");
+            .expect(
+                "Fix: Metal metric-snapshot program probe must compile a distinct Program key.",
+            );
 
         let metrics = backend
             .backend_metric_snapshot()
@@ -1561,9 +1606,9 @@ mod tests {
         backend
             .shutdown()
             .expect("Fix: native Metal shutdown must clear backend-owned resources.");
-        let error = backend
-            .download_resident(&resource)
-            .expect_err("Fix: resident handles must be invalid after Metal shutdown clears resources.");
+        let error = backend.download_resident(&resource).expect_err(
+            "Fix: resident handles must be invalid after Metal shutdown clears resources.",
+        );
         assert!(
             error.to_string().contains("stale resident handle"),
             "Fix: post-shutdown resident use must fail closed as a stale handle: {error}"
@@ -1752,16 +1797,18 @@ mod tests {
         backend
             .upload_resident(&input, &33u32.to_le_bytes())
             .expect("Fix: native Metal must upload compiled-pipeline resident input bytes.");
-        let before_compile = backend
-            .pipeline_cache_snapshot()
-            .expect("Fix: native Metal must expose cache counters before compiled resident testing.");
+        let before_compile = backend.pipeline_cache_snapshot().expect(
+            "Fix: native Metal must expose cache counters before compiled resident testing.",
+        );
         let pipeline = backend
             .compile_native(&program, &config)
             .expect("Fix: native Metal compile_native must compile resident-capable pipelines.")
-            .expect("Fix: native Metal compile_native must return Some for resident-capable pipelines.");
-        let after_compile = backend
-            .pipeline_cache_snapshot()
-            .expect("Fix: native Metal must expose cache counters after compiled resident compile.");
+            .expect(
+                "Fix: native Metal compile_native must return Some for resident-capable pipelines.",
+            );
+        let after_compile = backend.pipeline_cache_snapshot().expect(
+            "Fix: native Metal must expose cache counters after compiled resident compile.",
+        );
 
         let resources = [input.clone(), output.clone()];
         let timed = pipeline
@@ -1779,9 +1826,9 @@ mod tests {
             42u32.to_le_bytes().to_vec(),
             "Fix: Metal compiled resident dispatch must persist output bytes in the resident handle."
         );
-        let after_compiled_dispatch = backend
-            .pipeline_cache_snapshot()
-            .expect("Fix: native Metal must expose cache counters after compiled resident dispatch.");
+        let after_compiled_dispatch = backend.pipeline_cache_snapshot().expect(
+            "Fix: native Metal must expose cache counters after compiled resident dispatch.",
+        );
         assert_eq!(
             after_compiled_dispatch, after_compile,
             "Fix: Metal compiled resident dispatch must not re-enter backend lowering/compile cache."
@@ -1791,15 +1838,17 @@ mod tests {
         let output_capacity = outputs[0].capacity();
         pipeline
             .dispatch_persistent_handles_into(&resources, &config, &mut outputs)
-            .expect("Fix: Metal compiled resident dispatch_into must fill caller-owned output slots.");
+            .expect(
+                "Fix: Metal compiled resident dispatch_into must fill caller-owned output slots.",
+            );
         assert_eq!(outputs, vec![42u32.to_le_bytes().to_vec()]);
         assert!(
             outputs[0].capacity() >= output_capacity,
             "Fix: Metal compiled resident dispatch_into must preserve caller output slot capacity."
         );
-        let after_dispatch_into = backend
-            .pipeline_cache_snapshot()
-            .expect("Fix: native Metal must expose cache counters after compiled resident dispatch_into.");
+        let after_dispatch_into = backend.pipeline_cache_snapshot().expect(
+            "Fix: native Metal must expose cache counters after compiled resident dispatch_into.",
+        );
         assert_eq!(
             after_dispatch_into, after_compiled_dispatch,
             "Fix: Metal compiled resident dispatch_into must reuse the compiled pipeline without cache traffic."
@@ -1816,7 +1865,9 @@ mod tests {
         let stale_resources = [input.clone(), output];
         let stale_error = pipeline
             .dispatch_persistent_handles(&stale_resources, &config)
-            .expect_err("Fix: Metal compiled resident dispatch must reject stale resident handles.");
+            .expect_err(
+                "Fix: Metal compiled resident dispatch must reject stale resident handles.",
+            );
         assert!(
             stale_error.to_string().contains("stale handle"),
             "Fix: Metal compiled resident stale-handle diagnostics must name the handle lifetime problem: {stale_error}"
@@ -1850,8 +1901,7 @@ mod tests {
         );
         let add_program = Program::wrapped(
             vec![
-                BufferDecl::storage("mid", 0, BufferAccess::ReadOnly, DataType::U32)
-                    .with_count(1),
+                BufferDecl::storage("mid", 0, BufferAccess::ReadOnly, DataType::U32).with_count(1),
                 BufferDecl::storage("out", 1, BufferAccess::WriteOnly, DataType::U32)
                     .with_count(1)
                     .with_output_byte_range(0..4),
@@ -1899,9 +1949,9 @@ mod tests {
             "Fix: resource-output dispatch must return the caller-provided resident output handle in stable output order."
         );
         assert_eq!(
-            backend
-                .download_resident(&mid)
-                .expect("Fix: zero-copy chain middle handle must remain readable for verification."),
+            backend.download_resident(&mid).expect(
+                "Fix: zero-copy chain middle handle must remain readable for verification."
+            ),
             34u32.to_le_bytes().to_vec(),
             "Fix: first zero-copy chain stage must persist bytes in the returned resident handle."
         );
@@ -1909,7 +1959,9 @@ mod tests {
         let final_resources = [returned[0].clone(), out.clone()];
         let final_outputs = add
             .dispatch_persistent_handles(&final_resources, &config)
-            .expect("Fix: second Metal compiled pipeline must consume the returned resident output handle.");
+            .expect(
+            "Fix: second Metal compiled pipeline must consume the returned resident output handle.",
+        );
         assert_eq!(final_outputs, vec![39u32.to_le_bytes().to_vec()]);
         assert_eq!(
             backend

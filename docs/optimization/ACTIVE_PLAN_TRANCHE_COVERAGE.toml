@@ -1,0 +1,35 @@
+# Active plan tranche coverage for VX-700.
+# VX-621..VX-700 rows must carry local evidence, source key, work item, proof gate, and dedup seam.
+
+schema = "vyre.plan.active_tranche_coverage.v1"
+owner = "coordination"
+evidence_tokens = ["MLIR_PASS"]
+
+tranche = "VX-621..VX-700"
+
+required_fields = [
+  "vx_id_range",
+  "construct_tier_coverage",
+  "dialect_lattice_coverage",
+  "accelerator_route_coverage",
+  "source_impact_coverage",
+  "public_private_boundary_coverage",
+  "local_evidence_required",
+  "known_source_key_required",
+  "concrete_work_required",
+  "proof_gate_required",
+  "dedup_seam_required",
+]
+
+[[coverage]]
+vx_id_range = "VX-621..VX-700"
+construct_tier_coverage = "present"
+dialect_lattice_coverage = "present"
+accelerator_route_coverage = "present"
+source_impact_coverage = "present"
+public_private_boundary_coverage = "present"
+local_evidence_required = true
+known_source_key_required = true
+concrete_work_required = true
+proof_gate_required = true
+dedup_seam_required = true

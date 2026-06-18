@@ -4,12 +4,19 @@ use std::fs;
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 
+use crate::hash::sha256_hex;
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]
 struct WeirMatrix {
     schema_version: u32,
+    package_name: String,
+    package_version: String,
+    release_package_token: String,
     analyses: Vec<WeirAnalysis>,
+    feature_flags: Vec<WeirFeatureFlag>,
+    required_feature_count: usize,
+    missing_feature_count: usize,
     inventory_registered_count: usize,
     required_api_item_count: usize,
     missing_api_item_count: usize,
@@ -24,6 +31,16 @@ struct WeirMatrix {
     standalone_serde_feature_guard_count: usize,
     standalone_example_scan_errors: Vec<String>,
     standalone_examples: Vec<ComponentFile>,
+    bench_suite_count: usize,
+    resident_benchmark_evidence_count: usize,
+    fuzz_target_count: usize,
+    fuzz_release_evidence_count: usize,
+    bench_suites: Vec<WeirSourceArtifact>,
+    resident_benchmark_evidence: Vec<WeirResidentBenchmarkEvidence>,
+    fuzz_targets: Vec<WeirSourceArtifact>,
+    fuzz_release_evidence: Vec<WeirFuzzReleaseEvidence>,
+    corpus_manifest: WeirCorpusManifestArtifact,
+    declared_release_artifacts: Vec<WeirDeclaredReleaseArtifact>,
     untested_analyses: Vec<&'static str>,
     integration_tests: Vec<WeirTest>,
     blockers: Vec<String>,
@@ -70,10 +87,75 @@ struct ComponentFile {
     unresolved_markers: Vec<&'static str>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+struct WeirFeatureFlag {
+    name: &'static str,
+    cargo_declared: bool,
+    readme_documented: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct WeirSourceArtifact {
+    id: String,
+    kind: &'static str,
+    path: String,
+    exists: bool,
+    source_bytes: usize,
+    read_error: Option<String>,
+    required_tokens: Vec<&'static str>,
+    missing_tokens: Vec<&'static str>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct WeirCorpusManifestArtifact {
+    id: &'static str,
+    kind: &'static str,
+    path: String,
+    exists: bool,
+    source_bytes: usize,
+    read_error: Option<String>,
+    generator_command: &'static str,
+    seed_count: Option<u64>,
+    rng_seed: Option<u64>,
+    category_ids: Vec<String>,
+    seed_file_count: usize,
+    seed_total_bytes: u64,
+    corpus_fingerprint: String,
+    required_fields: Vec<&'static str>,
+    missing_fields: Vec<&'static str>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct WeirDeclaredReleaseArtifact {
+    path: &'static str,
+    documented: bool,
+    expected_generator: &'static str,
+    owner_lane: &'static str,
+    generator_command: &'static str,
+    source_fingerprint: String,
+    freshness_fingerprint: String,
+}
+
 #[derive(Debug, Serialize)]
 struct WeirIntegrationEvidence {
     schema_version: u32,
     tests: Vec<WeirTest>,
+    blockers: Vec<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct WeirFlowReleaseContracts {
+    schema_version: u32,
+    package_name: String,
+    package_version: String,
+    release_package_token: String,
+    feature_flags: Vec<WeirFeatureFlag>,
+    bench_suites: Vec<WeirSourceArtifact>,
+    resident_benchmark_evidence: Vec<WeirResidentBenchmarkEvidence>,
+    fuzz_targets: Vec<WeirSourceArtifact>,
+    fuzz_release_evidence: Vec<WeirFuzzReleaseEvidence>,
+    corpus_manifest: WeirCorpusManifestArtifact,
+    declared_release_artifacts: Vec<WeirDeclaredReleaseArtifact>,
     blockers: Vec<String>,
 }
 
@@ -87,6 +169,55 @@ struct WeirReadmeEvidence {
     missing_tokens: Vec<&'static str>,
     example_count: usize,
     blockers: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct WeirResidentBenchmarkEvidence {
+    id: &'static str,
+    path: String,
+    exists: bool,
+    source_bytes: usize,
+    read_error: Option<String>,
+    backend_id: &'static str,
+    device_signature: &'static str,
+    source_fingerprint: String,
+    bench_command: String,
+    required_fields: Vec<&'static str>,
+    missing_fields: Vec<&'static str>,
+    has_output_digest_field: bool,
+    has_transfer_byte_fields: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct WeirFuzzReleaseEvidence {
+    id: String,
+    source_path: String,
+    source_exists: bool,
+    source_bytes: usize,
+    source_read_error: Option<String>,
+    source_fingerprint: String,
+    corpus_path: String,
+    corpus_exists: bool,
+    corpus_file_count: usize,
+    corpus_total_bytes: u64,
+    corpus_digest: String,
+    artifacts_path: String,
+    artifact_file_count: usize,
+    artifact_total_bytes: u64,
+    artifact_digest: String,
+    replay_command: String,
+    corpus_replay_command: String,
+    crash_replay_command: String,
+    required_metadata: Vec<&'static str>,
+    missing_metadata: Vec<&'static str>,
+}
+
+#[derive(Debug, Clone)]
+struct WeirFuzzDirectoryDigest {
+    exists: bool,
+    file_count: usize,
+    total_bytes: u64,
+    digest: String,
 }
 
 const ANALYSES: &[(&str, &str)] = &[
@@ -234,7 +365,62 @@ const MIN_ADVERSARIAL_TEST_FAMILIES: usize = 1;
 const MIN_PERF_TEST_FAMILIES: usize = 2;
 const MIN_FUZZ_TEST_FAMILIES: usize = 1;
 const MIN_GAP_TEST_FAMILIES: usize = 1;
+const MIN_BENCH_SUITE_COUNT: usize = 10;
+const MIN_FUZZ_TARGET_COUNT: usize = 9;
 const MAX_WEIR_EVIDENCE_SOURCE_BYTES: u64 = 2_097_152;
+const WEIR_CORPUS_GENERATOR_COMMAND: &str = "cargo_full run --bin corpus_expander";
+
+const RESIDENT_BENCHMARK_REQUIRED_FIELDS: &[&str] = &[
+    "ResidentBenchmarkEvidence",
+    "backend_id",
+    "device_signature",
+    "source_fingerprint",
+    "output_digest",
+    "upload_transfer_bytes",
+    "readback_transfer_bytes",
+];
+
+const RESIDENT_BENCHMARK_SUITES: &[(&str, &str, &str, &str)] = &[
+    (
+        "ifds_direct_resident_hot_path",
+        "benches/ifds_direct_resident_hot_path.rs",
+        "wgpu",
+        "wgpu-live-device-required",
+    ),
+    (
+        "resident_fixed_point_hot_path",
+        "benches/resident_fixed_point_hot_path.rs",
+        "weir_bench_resident_fixed_point",
+        "mock-resident-sequence-window",
+    ),
+];
+
+const FUZZ_RELEASE_REQUIRED_METADATA: &[&str] = &[
+    "source_path",
+    "source_fingerprint",
+    "corpus_path",
+    "corpus_digest",
+    "replay_command",
+    "corpus_replay_command",
+    "crash_replay_command",
+];
+
+const REQUIRED_FEATURE_FLAGS: &[&str] = &[
+    "cpu-parity",
+    "gpu-telemetry",
+    "serde",
+    "simd-oracle",
+    "test-harness",
+];
+
+const WEIR_MATRIX_OWNER_LANE: &str = "flow_weir";
+const WEIR_MATRIX_GENERATOR_COMMAND: &str = "xtask weir-matrix";
+const DECLARED_RELEASE_ARTIFACTS: &[&str] = &[
+    "release/evidence/weir/weir-analysis-api-matrix.json",
+    "release/evidence/weir/weir-vyre-integration-tests.json",
+    "release/evidence/weir/weir-readme-contracts.json",
+    "release/evidence/weir/weir-flow-release-contracts.json",
+];
 
 pub(crate) fn run(args: &[String]) {
     let output = match parse_output(args) {
@@ -525,6 +711,88 @@ pub(crate) fn run(args: &[String]) {
             String::new()
         }
     };
+    let readme_path = weir_root.join("README.md");
+    let readme = match read_text_bounded(&readme_path) {
+        Ok(text) => text,
+        Err(error) => {
+            blockers.push(format!(
+                "Weir README could not be read for release surface evidence at {}: {error}",
+                readme_path.display()
+            ));
+            String::new()
+        }
+    };
+    let package_name =
+        manifest_string_value(&cargo_toml, "name").unwrap_or_else(|| "weir".to_string());
+    let package_version =
+        manifest_string_value(&cargo_toml, "version").unwrap_or_else(|| "unknown".to_string());
+    let release_package_token = format!("{package_name}@{package_version}");
+    let feature_flags = collect_feature_flags(&cargo_toml, &readme);
+    for feature in &feature_flags {
+        if !feature.cargo_declared {
+            blockers.push(format!(
+                "Weir required feature `{}` is missing from Cargo.toml",
+                feature.name
+            ));
+        }
+        if !feature.readme_documented {
+            blockers.push(format!(
+                "Weir required feature `{}` is missing from README.md",
+                feature.name
+            ));
+        }
+    }
+    let bench_suites = collect_source_artifacts(&weir_root, "benches", "bench", &[], &mut blockers);
+    if bench_suites.len() < MIN_BENCH_SUITE_COUNT {
+        blockers.push(format!(
+            "Weir matrix has {} benchmark suite(s); release requires at least {MIN_BENCH_SUITE_COUNT}",
+            bench_suites.len()
+        ));
+    }
+    let resident_benchmark_evidence =
+        collect_resident_benchmark_evidence(&weir_root, &mut blockers);
+    let fuzz_cargo_toml_path = weir_root.join("fuzz/Cargo.toml");
+    let fuzz_cargo_toml = match read_text_bounded(&fuzz_cargo_toml_path) {
+        Ok(text) => text,
+        Err(error) => {
+            blockers.push(format!(
+                "Weir fuzz Cargo.toml could not be read at {}: {error}",
+                fuzz_cargo_toml_path.display()
+            ));
+            String::new()
+        }
+    };
+    let fuzz_targets = collect_source_artifacts(
+        &weir_root,
+        "fuzz/fuzz_targets",
+        "fuzz",
+        &["fuzz_target!"],
+        &mut blockers,
+    );
+    if fuzz_targets.len() < MIN_FUZZ_TARGET_COUNT {
+        blockers.push(format!(
+            "Weir matrix has {} fuzz target(s); release requires at least {MIN_FUZZ_TARGET_COUNT}",
+            fuzz_targets.len()
+        ));
+    }
+    let fuzz_release_evidence =
+        collect_fuzz_release_evidence(&weir_root, &fuzz_cargo_toml, &mut blockers);
+    if fuzz_release_evidence.len() < MIN_FUZZ_TARGET_COUNT {
+        blockers.push(format!(
+            "Weir matrix has {} fuzz release evidence target(s); release requires at least {MIN_FUZZ_TARGET_COUNT}",
+            fuzz_release_evidence.len()
+        ));
+    }
+    let corpus_manifest = collect_corpus_manifest(&weir_root, &mut blockers);
+    let declared_release_artifacts = declared_release_artifacts(&readme);
+    for artifact in &declared_release_artifacts {
+        if !artifact.documented {
+            blockers.push(format!(
+                "Weir README is missing declared release artifact `{}`",
+                artifact.path
+            ));
+        }
+    }
     let standalone_serde_feature_guard_count = usize::from(
         cargo_toml.contains("name = \"serde_evidence\"")
             && cargo_toml.contains("required-features = [\"serde\"]"),
@@ -575,11 +843,20 @@ pub(crate) fn run(args: &[String]) {
         }
     }
     let matrix = WeirMatrix {
-        schema_version: 2,
+        schema_version: 6,
+        package_name,
+        package_version,
+        release_package_token,
         inventory_registered_count: analyses
             .iter()
             .filter(|analysis| analysis.inventory_registered)
             .count(),
+        required_feature_count: feature_flags.len(),
+        missing_feature_count: feature_flags
+            .iter()
+            .filter(|feature| !feature.cargo_declared || !feature.readme_documented)
+            .count(),
+        feature_flags,
         required_api_item_count: analyses
             .iter()
             .map(|analysis| analysis.required_api_items.len())
@@ -599,6 +876,16 @@ pub(crate) fn run(args: &[String]) {
         standalone_serde_feature_guard_count,
         standalone_example_scan_errors,
         standalone_examples,
+        bench_suite_count: bench_suites.len(),
+        resident_benchmark_evidence_count: resident_benchmark_evidence.len(),
+        fuzz_target_count: fuzz_targets.len(),
+        fuzz_release_evidence_count: fuzz_release_evidence.len(),
+        bench_suites,
+        resident_benchmark_evidence,
+        fuzz_targets,
+        fuzz_release_evidence,
+        corpus_manifest,
+        declared_release_artifacts,
         untested_analyses,
         analyses,
         integration_tests,
@@ -711,6 +998,679 @@ fn collect_standalone_examples(
     examples
 }
 
+fn collect_feature_flags(cargo_toml: &str, readme: &str) -> Vec<WeirFeatureFlag> {
+    let readme_lower = readme.to_ascii_lowercase();
+    REQUIRED_FEATURE_FLAGS
+        .iter()
+        .copied()
+        .map(|name| {
+            let quoted = format!("\"{name}\"");
+            let unquoted = format!("{name} =");
+            WeirFeatureFlag {
+                name,
+                cargo_declared: cargo_toml.contains(&quoted) || cargo_toml.contains(&unquoted),
+                readme_documented: readme_lower.contains(&name.to_ascii_lowercase()),
+            }
+        })
+        .collect()
+}
+
+fn collect_source_artifacts(
+    weir_root: &Path,
+    relative_dir: &str,
+    kind: &'static str,
+    required_tokens: &[&'static str],
+    blockers: &mut Vec<String>,
+) -> Vec<WeirSourceArtifact> {
+    let root = weir_root.join(relative_dir);
+    let entries = match fs::read_dir(&root) {
+        Ok(entries) => entries,
+        Err(error) => {
+            blockers.push(format!(
+                "Weir {kind} directory could not be read at {}: {error}",
+                root.display()
+            ));
+            return Vec::new();
+        }
+    };
+    let mut artifacts = Vec::new();
+    for entry in entries {
+        let entry = match entry {
+            Ok(entry) => entry,
+            Err(error) => {
+                blockers.push(format!(
+                    "Weir {kind} entry could not be read in {}: {error}",
+                    root.display()
+                ));
+                continue;
+            }
+        };
+        let path = entry.path();
+        if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
+            continue;
+        }
+        let (text, read_error) = match read_text_bounded(&path) {
+            Ok(text) => (text, None),
+            Err(error) => (String::new(), Some(error.to_string())),
+        };
+        let missing_tokens = required_tokens
+            .iter()
+            .copied()
+            .filter(|token| !text.contains(token))
+            .collect::<Vec<_>>();
+        for token in &missing_tokens {
+            blockers.push(format!(
+                "Weir {kind} artifact {} is missing required token `{token}`",
+                path.display()
+            ));
+        }
+        if let Some(error) = &read_error {
+            blockers.push(format!(
+                "Weir {kind} artifact {} could not be read: {error}",
+                path.display()
+            ));
+        }
+        if text.trim().is_empty() && read_error.is_none() {
+            blockers.push(format!("Weir {kind} artifact {} is empty", path.display()));
+        }
+        let id = path
+            .file_stem()
+            .and_then(|stem| stem.to_str())
+            .unwrap_or(kind)
+            .to_string();
+        artifacts.push(WeirSourceArtifact {
+            id,
+            kind,
+            path: path.display().to_string(),
+            exists: path.is_file(),
+            source_bytes: text.len(),
+            read_error,
+            required_tokens: required_tokens.to_vec(),
+            missing_tokens,
+        });
+    }
+    artifacts.sort_by(|left, right| left.path.cmp(&right.path));
+    artifacts
+}
+
+fn collect_resident_benchmark_evidence(
+    weir_root: &Path,
+    blockers: &mut Vec<String>,
+) -> Vec<WeirResidentBenchmarkEvidence> {
+    let mut evidence = Vec::new();
+    for &(id, relative, backend_id, device_signature) in RESIDENT_BENCHMARK_SUITES {
+        let path = weir_root.join(relative);
+        let exists = path.is_file();
+        let (text, read_error) = if exists {
+            match read_text_bounded(&path) {
+                Ok(text) => (text, None),
+                Err(error) => {
+                    let message = error.to_string();
+                    blockers.push(format!(
+                        "Weir resident benchmark `{id}` could not be read at {}: {message}",
+                        path.display()
+                    ));
+                    (String::new(), Some(message))
+                }
+            }
+        } else {
+            blockers.push(format!(
+                "Weir resident benchmark `{id}` is missing at {}",
+                path.display()
+            ));
+            (String::new(), None)
+        };
+        let missing_fields = RESIDENT_BENCHMARK_REQUIRED_FIELDS
+            .iter()
+            .copied()
+            .filter(|field| !text.contains(field))
+            .collect::<Vec<_>>();
+        for field in &missing_fields {
+            blockers.push(format!(
+                "Weir resident benchmark `{id}` is missing required evidence field `{field}`"
+            ));
+        }
+        if exists && text.trim().is_empty() && read_error.is_none() {
+            blockers.push(format!("Weir resident benchmark `{id}` source is empty"));
+        }
+        let has_output_digest_field = text.contains("output_digest");
+        let has_transfer_byte_fields =
+            text.contains("upload_transfer_bytes") && text.contains("readback_transfer_bytes");
+        if !has_output_digest_field {
+            blockers.push(format!(
+                "Weir resident benchmark `{id}` must expose output_digest evidence"
+            ));
+        }
+        if !has_transfer_byte_fields {
+            blockers.push(format!(
+                "Weir resident benchmark `{id}` must expose upload/readback transfer byte evidence"
+            ));
+        }
+        let source_fingerprint = format!(
+            "weir-resident-bench-source:v1:{}",
+            fnv1a64_hex(text.as_bytes())
+        );
+        let bench_name = Path::new(relative)
+            .file_stem()
+            .and_then(|stem| stem.to_str())
+            .unwrap_or(id);
+        evidence.push(WeirResidentBenchmarkEvidence {
+            id,
+            path: path.display().to_string(),
+            exists,
+            source_bytes: text.len(),
+            read_error,
+            backend_id,
+            device_signature,
+            source_fingerprint,
+            bench_command: format!("cargo_full bench --bench {bench_name}"),
+            required_fields: RESIDENT_BENCHMARK_REQUIRED_FIELDS.to_vec(),
+            missing_fields,
+            has_output_digest_field,
+            has_transfer_byte_fields,
+        });
+    }
+    evidence.sort_by(|left, right| left.id.cmp(right.id));
+    evidence
+}
+
+fn collect_fuzz_release_evidence(
+    weir_root: &Path,
+    fuzz_cargo_toml: &str,
+    blockers: &mut Vec<String>,
+) -> Vec<WeirFuzzReleaseEvidence> {
+    let fuzz_root = weir_root.join("fuzz");
+    let declared_targets = collect_declared_fuzz_targets(fuzz_cargo_toml, blockers);
+    if declared_targets.is_empty() {
+        blockers.push(format!(
+            "Weir fuzz manifest at {} declares no [[bin]] fuzz targets",
+            fuzz_root.join("Cargo.toml").display()
+        ));
+    }
+
+    let mut evidence = Vec::new();
+    for (id, source_relative) in declared_targets {
+        let source_path = fuzz_root.join(&source_relative);
+        let source_exists = source_path.is_file();
+        let (source_text, source_read_error) = if source_exists {
+            match read_text_bounded(&source_path) {
+                Ok(text) => (text, None),
+                Err(error) => {
+                    let message = error.to_string();
+                    blockers.push(format!(
+                        "Weir fuzz target `{id}` could not be read at {}: {message}",
+                        source_path.display()
+                    ));
+                    (String::new(), Some(message))
+                }
+            }
+        } else {
+            blockers.push(format!(
+                "Weir fuzz target `{id}` source is missing at {}",
+                source_path.display()
+            ));
+            (String::new(), None)
+        };
+        let source_fingerprint = format!(
+            "weir-fuzz-target-source:v1:{}",
+            fnv1a64_hex(source_text.as_bytes())
+        );
+        let corpus_path = fuzz_root.join("corpus").join(&id);
+        let corpus_digest = collect_fuzz_directory_digest(
+            &corpus_path,
+            &format!("Weir fuzz corpus `{id}`"),
+            true,
+            blockers,
+        );
+        let artifacts_path = fuzz_root.join("artifacts").join(&id);
+        let artifact_digest = collect_fuzz_directory_digest(
+            &artifacts_path,
+            &format!("Weir fuzz crash artifacts `{id}`"),
+            false,
+            blockers,
+        );
+        let replay_command = format!("cd {} && cargo_full fuzz run {id}", fuzz_root.display());
+        let corpus_replay_command = format!(
+            "cd {} && for seed in corpus/{id}/*; do test -f \"$seed\" && cargo_full fuzz run {id} \"$seed\"; done",
+            fuzz_root.display()
+        );
+        let crash_replay_command = format!(
+            "cd {} && for crash in artifacts/{id}/crash-*; do test -f \"$crash\" && cargo_full fuzz run {id} \"$crash\"; done",
+            fuzz_root.display()
+        );
+        let mut missing_metadata = Vec::new();
+        if !source_exists || source_text.trim().is_empty() || source_read_error.is_some() {
+            missing_metadata.push("source_path");
+            missing_metadata.push("source_fingerprint");
+        }
+        if !corpus_digest.exists || corpus_digest.file_count == 0 {
+            missing_metadata.push("corpus_path");
+            missing_metadata.push("corpus_digest");
+        }
+        if replay_command.trim().is_empty() {
+            missing_metadata.push("replay_command");
+        }
+        if corpus_replay_command.trim().is_empty() {
+            missing_metadata.push("corpus_replay_command");
+        }
+        if crash_replay_command.trim().is_empty() {
+            missing_metadata.push("crash_replay_command");
+        }
+        for field in &missing_metadata {
+            blockers.push(format!(
+                "Weir fuzz target `{id}` is missing release evidence metadata `{field}`"
+            ));
+        }
+        evidence.push(WeirFuzzReleaseEvidence {
+            id,
+            source_path: source_path.display().to_string(),
+            source_exists,
+            source_bytes: source_text.len(),
+            source_read_error,
+            source_fingerprint,
+            corpus_path: corpus_path.display().to_string(),
+            corpus_exists: corpus_digest.exists,
+            corpus_file_count: corpus_digest.file_count,
+            corpus_total_bytes: corpus_digest.total_bytes,
+            corpus_digest: corpus_digest.digest,
+            artifacts_path: artifacts_path.display().to_string(),
+            artifact_file_count: artifact_digest.file_count,
+            artifact_total_bytes: artifact_digest.total_bytes,
+            artifact_digest: artifact_digest.digest,
+            replay_command,
+            corpus_replay_command,
+            crash_replay_command,
+            required_metadata: FUZZ_RELEASE_REQUIRED_METADATA.to_vec(),
+            missing_metadata,
+        });
+    }
+    evidence.sort_by(|left, right| left.id.cmp(&right.id));
+    evidence
+}
+
+fn collect_declared_fuzz_targets(
+    fuzz_cargo_toml: &str,
+    blockers: &mut Vec<String>,
+) -> Vec<(String, String)> {
+    let mut targets = Vec::new();
+    let mut in_bin = false;
+    let mut name = None::<String>;
+    let mut path = None::<String>;
+    for line in fuzz_cargo_toml.lines() {
+        let trimmed = line.trim();
+        if trimmed == "[[bin]]" {
+            if in_bin {
+                push_declared_fuzz_target(&mut targets, name.take(), path.take(), blockers);
+            }
+            in_bin = true;
+            continue;
+        }
+        if !in_bin {
+            continue;
+        }
+        if let Some(value) = manifest_line_string_value(trimmed, "name") {
+            name = Some(value);
+        } else if let Some(value) = manifest_line_string_value(trimmed, "path") {
+            path = Some(value);
+        }
+    }
+    if in_bin {
+        push_declared_fuzz_target(&mut targets, name, path, blockers);
+    }
+    targets.sort_by(|left, right| left.0.cmp(&right.0));
+    targets
+}
+
+fn push_declared_fuzz_target(
+    targets: &mut Vec<(String, String)>,
+    name: Option<String>,
+    path: Option<String>,
+    blockers: &mut Vec<String>,
+) {
+    let Some(name) = name else {
+        blockers.push("Weir fuzz manifest has [[bin]] without name".to_string());
+        return;
+    };
+    let Some(path) = path else {
+        blockers.push(format!("Weir fuzz manifest target `{name}` has no path"));
+        return;
+    };
+    if !path.starts_with("fuzz_targets/") || !path.ends_with(".rs") {
+        blockers.push(format!(
+            "Weir fuzz manifest target `{name}` path `{path}` must point at fuzz_targets/*.rs"
+        ));
+    }
+    if targets.iter().any(|(existing, _)| existing == &name) {
+        blockers.push(format!(
+            "Weir fuzz manifest declares duplicate target `{name}`"
+        ));
+        return;
+    }
+    targets.push((name, path));
+}
+
+fn collect_fuzz_directory_digest(
+    root: &Path,
+    label: &str,
+    missing_is_blocker: bool,
+    blockers: &mut Vec<String>,
+) -> WeirFuzzDirectoryDigest {
+    if !root.is_dir() {
+        if missing_is_blocker {
+            blockers.push(format!("{label} directory is missing at {}", root.display()));
+        }
+        return WeirFuzzDirectoryDigest {
+            exists: false,
+            file_count: 0,
+            total_bytes: 0,
+            digest: format!(
+                "weir-fuzz-file-tree:v1:{}",
+                fnv1a64_hex(format!("missing:{}", root.display()).as_bytes())
+            ),
+        };
+    }
+    let entries = match fs::read_dir(root) {
+        Ok(entries) => entries,
+        Err(error) => {
+            blockers.push(format!("{label} directory {} could not be read: {error}", root.display()));
+            return WeirFuzzDirectoryDigest {
+                exists: true,
+                file_count: 0,
+                total_bytes: 0,
+                digest: format!(
+                    "weir-fuzz-file-tree:v1:{}",
+                    fnv1a64_hex(format!("unreadable:{}", root.display()).as_bytes())
+                ),
+            };
+        }
+    };
+    let mut file_records = Vec::new();
+    let mut total_bytes = 0u64;
+    for entry in entries {
+        let entry = match entry {
+            Ok(entry) => entry,
+            Err(error) => {
+                blockers.push(format!(
+                    "{label} entry in {} could not be read: {error}",
+                    root.display()
+                ));
+                continue;
+            }
+        };
+        let path = entry.path();
+        if !path.is_file() {
+            continue;
+        }
+        let metadata = match entry.metadata() {
+            Ok(metadata) => metadata,
+            Err(error) => {
+                blockers.push(format!("{label} file {} metadata failed: {error}", path.display()));
+                continue;
+            }
+        };
+        let len = metadata.len();
+        if len > MAX_WEIR_EVIDENCE_SOURCE_BYTES {
+            blockers.push(format!(
+                "{label} file {} is {len} bytes, above evidence digest cap {MAX_WEIR_EVIDENCE_SOURCE_BYTES}",
+                path.display()
+            ));
+            continue;
+        }
+        let bytes = match fs::read(&path) {
+            Ok(bytes) => bytes,
+            Err(error) => {
+                blockers.push(format!("{label} file {} could not be read: {error}", path.display()));
+                continue;
+            }
+        };
+        total_bytes = total_bytes.saturating_add(len);
+        file_records.push(format!(
+            "{}:{len}:{}",
+            path.file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or("<non-utf8>"),
+            fnv1a64_hex(&bytes)
+        ));
+    }
+    file_records.sort();
+    WeirFuzzDirectoryDigest {
+        exists: true,
+        file_count: file_records.len(),
+        total_bytes,
+        digest: format!(
+            "weir-fuzz-file-tree:v1:{}",
+            fnv1a64_hex(file_records.join("\n").as_bytes())
+        ),
+    }
+}
+
+fn collect_corpus_manifest(
+    weir_root: &Path,
+    blockers: &mut Vec<String>,
+) -> WeirCorpusManifestArtifact {
+    let manifest_path = weir_root.join("tests/corpus/seeds/manifest.json");
+    let required_fields = vec![
+        "seed_count",
+        "categories",
+        "rng_seed",
+        "manifest_path",
+        "output_directory",
+    ];
+    let exists = manifest_path.is_file();
+    let mut read_error = None;
+    let mut text = String::new();
+    if exists {
+        match read_text_bounded(&manifest_path) {
+            Ok(value) => text = value,
+            Err(error) => {
+                let message = error.to_string();
+                blockers.push(format!(
+                    "Weir corpus manifest {} could not be read: {message}",
+                    manifest_path.display()
+                ));
+                read_error = Some(message);
+            }
+        }
+    } else {
+        blockers.push(format!(
+            "Weir corpus manifest is missing at {}. Fix: run `{WEIR_CORPUS_GENERATOR_COMMAND}` from {}.",
+            manifest_path.display(),
+            weir_root.display()
+        ));
+    }
+
+    let mut seed_count = None;
+    let mut rng_seed = None;
+    let mut category_ids = Vec::new();
+    let mut missing_fields = required_fields.clone();
+    if !text.is_empty() {
+        match serde_json::from_str::<serde_json::Value>(&text) {
+            Ok(value) => {
+                missing_fields = required_fields
+                    .iter()
+                    .copied()
+                    .filter(|field| value.get(*field).is_none())
+                    .collect();
+                seed_count = value.get("seed_count").and_then(serde_json::Value::as_u64);
+                rng_seed = value.get("rng_seed").and_then(serde_json::Value::as_u64);
+                if let Some(categories) =
+                    value.get("categories").and_then(serde_json::Value::as_object)
+                {
+                    category_ids = categories.keys().cloned().collect();
+                    category_ids.sort();
+                }
+            }
+            Err(error) => {
+                blockers.push(format!(
+                    "Weir corpus manifest {} is not valid JSON: {error}",
+                    manifest_path.display()
+                ));
+            }
+        }
+    }
+    for field in &missing_fields {
+        blockers.push(format!(
+            "Weir corpus manifest {} is missing required field `{field}`",
+            manifest_path.display()
+        ));
+    }
+
+    let seeds_dir = weir_root.join("tests/corpus/seeds");
+    let (seed_file_count, seed_total_bytes, seed_listing_fingerprint) =
+        corpus_seed_listing_fingerprint(&seeds_dir, blockers);
+    if let Some(expected) = seed_count {
+        if expected != seed_file_count as u64 {
+            blockers.push(format!(
+                "Weir corpus manifest declares seed_count={expected}, but {seed_file_count} .bin fixture(s) exist in {}",
+                seeds_dir.display()
+            ));
+        }
+    }
+    if category_ids.is_empty() && exists && read_error.is_none() {
+        blockers.push(format!(
+            "Weir corpus manifest {} has no category ids",
+            manifest_path.display()
+        ));
+    }
+
+    let corpus_fingerprint = fnv1a64_hex(
+        format!(
+            "{}\n{}\n{}\n{}",
+            text, seed_file_count, seed_total_bytes, seed_listing_fingerprint
+        )
+        .as_bytes(),
+    );
+
+    WeirCorpusManifestArtifact {
+        id: "weir_corpus_manifest",
+        kind: "corpus",
+        path: manifest_path.display().to_string(),
+        exists,
+        source_bytes: text.len(),
+        read_error,
+        generator_command: WEIR_CORPUS_GENERATOR_COMMAND,
+        seed_count,
+        rng_seed,
+        category_ids,
+        seed_file_count,
+        seed_total_bytes,
+        corpus_fingerprint,
+        required_fields,
+        missing_fields,
+    }
+}
+
+fn corpus_seed_listing_fingerprint(
+    seeds_dir: &Path,
+    blockers: &mut Vec<String>,
+) -> (usize, u64, String) {
+    let entries = match fs::read_dir(seeds_dir) {
+        Ok(entries) => entries,
+        Err(error) => {
+            blockers.push(format!(
+                "Weir corpus seed directory {} could not be read: {error}",
+                seeds_dir.display()
+            ));
+            return (0, 0, fnv1a64_hex(b"missing-weir-corpus-seeds"));
+        }
+    };
+    let mut seed_files = Vec::new();
+    let mut total_bytes = 0u64;
+    for entry in entries {
+        let entry = match entry {
+            Ok(entry) => entry,
+            Err(error) => {
+                blockers.push(format!(
+                    "Weir corpus seed entry in {} could not be read: {error}",
+                    seeds_dir.display()
+                ));
+                continue;
+            }
+        };
+        let path = entry.path();
+        if path.extension().and_then(|ext| ext.to_str()) != Some("bin") {
+            continue;
+        }
+        let metadata = match entry.metadata() {
+            Ok(metadata) => metadata,
+            Err(error) => {
+                blockers.push(format!(
+                    "Weir corpus seed {} metadata could not be read: {error}",
+                    path.display()
+                ));
+                continue;
+            }
+        };
+        let len = metadata.len();
+        total_bytes = total_bytes.saturating_add(len);
+        seed_files.push(format!(
+            "{}:{len}",
+            path.file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or("<non-utf8>")
+        ));
+    }
+    seed_files.sort();
+    let fingerprint = fnv1a64_hex(seed_files.join("\n").as_bytes());
+    (seed_files.len(), total_bytes, fingerprint)
+}
+
+fn declared_release_artifacts(readme: &str) -> Vec<WeirDeclaredReleaseArtifact> {
+    DECLARED_RELEASE_ARTIFACTS
+        .iter()
+        .map(|path| {
+            let (source_fingerprint, freshness_fingerprint) =
+                declared_release_artifact_fingerprints(path);
+            WeirDeclaredReleaseArtifact {
+            path,
+            documented: readme.contains(path),
+                expected_generator: WEIR_MATRIX_GENERATOR_COMMAND,
+                owner_lane: WEIR_MATRIX_OWNER_LANE,
+                generator_command: WEIR_MATRIX_GENERATOR_COMMAND,
+                source_fingerprint,
+                freshness_fingerprint,
+            }
+        })
+        .collect()
+}
+
+fn declared_release_artifact_fingerprints(path: &str) -> (String, String) {
+    let source_material = format!(
+        "weir-matrix-declared-artifact:v1\nowner_lane={WEIR_MATRIX_OWNER_LANE}\ngenerator={WEIR_MATRIX_GENERATOR_COMMAND}\nartifact={path}\n"
+    );
+    let source_hash = sha256_hex(source_material.as_bytes());
+    let freshness_material = format!(
+        "release-evidence-freshness:v1\nartifact={path}\ngenerator={WEIR_MATRIX_GENERATOR_COMMAND}\nsource={source_hash}\n"
+    );
+    (
+        format!("release-evidence-source:v1:{source_hash}"),
+        format!(
+            "release-evidence-freshness:v1:{}",
+            sha256_hex(freshness_material.as_bytes())
+        ),
+    )
+}
+
+fn manifest_string_value(manifest: &str, key: &str) -> Option<String> {
+    let prefix = format!("{key} = ");
+    manifest.lines().find_map(|line| {
+        manifest_line_string_value(line.trim(), key).or_else(|| {
+            let value = line.trim().strip_prefix(&prefix)?;
+            let value = value.trim();
+            let value = value.strip_prefix('"')?.strip_suffix('"')?;
+            Some(value.to_string())
+        })
+    })
+}
+
+fn manifest_line_string_value(trimmed: &str, key: &str) -> Option<String> {
+    let prefix = format!("{key} = ");
+    let value = trimmed.strip_prefix(&prefix)?;
+    let value = value.trim();
+    let value = value.strip_prefix('"')?.strip_suffix('"')?;
+    Some(value.to_string())
+}
+
 fn write_sibling_artifacts(output: &Path, matrix: &WeirMatrix) {
     let Some(parent) = output.parent() else {
         eprintln!(
@@ -760,6 +1720,34 @@ fn write_sibling_artifacts(output: &Path, matrix: &WeirMatrix) {
             schema_version: 2,
             tests: matrix.integration_tests.clone(),
             blockers,
+        },
+    );
+    write_json(
+        &parent.join("weir-flow-release-contracts.json"),
+        &WeirFlowReleaseContracts {
+            schema_version: 4,
+            package_name: matrix.package_name.clone(),
+            package_version: matrix.package_version.clone(),
+            release_package_token: matrix.release_package_token.clone(),
+            feature_flags: matrix.feature_flags.clone(),
+            bench_suites: matrix.bench_suites.clone(),
+            resident_benchmark_evidence: matrix.resident_benchmark_evidence.clone(),
+            fuzz_targets: matrix.fuzz_targets.clone(),
+            fuzz_release_evidence: matrix.fuzz_release_evidence.clone(),
+            corpus_manifest: matrix.corpus_manifest.clone(),
+            declared_release_artifacts: matrix.declared_release_artifacts.clone(),
+            blockers: matrix
+                .blockers
+                .iter()
+                .filter(|blocker| {
+                    blocker.contains("feature")
+                        || blocker.contains("benchmark")
+                        || blocker.contains("fuzz")
+                        || blocker.contains("corpus")
+                        || blocker.contains("release artifact")
+                })
+                .cloned()
+                .collect(),
         },
     );
     write_weir_readme_artifact(parent);
@@ -1134,4 +2122,13 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
         ));
     }
     Ok(text)
+}
+
+fn fnv1a64_hex(bytes: &[u8]) -> String {
+    let mut hash = 0xcbf2_9ce4_8422_2325u64;
+    for &byte in bytes {
+        hash ^= byte as u64;
+        hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    format!("{hash:016x}")
 }

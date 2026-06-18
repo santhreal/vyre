@@ -15,19 +15,19 @@
     {
       "path": "cuda-conformance.json",
       "exists": true,
-      "bytes": 258145,
+      "bytes": 590280,
       "read_error": null
     },
     {
       "path": "wgpu-conformance.json",
       "exists": true,
-      "bytes": 258145,
+      "bytes": 590280,
       "read_error": null
     },
     {
       "path": "reference-conformance.json",
       "exists": true,
-      "bytes": 259957,
+      "bytes": 594063,
       "read_error": null
     }
   ],

@@ -20,7 +20,7 @@ Required generated evidence:
 
 Release contract:
 
-- CUDA, WGPU, and CPU reference conformance artifacts must exist and be non-empty.
+- CUDA, WGPU, and CPU reference conformance artifacts must exist, be non-empty JSON, use schema version `>= 3`, report matching `pair_count` and `diff_summary_count` values, expose per-op diff summaries with backend id, input digest, output digest, timing class, and failure class fields, and report zero failed pairs, zero blockers, and empty `missing_catalog_ops`.
 - `conformance-matrix.json` and every backend conformance artifact must prove OP_MATRIX-required catalog coverage with zero `missing_catalog_ops`.
 - OP_MATRIX release backend rows must not contain `blocked_release` for `reference`, `cuda`, or `wgpu`; `op_matrix_blocked_release_count` must be zero in both global and backend conformance artifacts.
 - `conformance-matrix.json` and every backend conformance artifact must expose `release_backend_row_count` covering all required OP_MATRIX ops across `reference`, `cuda`, and `wgpu`, and `missing_release_backend_rows` must be empty.
@@ -28,7 +28,7 @@ Release contract:
 - CI must also block on the root GPU workflow `Vyre/Weir final release gate`, which downloads `vyre-release-conformance-evidence` and `vyre-release-benchmark-evidence`, stages conformance, benchmark, and optimization artifacts, regenerates structural evidence, emits the completion audit at `release/evidence/final/completion-audit.json`, and runs `vyre-release-gate`.
 - The final GPU workflow must prove optimization evidence staging through `release/evidence/optimization`, exact completion-audit output wiring, and upload of `vyre-weir-final-release-evidence`.
 - Branch-protection evidence must include `.github/CI_REQUIRED.md` and `scripts/apply-branch-protection.sh`; the required-status list and the applier cannot drift into separate hardcoded contracts.
-- `conformance-matrix.json` must expose non-empty `required_ci_statuses` and empty `missing_required_ci_statuses`, proving every branch-protection context listed before the scheduled/manual section is backed by an actual workflow job.
+- `conformance-matrix.json` must expose non-empty `required_ci_statuses` and empty `missing_required_ci_statuses`, proving every branch-protection context listed before the scheduled/manual section is backed by an actual workflow job and exact required-status coverage.
 - Dynamic matrix jobs must have static fan-in statuses when they are release-required; the crate batch matrix is represented by the static `crate-checks` context.
 - Required workflows that contribute branch-protection contexts must not use path filters; required contexts must appear on every pull request and every push to `main`, and `conformance-matrix.json` must report empty `path_filtered_required_workflows`.
 - Nested Vyre release guardrails for conformance, GPU parity, CI, benches, fuzz smoke, architectural invariants, feature matrix, core, rewrite proofs, and lego-block audit are part of the path-filter regression scan; a skipped workflow is release-blocking evidence drift, not a benign optimization.

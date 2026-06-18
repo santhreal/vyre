@@ -1,0 +1,39 @@
+# End-to-end operator deployment tranche coverage for VX-1221 through VX-1240.
+# This tranche adds Kubernetes, Helm, systemd, runtime config, and service hardening while reusing OCI, resource, secret, network, telemetry, and publication authorities.
+
+schema = "vyre.release.operator_deployment_tranche_coverage.v1"
+owner = "coordination"
+evidence_tokens = ["KUBERNETES_POD_SECURITY_STANDARDS", "KUBERNETES_SECURITY_CONTEXT", "KUBERNETES_POD_SECURITY_ADMISSION", "KUBERNETES_CONFIGMAP", "KUBERNETES_SECRETS", "HELM_CHART_BEST_PRACTICES", "HELM_CHART_FORMAT", "SYSTEMD_SERVICE", "SYSTEMD_EXEC", "SYSTEMD_RESOURCE_CONTROL"]
+
+required_fields = [
+  "coverage_id",
+  "vx_id_range",
+  "operator_deployment_surface_matrix",
+  "kubernetes_helm_deployment_policy",
+  "systemd_service_hardening_policy",
+  "operator_runtime_configuration_policy",
+  "oci_container_image_publication_policy",
+  "resource_dos_governance",
+  "secret_material_handling_policy",
+  "network_security_governance",
+  "operator_evidence_governance",
+  "publication_boundary",
+  "dedup_seam",
+  "proof_gate",
+]
+
+[[coverage]]
+coverage_id = "operator-deployment-end-to-end"
+vx_id_range = "VX-1221..VX-1240"
+operator_deployment_surface_matrix = "OPERATOR_DEPLOYMENT_SURFACE_MATRIX.toml"
+kubernetes_helm_deployment_policy = "KUBERNETES_HELM_DEPLOYMENT_POLICY.toml"
+systemd_service_hardening_policy = "SYSTEMD_SERVICE_HARDENING_POLICY.toml"
+operator_runtime_configuration_policy = "OPERATOR_RUNTIME_CONFIGURATION_POLICY.toml"
+oci_container_image_publication_policy = "OCI_CONTAINER_IMAGE_PUBLICATION_POLICY.toml"
+resource_dos_governance = "RESOURCE_DOS_GOVERNANCE_TRANCHE_COVERAGE.toml"
+secret_material_handling_policy = "SECRET_MATERIAL_HANDLING_POLICY.toml"
+network_security_governance = "NETWORK_SECURITY_GOVERNANCE_TRANCHE_COVERAGE.toml"
+operator_evidence_governance = "OPERATOR_EVIDENCE_TRANCHE_COVERAGE.toml"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+dedup_seam = "deployment-surface-matrix-governs-operator-runtime-targets-oci-policy-remains-image-publication-authority-resource-secret-network-and-telemetry-registries-remain-domain-authorities"
+proof_gate = "conform/vyre-conform-enforce/tests/operator_deployment_governance.rs"

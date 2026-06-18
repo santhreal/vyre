@@ -66,6 +66,18 @@ pub fn csr_queue_delta_enqueue(
     let lane = Expr::InvocationId { axis: 0 };
     let words = bitset_words(node_count);
     let physical_edge_count = edge_count.max(1);
+    let edge_offset_count =
+        match crate::graph::checked_csr_offset_count(node_count, "csr_queue_delta_enqueue") {
+            Ok(edge_offset_count) => edge_offset_count,
+            Err(error) => {
+                return crate::invalid_output_program(
+                    CSR_QUEUE_DELTA_ENQUEUE_OP_ID,
+                    next_len,
+                    DataType::U32,
+                    error,
+                );
+            }
+        };
     let body = vec![
         Node::let_bind("qd_idx", lane.clone()),
         Node::if_then(
@@ -195,7 +207,7 @@ pub fn csr_queue_delta_enqueue(
                 .with_count(active_queue_capacity),
             BufferDecl::storage(active_len, 1, BufferAccess::ReadOnly, DataType::U32).with_count(1),
             BufferDecl::storage(edge_offsets, 2, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(node_count + 1),
+                .with_count(edge_offset_count),
             BufferDecl::storage(edge_targets, 3, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(physical_edge_count),
             BufferDecl::storage(edge_kind_mask, 4, BufferAccess::ReadOnly, DataType::U32)
@@ -350,6 +362,39 @@ mod tests {
             CSR_QUEUE_DELTA_ENQUEUE_WORKGROUP_SIZE
         );
         assert_eq!(program.buffers.len(), 8);
+    }
+
+    #[test]
+    fn delta_enqueue_rejects_offset_count_overflow_without_panic() {
+        let result = std::panic::catch_unwind(|| {
+            csr_queue_delta_enqueue(
+                "active_queue",
+                "active_len",
+                "edge_offsets",
+                "edge_targets",
+                "edge_kind_mask",
+                "accumulator",
+                "next_queue",
+                "next_len",
+                u32::MAX,
+                0,
+                1,
+                1,
+                1,
+            )
+        });
+
+        assert!(
+            result.is_ok(),
+            "CSR queue delta builder must reject offset-count overflow without panicking"
+        );
+        let program = result.unwrap();
+        assert!(program.stats().trap());
+        let entry = format!("{:?}", program.entry());
+        assert!(
+            entry.contains("node_count + 1 overflows u32"),
+            "Fix: trap must retain the CSR offset-count overflow diagnostic, got: {entry}"
+        );
     }
 
     #[test]

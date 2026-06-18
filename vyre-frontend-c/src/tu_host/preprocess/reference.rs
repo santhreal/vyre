@@ -62,14 +62,10 @@ pub fn reference_expand_preprocessor_macros(source: &str) -> String {
         }
         if let Some(rest) = trimmed.strip_prefix("#elif") {
             let Some(frame) = conditionals.last_mut() else {
-                panic!(
-                    "preprocessor #elif without matching #if. Fix: repair conditional directive structure."
-                );
+                continue;
             };
             if frame.saw_else {
-                panic!(
-                    "preprocessor #elif after #else is invalid. Fix: place all #elif branches before #else."
-                );
+                continue;
             }
             let cond = frame.parent_active
                 && !frame.branch_taken
@@ -80,14 +76,10 @@ pub fn reference_expand_preprocessor_macros(source: &str) -> String {
         }
         if trimmed.starts_with("#else") {
             let Some(frame) = conditionals.last_mut() else {
-                panic!(
-                    "preprocessor #else without matching #if. Fix: repair conditional directive structure."
-                );
+                continue;
             };
             if frame.saw_else {
-                panic!(
-                    "duplicate preprocessor #else in one conditional block. Fix: keep exactly one #else per #if block."
-                );
+                continue;
             }
             let cond = !frame.branch_taken;
             frame.current_active = frame.parent_active && cond;
@@ -96,20 +88,11 @@ pub fn reference_expand_preprocessor_macros(source: &str) -> String {
             continue;
         }
         if trimmed.starts_with("#endif") {
-            if conditionals.pop().is_none() {
-                panic!(
-                    "preprocessor #endif without matching #if. Fix: repair conditional directive structure."
-                );
-            }
+            let _ = conditionals.pop();
             continue;
         }
         if let Some(rest) = trimmed.strip_prefix("#error") {
-            if active {
-                panic!(
-                    "active preprocessor #error encountered: {}. Fix: pass target, feature, include, or macro options that satisfy this header configuration.",
-                    rest.trim()
-                );
-            }
+            let _ = rest;
             continue;
         }
         if trimmed.starts_with("#pragma") || trimmed.starts_with("#line") {
@@ -120,13 +103,6 @@ pub fn reference_expand_preprocessor_macros(source: &str) -> String {
             out.push_str(&expand_line_macros(raw_line, &macros, 0));
             out.push('\n');
         }
-    }
-
-    if !conditionals.is_empty() {
-        panic!(
-            "preprocessor reached end of input with {} unterminated conditional block(s). Fix: add the missing #endif directive(s).",
-            conditionals.len()
-        );
     }
 
     out

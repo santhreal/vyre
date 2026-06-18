@@ -50,6 +50,7 @@
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
 use super::attention::direct_attention_program;
+use super::planner::plan_flash_attention_scalar;
 use crate::region::wrap_anonymous;
 use vyre_primitives::nn::attention_stability::{
     bounded_exp_arg, bounded_score, flush_tiny, positive_denominator,
@@ -83,13 +84,9 @@ pub fn flash_attention(
     {
         return Ok(program);
     }
-    let elements = s
-        .checked_mul(d)
-        .ok_or_else(|| "Fix: flash_attention s*d overflows u32; reduce dimensions.".to_string())?;
-    let scratch_elements = d.checked_mul(256).ok_or_else(|| {
-        "Fix: flash_attention d*256 scratch storage overflows u32; reduce head dimension."
-            .to_string()
-    })?;
+    let plan = plan_flash_attention_scalar(s, d)?;
+    let elements = plan.logical_elements;
+    let scratch_elements = plan.o_acc_scratch_elements;
     let scale = 1.0_f32 / (d as f32).sqrt();
     let scale_expr = Expr::f32(scale);
     let scratch_index = |t: Expr| Expr::add(Expr::mul(Expr::var("flash_local"), Expr::u32(d)), t);
@@ -262,7 +259,7 @@ pub fn flash_attention(
             BufferDecl::workgroup("flash_o", scratch_elements, DataType::F32),
             BufferDecl::output(out, 3, DataType::F32).with_count(elements),
         ],
-        [128, 1, 1],
+        [plan.workgroup_lanes, 1, 1],
         vec![wrap_anonymous(OP_ID, body_with_guard)],
     ))
 }

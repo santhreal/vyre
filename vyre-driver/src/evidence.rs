@@ -7,17 +7,38 @@
 
 use std::collections::BTreeMap;
 use std::fs;
+use std::io::Read;
 use std::path::Path;
 use std::process::Command;
 
 use serde::{Deserialize, Serialize};
 use vyre_foundation::ir::Program;
+use vyre_foundation::serial::wire::encode::PROGRAM_WIRE_DIGEST_VERSION;
 
 use crate::backend::{BackendError, DispatchConfig, TimedDispatchResult, VyreBackend};
 use crate::pipeline::{
-    dispatch_policy_cache_string, hex_encode, try_normalized_program_cache_digest,
-    PipelineReproManifest,
+    dispatch_policy_cache_digest, dispatch_policy_cache_string, hex_encode,
+    try_normalized_program_cache_digest, PipelineReproManifest,
 };
+
+/// Version label for the normalized Program digest used by compiled-pipeline
+/// caches. The byte contract currently lives in `pipeline::hashing`; evidence
+/// records the same label in its digest ledger so cache identity and replay
+/// evidence cannot silently drift.
+pub const NORMALIZED_PROGRAM_DIGEST_VERSION: &str = "vyre-pipeline-cache-norm-v2";
+
+/// Version label for commit/dirty-state source fingerprints.
+pub const SOURCE_FINGERPRINT_VERSION: &str = "vyre-source-fingerprint-v1";
+const MAX_SOURCE_FINGERPRINT_FILE_BYTES: u64 = 64 * 1024 * 1024;
+
+/// Version label for source-tree content fingerprints.
+pub const SOURCE_TREE_FINGERPRINT_VERSION: &str = "source-tree-v1";
+
+/// Version label for dispatch workload/config fingerprints.
+pub const WORKLOAD_FINGERPRINT_VERSION: &str = "vyre-dispatch-workload-v1";
+
+/// Version label for backend environment fingerprints.
+pub const ENVIRONMENT_FINGERPRINT_VERSION: &str = "vyre-evidence-environment-v1";
 
 /// Git and source-tree provenance for evidence-producing runs.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -186,8 +207,13 @@ fn source_tree_fingerprint_from_paths(workspace_root: &Path, paths: &[u8]) -> St
     {
         update_hash_field(&mut hasher, b"path", path);
         let path = String::from_utf8_lossy(path);
-        match fs::read(workspace_root.join(path.as_ref())) {
-            Ok(bytes) => update_hash_field(&mut hasher, b"content", &bytes),
+        match read_source_fingerprint_file_bounded(&workspace_root.join(path.as_ref())) {
+            Ok(Some(bytes)) => update_hash_field(&mut hasher, b"content", &bytes),
+            Ok(None) => update_hash_field(
+                &mut hasher,
+                b"content-oversized",
+                MAX_SOURCE_FINGERPRINT_FILE_BYTES.to_string().as_bytes(),
+            ),
             Err(error) => {
                 update_hash_field(&mut hasher, b"read-error", error.to_string().as_bytes())
             }
@@ -269,11 +295,36 @@ fn dirty_worktree_fingerprint_from_parts(
     {
         update_hash_field(&mut hasher, b"untracked-path", path);
         let path = String::from_utf8_lossy(path);
-        if let Ok(bytes) = fs::read(workspace_root.join(path.as_ref())) {
-            update_hash_field(&mut hasher, b"untracked-content", &bytes);
+        match read_source_fingerprint_file_bounded(&workspace_root.join(path.as_ref())) {
+            Ok(Some(bytes)) => update_hash_field(&mut hasher, b"untracked-content", &bytes),
+            Ok(None) => update_hash_field(
+                &mut hasher,
+                b"untracked-content-oversized",
+                MAX_SOURCE_FINGERPRINT_FILE_BYTES.to_string().as_bytes(),
+            ),
+            Err(_) => {}
         }
     }
     hasher.finalize().to_hex().to_string()
+}
+
+fn read_source_fingerprint_file_bounded(path: &Path) -> std::io::Result<Option<Vec<u8>>> {
+    let mut reader = fs::File::open(path)?;
+    let mut bytes = Vec::new();
+    let mut total = 0u64;
+    let mut chunk = [0u8; 8192];
+    loop {
+        let read = reader.read(&mut chunk)?;
+        if read == 0 {
+            return Ok(Some(bytes));
+        }
+        let read = read as u64;
+        total = total.saturating_add(read);
+        if total > MAX_SOURCE_FINGERPRINT_FILE_BYTES {
+            return Ok(None);
+        }
+        bytes.extend_from_slice(&chunk[..read as usize]);
+    }
 }
 
 fn update_hash_field(hasher: &mut blake3::Hasher, label: &[u8], value: &[u8]) {
@@ -281,6 +332,22 @@ fn update_hash_field(hasher: &mut blake3::Hasher, label: &[u8], value: &[u8]) {
     hasher.update(label);
     hasher.update(&(value.len() as u64).to_le_bytes());
     hasher.update(value);
+}
+
+fn digest_to_hex(digest: [u8; 32]) -> String {
+    hex_encode(&digest)
+}
+
+fn evidence_environment_digest(backend_id: &str, backend_version: &str) -> String {
+    let mut hasher = blake3::Hasher::new();
+    update_hash_field(
+        &mut hasher,
+        b"format",
+        ENVIRONMENT_FINGERPRINT_VERSION.as_bytes(),
+    );
+    update_hash_field(&mut hasher, b"backend-id", backend_id.as_bytes());
+    update_hash_field(&mut hasher, b"backend-version", backend_version.as_bytes());
+    hasher.finalize().to_hex().to_string()
 }
 
 fn shell(workspace_root: &Path, args: &[&str]) -> Result<String, String> {
@@ -398,6 +465,167 @@ impl ReplayEvidence {
     }
 }
 
+/// Versioned digest ledger for every identity lane that participates in
+/// evidence replay, provenance, and cache correlation.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct EvidenceDigestLedger {
+    /// Ledger schema version.
+    pub schema: u32,
+    /// Version label for `program_wire_digest`.
+    pub program_wire_version: String,
+    /// BLAKE3 digest of canonical VIR0 Program wire bytes.
+    pub program_wire_digest: String,
+    /// Version label for `normalized_program_digest`.
+    pub normalized_program_version: String,
+    /// Normalized Program digest used by pipeline caches.
+    pub normalized_program_digest: String,
+    /// Version label for `workload_digest`.
+    pub workload_version: String,
+    /// Dispatch workload/config digest.
+    pub workload_digest: String,
+    /// Version label for `source_fingerprint`.
+    pub source_version: String,
+    /// Commit/dirty-state source fingerprint.
+    pub source_fingerprint: String,
+    /// Version label for `source_tree_fingerprint`.
+    pub source_tree_version: String,
+    /// Source-tree content fingerprint.
+    pub source_tree_fingerprint: String,
+    /// Version label for `environment_digest`.
+    pub environment_version: String,
+    /// Backend id/version digest.
+    pub environment_digest: String,
+}
+
+impl EvidenceDigestLedger {
+    /// Current digest-ledger schema.
+    pub const SCHEMA: u32 = 1;
+
+    /// Build the digest ledger from the same inputs used to build an evidence
+    /// bundle.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`BackendError::InvalidProgram`] when the normalized Program
+    /// digest cannot be built.
+    pub fn for_inputs(
+        backend_id: &str,
+        backend_version: &str,
+        program: &Program,
+        config: &DispatchConfig,
+        source: &SourceProvenance,
+    ) -> Result<Self, BackendError> {
+        let normalized_program_digest =
+            try_normalized_program_cache_digest(program).map_err(|error| {
+                BackendError::InvalidProgram {
+                    fix: format!(
+                        "Fix: failed to build evidence Program digest: {error}. Validate and normalize the Program before dispatch evidence emission."
+                    ),
+                }
+            })?;
+        Ok(Self {
+            schema: Self::SCHEMA,
+            program_wire_version: PROGRAM_WIRE_DIGEST_VERSION.to_string(),
+            program_wire_digest: digest_to_hex(program.fingerprint()),
+            normalized_program_version: NORMALIZED_PROGRAM_DIGEST_VERSION.to_string(),
+            normalized_program_digest: digest_to_hex(normalized_program_digest),
+            workload_version: WORKLOAD_FINGERPRINT_VERSION.to_string(),
+            workload_digest: digest_to_hex(dispatch_policy_cache_digest(config)),
+            source_version: SOURCE_FINGERPRINT_VERSION.to_string(),
+            source_fingerprint: source.source_fingerprint.clone(),
+            source_tree_version: SOURCE_TREE_FINGERPRINT_VERSION.to_string(),
+            source_tree_fingerprint: source.source_tree_fingerprint.clone(),
+            environment_version: ENVIRONMENT_FINGERPRINT_VERSION.to_string(),
+            environment_digest: evidence_environment_digest(backend_id, backend_version),
+        })
+    }
+
+    /// Validate ledger version labels and digest shapes.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`BackendError::InvalidProgram`] when any ledger lane is missing,
+    /// malformed, or versioned against the wrong contract.
+    pub fn validate(&self) -> Result<(), BackendError> {
+        if self.schema != Self::SCHEMA {
+            return Err(BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: evidence digest ledger schema {} is unsupported; regenerate evidence with schema {}.",
+                    self.schema,
+                    Self::SCHEMA
+                ),
+            });
+        }
+        validate_ledger_version(
+            "program_wire_version",
+            &self.program_wire_version,
+            PROGRAM_WIRE_DIGEST_VERSION,
+        )?;
+        validate_ledger_version(
+            "normalized_program_version",
+            &self.normalized_program_version,
+            NORMALIZED_PROGRAM_DIGEST_VERSION,
+        )?;
+        validate_ledger_version(
+            "workload_version",
+            &self.workload_version,
+            WORKLOAD_FINGERPRINT_VERSION,
+        )?;
+        validate_ledger_version(
+            "source_version",
+            &self.source_version,
+            SOURCE_FINGERPRINT_VERSION,
+        )?;
+        validate_ledger_version(
+            "source_tree_version",
+            &self.source_tree_version,
+            SOURCE_TREE_FINGERPRINT_VERSION,
+        )?;
+        validate_ledger_version(
+            "environment_version",
+            &self.environment_version,
+            ENVIRONMENT_FINGERPRINT_VERSION,
+        )?;
+        validate_hex_digest("program_wire_digest", &self.program_wire_digest)?;
+        validate_hex_digest("normalized_program_digest", &self.normalized_program_digest)?;
+        validate_hex_digest("workload_digest", &self.workload_digest)?;
+        validate_hex_digest("environment_digest", &self.environment_digest)?;
+        if self.source_fingerprint.trim().is_empty() {
+            return Err(BackendError::InvalidProgram {
+                fix: "Fix: evidence digest ledger source_fingerprint must be non-empty."
+                    .to_string(),
+            });
+        }
+        if self.source_tree_fingerprint.trim().is_empty() {
+            return Err(BackendError::InvalidProgram {
+                fix: "Fix: evidence digest ledger source_tree_fingerprint must be non-empty."
+                    .to_string(),
+            });
+        }
+        Ok(())
+    }
+}
+
+fn validate_ledger_version(label: &str, actual: &str, expected: &str) -> Result<(), BackendError> {
+    if actual != expected {
+        return Err(BackendError::InvalidProgram {
+            fix: format!(
+                "Fix: evidence digest ledger {label} must be `{expected}`, got `{actual}`."
+            ),
+        });
+    }
+    Ok(())
+}
+
+fn validate_hex_digest(label: &str, value: &str) -> Result<(), BackendError> {
+    if value.len() != 64 || !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return Err(BackendError::InvalidProgram {
+            fix: format!("Fix: evidence digest ledger {label} must be a 64-character hex digest."),
+        });
+    }
+    Ok(())
+}
+
 /// Shared evidence bundle for dispatch, benchmark, conformance, and replay surfaces.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct EvidenceBundle {
@@ -411,6 +639,9 @@ pub struct EvidenceBundle {
     pub program_digest: String,
     /// Dispatch policy fields that affect generated backend code.
     pub dispatch_policy: String,
+    /// Versioned digest ledger binding Program, workload, source, and backend
+    /// environment identity.
+    pub digest_ledger: EvidenceDigestLedger,
     /// Source provenance for the code that produced this evidence.
     pub source: SourceProvenance,
     /// Timing evidence for the dispatch or run.
@@ -436,20 +667,23 @@ impl EvidenceBundle {
         config: &DispatchConfig,
         source: SourceProvenance,
     ) -> Result<Self, BackendError> {
-        let program_digest = try_normalized_program_cache_digest(program).map_err(|error| {
-            BackendError::InvalidProgram {
-                fix: format!(
-                    "Fix: failed to build evidence Program digest: {error}. Validate and normalize the Program before dispatch evidence emission."
-                ),
-            }
-        })?;
         source.validate()?;
+        let backend_id = backend.id();
+        let backend_version = backend.version();
+        let digest_ledger = EvidenceDigestLedger::for_inputs(
+            backend_id,
+            backend_version,
+            program,
+            config,
+            &source,
+        )?;
         Ok(Self {
             schema: Self::SCHEMA,
-            backend_id: backend.id().to_string(),
-            backend_version: backend.version().to_string(),
-            program_digest: hex_encode(&program_digest),
+            backend_id: backend_id.to_string(),
+            backend_version: backend_version.to_string(),
+            program_digest: digest_ledger.normalized_program_digest.clone(),
             dispatch_policy: dispatch_policy_cache_string(config),
+            digest_ledger,
             source,
             timing: DispatchTimingEvidence::default(),
             artifacts: Vec::new(),
@@ -499,11 +733,30 @@ impl EvidenceBundle {
             });
         }
         if self.program_digest.len() != 64
-            || !self.program_digest.bytes().all(|byte| byte.is_ascii_hexdigit())
+            || !self
+                .program_digest
+                .bytes()
+                .all(|byte| byte.is_ascii_hexdigit())
         {
             return Err(BackendError::InvalidProgram {
                 fix: "Fix: evidence bundle program_digest must be a 64-character hex digest."
                     .to_string(),
+            });
+        }
+        self.digest_ledger.validate()?;
+        if self.digest_ledger.normalized_program_digest != self.program_digest {
+            return Err(BackendError::InvalidProgram {
+                fix: "Fix: evidence bundle program_digest must match digest_ledger.normalized_program_digest.".to_string(),
+            });
+        }
+        if self.digest_ledger.source_fingerprint != self.source.source_fingerprint {
+            return Err(BackendError::InvalidProgram {
+                fix: "Fix: evidence bundle source_fingerprint must match digest_ledger.source_fingerprint.".to_string(),
+            });
+        }
+        if self.digest_ledger.source_tree_fingerprint != self.source.source_tree_fingerprint {
+            return Err(BackendError::InvalidProgram {
+                fix: "Fix: evidence bundle source_tree_fingerprint must match digest_ledger.source_tree_fingerprint.".to_string(),
             });
         }
         self.source.validate()
@@ -530,6 +783,33 @@ mod tests {
 
         fn version(&self) -> &'static str {
             "test-version"
+        }
+
+        fn dispatch(
+            &self,
+            _program: &Program,
+            _inputs: &[Vec<u8>],
+            _config: &DispatchConfig,
+        ) -> Result<Vec<Vec<u8>>, BackendError> {
+            Ok(vec![42_u32.to_le_bytes().to_vec()])
+        }
+    }
+
+    #[derive(Clone)]
+    struct VersionedEvidenceTestBackend {
+        id: &'static str,
+        version: &'static str,
+    }
+
+    impl private::Sealed for VersionedEvidenceTestBackend {}
+
+    impl VyreBackend for VersionedEvidenceTestBackend {
+        fn id(&self) -> &'static str {
+            self.id
+        }
+
+        fn version(&self) -> &'static str {
+            self.version
         }
 
         fn dispatch(
@@ -586,6 +866,32 @@ mod tests {
         }
     }
 
+    fn changed_ledger_lanes(
+        left: &EvidenceDigestLedger,
+        right: &EvidenceDigestLedger,
+    ) -> Vec<&'static str> {
+        let mut changed = Vec::new();
+        if left.program_wire_digest != right.program_wire_digest {
+            changed.push("program_wire_digest");
+        }
+        if left.normalized_program_digest != right.normalized_program_digest {
+            changed.push("normalized_program_digest");
+        }
+        if left.workload_digest != right.workload_digest {
+            changed.push("workload_digest");
+        }
+        if left.source_fingerprint != right.source_fingerprint {
+            changed.push("source_fingerprint");
+        }
+        if left.source_tree_fingerprint != right.source_tree_fingerprint {
+            changed.push("source_tree_fingerprint");
+        }
+        if left.environment_digest != right.environment_digest {
+            changed.push("environment_digest");
+        }
+        changed
+    }
+
     #[test]
     fn evidence_bundle_records_backend_program_policy_source_timing_and_artifacts() {
         let backend = EvidenceTestBackend;
@@ -624,6 +930,22 @@ mod tests {
         assert_eq!(bundle.backend_id, "evidence-test");
         assert_eq!(bundle.backend_version, "test-version");
         assert_eq!(bundle.program_digest.len(), 64);
+        assert_eq!(
+            bundle.program_digest,
+            bundle.digest_ledger.normalized_program_digest
+        );
+        assert_eq!(
+            bundle.digest_ledger.program_wire_version,
+            PROGRAM_WIRE_DIGEST_VERSION
+        );
+        assert_eq!(
+            bundle.digest_ledger.normalized_program_version,
+            NORMALIZED_PROGRAM_DIGEST_VERSION
+        );
+        assert_eq!(
+            bundle.digest_ledger.workload_version,
+            WORKLOAD_FINGERPRINT_VERSION
+        );
         assert_eq!(bundle.dispatch_policy, "ulp=None:wg=Some([8, 1, 1])");
         assert_eq!(bundle.source.source_fingerprint, "git:abc123:dirty=false");
         assert_eq!(bundle.timing.device_ns, Some(70));
@@ -631,6 +953,111 @@ mod tests {
         assert_eq!(
             bundle.replay.as_ref().map(|replay| replay.command.as_str()),
             Some("vyre-conform dispatch --backend evidence-test --ops evidence.test")
+        );
+    }
+
+    #[test]
+    fn digest_ledger_scopes_program_source_workload_and_environment_changes() {
+        let backend = VersionedEvidenceTestBackend {
+            id: "evidence-test",
+            version: "test-version",
+        };
+        let program = evidence_program();
+        let config = DispatchConfig::default();
+        let source = source();
+        let base = EvidenceBundle::for_program(&backend, &program, &config, source.clone())
+            .expect("Fix: base evidence bundle must build")
+            .digest_ledger;
+
+        let changed_program = Program::wrapped(
+            vec![
+                BufferDecl::read("input", 0, DataType::U32).with_count(1),
+                BufferDecl::output("output", 1, DataType::U32).with_count(1),
+            ],
+            [1, 1, 1],
+            vec![Node::store("output", Expr::u32(0), Expr::u32(7))],
+        );
+        let program_changed =
+            EvidenceBundle::for_program(&backend, &changed_program, &config, source.clone())
+                .expect("Fix: changed Program evidence bundle must build")
+                .digest_ledger;
+        assert_eq!(
+            changed_ledger_lanes(&base, &program_changed),
+            vec!["program_wire_digest", "normalized_program_digest"],
+            "Fix: Program body mutations must not perturb source, workload, or environment digest lanes."
+        );
+
+        let source_changed = SourceProvenance {
+            source_fingerprint: "git:def456:dirty=false".to_string(),
+            ..source.clone()
+        };
+        let source_ledger =
+            EvidenceBundle::for_program(&backend, &program, &config, source_changed)
+                .expect("Fix: changed source evidence bundle must build")
+                .digest_ledger;
+        assert_eq!(
+            changed_ledger_lanes(&base, &source_ledger),
+            vec!["source_fingerprint"],
+            "Fix: source fingerprint mutations must stay in the source lane."
+        );
+
+        let source_tree_changed = SourceProvenance {
+            source_tree_fingerprint: "source-tree-v1:changed".to_string(),
+            ..source.clone()
+        };
+        let source_tree_ledger =
+            EvidenceBundle::for_program(&backend, &program, &config, source_tree_changed)
+                .expect("Fix: changed source-tree evidence bundle must build")
+                .digest_ledger;
+        assert_eq!(
+            changed_ledger_lanes(&base, &source_tree_ledger),
+            vec!["source_tree_fingerprint"],
+            "Fix: source-tree mutations must stay in the source-tree lane."
+        );
+
+        let mut workload_changed = DispatchConfig::default();
+        workload_changed.workgroup_override = Some([8, 1, 1]);
+        let workload_ledger =
+            EvidenceBundle::for_program(&backend, &program, &workload_changed, source.clone())
+                .expect("Fix: changed workload evidence bundle must build")
+                .digest_ledger;
+        assert_eq!(
+            changed_ledger_lanes(&base, &workload_ledger),
+            vec!["workload_digest"],
+            "Fix: workload/config mutations must stay in the workload digest lane."
+        );
+
+        let environment_changed = VersionedEvidenceTestBackend {
+            id: "evidence-test",
+            version: "test-version-2",
+        };
+        let environment_ledger =
+            EvidenceBundle::for_program(&environment_changed, &program, &config, source)
+                .expect("Fix: changed environment evidence bundle must build")
+                .digest_ledger;
+        assert_eq!(
+            changed_ledger_lanes(&base, &environment_ledger),
+            vec!["environment_digest"],
+            "Fix: backend environment mutations must stay in the environment digest lane."
+        );
+    }
+
+    #[test]
+    fn evidence_bundle_rejects_digest_ledger_mismatch() {
+        let backend = EvidenceTestBackend;
+        let program = evidence_program();
+        let mut bundle =
+            EvidenceBundle::for_program(&backend, &program, &DispatchConfig::default(), source())
+                .expect("Fix: evidence bundle should build before ledger mutation");
+        bundle.digest_ledger.normalized_program_digest =
+            "0000000000000000000000000000000000000000000000000000000000000000".to_string();
+
+        let error = bundle
+            .validate()
+            .expect_err("Fix: evidence validation must reject a mismatched digest ledger");
+        assert!(
+            error.to_string().contains("digest_ledger"),
+            "Fix: digest ledger mismatch rejection must name the mismatched field: {error}"
         );
     }
 
@@ -644,13 +1071,9 @@ mod tests {
             source_tree_fingerprint: "source-tree-v1:test".to_string(),
         };
 
-        let error = EvidenceBundle::for_program(
-            &backend,
-            &program,
-            &DispatchConfig::default(),
-            invalid,
-        )
-        .expect_err("Fix: evidence bundle must reject blank source_fingerprint");
+        let error =
+            EvidenceBundle::for_program(&backend, &program, &DispatchConfig::default(), invalid)
+                .expect_err("Fix: evidence bundle must reject blank source_fingerprint");
 
         assert!(
             error.to_string().contains("source_fingerprint"),

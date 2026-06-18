@@ -1,0 +1,47 @@
+# Algorithmic complexity DoS guards for VX-926 through VX-928.
+# Regex, parser, graph, relation, archive, and reporting paths use one complexity guard registry.
+
+schema = "vyre.resource.algorithmic_complexity_dos_guard.v1"
+owner = "security_reliability"
+evidence_tokens = ["CWE_407_ALGORITHMIC_COMPLEXITY", "CWE_674_UNCONTROLLED_RECURSION", "OWASP_DOS"]
+
+required_fields = [
+  "guard_id",
+  "surface",
+  "complexity_claim",
+  "worst_case_trigger",
+  "budget_policy",
+  "fallback_policy",
+  "proof_artifact",
+  "diagnostic",
+]
+
+[[guard]]
+guard_id = "regex-backtracking-refusal"
+surface = "regex compiler and matcher"
+complexity_claim = "no exponential backtracking route selected for untrusted patterns"
+worst_case_trigger = "nested ambiguous repetition"
+budget_policy = "RESOURCE_BUDGET_POLICY.toml"
+fallback_policy = "route-to-linear-automata-or-refuse"
+proof_artifact = "REGEX_UNSUPPORTED_DIAGNOSTICS.toml"
+diagnostic = "VYRE_COMPLEXITY_REGEX_REFUSED"
+
+[[guard]]
+guard_id = "relation-fixed-point-budget"
+surface = "relation and graph flow engine"
+complexity_claim = "iteration count and tuple growth are bounded by arrangement policy"
+worst_case_trigger = "dense transitive closure over high-cardinality facts"
+budget_policy = "DELTA_FLOW_ARRANGEMENTS.toml"
+fallback_policy = "switch-to-summary-mode-or-refuse-global-flow"
+proof_artifact = "RELATION_ENGINE_COMPARATORS.toml"
+diagnostic = "VYRE_COMPLEXITY_RELATION_LIMIT"
+
+[[guard]]
+guard_id = "parser-recursion-budget"
+surface = "parser recovery and source frontend"
+complexity_claim = "malformed nesting depth is bounded before recursive descent"
+worst_case_trigger = "deeply nested malformed delimiters"
+budget_policy = "RESOURCE_BUDGET_POLICY.toml"
+fallback_policy = "fail-closed-with-recovery-diagnostic"
+proof_artifact = "PARSER_RECOVERY_CORPUS.toml"
+diagnostic = "VYRE_COMPLEXITY_PARSER_DEPTH_LIMIT"

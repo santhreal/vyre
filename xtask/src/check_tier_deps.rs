@@ -36,6 +36,7 @@ pub(crate) fn run(args: &[String]) {
         let table = parse_toml(&manifest, &text);
         scan_manifest(&member, tier, &table, &mut failures);
     }
+    validate_cross_crate_promotion_contract(&root, &mut failures);
 
     if failures.is_empty() {
         println!(
@@ -144,11 +145,14 @@ fn dep_crate_name(dep_key: &str, value: &Value) -> Option<String> {
 
 fn scan_manifest(member: &str, tier: u32, table: &Value, failures: &mut Vec<String>) {
     let deps_tables = [
-        table.get("dependencies"),
-        table.get("dev-dependencies"),
-        table.get("build-dependencies"),
+        ("dependencies", table.get("dependencies")),
+        ("dev-dependencies", table.get("dev-dependencies")),
+        ("build-dependencies", table.get("build-dependencies")),
     ];
-    for deps in deps_tables.into_iter().flatten() {
+    for (dep_kind, deps) in deps_tables {
+        let Some(deps) = deps else {
+            continue;
+        };
         let Some(deps) = deps.as_table() else {
             continue;
         };
@@ -160,13 +164,85 @@ fn scan_manifest(member: &str, tier: u32, table: &Value, failures: &mut Vec<Stri
             let fallback = dep_crate_name(key, value);
             let dep_name = resolved.or(fallback).unwrap_or_else(|| key.to_string());
             let dep_tier = crate_tier(&dep_name);
-            if dep_tier > tier && tier < 99 {
+            if dep_tier > tier && tier < 99 && dep_kind != "dev-dependencies" {
                 failures.push(format!(
-                    "{member} (T{tier}) must not path-depend on {dep_name} (T{dep_tier}) via `{key}` = `{path}`"
+                    "{member} (T{tier}) must not path-depend on {dep_name} (T{dep_tier}) via `{key}` = `{path}` in {dep_kind}"
                 ));
             }
         }
     }
+}
+
+fn validate_cross_crate_promotion_contract(root: &Path, failures: &mut Vec<String>) {
+    let crate_graph = read_contract_doc(root, "docs/CRATE_GRAPH.md", failures);
+    let primitives_tier = read_contract_doc(root, "docs/primitives-tier.md", failures);
+    let library_tiers = read_contract_doc(root, "docs/library-tiers.md", failures);
+    let import_test = read_contract_doc(
+        root,
+        "vyre-core/tests/cross_crate_import_path_migration_contract.rs",
+        failures,
+    );
+    failures.extend(cross_crate_promotion_contract_text_failures(
+        crate_graph.as_deref().unwrap_or(""),
+        primitives_tier.as_deref().unwrap_or(""),
+        library_tiers.as_deref().unwrap_or(""),
+        import_test.as_deref().unwrap_or(""),
+    ));
+}
+
+fn read_contract_doc(root: &Path, rel: &str, failures: &mut Vec<String>) -> Option<String> {
+    let path = root.join(rel);
+    match fs::read_to_string(&path) {
+        Ok(text) => Some(text),
+        Err(error) => {
+            failures.push(format!(
+                "cross-crate promotion contract could not read `{rel}`: {error}"
+            ));
+            None
+        }
+    }
+}
+
+fn cross_crate_promotion_contract_text_failures(
+    crate_graph: &str,
+    primitives_tier: &str,
+    library_tiers: &str,
+    import_test: &str,
+) -> Vec<String> {
+    let mut failures = Vec::new();
+    for (name, text) in [
+        ("docs/CRATE_GRAPH.md", crate_graph),
+        ("docs/primitives-tier.md", primitives_tier),
+        ("docs/library-tiers.md", library_tiers),
+    ] {
+        for marker in [
+            "Cross-crate promotion patch contract",
+            "import-path migration test",
+            "check-tier-deps",
+            "lego-audit",
+        ] {
+            if !text.contains(marker) {
+                failures.push(format!(
+                    "{name} is missing `{marker}` for cross-crate promotion ownership"
+                ));
+            }
+        }
+    }
+    for marker in [
+        "import-path migration test",
+        "docs/CRATE_GRAPH.md",
+        "docs/primitives-tier.md",
+        "docs/library-tiers.md",
+        "check-tier-deps",
+        "lego-audit",
+    ] {
+        if !import_test.contains(marker) {
+            failures.push(format!(
+                "cross-crate import-path migration test is missing `{marker}`"
+            ));
+        }
+    }
+    failures
 }
 
 fn read_bounded(path: &Path) -> String {
@@ -186,4 +262,85 @@ fn parse_toml(path: &Path, text: &str) -> Value {
         panic!("Fix: parse {}: {e}", path.display());
     });
     Value::Table(table)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const VALID_DOC: &str = "Cross-crate promotion patch contract\nimport-path migration test\ncheck-tier-deps\nlego-audit\n";
+    const VALID_TEST: &str = "import-path migration test\ndocs/CRATE_GRAPH.md\ndocs/primitives-tier.md\ndocs/library-tiers.md\ncheck-tier-deps\nlego-audit\n";
+
+    #[test]
+    fn cross_crate_promotion_contract_accepts_complete_docs_and_test() {
+        assert!(cross_crate_promotion_contract_text_failures(
+            VALID_DOC, VALID_DOC, VALID_DOC, VALID_TEST,
+        )
+        .is_empty());
+    }
+
+    #[test]
+    fn cross_crate_promotion_contract_rejects_missing_import_test_marker() {
+        let failures = cross_crate_promotion_contract_text_failures(
+            VALID_DOC,
+            VALID_DOC,
+            VALID_DOC,
+            "docs/CRATE_GRAPH.md\ncheck-tier-deps\nlego-audit\n",
+        );
+
+        assert!(failures
+            .iter()
+            .any(|failure| failure.contains("import-path migration test")));
+        assert!(failures
+            .iter()
+            .any(|failure| failure.contains("docs/primitives-tier.md")));
+    }
+}
+
+#[cfg(test)]
+mod dependency_kind_tests {
+    use super::*;
+
+    #[test]
+    fn production_upward_path_dependency_fails() {
+        let table = parse_toml(
+            Path::new("fixture/Cargo.toml"),
+            r#"
+[dependencies]
+vyre-driver = { path = "../vyre-driver" }
+"#,
+        );
+        let mut failures = Vec::new();
+
+        scan_manifest(
+            "vyre-primitives",
+            crate_tier("vyre-primitives"),
+            &table,
+            &mut failures,
+        );
+
+        assert_eq!(failures.len(), 1);
+        assert!(failures[0].contains("dependencies"));
+    }
+
+    #[test]
+    fn dev_upward_path_dependency_is_allowed_for_contract_tests() {
+        let table = parse_toml(
+            Path::new("fixture/Cargo.toml"),
+            r#"
+[dev-dependencies]
+vyre-driver = { path = "../vyre-driver" }
+"#,
+        );
+        let mut failures = Vec::new();
+
+        scan_manifest(
+            "vyre-primitives",
+            crate_tier("vyre-primitives"),
+            &table,
+            &mut failures,
+        );
+
+        assert!(failures.is_empty(), "{failures:?}");
+    }
 }

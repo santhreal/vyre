@@ -1,0 +1,55 @@
+# Parser recovery corpus for VX-655.
+# Malformed inputs get exact recovery spans, partial-tree digests, or fail-closed decisions.
+
+schema = "vyre.parser.recovery_corpus.v1"
+owner = "parser_frontend"
+evidence_tokens = ["TREE_SITTER", "RUST_REGEX_AUTOMATA"]
+
+required_fields = [
+  "language",
+  "dialect",
+  "malformed_token_class",
+  "recovery_span",
+  "partial_tree_digest",
+  "diagnostic_code",
+  "gpu_blocker",
+  "decision",
+]
+
+decision_states = [
+  "recover_with_partial_tree",
+  "fail_closed",
+]
+
+[[case]]
+id = "rust-unclosed-raw-string"
+language = "rust"
+dialect = "rust-2021"
+malformed_token_class = "unclosed_raw_string"
+recovery_span = "18..71"
+partial_tree_digest = "sha256:rust-partial-tree"
+diagnostic_code = "VYRE_PARSE_RUST_UNCLOSED_RAW_STRING"
+gpu_blocker = "string-boundary-unknown"
+decision = "recover_with_partial_tree"
+
+[[case]]
+id = "c-unterminated-block-comment"
+language = "c"
+dialect = "gnu11"
+malformed_token_class = "unterminated_block_comment"
+recovery_span = "101..EOF"
+partial_tree_digest = "sha256:c-partial-tree"
+diagnostic_code = "VYRE_PARSE_C_UNTERMINATED_BLOCK_COMMENT"
+gpu_blocker = "comment-boundary-unknown"
+decision = "fail_closed"
+
+[[case]]
+id = "python-mixed-indent"
+language = "python"
+dialect = "python-3.12"
+malformed_token_class = "mixed_indent"
+recovery_span = "36..48"
+partial_tree_digest = "sha256:python-partial-tree"
+diagnostic_code = "VYRE_PARSE_PYTHON_MIXED_INDENT"
+gpu_blocker = "indentation-state-diverged"
+decision = "recover_with_partial_tree"

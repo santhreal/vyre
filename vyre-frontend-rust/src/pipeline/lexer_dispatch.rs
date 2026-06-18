@@ -277,7 +277,7 @@ fn decode_u32_words(bytes: &[u8], label: &str) -> Result<Vec<u32>, RustFrontendE
     }
     Ok(bytes
         .chunks_exact(std::mem::size_of::<u32>())
-        .map(|chunk| u32::from_le_bytes(chunk.try_into().expect("u32 chunk")))
+        .map(|chunk| u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
         .collect())
 }
 

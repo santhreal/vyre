@@ -1,0 +1,37 @@
+# End-to-end multi-channel distribution tranche coverage for VX-1181 through VX-1200.
+# This tranche adds OCI, GHCR, Homebrew, bottles, and binary assets while reusing Cargo, release artifact integrity, provenance, final gates, and publication boundaries.
+
+schema = "vyre.release.multichannel_distribution_tranche_coverage.v1"
+owner = "coordination"
+evidence_tokens = ["OCI_IMAGE_SPEC", "OCI_DISTRIBUTION_SPEC", "GITHUB_CONTAINER_REGISTRY", "HOMEBREW_FORMULA_COOKBOOK", "HOMEBREW_BOTTLES", "HOMEBREW_SHA256_POLICY"]
+
+required_fields = [
+  "coverage_id",
+  "vx_id_range",
+  "multichannel_distribution_surface_matrix",
+  "oci_container_image_publication_policy",
+  "homebrew_tap_bottle_publication_policy",
+  "binary_asset_platform_matrix",
+  "consumer_install_compatibility_matrix",
+  "release_artifact_integrity_index",
+  "consumer_artifact_verification_protocol",
+  "final_release_gate_manifest",
+  "publication_boundary",
+  "dedup_seam",
+  "proof_gate",
+]
+
+[[coverage]]
+coverage_id = "multichannel-distribution-end-to-end"
+vx_id_range = "VX-1181..VX-1200"
+multichannel_distribution_surface_matrix = "MULTICHANNEL_DISTRIBUTION_SURFACE_MATRIX.toml"
+oci_container_image_publication_policy = "OCI_CONTAINER_IMAGE_PUBLICATION_POLICY.toml"
+homebrew_tap_bottle_publication_policy = "HOMEBREW_TAP_BOTTLE_PUBLICATION_POLICY.toml"
+binary_asset_platform_matrix = "BINARY_ASSET_PLATFORM_MATRIX.toml"
+consumer_install_compatibility_matrix = "CONSUMER_INSTALL_COMPATIBILITY_MATRIX.toml"
+release_artifact_integrity_index = "RELEASE_ARTIFACT_INTEGRITY_INDEX.toml"
+consumer_artifact_verification_protocol = "CONSUMER_ARTIFACT_VERIFICATION_PROTOCOL.toml"
+final_release_gate_manifest = "FINAL_RELEASE_GATE_MANIFEST.toml"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+dedup_seam = "cargo-remains-rust-package-authority-oci-homebrew-and-binary-assets-are-distribution-channels-and-release-artifact-integrity-remains-verification-authority"
+proof_gate = "conform/vyre-conform-enforce/tests/multichannel_distribution_governance.rs"

@@ -1,0 +1,57 @@
+# Policy-as-code rules for VX-1022, VX-1027, VX-1031, and VX-1035.
+# Plan completion, publication, artifact authority, and validation authorization policies share one rule registry.
+
+schema = "vyre.plan.policy_as_code_rules.v1"
+owner = "coordination"
+evidence_tokens = ["OPEN_POLICY_AGENT_REGO", "JSON_SCHEMA_2020_12", "NIST_SSDF"]
+
+required_fields = [
+  "policy_id",
+  "engine_family",
+  "input_artifacts",
+  "decision",
+  "deny_condition",
+  "required_evidence",
+  "diagnostic",
+  "publication_class",
+]
+
+[[policy]]
+policy_id = "deny-completion-without-authorized-validation"
+engine_family = "rego-compatible-structured-input-policy"
+input_artifacts = ["COMPLETION_AUDIT_EVIDENCE_MATRIX.toml", "FINAL_RELEASE_GATE_MANIFEST.toml"]
+decision = "completion_claim_allowed"
+deny_condition = "any-required-gate-missing-or-not-user-authorized"
+required_evidence = ["gate-result-artifact", "authorization-record", "completion-matrix-entry"]
+diagnostic = "VYRE_PLAN_COMPLETION_BLOCKED_UNTIL_DIRECT_EVIDENCE"
+publication_class = "public-vyre-safe-with-private-redaction"
+
+[[policy]]
+policy_id = "deny-private-santh-publication"
+engine_family = "rego-compatible-publication-policy"
+input_artifacts = ["PUBLICATION_BOUNDARY_MANIFEST.toml", "PLAN_ARTIFACT_AUTHORITY_MAP.toml"]
+decision = "public_artifact_allowed"
+deny_condition = "artifact-references-santh-private-root-or-private-evidence-value"
+required_evidence = ["publication-boundary-id", "redaction-summary", "artifact-authority-row"]
+diagnostic = "VYRE_PLAN_PRIVATE_BOUNDARY_PUBLICATION_REFUSED"
+publication_class = "public-vyre-safe"
+
+[[policy]]
+policy_id = "deny-duplicate-authority-registries"
+engine_family = "rego-compatible-dedup-policy"
+input_artifacts = ["PLAN_ARTIFACT_AUTHORITY_MAP.toml", "PLAN_EXECUTION_DAG.toml"]
+decision = "artifact_authority_map_valid"
+deny_condition = "same-artifact-id-has-multiple-authoritative-files-or-copy-rule"
+required_evidence = ["authoritative-file", "duplicate-policy", "import-rule"]
+diagnostic = "VYRE_PLAN_DUPLICATE_AUTHORITY_REFUSED"
+publication_class = "public-vyre-safe"
+
+[[policy]]
+policy_id = "deny-unsequenced-plan-node"
+engine_family = "rego-compatible-dag-policy"
+input_artifacts = ["PLAN_EXECUTION_DAG.toml"]
+decision = "execution_node_allowed"
+deny_condition = "node-lacks-predecessor-authority-seam-validation-gate-or-unblock-condition"
+required_evidence = ["node-id", "authority-seam", "validation-gate", "unblock-condition"]
+diagnostic = "VYRE_PLAN_EXECUTION_NODE_INCOMPLETE"
+publication_class = "public-vyre-safe"

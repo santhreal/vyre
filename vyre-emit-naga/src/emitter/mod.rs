@@ -17,6 +17,8 @@ mod scalar_ops;
 mod setup;
 mod subgroup;
 
+#[cfg(test)]
+pub(crate) use op_dispatch::op_dispatch_route_cache_probe;
 pub(crate) use setup::emit_uncached;
 use setup::{Builtins, TypeHandles};
 
@@ -90,4 +92,5 @@ struct BodyBuilder<'a> {
     named_carrier_result_ids: FxHashMap<u32, vyre_lower::descriptor::Name>,
     trap_sidecar_slot: Option<u32>,
     trap_tag_codes: FxHashMap<vyre_lower::descriptor::Name, u32>,
+    op_dispatch_routes: op_dispatch::OpDispatchRouteCache,
 }

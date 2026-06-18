@@ -47,11 +47,15 @@ pub use provenance::build_scallop_lineage_with_program_and_scratch;
 #[cfg(feature = "self-substrate-adapters")]
 pub use provenance::build_scallop_lineage_with_scratch;
 pub use sizing::MegakernelSizingPolicy;
+#[cfg(any(test, feature = "legacy-infallible"))]
 pub use whole_megakernel_opt::{
     detect_cross_arm_redundancy, prune_redundant_work_items_into,
-    prune_redundant_work_items_with_scratch_into, try_detect_cross_arm_redundancy,
-    try_prune_redundant_work_items_into, try_prune_redundant_work_items_with_scratch_into,
-    CrossArmRedundancy, RedundantWorkItemPruneScratch,
+    prune_redundant_work_items_with_scratch_into,
+};
+pub use whole_megakernel_opt::{
+    try_detect_cross_arm_redundancy, try_prune_redundant_work_items_into,
+    try_prune_redundant_work_items_with_scratch_into, CrossArmRedundancy,
+    RedundantWorkItemPruneScratch,
 };
 
 #[cfg(test)]

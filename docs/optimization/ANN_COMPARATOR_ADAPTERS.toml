@@ -1,0 +1,40 @@
+# ANN comparator adapters for VX-684.
+# cuVS-compatible CAGRA, Vamana, IVF, and PQ routes use exact fixtures and large-corpus recall metrics.
+
+schema = "vyre.ann.comparator_adapters.v1"
+owner = "sparse_math_ai"
+evidence_tokens = ["CUVS", "FAISS_GPU"]
+
+adapters = [
+  "cagra",
+  "vamana",
+  "ivf",
+  "pq",
+]
+
+required_metrics = [
+  "exact_small_fixture_parity",
+  "recall_at_k",
+  "build_ns",
+  "query_ns",
+  "memory_bytes",
+  "selected_route_reason",
+]
+
+[[adapter]]
+id = "cagra-gpu-large"
+exact_small_fixture_parity = true
+recall_at_k = "0.982@10"
+build_ns = 890000000
+query_ns = 42000
+memory_bytes = 2147483648
+selected_route_reason = "gpu-graph-search-high-recall"
+
+[[adapter]]
+id = "ivf-pq-memory-bound"
+exact_small_fixture_parity = true
+recall_at_k = "0.941@10"
+build_ns = 430000000
+query_ns = 31000
+memory_bytes = 536870912
+selected_route_reason = "memory-budget-prefers-compressed-index"

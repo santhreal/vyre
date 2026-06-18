@@ -1,0 +1,178 @@
+[
+  {
+    "file": "vyre-emit-naga/src/lib.rs",
+    "line": 86,
+    "owner_lane": "lower_emit",
+    "budget": "max_findings",
+    "actual": 10,
+    "limit": 9,
+    "delta": 1,
+    "gate": "cargo_full run -p xtask --bin xtask -- hot-path-scan --strict",
+    "suggested_vx": "HOTPATH-VYRE-EMIT-NAGA-SRC-LIB-RS-MAX-FINDINGS"
+  },
+  {
+    "file": "vyre-emit-naga/src/lib.rs",
+    "line": 122,
+    "owner_lane": "lower_emit",
+    "budget": "max_panic_findings",
+    "actual": 1,
+    "limit": 0,
+    "delta": 1,
+    "gate": "cargo_full run -p xtask --bin xtask -- hot-path-scan --strict",
+    "suggested_vx": "HOTPATH-VYRE-EMIT-NAGA-SRC-LIB-RS-MAX-PANIC-FINDINGS"
+  },
+  {
+    "file": "vyre-driver/src/specialization.rs",
+    "line": 156,
+    "owner_lane": "driver_shared",
+    "budget": "max_findings",
+    "actual": 4,
+    "limit": 1,
+    "delta": 3,
+    "gate": "cargo_full run -p xtask --bin xtask -- hot-path-scan --strict",
+    "suggested_vx": "HOTPATH-VYRE-DRIVER-SRC-SPECIALIZATION-RS-MAX-FINDINGS"
+  },
+  {
+    "file": "vyre-driver/src/specialization.rs",
+    "line": 258,
+    "owner_lane": "driver_shared",
+    "budget": "max_panic_findings",
+    "actual": 3,
+    "limit": 0,
+    "delta": 3,
+    "gate": "cargo_full run -p xtask --bin xtask -- hot-path-scan --strict",
+    "suggested_vx": "HOTPATH-VYRE-DRIVER-SRC-SPECIALIZATION-RS-MAX-PANIC-FINDINGS"
+  },
+  {
+    "file": "vyre-foundation/src/optimizer/passes/algebraic/const_fold/reaching_def_propagate.rs",
+    "line": 191,
+    "owner_lane": "foundation_optimizer",
+    "budget": "max_findings",
+    "actual": 8,
+    "limit": 7,
+    "delta": 1,
+    "gate": "cargo_full run -p xtask --bin xtask -- hot-path-scan --strict",
+    "suggested_vx": "HOTPATH-VYRE-FOUNDATION-SRC-OPTIMIZER-PASSES-ALGEBRAIC-CONST-FOLD-REACHING-DEF-PROPAGATE-RS-MAX-FINDINGS"
+  },
+  {
+    "file": "vyre-foundation/src/optimizer/passes/algebraic/const_fold/reaching_def_propagate.rs",
+    "line": 554,
+    "owner_lane": "foundation_optimizer",
+    "budget": "max_panic_findings",
+    "actual": 1,
+    "limit": 0,
+    "delta": 1,
+    "gate": "cargo_full run -p xtask --bin xtask -- hot-path-scan --strict",
+    "suggested_vx": "HOTPATH-VYRE-FOUNDATION-SRC-OPTIMIZER-PASSES-ALGEBRAIC-CONST-FOLD-REACHING-DEF-PROPAGATE-RS-MAX-PANIC-FINDINGS"
+  },
+  {
+    "file": "vyre-foundation/src/optimizer/passes/loops/loop_fusion.rs",
+    "line": 96,
+    "owner_lane": "foundation_optimizer",
+    "budget": "max_findings",
+    "actual": 20,
+    "limit": 18,
+    "delta": 2,
+    "gate": "cargo_full run -p xtask --bin xtask -- hot-path-scan --strict",
+    "suggested_vx": "HOTPATH-VYRE-FOUNDATION-SRC-OPTIMIZER-PASSES-LOOPS-LOOP-FUSION-RS-MAX-FINDINGS"
+  },
+  {
+    "file": "vyre-foundation/src/optimizer/passes/loops/loop_fusion.rs",
+    "line": 774,
+    "owner_lane": "foundation_optimizer",
+    "budget": "max_panic_findings",
+    "actual": 2,
+    "limit": 0,
+    "delta": 2,
+    "gate": "cargo_full run -p xtask --bin xtask -- hot-path-scan --strict",
+    "suggested_vx": "HOTPATH-VYRE-FOUNDATION-SRC-OPTIMIZER-PASSES-LOOPS-LOOP-FUSION-RS-MAX-PANIC-FINDINGS"
+  },
+  {
+    "file": "vyre-foundation/src/optimizer/passes/loops/loop_fission.rs",
+    "line": 88,
+    "owner_lane": "foundation_optimizer",
+    "budget": "max_findings",
+    "actual": 19,
+    "limit": 18,
+    "delta": 1,
+    "gate": "cargo_full run -p xtask --bin xtask -- hot-path-scan --strict",
+    "suggested_vx": "HOTPATH-VYRE-FOUNDATION-SRC-OPTIMIZER-PASSES-LOOPS-LOOP-FISSION-RS-MAX-FINDINGS"
+  },
+  {
+    "file": "vyre-foundation/src/optimizer/passes/loops/loop_fission.rs",
+    "line": 828,
+    "owner_lane": "foundation_optimizer",
+    "budget": "max_panic_findings",
+    "actual": 1,
+    "limit": 0,
+    "delta": 1,
+    "gate": "cargo_full run -p xtask --bin xtask -- hot-path-scan --strict",
+    "suggested_vx": "HOTPATH-VYRE-FOUNDATION-SRC-OPTIMIZER-PASSES-LOOPS-LOOP-FISSION-RS-MAX-PANIC-FINDINGS"
+  },
+  {
+    "file": "vyre-runtime/src/megakernel/ring.rs",
+    "line": 97,
+    "owner_lane": "runtime_megakernel",
+    "budget": "max_findings",
+    "actual": 9,
+    "limit": 6,
+    "delta": 3,
+    "gate": "cargo_full run -p xtask --bin xtask -- hot-path-scan --strict",
+    "suggested_vx": "HOTPATH-VYRE-RUNTIME-SRC-MEGAKERNEL-RING-RS-MAX-FINDINGS"
+  },
+  {
+    "file": "vyre-runtime/src/megakernel/ring.rs",
+    "line": 332,
+    "owner_lane": "runtime_megakernel",
+    "budget": "max_allocation_findings",
+    "actual": 8,
+    "limit": 6,
+    "delta": 2,
+    "gate": "cargo_full run -p xtask --bin xtask -- hot-path-scan --strict",
+    "suggested_vx": "HOTPATH-VYRE-RUNTIME-SRC-MEGAKERNEL-RING-RS-MAX-ALLOCATION-FINDINGS"
+  },
+  {
+    "file": "vyre-runtime/src/megakernel/ring.rs",
+    "line": 97,
+    "owner_lane": "runtime_megakernel",
+    "budget": "max_panic_findings",
+    "actual": 1,
+    "limit": 0,
+    "delta": 1,
+    "gate": "cargo_full run -p xtask --bin xtask -- hot-path-scan --strict",
+    "suggested_vx": "HOTPATH-VYRE-RUNTIME-SRC-MEGAKERNEL-RING-RS-MAX-PANIC-FINDINGS"
+  },
+  {
+    "file": "vyre-runtime/src/megakernel/telemetry.rs",
+    "line": 40,
+    "owner_lane": "runtime_megakernel",
+    "budget": "max_findings",
+    "actual": 35,
+    "limit": 9,
+    "delta": 26,
+    "gate": "cargo_full run -p xtask --bin xtask -- hot-path-scan --strict",
+    "suggested_vx": "HOTPATH-VYRE-RUNTIME-SRC-MEGAKERNEL-TELEMETRY-RS-MAX-FINDINGS"
+  },
+  {
+    "file": "vyre-runtime/src/megakernel/telemetry.rs",
+    "line": 40,
+    "owner_lane": "runtime_megakernel",
+    "budget": "max_allocation_findings",
+    "actual": 25,
+    "limit": 9,
+    "delta": 16,
+    "gate": "cargo_full run -p xtask --bin xtask -- hot-path-scan --strict",
+    "suggested_vx": "HOTPATH-VYRE-RUNTIME-SRC-MEGAKERNEL-TELEMETRY-RS-MAX-ALLOCATION-FINDINGS"
+  },
+  {
+    "file": "vyre-runtime/src/megakernel/telemetry.rs",
+    "line": 69,
+    "owner_lane": "runtime_megakernel",
+    "budget": "max_panic_findings",
+    "actual": 10,
+    "limit": 0,
+    "delta": 10,
+    "gate": "cargo_full run -p xtask --bin xtask -- hot-path-scan --strict",
+    "suggested_vx": "HOTPATH-VYRE-RUNTIME-SRC-MEGAKERNEL-TELEMETRY-RS-MAX-PANIC-FINDINGS"
+  }
+]

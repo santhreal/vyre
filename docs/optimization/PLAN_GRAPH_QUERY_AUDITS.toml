@@ -1,0 +1,62 @@
+# Graph query audits for VX-1024, VX-1025, VX-1029, VX-1030, VX-1033, VX-1037, and VX-1038.
+# Datalog, GUAC-style relationship graph, CEL filters, and SHACL shapes share one audit-query registry.
+
+schema = "vyre.plan.graph_query_audits.v1"
+owner = "organization_dedup"
+evidence_tokens = ["SOUFFLE_CC", "OPENSSF_GUAC", "CEL_SPEC", "W3C_SHACL"]
+
+required_fields = [
+  "query_id",
+  "query_family",
+  "input_graph",
+  "relationship",
+  "must_return",
+  "must_not_return",
+  "negative_fixture",
+  "operator_result",
+  "publication_class",
+]
+
+[[query]]
+query_id = "find-unowned-plan-artifacts"
+query_family = "datalog-plus-guac-relationship-query"
+input_graph = ["PLAN_EXECUTION_DAG.toml", "PLAN_ARTIFACT_AUTHORITY_MAP.toml"]
+relationship = "artifact-produced-by-node-and-owned-by-one-seam"
+must_return = []
+must_not_return = ["artifact-without-authority-seam", "artifact-with-two-authoritative-files"]
+negative_fixture = "duplicate-authority-artifact"
+operator_result = "list-artifact-id-authoritative-file-and-owning-seam"
+publication_class = "public-vyre-safe"
+
+[[query]]
+query_id = "find-completion-claims-without-gate-evidence"
+query_family = "datalog-plus-cel-filter"
+input_graph = ["COMPLETION_AUDIT_EVIDENCE_MATRIX.toml", "PLAN_COMPLETION_ATTESTATION_BUNDLE.toml"]
+relationship = "completion-effect-requires-direct-gate-result"
+must_return = []
+must_not_return = ["completion-allowed-without-gate-result-artifact"]
+negative_fixture = "success-effect-without-direct-evidence"
+operator_result = "list-requirement-id-attestation-id-and-missing-evidence"
+publication_class = "public-vyre-safe-with-private-redaction"
+
+[[query]]
+query_id = "find-private-boundary-leaks"
+query_family = "shacl-shape-plus-publication-filter"
+input_graph = ["PUBLICATION_BOUNDARY_MANIFEST.toml", "PLAN_ARTIFACT_AUTHORITY_MAP.toml", "PLAN_COMPLETION_ATTESTATION_BUNDLE.toml"]
+relationship = "public-artifact-must-not-reference-private-santh-material"
+must_return = []
+must_not_return = ["public-vyre-artifact-with-santh-private-root"]
+negative_fixture = "private-root-reference-in-public-artifact"
+operator_result = "list-artifact-id-publication-class-and-redaction-diagnostic"
+publication_class = "public-vyre-safe"
+
+[[query]]
+query_id = "find-stale-dependent-artifacts"
+query_family = "datalog-transitive-dependency-query"
+input_graph = ["PLAN_EXECUTION_DAG.toml", "PLAN_ARTIFACT_AUTHORITY_MAP.toml"]
+relationship = "artifact-change-invalidates-dependent-node-and-proof-gate"
+must_return = ["dependent-node-id", "invalidated-proof-gate"]
+must_not_return = ["unchanged-independent-artifact"]
+negative_fixture = "source-ledger-change-without-plan-row-invalidation"
+operator_result = "list-changed-artifact-dependent-node-and-required-proof-gate"
+publication_class = "public-vyre-safe"

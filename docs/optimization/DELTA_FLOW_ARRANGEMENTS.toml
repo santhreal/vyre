@@ -1,0 +1,37 @@
+# Signed epoch arrangements for VX-666.
+# Insertions, deletions, compaction, replay, and recompute scope share one durable schema.
+
+schema = "vyre.flow.delta_arrangement.v1"
+owner = "graph_flow_compiler"
+evidence_tokens = ["DIFF_DATAFLOW", "DATAFROG"]
+
+required_fields = [
+  "arrangement_id",
+  "epoch",
+  "positive_deltas",
+  "negative_deltas",
+  "compaction_frontier",
+  "replay_digest",
+  "recompute_scope",
+  "tuple_count_contract",
+]
+
+[[arrangement]]
+arrangement_id = "parser-edit-flow-delta"
+epoch = 118
+positive_deltas = 34
+negative_deltas = 9
+compaction_frontier = 112
+replay_digest = "sha256:parser-edit-replay"
+recompute_scope = "affected-functions"
+tuple_count_contract = "positive-minus-negative-equals-materialized-delta"
+
+[[arrangement]]
+arrangement_id = "delete-large-call-subgraph"
+epoch = 209
+positive_deltas = 0
+negative_deltas = 18742
+compaction_frontier = 204
+replay_digest = "sha256:delete-call-subgraph-replay"
+recompute_scope = "callers-and-callees"
+tuple_count_contract = "replay-matches-full-recompute"

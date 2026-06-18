@@ -7,6 +7,7 @@ use vyre_driver::{BackendError, DispatchConfig};
 use vyre_foundation::ir::Program;
 
 use crate::backend::allocations::HostTransferAllocations;
+use crate::backend::ordering::{classify_dense_permutation, DensePermutationDefect};
 use crate::backend::plan::CudaDispatchPlan;
 use crate::backend::resident::CudaResidentBuffer;
 use crate::backend::resident_upload_fusion::ResidentUploadCopy;
@@ -65,31 +66,44 @@ fn validate_dense_resident_indices<I>(
 where
     I: IntoIterator<Item = usize>,
 {
-    let mut resolved_len = 0usize;
-    for (expected_index, index) in indices.into_iter().enumerate() {
-        resolved_len = expected_index.checked_add(1).ok_or_else(|| {
-            BackendError::InvalidProgram {
+    // Callers sort before validating (resident_dispatch::{borrowed,batch,
+    // async_dispatch} all `sort_unstable_by_key_if_needed` first); the shared
+    // classifier is defined on sorted slot order. Collect into the fallibly
+    // reserved staging buffer, then delegate the dense-permutation invariant to
+    // the single backend-neutral owner and format the resident-specific message
+    // from the classified defect — one algorithm, no per-subsystem fork.
+    let iter = indices.into_iter();
+    let mut sorted = SmallVec::<[usize; 8]>::new();
+    reserve_smallvec(
+        &mut sorted,
+        iter.size_hint().0,
+        "CUDA resident dense index validation",
+    )?;
+    sorted.extend(iter);
+    match classify_dense_permutation(&sorted, expected_len) {
+        Ok(()) => Ok(()),
+        Err(DensePermutationDefect::Duplicate { index, slot }) => {
+            Err(BackendError::InvalidProgram {
                 fix: format!(
-                    "Fix: CUDA {context} {index_kind} index validation overflowed while checking dense slot {expected_index}. Rebuild the binding plan before {rebuild_action}.",
+                    "Fix: CUDA {context} found a duplicate {index_kind} index {index} at sorted {index_kind} slot {slot}; duplicate {index_kind} indexes alias one logical slot onto two descriptors. Rebuild the binding plan with dense unique {index_kind} indexes 0..{expected_len} before {rebuild_action}.",
                 ),
-            }
-        })?;
-        if index != expected_index {
-            return Err(BackendError::InvalidProgram {
+            })
+        }
+        Err(DensePermutationDefect::Sparse { index, slot }) => {
+            Err(BackendError::InvalidProgram {
                 fix: format!(
-                    "Fix: CUDA {context} resolved {index_kind} index {index} at sorted {index_kind} slot {expected_index}; expected dense {index_kind} indexes 0..{expected_len}. Rebuild the binding plan before {rebuild_action}.",
+                    "Fix: CUDA {context} resolved sparse {index_kind} index {index} at sorted {index_kind} slot {slot}; expected dense {index_kind} indexes 0..{expected_len}. Rebuild the binding plan before {rebuild_action}.",
                 ),
-            });
+            })
+        }
+        Err(DensePermutationDefect::LengthMismatch { resolved, expected }) => {
+            Err(BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: CUDA {context} resolved {resolved} {index_kind} index(es); expected {expected}. Rebuild the binding plan before {rebuild_action}.",
+                ),
+            })
         }
     }
-    if resolved_len != expected_len {
-        return Err(BackendError::InvalidProgram {
-            fix: format!(
-                "Fix: CUDA {context} resolved {resolved_len} {index_kind} index(es); expected {expected_len}. Rebuild the binding plan before {rebuild_action}.",
-            ),
-        });
-    }
-    Ok(())
 }
 
 pub(crate) fn validate_dense_resident_output_indices<I>(

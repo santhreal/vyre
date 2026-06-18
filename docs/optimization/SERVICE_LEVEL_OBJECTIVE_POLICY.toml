@@ -1,0 +1,55 @@
+# Service level objective policy for VX-1242, VX-1246, VX-1247, VX-1253, and VX-1254.
+# SLOs, SLIs, error budgets, recording rules, deployment surfaces, and release-health effects share one reliability target seam.
+
+schema = "vyre.ops.service_level_objective_policy.v1"
+owner = "coordination"
+evidence_tokens = ["OPENSLO_SPEC", "GOOGLE_SRE_SLO", "PROMETHEUS_RECORDING_RULES", "OPENMETRICS_PROMETHEUS"]
+
+required_fields = [
+  "slo_id",
+  "service_surface",
+  "sli_query_policy",
+  "objective_policy",
+  "window_policy",
+  "error_budget_policy",
+  "recording_rule_policy",
+  "release_gate_effect",
+  "publication_boundary",
+  "diagnostic",
+]
+
+[[slo]]
+slo_id = "operator-api-availability"
+service_surface = "operator-deployment-public-health-endpoint"
+sli_query_policy = "good-events-over-total-events-derived-from-METRICS_EXPOSITION_CONTRACTS.toml"
+objective_policy = "objective-value-recorded-as-public-operator-reliability-target-not-marketing-claim"
+window_policy = "rolling-window-and-evaluation-interval-recorded-with-recording-rule"
+error_budget_policy = "budget-burn-links-to-alert-policy-and-release-health-feedback"
+recording_rule_policy = "Prometheus-recording-rule-name-labels-and-unit-match-metrics-exposition-contract"
+release_gate_effect = "release-health-blocker-when-new-release-regresses-public-operator-SLO-evidence"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+diagnostic = "VYRE_OPERATOR_API_AVAILABILITY_SLO_REQUIRED"
+
+[[slo]]
+slo_id = "scan-latency-slo"
+service_surface = "public-cli-and-operator-scan-workflow"
+sli_query_policy = "histogram-based-latency-SLI-uses-bounded-labels-and-public-route-classes"
+objective_policy = "latency-objective-tied-to-benchmark-and-production-like-operator-evidence"
+window_policy = "window-declared-separately-from-benchmark-run-duration"
+error_budget_policy = "latency-error-budget-burn-blocks-public-speed-claim-when-contradicted-by-operator-evidence"
+recording_rule_policy = "recording-rule-precomputes-route-level-latency-with-no-path-or-secret-labels"
+release_gate_effect = "invalidates-performance-release-claim-until-regression-triage-record-exists"
+publication_boundary = "PERFORMANCE_ARTIFACT_PUBLICATION.toml"
+diagnostic = "VYRE_SCAN_LATENCY_SLO_REQUIRED"
+
+[[slo]]
+slo_id = "diagnostic-actionability-slo"
+service_surface = "operator-visible-errors-alerts-and-runbooks"
+sli_query_policy = "actionable-diagnostic-count-over-total-error-count-from-structured-errors-and-alerts"
+objective_policy = "operator-facing-failure-must-include-fix-text-owner-route-and-runbook-link"
+window_policy = "evaluation-window-matches-release-health-feedback-window"
+error_budget_policy = "budget-burn-opens-release-health-feedback-signal"
+recording_rule_policy = "recording-rule-joins-alert-labels-diagnostic-ids-and-runbook-ids"
+release_gate_effect = "blocks-operator-readiness-claim-when-actionability-budget-is-exhausted"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+diagnostic = "VYRE_DIAGNOSTIC_ACTIONABILITY_SLO_REQUIRED"

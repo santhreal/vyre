@@ -1,0 +1,36 @@
+# Release artifact provenance for VX-696.
+# Evidence artifacts identify generator, mode, status, semantic validator, input/output digests, and blockers.
+
+schema = "vyre.release.artifact_provenance.v1"
+owner = "bench_harness"
+evidence_tokens = ["MLIR_PASS", "NSIGHT_COMPUTE"]
+
+required_fields = [
+  "generator_command",
+  "command_mode",
+  "required_status",
+  "semantic_validator",
+  "input_digest",
+  "output_digest",
+  "blocker_list",
+]
+
+[[artifact]]
+id = "backend-counter-report"
+generator_command = "xtask evidence backend-counters"
+command_mode = "release-evidence"
+required_status = "required"
+semantic_validator = "cross-backend-counter-schema"
+input_digest = "sha256:backend-counter-input"
+output_digest = "sha256:backend-counter-output"
+blocker_list = []
+
+[[artifact]]
+id = "scan-conformance-report"
+generator_command = "xtask evidence scan-conformance"
+command_mode = "release-evidence"
+required_status = "required"
+semantic_validator = "scan-conformance-matrix"
+input_digest = "sha256:scan-conformance-input"
+output_digest = "sha256:scan-conformance-output"
+blocker_list = ["missing-dialect-contract"]

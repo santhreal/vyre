@@ -1,0 +1,47 @@
+# Corpus privacy classification for VX-848 through VX-850 and VX-856.
+# Dataset, finding, trace, metric, and release evidence privacy classes share one policy.
+
+schema = "vyre.data.corpus_privacy_classification.v1"
+owner = "security_reliability"
+evidence_tokens = ["NIST_PRIVACY_FRAMEWORK", "NIST_SP_800_53"]
+
+required_fields = [
+  "classification_id",
+  "data_category",
+  "privacy_risk",
+  "allowed_use",
+  "redaction_policy",
+  "aggregation_policy",
+  "publication_gate",
+  "operator_diagnostic",
+]
+
+[[classification]]
+classification_id = "synthetic-public-fixture"
+data_category = "synthetic-test-data"
+privacy_risk = "low"
+allowed_use = "benchmarks-tests-docs-public-release"
+redaction_policy = "none-required"
+aggregation_policy = "may-publish-digests-and-examples"
+publication_gate = "allowed-public-vyre"
+operator_diagnostic = "none"
+
+[[classification]]
+classification_id = "private-worktree-corpus"
+data_category = "private-local-debug-data"
+privacy_risk = "high"
+allowed_use = "local-nonpublished-analysis-only"
+redaction_policy = "redact-paths-values-and-identifiers"
+aggregation_policy = "publish-only-anonymized-aggregate-if-reviewed"
+publication_gate = "blocked-from-publication"
+operator_diagnostic = "VYRE_DATA_PRIVACY_PUBLICATION_REFUSED"
+
+[[classification]]
+classification_id = "operator-telemetry"
+data_category = "runtime-trace-metric-report-data"
+privacy_risk = "medium"
+allowed_use = "local-analysis-and-redacted-public-evidence"
+redaction_policy = "drop-path-labels-and-secret-like-values"
+aggregation_policy = "cardinality-bounded-aggregate-only"
+publication_gate = "requires-redaction-proof"
+operator_diagnostic = "VYRE_DATA_PRIVACY_REDACTION_REQUIRED"

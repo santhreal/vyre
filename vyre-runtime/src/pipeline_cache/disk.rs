@@ -28,6 +28,16 @@ pub struct DiskCache {
     metrics: PipelineCacheCounters,
 }
 
+/// Crash-durability evidence for disk cache artifacts.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct DiskCacheDurabilityReport {
+    /// Entries installed by rename but not yet explicitly flushed.
+    pub pending_flushes: u64,
+    /// True when no installed artifacts are waiting on file and parent-dir
+    /// fsync evidence.
+    pub durable: bool,
+}
+
 /// Persistent process-crossing pipeline-cache store.
 ///
 /// This is the default disk-backed store for callers that need compiled
@@ -85,6 +95,20 @@ impl DiskCache {
     #[must_use]
     pub fn root(&self) -> &Path {
         &self.root
+    }
+
+    /// Snapshot whether installed artifacts have crossed the explicit
+    /// durability boundary.
+    #[must_use]
+    pub fn durability_report(&self) -> DiskCacheDurabilityReport {
+        let pending_flushes = match u64::try_from(self.pending_flushes.len()) {
+            Ok(pending_flushes) => pending_flushes,
+            Err(_) => u64::MAX,
+        };
+        DiskCacheDurabilityReport {
+            pending_flushes,
+            durable: pending_flushes == 0,
+        }
     }
 
     fn path_for(&self, fp: &PipelineFingerprint) -> PathBuf {
@@ -447,6 +471,40 @@ mod tests {
         assert!(
             read_verified_cache_blob(oversized).is_none(),
             "Fix: disk and remote cache readers must cap encoded blob bytes before allocation"
+        );
+    }
+
+    #[test]
+    fn disk_cache_durability_report_tracks_pending_flush_boundary() {
+        let temp = tempfile::tempdir().expect("Fix: create temp disk cache root");
+        let fp = PipelineFingerprint::of(&tiny_program());
+        let cache = DiskCache::new(temp.path()).expect("Fix: create disk cache");
+
+        assert_eq!(
+            cache.durability_report(),
+            DiskCacheDurabilityReport {
+                pending_flushes: 0,
+                durable: true,
+            }
+        );
+
+        cache.put(fp, b"driver-pipeline-blob".to_vec());
+        let after_put = cache.durability_report();
+        assert_eq!(after_put.pending_flushes, 1);
+        assert!(
+            !after_put.durable,
+            "Fix: installed artifacts must not be reported durable before explicit flush"
+        );
+
+        cache
+            .flush()
+            .expect("Fix: disk cache flush must fsync pending file and parent dir");
+        assert_eq!(
+            cache.durability_report(),
+            DiskCacheDurabilityReport {
+                pending_flushes: 0,
+                durable: true,
+            }
         );
     }
 }

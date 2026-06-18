@@ -9,6 +9,7 @@ use vyre_driver::BackendError;
 use super::allocations::cuda_check;
 use super::cuda_graph::{CachedCudaGraph, GraphExecGuard, StreamGuard};
 use super::dispatch::CudaBackend;
+use super::ordering::{classify_dense_permutation, DensePermutationDefect};
 use super::staging_reserve::{reserve_smallvec, reserve_vec, reserved_vec, resize_vec_slots};
 use crate::input_identity::{exact_input_key, ExactInputKey};
 
@@ -504,14 +505,6 @@ fn validate_cached_graph_slot_index_map(
     slot_kind: &'static str,
     action: &'static str,
 ) -> Result<(), BackendError> {
-    if indices.len() != expected_len {
-        return Err(BackendError::InvalidProgram {
-            fix: format!(
-                "Fix: cached cuda graph has {} logical {slot_kind} index(es) but {expected_len} expected {slot_kind} length(s). Re-record the graph; descriptor-ordered graph {slot_kind}s must map back to Program::buffers {slot_kind} slots.",
-                indices.len(),
-            ),
-        });
-    }
     let mut sorted_indices = SmallVec::<[usize; 8]>::new();
     reserve_smallvec(
         &mut sorted_indices,
@@ -520,16 +513,33 @@ fn validate_cached_graph_slot_index_map(
     )?;
     sorted_indices.extend(indices.iter().copied());
     crate::backend::ordering::sort_unstable_if_needed(sorted_indices.as_mut_slice());
-    for (expected_index, index) in sorted_indices.iter().copied().enumerate() {
-        if index != expected_index {
-            return Err(BackendError::InvalidProgram {
+    // Delegate the dense-permutation invariant to the single backend-neutral
+    // owner (shared with the resident-dispatch index validators); format the
+    // graph-replay-specific remediation from the classified defect.
+    match classify_dense_permutation(&sorted_indices, expected_len) {
+        Ok(()) => Ok(()),
+        Err(DensePermutationDefect::Duplicate { index, slot }) => {
+            Err(BackendError::InvalidProgram {
                 fix: format!(
-                    "Fix: cached cuda graph logical {slot_kind} index {index} at sorted slot {expected_index} is not dense over 0..{expected_len}. Re-record the graph from Program::buffers logical {slot_kind} order before {action}.",
+                    "Fix: cached cuda graph has a duplicate logical {slot_kind} index {index} at sorted slot {slot}; duplicate {slot_kind} indexes alias one logical slot onto two descriptors. Re-record the graph from Program::buffers logical {slot_kind} order before {action}.",
                 ),
-            });
+            })
+        }
+        Err(DensePermutationDefect::Sparse { index, slot }) => {
+            Err(BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: cached cuda graph logical {slot_kind} index {index} at sorted slot {slot} is not dense over 0..{expected_len}. Re-record the graph from Program::buffers logical {slot_kind} order before {action}.",
+                ),
+            })
+        }
+        Err(DensePermutationDefect::LengthMismatch { resolved, expected }) => {
+            Err(BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: cached cuda graph resolved {resolved} logical {slot_kind} index(es); expected {expected} {slot_kind} slot(s). Re-record the graph; descriptor-ordered graph {slot_kind}s must map back to Program::buffers {slot_kind} slots.",
+                ),
+            })
         }
     }
-    Ok(())
 }
 
 fn validate_cached_graph_input_index_map(
@@ -727,24 +737,32 @@ mod source_contract_tests {
 
     #[test]
     fn cached_graph_replay_input_index_map_rejects_stale_or_non_dense_maps() {
-        assert!(
-            validate_cached_graph_input_index_map(&[0, 0, 2], 3).is_err(),
-            "Fix: duplicate CUDA graph logical input indexes must fail before replay can alias an input slot."
+        let duplicate = validate_cached_graph_input_index_map(&[0, 0, 2], 3).unwrap_err();
+        assert_eq!(
+            duplicate.to_string().contains("duplicate"),
+            true,
+            "Fix: duplicate CUDA graph logical input indexes must fail before replay can alias an input slot: {duplicate}"
         );
-        assert!(
-            validate_cached_graph_input_index_map(&[0, 2, 3], 3).is_err(),
-            "Fix: sparse CUDA graph logical input indexes must fail before replay can skip an input slot."
+        let sparse = validate_cached_graph_input_index_map(&[0, 2, 3], 3).unwrap_err();
+        assert_eq!(
+            sparse.to_string().contains("dense"),
+            true,
+            "Fix: sparse CUDA graph logical input indexes must fail before replay can skip an input slot: {sparse}"
         );
-        assert!(
-            validate_cached_graph_input_index_map(&[0, 1], 3).is_err(),
-            "Fix: truncated CUDA graph logical input maps must fail before zip-based replay staging."
+        let truncated = validate_cached_graph_input_index_map(&[0, 1], 3).unwrap_err();
+        assert_eq!(
+            truncated.to_string().contains("expected 3"),
+            true,
+            "Fix: truncated CUDA graph logical input maps must fail before zip-based replay staging: {truncated}"
         );
 
         let only = [0xAA];
         let inputs: &[&[u8]] = &[only.as_slice()];
-        assert!(
-            cached_graph_input(inputs, 1, 0, "test replay").is_err(),
-            "Fix: stale CUDA graph logical input indexes must become BackendError, not a panic or wrong-slot replay."
+        let stale = cached_graph_input(inputs, 1, 0, "test replay").unwrap_err();
+        assert_eq!(
+            stale.to_string().contains("logical input 1"),
+            true,
+            "Fix: stale CUDA graph logical input indexes must become BackendError, not a panic or wrong-slot replay: {stale}"
         );
     }
 
@@ -753,17 +771,23 @@ mod source_contract_tests {
         validate_cached_graph_output_index_map(&[1, 0, 2], 3).expect(
             "Fix: descriptor-ordered CUDA graph outputs may map to reordered logical slots.",
         );
-        assert!(
-            validate_cached_graph_output_index_map(&[0, 0, 2], 3).is_err(),
-            "Fix: duplicate CUDA graph logical output indexes must fail before collection can alias an output slot."
+        let duplicate = validate_cached_graph_output_index_map(&[0, 0, 2], 3).unwrap_err();
+        assert_eq!(
+            duplicate.to_string().contains("duplicate"),
+            true,
+            "Fix: duplicate CUDA graph logical output indexes must fail before collection can alias an output slot: {duplicate}"
         );
-        assert!(
-            validate_cached_graph_output_index_map(&[0, 2, 3], 3).is_err(),
-            "Fix: sparse CUDA graph logical output indexes must fail before collection can skip an output slot."
+        let sparse = validate_cached_graph_output_index_map(&[0, 2, 3], 3).unwrap_err();
+        assert_eq!(
+            sparse.to_string().contains("dense"),
+            true,
+            "Fix: sparse CUDA graph logical output indexes must fail before collection can skip an output slot: {sparse}"
         );
-        assert!(
-            validate_cached_graph_output_index_map(&[0, 1], 3).is_err(),
-            "Fix: truncated CUDA graph logical output maps must fail before positional collection can drop a slot."
+        let truncated = validate_cached_graph_output_index_map(&[0, 1], 3).unwrap_err();
+        assert_eq!(
+            truncated.to_string().contains("expected 3"),
+            true,
+            "Fix: truncated CUDA graph logical output maps must fail before positional collection can drop a slot: {truncated}"
         );
     }
 

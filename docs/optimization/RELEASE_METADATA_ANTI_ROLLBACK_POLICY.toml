@@ -1,0 +1,43 @@
+# Release metadata anti-rollback policy for VX-1165, VX-1171, VX-1174, and VX-1175.
+# TUF-style root, timestamp, snapshot, target, threshold, expiration, rollback, freeze, and mirror policies share one update metadata seam.
+
+schema = "vyre.release.metadata_anti_rollback_policy.v1"
+owner = "security_reliability"
+evidence_tokens = ["TUF_SPECIFICATION", "GITHUB_IMMUTABLE_RELEASES", "SLSA_PROVENANCE"]
+
+required_fields = [
+  "metadata_id",
+  "root_trust_policy",
+  "target_metadata_policy",
+  "snapshot_policy",
+  "timestamp_policy",
+  "threshold_policy",
+  "expiration_policy",
+  "rollback_freeze_policy",
+  "mirror_policy",
+  "diagnostic",
+]
+
+[[metadata]]
+metadata_id = "public-release-update-metadata"
+root_trust_policy = "public-vyre-release-trust-root-versioned-and-rotatable"
+target_metadata_policy = "targets-list-release-assets-crate-package-SBOM-provenance-and-source-archive-digests"
+snapshot_policy = "snapshot-digest-and-version-cover-target-metadata"
+timestamp_policy = "timestamp-records-current-snapshot-version-and-digest"
+threshold_policy = "metadata-signatures-count-unique-keyids-and-meet-threshold-before-trust"
+expiration_policy = "expired-timestamp-snapshot-or-target-metadata-blocks-verification"
+rollback_freeze_policy = "lower-version-or-expired-metadata-is-rollback-or-freeze-failure"
+mirror_policy = "mirrors-serve-original-public-vyre-metadata-with-no-private-Santh-authority"
+diagnostic = "VYRE_RELEASE_METADATA_ANTI_ROLLBACK_REQUIRED"
+
+[[metadata]]
+metadata_id = "airgapped-consumer-bundle"
+root_trust_policy = "consumer-imports-pinned-public-vyre-root-metadata"
+target_metadata_policy = "bundle-targets-cover-every-included-release-artifact-by-digest-and-size"
+snapshot_policy = "bundle-snapshot-version-matches-timestamp"
+timestamp_policy = "bundle-timestamp-valid-at-import-and-recorded-in-audit-log"
+threshold_policy = "bundle-signatures-meet-public-vyre-threshold-before-import"
+expiration_policy = "expired-bundle-refused-unless-new-public-vyre-metadata-is-imported"
+rollback_freeze_policy = "older-bundle-cannot-replace-newer-trusted-metadata"
+mirror_policy = "airgapped-mirror-retains-original-source-uri-tag-builder-and-transparency-references"
+diagnostic = "VYRE_AIRGAPPED_RELEASE_METADATA_VERIFICATION"

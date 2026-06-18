@@ -6,6 +6,8 @@
 
 #[path = "release_benchmarks/args.rs"]
 mod args;
+#[path = "release_benchmarks/frontier_leaderboard.rs"]
+mod frontier_leaderboard;
 #[path = "release_benchmarks/metrics.rs"]
 mod metrics;
 #[path = "release_benchmarks/optimization.rs"]
@@ -19,4 +21,8 @@ mod suite_inspect;
 #[path = "release_benchmarks/types.rs"]
 mod types;
 
+pub(crate) use frontier_leaderboard::{
+    frontier_leaderboard_required_artifact_fields, validate_frontier_leaderboard_artifact_bytes,
+    FRONTIER_LEADERBOARD_SCHEMA_VERSION, FRONTIER_LEADERBOARD_SEMANTIC_VALIDATOR,
+};
 pub(crate) use run::run;

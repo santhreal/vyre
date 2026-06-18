@@ -1,0 +1,43 @@
+# Rollback and forward-fix decision policy for VX-1272, VX-1273, VX-1276, VX-1277, and VX-1278.
+# Decision records choose rollback, pause, feature disablement, or forward fix without duplicating artifact verification, runbooks, or vulnerability affectedness.
+
+schema = "vyre.release.rollback_forward_fix_decision_policy.v1"
+owner = "coordination"
+evidence_tokens = ["HELM_ROLLBACK", "KUBECTL_ROLLOUT", "TUF_SPECIFICATION", "OPENVEX_SPEC"]
+
+required_fields = [
+  "decision_id",
+  "trigger_policy",
+  "decision_inputs",
+  "rollback_condition",
+  "forward_fix_condition",
+  "pause_condition",
+  "verification_policy",
+  "privacy_boundary",
+  "release_gate_effect",
+  "diagnostic",
+]
+
+[[decision]]
+decision_id = "verified-rollback-decision"
+trigger_policy = "bad-release-alert-SLO-burn-progress-deadline-exceeded-or-operator-impact-attributed-to-current-release"
+decision_inputs = "release-version-artifact-digest-deployment-surface-rollout-history-helm-history-alert-state-and-anti-rollback-metadata"
+rollback_condition = "previous-release-is-public-verified-compatible-not-vulnerable-not-anti-rollback-blocked-and-operationally-safer"
+forward_fix_condition = "forward-fix-required-when-rollback-target-fails-artifact-verification-migration-compatibility-or-security-affectedness-check"
+pause_condition = "pause-rollout-when-causality-is-unclear-or-analysis-signal-conflicts-with-release-health"
+verification_policy = "CONSUMER_ARTIFACT_VERIFICATION_PROTOCOL.toml-RELEASE_METADATA_ANTI_ROLLBACK_POLICY.toml-OPERATOR_RUNBOOK_ROLLBACK_POLICY.toml"
+privacy_boundary = "decision-record-excludes-private-Santh-paths-secrets-device-identifiers-private-corpus-excerpts-and-exploit-detail"
+release_gate_effect = "blocks-full-promotion-until-decision-record-action-evidence-and-post-action-SLI-exist"
+diagnostic = "VYRE_VERIFIED_ROLLBACK_DECISION_REQUIRED"
+
+[[decision]]
+decision_id = "security-forward-fix-or-disablement"
+trigger_policy = "known-exploited-affectedness-private-vulnerability-report-or-security-incident-escalation"
+decision_inputs = "OpenVEX-status-advisory-state-affected-version-release-artifact-digest-feature-scope-and-public-operator-impact"
+rollback_condition = "rollback-if-prior-public-release-is-fixed-or-not-affected-and-artifact-verification-passes"
+forward_fix_condition = "forward-fix-if-all-prior-release-targets-are-affected-incompatible-or-anti-rollback-blocked"
+pause_condition = "disable-or-pause-affected-feature-while-under-investigation-or-before-redacted-public-status-is-ready"
+verification_policy = "VULNERABILITY_AFFECTEDNESS_VEX_POLICY.toml-PRIVATE_VULNERABILITY_RESPONSE_RUNBOOK.toml-SECURITY_ADVISORY_EXCHANGE_POLICY.toml"
+privacy_boundary = "sensitive-vulnerability-evidence-stays-private-public-output-contains-only-affected-version-impact-and-safe-action"
+release_gate_effect = "blocks-final-release-gate-while-under-investigation-affected-unfixed-or-unredacted"
+diagnostic = "VYRE_SECURITY_FORWARD_FIX_DECISION_REQUIRED"

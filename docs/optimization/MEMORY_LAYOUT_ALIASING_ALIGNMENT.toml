@@ -1,0 +1,40 @@
+# Memory layout, aliasing, and alignment contracts for VX-968 through VX-970.
+# Repr, size, alignment, aliasing, endianness, and bytestream validity share one contract.
+
+schema = "vyre.unsafe.memory_layout_aliasing_alignment.v1"
+owner = "foundation_serial"
+evidence_tokens = ["RUST_UNSAFE_CODE_GUIDELINES", "RUST_BOOK_UNSAFE"]
+
+required_fields = [
+  "layout_id",
+  "type_class",
+  "repr_policy",
+  "size_policy",
+  "alignment_policy",
+  "aliasing_policy",
+  "endianness_policy",
+  "validity_policy",
+  "diagnostic",
+]
+
+[[layout]]
+layout_id = "scan-database-header-wire"
+type_class = "wire-format-struct"
+repr_policy = "wire-layout-defined-by-encoder-not-rust-repr"
+size_policy = "explicit-byte-width-per-field"
+alignment_policy = "unaligned-input-decoded-by-copy"
+aliasing_policy = "no-shared-mutable-aliasing"
+endianness_policy = "little-endian-wire-fields"
+validity_policy = "reject-invalid-enum-and-length-fields-before-construction"
+diagnostic = "VYRE_MEMORY_LAYOUT_WIRE_REFUSED"
+
+[[layout]]
+layout_id = "graph-csr-device-view"
+type_class = "device-buffer-view"
+repr_policy = "primitive-array-layout"
+size_policy = "offset-and-target-lengths-certified"
+alignment_policy = "device-required-alignment-recorded"
+aliasing_policy = "read-only-alias-or-exclusive-mutable-view"
+endianness_policy = "host-prepared-native-device-representation"
+validity_policy = "CSR_CERTIFICATES.toml"
+diagnostic = "VYRE_MEMORY_LAYOUT_CSR_REFUSED"

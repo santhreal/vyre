@@ -1,0 +1,40 @@
+# Public repository identity governance for VX-1082, VX-1086, VX-1091, and VX-1096.
+# Public Vyre repository identity, private Santh exclusion, topics, README links, and repository metadata share one registry.
+
+schema = "vyre.release.public_repository_identity_governance.v1"
+owner = "coordination"
+evidence_tokens = ["GITHUB_REPOSITORY_TOPICS", "OPENSSF_SCORECARD", "PUBLICATION_BOUNDARY_MANIFEST"]
+
+required_fields = [
+  "repository_id",
+  "canonical_public_repository",
+  "private_repository_policy",
+  "backup_repository_policy",
+  "visibility_policy",
+  "topic_policy",
+  "readme_link_policy",
+  "metadata_policy",
+  "diagnostic",
+]
+
+[[repository]]
+repository_id = "vyre-public"
+canonical_public_repository = "santhsecurity/vyre"
+private_repository_policy = "Santh-worktree-and-santhsecurity/Santh-are-private-and-not-public-sync-targets"
+backup_repository_policy = "outer-santhsecurity/Santh-is-backup-only-not-release-or-sync-authority"
+visibility_policy = "public-release-artifacts-and-docs-point-to-vyre-public-repository-only"
+topic_policy = "topics-describe-public-vyre-capabilities-without-private-worktree-names"
+readme_link_policy = "readme-links-resolve-to-public-vyre-docs-crates-and-release-artifacts"
+metadata_policy = "repository-homepage-documentation-and-package-metadata-use-public-vyre-url"
+diagnostic = "VYRE_PUBLIC_REPOSITORY_IDENTITY_OK"
+
+[[repository]]
+repository_id = "santh-private"
+canonical_public_repository = "none"
+private_repository_policy = "private-santh-material-never-linked-from-public-vyre-package-or-release"
+backup_repository_policy = "backup-repository-not-used-for-public-issue-pr-release-or-package-state"
+visibility_policy = "private-only"
+topic_policy = "not-public"
+readme_link_policy = "not-public"
+metadata_policy = "not-public"
+diagnostic = "VYRE_PRIVATE_SANTH_REPOSITORY_EXCLUDED"

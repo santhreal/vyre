@@ -246,11 +246,7 @@ pub fn plan_compact_fusion_into<'a>(
     }
 
     scratch.exchange_adj.clear();
-    let dense_cells = n.checked_mul(n).unwrap_or_else(|| {
-        panic!(
-            "megakernel compact fusion exchange graph overflowed usize. Fix: shard the work batch before fusion planning."
-        )
-    });
+    let dense_cells = n * n;
     scratch.exchange_adj.resize(dense_cells, 0);
     let mut has_exchange_conflict = false;
 
@@ -553,11 +549,7 @@ pub fn prune_dead_arms_inplace(selection: &mut [u32], dead_mask: &[bool]) -> u32
     for (slot, &dead) in selection.iter_mut().zip(dead_mask.iter()) {
         if dead && *slot != 0 {
             *slot = 0;
-            eliminated = eliminated.checked_add(1).unwrap_or_else(|| {
-                panic!(
-                    "megakernel dead-arm elimination count overflowed u32. Fix: shard the fusion selection before pruning."
-                )
-            });
+            eliminated = eliminated.saturating_add(1);
         }
     }
     eliminated
@@ -581,19 +573,11 @@ fn compute_conflict_degrees_with_conflict(exchange_adj: &[u32], n: usize, out: &
 }
 
 fn discount_q16(value: u16, amount: u16) -> u16 {
-    value.checked_sub(amount).unwrap_or_else(|| {
-        panic!(
-            "megakernel fusion cost discount underflowed q16 score. Fix: normalize costs before applying fusion discounts."
-        )
-    })
+    value.saturating_sub(amount)
 }
 
 fn increment_degree(value: u32) -> u32 {
-    value.checked_add(1).unwrap_or_else(|| {
-        panic!(
-            "megakernel fusion conflict degree overflowed u32. Fix: shard the exchange graph before planning."
-        )
-    })
+    value.saturating_add(1)
 }
 
 fn select_ordered_maximal(

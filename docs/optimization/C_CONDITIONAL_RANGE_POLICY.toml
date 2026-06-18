@@ -1,0 +1,50 @@
+# C conditional range semantics for VX-658.
+# Disabled code findings are controlled by explicit policy, not accidental scan reachability.
+
+schema = "vyre.frontend.c.conditional_range_policy.v1"
+owner = "parser_frontend"
+evidence_tokens = ["TREE_SITTER", "CODEQL_CPP"]
+
+states = [
+  "active",
+  "inactive",
+  "unknown",
+  "macro_dependent",
+  "error",
+]
+
+required_fields = [
+  "state",
+  "byte_range",
+  "truth_source",
+  "scan_policy",
+  "report_policy",
+  "active_finding_allowed",
+]
+
+[[range]]
+id = "active-default-branch"
+state = "active"
+byte_range = "0..118"
+truth_source = "preprocess-certificate"
+scan_policy = "scan-active"
+report_policy = "report-active"
+active_finding_allowed = true
+
+[[range]]
+id = "inactive-ifdef-branch"
+state = "inactive"
+byte_range = "119..244"
+truth_source = "preprocess-certificate"
+scan_policy = "skip-unless-inactive-code-requested"
+report_policy = "report-inactive-only-when-requested"
+active_finding_allowed = false
+
+[[range]]
+id = "macro-dependent-branch"
+state = "macro_dependent"
+byte_range = "245..301"
+truth_source = "macro-table"
+scan_policy = "fail-closed-for-active-findings"
+report_policy = "report-unknown-condition"
+active_finding_allowed = false

@@ -1,9 +1,9 @@
 {
-  "schema_version": 1,
-  "test_files": 2855,
-  "vyre_test_files": 2572,
-  "weir_test_files": 272,
-  "vyrec_test_files": 11,
+  "schema_version": 5,
+  "test_files": 3396,
+  "vyre_test_files": 3021,
+  "weir_test_files": 359,
+  "vyrec_test_files": 16,
   "layers": [
     "adversarial",
     "benchmark",
@@ -18,9 +18,9 @@
   "surface_coverages": [
     {
       "surface": "vyre",
-      "file_count": 2572,
-      "assertion_count": 34374,
-      "entrypoint_count": 2572,
+      "file_count": 3021,
+      "assertion_count": 37359,
+      "entrypoint_count": 3021,
       "layers": [
         "adversarial",
         "benchmark",
@@ -44,13 +44,36 @@
         "fuzz"
       ],
       "missing_layers": [],
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [],
       "blockers": []
     },
     {
       "surface": "weir",
-      "file_count": 272,
-      "assertion_count": 3531,
-      "entrypoint_count": 269,
+      "file_count": 359,
+      "assertion_count": 3684,
+      "entrypoint_count": 337,
       "layers": [
         "adversarial",
         "benchmark",
@@ -74,13 +97,37 @@
         "fuzz"
       ],
       "missing_layers": [],
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property",
+        "uncategorized"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [],
       "blockers": []
     },
     {
       "surface": "vyrec",
-      "file_count": 11,
-      "assertion_count": 32,
-      "entrypoint_count": 11,
+      "file_count": 16,
+      "assertion_count": 165,
+      "entrypoint_count": 16,
       "layers": [
         "adversarial",
         "benchmark",
@@ -104,6 +151,29 @@
         "fuzz"
       ],
       "missing_layers": [],
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [],
       "blockers": []
     }
   ],
@@ -235,884 +305,4979 @@
       "exists": true
     }
   ],
-  "oversized_files": [
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/gpu_prep_kernel_libc_shape.rs",
-      "lines": 1052,
-      "lines_over_threshold": 552,
-      "recommended_split": [
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/support/ast_oracle.rs",
-      "lines": 1019,
-      "lines_over_threshold": 519,
-      "recommended_split": [
-        "extract backend/op parity cases into tests/conformance/",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/preprocess_differential_benchmark.rs",
-      "lines": 657,
-      "lines_over_threshold": 157,
-      "recommended_split": [
-        "extract backend/op parity cases into tests/conformance/",
-        "extract fixture-driven cases into tests/corpus/",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/r2_corpus_measurement.rs",
-      "lines": 898,
-      "lines_over_threshold": 398,
-      "recommended_split": [
-        "extract fixture-driven cases into tests/corpus/",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/pipeline/tests/passthrough.rs",
-      "lines": 619,
-      "lines_over_threshold": 119,
-      "recommended_split": [
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/tests/rust_lower_exec_oracle.rs",
-      "lines": 696,
-      "lines_over_threshold": 196,
-      "recommended_split": [
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/tests/gpu_pipeline_driver_roundtrip.rs",
-      "lines": 736,
-      "lines_over_threshold": 236,
-      "recommended_split": [
-        "extract hostile-input cases into tests/adversarial/",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-spec/tests/data_type_generated_edge_matrix.rs",
-      "lines": 611,
-      "lines_over_threshold": 111,
-      "recommended_split": [
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/dataflow_irregular/tests.rs",
-      "lines": 641,
-      "lines_over_threshold": 141,
-      "recommended_split": [
-        "move monolithic src/tests.rs coverage into focused tests/<domain>/ files",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/tests/release_matrix_contracts.rs",
-      "lines": 922,
-      "lines_over_threshold": 422,
-      "recommended_split": [
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/persistent_bfs/tests.rs",
-      "lines": 985,
-      "lines_over_threshold": 485,
-      "recommended_split": [
-        "extract hostile-input cases into tests/adversarial/",
-        "move monolithic src/tests.rs coverage into focused tests/<domain>/ files",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/csr_forward_or_changed/tests.rs",
-      "lines": 660,
-      "lines_over_threshold": 160,
-      "recommended_split": [
-        "move monolithic src/tests.rs coverage into focused tests/<domain>/ files",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/adaptive_traverse/tests.rs",
-      "lines": 1311,
-      "lines_over_threshold": 811,
-      "recommended_split": [
-        "extract hostile-input cases into tests/adversarial/",
-        "move monolithic src/tests.rs coverage into focused tests/<domain>/ files",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/csr_frontier_queue_batch_resident/tests.rs",
-      "lines": 1019,
-      "lines_over_threshold": 519,
-      "recommended_split": [
-        "move monolithic src/tests.rs coverage into focused tests/<domain>/ files",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/csr_bidirectional/tests.rs",
-      "lines": 565,
-      "lines_over_threshold": 65,
-      "recommended_split": [
-        "extract hostile-input cases into tests/adversarial/",
-        "move monolithic src/tests.rs coverage into focused tests/<domain>/ files",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/csr_frontier_queue_resident/tests.rs",
-      "lines": 846,
-      "lines_over_threshold": 346,
-      "recommended_split": [
-        "move monolithic src/tests.rs coverage into focused tests/<domain>/ files",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/math/quantized_dispatch/tests.rs",
-      "lines": 1542,
-      "lines_over_threshold": 1042,
-      "recommended_split": [
-        "extract backend/op parity cases into tests/conformance/",
-        "extract hostile-input cases into tests/adversarial/",
-        "move monolithic src/tests.rs coverage into focused tests/<domain>/ files",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/tests/organization_contracts.rs",
-      "lines": 1422,
-      "lines_over_threshold": 922,
-      "recommended_split": [
-        "extract backend/op parity cases into tests/conformance/",
-        "extract fixture-driven cases into tests/corpus/",
-        "extract hostile-input cases into tests/adversarial/",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/pipeline/tests.rs",
-      "lines": 865,
-      "lines_over_threshold": 365,
-      "recommended_split": [
-        "move monolithic src/tests.rs coverage into focused tests/<domain>/ files",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/egraph_kernel_plan/tests.rs",
-      "lines": 949,
-      "lines_over_threshold": 449,
-      "recommended_split": [
-        "extract hostile-input cases into tests/adversarial/",
-        "move monolithic src/tests.rs coverage into focused tests/<domain>/ files",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/backend/resident_dispatch/tests.rs",
-      "lines": 612,
-      "lines_over_threshold": 112,
-      "recommended_split": [
-        "move monolithic src/tests.rs coverage into focused tests/<domain>/ files",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/generated_resident_sequence_cuda_reference_matrix.rs",
-      "lines": 882,
-      "lines_over_threshold": 382,
-      "recommended_split": [
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/adaptive_traverse_vast_walk_gpu_parity.rs",
-      "lines": 931,
-      "lines_over_threshold": 431,
-      "recommended_split": [
-        "extract backend/op parity cases into tests/conformance/",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/generated_control_cuda_reference_matrix.rs",
-      "lines": 531,
-      "lines_over_threshold": 31,
-      "recommended_split": [
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/hash_parsing_primitives_gpu_parity.rs",
-      "lines": 603,
-      "lines_over_threshold": 103,
-      "recommended_split": [
-        "extract backend/op parity cases into tests/conformance/",
-        "extract fixture-driven cases into tests/corpus/",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/resident_dispatch_contracts.rs",
-      "lines": 1573,
-      "lines_over_threshold": 1073,
-      "recommended_split": [
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/generated_atomic_cuda_reference_matrix.rs",
-      "lines": 522,
-      "lines_over_threshold": 22,
-      "recommended_split": [
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/borrowck_reachability_cuda.rs",
-      "lines": 506,
-      "lines_over_threshold": 6,
-      "recommended_split": [
-        "extract backend/op parity cases into tests/conformance/",
-        "extract fixture-driven cases into tests/corpus/",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/egraph_device_image_upload.rs",
-      "lines": 1344,
-      "lines_over_threshold": 844,
-      "recommended_split": [
-        "extract hostile-input cases into tests/adversarial/",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/cuda_graph_dispatch_parity.rs",
-      "lines": 866,
-      "lines_over_threshold": 366,
-      "recommended_split": [
-        "extract backend/op parity cases into tests/conformance/",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/resident_buffer_contracts.rs",
-      "lines": 711,
-      "lines_over_threshold": 211,
-      "recommended_split": [
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/csr_frontier_queue_gpu_parity.rs",
-      "lines": 1411,
-      "lines_over_threshold": 911,
-      "recommended_split": [
-        "extract backend/op parity cases into tests/conformance/",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/self_optimizer_const_prop_e2e.rs",
-      "lines": 554,
-      "lines_over_threshold": 54,
-      "recommended_split": [
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/misc_primitives_batch_gpu_parity.rs",
-      "lines": 577,
-      "lines_over_threshold": 77,
-      "recommended_split": [
-        "extract backend/op parity cases into tests/conformance/",
-        "extract fixture-driven cases into tests/corpus/",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/vectorized_memory_live_cuda.rs",
-      "lines": 579,
-      "lines_over_threshold": 79,
-      "recommended_split": [
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/generated_resident_cuda_reference_matrix.rs",
-      "lines": 1530,
-      "lines_over_threshold": 1030,
-      "recommended_split": [
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/self_optimizer_pattern_match_extended.rs",
-      "lines": 796,
-      "lines_over_threshold": 296,
-      "recommended_split": [
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/int4_quantized_gpu_parity.rs",
-      "lines": 899,
-      "lines_over_threshold": 399,
-      "recommended_split": [
-        "extract backend/op parity cases into tests/conformance/",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/scheduler/tests.rs",
-      "lines": 629,
-      "lines_over_threshold": 129,
-      "recommended_split": [
-        "move monolithic src/tests.rs coverage into focused tests/<domain>/ files",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/pipeline/tests.rs",
-      "lines": 753,
-      "lines_over_threshold": 253,
-      "recommended_split": [
-        "move monolithic src/tests.rs coverage into focused tests/<domain>/ files",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/resident_buffer_contracts.rs",
-      "lines": 766,
-      "lines_over_threshold": 266,
-      "recommended_split": [
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/c_ast_gpu_parity_support/mod.rs",
-      "lines": 588,
-      "lines_over_threshold": 88,
-      "recommended_split": [
-        "extract backend/op parity cases into tests/conformance/",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/buf_len_array_length.rs",
-      "lines": 944,
-      "lines_over_threshold": 444,
-      "recommended_split": [
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/src/tests/data_tensor.rs",
-      "lines": 691,
-      "lines_over_threshold": 191,
-      "recommended_split": [
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/src/tests/memory_vector.rs",
-      "lines": 970,
-      "lines_over_threshold": 470,
-      "recommended_split": [
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/tests/nvrtc_compile_gate/fixtures.rs",
-      "lines": 560,
-      "lines_over_threshold": 60,
-      "recommended_split": [
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/persistent_bfs/tests/part1.rs",
-      "lines": 614,
-      "lines_over_threshold": 114,
-      "recommended_split": [
-        "extract hostile-input cases into tests/adversarial/",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/quantized/tests.rs",
-      "lines": 853,
-      "lines_over_threshold": 353,
-      "recommended_split": [
-        "move monolithic src/tests.rs coverage into focused tests/<domain>/ files",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/adversarial_graph_ops.rs",
-      "lines": 661,
-      "lines_over_threshold": 161,
-      "recommended_split": [
-        "extract backend/op parity cases into tests/conformance/",
-        "extract hostile-input cases into tests/adversarial/",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/adversarial_graph_csr_validation_contracts.rs",
-      "lines": 885,
-      "lines_over_threshold": 385,
-      "recommended_split": [
-        "extract hostile-input cases into tests/adversarial/",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/adversarial_graph_reachability_fixpoint.rs",
-      "lines": 582,
-      "lines_over_threshold": 82,
-      "recommended_split": [
-        "extract hostile-input cases into tests/adversarial/",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/execution/tests.rs",
-      "lines": 795,
-      "lines_over_threshold": 295,
-      "recommended_split": [
-        "move monolithic src/tests.rs coverage into focused tests/<domain>/ files",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/policy/tests.rs",
-      "lines": 570,
-      "lines_over_threshold": 70,
-      "recommended_split": [
-        "move monolithic src/tests.rs coverage into focused tests/<domain>/ files",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-runner/tests/__split/parity_matrix_chunk1.rs",
-      "lines": 768,
-      "lines_over_threshold": 268,
-      "recommended_split": [
-        "extract backend/op parity cases into tests/conformance/",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-runner/tests/cert_artifact.rs",
-      "lines": 823,
-      "lines_over_threshold": 323,
-      "recommended_split": [
-        "extract backend/op parity cases into tests/conformance/",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-runner/tests/release_gate_contracts.rs",
-      "lines": 856,
-      "lines_over_threshold": 356,
-      "recommended_split": [
-        "extract backend/op parity cases into tests/conformance/",
-        "extract hostile-input cases into tests/adversarial/",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-runner/tests/ulp_audit.rs",
-      "lines": 595,
-      "lines_over_threshold": 95,
-      "recommended_split": [
-        "extract backend/op parity cases into tests/conformance/",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/ifds_vyre_resident_tests.rs",
-      "lines": 1962,
-      "lines_over_threshold": 1462,
-      "recommended_split": [
-        "split by API contract into tests/contracts/ and tests/regression/"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/fixed_point_graph/tests.rs",
-      "lines": 610,
-      "lines_over_threshold": 110,
-      "recommended_split": [
-        "move monolithic src/tests.rs coverage into focused tests/<domain>/ files"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/fixed_point_resident_batch/tests.rs",
-      "lines": 719,
-      "lines_over_threshold": 219,
-      "recommended_split": [
-        "move monolithic src/tests.rs coverage into focused tests/<domain>/ files"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/ifds_gpu_core_tests.rs",
-      "lines": 1074,
-      "lines_over_threshold": 574,
-      "recommended_split": [
-        "extract hostile-input cases into tests/adversarial/"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/ifds_resident_batch/tests.rs",
-      "lines": 503,
-      "lines_over_threshold": 3,
-      "recommended_split": [
-        "move monolithic src/tests.rs coverage into focused tests/<domain>/ files"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/fixed_point_batch/ifds/tests.rs",
-      "lines": 551,
-      "lines_over_threshold": 51,
-      "recommended_split": [
-        "move monolithic src/tests.rs coverage into focused tests/<domain>/ files"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/fixed_point_batch/tests.rs",
-      "lines": 609,
-      "lines_over_threshold": 109,
-      "recommended_split": [
-        "move monolithic src/tests.rs coverage into focused tests/<domain>/ files"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/ifds_cpu_oracle_tests.rs",
-      "lines": 1845,
-      "lines_over_threshold": 1345,
-      "recommended_split": [
-        "extract backend/op parity cases into tests/conformance/",
-        "extract hostile-input cases into tests/adversarial/"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/ifds_resident_solve_tests.rs",
-      "lines": 881,
-      "lines_over_threshold": 381,
-      "recommended_split": [
-        "split by API contract into tests/contracts/ and tests/regression/"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/ifds_resident_direct_batch/tests.rs",
-      "lines": 709,
-      "lines_over_threshold": 209,
-      "recommended_split": [
-        "move monolithic src/tests.rs coverage into focused tests/<domain>/ files"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/reaching_closure_gpu_parity.rs",
-      "lines": 551,
-      "lines_over_threshold": 51,
-      "recommended_split": [
-        "extract backend/op parity cases into tests/conformance/"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/parameterized_analysis_matrix.rs",
-      "lines": 600,
-      "lines_over_threshold": 100,
-      "recommended_split": [
-        "extract backend/op parity cases into tests/conformance/"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/ifds_gpu_solve_gpu_parity.rs",
-      "lines": 680,
-      "lines_over_threshold": 180,
-      "recommended_split": [
-        "extract backend/op parity cases into tests/conformance/"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/fixed_point_scratch_contract.rs",
-      "lines": 524,
-      "lines_over_threshold": 24,
-      "recommended_split": [
-        "split by API contract into tests/contracts/ and tests/regression/"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/oracle_boundary.rs",
-      "lines": 553,
-      "lines_over_threshold": 53,
-      "recommended_split": [
-        "extract backend/op parity cases into tests/conformance/"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/adversarial_stress_suite.rs",
-      "lines": 882,
-      "lines_over_threshold": 382,
-      "recommended_split": [
-        "extract hostile-input cases into tests/adversarial/"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_parity_inventory_sweep.rs",
-      "lines": 882,
-      "lines_over_threshold": 382,
-      "recommended_split": [
-        "extract backend/op parity cases into tests/conformance/",
-        "extract fixture-driven cases into tests/corpus/"
-      ],
-      "release_blocker": true
+  "oversized_files": [],
+  "god_test_candidates": [],
+  "modularity_finding_count": 0,
+  "modularity_summary": [],
+  "modularity_findings": [],
+  "risk_dimension_coverages": [
+    {
+      "surface": "vyre",
+      "dimension": "backend",
+      "family_count": 9,
+      "file_count": 4810,
+      "assertion_count": 67793,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [],
+      "blockers": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "corpus",
+      "family_count": 10,
+      "file_count": 3940,
+      "assertion_count": 53227,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [],
+      "blockers": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "error_path",
+      "family_count": 9,
+      "file_count": 5946,
+      "assertion_count": 94917,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [],
+      "blockers": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "feature",
+      "family_count": 9,
+      "file_count": 5187,
+      "assertion_count": 81953,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [],
+      "blockers": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "op",
+      "family_count": 8,
+      "file_count": 7523,
+      "assertion_count": 111904,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [],
+      "blockers": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "weir_flow",
+      "family_count": 11,
+      "file_count": 3722,
+      "assertion_count": 52328,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [],
+      "blockers": []
+    },
+    {
+      "surface": "vyrec",
+      "dimension": "backend",
+      "family_count": 5,
+      "file_count": 20,
+      "assertion_count": 237,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [],
+      "blockers": []
+    },
+    {
+      "surface": "vyrec",
+      "dimension": "corpus",
+      "family_count": 5,
+      "file_count": 17,
+      "assertion_count": 190,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [],
+      "blockers": []
+    },
+    {
+      "surface": "vyrec",
+      "dimension": "error_path",
+      "family_count": 5,
+      "file_count": 25,
+      "assertion_count": 379,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [],
+      "blockers": []
+    },
+    {
+      "surface": "vyrec",
+      "dimension": "feature",
+      "family_count": 2,
+      "file_count": 16,
+      "assertion_count": 165,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [],
+      "blockers": []
+    },
+    {
+      "surface": "vyrec",
+      "dimension": "op",
+      "family_count": 5,
+      "file_count": 25,
+      "assertion_count": 357,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [],
+      "blockers": []
+    },
+    {
+      "surface": "vyrec",
+      "dimension": "weir_flow",
+      "family_count": 2,
+      "file_count": 16,
+      "assertion_count": 165,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [],
+      "blockers": []
+    },
+    {
+      "surface": "weir",
+      "dimension": "backend",
+      "family_count": 6,
+      "file_count": 496,
+      "assertion_count": 5104,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property",
+        "uncategorized"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [],
+      "blockers": []
+    },
+    {
+      "surface": "weir",
+      "dimension": "corpus",
+      "family_count": 8,
+      "file_count": 396,
+      "assertion_count": 3968,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property",
+        "uncategorized"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [],
+      "blockers": []
+    },
+    {
+      "surface": "weir",
+      "dimension": "error_path",
+      "family_count": 9,
+      "file_count": 606,
+      "assertion_count": 7374,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property",
+        "uncategorized"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [],
+      "blockers": []
+    },
+    {
+      "surface": "weir",
+      "dimension": "feature",
+      "family_count": 9,
+      "file_count": 566,
+      "assertion_count": 6813,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property",
+        "uncategorized"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [],
+      "blockers": []
+    },
+    {
+      "surface": "weir",
+      "dimension": "op",
+      "family_count": 7,
+      "file_count": 764,
+      "assertion_count": 8694,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property",
+        "uncategorized"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [],
+      "blockers": []
+    },
+    {
+      "surface": "weir",
+      "dimension": "weir_flow",
+      "family_count": 11,
+      "file_count": 824,
+      "assertion_count": 9209,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property",
+        "uncategorized"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [],
+      "blockers": []
     }
   ],
-  "god_test_candidates": [
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/api/raw_syntax/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/api/object_decode/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/megakernel_workspace/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/tu_host/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/tu_host/preprocess/expr/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/gpu_prep_kernel_libc_shape.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/support/ast_oracle.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/preprocess_differential_benchmark.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/r2_corpus_measurement.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/pipeline/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/pipeline/tests/passthrough.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/program_walks/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/diagnostics/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/nn/linear/inner/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/python/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/preprocess/gpu_char_constant_scan/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/preprocess/gpu_pipeline/cache/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/preprocess/expr_parser/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/preprocess/gpu_if_expression/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/preprocess/gpu_comment_strip_mask/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/lower/semantic_edges/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/tests/rust_lower_exec_oracle.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/tests/gpu_pipeline_driver_roundtrip.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-spec/tests/data_type_generated_edge_matrix.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/scan_ac_irregular/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/graph_frontier/skewed_csr/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/dataflow_irregular/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/tests/release_matrix_contracts.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/alias_registry/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/traversal_dispatch_pipeline/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/union_find_emit/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/persistent_bfs/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/motif/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/exploded/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/csr_forward_or_changed/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/toposort/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/adaptive_traverse/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/structural_kernel_pipeline/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/dominator_frontier/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/csr_frontier_queue_batch_resident/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/csr_bidirectional/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/vast_tree_walk/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/path_reconstruct/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/csr_frontier_queue_resident/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/dispatch_bridge/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/math/quantized_dispatch/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/tests/organization_contracts.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/pipeline/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/egraph_kernel_plan/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/backend/resident_dispatch/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/generated_resident_sequence_cuda_reference_matrix.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/adaptive_traverse_vast_walk_gpu_parity.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/generated_control_cuda_reference_matrix.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/hash_parsing_primitives_gpu_parity.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/resident_dispatch_contracts.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/generated_atomic_cuda_reference_matrix.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/borrowck_reachability_cuda.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/egraph_device_image_upload.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/cuda_graph_dispatch_parity.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/resident_buffer_contracts.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/csr_frontier_queue_gpu_parity.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/self_optimizer_const_prop_e2e.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/misc_primitives_batch_gpu_parity.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/vectorized_memory_live_cuda.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/generated_resident_cuda_reference_matrix.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/self_optimizer_pattern_match_extended.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/int4_quantized_gpu_parity.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/fact_substrate/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/pass_catalog/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/scheduler/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/cleanup/branch_coalesce/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/algebraic/strength_reduce/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/serial/wire/decode/from_wire/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/serial/wire/encode/to_wire/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/serial/text/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/visit/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/ir_inner/model/program/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/transform/autodiff/grad/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/execution_plan/fusion/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/engine/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/dispatch/dialect_lookup/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-macros/src/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/pipeline/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/runtime/cache/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/resident_buffer_contracts.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/c_ast_gpu_parity_support/mod.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/buf_len_array_length.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/src/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/src/tests/data_tensor.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/src/tests/memory_vector.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/tests/nvrtc_compile_gate/fixtures.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/xtask/src/hash/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/persistent_bfs/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/persistent_bfs/tests/part1.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/exploded/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/csr_forward_or_changed/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/csr_queue_split/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/dominator_tree/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/sinkhorn_iterate/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/semiring_gemm/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/quantized/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/adversarial_graph_ops.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/adversarial_graph_csr_validation_contracts.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/adversarial_graph_reachability_fixpoint.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/protocol/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/builder/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/io/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/descriptor/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/planner/fusion/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/handlers/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/task/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/scheduler/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/execution/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/protocol_api/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/policy/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-naga/src/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-runner/tests/__split/parity_matrix_chunk1.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-runner/tests/cert_artifact.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-runner/tests/release_gate_contracts.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-runner/tests/ulp_audit.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/fixed_point_scratch/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/ifds/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/ifds_vyre_resident_tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/reaching/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/loop_sum/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/fixed_point_graph/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/fixed_point_resident_batch/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/ifds_resident_cache/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/ifds_gpu_core_tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/ifds_resident_batch/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/fixed_point_batch/ifds/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/fixed_point_batch/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/fixed_point_resident_cache/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/fixed_point_resident_plan/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/summary/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/range/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/slice/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/ifds_cpu_oracle_tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/ifds_resident_solve_tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/callgraph/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/dominators/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/ifds_resident_direct_batch/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/live/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/points_to/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/reaching_closure_gpu_parity.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/parameterized_analysis_matrix.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/ifds_gpu_solve_gpu_parity.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/fixed_point_scratch_contract.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/oracle_boundary.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/adversarial_stress_suite.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_parity_inventory_sweep.rs"
+  "risk_family_coverages": [
+    {
+      "surface": "vyre",
+      "dimension": "backend",
+      "family": "backend_agnostic",
+      "risk_weight": 3,
+      "file_count": 670,
+      "assertion_count": 5873,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "backend",
+      "family": "cpu_oracle",
+      "risk_weight": 3,
+      "file_count": 1778,
+      "assertion_count": 25293,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "backend",
+      "family": "cuda_ptx",
+      "risk_weight": 5,
+      "file_count": 555,
+      "assertion_count": 8425,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "backend",
+      "family": "direct",
+      "risk_weight": 3,
+      "file_count": 673,
+      "assertion_count": 11215,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "backend",
+      "family": "metal",
+      "risk_weight": 5,
+      "file_count": 47,
+      "assertion_count": 826,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "backend",
+      "family": "naga",
+      "risk_weight": 3,
+      "file_count": 92,
+      "assertion_count": 1207,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "backend",
+      "family": "resident",
+      "risk_weight": 5,
+      "file_count": 381,
+      "assertion_count": 7397,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "backend",
+      "family": "spirv",
+      "risk_weight": 3,
+      "file_count": 43,
+      "assertion_count": 621,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "backend",
+      "family": "wgpu",
+      "risk_weight": 5,
+      "file_count": 571,
+      "assertion_count": 6936,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "corpus",
+      "family": "csmith",
+      "risk_weight": 3,
+      "file_count": 2,
+      "assertion_count": 23,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "corpus",
+      "family": "differential",
+      "risk_weight": 5,
+      "file_count": 778,
+      "assertion_count": 10975,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "corpus",
+      "family": "fixture",
+      "risk_weight": 3,
+      "file_count": 481,
+      "assertion_count": 7023,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "corpus",
+      "family": "fuzz",
+      "risk_weight": 5,
+      "file_count": 52,
+      "assertion_count": 647,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "corpus",
+      "family": "generated",
+      "risk_weight": 3,
+      "file_count": 689,
+      "assertion_count": 11465,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "corpus",
+      "family": "golden",
+      "risk_weight": 3,
+      "file_count": 14,
+      "assertion_count": 180,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "corpus",
+      "family": "linux",
+      "risk_weight": 3,
+      "file_count": 125,
+      "assertion_count": 1444,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "corpus",
+      "family": "r2",
+      "risk_weight": 3,
+      "file_count": 45,
+      "assertion_count": 549,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "corpus",
+      "family": "release",
+      "risk_weight": 5,
+      "file_count": 438,
+      "assertion_count": 7244,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "corpus",
+      "family": "unit_fixture",
+      "risk_weight": 3,
+      "file_count": 1316,
+      "assertion_count": 13677,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "fuzz"
+      ]
+    },
+    {
+      "surface": "vyre",
+      "dimension": "error_path",
+      "family": "empty_zero",
+      "risk_weight": 3,
+      "file_count": 1776,
+      "assertion_count": 28800,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "error_path",
+      "family": "malformed_input",
+      "risk_weight": 5,
+      "file_count": 753,
+      "assertion_count": 14070,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "error_path",
+      "family": "missing_input",
+      "risk_weight": 3,
+      "file_count": 555,
+      "assertion_count": 8875,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "error_path",
+      "family": "nominal",
+      "risk_weight": 3,
+      "file_count": 688,
+      "assertion_count": 3648,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "error_path",
+      "family": "overflow",
+      "risk_weight": 5,
+      "file_count": 472,
+      "assertion_count": 9727,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "error_path",
+      "family": "panic_path",
+      "risk_weight": 3,
+      "file_count": 835,
+      "assertion_count": 14183,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "error_path",
+      "family": "resource_budget",
+      "risk_weight": 3,
+      "file_count": 526,
+      "assertion_count": 9895,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "error_path",
+      "family": "timeout",
+      "risk_weight": 3,
+      "file_count": 52,
+      "assertion_count": 854,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "error_path",
+      "family": "unsupported_capability",
+      "risk_weight": 5,
+      "file_count": 289,
+      "assertion_count": 4865,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "feature",
+      "family": "allocation_scratch",
+      "risk_weight": 3,
+      "file_count": 710,
+      "assertion_count": 13597,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "feature",
+      "family": "cache",
+      "risk_weight": 3,
+      "file_count": 443,
+      "assertion_count": 7934,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "feature",
+      "family": "capability",
+      "risk_weight": 5,
+      "file_count": 893,
+      "assertion_count": 13188,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "feature",
+      "family": "core_feature",
+      "risk_weight": 3,
+      "file_count": 926,
+      "assertion_count": 7779,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "feature",
+      "family": "graph_capture",
+      "risk_weight": 3,
+      "file_count": 157,
+      "assertion_count": 2857,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "feature",
+      "family": "serde",
+      "risk_weight": 3,
+      "file_count": 214,
+      "assertion_count": 3567,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "feature",
+      "family": "simd",
+      "risk_weight": 3,
+      "file_count": 292,
+      "assertion_count": 6010,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "feature",
+      "family": "soundness",
+      "risk_weight": 5,
+      "file_count": 829,
+      "assertion_count": 15069,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "feature",
+      "family": "validation",
+      "risk_weight": 5,
+      "file_count": 723,
+      "assertion_count": 11952,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "op",
+      "family": "driver_runtime",
+      "risk_weight": 3,
+      "file_count": 1752,
+      "assertion_count": 25545,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "op",
+      "family": "flow",
+      "risk_weight": 5,
+      "file_count": 296,
+      "assertion_count": 5000,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "op",
+      "family": "lower_emit",
+      "risk_weight": 3,
+      "file_count": 1128,
+      "assertion_count": 17792,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "op",
+      "family": "nn_math",
+      "risk_weight": 5,
+      "file_count": 1278,
+      "assertion_count": 20896,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "op",
+      "family": "optimizer",
+      "risk_weight": 3,
+      "file_count": 961,
+      "assertion_count": 15267,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "op",
+      "family": "parser_frontend",
+      "risk_weight": 5,
+      "file_count": 849,
+      "assertion_count": 12203,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "op",
+      "family": "scan_static",
+      "risk_weight": 5,
+      "file_count": 826,
+      "assertion_count": 12585,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "op",
+      "family": "uncategorized_op",
+      "risk_weight": 1,
+      "file_count": 433,
+      "assertion_count": 2616,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "weir_flow",
+      "family": "cross_language",
+      "risk_weight": 5,
+      "file_count": 3,
+      "assertion_count": 42,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "weir_flow",
+      "family": "dispatch_decode",
+      "risk_weight": 5,
+      "file_count": 5,
+      "assertion_count": 117,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "weir_flow",
+      "family": "fixed_point",
+      "risk_weight": 5,
+      "file_count": 207,
+      "assertion_count": 4235,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "weir_flow",
+      "family": "ifds",
+      "risk_weight": 5,
+      "file_count": 52,
+      "assertion_count": 1154,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "weir_flow",
+      "family": "liveness",
+      "risk_weight": 5,
+      "file_count": 563,
+      "assertion_count": 8138,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "weir_flow",
+      "family": "non_weir",
+      "risk_weight": 3,
+      "file_count": 1491,
+      "assertion_count": 14086,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "weir_flow",
+      "family": "points_to",
+      "risk_weight": 5,
+      "file_count": 15,
+      "assertion_count": 348,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "weir_flow",
+      "family": "reaching",
+      "risk_weight": 5,
+      "file_count": 63,
+      "assertion_count": 955,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "weir_flow",
+      "family": "resident_flow",
+      "risk_weight": 5,
+      "file_count": 381,
+      "assertion_count": 7397,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "weir_flow",
+      "family": "slice",
+      "risk_weight": 5,
+      "file_count": 853,
+      "assertion_count": 14787,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyre",
+      "dimension": "weir_flow",
+      "family": "witness",
+      "risk_weight": 5,
+      "file_count": 89,
+      "assertion_count": 1069,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyrec",
+      "dimension": "backend",
+      "family": "backend_agnostic",
+      "risk_weight": 3,
+      "file_count": 8,
+      "assertion_count": 56,
+      "case_roles": [
+        "adversarial",
+        "boundary",
+        "conformance",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "benchmark",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "vyrec",
+      "dimension": "backend",
+      "family": "cpu_oracle",
+      "risk_weight": 3,
+      "file_count": 5,
+      "assertion_count": 53,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "e2e",
+        "negative",
+        "positive"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "property",
+        "fuzz",
+        "conformance"
+      ]
+    },
+    {
+      "surface": "vyrec",
+      "dimension": "backend",
+      "family": "cuda_ptx",
+      "risk_weight": 5,
+      "file_count": 2,
+      "assertion_count": 24,
+      "case_roles": [
+        "boundary",
+        "negative",
+        "positive"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "vyrec",
+      "dimension": "backend",
+      "family": "direct",
+      "risk_weight": 3,
+      "file_count": 4,
+      "assertion_count": 81,
+      "case_roles": [
+        "adversarial",
+        "boundary",
+        "e2e",
+        "negative",
+        "positive"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance"
+      ]
+    },
+    {
+      "surface": "vyrec",
+      "dimension": "backend",
+      "family": "wgpu",
+      "risk_weight": 5,
+      "file_count": 1,
+      "assertion_count": 23,
+      "case_roles": [
+        "boundary",
+        "negative",
+        "positive"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "vyrec",
+      "dimension": "corpus",
+      "family": "fixture",
+      "risk_weight": 3,
+      "file_count": 1,
+      "assertion_count": 17,
+      "case_roles": [
+        "boundary",
+        "negative",
+        "positive"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "vyrec",
+      "dimension": "corpus",
+      "family": "fuzz",
+      "risk_weight": 5,
+      "file_count": 1,
+      "assertion_count": 1,
+      "case_roles": [
+        "adversarial",
+        "boundary",
+        "fuzz",
+        "negative",
+        "positive"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "property",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "vyrec",
+      "dimension": "corpus",
+      "family": "linux",
+      "risk_weight": 3,
+      "file_count": 2,
+      "assertion_count": 28,
+      "case_roles": [
+        "boundary",
+        "negative",
+        "positive"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "vyrec",
+      "dimension": "corpus",
+      "family": "release",
+      "risk_weight": 5,
+      "file_count": 2,
+      "assertion_count": 63,
+      "case_roles": [
+        "adversarial",
+        "boundary",
+        "negative",
+        "positive"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "vyrec",
+      "dimension": "corpus",
+      "family": "unit_fixture",
+      "risk_weight": 3,
+      "file_count": 11,
+      "assertion_count": 81,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "fuzz"
+      ]
+    },
+    {
+      "surface": "vyrec",
+      "dimension": "error_path",
+      "family": "empty_zero",
+      "risk_weight": 3,
+      "file_count": 6,
+      "assertion_count": 115,
+      "case_roles": [
+        "adversarial",
+        "boundary",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "benchmark",
+        "conformance",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "vyrec",
+      "dimension": "error_path",
+      "family": "malformed_input",
+      "risk_weight": 5,
+      "file_count": 5,
+      "assertion_count": 90,
+      "case_roles": [
+        "adversarial",
+        "boundary",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "benchmark",
+        "conformance",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "vyrec",
+      "dimension": "error_path",
+      "family": "missing_input",
+      "risk_weight": 3,
+      "file_count": 3,
+      "assertion_count": 78,
+      "case_roles": [
+        "adversarial",
+        "boundary",
+        "negative",
+        "positive"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "vyrec",
+      "dimension": "error_path",
+      "family": "nominal",
+      "risk_weight": 3,
+      "file_count": 7,
+      "assertion_count": 12,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "negative",
+        "positive"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "property",
+        "fuzz"
+      ]
+    },
+    {
+      "surface": "vyrec",
+      "dimension": "error_path",
+      "family": "unsupported_capability",
+      "risk_weight": 5,
+      "file_count": 4,
+      "assertion_count": 84,
+      "case_roles": [
+        "adversarial",
+        "boundary",
+        "negative",
+        "positive"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "vyrec",
+      "dimension": "feature",
+      "family": "capability",
+      "risk_weight": 5,
+      "file_count": 5,
+      "assertion_count": 90,
+      "case_roles": [
+        "adversarial",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "vyrec",
+      "dimension": "feature",
+      "family": "core_feature",
+      "risk_weight": 3,
+      "file_count": 11,
+      "assertion_count": 75,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "property"
+      ]
+    },
+    {
+      "surface": "vyrec",
+      "dimension": "op",
+      "family": "driver_runtime",
+      "risk_weight": 3,
+      "file_count": 4,
+      "assertion_count": 82,
+      "case_roles": [
+        "adversarial",
+        "boundary",
+        "negative",
+        "positive"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "vyrec",
+      "dimension": "op",
+      "family": "lower_emit",
+      "risk_weight": 3,
+      "file_count": 5,
+      "assertion_count": 88,
+      "case_roles": [
+        "adversarial",
+        "boundary",
+        "negative",
+        "positive"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "vyrec",
+      "dimension": "op",
+      "family": "nn_math",
+      "risk_weight": 5,
+      "file_count": 1,
+      "assertion_count": 23,
+      "case_roles": [
+        "boundary",
+        "negative",
+        "positive"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "vyrec",
+      "dimension": "op",
+      "family": "parser_frontend",
+      "risk_weight": 5,
+      "file_count": 14,
+      "assertion_count": 163,
+      "case_roles": [
+        "adversarial",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "benchmark"
+      ]
+    },
+    {
+      "surface": "vyrec",
+      "dimension": "op",
+      "family": "uncategorized_op",
+      "risk_weight": 1,
+      "file_count": 1,
+      "assertion_count": 1,
+      "case_roles": [
+        "benchmark",
+        "negative",
+        "positive"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "conformance",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "vyrec",
+      "dimension": "weir_flow",
+      "family": "non_weir",
+      "risk_weight": 3,
+      "file_count": 15,
+      "assertion_count": 142,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "vyrec",
+      "dimension": "weir_flow",
+      "family": "slice",
+      "risk_weight": 5,
+      "file_count": 1,
+      "assertion_count": 23,
+      "case_roles": [
+        "boundary",
+        "negative",
+        "positive"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "backend",
+      "family": "backend_agnostic",
+      "risk_weight": 3,
+      "file_count": 95,
+      "assertion_count": 998,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "fuzz",
+        "negative",
+        "positive",
+        "property",
+        "uncategorized"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "e2e"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "backend",
+      "family": "cpu_oracle",
+      "risk_weight": 3,
+      "file_count": 180,
+      "assertion_count": 1754,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "weir",
+      "dimension": "backend",
+      "family": "cuda_ptx",
+      "risk_weight": 5,
+      "file_count": 40,
+      "assertion_count": 356,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "property"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "backend",
+      "family": "direct",
+      "risk_weight": 3,
+      "file_count": 45,
+      "assertion_count": 503,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "e2e"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "backend",
+      "family": "resident",
+      "risk_weight": 5,
+      "file_count": 135,
+      "assertion_count": 1493,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "fuzz",
+        "negative",
+        "positive"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "property",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "backend",
+      "family": "wgpu",
+      "risk_weight": 5,
+      "file_count": 1,
+      "assertion_count": 0,
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "positive"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "negative",
+        "adversarial",
+        "property",
+        "fuzz",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "corpus",
+      "family": "differential",
+      "risk_weight": 5,
+      "file_count": 88,
+      "assertion_count": 758,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "weir",
+      "dimension": "corpus",
+      "family": "fixture",
+      "risk_weight": 3,
+      "file_count": 32,
+      "assertion_count": 371,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "negative",
+        "positive"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "property",
+        "fuzz",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "corpus",
+      "family": "fuzz",
+      "risk_weight": 5,
+      "file_count": 15,
+      "assertion_count": 63,
+      "case_roles": [
+        "adversarial",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "benchmark"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "corpus",
+      "family": "generated",
+      "risk_weight": 3,
+      "file_count": 27,
+      "assertion_count": 278,
+      "case_roles": [
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "adversarial",
+        "benchmark"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "corpus",
+      "family": "linux",
+      "risk_weight": 3,
+      "file_count": 1,
+      "assertion_count": 0,
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "positive",
+        "adversarial",
+        "property",
+        "fuzz",
+        "conformance",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "corpus",
+      "family": "r2",
+      "risk_weight": 3,
+      "file_count": 10,
+      "assertion_count": 126,
+      "case_roles": [
+        "adversarial",
+        "boundary",
+        "conformance",
+        "negative",
+        "positive"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "property",
+        "fuzz",
+        "benchmark",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "corpus",
+      "family": "release",
+      "risk_weight": 5,
+      "file_count": 27,
+      "assertion_count": 359,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "property"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "corpus",
+      "family": "unit_fixture",
+      "risk_weight": 3,
+      "file_count": 196,
+      "assertion_count": 2013,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property",
+        "uncategorized"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "fuzz",
+        "conformance",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "error_path",
+      "family": "empty_zero",
+      "risk_weight": 3,
+      "file_count": 200,
+      "assertion_count": 2648,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "weir",
+      "dimension": "error_path",
+      "family": "malformed_input",
+      "risk_weight": 5,
+      "file_count": 46,
+      "assertion_count": 666,
+      "case_roles": [
+        "adversarial",
+        "boundary",
+        "conformance",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "benchmark",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "error_path",
+      "family": "missing_input",
+      "risk_weight": 3,
+      "file_count": 36,
+      "assertion_count": 397,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "weir",
+      "dimension": "error_path",
+      "family": "nominal",
+      "risk_weight": 3,
+      "file_count": 78,
+      "assertion_count": 513,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "fuzz",
+        "negative",
+        "positive",
+        "property",
+        "uncategorized"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "e2e"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "error_path",
+      "family": "overflow",
+      "risk_weight": 5,
+      "file_count": 49,
+      "assertion_count": 729,
+      "case_roles": [
+        "adversarial",
+        "boundary",
+        "conformance",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "benchmark",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "error_path",
+      "family": "panic_path",
+      "risk_weight": 3,
+      "file_count": 101,
+      "assertion_count": 1166,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "weir",
+      "dimension": "error_path",
+      "family": "resource_budget",
+      "risk_weight": 3,
+      "file_count": 87,
+      "assertion_count": 1135,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "fuzz",
+        "negative",
+        "positive"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "property",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "error_path",
+      "family": "timeout",
+      "risk_weight": 3,
+      "file_count": 2,
+      "assertion_count": 10,
+      "case_roles": [
+        "adversarial",
+        "boundary",
+        "negative",
+        "positive"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "error_path",
+      "family": "unsupported_capability",
+      "risk_weight": 5,
+      "file_count": 7,
+      "assertion_count": 110,
+      "case_roles": [
+        "adversarial",
+        "boundary",
+        "negative",
+        "positive"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "feature",
+      "family": "allocation_scratch",
+      "risk_weight": 3,
+      "file_count": 161,
+      "assertion_count": 2029,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "weir",
+      "dimension": "feature",
+      "family": "cache",
+      "risk_weight": 3,
+      "file_count": 53,
+      "assertion_count": 894,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "fuzz",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "feature",
+      "family": "capability",
+      "risk_weight": 5,
+      "file_count": 62,
+      "assertion_count": 782,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "fuzz",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "feature",
+      "family": "core_feature",
+      "risk_weight": 3,
+      "file_count": 80,
+      "assertion_count": 363,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "fuzz",
+        "negative",
+        "positive",
+        "property",
+        "uncategorized"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "e2e"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "feature",
+      "family": "graph_capture",
+      "risk_weight": 3,
+      "file_count": 6,
+      "assertion_count": 56,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "negative",
+        "positive"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "property",
+        "fuzz",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "feature",
+      "family": "serde",
+      "risk_weight": 3,
+      "file_count": 9,
+      "assertion_count": 200,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "negative",
+        "positive"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "property",
+        "fuzz",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "feature",
+      "family": "simd",
+      "risk_weight": 3,
+      "file_count": 24,
+      "assertion_count": 296,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "weir",
+      "dimension": "feature",
+      "family": "soundness",
+      "risk_weight": 5,
+      "file_count": 123,
+      "assertion_count": 1579,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "weir",
+      "dimension": "feature",
+      "family": "validation",
+      "risk_weight": 5,
+      "file_count": 48,
+      "assertion_count": 614,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "e2e"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "op",
+      "family": "driver_runtime",
+      "risk_weight": 3,
+      "file_count": 228,
+      "assertion_count": 2576,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "weir",
+      "dimension": "op",
+      "family": "flow",
+      "risk_weight": 5,
+      "file_count": 359,
+      "assertion_count": 3684,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property",
+        "uncategorized"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "weir",
+      "dimension": "op",
+      "family": "lower_emit",
+      "risk_weight": 3,
+      "file_count": 41,
+      "assertion_count": 585,
+      "case_roles": [
+        "adversarial",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "benchmark"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "op",
+      "family": "nn_math",
+      "risk_weight": 5,
+      "file_count": 71,
+      "assertion_count": 914,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "e2e"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "op",
+      "family": "optimizer",
+      "risk_weight": 3,
+      "file_count": 40,
+      "assertion_count": 543,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "e2e"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "op",
+      "family": "parser_frontend",
+      "risk_weight": 5,
+      "file_count": 13,
+      "assertion_count": 261,
+      "case_roles": [
+        "adversarial",
+        "boundary",
+        "conformance",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "benchmark",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "op",
+      "family": "scan_static",
+      "risk_weight": 5,
+      "file_count": 12,
+      "assertion_count": 131,
+      "case_roles": [
+        "adversarial",
+        "boundary",
+        "conformance",
+        "negative",
+        "positive"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "property",
+        "fuzz",
+        "benchmark",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "weir_flow",
+      "family": "cross_language",
+      "risk_weight": 5,
+      "file_count": 8,
+      "assertion_count": 125,
+      "case_roles": [
+        "adversarial",
+        "boundary",
+        "conformance",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "fuzz",
+        "benchmark",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "weir_flow",
+      "family": "dispatch_decode",
+      "risk_weight": 5,
+      "file_count": 47,
+      "assertion_count": 375,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "fuzz",
+        "negative",
+        "positive"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "property",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "weir_flow",
+      "family": "fixed_point",
+      "risk_weight": 5,
+      "file_count": 109,
+      "assertion_count": 1385,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "fuzz",
+        "negative",
+        "positive",
+        "property",
+        "uncategorized"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "e2e"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "weir_flow",
+      "family": "ifds",
+      "risk_weight": 5,
+      "file_count": 141,
+      "assertion_count": 1444,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "e2e"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "weir_flow",
+      "family": "liveness",
+      "risk_weight": 5,
+      "file_count": 83,
+      "assertion_count": 916,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "weir",
+      "dimension": "weir_flow",
+      "family": "points_to",
+      "risk_weight": 5,
+      "file_count": 39,
+      "assertion_count": 437,
+      "case_roles": [
+        "adversarial",
+        "boundary",
+        "conformance",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "fuzz",
+        "benchmark",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "weir_flow",
+      "family": "reaching",
+      "risk_weight": 5,
+      "file_count": 81,
+      "assertion_count": 893,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "weir",
+      "dimension": "weir_flow",
+      "family": "resident_flow",
+      "risk_weight": 5,
+      "file_count": 135,
+      "assertion_count": 1493,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "fuzz",
+        "negative",
+        "positive"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "property",
+        "e2e"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "weir_flow",
+      "family": "slice",
+      "risk_weight": 5,
+      "file_count": 118,
+      "assertion_count": 1610,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": []
+    },
+    {
+      "surface": "weir",
+      "dimension": "weir_flow",
+      "family": "weir_uncategorized",
+      "risk_weight": 5,
+      "file_count": 44,
+      "assertion_count": 344,
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "fuzz",
+        "negative",
+        "positive",
+        "property",
+        "uncategorized"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "e2e"
+      ]
+    },
+    {
+      "surface": "weir",
+      "dimension": "weir_flow",
+      "family": "witness",
+      "risk_weight": 5,
+      "file_count": 19,
+      "assertion_count": 187,
+      "case_roles": [
+        "adversarial",
+        "boundary",
+        "conformance",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [
+        "benchmark",
+        "e2e"
+      ]
+    }
   ],
-  "blockers": [
-    "74 test file(s) exceed the 500-line modularity threshold",
-    "152 monolithic test file(s) must be split into modular test layers"
-  ]
+  "regex_adversarial_coverages": [
+    {
+      "class_id": "quadratic_rescan",
+      "roles": [
+        "adversarial",
+        "baseline",
+        "boundary",
+        "evasion",
+        "negative",
+        "positive",
+        "resource_budget"
+      ],
+      "required_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "baseline",
+        "evasion",
+        "resource_budget"
+      ],
+      "missing_roles": [],
+      "evidence_paths": [
+        "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+      ]
+    },
+    {
+      "class_id": "empty_match",
+      "roles": [
+        "adversarial",
+        "baseline",
+        "boundary",
+        "evasion",
+        "negative",
+        "positive",
+        "resource_budget"
+      ],
+      "required_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "baseline",
+        "evasion",
+        "resource_budget"
+      ],
+      "missing_roles": [],
+      "evidence_paths": [
+        "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+      ]
+    },
+    {
+      "class_id": "overlapping_suffix",
+      "roles": [
+        "adversarial",
+        "baseline",
+        "boundary",
+        "evasion",
+        "negative",
+        "positive",
+        "resource_budget"
+      ],
+      "required_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "baseline",
+        "evasion",
+        "resource_budget"
+      ],
+      "missing_roles": [],
+      "evidence_paths": [
+        "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+      ]
+    },
+    {
+      "class_id": "utf8_boundary",
+      "roles": [
+        "adversarial",
+        "baseline",
+        "boundary",
+        "evasion",
+        "negative",
+        "positive",
+        "resource_budget"
+      ],
+      "required_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "baseline",
+        "evasion",
+        "resource_budget"
+      ],
+      "missing_roles": [],
+      "evidence_paths": [
+        "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+      ]
+    },
+    {
+      "class_id": "weak_literal",
+      "roles": [
+        "adversarial",
+        "baseline",
+        "boundary",
+        "evasion",
+        "negative",
+        "positive",
+        "resource_budget"
+      ],
+      "required_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "baseline",
+        "evasion",
+        "resource_budget"
+      ],
+      "missing_roles": [],
+      "evidence_paths": [
+        "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+      ]
+    },
+    {
+      "class_id": "nested_repeats",
+      "roles": [
+        "adversarial",
+        "baseline",
+        "boundary",
+        "evasion",
+        "negative",
+        "positive",
+        "resource_budget"
+      ],
+      "required_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "baseline",
+        "evasion",
+        "resource_budget"
+      ],
+      "missing_roles": [],
+      "evidence_paths": [
+        "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+      ]
+    },
+    {
+      "class_id": "nullable_loops",
+      "roles": [
+        "adversarial",
+        "baseline",
+        "boundary",
+        "evasion",
+        "negative",
+        "positive",
+        "resource_budget"
+      ],
+      "required_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "baseline",
+        "evasion",
+        "resource_budget"
+      ],
+      "missing_roles": [],
+      "evidence_paths": [
+        "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+      ]
+    },
+    {
+      "class_id": "anchors",
+      "roles": [
+        "adversarial",
+        "baseline",
+        "boundary",
+        "evasion",
+        "negative",
+        "positive",
+        "resource_budget"
+      ],
+      "required_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "baseline",
+        "evasion",
+        "resource_budget"
+      ],
+      "missing_roles": [],
+      "evidence_paths": [
+        "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+      ]
+    },
+    {
+      "class_id": "lookarounds",
+      "roles": [
+        "adversarial",
+        "baseline",
+        "boundary",
+        "evasion",
+        "negative",
+        "positive",
+        "resource_budget"
+      ],
+      "required_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "baseline",
+        "evasion",
+        "resource_budget"
+      ],
+      "missing_roles": [],
+      "evidence_paths": [
+        "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+      ]
+    },
+    {
+      "class_id": "backreferences",
+      "roles": [
+        "adversarial",
+        "baseline",
+        "boundary",
+        "evasion",
+        "negative",
+        "positive",
+        "resource_budget"
+      ],
+      "required_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "baseline",
+        "evasion",
+        "resource_budget"
+      ],
+      "missing_roles": [],
+      "evidence_paths": [
+        "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+      ]
+    },
+    {
+      "class_id": "unicode_classes",
+      "roles": [
+        "adversarial",
+        "baseline",
+        "boundary",
+        "evasion",
+        "negative",
+        "positive",
+        "resource_budget"
+      ],
+      "required_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "baseline",
+        "evasion",
+        "resource_budget"
+      ],
+      "missing_roles": [],
+      "evidence_paths": [
+        "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+      ]
+    },
+    {
+      "class_id": "huge_alternations",
+      "roles": [
+        "adversarial",
+        "baseline",
+        "boundary",
+        "evasion",
+        "negative",
+        "positive",
+        "resource_budget"
+      ],
+      "required_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "baseline",
+        "evasion",
+        "resource_budget"
+      ],
+      "missing_roles": [],
+      "evidence_paths": [
+        "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+      ]
+    }
+  ],
+  "regex_adversarial_findings": [],
+  "blockers": []
 }

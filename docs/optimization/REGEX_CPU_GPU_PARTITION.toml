@@ -1,0 +1,64 @@
+schema_version = 1
+
+planner_id = "regex-cpu-gpu-partition:v1"
+
+required_routes = [
+  "all_cpu",
+  "all_gpu_eligible",
+  "mixed_prefilter_verify",
+  "verifier_only",
+  "rejected",
+]
+
+required_metrics = [
+  "transfer_bytes",
+  "active_ns",
+  "match_parity",
+  "unsupported_count",
+  "verifier_load",
+]
+
+[[route]]
+route_id = "all_cpu"
+pattern_route = "cpu_ref"
+transfer_policy = "no_gpu_transfer"
+verifier_policy = "host_reference"
+parity_required = true
+failure_mode = "cpu_dominates"
+evidence_path = "vyre-bench/tests/regex_cpu_gpu_partition_registry.rs"
+
+[[route]]
+route_id = "all_gpu_eligible"
+pattern_route = "gpu_native"
+transfer_policy = "upload_pattern_database_and_haystack"
+verifier_policy = "not_required_or_gpu_verifier"
+parity_required = true
+failure_mode = "transfer_dominated"
+evidence_path = "vyre-bench/tests/regex_cpu_gpu_partition_registry.rs"
+
+[[route]]
+route_id = "mixed_prefilter_verify"
+pattern_route = "gpu_prefilter_cpu_or_gpu_verifier"
+transfer_policy = "candidate_ranges_only"
+verifier_policy = "required"
+parity_required = true
+failure_mode = "verifier_saturation"
+evidence_path = "vyre-bench/tests/regex_cpu_gpu_partition_registry.rs"
+
+[[route]]
+route_id = "verifier_only"
+pattern_route = "verifier_without_accelerator_claim"
+transfer_policy = "candidate_or_full_haystack_by_policy"
+verifier_policy = "required"
+parity_required = true
+failure_mode = "unsupported_accelerator_construct"
+evidence_path = "vyre-bench/tests/regex_cpu_gpu_partition_registry.rs"
+
+[[route]]
+route_id = "rejected"
+pattern_route = "no_safe_route"
+transfer_policy = "not_applicable"
+verifier_policy = "not_applicable"
+parity_required = false
+failure_mode = "nonpartitionable_pattern"
+evidence_path = "vyre-bench/tests/regex_cpu_gpu_partition_registry.rs"

@@ -1,0 +1,38 @@
+# Production panic and fallback registry for VX-694.
+# Release paths cannot contain unregistered panic, expect, synthetic fallback, or inert advertised behavior.
+
+schema = "vyre.hygiene.production_panic_fallback_registry.v1"
+owner = "security_reliability"
+evidence_tokens = ["MLIR_PASS"]
+
+classes = [
+  "test_assertion",
+  "documentation_example",
+  "compatibility_shim",
+  "release_path",
+]
+
+required_fields = [
+  "classification",
+  "path_class",
+  "symbol_or_text",
+  "release_allowed",
+  "diagnostic",
+  "review_owner",
+]
+
+[[entry]]
+classification = "test_assertion"
+path_class = "test"
+symbol_or_text = "panic used to assert impossible fixture state"
+release_allowed = false
+diagnostic = "none"
+review_owner = "test-depth"
+
+[[entry]]
+classification = "release_path"
+path_class = "production"
+symbol_or_text = "expect in backend dispatch"
+release_allowed = false
+diagnostic = "VYRE_RELEASE_PATH_EXPECT_UNREGISTERED"
+review_owner = "security-reliability"

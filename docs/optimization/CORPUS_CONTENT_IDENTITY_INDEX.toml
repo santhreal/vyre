@@ -1,0 +1,59 @@
+[artifact]
+id = "CORPUS_CONTENT_IDENTITY_INDEX"
+title = "Corpus content identity index contract"
+tranche = "VX-1541..VX-1560"
+owner = "runtime_io"
+status = "planned_contract"
+research_sources = [
+  "BLAKE3_SPEC",
+  "SQLITE_WAL",
+  "LINUX_STATX",
+]
+
+[scope]
+owns = [
+  "file identity records for scan reuse decisions",
+  "content digest and chunk digest materialization policy",
+  "alias tracking for hard links and renames",
+  "result cache key inputs before parser or matcher execution",
+  "journal-backed durability of corpus identity state",
+]
+does_not_own = [
+  "parser AST/cache object lifecycle, owned by the libs_parsing roadmap substrate",
+  "foundation optimizer diff artifacts, owned by the foundation_optimizer roadmap substrate",
+  "output finding provenance schema, owned by OUTPUT_SLAB_SCHEMA_PROVENANCE",
+  "secret hashing or authentication, owned by CRYPTO_SECRET_GOVERNANCE_TRANCHE_COVERAGE",
+]
+
+[identity_key]
+primary = ["root_id", "device", "inode", "size", "mtime", "ctime"]
+content_confirmed = ["blake3_digest", "chunk_digest_tree", "language_profile", "scan_rule_set_digest"]
+alias_fields = ["path_alias_digest", "parent_identity", "hardlink_count", "rename_epoch"]
+cache_epoch = "journal epoch plus rule/config digest; cache entries from older incompatible epochs are not reused"
+
+[digest_policy]
+metadata_fast_path = "metadata identity may avoid content hashing only when previous digest and statx snapshot are still valid under the configured trust class"
+content_digest = "BLAKE3 digest is recorded for byte-equivalence reuse and cross-process cache keys"
+chunk_digest_tree = "large files may store chunk digests so localized changes re-read and re-scan only affected ranges"
+secret_boundary = "content hashes are not authentication claims and cannot replace MAC or password hashing policy"
+
+[result_reuse]
+admit_reuse_when = [
+  "file identity is stable",
+  "content digest or trusted metadata snapshot matches",
+  "rule set digest matches",
+  "scanner binary/ABI digest matches",
+  "output schema digest matches",
+]
+reject_reuse_when = [
+  "watch overflow affects the root",
+  "metadata trust class changed",
+  "rule or config digest changed",
+  "partial chunk digest is missing for requested byte range",
+  "previous result lacks output provenance required by current reporter",
+]
+
+[persistence]
+state_store = "write-ahead journal plus checkpointed identity tables or an equivalent crash-recoverable store"
+concurrency = "multiple scan readers may consult stable snapshots while one writer appends invalidations"
+checkpoint = "checkpoint records include identity table generation, journal sequence, rule digest, and scanner ABI digest"

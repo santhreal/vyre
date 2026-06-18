@@ -6,12 +6,19 @@ use super::staging_reserve::{
 use crate::PipelineError;
 use rustc_hash::FxHashMap;
 
-/// Dense byte alphabet used by the DFA transition table.
+/// Dense byte alphabet used by the DFA transition table as the INPUT
+/// (`BatchRuleProgram`) representation: every rule still arrives as a dense
+/// `state * 256 + byte` table. The on-device packed table is byte-class
+/// compressed (see [`pack_rule_catalog_into`]); this constant is the source
+/// alphabet width the compressor folds DOWN from.
 pub const ALPHABET_SIZE: u32 = 256;
 const ALPHABET_SIZE_USIZE: usize = 256;
 
-/// Number of `u32` words per rule metadata entry.
-pub const RULE_META_WORDS: usize = 3;
+/// Number of `u32` words per rule metadata entry. The kernel reads these in
+/// order: `transition_base`, `accept_base`, `state_count`, `class_map_base`,
+/// `num_classes`. Bump in lockstep with [`RuleMeta`] and the dispatcher's
+/// `dfa_byte_scanner` if the per-rule metadata grows.
+pub const RULE_META_WORDS: usize = 5;
 
 /// One compiled DFA-backed rule program consumed by the batch dispatcher.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -49,16 +56,28 @@ impl BatchRuleProgram {
     }
 }
 
-/// Packed metadata for one dense DFA rule entry.
+/// Packed metadata for one byte-class-compressed DFA rule entry.
+///
+/// The on-device transition table is `transitions[transition_base + state *
+/// num_classes + class_maps[class_map_base + byte]]`: each rule carries a
+/// 256-entry byte→class map (into the shared `class_maps` buffer) and a
+/// compressed `state_count * num_classes` transition block, instead of a dense
+/// `state_count * 256` block. The compression is LOSSLESS — bytes share a class
+/// only when their transition column is identical across every state — so GPU
+/// firings are byte-for-byte identical to the dense table.
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct RuleMeta {
-    /// Word offset into the flattened transition table.
+    /// Word offset into the flattened (compressed) transition table.
     pub transition_base: u32,
     /// Word offset into the flattened accept table.
     pub accept_base: u32,
     /// DFA state count for this rule.
     pub state_count: u32,
+    /// Word offset into the shared 256-entry-per-rule byte→class map table.
+    pub class_map_base: u32,
+    /// Number of distinct byte classes for this rule (the compressed row width).
+    pub num_classes: u32,
 }
 
 /// One rule rejected from a megakernel batch while other rules still ran.
@@ -74,10 +93,15 @@ pub struct BatchRuleRejection {
 pub struct PackedRuleCatalog {
     /// Dense per-rule metadata table.
     pub rule_meta: Vec<RuleMeta>,
-    /// Deduplicated flattened DFA transition storage.
+    /// Deduplicated flattened byte-class-COMPRESSED DFA transition storage.
+    /// Indexed `transitions[rule.transition_base + state * rule.num_classes +
+    /// class]` where `class = class_maps[rule.class_map_base + byte]`.
     pub transitions: Vec<u32>,
     /// Deduplicated flattened DFA accept storage.
     pub accept: Vec<u32>,
+    /// Deduplicated flattened 256-entry-per-rule byte→class maps. Indexed
+    /// `class_maps[rule.class_map_base + byte]`.
+    pub class_maps: Vec<u32>,
     /// Rules rejected during validation or dense-slot assignment.
     pub rejected_rules: Vec<BatchRuleRejection>,
 }
@@ -88,15 +112,31 @@ pub struct PackedRuleCatalog {
 pub struct RuleCatalogPackingScratch {
     /// Dense per-rule metadata table.
     pub rule_meta: Vec<RuleMeta>,
-    /// Deduplicated flattened DFA transition storage.
+    /// Deduplicated flattened byte-class-COMPRESSED DFA transition storage.
     pub transitions: Vec<u32>,
     /// Deduplicated flattened DFA accept storage.
     pub accept: Vec<u32>,
+    /// Deduplicated flattened 256-entry-per-rule byte→class maps.
+    pub class_maps: Vec<u32>,
     /// Rules rejected during validation or dense-slot assignment.
     pub rejected_rules: Vec<BatchRuleRejection>,
-    unique_storage: FxHashMap<[u8; 32], (u32, u32, u32)>,
+    /// fingerprint -> (transition_base, accept_base, state_count,
+    /// class_map_base, num_classes) for storage dedup across identical DFAs.
+    unique_storage: FxHashMap<[u8; 32], UniqueStorageLayout>,
     occupied: Vec<bool>,
     addressed: Vec<bool>,
+    /// Reusable 256-entry byte→class scratch built per unique DFA.
+    class_scratch: Vec<u32>,
+}
+
+/// Resident-buffer layout for one deduplicated unique DFA storage block.
+#[derive(Clone, Copy)]
+struct UniqueStorageLayout {
+    transition_base: u32,
+    accept_base: u32,
+    state_count: u32,
+    class_map_base: u32,
+    num_classes: u32,
 }
 
 /// Fingerprints for the valid dense catalog entries.
@@ -197,6 +237,7 @@ pub fn pack_rule_catalog(rules: &[BatchRuleProgram]) -> Result<PackedRuleCatalog
         rule_meta: scratch.rule_meta,
         transitions: scratch.transitions,
         accept: scratch.accept,
+        class_maps: scratch.class_maps,
         rejected_rules: scratch.rejected_rules,
     })
 }
@@ -216,16 +257,24 @@ pub fn pack_rule_catalog_into(
         rules.len(),
         "unique DFA storage",
     )?;
+    // Inert rule slot 0: a 1-state DFA that self-loops on every byte and never
+    // accepts. Compressed it is num_classes=1, a 1-word transition row `[0]`,
+    // and a 256-entry all-zero byte→class map. Rejected / missing rules point
+    // their metadata here so the kernel reads a well-formed (no-match) DFA
+    // instead of out-of-bounds storage.
     scratch.transitions.clear();
-    reserve_catalog_vec(
-        &mut scratch.transitions,
-        ALPHABET_SIZE_USIZE,
-        "inert transition row",
-    )?;
-    scratch.transitions.resize(ALPHABET_SIZE_USIZE, 0);
+    reserve_catalog_vec(&mut scratch.transitions, 1, "inert transition row")?;
+    scratch.transitions.push(0);
     scratch.accept.clear();
     reserve_catalog_vec(&mut scratch.accept, 1, "inert accept row")?;
     scratch.accept.push(0);
+    scratch.class_maps.clear();
+    reserve_catalog_vec(
+        &mut scratch.class_maps,
+        ALPHABET_SIZE_USIZE,
+        "inert byte-class map",
+    )?;
+    scratch.class_maps.resize(ALPHABET_SIZE_USIZE, 0);
     scratch.rule_meta.clear();
     reserve_catalog_vec(&mut scratch.rule_meta, rules.len(), "rule metadata")?;
     scratch.rule_meta.resize(
@@ -234,6 +283,8 @@ pub fn pack_rule_catalog_into(
             transition_base: 0,
             accept_base: 0,
             state_count: 1,
+            class_map_base: 0,
+            num_classes: 1,
         },
     );
     scratch.rejected_rules.clear();
@@ -281,11 +332,36 @@ pub fn pack_rule_catalog_into(
         };
 
         let storage_fingerprint = dfa_storage_fingerprint(rule);
-        let (transition_base, accept_base, state_count) = if let Some(layout) =
-            scratch.unique_storage.get(&storage_fingerprint)
-        {
+        let layout = if let Some(layout) = scratch.unique_storage.get(&storage_fingerprint) {
             *layout
         } else {
+            // Build the LOSSLESS byte→class map for this DFA into reusable
+            // scratch, then emit the compressed `state * num_classes + class`
+            // transition block. `num_classes <= 256`, with equality only when
+            // every byte transitions differently in some state — the common
+            // secret-detector DFAs collapse to a handful of classes.
+            let num_classes = build_byte_class_map(rule, &mut scratch.class_scratch);
+
+            let class_map_base =
+                u32::try_from(scratch.class_maps.len()).map_err(|_| PipelineError::QueueFull {
+                    queue: "submission",
+                    fix: "flattened byte-class map table exceeds u32::MAX words; split the rule catalog into smaller groups",
+                })?;
+            let class_map_target = scratch
+                .class_maps
+                .len()
+                .checked_add(ALPHABET_SIZE_USIZE)
+                .ok_or(PipelineError::QueueFull {
+                    queue: "submission",
+                    fix: "flattened byte-class map length overflows usize; split the rule catalog into smaller groups",
+                })?;
+            reserve_catalog_vec(
+                &mut scratch.class_maps,
+                class_map_target,
+                "flattened byte-class map storage",
+            )?;
+            scratch.class_maps.extend_from_slice(&scratch.class_scratch);
+
             let transition_base =
                 u32::try_from(scratch.transitions.len()).map_err(|_| PipelineError::QueueFull {
                     queue: "submission",
@@ -295,10 +371,20 @@ pub fn pack_rule_catalog_into(
                 queue: "submission",
                 fix: "flattened accept table exceeds u32::MAX words; split the rule catalog into smaller groups",
             })?;
+            // Compressed block size = state_count * num_classes. Both are
+            // bounded (state_count is validated, num_classes <= 256), so the
+            // product cannot exceed the dense state_count * 256 size that
+            // already validated.
+            let compressed_words = (rule.state_count as usize)
+                .checked_mul(num_classes as usize)
+                .ok_or(PipelineError::QueueFull {
+                    queue: "submission",
+                    fix: "compressed transition block size overflows usize; split the rule catalog into smaller groups",
+                })?;
             let transition_target = scratch
                 .transitions
                 .len()
-                .checked_add(rule.transitions.len())
+                .checked_add(compressed_words)
                 .ok_or(PipelineError::QueueFull {
                     queue: "submission",
                     fix: "flattened transition table length overflows usize; split the rule catalog into smaller groups",
@@ -321,18 +407,45 @@ pub fn pack_rule_catalog_into(
                 accept_target,
                 "flattened accept storage",
             )?;
-            scratch.transitions.extend_from_slice(&rule.transitions);
+            // Emit one compressed transition per (state, class). For class `c`
+            // pick ANY byte that maps to it (the first); the dense column for
+            // every byte in that class is identical by construction, so the
+            // value is well-defined and lossless.
+            let mut class_representative = vec![0usize; num_classes as usize];
+            let mut seen = vec![false; num_classes as usize];
+            for (byte, &class) in scratch.class_scratch.iter().enumerate() {
+                let class = class as usize;
+                if !seen[class] {
+                    seen[class] = true;
+                    class_representative[class] = byte;
+                }
+            }
+            for state in 0..rule.state_count as usize {
+                let dense_row = state * ALPHABET_SIZE_USIZE;
+                for &rep_byte in &class_representative {
+                    scratch.transitions.push(rule.transitions[dense_row + rep_byte]);
+                }
+            }
             scratch.accept.extend_from_slice(&rule.accept);
-            scratch.unique_storage.insert(
-                storage_fingerprint,
-                (transition_base, accept_base, rule.state_count),
-            );
-            (transition_base, accept_base, rule.state_count)
+
+            let layout = UniqueStorageLayout {
+                transition_base,
+                accept_base,
+                state_count: rule.state_count,
+                class_map_base,
+                num_classes,
+            };
+            scratch
+                .unique_storage
+                .insert(storage_fingerprint, layout);
+            layout
         };
         scratch.rule_meta[meta_index] = RuleMeta {
-            transition_base,
-            accept_base,
-            state_count,
+            transition_base: layout.transition_base,
+            accept_base: layout.accept_base,
+            state_count: layout.state_count,
+            class_map_base: layout.class_map_base,
+            num_classes: layout.num_classes,
         };
     }
 
@@ -342,6 +455,48 @@ pub fn pack_rule_catalog_into(
         &mut scratch.rejected_rules,
     );
     Ok(())
+}
+
+/// Build the LOSSLESS byte→class map for one dense DFA into `out` (resized to
+/// 256) and return the class count.
+///
+/// Two bytes share a class iff their transition COLUMN is identical across every
+/// state: `transitions[s*256 + a] == transitions[s*256 + b]` for all `s`. Class
+/// ids are assigned in order of first byte appearance, so the map is `0` for
+/// byte 0's class and deterministic. The returned width `num_classes` is `<=
+/// 256`; for the secret-detector DFAs (long fixed prefixes + a few char
+/// classes) it collapses to a handful, shrinking the per-state transition row
+/// from 256 words to `num_classes` words — a lossless ~16x reduction on the
+/// ~987 MB catalog without changing a single firing.
+///
+/// `out` is cleared/reused so the hot resident-refresh path allocates nothing.
+fn build_byte_class_map(rule: &BatchRuleProgram, out: &mut Vec<u32>) -> u32 {
+    out.clear();
+    out.resize(ALPHABET_SIZE_USIZE, 0);
+    let state_count = rule.state_count as usize;
+    // Column signature per byte = its next-state across every state. Group by
+    // signature. `FxHashMap` keyed on the column bytes; the first byte to
+    // produce a signature owns a fresh class id.
+    let mut signature_to_class: FxHashMap<Vec<u32>, u32> = FxHashMap::default();
+    let mut next_class: u32 = 0;
+    let mut signature = Vec::with_capacity(state_count);
+    for byte in 0..ALPHABET_SIZE_USIZE {
+        signature.clear();
+        for state in 0..state_count {
+            signature.push(rule.transitions[state * ALPHABET_SIZE_USIZE + byte]);
+        }
+        let class = match signature_to_class.get(&signature) {
+            Some(&class) => class,
+            None => {
+                let class = next_class;
+                next_class += 1;
+                signature_to_class.insert(signature.clone(), class);
+                class
+            }
+        };
+        out[byte] = class;
+    }
+    next_class
 }
 
 fn validate_rule_shape(
@@ -446,11 +601,9 @@ fn extend_missing_rejections(
         .enumerate()
     {
         if !occupied && !addressed {
-            let rule_idx_u32 = u32::try_from(rule_idx).unwrap_or_else(|source| {
-                panic!(
-                    "rule catalog dense index {rule_idx} cannot fit u32: {source}. Fix: shard the rule catalog before rejection reporting."
-                )
-            });
+            let Ok(rule_idx_u32) = u32::try_from(rule_idx) else {
+                continue;
+            };
             out.push(BatchRuleRejection {
                 rule_idx: Some(rule_idx_u32),
                 reason: format!(
@@ -466,11 +619,24 @@ fn extend_missing_rejections(
 mod tests {
     use super::*;
 
+    /// Resolve the next state the COMPRESSED packed catalog yields for
+    /// `(rule, state, byte)` — mirrors the GPU kernel's index math exactly so
+    /// the parity tests can prove byte-for-byte equivalence to the dense table.
+    fn packed_next_state(packed: &PackedRuleCatalog, meta_index: usize, state: u32, byte: u8) -> u32 {
+        let meta = packed.rule_meta[meta_index];
+        let class = packed.class_maps[meta.class_map_base as usize + byte as usize];
+        let idx = meta.transition_base as usize
+            + state as usize * meta.num_classes as usize
+            + class as usize;
+        packed.transitions[idx]
+    }
+
     #[test]
     fn duplicate_dfas_share_catalog_storage() {
         let first = BatchRuleProgram::new(0, vec![0; 256], vec![0], 1).unwrap();
         let second = BatchRuleProgram::new(1, vec![0; 256], vec![0], 1).unwrap();
         let packed = pack_rule_catalog(&[first, second]).unwrap();
+        // Identical DFAs share compressed transition, accept AND class-map storage.
         assert_eq!(
             packed.rule_meta[0].transition_base,
             packed.rule_meta[1].transition_base
@@ -480,8 +646,18 @@ mod tests {
             packed.rule_meta[1].accept_base
         );
         assert_eq!(
+            packed.rule_meta[0].class_map_base,
+            packed.rule_meta[1].class_map_base
+        );
+        assert_eq!(packed.rule_meta[0].num_classes, packed.rule_meta[1].num_classes);
+        // An all-zero 1-state DFA collapses to a SINGLE byte class (every byte
+        // self-loops to state 0), so its compressed row is exactly one word, not
+        // 256. transition_base points just past the 1-word inert row.
+        assert_eq!(packed.rule_meta[0].num_classes, 1);
+        assert_eq!(packed.rule_meta[0].transition_base, 1);
+        assert_eq!(
             packed.transitions.len(),
-            packed.rule_meta[0].transition_base as usize + ALPHABET_SIZE as usize
+            packed.rule_meta[0].transition_base as usize + 1
         );
         assert_eq!(
             packed.accept.len(),
@@ -498,7 +674,8 @@ mod tests {
 
         let packed = pack_rule_catalog(&rules).unwrap();
 
-        assert_eq!(packed.transitions.len(), ALPHABET_SIZE as usize * 2);
+        // 1-word inert row + 1-word shared compressed row for all 32 duplicates.
+        assert_eq!(packed.transitions.len(), 2);
         assert!(
             packed.transitions.capacity() < ALPHABET_SIZE as usize * rules.len(),
             "Fix: duplicate DFA catalogs must not reserve memory as if every rule had unique transition storage."
@@ -508,6 +685,82 @@ mod tests {
             packed.accept.capacity() < rules.len(),
             "Fix: duplicate DFA catalogs must not reserve accept storage for every duplicate rule."
         );
+        // One inert + one shared class map, not 32.
+        assert_eq!(packed.class_maps.len(), ALPHABET_SIZE as usize * 2);
+    }
+
+    /// The compressed catalog yields byte-for-byte identical next-states to the
+    /// dense `state * 256 + byte` table for EVERY (state, byte) of a non-trivial
+    /// multi-class DFA — the lossless parity contract the GPU kernel depends on.
+    #[test]
+    fn byte_class_compression_is_lossless() {
+        // 3-state DFA. byte 0x41 ('A') advances 0->1->2->2; byte 0x42 ('B')
+        // advances 1->2 only; all other bytes reset to 0. This forces THREE
+        // distinct byte classes (A, B, everything-else) so num_classes < 256
+        // and the compression is exercised, not a degenerate single class.
+        let states = 3usize;
+        let mut dense = vec![0u32; states * 256];
+        // state 0: 'A' -> 1, else -> 0
+        dense[0 * 256 + 0x41] = 1;
+        // state 1: 'A' -> 2, 'B' -> 2, else -> 0
+        dense[1 * 256 + 0x41] = 2;
+        dense[1 * 256 + 0x42] = 2;
+        // state 2: 'A' -> 2, else -> 0
+        dense[2 * 256 + 0x41] = 2;
+        let accept = vec![0u32, 0, 1];
+        let rule = BatchRuleProgram::new(0, dense.clone(), accept, states as u32).unwrap();
+        let packed = pack_rule_catalog(&[rule]).unwrap();
+
+        assert_eq!(packed.rejected_rules.len(), 0);
+        // 'A', 'B', and the rest are three behaviourally-distinct columns.
+        assert_eq!(packed.rule_meta[0].num_classes, 3);
+        assert!(
+            packed.transitions.len() < 1 + states * 256,
+            "compressed transitions must be smaller than the dense table"
+        );
+
+        for state in 0..states as u32 {
+            for byte in 0u16..256 {
+                let byte = byte as u8;
+                let expected = dense[state as usize * 256 + byte as usize];
+                let got = packed_next_state(&packed, 0, state, byte);
+                assert_eq!(
+                    got, expected,
+                    "compressed transition mismatch at state {state} byte {byte:#x}: dense={expected} packed={got}"
+                );
+            }
+        }
+    }
+
+    /// A DFA whose every byte transitions differently in some state must NOT be
+    /// over-compressed: it keeps all 256 classes and still round-trips losslessly.
+    #[test]
+    fn full_alphabet_dfa_keeps_all_classes_and_is_lossless() {
+        // 2-state DFA where state 0 sends byte b -> (b as state is impossible
+        // with 2 states), so instead: state 0 sends EVERY byte to a distinct
+        // value by using state 1 vs 0 based on parity — that only yields 2
+        // classes. To force 256 classes we need 256 distinct columns, which
+        // needs >=256 states. Use a 256-state identity: state s, byte b -> b.
+        let states = 256usize;
+        let mut dense = vec![0u32; states * 256];
+        for s in 0..states {
+            for b in 0..256 {
+                dense[s * 256 + b] = b as u32; // column for byte b is constant = b across all states
+            }
+        }
+        // Every byte's column is the constant vector [b; 256], all distinct, so
+        // 256 classes.
+        let accept = vec![0u32; states];
+        let rule = BatchRuleProgram::new(0, dense.clone(), accept, states as u32).unwrap();
+        let packed = pack_rule_catalog(&[rule]).unwrap();
+        assert_eq!(packed.rule_meta[0].num_classes, 256);
+        for state in 0..states as u32 {
+            for byte in 0u16..256 {
+                let byte = byte as u8;
+                let expected = dense[state as usize * 256 + byte as usize];
+                assert_eq!(packed_next_state(&packed, 0, state, byte), expected);
+            }
+        }
     }
 
     #[test]
@@ -549,15 +802,25 @@ mod tests {
         let packed = pack_rule_catalog(&[valid, invalid]).unwrap();
         assert_eq!(packed.rejected_rules.len(), 1);
         assert_eq!(packed.rejected_rules[0].rule_idx, Some(1));
+        // Valid rule (slot 0) points at a REAL compressed block past the inert
+        // row; the inert/rejected slot 1 points back at the inert row 0.
         assert_eq!(packed.rule_meta[0].state_count, 1);
-        assert!(packed.rule_meta[0].transition_base >= ALPHABET_SIZE);
+        assert!(packed.rule_meta[0].transition_base >= 1);
         assert_eq!(packed.rule_meta[1].transition_base, 0);
         assert_eq!(packed.rule_meta[1].accept_base, 0);
         assert_eq!(packed.rule_meta[1].state_count, 1);
+        assert_eq!(packed.rule_meta[1].class_map_base, 0);
+        assert_eq!(packed.rule_meta[1].num_classes, 1);
+        // Inert row 0: a single self-loop word and an all-zero 256-entry class
+        // map — the rejected slot reads a well-formed no-match DFA.
+        assert_eq!(packed.transitions[0], 0);
+        assert_eq!(packed.accept[0], 0);
         assert_eq!(
-            &packed.transitions[..ALPHABET_SIZE as usize],
+            &packed.class_maps[..ALPHABET_SIZE as usize],
             &vec![0; ALPHABET_SIZE as usize]
         );
-        assert_eq!(packed.accept[0], 0);
+        // The rejected slot, driven on ANY byte from state 0, stays in state 0
+        // (never matches) — the loud-isolation contract.
+        assert_eq!(packed_next_state(&packed, 1, 0, b'X'), 0);
     }
 }

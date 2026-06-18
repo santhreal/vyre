@@ -37,7 +37,13 @@
 use thiserror::Error;
 use vyre_lower::KernelDescriptor;
 
+/// SPIR-V anchor-DFA offload evidence.
+pub mod anchor_dfa_offload;
 pub mod patterns;
+
+pub use anchor_dfa_offload::{
+    SpirvAnchorDfaOffloadEvidence, SPIRV_ANCHOR_DFA_OFFLOAD_SCHEMA_VERSION,
+};
 
 #[derive(Debug, Error)]
 pub enum EmitError {

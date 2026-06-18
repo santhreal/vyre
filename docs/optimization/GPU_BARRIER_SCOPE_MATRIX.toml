@@ -1,0 +1,71 @@
+# GPU barrier scope matrix owns backend-specific memory scope, storage class, and barrier semantics; target instruction capabilities own feature availability.
+
+schema = "vyre.sync.gpu_barrier_scope_matrix.v1"
+owner = "lower_emit"
+evidence_tokens = ["CUDA_CPP_SYNCHRONIZATION", "WGSL_MEMORY_MODEL", "VULKAN_MEMORY_MODEL", "VULKAN_SYNC_CACHE_CONTROL", "METAL_RESOURCE_SYNCHRONIZATION", "METAL_FENCE_SYNCHRONIZATION"]
+
+required_fields = [
+  "barrier_id",
+  "backend_surface",
+  "scope_policy",
+  "storage_class_policy",
+  "ordering_policy",
+  "cross_workgroup_policy",
+  "host_visibility_policy",
+  "elision_policy",
+  "capability_policy",
+  "diagnostic_policy",
+  "authority_links",
+]
+
+[[barrier]]
+barrier_id = "cuda-thread-block-shared-memory-barrier"
+backend_surface = "CUDA-PTX-shared-memory-tile-and-async-copy-consumers"
+scope_policy = "thread-block-scope-only-unless-cooperative-groups-or-cluster-contract-explicitly-declared"
+storage_class_policy = "shared-memory-consumers-require-syncthreads-or-equivalent-after-producer-writes-and-after-async-wait"
+ordering_policy = "barrier-orders-thread-block-participants-but-does-not-create-global-grid-order"
+cross_workgroup_policy = "cross-block-communication-rejected-unless-launch-contract-uses-supported-cooperative-grid-or-global-memory-protocol"
+host_visibility_policy = "host-visibility-requires-stream-event-fence-readback-or-driver-level-synchronization-record"
+elision_policy = "barrier-elision-allowed-only-when-effect-analysis-proves-no-read-after-write-write-after-read-or-write-after-write-edge"
+capability_policy = "TARGET_INSTRUCTION_CAPABILITIES.toml-and-BACKEND_CAPABILITY_DIGESTS.toml-remain-feature-authorities"
+diagnostic_policy = "VYRE_CUDA_BARRIER_SCOPE_CONTRACT_REQUIRED"
+authority_links = ["TARGET_INSTRUCTION_CAPABILITIES.toml", "BACKEND_CAPABILITY_DIGESTS.toml", "OUTPUT_SLAB_PROVENANCE.toml", "MEMORY_ORDERING_ATOMIC_CONTRACTS.toml"]
+
+[[barrier]]
+barrier_id = "wgsl-workgroup-storage-barrier"
+backend_surface = "WGSL-workgroup-storage-atomic-and-storage-buffer-coordination"
+scope_policy = "workgroupBarrier-and-storageBarrier-use-workgroup-execution-scope"
+storage_class_policy = "workgroupBarrier-applies-workgroup-memory-storageBarrier-applies-storage-buffer-memory-semantics"
+ordering_policy = "AcquireRelease-barrier-required-for-shared-memory-producer-consumer-visibility-inside-workgroup"
+cross_workgroup_policy = "barriers-do-not-synchronize-between-workgroups-and-cross-workgroup-protocols-require-separate-dispatch-or-storage-atomic-contract"
+host_visibility_policy = "host-visible-readback-requires-command-completion-and-output-slab-readback-epoch-contract"
+elision_policy = "elision-rejected-when-storage-workgroup-atomic-or-opaque-operation-crosses-the-barrier"
+capability_policy = "WGSL-subgroup-storage-and-atomic-capabilities-stay-in-target-instruction-and-WGPU-diagnostics-registries"
+diagnostic_policy = "VYRE_WGSL_BARRIER_SCOPE_CONTRACT_REQUIRED"
+authority_links = ["TARGET_INSTRUCTION_CAPABILITIES.toml", "WGPU_SUBGROUP_CAPABILITY_DIAGNOSTICS.toml", "OUTPUT_SLAB_PROVENANCE.toml", "MEMORY_ORDERING_ATOMIC_CONTRACTS.toml"]
+
+[[barrier]]
+barrier_id = "vulkan-queue-pipeline-barrier"
+backend_surface = "Vulkan-or-wgpu-native-command-buffer-queue-resource-and-readback-paths"
+scope_policy = "queue-family-command-buffer-and-host-device-scope-recorded-for-each-resource-hazard"
+storage_class_policy = "UniformMemory-WorkgroupMemory-ImageMemory-or-output-resource-class-recorded-when-SPIR-V-semantics-apply"
+ordering_policy = "Acquire-Release-and-availability-visibility-semantics-recorded-for-resource-transition"
+cross_workgroup_policy = "cross-dispatch-or-cross-queue-dependency-requires-semaphore-fence-event-or-pipeline-barrier-record"
+host_visibility_policy = "host-read-requires-fence-or-completion-edge-and-visible-memory-state-before-slab-publication"
+elision_policy = "no-elision-when-implicit-guarantees-are-insufficient-or-resource-access-hazard-is-unknown"
+capability_policy = "backend-capability-digest-records-supported-command-reuse-timestamp-and-queue-sync-features"
+diagnostic_policy = "VYRE_VULKAN_QUEUE_BARRIER_CONTRACT_REQUIRED"
+authority_links = ["BACKEND_CAPABILITY_DIGESTS.toml", "WGPU_COMMAND_REUSE_CLASSIFIER.toml", "OUTPUT_SLAB_PROVENANCE.toml", "GPU_BARRIER_VERIFICATION_EVIDENCE.toml"]
+
+[[barrier]]
+barrier_id = "metal-pass-fence-resource-synchronization"
+backend_surface = "Metal-command-queue-pass-resource-hazard-and-MSL-kernel-coordination"
+scope_policy = "command-queue-pass-stage-and-resource-hazard-tracking-mode-recorded"
+storage_class_policy = "threadgroup-device-resource-and-untracked-heap-hazard-class-recorded"
+ordering_policy = "barrier-fence-or-event-required-when-pass-resource-read-write-conflict-is-not-automatically-tracked"
+cross_workgroup_policy = "kernel-threadgroup-synchronization-does-not-prove-command-pass-resource-order"
+host_visibility_policy = "host-visible-readback-requires-command-buffer-completion-or-fence-backed-pass-order-record"
+elision_policy = "elision-rejected-for-untracked-resources-heaps-or-pass-overlap-with-write-read-conflict"
+capability_policy = "Metal-resource-and-counter-capability-records-remain-backend-authorities"
+diagnostic_policy = "VYRE_METAL_RESOURCE_SYNC_CONTRACT_REQUIRED"
+authority_links = ["BACKEND_CAPABILITY_DIGESTS.toml", "APPLE_MATH_COMPARATORS.toml", "OUTPUT_SLAB_PROVENANCE.toml", "GPU_BARRIER_VERIFICATION_EVIDENCE.toml"]

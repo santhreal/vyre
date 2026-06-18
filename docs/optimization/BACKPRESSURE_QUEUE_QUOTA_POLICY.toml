@@ -1,0 +1,47 @@
+# Backpressure, queue, and quota policy for VX-929 through VX-931 and VX-935 through VX-936.
+# Runtime queues, resident work, fetches, corpus ingress, and backend dispatch use one quota policy.
+
+schema = "vyre.resource.backpressure_queue_quota_policy.v1"
+owner = "runtime_residency"
+evidence_tokens = ["OWASP_DOS", "CWE_770_RESOURCE_ALLOCATION", "NIST_SP_800_190"]
+
+required_fields = [
+  "quota_id",
+  "queue_class",
+  "max_inflight",
+  "backpressure_action",
+  "load_shedding_policy",
+  "fairness_policy",
+  "container_limit_link",
+  "operator_diagnostic",
+]
+
+[[quota]]
+quota_id = "resident-scan-queue"
+queue_class = "scan"
+max_inflight = 4096
+backpressure_action = "pause-input-reader"
+load_shedding_policy = "refuse-new-batch-before-dropping-accepted-work"
+fairness_policy = "RUNTIME_WATCHDOG_PROOFS.toml"
+container_limit_link = "resource-limits-required-for-containerized-runs"
+operator_diagnostic = "VYRE_BACKPRESSURE_SCAN_QUEUE_FULL"
+
+[[quota]]
+quota_id = "relation-flow-delta-queue"
+queue_class = "flow_delta"
+max_inflight = 1024
+backpressure_action = "compact-arrangements-before-accepting-more-deltas"
+load_shedding_policy = "refuse-new-delta-with-retry-diagnostic"
+fairness_policy = "DELTA_FLOW_ARRANGEMENTS.toml"
+container_limit_link = "resource-limits-required-for-containerized-runs"
+operator_diagnostic = "VYRE_BACKPRESSURE_FLOW_QUEUE_FULL"
+
+[[quota]]
+quota_id = "network-fetch-queue"
+queue_class = "release_source_fetch"
+max_inflight = 32
+backpressure_action = "throttle-and-batch-link-checks"
+load_shedding_policy = "refuse-extra-fetch-with-operator-fix"
+fairness_policy = "HTTP_PROXY_REDIRECT_POLICY.toml"
+container_limit_link = "resource-limits-required-for-containerized-runs"
+operator_diagnostic = "VYRE_BACKPRESSURE_FETCH_QUEUE_FULL"

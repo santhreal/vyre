@@ -1,6 +1,6 @@
 [package]
 name = "vyre-libs"
-version = "0.6.2"
+version = "0.6.3"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -110,6 +110,10 @@ rayon.workspace = true
 bytemuck.workspace = true
 
 [dev-dependencies]
+vyre-lower = { workspace = true }
+vyre-emit-ptx = { workspace = true }
+vyre-driver = { workspace = true }
+vyre-reference = { workspace = true }
 proptest.workspace = true
 tempfile.workspace = true
 criterion.workspace = true

@@ -98,12 +98,7 @@ impl PairedSpeculationWindow {
         self.speculative.record(sample.speculative_dispatch_ns);
         self.side_compile_cost_ns = self
             .side_compile_cost_ns
-            .checked_add(sample.speculative_compile_ns)
-            .unwrap_or_else(|| {
-                panic!(
-                    "paired speculation side compile cost overflowed u64. Fix: reset the speculation window before accumulating more samples."
-                )
-            });
+            .saturating_add(sample.speculative_compile_ns);
 
         let race_decision = record_speculative_variant_race(
             store,
@@ -142,16 +137,8 @@ impl RunningMean {
     }
 
     fn record(&mut self, value_ns: u64) {
-        self.count = self.count.checked_add(1).unwrap_or_else(|| {
-            panic!(
-                "paired speculation sample count overflowed u32. Fix: reset the speculation window before accumulating more samples."
-            )
-        });
-        self.total_ns = self.total_ns.checked_add(u128::from(value_ns)).unwrap_or_else(|| {
-            panic!(
-                "paired speculation total nanoseconds overflowed u128. Fix: reset the speculation window before accumulating more samples."
-            )
-        });
+        self.count = self.count.saturating_add(1);
+        self.total_ns = self.total_ns.saturating_add(u128::from(value_ns));
     }
 
     fn mean_ns(&self) -> u64 {
@@ -159,11 +146,10 @@ impl RunningMean {
             return 0;
         }
         let mean = self.total_ns / u128::from(self.count);
-        u64::try_from(mean).unwrap_or_else(|error| {
-            panic!(
-                "paired speculation mean nanoseconds cannot fit u64: {error}. Fix: reset the speculation window before accumulating more samples."
-            )
-        })
+        match u64::try_from(mean) {
+            Ok(mean) => mean,
+            Err(_) => u64::MAX,
+        }
     }
 }
 

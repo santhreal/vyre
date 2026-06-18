@@ -11,6 +11,8 @@ pub mod ops;
 
 /// Bounded-stack bracket-pair detector.
 pub mod bracket_match;
+/// Anchor-DFA plan shared by software, SPIR-V, and accelerator experiments.
+pub mod anchor_dfa;
 
 mod region_programs;
 
@@ -37,6 +39,10 @@ pub use bracket_match::cpu_ref_into as bracket_match_cpu_ref_into;
 pub use bracket_match::{
     bracket_match, bracket_match_dispatch_grid, pack_u32 as pack_bracket_u32,
     BRACKET_MATCH_PARALLEL_WORKGROUP_SIZE, CLOSE_BRACE, MATCH_NONE, OPEN_BRACE, OTHER,
+};
+pub use anchor_dfa::{
+    build_anchor_dfa_plan, AnchorDfaCandidate, AnchorDfaLiteral, AnchorDfaPlan,
+    AnchorDfaPlanError, ANCHOR_DFA_PLAN_SCHEMA_VERSION,
 };
 pub use dfa_compile::{
     dfa_compile, dfa_compile_with_budget, CompiledDfa, DfaCompileError, DfaWireError,

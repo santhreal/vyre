@@ -92,8 +92,8 @@ fn live_megakernel_dispatch_reports_transfer_and_reuse_telemetry() {
         "first dispatch must account for resident rule-catalog upload bytes"
     );
     assert_eq!(
-        first.telemetry.resident_allocations, 3,
-        "first dispatch must account for rule-meta, transition, and accept resident buffers"
+        first.telemetry.resident_allocations, 4,
+        "first dispatch must account for rule-meta, transition, accept, and byte-class-map resident buffers"
     );
     assert!(
         first.telemetry.queue_state_readback_bytes > 0,

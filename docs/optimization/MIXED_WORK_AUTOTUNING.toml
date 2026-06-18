@@ -1,0 +1,47 @@
+# Mixed-work autotuning for VX-669.
+# Runtime queue weights are selected from scan, parser, graph, and flow pressure.
+
+schema = "vyre.runtime.mixed_work_autotuning.v1"
+owner = "runtime_residency"
+evidence_tokens = ["CUDA_COOP", "GUNROCK"]
+
+queue_classes = [
+  "scan",
+  "parser_edit",
+  "graph_frontier",
+  "flow_delta",
+  "control",
+]
+
+required_fields = [
+  "scan_density",
+  "parser_edit_size",
+  "frontier_size",
+  "flow_delta_size",
+  "queue_weights",
+  "starvation_count",
+  "route_reason",
+  "output_parity_digest",
+]
+
+[[policy]]
+id = "frontier-heavy"
+scan_density = "medium"
+parser_edit_size = "small"
+frontier_size = "large"
+flow_delta_size = "medium"
+queue_weights = "scan:2,parser_edit:1,graph_frontier:5,flow_delta:3,control:1"
+starvation_count = 0
+route_reason = "large-frontier-pressure"
+output_parity_digest = "sha256:frontier-heavy-output"
+
+[[policy]]
+id = "edit-heavy"
+scan_density = "low"
+parser_edit_size = "large"
+frontier_size = "small"
+flow_delta_size = "large"
+queue_weights = "scan:1,parser_edit:4,graph_frontier:1,flow_delta:4,control:1"
+starvation_count = 0
+route_reason = "edit-and-flow-delta-pressure"
+output_parity_digest = "sha256:edit-heavy-output"

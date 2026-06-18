@@ -1,0 +1,51 @@
+schema_version = 1
+dialect_lattice = "docs/optimization/REGEX_DIALECT_LATTICE.toml"
+
+[[row]]
+semantics = "leftmost_semantics"
+engine_support = { cpu_ref = "supported", cuda = "supported", wgpu = "supported", metal = "experimental", rust_regex = "supported", hyperscan = "supported", vectorscan = "supported" }
+evidence_path = "vyre-libs/tests/scan_conformance_matrix.rs"
+expected_output_hex = "6c6566746d6f73743a7061747465726e303a303a31"
+unsupported_diagnostic_code = "VYRE_SCAN_UNSUPPORTED_NOT_APPLICABLE"
+
+[[row]]
+semantics = "overlapping_matches"
+engine_support = { cpu_ref = "supported", cuda = "supported", wgpu = "supported", metal = "experimental", rust_regex = "supported", hyperscan = "supported", vectorscan = "supported" }
+evidence_path = "vyre-libs/tests/scan_conformance_matrix.rs"
+expected_output_hex = "6f7665726c61703a7061747465726e303a303a333b7061747465726e303a313a34"
+unsupported_diagnostic_code = "VYRE_SCAN_UNSUPPORTED_NOT_APPLICABLE"
+
+[[row]]
+semantics = "capture_groups"
+engine_support = { cpu_ref = "supported", cuda = "unsupported", wgpu = "unsupported", metal = "unsupported", rust_regex = "supported", hyperscan = "unsupported", vectorscan = "unsupported" }
+evidence_path = "vyre-libs/tests/scan_conformance_matrix.rs"
+expected_output_hex = "63617074757265733a6d617463683a303a333b67726f7570313a303a31"
+unsupported_diagnostic_code = "VYRE_SCAN_UNSUPPORTED_CAPTURE_GROUPS"
+
+[[row]]
+semantics = "byte_mode"
+engine_support = { cpu_ref = "supported", cuda = "supported", wgpu = "supported", metal = "experimental", rust_regex = "supported", hyperscan = "supported", vectorscan = "supported" }
+evidence_path = "vyre-libs/tests/scan_conformance_matrix.rs"
+expected_output_hex = "627974655f6d6f64653afffe3a313a33"
+unsupported_diagnostic_code = "VYRE_SCAN_UNSUPPORTED_NOT_APPLICABLE"
+
+[[row]]
+semantics = "unicode_mode"
+engine_support = { cpu_ref = "supported", cuda = "unsupported", wgpu = "unsupported", metal = "unsupported", rust_regex = "supported", hyperscan = "unsupported", vectorscan = "unsupported" }
+evidence_path = "vyre-libs/tests/scan_conformance_matrix.rs"
+expected_output_hex = "756e69636f64655f6d6f64653aceb13a303a32"
+unsupported_diagnostic_code = "VYRE_SCAN_UNSUPPORTED_UNICODE_MODE_GPU"
+
+[[row]]
+semantics = "streaming_chunks"
+engine_support = { cpu_ref = "supported", cuda = "supported", wgpu = "supported", metal = "experimental", rust_regex = "supported", hyperscan = "supported", vectorscan = "supported" }
+evidence_path = "vyre-libs/tests/scan_conformance_matrix.rs"
+expected_output_hex = "73747265616d696e673a6368756e6b303a7461696c3b6368756e6b313a68656164"
+unsupported_diagnostic_code = "VYRE_SCAN_UNSUPPORTED_NOT_APPLICABLE"
+
+[[row]]
+semantics = "unsupported_constructs"
+engine_support = { cpu_ref = "supported", cuda = "unsupported", wgpu = "unsupported", metal = "unsupported", rust_regex = "unsupported", hyperscan = "unsupported", vectorscan = "unsupported" }
+evidence_path = "vyre-libs/tests/scan_conformance_matrix.rs"
+expected_output_hex = "756e737570706f727465643a6261636b7265663a7061747465726e30"
+unsupported_diagnostic_code = "VYRE_SCAN_UNSUPPORTED_BACKREFERENCE"

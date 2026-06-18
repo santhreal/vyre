@@ -1,0 +1,37 @@
+# Security insights release summary for VX-988 through VX-990.
+# Security practices, contact, policy, vulnerability handling, dependency review, and artifact scope share one summary.
+
+schema = "vyre.release.security_insights_summary.v1"
+owner = "security_reliability"
+evidence_tokens = ["OPENSSF_SECURITY_INSIGHTS", "OPENSSF_SCORECARD", "OSV_SCHEMA"]
+
+required_fields = [
+  "summary_id",
+  "security_contact_policy",
+  "vulnerability_reporting_policy",
+  "dependency_review_policy",
+  "supported_versions_policy",
+  "artifact_scope",
+  "machine_readable_summary",
+  "publication_class",
+]
+
+[[summary]]
+summary_id = "vyre-public-security-insights"
+security_contact_policy = "public-security-contact-or-policy-url"
+vulnerability_reporting_policy = "documented-private-reporting-channel"
+dependency_review_policy = "SBOM-and-OSV-review-required"
+supported_versions_policy = "semver-compatible-supported-releases"
+artifact_scope = "public-vyre-repository-and-crates"
+machine_readable_summary = "security-insights-compatible-yaml"
+publication_class = "public-vyre-artifact"
+
+[[summary]]
+summary_id = "private-santh-exclusion"
+security_contact_policy = "not-a-public-artifact"
+vulnerability_reporting_policy = "private-worktree-not-published"
+dependency_review_policy = "local-only"
+supported_versions_policy = "not-public"
+artifact_scope = "private-santh-worktree-excluded"
+machine_readable_summary = "excluded-from-public-security-insights"
+publication_class = "local-only-nonpublished-doc"

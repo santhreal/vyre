@@ -1,0 +1,29 @@
+# Resource exhaustion and algorithmic DoS governance tranche coverage for VX-921 through VX-940.
+# Budgets, complexity guards, backpressure quotas, exhaustion evidence, and publication boundaries share one coverage row.
+
+schema = "vyre.plan.resource_dos_governance_tranche_coverage.v1"
+owner = "coordination"
+evidence_tokens = ["CWE_400_RESOURCE_CONSUMPTION", "CWE_770_RESOURCE_ALLOCATION", "CWE_407_ALGORITHMIC_COMPLEXITY", "CWE_674_UNCONTROLLED_RECURSION", "OWASP_DOS", "NIST_SP_800_190"]
+
+required_fields = [
+  "vx_id_range",
+  "resource_budget_policy",
+  "algorithmic_complexity_dos_guards",
+  "backpressure_queue_quota_policy",
+  "resource_exhaustion_evidence",
+  "source_ledger_coverage",
+  "publication_boundary",
+  "dedup_seam",
+  "proof_gate",
+]
+
+[[coverage]]
+vx_id_range = "VX-921..VX-940"
+resource_budget_policy = "RESOURCE_BUDGET_POLICY.toml"
+algorithmic_complexity_dos_guards = "ALGORITHMIC_COMPLEXITY_DOS_GUARDS.toml"
+backpressure_queue_quota_policy = "BACKPRESSURE_QUEUE_QUOTA_POLICY.toml"
+resource_exhaustion_evidence = "RESOURCE_EXHAUSTION_EVIDENCE.toml"
+source_ledger_coverage = "RESEARCH_SOURCE_LEDGER.toml"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+dedup_seam = "one-resource-budget-one-complexity-guard-one-backpressure-policy-one-exhaustion-evidence-contract"
+proof_gate = "resource_dos_governance.rs"

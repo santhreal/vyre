@@ -265,9 +265,8 @@ mod tests {
         let bytes = emit_target(Target::Metal, &program).expect(
             "Fix: xtask native_module target must route through vyre-emit-metal instead of the historical placeholder error.",
         );
-        let json: serde_json::Value = serde_json::from_slice(&bytes).expect(
-            "Fix: native_module target must emit structured JSON artifact bytes.",
-        );
+        let json: serde_json::Value = serde_json::from_slice(&bytes)
+            .expect("Fix: native_module target must emit structured JSON artifact bytes.");
 
         assert_eq!(json["target"], "native_module");
         let entry_point = json["entry_point"]

@@ -1,0 +1,37 @@
+# Shared emitter artifact schema for VX-681.
+# MSL, WGSL, SPIR-V, and PTX artifact metadata use one contract.
+
+schema = "vyre.lower.shared_emitter_artifact.v1"
+owner = "lower_emit"
+evidence_tokens = ["NAGA", "MLIR_PASS"]
+
+targets = [
+  "msl",
+  "wgsl",
+  "spirv",
+  "ptx",
+]
+
+required_fields = [
+  "descriptor_hash",
+  "abi_metadata",
+  "capability_digest",
+  "source_map",
+  "unsupported_features",
+]
+
+[[artifact]]
+target = "ptx"
+descriptor_hash = "sha256:descriptor-scan-a"
+abi_metadata = "args:u64,input_ptr,output_ptr"
+capability_digest = "sha256:ptx-capability-a"
+source_map = "sha256:ptx-source-map-a"
+unsupported_features = []
+
+[[artifact]]
+target = "wgsl"
+descriptor_hash = "sha256:descriptor-scan-a"
+abi_metadata = "args:u64,input_buffer,output_buffer"
+capability_digest = "sha256:wgsl-capability-a"
+source_map = "sha256:wgsl-source-map-a"
+unsupported_features = ["device-side-enqueue"]

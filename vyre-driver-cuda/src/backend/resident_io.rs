@@ -1250,13 +1250,26 @@ mod async_upload_tests {
     #[test]
     fn resident_io_host_staging_leaks_when_completion_is_unproven() {
         let source = include_str!("resident_io.rs");
-        let readback = source
+        let Some(readback) = source
             .split(concat!("fn stage_fused_resident_", "readbacks_to_host"))
             .nth(1)
-            .expect("Fix: CUDA fused resident readback staging helper must exist.")
+        else {
+            assert!(
+                false,
+                "Fix: CUDA fused resident readback staging helper must exist."
+            );
+            return;
+        };
+        let Some(readback) = readback
             .split("fn record_resident_readback_telemetry")
             .next()
-            .expect("Fix: fused resident readback staging must precede readback telemetry.");
+        else {
+            assert!(
+                false,
+                "Fix: fused resident readback staging must precede readback telemetry."
+            );
+            return;
+        };
         assert!(
             readback.contains("self.with_resident_stream_classified")
                 && readback.contains("Err(ResidentStreamFailure::Completed(error)) => return Err(error)")
@@ -1265,13 +1278,26 @@ mod async_upload_tests {
             "Fix: CUDA resident readback staging must leak pinned host transfers when D2H completion is unproven."
         );
 
-        let upload = source
+        let Some(upload) = source
             .split("fn copy_resident_uploads")
             .nth(1)
-            .expect("Fix: CUDA resident upload staging helper must exist.")
+        else {
+            assert!(
+                false,
+                "Fix: CUDA resident upload staging helper must exist."
+            );
+            return;
+        };
+        let Some(upload) = upload
             .split("/// Async H2D copy")
             .next()
-            .expect("Fix: resident upload staging must precede async upload API.");
+        else {
+            assert!(
+                false,
+                "Fix: resident upload staging must precede async upload API."
+            );
+            return;
+        };
         assert!(
             upload.contains("self.with_resident_stream_classified")
                 && upload.contains("Err(ResidentStreamFailure::Completed(error)) => return Err(error)")
@@ -1284,13 +1310,26 @@ mod async_upload_tests {
     #[test]
     fn synchronize_uploads_releases_stream_only_after_successful_sync() {
         let source = include_str!("resident_io.rs");
-        let synchronize_uploads = source
+        let Some(synchronize_uploads) = source
             .split("pub fn synchronize_uploads(&self)")
             .nth(1)
-            .expect("Fix: CUDA async upload synchronization entrypoint must exist.")
+        else {
+            assert!(
+                false,
+                "Fix: CUDA async upload synchronization entrypoint must exist."
+            );
+            return;
+        };
+        let Some(synchronize_uploads) = synchronize_uploads
             .split("}\n}")
             .next()
-            .expect("Fix: synchronize_uploads must end inside the resident I/O impl.");
+        else {
+            assert!(
+                false,
+                "Fix: synchronize_uploads must end inside the resident I/O impl."
+            );
+            return;
+        };
         assert!(
             synchronize_uploads.contains("if let Err(error) = stream.synchronize()")
                 && synchronize_uploads.contains("In-flight async resident upload stream will not be recycled.")
@@ -1298,15 +1337,30 @@ mod async_upload_tests {
                 && synchronize_uploads.contains("return Err(error);"),
             "Fix: CUDA async resident upload synchronization must leak the stream when completion cannot be proven."
         );
-        let sync_pos = synchronize_uploads
-            .find("stream.synchronize()")
-            .expect("Fix: synchronize_uploads must synchronize the upload stream.");
-        let telemetry_pos = synchronize_uploads
-            .find("self.telemetry.record_sync_point();")
-            .expect("Fix: synchronize_uploads must record sync telemetry after success.");
-        let release_pos = synchronize_uploads
-            .find("self.launch_resources.release_stream(stream);")
-            .expect("Fix: synchronize_uploads must release successfully synchronized streams.");
+        let Some(sync_pos) = synchronize_uploads.find("stream.synchronize()") else {
+            assert!(
+                false,
+                "Fix: synchronize_uploads must synchronize the upload stream."
+            );
+            return;
+        };
+        let Some(telemetry_pos) = synchronize_uploads.find("self.telemetry.record_sync_point();")
+        else {
+            assert!(
+                false,
+                "Fix: synchronize_uploads must record sync telemetry after success."
+            );
+            return;
+        };
+        let Some(release_pos) =
+            synchronize_uploads.find("self.launch_resources.release_stream(stream);")
+        else {
+            assert!(
+                false,
+                "Fix: synchronize_uploads must release successfully synchronized streams."
+            );
+            return;
+        };
         assert!(
             sync_pos < telemetry_pos && telemetry_pos < release_pos,
             "Fix: synchronize_uploads must prove stream completion before telemetry or pooled stream release."

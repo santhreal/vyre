@@ -1448,6 +1448,10 @@ fn run_resident_grid_sync_fixpoint(
             program: segment,
             resources: resident.ordered.as_slice(),
             grid_override: config.grid_override,
+            // Carry the workgroup too: `grid_override` is sized for this
+            // workgroup, so dropping it would launch a grid that under-covers
+            // the work and silently drops findings.
+            workgroup_override: config.workgroup_override,
         });
     }
 

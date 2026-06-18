@@ -1,0 +1,40 @@
+# License compliance process map for VX-1064, VX-1069, VX-1074, and VX-1076.
+# OpenChain-style roles, review gates, inquiry handling, archive evidence, and publication blockers share one process map.
+
+schema = "vyre.release.license_compliance_process_map.v1"
+owner = "coordination"
+evidence_tokens = ["OPENCHAIN_ISO_5230", "OSI_OPEN_SOURCE_DEFINITION", "SPDX_LICENSE_LIST"]
+
+required_fields = [
+  "process_id",
+  "scope",
+  "responsible_seam",
+  "review_trigger",
+  "required_artifacts",
+  "external_inquiry_policy",
+  "archive_policy",
+  "publication_blocker",
+  "diagnostic",
+]
+
+[[process]]
+process_id = "public-vyre-license-review"
+scope = "public-vyre-crate-and-subcrate-release"
+responsible_seam = "docs/optimization/release-license-compliance"
+review_trigger = "new-dependency-new-license-expression-new-bundled-artifact-or-package-metadata-change"
+required_artifacts = ["PUBLIC_RELEASE_LICENSE_MANIFEST.toml", "THIRD_PARTY_NOTICE_ATTRIBUTION.toml", "SPDX_SBOM"]
+external_inquiry_policy = "public-contact-route-recorded-in-security-insights-summary"
+archive_policy = "release-evidence-archive-stores-sbom-license-manifest-notice-registry-and-package-summary"
+publication_blocker = "missing-license-or-notice-evidence-blocks-public-package"
+diagnostic = "VYRE_LICENSE_COMPLIANCE_REVIEW_REQUIRED"
+
+[[process]]
+process_id = "private-santh-exclusion-review"
+scope = "public-package-boundary"
+responsible_seam = "docs/optimization/publication-boundary"
+review_trigger = "package-include-readme-docs-repository-license-file-or-notice-change"
+required_artifacts = ["PUBLICATION_BOUNDARY_MANIFEST.toml", "PUBLIC_RELEASE_LICENSE_MANIFEST.toml"]
+external_inquiry_policy = "private-worktree-material-is-not-public-artifact"
+archive_policy = "redacted-summary-only"
+publication_blocker = "private-santh-root-reference-blocks-public-package"
+diagnostic = "VYRE_LICENSE_PRIVATE_BOUNDARY_REFUSED"

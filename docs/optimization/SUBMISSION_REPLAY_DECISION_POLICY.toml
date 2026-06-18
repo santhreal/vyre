@@ -1,0 +1,66 @@
+# Submission replay decision policy chooses replay, reencode, persistent kernel, or plain dispatch without owning backend execution.
+
+schema = "vyre.driver.submission_replay_decision_policy.v1"
+owner = "driver_shared"
+evidence_tokens = ["CUDA_GRAPHS", "VULKAN_COMMAND_BUFFERS", "WEBGPU_COMMAND_BUFFERS", "METAL_INDIRECT_COMMAND_BUFFERS", "CRITERION_ANALYSIS_PROCESS"]
+
+required_fields = [
+  "decision_id",
+  "candidate_surface",
+  "input_signal_policy",
+  "amortization_policy",
+  "topology_policy",
+  "resource_policy",
+  "scheduler_boundary_policy",
+  "synchronization_boundary_policy",
+  "adoption_policy",
+  "rejection_policy",
+  "telemetry_policy",
+  "authority_links",
+  "diagnostic",
+]
+
+[[decision]]
+decision_id = "hot-stable-shape-record-and-replay"
+candidate_surface = "repeated-identical-dispatch-shape-with-high-host-launch-overhead-and-stable-resource-identity"
+input_signal_policy = "consume-hot-path-hints-profile-trace-metric-correlation-repeat-count-capture-cost-replay-cost-and-output-equivalence"
+amortization_policy = "adopt-only-when-measured-record-or-capture-cost-is-repaid-by-replay-savings-under-statistical-regression-gate"
+topology_policy = "COMMAND_TOPOLOGY_STABILITY_CONTRACTS.toml topology must be stable and backend capability row must allow replay"
+resource_policy = "resource-lifetime-handle-generation-output-slab-epoch-and-cache-key-match-replay-record"
+scheduler_boundary_policy = "runtime-scheduler-keeps-admission-fairness-and-tenant-quota-ownership"
+synchronization_boundary_policy = "host-device-visibility-and-memory-order-contracts-own correctness edges before replay speedup is accepted"
+adoption_policy = "mark-route-replay-adopted-only-after-correctness-equivalence-repeatability-and-speed-benefit-evidence"
+rejection_policy = "plain-dispatch-remains-selected-when-shape-drift-capture-overhead-or-resource-instability-erases-benefit"
+telemetry_policy = "emit-route-decision-capture-cost-replay-cost-repeat-count-output-digest-and-rejection-reason"
+authority_links = ["COMMAND_TOPOLOGY_STABILITY_CONTRACTS.toml", "BACKEND_COMMAND_REPLAY_CAPABILITY_MATRIX.toml", "SUBMISSION_REPLAY_EVIDENCE_POLICY.toml", "PROFILE_TRACE_METRIC_CORRELATION_POLICY.toml", "STATISTICAL_REGRESSION_GATES.toml"]
+diagnostic = "VYRE_SUBMISSION_REPLAY_DECISION_REQUIRED"
+
+[[decision]]
+decision_id = "shape-drift-recapture-or-reencode"
+candidate_surface = "dispatch-shape-or-resource-layout-changes-after-replay-route-has-been-considered"
+input_signal_policy = "consume-topology-digest-diff-bind-group-digest-buffer-shape-pipeline-layout-cache-key-and-output-slab-format"
+amortization_policy = "recapture-or-reencode-only-when-new-shape-has-enough-observed-repeats-to-repay-build-cost"
+topology_policy = "topology-diff-classifies-as-parameter-update-rerecord-or-reject-before backend-specific code runs"
+resource_policy = "resource-change-records-handle-generation-resource-range-output-epoch-and-cache-invalidation-reason"
+scheduler_boundary_policy = "shape-drift-does-not-change-runtime-queue-fairness-or-backpressure-policy"
+synchronization_boundary_policy = "new-resource-visibility-edge-required-before recaptured-or-reencoded-dispatch-is-observed"
+adoption_policy = "adopt-new-replay-key-only-after-output-equivalence-and-regression-statistics-pass"
+rejection_policy = "reject-replay-when-drift-rate-keeps-capture-cost-above-measured-savings"
+telemetry_policy = "emit-drift-class-recapture-cost-reencode-cost-repeat-window-and-selected-route"
+authority_links = ["CACHE_REBUILD_INVALIDATION_POLICY.toml", "WGPU_COMMAND_REUSE_CLASSIFIER.toml", "CUDA_GRAPH_UPDATE_EVIDENCE.toml", "HOST_DEVICE_VISIBILITY_POLICY.toml"]
+diagnostic = "VYRE_REPLAY_SHAPE_DRIFT_CLASSIFICATION_REQUIRED"
+
+[[decision]]
+decision_id = "resident-persistent-kernel-wins"
+candidate_surface = "resident-megakernel-or-device-side-work-queue-already-amortizes-host-submission-overhead"
+input_signal_policy = "consume-resident-queue-depth-scheduler-tick-count-dispatch-repeat-window-output-digest-and-backpressure-state"
+amortization_policy = "prefer-persistent-route-when-replay-build-cost-adds-no-throughput-gain-or-hurts-tail-latency"
+topology_policy = "replay-route-cannot-bypass-resident-protocol-epoch-queue-slot-publication-or-tenant-policy"
+resource_policy = "resident-buffer-lifetime-and-output-slab-epoch-remain-owned-by-runtime-and-output-provenance-authorities"
+scheduler_boundary_policy = "runtime-megakernel-scheduler-stays-authoritative-for-resident-work-distribution"
+synchronization_boundary_policy = "resident-publication-order-and-host-device-visibility-contracts-must-prove-equivalence"
+adoption_policy = "adopt-command-replay-only-for-nonresident-or-scheduler-approved-stable-segments"
+rejection_policy = "reject-command-replay-when-it-competes-with-resident-kernel-occupancy-queue-fairness-or-watchdog-policy"
+telemetry_policy = "emit-resident-versus-replay-decision-queue-depth-scheduler-reason-and-output-equivalence-digest"
+authority_links = ["BACKPRESSURE_QUEUE_QUOTA_POLICY.toml", "MEMORY_ORDERING_ATOMIC_CONTRACTS.toml", "RUNTIME_WATCHDOG_PROOFS.toml", "OUTPUT_SLAB_PROVENANCE.toml"]
+diagnostic = "VYRE_RESIDENT_REPLAY_BOUNDARY_REQUIRED"

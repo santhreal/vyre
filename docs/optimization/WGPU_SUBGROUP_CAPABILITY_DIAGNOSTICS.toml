@@ -1,0 +1,34 @@
+# WGPU subgroup capability diagnostics for VX-676.
+# Unsupported subgroup kernels fail before shader submission with exact fallback evidence.
+
+schema = "vyre.wgpu.subgroup_capability_diagnostic.v1"
+owner = "driver_wgpu"
+evidence_tokens = ["WGPU_SUBGROUPS", "WGSL_SUBGROUPS"]
+
+required_fields = [
+  "backend",
+  "feature_flag",
+  "subgroup_min",
+  "subgroup_max",
+  "shader_requirement",
+  "fallback_route",
+  "diagnostic",
+]
+
+[[capability]]
+backend = "vulkan"
+feature_flag = "subgroups"
+subgroup_min = 32
+subgroup_max = 32
+shader_requirement = "subgroupBallot"
+fallback_route = "subgroup-wgsl"
+diagnostic = "none"
+
+[[capability]]
+backend = "dx12"
+feature_flag = "subgroups-unavailable"
+subgroup_min = 0
+subgroup_max = 0
+shader_requirement = "subgroupBallot"
+fallback_route = "scalar-wgsl"
+diagnostic = "VYRE_WGPU_SUBGROUP_UNSUPPORTED"

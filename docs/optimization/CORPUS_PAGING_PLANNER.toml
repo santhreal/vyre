@@ -1,0 +1,43 @@
+# Direct-storage corpus paging planner for VX-668.
+# ANN, graph, and scan ingress compare mmap, CPU staging, async prefetch, and direct GPU DMA.
+
+schema = "vyre.storage.corpus_paging_planner.v1"
+owner = "graph_flow_compiler"
+evidence_tokens = ["GPUDIRECT_STORAGE", "PIPEANN"]
+
+routes = [
+  "mmap_cpu",
+  "cpu_staging",
+  "async_prefetch",
+  "direct_gpu_dma",
+]
+
+required_metrics = [
+  "corpus_digest",
+  "route",
+  "transfer_counter",
+  "match_or_recall_parity",
+  "capability_blocker",
+  "page_size",
+  "residency_budget",
+]
+
+[[case]]
+id = "graph-corpus-direct-dma"
+corpus_digest = "sha256:graph-corpus"
+route = "direct_gpu_dma"
+transfer_counter = "gpu_dma_bytes:1073741824"
+match_or_recall_parity = "matches-cpu-staging"
+capability_blocker = "none"
+page_size = "2MiB"
+residency_budget = "8GiB"
+
+[[case]]
+id = "scan-corpus-prefetch-fallback"
+corpus_digest = "sha256:scan-corpus"
+route = "async_prefetch"
+transfer_counter = "host_to_device_bytes:536870912"
+match_or_recall_parity = "matches-mmap-cpu"
+capability_blocker = "gds-unavailable"
+page_size = "1MiB"
+residency_budget = "4GiB"

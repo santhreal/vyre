@@ -1,12 +1,15 @@
 {
-  "schema_version": 2,
+  "schema_version": 6,
+  "package_name": "weir",
+  "package_version": "0.1.0",
+  "release_package_token": "weir@0.1.0",
   "analyses": [
     {
       "id": "ssa",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/ssa.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 33703,
+      "source_bytes": 34123,
       "has_public_api": true,
       "required_api_items": [
         "SsaForm",
@@ -30,7 +33,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/def_use.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 7794,
+      "source_bytes": 7892,
       "has_public_api": true,
       "required_api_items": [
         "def_use_chain",
@@ -51,7 +54,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/reaching.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 2336,
+      "source_bytes": 2378,
       "has_public_api": true,
       "required_api_items": [
         "reaching_defs_step",
@@ -146,7 +149,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/ifds_gpu.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 6544,
+      "source_bytes": 7609,
       "has_public_api": true,
       "required_api_items": [
         "solve_cpu",
@@ -158,8 +161,8 @@
       "missing_api_items": [],
       "required_policy_items": [],
       "missing_policy_items": [],
-      "declares_op_id": false,
-      "inventory_registered": false,
+      "declares_op_id": true,
+      "inventory_registered": true,
       "unresolved_markers": []
     },
     {
@@ -205,7 +208,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/cross_language.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 17546,
+      "source_bytes": 21437,
       "has_public_api": true,
       "required_api_items": [
         "EDGE_KIND_FFI",
@@ -360,7 +363,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/loop_sum.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 1715,
+      "source_bytes": 1781,
       "has_public_api": true,
       "required_api_items": [
         "loop_summarize",
@@ -417,7 +420,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/range.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 1963,
+      "source_bytes": 2082,
       "has_public_api": true,
       "required_api_items": [
         "range_propagate",
@@ -455,7 +458,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/reachability_witness.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 11701,
+      "source_bytes": 11879,
       "has_public_api": true,
       "required_api_items": [
         "PathSeed",
@@ -498,7 +501,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/soundness.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 12950,
+      "source_bytes": 13063,
       "has_public_api": true,
       "required_api_items": [
         "Soundness",
@@ -543,7 +546,36 @@
       "unresolved_markers": []
     }
   ],
-  "inventory_registered_count": 24,
+  "feature_flags": [
+    {
+      "name": "cpu-parity",
+      "cargo_declared": true,
+      "readme_documented": true
+    },
+    {
+      "name": "gpu-telemetry",
+      "cargo_declared": true,
+      "readme_documented": true
+    },
+    {
+      "name": "serde",
+      "cargo_declared": true,
+      "readme_documented": true
+    },
+    {
+      "name": "simd-oracle",
+      "cargo_declared": true,
+      "readme_documented": true
+    },
+    {
+      "name": "test-harness",
+      "cargo_declared": true,
+      "readme_documented": true
+    }
+  ],
+  "required_feature_count": 5,
+  "missing_feature_count": 0,
+  "inventory_registered_count": 25,
   "required_api_item_count": 102,
   "missing_api_item_count": 0,
   "property_test_count": 16,
@@ -560,7 +592,7 @@
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/examples/ifds_to_witness.rs",
       "exists": true,
-      "source_bytes": 2594,
+      "source_bytes": 2685,
       "read_error": null,
       "has_main": true,
       "uses_weir_crate": true,
@@ -582,13 +614,636 @@
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/examples/witness_many.rs",
       "exists": true,
-      "source_bytes": 2795,
+      "source_bytes": 2886,
       "read_error": null,
       "has_main": true,
       "uses_weir_crate": true,
       "has_serde_evidence": false,
       "api_reference_count": 2,
       "unresolved_markers": []
+    }
+  ],
+  "bench_suite_count": 12,
+  "resident_benchmark_evidence_count": 2,
+  "fuzz_target_count": 9,
+  "fuzz_release_evidence_count": 9,
+  "bench_suites": [
+    {
+      "id": "bitset_closure_oracle",
+      "kind": "bench",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/benches/bitset_closure_oracle.rs",
+      "exists": true,
+      "source_bytes": 6572,
+      "read_error": null,
+      "required_tokens": [],
+      "missing_tokens": []
+    },
+    {
+      "id": "bitset_closure_oracle_test",
+      "kind": "bench",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/benches/bitset_closure_oracle_test.rs",
+      "exists": true,
+      "source_bytes": 1619,
+      "read_error": null,
+      "required_tokens": [],
+      "missing_tokens": []
+    },
+    {
+      "id": "csr_normalize",
+      "kind": "bench",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/benches/csr_normalize.rs",
+      "exists": true,
+      "source_bytes": 1844,
+      "read_error": null,
+      "required_tokens": [],
+      "missing_tokens": []
+    },
+    {
+      "id": "dominators_cpu_oracle",
+      "kind": "bench",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/benches/dominators_cpu_oracle.rs",
+      "exists": true,
+      "source_bytes": 1082,
+      "read_error": null,
+      "required_tokens": [],
+      "missing_tokens": []
+    },
+    {
+      "id": "fixed_point_scratch_telemetry",
+      "kind": "bench",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/benches/fixed_point_scratch_telemetry.rs",
+      "exists": true,
+      "source_bytes": 6952,
+      "read_error": null,
+      "required_tokens": [],
+      "missing_tokens": []
+    },
+    {
+      "id": "ifds_cpu_oracle_hot_path",
+      "kind": "bench",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/benches/ifds_cpu_oracle_hot_path.rs",
+      "exists": true,
+      "source_bytes": 2137,
+      "read_error": null,
+      "required_tokens": [],
+      "missing_tokens": []
+    },
+    {
+      "id": "ifds_direct_resident_hot_path",
+      "kind": "bench",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/benches/ifds_direct_resident_hot_path.rs",
+      "exists": true,
+      "source_bytes": 5380,
+      "read_error": null,
+      "required_tokens": [],
+      "missing_tokens": []
+    },
+    {
+      "id": "primitive_micro",
+      "kind": "bench",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/benches/primitive_micro.rs",
+      "exists": true,
+      "source_bytes": 4456,
+      "read_error": null,
+      "required_tokens": [],
+      "missing_tokens": []
+    },
+    {
+      "id": "primitive_scale",
+      "kind": "bench",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/benches/primitive_scale.rs",
+      "exists": true,
+      "source_bytes": 6663,
+      "read_error": null,
+      "required_tokens": [],
+      "missing_tokens": []
+    },
+    {
+      "id": "reaching_def_summary_sharded",
+      "kind": "bench",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/benches/reaching_def_summary_sharded.rs",
+      "exists": true,
+      "source_bytes": 1225,
+      "read_error": null,
+      "required_tokens": [],
+      "missing_tokens": []
+    },
+    {
+      "id": "resident_fixed_point_hot_path",
+      "kind": "bench",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/benches/resident_fixed_point_hot_path.rs",
+      "exists": true,
+      "source_bytes": 10096,
+      "read_error": null,
+      "required_tokens": [],
+      "missing_tokens": []
+    },
+    {
+      "id": "scalar_opt_test_bak",
+      "kind": "bench",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/benches/scalar_opt_test_bak.rs",
+      "exists": true,
+      "source_bytes": 3675,
+      "read_error": null,
+      "required_tokens": [],
+      "missing_tokens": []
+    }
+  ],
+  "resident_benchmark_evidence": [
+    {
+      "id": "ifds_direct_resident_hot_path",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/benches/ifds_direct_resident_hot_path.rs",
+      "exists": true,
+      "source_bytes": 5380,
+      "read_error": null,
+      "backend_id": "wgpu",
+      "device_signature": "wgpu-live-device-required",
+      "source_fingerprint": "weir-resident-bench-source:v1:62ae5d30d52a92c4",
+      "bench_command": "cargo_full bench --bench ifds_direct_resident_hot_path",
+      "required_fields": [
+        "ResidentBenchmarkEvidence",
+        "backend_id",
+        "device_signature",
+        "source_fingerprint",
+        "output_digest",
+        "upload_transfer_bytes",
+        "readback_transfer_bytes"
+      ],
+      "missing_fields": [],
+      "has_output_digest_field": true,
+      "has_transfer_byte_fields": true
+    },
+    {
+      "id": "resident_fixed_point_hot_path",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/benches/resident_fixed_point_hot_path.rs",
+      "exists": true,
+      "source_bytes": 10096,
+      "read_error": null,
+      "backend_id": "weir_bench_resident_fixed_point",
+      "device_signature": "mock-resident-sequence-window",
+      "source_fingerprint": "weir-resident-bench-source:v1:ff5d6abc03632fbf",
+      "bench_command": "cargo_full bench --bench resident_fixed_point_hot_path",
+      "required_fields": [
+        "ResidentBenchmarkEvidence",
+        "backend_id",
+        "device_signature",
+        "source_fingerprint",
+        "output_digest",
+        "upload_transfer_bytes",
+        "readback_transfer_bytes"
+      ],
+      "missing_fields": [],
+      "has_output_digest_field": true,
+      "has_transfer_byte_fields": true
+    }
+  ],
+  "fuzz_targets": [
+    {
+      "id": "cross_analysis_compose",
+      "kind": "fuzz",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/fuzz_targets/cross_analysis_compose.rs",
+      "exists": true,
+      "source_bytes": 4720,
+      "read_error": null,
+      "required_tokens": [
+        "fuzz_target!"
+      ],
+      "missing_tokens": []
+    },
+    {
+      "id": "csr_normalize",
+      "kind": "fuzz",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/fuzz_targets/csr_normalize.rs",
+      "exists": true,
+      "source_bytes": 1911,
+      "read_error": null,
+      "required_tokens": [
+        "fuzz_target!"
+      ],
+      "missing_tokens": []
+    },
+    {
+      "id": "csr_validate",
+      "kind": "fuzz",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/fuzz_targets/csr_validate.rs",
+      "exists": true,
+      "source_bytes": 1362,
+      "read_error": null,
+      "required_tokens": [
+        "fuzz_target!"
+      ],
+      "missing_tokens": []
+    },
+    {
+      "id": "dispatch_decode_pack",
+      "kind": "fuzz",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/fuzz_targets/dispatch_decode_pack.rs",
+      "exists": true,
+      "source_bytes": 514,
+      "read_error": null,
+      "required_tokens": [
+        "fuzz_target!"
+      ],
+      "missing_tokens": []
+    },
+    {
+      "id": "dispatch_decode_unpack",
+      "kind": "fuzz",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/fuzz_targets/dispatch_decode_unpack.rs",
+      "exists": true,
+      "source_bytes": 597,
+      "read_error": null,
+      "required_tokens": [
+        "fuzz_target!"
+      ],
+      "missing_tokens": []
+    },
+    {
+      "id": "fixed_point_converge",
+      "kind": "fuzz",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/fuzz_targets/fixed_point_converge.rs",
+      "exists": true,
+      "source_bytes": 5133,
+      "read_error": null,
+      "required_tokens": [
+        "fuzz_target!"
+      ],
+      "missing_tokens": []
+    },
+    {
+      "id": "ifds_shape_validate",
+      "kind": "fuzz",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/fuzz_targets/ifds_shape_validate.rs",
+      "exists": true,
+      "source_bytes": 5402,
+      "read_error": null,
+      "required_tokens": [
+        "fuzz_target!"
+      ],
+      "missing_tokens": []
+    },
+    {
+      "id": "reachability_witness_extract",
+      "kind": "fuzz",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/fuzz_targets/reachability_witness_extract.rs",
+      "exists": true,
+      "source_bytes": 4663,
+      "read_error": null,
+      "required_tokens": [
+        "fuzz_target!"
+      ],
+      "missing_tokens": []
+    },
+    {
+      "id": "resident_resource_lifecycle",
+      "kind": "fuzz",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/fuzz_targets/resident_resource_lifecycle.rs",
+      "exists": true,
+      "source_bytes": 6630,
+      "read_error": null,
+      "required_tokens": [
+        "fuzz_target!"
+      ],
+      "missing_tokens": []
+    }
+  ],
+  "fuzz_release_evidence": [
+    {
+      "id": "cross_analysis_compose",
+      "source_path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/fuzz_targets/cross_analysis_compose.rs",
+      "source_exists": true,
+      "source_bytes": 4720,
+      "source_read_error": null,
+      "source_fingerprint": "weir-fuzz-target-source:v1:b383e2c7d52ad43d",
+      "corpus_path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/corpus/cross_analysis_compose",
+      "corpus_exists": true,
+      "corpus_file_count": 32,
+      "corpus_total_bytes": 81,
+      "corpus_digest": "weir-fuzz-file-tree:v1:e22b34b532d95944",
+      "artifacts_path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/artifacts/cross_analysis_compose",
+      "artifact_file_count": 0,
+      "artifact_total_bytes": 0,
+      "artifact_digest": "weir-fuzz-file-tree:v1:0018ca9ba16dc68b",
+      "replay_command": "cd /media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz && cargo_full fuzz run cross_analysis_compose",
+      "corpus_replay_command": "cd /media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz && for seed in corpus/cross_analysis_compose/*; do test -f \"$seed\" && cargo_full fuzz run cross_analysis_compose \"$seed\"; done",
+      "crash_replay_command": "cd /media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz && for crash in artifacts/cross_analysis_compose/crash-*; do test -f \"$crash\" && cargo_full fuzz run cross_analysis_compose \"$crash\"; done",
+      "required_metadata": [
+        "source_path",
+        "source_fingerprint",
+        "corpus_path",
+        "corpus_digest",
+        "replay_command",
+        "corpus_replay_command",
+        "crash_replay_command"
+      ],
+      "missing_metadata": []
+    },
+    {
+      "id": "csr_normalize",
+      "source_path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/fuzz_targets/csr_normalize.rs",
+      "source_exists": true,
+      "source_bytes": 1911,
+      "source_read_error": null,
+      "source_fingerprint": "weir-fuzz-target-source:v1:256ba245c9f79ce6",
+      "corpus_path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/corpus/csr_normalize",
+      "corpus_exists": true,
+      "corpus_file_count": 18,
+      "corpus_total_bytes": 52,
+      "corpus_digest": "weir-fuzz-file-tree:v1:6f23a0cae56abc5d",
+      "artifacts_path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/artifacts/csr_normalize",
+      "artifact_file_count": 0,
+      "artifact_total_bytes": 0,
+      "artifact_digest": "weir-fuzz-file-tree:v1:6a58518e84ec57d9",
+      "replay_command": "cd /media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz && cargo_full fuzz run csr_normalize",
+      "corpus_replay_command": "cd /media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz && for seed in corpus/csr_normalize/*; do test -f \"$seed\" && cargo_full fuzz run csr_normalize \"$seed\"; done",
+      "crash_replay_command": "cd /media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz && for crash in artifacts/csr_normalize/crash-*; do test -f \"$crash\" && cargo_full fuzz run csr_normalize \"$crash\"; done",
+      "required_metadata": [
+        "source_path",
+        "source_fingerprint",
+        "corpus_path",
+        "corpus_digest",
+        "replay_command",
+        "corpus_replay_command",
+        "crash_replay_command"
+      ],
+      "missing_metadata": []
+    },
+    {
+      "id": "csr_validate",
+      "source_path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/fuzz_targets/csr_validate.rs",
+      "source_exists": true,
+      "source_bytes": 1362,
+      "source_read_error": null,
+      "source_fingerprint": "weir-fuzz-target-source:v1:7caccf71701c6bac",
+      "corpus_path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/corpus/csr_validate",
+      "corpus_exists": true,
+      "corpus_file_count": 7,
+      "corpus_total_bytes": 11,
+      "corpus_digest": "weir-fuzz-file-tree:v1:a7f86c445402d93a",
+      "artifacts_path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/artifacts/csr_validate",
+      "artifact_file_count": 0,
+      "artifact_total_bytes": 0,
+      "artifact_digest": "weir-fuzz-file-tree:v1:56246bb246af17ec",
+      "replay_command": "cd /media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz && cargo_full fuzz run csr_validate",
+      "corpus_replay_command": "cd /media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz && for seed in corpus/csr_validate/*; do test -f \"$seed\" && cargo_full fuzz run csr_validate \"$seed\"; done",
+      "crash_replay_command": "cd /media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz && for crash in artifacts/csr_validate/crash-*; do test -f \"$crash\" && cargo_full fuzz run csr_validate \"$crash\"; done",
+      "required_metadata": [
+        "source_path",
+        "source_fingerprint",
+        "corpus_path",
+        "corpus_digest",
+        "replay_command",
+        "corpus_replay_command",
+        "crash_replay_command"
+      ],
+      "missing_metadata": []
+    },
+    {
+      "id": "dispatch_decode_pack",
+      "source_path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/fuzz_targets/dispatch_decode_pack.rs",
+      "source_exists": true,
+      "source_bytes": 514,
+      "source_read_error": null,
+      "source_fingerprint": "weir-fuzz-target-source:v1:d2a51d32648f8201",
+      "corpus_path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/corpus/dispatch_decode_pack",
+      "corpus_exists": true,
+      "corpus_file_count": 2,
+      "corpus_total_bytes": 5,
+      "corpus_digest": "weir-fuzz-file-tree:v1:4df2f7ad9b504416",
+      "artifacts_path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/artifacts/dispatch_decode_pack",
+      "artifact_file_count": 0,
+      "artifact_total_bytes": 0,
+      "artifact_digest": "weir-fuzz-file-tree:v1:3995dac372361534",
+      "replay_command": "cd /media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz && cargo_full fuzz run dispatch_decode_pack",
+      "corpus_replay_command": "cd /media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz && for seed in corpus/dispatch_decode_pack/*; do test -f \"$seed\" && cargo_full fuzz run dispatch_decode_pack \"$seed\"; done",
+      "crash_replay_command": "cd /media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz && for crash in artifacts/dispatch_decode_pack/crash-*; do test -f \"$crash\" && cargo_full fuzz run dispatch_decode_pack \"$crash\"; done",
+      "required_metadata": [
+        "source_path",
+        "source_fingerprint",
+        "corpus_path",
+        "corpus_digest",
+        "replay_command",
+        "corpus_replay_command",
+        "crash_replay_command"
+      ],
+      "missing_metadata": []
+    },
+    {
+      "id": "dispatch_decode_unpack",
+      "source_path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/fuzz_targets/dispatch_decode_unpack.rs",
+      "source_exists": true,
+      "source_bytes": 597,
+      "source_read_error": null,
+      "source_fingerprint": "weir-fuzz-target-source:v1:ccb38f94984f9e0f",
+      "corpus_path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/corpus/dispatch_decode_unpack",
+      "corpus_exists": true,
+      "corpus_file_count": 2,
+      "corpus_total_bytes": 5,
+      "corpus_digest": "weir-fuzz-file-tree:v1:b58d2a7265ef4520",
+      "artifacts_path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/artifacts/dispatch_decode_unpack",
+      "artifact_file_count": 0,
+      "artifact_total_bytes": 0,
+      "artifact_digest": "weir-fuzz-file-tree:v1:d8ae1ff09c5cdd37",
+      "replay_command": "cd /media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz && cargo_full fuzz run dispatch_decode_unpack",
+      "corpus_replay_command": "cd /media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz && for seed in corpus/dispatch_decode_unpack/*; do test -f \"$seed\" && cargo_full fuzz run dispatch_decode_unpack \"$seed\"; done",
+      "crash_replay_command": "cd /media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz && for crash in artifacts/dispatch_decode_unpack/crash-*; do test -f \"$crash\" && cargo_full fuzz run dispatch_decode_unpack \"$crash\"; done",
+      "required_metadata": [
+        "source_path",
+        "source_fingerprint",
+        "corpus_path",
+        "corpus_digest",
+        "replay_command",
+        "corpus_replay_command",
+        "crash_replay_command"
+      ],
+      "missing_metadata": []
+    },
+    {
+      "id": "fixed_point_converge",
+      "source_path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/fuzz_targets/fixed_point_converge.rs",
+      "source_exists": true,
+      "source_bytes": 5133,
+      "source_read_error": null,
+      "source_fingerprint": "weir-fuzz-target-source:v1:5c20f53e9abff915",
+      "corpus_path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/corpus/fixed_point_converge",
+      "corpus_exists": true,
+      "corpus_file_count": 9,
+      "corpus_total_bytes": 33,
+      "corpus_digest": "weir-fuzz-file-tree:v1:dc48b3459bedc598",
+      "artifacts_path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/artifacts/fixed_point_converge",
+      "artifact_file_count": 1,
+      "artifact_total_bytes": 4,
+      "artifact_digest": "weir-fuzz-file-tree:v1:da80b66426d098a8",
+      "replay_command": "cd /media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz && cargo_full fuzz run fixed_point_converge",
+      "corpus_replay_command": "cd /media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz && for seed in corpus/fixed_point_converge/*; do test -f \"$seed\" && cargo_full fuzz run fixed_point_converge \"$seed\"; done",
+      "crash_replay_command": "cd /media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz && for crash in artifacts/fixed_point_converge/crash-*; do test -f \"$crash\" && cargo_full fuzz run fixed_point_converge \"$crash\"; done",
+      "required_metadata": [
+        "source_path",
+        "source_fingerprint",
+        "corpus_path",
+        "corpus_digest",
+        "replay_command",
+        "corpus_replay_command",
+        "crash_replay_command"
+      ],
+      "missing_metadata": []
+    },
+    {
+      "id": "ifds_shape_validate",
+      "source_path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/fuzz_targets/ifds_shape_validate.rs",
+      "source_exists": true,
+      "source_bytes": 5402,
+      "source_read_error": null,
+      "source_fingerprint": "weir-fuzz-target-source:v1:1d32d007ec9e2922",
+      "corpus_path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/corpus/ifds_shape_validate",
+      "corpus_exists": true,
+      "corpus_file_count": 2,
+      "corpus_total_bytes": 5,
+      "corpus_digest": "weir-fuzz-file-tree:v1:9149707338b01bb5",
+      "artifacts_path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/artifacts/ifds_shape_validate",
+      "artifact_file_count": 0,
+      "artifact_total_bytes": 0,
+      "artifact_digest": "weir-fuzz-file-tree:v1:c2f68442679fcf02",
+      "replay_command": "cd /media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz && cargo_full fuzz run ifds_shape_validate",
+      "corpus_replay_command": "cd /media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz && for seed in corpus/ifds_shape_validate/*; do test -f \"$seed\" && cargo_full fuzz run ifds_shape_validate \"$seed\"; done",
+      "crash_replay_command": "cd /media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz && for crash in artifacts/ifds_shape_validate/crash-*; do test -f \"$crash\" && cargo_full fuzz run ifds_shape_validate \"$crash\"; done",
+      "required_metadata": [
+        "source_path",
+        "source_fingerprint",
+        "corpus_path",
+        "corpus_digest",
+        "replay_command",
+        "corpus_replay_command",
+        "crash_replay_command"
+      ],
+      "missing_metadata": []
+    },
+    {
+      "id": "reachability_witness_extract",
+      "source_path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/fuzz_targets/reachability_witness_extract.rs",
+      "source_exists": true,
+      "source_bytes": 4663,
+      "source_read_error": null,
+      "source_fingerprint": "weir-fuzz-target-source:v1:1a97cc1f90dfda65",
+      "corpus_path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/corpus/reachability_witness_extract",
+      "corpus_exists": true,
+      "corpus_file_count": 1,
+      "corpus_total_bytes": 72,
+      "corpus_digest": "weir-fuzz-file-tree:v1:32a4723abd734361",
+      "artifacts_path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/artifacts/reachability_witness_extract",
+      "artifact_file_count": 0,
+      "artifact_total_bytes": 0,
+      "artifact_digest": "weir-fuzz-file-tree:v1:79fefbd6b725175a",
+      "replay_command": "cd /media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz && cargo_full fuzz run reachability_witness_extract",
+      "corpus_replay_command": "cd /media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz && for seed in corpus/reachability_witness_extract/*; do test -f \"$seed\" && cargo_full fuzz run reachability_witness_extract \"$seed\"; done",
+      "crash_replay_command": "cd /media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz && for crash in artifacts/reachability_witness_extract/crash-*; do test -f \"$crash\" && cargo_full fuzz run reachability_witness_extract \"$crash\"; done",
+      "required_metadata": [
+        "source_path",
+        "source_fingerprint",
+        "corpus_path",
+        "corpus_digest",
+        "replay_command",
+        "corpus_replay_command",
+        "crash_replay_command"
+      ],
+      "missing_metadata": []
+    },
+    {
+      "id": "resident_resource_lifecycle",
+      "source_path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/fuzz_targets/resident_resource_lifecycle.rs",
+      "source_exists": true,
+      "source_bytes": 6630,
+      "source_read_error": null,
+      "source_fingerprint": "weir-fuzz-target-source:v1:f7c47b2da1b21765",
+      "corpus_path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/corpus/resident_resource_lifecycle",
+      "corpus_exists": true,
+      "corpus_file_count": 18,
+      "corpus_total_bytes": 47,
+      "corpus_digest": "weir-fuzz-file-tree:v1:5088b976ade68258",
+      "artifacts_path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/artifacts/resident_resource_lifecycle",
+      "artifact_file_count": 0,
+      "artifact_total_bytes": 0,
+      "artifact_digest": "weir-fuzz-file-tree:v1:52bdf8e73228f48f",
+      "replay_command": "cd /media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz && cargo_full fuzz run resident_resource_lifecycle",
+      "corpus_replay_command": "cd /media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz && for seed in corpus/resident_resource_lifecycle/*; do test -f \"$seed\" && cargo_full fuzz run resident_resource_lifecycle \"$seed\"; done",
+      "crash_replay_command": "cd /media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz && for crash in artifacts/resident_resource_lifecycle/crash-*; do test -f \"$crash\" && cargo_full fuzz run resident_resource_lifecycle \"$crash\"; done",
+      "required_metadata": [
+        "source_path",
+        "source_fingerprint",
+        "corpus_path",
+        "corpus_digest",
+        "replay_command",
+        "corpus_replay_command",
+        "crash_replay_command"
+      ],
+      "missing_metadata": []
+    }
+  ],
+  "corpus_manifest": {
+    "id": "weir_corpus_manifest",
+    "kind": "corpus",
+    "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/corpus/seeds/manifest.json",
+    "exists": true,
+    "source_bytes": 30681,
+    "read_error": null,
+    "generator_command": "cargo_full run --bin corpus_expander",
+    "seed_count": 1050,
+    "rng_seed": 42,
+    "category_ids": [
+      "adversarial",
+      "cross",
+      "csr",
+      "dom",
+      "ifds"
+    ],
+    "seed_file_count": 1050,
+    "seed_total_bytes": 640080376,
+    "corpus_fingerprint": "eb21ebdb27341b8a",
+    "required_fields": [
+      "seed_count",
+      "categories",
+      "rng_seed",
+      "manifest_path",
+      "output_directory"
+    ],
+    "missing_fields": []
+  },
+  "declared_release_artifacts": [
+    {
+      "path": "release/evidence/weir/weir-analysis-api-matrix.json",
+      "documented": true,
+      "expected_generator": "xtask weir-matrix",
+      "owner_lane": "flow_weir",
+      "generator_command": "xtask weir-matrix",
+      "source_fingerprint": "release-evidence-source:v1:eb2a026dd8fa3743488899a173d2a601a39d6ec1cbcfbe777e116cb2ab798a49",
+      "freshness_fingerprint": "release-evidence-freshness:v1:c0b0e4f4b492b13c71316b7e69fc56a3b9da725065a87000991f11378c166a2e"
+    },
+    {
+      "path": "release/evidence/weir/weir-vyre-integration-tests.json",
+      "documented": true,
+      "expected_generator": "xtask weir-matrix",
+      "owner_lane": "flow_weir",
+      "generator_command": "xtask weir-matrix",
+      "source_fingerprint": "release-evidence-source:v1:c9e9cbf8bd35790eb7ad5a1644868d42a5ffd0c51bab34b534b23dd91a7203e1",
+      "freshness_fingerprint": "release-evidence-freshness:v1:0c69bcbd0b39e0c33efd91f8d29b7abca09b59c5df173d9682523d3e9fce83b1"
+    },
+    {
+      "path": "release/evidence/weir/weir-readme-contracts.json",
+      "documented": true,
+      "expected_generator": "xtask weir-matrix",
+      "owner_lane": "flow_weir",
+      "generator_command": "xtask weir-matrix",
+      "source_fingerprint": "release-evidence-source:v1:07dab7f1542a1005873da5d1231be2187f2b43ca064bdb63ae69bc696b27640d",
+      "freshness_fingerprint": "release-evidence-freshness:v1:6b127cffe3310924644ca6d9e625a6c7e1c21942dc5dd3aa1d10765021448bb2"
+    },
+    {
+      "path": "release/evidence/weir/weir-flow-release-contracts.json",
+      "documented": true,
+      "expected_generator": "xtask weir-matrix",
+      "owner_lane": "flow_weir",
+      "generator_command": "xtask weir-matrix",
+      "source_fingerprint": "release-evidence-source:v1:888b40f60bf14b89a31213cb19fb580347dff3299621366263f9b4124db6c48d",
+      "freshness_fingerprint": "release-evidence-freshness:v1:291658de65f5e435237fd3fc18df1f9cda99c861c4237f66219b8d5ee0e6bcfc"
     }
   ],
   "untested_analyses": [],
@@ -624,7 +1279,7 @@
       "id": "construction_def_use",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_def_use.rs",
       "exists": true,
-      "source_bytes": 2503,
+      "source_bytes": 2739,
       "has_test_entrypoint": true,
       "assertion_count": 9,
       "unresolved_markers": []
@@ -705,7 +1360,7 @@
       "id": "escape_callgraph_range",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_escape_callgraph_range.rs",
       "exists": true,
-      "source_bytes": 2656,
+      "source_bytes": 2738,
       "has_test_entrypoint": true,
       "assertion_count": 17,
       "unresolved_markers": []
@@ -750,9 +1405,9 @@
       "id": "parity_inventory_sweep",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_parity_inventory_sweep.rs",
       "exists": true,
-      "source_bytes": 29945,
+      "source_bytes": 11670,
       "has_test_entrypoint": true,
-      "assertion_count": 28,
+      "assertion_count": 1,
       "unresolved_markers": []
     },
     {
@@ -858,7 +1513,7 @@
       "id": "property_def_use",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_def_use.rs",
       "exists": true,
-      "source_bytes": 2813,
+      "source_bytes": 2961,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "unresolved_markers": []
@@ -885,7 +1540,7 @@
       "id": "property_range_escape",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_range_escape.rs",
       "exists": true,
-      "source_bytes": 2242,
+      "source_bytes": 2503,
       "has_test_entrypoint": true,
       "assertion_count": 20,
       "unresolved_markers": []
@@ -930,7 +1585,7 @@
       "id": "property_summary_callgraph",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_summary_callgraph.rs",
       "exists": true,
-      "source_bytes": 2645,
+      "source_bytes": 2735,
       "has_test_entrypoint": true,
       "assertion_count": 30,
       "unresolved_markers": []
@@ -984,7 +1639,7 @@
       "id": "summary_loop_points",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_summary_loop_points.rs",
       "exists": true,
-      "source_bytes": 2804,
+      "source_bytes": 2885,
       "has_test_entrypoint": true,
       "assertion_count": 19,
       "unresolved_markers": []

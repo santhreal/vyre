@@ -1,0 +1,47 @@
+# Unicode identifier spoofing policy for VX-953 through VX-955.
+# Rule ids, config keys, public symbols, file labels, and operator-facing identifiers use one Unicode policy.
+
+schema = "vyre.injection.unicode_identifier_spoofing_policy.v1"
+owner = "security_reliability"
+evidence_tokens = ["UNICODE_TR36", "UNICODE_UTS39"]
+
+required_fields = [
+  "identifier_class",
+  "allowed_profile",
+  "normalization_policy",
+  "confusable_policy",
+  "mixed_script_policy",
+  "bidi_policy",
+  "display_policy",
+  "diagnostic",
+]
+
+[[identifier]]
+identifier_class = "rule-id"
+allowed_profile = "ascii-stable-identifiers"
+normalization_policy = "reject-non-normalized-or-nonascii-public-rule-ids"
+confusable_policy = "not-applicable-for-ascii-only"
+mixed_script_policy = "reject"
+bidi_policy = "reject-bidi-controls"
+display_policy = "verbatim-after-validation"
+diagnostic = "VYRE_UNICODE_RULE_ID_REFUSED"
+
+[[identifier]]
+identifier_class = "operator-label"
+allowed_profile = "unicode-display-with-security-profile"
+normalization_policy = "normalize-to-nfc-before-display"
+confusable_policy = "flag-confusable-with-public-symbols"
+mixed_script_policy = "warn-or-refuse-by-context"
+bidi_policy = "render-bidi-controls-visible"
+display_policy = "escape-controls-and-show-script-warning"
+diagnostic = "VYRE_UNICODE_LABEL_SPOOFING_WARNING"
+
+[[identifier]]
+identifier_class = "config-key"
+allowed_profile = "ascii-dotted-keys"
+normalization_policy = "reject-nonascii-config-keys"
+confusable_policy = "not-applicable-for-ascii-only"
+mixed_script_policy = "reject"
+bidi_policy = "reject-bidi-controls"
+display_policy = "verbatim-after-validation"
+diagnostic = "VYRE_UNICODE_CONFIG_KEY_REFUSED"

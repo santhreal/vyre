@@ -1,0 +1,40 @@
+# Security advisory exchange policy for VX-1046, VX-1051, and VX-1056.
+# CSAF advisory fields, OpenVEX statuses, OSV identities, and operator reports share one exchange seam.
+
+schema = "vyre.security.advisory_exchange_policy.v1"
+owner = "security_reliability"
+evidence_tokens = ["CSAF_2_0", "OPENVEX_SPEC", "OSV_SCHEMA", "SARIF_2_1_0"]
+
+required_fields = [
+  "exchange_id",
+  "advisory_identity",
+  "product_status_policy",
+  "vulnerability_status_policy",
+  "affected_product_policy",
+  "remediation_policy",
+  "report_link",
+  "publication_boundary",
+  "diagnostic",
+]
+
+[[exchange]]
+exchange_id = "public-vyre-advisory-exchange"
+advisory_identity = "csaf-document-tracking-id-or-osv-id"
+product_status_policy = "fixed-known-affected-known-not-affected-under-investigation"
+vulnerability_status_policy = "mapped-to-openvex-affectedness-status"
+affected_product_policy = "purl-or-public-crate-identity-required"
+remediation_policy = "fixed-version-mitigation-or-not-affected-proof-required"
+report_link = "OPERATOR_REPORTING_INTERCHANGE.toml"
+publication_boundary = "public-vyre-safe"
+diagnostic = "VYRE_ADVISORY_EXCHANGE_PUBLIC_READY"
+
+[[exchange]]
+exchange_id = "private-santh-evidence-redacted-exchange"
+advisory_identity = "public-id-with-private-evidence-redacted"
+product_status_policy = "private-worktree-status-not-published"
+vulnerability_status_policy = "public-status-derived-from-redacted-proof"
+affected_product_policy = "private-paths-replaced-by-public-package-identity"
+remediation_policy = "private-notes-excluded-public-fix-or-proof-only"
+report_link = "SECURITY_INSIGHTS_RELEASE_SUMMARY.toml"
+publication_boundary = "public-vyre-safe-with-private-redaction"
+diagnostic = "VYRE_ADVISORY_PRIVATE_EVIDENCE_REDACTED"

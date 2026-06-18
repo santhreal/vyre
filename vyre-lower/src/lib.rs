@@ -101,19 +101,38 @@ impl VerifyFailure {
 /// separate function calls.
 #[must_use]
 pub fn full_report(desc: &KernelDescriptor) -> FullReport {
+    let descriptor_id = desc.id.clone();
     let summary = desc.summary();
     let histogram = analyses::op_histogram::analyze(desc);
     let perf = audit::audit(desc);
-    let verify = verify::verify(desc);
-    let (optimized, stats) = rewrites::run_all_with_stats(desc);
-    let optimized_summary = optimized.summary();
+    let verify_input = verify::verify(desc);
+    let (optimized_summary, verify_output, stats, optimization_ran) = if verify_input.is_ok() {
+        let (optimized, stats) = rewrites::run_all_with_stats(desc);
+        let verify_output = verify::verify(&optimized);
+        (optimized.summary(), verify_output, stats, true)
+    } else {
+        (
+            summary.clone(),
+            Ok(()),
+            optimization_skipped_stats(desc),
+            false,
+        )
+    };
+    let fix_text = build_full_report_fix_text(
+        &verify_input,
+        optimization_ran.then_some(&verify_output),
+    );
     FullReport {
+        descriptor_id,
         summary,
         optimized_summary,
         histogram,
         perf,
-        verify_input: verify,
+        verify_input,
+        verify_output,
         stats,
+        optimization_ran,
+        fix_text,
     }
 }
 
@@ -121,29 +140,49 @@ pub fn full_report(desc: &KernelDescriptor) -> FullReport {
 /// the descriptor + standard pipeline output.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct FullReport {
+    #[serde(default)]
+    pub descriptor_id: String,
     pub summary: String,
     pub optimized_summary: String,
     pub histogram: analyses::op_histogram::OpHistogram,
     pub perf: PerfAuditReport,
     pub verify_input: verify::VerifyResult,
+    #[serde(default = "default_verify_result")]
+    pub verify_output: verify::VerifyResult,
     pub stats: rewrites::OptimizationStats,
+    #[serde(default)]
+    pub optimization_ran: bool,
+    #[serde(default)]
+    pub fix_text: String,
 }
 
 impl FullReport {
+    #[must_use]
+    pub fn verify_input_status(&self) -> &'static str {
+        verification_status(&self.verify_input)
+    }
+
+    #[must_use]
+    pub fn verify_output_status(&self) -> &'static str {
+        if self.optimization_ran {
+            verification_status(&self.verify_output)
+        } else {
+            "SKIPPED"
+        }
+    }
+
     /// One-line headline drawn from the underlying parts. Useful for
     /// log lines.
     pub fn format_short(&self) -> String {
         format!(
-            "{} | {} | {} | {} | input verify {}",
+            "{} | id {} | {} | {} | {} | input verify {} | output verify {}",
             self.summary,
+            self.descriptor_id,
             self.histogram.format_short(),
             self.perf.format_short(),
             self.stats.format_short(),
-            if self.verify_input.is_ok() {
-                "OK"
-            } else {
-                "FAIL"
-            },
+            self.verify_input_status(),
+            self.verify_output_status(),
         )
     }
 
@@ -153,6 +192,7 @@ impl FullReport {
         let mut out = String::new();
         use std::fmt::Write as _;
         let _ = writeln!(out, "Kernel:");
+        let _ = writeln!(out, "  descriptor id: {}", self.descriptor_id);
         let _ = writeln!(out, "  raw:       {}", self.summary);
         let _ = writeln!(out, "  optimized: {}", self.optimized_summary);
         let _ = writeln!(out, "Histogram:");
@@ -172,18 +212,90 @@ impl FullReport {
         let _ = writeln!(out, "Optimization:");
         let _ = writeln!(out, "  {}", self.stats.format_short());
         let _ = writeln!(out, "Verify (input):");
-        match &self.verify_input {
-            Ok(()) => {
-                let _ = writeln!(out, "  OK");
-            }
-            Err(errs) => {
-                let _ = writeln!(out, "  FAIL ({} errors)", errs.len());
-                for e in errs {
-                    let _ = writeln!(out, "    {:?}", e);
-                }
-            }
+        write_verify_section(&mut out, &self.verify_input);
+        let _ = writeln!(out, "Verify (output):");
+        if self.optimization_ran {
+            write_verify_section(&mut out, &self.verify_output);
+        } else {
+            let _ = writeln!(out, "  SKIPPED (input verification failed)");
+        }
+        if !self.fix_text.is_empty() {
+            let _ = writeln!(out, "Fix:");
+            let _ = writeln!(out, "  {}", self.fix_text);
         }
         out
+    }
+}
+
+fn default_verify_result() -> verify::VerifyResult {
+    Ok(())
+}
+
+fn optimization_skipped_stats(desc: &KernelDescriptor) -> rewrites::OptimizationStats {
+    rewrites::OptimizationStats {
+        ops_before: desc.body.ops.len(),
+        ops_after: desc.body.ops.len(),
+        bindings_before: desc.bindings.slots.len(),
+        bindings_after: desc.bindings.slots.len(),
+        literals_before: desc.body.literals.len(),
+        literals_after: desc.body.literals.len(),
+        iterations: 0,
+        converged: false,
+    }
+}
+
+fn verification_status(result: &verify::VerifyResult) -> &'static str {
+    if result.is_ok() {
+        "OK"
+    } else {
+        "FAIL"
+    }
+}
+
+fn write_verify_section(out: &mut String, result: &verify::VerifyResult) {
+    use std::fmt::Write as _;
+    match result {
+        Ok(()) => {
+            let _ = writeln!(out, "  OK");
+        }
+        Err(errs) => {
+            let _ = writeln!(out, "  FAIL ({} errors)", errs.len());
+            for e in errs {
+                let _ = writeln!(out, "    {:?}", e);
+            }
+        }
+    }
+}
+
+fn build_full_report_fix_text(
+    verify_input: &verify::VerifyResult,
+    verify_output: Option<&verify::VerifyResult>,
+) -> String {
+    let mut messages = Vec::new();
+    push_verify_fix_text("input", verify_input, &mut messages);
+    if let Some(verify_output) = verify_output {
+        push_verify_fix_text("output", verify_output, &mut messages);
+    }
+    messages.join(" ")
+}
+
+fn push_verify_fix_text(
+    stage: &str,
+    result: &verify::VerifyResult,
+    messages: &mut Vec<String>,
+) {
+    if let Err(errs) = result {
+        if errs.is_empty() {
+            messages.push(format!(
+                "Fix: {stage} descriptor verification returned an empty error list; treat this as a verifier contract bug and preserve the descriptor for triage."
+            ));
+        } else {
+            messages.push(format!(
+                "Fix: {stage} descriptor verification failed with {} error(s); repair the descriptor before emitting benchmark evidence. First error: {:?}",
+                errs.len(),
+                errs[0]
+            ));
+        }
     }
 }
 
@@ -195,9 +307,14 @@ impl std::fmt::Display for FullReport {
 pub use verify::{verify, VerifyError, VerifyErrorKind, VerifyResult};
 
 pub use descriptor::{
-    BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
-    KernelOp, KernelOpKind, LiteralValue, MatrixMmaElement, MatrixMmaLayout, MatrixMmaShape,
-    MemoryClass, OpaqueExprData, OpaqueNodeData, TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS,
+    BindingLayout, BindingSlot, BindingVisibility, DescriptorIntent, DescriptorIntentError,
+    DescriptorIntentEvidence, DescriptorIntentKind, DescriptorIntentSet,
+    DescriptorIntentStrategy, Dispatch, IntentAnnotatedDescriptor, KernelBody,
+    KernelDescriptor, KernelOp, KernelOpKind, LiteralValue, MatrixMmaElement,
+    MatrixMmaLayout, MatrixMmaShape, MemoryClass, OpaqueExprData, OpaqueNodeData,
+    scan_construct_intent_mapping, ScanConstructIntentClass, ScanConstructIntentMapping,
+    DESCRIPTOR_INTENT_SCHEMA_VERSION, SCAN_CONSTRUCT_INTENT_MAPPINGS, TRAP_SIDECAR_NAME,
+    TRAP_SIDECAR_WORDS,
 };
 pub use error::LowerError;
 pub use lower::lower;
@@ -269,14 +386,21 @@ mod verify_then_optimize_tests {
             },
         };
         let report = full_report(&desc);
+        assert_eq!(report.descriptor_id, "fr");
         assert!(report.summary.contains("fr:"));
         assert_eq!(report.histogram.literal, 2);
         assert_eq!(report.perf.kernel_id, "fr");
         assert!(report.verify_input.is_ok());
+        assert!(report.verify_output.is_ok());
+        assert!(report.optimization_ran);
+        assert_eq!(report.verify_input_status(), "OK");
+        assert_eq!(report.verify_output_status(), "OK");
         assert!(report.stats.iterations >= 1);
+        assert!(report.fix_text.is_empty());
         // Display delegates to format_short.
         let s = format!("{report}");
         assert!(s.contains("fr:"));
+        assert!(s.contains("id fr"));
         assert!(s.contains("OK"));
     }
 
@@ -297,11 +421,17 @@ mod verify_then_optimize_tests {
             },
         };
         let report = full_report(&desc);
+        assert_eq!(report.descriptor_id, "fr");
         let json = serde_json::to_string(&report).expect("Fix: serialize");
+        assert!(json.contains("\"descriptor_id\""));
         assert!(json.contains("\"summary\""));
         assert!(json.contains("\"histogram\""));
         assert!(json.contains("\"perf\""));
+        assert!(json.contains("\"verify_input\""));
+        assert!(json.contains("\"verify_output\""));
         assert!(json.contains("\"stats\""));
+        assert!(json.contains("\"optimization_ran\""));
+        assert!(json.contains("\"fix_text\""));
 
         // Round-trip back through Deserialize.
         let _back: FullReport = serde_json::from_str(&json).expect("Fix: round-trip");
@@ -326,11 +456,43 @@ mod verify_then_optimize_tests {
         let r = full_report(&desc);
         let long = r.format_long();
         assert!(long.contains("Kernel:"));
+        assert!(long.contains("descriptor id: fr"));
         assert!(long.contains("Histogram:"));
         assert!(long.contains("Perf audit:"));
         assert!(long.contains("Optimization:"));
         assert!(long.contains("Verify (input):"));
+        assert!(long.contains("Verify (output):"));
         assert!(long.contains("OK"));
+    }
+
+    #[test]
+    fn full_report_records_verify_fix_text_for_bad_descriptor() {
+        let desc = KernelDescriptor {
+            id: "bad".into(),
+            bindings: BindingLayout { slots: vec![] },
+            dispatch: Dispatch::new(0, 1, 1),
+            body: KernelBody {
+                ops: vec![],
+                child_bodies: vec![],
+                literals: vec![],
+            },
+        };
+        let report = full_report(&desc);
+        assert_eq!(report.descriptor_id, "bad");
+        assert_eq!(report.verify_input_status(), "FAIL");
+        assert_eq!(report.verify_output_status(), "SKIPPED");
+        assert!(!report.optimization_ran);
+        assert_eq!(report.stats.iterations, 0);
+        assert!(
+            report
+                .fix_text
+                .contains("Fix: input descriptor verification failed"),
+            "Fix: invalid descriptor reports must carry operator-actionable verifier repair text."
+        );
+        let long = report.format_long();
+        assert!(long.contains("Verify (input):"));
+        assert!(long.contains("Verify (output):"));
+        assert!(long.contains("Fix:"));
     }
 
     #[test]

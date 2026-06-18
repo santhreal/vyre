@@ -1,0 +1,37 @@
+# End-to-end operational readiness tranche coverage for VX-1241 through VX-1260.
+# This tranche adds SLOs, alerts, runbooks, rollback, and incident retrospectives while reusing telemetry, release health, deployment, support, and publication authorities.
+
+schema = "vyre.ops.operational_readiness_tranche_coverage.v1"
+owner = "coordination"
+evidence_tokens = ["OPENSLO_SPEC", "GOOGLE_SRE_SLO", "PROMETHEUS_ALERTING_RULES", "PROMETHEUS_RECORDING_RULES", "PROMETHEUS_ALERTMANAGER", "OPENTELEMETRY_LOGS"]
+
+required_fields = [
+  "coverage_id",
+  "vx_id_range",
+  "service_level_objective_policy",
+  "alert_routing_escalation_policy",
+  "operator_runbook_rollback_policy",
+  "incident_retrospective_evidence_policy",
+  "operator_evidence_governance",
+  "release_health_feedback_loop",
+  "operator_deployment_surface_matrix",
+  "public_intake_response_coverage",
+  "publication_boundary",
+  "dedup_seam",
+  "proof_gate",
+]
+
+[[coverage]]
+coverage_id = "operational-readiness-end-to-end"
+vx_id_range = "VX-1241..VX-1260"
+service_level_objective_policy = "SERVICE_LEVEL_OBJECTIVE_POLICY.toml"
+alert_routing_escalation_policy = "ALERT_ROUTING_ESCALATION_POLICY.toml"
+operator_runbook_rollback_policy = "OPERATOR_RUNBOOK_ROLLBACK_POLICY.toml"
+incident_retrospective_evidence_policy = "INCIDENT_RETROSPECTIVE_EVIDENCE_POLICY.toml"
+operator_evidence_governance = "OPERATOR_EVIDENCE_TRANCHE_COVERAGE.toml"
+release_health_feedback_loop = "RELEASE_HEALTH_FEEDBACK_LOOP.toml"
+operator_deployment_surface_matrix = "OPERATOR_DEPLOYMENT_SURFACE_MATRIX.toml"
+public_intake_response_coverage = "END_TO_END_PUBLIC_INTAKE_RESPONSE_TRANCHE_COVERAGE.toml"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+dedup_seam = "slo-alert-runbook-rollback-and-retrospective-policies-own-operational-readiness-while-telemetry-release-health-deployment-and-support-registries-remain-signal-and-intake-authorities"
+proof_gate = "conform/vyre-conform-enforce/tests/operational_readiness_governance.rs"

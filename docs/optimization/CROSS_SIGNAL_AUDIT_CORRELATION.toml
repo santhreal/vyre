@@ -1,0 +1,37 @@
+# Cross-signal audit correlation for VX-733 through VX-739.
+# Findings, traces, metrics, provenance, and reproducibility capsules join through stable ids.
+
+schema = "vyre.audit.cross_signal_correlation.v1"
+owner = "coordination"
+evidence_tokens = ["SARIF_2_1_0", "OPENTELEMETRY_SEMCONV", "W3C_TRACE_CONTEXT", "OPENMETRICS_PROMETHEUS"]
+
+required_fields = [
+  "correlation_id",
+  "finding_result_id",
+  "trace_id",
+  "metric_name",
+  "provenance_artifact",
+  "reproducibility_capsule",
+  "source_impact_edge",
+  "redaction_state",
+]
+
+[[correlation]]
+correlation_id = "ssrf-finding-runtime-route"
+finding_result_id = "finding-untrusted-url"
+trace_id = "trace-flow-001"
+metric_name = "vyre_scan_candidates_total"
+provenance_artifact = "PUBLIC_RELEASE_SUPPLY_CHAIN_PROVENANCE.toml"
+reproducibility_capsule = "REPRODUCIBILITY_CAPSULES.toml"
+source_impact_edge = "SOURCE_IMPACT_GRAPH.toml"
+redaction_state = "private-paths-redacted"
+
+[[correlation]]
+correlation_id = "subgroup-diagnostic-fallback-route"
+finding_result_id = "diagnostic-unsupported-subgroup"
+trace_id = "trace-scan-batch-001"
+metric_name = "vyre_dispatch_duration_seconds"
+provenance_artifact = "PUBLIC_RELEASE_SUPPLY_CHAIN_PROVENANCE.toml"
+reproducibility_capsule = "REPRODUCIBILITY_CAPSULES.toml"
+source_impact_edge = "SOURCE_IMPACT_GRAPH.toml"
+redaction_state = "private-paths-redacted"

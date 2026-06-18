@@ -1,0 +1,55 @@
+# Resource exhaustion evidence for VX-932 through VX-937.
+# OOM, timeout, quota, complexity, backpressure, and degraded-route events share one evidence schema.
+
+schema = "vyre.resource.exhaustion_evidence.v1"
+owner = "reporting"
+evidence_tokens = ["CWE_400_RESOURCE_CONSUMPTION", "OWASP_DOS", "RFC_9457_PROBLEM_DETAILS"]
+
+required_fields = [
+  "evidence_id",
+  "trigger",
+  "budget_id",
+  "observed_usage",
+  "limit",
+  "action",
+  "degraded_route",
+  "operator_error",
+  "redaction_state",
+  "metrics_link",
+]
+
+[[evidence]]
+evidence_id = "scan-input-refused-before-allocation"
+trigger = "input-bytes-exceed-limit"
+budget_id = "scan-input-bytes"
+observed_usage = "requested:12GiB"
+limit = "hard:8GiB"
+action = "refuse-before-allocation"
+degraded_route = "split-input-or-increase-tier-a-limit"
+operator_error = "STRUCTURED_ERROR_PROBLEM_DETAILS.toml"
+redaction_state = "private-paths-redacted"
+metrics_link = "METRICS_EXPOSITION_CONTRACTS.toml"
+
+[[evidence]]
+evidence_id = "gpu-memory-route-degraded"
+trigger = "gpu-resident-memory-limit"
+budget_id = "gpu-resident-memory"
+observed_usage = "planned:14GiB"
+limit = "configured:8GiB"
+action = "route-to-chunked-execution"
+degraded_route = "chunked-gpu-or-cpu-route"
+operator_error = "STRUCTURED_ERROR_PROBLEM_DETAILS.toml"
+redaction_state = "no-private-device-serials"
+metrics_link = "BACKEND_CAPABILITY_DIGESTS.toml"
+
+[[evidence]]
+evidence_id = "parser-depth-refused"
+trigger = "nested-delimiter-depth"
+budget_id = "parser-recursion-depth"
+observed_usage = "depth:20000"
+limit = "hard:16384"
+action = "fail-closed"
+degraded_route = "partial-recovery-diagnostic"
+operator_error = "STRUCTURED_ERROR_PROBLEM_DETAILS.toml"
+redaction_state = "source-snippet-redacted"
+metrics_link = "METRICS_EXPOSITION_CONTRACTS.toml"

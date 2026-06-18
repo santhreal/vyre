@@ -107,10 +107,7 @@ fn write_case_stacks(
             continue;
         }
         let display_stage = stage.strip_suffix("_ns").unwrap_or(stage);
-        // `write!` to a String is infallible; the `expect` is a static
-        // claim, not a runtime check.
-        write!(out, "vyre;{};{} {}\n", case_id, display_stage, stats.p50)
-            .expect("Fix: writing to a String never fails");
+        let _ = writeln!(out, "vyre;{};{} {}", case_id, display_stage, stats.p50);
     }
 }
 
@@ -135,7 +132,7 @@ pub fn collapse_report_json(report: &ReportSchema) -> String {
             }));
         }
     }
-    serde_json::to_string(&entries).expect("Fix: JSON serialization cannot fail for basic types")
+    serde_json::Value::Array(entries).to_string()
 }
 
 #[cfg(test)]
@@ -176,6 +173,8 @@ mod tests {
             workload_class: "Micro".to_string(),
             tags: Vec::new(),
             backend_id: Some("test".to_string()),
+            device_signature: Some("device-profile-v1:test".to_string()),
+            held_out_corpus_id: Some(format!("heldout:bench-case:{id}")),
             needs_gpu: false,
             min_vram_bytes: None,
             min_input_bytes: None,

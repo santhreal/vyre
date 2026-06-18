@@ -1,0 +1,54 @@
+# Host locality and affinity own CPU thread placement, NUMA memory policy, and local driver submission evidence.
+
+schema = "vyre.host.locality_affinity_contracts.v1"
+owner = "driver_shared"
+evidence_tokens = ["LINUX_KERNEL_CPUSETS", "LINUX_SCHED_AFFINITY", "LINUX_KERNEL_NUMA_MEMORY_POLICY", "NVML_CPU_MEMORY_AFFINITY", "HWLOC_TOPOLOGY_API"]
+
+required_fields = [
+  "contract_id",
+  "host_surface",
+  "cpu_affinity_policy",
+  "memory_policy",
+  "device_locality_policy",
+  "cpuset_policy",
+  "migration_policy",
+  "fallback_policy",
+  "authority_links",
+  "diagnostic",
+]
+
+[[contract]]
+contract_id = "driver-submission-thread-locality"
+host_surface = "CUDA-WGPU-Vulkan-Metal-driver-submission-and-completion-worker-threads"
+cpu_affinity_policy = "submission-thread-CPU-mask-recorded-and-confined-to-eligible-cpuset-before backend-dispatch-claim"
+memory_policy = "submission-queue-and-command-metadata-allocate-on-local-or-interleaved-NUMA-policy-declared-for-device-class"
+device_locality_policy = "GPU-CPU-affinity-from-NVML-or-hwloc-PCI-locality-map-links-thread-mask-to-device-class"
+cpuset_policy = "thread-mask-must-be-subset-of-container-cpuset-and-Kubernetes-CPU-manager-assignment-when-running-under-operator"
+migration_policy = "unexpected-thread-migration-or-cpuset-shrink-invalidates-low-latency-submission-claim"
+fallback_policy = "unavailable-affinity-data-routes-to-unpinned-baseline-with-locality-claim-disabled"
+authority_links = ["CPU_GPU_TOPOLOGY_AFFINITY_MATRIX.toml", "BACKEND_CAPABILITY_DIGESTS.toml", "SUBMISSION_REPLAY_DECISION_POLICY.toml", "PROFILE_TRACE_METRIC_CORRELATION_POLICY.toml"]
+diagnostic = "VYRE_DRIVER_SUBMISSION_LOCALITY_REQUIRED"
+
+[[contract]]
+contract_id = "pinned-staging-worker-locality"
+host_surface = "host-upload-readback-copy-workers-and-pinned-staging-pool-owners"
+cpu_affinity_policy = "copy-worker-thread-mask-records-local-CPU-class-for-staging-buffer-NUMA-node"
+memory_policy = "pinned-staging-and-readback-slabs-allocate-on-NUMA-node-local-to-target-device-or-record-remote-node-reason"
+device_locality_policy = "target-device-locality-matches-staging-NUMA-class-before overlap-speed-claim"
+cpuset_policy = "copy-worker-cpuset-recorded-with-pinned-byte-budget-and-cgroup-effective-CPU-memory-node-set"
+migration_policy = "remote-NUMA-pinned-copy-or-worker-migration-blocks-transfer-overlap-performance-claim-without-stratum"
+fallback_policy = "route-to-pageable-copy-baseline-or-lower-overlap-concurrency-when-local-pinned-staging-is-unavailable"
+authority_links = ["PINNED_STAGING_TRANSFER_POLICY.toml", "MEMORY_RESIDENCY_TIER_CONTRACTS.toml", "TRANSFER_OVERLAP_PIPELINE_EVIDENCE.toml", "RESOURCE_BUDGET_POLICY.toml"]
+diagnostic = "VYRE_PINNED_STAGING_LOCALITY_REQUIRED"
+
+[[contract]]
+contract_id = "io-parser-scan-thread-locality"
+host_surface = "corpus-ingress-parser-regex-CPU-reference-and-GPU-feed-worker-threads"
+cpu_affinity_policy = "IO-parser-scan-thread-pools-record-CPU-mask-workload-class-and-steal-boundary"
+memory_policy = "mmap-staging-parser-buffers-and-CPU-reference-working-sets-record-local-interleave-or-bind-policy"
+device_locality_policy = "GPU-feed-workers-prefer-CPU-and-memory-node-local-to-transfer-target-device-when-accelerator-route-selected"
+cpuset_policy = "thread-pool-size-and-mask-obey-resource-rightsizing-and-cgroup-effective-CPU-set"
+migration_policy = "cross-socket-work-stealing-recorded-as-stratum-factor-before generalized throughput claim"
+fallback_policy = "fall-back-to-work-conserving-unpinned-pool-when-affinity-would-starve-queue-or-violate-cpuset"
+authority_links = ["CORPUS_PAGING_PLANNER.toml", "REGEX_CPU_GPU_PARTITION.toml", "HARDWARE_WORKLOAD_STRATIFICATION_MATRIX.toml", "BACKPRESSURE_QUEUE_QUOTA_POLICY.toml"]
+diagnostic = "VYRE_IO_PARSER_SCAN_LOCALITY_REQUIRED"

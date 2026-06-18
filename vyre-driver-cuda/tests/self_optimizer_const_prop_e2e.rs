@@ -8,6 +8,8 @@
 #![cfg(test)]
 
 mod common;
+#[path = "common/self_optimizer_const_prop_bool.rs"]
+mod self_optimizer_const_prop_bool;
 
 use common::live_backend;
 use vyre::ir::{Expr, Node, Program};
@@ -453,76 +455,6 @@ fn cuda_const_prop_simplifies_bool_eq_with_literal() {
             !matches!(cond, Expr::BinOp { op: BinOp::Eq, .. }),
             "(b == true) must simplify to Var(b); got cond={cond:?}"
         );
-    }
-}
-
-#[test]
-
-fn cuda_const_prop_simplifies_bool_false_comparisons_to_logical_not() {
-    use vyre::ir::model::types::UnOp;
-    use vyre::ir::{BinOp, BufferAccess, BufferDecl, DataType};
-    fn binop(op: BinOp, a: Expr, b: Expr) -> Expr {
-        Expr::BinOp {
-            op,
-            left: Box::new(a),
-            right: Box::new(b),
-        }
-    }
-
-    for (label, cond) in [
-        (
-            "b == false",
-            binop(BinOp::Eq, Expr::var("b"), Expr::bool(false)),
-        ),
-        (
-            "false == b",
-            binop(BinOp::Eq, Expr::bool(false), Expr::var("b")),
-        ),
-        (
-            "b != true",
-            binop(BinOp::Ne, Expr::var("b"), Expr::bool(true)),
-        ),
-        (
-            "true != b",
-            binop(BinOp::Ne, Expr::bool(true), Expr::var("b")),
-        ),
-    ] {
-        let p = Program::wrapped(
-            vec![
-                BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32)
-                    .with_count(1),
-                BufferDecl::storage("buf", 1, BufferAccess::ReadWrite, DataType::U32).with_count(1),
-            ],
-            [1, 1, 1],
-            vec![
-                Node::let_bind(
-                    "b",
-                    Expr::eq(Expr::load("input", Expr::u32(0)), Expr::u32(7)),
-                ),
-                Node::if_then_else(
-                    cond,
-                    vec![Node::store("buf", Expr::u32(0), Expr::u32(1))],
-                    vec![Node::store("buf", Expr::u32(0), Expr::u32(2))],
-                ),
-            ],
-        );
-        let out = run_pipeline(p);
-        let body = body_of(&out);
-        let if_node = body.iter().find(|n| matches!(n, Node::If { .. }));
-        if let Some(Node::If { cond, .. }) = if_node {
-            assert!(
-                matches!(
-                    cond,
-                    Expr::UnOp {
-                        op: UnOp::LogicalNot,
-                        ..
-                    }
-                ),
-                "{label} must simplify to LogicalNot(b); got cond={cond:?}"
-            );
-        } else {
-            panic!("{label} must preserve a runtime If with simplified condition; body={body:?}");
-        }
     }
 }
 

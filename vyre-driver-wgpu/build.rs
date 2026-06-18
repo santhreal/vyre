@@ -6,6 +6,8 @@
 use std::fs;
 use std::path::PathBuf;
 
+const MAX_BUILD_MANIFEST_BYTES: u64 = 1024 * 1024;
+
 fn fail(message: impl std::fmt::Display) -> ! {
     eprintln!("Fix: {message}");
     std::process::exit(1);
@@ -16,7 +18,7 @@ fn main() {
         fail("CARGO_MANIFEST_DIR missing; restore this invariant before continuing.")
     }));
     let manifest_path = manifest_dir.join("Cargo.toml");
-    let manifest = fs::read_to_string(&manifest_path).unwrap_or_else(|error| {
+    let manifest = read_manifest_bounded(&manifest_path).unwrap_or_else(|error| {
         fail(format!(
             "failed to read {}: {error}",
             manifest_path.display()
@@ -43,4 +45,26 @@ fn main() {
 
     println!("cargo:rerun-if-changed={}", manifest_path.display());
     println!("cargo:rustc-env=VYRE_NAGA_VERSION={naga_version}");
+}
+
+fn read_manifest_bounded(path: &std::path::Path) -> Result<String, String> {
+    let mut reader = fs::File::open(path).map_err(|error| error.to_string())?;
+    let mut bytes = Vec::new();
+    let mut total = 0u64;
+    let mut chunk = [0u8; 4096];
+    loop {
+        let read =
+            std::io::Read::read(&mut reader, &mut chunk).map_err(|error| error.to_string())?;
+        if read == 0 {
+            return String::from_utf8(bytes).map_err(|error| error.to_string());
+        }
+        let read = read as u64;
+        total = total.saturating_add(read);
+        if total > MAX_BUILD_MANIFEST_BYTES {
+            return Err(format!(
+                "manifest exceeds {MAX_BUILD_MANIFEST_BYTES} byte build-script cap"
+            ));
+        }
+        bytes.extend_from_slice(&chunk[..read as usize]);
+    }
 }

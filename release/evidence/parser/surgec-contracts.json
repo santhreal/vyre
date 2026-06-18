@@ -2,22 +2,22 @@
   "schema_version": 1,
   "component_id": "surgec",
   "role": "Security compiler consumer integration surface",
-  "root": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec",
+  "root": "/media/mukund-thiru/SanthData/Santh/libs/surge/surgec",
   "required_files": [
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/Cargo.toml",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/surge/surgec/Cargo.toml",
       "exists": true,
       "read_error": null,
       "source_bytes": 3915
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/lib.rs",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/surge/surgec/src/lib.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 4438
+      "source_bytes": 4533
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/README.md",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/surge/surgec/README.md",
       "exists": true,
       "read_error": null,
       "source_bytes": 5895
@@ -50,21 +50,21 @@
   "required_evidence_trees": [
     {
       "tree": "tests",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/tests",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/surge/surgec/tests",
       "exists": true,
-      "source_bytes": 2660288,
+      "source_bytes": 2661271,
       "unreadable_file_count": 0
     },
     {
       "tree": "benches",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/benches",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/surge/surgec/benches",
       "exists": true,
       "source_bytes": 23380,
       "unreadable_file_count": 0
     },
     {
       "tree": "fuzz",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/fuzz",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/surge/surgec/fuzz",
       "exists": true,
       "source_bytes": 9310,
       "unreadable_file_count": 0

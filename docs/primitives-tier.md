@@ -201,3 +201,9 @@ A community contributor writing `vyre-libs-vision` (image kernels)
 imports `vyre-primitives` with `features = ["math", "hash"]` and
 ships their image-specific compositions on top. They never have to
 know `vyre-libs-nn` exists. That's the moat.
+
+## Cross-crate promotion patch contract
+
+A primitive promotion across crate or tier boundaries is valid only when the same patch updates the crate graph, the tier rule, and an import-path migration test. The import-path migration test must name the old path, the canonical owner path, or the compatibility shim that keeps downstream code working.
+
+`check-tier-deps` owns dependency-direction validation. `lego-audit` owns composition and cross-dialect import validation. A promotion that satisfies only one gate is not owned.

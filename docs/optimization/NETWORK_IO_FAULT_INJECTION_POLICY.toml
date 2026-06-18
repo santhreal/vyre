@@ -1,0 +1,43 @@
+# Network and file I/O fault injection policy for VX-1304, VX-1305, VX-1308, VX-1309, VX-1312, and VX-1316.
+# Network latency, loss, corruption, bandwidth, and file I/O faults share one dependency and storage fault seam.
+
+schema = "vyre.ops.network_io_fault_injection_policy.v1"
+owner = "security_reliability"
+evidence_tokens = ["CHAOS_MESH_NETWORKCHAOS", "CHAOS_MESH_IOCHAOS", "OPENTELEMETRY_LOGS"]
+
+required_fields = [
+  "fault_id",
+  "fault_surface",
+  "injection_policy",
+  "selector_policy",
+  "expected_behavior_policy",
+  "timeout_retry_policy",
+  "data_integrity_policy",
+  "observation_policy",
+  "release_gate_effect",
+  "diagnostic",
+]
+
+[[fault]]
+fault_id = "network-delay-loss-dependency-resilience"
+fault_surface = "operator-api-artifact-download-registry-access-telemetry-export-and-release-health-dependency-network"
+injection_policy = "NetworkChaos-delay-loss-duplicate-corrupt-rate-or-bandwidth-action-with-latency-correlation-jitter-loss-and-duration-recorded"
+selector_policy = "namespace-label-selector-direction-peer-service-and-port-scope-recorded-before-injection"
+expected_behavior_policy = "bounded-timeout-actionable-diagnostic-retry-budget-and-no-unbounded-queue-growth"
+timeout_retry_policy = "timeout-retry-backoff-and-load-shedding-link-to-resource-budget-and-backpressure-policy"
+data_integrity_policy = "artifact-download-or-metadata-fetch-fails-closed-on-partial-corrupt-or-mismatched-digest"
+observation_policy = "record-trace-id-dependency-target-fault-parameters-error-class-retry-count-alert-id-and-SLO-impact"
+release_gate_effect = "unbounded-retry-partial-artifact-trust-or-silent-telemetry-loss-blocks-release-readiness"
+diagnostic = "VYRE_NETWORK_FAULT_RESILIENCE_REQUIRED"
+
+[[fault]]
+fault_id = "file-io-latency-fault-state-resilience"
+fault_surface = "cache-directory-rule-data-store-release-evidence-state-backup-and-PVC-backed-operator-state"
+injection_policy = "IOChaos-latency-fault-attrOverride-or-mistake-action-with-volumePath-path-percent-delay-and-duration-recorded"
+selector_policy = "target-Pod-volume-path-file-glob-percent-and-state-surface-owner-recorded-before-injection"
+expected_behavior_policy = "bounded-read-write-timeout-state-consistency-check-and-source-backed-rebuild-path"
+timeout_retry_policy = "filesystem-timeouts-do-not-block-shutdown-readiness-or-rollback-decision-path"
+data_integrity_policy = "partial-write-corruption-or-missing-cache-entry-triggers-rebuild-or-restore-not-payload-trust"
+observation_policy = "record-path-class-cache-id-state-schema-version-backup-id-error-code-rebuild-result-and-post-fault-SLI"
+release_gate_effect = "silent-state-corruption-or-cache-trust-after-IO-fault-blocks-recovery-and-detection-claim"
+diagnostic = "VYRE_IO_FAULT_RESILIENCE_REQUIRED"

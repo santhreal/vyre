@@ -6,7 +6,7 @@
 //! can turn a GPU regression into a green release.
 
 use crate::{Violation, ViolationKind};
-use anyhow::{Context, Result};
+use anyhow::Result;
 use std::path::Path;
 
 const FORBIDDEN_FRAGMENTS: &[&str] = &[
@@ -120,8 +120,7 @@ fn is_approved_parity_file(workspace_rel: &str) -> bool {
 }
 
 fn scan_file(path: &Path, workspace_rel: &str) -> Result<Vec<Violation>> {
-    let source =
-        std::fs::read_to_string(path).with_context(|| format!("read {}", path.display()))?;
+    let source = crate::read_source_bounded(path)?;
     if source
         .lines()
         .map(str::trim)

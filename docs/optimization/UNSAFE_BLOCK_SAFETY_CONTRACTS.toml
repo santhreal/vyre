@@ -1,0 +1,40 @@
+# Unsafe block safety contracts for VX-961 through VX-964.
+# Every unsafe capability has a small owner, explicit invariants, a safe wrapper, and an audit diagnostic.
+
+schema = "vyre.unsafe.block_safety_contract.v1"
+owner = "security_reliability"
+evidence_tokens = ["RUST_BOOK_UNSAFE", "RUST_UNSAFE_CODE_GUIDELINES"]
+
+required_fields = [
+  "unsafe_id",
+  "owning_crate",
+  "unsafe_capability",
+  "safety_invariant",
+  "preconditions",
+  "postconditions",
+  "safe_wrapper",
+  "audit_owner",
+  "diagnostic",
+]
+
+[[unsafe_block]]
+unsafe_id = "wire-buffer-view"
+owning_crate = "vyre-libs"
+unsafe_capability = "raw-pointer-or-slice-view"
+safety_invariant = "buffer length, alignment, and lifetime are proven before view construction"
+preconditions = ["non-null-for-nonzero-length", "aligned-for-target-type", "byte-range-within-buffer"]
+postconditions = ["safe-slice-view-does-not-outlive-buffer", "decode-errors-do-not-expose-raw-pointer"]
+safe_wrapper = "bounded decode view constructor"
+audit_owner = "foundation_serial"
+diagnostic = "VYRE_UNSAFE_WIRE_VIEW_CONTRACT_MISSING"
+
+[[unsafe_block]]
+unsafe_id = "backend-device-handle"
+owning_crate = "vyre-driver"
+unsafe_capability = "foreign-resource-handle"
+safety_invariant = "backend handle ownership and release order are recorded before dispatch"
+preconditions = ["handle-origin-known", "device-capability-digest-matches", "lifetime-bound-to-dispatch-context"]
+postconditions = ["handle-not-used-after-release", "diagnostics-do-not-log-private-device-identifiers"]
+safe_wrapper = "backend handle owner"
+audit_owner = "driver_shared"
+diagnostic = "VYRE_UNSAFE_BACKEND_HANDLE_CONTRACT_MISSING"

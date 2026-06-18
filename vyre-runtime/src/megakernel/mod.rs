@@ -27,12 +27,14 @@
 
 #[cfg(feature = "megakernel-batch")]
 pub mod advanced;
+pub mod automata_worklist;
 pub mod builder;
 pub mod descriptor;
 pub mod execution;
 pub mod handlers;
 pub mod io;
 pub mod ir_util;
+pub mod mixed_work;
 pub mod planner;
 pub mod policy;
 pub mod protocol;
@@ -55,15 +57,23 @@ pub mod workspace_layout;
 use vyre_driver::backend::BackendError;
 
 // Re-export protocol constants at the megakernel level for back-compat.
+pub use automata_worklist::{
+    AutomataStateIndex, AutomataWorklistEvidence, AutomataWorklistMode, AutomataWorklistPolicy,
+    AutomataWorklistRecommendation, AutomataWorklistRequest,
+    AUTOMATA_WORKLIST_EVIDENCE_SCHEMA_VERSION,
+};
 pub use builder::{
     build_program, build_program_jit, build_program_jit_slots, build_program_priority,
     build_program_priority_slots, build_program_sharded, build_program_sharded_no_io,
     build_program_sharded_once_slots, build_program_sharded_once_slots_control_report_shared,
     build_program_sharded_once_slots_shared, build_program_sharded_slots,
     build_program_sharded_slots_shared, build_program_sharded_with_io_polling,
-    build_program_sharded_with_workspace_adapter, build_program_with_self_loading_miss_handler,
-    persistent_body, persistent_body_jit, persistent_body_priority, persistent_body_priority_slots,
+    build_program_sharded_with_workspace_adapter, persistent_body, persistent_body_jit,
+    persistent_body_priority, persistent_body_priority_slots,
+    try_build_program_with_self_loading_miss_handler,
 };
+#[cfg(any(test, feature = "legacy-infallible"))]
+pub use builder::build_program_with_self_loading_miss_handler;
 pub use descriptor::{
     BatchDescriptor, BuiltinOpcode, PackedOpDescriptor, SlotDescriptor, SlotOpcode, WindowClass,
     WindowDescriptor,
@@ -73,6 +83,11 @@ pub use execution::{
 };
 pub use handlers::OpcodeHandler;
 pub use io::{IoCompletion, IoRequest, MegakernelIoQueue, IO_SLOT_COUNT, IO_SLOT_WORDS};
+pub use mixed_work::{
+    mixed_work_protocol_evidence, validate_mixed_work_protocol, MixedWorkProtocolError,
+    MixedWorkProtocolEvidence, MixedWorkProtocolPlan, MixedWorkQueueClass, MixedWorkUnit,
+    MixedWorkUnitType, OutputSlabId, ResidentArtifactId, MIXED_WORK_PROTOCOL_SCHEMA_VERSION,
+};
 #[cfg(feature = "self-substrate-adapters")]
 pub use planner::{
     build_bellman_tn_order_program, build_kfac_autotune_step_program,
@@ -83,7 +98,6 @@ pub use planner::{
 pub use planner::{
     build_scallop_lineage_with_program_and_scratch, default_worker_groups_from_limits,
     dispatch_grid_for, padded_slot_count, plan_compact_fusion_into,
-    prune_redundant_work_items_into, prune_redundant_work_items_with_scratch_into,
     select_fused_subset, select_fused_subset_compact, select_fused_subset_compact_into,
     select_fused_subset_into, select_fused_subset_with_rate, select_optimal_fused_subset,
     try_detect_cross_arm_redundancy, try_prune_redundant_work_items_into,
@@ -93,11 +107,18 @@ pub use planner::{
     MegakernelLaunchGeometry, MegakernelReport, MegakernelSizingPolicy, MegakernelTelemetry,
     MegakernelWorkItem, MegakernelWorkloadHints, RedundantWorkItemPruneScratch,
 };
+#[cfg(any(test, feature = "legacy-infallible"))]
+pub use planner::{prune_redundant_work_items_into, prune_redundant_work_items_with_scratch_into};
+#[cfg(any(test, feature = "legacy-infallible"))]
+pub use policy::{diffuse_priority_across_siblings, diffuse_priority_across_siblings_into};
 pub use policy::{
-    diffuse_priority_across_siblings, diffuse_priority_across_siblings_into,
-    MegakernelDispatchTopology, MegakernelExecutionMode, MegakernelLaunchCacheStats,
-    MegakernelLaunchPolicy, MegakernelLaunchRecommendation, MegakernelLaunchRequest,
-    MegakernelQueuePressure, PriorityRequeueAccounting,
+    try_diffuse_priority_across_siblings, try_diffuse_priority_across_siblings_into,
+    MegakernelDispatchTopology, MegakernelExecutionMode, MegakernelGraphBlasSwitchClass,
+    MegakernelLaunchCacheStats, MegakernelLaunchPolicy, MegakernelLaunchRecommendation,
+    MegakernelLaunchRequest, MegakernelPromotionEvidence, MegakernelPromotionRoute,
+    MegakernelQueuePressure, MegakernelTopologyEvidence, PriorityDrainReason,
+    PriorityDrainRecommendation, PriorityRequeueAccounting, HOT_WINDOW_PROMOTION_EVIDENCE_SCHEMA_VERSION,
+    PRIORITY_COUNTER_DRAIN_FIX, PRIORITY_COUNTER_DRAIN_HEADROOM, TOPOLOGY_EVIDENCE_SCHEMA_VERSION,
 };
 pub use protocol::{
     control, control_byte_len, count_done_ring_slots, debug, debug_log_byte_len, encode_control,
@@ -109,7 +130,13 @@ pub use protocol::{
     DebugRecord, ProtocolError, ARG0_WORD, ARGS_PER_SLOT, CONTROL_MIN_WORDS, OPCODE_WORD,
     PRIORITY_WORD, SLOT_WORDS, STATUS_WORD, TENANT_WORD,
 };
+pub use protocol_api::RingSlotTransition;
 pub use readback::{MegakernelReadback, MegakernelReadbackCounters};
+pub use telemetry::{
+    MegakernelRuntimeEvidence, RuntimeEvidenceMetricCoverage, RuntimeEvidenceMetricFamily,
+    TelemetryDecodeCapacityEvidence, TelemetryDecodeScratch, RUNTIME_IO_EVIDENCE_SCHEMA_VERSION,
+    TELEMETRY_DECODE_CAPACITY_SCHEMA_VERSION,
+};
 pub use recovery::{
     backend_error_indicates_device_loss, MegakernelRecoveryDecision, MegakernelRecoveryPolicy,
 };

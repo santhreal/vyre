@@ -71,13 +71,76 @@ where
     }
 }
 
+/// The first way a sorted index slice fails to be a dense permutation of
+/// `0..expected_len`. Distinguishing these lets callers emit a remediation that
+/// names the actual defect (a duplicate aliases two descriptors onto one logical
+/// slot; a sparse map skips one; a length mismatch has the wrong cardinality)
+/// instead of a generic "not dense".
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DensePermutationDefect {
+    /// After sorting, `index` sits at `slot` with `index < slot`: a value
+    /// repeated earlier, so two descriptors alias one logical slot.
+    Duplicate {
+        /// The repeated value found below its sorted slot position.
+        index: usize,
+        /// The sorted slot position at which the duplicate surfaced.
+        slot: usize,
+    },
+    /// After sorting, `index` sits at `slot` with `index > slot`: a gap, so a
+    /// logical slot in `0..expected_len` is never mapped.
+    Sparse {
+        /// The value found above its sorted slot position.
+        index: usize,
+        /// The sorted slot position whose dense value (`slot`) is missing.
+        slot: usize,
+    },
+    /// Every present index was dense but the cardinality is wrong (the map is
+    /// truncated or over-long relative to `expected_len`).
+    LengthMismatch {
+        /// The number of indices actually present.
+        resolved: usize,
+        /// The dense cardinality the map was required to cover.
+        expected: usize,
+    },
+}
+
+/// Classify whether `sorted_indices` is a dense permutation of `0..expected_len`
+/// — each value in `0..expected_len` present exactly once.
+///
+/// Callers MUST pass indices already sorted ascending (e.g. via
+/// [`sort_unstable_if_needed`]); the classification is defined on sorted slot
+/// position. This is the single source of the dense-index-map invariant shared
+/// by every resident/graph descriptor→logical-slot map; format the returned
+/// [`DensePermutationDefect`] into a context-specific message at the call site.
+pub fn classify_dense_permutation(
+    sorted_indices: &[usize],
+    expected_len: usize,
+) -> Result<(), DensePermutationDefect> {
+    for (slot, &index) in sorted_indices.iter().enumerate() {
+        if index != slot {
+            return Err(if index < slot {
+                DensePermutationDefect::Duplicate { index, slot }
+            } else {
+                DensePermutationDefect::Sparse { index, slot }
+            });
+        }
+    }
+    if sorted_indices.len() != expected_len {
+        return Err(DensePermutationDefect::LengthMismatch {
+            resolved: sorted_indices.len(),
+            expected: expected_len,
+        });
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use std::cell::Cell;
 
     use super::{
-        iter_is_monotonic_by_key, sort_by_key_if_needed, sort_unstable_by_key_if_needed,
-        sort_unstable_if_needed,
+        classify_dense_permutation, iter_is_monotonic_by_key, sort_by_key_if_needed,
+        sort_unstable_by_key_if_needed, sort_unstable_if_needed, DensePermutationDefect,
     };
 
     #[test]
@@ -156,6 +219,74 @@ mod tests {
         sort_unstable_if_needed(&mut items);
 
         assert_eq!(items, [0, 1, 2]);
+    }
+
+    #[test]
+    fn classify_dense_permutation_distinguishes_dense_duplicate_sparse_and_length() {
+        assert_eq!(classify_dense_permutation(&[0, 1, 2], 3), Ok(()));
+        assert_eq!(classify_dense_permutation(&[], 0), Ok(()));
+        assert_eq!(
+            classify_dense_permutation(&[0, 0, 2], 3),
+            Err(DensePermutationDefect::Duplicate { index: 0, slot: 1 }),
+            "Fix: a repeated value at a later sorted slot is a duplicate, not a generic non-dense map."
+        );
+        assert_eq!(
+            classify_dense_permutation(&[0, 2, 3], 3),
+            Err(DensePermutationDefect::Sparse { index: 2, slot: 1 }),
+            "Fix: a value above its sorted slot is a sparse gap, not a duplicate."
+        );
+        assert_eq!(
+            classify_dense_permutation(&[0, 1], 3),
+            Err(DensePermutationDefect::LengthMismatch {
+                resolved: 2,
+                expected: 3
+            }),
+            "Fix: a dense-but-short map is a length mismatch."
+        );
+        assert_eq!(
+            classify_dense_permutation(&[0, 1, 2, 3], 3),
+            Err(DensePermutationDefect::LengthMismatch {
+                resolved: 4,
+                expected: 3
+            }),
+            "Fix: a dense-but-long map is a length mismatch."
+        );
+    }
+
+    #[test]
+    fn classify_dense_permutation_matches_sorted_reference_over_generated_maps() {
+        // For every permutation-with-defect we can synthesize, the classifier's
+        // verdict must agree with an independent set-based reference oracle.
+        for len in 0usize..=24 {
+            let dense: Vec<usize> = (0..len).collect();
+            assert_eq!(classify_dense_permutation(&dense, len), Ok(()));
+
+            for collide in 0..len {
+                // Replace one slot's value with a duplicate of slot 0's value (0),
+                // then re-sort: this guarantees a duplicate, never a sparse gap.
+                let mut indices = dense.clone();
+                indices[collide] = 0;
+                sort_unstable_if_needed(&mut indices);
+                let verdict = classify_dense_permutation(&indices, len);
+                let distinct: std::collections::BTreeSet<usize> =
+                    indices.iter().copied().collect();
+                let reference_is_dense =
+                    distinct.len() == len && indices.len() == len && *distinct.iter().max().unwrap_or(&0) < len.max(1);
+                if collide == 0 {
+                    // collide==0 leaves the map unchanged: still dense.
+                    assert_eq!(verdict, Ok(()));
+                } else {
+                    assert!(verdict.is_err(), "len={len} collide={collide} must be a defect");
+                    assert!(!reference_is_dense || verdict.is_ok());
+                    assert!(matches!(
+                        verdict,
+                        Err(DensePermutationDefect::Duplicate { .. })
+                            | Err(DensePermutationDefect::Sparse { .. })
+                            | Err(DensePermutationDefect::LengthMismatch { .. })
+                    ));
+                }
+            }
+        }
     }
 
     #[test]

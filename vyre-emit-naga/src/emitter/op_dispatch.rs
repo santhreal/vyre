@@ -3,7 +3,11 @@
 //! two helpers that only `emit_op` calls (`global_invocation_axis`,
 //! `emit_opaque_expr`).
 
+use std::fmt::Write as _;
+use std::mem::{self, Discriminant};
+
 use naga::{BinaryOperator, Expression, Literal, LocalVariable, ScalarKind, Span, Statement};
+use rustc_hash::FxHashMap;
 use vyre_foundation::ir::{BinOp, DataType, UnOp};
 use vyre_lower::{KernelBody, KernelOp, KernelOpKind, LiteralValue};
 
@@ -14,6 +18,253 @@ use super::op_lookup::{
 use super::BodyBuilder;
 use crate::EmitError;
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum OpDispatchRoute {
+    Literal,
+    LocalInvocationId,
+    GlobalInvocationId,
+    WorkgroupId,
+    SubgroupLocalId,
+    SubgroupSize,
+    LoopIndex,
+    BufferLength,
+    Load,
+    Store,
+    Copy,
+    BinOpKind,
+    UnOpKind,
+    Cast,
+    Select,
+    Fma,
+    StructuredIfThen,
+    StructuredIfThenElse,
+    StructuredBlock,
+    StructuredForLoop,
+    AsyncLoad,
+    AsyncStore,
+    AsyncWait,
+    Trap,
+    Resume,
+    Barrier,
+    Return,
+    SubgroupBallot,
+    SubgroupAdd,
+    SubgroupShuffle,
+    Atomic,
+    IndirectDispatch,
+    MatrixMma,
+    Call,
+    OpaqueExpr,
+    OpaqueNode,
+    LoopCarrierInit,
+    LoopCarrier,
+    LoopCarrierEnd,
+}
+
+pub(super) struct OpDispatchRouteCache {
+    routes: FxHashMap<Discriminant<KernelOpKind>, OpDispatchRoute>,
+    #[cfg(test)]
+    hits: usize,
+}
+
+impl Default for OpDispatchRouteCache {
+    fn default() -> Self {
+        Self {
+            routes: FxHashMap::default(),
+            #[cfg(test)]
+            hits: 0,
+        }
+    }
+}
+
+impl OpDispatchRouteCache {
+    fn route(&mut self, kind: &KernelOpKind) -> OpDispatchRoute {
+        let key = mem::discriminant(kind);
+        if let Some(route) = self.routes.get(&key).copied() {
+            #[cfg(test)]
+            {
+                self.hits += 1;
+            }
+            return route;
+        }
+        let route = classify_op_dispatch_route(kind);
+        self.routes.insert(key, route);
+        route
+    }
+}
+
+#[cfg(test)]
+pub(crate) fn op_dispatch_route_cache_probe(kinds: &[KernelOpKind]) -> (bool, usize) {
+    let mut cache = OpDispatchRouteCache::default();
+    let mut parity = true;
+    for kind in kinds {
+        let uncached = classify_op_dispatch_route(kind);
+        let cached = cache.route(kind);
+        parity &= uncached == cached;
+    }
+    (parity, cache.hits)
+}
+
+fn classify_op_dispatch_route(kind: &KernelOpKind) -> OpDispatchRoute {
+    match kind {
+        KernelOpKind::Literal => OpDispatchRoute::Literal,
+        KernelOpKind::LocalInvocationId => OpDispatchRoute::LocalInvocationId,
+        KernelOpKind::GlobalInvocationId => OpDispatchRoute::GlobalInvocationId,
+        KernelOpKind::WorkgroupId => OpDispatchRoute::WorkgroupId,
+        KernelOpKind::SubgroupLocalId => OpDispatchRoute::SubgroupLocalId,
+        KernelOpKind::SubgroupSize => OpDispatchRoute::SubgroupSize,
+        KernelOpKind::LoopIndex { .. } => OpDispatchRoute::LoopIndex,
+        KernelOpKind::BufferLength => OpDispatchRoute::BufferLength,
+        KernelOpKind::LoadGlobal | KernelOpKind::LoadShared | KernelOpKind::LoadConstant => {
+            OpDispatchRoute::Load
+        }
+        KernelOpKind::StoreGlobal | KernelOpKind::StoreShared => OpDispatchRoute::Store,
+        KernelOpKind::Copy => OpDispatchRoute::Copy,
+        KernelOpKind::BinOpKind(_) => OpDispatchRoute::BinOpKind,
+        KernelOpKind::UnOpKind(_) => OpDispatchRoute::UnOpKind,
+        KernelOpKind::Cast { .. } => OpDispatchRoute::Cast,
+        KernelOpKind::Select => OpDispatchRoute::Select,
+        KernelOpKind::Fma => OpDispatchRoute::Fma,
+        KernelOpKind::StructuredIfThen => OpDispatchRoute::StructuredIfThen,
+        KernelOpKind::StructuredIfThenElse => OpDispatchRoute::StructuredIfThenElse,
+        KernelOpKind::StructuredBlock | KernelOpKind::Region { .. } => {
+            OpDispatchRoute::StructuredBlock
+        }
+        KernelOpKind::StructuredForLoop { .. } => OpDispatchRoute::StructuredForLoop,
+        KernelOpKind::AsyncLoad { .. } => OpDispatchRoute::AsyncLoad,
+        KernelOpKind::AsyncStore { .. } => OpDispatchRoute::AsyncStore,
+        KernelOpKind::AsyncWait { .. } => OpDispatchRoute::AsyncWait,
+        KernelOpKind::Trap { .. } => OpDispatchRoute::Trap,
+        KernelOpKind::Resume { .. } => OpDispatchRoute::Resume,
+        KernelOpKind::Barrier { .. } => OpDispatchRoute::Barrier,
+        KernelOpKind::Return => OpDispatchRoute::Return,
+        KernelOpKind::SubgroupBallot => OpDispatchRoute::SubgroupBallot,
+        KernelOpKind::SubgroupAdd => OpDispatchRoute::SubgroupAdd,
+        KernelOpKind::SubgroupShuffle => OpDispatchRoute::SubgroupShuffle,
+        KernelOpKind::Atomic { .. } => OpDispatchRoute::Atomic,
+        KernelOpKind::IndirectDispatch { .. } => OpDispatchRoute::IndirectDispatch,
+        KernelOpKind::MatrixMma { .. } => OpDispatchRoute::MatrixMma,
+        KernelOpKind::Call { .. } => OpDispatchRoute::Call,
+        KernelOpKind::OpaqueExpr(_) => OpDispatchRoute::OpaqueExpr,
+        KernelOpKind::OpaqueNode(_) => OpDispatchRoute::OpaqueNode,
+        KernelOpKind::LoopCarrierInit { .. } => OpDispatchRoute::LoopCarrierInit,
+        KernelOpKind::LoopCarrier { .. } => OpDispatchRoute::LoopCarrier,
+        KernelOpKind::LoopCarrierEnd { .. } => OpDispatchRoute::LoopCarrierEnd,
+    }
+}
+
+macro_rules! with_route_kind {
+    ($op:expr, $route:expr, $pattern:pat => $body:expr) => {
+        match &$op.kind {
+            $pattern => $body,
+            _ => Err(route_mismatch($route)),
+        }
+    };
+}
+
+fn route_mismatch(route: OpDispatchRoute) -> EmitError {
+    let mut message: String = Default::default();
+    message.push_str("internal Naga op-dispatch route mismatch for ");
+    let _ = write!(&mut message, "{route:?}");
+    EmitError::InvalidDescriptor(message)
+}
+
+fn missing_literal_pool_index_message(literal_index: u32) -> String {
+    let mut message: String = Default::default();
+    message.push_str("literal op references missing literal-pool index ");
+    let _ = write!(&mut message, "{literal_index}");
+    message
+}
+
+fn missing_binding_slot_message(kind: &KernelOpKind) -> String {
+    let mut message: String = Default::default();
+    let _ = write!(&mut message, "{kind:?} missing binding slot");
+    message
+}
+
+fn non_byte_load_route_message(data_type: DataType) -> String {
+    let mut message: String = Default::default();
+    message.push_str("emit_byte_element_load called with non-byte DataType ");
+    let _ = write!(&mut message, "{data_type:?}");
+    message.push_str("; this is an emitter routing bug");
+    message
+}
+
+fn call_reached_message(op_id: &str) -> String {
+    let mut message: String = Default::default();
+    message.push_str("Call op `");
+    message.push_str(op_id);
+    message.push_str(
+        "` reached descriptor Naga emission. Fix: expand calls into KernelDescriptor ops before emission.",
+    );
+    message
+}
+
+fn opaque_node_message(extension_kind: &str, payload_len: usize) -> String {
+    let mut message: String = Default::default();
+    message.push_str("opaque node `");
+    message.push_str(extension_kind);
+    message.push_str("` with ");
+    let _ = write!(&mut message, "{payload_len}");
+    message.push_str(
+        " payload bytes has no descriptor Naga lowering. Fix: lower this extension into concrete KernelDescriptor ops before descriptor emission.",
+    );
+    message
+}
+
+fn wide_literal_payload_message(extension_kind: &str, payload_len: usize) -> String {
+    let mut message: String = Default::default();
+    message.push_str("wide-literal opaque `");
+    message.push_str(extension_kind);
+    message.push_str("` carries ");
+    let _ = write!(&mut message, "{payload_len}");
+    message.push_str(
+        " payload bytes, expected 8. Fix: encode literals through Expr::u64/i64/f64 builders.",
+    );
+    message
+}
+
+fn u64_literal_too_wide_message(value: u64) -> String {
+    let mut message: String = Default::default();
+    message.push_str("u64 literal ");
+    let _ = write!(&mut message, "{value}");
+    message
+        .push_str(" exceeds u32::MAX. Fix: split wide integers before descriptor Naga emission.");
+    message
+}
+
+fn i64_literal_outside_i32_message(value: i64) -> String {
+    let mut message: String = Default::default();
+    message.push_str("i64 literal ");
+    let _ = write!(&mut message, "{value}");
+    message.push_str(
+        " is outside i32 range. Fix: split wide integers before descriptor Naga emission.",
+    );
+    message
+}
+
+fn wide_literal_kind_gate_message(kind: &str) -> String {
+    let mut message: String = Default::default();
+    message.push_str("wide-literal kind `");
+    message.push_str(kind);
+    message.push_str(
+        "` reached descriptor opaque emission after the kind gate. Fix: update the kind gate and decoder together.",
+    );
+    message
+}
+
+fn opaque_expression_message(extension_kind: &str, extension_id: u32) -> String {
+    let mut message: String = Default::default();
+    message.push_str("opaque expression `");
+    message.push_str(extension_kind);
+    message.push_str("` (id=");
+    let _ = write!(&mut message, "{extension_id:#010x}");
+    message.push_str(
+        ") has no descriptor Naga lowering. Fix: lower this extension into concrete KernelDescriptor ops or add a descriptor extension emitter before Naga emission.",
+    );
+    message
+}
+
 impl BodyBuilder<'_> {
     pub(super) fn emit_body(&mut self, body: &KernelBody) -> Result<(), EmitError> {
         for op in &body.ops {
@@ -23,15 +274,14 @@ impl BodyBuilder<'_> {
     }
 
     pub(super) fn emit_op(&mut self, body: &KernelBody, op: &KernelOp) -> Result<(), EmitError> {
-        match &op.kind {
-            KernelOpKind::Literal => {
+        let route = self.op_dispatch_routes.route(&op.kind);
+        match route {
+            OpDispatchRoute::Literal => {
                 let literal_index = *op.operands.first().ok_or_else(|| {
-                    EmitError::InvalidDescriptor("literal op missing literal-pool index".to_owned())
+                    EmitError::InvalidDescriptor("literal op missing literal-pool index".into())
                 })?;
                 let literal = body.literals.get(literal_index as usize).ok_or_else(|| {
-                    EmitError::InvalidDescriptor(format!(
-                        "literal op references missing literal-pool index {literal_index}"
-                    ))
+                    EmitError::InvalidDescriptor(missing_literal_pool_index_message(literal_index))
                 })?;
                 let handle = if let LiteralValue::F32(value) = literal {
                     if value.is_finite() {
@@ -57,28 +307,30 @@ impl BodyBuilder<'_> {
                 let ty = self.literal_type(literal);
                 self.bind_result_typed(op, handle, ty)
             }
-            KernelOpKind::LocalInvocationId => self.emit_builtin_axis(op, self.builtins.local),
-            KernelOpKind::GlobalInvocationId => self.emit_builtin_axis(op, self.builtins.global),
-            KernelOpKind::WorkgroupId => self.emit_builtin_axis(op, self.builtins.workgroup),
-            KernelOpKind::SubgroupLocalId => {
+            OpDispatchRoute::LocalInvocationId => self.emit_builtin_axis(op, self.builtins.local),
+            OpDispatchRoute::GlobalInvocationId => self.emit_builtin_axis(op, self.builtins.global),
+            OpDispatchRoute::WorkgroupId => self.emit_builtin_axis(op, self.builtins.workgroup),
+            OpDispatchRoute::SubgroupLocalId => {
                 self.emit_scalar_builtin(op, self.builtins.subgroup_local, "SubgroupLocalId")
             }
-            KernelOpKind::SubgroupSize => {
+            OpDispatchRoute::SubgroupSize => {
                 self.emit_scalar_builtin(op, self.builtins.subgroup_size, "SubgroupSize")
             }
-            KernelOpKind::LoopIndex { loop_var } => self.emit_loop_index(op, loop_var),
-            KernelOpKind::BufferLength => {
+            OpDispatchRoute::LoopIndex => with_route_kind!(
+                op,
+                route,
+                KernelOpKind::LoopIndex { loop_var } => self.emit_loop_index(op, loop_var)
+            ),
+            OpDispatchRoute::BufferLength => {
                 let slot = *op.operands.first().ok_or_else(|| {
-                    EmitError::InvalidDescriptor(
-                        "BufferLength op missing binding slot".to_owned(),
-                    )
+                    EmitError::InvalidDescriptor("BufferLength op missing binding slot".into())
                 })?;
                 let value = self.buffer_len_expr(slot)?;
                 self.bind_result_typed(op, value, self.types.u32_ty)
             }
-            KernelOpKind::LoadGlobal | KernelOpKind::LoadShared | KernelOpKind::LoadConstant => {
+            OpDispatchRoute::Load => {
                 let slot = *op.operands.first().ok_or_else(|| {
-                    EmitError::InvalidDescriptor(format!("{:?} missing binding slot", op.kind))
+                    EmitError::InvalidDescriptor(missing_binding_slot_message(&op.kind))
                 })?;
                 // Byte-element bindings (U8/I8) are packed into array<u32>
                 // by the WGSL emitter (no native byte storage). The IR-level
@@ -97,11 +349,11 @@ impl BodyBuilder<'_> {
                         .get(&slot)
                         .ok_or_else(|| EmitError::InvalidBinding {
                             slot,
-                            reason: "no scalar type was recorded for this slot".to_owned(),
+                            reason: "no scalar type was recorded for this slot".into(),
                         })?;
                 self.bind_result_typed(op, value, ty)
             }
-            KernelOpKind::StoreGlobal | KernelOpKind::StoreShared => {
+            OpDispatchRoute::Store => {
                 let slot = self.slot_operand(op, 0)?;
                 // Byte-element bindings (U8/I8) need a read-modify-write
                 // through the array<u32> word so the byte at `index`
@@ -125,12 +377,12 @@ impl BodyBuilder<'_> {
                     .push(Statement::Store { pointer, value }, Span::UNDEFINED);
                 Ok(())
             }
-            KernelOpKind::Copy => {
+            OpDispatchRoute::Copy => {
                 let value = self.value_operand(op, 0)?;
                 let ty = self.value_type_operand(op, 0)?;
                 let local = self.function.local_variables.append(
                     LocalVariable {
-                        name: op.result.map(|id| format!("vyre_copy_{id}")),
+                        name: None,
                         ty,
                         init: None,
                     },
@@ -145,8 +397,12 @@ impl BodyBuilder<'_> {
                 let snapshot = self.append_expr(Expression::Load { pointer });
                 self.bind_result_typed(op, snapshot, ty)
             }
-            KernelOpKind::BinOpKind(binop) => self.emit_binop(op, *binop),
-            KernelOpKind::UnOpKind(unop) => {
+            OpDispatchRoute::BinOpKind => with_route_kind!(
+                op,
+                route,
+                KernelOpKind::BinOpKind(binop) => self.emit_binop(op, *binop)
+            ),
+            OpDispatchRoute::UnOpKind => with_route_kind!(op, route, KernelOpKind::UnOpKind(unop) => {
                 let expr = self.value_operand(op, 0)?;
                 let ty = match unop {
                     UnOp::LogicalNot | UnOp::IsNan | UnOp::IsInf | UnOp::IsFinite => {
@@ -211,8 +467,8 @@ impl BodyBuilder<'_> {
                     self.append_expr(Expression::Unary { op: naga_op, expr })
                 };
                 self.bind_result_typed(op, value, ty)
-            }
-            KernelOpKind::Cast { target } => {
+            }),
+            OpDispatchRoute::Cast => with_route_kind!(op, route, KernelOpKind::Cast { target } => {
                 let expr = self.value_operand(op, 0)?;
                 let (kind, width) = scalar_cast_target(target)?;
                 let value = self.append_expr(Expression::As {
@@ -222,8 +478,8 @@ impl BodyBuilder<'_> {
                 });
                 let ty = self.type_for_data_type(target)?;
                 self.bind_result_typed(op, value, ty)
-            }
-            KernelOpKind::Select => {
+            }),
+            OpDispatchRoute::Select => {
                 let condition = self.value_operand(op, 0)?;
                 let accept = self.value_operand(op, 1)?;
                 let reject = self.value_operand(op, 2)?;
@@ -246,7 +502,7 @@ impl BodyBuilder<'_> {
                 });
                 self.bind_result_typed(op, value, ty)
             }
-            KernelOpKind::Fma => {
+            OpDispatchRoute::Fma => {
                 let arg = self.value_operand(op, 0)?;
                 let arg1 = Some(self.value_operand(op, 1)?);
                 let arg2 = Some(self.value_operand(op, 2)?);
@@ -260,67 +516,95 @@ impl BodyBuilder<'_> {
                 let ty = self.value_type_operand(op, 0)?;
                 self.bind_result_typed(op, value, ty)
             }
-            KernelOpKind::StructuredIfThen => {
+            OpDispatchRoute::StructuredIfThen => {
                 self.emit_structured_if(body, op, &[1])
             }
-            KernelOpKind::StructuredIfThenElse => {
+            OpDispatchRoute::StructuredIfThenElse => {
                 self.emit_structured_if(body, op, &[1, 2])
             }
-            KernelOpKind::StructuredBlock | KernelOpKind::Region { .. } => {
+            OpDispatchRoute::StructuredBlock => {
                 self.emit_structured_block(body, op)
             }
-            KernelOpKind::StructuredForLoop { loop_var } => {
+            OpDispatchRoute::StructuredForLoop => with_route_kind!(
+                op,
+                route,
+                KernelOpKind::StructuredForLoop { loop_var } => {
                 self.emit_structured_for_loop(body, op, loop_var)
-            }
-            KernelOpKind::AsyncLoad { .. } => self.emit_async_load(op),
-            KernelOpKind::AsyncStore { .. } => self.emit_async_store(op),
-            KernelOpKind::AsyncWait { .. } => Ok(()),
-            KernelOpKind::Trap { tag } => self.emit_trap(op, tag),
-            KernelOpKind::Resume { .. } => Ok(()),
-            KernelOpKind::Barrier { ordering } => {
+                }
+            ),
+            OpDispatchRoute::AsyncLoad => self.emit_async_load(op),
+            OpDispatchRoute::AsyncStore => self.emit_async_store(op),
+            OpDispatchRoute::AsyncWait => Ok(()),
+            OpDispatchRoute::Trap => with_route_kind!(
+                op,
+                route,
+                KernelOpKind::Trap { tag } => self.emit_trap(op, tag)
+            ),
+            OpDispatchRoute::Resume => Ok(()),
+            OpDispatchRoute::Barrier => with_route_kind!(op, route, KernelOpKind::Barrier { ordering } => {
                 let barrier = barrier_flags(*ordering)?;
                 self.function
                     .body
                     .push(Statement::Barrier(barrier), Span::UNDEFINED);
                 Ok(())
-            }
-            KernelOpKind::Return => {
+            }),
+            OpDispatchRoute::Return => {
                 self.function
                     .body
                     .push(Statement::Return { value: None }, Span::UNDEFINED);
                 Ok(())
             }
-            KernelOpKind::SubgroupBallot => {
+            OpDispatchRoute::SubgroupBallot => {
                 self.emit_subgroup_ballot(op)
             }
-            KernelOpKind::SubgroupAdd => {
+            OpDispatchRoute::SubgroupAdd => {
                 self.emit_subgroup_add(op)
             }
-            KernelOpKind::SubgroupShuffle => {
+            OpDispatchRoute::SubgroupShuffle => {
                 self.emit_subgroup_shuffle(op)
             }
-            KernelOpKind::Atomic {
+            OpDispatchRoute::Atomic => with_route_kind!(op, route, KernelOpKind::Atomic {
                 op: atomic_op,
                 ordering: _,
             } => {
                 self.emit_atomic(op, *atomic_op)
-            }
-            KernelOpKind::IndirectDispatch { .. } => Ok(()),
-            KernelOpKind::MatrixMma { .. } => Err(EmitError::UnsupportedOp(op.clone())),
-            KernelOpKind::Call { op_id } => Err(EmitError::InvalidDescriptor(format!(
-                "Call op `{op_id}` reached descriptor Naga emission. Fix: expand calls into KernelDescriptor ops before emission."
-            ))),
-            KernelOpKind::OpaqueExpr(data) => {
+            }),
+            OpDispatchRoute::IndirectDispatch => Ok(()),
+            OpDispatchRoute::MatrixMma => Err(EmitError::InvalidDescriptor(
+                "MatrixMma reached descriptor Naga emission. Fix: route MatrixMma through a concrete tensor-core backend or lower it before Naga emission.".into(),
+            )),
+            OpDispatchRoute::Call => with_route_kind!(
+                op,
+                route,
+                KernelOpKind::Call { op_id } => {
+                    Err(EmitError::InvalidDescriptor(call_reached_message(op_id.as_ref())))
+                }
+            ),
+            OpDispatchRoute::OpaqueExpr => with_route_kind!(op, route, KernelOpKind::OpaqueExpr(data) => {
                 self.emit_opaque_expr(op, data.extension_id, &data.extension_kind, &data.payload)
-            }
-            KernelOpKind::OpaqueNode(data) => Err(EmitError::InvalidDescriptor(format!(
-                "opaque node `{}` with {} payload bytes has no descriptor Naga lowering. Fix: lower this extension into concrete KernelDescriptor ops before descriptor emission.",
-                data.extension_kind,
-                data.payload.len()
-            ))),
-            KernelOpKind::LoopCarrierInit { name } => self.emit_loop_carrier_init(op, name),
-            KernelOpKind::LoopCarrier { name } => self.emit_loop_carrier_read(op, name),
-            KernelOpKind::LoopCarrierEnd { name } => self.emit_loop_carrier_end(op, name),
+            }),
+            OpDispatchRoute::OpaqueNode => with_route_kind!(
+                op,
+                route,
+                KernelOpKind::OpaqueNode(data) => Err(EmitError::InvalidDescriptor(
+                    opaque_node_message(&data.extension_kind, data.payload.len())
+                ))
+            ),
+            OpDispatchRoute::LoopCarrierInit => with_route_kind!(
+                op,
+                route,
+                KernelOpKind::LoopCarrierInit { name } => self.emit_loop_carrier_init(op, name)
+            ),
+            OpDispatchRoute::LoopCarrier => with_route_kind!(
+                op,
+                route,
+                KernelOpKind::LoopCarrier { name } => self.emit_loop_carrier_read(op, name)
+            ),
+            OpDispatchRoute::LoopCarrierEnd => with_route_kind!(
+                op,
+                route,
+                KernelOpKind::LoopCarrierEnd { name } => self.emit_loop_carrier_end(op, name)
+            ),
         }
     }
 
@@ -351,8 +635,7 @@ impl BodyBuilder<'_> {
         let child_body_idxs: Vec<u32> = op.operands.iter().take(1).copied().collect();
         let new_targets = self.collect_child_carried_ids(body, op_pos, &child_body_idxs);
 
-        let mut pre_init: Vec<(u32, naga::Handle<Expression>)> =
-            Vec::with_capacity(new_targets.len());
+        let mut pre_init: Vec<(u32, naga::Handle<Expression>)> = Vec::default();
         for id in &new_targets {
             self.loop_carrier_targets.insert(*id);
             if let Some(handle) = self.value_handle_for_id(*id) {
@@ -421,8 +704,7 @@ impl BodyBuilder<'_> {
         // the pre-if value. value_handle_for_id materializes the prior
         // value via fresh Load when the cached handle's emit-block has
         // closed; otherwise it returns the cached handle directly.
-        let mut pre_init: Vec<(u32, naga::Handle<Expression>)> =
-            Vec::with_capacity(new_targets.len());
+        let mut pre_init: Vec<(u32, naga::Handle<Expression>)> = Vec::default();
         for id in &new_targets {
             self.loop_carrier_targets.insert(*id);
             if let Some(handle) = self.value_handle_for_id(*id) {
@@ -882,42 +1164,39 @@ impl BodyBuilder<'_> {
             "vyre.literal.u64" | "vyre.literal.i64" | "vyre.literal.f64"
         ) {
             let bytes: [u8; 8] = payload.try_into().map_err(|_| {
-                EmitError::InvalidDescriptor(format!(
-                    "wide-literal opaque `{extension_kind}` carries {} payload bytes, expected 8. Fix: encode literals through Expr::u64/i64/f64 builders.",
-                    payload.len()
+                EmitError::InvalidDescriptor(wide_literal_payload_message(
+                    extension_kind,
+                    payload.len(),
                 ))
             })?;
             let (literal, ty) = match extension_kind {
                 "vyre.literal.u64" => {
                     let value = u64::from_le_bytes(bytes);
                     let narrow: u32 = value.try_into().map_err(|_| {
-                        EmitError::InvalidDescriptor(format!(
-                            "u64 literal {value} exceeds u32::MAX. Fix: split wide integers before descriptor Naga emission."
-                        ))
+                        EmitError::InvalidDescriptor(u64_literal_too_wide_message(value))
                     })?;
                     (Literal::U32(narrow), self.types.u32_ty)
                 }
                 "vyre.literal.i64" => {
                     let value = i64::from_le_bytes(bytes);
                     let narrow: i32 = value.try_into().map_err(|_| {
-                        EmitError::InvalidDescriptor(format!(
-                            "i64 literal {value} is outside i32 range. Fix: split wide integers before descriptor Naga emission."
-                        ))
+                        EmitError::InvalidDescriptor(i64_literal_outside_i32_message(value))
                     })?;
                     (Literal::I32(narrow), self.types.i32_ty)
                 }
                 "vyre.literal.f64" => (Literal::F64(f64::from_le_bytes(bytes)), self.types.f64_ty),
                 other => {
-                    return Err(EmitError::InvalidDescriptor(format!(
-                        "wide-literal kind `{other}` reached descriptor opaque emission after the kind gate. Fix: update the kind gate and decoder together."
-                    )));
+                    return Err(EmitError::InvalidDescriptor(
+                        wide_literal_kind_gate_message(other),
+                    ));
                 }
             };
             let value = self.append_expr(Expression::Literal(literal));
             return self.bind_result_typed(op, value, ty);
         }
-        Err(EmitError::InvalidDescriptor(format!(
-            "opaque expression `{extension_kind}` (id={extension_id:#010x}) has no descriptor Naga lowering. Fix: lower this extension into concrete KernelDescriptor ops or add a descriptor extension emitter before Naga emission."
+        Err(EmitError::InvalidDescriptor(opaque_expression_message(
+            extension_kind,
+            extension_id,
         )))
     }
 
@@ -1012,9 +1291,7 @@ impl BodyBuilder<'_> {
             }
             other => Err(EmitError::InvalidBinding {
                 slot,
-                reason: format!(
-                    "emit_byte_element_load called with non-byte DataType {other:?}; this is an emitter routing bug"
-                ),
+                reason: non_byte_load_route_message(other),
             }),
         }
     }

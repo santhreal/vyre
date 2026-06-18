@@ -1,0 +1,54 @@
+# Multi-GPU sharding owns accelerator shard split and aggregation rules; CPU/GPU route partitioning remains in REGEX_CPU_GPU_PARTITION.
+
+schema = "vyre.accelerator.multi_gpu_sharding_aggregation_plan.v1"
+owner = "runtime_residency"
+evidence_tokens = ["CUDA_MULTI_DEVICE_P2P", "NCCL_COLLECTIVES", "CUDA_DEVICE_P2P_ATTRIBUTES", "VULKAN_DEVICE_GROUPS"]
+
+required_fields = [
+  "shard_id",
+  "workload_surface",
+  "partition_policy",
+  "halo_policy",
+  "load_balance_policy",
+  "aggregation_policy",
+  "parity_policy",
+  "scheduler_boundary_policy",
+  "authority_links",
+  "diagnostic",
+]
+
+[[shard]]
+shard_id = "regex-haystack-byte-range-shards"
+workload_surface = "large-haystack-regex-scan-split-across-peerable-GPU-device-set"
+partition_policy = "split-by-byte-range-with-rule-class-density-estimate-and-device-throughput-weight"
+halo_policy = "overlap-boundary-by-max-pattern-lookbehind-streaming-state-and-encoding-boundary-contract"
+load_balance_policy = "rebalance-next-batch-using-per-shard-active-ns-output-density-transfer-bytes-and-peer-link-class"
+aggregation_policy = "allgather-output-fragments-then stable-sort-by-input-offset-rule-id-and-finding-span"
+parity_policy = "multi-GPU-output-matches-REGEX_CPU_GPU_PARTITION all_gpu_eligible-or-mixed-route-reference"
+scheduler_boundary_policy = "runtime-scheduler-owns-queue-fairness-backpressure-and-tenant-admission-before shard-launch"
+authority_links = ["REGEX_CPU_GPU_PARTITION.toml", "OUTPUT_SLAB_PROVENANCE.toml", "PEER_TRANSFER_COLLECTIVE_POLICY.toml", "BACKPRESSURE_QUEUE_QUOTA_POLICY.toml"]
+diagnostic = "VYRE_REGEX_MULTI_GPU_SHARDING_REQUIRED"
+
+[[shard]]
+shard_id = "graph-frontier-device-shards"
+workload_surface = "graph-flow-frontier-expansion-and-candidate-filtering-split-across-accelerators"
+partition_policy = "split-frontier-by-vertex-range-edge-bucket-or-work-estimate-with-device-memory-budget"
+halo_policy = "cross-shard-neighbor-boundary-records-duplicate-suppression-and-visited-state-merge-policy"
+load_balance_policy = "work-stealing-admitted-only-when-peer-transfer-cost-and-deterministic-output-order-are-recorded"
+aggregation_policy = "reduce-scatter-counters-and-merge-frontier-output-by-stable-vertex-id-order"
+parity_policy = "multi-GPU-frontier-and-finding-set-match-single-device-or-CPU-oracle-for-fixture"
+scheduler_boundary_policy = "persistent-megakernel-scheduler-owns-resident-work-admission-and-watchdog"
+authority_links = ["PEER_TRANSFER_COLLECTIVE_POLICY.toml", "RUNTIME_WATCHDOG_PROOFS.toml", "OUTPUT_SLAB_PROVENANCE.toml", "FORMAL_MODEL_CONTRACTS.toml"]
+diagnostic = "VYRE_GRAPH_MULTI_GPU_SHARDING_REQUIRED"
+
+[[shard]]
+shard_id = "pattern-database-replicated-shards"
+workload_surface = "compiled-rule-database-replicated-or-striped-across-device-set-for-scan-throughput"
+partition_policy = "replicate-small-rule-database-and-stripe-large-rule-database-by-rule-family-and-output-density"
+halo_policy = "rule-boundary-halo-records-cross-rule-dedup-and-suppression-equivalence"
+load_balance_policy = "device-assignment-weights-rule-cost-output-density-resident-memory-and-link-class"
+aggregation_policy = "merge-rule-family-results-into-canonical-report-order-with-duplicate-finding-collapse"
+parity_policy = "replicated-and-striped-rule-database-routes-produce-identical-detection-output"
+scheduler_boundary_policy = "cache-rebuild-and-rule-database-validity-own database-version-before device-sharding"
+authority_links = ["CACHE_REBUILD_INVALIDATION_POLICY.toml", "PEER_TRANSFER_COLLECTIVE_POLICY.toml", "MEMORY_RESIDENCY_TIER_CONTRACTS.toml", "CROSS_SIGNAL_AUDIT_CORRELATION.toml"]
+diagnostic = "VYRE_PATTERN_DATABASE_MULTI_GPU_SHARDING_REQUIRED"

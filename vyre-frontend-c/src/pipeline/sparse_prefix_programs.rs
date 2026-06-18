@@ -69,13 +69,8 @@ pub(super) fn prefix_scan_nonzero_workgroup(in_buf: &str, out_buf: &str, n: u32)
         )],
     ));
     let output_bytes = usize::try_from(n)
-        .ok()
-        .and_then(|count| count.checked_mul(4))
-        .unwrap_or_else(|| {
-            panic!(
-                "prefix_scan_nonzero_workgroup n={n} overflows output byte range. Fix: shard the sparse prefix scan before GPU dispatch."
-            )
-        });
+        .unwrap_or(usize::MAX)
+        .saturating_mul(4);
 
     Program::wrapped(
         vec![

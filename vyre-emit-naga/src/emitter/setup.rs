@@ -519,6 +519,7 @@ pub(crate) fn emit_uncached(desc: &KernelDescriptor) -> Result<naga::Module, Emi
         named_carrier_result_ids: FxHashMap::default(),
         trap_sidecar_slot,
         trap_tag_codes,
+        op_dispatch_routes: Default::default(),
     };
     body_builder.emit_body(&desc.body)?;
 

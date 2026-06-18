@@ -1,0 +1,54 @@
+# Memory pressure and oversubscription response owns route changes under residency pressure.
+
+schema = "vyre.memory.pressure_oversubscription_response.v1"
+owner = "driver_shared"
+evidence_tokens = ["CUDA_UNIFIED_MEMORY", "CUDA_RUNTIME_MEMORY_API", "VULKAN_MEMORY_ALLOCATION", "WEBGPU_BUFFER_MAPPING"]
+
+required_fields = [
+  "pressure_id",
+  "pressure_surface",
+  "measurement_policy",
+  "admission_policy",
+  "migration_policy",
+  "fallback_policy",
+  "operator_effect_policy",
+  "privacy_boundary",
+  "authority_links",
+  "diagnostic",
+]
+
+[[pressure]]
+pressure_id = "cuda-managed-oversubscription-pressure"
+pressure_surface = "managed-memory-page-migration-device-free-memory-prefetch-failure-and-concurrent-access-limits"
+measurement_policy = "record-cudaMemGetInfo-free-total-prefetch-destination-page-fault-counter-page-migration-bytes-and-device-capability"
+admission_policy = "managed-oversubscription-admitted-only-with-explicit-page-migration-budget-and-corpus-chunk-plan"
+migration_policy = "prefetch-hot-window-to-device-prefetch-cold-output-to-CPU-and-record-memory-advice-used"
+fallback_policy = "route-to-chunked-explicit-copy-or-CPU-reference-when-fault-rate-or-free-memory-crosses-budget"
+operator_effect_policy = "emit-selected-route-lowered-residency-budget-expected-throughput-impact-and-actionable-config-key"
+privacy_boundary = "public-record-excludes-device-serial-private-paths-pointer-values-and-corpus-excerpts"
+authority_links = ["MEMORY_RESIDENCY_TIER_CONTRACTS.toml", "CORPUS_PAGING_PLANNER.toml", "RESOURCE_BUDGET_POLICY.toml", "OPERATOR_RUNBOOK_ROLLBACK_POLICY.toml"]
+diagnostic = "VYRE_CUDA_MANAGED_OVERSUBSCRIPTION_PRESSURE"
+
+[[pressure]]
+pressure_id = "vulkan-pageable-device-local-pressure"
+pressure_surface = "device-local-heap-budget-pageable-demotion-memory-priority-and-host-local-spill"
+measurement_policy = "record-heap-class-memory-type-flags-budget-class-priority-class-allocation-size-and-demotion-observation"
+admission_policy = "device-local-allocation-admitted-only-when-priority-budget-and-fallback-route-are-recorded"
+migration_policy = "lower-priority-cache-or-staging-resources-before-hot-scan-output-and-pattern-database-resources"
+fallback_policy = "route-to-smaller-batch-host-visible-staging-or-CPU-reference-when-device-local-pressure-invalidates-stratum"
+operator_effect_policy = "emit-memory-heap-pressure-resource-class-batch-size-change-and-release-claim-scope"
+privacy_boundary = "public-record-excludes-private-fleet-layout-adapter-unique-id-and-Santh-root"
+authority_links = ["MEMORY_RESIDENCY_TIER_CONTRACTS.toml", "HARDWARE_WORKLOAD_STRATIFICATION_MATRIX.toml", "RESOURCE_BUDGET_POLICY.toml", "BACKEND_CAPABILITY_DIGESTS.toml"]
+diagnostic = "VYRE_VULKAN_PAGEABLE_DEVICE_LOCAL_PRESSURE"
+
+[[pressure]]
+pressure_id = "staging-pool-pressure"
+pressure_surface = "pinned-host-staging-WebGPU-map-staging-Metal-shared-resource-and-readback-slab-growth"
+measurement_policy = "record-staging-bytes-pinned-bytes-map-pending-count-readback-bytes-copy-latency-and-pool-miss-count"
+admission_policy = "staging-growth-admitted-only-with-resource-budget-consumption-and-backpressure-link"
+migration_policy = "drain-readback-slabs-reuse-staging-pools-and-lower-upload-concurrency-before allocating new staging memory"
+fallback_policy = "reduce-batch-size-disable-overlap-or-use-pageable-copy-baseline-when staging-pool-pressure-persists"
+operator_effect_policy = "emit-staging-pressure-pool-lane-pool-miss-diagnostic-and-safe-config-knob"
+privacy_boundary = "public-record-excludes-hostnames-private-cache-roots-pointer-values-and-private-corpus-names"
+authority_links = ["PINNED_STAGING_TRANSFER_POLICY.toml", "CUDA_STREAM_ORDERED_POOL_PLANNER.toml", "CUDA_SCAN_MEMORY_POOLS.toml", "BACKPRESSURE_QUEUE_QUOTA_POLICY.toml"]
+diagnostic = "VYRE_STAGING_POOL_PRESSURE"

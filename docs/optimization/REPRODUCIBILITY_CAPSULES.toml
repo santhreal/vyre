@@ -1,0 +1,37 @@
+# Reproducibility capsules for VX-714 and VX-715.
+# Benchmarks and hardware evidence carry input, environment, counter, output, and capability fingerprints.
+
+schema = "vyre.bench.reproducibility_capsule.v1"
+owner = "bench_harness"
+evidence_tokens = ["NSIGHT_COMPUTE", "CUDA_BEST_PRACTICES", "WEBGPU_SPEC", "METAL_COUNTERS"]
+
+required_fields = [
+  "capsule_id",
+  "input_digest",
+  "environment_digest",
+  "hardware_fingerprint",
+  "counter_schema",
+  "output_digest",
+  "capability_digest",
+  "private_path_redaction",
+]
+
+[[capsule]]
+capsule_id = "cuda-scan-bench-capsule"
+input_digest = "sha256:cuda-scan-input"
+environment_digest = "sha256:cuda-env"
+hardware_fingerprint = "gpu-family-and-driver-class"
+counter_schema = "CROSS_BACKEND_COUNTER_SCHEMA.toml"
+output_digest = "sha256:cuda-scan-output"
+capability_digest = "BACKEND_CAPABILITY_DIGESTS.toml"
+private_path_redaction = "required"
+
+[[capsule]]
+capsule_id = "metal-ranking-bench-capsule"
+input_digest = "sha256:metal-ranking-input"
+environment_digest = "sha256:metal-env"
+hardware_fingerprint = "apple-gpu-family-and-os-class"
+counter_schema = "CROSS_BACKEND_COUNTER_SCHEMA.toml"
+output_digest = "sha256:metal-ranking-output"
+capability_digest = "BACKEND_CAPABILITY_DIGESTS.toml"
+private_path_redaction = "required"

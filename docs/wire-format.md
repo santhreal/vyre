@@ -186,3 +186,12 @@ The `wire_roundtrip` test suite enforces this invariant on every KAT program and
 ## Certificate compatibility
 
 The conform certificate includes `wire_format_version` and a `blake3` of the program's canonical wire bytes. Two certificates with matching `wire_format_version + program_hash + witness_set_hash + backend_id` identify exchangeable artifacts.
+
+## Binding conformance
+
+A conformant non-Rust binding MUST:
+
+1. Parse the header and reject any `version` it does not support.
+2. Preserve unknown extension payloads (`0x80` tags) verbatim when re-encoding.
+3. Surface unknown extensions as structured errors, never silent drops.
+4. Produce byte-identical output when re-encoding a program it consumed.

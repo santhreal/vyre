@@ -70,19 +70,11 @@ const QUIESCE_BACKOFF_SHIFT_CAP: u64 = 5;
 #[allow(clippy::unnecessary_min_or_max)]
 fn quiesce_backoff_duration(poll: u64) -> Duration {
     let parked_poll = poll.checked_sub(QUIESCE_SPIN_POLLS).unwrap_or(0);
-    let shift = u32::try_from(parked_poll.min(QUIESCE_BACKOFF_SHIFT_CAP)).unwrap_or_else(|error| {
-        panic!(
-            "tenant quiesce backoff shift cannot fit u32: {error}. Fix: lower QUIESCE_BACKOFF_SHIFT_CAP."
-        )
-    });
-    let multiplier = 1_u32.checked_shl(shift).unwrap_or_else(|| {
-        panic!("tenant quiesce backoff multiplier overflowed u32. Fix: lower shift cap.")
-    });
+    let shift = parked_poll.min(QUIESCE_BACKOFF_SHIFT_CAP) as u32;
+    let multiplier = 1_u32 << shift;
     QUIESCE_MIN_PARK
         .checked_mul(multiplier)
-        .unwrap_or_else(|| {
-            panic!("tenant quiesce backoff duration overflowed. Fix: lower quiesce park bounds.")
-        })
+        .unwrap_or(QUIESCE_MAX_PARK)
         .min(QUIESCE_MAX_PARK)
 }
 
@@ -157,9 +149,93 @@ pub enum TenantError {
         /// Configured outstanding-slot cap.
         cap: u64,
     },
+    /// Tenant has reached its configured staging-byte cap.
+    #[error(
+        "tenant {tenant_id} requested {requested} staging bytes with {used} already reserved, cap {cap}. \
+         Fix: release staging reservations after publish/readback progress or register the tenant with a larger bounded staging budget."
+    )]
+    StagingBackpressure {
+        /// Tenant id whose staging byte budget is full.
+        tenant_id: u32,
+        /// New bytes requested.
+        requested: u64,
+        /// Current reserved staging bytes.
+        used: u64,
+        /// Configured staging byte cap.
+        cap: u64,
+    },
+    /// Tenant has reached its configured resident-handle cap.
+    #[error(
+        "tenant {tenant_id} requested {requested} resident handles with {used} already reserved, cap {cap}. \
+         Fix: release resident handles when backend ownership ends or register the tenant with a larger bounded resident-handle budget."
+    )]
+    ResidentHandleBackpressure {
+        /// Tenant id whose resident handle budget is full.
+        tenant_id: u32,
+        /// New handles requested.
+        requested: u64,
+        /// Current reserved resident handles.
+        used: u64,
+        /// Configured resident handle cap.
+        cap: u64,
+    },
+    /// Tenant resource accounting would underflow.
+    #[error(
+        "tenant {tenant_id} released {requested} {resource} with only {used} reserved. \
+         Fix: pair every tenant resource release with a successful reservation."
+    )]
+    ResourceUnderflow {
+        /// Tenant id whose counter would underflow.
+        tenant_id: u32,
+        /// Resource counter being released.
+        resource: &'static str,
+        /// Release count requested.
+        requested: u64,
+        /// Current reserved count.
+        used: u64,
+    },
     /// Protocol error bubbled up from `Megakernel::publish_slot`.
     #[error("{0}")]
     Pipeline(#[from] PipelineError),
+}
+
+/// Per-tenant resource quota.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TenantQuota {
+    /// Maximum host-visible ring slots the tenant may keep outstanding.
+    pub max_outstanding_slots: u64,
+    /// Maximum staging bytes the tenant may reserve for pending work.
+    pub max_staging_bytes: u64,
+    /// Maximum resident handles the tenant may hold at once.
+    pub max_resident_handles: u64,
+}
+
+impl TenantQuota {
+    /// Unbounded tenant quota for compatibility with the legacy registration
+    /// API. Individual fields are still normalized to at least one resource
+    /// slot during registration.
+    #[must_use]
+    pub const fn unbounded() -> Self {
+        Self {
+            max_outstanding_slots: u64::MAX,
+            max_staging_bytes: u64::MAX,
+            max_resident_handles: u64::MAX,
+        }
+    }
+
+    /// Build a bounded tenant quota.
+    #[must_use]
+    pub const fn bounded(
+        max_outstanding_slots: u64,
+        max_staging_bytes: u64,
+        max_resident_handles: u64,
+    ) -> Self {
+        Self {
+            max_outstanding_slots,
+            max_staging_bytes,
+            max_resident_handles,
+        }
+    }
 }
 
 /// One tenant's accounting state. Lives inside an `Arc` so handles
@@ -172,6 +248,14 @@ struct TenantState {
     published_count: AtomicU64,
     /// Maximum host-visible slots this tenant may keep outstanding.
     max_outstanding_slots: u64,
+    /// Number of staging bytes currently reserved by this tenant.
+    staging_bytes: AtomicU64,
+    /// Maximum staging bytes this tenant may reserve.
+    max_staging_bytes: u64,
+    /// Number of resident handles currently reserved by this tenant.
+    resident_handles: AtomicU64,
+    /// Maximum resident handles this tenant may reserve.
+    max_resident_handles: u64,
     /// Number of slots the GPU has reported DONE for this tenant.
     /// Advanced by [`TenantHandle::note_drained`].
     drained_count: AtomicU64,
@@ -216,6 +300,21 @@ pub struct TenantRuntimeCounters {
     pub quiesce_wait_ns: u64,
 }
 
+/// Host-visible tenant quota counters.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TenantQuotaCounters {
+    /// Tenant id.
+    pub tenant_id: u32,
+    /// Current reserved staging bytes.
+    pub staging_bytes: u64,
+    /// Configured staging byte cap.
+    pub max_staging_bytes: u64,
+    /// Current reserved resident handle count.
+    pub resident_handles: u64,
+    /// Configured resident handle cap.
+    pub max_resident_handles: u64,
+}
+
 impl std::fmt::Debug for TenantHandle {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TenantHandle")
@@ -227,6 +326,16 @@ impl std::fmt::Debug for TenantHandle {
                 &self.state.published_count.load(Ordering::Relaxed),
             )
             .field("max_outstanding_slots", &self.state.max_outstanding_slots)
+            .field(
+                "staging_bytes",
+                &self.state.staging_bytes.load(Ordering::Relaxed),
+            )
+            .field("max_staging_bytes", &self.state.max_staging_bytes)
+            .field(
+                "resident_handles",
+                &self.state.resident_handles.load(Ordering::Relaxed),
+            )
+            .field("max_resident_handles", &self.state.max_resident_handles)
             .field(
                 "drained_count",
                 &self.state.drained_count.load(Ordering::Relaxed),
@@ -266,6 +375,7 @@ impl TenantHandle {
     /// Returns [`TenantError::OpcodeOutOfRange`] when the local
     /// value is outside the reserved window.
     pub fn global_opcode(&self, local: u32) -> Result<u32, TenantError> {
+        self.ensure_not_revoked()?;
         if local >= self.state.opcode_cap {
             return Err(TenantError::OpcodeOutOfRange {
                 tenant_id: self.id(),
@@ -300,18 +410,23 @@ impl TenantHandle {
         local_opcode: u32,
         args: &[u32],
     ) -> Result<(), TenantError> {
-        if self.state.revoked.load(Ordering::Acquire) != 0 {
-            return Err(TenantError::Revoked {
-                tenant_id: self.state.id,
-            });
-        }
+        self.ensure_not_revoked()?;
         let global = self.global_opcode(local_opcode)?;
         self.reserve_publish_slot()?;
         if let Err(error) =
             Megakernel::publish_slot(ring_bytes, slot_idx, self.state.id, global, args)
         {
-            checked_atomic_sub_u64(&self.state.published_count, 1, "tenant published rollback");
+            saturating_atomic_sub_u64(&self.state.published_count, 1, "tenant published rollback");
             return Err(error.into());
+        }
+        Ok(())
+    }
+
+    fn ensure_not_revoked(&self) -> Result<(), TenantError> {
+        if self.state.revoked.load(Ordering::Acquire) != 0 {
+            return Err(TenantError::Revoked {
+                tenant_id: self.state.id,
+            });
         }
         Ok(())
     }
@@ -373,6 +488,81 @@ impl TenantHandle {
         self.state.max_outstanding_slots
     }
 
+    /// Reserve staging bytes against this tenant's quota.
+    pub fn reserve_staging_bytes(&self, byte_count: u64) -> Result<(), TenantError> {
+        self.ensure_not_revoked()?;
+        reserve_resource_quota(
+            &self.state.staging_bytes,
+            byte_count,
+            self.state.max_staging_bytes,
+            || {
+                TenantError::StagingBackpressure {
+                    tenant_id: self.state.id,
+                    requested: byte_count,
+                    used: self.state.staging_bytes.load(Ordering::Acquire),
+                    cap: self.state.max_staging_bytes,
+                }
+            },
+            "tenant staging byte reservation overflowed u64; release staging reservations or recreate the tenant before reserving more bytes",
+        )
+    }
+
+    /// Release staging bytes previously reserved by this tenant.
+    pub fn release_staging_bytes(&self, byte_count: u64) -> Result<(), TenantError> {
+        release_resource_quota(
+            &self.state.staging_bytes,
+            byte_count,
+            self.state.id,
+            "staging bytes",
+        )
+    }
+
+    /// Reserve resident handles against this tenant's quota.
+    pub fn reserve_resident_handles(&self, handle_count: u64) -> Result<(), TenantError> {
+        self.ensure_not_revoked()?;
+        reserve_resource_quota(
+            &self.state.resident_handles,
+            handle_count,
+            self.state.max_resident_handles,
+            || {
+                TenantError::ResidentHandleBackpressure {
+                    tenant_id: self.state.id,
+                    requested: handle_count,
+                    used: self.state.resident_handles.load(Ordering::Acquire),
+                    cap: self.state.max_resident_handles,
+                }
+            },
+            "tenant resident handle reservation overflowed u64; release resident handles or recreate the tenant before reserving more handles",
+        )
+    }
+
+    /// Release resident handles previously reserved by this tenant.
+    pub fn release_resident_handles(&self, handle_count: u64) -> Result<(), TenantError> {
+        release_resource_quota(
+            &self.state.resident_handles,
+            handle_count,
+            self.state.id,
+            "resident handles",
+        )
+    }
+
+    /// Snapshot quota counters for this tenant.
+    #[must_use]
+    pub fn quota_counters(&self) -> TenantQuotaCounters {
+        TenantQuotaCounters {
+            tenant_id: self.state.id,
+            staging_bytes: self.state.staging_bytes.load(Ordering::Acquire),
+            max_staging_bytes: self.state.max_staging_bytes,
+            resident_handles: self.state.resident_handles.load(Ordering::Acquire),
+            max_resident_handles: self.state.max_resident_handles,
+        }
+    }
+
+    fn release_all_resource_reservations(&self) {
+        self.state.staging_bytes.store(0, Ordering::Release);
+        self.state.resident_handles.store(0, Ordering::Release);
+    }
+
     /// Snapshot host-visible runtime counters for this tenant.
     #[must_use]
     pub fn runtime_counters(&self) -> TenantRuntimeCounters {
@@ -382,12 +572,7 @@ impl TenantHandle {
             tenant_id: self.state.id,
             published_count,
             drained_count,
-            outstanding_slots: vyre_driver::accounting::checked_sub_u64_lazy(
-                published_count,
-                drained_count,
-                || "tenant drained_count exceeded published_count. Fix: rebuild tenant accounting state.",
-            )
-            .unwrap_or_else(|message| panic!("{message}")),
+            outstanding_slots: published_count.saturating_sub(drained_count),
             max_outstanding_slots: self.state.max_outstanding_slots,
             quiesce_calls: self.state.quiesce_calls.load(Ordering::Acquire),
             quiesce_timeouts: self.state.quiesce_timeouts.load(Ordering::Acquire),
@@ -399,7 +584,7 @@ impl TenantHandle {
     /// DONE_COUNT calls this when it sees the global counter
     /// advance past the tenant's last-published cursor.
     pub fn note_drained(&self, count: u64) {
-        checked_atomic_add_u64(&self.state.drained_count, count, "tenant drained_count");
+        saturating_atomic_add_u64(&self.state.drained_count, count, "tenant drained_count");
     }
 
     /// Block-style quiesce: bounded backoff until every published
@@ -436,16 +621,15 @@ impl TenantHandle {
     }
 
     fn record_quiesce(&self, started: Instant, timed_out: bool) {
-        checked_atomic_add_u64(&self.state.quiesce_calls, 1, "tenant quiesce_calls");
+        saturating_atomic_add_u64(&self.state.quiesce_calls, 1, "tenant quiesce_calls");
         if timed_out {
-            checked_atomic_add_u64(&self.state.quiesce_timeouts, 1, "tenant quiesce_timeouts");
+            saturating_atomic_add_u64(&self.state.quiesce_timeouts, 1, "tenant quiesce_timeouts");
         }
-        let elapsed_ns = u64::try_from(started.elapsed().as_nanos()).unwrap_or_else(|error| {
-            panic!(
-                "tenant quiesce elapsed nanoseconds cannot fit u64: {error}. Fix: quiesce with a bounded timeout."
-            )
-        });
-        checked_atomic_add_u64(
+        let elapsed_ns = match u64::try_from(started.elapsed().as_nanos()) {
+            Ok(elapsed_ns) => elapsed_ns,
+            Err(_) => u64::MAX,
+        };
+        saturating_atomic_add_u64(
             &self.state.quiesce_wait_ns,
             elapsed_ns,
             "tenant quiesce_wait_ns",
@@ -487,30 +671,80 @@ impl TenantSelectionScratch {
     }
 }
 
-fn checked_atomic_add_u64(counter: &AtomicU64, value: u64, label: &'static str) {
-    vyre_driver::accounting::checked_atomic_add_u64_with_order(
-        counter,
-        value,
-        Ordering::Acquire,
-        Ordering::AcqRel,
-        Ordering::Acquire,
-        |_, _| {
-            format!("{label} overflowed u64. Fix: quiesce or recreate the tenant accounting state.")
-        },
-    )
-    .unwrap_or_else(|message| panic!("{message}"));
+fn saturating_atomic_add_u64(counter: &AtomicU64, value: u64, _label: &'static str) {
+    let mut current = counter.load(Ordering::Acquire);
+    loop {
+        let next = current.saturating_add(value);
+        match counter.compare_exchange_weak(current, next, Ordering::AcqRel, Ordering::Acquire) {
+            Ok(_) => return,
+            Err(observed) => current = observed,
+        }
+    }
 }
 
-fn checked_atomic_sub_u64(counter: &AtomicU64, value: u64, label: &'static str) {
-    vyre_driver::accounting::checked_atomic_sub_u64_with_order(
+fn saturating_atomic_sub_u64(counter: &AtomicU64, value: u64, _label: &'static str) {
+    let mut current = counter.load(Ordering::Acquire);
+    loop {
+        let next = current.saturating_sub(value);
+        match counter.compare_exchange_weak(current, next, Ordering::AcqRel, Ordering::Acquire) {
+            Ok(_) => return,
+            Err(observed) => current = observed,
+        }
+    }
+}
+
+fn reserve_resource_quota(
+    counter: &AtomicU64,
+    value: u64,
+    cap: u64,
+    backpressure: impl Fn() -> TenantError,
+    overflow_fix: &'static str,
+) -> Result<(), TenantError> {
+    vyre_driver::accounting::checked_atomic_update_u64_with_order(
         counter,
-        value,
         Ordering::Acquire,
         Ordering::AcqRel,
         Ordering::Acquire,
-        |_, _| format!("{label} underflowed u64. Fix: rebuild tenant accounting state."),
-    )
-    .unwrap_or_else(|message| panic!("{message}"));
+        |used| {
+            let next = vyre_driver::accounting::checked_add_u64_lazy(used, value, || {
+                TenantError::Pipeline(PipelineError::QueueFull {
+                    queue: "tenant resource quota",
+                    fix: overflow_fix,
+                })
+            })?;
+            if next > cap {
+                return Err(backpressure());
+            }
+            Ok(next)
+        },
+        |_, _| Ok(()),
+    )?;
+    Ok(())
+}
+
+fn release_resource_quota(
+    counter: &AtomicU64,
+    value: u64,
+    tenant_id: u32,
+    resource: &'static str,
+) -> Result<(), TenantError> {
+    vyre_driver::accounting::checked_atomic_update_u64_with_order(
+        counter,
+        Ordering::Acquire,
+        Ordering::AcqRel,
+        Ordering::Acquire,
+        |used| {
+            used.checked_sub(value)
+                .ok_or(TenantError::ResourceUnderflow {
+                    tenant_id,
+                    resource,
+                    requested: value,
+                    used,
+                })
+        },
+        |_, _| Ok(()),
+    )?;
+    Ok(())
 }
 
 impl TenantRegistry {
@@ -542,6 +776,27 @@ impl TenantRegistry {
         &self,
         label: impl Into<String>,
         max_outstanding_slots: u64,
+    ) -> Result<TenantHandle, TenantError> {
+        self.register_with_quotas(
+            label,
+            TenantQuota {
+                max_outstanding_slots,
+                ..TenantQuota::unbounded()
+            },
+        )
+    }
+
+    /// Register a tenant with explicit ring-slot, staging-byte, and
+    /// resident-handle quotas.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TenantError::RegistryFull`] when the tenant id or opcode space
+    /// is exhausted.
+    pub fn register_with_quotas(
+        &self,
+        label: impl Into<String>,
+        quota: TenantQuota,
     ) -> Result<TenantHandle, TenantError> {
         let mut registration_retries = 0u64;
         let issued = vyre_driver::accounting::checked_atomic_update_u32_with_order(
@@ -598,7 +853,11 @@ impl TenantRegistry {
                 base_opcode,
                 opcode_cap: OPCODE_RANGE_PER_TENANT,
                 published_count: AtomicU64::new(0),
-                max_outstanding_slots: max_outstanding_slots.max(1),
+                max_outstanding_slots: quota.max_outstanding_slots.max(1),
+                staging_bytes: AtomicU64::new(0),
+                max_staging_bytes: quota.max_staging_bytes.max(1),
+                resident_handles: AtomicU64::new(0),
+                max_resident_handles: quota.max_resident_handles.max(1),
                 drained_count: AtomicU64::new(0),
                 quiesce_calls: AtomicU64::new(0),
                 quiesce_timeouts: AtomicU64::new(0),
@@ -618,6 +877,7 @@ impl TenantRegistry {
     pub fn unregister(&self, tenant_id: u32) -> Option<TenantHandle> {
         let (_, handle) = self.tenants.remove(&tenant_id)?;
         handle.state.revoked.store(1, Ordering::Release);
+        handle.release_all_resource_reservations();
         Some(handle)
     }
 
@@ -897,6 +1157,70 @@ mod tests {
             .expect("Fix: drain progress must reopen the bounded tenant queue; restore this invariant before continuing.");
         assert_eq!(t.published_count(), 2);
         assert_eq!(t.runtime_counters().outstanding_slots, 1);
+    }
+
+    #[test]
+    fn tenant_resource_quotas_reject_overcommit_and_cleanup_on_unregister() {
+        let reg = TenantRegistry::new();
+        let t = reg
+            .register_with_quotas("quota", TenantQuota::bounded(2, 16, 1))
+            .unwrap();
+
+        t.reserve_staging_bytes(8).unwrap();
+        let staging_error = t
+            .reserve_staging_bytes(9)
+            .expect_err("staging byte quota must reject overcommit");
+        assert!(matches!(
+            staging_error,
+            TenantError::StagingBackpressure {
+                requested: 9,
+                cap: 16,
+                ..
+            }
+        ));
+        assert_eq!(t.quota_counters().staging_bytes, 8);
+
+        t.release_staging_bytes(4).unwrap();
+        t.reserve_staging_bytes(12).unwrap();
+        assert_eq!(t.quota_counters().staging_bytes, 16);
+        let underflow = t
+            .release_staging_bytes(17)
+            .expect_err("staging release must reject underflow");
+        assert!(matches!(
+            underflow,
+            TenantError::ResourceUnderflow {
+                resource: "staging bytes",
+                requested: 17,
+                used: 16,
+                ..
+            }
+        ));
+
+        t.reserve_resident_handles(1).unwrap();
+        let handle_error = t
+            .reserve_resident_handles(1)
+            .expect_err("resident handle quota must reject overcommit");
+        assert!(matches!(
+            handle_error,
+            TenantError::ResidentHandleBackpressure {
+                requested: 1,
+                cap: 1,
+                ..
+            }
+        ));
+        assert_eq!(t.quota_counters().resident_handles, 1);
+
+        let removed = reg.unregister(t.id()).unwrap();
+        assert_eq!(removed.quota_counters().staging_bytes, 0);
+        assert_eq!(removed.quota_counters().resident_handles, 0);
+        assert!(matches!(
+            t.reserve_staging_bytes(1).unwrap_err(),
+            TenantError::Revoked { .. }
+        ));
+        assert!(matches!(
+            t.reserve_resident_handles(1).unwrap_err(),
+            TenantError::Revoked { .. }
+        ));
     }
 
     #[test]

@@ -1,0 +1,62 @@
+# Multi-channel distribution surface matrix for VX-1182, VX-1185, VX-1186, VX-1187, VX-1194, and VX-1197.
+# Cargo, GitHub release assets, GHCR OCI images, Homebrew formulae, bottles, and platform archives share one distribution surface map.
+
+schema = "vyre.release.multichannel_distribution_surface_matrix.v1"
+owner = "coordination"
+evidence_tokens = ["CARGO_PUBLISH", "GITHUB_RELEASES", "GITHUB_CONTAINER_REGISTRY", "OCI_IMAGE_SPEC", "HOMEBREW_FORMULA_COOKBOOK", "HOMEBREW_BOTTLES"]
+
+required_fields = [
+  "channel_id",
+  "distribution_surface",
+  "public_endpoint_policy",
+  "artifact_identity_policy",
+  "install_command_policy",
+  "verification_policy",
+  "release_authority",
+  "private_boundary_policy",
+  "diagnostic",
+]
+
+[[channel]]
+channel_id = "canonical-cargo-crate"
+distribution_surface = "crates-io"
+public_endpoint_policy = "public-crate-name-version-and-docs-rs-links"
+artifact_identity_policy = "crate-name-version-registry-index-checksum"
+install_command_policy = "cargo-install-and-cargo-add-contract-owned-by-CONSUMER_INSTALL_COMPATIBILITY_MATRIX.toml"
+verification_policy = "CONSUMER_ARTIFACT_VERIFICATION_PROTOCOL.toml"
+release_authority = "CRATES_IO_REGISTRY_PUBLICATION_POLICY.toml"
+private_boundary_policy = "no-private-Santh-paths-git-sources-or-local-cargo-overrides"
+diagnostic = "VYRE_DISTRIBUTION_CARGO_CHANNEL_READY"
+
+[[channel]]
+channel_id = "github-release-binary-assets"
+distribution_surface = "github-release-assets"
+public_endpoint_policy = "santhsecurity-vyre-release-page-and-immutable-release-tag"
+artifact_identity_policy = "asset-name-version-platform-archive-format-and-digest"
+install_command_policy = "download-verify-extract-and-run-public-vyre-binary"
+verification_policy = "RELEASE_ARTIFACT_INTEGRITY_INDEX.toml"
+release_authority = "FINAL_RELEASE_GATE_MANIFEST.toml"
+private_boundary_policy = "asset-contents-and-install-docs-exclude-Santh-private-material"
+diagnostic = "VYRE_DISTRIBUTION_GITHUB_ASSET_CHANNEL_READY"
+
+[[channel]]
+channel_id = "ghcr-oci-image"
+distribution_surface = "ghcr-oci-container-image"
+public_endpoint_policy = "ghcr.io-santhsecurity-vyre-image-linked-to-public-vyre-repository"
+artifact_identity_policy = "image-name-version-tag-platform-index-and-digest"
+install_command_policy = "pull-by-digest-or-version-tag-with-digest-record"
+verification_policy = "OCI_CONTAINER_IMAGE_PUBLICATION_POLICY.toml"
+release_authority = "RELEASE_WORKFLOW_ATTESTATION_POLICY.toml"
+private_boundary_policy = "image-layers-labels-and-history-exclude-private-Santh-paths-and-secrets"
+diagnostic = "VYRE_DISTRIBUTION_GHCR_CHANNEL_READY"
+
+[[channel]]
+channel_id = "homebrew-formula-and-bottle"
+distribution_surface = "homebrew-tap-formula-bottle"
+public_endpoint_policy = "public-tap-or-formula-points-to-public-vyre-release-assets"
+artifact_identity_policy = "formula-version-source-url-bottle-platform-sha256"
+install_command_policy = "brew-install-vyre-from-public-formula-or-tap"
+verification_policy = "HOMEBREW_TAP_BOTTLE_PUBLICATION_POLICY.toml"
+release_authority = "FINAL_RELEASE_GATE_MANIFEST.toml"
+private_boundary_policy = "formula-url-patches-tests-and-bottle-metadata-exclude-private-Santh"
+diagnostic = "VYRE_DISTRIBUTION_HOMEBREW_CHANNEL_READY"

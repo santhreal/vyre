@@ -1,0 +1,39 @@
+# CUDA stream-ordered pool planner for VX-673.
+# Staging, scratch, graph capture, resident uploads, and scan databases reuse ordered pools.
+
+schema = "vyre.cuda.stream_ordered_pool_planner.v1"
+owner = "driver_cuda"
+evidence_tokens = ["CUDA_MEMPOOL", "CUDA_GRAPHS"]
+
+pool_lanes = [
+  "staging",
+  "scratch",
+  "graph_capture",
+  "resident_upload",
+  "scan_database",
+]
+
+required_fields = [
+  "pool_lane",
+  "stream_scope",
+  "capture_allocation_allowed",
+  "reuse_order",
+  "pool_miss_diagnostic",
+  "sync_policy",
+]
+
+[[pool]]
+pool_lane = "graph_capture"
+stream_scope = "capture-stream"
+capture_allocation_allowed = false
+reuse_order = "stream-ordered"
+pool_miss_diagnostic = "VYRE_CUDA_POOL_MISS_DURING_CAPTURE"
+sync_policy = "no-global-sync"
+
+[[pool]]
+pool_lane = "scan_database"
+stream_scope = "scan-upload-stream"
+capture_allocation_allowed = false
+reuse_order = "stream-ordered"
+pool_miss_diagnostic = "VYRE_CUDA_SCAN_DATABASE_POOL_MISS"
+sync_policy = "event-linked"

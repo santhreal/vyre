@@ -5,7 +5,9 @@
 
 use proptest::prelude::*;
 use vyre_emit_spirv::{EmitError, SPIRV_MAGIC};
-use vyre_lower::emit_adversarial_corpus::{self, EmitAdversarialCase, EmitAdversarialFamily};
+use vyre_lower::emit_adversarial_corpus::{
+    self, EmitAdversarialBackend, EmitAdversarialCase, EmitAdversarialFamily,
+};
 
 /// SPIR-V OpEntryPoint = 15, OpMemoryBarrier = 39, OpLoopMerge = 246.
 const OP_ENTRY_POINT: u32 = 15;
@@ -85,6 +87,12 @@ fn assert_spirv_structure(case: &EmitAdversarialCase, words: &[u32]) {
 
 #[test]
 fn hostile_success_corpus_emits_structured_spirv() {
+    assert!(
+        emit_adversarial_corpus::required_backends()
+            .contains(&EmitAdversarialBackend::Spirv),
+        "Fix: shared emit adversarial corpus must register SPIR-V as a required consumer."
+    );
+
     for case in emit_adversarial_corpus::success_cases() {
         let words = vyre_emit_spirv::emit_optimized(&case.descriptor).unwrap_or_else(|err| {
             panic!(

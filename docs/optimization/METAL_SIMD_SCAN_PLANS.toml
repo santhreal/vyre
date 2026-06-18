@@ -1,0 +1,38 @@
+schema_version = 1
+
+planner_id = "metal-simdgroup-scan:v1"
+
+required_metrics = [
+  "simdgroup_width",
+  "divergence_class",
+  "threadgroup_layout",
+  "gpu_ns",
+  "counter_source",
+  "cpu_parity",
+]
+
+[[route]]
+route_id = "metal_simdgroup_scan"
+backend = "metal"
+divergence_class = "uniform-simdgroup"
+threadgroup_layout = "simdgroup-per-pattern-frontier"
+counter_source = "metal-counters-or-unavailable-reason"
+parity_required = true
+fallback_route = "metal_threadgroup_scan"
+evidence_path = "vyre-driver-metal/tests/metal_simd_scan_plan_registry.rs"
+
+[[route]]
+route_id = "metal_threadgroup_scan"
+backend = "metal"
+divergence_class = "workgroup-shared-memory"
+threadgroup_layout = "threadgroup-per-pattern-block"
+counter_source = "metal-counters-or-unavailable-reason"
+parity_required = true
+fallback_route = "cpu_ref"
+evidence_path = "vyre-driver-metal/tests/metal_simd_scan_plan_registry.rs"
+
+[[diagnostic]]
+diagnostic_code = "VYRE_METAL_SIMDGROUP_SCAN_UNSUPPORTED"
+required_fields = ["device_id", "simdgroup_width", "threadgroup_layout", "fallback_route"]
+fix = "Use the threadgroup-memory route unless SIMD-group execution and parity evidence are available."
+evidence_path = "vyre-driver-metal/tests/metal_simd_scan_plan_registry.rs"

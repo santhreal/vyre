@@ -1,0 +1,43 @@
+# Performance artifact publication contract for VX-792 through VX-799.
+# Benchmark artifacts are publishable only after privacy, reproducibility, stats, and source linkage pass.
+
+schema = "vyre.performance.artifact_publication.v1"
+owner = "bench_harness"
+evidence_tokens = ["CRITERION_RS", "SLSA_PROVENANCE", "SPDX_SBOM"]
+
+required_fields = [
+  "artifact_id",
+  "benchmark_id",
+  "methodology_contract",
+  "regression_gate",
+  "roofline_evidence",
+  "reproducibility_capsule",
+  "source_ledger_keys",
+  "publication_class",
+  "private_path_scan",
+  "publication_allowed",
+]
+
+[[artifact]]
+artifact_id = "scan-regex-batch-public-perf"
+benchmark_id = "scan-regex-batch-throughput"
+methodology_contract = "BENCHMARK_METHODOLOGY_CONTRACTS.toml"
+regression_gate = "STATISTICAL_REGRESSION_GATES.toml"
+roofline_evidence = "ROOFLINE_COUNTER_EVIDENCE.toml"
+reproducibility_capsule = "REPRODUCIBILITY_CAPSULES.toml"
+source_ledger_keys = ["CRITERION_RS", "ROOFLINE_MODEL", "NSIGHT_COMPUTE_ROOFLINE"]
+publication_class = "public-vyre-artifact"
+private_path_scan = "passed"
+publication_allowed = true
+
+[[artifact]]
+artifact_id = "local-private-benchmark-debug"
+benchmark_id = "graph-frontier-irregular-throughput"
+methodology_contract = "BENCHMARK_METHODOLOGY_CONTRACTS.toml"
+regression_gate = "STATISTICAL_REGRESSION_GATES.toml"
+roofline_evidence = "ROOFLINE_COUNTER_EVIDENCE.toml"
+reproducibility_capsule = "REPRODUCIBILITY_CAPSULES.toml"
+source_ledger_keys = ["GOOGLE_BENCHMARK", "ROOFLINE_MODEL"]
+publication_class = "local-only-nonpublished-doc"
+private_path_scan = "contains-local-debug-path"
+publication_allowed = false

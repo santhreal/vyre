@@ -1,0 +1,37 @@
+# HTTP, proxy, and redirect policy for VX-870 through VX-874.
+# Request methods, headers, redirects, proxy use, TLS expectation, and response limits share one policy.
+
+schema = "vyre.network.http_proxy_redirect_policy.v1"
+owner = "driver_shared"
+evidence_tokens = ["RFC_9110_HTTP", "OWASP_SSRF"]
+
+required_fields = [
+  "policy_id",
+  "method_policy",
+  "header_policy",
+  "redirect_policy",
+  "proxy_policy",
+  "tls_policy",
+  "response_limit",
+  "diagnostic",
+]
+
+[[policy]]
+policy_id = "public-research-source-fetch"
+method_policy = "GET-and-HEAD-only"
+header_policy = "no-credentials-no-private-headers"
+redirect_policy = "bounded-hops-and-revalidate-target"
+proxy_policy = "explicit-proxy-only-with-same-ssrf-guards"
+tls_policy = "https-required-when-source-supports-it"
+response_limit = "bounded-bytes-and-timeout"
+diagnostic = "VYRE_HTTP_FETCH_POLICY_REFUSED"
+
+[[policy]]
+policy_id = "release-evidence-link-check"
+method_policy = "HEAD-then-GET-if-required"
+header_policy = "no-secrets-no-cookies"
+redirect_policy = "preserve-public-boundary-on-redirect"
+proxy_policy = "proxy-env-ignored-unless-explicitly-enabled"
+tls_policy = "public-doc-links-prefer-https"
+response_limit = "headers-only-or-small-body"
+diagnostic = "VYRE_HTTP_RELEASE_LINK_REFUSED"

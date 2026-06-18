@@ -1,0 +1,43 @@
+# Kubernetes and Helm upgrade policy for VX-1263, VX-1264, VX-1265, VX-1268, VX-1269, and VX-1274.
+# Upgrade mechanics own rollout commands, progress deadlines, waits, history, and revision targeting while deployment hardening and rollback runbooks stay separate.
+
+schema = "vyre.release.kubernetes_helm_upgrade_policy.v1"
+owner = "security_reliability"
+evidence_tokens = ["KUBERNETES_DEPLOYMENTS", "KUBECTL_ROLLOUT", "HELM_UPGRADE", "HELM_ROLLBACK"]
+
+required_fields = [
+  "upgrade_id",
+  "surface_policy",
+  "rolling_update_policy",
+  "progress_deadline_policy",
+  "helm_upgrade_policy",
+  "helm_rollback_policy",
+  "history_policy",
+  "readiness_wait_policy",
+  "anti_rollback_policy",
+  "diagnostic",
+]
+
+[[upgrade]]
+upgrade_id = "kubernetes-deployment-rollout"
+surface_policy = "Deployment-kind-rollout-only-public-operator-manifests-link-to-KUBERNETES_HELM_DEPLOYMENT_POLICY.toml"
+rolling_update_policy = "RollingUpdate-maxSurge-maxUnavailable-and-replica-availability-recorded-before-promotion"
+progress_deadline_policy = "progressDeadlineSeconds-and-ProgressDeadlineExceeded-condition-feed-rollout-abort-gate"
+helm_upgrade_policy = "not-applicable-for-raw-manifest-surface"
+helm_rollback_policy = "kubectl-rollout-undo-allowed-only-after-artifact-identity-and-anti-rollback-check"
+history_policy = "kubectl-rollout-history-status-pause-resume-and-undo-output-class-recorded-as-operator-evidence"
+readiness_wait_policy = "Deployment-available-replicas-observed-generation-and-readiness-probes-must-match-release-version"
+anti_rollback_policy = "RELEASE_METADATA_ANTI_ROLLBACK_POLICY.toml-and-CONSUMER_ARTIFACT_VERIFICATION_PROTOCOL.toml"
+diagnostic = "VYRE_KUBERNETES_ROLLOUT_UPGRADE_POLICY_REQUIRED"
+
+[[upgrade]]
+upgrade_id = "helm-chart-upgrade-rollback"
+surface_policy = "public-Vyre-Helm-chart-upgrade-only-chart-values-images-and-hooks-link-to-KUBERNETES_HELM_DEPLOYMENT_POLICY.toml"
+rolling_update_policy = "rendered-Deployment-strategy-maxSurge-maxUnavailable-and-probe-policy-match-chart-values-schema"
+progress_deadline_policy = "rendered-progressDeadlineSeconds-and-Helm-timeout-feed-release-health-blocker-on-exhaustion"
+helm_upgrade_policy = "helm-upgrade-uses-explicit-chart-version-values-file-timeout-wait-wait-for-jobs-and-rollback-on-failure-policy"
+helm_rollback_policy = "helm-rollback-targets-explicit-release-revision-after-helm-history-and-artifact-verification"
+history_policy = "helm-history-release-revision-chart-version-app-version-digest-and-operator-action-recorded"
+readiness_wait_policy = "Helm-wait-timeout-and-wait-for-jobs-define-success-before-next-rollout-phase"
+anti_rollback_policy = "rollback-target-must-not-violate-TUF-version-or-release-metadata-anti-rollback-policy"
+diagnostic = "VYRE_HELM_UPGRADE_ROLLBACK_POLICY_REQUIRED"

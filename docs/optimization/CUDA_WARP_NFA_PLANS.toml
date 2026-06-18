@@ -1,0 +1,43 @@
+schema_version = 1
+
+planner_id = "cuda-warp-bit-parallel-nfa:v1"
+
+required_metrics = [
+  "active_ns",
+  "divergence_proxy",
+  "match_parity",
+  "warp_program_digest",
+  "unsupported_reason",
+]
+
+[[route]]
+route_id = "warp_bit_parallel_nfa"
+backend = "cuda"
+eligible_constructs = ["regular_exact_core", "lookaround_prefilter_constructs"]
+warp_ownership = "one-warp-per-pattern-frontier"
+verifier_required = true
+comparator = "cpu_regex_reference"
+match_parity_required = true
+evidence_path = "vyre-driver-cuda/tests/cuda_warp_nfa_plan_registry.rs"
+
+[[route]]
+route_id = "cpu_reference_fallback"
+backend = "cpu_ref"
+eligible_constructs = ["unsupported_backtracking_constructs", "unicode_classes"]
+warp_ownership = "not_applicable"
+verifier_required = false
+comparator = "warp_bit_parallel_nfa"
+match_parity_required = true
+evidence_path = "vyre-driver-cuda/tests/cuda_warp_nfa_plan_registry.rs"
+
+[[refusal]]
+reason_id = "unsupported_construct"
+diagnostic_code = "VYRE_CUDA_SCAN_UNSUPPORTED_CONSTRUCT"
+fix = "Route to CPU reference or verifier-backed prefilter; do not claim CUDA NFA parity."
+evidence_path = "vyre-driver-cuda/tests/cuda_warp_nfa_plan_registry.rs"
+
+[[refusal]]
+reason_id = "warp_program_too_large"
+diagnostic_code = "VYRE_CUDA_SCAN_WARP_PROGRAM_TOO_LARGE"
+fix = "Split the pattern set or choose automata tables with bounded verifier evidence."
+evidence_path = "vyre-driver-cuda/tests/cuda_warp_nfa_plan_registry.rs"

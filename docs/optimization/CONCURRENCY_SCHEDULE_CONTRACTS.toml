@@ -1,0 +1,40 @@
+# Concurrency schedule contracts for VX-771 through VX-773.
+# Runtime queues, CUDA pool state, readback slabs, and relation deltas use bounded schedule evidence.
+
+schema = "vyre.correctness.concurrency_schedule_contract.v1"
+owner = "runtime_residency"
+evidence_tokens = ["LOOM", "TLA_PLUS"]
+
+required_fields = [
+  "schedule_id",
+  "owning_crate",
+  "shared_state",
+  "operations",
+  "memory_model",
+  "preemption_points",
+  "state_bound",
+  "forbidden_outcome",
+  "counterexample_digest",
+]
+
+[[schedule]]
+schedule_id = "output-slab-readback-race"
+owning_crate = "vyre-driver"
+shared_state = "output slab validity epoch and readback state"
+operations = ["produce_slab", "mark_readback_pending", "publish_report", "invalidate_epoch"]
+memory_model = "rust-c11-style-interleavings"
+preemption_points = ["before_epoch_store", "after_readback_state_load", "before_report_publish"]
+state_bound = "slabs<=2,threads<=3,steps<=64"
+forbidden_outcome = "stale slab reported as host visible"
+counterexample_digest = "sha256:output-slab-schedule-counterexample"
+
+[[schedule]]
+schedule_id = "cuda-pool-capture-race"
+owning_crate = "vyre-driver-cuda"
+shared_state = "stream ordered pool and capture allocation gate"
+operations = ["enter_capture", "request_allocation", "reuse_pool_block", "exit_capture"]
+memory_model = "rust-c11-style-interleavings"
+preemption_points = ["before_capture_flag_load", "before_pool_miss_diagnostic", "after_reuse_decision"]
+state_bound = "streams<=2,blocks<=4,steps<=80"
+forbidden_outcome = "allocation succeeds during graph capture"
+counterexample_digest = "sha256:cuda-pool-schedule-counterexample"

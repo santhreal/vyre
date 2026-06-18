@@ -1,0 +1,78 @@
+[tranche]
+id = "VX-1521..VX-1540"
+title = "End-to-end file ingress async I/O governance coverage"
+owner = "runtime_io"
+status = "planned_contract"
+plan = "ALL_AXES_ACCELERATION_PLAN.md"
+
+[research]
+source_keys = [
+  "LINUX_IO_URING_SETUP",
+  "LINUX_IO_URING_ENTER",
+  "LINUX_IO_URING_REGISTER",
+  "LINUX_OPENAT2",
+  "LINUX_STATX",
+  "LINUX_GETDENTS64",
+  "LINUX_READV_PREADV2",
+  "LINUX_OPEN_DIRECT_IO",
+]
+
+[artifacts]
+created = [
+  "FILE_INGRESS_ASYNC_IO_PIPELINE.toml",
+  "DIRECTORY_ENUMERATION_METADATA_POLICY.toml",
+  "SAFE_OPEN_HANDLE_READ_POLICY.toml",
+  "IO_PIPELINE_BACKPRESSURE_EVIDENCE.toml",
+  "END_TO_END_FILE_INGRESS_ASYNC_IO_TRANCHE_COVERAGE.toml",
+  "conform/vyre-conform-enforce/tests/file_ingress_async_io_governance.rs",
+]
+linked_existing = [
+  "FILESYSTEM_ARCHIVE_GOVERNANCE_TRANCHE_COVERAGE.toml",
+  "FILESYSTEM_PATH_CANONICALIZATION_POLICY.toml",
+  "ATOMIC_FILE_OPERATION_RACE_POLICY.toml",
+  "ARCHIVE_EXTRACTION_BOMB_GUARDS.toml",
+  "FILESYSTEM_EVIDENCE_REDACTION.toml",
+  "CORPUS_INGRESS_GUARDS.toml",
+  "CORPUS_PAGING_PLANNER.toml",
+  "GPU_DIRECT_CORPUS_PAGING_CAPABILITIES.toml",
+  "BACKPRESSURE_QUEUE_QUOTA_POLICY.toml",
+  "RESOURCE_BUDGET_POLICY.toml",
+  "MEMORY_RESIDENCY_TIER_CONTRACTS.toml",
+  "PINNED_STAGING_TRANSFER_POLICY.toml",
+  "TRANSFER_OVERLAP_PIPELINE_EVIDENCE.toml",
+  "HOST_LOCALITY_AFFINITY_CONTRACTS.toml",
+  "BENCHMARK_PROFILING_CAPTURE_POLICY.toml",
+  "STATISTICAL_PERFORMANCE_GATES.toml",
+]
+
+[ownership_boundary]
+this_tranche_owns = [
+  "directory entry batch enumeration",
+  "metadata freshness class selection for scan admission",
+  "safe open-to-read handle discipline",
+  "io_uring submission/completion queue behavior",
+  "fixed buffer and fixed file registration admission",
+  "positioned read scheduling and partial-read retry evidence",
+  "direct-I/O alignment admission and buffered-read downgrade evidence",
+  "read-to-scan handoff backpressure telemetry",
+]
+existing_tranches_own = [
+  "path traversal and canonicalization security",
+  "archive extraction and bomb controls",
+  "TOCTOU race taxonomy and redaction",
+  "corpus size and malformed-input admission limits",
+  "GPU-direct corpus paging route choice",
+  "memory residency and pinned staging transfer overlap",
+  "global queue quota and resource-budget enforcement",
+  "profiling capture and statistical release gates",
+]
+
+[conformance]
+proof = "conform/vyre-conform-enforce/tests/file_ingress_async_io_governance.rs"
+required_assertions = [
+  "all new research source keys are present in the source ledger",
+  "each new artifact declares its ownership boundary and research sources",
+  "safe-open policy links openat2, statx, positioned reads, and direct-I/O evidence",
+  "backpressure evidence links io_uring pressure to global queue and statistical gates",
+  "the plan contains VX-1521 through VX-1540 rows",
+]

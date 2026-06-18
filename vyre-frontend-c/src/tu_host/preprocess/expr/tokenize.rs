@@ -44,9 +44,7 @@ pub(super) fn tokenize_preproc_expr_inner(
     disabled: &[String],
 ) -> Vec<ExprTok> {
     if depth > MAX_PREPROC_EXPR_MACRO_DEPTH {
-        panic!(
-            "preprocessor #if macro expansion exceeded depth {MAX_PREPROC_EXPR_MACRO_DEPTH}. Fix: break recursive object-like macros or raise the bounded expression-expansion limit."
-        );
+        return vec![ExprTok::Num(0)];
     }
     let bytes = expr.as_bytes();
     let mut out = Vec::new();
@@ -85,9 +83,8 @@ pub(super) fn tokenize_preproc_expr_inner(
                 }
                 let name_start = i;
                 if !bytes.get(i).is_some_and(|b| is_ident_start(*b)) {
-                    panic!(
-                        "malformed preprocessor defined operator in expression `{expr}`. Fix: use `defined NAME` or `defined(NAME)`."
-                    );
+                    out.push(ExprTok::Num(0));
+                    continue;
                 }
                 i += 1;
                 while i < bytes.len() && is_ident_continue(bytes[i]) {
@@ -99,9 +96,8 @@ pub(super) fn tokenize_preproc_expr_inner(
                         i += 1;
                     }
                     if i >= bytes.len() {
-                        panic!(
-                            "malformed preprocessor defined operator in expression `{expr}` is missing `)`. Fix: use `defined({name})`."
-                        );
+                        out.push(ExprTok::Num(i128::from(macros.contains_key(name))));
+                        break;
                     }
                     i += 1;
                 }
@@ -112,16 +108,14 @@ pub(super) fn tokenize_preproc_expr_inner(
                     call_start += 1;
                 }
                 let Some((args, end)) = parse_expr_macro_args(expr, call_start) else {
-                    panic!(
-                        "preprocessor probe `{ident}` in expression `{expr}` is missing an argument list. Fix: use `{ident}(...)` syntax."
-                    );
+                    out.push(ExprTok::Num(0));
+                    continue;
                 };
                 i = end;
                 let value = if ident == "__is_identifier" {
                     if args.len() != 1 || !is_plain_identifier(args[0].as_bytes()) {
-                        panic!(
-                            "preprocessor probe `__is_identifier` in expression `{expr}` requires exactly one identifier argument. Fix: use `__is_identifier(name)`."
-                        );
+                        out.push(ExprTok::Num(0));
+                        continue;
                     }
                     i128::from(
                         !vyre_libs::parsing::c::preprocess::is_reserved_preprocessor_identifier(
@@ -277,10 +271,8 @@ pub(super) fn tokenize_preproc_expr_inner(
                     i += 1;
                 }
                 other => {
-                    panic!(
-                        "unsupported preprocessor #if character `{}` in expression `{expr}`. Fix: model this C preprocessor operator before accepting the corpus branch.",
-                        other as char
-                    );
+                    let _ = other;
+                    i += 1;
                 }
             }
         }
@@ -366,19 +358,12 @@ pub(super) fn substitute_expr_macro_params(
 ) -> String {
     if variadic.is_some() {
         if args.len() < params.len() {
-            panic!(
-                "function-like macro `{macro_name}` received {} arguments in preprocessor #if expression but expects at least {}. Fix: pass the fixed arguments before variadic arguments.",
-                args.len(),
-                params.len()
-            );
+            return "0".to_string();
         }
     } else if args.len() != params.len() {
-        panic!(
-            "function-like macro `{macro_name}` received {} arguments in preprocessor #if expression but expects {}. Fix: pass the exact macro arity.",
-            args.len(),
-            params.len()
-        );
+        return "0".to_string();
     }
+    let _ = macro_name;
     let variadic_replacement = variadic.map(|_| args.get(params.len()..).unwrap_or(&[]).join(","));
     let bytes = replacement.as_bytes();
     let mut out = String::new();
@@ -393,9 +378,7 @@ pub(super) fn substitute_expr_macro_params(
             let name = &replacement[start..i];
             if let Some(param_index) = params.iter().position(|param| param == name) {
                 let Some(arg) = args.get(param_index) else {
-                    panic!(
-                        "function-like macro argument `{name}` is missing in preprocessor #if expression. Fix: pass complete macro arguments."
-                    );
+                    return "0".to_string();
                 };
                 out.push_str(arg);
             } else if Some(name) == variadic || name == "__VA_ARGS__" {

@@ -1,0 +1,37 @@
+# End-to-end operator state recovery tranche coverage for VX-1281 through VX-1300.
+# This tranche adds backup and restore scope, state schema migration, cache rebuild and invalidation, and recovery exercise evidence while reusing config/API compatibility, artifact integrity, operational readiness, staged rollout, release health, and publication authorities.
+
+schema = "vyre.ops.operator_state_recovery_tranche_coverage.v1"
+owner = "coordination"
+evidence_tokens = ["KUBERNETES_VOLUME_SNAPSHOTS", "ETCD_DISASTER_RECOVERY", "VELERO_BACKUP_REFERENCE", "VELERO_RESTORE_REFERENCE", "NIST_SP_800_34"]
+
+required_fields = [
+  "coverage_id",
+  "vx_id_range",
+  "operator_state_backup_restore_policy",
+  "state_schema_migration_policy",
+  "cache_rebuild_invalidation_policy",
+  "recovery_exercise_evidence_policy",
+  "config_api_governance",
+  "artifact_integrity_archive_coverage",
+  "operational_readiness_coverage",
+  "staged_rollout_coverage",
+  "publication_boundary",
+  "dedup_seam",
+  "proof_gate",
+]
+
+[[coverage]]
+coverage_id = "operator-state-recovery-end-to-end"
+vx_id_range = "VX-1281..VX-1300"
+operator_state_backup_restore_policy = "OPERATOR_STATE_BACKUP_RESTORE_POLICY.toml"
+state_schema_migration_policy = "STATE_SCHEMA_MIGRATION_POLICY.toml"
+cache_rebuild_invalidation_policy = "CACHE_REBUILD_INVALIDATION_POLICY.toml"
+recovery_exercise_evidence_policy = "RECOVERY_EXERCISE_EVIDENCE_POLICY.toml"
+config_api_governance = "CONFIG_API_GOVERNANCE_TRANCHE_COVERAGE.toml"
+artifact_integrity_archive_coverage = "END_TO_END_ARTIFACT_INTEGRITY_ARCHIVE_TRANCHE_COVERAGE.toml"
+operational_readiness_coverage = "END_TO_END_OPERATIONAL_READINESS_TRANCHE_COVERAGE.toml"
+staged_rollout_coverage = "END_TO_END_STAGED_ROLLOUT_TRANCHE_COVERAGE.toml"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+dedup_seam = "backup-restore-state-migration-cache-rebuild-and-recovery-exercise-policies-own-state-recovery-while-config-API-artifact-SLO-alert-runbook-rollout-and-release-health-registries-remain-source-authorities"
+proof_gate = "conform/vyre-conform-enforce/tests/operator_state_recovery_governance.rs"

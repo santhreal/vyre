@@ -1,6 +1,6 @@
 [package]
 name = "vyre-primitives"
-version = "0.6.2"
+version = "0.6.3"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -97,6 +97,9 @@ inventory = { workspace = true, optional = true }
 bytemuck.workspace = true
 
 [dev-dependencies]
+vyre-driver = { workspace = true }
+vyre-driver-cuda = { workspace = true }
+vyre-reference = { workspace = true }
 proptest.workspace = true
 criterion.workspace = true
 

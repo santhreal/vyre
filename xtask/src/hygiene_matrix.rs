@@ -1,10 +1,11 @@
 //! Source hygiene release evidence for Vyre and Weir.
 
+use std::collections::BTreeMap;
 use std::fs;
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use walkdir::WalkDir;
 
 #[derive(Debug, Serialize)]
@@ -14,6 +15,11 @@ struct HygieneMatrix {
     scanned_files: usize,
     release_surface_coverage: ReleaseSurfaceCoverage,
     finding_summary: Vec<HygieneFindingSummary>,
+    classification_summary: Vec<HygieneClassificationSummary>,
+    intake_summary: Vec<HygieneIntakeSummary>,
+    threshold_policy: ThresholdPolicyArtifact,
+    finding_classes: Vec<HygieneFindingClass>,
+    release_blocker_count: usize,
     findings: Vec<HygieneFinding>,
     blockers: Vec<String>,
 }
@@ -49,12 +55,121 @@ struct HygieneFindingSummary {
     count: usize,
 }
 
+#[derive(Debug, Clone, Serialize)]
+struct HygieneFindingClass {
+    path: String,
+    line: usize,
+    pattern: &'static str,
+    owner_lane: &'static str,
+    surface: &'static str,
+    risk: &'static str,
+    hot_path: bool,
+    release_blocker: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct HygieneClassificationSummary {
+    owner_lane: &'static str,
+    surface: &'static str,
+    risk: &'static str,
+    hot_path: bool,
+    release_blocker: bool,
+    count: usize,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct HygieneIntakeSummary {
+    owner_lane: &'static str,
+    surface: &'static str,
+    risk: &'static str,
+    hot_path: bool,
+    pattern: &'static str,
+    release_blocker: bool,
+    count: usize,
+}
+
+#[derive(Debug, Serialize)]
+struct HygieneIntakeArtifact {
+    schema_version: u32,
+    release_blocker_count: usize,
+    intake_summary: Vec<HygieneIntakeSummary>,
+    blockers: Vec<String>,
+}
+
 #[derive(Debug, Serialize)]
 struct HygieneScan {
     schema_version: u32,
     scan: String,
     findings: Vec<HygieneFinding>,
+    release_blocking_findings: Vec<HygieneFindingClass>,
     blockers: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct ThresholdPolicyArtifact {
+    schema_version: u32,
+    source_manifest: &'static str,
+    evidence_artifact: String,
+    owner_lane: String,
+    threshold_const_count: usize,
+    registered_policy_count: usize,
+    rows: Vec<ThresholdPolicyEvidenceRow>,
+    findings: Vec<ThresholdPolicyFinding>,
+    blockers: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct ThresholdPolicyEvidenceRow {
+    id: String,
+    path: String,
+    line: usize,
+    name: String,
+    observed_value: String,
+    unit: String,
+    provenance: String,
+    config_tier: String,
+    override_path: String,
+    evidence_link: String,
+    release_rule: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct ThresholdPolicyFinding {
+    path: String,
+    line: usize,
+    name: String,
+    finding: String,
+    fix: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct ThresholdPolicyDocument {
+    schema_version: u32,
+    owner_lane: String,
+    evidence_artifact: String,
+    #[serde(default)]
+    threshold: Vec<ThresholdPolicyTomlRow>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct ThresholdPolicyTomlRow {
+    id: String,
+    path: String,
+    name: String,
+    unit: String,
+    provenance: String,
+    config_tier: String,
+    override_path: String,
+    evidence_link: String,
+    release_rule: String,
+}
+
+#[derive(Debug)]
+struct ObservedThresholdConst {
+    path: String,
+    line: usize,
+    name: String,
+    value: String,
 }
 
 const BLOCKED_PATTERNS: &[(&str, &str)] = &[
@@ -84,6 +199,24 @@ const BLOCKED_PATTERNS: &[(&str, &str)] = &[
 ];
 
 const MAX_HYGIENE_SCAN_FILE_BYTES: u64 = 4_194_304;
+const THRESHOLD_POLICY_SCHEMA_VERSION: u32 = 1;
+const THRESHOLD_POLICY_SOURCE: &str = "docs/optimization/THRESHOLD_POLICY.toml";
+const THRESHOLD_POLICY_ARTIFACT: &str = "release/evidence/hygiene/threshold-policy.json";
+const THRESHOLD_POLICY_OWNER_LANE: &str = "testing_evidence";
+const THRESHOLD_SUFFIXES: &[&str] = &[
+    "_THRESHOLD",
+    "_LIMIT",
+    "_MAX",
+    "_MIN",
+    "_CAP",
+    "_BUDGET",
+    "_FLOOR",
+    "_CEILING",
+    "_TIMEOUT",
+    "_DEADLINE",
+    "_RETRY",
+    "_BACKOFF",
+];
 
 pub(crate) fn run(args: &[String]) {
     let output = match parse_output(args) {
@@ -107,8 +240,8 @@ pub(crate) fn run(args: &[String]) {
     let roots = [vyre_root, santh_root.join("libs/dataflow/weir")];
     let optional_roots = [
         santh_root.join("tools/vyrec"),
-        santh_root.join("libs/tools/surgec"),
-        santh_root.join("libs/shared/surgec-grammar-gen"),
+        santh_root.join("libs/surge/surgec"),
+        santh_root.join("libs/performance/matching/vyre/vyre-grammar-gen"),
     ];
     let mut scanned_roots = roots
         .iter()
@@ -139,28 +272,43 @@ pub(crate) fn run(args: &[String]) {
         roots[0].clone(),
         santh_root.join("libs/dataflow/weir"),
         santh_root.join("tools/vyrec"),
-        santh_root.join("libs/tools/surgec"),
-        santh_root.join("libs/shared/surgec-grammar-gen"),
+        santh_root.join("libs/surge/surgec"),
+        santh_root.join("libs/performance/matching/vyre/vyre-grammar-gen"),
     ] {
         scan_audit_report_locations(&root, &mut scanned_files, &mut findings);
     }
     check_required_cargo_wrappers(&roots[0], &santh_root, &mut findings);
+    let threshold_policy = collect_threshold_policy(&roots[0]);
     let release_surface_coverage = release_surface_coverage(&roots[0], &santh_root);
-    let blockers = if findings.is_empty() {
+    let hot_paths = load_hot_path_files(&roots[0]);
+    let finding_classes = classify_findings(&roots[0], &findings, &hot_paths);
+    let release_blocker_count = finding_classes
+        .iter()
+        .filter(|finding| finding.release_blocker)
+        .count();
+    let mut blockers = if release_blocker_count == 0 {
         Vec::new()
     } else {
         vec![format!(
-            "{} source hygiene finding(s) remain",
+            "{release_blocker_count} release-blocking source hygiene finding(s) remain; {} total finding(s) preserved in classification output",
             findings.len()
         )]
     };
+    blockers.extend(threshold_policy.blockers.iter().cloned());
     let finding_summary = finding_summary(&findings);
+    let classification_summary = classification_summary(&finding_classes);
+    let intake_summary = hygiene_intake_summary(&finding_classes);
     let matrix = HygieneMatrix {
-        schema_version: 1,
+        schema_version: 4,
         scanned_roots,
         scanned_files,
         release_surface_coverage,
         finding_summary,
+        classification_summary,
+        intake_summary,
+        threshold_policy,
+        finding_classes,
+        release_blocker_count,
         findings,
         blockers,
     };
@@ -199,6 +347,341 @@ fn finding_summary(findings: &[HygieneFinding]) -> Vec<HygieneFindingSummary> {
         .collect()
 }
 
+fn classify_findings(
+    vyre_root: &Path,
+    findings: &[HygieneFinding],
+    hot_paths: &std::collections::BTreeSet<String>,
+) -> Vec<HygieneFindingClass> {
+    findings
+        .iter()
+        .map(|finding| {
+            let owner_lane = hygiene_owner_lane_for_path(&finding.path);
+            let surface = hygiene_surface_for_path(&finding.path);
+            let hot_path = hygiene_finding_is_hot_path(vyre_root, &finding.path, hot_paths);
+            let risk = hygiene_risk(finding.pattern, surface, hot_path);
+            HygieneFindingClass {
+                path: finding.path.clone(),
+                line: finding.line,
+                pattern: finding.pattern,
+                owner_lane,
+                surface,
+                risk,
+                hot_path,
+                release_blocker: risk == "release_blocker",
+            }
+        })
+        .collect()
+}
+
+fn classification_summary(classes: &[HygieneFindingClass]) -> Vec<HygieneClassificationSummary> {
+    let mut counts =
+        BTreeMap::<(&'static str, &'static str, &'static str, bool, bool), usize>::new();
+    for class in classes {
+        *counts
+            .entry((
+                class.owner_lane,
+                class.surface,
+                class.risk,
+                class.hot_path,
+                class.release_blocker,
+            ))
+            .or_insert(0) += 1;
+    }
+    counts
+        .into_iter()
+        .map(
+            |((owner_lane, surface, risk, hot_path, release_blocker), count)| {
+                HygieneClassificationSummary {
+                    owner_lane,
+                    surface,
+                    risk,
+                    hot_path,
+                    release_blocker,
+                    count,
+                }
+            },
+        )
+        .collect()
+}
+
+fn hygiene_intake_summary(classes: &[HygieneFindingClass]) -> Vec<HygieneIntakeSummary> {
+    let mut counts = BTreeMap::<
+        (
+            &'static str,
+            &'static str,
+            &'static str,
+            bool,
+            &'static str,
+            bool,
+        ),
+        usize,
+    >::new();
+    for class in classes {
+        *counts
+            .entry((
+                class.owner_lane,
+                class.surface,
+                class.risk,
+                class.hot_path,
+                class.pattern,
+                class.release_blocker,
+            ))
+            .or_insert(0) += 1;
+    }
+    counts
+        .into_iter()
+        .map(
+            |((owner_lane, surface, risk, hot_path, pattern, release_blocker), count)| {
+                HygieneIntakeSummary {
+                    owner_lane,
+                    surface,
+                    risk,
+                    hot_path,
+                    pattern,
+                    release_blocker,
+                    count,
+                }
+            },
+        )
+        .collect()
+}
+
+fn hygiene_owner_lane_for_path(path: &str) -> &'static str {
+    let normalized = path.replace('\\', "/");
+    if normalized.contains("/libs/dataflow/weir/") {
+        return "flow_weir";
+    }
+    if normalized.contains("/tools/vyrec/")
+        || normalized.contains("/libs/surge/surgec/")
+        || normalized.contains("/libs/performance/matching/vyre/vyre-grammar-gen/")
+        || normalized.contains("/vyre-frontend-c/")
+        || normalized.contains("/vyre-frontend-rust/")
+        || normalized.contains("/vyre-libs/src/parsing/")
+        || normalized.contains("/vyre-primitives/src/parsing/")
+    {
+        return "frontend_parsing";
+    }
+    if normalized.contains("/vyre-foundation/src/optimizer/")
+        || normalized.contains("/vyre-foundation/src/transform/")
+    {
+        return "foundation_optimizer";
+    }
+    if normalized.contains("/vyre-foundation/src/serial/")
+        || normalized.contains("/vyre-foundation/src/ir_inner/")
+        || normalized.contains("/vyre-foundation/src/vast.rs")
+        || normalized.contains("/vyre-foundation/fuzz/")
+        || normalized.contains("/vyre-spec/")
+        || normalized.contains("/vyre-libs/src/lib.rs")
+        || normalized.contains("/vyre-libs/src/primitive_catalog.rs")
+        || normalized.contains("/vyre-libs/src/intern/")
+        || normalized.contains("/vyre-primitives/src/hash/")
+        || normalized.contains("/vyre-primitives/src/wire.rs")
+    {
+        return "foundation_wire";
+    }
+    if normalized.contains("/vyre-driver-cuda/") {
+        return "driver_cuda";
+    }
+    if normalized.contains("/vyre-driver-wgpu/") {
+        return "driver_wgpu";
+    }
+    if normalized.contains("/vyre-driver-spirv/") {
+        return "driver_spirv";
+    }
+    if normalized.contains("/vyre-driver-metal/") || normalized.contains("/vyre-emit-metal/") {
+        return "driver_metal";
+    }
+    if normalized.contains("/vyre-driver/") {
+        return "driver_shared";
+    }
+    if normalized.contains("/vyre-foundation/src/runtime/")
+        || normalized.contains("/vyre-reference/")
+        || normalized.contains("/vyre-intrinsics/")
+    {
+        return "driver_shared";
+    }
+    if normalized.contains("/vyre-lower/")
+        || normalized.contains("/vyre-emit-naga/")
+        || normalized.contains("/vyre-emit-ptx/")
+        || normalized.contains("/vyre-emit-spirv/")
+    {
+        return "lower_emit";
+    }
+    if normalized.contains("/vyre-runtime/src/megakernel/") {
+        return "runtime_megakernel";
+    }
+    if normalized.contains("/vyre-self-substrate/src/scheduling/")
+        || normalized.contains("/vyre-self-substrate/src/hardware/")
+        || normalized.contains("/vyre-runtime/src/")
+    {
+        return "runtime_megakernel";
+    }
+    if normalized.contains("/vyre-bench/") {
+        return "bench_harness";
+    }
+    if normalized.contains("/vyre-libs/src/scan/")
+        || normalized.contains("/vyre-libs/src/decode/")
+        || normalized.contains("/vyre-libs/src/rule/")
+        || normalized.contains("/vyre-self-substrate/src/data/")
+        || normalized.contains("/vyre-primitives/src/matching/")
+        || normalized.contains("/vyre-primitives/src/decode/")
+        || normalized.contains("/vyre-primitives/src/nfa/")
+    {
+        return "scan_static";
+    }
+    if normalized.contains("/vyre-libs/src/security/")
+        || normalized.contains("/vyre-libs/src/dataflow/")
+        || normalized.contains("/vyre-libs/src/borrowck/")
+        || normalized.contains("/vyre-self-substrate/src/analysis/")
+        || normalized.contains("/vyre-self-substrate/src/graph/")
+        || normalized.contains("/vyre-primitives/src/graph/")
+        || normalized.contains("/vyre-primitives/src/fixpoint/")
+        || normalized.contains("/vyre-primitives/src/predicate/")
+        || normalized.contains("/vyre-primitives/src/bitset/")
+    {
+        return "security_dataflow";
+    }
+    if normalized.contains("/vyre-libs/src/nn/")
+        || normalized.contains("/vyre-libs/src/math/")
+        || normalized.contains("/vyre-primitives/src/math/")
+    {
+        return "nn_math";
+    }
+    if normalized.contains("/xtask/")
+        || normalized.contains("/vyre-lints/")
+        || normalized.contains("/vyre-libs/src/test_support/")
+        || normalized.contains("/conform/")
+        || normalized.contains("/release/evidence/")
+        || normalized.contains("/docs/")
+        || normalized.contains("/.github/")
+        || normalized.contains("/scripts/")
+    {
+        return "testing_evidence";
+    }
+    "coordination"
+}
+
+fn hygiene_surface_for_path(path: &str) -> &'static str {
+    let normalized = path.replace('\\', "/");
+    if normalized.contains("/target/")
+        || normalized.contains("/target-codex/")
+        || normalized.contains("/release/evidence/")
+        || normalized.contains("/__split/")
+        || normalized.contains("/generated/")
+    {
+        return "generated";
+    }
+    if normalized.contains("/tests/")
+        || normalized.contains("/fuzz/")
+        || normalized.ends_with("/tests.rs")
+        || normalized.ends_with("_test.rs")
+        || normalized.ends_with("_tests.rs")
+        || normalized.contains("_tests_")
+        || normalized.contains("_test_")
+        || is_cpu_parity_oracle_source(&normalized)
+    {
+        return "test";
+    }
+    if normalized.contains("/examples/") {
+        return "example";
+    }
+    if normalized.ends_with(".md") || normalized.contains("/docs/") {
+        return "docs";
+    }
+    if normalized.contains("/xtask/src/")
+        || normalized.contains("/scripts/")
+        || normalized.contains("/.github/")
+    {
+        return "release_tooling";
+    }
+    "production"
+}
+
+fn is_cpu_parity_oracle_source(normalized_path: &str) -> bool {
+    normalized_path.ends_with("/cpu_oracle.rs")
+        || normalized_path.ends_with("_cpu_oracle.rs")
+        || normalized_path.ends_with("/bitset_closure_oracle.rs")
+        || normalized_path.ends_with("/reaching/oracle.rs")
+}
+
+fn hygiene_risk(pattern: &str, surface: &str, hot_path: bool) -> &'static str {
+    if surface == "generated" || surface == "example" {
+        return "informational";
+    }
+    if surface == "test" || pattern.starts_with("test_") {
+        return "test_hygiene";
+    }
+    if hot_path {
+        return "release_blocker";
+    }
+    if matches!(
+        pattern,
+        "panic_macro"
+            | "unwrap_call"
+            | "expect_call"
+            | "todo_macro"
+            | "unimplemented_macro"
+            | "not_implemented_text"
+            | "unbounded_read"
+            | "unreadable_source_file"
+            | "unreadable_tooling_file"
+            | "missing_cargo_wrapper"
+            | "stray_audit_report"
+    ) || is_hidden_fallback_pattern(pattern)
+    {
+        return "release_blocker";
+    }
+    if surface == "release_tooling"
+        && matches!(
+            pattern,
+            "raw_workspace_cargo" | "invalid_cargo_full_xtask" | "heredoc"
+        )
+    {
+        return "release_blocker";
+    }
+    if matches!(
+        pattern,
+        "TODO" | "FIXME" | "placeholder_text" | "stub_text" | "undocumented_public_api"
+    ) {
+        return "release_debt";
+    }
+    "informational"
+}
+
+fn load_hot_path_files(vyre_root: &Path) -> std::collections::BTreeSet<String> {
+    let path = vyre_root.join("docs/optimization/HOT_PATHS.toml");
+    let text = match fs::read_to_string(path) {
+        Ok(text) => text,
+        Err(_) => return std::collections::BTreeSet::new(),
+    };
+    let value = match toml::from_str::<toml::Value>(&text) {
+        Ok(value) => value,
+        Err(_) => return std::collections::BTreeSet::new(),
+    };
+    value
+        .get("hot_path")
+        .and_then(toml::Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|entry| entry.get("file").and_then(toml::Value::as_str))
+        .map(ToString::to_string)
+        .collect()
+}
+
+fn hygiene_finding_is_hot_path(
+    vyre_root: &Path,
+    path: &str,
+    hot_paths: &std::collections::BTreeSet<String>,
+) -> bool {
+    let normalized = path.replace('\\', "/");
+    let relative = Path::new(path)
+        .strip_prefix(vyre_root)
+        .ok()
+        .map(|path| path.to_string_lossy().replace('\\', "/"))
+        .unwrap_or(normalized);
+    hot_paths.contains(&relative)
+}
+
 fn release_surface_coverage(vyre_root: &Path, santh_root: &Path) -> ReleaseSurfaceCoverage {
     ReleaseSurfaceCoverage {
         vyre_workspace: vyre_root.join("vyre-core").is_dir(),
@@ -206,9 +689,9 @@ fn release_surface_coverage(vyre_root: &Path, santh_root: &Path) -> ReleaseSurfa
         wgpu_driver_crate: vyre_root.join("vyre-driver-wgpu/src/lib.rs").is_file(),
         weir_crate: santh_root.join("libs/dataflow/weir/src/lib.rs").is_file(),
         vyrec_tool: santh_root.join("tools/vyrec/src").is_dir(),
-        surgec_tool: santh_root.join("libs/tools/surgec/src").is_dir(),
+        surgec_tool: santh_root.join("libs/surge/surgec/src").is_dir(),
         surgec_grammar_gen: santh_root
-            .join("libs/shared/surgec-grammar-gen/src")
+            .join("libs/performance/matching/vyre/vyre-grammar-gen/src")
             .is_dir(),
         release_scripts: santh_root
             .join("scripts/apply-branch-protection.sh")
@@ -257,6 +740,24 @@ fn write_sibling_artifacts(output: &Path, matrix: &HygieneMatrix) {
         );
         std::process::exit(1);
     };
+    let intake_blockers = if matrix.release_blocker_count == 0 {
+        Vec::new()
+    } else {
+        vec![format!(
+            "{} release-blocking hygiene finding(s) remain; implementation-intake.json groups them by owner lane, surface, risk, hot-path flag, and pattern",
+            matrix.release_blocker_count
+        )]
+    };
+    write_json(
+        &parent.join("implementation-intake.json"),
+        &HygieneIntakeArtifact {
+            schema_version: 1,
+            release_blocker_count: matrix.release_blocker_count,
+            intake_summary: matrix.intake_summary.clone(),
+            blockers: intake_blockers,
+        },
+    );
+    write_json(&parent.join("threshold-policy.json"), &matrix.threshold_policy);
     for &(artifact, scan, patterns) in HYGIENE_SCANS {
         let findings = matrix
             .findings
@@ -264,10 +765,24 @@ fn write_sibling_artifacts(output: &Path, matrix: &HygieneMatrix) {
             .filter(|finding| patterns.iter().any(|pattern| pattern == &finding.pattern))
             .cloned()
             .collect::<Vec<_>>();
-        let blockers = if findings.is_empty() {
+        let release_blocking_findings = matrix
+            .finding_classes
+            .iter()
+            .filter(|finding| {
+                finding.release_blocker
+                    && patterns
+                        .iter()
+                        .any(|pattern| *pattern == finding.pattern)
+            })
+            .cloned()
+            .collect::<Vec<_>>();
+        let blockers = if release_blocking_findings.is_empty() {
             Vec::new()
         } else {
-            vec![format!("{} `{scan}` finding(s) remain", findings.len())]
+            vec![format!(
+                "{} release-blocking `{scan}` finding(s) remain",
+                release_blocking_findings.len()
+            )]
         };
         write_json(
             &parent.join(artifact),
@@ -275,10 +790,299 @@ fn write_sibling_artifacts(output: &Path, matrix: &HygieneMatrix) {
                 schema_version: 1,
                 scan: scan.to_string(),
                 findings,
+                release_blocking_findings,
                 blockers,
             },
         );
     }
+}
+
+fn collect_threshold_policy(vyre_root: &Path) -> ThresholdPolicyArtifact {
+    let observed = scan_threshold_constants(vyre_root);
+    let mut findings = Vec::new();
+    let mut blockers = Vec::new();
+    let policy_path = vyre_root.join(THRESHOLD_POLICY_SOURCE);
+    let document = match fs::read_to_string(&policy_path) {
+        Ok(text) => match toml::from_str::<ThresholdPolicyDocument>(&text) {
+            Ok(document) => Some(document),
+            Err(error) => {
+                blockers.push(format!(
+                    "{} is not valid threshold policy TOML: {error}. Fix: repair the TOML schema before release.",
+                    THRESHOLD_POLICY_SOURCE
+                ));
+                None
+            }
+        },
+        Err(error) => {
+            blockers.push(format!(
+                "missing {}: {error}. Fix: add unit, provenance, config tier, override path, evidence link, and release rule for every threshold-shaped const.",
+                THRESHOLD_POLICY_SOURCE
+            ));
+            None
+        }
+    };
+    let Some(document) = document else {
+        return ThresholdPolicyArtifact {
+            schema_version: THRESHOLD_POLICY_SCHEMA_VERSION,
+            source_manifest: THRESHOLD_POLICY_SOURCE,
+            evidence_artifact: THRESHOLD_POLICY_ARTIFACT.to_string(),
+            owner_lane: THRESHOLD_POLICY_OWNER_LANE.to_string(),
+            threshold_const_count: observed.len(),
+            registered_policy_count: 0,
+            rows: Vec::new(),
+            findings,
+            blockers,
+        };
+    };
+    if document.schema_version != THRESHOLD_POLICY_SCHEMA_VERSION {
+        blockers.push(format!(
+            "{} schema_version={} must be {THRESHOLD_POLICY_SCHEMA_VERSION}. Fix: update the threshold policy reader and manifest together.",
+            THRESHOLD_POLICY_SOURCE, document.schema_version
+        ));
+    }
+    if document.owner_lane != THRESHOLD_POLICY_OWNER_LANE {
+        blockers.push(format!(
+            "{} owner_lane `{}` must be `{THRESHOLD_POLICY_OWNER_LANE}`. Fix: keep threshold evidence under the hygiene/testing lane.",
+            THRESHOLD_POLICY_SOURCE, document.owner_lane
+        ));
+    }
+    if document.evidence_artifact != THRESHOLD_POLICY_ARTIFACT {
+        blockers.push(format!(
+            "{} evidence_artifact `{}` must be `{THRESHOLD_POLICY_ARTIFACT}`. Fix: point the policy at the generated hygiene sibling artifact.",
+            THRESHOLD_POLICY_SOURCE, document.evidence_artifact
+        ));
+    }
+    let mut observed_by_key = BTreeMap::new();
+    for threshold in observed {
+        observed_by_key.insert(threshold_key(&threshold.path, &threshold.name), threshold);
+    }
+    let mut policy_by_key = BTreeMap::new();
+    for row in &document.threshold {
+        let row_key = threshold_key(&row.path, &row.name);
+        if let Some(previous) = policy_by_key.insert(row_key.clone(), row.clone()) {
+            blockers.push(format!(
+                "{} duplicates threshold policy key `{}` for ids `{}` and `{}`. Fix: keep exactly one row per path/name threshold.",
+                THRESHOLD_POLICY_SOURCE, row_key, previous.id, row.id
+            ));
+        }
+        validate_threshold_policy_row(row, &mut blockers);
+    }
+    let mut rows = Vec::new();
+    for (key, threshold) in &observed_by_key {
+        let Some(policy) = policy_by_key.get(key) else {
+            findings.push(ThresholdPolicyFinding {
+                path: threshold.path.clone(),
+                line: threshold.line,
+                name: threshold.name.clone(),
+                finding: "unregistered-threshold-const".to_string(),
+                fix: format!(
+                    "Fix: add `{}`/`{}` to {} with unit, provenance, config_tier, override_path, evidence_link, and release_rule.",
+                    threshold.path, threshold.name, THRESHOLD_POLICY_SOURCE
+                ),
+            });
+            blockers.push(format!(
+                "{}:{} threshold const `{}` is missing from {}. Fix: register its unit, provenance, config tier, override path, evidence link, and VX release rule.",
+                threshold.path, threshold.line, threshold.name, THRESHOLD_POLICY_SOURCE
+            ));
+            continue;
+        };
+        rows.push(ThresholdPolicyEvidenceRow {
+            id: policy.id.clone(),
+            path: threshold.path.clone(),
+            line: threshold.line,
+            name: threshold.name.clone(),
+            observed_value: threshold.value.clone(),
+            unit: policy.unit.clone(),
+            provenance: policy.provenance.clone(),
+            config_tier: policy.config_tier.clone(),
+            override_path: policy.override_path.clone(),
+            evidence_link: policy.evidence_link.clone(),
+            release_rule: policy.release_rule.clone(),
+        });
+    }
+    for (key, policy) in &policy_by_key {
+        if !observed_by_key.contains_key(key) {
+            findings.push(ThresholdPolicyFinding {
+                path: policy.path.clone(),
+                line: 1,
+                name: policy.name.clone(),
+                finding: "stale-threshold-policy-row".to_string(),
+                fix: format!(
+                    "Fix: remove or update stale threshold policy row `{}` after moving the source constant.",
+                    policy.id
+                ),
+            });
+            blockers.push(format!(
+                "{} row `{}` points at `{}`/`{}` but no matching threshold const was observed. Fix: update or remove the stale policy row.",
+                THRESHOLD_POLICY_SOURCE, policy.id, policy.path, policy.name
+            ));
+        }
+    }
+    rows.sort_by(|left, right| {
+        left.path
+            .cmp(&right.path)
+            .then(left.line.cmp(&right.line))
+            .then(left.name.cmp(&right.name))
+    });
+    ThresholdPolicyArtifact {
+        schema_version: THRESHOLD_POLICY_SCHEMA_VERSION,
+        source_manifest: THRESHOLD_POLICY_SOURCE,
+        evidence_artifact: THRESHOLD_POLICY_ARTIFACT.to_string(),
+        owner_lane: document.owner_lane,
+        threshold_const_count: observed_by_key.len(),
+        registered_policy_count: policy_by_key.len(),
+        rows,
+        findings,
+        blockers,
+    }
+}
+
+fn validate_threshold_policy_row(row: &ThresholdPolicyTomlRow, blockers: &mut Vec<String>) {
+    for (field, value) in [
+        ("id", row.id.as_str()),
+        ("path", row.path.as_str()),
+        ("name", row.name.as_str()),
+        ("unit", row.unit.as_str()),
+        ("provenance", row.provenance.as_str()),
+        ("config_tier", row.config_tier.as_str()),
+        ("override_path", row.override_path.as_str()),
+        ("evidence_link", row.evidence_link.as_str()),
+        ("release_rule", row.release_rule.as_str()),
+    ] {
+        if value.trim().is_empty() {
+            blockers.push(format!(
+                "{} row `{}` has blank {field}. Fix: every threshold policy row must carry unit, provenance, tier, override, evidence, and VX ownership.",
+                THRESHOLD_POLICY_SOURCE, row.id
+            ));
+        }
+    }
+    if !matches!(row.config_tier.as_str(), "tier_a" | "tier_b" | "structural") {
+        blockers.push(format!(
+            "{} row `{}` uses config_tier `{}`. Fix: use `tier_a`, `tier_b`, or `structural`.",
+            THRESHOLD_POLICY_SOURCE, row.id, row.config_tier
+        ));
+    }
+    if row.config_tier == "tier_a"
+        && !(row.override_path.contains("tool.toml") && row.override_path.contains("CLI"))
+    {
+        blockers.push(format!(
+            "{} row `{}` is Tier A but override_path does not name tool.toml and CLI override behavior. Fix: record compiled default -> tool.toml -> CLI precedence.",
+            THRESHOLD_POLICY_SOURCE, row.id
+        ));
+    }
+    if row.config_tier == "tier_b" && !row.override_path.contains("TOML data") {
+        blockers.push(format!(
+            "{} row `{}` is Tier B but override_path does not name TOML data ownership. Fix: keep community/data thresholds out of CLI flags.",
+            THRESHOLD_POLICY_SOURCE, row.id
+        ));
+    }
+    if row.config_tier == "structural" && !row.override_path.contains("not operator configurable") {
+        blockers.push(format!(
+            "{} row `{}` is structural but override_path does not say `not operator configurable`. Fix: separate wire/ABI bounds from runtime knobs.",
+            THRESHOLD_POLICY_SOURCE, row.id
+        ));
+    }
+    if row.evidence_link != THRESHOLD_POLICY_ARTIFACT {
+        blockers.push(format!(
+            "{} row `{}` evidence_link `{}` must be `{THRESHOLD_POLICY_ARTIFACT}`.",
+            THRESHOLD_POLICY_SOURCE, row.id, row.evidence_link
+        ));
+    }
+    if row.release_rule != "VX-475" {
+        blockers.push(format!(
+            "{} row `{}` release_rule `{}` must be `VX-475`.",
+            THRESHOLD_POLICY_SOURCE, row.id, row.release_rule
+        ));
+    }
+}
+
+fn scan_threshold_constants(vyre_root: &Path) -> Vec<ObservedThresholdConst> {
+    let mut thresholds = Vec::new();
+    for root in threshold_scan_roots(vyre_root) {
+        if !root.exists() {
+            continue;
+        }
+        for entry in WalkDir::new(&root).into_iter().filter_entry(|entry| {
+            let name = entry.file_name().to_string_lossy();
+            !matches!(name.as_ref(), "target" | "target-codex" | "tests" | ".git")
+        }) {
+            let Ok(entry) = entry else {
+                continue;
+            };
+            let path = entry.path();
+            if path.extension().and_then(|extension| extension.to_str()) != Some("rs") {
+                continue;
+            }
+            let Ok(text) = read_text_bounded(path) else {
+                thresholds.push(ObservedThresholdConst {
+                    path: relative_to_vyre(vyre_root, path),
+                    line: 1,
+                    name: "unreadable-threshold-source".to_string(),
+                    value: "unreadable".to_string(),
+                });
+                continue;
+            };
+            for (line_index, line) in text.lines().enumerate() {
+                let Some((name, value)) = parse_threshold_const(line) else {
+                    continue;
+                };
+                thresholds.push(ObservedThresholdConst {
+                    path: relative_to_vyre(vyre_root, path),
+                    line: line_index + 1,
+                    name,
+                    value,
+                });
+            }
+        }
+    }
+    thresholds
+}
+
+fn threshold_scan_roots(vyre_root: &Path) -> Vec<PathBuf> {
+    [
+        "vyre-foundation/src/optimizer",
+        "vyre-runtime/src/megakernel",
+        "vyre-driver-wgpu/src/runtime",
+        "vyre-driver-wgpu/src/buffer",
+    ]
+    .iter()
+    .map(|relative| vyre_root.join(relative))
+    .collect()
+}
+
+fn parse_threshold_const(line: &str) -> Option<(String, String)> {
+    let code = line.split("//").next().unwrap_or(line).trim();
+    let const_index = code.find("const ")?;
+    let rest = &code[const_index + "const ".len()..];
+    let colon_index = rest.find(':')?;
+    let name = rest[..colon_index].trim();
+    if name.is_empty()
+        || !name
+            .chars()
+            .all(|ch| ch.is_ascii_uppercase() || ch.is_ascii_digit() || ch == '_')
+        || !THRESHOLD_SUFFIXES
+            .iter()
+            .any(|suffix| name.ends_with(suffix))
+    {
+        return None;
+    }
+    let equals_index = rest.find('=')?;
+    let value = rest[equals_index + 1..].split(';').next()?.trim();
+    if !value.chars().next().is_some_and(|ch| ch.is_ascii_digit()) {
+        return None;
+    }
+    Some((name.to_string(), value.to_string()))
+}
+
+fn threshold_key(path: &str, name: &str) -> String {
+    format!("{path}::{name}")
+}
+
+fn relative_to_vyre(vyre_root: &Path, path: &Path) -> String {
+    path.strip_prefix(vyre_root)
+        .unwrap_or(path)
+        .to_string_lossy()
+        .replace('\\', "/")
 }
 
 const HYGIENE_SCANS: &[(&str, &str, &[&str])] = &[
@@ -475,29 +1279,40 @@ fn scan_optional_test_root(
 }
 
 fn scan_release_xtask(root: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneFinding>) {
-    let xtask = root.join("xtask/src");
-    for relative in [
-        "backend_matrix.rs",
-        "c_parser_corpus.rs",
-        "conformance_matrix.rs",
-        "docs_matrix.rs",
-        "feature_matrix.rs",
-        "hygiene_matrix.rs",
-        "metadata_matrix.rs",
-        "optimization_corpus.rs",
-        "optimization_matrix.rs",
-        "parser_coherence.rs",
-        "release_benchmarks.rs",
-        "release_completion_audit.rs",
-        "release_conformance.rs",
-        "release_evidence.rs",
-        "release_gate.rs",
-        "test_matrix.rs",
-        "version_matrix.rs",
-        "vyre_weir_release_gate.rs",
-        "weir_matrix.rs",
+    for module in [
+        "backend_matrix",
+        "c_parser_corpus",
+        "conformance_matrix",
+        "docs_matrix",
+        "feature_matrix",
+        "hygiene_matrix",
+        "metadata_matrix",
+        "optimization_corpus",
+        "optimization_matrix",
+        "parser_coherence",
+        "release_benchmarks",
+        "release_completion_audit",
+        "release_conformance",
+        "release_evidence",
+        "release_gate",
+        "test_matrix",
+        "version_matrix",
+        "vyre_weir_release_gate",
+        "weir_matrix",
     ] {
-        scan_file(&xtask.join(relative), scanned_files, findings);
+        match crate::command_matrix::resolve_module_source(root, module) {
+            Ok(path) => scan_file(&path, scanned_files, findings),
+            Err(error) => findings.push(HygieneFinding {
+                path: root
+                    .join("xtask/src")
+                    .join(format!("{module}.rs"))
+                    .display()
+                    .to_string(),
+                line: 1,
+                pattern: "unreadable_source_file",
+                text: error,
+            }),
+        }
     }
 }
 
@@ -691,6 +1506,8 @@ fn scan_file(path: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneF
     let mut pending_cfg_test = false;
     let mut pending_test_attr = false;
     let mut test_module_depth = 0usize;
+    let mut skipping_cfg_test_item = false;
+    let mut cfg_test_item_depth = 0usize;
     let mut pending_bounded_read_chain = false;
     for (line_index, line) in text.lines().enumerate() {
         let trimmed = line.trim();
@@ -698,12 +1515,38 @@ fn scan_file(path: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneF
         if trimmed.contains(".take(") && !line_contains_read_call(line) {
             pending_bounded_read_chain = true;
         }
+        if skipping_cfg_test_item {
+            if cfg_test_item_depth == 0 {
+                if trimmed.contains('{') {
+                    cfg_test_item_depth = update_brace_depth(0, line);
+                    if cfg_test_item_depth == 0 {
+                        skipping_cfg_test_item = false;
+                    }
+                } else if trimmed.ends_with(';') {
+                    skipping_cfg_test_item = false;
+                }
+            } else {
+                cfg_test_item_depth = update_brace_depth(cfg_test_item_depth, line);
+                if cfg_test_item_depth == 0 {
+                    skipping_cfg_test_item = false;
+                }
+            }
+            continue;
+        }
         if test_module_depth > 0 {
             test_module_depth = update_brace_depth(test_module_depth, line);
             continue;
         }
-        if pending_cfg_test && trimmed.starts_with("mod ") && trimmed.contains('{') {
-            test_module_depth = update_brace_depth(0, line);
+        if pending_cfg_test {
+            if trimmed.contains('{') {
+                test_module_depth = update_brace_depth(0, line);
+                if test_module_depth == 0 {
+                    test_module_depth = 0;
+                }
+            } else {
+                skipping_cfg_test_item = true;
+                cfg_test_item_depth = 0;
+            }
             pending_cfg_test = false;
             continue;
         }
@@ -712,7 +1555,10 @@ fn scan_file(path: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneF
             pending_test_attr = false;
             continue;
         }
-        pending_cfg_test = trimmed == "#[cfg(test)]";
+        if pending_test_attr && trimmed.starts_with("#[") {
+            continue;
+        }
+        pending_cfg_test = is_non_release_cfg_attr(trimmed);
         pending_test_attr = trimmed == "#[test]"
             || trimmed.starts_with("#[tokio::test")
             || trimmed.starts_with("#[should_panic");
@@ -779,6 +1625,14 @@ fn scan_file(path: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneF
             });
         }
     }
+}
+
+fn is_non_release_cfg_attr(trimmed: &str) -> bool {
+    trimmed == "#[cfg(test)]"
+        || trimmed.contains("cfg(any(test, feature = \"cpu-parity\"))")
+        || trimmed.contains("cfg(any(feature = \"cpu-parity\", test))")
+        || trimmed.contains("cfg(any(test, feature = \"legacy-infallible\"))")
+        || trimmed.contains("cfg(any(feature = \"legacy-infallible\", test))")
 }
 
 fn line_contains_read_call(line: &str) -> bool {
@@ -1012,6 +1866,9 @@ fn line_contains_blocked_pattern(
     lower: &str,
 ) -> bool {
     let trimmed = line.trim();
+    if is_rust_doc_comment_line(trimmed) && is_code_call_blocker(name) {
+        return false;
+    }
     if is_hygiene_rule_source(path) {
         return false;
     }
@@ -1034,6 +1891,22 @@ fn line_contains_blocked_pattern(
         "TODO" | "FIXME" => line.contains(pattern),
         _ => line.contains(pattern) || lower.contains(pattern),
     }
+}
+
+fn is_rust_doc_comment_line(trimmed: &str) -> bool {
+    trimmed.starts_with("///") || trimmed.starts_with("//!")
+}
+
+fn is_code_call_blocker(name: &str) -> bool {
+    matches!(
+        name,
+        "panic_macro"
+            | "unwrap_call"
+            | "expect_call"
+            | "todo_macro"
+            | "unimplemented_macro"
+            | "not_implemented_text"
+    )
 }
 
 fn is_hidden_fallback_pattern(name: &str) -> bool {
@@ -1288,7 +2161,7 @@ mod tests {
 
     #[test]
     fn hidden_fallback_scan_still_flags_positive_product_fallback() {
-        let source = Path::new("libs/tools/surgec/src/scan/pipeline/parse_driver.rs");
+        let source = Path::new("libs/surge/surgec/src/scan/pipeline/parse_driver.rs");
 
         assert!(
             line_contains_blocked_pattern(
@@ -1304,7 +2177,7 @@ mod tests {
 
     #[test]
     fn cfg_not_gpu_attr_is_not_a_hidden_fallback_by_itself() {
-        let source = Path::new("libs/tools/surgec/src/cmd_scan.rs");
+        let source = Path::new("libs/surge/surgec/src/cmd_scan.rs");
 
         assert!(
             !line_contains_blocked_pattern(
@@ -1316,6 +2189,131 @@ mod tests {
             ),
             "Fix: a fail-closed compile-time GPU feature guard must not be treated as a runtime hidden fallback without fallback behavior."
         );
+    }
+
+    #[test]
+    fn hygiene_classifier_separates_test_from_release_blocker() {
+        let hot_paths = std::collections::BTreeSet::new();
+        let findings = vec![
+            HygieneFinding {
+                path: "vyre-driver/src/pipeline/mod.rs".to_string(),
+                line: 10,
+                pattern: "panic_macro",
+                text: "panic!(\"bad\")".to_string(),
+            },
+            HygieneFinding {
+                path: "vyre-driver/tests/pipeline_contracts.rs".to_string(),
+                line: 20,
+                pattern: "test_ignored",
+                text: "#[ignore]".to_string(),
+            },
+        ];
+
+        let classes = classify_findings(Path::new("."), &findings, &hot_paths);
+
+        assert_eq!(classes[0].surface, "production");
+        assert_eq!(classes[0].risk, "release_blocker");
+        assert!(classes[0].release_blocker);
+        assert_eq!(classes[1].surface, "test");
+        assert_eq!(classes[1].risk, "test_hygiene");
+        assert!(!classes[1].release_blocker);
+    }
+
+    #[test]
+    fn cpu_parity_oracle_sources_are_test_hygiene_not_release_blockers() {
+        let hot_paths = std::collections::BTreeSet::new();
+        let findings = vec![HygieneFinding {
+            path: "/repo/libs/dataflow/weir/src/ifds_cpu_oracle.rs".to_string(),
+            line: 37,
+            pattern: "panic_macro",
+            text: "panic!(\"IFDS CPU oracle\")".to_string(),
+        }];
+
+        let classes = classify_findings(Path::new("."), &findings, &hot_paths);
+
+        assert_eq!(classes[0].surface, "test");
+        assert_eq!(classes[0].risk, "test_hygiene");
+        assert_eq!(classes[0].release_blocker, false);
+    }
+
+    #[test]
+    fn rust_doc_comment_call_examples_do_not_count_as_production_blockers() {
+        assert_eq!(
+            line_contains_blocked_pattern(
+                Path::new("libs/dataflow/weir/src/lib.rs"),
+                "unwrap_call",
+                ".unwrap()",
+                "//! let value = fallible().unwrap();",
+                "//! let value = fallible().unwrap();",
+            ),
+            false
+        );
+    }
+
+    #[test]
+    fn fuzz_targets_are_test_surface_not_release_production() {
+        assert_eq!(
+            hygiene_surface_for_path("libs/dataflow/weir/fuzz/fuzz_targets/reachability.rs"),
+            "test"
+        );
+    }
+
+    #[test]
+    fn cfg_cpu_parity_attr_is_classified_as_non_release_item() {
+        assert_eq!(
+            is_non_release_cfg_attr("#[cfg(any(test, feature = \"cpu-parity\"))]"),
+            true
+        );
+        assert_eq!(
+            is_non_release_cfg_attr("#[cfg(any(test, feature = \"legacy-infallible\"))]"),
+            true
+        );
+        assert_eq!(
+            is_non_release_cfg_attr("#[cfg(feature = \"serde\")]"),
+            false
+        );
+    }
+
+    #[test]
+    fn stacked_cfg_after_test_attr_still_counts_as_test_body() {
+        let mut findings = Vec::new();
+        let mut scanned_files = 0;
+        let dir = std::env::temp_dir().join(format!(
+            "vyre-hygiene-stacked-test-{}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&dir).expect("test temp dir");
+        let path = dir.join("stacked_test.rs");
+        std::fs::write(
+            &path,
+            "#[test]\n#[cfg(feature = \"gpu\")]\nfn generated_e2e() {\n    fallible().expect(\"test-only assertion\");\n}\n",
+        )
+        .expect("write stacked test fixture");
+        scan_file(&path, &mut scanned_files, &mut findings);
+        std::fs::remove_file(&path).ok();
+        std::fs::remove_dir(&dir).ok();
+        assert_eq!(scanned_files, 1);
+        assert!(
+            findings.is_empty(),
+            "stacked #[test] + #[cfg] function body must not be release hygiene"
+        );
+    }
+
+    #[test]
+    fn hygiene_classifier_marks_hot_path_debt_as_release_blocker() {
+        let hot_paths =
+            std::collections::BTreeSet::from(["vyre-runtime/src/megakernel/ring.rs".to_string()]);
+        let findings = vec![HygieneFinding {
+            path: "vyre-runtime/src/megakernel/ring.rs".to_string(),
+            line: 12,
+            pattern: "TODO",
+            text: "// TODO: remove allocation".to_string(),
+        }];
+
+        let classes = classify_findings(Path::new("."), &findings, &hot_paths);
+
+        assert!(classes[0].hot_path);
+        assert_eq!(classes[0].risk, "release_blocker");
     }
 
     #[test]

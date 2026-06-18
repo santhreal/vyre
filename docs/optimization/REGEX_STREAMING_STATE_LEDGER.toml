@@ -1,0 +1,37 @@
+schema_version = 1
+
+required_modes = [
+  "block",
+  "streaming",
+  "vectored",
+]
+
+[[stream]]
+stream_mode = "block"
+state_bytes = 0
+chunk_boundary_policy = "single-buffer"
+start_of_match = "available"
+finalization = "not_required"
+reset_semantics = "new-scan-per-buffer"
+cross_chunk_offsets = "not_applicable"
+evidence_path = "vyre-libs/tests/regex_streaming_state_ledger.rs"
+
+[[stream]]
+stream_mode = "streaming"
+state_bytes = 128
+chunk_boundary_policy = "carry-prefix-suffix-and-automata-state"
+start_of_match = "requires-som-state"
+finalization = "required"
+reset_semantics = "explicit-stream-reset"
+cross_chunk_offsets = "absolute-offsets-from-stream-start"
+evidence_path = "vyre-libs/tests/regex_streaming_state_ledger.rs"
+
+[[stream]]
+stream_mode = "vectored"
+state_bytes = 64
+chunk_boundary_policy = "ordered-buffer-vector"
+start_of_match = "available-per-vector-segment"
+finalization = "required-after-last-segment"
+reset_semantics = "new-vector-scan-per-call"
+cross_chunk_offsets = "absolute-offsets-over-concatenated-vector"
+evidence_path = "vyre-libs/tests/regex_streaming_state_ledger.rs"

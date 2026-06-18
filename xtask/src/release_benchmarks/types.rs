@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 pub(super) const REQUIRED_CPU_SOTA_100X_CASES: &[&str] = &[
     "release.condition_eval.1m",
@@ -40,10 +41,28 @@ pub(super) struct ReleaseWorkloadFamily {
 pub(super) struct BackendSuiteEvidence {
     pub(super) schema_version: u32,
     pub(super) backend: String,
+    pub(super) schema_digest_chain: Value,
+    pub(super) hardware_digest: String,
+    pub(super) hardware_digest_fields: Vec<HardwareDigestField>,
+    pub(super) hardware_unavailable_reasons: Vec<HardwareUnavailableReason>,
     pub(super) family_count: usize,
     pub(super) artifacts: Vec<String>,
     pub(super) artifact_statuses: Vec<BackendSuiteArtifact>,
     pub(super) blockers: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub(super) struct HardwareDigestField {
+    pub(super) field: String,
+    pub(super) value: String,
+    pub(super) source: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub(super) struct HardwareUnavailableReason {
+    pub(super) field: String,
+    pub(super) reason: String,
+    pub(super) fix: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -68,6 +87,10 @@ pub(super) struct BackendSuiteArtifact {
     pub(super) min_cuda_ptx_source_cache_hits: Option<u64>,
     pub(super) min_cuda_ptx_source_cache_misses: Option<u64>,
     pub(super) min_kernel_launches: Option<u64>,
+    pub(super) fused_execution_dag_contract: Option<String>,
+    pub(super) fused_execution_dag_node_count: Option<usize>,
+    pub(super) fused_execution_dag_memory_edge_count: Option<usize>,
+    pub(super) fused_execution_dag_host_sync_points: Option<u64>,
     pub(super) case_count: usize,
     pub(super) failed_count: Option<u64>,
     pub(super) nonmatching_case_backend_count: usize,
@@ -109,6 +132,11 @@ pub(super) struct ReleaseAxesEvidence {
 pub(super) struct OptimizationBenchmarkManifest {
     pub(super) schema_version: u32,
     pub(super) backend: String,
+    pub(super) selected_backend: String,
+    pub(super) source_fingerprint: String,
+    pub(super) source_tree_fingerprint: String,
+    pub(super) environment: Value,
+    pub(super) summary: OptimizationBenchmarkManifestSummary,
     pub(super) required_case_count: usize,
     pub(super) required_pass_families: Vec<&'static str>,
     pub(super) covered_pass_families: Vec<&'static str>,
@@ -118,9 +146,21 @@ pub(super) struct OptimizationBenchmarkManifest {
 }
 
 #[derive(Debug, Serialize)]
+pub(super) struct OptimizationBenchmarkManifestSummary {
+    pub(super) total_cases: usize,
+    pub(super) passed: usize,
+    pub(super) failed: usize,
+    pub(super) total_time_ns: u64,
+    pub(super) cache_hit_rate: Option<f64>,
+}
+
+#[derive(Debug, Serialize)]
 pub(super) struct OptimizationBenchmarkEvidence {
+    pub(super) id: &'static str,
     pub(super) case_id: &'static str,
     pub(super) artifact: &'static str,
+    pub(super) backend_id: String,
+    pub(super) status: String,
     pub(super) covered_pass_families: Vec<&'static str>,
     pub(super) required_custom_metrics: Vec<&'static str>,
     pub(super) required_positive_metrics: Vec<&'static str>,
@@ -146,6 +186,12 @@ pub(super) struct OptimizationBenchmarkEvidence {
 pub(super) struct OptimizationArtifactInspection {
     pub(super) exists: bool,
     pub(super) read_error: Option<String>,
+    pub(super) selected_backend: Option<String>,
+    pub(super) source_fingerprint: Option<String>,
+    pub(super) source_tree_fingerprint: Option<String>,
+    pub(super) environment: Option<Value>,
+    pub(super) summary_total_time_ns: Option<u64>,
+    pub(super) summary_cache_hit_rate: Option<f64>,
     pub(super) case_count: usize,
     pub(super) min_wall_samples: Option<u64>,
     pub(super) min_wall_p50: Option<u64>,

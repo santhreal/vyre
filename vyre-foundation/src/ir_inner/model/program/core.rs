@@ -1,3 +1,4 @@
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicU8, Ordering};
 use std::sync::{Arc, OnceLock};
 
 use rustc_hash::FxHashMap;
@@ -64,7 +65,9 @@ pub struct Program {
     /// sharded DashSet is only allocated on first `mark_validated_on` call).
     #[doc(hidden)]
     pub(crate) validation_set: OnceLock<Arc<dashmap::DashSet<Arc<str>>>>,
-    pub(crate) structural_validated: std::sync::atomic::AtomicBool,
+    pub(crate) structural_validated: AtomicBool,
+    pub(crate) structural_validation_fingerprint: AtomicU64,
+    pub(crate) mutation_provenance: AtomicU8,
     pub(crate) fingerprint: OnceLock<[u8; 32]>,
     // VYRE_IR_HOTSPOTS HIGH (core.rs:100-117): both caches were
     // plain values, so `Program::clone` copied the whole Vec / whole
@@ -108,9 +111,12 @@ impl Clone for Program {
                 }
                 cell
             },
-            structural_validated: std::sync::atomic::AtomicBool::new(
-                self.is_structurally_validated(),
+            structural_validated: AtomicBool::new(self.is_structurally_validated()),
+            structural_validation_fingerprint: AtomicU64::new(
+                self.structural_validation_fingerprint
+                    .load(Ordering::Acquire),
             ),
+            mutation_provenance: AtomicU8::new(self.mutation_provenance.load(Ordering::Acquire)),
             fingerprint: OnceLock::new(),
             output_buffer_index: OnceLock::new(),
             has_indirect_dispatch: OnceLock::new(),

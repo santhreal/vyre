@@ -51,7 +51,7 @@ mod cpu_ref;
 mod registry;
 
 #[cfg(test)]
-#[path = "dominator_tree/tests.rs"]
+#[path = "dominator_tree/tests/mod.rs"]
 mod tests;
 
 pub use program::{

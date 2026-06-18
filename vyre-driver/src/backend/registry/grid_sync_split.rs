@@ -747,11 +747,13 @@ mod tests {
             program: &program,
             resources: &resources,
             grid_override: None,
+            workgroup_override: None,
         }];
         let repeated_steps = [ResidentDispatchStep {
             program: &program,
             resources: &resources,
             grid_override: Some([3, 1, 1]),
+            workgroup_override: None,
         }];
         let read_ranges = [
             ResidentReadRange {

@@ -76,6 +76,20 @@ pub fn csr_queue_strided_forward_traverse(
     let lane = Expr::InvocationId { axis: 0 };
     let words = bitset_words(node_count);
     let physical_edge_count = edge_count.max(1);
+    let edge_offset_count = match crate::graph::checked_csr_offset_count(
+        node_count,
+        "csr_queue_strided_forward_traverse",
+    ) {
+        Ok(edge_offset_count) => edge_offset_count,
+        Err(error) => {
+            return crate::invalid_output_program(
+                CSR_QUEUE_STRIDED_FORWARD_OP_ID,
+                frontier_out,
+                DataType::U32,
+                error,
+            );
+        }
+    };
     let lanes_per_source = Expr::u32(CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE);
     let body = vec![
         Node::let_bind("qs_lane", lane),
@@ -251,7 +265,7 @@ pub fn csr_queue_strided_forward_traverse(
                 .with_count(queue_capacity),
             BufferDecl::storage(queue_len, 1, BufferAccess::ReadOnly, DataType::U32).with_count(1),
             BufferDecl::storage(edge_offsets, 2, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(node_count + 1),
+                .with_count(edge_offset_count),
             BufferDecl::storage(edge_targets, 3, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(physical_edge_count),
             BufferDecl::storage(edge_kind_mask, 4, BufferAccess::ReadOnly, DataType::U32)
@@ -481,6 +495,36 @@ mod tests {
         assert!(
             program.stats().trap(),
             "invalid node_count must compile to a trap program"
+        );
+    }
+
+    #[test]
+    fn offset_count_overflow_returns_trap_program_without_panic() {
+        let result = std::panic::catch_unwind(|| {
+            csr_queue_strided_forward_traverse(
+                "queue",
+                "len",
+                "offsets",
+                "targets",
+                "kinds",
+                "out",
+                u32::MAX,
+                0,
+                1,
+                1,
+            )
+        });
+
+        assert!(
+            result.is_ok(),
+            "CSR queue strided builder must reject offset-count overflow without panicking"
+        );
+        let program = result.unwrap();
+        assert!(program.stats().trap());
+        let entry = format!("{:?}", program.entry());
+        assert!(
+            entry.contains("node_count + 1 overflows u32"),
+            "Fix: trap must retain the CSR offset-count overflow diagnostic, got: {entry}"
         );
     }
 }

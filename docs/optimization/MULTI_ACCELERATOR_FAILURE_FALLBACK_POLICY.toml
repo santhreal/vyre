@@ -1,0 +1,54 @@
+# Multi-accelerator failure fallback owns safe degradation when one device, link, rank, or collective becomes unsafe.
+
+schema = "vyre.accelerator.multi_accelerator_failure_fallback_policy.v1"
+owner = "security_reliability"
+evidence_tokens = ["CUDA_PEER_DEVICE_MEMORY", "NCCL_COLLECTIVES", "NVML_NVLINK_METHODS", "VULKAN_DEVICE_GROUPS"]
+
+required_fields = [
+  "failure_id",
+  "failure_surface",
+  "detection_policy",
+  "containment_policy",
+  "fallback_route_policy",
+  "output_integrity_policy",
+  "operator_effect_policy",
+  "privacy_boundary",
+  "authority_links",
+  "diagnostic",
+]
+
+[[failure]]
+failure_id = "peer-access-missing-or-revoked"
+failure_surface = "CUDA-peer-access-false-enable-failure-revoked-context-or-IOMMU-blocked-peer-copy"
+detection_policy = "record-peer-access-query-enable-result-error-code-link-class-and-device-pair-public-class"
+containment_policy = "do-not-launch-cross-device-dereference-or-peer-copy-on-failed-pair"
+fallback_route_policy = "route-through-host-staging-single-GPU-shard-or-CPU-reference-with-explicit-performance-claim-scope"
+output_integrity_policy = "rerun-affected-shard-or compare-output-digest-before publishing-report"
+operator_effect_policy = "emit-peer-access-diagnostic-device-class-pair-fallback-route-and-config-fix"
+privacy_boundary = "public-record-excludes-PCI-address-full-hostname-device-serial-and-Santh-path"
+authority_links = ["MULTI_ACCELERATOR_TOPOLOGY_CAPABILITY_MATRIX.toml", "PINNED_STAGING_TRANSFER_POLICY.toml", "OUTPUT_SLAB_PROVENANCE.toml", "OPERATOR_RUNBOOK_ROLLBACK_POLICY.toml"]
+diagnostic = "VYRE_PEER_ACCESS_FALLBACK_REQUIRED"
+
+[[failure]]
+failure_id = "collective-rank-mismatch-or-timeout"
+failure_surface = "NCCL-or-native-collective-rank-count-datatype-root-count-mismatch-or-timeout"
+detection_policy = "record-rank-map-count-datatype-root-timeout-stream-group-and-last-safe-output-epoch"
+containment_policy = "abort-collective-group-and-mark-all-dependent-output-slabs-stale-until recomputed"
+fallback_route_policy = "switch-to-peer-copy-gather-host-staging-gather-or-single-device-route-based-on-topology"
+output_integrity_policy = "published-report-requires-complete-rank-set-or-verified-recomputed-fallback-output"
+operator_effect_policy = "emit-collective-fallback-rank-count-selected-route-and-output-recompute-status"
+privacy_boundary = "public-record-excludes-private-device-layout-rank-hostnames-corpus-excerpts-and-pointer-values"
+authority_links = ["PEER_TRANSFER_COLLECTIVE_POLICY.toml", "OUTPUT_SLAB_PROVENANCE.toml", "TRACE_CONTEXT_TELEMETRY_CONTRACTS.toml", "SERVICE_LEVEL_OBJECTIVE_POLICY.toml"]
+diagnostic = "VYRE_COLLECTIVE_FALLBACK_REQUIRED"
+
+[[failure]]
+failure_id = "accelerator-link-health-degradation"
+failure_surface = "NVLink-error-counter-link-down-bandwidth-drop-or-device-group-peer-memory-degradation"
+detection_policy = "record-link-health-window-error-counter-throughput-class-temperature-power-state-and-recent-transfer-failures"
+containment_policy = "remove-unhealthy-link-or-device-pair-from-shard-admission-until-health-window-recovers"
+fallback_route_policy = "rebalance-shards-to-healthy-device-set-or-lower-to-single-device-capacity-envelope"
+output_integrity_policy = "partially-completed-shards-recomputed-on-healthy-route-before result-publication"
+operator_effect_policy = "emit-link-health-diagnostic-capacity-envelope-change-and-release-claim-impact"
+privacy_boundary = "public-record-excludes-raw-topology-map-private-hostnames-device-serials-and-Santh-root"
+authority_links = ["POWER_THERMAL_TELEMETRY_CONTRACTS.toml", "ENERGY_EFFICIENCY_REGRESSION_POLICY.toml", "MULTI_GPU_SHARDING_AGGREGATION_PLAN.toml", "RELEASE_HEALTH_FEEDBACK_LOOP.toml"]
+diagnostic = "VYRE_ACCELERATOR_LINK_HEALTH_FALLBACK_REQUIRED"

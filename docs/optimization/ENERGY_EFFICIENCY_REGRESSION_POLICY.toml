@@ -1,0 +1,66 @@
+# Energy efficiency regression owns perf-per-watt, joules-per-work-unit, and thermal-throttle gates; performance statistics and profiling remain speed and causality authorities.
+
+schema = "vyre.efficiency.energy_efficiency_regression.v1"
+owner = "performance_efficiency"
+evidence_tokens = ["NVIDIA_NVML_DEVICE_POWER", "NVIDIA_DCGM_PROFILING_GROUPS", "LINUX_POWERCAP_RAPL", "KEPLER_ENERGY_EXPORTER", "CRITERION_ANALYSIS_PROCESS", "GOOGLE_BENCHMARK_COMPARE_TOOLS"]
+
+required_fields = [
+  "efficiency_gate_id",
+  "workload_surface",
+  "functional_unit_policy",
+  "baseline_policy",
+  "candidate_policy",
+  "energy_metric_policy",
+  "performance_metric_policy",
+  "thermal_throttle_policy",
+  "statistical_policy",
+  "decision_policy",
+  "release_gate_effect",
+  "authority_links",
+  "diagnostic",
+]
+
+[[efficiency_gate]]
+efficiency_gate_id = "gpu-throughput-per-watt-regression"
+workload_surface = "CUDA-GPU-scan-flow-graph-release-benchmarks"
+functional_unit_policy = "functional-unit-records-scanned-bytes-edges-or-rules-processed-per-window"
+baseline_policy = "baseline-records-artifact-digest-backend-capability-digest-GPU-class-power-limit-clock-class-workload-digest-and-energy-window"
+candidate_policy = "candidate-records-same-capacity-envelope-workload-digest-power-limit-clock-class-and-profile-id"
+energy_metric_policy = "record-joules-per-functional-unit-average-watts-peak-watts-power-limit-and-energy-window"
+performance_metric_policy = "record-throughput-latency-device-time-and-profile-backed-hot-path-attribution"
+thermal_throttle_policy = "efficiency-claim-invalid-when-throttle-reason-temperature-margin-or-clock-drop-is-unexplained"
+statistical_policy = "uses-STATISTICAL_REGRESSION_GATES-and-MULTIPLE_COMPARISON_DECISION_POLICY-for-performance-and-energy-effect-decisions"
+decision_policy = "candidate-wins-only-when-throughput-or-latency-clears-gate-and-joules-per-unit-does-not-regress-beyond-threshold"
+release_gate_effect = "GPU-performance-claim-blocked-when-speedup-hides-energy-regression-or-thermal-throttle"
+authority_links = ["POWER_THERMAL_TELEMETRY_CONTRACTS.toml", "STATISTICAL_REGRESSION_GATES.toml", "PERFORMANCE_REGRESSION_PROFILE_TRIAGE_POLICY.toml", "GPU_DEVICE_CAPACITY_PLACEMENT_POLICY.toml"]
+diagnostic = "VYRE_GPU_PER_WATT_REGRESSION_GATE_REQUIRED"
+
+[[efficiency_gate]]
+efficiency_gate_id = "cpu-reference-joules-per-scan-regression"
+workload_surface = "CPU-reference-routes-parser-flow-and-detection-workloads"
+functional_unit_policy = "functional-unit-records-files-bytes-rules-or-analysis-units-processed"
+baseline_policy = "baseline-records-CPU-capability-class-powercap-zone-governor-class-workload-digest-and-release-version"
+candidate_policy = "candidate-records-same-power-zone-capacity-envelope-workload-digest-and-route-id"
+energy_metric_policy = "record-RAPL-or-Kepler-joules-per-functional-unit-average-watts-and-powercap-constraint-state"
+performance_metric_policy = "record-wall-time-cpu-time-throughput-latency-and-resource-budget-state"
+thermal_throttle_policy = "claim-invalid-when-powercap-constraint-or-thermal-zone-state-changes-without-stratification"
+statistical_policy = "uses-benchmark-methodology-statistical-gates-and-experiment-design-blocking-before-regression-decision"
+decision_policy = "candidate-wins-only-when-energy-per-unit-and-time-per-unit-clear-predeclared-effect-thresholds"
+release_gate_effect = "CPU-efficiency-claim-blocked-when-energy-window-or-powercap-state-is-missing"
+authority_links = ["POWER_THERMAL_TELEMETRY_CONTRACTS.toml", "OPTIMIZATION_EXPERIMENT_DESIGN_POLICY.toml", "HARDWARE_WORKLOAD_STRATIFICATION_MATRIX.toml", "RESOURCE_RIGHTSIZING_CAPACITY_POLICY.toml"]
+diagnostic = "VYRE_CPU_JOULES_PER_SCAN_GATE_REQUIRED"
+
+[[efficiency_gate]]
+efficiency_gate_id = "operator-load-energy-regression"
+workload_surface = "operator-API-batch-worker-autoscaling-and-release-canary-load"
+functional_unit_policy = "functional-unit-records-successful-requests-scans-or-work-items-per-SLO-window"
+baseline_policy = "baseline-records-release-version-capacity-envelope-autoscaling-mode-replica-class-and-energy-window"
+candidate_policy = "candidate-records-release-version-capacity-envelope-autoscaling-mode-replica-class-and-energy-window"
+energy_metric_policy = "record-pod-container-node-energy-attribution-joules-per-functional-unit-and-idle-vs-dynamic-policy"
+performance_metric_policy = "record-SLO-SLI-error-budget-shed-count-queue-depth-throughput-and-latency"
+thermal_throttle_policy = "node-powercap-or-thermal-state-change-pauses-efficiency-comparison-until-blocked-or-repeated"
+statistical_policy = "uses-operator-release-load-comparison-family-and-SLO-analysis-gates"
+decision_policy = "promotion-allowed-only-when-SLO-clears-and-energy-per-functional-unit-does-not-regress-beyond-policy"
+release_gate_effect = "release-promotion-blocked-when-canary-improves-latency-by-overprovisioning-energy-without-disclosure"
+authority_links = ["POWER_THERMAL_TELEMETRY_CONTRACTS.toml", "SERVICE_LEVEL_OBJECTIVE_POLICY.toml", "PROGRESSIVE_DELIVERY_CANARY_POLICY.toml", "MULTIPLE_COMPARISON_DECISION_POLICY.toml"]
+diagnostic = "VYRE_OPERATOR_LOAD_ENERGY_GATE_REQUIRED"

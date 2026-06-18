@@ -21,7 +21,7 @@ mod sync;
 mod timed;
 
 #[cfg(test)]
-#[path = "resident_dispatch/tests.rs"]
+#[path = "resident_dispatch/tests/mod.rs"]
 mod tests;
 
 pub(crate) use crate::backend::resident_dispatch_support::CudaResidentDispatch;

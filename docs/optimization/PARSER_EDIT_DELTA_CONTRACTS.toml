@@ -1,0 +1,50 @@
+# Parser edit-delta contracts for VX-651.
+# These rows make incremental parse reuse observable instead of inferred.
+
+schema = "vyre.parser.edit_delta.v1"
+owner = "parser_frontend"
+evidence_tokens = ["TREE_SITTER", "DIFF_DATAFLOW"]
+
+required_fields = [
+  "language",
+  "dialect",
+  "old_tree_digest",
+  "new_tree_digest",
+  "changed_ranges",
+  "reused_node_count",
+  "invalidated_fact_ranges",
+  "scan_impact",
+  "compiler_impact",
+]
+
+invariants = [
+  "changed ranges are byte-disjoint and sorted",
+  "old tree digest and new tree digest are non-empty",
+  "reused node count cannot exceed old tree node count",
+  "invalidated fact ranges cover every changed source range",
+  "scan impact and compiler impact must name the affected route",
+]
+
+[[contract]]
+id = "rust-small-edit-span-limited"
+language = "rust"
+dialect = "rust-2021"
+old_tree_digest = "sha256:old-rust-tree"
+new_tree_digest = "sha256:new-rust-tree"
+changed_ranges = ["42..47"]
+reused_node_count = 318
+invalidated_fact_ranges = ["borrow:42..47", "symbol:40..55"]
+scan_impact = "rescan-overlapping-regex-shards"
+compiler_impact = "rebuild-one-function-lowering"
+
+[[contract]]
+id = "c-macro-body-invalidates-expansion"
+language = "c"
+dialect = "gnu11"
+old_tree_digest = "sha256:old-c-tree"
+new_tree_digest = "sha256:new-c-tree"
+changed_ranges = ["88..103"]
+reused_node_count = 211
+invalidated_fact_ranges = ["macro:FOO", "expansion:120..148"]
+scan_impact = "rescan-macro-expansion-slices"
+compiler_impact = "rebuild-translation-unit-preprocess-certificate"

@@ -14,6 +14,12 @@ fn cuda_ffi_template_compiles_as_emitted_launcher_module() {
         src_dir.join("lib.rs"),
     )
     .expect("Fix: generated CUDA FFI template must be readable.");
+    let emitted = fs::read_to_string(src_dir.join("lib.rs"))
+        .expect("Fix: generated CUDA FFI template copy must be readable.");
+    assert!(
+        emitted.contains("cuModuleLoadData") && emitted.contains("cuLaunchKernel"),
+        "Fix: generated CUDA FFI template must expose module loading and kernel launch bindings."
+    );
     fs::write(
         temp.path().join("Cargo.toml"),
         r#"[package]

@@ -1,0 +1,40 @@
+# FFI and ABI boundary contracts for VX-965 through VX-967 and VX-971 through VX-972.
+# Extern ABIs, pointer validity, string encoding, ownership transfer, and unwinding share one contract.
+
+schema = "vyre.ffi.abi_boundary_contract.v1"
+owner = "driver_shared"
+evidence_tokens = ["RUST_NOMICON_FFI", "RUST_RFC_2945_C_UNWIND"]
+
+required_fields = [
+  "boundary_id",
+  "abi",
+  "symbol_class",
+  "pointer_policy",
+  "string_policy",
+  "ownership_policy",
+  "thread_safety_policy",
+  "unwind_policy",
+  "diagnostic",
+]
+
+[[boundary]]
+boundary_id = "cuda-driver-ffi"
+abi = "C"
+symbol_class = "vendor-driver-function"
+pointer_policy = "non-null-and-length-checked-before-call"
+string_policy = "no-untrusted-c-string-with-interior-nul"
+ownership_policy = "driver-retains-device-ownership-wrapper-retains-host-buffer"
+thread_safety_policy = "stream-context-bound"
+unwind_policy = "panic-cannot-cross-ffi-boundary"
+diagnostic = "VYRE_FFI_CUDA_BOUNDARY_REFUSED"
+
+[[boundary]]
+boundary_id = "c-parser-callback"
+abi = "C-unwind"
+symbol_class = "foreign-callback-boundary"
+pointer_policy = "opaque-user-data-pointer-validated-before-callback"
+string_policy = "utf8-or-byte-slice-explicitly-tagged"
+ownership_policy = "caller-retains-allocation-callee-borrows-for-call"
+thread_safety_policy = "callback-thread-affinity-recorded"
+unwind_policy = "unwind-abi-explicit-and-catch-boundary-recorded"
+diagnostic = "VYRE_FFI_CALLBACK_BOUNDARY_REFUSED"

@@ -18,8 +18,8 @@
 use std::time::Instant;
 
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_libs::scan::{build_rule_pipeline, ResidentRulePipeline};
 use vyre_foundation::match_result::Match;
+use vyre_libs::scan::{build_rule_pipeline, ResidentRulePipeline};
 
 /// A pattern set large enough that the lane-major transition table is non-trivial
 /// (this is the table the resident path avoids re-uploading every scan).
@@ -39,7 +39,8 @@ fn borrowed_then_reference(
         .expect("borrowed RulePipeline::scan dispatch");
     let reference = pipeline.reference_scan(haystack);
     assert_eq!(
-        borrowed, reference,
+        borrowed,
+        reference,
         "borrowed GPU scan must match the CPU reference for {:?}",
         String::from_utf8_lossy(haystack)
     );
@@ -48,8 +49,8 @@ fn borrowed_then_reference(
 
 #[test]
 fn resident_rule_pipeline_matches_borrowed_on_real_gpu() {
-    let backend = WgpuBackend::new()
-        .expect("Fix: resident RulePipeline parity requires a live GPU adapter");
+    let backend =
+        WgpuBackend::new().expect("Fix: resident RulePipeline parity requires a live GPU adapter");
 
     let haystacks: &[&[u8]] = &[
         b"zabcd",
@@ -78,7 +79,8 @@ fn resident_rule_pipeline_matches_borrowed_on_real_gpu() {
             .expect("resident scan dispatch");
 
         assert_eq!(
-            resident_matches, expected,
+            resident_matches,
+            expected,
             "resident scan diverged from borrowed/reference for {:?}",
             String::from_utf8_lossy(haystack)
         );
@@ -110,7 +112,8 @@ fn resident_rule_pipeline_matches_borrowed_on_real_gpu() {
 #[test]
 #[ignore = "measurement, run with --ignored --nocapture"]
 fn resident_rule_pipeline_amortizes_table_upload() {
-    let backend = WgpuBackend::new().expect("Fix: GPU adapter required for the amortization measurement");
+    let backend =
+        WgpuBackend::new().expect("Fix: GPU adapter required for the amortization measurement");
 
     let haystack = b"abcabcabc def def secret secret token AKIA passwd key cde bcd".repeat(64);
     let pipeline = build_rule_pipeline(PATTERNS, "input", "hits", haystack.len() as u32);
@@ -118,10 +121,14 @@ fn resident_rule_pipeline_amortizes_table_upload() {
 
     // Warm-up both paths (adapter/pipeline cold-start).
     let _ = pipeline.scan(&backend, &haystack, MAX_MATCHES).unwrap();
-    let session = pipeline.prepare_resident(&backend, haystack.len(), MAX_MATCHES).unwrap();
+    let session = pipeline
+        .prepare_resident(&backend, haystack.len(), MAX_MATCHES)
+        .unwrap();
     let mut scratch = Vec::new();
     let mut matches = Vec::new();
-    session.scan_into(&backend, &haystack, &mut matches, &mut scratch).unwrap();
+    session
+        .scan_into(&backend, &haystack, &mut matches, &mut scratch)
+        .unwrap();
 
     let t0 = Instant::now();
     for _ in 0..ROUNDS {
@@ -132,7 +139,9 @@ fn resident_rule_pipeline_amortizes_table_upload() {
 
     let t1 = Instant::now();
     for _ in 0..ROUNDS {
-        session.scan_into(&backend, &haystack, &mut matches, &mut scratch).unwrap();
+        session
+            .scan_into(&backend, &haystack, &mut matches, &mut scratch)
+            .unwrap();
         std::hint::black_box(&matches);
     }
     let resident_ms = t1.elapsed().as_secs_f64() * 1000.0;

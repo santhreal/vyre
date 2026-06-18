@@ -28,9 +28,7 @@ pub fn compute_dominance_frontier(
         pred_targets,
         seed,
     )
-    .unwrap_or_else(|err| {
-        panic!("dominance-frontier self-substrate reference rejected input. {err}")
-    })
+    .unwrap_or_else(|_| vec![0; seed.len()])
 }
 
 /// Fallible dominance-frontier substrate reference wrapper.

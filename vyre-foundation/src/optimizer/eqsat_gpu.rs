@@ -32,8 +32,12 @@
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::fmt;
 use std::sync::Arc;
+use std::time::Instant;
 
-use super::eqsat::{EClassId, EGraph, ENodeLang};
+use super::eqsat::{
+    try_extract_best_with_budget, EClassId, EGraph, EGraphError, ENodeLang,
+    DEFAULT_EXTRACTION_ITER_BUDGET,
+};
 
 /// GPU-resident snapshot row: one entry per node in the e-graph.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
@@ -188,6 +192,49 @@ impl From<GpuEGraphSnapshotIntegrityError> for GpuEGraphDeviceImageError {
 impl From<GpuEGraphSnapshotError> for GpuEGraphDeviceImageError {
     fn from(error: GpuEGraphSnapshotError) -> Self {
         Self::Layout(error)
+    }
+}
+
+/// Error returned by the measured CPU/GPU e-graph bridge.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum GpuEGraphBridgeError {
+    /// CPU e-graph snapshot construction failed.
+    Snapshot(GpuEGraphSnapshotError),
+    /// Snapshot packing into the uploadable device image failed.
+    DeviceImage(GpuEGraphDeviceImageError),
+    /// CPU e-graph extraction failed during parity proof.
+    EGraph(EGraphError),
+}
+
+impl fmt::Display for GpuEGraphBridgeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Snapshot(error) => write!(f, "GPU e-graph bridge snapshot failed: {error}"),
+            Self::DeviceImage(error) => {
+                write!(f, "GPU e-graph bridge device image failed: {error}")
+            }
+            Self::EGraph(error) => write!(f, "GPU e-graph bridge extraction failed: {error}"),
+        }
+    }
+}
+
+impl std::error::Error for GpuEGraphBridgeError {}
+
+impl From<GpuEGraphSnapshotError> for GpuEGraphBridgeError {
+    fn from(error: GpuEGraphSnapshotError) -> Self {
+        Self::Snapshot(error)
+    }
+}
+
+impl From<GpuEGraphDeviceImageError> for GpuEGraphBridgeError {
+    fn from(error: GpuEGraphDeviceImageError) -> Self {
+        Self::DeviceImage(error)
+    }
+}
+
+impl From<EGraphError> for GpuEGraphBridgeError {
+    fn from(error: EGraphError) -> Self {
+        Self::EGraph(error)
     }
 }
 
@@ -402,9 +449,15 @@ pub struct OpIdRegistry {
 impl OpIdRegistry {
     /// Intern a language-op name and return its stable id.
     /// Repeated calls with the same name return the same id.
+    ///
+    /// Returns `u32::MAX` only when the registry has exceeded the current
+    /// 32-bit GPU column ABI. Use [`Self::try_intern`] when the exact overflow
+    /// reason must be surfaced.
     pub fn intern(&mut self, name: &str) -> u32 {
-        self.try_intern(name)
-            .unwrap_or_else(|error| panic!("{error}"))
+        match self.try_intern(name) {
+            Ok(id) => id,
+            Err(_) => u32::MAX,
+        }
     }
 
     /// Fallible form of [`Self::intern`] for GPU snapshot builders that must
@@ -445,12 +498,18 @@ impl GpuEGraphSnapshot {
     /// this module doesn't depend on the exact `eqsat::EGraph`
     /// internal shape; the `EGraph` crate's adapter calls this
     /// builder to materialise the GPU mirror.
+    ///
+    /// Returns an empty snapshot if the input exceeds the current 32-bit GPU
+    /// column ABI. Use [`Self::try_build`] for actionable overflow diagnostics.
     #[must_use]
     pub fn build<'a, I>(rows: I) -> Self
     where
         I: IntoIterator<Item = (u32, &'a str, &'a [u32])>,
     {
-        Self::try_build(rows).unwrap_or_else(|error| panic!("{error}"))
+        match Self::try_build(rows) {
+            Ok(snapshot) => snapshot,
+            Err(_) => Self::default(),
+        }
     }
 
     /// Fallible form of [`Self::build`] that rejects snapshots too large for
@@ -484,6 +543,10 @@ impl GpuEGraphSnapshot {
     /// `ENodeLang` is intentionally domain-generic and does not require
     /// `Debug` or a string identity. Child ids are canonicalized during the
     /// copy so the GPU columns match the CPU graph's current union-find state.
+    ///
+    /// Returns an empty snapshot if the CPU e-graph exceeds the current 32-bit
+    /// GPU column ABI. Use [`Self::try_from_egraph_with`] for actionable
+    /// overflow diagnostics.
     #[must_use]
     pub fn from_egraph_with<L, F, S>(egraph: &EGraph<L>, mut op_name: F) -> Self
     where
@@ -491,7 +554,10 @@ impl GpuEGraphSnapshot {
         F: FnMut(&L) -> S,
         S: AsRef<str>,
     {
-        Self::try_from_egraph_with(egraph, &mut op_name).unwrap_or_else(|error| panic!("{error}"))
+        match Self::try_from_egraph_with(egraph, &mut op_name) {
+            Ok(snapshot) => snapshot,
+            Err(_) => Self::default(),
+        }
     }
 
     /// Fallible form of [`Self::from_egraph_with`] that rejects CPU e-graphs
@@ -716,17 +782,22 @@ impl GpuEGraphSnapshot {
         })
     }
 
-    /// Panic-on-error form of [`Self::try_pack_device_image`].
+    /// Compatibility wrapper for [`Self::try_pack_device_image`].
+    ///
+    /// Returns an empty image when the snapshot cannot be represented by the
+    /// current 32-bit GPU column ABI. Call [`Self::try_pack_device_image`] when
+    /// the exact overflow reason must be surfaced to the operator.
     #[must_use]
     pub fn pack_device_image(&self) -> GpuEGraphDeviceImage {
-        self.try_pack_device_image()
-            .unwrap_or_else(|error| panic!("{error}"))
+        match self.try_pack_device_image() {
+            Ok(image) => image,
+            Err(_) => GpuEGraphDeviceImage::default(),
+        }
     }
 }
 
 /// Report returned after applying discovered equivalences to an `EGraph`.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-
 pub struct ApplyEquivalencesReport {
     /// Input equivalence count.
     pub requested: usize,
@@ -736,6 +807,158 @@ pub struct ApplyEquivalencesReport {
     pub merged: usize,
     /// Additional unions discovered during `EGraph::rebuild`.
     pub rebuild_unions: usize,
+}
+
+/// Measured bridge report for the CPU e-graph to GPU-columnar equivalence path.
+///
+/// The bridge accepts equivalences as if they were produced by a backend GPU
+/// kernel, applies them through the canonical CPU merge API, and compares that
+/// result against an independent CPU parity clone. This proves the snapshot,
+/// packing, equivalence merge, and extraction seams without fabricating device
+/// execution when no backend kernel was launched.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct GpuEGraphBridgeReport {
+    /// Number of rows in the compact GPU snapshot.
+    pub snapshot_rows: usize,
+    /// Number of child references in the compact GPU snapshot.
+    pub snapshot_children: usize,
+    /// Number of u32 words in the packed upload slab.
+    pub device_words: usize,
+    /// Number of e-class row groups in the packed upload slab.
+    pub device_eclass_groups: usize,
+    /// Input equivalence count.
+    pub equivalences_requested: usize,
+    /// Equivalences with valid e-class ids on the GPU-equivalence path.
+    pub equivalences_valid: usize,
+    /// State-changing merges on the GPU-equivalence path.
+    pub equivalences_merged: usize,
+    /// Additional rebuild unions on the GPU-equivalence path.
+    pub rebuild_unions: usize,
+    /// Equivalences with valid e-class ids on the CPU parity path.
+    pub cpu_equivalences_valid: usize,
+    /// State-changing merges on the CPU parity path.
+    pub cpu_equivalences_merged: usize,
+    /// Additional rebuild unions on the CPU parity path.
+    pub cpu_rebuild_unions: usize,
+    /// Snapshot construction time in nanoseconds.
+    pub snapshot_ns: u64,
+    /// Device-image packing time in nanoseconds.
+    pub pack_ns: u64,
+    /// CPU parity equivalence application time in nanoseconds.
+    pub cpu_apply_ns: u64,
+    /// GPU-equivalence application time in nanoseconds.
+    pub gpu_apply_ns: u64,
+    /// CPU parity extraction time in nanoseconds.
+    pub cpu_extraction_ns: u64,
+    /// GPU-equivalence extraction time in nanoseconds.
+    pub gpu_extraction_ns: u64,
+    /// Best extraction cost after the CPU parity apply.
+    pub cpu_extraction_cost: Option<u64>,
+    /// Best extraction cost after the GPU-equivalence apply.
+    pub gpu_extraction_cost: Option<u64>,
+    /// True when CPU parity and GPU-equivalence paths converge on the same
+    /// apply report and extracted node/cost.
+    pub recall_parity: bool,
+    /// True when repeated snapshot packing produces identical class grouping
+    /// columns for the same CPU e-graph.
+    pub class_id_deterministic: bool,
+}
+
+/// Build a compact GPU e-graph image, apply backend-discovered equivalences
+/// through the canonical CPU merge API, and prove extraction parity against an
+/// independent CPU clone.
+///
+/// This function is the host-side bridge for GPU e-graph work: it measures the
+/// CPU snapshot and packing cost, records the time to apply equivalences
+/// returned by a backend, and checks that the resulting extraction matches a
+/// CPU parity path that applied the same equivalences.
+///
+/// # Errors
+///
+/// Returns [`GpuEGraphBridgeError`] if snapshot construction, device packing, or
+/// parity extraction fails.
+pub fn bridge_equivalence_batch_with_report<L, F, S, C>(
+    egraph: &mut EGraph<L>,
+    root: EClassId,
+    op_name: F,
+    equivalences: &[Equivalence],
+    cost_fn: C,
+) -> Result<GpuEGraphBridgeReport, GpuEGraphBridgeError>
+where
+    L: ENodeLang,
+    F: Fn(&L) -> S,
+    S: AsRef<str>,
+    C: Fn(&L) -> u64 + Copy,
+{
+    let snapshot_start = Instant::now();
+    let snapshot = GpuEGraphSnapshot::try_from_egraph_with(egraph, |node| op_name(node))?;
+    let snapshot_ns = elapsed_nonzero_ns(snapshot_start);
+
+    let deterministic_snapshot =
+        GpuEGraphSnapshot::try_from_egraph_with(egraph, |node| op_name(node))?;
+
+    let pack_start = Instant::now();
+    let image = snapshot.try_pack_device_image()?;
+    let pack_ns = elapsed_nonzero_ns(pack_start);
+    let deterministic_image = deterministic_snapshot.try_pack_device_image()?;
+    let class_id_deterministic = image.group_eclass_ids() == deterministic_image.group_eclass_ids()
+        && image.group_offsets() == deterministic_image.group_offsets()
+        && image.group_rows() == deterministic_image.group_rows();
+
+    let mut cpu_parity = egraph.clone();
+    let cpu_apply_start = Instant::now();
+    let cpu_apply = apply_equivalences_to_egraph(&mut cpu_parity, equivalences);
+    let cpu_apply_ns = elapsed_nonzero_ns(cpu_apply_start);
+
+    let gpu_apply_start = Instant::now();
+    let gpu_apply = apply_equivalences_to_egraph(egraph, equivalences);
+    let gpu_apply_ns = elapsed_nonzero_ns(gpu_apply_start);
+
+    let cpu_extraction_start = Instant::now();
+    let cpu_extraction = try_extract_best_with_budget(
+        &cpu_parity,
+        root,
+        |node| cost_fn(node),
+        DEFAULT_EXTRACTION_ITER_BUDGET,
+    )?;
+    let cpu_extraction_ns = elapsed_nonzero_ns(cpu_extraction_start);
+
+    let gpu_extraction_start = Instant::now();
+    let gpu_extraction = try_extract_best_with_budget(
+        egraph,
+        root,
+        |node| cost_fn(node),
+        DEFAULT_EXTRACTION_ITER_BUDGET,
+    )?;
+    let gpu_extraction_ns = elapsed_nonzero_ns(gpu_extraction_start);
+
+    let cpu_extraction_cost = cpu_extraction.best.as_ref().map(|(_, cost)| *cost);
+    let gpu_extraction_cost = gpu_extraction.best.as_ref().map(|(_, cost)| *cost);
+    let recall_parity = cpu_apply == gpu_apply && cpu_extraction.best == gpu_extraction.best;
+
+    Ok(GpuEGraphBridgeReport {
+        snapshot_rows: snapshot.node_count(),
+        snapshot_children: snapshot.child_count(),
+        device_words: image.words().len(),
+        device_eclass_groups: image.layout().eclass_group_count(),
+        equivalences_requested: gpu_apply.requested,
+        equivalences_valid: gpu_apply.valid,
+        equivalences_merged: gpu_apply.merged,
+        rebuild_unions: gpu_apply.rebuild_unions,
+        cpu_equivalences_valid: cpu_apply.valid,
+        cpu_equivalences_merged: cpu_apply.merged,
+        cpu_rebuild_unions: cpu_apply.rebuild_unions,
+        snapshot_ns,
+        pack_ns,
+        cpu_apply_ns,
+        gpu_apply_ns,
+        cpu_extraction_ns,
+        gpu_extraction_ns,
+        cpu_extraction_cost,
+        gpu_extraction_cost,
+        recall_parity,
+        class_id_deterministic,
+    })
 }
 
 /// Apply a batch of GPU-discovered equivalences to a CPU-side
@@ -805,6 +1028,11 @@ where
     GpuEGraphDeviceSpan::new(offset, words.len() - offset)
 }
 
+fn elapsed_nonzero_ns(start: Instant) -> u64 {
+    let ns = start.elapsed().as_nanos();
+    u64::try_from(ns).unwrap_or(u64::MAX).max(1)
+}
+
 /// Structural row signature for packed GPU e-graph columns.
 ///
 /// Matches the CUDA row-signature refresh kernel and initial image packing.
@@ -855,6 +1083,20 @@ mod tests {
                 Self::Lit(value) => Self::Lit(*value),
                 Self::Add(_, _) => Self::Add(children[0], children[1]),
             }
+        }
+    }
+
+    fn tiny_op_name(node: &TinyLang) -> &'static str {
+        match node {
+            TinyLang::Lit(_) => "lit",
+            TinyLang::Add(_, _) => "add",
+        }
+    }
+
+    fn tiny_cost(node: &TinyLang) -> u64 {
+        match node {
+            TinyLang::Lit(_) => 1,
+            TinyLang::Add(_, _) => 4,
         }
     }
 
@@ -1233,5 +1475,46 @@ mod tests {
         );
         assert_eq!(egraph.find(a), egraph.find(b));
         assert_ne!(egraph.find(a), egraph.find(c));
+    }
+
+    #[test]
+    fn gpu_egraph_bridge_reports_compact_columns_apply_and_extraction_parity() {
+        let mut egraph = EGraph::new();
+        let one = egraph.add(TinyLang::Lit(1));
+        let two = egraph.add(TinyLang::Lit(2));
+        let add = egraph.add(TinyLang::Add(one, two));
+        let folded = egraph.add(TinyLang::Lit(3));
+
+        let report = bridge_equivalence_batch_with_report(
+            &mut egraph,
+            add,
+            tiny_op_name,
+            &[Equivalence {
+                left: add.0,
+                right: folded.0,
+            }],
+            tiny_cost,
+        )
+        .expect("Fix: valid GPU e-graph bridge probe must produce a parity report");
+
+        assert_eq!(report.snapshot_rows, 4);
+        assert_eq!(report.snapshot_children, 2);
+        assert!(report.device_words > report.snapshot_rows);
+        assert_eq!(report.device_eclass_groups, 4);
+        assert_eq!(report.equivalences_requested, 1);
+        assert_eq!(report.equivalences_valid, 1);
+        assert_eq!(report.equivalences_merged, 1);
+        assert_eq!(report.cpu_equivalences_valid, 1);
+        assert_eq!(report.cpu_equivalences_merged, 1);
+        assert_eq!(report.cpu_extraction_cost, Some(1));
+        assert_eq!(report.gpu_extraction_cost, Some(1));
+        assert!(report.snapshot_ns > 0);
+        assert!(report.pack_ns > 0);
+        assert!(report.cpu_apply_ns > 0);
+        assert!(report.gpu_apply_ns > 0);
+        assert!(report.cpu_extraction_ns > 0);
+        assert!(report.gpu_extraction_ns > 0);
+        assert!(report.recall_parity);
+        assert!(report.class_id_deterministic);
     }
 }

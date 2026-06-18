@@ -14,6 +14,9 @@ use crate::BackendError;
 const GRAPH_CAPTURE_BINDING_ACCOUNTING: TransferAccountingPolicy =
     TransferAccountingPolicy::new("graph capture binding plan", "record a smaller graph shape");
 
+/// Schema version for scan graph-capture edit classification evidence.
+pub const SCAN_GRAPH_CAPTURE_EDIT_SCHEMA_VERSION: u32 = 1;
+
 /// Capacity and safety plan for recording one replayable dispatch graph.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct GraphCaptureBindingPlan {
@@ -35,6 +38,154 @@ pub struct GraphCaptureBindingPlan {
     /// True when a backend can replay a no-upload steady-state graph after the
     /// device inputs have been initialized once.
     pub resident_input_replay_safe: bool,
+}
+
+/// Scan-specific edit class that can affect graph replay safety.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ScanGraphCaptureEditKind {
+    /// Resident pattern database upload or replacement.
+    PatternDatabaseUpload,
+    /// Haystack bytes changed between graph dispatches.
+    HaystackBufferChange,
+    /// Output slab size or layout changed.
+    OutputSlabResize,
+    /// Verifier program or verifier metadata changed.
+    VerifierChange,
+}
+
+impl ScanGraphCaptureEditKind {
+    /// Stable evidence label for this scan edit kind.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::PatternDatabaseUpload => "pattern_database_upload",
+            Self::HaystackBufferChange => "haystack_buffer_change",
+            Self::OutputSlabResize => "output_slab_resize",
+            Self::VerifierChange => "verifier_change",
+        }
+    }
+}
+
+/// Backend-neutral action selected for a scan graph-capture edit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum GraphCaptureEditAction {
+    /// Reuse the captured graph without parameter update.
+    Replay,
+    /// Update graph parameters or copied input bytes without recapturing topology.
+    Update,
+    /// Re-record the graph because topology, pointer shape, or code changed.
+    Recapture,
+}
+
+impl GraphCaptureEditAction {
+    /// Stable evidence label for this capture action.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Replay => "replay",
+            Self::Update => "update",
+            Self::Recapture => "recapture",
+        }
+    }
+}
+
+/// Graph-topology stability after applying one scan edit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum GraphCaptureEditStability {
+    /// Captured graph topology and pointer table shape remain valid.
+    GraphStable,
+    /// Captured graph topology or pointer table shape is invalidated.
+    GraphBreaking,
+}
+
+impl GraphCaptureEditStability {
+    /// Stable evidence label for this stability class.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::GraphStable => "graph_stable",
+            Self::GraphBreaking => "graph_breaking",
+        }
+    }
+}
+
+/// Input facts for classifying one scan graph-capture edit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ScanGraphCaptureEdit {
+    /// Edit kind to classify.
+    pub kind: ScanGraphCaptureEditKind,
+    /// Previous resident artifact or buffer byte length.
+    pub previous_byte_len: u64,
+    /// New resident artifact or buffer byte length.
+    pub next_byte_len: u64,
+    /// Previous content, table, or verifier digest.
+    pub previous_digest: u64,
+    /// New content, table, or verifier digest.
+    pub next_digest: u64,
+}
+
+impl ScanGraphCaptureEdit {
+    /// Construct scan graph-capture edit facts.
+    #[must_use]
+    pub const fn new(
+        kind: ScanGraphCaptureEditKind,
+        previous_byte_len: u64,
+        next_byte_len: u64,
+        previous_digest: u64,
+        next_digest: u64,
+    ) -> Self {
+        Self {
+            kind,
+            previous_byte_len,
+            next_byte_len,
+            previous_digest,
+            next_digest,
+        }
+    }
+
+    const fn shape_unchanged(self) -> bool {
+        self.previous_byte_len == self.next_byte_len
+    }
+
+    const fn digest_unchanged(self) -> bool {
+        self.previous_digest == self.next_digest
+    }
+}
+
+/// Evidence emitted by scan graph-capture edit classification.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ScanGraphCaptureEditClassification {
+    /// Evidence schema version.
+    pub schema_version: u32,
+    /// Edit kind that was classified.
+    pub edit_kind: ScanGraphCaptureEditKind,
+    /// Replay, update, or recapture action.
+    pub action: GraphCaptureEditAction,
+    /// Whether graph topology and pointer shape remain stable.
+    pub stability: GraphCaptureEditStability,
+    /// Exact reason code for tests, logs, and release evidence.
+    pub reason: &'static str,
+    /// True when the graph can be replayed without re-recording.
+    pub graph_stable: bool,
+    /// True when the edit invalidates the captured graph.
+    pub graph_breaking: bool,
+    /// True when content changed but graph shape did not.
+    pub parameter_update_required: bool,
+}
+
+impl ScanGraphCaptureEditClassification {
+    /// Return true when this evidence has a valid schema, exact reason, and a
+    /// self-consistent action/stability pair.
+    #[must_use]
+    pub const fn is_complete(self) -> bool {
+        self.schema_version == SCAN_GRAPH_CAPTURE_EDIT_SCHEMA_VERSION
+            && !self.reason.is_empty()
+            && self.graph_stable == matches!(self.stability, GraphCaptureEditStability::GraphStable)
+            && self.graph_breaking
+                == matches!(self.stability, GraphCaptureEditStability::GraphBreaking)
+            && self.parameter_update_required
+                == matches!(self.action, GraphCaptureEditAction::Update)
+    }
 }
 
 /// Build a backend-neutral capture plan from a lowered binding plan.
@@ -91,13 +242,126 @@ pub fn plan_graph_capture_bindings(
     })
 }
 
+/// Classify one scan workload edit for replayable graph capture.
+///
+/// Pattern database and verifier changes are graph-breaking because they alter
+/// resident scan code/data semantics. Haystack content changes with identical
+/// byte length are graph-stable parameter updates. Output slab resizing is
+/// graph-breaking because readback and pointer-shape assumptions change.
+#[must_use]
+pub const fn classify_scan_graph_capture_edit(
+    edit: ScanGraphCaptureEdit,
+) -> ScanGraphCaptureEditClassification {
+    match edit.kind {
+        ScanGraphCaptureEditKind::PatternDatabaseUpload => {
+            if edit.shape_unchanged() && edit.digest_unchanged() {
+                scan_graph_capture_classification(
+                    edit.kind,
+                    GraphCaptureEditAction::Replay,
+                    GraphCaptureEditStability::GraphStable,
+                    "pattern_database_unchanged",
+                )
+            } else {
+                scan_graph_capture_classification(
+                    edit.kind,
+                    GraphCaptureEditAction::Recapture,
+                    GraphCaptureEditStability::GraphBreaking,
+                    "pattern_database_changed",
+                )
+            }
+        }
+        ScanGraphCaptureEditKind::HaystackBufferChange => {
+            if edit.shape_unchanged() {
+                if edit.digest_unchanged() {
+                    scan_graph_capture_classification(
+                        edit.kind,
+                        GraphCaptureEditAction::Replay,
+                        GraphCaptureEditStability::GraphStable,
+                        "haystack_unchanged",
+                    )
+                } else {
+                    scan_graph_capture_classification(
+                        edit.kind,
+                        GraphCaptureEditAction::Update,
+                        GraphCaptureEditStability::GraphStable,
+                        "haystack_contents_changed_same_shape",
+                    )
+                }
+            } else {
+                scan_graph_capture_classification(
+                    edit.kind,
+                    GraphCaptureEditAction::Recapture,
+                    GraphCaptureEditStability::GraphBreaking,
+                    "haystack_shape_changed",
+                )
+            }
+        }
+        ScanGraphCaptureEditKind::OutputSlabResize => {
+            if edit.shape_unchanged() {
+                scan_graph_capture_classification(
+                    edit.kind,
+                    GraphCaptureEditAction::Replay,
+                    GraphCaptureEditStability::GraphStable,
+                    "output_slab_unchanged",
+                )
+            } else {
+                scan_graph_capture_classification(
+                    edit.kind,
+                    GraphCaptureEditAction::Recapture,
+                    GraphCaptureEditStability::GraphBreaking,
+                    "output_slab_size_changed",
+                )
+            }
+        }
+        ScanGraphCaptureEditKind::VerifierChange => {
+            if edit.shape_unchanged() && edit.digest_unchanged() {
+                scan_graph_capture_classification(
+                    edit.kind,
+                    GraphCaptureEditAction::Replay,
+                    GraphCaptureEditStability::GraphStable,
+                    "verifier_unchanged",
+                )
+            } else {
+                scan_graph_capture_classification(
+                    edit.kind,
+                    GraphCaptureEditAction::Recapture,
+                    GraphCaptureEditStability::GraphBreaking,
+                    "verifier_changed",
+                )
+            }
+        }
+    }
+}
+
+const fn scan_graph_capture_classification(
+    edit_kind: ScanGraphCaptureEditKind,
+    action: GraphCaptureEditAction,
+    stability: GraphCaptureEditStability,
+    reason: &'static str,
+) -> ScanGraphCaptureEditClassification {
+    ScanGraphCaptureEditClassification {
+        schema_version: SCAN_GRAPH_CAPTURE_EDIT_SCHEMA_VERSION,
+        edit_kind,
+        action,
+        stability,
+        reason,
+        graph_stable: matches!(stability, GraphCaptureEditStability::GraphStable),
+        graph_breaking: matches!(stability, GraphCaptureEditStability::GraphBreaking),
+        parameter_update_required: matches!(action, GraphCaptureEditAction::Update),
+    }
+}
+
 fn graph_capture_capacity_add(lhs: usize, rhs: usize, label: &str) -> Result<usize, BackendError> {
     GRAPH_CAPTURE_BINDING_ACCOUNTING.add_usize_capacity(lhs, rhs, label)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{graph_capture_capacity_add, plan_graph_capture_bindings, GraphCaptureBindingPlan};
+    use super::{
+        classify_scan_graph_capture_edit, graph_capture_capacity_add, plan_graph_capture_bindings,
+        GraphCaptureBindingPlan, GraphCaptureEditAction, GraphCaptureEditStability,
+        ScanGraphCaptureEdit, ScanGraphCaptureEditKind,
+    };
     use crate::binding::{Binding, BindingPlan, BindingRole};
     use std::sync::Arc;
 
@@ -238,6 +502,110 @@ mod tests {
         assert!(message.contains("graph capture binding plan"));
         assert!(message.contains("kernel argument table"));
         assert!(message.contains("record a smaller graph shape"));
+    }
+
+    #[test]
+    fn scan_graph_capture_classifies_replay_update_and_recapture_reasons() {
+        let cases = [
+            (
+                ScanGraphCaptureEdit::new(
+                    ScanGraphCaptureEditKind::PatternDatabaseUpload,
+                    4096,
+                    4096,
+                    11,
+                    11,
+                ),
+                GraphCaptureEditAction::Replay,
+                GraphCaptureEditStability::GraphStable,
+                "pattern_database_unchanged",
+            ),
+            (
+                ScanGraphCaptureEdit::new(
+                    ScanGraphCaptureEditKind::PatternDatabaseUpload,
+                    4096,
+                    4096,
+                    11,
+                    12,
+                ),
+                GraphCaptureEditAction::Recapture,
+                GraphCaptureEditStability::GraphBreaking,
+                "pattern_database_changed",
+            ),
+            (
+                ScanGraphCaptureEdit::new(
+                    ScanGraphCaptureEditKind::HaystackBufferChange,
+                    8192,
+                    8192,
+                    21,
+                    22,
+                ),
+                GraphCaptureEditAction::Update,
+                GraphCaptureEditStability::GraphStable,
+                "haystack_contents_changed_same_shape",
+            ),
+            (
+                ScanGraphCaptureEdit::new(
+                    ScanGraphCaptureEditKind::HaystackBufferChange,
+                    8192,
+                    16_384,
+                    21,
+                    22,
+                ),
+                GraphCaptureEditAction::Recapture,
+                GraphCaptureEditStability::GraphBreaking,
+                "haystack_shape_changed",
+            ),
+            (
+                ScanGraphCaptureEdit::new(
+                    ScanGraphCaptureEditKind::OutputSlabResize,
+                    1024,
+                    2048,
+                    31,
+                    31,
+                ),
+                GraphCaptureEditAction::Recapture,
+                GraphCaptureEditStability::GraphBreaking,
+                "output_slab_size_changed",
+            ),
+            (
+                ScanGraphCaptureEdit::new(
+                    ScanGraphCaptureEditKind::VerifierChange,
+                    512,
+                    512,
+                    41,
+                    42,
+                ),
+                GraphCaptureEditAction::Recapture,
+                GraphCaptureEditStability::GraphBreaking,
+                "verifier_changed",
+            ),
+        ];
+
+        for (edit, action, stability, reason) in cases {
+            let classified = classify_scan_graph_capture_edit(edit);
+            assert!(classified.is_complete());
+            assert_eq!(classified.edit_kind, edit.kind);
+            assert_eq!(classified.action, action);
+            assert_eq!(classified.stability, stability);
+            assert_eq!(classified.reason, reason);
+        }
+    }
+
+    #[test]
+    fn scan_graph_capture_same_shape_haystack_update_is_not_a_hidden_recapture() {
+        let classified = classify_scan_graph_capture_edit(ScanGraphCaptureEdit::new(
+            ScanGraphCaptureEditKind::HaystackBufferChange,
+            65_536,
+            65_536,
+            100,
+            101,
+        ));
+
+        assert_eq!(classified.action, GraphCaptureEditAction::Update);
+        assert!(classified.graph_stable);
+        assert!(!classified.graph_breaking);
+        assert!(classified.parameter_update_required);
+        assert_eq!(classified.reason, "haystack_contents_changed_same_shape");
     }
 
     fn next_u64(state: &mut u64) -> u64 {

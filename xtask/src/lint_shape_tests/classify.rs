@@ -7,7 +7,7 @@
 
 use syn::parse::Parser;
 use syn::visit::Visit;
-use syn::{Expr, ExprBinary, ExprUnary, ItemFn, Lit, Stmt, UnOp};
+use syn::{Expr, ExprBinary, ExprUnary, ItemFn, Lit, Member, Stmt, UnOp};
 
 use super::Classification;
 #[cfg(test)]
@@ -88,13 +88,23 @@ fn is_shape_assert(name: &str, args: &[Expr]) -> bool {
             let Some(first) = args.first() else {
                 return false;
             };
-            is_ok_call(first) || is_err_call(first) || is_not_empty(first) || is_len_gt_zero(first)
+            is_ok_call(first)
+                || is_err_call(first)
+                || is_not_empty(first)
+                || is_len_gt_zero(first)
+                || is_status_only_assert(first)
         }
         "assert_eq" => {
             let (Some(left), Some(right)) = (args.first(), args.get(1)) else {
                 return false;
             };
-            is_roundtrip(left, right)
+            is_roundtrip(left, right) || is_status_only_equality(left, right)
+        }
+        "assert_ne" => {
+            let (Some(left), Some(right)) = (args.first(), args.get(1)) else {
+                return false;
+            };
+            is_status_only_equality(left, right)
         }
         _ => false,
     }
@@ -135,6 +145,130 @@ fn is_len_gt_zero(expr: &Expr) -> bool {
     let left_is_len = matches!(left.as_ref(), Expr::MethodCall(m) if m.method == "len");
     let right_is_zero = is_literal_zero(right);
     is_gt && left_is_len && right_is_zero
+}
+
+fn is_status_only_assert(expr: &Expr) -> bool {
+    match expr {
+        Expr::MethodCall(method) => {
+            method.method == "success" && expr_contains_status_word(&method.receiver)
+        }
+        Expr::Unary(ExprUnary {
+            op: UnOp::Not(_),
+            expr: inner,
+            ..
+        }) => is_status_only_assert(inner),
+        Expr::Paren(paren) => is_status_only_assert(&paren.expr),
+        Expr::Reference(reference) => is_status_only_assert(&reference.expr),
+        Expr::Binary(binary) if matches!(binary.op, syn::BinOp::Eq(_) | syn::BinOp::Ne(_)) => {
+            is_status_only_equality(&binary.left, &binary.right)
+        }
+        _ => false,
+    }
+}
+
+fn is_status_only_equality(left: &Expr, right: &Expr) -> bool {
+    (expr_is_status_like(left) && expr_is_status_literal(right))
+        || (expr_is_status_like(right) && expr_is_status_literal(left))
+}
+
+fn expr_is_status_like(expr: &Expr) -> bool {
+    match expr {
+        Expr::MethodCall(method) => {
+            (method.method == "success" || method.method == "code")
+                && expr_contains_status_word(&method.receiver)
+        }
+        Expr::Field(_) | Expr::Path(_) => expr_contains_status_word(expr),
+        Expr::Paren(paren) => expr_is_status_like(&paren.expr),
+        Expr::Reference(reference) => expr_is_status_like(&reference.expr),
+        Expr::Unary(unary) => expr_is_status_like(&unary.expr),
+        _ => false,
+    }
+}
+
+fn expr_is_status_literal(expr: &Expr) -> bool {
+    match expr {
+        Expr::Lit(lit) => match &lit.lit {
+            Lit::Bool(_) => true,
+            Lit::Int(int) => int.base10_parse::<i64>().is_ok_and(|value| value == 0),
+            Lit::Str(string) => matches!(
+                string.value().to_ascii_lowercase().as_str(),
+                "ok" | "success" | "passed" | "pass" | "failed" | "failure"
+            ),
+            _ => false,
+        },
+        Expr::Call(call) => expr_contains_status_literal_argument(&call.args),
+        Expr::Path(path) => path
+            .path
+            .segments
+            .last()
+            .is_some_and(|segment| is_status_literal_word(&segment.ident.to_string())),
+        Expr::Paren(paren) => expr_is_status_literal(&paren.expr),
+        Expr::Reference(reference) => expr_is_status_literal(&reference.expr),
+        _ => false,
+    }
+}
+
+fn expr_contains_status_literal_argument(
+    args: &syn::punctuated::Punctuated<Expr, syn::Token![,]>,
+) -> bool {
+    args.iter().any(expr_is_status_literal)
+}
+
+fn expr_contains_status_word(expr: &Expr) -> bool {
+    match expr {
+        Expr::Path(path) => path
+            .path
+            .segments
+            .iter()
+            .any(|segment| is_status_word(&segment.ident.to_string())),
+        Expr::Field(field) => {
+            member_is_status_word(&field.member) || expr_contains_status_word(&field.base)
+        }
+        Expr::MethodCall(method) => {
+            is_status_word(&method.method.to_string())
+                || expr_contains_status_word(&method.receiver)
+                || method.args.iter().any(expr_contains_status_word)
+        }
+        Expr::Call(call) => {
+            expr_contains_status_word(&call.func) || call.args.iter().any(expr_contains_status_word)
+        }
+        Expr::Unary(unary) => expr_contains_status_word(&unary.expr),
+        Expr::Binary(binary) => {
+            expr_contains_status_word(&binary.left) || expr_contains_status_word(&binary.right)
+        }
+        Expr::Paren(paren) => expr_contains_status_word(&paren.expr),
+        Expr::Reference(reference) => expr_contains_status_word(&reference.expr),
+        Expr::Tuple(tuple) => tuple.elems.iter().any(expr_contains_status_word),
+        Expr::Array(array) => array.elems.iter().any(expr_contains_status_word),
+        Expr::Index(index) => {
+            expr_contains_status_word(&index.expr) || expr_contains_status_word(&index.index)
+        }
+        _ => false,
+    }
+}
+
+fn member_is_status_word(member: &Member) -> bool {
+    match member {
+        Member::Named(ident) => is_status_word(&ident.to_string()),
+        Member::Unnamed(_) => false,
+    }
+}
+
+fn is_status_word(word: &str) -> bool {
+    let word = word.to_ascii_lowercase();
+    word == "status"
+        || word == "exit_status"
+        || word == "exit_code"
+        || word.ends_with("_status")
+        || word.ends_with("_exit_code")
+        || word.contains("status")
+}
+
+fn is_status_literal_word(word: &str) -> bool {
+    matches!(
+        word.to_ascii_lowercase().as_str(),
+        "ok" | "success" | "passed" | "pass" | "failed" | "failure"
+    )
 }
 
 fn is_literal_zero(expr: &Expr) -> bool {
@@ -312,6 +446,48 @@ mod tests {
     }
 
     #[test]
+    fn shape_status_success() {
+        let f = parse_func(r#"#[test] fn t() { assert!(output.status.success()); }"#);
+        let (cls, _) = classify_test(&f);
+        assert_eq!(cls, Classification::Shape);
+    }
+
+    #[test]
+    fn shape_negative_status_success() {
+        let f = parse_func(r#"#[test] fn t() { assert!(!output.status.success()); }"#);
+        let (cls, _) = classify_test(&f);
+        assert_eq!(cls, Classification::Shape);
+    }
+
+    #[test]
+    fn shape_status_code_equality() {
+        let f = parse_func(r#"#[test] fn t() { assert_eq!(output.status.code(), Some(0)); }"#);
+        let (cls, _) = classify_test(&f);
+        assert_eq!(cls, Classification::Shape);
+    }
+
+    #[test]
+    fn shape_exit_code_equality() {
+        let f = parse_func(r#"#[test] fn t() { assert_eq!(result.exit_code, 0); }"#);
+        let (cls, _) = classify_test(&f);
+        assert_eq!(cls, Classification::Shape);
+    }
+
+    #[test]
+    fn shape_named_status_success_equality() {
+        let f = parse_func(r#"#[test] fn t() { assert_eq!(result.status, "success"); }"#);
+        let (cls, _) = classify_test(&f);
+        assert_eq!(cls, Classification::Shape);
+    }
+
+    #[test]
+    fn truth_distinct_non_status_values_are_not_shape() {
+        let f = parse_func(r#"#[test] fn t() { assert_ne!(FloatType::F32, FloatType::F64); }"#);
+        let (cls, _) = classify_test(&f);
+        assert_eq!(cls, Classification::Truth);
+    }
+
+    #[test]
     fn truth_specific_value() {
         let f = parse_func(r#"#[test] fn t() { assert_eq!(x.line_start, 12); }"#);
         let (cls, _) = classify_test(&f);
@@ -340,6 +516,7 @@ mod tests {
             r#"
             #[test] fn t() {
                 assert!(result.is_ok());
+                assert!(output.status.success());
                 assert_eq!(x.line_start, 12);
             }
         "#,

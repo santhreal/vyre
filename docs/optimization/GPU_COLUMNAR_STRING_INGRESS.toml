@@ -1,0 +1,42 @@
+schema_version = 1
+
+abi_id = "gpu-columnar-string-ingress:v1"
+
+required_buffers = [
+  "offsets",
+  "chars",
+  "null_mask",
+  "row_range_output",
+]
+
+[[buffer]]
+buffer_id = "offsets"
+element_type = "u32"
+ownership = "input"
+row_boundary_role = "string_start_end"
+zero_copy_eligible = true
+evidence_path = "vyre-libs/tests/gpu_columnar_string_ingress.rs"
+
+[[buffer]]
+buffer_id = "chars"
+element_type = "u8"
+ownership = "input"
+row_boundary_role = "string_bytes"
+zero_copy_eligible = true
+evidence_path = "vyre-libs/tests/gpu_columnar_string_ingress.rs"
+
+[[buffer]]
+buffer_id = "null_mask"
+element_type = "bitmask"
+ownership = "input"
+row_boundary_role = "nullability"
+zero_copy_eligible = true
+evidence_path = "vyre-libs/tests/gpu_columnar_string_ingress.rs"
+
+[[buffer]]
+buffer_id = "row_range_output"
+element_type = "span_record"
+ownership = "output"
+row_boundary_role = "per_row_match_ranges"
+zero_copy_eligible = false
+evidence_path = "vyre-libs/tests/gpu_columnar_string_ingress.rs"

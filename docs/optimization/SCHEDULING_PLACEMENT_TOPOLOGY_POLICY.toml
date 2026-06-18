@@ -1,0 +1,43 @@
+# Scheduling placement and topology policy for VX-1327, VX-1328, VX-1329, VX-1330, VX-1336, and VX-1338.
+# Node assignment, topology spread, taints, tolerations, priority, and preemption share one placement decision seam.
+
+schema = "vyre.ops.scheduling_placement_topology_policy.v1"
+owner = "security_reliability"
+evidence_tokens = ["KUBERNETES_NODE_AFFINITY", "KUBERNETES_TOPOLOGY_SPREAD", "KUBERNETES_TAINTS_TOLERATIONS", "KUBERNETES_PRIORITY_PREEMPTION"]
+
+required_fields = [
+  "placement_id",
+  "workload_surface",
+  "node_assignment_policy",
+  "topology_spread_policy",
+  "taint_toleration_policy",
+  "priority_preemption_policy",
+  "rollout_policy",
+  "privacy_boundary",
+  "release_gate_effect",
+  "diagnostic",
+]
+
+[[placement]]
+placement_id = "operator-zone-spread-placement"
+workload_surface = "operator-api-daemon-and-worker-pods-serving-public-release-surfaces"
+node_assignment_policy = "nodeSelector-nodeAffinity-and-inter-pod-anti-affinity-use-public-safe-labels-only"
+topology_spread_policy = "topologySpreadConstraints-record-topologyKey-maxSkew-whenUnsatisfiable-labelSelector-and-minDomains-when-used"
+taint_toleration_policy = "tolerations-declared-only-for-dedicated-operator-or-GPU-node-pools-with-explicit-effect"
+priority_preemption_policy = "PriorityClass-and-nonpreempting-policy-recorded-no-silent-preemption-of-critical-cluster-workloads"
+rollout_policy = "placement-rules-compatible-with-canary-bluegreen-PDB-and-HPA-replica-bounds"
+privacy_boundary = "node-labels-zones-and-capacity-classes-are-public-safe-no-private-hostnames-device-serials-or-Santh-paths"
+release_gate_effect = "single-zone-or-unschedulable-placement-without-explicit-risk-record-blocks-availability-claim"
+diagnostic = "VYRE_OPERATOR_TOPOLOGY_PLACEMENT_REQUIRED"
+
+[[placement]]
+placement_id = "batch-worker-priority-placement"
+workload_surface = "batch-scan-parser-flow-and-benchmark-worker-pods"
+node_assignment_policy = "workers-use-affinity-to-compatible-CPU-GPU-or-storage-node-class-without-hardcoding-private-hostnames"
+topology_spread_policy = "batch-workers-spread-by-zone-or-node-when-replica-count-and-workload-class-benefit"
+taint_toleration_policy = "workers-tolerate-only-declared-dedicated-batch-or-accelerator-taints"
+priority_preemption_policy = "batch-priority-lower-than-operator-control-plane-and-release-health-critical-path"
+rollout_policy = "scale-out-and-scale-in-must-not-violate-backpressure-or-accepted-work-durability-contracts"
+privacy_boundary = "placement-evidence-publishes-capacity-class-and-zone-class-only"
+release_gate_effect = "priority-starvation-or-placement-induced-work-loss-blocks-performance-and-dogfood-claim"
+diagnostic = "VYRE_BATCH_WORKER_PLACEMENT_REQUIRED"

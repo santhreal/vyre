@@ -1,0 +1,54 @@
+[artifact]
+id = "LANGUAGE_DEPENDENCY_EDGE_MATRIX"
+title = "Language dependency edge extraction matrix"
+tranche = "VX-1561..VX-1580"
+owner = "scanner_frontends"
+status = "planned_contract"
+research_sources = [
+  "GCC_PREPROCESSOR_DEPENDENCIES",
+  "CLANG_DEPENDENCY_SCANNING",
+  "PYTHON_IMPORT_SYSTEM",
+  "RUST_MODULES_REFERENCE",
+]
+
+[scope]
+owns = [
+  "language-specific import, include, module, package, and generated-file edge extraction",
+  "direct and transitive dependency edge classification for scan invalidation",
+  "unresolved edge and ambiguous edge evidence",
+  "dependency extractor versioning by language profile and scanner rule set",
+  "cross-file dependency graph snapshots before parser and matcher reuse",
+]
+does_not_own = [
+  "file identity and content digest persistence, owned by CORPUS_CONTENT_IDENTITY_INDEX",
+  "watcher event replay, owned by INCREMENTAL_CORPUS_CHANGE_JOURNAL",
+  "parser object cache lifecycle, owned by the libs_parsing roadmap substrate",
+  "optimizer subtree artifact reuse, owned by the foundation_optimizer roadmap substrate",
+  "generic plan impact graphs, owned by SOURCE_IMPACT_GRAPH",
+  "reported output schema provenance, owned by OUTPUT_SLAB_SCHEMA_PROVENANCE",
+]
+
+[edge_classes]
+include = "C and C++ textual includes, forced includes, imacros inputs, precompiled-header inputs, and generated missing-header edges when enabled"
+module = "C++ named modules, Rust mod declarations, Rust path modules, and explicit module interface dependencies"
+import = "Python absolute imports, relative imports, packages, submodules, and loader-provided module specs"
+generated = "generated headers, generated modules, codegen outputs, and build-script outputs represented as producer-to-consumer edges"
+config = "compile flags, include paths, Python path roots, feature flags, rule set digest, and language-version settings"
+
+[language_rows.c_cpp]
+primary_sources = ["GCC_PREPROCESSOR_DEPENDENCIES", "CLANG_DEPENDENCY_SCANNING"]
+edge_inputs = ["include directives", "forced include flags", "imacros flags", "module imports", "compile command database", "include search paths"]
+required_evidence = ["translation_unit_id", "direct_file_deps", "module_deps", "missing_generated_deps", "preprocessor_config_digest"]
+invalidates = ["translation unit scan", "macro-sensitive rules", "include-transitive findings", "module-visible findings"]
+
+[language_rows.python]
+primary_sources = ["PYTHON_IMPORT_SYSTEM"]
+edge_inputs = ["import statements", "from-import statements", "relative import level", "package __path__", "module spec", "sys.path policy"]
+required_evidence = ["module_name", "resolved_origin", "loader_kind", "package_root_digest", "sys_path_digest", "namespace_package_state"]
+invalidates = ["module scan", "package-level dataflow", "import-transitive findings", "dynamic-import uncertainty records"]
+
+[language_rows.rust]
+primary_sources = ["RUST_MODULES_REFERENCE"]
+edge_inputs = ["mod declarations", "inline modules", "path attributes", "crate root", "visibility", "feature configuration"]
+required_evidence = ["crate_id", "module_path", "source_file", "visibility_scope", "cfg_digest", "module_resolution_reason"]
+invalidates = ["crate-local scan", "module-transitive findings", "visibility-sensitive rules", "feature-conditioned findings"]

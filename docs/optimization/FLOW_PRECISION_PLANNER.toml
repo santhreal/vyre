@@ -1,0 +1,44 @@
+# Flow precision planner for VX-661.
+# Local, summary, global, taint, and witness reconstruction routes are selected by cost and evidence.
+
+schema = "vyre.flow.precision_planner.v1"
+owner = "graph_flow_compiler"
+evidence_tokens = ["CODEQL_FLOW", "CODEQL_CPP"]
+
+route_modes = [
+  "local",
+  "summary",
+  "global",
+  "taint",
+  "witness_reconstruction",
+]
+
+required_fields = [
+  "source_domain",
+  "sink_domain",
+  "sanitizer_policy",
+  "precision_mode",
+  "cost_budget",
+  "route_reason",
+  "witness_requirement",
+]
+
+[[route]]
+id = "local-intraprocedural-sanitized"
+source_domain = "request_param"
+sink_domain = "html_render"
+sanitizer_policy = "same-function-sanitizer-required"
+precision_mode = "local"
+cost_budget = "single-function"
+route_reason = "source-and-sink-share-function"
+witness_requirement = "primary-span-only"
+
+[[route]]
+id = "global-taint-with-witness"
+source_domain = "network_input"
+sink_domain = "sql_execute"
+sanitizer_policy = "recognized-sanitizers-break-flow"
+precision_mode = "taint"
+cost_budget = "whole-program-with-summaries"
+route_reason = "cross-procedure-source-to-sink"
+witness_requirement = "full-call-string"

@@ -96,8 +96,12 @@ impl CountMinSketch {
 
     /// Add `amount` to every row bucket selected for `key`.
     pub fn add(&mut self, key: u32, amount: u64) {
-        if let Err(error) = self.try_add(key, amount) {
-            panic!("{error}");
+        if amount == 0 {
+            return;
+        }
+        for row in 0..self.depth {
+            let idx = self.bucket(row, key);
+            self.counters[idx] = self.counters[idx].saturating_add(amount);
         }
     }
 
@@ -154,25 +158,10 @@ impl CountMinSketch {
     }
 
     fn bucket(&self, row: usize, key: u32) -> usize {
-        let row_u64 = u64::try_from(row).unwrap_or_else(|error| {
-            panic!("Count-Min sketch row cannot fit u64: {error}. Fix: reduce sketch depth.")
-        });
+        let row_u64 = row as u64;
         let hash = splitmix64(u64::from(key) ^ row_u64.wrapping_mul(0x9E37_79B9_7F4A_7C15));
-        let bucket = usize::try_from(
-            hash % u64::try_from(self.width).unwrap_or_else(|error| {
-                panic!("Count-Min sketch width cannot fit u64: {error}. Fix: reduce sketch width.")
-            }),
-        )
-        .unwrap_or_else(|error| {
-            panic!("Count-Min sketch bucket cannot fit usize: {error}. Fix: reduce sketch width.")
-        });
-        row.checked_mul(self.width)
-            .and_then(|base| base.checked_add(bucket))
-            .unwrap_or_else(|| {
-                panic!(
-                    "Count-Min sketch bucket index overflowed usize. Fix: reduce sketch depth or width."
-                )
-            })
+        let bucket = (hash % self.width as u64) as usize;
+        row * self.width + bucket
     }
 }
 

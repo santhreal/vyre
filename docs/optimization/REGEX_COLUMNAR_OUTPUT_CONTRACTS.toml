@@ -1,0 +1,65 @@
+schema_version = 1
+
+required_shapes = [
+  "contains",
+  "count",
+  "first_span",
+  "all_spans",
+  "grouped_extraction",
+]
+
+required_fields = [
+  "row_id",
+  "pattern_id",
+  "match_count",
+  "span_start",
+  "span_end",
+  "group_id",
+  "group_name",
+  "null_state",
+]
+
+[[shape]]
+shape_id = "contains"
+output_layout = "nullable_bool_column"
+null_policy = "null-input-yields-null-output"
+row_boundary_policy = "one-output-row-per-input-row"
+span_array_policy = "not_applicable"
+stable_binary_layout = true
+evidence_path = "vyre-libs/tests/regex_columnar_output_contracts.rs"
+
+[[shape]]
+shape_id = "count"
+output_layout = "nullable_u32_count_column"
+null_policy = "null-input-yields-null-output"
+row_boundary_policy = "one-output-row-per-input-row"
+span_array_policy = "not_applicable"
+stable_binary_layout = true
+evidence_path = "vyre-libs/tests/regex_columnar_output_contracts.rs"
+
+[[shape]]
+shape_id = "first_span"
+output_layout = "nullable_span_struct_column"
+null_policy = "no-match-yields-null-span"
+row_boundary_policy = "one-output-row-per-input-row"
+span_array_policy = "first-match-only"
+stable_binary_layout = true
+evidence_path = "vyre-libs/tests/regex_columnar_output_contracts.rs"
+
+[[shape]]
+shape_id = "all_spans"
+output_layout = "list_span_struct_column"
+null_policy = "null-input-yields-null-list"
+row_boundary_policy = "list-offsets-preserve-input-rows"
+span_array_policy = "all-match-spans-in-row-order"
+stable_binary_layout = true
+evidence_path = "vyre-libs/tests/regex_columnar_output_contracts.rs"
+
+[[shape]]
+shape_id = "grouped_extraction"
+output_layout = "list_group_span_struct_column"
+null_policy = "unmatched-group-yields-null"
+row_boundary_policy = "list-offsets-preserve-input-rows"
+span_array_policy = "group-spans-in-match-order"
+stable_binary_layout = true
+evidence_path = "vyre-libs/tests/regex_columnar_output_contracts.rs"

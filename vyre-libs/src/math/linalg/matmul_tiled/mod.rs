@@ -31,3 +31,10 @@ mod tensor_core_policy;
 mod tile_coords;
 
 pub use ops::{matmul_bias_tiled, matmul_tiled, MatmulBiasTiled, MatmulTiled};
+#[cfg(feature = "nn-linear-4bit")]
+pub(crate) use shape::MatrixShape;
+#[cfg(feature = "nn-linear-4bit")]
+pub(crate) use tensor_core_policy::{
+    plan_matmul_kernel, F32MatmulMode, MatmulKernelCapabilities, MatmulKernelPath,
+    MatmulFallbackReason, MatmulKernelPlan,
+};

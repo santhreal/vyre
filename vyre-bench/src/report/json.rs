@@ -5,6 +5,19 @@ use crate::api::case::{Correctness, PerformanceContract, PerformanceEvaluation};
 use crate::api::metric::MetricStats;
 use crate::probes::environment::EnvironmentData;
 
+pub const REQUIRED_BENCHMARK_CASE_FIELDS: &[&str] =
+    &["backend_id", "device_signature", "held_out_corpus_id"];
+pub const REQUIRED_BENCHMARK_METRIC_FIELDS: &[&str] =
+    &["cpu_digest", "gpu_digest", "active_time_ns", "transfer_bytes"];
+pub const REQUIRED_SCAN_BENCHMARK_METRIC_FIELDS: &[&str] = &[
+    "scan_compile_time_ns",
+    "scan_database_bytes",
+    "scan_scratch_bytes",
+    "scan_cold_throughput_bytes_per_s",
+    "scan_warm_throughput_bytes_per_s",
+    "scan_streaming_setup_ns",
+];
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReportSchema {
     pub schema: String,
@@ -44,6 +57,61 @@ pub struct ReportBackendProfile {
     pub mem_bw_gbps: u32,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ScanBenchmarkMetricEvidence {
+    pub case_id: String,
+    pub compile_time_ns: u64,
+    pub database_bytes: u64,
+    pub scratch_bytes: u64,
+    pub cold_throughput_bytes_per_s: u64,
+    pub warm_throughput_bytes_per_s: u64,
+    pub streaming_setup_ns: u64,
+}
+
+impl ScanBenchmarkMetricEvidence {
+    #[must_use]
+    pub fn is_complete(&self) -> bool {
+        !self.case_id.is_empty()
+            && self.compile_time_ns != 0
+            && self.database_bytes != 0
+            && self.cold_throughput_bytes_per_s != 0
+            && self.warm_throughput_bytes_per_s != 0
+    }
+}
+
+pub fn validate_scan_benchmark_metric_evidence(
+    evidence: &ScanBenchmarkMetricEvidence,
+) -> Result<(), String> {
+    if evidence.case_id.is_empty() {
+        return Err("Fix: scan benchmark metric evidence case_id must be non-empty.".to_string());
+    }
+    if evidence.compile_time_ns == 0 {
+        return Err(format!(
+            "Fix: scan benchmark metric evidence `{}` is missing compile_time_ns.",
+            evidence.case_id
+        ));
+    }
+    if evidence.database_bytes == 0 {
+        return Err(format!(
+            "Fix: scan benchmark metric evidence `{}` is missing database_bytes.",
+            evidence.case_id
+        ));
+    }
+    if evidence.cold_throughput_bytes_per_s == 0 {
+        return Err(format!(
+            "Fix: scan benchmark metric evidence `{}` is missing cold throughput.",
+            evidence.case_id
+        ));
+    }
+    if evidence.warm_throughput_bytes_per_s == 0 {
+        return Err(format!(
+            "Fix: scan benchmark metric evidence `{}` is missing warm throughput.",
+            evidence.case_id
+        ));
+    }
+    Ok(())
+}
+
 impl ReportBackendProfile {
     #[must_use]
     pub fn from_device_profile(profile: vyre_driver::DeviceProfile) -> Self {
@@ -73,6 +141,141 @@ impl ReportBackendProfile {
     }
 }
 
+#[must_use]
+pub fn benchmark_device_signature(profile: vyre_driver::DeviceProfile) -> String {
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(b"vyre-bench.device-profile.v1");
+    update_signature_str(&mut hasher, "backend", profile.backend);
+    update_signature_str(&mut hasher, "timing_quality", profile.timing_quality.as_str());
+    update_signature_bool(
+        &mut hasher,
+        "supports_subgroup_ops",
+        profile.supports_subgroup_ops,
+    );
+    update_signature_bool(
+        &mut hasher,
+        "supports_indirect_dispatch",
+        profile.supports_indirect_dispatch,
+    );
+    update_signature_bool(
+        &mut hasher,
+        "supports_distributed_collectives",
+        profile.supports_distributed_collectives,
+    );
+    update_signature_bool(
+        &mut hasher,
+        "supports_specialization_constants",
+        profile.supports_specialization_constants,
+    );
+    update_signature_bool(&mut hasher, "supports_f16", profile.supports_f16);
+    update_signature_bool(&mut hasher, "supports_bf16", profile.supports_bf16);
+    update_signature_bool(
+        &mut hasher,
+        "supports_trap_propagation",
+        profile.supports_trap_propagation,
+    );
+    update_signature_bool(
+        &mut hasher,
+        "supports_tensor_cores",
+        profile.supports_tensor_cores,
+    );
+    update_signature_bool(&mut hasher, "has_mul_high", profile.has_mul_high);
+    update_signature_bool(
+        &mut hasher,
+        "has_dual_issue_fp32_int32",
+        profile.has_dual_issue_fp32_int32,
+    );
+    update_signature_bool(
+        &mut hasher,
+        "has_subgroup_shuffle",
+        profile.has_subgroup_shuffle,
+    );
+    update_signature_bool(&mut hasher, "has_shared_memory", profile.has_shared_memory);
+    update_signature_u32(&mut hasher, "max_native_int_width", profile.max_native_int_width);
+    for (axis, value) in profile.max_workgroup_size.iter().enumerate() {
+        update_signature_u32(&mut hasher, &format!("max_workgroup_size.{axis}"), *value);
+    }
+    update_signature_u32(
+        &mut hasher,
+        "max_invocations_per_workgroup",
+        profile.max_invocations_per_workgroup,
+    );
+    update_signature_u32(
+        &mut hasher,
+        "max_shared_memory_bytes",
+        profile.max_shared_memory_bytes,
+    );
+    update_signature_u64(
+        &mut hasher,
+        "max_storage_buffer_binding_size",
+        profile.max_storage_buffer_binding_size,
+    );
+    update_signature_u32(&mut hasher, "subgroup_size", profile.subgroup_size);
+    update_signature_u32(&mut hasher, "compute_units", profile.compute_units);
+    update_signature_u32(&mut hasher, "regs_per_thread_max", profile.regs_per_thread_max);
+    update_signature_u32(&mut hasher, "l1_cache_bytes", profile.l1_cache_bytes);
+    update_signature_u32(&mut hasher, "l2_cache_bytes", profile.l2_cache_bytes);
+    update_signature_u32(&mut hasher, "mem_bw_gbps", profile.mem_bw_gbps);
+    update_signature_bool(
+        &mut hasher,
+        "supports_device_timestamps",
+        profile.supports_device_timestamps,
+    );
+    update_signature_bool(
+        &mut hasher,
+        "supports_hardware_counters",
+        profile.supports_hardware_counters,
+    );
+    update_signature_u32(&mut hasher, "ideal_unroll_depth", profile.ideal_unroll_depth);
+    update_signature_u32(
+        &mut hasher,
+        "ideal_vector_pack_bits",
+        profile.ideal_vector_pack_bits,
+    );
+    for (axis, value) in profile.ideal_workgroup_tile.iter().enumerate() {
+        update_signature_u32(&mut hasher, &format!("ideal_workgroup_tile.{axis}"), *value);
+    }
+    update_signature_u32(
+        &mut hasher,
+        "shared_memory_bank_count",
+        profile.shared_memory_bank_count,
+    );
+    update_signature_u32(
+        &mut hasher,
+        "shared_memory_bank_width_bytes",
+        profile.shared_memory_bank_width_bytes,
+    );
+    format!("device-profile-v1:{}", hasher.finalize().to_hex())
+}
+
+#[must_use]
+pub fn benchmark_held_out_corpus_id(workload_fingerprint: &str) -> String {
+    format!("heldout:{workload_fingerprint}")
+}
+
+fn update_signature_str(hasher: &mut blake3::Hasher, name: &str, value: &str) {
+    hasher.update(&(name.len() as u64).to_le_bytes());
+    hasher.update(name.as_bytes());
+    hasher.update(&(value.len() as u64).to_le_bytes());
+    hasher.update(value.as_bytes());
+}
+
+fn update_signature_bool(hasher: &mut blake3::Hasher, name: &str, value: bool) {
+    update_signature_str(hasher, name, if value { "1" } else { "0" });
+}
+
+fn update_signature_u32(hasher: &mut blake3::Hasher, name: &str, value: u32) {
+    hasher.update(&(name.len() as u64).to_le_bytes());
+    hasher.update(name.as_bytes());
+    hasher.update(&value.to_le_bytes());
+}
+
+fn update_signature_u64(hasher: &mut blake3::Hasher, name: &str, value: u64) {
+    hasher.update(&(name.len() as u64).to_le_bytes());
+    hasher.update(name.as_bytes());
+    hasher.update(&value.to_le_bytes());
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CaseReport {
     pub id: String,
@@ -88,6 +291,10 @@ pub struct CaseReport {
     pub tags: Vec<String>,
     #[serde(default)]
     pub backend_id: Option<String>,
+    #[serde(default)]
+    pub device_signature: Option<String>,
+    #[serde(default)]
+    pub held_out_corpus_id: Option<String>,
     #[serde(default)]
     pub needs_gpu: bool,
     #[serde(default)]
@@ -105,6 +312,35 @@ pub struct CaseReport {
     #[serde(default)]
     pub optimization_passes_applied: Vec<String>,
     pub artifacts: Vec<String>,
+}
+
+pub const LOWER_FULL_REPORT_ARTIFACT_KIND: &str = "vyre.lower.full_report.json";
+
+#[derive(Serialize)]
+struct LowerFullReportArtifact<'a> {
+    kind: &'static str,
+    descriptor_id: &'a str,
+    verify_input_status: &'static str,
+    verify_output_status: &'static str,
+    histogram: &'a vyre_lower::analyses::op_histogram::OpHistogram,
+    rewrite_stats: &'a vyre_lower::rewrites::OptimizationStats,
+    fix_text: &'a str,
+    full_report: &'a vyre_lower::FullReport,
+}
+
+pub fn lower_full_report_artifact(
+    report: &vyre_lower::FullReport,
+) -> Result<String, serde_json::Error> {
+    serde_json::to_string(&LowerFullReportArtifact {
+        kind: LOWER_FULL_REPORT_ARTIFACT_KIND,
+        descriptor_id: &report.descriptor_id,
+        verify_input_status: report.verify_input_status(),
+        verify_output_status: report.verify_output_status(),
+        histogram: &report.histogram,
+        rewrite_stats: &report.stats,
+        fix_text: &report.fix_text,
+        full_report: report,
+    })
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -152,6 +388,72 @@ impl CaseReport {
             }
         }
         blockers
+    }
+
+    pub fn validate_benchmark_evidence_schema(&self) -> Result<(), String> {
+        if self.backend_id.as_deref().is_none_or(str::is_empty) {
+            return Err(format!(
+                "case `{}` is missing benchmark evidence field `backend_id`. Fix: regenerate the benchmark report with a current vyre-bench runner.",
+                self.id
+            ));
+        }
+        if self.device_signature.as_deref().is_none_or(str::is_empty) {
+            return Err(format!(
+                "case `{}` is missing benchmark evidence field `device_signature`. Fix: regenerate the benchmark report so the selected backend DeviceProfile is recorded.",
+                self.id
+            ));
+        }
+        if self.held_out_corpus_id.as_deref().is_none_or(str::is_empty) {
+            return Err(format!(
+                "case `{}` is missing benchmark evidence field `held_out_corpus_id`. Fix: regenerate the benchmark report so the workload corpus identity is recorded.",
+                self.id
+            ));
+        }
+        for metric in REQUIRED_BENCHMARK_METRIC_FIELDS {
+            let stats = self.metrics.get(*metric).ok_or_else(|| {
+                format!(
+                    "case `{}` is missing required benchmark metric `{metric}`. Fix: regenerate the benchmark report with CPU digest, GPU digest, active time, and transfer-byte normalization enabled.",
+                    self.id
+                )
+            })?;
+            if stats.samples == 0 {
+                return Err(format!(
+                    "case `{}` required benchmark metric `{metric}` has zero samples. Fix: regenerate the benchmark report from measured evidence instead of hand-edited JSON.",
+                    self.id
+                ));
+            }
+        }
+        if self
+            .metrics
+            .get("active_time_ns")
+            .is_some_and(|stats| stats.max == 0)
+        {
+            return Err(format!(
+                "case `{}` required benchmark metric `active_time_ns` is zero. Fix: collect dispatch, kernel, or wall timing for the case.",
+                self.id
+            ));
+        }
+        if self.is_scan_case() {
+            for metric in REQUIRED_SCAN_BENCHMARK_METRIC_FIELDS {
+                let stats = self.metrics.get(*metric).ok_or_else(|| {
+                    format!(
+                        "case `{}` is missing required scan benchmark metric `{metric}`. Fix: regenerate scan benchmark JSON with compile time, database bytes, scratch bytes, cold/warm throughput, and streaming setup metrics.",
+                        self.id
+                    )
+                })?;
+                if stats.samples == 0 {
+                    return Err(format!(
+                        "case `{}` scan benchmark metric `{metric}` has zero samples. Fix: regenerate scan benchmark JSON from measured compile and scan evidence.",
+                        self.id
+                    ));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn is_scan_case(&self) -> bool {
+        self.id.contains("scan") || self.tags.iter().any(|tag| tag == "scan")
     }
 }
 
@@ -245,6 +547,13 @@ impl ReportSchema {
         Ok(())
     }
 
+    pub fn validate_benchmark_case_evidence_schema(&self) -> Result<(), String> {
+        for case in &self.cases {
+            case.validate_benchmark_evidence_schema()?;
+        }
+        Ok(())
+    }
+
     pub fn derived_blockers(&self) -> Vec<String> {
         self.cases
             .iter()
@@ -274,6 +583,8 @@ mod tests {
             workload_class: "Release".to_string(),
             tags: Vec::new(),
             backend_id: Some("cuda".to_string()),
+            device_signature: Some("device-profile-v1:test".to_string()),
+            held_out_corpus_id: Some("heldout:bench-case:release.condition_eval.1m".to_string()),
             needs_gpu: true,
             min_vram_bytes: None,
             min_input_bytes: None,
@@ -283,9 +594,39 @@ mod tests {
             correctness,
             contract: None,
             performance,
-            metrics: BTreeMap::new(),
+            metrics: benchmark_evidence_metrics(),
             optimization_passes_applied: Vec::new(),
             artifacts: Vec::new(),
+        }
+    }
+
+    fn benchmark_evidence_metrics() -> BTreeMap<String, MetricStats> {
+        let mut metrics = BTreeMap::new();
+        for (name, value) in [
+            ("cpu_digest", 1),
+            ("gpu_digest", 1),
+            ("active_time_ns", 10),
+            ("transfer_bytes", 64),
+        ] {
+            metrics.insert(name.to_string(), stats(value));
+        }
+        metrics
+    }
+
+    fn stats(value: u64) -> MetricStats {
+        MetricStats {
+            min: value,
+            p50: value,
+            p90: value,
+            p95: value,
+            p99: value,
+            p999: value,
+            p9999: value,
+            max: value,
+            mean: value as f64,
+            stddev: 0.0,
+            samples: 1,
+            determinism_cv: None,
         }
     }
 
@@ -299,6 +640,120 @@ mod tests {
                 vec!["speedup below release floor".to_string()]
             },
         }
+    }
+
+    #[test]
+    fn lower_full_report_artifact_carries_lower_evidence_surface() {
+        let desc = vyre_lower::KernelDescriptor {
+            id: "bench_bad".to_string(),
+            bindings: vyre_lower::BindingLayout { slots: vec![] },
+            dispatch: vyre_lower::Dispatch::new(0, 1, 1),
+            body: vyre_lower::KernelBody {
+                ops: vec![vyre_lower::KernelOp {
+                    kind: vyre_lower::KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(0),
+                }],
+                child_bodies: vec![],
+                literals: vec![vyre_lower::LiteralValue::U32(7)],
+            },
+        };
+        let lower_report = vyre_lower::full_report(&desc);
+        let artifact =
+            lower_full_report_artifact(&lower_report).expect("Fix: serialize lower full report");
+
+        assert!(artifact.contains("\"kind\":\"vyre.lower.full_report.json\""));
+        assert!(artifact.contains("\"descriptor_id\":\"bench_bad\""));
+        assert!(artifact.contains("\"verify_input_status\":\"FAIL\""));
+        assert!(artifact.contains("\"verify_output_status\":\"SKIPPED\""));
+        assert!(artifact.contains("\"histogram\""));
+        assert!(artifact.contains("\"rewrite_stats\""));
+        assert!(artifact.contains("\"full_report\""));
+        assert!(
+            artifact.contains("\"fix_text\":\"Fix:"),
+            "Fix: invalid lower descriptors must put repair text in benchmark artifacts."
+        );
+
+        let mut case = case_report(
+            "failed",
+            Correctness::Invalid {
+                reason: lower_report.fix_text.clone(),
+            },
+            None,
+        );
+        case.artifacts.push(artifact);
+        let serialized_case =
+            serde_json::to_string(&case).expect("Fix: serialize benchmark case evidence");
+        assert!(serialized_case.contains(LOWER_FULL_REPORT_ARTIFACT_KIND));
+        assert!(serialized_case.contains("bench_bad"));
+        assert!(serialized_case.contains("Fix:"));
+    }
+
+    #[test]
+    fn benchmark_evidence_schema_rejects_missing_required_metric() {
+        let mut case = case_report("pass", Correctness::Exact, Some(performance(true)));
+        case.metrics.remove("gpu_digest");
+        let error = case
+            .validate_benchmark_evidence_schema()
+            .expect_err("Fix: missing benchmark evidence metrics must be rejected.");
+        assert!(
+            error.contains("gpu_digest"),
+            "Fix: validation error should name the missing metric; got {error}"
+        );
+    }
+
+    #[test]
+    fn scan_benchmark_metric_evidence_accepts_compile_and_scan_time_split() {
+        let evidence = ScanBenchmarkMetricEvidence {
+            case_id: "scan.literal_set.irregular_hotloop.4m".to_string(),
+            compile_time_ns: 10,
+            database_bytes: 4096,
+            scratch_bytes: 512,
+            cold_throughput_bytes_per_s: 1_000_000,
+            warm_throughput_bytes_per_s: 2_000_000,
+            streaming_setup_ns: 7,
+        };
+
+        validate_scan_benchmark_metric_evidence(&evidence)
+            .expect("Fix: complete scan metric evidence must pass");
+        assert!(evidence.is_complete());
+    }
+
+    #[test]
+    fn scan_case_report_requires_scan_specific_metrics() {
+        let mut case = case_report("pass", Correctness::Exact, Some(performance(true)));
+        case.id = "scan.literal_set.irregular_hotloop.4m".to_string();
+        case.tags.push("scan".to_string());
+        let error = case
+            .validate_benchmark_evidence_schema()
+            .expect_err("Fix: scan reports missing scan metrics must reject");
+        assert!(error.contains("scan_compile_time_ns"));
+
+        for (name, value) in [
+            ("scan_compile_time_ns", 10),
+            ("scan_database_bytes", 4096),
+            ("scan_scratch_bytes", 512),
+            ("scan_cold_throughput_bytes_per_s", 1_000_000),
+            ("scan_warm_throughput_bytes_per_s", 2_000_000),
+            ("scan_streaming_setup_ns", 7),
+        ] {
+            case.metrics.insert(name.to_string(), stats(value));
+        }
+        case.validate_benchmark_evidence_schema()
+            .expect("Fix: scan report with split compile/scan metrics must pass");
+    }
+
+    #[test]
+    fn benchmark_device_signature_changes_with_profile_facts() {
+        let baseline =
+            benchmark_device_signature(vyre_driver::DeviceProfile::conservative("test"));
+        let mut tensor = vyre_driver::DeviceProfile::conservative("test");
+        tensor.supports_tensor_cores = true;
+        assert_ne!(
+            baseline,
+            benchmark_device_signature(tensor),
+            "Fix: report device signatures must reflect DeviceProfile facts used by planners."
+        );
     }
 
     #[test]

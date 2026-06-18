@@ -1,0 +1,43 @@
+# Stress and resource saturation experiment policy for VX-1306, VX-1310, VX-1313, VX-1315, and VX-1317.
+# CPU, memory, queue, GPU, and cache pressure experiments share one saturation proof seam while quota and backpressure registries remain control authorities.
+
+schema = "vyre.ops.stress_resource_saturation_experiment_policy.v1"
+owner = "performance"
+evidence_tokens = ["CHAOS_MESH_STRESSCHAOS", "OWASP_DOS", "CWE_770_RESOURCE_ALLOCATION"]
+
+required_fields = [
+  "stress_id",
+  "stress_surface",
+  "injection_policy",
+  "resource_budget_policy",
+  "backpressure_policy",
+  "load_shedding_policy",
+  "fairness_policy",
+  "observation_policy",
+  "release_gate_effect",
+  "diagnostic",
+]
+
+[[stress]]
+stress_id = "cpu-memory-pressure-operator-resilience"
+stress_surface = "operator-daemon-worker-runtime-and-parser-scan-service-containers"
+injection_policy = "StressChaos-CPU-or-memory-pressure-target-selector-workers-load-size-duration-and-mode-recorded"
+resource_budget_policy = "RESOURCE_BUDGET_POLICY.toml"
+backpressure_policy = "BACKPRESSURE_QUEUE_QUOTA_POLICY.toml"
+load_shedding_policy = "refuse-new-work-before-dropping-accepted-work-and-emit-actionable-diagnostic"
+fairness_policy = "tenant-priority-and-queue-fairness-state-recorded-under-pressure"
+observation_policy = "record-resource-class-container-limit-queue-depth-shed-count-latency-SLI-alert-id-and-recovery-result"
+release_gate_effect = "OOM-unbounded-allocation-accepted-work-loss-or-missing-diagnostic-blocks-operator-readiness"
+diagnostic = "VYRE_CPU_MEMORY_STRESS_RESILIENCE_REQUIRED"
+
+[[stress]]
+stress_id = "gpu-runtime-pressure-resilience"
+stress_surface = "CUDA-WGPU-Metal-resident-dispatch-compiled-pipeline-cache-and-megakernel-queue"
+injection_policy = "synthetic-GPU-queue-pressure-cache-pressure-and-device-resource-exhaustion-recorded-with-backend-capability-digest"
+resource_budget_policy = "runtime.max_gpu_resident_bytes-and-device-capability-derived-limits-from-RESOURCE_BUDGET_POLICY.toml"
+backpressure_policy = "resident-queue-quota-and-watchdog-contracts-refuse-or-drain-work-with-bounded-evidence"
+load_shedding_policy = "new-low-priority-work-shed-before-accepted-high-priority-work-or-stateful-dispatch"
+fairness_policy = "priority-partition-tenant-fairness-and-no-starvation-evidence-required"
+observation_policy = "record-backend-device-signature-capability-digest-resident-bytes-queue-depth-cache-miss-reason-watchdog-state-and-output-digest"
+release_gate_effect = "device-loss-silent-fallback-stale-cache-hit-or-starvation-under-pressure-blocks-performance-claim"
+diagnostic = "VYRE_GPU_RUNTIME_STRESS_RESILIENCE_REQUIRED"

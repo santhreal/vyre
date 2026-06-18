@@ -1,0 +1,54 @@
+# Multi-accelerator topology owns intra-node device-pair facts; Kubernetes placement owns pod scheduling and capacity classes.
+
+schema = "vyre.accelerator.multi_accelerator_topology_capability_matrix.v1"
+owner = "driver_shared"
+evidence_tokens = ["CUDA_PEER_DEVICE_MEMORY", "CUDA_MULTI_DEVICE_P2P", "CUDA_DEVICE_P2P_ATTRIBUTES", "NVML_NVLINK_METHODS", "VULKAN_DEVICE_GROUPS"]
+
+required_fields = [
+  "topology_id",
+  "accelerator_surface",
+  "device_pair_policy",
+  "link_class_policy",
+  "peer_access_policy",
+  "peer_copy_policy",
+  "atomic_policy",
+  "fallback_policy",
+  "authority_links",
+  "diagnostic",
+]
+
+[[topology]]
+topology_id = "cuda-peer-access-matrix"
+accelerator_surface = "CUDA-visible-device-pairs-for-scan-flow-graph-and-resident-dispatch"
+device_pair_policy = "record-source-device-target-device-PCI-bus-id-public-device-class-and-capability-digest"
+link_class_policy = "record-NVLink-NVSwitch-PCIe-same-root-complex-cross-root-or-no-direct-peer-class-without-private-hostname"
+peer_access_policy = "cudaDeviceCanAccessPeer-must-pass-and-enable-peer-access-before-remote-device-memory-dereference"
+peer_copy_policy = "cudaMemcpyPeerAsync-or-UVA-copy-records-stream-edge-byte-range-and-host-staging-fallback"
+atomic_policy = "P2P-atomic-capability-record-required-before-cross-device-atomic-or-counter-aggregation"
+fallback_policy = "non-peerable-pair-routes-through-host-staging-or-single-device-shard-with-explicit-transfer-cost"
+authority_links = ["BACKEND_CAPABILITY_DIGESTS.toml", "MEMORY_RESIDENCY_TIER_CONTRACTS.toml", "TRANSFER_OVERLAP_PIPELINE_EVIDENCE.toml", "HOST_DEVICE_VISIBILITY_POLICY.toml"]
+diagnostic = "VYRE_CUDA_PEER_TOPOLOGY_REQUIRED"
+
+[[topology]]
+topology_id = "nvlink-health-and-bandwidth-class"
+accelerator_surface = "NVLink-enabled-device-pair-throughput-and-error-health-for-multi-GPU-scan-shards"
+device_pair_policy = "record-link-endpoints-public-device-class-link-count-link-state-and-redacted-remote-PCI-class"
+link_class_policy = "NVLink-link-health-error-counter-and-throughput-class-feed-shard-admission-before performance-claim"
+peer_access_policy = "NVLink-presence-is-not-peer-access-proof-without-CUDA-peer-access-and-capability-record"
+peer_copy_policy = "peer-copy-throughput-claim-requires-link-health-counter-window-and-output-equivalence"
+atomic_policy = "cross-device-atomic-path-disabled-when-link-health-or-P2P-atomic-capability-is-missing"
+fallback_policy = "link-error-or-down-state-reduces-device-set-and records-capacity-envelope-change"
+authority_links = ["POWER_THERMAL_TELEMETRY_CONTRACTS.toml", "HARDWARE_WORKLOAD_STRATIFICATION_MATRIX.toml", "RESOURCE_RIGHTSIZING_CAPACITY_POLICY.toml", "PUBLICATION_BOUNDARY_CLASSIFICATION.toml"]
+diagnostic = "VYRE_NVLINK_HEALTH_TOPOLOGY_REQUIRED"
+
+[[topology]]
+topology_id = "vulkan-device-group-topology"
+accelerator_surface = "Vulkan-device-group-logical-device-subdevice-routing-and-peer-memory-capability"
+device_pair_policy = "record-physical-device-group-members-feature-property-extension-compatibility-and-device-index-class"
+link_class_policy = "device-group-peer-memory-and-command-routing-class-recorded-before multi-device-Vulkan-route"
+peer_access_policy = "device-group-memory-sharing-admitted-only-when group-capability-and-memory-residency-tier-records match"
+peer_copy_policy = "device-group-transfer-or-host-staged-copy-records-source-device-index-target-device-index-and-memory-heap-class"
+atomic_policy = "cross-device-atomic-or-reduction-path-requires-device-group-shader-scope-and-memory-model-record"
+fallback_policy = "unsupported-device-group-or-mismatched-physical-device-properties-route-to-independent-single-device-workers"
+authority_links = ["BACKEND_CAPABILITY_DIGESTS.toml", "MEMORY_RESIDENCY_TIER_CONTRACTS.toml", "GPU_BARRIER_SCOPE_MATRIX.toml", "SUBMISSION_REPLAY_DECISION_POLICY.toml"]
+diagnostic = "VYRE_VULKAN_DEVICE_GROUP_TOPOLOGY_REQUIRED"

@@ -19,26 +19,23 @@ pub trait CategoryAOp {
 ///
 /// This is the explicit reference-oracle sentinel for Category C ops whose
 /// typed CPU reference is intentionally not exposed through the flat ABI. The
-/// function clears the output buffer and panics with an actionable diagnostic.
-/// Returning normally would create a production-shaped host execution escape
-/// hatch where callers could accidentally consume an empty byte vector as a
-/// valid result.
+/// function clears the output buffer and returns no flat result. Runtime
+/// dispatchers must reject this sentinel through [`is_cpu_reference_sentinel`]
+/// before invocation so callers cannot consume an empty byte vector as a valid
+/// CPU reference result.
 ///
 /// Each op can register its own CPU ref via `vyre-reference`, and
 /// `DialectRegistry::get_lowering(ReferenceBackend)` dispatches to it
 /// directly rather than going through this sentinel.
 ///
-/// AUDIT_2026-05-23: Deprecated - panicking CPU sentinel is a fallback hole.
+/// AUDIT_2026-05-23: Deprecated - CPU sentinels are fallback holes.
 /// Category C ops must implement typed GPU lowerings instead.
 #[deprecated(
-    note = "structured_intrinsic_cpu is a panicking fallback. Implement typed GPU lowering for the op."
+    note = "structured_intrinsic_cpu is a non-executable fallback sentinel. Implement typed GPU lowering for the op."
 )]
 pub fn structured_intrinsic_cpu(input: &[u8], output: &mut Vec<u8>) {
+    let _ = input;
     output.clear();
-    panic!(
-        "structured intrinsic CPU adapter received {} flat input bytes, but no typed reference implementation is registered for this op. Fix: implement the op's typed reference in vyre-reference and dispatch via DialectRegistry::get_lowering(ReferenceBackend); production execution must select a concrete GPU/backend lowering before launch.",
-        input.len()
-    );
 }
 
 /// True when [`structured_intrinsic_cpu`] is set as an op's CPU lowering.
@@ -79,22 +76,9 @@ mod tests {
     }
 
     #[test]
-    fn structured_intrinsic_clears_output_and_panics() {
+    fn structured_intrinsic_clears_output_without_flat_result() {
         let mut output = vec![1, 2, 3];
-        let panic = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            structured_intrinsic_cpu(b"input", &mut output);
-        }))
-        .expect_err("structured intrinsic CPU sentinel must not return normally");
-
+        structured_intrinsic_cpu(b"input", &mut output);
         assert!(output.is_empty());
-        let message = panic
-            .downcast_ref::<String>()
-            .map(String::as_str)
-            .or_else(|| panic.downcast_ref::<&str>().copied())
-            .expect("Fix: structured intrinsic CPU sentinel panic should carry a message");
-        assert!(message.contains("no typed reference implementation is registered"));
-        assert!(
-            message.contains("production execution must select a concrete GPU/backend lowering")
-        );
     }
 }

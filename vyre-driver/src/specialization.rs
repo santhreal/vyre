@@ -254,17 +254,8 @@ pub fn versioned_specialization_artifact_key(
 
 fn push_lower_hex(bytes: &[u8], out: &mut String) {
     const HEX: &[u8; 16] = b"0123456789abcdef";
-    let additional = bytes.len().checked_mul(2).unwrap_or_else(|| {
-        panic!(
-            "hex encoding input length {} overflows output capacity. Fix: shard artifact-key material before encoding.",
-            bytes.len()
-        )
-    });
-    out.try_reserve(additional).unwrap_or_else(|error| {
-        panic!(
-            "hex encoding could not reserve {additional} output byte(s): {error}. Fix: shard artifact-key material before encoding."
-        )
-    });
+    let additional = bytes.len().saturating_mul(2);
+    let _ = out.try_reserve(additional);
     for &byte in bytes {
         out.push(HEX[(byte >> 4) as usize] as char);
         out.push(HEX[(byte & 0x0f) as usize] as char);
@@ -334,10 +325,7 @@ mod tests {
     #[test]
     fn dtype_spec_value_round_trips() {
         let v = SpecValue::DType(DataType::F32);
-        match v {
-            SpecValue::DType(DataType::F32) => {}
-            other => panic!("expected DType(F32); got {other:?}"),
-        }
+        assert!(matches!(v, SpecValue::DType(DataType::F32)));
     }
 
     #[test]

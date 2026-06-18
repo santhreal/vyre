@@ -51,7 +51,19 @@ pub fn dominator_tree(shape: ProgramGraphShape, frontier_in: &str, frontier_out:
         shape.node_count,
         &[("frontier_in", frontier_in), ("frontier_out", frontier_out)],
     );
-    let primitive = csr_backward_traverse(shape, frontier_in, frontier_out, edge_kind::DOMINANCE);
+    // Traverse DOMINANCE (block-entry idom chain) UNION BLOCK_MEMBER
+    // (block-entry ↔ contained-node, bidirectional). The idom edges
+    // alone connect only block-entry nodes; BLOCK_MEMBER lets a backward
+    // step reach a call/argument operand node from its block entry and
+    // vice-versa, so `dominates($a, $b)` evaluates block-level dominance
+    // on arbitrary expression operands rather than the empty frontier
+    // those operands form against idom-only edges.
+    let primitive = csr_backward_traverse(
+        shape,
+        frontier_in,
+        frontier_out,
+        edge_kind::DOMINANCE | edge_kind::BLOCK_MEMBER,
+    );
     Program::wrapped(
         primitive.buffers().to_vec(),
         primitive.workgroup_size(),

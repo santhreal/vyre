@@ -5,6 +5,134 @@
 
 use vyre::ir::{Expr, Node};
 
+use super::tensor_core_policy::MatmulKernelPath;
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub(crate) enum MmaBackendKind {
+    Ptx,
+    Metal,
+    Wgpu,
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub(crate) enum MmaInstructionClass {
+    PtxMmaSyncAlignedM16N8K16F16,
+    PtxMmaSyncAlignedM16N8K16Bf16,
+    PtxMmaSyncAlignedM16N8K4Tf32,
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub(crate) struct MmaCapabilityRecord {
+    pub(crate) backend: MmaBackendKind,
+    pub(crate) descriptor_mma: bool,
+    pub(crate) f16_m16n8k16: bool,
+    pub(crate) bf16_m16n8k16: bool,
+    pub(crate) tf32_m16n8k4: bool,
+}
+
+impl MmaCapabilityRecord {
+    pub(crate) const fn ptx_sm80() -> Self {
+        Self {
+            backend: MmaBackendKind::Ptx,
+            descriptor_mma: true,
+            f16_m16n8k16: true,
+            bf16_m16n8k16: true,
+            tf32_m16n8k4: true,
+        }
+    }
+
+    pub(crate) const fn metal() -> Self {
+        Self {
+            backend: MmaBackendKind::Metal,
+            descriptor_mma: false,
+            f16_m16n8k16: false,
+            bf16_m16n8k16: false,
+            tf32_m16n8k4: false,
+        }
+    }
+
+    pub(crate) const fn wgpu() -> Self {
+        Self {
+            backend: MmaBackendKind::Wgpu,
+            descriptor_mma: false,
+            f16_m16n8k16: false,
+            bf16_m16n8k16: false,
+            tf32_m16n8k4: false,
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub(crate) enum MmaFallbackDiagnostic {
+    CooperativePath,
+    BackendDoesNotLowerDescriptorMma {
+        backend: MmaBackendKind,
+    },
+    MissingInstructionClass {
+        backend: MmaBackendKind,
+        path: MatmulKernelPath,
+    },
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub(crate) struct MmaCapabilityGate {
+    pub(crate) selected_path: MatmulKernelPath,
+    pub(crate) instruction_class: Option<MmaInstructionClass>,
+    pub(crate) fallback_diagnostic: Option<MmaFallbackDiagnostic>,
+}
+
+pub(crate) fn gate_mma_path(
+    path: MatmulKernelPath,
+    capabilities: MmaCapabilityRecord,
+) -> MmaCapabilityGate {
+    let Some(instruction_class) = instruction_class_for(path, capabilities) else {
+        return MmaCapabilityGate {
+            selected_path: MatmulKernelPath::Cooperative,
+            instruction_class: None,
+            fallback_diagnostic: Some(if path == MatmulKernelPath::Cooperative {
+                MmaFallbackDiagnostic::CooperativePath
+            } else if !capabilities.descriptor_mma {
+                MmaFallbackDiagnostic::BackendDoesNotLowerDescriptorMma {
+                    backend: capabilities.backend,
+                }
+            } else {
+                MmaFallbackDiagnostic::MissingInstructionClass {
+                    backend: capabilities.backend,
+                    path,
+                }
+            }),
+        };
+    };
+
+    MmaCapabilityGate {
+        selected_path: path,
+        instruction_class: Some(instruction_class),
+        fallback_diagnostic: None,
+    }
+}
+
+fn instruction_class_for(
+    path: MatmulKernelPath,
+    capabilities: MmaCapabilityRecord,
+) -> Option<MmaInstructionClass> {
+    if capabilities.backend != MmaBackendKind::Ptx || !capabilities.descriptor_mma {
+        return None;
+    }
+
+    match path {
+        MatmulKernelPath::TensorCoreF16M16N8K16 if capabilities.f16_m16n8k16 => {
+            Some(MmaInstructionClass::PtxMmaSyncAlignedM16N8K16F16)
+        }
+        MatmulKernelPath::TensorCoreBf16M16N8K16 if capabilities.bf16_m16n8k16 => {
+            Some(MmaInstructionClass::PtxMmaSyncAlignedM16N8K16Bf16)
+        }
+        MatmulKernelPath::TensorCoreTf32M16N8K4 if capabilities.tf32_m16n8k4 => {
+            Some(MmaInstructionClass::PtxMmaSyncAlignedM16N8K4Tf32)
+        }
+        _ => None,
+    }
+}
+
 /// Build the Program IR for one M16N8K16 matrix-multiply-accumulate
 /// fragment using the exact FMA sequence that B6 promotes to
 /// `KernelOpKind::MatrixMma`.
@@ -222,6 +350,43 @@ mod tests {
         assert!(op1.0.contains("a1") && op1.1.contains("b1") && op1.2.contains("c1"));
         assert!(op2.0.contains("a2") && op2.1.contains("b0") && op2.2.contains("c2"));
         assert!(op3.0.contains("a3") && op3.1.contains("b1") && op3.2.contains("c3"));
+    }
+
+    #[test]
+    fn mma_capability_gate_accepts_ptx_and_reports_instruction_class() {
+        let gate = gate_mma_path(
+            MatmulKernelPath::TensorCoreF16M16N8K16,
+            MmaCapabilityRecord::ptx_sm80(),
+        );
+
+        assert_eq!(
+            gate.selected_path,
+            MatmulKernelPath::TensorCoreF16M16N8K16
+        );
+        assert_eq!(
+            gate.instruction_class,
+            Some(MmaInstructionClass::PtxMmaSyncAlignedM16N8K16F16)
+        );
+        assert_eq!(gate.fallback_diagnostic, None);
+    }
+
+    #[test]
+    fn mma_capability_gate_falls_back_on_unsupported_backends() {
+        for capabilities in [MmaCapabilityRecord::metal(), MmaCapabilityRecord::wgpu()] {
+            let gate = gate_mma_path(
+                MatmulKernelPath::TensorCoreF16M16N8K16,
+                capabilities,
+            );
+
+            assert_eq!(gate.selected_path, MatmulKernelPath::Cooperative);
+            assert_eq!(gate.instruction_class, None);
+            assert_eq!(
+                gate.fallback_diagnostic,
+                Some(MmaFallbackDiagnostic::BackendDoesNotLowerDescriptorMma {
+                    backend: capabilities.backend,
+                })
+            );
+        }
     }
 }
 

@@ -395,6 +395,10 @@ pub(super) fn custom_metric_key(prefix: &'static str, name: &str) -> Option<&'st
         ("", "conservative_fusion_loop_count") => Some("conservative_fusion_loop_count"),
         ("", "alias_fission_loop_count") => Some("alias_fission_loop_count"),
         ("", "conservative_fission_loop_count") => Some("conservative_fission_loop_count"),
+        ("", "cpu_digest") => Some("cpu_digest"),
+        ("", "gpu_digest") => Some("gpu_digest"),
+        ("", "active_time_ns") => Some("active_time_ns"),
+        ("", "transfer_bytes") => Some("transfer_bytes"),
         ("", "benchmark_repeats") => Some("benchmark_repeats"),
         ("", "ptx_corpus_kernels") => Some("ptx_corpus_kernels"),
         ("", "ptx_predication_candidates") => Some("ptx_predication_candidates"),
@@ -415,6 +419,16 @@ pub(super) fn custom_metric_key(prefix: &'static str, name: &str) -> Option<&'st
         ("", "ptx_vector_kernel_scalar_stores") => Some("ptx_vector_kernel_scalar_stores"),
         ("", "ptx_vector_kernel_scalar_index_adds") => Some("ptx_vector_kernel_scalar_index_adds"),
         ("", "ptx_bytes_emitted") => Some("ptx_bytes_emitted"),
+        // The CUDA PTX patterns codegen corpus emits its own source-cache stats
+        // (entries/hits/misses over the unique kernel set). Without these keys the
+        // case's values are silently dropped by `collect_custom_metrics`, and the
+        // driver's backend_metric_snapshot (0 for a codegen-only case that never
+        // dispatches a module) is the only value left via `or_insert_with` — which
+        // zeroed `cuda_ptx_source_cache_entries` in the release artifact and failed
+        // the PTX pattern evidence gate. Registering them keeps the corpus values.
+        ("", "cuda_ptx_source_cache_entries") => Some("cuda_ptx_source_cache_entries"),
+        ("", "cuda_ptx_source_cache_hits") => Some("cuda_ptx_source_cache_hits"),
+        ("", "cuda_ptx_source_cache_misses") => Some("cuda_ptx_source_cache_misses"),
         ("", "egraph_case_count") => Some("egraph_case_count"),
         ("", "egraph_bitwise_case_count") => Some("egraph_bitwise_case_count"),
         ("", "egraph_boolean_case_count") => Some("egraph_boolean_case_count"),
@@ -426,6 +440,10 @@ pub(super) fn custom_metric_key(prefix: &'static str, name: &str) -> Option<&'st
         ("", "egraph_applied_rewrites") => Some("egraph_applied_rewrites"),
         ("", "egraph_hit_iteration_limit") => Some("egraph_hit_iteration_limit"),
         ("", "egraph_hit_node_limit") => Some("egraph_hit_node_limit"),
+        ("", "egraph_cpu_saturation_ns") => Some("egraph_cpu_saturation_ns"),
+        ("", "egraph_gpu_apply_ns") => Some("egraph_gpu_apply_ns"),
+        ("", "egraph_gpu_recall_parity") => Some("egraph_gpu_recall_parity"),
+        ("", "egraph_gpu_class_id_determinism") => Some("egraph_gpu_class_id_determinism"),
         ("", "rust_frontend_public_pipeline_speedup_x1000") => {
             Some("rust_frontend_public_pipeline_speedup_x1000")
         }
@@ -536,6 +554,20 @@ mod tests {
     use super::custom_metric_key;
 
     #[test]
+    fn custom_metric_key_keeps_cuda_ptx_source_cache_visible() {
+        // Regression: these were absent, so `collect_custom_metrics` dropped the
+        // codegen corpus's source-cache stats and the artifact reported 0 entries,
+        // failing the CUDA PTX pattern evidence gate. They must stay collectable.
+        for name in [
+            "cuda_ptx_source_cache_entries",
+            "cuda_ptx_source_cache_hits",
+            "cuda_ptx_source_cache_misses",
+        ] {
+            assert_eq!(custom_metric_key("", name), Some(name));
+        }
+    }
+
+    #[test]
     fn custom_metric_key_keeps_queue_closure_telemetry_visible() {
         for name in [
             "dataflow_ifds_closure_queue_capacity",
@@ -581,6 +613,13 @@ mod tests {
     #[test]
     fn custom_metric_key_keeps_weir_release_shape_metrics_visible() {
         for name in ["weir_nodes", "weir_bitset_words"] {
+            assert_eq!(custom_metric_key("", name), Some(name));
+        }
+    }
+
+    #[test]
+    fn custom_metric_key_keeps_benchmark_evidence_schema_metrics_visible() {
+        for name in ["cpu_digest", "gpu_digest", "active_time_ns", "transfer_bytes"] {
             assert_eq!(custom_metric_key("", name), Some(name));
         }
     }

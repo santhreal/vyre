@@ -14,6 +14,7 @@
 
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
+use super::planner::plan_flash_attention_tiled;
 use crate::region::wrap_anonymous;
 use vyre_primitives::nn::attention_stability::{
     bounded_exp_arg, bounded_score, flush_tiny, positive_denominator,
@@ -57,57 +58,20 @@ pub fn flash_attention_2(
         );
     }
 
-    let elements = match seq_len.checked_mul(head_dim) {
-        Some(e) => e,
-        None => {
-            return crate::builder::invalid_output_program(
-                OP_ID,
-                out,
-                DataType::F32,
-                "Fix: flash_attention_2 seq_len*head_dim overflows u32".to_string(),
-            );
+    let plan = match plan_flash_attention_tiled(seq_len, head_dim, tile_size) {
+        Ok(plan) => plan,
+        Err(error) => {
+            return crate::builder::invalid_output_program(OP_ID, out, DataType::F32, error);
         }
     };
-
-    const WORKGROUP_LANES: u32 = 64;
-
-    let q_scratch_count = match WORKGROUP_LANES.checked_mul(head_dim) {
-        Some(c) => c,
-        None => {
-            return crate::builder::invalid_output_program(
-                OP_ID,
-                out,
-                DataType::F32,
-                "Fix: flash_attention_2 q_scratch overflows u32".to_string(),
-            );
-        }
-    };
-    let score_scratch_count = match WORKGROUP_LANES.checked_mul(tile_size) {
-        Some(c) => c,
-        None => {
-            return crate::builder::invalid_output_program(
-                OP_ID,
-                out,
-                DataType::F32,
-                "Fix: flash_attention_2 score_scratch overflows u32".to_string(),
-            );
-        }
-    };
-    let o_acc_count = match WORKGROUP_LANES.checked_mul(head_dim) {
-        Some(c) => c,
-        None => {
-            return crate::builder::invalid_output_program(
-                OP_ID,
-                out,
-                DataType::F32,
-                "Fix: flash_attention_2 o_acc overflows u32".to_string(),
-            );
-        }
-    };
+    let elements = plan.logical_elements;
+    let q_scratch_count = plan.q_scratch_elements;
+    let score_scratch_count = plan.score_scratch_elements;
+    let o_acc_count = plan.o_acc_scratch_elements;
 
     let scale = 1.0f32 / (head_dim as f32).sqrt();
     let scale_expr = Expr::f32(scale);
-    let num_tiles = seq_len.div_ceil(tile_size);
+    let num_tiles = plan.tile_count;
 
     // Scratch index helpers: each lane gets its own sub-slice.
     let q_idx = |local: Expr, d: Expr| Expr::add(Expr::mul(local.clone(), Expr::u32(head_dim)), d);
@@ -419,7 +383,7 @@ pub fn flash_attention_2(
             BufferDecl::workgroup("o_acc", o_acc_count, DataType::F32),
             BufferDecl::output(out, 3, DataType::F32).with_count(elements),
         ],
-        [WORKGROUP_LANES, 1, 1],
+        [plan.workgroup_lanes, 1, 1],
         vec![wrap_anonymous(OP_ID, body)],
     )
 }

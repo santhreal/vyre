@@ -184,7 +184,7 @@ impl<'a> Parser<'a> {
         tok
     }
 
-    fn expect(&mut self, kind: u16) -> Result<&Token, ParseError> {
+    fn expect_token(&mut self, kind: u16) -> Result<&Token, ParseError> {
         let tok = self.peek();
         if tok.kind == kind {
             Ok(self.advance())
@@ -205,11 +205,11 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_function(&mut self) -> Result<Function, ParseError> {
-        self.expect(KW_FN)?;
-        let name = self.expect(IDENT)?.start;
-        self.expect(LPAREN)?;
+        self.expect_token(KW_FN)?;
+        let name = self.expect_token(IDENT)?.start;
+        self.expect_token(LPAREN)?;
         let params = self.parse_params()?;
-        self.expect(RPAREN)?;
+        self.expect_token(RPAREN)?;
         let ret = if self.peek().kind == ARROW {
             self.advance();
             self.parse_type()?
@@ -231,8 +231,8 @@ impl<'a> Parser<'a> {
             return Ok(params);
         }
         loop {
-            let name = self.expect(IDENT)?.start;
-            self.expect(COLON)?;
+            let name = self.expect_token(IDENT)?.start;
+            self.expect_token(COLON)?;
             let ty = self.parse_type()?;
             params.push((name, ty));
             if self.peek().kind == COMMA {
@@ -307,12 +307,12 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_block_inner(&mut self) -> Result<Vec<Stmt>, ParseError> {
-        self.expect(LBRACE)?;
+        self.expect_token(LBRACE)?;
         let mut stmts = Vec::new();
         while self.peek().kind != RBRACE && self.peek().kind != EOF {
             stmts.push(self.parse_stmt()?);
         }
-        self.expect(RBRACE)?;
+        self.expect_token(RBRACE)?;
         Ok(stmts)
     }
 
@@ -334,7 +334,7 @@ impl<'a> Parser<'a> {
                     if self.peek().kind == ASSIGN {
                         self.advance();
                         let value = self.parse_expr()?;
-                        self.expect(SEMI)?;
+                        self.expect_token(SEMI)?;
                         return Ok(Stmt::Assign { name, value });
                     }
                     // Compound assignment `name += e` / `name -= e` desugars to
@@ -350,7 +350,7 @@ impl<'a> Parser<'a> {
                             MINUS
                         };
                         let rhs = self.parse_expr()?;
-                        self.expect(SEMI)?;
+                        self.expect_token(SEMI)?;
                         let value = Expr::Binary {
                             op,
                             lhs: Box::new(Expr::Var(name)),
@@ -367,7 +367,7 @@ impl<'a> Parser<'a> {
                         self.advance();
                     }
                 } else {
-                    self.expect(SEMI)?;
+                    self.expect_token(SEMI)?;
                 }
                 Ok(Stmt::Expr(expr))
             }
@@ -375,19 +375,19 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_let(&mut self) -> Result<Stmt, ParseError> {
-        self.expect(KW_LET)?;
+        self.expect_token(KW_LET)?;
         let mutable = if self.peek().kind == KW_MUT {
             self.advance();
             true
         } else {
             false
         };
-        let name = self.expect(IDENT)?.start;
-        self.expect(COLON)?;
+        let name = self.expect_token(IDENT)?.start;
+        self.expect_token(COLON)?;
         let ty = self.parse_type()?;
-        self.expect(ASSIGN)?;
+        self.expect_token(ASSIGN)?;
         let init = self.parse_expr()?;
-        self.expect(SEMI)?;
+        self.expect_token(SEMI)?;
         Ok(Stmt::Let {
             mutable,
             name,
@@ -397,11 +397,11 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_for(&mut self) -> Result<Stmt, ParseError> {
-        self.expect(KW_FOR)?;
-        let name = self.expect(IDENT)?.start;
-        self.expect(KW_IN)?;
+        self.expect_token(KW_FOR)?;
+        let name = self.expect_token(IDENT)?.start;
+        self.expect_token(KW_IN)?;
         let start = self.parse_expr()?;
-        self.expect(DOTDOT)?;
+        self.expect_token(DOTDOT)?;
         let end = self.parse_expr()?;
         let body = self.parse_block()?;
         Ok(Stmt::For {
@@ -413,13 +413,13 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_return(&mut self) -> Result<Stmt, ParseError> {
-        self.expect(KW_RETURN)?;
+        self.expect_token(KW_RETURN)?;
         let expr = if self.peek().kind != SEMI {
             Some(self.parse_expr()?)
         } else {
             None
         };
-        self.expect(SEMI)?;
+        self.expect_token(SEMI)?;
         Ok(Stmt::Return(expr))
     }
 
@@ -552,7 +552,7 @@ impl<'a> Parser<'a> {
             LPAREN => {
                 self.advance();
                 let inner = self.parse_expr()?;
-                self.expect(RPAREN)?;
+                self.expect_token(RPAREN)?;
                 Ok(inner)
             }
             LITERAL_INT => {
@@ -564,7 +564,11 @@ impl<'a> Parser<'a> {
                 // the target type). Match that boundary exactly: parse as u128,
                 // reject on overflow. Storing the low 64 bits is value-faithful
                 // for the i32-only subset because `v as u64 as i32 == v as i32`.
-                match tok.text(self.source).parse::<u128>() {
+                let text = tok.try_text(self.source).map_err(|offset| ParseError {
+                    message: format!("invalid token text span at byte {offset}"),
+                    token_index: self.pos,
+                })?;
+                match text.parse::<u128>() {
                     Ok(v) => Ok(Expr::LiteralInt(tok.start, v as u64)),
                     Err(_) => Err(ParseError {
                         message: "integer literal is too large".into(),
@@ -574,7 +578,10 @@ impl<'a> Parser<'a> {
             }
             LITERAL_BOOL => {
                 let tok = *self.advance();
-                let b = tok.text(self.source) == "true";
+                let b = tok.try_text(self.source).map_err(|offset| ParseError {
+                    message: format!("invalid token text span at byte {offset}"),
+                    token_index: self.pos,
+                })? == "true";
                 Ok(Expr::LiteralBool(tok.start, b))
             }
             IDENT => {
@@ -592,7 +599,7 @@ impl<'a> Parser<'a> {
                             }
                         }
                     }
-                    self.expect(RPAREN)?;
+                    self.expect_token(RPAREN)?;
                     Ok(Expr::Call { name, args })
                 } else {
                     Ok(Expr::Var(name))

@@ -37,6 +37,31 @@ pub enum EmitOutcome {
     Reject,
 }
 
+/// Backends that must consume this corpus in their own emit/descriptor tests.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum EmitAdversarialBackend {
+    Naga,
+    Metal,
+    Ptx,
+    Spirv,
+    Wgpu,
+    Cuda,
+}
+
+pub const REQUIRED_BACKENDS: [EmitAdversarialBackend; 6] = [
+    EmitAdversarialBackend::Naga,
+    EmitAdversarialBackend::Metal,
+    EmitAdversarialBackend::Ptx,
+    EmitAdversarialBackend::Spirv,
+    EmitAdversarialBackend::Wgpu,
+    EmitAdversarialBackend::Cuda,
+];
+
+#[must_use]
+pub fn required_backends() -> &'static [EmitAdversarialBackend] {
+    &REQUIRED_BACKENDS
+}
+
 /// One adversarial emit program case.
 #[derive(Debug, Clone)]
 pub struct EmitAdversarialCase {
@@ -586,6 +611,38 @@ mod tests {
                 "Fix: adversarial case `{}` must verify before emit testing: {:?}",
                 case.id,
                 errors
+            );
+        }
+    }
+
+    #[test]
+    fn required_backend_matrix_names_all_emit_consumers() {
+        assert_eq!(
+            required_backends(),
+            [
+                EmitAdversarialBackend::Naga,
+                EmitAdversarialBackend::Metal,
+                EmitAdversarialBackend::Ptx,
+                EmitAdversarialBackend::Spirv,
+                EmitAdversarialBackend::Wgpu,
+                EmitAdversarialBackend::Cuda,
+            ],
+            "Fix: adversarial emit corpus must stay wired to every descriptor-emitting backend."
+        );
+    }
+
+    #[test]
+    fn case_ids_are_unique_and_match_descriptor_ids() {
+        let mut ids = std::collections::BTreeSet::new();
+        for case in corpus() {
+            assert!(
+                ids.insert(case.id),
+                "Fix: duplicate adversarial emit case id `{}`",
+                case.id
+            );
+            assert_eq!(
+                case.id, case.descriptor.id,
+                "Fix: corpus case id and KernelDescriptor id must match for backend matrix diagnostics."
             );
         }
     }

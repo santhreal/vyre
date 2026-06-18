@@ -47,8 +47,7 @@ fn workspace_relative(path: &Path) -> String {
 }
 
 fn scan_file(path: &Path, workspace_rel: &str) -> Result<Vec<Violation>> {
-    let source =
-        std::fs::read_to_string(path).with_context(|| format!("read {}", path.display()))?;
+    let source = crate::read_source_bounded(path)?;
     let file = syn::parse_file(&source).with_context(|| format!("parse {}", path.display()))?;
 
     let mut visitor = LegoBlockVisitor {

@@ -1,0 +1,84 @@
+# Execution DAG for VX-1001 through VX-1020.
+# Plan rows, authority seams, artifacts, validation gates, and publication classes share one dependency graph.
+
+schema = "vyre.plan.execution_dag.v1"
+owner = "coordination"
+evidence_tokens = ["W3C_PROV_DM", "IN_TOTO_ATTESTATION", "NIST_SSDF", "NIST_OSCAL", "OPENSSF_GUAC"]
+
+required_fields = [
+  "node_id",
+  "vx_rows",
+  "phase",
+  "predecessors",
+  "owned_artifacts",
+  "authority_seam",
+  "validation_gate",
+  "publication_class",
+  "unblock_condition",
+]
+
+[[node]]
+node_id = "plan-source-ledger-closure"
+vx_rows = "VX-1001"
+phase = "research-source-ingress"
+predecessors = []
+owned_artifacts = ["RESEARCH_SOURCE_LEDGER.toml"]
+authority_seam = "docs/optimization/research-ledger"
+validation_gate = "plan_execution_governance.rs::execution_governance_sources_are_registered"
+publication_class = "public-vyre-safe"
+unblock_condition = "all-source-keys-registered-before-plan-rows-reference-them"
+
+[[node]]
+node_id = "plan-execution-dependency-graph"
+vx_rows = "VX-1002..VX-1003"
+phase = "execution-topology"
+predecessors = ["plan-source-ledger-closure"]
+owned_artifacts = ["PLAN_EXECUTION_DAG.toml"]
+authority_seam = "docs/optimization/execution-dag"
+validation_gate = "plan_execution_governance.rs::execution_dag_records_dependencies_authority_gates_and_publication"
+publication_class = "public-vyre-safe"
+unblock_condition = "each-node-has-predecessor-owned-artifact-authority-gate-and-publication-class"
+
+[[node]]
+node_id = "artifact-authority-and-dedup-map"
+vx_rows = "VX-1004..VX-1006"
+phase = "artifact-authority"
+predecessors = ["plan-execution-dependency-graph"]
+owned_artifacts = ["PLAN_ARTIFACT_AUTHORITY_MAP.toml"]
+authority_seam = "docs/optimization/artifact-authority-map"
+validation_gate = "plan_execution_governance.rs::artifact_authority_map_preserves_one_truth_source_per_registry"
+publication_class = "public-vyre-safe"
+unblock_condition = "every-shared-artifact-has-one-authoritative-file-and-import-only-duplicate-policy"
+
+[[node]]
+node_id = "completion-attestation-bundle"
+vx_rows = "VX-1007..VX-1011"
+phase = "attestation-and-control-mapping"
+predecessors = ["artifact-authority-and-dedup-map"]
+owned_artifacts = ["PLAN_COMPLETION_ATTESTATION_BUNDLE.toml"]
+authority_seam = "docs/optimization/completion-attestation-bundle"
+validation_gate = "plan_execution_governance.rs::completion_attestation_bundle_maps_prov_intoto_ssdf_oscal_and_guac"
+publication_class = "public-vyre-safe"
+unblock_condition = "each-attestation-row-names-materials-products-byproducts-practice-control-and-relationship"
+
+[[node]]
+node_id = "state-transition-and-staleness-closure"
+vx_rows = "VX-1012..VX-1017"
+phase = "completion-state-machine"
+predecessors = ["completion-attestation-bundle"]
+owned_artifacts = ["PLAN_EXECUTION_DAG.toml", "PLAN_ARTIFACT_AUTHORITY_MAP.toml", "PLAN_COMPLETION_ATTESTATION_BUNDLE.toml"]
+authority_seam = "docs/optimization/completion-state"
+validation_gate = "plan_execution_governance.rs::execution_governance_keeps_completion_blocked_until_direct_evidence_exists"
+publication_class = "public-vyre-safe-with-private-redaction"
+unblock_condition = "stale-artifacts-invalidated-and-direct-evidence-recorded-before-completion-claim"
+
+[[node]]
+node_id = "tranche-coverage-and-proof-gate"
+vx_rows = "VX-1018..VX-1020"
+phase = "coverage-proof"
+predecessors = ["state-transition-and-staleness-closure"]
+owned_artifacts = ["END_TO_END_EXECUTION_GOVERNANCE_TRANCHE_COVERAGE.toml", "conform/vyre-conform-enforce/tests/plan_execution_governance.rs"]
+authority_seam = "conform/proof-gate"
+validation_gate = "plan_execution_governance.rs::end_to_end_execution_governance_coverage_preserves_dedup_seams"
+publication_class = "public-vyre-safe"
+unblock_condition = "coverage-row-links-dag-authority-map-attestation-bundle-source-ledger-and-proof-gate"

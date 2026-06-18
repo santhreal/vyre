@@ -166,13 +166,7 @@ impl MultiGpuExecutor {
     pub fn enumerate_live_gpus() -> Vec<LiveGpu> {
         let adapters = crate::runtime::device::enumerate_adapters();
         let mut live = Vec::new();
-        vyre_driver::allocation::try_reserve_vec_to_capacity(&mut live, adapters.len())
-            .unwrap_or_else(|source| {
-                panic!(
-                    "live GPU enumeration could not reserve {} adapter slot(s): {source}. Fix: reduce adapter fanout or repair driver memory pressure before scheduling.",
-                    adapters.len()
-                )
-            });
+        let _ = vyre_driver::allocation::try_reserve_vec_to_capacity(&mut live, adapters.len());
         for (adapter_index, info) in adapters.into_iter().enumerate() {
             if crate::capabilities::is_real_gpu(&info) {
                 live.push(LiveGpu {
@@ -264,13 +258,8 @@ impl MultiGpuExecutor {
     #[must_use]
     pub fn adapter_indices(&self) -> Vec<usize> {
         let mut indices = Vec::new();
-        vyre_driver::allocation::try_reserve_vec_to_capacity(&mut indices, self.devices.len())
-            .unwrap_or_else(|source| {
-                panic!(
-                    "multi-GPU adapter index snapshot could not reserve {} index slot(s): {source}. Fix: reduce adapter fanout before snapshotting.",
-                    self.devices.len()
-                )
-            });
+        let _ =
+            vyre_driver::allocation::try_reserve_vec_to_capacity(&mut indices, self.devices.len());
         indices.extend(self.devices.iter().map(|device| device.adapter_index));
         indices
     }

@@ -38,6 +38,13 @@
 //! without a proof obligation should add at least one positive case
 //! to this registry within the same PR.
 
+use super::algebraic_rules::{
+    REWRITE_ID_CANONICALIZE_ADD_COMMUTATIVE, REWRITE_ID_CANONICALIZE_MUL_COMMUTATIVE,
+    REWRITE_ID_CONST_FOLD_ADD_LITERALS, REWRITE_ID_CONST_FOLD_MUL_LITERALS,
+    REWRITE_ID_IDENTITY_ELIM_ADD_ZERO, REWRITE_ID_IDENTITY_ELIM_MUL_ONE,
+    REWRITE_ID_IDENTITY_ELIM_MUL_ZERO, REWRITE_ID_STRENGTH_REDUCE_MUL_POW2_EIGHT,
+    REWRITE_ID_STRENGTH_REDUCE_MUL_POW2_FOUR, REWRITE_ID_STRENGTH_REDUCE_MUL_POW2_TWO,
+};
 use super::rewrite_proof::{ProofExpr, ProofSort, RewriteProofObligation};
 
 const BV_WIDTH: u32 = 32;
@@ -57,19 +64,19 @@ pub fn shipped_obligations() -> Vec<RewriteProofObligation> {
     vec![
         // identity_elim
         RewriteProofObligation::equivalence(
-            "identity_elim_add_zero",
+            REWRITE_ID_IDENTITY_ELIM_ADD_ZERO,
             std::iter::empty(),
             ProofExpr::bvadd(bv_var("x"), bv_const(0)),
             bv_var("x"),
         ),
         RewriteProofObligation::equivalence(
-            "identity_elim_mul_one",
+            REWRITE_ID_IDENTITY_ELIM_MUL_ONE,
             std::iter::empty(),
             ProofExpr::bvmul(bv_var("x"), bv_const(1)),
             bv_var("x"),
         ),
         RewriteProofObligation::equivalence(
-            "identity_elim_mul_zero",
+            REWRITE_ID_IDENTITY_ELIM_MUL_ZERO,
             std::iter::empty(),
             ProofExpr::bvmul(bv_var("x"), bv_const(0)),
             bv_const(0),
@@ -79,45 +86,45 @@ pub fn shipped_obligations() -> Vec<RewriteProofObligation> {
         // produces a Shift op whose runtime value equals the bvmul
         // form modulo BV width  -  both forms are equivalent in QF_BV.
         RewriteProofObligation::equivalence(
-            "strength_reduce_mul_pow2_two",
+            REWRITE_ID_STRENGTH_REDUCE_MUL_POW2_TWO,
             std::iter::empty(),
             ProofExpr::bvmul(bv_var("x"), bv_const(2)),
             ProofExpr::bvmul(bv_var("x"), bv_const(2)),
         ),
         RewriteProofObligation::equivalence(
-            "strength_reduce_mul_pow2_four",
+            REWRITE_ID_STRENGTH_REDUCE_MUL_POW2_FOUR,
             std::iter::empty(),
             ProofExpr::bvmul(bv_var("x"), bv_const(4)),
             ProofExpr::bvmul(bv_var("x"), bv_const(4)),
         ),
         RewriteProofObligation::equivalence(
-            "strength_reduce_mul_pow2_eight",
+            REWRITE_ID_STRENGTH_REDUCE_MUL_POW2_EIGHT,
             std::iter::empty(),
             ProofExpr::bvmul(bv_var("x"), bv_const(8)),
             ProofExpr::bvmul(bv_var("x"), bv_const(8)),
         ),
         // const_fold
         RewriteProofObligation::equivalence(
-            "const_fold_add_literals",
+            REWRITE_ID_CONST_FOLD_ADD_LITERALS,
             std::iter::empty(),
             ProofExpr::bvadd(bv_const(2), bv_const(3)),
             bv_const(5),
         ),
         RewriteProofObligation::equivalence(
-            "const_fold_mul_literals",
+            REWRITE_ID_CONST_FOLD_MUL_LITERALS,
             std::iter::empty(),
             ProofExpr::bvmul(bv_const(4), bv_const(5)),
             bv_const(20),
         ),
         // canonicalize commutativity
         RewriteProofObligation::equivalence(
-            "canonicalize_add_commutative",
+            REWRITE_ID_CANONICALIZE_ADD_COMMUTATIVE,
             std::iter::empty(),
             ProofExpr::bvadd(bv_var("x"), bv_var("y")),
             ProofExpr::bvadd(bv_var("y"), bv_var("x")),
         ),
         RewriteProofObligation::equivalence(
-            "canonicalize_mul_commutative",
+            REWRITE_ID_CANONICALIZE_MUL_COMMUTATIVE,
             std::iter::empty(),
             ProofExpr::bvmul(bv_var("x"), bv_var("y")),
             ProofExpr::bvmul(bv_var("y"), bv_var("x")),

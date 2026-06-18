@@ -1,0 +1,29 @@
+# Config, schema, API, and crate-boundary tranche coverage for VX-801 through VX-820.
+# Schema governance, Tier A/B separation, API compatibility, crate boundaries, and dedup seams share one coverage row.
+
+schema = "vyre.plan.config_api_governance_tranche_coverage.v1"
+owner = "coordination"
+evidence_tokens = ["TOML_1_0", "JSON_SCHEMA_2020_12", "SEMVER_2_0", "RUST_API_GUIDELINES"]
+
+required_fields = [
+  "vx_id_range",
+  "config_schema_governance",
+  "config_precedence_tiering",
+  "api_compatibility_governance",
+  "crate_boundary_feature_matrix",
+  "source_ledger_coverage",
+  "publication_boundary",
+  "dedup_seam",
+  "proof_gate",
+]
+
+[[coverage]]
+vx_id_range = "VX-801..VX-820"
+config_schema_governance = "CONFIG_SCHEMA_GOVERNANCE.toml"
+config_precedence_tiering = "CONFIG_PRECEDENCE_AND_TIERING.toml"
+api_compatibility_governance = "API_COMPATIBILITY_GOVERNANCE.toml"
+crate_boundary_feature_matrix = "CRATE_BOUNDARY_FEATURE_MATRIX.toml"
+source_ledger_coverage = "RESEARCH_SOURCE_LEDGER.toml"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+dedup_seam = "one-config-schema-one-precedence-model-one-api-compatibility-contract-one-crate-boundary-matrix"
+proof_gate = "config_api_governance.rs"

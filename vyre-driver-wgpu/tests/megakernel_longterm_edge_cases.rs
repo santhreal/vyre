@@ -4,6 +4,7 @@
 //! - Bounded batch packing
 //! - Protocol encode/decode rejects short buffers
 //! - Async worker dispatch is observable
+#![cfg(feature = "legacy-infallible")]
 
 #![allow(clippy::field_reassign_with_default)]
 

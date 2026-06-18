@@ -1,0 +1,46 @@
+# Trace context telemetry contracts for VX-724 through VX-728.
+# Runtime, driver, parser, scan, and flow spans share traceparent, tracestate, resource, and privacy fields.
+
+schema = "vyre.telemetry.trace_context.v1"
+owner = "driver_shared"
+evidence_tokens = ["OPENTELEMETRY_SEMCONV", "W3C_TRACE_CONTEXT"]
+
+required_fields = [
+  "span_id",
+  "trace_id",
+  "traceparent",
+  "tracestate",
+  "resource_attributes",
+  "span_kind",
+  "parent_span",
+  "privacy_class",
+  "capability_digest",
+]
+
+span_kinds = [
+  "internal",
+  "producer",
+  "consumer",
+]
+
+[[span]]
+span_id = "scan-dispatch-span"
+trace_id = "trace-scan-batch-001"
+traceparent = "00-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-01"
+tracestate = "vyre=route:cuda-scan"
+resource_attributes = ["vyre.backend=cuda", "vyre.owner=driver_cuda"]
+span_kind = "internal"
+parent_span = "scan-request-root"
+privacy_class = "no-private-paths"
+capability_digest = "BACKEND_CAPABILITY_DIGESTS.toml"
+
+[[span]]
+span_id = "flow-analysis-span"
+trace_id = "trace-flow-001"
+traceparent = "00-cccccccccccccccccccccccccccccccc-dddddddddddddddd-01"
+tracestate = "vyre=route:relation-flow"
+resource_attributes = ["vyre.owner=graph_flow_compiler", "vyre.mode=taint"]
+span_kind = "internal"
+parent_span = "analysis-request-root"
+privacy_class = "no-secret-values"
+capability_digest = "FLOW_PRECISION_PLANNER.toml"

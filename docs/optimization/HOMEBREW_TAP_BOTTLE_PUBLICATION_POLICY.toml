@@ -1,0 +1,43 @@
+# Homebrew tap and bottle publication policy for VX-1184, VX-1190, VX-1191, VX-1192, and VX-1196.
+# Formula URLs, license, dependencies, tests, bottles, SHA-256 checksums, taps, and private-boundary checks share one Homebrew seam.
+
+schema = "vyre.release.homebrew_tap_bottle_publication_policy.v1"
+owner = "dogfood_ux"
+evidence_tokens = ["HOMEBREW_FORMULA_COOKBOOK", "HOMEBREW_BOTTLES", "HOMEBREW_SHA256_POLICY", "GITHUB_IMMUTABLE_RELEASES"]
+
+required_fields = [
+  "formula_id",
+  "formula_policy",
+  "source_url_policy",
+  "license_policy",
+  "dependency_policy",
+  "test_policy",
+  "bottle_policy",
+  "checksum_policy",
+  "tap_boundary_policy",
+  "diagnostic",
+]
+
+[[formula]]
+formula_id = "vyre-homebrew-formula"
+formula_policy = "formula-defines-public-vyre-cli-install-only-not-private-worktree"
+source_url_policy = "url-points-to-public-immutable-github-release-asset-or-crates-io-source"
+license_policy = "license-matches-PUBLIC_RELEASE_LICENSE_MANIFEST.toml"
+dependency_policy = "dependencies-match-public-runtime-needs-and-do-not-reference-private-Santh-paths"
+test_policy = "formula-test-runs-public-vyre-version-or-help-command-with-no-network-secret-or-private-path"
+bottle_policy = "bottles-declared-per-supported-macos-or-linux-platform-only-after-public-artifact-integrity-record"
+checksum_policy = "formula-and-bottle-use-sha256-not-md5-or-sha1"
+tap_boundary_policy = "public-tap-is-distribution-channel-not-release-authority"
+diagnostic = "VYRE_HOMEBREW_FORMULA_PUBLICATION_REQUIRED"
+
+[[formula]]
+formula_id = "vyre-homebrew-bottle"
+formula_policy = "bottle-metadata-matches-formula-version-and-public-release-version"
+source_url_policy = "bottle-root-url-points-to-public-release-or-public-tap-storage"
+license_policy = "inherits-formula-license-policy"
+dependency_policy = "bottle-runtime-dependencies-match-formula"
+test_policy = "poured-bottle-test-validates-binary-starts-with-public-config-defaults"
+bottle_policy = "bottle-filename-platform-cellar-and-rebuild-fields-recorded"
+checksum_policy = "sha256-per-platform-bottle-required"
+tap_boundary_policy = "bottle-upload-does-not-create-independent-version-line"
+diagnostic = "VYRE_HOMEBREW_BOTTLE_PUBLICATION_REQUIRED"

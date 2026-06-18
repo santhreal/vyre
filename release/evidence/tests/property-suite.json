@@ -1,11 +1,95 @@
 {
   "schema_version": 1,
   "suite": "property",
-  "file_count": 187,
-  "vyre_file_count": 152,
+  "file_count": 191,
+  "vyre_file_count": 156,
   "dataflow_consumer_file_count": 34,
   "vyrec_file_count": 1,
   "files": [
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-grammar-gen/tests/property_contracts.rs",
+      "layers": [
+        "benchmark",
+        "integration",
+        "property",
+        "unit"
+      ],
+      "lines": 12,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
+      "has_test_entrypoint": true,
+      "assertion_count": 1,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-grammar-gen/tests/property.rs",
+      "layers": [
+        "benchmark",
+        "integration",
+        "property",
+        "unit"
+      ],
+      "lines": 237,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
+      "has_test_entrypoint": true,
+      "assertion_count": 37,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "lower_emit"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "validation"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
+    },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/nn/norm/rms_norm.rs",
       "layers": [
@@ -21,7 +105,36 @@
       "assertion_count": 9,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "nn_math",
+        "optimizer"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "allocation_scratch"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "malformed_input",
+        "overflow",
+        "panic_path"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/nn/norm/layer_norm.rs",
@@ -33,14 +146,46 @@
       "lines": 612,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
-      "line_threshold_exceeded": true,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 14,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": [
-        "extract property invariants into tests/properties/",
-        "move timing-only checks into benches/ or release benchmark cases"
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "lower_emit",
+        "nn_math",
+        "optimizer"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "cuda_ptx"
+      ],
+      "feature_families": [
+        "allocation_scratch",
+        "soundness",
+        "validation"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "malformed_input",
+        "overflow",
+        "panic_path"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "liveness",
+        "slice"
       ]
     },
     {
@@ -51,18 +196,51 @@
         "property",
         "unit"
       ],
-      "lines": 593,
+      "lines": 594,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
-      "line_threshold_exceeded": true,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 17,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": [
-        "extract backend/op parity cases into tests/conformance/",
-        "extract property invariants into tests/properties/",
-        "move timing-only checks into benches/ or release benchmark cases"
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "lower_emit",
+        "nn_math",
+        "optimizer"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "cuda_ptx"
+      ],
+      "feature_families": [
+        "allocation_scratch",
+        "capability",
+        "validation"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "malformed_input",
+        "overflow",
+        "panic_path",
+        "resource_budget",
+        "unsupported_capability"
+      ],
+      "corpus_families": [
+        "differential",
+        "generated"
+      ],
+      "weir_flow_families": [
+        "slice"
       ]
     },
     {
@@ -81,7 +259,35 @@
       "assertion_count": 19,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "nn_math"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "overflow",
+        "panic_path"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/nn/activation/leaky_relu_sq.rs",
@@ -99,7 +305,34 @@
       "assertion_count": 16,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "nn_math"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "overflow",
+        "panic_path"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/security/label_by_family.rs",
@@ -116,7 +349,33 @@
       "assertion_count": 9,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "lower_emit"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "panic_path"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/math/linalg/matmul.rs",
@@ -128,37 +387,93 @@
       "lines": 780,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
-      "line_threshold_exceeded": true,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 15,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": [
-        "extract property invariants into tests/properties/",
-        "move timing-only checks into benches/ or release benchmark cases"
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "nn_math",
+        "optimizer"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "validation"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "malformed_input",
+        "overflow"
+      ],
+      "corpus_families": [
+        "fixture",
+        "generated"
+      ],
+      "weir_flow_families": [
+        "slice"
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/preprocess/expr_parser/tests.rs",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/preprocess/expr_parser/tests/mod.rs",
       "layers": [
         "adversarial",
         "benchmark",
+        "integration",
         "property",
         "unit"
       ],
-      "lines": 299,
+      "lines": 304,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 42,
       "oversized": false,
-      "god_test_candidate": true,
-      "recommended_split": [
-        "extract hostile-input cases into tests/adversarial/",
-        "extract property invariants into tests/properties/",
-        "move monolithic src/tests.rs coverage into focused tests/<domain>/ files",
-        "move timing-only checks into benches/ or release benchmark cases"
+      "god_test_candidate": false,
+      "recommended_split": [],
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "parser_frontend",
+        "scan_static"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "direct"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "malformed_input",
+        "missing_input",
+        "overflow",
+        "panic_path",
+        "resource_budget"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "slice"
       ]
     },
     {
@@ -169,18 +484,42 @@
         "property",
         "unit"
       ],
-      "lines": 511,
+      "lines": 510,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
-      "line_threshold_exceeded": true,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 35,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": [
-        "extract fixture-driven cases into tests/corpus/",
-        "extract property invariants into tests/properties/",
-        "move timing-only checks into benches/ or release benchmark cases"
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "optimizer"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "allocation_scratch",
+        "simd"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "panic_path",
+        "resource_budget"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
       ]
     },
     {
@@ -200,7 +539,36 @@
       "assertion_count": 0,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "scan_static"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "malformed_input",
+        "overflow",
+        "panic_path"
+      ],
+      "corpus_families": [
+        "fuzz"
+      ],
+      "weir_flow_families": [
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/tests/regex_compile_property.rs",
@@ -218,7 +586,77 @@
       "assertion_count": 16,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "scan_static"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "panic_path",
+        "resource_budget",
+        "unsupported_capability"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/tests/property_differential_oracles.rs",
+      "layers": [
+        "benchmark",
+        "integration",
+        "property",
+        "unit"
+      ],
+      "lines": 25,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
+      "has_test_entrypoint": true,
+      "assertion_count": 1,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "scan_static"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "differential",
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/tests/property.rs",
@@ -236,7 +674,32 @@
       "assertion_count": 18,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "nn_math",
+        "parser_frontend",
+        "scan_static"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/tests/logical_proptest.rs",
@@ -254,7 +717,31 @@
       "assertion_count": 10,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "panic_path"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/tests/f32_adversarial.rs",
@@ -273,7 +760,39 @@
       "assertion_count": 8,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "lower_emit",
+        "nn_math",
+        "optimizer"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "direct"
+      ],
+      "feature_families": [
+        "capability",
+        "validation"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "missing_input",
+        "panic_path"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-spec/tests/category_property_contracts.rs",
@@ -291,7 +810,30 @@
       "assertion_count": 7,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime"
+      ],
+      "backend_families": [
+        "cuda_ptx"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "fixed_point"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-spec/tests/collective_property_contracts.rs",
@@ -309,7 +851,32 @@
       "assertion_count": 12,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "soundness"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-spec/tests/capability_id_property_contracts.rs",
@@ -327,7 +894,31 @@
       "assertion_count": 5,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "unsupported_capability"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-spec/tests/invariant_property_contracts.rs",
@@ -345,7 +936,32 @@
       "assertion_count": 12,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "resource_budget"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-spec/tests/data_type_min_bytes_property_contracts.rs",
@@ -363,7 +979,32 @@
       "assertion_count": 10,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "missing_input"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-spec/tests/comm_group_property_contracts.rs",
@@ -381,7 +1022,31 @@
       "assertion_count": 5,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "nn_math"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-spec/tests/collective_op_property_contracts.rs",
@@ -399,7 +1064,32 @@
       "assertion_count": 6,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-spec/tests/op_wire_property_contracts.rs",
@@ -417,7 +1107,32 @@
       "assertion_count": 14,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "serde"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-spec/tests/data_type_property_contracts.rs",
@@ -436,7 +1151,37 @@
       "assertion_count": 20,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "nn_math",
+        "parser_frontend"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "serde",
+        "validation"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "malformed_input",
+        "missing_input"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-spec/tests/test_descriptor_property_contracts.rs",
@@ -455,7 +1200,32 @@
       "assertion_count": 8,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime"
+      ],
+      "backend_families": [
+        "cuda_ptx"
+      ],
+      "feature_families": [
+        "validation"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "differential",
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-spec/tests/operation_contract_property_contracts.rs",
@@ -473,7 +1243,33 @@
       "assertion_count": 12,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "capability",
+        "serde",
+        "soundness"
+      ],
+      "error_path_families": [
+        "unsupported_capability"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-spec/tests/semiring_property_contracts.rs",
@@ -491,7 +1287,32 @@
       "assertion_count": 6,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "serde",
+        "soundness"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-spec/tests/op_signature_property_contracts.rs",
@@ -509,7 +1330,32 @@
       "assertion_count": 6,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "nn_math",
+        "parser_frontend"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "serde"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-spec/tests/extension_id_property_contracts.rs",
@@ -527,7 +1373,31 @@
       "assertion_count": 21,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/dataflow_irregular/tests/queue_closure_generated.rs",
@@ -545,7 +1415,36 @@
       "assertion_count": 42,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow",
+        "nn_math"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "soundness"
+      ],
+      "error_path_families": [
+        "panic_path"
+      ],
+      "corpus_families": [
+        "fixture",
+        "generated"
+      ],
+      "weir_flow_families": [
+        "fixed_point",
+        "ifds",
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/tests/cross_emitter_property.rs",
@@ -563,7 +1462,42 @@
       "assertion_count": 6,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "lower_emit",
+        "optimizer",
+        "scan_static"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "cuda_ptx",
+        "naga",
+        "spirv"
+      ],
+      "feature_families": [
+        "capability",
+        "validation"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "malformed_input",
+        "panic_path",
+        "unsupported_capability"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-rust/tests/proptest_robustness.rs",
@@ -581,7 +1515,34 @@
       "assertion_count": 6,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "lower_emit",
+        "parser_frontend"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "malformed_input",
+        "panic_path"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-rust/tests/differential_fuzz.rs",
@@ -600,12 +1561,41 @@
       "assertion_count": 6,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "soundness"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "differential",
+        "fuzz",
+        "generated"
+      ],
+      "weir_flow_families": [
+        "liveness"
+      ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/tests.rs",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/tests/mod.rs",
       "layers": [
         "benchmark",
+        "integration",
         "property",
         "unit"
       ],
@@ -616,17 +1606,39 @@
       "has_test_entrypoint": true,
       "assertion_count": 5,
       "oversized": false,
-      "god_test_candidate": true,
-      "recommended_split": [
-        "extract property invariants into tests/properties/",
-        "move monolithic src/tests.rs coverage into focused tests/<domain>/ files",
-        "move timing-only checks into benches/ or release benchmark cases"
+      "god_test_candidate": false,
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "nn_math",
+        "optimizer"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/serial/text/tests.rs",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/serial/text/tests/mod.rs",
       "layers": [
         "benchmark",
+        "integration",
         "property",
         "unit"
       ],
@@ -637,11 +1649,38 @@
       "has_test_entrypoint": true,
       "assertion_count": 25,
       "oversized": false,
-      "god_test_candidate": true,
-      "recommended_split": [
-        "extract property invariants into tests/properties/",
-        "move monolithic src/tests.rs coverage into focused tests/<domain>/ files",
-        "move timing-only checks into benches/ or release benchmark cases"
+      "god_test_candidate": false,
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "lower_emit",
+        "nn_math",
+        "parser_frontend",
+        "scan_static"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "validation"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "malformed_input",
+        "missing_input",
+        "panic_path"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
       ]
     },
     {
@@ -654,14 +1693,38 @@
       "lines": 711,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
-      "line_threshold_exceeded": true,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 60,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": [
-        "extract property invariants into tests/properties/",
-        "move timing-only checks into benches/ or release benchmark cases"
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "lower_emit",
+        "nn_math",
+        "optimizer"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "validation"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
       ]
     },
     {
@@ -674,14 +1737,44 @@
       "lines": 726,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
-      "line_threshold_exceeded": true,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 10,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": [
-        "extract property invariants into tests/properties/",
-        "move timing-only checks into benches/ or release benchmark cases"
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "lower_emit",
+        "nn_math",
+        "optimizer"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "direct"
+      ],
+      "feature_families": [
+        "allocation_scratch",
+        "cache",
+        "simd",
+        "soundness",
+        "validation"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "overflow"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
       ]
     },
     {
@@ -700,7 +1793,40 @@
       "assertion_count": 25,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "lower_emit",
+        "nn_math",
+        "scan_static"
+      ],
+      "backend_families": [
+        "direct"
+      ],
+      "feature_families": [
+        "capability",
+        "validation"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "missing_input",
+        "panic_path",
+        "unsupported_capability"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "liveness"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/validate/validate_tests.rs",
@@ -717,7 +1843,36 @@
       "assertion_count": 4,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "lower_emit",
+        "nn_math",
+        "optimizer"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "allocation_scratch",
+        "soundness",
+        "validation"
+      ],
+      "error_path_families": [
+        "resource_budget"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/tests/canonical_determinism.rs",
@@ -735,7 +1890,31 @@
       "assertion_count": 8,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "optimizer"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/tests/buffer_layout_proptest.rs",
@@ -753,7 +1932,32 @@
       "assertion_count": 6,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "panic_path"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/tests/optimizer_idempotence_proptest.rs",
@@ -773,7 +1977,38 @@
       "assertion_count": 13,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "lower_emit",
+        "nn_math",
+        "optimizer",
+        "scan_static"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "simd"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "panic_path"
+      ],
+      "corpus_families": [
+        "differential",
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/tests/wire_roundtrip_proptest.rs",
@@ -791,7 +2026,29 @@
       "assertion_count": 0,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/tests/program_wire_property_contracts.rs",
@@ -811,7 +2068,36 @@
       "assertion_count": 10,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "optimizer",
+        "parser_frontend"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "allocation_scratch"
+      ],
+      "error_path_families": [
+        "panic_path"
+      ],
+      "corpus_families": [
+        "fuzz",
+        "generated"
+      ],
+      "weir_flow_families": [
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/tests/__split/program_stats_proptest_chunk2.rs",
@@ -829,7 +2115,37 @@
       "assertion_count": 16,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "nn_math",
+        "optimizer"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "direct"
+      ],
+      "feature_families": [
+        "allocation_scratch",
+        "cache",
+        "capability",
+        "soundness"
+      ],
+      "error_path_families": [
+        "unsupported_capability"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/tests/__split/opaque_payload_endian_chunk1.rs",
@@ -847,7 +2163,36 @@
       "assertion_count": 81,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "lower_emit",
+        "nn_math",
+        "scan_static"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "cache",
+        "soundness"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "resource_budget"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/tests/__split/wire_roundtrip_proptest_support.rs",
@@ -865,7 +2210,29 @@
       "assertion_count": 0,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/tests/__split/wire_roundtrip_proptest_support_chunk1.rs",
@@ -883,7 +2250,33 @@
       "assertion_count": 0,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "nn_math",
+        "scan_static"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "allocation_scratch",
+        "validation"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/tests/__split/program_stats_proptest_chunk1.rs",
@@ -901,7 +2294,37 @@
       "assertion_count": 0,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "nn_math",
+        "optimizer",
+        "scan_static"
+      ],
+      "backend_families": [
+        "direct"
+      ],
+      "feature_families": [
+        "allocation_scratch",
+        "cache",
+        "capability",
+        "validation"
+      ],
+      "error_path_families": [
+        "unsupported_capability"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/tests/__split/wire_roundtrip_proptest_support_chunk2.rs",
@@ -919,7 +2342,32 @@
       "assertion_count": 1,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "nn_math",
+        "optimizer"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "allocation_scratch"
+      ],
+      "error_path_families": [
+        "panic_path"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/tests/__split/wire_roundtrip_proptest_part1.rs",
@@ -937,7 +2385,37 @@
       "assertion_count": 22,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "nn_math",
+        "parser_frontend",
+        "scan_static"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "cache",
+        "soundness"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "missing_input",
+        "panic_path"
+      ],
+      "corpus_families": [
+        "fixture"
+      ],
+      "weir_flow_families": [
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/tests/__split/wire_roundtrip_proptest_part2.rs",
@@ -955,7 +2433,31 @@
       "assertion_count": 2,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "optimizer"
+      ],
+      "backend_families": [
+        "direct"
+      ],
+      "feature_families": [
+        "allocation_scratch"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/tests/program_stats_proptest.rs",
@@ -973,7 +2475,29 @@
       "assertion_count": 0,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "cache"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "liveness"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/tests/vast_proptest.rs",
@@ -991,7 +2515,31 @@
       "assertion_count": 6,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "parser_frontend"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "validation"
+      ],
+      "error_path_families": [
+        "panic_path"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/tests/adversarial_program_canonical_laws.rs",
@@ -1010,7 +2558,31 @@
       "assertion_count": 10,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/tests/adversarial_graph_canonical_laws.rs",
@@ -1029,7 +2601,96 @@
       "assertion_count": 22,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow",
+        "lower_emit",
+        "nn_math",
+        "optimizer",
+        "scan_static"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "validation"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "malformed_input",
+        "missing_input",
+        "panic_path"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/megakernel/segmentation.rs",
+      "layers": [
+        "adversarial",
+        "benchmark",
+        "conformance",
+        "property",
+        "unit"
+      ],
+      "lines": 996,
+      "dedicated_test_file": false,
+      "inline_test_module_file": true,
+      "line_threshold_exceeded": false,
+      "has_test_entrypoint": true,
+      "assertion_count": 73,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": [],
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "lower_emit",
+        "nn_math",
+        "optimizer",
+        "scan_static"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "direct",
+        "wgpu"
+      ],
+      "feature_families": [
+        "soundness",
+        "validation"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "malformed_input",
+        "panic_path",
+        "resource_budget"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/buffer/pool.rs",
@@ -1041,14 +2702,51 @@
       "lines": 922,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
-      "line_threshold_exceeded": true,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 17,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": [
-        "extract property invariants into tests/properties/",
-        "move timing-only checks into benches/ or release benchmark cases"
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "nn_math",
+        "optimizer",
+        "scan_static"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "direct",
+        "resident",
+        "wgpu"
+      ],
+      "feature_families": [
+        "allocation_scratch",
+        "cache",
+        "simd",
+        "soundness"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "malformed_input",
+        "overflow",
+        "panic_path",
+        "resource_budget",
+        "timeout"
+      ],
+      "corpus_families": [
+        "fixture",
+        "release"
+      ],
+      "weir_flow_families": [
+        "resident_flow"
       ]
     },
     {
@@ -1067,7 +2765,31 @@
       "assertion_count": 0,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "nn_math",
+        "parser_frontend"
+      ],
+      "backend_families": [
+        "wgpu"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/__split/op_pairwise_chunk2.rs",
@@ -1086,7 +2808,45 @@
       "assertion_count": 9,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "flow",
+        "lower_emit",
+        "nn_math",
+        "optimizer"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "wgpu"
+      ],
+      "feature_families": [
+        "capability",
+        "simd",
+        "soundness",
+        "validation"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "missing_input",
+        "panic_path",
+        "unsupported_capability"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "slice",
+        "witness"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/__split/c_lower_ast_to_pg_nodes_part5.rs",
@@ -1105,7 +2865,41 @@
       "assertion_count": 5,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "flow",
+        "lower_emit",
+        "parser_frontend",
+        "scan_static"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "wgpu"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "panic_path"
+      ],
+      "corpus_families": [
+        "differential",
+        "fixture"
+      ],
+      "weir_flow_families": [
+        "slice",
+        "witness"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/__split/c_ast_property_typedef_annotation_contracts_chunk2.rs",
@@ -1123,7 +2917,33 @@
       "assertion_count": 0,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "nn_math",
+        "parser_frontend"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "wgpu"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/__split/c_ast_property_typedef_annotation_contracts_chunk1.rs",
@@ -1142,7 +2962,38 @@
       "assertion_count": 14,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "nn_math",
+        "parser_frontend",
+        "scan_static"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "wgpu"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "resource_budget"
+      ],
+      "corpus_families": [
+        "differential",
+        "fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/c11_sema_scope.rs",
@@ -1161,7 +3012,44 @@
       "assertion_count": 15,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "flow",
+        "lower_emit",
+        "optimizer",
+        "parser_frontend"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "naga",
+        "wgpu"
+      ],
+      "feature_families": [
+        "capability",
+        "soundness",
+        "validation"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "panic_path"
+      ],
+      "corpus_families": [
+        "differential",
+        "fixture"
+      ],
+      "weir_flow_families": [
+        "slice",
+        "witness"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/c_ast_property_span_monotonicity_contracts.rs",
@@ -1180,7 +3068,34 @@
       "assertion_count": 13,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "parser_frontend"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "wgpu"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "resource_budget"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/differential_fuzz.rs",
@@ -1200,7 +3115,37 @@
       "assertion_count": 8,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "fuzz",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "flow",
+        "scan_static"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "wgpu"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "differential",
+        "fuzz"
+      ],
+      "weir_flow_families": [
+        "liveness",
+        "witness"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/hit_buffer.rs",
@@ -1218,7 +3163,36 @@
       "assertion_count": 15,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "lower_emit",
+        "optimizer",
+        "scan_static"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "wgpu"
+      ],
+      "feature_families": [
+        "soundness"
+      ],
+      "error_path_families": [
+        "overflow"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "liveness",
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/determinism_contract.rs",
@@ -1236,7 +3210,37 @@
       "assertion_count": 2,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "lower_emit",
+        "nn_math"
+      ],
+      "backend_families": [
+        "wgpu"
+      ],
+      "feature_families": [
+        "capability",
+        "validation"
+      ],
+      "error_path_families": [
+        "panic_path",
+        "unsupported_capability"
+      ],
+      "corpus_families": [
+        "generated",
+        "release"
+      ],
+      "weir_flow_families": [
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/c_ast_property_operator_stream_contracts.rs",
@@ -1255,7 +3259,35 @@
       "assertion_count": 7,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "parser_frontend"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "wgpu"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "differential",
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/gap_transcendentals_parity.rs",
@@ -1275,7 +3307,36 @@
       "assertion_count": 1,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "lower_emit"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "wgpu"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "panic_path"
+      ],
+      "corpus_families": [
+        "differential",
+        "release"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/c_ast_property_graph_consistency_contracts.rs",
@@ -1295,7 +3356,39 @@
       "assertion_count": 13,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "parser_frontend"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "direct",
+        "wgpu"
+      ],
+      "feature_families": [
+        "capability",
+        "validation"
+      ],
+      "error_path_families": [
+        "malformed_input",
+        "resource_budget"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/transcendentals_parity.rs",
@@ -1314,7 +3407,38 @@
       "assertion_count": 10,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "lower_emit"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "wgpu"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "resource_budget"
+      ],
+      "corpus_families": [
+        "differential",
+        "linux",
+        "release"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-harness/tests/categorical_laws_proptest.rs",
@@ -1332,7 +3456,32 @@
       "assertion_count": 7,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "optimizer"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "direct"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-spirv/tests/adversarial_emit_program_matrix.rs",
@@ -1344,15 +3493,47 @@
         "property",
         "unit"
       ],
-      "lines": 173,
+      "lines": 181,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 19,
+      "assertion_count": 20,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "lower_emit",
+        "nn_math",
+        "optimizer"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "direct",
+        "naga",
+        "spirv"
+      ],
+      "feature_families": [
+        "validation"
+      ],
+      "error_path_families": [
+        "missing_input",
+        "panic_path"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/src/value.rs",
@@ -1369,7 +3550,34 @@
       "assertion_count": 12,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "nn_math"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "simd"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "overflow",
+        "panic_path"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/src/subgroup.rs",
@@ -1386,7 +3594,31 @@
       "assertion_count": 4,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "lower_emit"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/src/execution/expr.rs",
@@ -1400,16 +3632,45 @@
       "lines": 596,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
-      "line_threshold_exceeded": true,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 3,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": [
-        "extract backend/op parity cases into tests/conformance/",
-        "extract hostile-input cases into tests/adversarial/",
-        "extract property invariants into tests/properties/",
-        "move timing-only checks into benches/ or release benchmark cases"
+      "recommended_split": [],
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "lower_emit",
+        "nn_math"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability",
+        "soundness"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "malformed_input",
+        "missing_input",
+        "unsupported_capability"
+      ],
+      "corpus_families": [
+        "differential",
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
       ]
     },
     {
@@ -1428,7 +3689,31 @@
       "assertion_count": 14,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/tests/byte_prefix_property_contracts.rs",
@@ -1446,7 +3731,32 @@
       "assertion_count": 8,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/tests/value_truthiness_property_contracts.rs",
@@ -1464,7 +3774,31 @@
       "assertion_count": 10,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/tests/value_byte_property_contracts.rs",
@@ -1482,7 +3816,32 @@
       "assertion_count": 8,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "soundness"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "overflow"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/tests/__split/expr_adversarial_proptest_part2_chunk4.rs",
@@ -1501,7 +3860,36 @@
       "assertion_count": 14,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "direct"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "panic_path",
+        "unsupported_capability"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/tests/__split/expr_adversarial_proptest_part2.rs",
@@ -1520,7 +3908,30 @@
       "assertion_count": 0,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/tests/__split/expr_adversarial_proptest_part1.rs",
@@ -1539,7 +3950,34 @@
       "assertion_count": 37,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "overflow"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/tests/__split/expr_adversarial_proptest_part2_chunk1.rs",
@@ -1558,7 +3996,34 @@
       "assertion_count": 18,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "overflow"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/tests/__split/expr_adversarial_proptest_part2_chunk3.rs",
@@ -1577,7 +4042,36 @@
       "assertion_count": 60,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "lower_emit",
+        "nn_math"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "direct",
+        "wgpu"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/tests/__split/expr_adversarial_proptest_part2_chunk2.rs",
@@ -1596,7 +4090,32 @@
       "assertion_count": 54,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/tests/expr_adversarial_proptest.rs",
@@ -1615,7 +4134,34 @@
       "assertion_count": 42,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "lower_emit"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "wgpu"
+      ],
+      "feature_families": [
+        "validation"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/tests/value_float_property_contracts.rs",
@@ -1633,7 +4179,31 @@
       "assertion_count": 8,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "soundness"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/tests/value_narrowing_property_contracts.rs",
@@ -1651,7 +4221,32 @@
       "assertion_count": 12,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/tests/gap_transcendentals_parity.rs",
@@ -1671,7 +4266,38 @@
       "assertion_count": 4,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "lower_emit"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "wgpu"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "panic_path"
+      ],
+      "corpus_families": [
+        "differential",
+        "generated",
+        "release"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/tests/f32_comparison_property_contracts.rs",
@@ -1689,7 +4315,30 @@
       "assertion_count": 2,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/tests/atomic_property_contracts.rs",
@@ -1707,7 +4356,32 @@
       "assertion_count": 10,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "missing_input"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/tests/single_rank_collective_reference.rs",
@@ -1725,7 +4399,32 @@
       "assertion_count": 13,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "lower_emit"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/tests/value_array_property_contracts.rs",
@@ -1743,7 +4442,32 @@
       "assertion_count": 10,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "overflow"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/tests/fixed_width_value_property_contracts.rs",
@@ -1761,7 +4485,30 @@
       "assertion_count": 10,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "soundness"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/tests/atomic_law_property_contracts.rs",
@@ -1779,7 +4526,31 @@
       "assertion_count": 24,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/tests/dual_reference_property_contracts.rs",
@@ -1797,7 +4568,33 @@
       "assertion_count": 8,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "panic_path"
+      ],
+      "corpus_families": [
+        "differential",
+        "generated"
+      ],
+      "weir_flow_families": [
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/tests/adversarial_emit_program_matrix.rs",
@@ -1809,15 +4606,47 @@
         "property",
         "unit"
       ],
-      "lines": 196,
+      "lines": 203,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 24,
+      "assertion_count": 25,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "lower_emit",
+        "optimizer",
+        "scan_static"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "cuda_ptx",
+        "direct"
+      ],
+      "feature_families": [
+        "simd",
+        "soundness"
+      ],
+      "error_path_families": [
+        "malformed_input",
+        "missing_input",
+        "panic_path"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "liveness"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/xtask/src/test_matrix.rs",
@@ -1831,21 +4660,87 @@
         "property",
         "unit"
       ],
-      "lines": 906,
+      "lines": 2074,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
-      "line_threshold_exceeded": true,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 11,
+      "assertion_count": 19,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": [
-        "extract backend/op parity cases into tests/conformance/",
-        "extract expected-failure coverage into tests/gap/",
-        "extract fixture-driven cases into tests/corpus/",
-        "extract hostile-input cases into tests/adversarial/",
-        "extract property invariants into tests/properties/",
-        "move timing-only checks into benches/ or release benchmark cases"
+      "recommended_split": [],
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "flow",
+        "lower_emit",
+        "nn_math",
+        "optimizer",
+        "parser_frontend",
+        "scan_static"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "cuda_ptx",
+        "direct",
+        "metal",
+        "naga",
+        "resident",
+        "spirv",
+        "wgpu"
+      ],
+      "feature_families": [
+        "allocation_scratch",
+        "cache",
+        "capability",
+        "graph_capture",
+        "serde",
+        "simd",
+        "soundness",
+        "validation"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "malformed_input",
+        "missing_input",
+        "overflow",
+        "panic_path",
+        "resource_budget",
+        "timeout",
+        "unsupported_capability"
+      ],
+      "corpus_families": [
+        "csmith",
+        "differential",
+        "fixture",
+        "fuzz",
+        "generated",
+        "golden",
+        "linux",
+        "r2",
+        "release"
+      ],
+      "weir_flow_families": [
+        "cross_language",
+        "dispatch_decode",
+        "fixed_point",
+        "ifds",
+        "liveness",
+        "points_to",
+        "reaching",
+        "resident_flow",
+        "slice",
+        "witness"
       ]
     },
     {
@@ -1853,22 +4748,76 @@
       "layers": [
         "benchmark",
         "conformance",
+        "corpus",
         "fuzz",
         "property",
         "unit"
       ],
-      "lines": 1137,
+      "lines": 2134,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
-      "line_threshold_exceeded": true,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": [
-        "extract backend/op parity cases into tests/conformance/",
-        "extract property invariants into tests/properties/",
-        "move timing-only checks into benches/ or release benchmark cases"
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "flow",
+        "lower_emit",
+        "nn_math",
+        "optimizer",
+        "parser_frontend",
+        "scan_static"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "direct",
+        "resident",
+        "wgpu"
+      ],
+      "feature_families": [
+        "capability",
+        "graph_capture",
+        "serde",
+        "simd",
+        "soundness",
+        "validation"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "malformed_input",
+        "missing_input",
+        "panic_path",
+        "resource_budget"
+      ],
+      "corpus_families": [
+        "differential",
+        "fixture",
+        "fuzz",
+        "generated",
+        "release"
+      ],
+      "weir_flow_families": [
+        "cross_language",
+        "fixed_point",
+        "ifds",
+        "liveness",
+        "points_to",
+        "reaching",
+        "resident_flow",
+        "slice",
+        "witness"
       ]
     },
     {
@@ -1887,7 +4836,33 @@
       "assertion_count": 20,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability",
+        "soundness"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_text_encoding_classify.rs",
@@ -1906,7 +4881,33 @@
       "assertion_count": 14,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "differential",
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_reduce_min_max_laws.rs",
@@ -1925,7 +4926,32 @@
       "assertion_count": 14,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/dominator_tree_proptest.rs",
@@ -1944,7 +4970,33 @@
       "assertion_count": 9,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "nn_math"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "differential",
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_bitset_subset_of.rs",
@@ -1963,7 +5015,32 @@
       "assertion_count": 14,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_text_utf8_validate.rs",
@@ -1982,7 +5059,37 @@
       "assertion_count": 37,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability",
+        "soundness",
+        "validation"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "malformed_input"
+      ],
+      "corpus_families": [
+        "differential",
+        "generated"
+      ],
+      "weir_flow_families": [
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_toposort_dag.rs",
@@ -2000,7 +5107,31 @@
       "assertion_count": 10,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "nn_math"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_prefix_scan_large.rs",
@@ -2019,7 +5150,36 @@
       "assertion_count": 15,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "optimizer",
+        "scan_static"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "panic_path"
+      ],
+      "corpus_families": [
+        "differential",
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_bitset_popcount.rs",
@@ -2038,7 +5198,32 @@
       "assertion_count": 12,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_bitset_popcount_laws.rs",
@@ -2057,7 +5242,32 @@
       "assertion_count": 8,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_text_char_class.rs",
@@ -2076,7 +5286,34 @@
       "assertion_count": 12,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability",
+        "soundness"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_hex_decode.rs",
@@ -2094,7 +5331,34 @@
       "assertion_count": 5,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability",
+        "soundness"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "malformed_input"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_csr_queue_strided.rs",
@@ -2114,7 +5378,35 @@
       "assertion_count": 10,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "malformed_input"
+      ],
+      "corpus_families": [
+        "differential",
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_wire_roundtrip.rs",
@@ -2132,7 +5424,31 @@
       "assertion_count": 34,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "soundness"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/bitset_law_support.rs",
@@ -2150,7 +5466,31 @@
       "assertion_count": 20,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_bitset_and_laws.rs",
@@ -2169,7 +5509,31 @@
       "assertion_count": 0,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_bitset_contains.rs",
@@ -2188,7 +5552,32 @@
       "assertion_count": 8,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_dominator_frontier.rs",
@@ -2207,7 +5596,32 @@
       "assertion_count": 8,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_csr_frontier_queue.rs",
@@ -2226,7 +5640,36 @@
       "assertion_count": 18,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "parser_frontend"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability",
+        "validation"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "malformed_input"
+      ],
+      "corpus_families": [
+        "differential",
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_bitset_not_involution.rs",
@@ -2245,7 +5688,32 @@
       "assertion_count": 8,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_reduce_all.rs",
@@ -2264,7 +5732,32 @@
       "assertion_count": 8,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_persistent_bfs_bitset_words.rs",
@@ -2282,7 +5775,30 @@
       "assertion_count": 10,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_multi_block_prefix_scan.rs",
@@ -2301,7 +5817,36 @@
       "assertion_count": 20,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "nn_math",
+        "optimizer",
+        "scan_static"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "allocation_scratch",
+        "capability"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "differential",
+        "generated"
+      ],
+      "weir_flow_families": [
+        "liveness"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_text_byte_histogram.rs",
@@ -2320,7 +5865,34 @@
       "assertion_count": 18,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "nn_math"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability",
+        "soundness"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_reduce_any.rs",
@@ -2339,7 +5911,32 @@
       "assertion_count": 8,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_reduce_sum_laws.rs",
@@ -2358,7 +5955,32 @@
       "assertion_count": 8,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/wire_differential_std_io.rs",
@@ -2376,7 +5998,31 @@
       "assertion_count": 14,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "nn_math"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "soundness"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_bitset_boolean_algebra.rs",
@@ -2395,7 +6041,32 @@
       "assertion_count": 32,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "nn_math"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_reduce_count_laws.rs",
@@ -2414,7 +6085,32 @@
       "assertion_count": 12,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_csr_queue_split.rs",
@@ -2434,7 +6130,37 @@
       "assertion_count": 22,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "lower_emit"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "malformed_input"
+      ],
+      "corpus_families": [
+        "differential",
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_ziftsieve.rs",
@@ -2452,7 +6178,32 @@
       "assertion_count": 5,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "scan_static"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_graph_reachable.rs",
@@ -2471,7 +6222,32 @@
       "assertion_count": 6,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_base64_decode.rs",
@@ -2489,7 +6265,32 @@
       "assertion_count": 4,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "malformed_input"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_text_line_index.rs",
@@ -2508,7 +6309,38 @@
       "assertion_count": 36,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "optimizer",
+        "scan_static"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "direct"
+      ],
+      "feature_families": [
+        "capability",
+        "soundness"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "missing_input"
+      ],
+      "corpus_families": [
+        "differential",
+        "generated"
+      ],
+      "weir_flow_families": [
+        "liveness"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/region_dedup_property.rs",
@@ -2527,7 +6359,32 @@
       "assertion_count": 14,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "differential",
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_bitset_zero.rs",
@@ -2545,7 +6402,31 @@
       "assertion_count": 8,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_bitset_not_laws.rs",
@@ -2564,7 +6445,32 @@
       "assertion_count": 10,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_bitset_or_laws.rs",
@@ -2583,7 +6489,31 @@
       "assertion_count": 0,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_bitset_equal.rs",
@@ -2602,7 +6532,32 @@
       "assertion_count": 10,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/adversarial_frontier_queue_clear.rs",
@@ -2622,7 +6577,35 @@
       "assertion_count": 13,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "lower_emit"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability",
+        "soundness"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "differential",
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_bitset_xor_laws.rs",
@@ -2641,7 +6624,32 @@
       "assertion_count": 10,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_reduce_any_all.rs",
@@ -2660,7 +6668,32 @@
       "assertion_count": 20,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_csr_forward_traverse.rs",
@@ -2679,7 +6712,32 @@
       "assertion_count": 6,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_reduce_count_non_zero.rs",
@@ -2698,7 +6756,32 @@
       "assertion_count": 8,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_bitset_any.rs",
@@ -2717,7 +6800,32 @@
       "assertion_count": 10,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_bitset_copy.rs",
@@ -2736,7 +6844,32 @@
       "assertion_count": 10,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_dispatch_pack_roundtrip.rs",
@@ -2754,7 +6887,30 @@
       "assertion_count": 12,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_hash_crc32.rs",
@@ -2772,7 +6928,31 @@
       "assertion_count": 10,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/tests/adversarial_disk.rs",
@@ -2791,7 +6971,40 @@
       "assertion_count": 14,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "lower_emit",
+        "nn_math"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "direct"
+      ],
+      "feature_families": [
+        "cache",
+        "capability",
+        "simd"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "malformed_input",
+        "panic_path"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "fixed_point"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/tests/cache_eviction_proptest.rs",
@@ -2809,7 +7022,31 @@
       "assertion_count": 4,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "lower_emit",
+        "nn_math"
+      ],
+      "backend_families": [
+        "direct"
+      ],
+      "feature_families": [
+        "cache"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/tests/scheduler_model_proptest.rs",
@@ -2827,7 +7064,32 @@
       "assertion_count": 10,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "optimizer"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-naga/tests/adversarial_emit_program_matrix.rs",
@@ -2839,15 +7101,46 @@
         "property",
         "unit"
       ],
-      "lines": 235,
+      "lines": 240,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 15,
+      "assertion_count": 16,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "lower_emit",
+        "nn_math",
+        "optimizer"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "naga"
+      ],
+      "feature_families": [
+        "validation"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "panic_path"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-core/tests/wire_malformed_adversarial.rs",
@@ -2867,12 +7160,42 @@
       "assertion_count": 7,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "nn_math"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "malformed_input",
+        "panic_path"
+      ],
+      "corpus_families": [
+        "fixture",
+        "fuzz"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/points_to/tests.rs",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/points_to/tests/mod.rs",
       "layers": [
         "adversarial",
+        "integration",
         "property",
         "unit"
       ],
@@ -2883,11 +7206,41 @@
       "has_test_entrypoint": true,
       "assertion_count": 13,
       "oversized": false,
-      "god_test_candidate": true,
-      "recommended_split": [
-        "extract hostile-input cases into tests/adversarial/",
-        "extract property invariants into tests/properties/",
-        "move monolithic src/tests.rs coverage into focused tests/<domain>/ files"
+      "god_test_candidate": false,
+      "recommended_split": [],
+      "case_roles": [
+        "adversarial",
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "flow",
+        "lower_emit"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "allocation_scratch",
+        "soundness",
+        "validation"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "malformed_input",
+        "missing_input",
+        "panic_path"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "fixed_point",
+        "points_to",
+        "slice"
       ]
     },
     {
@@ -2906,7 +7259,31 @@
       "assertion_count": 10,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "boundary",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "weir_uncategorized"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/proptest_ssa_place_phi.rs",
@@ -2916,7 +7293,7 @@
         "property",
         "unit"
       ],
-      "lines": 164,
+      "lines": 168,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
       "line_threshold_exceeded": false,
@@ -2924,7 +7301,33 @@
       "assertion_count": 6,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "boundary",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow",
+        "nn_math"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "differential",
+        "generated"
+      ],
+      "weir_flow_families": [
+        "fixed_point"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/proptest_ssa_dominance_frontiers.rs",
@@ -2934,7 +7337,7 @@
         "property",
         "unit"
       ],
-      "lines": 150,
+      "lines": 151,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
       "line_threshold_exceeded": false,
@@ -2942,7 +7345,33 @@
       "assertion_count": 10,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "boundary",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow",
+        "nn_math"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "differential",
+        "generated"
+      ],
+      "weir_flow_families": [
+        "weir_uncategorized"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_range_check.rs",
@@ -2959,7 +7388,31 @@
       "assertion_count": 16,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "simd",
+        "soundness"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "weir_uncategorized"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_def_use.rs",
@@ -2968,7 +7421,7 @@
         "property",
         "unit"
       ],
-      "lines": 81,
+      "lines": 82,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
       "line_threshold_exceeded": false,
@@ -2976,7 +7429,33 @@
       "assertion_count": 8,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow",
+        "nn_math"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "soundness"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "missing_input"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "weir_uncategorized"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_ifds.rs",
@@ -2993,7 +7472,30 @@
       "assertion_count": 12,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "soundness"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "ifds"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_cross_language.rs",
@@ -3010,7 +7512,30 @@
       "assertion_count": 6,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "soundness"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "cross_language"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/proptest_regression_manifest.rs",
@@ -3020,7 +7545,7 @@
         "property",
         "unit"
       ],
-      "lines": 92,
+      "lines": 93,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
       "line_threshold_exceeded": false,
@@ -3028,7 +7553,35 @@
       "assertion_count": 8,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow",
+        "parser_frontend"
+      ],
+      "backend_families": [
+        "direct"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "malformed_input",
+        "missing_input",
+        "panic_path"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "weir_uncategorized"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_may_alias.rs",
@@ -3045,7 +7598,30 @@
       "assertion_count": 8,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "soundness"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "points_to"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/proptest_oracle_summary_may_alias.rs",
@@ -3063,7 +7639,31 @@
       "assertion_count": 8,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "boundary",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/proptest_ssa_dominators_random_cfg.rs",
@@ -3081,7 +7681,31 @@
       "assertion_count": 16,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "boundary",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "weir_uncategorized"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_range_escape.rs",
@@ -3090,7 +7714,7 @@
         "property",
         "unit"
       ],
-      "lines": 58,
+      "lines": 61,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
       "line_threshold_exceeded": false,
@@ -3098,7 +7722,30 @@
       "assertion_count": 20,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "soundness"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "weir_uncategorized"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/proptest_graph_layout_normalize.rs",
@@ -3116,7 +7763,35 @@
       "assertion_count": 13,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "boundary",
+        "conformance",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "direct"
+      ],
+      "feature_families": [
+        "capability",
+        "validation"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "panic_path"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "weir_uncategorized"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_graph_layout.rs",
@@ -3133,7 +7808,30 @@
       "assertion_count": 5,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "weir_uncategorized"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_ssa_dominators.rs",
@@ -3150,7 +7848,31 @@
       "assertion_count": 8,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow",
+        "nn_math"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "soundness"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "weir_uncategorized"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/proptest_reaching_def_summary.rs",
@@ -3168,7 +7890,33 @@
       "assertion_count": 24,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "boundary",
+        "conformance",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "overflow"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "reaching"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_reaching_def_escapes.rs",
@@ -3185,7 +7933,30 @@
       "assertion_count": 14,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "soundness"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "reaching"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_slice_construction.rs",
@@ -3202,7 +7973,31 @@
       "assertion_count": 10,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow",
+        "lower_emit"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "soundness"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/proptest_oracle_graph_reaching_closure.rs",
@@ -3220,7 +8015,32 @@
       "assertion_count": 6,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "boundary",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "fixed_point",
+        "reaching"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_bitset_oracles_extended.rs",
@@ -3237,7 +8057,30 @@
       "assertion_count": 16,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "reaching"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/proptest_oracle_bitset_laws.rs",
@@ -3255,7 +8098,33 @@
       "assertion_count": 28,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "boundary",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "liveness",
+        "reaching",
+        "slice"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_reaching_def_summary.rs",
@@ -3272,7 +8141,32 @@
       "assertion_count": 15,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "soundness"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "overflow"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "reaching"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_ssa_rename.rs",
@@ -3289,7 +8183,31 @@
       "assertion_count": 6,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow",
+        "nn_math"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "missing_input"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "weir_uncategorized"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/campaign_wave2_flowgraph.rs",
@@ -3307,7 +8225,35 @@
       "assertion_count": 16,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "boundary",
+        "conformance",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow",
+        "nn_math"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability",
+        "validation"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "panic_path"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "weir_uncategorized"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_reachability_witness.rs",
@@ -3324,7 +8270,30 @@
       "assertion_count": 8,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "soundness"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "witness"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_value_set.rs",
@@ -3341,7 +8310,30 @@
       "assertion_count": 12,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "soundness"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "weir_uncategorized"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_summary_callgraph.rs",
@@ -3350,7 +8342,7 @@
         "property",
         "unit"
       ],
-      "lines": 70,
+      "lines": 71,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
       "line_threshold_exceeded": false,
@@ -3358,7 +8350,33 @@
       "assertion_count": 30,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow",
+        "optimizer"
+      ],
+      "backend_families": [
+        "direct"
+      ],
+      "feature_families": [
+        "cache",
+        "simd",
+        "soundness"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "weir_uncategorized"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_bitset_oracles.rs",
@@ -3375,7 +8393,31 @@
       "assertion_count": 12,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "simd",
+        "soundness"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "liveness"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_points_to.rs",
@@ -3392,7 +8434,32 @@
       "assertion_count": 8,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow",
+        "lower_emit"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "simd",
+        "soundness"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "points_to"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_control_dependence.rs",
@@ -3409,7 +8476,30 @@
       "assertion_count": 10,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "soundness"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "weir_uncategorized"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_fuzz_bitset_oracles.rs",
@@ -3427,7 +8517,31 @@
       "assertion_count": 8,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "boundary",
+        "fuzz",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "soundness"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "fuzz"
+      ],
+      "weir_flow_families": [
+        "liveness"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_dominator_tree_laws.rs",
@@ -3445,7 +8559,33 @@
       "assertion_count": 10,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "boundary",
+        "conformance",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow",
+        "nn_math",
+        "optimizer"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "differential"
+      ],
+      "weir_flow_families": [
+        "weir_uncategorized"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_dominators.rs",
@@ -3462,7 +8602,30 @@
       "assertion_count": 14,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "boundary",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "flow"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "soundness"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "weir_uncategorized"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/tests/property_cli_contracts.rs",
@@ -3471,15 +8634,40 @@
         "property",
         "unit"
       ],
-      "lines": 9,
+      "lines": 38,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 1,
+      "assertion_count": 6,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [],
+      "case_roles": [
+        "boundary",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "parser_frontend"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "malformed_input"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
     }
   ],
   "blockers": []

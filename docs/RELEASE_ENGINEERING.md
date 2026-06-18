@@ -44,12 +44,31 @@ release evidence gate is closed.
 Release evidence anchors:
 
 - `release/evidence/final/completion-audit.json`
+- `release/evidence/final/release-evidence-run.json`
+- `release/evidence/final/expected-artifacts.json`
 - `release/evidence/conformance/conformance-matrix.json`
+- `release/evidence/benchmarks/cuda-release-suite.json`
 - `release/evidence/benchmarks/release-workload-matrix.json`
 - `release/evidence/benchmarks/cpu-only-100x-proof.json`
 - `release/evidence/tests/release-surface-suite-coverage.json`
 - `release/evidence/metadata/metadata-matrix.json`
 - `release/evidence/docs/docs-matrix.json`
+
+## Release evidence external artifacts
+
+`release-evidence` records externally refreshed benchmark artifacts as
+`external-artifacts-only` instead of spawning `release-benchmarks`. The
+expected-artifact registry at `release/evidence/final/expected-artifacts.json`
+must expose `command_mode`, `artifact_contracts`, `blockers`, and the
+`release-benchmarks --backend cuda` contract rows that keep long benchmark runs
+outside the structural evidence command. A registry or artifact-status blocker
+is a release-gate exit condition.
+
+The release evidence run at `release/evidence/final/release-evidence-run.json`
+inspects `release/evidence/benchmarks/cuda-release-suite.json` for
+`schema_digest_chain` provenance. That chain must carry `source_digest`,
+`command_digest`, and `hardware_digest` values, and the suite must also expose
+top-level hardware provenance before benchmark freshness is accepted.
 
 ## Changelog protocol
 

@@ -1,0 +1,43 @@
+# Resource right-sizing and capacity policy for VX-1324, VX-1334, VX-1335, and VX-1337.
+# Requests, limits, observed usage, quota links, saturation alerts, and capacity evidence share one right-sizing seam.
+
+schema = "vyre.ops.resource_rightsizing_capacity_policy.v1"
+owner = "performance"
+evidence_tokens = ["KUBERNETES_RESOURCE_MANAGEMENT", "CWE_770_RESOURCE_ALLOCATION", "PROMETHEUS_RECORDING_RULES"]
+
+required_fields = [
+  "capacity_id",
+  "workload_surface",
+  "request_limit_policy",
+  "observed_usage_policy",
+  "rightsizing_policy",
+  "quota_link_policy",
+  "saturation_signal_policy",
+  "cost_capacity_policy",
+  "release_gate_effect",
+  "diagnostic",
+]
+
+[[capacity]]
+capacity_id = "operator-container-rightsizing"
+workload_surface = "operator-api-daemon-batch-worker-and-sidecar-containers"
+request_limit_policy = "cpu-memory-ephemeral-storage-requests-limits-and-runtime-timeout-declared-for-each-container"
+observed_usage_policy = "record-p50-p95-p99-peak-cpu-memory-ephemeral-storage-queue-depth-and-restart-count-under-representative-load"
+rightsizing_policy = "requests-cover-steady-state-and-limits-bound-worst-case-without-hiding-OOM-timeout-or-load-shed-evidence"
+quota_link_policy = "RESOURCE_BUDGET_POLICY.toml-and-BACKPRESSURE_QUEUE_QUOTA_POLICY.toml-remain-control-authorities"
+saturation_signal_policy = "deployment-saturation-alert-and-resource-exhaustion-evidence-feed-rightsizing-review"
+cost_capacity_policy = "overprovision-and-underprovision-both-recorded-as-release-health-feedback-with-public-safe-impact-text"
+release_gate_effect = "unbounded-container-resource-or-missing-rightsizing-evidence-blocks-operator-deployment-readiness"
+diagnostic = "VYRE_CONTAINER_RIGHTSIZING_CAPACITY_REQUIRED"
+
+[[capacity]]
+capacity_id = "release-workload-capacity-envelope"
+workload_surface = "release-benchmarks-public-operator-workloads-chaos-experiments-and-autoscaling-targets"
+request_limit_policy = "capacity-envelope-records-min-node-class-max-node-class-container-limits-and-queue-quota-class"
+observed_usage_policy = "record-throughput-latency-SLO-burn-shed-count-cache-hit-rate-GPU-resident-bytes-and-artifact-digest"
+rightsizing_policy = "capacity-envelope-must-explain-performance-claim-boundaries-and-invalidates-claims-outside-observed-envelope"
+quota_link_policy = "RESOURCE_DOS_GOVERNANCE_TRANCHE_COVERAGE.toml"
+saturation_signal_policy = "stress-resource-saturation-experiments-and-alerts-feed-capacity-envelope-adjustment"
+cost_capacity_policy = "public-report-states-capacity-class-not-cloud-price-or-private-fleet-layout"
+release_gate_effect = "performance-claim-without-capacity-envelope-and-saturation-evidence-is-invalid"
+diagnostic = "VYRE_RELEASE_WORKLOAD_CAPACITY_ENVELOPE_REQUIRED"

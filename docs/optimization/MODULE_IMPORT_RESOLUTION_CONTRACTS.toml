@@ -1,0 +1,61 @@
+[artifact]
+id = "MODULE_IMPORT_RESOLUTION_CONTRACTS"
+title = "Module and import resolution contracts"
+tranche = "VX-1561..VX-1580"
+owner = "scanner_frontends"
+status = "planned_contract"
+research_sources = [
+  "CLANG_DEPENDENCY_SCANNING",
+  "PYTHON_IMPORT_SYSTEM",
+  "RUST_MODULES_REFERENCE",
+  "GCC_PREPROCESSOR_DEPENDENCIES",
+]
+
+[scope]
+owns = [
+  "resolver inputs that make dependency edges reproducible",
+  "ambiguous and unresolved dependency diagnostics",
+  "dynamic import conservative invalidation policy",
+  "module cache context digest requirements",
+  "generated dependency producer-to-consumer links",
+]
+does_not_own = [
+  "raw filesystem traversal, owned by DIRECTORY_ENUMERATION_METADATA_POLICY",
+  "safe file opening, owned by SAFE_OPEN_HANDLE_READ_POLICY",
+  "content hashing, owned by CORPUS_CONTENT_IDENTITY_INDEX",
+  "backend command replay caches, owned by SUBMISSION_REPLAY_DECISION_POLICY",
+]
+
+[resolver_inputs]
+common = [
+  "language_id",
+  "language_version",
+  "root_id",
+  "file_identity",
+  "source_digest",
+  "rule_set_digest",
+  "dependency_extractor_digest",
+]
+c_cpp = ["compile_command_digest", "include_path_digest", "macro_environment_digest", "module_cache_context_digest"]
+python = ["sys_path_digest", "package_root_digest", "loader_policy_digest", "namespace_package_digest"]
+rust = ["crate_root_digest", "cfg_digest", "edition", "path_attribute_digest", "feature_digest"]
+
+[resolution_policy]
+resolved = "resolved edges record producer identity, consumer identity, edge class, resolver inputs, and dependency reason"
+unresolved = "unresolved edges block reuse for affected consumers unless a language policy proves the edge is non-executable or non-semantic"
+ambiguous = "multiple candidate providers force conservative invalidation across all candidate providers and consumers"
+dynamic = "dynamic imports, generated includes, macro-computed paths, and build-script outputs create uncertainty edges until extractor evidence narrows them"
+cycle = "dependency cycles are represented explicitly and invalidated as strongly connected components"
+
+[diagnostics]
+required = [
+  "language_id",
+  "source_file_identity",
+  "edge_expression",
+  "resolution_state",
+  "candidate_count",
+  "resolver_digest",
+  "reuse_blocked",
+  "operator_fix",
+]
+privacy = "diagnostics use path alias digests and package/module names approved by publication policy, not private Santh roots"

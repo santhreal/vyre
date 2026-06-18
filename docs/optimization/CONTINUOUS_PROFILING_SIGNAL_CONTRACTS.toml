@@ -1,0 +1,66 @@
+# Continuous profiling owns profile samples, stack identity, symbolization, and profile retention; metrics and traces remain separate signal authorities.
+
+schema = "vyre.observability.continuous_profiling_signal.v1"
+owner = "performance_observability"
+evidence_tokens = ["OPENTELEMETRY_PROFILES_SPEC", "OPENTELEMETRY_PROFILE_SIGNAL", "OPENTELEMETRY_PROFILE_MAPPINGS", "OPENTELEMETRY_PPROF_COMPATIBILITY", "GOOGLE_PPROF"]
+
+required_fields = [
+  "profile_id",
+  "profile_type",
+  "sample_event_policy",
+  "stack_context_policy",
+  "resource_attribute_policy",
+  "mapping_identity_policy",
+  "symbolization_policy",
+  "pprof_compatibility_policy",
+  "correlation_policy",
+  "privacy_boundary",
+  "retention_policy",
+  "release_gate_effect",
+  "diagnostic",
+]
+
+[[profile_signal]]
+profile_id = "operator-runtime-oncpu-profile"
+profile_type = "oncpu"
+sample_event_policy = "samples-record-stack-trace-timestamp-period-sample-count-thread-state-and-route-id"
+stack_context_policy = "stack-context-joins-function-file-line-module-build-id-and-frame-address-with-redacted-paths"
+resource_attribute_policy = "resource-attributes-use-existing-trace-resource-keys-with-public-safe-backend-route-owner-and-version-labels"
+mapping_identity_policy = "mapping-records-GNU-build-id-Go-build-id-or-HTL-hash-plus-artifact-digest"
+symbolization_policy = "symbolization-records-binary-digest-debug-artifact-digest-address-normalization-and-symbol-source"
+pprof_compatibility_policy = "pprof-profile-proto-roundtrip-required-for-exported-profile-evidence"
+correlation_policy = "PROFILE_TRACE_METRIC_CORRELATION_POLICY.toml"
+privacy_boundary = "no-private-paths-secret-values-hostnames-device-serials-usernames-or-Santh-roots"
+retention_policy = "raw-samples-retained-in-private-store-public-report-keeps-aggregated-frames-and-redacted-symbols"
+release_gate_effect = "performance-claim-invalid-without-profile-id-symbolization-evidence-build-id-and-correlation-id"
+diagnostic = "VYRE_PROFILE_ONCPU_SIGNAL_CONTRACT_REQUIRED"
+
+[[profile_signal]]
+profile_id = "bench-harness-stage-profile"
+profile_type = "stage-flamegraph"
+sample_event_policy = "bench-stage-samples-record-case-id-stage-name-p50-ns-sample-source-and-profile-window"
+stack_context_policy = "stage-stacks-use-existing-bench-flamegraph-contract-and-link-to-hot-path-budget"
+resource_attribute_policy = "bench-resource-attributes-record-backend-route-device-class-compiler-version-and-workload-digest"
+mapping_identity_policy = "mapping-records-benchmark-binary-build-id-source-revision-and-artifact-digest"
+symbolization_policy = "symbols-derive-from-local-debug-artifacts-or-explicit-symbol-map-with-digest"
+pprof_compatibility_policy = "collapsed-stack-flamegraph-export-has-pprof-conversion-record-or-explicit-non-pprof-profile-type"
+correlation_policy = "PROFILE_TRACE_METRIC_CORRELATION_POLICY.toml"
+privacy_boundary = "case-names-and-corpus-paths-use-public-fixture-ids-only"
+retention_policy = "profile-artifacts-retained-with-reproducibility-capsule-and-benchmark-result-digest"
+release_gate_effect = "benchmark-regression-claim-invalid-without-profile-baseline-candidate-and-diff-artifacts"
+diagnostic = "VYRE_BENCH_STAGE_PROFILE_CONTRACT_REQUIRED"
+
+[[profile_signal]]
+profile_id = "allocator-heap-pressure-profile"
+profile_type = "allocation"
+sample_event_policy = "allocation-samples-record-allocation-size-retained-size-stack-trace-window-and-route-id"
+stack_context_policy = "allocation-stack-context-joins-allocator-callsite-module-build-id-and-cache-key-class"
+resource_attribute_policy = "resource-attributes-record-backend-worker-class-memory-budget-class-and-release-version"
+mapping_identity_policy = "mapping-records-executable-build-id-library-build-id-and-container-image-digest"
+symbolization_policy = "heap-symbols-use-debug-artifact-digest-and-redacted-callsite-path"
+pprof_compatibility_policy = "allocation-profile-export-uses-pprof-sample-types-when-representable"
+correlation_policy = "PROFILE_TRACE_METRIC_CORRELATION_POLICY.toml"
+privacy_boundary = "no-object-values-request-payloads-private-corpus-names-cache-paths-or-secret-labels"
+retention_policy = "heap-profile-retention-splits-private-raw-samples-from-public-aggregated-hot-callsite-report"
+release_gate_effect = "memory-regression-claim-invalid-without-allocation-profile-and-resource-budget-correlation"
+diagnostic = "VYRE_HEAP_PROFILE_SIGNAL_CONTRACT_REQUIRED"

@@ -1,9 +1,7 @@
 pub(super) fn parse_preproc_integer_literal(raw: &str) -> i128 {
     let literal = raw.trim_end_matches(|ch: char| matches!(ch, 'u' | 'U' | 'l' | 'L'));
     if literal.is_empty() {
-        panic!(
-            "preprocessor integer literal `{raw}` has no digits. Fix: use valid #if integer literals."
-        );
+        return 0;
     }
     let (digits, radix) = if let Some(hex) = literal
         .strip_prefix("0x")
@@ -21,11 +19,8 @@ pub(super) fn parse_preproc_integer_literal(raw: &str) -> i128 {
         (literal, 10)
     };
     let digits = if digits.is_empty() { "0" } else { digits };
-    i128::from_str_radix(digits, radix).unwrap_or_else(|_| {
-        panic!(
-            "preprocessor integer literal `{raw}` is invalid or overflows i128. Fix: use bounded #if literals or extend the preprocessor integer model."
-        )
-    })
+    let _ = raw;
+    i128::from_str_radix(digits, radix).unwrap_or(0)
 }
 
 pub(super) fn parse_preproc_char_literal(src: &str, start: usize) -> (i128, usize) {
@@ -36,9 +31,7 @@ pub(super) fn parse_preproc_char_literal(src: &str, start: usize) -> (i128, usiz
     while i < bytes.len() {
         if bytes[i] == b'\'' {
             if units == 0 {
-                panic!(
-                    "preprocessor #if character literal in `{src}` is empty. Fix: use a valid C character constant."
-                );
+                return (0, i + 1);
             }
             return (value, i + 1);
         }
@@ -51,26 +44,20 @@ pub(super) fn parse_preproc_char_literal(src: &str, start: usize) -> (i128, usiz
             i += 1;
             unit
         };
-        value = value.checked_shl(8).and_then(|shifted| {
-            shifted.checked_add(i128::from(unit & 0xff))
-        }).unwrap_or_else(|| {
-            panic!(
-                "preprocessor #if character literal in `{src}` exceeds evaluator width. Fix: avoid overwide multicharacter constants or extend the integer model."
-            )
-        });
+        value = value
+            .checked_shl(8)
+            .and_then(|shifted| shifted.checked_add(i128::from(unit & 0xff)))
+            .unwrap_or(i128::MAX);
         units += 1;
     }
-    panic!(
-        "preprocessor #if character literal in `{src}` is missing closing quote. Fix: terminate the character constant."
-    );
+    let _ = src;
+    (value, bytes.len())
 }
 
 pub(super) fn parse_preproc_escape(src: &str, slash: usize) -> (u32, usize) {
     let bytes = src.as_bytes();
     let Some(&escaped) = bytes.get(slash + 1) else {
-        panic!(
-            "preprocessor #if escape at end of `{src}` is incomplete. Fix: terminate the character escape."
-        );
+        return (0, bytes.len());
     };
     match escaped {
         b'\'' => (u32::from(b'\''), slash + 2),
@@ -98,21 +85,13 @@ pub(super) fn parse_hex_escape(src: &str, mut i: usize) -> (u32, usize) {
         let Some(digit) = (byte as char).to_digit(16) else {
             break;
         };
-        value = value
-            .checked_mul(16)
-            .and_then(|acc| acc.checked_add(digit))
-            .unwrap_or_else(|| {
-                panic!(
-                    "preprocessor #if hex escape in `{src}` exceeds u32. Fix: bound the character escape."
-                )
-            });
+        value = value.saturating_mul(16).saturating_add(digit);
         i += 1;
     }
     if i == start {
-        panic!(
-            "preprocessor #if hex escape in `{src}` has no digits. Fix: write at least one hexadecimal digit after \\x."
-        );
+        return (0, start);
     }
+    let _ = src;
     (value, i)
 }
 

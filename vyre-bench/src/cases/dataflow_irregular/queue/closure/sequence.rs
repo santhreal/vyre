@@ -116,6 +116,7 @@ pub(super) fn dispatch_resident_queue_closure_sequence(
         program: &prepared.reset_program,
         resources: &resource_sets[0],
         grid_override: Some(reset_grid),
+        workgroup_override: None,
     };
     let read_ranges = [ResidentReadRange {
         resource: &resource_sets[0][QUEUE_CLOSURE_RESET_ACCUMULATOR_RESOURCE],
@@ -134,21 +135,25 @@ pub(super) fn dispatch_resident_queue_closure_sequence(
         program: &prepared.clear_len_program,
         resources: &resource_sets[1],
         grid_override: Some([1, 1, 1]),
+        workgroup_override: None,
     };
     let clear_b_step = || ResidentDispatchStep {
         program: &prepared.clear_len_program,
         resources: &resource_sets[2],
         grid_override: Some([1, 1, 1]),
+        workgroup_override: None,
     };
     let delta_a_to_b_step = || ResidentDispatchStep {
         program: &prepared.delta_program,
         resources: &resource_sets[3],
         grid_override: Some(prepared.delta_grid),
+        workgroup_override: None,
     };
     let delta_b_to_a_step = || ResidentDispatchStep {
         program: &prepared.delta_program,
         resources: &resource_sets[4],
         grid_override: Some(prepared.delta_grid),
+        workgroup_override: None,
     };
 
     if plan.leading_a_to_b_half_wave {

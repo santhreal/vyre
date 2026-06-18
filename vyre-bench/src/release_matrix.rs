@@ -5,7 +5,7 @@
 //! workload exposes enough parallelism. This module makes those
 //! requirements auditable from the benchmark registry.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::Path;
 
@@ -14,39 +14,20 @@ use serde::Serialize;
 use crate::api::case::{BaselineClass, BenchCase, PerformanceContract};
 use crate::api::suite::SuiteKind;
 use crate::registry::BenchRegistry;
+use crate::report::json::{
+    REQUIRED_BENCHMARK_CASE_FIELDS, REQUIRED_BENCHMARK_METRIC_FIELDS,
+};
 
 const REQUIRED_CLOSED_FAMILIES: usize = 12;
-const REQUIRED_CPU_SOTA_100X_FAMILIES: usize = 10;
-const REQUIRED_CPU_SOTA_100X_FAMILY_IDS: &[&str] = &[
-    "condition-eval",
-    "string-bitmap-scatter",
-    "offset-count-aggregation",
-    "entropy-window",
-    "quantified-condition-loops",
-    "alias-reaching-def",
-    "ifds-witness",
-    "c-ast-traversal",
-    "megakernel-queued-batches",
-    "egraph-saturation",
-    "sparse-output-compaction",
-];
-const REQUIRED_CPU_SOTA_100X_CASE_IDS: &[&str] = &[
-    "release.condition_eval.1m",
-    "release.string_bitmap_scatter.1m",
-    "release.offset_count_aggregation.1m",
-    "release.entropy_window.1m",
-    "release.quantified_condition_loops.1m",
-    "release.alias_reaching_def.1m",
-    "release.ifds_witness.1m",
-    "release.c_ast_traversal.1m",
-    "release.megakernel_queue.1m",
-    "release.egraph_saturation.1m",
-    "sparse.compaction.count.1m",
-];
+const MIN_CPU_SOTA_100X_FAMILIES: usize = 10;
+const BENCH_TARGETS: &str = include_str!("../../docs/optimization/BENCH_TARGETS.toml");
 
 #[derive(Debug, Serialize)]
 pub struct ReleaseWorkloadMatrix {
     pub schema_version: u32,
+    pub benchmark_evidence_schema_version: u32,
+    pub required_benchmark_case_fields: Vec<&'static str>,
+    pub required_benchmark_metric_fields: Vec<&'static str>,
     pub required_closed_families: usize,
     pub required_cpu_sota_100x_families: Vec<&'static str>,
     pub missing_required_cpu_sota_100x_families: Vec<&'static str>,
@@ -93,6 +74,13 @@ struct ReleaseWorkloadFamily {
     bench_target_id: &'static str,
     dispatch_policy: &'static str,
     non_megakernel_justification: Option<&'static str>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+struct ReleaseBenchTarget {
+    id: String,
+    bench_case_id: String,
+    min_speedup_over_cpu_sota: f64,
 }
 
 const RELEASE_WORKLOADS: &[ReleaseWorkloadFamily] = &[
@@ -291,6 +279,11 @@ const RELEASE_WORKLOADS: &[ReleaseWorkloadFamily] = &[
 ];
 
 pub fn build_release_matrix(registry: &BenchRegistry) -> ReleaseWorkloadMatrix {
+    let (release_targets, mut blockers) = match release_bench_targets_from_manifest(BENCH_TARGETS) {
+        Ok(targets) => (targets, Vec::new()),
+        Err(error) => (Vec::new(), vec![error]),
+    };
+    let target_by_id = release_bench_target_by_id(&release_targets);
     let release_cases: Vec<_> = registry
         .iter()
         .filter(|case| case.active_in_suite(SuiteKind::Release))
@@ -314,8 +307,10 @@ pub fn build_release_matrix(registry: &BenchRegistry) -> ReleaseWorkloadMatrix {
 
     let mut families = Vec::new();
     for family in RELEASE_WORKLOADS {
-        families.push(build_family_report(family, &release_cases));
+        families.push(build_family_report(family, &release_cases, &target_by_id));
     }
+    let required_cpu_sota_100x_families =
+        required_cpu_sota_100x_family_ids(RELEASE_WORKLOADS, &target_by_id);
 
     let required_closed_families = families.iter().filter(|family| family.required).count();
     let matched_required_families = families
@@ -340,7 +335,7 @@ pub fn build_release_matrix(registry: &BenchRegistry) -> ReleaseWorkloadMatrix {
         .collect::<Vec<_>>();
     cpu_sota_100x_families.sort_unstable();
     let cpu_sota_100x_family_count = cpu_sota_100x_families.len();
-    let missing_required_cpu_sota_100x_families = REQUIRED_CPU_SOTA_100X_FAMILY_IDS
+    let missing_required_cpu_sota_100x_families = required_cpu_sota_100x_families
         .iter()
         .copied()
         .filter(|required| {
@@ -350,7 +345,6 @@ pub fn build_release_matrix(registry: &BenchRegistry) -> ReleaseWorkloadMatrix {
         })
         .collect::<Vec<_>>();
     let cpu_sota_100x_contract_cases = cpu_sota_100x_contract_ids.iter().cloned().collect();
-    let mut blockers = Vec::new();
     if matched_required_families < REQUIRED_CLOSED_FAMILIES {
         blockers.push(format!(
             "release suite covers {matched_required_families} required workload families; needs at least {REQUIRED_CLOSED_FAMILIES}"
@@ -406,15 +400,21 @@ pub fn build_release_matrix(registry: &BenchRegistry) -> ReleaseWorkloadMatrix {
             ));
         }
     }
-    if cpu_sota_100x_contract_ids.len() < REQUIRED_CPU_SOTA_100X_FAMILIES {
+    if cpu_sota_100x_contract_ids.len() < MIN_CPU_SOTA_100X_FAMILIES {
         blockers.push(format!(
-            "release suite declares {} CPU-SOTA 100x performance contract(s); needs at least {REQUIRED_CPU_SOTA_100X_FAMILIES}",
+            "release suite declares {} CPU-SOTA 100x performance contract(s); needs at least {MIN_CPU_SOTA_100X_FAMILIES}",
             cpu_sota_100x_contract_ids.len()
         ));
     }
-    if cpu_sota_100x_family_count < REQUIRED_CPU_SOTA_100X_FAMILIES {
+    if cpu_sota_100x_family_count < MIN_CPU_SOTA_100X_FAMILIES {
         blockers.push(format!(
-            "release suite covers {cpu_sota_100x_family_count} CPU-SOTA 100x workload family/families; needs at least {REQUIRED_CPU_SOTA_100X_FAMILIES}"
+            "release suite covers {cpu_sota_100x_family_count} CPU-SOTA 100x workload family/families; needs at least {MIN_CPU_SOTA_100X_FAMILIES}"
+        ));
+    }
+    if cpu_sota_100x_family_count < required_cpu_sota_100x_families.len() {
+        blockers.push(format!(
+            "release suite covers {cpu_sota_100x_family_count} BENCH_TARGETS-derived CPU-SOTA 100x workload family/families; needs {}",
+            required_cpu_sota_100x_families.len()
         ));
     }
     for family in &missing_required_cpu_sota_100x_families {
@@ -425,8 +425,11 @@ pub fn build_release_matrix(registry: &BenchRegistry) -> ReleaseWorkloadMatrix {
 
     ReleaseWorkloadMatrix {
         schema_version: 1,
+        benchmark_evidence_schema_version: 1,
+        required_benchmark_case_fields: REQUIRED_BENCHMARK_CASE_FIELDS.to_vec(),
+        required_benchmark_metric_fields: REQUIRED_BENCHMARK_METRIC_FIELDS.to_vec(),
         required_closed_families,
-        required_cpu_sota_100x_families: REQUIRED_CPU_SOTA_100X_FAMILY_IDS.to_vec(),
+        required_cpu_sota_100x_families,
         missing_required_cpu_sota_100x_families,
         matched_required_families,
         release_suite_case_count: required_matched_release_cases.len(),
@@ -546,6 +549,7 @@ pub fn enforce_release_matrix(matrix: &ReleaseWorkloadMatrix) -> anyhow::Result<
 fn build_family_report(
     family: &ReleaseWorkloadFamily,
     release_cases: &[&'static dyn BenchCase],
+    target_by_id: &BTreeMap<&str, &ReleaseBenchTarget>,
 ) -> ReleaseWorkloadFamilyReport {
     let mut matched_cases = Vec::new();
     let mut cpu_sota_contracts = Vec::new();
@@ -581,12 +585,14 @@ fn build_family_report(
         "release/evidence/benchmarks/workload-{:02}-{}.json",
         family.release_plan_workload, family.id
     );
+    let bench_target = target_by_id.get(family.bench_target_id).copied();
+    let requires_release_defining_cpu_sota = family.required
+        && bench_target.is_some_and(|target| target.min_speedup_over_cpu_sota >= 100.0);
     let benchmark_case = preferred_release_case(
         &matched_cases,
         &cpu_sota_100x_cases,
-        REQUIRED_CPU_SOTA_100X_FAMILY_IDS
-            .iter()
-            .any(|required| family.id == *required),
+        bench_target.map(|target| target.bench_case_id.as_str()),
+        requires_release_defining_cpu_sota,
     );
     let benchmark_command = benchmark_case.map(|case_id| {
         format!(
@@ -621,7 +627,11 @@ fn build_family_report(
         matched_cases,
         evidence_artifact,
         benchmark_command,
-        bench_target_ids: vec![family.bench_target_id],
+        bench_target_ids: if bench_target.is_some() {
+            vec![family.bench_target_id]
+        } else {
+            Vec::new()
+        },
         cpu_sota_contracts,
         cpu_sota_100x_cases,
         cpu_sota_baseline_names,
@@ -636,27 +646,128 @@ fn build_family_report(
 fn preferred_release_case<'a>(
     matched_cases: &'a [String],
     cpu_sota_100x_cases: &'a [String],
+    release_defining_case_id: Option<&str>,
     require_release_defining_cpu_sota: bool,
 ) -> Option<&'a str> {
     if require_release_defining_cpu_sota {
+        let release_defining_case_id = release_defining_case_id?;
         return cpu_sota_100x_cases
             .iter()
-            .find(|case_id| {
-                REQUIRED_CPU_SOTA_100X_CASE_IDS
-                    .iter()
-                    .any(|required| case_id.as_str() == *required)
-            })
+            .find(|case_id| case_id.as_str() == release_defining_case_id)
             .map(String::as_str);
     }
-    matched_cases
-        .iter()
-        .find(|case_id| {
-            REQUIRED_CPU_SOTA_100X_CASE_IDS
-                .iter()
-                .any(|required| case_id.as_str() == *required)
+    if let Some(release_defining_case_id) = release_defining_case_id {
+        if let Some(case_id) = matched_cases
+            .iter()
+            .find(|case_id| case_id.as_str() == release_defining_case_id)
+        {
+            return Some(case_id.as_str());
+        }
+    }
+    matched_cases.first().map(String::as_str)
+}
+
+fn release_bench_targets_from_manifest(text: &str) -> Result<Vec<ReleaseBenchTarget>, String> {
+    let value = toml::from_str::<toml::Value>(text)
+        .map_err(|error| format!("Fix: BENCH_TARGETS.toml must parse as TOML: {error}"))?;
+    let targets = value
+        .get("target")
+        .and_then(toml::Value::as_array)
+        .ok_or_else(|| "Fix: BENCH_TARGETS.toml must contain [[target]] rows.".to_string())?;
+    let mut seen = BTreeSet::new();
+    let mut rows = Vec::new();
+    for target in targets.iter().filter(|target| {
+        target.get("suite").and_then(toml::Value::as_str) == Some("release-workload")
+    }) {
+        let id = release_target_string(target, "id")?;
+        if !seen.insert(id.clone()) {
+            return Err(format!(
+                "Fix: BENCH_TARGETS.toml contains duplicate release-workload target id `{id}`."
+            ));
+        }
+        rows.push(ReleaseBenchTarget {
+            id,
+            bench_case_id: release_target_string(target, "bench_case_id")?,
+            min_speedup_over_cpu_sota: release_target_number(target, "min_speedup_over_cpu_sota")?,
+        });
+    }
+    if rows.is_empty() {
+        return Err(
+            "Fix: BENCH_TARGETS.toml must define at least one suite=release-workload target."
+                .to_string(),
+        );
+    }
+    Ok(rows)
+}
+
+fn release_target_string(target: &toml::Value, key: &'static str) -> Result<String, String> {
+    let id = target
+        .get("id")
+        .and_then(toml::Value::as_str)
+        .unwrap_or("<missing id>");
+    let value = target
+        .get(key)
+        .and_then(toml::Value::as_str)
+        .unwrap_or("")
+        .trim();
+    if value.is_empty() {
+        return Err(format!(
+            "Fix: release-workload BENCH_TARGETS target `{id}` must declare non-empty `{key}`."
+        ));
+    }
+    Ok(value.to_string())
+}
+
+fn release_target_number(target: &toml::Value, key: &'static str) -> Result<f64, String> {
+    let id = target
+        .get("id")
+        .and_then(toml::Value::as_str)
+        .unwrap_or("<missing id>");
+    let value = target
+        .get(key)
+        .and_then(toml::Value::as_float)
+        .or_else(|| {
+            target
+                .get(key)
+                .and_then(toml::Value::as_integer)
+                .map(|value| value as f64)
         })
-        .or_else(|| matched_cases.first())
-        .map(String::as_str)
+        .ok_or_else(|| {
+            format!(
+                "Fix: release-workload BENCH_TARGETS target `{id}` must declare numeric `{key}`."
+            )
+        })?;
+    if value <= 0.0 {
+        return Err(format!(
+            "Fix: release-workload BENCH_TARGETS target `{id}` numeric `{key}` must be positive."
+        ));
+    }
+    Ok(value)
+}
+
+fn release_bench_target_by_id(
+    targets: &[ReleaseBenchTarget],
+) -> BTreeMap<&str, &ReleaseBenchTarget> {
+    targets
+        .iter()
+        .map(|target| (target.id.as_str(), target))
+        .collect()
+}
+
+fn required_cpu_sota_100x_family_ids(
+    families: &'static [ReleaseWorkloadFamily],
+    target_by_id: &BTreeMap<&str, &ReleaseBenchTarget>,
+) -> Vec<&'static str> {
+    families
+        .iter()
+        .filter(|family| family.required)
+        .filter(|family| {
+            target_by_id
+                .get(family.bench_target_id)
+                .is_some_and(|target| target.min_speedup_over_cpu_sota >= 100.0)
+        })
+        .map(|family| family.id)
+        .collect()
 }
 
 fn has_cpu_sota_100x_contract(contract: Option<&PerformanceContract>) -> bool {
@@ -745,7 +856,12 @@ mod tests {
         let cpu_sota_100x_cases = vec!["conditions.yara_like.eval.1m".to_string()];
 
         assert_eq!(
-            preferred_release_case(&matched_cases, &cpu_sota_100x_cases, true),
+            preferred_release_case(
+                &matched_cases,
+                &cpu_sota_100x_cases,
+                Some("release.condition_eval.1m"),
+                true
+            ),
             None,
             "Fix: release matrix commands must not publish a broad CPU-SOTA case when the 100x case list does not include a release-defining case."
         );
@@ -760,7 +876,12 @@ mod tests {
         let cpu_sota_100x_cases = Vec::new();
 
         assert_eq!(
-            preferred_release_case(&matched_cases, &cpu_sota_100x_cases, false),
+            preferred_release_case(
+                &matched_cases,
+                &cpu_sota_100x_cases,
+                Some("release.condition_eval.1m"),
+                false
+            ),
             Some("release.condition_eval.1m"),
             "Fix: non-100x release workload commands should still prefer release-defining matched cases."
         );
@@ -772,9 +893,53 @@ mod tests {
         let cpu_sota_100x_cases = vec!["nn.linear_4bit_affine_grouped.1m".to_string()];
 
         assert_eq!(
-            preferred_release_case(&matched_cases, &cpu_sota_100x_cases, false),
+            preferred_release_case(
+                &matched_cases,
+                &cpu_sota_100x_cases,
+                Some("nn.linear_4bit_affine_grouped.1m"),
+                false
+            ),
             Some("nn.linear_4bit_affine_grouped.1m"),
             "Fix: optional or non-proof 100x workloads should keep reproducible CUDA commands while CPU-SOTA proof workloads require release-defining case ids."
+        );
+    }
+
+    #[test]
+    fn required_cpu_sota_100x_families_follow_bench_target_data() {
+        let low_manifest = r#"
+schema = 1
+
+[[target]]
+id = "release.workload.condition_eval"
+bench_case_id = "release.condition_eval.1m"
+suite = "release-workload"
+min_speedup_over_cpu_sota = 50.0
+"#;
+        let high_manifest = r#"
+schema = 1
+
+[[target]]
+id = "release.workload.condition_eval"
+bench_case_id = "release.condition_eval.1m"
+suite = "release-workload"
+min_speedup_over_cpu_sota = 100.0
+"#;
+        let low_targets = release_bench_targets_from_manifest(low_manifest)
+            .expect("Fix: low-speedup target fixture must parse.");
+        let high_targets = release_bench_targets_from_manifest(high_manifest)
+            .expect("Fix: high-speedup target fixture must parse.");
+        let low_by_id = release_bench_target_by_id(&low_targets);
+        let high_by_id = release_bench_target_by_id(&high_targets);
+
+        assert!(
+            !required_cpu_sota_100x_family_ids(RELEASE_WORKLOADS, &low_by_id)
+                .contains(&"condition-eval"),
+            "Fix: release matrix must not require CPU-SOTA 100x for a target whose target data sets a lower speedup."
+        );
+        assert!(
+            required_cpu_sota_100x_family_ids(RELEASE_WORKLOADS, &high_by_id)
+                .contains(&"condition-eval"),
+            "Fix: release matrix required CPU-SOTA 100x families must follow BENCH_TARGETS.toml target data."
         );
     }
 }

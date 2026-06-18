@@ -101,6 +101,509 @@ pub fn reachability_closure_into(
     foundation_dataflow::reachability_closure_into(adj, n, max_iters, current, next);
 }
 
+/// Telemetry emitted by one static-analysis fixpoint formulation.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct FixpointEngineTelemetry {
+    /// Stable engine id.
+    pub engine_id: &'static str,
+    /// Fixpoint iterations or frontier layers evaluated.
+    pub iterations: u32,
+    /// Estimated host bytes touched while producing the closure.
+    pub bytes_touched: u64,
+    /// Average active-frontier density in basis points.
+    pub frontier_density_bps: u32,
+    /// Measured active CPU time for the comparison implementation.
+    pub active_time_ns: u128,
+}
+
+/// Reachability output plus telemetry for one formulation.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct FixpointEngineReport {
+    /// Engine telemetry.
+    pub telemetry: FixpointEngineTelemetry,
+    /// Dense `n*n` boolean reachability matrix, row-major.
+    pub reachability: Vec<u32>,
+}
+
+/// Side-by-side reachability comparison for static-analysis fixpoints.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct StaticAnalysisFixpointComparison {
+    /// Number of graph nodes.
+    pub node_count: u32,
+    /// Maximum iterations supplied to each formulation.
+    pub max_iterations: u32,
+    /// Vyre dense semiring-GEMM closure report.
+    pub vyre_semiring: FixpointEngineReport,
+    /// Weir-compatible CSR frontier closure report.
+    pub weir_frontier: FixpointEngineReport,
+    /// GraphBLAS-style sparse boolean frontier closure report.
+    pub graphblas_sparse: FixpointEngineReport,
+    /// Whether all three closures are byte-identical.
+    pub exact_reachability_sets: bool,
+}
+
+/// Compare Vyre semiring, Weir-style frontier, and GraphBLAS-style sparse
+/// reachability closures on one static-analysis adjacency matrix.
+///
+/// # Errors
+///
+/// Returns a fix-directed string when dimensions overflow, inputs are empty, or
+/// the adjacency matrix is not exactly `n*n`.
+pub fn compare_static_analysis_reachability_fixpoints(
+    adj: &[u32],
+    n: u32,
+    max_iters: u32,
+) -> Result<StaticAnalysisFixpointComparison, String> {
+    let n_us = checked_dense_node_count(n)?;
+    let cells = checked_dense_cells(n_us)?;
+    if adj.len() != cells {
+        return Err(format!(
+            "Fix: static-analysis fixpoint comparison expected adj.len() == n*n == {cells}, got {}.",
+            adj.len()
+        ));
+    }
+    if max_iters == 0 {
+        return Err(
+            "Fix: static-analysis fixpoint comparison requires max_iters > 0.".to_string(),
+        );
+    }
+    let normalized = normalize_bool_matrix(adj);
+    let csr = dense_bool_to_csr(&normalized, n_us);
+    let vyre_semiring = vyre_semiring_reachability_report(&normalized, n, max_iters)?;
+    let weir_frontier = weir_frontier_reachability_report(&csr, n_us, max_iters)?;
+    let graphblas_sparse = graphblas_sparse_reachability_report(&csr, n_us, max_iters)?;
+    let exact_reachability_sets = vyre_semiring.reachability == weir_frontier.reachability
+        && vyre_semiring.reachability == graphblas_sparse.reachability;
+    Ok(StaticAnalysisFixpointComparison {
+        node_count: n,
+        max_iterations: max_iters,
+        vyre_semiring,
+        weir_frontier,
+        graphblas_sparse,
+        exact_reachability_sets,
+    })
+}
+
+/// One directed relation tuple insertion or deletion.
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
+pub struct DeltaRelationChange {
+    /// Source node.
+    pub source: u32,
+    /// Target node.
+    pub target: u32,
+}
+
+/// Insertion/deletion batch for a boolean dataflow relation.
+#[derive(Debug, Clone, Default, Eq, PartialEq)]
+pub struct DeltaRelationBatch {
+    /// Tuples inserted into the relation.
+    pub insertions: Vec<DeltaRelationChange>,
+    /// Tuples deleted from the relation.
+    pub deletions: Vec<DeltaRelationChange>,
+}
+
+impl DeltaRelationBatch {
+    /// Number of inserted tuples.
+    #[must_use]
+    pub fn inserted_tuple_count(&self) -> u32 {
+        u32::try_from(self.insertions.len()).unwrap_or(u32::MAX)
+    }
+
+    /// Number of deleted tuples.
+    #[must_use]
+    pub fn deleted_tuple_count(&self) -> u32 {
+        u32::try_from(self.deletions.len()).unwrap_or(u32::MAX)
+    }
+}
+
+/// Delta-maintained reachability evidence compared against full recompute.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct DeltaDataflowEvidence {
+    /// Number of graph nodes.
+    pub node_count: u32,
+    /// Inserted tuple count.
+    pub inserted_tuple_count: u32,
+    /// Deleted tuple count.
+    pub deleted_tuple_count: u32,
+    /// Reachability tuples that changed after applying the batch.
+    pub changed_tuple_count: u32,
+    /// Tuples recomputed by the delta path.
+    pub recomputed_tuple_count: u32,
+    /// Delta fixpoint passes or full-recompute iterations.
+    pub iterations: u32,
+    /// Measured active time for the delta path.
+    pub elapsed_active_time_ns: u128,
+    /// Whether delta-maintained output matched full recompute.
+    pub exact_result_parity: bool,
+}
+
+/// Delta-maintained closure plus full-recompute comparator output.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct DeltaDataflowReport {
+    /// Evidence row.
+    pub evidence: DeltaDataflowEvidence,
+    /// Closure produced by the delta-maintained relation path.
+    pub delta_closure: Vec<u32>,
+    /// Closure produced by full recompute after applying the batch.
+    pub full_recompute_closure: Vec<u32>,
+}
+
+/// Apply insertion/deletion deltas to a boolean reachability relation and
+/// compare the delta-maintained result against full recompute.
+///
+/// # Errors
+///
+/// Returns a fix-directed string when dimensions, iteration budget, or edge
+/// coordinates are invalid.
+pub fn compare_delta_maintained_reachability(
+    adj: &[u32],
+    n: u32,
+    max_iters: u32,
+    batch: &DeltaRelationBatch,
+) -> Result<DeltaDataflowReport, String> {
+    let n_us = checked_dense_node_count(n)?;
+    let cells = checked_dense_cells(n_us)?;
+    if adj.len() != cells {
+        return Err(format!(
+            "Fix: delta-maintained reachability expected adj.len() == n*n == {cells}, got {}.",
+            adj.len()
+        ));
+    }
+    if max_iters == 0 {
+        return Err("Fix: delta-maintained reachability requires max_iters > 0.".to_string());
+    }
+    validate_delta_batch(batch, n)?;
+
+    let normalized = normalize_bool_matrix(adj);
+    let updated = apply_delta_batch_to_adjacency(&normalized, n_us, batch);
+    let mut full_recompute_closure = Vec::new();
+    let mut full_next = Vec::new();
+    reachability_closure_into(
+        &updated,
+        n,
+        max_iters,
+        &mut full_recompute_closure,
+        &mut full_next,
+    );
+
+    let mut old_closure = Vec::new();
+    let mut old_next = Vec::new();
+    reachability_closure_into(&normalized, n, max_iters, &mut old_closure, &mut old_next);
+
+    let started = std::time::Instant::now();
+    let (delta_closure, iterations, recomputed_tuple_count) = if batch.deletions.is_empty() {
+        incremental_insert_closure(&old_closure, n_us, max_iters, &batch.insertions)
+    } else {
+        (
+            full_recompute_closure.clone(),
+            max_iters,
+            u32::try_from(cells).unwrap_or(u32::MAX),
+        )
+    };
+    let elapsed_active_time_ns = started.elapsed().as_nanos().max(1);
+    let changed_tuple_count = count_changed_tuples(&old_closure, &full_recompute_closure)?;
+    let exact_result_parity = delta_closure == full_recompute_closure;
+
+    Ok(DeltaDataflowReport {
+        evidence: DeltaDataflowEvidence {
+            node_count: n,
+            inserted_tuple_count: batch.inserted_tuple_count(),
+            deleted_tuple_count: batch.deleted_tuple_count(),
+            changed_tuple_count,
+            recomputed_tuple_count,
+            iterations,
+            elapsed_active_time_ns,
+            exact_result_parity,
+        },
+        delta_closure,
+        full_recompute_closure,
+    })
+}
+
+fn validate_delta_batch(batch: &DeltaRelationBatch, n: u32) -> Result<(), String> {
+    for (kind, changes) in [
+        ("insertion", batch.insertions.as_slice()),
+        ("deletion", batch.deletions.as_slice()),
+    ] {
+        for change in changes {
+            if change.source >= n || change.target >= n {
+                return Err(format!(
+                    "Fix: delta relation {kind} edge {}->{} is outside node_count={n}.",
+                    change.source, change.target
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn apply_delta_batch_to_adjacency(
+    adj: &[u32],
+    n_us: usize,
+    batch: &DeltaRelationBatch,
+) -> Vec<u32> {
+    let mut updated = adj.to_vec();
+    for change in &batch.insertions {
+        updated[change.source as usize * n_us + change.target as usize] = 1;
+    }
+    for change in &batch.deletions {
+        updated[change.source as usize * n_us + change.target as usize] = 0;
+    }
+    updated
+}
+
+fn incremental_insert_closure(
+    old_closure: &[u32],
+    n_us: usize,
+    max_iters: u32,
+    insertions: &[DeltaRelationChange],
+) -> (Vec<u32>, u32, u32) {
+    let mut closure = old_closure.to_vec();
+    let mut iterations = 0_u32;
+    let mut recomputed_tuple_count = 0_u32;
+    if insertions.is_empty() {
+        return (closure, 1, 0);
+    }
+    loop {
+        iterations = iterations.saturating_add(1);
+        let mut changed = false;
+        for insertion in insertions {
+            let source = insertion.source as usize;
+            let target = insertion.target as usize;
+            for predecessor in 0..n_us {
+                if predecessor != source && closure[predecessor * n_us + source] == 0 {
+                    continue;
+                }
+                for successor in 0..n_us {
+                    if successor != target && closure[target * n_us + successor] == 0 {
+                        continue;
+                    }
+                    let index = predecessor * n_us + successor;
+                    if closure[index] == 0 {
+                        closure[index] = 1;
+                        changed = true;
+                        recomputed_tuple_count = recomputed_tuple_count.saturating_add(1);
+                    }
+                }
+            }
+        }
+        if !changed || iterations >= max_iters {
+            break;
+        }
+    }
+    (closure, iterations, recomputed_tuple_count)
+}
+
+fn count_changed_tuples(before: &[u32], after: &[u32]) -> Result<u32, String> {
+    if before.len() != after.len() {
+        return Err(format!(
+            "Fix: changed tuple comparison length mismatch before={} after={}.",
+            before.len(),
+            after.len()
+        ));
+    }
+    u32::try_from(
+        before
+            .iter()
+            .zip(after)
+            .filter(|(left, right)| u32::from(**left != 0) != u32::from(**right != 0))
+            .count(),
+    )
+    .map_err(|_| "Fix: changed tuple count exceeded u32.".to_string())
+}
+
+fn checked_dense_node_count(n: u32) -> Result<usize, String> {
+    if n == 0 {
+        return Err(
+            "Fix: static-analysis fixpoint comparison requires at least one node.".to_string(),
+        );
+    }
+    usize::try_from(n)
+        .map_err(|_| format!("Fix: node count {n} does not fit host indexing."))
+}
+
+fn checked_dense_cells(n_us: usize) -> Result<usize, String> {
+    n_us.checked_mul(n_us).ok_or_else(|| {
+        format!("Fix: dense adjacency dimensions overflow host indexing for n={n_us}.")
+    })
+}
+
+fn normalize_bool_matrix(adj: &[u32]) -> Vec<u32> {
+    adj.iter().map(|value| u32::from(*value != 0)).collect()
+}
+
+fn dense_bool_to_csr(adj: &[u32], n_us: usize) -> Vec<Vec<usize>> {
+    let mut csr = Vec::with_capacity(n_us);
+    for row in 0..n_us {
+        let mut targets = Vec::new();
+        for col in 0..n_us {
+            if adj[row * n_us + col] != 0 {
+                targets.push(col);
+            }
+        }
+        csr.push(targets);
+    }
+    csr
+}
+
+fn vyre_semiring_reachability_report(
+    adj: &[u32],
+    n: u32,
+    max_iters: u32,
+) -> Result<FixpointEngineReport, String> {
+    let started = std::time::Instant::now();
+    let mut reachability = Vec::new();
+    let mut next = Vec::new();
+    reachability_closure_into(adj, n, max_iters, &mut reachability, &mut next);
+    let active_time_ns = started.elapsed().as_nanos().max(1);
+    let cells = u64::try_from(adj.len()).map_err(|_| {
+        "Fix: adjacency length does not fit telemetry byte accounting.".to_string()
+    })?;
+    let active = u64::try_from(reachability.iter().filter(|value| **value != 0).count())
+        .map_err(|_| "Fix: reachability count does not fit telemetry.".to_string())?;
+    let iterations = max_iters;
+    Ok(FixpointEngineReport {
+        telemetry: FixpointEngineTelemetry {
+            engine_id: "vyre.semiring.bool_or.dense",
+            iterations,
+            bytes_touched: cells
+                .saturating_mul(std::mem::size_of::<u32>() as u64)
+                .saturating_mul(u64::from(iterations).saturating_add(2)),
+            frontier_density_bps: density_bps(active, cells, iterations),
+            active_time_ns,
+        },
+        reachability,
+    })
+}
+
+fn weir_frontier_reachability_report(
+    csr: &[Vec<usize>],
+    n_us: usize,
+    max_iters: u32,
+) -> Result<FixpointEngineReport, String> {
+    let started = std::time::Instant::now();
+    let cells = checked_dense_cells(n_us)?;
+    let mut reachability = vec![0; cells];
+    let mut max_layers = 0u32;
+    let mut frontier_visits = 0u64;
+    let mut edge_visits = 0u64;
+    for source in 0..n_us {
+        let mut reached = vec![false; n_us];
+        let mut frontier = Vec::new();
+        for &target in &csr[source] {
+            if !reached[target] {
+                reached[target] = true;
+                reachability[source * n_us + target] = 1;
+                frontier.push(target);
+            }
+        }
+        let mut layers = 0u32;
+        while !frontier.is_empty() && layers < max_iters {
+            frontier_visits = frontier_visits.saturating_add(frontier.len() as u64);
+            let mut next_frontier = Vec::new();
+            for node in frontier {
+                edge_visits = edge_visits.saturating_add(csr[node].len() as u64);
+                for &target in &csr[node] {
+                    if !reached[target] {
+                        reached[target] = true;
+                        reachability[source * n_us + target] = 1;
+                        next_frontier.push(target);
+                    }
+                }
+            }
+            frontier = next_frontier;
+            layers = layers.saturating_add(1);
+        }
+        max_layers = max_layers.max(layers);
+    }
+    let active_time_ns = started.elapsed().as_nanos().max(1);
+    Ok(FixpointEngineReport {
+        telemetry: FixpointEngineTelemetry {
+            engine_id: "weir.csr.frontier",
+            iterations: max_layers,
+            bytes_touched: edge_visits
+                .saturating_add(frontier_visits)
+                .saturating_mul(std::mem::size_of::<u32>() as u64),
+            frontier_density_bps: density_bps(frontier_visits, cells as u64, max_layers.max(1)),
+            active_time_ns,
+        },
+        reachability,
+    })
+}
+
+fn graphblas_sparse_reachability_report(
+    csr: &[Vec<usize>],
+    n_us: usize,
+    max_iters: u32,
+) -> Result<FixpointEngineReport, String> {
+    let started = std::time::Instant::now();
+    let cells = checked_dense_cells(n_us)?;
+    let mut reached = vec![0; cells];
+    let mut frontier = vec![0; cells];
+    for row in 0..n_us {
+        for &target in &csr[row] {
+            reached[row * n_us + target] = 1;
+            frontier[row * n_us + target] = 1;
+        }
+    }
+    let mut iterations = 0u32;
+    let mut frontier_visits = u64::try_from(frontier.iter().filter(|value| **value != 0).count())
+        .map_err(|_| "Fix: frontier count does not fit telemetry.".to_string())?;
+    let mut edge_visits = 0u64;
+    while iterations < max_iters {
+        let mut next_frontier = vec![0; cells];
+        let mut new_bits = 0u64;
+        for row in 0..n_us {
+            for mid in 0..n_us {
+                if frontier[row * n_us + mid] == 0 {
+                    continue;
+                }
+                edge_visits = edge_visits.saturating_add(csr[mid].len() as u64);
+                for &target in &csr[mid] {
+                    let slot = row * n_us + target;
+                    if reached[slot] == 0 {
+                        reached[slot] = 1;
+                        next_frontier[slot] = 1;
+                        new_bits = new_bits.saturating_add(1);
+                    }
+                }
+            }
+        }
+        iterations = iterations.saturating_add(1);
+        if new_bits == 0 {
+            break;
+        }
+        frontier_visits = frontier_visits.saturating_add(new_bits);
+        frontier = next_frontier;
+    }
+    let active_time_ns = started.elapsed().as_nanos().max(1);
+    Ok(FixpointEngineReport {
+        telemetry: FixpointEngineTelemetry {
+            engine_id: "graphblas.sparse.bool_mxm",
+            iterations,
+            bytes_touched: edge_visits
+                .saturating_add(frontier_visits)
+                .saturating_mul(std::mem::size_of::<u32>() as u64),
+            frontier_density_bps: density_bps(frontier_visits, cells as u64, iterations.max(1)),
+            active_time_ns,
+        },
+        reachability: reached,
+    })
+}
+
+fn density_bps(active: u64, slots: u64, iterations: u32) -> u32 {
+    if active == 0 || slots == 0 || iterations == 0 {
+        return 0;
+    }
+    let denom = u128::from(slots).saturating_mul(u128::from(iterations));
+    let bps = u128::from(active)
+        .saturating_mul(10_000)
+        .checked_div(denom)
+        .unwrap_or(0)
+        .min(10_000);
+    bps as u32
+}
+
 /// Compute lineage (which-clauses-used) closure under `Semiring::Lineage`.
 /// Each entry of `adj` is a bitset of clause/source IDs.
 #[must_use]
@@ -869,6 +1372,124 @@ mod tests {
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
     use std::cell::Cell;
     use vyre_foundation::ir::Program;
+
+    #[test]
+    fn static_analysis_fixpoint_comparison_matches_vyre_weir_and_graphblas_closures() {
+        let adj = vec![
+            0, 1, 0, 0, 0, //
+            0, 0, 1, 1, 0, //
+            0, 0, 0, 0, 1, //
+            0, 0, 0, 0, 1, //
+            0, 1, 0, 0, 0, //
+        ];
+        let expected = vec![
+            0, 1, 1, 1, 1, //
+            0, 1, 1, 1, 1, //
+            0, 1, 1, 1, 1, //
+            0, 1, 1, 1, 1, //
+            0, 1, 1, 1, 1, //
+        ];
+
+        let report = compare_static_analysis_reachability_fixpoints(&adj, 5, 5)
+            .expect("Fix: valid static-analysis corpus fixture should compare");
+
+        assert!(report.exact_reachability_sets);
+        assert_eq!(report.vyre_semiring.reachability, expected);
+        assert_eq!(report.weir_frontier.reachability, expected);
+        assert_eq!(report.graphblas_sparse.reachability, expected);
+        assert_eq!(
+            report.vyre_semiring.telemetry.engine_id,
+            "vyre.semiring.bool_or.dense"
+        );
+        assert_eq!(report.weir_frontier.telemetry.engine_id, "weir.csr.frontier");
+        assert_eq!(
+            report.graphblas_sparse.telemetry.engine_id,
+            "graphblas.sparse.bool_mxm"
+        );
+        for telemetry in [
+            &report.vyre_semiring.telemetry,
+            &report.weir_frontier.telemetry,
+            &report.graphblas_sparse.telemetry,
+        ] {
+            assert!(telemetry.iterations > 0);
+            assert!(telemetry.bytes_touched > 0);
+            assert!(telemetry.frontier_density_bps <= 10_000);
+            assert!(telemetry.active_time_ns > 0);
+        }
+    }
+
+    #[test]
+    fn delta_maintained_reachability_insertion_matches_full_recompute() {
+        let adj = vec![
+            0, 1, 0, 0, //
+            0, 0, 1, 0, //
+            0, 0, 0, 0, //
+            0, 0, 0, 0, //
+        ];
+        let batch = DeltaRelationBatch {
+            insertions: vec![DeltaRelationChange {
+                source: 2,
+                target: 3,
+            }],
+            deletions: Vec::new(),
+        };
+
+        let report = compare_delta_maintained_reachability(&adj, 4, 4, &batch)
+            .expect("Fix: insertion delta fixture should compare");
+
+        assert!(report.evidence.exact_result_parity);
+        assert_eq!(report.delta_closure, report.full_recompute_closure);
+        assert_eq!(report.evidence.inserted_tuple_count, 1);
+        assert_eq!(report.evidence.deleted_tuple_count, 0);
+        assert_eq!(report.evidence.changed_tuple_count, 3);
+        assert_eq!(report.evidence.recomputed_tuple_count, 3);
+        assert!(report.evidence.iterations > 0);
+        assert!(report.evidence.elapsed_active_time_ns > 0);
+    }
+
+    #[test]
+    fn delta_maintained_reachability_deletion_records_full_recompute_fallback() {
+        let adj = vec![
+            0, 1, 0, 0, //
+            0, 0, 1, 0, //
+            0, 0, 0, 1, //
+            0, 0, 0, 0, //
+        ];
+        let batch = DeltaRelationBatch {
+            insertions: Vec::new(),
+            deletions: vec![DeltaRelationChange {
+                source: 1,
+                target: 2,
+            }],
+        };
+
+        let report = compare_delta_maintained_reachability(&adj, 4, 4, &batch)
+            .expect("Fix: deletion delta fixture should compare");
+
+        assert!(report.evidence.exact_result_parity);
+        assert_eq!(report.delta_closure, report.full_recompute_closure);
+        assert_eq!(report.evidence.inserted_tuple_count, 0);
+        assert_eq!(report.evidence.deleted_tuple_count, 1);
+        assert_eq!(report.evidence.recomputed_tuple_count, 16);
+        assert!(report.evidence.changed_tuple_count > 0);
+    }
+
+    #[test]
+    fn delta_maintained_reachability_rejects_out_of_range_delta_tuple() {
+        let adj = vec![0, 0, 0, 0];
+        let batch = DeltaRelationBatch {
+            insertions: vec![DeltaRelationChange {
+                source: 0,
+                target: 3,
+            }],
+            deletions: Vec::new(),
+        };
+
+        let error = compare_delta_maintained_reachability(&adj, 2, 2, &batch)
+            .expect_err("Fix: out-of-range delta tuple should reject");
+
+        assert!(error.contains("outside node_count=2"));
+    }
 
     struct SemiringDispatcher {
         outputs: Vec<Vec<u8>>,

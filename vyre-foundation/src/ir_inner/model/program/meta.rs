@@ -12,6 +12,41 @@ use crate::transform::visit::{walk_nodes_and_exprs, ExprVisitor, NodeVisitor};
 
 use super::Program;
 
+/// Provenance for mutations that invalidate Program validation/cache state.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[repr(u8)]
+pub enum ProgramMutationProvenance {
+    /// Program has not been mutated since construction or successful validation.
+    Clean = 0,
+    /// The non-composable dispatch flag changed.
+    NonComposableFlag = 1,
+    /// The target workgroup dimensions changed.
+    WorkgroupSize = 2,
+    /// The substrate-neutral parallel-region dimensions changed.
+    ParallelRegionSize = 3,
+    /// A caller borrowed the mutable entry vector.
+    EntryMutation = 4,
+    /// Internal builder or decode path rewrote Program shape.
+    InternalShapeMutation = 5,
+    /// Mutation provenance is unknown, so validation must fail closed.
+    Unknown = 255,
+}
+
+impl ProgramMutationProvenance {
+    #[inline]
+    const fn from_code(code: u8) -> Self {
+        match code {
+            0 => Self::Clean,
+            1 => Self::NonComposableFlag,
+            2 => Self::WorkgroupSize,
+            3 => Self::ParallelRegionSize,
+            4 => Self::EntryMutation,
+            5 => Self::InternalShapeMutation,
+            _ => Self::Unknown,
+        }
+    }
+}
+
 fn mix_wire_fallback_hashable<T: Hash>(hasher: &mut blake3::Hasher, value: &T) {
     let mut state = FxHasher::default();
     value.hash(&mut state);
@@ -356,7 +391,7 @@ impl Program {
     #[inline]
     pub fn with_non_composable_with_self(mut self, flag: bool) -> Self {
         self.non_composable_with_self = flag;
-        self.invalidate_caches();
+        self.invalidate_caches_for(ProgramMutationProvenance::NonComposableFlag);
         self
     }
 
@@ -367,14 +402,14 @@ impl Program {
     #[inline]
     pub fn set_workgroup_size(&mut self, workgroup_size: [u32; 3]) {
         self.workgroup_size = workgroup_size;
-        self.invalidate_caches();
+        self.invalidate_caches_for(ProgramMutationProvenance::WorkgroupSize);
     }
 
     /// Substrate-neutral alias for [`set_workgroup_size`](Self::set_workgroup_size).
     #[inline]
     pub fn set_parallel_region_size(&mut self, parallel_region_size: [u32; 3]) {
         self.workgroup_size = parallel_region_size;
-        self.invalidate_caches();
+        self.invalidate_caches_for(ProgramMutationProvenance::ParallelRegionSize);
     }
 
     /// Entry-point nodes.
@@ -440,7 +475,7 @@ impl Program {
     #[must_use]
     #[inline]
     pub fn entry_mut(&mut self) -> &mut Vec<Node> {
-        self.invalidate_caches();
+        self.invalidate_caches_for(ProgramMutationProvenance::EntryMutation);
         Arc::make_mut(&mut self.entry)
     }
 
@@ -583,6 +618,12 @@ impl Program {
     /// Mark this program as successfully validated structurally.
     #[inline]
     pub fn mark_structurally_validated(&self) {
+        self.structural_validation_fingerprint.store(
+            self.current_validation_fingerprint_token(),
+            Ordering::Release,
+        );
+        self.mutation_provenance
+            .store(ProgramMutationProvenance::Clean as u8, Ordering::Release);
         self.structural_validated.store(true, Ordering::Release);
     }
 
@@ -590,12 +631,44 @@ impl Program {
     #[must_use]
     #[inline]
     pub fn is_structurally_validated(&self) -> bool {
-        self.structural_validated.load(Ordering::Acquire)
+        if !self.structural_validated.load(Ordering::Acquire) {
+            return false;
+        }
+        if self.validation_mutation_provenance() == ProgramMutationProvenance::Unknown {
+            self.structural_validated.store(false, Ordering::Release);
+            return false;
+        }
+        let recorded = self
+            .structural_validation_fingerprint
+            .load(Ordering::Acquire);
+        if recorded == 0 || recorded != self.current_validation_fingerprint_token() {
+            self.structural_validated.store(false, Ordering::Release);
+            return false;
+        }
+        true
+    }
+
+    /// Last mutation provenance recorded for validation/cache invalidation.
+    #[must_use]
+    #[inline]
+    pub fn validation_mutation_provenance(&self) -> ProgramMutationProvenance {
+        ProgramMutationProvenance::from_code(self.mutation_provenance.load(Ordering::Acquire))
+    }
+
+    /// Mark the Program as having been mutated by a boundary that cannot name a
+    /// concrete provenance. Validation fails closed until the Program is rebuilt
+    /// through a known constructor or known mutation API.
+    #[inline]
+    pub fn mark_unknown_mutation_provenance(&mut self) {
+        self.invalidate_caches_for(ProgramMutationProvenance::Unknown);
     }
 
     /// Mark this program as successfully validated for a specific backend.
     #[inline]
     pub fn mark_validated_on(&self, backend_id: &str) {
+        if self.validation_mutation_provenance() == ProgramMutationProvenance::Unknown {
+            return;
+        }
         self.validation_set
             .get_or_init(|| Arc::new(dashmap::DashSet::new()))
             .insert(Arc::from(self.validation_cache_key(backend_id)));
@@ -632,6 +705,11 @@ impl Program {
     /// Returns [`crate::Error::WireFormatValidation`] with every validation
     /// message joined when the structural validator rejects the program.
     pub fn validate(&self) -> crate::error::Result<()> {
+        if self.validation_mutation_provenance() == ProgramMutationProvenance::Unknown {
+            return Err(crate::error::Error::WireFormatValidation {
+                message: "program validation cache was invalidated by unknown mutation provenance. Fix: rebuild the Program through Program::wrapped/from_wire or use a named Program mutation API before validating.".into(),
+            });
+        }
         if self.is_structurally_validated() {
             return Ok(());
         }
@@ -812,7 +890,7 @@ impl Program {
 
     fn validation_cache_key(&self, backend_id: &str) -> String {
         const HEX: &[u8; 16] = b"0123456789abcdef";
-        let fingerprint = self.fingerprint();
+        let fingerprint = self.current_validation_fingerprint();
         let mut key = String::with_capacity(backend_id.len() + 1 + 64);
         key.push_str(backend_id);
         key.push(':');
@@ -825,7 +903,16 @@ impl Program {
 
     #[inline]
     pub(super) fn invalidate_caches(&mut self) {
+        self.invalidate_caches_for(ProgramMutationProvenance::InternalShapeMutation);
+    }
+
+    #[inline]
+    pub(super) fn invalidate_caches_for(&mut self, provenance: ProgramMutationProvenance) {
         self.structural_validated.store(false, Ordering::Release);
+        self.structural_validation_fingerprint
+            .store(0, Ordering::Release);
+        self.mutation_provenance
+            .store(provenance as u8, Ordering::Release);
         if let Some(set) = self.validation_set.get() {
             set.clear();
         }
@@ -834,6 +921,18 @@ impl Program {
         drop(self.output_buffer_index.take());
         let _ = self.has_indirect_dispatch.take();
         drop(self.stats.take());
+    }
+
+    fn current_validation_fingerprint(&self) -> [u8; 32] {
+        *self.compute_wire_hash().as_bytes()
+    }
+
+    fn current_validation_fingerprint_token(&self) -> u64 {
+        let bytes = self.current_validation_fingerprint();
+        let token = u64::from_le_bytes([
+            bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
+        ]);
+        token.max(1)
     }
 
     #[inline]

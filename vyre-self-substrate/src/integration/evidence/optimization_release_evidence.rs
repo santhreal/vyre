@@ -89,19 +89,19 @@ pub fn validate_optimization_release_evidence(
         ("vector-layout family", "\"family\": \"vector-layout\""),
         (
             "Dataflow analysis DSE family",
-            "\"family\": \"dataflow-dse\"",
+            "\"family\": \"weir-dataflow-dse\"",
         ),
         (
             "Dataflow analysis loop fusion family",
-            "\"family\": \"dataflow-loop-fusion\"",
+            "\"family\": \"weir-dataflow-loop-fusion\"",
         ),
         (
             "Dataflow analysis loop fission family",
-            "\"family\": \"dataflow-loop-fission\"",
+            "\"family\": \"weir-dataflow-loop-fission\"",
         ),
         (
             "Dataflow analysis LICM family",
-            "\"family\": \"dataflow-licm\"",
+            "\"family\": \"weir-dataflow-licm\"",
         ),
     ] {
         artifact_contains(family_manifest, evidence, needle)?;
@@ -123,11 +123,11 @@ pub fn validate_optimization_release_evidence(
         ("corpus optimized case total", "\"optimized_cases\": 10386"),
         (
             "Dataflow analysis corpus coverage",
-            "\"dataflow_cases\": 1024",
+            "\"dataflow_analysis_cases\": 1024",
         ),
         (
             "Dataflow analysis optimized coverage",
-            "\"dataflow_optimized_cases\": 1024",
+            "\"dataflow_analysis_optimized_cases\": 1024",
         ),
     ] {
         artifact_contains(corpus, evidence, needle)?;

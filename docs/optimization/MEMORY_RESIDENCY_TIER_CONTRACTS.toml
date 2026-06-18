@@ -1,0 +1,78 @@
+# Memory residency tier contracts choose where bytes live; corpus paging chooses ingress routes and visibility policy chooses synchronization.
+
+schema = "vyre.memory.residency_tier_contracts.v1"
+owner = "driver_shared"
+evidence_tokens = ["CUDA_UNIFIED_MEMORY", "CUDA_RUNTIME_MEMORY_API", "VULKAN_MEMORY_ALLOCATION", "WEBGPU_BUFFER_MAPPING", "METAL_RESOURCE_STORAGE_MODES"]
+
+required_fields = [
+  "tier_id",
+  "backend_surface",
+  "residency_policy",
+  "host_access_policy",
+  "device_access_policy",
+  "coherency_policy",
+  "page_fault_policy",
+  "oversubscription_policy",
+  "authority_links",
+  "diagnostic",
+]
+
+[[tier]]
+tier_id = "cuda-managed-prefetch-tier"
+backend_surface = "cuda-managed-memory-explicit-prefetch-and-memory-advice"
+residency_policy = "managed-allocation-records-preferred-location-prefetch-destination-accessed-by-device-and-observed-page-location-class"
+host_access_policy = "host-access-requires-concurrent-managed-access-or-completed-device-work-before CPU-read-or-write"
+device_access_policy = "device-access-requires-prefetch-or-advise-record-when-page-fault-cost-would-pollute-scan-latency"
+coherency_policy = "hardware-coherent-HMM-software-coherent-and-limited-unified-memory-paradigms-recorded-in-capability-digest"
+page_fault_policy = "unexpected-GPU-page-faults-during-hot-scan-block-speed-claim-and-create-pressure-response-record"
+oversubscription_policy = "managed-oversubscription-allowed-only-when-device-support-and-page-migration-budget-are-recorded"
+authority_links = ["BACKEND_CAPABILITY_DIGESTS.toml", "MEMORY_PRESSURE_OVERSUBSCRIPTION_RESPONSE.toml", "TRANSFER_OVERLAP_PIPELINE_EVIDENCE.toml", "RESOURCE_BUDGET_POLICY.toml"]
+diagnostic = "VYRE_CUDA_MANAGED_RESIDENCY_CONTRACT_REQUIRED"
+
+[[tier]]
+tier_id = "cuda-pinned-host-staging-tier"
+backend_surface = "cuda-page-locked-host-memory-explicit-copy-and-mapped-zero-copy"
+residency_policy = "page-locked-host-allocation-or-registration-records-byte-range-NUMA-class-device-pointer-mapping-and-unpin-owner"
+host_access_policy = "host-writes-complete-before-async-copy-or-mapped-device-read-is-enqueued"
+device_access_policy = "device-reads-pinned-memory-directly-only-when-zero-copy-policy-admits-access-pattern-and-device-capability"
+coherency_policy = "explicit-copy-and-event-ordering-preferred-for-reused-scan-buffers-on-discrete-GPU"
+page_fault_policy = "pageable-host-memory-on-hot-transfer-path-is-recorded-as-copy-through-driver-staging-and-not-as-pinned-overlap"
+oversubscription_policy = "pinned-byte-budget-and-mlock-pressure-recorded-before additional-registration"
+authority_links = ["PINNED_STAGING_TRANSFER_POLICY.toml", "CUDA_STREAM_ORDERED_POOL_PLANNER.toml", "CUDA_SCAN_MEMORY_POOLS.toml", "HOST_DEVICE_VISIBILITY_POLICY.toml"]
+diagnostic = "VYRE_CUDA_PINNED_STAGING_CONTRACT_REQUIRED"
+
+[[tier]]
+tier_id = "vulkan-memory-heap-tier"
+backend_surface = "vulkan-device-local-host-visible-host-coherent-host-cached-and-pageable-device-local-memory"
+residency_policy = "memory-heap-flags-memory-type-property-flags-budget-class-and-priority-recorded-per-allocation"
+host_access_policy = "host-visible-memory-records-map-range-flush-invalidate-policy-and-cacheability"
+device_access_policy = "device-local-memory-selected-for-device-hot-resources-unless-transfer-or-readback-policy-requires-host-visible-tier"
+coherency_policy = "host-coherent-bit-controls-whether-flush-or-invalidate-record-is-required"
+page_fault_policy = "pageable-device-local-demotion-or-promotion-observation-blocks-generalized-performance-claim-without-strata"
+oversubscription_policy = "memory-priority-and-budget-pressure-recorded-before allocating pageable device-local resources"
+authority_links = ["BACKEND_CAPABILITY_DIGESTS.toml", "HOST_DEVICE_VISIBILITY_POLICY.toml", "HARDWARE_WORKLOAD_STRATIFICATION_MATRIX.toml", "MEMORY_PRESSURE_OVERSUBSCRIPTION_RESPONSE.toml"]
+diagnostic = "VYRE_VULKAN_MEMORY_TIER_CONTRACT_REQUIRED"
+
+[[tier]]
+tier_id = "webgpu-staging-map-tier"
+backend_surface = "WebGPU-buffer-usage-mapAsync-copy-buffer-and-queue-submit-resource-availability"
+residency_policy = "GPUBuffer-usage-map-state-copy-source-copy-destination-storage-and-readback-role-recorded-per-buffer"
+host_access_policy = "mapped-buffer-is-CPU-accessible-and-unavailable-for-GPU-command-use-until-unmapped"
+device_access_policy = "device-hot-buffer-uses-storage-or-copy-destination-role-with-staging-copy-instead-of-long-lived-map"
+coherency_policy = "queue-submit-and-mapAsync-completion-records-own-CPU-GPU-ownership-transition"
+page_fault_policy = "browser-or-native-adapter-memory-pressure-is-recorded-as-resource-unavailable-or-destroyed-state-not-silent-stall"
+oversubscription_policy = "adapter-limits-buffer-size-and-staging-pool-budget-recorded-before batch-upload-growth"
+authority_links = ["BACKEND_HANDLE_LIFETIME_PROVENANCE.toml", "HOST_DEVICE_VISIBILITY_POLICY.toml", "WGPU_COMMAND_REUSE_CLASSIFIER.toml", "RESOURCE_BUDGET_POLICY.toml"]
+diagnostic = "VYRE_WEBGPU_STAGING_MAP_CONTRACT_REQUIRED"
+
+[[tier]]
+tier_id = "metal-storage-mode-tier"
+backend_surface = "Metal-shared-private-managed-and-memoryless-resource-storage-modes"
+residency_policy = "storage-mode-resource-options-hazard-mode-and-resource-role-recorded-per-buffer-or-texture"
+host_access_policy = "shared-or-managed-resource-required-for-direct-CPU-access-private-resource-requires-blit-or-copy-path"
+device_access_policy = "private-resource-preferred-for-device-hot-reused-buffers-when-readback-or-upload-policy-allows-staging"
+coherency_policy = "managed-resource-synchronization-and-command-buffer-boundary-records-required-before CPU-GPU-ownership-claim"
+page_fault_policy = "storage-mode-mismatch-or-resource-hazard-blocks-performance-claim-and-links-to-diagnostic"
+oversubscription_policy = "resident-resource-budget-and-heap-class-recorded-before promoted-private-resource-allocation"
+authority_links = ["BACKEND_HANDLE_LIFETIME_PROVENANCE.toml", "HOST_DEVICE_VISIBILITY_POLICY.toml", "GPU_BARRIER_SCOPE_MATRIX.toml", "RESOURCE_BUDGET_POLICY.toml"]
+diagnostic = "VYRE_METAL_STORAGE_MODE_CONTRACT_REQUIRED"

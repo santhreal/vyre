@@ -1,6 +1,6 @@
 //! Handwritten oracle matrix for megakernel host ring buffer contracts.
 //!
-//! Compares `HostRing` publish/read/done_count behavior against an independent
+//! Compares `HostRing` publish/read/try_done_count behavior against an independent
 //! byte-layout oracle across hostile slot indices and encoded payloads.
 
 #![forbid(unsafe_code)]
@@ -75,7 +75,8 @@ fn host_ring_done_count_oracle_matrix_matches_independent_status_scan() {
             done
         };
         assert_eq!(
-            RingConsumer::done_count(&ring),
+            RingConsumer::try_done_count(&ring)
+                .unwrap_or_else(|error| panic!("Fix: done_count case {case} must decode: {error}")),
             expected_done,
             "Fix: done_count case {case} must match the independent status-word oracle."
         );

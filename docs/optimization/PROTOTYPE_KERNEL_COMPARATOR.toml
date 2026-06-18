@@ -1,0 +1,36 @@
+# Prototype kernel comparator lane for VX-690.
+# Triton and CUTLASS can inform exploration, but production promotion requires Vyre-owned ABI and capability gates.
+
+schema = "vyre.kernel.prototype_comparator.v1"
+owner = "sparse_math_ai"
+evidence_tokens = ["TRITON", "CUTLASS_GEMM"]
+
+required_fields = [
+  "prototype_tool",
+  "promotion_criteria",
+  "abi_check",
+  "output_parity",
+  "active_ns",
+  "toolchain_digest",
+  "production_owner",
+]
+
+[[prototype]]
+id = "triton-reduction-candidate"
+prototype_tool = "triton"
+promotion_criteria = "vyre-msl-ptx-parity-and-capability-gate"
+abi_check = "matches-vyre-descriptor-abi"
+output_parity = "matches-cpu-reference"
+active_ns = 76000
+toolchain_digest = "sha256:triton-toolchain"
+production_owner = "vyre-driver"
+
+[[prototype]]
+id = "cutlass-gemm-candidate"
+prototype_tool = "cutlass"
+promotion_criteria = "vyre-owned-kernel-with-cutlass-baseline-parity"
+abi_check = "matches-vyre-matrix-abi"
+output_parity = "matches-cpu-reference"
+active_ns = 43000
+toolchain_digest = "sha256:cutlass-toolchain"
+production_owner = "vyre-driver"

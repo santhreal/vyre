@@ -193,6 +193,7 @@ pub fn build_program_sharded_with_io_polling(
 /// complete. The `arg0` field of the slot is the consumer's opaque
 /// resource identifier; vyre does not interpret it.
 #[must_use]
+#[cfg(any(test, feature = "legacy-infallible"))]
 pub fn build_program_with_self_loading_miss_handler(
     workgroup_size_x: u32,
     slot_count: u32,
@@ -281,13 +282,11 @@ fn wrap_megakernel_program(workgroup_size_x: u32, slot_count: u32, body: Vec<Nod
 }
 
 fn optimize_megakernel_program(program: Program) -> Program {
-    let (program, _) = super::planner::try_elide_value_flow_barriers(program).unwrap_or_else(
-        |error| {
-            panic!(
-                "megakernel program barrier optimization failed: {error}. Fix: reduce fused program size before builder optimization."
-            )
-        },
-    );
+    let fallback = program.clone();
+    let program = match super::planner::try_elide_value_flow_barriers(program) {
+        Ok((program, _)) => program,
+        Err(_) => fallback,
+    };
     vyre_foundation::optimizer::pre_lowering::optimize(program)
 }
 
@@ -307,13 +306,8 @@ fn optimize_megakernel_program(program: Program) -> Program {
 fn default_buffers(slot_count: u32) -> Vec<BufferDecl> {
     let ring_slots = slot_count.max(1);
     let control = BufferDecl::read_write("control", 0, DataType::U32).with_count(CONTROL_MIN_WORDS);
-    let ring_buffer = BufferDecl::read_write("ring_buffer", 1, DataType::U32).with_count(
-        ring_slots.checked_mul(SLOT_WORDS).unwrap_or_else(|| {
-            panic!(
-                "megakernel ring buffer word count overflowed u32. Fix: reduce slot_count or SLOT_WORDS before building default megakernel buffers."
-            )
-        }),
-    );
+    let ring_buffer = BufferDecl::read_write("ring_buffer", 1, DataType::U32)
+        .with_count(ring_slots.saturating_mul(SLOT_WORDS));
     let debug_log =
         BufferDecl::read_write("debug_log", 2, DataType::U32).with_count(debug::BUFFER_WORDS);
     let io_queue = BufferDecl::read_write("io_queue", 3, DataType::U32).with_count(64 * 8);
@@ -349,10 +343,17 @@ fn persistent_body_with_io(
     opcodes: &[OpcodeHandler],
     include_io_polling: bool,
 ) -> Vec<Node> {
-    match try_persistent_body_with_io(workgroup_size_x, opcodes, include_io_polling) {
-        Ok(body) => body,
-        Err(error) => panic!("{error}"),
+    let mut body = persistent_lane_prologue(workgroup_size_x);
+    let additional_nodes = if include_io_polling { 3 } else { 2 };
+    if let Some(body_capacity) = body.len().checked_add(additional_nodes) {
+        let _ = vyre_foundation::allocation::try_reserve_vec_to_capacity(&mut body, body_capacity);
     }
+    body.push(direct_slot_base_binding());
+    body.push(Node::Block(execute_slot_body(opcodes)));
+    if include_io_polling {
+        body.push(Node::Block(process_io_requests()));
+    }
+    body
 }
 
 fn try_persistent_body_with_io(

@@ -1,0 +1,55 @@
+# Alert routing and escalation policy for VX-1243, VX-1244, VX-1248, VX-1249, VX-1255, and VX-1258.
+# Prometheus alert rules, Alertmanager routing, labels, silences, inhibition, owner routes, and runbook links share one alerting seam.
+
+schema = "vyre.ops.alert_routing_escalation_policy.v1"
+owner = "security_reliability"
+evidence_tokens = ["PROMETHEUS_ALERTING_RULES", "PROMETHEUS_ALERTMANAGER", "OPENMETRICS_PROMETHEUS", "GITHUB_LABELS"]
+
+required_fields = [
+  "alert_id",
+  "signal_source",
+  "expr_policy",
+  "for_duration_policy",
+  "label_policy",
+  "annotation_policy",
+  "routing_policy",
+  "dedup_inhibition_policy",
+  "runbook_policy",
+  "diagnostic",
+]
+
+[[alert]]
+alert_id = "slo-error-budget-burn"
+signal_source = "SERVICE_LEVEL_OBJECTIVE_POLICY.toml"
+expr_policy = "PromQL-expression-uses-recorded-SLI-and-error-budget-burn-recording-rule"
+for_duration_policy = "for-duration-prevents-single-scrape-noise-from-release-health-blocker"
+label_policy = "labels-include-severity-service-slo_id-owner-lane-and-public-surface-no-private-paths"
+annotation_policy = "summary-description-impact-runbook-url-and-public-fix-text-required"
+routing_policy = "Alertmanager-route-maps-owner-lane-to-MAINTAINER_OWNERSHIP_ESCALATION_MAP.toml"
+dedup_inhibition_policy = "deduplicate-by-slo_id-and-inhibit-symptom-alerts-when-root-cause-alert-fires"
+runbook_policy = "OPERATOR_RUNBOOK_ROLLBACK_POLICY.toml"
+diagnostic = "VYRE_ALERT_SLO_BURN_ROUTE_REQUIRED"
+
+[[alert]]
+alert_id = "operator-diagnostic-cluster-alert"
+signal_source = "RELEASE_HEALTH_FEEDBACK_LOOP.toml"
+expr_policy = "PromQL-expression-counts-repeated-public-safe-diagnostic-clusters"
+for_duration_policy = "cluster-must-persist-for-declared-window-before-page-or-release-block"
+label_policy = "labels-include-diagnostic_id-owner-lane-surface-severity-and-release-version"
+annotation_policy = "annotation-links-structured-error-problem-detail-and-runbook"
+routing_policy = "routes-to-release-health-owner-and-security-owner-when-diagnostic-class-is-security"
+dedup_inhibition_policy = "deduplicate-by-diagnostic_id-and-release-version"
+runbook_policy = "OPERATOR_RUNBOOK_ROLLBACK_POLICY.toml"
+diagnostic = "VYRE_ALERT_OPERATOR_DIAGNOSTIC_CLUSTER_REQUIRED"
+
+[[alert]]
+alert_id = "deployment-saturation-alert"
+signal_source = "OPERATOR_DEPLOYMENT_SURFACE_MATRIX.toml"
+expr_policy = "PromQL-expression-uses-resource-budget-and-backpressure-metrics"
+for_duration_policy = "duration-matches-deployment-surface-and-queue-recovery-window"
+label_policy = "labels-include-deployment_id-resource_class-owner-lane-and-public-surface"
+annotation_policy = "annotation-describes-scale-tune-or-throttle-action"
+routing_policy = "routes-to-operator-deployment-owner-and-resource-budget-owner"
+dedup_inhibition_policy = "inhibits-latency-symptom-alert-when-resource-saturation-root-cause-alert-fires"
+runbook_policy = "OPERATOR_RUNBOOK_ROLLBACK_POLICY.toml"
+diagnostic = "VYRE_ALERT_DEPLOYMENT_SATURATION_REQUIRED"

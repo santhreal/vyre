@@ -1,0 +1,40 @@
+# Repository security disclosure policy for VX-1083, VX-1084, VX-1088, VX-1089, and VX-1093.
+# SECURITY.md, supported versions, private vulnerability reports, advisories, and redacted public disclosure share one policy.
+
+schema = "vyre.release.repository_security_disclosure_policy.v1"
+owner = "security_reliability"
+evidence_tokens = ["GITHUB_SECURITY_POLICY", "GITHUB_REPOSITORY_SECURITY_ADVISORIES", "OPENVEX_SPEC", "CSAF_2_0"]
+
+required_fields = [
+  "policy_id",
+  "security_file_policy",
+  "supported_versions_policy",
+  "reporting_channel_policy",
+  "private_report_policy",
+  "advisory_policy",
+  "affectedness_policy",
+  "public_disclosure_boundary",
+  "diagnostic",
+]
+
+[[policy]]
+policy_id = "public-vyre-security-md"
+security_file_policy = "SECURITY.md-lives-in-public-vyre-root-or-github-community-health-location"
+supported_versions_policy = "supported-public-vyre-versions-listed-and-match-release-policy"
+reporting_channel_policy = "reporters-get-public-vyre-vulnerability-intake-route-not-private-santh-paths"
+private_report_policy = "private-vulnerability-reports-used-for-sensitive-issues-before-public-advisory"
+advisory_policy = "repository-security-advisory-created-when-release-fixes-security-vulnerability"
+affectedness_policy = "VULNERABILITY_AFFECTEDNESS_VEX_POLICY.toml"
+public_disclosure_boundary = "public-advisory-excludes-private-santh-evidence-values"
+diagnostic = "VYRE_SECURITY_POLICY_PUBLIC_READY"
+
+[[policy]]
+policy_id = "private-santh-report-exclusion"
+security_file_policy = "Santh-private-worktree-does-not-define-public-Vyre-reporting-authority"
+supported_versions_policy = "not-public"
+reporting_channel_policy = "private-local-notes-not-used-as-public-disclosure-channel"
+private_report_policy = "private-evidence-may-support-redacted-public-vyre-advisory-only"
+advisory_policy = "public-advisory-published-from-vyre-repository-only"
+affectedness_policy = "private-evidence-redacted-before-public-status"
+public_disclosure_boundary = "santh-private-material-excluded"
+diagnostic = "VYRE_SECURITY_POLICY_PRIVATE_SANTH_EXCLUDED"

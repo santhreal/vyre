@@ -7,8 +7,8 @@ use serde_json::{json, Value};
 use super::metrics::write_json;
 use super::runner::run_command_status;
 use super::types::{
-    BackendSuiteArtifact, BackendSuiteArtifactInput, BackendSuiteEvidence,
-    MAX_RELEASE_BENCHMARK_TEXT_BYTES, MIN_CPU_SOTA_100X_RELEASE_CASES,
+    BackendSuiteArtifact, BackendSuiteArtifactInput, BackendSuiteEvidence, HardwareDigestField,
+    HardwareUnavailableReason, MAX_RELEASE_BENCHMARK_TEXT_BYTES, MIN_CPU_SOTA_100X_RELEASE_CASES,
     MIN_CUDA_RELEASE_COMPUTE_CAPABILITY_MAJOR, MIN_CUDA_RELEASE_COMPUTE_CAPABILITY_MINOR,
     MIN_CUDA_RELEASE_MEMORY_MIB, REQUIRED_CPU_SOTA_100X_CASES,
 };
@@ -32,6 +32,8 @@ pub(super) fn write_cpu_100x_proof(workspace_root: &Path, artifacts: &[String]) 
     let mut source_fingerprint = None::<String>;
     let mut source_tree_fingerprint = None::<String>;
     let mut unique_artifacts = BTreeSet::new();
+    let mut component_rows = Vec::new();
+    let mut component_blockers = Vec::new();
     for artifact in artifacts {
         if !unique_artifacts.insert(artifact.clone()) {
             blockers.push(format!(
@@ -176,6 +178,13 @@ pub(super) fn write_cpu_100x_proof(workspace_root: &Path, artifacts: &[String]) 
                 )
             {
                 observed_required_cases.insert(case_id.to_string());
+                component_rows.push(cpu_sota_component_proof_case(
+                    artifact,
+                    case_id,
+                    case,
+                    metrics,
+                    &mut component_blockers,
+                ));
             }
             let wall_samples = metrics
                 .and_then(|metrics| suite_metric_samples(metrics.get("wall_ns")))
@@ -285,6 +294,7 @@ pub(super) fn write_cpu_100x_proof(workspace_root: &Path, artifacts: &[String]) 
         ));
     }
     let aggregate_failed = cases.len().saturating_sub(passing_contract_case_count);
+    blockers.extend(component_blockers.iter().cloned());
     let evidence = json!({
         "schema_version": 1,
         "selected_backend": "cuda",
@@ -306,6 +316,24 @@ pub(super) fn write_cpu_100x_proof(workspace_root: &Path, artifacts: &[String]) 
         "min_baseline_wall_p50": min_baseline_wall_p50,
         "min_baseline_wall_p95": min_baseline_wall_p95,
         "min_baseline_wall_p99": min_baseline_wall_p99,
+        "component_speedup_proof": {
+            "schema_version": 1,
+            "comparator_identity": "cpu-sota-component-speedup:v1",
+            "collapsed_speedup_field_allowed": false,
+            "required_components": [
+                "scalar_cpu",
+                "simd_cpu",
+                "gpu_active",
+                "transfer",
+                "launch",
+                "end_to_end"
+            ],
+            "parity_policy": "exact_cpu_gpu_digest",
+            "case_count": component_rows.len(),
+            "missing_component_count": component_blockers.len(),
+            "missing_components": component_blockers,
+            "cases": component_rows
+        },
         "summary": {
             "total_cases": cases.len(),
             "passed": passing_contract_case_count,
@@ -320,6 +348,75 @@ pub(super) fn write_cpu_100x_proof(workspace_root: &Path, artifacts: &[String]) 
         &workspace_root.join("release/evidence/benchmarks/cpu-only-100x-proof.json"),
         &evidence,
     );
+}
+
+fn cpu_sota_component_proof_case(
+    artifact: &str,
+    case_id: &str,
+    case: &Value,
+    metrics: Option<&serde_json::Map<String, Value>>,
+    blockers: &mut Vec<String>,
+) -> Value {
+    let scalar_cpu_wall_ns_p50 = first_metric_p50(
+        metrics,
+        &["scalar_cpu_wall_ns", "cpu_scalar_wall_ns"],
+    );
+    let simd_cpu_wall_ns_p50 =
+        first_metric_p50(metrics, &["simd_cpu_wall_ns", "cpu_simd_wall_ns"]);
+    let gpu_active_ns_p50 = first_metric_p50(
+        metrics,
+        &["active_time_ns", "gpu_active_ns", "kernel_execute_ns", "dispatch_ns"],
+    );
+    let transfer_bytes_p50 = first_metric_p50(metrics, &["transfer_bytes", "gpu_transfer_bytes"]);
+    let launch_ns_p50 = first_metric_p50(metrics, &["launch_ns", "kernel_launch_ns"]);
+    let end_to_end_wall_ns_p50 = first_metric_p50(metrics, &["wall_ns"]);
+    let cpu_digest = first_metric_p50(metrics, &["cpu_digest"]);
+    let gpu_digest = first_metric_p50(metrics, &["gpu_digest"]);
+    for (field, value) in [
+        ("scalar_cpu_wall_ns_p50", scalar_cpu_wall_ns_p50),
+        ("simd_cpu_wall_ns_p50", simd_cpu_wall_ns_p50),
+        ("gpu_active_ns_p50", gpu_active_ns_p50),
+        ("transfer_bytes_p50", transfer_bytes_p50),
+        ("launch_ns_p50", launch_ns_p50),
+        ("end_to_end_wall_ns_p50", end_to_end_wall_ns_p50),
+        ("cpu_digest", cpu_digest),
+        ("gpu_digest", gpu_digest),
+    ] {
+        if value.is_none_or(|value| value == 0) {
+            blockers.push(format!(
+                "100x component proof source artifact `{artifact}` case `{case_id}` is missing {field}"
+            ));
+        }
+    }
+    let parity_passed = matches!((cpu_digest, gpu_digest), (Some(cpu), Some(gpu)) if cpu != 0 && cpu == gpu)
+        && case.get("correctness").and_then(|correctness| correctness.get("Invalid")).is_none();
+    if !parity_passed {
+        blockers.push(format!(
+            "100x component proof source artifact `{artifact}` case `{case_id}` must prove exact CPU/GPU digest parity"
+        ));
+    }
+    json!({
+        "artifact": artifact,
+        "case_id": case_id,
+        "scalar_cpu_wall_ns_p50": scalar_cpu_wall_ns_p50,
+        "simd_cpu_wall_ns_p50": simd_cpu_wall_ns_p50,
+        "gpu_active_ns_p50": gpu_active_ns_p50,
+        "transfer_bytes_p50": transfer_bytes_p50,
+        "launch_ns_p50": launch_ns_p50,
+        "end_to_end_wall_ns_p50": end_to_end_wall_ns_p50,
+        "cpu_digest": cpu_digest,
+        "gpu_digest": gpu_digest,
+        "parity_passed": parity_passed,
+    })
+}
+
+fn first_metric_p50(
+    metrics: Option<&serde_json::Map<String, Value>>,
+    names: &[&str],
+) -> Option<u64> {
+    names
+        .iter()
+        .find_map(|name| metrics.and_then(|metrics| suite_metric_percentile(metrics.get(*name), "p50")))
 }
 
 pub(super) fn read_text_bounded(path: &Path, max_bytes: u64) -> std::io::Result<String> {
@@ -463,9 +560,18 @@ pub(super) fn write_backend_suite_with_extra_blockers(
             }));
         })
         .collect::<Vec<_>>();
+    let (hardware_digest, hardware_digest_fields, hardware_unavailable_reasons, hardware_blockers) =
+        backend_suite_hardware_digest(backend, &artifact_statuses);
+    blockers.extend(hardware_blockers);
+    let schema_digest_chain =
+        backend_suite_schema_digest_chain(backend, &artifact_statuses, &hardware_digest);
     let evidence = BackendSuiteEvidence {
-        schema_version: 2,
+        schema_version: 3,
         backend: backend.to_string(),
+        schema_digest_chain,
+        hardware_digest,
+        hardware_digest_fields,
+        hardware_unavailable_reasons,
         family_count: family_counts.len(),
         artifacts,
         artifact_statuses,
@@ -489,6 +595,267 @@ pub(super) fn write_backend_suite_with_extra_blockers(
         eprintln!("Fix: failed to write `{}`: {error}", path.display());
         std::process::exit(1);
     }
+}
+
+fn backend_suite_schema_digest_chain(
+    backend: &str,
+    artifact_statuses: &[BackendSuiteArtifact],
+    hardware_digest: &str,
+) -> Value {
+    let mut source_material = format!("benchmark-suite-source:v1\nbackend={backend}\n");
+    let mut config_material = format!("benchmark-suite-config:v1\nbackend={backend}\n");
+    let mut dataset_material = format!("benchmark-suite-dataset:v1\nbackend={backend}\n");
+    for status in artifact_statuses {
+        source_material.push_str("source_fingerprint=");
+        source_material.push_str(status.source_fingerprint.as_deref().unwrap_or(""));
+        source_material.push_str("\nsource_tree_fingerprint=");
+        source_material.push_str(status.source_tree_fingerprint.as_deref().unwrap_or(""));
+        source_material.push('\n');
+
+        config_material.push_str("path=");
+        config_material.push_str(&status.path);
+        config_material.push_str("\nfamily_id=");
+        config_material.push_str(&status.family_id);
+        config_material.push_str("\nrequested_case_id=");
+        config_material.push_str(&status.requested_case_id);
+        config_material.push_str("\ncpu_sota_100x_required=");
+        config_material.push_str(if status.cpu_sota_100x_required {
+            "true"
+        } else {
+            "false"
+        });
+        config_material.push('\n');
+
+        dataset_material.push_str("family_id=");
+        dataset_material.push_str(&status.family_id);
+        dataset_material.push_str("\nrequested_case_id=");
+        dataset_material.push_str(&status.requested_case_id);
+        dataset_material.push_str("\nartifact_path=");
+        dataset_material.push_str(&status.path);
+        dataset_material.push('\n');
+    }
+    let source_digest = format!(
+        "benchmark-source-digest:v1:{}",
+        crate::hash::sha256_hex(source_material.as_bytes())
+    );
+    let command_digest = format!(
+        "benchmark-command-digest:v1:{}",
+        crate::hash::sha256_hex(
+            format!("release-benchmarks backend-suite:v1 backend={backend}\n").as_bytes()
+        )
+    );
+    let config_digest = format!(
+        "benchmark-config-digest:v1:{}",
+        crate::hash::sha256_hex(config_material.as_bytes())
+    );
+    let dataset_digest = format!(
+        "benchmark-dataset-digest:v1:{}",
+        crate::hash::sha256_hex(dataset_material.as_bytes())
+    );
+    let comparator_version =
+        "benchmark-suite-comparator:v1:case-integrity+summary+hardware".to_string();
+    crate::benchmark_evidence_semantics::benchmark_schema_digest_chain_value(
+        "backend-suite",
+        3,
+        &source_digest,
+        &command_digest,
+        &config_digest,
+        hardware_digest,
+        &dataset_digest,
+        &comparator_version,
+    )
+}
+
+fn backend_suite_hardware_digest(
+    backend: &str,
+    artifact_statuses: &[BackendSuiteArtifact],
+) -> (
+    String,
+    Vec<HardwareDigestField>,
+    Vec<HardwareUnavailableReason>,
+    Vec<String>,
+) {
+    let mut fields = Vec::new();
+    let mut unavailable = Vec::new();
+    let mut blockers = Vec::new();
+    record_string_hardware_field(
+        &mut fields,
+        &mut blockers,
+        artifact_statuses,
+        "host_cpu_model",
+        "artifact.environment.host_cpu_model|cpu_model|host_cpu",
+        |status| status.host_cpu_model.clone(),
+    );
+    if backend == "cuda" {
+        record_string_hardware_field(
+            &mut fields,
+            &mut blockers,
+            artifact_statuses,
+            "gpu_model",
+            "artifact.environment.gpu_devices[0].name",
+            |status| status.gpu_model.clone(),
+        );
+        record_u64_hardware_field(
+            &mut fields,
+            &mut blockers,
+            artifact_statuses,
+            "gpu_memory_total_mib",
+            "artifact.environment.gpu_devices[0].memory_total_mib",
+            |status| status.gpu_memory_total_mib,
+        );
+        record_compute_capability_hardware_field(&mut fields, &mut blockers, artifact_statuses);
+        record_string_hardware_field(
+            &mut fields,
+            &mut blockers,
+            artifact_statuses,
+            "nvidia_driver_version",
+            "artifact.environment.nvidia_driver_version",
+            |status| status.nvidia_driver_version.clone(),
+        );
+        record_string_hardware_field(
+            &mut fields,
+            &mut blockers,
+            artifact_statuses,
+            "cuda_toolkit_version",
+            "artifact.environment.nvidia_cuda_version",
+            |status| status.nvidia_cuda_version.clone(),
+        );
+        for (field, reason) in [
+            (
+                "host_ram_total_mib",
+                "benchmark environment did not expose host RAM capacity",
+            ),
+            (
+                "storage_filesystem_signature",
+                "benchmark environment did not expose SSD or filesystem identity",
+            ),
+            (
+                "os_kernel_version",
+                "benchmark environment did not expose operating-system kernel version",
+            ),
+            (
+                "gpu_ecc_state",
+                "nvidia-smi benchmark capture did not expose visible ECC state",
+            ),
+            (
+                "gpu_clock_mhz",
+                "nvidia-smi benchmark capture did not expose graphics or memory clocks",
+            ),
+        ] {
+            unavailable.push(HardwareUnavailableReason {
+                field: field.to_string(),
+                reason: reason.to_string(),
+                fix: format!(
+                    "Fix: extend benchmark environment capture to populate `{field}` before using hardware comparisons that depend on it."
+                ),
+            });
+        }
+    }
+    let mut material = format!("benchmark-hardware-digest:v1\nbackend={backend}\n");
+    for field in &fields {
+        material.push_str("field=");
+        material.push_str(&field.field);
+        material.push_str("\nvalue=");
+        material.push_str(&field.value);
+        material.push_str("\nsource=");
+        material.push_str(&field.source);
+        material.push('\n');
+    }
+    for reason in &unavailable {
+        material.push_str("unavailable=");
+        material.push_str(&reason.field);
+        material.push_str("\nreason=");
+        material.push_str(&reason.reason);
+        material.push_str("\nfix=");
+        material.push_str(&reason.fix);
+        material.push('\n');
+    }
+    let hardware_digest = format!(
+        "benchmark-hardware-digest:v1:{}",
+        crate::hash::sha256_hex(material.as_bytes())
+    );
+    (hardware_digest, fields, unavailable, blockers)
+}
+
+fn record_string_hardware_field(
+    fields: &mut Vec<HardwareDigestField>,
+    blockers: &mut Vec<String>,
+    artifact_statuses: &[BackendSuiteArtifact],
+    field: &str,
+    source: &str,
+    extractor: impl Fn(&BackendSuiteArtifact) -> Option<String>,
+) {
+    let values = artifact_statuses
+        .iter()
+        .filter_map(extractor)
+        .collect::<BTreeSet<_>>();
+    record_hardware_field_values(fields, blockers, field, source, values);
+}
+
+fn record_u64_hardware_field(
+    fields: &mut Vec<HardwareDigestField>,
+    blockers: &mut Vec<String>,
+    artifact_statuses: &[BackendSuiteArtifact],
+    field: &str,
+    source: &str,
+    extractor: impl Fn(&BackendSuiteArtifact) -> Option<u64>,
+) {
+    let values = artifact_statuses
+        .iter()
+        .filter_map(extractor)
+        .map(|value| value.to_string())
+        .collect::<BTreeSet<_>>();
+    record_hardware_field_values(fields, blockers, field, source, values);
+}
+
+fn record_compute_capability_hardware_field(
+    fields: &mut Vec<HardwareDigestField>,
+    blockers: &mut Vec<String>,
+    artifact_statuses: &[BackendSuiteArtifact],
+) {
+    let values = artifact_statuses
+        .iter()
+        .filter_map(|status| {
+            Some(format!(
+                "{}.{}",
+                status.gpu_compute_capability_major?,
+                status.gpu_compute_capability_minor?
+            ))
+        })
+        .collect::<BTreeSet<_>>();
+    record_hardware_field_values(
+        fields,
+        blockers,
+        "gpu_compute_capability",
+        "artifact.environment.gpu_devices[0].compute_capability_major/minor",
+        values,
+    );
+}
+
+fn record_hardware_field_values(
+    fields: &mut Vec<HardwareDigestField>,
+    blockers: &mut Vec<String>,
+    field: &str,
+    source: &str,
+    values: BTreeSet<String>,
+) {
+    if values.is_empty() {
+        blockers.push(format!(
+            "hardware digest field `{field}` has no artifact-backed value"
+        ));
+        return;
+    }
+    if values.len() > 1 {
+        blockers.push(format!(
+            "hardware digest field `{field}` has {} distinct values; release benchmark suites must not merge incomparable hardware",
+            values.len()
+        ));
+    }
+    fields.push(HardwareDigestField {
+        field: field.to_string(),
+        value: values.into_iter().collect::<Vec<_>>().join(" | "),
+        source: source.to_string(),
+    });
 }
 
 fn backend_suite_input_family_counts(
@@ -575,6 +942,10 @@ pub(super) fn inspect_backend_suite_artifact(
             min_cuda_ptx_source_cache_hits: None,
             min_cuda_ptx_source_cache_misses: None,
             min_kernel_launches: None,
+            fused_execution_dag_contract: None,
+            fused_execution_dag_node_count: None,
+            fused_execution_dag_memory_edge_count: None,
+            fused_execution_dag_host_sync_points: None,
             case_count: 0,
             failed_count: None,
             nonmatching_case_backend_count: 0,
@@ -666,6 +1037,34 @@ pub(super) fn inspect_backend_suite_artifact(
             selected_backend
         ));
     }
+    let requires_fused_execution_dag =
+        artifact.family_id == "compound-fused-filter"
+            || artifact.requested_case_id == "compound.pipeline.fused_filter.1m";
+    if requires_fused_execution_dag {
+        blockers.extend(
+            crate::benchmark_evidence_semantics::benchmark_fused_execution_dag_issues(
+                &artifact.path,
+                &report,
+            ),
+        );
+    }
+    let fused_execution_dag = report.get("fused_execution_dag");
+    let fused_execution_dag_contract = fused_execution_dag
+        .and_then(|dag| dag.get("contract"))
+        .and_then(nonblank_str)
+        .map(str::to_string)
+        .or_else(|| requires_fused_execution_dag.then(|| "fused-execution-dag:v1".to_string()));
+    let fused_execution_dag_node_count = fused_execution_dag
+        .and_then(|dag| dag.get("graph_nodes"))
+        .and_then(Value::as_array)
+        .map(Vec::len);
+    let fused_execution_dag_memory_edge_count = fused_execution_dag
+        .and_then(|dag| dag.get("memory_edges"))
+        .and_then(Value::as_array)
+        .map(Vec::len);
+    let fused_execution_dag_host_sync_points = fused_execution_dag
+        .and_then(|dag| dag.get("host_sync_points"))
+        .and_then(Value::as_u64);
     let environment = report.get("environment");
     let first_gpu = environment
         .and_then(|environment| environment.get("gpu_devices"))
@@ -963,6 +1362,10 @@ pub(super) fn inspect_backend_suite_artifact(
         min_cuda_ptx_source_cache_hits,
         min_cuda_ptx_source_cache_misses,
         min_kernel_launches,
+        fused_execution_dag_contract,
+        fused_execution_dag_node_count,
+        fused_execution_dag_memory_edge_count,
+        fused_execution_dag_host_sync_points,
         case_count: cases.len(),
         failed_count,
         nonmatching_case_backend_count,

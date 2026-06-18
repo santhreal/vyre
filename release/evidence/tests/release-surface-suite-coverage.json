@@ -3,9 +3,9 @@
   "surfaces": [
     {
       "surface": "vyre",
-      "file_count": 2572,
-      "assertion_count": 34374,
-      "entrypoint_count": 2572,
+      "file_count": 3021,
+      "assertion_count": 37359,
+      "entrypoint_count": 3021,
       "layers": [
         "adversarial",
         "benchmark",
@@ -29,13 +29,36 @@
         "fuzz"
       ],
       "missing_layers": [],
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [],
       "blockers": []
     },
     {
       "surface": "weir",
-      "file_count": 272,
-      "assertion_count": 3531,
-      "entrypoint_count": 269,
+      "file_count": 359,
+      "assertion_count": 3684,
+      "entrypoint_count": 337,
       "layers": [
         "adversarial",
         "benchmark",
@@ -59,13 +82,37 @@
         "fuzz"
       ],
       "missing_layers": [],
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property",
+        "uncategorized"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [],
       "blockers": []
     },
     {
       "surface": "vyrec",
-      "file_count": 11,
-      "assertion_count": 32,
-      "entrypoint_count": 11,
+      "file_count": 16,
+      "assertion_count": 165,
+      "entrypoint_count": 16,
       "layers": [
         "adversarial",
         "benchmark",
@@ -89,6 +136,29 @@
         "fuzz"
       ],
       "missing_layers": [],
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "e2e",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "required_case_roles": [
+        "positive",
+        "negative",
+        "boundary",
+        "adversarial",
+        "property",
+        "fuzz",
+        "benchmark",
+        "conformance",
+        "e2e"
+      ],
+      "missing_case_roles": [],
       "blockers": []
     }
   ],

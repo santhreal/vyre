@@ -83,9 +83,12 @@ pub fn emit_prepared_module_with_features(
 /// Returns a lowering error when call inlining fails or the rewritten program
 /// cannot preserve the backend's buffer-access invariants.
 pub fn prepared_program(program: &Program) -> Result<Program, LoweringError> {
-    let program = vyre_foundation::ir::inline_calls(program)
-        .map_err(|error| LoweringError::invalid(error.to_string()))?;
-    let program = vyre_foundation::ir::optimize(program);
+    let lowered = vyre_lower::lower_for_emit(program).map_err(|error| {
+        LoweringError::invalid(format!(
+            "canonical pre-emit lowering failed before Naga Program compatibility preparation: {error}. Fix: route Program compatibility helpers through vyre-lower::lower_for_emit instead of local inlining or optimizer passes."
+        ))
+    })?;
+    let program = lowered.program;
     // BufferAccess auto-inference. Walk the entry nodes and collect
     // the set of buffers that receive a write (Node::Store /
     // AsyncStore / AsyncLoad / IndirectDispatch / Expr::Atomic*). Any

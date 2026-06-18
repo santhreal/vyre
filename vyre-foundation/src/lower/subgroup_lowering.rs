@@ -448,13 +448,13 @@ mod tests {
     }
 
     fn nodes_contain_select_false_f32_zero(nodes: &[Node]) -> bool {
-        nodes_contain_select_false(nodes, |expr| matches!(expr, Expr::LitF32(value) if *value == 0.0))
+        nodes_contain_select_false(
+            nodes,
+            |expr| matches!(expr, Expr::LitF32(value) if *value == 0.0),
+        )
     }
 
-    fn nodes_contain_select_false(
-        nodes: &[Node],
-        predicate: fn(&Expr) -> bool,
-    ) -> bool {
+    fn nodes_contain_select_false(nodes: &[Node], predicate: fn(&Expr) -> bool) -> bool {
         nodes
             .iter()
             .any(|node| node_contains_select_false(node, predicate))
@@ -511,7 +511,11 @@ mod tests {
             | Expr::Cast { value: index, .. }
             | Expr::SubgroupBallot { cond: index }
             | Expr::SubgroupAdd { value: index } => expr_contains_select_false(index, predicate),
-            Expr::BinOp { left, right, .. } | Expr::SubgroupShuffle { value: left, lane: right } => {
+            Expr::BinOp { left, right, .. }
+            | Expr::SubgroupShuffle {
+                value: left,
+                lane: right,
+            } => {
                 expr_contains_select_false(left, predicate)
                     || expr_contains_select_false(right, predicate)
             }

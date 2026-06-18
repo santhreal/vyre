@@ -1,0 +1,47 @@
+# Correctness counterexample artifacts for VX-774 through VX-779.
+# Formal models, property failures, differential failures, and schedule failures use one artifact schema.
+
+schema = "vyre.correctness.counterexample_artifact.v1"
+owner = "bench_harness"
+evidence_tokens = ["TLA_PLUS", "ALLOY_ANALYZER", "KANI_RUST_VERIFIER", "PROPTEST", "LOOM", "C_REDUCE"]
+
+required_fields = [
+  "artifact_id",
+  "source_contract",
+  "counterexample_digest",
+  "minimal_input",
+  "assumption_set",
+  "replay_command_class",
+  "operator_report_link",
+  "privacy_class",
+]
+
+[[artifact]]
+artifact_id = "wire-decode-counterexample"
+source_contract = "FORMAL_MODEL_CONTRACTS.toml"
+counterexample_digest = "sha256:wire-decode-fail-closed"
+minimal_input = "bounded-byte-slice"
+assumption_set = ["bounded byte slice", "deterministic decoder"]
+replay_command_class = "local-nonpublished-proof"
+operator_report_link = "OPERATOR_REPORTING_INTERCHANGE.toml"
+privacy_class = "no-private-paths"
+
+[[artifact]]
+artifact_id = "csr-differential-counterexample"
+source_contract = "PROPERTY_DIFFERENTIAL_ORACLES.toml"
+counterexample_digest = "sha256:graph-csr-minimal"
+minimal_input = "bounded-csr-graph"
+assumption_set = ["valid CSR certificate", "finite semiring domain"]
+replay_command_class = "local-nonpublished-proof"
+operator_report_link = "OPERATOR_REPORTING_INTERCHANGE.toml"
+privacy_class = "no-secret-values"
+
+[[artifact]]
+artifact_id = "slab-race-counterexample"
+source_contract = "CONCURRENCY_SCHEDULE_CONTRACTS.toml"
+counterexample_digest = "sha256:output-slab-schedule-counterexample"
+minimal_input = "bounded-schedule-trace"
+assumption_set = ["bounded threads", "bounded slab count"]
+replay_command_class = "local-nonpublished-proof"
+operator_report_link = "OPERATOR_REPORTING_INTERCHANGE.toml"
+privacy_class = "no-private-paths"

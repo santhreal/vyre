@@ -1,0 +1,40 @@
+# docs.rs and rustdoc publication policy for VX-1125, VX-1126, VX-1130, VX-1131, VX-1135, and VX-1136.
+# docs.rs metadata, rustdoc output, README rendering, feature docs, target policy, and private path redaction share one policy.
+
+schema = "vyre.release.docs_rs_rustdoc_publication_policy.v1"
+owner = "coordination"
+evidence_tokens = ["DOCS_RS_BUILDS", "DOCS_RS_METADATA", "RUSTDOC_BOOK", "RUST_API_GUIDELINES"]
+
+required_fields = [
+  "docs_surface",
+  "readme_policy",
+  "metadata_docs_rs_policy",
+  "feature_documentation_policy",
+  "target_policy",
+  "rustdoc_policy",
+  "build_script_policy",
+  "private_boundary_policy",
+  "diagnostic",
+]
+
+[[docs]]
+docs_surface = "public-vyre-docs-rs"
+readme_policy = "crate-readme-renders-public-install-usage-security-and-release-boundary-information"
+metadata_docs_rs_policy = "package-metadata-docs-rs-features-targets-rustdoc-args-recorded-before-publish"
+feature_documentation_policy = "feature-gated-subcrates-and-backends-have-public-docs-for-enabled-and-disabled-states"
+target_policy = "docs-rs-targets-kept-within-resource-limits-and-public-platform-claims"
+rustdoc_policy = "public-items-have-rustdoc-examples-error-contracts-and-safety-notes-when-applicable"
+build_script_policy = "docs-rs-builds-do-not-require-network-or-private-santh-paths"
+private_boundary_policy = "docs-rs-output-must-not-render-private-santh-paths-local-evidence-or-private-repository-links"
+diagnostic = "VYRE_DOCS_RS_PUBLICATION_POLICY_REQUIRED"
+
+[[docs]]
+docs_surface = "public-tool-subcrate-docs"
+readme_policy = "subcrate-readme-links-parent-public-api-and-cargo-add-example"
+metadata_docs_rs_policy = "subcrate-docs-rs-metadata-inherits-parent-target-and-feature-constraints"
+feature_documentation_policy = "subcrate-feature-docs-state-parent-feature-required-for-integration"
+target_policy = "subcrate-targets-do-not-exceed-public-support-matrix"
+rustdoc_policy = "library-and-cli-entrypoints-have-examples-and-compatibility-notes"
+build_script_policy = "subcrate-doc-build-does-not-read-private-worktree"
+private_boundary_policy = "no-private-santh-links-or-local-paths-in-subcrate-docs"
+diagnostic = "VYRE_SUBCRATE_DOCS_RS_POLICY_REQUIRED"

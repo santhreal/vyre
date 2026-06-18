@@ -16,11 +16,12 @@
 //! now takes only the canonical frontier / sink buffer names.
 
 use vyre::ir::Program;
-use vyre_primitives::graph::csr_forward_traverse::csr_forward_traverse;
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 use vyre_primitives::predicate::edge_kind;
 
-const OP_ID: &str = "vyre-libs::security::flows_to";
+use crate::security::flow_composition::dataflow_reach_program;
+
+pub(crate) const OP_ID: &str = "vyre-libs::security::flows_to";
 
 /// Bitmask of edge kinds that represent genuine dataflow edges.
 /// Per AUDIT_2026-04-24 F-FT-01 (kimi) a previous `0xFFFF_FFFF`
@@ -69,10 +70,7 @@ pub fn flows_to(shape: ProgramGraphShape, frontier_in: &str, frontier_out: &str)
         shape.node_count,
         &[("frontier_in", frontier_in), ("frontier_out", frontier_out)],
     );
-    crate::region::tag_program(
-        OP_ID,
-        csr_forward_traverse(shape, frontier_in, frontier_out, FLOWS_TO_MASK),
-    )
+    dataflow_reach_program(OP_ID, shape, frontier_in, frontier_out, FLOWS_TO_MASK)
 }
 
 /// Build one forward-traversal step along ALIAS-only edges.
@@ -85,9 +83,12 @@ pub fn flows_to_alias_only(
     frontier_in: &str,
     frontier_out: &str,
 ) -> Program {
-    crate::region::tag_program(
+    dataflow_reach_program(
         OP_ID,
-        csr_forward_traverse(shape, frontier_in, frontier_out, ALIAS_PROPAGATION_MASK),
+        shape,
+        frontier_in,
+        frontier_out,
+        ALIAS_PROPAGATION_MASK,
     )
 }
 
@@ -159,6 +160,70 @@ mod tests {
     #[test]
     fn flows_to_mask_is_not_universal() {
         assert_ne!(FLOWS_TO_MASK, 0xFFFF_FFFF, "regression to universal mask");
+    }
+
+    #[test]
+    fn flows_to_cpu_fixture_excludes_control_and_dominance_false_positive_edges() {
+        let edge_offsets = [0, 2, 3, 3, 3];
+        let edge_targets = [1, 3, 2];
+        let edge_kind_mask = [
+            edge_kind::CONTROL,
+            edge_kind::ASSIGNMENT,
+            edge_kind::DOMINANCE,
+        ];
+        let out = crate::security::flow_composition::dataflow_reach_step_cpu_ref(
+            4,
+            &edge_offsets,
+            &edge_targets,
+            &edge_kind_mask,
+            &[0b0001],
+        );
+
+        assert_eq!(
+            out,
+            vec![0b1000],
+            "Fix: flows_to must follow assignment dataflow edges while excluding CONTROL/DOMINANCE false-positive paths."
+        );
+    }
+
+    #[test]
+    fn alias_only_fixture_keeps_copy_and_realloc_but_excludes_dup_call_edges() {
+        let edge_offsets = [0, 5, 5, 5, 5, 5, 5];
+        let edge_targets = [1, 2, 3, 4, 5];
+        let edge_kind_mask = [
+            edge_kind::CALL_ARG,
+            edge_kind::ASSIGNMENT,
+            edge_kind::ALIAS,
+            edge_kind::MUT_REF,
+            edge_kind::RETURN,
+        ];
+        let alias_only = vyre_primitives::graph::csr_forward_traverse::cpu_ref(
+            6,
+            &edge_offsets,
+            &edge_targets,
+            &edge_kind_mask,
+            &[0b000001],
+            ALIAS_PROPAGATION_MASK,
+        );
+        let full_flow = vyre_primitives::graph::csr_forward_traverse::cpu_ref(
+            6,
+            &edge_offsets,
+            &edge_targets,
+            &edge_kind_mask,
+            &[0b000001],
+            FLOWS_TO_MASK,
+        );
+
+        assert_eq!(
+            alias_only,
+            vec![0b011100],
+            "Fix: alias-only propagation should keep direct copy/alias/realloc edges and reject dup-style CALL_ARG/RETURN taint."
+        );
+        assert_eq!(
+            full_flow,
+            vec![0b111110],
+            "Fix: full flows_to should still carry regular source-to-sink CALL_ARG/RETURN dataflow."
+        );
     }
 
     #[test]

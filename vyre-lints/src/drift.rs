@@ -108,7 +108,7 @@ pub fn run<R: AgeResolver>(
 }
 
 fn load_entries(path: &Path) -> Result<Vec<String>> {
-    let bytes = std::fs::read_to_string(path)
+    let bytes = crate::read_source_bounded(path)
         .with_context(|| format!("read allowlist {}", path.display()))?;
     #[derive(serde::Deserialize)]
     struct Raw {

@@ -1,0 +1,72 @@
+schema_version = 1
+
+required_fields = [
+  "construct_id",
+  "diagnostic_code",
+  "syntax_span_policy",
+  "dialect_expectation",
+  "safe_fallback",
+  "verifier_required",
+  "remediation",
+  "evidence_path",
+]
+
+[[diagnostic]]
+construct_id = "backreference"
+diagnostic_code = "VYRE_SCAN_UNSUPPORTED_BACKREFERENCE"
+syntax_span_policy = "exact_construct_span"
+dialect_expectation = "PCRE2 supports this construct; RE2, Rust regex, Hyperscan, Vectorscan, and Vyre native accelerator routes reject it."
+safe_fallback = "reject"
+verifier_required = false
+remediation = "Remove the backreference, rewrite as a regular-language pattern, or run an explicit PCRE2 comparator outside accelerator claims."
+evidence_path = "vyre-libs/tests/regex_unsupported_diagnostic_registry.rs"
+
+[[diagnostic]]
+construct_id = "lookaround"
+diagnostic_code = "VYRE_SCAN_APPROXIMATED_LOOKAROUND_REQUIRES_VERIFIER"
+syntax_span_policy = "exact_construct_span"
+dialect_expectation = "PCRE2 supports lookaround; Hyperscan-compatible routes can only prefilter and must verify final offsets."
+safe_fallback = "prefilter-plus-verifier"
+verifier_required = true
+remediation = "Keep the verifier route enabled or rewrite the assertion into regular-language context."
+evidence_path = "vyre-libs/tests/regex_unsupported_diagnostic_registry.rs"
+
+[[diagnostic]]
+construct_id = "unicode_classes_gpu"
+diagnostic_code = "VYRE_SCAN_UNSUPPORTED_UNICODE_MODE_GPU"
+syntax_span_policy = "class_span"
+dialect_expectation = "Unicode classes require a Unicode semantic profile; byte-mode GPU routes reject them unless a verifier owns scalar semantics."
+safe_fallback = "host-reference-or-verifier"
+verifier_required = true
+remediation = "Use byte mode, host Unicode reference, or a verifier-backed Unicode profile."
+evidence_path = "vyre-libs/tests/regex_unsupported_diagnostic_registry.rs"
+
+[[diagnostic]]
+construct_id = "capture_extraction"
+diagnostic_code = "VYRE_SCAN_CAPTURE_EXTRACTION_REQUIRES_VERIFIER"
+syntax_span_policy = "capture_group_span"
+dialect_expectation = "Whole-match accelerators do not prove submatch extraction; capture spans require verifier output."
+safe_fallback = "whole-match-plus-capture-verifier"
+verifier_required = true
+remediation = "Use noncapturing groups for acceleration-only scans or keep capture verifier output enabled."
+evidence_path = "vyre-libs/tests/regex_unsupported_diagnostic_registry.rs"
+
+[[diagnostic]]
+construct_id = "huge_alternation"
+diagnostic_code = "VYRE_SCAN_UNSUPPORTED_HUGE_ALTERNATION_BUDGET"
+syntax_span_policy = "alternation_span"
+dialect_expectation = "Huge alternations must fit construct and decode budgets before any release performance claim."
+safe_fallback = "reject-or-split-pattern-set"
+verifier_required = false
+remediation = "Split the pattern set or lower it through a literal-set table with bounded budget evidence."
+evidence_path = "vyre-libs/tests/regex_unsupported_diagnostic_registry.rs"
+
+[[diagnostic]]
+construct_id = "nested_repeats"
+diagnostic_code = "VYRE_SCAN_UNSUPPORTED_NESTED_REPEAT_BUDGET"
+syntax_span_policy = "repeat_subtree_span"
+dialect_expectation = "Nested repeats must fit state-growth and transition-density budgets before compile or benchmark eligibility."
+safe_fallback = "reject-or-quarantine"
+verifier_required = false
+remediation = "Rewrite the nested repeat or quarantine the pattern from accelerator benchmarks."
+evidence_path = "vyre-libs/tests/regex_unsupported_diagnostic_registry.rs"

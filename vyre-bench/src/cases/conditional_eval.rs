@@ -528,11 +528,13 @@ fn dispatch_resident_conditional_sequence(
         program: &prepared.reset_program,
         resources: &reset_resources,
         grid_override: Some([1, 1, 1]),
+        workgroup_override: None,
     };
     let conditional_step = ResidentDispatchStep {
         program: &prepared.program,
         resources: &conditional_resources,
         grid_override: Some([RULE_COUNT.div_ceil(workgroup[0]).max(1), 1, 1]),
+        workgroup_override: None,
     };
     let read_ranges = [
         ResidentReadRange {

@@ -1,0 +1,55 @@
+# Coverage and sanitizer matrix for VX-747 and VX-751 through VX-759.
+# Coverage signals, sanitizer classes, crash triage, and replay capsules share one evidence matrix.
+
+schema = "vyre.test.coverage_sanitizer_matrix.v1"
+owner = "bench_harness"
+evidence_tokens = ["LLVM_SANITIZER_COVERAGE", "LLVM_SOURCE_COVERAGE", "LLVM_LIBFUZZER", "CWE"]
+
+coverage_modes = [
+  "function",
+  "basic_block",
+  "edge",
+  "source_region",
+]
+
+sanitizer_classes = [
+  "address",
+  "undefined_behavior",
+  "leak",
+  "thread",
+  "memory",
+]
+
+required_fields = [
+  "target_id",
+  "coverage_mode",
+  "sanitizer_class",
+  "minimum_signal",
+  "crash_reproducer",
+  "oom_policy",
+  "timeout_policy",
+  "cwe_id",
+  "report_link",
+]
+
+[[matrix]]
+target_id = "scan-pattern-wire-fuzz"
+coverage_mode = "edge"
+sanitizer_class = "address"
+minimum_signal = "new-edge-or-new-diagnostic"
+crash_reproducer = "minimized-input-plus-target-id"
+oom_policy = "fail-closed-with-resource-diagnostic"
+timeout_policy = "fail-closed-with-timeout-diagnostic"
+cwe_id = "CWE-787"
+report_link = "OPERATOR_REPORTING_INTERCHANGE.toml"
+
+[[matrix]]
+target_id = "frontend-source-recovery-fuzz"
+coverage_mode = "source_region"
+sanitizer_class = "undefined_behavior"
+minimum_signal = "new-recovery-span-or-diagnostic"
+crash_reproducer = "minimized-source-envelope"
+oom_policy = "fail-closed-with-resource-diagnostic"
+timeout_policy = "fail-closed-with-timeout-diagnostic"
+cwe_id = "CWE-400"
+report_link = "OPERATOR_REPORTING_INTERCHANGE.toml"

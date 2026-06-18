@@ -5,7 +5,7 @@
 //! success or skip a CUDA/WGPU test path.
 
 use crate::{paths::workspace_relative, Violation, ViolationKind};
-use anyhow::{Context, Result};
+use anyhow::Result;
 use std::path::Path;
 
 const DIRECT_SKIP_FRAGMENTS: &[&str] = &[
@@ -72,8 +72,7 @@ pub fn scan_tree(root: &Path) -> Result<Vec<Violation>> {
 }
 
 fn scan_file(path: &Path, workspace_rel: &str) -> Result<Vec<Violation>> {
-    let source =
-        std::fs::read_to_string(path).with_context(|| format!("read {}", path.display()))?;
+    let source = crate::read_source_bounded(path)?;
     let mut violations = Vec::new();
     let mut pending_probe_failure: Option<(u32, usize, u8)> = None;
     for (line_idx, line) in source.lines().enumerate() {

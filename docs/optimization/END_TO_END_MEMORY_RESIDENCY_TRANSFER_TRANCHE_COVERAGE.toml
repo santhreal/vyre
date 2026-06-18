@@ -1,0 +1,26 @@
+# Memory residency and transfer coverage keeps tier placement separate from ingress planning, visibility, and output provenance.
+
+schema = "vyre.optimization.memory_residency_transfer_tranche_coverage.v1"
+owner = "driver_shared"
+tranche = "VX-1461..VX-1480"
+evidence_tokens = ["CUDA_UNIFIED_MEMORY", "CUDA_RUNTIME_MEMORY_API", "VULKAN_MEMORY_ALLOCATION", "WEBGPU_BUFFER_MAPPING", "METAL_RESOURCE_STORAGE_MODES"]
+
+memory_residency_tier_contracts = "MEMORY_RESIDENCY_TIER_CONTRACTS.toml"
+pinned_staging_transfer_policy = "PINNED_STAGING_TRANSFER_POLICY.toml"
+memory_pressure_oversubscription_response = "MEMORY_PRESSURE_OVERSUBSCRIPTION_RESPONSE.toml"
+transfer_overlap_pipeline_evidence = "TRANSFER_OVERLAP_PIPELINE_EVIDENCE.toml"
+corpus_paging_planner = "CORPUS_PAGING_PLANNER.toml"
+gpu_direct_corpus_paging_capabilities = "GPU_DIRECT_CORPUS_PAGING_CAPABILITIES.toml"
+cuda_stream_ordered_pool_planner = "CUDA_STREAM_ORDERED_POOL_PLANNER.toml"
+cuda_scan_memory_pools = "CUDA_SCAN_MEMORY_POOLS.toml"
+resource_budget_policy = "RESOURCE_BUDGET_POLICY.toml"
+backpressure_queue_quota_policy = "BACKPRESSURE_QUEUE_QUOTA_POLICY.toml"
+backend_capability_digests = "BACKEND_CAPABILITY_DIGESTS.toml"
+backend_handle_lifetime_provenance = "BACKEND_HANDLE_LIFETIME_PROVENANCE.toml"
+host_device_visibility_policy = "HOST_DEVICE_VISIBILITY_POLICY.toml"
+output_slab_provenance = "OUTPUT_SLAB_PROVENANCE.toml"
+profile_trace_metric_correlation_policy = "PROFILE_TRACE_METRIC_CORRELATION_POLICY.toml"
+statistical_regression_gates = "STATISTICAL_REGRESSION_GATES.toml"
+publication_boundary = "PUBLICATION_BOUNDARY_CLASSIFICATION.toml"
+dedup_seam = "memory-residency-transfer-owns-tier-placement-pressure-and-overlap-evidence-while-corpus-paging-owns-ingress-route-selection-visibility-owns-synchronization-and-output-provenance-owns-reported-bytes"
+proof_gate = "conform/vyre-conform-enforce/tests/memory_residency_transfer_governance.rs"

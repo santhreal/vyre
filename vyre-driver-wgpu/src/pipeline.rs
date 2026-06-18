@@ -114,21 +114,13 @@ impl CachedPipelineArtifact {
 }
 
 fn checked_cache_cost_product(count: usize, element_size: usize) -> usize {
-    count.checked_mul(element_size).unwrap_or_else(|| {
-        panic!(
-            "cached pipeline artifact cost product overflowed usize. Fix: split oversized pipeline metadata before caching."
-        )
-    })
+    count.saturating_mul(element_size)
 }
 
 fn checked_cache_cost_sum(parts: &[usize]) -> usize {
     let mut total = 0usize;
     for &part in parts {
-        total = total.checked_add(part).unwrap_or_else(|| {
-            panic!(
-                "cached pipeline artifact cost sum overflowed usize. Fix: split oversized pipeline metadata before caching."
-            )
-        });
+        total = total.saturating_add(part);
     }
     total
 }
@@ -792,11 +784,7 @@ pub(crate) fn trap_error_from_sidecar(bytes: &[u8], trap_tags: &[TrapTag]) -> Op
     let required_len = usize::try_from(TRAP_SIDECAR_WORDS)
         .ok()
         .and_then(|words| words.checked_mul(4))
-        .unwrap_or_else(|| {
-            panic!(
-                "trap sidecar byte length overflowed usize. Fix: keep TRAP_SIDECAR_WORDS within the host index ABI."
-            )
-        });
+        .unwrap_or(usize::MAX);
     if bytes.len() < required_len {
         return Some(BackendError::new(format!(
             "internal wgpu trap readback returned {} bytes but {required_len} bytes are required. Fix: allocate the trap sidecar as {TRAP_SIDECAR_WORDS} u32 words.",

@@ -387,11 +387,7 @@ pub fn pipeline_cache_snapshot() -> PipelineCacheSnapshot {
 
 pub(super) fn resident_syntax_key(source: &[u8]) -> ResidentSyntaxKey {
     ResidentSyntaxKey {
-        len: u64::try_from(source.len()).unwrap_or_else(|_| {
-            panic!(
-                "vyre-frontend-c resident syntax source length exceeds u64. Fix: shard resident syntax input before caching."
-            )
-        }),
+        len: u64::try_from(source.len()).unwrap_or(u64::MAX),
         hash: blake3_128(source),
     }
 }
@@ -438,21 +434,17 @@ pub(super) fn insert_resident_syntax_cache_with_limits(
     let entry_bytes = resident_syntax_entry_bytes(&prepared);
     if max_entries == 0 || entry_bytes > max_bytes {
         if let Some(old) = cache.entries.remove(&key) {
-            cache.bytes = cache.bytes.checked_sub(resident_syntax_entry_bytes(&old.prepared)).unwrap_or_else(|| {
-                panic!(
-                    "vyre-frontend-c resident syntax cache byte accounting underflowed during oversize replacement. Fix: repair cache accounting before relying on memory limits."
-                )
-            });
+            cache.bytes = cache
+                .bytes
+                .saturating_sub(resident_syntax_entry_bytes(&old.prepared));
         }
         cache.stats.rejected_oversized = cache.stats.rejected_oversized.saturating_add(1);
         return;
     }
     if let Some(old) = cache.entries.remove(&key) {
-        cache.bytes = cache.bytes.checked_sub(resident_syntax_entry_bytes(&old.prepared)).unwrap_or_else(|| {
-            panic!(
-                "vyre-frontend-c resident syntax cache byte accounting underflowed during replacement. Fix: repair cache accounting before relying on memory limits."
-            )
-        });
+        cache.bytes = cache
+            .bytes
+            .saturating_sub(resident_syntax_entry_bytes(&old.prepared));
     }
     while cache.len() >= max_entries
         || cache.bytes.checked_add(entry_bytes).unwrap_or(usize::MAX) > max_bytes
@@ -467,20 +459,12 @@ pub(super) fn insert_resident_syntax_cache_with_limits(
         };
         if let Some(evicted) = cache.entries.remove(&evict_key) {
             let evicted_bytes = resident_syntax_entry_bytes(&evicted.prepared);
-            cache.bytes = cache.bytes.checked_sub(evicted_bytes).unwrap_or_else(|| {
-                panic!(
-                    "vyre-frontend-c resident syntax cache byte accounting underflowed during eviction. Fix: repair cache accounting before relying on memory limits."
-                )
-            });
+            cache.bytes = cache.bytes.saturating_sub(evicted_bytes);
             cache.stats.evictions = cache.stats.evictions.saturating_add(1);
         }
     }
     let last_access = cache.next_epoch();
-    cache.bytes = cache.bytes.checked_add(entry_bytes).unwrap_or_else(|| {
-        panic!(
-            "vyre-frontend-c resident syntax cache byte accounting overflowed during insert. Fix: reduce cache size or shard resident syntax entries."
-        )
-    });
+    cache.bytes = cache.bytes.saturating_add(entry_bytes);
     cache.entries.insert(
         key,
         ResidentSyntaxCacheEntry {

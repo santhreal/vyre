@@ -62,3 +62,27 @@ fn escaped_symbols_are_valid_smt_identifiers() {
 
     assert!(smt.contains("(declare-fun |loop index| () (_ BitVec 32))"));
 }
+
+#[test]
+fn invalid_sort_combinations_are_rejected_before_smt_emission() {
+    let bool_expr = ProofExpr::bool(true);
+    let bv_expr = ProofExpr::bv(1, 32);
+
+    let invalid_bvadd = std::panic::catch_unwind(|| {
+        let _ = ProofExpr::bvadd(bool_expr.clone(), bv_expr.clone());
+    });
+    assert_eq!(
+        invalid_bvadd.is_err(),
+        true,
+        "bit-vector operators must reject boolean operands"
+    );
+
+    let invalid_equivalence = std::panic::catch_unwind(|| {
+        let _ = RewriteProofObligation::equivalence("bad_sort", [], bool_expr, bv_expr);
+    });
+    assert_eq!(
+        invalid_equivalence.is_err(),
+        true,
+        "rewrite obligations must reject mismatched before/after sorts"
+    );
+}

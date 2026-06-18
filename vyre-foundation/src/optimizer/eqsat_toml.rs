@@ -108,7 +108,7 @@ impl TomlEquivalenceRules {
     /// parse failure. Schema-version mismatch returns
     /// `std::io::ErrorKind::InvalidData`.
     pub fn load(name: &'static str, path: &Path) -> std::io::Result<Self> {
-        let text = std::fs::read_to_string(path)?;
+        let text = read_eqsat_toml_bounded(path)?;
         Self::from_toml_str(name, &text)
     }
 
@@ -151,6 +151,35 @@ impl TomlEquivalenceRules {
     /// Iterate the loaded rules in declaration order.
     pub fn iter(&self) -> impl Iterator<Item = &EquivalenceRule> {
         self.rules.iter()
+    }
+}
+
+const MAX_EQSAT_TOML_RULE_BYTES: u64 = 4 * 1024 * 1024;
+
+fn read_eqsat_toml_bounded(path: &Path) -> std::io::Result<String> {
+    let mut reader = std::fs::File::open(path)?;
+    let mut bytes = Vec::new();
+    let mut total = 0u64;
+    let mut chunk = [0u8; 8192];
+    loop {
+        let read = std::io::Read::read(&mut reader, &mut chunk)?;
+        if read == 0 {
+            return String::from_utf8(bytes).map_err(|error| {
+                std::io::Error::new(std::io::ErrorKind::InvalidData, error)
+            });
+        }
+        let read = read as u64;
+        total = total.saturating_add(read);
+        if total > MAX_EQSAT_TOML_RULE_BYTES {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!(
+                    "eqsat TOML `{}` exceeds {MAX_EQSAT_TOML_RULE_BYTES} byte rule cap",
+                    path.display()
+                ),
+            ));
+        }
+        bytes.extend_from_slice(&chunk[..read as usize]);
     }
 }
 

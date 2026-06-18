@@ -412,11 +412,7 @@ impl BodyCtx<'_> {
         Ok(self.emit_index_reg_in_bounds_pred(binding_slot, raw_idx))
     }
 
-    pub(super) fn emit_index_reg_in_bounds_pred(
-        &mut self,
-        binding_slot: u32,
-        raw_idx: Reg,
-    ) -> Reg {
+    pub(super) fn emit_index_reg_in_bounds_pred(&mut self, binding_slot: u32, raw_idx: Reg) -> Reg {
         let len_reg = self.ensure_buffer_length_reg(binding_slot);
         let in_bounds = self.alloc(PtxType::Bool);
         let _ = writeln!(

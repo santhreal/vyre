@@ -1,0 +1,40 @@
+# Actions dependency pinning policy for VX-1102, VX-1107, and VX-1112.
+# Third-party action pinning, reusable workflow trust, script injection controls, and action audit ownership share one policy.
+
+schema = "vyre.cicd.actions_dependency_pinning_policy.v1"
+owner = "security_reliability"
+evidence_tokens = ["GITHUB_ACTIONS_SECURE_USE", "OPENSSF_SCORECARD", "SLSA_PROVENANCE"]
+
+required_fields = [
+  "dependency_class",
+  "pinning_policy",
+  "source_review_policy",
+  "update_policy",
+  "script_injection_policy",
+  "reusable_workflow_policy",
+  "allowlist_authority",
+  "publication_gate",
+  "diagnostic",
+]
+
+[[dependency]]
+dependency_class = "third-party-action"
+pinning_policy = "pin-to-full-length-commit-sha"
+source_review_policy = "audit-action-source-before-introducing-release-or-secret-access"
+update_policy = "updates-require-new-source-review-and-digest-change-record"
+script_injection_policy = "untrusted-context-never-concatenated-directly-into-run-script"
+reusable_workflow_policy = "external-reusable-workflows-require-explicit-signer-repository-and-workflow-record"
+allowlist_authority = "PLAN_ARTIFACT_AUTHORITY_MAP.toml"
+publication_gate = "FINAL_RELEASE_GATE_MANIFEST.toml"
+diagnostic = "VYRE_ACTION_DEPENDENCY_PINNING_REQUIRED"
+
+[[dependency]]
+dependency_class = "first-party-public-vyre-workflow"
+pinning_policy = "protected-branch-or-protected-tag-reference-only"
+source_review_policy = "workflow-changes-owned-by-public-repository-governance"
+update_policy = "workflow-change-invalidates-release-gate-attestation"
+script_injection_policy = "shell-steps-use-quoted-env-and-typed-input-validation"
+reusable_workflow_policy = "reusable-workflow-runs-under-public-vyre-repository-identity"
+allowlist_authority = "PUBLIC_REPOSITORY_IDENTITY_GOVERNANCE.toml"
+publication_gate = "REPOSITORY_RULESET_RELEASE_PROTECTION.toml"
+diagnostic = "VYRE_FIRST_PARTY_WORKFLOW_PINNING_OK"

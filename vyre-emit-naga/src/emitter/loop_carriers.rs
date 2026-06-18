@@ -177,11 +177,9 @@ impl BodyBuilder<'_> {
         id: u32,
         init_handle: &naga::Handle<Expression>,
     ) -> naga::Handle<LocalVariable> {
-        if let Some(local) = self.block_scoped_locals.get(&id).copied() {
-            return local;
-        }
-        // Constrain block-scoped local to a canonical scalar type only.
-        // The naïve `value_types.get(&id).unwrap_or(u32_ty)` fallback
+        // Decide the canonical scalar type for THIS binding FIRST (the cache
+        // reuse below depends on it). Constrain to a canonical scalar type
+        // only: the naïve `value_types.get(&id).unwrap_or(u32_ty)` fallback
         // returned non-scalar handles (atomic / array / struct) when the
         // vyre op produced them, and naga rejects `LocalVariable` of
         // those types with `InvalidType`. Default to u32 in the
@@ -200,6 +198,20 @@ impl BodyBuilder<'_> {
             Some(naga::ScalarKind::Uint) => self.types.u32_ty,
             _ => value_types_scalar.unwrap_or(self.types.u32_ty),
         };
+        // Reuse the cached local ONLY when its type matches the type required
+        // now. Lowering reuses an SSA id across sibling blocks for values of a
+        // *different* scalar kind (e.g. a Bool comparison result, then later a
+        // u32 state word in an NFA-scan shader). Returning the stale-typed local
+        // makes the caller's coerced Store validate as `InvalidStoreTypes`
+        // whenever the scalar-kind heuristic can't re-derive the value's kind
+        // (coerce_value_to_type then no-ops, leaving a u32 value stored into a
+        // bool local). This mirrors `allocate_carrier_local`'s re-typing guard.
+        // Repro: a 2-byte NFA literal (`num_states == 4`) before this guard.
+        if let Some(local) = self.block_scoped_locals.get(&id).copied() {
+            if self.function.local_variables[local].ty == ty {
+                return local;
+            }
+        }
         let local = self.function.local_variables.append(
             LocalVariable {
                 name: Some(format!("vyre_block_scope_{id}")),

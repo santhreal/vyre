@@ -1,0 +1,37 @@
+# Command execution boundary for VX-941 through VX-944.
+# Process spawning, shell avoidance, argument construction, environment, cwd, and diagnostics share one policy.
+
+schema = "vyre.injection.command_execution_boundary.v1"
+owner = "security_reliability"
+evidence_tokens = ["OWASP_OS_COMMAND_INJECTION", "CWE_78_OS_COMMAND_INJECTION"]
+
+required_fields = [
+  "boundary_id",
+  "operation_class",
+  "shell_policy",
+  "argv_policy",
+  "environment_policy",
+  "cwd_policy",
+  "stdin_policy",
+  "diagnostic",
+]
+
+[[boundary]]
+boundary_id = "release-tool-invocation"
+operation_class = "fixed-program-with-structured-arguments"
+shell_policy = "never-invoke-through-shell"
+argv_policy = "predeclared-argument-schema-no-string-joining"
+environment_policy = "allowlisted-environment-only-no-secrets"
+cwd_policy = "validated-workspace-or-temp-root"
+stdin_policy = "bounded-bytes-no-control-protocol"
+diagnostic = "VYRE_COMMAND_EXECUTION_BOUNDARY_REFUSED"
+
+[[boundary]]
+boundary_id = "benchmark-helper-invocation"
+operation_class = "fixed-local-helper"
+shell_policy = "never-invoke-through-shell"
+argv_policy = "typed-argv-builder"
+environment_policy = "minimal-env-with-explicit-overrides"
+cwd_policy = "repo-relative-or-temp-root"
+stdin_policy = "closed-unless-test-fixture-declares-input"
+diagnostic = "VYRE_COMMAND_ARGUMENT_POLICY_REFUSED"

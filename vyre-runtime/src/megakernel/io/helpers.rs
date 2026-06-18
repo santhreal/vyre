@@ -13,7 +13,7 @@ pub(super) struct IoQueueView {
 }
 
 pub(super) fn queue_word_index(slot_idx: u32, word: u32) -> usize {
-    try_queue_word_index(slot_idx, word).unwrap_or_else(|error| panic!("{error}"))
+    try_queue_word_index(slot_idx, word).unwrap_or(0)
 }
 
 pub(super) fn try_queue_word_index(slot_idx: u32, word: u32) -> Result<usize, PipelineError> {

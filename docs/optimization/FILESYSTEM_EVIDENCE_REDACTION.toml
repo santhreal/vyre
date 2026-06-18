@@ -1,0 +1,37 @@
+# Filesystem evidence redaction for VX-915 through VX-918.
+# Path diagnostics, archive member names, permissions, and race evidence use one public/private-safe contract.
+
+schema = "vyre.filesystem.evidence_redaction.v1"
+owner = "security_reliability"
+evidence_tokens = ["OWASP_PATH_TRAVERSAL", "RFC_9457_PROBLEM_DETAILS", "NIST_PRIVACY_FRAMEWORK"]
+
+required_fields = [
+  "evidence_id",
+  "raw_fields",
+  "redacted_fields",
+  "path_classification",
+  "publication_class",
+  "operator_error",
+  "retention_policy",
+  "report_link",
+]
+
+[[evidence]]
+evidence_id = "blocked-path-traversal"
+raw_fields = ["input_path", "canonical_parent", "allowed_root", "file_kind"]
+redacted_fields = ["input_path", "canonical_parent", "private-root-prefix"]
+path_classification = "private-or-operator-supplied"
+publication_class = "local-only-nonpublished-doc"
+operator_error = "STRUCTURED_ERROR_PROBLEM_DETAILS.toml"
+retention_policy = "DATA_RETENTION_MEDIA_CONTROLS.toml"
+report_link = "OPERATOR_REPORTING_INTERCHANGE.toml"
+
+[[evidence]]
+evidence_id = "archive-member-refusal"
+raw_fields = ["archive_id", "member_name", "expanded_size", "compression_ratio", "diagnostic"]
+redacted_fields = ["member_name-if-private-or-secret-like"]
+path_classification = "archive-member-path"
+publication_class = "redacted-public-summary-or-local-only"
+operator_error = "STRUCTURED_ERROR_PROBLEM_DETAILS.toml"
+retention_policy = "DATA_RETENTION_MEDIA_CONTROLS.toml"
+report_link = "OPERATOR_REPORTING_INTERCHANGE.toml"

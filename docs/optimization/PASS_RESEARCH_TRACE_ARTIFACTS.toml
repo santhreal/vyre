@@ -1,0 +1,39 @@
+# Pass research trace artifacts for VX-683.
+# Optimizer pass decisions carry hypothesis, comparator, metrics, falsification, and selected decision.
+
+schema = "vyre.optimizer.pass_research_trace.v1"
+owner = "foundation_optimizer"
+evidence_tokens = ["MLIR_PASS", "MLIR_TRANSFORM"]
+
+required_fields = [
+  "source_key",
+  "hypothesis",
+  "comparator",
+  "measured_metric",
+  "falsification_result",
+  "selected_pass_decision",
+]
+
+[[trace]]
+source_key = "mlir-transform-fusion"
+hypothesis = "fusing adjacent scan predicates reduces memory traffic"
+comparator = "unfused-scan-pipeline"
+measured_metric = "dram_bytes_per_input_byte"
+falsification_result = "not-falsified-on-corpus-a"
+selected_pass_decision = "selected"
+
+[[trace]]
+source_key = "mlir-vector-unroll"
+hypothesis = "larger unroll improves verifier throughput"
+comparator = "baseline-unroll-factor"
+measured_metric = "verifier_candidates_per_second"
+falsification_result = "falsified-by-register-pressure"
+selected_pass_decision = "rejected"
+
+[[trace]]
+source_key = "dead-pass-no-capability"
+hypothesis = "target feature required for async copy pass"
+comparator = "target-capability-record"
+measured_metric = "capability-availability"
+falsification_result = "capability-missing"
+selected_pass_decision = "skipped"

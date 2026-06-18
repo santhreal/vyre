@@ -1,0 +1,54 @@
+# Command topology stability contracts own replay shape equivalence; backend-specific graph/update files own native API details.
+
+schema = "vyre.driver.command_topology_stability_contracts.v1"
+owner = "driver_shared"
+evidence_tokens = ["CUDA_GRAPHS", "VULKAN_COMMAND_BUFFERS", "WEBGPU_COMMAND_BUFFERS", "METAL_INDIRECT_COMMAND_BUFFERS"]
+
+required_fields = [
+  "topology_id",
+  "backend_surfaces",
+  "command_shape_policy",
+  "resource_identity_policy",
+  "parameter_update_policy",
+  "invalidation_policy",
+  "synchronization_dependency_policy",
+  "output_equivalence_policy",
+  "authority_links",
+  "diagnostic",
+]
+
+[[topology]]
+topology_id = "scan-dispatch-stable-topology"
+backend_surfaces = ["cuda-graph-exec", "vulkan-primary-command-buffer", "wgpu-command-template", "metal-indirect-command-buffer"]
+command_shape_policy = "kernel-sequence-pipeline-layout-dispatch-grid-copy-edges-and-readback-edges-share-one-topology-digest"
+resource_identity_policy = "buffer-device-address-or-binding-layout-identity-must-match-replay-key-or-force-reencode"
+parameter_update_policy = "CUDA-node-parameter-update-allowed-only-for-topology-identical-graphs-WGPU-reencodes-command-buffer-objects-from-template"
+invalidation_policy = "pipeline-layout-resource-shape-workgroup-count-copy-range-or-output-slab-change-invalidates-replay-key"
+synchronization_dependency_policy = "visibility-edge-from-HOST_DEVICE_VISIBILITY_POLICY-and-barrier-edge-from-GPU_BARRIER_SCOPE_MATRIX-required-before-adopt"
+output_equivalence_policy = "replay-output-digest-and-output-slab-epoch-match-plain-dispatch-baseline-before-speed-claim"
+authority_links = ["CUDA_GRAPH_UPDATE_EVIDENCE.toml", "WGPU_COMMAND_REUSE_CLASSIFIER.toml", "HOST_DEVICE_VISIBILITY_POLICY.toml", "GPU_BARRIER_SCOPE_MATRIX.toml", "OUTPUT_SLAB_PROVENANCE.toml"]
+diagnostic = "VYRE_COMMAND_TOPOLOGY_STABILITY_REQUIRED"
+
+[[topology]]
+topology_id = "multi-pass-output-readback-topology"
+backend_surfaces = ["cuda-host-graph", "vulkan-secondary-command-buffer-chain", "wgpu-encoder-finish-submit", "metal-icb-plus-command-buffer"]
+command_shape_policy = "producer-dispatch-copy-readback-and-reporting-consumer-edges-share-one-ordered-topology-digest"
+resource_identity_policy = "output-slab-byte-range-readback-buffer-and-staging-resource-identities-recorded-per-replay"
+parameter_update_policy = "readback-offset-or-size-change-is-parameter-update-only-when-copy-topology-and-resource-hazards-stay-equivalent"
+invalidation_policy = "readback-byte-range-output-format-resource-lifetime-or-host-map-policy-change-requires-new-topology-digest"
+synchronization_dependency_policy = "device-write-to-host-read-completion-edge-required-for-each-replay-instance"
+output_equivalence_policy = "reported-bytes-line-count-rule-count-and-output-digest-equal-nonreplay-baseline"
+authority_links = ["HOST_DEVICE_VISIBILITY_POLICY.toml", "OUTPUT_SLAB_PROVENANCE.toml", "CROSS_SIGNAL_AUDIT_CORRELATION.toml", "GPU_BARRIER_VERIFICATION_EVIDENCE.toml"]
+diagnostic = "VYRE_REPLAY_READBACK_TOPOLOGY_REQUIRED"
+
+[[topology]]
+topology_id = "resident-hot-shape-command-topology"
+backend_surfaces = ["persistent-megakernel", "cuda-device-graph", "vulkan-command-buffer-reuse", "metal-gpu-encoded-icb"]
+command_shape_policy = "hot-shape-admission-records-repeated-dispatch-shape-without-moving-scheduler-ownership-from-runtime-megakernel"
+resource_identity_policy = "resident-queue-slot-input-slab-output-slab-and-autotune-cache-epoch-share-one-replay-key"
+parameter_update_policy = "device-side-launch-or-indirect-execution-may-update bounded parameters only when resident-protocol-epoch-matches"
+invalidation_policy = "scheduler-policy-tenant-quota-backpressure-or-resident-protocol-change-blocks-command-replay-adoption"
+synchronization_dependency_policy = "runtime-publication-order-and-host-device-visibility-records-required-before replay-observation-is-trusted"
+output_equivalence_policy = "replay-path-must-match-detection-findings-and-timing-envelope-for-same-input-digest"
+authority_links = ["BACKPRESSURE_QUEUE_QUOTA_POLICY.toml", "MEMORY_ORDERING_ATOMIC_CONTRACTS.toml", "PROFILE_TRACE_METRIC_CORRELATION_POLICY.toml", "STATISTICAL_REGRESSION_GATES.toml"]
+diagnostic = "VYRE_RESIDENT_REPLAY_TOPOLOGY_REQUIRED"

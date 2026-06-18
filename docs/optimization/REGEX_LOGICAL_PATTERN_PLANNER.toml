@@ -1,0 +1,85 @@
+schema_version = 1
+
+planner_id = "regex-logical-pattern-planner:v1"
+
+required_operators = [
+  "and",
+  "or",
+  "not",
+  "ordered_dependency",
+]
+
+required_routes = [
+  "separate_scans_plus_combine",
+  "automata_product",
+  "derivative_product",
+]
+
+required_metrics = [
+  "output_parity",
+  "state_growth",
+  "active_ns",
+  "dependency_semantics",
+  "refusal_reason",
+]
+
+[[operator]]
+operator_id = "and"
+dependency_semantics = "all-child-patterns-match"
+requires_match_id_join = true
+requires_negative_evidence = false
+evidence_path = "vyre-libs/tests/regex_logical_pattern_planner.rs"
+
+[[operator]]
+operator_id = "or"
+dependency_semantics = "any-child-pattern-matches"
+requires_match_id_join = false
+requires_negative_evidence = false
+evidence_path = "vyre-libs/tests/regex_logical_pattern_planner.rs"
+
+[[operator]]
+operator_id = "not"
+dependency_semantics = "left-match-without-right-match"
+requires_match_id_join = true
+requires_negative_evidence = true
+evidence_path = "vyre-libs/tests/regex_logical_pattern_planner.rs"
+
+[[operator]]
+operator_id = "ordered_dependency"
+dependency_semantics = "child-patterns-match-in-declared-order"
+requires_match_id_join = true
+requires_negative_evidence = false
+evidence_path = "vyre-libs/tests/regex_logical_pattern_planner.rs"
+
+[[route]]
+route_id = "separate_scans_plus_combine"
+comparator = "automata_product"
+state_growth_policy = "linear-in-child-pattern-count"
+parity_required = true
+evidence_path = "vyre-libs/tests/regex_logical_pattern_planner.rs"
+
+[[route]]
+route_id = "automata_product"
+comparator = "separate_scans_plus_combine"
+state_growth_policy = "bounded-product-state-count"
+parity_required = true
+evidence_path = "vyre-libs/tests/regex_logical_pattern_planner.rs"
+
+[[route]]
+route_id = "derivative_product"
+comparator = "automata_product"
+state_growth_policy = "bounded-derivative-state-count"
+parity_required = true
+evidence_path = "vyre-libs/tests/regex_logical_pattern_planner.rs"
+
+[[refusal]]
+reason_id = "state_growth_exceeded"
+diagnostic_code = "VYRE_SCAN_LOGICAL_STATE_GROWTH_EXCEEDED"
+fix = "Use separate scans plus combine or split the logical pattern set."
+evidence_path = "vyre-libs/tests/regex_logical_pattern_planner.rs"
+
+[[refusal]]
+reason_id = "negative_evidence_missing"
+diagnostic_code = "VYRE_SCAN_LOGICAL_NEGATIVE_EVIDENCE_REQUIRED"
+fix = "Keep negative evidence for NOT patterns or reject the logical route."
+evidence_path = "vyre-libs/tests/regex_logical_pattern_planner.rs"

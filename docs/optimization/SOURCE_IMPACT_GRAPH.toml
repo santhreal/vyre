@@ -1,0 +1,31 @@
+# Source-impact graph for VX-697.
+# Plan rows connect VX id, touched path, owner lane, proof gate, benchmark target, and supersession status.
+
+schema = "vyre.plan.source_impact_graph.v1"
+owner = "coordination"
+evidence_tokens = ["MLIR_PASS", "CODEQL_FLOW"]
+
+required_fields = [
+  "vx_id",
+  "touched_path",
+  "owner_lane",
+  "proof_gate",
+  "benchmark_target",
+  "superseded_rows",
+]
+
+[[edge]]
+vx_id = "VX-681"
+touched_path = "docs/optimization/SHARED_EMITTER_ARTIFACT_SCHEMA.toml"
+owner_lane = "lower_emit"
+proof_gate = "vyre-libs/tests/shared_emitter_artifact_schema.rs"
+benchmark_target = "emitter-artifact-parity"
+superseded_rows = []
+
+[[edge]]
+vx_id = "VX-699"
+touched_path = "docs/optimization/REPO_BOUNDARY_PUBLICATION_CHECKS.toml"
+owner_lane = "coordination"
+proof_gate = "conform/vyre-conform-enforce/tests/plan_boundary_governance.rs"
+benchmark_target = "not-applicable"
+superseded_rows = []

@@ -1,0 +1,46 @@
+# Set-domain selector for VX-665.
+# Facts, graph ids, findings, and suppression filters choose one representation by density and churn.
+
+schema = "vyre.set_domain.selector.v1"
+owner = "graph_flow_compiler"
+evidence_tokens = ["ROARING", "GRAPHBLAS"]
+
+representations = [
+  "bitset",
+  "roaring",
+  "dense_vector",
+  "sparse_matrix",
+]
+
+required_fields = [
+  "domain_id",
+  "density",
+  "churn",
+  "selected_representation",
+  "selection_reason",
+  "operation_contracts",
+]
+
+[[domain]]
+domain_id = "finding-suppression-filter"
+density = "sparse"
+churn = "low"
+selected_representation = "roaring"
+selection_reason = "sparse-stable-set"
+operation_contracts = ["intersection", "union", "difference"]
+
+[[domain]]
+domain_id = "dense-node-reachability"
+density = "dense"
+churn = "medium"
+selected_representation = "bitset"
+selection_reason = "dense-fast-intersection"
+operation_contracts = ["intersection", "union", "difference"]
+
+[[domain]]
+domain_id = "sparse-adjacency-filter"
+density = "very_sparse"
+churn = "high"
+selected_representation = "sparse_matrix"
+selection_reason = "matrix-mask-reuse"
+operation_contracts = ["intersection", "union", "difference"]

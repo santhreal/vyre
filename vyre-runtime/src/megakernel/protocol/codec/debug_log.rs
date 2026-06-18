@@ -4,22 +4,16 @@ use super::{DebugRecord, ProtocolError};
 /// Decode PRINTF records out of the debug-log buffer.
 #[must_use]
 pub fn read_debug_log(debug_bytes: &[u8]) -> Vec<DebugRecord> {
-    try_read_debug_log(debug_bytes).unwrap_or_else(|source| {
-        panic!(
-            "megakernel debug-log decode failed: {source}. Fix: use a complete debug-log readback produced by the matching megakernel protocol encoder."
-        )
-    })
+    try_read_debug_log(debug_bytes).unwrap_or_default()
 }
 
 /// Decode PRINTF records into caller-owned storage.
 ///
 /// Clears `out`, then reuses its allocation.
 pub fn read_debug_log_into(debug_bytes: &[u8], out: &mut Vec<DebugRecord>) {
-    try_read_debug_log_into(debug_bytes, out).unwrap_or_else(|source| {
-        panic!(
-            "megakernel debug-log decode failed: {source}. Fix: use a complete debug-log readback produced by the matching megakernel protocol encoder."
-        )
-    });
+    if try_read_debug_log_into(debug_bytes, out).is_err() {
+        out.clear();
+    }
 }
 
 /// Strictly decode PRINTF records out of the debug-log buffer.

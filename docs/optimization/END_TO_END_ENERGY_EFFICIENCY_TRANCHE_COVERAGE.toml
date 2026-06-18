@@ -1,0 +1,36 @@
+# This tranche adds power, thermal, energy, carbon, and cost-efficiency governance while reusing metrics, profiling, capacity, rollout, SLO, runbook, and publication authorities.
+
+schema = "vyre.coverage.energy_efficiency_tranche.v1"
+tranche = "VX-1401..VX-1420"
+owner = "performance_efficiency"
+evidence_tokens = ["NVIDIA_DCGM_POWER_PROFILES", "NVIDIA_NVML_DEVICE_POWER", "NVIDIA_DCGM_PROFILING_GROUPS", "LINUX_POWERCAP_RAPL", "GREEN_SOFTWARE_SCI", "KEPLER_ENERGY_EXPORTER", "OPENTELEMETRY_HARDWARE_SEMCONV"]
+
+required_links = [
+  "power_thermal_telemetry_contracts",
+  "energy_efficiency_regression_policy",
+  "carbon_cost_efficiency_accounting_policy",
+  "power_cap_throttle_response_policy",
+  "metrics_exposition_contracts",
+  "continuous_profiling_coverage",
+  "capacity_autoscaling_coverage",
+  "optimization_experiment_design_coverage",
+  "operational_readiness_coverage",
+  "staged_rollout_coverage",
+  "publication_boundary",
+  "dedup_seam",
+  "proof_gate",
+]
+
+power_thermal_telemetry_contracts = "POWER_THERMAL_TELEMETRY_CONTRACTS.toml"
+energy_efficiency_regression_policy = "ENERGY_EFFICIENCY_REGRESSION_POLICY.toml"
+carbon_cost_efficiency_accounting_policy = "CARBON_COST_EFFICIENCY_ACCOUNTING_POLICY.toml"
+power_cap_throttle_response_policy = "POWER_CAP_THROTTLE_RESPONSE_POLICY.toml"
+metrics_exposition_contracts = "METRICS_EXPOSITION_CONTRACTS.toml"
+continuous_profiling_coverage = "END_TO_END_CONTINUOUS_PROFILING_TRANCHE_COVERAGE.toml"
+capacity_autoscaling_coverage = "END_TO_END_CAPACITY_AUTOSCALING_TRANCHE_COVERAGE.toml"
+optimization_experiment_design_coverage = "END_TO_END_OPTIMIZATION_EXPERIMENT_DESIGN_TRANCHE_COVERAGE.toml"
+operational_readiness_coverage = "END_TO_END_OPERATIONAL_READINESS_TRANCHE_COVERAGE.toml"
+staged_rollout_coverage = "END_TO_END_STAGED_ROLLOUT_TRANCHE_COVERAGE.toml"
+publication_boundary = "PUBLICATION_BOUNDARY_CLASSIFICATION.toml"
+dedup_seam = "energy-efficiency-owns-power-thermal-energy-carbon-cost-class-and-throttle-response-evidence-while-metrics-profiling-capacity-experiment-rollout-SLO-runbook-and-publication-registries-remain-source-authorities"
+proof_gate = "conform/vyre-conform-enforce/tests/energy_efficiency_governance.rs"

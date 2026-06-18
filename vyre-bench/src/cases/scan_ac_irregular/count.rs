@@ -451,6 +451,7 @@ fn dispatch_resident_count_sequence(
         program: &prepared.reset_program,
         resources: &reset_resources,
         grid_override: Some([1, 1, 1]),
+        workgroup_override: None,
     };
     let scan_step = ResidentDispatchStep {
         program: &prepared.program,
@@ -460,6 +461,7 @@ fn dispatch_resident_count_sequence(
             1,
             1,
         ]),
+        workgroup_override: None,
     };
     let read_ranges = [ResidentReadRange {
         resource: &scan_resources[COUNT_MATCH_COUNT_INPUT_INDEX],

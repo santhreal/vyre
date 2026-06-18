@@ -70,6 +70,7 @@ use rustc_hash::FxHashMap;
     boundary_class = "abi_preserving",
     cost_model_family = "scalar"
 )]
+/// ABI-preserving reaching-definition propagation pass for unique literal let bindings.
 pub struct ReachingDefPropagatePass;
 
 impl ReachingDefPropagatePass {
@@ -549,10 +550,10 @@ mod tests {
     #[test]
     fn analyze_skips_program_with_no_eligible_lets() {
         let entry = vec![Node::store("buf", Expr::u32(0), Expr::u32(1))];
-        match crate::optimizer::ProgramPass::analyze(&ReachingDefPropagatePass, &program(entry)) {
-            PassAnalysis::SKIP => {}
-            other => panic!("expected SKIP, got {other:?}"),
-        }
+        assert!(matches!(
+            crate::optimizer::ProgramPass::analyze(&ReachingDefPropagatePass, &program(entry)),
+            PassAnalysis::SKIP
+        ));
     }
 
     /// Positive end-to-end: `transform` produces the same result as

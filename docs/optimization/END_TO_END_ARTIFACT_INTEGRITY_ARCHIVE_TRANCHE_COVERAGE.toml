@@ -1,0 +1,37 @@
+# End-to-end artifact integrity, consumer verification, anti-rollback metadata, and source archive durability coverage for VX-1161 through VX-1180.
+# This tranche connects existing provenance, SBOM, reproducible build, release workflow, and final gate authorities to durable consumer verification.
+
+schema = "vyre.release.artifact_integrity_archive_tranche_coverage.v1"
+owner = "coordination"
+evidence_tokens = ["GITHUB_IMMUTABLE_RELEASES", "CARGO_REGISTRY_INDEX_CHECKSUM", "SIGSTORE_COSIGN_VERIFY", "SLSA_VERIFIER", "TUF_SPECIFICATION", "SOFTWARE_HERITAGE_DEPOSIT"]
+
+required_fields = [
+  "coverage_id",
+  "vx_id_range",
+  "release_artifact_integrity_index",
+  "consumer_artifact_verification_protocol",
+  "release_metadata_anti_rollback_policy",
+  "source_archive_durability_map",
+  "public_release_supply_chain_provenance",
+  "reproducible_build_release_attestation",
+  "release_workflow_attestation_policy",
+  "final_release_gate_manifest",
+  "publication_boundary",
+  "dedup_seam",
+  "proof_gate",
+]
+
+[[coverage]]
+coverage_id = "artifact-integrity-archive-end-to-end"
+vx_id_range = "VX-1161..VX-1180"
+release_artifact_integrity_index = "RELEASE_ARTIFACT_INTEGRITY_INDEX.toml"
+consumer_artifact_verification_protocol = "CONSUMER_ARTIFACT_VERIFICATION_PROTOCOL.toml"
+release_metadata_anti_rollback_policy = "RELEASE_METADATA_ANTI_ROLLBACK_POLICY.toml"
+source_archive_durability_map = "SOURCE_ARCHIVE_DURABILITY_MAP.toml"
+public_release_supply_chain_provenance = "PUBLIC_RELEASE_SUPPLY_CHAIN_PROVENANCE.toml"
+reproducible_build_release_attestation = "REPRODUCIBLE_BUILD_RELEASE_ATTESTATION.toml"
+release_workflow_attestation_policy = "RELEASE_WORKFLOW_ATTESTATION_POLICY.toml"
+final_release_gate_manifest = "FINAL_RELEASE_GATE_MANIFEST.toml"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+dedup_seam = "integrity-index-consumer-verification-anti-rollback-metadata-and-source-archive-durability-extend-existing-provenance-authorities-without-replacing-them"
+proof_gate = "conform/vyre-conform-enforce/tests/artifact_integrity_archive_governance.rs"

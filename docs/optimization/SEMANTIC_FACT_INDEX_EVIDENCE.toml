@@ -1,0 +1,71 @@
+[artifact]
+id = "SEMANTIC_FACT_INDEX_EVIDENCE"
+title = "Semantic fact index evidence policy"
+tranche = "VX-1581..VX-1600"
+owner = "scanner_frontends"
+status = "planned_contract"
+research_sources = [
+  "SCIP_CODE_INTELLIGENCE_PROTOCOL",
+  "LSP_SEMANTIC_TOKENS_3_17",
+  "SOUFFLE_RELATIONS",
+  "CODEQL_DATA_FLOW_ANALYSIS",
+]
+
+[scope]
+owns = [
+  "semantic fact index performance and correctness metrics",
+  "fact reuse rejection reason accounting",
+  "dataflow delta and fixpoint evidence",
+  "public-safe fact index diagnostics",
+  "handoff evidence to profiling, statistics, output provenance, and dogfood loops",
+]
+does_not_own = [
+  "benchmark trace storage, owned by BENCHMARK_PROFILING_CAPTURE_POLICY",
+  "pass/fail statistics, owned by STATISTICAL_PERFORMANCE_GATES",
+  "reported findings schema, owned by OUTPUT_SLAB_SCHEMA_PROVENANCE",
+  "dogfood finding lifecycle, owned by DOGFOOD_FINDING_LOOP",
+]
+
+[required_per_run]
+fields = [
+  "fact_index_epoch",
+  "semantic_schema_digest",
+  "language_profiles",
+  "base_facts_total",
+  "derived_facts_total",
+  "symbols_total",
+  "references_total",
+  "calls_total",
+  "flow_nodes_total",
+  "flow_edges_total",
+  "base_fact_delta_count",
+  "derived_fact_delta_count",
+  "relation_strata_recomputed",
+  "fixpoint_iterations",
+  "reuse_candidates",
+  "reuse_admitted",
+  "reuse_rejected",
+  "bytes_avoided",
+  "scan_work_avoided",
+  "false_reuse_count",
+]
+
+[required_per_rejection]
+fields = [
+  "relation_name",
+  "fact_key_digest",
+  "rejection_reason",
+  "affected_rule_id",
+  "symbol_id_or_unknown",
+  "dependency_graph_epoch",
+  "operator_fix",
+]
+
+[metrics]
+performance = ["fact_extraction_ns", "relation_delta_ns", "fixpoint_ns", "join_cardinality", "cache_hit_ratio", "bytes_avoided"]
+correctness = ["false_reuse_count", "unknown_symbol_count", "unresolved_relation_count", "stale_fact_suppression_count"]
+operator = ["top_rejection_reason", "largest_relation_delta", "largest_fixpoint_component", "fact_schema_mismatch_count"]
+
+[publication]
+public_fields = ["language_id", "fact_kind", "relation_name", "rejection_reason", "confidence", "operator_fix"]
+private_fields = ["raw_symbol_spelling", "raw_path", "source_excerpt", "Santh root", "workspace hostname", "private registry URL"]

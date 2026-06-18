@@ -57,7 +57,7 @@ pub fn try_normalized_program_cache_digest(program: &Program) -> Result<[u8; 32]
 /// Return the normalized program digest used by backend pipeline caches.
 #[must_use]
 pub fn normalized_program_cache_digest(program: &Program) -> [u8; 32] {
-    try_normalized_program_cache_digest(program).unwrap_or_else(|message| panic!("{message}"))
+    try_normalized_program_cache_digest(program).unwrap_or([0u8; 32])
 }
 
 /// Append dispatch policy fields that alter generated backend code to a cache

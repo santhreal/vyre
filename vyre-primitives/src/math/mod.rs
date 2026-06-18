@@ -170,6 +170,9 @@ pub mod bigint_add_carry;
 /// dataflow fixpoint, #39 Scallop-join provenance semiring).
 pub mod semiring_gemm;
 
+/// Sparse-kernel selector evidence for library comparisons.
+pub mod sparse_selector;
+
 /// Bellman-Ford shortest path primitive over an edge list. Composes
 /// `persistent_fixpoint`. Self-consumer: tensor-network contraction order.
 pub mod bellman_shortest_path;

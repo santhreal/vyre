@@ -1,0 +1,55 @@
+# Source archive durability map for VX-1166, VX-1168, VX-1176, and VX-1177.
+# Public source tags, crate package archives, registry checksums, Software Heritage identifiers, and private-boundary exclusions share one archive durability seam.
+
+schema = "vyre.release.source_archive_durability_map.v1"
+owner = "coordination"
+evidence_tokens = ["SOFTWARE_HERITAGE_DEPOSIT", "CARGO_REGISTRY_INDEX_CHECKSUM", "GITHUB_IMMUTABLE_RELEASES", "SLSA_PROVENANCE"]
+
+required_fields = [
+  "archive_id",
+  "source_surface",
+  "persistent_identifier",
+  "source_tag_policy",
+  "package_archive_policy",
+  "swhid_policy",
+  "crate_checksum_policy",
+  "retention_policy",
+  "private_boundary_policy",
+  "diagnostic",
+]
+
+[[archive]]
+archive_id = "public-vyre-source-tag"
+source_surface = "santhsecurity/vyre-git-tag"
+persistent_identifier = "public-repository-url-tag-commit-and-optional-SWHID"
+source_tag_policy = "protected-public-release-tag-matches-provenance-source-tag"
+package_archive_policy = "crate-package-archive-links-to-public-source-tag-and-package-contents"
+swhid_policy = "Software-Heritage-identifier-recorded-when-public-source-archive-is-captured"
+crate_checksum_policy = "registry-index-sha256-checksum-links-package-version-to-archive-record"
+retention_policy = "public-source-archive-retained-with-release-metadata-bundle"
+private_boundary_policy = "Santh-and-santhsecurity-Santh-private-or-backup-roots-excluded"
+diagnostic = "VYRE_PUBLIC_SOURCE_ARCHIVE_DURABLE"
+
+[[archive]]
+archive_id = "public-crate-package-archive"
+source_surface = "crates-io-package-download"
+persistent_identifier = "crate-name-version-registry-index-checksum"
+source_tag_policy = "package-source-tag-link-required-in-release-metadata"
+package_archive_policy = "downloaded-crate-archive-digest-matches-registry-index-checksum"
+swhid_policy = "SWHID-links-source-tree-not-private-worktree"
+crate_checksum_policy = "sha256-checksum-is-consumer-verification-input"
+retention_policy = "package-archive-permanence-and-yank-state-recorded-in-crates-io-policy"
+private_boundary_policy = "crate-package-contents-checked-against-publication-boundary"
+diagnostic = "VYRE_CRATE_PACKAGE_ARCHIVE_DURABLE"
+
+[[archive]]
+archive_id = "private-local-evidence-exclusion"
+source_surface = "local-private-Santh-worktree"
+persistent_identifier = "not-public"
+source_tag_policy = "not-release-authority"
+package_archive_policy = "not-public-package-source"
+swhid_policy = "no-private-worktree-deposit-or-public-SWHID"
+crate_checksum_policy = "not-applicable"
+retention_policy = "DATA_RETENTION_MEDIA_CONTROLS.toml"
+private_boundary_policy = "excluded-from-public-release-artifact-index"
+diagnostic = "VYRE_PRIVATE_SOURCE_ARCHIVE_EXCLUDED"

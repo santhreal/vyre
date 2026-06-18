@@ -1,0 +1,64 @@
+[artifact]
+id = "INCREMENTAL_DATAFLOW_FACT_REUSE_POLICY"
+title = "Incremental dataflow fact reuse policy"
+tranche = "VX-1581..VX-1600"
+owner = "scanner_frontends"
+status = "planned_contract"
+research_sources = [
+  "CODEQL_DATA_FLOW_ANALYSIS",
+  "SOUFFLE_RELATIONS",
+  "BLAKE3_SPEC",
+]
+
+[scope]
+owns = [
+  "base-fact delta to derived-fact invalidation policy",
+  "relation-level reuse admission for semantic flow analysis",
+  "local, global, and taint flow fact boundaries",
+  "join-key and stratum digest evidence",
+  "false-reuse and over-invalidation accounting for dataflow facts",
+]
+does_not_own = [
+  "language dependency edge extraction, owned by LANGUAGE_DEPENDENCY_EDGE_MATRIX",
+  "cross-file traversal policy, owned by CROSS_FILE_INVALIDATION_PROPAGATION_POLICY",
+  "low-level optimizer dataflow programs, owned by ROADMAP.md P6",
+  "GPU graph/dataflow execution policy, owned by primitives_graph and libs_dataflow ownership seams",
+  "statistical release gates, owned by STATISTICAL_PERFORMANCE_GATES",
+]
+
+[flow_classes]
+local_flow = "within-function or within-scope value propagation; reuse is invalidated by changed statements, symbols, types, or local control dependencies"
+global_flow = "interprocedural or cross-file propagation; reuse is invalidated by changed call edges, parameter bindings, return flows, or dependency graph reachability"
+taint_flow = "source-to-sink propagation with sanitizer state; reuse is invalidated by source, sink, sanitizer, call, or guard changes"
+control_flow = "branch and guard facts; reuse is invalidated by predicate, dominance, or exceptional-control changes"
+
+[reuse_admission]
+required = [
+  "semantic_schema_digest matches",
+  "relation_schema_digest matches",
+  "extractor_binary_digest matches",
+  "rule_set_digest matches",
+  "base_fact_delta is known",
+  "dependency_graph_epoch is compatible",
+  "symbol_reference_stability is proven",
+]
+reject_when = [
+  "unknown symbol identity affects a relation",
+  "dynamic call target set changed",
+  "unresolved import/include edge reaches a consumer",
+  "sanitizer definition changed",
+  "source or sink definition changed",
+  "relation stratum dependency changed",
+]
+
+[delta_fixpoint]
+base_delta = "inserted, removed, or changed base facts are recorded with relation name, key digest, old value digest, and new value digest"
+derived_delta = "derived facts are recomputed only for affected relation strata unless a dependency-cycle or unknown edge forces wider invalidation"
+join_policy = "join keys and relation cardinalities are recorded so a small delta cannot hide an O(n squared) recompute path"
+cycle_policy = "cyclic relation strata are invalidated as a component and report fixpoint iteration count"
+
+[truth_requirements]
+positive = "unchanged symbols and unchanged base facts admit derived relation reuse with identical findings"
+negative = "changed source, sink, sanitizer, call target, type, or control dependency rejects affected flow reuse"
+adversarial = "dynamic dispatch, reflection, macro expansion, generated code, unresolved dependency edges, and alias uncertainty block unsafe reuse"
+cross_file = "provider and consumer files, relation keys, source node, sink node, sanitizer state, rule id, and output bytes are asserted by proving fixtures"

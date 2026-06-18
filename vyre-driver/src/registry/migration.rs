@@ -304,11 +304,10 @@ impl MigrationRegistry {
         REGISTRY.get_or_init(|| {
             let migration_count = inventory::iter::<Migration>().count();
             let mut forward = FxHashMap::default();
-            vyre_foundation::allocation::try_reserve_hash_map_to_capacity(&mut forward, migration_count).unwrap_or_else(|error| {
-                panic!(
-                    "Vyre migration registry could not reserve {migration_count} migration slot(s): {error}. Fix: split registry initialization or reduce linked migration inventory."
-                )
-            });
+            let _ = vyre_foundation::allocation::try_reserve_hash_map_to_capacity(
+                &mut forward,
+                migration_count,
+            );
             let migrations = inventory::iter::<Migration>();
             for m in migrations {
                 forward.insert((m.from.0, m.from.1), m);
@@ -319,11 +318,7 @@ impl MigrationRegistry {
                 &mut deprecations,
                 deprecation_count,
             )
-            .unwrap_or_else(|error| {
-                    panic!(
-                        "Vyre migration registry could not reserve {deprecation_count} deprecation slot(s): {error}. Fix: split registry initialization or reduce linked deprecation inventory."
-                    )
-                });
+            .ok();
             let deprecation_defs = inventory::iter::<Deprecation>();
             for d in deprecation_defs {
                 deprecations.insert(d.op_id, d);

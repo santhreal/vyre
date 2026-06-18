@@ -164,7 +164,6 @@ Status values:
 | `current` | 2026-05-26 | 2026-05-26 | [docs/vyre-libs-features.md](vyre-libs-features.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/VYRE_BENCH_META_HARNESS_PRD.md](VYRE_BENCH_META_HARNESS_PRD.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/wire-format-0.6-reservations.md](wire-format-0.6-reservations.md) |
-| `current` | 2026-05-26 | 2026-05-26 | [docs/wire-format-v1.md](wire-format-v1.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/wire-format.md](wire-format.md) |
 | `generated` | 2026-05-26 | 2026-05-26 | [docs/generated/OP_INVENTORY.md](generated/OP_INVENTORY.md) |
 | `generated` | 2026-05-26 | 2026-05-26 | [docs/generated/README.md](generated/README.md) |

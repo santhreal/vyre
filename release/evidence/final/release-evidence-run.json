@@ -1,11 +1,11 @@
 {
-  "schema_version": 2,
-  "total_commands": 13,
-  "successful_commands": 11,
-  "command_failures": 2,
+  "schema_version": 3,
+  "total_commands": 14,
+  "successful_commands": 14,
+  "command_failures": 0,
   "artifact_failures": 0,
-  "command_count": 13,
-  "required_command_count": 13,
+  "command_count": 14,
+  "required_command_count": 14,
   "report_only_command_count": 0,
   "commands": [
     {
@@ -42,128 +42,254 @@
         {
           "path": "release/evidence/docs/docs-matrix.json",
           "exists": true,
-          "bytes": 14126,
-          "read_error": null
+          "bytes": 14209,
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask docs-matrix",
+          "content_sha256": "0b74d905d87ed629f572567a6b7c7316d81a1596e1d65b409b0e65c3241f6b82",
+          "source_fingerprint": "release-evidence-source:v1:1702cf542a7b6d79cfe1e24b77d780cd8e7eba086fb463b04c3f98f2432de597",
+          "freshness_fingerprint": "release-evidence-freshness:v1:56e52663bb8262fbde9d43fc066224c2d02338097cf1383f88bec3a37b52e060",
+          "blockers": []
         },
         {
           "path": "release/evidence/docs/vyre-readme-contracts.json",
           "exists": true,
           "bytes": 432,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask docs-matrix",
+          "content_sha256": "b0e5e58a20dd275aa375f77b87328843d4c6fb5a780507a58115bc8f0984dbf7",
+          "source_fingerprint": "release-evidence-source:v1:495d0cc3c5e4857d8ccf4c4091fb3b241d7acbffdc6420c06dfa018605d24259",
+          "freshness_fingerprint": "release-evidence-freshness:v1:c39e0b16d65c769ebfa93139be780bd49db2c16b9bd909428f32ce8cfb3ac131",
+          "blockers": []
         },
         {
           "path": "release/evidence/docs/release-notes-version-story.md",
           "exists": true,
           "bytes": 2196,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask docs-matrix",
+          "content_sha256": "fe533ccb6de073a6a512f2681484a0c43dde7fa504a35382cb27da1f6cdbf52b",
+          "source_fingerprint": "release-evidence-source:v1:95896488b31ec6e8c0f1b0ee6b542ed0bf6b1f394ba41ac5474697df35ff9005",
+          "freshness_fingerprint": "release-evidence-freshness:v1:6a8c50a9c1e38ba7c0bba897910fd844033e70f1c637f731ca7840b6e13558d8",
+          "blockers": []
         },
         {
           "path": "release/evidence/docs/cuda-release-path.md",
           "exists": true,
           "bytes": 3195,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask docs-matrix",
+          "content_sha256": "b9b134255eeef29b980b9edb12e13a24d1d8b23f4eab5d12b1c2d02fb92c5afa",
+          "source_fingerprint": "release-evidence-source:v1:9e00772855bc82ff8c5cf30a0e2af941e5792e6c5a4219ba25e19d96f522d5a7",
+          "freshness_fingerprint": "release-evidence-freshness:v1:190c825ba0be69f45a1b6d007fe8128ded9344a9dffe43d461601df8c88e27bb",
+          "blockers": []
         },
         {
           "path": "release/evidence/docs/wgpu-fallback-proof.md",
           "exists": true,
           "bytes": 1412,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask docs-matrix",
+          "content_sha256": "0a643296310b6e71a1aa224fcb26e0a74b3ecae61f5db369b6bca8d0be64d6b3",
+          "source_fingerprint": "release-evidence-source:v1:4681cd54826240edb69bf91f0aad947932ac018e2acfdd076883307a080b4591",
+          "freshness_fingerprint": "release-evidence-freshness:v1:4ce7d8c1efdbb22b9b763374e6ff2fbb117b3fb55f5ee9943227dd7c625980c3",
+          "blockers": []
         },
         {
           "path": "release/evidence/docs/megakernel-default-proof.md",
           "exists": true,
           "bytes": 2173,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask docs-matrix",
+          "content_sha256": "9c55c92f46cde3705823f292f101e735c42d70a4046872fbdcf71861c9a06fd8",
+          "source_fingerprint": "release-evidence-source:v1:ef00fc6f56f76af89ee3f5162b265c9394ac5549bb2caa11434528a3e76a120d",
+          "freshness_fingerprint": "release-evidence-freshness:v1:67abff6fef34dd98eb18bcb768b218e34fe78e48563d6aedb08124d9198d20be",
+          "blockers": []
         },
         {
           "path": "release/evidence/docs/optimization-proof.md",
           "exists": true,
           "bytes": 3851,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask docs-matrix",
+          "content_sha256": "77e8d71f026d66a4df12129a74e84a6fe11d3569ce507ae5756f50b26c207894",
+          "source_fingerprint": "release-evidence-source:v1:dccd1606f01f105426bec64bd82ef2c80e253724e21f09815df289e8292bc949",
+          "freshness_fingerprint": "release-evidence-freshness:v1:64ac5f036dce63a5eab38a02a6a2dd44a3c1c2b10404b2cb7c5fc85f6acf40d3",
+          "blockers": []
         },
         {
           "path": "release/evidence/docs/egraph-saturation.md",
           "exists": true,
           "bytes": 969,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask docs-matrix",
+          "content_sha256": "45fccf6a759444dc50a52abebdf443e9d2390acaa947492312655ba62e98538d",
+          "source_fingerprint": "release-evidence-source:v1:3bed569871c8bab3131253b5b9593194cda0322765c1be0757c4c5ec69b2a313",
+          "freshness_fingerprint": "release-evidence-freshness:v1:c85665fcc5adcc403109351a0e73a3264c2dc12a9252a0b4080c4d8a4b64e2fd",
+          "blockers": []
         },
         {
           "path": "release/evidence/docs/c-parser-linux-proof.md",
           "exists": true,
           "bytes": 2795,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask docs-matrix",
+          "content_sha256": "93107208fee60743c8a0ab6aa7409068ac42a7cb44f1bb04b64a31b27459a473",
+          "source_fingerprint": "release-evidence-source:v1:a95e31526760afb0b9094e7782f79d3359a47bf1c3eee55194a977e8916c1309",
+          "freshness_fingerprint": "release-evidence-freshness:v1:9021791165f1ddb18647db68274fe2b40b7657255481f47bda96e225a6625677",
+          "blockers": []
         },
         {
           "path": "release/evidence/docs/distributed-parser-coherence.md",
           "exists": true,
           "bytes": 1881,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask docs-matrix",
+          "content_sha256": "823e488cadc319115f998dfa98ba68e05f25cdea89ff55b487a4bf091a836212",
+          "source_fingerprint": "release-evidence-source:v1:77f4fc21b592d14593183854ec455793b3074131da0a8d0679af803b3f11c67c",
+          "freshness_fingerprint": "release-evidence-freshness:v1:5391c2b56dfa54ca3fb2beaa883edbfaeb19c552a683a9067ba01b4ed0781b07",
+          "blockers": []
         },
         {
           "path": "release/evidence/docs/weir-integration.md",
           "exists": true,
-          "bytes": 1972,
-          "read_error": null
+          "bytes": 1976,
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask docs-matrix",
+          "content_sha256": "2592a91b61b8058c028bd15e997602018473ae049d522c65ae0d57d403fa7aa2",
+          "source_fingerprint": "release-evidence-source:v1:a66808176da3c37a3eb042c10517a0336bc41b0f97ce7515feecf0bf4e194baf",
+          "freshness_fingerprint": "release-evidence-freshness:v1:2e7ca8bea1b3d6fea7c1a5ea780022ed5f4276f66a262c32e333a95b3e485d03",
+          "blockers": []
         },
         {
           "path": "release/evidence/docs/test-architecture.md",
           "exists": true,
           "bytes": 1700,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask docs-matrix",
+          "content_sha256": "bb1131e62673ccac30bdba7df9ece1ccdfe8717c997914e388df805707f7b1cb",
+          "source_fingerprint": "release-evidence-source:v1:b0c7ed41e1b53319b13f36ac86a1cd768cf98a37e94263cdc5949c13f77ccb32",
+          "freshness_fingerprint": "release-evidence-freshness:v1:b80bfc2fd82d4370bdfef7328b4892a2e8b945d0d893fee84fb4cf8b8ab3ffac",
+          "blockers": []
         },
         {
           "path": "release/evidence/docs/vyre-readme-proof.md",
           "exists": true,
           "bytes": 896,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask docs-matrix",
+          "content_sha256": "16ac7c4a517b76b7dc4236cdfc786a13557c861616183b7117a65e2b2604d2fc",
+          "source_fingerprint": "release-evidence-source:v1:d52475d2baca52e0ced079825195d20297d5e8dcc42937746342d91047144a57",
+          "freshness_fingerprint": "release-evidence-freshness:v1:f275b73d9b97cfd7363dd0e127e9574ec2c766f437854dcb9071fed2686d7b26",
+          "blockers": []
         },
         {
           "path": "release/evidence/docs/weir-readme-proof.md",
           "exists": true,
           "bytes": 724,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask docs-matrix",
+          "content_sha256": "cb45e18250d92a07fa08c3332e09914ef9626328abfc7c53fd8ed48636ed0f0a",
+          "source_fingerprint": "release-evidence-source:v1:9acd5ef67057ad0e253d154d5f866e92e3e54436f7b7229b998806ecca5da966",
+          "freshness_fingerprint": "release-evidence-freshness:v1:6f117f3367e86aacd59973cef8ac8187e47479e59dadcf234157e50944d7fb00",
+          "blockers": []
         },
         {
           "path": "release/evidence/docs/parser-doc-proof.md",
           "exists": true,
           "bytes": 943,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask docs-matrix",
+          "content_sha256": "10a4912c4fb72d21813f7b6caf68569b05358387b906ea8ecd86578c6e7b4e51",
+          "source_fingerprint": "release-evidence-source:v1:640633e42a145a9763972a44ea5290ff601c8e897f270472aa02cc0d4b3ee58c",
+          "freshness_fingerprint": "release-evidence-freshness:v1:570c22fd1249ad0453842040907f7bb368a137e4108e8772e28ee76ffe8e1b9c",
+          "blockers": []
         },
         {
           "path": "release/evidence/docs/benchmark-doc-proof.md",
           "exists": true,
           "bytes": 3019,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask docs-matrix",
+          "content_sha256": "c8fd1f0d2bc49b6678404ce6feba0cc371606876a8873d4715a2aa56070ddc41",
+          "source_fingerprint": "release-evidence-source:v1:b3bc47f0fdf108c01f861b7cd32888cb5803682952b7fcdce630a01576561f31",
+          "freshness_fingerprint": "release-evidence-freshness:v1:c162cc7ff9b67a64b704366e759b503144368d0ccbca680a2291cb7c707e4f47",
+          "blockers": []
         },
         {
           "path": "release/evidence/docs/conformance-doc-proof.md",
           "exists": true,
-          "bytes": 4200,
-          "read_error": null
+          "bytes": 4519,
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask docs-matrix",
+          "content_sha256": "1ab283cc8f0524eb544e2a33b446fe9d2c7a4e5f42b51d1a2319da6f92e7bcde",
+          "source_fingerprint": "release-evidence-source:v1:29a817e61eaeccaa6a14bce21854e2c51d5b0d56df8404a8147c5a11c392b18e",
+          "freshness_fingerprint": "release-evidence-freshness:v1:7643f40281940ef5e5e55fba648b574b7ccc793cf9b7451aef2450b0b56778f7",
+          "blockers": []
         },
         {
           "path": "release/evidence/docs/release-notes.md",
           "exists": true,
           "bytes": 1315,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask docs-matrix",
+          "content_sha256": "9fb7837271d91e56a97df71babf3e13431d245d135f4c6227c5309c7b716b6c8",
+          "source_fingerprint": "release-evidence-source:v1:8eee371591ee9e7ef1ae0ec0a2525c0bf14960800131547a1cfe52dccc6ca17f",
+          "freshness_fingerprint": "release-evidence-freshness:v1:f23502f64e93939f7af8b2d0a7b2aeb4e748039e2eb6b768f45ca25d649694c6",
+          "blockers": []
         },
         {
           "path": "release/evidence/docs/crate-metadata-proof.md",
           "exists": true,
           "bytes": 2111,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask docs-matrix",
+          "content_sha256": "1a08ccb858584fa44ff33042da69bbe3a205b6bda1088c31f6da998d0efd307b",
+          "source_fingerprint": "release-evidence-source:v1:242fa72644b3b878fd850f6ec84109f13f3caec1a968831dd573c49fd7d9fab7",
+          "freshness_fingerprint": "release-evidence-freshness:v1:66fd58f1741e0020b92da0381379f473441142217d98d9b38114ea4e2720ce4b",
+          "blockers": []
         },
         {
           "path": "release/evidence/docs/release-hygiene-proof.md",
           "exists": true,
           "bytes": 3387,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask docs-matrix",
+          "content_sha256": "548399add274bf5afb1604cd01b1c9db9ff6e18d4d0938b8d2b9111d47215ba6",
+          "source_fingerprint": "release-evidence-source:v1:0b7651ca542a4b486ec9dd5c00e52a86486d9d578ee85d1edc56d99de10d07c0",
+          "freshness_fingerprint": "release-evidence-freshness:v1:3bced7f4b4da8fe4f88e9e9560b281e9d3779ce28d979ac15d898340321459ec",
+          "blockers": []
         },
         {
           "path": "release/evidence/docs/cpu-only-100x-proof.md",
           "exists": true,
           "bytes": 3100,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask docs-matrix",
+          "content_sha256": "aacb9a4f32aa5cf8eb2e8ecb4d3d22c428abe8d245326cb1a5a319e2c54913dc",
+          "source_fingerprint": "release-evidence-source:v1:febf8f131a424e2032965679e1b6d824169dbb2eec32e3669e04300ef32f6d89",
+          "freshness_fingerprint": "release-evidence-freshness:v1:24f15e57b8554a253961a127050f9c3b96d5e1e6bb83c0b0226a6189c90953cb",
+          "blockers": []
         }
       ]
     },
@@ -182,14 +308,26 @@
         {
           "path": "release/evidence/version/version-matrix.json",
           "exists": true,
-          "bytes": 22717,
-          "read_error": null
+          "bytes": 37261,
+          "read_error": null,
+          "owner_lane": "coordination",
+          "generator_command": "xtask version-matrix",
+          "content_sha256": "2e5b479905ea90eed535028a13eeced0f930958d49e45cbda1bead74b7d4b6e4",
+          "source_fingerprint": "release-evidence-source:v1:fca6227813920f3cf4569cb43f7213a6898317dffb6330cf443c510b36e989ca",
+          "freshness_fingerprint": "release-evidence-freshness:v1:cbe16e6a40de627dba1beb372b152994aa1dfd528026929d06ffee57df985025",
+          "blockers": []
         },
         {
           "path": "release/evidence/version/release-tag-plan.json",
           "exists": true,
           "bytes": 1193,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "coordination",
+          "generator_command": "xtask version-matrix",
+          "content_sha256": "2598ba6e9acb0ed7580ff89b51d5ca0e79f5c0a0f0ed3f6d2f8be7b45a711ae5",
+          "source_fingerprint": "release-evidence-source:v1:d650dadb8358d831da3e4173a530a12cce6734bd381d7f4a89048d7773ae964f",
+          "freshness_fingerprint": "release-evidence-freshness:v1:10913f2d10984a0afd11840129a8bb5f89790c72b4bb62005b19fda9441ed0b9",
+          "blockers": []
         }
       ]
     },
@@ -207,8 +345,14 @@
         {
           "path": "release/evidence/backends/backend-matrix.json",
           "exists": true,
-          "bytes": 13256,
-          "read_error": null
+          "bytes": 13254,
+          "read_error": null,
+          "owner_lane": "driver_shared",
+          "generator_command": "xtask backend-matrix",
+          "content_sha256": "ca095a52fe3c9d6ff68e0c31c5c940bc1a1f55ae921413cd6152d6f42ebca30b",
+          "source_fingerprint": "release-evidence-source:v1:bce90a22dfef846f3db2d1190f50d4698c62604c82b14681236115008d409fb7",
+          "freshness_fingerprint": "release-evidence-freshness:v1:27b0bc5fe0ceb329b8b45dd2e681305e08d9466324edcf8c058a10b4c346ad44",
+          "blockers": []
         }
       ]
     },
@@ -226,8 +370,14 @@
         {
           "path": "release/evidence/conformance/conformance-matrix.json",
           "exists": true,
-          "bytes": 229787,
-          "read_error": null
+          "bytes": 2945711,
+          "read_error": null,
+          "owner_lane": "driver_shared",
+          "generator_command": "xtask conformance-matrix",
+          "content_sha256": "4cc6eeab4bdab5147cf598dc864cf5ce16dddc43b0de5bca7d6367889e6c1460",
+          "source_fingerprint": "release-evidence-source:v1:6c58f16f6b2ac9be9a427dec30c7abaa4df8c9671c20754747b98c617034060d",
+          "freshness_fingerprint": "release-evidence-freshness:v1:26f2a38325dc86d8c594977c7700d23ec2302fbfcf028bf09f14769248ab2115",
+          "blockers": []
         }
       ]
     },
@@ -246,8 +396,14 @@
         {
           "path": "release/evidence/benchmarks/release-workload-matrix.json",
           "exists": true,
-          "bytes": 26425,
-          "read_error": null
+          "bytes": 26673,
+          "read_error": null,
+          "owner_lane": "bench_harness",
+          "generator_command": "xtask release-workload-matrix --enforce",
+          "content_sha256": "faecb41bd4091df87ea660ddd1d71081475503bf113bba0d35ed78510562b453",
+          "source_fingerprint": "release-evidence-source:v1:7797a23b0999db76934ef3c65994b402a0c5c7eb1f488aebb26de0828c1e399f",
+          "freshness_fingerprint": "release-evidence-freshness:v1:2a5663704c564bdb17438c91bc9ea84eb1d89d866f684b8871500455d85654db",
+          "blockers": []
         }
       ]
     },
@@ -258,6 +414,7 @@
       "required": true,
       "expected_artifacts": [
         "release/evidence/hygiene/hygiene-matrix.json",
+        "release/evidence/hygiene/implementation-intake.json",
         "release/evidence/hygiene/no-stubs-scan.json",
         "release/evidence/hygiene/no-hidden-fallback-scan.json",
         "release/evidence/hygiene/resource-bound-scan.json",
@@ -267,62 +424,128 @@
         "release/evidence/hygiene/public-doc-scan.json",
         "release/evidence/hygiene/test-hygiene-scan.json"
       ],
-      "status": "failed: exit status: 1",
-      "exit_code": 1,
+      "status": "success",
+      "exit_code": 0,
       "artifact_statuses": [
         {
           "path": "release/evidence/hygiene/hygiene-matrix.json",
           "exists": true,
-          "bytes": 404239,
-          "read_error": null
+          "bytes": 471079,
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask hygiene-matrix",
+          "content_sha256": "c784fcc27ab79eea67705822a4f4ac868f170b27ee426d18975382c99def5136",
+          "source_fingerprint": "release-evidence-source:v1:f2ed95c4568ae125c9f63f75ffd0c973b22a52fa6273acdeeb680a85e5cc97e5",
+          "freshness_fingerprint": "release-evidence-freshness:v1:246f2bd516a60f9c532c2e7aa82ab48dc62fc318e791334daa77da5ed4fe0889",
+          "blockers": []
+        },
+        {
+          "path": "release/evidence/hygiene/implementation-intake.json",
+          "exists": true,
+          "bytes": 9954,
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask hygiene-matrix",
+          "content_sha256": "a7e719f1bb3170ae11f5464dc6fd1237c304315bf4f7456991a862de0afcd79c",
+          "source_fingerprint": "release-evidence-source:v1:2f559ef068838d794108f4021b9ff56a0669e535b4e560d4b8be80c85b94a9f8",
+          "freshness_fingerprint": "release-evidence-freshness:v1:35a50627995bd4e20ce3475e0b8287d754344dfbf91229d7491794897f77446b",
+          "blockers": []
         },
         {
           "path": "release/evidence/hygiene/no-stubs-scan.json",
           "exists": true,
-          "bytes": 17917,
-          "read_error": null
+          "bytes": 17715,
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask hygiene-matrix",
+          "content_sha256": "8677ddde9b2e6718bcfafd6a987652cd1c8c927db936799604bb58b5385031d9",
+          "source_fingerprint": "release-evidence-source:v1:693b944417a14c9e9653013e334dab37f584b3239c6634ef6258731666084f5c",
+          "freshness_fingerprint": "release-evidence-freshness:v1:a1ccca3793313e9b0eb5cf8cafb5359ba8b57c60675782136cbb96da00b9b2be",
+          "blockers": []
         },
         {
           "path": "release/evidence/hygiene/no-hidden-fallback-scan.json",
           "exists": true,
-          "bytes": 430,
-          "read_error": null
+          "bytes": 129,
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask hygiene-matrix",
+          "content_sha256": "951d2a6731d54c1307c4af8fcf11f2c11b370b2b901f7bb183a272f00e2e2417",
+          "source_fingerprint": "release-evidence-source:v1:45ad26a692d3290bcfa393185f226f0b3ea6d7862fdd112518b3edb533c66aff",
+          "freshness_fingerprint": "release-evidence-freshness:v1:5e5d09a9813631a7bdba8261c813081261d1afc4975af415069bbd3a8f51ab87",
+          "blockers": []
         },
         {
           "path": "release/evidence/hygiene/resource-bound-scan.json",
           "exists": true,
-          "bytes": 9460,
-          "read_error": null
+          "bytes": 125,
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask hygiene-matrix",
+          "content_sha256": "58b2f50a8e2d395e1ea8ff8d550e0c5a168f6f3b3ecc0747042774739e489775",
+          "source_fingerprint": "release-evidence-source:v1:4a8dd6a00cb5474cbf7167d2a6fbc195613530fa91d645ce4c156c09c58c6ce3",
+          "freshness_fingerprint": "release-evidence-freshness:v1:a48ee2e455dc2b0edf82d4404d24d17079956780e0093c740b9de7f82dacd632",
+          "blockers": []
         },
         {
           "path": "release/evidence/hygiene/error-surface-scan.json",
           "exists": true,
-          "bytes": 203400,
-          "read_error": null
+          "bytes": 13154,
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask hygiene-matrix",
+          "content_sha256": "052983ae5f9d3a498d8b363b79f05c9b76d14723447b23260506d5efca4fe936",
+          "source_fingerprint": "release-evidence-source:v1:6710b3ca24a6f5edde136b4115f1cc75dbb465b6309b5efd5699534b0ebdf730",
+          "freshness_fingerprint": "release-evidence-freshness:v1:9421fa17b44641f3e0d1b95797ad2b68e8eb144e2b597fa38be654a00f0a4d0a",
+          "blockers": []
         },
         {
           "path": "release/evidence/hygiene/cargo-wrapper-scan.json",
           "exists": true,
-          "bytes": 14855,
-          "read_error": null
+          "bytes": 2381,
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask hygiene-matrix",
+          "content_sha256": "4a34d00992155517614c4711762098d1f2524e32724f64867221565f54862595",
+          "source_fingerprint": "release-evidence-source:v1:6867638d4738314b8cadc9b1ad9cb6a6117f984a426e75f5a9d1bec78bf6163b",
+          "freshness_fingerprint": "release-evidence-freshness:v1:975dac1999e4a317c4047f5a9442bed67c7d99d2a27cfb35977f0ae7c87e0b9a",
+          "blockers": []
         },
         {
           "path": "release/evidence/hygiene/audit-location-scan.json",
           "exists": true,
-          "bytes": 90,
-          "read_error": null
+          "bytes": 125,
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask hygiene-matrix",
+          "content_sha256": "4fb36c2cb6382a0cbff4233cd50841e648260c5f4700fc71d41f1d15665ccc23",
+          "source_fingerprint": "release-evidence-source:v1:7eac6eb1e1bd25000f48d0f0629269f664ba02ea357728ce15301da7efd9e763",
+          "freshness_fingerprint": "release-evidence-freshness:v1:ab08ec4abdd1fc9192bceef362b65fdbcb399963122cba027a15c693562bee95",
+          "blockers": []
         },
         {
           "path": "release/evidence/hygiene/public-doc-scan.json",
           "exists": true,
-          "bytes": 64362,
-          "read_error": null
+          "bytes": 65782,
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask hygiene-matrix",
+          "content_sha256": "c75ef6f103449727ea5033b646a640d7634d177d0f12940f41767164f724a212",
+          "source_fingerprint": "release-evidence-source:v1:ce2c71e7e237b40e605feeb1e2cac3801c70b767bb3dfa7971f6b58edc1eead8",
+          "freshness_fingerprint": "release-evidence-freshness:v1:1da2b584fa6c897b99029cd0c03270428d1a491509efd0d0d351dd37ae60132a",
+          "blockers": []
         },
         {
           "path": "release/evidence/hygiene/test-hygiene-scan.json",
           "exists": true,
-          "bytes": 91749,
-          "read_error": null
+          "bytes": 92127,
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask hygiene-matrix",
+          "content_sha256": "c0aaf781131916def0ad105a93686ca1dd955a5e4722287da44254acf66264a0",
+          "source_fingerprint": "release-evidence-source:v1:d156c54ffd1e13ee90b01a2e1af2a1e7b8c75019810fbc90ae8625013433aeee",
+          "freshness_fingerprint": "release-evidence-freshness:v1:1e595da19a3b4a5ed01ac483f9cb9086239a0a80ce0a73afc6a03160c80d3782",
+          "blockers": []
         }
       ]
     },
@@ -335,6 +558,8 @@
         "release/evidence/tests/test-matrix.json",
         "release/evidence/tests/modularization-map.json",
         "release/evidence/tests/oversized-test-closure.json",
+        "release/evidence/tests/modularity-findings.json",
+        "release/evidence/tests/risk-coverage.json",
         "release/evidence/tests/release-surface-suite-coverage.json",
         "release/evidence/tests/unit-suite.json",
         "release/evidence/tests/adversarial-suite.json",
@@ -345,80 +570,176 @@
         "release/evidence/tests/gap-suite.json",
         "release/evidence/tests/fuzz-suite.json"
       ],
-      "status": "failed: exit status: 1",
-      "exit_code": 1,
+      "status": "success",
+      "exit_code": 0,
       "artifact_statuses": [
         {
           "path": "release/evidence/tests/test-matrix.json",
           "exists": true,
-          "bytes": 53473,
-          "read_error": null
+          "bytes": 99657,
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask test-matrix",
+          "content_sha256": "bb65aaef61136d56b15f425d65d3345d409a10d5118d23a50c884b05f70005c1",
+          "source_fingerprint": "release-evidence-source:v1:22963395ef0fc703986d165a15844bcc42b8e3346dcea138716d931650f400e6",
+          "freshness_fingerprint": "release-evidence-freshness:v1:66d109794ac9ea51f2c623c157efed006c1d302bd0db29fe984127b5e518edad",
+          "blockers": []
         },
         {
           "path": "release/evidence/tests/modularization-map.json",
           "exists": true,
           "bytes": 3730,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask test-matrix",
+          "content_sha256": "701463cc6e1b3eabeab303e3bfc62dcabbebe14082ec9f998c34a34b3f080134",
+          "source_fingerprint": "release-evidence-source:v1:00770e2680e9783e78c6a00617232a8d05af1bd04bbb5b50d2c2f514fcf1c889",
+          "freshness_fingerprint": "release-evidence-freshness:v1:72480b2e38713672dbe66ed33782a1551a9f91f16324b0cb29152f7553d56f91",
+          "blockers": []
         },
         {
           "path": "release/evidence/tests/oversized-test-closure.json",
           "exists": true,
-          "bytes": 47871,
-          "read_error": null
+          "bytes": 235,
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask test-matrix",
+          "content_sha256": "096750ee7aedd5bd6d07e551c05311b7fb4ef56d9b964e0b0481a3a048842164",
+          "source_fingerprint": "release-evidence-source:v1:66cf6f4c31916d349c2e6d86cdfa770b5560127206c9d859b3278ff773a61b1f",
+          "freshness_fingerprint": "release-evidence-freshness:v1:19ed761b759d7e22929287f850accaaec77c478fb4e670c268f581595c4c0e11",
+          "blockers": []
+        },
+        {
+          "path": "release/evidence/tests/modularity-findings.json",
+          "exists": true,
+          "bytes": 127,
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask test-matrix",
+          "content_sha256": "45a97b1e2d3e5dfddc19cf5f22f27f405acec4540d29d9685b4326351dd77d6e",
+          "source_fingerprint": "release-evidence-source:v1:5129715acaa90bcdf043c7faadcacf4cbb4710414b08d83eba74c859b900f53c",
+          "freshness_fingerprint": "release-evidence-freshness:v1:27b0be3f1ed448cffcf52374ebeeaed77555736b48df50c0df1666bbe8c10f03",
+          "blockers": []
+        },
+        {
+          "path": "release/evidence/tests/risk-coverage.json",
+          "exists": true,
+          "bytes": 95724,
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask test-matrix",
+          "content_sha256": "efee3a43fa0cec1e287559f60e74613b1cc117c87130603dbeeba65e4e0909fb",
+          "source_fingerprint": "release-evidence-source:v1:4fa9cf3e79830421afb16fc6e3335e2f1a0b85bfb502b46b355c6a4e390b5575",
+          "freshness_fingerprint": "release-evidence-freshness:v1:8c0461e6cef22f807edce8d35145f64758d2ee43c69b823dae5074ccbf81dc4b",
+          "blockers": []
         },
         {
           "path": "release/evidence/tests/release-surface-suite-coverage.json",
           "exists": true,
-          "bytes": 1819,
-          "read_error": null
+          "bytes": 3215,
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask test-matrix",
+          "content_sha256": "afc44df13d0e46b7beb5b13ab5c54fbd3d7635ba5730f0ca2d81ae3456e41ac3",
+          "source_fingerprint": "release-evidence-source:v1:e28bd96d269e4c989940a554e9dbc5bf30315aa0744b20e3c187ea5438312d86",
+          "freshness_fingerprint": "release-evidence-freshness:v1:a175735133b6083a07ea11a8fde30427015d4fc685cbc96e577f39e5b47eb30a",
+          "blockers": []
         },
         {
           "path": "release/evidence/tests/unit-suite.json",
           "exists": true,
-          "bytes": 1550392,
-          "read_error": null
+          "bytes": 3483314,
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask test-matrix",
+          "content_sha256": "8566093f20f6cc0b08f6bf58bb5ed30791e0e6faa3a014ad945ae124d97a5254",
+          "source_fingerprint": "release-evidence-source:v1:67b522eedefd81a5c9e01b22aedeb654b71675928d5fb07d530e33a9c606b415",
+          "freshness_fingerprint": "release-evidence-freshness:v1:04198d38df5db8aa9ae6cac2e28ef943dfb072e9cdefb8d9928363b8a13f3752",
+          "blockers": []
         },
         {
           "path": "release/evidence/tests/adversarial-suite.json",
           "exists": true,
-          "bytes": 241429,
-          "read_error": null
+          "bytes": 541246,
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask test-matrix",
+          "content_sha256": "ac23afc0d896ef94481afd4a9843ee288b7e5745d337ae4fae1211f06657ef99",
+          "source_fingerprint": "release-evidence-source:v1:b9376b0bac53edc71fd7bae6222fb6b424563be605b734d2b53aa44afb1aa0c3",
+          "freshness_fingerprint": "release-evidence-freshness:v1:aed1ea7e380b60fabc44f649bb095cf82044e220c8d4e7c9a2f010b42e87d05e",
+          "blockers": []
         },
         {
           "path": "release/evidence/tests/property-suite.json",
           "exists": true,
-          "bytes": 104988,
-          "read_error": null
+          "bytes": 202456,
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask test-matrix",
+          "content_sha256": "b9070e64c5e1f8cb30702faf7477457f13cf927e3b1bb3415c9bd02da629ec7f",
+          "source_fingerprint": "release-evidence-source:v1:d460f3ec8a6ae88d7bb737ddc82390e3df6286dc672ca21795a488c20babb83e",
+          "freshness_fingerprint": "release-evidence-freshness:v1:3b51286793382112a7081807f46ce09cdaf9e2449f3acfaa37951c8af80b257b",
+          "blockers": []
         },
         {
           "path": "release/evidence/tests/conformance-suite.json",
           "exists": true,
-          "bytes": 447675,
-          "read_error": null
+          "bytes": 1010698,
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask test-matrix",
+          "content_sha256": "265e3288c599da5d4393cce90f7602dc291c294647ed6af7f15e2e95043ea3cd",
+          "source_fingerprint": "release-evidence-source:v1:fefa28df7b372c4de7e8bdcbca396ef999946032e572b7bbbdfc975e1f25033a",
+          "freshness_fingerprint": "release-evidence-freshness:v1:5c02c3e11df63b9afdafd1e450503ae8355526bd0b6c3979cfea4ff6e27d3b30",
+          "blockers": []
         },
         {
           "path": "release/evidence/tests/corpus-suite.json",
           "exists": true,
-          "bytes": 112589,
-          "read_error": null
+          "bytes": 256432,
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask test-matrix",
+          "content_sha256": "82d76c9730ef4439c51a2244b03034d8d714e2234fceef249bd070a5f2854c4c",
+          "source_fingerprint": "release-evidence-source:v1:b0bc978543560d0497fdd52c5796a357da4a4fa6e42a3db763ba5959bd8dd149",
+          "freshness_fingerprint": "release-evidence-freshness:v1:c123744d52967aa6edd1423fdb773d4f4f7033bd64b0c440ef236d57dcf52468",
+          "blockers": []
         },
         {
           "path": "release/evidence/tests/benchmark-suite.json",
           "exists": true,
-          "bytes": 1417978,
-          "read_error": null
+          "bytes": 3126492,
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask test-matrix",
+          "content_sha256": "60f89650a32c958f749e93a34ba4faac8e80a52e78254492e3a1148a6e6f03cd",
+          "source_fingerprint": "release-evidence-source:v1:8641d7752db2c28e45530d25f68b2534065aec1466dc3cd89f3a191bc0ad3e35",
+          "freshness_fingerprint": "release-evidence-freshness:v1:8fa91459cae59e92df94d81c476ed5ca542750b841d90b334d0db77fa8037e15",
+          "blockers": []
         },
         {
           "path": "release/evidence/tests/gap-suite.json",
           "exists": true,
-          "bytes": 20278,
-          "read_error": null
+          "bytes": 41982,
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask test-matrix",
+          "content_sha256": "072c914240a9fba8cc8bf8b2d14615f7dac0c2eee31b7b670071483b8b285680",
+          "source_fingerprint": "release-evidence-source:v1:fd0efaa6ee25f58f54099108593c73a643dbae309c4b0a193880679af16e69e6",
+          "freshness_fingerprint": "release-evidence-freshness:v1:ba3cb1b2e6651c4d1b4a9d5a9b8a2d31fdf9b5c467ad444b6fe490d5840cb1b6",
+          "blockers": []
         },
         {
           "path": "release/evidence/tests/fuzz-suite.json",
           "exists": true,
-          "bytes": 35263,
-          "read_error": null
+          "bytes": 80986,
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask test-matrix",
+          "content_sha256": "857a221c1cb1d8f693a6e7fcb231b2cf84716a54be38a288072946dc2ec6fbae",
+          "source_fingerprint": "release-evidence-source:v1:7183454321592d8529336c72bfa26a2c27729def01848a458b004e3f771e8dd8",
+          "freshness_fingerprint": "release-evidence-freshness:v1:4eb68584a6a307d97ffb92d5745ae9a596c36f36c1bffb1415feaa6baf56458d",
+          "blockers": []
         }
       ]
     },
@@ -436,8 +757,14 @@
         {
           "path": "release/evidence/metadata/metadata-matrix.json",
           "exists": true,
-          "bytes": 36985,
-          "read_error": null
+          "bytes": 38957,
+          "read_error": null,
+          "owner_lane": "coordination",
+          "generator_command": "xtask metadata-matrix",
+          "content_sha256": "c6d43a0c8d71d816e65cfd0ec85c174237880e34d91220b06bc7dba7b5139447",
+          "source_fingerprint": "release-evidence-source:v1:e6b621e4e024aad71d46ce925b42c646c12513b9e2f81f63175d923f860c43f5",
+          "freshness_fingerprint": "release-evidence-freshness:v1:2344fe855ec02b7c7e7c37bc4f1eec5c01ae3a833700fb957a2a449c7605cdd6",
+          "blockers": []
         }
       ]
     },
@@ -455,8 +782,14 @@
         {
           "path": "release/evidence/metadata/feature-matrix.json",
           "exists": true,
-          "bytes": 20711,
-          "read_error": null
+          "bytes": 21722,
+          "read_error": null,
+          "owner_lane": "coordination",
+          "generator_command": "xtask feature-matrix",
+          "content_sha256": "894d4eb371b4ccf5b07c62b793a873fbca3a2ee9dfadbd6ba24e4f3fae9e09f2",
+          "source_fingerprint": "release-evidence-source:v1:2b3956017453235544cd03a1786df1a4d42e43366e00de9c89e6aafb9427051b",
+          "freshness_fingerprint": "release-evidence-freshness:v1:63c603aaaa261c11a480244ae5caca61c97945eacac50e494311f817ab9bd14a",
+          "blockers": []
         }
       ]
     },
@@ -479,31 +812,61 @@
           "path": "release/evidence/optimization/optimization-corpus.json",
           "exists": true,
           "bytes": 1318,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "foundation_optimizer",
+          "generator_command": "xtask optimization-corpus",
+          "content_sha256": "0d6f6d445ce253d23600a1e5aba7fc300f8aad50301280564cc504590a0fc141",
+          "source_fingerprint": "release-evidence-source:v1:84a036dd97f4f24650fba2e13fe607a7f0449cf3940cbf64e686facfd4e9601a",
+          "freshness_fingerprint": "release-evidence-freshness:v1:bfc89d63741659bf7fce09294059345d3edec37c3efb9cf6f66bbfd68c07d9db",
+          "blockers": []
         },
         {
           "path": "release/evidence/optimization/optimization-corpus-contracts.json",
           "exists": true,
           "bytes": 322,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "foundation_optimizer",
+          "generator_command": "xtask optimization-corpus",
+          "content_sha256": "30714b24fe9cf37304be445831616f2430f81eaca293bc2ac5426d945c4ccb82",
+          "source_fingerprint": "release-evidence-source:v1:28be9d848037e839cff49328961fd8ab75dc15f1be6274690c10e55f4899b35a",
+          "freshness_fingerprint": "release-evidence-freshness:v1:4a14c9a537e1937f0aee262da0fbec3555bab5065f5b127c0b2d0da127b3dc8e",
+          "blockers": []
         },
         {
           "path": "release/evidence/optimization/optimization-family-manifest.json",
           "exists": true,
           "bytes": 1490,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "foundation_optimizer",
+          "generator_command": "xtask optimization-corpus",
+          "content_sha256": "31f4b42b97803cfff63dab4b4e7e60b625458a350d22b2bd3002a97ece7bb964",
+          "source_fingerprint": "release-evidence-source:v1:8fd00ad63712a460d1e9d0a75ab082ff6d87f09ac8212ec85eb84fce0d2c9345",
+          "freshness_fingerprint": "release-evidence-freshness:v1:1e3ff941fa0473a5f285549afa17842557bc08a876c107741e0b8e61d8a9de69",
+          "blockers": []
         },
         {
           "path": "release/evidence/optimization/optimization-analysis-fixtures.json",
           "exists": true,
           "bytes": 2116,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "foundation_optimizer",
+          "generator_command": "xtask optimization-corpus",
+          "content_sha256": "7eb432637da18139710603905da9018620499c0ef2a43539902090f79b814fbf",
+          "source_fingerprint": "release-evidence-source:v1:44ed2e24c56109237b800020033eb26bf97449106ccf63a2d4440acaeca6b2d8",
+          "freshness_fingerprint": "release-evidence-freshness:v1:2e8794d309d1afc4625d4f87261427cd674d9020820f0fb97cec7164953890b5",
+          "blockers": []
         },
         {
           "path": "release/evidence/optimization/optimization-case-manifest.json",
           "exists": true,
           "bytes": 2732788,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "foundation_optimizer",
+          "generator_command": "xtask optimization-corpus",
+          "content_sha256": "efcfe6146bb10252bc31c81f014503ea1a38e127f463f010da1b957fda1e8502",
+          "source_fingerprint": "release-evidence-source:v1:b421dbe3fb8e1d7b68a29ed3f6e5baa08a3b265e50c8b342a1fd3b31a214b1d7",
+          "freshness_fingerprint": "release-evidence-freshness:v1:bfd4904287d4a3a7a1bb4c32d49c3343f44570a4c73ba5d3297b37e66254cbd4",
+          "blockers": []
         }
       ]
     },
@@ -529,49 +892,97 @@
           "path": "release/evidence/optimization/optimization-integration-matrix.json",
           "exists": true,
           "bytes": 20463,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "foundation_optimizer",
+          "generator_command": "xtask optimization-matrix",
+          "content_sha256": "7bf1dbe046a0aa9853f0ed2efbde30eeefe4a52b60fc7b7aa5b98b185c83db1f",
+          "source_fingerprint": "release-evidence-source:v1:0df77232ce4ea2235d58d9d912ec978a806dd18f66f219f76aea3574711a6adb",
+          "freshness_fingerprint": "release-evidence-freshness:v1:ce578e84ed16b002ac9b775be44320dacac1913c5e6743587033188d23397043",
+          "blockers": []
         },
         {
           "path": "release/evidence/optimization/alias-aware-dse.json",
           "exists": true,
           "bytes": 5458,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "foundation_optimizer",
+          "generator_command": "xtask optimization-matrix",
+          "content_sha256": "51146dde022f75d24a037cdd523f4071bd7467650b30c9049c7490c36374be4c",
+          "source_fingerprint": "release-evidence-source:v1:305c16d8f313e9bc30382d926a083d9fc59f83be820f37969e0b27b5cfe42cd0",
+          "freshness_fingerprint": "release-evidence-freshness:v1:6c3ffacef808a939a004dde9b2328c07949bf3ef06540b7813d150873d68a471",
+          "blockers": []
         },
         {
           "path": "release/evidence/optimization/alias-aware-stlf.json",
           "exists": true,
           "bytes": 3046,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "foundation_optimizer",
+          "generator_command": "xtask optimization-matrix",
+          "content_sha256": "409e9f7814b6a58dbc38f3e4b0ecce9b171a8b2d35aff870a2114ce7bac3a9d3",
+          "source_fingerprint": "release-evidence-source:v1:739286d7835e7da69f9465d6867e4c4d31f2bacd7bc0485cc8ee849003ff5e4c",
+          "freshness_fingerprint": "release-evidence-freshness:v1:4a0974de65eebba10111c1b3812aea45f476c5d81b85420af1449dba864d4741",
+          "blockers": []
         },
         {
           "path": "release/evidence/optimization/alias-aware-licm.json",
           "exists": true,
           "bytes": 2489,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "foundation_optimizer",
+          "generator_command": "xtask optimization-matrix",
+          "content_sha256": "96fddefb0d7094d90a7439e31196f7f653e3b92e09cd4cc944216ef54d219954",
+          "source_fingerprint": "release-evidence-source:v1:a71e8d8a0792e96489eb1562cef1f50049bd3b7d76d66a623710bb7755a6b603",
+          "freshness_fingerprint": "release-evidence-freshness:v1:3fa9a06a52f90d3f6f9bd14f7161ce526618786e64a08704e6a0cdd6d4afb02f",
+          "blockers": []
         },
         {
           "path": "release/evidence/optimization/alias-aware-fusion-fission.json",
           "exists": true,
           "bytes": 3954,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "foundation_optimizer",
+          "generator_command": "xtask optimization-matrix",
+          "content_sha256": "ca0760e33c528bc829b90a637957f497f24541417224bd26cce21bc567f503c8",
+          "source_fingerprint": "release-evidence-source:v1:f4c23d3d5a0d0e9cd5f0e9f5ae474cdccc82b17e75fa59a745521bba4e35776b",
+          "freshness_fingerprint": "release-evidence-freshness:v1:22cf597efa87665aa26c73bf5efc934260fb3e8fd4e5043aefc35f1183fa6d5a",
+          "blockers": []
         },
         {
           "path": "release/evidence/optimization/weir-facts-pass-firing.json",
           "exists": true,
           "bytes": 9063,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "foundation_optimizer",
+          "generator_command": "xtask optimization-matrix",
+          "content_sha256": "22684b0b34bc97dfb02b0386ff9df8b978cd777b170a1b077c8cb2b10b9fd63f",
+          "source_fingerprint": "release-evidence-source:v1:2f3203a9751774efb80402fbcb1af6f82fb1769783bd9db4ab61f5485465a95f",
+          "freshness_fingerprint": "release-evidence-freshness:v1:09c25fccdbe2535e9b4b269a5a09dde6a071eec744d2cda9f95a095229c7df73",
+          "blockers": []
         },
         {
           "path": "release/evidence/optimization/egraph-saturation-matrix.json",
           "exists": true,
           "bytes": 2045,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "foundation_optimizer",
+          "generator_command": "xtask optimization-matrix",
+          "content_sha256": "e866af1dc488a8184a8375ef908ceeb103d8f48a406889efa61419dfb8fbf2f9",
+          "source_fingerprint": "release-evidence-source:v1:bcd248c14d44028f1a8b772fcce9404d36ddde7e18444402f6d31a72d05ec166",
+          "freshness_fingerprint": "release-evidence-freshness:v1:2cb989cd9416d9d6345af0a5e1edfa28edf81f6b2fdee62bfdb9f1c7ee99d075",
+          "blockers": []
         },
         {
           "path": "release/evidence/optimization/egraph-semantic-contracts.json",
           "exists": true,
           "bytes": 2053,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "foundation_optimizer",
+          "generator_command": "xtask optimization-matrix",
+          "content_sha256": "f4cbec6e92bf273171fab25e3e9fdbff1a9d4af9aed6e37e1a32b8da5c635ad6",
+          "source_fingerprint": "release-evidence-source:v1:1b8ed4d72430e3b3e9d7043dfb42f1bafda56dd86ec93e18c801e195f8d8bf94",
+          "freshness_fingerprint": "release-evidence-freshness:v1:6f6b8252e9bea6289257a535c065b8bebebb9f43e87c34b43caffdb8d9342240",
+          "blockers": []
         }
       ]
     },
@@ -595,37 +1006,73 @@
           "path": "release/evidence/parser/distributed-parser-map.json",
           "exists": true,
           "bytes": 12699,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "frontend_parsing",
+          "generator_command": "xtask parser-coherence",
+          "content_sha256": "5feb174405a49fe789e0c8190ecaad9d0b14699c29e238a605a9e6a27df76cd4",
+          "source_fingerprint": "release-evidence-source:v1:3faa6bb221430031c2c8ccf5c27db5c8ec201d345b220b72df943c39b7208eac",
+          "freshness_fingerprint": "release-evidence-freshness:v1:bcb0547674e02d04e5ce109b398db2882e354168550b6f4f6a09f822b9569b94",
+          "blockers": []
         },
         {
           "path": "release/evidence/parser/vyre-frontend-c-contracts.json",
           "exists": true,
           "bytes": 2127,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "frontend_parsing",
+          "generator_command": "xtask parser-coherence",
+          "content_sha256": "549386dc56d65e6b3d9c1a0ec69d703364b205fb504eeaa33518978b54e186fd",
+          "source_fingerprint": "release-evidence-source:v1:06764e9833343ad3e28b82ae34f06cb44630b8179ac886c1d5f5778a1fd5111b",
+          "freshness_fingerprint": "release-evidence-freshness:v1:b456d79b1fcc006fb93741945c480c692478145f2ead4b7f9215c5c00457e46e",
+          "blockers": []
         },
         {
           "path": "release/evidence/parser/vyrec-cli-contracts.json",
           "exists": true,
           "bytes": 3330,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "frontend_parsing",
+          "generator_command": "xtask parser-coherence",
+          "content_sha256": "1bb73a4d8833e4b610fa0f867427813048b9c1b4f8fb7d854ffed594eda5e06f",
+          "source_fingerprint": "release-evidence-source:v1:67b4b5b8105d88e429ec2186fbdcf059c57841230331716fb9db44ea04ecdc29",
+          "freshness_fingerprint": "release-evidence-freshness:v1:8644da38850be0a18ae25554ae7caf4a320982b4a32f9577d41b63d509474ac9",
+          "blockers": []
         },
         {
           "path": "release/evidence/parser/weir-contracts.json",
           "exists": true,
           "bytes": 1890,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "frontend_parsing",
+          "generator_command": "xtask parser-coherence",
+          "content_sha256": "ec745d40729e55ca29b3267595fbfa57c126bf9b75c99f666e395b99cc6d5624",
+          "source_fingerprint": "release-evidence-source:v1:bbe478c040601d25b618b06fee719954a66c3d8c9195939d8f6c73f00854800f",
+          "freshness_fingerprint": "release-evidence-freshness:v1:4b66578264e496a82f75288933dc3860d6b9d040f3b91363af3330132eb65126",
+          "blockers": []
         },
         {
           "path": "release/evidence/parser/surgec-contracts.json",
           "exists": true,
           "bytes": 1815,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "frontend_parsing",
+          "generator_command": "xtask parser-coherence",
+          "content_sha256": "f9578f7790592bfd4900059e13ab910b07a6d04c3c1098be13b0a6491ffa002c",
+          "source_fingerprint": "release-evidence-source:v1:6ee0b794a91affe4d81fdbc0fc47c97151ccdd38e1f65b2f39527d0ab76eeea2",
+          "freshness_fingerprint": "release-evidence-freshness:v1:291a249f9994bfbe272eb421693b38077c00a5bb14c72104988b4f154ef9c385",
+          "blockers": []
         },
         {
           "path": "release/evidence/parser/surgec-grammar-gen-contracts.json",
           "exists": true,
           "bytes": 1903,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "frontend_parsing",
+          "generator_command": "xtask parser-coherence",
+          "content_sha256": "422a399f373328a970d2da144fbbb295a512106313f24cca34c06e812d64b26f",
+          "source_fingerprint": "release-evidence-source:v1:73e86ceb5600c20fca7c1efec71034669984807065e94e2dbf3134f6c13ada54",
+          "freshness_fingerprint": "release-evidence-freshness:v1:98330afbf77e8cb33cd7a5fb9dd118bac2e72d87f3e322823ce046cb774a48f0",
+          "blockers": []
         }
       ]
     },
@@ -637,7 +1084,8 @@
       "expected_artifacts": [
         "release/evidence/weir/weir-analysis-api-matrix.json",
         "release/evidence/weir/weir-vyre-integration-tests.json",
-        "release/evidence/weir/weir-readme-contracts.json"
+        "release/evidence/weir/weir-readme-contracts.json",
+        "release/evidence/weir/weir-flow-release-contracts.json"
       ],
       "status": "success",
       "exit_code": 0,
@@ -645,27 +1093,848 @@
         {
           "path": "release/evidence/weir/weir-analysis-api-matrix.json",
           "exists": true,
-          "bytes": 31110,
-          "read_error": null
+          "bytes": 58771,
+          "read_error": null,
+          "owner_lane": "flow_weir",
+          "generator_command": "xtask weir-matrix",
+          "content_sha256": "8b873e417ee62f8746ecc1bb326cb61238a60355b9843f122388ff4743c875fc",
+          "source_fingerprint": "release-evidence-source:v1:c25e9d27812df882ea0e1ed36bdf352af700caa23af385d778ffd22e5d844066",
+          "freshness_fingerprint": "release-evidence-freshness:v1:6b8b168452e7533cc559c6e789e22c0e4f4609f4cf6778473a5d6102ca6aa9be",
+          "blockers": []
         },
         {
           "path": "release/evidence/weir/weir-vyre-integration-tests.json",
           "exists": true,
-          "bytes": 14087,
-          "read_error": null
+          "bytes": 14086,
+          "read_error": null,
+          "owner_lane": "flow_weir",
+          "generator_command": "xtask weir-matrix",
+          "content_sha256": "7817cdb45fca75a5610d1eeb0af76cb4115e9abf2f85ed1af63b4b5bbb9fa8f6",
+          "source_fingerprint": "release-evidence-source:v1:29ece81ad50f243c33f2fcf1859ab8b6b1aff5696fb98a7a6249b59318391cd6",
+          "freshness_fingerprint": "release-evidence-freshness:v1:d63444be7e424cc1f98cb1f2ac029d644bb1940c4676a4b2c53aa4ded91a3674",
+          "blockers": []
         },
         {
           "path": "release/evidence/weir/weir-readme-contracts.json",
           "exists": true,
           "bytes": 804,
-          "read_error": null
+          "read_error": null,
+          "owner_lane": "flow_weir",
+          "generator_command": "xtask weir-matrix",
+          "content_sha256": "450c13f4a9f7e21ed7929283d81adf2c8be11daf7eb37a6402fd3266adec3e55",
+          "source_fingerprint": "release-evidence-source:v1:f552bebb83df0d3be412c358354f7018ecccc3d35043ea84ee2183ad97ba5bbc",
+          "freshness_fingerprint": "release-evidence-freshness:v1:3ad4a8fff7313fdc20538355d1c1d13b175a92f675937b51b77d12c375476a62",
+          "blockers": []
+        },
+        {
+          "path": "release/evidence/weir/weir-flow-release-contracts.json",
+          "exists": true,
+          "bytes": 27516,
+          "read_error": null,
+          "owner_lane": "flow_weir",
+          "generator_command": "xtask weir-matrix",
+          "content_sha256": "1f13d1f1ef29f16969dce0374bc64d849fd17122e59f99da171d06f382f5324a",
+          "source_fingerprint": "release-evidence-source:v1:b2c3910138c592e3d7582223ce2ef69d1ebfff8f2cb0f44eaa16f4bd3dee1858",
+          "freshness_fingerprint": "release-evidence-freshness:v1:7e4f3442a79ff982aeef3e2f556b215cf215b2cf19832be52df8ba20db2622b0",
+          "blockers": []
+        }
+      ]
+    },
+    {
+      "args": [
+        "acceleration-plan-gate",
+        "--progress-json",
+        "release/evidence/optimization/acceleration-plan-progress.json"
+      ],
+      "required": true,
+      "expected_artifacts": [
+        "release/evidence/optimization/acceleration-plan-progress.json"
+      ],
+      "status": "success",
+      "exit_code": 0,
+      "artifact_statuses": [
+        {
+          "path": "release/evidence/optimization/acceleration-plan-progress.json",
+          "exists": true,
+          "bytes": 64616,
+          "read_error": null,
+          "owner_lane": "testing_evidence",
+          "generator_command": "xtask acceleration-plan-gate --progress-json release/evidence/optimization/acceleration-plan-progress.json",
+          "content_sha256": "99ece3f6d2478d3cfe92da6fddfc328db8f41eeeb84808a4d3ddbd897aabe0d6",
+          "source_fingerprint": "release-evidence-source:v1:2c23b19985bb3a58023b8edeace632647d6c629e6b11c9b00b22dc53dc911fd6",
+          "freshness_fingerprint": "release-evidence-freshness:v1:693fc154f4bc304b2291c01dcb30e8b40096d4846d523fae95b9386bd4f7a5c6",
+          "blockers": []
         }
       ]
     }
   ],
-  "blockers": [
-    "`xtask hygiene-matrix` failed with exit status: 1",
-    "`xtask test-matrix` failed with exit status: 1"
-  ],
+  "evidence_index": {
+    "schema_version": 1,
+    "artifact_count": 76,
+    "artifacts": [
+      {
+        "path": "release/evidence/backends/backend-matrix.json",
+        "owner_lane": "driver_shared",
+        "generator_command": "xtask backend-matrix",
+        "bytes": 13254,
+        "content_sha256": "ca095a52fe3c9d6ff68e0c31c5c940bc1a1f55ae921413cd6152d6f42ebca30b",
+        "source_fingerprint": "release-evidence-source:v1:bce90a22dfef846f3db2d1190f50d4698c62604c82b14681236115008d409fb7",
+        "freshness_fingerprint": "release-evidence-freshness:v1:27b0bc5fe0ceb329b8b45dd2e681305e08d9466324edcf8c058a10b4c346ad44",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/benchmarks/release-workload-matrix.json",
+        "owner_lane": "bench_harness",
+        "generator_command": "xtask release-workload-matrix --enforce",
+        "bytes": 26673,
+        "content_sha256": "faecb41bd4091df87ea660ddd1d71081475503bf113bba0d35ed78510562b453",
+        "source_fingerprint": "release-evidence-source:v1:7797a23b0999db76934ef3c65994b402a0c5c7eb1f488aebb26de0828c1e399f",
+        "freshness_fingerprint": "release-evidence-freshness:v1:2a5663704c564bdb17438c91bc9ea84eb1d89d866f684b8871500455d85654db",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/conformance/conformance-matrix.json",
+        "owner_lane": "driver_shared",
+        "generator_command": "xtask conformance-matrix",
+        "bytes": 2945711,
+        "content_sha256": "4cc6eeab4bdab5147cf598dc864cf5ce16dddc43b0de5bca7d6367889e6c1460",
+        "source_fingerprint": "release-evidence-source:v1:6c58f16f6b2ac9be9a427dec30c7abaa4df8c9671c20754747b98c617034060d",
+        "freshness_fingerprint": "release-evidence-freshness:v1:26f2a38325dc86d8c594977c7700d23ec2302fbfcf028bf09f14769248ab2115",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/docs/benchmark-doc-proof.md",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask docs-matrix",
+        "bytes": 3019,
+        "content_sha256": "c8fd1f0d2bc49b6678404ce6feba0cc371606876a8873d4715a2aa56070ddc41",
+        "source_fingerprint": "release-evidence-source:v1:b3bc47f0fdf108c01f861b7cd32888cb5803682952b7fcdce630a01576561f31",
+        "freshness_fingerprint": "release-evidence-freshness:v1:c162cc7ff9b67a64b704366e759b503144368d0ccbca680a2291cb7c707e4f47",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/docs/c-parser-linux-proof.md",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask docs-matrix",
+        "bytes": 2795,
+        "content_sha256": "93107208fee60743c8a0ab6aa7409068ac42a7cb44f1bb04b64a31b27459a473",
+        "source_fingerprint": "release-evidence-source:v1:a95e31526760afb0b9094e7782f79d3359a47bf1c3eee55194a977e8916c1309",
+        "freshness_fingerprint": "release-evidence-freshness:v1:9021791165f1ddb18647db68274fe2b40b7657255481f47bda96e225a6625677",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/docs/conformance-doc-proof.md",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask docs-matrix",
+        "bytes": 4519,
+        "content_sha256": "1ab283cc8f0524eb544e2a33b446fe9d2c7a4e5f42b51d1a2319da6f92e7bcde",
+        "source_fingerprint": "release-evidence-source:v1:29a817e61eaeccaa6a14bce21854e2c51d5b0d56df8404a8147c5a11c392b18e",
+        "freshness_fingerprint": "release-evidence-freshness:v1:7643f40281940ef5e5e55fba648b574b7ccc793cf9b7451aef2450b0b56778f7",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/docs/cpu-only-100x-proof.md",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask docs-matrix",
+        "bytes": 3100,
+        "content_sha256": "aacb9a4f32aa5cf8eb2e8ecb4d3d22c428abe8d245326cb1a5a319e2c54913dc",
+        "source_fingerprint": "release-evidence-source:v1:febf8f131a424e2032965679e1b6d824169dbb2eec32e3669e04300ef32f6d89",
+        "freshness_fingerprint": "release-evidence-freshness:v1:24f15e57b8554a253961a127050f9c3b96d5e1e6bb83c0b0226a6189c90953cb",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/docs/crate-metadata-proof.md",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask docs-matrix",
+        "bytes": 2111,
+        "content_sha256": "1a08ccb858584fa44ff33042da69bbe3a205b6bda1088c31f6da998d0efd307b",
+        "source_fingerprint": "release-evidence-source:v1:242fa72644b3b878fd850f6ec84109f13f3caec1a968831dd573c49fd7d9fab7",
+        "freshness_fingerprint": "release-evidence-freshness:v1:66fd58f1741e0020b92da0381379f473441142217d98d9b38114ea4e2720ce4b",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/docs/cuda-release-path.md",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask docs-matrix",
+        "bytes": 3195,
+        "content_sha256": "b9b134255eeef29b980b9edb12e13a24d1d8b23f4eab5d12b1c2d02fb92c5afa",
+        "source_fingerprint": "release-evidence-source:v1:9e00772855bc82ff8c5cf30a0e2af941e5792e6c5a4219ba25e19d96f522d5a7",
+        "freshness_fingerprint": "release-evidence-freshness:v1:190c825ba0be69f45a1b6d007fe8128ded9344a9dffe43d461601df8c88e27bb",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/docs/distributed-parser-coherence.md",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask docs-matrix",
+        "bytes": 1881,
+        "content_sha256": "823e488cadc319115f998dfa98ba68e05f25cdea89ff55b487a4bf091a836212",
+        "source_fingerprint": "release-evidence-source:v1:77f4fc21b592d14593183854ec455793b3074131da0a8d0679af803b3f11c67c",
+        "freshness_fingerprint": "release-evidence-freshness:v1:5391c2b56dfa54ca3fb2beaa883edbfaeb19c552a683a9067ba01b4ed0781b07",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/docs/docs-matrix.json",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask docs-matrix",
+        "bytes": 14209,
+        "content_sha256": "0b74d905d87ed629f572567a6b7c7316d81a1596e1d65b409b0e65c3241f6b82",
+        "source_fingerprint": "release-evidence-source:v1:1702cf542a7b6d79cfe1e24b77d780cd8e7eba086fb463b04c3f98f2432de597",
+        "freshness_fingerprint": "release-evidence-freshness:v1:56e52663bb8262fbde9d43fc066224c2d02338097cf1383f88bec3a37b52e060",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/docs/egraph-saturation.md",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask docs-matrix",
+        "bytes": 969,
+        "content_sha256": "45fccf6a759444dc50a52abebdf443e9d2390acaa947492312655ba62e98538d",
+        "source_fingerprint": "release-evidence-source:v1:3bed569871c8bab3131253b5b9593194cda0322765c1be0757c4c5ec69b2a313",
+        "freshness_fingerprint": "release-evidence-freshness:v1:c85665fcc5adcc403109351a0e73a3264c2dc12a9252a0b4080c4d8a4b64e2fd",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/docs/megakernel-default-proof.md",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask docs-matrix",
+        "bytes": 2173,
+        "content_sha256": "9c55c92f46cde3705823f292f101e735c42d70a4046872fbdcf71861c9a06fd8",
+        "source_fingerprint": "release-evidence-source:v1:ef00fc6f56f76af89ee3f5162b265c9394ac5549bb2caa11434528a3e76a120d",
+        "freshness_fingerprint": "release-evidence-freshness:v1:67abff6fef34dd98eb18bcb768b218e34fe78e48563d6aedb08124d9198d20be",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/docs/optimization-proof.md",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask docs-matrix",
+        "bytes": 3851,
+        "content_sha256": "77e8d71f026d66a4df12129a74e84a6fe11d3569ce507ae5756f50b26c207894",
+        "source_fingerprint": "release-evidence-source:v1:dccd1606f01f105426bec64bd82ef2c80e253724e21f09815df289e8292bc949",
+        "freshness_fingerprint": "release-evidence-freshness:v1:64ac5f036dce63a5eab38a02a6a2dd44a3c1c2b10404b2cb7c5fc85f6acf40d3",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/docs/parser-doc-proof.md",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask docs-matrix",
+        "bytes": 943,
+        "content_sha256": "10a4912c4fb72d21813f7b6caf68569b05358387b906ea8ecd86578c6e7b4e51",
+        "source_fingerprint": "release-evidence-source:v1:640633e42a145a9763972a44ea5290ff601c8e897f270472aa02cc0d4b3ee58c",
+        "freshness_fingerprint": "release-evidence-freshness:v1:570c22fd1249ad0453842040907f7bb368a137e4108e8772e28ee76ffe8e1b9c",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/docs/release-hygiene-proof.md",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask docs-matrix",
+        "bytes": 3387,
+        "content_sha256": "548399add274bf5afb1604cd01b1c9db9ff6e18d4d0938b8d2b9111d47215ba6",
+        "source_fingerprint": "release-evidence-source:v1:0b7651ca542a4b486ec9dd5c00e52a86486d9d578ee85d1edc56d99de10d07c0",
+        "freshness_fingerprint": "release-evidence-freshness:v1:3bced7f4b4da8fe4f88e9e9560b281e9d3779ce28d979ac15d898340321459ec",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/docs/release-notes-version-story.md",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask docs-matrix",
+        "bytes": 2196,
+        "content_sha256": "fe533ccb6de073a6a512f2681484a0c43dde7fa504a35382cb27da1f6cdbf52b",
+        "source_fingerprint": "release-evidence-source:v1:95896488b31ec6e8c0f1b0ee6b542ed0bf6b1f394ba41ac5474697df35ff9005",
+        "freshness_fingerprint": "release-evidence-freshness:v1:6a8c50a9c1e38ba7c0bba897910fd844033e70f1c637f731ca7840b6e13558d8",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/docs/release-notes.md",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask docs-matrix",
+        "bytes": 1315,
+        "content_sha256": "9fb7837271d91e56a97df71babf3e13431d245d135f4c6227c5309c7b716b6c8",
+        "source_fingerprint": "release-evidence-source:v1:8eee371591ee9e7ef1ae0ec0a2525c0bf14960800131547a1cfe52dccc6ca17f",
+        "freshness_fingerprint": "release-evidence-freshness:v1:f23502f64e93939f7af8b2d0a7b2aeb4e748039e2eb6b768f45ca25d649694c6",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/docs/test-architecture.md",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask docs-matrix",
+        "bytes": 1700,
+        "content_sha256": "bb1131e62673ccac30bdba7df9ece1ccdfe8717c997914e388df805707f7b1cb",
+        "source_fingerprint": "release-evidence-source:v1:b0c7ed41e1b53319b13f36ac86a1cd768cf98a37e94263cdc5949c13f77ccb32",
+        "freshness_fingerprint": "release-evidence-freshness:v1:b80bfc2fd82d4370bdfef7328b4892a2e8b945d0d893fee84fb4cf8b8ab3ffac",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/docs/vyre-readme-contracts.json",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask docs-matrix",
+        "bytes": 432,
+        "content_sha256": "b0e5e58a20dd275aa375f77b87328843d4c6fb5a780507a58115bc8f0984dbf7",
+        "source_fingerprint": "release-evidence-source:v1:495d0cc3c5e4857d8ccf4c4091fb3b241d7acbffdc6420c06dfa018605d24259",
+        "freshness_fingerprint": "release-evidence-freshness:v1:c39e0b16d65c769ebfa93139be780bd49db2c16b9bd909428f32ce8cfb3ac131",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/docs/vyre-readme-proof.md",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask docs-matrix",
+        "bytes": 896,
+        "content_sha256": "16ac7c4a517b76b7dc4236cdfc786a13557c861616183b7117a65e2b2604d2fc",
+        "source_fingerprint": "release-evidence-source:v1:d52475d2baca52e0ced079825195d20297d5e8dcc42937746342d91047144a57",
+        "freshness_fingerprint": "release-evidence-freshness:v1:f275b73d9b97cfd7363dd0e127e9574ec2c766f437854dcb9071fed2686d7b26",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/docs/weir-integration.md",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask docs-matrix",
+        "bytes": 1976,
+        "content_sha256": "2592a91b61b8058c028bd15e997602018473ae049d522c65ae0d57d403fa7aa2",
+        "source_fingerprint": "release-evidence-source:v1:a66808176da3c37a3eb042c10517a0336bc41b0f97ce7515feecf0bf4e194baf",
+        "freshness_fingerprint": "release-evidence-freshness:v1:2e7ca8bea1b3d6fea7c1a5ea780022ed5f4276f66a262c32e333a95b3e485d03",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/docs/weir-readme-proof.md",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask docs-matrix",
+        "bytes": 724,
+        "content_sha256": "cb45e18250d92a07fa08c3332e09914ef9626328abfc7c53fd8ed48636ed0f0a",
+        "source_fingerprint": "release-evidence-source:v1:9acd5ef67057ad0e253d154d5f866e92e3e54436f7b7229b998806ecca5da966",
+        "freshness_fingerprint": "release-evidence-freshness:v1:6f117f3367e86aacd59973cef8ac8187e47479e59dadcf234157e50944d7fb00",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/docs/wgpu-fallback-proof.md",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask docs-matrix",
+        "bytes": 1412,
+        "content_sha256": "0a643296310b6e71a1aa224fcb26e0a74b3ecae61f5db369b6bca8d0be64d6b3",
+        "source_fingerprint": "release-evidence-source:v1:4681cd54826240edb69bf91f0aad947932ac018e2acfdd076883307a080b4591",
+        "freshness_fingerprint": "release-evidence-freshness:v1:4ce7d8c1efdbb22b9b763374e6ff2fbb117b3fb55f5ee9943227dd7c625980c3",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/hygiene/audit-location-scan.json",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask hygiene-matrix",
+        "bytes": 125,
+        "content_sha256": "4fb36c2cb6382a0cbff4233cd50841e648260c5f4700fc71d41f1d15665ccc23",
+        "source_fingerprint": "release-evidence-source:v1:7eac6eb1e1bd25000f48d0f0629269f664ba02ea357728ce15301da7efd9e763",
+        "freshness_fingerprint": "release-evidence-freshness:v1:ab08ec4abdd1fc9192bceef362b65fdbcb399963122cba027a15c693562bee95",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/hygiene/cargo-wrapper-scan.json",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask hygiene-matrix",
+        "bytes": 2381,
+        "content_sha256": "4a34d00992155517614c4711762098d1f2524e32724f64867221565f54862595",
+        "source_fingerprint": "release-evidence-source:v1:6867638d4738314b8cadc9b1ad9cb6a6117f984a426e75f5a9d1bec78bf6163b",
+        "freshness_fingerprint": "release-evidence-freshness:v1:975dac1999e4a317c4047f5a9442bed67c7d99d2a27cfb35977f0ae7c87e0b9a",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/hygiene/error-surface-scan.json",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask hygiene-matrix",
+        "bytes": 13154,
+        "content_sha256": "052983ae5f9d3a498d8b363b79f05c9b76d14723447b23260506d5efca4fe936",
+        "source_fingerprint": "release-evidence-source:v1:6710b3ca24a6f5edde136b4115f1cc75dbb465b6309b5efd5699534b0ebdf730",
+        "freshness_fingerprint": "release-evidence-freshness:v1:9421fa17b44641f3e0d1b95797ad2b68e8eb144e2b597fa38be654a00f0a4d0a",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/hygiene/hygiene-matrix.json",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask hygiene-matrix",
+        "bytes": 471079,
+        "content_sha256": "c784fcc27ab79eea67705822a4f4ac868f170b27ee426d18975382c99def5136",
+        "source_fingerprint": "release-evidence-source:v1:f2ed95c4568ae125c9f63f75ffd0c973b22a52fa6273acdeeb680a85e5cc97e5",
+        "freshness_fingerprint": "release-evidence-freshness:v1:246f2bd516a60f9c532c2e7aa82ab48dc62fc318e791334daa77da5ed4fe0889",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/hygiene/implementation-intake.json",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask hygiene-matrix",
+        "bytes": 9954,
+        "content_sha256": "a7e719f1bb3170ae11f5464dc6fd1237c304315bf4f7456991a862de0afcd79c",
+        "source_fingerprint": "release-evidence-source:v1:2f559ef068838d794108f4021b9ff56a0669e535b4e560d4b8be80c85b94a9f8",
+        "freshness_fingerprint": "release-evidence-freshness:v1:35a50627995bd4e20ce3475e0b8287d754344dfbf91229d7491794897f77446b",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/hygiene/no-hidden-fallback-scan.json",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask hygiene-matrix",
+        "bytes": 129,
+        "content_sha256": "951d2a6731d54c1307c4af8fcf11f2c11b370b2b901f7bb183a272f00e2e2417",
+        "source_fingerprint": "release-evidence-source:v1:45ad26a692d3290bcfa393185f226f0b3ea6d7862fdd112518b3edb533c66aff",
+        "freshness_fingerprint": "release-evidence-freshness:v1:5e5d09a9813631a7bdba8261c813081261d1afc4975af415069bbd3a8f51ab87",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/hygiene/no-stubs-scan.json",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask hygiene-matrix",
+        "bytes": 17715,
+        "content_sha256": "8677ddde9b2e6718bcfafd6a987652cd1c8c927db936799604bb58b5385031d9",
+        "source_fingerprint": "release-evidence-source:v1:693b944417a14c9e9653013e334dab37f584b3239c6634ef6258731666084f5c",
+        "freshness_fingerprint": "release-evidence-freshness:v1:a1ccca3793313e9b0eb5cf8cafb5359ba8b57c60675782136cbb96da00b9b2be",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/hygiene/public-doc-scan.json",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask hygiene-matrix",
+        "bytes": 65782,
+        "content_sha256": "c75ef6f103449727ea5033b646a640d7634d177d0f12940f41767164f724a212",
+        "source_fingerprint": "release-evidence-source:v1:ce2c71e7e237b40e605feeb1e2cac3801c70b767bb3dfa7971f6b58edc1eead8",
+        "freshness_fingerprint": "release-evidence-freshness:v1:1da2b584fa6c897b99029cd0c03270428d1a491509efd0d0d351dd37ae60132a",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/hygiene/resource-bound-scan.json",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask hygiene-matrix",
+        "bytes": 125,
+        "content_sha256": "58b2f50a8e2d395e1ea8ff8d550e0c5a168f6f3b3ecc0747042774739e489775",
+        "source_fingerprint": "release-evidence-source:v1:4a8dd6a00cb5474cbf7167d2a6fbc195613530fa91d645ce4c156c09c58c6ce3",
+        "freshness_fingerprint": "release-evidence-freshness:v1:a48ee2e455dc2b0edf82d4404d24d17079956780e0093c740b9de7f82dacd632",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/hygiene/test-hygiene-scan.json",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask hygiene-matrix",
+        "bytes": 92127,
+        "content_sha256": "c0aaf781131916def0ad105a93686ca1dd955a5e4722287da44254acf66264a0",
+        "source_fingerprint": "release-evidence-source:v1:d156c54ffd1e13ee90b01a2e1af2a1e7b8c75019810fbc90ae8625013433aeee",
+        "freshness_fingerprint": "release-evidence-freshness:v1:1e595da19a3b4a5ed01ac483f9cb9086239a0a80ce0a73afc6a03160c80d3782",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/metadata/feature-matrix.json",
+        "owner_lane": "coordination",
+        "generator_command": "xtask feature-matrix",
+        "bytes": 21722,
+        "content_sha256": "894d4eb371b4ccf5b07c62b793a873fbca3a2ee9dfadbd6ba24e4f3fae9e09f2",
+        "source_fingerprint": "release-evidence-source:v1:2b3956017453235544cd03a1786df1a4d42e43366e00de9c89e6aafb9427051b",
+        "freshness_fingerprint": "release-evidence-freshness:v1:63c603aaaa261c11a480244ae5caca61c97945eacac50e494311f817ab9bd14a",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/metadata/metadata-matrix.json",
+        "owner_lane": "coordination",
+        "generator_command": "xtask metadata-matrix",
+        "bytes": 38957,
+        "content_sha256": "c6d43a0c8d71d816e65cfd0ec85c174237880e34d91220b06bc7dba7b5139447",
+        "source_fingerprint": "release-evidence-source:v1:e6b621e4e024aad71d46ce925b42c646c12513b9e2f81f63175d923f860c43f5",
+        "freshness_fingerprint": "release-evidence-freshness:v1:2344fe855ec02b7c7e7c37bc4f1eec5c01ae3a833700fb957a2a449c7605cdd6",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/optimization/acceleration-plan-progress.json",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask acceleration-plan-gate --progress-json release/evidence/optimization/acceleration-plan-progress.json",
+        "bytes": 64616,
+        "content_sha256": "99ece3f6d2478d3cfe92da6fddfc328db8f41eeeb84808a4d3ddbd897aabe0d6",
+        "source_fingerprint": "release-evidence-source:v1:2c23b19985bb3a58023b8edeace632647d6c629e6b11c9b00b22dc53dc911fd6",
+        "freshness_fingerprint": "release-evidence-freshness:v1:693fc154f4bc304b2291c01dcb30e8b40096d4846d523fae95b9386bd4f7a5c6",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/optimization/alias-aware-dse.json",
+        "owner_lane": "foundation_optimizer",
+        "generator_command": "xtask optimization-matrix",
+        "bytes": 5458,
+        "content_sha256": "51146dde022f75d24a037cdd523f4071bd7467650b30c9049c7490c36374be4c",
+        "source_fingerprint": "release-evidence-source:v1:305c16d8f313e9bc30382d926a083d9fc59f83be820f37969e0b27b5cfe42cd0",
+        "freshness_fingerprint": "release-evidence-freshness:v1:6c3ffacef808a939a004dde9b2328c07949bf3ef06540b7813d150873d68a471",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/optimization/alias-aware-fusion-fission.json",
+        "owner_lane": "foundation_optimizer",
+        "generator_command": "xtask optimization-matrix",
+        "bytes": 3954,
+        "content_sha256": "ca0760e33c528bc829b90a637957f497f24541417224bd26cce21bc567f503c8",
+        "source_fingerprint": "release-evidence-source:v1:f4c23d3d5a0d0e9cd5f0e9f5ae474cdccc82b17e75fa59a745521bba4e35776b",
+        "freshness_fingerprint": "release-evidence-freshness:v1:22cf597efa87665aa26c73bf5efc934260fb3e8fd4e5043aefc35f1183fa6d5a",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/optimization/alias-aware-licm.json",
+        "owner_lane": "foundation_optimizer",
+        "generator_command": "xtask optimization-matrix",
+        "bytes": 2489,
+        "content_sha256": "96fddefb0d7094d90a7439e31196f7f653e3b92e09cd4cc944216ef54d219954",
+        "source_fingerprint": "release-evidence-source:v1:a71e8d8a0792e96489eb1562cef1f50049bd3b7d76d66a623710bb7755a6b603",
+        "freshness_fingerprint": "release-evidence-freshness:v1:3fa9a06a52f90d3f6f9bd14f7161ce526618786e64a08704e6a0cdd6d4afb02f",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/optimization/alias-aware-stlf.json",
+        "owner_lane": "foundation_optimizer",
+        "generator_command": "xtask optimization-matrix",
+        "bytes": 3046,
+        "content_sha256": "409e9f7814b6a58dbc38f3e4b0ecce9b171a8b2d35aff870a2114ce7bac3a9d3",
+        "source_fingerprint": "release-evidence-source:v1:739286d7835e7da69f9465d6867e4c4d31f2bacd7bc0485cc8ee849003ff5e4c",
+        "freshness_fingerprint": "release-evidence-freshness:v1:4a0974de65eebba10111c1b3812aea45f476c5d81b85420af1449dba864d4741",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/optimization/egraph-saturation-matrix.json",
+        "owner_lane": "foundation_optimizer",
+        "generator_command": "xtask optimization-matrix",
+        "bytes": 2045,
+        "content_sha256": "e866af1dc488a8184a8375ef908ceeb103d8f48a406889efa61419dfb8fbf2f9",
+        "source_fingerprint": "release-evidence-source:v1:bcd248c14d44028f1a8b772fcce9404d36ddde7e18444402f6d31a72d05ec166",
+        "freshness_fingerprint": "release-evidence-freshness:v1:2cb989cd9416d9d6345af0a5e1edfa28edf81f6b2fdee62bfdb9f1c7ee99d075",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/optimization/egraph-semantic-contracts.json",
+        "owner_lane": "foundation_optimizer",
+        "generator_command": "xtask optimization-matrix",
+        "bytes": 2053,
+        "content_sha256": "f4cbec6e92bf273171fab25e3e9fdbff1a9d4af9aed6e37e1a32b8da5c635ad6",
+        "source_fingerprint": "release-evidence-source:v1:1b8ed4d72430e3b3e9d7043dfb42f1bafda56dd86ec93e18c801e195f8d8bf94",
+        "freshness_fingerprint": "release-evidence-freshness:v1:6f6b8252e9bea6289257a535c065b8bebebb9f43e87c34b43caffdb8d9342240",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/optimization/optimization-analysis-fixtures.json",
+        "owner_lane": "foundation_optimizer",
+        "generator_command": "xtask optimization-corpus",
+        "bytes": 2116,
+        "content_sha256": "7eb432637da18139710603905da9018620499c0ef2a43539902090f79b814fbf",
+        "source_fingerprint": "release-evidence-source:v1:44ed2e24c56109237b800020033eb26bf97449106ccf63a2d4440acaeca6b2d8",
+        "freshness_fingerprint": "release-evidence-freshness:v1:2e8794d309d1afc4625d4f87261427cd674d9020820f0fb97cec7164953890b5",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/optimization/optimization-case-manifest.json",
+        "owner_lane": "foundation_optimizer",
+        "generator_command": "xtask optimization-corpus",
+        "bytes": 2732788,
+        "content_sha256": "efcfe6146bb10252bc31c81f014503ea1a38e127f463f010da1b957fda1e8502",
+        "source_fingerprint": "release-evidence-source:v1:b421dbe3fb8e1d7b68a29ed3f6e5baa08a3b265e50c8b342a1fd3b31a214b1d7",
+        "freshness_fingerprint": "release-evidence-freshness:v1:bfd4904287d4a3a7a1bb4c32d49c3343f44570a4c73ba5d3297b37e66254cbd4",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/optimization/optimization-corpus-contracts.json",
+        "owner_lane": "foundation_optimizer",
+        "generator_command": "xtask optimization-corpus",
+        "bytes": 322,
+        "content_sha256": "30714b24fe9cf37304be445831616f2430f81eaca293bc2ac5426d945c4ccb82",
+        "source_fingerprint": "release-evidence-source:v1:28be9d848037e839cff49328961fd8ab75dc15f1be6274690c10e55f4899b35a",
+        "freshness_fingerprint": "release-evidence-freshness:v1:4a14c9a537e1937f0aee262da0fbec3555bab5065f5b127c0b2d0da127b3dc8e",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/optimization/optimization-corpus.json",
+        "owner_lane": "foundation_optimizer",
+        "generator_command": "xtask optimization-corpus",
+        "bytes": 1318,
+        "content_sha256": "0d6f6d445ce253d23600a1e5aba7fc300f8aad50301280564cc504590a0fc141",
+        "source_fingerprint": "release-evidence-source:v1:84a036dd97f4f24650fba2e13fe607a7f0449cf3940cbf64e686facfd4e9601a",
+        "freshness_fingerprint": "release-evidence-freshness:v1:bfc89d63741659bf7fce09294059345d3edec37c3efb9cf6f66bbfd68c07d9db",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/optimization/optimization-family-manifest.json",
+        "owner_lane": "foundation_optimizer",
+        "generator_command": "xtask optimization-corpus",
+        "bytes": 1490,
+        "content_sha256": "31f4b42b97803cfff63dab4b4e7e60b625458a350d22b2bd3002a97ece7bb964",
+        "source_fingerprint": "release-evidence-source:v1:8fd00ad63712a460d1e9d0a75ab082ff6d87f09ac8212ec85eb84fce0d2c9345",
+        "freshness_fingerprint": "release-evidence-freshness:v1:1e3ff941fa0473a5f285549afa17842557bc08a876c107741e0b8e61d8a9de69",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/optimization/optimization-integration-matrix.json",
+        "owner_lane": "foundation_optimizer",
+        "generator_command": "xtask optimization-matrix",
+        "bytes": 20463,
+        "content_sha256": "7bf1dbe046a0aa9853f0ed2efbde30eeefe4a52b60fc7b7aa5b98b185c83db1f",
+        "source_fingerprint": "release-evidence-source:v1:0df77232ce4ea2235d58d9d912ec978a806dd18f66f219f76aea3574711a6adb",
+        "freshness_fingerprint": "release-evidence-freshness:v1:ce578e84ed16b002ac9b775be44320dacac1913c5e6743587033188d23397043",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/optimization/weir-facts-pass-firing.json",
+        "owner_lane": "foundation_optimizer",
+        "generator_command": "xtask optimization-matrix",
+        "bytes": 9063,
+        "content_sha256": "22684b0b34bc97dfb02b0386ff9df8b978cd777b170a1b077c8cb2b10b9fd63f",
+        "source_fingerprint": "release-evidence-source:v1:2f3203a9751774efb80402fbcb1af6f82fb1769783bd9db4ab61f5485465a95f",
+        "freshness_fingerprint": "release-evidence-freshness:v1:09c25fccdbe2535e9b4b269a5a09dde6a071eec744d2cda9f95a095229c7df73",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/parser/distributed-parser-map.json",
+        "owner_lane": "frontend_parsing",
+        "generator_command": "xtask parser-coherence",
+        "bytes": 12699,
+        "content_sha256": "5feb174405a49fe789e0c8190ecaad9d0b14699c29e238a605a9e6a27df76cd4",
+        "source_fingerprint": "release-evidence-source:v1:3faa6bb221430031c2c8ccf5c27db5c8ec201d345b220b72df943c39b7208eac",
+        "freshness_fingerprint": "release-evidence-freshness:v1:bcb0547674e02d04e5ce109b398db2882e354168550b6f4f6a09f822b9569b94",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/parser/surgec-contracts.json",
+        "owner_lane": "frontend_parsing",
+        "generator_command": "xtask parser-coherence",
+        "bytes": 1815,
+        "content_sha256": "f9578f7790592bfd4900059e13ab910b07a6d04c3c1098be13b0a6491ffa002c",
+        "source_fingerprint": "release-evidence-source:v1:6ee0b794a91affe4d81fdbc0fc47c97151ccdd38e1f65b2f39527d0ab76eeea2",
+        "freshness_fingerprint": "release-evidence-freshness:v1:291a249f9994bfbe272eb421693b38077c00a5bb14c72104988b4f154ef9c385",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/parser/surgec-grammar-gen-contracts.json",
+        "owner_lane": "frontend_parsing",
+        "generator_command": "xtask parser-coherence",
+        "bytes": 1903,
+        "content_sha256": "422a399f373328a970d2da144fbbb295a512106313f24cca34c06e812d64b26f",
+        "source_fingerprint": "release-evidence-source:v1:73e86ceb5600c20fca7c1efec71034669984807065e94e2dbf3134f6c13ada54",
+        "freshness_fingerprint": "release-evidence-freshness:v1:98330afbf77e8cb33cd7a5fb9dd118bac2e72d87f3e322823ce046cb774a48f0",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/parser/vyre-frontend-c-contracts.json",
+        "owner_lane": "frontend_parsing",
+        "generator_command": "xtask parser-coherence",
+        "bytes": 2127,
+        "content_sha256": "549386dc56d65e6b3d9c1a0ec69d703364b205fb504eeaa33518978b54e186fd",
+        "source_fingerprint": "release-evidence-source:v1:06764e9833343ad3e28b82ae34f06cb44630b8179ac886c1d5f5778a1fd5111b",
+        "freshness_fingerprint": "release-evidence-freshness:v1:b456d79b1fcc006fb93741945c480c692478145f2ead4b7f9215c5c00457e46e",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/parser/vyrec-cli-contracts.json",
+        "owner_lane": "frontend_parsing",
+        "generator_command": "xtask parser-coherence",
+        "bytes": 3330,
+        "content_sha256": "1bb73a4d8833e4b610fa0f867427813048b9c1b4f8fb7d854ffed594eda5e06f",
+        "source_fingerprint": "release-evidence-source:v1:67b4b5b8105d88e429ec2186fbdcf059c57841230331716fb9db44ea04ecdc29",
+        "freshness_fingerprint": "release-evidence-freshness:v1:8644da38850be0a18ae25554ae7caf4a320982b4a32f9577d41b63d509474ac9",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/parser/weir-contracts.json",
+        "owner_lane": "frontend_parsing",
+        "generator_command": "xtask parser-coherence",
+        "bytes": 1890,
+        "content_sha256": "ec745d40729e55ca29b3267595fbfa57c126bf9b75c99f666e395b99cc6d5624",
+        "source_fingerprint": "release-evidence-source:v1:bbe478c040601d25b618b06fee719954a66c3d8c9195939d8f6c73f00854800f",
+        "freshness_fingerprint": "release-evidence-freshness:v1:4b66578264e496a82f75288933dc3860d6b9d040f3b91363af3330132eb65126",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/tests/adversarial-suite.json",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask test-matrix",
+        "bytes": 541246,
+        "content_sha256": "ac23afc0d896ef94481afd4a9843ee288b7e5745d337ae4fae1211f06657ef99",
+        "source_fingerprint": "release-evidence-source:v1:b9376b0bac53edc71fd7bae6222fb6b424563be605b734d2b53aa44afb1aa0c3",
+        "freshness_fingerprint": "release-evidence-freshness:v1:aed1ea7e380b60fabc44f649bb095cf82044e220c8d4e7c9a2f010b42e87d05e",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/tests/benchmark-suite.json",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask test-matrix",
+        "bytes": 3126492,
+        "content_sha256": "60f89650a32c958f749e93a34ba4faac8e80a52e78254492e3a1148a6e6f03cd",
+        "source_fingerprint": "release-evidence-source:v1:8641d7752db2c28e45530d25f68b2534065aec1466dc3cd89f3a191bc0ad3e35",
+        "freshness_fingerprint": "release-evidence-freshness:v1:8fa91459cae59e92df94d81c476ed5ca542750b841d90b334d0db77fa8037e15",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/tests/conformance-suite.json",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask test-matrix",
+        "bytes": 1010698,
+        "content_sha256": "265e3288c599da5d4393cce90f7602dc291c294647ed6af7f15e2e95043ea3cd",
+        "source_fingerprint": "release-evidence-source:v1:fefa28df7b372c4de7e8bdcbca396ef999946032e572b7bbbdfc975e1f25033a",
+        "freshness_fingerprint": "release-evidence-freshness:v1:5c02c3e11df63b9afdafd1e450503ae8355526bd0b6c3979cfea4ff6e27d3b30",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/tests/corpus-suite.json",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask test-matrix",
+        "bytes": 256432,
+        "content_sha256": "82d76c9730ef4439c51a2244b03034d8d714e2234fceef249bd070a5f2854c4c",
+        "source_fingerprint": "release-evidence-source:v1:b0bc978543560d0497fdd52c5796a357da4a4fa6e42a3db763ba5959bd8dd149",
+        "freshness_fingerprint": "release-evidence-freshness:v1:c123744d52967aa6edd1423fdb773d4f4f7033bd64b0c440ef236d57dcf52468",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/tests/fuzz-suite.json",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask test-matrix",
+        "bytes": 80986,
+        "content_sha256": "857a221c1cb1d8f693a6e7fcb231b2cf84716a54be38a288072946dc2ec6fbae",
+        "source_fingerprint": "release-evidence-source:v1:7183454321592d8529336c72bfa26a2c27729def01848a458b004e3f771e8dd8",
+        "freshness_fingerprint": "release-evidence-freshness:v1:4eb68584a6a307d97ffb92d5745ae9a596c36f36c1bffb1415feaa6baf56458d",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/tests/gap-suite.json",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask test-matrix",
+        "bytes": 41982,
+        "content_sha256": "072c914240a9fba8cc8bf8b2d14615f7dac0c2eee31b7b670071483b8b285680",
+        "source_fingerprint": "release-evidence-source:v1:fd0efaa6ee25f58f54099108593c73a643dbae309c4b0a193880679af16e69e6",
+        "freshness_fingerprint": "release-evidence-freshness:v1:ba3cb1b2e6651c4d1b4a9d5a9b8a2d31fdf9b5c467ad444b6fe490d5840cb1b6",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/tests/modularity-findings.json",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask test-matrix",
+        "bytes": 127,
+        "content_sha256": "45a97b1e2d3e5dfddc19cf5f22f27f405acec4540d29d9685b4326351dd77d6e",
+        "source_fingerprint": "release-evidence-source:v1:5129715acaa90bcdf043c7faadcacf4cbb4710414b08d83eba74c859b900f53c",
+        "freshness_fingerprint": "release-evidence-freshness:v1:27b0be3f1ed448cffcf52374ebeeaed77555736b48df50c0df1666bbe8c10f03",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/tests/modularization-map.json",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask test-matrix",
+        "bytes": 3730,
+        "content_sha256": "701463cc6e1b3eabeab303e3bfc62dcabbebe14082ec9f998c34a34b3f080134",
+        "source_fingerprint": "release-evidence-source:v1:00770e2680e9783e78c6a00617232a8d05af1bd04bbb5b50d2c2f514fcf1c889",
+        "freshness_fingerprint": "release-evidence-freshness:v1:72480b2e38713672dbe66ed33782a1551a9f91f16324b0cb29152f7553d56f91",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/tests/oversized-test-closure.json",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask test-matrix",
+        "bytes": 235,
+        "content_sha256": "096750ee7aedd5bd6d07e551c05311b7fb4ef56d9b964e0b0481a3a048842164",
+        "source_fingerprint": "release-evidence-source:v1:66cf6f4c31916d349c2e6d86cdfa770b5560127206c9d859b3278ff773a61b1f",
+        "freshness_fingerprint": "release-evidence-freshness:v1:19ed761b759d7e22929287f850accaaec77c478fb4e670c268f581595c4c0e11",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/tests/property-suite.json",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask test-matrix",
+        "bytes": 202456,
+        "content_sha256": "b9070e64c5e1f8cb30702faf7477457f13cf927e3b1bb3415c9bd02da629ec7f",
+        "source_fingerprint": "release-evidence-source:v1:d460f3ec8a6ae88d7bb737ddc82390e3df6286dc672ca21795a488c20babb83e",
+        "freshness_fingerprint": "release-evidence-freshness:v1:3b51286793382112a7081807f46ce09cdaf9e2449f3acfaa37951c8af80b257b",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/tests/release-surface-suite-coverage.json",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask test-matrix",
+        "bytes": 3215,
+        "content_sha256": "afc44df13d0e46b7beb5b13ab5c54fbd3d7635ba5730f0ca2d81ae3456e41ac3",
+        "source_fingerprint": "release-evidence-source:v1:e28bd96d269e4c989940a554e9dbc5bf30315aa0744b20e3c187ea5438312d86",
+        "freshness_fingerprint": "release-evidence-freshness:v1:a175735133b6083a07ea11a8fde30427015d4fc685cbc96e577f39e5b47eb30a",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/tests/risk-coverage.json",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask test-matrix",
+        "bytes": 95724,
+        "content_sha256": "efee3a43fa0cec1e287559f60e74613b1cc117c87130603dbeeba65e4e0909fb",
+        "source_fingerprint": "release-evidence-source:v1:4fa9cf3e79830421afb16fc6e3335e2f1a0b85bfb502b46b355c6a4e390b5575",
+        "freshness_fingerprint": "release-evidence-freshness:v1:8c0461e6cef22f807edce8d35145f64758d2ee43c69b823dae5074ccbf81dc4b",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/tests/test-matrix.json",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask test-matrix",
+        "bytes": 99657,
+        "content_sha256": "bb65aaef61136d56b15f425d65d3345d409a10d5118d23a50c884b05f70005c1",
+        "source_fingerprint": "release-evidence-source:v1:22963395ef0fc703986d165a15844bcc42b8e3346dcea138716d931650f400e6",
+        "freshness_fingerprint": "release-evidence-freshness:v1:66d109794ac9ea51f2c623c157efed006c1d302bd0db29fe984127b5e518edad",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/tests/unit-suite.json",
+        "owner_lane": "testing_evidence",
+        "generator_command": "xtask test-matrix",
+        "bytes": 3483314,
+        "content_sha256": "8566093f20f6cc0b08f6bf58bb5ed30791e0e6faa3a014ad945ae124d97a5254",
+        "source_fingerprint": "release-evidence-source:v1:67b522eedefd81a5c9e01b22aedeb654b71675928d5fb07d530e33a9c606b415",
+        "freshness_fingerprint": "release-evidence-freshness:v1:04198d38df5db8aa9ae6cac2e28ef943dfb072e9cdefb8d9928363b8a13f3752",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/version/release-tag-plan.json",
+        "owner_lane": "coordination",
+        "generator_command": "xtask version-matrix",
+        "bytes": 1193,
+        "content_sha256": "2598ba6e9acb0ed7580ff89b51d5ca0e79f5c0a0f0ed3f6d2f8be7b45a711ae5",
+        "source_fingerprint": "release-evidence-source:v1:d650dadb8358d831da3e4173a530a12cce6734bd381d7f4a89048d7773ae964f",
+        "freshness_fingerprint": "release-evidence-freshness:v1:10913f2d10984a0afd11840129a8bb5f89790c72b4bb62005b19fda9441ed0b9",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/version/version-matrix.json",
+        "owner_lane": "coordination",
+        "generator_command": "xtask version-matrix",
+        "bytes": 37261,
+        "content_sha256": "2e5b479905ea90eed535028a13eeced0f930958d49e45cbda1bead74b7d4b6e4",
+        "source_fingerprint": "release-evidence-source:v1:fca6227813920f3cf4569cb43f7213a6898317dffb6330cf443c510b36e989ca",
+        "freshness_fingerprint": "release-evidence-freshness:v1:cbe16e6a40de627dba1beb372b152994aa1dfd528026929d06ffee57df985025",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/weir/weir-analysis-api-matrix.json",
+        "owner_lane": "flow_weir",
+        "generator_command": "xtask weir-matrix",
+        "bytes": 58771,
+        "content_sha256": "8b873e417ee62f8746ecc1bb326cb61238a60355b9843f122388ff4743c875fc",
+        "source_fingerprint": "release-evidence-source:v1:c25e9d27812df882ea0e1ed36bdf352af700caa23af385d778ffd22e5d844066",
+        "freshness_fingerprint": "release-evidence-freshness:v1:6b8b168452e7533cc559c6e789e22c0e4f4609f4cf6778473a5d6102ca6aa9be",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/weir/weir-flow-release-contracts.json",
+        "owner_lane": "flow_weir",
+        "generator_command": "xtask weir-matrix",
+        "bytes": 27516,
+        "content_sha256": "1f13d1f1ef29f16969dce0374bc64d849fd17122e59f99da171d06f382f5324a",
+        "source_fingerprint": "release-evidence-source:v1:b2c3910138c592e3d7582223ce2ef69d1ebfff8f2cb0f44eaa16f4bd3dee1858",
+        "freshness_fingerprint": "release-evidence-freshness:v1:7e4f3442a79ff982aeef3e2f556b215cf215b2cf19832be52df8ba20db2622b0",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/weir/weir-readme-contracts.json",
+        "owner_lane": "flow_weir",
+        "generator_command": "xtask weir-matrix",
+        "bytes": 804,
+        "content_sha256": "450c13f4a9f7e21ed7929283d81adf2c8be11daf7eb37a6402fd3266adec3e55",
+        "source_fingerprint": "release-evidence-source:v1:f552bebb83df0d3be412c358354f7018ecccc3d35043ea84ee2183ad97ba5bbc",
+        "freshness_fingerprint": "release-evidence-freshness:v1:3ad4a8fff7313fdc20538355d1c1d13b175a92f675937b51b77d12c375476a62",
+        "blockers": []
+      },
+      {
+        "path": "release/evidence/weir/weir-vyre-integration-tests.json",
+        "owner_lane": "flow_weir",
+        "generator_command": "xtask weir-matrix",
+        "bytes": 14086,
+        "content_sha256": "7817cdb45fca75a5610d1eeb0af76cb4115e9abf2f85ed1af63b4b5bbb9fa8f6",
+        "source_fingerprint": "release-evidence-source:v1:29ece81ad50f243c33f2fcf1859ab8b6b1aff5696fb98a7a6249b59318391cd6",
+        "freshness_fingerprint": "release-evidence-freshness:v1:d63444be7e424cc1f98cb1f2ac029d644bb1940c4676a4b2c53aa4ded91a3674",
+        "blockers": []
+      }
+    ],
+    "blockers": []
+  },
+  "blockers": [],
   "reports": []
 }

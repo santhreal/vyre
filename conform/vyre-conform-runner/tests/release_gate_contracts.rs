@@ -47,135 +47,6 @@ fn floor(script: &str, crate_name: &str) -> u32 {
     })
 }
 
-#[test]
-fn release_conformance_artifacts_prove_three_backend_catalog_completeness() {
-    let gate = repo_json("release/evidence/conformance/release-gate-log.json");
-    assert_eq!(
-        gate["schema_version"], 2,
-        "Fix: release gate log schema must be v2."
-    );
-    assert_json_string_array_contains_exactly(
-        &gate["requested_backends"],
-        &["cuda", "wgpu", "cpu-ref"],
-        "requested_backends",
-    );
-    assert_json_string_array_contains_exactly(
-        &gate["required_artifacts"],
-        &[
-            "cuda-conformance.json",
-            "wgpu-conformance.json",
-            "reference-conformance.json",
-        ],
-        "required_artifacts",
-    );
-    assert!(
-        gate["blockers"].as_array().is_some_and(Vec::is_empty),
-        "Fix: release conformance gate must have zero blockers."
-    );
-    for status in gate["artifact_statuses"]
-        .as_array()
-        .expect("Fix: release gate log must contain artifact_statuses")
-    {
-        let path = status["path"]
-            .as_str()
-            .expect("Fix: conformance artifact status must name a path");
-        assert_eq!(
-            status["exists"], true,
-            "Fix: required conformance artifact `{path}` must exist."
-        );
-        assert!(
-            status["bytes"].as_u64().unwrap_or(0) > 1000,
-            "Fix: required conformance artifact `{path}` is too small to be a real certificate."
-        );
-        assert!(
-            status["read_error"].is_null(),
-            "Fix: required conformance artifact `{path}` must be readable."
-        );
-    }
-
-    let matrix = repo_json("release/evidence/conformance/conformance-matrix.json");
-    let matrix_summary = ConformanceSummary::from_json(&matrix, "conformance-matrix.json");
-    assert!(
-        matrix_summary.distinct_op_count >= 400,
-        "Fix: release conformance matrix must cover the full catalog-scale op surface."
-    );
-    assert_eq!(
-        matrix_summary.catalog_required_op_count, matrix_summary.catalog_covered_op_count,
-        "Fix: every required catalog op must be covered by release conformance rows."
-    );
-    assert!(
-        matrix_summary.missing_catalog_ops.is_empty(),
-        "Fix: release conformance matrix has missing catalog ops: {:?}",
-        matrix_summary.missing_catalog_ops
-    );
-    assert_eq!(
-        matrix_summary.release_backend_row_count,
-        matrix_summary.catalog_required_op_count * 3,
-        "Fix: release conformance matrix must contain exactly one reference, CUDA, and WGPU row for every required catalog op."
-    );
-    let expected_rows = release_backend_rows(&matrix, "conformance-matrix.json");
-    assert_eq!(
-        expected_rows.len(),
-        matrix_summary.release_backend_row_count,
-        "Fix: release conformance row count field must match release_backend_rows length."
-    );
-    assert_complete_backend_rows(&expected_rows, matrix_summary.catalog_required_op_count);
-
-    for (backend_id, artifact) in [
-        ("cuda", "cuda-conformance.json"),
-        ("wgpu", "wgpu-conformance.json"),
-        ("cpu-ref", "reference-conformance.json"),
-    ] {
-        let artifact_path = format!("release/evidence/conformance/{artifact}");
-        let json = repo_json(&artifact_path);
-        let summary = ConformanceSummary::from_json(&json, &artifact_path);
-        assert_eq!(
-            json["backend_id"], backend_id,
-            "Fix: `{artifact}` must declare backend_id `{backend_id}`."
-        );
-        let command = json["command"]
-            .as_str()
-            .expect("Fix: conformance artifact must record the command that generated it");
-        assert!(
-            command.contains("cargo_full")
-                && command.contains("vyre-conform-runner")
-                && command.contains("dispatch --backend")
-                && command.contains(backend_id),
-            "Fix: `{artifact}` must record a reproducible cargo_full dispatch command for `{backend_id}`, got `{command}`."
-        );
-        assert_eq!(
-            summary.distinct_op_count, matrix_summary.distinct_op_count,
-            "Fix: `{artifact}` distinct_op_count must agree with conformance-matrix.json."
-        );
-        assert_eq!(
-            summary.catalog_required_op_count, matrix_summary.catalog_required_op_count,
-            "Fix: `{artifact}` catalog_required_op_count must agree with conformance-matrix.json."
-        );
-        assert_eq!(
-            summary.catalog_covered_op_count, matrix_summary.catalog_covered_op_count,
-            "Fix: `{artifact}` catalog_covered_op_count must agree with conformance-matrix.json."
-        );
-        assert!(
-            summary.missing_catalog_ops.is_empty(),
-            "Fix: `{artifact}` reports missing catalog ops: {:?}",
-            summary.missing_catalog_ops
-        );
-        assert!(
-            json["stdout_diagnostics"]
-                .as_array()
-                .is_some_and(Vec::is_empty),
-            "Fix: `{artifact}` must not carry ignored stdout diagnostics."
-        );
-        assert_conformance_artifact_has_no_failures(&json, artifact);
-        assert_runtime_dialect_rows(&json, backend_id, artifact);
-        let rows = release_backend_rows(&json, &artifact_path);
-        assert_eq!(
-            rows, expected_rows,
-            "Fix: `{artifact}` release backend rows must match conformance-matrix.json exactly."
-        );
-    }
-}
-
 fn assert_conformance_artifact_has_no_failures(json: &Value, label: &str) {
     let total_pairs = json_usize(json, "total_pairs", label)
         .unwrap_or_else(|| panic!("Fix: `{label}` must define total_pairs."));
@@ -210,6 +81,55 @@ fn assert_conformance_artifact_has_no_failures(json: &Value, label: &str) {
             pair["backend_id"], pair["op_id"]
         );
     }
+    let diff_summary_count = json_usize(json, "diff_summary_count", label)
+        .unwrap_or_else(|| panic!("Fix: `{label}` must define diff_summary_count."));
+    let diff_summaries = json["diff_summaries"]
+        .as_array()
+        .unwrap_or_else(|| panic!("Fix: `{label}` must include diff_summaries."));
+    assert_eq!(
+        diff_summary_count, total_pairs,
+        "Fix: `{label}` diff_summary_count must equal total_pairs."
+    );
+    assert_eq!(
+        diff_summaries.len(),
+        total_pairs,
+        "Fix: `{label}` diff_summaries length must equal total_pairs."
+    );
+    let pair_ops = pairs
+        .iter()
+        .map(|pair| {
+            pair["op_id"]
+                .as_str()
+                .unwrap_or_else(|| panic!("Fix: `{label}` pair must include op_id."))
+        })
+        .collect::<BTreeSet<_>>();
+    let diff_ops = diff_summaries
+        .iter()
+        .map(|summary| {
+            for field in [
+                "op_id",
+                "backend_id",
+                "input_digest",
+                "output_digest",
+                "timing_class",
+                "failure_class",
+            ] {
+                assert!(
+                    summary[field]
+                        .as_str()
+                        .is_some_and(|value| !value.trim().is_empty()),
+                    "Fix: `{label}` diff summary must include non-empty `{field}`."
+                );
+            }
+            summary["op_id"]
+                .as_str()
+                .expect("Fix: checked above")
+        })
+        .collect::<BTreeSet<_>>();
+    assert_eq!(
+        diff_ops, pair_ops,
+        "Fix: `{label}` diff_summaries must cover exactly pairs[].op_id."
+    );
 }
 
 fn assert_runtime_dialect_rows(json: &Value, backend_id: &str, label: &str) {
@@ -232,18 +152,6 @@ fn assert_runtime_dialect_rows(json: &Value, backend_id: &str, label: &str) {
     }
 }
 
-#[test]
-fn concrete_driver_coverage_floors_are_nonzero_release_gates() {
-    let script = repo_file("scripts/check_test_coverage_per_crate.sh");
-
-    for crate_name in concrete_driver_crates() {
-        assert!(
-            floor(&script, &crate_name) > 0,
-            "Fix: concrete driver `{crate_name}` must not be exempt from per-crate test coverage."
-        );
-    }
-}
-
 struct ConformanceSummary {
     distinct_op_count: usize,
     catalog_required_op_count: usize,
@@ -254,9 +162,11 @@ struct ConformanceSummary {
 
 impl ConformanceSummary {
     fn from_json(json: &Value, label: &str) -> Self {
-        assert_eq!(
-            json["schema_version"], 2,
-            "Fix: `{label}` must use conformance evidence schema v2."
+        let schema_version = json_usize(json, "schema_version", label)
+            .unwrap_or_else(|| panic!("Fix: `{label}` must define schema_version."));
+        assert!(
+            schema_version >= 3,
+            "Fix: `{label}` must use conformance evidence schema v3 or newer."
         );
         let total_pairs = json_usize(json, "total_pairs", label).unwrap_or_else(|| {
             json_usize(json, "op_count", label)
@@ -395,259 +305,6 @@ fn assert_json_string_array_contains_exactly(json: &Value, expected: &[&str], fi
     assert_eq!(actual, expected, "Fix: `{field}` has the wrong entries.");
 }
 
-#[test]
-fn cuda_parity_gate_documents_int4_gpu_parity_coverage() {
-    let script = repo_file("scripts/check_cuda_parity_perf_gate.sh");
-    assert!(
-        script.contains("check_cuda_parity_perf_gate.sh")
-            && script.contains("*gpu_parity*")
-            && script.contains("int4_quantized_gpu_parity"),
-        "Fix: CUDA parity gate must auto-discover INT4 gpu_parity integration tests."
-    );
-
-    let evidence: serde_json::Value =
-        serde_json::from_str(&repo_file("release/evidence/tests/cuda-release-gate.json"))
-            .expect("Fix: CUDA release gate evidence must be valid JSON.");
-    let int4_ops = evidence["int4_conformance_ops"]
-        .as_array()
-        .expect("Fix: cuda-release-gate.json must list int4_conformance_ops.");
-    assert_eq!(
-        int4_ops.len(),
-        6,
-        "Fix: INT4 release gate must enumerate all six harness-backed quant.int4 ops."
-    );
-    assert!(
-        evidence["gpu_parity_integration_tests"]
-            .as_array()
-            .is_some_and(|tests| tests.iter().any(|test| test == "int4_quantized_gpu_parity")),
-        "Fix: cuda-release-gate.json must name int4_quantized_gpu_parity as a gpu_parity integration test."
-    );
-}
-
-#[test]
-fn nightly_ci_runs_backend_gates_and_real_conform_subcommands() {
-    let script = repo_file("scripts/nightly_ci.sh");
-    assert!(
-        script.contains("source scripts/lib/cargo_runner.sh") && script.contains("vyre_select_cargo_runner"),
-        "Fix: nightly_ci.sh must fall back to cargo under CARGO_BUILD_JOBS-gated execution when cargo_full is absent."
-    );
-
-    for required in [
-        "nvidia-smi",
-        "scripts/check_test_coverage_per_crate.sh",
-        "scripts/check_roadmap_status_split.sh",
-        "scripts/check_ownership_boundaries.sh",
-        "scripts/check_cuda_parity_perf_gate.sh",
-        "dispatch --backend",
-    ] {
-        assert!(
-            script.contains(required),
-            "Fix: nightly_ci.sh must contain `{required}` so backend gates cannot be silently unchecked."
-        );
-    }
-    assert!(
-        !script.contains(" -- run --backend "),
-        "Fix: nightly_ci.sh must call the implemented `dispatch` subcommand, not the stale `run` spelling."
-    );
-    assert!(
-        !script.contains("\"\" test"),
-        "Fix: nightly_ci.sh must invoke the selected cargo runner, not an empty command string."
-    );
-    for required_test in [
-        "CARGO_BUILD_JOBS=\"${CARGO_BUILD_JOBS:-1}\" \"$CARGO_RUNNER\" test -q -p vyre-reference --test oracle_program_edges",
-        "CARGO_BUILD_JOBS=\"${CARGO_BUILD_JOBS:-1}\" \"$CARGO_RUNNER\" test -q -p vyre-reference --test quantized_buffer_contract",
-        "CARGO_BUILD_JOBS=\"${CARGO_BUILD_JOBS:-1}\" \"$CARGO_RUNNER\" test -q -p vyre-spec --test invariant_catalog_surface",
-        "CARGO_BUILD_JOBS=\"${CARGO_BUILD_JOBS:-1}\" \"$CARGO_RUNNER\" test -q -p vyre-spec --test data_type_layout_matrix",
-        "CARGO_BUILD_JOBS=\"${CARGO_BUILD_JOBS:-1}\" \"$CARGO_RUNNER\" test -q -p vyre-spec --test collective_op_contracts",
-        "CARGO_BUILD_JOBS=\"${CARGO_BUILD_JOBS:-1}\" \"$CARGO_RUNNER\" test -q -p vyre-macros --test adversarial",
-        "CARGO_BUILD_JOBS=\"${CARGO_BUILD_JOBS:-1}\" \"$CARGO_RUNNER\" test -q -p vyre-foundation --test wire_fuzz_infra_contracts",
-        "CARGO_BUILD_JOBS=\"${CARGO_BUILD_JOBS:-1}\" \"$CARGO_RUNNER\" test -q -p vyre-foundation --test autodiff_transform_contracts",
-        "CARGO_BUILD_JOBS=\"${CARGO_BUILD_JOBS:-1}\" \"$CARGO_RUNNER\" test -q -p vyre-foundation --test collective_ir_contracts",
-        "CARGO_BUILD_JOBS=\"${CARGO_BUILD_JOBS:-1}\" \"$CARGO_RUNNER\" test -q -p vyre-libs --test hash_single_source_contracts",
-        "CARGO_BUILD_JOBS=\"${CARGO_BUILD_JOBS:-1}\" \"$CARGO_RUNNER\" test -q -p vyre-bench --test release_matrix_contracts",
-        "CARGO_BUILD_JOBS=\"${CARGO_BUILD_JOBS:-1}\" \"$CARGO_RUNNER\" test -q -p vyre --test wire_malformed_adversarial",
-        "CARGO_BUILD_JOBS=\"${CARGO_BUILD_JOBS:-1}\" \"$CARGO_RUNNER\" test -q -p vyre-self-substrate --test organization_contracts",
-        "CARGO_BUILD_JOBS=\"${CARGO_BUILD_JOBS:-1}\" \"$CARGO_RUNNER\" test -q -p vyre-self-substrate --test graph_single_source_contracts",
-        "CARGO_BUILD_JOBS=\"${CARGO_BUILD_JOBS:-1}\" \"$CARGO_RUNNER\" test -q -p vyre-self-substrate --test platform_doc_consumer_boundary",
-    ] {
-        assert!(
-            script.contains(required_test),
-            "Fix: nightly_ci.sh must run focused release-blocker test `{required_test}`."
-        );
-    }
-}
-
-#[test]
-fn metal_macbook_gate_is_scripted_through_env_and_shared_runner() {
-    let script = repo_file("scripts/check_metal_macbook.sh");
-    let bench_manifest = repo_file("vyre-bench/Cargo.toml");
-    let bench_lib = repo_file("vyre-bench/src/lib.rs");
-    let bench_cli = repo_file("vyre-bench/src/cli.rs");
-    let rust_frontend_manifest = repo_file("vyre-frontend-rust/Cargo.toml");
-    let rust_frontend_lexer_dispatch =
-        repo_file("vyre-frontend-rust/src/pipeline/lexer_dispatch.rs");
-    assert!(
-        script.contains("VYRE_MACBOOK_SSH")
-            && script.contains("VYRE_MACBOOK_VYRE_ROOT")
-            && script.contains("VYRE_MACBOOK_CARGO_TARGET_DIR")
-            && script.contains("VYRE_MACBOOK_BENCH_OUTPUT_DIR")
-            && script.contains("VYRE_MACBOOK_CONNECT_TIMEOUT"),
-        "Fix: Metal MacBook gate must be driven by documented environment variables."
-    );
-    assert!(
-        script.contains("source scripts/lib/cargo_runner.sh")
-            && script.contains("vyre_select_cargo_runner")
-            && script.contains("\"$CARGO_RUNNER\" test -p vyre-driver-metal")
-            && script.contains("VYRE_BACKEND=metal \"$CARGO_RUNNER\" test -p vyre-conform-runner --features gpu")
-            && script.contains("\"$CARGO_RUNNER\" build -p vyre-bench")
-            && script.contains("foundation.elementwise.add.1m")
-            && script.contains("metal-resident-queue-closure.json")
-            && script.contains("dataflow.ifds.skewed.queue_closure.1m")
-            && script.contains("dataflow_ifds_closure_resident_buffers")
-            && script.contains("dataflow_ifds_closure_resident_reset_bytes")
-            && script.contains("metal_pipeline_cache_hits")
-            && script.contains("metal_pipeline_cache_misses")
-            && script.contains("metal_pipeline_cache_miss_empty_cache")
-            && script.contains("metal_pipeline_cache_miss_program_changed")
-            && script.contains("metal_pipeline_cache_miss_dispatch_policy_changed")
-            && script.contains("metal_pipeline_cache_miss_device_or_runtime_changed")
-            && script.contains("metal_pipeline_cache_miss_key_absent")
-            && script.contains("metal_buffer_allocation_count")
-            && script.contains("metal_buffer_allocation_bytes")
-            && script.contains("metal_host_to_device_copy_count")
-            && script.contains("metal_host_to_device_bytes")
-            && script.contains("metal_device_to_host_copy_count")
-            && script.contains("metal_device_to_host_bytes")
-            && script.contains("metal_output_readback_bytes")
-            && script.contains("metal_resident_buffer_count")
-            && script.contains("metal_resident_bytes")
-            && script.contains("VYRE_ALLOW_FEW_SAMPLES=1 \"$bench_bin\" run")
-            && script.contains("--measured-samples 3")
-            && script.contains("--measured-samples 1")
-            && script.contains("--sample-timeout-secs 60")
-            && script.contains("--output \"$output\"")
-            && script.contains("--output \"$resident_output\"")
-            && script.contains("\"$bench_bin\" validate-report")
-            && script.contains("--path \"$output\"")
-            && script.contains("--path \"$resident_output\"")
-            && script.contains("--total-cases 1")
-            && script.contains("--failed 0")
-            && script.contains("wgpu-vs-metal.txt")
-            && script.contains("wgpu-vs-metal.json")
-            && script.contains("cpu-ref-vs-metal.txt")
-            && script.contains("cpu-ref-vs-metal.json")
-            && script.contains("\"$bench_bin\" compare")
-            && script.contains("--baseline \"$bench_output_dir/wgpu.json\"")
-            && script.contains("--candidate \"$bench_output_dir/metal.json\"")
-            && script.contains("--output \"$comparison_json\"")
-            && script.contains("--baseline \"$bench_output_dir/cpu-ref.json\"")
-            && script.contains("--output \"$ref_comparison_json\"")
-            && script.contains("\"$bench_bin\" validate-comparison")
-            && script.contains("--path \"$comparison_json\"")
-            && script.contains("--path \"$ref_comparison_json\"")
-            && script.contains("--baseline-backend wgpu")
-            && script.contains("--baseline-backend cpu-ref")
-            && script.contains("--candidate-backend metal")
-            && script.contains("--case foundation.elementwise.add.1m")
-            && script.contains("compare_exit_code=$compare_status")
-            && script.contains("baseline_profile_backend=wgpu")
-            && script.contains("baseline_profile_backend=cpu-ref")
-            && script.contains("candidate_profile_backend=metal")
-            && script.contains("baseline_timing_quality=")
-            && script.contains("candidate_timing_quality=")
-            && script.contains("grep -q \"compare_exit_code=\" \"$comparison\"")
-            && script.contains("\"$bench_bin\" validate-benchmark-bundle")
-            && script.contains("--dir \"$bench_output_dir\"")
-            && script.contains("bundle-manifest.json")
-            && script.contains("--manifest-output \"$bundle_manifest\"")
-            && script.contains("--manifest-input \"$bundle_manifest\"")
-            && script.contains("\\\"schema\\\": \\\"vyre-bench.bundle.v1\\\"")
-            && script.contains("\\\"validator\\\": \\\"vyre-bench validate-benchmark-bundle\\\"")
-            && script.contains("\\\"suite\\\": \\\"smoke\\\"")
-            && script.contains("\\\"case_id\\\": \\\"foundation.elementwise.add.1m\\\"")
-            && script.contains("\\\"baseline_backend\\\": \\\"wgpu\\\"")
-            && script.contains("\\\"candidate_backend\\\": \\\"metal\\\"")
-            && script.contains("\\\"comparison_pairs\\\"")
-            && script.contains("\\\"cpu-ref->metal\\\"")
-            && script.contains("\\\"wgpu->metal\\\"")
-            && script.contains("\\\"source_fingerprint\\\"")
-            && script.contains("\\\"source_tree_fingerprint\\\"")
-            && script.contains("\\\"artifact_count\\\": 7")
-            && script.contains("\\\"bundle_blake3\\\"")
-            && script.contains("\\\"path\\\": \\\"metal.json\\\"")
-            && script.contains("\\\"path\\\": \\\"cpu-ref-vs-metal.json\\\""),
-        "Fix: Metal MacBook gate must use the shared cargo runner for driver, conformance, and benchmark gates."
-    );
-    for backend in ["cpu-ref", "wgpu", "metal"] {
-        assert!(
-            script.contains(&format!("for backend in cpu-ref wgpu metal; do"))
-                && script.contains("--backend \"$backend\""),
-            "Fix: Metal MacBook benchmark gate must explicitly run smoke coverage for backend `{backend}`."
-        );
-    }
-    assert!(
-        bench_manifest.contains("vyre-driver-metal = { workspace = true }")
-            && bench_manifest.contains("[target.'cfg(not(target_os = \"macos\"))'.dependencies]")
-            && bench_lib.contains("pub fn link_benchmark_backend_registrations()")
-            && bench_cli.contains("crate::link_benchmark_backend_registrations();")
-            && bench_lib.contains("use vyre_driver_metal as _;")
-            && bench_lib.contains("#[cfg(not(target_os = \"macos\"))]\nuse vyre_driver_cuda as _;"),
-        "Fix: vyre-bench must link vyre-driver-metal for Mac benchmarking without unconditionally loading CUDA on macOS."
-    );
-    assert!(
-        rust_frontend_manifest.contains("[target.'cfg(not(target_os = \"macos\"))'.dependencies]")
-            && rust_frontend_lexer_dispatch
-                .contains("#[cfg(not(target_os = \"macos\"))]\nuse vyre_driver_cuda as _;"),
-        "Fix: vyre-frontend-rust must not pull cudarc into the Mac benchmark dependency graph."
-    );
-    assert!(
-        script.contains("ssh -o BatchMode=yes -o ConnectTimeout=")
-            && script.contains("driver|correctness")
-            && script.contains("conformance")
-            && script.contains("benchmark")
-            && script.contains("all"),
-        "Fix: Metal MacBook gate must expose SSH-backed driver, conformance, benchmark, and complete modes."
-    );
-    assert!(
-        !script.contains("cargo_full(workspace)")
-            && !script.contains("ssh tt-macbook")
-            && !script.contains("cargo test -p vyre-driver-metal"),
-        "Fix: Metal MacBook gate must not hardcode hostnames or bypass scripts/lib/cargo_runner.sh."
-    );
-}
-
-#[test]
-
-fn release_shell_scripts_use_shared_cargo_runner_selection() {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .and_then(Path::parent)
-        .expect("Fix: vyre-conform-runner must stay under the repository conform directory.");
-    let helper = repo_file("scripts/lib/cargo_runner.sh");
-    assert!(
-        helper.contains("vyre_select_cargo_runner")
-            && helper.contains("[[ -x ./cargo_full ]]")
-            && helper.contains("CARGO_RUNNER=\"cargo\"")
-            && helper.contains("CARGO_BUILD_JOBS=\"${CARGO_BUILD_JOBS:-1}\""),
-        "Fix: scripts/lib/cargo_runner.sh must centralize cargo_full/cargo fallback with single-job builds."
-    );
-
-    for script in shell_scripts_under(root.join("scripts")) {
-        let display = script
-            .strip_prefix(root)
-            .unwrap_or(&script)
-            .display()
-            .to_string();
-        let contents = std::fs::read_to_string(&script).unwrap_or_else(|error| {
-            panic!("Fix: shell script `{display}` must be readable: {error}")
-        });
-        assert!(
-            !contents.contains("VYRE_CARGO_RUNNER:-./cargo_full"),
-            "Fix: `{display}` must use scripts/lib/cargo_runner.sh instead of hardcoding a brittle ./cargo_full default."
-        );
-    }
-}
-
 fn shell_scripts_under(root: PathBuf) -> Vec<PathBuf> {
     let mut scripts = Vec::new();
     let mut stack = vec![root];
@@ -672,186 +329,6 @@ fn shell_scripts_under(root: PathBuf) -> Vec<PathBuf> {
     }
     scripts.sort();
     scripts
-}
-
-#[test]
-fn conformance_tests_use_wrapped_backend_acquisition() {
-    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let src_dir = manifest_dir.join("src");
-    let tests_dir = manifest_dir.join("tests");
-    let mut findings = Vec::new();
-    scan_for_raw_backend_factory_calls(&src_dir, &src_dir, &mut findings);
-    scan_for_raw_backend_factory_calls(&tests_dir, &tests_dir, &mut findings);
-
-    assert!(
-        findings.is_empty(),
-        "Fix: conformance runner code must call BackendRegistration::acquire() so grid-sync split and backend wrappers are applied:\n{}",
-        findings.join("\n")
-    );
-}
-
-#[test]
-fn dispatch_conformance_isolates_backend_instance_per_pair() {
-    let source = repo_file("conform/vyre-conform-runner/src/main.rs");
-    let dispatch_start = source
-        .find("fn dispatch_pairs(")
-        .expect("Fix: conformance runner must expose dispatch_pairs.");
-    let dispatch_end = source[dispatch_start..]
-        .find("fn acquire_backend(")
-        .map(|offset| dispatch_start + offset)
-        .expect("Fix: dispatch_pairs must remain before acquire_backend.");
-    let dispatch = &source[dispatch_start..dispatch_end];
-    let prepare_pos = dispatch
-        .find("let prepared = match prepare_entry(entry)")
-        .expect("Fix: dispatch_pairs must prepare each entry before backend comparison.");
-    let acquire_pos = dispatch
-        .find("let backend = match acquire_backend(&backend_id)")
-        .expect("Fix: dispatch_pairs must acquire the selected backend.");
-    let compare_pos = dispatch
-        .find("compare_backend_against_reference(")
-        .expect("Fix: dispatch_pairs must compare backend output against reference.");
-    assert!(
-        prepare_pos < acquire_pos && acquire_pos < compare_pos,
-        "Fix: dispatch conformance must acquire a fresh backend per prepared pair so a poisoned CUDA instance cannot taint later release evidence."
-    );
-    assert!(
-        !dispatch[..prepare_pos].contains("acquire_backend(&backend_id)"),
-        "Fix: dispatch conformance must not share one backend instance across all selected pairs."
-    );
-}
-
-#[test]
-fn release_conformance_static_sizing_uses_packed_buffer_lengths() {
-    for path in [
-        "conform/vyre-conform-runner/src/witness_plan.rs",
-        "conform/vyre-conform-runner/tests/__split/parity_matrix_chunk1.rs",
-        "vyre-libs/src/primitive_catalog.rs",
-    ] {
-        let source = repo_file(path);
-        assert!(
-            source.contains(".static_byte_len()"),
-            "Fix: `{path}` must use BufferDecl::static_byte_len() so sub-byte static buffers use packed lengths."
-        );
-        assert!(
-            !source.contains("buffer.element().min_bytes()"),
-            "Fix: `{path}` must not size static dispatch buffers with min_bytes(); I4/FP4/NF4 buffers require packed byte lengths."
-        );
-    }
-
-    for path in [
-        "vyre-reference/src/execution/hashmap/mod.rs",
-        "vyre-reference/src/execution/hashmap/memory.rs",
-    ] {
-        let source = repo_file(path);
-        assert!(
-            source.contains(".static_byte_len()"),
-            "Fix: `{path}` must use BufferDecl::static_byte_len() so reference allocation mirrors packed backend buffer lengths."
-        );
-    }
-
-    for path in [
-        "vyre-reference/src/execution/hashmap/sync.rs",
-        "vyre-reference/src/oob.rs",
-    ] {
-        let source = repo_file(path);
-        assert!(
-            source.contains(".bit_width()"),
-            "Fix: `{path}` must compute logical element counts from DataType::bit_width() so sub-byte buffers report packed logical lengths."
-        );
-    }
-}
-
-#[test]
-fn parity_matrix_input_planner_tracks_dynamic_fixture_contract() {
-    for path in ["conform/vyre-conform-runner/src/witness_plan.rs"] {
-        let source = repo_file(path);
-        assert!(
-            source.contains("matching_fixture_bytes(")
-                && source.contains("fixture_index")
-                && source.contains("byte_len: Option<usize>"),
-            "Fix: `{path}` must route backend witness inputs by logical fixture order with optional static byte lengths, not only raw Program::buffers indices."
-        );
-        assert!(
-            source.contains("runtime-sized read-write buffer"),
-            "Fix: `{path}` must reject omitted runtime-sized read-write buffers instead of silently zeroing an unknown byte length."
-        );
-        assert!(
-            !source.contains("fixture_buffer_count"),
-            "Fix: `{path}` must not infer read-write fixture presence from a raw fixture count; use per-buffer fixture matching."
-        );
-    }
-
-    let main = repo_file("conform/vyre-conform-runner/src/main.rs");
-    assert!(
-        main.contains("WitnessInputPlan::for_program(program)")
-            && main.contains("plan_witness_inputs_into(fixture_inputs, plan, backend_inputs)"),
-        "Fix: CLI release conformance must route production witness planning through the shared witness_plan module."
-    );
-
-    let parity = repo_file("conform/vyre-conform-runner/tests/__split/parity_matrix_chunk1.rs");
-    assert!(
-        parity.contains("matching_fixture_bytes(")
-            && parity.contains("fixture_index")
-            && parity.contains("byte_len: Option<usize>")
-            && parity.contains("runtime-sized read-write buffer")
-            && !parity.contains("fixture_buffer_count"),
-        "Fix: parity matrix harness must keep the logical fixture/static-length/read-write witness contract."
-    );
-}
-
-#[test]
-fn bundle_certificate_uses_shared_witness_input_planner() {
-    let source = repo_file("conform/vyre-conform-runner/src/bundle_cert.rs");
-
-    assert!(
-        source.contains("WitnessInputPlan::for_program(program)")
-            && source.contains("plan_witness_inputs_into(&witness.inputs, input_plan")
-            && source.contains("WitnessPlanningFailed"),
-        "Fix: bundle cert issue/verify must dispatch through the same planned logical witness stream as release conformance."
-    );
-    assert!(
-        !source.contains("witness.inputs.iter().map(Vec::as_slice).collect"),
-        "Fix: bundle cert backend verification must not feed raw witness buffers directly to dispatch_borrowed."
-    );
-}
-
-#[test]
-fn ulp_audit_input_planner_tracks_release_witness_contract() {
-    let source = repo_file("conform/vyre-conform-runner/tests/ulp_audit.rs");
-    let split = repo_file("conform/vyre-conform-runner/tests/__split/ulp_audit_part1.rs");
-
-    assert!(
-        source.contains("fn backend_dispatch_plan(")
-            && source.contains("matching_fixture_bytes(")
-            && source.contains("ReadWriteOrZero")
-            && source.contains("runtime-sized read-write buffer"),
-        "Fix: ULP audit must use the same logical fixture/static-length/read-write witness planning contract as release conformance."
-    );
-    assert!(
-        split.contains("backend_dispatch_plan(&program)")
-            && split.contains("backend_inputs_from_fixture_into(inputs, &input_plan")
-            && split.contains("backend_input_buffer_indices(&input_plan)"),
-        "Fix: release_per_op_f32_ulp_audit must dispatch fixture and adversarial cases through the planned backend input stream."
-    );
-    assert!(
-        !source.contains("BindingPlan")
-            && !source.contains("backend_input_map")
-            && !source.contains("fixture_len"),
-        "Fix: ULP audit must not infer backend inputs from raw fixture counts or BindingPlan-only buffer indices."
-    );
-}
-
-#[test]
-fn conformance_tests_do_not_compile_out_gpu_gates() {
-    let tests_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests");
-    let mut findings = Vec::new();
-    scan_for_cfg_gated_gpu_tests(&tests_dir, &tests_dir, &mut findings);
-
-    assert!(
-        findings.is_empty(),
-        "Fix: conformance GPU gates must fail loudly when GPU drivers are not linked; do not compile out tests/modules with cfg(feature = \"gpu\"):\n{}",
-        findings.join("\n")
-    );
 }
 
 fn scan_for_raw_backend_factory_calls(root: &Path, path: &Path, findings: &mut Vec<String>) {
@@ -994,39 +471,15 @@ fn concrete_driver_crates() -> Vec<String> {
         .collect()
 }
 
-#[test]
-fn conformance_runner_wrong_output_pairs_have_replay_capsules_contract() {
-    let source = repo_file("conform/vyre-conform-runner/src/main.rs");
-    for required in [
-        "replay_capsule: Option<ReplayCapsule>",
-        "struct ReplayCapsule",
-        "program_blake3",
-        "witness_input_blake3",
-        "reference_output_blake3",
-        "backend_output_blake3",
-        "first_replay_mismatch",
-        "single_witness_case",
-        "program.content_hash()",
-        "build_replay_capsule(",
-    ] {
-        assert!(
-            source.contains(required),
-            "Fix: wrong-output conformance failures must keep structured replay capsule evidence; missing `{required}`."
-        );
-    }
-    let production_source = source.split("#[cfg(test)]").next().unwrap_or(&source);
-    let mismatch_count = production_source
-        .matches("if let BufferParity::Mismatch(detail)")
-        .count();
-    let capsule_call_count = production_source
-        .matches("replay_capsule: Some(build_replay_capsule(")
-        .count();
-    assert!(
-        mismatch_count >= 2,
-        "Fix: source contract expects both normal dispatch and convergence mismatch paths."
-    );
-    assert_eq!(
-        capsule_call_count, mismatch_count,
-        "Fix: every BufferParity mismatch path must attach a replay capsule instead of returning only prose."
-    );
-}
+#[path = "release_gate_contracts/artifact_catalog_contracts.rs"]
+mod artifact_catalog_contracts;
+#[path = "release_gate_contracts/driver_floor_contracts.rs"]
+mod driver_floor_contracts;
+#[path = "release_gate_contracts/ci_script_contracts.rs"]
+mod ci_script_contracts;
+#[path = "release_gate_contracts/backend_acquisition_contracts.rs"]
+mod backend_acquisition_contracts;
+#[path = "release_gate_contracts/planner_contracts.rs"]
+mod planner_contracts;
+#[path = "release_gate_contracts/static_scan_contracts.rs"]
+mod static_scan_contracts;

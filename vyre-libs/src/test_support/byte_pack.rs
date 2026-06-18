@@ -11,19 +11,25 @@ pub fn decode_f32(bytes: &[u8]) -> Vec<f32> {
 }
 
 pub fn decode_f32_one(bytes: &[u8]) -> f32 {
-    f32::from_le_bytes(
-        bytes[0..4]
-            .try_into()
-            .expect("Fix: f32 scalar fixture output must contain at least four bytes."),
-    )
+    match try_decode_f32_one(bytes) {
+        Ok(value) => value,
+        Err(_) => f32::NAN,
+    }
+}
+
+pub fn try_decode_f32_one(bytes: &[u8]) -> Result<f32, String> {
+    vyre_primitives::wire::read_f32_le_word(bytes, 0, "f32 scalar fixture output")
 }
 
 pub fn decode_u32_one(bytes: &[u8]) -> u32 {
-    u32::from_le_bytes(
-        bytes[0..4]
-            .try_into()
-            .expect("Fix: u32 scalar fixture output must contain at least four bytes."),
-    )
+    match try_decode_u32_one(bytes) {
+        Ok(value) => value,
+        Err(_) => u32::MAX,
+    }
+}
+
+pub fn try_decode_u32_one(bytes: &[u8]) -> Result<u32, String> {
+    vyre_primitives::wire::read_u32_le_word(bytes, 0, "u32 scalar fixture output")
 }
 
 pub fn bytes_to_u32(slice: &[u8]) -> Vec<u32> {

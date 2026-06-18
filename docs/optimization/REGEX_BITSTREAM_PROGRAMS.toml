@@ -1,0 +1,40 @@
+schema_version = 1
+
+planner_id = "regex-interleaved-bitstream:v1"
+
+required_metrics = [
+  "program_digest",
+  "match_parity",
+  "divergence_counter",
+  "verifier_parity",
+  "unsupported_operator",
+]
+
+[[program_class]]
+class_id = "gpu_fit_regular_subset"
+operators = ["literal", "concat", "alternation", "bounded_repeat"]
+program_layout = "interleaved_bit_parallel_words"
+backend = "cuda"
+verifier_required = true
+parity_required = true
+evidence_path = "vyre-driver-cuda/tests/regex_bitstream_program_registry.rs"
+
+[[program_class]]
+class_id = "unsupported_operator"
+operators = ["backreference", "recursion", "conditional_reference"]
+program_layout = "not_applicable"
+backend = "cuda"
+verifier_required = false
+parity_required = false
+diagnostic_code = "VYRE_CUDA_BITSTREAM_UNSUPPORTED_OPERATOR"
+evidence_path = "vyre-driver-cuda/tests/regex_bitstream_program_registry.rs"
+
+[[program_class]]
+class_id = "register_pressure_exceeded"
+operators = ["large_alternation", "wide_unicode_class"]
+program_layout = "not_applicable"
+backend = "cuda"
+verifier_required = false
+parity_required = false
+diagnostic_code = "VYRE_CUDA_BITSTREAM_REGISTER_PRESSURE_EXCEEDED"
+evidence_path = "vyre-driver-cuda/tests/regex_bitstream_program_registry.rs"

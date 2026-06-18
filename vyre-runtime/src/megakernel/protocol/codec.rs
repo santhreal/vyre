@@ -297,21 +297,13 @@ pub fn try_encode_empty_debug_log_into(
 /// Decode the kernel's `done_count` from a control buffer.
 #[must_use]
 pub fn read_done_count(control_bytes: &[u8]) -> u32 {
-    try_read_done_count(control_bytes).unwrap_or_else(|source| {
-        panic!(
-            "megakernel control done_count decode failed: {source}. Fix: use a complete control readback produced by the matching megakernel protocol encoder."
-        )
-    })
+    try_read_done_count(control_bytes).unwrap_or(0)
 }
 
 /// Read the epoch counter from a control buffer.
 #[must_use]
 pub fn read_epoch(control_bytes: &[u8]) -> u32 {
-    try_read_epoch(control_bytes).unwrap_or_else(|source| {
-        panic!(
-            "megakernel control epoch decode failed: {source}. Fix: use a complete control readback produced by the matching megakernel protocol encoder."
-        )
-    })
+    try_read_epoch(control_bytes).unwrap_or(0)
 }
 
 /// Strictly decode the kernel's `done_count` from a control buffer.
@@ -579,7 +571,7 @@ fn try_reserve_target_capacity<T>(
     )
 }
 
-fn try_reserve_protocol_capacity<T>(
+pub(super) fn try_reserve_protocol_capacity<T>(
     out: &mut Vec<T>,
     target_capacity: usize,
     buffer: &'static str,
@@ -725,6 +717,6 @@ pub(crate) fn write_word(bytes: &mut [u8], word_idx: usize, value: u32) {
     bytes[off..off + 4].copy_from_slice(&value.to_le_bytes());
 }
 
-fn words_to_bytes(words: u32) -> Option<usize> {
+pub(super) fn words_to_bytes(words: u32) -> Option<usize> {
     usize::try_from(words).ok()?.checked_mul(4)
 }

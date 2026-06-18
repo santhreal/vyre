@@ -1,0 +1,40 @@
+# crates.io registry publication policy for VX-1122, VX-1127, VX-1132, and VX-1137.
+# Publishing permanence, package contents, owners, yanking, crate naming, and public/private boundaries share one registry policy.
+
+schema = "vyre.release.crates_io_registry_publication_policy.v1"
+owner = "coordination"
+evidence_tokens = ["CARGO_PUBLISH", "CARGO_MANIFEST_LICENSE_FIELDS", "PUBLICATION_BOUNDARY_MANIFEST"]
+
+required_fields = [
+  "registry_surface",
+  "crate_name_policy",
+  "publish_permanence_policy",
+  "owner_policy",
+  "yank_policy",
+  "package_contents_policy",
+  "dry_run_policy",
+  "private_boundary_policy",
+  "diagnostic",
+]
+
+[[publication]]
+registry_surface = "public-vyre-crate"
+crate_name_policy = "public-crate-name-reserved-for-vyre-product-or-approved-tool-subcrate"
+publish_permanence_policy = "published-version-is-immutable-and-cannot-be-overwritten"
+owner_policy = "team-owner-preferred-named-owner-minimized-and-recorded"
+yank_policy = "yank-blocks-new-resolution-but-does-not-delete-code-or-secrets"
+package_contents_policy = "cargo-package-list-must-exclude-private-santh-root-large-local-assets-and-private-evidence"
+dry_run_policy = "cargo-package-or-publish-dry-run-required-before-public-upload"
+private_boundary_policy = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+diagnostic = "VYRE_CRATES_IO_PUBLICATION_POLICY_REQUIRED"
+
+[[publication]]
+registry_surface = "feature-gated-tool-subcrate"
+crate_name_policy = "subcrate-name-matches-parent-tool-boundary-and-feature-gate"
+publish_permanence_policy = "subcrate-version-published-only-with-parent-compatibility-record"
+owner_policy = "same-owner-policy-as-public-vyre-root"
+yank_policy = "yank-coordinated-with-parent-feature-compatibility-and-release-notes"
+package_contents_policy = "subcrate-package-contains-only-public-tool-surface-and-required-license-notices"
+dry_run_policy = "subcrate-package-dry-run-required-before-public-upload"
+private_boundary_policy = "PACKAGE_METADATA_PUBLICATION_POLICY.toml"
+diagnostic = "VYRE_SUBCRATE_REGISTRY_POLICY_REQUIRED"

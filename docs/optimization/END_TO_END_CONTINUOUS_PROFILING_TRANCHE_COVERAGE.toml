@@ -1,0 +1,36 @@
+# This tranche adds continuous profiling signal contracts, collection safety, profile correlation, and regression triage while reusing existing metrics, traces, SLO, rollout, capacity, and publication authorities.
+
+schema = "vyre.coverage.continuous_profiling_tranche.v1"
+tranche = "VX-1361..VX-1380"
+owner = "performance_observability"
+evidence_tokens = ["OPENTELEMETRY_PROFILES_SPEC", "OPENTELEMETRY_PROFILE_SIGNAL", "OPENTELEMETRY_PROFILE_MAPPINGS", "OPENTELEMETRY_PPROF_COMPATIBILITY", "GOOGLE_PPROF", "LINUX_PERF_SECURITY", "GRAFANA_PYROSCOPE", "PYROSCOPE_CLIENT_COLLECTION"]
+
+required_links = [
+  "continuous_profiling_signal_contracts",
+  "profiling_collection_security_policy",
+  "profile_trace_metric_correlation_policy",
+  "performance_regression_profile_triage_policy",
+  "trace_context_telemetry_contracts",
+  "metrics_exposition_contracts",
+  "cross_signal_audit_correlation",
+  "operational_readiness_coverage",
+  "capacity_autoscaling_coverage",
+  "staged_rollout_coverage",
+  "publication_boundary",
+  "dedup_seam",
+  "proof_gate",
+]
+
+continuous_profiling_signal_contracts = "CONTINUOUS_PROFILING_SIGNAL_CONTRACTS.toml"
+profiling_collection_security_policy = "PROFILING_COLLECTION_SECURITY_POLICY.toml"
+profile_trace_metric_correlation_policy = "PROFILE_TRACE_METRIC_CORRELATION_POLICY.toml"
+performance_regression_profile_triage_policy = "PERFORMANCE_REGRESSION_PROFILE_TRIAGE_POLICY.toml"
+trace_context_telemetry_contracts = "TRACE_CONTEXT_TELEMETRY_CONTRACTS.toml"
+metrics_exposition_contracts = "METRICS_EXPOSITION_CONTRACTS.toml"
+cross_signal_audit_correlation = "CROSS_SIGNAL_AUDIT_CORRELATION.toml"
+operational_readiness_coverage = "END_TO_END_OPERATIONAL_READINESS_TRANCHE_COVERAGE.toml"
+capacity_autoscaling_coverage = "END_TO_END_CAPACITY_AUTOSCALING_TRANCHE_COVERAGE.toml"
+staged_rollout_coverage = "END_TO_END_STAGED_ROLLOUT_TRANCHE_COVERAGE.toml"
+publication_boundary = "PUBLICATION_BOUNDARY_CLASSIFICATION.toml"
+dedup_seam = "continuous-profiling-owns-profile-samples-collection-safety-correlation-and-regression-attribution-while-existing-trace-metric-SLO-rollout-capacity-and-publication-registries-remain-signal-and-release-authorities"
+proof_gate = "conform/vyre-conform-enforce/tests/continuous_profiling_governance.rs"

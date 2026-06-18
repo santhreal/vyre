@@ -1,0 +1,62 @@
+# Release health feedback loop for VX-1153, VX-1154, VX-1155, VX-1156, and VX-1157.
+# Public issues, private advisories, operator reports, metrics, benchmarks, and package docs feed one gate-effect seam.
+
+schema = "vyre.release.release_health_feedback_loop.v1"
+owner = "coordination"
+evidence_tokens = ["GITHUB_LABELS", "OPENTELEMETRY_SEMCONV", "OPENMETRICS_PROMETHEUS", "SARIF_2_1_0", "FIRST_PSIRT_SERVICES_FRAMEWORK"]
+
+required_fields = [
+  "signal_id",
+  "input_surface",
+  "normalization_policy",
+  "evidence_link",
+  "owner_route",
+  "release_gate_effect",
+  "feedback_artifact",
+  "privacy_boundary",
+  "diagnostic",
+]
+
+[[signal]]
+signal_id = "accepted-security-report"
+input_surface = "PRIVATE_VULNERABILITY_RESPONSE_RUNBOOK.toml"
+normalization_policy = "accepted-private-report-becomes-vulnerability-risk-record-and-release-blocker"
+evidence_link = "VULNERABILITY_RISK_DECISION_MATRIX.toml"
+owner_route = "MAINTAINER_OWNERSHIP_ESCALATION_MAP.toml"
+release_gate_effect = "blocks-FINAL_RELEASE_GATE_MANIFEST.toml-until-fixed-mitigated-or-not-affected-proof"
+feedback_artifact = "SECURITY_ADVISORY_EXCHANGE_POLICY.toml"
+privacy_boundary = "public-advisory-redacts-private-santh-evidence-and-sensitive-reproducer-data"
+diagnostic = "VYRE_RELEASE_HEALTH_SECURITY_BLOCKER"
+
+[[signal]]
+signal_id = "docs-install-regression"
+input_surface = "PUBLIC_ISSUE_SUPPORT_INTAKE_POLICY.toml"
+normalization_policy = "support-or-docs-install-failure-becomes-package-consumer-compatibility-record"
+evidence_link = "CONSUMER_INSTALL_COMPATIBILITY_MATRIX.toml"
+owner_route = "MAINTAINER_OWNERSHIP_ESCALATION_MAP.toml"
+release_gate_effect = "invalidates-docs-package-readiness-until-public-copyable-example-or-install-contract-is-fixed"
+feedback_artifact = "DOCS_RS_RUSTDOC_PUBLICATION_POLICY.toml"
+privacy_boundary = "support-thread-excludes-private-paths-secrets-and-local-santh-install-notes"
+diagnostic = "VYRE_RELEASE_HEALTH_DOCS_INSTALL_REGRESSION"
+
+[[signal]]
+signal_id = "performance-regression"
+input_surface = "PUBLIC_ISSUE_SUPPORT_INTAKE_POLICY.toml"
+normalization_policy = "public-performance-report-links-to-benchmark-evidence-hot-path-budget-and-hardware-class"
+evidence_link = "HOT_PATHS.toml"
+owner_route = "MAINTAINER_OWNERSHIP_ESCALATION_MAP.toml"
+release_gate_effect = "blocks-public-performance-claim-if-regression-evidence-contradicts-benchmark-summary"
+feedback_artifact = "SECURITY_INSIGHTS_RELEASE_SUMMARY.toml"
+privacy_boundary = "device-serials-private-corpora-and-private-paths-redacted-before-public-evidence"
+diagnostic = "VYRE_RELEASE_HEALTH_PERFORMANCE_REGRESSION"
+
+[[signal]]
+signal_id = "operator-diagnostic-cluster"
+input_surface = "OPERATOR_REPORTING_INTERCHANGE.toml"
+normalization_policy = "repeated-public-safe-diagnostics-map-to-issue-label-route-and-release-risk-record"
+evidence_link = "TRACE_CONTEXT_TELEMETRY_CONTRACTS.toml"
+owner_route = "MAINTAINER_OWNERSHIP_ESCALATION_MAP.toml"
+release_gate_effect = "invalidates-release-health-claim-when-diagnostic-cluster-crosses-declared-resource-or-correctness-boundary"
+feedback_artifact = "OPERATOR_EVIDENCE_TRANCHE_COVERAGE.toml"
+privacy_boundary = "telemetry-and-reports-apply-corpus-privacy-and-publication-boundary-controls"
+diagnostic = "VYRE_RELEASE_HEALTH_OPERATOR_CLUSTER"

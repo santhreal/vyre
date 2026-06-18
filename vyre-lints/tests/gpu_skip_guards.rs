@@ -145,4 +145,9 @@ fn cli_default_gpu_skip_roots_are_vyre_owned() {
         "Vyre default GPU skip roots must not require external consumer checkouts: stderr={}",
         String::from_utf8_lossy(&output.stderr)
     );
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr).as_ref(),
+        "",
+        "successful default GPU skip-root scan must not emit diagnostics"
+    );
 }

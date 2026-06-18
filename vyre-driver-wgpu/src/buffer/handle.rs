@@ -168,24 +168,61 @@ impl GpuBufferHandle {
         usage: wgpu::BufferUsages,
     ) -> Result<Self, BackendError> {
         let allocation_len = aligned_len(bytes.len())?;
+        let final_usage = usage | wgpu::BufferUsages::COPY_DST;
+        // Fast path: create the buffer already mapped and memcpy host bytes
+        // DIRECTLY into its host-visible / BAR backing store, then unmap. This
+        // is ONE host copy with no wgpu-internal staging buffer and no GPU copy
+        // command — the slow `queue.write_buffer` path routes every large upload
+        // through wgpu's `StagingBelt`, which on Vulkan allocates + maps a fresh
+        // staging buffer per write (the ~90 MB/s catalog-upload bottleneck on
+        // the ~1 GB megakernel DFA catalog). `mapped_at_creation` works for ANY
+        // usage flags (it does not require MAP_WRITE) and is correct for ALL
+        // sizes, so it replaces the staged path unconditionally for non-empty
+        // uploads. Zero-length buffers cannot be mapped at creation, so they
+        // take the (no-op) `write_padded` path below — `aligned_len(0) == 0`,
+        // and wgpu rejects a 0-byte `mapped_at_creation` buffer.
+        if allocation_len > 0 {
+            let buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("vyre persistent upload"),
+                size: allocation_len,
+                usage: final_usage,
+                mapped_at_creation: true,
+            });
+            {
+                let mut mapped = buffer.slice(..).get_mapped_range_mut();
+                crate::padded_upload::write_padded_into_mapped(&mut mapped, bytes)?;
+            }
+            buffer.unmap();
+            let logical_len = u64::try_from(bytes.len()).map_err(|source| {
+                BackendError::new(format!(
+                    "GPU upload logical byte length cannot fit u64: {source}. Fix: split the dispatch input."
+                ))
+            })?;
+            return Ok(Self::from_parts(
+                Arc::new(buffer),
+                logical_len,
+                allocation_len,
+                bytes.len(),
+                final_usage,
+                None,
+            ));
+        }
+        // Zero-length upload: allocate a minimal buffer (wgpu forbids both a
+        // 0-byte allocation and a 0-byte mapped_at_creation buffer). `write_padded`
+        // is a no-op here; the handle reports a logical length of 0.
         let buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("vyre persistent upload"),
             size: allocation_len,
-            usage: usage | wgpu::BufferUsages::COPY_DST,
+            usage: final_usage,
             mapped_at_creation: false,
         });
         write_padded(queue, &buffer, bytes, allocation_len)?;
-        let logical_len = u64::try_from(bytes.len()).map_err(|source| {
-            BackendError::new(format!(
-                "GPU upload logical byte length cannot fit u64: {source}. Fix: split the dispatch input."
-            ))
-        })?;
         Ok(Self::from_parts(
             Arc::new(buffer),
-            logical_len,
+            0,
             allocation_len,
             bytes.len(),
-            usage | wgpu::BufferUsages::COPY_DST,
+            final_usage,
             None,
         ))
     }
@@ -975,6 +1012,57 @@ mod tests {
                 .expect("Fix: unpooled readback should succeed");
             assert_eq!(out, contents);
         }
+    }
+
+    /// The mapped-at-creation upload fast path (the StagingBelt replacement)
+    /// must produce a buffer whose contents byte-for-byte equal the input across
+    /// every boundary class: sub-word, exactly-a-word, word+tail, and a large
+    /// payload (the catalog-scale path). A regression here is a silent data
+    /// corruption on the ~1 GB DFA-catalog upload.
+    #[test]
+    fn mapped_upload_roundtrips_exact_bytes_across_boundaries() {
+        let arc = crate::runtime::cached_device()
+            .expect("Fix: live GPU device required for mapped upload roundtrip test");
+        let (device, queue) = &*arc;
+        // 1,3 exercise the 4-byte tail; 4 is exactly aligned; 5 is word+tail;
+        // 257 is multi-word+tail; 1 MiB + 3 is the large, tail-padded path that
+        // used to route through the slow per-write StagingBelt.
+        for &len in &[1usize, 3, 4, 5, 257, (1 << 20) + 3] {
+            let contents: Vec<u8> = (0..len).map(|i| (i % 251) as u8).collect();
+            let handle = GpuBufferHandle::upload(
+                device,
+                queue,
+                &contents,
+                wgpu::BufferUsages::COPY_SRC,
+            )
+            .expect("Fix: mapped upload should succeed at every size");
+            let mut out = Vec::new();
+            handle
+                .readback(device, queue, &mut out)
+                .expect("Fix: readback should succeed");
+            assert_eq!(
+                out, contents,
+                "mapped upload corrupted {len}-byte payload: readback != input"
+            );
+        }
+    }
+
+    /// `write_padded_into_mapped` (the fast-path filler) must copy the logical
+    /// bytes and zero the alignment tail deterministically — proved without a
+    /// GPU so the contract holds on every host.
+    #[test]
+    fn write_padded_into_mapped_zeroes_the_tail() {
+        // Allocation of 8 bytes, 5 logical: bytes 0..5 copied, 5..8 zeroed even
+        // if the destination started with garbage.
+        let mut mapped = [0xAAu8; 8];
+        let bytes = [1u8, 2, 3, 4, 5];
+        crate::padded_upload::write_padded_into_mapped(&mut mapped, &bytes)
+            .expect("Fix: filling a large-enough mapped slice must succeed");
+        assert_eq!(&mapped[..5], &bytes);
+        assert_eq!(&mapped[5..], &[0u8, 0, 0], "alignment tail must be zeroed");
+        // A slice smaller than the data must fail closed, never truncate.
+        let mut too_small = [0u8; 2];
+        assert!(crate::padded_upload::write_padded_into_mapped(&mut too_small, &bytes).is_err());
     }
 
     #[test]

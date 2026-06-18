@@ -1,0 +1,36 @@
+# Repo-boundary publication checks for VX-699.
+# Public Vyre artifacts cannot publish private Santh paths, package metadata, or release evidence.
+
+schema = "vyre.release.repo_boundary_publication_check.v1"
+owner = "coordination"
+evidence_tokens = ["MLIR_PASS"]
+
+required_fields = [
+  "url_class",
+  "artifact_path_class",
+  "package_metadata_class",
+  "readme_link_class",
+  "release_evidence_class",
+  "publication_allowed",
+  "diagnostic",
+]
+
+[[check]]
+id = "public-vyre-url"
+url_class = "public-vyre"
+artifact_path_class = "public-package"
+package_metadata_class = "publishable"
+readme_link_class = "public-doc-link"
+release_evidence_class = "public-evidence"
+publication_allowed = true
+diagnostic = "none"
+
+[[check]]
+id = "private-santh-path"
+url_class = "private-santh"
+artifact_path_class = "private-worktree"
+package_metadata_class = "not-publishable"
+readme_link_class = "private-local-link"
+release_evidence_class = "local-only-nonpublished-doc"
+publication_allowed = false
+diagnostic = "VYRE_PUBLICATION_PRIVATE_BOUNDARY_REFUSED"

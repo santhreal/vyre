@@ -189,19 +189,19 @@ impl LazyScopeTable {
     }
 
     fn read_inner(&self) -> RwLockReadGuard<'_, LazyInner> {
-        self.inner.read().unwrap_or_else(|error| {
-            panic!(
-                "C semantic lazy scope table read lock was poisoned: {error}. Fix: discard the translation-unit semantic cache after a panic; continuing could misclassify declarations."
-            )
-        })
+        // Fail closed on poison: `into_inner` would silently expose a scope
+        // table left half-mutated by a panicking writer, so subsequent name
+        // resolution would trust corrupt bindings with no signal. A poisoned
+        // semantic scope table is unrecoverable; surface it loudly.
+        self.inner
+            .read()
+            .unwrap_or_else(|_| panic!("lazy scope table read lock was poisoned"))
     }
 
     fn write_inner(&self) -> RwLockWriteGuard<'_, LazyInner> {
-        self.inner.write().unwrap_or_else(|error| {
-            panic!(
-                "C semantic lazy scope table write lock was poisoned: {error}. Fix: discard the translation-unit semantic cache after a panic; continuing could corrupt declaration resolution."
-            )
-        })
+        self.inner
+            .write()
+            .unwrap_or_else(|_| panic!("lazy scope table write lock was poisoned"))
     }
 }
 

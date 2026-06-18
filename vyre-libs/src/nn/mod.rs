@@ -69,6 +69,10 @@ pub use backward::{
 #[cfg(feature = "nn-linear")]
 pub use linear::{linear, linear_relu, linear_silu, linear_tiled, Linear};
 #[cfg(feature = "nn-linear-4bit")]
-pub use linear::{linear_4bit_affine_grouped_typed, QuantizedLinear4BitSpec};
+pub use linear::{
+    linear_4bit_affine_grouped_planner_evidence, linear_4bit_affine_grouped_typed,
+    QuantizedLinear4BitPlannerEvidence, QuantizedLinear4BitSpec,
+    LINEAR_4BIT_AFFINE_GROUPED_OUTPUT_DRIFT_ABS_TOLERANCE,
+};
 #[cfg(feature = "nn-norm")]
 pub use norm::{layer_norm, rms_norm, rms_norm_reference, LayerNorm};

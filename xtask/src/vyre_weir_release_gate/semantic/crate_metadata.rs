@@ -77,7 +77,8 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
     if let Some(entries) = matrix.get("packages").and_then(serde_json::Value::as_array) {
         if !entries.iter().any(|entry| {
             entry.get("name").and_then(serde_json::Value::as_str) == Some("vyrec")
-                && entry.get("version").and_then(serde_json::Value::as_str) == Some("0.1.0")
+                && entry.get("version").and_then(serde_json::Value::as_str)
+                    == Some(crate::release_train::vyrec_version())
                 && entry.get("readme").and_then(serde_json::Value::as_str) == Some("README.md")
                 && entry
                     .get("release_surface")
@@ -85,13 +86,16 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
                     == Some("parser-cli")
         }) {
             failures.push(
-                "requirement `crate-metadata` matrix must include vyrec 0.1.0 parser-cli with README metadata"
-                    .to_string(),
+                format!(
+                    "requirement `crate-metadata` matrix must include vyrec {} parser-cli with README metadata",
+                    crate::release_train::vyrec_version()
+                ),
             );
         }
         if !entries.iter().any(|entry| {
             entry.get("name").and_then(serde_json::Value::as_str) == Some("vyre-frontend-c")
-                && entry.get("version").and_then(serde_json::Value::as_str) == Some("0.6.1")
+                && entry.get("version").and_then(serde_json::Value::as_str)
+                    == Some(crate::release_train::vyre_frontend_c_version())
                 && entry.get("readme").and_then(serde_json::Value::as_str) == Some("README.md")
                 && entry
                     .get("release_kind")
@@ -103,8 +107,10 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
                     == Some("c-frontend")
         }) {
             failures.push(
-                "requirement `crate-metadata` matrix must include vyre-frontend-c 0.6.1 as a c-frontend non-publishable release surface with README metadata"
-                    .to_string(),
+                format!(
+                    "requirement `crate-metadata` matrix must include vyre-frontend-c {} as a c-frontend non-publishable release surface with README metadata",
+                    crate::release_train::vyre_frontend_c_version()
+                ),
             );
         }
         for (package_name, backend_surface) in [
@@ -113,7 +119,8 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
         ] {
             if !entries.iter().any(|entry| {
                 entry.get("name").and_then(serde_json::Value::as_str) == Some(package_name)
-                    && entry.get("version").and_then(serde_json::Value::as_str) == Some("0.6.1")
+                    && entry.get("version").and_then(serde_json::Value::as_str)
+                        == Some(crate::release_train::vyre_version())
                     && entry.get("readme").and_then(serde_json::Value::as_str) == Some("README.md")
                     && entry
                         .get("release_kind")
@@ -125,7 +132,8 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
                         == Some(backend_surface)
             }) {
                 failures.push(format!(
-                    "requirement `crate-metadata` matrix must include {package_name} 0.6.1 as a publishable {backend_surface} release surface with README metadata"
+                    "requirement `crate-metadata` matrix must include {package_name} {} as a publishable {backend_surface} release surface with README metadata",
+                    crate::release_train::vyre_version()
                 ));
             }
         }

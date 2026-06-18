@@ -435,6 +435,7 @@ fn dispatch_resident_scan_sequence(
         program: &prepared.reset_program,
         resources: &reset_resources,
         grid_override: Some([1, 1, 1]),
+        workgroup_override: None,
     };
     let scan_step = ResidentDispatchStep {
         program: &prepared.program,
@@ -444,6 +445,7 @@ fn dispatch_resident_scan_sequence(
             1,
             1,
         ]),
+        workgroup_override: None,
     };
     let match_output_bytes = match_triples_readback_bytes(prepared.stats.expected_matches)?;
     let read_ranges = [

@@ -1,0 +1,46 @@
+# C preprocessing certificates for VX-653.
+# GPU tokenization cannot claim eligibility without a matching certificate digest.
+
+schema = "vyre.frontend.c.preprocess_certificate.v1"
+owner = "parser_frontend"
+evidence_tokens = ["TREE_SITTER", "CUDA_COOP"]
+
+required_fields = [
+  "translation_unit",
+  "dialect",
+  "include_graph_digest",
+  "macro_table_digest",
+  "conditional_truth_map_digest",
+  "disabled_byte_ranges",
+  "gpu_eligibility",
+  "certificate_digest",
+]
+
+gpu_eligibility_states = [
+  "eligible",
+  "blocked_by_macro_expansion",
+  "blocked_by_unknown_condition",
+  "blocked_by_include_cycle",
+]
+
+[[certificate]]
+id = "gnu11-flat-include-eligible"
+translation_unit = "fixtures/c/preprocess/flat.c"
+dialect = "gnu11"
+include_graph_digest = "sha256:flat-include-graph"
+macro_table_digest = "sha256:flat-macro-table"
+conditional_truth_map_digest = "sha256:flat-conditionals"
+disabled_byte_ranges = ["220..301"]
+gpu_eligibility = "eligible"
+certificate_digest = "sha256:flat-preprocess-certificate"
+
+[[certificate]]
+id = "macro-dependent-gpu-blocked"
+translation_unit = "fixtures/c/preprocess/macro_dependent.c"
+dialect = "gnu17"
+include_graph_digest = "sha256:macro-include-graph"
+macro_table_digest = "sha256:macro-table"
+conditional_truth_map_digest = "sha256:macro-conditionals"
+disabled_byte_ranges = ["77..144", "311..389"]
+gpu_eligibility = "blocked_by_unknown_condition"
+certificate_digest = "sha256:macro-preprocess-certificate"

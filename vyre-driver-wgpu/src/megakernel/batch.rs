@@ -4,6 +4,7 @@
 //! uploads the prefix-sum offsets + metadata tables once, and keeps a
 //! persistent device-derived work schedule + sparse hit ring alive across dispatches.
 
+use super::segmentation;
 use crate::buffer::GpuBufferHandle;
 use crate::staging_reserve::reserve_vec_exact_for_len;
 use std::sync::Arc;
@@ -41,7 +42,11 @@ pub mod queue_state_word {
     pub const HIT_CAPACITY: usize = 3;
     /// Total work items completed by the device.
     pub const DONE_COUNT: usize = 4;
-    /// Rule fanout used to derive `(file_idx, rule_idx)` from a device claim id.
+    /// Rule fanout used to derive `(seg_idx, rule_idx)` from a claim id.
+    /// `seg_idx = claim / rule_count` indexes the `segments` table, whose row
+    /// `[file_idx, scan_start, emit_start, emit_end]` (file-relative) fully
+    /// describes the window — no segmentation control words live here, the
+    /// device decode reads the table directly (see `dispatcher.rs`).
     pub const RULE_COUNT: usize = 5;
 }
 
@@ -147,6 +152,10 @@ pub struct FileBatch {
     haystack: GpuBufferHandle,
     offsets: GpuBufferHandle,
     metadata: GpuBufferHandle,
+    /// Flat segment table: `segment_count * SEGMENT_WORDS` u32s, each row
+    /// `[file_idx, scan_start, emit_start, emit_end]` (file-relative). The
+    /// device claim decode reads `seg_idx = claim / rule_count` rows from here.
+    segments: GpuBufferHandle,
     queue_state: GpuBufferHandle,
     hit_ring: GpuBufferHandle,
 }
@@ -199,7 +208,9 @@ impl FileBatch {
         build_metadata_into(files, &mut file_metadata)?;
         build_offsets_into(files, &mut file_offsets)?;
         flatten_haystack_words_into(files, &mut haystack_words)?;
-        let queue_len = dense_queue_len(file_metadata.len(), rule_count)?;
+        let (seg_len, overlap) = default_segmentation(file_metadata.len());
+        let segment_words = build_segment_table(&file_metadata, seg_len, overlap);
+        let queue_len = segment_queue_len(&segment_words, rule_count)?;
         let queue_state_words = initial_queue_state(queue_len, hit_capacity, rule_count);
 
         let haystack = GpuBufferHandle::upload(
@@ -218,6 +229,12 @@ impl FileBatch {
             device,
             queue,
             bytemuck::cast_slice(&file_metadata),
+            persistent_storage_binding_usage(),
+        )?;
+        let segments = GpuBufferHandle::upload(
+            device,
+            queue,
+            bytemuck::cast_slice(&segment_words),
             persistent_storage_binding_usage(),
         )?;
         let queue_state = GpuBufferHandle::upload(
@@ -241,6 +258,7 @@ impl FileBatch {
             haystack,
             offsets,
             metadata,
+            segments,
             queue_state,
             hit_ring,
         })
@@ -282,7 +300,9 @@ impl FileBatch {
         build_offsets_into(files, &mut self.file_offsets)?;
         flatten_haystack_words_into(files, &mut self.haystack_words)?;
 
-        let queue_len = dense_queue_len(self.file_metadata.len(), rule_count)?;
+        let (seg_len, overlap) = default_segmentation(self.file_metadata.len());
+        let segment_words = build_segment_table(&self.file_metadata, seg_len, overlap);
+        let queue_len = segment_queue_len(&segment_words, rule_count)?;
         self.rule_count = rule_count;
         self.queue_len = queue_len;
         self.hit_capacity = hit_capacity;
@@ -315,6 +335,14 @@ impl FileBatch {
         )?;
         accumulate_refresh(
             &mut report,
+            &mut self.segments,
+            device,
+            queue,
+            bytemuck::cast_slice(&segment_words),
+            persistent_storage_binding_usage(),
+        )?;
+        accumulate_refresh(
+            &mut report,
             &mut self.queue_state,
             device,
             queue,
@@ -342,6 +370,54 @@ impl FileBatch {
         let (_, queue) = &*self.device_queue;
         let words = initial_queue_state(self.queue_len, self.hit_capacity, self.rule_count);
         queue.write_buffer(self.queue_state.buffer(), 0, bytemuck::cast_slice(&words));
+        Ok(())
+    }
+
+    /// Re-tile this batch at a new window geometry: rebuild the `segments` table
+    /// (each file split into `ceil(len / seg_len)` windows, files shorter than
+    /// `seg_len` staying whole), grow/rewrite the resident segments buffer, and
+    /// update `queue_len = segment_count * rule_count` + the queue-state header so
+    /// the next dispatch claims the new work space. `seg_len = u32::MAX` restores
+    /// one segment per file (the legacy whole-file scan).
+    ///
+    /// SOUNDNESS CONTRACT: `overlap` MUST be at least
+    /// [`segmentation::catalog_sync_overlap`] over the rules that will scan this
+    /// batch. With a shorter warm-up a window can reconstruct the wrong DFA state
+    /// at `emit_start` and drop or fabricate matches. The geometry is the
+    /// caller's decision (it owns the rule catalog); this method enforces only the
+    /// structural invariant `seg_len > 0`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PipelineError::QueueFull`] when `seg_len == 0` or the new work
+    /// queue overflows the device claim protocol, or [`PipelineError::Backend`]
+    /// when the buffer upload fails.
+    pub fn set_segmentation(&mut self, seg_len: u32, overlap: u32) -> Result<(), PipelineError> {
+        if seg_len == 0 {
+            return Err(PipelineError::QueueFull {
+                queue: "submission",
+                fix: "segment owned-width (seg_len) must be > 0; pass u32::MAX for one segment per file",
+            });
+        }
+        let segment_words = build_segment_table(&self.file_metadata, seg_len, overlap);
+        let queue_len = segment_queue_len(&segment_words, self.rule_count)?;
+        self.queue_len = queue_len;
+        let queue_state_words = initial_queue_state(queue_len, self.hit_capacity, self.rule_count);
+        let (device, queue) = &*self.device_queue;
+        let mut report = FileBatchRefreshReport::default();
+        accumulate_refresh(
+            &mut report,
+            &mut self.segments,
+            device,
+            queue,
+            bytemuck::cast_slice(&segment_words),
+            persistent_storage_binding_usage(),
+        )?;
+        queue.write_buffer(
+            self.queue_state.buffer(),
+            0,
+            bytemuck::cast_slice(&queue_state_words),
+        );
         Ok(())
     }
 
@@ -385,6 +461,14 @@ impl FileBatch {
     #[must_use]
     pub const fn metadata(&self) -> &GpuBufferHandle {
         &self.metadata
+    }
+
+    /// Flat segment table (`segment_count * SEGMENT_WORDS` u32s). The device
+    /// claim decode reads row `seg_idx = claim / rule_count` to derive the
+    /// window `(file_idx, scan_start, emit_start, emit_end)`.
+    #[must_use]
+    pub const fn segments(&self) -> &GpuBufferHandle {
+        &self.segments
     }
 
     /// Queue-state/control words.
@@ -807,7 +891,37 @@ fn initial_queue_state(
     hit_capacity: u32,
     rule_count: u32,
 ) -> [u32; QUEUE_STATE_WORDS] {
+    // Word order MUST match `queue_state_word::*`:
+    // [HEAD, QUEUE_LEN, HIT_HEAD, HIT_CAPACITY, DONE_COUNT, RULE_COUNT].
     [0, queue_len, 0, hit_capacity, 0, rule_count]
+}
+
+/// Default (non-tuned) window geometry: `seg_len = u32::MAX` and `overlap = 0`,
+/// which yields exactly ONE segment per file. The resulting `segments` table is
+/// `[file_idx, 0, 0, file_len]` per file, so the device decode scans each file
+/// whole from state 0 with no warm-up — byte-for-byte the pre-segmentation
+/// behavior. Tuning `seg_len` below the file length saturates the device, but is
+/// only sound once `overlap >= the catalog's longest match span`; that geometry
+/// is chosen by the caller, never defaulted here.
+fn default_segmentation(_file_count: usize) -> (u32, u32) {
+    (u32::MAX, 0)
+}
+
+/// Build the flat device segment table from the per-file metadata at the given
+/// window geometry. The row order matches [`segmentation::plan_segments`], so the
+/// device `seg_idx = claim / rule_count` indexes it directly.
+fn build_segment_table(file_metadata: &[FileMetadata], seg_len: u32, overlap: u32) -> Vec<u32> {
+    let file_lens: Vec<u32> = file_metadata.iter().map(|meta| meta.size_bytes).collect();
+    segmentation::segment_table(&file_lens, seg_len, overlap)
+}
+
+/// Work-queue length for a segment table = `segment_count * rule_count`, reusing
+/// the same overflow/limit guards as the dense path (`dense_queue_len` is the
+/// `count * rule_count` primitive; here `count` is the segment count, not the
+/// file count). A zero-length table (every file empty) yields a zero queue.
+fn segment_queue_len(segment_words: &[u32], rule_count: u32) -> Result<u32, PipelineError> {
+    let segment_count = segment_words.len() / segmentation::SEGMENT_WORDS;
+    dense_queue_len(segment_count, rule_count)
 }
 
 fn reserve_batch_vec_len<T>(
@@ -987,8 +1101,9 @@ mod tests {
             "smaller refresh must not replace resident input buffers"
         );
         assert_eq!(
-            refresh_report.reused_buffers, 5,
-            "refresh must account for four refreshed inputs plus hit ring reuse"
+            refresh_report.reused_buffers, 6,
+            "refresh must account for five refreshed inputs (haystack, offsets, metadata, \
+             segments, queue_state) plus hit ring reuse"
         );
         assert!(
             refresh_report.bytes_uploaded > 0,
@@ -1017,6 +1132,78 @@ mod tests {
         assert_eq!(
             report.hit_count, 6,
             "refreshed batch must scan only the 3 refreshed bytes across 2 rules, not stale tail bytes"
+        );
+    }
+
+    #[test]
+    fn set_segmentation_preserves_hits_vs_whole_file() {
+        // GPU PARITY: tiling a file into overlapping windows (`set_segmentation`)
+        // must produce the EXACT same hit set as the whole-file scan. Uses an
+        // accept-every rule (one state, accept[0]=1) so every byte offset is a
+        // hit — the hit set is the offset tiling itself, so any double-count,
+        // gap, or warm-up leak shows up directly. overlap=8 exercises the
+        // emit-guard: warm-up bytes (`byte_pos < emit_start`) must advance state
+        // but NEVER emit. dfa_sync_distance of a 1-state DFA is 0, so overlap=8 is
+        // amply sound here.
+        let backend = crate::WgpuBackend::new().expect(
+            "Fix: live WGPU backend required for the segmentation GPU-parity contract.",
+        );
+        let content: Vec<u8> = (0..600u32).map(|i| (i % 251) as u8).collect();
+        let files = vec![BatchFile::new(7, 0, content)];
+        let mut batch = FileBatch::upload(backend.device_queue(), &files, 1, 2048)
+            .expect("Fix: FileBatch upload must succeed");
+
+        let config = crate::megakernel::BatchDispatchConfig {
+            workgroup_size_x: 64,
+            worker_groups: 8,
+            hit_capacity: 2048,
+            timeout: std::time::Duration::from_secs(10),
+            ..Default::default()
+        };
+        let mut dispatcher = crate::megakernel::BatchDispatcher::new(backend, config)
+            .expect("Fix: live batch dispatcher must compile");
+        let rules = vec![
+            vyre_runtime::megakernel::BatchRuleProgram::new(0, vec![0; 256], vec![1], 1)
+                .expect("Fix: accept-every rule must be valid"),
+        ];
+
+        // Whole-file scan (one segment per file): expect one hit per byte offset.
+        assert_eq!(batch.queue_len(), 1, "default geometry is one work item (1 file × 1 rule)");
+        let mut whole = Vec::new();
+        dispatcher
+            .dispatch_into(&batch, &rules, &mut whole)
+            .expect("Fix: whole-file dispatch must succeed");
+        let whole_set: std::collections::BTreeSet<(u32, u32)> =
+            whole.iter().map(|h| (h.rule_idx, h.match_offset)).collect();
+        assert_eq!(whole_set.len(), 600, "accept-every rule hits every one of 600 offsets");
+        assert_eq!(*whole_set.iter().next().unwrap(), (0, 0));
+        assert_eq!(*whole_set.iter().next_back().unwrap(), (0, 599));
+
+        // Segment into 5 windows (ceil(600/128)) with 8 bytes of warm-up.
+        batch
+            .set_segmentation(128, 8)
+            .expect("Fix: set_segmentation must succeed");
+        assert_eq!(
+            batch.queue_len(),
+            5,
+            "600 bytes at seg_len=128 ⇒ 5 segments × 1 rule = 5 work items"
+        );
+        let mut segmented = Vec::new();
+        dispatcher
+            .dispatch_into(&batch, &rules, &mut segmented)
+            .expect("Fix: segmented dispatch must succeed");
+        let segmented_set: std::collections::BTreeSet<(u32, u32)> =
+            segmented.iter().map(|h| (h.rule_idx, h.match_offset)).collect();
+
+        assert_eq!(
+            segmented_set, whole_set,
+            "segmented scan must produce the identical (rule, offset) hit set as the whole-file scan"
+        );
+        // No double counting from the overlapping warm-up regions.
+        assert_eq!(
+            segmented.len(),
+            whole.len(),
+            "segmented scan must not duplicate hits across window warm-up overlaps"
         );
     }
 

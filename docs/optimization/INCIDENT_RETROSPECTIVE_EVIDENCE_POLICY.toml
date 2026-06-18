@@ -1,0 +1,43 @@
+# Incident retrospective evidence policy for VX-1252, VX-1256, VX-1257, and VX-1259.
+# Incident records, SLO impact, alert timeline, operator logs, runbook actions, remediation links, and public/private boundaries share one retrospective seam.
+
+schema = "vyre.ops.incident_retrospective_evidence_policy.v1"
+owner = "coordination"
+evidence_tokens = ["OPENTELEMETRY_LOGS", "OPENTELEMETRY_SEMCONV", "W3C_TRACE_CONTEXT", "SARIF_2_1_0", "FIRST_PSIRT_SERVICES_FRAMEWORK"]
+
+required_fields = [
+  "incident_id",
+  "incident_class",
+  "timeline_policy",
+  "slo_impact_policy",
+  "alert_correlation_policy",
+  "runbook_action_policy",
+  "remediation_link_policy",
+  "publication_policy",
+  "feedback_loop_policy",
+  "diagnostic",
+]
+
+[[incident]]
+incident_id = "operator-reliability-incident"
+incident_class = "availability-latency-resource-or-deployment-regression"
+timeline_policy = "timeline-uses-alert-fire-resolve-times-trace-ids-log-records-and-release-version"
+slo_impact_policy = "SLO-impact-record-links-service-level-objective-policy-and-error-budget-consumption"
+alert_correlation_policy = "alerts-deduplicated-through-Alertmanager-route-and-cross-signal-correlation"
+runbook_action_policy = "runbook-action-records-command-class-artifact-digest-config-digest-and-observed-result"
+remediation_link_policy = "links-release-health-feedback-owner-route-and-fix-or-config-record"
+publication_policy = "public-retrospective-redacts-private-Santh-paths-secrets-device-serials-and-corpus-data"
+feedback_loop_policy = "new-or-changed-runbook-alert-SLO-or-deployment-policy-created-from-recurring-cause"
+diagnostic = "VYRE_INCIDENT_RETROSPECTIVE_REQUIRED"
+
+[[incident]]
+incident_id = "security-incident-retrospective"
+incident_class = "accepted-private-report-active-exploitation-or-public-security-misroute"
+timeline_policy = "private-timeline-records-intake-triage-affectedness-fix-release-and-public-disclosure-events"
+slo_impact_policy = "security-availability-or-integrity-impact-recorded-with-public-safe-summary"
+alert_correlation_policy = "security-alerts-link-to-private-vulnerability-response-and-advisory-exchange"
+runbook_action_policy = "runbook-actions-record-redaction-boundary-and-remediation-state"
+remediation_link_policy = "links-vulnerability-risk-decision-affectedness-VEX-advisory-and-release-artifacts"
+publication_policy = "public-retrospective-only-after-advisory-publication-boundary-is-satisfied"
+feedback_loop_policy = "recurring-cause-updates-security-runbook-alert-or-private-response-policy"
+diagnostic = "VYRE_SECURITY_INCIDENT_RETROSPECTIVE_REQUIRED"

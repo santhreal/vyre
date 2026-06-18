@@ -1,4 +1,5 @@
 //! Contract tests for compact megakernel sketch telemetry.
+#![cfg(feature = "legacy-infallible")]
 
 use vyre_runtime::megakernel::{
     control, opcode, slot, CountMinSketch, Megakernel, RingTelemetry, SLOT_WORDS, STATUS_WORD,

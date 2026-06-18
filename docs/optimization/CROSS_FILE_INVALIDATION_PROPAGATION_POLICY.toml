@@ -1,0 +1,47 @@
+[artifact]
+id = "CROSS_FILE_INVALIDATION_PROPAGATION_POLICY"
+title = "Cross-file dependency invalidation propagation policy"
+tranche = "VX-1561..VX-1580"
+owner = "scanner_frontends"
+status = "planned_contract"
+research_sources = [
+  "GCC_PREPROCESSOR_DEPENDENCIES",
+  "PYTHON_IMPORT_SYSTEM",
+  "RUST_MODULES_REFERENCE",
+  "BLAKE3_SPEC",
+]
+
+[scope]
+owns = [
+  "changed-node to affected-consumer propagation",
+  "strongly connected component invalidation",
+  "rule-scope aware dependency traversal",
+  "incremental graph update after corpus journal replay",
+  "cross-file false-reuse prevention gates",
+]
+does_not_own = [
+  "watcher overflow detection, owned by FILESYSTEM_WATCHER_EVENT_POLICY",
+  "file content identity, owned by CORPUS_CONTENT_IDENTITY_INDEX",
+  "scan execution scheduling, owned by FILE_INGRESS_ASYNC_IO_PIPELINE and runtime scheduler artifacts",
+  "statistical release math, owned by STATISTICAL_PERFORMANCE_GATES",
+]
+
+[propagation]
+changed_file = "invalidate direct scan output and every consumer reachable through rule-relevant dependency edges"
+changed_config = "invalidate all graph nodes whose resolver input digest includes the changed config class"
+changed_generated_producer = "invalidate generated outputs and all downstream consumers until producer output digest stabilizes"
+deleted_provider = "invalidate all consumers with resolved or ambiguous edges to the deleted provider and emit unresolved-edge diagnostics"
+renamed_provider = "preserve graph node identity only when CORPUS_CONTENT_IDENTITY_INDEX proves alias continuity"
+cycle = "invalidate the entire strongly connected component and record cycle members in evidence"
+
+[rule_scope]
+lexical_rules = "content-only rules may stop at the changed file unless dependency edge metadata marks generated or included bytes as logically present"
+semantic_rules = "type, symbol, import, dataflow, or package-context rules traverse direct and transitive dependency edges"
+package_rules = "package/module boundary rules invalidate package roots, namespace packages, crates, and translation-unit groups"
+config_rules = "rules affected by flags, features, include paths, sys.path, cfg, or language version invalidate every node sharing the changed resolver digest"
+
+[truth_requirements]
+positive = "changing an unused leaf file preserves scan output for unrelated dependency components"
+negative = "changing an included/imported/module provider invalidates every dependent consumer that can change findings"
+adversarial = "ambiguous imports, generated headers, rename storms, symlink aliases, feature flips, and missing providers block reuse"
+cross_file = "proof fixtures must assert provider file, consumer file, dependency edge, rule id, finding span, and output bytes"

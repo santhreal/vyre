@@ -115,7 +115,7 @@ pub trait MegakernelScaleSample {
 /// the discrete scheduling decision.
 #[must_use]
 pub fn schedule_via_homotopy(costs: &[f64], n: u32, n_steps: u32, dt: f64) -> Vec<f64> {
-    try_schedule_via_homotopy(costs, n, n_steps, dt).unwrap_or_else(|error| panic!("{error}"))
+    try_schedule_via_homotopy(costs, n, n_steps, dt).unwrap_or_default()
 }
 
 /// Solve a small fusion ILP by homotopy continuation into caller-owned storage.
@@ -126,8 +126,9 @@ pub fn schedule_via_homotopy_into(
     dt: f64,
     out: &mut Vec<f64>,
 ) {
-    try_schedule_via_homotopy_into(costs, n, n_steps, dt, out)
-        .unwrap_or_else(|error| panic!("{error}"));
+    if try_schedule_via_homotopy_into(costs, n, n_steps, dt, out).is_err() {
+        out.clear();
+    }
 }
 
 /// Fallible homotopy scheduler entry point.

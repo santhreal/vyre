@@ -1,0 +1,36 @@
+# Extraction memory and verifier cost model for VX-682.
+# Optimizer routes include transfer, coalescing, verifier, divergence, and measured counter terms.
+
+schema = "vyre.optimizer.extraction_cost_model.v1"
+owner = "foundation_optimizer"
+evidence_tokens = ["CUDA_BEST_PRACTICES", "NSIGHT_COMPUTE"]
+
+required_terms = [
+  "transfer_bytes",
+  "coalescing_class",
+  "candidate_count",
+  "branch_divergence_proxy",
+  "measured_counter_ids",
+  "verifier_work_units",
+  "route_change_reason",
+]
+
+[[route]]
+id = "gpu-scan-verifier-heavy"
+transfer_bytes = 268435456
+coalescing_class = "mostly-coalesced"
+candidate_count = 140023
+branch_divergence_proxy = "candidate-divergence:0.41"
+measured_counter_ids = ["dram__bytes", "smsp__branch_targets"]
+verifier_work_units = 140023
+route_change_reason = "verifier-work-dominates-kernel-time"
+
+[[route]]
+id = "cpu-small-candidate-set"
+transfer_bytes = 1048576
+coalescing_class = "not-applicable"
+candidate_count = 17
+branch_divergence_proxy = "none"
+measured_counter_ids = ["host_elapsed_ns"]
+verifier_work_units = 17
+route_change_reason = "transfer-overhead-exceeds-verifier-work"

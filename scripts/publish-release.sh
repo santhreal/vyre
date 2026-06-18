@@ -1,20 +1,33 @@
 #!/usr/bin/env bash
 #
-# Guarded crates.io publish launcher for Vyre 0.4.2 / Weir 0.1.0.
+# Guarded crates.io publish launcher for the configured Vyre / Weir release train.
 #
 # This script intentionally refuses to run unless the maintainer sets:
-#   VYRE_RELEASE_APPROVED=publish-vyre-0.4.2-weir-0.1.0
+#   VYRE_RELEASE_APPROVED=<token derived by scripts/lib/release_train.sh>
 #
 # It derives the publish order from release/evidence/package/publish-readiness.json
 # so final publish cannot drift from the audited dependency order.
 
 set -euo pipefail
 
+PREFLIGHT=0
+if [[ "${1:-}" == "--preflight" ]]; then
+    PREFLIGHT=1
+    shift
+fi
+if [[ "$#" -ne 0 ]]; then
+    printf 'Fix: unknown publish-release argument(s): %s\n' "$*" >&2
+    exit 2
+fi
+
 VYRE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$VYRE_ROOT"
 
-APPROVAL_TOKEN="publish-vyre-0.4.2-weir-0.1.0"
-if [[ "${VYRE_RELEASE_APPROVED:-}" != "$APPROVAL_TOKEN" ]]; then
+source scripts/lib/release_train.sh
+vyre_load_release_train
+
+APPROVAL_TOKEN="$VYRE_RELEASE_PUBLISH_APPROVAL_TOKEN"
+if [[ "$PREFLIGHT" != "1" && "${VYRE_RELEASE_APPROVED:-}" != "$APPROVAL_TOKEN" ]]; then
     printf 'Fix: refusing to publish without explicit approval.\n' >&2
     printf 'Set VYRE_RELEASE_APPROVED=%s only after the maintainer approves crates.io publish.\n' "$APPROVAL_TOKEN" >&2
     exit 2
@@ -42,6 +55,11 @@ mapfile -t PUBLISH_ENTRIES < <(jq -r '.publish_order[] | [.package, .version, .m
 if [[ "${#PUBLISH_ENTRIES[@]}" -eq 0 ]]; then
     printf 'Fix: publish_order is empty in %s.\n' "$PACKAGE_READINESS" >&2
     exit 1
+fi
+
+if [[ "$PREFLIGHT" == "1" ]]; then
+    printf 'publish-release preflight passed for %s audited crate(s); no crates.io publish performed.\n' "${#PUBLISH_ENTRIES[@]}"
+    exit 0
 fi
 
 crate_version_visible() {

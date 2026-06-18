@@ -6,6 +6,10 @@
 //! of a separate unpack dispatch.
 
 use crate::region::wrap_anonymous;
+use crate::math::linalg::{
+    plan_matmul_kernel, F32MatmulMode, MatmulFallbackReason, MatmulKernelCapabilities,
+    MatmulKernelPath, MatmulKernelPlan, MatrixShape,
+};
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_spec::{QuantizationScale, QuantizationZeroPoint};
 
@@ -18,6 +22,52 @@ const AFFINE_GROUPED_WARPS_PER_WORKGROUP: u32 =
 const AFFINE_GROUPED_OUTPUTS_PER_WORKGROUP: u32 =
     AFFINE_GROUPED_WARPS_PER_WORKGROUP * AFFINE_GROUPED_OUTPUTS_PER_WARP;
 const AFFINE_GROUPED_OP_ID: &str = "vyre-libs::nn::linear_4bit_affine_grouped";
+
+/// Maximum absolute output drift allowed for grouped INT4 planner evidence tests.
+pub const LINEAR_4BIT_AFFINE_GROUPED_OUTPUT_DRIFT_ABS_TOLERANCE: f32 = 1.0e-4;
+
+/// Planner evidence for fused grouped INT4 linear versus dequantized matmul.
+#[derive(Debug, Clone, PartialEq)]
+pub struct QuantizedLinear4BitPlannerEvidence {
+    /// Input feature dimension.
+    pub in_dim: u32,
+    /// Output feature dimension.
+    pub out_dim: u32,
+    /// Quantization group size.
+    pub group_size: u32,
+    /// Number of quantization groups.
+    pub group_count: u32,
+    /// Packed INT4 weight bytes.
+    pub packed_weight_bytes: u64,
+    /// Bytes that a materialized f32 dequantized weight matrix would require.
+    pub dequantized_weight_bytes: u64,
+    /// Scale plus zero-point sidecar bytes.
+    pub sidecar_bytes: u64,
+    /// Bias bytes.
+    pub bias_bytes: u64,
+    /// Output bytes.
+    pub output_bytes: u64,
+    /// Dequantized weight bytes avoided by the fused path.
+    pub dequant_bytes_elided: u64,
+    /// Equivalent matmul planner M dimension.
+    pub matmul_m: u32,
+    /// Equivalent matmul planner K dimension.
+    pub matmul_k: u32,
+    /// Equivalent matmul planner N dimension.
+    pub matmul_n: u32,
+    /// Equivalent matmul planner K tile.
+    pub matmul_tile: u32,
+    /// Selected shared matmul planner path.
+    pub matmul_selected_path: &'static str,
+    /// Candidate tensor-core path from the shared matmul planner, when any.
+    pub matmul_candidate_path: Option<&'static str>,
+    /// Shared matmul planner fallback reason, when the selected path is cooperative.
+    pub matmul_fallback_reason: Option<&'static str>,
+    /// Whether the shared matmul planner selected a tensor-core path.
+    pub tensor_core_eligible: bool,
+    /// Maximum absolute output drift accepted by evidence tests.
+    pub output_drift_abs_tolerance: f32,
+}
 
 /// Typed metadata for fused grouped INT4 linear.
 ///
@@ -81,6 +131,120 @@ impl QuantizedLinear4BitSpec {
                 "Fix: grouped INT4 linear requires DataType::Quantized<I4; PerGroup scale; PerGroup zero-point>, got {other}."
             )),
         }
+    }
+}
+
+/// Build planner evidence for [`linear_4bit_affine_grouped_typed`].
+///
+/// # Errors
+/// Returns `Err` when quantized metadata or dimensions are invalid.
+pub fn linear_4bit_affine_grouped_planner_evidence(
+    spec: &QuantizedLinear4BitSpec,
+) -> Result<QuantizedLinear4BitPlannerEvidence, String> {
+    let group_size = spec.affine_group_size()?;
+    quantized_linear_4bit_planner_evidence(spec.in_dim, spec.out_dim, group_size)
+}
+
+fn quantized_linear_4bit_planner_evidence(
+    in_dim: u32,
+    out_dim: u32,
+    group_size: u32,
+) -> Result<QuantizedLinear4BitPlannerEvidence, String> {
+    if in_dim == 0 {
+        return Err(
+            "Fix: linear_4bit_affine_grouped planner evidence requires in_dim > 0.".to_string(),
+        );
+    }
+    if out_dim == 0 {
+        return Err(
+            "Fix: linear_4bit_affine_grouped planner evidence requires out_dim > 0.".to_string(),
+        );
+    }
+    if group_size == 0 {
+        return Err(
+            "Fix: linear_4bit_affine_grouped planner evidence requires group_size > 0."
+                .to_string(),
+        );
+    }
+    if in_dim % 8 != 0 {
+        return Err(format!(
+            "Fix: linear_4bit_affine_grouped planner evidence in_dim={in_dim} is not divisible by 8."
+        ));
+    }
+
+    let packed_words = (in_dim / 8).checked_mul(out_dim).ok_or_else(|| {
+        "Fix: linear_4bit_affine_grouped planner evidence packed weights overflow u32."
+            .to_string()
+    })?;
+    let group_count = in_dim.div_ceil(group_size);
+    let sidecar_values = group_count.checked_mul(out_dim).ok_or_else(|| {
+        "Fix: linear_4bit_affine_grouped planner evidence sidecars overflow u32.".to_string()
+    })?;
+    let matmul_shape = MatrixShape {
+        m: out_dim,
+        k: in_dim,
+        n: 1,
+    };
+    let matmul_tile = AFFINE_GROUPED_LANES_PER_OUTPUT;
+    let matmul_plan = plan_matmul_kernel(
+        &DataType::F32,
+        matmul_shape,
+        matmul_tile,
+        1,
+        F32MatmulMode::StrictF32,
+        MatmulKernelCapabilities::current_codegen(),
+    );
+    let dequantized_weight_bytes = u64::from(in_dim)
+        .saturating_mul(u64::from(out_dim))
+        .saturating_mul(core::mem::size_of::<f32>() as u64);
+    let packed_weight_bytes = u64::from(packed_words) * core::mem::size_of::<u32>() as u64;
+    let sidecar_bytes = u64::from(sidecar_values)
+        .saturating_mul((core::mem::size_of::<f32>() + core::mem::size_of::<u32>()) as u64);
+    let output_bytes = u64::from(out_dim) * core::mem::size_of::<f32>() as u64;
+
+    Ok(QuantizedLinear4BitPlannerEvidence {
+        in_dim,
+        out_dim,
+        group_size,
+        group_count,
+        packed_weight_bytes,
+        dequantized_weight_bytes,
+        sidecar_bytes,
+        bias_bytes: output_bytes,
+        output_bytes,
+        dequant_bytes_elided: dequantized_weight_bytes,
+        matmul_m: matmul_shape.m,
+        matmul_k: matmul_shape.k,
+        matmul_n: matmul_shape.n,
+        matmul_tile,
+        matmul_selected_path: matmul_path_label(matmul_plan.selected_path),
+        matmul_candidate_path: matmul_plan.candidate_path.map(matmul_path_label),
+        matmul_fallback_reason: matmul_fallback_label(&matmul_plan),
+        tensor_core_eligible: matmul_plan.selected_path != MatmulKernelPath::Cooperative,
+        output_drift_abs_tolerance: LINEAR_4BIT_AFFINE_GROUPED_OUTPUT_DRIFT_ABS_TOLERANCE,
+    })
+}
+
+fn matmul_path_label(path: MatmulKernelPath) -> &'static str {
+    match path {
+        MatmulKernelPath::Cooperative => "cooperative",
+        MatmulKernelPath::TensorCoreF16M16N8K16 => "tensor_core_f16_m16n8k16",
+        MatmulKernelPath::TensorCoreBf16M16N8K16 => "tensor_core_bf16_m16n8k16",
+        MatmulKernelPath::TensorCoreTf32M16N8K4 => "tensor_core_tf32_m16n8k4",
+    }
+}
+
+fn matmul_fallback_label(plan: &MatmulKernelPlan) -> Option<&'static str> {
+    match plan.fallback_reason {
+        Some(MatmulFallbackReason::StrictF32Requested) => Some("strict_f32_requested"),
+        Some(MatmulFallbackReason::UnsupportedDtype) => Some("unsupported_dtype"),
+        Some(MatmulFallbackReason::TileSizeMismatch { .. }) => Some("tile_size_mismatch"),
+        Some(MatmulFallbackReason::RaggedTileUnsupported) => Some("ragged_tile_unsupported"),
+        Some(MatmulFallbackReason::SplitKUnsupported) => Some("split_k_unsupported"),
+        Some(MatmulFallbackReason::TensorCoreDtypeUnsupported) => {
+            Some("tensor_core_dtype_unsupported")
+        }
+        None => None,
     }
 }
 
@@ -768,6 +932,15 @@ mod tests {
             "expected fused affine dequantized dot product 150.0, got {}",
             out_vals[0]
         );
+        let evidence =
+            linear_4bit_affine_grouped_planner_evidence(&QuantizedLinear4BitSpec::affine_grouped(
+                8, 2, 4,
+            ))
+            .expect("Fix: planner evidence fixture must build");
+        assert!(
+            (out_vals[0] - 150.0).abs() <= evidence.output_drift_abs_tolerance,
+            "Fix: runtime output drift must stay within planner evidence tolerance."
+        );
         assert!(
             (out_vals[1] - 3.0).abs() < 1e-4,
             "expected bias-only second output 3.0, got {}",
@@ -843,6 +1016,39 @@ mod tests {
                 ..
             }
         ));
+    }
+
+    #[test]
+    fn typed_affine_grouped_planner_evidence_records_matmul_and_dequant_contract() {
+        let spec = QuantizedLinear4BitSpec::affine_grouped(256, 4096, 64);
+        let evidence = linear_4bit_affine_grouped_planner_evidence(&spec)
+            .expect("Fix: release grouped INT4 evidence must build");
+
+        assert_eq!(evidence.in_dim, 256);
+        assert_eq!(evidence.out_dim, 4096);
+        assert_eq!(evidence.group_size, 64);
+        assert_eq!(evidence.group_count, 4);
+        assert_eq!(evidence.packed_weight_bytes, 524_288);
+        assert_eq!(evidence.dequantized_weight_bytes, 4_194_304);
+        assert_eq!(evidence.dequant_bytes_elided, evidence.dequantized_weight_bytes);
+        assert_eq!(evidence.sidecar_bytes, 131_072);
+        assert_eq!(evidence.bias_bytes, 16_384);
+        assert_eq!(evidence.output_bytes, 16_384);
+        assert_eq!(evidence.matmul_m, 4096);
+        assert_eq!(evidence.matmul_k, 256);
+        assert_eq!(evidence.matmul_n, 1);
+        assert_eq!(evidence.matmul_tile, AFFINE_GROUPED_LANES_PER_OUTPUT);
+        assert_eq!(evidence.matmul_selected_path, "cooperative");
+        assert_eq!(evidence.matmul_candidate_path, None);
+        assert_eq!(
+            evidence.matmul_fallback_reason,
+            Some("strict_f32_requested")
+        );
+        assert!(!evidence.tensor_core_eligible);
+        assert_eq!(
+            evidence.output_drift_abs_tolerance,
+            LINEAR_4BIT_AFFINE_GROUPED_OUTPUT_DRIFT_ABS_TOLERANCE
+        );
     }
 
     #[test]

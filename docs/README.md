@@ -22,8 +22,7 @@ you're trying to do, not by filename.
 ## IR + wire format
 
 - [ir-semantics.md](ir-semantics.md)  -  Expr/Node variant semantics.
-- [wire-format.md](wire-format.md)  -  current binary wire format.
-- [wire-format-v1.md](wire-format-v1.md)  -  1.0 proposal.
+- [wire-format.md](wire-format.md)  -  current binary wire format (VIR0), including non-Rust binding conformance.
 - [wire-format-0.6-reservations.md](wire-format-0.6-reservations.md)
    -  forward-compat reservations held in 0.6.
 - [memory-model.md](memory-model.md)  -  atomic + ordering contract.

@@ -33,7 +33,7 @@ pub(crate) fn write_report(path: &Path, findings: &[Finding]) {
 
     lines.push(String::new());
     lines.push("## Legend\n".to_string());
-    lines.push("- **SHAPE**  -  test only asserts structural properties (is_ok, is_err, non-empty, roundtrip).".to_string());
+    lines.push("- **SHAPE**  -  test only asserts structural properties (is_ok, is_err, non-empty, status-only, roundtrip).".to_string());
     lines.push("- **TRUTH**  -  test asserts at least one specific expected value.".to_string());
     lines.push("- **NO_ASSERTS**  -  test contains no assert*! macros.".to_string());
 

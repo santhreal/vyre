@@ -1,0 +1,37 @@
+# End-to-end failure injection and resilience tranche coverage for VX-1301 through VX-1320.
+# This tranche adds chaos experiment scoping, pod disruption resilience, network and I/O fault injection, and stress saturation experiments while reusing SLO, alert, runbook, rollout, recovery, resource, artifact, deployment, and publication authorities.
+
+schema = "vyre.ops.failure_injection_resilience_tranche_coverage.v1"
+owner = "coordination"
+evidence_tokens = ["CHAOS_MESH_PODCHAOS", "CHAOS_MESH_NETWORKCHAOS", "CHAOS_MESH_IOCHAOS", "CHAOS_MESH_STRESSCHAOS", "KUBERNETES_DISRUPTIONS", "KUBERNETES_PDB"]
+
+required_fields = [
+  "coverage_id",
+  "vx_id_range",
+  "chaos_experiment_scope_policy",
+  "pod_node_disruption_resilience_policy",
+  "network_io_fault_injection_policy",
+  "stress_resource_saturation_experiment_policy",
+  "operational_readiness_coverage",
+  "operator_state_recovery_coverage",
+  "staged_rollout_coverage",
+  "resource_dos_governance",
+  "publication_boundary",
+  "dedup_seam",
+  "proof_gate",
+]
+
+[[coverage]]
+coverage_id = "failure-injection-resilience-end-to-end"
+vx_id_range = "VX-1301..VX-1320"
+chaos_experiment_scope_policy = "CHAOS_EXPERIMENT_SCOPE_POLICY.toml"
+pod_node_disruption_resilience_policy = "POD_NODE_DISRUPTION_RESILIENCE_POLICY.toml"
+network_io_fault_injection_policy = "NETWORK_IO_FAULT_INJECTION_POLICY.toml"
+stress_resource_saturation_experiment_policy = "STRESS_RESOURCE_SATURATION_EXPERIMENT_POLICY.toml"
+operational_readiness_coverage = "END_TO_END_OPERATIONAL_READINESS_TRANCHE_COVERAGE.toml"
+operator_state_recovery_coverage = "END_TO_END_OPERATOR_STATE_RECOVERY_TRANCHE_COVERAGE.toml"
+staged_rollout_coverage = "END_TO_END_STAGED_ROLLOUT_TRANCHE_COVERAGE.toml"
+resource_dos_governance = "RESOURCE_DOS_GOVERNANCE_TRANCHE_COVERAGE.toml"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+dedup_seam = "chaos-scope-pod-disruption-network-io-and-stress-experiment-policies-own-failure-injection-while-SLO-alert-runbook-rollout-recovery-resource-artifact-deployment-and-publication-registries-remain-source-authorities"
+proof_gate = "conform/vyre-conform-enforce/tests/failure_injection_resilience_governance.rs"

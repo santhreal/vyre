@@ -1,0 +1,34 @@
+# Metal hazard certificates for VX-678.
+# Resource ownership and synchronization evidence are explicit for resident buffers.
+
+schema = "vyre.metal.hazard_certificate.v1"
+owner = "driver_metal"
+evidence_tokens = ["METAL_HAZARD", "METAL_COUNTERS"]
+
+required_fields = [
+  "resource_id",
+  "access_mode",
+  "dependency_edge",
+  "hazard_tracking_mode",
+  "synchronization_evidence",
+  "counter_wait_reason",
+  "dispatch_allowed",
+]
+
+[[certificate]]
+resource_id = "scan-output-buffer"
+access_mode = "write_then_read"
+dependency_edge = "scan_kernel->readback_blit"
+hazard_tracking_mode = "tracked"
+synchronization_evidence = "command-buffer-dependency"
+counter_wait_reason = "none"
+dispatch_allowed = true
+
+[[certificate]]
+resource_id = "resident-frontier-buffer"
+access_mode = "read_write"
+dependency_edge = "frontier_expand->frontier_filter"
+hazard_tracking_mode = "untracked"
+synchronization_evidence = "missing"
+counter_wait_reason = "resource-hazard"
+dispatch_allowed = false

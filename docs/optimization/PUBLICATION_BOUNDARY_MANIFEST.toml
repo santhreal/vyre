@@ -1,0 +1,34 @@
+# Publication boundary manifest for VX-716.
+# Public Vyre package material is separated from private Santh evidence before release evidence is emitted.
+
+schema = "vyre.release.publication_boundary_manifest.v1"
+owner = "coordination"
+evidence_tokens = ["SPDX_SBOM", "SLSA_PROVENANCE", "SIGSTORE_REKOR"]
+
+required_fields = [
+  "manifest_id",
+  "public_artifact_class",
+  "private_artifact_class",
+  "allowed_roots",
+  "blocked_roots",
+  "link_policy",
+  "diagnostic",
+]
+
+[[manifest]]
+manifest_id = "vyre-public-crate-manifest"
+public_artifact_class = "crate-package-readme-docs"
+private_artifact_class = "local-worktree-evidence"
+allowed_roots = ["vyre-public-root"]
+blocked_roots = ["santh-private-root"]
+link_policy = "public-links-only"
+diagnostic = "VYRE_PUBLICATION_BOUNDARY_OK"
+
+[[manifest]]
+manifest_id = "private-path-rejection"
+public_artifact_class = "crate-package-readme-docs"
+private_artifact_class = "santh-private-path"
+allowed_roots = ["vyre-public-root"]
+blocked_roots = ["santh-private-root"]
+link_policy = "reject-private-links"
+diagnostic = "VYRE_PUBLICATION_PRIVATE_BOUNDARY_REFUSED"

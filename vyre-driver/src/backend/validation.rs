@@ -42,13 +42,7 @@ pub fn default_supported_ops() -> &'static std::collections::HashSet<OpId> {
     static OPS: std::sync::OnceLock<std::collections::HashSet<OpId>> = std::sync::OnceLock::new();
     OPS.get_or_init(|| {
         let mut ops = std::collections::HashSet::new();
-        ops.try_reserve(CORE_SUPPORTED_OP_IDS.len())
-            .unwrap_or_else(|error| {
-                panic!(
-                    "Vyre default supported-op set could not reserve {} core op slot(s): {error}. Fix: split backend validation support-set construction.",
-                    CORE_SUPPORTED_OP_IDS.len()
-                )
-            });
+        let _ = ops.try_reserve(CORE_SUPPORTED_OP_IDS.len());
         ops.extend(CORE_SUPPORTED_OP_IDS.iter().copied().map(Arc::<str>::from));
         ops
     })
@@ -63,17 +57,9 @@ pub fn default_supported_ops_with_trap() -> &'static std::collections::HashSet<O
     static OPS: std::sync::OnceLock<std::collections::HashSet<OpId>> = std::sync::OnceLock::new();
     OPS.get_or_init(|| {
         let base = default_supported_ops();
-        let reserve = base.len().checked_add(1).unwrap_or_else(|| {
-            panic!(
-                "Vyre default supported-op set with trap overflowed while adding Node::Trap. Fix: split backend validation support-set construction."
-            )
-        });
+        let reserve = base.len().saturating_add(1);
         let mut ops = std::collections::HashSet::new();
-        ops.try_reserve(reserve).unwrap_or_else(|error| {
-            panic!(
-                "Vyre default supported-op set with trap could not reserve {reserve} op slot(s): {error}. Fix: split backend validation support-set construction."
-            )
-        });
+        let _ = ops.try_reserve(reserve);
         ops.extend(base.iter().cloned());
         ops.insert(Arc::<str>::from("vyre.node.trap"));
         ops

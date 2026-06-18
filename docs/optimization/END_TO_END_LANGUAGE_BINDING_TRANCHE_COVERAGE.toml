@@ -1,0 +1,37 @@
+# End-to-end language binding tranche coverage for VX-1201 through VX-1220.
+# This tranche governs public binding products while reusing unsafe FFI, API compatibility, crate boundary, artifact integrity, and publication authorities.
+
+schema = "vyre.release.language_binding_tranche_coverage.v1"
+owner = "coordination"
+evidence_tokens = ["RUST_REFERENCE_LINKAGE", "PYO3_USER_GUIDE", "MATURIN_USER_GUIDE", "PYTHON_WHEEL_SPEC", "NODE_API_ABI", "NAPI_RS", "NPM_PACKAGE_JSON", "WEBASSEMBLY_CORE_SPEC", "WEBASSEMBLY_COMPONENT_MODEL"]
+
+required_fields = [
+  "coverage_id",
+  "vx_id_range",
+  "language_binding_surface_matrix",
+  "c_abi_header_library_policy",
+  "python_wheel_binding_policy",
+  "node_wasm_binding_policy",
+  "unsafe_ffi_governance",
+  "public_api_semver_msrv_policy",
+  "crate_boundary_feature_matrix",
+  "release_artifact_integrity_index",
+  "publication_boundary",
+  "dedup_seam",
+  "proof_gate",
+]
+
+[[coverage]]
+coverage_id = "language-binding-end-to-end"
+vx_id_range = "VX-1201..VX-1220"
+language_binding_surface_matrix = "LANGUAGE_BINDING_SURFACE_MATRIX.toml"
+c_abi_header_library_policy = "C_ABI_HEADER_LIBRARY_POLICY.toml"
+python_wheel_binding_policy = "PYTHON_WHEEL_BINDING_POLICY.toml"
+node_wasm_binding_policy = "NODE_WASM_BINDING_POLICY.toml"
+unsafe_ffi_governance = "UNSAFE_FFI_GOVERNANCE_TRANCHE_COVERAGE.toml"
+public_api_semver_msrv_policy = "PUBLIC_API_SEMVER_MSRV_POLICY.toml"
+crate_boundary_feature_matrix = "CRATE_BOUNDARY_FEATURE_MATRIX.toml"
+release_artifact_integrity_index = "RELEASE_ARTIFACT_INTEGRITY_INDEX.toml"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+dedup_seam = "binding-surface-matrix-governs-published-language-products-unsafe-ffi-governance-remains-raw-boundary-authority-and-artifact-integrity-remains-verification-authority"
+proof_gate = "conform/vyre-conform-enforce/tests/language_binding_governance.rs"

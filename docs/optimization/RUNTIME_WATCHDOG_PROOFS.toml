@@ -1,0 +1,31 @@
+# Resident runtime watchdog proofs for VX-671.
+# Queue classes must prove bounded drain and remediation before resident launch.
+
+schema = "vyre.runtime.watchdog_proof.v1"
+owner = "runtime_residency"
+evidence_tokens = ["CUDA_COOP", "CUDA_DSM"]
+
+required_fields = [
+  "queue_class",
+  "bounded_drain_steps",
+  "resident_time_limit_us",
+  "preemption_blocker",
+  "remediation_text",
+  "launch_allowed",
+]
+
+[[proof]]
+queue_class = "scan"
+bounded_drain_steps = 2048
+resident_time_limit_us = 5000
+preemption_blocker = "none"
+remediation_text = "split scan batch or lower resident queue weight"
+launch_allowed = true
+
+[[proof]]
+queue_class = "graph_frontier"
+bounded_drain_steps = 8192
+resident_time_limit_us = 7000
+preemption_blocker = "frontier-expansion-unbounded"
+remediation_text = "enable two-phase frontier drain before resident launch"
+launch_allowed = false

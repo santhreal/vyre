@@ -1,0 +1,47 @@
+# Dataset publication manifest for VX-857 through VX-859.
+# Public corpus summaries, benchmark artifacts, fuzz seeds, and private local evidence share one publication gate.
+
+schema = "vyre.data.dataset_publication_manifest.v1"
+owner = "coordination"
+evidence_tokens = ["W3C_DCAT_3", "NIST_PRIVACY_FRAMEWORK", "SLSA_PROVENANCE"]
+
+required_fields = [
+  "manifest_id",
+  "dataset_id",
+  "lineage_contract",
+  "privacy_classification",
+  "retention_control",
+  "publication_boundary",
+  "release_artifact",
+  "publication_allowed",
+]
+
+[[manifest]]
+manifest_id = "public-fuzz-seeds"
+dataset_id = "fuzz-scan-wire-seeds"
+lineage_contract = "DATASET_LINEAGE_CATALOG.toml"
+privacy_classification = "synthetic-public-fixture"
+retention_control = "public-synthetic-fixtures"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+release_artifact = "public-vyre-fixture"
+publication_allowed = true
+
+[[manifest]]
+manifest_id = "public-performance-summary"
+dataset_id = "scan-regex-batch-fixtures"
+lineage_contract = "DATASET_LINEAGE_CATALOG.toml"
+privacy_classification = "synthetic-public-fixture"
+retention_control = "public-synthetic-fixtures"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+release_artifact = "PERFORMANCE_ARTIFACT_PUBLICATION.toml"
+publication_allowed = true
+
+[[manifest]]
+manifest_id = "private-local-debug-blocked"
+dataset_id = "private-local-debug-corpus"
+lineage_contract = "DATASET_LINEAGE_CATALOG.toml"
+privacy_classification = "private-worktree-corpus"
+retention_control = "private-debug-corpus"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+release_artifact = "local-only-nonpublished-doc"
+publication_allowed = false

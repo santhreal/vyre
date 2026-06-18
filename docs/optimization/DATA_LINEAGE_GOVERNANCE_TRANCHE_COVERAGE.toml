@@ -1,0 +1,29 @@
+# Data lineage governance tranche coverage for VX-841 through VX-860.
+# Dataset catalog, privacy classification, retention/media controls, and publication manifest share one coverage row.
+
+schema = "vyre.plan.data_lineage_governance_tranche_coverage.v1"
+owner = "coordination"
+evidence_tokens = ["W3C_PROV_O", "W3C_DCAT_3", "NIST_PRIVACY_FRAMEWORK", "NIST_SP_800_53"]
+
+required_fields = [
+  "vx_id_range",
+  "dataset_lineage_catalog",
+  "corpus_privacy_classification",
+  "data_retention_media_controls",
+  "dataset_publication_manifest",
+  "source_ledger_coverage",
+  "publication_boundary",
+  "dedup_seam",
+  "proof_gate",
+]
+
+[[coverage]]
+vx_id_range = "VX-841..VX-860"
+dataset_lineage_catalog = "DATASET_LINEAGE_CATALOG.toml"
+corpus_privacy_classification = "CORPUS_PRIVACY_CLASSIFICATION.toml"
+data_retention_media_controls = "DATA_RETENTION_MEDIA_CONTROLS.toml"
+dataset_publication_manifest = "DATASET_PUBLICATION_MANIFEST.toml"
+source_ledger_coverage = "RESEARCH_SOURCE_LEDGER.toml"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+dedup_seam = "one-dataset-catalog-one-privacy-classification-one-retention-policy-one-publication-manifest"
+proof_gate = "data_lineage_governance.rs"

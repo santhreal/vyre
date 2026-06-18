@@ -15,11 +15,7 @@ pub(super) struct IncludeSearchDirs {
 }
 
 pub(super) fn expand_explicit_include_dirs(include_dirs: &[PathBuf]) -> Vec<PathBuf> {
-    let mut dirs = Vec::with_capacity(include_dirs.len().checked_mul(6).unwrap_or_else(|| {
-        panic!(
-            "vyre-frontend-c include directory expansion capacity overflows usize. Fix: reduce include roots before preprocessing."
-        )
-    }));
+    let mut dirs = Vec::with_capacity(include_dirs.len().saturating_mul(6));
     for dir in include_dirs {
         push_unique_path(&mut dirs, dir.clone());
         push_unique_path(&mut dirs, dir.join("generated"));

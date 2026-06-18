@@ -1,0 +1,57 @@
+[artifact]
+id = "VECTORIZED_RULE_EXECUTION_PLAN"
+title = "Vectorized semantic rule execution plan contract"
+tranche = "VX-1601..VX-1620"
+owner = "scanner_frontends"
+status = "planned_contract"
+research_sources = [
+  "DUCKDB_VECTOR_EXECUTION_FORMAT",
+  "APACHE_ARROW_COLUMNAR_FORMAT",
+  "APACHE_DATAFUSION_QUERY_OPTIMIZER",
+  "SUBSTRAIT_SPECIFICATION",
+]
+
+[scope]
+owns = [
+  "batch-oriented rule operator plans over semantic fact relations",
+  "filter, projection, join, aggregation, anti-join, and semi-join operator boundaries",
+  "operator fusion and materialization decisions for fact queries",
+  "portable relational plan serialization boundary",
+  "CPU vector, GPU batch, and portable fallback route eligibility evidence",
+]
+does_not_own = [
+  "rule semantics, owned by scanner rule contracts and SEMANTIC_FACT_INDEX_SCHEMA",
+  "regex logical pattern planning, owned by REGEX_LOGICAL_PATTERN_PLANNER",
+  "dataflow truth gates, owned by INCREMENTAL_DATAFLOW_FACT_REUSE_POLICY",
+  "backend command replay, owned by SUBMISSION_REPLAY_DECISION_POLICY",
+  "multi-accelerator sharding, owned by MULTI_GPU_SHARDING_AGGREGATION_PLAN",
+]
+
+[operator_set]
+filter = "applies predicates over projected relation columns and emits selection vectors"
+projection = "selects only columns required by downstream operators or output provenance"
+hash_join = "joins relation batches on encoded key columns with build/probe side evidence"
+sort_merge_join = "joins pre-sorted relation batches when sort-order evidence is present"
+semi_join = "filters left rows by right-side existence without materializing right payload"
+anti_join = "filters rows with no right-side match and records null or unknown handling"
+aggregation = "groups by stable keys and emits counts, distincts, min/max, or rule-specific summaries"
+
+[execution_routes]
+cpu_vector = "default route for fact relations using cache-sized batches and SIMD-friendly loops"
+gpu_batch = "admitted only when transfer, residency, and output equivalence evidence proves benefit"
+portable_iterator = "fallback route for small, unsupported, or debugging workloads where vector overhead exceeds benefit"
+substrait_boundary = "portable plans may be serialized only when every function, type, and extension anchor is declared"
+
+[fusion_policy]
+allowed = [
+  "filter followed by projection",
+  "projection before join when required columns are preserved",
+  "semi-join filter before expensive derived relation expansion",
+  "dictionary decode delayed past filters",
+]
+rejected = [
+  "fusion that hides output provenance columns",
+  "fusion that crosses unknown symbol or unresolved dependency guards",
+  "fusion that changes null, unknown, or ambiguous-edge semantics",
+  "fusion that bypasses backpressure or watchdog checkpoints",
+]

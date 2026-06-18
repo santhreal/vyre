@@ -1,0 +1,72 @@
+# Release artifact integrity index for VX-1162, VX-1163, VX-1164, VX-1167, VX-1168, VX-1169, and VX-1172.
+# Public crate packages, GitHub release assets, provenance, SBOMs, signatures, transparency entries, and archive identifiers share one integrity index.
+
+schema = "vyre.release.artifact_integrity_index.v1"
+owner = "security_reliability"
+evidence_tokens = ["GITHUB_IMMUTABLE_RELEASES", "CARGO_REGISTRY_INDEX_CHECKSUM", "SIGSTORE_COSIGN_VERIFY", "SLSA_VERIFIER", "SLSA_PROVENANCE", "SPDX_SBOM", "SIGSTORE_REKOR"]
+
+required_fields = [
+  "artifact_id",
+  "artifact_surface",
+  "immutable_identity",
+  "digest_policy",
+  "signature_policy",
+  "attestation_policy",
+  "sbom_policy",
+  "transparency_policy",
+  "source_archive_policy",
+  "publication_boundary",
+  "diagnostic",
+]
+
+[[artifact]]
+artifact_id = "vyre-crates-io-package"
+artifact_surface = "crates-io-crate-package"
+immutable_identity = "crate-name-version-and-cargo-registry-index-entry"
+digest_policy = "registry-index-sha256-checksum-matches-downloaded-crate-archive"
+signature_policy = "release-workflow-signing-identity-recorded-when-signature-bundle-exists"
+attestation_policy = "SLSA-provenance-subject-covers-crate-package-digest"
+sbom_policy = "SPDX-SBOM-document-links-public-crate-package"
+transparency_policy = "Rekor-entry-required-for-signed-or-attested-public-package"
+source_archive_policy = "SOURCE_ARCHIVE_DURABILITY_MAP.toml"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+diagnostic = "VYRE_CRATE_PACKAGE_INTEGRITY_INDEXED"
+
+[[artifact]]
+artifact_id = "vyre-github-release-asset"
+artifact_surface = "github-release-asset"
+immutable_identity = "immutable-github-release-tag-and-asset-digest"
+digest_policy = "asset-digest-recorded-in-release-metadata-bundle-and-provenance-subject"
+signature_policy = "cosign-verify-blob-bundle-or-equivalent-release-signature-required"
+attestation_policy = "slsa-verifier-source-uri-and-source-tag-match-santhsecurity-vyre"
+sbom_policy = "asset-SBOM-link-required-when-asset-contains-packaged-software"
+transparency_policy = "signature-or-attestation-transparency-entry-recorded"
+source_archive_policy = "SOURCE_ARCHIVE_DURABILITY_MAP.toml"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+diagnostic = "VYRE_GITHUB_RELEASE_ASSET_INTEGRITY_INDEXED"
+
+[[artifact]]
+artifact_id = "vyre-release-metadata-bundle"
+artifact_surface = "release-metadata"
+immutable_identity = "versioned-release-metadata-bundle-digest"
+digest_policy = "bundle-digest-covers-checksums-signatures-attestations-sbom-and-source-archive-links"
+signature_policy = "metadata-bundle-signed-by-public-vyre-release-identity"
+attestation_policy = "in-toto-statement-or-SLSA-provenance-links-bundle-subjects"
+sbom_policy = "SPDX-SBOM-included-or-linked-by-digest"
+transparency_policy = "metadata-signature-transparency-entry-recorded-when-public"
+source_archive_policy = "SOURCE_ARCHIVE_DURABILITY_MAP.toml"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+diagnostic = "VYRE_RELEASE_METADATA_BUNDLE_INDEXED"
+
+[[artifact]]
+artifact_id = "redacted-release-evidence-summary"
+artifact_surface = "public-safe-evidence-summary"
+immutable_identity = "release-evidence-summary-digest"
+digest_policy = "summary-digest-excludes-private-Santh-paths-and-secret-values"
+signature_policy = "summary-signature-optional-but-digest-required"
+attestation_policy = "attestation-links-to-redacted-release-evidence-only"
+sbom_policy = "not-applicable"
+transparency_policy = "not-required-for-local-only-evidence"
+source_archive_policy = "not-public-source-archive"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+diagnostic = "VYRE_REDACTED_EVIDENCE_SUMMARY_INDEXED"

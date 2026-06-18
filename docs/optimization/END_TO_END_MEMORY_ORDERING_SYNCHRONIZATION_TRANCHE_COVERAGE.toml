@@ -1,0 +1,36 @@
+# This tranche adds memory-ordering, barrier-scope, host/device visibility, and synchronization evidence while reusing formal correctness, concurrency schedules, output provenance, target capabilities, telemetry, and publication authorities.
+
+schema = "vyre.coverage.memory_ordering_synchronization_tranche.v1"
+tranche = "VX-1421..VX-1440"
+owner = "runtime_residency"
+evidence_tokens = ["RUST_ATOMIC_ORDERING", "RUST_NOMICON_ATOMICS", "CUDA_CPP_SYNCHRONIZATION", "WGSL_MEMORY_MODEL", "VULKAN_SYNC_CACHE_CONTROL", "VULKAN_MEMORY_MODEL", "METAL_RESOURCE_SYNCHRONIZATION", "METAL_FENCE_SYNCHRONIZATION"]
+
+required_links = [
+  "memory_ordering_atomic_contracts",
+  "gpu_barrier_scope_matrix",
+  "host_device_visibility_policy",
+  "gpu_barrier_verification_evidence",
+  "correctness_validation_coverage",
+  "concurrency_schedule_contracts",
+  "output_slab_provenance",
+  "target_instruction_capabilities",
+  "backend_capability_digests",
+  "operator_evidence_coverage",
+  "publication_boundary",
+  "dedup_seam",
+  "proof_gate",
+]
+
+memory_ordering_atomic_contracts = "MEMORY_ORDERING_ATOMIC_CONTRACTS.toml"
+gpu_barrier_scope_matrix = "GPU_BARRIER_SCOPE_MATRIX.toml"
+host_device_visibility_policy = "HOST_DEVICE_VISIBILITY_POLICY.toml"
+gpu_barrier_verification_evidence = "GPU_BARRIER_VERIFICATION_EVIDENCE.toml"
+correctness_validation_coverage = "CORRECTNESS_VALIDATION_TRANCHE_COVERAGE.toml"
+concurrency_schedule_contracts = "CONCURRENCY_SCHEDULE_CONTRACTS.toml"
+output_slab_provenance = "OUTPUT_SLAB_PROVENANCE.toml"
+target_instruction_capabilities = "TARGET_INSTRUCTION_CAPABILITIES.toml"
+backend_capability_digests = "BACKEND_CAPABILITY_DIGESTS.toml"
+operator_evidence_coverage = "OPERATOR_EVIDENCE_TRANCHE_COVERAGE.toml"
+publication_boundary = "PUBLICATION_BOUNDARY_CLASSIFICATION.toml"
+dedup_seam = "memory-ordering-sync-owns-atomic-order-barrier-scope-host-device-visibility-and-barrier-proof-records-while-formal-correctness-schedule-output-provenance-target-capability-telemetry-and-publication-registries-remain-source-authorities"
+proof_gate = "conform/vyre-conform-enforce/tests/memory_ordering_sync_governance.rs"

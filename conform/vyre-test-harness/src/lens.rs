@@ -500,8 +500,26 @@ pub fn convergence(entry: &OpEntry, backend: &dyn VyreBackend) -> LensOutcome {
             ),
         };
     };
-    let current_idx = index_of_buffer(&program, current_name).expect("Fix: inferred current");
-    let next_idx = index_of_buffer(&program, next_name).expect("Fix: inferred next");
+    let Some(current_idx) = index_of_buffer(&program, current_name) else {
+        return LensOutcome::Fail {
+            case_index: 0,
+            detail: format!(
+                "{}: inferred current buffer '{current_name}' is absent from the program buffer table. \
+                 Fix: keep fixpoint inference and buffer declarations in the same program contract.",
+                entry.id
+            ),
+        };
+    };
+    let Some(next_idx) = index_of_buffer(&program, next_name) else {
+        return LensOutcome::Fail {
+            case_index: 0,
+            detail: format!(
+                "{}: inferred next buffer '{next_name}' is absent from the program buffer table. \
+                 Fix: keep fixpoint inference and buffer declarations in the same program contract.",
+                entry.id
+            ),
+        };
+    };
 
     let cases = test_inputs();
     if cases.is_empty() {

@@ -1,0 +1,79 @@
+schema_version = 1
+
+required_fields = [
+  "engine_id",
+  "version_source",
+  "syntax_profile",
+  "flags",
+  "corpus_digest",
+  "output_parity",
+  "resource_limits",
+  "timing_source",
+  "evidence_path",
+]
+
+[[engine]]
+engine_id = "vyre"
+version_source = "workspace"
+syntax_profile = "vyre_regular_plus_verifier"
+flags = ["byte_mode", "unicode_mode", "streaming", "capture_verifier"]
+corpus_digest = "registered:regex-comparator-core"
+output_parity = "required"
+resource_limits = ["construct_budget", "decode_budget", "verifier_budget"]
+timing_source = "vyre-bench-active-time"
+evidence_path = "vyre-bench/tests/regex_engine_comparator_registry.rs"
+
+[[engine]]
+engine_id = "hyperscan"
+version_source = "external-package-version"
+syntax_profile = "hyperscan_pcre_subset"
+flags = ["block", "streaming", "vectored", "prefilter"]
+corpus_digest = "registered:regex-comparator-core"
+output_parity = "required"
+resource_limits = ["compile_error", "pattern_too_large", "scratch_size"]
+timing_source = "external-active-time"
+evidence_path = "vyre-bench/tests/regex_engine_comparator_registry.rs"
+
+[[engine]]
+engine_id = "vectorscan"
+version_source = "external-package-version"
+syntax_profile = "hyperscan_compatible_portable"
+flags = ["block", "streaming", "vectored", "prefilter"]
+corpus_digest = "registered:regex-comparator-core"
+output_parity = "required"
+resource_limits = ["compile_error", "pattern_too_large", "scratch_size"]
+timing_source = "external-active-time"
+evidence_path = "vyre-bench/tests/regex_engine_comparator_registry.rs"
+
+[[engine]]
+engine_id = "re2"
+version_source = "external-package-version"
+syntax_profile = "re2_linear_time_subset"
+flags = ["utf8", "leftmost_first", "no_backtracking_constructs"]
+corpus_digest = "registered:regex-comparator-core"
+output_parity = "required"
+resource_limits = ["program_size", "dfa_cache", "match_limit"]
+timing_source = "external-active-time"
+evidence_path = "vyre-bench/tests/regex_engine_comparator_registry.rs"
+
+[[engine]]
+engine_id = "pcre2_jit"
+version_source = "external-package-version"
+syntax_profile = "pcre2_jit"
+flags = ["jit", "match_limit", "depth_limit", "jit_stack_limit"]
+corpus_digest = "registered:regex-comparator-core"
+output_parity = "required"
+resource_limits = ["match_limit", "depth_limit", "jit_stack_limit"]
+timing_source = "external-active-time"
+evidence_path = "vyre-bench/tests/regex_engine_comparator_registry.rs"
+
+[[engine]]
+engine_id = "rust_regex"
+version_source = "cargo-lock-package-version"
+syntax_profile = "rust_regex_linear_time_subset"
+flags = ["unicode", "bytes", "leftmost_first", "no_lookaround", "no_backreferences"]
+corpus_digest = "registered:regex-comparator-core"
+output_parity = "required"
+resource_limits = ["size_limit", "dfa_size_limit", "nest_limit"]
+timing_source = "criterion-or-active-time"
+evidence_path = "vyre-bench/tests/regex_engine_comparator_registry.rs"

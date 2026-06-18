@@ -1,0 +1,31 @@
+# End-to-end CI/CD hardening tranche coverage for VX-1101 through VX-1120.
+# Workflow permissions, action pinning, runners, cache/artifacts, release attestations, final gates, and public repository boundaries share one coverage row.
+
+schema = "vyre.cicd.end_to_end_hardening_tranche_coverage.v1"
+owner = "coordination"
+evidence_tokens = ["GITHUB_ACTIONS_SECURE_USE", "GITHUB_ACTIONS_TOKEN_PERMISSIONS", "GITHUB_ACTIONS_OIDC", "GITHUB_ARTIFACT_ATTESTATIONS", "GITHUB_ACTIONS_DEPENDENCY_CACHING"]
+
+required_fields = [
+  "vx_id_range",
+  "workflow_permission_boundary",
+  "actions_dependency_pinning_policy",
+  "ci_runner_cache_artifact_policy",
+  "release_workflow_attestation_policy",
+  "final_release_gate_manifest",
+  "public_repository_rulesets",
+  "publication_boundary",
+  "dedup_seam",
+  "proof_gate",
+]
+
+[[coverage]]
+vx_id_range = "VX-1101..VX-1120"
+workflow_permission_boundary = "WORKFLOW_PERMISSION_BOUNDARY.toml"
+actions_dependency_pinning_policy = "ACTIONS_DEPENDENCY_PINNING_POLICY.toml"
+ci_runner_cache_artifact_policy = "CI_RUNNER_CACHE_ARTIFACT_POLICY.toml"
+release_workflow_attestation_policy = "RELEASE_WORKFLOW_ATTESTATION_POLICY.toml"
+final_release_gate_manifest = "FINAL_RELEASE_GATE_MANIFEST.toml"
+public_repository_rulesets = "REPOSITORY_RULESET_RELEASE_PROTECTION.toml"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+dedup_seam = "one-workflow-permission-boundary-one-action-pinning-policy-one-runner-cache-artifact-policy-one-release-workflow-attestation-policy"
+proof_gate = "ci_cd_hardening_governance.rs"

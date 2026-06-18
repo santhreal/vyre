@@ -37,8 +37,9 @@ fn memory_ordering_wire_tags_are_total_and_unique_for_known_values() {
 #[test]
 fn unknown_memory_ordering_wire_tags_fail_closed() {
     for tag in [7, 31, 127, 255] {
-        assert!(
+        assert_eq!(
             MemoryOrdering::from_wire_tag(tag).is_err(),
+            true,
             "unknown memory ordering tag {tag} must be rejected"
         );
     }

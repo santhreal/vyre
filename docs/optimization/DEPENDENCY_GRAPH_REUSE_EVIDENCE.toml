@@ -1,0 +1,70 @@
+[artifact]
+id = "DEPENDENCY_GRAPH_REUSE_EVIDENCE"
+title = "Dependency graph reuse and invalidation evidence policy"
+tranche = "VX-1561..VX-1580"
+owner = "scanner_frontends"
+status = "planned_contract"
+research_sources = [
+  "CLANG_DEPENDENCY_SCANNING",
+  "PYTHON_IMPORT_SYSTEM",
+  "RUST_MODULES_REFERENCE",
+  "SQLITE_WAL",
+]
+
+[scope]
+owns = [
+  "dependency graph snapshot evidence",
+  "edge extraction cost and reuse metrics",
+  "false-reuse and over-invalidation accounting",
+  "public-safe dependency diagnostics",
+  "handoff from dependency graph to parser cache and optimizer diffing",
+]
+does_not_own = [
+  "profiling capture schema, owned by BENCHMARK_PROFILING_CAPTURE_POLICY",
+  "statistical gates, owned by STATISTICAL_PERFORMANCE_GATES",
+  "dogfood finding lifecycle, owned by DOGFOOD_FINDING_LOOP",
+  "output slab schema, owned by OUTPUT_SLAB_SCHEMA_PROVENANCE",
+]
+
+[required_per_run]
+fields = [
+  "graph_epoch",
+  "language_profiles",
+  "nodes_total",
+  "edges_total",
+  "resolved_edges",
+  "unresolved_edges",
+  "ambiguous_edges",
+  "strongly_connected_components",
+  "changed_nodes",
+  "affected_consumers",
+  "reuse_candidates",
+  "reuse_admitted",
+  "reuse_rejected",
+  "over_invalidation_estimate",
+  "false_reuse_count",
+  "graph_update_ns",
+  "bytes_avoided",
+]
+
+[required_per_edge]
+fields = [
+  "producer_identity",
+  "consumer_identity",
+  "edge_class",
+  "language_id",
+  "resolver_digest",
+  "direct_or_transitive",
+  "rule_scope",
+  "resolution_state",
+  "invalidation_reason",
+]
+
+[metrics]
+performance = ["edge_extraction_ns", "graph_update_ns", "affected_consumer_count", "bytes_avoided", "scan_work_avoided"]
+correctness = ["false_reuse_count", "stale_dependency_count", "unresolved_edge_count", "ambiguous_edge_count"]
+operator = ["top_reuse_rejection_reason", "top_unresolved_dependency", "largest_component_size", "graph_rebuild_reason"]
+
+[publication]
+public_fields = ["language_id", "edge_class", "resolution_state", "component_size", "rejection_reason", "operator_fix"]
+private_fields = ["raw_path", "raw_include_path", "raw_sys_path", "Santh root", "workspace hostname", "source excerpt"]

@@ -154,24 +154,13 @@ impl WgpuProgram {
             dump_kdesc_if_requested(&descriptor, None);
         }
 
-        if let Err(errors) = vyre_lower::verify::verify(&descriptor) {
-            if std::env::var("VYRE_CAPTURE_FAILED_DESCRIPTOR").is_ok() {
-                dump_kdesc_if_requested(&descriptor, None);
-            }
-            return Err(LoweringError::invalid(format!(
-                "KernelDescriptor verification failed after wgpu workgroup selection: {}. Fix: keep DispatchConfig.workgroup_override within descriptor limits.",
-                format_descriptor_verify_errors(&errors)
-            )));
-        }
-        let module = match vyre_emit_naga::emit(&descriptor) {
-            Ok(m) => m,
+        let module = match emit_naga_module_for_descriptor(&descriptor) {
+            Ok(module) => module,
             Err(error) => {
                 if std::env::var("VYRE_CAPTURE_FAILED_DESCRIPTOR").is_ok() {
                     dump_kdesc_if_requested(&descriptor, None);
                 }
-                return Err(LoweringError::invalid(format!(
-                    "KernelDescriptor Naga emission failed before wgpu WGSL writing: {error}. Fix: extend vyre-emit-naga descriptor emission; do not route around it with driver-local lowering."
-                )));
+                return Err(error);
             }
         };
 
@@ -197,6 +186,22 @@ impl WgpuProgram {
             dispatch_geometry,
         })
     }
+}
+
+pub(crate) fn emit_naga_module_for_descriptor(
+    descriptor: &vyre_lower::KernelDescriptor,
+) -> Result<naga::Module, LoweringError> {
+    if let Err(errors) = vyre_lower::verify::verify(descriptor) {
+        return Err(LoweringError::invalid(format!(
+            "KernelDescriptor verification failed after wgpu workgroup selection: {}. Fix: keep DispatchConfig.workgroup_override within descriptor limits.",
+            format_descriptor_verify_errors(&errors)
+        )));
+    }
+    vyre_emit_naga::emit(descriptor).map_err(|error| {
+        LoweringError::invalid(format!(
+            "KernelDescriptor Naga emission failed before wgpu WGSL writing: {error}. Fix: extend vyre-emit-naga descriptor emission; do not route around it with driver-local lowering."
+        ))
+    })
 }
 
 fn dump_kdesc_if_requested(
@@ -406,6 +411,7 @@ fn format_descriptor_verify_errors(errors: &[vyre_lower::VerifyError]) -> String
 mod tests {
     use super::*;
     use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+    use vyre_lower::emit_adversarial_corpus::{self, EmitAdversarialBackend};
 
     #[test]
     fn wgpu_program_lowers_through_kernel_descriptor() {
@@ -469,6 +475,61 @@ mod tests {
         assert_eq!(assignments.len(), 1);
         assert_eq!(assignments[0].name.as_ref(), "out");
         assert_eq!(static_workgroups(&descriptor, [4, 1, 1]), [2, 1, 1]);
+    }
+
+    #[test]
+    fn adversarial_success_corpus_passes_wgpu_descriptor_emit_path() {
+        assert!(
+            emit_adversarial_corpus::required_backends().contains(&EmitAdversarialBackend::Wgpu),
+            "Fix: shared emit adversarial corpus must register WGPU as a required consumer."
+        );
+
+        for case in emit_adversarial_corpus::success_cases() {
+            let module =
+                emit_naga_module_for_descriptor(&case.descriptor).unwrap_or_else(|error| {
+                    panic!(
+                        "Fix: `{}` ({:?}) must pass WGPU descriptor emission: {}",
+                        case.id,
+                        case.family,
+                        error.message()
+                    )
+                });
+            assert_eq!(
+                module.entry_points[0].name, "main",
+                "{}: WGPU descriptor path must preserve compute entry point",
+                case.id
+            );
+            assert_eq!(
+                module.entry_points[0].workgroup_size, case.descriptor.dispatch.workgroup_size,
+                "{}: WGPU descriptor path must preserve workgroup size before adapter override",
+                case.id
+            );
+            assert!(
+                binding_assignments(&case.descriptor).len() <= case.descriptor.bindings.slots.len(),
+                "{}: WGPU binding assignment projection must not invent resource slots",
+                case.id
+            );
+            assert!(
+                static_workgroups(&case.descriptor, case.descriptor.dispatch.workgroup_size)[0]
+                    >= 1,
+                "{}: WGPU static dispatch geometry must produce at least one workgroup",
+                case.id
+            );
+        }
+    }
+
+    #[test]
+    fn adversarial_rejection_corpus_returns_structured_wgpu_errors() {
+        for case in emit_adversarial_corpus::rejection_cases() {
+            let error = emit_naga_module_for_descriptor(&case.descriptor)
+                .expect_err("Fix: rejection corpus case must fail WGPU descriptor emission");
+            assert!(
+                error.message().contains("KernelDescriptor") && error.message().contains("Fix:"),
+                "Fix: `{}` WGPU descriptor rejection must include structured KernelDescriptor repair text: {}",
+                case.id,
+                error.message()
+            );
+        }
     }
 
     /// Regression test: multi-dimensional workgroup sizes must use the

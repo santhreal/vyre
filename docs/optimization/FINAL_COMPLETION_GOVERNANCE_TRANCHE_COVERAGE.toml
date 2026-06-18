@@ -1,0 +1,31 @@
+# Final completion governance tranche coverage for VX-981 through VX-1000.
+# Release gates, reproducible builds, security insights, dogfood workflows, completion matrix, and publication boundaries share one coverage row.
+
+schema = "vyre.plan.final_completion_governance_tranche_coverage.v1"
+owner = "coordination"
+evidence_tokens = ["CARGO_PUBLISH", "REPRODUCIBLE_BUILDS", "OPENSSF_SECURITY_INSIGHTS", "GITHUB_ACTIONS_WORKFLOW"]
+
+required_fields = [
+  "vx_id_range",
+  "final_release_gate_manifest",
+  "reproducible_build_release_attestation",
+  "security_insights_release_summary",
+  "dogfood_workflow_evidence",
+  "completion_audit_evidence_matrix",
+  "source_ledger_coverage",
+  "publication_boundary",
+  "dedup_seam",
+  "proof_gate",
+]
+
+[[coverage]]
+vx_id_range = "VX-981..VX-1000"
+final_release_gate_manifest = "FINAL_RELEASE_GATE_MANIFEST.toml"
+reproducible_build_release_attestation = "REPRODUCIBLE_BUILD_RELEASE_ATTESTATION.toml"
+security_insights_release_summary = "SECURITY_INSIGHTS_RELEASE_SUMMARY.toml"
+dogfood_workflow_evidence = "DOGFOOD_WORKFLOW_EVIDENCE.toml"
+completion_audit_evidence_matrix = "COMPLETION_AUDIT_EVIDENCE_MATRIX.toml"
+source_ledger_coverage = "RESEARCH_SOURCE_LEDGER.toml"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+dedup_seam = "one-final-gate-manifest-one-reproducible-build-attestation-one-security-insights-summary-one-dogfood-evidence-one-completion-matrix"
+proof_gate = "release_completion_governance.rs"

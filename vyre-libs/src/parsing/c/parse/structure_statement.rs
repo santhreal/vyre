@@ -16,8 +16,13 @@ pub fn c11_statement_bounds(
     let tok_count = match &num_tokens {
         Expr::LitU32(0) => 1,
         Expr::LitU32(n) => *n,
-        _ => panic!(
-            "c11_statement_bounds requires a literal token-window count for buffer sizing. Fix: build one explicit GPU program per token window instead of silently sizing a one-token output."
+        // The statement output buffers are sized at build time from this count
+        // (`tok_count.saturating_mul(2)` below). Silently defaulting a
+        // runtime-dynamic count to 1 would mis-size those buffers and drop
+        // statements with no signal — fail fast instead.
+        other => panic!(
+            "c11_statement_bounds requires a literal token-window count for build-time output \
+             buffer sizing, got a non-literal expression {other:?}. Fix: pass Expr::u32(N)."
         ),
     };
     let scan_count = Expr::buf_len(tok_types);

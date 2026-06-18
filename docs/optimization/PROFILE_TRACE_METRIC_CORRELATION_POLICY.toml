@@ -1,0 +1,66 @@
+# Profile correlation owns profile-to-trace-to-metric joins; existing trace, metric, cross-signal, and provenance files remain source authorities.
+
+schema = "vyre.observability.profile_trace_metric_correlation.v1"
+owner = "performance_observability"
+evidence_tokens = ["OPENTELEMETRY_PROFILES_SPEC", "OPENTELEMETRY_PROFILE_SIGNAL", "OPENTELEMETRY_PROFILE_MAPPINGS", "OPENTELEMETRY_PPROF_COMPATIBILITY", "OPENMETRICS_PROMETHEUS", "W3C_TRACE_CONTEXT"]
+
+required_fields = [
+  "correlation_id",
+  "profile_id",
+  "trace_id_policy",
+  "metric_policy",
+  "profile_mapping_policy",
+  "build_identity_policy",
+  "time_window_policy",
+  "pprof_policy",
+  "provenance_policy",
+  "regression_policy",
+  "redaction_policy",
+  "authority_links",
+  "diagnostic",
+]
+
+[[correlation]]
+correlation_id = "scan-latency-profile-correlation"
+profile_id = "operator-runtime-oncpu-profile"
+trace_id_policy = "profile-samples-may-carry-trace-id-and-must-link-to-TRACE_CONTEXT_TELEMETRY_CONTRACTS-when-present"
+metric_policy = "latency-and-throughput-metrics-link-through-METRICS_EXPOSITION_CONTRACTS-with-matching-route-version-window"
+profile_mapping_policy = "mapping-identity-uses-build-id-or-HTL-hash-and-symbol-source-digest"
+build_identity_policy = "artifact-digest-container-image-digest-binary-build-id-and-release-version-must-match"
+time_window_policy = "profile-window-overlaps-trace-span-window-and-metric-range-query-window"
+pprof_policy = "profile-export-records-pprof-roundtrip-or-explicit-non-pprof-profile-type"
+provenance_policy = "links-to-public-release-supply-chain-provenance-and-reproducibility-capsule"
+regression_policy = "PERFORMANCE_REGRESSION_PROFILE_TRIAGE_POLICY.toml"
+redaction_policy = "public-correlation-records-use-redacted-symbols-aggregate-frame-percentages-and-public-route-ids"
+authority_links = ["TRACE_CONTEXT_TELEMETRY_CONTRACTS.toml", "METRICS_EXPOSITION_CONTRACTS.toml", "CROSS_SIGNAL_AUDIT_CORRELATION.toml", "PUBLIC_RELEASE_SUPPLY_CHAIN_PROVENANCE.toml"]
+diagnostic = "VYRE_SCAN_PROFILE_CORRELATION_REQUIRED"
+
+[[correlation]]
+correlation_id = "allocation-pressure-profile-correlation"
+profile_id = "allocator-heap-pressure-profile"
+trace_id_policy = "allocation-profile-samples-link-to-request-trace-id-only-after-secret-and-payload-redaction"
+metric_policy = "memory-budget-metrics-link-to-resource-budget-and-resource-exhaustion-evidence"
+profile_mapping_policy = "allocation-mapping-records-library-build-id-allocator-kind-and-symbolization-digest"
+build_identity_policy = "worker-binary-digest-rule-data-digest-and-cache-key-class-recorded"
+time_window_policy = "allocation-profile-window-spans-resource-pressure-alert-window-and-cache-rebuild-window"
+pprof_policy = "allocation-profile-uses-pprof-compatible-sample-types-when-lossless"
+provenance_policy = "links-to-cache-rebuild-invalidation-and-release-artifact-integrity-evidence"
+regression_policy = "PERFORMANCE_REGRESSION_PROFILE_TRIAGE_POLICY.toml"
+redaction_policy = "object-values-private-corpus-paths-cache-paths-and-secret-labels-omitted-from-public-record"
+authority_links = ["RESOURCE_BUDGET_POLICY.toml", "RESOURCE_EXHAUSTION_EVIDENCE.toml", "CACHE_REBUILD_INVALIDATION_POLICY.toml", "CROSS_SIGNAL_AUDIT_CORRELATION.toml"]
+diagnostic = "VYRE_ALLOCATION_PROFILE_CORRELATION_REQUIRED"
+
+[[correlation]]
+correlation_id = "bench-stage-profile-correlation"
+profile_id = "bench-harness-stage-profile"
+trace_id_policy = "benchmark-profile-run-id-links-to-bench-trace-or-records-trace-absent-by-design"
+metric_policy = "stage-duration-metrics-link-to-benchmark-report-and-hot-path-budget"
+profile_mapping_policy = "benchmark-mapping-records-binary-build-id-debug-artifact-digest-and-source-revision"
+build_identity_policy = "baseline-and-candidate-artifact-identities-recorded-before-profile-diff"
+time_window_policy = "baseline-candidate-windows-use-same-warmup-steady-state-and-sampling-policy"
+pprof_policy = "profile-diff-records-pprof-top-or-collapsed-stack-diff-source-with-digest"
+provenance_policy = "links-to-reproducibility-capsule-and-public-release-provenance"
+regression_policy = "PERFORMANCE_REGRESSION_PROFILE_TRIAGE_POLICY.toml"
+redaction_policy = "public-benchmark-profile-correlation-uses-fixture-ids-and-redacted-local-machine-details"
+authority_links = ["HOT_PATHS.toml", "REPRODUCIBILITY_CAPSULES.toml", "METRICS_EXPOSITION_CONTRACTS.toml", "CROSS_SIGNAL_AUDIT_CORRELATION.toml"]
+diagnostic = "VYRE_BENCH_PROFILE_CORRELATION_REQUIRED"

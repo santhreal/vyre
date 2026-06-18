@@ -160,11 +160,7 @@ impl<'a> PreprocessRun<'a> {
     }
 
     fn invalidate_defines_hash(&mut self) {
-        self.macro_generation = self.macro_generation.checked_add(1).unwrap_or_else(|| {
-            panic!(
-                "vyre-libs gpu preprocessor macro generation overflowed. Fix: split the translation unit before continuing an unbounded macro-mutation stream."
-            )
-        });
+        self.macro_generation = self.macro_generation.saturating_add(1);
         self.defines_hash_cache = None;
     }
 

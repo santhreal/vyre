@@ -1,0 +1,43 @@
+# Operator runtime configuration policy for VX-1226, VX-1227, VX-1232, VX-1235, VX-1236, and VX-1239.
+# Tier A runtime config, ConfigMaps, Secrets, environment files, command flags, resource knobs, telemetry knobs, and private-boundary checks share one operator config seam.
+
+schema = "vyre.release.operator_runtime_configuration_policy.v1"
+owner = "coordination"
+evidence_tokens = ["KUBERNETES_CONFIGMAP", "KUBERNETES_SECRETS", "SYSTEMD_EXEC", "OPENTELEMETRY_SEMCONV", "OPENMETRICS_PROMETHEUS"]
+
+required_fields = [
+  "config_id",
+  "surface",
+  "allowed_config_policy",
+  "secret_boundary_policy",
+  "resource_knob_policy",
+  "telemetry_policy",
+  "gpu_policy",
+  "validation_policy",
+  "publication_boundary",
+  "diagnostic",
+]
+
+[[runtime_config]]
+config_id = "kubernetes-runtime-config"
+surface = "Helm-values-ConfigMap-Secret-and-pod-env"
+allowed_config_policy = "Tier-A-operational-knobs-only-concurrency-timeout-depth-rate-severity-and-output-mode"
+secret_boundary_policy = "secret-values-live-in-Kubernetes-Secrets-or-external-secret-references-not-ConfigMaps-values-or-public-docs"
+resource_knob_policy = "resource-requests-limits-backpressure-and-queue-quotas-link-to-resource-budget-and-backpressure-policies"
+telemetry_policy = "trace-metric-log-export-config-uses-public-redacted-OpenTelemetry-and-OpenMetrics-contracts"
+gpu_policy = "GPU-request-node-selector-runtime-class-and-device-plugin-assumptions-explicit-when-GPU-route-is-enabled"
+validation_policy = "invalid-config-fails-closed-with-structured-problem-detail-and-public-fix-text"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+diagnostic = "VYRE_KUBERNETES_RUNTIME_CONFIG_POLICY_REQUIRED"
+
+[[runtime_config]]
+config_id = "systemd-runtime-config"
+surface = "systemd-unit-EnvironmentFile-LoadCredential-and-command-flags"
+allowed_config_policy = "Tier-A-operational-knobs-through-config-file-and-command-flags-with-command-flags-winning"
+secret_boundary_policy = "EnvironmentFile-not-used-for-secrets-LoadCredential-or-protected-file-reference-required"
+resource_knob_policy = "systemd-resource-control-values-map-to-resource-budget-policy"
+telemetry_policy = "journald-logs-metrics-and-traces-apply-operator-evidence-redaction-contracts"
+gpu_policy = "GPU-device-access-and-driver-environment-explicitly-configured-no-implicit-host-device-access"
+validation_policy = "service-start-refuses-invalid-config-and-emits-actionable-diagnostic"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+diagnostic = "VYRE_SYSTEMD_RUNTIME_CONFIG_POLICY_REQUIRED"

@@ -1,0 +1,37 @@
+# Reproducible build release attestation for VX-985 through VX-987.
+# Source, environment, instructions, outputs, provenance, and comparison evidence share one release attestation.
+
+schema = "vyre.release.reproducible_build_attestation.v1"
+owner = "bench_harness"
+evidence_tokens = ["REPRODUCIBLE_BUILDS", "SLSA_PROVENANCE"]
+
+required_fields = [
+  "attestation_id",
+  "source_digest",
+  "build_environment_digest",
+  "build_instructions",
+  "output_digest",
+  "comparison_policy",
+  "provenance_link",
+  "publication_class",
+]
+
+[[attestation]]
+attestation_id = "vyre-public-crate-reproducibility"
+source_digest = "public-vyre-source-digest"
+build_environment_digest = "pinned-toolchain-and-platform-class"
+build_instructions = "release-packaging-command-class"
+output_digest = "crate-package-output-digest"
+comparison_policy = "byte-for-byte-or-explained-nondeterminism"
+provenance_link = "PUBLIC_RELEASE_SUPPLY_CHAIN_PROVENANCE.toml"
+publication_class = "public-vyre-artifact"
+
+[[attestation]]
+attestation_id = "local-private-evidence-reproducibility"
+source_digest = "local-private-worktree-digest"
+build_environment_digest = "local-environment-redacted"
+build_instructions = "local-nonpublished-proof-command-class"
+output_digest = "local-evidence-output-digest"
+comparison_policy = "local-only-comparison"
+provenance_link = "RELEASE_ARTIFACT_PROVENANCE.toml"
+publication_class = "local-only-nonpublished-doc"

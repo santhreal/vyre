@@ -28,6 +28,19 @@ pub struct MetricPoint {
     pub value: u64,
 }
 
+#[must_use]
+pub fn digest64_buffers(buffers: &[Vec<u8>]) -> u64 {
+    let mut hasher = blake3::Hasher::new();
+    for buffer in buffers {
+        hasher.update(&(buffer.len() as u64).to_le_bytes());
+        hasher.update(buffer);
+    }
+    let hash = hasher.finalize();
+    let mut digest = [0u8; 8];
+    digest.copy_from_slice(&hash.as_bytes()[..8]);
+    u64::from_le_bytes(digest)
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct BenchMetrics {
     pub wall_ns: Option<u64>,
@@ -149,6 +162,16 @@ mod tests {
         assert!(
             m.achieved_bandwidth_gb_s().is_none(),
             "zero wall_ns must return None to avoid div-by-zero"
+        );
+    }
+
+    #[test]
+    fn digest64_buffers_is_length_delimited() {
+        let joined = digest64_buffers(&[b"ab".to_vec(), b"c".to_vec()]);
+        let split = digest64_buffers(&[b"a".to_vec(), b"bc".to_vec()]);
+        assert_ne!(
+            joined, split,
+            "Fix: benchmark output digests must include buffer boundaries."
         );
     }
 }

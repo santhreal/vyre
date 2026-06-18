@@ -1,0 +1,66 @@
+# Power and thermal telemetry owns watt, joule, temperature, clock, throttle, and sensor provenance fields; metrics exposition owns generic metric syntax.
+
+schema = "vyre.efficiency.power_thermal_telemetry.v1"
+owner = "performance_efficiency"
+evidence_tokens = ["NVIDIA_NVML_DEVICE_POWER", "NVIDIA_DCGM_POWER_PROFILES", "NVIDIA_DCGM_PROFILING_GROUPS", "LINUX_POWERCAP_RAPL", "KEPLER_ENERGY_EXPORTER", "OPENTELEMETRY_HARDWARE_SEMCONV"]
+
+required_fields = [
+  "telemetry_id",
+  "measurement_surface",
+  "sensor_source_policy",
+  "unit_policy",
+  "sampling_window_policy",
+  "attribution_policy",
+  "clock_throttle_policy",
+  "thermal_policy",
+  "profile_group_policy",
+  "metric_export_policy",
+  "privacy_boundary",
+  "authority_links",
+  "diagnostic",
+]
+
+[[telemetry]]
+telemetry_id = "gpu-power-thermal-telemetry"
+measurement_surface = "CUDA-and-NVIDIA-GPU-runtime-workers-release-benchmarks-and-operator-workloads"
+sensor_source_policy = "NVML-power-usage-power-limit-power-state-clock-throttle-temperature-and-DCGM-workload-power-profile-recorded-with-driver-version"
+unit_policy = "power-in-watts-energy-derived-as-watt-seconds-to-joules-temperature-in-celsius-clock-in-MHz-and-window-duration-in-seconds"
+sampling_window_policy = "sampling-window-start-stop-profile-id-release-version-workload-digest-and-clock-class-recorded"
+attribution_policy = "per-workload-attribution-requires-process-or-container-owner-route-and-capacity-envelope-link"
+clock_throttle_policy = "record-current-clock-clock-limit-throttle-reason-power-limit-and-performance-state-before-performance-or-efficiency-claim"
+thermal_policy = "record-temperature-margin-fan-or-cooling-state-and-thermal-throttle-presence"
+profile_group_policy = "DCGM-profiling-group-concurrency-limit-pause-resume-and-blank-value-state-recorded-when-DCGM-prof-fields-are-used"
+metric_export_policy = "exports-through-METRICS_EXPOSITION_CONTRACTS-with-bounded-public-labels"
+privacy_boundary = "redact-GPU-serial-hostname-private-fleet-label-local-driver-path-and-Santh-root"
+authority_links = ["METRICS_EXPOSITION_CONTRACTS.toml", "BACKEND_CAPABILITY_DIGESTS.toml", "GPU_DEVICE_CAPACITY_PLACEMENT_POLICY.toml", "PROFILING_COLLECTION_SECURITY_POLICY.toml"]
+diagnostic = "VYRE_GPU_POWER_THERMAL_TELEMETRY_REQUIRED"
+
+[[telemetry]]
+telemetry_id = "cpu-rapl-energy-telemetry"
+measurement_surface = "CPU-reference-routes-operator-control-plane-batch-workers-and-parser-workloads"
+sensor_source_policy = "Linux-powercap-control-type-power-zone-hierarchy-RAPL-zone-energy-and-constraint-state-recorded"
+unit_policy = "energy-in-joules-power-in-watts-window-duration-in-seconds-and-functional-unit-count-recorded"
+sampling_window_policy = "read-before-after-window-with-zone-id-control-type-workload-digest-and-process-or-container-attribution"
+attribution_policy = "Kepler-or-local-powercap-attribution-records-node-pod-container-process-and-resource-utilization-basis"
+clock_throttle_policy = "record-governor-class-frequency-class-powercap-constraint-and-throttle-state-when-available"
+thermal_policy = "record-thermal-zone-class-temperature-and-thermal-pressure-when-available"
+profile_group_policy = "not-applicable-for-CPU-powercap-but-profile-id-link-must-point-to-continuous-profiling-when-used"
+metric_export_policy = "exports-through-METRICS_EXPOSITION_CONTRACTS-and-Kepler-compatible-Prometheus-label-boundary"
+privacy_boundary = "redact-hostname-pod-private-tenant-name-local-path-user-id-and-Santh-root"
+authority_links = ["METRICS_EXPOSITION_CONTRACTS.toml", "RESOURCE_RIGHTSIZING_CAPACITY_POLICY.toml", "WORKLOAD_AUTOSCALING_POLICY.toml", "PROFILE_TRACE_METRIC_CORRELATION_POLICY.toml"]
+diagnostic = "VYRE_CPU_RAPL_ENERGY_TELEMETRY_REQUIRED"
+
+[[telemetry]]
+telemetry_id = "container-pod-energy-attribution"
+measurement_surface = "Kubernetes-operator-pods-batch-workers-and-profile-collector-sidecars"
+sensor_source_policy = "Kepler-style-energy-attribution-records-hardware-sensor-source-id-resource-utilization-basis-and-exporter-version"
+unit_policy = "pod-container-process-energy-in-joules-power-in-watts-and-functional-unit-throughput-recorded"
+sampling_window_policy = "window-aligns-with-SLO-metric-profile-and-rollout-analysis-window"
+attribution_policy = "attribution-records-node-pod-container-namespace-release-version-route-and-public-workload-class"
+clock_throttle_policy = "node-level-throttle-or-powercap-state-linked-when-pod-level-attribution-is-derived"
+thermal_policy = "node-thermal-state-linked-when-energy-attribution-window-overlaps-throttling"
+profile_group_policy = "collector-profile-overhead-and-power-attribution-recorded-for-profiler-sidecars"
+metric_export_policy = "exports-through-METRICS_EXPOSITION_CONTRACTS-with-cardinality-bounds-and-public-labels"
+privacy_boundary = "redact-private-namespace-tenant-hostname-node-name-container-id-and-Santh-root"
+authority_links = ["OPERATOR_DEPLOYMENT_SURFACE_MATRIX.toml", "WORKLOAD_AUTOSCALING_POLICY.toml", "SERVICE_LEVEL_OBJECTIVE_POLICY.toml", "PUBLICATION_BOUNDARY_CLASSIFICATION.toml"]
+diagnostic = "VYRE_CONTAINER_ENERGY_ATTRIBUTION_REQUIRED"

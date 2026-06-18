@@ -1,0 +1,41 @@
+# Diagnostic privacy fuzzing for VX-691.
+# Secret-like paths, tokens, URLs, env names, and backend ids are redacted without hiding fix text.
+
+schema = "vyre.security.diagnostic_privacy_fuzzing.v1"
+owner = "security_reliability"
+evidence_tokens = ["CODEQL_FLOW", "MLIR_PASS"]
+
+input_classes = [
+  "secret_like_path",
+  "token",
+  "url",
+  "env_name",
+  "backend_id",
+]
+
+required_fields = [
+  "input_class",
+  "redaction_policy",
+  "backend_id_visibility",
+  "capability_id_visibility",
+  "remediation_visibility",
+  "diagnostic_id",
+]
+
+[[case]]
+id = "credential-path-redacted"
+input_class = "secret_like_path"
+redaction_policy = "redact-path-value"
+backend_id_visibility = "visible"
+capability_id_visibility = "visible"
+remediation_visibility = "visible"
+diagnostic_id = "VYRE_DIAGNOSTIC_SECRET_REDACTED"
+
+[[case]]
+id = "backend-id-preserved"
+input_class = "backend_id"
+redaction_policy = "preserve-nonsecret-identifier"
+backend_id_visibility = "visible"
+capability_id_visibility = "visible"
+remediation_visibility = "visible"
+diagnostic_id = "VYRE_BACKEND_CAPABILITY_BLOCKED"

@@ -12,6 +12,7 @@ This crate provides tools to validate, diff, and inspect Vyre's intermediate rep
 - **Descriptor Diffing:** Compares two kernel descriptors (e.g., before and after an optimization pass) and generates a structured summary of changes (dropped bindings, added bindings, operation counts).
 - **WGSL Emission Inspection:** Wraps `vyre-emit-naga` to provide validated, line-numbered WGSL dumps for any `Program` or `KernelDescriptor`.
 - **Carrier Tracing:** Identifies loops without valid loop carriers and summarizes reads/writes for debugging `loop_carry` and `bank_conflict` rewrites.
+- **Scan Explain Reports:** Summarizes scan decomposition metadata from descriptor intents and scan database headers, including extracted factors, selected engines, rejected accelerator candidates, verifier fragments, exactness class, verifier cost estimate, literal selectivity basis, streaming state, table bytes, baseline id, and release evidence links.
 
 ## Command Line Interface
 

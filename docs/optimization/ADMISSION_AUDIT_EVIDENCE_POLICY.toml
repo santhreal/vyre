@@ -1,0 +1,43 @@
+# Admission audit evidence policy for VX-1349, VX-1352, VX-1354, VX-1356, and VX-1359.
+# Kubernetes audit records, webhook metrics, policy reports, redaction, and release-health feedback share one admission evidence seam.
+
+schema = "vyre.ops.admission_audit_evidence_policy.v1"
+owner = "coordination"
+evidence_tokens = ["KUBERNETES_AUDITING", "KUBERNETES_DYNAMIC_ADMISSION", "OPA_GATEKEEPER", "KYVERNO_VALIDATE_RULES"]
+
+required_fields = [
+  "audit_id",
+  "event_surface",
+  "audit_capture_policy",
+  "decision_correlation_policy",
+  "metric_policy",
+  "retention_policy",
+  "redaction_policy",
+  "release_health_policy",
+  "operator_result_policy",
+  "diagnostic",
+]
+
+[[audit]]
+audit_id = "admission-denial-audit-evidence"
+event_surface = "admission-denied-warned-audited-or-mutated-Kubernetes-API-requests-for-public-Vyre-resources"
+audit_capture_policy = "audit-policy-records-metadata-level-for-admission-decisions-and-requestResponse-only-for-redacted-fixtures-when-approved"
+decision_correlation_policy = "correlate-audit-event-policy-id-engine-id-admission-controller-user-groups-objectRef-namespace-and-release-version"
+metric_policy = "webhook-latency-error-timeout-deny-count-warn-count-audit-count-and-policy-report-violation-count-recorded"
+retention_policy = "audit-log-retention-maxage-maxbackup-maxsize-and-storage-class-recorded-with-public-safe-summary"
+redaction_policy = "secret-values-token-values-private-Santh-paths-hostnames-device-serials-and-private-corpus-excerpts-redacted"
+release_health_policy = "admission-denials-timeouts-and-audit-only-violations-feed-RELEASE_HEALTH_FEEDBACK_LOOP.toml"
+operator_result_policy = "operator-output-lists-policy-id-resource-kind-decision-action-owner-route-and-public-fix-text"
+diagnostic = "VYRE_ADMISSION_DENIAL_AUDIT_EVIDENCE_REQUIRED"
+
+[[audit]]
+audit_id = "policy-engine-drift-audit-evidence"
+event_surface = "drift-between-infrastructure-as-code-policy-cluster-policy-binding-and-live-resource-state"
+audit_capture_policy = "Gatekeeper-audit-Kyverno-policy-report-Kubernetes-audit-and-IaC-policy-check-results-correlated"
+decision_correlation_policy = "policy-source-digest-cluster-policy-digest-binding-digest-live-resource-digest-and-decision-mode-recorded"
+metric_policy = "drift-count-enforced-deny-count-audit-only-count-stale-binding-count-and-exception-count-recorded"
+retention_policy = "policy-drift-evidence-retained-with-release-evidence-and-incident-retrospective-when-release-blocking"
+redaction_policy = "resource-manifest-diffs-redact-secrets-private-paths-private-label-values-and-sensitive-incident-context"
+release_health_policy = "drift-from-enforced-policy-invalidates-operator-deployment-readiness-until resolved"
+operator_result_policy = "operator-output-lists-drift-family-policy-source-cluster-binding-live-resource-and-required-fix"
+diagnostic = "VYRE_POLICY_ENGINE_DRIFT_AUDIT_REQUIRED"

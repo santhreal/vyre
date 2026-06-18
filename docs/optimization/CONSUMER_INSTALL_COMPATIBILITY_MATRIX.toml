@@ -1,0 +1,51 @@
+# Consumer install compatibility matrix for VX-1123, VX-1128, VX-1133, and VX-1138.
+# CLI install, library dependency, feature-gated subcrate dependency, docs examples, and platform/MSRV compatibility share one matrix.
+
+schema = "vyre.release.consumer_install_compatibility_matrix.v1"
+owner = "organization_dedup"
+evidence_tokens = ["CARGO_PUBLISH", "SEMVER_2_0", "CARGO_RUST_VERSION_FIELD", "RUST_API_GUIDELINES"]
+
+required_fields = [
+  "consumer_mode",
+  "entrypoint",
+  "cargo_command_policy",
+  "feature_policy",
+  "msrv_policy",
+  "semver_policy",
+  "public_docs_policy",
+  "negative_case",
+  "diagnostic",
+]
+
+[[consumer]]
+consumer_mode = "cargo-install-cli"
+entrypoint = "vyre-cli-public-binary"
+cargo_command_policy = "cargo-install-public-crate-name-with-no-private-paths-or-git-santh-source"
+feature_policy = "default-features-produce-supported-public-cli"
+msrv_policy = "rust-version-compatible-with-public-release-msrv"
+semver_policy = "cli-exit-code-output-and-config-contract-changes-reviewed-for-compatibility"
+public_docs_policy = "README-and-docs-rs-include-public-install-example"
+negative_case = "cargo-install-from-private-santh-path-is-not-public-release-evidence"
+diagnostic = "VYRE_CONSUMER_CARGO_INSTALL_COMPATIBILITY_REQUIRED"
+
+[[consumer]]
+consumer_mode = "cargo-add-library"
+entrypoint = "vyre-public-library-api"
+cargo_command_policy = "cargo-add-public-crate-name-and-semver-compatible-version-requirement"
+feature_policy = "library-features-are-additive-and-documented"
+msrv_policy = "rust-version-field-documents-minimum-supported-rust-toolchain"
+semver_policy = "public-api-breaking-change-requires-major-version-or-migration-record"
+public_docs_policy = "rustdoc-examples-cover-representative-library-use"
+negative_case = "public-example-cannot-require-private-santh-worktree"
+diagnostic = "VYRE_CONSUMER_LIBRARY_COMPATIBILITY_REQUIRED"
+
+[[consumer]]
+consumer_mode = "cargo-add-tool-subcrate"
+entrypoint = "feature-gated-tool-subcrate"
+cargo_command_policy = "cargo-add-subcrate-or-parent-feature-boundary-documented"
+feature_policy = "subcrate-consumption-matches-CRATE_BOUNDARY_FEATURE_MATRIX.toml"
+msrv_policy = "subcrate-msrv-not-lower-truth-than-parent-policy"
+semver_policy = "subcrate-public-api-versioning-aligned-with-parent-compatibility-record"
+public_docs_policy = "subcrate-docs-rs-page-links-parent-feature-gate"
+negative_case = "thin-wrapper-subcrate-without-standalone-contract-refused"
+diagnostic = "VYRE_CONSUMER_SUBCRATE_COMPATIBILITY_REQUIRED"

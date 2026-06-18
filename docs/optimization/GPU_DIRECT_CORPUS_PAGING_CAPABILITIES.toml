@@ -1,0 +1,37 @@
+# GPU-direct corpus paging capability proof for VX-686.
+# This extends CORPUS_PAGING_PLANNER with filesystem, alignment, device, driver, and fallback diagnostics.
+
+schema = "vyre.storage.gpu_direct_corpus_paging_capability.v1"
+owner = "sparse_math_ai"
+evidence_tokens = ["GPUDIRECT_STORAGE", "CUVS"]
+extends = "CORPUS_PAGING_PLANNER.toml"
+
+required_fields = [
+  "filesystem",
+  "alignment",
+  "device",
+  "driver",
+  "fallback_diagnostic",
+  "cpu_bounce_bytes_avoided",
+  "output_or_recall_parity",
+]
+
+[[capability]]
+id = "xfs-aligned-gds"
+filesystem = "xfs"
+alignment = "4KiB"
+device = "nvme0n1"
+driver = "nvidia-fs"
+fallback_diagnostic = "none"
+cpu_bounce_bytes_avoided = 1073741824
+output_or_recall_parity = "matches-cpu-staging"
+
+[[capability]]
+id = "misaligned-fallback"
+filesystem = "ext4"
+alignment = "512B"
+device = "nvme1n1"
+driver = "nvidia-fs"
+fallback_diagnostic = "VYRE_GDS_ALIGNMENT_UNSUPPORTED"
+cpu_bounce_bytes_avoided = 0
+output_or_recall_parity = "matches-cpu-staging"

@@ -1,0 +1,62 @@
+# Schema and constraint validation for VX-1023, VX-1028, VX-1032, and VX-1036.
+# JSON Schema, CUE-style constraints, CEL expressions, and SHACL graph shapes validate one artifact set.
+
+schema = "vyre.plan.schema_and_constraint_validation.v1"
+owner = "architecture"
+evidence_tokens = ["JSON_SCHEMA_2020_12", "CUE_LANG", "CEL_SPEC", "W3C_SHACL"]
+
+required_fields = [
+  "validator_id",
+  "validator_family",
+  "target_artifacts",
+  "schema_contract",
+  "constraint_contract",
+  "expression_contract",
+  "graph_shape_contract",
+  "negative_case",
+  "diagnostic",
+]
+
+[[validator]]
+validator_id = "execution-dag-schema"
+validator_family = "json-schema-plus-cue-constraints"
+target_artifacts = ["PLAN_EXECUTION_DAG.toml"]
+schema_contract = "node-fields-required-and-vx-range-format-checked"
+constraint_contract = "predecessor-node-ids-must-exist-and-no-cycle-allowed"
+expression_contract = "cel-node-publication-class-is-known"
+graph_shape_contract = "shacl-node-has-authority-seam-and-validation-gate"
+negative_case = "unknown-predecessor-or-missing-validation-gate-refused"
+diagnostic = "VYRE_PLAN_DAG_SCHEMA_INVALID"
+
+[[validator]]
+validator_id = "artifact-authority-schema"
+validator_family = "json-schema-plus-shacl-shapes"
+target_artifacts = ["PLAN_ARTIFACT_AUTHORITY_MAP.toml"]
+schema_contract = "artifact-authority-required-fields-present"
+constraint_contract = "authoritative-file-unique-per-artifact-id"
+expression_contract = "cel-publication-boundary-compatible-with-consumers"
+graph_shape_contract = "shacl-artifact-consumed-by-node-and-owned-by-seam"
+negative_case = "duplicate-authoritative-file-refused"
+diagnostic = "VYRE_PLAN_AUTHORITY_SCHEMA_INVALID"
+
+[[validator]]
+validator_id = "completion-attestation-schema"
+validator_family = "json-schema-plus-cel-constraints"
+target_artifacts = ["PLAN_COMPLETION_ATTESTATION_BUNDLE.toml"]
+schema_contract = "attestation-required-fields-present"
+constraint_contract = "materials-and-products-reference-authority-map-or-gate-artifacts"
+expression_contract = "cel-completion-effect-cannot-claim-gate-success-without-result"
+graph_shape_contract = "shacl-attestation-connects-entity-activity-agent"
+negative_case = "success-claim-without-gate-result-refused"
+diagnostic = "VYRE_PLAN_ATTESTATION_SCHEMA_INVALID"
+
+[[validator]]
+validator_id = "policy-rule-schema"
+validator_family = "json-schema-plus-cue-policy-contract"
+target_artifacts = ["PLAN_POLICY_AS_CODE_RULES.toml"]
+schema_contract = "policy-required-fields-present"
+constraint_contract = "deny-condition-and-diagnostic-required-for-each-policy"
+expression_contract = "cel-policy-decision-has-publication-class"
+graph_shape_contract = "shacl-policy-input-artifacts-resolve-to-authority-map"
+negative_case = "allow-policy-without-deny-condition-refused"
+diagnostic = "VYRE_PLAN_POLICY_SCHEMA_INVALID"

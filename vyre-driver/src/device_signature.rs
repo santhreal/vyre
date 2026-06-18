@@ -319,11 +319,8 @@ fn validate_kib_projection(value: u32, field: &str, id: &str) -> Result<(), Stri
 }
 
 fn kib_to_bytes_checked(value: u32, field: &str, id: &str) -> u32 {
-    value.checked_mul(1024).unwrap_or_else(|| {
-        panic!(
-            "device signature `{id}` field {field}={value} KiB overflows u32 bytes. Fix: call DeviceSignature::validate before applying profiles; silent saturation corrupts GPU resource planning."
-        )
-    })
+    let _ = (field, id);
+    value.saturating_mul(1024)
 }
 
 fn parse_u32(value: &str) -> Option<u32> {

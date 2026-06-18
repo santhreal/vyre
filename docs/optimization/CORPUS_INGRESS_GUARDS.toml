@@ -1,0 +1,36 @@
+# Corpus ingress guards for VX-693.
+# Benches, parser, scan, and release evidence reject oversized, expanded, nested, and malformed inputs.
+
+schema = "vyre.security.corpus_ingress_guard.v1"
+owner = "security_reliability"
+evidence_tokens = ["SIMDJSON_PARSE_MANY", "CUDA_BEST_PRACTICES"]
+
+required_fields = [
+  "maximum_bytes",
+  "expansion_ratio",
+  "file_count",
+  "nesting_depth",
+  "chunk_size",
+  "refusal_reason",
+  "diagnostic",
+]
+
+[[guard]]
+id = "compressed-bomb"
+maximum_bytes = 1073741824
+expansion_ratio = "10x"
+file_count = 1024
+nesting_depth = 8
+chunk_size = 1048576
+refusal_reason = "expansion-ratio-exceeded"
+diagnostic = "VYRE_CORPUS_EXPANSION_REFUSED"
+
+[[guard]]
+id = "path-traversal-entry"
+maximum_bytes = 1073741824
+expansion_ratio = "1x"
+file_count = 64
+nesting_depth = 2
+chunk_size = 1048576
+refusal_reason = "path-traversal-entry"
+diagnostic = "VYRE_CORPUS_PATH_TRAVERSAL_REFUSED"

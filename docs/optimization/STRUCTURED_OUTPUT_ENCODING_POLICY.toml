@@ -1,0 +1,47 @@
+# Structured output encoding policy for VX-949 through VX-952.
+# JSON, SARIF, problem details, metrics labels, and trace attributes share one escaping and validation contract.
+
+schema = "vyre.injection.structured_output_encoding_policy.v1"
+owner = "reporting"
+evidence_tokens = ["RFC_8259_JSON", "SARIF_2_1_0", "RFC_9457_PROBLEM_DETAILS"]
+
+required_fields = [
+  "encoding_id",
+  "format",
+  "string_policy",
+  "number_policy",
+  "field_name_policy",
+  "control_character_policy",
+  "roundtrip_contract",
+  "diagnostic",
+]
+
+[[encoding]]
+encoding_id = "json-findings-output"
+format = "json"
+string_policy = "utf8-strings-with-required-json-escaping"
+number_policy = "finite-numbers-only-no-nan-or-infinity"
+field_name_policy = "schema-declared-fields-only"
+control_character_policy = "escape-controls-per-json-string-rules"
+roundtrip_contract = "serialize-parse-preserves-report-contract"
+diagnostic = "VYRE_JSON_OUTPUT_ENCODING_REFUSED"
+
+[[encoding]]
+encoding_id = "sarif-report-output"
+format = "sarif"
+string_policy = "json-compatible-strings-plus-sarif-field-contract"
+number_policy = "finite-numbers-only"
+field_name_policy = "sarif-schema-and-vyre-extension-allowlist"
+control_character_policy = "escape-controls-and-redact-private-paths"
+roundtrip_contract = "sarif-report-reloads-with-stable-fingerprints"
+diagnostic = "VYRE_SARIF_OUTPUT_ENCODING_REFUSED"
+
+[[encoding]]
+encoding_id = "problem-details-output"
+format = "problem-json"
+string_policy = "json-compatible-redacted-detail-fields"
+number_policy = "integer-status-and-exit-code-only"
+field_name_policy = "problem-details-fields-plus-vyre-extension-allowlist"
+control_character_policy = "escape-controls-and-reject-crlf-in-type-uri"
+roundtrip_contract = "problem-json-reloads-with-error-id"
+diagnostic = "VYRE_PROBLEM_DETAILS_ENCODING_REFUSED"

@@ -1,0 +1,29 @@
+# End-to-end license and IP tranche coverage for VX-1061 through VX-1080.
+# Public license manifest, third-party notices, compliance process, package metadata, supply-chain provenance, and publication boundary share one coverage row.
+
+schema = "vyre.release.end_to_end_license_ip_tranche_coverage.v1"
+owner = "coordination"
+evidence_tokens = ["SPDX_LICENSE_LIST", "REUSE_SPEC", "OPENCHAIN_ISO_5230", "CARGO_MANIFEST_LICENSE_FIELDS", "OSI_OPEN_SOURCE_DEFINITION"]
+
+required_fields = [
+  "vx_id_range",
+  "public_release_license_manifest",
+  "third_party_notice_attribution",
+  "license_compliance_process_map",
+  "package_metadata_publication_policy",
+  "supply_chain_provenance",
+  "publication_boundary",
+  "dedup_seam",
+  "proof_gate",
+]
+
+[[coverage]]
+vx_id_range = "VX-1061..VX-1080"
+public_release_license_manifest = "PUBLIC_RELEASE_LICENSE_MANIFEST.toml"
+third_party_notice_attribution = "THIRD_PARTY_NOTICE_ATTRIBUTION.toml"
+license_compliance_process_map = "LICENSE_COMPLIANCE_PROCESS_MAP.toml"
+package_metadata_publication_policy = "PACKAGE_METADATA_PUBLICATION_POLICY.toml"
+supply_chain_provenance = "PUBLIC_RELEASE_SUPPLY_CHAIN_PROVENANCE.toml"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+dedup_seam = "one-public-license-manifest-one-third-party-notice-registry-one-license-compliance-process-map-one-package-metadata-policy"
+proof_gate = "license_ip_governance.rs"

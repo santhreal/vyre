@@ -59,20 +59,8 @@ mod program_key;
 mod validation;
 
 #[cfg(test)]
-#[path = "exploded/tests.rs"]
+#[path = "exploded/tests/mod.rs"]
 mod tests;
-
-#[cfg(test)]
-#[path = "exploded/tests/dispatch_plan_tests.rs"]
-mod dispatch_plan_tests;
-
-#[cfg(test)]
-#[path = "exploded/tests/rule_column_tests.rs"]
-mod rule_column_tests;
-
-#[cfg(test)]
-#[path = "exploded/tests/cpu_reference_tests.rs"]
-mod cpu_reference_tests;
 
 pub use abi::{
     ifds_csr_dispatch_grid, IFDS_CSR_COL_IDX_BUFFER, IFDS_CSR_COL_LEN_BUFFER,

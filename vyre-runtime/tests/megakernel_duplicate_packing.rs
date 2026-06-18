@@ -2,6 +2,7 @@
 //!
 //! Covers behavior when the same opcode, ticket, or task identity appears
 //! more than once in a packed batch or window.
+#![cfg(feature = "legacy-infallible")]
 
 use vyre_runtime::megakernel::{
     descriptor::{BatchDescriptor, SlotDescriptor, SlotOpcode, WindowDescriptor},

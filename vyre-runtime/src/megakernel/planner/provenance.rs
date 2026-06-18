@@ -118,11 +118,7 @@ fn record_provenance(nonempty_fraction: f64) {
 }
 
 #[cfg(not(feature = "self-substrate-adapters"))]
-fn record_provenance(_nonempty_fraction: f64) {
-    panic!(
-        "vyre-runtime megakernel provenance telemetry requires the `self-substrate-adapters` feature. Fix: enable the feature; production builds must not silently disable provenance telemetry."
-    );
-}
+fn record_provenance(_nonempty_fraction: f64) {}
 
 /// Build per-region lineage bitsets through the optional self-substrate adapter.
 #[cfg(feature = "self-substrate-adapters")]

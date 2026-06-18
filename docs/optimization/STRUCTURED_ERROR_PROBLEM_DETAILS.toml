@@ -1,0 +1,43 @@
+# Structured error problem details for VX-826 through VX-830 and VX-833.
+# CLI, JSON, SARIF, logs, and diagnostics share a redaction-safe error contract.
+
+schema = "vyre.operator.structured_error_problem_details.v1"
+owner = "security_reliability"
+evidence_tokens = ["RFC_9457_PROBLEM_DETAILS", "SARIF_2_1_0"]
+
+required_fields = [
+  "error_id",
+  "type_uri",
+  "title",
+  "status_class",
+  "detail",
+  "instance",
+  "exit_code",
+  "remediation",
+  "redaction_state",
+  "report_link",
+]
+
+[[error]]
+error_id = "config-tier-b-cli-refused"
+type_uri = "urn:vyre:error:config-tier-b-cli-refused"
+title = "Tier B data cannot be overridden by CLI"
+status_class = "usage-error"
+detail = "rules and signatures are data files, not operational knobs"
+instance = "operator-command"
+exit_code = 64
+remediation = "move the value to the configured Tier B TOML data file"
+redaction_state = "private-paths-redacted"
+report_link = "OPERATOR_REPORTING_INTERCHANGE.toml"
+
+[[error]]
+error_id = "private-boundary-publication-refused"
+type_uri = "urn:vyre:error:private-boundary-publication-refused"
+title = "Private workspace material cannot be published"
+status_class = "release-boundary-error"
+detail = "public Vyre artifacts cannot reference private Santh paths"
+instance = "release-evidence"
+exit_code = 78
+remediation = "replace the reference with a public Vyre artifact or mark it local-only"
+redaction_state = "private-paths-redacted"
+report_link = "OPERATOR_REPORTING_INTERCHANGE.toml"

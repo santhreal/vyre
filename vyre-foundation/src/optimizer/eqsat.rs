@@ -43,6 +43,9 @@ use rustc_hash::FxHashMap;
 use rustc_hash::FxHasher;
 use smallvec::SmallVec;
 
+/// Default extraction fixed-point iteration budget.
+pub const DEFAULT_EXTRACTION_ITER_BUDGET: usize = 1024;
+
 /// Stack-backed child list used by `EGraph` node APIs. Most IR algebra nodes
 /// have 0-3 children; keeping that path inline avoids allocator traffic during
 /// saturation.
@@ -651,6 +654,52 @@ pub trait Family<L: ENodeLang> {
     fn rules(&self) -> Vec<Box<dyn Rule<L>>>;
 }
 
+/// Reason an equality-saturation run stopped.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SaturationStopReason {
+    /// No rule set was supplied.
+    EmptyRuleSet,
+    /// The caller supplied a zero-iteration cap.
+    ZeroBudget,
+    /// A rule scan produced no more equivalences.
+    FixedPoint,
+    /// The run consumed the supplied iteration cap while matches were still
+    /// being produced.
+    IterationBudget,
+}
+
+/// Executable telemetry for one equality-saturation run.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SaturationReport {
+    /// Rewrite family label for this run. Raw rule-slice calls use `global`;
+    /// per-family calls use [`Family::name`].
+    pub rewrite_family: &'static str,
+    /// Number of rules scanned each iteration.
+    pub rule_count: usize,
+    /// Iterations actually executed.
+    pub iters_used: usize,
+    /// Caller-supplied iteration budget.
+    pub budget: usize,
+    /// Why the run stopped.
+    pub stop_reason: SaturationStopReason,
+    /// Dense class slots before rule application.
+    pub class_count_before: usize,
+    /// Dense class slots after rule application.
+    pub class_count_after: usize,
+    /// Equivalence pairs returned by rules and handed to union.
+    pub applied_equivalences: usize,
+    /// Extra unions discovered by rebuild propagation.
+    pub rebuild_unions: usize,
+}
+
+impl SaturationReport {
+    /// Signed dense-class delta from before to after.
+    #[must_use]
+    pub fn class_count_delta(&self) -> isize {
+        self.class_count_after as isize - self.class_count_before as isize
+    }
+}
+
 /// Run rules to fixed point or `max_iters`, whichever comes first.
 /// Returns the iteration count actually used.
 pub fn saturate<L: ENodeLang>(
@@ -673,12 +722,91 @@ pub fn try_saturate<L: ENodeLang>(
     rules: &[Box<dyn Rule<L>>],
     max_iters: usize,
 ) -> Result<usize, EGraphError> {
+    try_saturate_with_report(egraph, rules, max_iters).map(|report| report.iters_used)
+}
+
+/// Run a raw rule set and return saturation telemetry.
+pub fn saturate_with_report<L: ENodeLang>(
+    egraph: &mut EGraph<L>,
+    rules: &[Box<dyn Rule<L>>],
+    max_iters: usize,
+) -> SaturationReport {
+    match try_saturate_with_report(egraph, rules, max_iters) {
+        Ok(report) => report,
+        Err(error) => {
+            log_egraph_compat_error("egraph saturate_with_report", &error);
+            finalize_saturation_report(
+                egraph,
+                saturation_report(
+                    "global",
+                    rules.len(),
+                    0,
+                    max_iters,
+                    SaturationStopReason::IterationBudget,
+                    egraph.class_count(),
+                    0,
+                    0,
+                ),
+            )
+        }
+    }
+}
+
+/// Fallible variant of [`saturate_with_report`].
+pub fn try_saturate_with_report<L: ENodeLang>(
+    egraph: &mut EGraph<L>,
+    rules: &[Box<dyn Rule<L>>],
+    max_iters: usize,
+) -> Result<SaturationReport, EGraphError> {
+    try_saturate_named(egraph, "global", rules, max_iters)
+}
+
+/// Run a named rewrite family and return saturation telemetry.
+pub fn try_saturate_named<L: ENodeLang>(
+    egraph: &mut EGraph<L>,
+    rewrite_family: &'static str,
+    rules: &[Box<dyn Rule<L>>],
+    max_iters: usize,
+) -> Result<SaturationReport, EGraphError> {
+    let class_count_before = egraph.class_count();
+    if rules.is_empty() {
+        return Ok(finalize_saturation_report(
+            egraph,
+            saturation_report(
+                rewrite_family,
+                0,
+                0,
+                max_iters,
+                SaturationStopReason::EmptyRuleSet,
+                class_count_before,
+                0,
+                0,
+            ),
+        ));
+    }
+    if max_iters == 0 {
+        return Ok(finalize_saturation_report(
+            egraph,
+            saturation_report(
+                rewrite_family,
+                rules.len(),
+                0,
+                0,
+                SaturationStopReason::ZeroBudget,
+                class_count_before,
+                0,
+                0,
+            ),
+        ));
+    }
     let mut equivalences = Vec::new();
     reserve_vec_exact(
         &mut equivalences,
         egraph.class_count(),
         "egraph saturation equivalence staging",
     )?;
+    let mut applied_equivalences = 0usize;
+    let mut rebuild_unions = 0usize;
     for iter in 0..max_iters {
         equivalences.clear();
         for rule in rules {
@@ -691,18 +819,75 @@ pub fn try_saturate<L: ENodeLang>(
             equivalences.extend(matches);
         }
         if equivalences.is_empty() {
-            return Ok(iter);
+            return Ok(finalize_saturation_report(
+                egraph,
+                saturation_report(
+                    rewrite_family,
+                    rules.len(),
+                    iter,
+                    max_iters,
+                    SaturationStopReason::FixedPoint,
+                    class_count_before,
+                    applied_equivalences,
+                    rebuild_unions,
+                ),
+            ));
         }
+        applied_equivalences = applied_equivalences.saturating_add(equivalences.len());
         for (a, b) in equivalences.drain(..) {
             egraph.try_union(a, b)?;
         }
         let extra = egraph.try_rebuild()?;
+        rebuild_unions = rebuild_unions.saturating_add(extra);
         if extra == 0 && egraph.pending.is_empty() {
             // Nothing else to propagate; still need to check if rules find
             // anything new on the next iter.
         }
     }
-    Ok(max_iters)
+    Ok(finalize_saturation_report(
+        egraph,
+        saturation_report(
+            rewrite_family,
+            rules.len(),
+            max_iters,
+            max_iters,
+            SaturationStopReason::IterationBudget,
+            class_count_before,
+            applied_equivalences,
+            rebuild_unions,
+        ),
+    ))
+}
+
+fn saturation_report(
+    rewrite_family: &'static str,
+    rule_count: usize,
+    iters_used: usize,
+    budget: usize,
+    stop_reason: SaturationStopReason,
+    class_count_before: usize,
+    applied_equivalences: usize,
+    rebuild_unions: usize,
+) -> SaturationReport {
+    SaturationReport {
+        rewrite_family,
+        rule_count,
+        iters_used,
+        budget,
+        stop_reason,
+        class_count_before,
+        class_count_after: class_count_before,
+        applied_equivalences,
+        rebuild_unions,
+    }
+}
+
+fn finalize_saturation_report<L: ENodeLang>(
+    egraph: &EGraph<L>,
+    mut report: SaturationReport,
+) -> SaturationReport {
+    report.class_count_after = egraph.class_count();
+    report
 }
 
 /// Adapter that gates a base [`Rule`] on a device-fact predicate.
@@ -763,6 +948,15 @@ pub struct FamilySaturationReport {
     pub budget: usize,
 }
 
+/// Detailed per-family saturation telemetry.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FamilySaturationTelemetry {
+    /// Family name as returned by [`Family::name`].
+    pub family: &'static str,
+    /// Full saturation report for this family run.
+    pub saturation: SaturationReport,
+}
+
 /// Run each family with its own iteration budget.
 ///
 /// Saturate-per-family is the prerequisite for ROADMAP A8: a global
@@ -800,32 +994,88 @@ pub fn try_saturate_per_family<L: ENodeLang>(
     families: &[&dyn Family<L>],
     budget_for: impl Fn(&str) -> usize,
 ) -> Result<Vec<FamilySaturationReport>, EGraphError> {
+    let detailed = try_saturate_per_family_detailed(egraph, families, budget_for)?;
+    let mut out = Vec::new();
+    reserve_vec_exact(
+        &mut out,
+        detailed.len(),
+        "egraph family saturation legacy report staging",
+    )?;
+    out.extend(detailed.into_iter().map(|entry| FamilySaturationReport {
+        family: entry.family,
+        iters_used: entry.saturation.iters_used,
+        budget: entry.saturation.budget,
+    }));
+    Ok(out)
+}
+
+/// Run each family with its own iteration budget and return full telemetry.
+pub fn saturate_per_family_detailed<L: ENodeLang>(
+    egraph: &mut EGraph<L>,
+    families: &[&dyn Family<L>],
+    budget_for: impl Fn(&str) -> usize,
+) -> Vec<FamilySaturationTelemetry> {
+    match try_saturate_per_family_detailed(egraph, families, budget_for) {
+        Ok(report) => report,
+        Err(error) => {
+            log_egraph_compat_error("egraph saturate_per_family_detailed", &error);
+            Vec::new()
+        }
+    }
+}
+
+/// Fallible variant of [`saturate_per_family_detailed`].
+pub fn try_saturate_per_family_detailed<L: ENodeLang>(
+    egraph: &mut EGraph<L>,
+    families: &[&dyn Family<L>],
+    budget_for: impl Fn(&str) -> usize,
+) -> Result<Vec<FamilySaturationTelemetry>, EGraphError> {
     let mut out = Vec::new();
     reserve_vec_exact(
         &mut out,
         families.len(),
-        "egraph family saturation report staging",
+        "egraph family saturation telemetry staging",
     )?;
     for family in families {
         let name = family.name();
         let budget = budget_for(name);
-        if budget == 0 {
-            out.push(FamilySaturationReport {
-                family: name,
-                iters_used: 0,
-                budget: 0,
-            });
-            continue;
-        }
         let rules = family.rules();
-        let iters_used = try_saturate(egraph, &rules, budget)?;
-        out.push(FamilySaturationReport {
+        let saturation = try_saturate_named(egraph, name, &rules, budget)?;
+        out.push(FamilySaturationTelemetry {
             family: name,
-            iters_used,
-            budget,
+            saturation,
         });
     }
     Ok(out)
+}
+
+/// Reason an extraction run stopped.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ExtractionStopReason {
+    /// The extraction cost table reached a fixed point.
+    FixedPoint,
+    /// The extraction loop consumed the supplied iteration cap.
+    IterationBudget,
+    /// The root class remained uncosted, usually because the represented term
+    /// is cyclic or depends on an uncosted child class.
+    MissingCost,
+}
+
+/// Executable telemetry for one extraction run.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExtractionReport<L: ENodeLang> {
+    /// Root class requested by the caller.
+    pub class_id: EClassId,
+    /// Best node and computed cost when extraction produced a candidate.
+    pub best: Option<(L, u64)>,
+    /// Iterations actually executed.
+    pub iters_used: usize,
+    /// Caller-supplied extraction iteration budget.
+    pub budget: usize,
+    /// Why extraction stopped.
+    pub stop_reason: ExtractionStopReason,
+    /// Dense class slots visible to extraction.
+    pub class_count: usize,
 }
 
 /// Extract the lowest-cost equivalent representation of `class_id` under
@@ -854,6 +1104,18 @@ pub fn try_extract_best<L: ENodeLang>(
     class_id: EClassId,
     cost_fn: impl Fn(&L) -> u64,
 ) -> Result<Option<(L, u64)>, EGraphError> {
+    try_extract_best_with_budget(egraph, class_id, cost_fn, DEFAULT_EXTRACTION_ITER_BUDGET)
+        .map(|report| report.best)
+}
+
+/// Extract with a caller-supplied fixed-point iteration budget and return
+/// telemetry.
+pub fn try_extract_best_with_budget<L: ENodeLang>(
+    egraph: &EGraph<L>,
+    class_id: EClassId,
+    cost_fn: impl Fn(&L) -> u64,
+    iter_budget: usize,
+) -> Result<ExtractionReport<L>, EGraphError> {
     // VYRE_IR_HOTSPOTS HIGH: extract_best is the inner loop of every
     // optimizer extraction (called per device per root by
     // device_extraction). The previous FxHashMap<EClassId, (L,u64)>
@@ -869,7 +1131,7 @@ pub fn try_extract_best<L: ENodeLang>(
     costs.resize_with(class_count, || None);
     let mut changed = true;
     let mut iters = 0;
-    while changed && iters < 1024 {
+    while changed && iters < iter_budget {
         changed = false;
         iters += 1;
         for (cid, node) in egraph.iter_nodes() {
@@ -905,7 +1167,22 @@ pub fn try_extract_best<L: ENodeLang>(
     }
     let canon = egraph.try_find_immut(class_id)?;
     let canon_idx = eclass_index(canon, class_count, "egraph extraction root class")?;
-    Ok(costs.get(canon_idx).and_then(Clone::clone))
+    let best = costs.get(canon_idx).and_then(Clone::clone);
+    let stop_reason = if changed {
+        ExtractionStopReason::IterationBudget
+    } else if best.is_some() {
+        ExtractionStopReason::FixedPoint
+    } else {
+        ExtractionStopReason::MissingCost
+    };
+    Ok(ExtractionReport {
+        class_id,
+        best,
+        iters_used: iters,
+        budget: iter_budget,
+        stop_reason,
+        class_count,
+    })
 }
 
 #[cfg(test)]
@@ -1045,6 +1322,43 @@ mod tests {
     }
 
     #[test]
+    fn eqsat_extraction_report_records_budget_stop_reason_class_count_and_cost() {
+        let mut egraph: EGraph<Arith> = EGraph::new();
+        let one = egraph.add(Arith::Const(1));
+        let two = egraph.add(Arith::Const(2));
+        let three = egraph.add(Arith::Const(3));
+        let add_12 = egraph.add(Arith::Add(one, two));
+        egraph.union(add_12, three);
+        let _ = egraph.rebuild();
+        let report = try_extract_best_with_budget(&egraph, add_12, arith_cost, 16)
+            .expect("Fix: valid extraction report must be produced");
+        let (best, cost) = report
+            .best
+            .expect("Fix: equivalent constant must be extractable");
+        assert_eq!(best, Arith::Const(3));
+        assert_eq!(cost, 1);
+        assert_eq!(report.class_id, add_12);
+        assert_eq!(report.budget, 16);
+        assert!(report.iters_used > 0 && report.iters_used <= 16);
+        assert_eq!(report.stop_reason, ExtractionStopReason::FixedPoint);
+        assert_eq!(report.class_count, egraph.class_count());
+    }
+
+    #[test]
+    fn eqsat_extraction_zero_budget_reports_budget_stop_without_best() {
+        let mut egraph: EGraph<Arith> = EGraph::new();
+        let class_id = egraph.add(Arith::Const(42));
+        let report = try_extract_best_with_budget(&egraph, class_id, arith_cost, 0)
+            .expect("Fix: valid zero-budget extraction report must be produced");
+        assert_eq!(report.class_id, class_id);
+        assert_eq!(report.best, None);
+        assert_eq!(report.iters_used, 0);
+        assert_eq!(report.budget, 0);
+        assert_eq!(report.stop_reason, ExtractionStopReason::IterationBudget);
+        assert_eq!(report.class_count, egraph.class_count());
+    }
+
+    #[test]
     fn extract_best_returns_only_node_when_no_alternatives() {
         let mut egraph: EGraph<Arith> = EGraph::new();
         let a = egraph.add(Arith::Const(42));
@@ -1092,6 +1406,24 @@ mod tests {
         // No new equivalences past the first iter (hashcons already
         // dedupes), so saturate returns 0 or 1.
         assert!(iters <= 1);
+    }
+
+    #[test]
+    fn eqsat_saturation_report_records_fixed_point_class_count_and_family() {
+        let mut egraph: EGraph<Arith> = EGraph::new();
+        let _a = egraph.add(Arith::Const(7));
+        let _b = egraph.add(Arith::Const(8));
+        let rules: Vec<Box<dyn Rule<Arith>>> = vec![Box::new(UnionEqualConstsRule)];
+        let report = try_saturate_named(&mut egraph, "arith_identities", &rules, 10)
+            .expect("Fix: valid saturation report must be produced");
+        assert_eq!(report.rewrite_family, "arith_identities");
+        assert_eq!(report.rule_count, 1);
+        assert_eq!(report.stop_reason, SaturationStopReason::FixedPoint);
+        assert_eq!(report.class_count_before, 2);
+        assert_eq!(report.class_count_after, egraph.class_count());
+        assert_eq!(report.class_count_delta(), 0);
+        assert_eq!(report.applied_equivalences, 0);
+        assert_eq!(report.rebuild_unions, 0);
     }
 
     #[test]
@@ -1159,6 +1491,49 @@ mod tests {
             }
             out
         }
+    }
+
+    struct ForeignClassRule;
+
+    impl Rule<Arith> for ForeignClassRule {
+        fn name(&self) -> &'static str {
+            "foreign_class"
+        }
+
+        fn matches(&self, _egraph: &EGraph<Arith>) -> Vec<(EClassId, EClassId)> {
+            vec![(EClassId(999), EClassId(999))]
+        }
+    }
+
+    #[test]
+    fn eqsat_saturation_report_exposes_budget_stop_without_silent_fallback() {
+        let mut egraph: EGraph<Arith> = EGraph::new();
+        let _ = egraph.add(Arith::Const(7));
+        let rules: Vec<Box<dyn Rule<Arith>>> = vec![Box::new(PairConstSelfRule)];
+        let report = try_saturate_named(&mut egraph, "self_pairs", &rules, 2)
+            .expect("Fix: valid budgeted saturation report must be produced");
+        assert_eq!(report.rewrite_family, "self_pairs");
+        assert_eq!(report.iters_used, 2);
+        assert_eq!(report.budget, 2);
+        assert_eq!(report.stop_reason, SaturationStopReason::IterationBudget);
+        assert_eq!(report.class_count_before, 1);
+        assert_eq!(report.class_count_after, egraph.class_count());
+        assert_eq!(report.applied_equivalences, 2);
+
+        let invalid_rules: Vec<Box<dyn Rule<Arith>>> = vec![Box::new(ForeignClassRule)];
+        let err = try_saturate_named(&mut egraph, "invalid_foreign", &invalid_rules, 1)
+            .expect_err("Fix: fallible saturation must reject invalid equivalence ids");
+        assert!(
+            matches!(
+                err,
+                EGraphError::ClassIdOutOfBounds {
+                    context: "egraph find",
+                    id: EClassId(999),
+                    len: 1
+                }
+            ),
+            "unexpected error: {err}"
+        );
     }
 
     #[test]
@@ -1251,6 +1626,24 @@ mod tests {
         assert_eq!(report[1].family, "beta");
         assert_eq!(report[1].budget, 5);
         assert!(report[1].iters_used <= 5);
+    }
+
+    #[test]
+    fn eqsat_per_family_detailed_report_keeps_family_identity_and_stop_reason() {
+        let mut egraph: EGraph<Arith> = EGraph::new();
+        let _ = egraph.add(Arith::Const(1));
+        let fam = ConstUnionFamily { name: "alpha" };
+        let report = try_saturate_per_family_detailed(&mut egraph, &[&fam], |_| 0)
+            .expect("Fix: detailed per-family report must be produced");
+        assert_eq!(report.len(), 1);
+        assert_eq!(report[0].family, "alpha");
+        assert_eq!(report[0].saturation.rewrite_family, "alpha");
+        assert_eq!(report[0].saturation.budget, 0);
+        assert_eq!(
+            report[0].saturation.stop_reason,
+            SaturationStopReason::ZeroBudget
+        );
+        assert_eq!(report[0].saturation.class_count_after, egraph.class_count());
     }
 
     #[test]

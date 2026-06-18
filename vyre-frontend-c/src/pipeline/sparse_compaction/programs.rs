@@ -258,11 +258,7 @@ pub(in crate::pipeline) fn pass_c_rescan_compact_sparse_tokens_with_capacity(
                 Node::if_then(
                     Expr::eq(
                         global,
-                        Expr::u32(n.checked_sub(1).unwrap_or_else(|| {
-                            panic!(
-                                "pass_c_rescan_compact_sparse_tokens requires n > 0. Fix: avoid launching sparse token compaction on an empty token domain."
-                            )
-                        })),
+                        Expr::u32(n.saturating_sub(1)),
                     ),
                     vec![Node::store(out_counts, Expr::u32(0), Expr::var("rank"))],
                 ),

@@ -470,9 +470,11 @@ pub fn run_all_once(desc: &crate::KernelDescriptor) -> crate::KernelDescriptor {
 #[cfg(debug_assertions)]
 fn debug_verify_after_rewrite(desc: &crate::KernelDescriptor, pass: &str) {
     if let Err(errors) = crate::verify::verify(desc) {
-        panic!(
+        let violation_count = errors.len();
+        assert!(
+            violation_count == 0,
             "rewrite pass `{pass}` produced an invalid KernelDescriptor  -  {} violation(s):\n{errors:#?}",
-            errors.len()
+            violation_count
         );
     }
 }

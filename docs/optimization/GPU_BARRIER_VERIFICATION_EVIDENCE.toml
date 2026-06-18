@@ -1,0 +1,62 @@
+# Barrier verification evidence owns before/after barrier proof records; correctness schedules own bounded interleaving exploration.
+
+schema = "vyre.sync.gpu_barrier_verification_evidence.v1"
+owner = "lower_emit"
+evidence_tokens = ["CUDA_CPP_SYNCHRONIZATION", "WGSL_MEMORY_MODEL", "VULKAN_MEMORY_MODEL", "METAL_RESOURCE_SYNCHRONIZATION", "TLA_PLUS", "LOOM"]
+
+required_fields = [
+  "evidence_id",
+  "barrier_contract",
+  "hazard_class",
+  "producer_policy",
+  "consumer_policy",
+  "negative_case_policy",
+  "elision_counterexample_policy",
+  "cross_backend_policy",
+  "artifact_policy",
+  "privacy_boundary",
+  "authority_links",
+  "diagnostic",
+]
+
+[[evidence]]
+evidence_id = "shared-memory-producer-consumer-barrier-proof"
+barrier_contract = "GPU_BARRIER_SCOPE_MATRIX.toml:cuda-thread-block-shared-memory-barrier-and-wgsl-workgroup-storage-barrier"
+hazard_class = "shared-memory-read-after-write"
+producer_policy = "producer-writes-shared-or-workgroup-memory-before-barrier-or-async-wait"
+consumer_policy = "consumer-reads-shared-or-workgroup-memory-after-matching-barrier-with-same-scope"
+negative_case_policy = "missing-barrier-or-wrong-scope-fixture-must-produce-diagnostic-or-counterexample"
+elision_counterexample_policy = "barrier-elision-counterexample-records-producer-op-consumer-op-scope-storage-class-and-observed-stale-value"
+cross_backend_policy = "CUDA-WGSL-Vulkan-Metal-evidence-records-equivalent-hazard-class-even-when-barrier-primitives-differ"
+artifact_policy = "artifact-links-emitted-kernel-snippet-scope-matrix-entry-counterexample-digest-and-output-parity-record"
+privacy_boundary = "public-artifact-redacts-private-kernel-paths-hostnames-device-serials-and-Santh-roots"
+authority_links = ["GPU_BARRIER_SCOPE_MATRIX.toml", "CORRECTNESS_COUNTEREXAMPLE_ARTIFACTS.toml", "PROPERTY_DIFFERENTIAL_ORACLES.toml", "TARGET_INSTRUCTION_CAPABILITIES.toml"]
+diagnostic = "VYRE_SHARED_MEMORY_BARRIER_PROOF_REQUIRED"
+
+[[evidence]]
+evidence_id = "global-output-readback-fence-proof"
+barrier_contract = "HOST_DEVICE_VISIBILITY_POLICY.toml:device-output-host-readback-visibility"
+hazard_class = "device-write-host-read"
+producer_policy = "device-kernel-or-copy-command-writes-output-before-completion-edge"
+consumer_policy = "host-reporter-reads-after-completion-edge-cache-visibility-action-and-epoch-match"
+negative_case_policy = "host-read-before-completion-or-epoch-mismatch-fixture-must-be-rejected"
+elision_counterexample_policy = "fence-elision-counterexample-records-command-id-resource-range-epoch-completion-state-and-stale-bytes"
+cross_backend_policy = "CUDA-stream-WGPU-map-Vulkan-fence-and-Metal-command-buffer-completion-records-map-to-one-visibility-contract"
+artifact_policy = "artifact-links-output-slab-provenance-trace-id-byte-range-readback-state-and-counterexample-digest"
+privacy_boundary = "public-artifact-redacts-output-private-data-hostnames-paths-and-Santh-roots"
+authority_links = ["HOST_DEVICE_VISIBILITY_POLICY.toml", "OUTPUT_SLAB_PROVENANCE.toml", "CONCURRENCY_SCHEDULE_CONTRACTS.toml", "CROSS_SIGNAL_AUDIT_CORRELATION.toml"]
+diagnostic = "VYRE_GLOBAL_READBACK_FENCE_PROOF_REQUIRED"
+
+[[evidence]]
+evidence_id = "atomic-rmw-consistency-proof"
+barrier_contract = "MEMORY_ORDERING_ATOMIC_CONTRACTS.toml:resident-ring-slot-publication"
+hazard_class = "atomic-read-modify-write-publication"
+producer_policy = "producer-RMW-updates-index-or-state-with-AcqRel-when-it-both-observes-and-publishes"
+consumer_policy = "consumer-acquire-observes-RMW-published-state-before-reading-dependent-non-atomic-data"
+negative_case_policy = "Relaxed-RMW-used-as-publication-fixture-must-produce-model-counterexample-or-diagnostic"
+elision_counterexample_policy = "ordering-weakening-counterexample-records-load-store-RMW-order-payload-digest-and-observed-state"
+cross_backend_policy = "Rust-host-atomics-SPIR-V-device-atomics-and-WGSL-atomics-record-scope-and-semantics-before-equivalence-claim"
+artifact_policy = "artifact-links-model-harness-schedule-contract-memory-order-matrix-and-counterexample-digest"
+privacy_boundary = "public-artifact-redacts-private-workload-identifiers-and-host-details"
+authority_links = ["MEMORY_ORDERING_ATOMIC_CONTRACTS.toml", "CONCURRENCY_SCHEDULE_CONTRACTS.toml", "FORMAL_MODEL_CONTRACTS.toml", "CORRECTNESS_COUNTEREXAMPLE_ARTIFACTS.toml"]
+diagnostic = "VYRE_ATOMIC_RMW_CONSISTENCY_PROOF_REQUIRED"

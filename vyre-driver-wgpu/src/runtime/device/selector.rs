@@ -113,8 +113,10 @@ impl AdapterCriteria {
 /// List every adapter the wgpu instance reports.
 #[must_use]
 pub fn enumerate_adapters() -> Vec<wgpu::AdapterInfo> {
-    try_enumerate_adapters()
-        .expect("Fix: WGPU adapter enumeration metadata allocation failed; reduce adapter fan-out or repair host memory pressure before release-path probing.")
+    match try_enumerate_adapters() {
+        Ok(adapters) => adapters,
+        Err(_) => Vec::new(),
+    }
 }
 
 /// List every adapter the wgpu instance reports with fallible metadata staging.

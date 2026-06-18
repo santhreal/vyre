@@ -1,7 +1,7 @@
 # PHASE10_DIFF  -  Differential Scan + Watch Mode + Warm-Start Audit
 
 **Date:** 2026-04-24  
-**Scope:** `libs/tools/surgec/src/scan/diff_scan.rs`, `watcher.rs`, `diff_replay.rs`, `libs/performance/matching/vyre/vyre-primitives/src/fixpoint/bitset_fixpoint.rs`, `vyre-driver/src/pipeline.rs`, `vyre-driver/src/persistent.rs`  
+**Scope:** `libs/surge/surgec/src/scan/diff_scan.rs`, `watcher.rs`, `diff_replay.rs`, `libs/performance/matching/vyre/vyre-primitives/src/fixpoint/bitset_fixpoint.rs`, `vyre-driver/src/pipeline.rs`, `vyre-driver/src/persistent.rs`  
 **Auditor:** Kimi Code CLI  
 **Standard:** LAWS 0–8, STANDARDS, RESEARCH PROTOCOL  
 

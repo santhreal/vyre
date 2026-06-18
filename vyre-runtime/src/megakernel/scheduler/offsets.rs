@@ -10,11 +10,7 @@ const PRIORITY_OFFSETS_WITH_SENTINEL: usize = PRIORITY_LEVELS_USIZE + 1;
 /// Any remainder goes to the NORMAL partition.
 #[must_use]
 pub fn default_priority_offsets(total_slots: u32) -> Vec<u32> {
-    try_default_priority_offsets(total_slots).unwrap_or_else(|error| {
-        panic!(
-            "default priority offset allocation failed: {error}. Fix: keep priority partition metadata inside host memory budget."
-        )
-    })
+    default_priority_offsets_array(total_slots).to_vec()
 }
 
 /// Encode default priority partition offsets with fallible host staging.
@@ -61,22 +57,14 @@ fn write_default_priority_offsets_array(
     let mut cursor = 0u32;
     for pri in 0..PRIORITY_LEVELS_USIZE {
         offsets[pri] = cursor;
-        let pri_u32 = u32::try_from(pri).unwrap_or_else(|source| {
-            panic!(
-                "priority index cannot fit u32: {source}. Fix: keep priority level count inside the u32 ABI."
-            )
-        });
+        let pri_u32 = pri as u32;
         let size = base_per_pri
             + if pri_u32 == priority::NORMAL {
                 remainder
             } else {
                 0
             };
-        cursor = cursor.checked_add(size).unwrap_or_else(|| {
-            panic!(
-                "priority partition cursor overflowed u32. Fix: keep total_slots inside the u32 ring ABI."
-            )
-        });
+        cursor = cursor.saturating_add(size);
     }
     offsets[PRIORITY_LEVELS_USIZE] = cursor;
 }

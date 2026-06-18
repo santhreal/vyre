@@ -1,0 +1,70 @@
+[artifact]
+id = "INCREMENTAL_CORPUS_CHANGE_JOURNAL"
+title = "Incremental corpus change journal contract"
+tranche = "VX-1541..VX-1560"
+owner = "runtime_io"
+status = "planned_contract"
+research_sources = [
+  "LINUX_INOTIFY",
+  "LINUX_FANOTIFY",
+  "SQLITE_WAL",
+  "BLAKE3_SPEC",
+  "LINUX_STATX",
+]
+
+[scope]
+owns = [
+  "persistent corpus identity snapshots",
+  "append-only change journal records for scan invalidation",
+  "watcher overflow recovery state",
+  "rename-pair and delete-create reconciliation before rescan planning",
+  "cross-process cache epoch and journal replay evidence",
+]
+does_not_own = [
+  "directory enumeration batching, owned by DIRECTORY_ENUMERATION_METADATA_POLICY",
+  "safe open-to-read handles, owned by SAFE_OPEN_HANDLE_READ_POLICY",
+  "path traversal security, owned by FILESYSTEM_PATH_CANONICALIZATION_POLICY",
+  "parsed-source LRU cache behavior, owned by the libs_parsing roadmap substrate",
+  "optimizer subtree artifact reuse, owned by the foundation_optimizer diff-compile substrate",
+  "global backpressure quotas, owned by BACKPRESSURE_QUEUE_QUOTA_POLICY",
+]
+
+[journal_model]
+write_pattern = "append-only mutations with checkpoint records after durable scan-result publication"
+reader_writer_contract = "scan readers use a stable journal epoch while watch/event writers append newer invalidations"
+replay_contract = "startup replays the last durable checkpoint plus newer journal records before accepting incremental scan claims"
+compaction_contract = "compaction may remove superseded events only after equivalent invalidation state is materialized in the identity index"
+crash_contract = "crash recovery either replays a complete committed event record or falls back to full affected-root enumeration"
+
+[event_record]
+required_fields = [
+  "journal_epoch",
+  "event_sequence",
+  "watch_backend",
+  "root_id",
+  "parent_identity",
+  "path_alias_digest",
+  "device",
+  "inode",
+  "size",
+  "mtime",
+  "ctime",
+  "event_kind",
+  "rename_cookie_or_null",
+  "content_digest_state",
+  "rescan_decision",
+]
+privacy_boundary = "raw paths, hostnames, Santh roots, corpus excerpts, and secret-bearing bytes are excluded from public artifacts"
+
+[invalidation]
+modify = "invalidate byte-content-derived findings and parser cache entries for the affected file identity"
+attrib = "invalidate metadata-derived filters and re-evaluate scan admission"
+rename = "preserve content identity when rename pairs reconcile; otherwise invalidate both source alias and destination alias"
+delete = "mark identity tombstoned and suppress stale findings after output provenance confirms no active alias remains"
+overflow = "mark affected watch root uncertain and force bounded full-root re-enumeration through DIRECTORY_ENUMERATION_METADATA_POLICY"
+unmount = "close watch epoch and require explicit root re-admission before incremental scanning resumes"
+
+[handoff]
+file_ingress = "incremental invalidations enqueue candidates into FILE_INGRESS_ASYNC_IO_PIPELINE only after safe-open policy admits handles"
+parser_cache = "content digest and language options form parser cache keys; cache hits cannot bypass changed metadata gates"
+optimizer_cache = "changed parser or fact hashes are forwarded to optimizer diff-compile boundaries without owning optimizer artifacts"

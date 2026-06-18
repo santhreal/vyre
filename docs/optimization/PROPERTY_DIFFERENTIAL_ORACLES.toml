@@ -1,0 +1,47 @@
+# Property and differential oracle contracts for VX-766 through VX-770.
+# Generators, shrinkers, differential lanes, and reducers share one oracle registry.
+
+schema = "vyre.correctness.property_differential_oracle.v1"
+owner = "security_reliability"
+evidence_tokens = ["PROPTEST", "QUICKCHECK", "CSMITH", "C_REDUCE"]
+
+required_fields = [
+  "oracle_id",
+  "property",
+  "generator",
+  "shrinker",
+  "differential_lanes",
+  "validity_predicate",
+  "reducer",
+  "minimal_counterexample_digest",
+]
+
+[[oracle]]
+oracle_id = "scan-roundtrip-property"
+property = "encode decode encode preserves scan database compatibility digest"
+generator = "structured scan database generator"
+shrinker = "remove rules then reduce patterns then reduce metadata"
+differential_lanes = ["legacy-wire-decoder", "current-wire-decoder"]
+validity_predicate = "generated database satisfies declared compatibility constraints"
+reducer = "proptest-shrinker"
+minimal_counterexample_digest = "sha256:scan-roundtrip-minimal"
+
+[[oracle]]
+oracle_id = "c-frontend-differential"
+property = "C source facts match parser certificate and disabled-code policy"
+generator = "undefined-behavior-free C source generator"
+shrinker = "validity-preserving C reducer"
+differential_lanes = ["tree-sitter-c", "vyre-c-frontend", "preprocess-certificate"]
+validity_predicate = "source remains syntactically valid and policy-classified"
+reducer = "c-reduce-style"
+minimal_counterexample_digest = "sha256:c-frontend-minimal"
+
+[[oracle]]
+oracle_id = "graph-csr-algebra-property"
+property = "CSR traversal and semiring reachability preserve node sets"
+generator = "bounded graph and semiring generator"
+shrinker = "remove edges then remove nodes while preserving failing reachability"
+differential_lanes = ["cpu-csr", "graphblas-semiring", "gpu-frontier-route"]
+validity_predicate = "CSR certificate remains valid"
+reducer = "domain-specific-graph-reducer"
+minimal_counterexample_digest = "sha256:graph-csr-minimal"

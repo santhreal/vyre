@@ -1,0 +1,68 @@
+[tranche]
+id = "VX-1581..VX-1600"
+title = "End-to-end semantic fact index and incremental dataflow governance coverage"
+owner = "scanner_frontends"
+status = "planned_contract"
+plan = "ALL_AXES_ACCELERATION_PLAN.md"
+research_sources = [
+  "SCIP_CODE_INTELLIGENCE_PROTOCOL",
+  "LSP_SEMANTIC_TOKENS_3_17",
+  "SOUFFLE_RELATIONS",
+  "CODEQL_DATA_FLOW_ANALYSIS",
+]
+
+[artifacts]
+created = [
+  "SEMANTIC_FACT_INDEX_SCHEMA.toml",
+  "SYMBOL_REFERENCE_STABILITY_POLICY.toml",
+  "INCREMENTAL_DATAFLOW_FACT_REUSE_POLICY.toml",
+  "SEMANTIC_FACT_INDEX_EVIDENCE.toml",
+  "END_TO_END_SEMANTIC_FACT_INDEX_TRANCHE_COVERAGE.toml",
+  "conform/vyre-conform-enforce/tests/semantic_fact_index_governance.rs",
+]
+linked_existing = [
+  "CORPUS_CONTENT_IDENTITY_INDEX.toml",
+  "LANGUAGE_DEPENDENCY_EDGE_MATRIX.toml",
+  "MODULE_IMPORT_RESOLUTION_CONTRACTS.toml",
+  "CROSS_FILE_INVALIDATION_PROPAGATION_POLICY.toml",
+  "DEPENDENCY_GRAPH_REUSE_EVIDENCE.toml",
+  "SOURCE_IMPACT_GRAPH.toml",
+  "OUTPUT_SLAB_SCHEMA_PROVENANCE.toml",
+  "BENCHMARK_PROFILING_CAPTURE_POLICY.toml",
+  "STATISTICAL_PERFORMANCE_GATES.toml",
+  "DOGFOOD_FINDING_LOOP.toml",
+  "ROADMAP.md#E2",
+  "ROADMAP.md#E3",
+  "ROADMAP.md#P6",
+]
+
+[ownership_boundary]
+this_tranche_owns = [
+  "semantic fact table schemas",
+  "stable symbol and reference identity policy",
+  "incremental dataflow relation reuse gates",
+  "base-fact and derived-fact delta evidence",
+  "fact index correctness and performance metrics",
+]
+existing_tranches_own = [
+  "file content identity and chunk hashes",
+  "language dependency edge extraction and propagation",
+  "parser cache object lifecycle",
+  "optimizer ProgramFacts and low-level dataflow programs",
+  "generic source impact graph audits",
+  "scan execution and GPU scheduling",
+  "output schema provenance",
+  "profiling capture and statistical decisions",
+]
+
+[conformance]
+proof = "conform/vyre-conform-enforce/tests/semantic_fact_index_governance.rs"
+required_assertions = [
+  "new source keys are present in the research ledger",
+  "all new artifacts declare research sources, ownership boundaries, and tranche id",
+  "schema includes symbol, definition, reference, call, type, scope, and flow relation tables",
+  "symbol stability policy handles stable, unstable, unknown, and delta cases",
+  "dataflow reuse policy covers local, global, taint, control, delta fixpoint, and truth requirements",
+  "evidence policy records false reuse, fact deltas, fixpoint iterations, bytes avoided, and public/private fields",
+  "the plan contains VX-1581 through VX-1600 rows",
+]

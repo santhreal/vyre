@@ -41,15 +41,25 @@ pub mod program;
 pub use error::EmitError;
 pub use vyre_lower;
 
+/// Stable diagnostic row emitted when binding a lowered Vyre operation into a
+/// Naga module.
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct BindResultEntry {
+    /// Stable numeric operation id assigned by Vyre lowering.
     pub vyre_op_id: u32,
+    /// Lowered operation kind used by the emitter dispatch table.
     pub op_kind: String,
+    /// Naga expression or handle id used for the initial value path.
     pub init_handle: u32,
+    /// Scalar kind attached to the initial value when one is known.
     pub init_scalar_kind: Option<String>,
+    /// Nesting depth of the child body that produced this bind row.
     pub child_body_depth: usize,
+    /// Bit-packed value-type summary observed at the call boundary.
     pub value_types_at_call: Option<u32>,
+    /// Human-readable path describing where the value was published.
     pub publish_path: String,
+    /// Allocated local type id when the bind operation materialized local storage.
     pub local_allocated_ty: Option<u32>,
 }
 
@@ -118,11 +128,14 @@ fn module_cache() -> &'static Mutex<ModuleCache> {
 }
 
 fn lock_module_cache() -> MutexGuard<'static, ModuleCache> {
-    module_cache().lock().unwrap_or_else(|error| {
-        panic!(
-            "Vyre Naga module cache lock was poisoned: {error}. Fix: discard the process-local shader module cache after a panic; continuing could reuse corrupted module state."
-        )
-    })
+    match module_cache().lock() {
+        Ok(guard) => guard,
+        Err(error) => {
+            let mut guard = error.into_inner();
+            *guard = ModuleCache::default();
+            guard
+        }
+    }
 }
 
 fn descriptor_cache_key(desc: &KernelDescriptor) -> ModuleCacheKey {

@@ -17,6 +17,62 @@ struct RingPublishView {
     slot_capacity: usize,
 }
 
+/// Explicit host-observable ring slot lifecycle transition.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RingSlotTransition {
+    /// Host publishes a fully written slot.
+    Publish,
+    /// Worker claims a published or scheduler-ready slot.
+    Claim,
+    /// Worker marks a claimed slot done.
+    Done,
+    /// Runtime marks an in-flight slot faulted.
+    Fault,
+    /// Host cancels an unclaimed in-flight slot.
+    Cancel,
+}
+
+impl RingSlotTransition {
+    fn label(self) -> &'static str {
+        match self {
+            Self::Publish => "publish",
+            Self::Claim => "claim",
+            Self::Done => "done",
+            Self::Fault => "fault",
+            Self::Cancel => "cancel",
+        }
+    }
+
+    fn target_status(self) -> u32 {
+        match self {
+            Self::Publish => slot::PUBLISHED,
+            Self::Claim => slot::CLAIMED,
+            Self::Done => slot::DONE,
+            Self::Fault => slot::FAULT,
+            Self::Cancel => slot::EMPTY,
+        }
+    }
+
+    fn allows(self, current_status: u32) -> bool {
+        match self {
+            Self::Publish => matches!(current_status, slot::EMPTY | slot::DONE),
+            Self::Claim => matches!(
+                current_status,
+                slot::PUBLISHED | slot::YIELD | slot::REQUEUE
+            ),
+            Self::Done => current_status == slot::CLAIMED,
+            Self::Fault => matches!(
+                current_status,
+                slot::PUBLISHED | slot::CLAIMED | slot::WAIT_IO | slot::YIELD | slot::REQUEUE
+            ),
+            Self::Cancel => matches!(
+                current_status,
+                slot::PUBLISHED | slot::WAIT_IO | slot::YIELD | slot::REQUEUE
+            ),
+        }
+    }
+}
+
 fn validate_ring_publish_view(ring_bytes: &[u8]) -> Result<RingPublishView, PipelineError> {
     let slot_bytes = SLOT_WORDS_USIZE
         .checked_mul(4)
@@ -37,6 +93,36 @@ fn validate_ring_publish_view(ring_bytes: &[u8]) -> Result<RingPublishView, Pipe
 }
 
 impl Megakernel {
+    /// Apply one explicit lifecycle transition to a ring slot status word.
+    ///
+    /// This helper is for host-side tests, recovery, cancellation, and
+    /// diagnostics. Normal publication should still use [`Megakernel::publish_slot`]
+    /// or batch publishers so payload words are written before the PUBLISHED
+    /// status barrier.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PipelineError::QueueFull`] when the slot is out of bounds,
+    /// the ring is malformed, or the requested transition is illegal for the
+    /// current status word.
+    pub fn transition_slot_status(
+        ring_bytes: &mut [u8],
+        slot_idx: u32,
+        transition: RingSlotTransition,
+    ) -> Result<u32, PipelineError> {
+        if transition == RingSlotTransition::Publish {
+            return Err(PipelineError::QueueFull {
+                queue: "submission",
+                fix: "publish transitions must use publish_slot or a batch publisher so payload words are written before PUBLISHED status",
+            });
+        }
+        let view = validate_ring_publish_view(ring_bytes)?;
+        let current_status = read_slot_status_word(ring_bytes, view, slot_idx)?;
+        validate_slot_transition(current_status, transition)?;
+        write_slot_status_word(ring_bytes, view, slot_idx, transition.target_status())?;
+        Ok(current_status)
+    }
+
     /// Publish one opcode into `ring_bytes[slot_idx]`.
     ///
     /// # Errors
@@ -255,13 +341,7 @@ impl Megakernel {
         };
 
         let current_status = read_word(ring_bytes, STATUS_WORD_USIZE)?;
-        if current_status != slot::EMPTY && current_status != slot::DONE {
-            return Err(PipelineError::QueueFull {
-                queue: "submission",
-                fix:
-                    "slot is not publishable; only EMPTY and DONE slots may be written by the host",
-            });
-        }
+        validate_slot_transition(current_status, RingSlotTransition::Publish)?;
 
         let write_word = |buf: &mut [u8], word_idx: usize, value: u32| {
             let off = base + word_idx * 4;
@@ -541,36 +621,104 @@ fn validate_publishable_slot(
     view: RingPublishView,
     slot_idx: u32,
 ) -> Result<(), PipelineError> {
+    let current_status = read_slot_status_word(ring_bytes, view, slot_idx)?;
+    validate_slot_transition(current_status, RingSlotTransition::Publish)
+}
+
+fn validate_slot_transition(
+    current_status: u32,
+    transition: RingSlotTransition,
+) -> Result<(), PipelineError> {
+    if transition.allows(current_status) {
+        return Ok(());
+    }
+    Err(PipelineError::QueueFull {
+        queue: "submission",
+        fix: illegal_transition_fix(transition, current_status),
+    })
+}
+
+fn illegal_transition_fix(transition: RingSlotTransition, _current_status: u32) -> &'static str {
+    match transition {
+        RingSlotTransition::Publish => {
+            "slot is not publishable; only EMPTY and DONE slots may be written by the host"
+        }
+        RingSlotTransition::Claim => {
+            "illegal ring slot transition: claim requires PUBLISHED, YIELD, or REQUEUE status"
+        }
+        RingSlotTransition::Done => "illegal ring slot transition: done requires CLAIMED status",
+        RingSlotTransition::Fault => {
+            "illegal ring slot transition: fault requires an in-flight slot status"
+        }
+        RingSlotTransition::Cancel => {
+            "illegal ring slot transition: cancel requires an unclaimed in-flight slot status"
+        }
+    }
+}
+
+fn slot_status_offset(slot_idx: u32, view: RingPublishView) -> Result<usize, PipelineError> {
     let base = slot_base(slot_idx, view)?;
-    let status_offset =
-        base.checked_add(STATUS_WORD_USIZE.checked_mul(4).ok_or(
-            PipelineError::QueueFull {
-                queue: "submission",
-                fix: "slot status word byte offset overflowed usize; keep SLOT_WORDS within the u32 ABI",
-            },
-        )?)
+    base.checked_add(
+        STATUS_WORD_USIZE
+            .checked_mul(4)
+            .ok_or(PipelineError::QueueFull {
+            queue: "submission",
+            fix:
+                "slot status word byte offset overflowed usize; keep SLOT_WORDS within the u32 ABI",
+        })?,
+    )
+    .ok_or(PipelineError::QueueFull {
+        queue: "submission",
+        fix: "slot status byte offset overflowed usize; shard the ring before publishing",
+    })
+}
+
+fn read_slot_status_word(
+    ring_bytes: &[u8],
+    view: RingPublishView,
+    slot_idx: u32,
+) -> Result<u32, PipelineError> {
+    let status_offset = slot_status_offset(slot_idx, view)?;
+    let status_end = status_offset
+        .checked_add(4)
         .ok_or(PipelineError::QueueFull {
             queue: "submission",
-            fix: "slot status byte offset overflowed usize; shard the ring before publishing",
+            fix: "slot status byte end overflowed usize; shard the ring before publishing",
         })?;
     let status_bytes = ring_bytes
-        .get(status_offset..status_offset + 4)
+        .get(status_offset..status_end)
         .ok_or(PipelineError::QueueFull {
             queue: "submission",
             fix: "slot status is outside the validated ring buffer; validate ring length before publishing",
         })?;
-    let current_status = u32::from_le_bytes([
+    Ok(u32::from_le_bytes([
         status_bytes[0],
         status_bytes[1],
         status_bytes[2],
         status_bytes[3],
-    ]);
-    if current_status != slot::EMPTY && current_status != slot::DONE {
-        return Err(PipelineError::QueueFull {
+    ]))
+}
+
+fn write_slot_status_word(
+    ring_bytes: &mut [u8],
+    view: RingPublishView,
+    slot_idx: u32,
+    value: u32,
+) -> Result<(), PipelineError> {
+    let status_offset = slot_status_offset(slot_idx, view)?;
+    let status_end = status_offset
+        .checked_add(4)
+        .ok_or(PipelineError::QueueFull {
             queue: "submission",
-            fix: "slot is not publishable; only EMPTY and DONE slots may be written by the host",
-        });
-    }
+            fix: "slot status byte end overflowed usize; shard the ring before publishing",
+        })?;
+    let status_bytes = ring_bytes
+        .get_mut(status_offset..status_end)
+        .ok_or(PipelineError::QueueFull {
+            queue: "submission",
+            fix: "slot status is outside the validated ring buffer; validate ring length before publishing",
+        })?;
+    status_bytes.copy_from_slice(&value.to_le_bytes());
     Ok(())
 }
 
@@ -688,10 +836,6 @@ fn write_slot_word(ring_bytes: &mut [u8], slot_base: usize, word_idx: usize, val
 
 fn write_packed_metadata_byte(args: &mut [u32; ARGS_PER_SLOT_USIZE], byte_index: usize, value: u8) {
     let word_index = byte_index / 4;
-    let shift = u32::try_from((byte_index % 4) * 8).unwrap_or_else(|source| {
-        panic!(
-            "packed metadata byte shift cannot fit u32: {source}. Fix: keep packed metadata byte indices within one u32 word lane."
-        )
-    });
+    let shift = ((byte_index % 4) * 8) as u32;
     args[word_index] |= u32::from(value) << shift;
 }

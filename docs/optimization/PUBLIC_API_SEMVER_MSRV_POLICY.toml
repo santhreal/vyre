@@ -1,0 +1,51 @@
+# Public API semver and MSRV policy for VX-1124, VX-1129, VX-1134, and VX-1139.
+# API compatibility governance, rust-version, semver, migration records, and docs gates share one policy.
+
+schema = "vyre.release.public_api_semver_msrv_policy.v1"
+owner = "organization_dedup"
+evidence_tokens = ["SEMVER_2_0", "CARGO_RUST_VERSION_FIELD", "RUST_API_GUIDELINES"]
+
+required_fields = [
+  "compat_surface",
+  "api_snapshot_policy",
+  "semver_change_policy",
+  "msrv_change_policy",
+  "migration_policy",
+  "docs_gate_policy",
+  "consumer_mode_link",
+  "publication_gate",
+  "diagnostic",
+]
+
+[[compat]]
+compat_surface = "public-library-api"
+api_snapshot_policy = "PUBLIC_API_OWNERSHIP_SNAPSHOTS.toml"
+semver_change_policy = "major-for-breaking-public-api-minor-for-additive-compatible-api-patch-for-fixes"
+msrv_change_policy = "rust-version-increase-requires-release-note-api-compatibility-record-and-consumer-impact-review"
+migration_policy = "API_COMPATIBILITY_GOVERNANCE.toml"
+docs_gate_policy = "public-rustdoc-and-readme-examples-updated-with-api-change"
+consumer_mode_link = "cargo-add-library"
+publication_gate = "FINAL_RELEASE_GATE_MANIFEST.toml"
+diagnostic = "VYRE_PUBLIC_API_SEMVER_MSRV_REVIEW_REQUIRED"
+
+[[compat]]
+compat_surface = "cli-and-config-surface"
+api_snapshot_policy = "CLI_SURFACE_CONTRACTS.toml"
+semver_change_policy = "breaking-output-exit-code-config-or-command-change-requires-major-or-explicit-migration-record"
+msrv_change_policy = "cli-msrv-change-requires-install-compatibility-record"
+migration_policy = "DOCS_HELP_EXAMPLE_COHERENCE.toml"
+docs_gate_policy = "help-readme-examples-and-json-fields-updated-together"
+consumer_mode_link = "cargo-install-cli"
+publication_gate = "FINAL_RELEASE_GATE_MANIFEST.toml"
+diagnostic = "VYRE_CLI_SEMVER_MSRV_REVIEW_REQUIRED"
+
+[[compat]]
+compat_surface = "feature-gated-tool-subcrate"
+api_snapshot_policy = "CRATE_BOUNDARY_FEATURE_MATRIX.toml"
+semver_change_policy = "subcrate-breaking-change-cannot-hide-behind-parent-compatible-version"
+msrv_change_policy = "subcrate-msrv-change-aligns-with-parent-public-policy"
+migration_policy = "API_COMPATIBILITY_GOVERNANCE.toml"
+docs_gate_policy = "subcrate-docs-rs-and-parent-feature-docs-updated-together"
+consumer_mode_link = "cargo-add-tool-subcrate"
+publication_gate = "CRATES_IO_REGISTRY_PUBLICATION_POLICY.toml"
+diagnostic = "VYRE_SUBCRATE_SEMVER_MSRV_REVIEW_REQUIRED"

@@ -328,12 +328,7 @@ impl TomlDialectStore {
             &mut manifests,
             self.manifests.len(),
         )
-        .unwrap_or_else(|error| {
-                panic!(
-                    "Vyre TOML registry could not reserve {} manifest reference slot(s): {error}. Fix: split manifest loading into pages or reduce loaded dialect files.",
-                    self.manifests.len()
-                )
-            });
+        .ok();
         manifests.extend(self.manifests.values());
         manifests
     }

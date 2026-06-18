@@ -38,8 +38,9 @@ fn deeply_nested_parens_fail_closed() {
     src.push_str("; }");
     // Must return a typed error (nesting too deep), not abort the process.
     let r = parses_without_crashing(&src);
-    assert!(
-        r.is_err(),
+    assert_eq!(
+        r,
+        Err(()),
         "Fix: 20k-deep parens must be rejected with a ParseError, not accepted \
          (and crucially not crash the process)"
     );
@@ -52,8 +53,9 @@ fn deeply_nested_unary_not_fails_closed() {
     src.push_str(&"!".repeat(20_000));
     src.push_str("true; }");
     let r = parses_without_crashing(&src);
-    assert!(
-        r.is_err(),
+    assert_eq!(
+        r,
+        Err(()),
         "Fix: 20k-deep `!` chain must fail closed, not crash"
     );
 }
@@ -65,8 +67,9 @@ fn deeply_nested_deref_fails_closed() {
     src.push_str(&"*".repeat(20_000));
     src.push_str("x; }");
     let r = parses_without_crashing(&src);
-    assert!(
-        r.is_err(),
+    assert_eq!(
+        r,
+        Err(()),
         "Fix: 20k-deep deref chain must fail closed, not crash"
     );
 }
@@ -81,8 +84,9 @@ fn deeply_nested_borrow_expr_fails_closed() {
     src.push_str(&"&mut ".repeat(20_000));
     src.push_str("x; }");
     let r = parses_without_crashing(&src);
-    assert!(
-        r.is_err(),
+    assert_eq!(
+        r,
+        Err(()),
         "Fix: 20k-deep `&mut` borrow chain must fail closed, not crash"
     );
 }
@@ -99,8 +103,9 @@ fn deeply_nested_while_blocks_fail_closed() {
     src.push_str(&"}".repeat(n));
     src.push_str(" }");
     let r = parses_without_crashing(&src);
-    assert!(
-        r.is_err(),
+    assert_eq!(
+        r,
+        Err(()),
         "Fix: 20k-deep nested `while` blocks must fail closed, not crash"
     );
 }
@@ -115,8 +120,9 @@ fn deeply_nested_if_blocks_fail_closed() {
     src.push_str(&"}".repeat(n));
     src.push_str(" }");
     let r = parses_without_crashing(&src);
-    assert!(
-        r.is_err(),
+    assert_eq!(
+        r,
+        Err(()),
         "Fix: 20k-deep nested `if` blocks must fail closed, not crash"
     );
 }
@@ -128,8 +134,9 @@ fn deeply_nested_ref_type_fails_closed() {
     src.push_str(&"&mut ".repeat(20_000));
     src.push_str("i32 = 0; }");
     let r = parses_without_crashing(&src);
-    assert!(
-        r.is_err(),
+    assert_eq!(
+        r,
+        Err(()),
         "Fix: 20k-deep `&mut` type chain must fail closed, not crash"
     );
 }
@@ -145,8 +152,9 @@ fn nesting_at_a_reasonable_depth_still_parses() {
     src.push_str(&")".repeat(depth));
     src.push_str("; }");
     let r = parses_without_crashing(&src);
-    assert!(
-        r.is_ok(),
+    assert_eq!(
+        r,
+        Ok(()),
         "Fix: a 32-deep paren nest is legal and must still parse"
     );
 }

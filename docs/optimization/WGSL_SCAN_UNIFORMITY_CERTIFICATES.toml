@@ -1,0 +1,32 @@
+schema_version = 1
+
+certificate_id = "wgsl-scan-uniformity:v1"
+
+required_fields = [
+  "shader_id",
+  "branch_class",
+  "subgroup_call_site",
+  "uniform_input_proof",
+  "fallback_reason",
+]
+
+[[certificate]]
+shader_id = "regex_subgroup_ballot_scan"
+branch_class = "uniform-over-subgroup"
+subgroup_call_site = "candidate_mask_ballot"
+uniform_input_proof = "pattern_program_digest_is_uniform"
+fallback_reason = "adapter lacks subgroup feature or branch is data-dependent"
+evidence_path = "vyre-driver-wgpu/tests/wgsl_scan_uniformity_certificates.rs"
+
+[[certificate]]
+shader_id = "regex_subgroup_reduce_scan"
+branch_class = "uniform-over-workgroup-entry"
+subgroup_call_site = "candidate_count_reduce"
+uniform_input_proof = "workgroup_route_id_is_uniform"
+fallback_reason = "subgroup size unsupported"
+evidence_path = "vyre-driver-wgpu/tests/wgsl_scan_uniformity_certificates.rs"
+
+[[rejection]]
+diagnostic_code = "VYRE_WGSL_SUBGROUP_UNIFORMITY_MISSING"
+fix = "Use the portable workgroup-memory route unless every subgroup call site has a uniformity certificate."
+evidence_path = "vyre-driver-wgpu/tests/wgsl_scan_uniformity_certificates.rs"

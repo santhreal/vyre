@@ -1,0 +1,421 @@
+schema_version = 1
+
+[[case]]
+class_id = "quadratic_rescan"
+role = "positive"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "quadratic_rescan"
+role = "negative"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "quadratic_rescan"
+role = "boundary"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "quadratic_rescan"
+role = "adversarial"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "quadratic_rescan"
+role = "baseline"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "quadratic_rescan"
+role = "evasion"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "quadratic_rescan"
+role = "resource_budget"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "empty_match"
+role = "positive"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "empty_match"
+role = "negative"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "empty_match"
+role = "boundary"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "empty_match"
+role = "adversarial"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "empty_match"
+role = "baseline"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "empty_match"
+role = "evasion"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "empty_match"
+role = "resource_budget"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "overlapping_suffix"
+role = "positive"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "overlapping_suffix"
+role = "negative"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "overlapping_suffix"
+role = "boundary"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "overlapping_suffix"
+role = "adversarial"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "overlapping_suffix"
+role = "baseline"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "overlapping_suffix"
+role = "evasion"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "overlapping_suffix"
+role = "resource_budget"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "utf8_boundary"
+role = "positive"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "utf8_boundary"
+role = "negative"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "utf8_boundary"
+role = "boundary"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "utf8_boundary"
+role = "adversarial"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "utf8_boundary"
+role = "baseline"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "utf8_boundary"
+role = "evasion"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "utf8_boundary"
+role = "resource_budget"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "weak_literal"
+role = "positive"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "weak_literal"
+role = "negative"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "weak_literal"
+role = "boundary"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "weak_literal"
+role = "adversarial"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "weak_literal"
+role = "baseline"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "weak_literal"
+role = "evasion"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "weak_literal"
+role = "resource_budget"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "nested_repeats"
+role = "positive"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "nested_repeats"
+role = "negative"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "nested_repeats"
+role = "boundary"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "nested_repeats"
+role = "adversarial"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "nested_repeats"
+role = "baseline"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "nested_repeats"
+role = "evasion"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "nested_repeats"
+role = "resource_budget"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "nullable_loops"
+role = "positive"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "nullable_loops"
+role = "negative"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "nullable_loops"
+role = "boundary"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "nullable_loops"
+role = "adversarial"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "nullable_loops"
+role = "baseline"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "nullable_loops"
+role = "evasion"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "nullable_loops"
+role = "resource_budget"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "anchors"
+role = "positive"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "anchors"
+role = "negative"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "anchors"
+role = "boundary"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "anchors"
+role = "adversarial"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "anchors"
+role = "baseline"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "anchors"
+role = "evasion"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "anchors"
+role = "resource_budget"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "lookarounds"
+role = "positive"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "lookarounds"
+role = "negative"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "lookarounds"
+role = "boundary"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "lookarounds"
+role = "adversarial"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "lookarounds"
+role = "baseline"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "lookarounds"
+role = "evasion"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "lookarounds"
+role = "resource_budget"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "backreferences"
+role = "positive"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "backreferences"
+role = "negative"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "backreferences"
+role = "boundary"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "backreferences"
+role = "adversarial"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "backreferences"
+role = "baseline"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "backreferences"
+role = "evasion"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "backreferences"
+role = "resource_budget"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "unicode_classes"
+role = "positive"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "unicode_classes"
+role = "negative"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "unicode_classes"
+role = "boundary"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "unicode_classes"
+role = "adversarial"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "unicode_classes"
+role = "baseline"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "unicode_classes"
+role = "evasion"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "unicode_classes"
+role = "resource_budget"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "huge_alternations"
+role = "positive"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "huge_alternations"
+role = "negative"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "huge_alternations"
+role = "boundary"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "huge_alternations"
+role = "adversarial"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "huge_alternations"
+role = "baseline"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "huge_alternations"
+role = "evasion"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"
+
+[[case]]
+class_id = "huge_alternations"
+role = "resource_budget"
+evidence_path = "vyre-libs/tests/regex_adversarial_class_catalog.rs"

@@ -11,7 +11,7 @@ use vyre::ir::DataType as IrDataType;
 use crate::value::Value;
 use vyre::ir::DataType;
 
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 /// Typed bytes backing one declared IR buffer.
 ///
@@ -34,8 +34,28 @@ impl Buffer {
         }
     }
 
+    /// Acquire the byte buffer for reading, failing closed on poison.
+    ///
+    /// A poisoned lock means a writer panicked mid-store, leaving the bytes
+    /// inconsistent. Silently recovering with `into_inner()` would let the CPU
+    /// reference oracle emit corrupt golden values that the conform gate then
+    /// trusts as truth — a silent correctness fallback (Law 10). Surface it.
+    fn read_bytes(&self) -> RwLockReadGuard<'_, Vec<u8>> {
+        self.bytes
+            .read()
+            .unwrap_or_else(|_| panic!("reference Buffer byte lock was poisoned"))
+    }
+
+    /// Acquire the byte buffer for writing, failing closed on poison (see
+    /// [`Buffer::read_bytes`]).
+    fn write_bytes(&self) -> RwLockWriteGuard<'_, Vec<u8>> {
+        self.bytes
+            .write()
+            .unwrap_or_else(|_| panic!("reference Buffer byte lock was poisoned"))
+    }
+
     pub(crate) fn len(&self) -> u32 {
-        let bytes_guard = self.bytes.read().unwrap_or_else(|error| error.into_inner());
+        let bytes_guard = self.read_bytes();
         let count = if let Some(bits) = self.element.bit_width() {
             bytes_guard
                 .len()
@@ -67,10 +87,7 @@ impl Buffer {
     }
 
     pub(crate) fn byte_len(&self) -> usize {
-        self.bytes
-            .read()
-            .unwrap_or_else(|error| error.into_inner())
-            .len()
+        self.read_bytes().len()
     }
 
     pub(crate) fn element(&self) -> &IrDataType {
@@ -78,16 +95,23 @@ impl Buffer {
     }
 
     pub(crate) fn zero_fill(&self) {
-        self.bytes
-            .write()
-            .unwrap_or_else(|error| error.into_inner())
-            .fill(0);
+        self.write_bytes().fill(0);
     }
 
     pub(crate) fn into_bytes(self) -> Vec<u8> {
+        // Same poison policy as the guard helpers: a poisoned lock is a corrupt
+        // reference buffer, never silently laundered.
         std::sync::Arc::try_unwrap(self.bytes)
-            .map(|rw| rw.into_inner().unwrap_or_else(|error| error.into_inner()))
-            .unwrap_or_else(|a| a.read().unwrap_or_else(|error| error.into_inner()).clone())
+            .map(|rw| {
+                rw.into_inner()
+                    .unwrap_or_else(|_| panic!("reference Buffer byte lock was poisoned"))
+            })
+            .unwrap_or_else(|shared| {
+                shared
+                    .read()
+                    .unwrap_or_else(|_| panic!("reference Buffer byte lock was poisoned"))
+                    .clone()
+            })
     }
 
     /// Consume this buffer and return its contents as a Value.
@@ -98,10 +122,7 @@ impl Buffer {
 }
 
 pub(crate) fn load(buffer: &Buffer, index: u32) -> Value {
-    let bytes_guard = buffer
-        .bytes
-        .read()
-        .unwrap_or_else(|error| error.into_inner());
+    let bytes_guard = buffer.read_bytes();
     let stride = buffer.element.min_bytes();
     let ty = ir_to_conform_type(buffer.element.clone());
     if matches!(buffer.element, IrDataType::Bytes) {
@@ -122,10 +143,7 @@ pub(crate) fn load(buffer: &Buffer, index: u32) -> Value {
 }
 
 pub(crate) fn store(buffer: &mut Buffer, index: u32, value: &Value) {
-    let mut bytes_guard = buffer
-        .bytes
-        .write()
-        .unwrap_or_else(|error| error.into_inner());
+    let mut bytes_guard = buffer.write_bytes();
     let stride = buffer.element.min_bytes();
     if matches!(buffer.element, IrDataType::Bytes) {
         let offset = index as usize;
@@ -152,10 +170,7 @@ pub(crate) fn store(buffer: &mut Buffer, index: u32, value: &Value) {
 }
 
 pub(crate) fn atomic_load(buffer: &Buffer, index: u32) -> Option<u32> {
-    let bytes_guard = buffer
-        .bytes
-        .read()
-        .unwrap_or_else(|error| error.into_inner());
+    let bytes_guard = buffer.read_bytes();
     let stride = buffer.element.min_bytes().max(4);
     let offset = byte_offset(index, stride)?;
     if offset + 4 > bytes_guard.len() {
@@ -166,10 +181,7 @@ pub(crate) fn atomic_load(buffer: &Buffer, index: u32) -> Option<u32> {
 }
 
 pub(crate) fn atomic_store(buffer: &mut Buffer, index: u32, value: u32) {
-    let mut bytes_guard = buffer
-        .bytes
-        .write()
-        .unwrap_or_else(|error| error.into_inner());
+    let mut bytes_guard = buffer.write_bytes();
     let stride = buffer.element.min_bytes().max(4);
     let Some(offset) = byte_offset(index, stride) else {
         return;
@@ -285,5 +297,34 @@ mod tests {
         let mut payload_nan = Buffer::new(vec![0; 4], DataType::F32);
         store(&mut payload_nan, 0, &Value::U32(0x7fa0_0001));
         assert_eq!(f32_bits(payload_nan.to_value()), 0x7fc0_0000);
+    }
+
+    #[test]
+    fn poisoned_reference_buffer_lock_is_not_silently_recovered() {
+        // A writer that panics mid-store poisons the lock. The reference oracle
+        // must fail closed on a subsequent access rather than handing back the
+        // half-mutated bytes (which would silently produce a corrupt golden
+        // value the conform gate then trusts) — Law 10.
+        let buffer = Buffer::new(vec![0u8; 8], DataType::U32);
+        let poisoner = buffer.clone();
+        let _ = std::thread::spawn(move || {
+            let _guard = poisoner.write_bytes();
+            panic!("poison reference buffer lock mid-store");
+        })
+        .join();
+
+        let panic = std::panic::catch_unwind(|| {
+            let _ = buffer.len();
+        })
+        .expect_err("poisoned reference Buffer lock must panic instead of recovering");
+        let message = panic
+            .downcast_ref::<String>()
+            .map(String::as_str)
+            .or_else(|| panic.downcast_ref::<&'static str>().copied())
+            .unwrap_or("<non-string panic>");
+        assert!(
+            message.contains("reference Buffer byte lock was poisoned"),
+            "panic must name the poisoned reference buffer lock, got: {message}"
+        );
     }
 }

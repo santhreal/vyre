@@ -52,10 +52,14 @@ fn execute_slot_body_jit(payload_processor: &[Node]) -> Vec<Node> {
 /// The JIT body that runs once per iteration per lane.
 #[must_use]
 pub fn persistent_body_jit(workgroup_size_x: u32, payload_processor: &[Node]) -> Vec<Node> {
-    match try_persistent_body_jit(workgroup_size_x, payload_processor) {
-        Ok(body) => body,
-        Err(error) => panic!("{error}"),
+    let mut body = persistent_lane_prologue(workgroup_size_x);
+    if let Some(body_capacity) = body.len().checked_add(3) {
+        let _ = vyre_foundation::allocation::try_reserve_vec_to_capacity(&mut body, body_capacity);
     }
+    body.push(direct_slot_base_binding());
+    body.push(Node::Block(execute_slot_body_jit(payload_processor)));
+    body.push(Node::Block(process_io_requests()));
+    body
 }
 
 /// Fallible JIT body builder with explicit staging-allocation reporting.

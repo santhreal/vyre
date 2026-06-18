@@ -254,9 +254,13 @@ fn main() {
         Ok(pairs) => {
             let failed = pairs.iter().any(|pair| !pair.passed);
             for pair in pairs {
-                let json = serde_json::to_string(&pair).unwrap_or_else(|error| {
-                    panic!("Fix: dispatch result must stay serializable: {error}")
-                });
+                let json = match serde_json::to_string(&pair) {
+                    Ok(json) => json,
+                    Err(error) => {
+                        eprintln!("failed to serialize dispatch result: {error}");
+                        std::process::exit(1);
+                    }
+                };
                 println!("{json}");
             }
             if failed {
@@ -1853,11 +1857,7 @@ fn merge_certificates(args: impl IntoIterator<Item = String>) -> Result<(), Stri
 }
 
 fn read_and_verify_shard(path: &str) -> Result<VerifiedShard, String> {
-    let json = std::fs::read_to_string(path).map_err(|error| {
-        format!(
-            "failed to read certificate `{path}`: {error}. Fix: pass a readable prove artifact."
-        )
-    })?;
+    let json = read_prove_artifact_bounded(path)?;
     let value: serde_json::Value = serde_json::from_str(&json).map_err(|error| {
         format!(
             "failed to parse certificate `{path}`: {error}. Fix: pass a valid JSON prove artifact."
@@ -1950,6 +1950,41 @@ fn read_and_verify_shard(path: &str) -> Result<VerifiedShard, String> {
         universe_backend_count,
         universe_op_count,
     })
+}
+
+const MAX_PROVE_ARTIFACT_BYTES: u64 = 16 * 1024 * 1024;
+
+fn read_prove_artifact_bounded(path: &str) -> Result<String, String> {
+    let mut reader = std::fs::File::open(path).map_err(|error| {
+        format!(
+            "failed to read certificate `{path}`: {error}. Fix: pass a readable prove artifact."
+        )
+    })?;
+    let mut bytes = Vec::new();
+    let mut total = 0u64;
+    let mut chunk = [0u8; 8192];
+    loop {
+        let read = std::io::Read::read(&mut reader, &mut chunk).map_err(|error| {
+            format!(
+                "failed to read certificate `{path}`: {error}. Fix: pass a readable prove artifact."
+            )
+        })?;
+        if read == 0 {
+            return String::from_utf8(bytes).map_err(|error| {
+                format!(
+                    "certificate `{path}` is not UTF-8: {error}. Fix: pass a valid JSON prove artifact."
+                )
+            });
+        }
+        let read = read as u64;
+        total = total.saturating_add(read);
+        if total > MAX_PROVE_ARTIFACT_BYTES {
+            return Err(format!(
+                "certificate `{path}` exceeds {MAX_PROVE_ARTIFACT_BYTES} byte merge cap. Fix: shard or trim the prove artifact before merging."
+            ));
+        }
+        bytes.extend_from_slice(&chunk[..read as usize]);
+    }
 }
 
 fn value_field<'a>(

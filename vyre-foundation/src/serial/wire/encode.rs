@@ -1,5 +1,10 @@
 //! Encode the stable IR wire model into `VIR0` bytes.
 
+/// Version label for BLAKE3 digests computed from canonical VIR0 Program wire
+/// bytes. Evidence, cache, and replay surfaces import this label instead of
+/// inventing parallel Program digest version strings.
+pub const PROGRAM_WIRE_DIGEST_VERSION: &str = "vyre-program-wire-vir0-blake3-v1";
+
 /// Encode a single [`crate::ir::Expr`] into its wire-format tag and payload.
 ///
 /// # Role
@@ -155,6 +160,18 @@ pub use to_wire::to_wire;
 pub use to_wire::to_wire_into;
 pub use to_wire::to_wire_with_buffer_order_into;
 
+/// Versioned scan database header helpers for cache and benchmark evidence
+/// payloads that are not `VIR0` Program blobs.
+pub use scan_database_header::{
+    decode_compatible_scan_database_header, decode_scan_database_header,
+    decode_scan_database_header_with_compatibility, encode_scan_database_header,
+    put_scan_database_header, ScanDatabaseCompatibilityRecord, ScanDatabaseHeader,
+    ScanDatabaseMode, ScanDatabaseReaderCompatibility, ScanDatabaseSectionHeader,
+    ScanDatabaseSectionKind, UnsupportedScanFeature, MAX_SCAN_DATABASE_SECTIONS,
+    MAX_SCAN_DATABASE_UNSUPPORTED_FEATURES, SCAN_DATABASE_HEADER_MAGIC,
+    SCAN_DATABASE_HEADER_VERSION,
+};
+
 /// Zero-allocation error type for hot-path wire encoders.
 pub mod error;
 pub use error::WireEncodeErr;
@@ -187,6 +204,9 @@ pub(crate) mod put_node;
 ///
 /// See [`put_nodes()`] for the public entry point.
 pub mod put_nodes;
+
+/// Versioned scan database header encoder/decoder.
+pub mod scan_database_header;
 
 /// Top-level program encoder.
 ///

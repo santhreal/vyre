@@ -1,0 +1,54 @@
+# Peer transfer and collective policy owns inter-device data movement and aggregation admission.
+
+schema = "vyre.accelerator.peer_transfer_collective_policy.v1"
+owner = "driver_shared"
+evidence_tokens = ["CUDA_PEER_DEVICE_MEMORY", "CUDA_MULTI_DEVICE_P2P", "NCCL_COLLECTIVES", "NVML_NVLINK_METHODS"]
+
+required_fields = [
+  "collective_id",
+  "data_surface",
+  "rank_mapping_policy",
+  "transfer_policy",
+  "collective_policy",
+  "ordering_policy",
+  "hang_prevention_policy",
+  "equivalence_policy",
+  "authority_links",
+  "diagnostic",
+]
+
+[[collective]]
+collective_id = "scan-shard-output-allgather"
+data_surface = "per-GPU-output-slab-fragments-gathered-into-deterministic-report-order"
+rank_mapping_policy = "rank-to-device-map-records-public-device-class-shard-range-and-output-order"
+transfer_policy = "use-peer-copy-or-NCCL-allgather-only-when topology-matrix-admits-device-pair-and-byte-range"
+collective_policy = "all-ranks-call-same-count-same-datatype-and-compatible-stream-group-before output-gather"
+ordering_policy = "gathered-output-ordered-by-input-byte-range-then-rule-id-not-by completion-order"
+hang_prevention_policy = "rank-count-count-datatype-root-and-timeout-policy-recorded-before collective-submit"
+equivalence_policy = "multi-GPU-gathered-report-bytes-match-single-GPU-or-CPU-reference-for-same-corpus-digest"
+authority_links = ["OUTPUT_SLAB_PROVENANCE.toml", "CROSS_SIGNAL_AUDIT_CORRELATION.toml", "MULTI_ACCELERATOR_TOPOLOGY_CAPABILITY_MATRIX.toml", "HOST_DEVICE_VISIBILITY_POLICY.toml"]
+diagnostic = "VYRE_MULTI_GPU_OUTPUT_ALLGATHER_REQUIRED"
+
+[[collective]]
+collective_id = "distributed-rule-database-broadcast"
+data_surface = "compiled-pattern-database-rule-sig-database-and-shard-manifest-distributed-to-accelerator-ranks"
+rank_mapping_policy = "root-rank-and-device-map-recorded-separately-from-device-number"
+transfer_policy = "broadcast-over-peer-link-or-host-staging-based-on-topology-and-residency-tier-contract"
+collective_policy = "all-ranks-enter-broadcast-with-same-rule-database-digest-count-and-version"
+ordering_policy = "rule-database-visible-on-each-device-before shard-dispatch-admission"
+hang_prevention_policy = "missing-rank-digest-mismatch-count-mismatch-or-timeout-routes-to-single-device-or-CPU-path"
+equivalence_policy = "per-rank-rule-database-digest-and-detection-parity-match-shared-reference-database"
+authority_links = ["CACHE_REBUILD_INVALIDATION_POLICY.toml", "MEMORY_RESIDENCY_TIER_CONTRACTS.toml", "BACKEND_HANDLE_LIFETIME_PROVENANCE.toml", "BACKEND_CAPABILITY_DIGESTS.toml"]
+diagnostic = "VYRE_MULTI_GPU_RULE_BROADCAST_REQUIRED"
+
+[[collective]]
+collective_id = "frontier-counter-reduce-scatter"
+data_surface = "graph-frontier-counters-hit-counts-and-work-queue-pressure-split-across-accelerators"
+rank_mapping_policy = "rank-index-determines-counter-block-ownership-and-reduce-scatter-output-range"
+transfer_policy = "prefer-reduce-scatter-when-counter-volume-exceeds-peer-copy-threshold-and-all-ranks-are-healthy"
+collective_policy = "reduce-scatter-input-count-output-block-size-datatype-and-operation-recorded-for-each-rank"
+ordering_policy = "counter-aggregation-happens-after-device-work-completion-and-before scheduler-feedback-publication"
+hang_prevention_policy = "collective-group-membership-timeout-and-partial-rank-failure-policy-required"
+equivalence_policy = "reduced-counters-match-serial-CPU-aggregation-and-single-GPU-baseline"
+authority_links = ["BACKPRESSURE_QUEUE_QUOTA_POLICY.toml", "MEMORY_ORDERING_ATOMIC_CONTRACTS.toml", "STATISTICAL_REGRESSION_GATES.toml", "TRACE_CONTEXT_TELEMETRY_CONTRACTS.toml"]
+diagnostic = "VYRE_MULTI_GPU_COUNTER_REDUCE_SCATTER_REQUIRED"

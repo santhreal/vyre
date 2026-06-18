@@ -1,0 +1,60 @@
+[artifact]
+id = "SYMBOL_REFERENCE_STABILITY_POLICY"
+title = "Symbol and reference stability policy"
+tranche = "VX-1581..VX-1600"
+owner = "scanner_frontends"
+status = "planned_contract"
+research_sources = [
+  "SCIP_CODE_INTELLIGENCE_PROTOCOL",
+  "LSP_SEMANTIC_TOKENS_3_17",
+  "PYTHON_IMPORT_SYSTEM",
+  "RUST_MODULES_REFERENCE",
+]
+
+[scope]
+owns = [
+  "stable symbol ids across rename, move, and edit deltas when language evidence proves identity continuity",
+  "reference occurrence invalidation policy",
+  "semantic token delta admission for fact updates",
+  "unknown, ambiguous, and generated symbol evidence",
+  "operator diagnostics for symbol instability",
+]
+does_not_own = [
+  "dependency edge extraction, owned by LANGUAGE_DEPENDENCY_EDGE_MATRIX",
+  "cross-file invalidation traversal, owned by CROSS_FILE_INVALIDATION_PROPAGATION_POLICY",
+  "content identity and alias tracking, owned by CORPUS_CONTENT_IDENTITY_INDEX",
+  "LSP server implementation details, owned by language frontend crates when implemented",
+]
+
+[identity_policy]
+stable_when = [
+  "symbol qualified identity is unchanged",
+  "definition range moved but resolver identity and content context match",
+  "rename operation supplies explicit before-and-after resolver evidence",
+  "generated symbol producer digest and generated output digest match",
+]
+unstable_when = [
+  "overload set changes",
+  "scope parent changes without resolver proof",
+  "dynamic dispatch target set changes",
+  "macro expansion or generated producer changed",
+  "symbol spelling collides with another candidate under the same resolver digest",
+]
+unknown = "unknown symbol identity blocks reuse for semantic, taint, call, and dataflow facts that depend on the symbol"
+
+[occurrence_policy]
+reference_delta = "semantic-token or index deltas may update occurrence ranges only when file identity, symbol id, token kind, and resolver digest match"
+definition_delta = "definition movement preserves symbol id only when enclosing scope and signature digest remain compatible"
+callsite_delta = "callsite reuse requires callee resolution state and dispatch kind to remain compatible"
+range_shift = "pure range shifts may update occurrence coordinates without recomputing flow only when surrounding content digest proves no semantic change"
+
+[diagnostics]
+required = [
+  "symbol_id_or_unknown",
+  "language_id",
+  "instability_reason",
+  "resolver_digest",
+  "affected_fact_tables",
+  "reuse_blocked",
+  "operator_fix",
+]

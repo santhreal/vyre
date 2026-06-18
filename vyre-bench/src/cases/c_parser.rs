@@ -17,6 +17,37 @@ use support::{
 };
 use vyre_frontend_c::api::{compile, parse_source, VyreCompileOptions};
 
+const MAX_C_PARSER_OBJECT_BYTES: u64 = 64 * 1024 * 1024;
+
+fn read_c_parser_object_bounded(path: &std::path::Path) -> Result<Vec<u8>, BenchError> {
+    let mut reader = std::fs::File::open(path).map_err(|error| {
+        BenchError::ExecutionFailed(format!("read C parser object `{}`: {error}", path.display()))
+    })?;
+    let mut bytes = Vec::new();
+    let mut total = 0u64;
+    let mut chunk = [0u8; 8192];
+    loop {
+        let read = std::io::Read::read(&mut reader, &mut chunk).map_err(|error| {
+            BenchError::ExecutionFailed(format!(
+                "read C parser object `{}`: {error}",
+                path.display()
+            ))
+        })?;
+        if read == 0 {
+            return Ok(bytes);
+        }
+        let read = read as u64;
+        total = total.saturating_add(read);
+        if total > MAX_C_PARSER_OBJECT_BYTES {
+            return Err(BenchError::ExecutionFailed(format!(
+                "C parser object `{}` exceeds {MAX_C_PARSER_OBJECT_BYTES} byte benchmark cap. Fix: shard the fixture or raise the cap deliberately.",
+                path.display()
+            )));
+        }
+        bytes.extend_from_slice(&chunk[..read as usize]);
+    }
+}
+
 pub struct CParserLinuxDriverPipeline;
 pub struct CParserOnlyLinuxDriverPipeline;
 pub struct CParserSemaLinuxDriverCorpus100Pipeline;
@@ -129,9 +160,7 @@ impl BenchCase for CParserLinuxDriverPipeline {
         let tree_sitter = run_tree_sitter_c_baseline(&prepared.source)?;
         let baseline_ns = baseline_start.elapsed().as_nanos() as u64;
 
-        let object_bytes = std::fs::read(&paths.object).map_err(|error| {
-            BenchError::ExecutionFailed(format!("read C parser object: {error}"))
-        })?;
+        let object_bytes = read_c_parser_object_bounded(&paths.object)?;
         paths.cleanup();
 
         Ok(BenchRun {

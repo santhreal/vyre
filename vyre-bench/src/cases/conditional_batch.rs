@@ -489,11 +489,13 @@ fn dispatch_resident_conditional_batch_sequence(
         program: &prepared.reset_program,
         resources: &reset_resources,
         grid_override: Some([1, 1, 1]),
+        workgroup_override: None,
     };
     let conditional_step = ResidentDispatchStep {
         program: &prepared.program,
         resources: &conditional_resources,
         grid_override: Some([EVAL_COUNT.div_ceil(workgroup[0]).max(1), 1, 1]),
+        workgroup_override: None,
     };
     let read_ranges = [
         ResidentReadRange {

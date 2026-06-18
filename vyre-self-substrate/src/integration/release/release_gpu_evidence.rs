@@ -349,7 +349,7 @@ pub fn validate_release_cuda_suite_artifacts(
         ),
         (cuda_suite, "CUDA suite schema", "\"schema_version\": 2"),
         (cuda_suite, "CUDA suite backend", "\"backend\": \"cuda\""),
-        (cuda_suite, "CUDA family count", "\"family_count\": 13"),
+        (cuda_suite, "CUDA family count", "\"family_count\": 16"),
         (
             cuda_suite,
             "RTX 5090 suite hardware",
@@ -417,7 +417,7 @@ pub fn validate_release_cuda_suite_artifacts(
     )?;
 
     Ok(ReleaseCudaSuiteArtifactProof {
-        family_count: 13,
+        family_count: 16,
         artifact_count,
         hundred_x_passing_cases,
     })
@@ -550,7 +550,7 @@ mod tests {
         )
         .expect("Fix: committed backend matrix and CUDA suite should pass");
 
-        assert_eq!(proof.family_count, 13);
+        assert_eq!(proof.family_count, 16);
         assert!(proof.artifact_count >= 13);
         assert!(proof.hundred_x_passing_cases >= 10);
     }

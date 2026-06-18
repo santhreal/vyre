@@ -1,0 +1,43 @@
+# Benchmark methodology contracts for VX-781 through VX-785.
+# Benchmarks use one method contract for warmup, samples, fixtures, counters, environment, and noise.
+
+schema = "vyre.performance.benchmark_methodology_contract.v1"
+owner = "bench_harness"
+evidence_tokens = ["CRITERION_RS", "GOOGLE_BENCHMARK"]
+
+required_fields = [
+  "benchmark_id",
+  "owning_crate",
+  "fixture_digest",
+  "warmup_policy",
+  "sample_policy",
+  "measurement_unit",
+  "counter_set",
+  "environment_digest",
+  "noise_controls",
+  "privacy_class",
+]
+
+[[benchmark]]
+benchmark_id = "scan-regex-batch-throughput"
+owning_crate = "vyre-bench"
+fixture_digest = "sha256:scan-regex-batch-fixtures"
+warmup_policy = "fixed-warmup-plus-stability-check"
+sample_policy = "statistics-driven-resampling"
+measurement_unit = "bytes_per_second"
+counter_set = "CROSS_BACKEND_COUNTER_SCHEMA.toml"
+environment_digest = "REPRODUCIBILITY_CAPSULES.toml"
+noise_controls = ["pin-input-digest", "record-backend-capability", "record-cpu-governor-class"]
+privacy_class = "no-private-paths"
+
+[[benchmark]]
+benchmark_id = "graph-frontier-irregular-throughput"
+owning_crate = "vyre-bench"
+fixture_digest = "sha256:graph-frontier-irregular-fixtures"
+warmup_policy = "fixed-warmup-plus-cache-state-record"
+sample_policy = "statistics-driven-resampling"
+measurement_unit = "edges_per_second"
+counter_set = "CROSS_BACKEND_COUNTER_SCHEMA.toml"
+environment_digest = "REPRODUCIBILITY_CAPSULES.toml"
+noise_controls = ["pin-graph-digest", "record-device-clock-class", "record-driver-class"]
+privacy_class = "no-secret-values"

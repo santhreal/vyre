@@ -37,16 +37,12 @@ impl LaunchRecommendationCache {
             }
         }
         let Some(entry) = self.entries.get_mut(key) else {
-            self.misses = self.misses.checked_add(1).unwrap_or_else(|| {
-                panic!("megakernel launch-cache miss counter overflowed u64. Fix: reset launch-cache telemetry before counters reach u64::MAX.")
-            });
+            self.misses = self.misses.saturating_add(1);
             return None;
         };
         self.clock += 1;
         entry.last_seen = self.clock;
-        self.hits = self.hits.checked_add(1).unwrap_or_else(|| {
-            panic!("megakernel launch-cache hit counter overflowed u64. Fix: reset launch-cache telemetry before counters reach u64::MAX.")
-        });
+        self.hits = self.hits.saturating_add(1);
         Some(entry.recommendation)
     }
 

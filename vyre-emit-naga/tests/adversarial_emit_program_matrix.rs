@@ -8,7 +8,7 @@ use naga::valid::{Capabilities, ValidationFlags, Validator};
 use naga::{AddressSpace, Block, Statement, TypeInner};
 use proptest::prelude::*;
 use vyre_lower::emit_adversarial_corpus::{
-    self, EmitAdversarialCase, EmitAdversarialFamily, EmitOutcome,
+    self, EmitAdversarialBackend, EmitAdversarialCase, EmitAdversarialFamily, EmitOutcome,
 };
 
 fn block_has_barrier(block: &Block) -> bool {
@@ -153,6 +153,11 @@ fn validate_module(module: &naga::Module, label: &str) {
 
 #[test]
 fn hostile_success_corpus_emits_structured_naga_modules() {
+    assert!(
+        emit_adversarial_corpus::required_backends().contains(&EmitAdversarialBackend::Naga),
+        "Fix: shared emit adversarial corpus must register Naga as a required consumer."
+    );
+
     for case in emit_adversarial_corpus::success_cases() {
         let module = vyre_emit_naga::emit_optimized(&case.descriptor).unwrap_or_else(|err| {
             panic!(

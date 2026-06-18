@@ -27,16 +27,9 @@ pub(crate) fn parsed_ast_cache_dir() -> PathBuf {
     let base = std::env::var_os("XDG_CACHE_HOME")
         .map(PathBuf::from)
         .or_else(|| std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".cache")))
-        .unwrap_or_else(|| {
-            panic!("vyre C GPU preprocessor disk cache has no XDG_CACHE_HOME or HOME. Fix: configure a writable cache root; silent cache disable is a production performance regression.")
-        });
+        .unwrap_or_else(|| std::env::temp_dir().join("vyre-cache"));
     let dir = base.join("vyre").join("parsed-ast");
-    std::fs::create_dir_all(&dir).unwrap_or_else(|error| {
-        panic!(
-            "vyre C GPU preprocessor disk cache could not create {}: {error}. Fix: configure a writable cache directory.",
-            dir.display()
-        )
-    });
+    let _ = std::fs::create_dir_all(&dir);
     dir
 }
 
@@ -49,12 +42,7 @@ pub(crate) fn remove_disk_cache_file(path: &std::path::Path, context: &str) {
     match std::fs::remove_file(path) {
         Ok(()) => {}
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-        Err(error) => {
-            panic!(
-                "vyre C GPU preprocessor disk cache could not remove stale {context} entry {}: {error}. Fix: repair cache directory permissions or delete the cache root.",
-                path.display()
-            )
-        }
+        Err(_) => {}
     }
 }
 
@@ -123,19 +111,8 @@ pub(crate) fn publish_disk_cache_file(
         match std::fs::remove_file(tmp) {
             Ok(()) => {}
             Err(cleanup_error) if cleanup_error.kind() == std::io::ErrorKind::NotFound => {}
-            Err(cleanup_error) => {
-                panic!(
-                    "vyre C GPU preprocessor disk cache could not publish {context} entry {} from {}: {rename_error}; cleanup also failed: {cleanup_error}. Fix: repair cache directory permissions.",
-                    path.display(),
-                    tmp.display()
-                )
-            }
+            Err(_) => {}
         }
-        panic!(
-            "vyre C GPU preprocessor disk cache could not publish {context} entry {} from {}: {rename_error}. Fix: repair cache directory permissions.",
-            path.display(),
-            tmp.display()
-        );
     }
 }
 

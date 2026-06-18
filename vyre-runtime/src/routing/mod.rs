@@ -21,6 +21,17 @@ pub enum RoutingDecision {
     PersistentMegakernel,
 }
 
+/// Operator-visible routing evidence.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct RoutingExplanation {
+    /// Policy name that made the decision.
+    pub policy: &'static str,
+    /// Final route selected by the runtime.
+    pub decision: RoutingDecision,
+    /// Stable short reason for the selected route.
+    pub reason: &'static str,
+}
+
 /// Pluggable routing policy.
 pub trait RoutingPolicy: Send + Sync {
     /// Name of the policy for diagnostics.
@@ -28,6 +39,15 @@ pub trait RoutingPolicy: Send + Sync {
 
     /// Decide which backend route to take for a given plan.
     fn route(&self, plan: &ExecutionPlan) -> RoutingDecision;
+
+    /// Decide which backend route to take and explain the decision.
+    fn route_with_explanation(&self, plan: &ExecutionPlan) -> RoutingExplanation {
+        RoutingExplanation {
+            policy: self.name(),
+            decision: self.route(plan),
+            reason: "policy returned route without extended evidence",
+        }
+    }
 }
 
 /// The standard routing engine.
@@ -46,6 +66,11 @@ impl RoutingEngine {
     /// Route a program to a backend.
     pub fn route(&self, plan: &ExecutionPlan) -> RoutingDecision {
         self.policy.route(plan)
+    }
+
+    /// Route a program and return operator-visible evidence.
+    pub fn route_with_explanation(&self, plan: &ExecutionPlan) -> RoutingExplanation {
+        self.policy.route_with_explanation(plan)
     }
 }
 pub mod standard_policy;

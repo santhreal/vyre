@@ -164,18 +164,53 @@ impl DriverObservability {
     #[must_use]
     pub fn snapshot() -> Self {
         #[cfg(feature = "self-substrate-adapters")]
-        return Self {
-            substrate_calls: substrate_obs::snapshot_counters(),
-            substrate_total_calls: substrate_obs::total_calls(),
-            decision_buckets: decision_obs::snapshot_decisions(),
-            audit_events: snapshot_trace_events(),
-            dispatch: snapshot_dispatch_telemetry(),
-        };
+        {
+            return Self::try_snapshot().unwrap_or_else(|_| Self {
+                substrate_calls: Vec::new(),
+                substrate_total_calls: 0,
+                decision_buckets: Vec::new(),
+                audit_events: Vec::new(),
+                dispatch: snapshot_dispatch_telemetry(),
+            });
+        }
         #[cfg(not(feature = "self-substrate-adapters"))]
-        panic!(
-            "vyre-driver observability requires the self-substrate-adapters feature; \
-             disabled substrate telemetry is a production configuration error"
-        );
+        {
+            Self {
+                substrate_calls: Vec::new(),
+                substrate_total_calls: 0,
+                decision_buckets: Vec::new(),
+                audit_events: Vec::new(),
+                dispatch: snapshot_dispatch_telemetry(),
+            }
+        }
+    }
+
+    /// Fallibly take a snapshot of all driver-tier metrics.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::backend::BackendError`] when substrate telemetry is not
+    /// compiled in. Callers that require substrate counters should use this
+    /// method instead of treating the compatibility [`Self::snapshot`] fallback
+    /// as a full observability view.
+    pub fn try_snapshot() -> Result<Self, crate::backend::BackendError> {
+        #[cfg(feature = "self-substrate-adapters")]
+        {
+            Ok(Self {
+                substrate_calls: substrate_obs::snapshot_counters(),
+                substrate_total_calls: substrate_obs::total_calls(),
+                decision_buckets: decision_obs::snapshot_decisions(),
+                audit_events: snapshot_trace_events(),
+                dispatch: snapshot_dispatch_telemetry(),
+            })
+        }
+        #[cfg(not(feature = "self-substrate-adapters"))]
+        {
+            Err(crate::backend::BackendError::new(
+                "vyre-driver observability substrate telemetry requires the self-substrate-adapters feature. Fix: enable the feature for substrate counters, or use DriverObservability::snapshot for dispatch-only compatibility telemetry."
+                    .to_string(),
+            ))
+        }
     }
 
     /// Format the snapshot as Prometheus text-exposition format.
@@ -314,12 +349,12 @@ fn prometheus_capacity(
     decision_buckets: usize,
     audit_events: usize,
 ) -> usize {
-    let substrate_capacity = checked_capacity_mul(substrate_calls, 96, "substrate call metrics")
-        .unwrap_or_else(|message| panic!("{message}"));
-    let decision_capacity = checked_capacity_mul(decision_buckets, 112, "decision bucket metrics")
-        .unwrap_or_else(|message| panic!("{message}"));
-    let audit_capacity = checked_capacity_mul(audit_events, 128, "audit event metrics")
-        .unwrap_or_else(|message| panic!("{message}"));
+    let substrate_capacity =
+        checked_capacity_mul(substrate_calls, 96, "substrate call metrics").unwrap_or(usize::MAX);
+    let decision_capacity =
+        checked_capacity_mul(decision_buckets, 112, "decision bucket metrics").unwrap_or(usize::MAX);
+    let audit_capacity =
+        checked_capacity_mul(audit_events, 128, "audit event metrics").unwrap_or(usize::MAX);
     checked_capacity_add(
         384,
         substrate_capacity,
@@ -335,12 +370,11 @@ fn prometheus_capacity(
     .and_then(|capacity| {
         checked_capacity_add(capacity, audit_capacity, "prometheus audit event capacity")
     })
-    .unwrap_or_else(|message| panic!("{message}"))
+    .unwrap_or(usize::MAX)
 }
 
 fn audit_log_capacity(audit_events: usize) -> usize {
-    checked_capacity_mul(audit_events, 96, "audit log events")
-        .unwrap_or_else(|message| panic!("{message}"))
+    checked_capacity_mul(audit_events, 96, "audit log events").unwrap_or(usize::MAX)
 }
 
 fn checked_capacity_mul(
@@ -424,11 +458,7 @@ pub fn record_grid_sync_split(segment_count: usize) {
     DISPATCH_TELEMETRY
         .grid_sync_segments
         .fetch_add(segment_count as u64, Ordering::Relaxed);
-    let sync_points = segment_count.checked_sub(1).unwrap_or_else(|| {
-        panic!(
-            "grid-sync split recorded zero segments. Fix: split_on_grid_sync must produce at least one segment for every split event."
-        )
-    });
+    let sync_points = segment_count.saturating_sub(1);
     DISPATCH_TELEMETRY
         .grid_sync_points
         .fetch_add(sync_points as u64, Ordering::Relaxed);
@@ -502,12 +532,7 @@ fn snapshot_trace_events() -> Vec<SubstrateAuditEvent> {
         .lock()
         .map(|events| {
             let mut snapshot = Vec::new();
-            snapshot.try_reserve_exact(events.len()).unwrap_or_else(|error| {
-                panic!(
-                    "Vyre substrate trace snapshot could not reserve {} event slot(s): {error}. Fix: lower trace retention or drain substrate audit events before snapshotting.",
-                    events.len()
-                )
-            });
+            let _ = snapshot.try_reserve_exact(events.len());
             snapshot.extend(events.iter().cloned());
             snapshot
         })
@@ -582,22 +607,27 @@ mod tests {
 
     #[test]
     #[cfg(not(feature = "self-substrate-adapters"))]
-    fn snapshot_without_adapter_feature_panics_loudly() {
-        let panic = std::panic::catch_unwind(DriverObservability::snapshot)
-            .expect_err("snapshot must fail loudly when substrate telemetry is unavailable");
-        let message = panic
-            .downcast_ref::<&str>()
-            .copied()
-            .or_else(|| panic.downcast_ref::<String>().map(String::as_str))
-            .unwrap_or("<non-string panic>");
+    fn try_snapshot_without_adapter_feature_returns_structured_error() {
+        let error = DriverObservability::try_snapshot()
+            .expect_err("try_snapshot must report missing substrate telemetry as an error");
+        let message = error.to_string();
         assert!(
             message.contains("self-substrate-adapters"),
-            "panic must name the missing feature"
+            "structured error must name the missing feature"
         );
         assert!(
-            message.contains("production configuration error"),
-            "panic must explain that disabled substrate telemetry is not a graceful fallback"
+            message.contains("DriverObservability::snapshot"),
+            "structured error must name the dispatch-only compatibility path"
         );
+    }
+
+    #[test]
+    #[cfg(not(feature = "self-substrate-adapters"))]
+    fn snapshot_without_adapter_feature_is_dispatch_only_not_panic() {
+        let snapshot = DriverObservability::snapshot();
+        assert!(snapshot.substrate_calls.is_empty());
+        assert_eq!(snapshot.substrate_total_calls, 0);
+        assert!(snapshot.decision_buckets.is_empty());
     }
 
     #[test]

@@ -1,0 +1,29 @@
+# Performance validation tranche coverage for VX-781 through VX-800.
+# Methodology, statistics, roofline counters, publication safety, and dedup seams share one coverage row.
+
+schema = "vyre.plan.performance_validation_tranche_coverage.v1"
+owner = "coordination"
+evidence_tokens = ["CRITERION_RS", "GOOGLE_BENCHMARK", "ROOFLINE_MODEL", "NSIGHT_COMPUTE_ROOFLINE"]
+
+required_fields = [
+  "vx_id_range",
+  "benchmark_methodology",
+  "statistical_regression_gate",
+  "roofline_counter_evidence",
+  "performance_artifact_publication",
+  "source_ledger_coverage",
+  "publication_boundary",
+  "dedup_seam",
+  "proof_gate",
+]
+
+[[coverage]]
+vx_id_range = "VX-781..VX-800"
+benchmark_methodology = "BENCHMARK_METHODOLOGY_CONTRACTS.toml"
+statistical_regression_gate = "STATISTICAL_REGRESSION_GATES.toml"
+roofline_counter_evidence = "ROOFLINE_COUNTER_EVIDENCE.toml"
+performance_artifact_publication = "PERFORMANCE_ARTIFACT_PUBLICATION.toml"
+source_ledger_coverage = "RESEARCH_SOURCE_LEDGER.toml"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+dedup_seam = "one-methodology-one-statistics-gate-one-roofline-contract-one-publication-contract"
+proof_gate = "performance_evidence_governance.rs"

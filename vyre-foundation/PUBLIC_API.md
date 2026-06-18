@@ -5273,6 +5273,7 @@ pub struct vyre_foundation::ir::model::expr::Ident
 impl vyre_foundation::ir::Ident
 pub fn vyre_foundation::ir::Ident::as_str(&self) -> &str
 pub fn vyre_foundation::ir::Ident::cached_hash(&self) -> u64
+pub fn vyre_foundation::ir::Ident::duplicate_handle(&self) -> Self
 pub fn vyre_foundation::ir::Ident::new(text: alloc::sync::Arc<str>) -> Self
 pub fn vyre_foundation::ir::Ident::shared_text(&self) -> alloc::sync::Arc<str>
 impl core::borrow::Borrow<str> for vyre_foundation::ir::Ident
@@ -6710,6 +6711,7 @@ pub fn vyre_foundation::ir::Program::is_top_level_region_wrapped(&self) -> bool
 pub fn vyre_foundation::ir::Program::is_validated(&self) -> bool
 pub fn vyre_foundation::ir::Program::is_validated_on(&self, backend_id: &str) -> bool
 pub fn vyre_foundation::ir::Program::mark_structurally_validated(&self)
+pub fn vyre_foundation::ir::Program::mark_unknown_mutation_provenance(&mut self)
 pub fn vyre_foundation::ir::Program::mark_validated(&self)
 pub fn vyre_foundation::ir::Program::mark_validated_on(&self, backend_id: &str)
 pub fn vyre_foundation::ir::Program::output_buffer_indices(&self) -> &[u32]
@@ -6721,6 +6723,7 @@ pub fn vyre_foundation::ir::Program::set_workgroup_size(&mut self, workgroup_siz
 pub fn vyre_foundation::ir::Program::structural_eq(&self, other: &Self) -> bool
 pub fn vyre_foundation::ir::Program::top_level_region_violation(&self) -> core::option::Option<alloc::string::String>
 pub fn vyre_foundation::ir::Program::validate(&self) -> vyre_foundation::error::Result<()>
+pub fn vyre_foundation::ir::Program::validation_mutation_provenance(&self) -> vyre_foundation::ir_inner::model::program::meta::ProgramMutationProvenance
 pub fn vyre_foundation::ir::Program::vsa_fingerprint(&self) -> alloc::vec::Vec<u32>
 pub fn vyre_foundation::ir::Program::with_non_composable_with_self(self, flag: bool) -> Self
 pub fn vyre_foundation::ir::Program::workgroup_size(&self) -> [u32; 3]
@@ -8041,6 +8044,7 @@ pub struct vyre_foundation::ir::Ident
 impl vyre_foundation::ir::Ident
 pub fn vyre_foundation::ir::Ident::as_str(&self) -> &str
 pub fn vyre_foundation::ir::Ident::cached_hash(&self) -> u64
+pub fn vyre_foundation::ir::Ident::duplicate_handle(&self) -> Self
 pub fn vyre_foundation::ir::Ident::new(text: alloc::sync::Arc<str>) -> Self
 pub fn vyre_foundation::ir::Ident::shared_text(&self) -> alloc::sync::Arc<str>
 impl core::borrow::Borrow<str> for vyre_foundation::ir::Ident
@@ -8346,6 +8350,7 @@ pub fn vyre_foundation::ir::Program::is_top_level_region_wrapped(&self) -> bool
 pub fn vyre_foundation::ir::Program::is_validated(&self) -> bool
 pub fn vyre_foundation::ir::Program::is_validated_on(&self, backend_id: &str) -> bool
 pub fn vyre_foundation::ir::Program::mark_structurally_validated(&self)
+pub fn vyre_foundation::ir::Program::mark_unknown_mutation_provenance(&mut self)
 pub fn vyre_foundation::ir::Program::mark_validated(&self)
 pub fn vyre_foundation::ir::Program::mark_validated_on(&self, backend_id: &str)
 pub fn vyre_foundation::ir::Program::output_buffer_indices(&self) -> &[u32]
@@ -8357,6 +8362,7 @@ pub fn vyre_foundation::ir::Program::set_workgroup_size(&mut self, workgroup_siz
 pub fn vyre_foundation::ir::Program::structural_eq(&self, other: &Self) -> bool
 pub fn vyre_foundation::ir::Program::top_level_region_violation(&self) -> core::option::Option<alloc::string::String>
 pub fn vyre_foundation::ir::Program::validate(&self) -> vyre_foundation::error::Result<()>
+pub fn vyre_foundation::ir::Program::validation_mutation_provenance(&self) -> vyre_foundation::ir_inner::model::program::meta::ProgramMutationProvenance
 pub fn vyre_foundation::ir::Program::vsa_fingerprint(&self) -> alloc::vec::Vec<u32>
 pub fn vyre_foundation::ir::Program::with_non_composable_with_self(self, flag: bool) -> Self
 pub fn vyre_foundation::ir::Program::workgroup_size(&self) -> [u32; 3]
@@ -9463,6 +9469,66 @@ impl<T> tracing::instrument::Instrument for vyre_foundation::optimizer::algebrai
 impl<T> tracing::instrument::WithSubscriber for vyre_foundation::optimizer::algebraic_rules::ScalarLiteral
 impl<T> typenum::type_operators::Same for vyre_foundation::optimizer::algebraic_rules::ScalarLiteral
 pub type vyre_foundation::optimizer::algebraic_rules::ScalarLiteral::Output = T
+pub struct vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract
+pub vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract::family: &'static str
+pub vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract::rewrite_id: &'static str
+impl core::clone::Clone for vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract
+pub fn vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract::clone(&self) -> vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract
+impl core::cmp::Eq for vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract
+impl core::cmp::PartialEq for vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract
+pub fn vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract::eq(&self, other: &vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract) -> bool
+impl core::fmt::Debug for vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract
+pub fn vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract
+impl core::marker::StructuralPartialEq for vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract
+impl core::marker::Freeze for vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract
+impl core::marker::Send for vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract
+impl core::marker::Sync for vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract
+impl core::marker::Unpin for vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract
+impl core::marker::UnsafeUnpin for vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract where U: core::convert::From<T>
+pub fn vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract where U: core::convert::Into<T>
+pub type vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract::Error = core::convert::Infallible
+pub fn vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract where U: core::convert::TryFrom<T>
+pub type vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract where T: core::clone::Clone
+pub type vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract::Owned = T
+pub fn vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract where T: ?core::marker::Sized
+pub fn vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract where T: ?core::marker::Sized
+pub fn vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract where T: core::clone::Clone
+pub unsafe fn vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract
+pub fn vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract
+impl<T> typenum::type_operators::Same for vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract
+pub type vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract::Output = T
+pub const vyre_foundation::optimizer::algebraic_rules::REWRITE_ID_CANONICALIZE_ADD_COMMUTATIVE: &str
+pub const vyre_foundation::optimizer::algebraic_rules::REWRITE_ID_CANONICALIZE_MUL_COMMUTATIVE: &str
+pub const vyre_foundation::optimizer::algebraic_rules::REWRITE_ID_CONST_FOLD_ADD_LITERALS: &str
+pub const vyre_foundation::optimizer::algebraic_rules::REWRITE_ID_CONST_FOLD_MUL_LITERALS: &str
+pub const vyre_foundation::optimizer::algebraic_rules::REWRITE_ID_IDENTITY_ELIM_ADD_ZERO: &str
+pub const vyre_foundation::optimizer::algebraic_rules::REWRITE_ID_IDENTITY_ELIM_MUL_ONE: &str
+pub const vyre_foundation::optimizer::algebraic_rules::REWRITE_ID_IDENTITY_ELIM_MUL_ZERO: &str
+pub const vyre_foundation::optimizer::algebraic_rules::REWRITE_ID_STRENGTH_REDUCE_MUL_POW2_EIGHT: &str
+pub const vyre_foundation::optimizer::algebraic_rules::REWRITE_ID_STRENGTH_REDUCE_MUL_POW2_FOUR: &str
+pub const vyre_foundation::optimizer::algebraic_rules::REWRITE_ID_STRENGTH_REDUCE_MUL_POW2_TWO: &str
+pub const fn vyre_foundation::optimizer::algebraic_rules::arithmetic_rewrite_proof_contracts() -> &'static [vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract]
 pub fn vyre_foundation::optimizer::algebraic_rules::binop_identity_replacement(op: vyre_spec::bin_op::BinOp, lhs_same_as_rhs: bool, lhs_lit: core::option::Option<vyre_foundation::optimizer::algebraic_rules::ScalarLiteral>, rhs_lit: core::option::Option<vyre_foundation::optimizer::algebraic_rules::ScalarLiteral>) -> core::option::Option<vyre_foundation::optimizer::algebraic_rules::IdentityReplacement>
 pub fn vyre_foundation::optimizer::algebraic_rules::strength_reduce_power_of_two_shift(value: u32) -> core::option::Option<u32>
 pub mod vyre_foundation::optimizer::cost
@@ -10193,6 +10259,8 @@ pub fn vyre_foundation::optimizer::eqsat::EGraphError::clone(&self) -> vyre_foun
 impl core::cmp::Eq for vyre_foundation::optimizer::eqsat::EGraphError
 impl core::cmp::PartialEq for vyre_foundation::optimizer::eqsat::EGraphError
 pub fn vyre_foundation::optimizer::eqsat::EGraphError::eq(&self, other: &vyre_foundation::optimizer::eqsat::EGraphError) -> bool
+impl core::convert::From<vyre_foundation::optimizer::eqsat::EGraphError> for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError::from(error: vyre_foundation::optimizer::eqsat::EGraphError) -> Self
 impl core::error::Error for vyre_foundation::optimizer::eqsat::EGraphError
 impl core::fmt::Debug for vyre_foundation::optimizer::eqsat::EGraphError
 pub fn vyre_foundation::optimizer::eqsat::EGraphError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -10238,6 +10306,107 @@ impl<T> tracing::instrument::Instrument for vyre_foundation::optimizer::eqsat::E
 impl<T> tracing::instrument::WithSubscriber for vyre_foundation::optimizer::eqsat::EGraphError
 impl<T> typenum::type_operators::Same for vyre_foundation::optimizer::eqsat::EGraphError
 pub type vyre_foundation::optimizer::eqsat::EGraphError::Output = T
+pub enum vyre_foundation::optimizer::eqsat::ExtractionStopReason
+pub vyre_foundation::optimizer::eqsat::ExtractionStopReason::FixedPoint
+pub vyre_foundation::optimizer::eqsat::ExtractionStopReason::IterationBudget
+pub vyre_foundation::optimizer::eqsat::ExtractionStopReason::MissingCost
+impl core::clone::Clone for vyre_foundation::optimizer::eqsat::ExtractionStopReason
+pub fn vyre_foundation::optimizer::eqsat::ExtractionStopReason::clone(&self) -> vyre_foundation::optimizer::eqsat::ExtractionStopReason
+impl core::cmp::Eq for vyre_foundation::optimizer::eqsat::ExtractionStopReason
+impl core::cmp::PartialEq for vyre_foundation::optimizer::eqsat::ExtractionStopReason
+pub fn vyre_foundation::optimizer::eqsat::ExtractionStopReason::eq(&self, other: &vyre_foundation::optimizer::eqsat::ExtractionStopReason) -> bool
+impl core::fmt::Debug for vyre_foundation::optimizer::eqsat::ExtractionStopReason
+pub fn vyre_foundation::optimizer::eqsat::ExtractionStopReason::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for vyre_foundation::optimizer::eqsat::ExtractionStopReason
+impl core::marker::StructuralPartialEq for vyre_foundation::optimizer::eqsat::ExtractionStopReason
+impl core::marker::Freeze for vyre_foundation::optimizer::eqsat::ExtractionStopReason
+impl core::marker::Send for vyre_foundation::optimizer::eqsat::ExtractionStopReason
+impl core::marker::Sync for vyre_foundation::optimizer::eqsat::ExtractionStopReason
+impl core::marker::Unpin for vyre_foundation::optimizer::eqsat::ExtractionStopReason
+impl core::marker::UnsafeUnpin for vyre_foundation::optimizer::eqsat::ExtractionStopReason
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::optimizer::eqsat::ExtractionStopReason
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::optimizer::eqsat::ExtractionStopReason
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::optimizer::eqsat::ExtractionStopReason where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat::ExtractionStopReason::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::optimizer::eqsat::ExtractionStopReason where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat::ExtractionStopReason::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::optimizer::eqsat::ExtractionStopReason where U: core::convert::From<T>
+pub fn vyre_foundation::optimizer::eqsat::ExtractionStopReason::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::optimizer::eqsat::ExtractionStopReason where U: core::convert::Into<T>
+pub type vyre_foundation::optimizer::eqsat::ExtractionStopReason::Error = core::convert::Infallible
+pub fn vyre_foundation::optimizer::eqsat::ExtractionStopReason::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::optimizer::eqsat::ExtractionStopReason where U: core::convert::TryFrom<T>
+pub type vyre_foundation::optimizer::eqsat::ExtractionStopReason::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::optimizer::eqsat::ExtractionStopReason::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::optimizer::eqsat::ExtractionStopReason where T: core::clone::Clone
+pub type vyre_foundation::optimizer::eqsat::ExtractionStopReason::Owned = T
+pub fn vyre_foundation::optimizer::eqsat::ExtractionStopReason::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::optimizer::eqsat::ExtractionStopReason::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::optimizer::eqsat::ExtractionStopReason where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat::ExtractionStopReason::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::optimizer::eqsat::ExtractionStopReason where T: ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat::ExtractionStopReason::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::optimizer::eqsat::ExtractionStopReason where T: ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat::ExtractionStopReason::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::optimizer::eqsat::ExtractionStopReason where T: core::clone::Clone
+pub unsafe fn vyre_foundation::optimizer::eqsat::ExtractionStopReason::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::optimizer::eqsat::ExtractionStopReason
+pub fn vyre_foundation::optimizer::eqsat::ExtractionStopReason::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_foundation::optimizer::eqsat::ExtractionStopReason
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::optimizer::eqsat::ExtractionStopReason
+impl<T> typenum::type_operators::Same for vyre_foundation::optimizer::eqsat::ExtractionStopReason
+pub type vyre_foundation::optimizer::eqsat::ExtractionStopReason::Output = T
+pub enum vyre_foundation::optimizer::eqsat::SaturationStopReason
+pub vyre_foundation::optimizer::eqsat::SaturationStopReason::EmptyRuleSet
+pub vyre_foundation::optimizer::eqsat::SaturationStopReason::FixedPoint
+pub vyre_foundation::optimizer::eqsat::SaturationStopReason::IterationBudget
+pub vyre_foundation::optimizer::eqsat::SaturationStopReason::ZeroBudget
+impl core::clone::Clone for vyre_foundation::optimizer::eqsat::SaturationStopReason
+pub fn vyre_foundation::optimizer::eqsat::SaturationStopReason::clone(&self) -> vyre_foundation::optimizer::eqsat::SaturationStopReason
+impl core::cmp::Eq for vyre_foundation::optimizer::eqsat::SaturationStopReason
+impl core::cmp::PartialEq for vyre_foundation::optimizer::eqsat::SaturationStopReason
+pub fn vyre_foundation::optimizer::eqsat::SaturationStopReason::eq(&self, other: &vyre_foundation::optimizer::eqsat::SaturationStopReason) -> bool
+impl core::fmt::Debug for vyre_foundation::optimizer::eqsat::SaturationStopReason
+pub fn vyre_foundation::optimizer::eqsat::SaturationStopReason::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for vyre_foundation::optimizer::eqsat::SaturationStopReason
+impl core::marker::StructuralPartialEq for vyre_foundation::optimizer::eqsat::SaturationStopReason
+impl core::marker::Freeze for vyre_foundation::optimizer::eqsat::SaturationStopReason
+impl core::marker::Send for vyre_foundation::optimizer::eqsat::SaturationStopReason
+impl core::marker::Sync for vyre_foundation::optimizer::eqsat::SaturationStopReason
+impl core::marker::Unpin for vyre_foundation::optimizer::eqsat::SaturationStopReason
+impl core::marker::UnsafeUnpin for vyre_foundation::optimizer::eqsat::SaturationStopReason
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::optimizer::eqsat::SaturationStopReason
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::optimizer::eqsat::SaturationStopReason
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::optimizer::eqsat::SaturationStopReason where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat::SaturationStopReason::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::optimizer::eqsat::SaturationStopReason where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat::SaturationStopReason::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::optimizer::eqsat::SaturationStopReason where U: core::convert::From<T>
+pub fn vyre_foundation::optimizer::eqsat::SaturationStopReason::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::optimizer::eqsat::SaturationStopReason where U: core::convert::Into<T>
+pub type vyre_foundation::optimizer::eqsat::SaturationStopReason::Error = core::convert::Infallible
+pub fn vyre_foundation::optimizer::eqsat::SaturationStopReason::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::optimizer::eqsat::SaturationStopReason where U: core::convert::TryFrom<T>
+pub type vyre_foundation::optimizer::eqsat::SaturationStopReason::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::optimizer::eqsat::SaturationStopReason::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::optimizer::eqsat::SaturationStopReason where T: core::clone::Clone
+pub type vyre_foundation::optimizer::eqsat::SaturationStopReason::Owned = T
+pub fn vyre_foundation::optimizer::eqsat::SaturationStopReason::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::optimizer::eqsat::SaturationStopReason::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::optimizer::eqsat::SaturationStopReason where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat::SaturationStopReason::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::optimizer::eqsat::SaturationStopReason where T: ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat::SaturationStopReason::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::optimizer::eqsat::SaturationStopReason where T: ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat::SaturationStopReason::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::optimizer::eqsat::SaturationStopReason where T: core::clone::Clone
+pub unsafe fn vyre_foundation::optimizer::eqsat::SaturationStopReason::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::optimizer::eqsat::SaturationStopReason
+pub fn vyre_foundation::optimizer::eqsat::SaturationStopReason::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_foundation::optimizer::eqsat::SaturationStopReason
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::optimizer::eqsat::SaturationStopReason
+impl<T> typenum::type_operators::Same for vyre_foundation::optimizer::eqsat::SaturationStopReason
+pub type vyre_foundation::optimizer::eqsat::SaturationStopReason::Output = T
 pub struct vyre_foundation::optimizer::eqsat::DeviceAwareRule<L: vyre_foundation::optimizer::eqsat::ENodeLang, F: core::ops::function::Fn() -> bool>
 impl<L: vyre_foundation::optimizer::eqsat::ENodeLang, F: core::ops::function::Fn() -> bool> vyre_foundation::optimizer::eqsat::DeviceAwareRule<L, F>
 pub fn vyre_foundation::optimizer::eqsat::DeviceAwareRule<L, F>::new(inner: alloc::boxed::Box<dyn vyre_foundation::optimizer::eqsat::Rule<L>>, predicate: F) -> Self
@@ -10424,6 +10593,58 @@ impl<T> tracing::instrument::Instrument for vyre_foundation::optimizer::eqsat::E
 impl<T> tracing::instrument::WithSubscriber for vyre_foundation::optimizer::eqsat::EGraph<L>
 impl<T> typenum::type_operators::Same for vyre_foundation::optimizer::eqsat::EGraph<L>
 pub type vyre_foundation::optimizer::eqsat::EGraph<L>::Output = T
+pub struct vyre_foundation::optimizer::eqsat::ExtractionReport<L: vyre_foundation::optimizer::eqsat::ENodeLang>
+pub vyre_foundation::optimizer::eqsat::ExtractionReport::best: core::option::Option<(L, u64)>
+pub vyre_foundation::optimizer::eqsat::ExtractionReport::budget: usize
+pub vyre_foundation::optimizer::eqsat::ExtractionReport::class_count: usize
+pub vyre_foundation::optimizer::eqsat::ExtractionReport::class_id: vyre_foundation::optimizer::eqsat::EClassId
+pub vyre_foundation::optimizer::eqsat::ExtractionReport::iters_used: usize
+pub vyre_foundation::optimizer::eqsat::ExtractionReport::stop_reason: vyre_foundation::optimizer::eqsat::ExtractionStopReason
+impl<L: core::clone::Clone + vyre_foundation::optimizer::eqsat::ENodeLang> core::clone::Clone for vyre_foundation::optimizer::eqsat::ExtractionReport<L>
+pub fn vyre_foundation::optimizer::eqsat::ExtractionReport<L>::clone(&self) -> vyre_foundation::optimizer::eqsat::ExtractionReport<L>
+impl<L: core::cmp::Eq + vyre_foundation::optimizer::eqsat::ENodeLang> core::cmp::Eq for vyre_foundation::optimizer::eqsat::ExtractionReport<L>
+impl<L: core::cmp::PartialEq + vyre_foundation::optimizer::eqsat::ENodeLang> core::cmp::PartialEq for vyre_foundation::optimizer::eqsat::ExtractionReport<L>
+pub fn vyre_foundation::optimizer::eqsat::ExtractionReport<L>::eq(&self, other: &vyre_foundation::optimizer::eqsat::ExtractionReport<L>) -> bool
+impl<L: core::fmt::Debug + vyre_foundation::optimizer::eqsat::ENodeLang> core::fmt::Debug for vyre_foundation::optimizer::eqsat::ExtractionReport<L>
+pub fn vyre_foundation::optimizer::eqsat::ExtractionReport<L>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<L: vyre_foundation::optimizer::eqsat::ENodeLang> core::marker::StructuralPartialEq for vyre_foundation::optimizer::eqsat::ExtractionReport<L>
+impl<L> core::marker::Freeze for vyre_foundation::optimizer::eqsat::ExtractionReport<L> where L: core::marker::Freeze
+impl<L> core::marker::Send for vyre_foundation::optimizer::eqsat::ExtractionReport<L> where L: core::marker::Send
+impl<L> core::marker::Sync for vyre_foundation::optimizer::eqsat::ExtractionReport<L> where L: core::marker::Sync
+impl<L> core::marker::Unpin for vyre_foundation::optimizer::eqsat::ExtractionReport<L> where L: core::marker::Unpin
+impl<L> core::marker::UnsafeUnpin for vyre_foundation::optimizer::eqsat::ExtractionReport<L> where L: core::marker::UnsafeUnpin
+impl<L> core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::optimizer::eqsat::ExtractionReport<L> where L: core::panic::unwind_safe::RefUnwindSafe
+impl<L> core::panic::unwind_safe::UnwindSafe for vyre_foundation::optimizer::eqsat::ExtractionReport<L> where L: core::panic::unwind_safe::UnwindSafe
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::optimizer::eqsat::ExtractionReport<L> where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat::ExtractionReport<L>::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::optimizer::eqsat::ExtractionReport<L> where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat::ExtractionReport<L>::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::optimizer::eqsat::ExtractionReport<L> where U: core::convert::From<T>
+pub fn vyre_foundation::optimizer::eqsat::ExtractionReport<L>::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::optimizer::eqsat::ExtractionReport<L> where U: core::convert::Into<T>
+pub type vyre_foundation::optimizer::eqsat::ExtractionReport<L>::Error = core::convert::Infallible
+pub fn vyre_foundation::optimizer::eqsat::ExtractionReport<L>::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::optimizer::eqsat::ExtractionReport<L> where U: core::convert::TryFrom<T>
+pub type vyre_foundation::optimizer::eqsat::ExtractionReport<L>::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::optimizer::eqsat::ExtractionReport<L>::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::optimizer::eqsat::ExtractionReport<L> where T: core::clone::Clone
+pub type vyre_foundation::optimizer::eqsat::ExtractionReport<L>::Owned = T
+pub fn vyre_foundation::optimizer::eqsat::ExtractionReport<L>::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::optimizer::eqsat::ExtractionReport<L>::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::optimizer::eqsat::ExtractionReport<L> where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat::ExtractionReport<L>::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::optimizer::eqsat::ExtractionReport<L> where T: ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat::ExtractionReport<L>::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::optimizer::eqsat::ExtractionReport<L> where T: ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat::ExtractionReport<L>::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::optimizer::eqsat::ExtractionReport<L> where T: core::clone::Clone
+pub unsafe fn vyre_foundation::optimizer::eqsat::ExtractionReport<L>::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::optimizer::eqsat::ExtractionReport<L>
+pub fn vyre_foundation::optimizer::eqsat::ExtractionReport<L>::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_foundation::optimizer::eqsat::ExtractionReport<L>
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::optimizer::eqsat::ExtractionReport<L>
+impl<T> typenum::type_operators::Same for vyre_foundation::optimizer::eqsat::ExtractionReport<L>
+pub type vyre_foundation::optimizer::eqsat::ExtractionReport<L>::Output = T
 pub struct vyre_foundation::optimizer::eqsat::FamilySaturationReport
 pub vyre_foundation::optimizer::eqsat::FamilySaturationReport::budget: usize
 pub vyre_foundation::optimizer::eqsat::FamilySaturationReport::family: &'static str
@@ -10473,6 +10694,112 @@ impl<T> tracing::instrument::Instrument for vyre_foundation::optimizer::eqsat::F
 impl<T> tracing::instrument::WithSubscriber for vyre_foundation::optimizer::eqsat::FamilySaturationReport
 impl<T> typenum::type_operators::Same for vyre_foundation::optimizer::eqsat::FamilySaturationReport
 pub type vyre_foundation::optimizer::eqsat::FamilySaturationReport::Output = T
+pub struct vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry
+pub vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry::family: &'static str
+pub vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry::saturation: vyre_foundation::optimizer::eqsat::SaturationReport
+impl core::clone::Clone for vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry
+pub fn vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry::clone(&self) -> vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry
+impl core::cmp::Eq for vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry
+impl core::cmp::PartialEq for vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry
+pub fn vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry::eq(&self, other: &vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry) -> bool
+impl core::fmt::Debug for vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry
+pub fn vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry
+impl core::marker::Freeze for vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry
+impl core::marker::Send for vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry
+impl core::marker::Sync for vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry
+impl core::marker::Unpin for vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry
+impl core::marker::UnsafeUnpin for vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry where U: core::convert::From<T>
+pub fn vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry where U: core::convert::Into<T>
+pub type vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry::Error = core::convert::Infallible
+pub fn vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry where U: core::convert::TryFrom<T>
+pub type vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry where T: core::clone::Clone
+pub type vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry::Owned = T
+pub fn vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry where T: ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry where T: ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry where T: core::clone::Clone
+pub unsafe fn vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry
+pub fn vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry
+impl<T> typenum::type_operators::Same for vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry
+pub type vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry::Output = T
+pub struct vyre_foundation::optimizer::eqsat::SaturationReport
+pub vyre_foundation::optimizer::eqsat::SaturationReport::applied_equivalences: usize
+pub vyre_foundation::optimizer::eqsat::SaturationReport::budget: usize
+pub vyre_foundation::optimizer::eqsat::SaturationReport::class_count_after: usize
+pub vyre_foundation::optimizer::eqsat::SaturationReport::class_count_before: usize
+pub vyre_foundation::optimizer::eqsat::SaturationReport::iters_used: usize
+pub vyre_foundation::optimizer::eqsat::SaturationReport::rebuild_unions: usize
+pub vyre_foundation::optimizer::eqsat::SaturationReport::rewrite_family: &'static str
+pub vyre_foundation::optimizer::eqsat::SaturationReport::rule_count: usize
+pub vyre_foundation::optimizer::eqsat::SaturationReport::stop_reason: vyre_foundation::optimizer::eqsat::SaturationStopReason
+impl vyre_foundation::optimizer::eqsat::SaturationReport
+pub fn vyre_foundation::optimizer::eqsat::SaturationReport::class_count_delta(&self) -> isize
+impl core::clone::Clone for vyre_foundation::optimizer::eqsat::SaturationReport
+pub fn vyre_foundation::optimizer::eqsat::SaturationReport::clone(&self) -> vyre_foundation::optimizer::eqsat::SaturationReport
+impl core::cmp::Eq for vyre_foundation::optimizer::eqsat::SaturationReport
+impl core::cmp::PartialEq for vyre_foundation::optimizer::eqsat::SaturationReport
+pub fn vyre_foundation::optimizer::eqsat::SaturationReport::eq(&self, other: &vyre_foundation::optimizer::eqsat::SaturationReport) -> bool
+impl core::fmt::Debug for vyre_foundation::optimizer::eqsat::SaturationReport
+pub fn vyre_foundation::optimizer::eqsat::SaturationReport::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for vyre_foundation::optimizer::eqsat::SaturationReport
+impl core::marker::Freeze for vyre_foundation::optimizer::eqsat::SaturationReport
+impl core::marker::Send for vyre_foundation::optimizer::eqsat::SaturationReport
+impl core::marker::Sync for vyre_foundation::optimizer::eqsat::SaturationReport
+impl core::marker::Unpin for vyre_foundation::optimizer::eqsat::SaturationReport
+impl core::marker::UnsafeUnpin for vyre_foundation::optimizer::eqsat::SaturationReport
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::optimizer::eqsat::SaturationReport
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::optimizer::eqsat::SaturationReport
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::optimizer::eqsat::SaturationReport where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat::SaturationReport::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::optimizer::eqsat::SaturationReport where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat::SaturationReport::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::optimizer::eqsat::SaturationReport where U: core::convert::From<T>
+pub fn vyre_foundation::optimizer::eqsat::SaturationReport::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::optimizer::eqsat::SaturationReport where U: core::convert::Into<T>
+pub type vyre_foundation::optimizer::eqsat::SaturationReport::Error = core::convert::Infallible
+pub fn vyre_foundation::optimizer::eqsat::SaturationReport::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::optimizer::eqsat::SaturationReport where U: core::convert::TryFrom<T>
+pub type vyre_foundation::optimizer::eqsat::SaturationReport::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::optimizer::eqsat::SaturationReport::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::optimizer::eqsat::SaturationReport where T: core::clone::Clone
+pub type vyre_foundation::optimizer::eqsat::SaturationReport::Owned = T
+pub fn vyre_foundation::optimizer::eqsat::SaturationReport::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::optimizer::eqsat::SaturationReport::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::optimizer::eqsat::SaturationReport where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat::SaturationReport::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::optimizer::eqsat::SaturationReport where T: ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat::SaturationReport::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::optimizer::eqsat::SaturationReport where T: ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat::SaturationReport::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::optimizer::eqsat::SaturationReport where T: core::clone::Clone
+pub unsafe fn vyre_foundation::optimizer::eqsat::SaturationReport::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::optimizer::eqsat::SaturationReport
+pub fn vyre_foundation::optimizer::eqsat::SaturationReport::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_foundation::optimizer::eqsat::SaturationReport
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::optimizer::eqsat::SaturationReport
+impl<T> typenum::type_operators::Same for vyre_foundation::optimizer::eqsat::SaturationReport
+pub type vyre_foundation::optimizer::eqsat::SaturationReport::Output = T
+pub const vyre_foundation::optimizer::eqsat::DEFAULT_EXTRACTION_ITER_BUDGET: usize
 pub trait vyre_foundation::optimizer::eqsat::ENodeLang: core::clone::Clone + core::cmp::Eq + core::hash::Hash
 pub fn vyre_foundation::optimizer::eqsat::ENodeLang::children(&self) -> vyre_foundation::optimizer::eqsat::EChildren
 pub fn vyre_foundation::optimizer::eqsat::ENodeLang::with_children(&self, children: &[vyre_foundation::optimizer::eqsat::EClassId]) -> Self
@@ -10491,11 +10818,77 @@ pub fn vyre_foundation::optimizer::eqsat_toml::TomlEquivalenceRules::name(&self)
 pub fn vyre_foundation::optimizer::eqsat::extract_best<L: vyre_foundation::optimizer::eqsat::ENodeLang>(egraph: &vyre_foundation::optimizer::eqsat::EGraph<L>, class_id: vyre_foundation::optimizer::eqsat::EClassId, cost_fn: impl core::ops::function::Fn(&L) -> u64) -> core::option::Option<(L, u64)>
 pub fn vyre_foundation::optimizer::eqsat::saturate<L: vyre_foundation::optimizer::eqsat::ENodeLang>(egraph: &mut vyre_foundation::optimizer::eqsat::EGraph<L>, rules: &[alloc::boxed::Box<dyn vyre_foundation::optimizer::eqsat::Rule<L>>], max_iters: usize) -> usize
 pub fn vyre_foundation::optimizer::eqsat::saturate_per_family<L: vyre_foundation::optimizer::eqsat::ENodeLang>(egraph: &mut vyre_foundation::optimizer::eqsat::EGraph<L>, families: &[&dyn vyre_foundation::optimizer::eqsat::Family<L>], budget_for: impl core::ops::function::Fn(&str) -> usize) -> alloc::vec::Vec<vyre_foundation::optimizer::eqsat::FamilySaturationReport>
+pub fn vyre_foundation::optimizer::eqsat::saturate_per_family_detailed<L: vyre_foundation::optimizer::eqsat::ENodeLang>(egraph: &mut vyre_foundation::optimizer::eqsat::EGraph<L>, families: &[&dyn vyre_foundation::optimizer::eqsat::Family<L>], budget_for: impl core::ops::function::Fn(&str) -> usize) -> alloc::vec::Vec<vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry>
+pub fn vyre_foundation::optimizer::eqsat::saturate_with_report<L: vyre_foundation::optimizer::eqsat::ENodeLang>(egraph: &mut vyre_foundation::optimizer::eqsat::EGraph<L>, rules: &[alloc::boxed::Box<dyn vyre_foundation::optimizer::eqsat::Rule<L>>], max_iters: usize) -> vyre_foundation::optimizer::eqsat::SaturationReport
 pub fn vyre_foundation::optimizer::eqsat::try_extract_best<L: vyre_foundation::optimizer::eqsat::ENodeLang>(egraph: &vyre_foundation::optimizer::eqsat::EGraph<L>, class_id: vyre_foundation::optimizer::eqsat::EClassId, cost_fn: impl core::ops::function::Fn(&L) -> u64) -> core::result::Result<core::option::Option<(L, u64)>, vyre_foundation::optimizer::eqsat::EGraphError>
+pub fn vyre_foundation::optimizer::eqsat::try_extract_best_with_budget<L: vyre_foundation::optimizer::eqsat::ENodeLang>(egraph: &vyre_foundation::optimizer::eqsat::EGraph<L>, class_id: vyre_foundation::optimizer::eqsat::EClassId, cost_fn: impl core::ops::function::Fn(&L) -> u64, iter_budget: usize) -> core::result::Result<vyre_foundation::optimizer::eqsat::ExtractionReport<L>, vyre_foundation::optimizer::eqsat::EGraphError>
 pub fn vyre_foundation::optimizer::eqsat::try_saturate<L: vyre_foundation::optimizer::eqsat::ENodeLang>(egraph: &mut vyre_foundation::optimizer::eqsat::EGraph<L>, rules: &[alloc::boxed::Box<dyn vyre_foundation::optimizer::eqsat::Rule<L>>], max_iters: usize) -> core::result::Result<usize, vyre_foundation::optimizer::eqsat::EGraphError>
+pub fn vyre_foundation::optimizer::eqsat::try_saturate_named<L: vyre_foundation::optimizer::eqsat::ENodeLang>(egraph: &mut vyre_foundation::optimizer::eqsat::EGraph<L>, rewrite_family: &'static str, rules: &[alloc::boxed::Box<dyn vyre_foundation::optimizer::eqsat::Rule<L>>], max_iters: usize) -> core::result::Result<vyre_foundation::optimizer::eqsat::SaturationReport, vyre_foundation::optimizer::eqsat::EGraphError>
 pub fn vyre_foundation::optimizer::eqsat::try_saturate_per_family<L: vyre_foundation::optimizer::eqsat::ENodeLang>(egraph: &mut vyre_foundation::optimizer::eqsat::EGraph<L>, families: &[&dyn vyre_foundation::optimizer::eqsat::Family<L>], budget_for: impl core::ops::function::Fn(&str) -> usize) -> core::result::Result<alloc::vec::Vec<vyre_foundation::optimizer::eqsat::FamilySaturationReport>, vyre_foundation::optimizer::eqsat::EGraphError>
+pub fn vyre_foundation::optimizer::eqsat::try_saturate_per_family_detailed<L: vyre_foundation::optimizer::eqsat::ENodeLang>(egraph: &mut vyre_foundation::optimizer::eqsat::EGraph<L>, families: &[&dyn vyre_foundation::optimizer::eqsat::Family<L>], budget_for: impl core::ops::function::Fn(&str) -> usize) -> core::result::Result<alloc::vec::Vec<vyre_foundation::optimizer::eqsat::FamilySaturationTelemetry>, vyre_foundation::optimizer::eqsat::EGraphError>
+pub fn vyre_foundation::optimizer::eqsat::try_saturate_with_report<L: vyre_foundation::optimizer::eqsat::ENodeLang>(egraph: &mut vyre_foundation::optimizer::eqsat::EGraph<L>, rules: &[alloc::boxed::Box<dyn vyre_foundation::optimizer::eqsat::Rule<L>>], max_iters: usize) -> core::result::Result<vyre_foundation::optimizer::eqsat::SaturationReport, vyre_foundation::optimizer::eqsat::EGraphError>
 pub type vyre_foundation::optimizer::eqsat::EChildren = smallvec::SmallVec<[vyre_foundation::optimizer::eqsat::EClassId; 4]>
 pub mod vyre_foundation::optimizer::eqsat_gpu
+pub enum vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError
+pub vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError::DeviceImage(vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImageError)
+pub vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError::EGraph(vyre_foundation::optimizer::eqsat::EGraphError)
+pub vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError::Snapshot(vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotError)
+impl core::clone::Clone for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError::clone(&self) -> vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError
+impl core::cmp::Eq for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError
+impl core::cmp::PartialEq for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError::eq(&self, other: &vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError) -> bool
+impl core::convert::From<vyre_foundation::optimizer::eqsat::EGraphError> for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError::from(error: vyre_foundation::optimizer::eqsat::EGraphError) -> Self
+impl core::convert::From<vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImageError> for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError::from(error: vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImageError) -> Self
+impl core::convert::From<vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotError> for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError::from(error: vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotError) -> Self
+impl core::error::Error for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError
+impl core::fmt::Debug for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError
+impl core::marker::Freeze for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError
+impl core::marker::Send for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError
+impl core::marker::Sync for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError
+impl core::marker::Unpin for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError
+impl core::marker::UnsafeUnpin for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError where U: core::convert::From<T>
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError where U: core::convert::Into<T>
+pub type vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError::Error = core::convert::Infallible
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError where U: core::convert::TryFrom<T>
+pub type vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError where T: core::clone::Clone
+pub type vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError::Owned = T
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError::to_owned(&self) -> T
+impl<T> alloc::string::ToString for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError where T: core::fmt::Display + ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError::to_string(&self) -> alloc::string::String
+impl<T> core::any::Any for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError where T: ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError where T: ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError where T: core::clone::Clone
+pub unsafe fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError
+impl<T> typenum::type_operators::Same for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError
+pub type vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError::Output = T
 pub enum vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImageError
 pub vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImageError::Integrity(vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotIntegrityError)
 pub vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImageError::Layout(vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotError)
@@ -10504,6 +10897,8 @@ pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImageError::clone(&
 impl core::cmp::Eq for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImageError
 impl core::cmp::PartialEq for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImageError
 pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImageError::eq(&self, other: &vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImageError) -> bool
+impl core::convert::From<vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImageError> for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError::from(error: vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImageError) -> Self
 impl core::convert::From<vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotError> for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImageError
 pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImageError::from(error: vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotError) -> Self
 impl core::convert::From<vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotIntegrityError> for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImageError
@@ -10657,6 +11052,75 @@ impl<T> tracing::instrument::Instrument for vyre_foundation::optimizer::eqsat_gp
 impl<T> tracing::instrument::WithSubscriber for vyre_foundation::optimizer::eqsat_gpu::Equivalence
 impl<T> typenum::type_operators::Same for vyre_foundation::optimizer::eqsat_gpu::Equivalence
 pub type vyre_foundation::optimizer::eqsat_gpu::Equivalence::Output = T
+pub struct vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport
+pub vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::class_id_deterministic: bool
+pub vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::cpu_apply_ns: u64
+pub vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::cpu_equivalences_merged: usize
+pub vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::cpu_equivalences_valid: usize
+pub vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::cpu_extraction_cost: core::option::Option<u64>
+pub vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::cpu_extraction_ns: u64
+pub vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::cpu_rebuild_unions: usize
+pub vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::device_eclass_groups: usize
+pub vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::device_words: usize
+pub vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::equivalences_merged: usize
+pub vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::equivalences_requested: usize
+pub vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::equivalences_valid: usize
+pub vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::gpu_apply_ns: u64
+pub vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::gpu_extraction_cost: core::option::Option<u64>
+pub vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::gpu_extraction_ns: u64
+pub vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::pack_ns: u64
+pub vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::rebuild_unions: usize
+pub vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::recall_parity: bool
+pub vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::snapshot_children: usize
+pub vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::snapshot_ns: u64
+pub vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::snapshot_rows: usize
+impl core::clone::Clone for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::clone(&self) -> vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport
+impl core::cmp::Eq for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport
+impl core::cmp::PartialEq for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::eq(&self, other: &vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport) -> bool
+impl core::default::Default for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::default() -> vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport
+impl core::fmt::Debug for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport
+impl core::marker::Freeze for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport
+impl core::marker::Send for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport
+impl core::marker::Sync for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport
+impl core::marker::Unpin for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport
+impl core::marker::UnsafeUnpin for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport where U: core::convert::From<T>
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport where U: core::convert::Into<T>
+pub type vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::Error = core::convert::Infallible
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport where U: core::convert::TryFrom<T>
+pub type vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport where T: core::clone::Clone
+pub type vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::Owned = T
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport where T: ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport where T: ?core::marker::Sized
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport where T: core::clone::Clone
+pub unsafe fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport
+impl<T> typenum::type_operators::Same for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport
+pub type vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport::Output = T
 pub struct vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImage
 impl vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImage
 pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImage::children(&self) -> &[u32]
@@ -10897,6 +11361,8 @@ pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotError::clone(&sel
 impl core::cmp::Eq for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotError
 impl core::cmp::PartialEq for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotError
 pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotError::eq(&self, other: &vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotError) -> bool
+impl core::convert::From<vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotError> for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError
+pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError::from(error: vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotError) -> Self
 impl core::convert::From<vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotError> for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImageError
 pub fn vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImageError::from(error: vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotError) -> Self
 impl core::error::Error for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotError
@@ -11102,6 +11568,7 @@ impl<T> typenum::type_operators::Same for vyre_foundation::optimizer::eqsat_gpu:
 pub type vyre_foundation::optimizer::eqsat_gpu::SnapshotRow::Output = T
 pub fn vyre_foundation::optimizer::eqsat_gpu::apply_equivalences<F>(equivalences: &[vyre_foundation::optimizer::eqsat_gpu::Equivalence], merger: F) -> usize where F: core::ops::function::FnMut(u32, u32) -> bool
 pub fn vyre_foundation::optimizer::eqsat_gpu::apply_equivalences_to_egraph<L>(egraph: &mut vyre_foundation::optimizer::eqsat::EGraph<L>, equivalences: &[vyre_foundation::optimizer::eqsat_gpu::Equivalence]) -> vyre_foundation::optimizer::eqsat_gpu::ApplyEquivalencesReport where L: vyre_foundation::optimizer::eqsat::ENodeLang
+pub fn vyre_foundation::optimizer::eqsat_gpu::bridge_equivalence_batch_with_report<L, F, S, C>(egraph: &mut vyre_foundation::optimizer::eqsat::EGraph<L>, root: vyre_foundation::optimizer::eqsat::EClassId, op_name: F, equivalences: &[vyre_foundation::optimizer::eqsat_gpu::Equivalence], cost_fn: C) -> core::result::Result<vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport, vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError> where L: vyre_foundation::optimizer::eqsat::ENodeLang, F: core::ops::function::Fn(&L) -> S, S: core::convert::AsRef<str>, C: core::ops::function::Fn(&L) -> u64 + core::marker::Copy
 pub fn vyre_foundation::optimizer::eqsat_gpu::gpu_egraph_row_signature(language_op_id: u32, children_len: u32, children: &[u32]) -> u32
 pub mod vyre_foundation::optimizer::eqsat_toml
 pub struct vyre_foundation::optimizer::eqsat_toml::EquivalenceRule
@@ -12035,6 +12502,55 @@ impl<T> tracing::instrument::Instrument for vyre_foundation::optimizer::pass_exp
 impl<T> tracing::instrument::WithSubscriber for vyre_foundation::optimizer::pass_explain::CatalogLookupStatus
 impl<T> typenum::type_operators::Same for vyre_foundation::optimizer::pass_explain::CatalogLookupStatus
 pub type vyre_foundation::optimizer::pass_explain::CatalogLookupStatus::Output = T
+pub enum vyre_foundation::optimizer::pass_explain::PassOrderOrigin
+pub vyre_foundation::optimizer::pass_explain::PassOrderOrigin::LiveOptimizerCatalog
+pub vyre_foundation::optimizer::pass_explain::PassOrderOrigin::MetricsOnlyReport
+impl core::clone::Clone for vyre_foundation::optimizer::pass_explain::PassOrderOrigin
+pub fn vyre_foundation::optimizer::pass_explain::PassOrderOrigin::clone(&self) -> vyre_foundation::optimizer::pass_explain::PassOrderOrigin
+impl core::cmp::Eq for vyre_foundation::optimizer::pass_explain::PassOrderOrigin
+impl core::cmp::PartialEq for vyre_foundation::optimizer::pass_explain::PassOrderOrigin
+pub fn vyre_foundation::optimizer::pass_explain::PassOrderOrigin::eq(&self, other: &vyre_foundation::optimizer::pass_explain::PassOrderOrigin) -> bool
+impl core::fmt::Debug for vyre_foundation::optimizer::pass_explain::PassOrderOrigin
+pub fn vyre_foundation::optimizer::pass_explain::PassOrderOrigin::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for vyre_foundation::optimizer::pass_explain::PassOrderOrigin
+impl core::marker::StructuralPartialEq for vyre_foundation::optimizer::pass_explain::PassOrderOrigin
+impl core::marker::Freeze for vyre_foundation::optimizer::pass_explain::PassOrderOrigin
+impl core::marker::Send for vyre_foundation::optimizer::pass_explain::PassOrderOrigin
+impl core::marker::Sync for vyre_foundation::optimizer::pass_explain::PassOrderOrigin
+impl core::marker::Unpin for vyre_foundation::optimizer::pass_explain::PassOrderOrigin
+impl core::marker::UnsafeUnpin for vyre_foundation::optimizer::pass_explain::PassOrderOrigin
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::optimizer::pass_explain::PassOrderOrigin
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::optimizer::pass_explain::PassOrderOrigin
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::optimizer::pass_explain::PassOrderOrigin where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::optimizer::pass_explain::PassOrderOrigin::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::optimizer::pass_explain::PassOrderOrigin where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::optimizer::pass_explain::PassOrderOrigin::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::optimizer::pass_explain::PassOrderOrigin where U: core::convert::From<T>
+pub fn vyre_foundation::optimizer::pass_explain::PassOrderOrigin::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::optimizer::pass_explain::PassOrderOrigin where U: core::convert::Into<T>
+pub type vyre_foundation::optimizer::pass_explain::PassOrderOrigin::Error = core::convert::Infallible
+pub fn vyre_foundation::optimizer::pass_explain::PassOrderOrigin::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::optimizer::pass_explain::PassOrderOrigin where U: core::convert::TryFrom<T>
+pub type vyre_foundation::optimizer::pass_explain::PassOrderOrigin::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::optimizer::pass_explain::PassOrderOrigin::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::optimizer::pass_explain::PassOrderOrigin where T: core::clone::Clone
+pub type vyre_foundation::optimizer::pass_explain::PassOrderOrigin::Owned = T
+pub fn vyre_foundation::optimizer::pass_explain::PassOrderOrigin::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::optimizer::pass_explain::PassOrderOrigin::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::optimizer::pass_explain::PassOrderOrigin where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::optimizer::pass_explain::PassOrderOrigin::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::optimizer::pass_explain::PassOrderOrigin where T: ?core::marker::Sized
+pub fn vyre_foundation::optimizer::pass_explain::PassOrderOrigin::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::optimizer::pass_explain::PassOrderOrigin where T: ?core::marker::Sized
+pub fn vyre_foundation::optimizer::pass_explain::PassOrderOrigin::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::optimizer::pass_explain::PassOrderOrigin where T: core::clone::Clone
+pub unsafe fn vyre_foundation::optimizer::pass_explain::PassOrderOrigin::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::optimizer::pass_explain::PassOrderOrigin
+pub fn vyre_foundation::optimizer::pass_explain::PassOrderOrigin::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_foundation::optimizer::pass_explain::PassOrderOrigin
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::optimizer::pass_explain::PassOrderOrigin
+impl<T> typenum::type_operators::Same for vyre_foundation::optimizer::pass_explain::PassOrderOrigin
+pub type vyre_foundation::optimizer::pass_explain::PassOrderOrigin::Output = T
 pub struct vyre_foundation::optimizer::pass_explain::PassExplanation
 pub vyre_foundation::optimizer::pass_explain::PassExplanation::benchmark: core::option::Option<&'static str>
 pub vyre_foundation::optimizer::pass_explain::PassExplanation::boundary_class: core::option::Option<vyre_foundation::optimizer::PassBoundaryClass>
@@ -12042,16 +12558,25 @@ pub vyre_foundation::optimizer::pass_explain::PassExplanation::catalog_status: v
 pub vyre_foundation::optimizer::pass_explain::PassExplanation::changed: bool
 pub vyre_foundation::optimizer::pass_explain::PassExplanation::cost_model_family: core::option::Option<vyre_foundation::optimizer::CostModelFamily>
 pub vyre_foundation::optimizer::pass_explain::PassExplanation::decision: vyre_foundation::optimizer::PassRunDecision
+pub vyre_foundation::optimizer::pass_explain::PassExplanation::declared_invalidations: &'static [&'static str]
 pub vyre_foundation::optimizer::pass_explain::PassExplanation::delta: vyre_foundation::optimizer::pass_explain::PassMetricDelta
+pub vyre_foundation::optimizer::pass_explain::PassExplanation::fact_substrate_invalidated: bool
+pub vyre_foundation::optimizer::pass_explain::PassExplanation::fact_substrate_recomputed: bool
+pub vyre_foundation::optimizer::pass_explain::PassExplanation::fact_substrate_reused: bool
+pub vyre_foundation::optimizer::pass_explain::PassExplanation::invalidated_analyses: &'static [&'static str]
 pub vyre_foundation::optimizer::pass_explain::PassExplanation::invariant: core::option::Option<&'static str>
 pub vyre_foundation::optimizer::pass_explain::PassExplanation::iteration: usize
 pub vyre_foundation::optimizer::pass_explain::PassExplanation::owner: core::option::Option<&'static str>
 pub vyre_foundation::optimizer::pass_explain::PassExplanation::pass: &'static str
+pub vyre_foundation::optimizer::pass_explain::PassExplanation::pass_order_origin: vyre_foundation::optimizer::pass_explain::PassOrderOrigin
 pub vyre_foundation::optimizer::pass_explain::PassExplanation::phase: core::option::Option<vyre_foundation::optimizer::PassPhase>
+pub vyre_foundation::optimizer::pass_explain::PassExplanation::preserved_analyses: &'static [&'static str]
 pub vyre_foundation::optimizer::pass_explain::PassExplanation::ran: bool
 pub vyre_foundation::optimizer::pass_explain::PassExplanation::reason: &'static str
 pub vyre_foundation::optimizer::pass_explain::PassExplanation::refusal_kind: core::option::Option<&'static str>
+pub vyre_foundation::optimizer::pass_explain::PassExplanation::required_analyses: &'static [&'static str]
 pub vyre_foundation::optimizer::pass_explain::PassExplanation::runtime_ns: u128
+pub vyre_foundation::optimizer::pass_explain::PassExplanation::scheduler_stop_reason: vyre_foundation::optimizer::PassRunDecision
 impl vyre_foundation::optimizer::pass_explain::PassExplanation
 pub fn vyre_foundation::optimizer::pass_explain::PassExplanation::from_metric(metric: &vyre_foundation::optimizer::PassRunMetric, catalog_entry: core::option::Option<&vyre_foundation::optimizer::pass_catalog::OptimizationCatalogEntry>) -> Self
 impl core::clone::Clone for vyre_foundation::optimizer::pass_explain::PassExplanation
@@ -12281,6 +12806,7 @@ pub enum vyre_foundation::optimizer::pass_selection::PassSelectionReason
 pub vyre_foundation::optimizer::pass_selection::PassSelectionReason::AlwaysOn
 pub vyre_foundation::optimizer::pass_selection::PassSelectionReason::BelowThreshold
 pub vyre_foundation::optimizer::pass_selection::PassSelectionReason::HotPathTelemetry
+pub vyre_foundation::optimizer::pass_selection::PassSelectionReason::PassCostReport
 pub vyre_foundation::optimizer::pass_selection::PassSelectionReason::ProfileRejected
 pub vyre_foundation::optimizer::pass_selection::PassSelectionReason::ProgramShape
 pub vyre_foundation::optimizer::pass_selection::PassSelectionReason::RequiredDependency
@@ -12332,6 +12858,7 @@ impl<T> typenum::type_operators::Same for vyre_foundation::optimizer::pass_selec
 pub type vyre_foundation::optimizer::pass_selection::PassSelectionReason::Output = T
 pub struct vyre_foundation::optimizer::pass_selection::PassSelectionDecision
 pub vyre_foundation::optimizer::pass_selection::PassSelectionDecision::metadata: vyre_foundation::optimizer::PassMetadata
+pub vyre_foundation::optimizer::pass_selection::PassSelectionDecision::priority: u16
 pub vyre_foundation::optimizer::pass_selection::PassSelectionDecision::reason: vyre_foundation::optimizer::pass_selection::PassSelectionReason
 pub vyre_foundation::optimizer::pass_selection::PassSelectionDecision::selected: bool
 impl core::clone::Clone for vyre_foundation::optimizer::pass_selection::PassSelectionDecision
@@ -12381,6 +12908,7 @@ impl<T> typenum::type_operators::Same for vyre_foundation::optimizer::pass_selec
 pub type vyre_foundation::optimizer::pass_selection::PassSelectionDecision::Output = T
 pub fn vyre_foundation::optimizer::pass_selection::registered_passes_for_profile_and_program(profile: vyre_foundation::optimizer::OptimizerProfile, program: &vyre_foundation::ir::Program, hints: &vyre_foundation::optimizer::hot_path_hints::HotPathHints) -> core::result::Result<alloc::vec::Vec<vyre_foundation::optimizer::ProgramPassKind>, vyre_foundation::optimizer::OptimizerError>
 pub fn vyre_foundation::optimizer::pass_selection::select_pass_metadata_for_program(metadata: &[vyre_foundation::optimizer::PassMetadata], profile: vyre_foundation::optimizer::OptimizerProfile, program: &vyre_foundation::ir::Program, hints: &vyre_foundation::optimizer::hot_path_hints::HotPathHints) -> alloc::vec::Vec<vyre_foundation::optimizer::pass_selection::PassSelectionDecision>
+pub fn vyre_foundation::optimizer::pass_selection::select_pass_metadata_for_program_with_report(metadata: &[vyre_foundation::optimizer::PassMetadata], profile: vyre_foundation::optimizer::OptimizerProfile, program: &vyre_foundation::ir::Program, hints: &vyre_foundation::optimizer::hot_path_hints::HotPathHints, report: core::option::Option<&vyre_foundation::optimizer::OptimizerRunReport>) -> alloc::vec::Vec<vyre_foundation::optimizer::pass_selection::PassSelectionDecision>
 pub mod vyre_foundation::optimizer::passes
 pub mod vyre_foundation::optimizer::passes::algebraic
 pub mod vyre_foundation::optimizer::passes::algebraic::atomic_minimize
@@ -18207,6 +18735,7 @@ pub enum vyre_foundation::optimizer::PassSelectionReason
 pub vyre_foundation::optimizer::PassSelectionReason::AlwaysOn
 pub vyre_foundation::optimizer::PassSelectionReason::BelowThreshold
 pub vyre_foundation::optimizer::PassSelectionReason::HotPathTelemetry
+pub vyre_foundation::optimizer::PassSelectionReason::PassCostReport
 pub vyre_foundation::optimizer::PassSelectionReason::ProfileRejected
 pub vyre_foundation::optimizer::PassSelectionReason::ProgramShape
 pub vyre_foundation::optimizer::PassSelectionReason::RequiredDependency
@@ -18760,16 +19289,25 @@ pub vyre_foundation::optimizer::PassExplanation::catalog_status: vyre_foundation
 pub vyre_foundation::optimizer::PassExplanation::changed: bool
 pub vyre_foundation::optimizer::PassExplanation::cost_model_family: core::option::Option<vyre_foundation::optimizer::CostModelFamily>
 pub vyre_foundation::optimizer::PassExplanation::decision: vyre_foundation::optimizer::PassRunDecision
+pub vyre_foundation::optimizer::PassExplanation::declared_invalidations: &'static [&'static str]
 pub vyre_foundation::optimizer::PassExplanation::delta: vyre_foundation::optimizer::pass_explain::PassMetricDelta
+pub vyre_foundation::optimizer::PassExplanation::fact_substrate_invalidated: bool
+pub vyre_foundation::optimizer::PassExplanation::fact_substrate_recomputed: bool
+pub vyre_foundation::optimizer::PassExplanation::fact_substrate_reused: bool
+pub vyre_foundation::optimizer::PassExplanation::invalidated_analyses: &'static [&'static str]
 pub vyre_foundation::optimizer::PassExplanation::invariant: core::option::Option<&'static str>
 pub vyre_foundation::optimizer::PassExplanation::iteration: usize
 pub vyre_foundation::optimizer::PassExplanation::owner: core::option::Option<&'static str>
 pub vyre_foundation::optimizer::PassExplanation::pass: &'static str
+pub vyre_foundation::optimizer::PassExplanation::pass_order_origin: vyre_foundation::optimizer::pass_explain::PassOrderOrigin
 pub vyre_foundation::optimizer::PassExplanation::phase: core::option::Option<vyre_foundation::optimizer::PassPhase>
+pub vyre_foundation::optimizer::PassExplanation::preserved_analyses: &'static [&'static str]
 pub vyre_foundation::optimizer::PassExplanation::ran: bool
 pub vyre_foundation::optimizer::PassExplanation::reason: &'static str
 pub vyre_foundation::optimizer::PassExplanation::refusal_kind: core::option::Option<&'static str>
+pub vyre_foundation::optimizer::PassExplanation::required_analyses: &'static [&'static str]
 pub vyre_foundation::optimizer::PassExplanation::runtime_ns: u128
+pub vyre_foundation::optimizer::PassExplanation::scheduler_stop_reason: vyre_foundation::optimizer::PassRunDecision
 impl vyre_foundation::optimizer::pass_explain::PassExplanation
 pub fn vyre_foundation::optimizer::pass_explain::PassExplanation::from_metric(metric: &vyre_foundation::optimizer::PassRunMetric, catalog_entry: core::option::Option<&vyre_foundation::optimizer::pass_catalog::OptimizationCatalogEntry>) -> Self
 impl core::clone::Clone for vyre_foundation::optimizer::pass_explain::PassExplanation
@@ -19038,8 +19576,12 @@ pub vyre_foundation::optimizer::PassRunMetric::changed: bool
 pub vyre_foundation::optimizer::PassRunMetric::control_flow_count_after: u64
 pub vyre_foundation::optimizer::PassRunMetric::control_flow_count_before: u64
 pub vyre_foundation::optimizer::PassRunMetric::decision: vyre_foundation::optimizer::PassRunDecision
+pub vyre_foundation::optimizer::PassRunMetric::declared_invalidations: &'static [&'static str]
 pub vyre_foundation::optimizer::PassRunMetric::effect_bits_after: u32
 pub vyre_foundation::optimizer::PassRunMetric::effect_bits_before: u32
+pub vyre_foundation::optimizer::PassRunMetric::fact_substrate_invalidated: bool
+pub vyre_foundation::optimizer::PassRunMetric::fact_substrate_recomputed: bool
+pub vyre_foundation::optimizer::PassRunMetric::fact_substrate_reused: bool
 pub vyre_foundation::optimizer::PassRunMetric::instruction_count_after: u64
 pub vyre_foundation::optimizer::PassRunMetric::instruction_count_before: u64
 pub vyre_foundation::optimizer::PassRunMetric::ir_heap_allocations_after: usize
@@ -19058,6 +19600,7 @@ pub vyre_foundation::optimizer::PassRunMetric::ran: bool
 pub vyre_foundation::optimizer::PassRunMetric::refusal_kind: core::option::Option<&'static str>
 pub vyre_foundation::optimizer::PassRunMetric::register_pressure_after: u32
 pub vyre_foundation::optimizer::PassRunMetric::register_pressure_before: u32
+pub vyre_foundation::optimizer::PassRunMetric::required_analyses: &'static [&'static str]
 pub vyre_foundation::optimizer::PassRunMetric::runtime_ns: u128
 pub vyre_foundation::optimizer::PassRunMetric::shape_predicate_violations_after: usize
 pub vyre_foundation::optimizer::PassRunMetric::shape_predicate_violations_before: usize
@@ -19168,6 +19711,7 @@ impl<T> typenum::type_operators::Same for vyre_foundation::optimizer::PassSchedu
 pub type vyre_foundation::optimizer::PassScheduler::Output = T
 pub struct vyre_foundation::optimizer::PassSelectionDecision
 pub vyre_foundation::optimizer::PassSelectionDecision::metadata: vyre_foundation::optimizer::PassMetadata
+pub vyre_foundation::optimizer::PassSelectionDecision::priority: u16
 pub vyre_foundation::optimizer::PassSelectionDecision::reason: vyre_foundation::optimizer::pass_selection::PassSelectionReason
 pub vyre_foundation::optimizer::PassSelectionDecision::selected: bool
 impl core::clone::Clone for vyre_foundation::optimizer::pass_selection::PassSelectionDecision
@@ -21329,6 +21873,7 @@ impl<T> tracing::instrument::Instrument for vyre_foundation::serial::wire::encod
 impl<T> tracing::instrument::WithSubscriber for vyre_foundation::serial::wire::encode::error::WireEncodeErr
 impl<T> typenum::type_operators::Same for vyre_foundation::serial::wire::encode::error::WireEncodeErr
 pub type vyre_foundation::serial::wire::encode::error::WireEncodeErr::Output = T
+pub const vyre_foundation::serial::wire::encode::PROGRAM_WIRE_DIGEST_VERSION: &str
 pub fn vyre_foundation::serial::wire::encode::put_expr(out: &mut alloc::vec::Vec<u8>, expr: &vyre_foundation::ir::Expr) -> core::result::Result<(), vyre_foundation::serial::wire::encode::error::WireEncodeErr>
 pub fn vyre_foundation::serial::wire::encode::put_node(out: &mut alloc::vec::Vec<u8>, node: &vyre_foundation::ir::Node) -> core::result::Result<(), vyre_foundation::serial::wire::encode::error::WireEncodeErr>
 pub fn vyre_foundation::serial::wire::encode::put_nodes(out: &mut alloc::vec::Vec<u8>, nodes: &[vyre_foundation::ir::Node]) -> core::result::Result<(), vyre_foundation::serial::wire::encode::error::WireEncodeErr>

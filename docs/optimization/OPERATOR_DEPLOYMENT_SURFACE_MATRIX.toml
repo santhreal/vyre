@@ -1,0 +1,67 @@
+# Operator deployment surface matrix for VX-1222, VX-1226, VX-1227, VX-1231, and VX-1236.
+# Helm, raw Kubernetes manifests, systemd services, and container-only runs share one operator deployment surface map.
+
+schema = "vyre.release.operator_deployment_surface_matrix.v1"
+owner = "coordination"
+evidence_tokens = ["HELM_CHART_FORMAT", "KUBERNETES_POD_SECURITY_STANDARDS", "SYSTEMD_SERVICE", "OCI_IMAGE_SPEC"]
+
+required_fields = [
+  "deployment_id",
+  "deployment_surface",
+  "artifact_source_policy",
+  "configuration_policy",
+  "identity_policy",
+  "resource_policy",
+  "security_policy",
+  "telemetry_policy",
+  "publication_boundary",
+  "diagnostic",
+]
+
+[[deployment]]
+deployment_id = "helm-chart-public-operator"
+deployment_surface = "helm-chart-for-kubernetes"
+artifact_source_policy = "chart-images-reference-public-vyre-OCI-digests-or-public-release-assets-only"
+configuration_policy = "values-schema-maps-Tier-A-operational-knobs-and-forbids-Tier-B-rule-data-inline-overrides"
+identity_policy = "service-account-rbac-and-namespace-boundaries-declared-by-chart"
+resource_policy = "requests-limits-backpressure-and-concurrency-map-to-RESOURCE_BUDGET_POLICY.toml"
+security_policy = "KUBERNETES_HELM_DEPLOYMENT_POLICY.toml"
+telemetry_policy = "TRACE_CONTEXT_TELEMETRY_CONTRACTS.toml-and-METRICS_EXPOSITION_CONTRACTS.toml"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+diagnostic = "VYRE_OPERATOR_HELM_DEPLOYMENT_SURFACE_READY"
+
+[[deployment]]
+deployment_id = "raw-kubernetes-manifests"
+deployment_surface = "kubernetes-yaml"
+artifact_source_policy = "image-fields-use-public-digest-pinned-GHCR-image"
+configuration_policy = "ConfigMaps-for-non-secret-config-Secrets-for-sensitive-material-with-no-public-secret-values"
+identity_policy = "least-privilege-service-account-and-no-default-token-mount-unless-required"
+resource_policy = "requests-limits-and-queue-quotas-map-to-resource-governance"
+security_policy = "KUBERNETES_HELM_DEPLOYMENT_POLICY.toml"
+telemetry_policy = "operator-visible-traces-metrics-and-health-probes-use-public-redacted-fields"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+diagnostic = "VYRE_OPERATOR_KUBERNETES_MANIFEST_SURFACE_READY"
+
+[[deployment]]
+deployment_id = "systemd-service-unit"
+deployment_surface = "systemd-service"
+artifact_source_policy = "ExecStart-points-to-public-vyre-binary-or-verified-install-path"
+configuration_policy = "EnvironmentFile-contains-non-secret-config-only-secret-files-use-credential-policy"
+identity_policy = "DynamicUser-or-dedicated-unprivileged-user-required-for-daemon-mode"
+resource_policy = "systemd-resource-control-maps-to-RESOURCE_BUDGET_POLICY.toml"
+security_policy = "SYSTEMD_SERVICE_HARDENING_POLICY.toml"
+telemetry_policy = "journald-and-metrics-export-use-redacted-operator-fields"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+diagnostic = "VYRE_OPERATOR_SYSTEMD_SERVICE_SURFACE_READY"
+
+[[deployment]]
+deployment_id = "container-run-local"
+deployment_surface = "docker-or-podman-run-style-container"
+artifact_source_policy = "image-pulled-by-public-digest-from-ghcr"
+configuration_policy = "env-file-and-mounted-config-follow-operator-runtime-configuration-policy"
+identity_policy = "non-root-user-no-privileged-mode-no-host-namespace-sharing"
+resource_policy = "cpu-memory-pids-and-file-descriptor-limits-declared-for-public-run-example"
+security_policy = "KUBERNETES_HELM_DEPLOYMENT_POLICY.toml"
+telemetry_policy = "container-logs-and-metrics-redact-private-paths-device-serials-and-secrets"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+diagnostic = "VYRE_OPERATOR_CONTAINER_RUN_SURFACE_READY"

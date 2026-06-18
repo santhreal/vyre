@@ -1,0 +1,43 @@
+# Statistical regression gates for VX-783 through VX-785 and VX-791.
+# Route changes require effect size, confidence, baseline, and blocker records.
+
+schema = "vyre.performance.statistical_regression_gate.v1"
+owner = "bench_harness"
+evidence_tokens = ["CRITERION_RS", "GOOGLE_BENCHMARK"]
+
+required_fields = [
+  "gate_id",
+  "benchmark_id",
+  "baseline_digest",
+  "candidate_digest",
+  "effect_size",
+  "confidence_level",
+  "regression_threshold",
+  "noise_floor",
+  "decision",
+  "route_change_allowed",
+]
+
+[[gate]]
+gate_id = "scan-regex-batch-route-change"
+benchmark_id = "scan-regex-batch-throughput"
+baseline_digest = "sha256:scan-regex-baseline"
+candidate_digest = "sha256:scan-regex-candidate"
+effect_size = "speedup>=1.15"
+confidence_level = "0.99"
+regression_threshold = "slowdown<=0.03"
+noise_floor = "0.01"
+decision = "allow-route-change"
+route_change_allowed = true
+
+[[gate]]
+gate_id = "graph-frontier-regression-blocker"
+benchmark_id = "graph-frontier-irregular-throughput"
+baseline_digest = "sha256:graph-frontier-baseline"
+candidate_digest = "sha256:graph-frontier-candidate"
+effect_size = "slowdown=0.09"
+confidence_level = "0.99"
+regression_threshold = "slowdown<=0.03"
+noise_floor = "0.02"
+decision = "block-route-change"
+route_change_allowed = false

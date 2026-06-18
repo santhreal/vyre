@@ -1,0 +1,27 @@
+# Correctness validation tranche coverage for VX-761 through VX-780.
+# Formal models, property tests, differential oracles, concurrency schedules, reducers, and counterexamples share one coverage row.
+
+schema = "vyre.plan.correctness_validation_tranche_coverage.v1"
+owner = "coordination"
+evidence_tokens = ["TLA_PLUS", "ALLOY_ANALYZER", "KANI_RUST_VERIFIER", "LOOM", "PROPTEST", "QUICKCHECK", "CSMITH", "C_REDUCE"]
+
+required_fields = [
+  "vx_id_range",
+  "formal_model_contract",
+  "property_differential_oracles",
+  "concurrency_schedule_contracts",
+  "counterexample_artifacts",
+  "source_ledger_coverage",
+  "dedup_seam",
+  "proof_gate",
+]
+
+[[coverage]]
+vx_id_range = "VX-761..VX-780"
+formal_model_contract = "FORMAL_MODEL_CONTRACTS.toml"
+property_differential_oracles = "PROPERTY_DIFFERENTIAL_ORACLES.toml"
+concurrency_schedule_contracts = "CONCURRENCY_SCHEDULE_CONTRACTS.toml"
+counterexample_artifacts = "CORRECTNESS_COUNTEREXAMPLE_ARTIFACTS.toml"
+source_ledger_coverage = "RESEARCH_SOURCE_LEDGER.toml"
+dedup_seam = "one-formal-model-one-property-oracle-one-schedule-one-counterexample-contract"
+proof_gate = "formal_correctness_governance.rs"

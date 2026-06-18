@@ -142,12 +142,14 @@ impl MegakernelConfig {
         max_compute_invocations_per_workgroup: u32,
     ) -> Result<MegakernelLaunchRequest, BackendError> {
         let snapshot = TaskQueueSnapshot::from_tasks(tasks)?;
-        Ok(snapshot.apply_to_launch_request(self.launch_request(
-            snapshot.schedulable_count(),
+        let schedulable_count = snapshot.try_schedulable_count()?;
+        let request = self.launch_request(
+            schedulable_count,
             max_workgroup_size_x,
             max_compute_workgroups_per_dimension,
             max_compute_invocations_per_workgroup,
-        )))
+        );
+        snapshot.try_apply_to_launch_request(request)
     }
 
     /// Recommend one launch shape through the shared megakernel policy.

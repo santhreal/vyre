@@ -1,0 +1,33 @@
+schema_version = 1
+
+counter_schema_id = "scan-counter-evidence:v1"
+
+required_counters = [
+  "memory_bytes",
+  "branch_divergence_proxy",
+  "occupancy_proxy",
+  "candidate_count",
+  "counter_source",
+  "unavailable_reason",
+]
+
+[[backend]]
+backend_id = "cuda"
+counter_source = "nsight-compute-or-unavailable-reason"
+required_counters = ["memory_bytes", "branch_divergence_proxy", "occupancy_proxy", "candidate_count"]
+unavailable_reason_required = true
+evidence_path = "vyre-bench/tests/scan_counter_evidence_registry.rs"
+
+[[backend]]
+backend_id = "metal"
+counter_source = "metal-counters-or-unavailable-reason"
+required_counters = ["memory_bytes", "occupancy_proxy", "candidate_count"]
+unavailable_reason_required = true
+evidence_path = "vyre-bench/tests/scan_counter_evidence_registry.rs"
+
+[[backend]]
+backend_id = "wgpu"
+counter_source = "timestamp-query-or-unavailable-reason"
+required_counters = ["memory_bytes", "candidate_count"]
+unavailable_reason_required = true
+evidence_path = "vyre-bench/tests/scan_counter_evidence_registry.rs"

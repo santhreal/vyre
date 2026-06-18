@@ -1,0 +1,37 @@
+# Backend capability digests for VX-672.
+# Driver docs, dispatch evidence, and benchmark artifacts share one device capability record.
+
+schema = "vyre.driver.backend_capability_digest.v1"
+owner = "driver_shared"
+evidence_tokens = ["CUDA_BEST_PRACTICES", "WEBGPU_SPEC", "METAL_COMPUTE"]
+
+required_fields = [
+  "backend",
+  "device_id",
+  "feature_flags",
+  "timing_capability",
+  "graph_capability",
+  "resident_capability",
+  "unsupported_reasons",
+  "capability_digest",
+]
+
+[[backend]]
+backend = "cuda"
+device_id = "sm_120:rtx_5090"
+feature_flags = ["graphs", "mempool", "cooperative_groups", "device_timestamps"]
+timing_capability = "device-and-host"
+graph_capability = "cuda-graph-capture"
+resident_capability = "cooperative-kernel"
+unsupported_reasons = []
+capability_digest = "sha256:cuda-rtx5090-capabilities"
+
+[[backend]]
+backend = "wgpu"
+device_id = "vulkan:generic"
+feature_flags = ["timestamp_query"]
+timing_capability = "device-if-enabled"
+graph_capability = "command-reuse"
+resident_capability = "not-supported"
+unsupported_reasons = ["no-resident-kernel-api"]
+capability_digest = "sha256:wgpu-vulkan-generic-capabilities"

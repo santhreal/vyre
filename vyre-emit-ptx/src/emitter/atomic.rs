@@ -82,7 +82,11 @@ impl BodyCtx<'_> {
         let type_suffix = atomic_type_suffix(atomic_op, elem_ty)?;
         let result_reg = self.alloc(elem_ty);
         if let Some(in_bounds) = in_bounds {
-            let _ = writeln!(self.text, "    mov.{}    {result_reg}, 0;", elem_ty.ptx_type_str());
+            let _ = writeln!(
+                self.text,
+                "    mov.{}    {result_reg}, 0;",
+                elem_ty.ptx_type_str()
+            );
             let _ = writeln!(
                 self.text,
                 "    @{in_bounds} atom.global.{mnemonic}.{type_suffix}    {result_reg}, [{final_addr}], {value_reg};"
@@ -171,7 +175,11 @@ impl BodyCtx<'_> {
         );
         let result_reg = self.alloc(elem_ty);
         if let Some(in_bounds) = in_bounds {
-            let _ = writeln!(self.text, "    mov.{}    {result_reg}, 0;", elem_ty.ptx_type_str());
+            let _ = writeln!(
+                self.text,
+                "    mov.{}    {result_reg}, 0;",
+                elem_ty.ptx_type_str()
+            );
             let _ = writeln!(
                 self.text,
                 "    @{in_bounds} atom.global.cas.b32    {result_reg}, [{final_addr}], {cmp_reg}, {new_reg};"

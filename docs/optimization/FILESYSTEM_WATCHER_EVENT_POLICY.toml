@@ -1,0 +1,58 @@
+[artifact]
+id = "FILESYSTEM_WATCHER_EVENT_POLICY"
+title = "Filesystem watcher event policy"
+tranche = "VX-1541..VX-1560"
+owner = "runtime_io"
+status = "planned_contract"
+research_sources = [
+  "LINUX_INOTIFY",
+  "LINUX_FANOTIFY",
+  "LINUX_STATX",
+  "LINUX_OPENAT2",
+]
+
+[scope]
+owns = [
+  "watch backend capability selection",
+  "watch descriptor to corpus root mapping",
+  "event normalization into journal mutations",
+  "queue overflow detection and recovery trigger",
+  "watcher privacy and operator diagnostics",
+]
+does_not_own = [
+  "initial tree enumeration, owned by DIRECTORY_ENUMERATION_METADATA_POLICY",
+  "handle safety, owned by SAFE_OPEN_HANDLE_READ_POLICY",
+  "TOCTOU race taxonomy, owned by ATOMIC_FILE_OPERATION_RACE_POLICY",
+  "global queue quotas, owned by BACKPRESSURE_QUEUE_QUOTA_POLICY",
+]
+
+[backend_selection]
+inotify = "selected for directory-tree watch sets when watch count, queue size, and recursive expansion budget are sufficient"
+fanotify = "selected for mount or filesystem scope only when permissions, event coverage, and operator policy allow it"
+polling_snapshot = "selected as the portable baseline or overflow recovery route when watcher evidence is insufficient"
+unsupported = "incremental mode is disabled and full enumeration remains the truthful route"
+
+[event_normalization]
+rename_pairing = "rename cookies are paired within a bounded event window; unmatched rename halves become conservative invalidate records"
+create = "new candidate enters metadata admission before read scheduling"
+modify_close = "content identity becomes stale and read scheduling is enqueued only after writable close or equivalent stability signal"
+attrib = "metadata admission is rerun because permissions, link count, timestamps, or ownership may change scan behavior"
+delete = "identity tombstone is recorded before output suppression"
+overflow = "watch root enters uncertain state and must be repaired by bounded re-enumeration"
+
+[queue_and_capacity]
+watch_limits = "watch count, event queue depth, overflow count, and dropped-event recovery are Tier A operational evidence"
+pressure_handoff = "watcher event pressure feeds BACKPRESSURE_QUEUE_QUOTA_POLICY before it can expand into read work"
+fairness = "hot directories cannot starve cold roots; per-root event budgets are measured independently"
+
+[diagnostics]
+required = [
+  "watch_backend",
+  "root_id",
+  "event_kind",
+  "queue_depth",
+  "overflow_state",
+  "repair_action",
+  "incremental_disabled_reason",
+  "operator_fix",
+]

@@ -1,0 +1,51 @@
+# Fuzz target inventory for VX-741 through VX-743.
+# One inventory owns fuzz seams for parser, scan, decoder, graph, reporter, and driver inputs.
+
+schema = "vyre.fuzz.target_inventory.v1"
+owner = "security_reliability"
+evidence_tokens = ["LLVM_LIBFUZZER", "CARGO_FUZZ", "AFLPLUSPLUS"]
+
+required_fields = [
+  "target_id",
+  "owning_crate",
+  "entrypoint",
+  "input_domain",
+  "oracle",
+  "timeout_ms",
+  "memory_limit_bytes",
+  "crash_dedup_key",
+  "privacy_class",
+]
+
+[[target]]
+target_id = "scan-pattern-wire-fuzz"
+owning_crate = "vyre-libs"
+entrypoint = "fuzz_scan_pattern_wire"
+input_domain = "scan pattern database bytes"
+oracle = "decode-or-refuse-with-diagnostic"
+timeout_ms = 1000
+memory_limit_bytes = 268435456
+crash_dedup_key = "stack-input-digest"
+privacy_class = "no-private-paths"
+
+[[target]]
+target_id = "frontend-source-recovery-fuzz"
+owning_crate = "vyre-libs"
+entrypoint = "fuzz_frontend_source_recovery"
+input_domain = "source bytes and dialect envelope"
+oracle = "recover-or-fail-closed"
+timeout_ms = 1000
+memory_limit_bytes = 268435456
+crash_dedup_key = "diagnostic-partial-tree-digest"
+privacy_class = "no-secret-values"
+
+[[target]]
+target_id = "reporting-interchange-fuzz"
+owning_crate = "vyre-libs"
+entrypoint = "fuzz_operator_report"
+input_domain = "finding and diagnostic interchange records"
+oracle = "serialize-parse-redaction-parity"
+timeout_ms = 500
+memory_limit_bytes = 134217728
+crash_dedup_key = "report-rule-location-digest"
+privacy_class = "private-paths-redacted"

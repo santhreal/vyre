@@ -24,6 +24,11 @@ use vyre_libs::scan::{
 const HAYSTACK_BYTES: usize = 4 * 1024 * 1024;
 const DEFAULT_LITERAL_SET_MATCH_CAP: u32 = 10_000;
 const MATCH_TRIPLE_BYTES: u64 = 12;
+const LITERAL_MICROBENCH_STRATIFICATION_SCHEMA_VERSION: u32 = 1;
+const LITERAL_MICROBENCH_CHUNK_BYTES: usize = 32;
+const STRATIFICATION_BASIS_POINTS: u32 = 10_000;
+const FNV64_OFFSET_BASIS: u64 = 0xCBF2_9CE4_8422_2325;
+const FNV64_PRIME: u64 = 0x0000_0100_0000_01B3;
 const SUITES: &[SuiteKind] = &[
     SuiteKind::Smoke,
     SuiteKind::Release,
@@ -48,6 +53,7 @@ struct LiteralSetIrregularPrepared {
     expected_matches: u32,
     max_matches: u32,
     planted_matches: u32,
+    stratification: LiteralMicrobenchStratification,
     encoded_input_bytes: u64,
     output_bytes: u64,
 }
@@ -63,7 +69,25 @@ struct LiteralSetIrregularCountPrepared {
     baseline_wall_ns: u64,
     expected_matches: u32,
     planted_matches: u32,
+    stratification: LiteralMicrobenchStratification,
     encoded_input_bytes: u64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct LiteralMicrobenchStratification {
+    pub schema_version: u32,
+    pub pattern_count: u32,
+    pub min_needle_len: u32,
+    pub max_needle_len: u32,
+    pub rare_byte: u8,
+    pub rare_byte_position: u32,
+    pub alphabet_size: u32,
+    pub haystack_entropy_bps: u32,
+    pub overlap_density_bps: u32,
+    pub chunk_boundary_bytes: u32,
+    pub chunk_boundary_crossing_matches: u32,
+    pub pattern_digest: u64,
+    pub match_digest: u64,
 }
 
 impl BenchCase for LiteralSetIrregularHotloop {
@@ -152,6 +176,9 @@ impl BenchCase for LiteralSetIrregularHotloop {
         let encoded_matches = encode_match_triples(&baseline_matches);
         let output_bytes = 4_u64.saturating_add(encoded_matches.len() as u64);
         let baseline_outputs = vec![expected_matches.to_le_bytes().to_vec(), encoded_matches];
+        let stratification =
+            literal_microbench_stratification(&haystack, &baseline_matches, planted_matches);
+        validate_literal_microbench_stratification(&stratification)?;
         let mut scratch = LiteralSetScanScratch::default();
         engine
             .prepare_literal_scratch(max_matches, &mut scratch)
@@ -189,6 +216,7 @@ impl BenchCase for LiteralSetIrregularHotloop {
             expected_matches,
             max_matches,
             planted_matches,
+            stratification,
             encoded_input_bytes,
             output_bytes,
         }))
@@ -375,14 +403,16 @@ impl BenchCase for LiteralSetIrregularCountHotloop {
         })?;
 
         let baseline_start = Instant::now();
-        let expected_matches = u32::try_from(engine.reference_scan(&haystack).len()).map_err(
-            |_| {
-                BenchError::EnvironmentInvalid(
-                    "literal-set irregular count fixture exceeded u32 match-count capacity. Fix: lower fixture density or shard the scan."
-                        .to_string(),
-                )
-            },
-        )?;
+        let baseline_matches = engine.reference_scan(&haystack);
+        let expected_matches = u32::try_from(baseline_matches.len()).map_err(|_| {
+            BenchError::EnvironmentInvalid(format!(
+                "literal-set irregular count fixture produced {} matches, above u32 capacity. Fix: lower fixture density or shard the count scan.",
+                baseline_matches.len()
+            ))
+        })?;
+        let stratification =
+            literal_microbench_stratification(&haystack, &baseline_matches, planted_matches);
+        validate_literal_microbench_stratification(&stratification)?;
         let baseline_wall_ns = baseline_start
             .elapsed()
             .as_nanos()
@@ -411,6 +441,7 @@ impl BenchCase for LiteralSetIrregularCountHotloop {
             baseline_wall_ns,
             expected_matches,
             planted_matches,
+            stratification,
             encoded_input_bytes,
         }))
     }
@@ -494,6 +525,266 @@ impl BenchCase for LiteralSetIrregularCountHotloop {
     }
 }
 
+fn literal_microbench_stratification(
+    haystack: &[u8],
+    matches: &[Match],
+    planted_matches: u32,
+) -> LiteralMicrobenchStratification {
+    let mut pattern_byte_counts = [0_u32; 256];
+    let mut min_needle_len = u32::MAX;
+    let mut max_needle_len = 0_u32;
+    for pattern in PATTERNS {
+        let len = pattern.len() as u32;
+        min_needle_len = min_needle_len.min(len);
+        max_needle_len = max_needle_len.max(len);
+        for byte in *pattern {
+            pattern_byte_counts[usize::from(*byte)] += 1;
+        }
+    }
+
+    let mut rare_byte = 0_u8;
+    let mut rare_byte_count = u32::MAX;
+    for (byte, count) in pattern_byte_counts.iter().enumerate() {
+        if *count > 0
+            && (*count < rare_byte_count
+                || (*count == rare_byte_count && byte < usize::from(rare_byte)))
+        {
+            rare_byte = byte as u8;
+            rare_byte_count = *count;
+        }
+    }
+
+    let expected_matches = u32::try_from(matches.len()).unwrap_or(u32::MAX);
+    let overlap_matches = expected_matches.saturating_sub(planted_matches);
+    let overlap_density_bps = if expected_matches == 0 {
+        0
+    } else {
+        ((u64::from(overlap_matches) * u64::from(STRATIFICATION_BASIS_POINTS))
+            / u64::from(expected_matches))
+        .min(u64::from(STRATIFICATION_BASIS_POINTS)) as u32
+    };
+    let chunk_boundary_crossing_matches = u32::try_from(
+        matches
+            .iter()
+            .filter(|hit| crosses_chunk_boundary(hit.start, hit.end))
+            .count(),
+    )
+    .unwrap_or(u32::MAX);
+    let pattern_digest = literal_pattern_digest();
+
+    LiteralMicrobenchStratification {
+        schema_version: LITERAL_MICROBENCH_STRATIFICATION_SCHEMA_VERSION,
+        pattern_count: PATTERNS.len() as u32,
+        min_needle_len: if min_needle_len == u32::MAX {
+            0
+        } else {
+            min_needle_len
+        },
+        max_needle_len,
+        rare_byte,
+        rare_byte_position: first_needle_position(rare_byte),
+        alphabet_size: pattern_byte_counts
+            .iter()
+            .filter(|count| **count > 0)
+            .count() as u32,
+        haystack_entropy_bps: haystack_entropy_bps(haystack),
+        overlap_density_bps,
+        chunk_boundary_bytes: LITERAL_MICROBENCH_CHUNK_BYTES as u32,
+        chunk_boundary_crossing_matches,
+        pattern_digest,
+        match_digest: literal_match_digest(matches, pattern_digest),
+    }
+}
+
+fn validate_literal_microbench_stratification(
+    metadata: &LiteralMicrobenchStratification,
+) -> Result<(), BenchError> {
+    if metadata.schema_version != LITERAL_MICROBENCH_STRATIFICATION_SCHEMA_VERSION {
+        return Err(BenchError::EnvironmentInvalid(format!(
+            "literal microbench stratification schema version {} did not match expected {}. Fix: regenerate the literal microbench metadata with the current schema.",
+            metadata.schema_version, LITERAL_MICROBENCH_STRATIFICATION_SCHEMA_VERSION
+        )));
+    }
+    if metadata.pattern_count != PATTERNS.len() as u32 {
+        return Err(BenchError::EnvironmentInvalid(format!(
+            "literal microbench stratification recorded {} patterns but fixture owns {}. Fix: rebuild metadata from PATTERNS in the benchmark fixture.",
+            metadata.pattern_count,
+            PATTERNS.len()
+        )));
+    }
+    if metadata.min_needle_len == 0 || metadata.max_needle_len < metadata.min_needle_len {
+        return Err(BenchError::EnvironmentInvalid(format!(
+            "literal microbench stratification recorded invalid needle lengths min={} max={}. Fix: record min/max from the literal fixture before dispatch.",
+            metadata.min_needle_len, metadata.max_needle_len
+        )));
+    }
+    if metadata.alphabet_size == 0 || metadata.alphabet_size > 256 {
+        return Err(BenchError::EnvironmentInvalid(format!(
+            "literal microbench stratification recorded invalid alphabet size {}. Fix: derive alphabet coverage from literal bytes.",
+            metadata.alphabet_size
+        )));
+    }
+    if metadata.haystack_entropy_bps == 0
+        || metadata.haystack_entropy_bps > STRATIFICATION_BASIS_POINTS
+    {
+        return Err(BenchError::EnvironmentInvalid(format!(
+            "literal microbench stratification recorded invalid haystack entropy {} bps. Fix: derive entropy from the generated haystack bytes.",
+            metadata.haystack_entropy_bps
+        )));
+    }
+    if metadata.overlap_density_bps > STRATIFICATION_BASIS_POINTS {
+        return Err(BenchError::EnvironmentInvalid(format!(
+            "literal microbench stratification recorded invalid overlap density {} bps. Fix: bound overlap density to the basis-point scale.",
+            metadata.overlap_density_bps
+        )));
+    }
+    if metadata.chunk_boundary_bytes != LITERAL_MICROBENCH_CHUNK_BYTES as u32
+        || metadata.chunk_boundary_crossing_matches == 0
+    {
+        return Err(BenchError::EnvironmentInvalid(format!(
+            "literal microbench stratification recorded chunk_bytes={} crossing_matches={}. Fix: record boundary-crossing matches for the configured chunk size.",
+            metadata.chunk_boundary_bytes, metadata.chunk_boundary_crossing_matches
+        )));
+    }
+    if metadata.pattern_digest == 0 || metadata.match_digest == 0 {
+        return Err(BenchError::EnvironmentInvalid(
+            "literal microbench stratification omitted pattern or match digest. Fix: hash the literal metadata and exact match triples before reporting metrics."
+                .to_string(),
+        ));
+    }
+    Ok(())
+}
+
+fn first_needle_position(byte: u8) -> u32 {
+    for pattern in PATTERNS {
+        if let Some(position) = pattern.iter().position(|candidate| *candidate == byte) {
+            return position as u32;
+        }
+    }
+    0
+}
+
+fn haystack_entropy_bps(haystack: &[u8]) -> u32 {
+    if haystack.is_empty() {
+        return 0;
+    }
+
+    let mut counts = [0_u64; 256];
+    for byte in haystack {
+        counts[usize::from(*byte)] += 1;
+    }
+    let len = haystack.len() as f64;
+    let mut entropy_bits = 0.0_f64;
+    for count in counts {
+        if count > 0 {
+            let probability = count as f64 / len;
+            entropy_bits -= probability * probability.log2();
+        }
+    }
+    ((entropy_bits / 8.0) * f64::from(STRATIFICATION_BASIS_POINTS))
+        .round()
+        .clamp(0.0, f64::from(STRATIFICATION_BASIS_POINTS)) as u32
+}
+
+fn crosses_chunk_boundary(start: u32, end: u32) -> bool {
+    if end <= start {
+        return false;
+    }
+    let start_chunk = start as usize / LITERAL_MICROBENCH_CHUNK_BYTES;
+    let last_chunk = end.saturating_sub(1) as usize / LITERAL_MICROBENCH_CHUNK_BYTES;
+    start_chunk != last_chunk
+}
+
+fn literal_pattern_digest() -> u64 {
+    let mut digest = fnv64_u64(FNV64_OFFSET_BASIS, PATTERNS.len() as u64);
+    for (index, pattern) in PATTERNS.iter().enumerate() {
+        digest = fnv64_u64(digest, index as u64);
+        digest = fnv64_u64(digest, pattern.len() as u64);
+        digest = fnv64_bytes(digest, pattern);
+    }
+    digest
+}
+
+fn literal_match_digest(matches: &[Match], pattern_digest: u64) -> u64 {
+    let mut digest = fnv64_u64(FNV64_OFFSET_BASIS, pattern_digest);
+    digest = fnv64_u64(digest, matches.len() as u64);
+    for hit in matches {
+        digest = fnv64_u64(digest, u64::from(hit.pattern_id));
+        digest = fnv64_u64(digest, u64::from(hit.start));
+        digest = fnv64_u64(digest, u64::from(hit.end));
+    }
+    digest
+}
+
+fn fnv64_u64(digest: u64, value: u64) -> u64 {
+    fnv64_bytes(digest, &value.to_le_bytes())
+}
+
+fn fnv64_bytes(mut digest: u64, bytes: &[u8]) -> u64 {
+    for byte in bytes {
+        digest ^= u64::from(*byte);
+        digest = digest.wrapping_mul(FNV64_PRIME);
+    }
+    digest
+}
+
+fn extend_literal_stratification_metrics(
+    metrics: &mut Vec<MetricPoint>,
+    prefix: &str,
+    metadata: LiteralMicrobenchStratification,
+) {
+    metrics.extend([
+        prefixed_metric(
+            prefix,
+            "stratification_schema_version",
+            u64::from(metadata.schema_version),
+        ),
+        prefixed_metric(
+            prefix,
+            "stratified_pattern_count",
+            u64::from(metadata.pattern_count),
+        ),
+        prefixed_metric(prefix, "min_needle_len", u64::from(metadata.min_needle_len)),
+        prefixed_metric(prefix, "max_needle_len", u64::from(metadata.max_needle_len)),
+        prefixed_metric(prefix, "rare_byte", u64::from(metadata.rare_byte)),
+        prefixed_metric(
+            prefix,
+            "rare_byte_position",
+            u64::from(metadata.rare_byte_position),
+        ),
+        prefixed_metric(prefix, "alphabet_size", u64::from(metadata.alphabet_size)),
+        prefixed_metric(
+            prefix,
+            "haystack_entropy_bps",
+            u64::from(metadata.haystack_entropy_bps),
+        ),
+        prefixed_metric(
+            prefix,
+            "overlap_density_bps",
+            u64::from(metadata.overlap_density_bps),
+        ),
+        prefixed_metric(
+            prefix,
+            "chunk_boundary_bytes",
+            u64::from(metadata.chunk_boundary_bytes),
+        ),
+        prefixed_metric(
+            prefix,
+            "chunk_boundary_crossing_matches",
+            u64::from(metadata.chunk_boundary_crossing_matches),
+        ),
+        prefixed_metric(prefix, "pattern_digest", metadata.pattern_digest),
+        prefixed_metric(prefix, "match_digest", metadata.match_digest),
+    ]);
+}
+
+fn prefixed_metric(prefix: &str, suffix: &str, value: u64) -> MetricPoint {
+    MetricPoint {
+        name: format!("{prefix}_{suffix}"),
+        value,
+    }
+}
+
 fn literal_set_metric_points(
     prepared: &LiteralSetIrregularPrepared,
     wall_ns: u64,
@@ -561,6 +852,11 @@ fn literal_set_metric_points(
             u64::from(avoided_default_matches).saturating_mul(MATCH_TRIPLE_BYTES),
         ),
     ];
+    extend_literal_stratification_metrics(
+        &mut metrics,
+        "literal_set_irregular",
+        prepared.stratification,
+    );
     if wall_ns > 0 {
         metrics.push(metric(
             "literal_set_irregular_speedup_x1000",
@@ -622,6 +918,11 @@ fn literal_set_count_metric_points(
             u64::from(prepared.planted_matches),
         ),
     ];
+    extend_literal_stratification_metrics(
+        &mut metrics,
+        "literal_set_irregular_count",
+        prepared.stratification,
+    );
     if wall_ns > 0 {
         metrics.push(metric(
             "literal_set_irregular_count_speedup_x1000",
@@ -675,11 +976,13 @@ fn dispatch_literal_set_resident_sequence(
         program: &prepared.reset_program,
         resources: &reset_resources,
         grid_override: Some([1, 1, 1]),
+        workgroup_override: None,
     };
     let scan_step = ResidentDispatchStep {
         program: &prepared.prepared_scan.program,
         resources: &scan_resources,
         grid_override: prepared.prepared_scan.dispatch_config.grid_override,
+        workgroup_override: None,
     };
     let match_output_bytes = prepared
         .prepared_scan
@@ -740,11 +1043,13 @@ fn dispatch_literal_set_count_resident_sequence(
         program: &prepared.reset_program,
         resources: &reset_resources,
         grid_override: Some([1, 1, 1]),
+        workgroup_override: None,
     };
     let scan_step = ResidentDispatchStep {
         program: &prepared.prepared_count.program,
         resources: &scan_resources,
         grid_override: prepared.prepared_count.dispatch_config.grid_override,
+        workgroup_override: None,
     };
     let read_ranges = [ResidentReadRange {
         resource: &scan_resources[LITERAL_SET_COUNT_RESOURCE_INDEX],
@@ -775,4 +1080,79 @@ inventory::submit! {
 
 inventory::submit! {
     &LiteralSetIrregularCountHotloop as &'static dyn BenchCase
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sample_matches() -> [Match; 2] {
+        [Match::new(0, 31, 35), Match::new(1, 64, 68)]
+    }
+
+    #[test]
+    fn literal_microbench_stratification_records_pattern_metadata_and_digest() {
+        let haystack = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        let matches = sample_matches();
+        let metadata = literal_microbench_stratification(haystack, &matches, 1);
+
+        assert_eq!(
+            metadata.pattern_count,
+            u32::try_from(PATTERNS.len()).unwrap()
+        );
+        assert_eq!(
+            metadata.min_needle_len,
+            PATTERNS.iter().map(|pattern| pattern.len()).min().unwrap() as u32
+        );
+        assert_eq!(
+            metadata.max_needle_len,
+            PATTERNS.iter().map(|pattern| pattern.len()).max().unwrap() as u32
+        );
+        assert!(metadata.alphabet_size > 0);
+        assert!(metadata.pattern_digest != 0);
+        assert!(metadata.match_digest != 0);
+        assert_eq!(metadata.chunk_boundary_crossing_matches, 1);
+        validate_literal_microbench_stratification(&metadata).unwrap();
+    }
+
+    #[test]
+    fn literal_microbench_metric_fanout_covers_scan_and_count_cases() {
+        let matches = sample_matches();
+        let metadata = literal_microbench_stratification(b"abcdefghijklmnopqrstuvwxyz", &matches, 1);
+        let mut metrics = Vec::new();
+
+        extend_literal_stratification_metrics(&mut metrics, "literal_set_irregular", metadata);
+        extend_literal_stratification_metrics(
+            &mut metrics,
+            "literal_set_irregular_count",
+            metadata,
+        );
+
+        assert!(metrics.iter().any(|metric| {
+            metric.name == "literal_set_irregular_min_needle_len"
+                && metric.value == u64::from(metadata.min_needle_len)
+        }));
+        assert!(metrics.iter().any(|metric| {
+            metric.name == "literal_set_irregular_match_digest"
+                && metric.value == metadata.match_digest
+        }));
+        assert!(metrics.iter().any(|metric| {
+            metric.name == "literal_set_irregular_count_haystack_entropy_bps"
+                && metric.value == u64::from(metadata.haystack_entropy_bps)
+        }));
+        assert!(metrics.iter().any(|metric| {
+            metric.name == "literal_set_irregular_count_chunk_boundary_crossing_matches"
+                && metric.value == u64::from(metadata.chunk_boundary_crossing_matches)
+        }));
+    }
+
+    #[test]
+    fn literal_microbench_stratification_rejects_missing_digest() {
+        let matches = sample_matches();
+        let mut metadata = literal_microbench_stratification(b"abcdefghijklmnopqrstuvwxyz", &matches, 1);
+        metadata.match_digest = 0;
+
+        let error = validate_literal_microbench_stratification(&metadata).unwrap_err();
+        assert!(error.to_string().contains("digest"));
+    }
 }

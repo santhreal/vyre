@@ -1,0 +1,35 @@
+schema_version = 1
+
+planner_id = "wgpu-subgroup-scan:v1"
+
+required_features = [
+  "SUBGROUP",
+  "SUBGROUP_BARRIER",
+  "subgroup_ballot",
+  "subgroup_shuffle",
+  "subgroup_reduce",
+]
+
+[[route]]
+route_id = "native_wgpu_subgroup_scan"
+backend = "wgpu-native"
+feature_gate = "SUBGROUP"
+shader_requirements = ["subgroup_ballot", "subgroup_shuffle", "subgroup_reduce"]
+fallback_route = "workgroup_shared_memory_scan"
+parity_required = true
+evidence_path = "vyre-driver-wgpu/tests/wgpu_subgroup_scan_plan_registry.rs"
+
+[[route]]
+route_id = "workgroup_shared_memory_scan"
+backend = "wgpu-portable"
+feature_gate = "none"
+shader_requirements = ["workgroup_memory", "storage_buffer"]
+fallback_route = "cpu_ref"
+parity_required = true
+evidence_path = "vyre-driver-wgpu/tests/wgpu_subgroup_scan_plan_registry.rs"
+
+[[diagnostic]]
+diagnostic_code = "VYRE_WGPU_SUBGROUP_UNSUPPORTED"
+required_fields = ["backend", "feature_flag", "subgroup_min", "subgroup_max", "fallback_route"]
+fix = "Use the portable workgroup-memory route or run on a native adapter with subgroup support."
+evidence_path = "vyre-driver-wgpu/tests/wgpu_subgroup_scan_plan_registry.rs"

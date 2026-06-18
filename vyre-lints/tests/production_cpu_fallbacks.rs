@@ -72,6 +72,11 @@ fn cli_default_production_roots_are_vyre_owned_only() {
         "Vyre default production roots must not require external consumer checkouts: stderr={}",
         String::from_utf8_lossy(&output.stderr)
     );
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr).as_ref(),
+        "",
+        "successful default production-root scan must not emit diagnostics"
+    );
 }
 
 #[test]

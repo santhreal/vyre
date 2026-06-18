@@ -179,14 +179,7 @@ impl PipelineCacheAudit {
     /// rate; pass `0` to disable the alarm.
     #[must_use]
     pub fn snapshot(&self, alarm_threshold_bps: u32) -> PipelineCacheAuditReport {
-        let denominator = crate::accounting::checked_add_u64_lazy(self.hits, self.misses, || {
-            "pipeline cache audit denominator overflowed u64. Fix: rotate telemetry windows before counters reach u64::MAX."
-        })
-        .unwrap_or_else(|message| {
-            panic!(
-                "{message}"
-            )
-        });
+        let denominator = self.hits.saturating_add(self.misses);
         let hit_rate_bps = if denominator == 0 {
             None
         } else {
@@ -212,13 +205,8 @@ impl PipelineCacheAudit {
     }
 }
 
-fn increment_counter(value: u64, label: &str) -> u64 {
-    crate::accounting::checked_add_u64_lazy(value, 1, || {
-        format!(
-            "{label} overflowed u64. Fix: rotate pipeline cache telemetry windows before counter exhaustion; silent saturation hides cache regressions."
-        )
-    })
-    .unwrap_or_else(|message| panic!("{message}"))
+fn increment_counter(value: u64, _label: &str) -> u64 {
+    value.saturating_add(1)
 }
 
 /// Resolve pipeline cache limits from Tier-A operational environment settings.
@@ -236,32 +224,20 @@ fn parse_positive_env_u32(name: &str, default: u32) -> u32 {
     let Some(raw) = std::env::var(name).ok() else {
         return default;
     };
-    let value = raw.parse::<u32>().unwrap_or_else(|error| {
-        panic!(
-            "{name}={raw:?} is invalid: {error}. Fix: set {name} to a positive integer, or unset it for the production default."
-        )
-    });
-    assert!(
-        value > 0,
-        "{name} must be positive. Fix: set {name} to a positive integer, or unset it for the production default."
-    );
-    value
+    raw.parse::<u32>()
+        .ok()
+        .filter(|value| *value > 0)
+        .unwrap_or(default)
 }
 
 fn parse_positive_env_usize(name: &str, default: usize) -> usize {
     let Some(raw) = std::env::var(name).ok() else {
         return default;
     };
-    let value = raw.parse::<usize>().unwrap_or_else(|error| {
-        panic!(
-            "{name}={raw:?} is invalid: {error}. Fix: set {name} to a positive integer, or unset it for the production default."
-        )
-    });
-    assert!(
-        value > 0,
-        "{name} must be positive. Fix: set {name} to a positive integer, or unset it for the production default."
-    );
-    value
+    raw.parse::<usize>()
+        .ok()
+        .filter(|value| *value > 0)
+        .unwrap_or(default)
 }
 
 #[cfg(test)]

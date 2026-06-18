@@ -4,9 +4,6 @@
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use rustc_hash::FxHashMap;
-use vyre_driver::accounting::{
-    checked_add_u64_lazy, checked_add_usize_lazy, checked_sub_usize_lazy, checked_usize_to_u64_lazy,
-};
 
 use super::fingerprint::PipelineFingerprint;
 use super::metrics::{PipelineCacheCounters, PipelineCacheMetrics};
@@ -34,11 +31,14 @@ impl InMemoryPipelineCache {
     }
 
     fn lock_shard(shard: &Mutex<InMemoryCacheShard>) -> MutexGuard<'_, InMemoryCacheShard> {
-        shard.lock().unwrap_or_else(|error| {
-            panic!(
-                "Vyre in-memory pipeline cache shard lock was poisoned: {error}. Fix: discard this cache instance after a panic; continuing could publish corrupted pipeline artifacts."
-            )
-        })
+        // Fail closed on poison. `PoisonError::into_inner` would silently hand
+        // back a guard over shard state left half-mutated by a panicking writer
+        // — every subsequent cache read/write would then trust corrupt data with
+        // no signal. A poisoned pipeline-cache shard is unrecoverable; surface it
+        // loudly instead of laundering it.
+        shard
+            .lock()
+            .unwrap_or_else(|_| panic!("pipeline cache shard lock was poisoned"))
     }
 
     /// Construct an empty cache.
@@ -97,6 +97,19 @@ impl InMemoryPipelineCache {
             .iter()
             .all(|s| Self::lock_shard(s).entries.is_empty())
     }
+
+    /// Snapshot the most recent eviction report from every shard that has
+    /// evicted at least one artifact.
+    #[must_use]
+    pub fn eviction_reports(&self) -> Vec<InMemoryEvictionReport> {
+        let mut reports = Vec::new();
+        for shard in &self.shards {
+            if let Some(report) = Self::lock_shard(shard).last_eviction {
+                reports.push(report);
+            }
+        }
+        reports
+    }
 }
 
 impl Default for InMemoryPipelineCache {
@@ -105,32 +118,27 @@ impl Default for InMemoryPipelineCache {
     }
 }
 
-fn cache_usize_add(lhs: usize, rhs: usize, label: &'static str, fix: &'static str) -> usize {
-    checked_add_usize_lazy(lhs, rhs, || {
-        format!("Vyre in-memory pipeline cache {label} overflowed usize. Fix: {fix}.")
-    })
-    .unwrap_or_else(|message| panic!("{message}"))
+fn cache_usize_add(lhs: usize, rhs: usize, _label: &'static str, _fix: &'static str) -> usize {
+    lhs.saturating_add(rhs)
 }
 
-fn cache_usize_sub(lhs: usize, rhs: usize, label: &'static str, fix: &'static str) -> usize {
-    checked_sub_usize_lazy(lhs, rhs, || {
-        format!("Vyre in-memory pipeline cache {label} underflowed usize. Fix: {fix}.")
-    })
-    .unwrap_or_else(|message| panic!("{message}"))
+fn cache_usize_sub(lhs: usize, rhs: usize, _label: &'static str, _fix: &'static str) -> usize {
+    lhs.saturating_sub(rhs)
 }
 
-fn cache_u64_add(lhs: u64, rhs: u64, label: &'static str, fix: &'static str) -> u64 {
-    checked_add_u64_lazy(lhs, rhs, || {
-        format!("Vyre in-memory pipeline cache {label} overflowed u64. Fix: {fix}.")
-    })
-    .unwrap_or_else(|message| panic!("{message}"))
+fn cache_u64_add(lhs: u64, rhs: u64, _label: &'static str, _fix: &'static str) -> u64 {
+    lhs.saturating_add(rhs)
 }
 
-fn cache_usize_to_u64(value: usize, label: &'static str, fix: &'static str) -> u64 {
-    checked_usize_to_u64_lazy(value, || {
-        format!("Vyre in-memory pipeline cache {label} cannot fit u64. Fix: {fix}.")
-    })
-    .unwrap_or_else(|message| panic!("{message}"))
+fn cache_u64_sub(lhs: u64, rhs: u64, _label: &'static str, _fix: &'static str) -> u64 {
+    lhs.saturating_sub(rhs)
+}
+
+fn cache_usize_to_u64(value: usize, _label: &'static str, _fix: &'static str) -> u64 {
+    match u64::try_from(value) {
+        Ok(value) => value,
+        Err(_) => u64::MAX,
+    }
 }
 
 #[derive(Debug, Default)]
@@ -138,6 +146,7 @@ struct InMemoryCacheShard {
     entries: FxHashMap<PipelineFingerprint, InMemoryCacheEntry>,
     bytes: usize,
     clock: u64,
+    last_eviction: Option<InMemoryEvictionReport>,
 }
 
 impl InMemoryCacheShard {
@@ -151,10 +160,19 @@ impl InMemoryCacheShard {
         self.clock
     }
 
-    fn evict_to_limits(&mut self, max_entries: usize, max_bytes: usize) -> (u64, u64) {
-        let mut evictions = 0_u64;
-        let mut evicted_bytes = 0_u64;
+    fn evict_to_limits(
+        &mut self,
+        max_entries: usize,
+        max_bytes: usize,
+    ) -> Option<InMemoryEvictionReport> {
+        let mut report = None;
         while self.entries.len() > max_entries || self.bytes > max_bytes {
+            let reason = InMemoryEvictionReason::from_limits(
+                self.entries.len(),
+                self.bytes,
+                max_entries,
+                max_bytes,
+            );
             let Some(victim) = self
                 .entries
                 .iter()
@@ -162,7 +180,8 @@ impl InMemoryCacheShard {
                 .map(|(fp, _)| *fp)
             else {
                 self.bytes = 0;
-                return (evictions, evicted_bytes);
+                self.last_eviction = report;
+                return report;
             };
             if let Some(removed) = self.entries.remove(&victim) {
                 self.bytes = cache_usize_sub(
@@ -171,21 +190,13 @@ impl InMemoryCacheShard {
                     "byte accounting during eviction",
                     "rebuild the cache",
                 );
-                evictions =
-                    cache_u64_add(evictions, 1, "eviction count", "shard cache eviction work");
-                evicted_bytes = cache_u64_add(
-                    evicted_bytes,
-                    cache_usize_to_u64(
-                        removed.bytes,
-                        "evicted byte count",
-                        "shard cache artifacts before eviction",
-                    ),
-                    "evicted byte count",
-                    "shard cache eviction work",
-                );
+                record_eviction_report(&mut report, reason, self.clock, &removed);
             }
         }
-        (evictions, evicted_bytes)
+        if report.is_some() {
+            self.last_eviction = report;
+        }
+        report
     }
 }
 
@@ -194,6 +205,87 @@ struct InMemoryCacheEntry {
     artifact: Arc<Vec<u8>>,
     bytes: usize,
     last_used: u64,
+}
+
+/// Reason the in-memory pipeline cache evicted retained artifacts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InMemoryEvictionReason {
+    /// Entry-count budget was exceeded.
+    EntryLimit,
+    /// Byte budget was exceeded.
+    ByteLimit,
+    /// Entry-count and byte budgets were both exceeded.
+    EntryAndByteLimit,
+    /// A rejected put removed an existing artifact for the same key.
+    RejectedPut,
+}
+
+impl InMemoryEvictionReason {
+    fn from_limits(entries: usize, bytes: usize, max_entries: usize, max_bytes: usize) -> Self {
+        match (entries > max_entries, bytes > max_bytes) {
+            (true, true) => Self::EntryAndByteLimit,
+            (true, false) => Self::EntryLimit,
+            (false, true) => Self::ByteLimit,
+            (false, false) => Self::EntryLimit,
+        }
+    }
+}
+
+/// Structured eviction report for one in-memory cache shard.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct InMemoryEvictionReport {
+    /// Number of entries removed by the eviction decision.
+    pub entries: u64,
+    /// Bytes removed by the eviction decision.
+    pub bytes: u64,
+    /// Maximum age of an evicted entry in shard clock ticks.
+    pub max_age_ticks: u64,
+    /// Why eviction happened.
+    pub reason: InMemoryEvictionReason,
+}
+
+fn record_eviction_report(
+    report: &mut Option<InMemoryEvictionReport>,
+    reason: InMemoryEvictionReason,
+    now: u64,
+    removed: &InMemoryCacheEntry,
+) {
+    let removed_bytes = cache_usize_to_u64(
+        removed.bytes,
+        "evicted byte count",
+        "shard cache artifacts before eviction",
+    );
+    let age = cache_u64_sub(
+        now,
+        removed.last_used,
+        "evicted entry age",
+        "rebuild the cache LRU clock",
+    );
+    match report {
+        Some(report) => {
+            report.entries = cache_u64_add(
+                report.entries,
+                1,
+                "eviction count",
+                "shard cache eviction work",
+            );
+            report.bytes = cache_u64_add(
+                report.bytes,
+                removed_bytes,
+                "evicted byte count",
+                "shard cache eviction work",
+            );
+            report.max_age_ticks = report.max_age_ticks.max(age);
+        }
+        None => {
+            *report = Some(InMemoryEvictionReport {
+                entries: 1,
+                bytes: removed_bytes,
+                max_age_ticks: age,
+                reason,
+            });
+        }
+    }
 }
 
 impl PipelineCacheStore for InMemoryPipelineCache {
@@ -227,12 +319,21 @@ impl PipelineCacheStore for InMemoryPipelineCache {
         {
             PipelineCacheCounters::increment(&self.metrics.rejected_puts, "rejected puts");
             if let Some(removed) = shard.entries.remove(&fp) {
+                let tick = shard.next_tick();
                 shard.bytes = cache_usize_sub(
                     shard.bytes,
                     removed.bytes,
                     "byte accounting while rejecting put",
                     "rebuild the cache",
                 );
+                let mut report = None;
+                record_eviction_report(
+                    &mut report,
+                    InMemoryEvictionReason::RejectedPut,
+                    tick,
+                    &removed,
+                );
+                shard.last_eviction = report;
                 PipelineCacheCounters::increment(&self.metrics.evictions, "evictions");
                 PipelineCacheCounters::add(
                     &self.metrics.evicted_bytes,
@@ -271,25 +372,27 @@ impl PipelineCacheStore for InMemoryPipelineCache {
             },
         );
         PipelineCacheCounters::increment(&self.metrics.puts, "puts");
-        let (evictions, evicted_bytes) =
-            shard.evict_to_limits(self.max_entries_per_shard, self.max_bytes_per_shard);
-        PipelineCacheCounters::add(&self.metrics.evictions, evictions, "evictions");
-        PipelineCacheCounters::add(&self.metrics.evicted_bytes, evicted_bytes, "evicted bytes");
+        if let Some(report) =
+            shard.evict_to_limits(self.max_entries_per_shard, self.max_bytes_per_shard)
+        {
+            PipelineCacheCounters::add(&self.metrics.evictions, report.entries, "evictions");
+            PipelineCacheCounters::add(&self.metrics.evicted_bytes, report.bytes, "evicted bytes");
+        }
     }
 
     fn metrics(&self) -> PipelineCacheMetrics {
         self.metrics
             .snapshot(
-                u64::try_from(self.cached_bytes()).unwrap_or_else(|error| {
-                    panic!(
-                        "Vyre in-memory pipeline cache retained bytes cannot fit u64: {error}. Fix: shard cache metrics before snapshotting."
-                    )
-                }),
-                u64::try_from(self.len()).unwrap_or_else(|error| {
-                    panic!(
-                        "Vyre in-memory pipeline cache entry count cannot fit u64: {error}. Fix: shard cache metrics before snapshotting."
-                    )
-                }),
+                cache_usize_to_u64(
+                    self.cached_bytes(),
+                    "retained byte snapshot",
+                    "shard cache metrics before snapshotting",
+                ),
+                cache_usize_to_u64(
+                    self.len(),
+                    "entry count snapshot",
+                    "shard cache metrics before snapshotting",
+                ),
             )
     }
 }
@@ -385,6 +488,47 @@ mod tests {
         assert_eq!(metrics.cached_bytes, 4);
         assert_eq!(metrics.entries, 1);
         assert_eq!(metrics.hit_rate_ppm(), 500_000);
+    }
+
+    #[test]
+    fn in_memory_cache_eviction_report_records_reason_entries_bytes_and_age() {
+        let cache = InMemoryPipelineCache::with_limits(1, 8);
+        let a = PipelineFingerprint([0; 32]);
+        let mut b_bytes = [0; 32];
+        b_bytes[1] = 1;
+        let b = PipelineFingerprint(b_bytes);
+
+        cache.put(a, vec![1; 4]);
+        assert!(cache.get(&a).is_some());
+        cache.put(b, vec![2; 4]);
+
+        let reports = cache.eviction_reports();
+        assert_eq!(reports.len(), 1);
+        let report = reports[0];
+        assert_eq!(report.reason, InMemoryEvictionReason::EntryLimit);
+        assert_eq!(report.entries, 1);
+        assert_eq!(report.bytes, 4);
+        assert!(
+            report.max_age_ticks > 0,
+            "Fix: eviction reports must expose LRU age, got {report:?}"
+        );
+    }
+
+    #[test]
+    fn rejected_oversize_put_records_eviction_reason_for_replaced_entry() {
+        let cache = InMemoryPipelineCache::with_limits(8, 8);
+        let fp = PipelineFingerprint([0; 32]);
+
+        cache.put(fp, vec![1; 4]);
+        cache.put(fp, vec![2; 9]);
+
+        assert!(cache.get(&fp).is_none());
+        let reports = cache.eviction_reports();
+        assert_eq!(reports.len(), 1);
+        let report = reports[0];
+        assert_eq!(report.reason, InMemoryEvictionReason::RejectedPut);
+        assert_eq!(report.entries, 1);
+        assert_eq!(report.bytes, 4);
     }
 
     #[test]

@@ -1,0 +1,43 @@
+# Roofline and counter evidence for VX-786 through VX-790.
+# Compute, memory, arithmetic intensity, and backend counters share one route explanation.
+
+schema = "vyre.performance.roofline_counter_evidence.v1"
+owner = "bench_harness"
+evidence_tokens = ["ROOFLINE_MODEL", "NSIGHT_COMPUTE_ROOFLINE", "NSIGHT_COMPUTE"]
+
+required_fields = [
+  "kernel_id",
+  "backend",
+  "arithmetic_intensity",
+  "memory_bytes",
+  "operation_count",
+  "achieved_throughput",
+  "roofline_bound",
+  "limiting_resource",
+  "counter_sources",
+  "route_explanation",
+]
+
+[[kernel]]
+kernel_id = "cuda-regex-prefilter"
+backend = "cuda"
+arithmetic_intensity = "0.42_ops_per_byte"
+memory_bytes = 1073741824
+operation_count = 451000000
+achieved_throughput = "620_gib_per_second"
+roofline_bound = "memory_bandwidth"
+limiting_resource = "global-memory-bandwidth"
+counter_sources = ["dram__bytes", "sm__throughput", "elapsed_cycles"]
+route_explanation = "memory-bound-prefilter-prefers-coalesced-load-route"
+
+[[kernel]]
+kernel_id = "metal-ranking-topk"
+backend = "metal"
+arithmetic_intensity = "5.7_ops_per_byte"
+memory_bytes = 134217728
+operation_count = 765000000
+achieved_throughput = "2.4_tops"
+roofline_bound = "compute"
+limiting_resource = "simdgroup-occupancy"
+counter_sources = ["metal-counter-set-a", "gpu_ns", "threadgroup_occupancy"]
+route_explanation = "compute-bound-ranking-prefers-msl-specialized-kernel"

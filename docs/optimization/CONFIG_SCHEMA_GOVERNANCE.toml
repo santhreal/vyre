@@ -1,0 +1,49 @@
+# Config and schema governance for VX-801 through VX-803 and VX-815 through VX-817.
+# TOML registries and machine-checkable schema contracts share one governance seam.
+
+schema = "vyre.config.schema_governance.v1"
+owner = "organization_dedup"
+evidence_tokens = ["TOML_1_0", "JSON_SCHEMA_2020_12"]
+
+required_fields = [
+  "registry_id",
+  "file_glob",
+  "format",
+  "schema_contract",
+  "owner_lane",
+  "validation_scope",
+  "diagnostic_prefix",
+  "publication_class",
+]
+
+[[registry]]
+registry_id = "optimization-registries"
+file_glob = "docs/optimization/*.toml"
+format = "toml-1.0"
+schema_contract = "json-schema-2020-12-compatible-shape"
+owner_lane = "coordination"
+validation_scope = "all plan-linked registries"
+diagnostic_prefix = "VYRE_CONFIG_SCHEMA"
+publication_class = "public-vyre-artifact"
+
+[[registry]]
+registry_id = "release-boundary-registries"
+file_glob = "docs/optimization/*PUBLICATION*.toml"
+format = "toml-1.0"
+schema_contract = "json-schema-2020-12-compatible-shape"
+owner_lane = "security_reliability"
+validation_scope = "public/private publication boundaries"
+diagnostic_prefix = "VYRE_PUBLICATION_SCHEMA"
+publication_class = "public-vyre-artifact"
+
+[[diagnostic]]
+id = "unknown-field"
+code = "VYRE_CONFIG_SCHEMA_UNKNOWN_FIELD"
+message_class = "field is not declared by the schema contract"
+fix_class = "remove field or add schema migration record"
+
+[[diagnostic]]
+id = "wrong-tier"
+code = "VYRE_CONFIG_SCHEMA_WRONG_TIER"
+message_class = "operational knob and data file entries cannot share a tier"
+fix_class = "move field to Tier A config or Tier B data registry"

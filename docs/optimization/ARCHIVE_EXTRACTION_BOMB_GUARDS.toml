@@ -1,0 +1,40 @@
+# Archive extraction and decompression bomb guards for VX-905 through VX-907 and VX-911.
+# Archive members, compression ratio, total bytes, file count, nested archives, and extraction roots share one guard.
+
+schema = "vyre.filesystem.archive_extraction_bomb_guard.v1"
+owner = "security_reliability"
+evidence_tokens = ["PKWARE_APPNOTE", "CWE_22_PATH_TRAVERSAL"]
+
+required_fields = [
+  "guard_id",
+  "archive_format",
+  "member_path_policy",
+  "compression_ratio_limit",
+  "expanded_bytes_limit",
+  "file_count_limit",
+  "nested_archive_policy",
+  "extraction_root_policy",
+  "diagnostic",
+]
+
+[[guard]]
+guard_id = "zip-release-evidence-import"
+archive_format = "zip"
+member_path_policy = "canonicalize-each-member-under-extraction-root"
+compression_ratio_limit = "100x"
+expanded_bytes_limit = "1GiB"
+file_count_limit = 100000
+nested_archive_policy = "refuse-recursive-extraction-by-default"
+extraction_root_policy = "fresh-temp-dir-then-atomic-promote"
+diagnostic = "VYRE_ARCHIVE_EXTRACTION_REFUSED"
+
+[[guard]]
+guard_id = "fuzz-corpus-archive"
+archive_format = "zip"
+member_path_policy = "reject-absolute-dotdot-drive-prefix-and-symlink-members"
+compression_ratio_limit = "10x"
+expanded_bytes_limit = "256MiB"
+file_count_limit = 10000
+nested_archive_policy = "quarantine-nested-archives"
+extraction_root_policy = "local-nonpublished-temp-root"
+diagnostic = "VYRE_ARCHIVE_BOMB_REFUSED"

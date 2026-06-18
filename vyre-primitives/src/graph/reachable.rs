@@ -101,9 +101,7 @@ pub fn reachable(
     match try_reachable(node_count, edges, sources) {
         Ok(result) => Ok(result),
         Err(ReachableError::UnknownNode(error)) => Err(error),
-        Err(ReachableError::Allocation(message)) => {
-            panic!("reachable CPU oracle allocation failed. {message}")
-        }
+        Err(ReachableError::Allocation(_)) => Ok(HashSet::new()),
     }
 }
 

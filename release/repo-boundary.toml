@@ -1,0 +1,7 @@
+public_repository = "santhsecurity/vyre"
+private_repository = "santhsecurity/Santh"
+public_repository_field = "public_repository"
+legacy_public_repositories_field = "repositories_public"
+legacy_plural_release_repo_variable = "VYRE_RELEASE_REPOS"
+verify_public_repo_action = "verify vyre repository is public"
+boundary_description = "only santhsecurity/vyre is public; Santh remains private"

@@ -1,0 +1,47 @@
+# Data retention and media controls for VX-851 through VX-855.
+# Corpus storage, deletion, quarantine, transfer, and private/public release controls share one policy.
+
+schema = "vyre.data.retention_media_controls.v1"
+owner = "security_reliability"
+evidence_tokens = ["NIST_SP_800_53", "NIST_PRIVACY_FRAMEWORK"]
+
+required_fields = [
+  "control_id",
+  "data_class",
+  "storage_scope",
+  "retention_policy",
+  "deletion_policy",
+  "quarantine_policy",
+  "transfer_policy",
+  "audit_evidence",
+]
+
+[[control]]
+control_id = "public-synthetic-fixtures"
+data_class = "synthetic-public-fixture"
+storage_scope = "repo-fixtures"
+retention_policy = "versioned-with-source"
+deletion_policy = "remove-by-reverting-fixture-with-migration-note"
+quarantine_policy = "not-required"
+transfer_policy = "public-repo-only"
+audit_evidence = "DATASET_LINEAGE_CATALOG.toml"
+
+[[control]]
+control_id = "private-debug-corpus"
+data_class = "private-worktree-corpus"
+storage_scope = "local-private-root-only"
+retention_policy = "retain-only-while-active-local-analysis"
+deletion_policy = "delete-local-copy-after-redacted-reproducer-is-created"
+quarantine_policy = "quarantine-if-publication-boundary-hit"
+transfer_policy = "no-publication-no-package-no-release-artifact"
+audit_evidence = "CORPUS_PRIVACY_CLASSIFICATION.toml"
+
+[[control]]
+control_id = "fuzz-crash-reproducer"
+data_class = "minimized-crash-reproducer"
+storage_scope = "repo-fixtures-if-redacted"
+retention_policy = "versioned-when-synthetic-or-redacted"
+deletion_policy = "delete-private-source-after-minimization"
+quarantine_policy = "quarantine-until-privacy-classification-passes"
+transfer_policy = "public-only-after-redaction-proof"
+audit_evidence = "CORRECTNESS_COUNTEREXAMPLE_ARTIFACTS.toml"

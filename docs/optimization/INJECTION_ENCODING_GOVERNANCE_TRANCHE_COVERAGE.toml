@@ -1,0 +1,29 @@
+# Injection and output-encoding governance tranche coverage for VX-941 through VX-960.
+# Command execution, control characters, structured output encoding, Unicode spoofing, and publication boundaries share one coverage row.
+
+schema = "vyre.plan.injection_encoding_governance_tranche_coverage.v1"
+owner = "coordination"
+evidence_tokens = ["OWASP_OS_COMMAND_INJECTION", "CWE_78_OS_COMMAND_INJECTION", "CWE_93_CRLF_INJECTION", "CWE_117_LOG_NEUTRALIZATION", "RFC_8259_JSON", "UNICODE_TR36", "UNICODE_UTS39"]
+
+required_fields = [
+  "vx_id_range",
+  "command_execution_boundary",
+  "control_character_output_policy",
+  "structured_output_encoding_policy",
+  "unicode_identifier_spoofing_policy",
+  "source_ledger_coverage",
+  "publication_boundary",
+  "dedup_seam",
+  "proof_gate",
+]
+
+[[coverage]]
+vx_id_range = "VX-941..VX-960"
+command_execution_boundary = "COMMAND_EXECUTION_BOUNDARY.toml"
+control_character_output_policy = "CONTROL_CHARACTER_OUTPUT_POLICY.toml"
+structured_output_encoding_policy = "STRUCTURED_OUTPUT_ENCODING_POLICY.toml"
+unicode_identifier_spoofing_policy = "UNICODE_IDENTIFIER_SPOOFING_POLICY.toml"
+source_ledger_coverage = "RESEARCH_SOURCE_LEDGER.toml"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+dedup_seam = "one-command-boundary-one-control-character-policy-one-structured-output-encoding-policy-one-unicode-spoofing-policy"
+proof_gate = "injection_encoding_governance.rs"

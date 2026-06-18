@@ -1,0 +1,37 @@
+# End-to-end staged rollout tranche coverage for VX-1261 through VX-1280.
+# This tranche adds release rollout strategy, Kubernetes and Helm upgrade mechanics, progressive delivery gates, and rollback versus forward-fix decisions while reusing deployment, artifact, SLO, alert, runbook, vulnerability, release-health, and publication authorities.
+
+schema = "vyre.release.staged_rollout_tranche_coverage.v1"
+owner = "coordination"
+evidence_tokens = ["KUBERNETES_DEPLOYMENTS", "KUBECTL_ROLLOUT", "HELM_UPGRADE", "HELM_ROLLBACK", "ARGO_ROLLOUTS_CANARY", "ARGO_ROLLOUTS_BLUEGREEN"]
+
+required_fields = [
+  "coverage_id",
+  "vx_id_range",
+  "release_rollout_strategy_policy",
+  "kubernetes_helm_upgrade_policy",
+  "progressive_delivery_canary_policy",
+  "rollback_forward_fix_decision_policy",
+  "artifact_integrity_archive_coverage",
+  "operational_readiness_coverage",
+  "operator_deployment_surface_matrix",
+  "release_health_feedback_loop",
+  "publication_boundary",
+  "dedup_seam",
+  "proof_gate",
+]
+
+[[coverage]]
+coverage_id = "staged-rollout-end-to-end"
+vx_id_range = "VX-1261..VX-1280"
+release_rollout_strategy_policy = "RELEASE_ROLLOUT_STRATEGY_POLICY.toml"
+kubernetes_helm_upgrade_policy = "KUBERNETES_HELM_UPGRADE_POLICY.toml"
+progressive_delivery_canary_policy = "PROGRESSIVE_DELIVERY_CANARY_POLICY.toml"
+rollback_forward_fix_decision_policy = "ROLLBACK_FORWARD_FIX_DECISION_POLICY.toml"
+artifact_integrity_archive_coverage = "END_TO_END_ARTIFACT_INTEGRITY_ARCHIVE_TRANCHE_COVERAGE.toml"
+operational_readiness_coverage = "END_TO_END_OPERATIONAL_READINESS_TRANCHE_COVERAGE.toml"
+operator_deployment_surface_matrix = "OPERATOR_DEPLOYMENT_SURFACE_MATRIX.toml"
+release_health_feedback_loop = "RELEASE_HEALTH_FEEDBACK_LOOP.toml"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+dedup_seam = "rollout-phase-upgrade-canary-and-decision-policies-own-release-progression-while-deployment-artifact-SLO-alert-runbook-vulnerability-and-release-health-registries-remain-source-authorities"
+proof_gate = "conform/vyre-conform-enforce/tests/staged_rollout_governance.rs"

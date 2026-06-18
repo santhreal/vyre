@@ -1,0 +1,55 @@
+# Operator runbook and rollback policy for VX-1245, VX-1250, VX-1251, VX-1257, and VX-1258.
+# Runbook actions, rollback decisions, artifact verification, operator logs, incident links, and release-health blockers share one actionability seam.
+
+schema = "vyre.ops.operator_runbook_rollback_policy.v1"
+owner = "coordination"
+evidence_tokens = ["PROMETHEUS_ALERTMANAGER", "GITHUB_IMMUTABLE_RELEASES", "TUF_SPECIFICATION", "OPENTELEMETRY_LOGS"]
+
+required_fields = [
+  "runbook_id",
+  "trigger_policy",
+  "operator_action_policy",
+  "rollback_policy",
+  "verification_policy",
+  "evidence_capture_policy",
+  "privacy_boundary",
+  "owner_route",
+  "release_gate_effect",
+  "diagnostic",
+]
+
+[[runbook]]
+runbook_id = "rollback-bad-release"
+trigger_policy = "release-health-blocker-or-SLO-burn-attributed-to-current-release"
+operator_action_policy = "identify-version-verify-previous-artifact-apply-deployment-specific-rollback-and-confirm-health"
+rollback_policy = "rollback-target-must-be-public-verified-release-or-TUF-valid-metadata-bundle"
+verification_policy = "CONSUMER_ARTIFACT_VERIFICATION_PROTOCOL.toml-and-RELEASE_METADATA_ANTI_ROLLBACK_POLICY.toml"
+evidence_capture_policy = "capture-alert-id-release-version-artifact-digest-deployment-id-trace-id-and-post-rollback-SLI"
+privacy_boundary = "no-private-Santh-paths-secrets-device-serials-or-private-corpus-excerpts-in-runbook-evidence"
+owner_route = "MAINTAINER_OWNERSHIP_ESCALATION_MAP.toml"
+release_gate_effect = "blocks-new-release-completion-until-regression-record-and-remediation-state-exist"
+diagnostic = "VYRE_RUNBOOK_BAD_RELEASE_ROLLBACK_REQUIRED"
+
+[[runbook]]
+runbook_id = "resource-saturation-mitigation"
+trigger_policy = "deployment-saturation-alert-or-resource-budget-burn"
+operator_action_policy = "check-queue-depth-resource-limits-backpressure-knobs-and-deployment-surface"
+rollback_policy = "rollback-only-if-saturation-correlates-with-current-version-or-config-change"
+verification_policy = "RESOURCE_DOS_GOVERNANCE_TRANCHE_COVERAGE.toml"
+evidence_capture_policy = "capture-resource-class-queue-metrics-config-digest-and-action-taken"
+privacy_boundary = "metrics-labels-and-logs-use-redacted-public-fields-only"
+owner_route = "OPERATOR_DEPLOYMENT_SURFACE_MATRIX.toml"
+release_gate_effect = "invalidates-performance-or-operator-readiness-claim-when unresolved"
+diagnostic = "VYRE_RUNBOOK_RESOURCE_SATURATION_REQUIRED"
+
+[[runbook]]
+runbook_id = "security-incident-escalation"
+trigger_policy = "security-alert-private-report-or-active-exploitation-signal"
+operator_action_policy = "move-sensitive-detail-to-private-response-runbook-and publish only redacted status"
+rollback_policy = "rollback-or-disable-affected-feature-until-fixed-mitigated-or-not-affected-proof"
+verification_policy = "PRIVATE_VULNERABILITY_RESPONSE_RUNBOOK.toml"
+evidence_capture_policy = "capture-advisory-id-affected-version-release-artifact-digest-and-public-safe-operator-impact"
+privacy_boundary = "exploit-details-secrets-private-paths-and-sensitive-reproducers-stay-private"
+owner_route = "MAINTAINER_OWNERSHIP_ESCALATION_MAP.toml"
+release_gate_effect = "blocks-final-release-gate-while-under-investigation-or-affected-unfixed"
+diagnostic = "VYRE_RUNBOOK_SECURITY_ESCALATION_REQUIRED"

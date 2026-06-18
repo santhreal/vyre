@@ -1,0 +1,34 @@
+# Public API ownership snapshots for VX-695.
+# Exported symbols carry owner, stability, feature gate, dependency direction, migration, and release proof.
+
+schema = "vyre.api.public_ownership_snapshot.v1"
+owner = "organization_dedup"
+evidence_tokens = ["MLIR_PASS"]
+
+required_fields = [
+  "symbol",
+  "owner_lane",
+  "stability_class",
+  "feature_gate",
+  "dependency_direction",
+  "migration_path",
+  "release_proof_id",
+]
+
+[[symbol]]
+symbol = "vyre_primitives::graph::Motif"
+owner_lane = "graph_flow_compiler"
+stability_class = "public-stable"
+feature_gate = "graph"
+dependency_direction = "primitive-to-consumer"
+migration_path = "compatibility-adapter-required"
+release_proof_id = "api-proof-motif-001"
+
+[[symbol]]
+symbol = "vyre_driver::BackendCapability"
+owner_lane = "driver_shared"
+stability_class = "public-evolving"
+feature_gate = "driver"
+dependency_direction = "driver-to-runtime"
+migration_path = "nonbreaking-field-addition"
+release_proof_id = "api-proof-backend-capability-001"

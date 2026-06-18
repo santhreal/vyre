@@ -219,81 +219,151 @@ impl TaskWorkItem {
 
     /// Encode a pause at `continuation_pc` until `resume_epoch`.
     #[must_use]
-    pub const fn paused(
+    pub fn try_paused(
         mut self,
         continuation_pc: u32,
         continuation_data: u32,
         resume_epoch: u32,
-    ) -> Self {
+    ) -> Result<Self, BackendError> {
+        self.ensure_transitionable("pause")?;
         self.state = TaskState::Paused.word();
         self.continuation_pc = continuation_pc;
         self.continuation_data = continuation_data;
         self.resume_epoch = resume_epoch;
         self.flags = (self.flags | TASK_FLAG_PAUSED) & !TASK_FLAG_RESUME_READY;
-        self
+        Ok(self)
+    }
+
+    /// Encode a pause at `continuation_pc` until `resume_epoch`.
+    #[must_use]
+    #[cfg(any(test, feature = "legacy-infallible"))]
+    pub fn paused(self, continuation_pc: u32, continuation_data: u32, resume_epoch: u32) -> Self {
+        self.try_paused(continuation_pc, continuation_data, resume_epoch)
+            .unwrap_or_else(|error| panic!("{error}"))
     }
 
     /// Mark a paused task ready for GPU-side resume.
     #[must_use]
-    pub const fn resumed(mut self) -> Self {
+    pub fn try_resumed(mut self) -> Result<Self, BackendError> {
+        if self.task_state() != Some(TaskState::Paused) {
+            return Err(invalid_task_transition("resume", self.state));
+        }
         self.state = TaskState::Ready.word();
         self.flags =
             (self.flags | TASK_FLAG_RESUME_READY) & !(TASK_FLAG_PAUSED | TASK_FLAG_YIELDED);
-        self
+        Ok(self)
+    }
+
+    /// Mark a paused task ready for GPU-side resume.
+    #[must_use]
+    #[cfg(any(test, feature = "legacy-infallible"))]
+    pub fn resumed(self) -> Self {
+        self.try_resumed().unwrap_or_else(|error| panic!("{error}"))
     }
 
     /// Yield this task back to the scheduler at `continuation_pc`.
     #[must_use]
-    pub const fn yielded(mut self, continuation_pc: u32, continuation_data: u32) -> Self {
+    pub fn try_yielded(
+        mut self,
+        continuation_pc: u32,
+        continuation_data: u32,
+    ) -> Result<Self, BackendError> {
+        self.ensure_transitionable("yield")?;
         self.state = TaskState::Yielded.word();
         self.continuation_pc = continuation_pc;
         self.continuation_data = continuation_data;
-        self.yield_count = match self.yield_count.checked_add(1) {
-            Some(value) => value,
-            None => panic!("megakernel task yield_count overflowed u32"),
-        };
+        self.yield_count = checked_task_counter_increment(self.yield_count, "yield_count")?;
         self.flags |= TASK_FLAG_YIELDED;
-        self
+        Ok(self)
+    }
+
+    /// Yield this task back to the scheduler at `continuation_pc`.
+    #[must_use]
+    #[cfg(any(test, feature = "legacy-infallible"))]
+    pub fn yielded(self, continuation_pc: u32, continuation_data: u32) -> Self {
+        self.try_yielded(continuation_pc, continuation_data)
+            .unwrap_or_else(|error| panic!("{error}"))
     }
 
     /// Requeue this task, optionally changing its priority partition.
     #[must_use]
-    pub const fn requeued(
+    pub fn try_requeued(
         mut self,
         continuation_pc: u32,
         continuation_data: u32,
         priority: TaskPriority,
-    ) -> Self {
+    ) -> Result<Self, BackendError> {
+        self.ensure_transitionable("requeue")?;
         self.state = TaskState::Requeued.word();
         self.priority = priority.word();
         self.continuation_pc = continuation_pc;
         self.continuation_data = continuation_data;
-        self.requeue_count = match self.requeue_count.checked_add(1) {
-            Some(value) => value,
-            None => panic!("megakernel task requeue_count overflowed u32"),
-        };
-        self.age_ticks = match self.age_ticks.checked_add(1) {
-            Some(value) => value,
-            None => panic!("megakernel task age_ticks overflowed u32"),
-        };
+        self.requeue_count = checked_task_counter_increment(self.requeue_count, "requeue_count")?;
+        self.age_ticks = checked_task_counter_increment(self.age_ticks, "age_ticks")?;
         self.flags |= TASK_FLAG_REQUEUE_REQUESTED;
-        self
+        Ok(self)
+    }
+
+    /// Requeue this task, optionally changing its priority partition.
+    #[must_use]
+    #[cfg(any(test, feature = "legacy-infallible"))]
+    pub fn requeued(
+        self,
+        continuation_pc: u32,
+        continuation_data: u32,
+        priority: TaskPriority,
+    ) -> Self {
+        self.try_requeued(continuation_pc, continuation_data, priority)
+            .unwrap_or_else(|error| panic!("{error}"))
     }
 
     /// Mark this task completed.
     #[must_use]
-    pub const fn completed(mut self) -> Self {
+    pub fn try_completed(mut self) -> Result<Self, BackendError> {
+        self.ensure_transitionable("complete")?;
         self.state = TaskState::Done.word();
         self.flags = 0;
-        self
+        Ok(self)
+    }
+
+    /// Mark this task completed.
+    #[must_use]
+    #[cfg(any(test, feature = "legacy-infallible"))]
+    pub fn completed(self) -> Self {
+        self.try_completed()
+            .unwrap_or_else(|error| panic!("{error}"))
     }
 
     /// Mark this task faulted with a compact fault code.
     #[must_use]
-    pub const fn faulted(mut self, fault_code: u32) -> Self {
+    pub fn try_faulted(mut self, fault_code: u32) -> Result<Self, BackendError> {
+        self.ensure_transitionable("fault")?;
         self.state = TaskState::Faulted.word();
         self.continuation_data = fault_code;
-        self
+        Ok(self)
+    }
+
+    /// Mark this task faulted with a compact fault code.
+    #[must_use]
+    #[cfg(any(test, feature = "legacy-infallible"))]
+    pub fn faulted(self, fault_code: u32) -> Self {
+        self.try_faulted(fault_code)
+            .unwrap_or_else(|error| panic!("{error}"))
+    }
+
+    fn ensure_transitionable(&self, action: &'static str) -> Result<(), BackendError> {
+        match self.task_state() {
+            Some(TaskState::Empty | TaskState::Done | TaskState::Faulted) | None => {
+                Err(invalid_task_transition(action, self.state))
+            }
+            Some(
+                TaskState::Ready
+                | TaskState::Running
+                | TaskState::Paused
+                | TaskState::Yielded
+                | TaskState::Requeued,
+            ) => Ok(()),
+        }
     }
 }
 
@@ -358,6 +428,7 @@ impl TaskQueueSnapshot {
 
     /// Number of slots immediately eligible for GPU scheduling.
     #[must_use]
+    #[cfg(any(test, feature = "legacy-infallible"))]
     pub fn schedulable_count(&self) -> u32 {
         match self.try_schedulable_count() {
             Ok(value) => value,
@@ -384,6 +455,7 @@ impl TaskQueueSnapshot {
 
     /// Number of slots carrying continuation pressure.
     #[must_use]
+    #[cfg(any(test, feature = "legacy-infallible"))]
     pub fn continuation_pressure_count(&self) -> u64 {
         match self.try_continuation_pressure_count() {
             Ok(value) => value,
@@ -444,6 +516,7 @@ impl TaskQueueSnapshot {
 
     /// Merge this queue telemetry into a launch request.
     #[must_use]
+    #[cfg(any(test, feature = "legacy-infallible"))]
     pub fn apply_to_launch_request(
         &self,
         mut request: MegakernelLaunchRequest,
@@ -486,6 +559,23 @@ fn checked_increment(counter: &mut u32) -> Result<(), BackendError> {
         )
     })?;
     Ok(())
+}
+
+fn checked_task_counter_increment(value: u32, label: &'static str) -> Result<u32, BackendError> {
+    value.checked_add(1).ok_or_else(|| {
+        BackendError::new(format!(
+            "megakernel task {label} overflowed u32. Fix: drain or shard the task ring before mutating continuation counters."
+        ))
+    })
+}
+
+fn invalid_task_transition(action: &'static str, state_word: u32) -> BackendError {
+    let state = TaskState::from_word(state_word)
+        .map(|state| format!("{state:?}"))
+        .unwrap_or_else(|| format!("unknown({state_word})"));
+    BackendError::new(format!(
+        "megakernel task cannot {action} from state {state}. Fix: publish only legal task lifecycle transitions before mutating the task slot."
+    ))
 }
 
 #[cfg(test)]

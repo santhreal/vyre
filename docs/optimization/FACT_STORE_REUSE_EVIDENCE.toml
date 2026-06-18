@@ -1,0 +1,76 @@
+[artifact]
+id = "FACT_STORE_REUSE_EVIDENCE"
+title = "Columnar fact store reuse and rule execution evidence policy"
+tranche = "VX-1601..VX-1620"
+owner = "scanner_frontends"
+status = "planned_contract"
+research_sources = [
+  "APACHE_ARROW_COLUMNAR_FORMAT",
+  "DUCKDB_VECTOR_EXECUTION_FORMAT",
+  "APACHE_DATAFUSION_QUERY_OPTIMIZER",
+  "SUBSTRAIT_SPECIFICATION",
+]
+
+[scope]
+owns = [
+  "columnar fact-store performance evidence",
+  "rule execution plan rewrite evidence",
+  "batch operator correctness and equivalence records",
+  "CPU vector versus GPU batch route comparison fields",
+  "public-safe operator diagnostics for fact query execution",
+]
+does_not_own = [
+  "profile trace capture, owned by BENCHMARK_PROFILING_CAPTURE_POLICY",
+  "statistical release decision, owned by STATISTICAL_PERFORMANCE_GATES",
+  "output finding schema, owned by OUTPUT_SLAB_SCHEMA_PROVENANCE",
+  "runtime watchdog policy, owned by RUNTIME_WATCHDOG_PROOFS",
+]
+
+[required_per_run]
+fields = [
+  "fact_store_epoch",
+  "relation_count",
+  "batch_count",
+  "rows_total",
+  "bytes_total",
+  "dictionary_bytes",
+  "validity_bitmap_bytes",
+  "selection_vector_bytes",
+  "operator_count",
+  "joins_total",
+  "filters_total",
+  "aggregations_total",
+  "plan_rewrites_applied",
+  "plan_rewrites_rejected",
+  "cpu_vector_ns",
+  "gpu_batch_ns",
+  "portable_iterator_ns",
+  "route_selected",
+  "output_equivalence_digest",
+]
+
+[required_per_operator]
+fields = [
+  "operator_id",
+  "operator_kind",
+  "input_rows",
+  "output_rows",
+  "input_batches",
+  "output_batches",
+  "selection_density",
+  "null_density",
+  "dictionary_cardinality",
+  "elapsed_ns",
+  "materialized_bytes",
+  "spill_bytes",
+]
+
+[truth_gates]
+positive = "vectorized and portable routes produce identical finding identities, spans, rule ids, and output bytes for representative rule groups"
+negative = "unknown symbols, unresolved dependencies, null semantics, ambiguous edges, or missing provenance columns reject unsafe rewrites"
+adversarial = "skewed joins, high-null columns, high-cardinality dictionaries, sparse bitmaps, dense bitmaps, and tiny relations are measured separately"
+performance = "batch route wins must include p50, p95, p99, bytes/sec, CPU cycles per row, and memory bytes per row"
+
+[publication]
+public_fields = ["operator_kind", "route_selected", "rewrite_reason", "row_count_class", "density_class", "operator_fix"]
+private_fields = ["raw_symbol_spelling", "raw_path", "source_excerpt", "Santh root", "workspace hostname", "private registry URL"]

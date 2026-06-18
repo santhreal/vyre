@@ -1,0 +1,1593 @@
+{
+  "schema_version": 1,
+  "source_plan": "docs/optimization/ALL_AXES_ACCELERATION_PLAN.md",
+  "row_count": 120,
+  "rows": [
+    {
+      "id": "VX-001",
+      "axis": "coordination",
+      "evidence_paths": [
+        "docs/optimization/ALL_AXES_ACCELERATION_PLAN.md"
+      ],
+      "research_keys": [
+        "MLIR_PASS"
+      ],
+      "proof_gate": "`acceleration-plan-gate` asserts sequential ids, rooted evidence, concrete work, proof text, and dedup seam.",
+      "dedup_seam": "One active plan owns VX scope.",
+      "status": "active"
+    },
+    {
+      "id": "VX-002",
+      "axis": "coordination",
+      "evidence_paths": [
+        "docs/optimization/OWNERSHIP.toml"
+      ],
+      "research_keys": [
+        "CODEQL_FLOW"
+      ],
+      "proof_gate": "Ownership lane audit asserts every VX axis maps to one lane with required commands.",
+      "dedup_seam": "One ownership map owns cross-repo flow write boundaries.",
+      "status": "active"
+    },
+    {
+      "id": "VX-003",
+      "axis": "coordination",
+      "evidence_paths": [
+        "docs/optimization/XTASK_COMMAND_MATRIX.md",
+        "xtask/src/hygiene_matrix.rs",
+        "xtask/src/hot_path_scan.rs"
+      ],
+      "research_keys": [
+        "MLIR_PASS"
+      ],
+      "proof_gate": "`command-matrix --check` rejects high-risk commands without active VX linkage.",
+      "dedup_seam": "One command matrix owns xtask inventory.",
+      "status": "active"
+    },
+    {
+      "id": "VX-004",
+      "axis": "coordination",
+      "evidence_paths": [
+        "docs/optimization/HOT_PATHS.toml",
+        "docs/optimization/HOT_PATH_BUDGET_VX_CANDIDATES.json"
+      ],
+      "research_keys": [
+        "MLIR_PASS"
+      ],
+      "proof_gate": "`hot-path-scan --strict` and plan gate assert candidates are represented in VX rows.",
+      "dedup_seam": "One hot-path budget source owns performance debt intake.",
+      "status": "active"
+    },
+    {
+      "id": "VX-005",
+      "axis": "coordination",
+      "evidence_paths": [
+        "release/evidence/final/release-evidence-run.json"
+      ],
+      "research_keys": [
+        "MLIR_PASS"
+      ],
+      "proof_gate": "Release evidence gate rejects generated artifacts missing provenance fields.",
+      "dedup_seam": "One release evidence index owns artifact provenance.",
+      "status": "active"
+    },
+    {
+      "id": "VX-006",
+      "axis": "coordination",
+      "evidence_paths": [
+        "docs/optimization/LEGACY_DOCS.md"
+      ],
+      "research_keys": [
+        "MLIR_PASS"
+      ],
+      "proof_gate": "Docs matrix and plan gate reject parallel active plan markers.",
+      "dedup_seam": "One plan authority prevents split queues.",
+      "status": "active"
+    },
+    {
+      "id": "VX-007",
+      "axis": "coordination",
+      "evidence_paths": [
+        "docs/THESIS.md",
+        "THESIS.md",
+        "ARCHITECTURE.md"
+      ],
+      "research_keys": [
+        "MLIR_PASS"
+      ],
+      "proof_gate": "Docs matrix asserts every authority link resolves and every release claim maps to an artifact digest.",
+      "dedup_seam": "One docs matrix owns claim integrity.",
+      "status": "active"
+    },
+    {
+      "id": "VX-008",
+      "axis": "coordination",
+      "evidence_paths": [
+        "xtask/src/lego_audit.rs",
+        "xtask/src/source_similar.rs",
+        "xtask/src/whats_similar.rs"
+      ],
+      "research_keys": [
+        "MLIR_PASS"
+      ],
+      "proof_gate": "Source-similar and lego-audit tests assert one shared JSON schema.",
+      "dedup_seam": "One duplicate detector schema feeds dedup planning.",
+      "status": "active"
+    },
+    {
+      "id": "VX-009",
+      "axis": "coordination",
+      "evidence_paths": [
+        "xtask/src/benchmark_evidence_semantics.rs"
+      ],
+      "research_keys": [
+        "MLIR_PASS"
+      ],
+      "proof_gate": "Unit tests assert each module rejects malformed fixtures with exact messages.",
+      "dedup_seam": "One evidence schema module and one path module replace monolith checks.",
+      "status": "active"
+    },
+    {
+      "id": "VX-010",
+      "axis": "coordination",
+      "evidence_paths": [
+        "release/evidence/hygiene/hygiene-matrix.json"
+      ],
+      "research_keys": [
+        "MLIR_PASS"
+      ],
+      "proof_gate": "Hygiene matrix test asserts exact class counts and release blocker extraction.",
+      "dedup_seam": "One hygiene classifier feeds release and hot-path gates.",
+      "status": "active"
+    },
+    {
+      "id": "VX-011",
+      "axis": "foundation_optimizer",
+      "evidence_paths": [
+        "vyre-foundation/src/optimizer/scheduler/mod.rs"
+      ],
+      "research_keys": [
+        "MLIR_PASS"
+      ],
+      "proof_gate": "Scheduler tests assert exact JSON for clean-skipped, changed, refused, and reverted passes.",
+      "dedup_seam": "One scheduler metrics schema feeds benches and release evidence.",
+      "status": "active"
+    },
+    {
+      "id": "VX-012",
+      "axis": "foundation_optimizer",
+      "evidence_paths": [
+        "vyre-foundation/src/optimizer/fact_substrate.rs"
+      ],
+      "research_keys": [
+        "GRAPHBLAS"
+      ],
+      "proof_gate": "Fact substrate tests assert partition freshness and recompute counts after local mutation.",
+      "dedup_seam": "One partitioned fact substrate replaces per-pass fact walkers.",
+      "status": "active"
+    },
+    {
+      "id": "VX-013",
+      "axis": "foundation_optimizer",
+      "evidence_paths": [
+        "vyre-foundation/src/optimizer/eqsat.rs"
+      ],
+      "research_keys": [
+        "MLIR_PASS"
+      ],
+      "proof_gate": "EGraph tests assert stats for saturation, extraction, and budget-hit fixtures.",
+      "dedup_seam": "One egraph stats schema feeds optimizer and release evidence.",
+      "status": "active"
+    },
+    {
+      "id": "VX-014",
+      "axis": "foundation_optimizer",
+      "evidence_paths": [
+        "vyre-foundation/src/optimizer/eqsat_gpu.rs"
+      ],
+      "research_keys": [
+        "CUDA_COOP"
+      ],
+      "proof_gate": "Bench asserts extracted Program fingerprint parity and reports CPU versus GPU costs.",
+      "dedup_seam": "One egraph family interface serves CPU and GPU engines.",
+      "status": "active"
+    },
+    {
+      "id": "VX-015",
+      "axis": "foundation_optimizer",
+      "evidence_paths": [
+        "vyre-foundation/src/optimizer/program_soa.rs",
+        "docs/optimization/HOT_PATHS.toml"
+      ],
+      "research_keys": [
+        "MLIR_PASS"
+      ],
+      "proof_gate": "`hot-path-scan --strict` asserts program_soa budgets and optimizer tests assert byte-stable output.",
+      "dedup_seam": "One SoA fact view replaces cloned pass-local views.",
+      "status": "active"
+    },
+    {
+      "id": "VX-016",
+      "axis": "foundation_optimizer",
+      "evidence_paths": [
+        "vyre-foundation/src/optimizer/passes/loops/loop_fusion.rs"
+      ],
+      "research_keys": [
+        "MLIR_PASS"
+      ],
+      "proof_gate": "Hot-path strict plus loop-fusion tests assert zero panic findings and exact refusal codes.",
+      "dedup_seam": "One loop-analysis scratch object feeds fusion and fission.",
+      "status": "active"
+    },
+    {
+      "id": "VX-017",
+      "axis": "foundation_optimizer",
+      "evidence_paths": [
+        "vyre-foundation/src/optimizer/passes/loops/loop_fission.rs"
+      ],
+      "research_keys": [
+        "MLIR_PASS"
+      ],
+      "proof_gate": "Source-similar and optimizer tests assert shared analysis plus exact fission output.",
+      "dedup_seam": "One loop dependence analyzer serves loop fusion and fission.",
+      "status": "active"
+    },
+    {
+      "id": "VX-018",
+      "axis": "foundation_optimizer",
+      "evidence_paths": [
+        "vyre-foundation/src/optimizer/passes/algebraic/const_fold/reaching_def_propagate.rs"
+      ],
+      "research_keys": [
+        "CODEQL_FLOW"
+      ],
+      "proof_gate": "Test asserts only changed def-use partitions recompute after a local edit.",
+      "dedup_seam": "One reaching-def fact frontier feeds const fold and Weir handoff.",
+      "status": "active"
+    },
+    {
+      "id": "VX-019",
+      "axis": "foundation_wire",
+      "evidence_paths": [
+        "vyre-foundation/src/serial/wire/encode.rs"
+      ],
+      "research_keys": [
+        "MLIR_PASS"
+      ],
+      "proof_gate": "Wire tests assert repeated encode reuses scratch and output bytes match golden fixtures.",
+      "dedup_seam": "One wire scratch owner serves encode and fingerprint.",
+      "status": "active"
+    },
+    {
+      "id": "VX-020",
+      "axis": "foundation_wire",
+      "evidence_paths": [
+        "vyre-foundation/src/ir_inner/model/program/meta.rs"
+      ],
+      "research_keys": [
+        "MLIR_PASS"
+      ],
+      "proof_gate": "Validation tests assert marks clear after structural mutation and survive metadata-only changes.",
+      "dedup_seam": "One Program metadata cache owns validation state.",
+      "status": "active"
+    },
+    {
+      "id": "VX-021",
+      "axis": "foundation_wire",
+      "evidence_paths": [
+        "vyre-foundation/src/vast.rs"
+      ],
+      "research_keys": [
+        "TREE_SITTER"
+      ],
+      "proof_gate": "VAST tests assert chunked and flat inputs emit identical bytes and stable changed ranges.",
+      "dedup_seam": "One VAST wire layout feeds C, Rust, and Weir graph frontends.",
+      "status": "active"
+    },
+    {
+      "id": "VX-022",
+      "axis": "foundation_wire",
+      "evidence_paths": [
+        "vyre-foundation/src/serial/wire/decode/from_wire/payload.rs"
+      ],
+      "research_keys": [
+        "NAGA"
+      ],
+      "proof_gate": "Opaque payload tests assert malformed payloads fail before Naga, PTX, SPIR-V, or Metal emission.",
+      "dedup_seam": "One opaque payload decoder serves lower and emit crates.",
+      "status": "active"
+    },
+    {
+      "id": "VX-023",
+      "axis": "foundation_wire",
+      "evidence_paths": [
+        "vyre-core/src/lib.rs"
+      ],
+      "research_keys": [
+        "MLIR_PASS"
+      ],
+      "proof_gate": "Public API gate rejects aliases without owner, canonical path, and compatibility contract.",
+      "dedup_seam": "One facade snapshot owns public API drift.",
+      "status": "active"
+    },
+    {
+      "id": "VX-024",
+      "axis": "foundation_wire",
+      "evidence_paths": [
+        "vyre-libs/src/compat_aliases.rs"
+      ],
+      "research_keys": [
+        "MLIR_PASS"
+      ],
+      "proof_gate": "Compat alias audit rejects deprecated imports in non-test source.",
+      "dedup_seam": "One alias registry owns compatibility shims.",
+      "status": "active"
+    },
+    {
+      "id": "VX-025",
+      "axis": "lower_emit",
+      "evidence_paths": [
+        "vyre-lower/src/lower.rs"
+      ],
+      "research_keys": [
+        "MLIR_PASS"
+      ],
+      "proof_gate": "Lower tests assert descriptor fingerprints match before and after split.",
+      "dedup_seam": "One lower API with split internal responsibilities.",
+      "status": "active"
+    },
+    {
+      "id": "VX-026",
+      "axis": "lower_emit",
+      "evidence_paths": [
+        "vyre-lower/src/lower.rs"
+      ],
+      "research_keys": [
+        "METAL_ARGUMENT_BUFFERS"
+      ],
+      "proof_gate": "Binding planner tests assert no collisions across Naga, PTX, SPIR-V, and Metal artifacts.",
+      "dedup_seam": "One binding planner feeds all emitters.",
+      "status": "active"
+    },
+    {
+      "id": "VX-027",
+      "axis": "lower_emit",
+      "evidence_paths": [
+        "vyre-lower/src/rewrites/mod.rs"
+      ],
+      "research_keys": [
+        "MLIR_PASS"
+      ],
+      "proof_gate": "Rewrite pipeline tests assert exact stats for DCE, CSE, const fold, load forwarding, LICM, and loop rewrites.",
+      "dedup_seam": "One descriptor pass registry replaces hand-maintained lists.",
+      "status": "active"
+    },
+    {
+      "id": "VX-028",
+      "axis": "lower_emit",
+      "evidence_paths": [
+        "vyre-emit-naga/src/emitter/op_dispatch.rs"
+      ],
+      "research_keys": [
+        "NAGA"
+      ],
+      "proof_gate": "Naga tests assert every `KernelOpKind` maps to one route and route cache parity holds.",
+      "dedup_seam": "One op-dispatch table drives Naga and Metal emission.",
+      "status": "active"
+    },
+    {
+      "id": "VX-029",
+      "axis": "lower_emit",
+      "evidence_paths": [
+        "vyre-emit-naga/src/lib.rs"
+      ],
+      "research_keys": [
+        "NAGA"
+      ],
+      "proof_gate": "Hot-path strict and emitter tests assert zero panic findings and exact error codes.",
+      "dedup_seam": "One structured emit error surface serves all Naga consumers.",
+      "status": "active"
+    },
+    {
+      "id": "VX-030",
+      "axis": "lower_emit",
+      "evidence_paths": [
+        "vyre-emit-metal/src/lib.rs"
+      ],
+      "research_keys": [
+        "NAGA"
+      ],
+      "proof_gate": "Artifact tests assert identical descriptor hash and ABI fields across emitters.",
+      "dedup_seam": "One artifact schema replaces emitter-specific metadata drift.",
+      "status": "active"
+    },
+    {
+      "id": "VX-031",
+      "axis": "lower_emit",
+      "evidence_paths": [
+        "vyre-emit-ptx/src/emitter.rs"
+      ],
+      "research_keys": [
+        "PTX_ISA"
+      ],
+      "proof_gate": "PTX tests assert unsupported instructions fail with exact capability diagnostics.",
+      "dedup_seam": "One capability gate feeds PTX emission and CUDA launch diagnostics.",
+      "status": "active"
+    },
+    {
+      "id": "VX-032",
+      "axis": "lower_emit",
+      "evidence_paths": [
+        "vyre-emit-spirv/src/lib.rs"
+      ],
+      "research_keys": [
+        "NAGA"
+      ],
+      "proof_gate": "Emitter matrix asserts Naga, PTX, SPIR-V, and Metal cover the same descriptor fixture ids or exact unsupported codes.",
+      "dedup_seam": "One descriptor fixture corpus serves all emitters.",
+      "status": "active"
+    },
+    {
+      "id": "VX-033",
+      "axis": "driver_shared",
+      "evidence_paths": [
+        "vyre-driver/src/backend.rs"
+      ],
+      "research_keys": [
+        "MLIR_PASS"
+      ],
+      "proof_gate": "Backend trait tests assert state transition errors and no hidden fallback behavior.",
+      "dedup_seam": "One lifecycle contract serves every backend.",
+      "status": "active"
+    },
+    {
+      "id": "VX-034",
+      "axis": "driver_shared",
+      "evidence_paths": [
+        "vyre-driver/src/specialization.rs"
+      ],
+      "research_keys": [
+        "CUDA_GRAPHS"
+      ],
+      "proof_gate": "Hot-path strict plus specialization tests assert exact overflow and unsupported-shape diagnostics.",
+      "dedup_seam": "One specialization key builder feeds graph replay and pipeline cache.",
+      "status": "active"
+    },
+    {
+      "id": "VX-035",
+      "axis": "driver_shared",
+      "evidence_paths": [
+        "vyre-driver/src/graph_capture.rs"
+      ],
+      "research_keys": [
+        "CUDA_GRAPHS"
+      ],
+      "proof_gate": "Graph-capture tests assert update, recapture, and reject decisions for exact shape changes.",
+      "dedup_seam": "One graph-capture classifier feeds CUDA graphs and command reuse.",
+      "status": "active"
+    },
+    {
+      "id": "VX-036",
+      "axis": "driver_shared",
+      "evidence_paths": [
+        "vyre-driver/src/launch_fusion.rs"
+      ],
+      "research_keys": [
+        "CUDA_GRAPHS"
+      ],
+      "proof_gate": "Bench compares fused launch, graph replay, and megakernel baseline with exact output digests.",
+      "dedup_seam": "One launch-fusion planner feeds CUDA, WGPU, Metal, and runtime.",
+      "status": "active"
+    },
+    {
+      "id": "VX-037",
+      "axis": "driver_shared",
+      "evidence_paths": [
+        "vyre-driver/src/binding.rs"
+      ],
+      "research_keys": [
+        "METAL_ARGUMENT_BUFFERS"
+      ],
+      "proof_gate": "Binding tests assert identical layout fingerprints across direct, compiled, resident, and Metal paths.",
+      "dedup_seam": "One ABI planner replaces backend-local binding reconstruction.",
+      "status": "active"
+    },
+    {
+      "id": "VX-038",
+      "axis": "driver_shared",
+      "evidence_paths": [
+        "vyre-driver/src/result_compaction.rs"
+      ],
+      "research_keys": [
+        "PFAC"
+      ],
+      "proof_gate": "Result compaction tests assert exact triples, overflow flag, and readback byte count.",
+      "dedup_seam": "One compaction planner feeds scan, diagnostics, and resident dispatch.",
+      "status": "active"
+    },
+    {
+      "id": "VX-039",
+      "axis": "driver_shared",
+      "evidence_paths": [
+        "vyre-driver/src/validation.rs"
+      ],
+      "research_keys": [
+        "MLIR_PASS"
+      ],
+      "proof_gate": "Validation tests assert exact fields for invalid output, invalid binding, and capability failure.",
+      "dedup_seam": "One validation context feeds driver and conformance errors.",
+      "status": "active"
+    },
+    {
+      "id": "VX-040",
+      "axis": "driver_shared",
+      "evidence_paths": [
+        "vyre-driver/src/evidence.rs"
+      ],
+      "research_keys": [
+        "MLIR_PASS"
+      ],
+      "proof_gate": "Evidence semantics gate rejects missing command provenance and metric fields.",
+      "dedup_seam": "One evidence schema feeds benches and release gates.",
+      "status": "active"
+    },
+    {
+      "id": "VX-041",
+      "axis": "driver_cuda",
+      "evidence_paths": [
+        "vyre-driver-cuda/src/backend/cuda_graph.rs"
+      ],
+      "research_keys": [
+        "CUDA_GRAPHS"
+      ],
+      "proof_gate": "CUDA graph tests assert replay certificates and exact output parity across repeated dispatches.",
+      "dedup_seam": "One CUDA graph certificate feeds release evidence.",
+      "status": "active"
+    },
+    {
+      "id": "VX-042",
+      "axis": "driver_cuda",
+      "evidence_paths": [
+        "vyre-driver-cuda/src/backend/cuda_graph.rs",
+        "vyre-driver/src/graph_capture.rs"
+      ],
+      "research_keys": [
+        "CUDA_GRAPHS"
+      ],
+      "proof_gate": "CUDA graph tests assert each mismatch produces the shared classifier code.",
+      "dedup_seam": "One classifier owns capture invalidation.",
+      "status": "active"
+    },
+    {
+      "id": "VX-043",
+      "axis": "driver_cuda",
+      "evidence_paths": [
+        "vyre-driver-cuda/src/backend/resident_dispatch.rs"
+      ],
+      "research_keys": [
+        "CUDA_COOP"
+      ],
+      "proof_gate": "Resident dispatch tests assert direct, borrowed, batched, sequence, and fused paths reuse the same planner ids.",
+      "dedup_seam": "One CUDA resident planner owns resource sequencing.",
+      "status": "active"
+    },
+    {
+      "id": "VX-044",
+      "axis": "driver_cuda",
+      "evidence_paths": [
+        "vyre-driver-cuda/src/backend/module_cache.rs",
+        "vyre-driver-cuda/src/backend/cuda_graph_replay.rs"
+      ],
+      "research_keys": [
+        "CUDA_GRAPHS"
+      ],
+      "proof_gate": "CUDA cache tests assert stable telemetry fields and no backend-local duplicate schema.",
+      "dedup_seam": "One pipeline cache snapshot serves all compiled backends.",
+      "status": "active"
+    },
+    {
+      "id": "VX-045",
+      "axis": "driver_cuda",
+      "evidence_paths": [
+        "vyre-driver-cuda/src/backend/allocations.rs"
+      ],
+      "research_keys": [
+        "CUDA_GRAPHS"
+      ],
+      "proof_gate": "Allocation tests assert graph capture uses preallocated buffers and reports pool misses before capture.",
+      "dedup_seam": "One CUDA staging allocator feeds dispatch, graph, and resident paths.",
+      "status": "active"
+    },
+    {
+      "id": "VX-046",
+      "axis": "driver_wgpu",
+      "evidence_paths": [
+        "vyre-driver-wgpu/src/backend_impl.rs"
+      ],
+      "research_keys": [
+        "WGPU_COMMANDS"
+      ],
+      "proof_gate": "WGPU cache tests assert equivalent configs produce identical keys and changed configs produce miss reasons.",
+      "dedup_seam": "One canonical cache key serves WGPU compiled and resident paths.",
+      "status": "active"
+    },
+    {
+      "id": "VX-047",
+      "axis": "driver_wgpu",
+      "evidence_paths": [
+        "vyre-driver-wgpu/src/megakernel/dispatcher.rs",
+        "vyre-driver-wgpu/src/megakernel.rs"
+      ],
+      "research_keys": [
+        "WGPU_COMMANDS"
+      ],
+      "proof_gate": "WGPU megakernel tests assert byte-identical outputs and module-level ownership.",
+      "dedup_seam": "One WGPU megakernel dispatcher boundary owns command encoding.",
+      "status": "active"
+    },
+    {
+      "id": "VX-048",
+      "axis": "driver_wgpu",
+      "evidence_paths": [
+        "vyre-driver-wgpu/src/backend_impl.rs"
+      ],
+      "research_keys": [
+        "WGPU_COMMANDS"
+      ],
+      "proof_gate": "WGPU recovery tests assert exact diagnostics and no silent fallback to another adapter.",
+      "dedup_seam": "One adapter recovery contract owns WGPU failure handling.",
+      "status": "active"
+    },
+    {
+      "id": "VX-049",
+      "axis": "driver_metal",
+      "evidence_paths": [
+        "vyre-driver-metal/src/runtime.rs",
+        "vyre-driver-metal/src/lib.rs"
+      ],
+      "research_keys": [
+        "METAL_COMPUTE"
+      ],
+      "proof_gate": "Metal check and tests assert public API unchanged and each split module owns one responsibility.",
+      "dedup_seam": "One Metal runtime facade hides split internals.",
+      "status": "active"
+    },
+    {
+      "id": "VX-050",
+      "axis": "driver_metal",
+      "evidence_paths": [
+        "vyre-emit-metal/src/lib.rs"
+      ],
+      "research_keys": [
+        "METAL_ARGUMENT_BUFFERS"
+      ],
+      "proof_gate": "Metal bench on macOS asserts output parity and reports encoder binding calls and CPU submit time.",
+      "dedup_seam": "One Metal binding metadata schema feeds flat and argument-buffer modes.",
+      "status": "active"
+    },
+    {
+      "id": "VX-051",
+      "axis": "driver_metal",
+      "evidence_paths": [
+        "vyre-driver-metal/src/runtime.rs"
+      ],
+      "research_keys": [
+        "METAL_COMPUTE"
+      ],
+      "proof_gate": "Metal bench compares direct dispatch and command reuse with descriptor hash parity and output digest parity.",
+      "dedup_seam": "One command-reuse classifier serves Metal and shared graph-capture evidence.",
+      "status": "active"
+    },
+    {
+      "id": "VX-052",
+      "axis": "driver_metal",
+      "evidence_paths": [
+        "vyre-driver-metal/src/runtime.rs"
+      ],
+      "research_keys": [
+        "METAL_COMPUTE"
+      ],
+      "proof_gate": "Metal tests assert metrics appear in the same fields as CUDA and WGPU snapshots.",
+      "dedup_seam": "One backend metric snapshot serves all drivers.",
+      "status": "active"
+    },
+    {
+      "id": "VX-053",
+      "axis": "driver_metal",
+      "evidence_paths": [
+        "vyre-driver-metal/examples/metal_release_surface.rs",
+        "vyre-emit-metal/examples/vyre_emit_metal_release_surface.rs"
+      ],
+      "research_keys": [
+        "METAL_COMPUTE"
+      ],
+      "proof_gate": "Metadata and conformance matrices assert Metal rows include fixture ids and exact unsupported diagnostics.",
+      "dedup_seam": "One conformance matrix owns Metal release evidence.",
+      "status": "active"
+    },
+    {
+      "id": "VX-054",
+      "axis": "runtime_megakernel",
+      "evidence_paths": [
+        "vyre-runtime/src/megakernel/ring.rs"
+      ],
+      "research_keys": [
+        "CUDA_COOP"
+      ],
+      "proof_gate": "Runtime tests assert malformed ring snapshots return `ProtocolError` and no hot path calls panicking wrappers.",
+      "dedup_seam": "One ring observation API owns error semantics.",
+      "status": "active"
+    },
+    {
+      "id": "VX-055",
+      "axis": "runtime_megakernel",
+      "evidence_paths": [
+        "vyre-runtime/src/megakernel/telemetry.rs"
+      ],
+      "research_keys": [
+        "CUDA_COOP"
+      ],
+      "proof_gate": "Hot-path strict asserts telemetry budgets and tests assert malformed control/ring buffers return errors.",
+      "dedup_seam": "One telemetry decode scratch feeds all runtime observers.",
+      "status": "active"
+    },
+    {
+      "id": "VX-056",
+      "axis": "runtime_megakernel",
+      "evidence_paths": [
+        "vyre-runtime/src/megakernel/policy.rs"
+      ],
+      "research_keys": [
+        "CUDA_COOP"
+      ],
+      "proof_gate": "Policy tests assert overflow returns structured error and scheduler callers propagate it.",
+      "dedup_seam": "One priority accounting type owns scheduler pressure counters.",
+      "status": "active"
+    },
+    {
+      "id": "VX-057",
+      "axis": "runtime_megakernel",
+      "evidence_paths": [
+        "vyre-runtime/src/megakernel/ring.rs",
+        "vyre-runtime/src/megakernel/telemetry.rs"
+      ],
+      "research_keys": [
+        "CUDA_COOP"
+      ],
+      "proof_gate": "Ownership audit asserts drivers adapt buffers but do not parse protocol words directly.",
+      "dedup_seam": "One runtime protocol boundary serves all backends.",
+      "status": "active"
+    },
+    {
+      "id": "VX-058",
+      "axis": "runtime_megakernel",
+      "evidence_paths": [
+        "vyre-runtime/src/megakernel/policy.rs"
+      ],
+      "research_keys": [
+        "GRAPHBLAS"
+      ],
+      "proof_gate": "Runtime bench asserts output parity and reports queue pressure, frontier density, topology, and resident bytes.",
+      "dedup_seam": "One topology planner feeds runtime and Weir resident fixed-point execution.",
+      "status": "active"
+    },
+    {
+      "id": "VX-059",
+      "axis": "runtime_megakernel",
+      "evidence_paths": [
+        "vyre-runtime/Cargo.toml"
+      ],
+      "research_keys": [
+        "CUDA_COOP"
+      ],
+      "proof_gate": "Runtime evidence gate rejects missing ring, control, copy, and residency metrics.",
+      "dedup_seam": "One runtime evidence schema feeds release and bench artifacts.",
+      "status": "active"
+    },
+    {
+      "id": "VX-060",
+      "axis": "runtime_megakernel",
+      "evidence_paths": [
+        "vyre-runtime/src/megakernel/policy.rs"
+      ],
+      "research_keys": [
+        "MLIR_PASS"
+      ],
+      "proof_gate": "Megakernel bench asserts output parity and reports interpreter versus fused-window active time.",
+      "dedup_seam": "One hot-window promotion contract feeds runtime and lowerer.",
+      "status": "active"
+    },
+    {
+      "id": "VX-061",
+      "axis": "frontend_parsing",
+      "evidence_paths": [
+        "vyre-foundation/src/vast.rs"
+      ],
+      "research_keys": [
+        "TREE_SITTER"
+      ],
+      "proof_gate": "Parser tests assert C and Rust VAST rows map to stable graph node ids after local edits.",
+      "dedup_seam": "One VAST identity feeds parser, Weir, and source-span witnesses.",
+      "status": "active"
+    },
+    {
+      "id": "VX-062",
+      "axis": "frontend_parsing",
+      "evidence_paths": [
+        "vyre-libs/src/parsing/c/lex/lexer/core_sparse/sparse_impl.rs"
+      ],
+      "research_keys": [
+        "TREE_SITTER"
+      ],
+      "proof_gate": "Lexer tests assert token stream parity and table hash stability on adversarial C corpus.",
+      "dedup_seam": "One byte-class table feeds dense, sparse, and raw U8 lexer paths.",
+      "status": "active"
+    },
+    {
+      "id": "VX-063",
+      "axis": "frontend_parsing",
+      "evidence_paths": [
+        "vyre-libs/src/parsing/c/preprocess/gpu_if_expression.rs"
+      ],
+      "research_keys": [
+        "TREE_SITTER"
+      ],
+      "proof_gate": "Preprocessor tests assert exact nested if, elif, defined, ternary, overflow, and malformed fixtures.",
+      "dedup_seam": "One expression parser substrate feeds preprocessing and C semantic recovery.",
+      "status": "active"
+    },
+    {
+      "id": "VX-064",
+      "axis": "frontend_parsing",
+      "evidence_paths": [
+        "vyre-libs/src/parsing/c/pipeline/stages.rs"
+      ],
+      "research_keys": [
+        "TREE_SITTER"
+      ],
+      "proof_gate": "Parser-coherence gate rejects stages without owner, fixture, corpus bucket, and benchmark evidence.",
+      "dedup_seam": "One parser stage manifest replaces scattered facade knowledge.",
+      "status": "active"
+    },
+    {
+      "id": "VX-065",
+      "axis": "frontend_parsing",
+      "evidence_paths": [
+        "vyre-libs/src/parsing/c/pipeline/source_cache.rs"
+      ],
+      "research_keys": [
+        "TREE_SITTER"
+      ],
+      "proof_gate": "Source-cache tests assert hits and invalidations for edits, includes, macros, and VAST schema changes.",
+      "dedup_seam": "One source cache identity feeds parser and flow facts.",
+      "status": "active"
+    },
+    {
+      "id": "VX-066",
+      "axis": "frontend_parsing",
+      "evidence_paths": [
+        "docs/PARSING_EXECUTION_PLAN.md"
+      ],
+      "research_keys": [
+        "TREE_SITTER"
+      ],
+      "proof_gate": "Differential tests assert exact node counts, spans, and classified divergences.",
+      "dedup_seam": "One parser differential oracle feeds C and Rust frontends.",
+      "status": "active"
+    },
+    {
+      "id": "VX-067",
+      "axis": "frontend_parsing",
+      "evidence_paths": [
+        "vyre-libs/src/parsing/rust/sema/mod.rs"
+      ],
+      "research_keys": [
+        "TREE_SITTER"
+      ],
+      "proof_gate": "Rust frontend tests assert each construct returns distinct diagnostics with byte offsets.",
+      "dedup_seam": "One Rust diagnostic taxonomy feeds frontend and Weir fact mapping.",
+      "status": "active"
+    },
+    {
+      "id": "VX-068",
+      "axis": "frontend_parsing",
+      "evidence_paths": [
+        "vyre-frontend-rust/Cargo.toml"
+      ],
+      "research_keys": [
+        "CODEQL_FLOW"
+      ],
+      "proof_gate": "Cross-crate tests assert Rust frontend fact buffers dispatch through Weir without CPU fallback.",
+      "dedup_seam": "One graph/fact buffer ABI bridges Rust frontend and Weir.",
+      "status": "active"
+    },
+    {
+      "id": "VX-069",
+      "axis": "frontend_parsing",
+      "evidence_paths": [
+        "../../../dataflow/weir/src/cross_language.rs"
+      ],
+      "research_keys": [
+        "CODEQL_FLOW"
+      ],
+      "proof_gate": "Cross-language tests assert stable node ids and exact fused edge counts across C/Rust fixtures.",
+      "dedup_seam": "One cross-language graph id schema serves all frontends.",
+      "status": "active"
+    },
+    {
+      "id": "VX-070",
+      "axis": "frontend_parsing",
+      "evidence_paths": [
+        "release/evidence/parser/c-parser-throughput.json",
+        "xtask/src/c_parser_bench.rs"
+      ],
+      "research_keys": [
+        "TREE_SITTER"
+      ],
+      "proof_gate": "Parser bench gate rejects throughput without corpus bucket metadata and output digests.",
+      "dedup_seam": "One parser corpus manifest feeds benches and differential tests.",
+      "status": "active"
+    },
+    {
+      "id": "VX-071",
+      "axis": "scan_static",
+      "evidence_paths": [
+        "vyre-libs/src/scan/literal_set.rs"
+      ],
+      "research_keys": [
+        "HYPERSCAN"
+      ],
+      "proof_gate": "Source-similar and literal-set tests assert exact match triples and reduced duplicate score.",
+      "dedup_seam": "One literal-set compiler feeds scan and resident dispatch.",
+      "status": "active"
+    },
+    {
+      "id": "VX-072",
+      "axis": "scan_static",
+      "evidence_paths": [
+        "vyre-libs/src/scan/literal_set.rs"
+      ],
+      "research_keys": [
+        "PFAC"
+      ],
+      "proof_gate": "Benchmark compares candidate count, throughput, load balance, and exact overlapping match triples.",
+      "dedup_seam": "One prefilter planner feeds AC, PFAC, and literal-set engines.",
+      "status": "active"
+    },
+    {
+      "id": "VX-073",
+      "axis": "scan_static",
+      "evidence_paths": [
+        "vyre-libs/src/scan/regex_compile.rs"
+      ],
+      "research_keys": [
+        "HYPERSCAN_COMPILE"
+      ],
+      "proof_gate": "Regex tests assert exact class and rejection code for a curated pattern corpus.",
+      "dedup_seam": "One regex classifier feeds GPU planner and user diagnostics.",
+      "status": "active"
+    },
+    {
+      "id": "VX-074",
+      "axis": "scan_static",
+      "evidence_paths": [
+        "vyre-primitives/src/matching/nfa_to_dfa.rs"
+      ],
+      "research_keys": [
+        "HYPERSCAN"
+      ],
+      "proof_gate": "Planner tests assert exact DFA, NFA, and split decisions for small, medium, and explosive regex fixtures.",
+      "dedup_seam": "One automata planner feeds regex, literal, and security scan.",
+      "status": "active"
+    },
+    {
+      "id": "VX-075",
+      "axis": "scan_static",
+      "evidence_paths": [
+        "vyre-libs/src/decode/scan.rs"
+      ],
+      "research_keys": [
+        "CUDF_REGEX"
+      ],
+      "proof_gate": "Benchmark compares fused and separate baselines with exact outputs and transfer bytes.",
+      "dedup_seam": "One decode-scan body feeds base64, hex, gzip, and regex pipelines.",
+      "status": "active"
+    },
+    {
+      "id": "VX-076",
+      "axis": "scan_static",
+      "evidence_paths": [
+        "vyre-driver/src/result_compaction.rs"
+      ],
+      "research_keys": [
+        "PFAC"
+      ],
+      "proof_gate": "Scan tests assert prepared literal-set uses shared compaction fields and exact overflow behavior.",
+      "dedup_seam": "One result compaction schema feeds all scan outputs.",
+      "status": "active"
+    },
+    {
+      "id": "VX-077",
+      "axis": "scan_static",
+      "evidence_paths": [
+        "vyre-libs/src/scan/literal_set.rs"
+      ],
+      "research_keys": [
+        "HYPERSCAN"
+      ],
+      "proof_gate": "Resident scan tests assert sequence ids, resource indices, and exact outputs across repeated haystacks.",
+      "dedup_seam": "One resident scan sequence planner serves literal, regex, and rule engines.",
+      "status": "active"
+    },
+    {
+      "id": "VX-078",
+      "axis": "scan_static",
+      "evidence_paths": [
+        "vyre-libs/src/scan/regex_compile.rs"
+      ],
+      "research_keys": [
+        "HYPERSCAN_COMPILE"
+      ],
+      "proof_gate": "Regex corpus gate rejects patterns without class, state count, memory budget, and diagnostic evidence.",
+      "dedup_seam": "One regex corpus manifest feeds scan and security rules.",
+      "status": "active"
+    },
+    {
+      "id": "VX-079",
+      "axis": "scan_static",
+      "evidence_paths": [
+        "vyre-libs/src/scan/literal_set.rs"
+      ],
+      "research_keys": [
+        "HYPERSCAN"
+      ],
+      "proof_gate": "Cache tests assert hits, misses, and invalidation reasons for changed pattern/cap/backend cases.",
+      "dedup_seam": "One scan cache key feeds direct and resident scan paths.",
+      "status": "active"
+    },
+    {
+      "id": "VX-080",
+      "axis": "scan_static",
+      "evidence_paths": [
+        "../../../dataflow/weir/src/reachability_witness.rs"
+      ],
+      "research_keys": [
+        "CODEQL_FLOW"
+      ],
+      "proof_gate": "Integration tests assert a scan match can seed a Weir source-to-sink witness path.",
+      "dedup_seam": "One finding seed schema bridges scan and flow.",
+      "status": "active"
+    },
+    {
+      "id": "VX-081",
+      "axis": "flow_weir",
+      "evidence_paths": [
+        "../../../dataflow/weir/README.md"
+      ],
+      "research_keys": [
+        "CODEQL_FLOW"
+      ],
+      "proof_gate": "Weir matrix asserts Vyre security/dataflow rows cite Weir or justify primitive-only execution.",
+      "dedup_seam": "One flow boundary owns graph/fact dataflow execution.",
+      "status": "active"
+    },
+    {
+      "id": "VX-082",
+      "axis": "flow_weir",
+      "evidence_paths": [
+        "../../../dataflow/weir/src/analysis_family.rs"
+      ],
+      "research_keys": [
+        "GRAPHBLAS"
+      ],
+      "proof_gate": "Weir tests assert reaching, live, points_to, and slice families expose complete metadata.",
+      "dedup_seam": "One analysis-family trait replaces per-family boilerplate.",
+      "status": "active"
+    },
+    {
+      "id": "VX-083",
+      "axis": "flow_weir",
+      "evidence_paths": [
+        "../../../dataflow/weir/src/fixed_point_graph/kind.rs",
+        "../../../dataflow/weir/src/fixed_point_graph/graph.rs",
+        "../../../dataflow/weir/src/fixed_point_graph/plan.rs"
+      ],
+      "research_keys": [
+        "GRAPHBLAS"
+      ],
+      "proof_gate": "Fixed-point graph tests assert malformed kind/shape combinations fail before dispatch.",
+      "dedup_seam": "One fixed-point graph contract feeds all flow families.",
+      "status": "active"
+    },
+    {
+      "id": "VX-084",
+      "axis": "flow_weir",
+      "evidence_paths": [
+        "../../../dataflow/weir/src/ifds_shape.rs"
+      ],
+      "research_keys": [
+        "CODEQL_FLOW"
+      ],
+      "proof_gate": "IFDS tests assert certificates for valid, overflow, zero-budget, and malformed-shape cases.",
+      "dedup_seam": "One IFDS shape certificate feeds resident and direct solves.",
+      "status": "active"
+    },
+    {
+      "id": "VX-085",
+      "axis": "flow_weir",
+      "evidence_paths": [
+        "../../../dataflow/weir/src/ifds_resident_cache/"
+      ],
+      "research_keys": [
+        "CUDA_COOP"
+      ],
+      "proof_gate": "Resident IFDS tests assert cache hit/miss reasons and stable resource handles across repeated solves.",
+      "dedup_seam": "One resident cache identity bridges Weir and Vyre drivers.",
+      "status": "active"
+    },
+    {
+      "id": "VX-086",
+      "axis": "flow_weir",
+      "evidence_paths": [
+        "../../../dataflow/weir/src/ifds_resident_direct_batch/"
+      ],
+      "research_keys": [
+        "CUDA_COOP"
+      ],
+      "proof_gate": "IFDS resident bench asserts exact reached sets and reports dispatch count, readback bytes, and active time.",
+      "dedup_seam": "One resident batch planner serves all IFDS queries.",
+      "status": "active"
+    },
+    {
+      "id": "VX-087",
+      "axis": "flow_weir",
+      "evidence_paths": [
+        "../../../dataflow/weir/src/reachability_witness.rs",
+        "../../../dataflow/weir/README.md"
+      ],
+      "research_keys": [
+        "CODEQL_FLOW"
+      ],
+      "proof_gate": "Witness tests assert identical paths for repeated seeds and no graph rebuild per finding.",
+      "dedup_seam": "One prepared witness graph serves all source-to-sink findings.",
+      "status": "active"
+    },
+    {
+      "id": "VX-088",
+      "axis": "flow_weir",
+      "evidence_paths": [
+        "../../../dataflow/weir/src/cross_language.rs"
+      ],
+      "research_keys": [
+        "CODEQL_CPP"
+      ],
+      "proof_gate": "Cross-language tests assert new cross-language paths and unchanged single-language outputs.",
+      "dedup_seam": "One cross-language edge fusion primitive serves C, Rust, and mixed projects.",
+      "status": "active"
+    },
+    {
+      "id": "VX-089",
+      "axis": "flow_weir",
+      "evidence_paths": [
+        "../../../dataflow/weir/src/dense_domain.rs"
+      ],
+      "research_keys": [
+        "GRAPHBLAS"
+      ],
+      "proof_gate": "Bench asserts exact closure parity and reports sparse/dense switch points.",
+      "dedup_seam": "One domain planner feeds fixed-point and runtime topology.",
+      "status": "active"
+    },
+    {
+      "id": "VX-090",
+      "axis": "flow_weir",
+      "evidence_paths": [
+        "../../../dataflow/weir/src/dispatch_decode/pack.rs",
+        "../../../dataflow/weir/src/dispatch_decode/unpack.rs",
+        "../../../dataflow/weir/src/dispatch_decode/validate.rs"
+      ],
+      "research_keys": [
+        "MLIR_PASS"
+      ],
+      "proof_gate": "Dispatch decode fuzz and tests assert malformed bytes fail closed with exact diagnostics.",
+      "dedup_seam": "One dispatch-decode ABI feeds Weir and Vyre runtime.",
+      "status": "active"
+    },
+    {
+      "id": "VX-091",
+      "axis": "flow_weir",
+      "evidence_paths": [
+        "../../../dataflow/weir/README.md"
+      ],
+      "research_keys": [
+        "CODEQL_FLOW"
+      ],
+      "proof_gate": "Soundness tests reject a zero-false-positive query that composes MayOver primitives.",
+      "dedup_seam": "One soundness lattice serves Weir and Vyre security.",
+      "status": "active"
+    },
+    {
+      "id": "VX-092",
+      "axis": "flow_weir",
+      "evidence_paths": [
+        "../../../dataflow/weir/README.md"
+      ],
+      "research_keys": [
+        "CUDA_COOP"
+      ],
+      "proof_gate": "Weir release gate rejects `cpu_ref`, `solve_cpu`, or oracle calls from non-test production paths.",
+      "dedup_seam": "One oracle boundary prevents hidden CPU fallback.",
+      "status": "active"
+    },
+    {
+      "id": "VX-093",
+      "axis": "flow_weir",
+      "evidence_paths": [
+        "../../../dataflow/weir/benches/ifds_direct_resident_hot_path.rs",
+        "../../../dataflow/weir/benches/resident_fixed_point_hot_path.rs"
+      ],
+      "research_keys": [
+        "CUDA_COOP"
+      ],
+      "proof_gate": "Weir matrix asserts resident benches write source fingerprints, output digests, and transfer bytes.",
+      "dedup_seam": "One Weir benchmark evidence schema feeds Vyre release artifacts.",
+      "status": "active"
+    },
+    {
+      "id": "VX-094",
+      "axis": "flow_weir",
+      "evidence_paths": [
+        "../../../dataflow/weir/fuzz/fuzz_targets/"
+      ],
+      "research_keys": [
+        "CODEQL_FLOW"
+      ],
+      "proof_gate": "Weir matrix rejects missing fuzz target metadata and missing replay command fields.",
+      "dedup_seam": "One fuzz evidence schema covers flow safety.",
+      "status": "active"
+    },
+    {
+      "id": "VX-095",
+      "axis": "flow_weir",
+      "evidence_paths": [
+        "xtask/src/weir_matrix.rs"
+      ],
+      "research_keys": [
+        "MLIR_PASS"
+      ],
+      "proof_gate": "`weir-matrix` tests assert every required Weir artifact has owner lane, command, and freshness fingerprint.",
+      "dedup_seam": "One Weir matrix feeds release evidence.",
+      "status": "active"
+    },
+    {
+      "id": "VX-096",
+      "axis": "security_dataflow",
+      "evidence_paths": [
+        "vyre-libs/src/security/mod.rs"
+      ],
+      "research_keys": [
+        "CODEQL_FLOW"
+      ],
+      "proof_gate": "Security tests assert generated predicates match current CPU refs and op ids.",
+      "dedup_seam": "One security predicate table replaces macro duplication.",
+      "status": "active"
+    },
+    {
+      "id": "VX-097",
+      "axis": "security_dataflow",
+      "evidence_paths": [
+        "vyre-libs/src/dataflow/mod.rs"
+      ],
+      "research_keys": [
+        "CODEQL_FLOW"
+      ],
+      "proof_gate": "Fact-schema tests assert C, Rust, and Weir facts serialize to exact shared headers.",
+      "dedup_seam": "One fact schema feeds security, borrowck, and Weir.",
+      "status": "active"
+    },
+    {
+      "id": "VX-098",
+      "axis": "security_dataflow",
+      "evidence_paths": [
+        "vyre-libs/src/security/flows_to.rs",
+        "vyre-libs/src/security/flows_to_to_sink.rs",
+        "vyre-libs/src/security/flows_to_with_sanitizer.rs"
+      ],
+      "research_keys": [
+        "CODEQL_FLOW"
+      ],
+      "proof_gate": "Security flow tests assert old public functions emit identical Program fingerprints through the shared builder.",
+      "dedup_seam": "One flow builder serves all flows_to variants.",
+      "status": "active"
+    },
+    {
+      "id": "VX-099",
+      "axis": "security_dataflow",
+      "evidence_paths": [
+        "vyre-libs/src/security/flows_to_with_sanitizer.rs"
+      ],
+      "research_keys": [
+        "CODEQL_FLOW"
+      ],
+      "proof_gate": "Tests assert one-step and fixed-point results are labeled with distinct soundness tags.",
+      "dedup_seam": "One flow soundness contract feeds findings.",
+      "status": "active"
+    },
+    {
+      "id": "VX-100",
+      "axis": "security_dataflow",
+      "evidence_paths": [
+        "../../../dataflow/weir/src/ifds.rs",
+        "../../../dataflow/weir/src/ifds_gpu.rs"
+      ],
+      "research_keys": [
+        "CODEQL_FLOW"
+      ],
+      "proof_gate": "Integration tests assert source-to-sink queries dispatch through Weir IFDS and return witness seeds.",
+      "dedup_seam": "One IFDS query path serves security taint.",
+      "status": "active"
+    },
+    {
+      "id": "VX-101",
+      "axis": "security_dataflow",
+      "evidence_paths": [
+        "vyre-libs/src/borrowck/rustc_facts.rs"
+      ],
+      "research_keys": [
+        "CODEQL_FLOW"
+      ],
+      "proof_gate": "Borrowck tests assert placeholder, subset, loan, and origin facts map to exact shared headers.",
+      "dedup_seam": "One fact schema bridges borrowck and security analysis.",
+      "status": "active"
+    },
+    {
+      "id": "VX-102",
+      "axis": "security_dataflow",
+      "evidence_paths": [
+        "vyre-self-substrate/src/analysis/dataflow_fixpoint.rs"
+      ],
+      "research_keys": [
+        "GRAPHBLAS"
+      ],
+      "proof_gate": "Bench asserts exact reachability sets and reports iterations, bytes, frontier density, and active time.",
+      "dedup_seam": "One semiring fixpoint primitive feeds optimizer, security, and Weir.",
+      "status": "active"
+    },
+    {
+      "id": "VX-103",
+      "axis": "security_dataflow",
+      "evidence_paths": [
+        "../../../dataflow/weir/src/reachability_witness.rs"
+      ],
+      "research_keys": [
+        "CODEQL_FLOW"
+      ],
+      "proof_gate": "Finding tests assert output contains exact path statements and source bytes.",
+      "dedup_seam": "One witness schema feeds reports and triage.",
+      "status": "active"
+    },
+    {
+      "id": "VX-104",
+      "axis": "security_dataflow",
+      "evidence_paths": [
+        "vyre-libs/src/security/mod.rs"
+      ],
+      "research_keys": [
+        "CODEQL_CPP"
+      ],
+      "proof_gate": "Security matrix rejects predicates without soundness and witness evidence.",
+      "dedup_seam": "One security catalog owns predicate semantics.",
+      "status": "active"
+    },
+    {
+      "id": "VX-105",
+      "axis": "security_dataflow",
+      "evidence_paths": [
+        "vyre-libs/src/security/flows_to.rs"
+      ],
+      "research_keys": [
+        "CODEQL_FLOW"
+      ],
+      "proof_gate": "Security tests assert control/dominance exclusions and alias-only precision on copy/dup/realloc fixtures.",
+      "dedup_seam": "One edge-kind policy owns flow precision.",
+      "status": "active"
+    },
+    {
+      "id": "VX-106",
+      "axis": "nn_math",
+      "evidence_paths": [
+        "vyre-libs/src/nn/attention/flash_attention.rs"
+      ],
+      "research_keys": [
+        "FLASH_ATTN2"
+      ],
+      "proof_gate": "Attention bench asserts output tolerance and reports memory traffic, occupancy, and non-matmul FLOPs.",
+      "dedup_seam": "One attention planner feeds flash_attention and flash_attention_2.",
+      "status": "active"
+    },
+    {
+      "id": "VX-107",
+      "axis": "nn_math",
+      "evidence_paths": [
+        "vyre-libs/src/nn/attention/flash_attention_2.rs"
+      ],
+      "research_keys": [
+        "FLASH_ATTN2"
+      ],
+      "proof_gate": "Attention tests assert same output and bench reports lower non-matmul work versus baseline.",
+      "dedup_seam": "One work-partition planner feeds attention variants.",
+      "status": "active"
+    },
+    {
+      "id": "VX-108",
+      "axis": "nn_math",
+      "evidence_paths": [
+        "vyre-libs/src/math/linalg/matmul_tiled/tensor_core_policy.rs"
+      ],
+      "research_keys": [
+        "CUTLASS_GEMM"
+      ],
+      "proof_gate": "Matmul tests assert exact selected path for F16, BF16, TF32, F32, split-K, and ragged fixtures.",
+      "dedup_seam": "One matmul kernel planner feeds plain, bias, attention, linear, and quantized paths.",
+      "status": "active"
+    },
+    {
+      "id": "VX-109",
+      "axis": "nn_math",
+      "evidence_paths": [
+        "vyre-libs/src/math/linalg/matmul_tiled/mma_body.rs",
+        "vyre-libs/src/math/linalg/matmul_tiled/mma_fragment.rs"
+      ],
+      "research_keys": [
+        "PTX_ISA"
+      ],
+      "proof_gate": "MMA tests assert unsupported backend uses cooperative path and supported PTX emits expected instruction class.",
+      "dedup_seam": "One MMA capability gate feeds matmul and attention.",
+      "status": "active"
+    },
+    {
+      "id": "VX-110",
+      "axis": "nn_math",
+      "evidence_paths": [
+        "vyre-libs/src/nn/linear/inner/linear_4bit.rs"
+      ],
+      "research_keys": [
+        "CUTLASS_GEMM"
+      ],
+      "proof_gate": "Benchmark compares quantized linear against matmul-planner baseline with exact drift threshold.",
+      "dedup_seam": "One matmul and quant planner feeds linear, attention, and MoE.",
+      "status": "active"
+    },
+    {
+      "id": "VX-111",
+      "axis": "nn_math",
+      "evidence_paths": [
+        "vyre-primitives/src/math/padic.rs"
+      ],
+      "research_keys": [
+        "MLIR_PASS"
+      ],
+      "proof_gate": "Recursion gate rejects exposed primitives without consumer and proof evidence.",
+      "dedup_seam": "One primitive promotion gate owns research surfaces.",
+      "status": "active"
+    },
+    {
+      "id": "VX-112",
+      "axis": "nn_math",
+      "evidence_paths": [
+        "vyre-bench/src/cases/release_workloads.rs"
+      ],
+      "research_keys": [
+        "CUTLASS_GEMM"
+      ],
+      "proof_gate": "Benchmark evidence gate rejects math cases missing digests, tolerance, and planner decision.",
+      "dedup_seam": "One benchmark case schema covers math and NN kernels.",
+      "status": "active"
+    },
+    {
+      "id": "VX-113",
+      "axis": "bench_harness",
+      "evidence_paths": [
+        "vyre-bench/src/cases/release_workloads.rs"
+      ],
+      "research_keys": [
+        "MLIR_PASS"
+      ],
+      "proof_gate": "Bench registry tests assert exact case ids, owners, input bytes, and expected output digests after split.",
+      "dedup_seam": "One case builder per workload family.",
+      "status": "active"
+    },
+    {
+      "id": "VX-114",
+      "axis": "bench_harness",
+      "evidence_paths": [
+        "vyre-bench/src/cli.rs"
+      ],
+      "research_keys": [
+        "MLIR_PASS"
+      ],
+      "proof_gate": "CLI tests assert exact help, exit codes, JSON output, and validation errors.",
+      "dedup_seam": "One CLI command module per subcommand.",
+      "status": "active"
+    },
+    {
+      "id": "VX-115",
+      "axis": "bench_harness",
+      "evidence_paths": [
+        "release/evidence/benchmarks/release-workload-matrix.json"
+      ],
+      "research_keys": [
+        "MLIR_PASS"
+      ],
+      "proof_gate": "Benchmark evidence gate rejects cases missing required metric fields.",
+      "dedup_seam": "One benchmark evidence schema serves all suites.",
+      "status": "active"
+    },
+    {
+      "id": "VX-116",
+      "axis": "testing_evidence",
+      "evidence_paths": [
+        "xtask/src/test_matrix.rs"
+      ],
+      "research_keys": [
+        "MLIR_PASS"
+      ],
+      "proof_gate": "Test matrix gate rejects shipped surfaces missing positive, negative, boundary, adversarial, property, fuzz, benchmark, conformance, and e2e rows.",
+      "dedup_seam": "One test matrix owns test truth across Vyre, Weir, and Vyrec.",
+      "status": "active"
+    },
+    {
+      "id": "VX-117",
+      "axis": "testing_evidence",
+      "evidence_paths": [
+        "xtask/src/conformance_matrix.rs"
+      ],
+      "research_keys": [
+        "MLIR_PASS"
+      ],
+      "proof_gate": "Conformance matrix tests assert representative ops have all case classes.",
+      "dedup_seam": "One conformance matrix serves all backend parity gates.",
+      "status": "active"
+    },
+    {
+      "id": "VX-118",
+      "axis": "testing_evidence",
+      "evidence_paths": [
+        "xtask/src/release_conformance.rs"
+      ],
+      "research_keys": [
+        "CUDA_GRAPHS"
+      ],
+      "proof_gate": "Release conformance gate rejects backend evidence without diff summary fields.",
+      "dedup_seam": "One backend diff schema feeds CUDA, WGPU, Metal, and reference.",
+      "status": "active"
+    },
+    {
+      "id": "VX-119",
+      "axis": "testing_evidence",
+      "evidence_paths": [
+        "xtask/src/lint_shape_tests/"
+      ],
+      "research_keys": [
+        "MLIR_PASS"
+      ],
+      "proof_gate": "Shape-test gate rejects proof rows and tests with only shape-style language.",
+      "dedup_seam": "One shape-test classifier feeds docs and tests.",
+      "status": "active"
+    },
+    {
+      "id": "VX-120",
+      "axis": "testing_evidence",
+      "evidence_paths": [
+        "xtask/src/acceleration_plan_gate.rs",
+        "xtask/src/release_evidence.rs"
+      ],
+      "research_keys": [
+        "MLIR_PASS"
+      ],
+      "proof_gate": "Plan gate and release evidence tests assert exact JSON and freshness fingerprints.",
+      "dedup_seam": "One plan progress artifact feeds project status without prose queues.",
+      "status": "active"
+    }
+  ]
+}

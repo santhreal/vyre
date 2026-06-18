@@ -1,0 +1,43 @@
+# Chaos experiment scope policy for VX-1302, VX-1311, VX-1312, VX-1315, and VX-1318.
+# Experiment scope, blast radius, preconditions, aborts, evidence, and publication boundaries share one fault-injection governance seam.
+
+schema = "vyre.ops.chaos_experiment_scope_policy.v1"
+owner = "security_reliability"
+evidence_tokens = ["CHAOS_MESH_PODCHAOS", "CHAOS_MESH_NETWORKCHAOS", "CHAOS_MESH_IOCHAOS", "CHAOS_MESH_STRESSCHAOS"]
+
+required_fields = [
+  "experiment_id",
+  "fault_family",
+  "target_selector_policy",
+  "blast_radius_policy",
+  "precondition_policy",
+  "abort_policy",
+  "observation_policy",
+  "owner_route",
+  "publication_boundary",
+  "diagnostic",
+]
+
+[[experiment]]
+experiment_id = "operator-single-surface-chaos-scope"
+fault_family = "pod-network-io-or-resource-stress-injection-against-one-public-operator-surface"
+target_selector_policy = "namespace-label-selector-release-version-and-deployment-surface-recorded-before-injection"
+blast_radius_policy = "mode-one-or-fixed-percent-with-max-affected-replicas-and-PDB-status-recorded"
+precondition_policy = "steady-state-SLO-alert-clean-release-health-artifact-identity-and-restore-point-exist-before-injection"
+abort_policy = "abort-if-SLO-burn-exceeds-experiment-budget-security-alert-fires-private-boundary-risk-appears-or-recovery-point-is-missing"
+observation_policy = "record-fault-kind-target-selector-duration-start-stop-alerts-SLIs-runbook-actions-and-recovery-result"
+owner_route = "ALERT_ROUTING_ESCALATION_POLICY.toml"
+publication_boundary = "public-experiment-report-includes-fault-class-health-impact-and-recovery-result-no-private-Santh-paths-secrets-or-device-serials"
+diagnostic = "VYRE_CHAOS_EXPERIMENT_SCOPE_REQUIRED"
+
+[[experiment]]
+experiment_id = "release-promotion-resilience-scope"
+fault_family = "controlled-disruption-during-staged-rollout-or-recovery-exercise"
+target_selector_policy = "targets-release-candidate-surface-only-unless-full-promotion-resilience-proof-is-explicitly-required"
+blast_radius_policy = "canary-or-preview-service-first-with-production-traffic-weight-and-affected-pod-count-recorded"
+precondition_policy = "staged-rollout-phase-backup-restore-point-and-rollback-forward-fix-decision-route-exist"
+abort_policy = "abort-and-pause-promotion-on-progress-deadline-exceeded-unexpected-data-loss-or-alert-root-cause-escalation"
+observation_policy = "record-rollout-phase-analysis-result-fault-window-promotion-decision-and-post-fault-SLI"
+owner_route = "RELEASE_ROLLOUT_STRATEGY_POLICY.toml"
+publication_boundary = "public-rollout-resilience-status-excludes-private-incident-details-and-sensitive-reproducers"
+diagnostic = "VYRE_RELEASE_RESILIENCE_SCOPE_REQUIRED"

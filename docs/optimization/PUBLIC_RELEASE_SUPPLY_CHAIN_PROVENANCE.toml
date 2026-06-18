@@ -1,0 +1,43 @@
+# Public-release supply-chain provenance for VX-703 through VX-710.
+# Public Vyre artifacts use provenance, SBOM, transparency, scorecard, dependency, license, hermeticity, and signing evidence.
+
+schema = "vyre.release.supply_chain_provenance.v1"
+owner = "security_reliability"
+evidence_tokens = ["SLSA_PROVENANCE", "SPDX_SBOM", "SIGSTORE_REKOR", "OPENSSF_SCORECARD"]
+
+required_fields = [
+  "artifact_id",
+  "provenance_predicate",
+  "sbom_document",
+  "transparency_entry",
+  "scorecard_profile",
+  "dependency_risk_record",
+  "license_record",
+  "build_inputs",
+  "signing_identity",
+  "publication_gate",
+]
+
+[[artifact]]
+artifact_id = "vyre-public-crate"
+provenance_predicate = "slsa-v1.2-provenance"
+sbom_document = "spdx-3.0.1-sbom"
+transparency_entry = "rekor-inclusion-proof-required"
+scorecard_profile = "public-repository-checks"
+dependency_risk_record = "dependency-risk-accepted-with-owner"
+license_record = "spdx-license-expressions"
+build_inputs = "pinned-source-and-toolchain"
+signing_identity = "release-automation-identity"
+publication_gate = "public-vyre-only"
+
+[[artifact]]
+artifact_id = "local-private-evidence"
+provenance_predicate = "local-provenance-record"
+sbom_document = "nonpublished-component-list"
+transparency_entry = "not-published"
+scorecard_profile = "not-public"
+dependency_risk_record = "private-workspace-owner"
+license_record = "local-review"
+build_inputs = "private-santh-root"
+signing_identity = "none"
+publication_gate = "blocked-from-publication"

@@ -1,0 +1,37 @@
+# Atomic file operation and race policy for VX-908 through VX-910 and VX-912 through VX-913.
+# TOCTOU, symlink swaps, temp files, atomic promotion, lock files, and permission checks share one policy.
+
+schema = "vyre.filesystem.atomic_file_operation_race_policy.v1"
+owner = "driver_shared"
+evidence_tokens = ["SEI_CERT_FIO45_C", "CWE_367_TOCTOU"]
+
+required_fields = [
+  "operation_id",
+  "target_class",
+  "open_policy",
+  "check_use_policy",
+  "tempfile_policy",
+  "atomic_promotion_policy",
+  "permission_policy",
+  "race_diagnostic",
+]
+
+[[operation]]
+operation_id = "write-release-evidence-artifact"
+target_class = "public-or-local-evidence-file"
+open_policy = "open-relative-to-validated-directory-handle"
+check_use_policy = "check-and-use-same-open-handle"
+tempfile_policy = "same-directory-random-tempfile-no-follow"
+atomic_promotion_policy = "fsync-temp-rename-fsync-directory"
+permission_policy = "owner-write-no-world-write"
+race_diagnostic = "VYRE_FILE_TOCTOU_REFUSED"
+
+[[operation]]
+operation_id = "promote-extracted-archive"
+target_class = "archive-extraction-output"
+open_policy = "create-new-under-fresh-temp-root"
+check_use_policy = "verify-file-kind-after-open-before-promote"
+tempfile_policy = "fresh-private-temp-directory"
+atomic_promotion_policy = "rename-directory-after-complete-validation"
+permission_policy = "reject-world-writable-ancestor"
+race_diagnostic = "VYRE_ARCHIVE_PROMOTION_RACE_REFUSED"

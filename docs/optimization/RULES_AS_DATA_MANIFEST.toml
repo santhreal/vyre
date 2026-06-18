@@ -1,0 +1,58 @@
+schema_version = 1
+contract = "vyre-rules-as-data-manifest:v1"
+
+[[data]]
+id = "rules-as-data-manifest"
+path = "docs/optimization/RULES_AS_DATA_MANIFEST.toml"
+owner_lane = "evidence_truth"
+schema_token = "vyre-rules-as-data-manifest:v1"
+command_matrix_source = true
+malformed_fixture = "xtask/src/rules_as_data.rs:manifest_rejects_missing_command_matrix_source"
+
+[[data]]
+id = "research-source-ledger"
+path = "docs/optimization/RESEARCH_SOURCE_LEDGER.toml"
+owner_lane = "evidence_truth"
+schema_token = "vyre-research-source-ledger"
+command_matrix_source = true
+malformed_fixture = "xtask/src/research_audit/source_ledger.rs:source_impact_rejects_generic_gate_without_enforcement"
+
+[[data]]
+id = "competitor-issue-ledger"
+path = "docs/optimization/COMPETITOR_ISSUE_LEDGER.toml"
+owner_lane = "evidence_truth"
+schema_token = "vyre-competitor-issue-ledger"
+command_matrix_source = true
+malformed_fixture = "xtask/src/research_audit/source_ledger.rs:competitor issue is missing local fixture id"
+
+[[data]]
+id = "frontier-leaderboard-baselines"
+path = "docs/optimization/FRONTIER_LEADERBOARD_BASELINES.toml"
+owner_lane = "bench_harness"
+schema_token = "vyre-frontier-leaderboard-baselines"
+command_matrix_source = true
+malformed_fixture = "xtask/src/release_benchmarks/frontier_leaderboard.rs:frontier_catalog_rejects_unknown_research_key"
+
+[[data]]
+id = "threshold-policy"
+path = "docs/optimization/THRESHOLD_POLICY.toml"
+owner_lane = "evidence_truth"
+schema_token = "release/evidence/hygiene/threshold-policy.json"
+command_matrix_source = true
+malformed_fixture = "xtask/src/hygiene_matrix.rs:threshold_policy.rows"
+
+[[data]]
+id = "benchmark-targets"
+path = "docs/optimization/BENCH_TARGETS.toml"
+owner_lane = "bench_harness"
+schema_token = "bench-target-release-workload:v1"
+command_matrix_source = true
+malformed_fixture = "vyre-bench/tests/benchmark_target_contracts.rs:benchmark_target_contracts_negative_fixtures_reject_missing_target_and_stale_case"
+
+[[data]]
+id = "archive-replay-audits"
+path = "docs/optimization/ARCHIVE_REPLAY_AUDITS.toml"
+owner_lane = "evidence_truth"
+schema_token = "vyre-archive-replay-audits:v1"
+command_matrix_source = true
+malformed_fixture = "xtask/src/research_audit/validate.rs:research_audit_artifact_rejects_archive_replay_findings"

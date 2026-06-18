@@ -1,0 +1,43 @@
+# systemd service hardening policy for VX-1229, VX-1230, VX-1237, and VX-1238.
+# Service units, execution environment, sandboxing, identity, resource controls, logging, secrets, and update boundaries share one systemd seam.
+
+schema = "vyre.release.systemd_service_hardening_policy.v1"
+owner = "security_reliability"
+evidence_tokens = ["SYSTEMD_SERVICE", "SYSTEMD_EXEC", "SYSTEMD_RESOURCE_CONTROL", "OWASP_SECRETS_MANAGEMENT"]
+
+required_fields = [
+  "unit_id",
+  "service_policy",
+  "exec_policy",
+  "identity_policy",
+  "filesystem_policy",
+  "capability_policy",
+  "network_policy",
+  "resource_policy",
+  "secret_policy",
+  "diagnostic",
+]
+
+[[unit]]
+unit_id = "vyre-daemon-systemd-service"
+service_policy = "Type=notify-or-simple-with-explicit-Restart-policy-and-public-health-check-command"
+exec_policy = "ExecStart-uses-verified-public-binary-path-and-explicit-config-path"
+identity_policy = "DynamicUser-or-dedicated-unprivileged-user-no-root-default"
+filesystem_policy = "ProtectSystem=strict-PrivateTmp=yes-read-write-paths-limited-to-public-configured-state-dir"
+capability_policy = "NoNewPrivileges=yes-CapabilityBoundingSet-empty-unless-public-capability-rationale-exists"
+network_policy = "IPAddressDeny-or-RestrictAddressFamilies-declared-according-to-network-feature-config"
+resource_policy = "MemoryMax-CPUQuota-TasksMax-and-IO-policy-map-to-RESOURCE_BUDGET_POLICY.toml"
+secret_policy = "LoadCredential-or-protected-secret-file-reference-no-secrets-in-EnvironmentFile"
+diagnostic = "VYRE_SYSTEMD_SERVICE_HARDENING_REQUIRED"
+
+[[unit]]
+unit_id = "vyre-batch-systemd-service"
+service_policy = "oneshot-or-transient-batch-mode-records-timeout-and-exit-code-contract"
+exec_policy = "ExecStart-uses-public-binary-and-public-input-path-policy"
+identity_policy = "unprivileged-user-no-ambient-capabilities-by-default"
+filesystem_policy = "ReadOnlyPaths-for-inputs-and-state-output-path-explicit"
+capability_policy = "NoNewPrivileges=yes-no-kernel-module-device-or-admin-capabilities"
+network_policy = "network-access-disabled-unless-scan-source-policy-requires-it"
+resource_policy = "CPUWeight-MemoryMax-TasksMax-and-runtime-timeout-declared"
+secret_policy = "secret-material-references-go-through-SECRET_MATERIAL_HANDLING_POLICY.toml"
+diagnostic = "VYRE_SYSTEMD_BATCH_HARDENING_REQUIRED"

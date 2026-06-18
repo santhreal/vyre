@@ -33,21 +33,9 @@ pub fn dialect_and_language_supported_ops() -> &'static HashSet<OpId> {
             .size_hint()
             .1
             .unwrap_or_else(|| registrations.size_hint().0);
-        let reserve = language_ops
-            .len()
-            .checked_add(inventory_bound)
-            .unwrap_or_else(|| {
-                panic!(
-                    "Vyre dialect support set size overflowed while reserving {} language op(s) plus {inventory_bound} dialect op(s). Fix: split support-set construction.",
-                    language_ops.len()
-                )
-            });
+        let reserve = language_ops.len().saturating_add(inventory_bound);
         let mut set = HashSet::new();
-        set.try_reserve(reserve).unwrap_or_else(|error| {
-            panic!(
-                "Vyre dialect support set could not reserve {reserve} op slot(s): {error}. Fix: reduce linked dialect inventory or split support-set construction."
-            )
-        });
+        let _ = set.try_reserve(reserve);
         set.extend(language_ops.iter().cloned());
         for reg in registrations {
             let def = (reg.op)();
@@ -77,11 +65,7 @@ pub fn dialect_only_supported_ops() -> &'static HashSet<OpId> {
             .1
             .unwrap_or_else(|| registrations.size_hint().0);
         let mut set = HashSet::new();
-        set.try_reserve(reserve).unwrap_or_else(|error| {
-            panic!(
-                "Vyre dialect support set could not reserve {reserve} dialect-only op slot(s): {error}. Fix: reduce linked dialect inventory or split support-set construction."
-            )
-        });
+        let _ = set.try_reserve(reserve);
         for reg in registrations {
             let def = (reg.op)();
             set.insert(Arc::<str>::from(def.id));

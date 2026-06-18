@@ -1,0 +1,53 @@
+[schema]
+version = 1
+ledger = "vyre-competitor-issue-ledger"
+recorded_on = "2026-06-10"
+contract = "Each issue row records competitor regression fixture mapping requirements, including canonical issue URL, source key, issue type, status, affected version, labels, local fixture id, VX rows, and digest material."
+
+[[issues]]
+id = "HYPERSCAN-ISSUE-68"
+source_key = "HYPERSCAN"
+url = "https://github.com/intel/hyperscan/issues/68"
+issue_type = "performance-cliff"
+status = "open"
+affected_version = "4.5.2"
+labels = ["regex-performance-cliff", "pattern-set-regression", "anchored-null-run"]
+local_fixture = "hyperscan-anchor-null-performance-cliff"
+vx_rows = ["VX-451", "VX-453"]
+digest_material = "HYPERSCAN-ISSUE-68|HYPERSCAN|https://github.com/intel/hyperscan/issues/68|performance-cliff|open|4.5.2|regex-performance-cliff|pattern-set-regression|anchored-null-run|hyperscan-anchor-null-performance-cliff|VX-451|VX-453"
+
+[[issues]]
+id = "CUVS-ISSUE-752"
+source_key = "CUVS"
+url = "https://github.com/rapidsai/cuvs/issues/752"
+issue_type = "benchmark-telemetry"
+status = "open"
+affected_version = "24.12a-cuda12.0-py3.11"
+labels = ["cuvs-bench", "quantized-cagra", "hnswlib-comparison"]
+local_fixture = "cuvs-cagra-hnswlib-quantized-bench-regression"
+vx_rows = ["VX-451", "VX-452", "VX-453"]
+digest_material = "CUVS-ISSUE-752|CUVS|https://github.com/rapidsai/cuvs/issues/752|benchmark-telemetry|open|24.12a-cuda12.0-py3.11|cuvs-bench|quantized-cagra|hnswlib-comparison|cuvs-cagra-hnswlib-quantized-bench-regression|VX-451|VX-452|VX-453"
+
+[[issues]]
+id = "FAISS-ISSUE-3259"
+source_key = "FAISS_GPU"
+url = "https://github.com/facebookresearch/faiss/issues/3259"
+issue_type = "gpu-memory-pressure"
+status = "open"
+affected_version = "v1.7.4"
+labels = ["gpu-oom", "ivfpq", "large-index"]
+local_fixture = "faiss-ivfpq-large-index-gpu-oom"
+vx_rows = ["VX-465", "VX-466", "VX-471"]
+digest_material = "FAISS-ISSUE-3259|FAISS_GPU|https://github.com/facebookresearch/faiss/issues/3259|gpu-memory-pressure|open|v1.7.4|gpu-oom|ivfpq|large-index|faiss-ivfpq-large-index-gpu-oom|VX-465|VX-466|VX-471"
+
+[[issues]]
+id = "VECTORSCAN-ISSUE-100"
+source_key = "VECTORSCAN_PORTABLE"
+url = "https://github.com/VectorCamp/vectorscan/issues/100"
+issue_type = "portability-correctness"
+status = "closed"
+affected_version = "aarch64-portability-report"
+labels = ["aarch64", "false-positive", "portable-simd"]
+local_fixture = "vectorscan-aarch64-false-positive-portability"
+vx_rows = ["VX-361", "VX-390", "VX-415"]
+digest_material = "VECTORSCAN-ISSUE-100|VECTORSCAN_PORTABLE|https://github.com/VectorCamp/vectorscan/issues/100|portability-correctness|closed|aarch64-portability-report|aarch64|false-positive|portable-simd|vectorscan-aarch64-false-positive-portability|VX-361|VX-390|VX-415"

@@ -13,8 +13,8 @@ pub(in crate::pipeline_cache) fn tiny_program() -> Program {
 }
 
 pub(in crate::pipeline_cache) fn unique_u64() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .expect("Fix: system clock must be after UNIX_EPOCH for cache temp names.")
-        .as_nanos() as u64
+    match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
+        Ok(duration) => duration.as_nanos() as u64,
+        Err(_) => 0,
+    }
 }

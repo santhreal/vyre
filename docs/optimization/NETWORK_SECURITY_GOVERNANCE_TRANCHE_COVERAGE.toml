@@ -1,0 +1,29 @@
+# Network security governance tranche coverage for VX-861 through VX-880.
+# URL, SSRF/DNS, HTTP/proxy/redirect, network evidence redaction, and publication boundaries share one coverage row.
+
+schema = "vyre.plan.network_security_governance_tranche_coverage.v1"
+owner = "coordination"
+evidence_tokens = ["WHATWG_URL", "RFC_9110_HTTP", "OWASP_SSRF", "RFC_1035_DNS"]
+
+required_fields = [
+  "vx_id_range",
+  "url_canonicalization_policy",
+  "ssrf_dns_rebinding_guards",
+  "http_proxy_redirect_policy",
+  "network_evidence_redaction",
+  "source_ledger_coverage",
+  "publication_boundary",
+  "dedup_seam",
+  "proof_gate",
+]
+
+[[coverage]]
+vx_id_range = "VX-861..VX-880"
+url_canonicalization_policy = "URL_CANONICALIZATION_POLICY.toml"
+ssrf_dns_rebinding_guards = "SSRF_DNS_REBINDING_GUARDS.toml"
+http_proxy_redirect_policy = "HTTP_PROXY_REDIRECT_POLICY.toml"
+network_evidence_redaction = "NETWORK_EVIDENCE_REDACTION.toml"
+source_ledger_coverage = "RESEARCH_SOURCE_LEDGER.toml"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+dedup_seam = "one-url-policy-one-ssrf-dns-guard-one-http-proxy-policy-one-network-redaction-contract"
+proof_gate = "network_security_governance.rs"

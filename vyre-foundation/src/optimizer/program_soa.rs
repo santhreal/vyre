@@ -269,15 +269,15 @@ impl ProgramFacts {
         let stats = program.stats();
         let node_count = stats.node_count;
         let mut facts = Self {
-            kinds: Vec::new(),
-            parent: Vec::new(),
+            kinds: Vec::default(),
+            parent: Vec::default(),
             kinds_present: 0,
-            lets: Vec::new(),
-            assigns: Vec::new(),
-            loop_vars: Vec::new(),
-            var_reads: Vec::new(),
-            buffer_refs: Vec::new(),
-            regions: Vec::new(),
+            lets: Vec::default(),
+            assigns: Vec::default(),
+            loop_vars: Vec::default(),
+            var_reads: Vec::default(),
+            buffer_refs: Vec::default(),
+            regions: Vec::default(),
             let_index: OnceLock::new(),
             assign_index: OnceLock::new(),
             var_read_index: OnceLock::new(),
@@ -459,7 +459,9 @@ impl ProgramFacts {
         let map = self.buffer_index.get_or_init(|| {
             let mut out: FxHashMap<Ident, Vec<(NodeIndex, BufferRefKind)>> = FxHashMap::default();
             for (idx, buffer, kind) in &self.buffer_refs {
-                out.entry(buffer.clone()).or_default().push((*idx, *kind));
+                out.entry(buffer.duplicate_handle())
+                    .or_default()
+                    .push((*idx, *kind));
             }
             out
         });
@@ -497,7 +499,9 @@ impl ProgramFacts {
         let map = self.region_index_by_generator.get_or_init(|| {
             let mut out: FxHashMap<Ident, Vec<usize>> = FxHashMap::default();
             for (i, meta) in self.regions.iter().enumerate() {
-                out.entry(meta.generator.clone()).or_default().push(i);
+                out.entry(meta.generator.duplicate_handle())
+                    .or_default()
+                    .push(i);
             }
             out
         });
@@ -595,7 +599,7 @@ impl ProgramFacts {
                     | BufferRefKind::AsyncDestination
                     | BufferRefKind::IndirectCount
             ) {
-                out.insert(name.clone());
+                out.insert(name.duplicate_handle());
             }
         }
         out
@@ -605,7 +609,7 @@ impl ProgramFacts {
 fn build_index(rows: &[(NodeIndex, Ident)]) -> FxHashMap<Ident, Vec<NodeIndex>> {
     let mut out: FxHashMap<Ident, Vec<NodeIndex>> = FxHashMap::default();
     for (idx, name) in rows {
-        out.entry(name.clone()).or_default().push(*idx);
+        out.entry(name.duplicate_handle()).or_default().push(*idx);
     }
     out
 }
@@ -658,12 +662,12 @@ fn walk_node(node: &Node, parent: Option<NodeIndex>, facts: &mut ProgramFacts) {
     match node {
         Node::Let { name, value } => {
             let idx = record_node(facts, NodeKind::Let, parent);
-            facts.lets.push((idx, name.clone()));
+            facts.lets.push((idx, name.duplicate_handle()));
             walk_expr(value, idx, facts);
         }
         Node::Assign { name, value } => {
             let idx = record_node(facts, NodeKind::Assign, parent);
-            facts.assigns.push((idx, name.clone()));
+            facts.assigns.push((idx, name.duplicate_handle()));
             walk_expr(value, idx, facts);
         }
         Node::Store {
@@ -674,7 +678,7 @@ fn walk_node(node: &Node, parent: Option<NodeIndex>, facts: &mut ProgramFacts) {
             let idx = record_node(facts, NodeKind::Store, parent);
             facts
                 .buffer_refs
-                .push((idx, buffer.clone(), BufferRefKind::Write));
+                .push((idx, buffer.duplicate_handle(), BufferRefKind::Write));
             walk_expr(index, idx, facts);
             walk_expr(value, idx, facts);
         }
@@ -699,7 +703,7 @@ fn walk_node(node: &Node, parent: Option<NodeIndex>, facts: &mut ProgramFacts) {
             body,
         } => {
             let idx = record_node(facts, NodeKind::Loop, parent);
-            facts.loop_vars.push((idx, var.clone()));
+            facts.loop_vars.push((idx, var.duplicate_handle()));
             walk_expr(from, idx, facts);
             walk_expr(to, idx, facts);
             for n in body {
@@ -708,9 +712,11 @@ fn walk_node(node: &Node, parent: Option<NodeIndex>, facts: &mut ProgramFacts) {
         }
         Node::IndirectDispatch { count_buffer, .. } => {
             let idx = record_node(facts, NodeKind::IndirectDispatch, parent);
-            facts
-                .buffer_refs
-                .push((idx, count_buffer.clone(), BufferRefKind::IndirectCount));
+            facts.buffer_refs.push((
+                idx,
+                count_buffer.duplicate_handle(),
+                BufferRefKind::IndirectCount,
+            ));
         }
         Node::AsyncLoad {
             source,
@@ -722,10 +728,12 @@ fn walk_node(node: &Node, parent: Option<NodeIndex>, facts: &mut ProgramFacts) {
             let idx = record_node(facts, NodeKind::AsyncLoad, parent);
             facts
                 .buffer_refs
-                .push((idx, source.clone(), BufferRefKind::AsyncSource));
-            facts
-                .buffer_refs
-                .push((idx, destination.clone(), BufferRefKind::AsyncDestination));
+                .push((idx, source.duplicate_handle(), BufferRefKind::AsyncSource));
+            facts.buffer_refs.push((
+                idx,
+                destination.duplicate_handle(),
+                BufferRefKind::AsyncDestination,
+            ));
             walk_expr(offset, idx, facts);
             walk_expr(size, idx, facts);
         }
@@ -739,10 +747,10 @@ fn walk_node(node: &Node, parent: Option<NodeIndex>, facts: &mut ProgramFacts) {
             let idx = record_node(facts, NodeKind::AsyncStore, parent);
             facts
                 .buffer_refs
-                .push((idx, source.clone(), BufferRefKind::AsyncSource));
+                .push((idx, source.duplicate_handle(), BufferRefKind::AsyncSource));
             facts
                 .buffer_refs
-                .push((idx, destination.clone(), BufferRefKind::Write));
+                .push((idx, destination.duplicate_handle(), BufferRefKind::Write));
             walk_expr(offset, idx, facts);
             walk_expr(size, idx, facts);
         }
@@ -776,7 +784,7 @@ fn walk_node(node: &Node, parent: Option<NodeIndex>, facts: &mut ProgramFacts) {
             let idx = record_node(facts, NodeKind::Region, parent);
             facts.regions.push(RegionMeta {
                 node: idx,
-                generator: generator.clone(),
+                generator: generator.duplicate_handle(),
                 source_region: source_region.clone(),
             });
             for n in body.iter() {
@@ -787,31 +795,31 @@ fn walk_node(node: &Node, parent: Option<NodeIndex>, facts: &mut ProgramFacts) {
             let idx = record_node(facts, NodeKind::AllReduce, parent);
             facts
                 .buffer_refs
-                .push((idx, buffer.clone(), BufferRefKind::Write));
+                .push((idx, buffer.duplicate_handle(), BufferRefKind::Write));
         }
         Node::AllGather { input, output, .. } => {
             let idx = record_node(facts, NodeKind::AllGather, parent);
             facts
                 .buffer_refs
-                .push((idx, input.clone(), BufferRefKind::Read));
+                .push((idx, input.duplicate_handle(), BufferRefKind::Read));
             facts
                 .buffer_refs
-                .push((idx, output.clone(), BufferRefKind::Write));
+                .push((idx, output.duplicate_handle(), BufferRefKind::Write));
         }
         Node::ReduceScatter { input, output, .. } => {
             let idx = record_node(facts, NodeKind::ReduceScatter, parent);
             facts
                 .buffer_refs
-                .push((idx, input.clone(), BufferRefKind::Read));
+                .push((idx, input.duplicate_handle(), BufferRefKind::Read));
             facts
                 .buffer_refs
-                .push((idx, output.clone(), BufferRefKind::Write));
+                .push((idx, output.duplicate_handle(), BufferRefKind::Write));
         }
         Node::Broadcast { buffer, .. } => {
             let idx = record_node(facts, NodeKind::Broadcast, parent);
             facts
                 .buffer_refs
-                .push((idx, buffer.clone(), BufferRefKind::Write));
+                .push((idx, buffer.duplicate_handle(), BufferRefKind::Write));
         }
         Node::Opaque(_) => {
             record_node(facts, NodeKind::Opaque, parent);
@@ -822,18 +830,18 @@ fn walk_node(node: &Node, parent: Option<NodeIndex>, facts: &mut ProgramFacts) {
 fn walk_expr(expr: &Expr, owning_node: NodeIndex, facts: &mut ProgramFacts) {
     match expr {
         Expr::Var(name) => {
-            facts.var_reads.push((owning_node, name.clone()));
+            facts.var_reads.push((owning_node, name.duplicate_handle()));
         }
         Expr::Load { buffer, index } => {
             facts
                 .buffer_refs
-                .push((owning_node, buffer.clone(), BufferRefKind::Read));
+                .push((owning_node, buffer.duplicate_handle(), BufferRefKind::Read));
             walk_expr(index, owning_node, facts);
         }
         Expr::BufLen { buffer } => {
             facts
                 .buffer_refs
-                .push((owning_node, buffer.clone(), BufferRefKind::Read));
+                .push((owning_node, buffer.duplicate_handle(), BufferRefKind::Read));
         }
         Expr::Atomic {
             op,
@@ -843,9 +851,11 @@ fn walk_expr(expr: &Expr, owning_node: NodeIndex, facts: &mut ProgramFacts) {
             value,
             ..
         } => {
-            facts
-                .buffer_refs
-                .push((owning_node, buffer.clone(), BufferRefKind::Atomic(*op)));
+            facts.buffer_refs.push((
+                owning_node,
+                buffer.duplicate_handle(),
+                BufferRefKind::Atomic(*op),
+            ));
             walk_expr(index, owning_node, facts);
             if let Some(e) = expected.as_deref() {
                 walk_expr(e, owning_node, facts);
@@ -949,7 +959,7 @@ mod tests {
     /// node and is recorded).
     #[test]
     fn empty_program_has_only_region_node() {
-        let facts = ProgramFacts::build(&program(Vec::new()));
+        let facts = ProgramFacts::build(&program(Vec::default()));
         assert_eq!(facts.node_count(), 1);
         assert_eq!(facts.kind_at(NodeIndex(0)), NodeKind::Region);
         assert!(facts.lets().is_empty());
@@ -961,7 +971,7 @@ mod tests {
     /// and nothing else  -  no Lets, no Loops, no Stores.
     #[test]
     fn kinds_present_bitset_starts_empty_then_records_each_kind() {
-        let facts = ProgramFacts::build(&program(Vec::new()));
+        let facts = ProgramFacts::build(&program(Vec::default()));
         // Wrapping Region IS recorded by `build`.
         assert!(facts.has_kind(NodeKind::Region));
         // But nothing else is.
@@ -983,7 +993,7 @@ mod tests {
                 "i",
                 Expr::u32(0),
                 Expr::u32(4),
-                vec![Node::Block(Vec::new())],
+                vec![Node::Block(Vec::default())],
             ),
             Node::Barrier {
                 ordering: MemoryOrdering::SeqCst,

@@ -1,0 +1,60 @@
+[artifact]
+id = "SEMANTIC_FACT_INDEX_SCHEMA"
+title = "Semantic fact index schema contract"
+tranche = "VX-1581..VX-1600"
+owner = "scanner_frontends"
+status = "planned_contract"
+research_sources = [
+  "SCIP_CODE_INTELLIGENCE_PROTOCOL",
+  "SOUFFLE_RELATIONS",
+  "CODEQL_DATA_FLOW_ANALYSIS",
+]
+
+[scope]
+owns = [
+  "stable semantic fact table schemas for scanner reuse",
+  "symbol, definition, reference, call, type, scope, and flow fact identity",
+  "base-fact and derived-fact versioning",
+  "schema and extractor digest contracts for fact reuse",
+  "semantic fact privacy fields before publication",
+]
+does_not_own = [
+  "file content identity and chunk digests, owned by CORPUS_CONTENT_IDENTITY_INDEX",
+  "language import/include/module edges, owned by LANGUAGE_DEPENDENCY_EDGE_MATRIX",
+  "parser object cache lifecycle, owned by the libs_parsing roadmap substrate",
+  "ProgramFacts and low-level optimizer facts, owned by ROADMAP.md P6 and foundation optimizer substrates",
+  "generic source impact graph audits, owned by SOURCE_IMPACT_GRAPH",
+  "reported output schema, owned by OUTPUT_SLAB_SCHEMA_PROVENANCE",
+]
+
+[schema_identity]
+required_digests = [
+  "semantic_schema_digest",
+  "extractor_binary_digest",
+  "language_profile_digest",
+  "rule_set_digest",
+  "dependency_graph_epoch",
+  "corpus_identity_epoch",
+]
+compatibility = "fact reuse is admitted only when schema, extractor, language, dependency, corpus, and rule digests are compatible"
+mutation_policy = "schema changes create a new fact index generation and reject stale derived facts"
+
+[base_fact_tables]
+symbol = ["symbol_id", "language_id", "kind", "qualified_name_digest", "signature_digest", "visibility", "package_or_crate_digest"]
+definition = ["symbol_id", "file_identity", "range_digest", "definition_kind", "resolver_digest"]
+reference = ["symbol_id", "file_identity", "range_digest", "reference_kind", "read_write_execute_class"]
+call = ["caller_symbol_id", "callee_symbol_id_or_unknown", "callsite_range_digest", "dispatch_kind", "resolution_state"]
+type_fact = ["entity_id", "type_digest", "type_source", "confidence", "language_profile_digest"]
+scope = ["scope_id", "parent_scope_id", "file_identity", "range_digest", "scope_kind"]
+
+[derived_fact_tables]
+flow_node = ["node_id", "symbol_id_or_unknown", "file_identity", "range_digest", "node_kind"]
+flow_edge = ["source_node_id", "target_node_id", "flow_kind", "guard_digest", "sanitizer_state"]
+taint_source = ["node_id", "source_kind", "rule_scope", "confidence"]
+taint_sink = ["node_id", "sink_kind", "rule_scope", "confidence"]
+sanitation = ["node_id", "sanitizer_kind", "rule_scope", "confidence"]
+control_dependency = ["predicate_node_id", "controlled_node_id", "branch_kind", "condition_digest"]
+
+[privacy]
+public_allowed = ["language_id", "fact_kind", "resolution_state", "confidence", "rule_scope", "diagnostic_code"]
+private_blocked = ["raw_path", "raw_symbol_spelling", "source_excerpt", "Santh root", "workspace hostname", "private package registry URL"]

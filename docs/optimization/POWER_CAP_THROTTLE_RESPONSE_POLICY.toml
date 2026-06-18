@@ -1,0 +1,66 @@
+# Power-cap and throttling response owns operator actions when efficiency telemetry shows caps, throttle, overheating, or profiler contention.
+
+schema = "vyre.efficiency.power_cap_throttle_response.v1"
+owner = "performance_efficiency"
+evidence_tokens = ["NVIDIA_NVML_DEVICE_POWER", "NVIDIA_DCGM_POWER_PROFILES", "NVIDIA_DCGM_PROFILING_GROUPS", "LINUX_POWERCAP_RAPL", "PROMETHEUS_ALERTING_RULES"]
+
+required_fields = [
+  "response_id",
+  "trigger_policy",
+  "classification_policy",
+  "operator_action_policy",
+  "power_profile_policy",
+  "profiler_contention_policy",
+  "rollout_policy",
+  "runbook_policy",
+  "evidence_policy",
+  "privacy_boundary",
+  "release_gate_effect",
+  "authority_links",
+  "diagnostic",
+]
+
+[[response]]
+response_id = "gpu-power-limit-throttle-response"
+trigger_policy = "NVML-or-DCGM-power-limit-clock-throttle-temperature-margin-or-power-state-change-during-release-window"
+classification_policy = "classify-as-power-cap-thermal-throttle-clock-policy-profiler-contention-or-device-sharing-shift"
+operator_action_policy = "pause-efficiency-claim-capture-power-window-compare-capacity-envelope-and-route-to-GPU-owner"
+power_profile_policy = "DCGM-workload-power-profile-index-current-target-action-and-GPU-architecture-recorded-before-changing-profile"
+profiler_contention_policy = "DCGM-profiling-pause-resume-or-blank-values-recorded-when-collector-conflicts-with-Nsight-or-profiler-tools"
+rollout_policy = "canary-promotion-pauses-when-throttle-state-overlaps-performance-or-energy-decision-window"
+runbook_policy = "operator-runbook-links-power-limit-fix-thermal-check-capacity-adjustment-or-route-disablement"
+evidence_policy = "capture-release-version-artifact-digest-GPU-class-power-limit-clock-throttle-reason-profile-id-and-SLI-impact"
+privacy_boundary = "redact-device-serial-hostname-private-fleet-label-local-driver-path-and-Santh-root"
+release_gate_effect = "performance-or-efficiency-claim-invalid-until-throttle-response-record-is-clean-or-actioned"
+authority_links = ["POWER_THERMAL_TELEMETRY_CONTRACTS.toml", "OPERATOR_RUNBOOK_ROLLBACK_POLICY.toml", "PROGRESSIVE_DELIVERY_CANARY_POLICY.toml", "ADMISSION_AUDIT_EVIDENCE_POLICY.toml"]
+diagnostic = "VYRE_GPU_POWER_THROTTLE_RESPONSE_REQUIRED"
+
+[[response]]
+response_id = "cpu-powercap-constraint-response"
+trigger_policy = "Linux-powercap-RAPL-constraint-power-zone-or-frequency-governor-change-during-comparison-window"
+classification_policy = "classify-as-powercap-constraint-governor-shift-thermal-zone-pressure-or-attribution-gap"
+operator_action_policy = "pause-comparison-record-powercap-zone-state-and-repeat-with-blocked-stratum-or disclose limited claim scope"
+power_profile_policy = "not-applicable-to-GPU-power-profile-but-powercap-zone-constraint-and-control-type-recorded"
+profiler_contention_policy = "record-profiler-overhead-when-continuous-profiling-overlaps-energy-window"
+rollout_policy = "release-load-comparison-restarts-or-narrows-scope-when-powercap-state-changes"
+runbook_policy = "operator-runbook-links-governor-powercap-capacity-or-autoscaling-action"
+evidence_policy = "capture-control-type-zone-constraint-energy-window-workload-digest-route-id-and-SLO-impact"
+privacy_boundary = "redact-hostname-pod-private-tenant-user-local-path-and-Santh-root"
+release_gate_effect = "CPU-efficiency-claim-invalid-when-powercap-state-changed-without-response-record"
+authority_links = ["POWER_THERMAL_TELEMETRY_CONTRACTS.toml", "HARDWARE_WORKLOAD_STRATIFICATION_MATRIX.toml", "OPERATOR_RUNBOOK_ROLLBACK_POLICY.toml", "RESOURCE_RIGHTSIZING_CAPACITY_POLICY.toml"]
+diagnostic = "VYRE_CPU_POWERCAP_RESPONSE_REQUIRED"
+
+[[response]]
+response_id = "collector-efficiency-overhead-response"
+trigger_policy = "profile-metrics-or-energy-collector-overhead-exceeds-budget-or-creates-missing-blank-conflicting-samples"
+classification_policy = "classify-as-exporter-overhead-profiler-conflict-cardinality-breach-or-attribution-model-gap"
+operator_action_policy = "reduce-sampling-window-disable-nonessential-profile-group-or-mark-efficiency-claim-unavailable-for-affected-window"
+power_profile_policy = "collector-action-must-not-change-GPU-power-profile-without-separate-power-profile-record"
+profiler_contention_policy = "record-DCGM-profile-group-conflict-pause-resume-blank-values-and-collector-version"
+rollout_policy = "release-promotion-uses-conservative-decision-when-efficiency-collector-corrupts-window"
+runbook_policy = "operator-runbook-links-collector-sampling-cardinality-redaction-and-retry-action"
+evidence_policy = "capture-collector-id-overhead-metrics-missing-samples-cardinality-state-and-public-redacted-result"
+privacy_boundary = "redact-exporter-endpoints-hostnames-private-labels-token-values-and-Santh-root"
+release_gate_effect = "efficiency-claim-invalid-when-collector-overhead-or-missing-samples-exceed-policy"
+authority_links = ["PROFILING_COLLECTION_SECURITY_POLICY.toml", "METRICS_EXPOSITION_CONTRACTS.toml", "ALERT_ROUTING_ESCALATION_POLICY.toml", "PUBLICATION_BOUNDARY_CLASSIFICATION.toml"]
+diagnostic = "VYRE_EFFICIENCY_COLLECTOR_OVERHEAD_RESPONSE_REQUIRED"

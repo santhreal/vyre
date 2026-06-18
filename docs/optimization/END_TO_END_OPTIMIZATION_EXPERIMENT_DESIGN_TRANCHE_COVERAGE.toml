@@ -1,0 +1,36 @@
+# This tranche adds controlled experiment design, blocking, stratification, ablation, and multiple-comparison governance while reusing benchmark methodology, statistical gates, profiling, capacity, and rollout authorities.
+
+schema = "vyre.coverage.optimization_experiment_design_tranche.v1"
+tranche = "VX-1381..VX-1400"
+owner = "bench_harness"
+evidence_tokens = ["NIST_DOE_DESIGN_SELECTION", "NIST_DOE_OBJECTIVES", "NIST_DOE_FACTOR_SELECTION", "NIST_RANDOMIZED_BLOCK_DESIGN", "NIST_FULL_FACTORIAL_DESIGN", "NIST_MULTIPLE_COMPARISONS", "CRITERION_ANALYSIS_PROCESS", "GOOGLE_BENCHMARK_COMPARE_TOOLS"]
+
+required_links = [
+  "optimization_experiment_design_policy",
+  "hardware_workload_stratification_matrix",
+  "ablation_and_counterfactual_evidence_policy",
+  "multiple_comparison_decision_policy",
+  "benchmark_methodology_contracts",
+  "statistical_regression_gates",
+  "continuous_profiling_coverage",
+  "performance_validation_coverage",
+  "capacity_autoscaling_coverage",
+  "staged_rollout_coverage",
+  "publication_boundary",
+  "dedup_seam",
+  "proof_gate",
+]
+
+optimization_experiment_design_policy = "OPTIMIZATION_EXPERIMENT_DESIGN_POLICY.toml"
+hardware_workload_stratification_matrix = "HARDWARE_WORKLOAD_STRATIFICATION_MATRIX.toml"
+ablation_and_counterfactual_evidence_policy = "ABLATION_AND_COUNTERFACTUAL_EVIDENCE_POLICY.toml"
+multiple_comparison_decision_policy = "MULTIPLE_COMPARISON_DECISION_POLICY.toml"
+benchmark_methodology_contracts = "BENCHMARK_METHODOLOGY_CONTRACTS.toml"
+statistical_regression_gates = "STATISTICAL_REGRESSION_GATES.toml"
+continuous_profiling_coverage = "END_TO_END_CONTINUOUS_PROFILING_TRANCHE_COVERAGE.toml"
+performance_validation_coverage = "PERFORMANCE_VALIDATION_TRANCHE_COVERAGE.toml"
+capacity_autoscaling_coverage = "END_TO_END_CAPACITY_AUTOSCALING_TRANCHE_COVERAGE.toml"
+staged_rollout_coverage = "END_TO_END_STAGED_ROLLOUT_TRANCHE_COVERAGE.toml"
+publication_boundary = "PUBLICATION_BOUNDARY_CLASSIFICATION.toml"
+dedup_seam = "experiment-design-owns-hypotheses-controls-blocking-stratification-ablation-and-multiple-comparison-family-decisions-while-benchmark-methodology-statistical-gates-profiling-capacity-rollout-and-publication-registries-remain-source-authorities"
+proof_gate = "conform/vyre-conform-enforce/tests/optimization_experiment_design_governance.rs"

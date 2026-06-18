@@ -1,0 +1,10 @@
+schema_version = 1
+contract = "vyre-archive-replay-audits:v1"
+
+[[audit]]
+path = "audits/PHASE10_DIFF.md"
+fixture_prefix = "phase10-diff"
+
+[[audit]]
+path = "audits/RELEASE_1000X_PLAN.md"
+fixture_prefix = "release-1000x-plan"

@@ -278,7 +278,9 @@ pub fn acquire_preferred_dispatch_backend() -> Result<Box<dyn VyreBackend>, Back
         }
     }
     if !candidates.is_empty() {
-        candidates.sort_unstable_by(|left, right| compare_backend_selection_facts(left.facts, right.facts));
+        candidates.sort_unstable_by(|left, right| {
+            compare_backend_selection_facts(left.facts, right.facts)
+        });
         let selected = candidates.remove(0);
         tracing::trace!(
             "acquire_preferred_dispatch_backend: selected backend `{}` with capability_score={} timing_quality_score={} precedence={} acquisition_ns={}",

@@ -151,9 +151,7 @@ impl BenchCase for BytecodeDispatch {
 }
 
 fn bytecode_program(instance_count: u32, instrs_per_instance: u32) -> Program {
-    let total_instrs = instance_count
-        .checked_mul(instrs_per_instance)
-        .expect("Fix: bytecode benchmark dimensions must fit u32");
+    let total_instrs = instance_count.saturating_mul(instrs_per_instance);
     Program::wrapped(
         vec![
             BufferDecl::storage("instrs", 0, BufferAccess::ReadOnly, DataType::U32)

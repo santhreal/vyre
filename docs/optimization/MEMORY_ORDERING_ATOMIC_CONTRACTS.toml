@@ -1,0 +1,62 @@
+# Memory-ordering contracts own atomic order choices and publication protocols; schedule contracts own bounded interleavings.
+
+schema = "vyre.sync.memory_ordering_atomic_contract.v1"
+owner = "runtime_residency"
+evidence_tokens = ["RUST_ATOMIC_ORDERING", "RUST_NOMICON_ATOMICS", "VULKAN_MEMORY_MODEL", "LOOM", "KANI_RUST_VERIFIER"]
+
+required_fields = [
+  "contract_id",
+  "shared_state",
+  "writer_policy",
+  "reader_policy",
+  "atomic_order_policy",
+  "non_atomic_data_policy",
+  "failure_mode_policy",
+  "model_check_policy",
+  "counterexample_policy",
+  "release_gate_effect",
+  "authority_links",
+  "diagnostic",
+]
+
+[[contract]]
+contract_id = "resident-ring-slot-publication"
+shared_state = "resident-megakernel-ring-slot-state-payload-epoch-and-completion-marker"
+writer_policy = "producer-writes-payload-before-release-store-of-slot-state-and-epoch"
+reader_policy = "consumer-acquire-loads-slot-state-before-reading-payload-and-completion-marker"
+atomic_order_policy = "Release-on-publish-Acquire-on-claim-AcqRel-on-RMW-Relaxed-only-for-statistics-not-guarding-data"
+non_atomic_data_policy = "non-atomic-payload-readable-only-after-acquire-edge-or-explicit-host-device-visibility-record"
+failure_mode_policy = "missing-release-acquire-edge-can-report-stale-or-partial-work-item-and-blocks-resident-runtime-claim"
+model_check_policy = "LOOM-or-KANI-harness-links-to-CONCURRENCY_SCHEDULE_CONTRACTS-for-bounded-interleaving-proof"
+counterexample_policy = "minimal-counterexample-records-operation-order-atomic-values-payload-digest-and-visibility-edge"
+release_gate_effect = "resident-runtime-performance-claim-invalid-without-ring-publication-order-contract"
+authority_links = ["CONCURRENCY_SCHEDULE_CONTRACTS.toml", "FORMAL_MODEL_CONTRACTS.toml", "BACKPRESSURE_QUEUE_QUOTA_POLICY.toml", "TRACE_CONTEXT_TELEMETRY_CONTRACTS.toml"]
+diagnostic = "VYRE_RESIDENT_RING_MEMORY_ORDER_REQUIRED"
+
+[[contract]]
+contract_id = "output-slab-readback-epoch"
+shared_state = "output-slab-validity-epoch-readback-state-host-visible-marker-and-report-publication"
+writer_policy = "device-or-driver-producer-marks-readback-pending-before-host-visible-release-edge"
+reader_policy = "reporter-acquire-loads-host-visible-marker-and-validates-epoch-before-reading-slab"
+atomic_order_policy = "Release-on-state-transition-Acquire-on-report-read-SeqCst-only-when-total-order-is-required-by-model"
+non_atomic_data_policy = "slab-bytes-readable-only-after-fence-or-acquire-visible-state-and-matching-epoch"
+failure_mode_policy = "stale-slab-host-report-or-epoch-reuse-without-visibility-edge-blocks-public-output-claim"
+model_check_policy = "schedule-contract-output-slab-readback-race-remains-interleaving-authority"
+counterexample_policy = "counterexample-records-epoch-store-state-load-readback-transition-and-reported-byte-range"
+release_gate_effect = "reporting-or-metrics-output-invalid-without-readback-epoch-order-contract"
+authority_links = ["OUTPUT_SLAB_PROVENANCE.toml", "CONCURRENCY_SCHEDULE_CONTRACTS.toml", "CROSS_SIGNAL_AUDIT_CORRELATION.toml", "PUBLICATION_BOUNDARY_CLASSIFICATION.toml"]
+diagnostic = "VYRE_OUTPUT_SLAB_MEMORY_ORDER_REQUIRED"
+
+[[contract]]
+contract_id = "autotune-cache-publication"
+shared_state = "compiled-pipeline-cache-autotune-decision-cache-key-and-disk-persistence-marker"
+writer_policy = "writer-completes-cache-entry-and-digest-before-release-publishing-visible-key"
+reader_policy = "reader-acquire-loads-visible-key-before-trusting-cache-entry-or-autotune-winner"
+atomic_order_policy = "AcquireRelease-for-in-process-publication-file-lock-and-sync-remain-filesystem-authorities-for-cross-process-writes"
+non_atomic_data_policy = "cache-entry-fields-immutable-after-release-publication-or-versioned-by-new-key"
+failure_mode_policy = "torn-cache-entry-or-stale-autotune-winner-invalidates-route-selection-and-performance-claim"
+model_check_policy = "in-process-cache-publication-modeled-with-LOOM-cross-process-file-tearing-owned-by-filesystem-policy"
+counterexample_policy = "counterexample-records-key-digest-entry-state-winner-state-and-reader-observed-route"
+release_gate_effect = "route-selection-claim-invalid-without-cache-publication-order-record"
+authority_links = ["CACHE_REBUILD_INVALIDATION_POLICY.toml", "ATOMIC_FILE_OPERATION_RACE_POLICY.toml", "STATISTICAL_REGRESSION_GATES.toml", "PERFORMANCE_REGRESSION_PROFILE_TRIAGE_POLICY.toml"]
+diagnostic = "VYRE_AUTOTUNE_CACHE_MEMORY_ORDER_REQUIRED"

@@ -1,0 +1,29 @@
+# Unsafe, FFI, ABI, and memory-boundary governance tranche coverage for VX-961 through VX-980.
+# Unsafe blocks, FFI ABIs, memory layout, backend handles, source ledger, publication boundary, and dedup seams share one coverage row.
+
+schema = "vyre.plan.unsafe_ffi_governance_tranche_coverage.v1"
+owner = "coordination"
+evidence_tokens = ["RUST_BOOK_UNSAFE", "RUST_NOMICON_FFI", "RUST_UNSAFE_CODE_GUIDELINES", "RUST_RFC_2945_C_UNWIND"]
+
+required_fields = [
+  "vx_id_range",
+  "unsafe_block_safety_contracts",
+  "ffi_abi_boundary_contracts",
+  "memory_layout_aliasing_alignment",
+  "backend_handle_lifetime_provenance",
+  "source_ledger_coverage",
+  "publication_boundary",
+  "dedup_seam",
+  "proof_gate",
+]
+
+[[coverage]]
+vx_id_range = "VX-961..VX-980"
+unsafe_block_safety_contracts = "UNSAFE_BLOCK_SAFETY_CONTRACTS.toml"
+ffi_abi_boundary_contracts = "FFI_ABI_BOUNDARY_CONTRACTS.toml"
+memory_layout_aliasing_alignment = "MEMORY_LAYOUT_ALIASING_ALIGNMENT.toml"
+backend_handle_lifetime_provenance = "BACKEND_HANDLE_LIFETIME_PROVENANCE.toml"
+source_ledger_coverage = "RESEARCH_SOURCE_LEDGER.toml"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+dedup_seam = "one-unsafe-contract-one-ffi-boundary-one-memory-layout-contract-one-backend-handle-lifetime-contract"
+proof_gate = "unsafe_ffi_governance.rs"

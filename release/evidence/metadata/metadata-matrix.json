@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "publishable_package_count": 24,
-  "vyre_package_count": 25,
+  "publishable_package_count": 26,
+  "vyre_package_count": 27,
   "weir_package_count": 1,
   "parser_release_surface_count": 2,
   "non_publishable_release_surface_count": 2,
@@ -261,6 +261,29 @@
       "blockers": []
     },
     {
+      "name": "vyre-driver-metal",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-metal/Cargo.toml",
+      "version": "0.6.1",
+      "description": "Native Metal backend for vyre IR through Metal.framework.",
+      "license": "MIT OR Apache-2.0",
+      "readme": "README.md",
+      "repository": "https://github.com/santhsecurity/vyre",
+      "example_count": 1,
+      "example_files": [
+        "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-metal/examples/metal_release_surface.rs"
+      ],
+      "readme_example_count": 0,
+      "has_runnable_example": true,
+      "has_api_referencing_example": true,
+      "publish": null,
+      "release_kind": "publishable-crate",
+      "release_group": "vyre",
+      "release_surface": "vyre-crate",
+      "expected_version": "0.6.1",
+      "publish_policy": "publishable release crate",
+      "blockers": []
+    },
+    {
       "name": "vyre-driver-reference",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-reference/Cargo.toml",
       "version": "0.6.1",
@@ -325,6 +348,29 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "wgpu-backend",
+      "expected_version": "0.6.1",
+      "publish_policy": "publishable release crate",
+      "blockers": []
+    },
+    {
+      "name": "vyre-emit-metal",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-metal/Cargo.toml",
+      "version": "0.6.1",
+      "description": "Metal Shading Language artifact emitter for vyre KernelDescriptor. Routes through naga::Module to share substrate-neutral lowering.",
+      "license": "MIT OR Apache-2.0",
+      "readme": "README.md",
+      "repository": "https://github.com/santhsecurity/vyre",
+      "example_count": 1,
+      "example_files": [
+        "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-metal/examples/vyre_emit_metal_release_surface.rs"
+      ],
+      "readme_example_count": 0,
+      "has_runnable_example": true,
+      "has_api_referencing_example": true,
+      "publish": null,
+      "release_kind": "publishable-crate",
+      "release_group": "vyre",
+      "release_surface": "vyre-crate",
       "expected_version": "0.6.1",
       "publish_policy": "publishable release crate",
       "blockers": []

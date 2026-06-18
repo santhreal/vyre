@@ -83,6 +83,8 @@ fn test_suite_completeness() {
             workload_class: "Micro".to_string(),
             tags: vec![],
             backend_id: Some("test".to_string()),
+            device_signature: Some("device-profile-v1:test".to_string()),
+            held_out_corpus_id: Some("heldout:bench-case:test".to_string()),
             needs_gpu: false,
             min_vram_bytes: None,
             min_input_bytes: None,

@@ -1,0 +1,43 @@
+# GPU device capacity and placement policy for VX-1331, VX-1332, VX-1335, and VX-1337.
+# Kubernetes device plugins, NVIDIA GPU resources, node placement, runtime config, and capacity evidence share one accelerator scheduling seam.
+
+schema = "vyre.ops.gpu_device_capacity_placement_policy.v1"
+owner = "performance"
+evidence_tokens = ["KUBERNETES_DEVICE_PLUGINS", "NVIDIA_K8S_DEVICE_PLUGIN", "CUDA_BEST_PRACTICES", "KUBERNETES_TAINTS_TOLERATIONS"]
+
+required_fields = [
+  "gpu_id",
+  "device_surface",
+  "device_plugin_policy",
+  "resource_request_policy",
+  "placement_policy",
+  "sharing_partition_policy",
+  "runtime_config_policy",
+  "capacity_evidence_policy",
+  "release_gate_effect",
+  "diagnostic",
+]
+
+[[gpu]]
+gpu_id = "nvidia-gpu-operator-worker-placement"
+device_surface = "CUDA-enabled-scan-flow-graph-runtime-workers-and-resident-dispatch-services"
+device_plugin_policy = "Kubernetes-device-plugin-advertised-extended-resource-and-NVIDIA-device-plugin-version-recorded"
+resource_request_policy = "nvidia.com/gpu-or-declared-MIG-resource-request-limit-and-container-resource-contract-recorded"
+placement_policy = "GPU-nodeSelector-affinity-taints-tolerations-driver-environment-and-runtime-class-link-to-OPERATOR_RUNTIME_CONFIGURATION_POLICY.toml"
+sharing_partition_policy = "MIG-time-slicing-or-sharing-mode-recorded-and-blocks-performance-claims-without-isolation-evidence"
+runtime_config_policy = "CUDA-driver-runtime-library-version-backend-capability-digest-and-device-signature-recorded"
+capacity_evidence_policy = "record-GPU-model-class-memory-class-SM-class-resident-byte-budget-queue-depth-cache-hit-rate-and-output-digest"
+release_gate_effect = "GPU-unavailable-misplaced-shared-without-isolation-or-unverified-device-plugin-state-blocks-accelerator-readiness"
+diagnostic = "VYRE_NVIDIA_GPU_DEVICE_CAPACITY_REQUIRED"
+
+[[gpu]]
+gpu_id = "mixed-cpu-gpu-routing-capacity"
+device_surface = "workloads-that-can-route-between-CPU-reference-CUDA-WGPU-Metal-and-non-GPU-paths"
+device_plugin_policy = "GPU-device-plugin-presence-is-capability-input-not-proof-of-accelerator-availability"
+resource_request_policy = "GPU-request-required-for-GPU-release-claim-CPU-route-required-when-GPU-claim-is-not-made"
+placement_policy = "scheduler-placement-must-match-backend-capability-digest-and-runtime-evidence"
+sharing_partition_policy = "shared-GPU-or-MIG-partition-class-cannot-be-compared-to-exclusive-GPU-baseline-without-label"
+runtime_config_policy = "backend-routing-records-device-capability-live-limits-and-resource-budget-class"
+capacity_evidence_policy = "capacity-report-compares-selected-route-to-observed-device-class-and-not-private-fleet-layout"
+release_gate_effect = "silent-fallback-from-GPU-to-CPU-or-wrong-device-class-invalidates-performance-claim"
+diagnostic = "VYRE_MIXED_CPU_GPU_CAPACITY_ROUTING_REQUIRED"

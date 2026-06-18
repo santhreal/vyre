@@ -16,6 +16,7 @@
 //! The queue length can exceed queue capacity to expose overflow pressure; the
 //! traversal consumes only the first `queue_capacity` entries.
 
+use std::fmt;
 use std::sync::Arc;
 
 use vyre_foundation::ir::model::expr::Ident;
@@ -54,15 +55,62 @@ pub const FRONTIER_QUEUE_LEN_INIT_OP_ID: &str = "vyre-primitives::graph::frontie
 /// Canonical op id for queue-driven CSR expansion.
 pub const CSR_QUEUE_FORWARD_OP_ID: &str = "vyre-primitives::graph::csr_queue_forward_traverse";
 
-fn u32_byte_range(words: u32, context: &str) -> usize {
-    usize::try_from(words)
-        .ok()
-        .and_then(|count| count.checked_mul(std::mem::size_of::<u32>()))
-        .unwrap_or_else(|| {
-            panic!(
-                "{context} words={words} overflows output byte range. Fix: shard the frontier queue before GPU dispatch."
-            )
-        })
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct FrontierQueueSizingError {
+    message: String,
+}
+
+impl FrontierQueueSizingError {
+    fn new(message: String) -> Self {
+        Self { message }
+    }
+}
+
+impl fmt::Display for FrontierQueueSizingError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.message)
+    }
+}
+
+fn checked_frontier_u32_product(
+    lhs: u32,
+    rhs: u32,
+    context: &str,
+) -> Result<u32, FrontierQueueSizingError> {
+    lhs.checked_mul(rhs).ok_or_else(|| {
+        FrontierQueueSizingError::new(format!(
+            "Fix: {context} overflows u32 word count for lhs={lhs} rhs={rhs}. Shard the frontier queue before GPU dispatch."
+        ))
+    })
+}
+
+fn try_u32_byte_range(words: u32, context: &str) -> Result<usize, FrontierQueueSizingError> {
+    try_u32_byte_range_with_word_size(words, std::mem::size_of::<u32>(), context)
+}
+
+fn try_u32_byte_range_with_word_size(
+    words: u32,
+    word_size: usize,
+    context: &str,
+) -> Result<usize, FrontierQueueSizingError> {
+    let count = usize::try_from(words).map_err(|_| {
+        FrontierQueueSizingError::new(format!(
+            "Fix: {context} words={words} cannot fit usize on this target. Shard the frontier queue before GPU dispatch."
+        ))
+    })?;
+    count.checked_mul(word_size).ok_or_else(|| {
+        FrontierQueueSizingError::new(format!(
+            "Fix: {context} words={words} word_size={word_size} overflows output byte range. Shard the frontier queue before GPU dispatch."
+        ))
+    })
+}
+
+fn invalid_frontier_queue_sizing_program(
+    op_id: &'static str,
+    output: &str,
+    error: FrontierQueueSizingError,
+) -> Program {
+    crate::invalid_output_program(op_id, output, DataType::U32, error.to_string())
 }
 
 /// Build a GPU program that initializes the active queue length scalar.
@@ -474,14 +522,42 @@ pub fn frontier_word_counts_scan_pass_a(
     }
     let words = bitset_words(node_count);
     let num_blocks = words.div_ceil(FRONTIER_WORD_SCAN_BLOCK_LANES).max(1);
-    let total_partials = num_blocks.checked_mul(FRONTIER_WORD_SCAN_BLOCK_LANES).unwrap_or_else(|| {
-        panic!(
-            "frontier_word_counts_scan_pass_a num_blocks={num_blocks} overflows partial word count. Fix: shard the frontier queue."
-        )
-    });
-    let partial_bytes = u32_byte_range(total_partials, "frontier_word_counts_scan_pass_a partials");
+    let total_partials = match checked_frontier_u32_product(
+        num_blocks,
+        FRONTIER_WORD_SCAN_BLOCK_LANES,
+        "frontier_word_counts_scan_pass_a partial word count",
+    ) {
+        Ok(total_partials) => total_partials,
+        Err(error) => {
+            return invalid_frontier_queue_sizing_program(
+                FRONTIER_WORD_COUNTS_SCAN_PASS_A_OP_ID,
+                word_partials,
+                error,
+            );
+        }
+    };
+    let partial_bytes =
+        match try_u32_byte_range(total_partials, "frontier_word_counts_scan_pass_a partials") {
+            Ok(partial_bytes) => partial_bytes,
+            Err(error) => {
+                return invalid_frontier_queue_sizing_program(
+                    FRONTIER_WORD_COUNTS_SCAN_PASS_A_OP_ID,
+                    word_partials,
+                    error,
+                );
+            }
+        };
     let block_total_bytes =
-        u32_byte_range(num_blocks, "frontier_word_counts_scan_pass_a block totals");
+        match try_u32_byte_range(num_blocks, "frontier_word_counts_scan_pass_a block totals") {
+            Ok(block_total_bytes) => block_total_bytes,
+            Err(error) => {
+                return invalid_frontier_queue_sizing_program(
+                    FRONTIER_WORD_COUNTS_SCAN_PASS_A_OP_ID,
+                    block_totals,
+                    error,
+                );
+            }
+        };
     let tail_bits = node_count & 31;
     let tail_mask = if tail_bits == 0 {
         u32::MAX
@@ -624,10 +700,19 @@ pub fn frontier_word_block_offsets_in_place(block_totals: &str, node_count: u32)
     }
     let words = bitset_words(node_count);
     let num_blocks = words.div_ceil(FRONTIER_WORD_SCAN_BLOCK_LANES).max(1);
-    let block_total_bytes = u32_byte_range(
+    let block_total_bytes = match try_u32_byte_range(
         num_blocks,
         "frontier_word_block_offsets_in_place block totals",
-    );
+    ) {
+        Ok(block_total_bytes) => block_total_bytes,
+        Err(error) => {
+            return invalid_frontier_queue_sizing_program(
+                FRONTIER_WORD_BLOCK_OFFSETS_IN_PLACE_OP_ID,
+                block_totals,
+                error,
+            );
+        }
+    };
     if num_blocks <= FRONTIER_WORD_SCAN_BLOCK_LANES {
         return frontier_word_block_offsets_single_workgroup(
             block_totals,
@@ -870,11 +955,11 @@ fn frontier_word_queue_scatter_program(
     }
     let words = bitset_words(node_count);
     let num_blocks = words.div_ceil(FRONTIER_WORD_SCAN_BLOCK_LANES).max(1);
-    let total_partials = num_blocks.checked_mul(FRONTIER_WORD_SCAN_BLOCK_LANES).unwrap_or_else(|| {
-        panic!(
-            "frontier_word_block_prefix_to_queue_parallel num_blocks={num_blocks} overflows partial word count. Fix: shard the frontier queue."
-        )
-    });
+    let total_partials =
+        match checked_frontier_u32_product(num_blocks, FRONTIER_WORD_SCAN_BLOCK_LANES, op_id) {
+            Ok(total_partials) => total_partials,
+            Err(error) => return invalid_frontier_queue_sizing_program(op_id, queue_len, error),
+        };
     let tail_bits = node_count & 31;
     let tail_mask = if tail_bits == 0 {
         u32::MAX
@@ -1049,6 +1134,19 @@ pub fn csr_queue_forward_traverse(
     let lane = Expr::InvocationId { axis: 0 };
     let words = bitset_words(node_count);
     let physical_edge_count = edge_count.max(1);
+    let edge_offset_count = match node_count.checked_add(1) {
+        Some(edge_offset_count) => edge_offset_count,
+        None => {
+            return crate::invalid_output_program(
+                CSR_QUEUE_FORWARD_OP_ID,
+                frontier_out,
+                DataType::U32,
+                format!(
+                    "Fix: csr_queue_forward_traverse node_count + 1 overflows u32 for node_count={node_count}. Shard the CSR graph before GPU dispatch."
+                ),
+            );
+        }
+    };
     let body = vec![
         Node::let_bind("qt_idx", lane.clone()),
         Node::if_then(
@@ -1145,7 +1243,7 @@ pub fn csr_queue_forward_traverse(
                 .with_count(queue_capacity),
             BufferDecl::storage(queue_len, 1, BufferAccess::ReadOnly, DataType::U32).with_count(1),
             BufferDecl::storage(edge_offsets, 2, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(node_count + 1),
+                .with_count(edge_offset_count),
             BufferDecl::storage(edge_targets, 3, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(physical_edge_count),
             BufferDecl::storage(edge_kind_mask, 4, BufferAccess::ReadOnly, DataType::U32)
@@ -1700,6 +1798,71 @@ mod tests {
         );
         assert_eq!(traverse.workgroup_size, [256, 1, 1]);
         assert_eq!(traverse.buffers.len(), 6);
+    }
+
+    #[test]
+    fn frontier_queue_sizing_overflow_returns_error_without_panic() {
+        let byte_result = std::panic::catch_unwind(|| {
+            try_u32_byte_range_with_word_size(2, usize::MAX, "test frontier queue bytes")
+        });
+        assert!(
+            byte_result.is_ok(),
+            "checked frontier byte sizing must return an error instead of panicking"
+        );
+        let err = byte_result.unwrap().unwrap_err().to_string();
+        assert!(
+            err.contains("overflows output byte range"),
+            "Fix: byte sizing overflow must name the byte-range contract, got: {err}"
+        );
+        assert!(
+            err.contains("Shard the frontier queue"),
+            "Fix: byte sizing overflow must tell the operator how to recover, got: {err}"
+        );
+
+        let product_result = std::panic::catch_unwind(|| {
+            checked_frontier_u32_product(u32::MAX, 2, "test partial word count")
+        });
+        assert!(
+            product_result.is_ok(),
+            "checked frontier word products must return an error instead of panicking"
+        );
+        let err = product_result.unwrap().unwrap_err().to_string();
+        assert!(
+            err.contains("overflows u32 word count"),
+            "Fix: word-count overflow must name the u32 product contract, got: {err}"
+        );
+    }
+
+    #[test]
+    fn csr_queue_traverse_rejects_offset_count_overflow_without_panic() {
+        let result = std::panic::catch_unwind(|| {
+            csr_queue_forward_traverse(
+                "queue",
+                "len",
+                "offsets",
+                "targets",
+                "kinds",
+                "out",
+                u32::MAX,
+                0,
+                1,
+                1,
+            )
+        });
+        assert!(
+            result.is_ok(),
+            "csr_queue_forward_traverse must emit an invalid program instead of panicking"
+        );
+
+        let program = result.unwrap();
+        assert_eq!(program.workgroup_size, [1, 1, 1]);
+        assert_eq!(program.buffers.len(), 1);
+        assert_eq!(program.buffers[0].name.as_ref(), "out");
+        let entry = format!("{:?}", program.entry());
+        assert!(
+            entry.contains("node_count + 1 overflows u32"),
+            "Fix: invalid CSR queue program must preserve the offset overflow diagnostic, got: {entry}"
+        );
     }
 
     fn count_atomic_exprs(program: &Program) -> usize {

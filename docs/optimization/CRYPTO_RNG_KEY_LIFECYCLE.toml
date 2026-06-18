@@ -1,0 +1,51 @@
+# Crypto RNG and key lifecycle policy for VX-884 through VX-888.
+# Algorithm selection, key lifecycle, entropy, DRBG, nonce, and destruction records share one policy.
+
+schema = "vyre.crypto.rng_key_lifecycle.v1"
+owner = "security_reliability"
+evidence_tokens = ["NIST_SP_800_57", "NIST_SP_800_90A", "OWASP_CRYPTO_STORAGE"]
+
+required_fields = [
+  "crypto_id",
+  "purpose",
+  "algorithm_policy",
+  "key_strength",
+  "rng_source",
+  "nonce_policy",
+  "rotation_policy",
+  "destruction_policy",
+  "diagnostic",
+]
+
+[[crypto]]
+crypto_id = "release-artifact-signing"
+purpose = "sign public release evidence and artifacts"
+algorithm_policy = "approved-asymmetric-signature-through-external-provider"
+key_strength = "matches-current-policy-floor"
+rng_source = "provider-managed-approved-rng"
+nonce_policy = "provider-managed"
+rotation_policy = "expiry-and-key-id-versioned"
+destruction_policy = "provider-managed-key-retirement"
+diagnostic = "VYRE_CRYPTO_SIGNING_POLICY_REFUSED"
+
+[[crypto]]
+crypto_id = "local-evidence-random-id"
+purpose = "generate non-secret local correlation identifiers"
+algorithm_policy = "cryptographic-rng-for-unpredictable-identifiers"
+key_strength = "not-applicable"
+rng_source = "os-cryptographic-random"
+nonce_policy = "unique-per-artifact"
+rotation_policy = "not-applicable"
+destruction_policy = "discard-after-use"
+diagnostic = "VYRE_RNG_SOURCE_UNAVAILABLE"
+
+[[crypto]]
+crypto_id = "encrypted-local-cache"
+purpose = "protect optional local nonpublished cache"
+algorithm_policy = "authenticated-encryption-only"
+key_strength = "matches-current-policy-floor"
+rng_source = "os-cryptographic-random"
+nonce_policy = "unique-nonce-per-encryption-key"
+rotation_policy = "rotate-cache-key-on-policy-change"
+destruction_policy = "delete-cache-key-on-cache-removal"
+diagnostic = "VYRE_CRYPTO_CACHE_POLICY_REFUSED"

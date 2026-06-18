@@ -327,23 +327,29 @@ fn map_envelope_error(error: vyre_foundation::serial::EnvelopeError) -> DfaWireE
 pub const DEFAULT_DFA_BUDGET_BYTES: usize = 16 * 1024 * 1024;
 
 /// Compile a list of byte patterns into a CPU-built DFA under the
-/// default [`DEFAULT_DFA_BUDGET_BYTES`] budget. Panics on budget
-/// exhaustion; use [`dfa_compile_with_budget`] for structured error
-/// handling.
+/// default [`DEFAULT_DFA_BUDGET_BYTES`] budget.
 ///
 /// # Panics
 ///
-/// Panics with an actionable message when the transition table would
-/// exceed the default budget. Use [`dfa_compile_with_budget`] to
-/// capture this as a structured [`DfaCompileError`].
+/// Panics when the transition table would exceed the default budget. Returning
+/// an empty DFA in that case would silently drop EVERY match (the empty
+/// automaton rejects all input) — an invisible recall loss in any scanner built
+/// on it. The pattern set is operator-supplied (a rule catalog, never attacker
+/// haystack), so an oversized set is a configuration error that must fail
+/// closed and loud. Callers that need to handle oversized sets programmatically
+/// must use [`dfa_compile_with_budget`] and shard oversized pattern sets,
+/// capturing the structured [`DfaCompileError`] instead of panicking.
 #[must_use]
 pub fn dfa_compile(patterns: &[&[u8]]) -> CompiledDfa {
-    dfa_compile_with_budget(patterns, DEFAULT_DFA_BUDGET_BYTES)
-        .unwrap_or_else(|error| {
-            panic!(
-                "default DFA compilation exceeded the production budget: {error}. Fix: use dfa_compile_with_budget and shard oversized pattern sets."
-            )
-        })
+    match dfa_compile_with_budget(patterns, DEFAULT_DFA_BUDGET_BYTES) {
+        Ok(dfa) => dfa,
+        Err(error) => panic!(
+            "dfa_compile: compiling {} pattern(s) exceeded the default {DEFAULT_DFA_BUDGET_BYTES}-byte DFA budget ({error}). \
+             Returning the empty rejecting automaton would silently drop every match; \
+             use dfa_compile_with_budget and shard oversized pattern sets to handle this as a structured error.",
+            patterns.len()
+        ),
+    }
 }
 
 /// Compile a list of byte patterns with an explicit transition-table

@@ -1,0 +1,40 @@
+# CI runner, cache, and workflow artifact policy for VX-1106, VX-1111, VX-1116, and VX-1117.
+# Runner class, cache trust, artifact digest, log redaction, and private Santh boundary share one policy.
+
+schema = "vyre.cicd.runner_cache_artifact_policy.v1"
+owner = "coordination"
+evidence_tokens = ["GITHUB_ACTIONS_DEPENDENCY_CACHING", "GITHUB_ACTIONS_SECURE_USE", "GITHUB_ARTIFACT_ATTESTATIONS"]
+
+required_fields = [
+  "ci_surface",
+  "runner_policy",
+  "cache_policy",
+  "artifact_policy",
+  "log_policy",
+  "private_boundary_policy",
+  "retention_policy",
+  "negative_case",
+  "diagnostic",
+]
+
+[[surface]]
+ci_surface = "public-pr-validation"
+runner_policy = "ephemeral-github-hosted-runner-or-equivalent-clean-runner"
+cache_policy = "dependency-cache-read-allowed-write-key-derived-from-lockfile-and-toolchain-no-secret-material"
+artifact_policy = "nonrelease-artifacts-use-digest-validation-and-never-become-public-release-evidence"
+log_policy = "no-secret-or-private-path-values-in-logs"
+private_boundary_policy = "cache-keys-artifacts-and-logs-must-not-contain-santh-private-root"
+retention_policy = "short-lived-validation-artifacts-with-redacted-summary"
+negative_case = "fork-pr-cache-or-artifact-cannot-promote-to-release"
+diagnostic = "VYRE_CI_PUBLIC_PR_CACHE_ARTIFACT_BOUNDARY_OK"
+
+[[surface]]
+ci_surface = "public-release-publication"
+runner_policy = "release-runner-bound-to-protected-ref-and-release-environment"
+cache_policy = "release-output-does-not-trust-unverified-cache-contents"
+artifact_policy = "release-artifacts-have-digest-provenance-attestation-and-public-boundary-check"
+log_policy = "release-logs-redacted-before-public-evidence-summary"
+private_boundary_policy = "release-artifacts-logs-and-cache-metadata-exclude-santh-private-root"
+retention_policy = "release-evidence-retained-through-final-gate-manifest"
+negative_case = "release-artifact-without-attestation-or-boundary-check-refused"
+diagnostic = "VYRE_CI_RELEASE_CACHE_ARTIFACT_BOUNDARY_OK"

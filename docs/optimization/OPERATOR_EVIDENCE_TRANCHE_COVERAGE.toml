@@ -1,0 +1,27 @@
+# Operator evidence tranche coverage for VX-721 through VX-740.
+# Reporting, traces, metrics, and cross-signal correlation extend the active plan without duplicating backend-local schemas.
+
+schema = "vyre.plan.operator_evidence_tranche_coverage.v1"
+owner = "coordination"
+evidence_tokens = ["SARIF_2_1_0", "OPENTELEMETRY_SEMCONV", "W3C_TRACE_CONTEXT", "OPENMETRICS_PROMETHEUS"]
+
+required_fields = [
+  "vx_id_range",
+  "reporting_contract",
+  "trace_contract",
+  "metrics_contract",
+  "cross_signal_contract",
+  "source_ledger_coverage",
+  "dedup_seam",
+  "proof_gate",
+]
+
+[[coverage]]
+vx_id_range = "VX-721..VX-740"
+reporting_contract = "OPERATOR_REPORTING_INTERCHANGE.toml"
+trace_contract = "TRACE_CONTEXT_TELEMETRY_CONTRACTS.toml"
+metrics_contract = "METRICS_EXPOSITION_CONTRACTS.toml"
+cross_signal_contract = "CROSS_SIGNAL_AUDIT_CORRELATION.toml"
+source_ledger_coverage = "RESEARCH_SOURCE_LEDGER.toml"
+dedup_seam = "one-reporting-one-trace-one-metrics-one-correlation-contract"
+proof_gate = "operator_evidence_governance.rs"

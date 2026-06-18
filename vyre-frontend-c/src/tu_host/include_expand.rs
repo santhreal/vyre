@@ -78,11 +78,7 @@ pub(super) fn expand_local_includes_with_state(
         ));
     }
     let tu_dir = tu_path.parent().unwrap_or_else(|| Path::new("."));
-    let mut out = String::with_capacity(source.len().checked_mul(2).unwrap_or_else(|| {
-        panic!(
-            "vyre-frontend-c include expansion capacity overflows usize. Fix: split the translation unit before reference-only preprocessing."
-        )
-    }));
+    let mut out = String::with_capacity(source.len().saturating_mul(2));
     let mut conditionals = Vec::<IncludeConditionalFrame>::new();
     for logical_line in source.split_inclusive('\n') {
         let (line, newline) = line_body_and_newline(logical_line);

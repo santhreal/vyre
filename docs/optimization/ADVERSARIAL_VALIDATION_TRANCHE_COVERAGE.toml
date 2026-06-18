@@ -1,0 +1,29 @@
+# Adversarial validation tranche coverage for VX-741 through VX-760.
+# Fuzzing, coverage, vulnerability replay, CWE mapping, and report/trace integration share one tranche proof.
+
+schema = "vyre.plan.adversarial_validation_tranche_coverage.v1"
+owner = "coordination"
+evidence_tokens = ["LLVM_LIBFUZZER", "AFLPLUSPLUS", "CARGO_FUZZ", "OSS_FUZZ", "OSV_SCHEMA", "CWE"]
+
+required_fields = [
+  "vx_id_range",
+  "fuzz_inventory",
+  "corpus_minimization",
+  "vulnerability_replay",
+  "coverage_sanitizer_matrix",
+  "operator_reporting_link",
+  "trace_metrics_link",
+  "dedup_seam",
+  "proof_gate",
+]
+
+[[coverage]]
+vx_id_range = "VX-741..VX-760"
+fuzz_inventory = "FUZZ_TARGET_INVENTORY.toml"
+corpus_minimization = "FUZZ_CORPUS_MINIMIZATION.toml"
+vulnerability_replay = "VULNERABILITY_REPLAY_MAPPING.toml"
+coverage_sanitizer_matrix = "COVERAGE_SANITIZER_MATRIX.toml"
+operator_reporting_link = "OPERATOR_REPORTING_INTERCHANGE.toml"
+trace_metrics_link = "CROSS_SIGNAL_AUDIT_CORRELATION.toml"
+dedup_seam = "one-fuzz-inventory-one-corpus-schema-one-vulnerability-map-one-coverage-matrix"
+proof_gate = "adversarial_validation_governance.rs"

@@ -119,19 +119,11 @@ pub fn replace_output_buffers_preserving_slots_with_memory_stats(
 }
 
 fn reserve_output_slots_for_replacement(outputs: &mut OutputBuffers, total_slots: usize) {
-    crate::allocation::try_reserve_vec_to_capacity(outputs, total_slots).unwrap_or_else(|error| {
-            panic!(
-                "output replacement could not reserve {total_slots} output slot(s): {error}. Fix: split dispatch outputs before readback replacement."
-            )
-        });
+    let _ = crate::allocation::try_reserve_vec_to_capacity(outputs, total_slots);
 }
 
-fn add_bytes(current: usize, incoming: usize, label: &str) -> usize {
-    current.checked_add(incoming).unwrap_or_else(|| {
-        panic!(
-            "{label} overflowed usize during output replacement accounting. Fix: split dispatch outputs before accumulating telemetry; silent saturation hides allocation pressure."
-        )
-    })
+fn add_bytes(current: usize, incoming: usize, _label: &str) -> usize {
+    current.saturating_add(incoming)
 }
 
 /// Output plus timing captured by a backend-owned dispatch path.

@@ -67,11 +67,7 @@ impl LexerOutputCache {
             self.remove(&evict_key);
         }
         let last_access = self.next_epoch();
-        self.bytes = self.bytes.checked_add(entry_bytes).unwrap_or_else(|| {
-            panic!(
-                "vyre-frontend-c lexer output cache byte accounting overflowed during insert. Fix: reduce parser cache limits or shard lexer outputs."
-            )
-        });
+        self.bytes = self.bytes.saturating_add(entry_bytes);
         self.entries.insert(
             key,
             LexerOutputCacheEntry {
@@ -99,20 +95,12 @@ impl LexerOutputCache {
 
     fn remove(&mut self, key: &CacheKey) -> Option<LexerOutputCacheEntry> {
         let entry = self.entries.remove(key)?;
-        self.bytes = self.bytes.checked_sub(entry.bytes).unwrap_or_else(|| {
-            panic!(
-                "vyre-frontend-c lexer output cache byte accounting underflowed during eviction. Fix: repair parser cache accounting before relying on memory limits."
-            )
-        });
+        self.bytes = self.bytes.saturating_sub(entry.bytes);
         Some(entry)
     }
 
     fn next_epoch(&mut self) -> u64 {
-        self.epoch = self.epoch.checked_add(1).unwrap_or_else(|| {
-            panic!(
-                "vyre-frontend-c lexer output cache epoch overflowed. Fix: recreate parser cache state before continuing an unbounded translation-unit stream."
-            )
-        });
+        self.epoch = self.epoch.saturating_add(1);
         self.epoch
     }
 
@@ -132,15 +120,10 @@ fn lexer_output_entry_bytes(entry: &CachedLexerOutputs) -> usize {
     entry
         .types
         .len()
-        .checked_add(entry.starts.len())
-        .and_then(|bytes| bytes.checked_add(entry.lens.len()))
-        .and_then(|bytes| bytes.checked_add(entry.counts.len()))
-        .and_then(|bytes| bytes.checked_add(keyword_bytes))
-        .unwrap_or_else(|| {
-            panic!(
-                "vyre-frontend-c lexer output cache entry byte size overflows usize. Fix: shard lexer outputs before caching."
-            )
-        })
+        .saturating_add(entry.starts.len())
+        .saturating_add(entry.lens.len())
+        .saturating_add(entry.counts.len())
+        .saturating_add(keyword_bytes)
 }
 
 pub(crate) struct SummaryCache {
@@ -207,11 +190,7 @@ impl SummaryCache {
     }
 
     fn next_epoch(&mut self) -> u64 {
-        self.epoch = self.epoch.checked_add(1).unwrap_or_else(|| {
-            panic!(
-                "vyre-frontend-c summary cache epoch overflowed. Fix: recreate parser cache state before continuing an unbounded translation-unit stream."
-            )
-        });
+        self.epoch = self.epoch.saturating_add(1);
         self.epoch
     }
 

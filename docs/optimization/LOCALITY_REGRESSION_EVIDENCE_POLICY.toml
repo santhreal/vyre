@@ -1,0 +1,54 @@
+# Locality regression evidence proves CPU affinity and NUMA placement improved or preserved throughput without hiding correctness or capacity changes.
+
+schema = "vyre.host.locality_regression_evidence_policy.v1"
+owner = "bench_harness"
+evidence_tokens = ["LINUX_SCHED_AFFINITY", "LINUX_KERNEL_NUMA_MEMORY_POLICY", "HWLOC_TOPOLOGY_API", "NVML_CPU_MEMORY_AFFINITY", "CRITERION_ANALYSIS_PROCESS"]
+
+required_fields = [
+  "evidence_id",
+  "comparison_surface",
+  "baseline_policy",
+  "candidate_policy",
+  "metric_policy",
+  "counter_policy",
+  "correctness_policy",
+  "decision_policy",
+  "authority_links",
+  "diagnostic",
+]
+
+[[evidence]]
+evidence_id = "driver-submission-affinity-regression"
+comparison_surface = "unpinned-versus-GPU-local-driver-submission-thread-affinity"
+baseline_policy = "baseline-records-unpinned-thread-mask-effective-cpuset-device-class-and-dispatch-route"
+candidate_policy = "candidate-records-GPU-local-thread-mask-NUMA-node-command-submission-route-and-cpuset-policy"
+metric_policy = "measure-dispatch-submit-latency-readback-wait-p99-throughput-and-CPU-steal-time"
+counter_policy = "record-thread-migration-count-context-switches-runqueue-delay-and-profile-trace-correlation"
+correctness_policy = "output-digest-and-report-bytes-match-baseline-for-same-input-and-route"
+decision_policy = "adopt-affinity-only-when-statistical-gate-passes-without-worse-tail-latency-or-output-change"
+authority_links = ["HOST_LOCALITY_AFFINITY_CONTRACTS.toml", "PROFILE_TRACE_METRIC_CORRELATION_POLICY.toml", "STATISTICAL_REGRESSION_GATES.toml", "OUTPUT_SLAB_PROVENANCE.toml"]
+diagnostic = "VYRE_DRIVER_AFFINITY_REGRESSION_EVIDENCE_REQUIRED"
+
+[[evidence]]
+evidence_id = "pinned-staging-numa-regression"
+comparison_surface = "remote-versus-local-NUMA-pinned-staging-transfer-and-readback"
+baseline_policy = "baseline-records-remote-or-uncontrolled-NUMA-policy-pinned-byte-count-device-class-and-copy-route"
+candidate_policy = "candidate-records-local-NUMA-policy-first-touch-thread-mask-and-staging-pool-lane"
+metric_policy = "measure-H2D-D2H-copy-throughput-copy-engine-time-map-wait-time-SM-overlap-and-p99-scan-latency"
+counter_policy = "record-NUMA-remote-page-rate-page-faults-copy-bytes-worker-migrations-and-pool-misses"
+correctness_policy = "readback-digest-rule-count-line-count-and-output-epoch-match-baseline"
+decision_policy = "adopt-local-staging-only-when-transfer-improvement-survives-strata-and-resource-budget-stays-within-limit"
+authority_links = ["NUMA_MEMORY_PLACEMENT_POLICY.toml", "PINNED_STAGING_TRANSFER_POLICY.toml", "TRANSFER_OVERLAP_PIPELINE_EVIDENCE.toml", "MEMORY_PRESSURE_OVERSUBSCRIPTION_RESPONSE.toml"]
+diagnostic = "VYRE_PINNED_STAGING_NUMA_REGRESSION_EVIDENCE_REQUIRED"
+
+[[evidence]]
+evidence_id = "cpu-reference-locality-regression"
+comparison_surface = "CPU-reference-parser-regex-verifier-throughput-under-local-versus-cross-socket-thread-and-memory-placement"
+baseline_policy = "baseline-records-work-conserving-unpinned-pool-memory-policy-SIMD-class-and-corpus-window"
+candidate_policy = "candidate-records-socket-local-thread-pool-memory-policy-cache-class-and-work-stealing-boundary"
+metric_policy = "measure-files-per-second-bytes-per-second-match-throughput-verifier-load-and-tail-latency"
+counter_policy = "record-thread-migration-remote-memory-event-page-fault-cache-miss-proxy-and-queue-depth"
+correctness_policy = "CPU-reference-output-remains-byte-identical-and-matches-accelerated-parity-fixture"
+decision_policy = "adopt-locality-policy-only-for-workload-strata-where-effect-size-and-tail-latency-pass-gates"
+authority_links = ["REGEX_CPU_GPU_PARTITION.toml", "HARDWARE_WORKLOAD_STRATIFICATION_MATRIX.toml", "BENCHMARK_METHODOLOGY_CONTRACTS.toml", "MULTIPLE_COMPARISON_DECISION_POLICY.toml"]
+diagnostic = "VYRE_CPU_REFERENCE_LOCALITY_REGRESSION_EVIDENCE_REQUIRED"

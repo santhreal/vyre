@@ -1,0 +1,39 @@
+# Apple math comparator for VX-689.
+# MPSGraph, Vyre MSL, and CPU references compare reductions, elementwise ops, and ranking kernels.
+
+schema = "vyre.metal.apple_math_comparator.v1"
+owner = "sparse_math_ai"
+evidence_tokens = ["MPS_GRAPH", "METAL_COUNTERS"]
+
+routes = [
+  "mpsgraph",
+  "vyre_msl",
+  "cpu_reference",
+]
+
+required_metrics = [
+  "kernel_family",
+  "output_digest",
+  "compile_ns",
+  "gpu_ns",
+  "counter_evidence",
+  "selected_backend_reason",
+]
+
+[[case]]
+id = "topk-ranking"
+kernel_family = "ranking"
+output_digest = "sha256:topk-ranking-output"
+compile_ns = 12000000
+gpu_ns = 180000
+counter_evidence = "metal-counter-set-a"
+selected_backend_reason = "vyre-msl-lower-submit-cost"
+
+[[case]]
+id = "vector-reduction"
+kernel_family = "reduction"
+output_digest = "sha256:vector-reduction-output"
+compile_ns = 9000000
+gpu_ns = 140000
+counter_evidence = "metal-counter-set-b"
+selected_backend_reason = "mpsgraph-tuned-reduction"

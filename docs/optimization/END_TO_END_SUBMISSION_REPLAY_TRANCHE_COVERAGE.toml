@@ -1,0 +1,24 @@
+# Submission replay coverage keeps cross-backend replay decisions separate from scheduler, sync, and backend-native evidence authorities.
+
+schema = "vyre.optimization.submission_replay_tranche_coverage.v1"
+owner = "driver_shared"
+tranche = "VX-1441..VX-1460"
+evidence_tokens = ["CUDA_GRAPHS", "VULKAN_COMMAND_BUFFERS", "WEBGPU_COMMAND_BUFFERS", "WGPU_COMMANDS", "METAL_INDIRECT_COMMAND_BUFFERS"]
+
+command_topology_stability_contracts = "COMMAND_TOPOLOGY_STABILITY_CONTRACTS.toml"
+backend_command_replay_capability_matrix = "BACKEND_COMMAND_REPLAY_CAPABILITY_MATRIX.toml"
+submission_replay_decision_policy = "SUBMISSION_REPLAY_DECISION_POLICY.toml"
+submission_replay_evidence_policy = "SUBMISSION_REPLAY_EVIDENCE_POLICY.toml"
+cuda_graph_update_evidence = "CUDA_GRAPH_UPDATE_EVIDENCE.toml"
+wgpu_command_reuse_classifier = "WGPU_COMMAND_REUSE_CLASSIFIER.toml"
+host_device_visibility_policy = "HOST_DEVICE_VISIBILITY_POLICY.toml"
+memory_ordering_atomic_contracts = "MEMORY_ORDERING_ATOMIC_CONTRACTS.toml"
+backend_handle_lifetime_provenance = "BACKEND_HANDLE_LIFETIME_PROVENANCE.toml"
+cache_rebuild_invalidation_policy = "CACHE_REBUILD_INVALIDATION_POLICY.toml"
+profile_trace_metric_correlation_policy = "PROFILE_TRACE_METRIC_CORRELATION_POLICY.toml"
+statistical_regression_gates = "STATISTICAL_REGRESSION_GATES.toml"
+output_slab_provenance = "OUTPUT_SLAB_PROVENANCE.toml"
+runtime_scheduler_boundary = "vyre-runtime-megakernel-scheduler-keeps-admission-fairness-queue-and-tenant-ownership"
+publication_boundary = "PUBLICATION_BOUNDARY_CLASSIFICATION.toml"
+dedup_seam = "cross-backend-replay-policy-owns-adopt-reject-reencode-records-while-native-backend-files-own-API-specific-capture-update-and-command-lifetime-details"
+proof_gate = "conform/vyre-conform-enforce/tests/submission_replay_governance.rs"

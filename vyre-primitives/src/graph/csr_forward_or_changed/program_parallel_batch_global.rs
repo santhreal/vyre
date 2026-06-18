@@ -51,6 +51,10 @@ pub fn csr_forward_or_changed_parallel_batch_global_slot(
     changed_slot: u32,
     changed_slots: u32,
 ) -> Program {
+    // Fail fast on an invalid global convergence slot rather than silently
+    // degrading to an inert empty kernel (silent recall loss). Use
+    // `try_csr_forward_or_changed_parallel_batch_global_slot` for structured
+    // handling.
     try_csr_forward_or_changed_parallel_batch_global_slot(
         shape,
         frontier_out,
@@ -60,7 +64,7 @@ pub fn csr_forward_or_changed_parallel_batch_global_slot(
         changed_slot,
         changed_slots,
     )
-    .unwrap_or_else(|err| panic!("{err}"))
+    .unwrap_or_else(|error| panic!("{error}"))
 }
 
 /// Batched parallel expansion with one checked global convergence slot.

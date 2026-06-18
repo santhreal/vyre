@@ -103,7 +103,9 @@ pub mod scheduler;
 /// in the ring protocol.
 pub mod tenant;
 
-pub use replay::{RecordedSlot, ReplayLogError, RingLog};
+pub use replay::{
+    RecordedSlot, ReplayFailureClass, ReplayFailureEvidence, ReplayLogError, ReplayRecord, RingLog,
+};
 pub use tenant::{
     TenantError, TenantHandle, TenantRegistry, OPCODE_RANGE_PER_TENANT, TENANT_ID_MAX,
     TENANT_OPCODE_BASE,
@@ -113,7 +115,8 @@ pub use tenant::{
 pub use pipeline_cache::RemoteCache;
 pub use pipeline_cache::{
     DiskCache, DiskCacheError, InMemoryPipelineCache, LayeredPipelineCache,
-    PersistentPipelineCacheStore, PipelineCacheMetrics, PipelineCacheStore, PipelineFingerprint,
+    PersistentPipelineCacheStore, PipelineCacheMetricError, PipelineCacheMetrics,
+    PipelineCacheStore, PipelineFingerprint,
 };
 
 pub use megakernel::Megakernel;

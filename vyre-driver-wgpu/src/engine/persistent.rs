@@ -192,8 +192,8 @@ fn recover_and_recompile(
 mod tests {
     use super::*;
     use crate::WgpuBackend;
-    use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
-    use vyre::DispatchConfig;
+    use vyre_driver::DispatchConfig;
+    use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
     fn add_one_program(words: u32) -> Program {
         let idx = Expr::gid_x();

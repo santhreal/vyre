@@ -1,0 +1,62 @@
+# Host/device visibility owns when device writes become host-readable and when host writes become device-readable; output provenance owns reported slabs.
+
+schema = "vyre.sync.host_device_visibility_policy.v1"
+owner = "driver_shared"
+evidence_tokens = ["VULKAN_SYNC_CACHE_CONTROL", "VULKAN_MEMORY_MODEL", "CUDA_CPP_SYNCHRONIZATION", "WGSL_MEMORY_MODEL", "METAL_RESOURCE_SYNCHRONIZATION"]
+
+required_fields = [
+  "visibility_id",
+  "transfer_surface",
+  "host_write_policy",
+  "device_write_policy",
+  "completion_policy",
+  "cache_policy",
+  "readback_policy",
+  "stale_data_policy",
+  "trace_policy",
+  "release_gate_effect",
+  "authority_links",
+  "diagnostic",
+]
+
+[[visibility]]
+visibility_id = "host-upload-device-read-visibility"
+transfer_surface = "host-staging-upload-to-CUDA-WGPU-Vulkan-Metal-storage-or-uniform-resource"
+host_write_policy = "host-write-completes-and-is-made-visible-before-command-submission-or-upload-copy-record"
+device_write_policy = "not-applicable-for-upload-but-prior-device-write-to-reused-resource-must-be-complete-before-host-overwrite"
+completion_policy = "submission-record-links-staging-buffer-digest-resource-range-command-id-and-backend-queue"
+cache_policy = "backend-specific-flush-map-unmap-or-copy-visibility-action-recorded-before-device-read"
+readback_policy = "not-applicable-for-upload"
+stale_data_policy = "device-read-from-stale-host-upload-invalidates-dispatch-output-and-performance-claim"
+trace_policy = "trace-span-records-upload-resource-range-visibility-edge-and-command-id"
+release_gate_effect = "backend-dispatch-claim-invalid-without-host-upload-visibility-record-for-host-originated-inputs"
+authority_links = ["TRACE_CONTEXT_TELEMETRY_CONTRACTS.toml", "OUTPUT_SLAB_PROVENANCE.toml", "BACKEND_CAPABILITY_DIGESTS.toml", "MEMORY_ORDERING_ATOMIC_CONTRACTS.toml"]
+diagnostic = "VYRE_HOST_UPLOAD_VISIBILITY_REQUIRED"
+
+[[visibility]]
+visibility_id = "device-output-host-readback-visibility"
+transfer_surface = "device-output-slab-copy-map-readback-and-operator-report-publication"
+host_write_policy = "host-must-not-read-output-slab-until-completion-edge-and-epoch-match"
+device_write_policy = "device-writes-output-before-command-completion-or-explicit-copy-fence-edge"
+completion_policy = "stream-event-command-buffer-fence-map-callback-or-driver-completion-record-required"
+cache_policy = "cache-availability-and-visibility-action-recorded-for-backend-before-host-read"
+readback_policy = "readback-state-transitions-device-resident-to-readback-pending-to-host-visible-with-monotonic-epoch"
+stale_data_policy = "stale-or-epoch-mismatched-readback-rejected-and-counterexample-linked"
+trace_policy = "trace-span-records-producer-kernel-byte-range-epoch-completion-edge-and-reporter-consumer"
+release_gate_effect = "reported-output-invalid-without-device-output-host-readback-visibility-record"
+authority_links = ["OUTPUT_SLAB_PROVENANCE.toml", "CROSS_SIGNAL_AUDIT_CORRELATION.toml", "TRACE_CONTEXT_TELEMETRY_CONTRACTS.toml", "GPU_BARRIER_SCOPE_MATRIX.toml"]
+diagnostic = "VYRE_DEVICE_READBACK_VISIBILITY_REQUIRED"
+
+[[visibility]]
+visibility_id = "multi-queue-command-reuse-visibility"
+transfer_surface = "reused-command-graphs-persistent-pipelines-multi-queue-and-prewarmed-command-submission"
+host_write_policy = "host-side-cache-entry-publication-must-order-command-reuse-metadata-before-dispatch"
+device_write_policy = "device-output-from-prior-reuse-run-complete-before-resource-reused-for-next-dispatch"
+completion_policy = "reuse-record-links-queue-id-command-id-resource-range-and-synchronization-object"
+cache_policy = "pipeline-command-cache-identity-and-resource-visibility-edge-recorded-together"
+readback_policy = "readback-slab-epoch-cannot-be-reused-across-command-reuse-without-new-completion-edge"
+stale_data_policy = "resource-reuse-without-completion-edge-blocks-command-reuse-and-performance-claim"
+trace_policy = "trace-span-records-command-reuse-key-resource-range-visibility-edge-and-output-epoch"
+release_gate_effect = "command-reuse-claim-invalid-without-multi-queue-visibility-record"
+authority_links = ["WGPU_COMMAND_REUSE_CLASSIFIER.toml", "CACHE_REBUILD_INVALIDATION_POLICY.toml", "OUTPUT_SLAB_PROVENANCE.toml", "PROFILE_TRACE_METRIC_CORRELATION_POLICY.toml"]
+diagnostic = "VYRE_MULTI_QUEUE_VISIBILITY_REQUIRED"

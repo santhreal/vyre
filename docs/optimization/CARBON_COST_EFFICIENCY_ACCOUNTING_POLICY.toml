@@ -1,0 +1,66 @@
+# Carbon and cost-efficiency accounting owns functional-unit accounting and public claim boundaries; resource capacity owns container sizing and SCI owns carbon-rate semantics.
+
+schema = "vyre.efficiency.carbon_cost_accounting.v1"
+owner = "performance_efficiency"
+evidence_tokens = ["GREEN_SOFTWARE_SCI", "KEPLER_ENERGY_EXPORTER", "OPENTELEMETRY_HARDWARE_SEMCONV", "PROMETHEUS_RECORDING_RULES"]
+
+required_fields = [
+  "accounting_id",
+  "boundary_policy",
+  "functional_unit_policy",
+  "energy_policy",
+  "carbon_intensity_policy",
+  "embodied_emissions_policy",
+  "cost_capacity_policy",
+  "claim_scope_policy",
+  "reporting_policy",
+  "privacy_boundary",
+  "release_gate_effect",
+  "authority_links",
+  "diagnostic",
+]
+
+[[accounting]]
+accounting_id = "scan-energy-carbon-rate-accounting"
+boundary_policy = "software-boundary-records-driver-runtime-operator-worker-profile-collector-and-excluded-private-Santh-systems"
+functional_unit_policy = "functional-unit-is-successful-scan-byte-file-rule-or-analysis-unit-with-versioned-definition"
+energy_policy = "energy-consumed-recorded-in-kWh-or-derived-from-joules-over-functional-unit-window-with-measurement-or-model-source"
+carbon_intensity_policy = "carbon-intensity-records-region-class-source-timestamp-model-or-supplier-data-and-public-precision-level"
+embodied_emissions_policy = "embodied-emissions-included-only-when-hardware-class-lifetime-allocation-model-and-source-are-declared"
+cost_capacity_policy = "cost-claim-uses-capacity-class-and-provisioned-resource-class-not-private-cloud-price-or-fleet-layout"
+claim_scope_policy = "public-claim-states-boundary-functional-unit-energy-source-carbon-source-and-observed-capacity-envelope"
+reporting_policy = "public-report-discloses-SCI-style-methodology-lower-is-better-and-measurement-vs-model-status"
+privacy_boundary = "redact-region-when-sensitive-hostname-provider-account-price-fleet-layout-and-Santh-root"
+release_gate_effect = "carbon-or-cost-efficiency-claim-invalid-without-boundary-functional-unit-energy-source-and-capacity-envelope"
+authority_links = ["POWER_THERMAL_TELEMETRY_CONTRACTS.toml", "RESOURCE_RIGHTSIZING_CAPACITY_POLICY.toml", "PUBLICATION_BOUNDARY_CLASSIFICATION.toml", "END_TO_END_OPERATOR_DEPLOYMENT_TRANCHE_COVERAGE.toml"]
+diagnostic = "VYRE_SCAN_CARBON_RATE_ACCOUNTING_REQUIRED"
+
+[[accounting]]
+accounting_id = "operator-release-energy-cost-accounting"
+boundary_policy = "boundary-records-operator-API-worker-sidecar-profile-collector-and-storage-components-included-in-release-load-window"
+functional_unit_policy = "functional-unit-is-successful-operator-request-scan-work-item-or-release-canary-transaction"
+energy_policy = "energy-records-node-pod-container-attribution-source-Kepler-or-meter-model-window-and-idle-allocation-policy"
+carbon_intensity_policy = "carbon-intensity-records-region-class-time-window-and-source-or-model-quality"
+embodied_emissions_policy = "hardware-embodied-emissions-recorded-as-class-level-model-only-when-public-safe-source-exists"
+cost_capacity_policy = "operator-cost-claim-limited-to-capacity-class-replica-class-GPU-class-and-utilization-not-provider-bill"
+claim_scope_policy = "claim-limited-to-observed-release-load-strata-and-autoscaling-range"
+reporting_policy = "public-release-report-links-SLO-result-energy-per-functional-unit-and-capacity-class"
+privacy_boundary = "redact-private-tenant-namespace-node-name-region-if-sensitive-account-id-and-price"
+release_gate_effect = "release-efficiency-claim-blocked-when-overprovisioning-energy-or-idle-allocation-policy-is-missing"
+authority_links = ["ENERGY_EFFICIENCY_REGRESSION_POLICY.toml", "WORKLOAD_AUTOSCALING_POLICY.toml", "SERVICE_LEVEL_OBJECTIVE_POLICY.toml", "RELEASE_ROLLOUT_STRATEGY_POLICY.toml"]
+diagnostic = "VYRE_OPERATOR_RELEASE_COST_ENERGY_ACCOUNTING_REQUIRED"
+
+[[accounting]]
+accounting_id = "benchmark-perf-per-cost-class-accounting"
+boundary_policy = "boundary-records-benchmark-binary-driver-runtime-device-class-and-profile-collector-overhead"
+functional_unit_policy = "functional-unit-is-benchmark-throughput-unit-or-workload-output-digest-count"
+energy_policy = "energy-window-records-measured-or-modeled-source-and-aligns-with-benchmark-sample-window"
+carbon_intensity_policy = "carbon-claim-omitted-unless-region-or-energy-source-class-is-recorded-with-methodology"
+embodied_emissions_policy = "hardware-efficiency-claim-records-device-class-allocation-policy-and-sharing-mode"
+cost_capacity_policy = "perf-per-cost-class-uses-public-device-class-and-capacity-class-not-private-dollar-values"
+claim_scope_policy = "claim-limited-to-same-stratification-block-and-same-power-profile-class"
+reporting_policy = "benchmark-report-states-performance-energy-cost-class-and-carbon-methodology-separately"
+privacy_boundary = "redact-hostname-device-serial-private-fleet-layout-local-path-and-private-price"
+release_gate_effect = "benchmark-efficiency-leaderboard-claim-invalid-without-energy-window-and-cost-class-boundary"
+authority_links = ["BENCHMARK_METHODOLOGY_CONTRACTS.toml", "HARDWARE_WORKLOAD_STRATIFICATION_MATRIX.toml", "POWER_THERMAL_TELEMETRY_CONTRACTS.toml", "PERFORMANCE_ARTIFACT_PUBLICATION.toml"]
+diagnostic = "VYRE_BENCHMARK_COST_CLASS_ACCOUNTING_REQUIRED"

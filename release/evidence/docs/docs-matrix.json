@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 5,
   "curated_proof_docs_preserved": true,
   "docs": [
     {
@@ -107,15 +107,20 @@
       "evidence_artifact_refs": [
         "release/evidence/",
         "release/evidence/benchmarks/cpu-only-100x-proof.json",
+        "release/evidence/benchmarks/cuda-release-suite.json",
         "release/evidence/benchmarks/release-workload-matrix.json",
         "release/evidence/conformance/conformance-matrix.json",
         "release/evidence/docs/docs-matrix.json",
         "release/evidence/final/completion-audit.json",
+        "release/evidence/final/expected-artifacts.json",
+        "release/evidence/final/release-evidence-run.json",
         "release/evidence/metadata/metadata-matrix.json",
         "release/evidence/tests/release-surface-suite-coverage.json"
       ],
-      "evidence_artifact_ref_count": 8,
-      "missing_evidence_artifact_refs": [],
+      "evidence_artifact_ref_count": 11,
+      "missing_evidence_artifact_refs": [
+        "release/evidence/final/expected-artifacts.json"
+      ],
       "required_topics": [
         "release",
         "evidence",
@@ -291,6 +296,29 @@
       "unresolved_markers": []
     },
     {
+      "id": "parsing-frontends",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/docs/parsing-and-frontends.md",
+      "exists": true,
+      "read_error": null,
+      "contains_release_evidence_rule": true,
+      "evidence_artifact_refs": [
+        "release/evidence/docs/parser-doc-proof.md"
+      ],
+      "evidence_artifact_ref_count": 1,
+      "missing_evidence_artifact_refs": [],
+      "required_topics": [
+        "parser",
+        "tokenization",
+        "literal anchor",
+        "verifier rule",
+        "quadratic guard",
+        "host-loop ban",
+        "release/evidence/docs/parser-doc-proof.md"
+      ],
+      "missing_topics": [],
+      "unresolved_markers": []
+    },
+    {
       "id": "vyrec-readme",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/../../../../tools/vyrec/README.md",
       "exists": true,
@@ -321,9 +349,9 @@
       "contains_release_evidence_rule": true,
       "evidence_artifact_refs": [
         "release/evidence/",
-        "release/evidence/benchmarks/weir-dataflow-release.json",
-        "release/evidence/docs/weir-integration.md",
         "release/evidence/weir/weir-analysis-api-matrix.json",
+        "release/evidence/weir/weir-flow-release-contracts.json",
+        "release/evidence/weir/weir-readme-contracts.json",
         "release/evidence/weir/weir-vyre-integration-tests.json"
       ],
       "evidence_artifact_ref_count": 5,
@@ -403,6 +431,84 @@
       "unresolved_markers": []
     }
   ],
-  "limitation_findings": [],
-  "blockers": []
+  "limitation_findings": [
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/docs/parsing-and-frontends.md",
+      "line": 229,
+      "text": "interpreters, goroutine schedulers)  -  out of scope; vyre models"
+    }
+  ],
+  "authority_link_findings": [],
+  "stale_generated_artifact_findings": [],
+  "parallel_active_plan_findings": [],
+  "behavior_coherence_findings": [
+    {
+      "behavior_id": "command-matrix-provenance",
+      "path": "docs/optimization/XTASK_COMMAND_MATRIX.md",
+      "missing_tokens": [
+        "source digest",
+        "source-count provenance"
+      ],
+      "evidence_artifact": "docs/optimization/XTASK_COMMAND_MATRIX.md"
+    },
+    {
+      "behavior_id": "research-audit-schema",
+      "path": "docs/optimization/AGENT_CONTRACT.md",
+      "missing_tokens": [
+        "research-audit",
+        "schema",
+        "source_digest",
+        "source_ledger_findings",
+        "blockers",
+        "release/evidence/optimization/research-audit.json"
+      ],
+      "evidence_artifact": "release/evidence/optimization/research-audit.json"
+    },
+    {
+      "behavior_id": "frontier-leaderboard-contract",
+      "path": "vyre-bench/README.md",
+      "missing_tokens": [
+        "release-benchmarks",
+        "frontier-leaderboard",
+        "metric_family",
+        "comparator",
+        "blockers",
+        "release/evidence/benchmarks/frontier-leaderboard.json"
+      ],
+      "evidence_artifact": "release/evidence/benchmarks/frontier-leaderboard.json"
+    }
+  ],
+  "scan_positioning_findings": [
+    {
+      "row_index": 1,
+      "engine": "Hyperscan",
+      "issue": "benchmark_artifact `release/evidence/benchmarks/frontier-leaderboard.json` does not exist. Fix: point at a concrete release/evidence benchmark artifact or use a semantic exclusion/unsupported reason."
+    },
+    {
+      "row_index": 2,
+      "engine": "Vectorscan",
+      "issue": "benchmark_artifact `release/evidence/benchmarks/frontier-leaderboard.json` does not exist. Fix: point at a concrete release/evidence benchmark artifact or use a semantic exclusion/unsupported reason."
+    },
+    {
+      "row_index": 4,
+      "engine": "Aho-Corasick",
+      "issue": "benchmark_artifact `release/evidence/benchmarks/frontier-leaderboard.json` does not exist. Fix: point at a concrete release/evidence benchmark artifact or use a semantic exclusion/unsupported reason."
+    },
+    {
+      "row_index": 5,
+      "engine": "memchr",
+      "issue": "benchmark_artifact `release/evidence/benchmarks/frontier-leaderboard.json` does not exist. Fix: point at a concrete release/evidence benchmark artifact or use a semantic exclusion/unsupported reason."
+    }
+  ],
+  "blockers": [
+    "required documentation `vyre-release-engineering` references 1 missing release evidence artifact(s)",
+    "release documentation `/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/docs/parsing-and-frontends.md`:229 contains unapproved limitation wording `interpreters, goroutine schedulers)  -  out of scope; vyre models`",
+    "user-visible behavior `command-matrix-provenance` in `docs/optimization/XTASK_COMMAND_MATRIX.md` is missing 2 docs/help/example/JSON/exit/evidence token(s) for `docs/optimization/XTASK_COMMAND_MATRIX.md`",
+    "user-visible behavior `research-audit-schema` in `docs/optimization/AGENT_CONTRACT.md` is missing 6 docs/help/example/JSON/exit/evidence token(s) for `release/evidence/optimization/research-audit.json`",
+    "user-visible behavior `frontier-leaderboard-contract` in `vyre-bench/README.md` is missing 6 docs/help/example/JSON/exit/evidence token(s) for `release/evidence/benchmarks/frontier-leaderboard.json`",
+    "scan positioning matrix row Some(1) for `Hyperscan` is invalid: benchmark_artifact `release/evidence/benchmarks/frontier-leaderboard.json` does not exist. Fix: point at a concrete release/evidence benchmark artifact or use a semantic exclusion/unsupported reason.",
+    "scan positioning matrix row Some(2) for `Vectorscan` is invalid: benchmark_artifact `release/evidence/benchmarks/frontier-leaderboard.json` does not exist. Fix: point at a concrete release/evidence benchmark artifact or use a semantic exclusion/unsupported reason.",
+    "scan positioning matrix row Some(4) for `Aho-Corasick` is invalid: benchmark_artifact `release/evidence/benchmarks/frontier-leaderboard.json` does not exist. Fix: point at a concrete release/evidence benchmark artifact or use a semantic exclusion/unsupported reason.",
+    "scan positioning matrix row Some(5) for `memchr` is invalid: benchmark_artifact `release/evidence/benchmarks/frontier-leaderboard.json` does not exist. Fix: point at a concrete release/evidence benchmark artifact or use a semantic exclusion/unsupported reason."
+  ]
 }

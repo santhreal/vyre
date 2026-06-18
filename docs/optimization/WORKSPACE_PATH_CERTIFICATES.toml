@@ -1,0 +1,42 @@
+# Workspace path certificates for VX-692.
+# Public Vyre artifacts and private Santh workspace evidence are classified before publication.
+
+schema = "vyre.security.workspace_path_certificate.v1"
+owner = "security_reliability"
+evidence_tokens = ["MLIR_PASS"]
+
+publish_classes = [
+  "public-vyre-artifact",
+  "private-santh-evidence",
+  "local-only-nonpublished-doc",
+]
+
+required_fields = [
+  "canonical_path",
+  "allowed_root",
+  "symlink_status",
+  "file_kind",
+  "owner_lane",
+  "publish_class",
+  "publication_allowed",
+]
+
+[[path]]
+id = "public-package-metadata"
+canonical_path = "vyre-public-package-metadata"
+allowed_root = "vyre-public-root"
+symlink_status = "not-symlink"
+file_kind = "package-metadata"
+owner_lane = "release"
+publish_class = "public-vyre-artifact"
+publication_allowed = true
+
+[[path]]
+id = "private-worktree-evidence"
+canonical_path = "santh-private-worktree-evidence"
+allowed_root = "santh-private-root"
+symlink_status = "not-symlink"
+file_kind = "local-evidence"
+owner_lane = "audit"
+publish_class = "private-santh-evidence"
+publication_allowed = false

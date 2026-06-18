@@ -1,0 +1,54 @@
+schema_version = 1
+
+classifier_id = "scan-graph-update-classifier:v1"
+
+required_edits = [
+  "pattern_digest_same",
+  "pattern_digest_changed",
+  "haystack_same_shape",
+  "haystack_shape_changed",
+  "output_slab_resize",
+  "verifier_topology_changed",
+]
+
+[[edit]]
+edit_id = "pattern_digest_same"
+graph_action = "replay"
+reason_code = "VYRE_SCAN_GRAPH_PATTERN_DIGEST_STABLE"
+topology_breaking = false
+evidence_path = "vyre-driver/tests/scan_graph_update_classifier_registry.rs"
+
+[[edit]]
+edit_id = "pattern_digest_changed"
+graph_action = "recapture"
+reason_code = "VYRE_SCAN_GRAPH_PATTERN_DIGEST_CHANGED"
+topology_breaking = true
+evidence_path = "vyre-driver/tests/scan_graph_update_classifier_registry.rs"
+
+[[edit]]
+edit_id = "haystack_same_shape"
+graph_action = "update_node_params"
+reason_code = "VYRE_SCAN_GRAPH_HAYSTACK_SAME_SHAPE"
+topology_breaking = false
+evidence_path = "vyre-driver/tests/scan_graph_update_classifier_registry.rs"
+
+[[edit]]
+edit_id = "haystack_shape_changed"
+graph_action = "recapture"
+reason_code = "VYRE_SCAN_GRAPH_HAYSTACK_SHAPE_CHANGED"
+topology_breaking = true
+evidence_path = "vyre-driver/tests/scan_graph_update_classifier_registry.rs"
+
+[[edit]]
+edit_id = "output_slab_resize"
+graph_action = "recapture"
+reason_code = "VYRE_SCAN_GRAPH_OUTPUT_SLAB_RESIZED"
+topology_breaking = true
+evidence_path = "vyre-driver/tests/scan_graph_update_classifier_registry.rs"
+
+[[edit]]
+edit_id = "verifier_topology_changed"
+graph_action = "recapture"
+reason_code = "VYRE_SCAN_GRAPH_VERIFIER_TOPOLOGY_CHANGED"
+topology_breaking = true
+evidence_path = "vyre-driver/tests/scan_graph_update_classifier_registry.rs"

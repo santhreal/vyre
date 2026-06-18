@@ -175,3 +175,9 @@ the chain visible.
   required-non-None when the body was built by calling another
   registered op. `cargo xtask print-composition` relies on this to
   render the chain.
+
+## Cross-crate promotion patch contract
+
+Cross-crate promotion changes the public dependency graph, so it must update `docs/CRATE_GRAPH.md`, this tier table, and the relevant domain tier document in the same patch. The patch must include an import-path migration test that proves canonical imports, compatibility shims, or explicit removal behavior.
+
+`check-tier-deps` blocks upward path dependencies and unowned tier movement. `lego-audit` blocks cross-tier imports that bypass the canonical primitive or facade owner.

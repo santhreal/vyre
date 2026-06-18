@@ -86,9 +86,9 @@ pub fn impacted_entries_into(
             lineage_cells,
             _scratch,
         );
-        panic!(
-            "vyre-driver cache invalidation requires the `self-substrate-adapters` feature. Fix: enable the feature; production builds must not run the reference cache-invalidation oracle."
-        );
+        return Err(CacheInvalidationError::new(
+            "vyre-driver cache invalidation requires the `self-substrate-adapters` feature. Fix: enable the feature; production builds must not run the reference cache-invalidation oracle.",
+        ));
     }
 
     #[cfg(feature = "self-substrate-adapters")]

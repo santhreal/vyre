@@ -1,0 +1,43 @@
+# Release rollout strategy policy for VX-1262, VX-1271, VX-1273, VX-1275, VX-1276, and VX-1278.
+# Release phase gates own promotion and abort decisions while deployment, artifact, SLO, alert, and runbook registries remain the signal authorities.
+
+schema = "vyre.release.release_rollout_strategy_policy.v1"
+owner = "coordination"
+evidence_tokens = ["KUBERNETES_DEPLOYMENTS", "KUBECTL_ROLLOUT", "OPENSLO_SPEC", "PROMETHEUS_ALERTMANAGER"]
+
+required_fields = [
+  "strategy_id",
+  "deployment_surface",
+  "artifact_identity_policy",
+  "phase_policy",
+  "promotion_gate_policy",
+  "abort_gate_policy",
+  "observation_policy",
+  "owner_route",
+  "publication_boundary",
+  "diagnostic",
+]
+
+[[strategy]]
+strategy_id = "public-vyre-operator-release"
+deployment_surface = "OPERATOR_DEPLOYMENT_SURFACE_MATRIX.toml"
+artifact_identity_policy = "released-version-container-digest-chart-version-binary-digest-SBOM-and-attestation-linked-before-promotion"
+phase_policy = "candidate-internal-dogfood-low-traffic-canary-regional-broadening-full-promotion-with-each-step-recorded"
+promotion_gate_policy = "SLO-error-budget-clean-alerts-artifact-verification-release-health-and-owner-approval-required-before-next-step"
+abort_gate_policy = "progress-deadline-exceeded-SLO-burn-security-blocker-artifact-verification-failure-or-private-boundary-leak-stops-promotion"
+observation_policy = "record-rollout-history-deployment-status-alert-state-release-version-artifact-digest-and-operator-impact"
+owner_route = "MAINTAINER_OWNERSHIP_ESCALATION_MAP.toml"
+publication_boundary = "public-status-may-include-version-digest-health-and-operator-impact-no-private-Santh-paths-or-sensitive-incident-detail"
+diagnostic = "VYRE_RELEASE_ROLLOUT_STRATEGY_REQUIRED"
+
+[[strategy]]
+strategy_id = "public-vyre-package-release"
+deployment_surface = "END_TO_END_PACKAGE_REGISTRY_CONSUMER_TRANCHE_COVERAGE.toml"
+artifact_identity_policy = "crate-version-docs-rs-build-source-archive-release-asset-and-checksum-identity-linked-before-public-announcement"
+phase_policy = "release-candidate-local-install-doc-build-package-publish-consumer-installibility-and-public-support-intake-readiness"
+promotion_gate_policy = "consumer-install-compatibility-package-metadata-license-boundary-artifact-integrity-and-release-health-pass-before-public-readiness-claim"
+abort_gate_policy = "package-yank-risk-private-path-exposure-doc-build-failure-license-blocker-or-consumer-install-break-stops-promotion"
+observation_policy = "record-crate-version-docs-url-package-checksum-install-command-output-class-and-public-issue-intake-route"
+owner_route = "PUBLIC_ISSUE_SUPPORT_INTAKE_POLICY.toml"
+publication_boundary = "public-package-metadata-points-only-to-santhsecurity-vyre-and-excludes-Santh-backup-or-local-paths"
+diagnostic = "VYRE_PUBLIC_PACKAGE_ROLLOUT_STRATEGY_REQUIRED"

@@ -5,11 +5,16 @@ use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
+use crate::launch_contract::{required_external_actions, GIT_PUSH_ACTION, PUBLISH_ACTION};
+use crate::repo_boundary;
+use crate::release_train;
+
 #[derive(Debug, Serialize)]
 struct LaunchState {
     schema_version: u32,
     objective: &'static str,
     current_state: &'static str,
+    public_repository: &'static str,
     prepublish_gates: PrepublishGates,
     external_actions: Vec<ExternalAction>,
     blockers: Vec<&'static str>,
@@ -54,6 +59,7 @@ pub(crate) fn run(args: &[String]) {
         } else {
             "prepublish_release_ready"
         },
+        public_repository: repo_boundary::vyre_public_repository(),
         prepublish_gates: PrepublishGates {
             version_matrix: "pass",
             metadata_matrix: "pass",
@@ -64,7 +70,7 @@ pub(crate) fn run(args: &[String]) {
         },
         external_actions: vec![
             ExternalAction {
-                action: "cargo_full publish approved crates in dependency order",
+                action: PUBLISH_ACTION,
                 status: if complete {
                     "complete"
                 } else {
@@ -73,16 +79,16 @@ pub(crate) fn run(args: &[String]) {
                 evidence: Some("scripts/final-launch.sh + scripts/publish-release.sh + release/evidence/package/publish-readiness.json"),
             },
             ExternalAction {
-                action: "make repositories public",
+                action: repo_boundary::verify_public_repo_action(),
                 status: if complete {
                     "complete"
                 } else {
                     "blocked_pending_user_approval"
                 },
-                evidence: Some("scripts/final-launch.sh"),
+                evidence: Some(repo_boundary::verify_public_repo_evidence()),
             },
             ExternalAction {
-                action: "git push release branch and tags",
+                action: GIT_PUSH_ACTION,
                 status: if complete {
                     "complete"
                 } else {
@@ -96,7 +102,7 @@ pub(crate) fn run(args: &[String]) {
         } else {
             vec![
                 "cargo_full publish is not approved or completed",
-                "repository public launch is not approved or completed",
+                "vyre repository public verification is not completed",
                 "git push release branch and tags is not approved or completed",
             ]
         },
@@ -144,12 +150,12 @@ fn completion_marker_complete(path: &Path) -> bool {
             .get("release_train")
             .and_then(|train| train.get("vyre"))
             .and_then(serde_json::Value::as_str)
-            == Some("0.6.1")
+            == Some(release_train::vyre_version())
         && value
             .get("release_train")
             .and_then(|train| train.get("weir"))
             .and_then(serde_json::Value::as_str)
-            == Some("0.1.0")
+            == Some(release_train::weir_version())
         && value
             .get("completion_status")
             .and_then(serde_json::Value::as_str)
@@ -164,32 +170,25 @@ fn completion_marker_complete(path: &Path) -> bool {
             .and_then(|git| git.get("tags"))
             .and_then(serde_json::Value::as_array)
             .is_some_and(|tags| {
-                ["vyre-v0.6.1", "weir-v0.1.0", "vyre-0.6.1-weir-0.1.0"]
+                release_train::tag_creation_order()
                     .iter()
-                    .all(|required| tags.iter().any(|tag| tag.as_str() == Some(required)))
+                    .skip(3)
+                    .all(|required| tags.iter().any(|tag| tag.as_str() == Some(*required)))
             })
-        && value
-            .get("repositories_public")
-            .and_then(serde_json::Value::as_array)
-            .is_some_and(|repos| !repos.is_empty())
+        && repo_boundary::has_single_public_repository(&value)
         && value
             .get("external_actions")
             .and_then(serde_json::Value::as_array)
             .is_some_and(|actions| {
-                [
-                    "cargo_full publish approved crates in dependency order",
-                    "make repositories public",
-                    "git push release branch and tags",
-                ]
-                .iter()
-                .all(|required| {
-                    actions.iter().any(|action| {
-                        action.get("action").and_then(serde_json::Value::as_str) == Some(required)
-                            && action.get("status").and_then(serde_json::Value::as_str)
-                                == Some("complete")
+                required_external_actions().iter().all(|required| {
+                        actions.iter().any(|action| {
+                            action.get("action").and_then(serde_json::Value::as_str)
+                                == Some(*required)
+                                && action.get("status").and_then(serde_json::Value::as_str)
+                                    == Some("complete")
+                        })
                     })
                 })
-            })
 }
 
 fn parse_output(args: &[String]) -> Result<PathBuf, String> {
@@ -222,4 +221,147 @@ fn default_output() -> PathBuf {
         .parent()
         .map(|path| path.join("release/evidence/final/public-launch-state.json"))
         .unwrap_or_else(|| PathBuf::from("release/evidence/final/public-launch-state.json"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::completion_marker_complete;
+
+    #[test]
+    fn completion_marker_accepts_061_release_train_with_required_actions() {
+        let dir = tempfile::tempdir().expect("Fix: create launch-state test directory.");
+        let marker = dir.path().join("public-launch-completion.json");
+        std::fs::write(
+            &marker,
+            r#"{
+  "schema_version": 1,
+  "release_train": {
+    "vyre": "0.6.3",
+    "weir": "0.1.0"
+  },
+  "git": {
+    "branch": "main",
+    "tags": [
+      "vyre-v0.6.3",
+      "weir-v0.1.0",
+      "vyre-0.6.3-weir-0.1.0"
+    ]
+  },
+  "public_repository": "santhsecurity/vyre",
+  "external_actions": [
+    {
+      "action": "cargo_full publish approved crates in dependency order",
+      "status": "complete"
+    },
+    {
+      "action": "verify vyre repository is public",
+      "status": "complete"
+    },
+    {
+      "action": "git push release branch and tags",
+      "status": "complete"
+    }
+  ],
+  "completion_status": "complete"
+}"#,
+        )
+        .expect("Fix: write launch completion marker fixture.");
+
+        assert!(
+            completion_marker_complete(&marker),
+            "Fix: launch-state must accept the completed 0.6.3/0.1.0 marker that final-launch writes."
+        );
+    }
+
+    #[test]
+    fn completion_marker_rejects_stale_042_release_train() {
+        let dir = tempfile::tempdir().expect("Fix: create launch-state test directory.");
+        let marker = dir.path().join("public-launch-completion.json");
+        std::fs::write(
+            &marker,
+            r#"{
+  "schema_version": 1,
+  "release_train": {
+    "vyre": "0.4.2",
+    "weir": "0.1.0"
+  },
+  "git": {
+    "branch": "main",
+    "tags": [
+      "vyre-v0.4.2",
+      "weir-v0.1.0",
+      "vyre-0.4.2-weir-0.1.0"
+    ]
+  },
+  "public_repository": "santhsecurity/vyre",
+  "external_actions": [
+    {
+      "action": "cargo_full publish approved crates in dependency order",
+      "status": "complete"
+    },
+    {
+      "action": "verify vyre repository is public",
+      "status": "complete"
+    },
+    {
+      "action": "git push release branch and tags",
+      "status": "complete"
+    }
+  ],
+  "completion_status": "complete"
+}"#,
+        )
+        .expect("Fix: write stale launch completion marker fixture.");
+
+        assert!(
+            !completion_marker_complete(&marker),
+            "Fix: launch-state must reject stale 0.4.2 launch evidence for the 0.6.3 release train."
+        );
+    }
+
+    #[test]
+    fn completion_marker_rejects_legacy_single_public_repository_array() {
+        let dir = tempfile::tempdir().expect("Fix: create launch-state test directory.");
+        let marker = dir.path().join("public-launch-completion.json");
+        std::fs::write(
+            &marker,
+            r#"{
+  "schema_version": 1,
+  "release_train": {
+    "vyre": "0.6.3",
+    "weir": "0.1.0"
+  },
+  "git": {
+    "branch": "main",
+    "tags": [
+      "vyre-v0.6.3",
+      "weir-v0.1.0",
+      "vyre-0.6.3-weir-0.1.0"
+    ]
+  },
+  "repositories_public": ["santhsecurity/vyre"],
+  "external_actions": [
+    {
+      "action": "cargo_full publish approved crates in dependency order",
+      "status": "complete"
+    },
+    {
+      "action": "verify vyre repository is public",
+      "status": "complete"
+    },
+    {
+      "action": "git push release branch and tags",
+      "status": "complete"
+    }
+  ],
+  "completion_status": "complete"
+}"#,
+        )
+        .expect("Fix: write launch completion marker fixture.");
+
+        assert!(
+            !completion_marker_complete(&marker),
+            "Fix: launch-state must reject legacy repositories_public evidence and require singular public_repository."
+        );
+    }
 }

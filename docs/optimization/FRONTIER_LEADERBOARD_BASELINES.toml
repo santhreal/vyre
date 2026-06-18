@@ -1,0 +1,45 @@
+[schema]
+version = 1
+catalog = "vyre-frontier-leaderboard-baselines"
+
+[[baselines]]
+id = "hyperscan-vectorscan-scan"
+research_key = "HYPERSCAN_NSDI"
+baseline = "Hyperscan/Vectorscan scan decomposition"
+workload_family = "scan"
+match_terms = ["scan", "string", "condition", "entropy", "filter"]
+
+[[baselines]]
+id = "hybridsa-gpu-partitioning"
+research_key = "HYBRIDSA"
+baseline = "HybridSA CPU/GPU partitioning"
+workload_family = "scan-partitioning"
+match_terms = ["scan", "condition", "entropy", "filter", "megakernel"]
+
+[[baselines]]
+id = "faiss-like-ann"
+research_key = "FAISS_GPU"
+baseline = "Faiss-like dense vector search"
+workload_family = "ann-vector"
+match_terms = ["ann", "vector", "linear", "quantized", "matrix"]
+
+[[baselines]]
+id = "rummy-out-of-core-vectors"
+research_key = "RUMMY"
+baseline = "RUMMY-style out-of-core GPU vectors"
+workload_family = "out-of-core-vector"
+match_terms = ["resident", "quantized", "linear", "megakernel", "transfer"]
+
+[[baselines]]
+id = "pipeann-storage-ann"
+research_key = "PIPEANN"
+baseline = "PipeANN-style storage-aware graph search"
+workload_family = "storage-ann-graph"
+match_terms = ["graph", "callgraph", "reachability", "adaptive", "routing"]
+
+[[baselines]]
+id = "vyre-native-plan"
+research_key = "MLIR_PASS"
+baseline = "Vyre-native selected and rejected plan evidence"
+workload_family = "vyre-native"
+match_terms = ["release"]

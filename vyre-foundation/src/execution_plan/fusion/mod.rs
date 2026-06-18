@@ -34,7 +34,7 @@ mod helpers;
 #[cfg(test)]
 mod tests;
 
-pub use fuse::{fuse_programs, fuse_programs_vec};
+pub use fuse::{fuse_programs, fuse_programs_vec, merge_programs_shared};
 
 /// Error returned when a fusion batch cannot be combined safely.
 #[derive(Debug, Clone, PartialEq, Eq)]

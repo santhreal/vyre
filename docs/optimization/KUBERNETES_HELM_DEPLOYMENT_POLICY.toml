@@ -1,0 +1,43 @@
+# Kubernetes and Helm deployment policy for VX-1223, VX-1224, VX-1225, VX-1228, VX-1231, VX-1232, VX-1233, and VX-1234.
+# Chart structure, values, Pod security standards, security contexts, ConfigMaps, Secrets, probes, resources, and image digests share one Kubernetes seam.
+
+schema = "vyre.release.kubernetes_helm_deployment_policy.v1"
+owner = "security_reliability"
+evidence_tokens = ["KUBERNETES_POD_SECURITY_STANDARDS", "KUBERNETES_SECURITY_CONTEXT", "KUBERNETES_POD_SECURITY_ADMISSION", "KUBERNETES_CONFIGMAP", "KUBERNETES_SECRETS", "HELM_CHART_BEST_PRACTICES", "HELM_CHART_FORMAT"]
+
+required_fields = [
+  "policy_id",
+  "chart_policy",
+  "image_policy",
+  "pod_security_policy",
+  "security_context_policy",
+  "configuration_policy",
+  "secret_policy",
+  "resource_policy",
+  "probe_policy",
+  "diagnostic",
+]
+
+[[policy]]
+policy_id = "public-vyre-helm-chart"
+chart_policy = "Chart.yaml-values.yaml-templates-and-values-schema-match-Helm-public-chart-structure"
+image_policy = "image-repository-tag-and-digest-fields-default-to-public-GHCR-digest-record"
+pod_security_policy = "restricted-profile-compatible-by-default-baseline-exception-requires-explicit-public-rationale"
+security_context_policy = "runAsNonRoot-readOnlyRootFilesystem-allowPrivilegeEscalationFalse-dropCapabilities-and-seccompProfile-declared"
+configuration_policy = "ConfigMap-values-carry-non-secret-Tier-A-runtime-knobs-only"
+secret_policy = "Kubernetes-Secrets-reference-existing-secret-names-or-secret-mounts-no-secret-values-in-chart"
+resource_policy = "cpu-memory-ephemeral-storage-and-concurrency-limits-link-to-resource-budget-policy"
+probe_policy = "readiness-liveness-startup-probes-map-to-public-health-endpoints-with-no-secret-output"
+diagnostic = "VYRE_KUBERNETES_HELM_POLICY_REQUIRED"
+
+[[policy]]
+policy_id = "public-vyre-kubernetes-manifest"
+chart_policy = "raw-manifest-parity-with-Helm-rendered-contract-required-for-public-examples"
+image_policy = "image-digest-pin-required-floating-tag-only-invalid-for-reproducibility-claims"
+pod_security_policy = "namespace-Pod-Security-Admission-level-recorded-when-example-assumes-enforcement"
+security_context_policy = "container-and-pod-security-contexts-explicit-no-privileged-hostNetwork-hostPID-hostPath-by-default"
+configuration_policy = "ConfigMap-size-and-key-policy-recorded-no-large-rule-data-or-private-paths"
+secret_policy = "Secret-usage-documented-as-sensitive-reference-never-public-value"
+resource_policy = "requests-limits-and-backpressure-quotas-required-for-daemon-or-server-mode"
+probe_policy = "probes-use-public-redacted-health-result-and-operator-action-text"
+diagnostic = "VYRE_KUBERNETES_MANIFEST_POLICY_REQUIRED"

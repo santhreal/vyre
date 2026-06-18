@@ -1,0 +1,57 @@
+[artifact]
+id = "DIRECTORY_ENUMERATION_METADATA_POLICY"
+title = "Directory enumeration and metadata batching policy"
+tranche = "VX-1521..VX-1540"
+owner = "runtime_io"
+status = "planned_contract"
+research_sources = [
+  "LINUX_GETDENTS64",
+  "LINUX_STATX",
+  "LINUX_OPENAT2",
+]
+
+[scope]
+owns = [
+  "directory-entry batch sizing and syscall accounting",
+  "metadata freshness class for scan admission",
+  "directory file-descriptor cursor lifetime",
+  "enumeration-to-open work queue ordering",
+  "duplicate inode/device suppression before read scheduling",
+]
+does_not_own = [
+  "canonical path security decisions, owned by FILESYSTEM_PATH_CANONICALIZATION_POLICY",
+  "atomic file-operation race response, owned by ATOMIC_FILE_OPERATION_RACE_POLICY",
+  "archive traversal and bomb controls, owned by ARCHIVE_EXTRACTION_BOMB_GUARDS",
+  "corpus content limits, owned by CORPUS_INGRESS_GUARDS",
+]
+
+[enumeration]
+entry_source = "directory entries are collected in batches and normalized into explicit candidate records before metadata fetch"
+entry_identity = ["parent_dirfd_id", "raw_name_bytes", "d_type_if_available", "batch_sequence", "enumerator_worker_id"]
+batch_budget = "directory batch size and max in-flight directories are Tier A operational knobs"
+ordering = "enumeration order is not a correctness contract; stable output ordering is handled by reporter provenance"
+rescan_policy = "watcher invalidation may enqueue a fresh candidate set but cannot mutate a batch already handed to read scheduling"
+
+[metadata]
+required_fields = ["mode", "size", "inode", "device", "mtime", "ctime"]
+optional_fields = ["birthtime", "mount_id", "direct_io_alignment", "attribute_mask"]
+sync_classes = ["cache_ok", "force_sync_for_boundary", "reject_if_metadata_unavailable"]
+admission_rule = "regular files with size and identity evidence may enter read scheduling; unsupported types are reported with explicit skip reason"
+dedup_key = "device + inode + generation-or-change-time when available, with path aliases preserved as evidence"
+
+[scaling_controls]
+wide_directory_strategy = "large directories are chunked into bounded work batches and never monopolize the global ingress queue"
+deep_tree_strategy = "depth and symlink behavior are enforced by existing filesystem governance before this policy receives candidates"
+stat_pressure_strategy = "metadata fetch concurrency is separately budgeted from read concurrency to avoid starving completed-read drains"
+
+[evidence]
+per_batch_fields = [
+  "directory_handle_id",
+  "entry_count",
+  "metadata_calls",
+  "candidate_files",
+  "duplicate_identities",
+  "rejected_types",
+  "elapsed_ns",
+  "queue_pressure_after_enqueue",
+]

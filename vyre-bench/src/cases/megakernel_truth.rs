@@ -300,8 +300,11 @@ mod tests {
     fn work_items_are_unique_for_dedupe_truth() {
         let items = make_work_items(64).expect("Fix: fixture");
         let mut deduped = Vec::new();
-        let report =
-            vyre_runtime::megakernel::prune_redundant_work_items_into(&items, &mut deduped);
+        let report = vyre_runtime::megakernel::try_prune_redundant_work_items_into(
+            &items,
+            &mut deduped,
+        )
+        .expect("Fix: dedupe truth fixture must satisfy megakernel planner invariants.");
 
         assert!(report.is_empty());
         assert!(deduped.is_empty());

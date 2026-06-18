@@ -6,12 +6,12 @@
 //! telemetry justifies them. Correctness-critical normalizers remain selected.
 
 use super::{
-    registered_pass_registrations, CostModelFamily, OptimizerError, OptimizerProfile, PassMetadata,
-    ProgramPassKind,
+    registered_pass_registrations, CostModelFamily, OptimizerError, OptimizerProfile,
+    OptimizerRunReport, PassMetadata, PassRunMetric, ProgramPassKind,
 };
 use crate::ir_inner::model::program::Program;
 use crate::optimizer::hot_path_hints::HotPathHints;
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 const MIN_LOOP_NODES: usize = 12;
 const MIN_MEMORY_BYTES: u64 = 16 * 1024;
@@ -28,6 +28,9 @@ pub enum PassSelectionReason {
     ProgramShape,
     /// Runtime hot-path telemetry says this region is expensive enough.
     HotPathTelemetry,
+    /// Previous pass-cost metrics prove this pass reduced a cost proxy on the
+    /// same pass family.
+    PassCostReport,
     /// Pass was included because another selected pass requires it.
     RequiredDependency,
     /// Pass does not belong to the requested profile.
@@ -45,6 +48,10 @@ pub struct PassSelectionDecision {
     pub selected: bool,
     /// Stable reason for the decision.
     pub reason: PassSelectionReason,
+    /// Stable selection priority. Higher values represent stronger evidence;
+    /// callers that do not reorder can still surface this to explain why a pass
+    /// was kept.
+    pub priority: u16,
 }
 
 /// Instantiate registered passes accepted by `profile` and selected for
@@ -62,7 +69,7 @@ pub fn registered_passes_for_profile_and_program(
         .iter()
         .map(|registration| registration.metadata)
         .collect::<Vec<_>>();
-    let selected = selected_name_set(&metadata, profile, program, hints);
+    let selected = selected_name_set(&metadata, profile, program, hints, None);
     let mut passes = Vec::with_capacity(selected.len());
     for registration in registrations.iter() {
         if selected.contains(registration.metadata.name) {
@@ -80,13 +87,30 @@ pub fn select_pass_metadata_for_program(
     program: &Program,
     hints: &HotPathHints,
 ) -> Vec<PassSelectionDecision> {
-    let selected = selected_name_set(metadata, profile, program, hints);
+    select_pass_metadata_for_program_with_report(metadata, profile, program, hints, None)
+}
+
+/// Return pass-selection decisions using optional previous pass-cost metrics.
+///
+/// The report path is additive: no caller is required to provide profile data,
+/// and the empty report behaves exactly like [`select_pass_metadata_for_program`].
+#[must_use]
+pub fn select_pass_metadata_for_program_with_report(
+    metadata: &[PassMetadata],
+    profile: OptimizerProfile,
+    program: &Program,
+    hints: &HotPathHints,
+    report: Option<&OptimizerRunReport>,
+) -> Vec<PassSelectionDecision> {
+    let cost_report = report.map(PassCostReport::from_optimizer_report);
+    let selected = selected_name_set(metadata, profile, program, hints, cost_report.as_ref());
     metadata
         .iter()
         .copied()
         .map(|metadata| {
             let profile_accepted = profile.accepts(metadata);
-            let initially = initial_selection_reason(metadata, profile, program, hints);
+            let initially =
+                initial_selection_reason(metadata, profile, program, hints, cost_report.as_ref());
             let selected_by_closure = selected.contains(metadata.name);
             let reason = if !profile_accepted {
                 PassSelectionReason::ProfileRejected
@@ -100,6 +124,7 @@ pub fn select_pass_metadata_for_program(
             PassSelectionDecision {
                 metadata,
                 selected: selected_by_closure,
+                priority: selection_priority(reason),
                 reason,
             }
         })
@@ -111,14 +136,16 @@ fn selected_name_set(
     profile: OptimizerProfile,
     program: &Program,
     hints: &HotPathHints,
+    cost_report: Option<&PassCostReport>,
 ) -> FxHashSet<&'static str> {
     let mut selected = FxHashSet::default();
     for pass in metadata {
         if matches!(
-            initial_selection_reason(*pass, profile, program, hints),
+            initial_selection_reason(*pass, profile, program, hints, cost_report),
             PassSelectionReason::AlwaysOn
                 | PassSelectionReason::ProgramShape
                 | PassSelectionReason::HotPathTelemetry
+                | PassSelectionReason::PassCostReport
         ) {
             selected.insert(pass.name);
         }
@@ -153,12 +180,16 @@ fn initial_selection_reason(
     profile: OptimizerProfile,
     program: &Program,
     hints: &HotPathHints,
+    cost_report: Option<&PassCostReport>,
 ) -> PassSelectionReason {
     if !profile.accepts(metadata) {
         return PassSelectionReason::ProfileRejected;
     }
     if entry_region_is_hot(program, hints) {
         return PassSelectionReason::HotPathTelemetry;
+    }
+    if cost_report.is_some_and(|report| report.selects(metadata.name)) {
+        return PassSelectionReason::PassCostReport;
     }
     let stats = program.stats();
     let reason_for = |above_threshold: bool| {
@@ -184,6 +215,89 @@ fn initial_selection_reason(
     }
 }
 
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+struct PassCostReport {
+    cost_reducing_passes: FxHashSet<&'static str>,
+}
+
+impl PassCostReport {
+    fn from_optimizer_report(report: &OptimizerRunReport) -> Self {
+        let mut cost_reducing_passes = FxHashSet::default();
+        cost_reducing_passes.reserve(report.passes.len());
+        let mut best_delta_by_pass: FxHashMap<&'static str, i128> = FxHashMap::default();
+        for metric in &report.passes {
+            let reduction = metric_cost_reduction(metric);
+            if reduction > 0 {
+                best_delta_by_pass
+                    .entry(metric.pass)
+                    .and_modify(|best| *best = (*best).max(reduction))
+                    .or_insert(reduction);
+            }
+        }
+        cost_reducing_passes.extend(best_delta_by_pass.into_keys());
+        Self {
+            cost_reducing_passes,
+        }
+    }
+
+    fn selects(&self, pass: &'static str) -> bool {
+        self.cost_reducing_passes.contains(pass)
+    }
+}
+
+fn metric_cost_reduction(metric: &PassRunMetric) -> i128 {
+    if !metric.changed {
+        return 0;
+    }
+    [
+        reduction(metric.nodes_before, metric.nodes_after),
+        reduction(
+            metric.static_storage_bytes_before,
+            metric.static_storage_bytes_after,
+        ),
+        reduction(
+            metric.instruction_count_before,
+            metric.instruction_count_after,
+        ),
+        reduction(metric.memory_op_count_before, metric.memory_op_count_after),
+        reduction(metric.atomic_op_count_before, metric.atomic_op_count_after),
+        reduction(
+            metric.control_flow_count_before,
+            metric.control_flow_count_after,
+        ),
+        reduction(
+            metric.register_pressure_before,
+            metric.register_pressure_after,
+        ),
+        reduction(
+            metric.ir_heap_allocations_before,
+            metric.ir_heap_allocations_after,
+        ),
+        reduction(metric.ir_heap_bytes_before, metric.ir_heap_bytes_after),
+    ]
+    .into_iter()
+    .max()
+    .unwrap_or(0)
+}
+
+fn reduction<T>(before: T, after: T) -> i128
+where
+    T: TryInto<i128>,
+{
+    before.try_into().unwrap_or(i128::MAX) - after.try_into().unwrap_or(i128::MAX)
+}
+
+fn selection_priority(reason: PassSelectionReason) -> u16 {
+    match reason {
+        PassSelectionReason::HotPathTelemetry => 500,
+        PassSelectionReason::PassCostReport => 400,
+        PassSelectionReason::ProgramShape => 300,
+        PassSelectionReason::AlwaysOn => 200,
+        PassSelectionReason::RequiredDependency => 100,
+        PassSelectionReason::BelowThreshold | PassSelectionReason::ProfileRejected => 0,
+    }
+}
+
 fn entry_region_is_hot(program: &Program, hints: &HotPathHints) -> bool {
     program
         .entry_op_id()
@@ -194,7 +308,7 @@ fn entry_region_is_hot(program: &Program, hints: &HotPathHints) -> bool {
 mod tests {
     use super::*;
     use crate::ir::{BufferDecl, DataType, Expr, Node, Program};
-    use crate::optimizer::{PassBoundaryClass, PassPhase};
+    use crate::optimizer::{PassBoundaryClass, PassPhase, PassRunDecision};
 
     fn meta(
         name: &'static str,
@@ -220,6 +334,64 @@ mod tests {
             [1, 1, 1],
             vec![Node::store("out", Expr::u32(0), Expr::u32(1))],
         )
+    }
+
+    fn pass_metric(
+        pass: &'static str,
+        changed: bool,
+        nodes_before: usize,
+        nodes_after: usize,
+    ) -> PassRunMetric {
+        PassRunMetric {
+            iteration: 0,
+            pass,
+            ran: true,
+            changed,
+            decision: if changed {
+                PassRunDecision::Changed
+            } else {
+                PassRunDecision::RanUnchanged
+            },
+            refusal_kind: None,
+            required_analyses: &[],
+            declared_invalidations: &[],
+            fact_substrate_reused: !changed,
+            fact_substrate_recomputed: changed,
+            fact_substrate_invalidated: changed,
+            effect_bits_before: 0,
+            effect_bits_after: 0,
+            linear_type_violations_before: 0,
+            linear_type_violations_after: 0,
+            shape_predicate_violations_before: 0,
+            shape_predicate_violations_after: 0,
+            runtime_ns: 100,
+            nodes_before,
+            nodes_after,
+            static_storage_bytes_before: 4096,
+            static_storage_bytes_after: 4096,
+            instruction_count_before: 12,
+            instruction_count_after: 12,
+            memory_op_count_before: 1,
+            memory_op_count_after: 1,
+            atomic_op_count_before: 0,
+            atomic_op_count_after: 0,
+            control_flow_count_before: 0,
+            control_flow_count_after: 0,
+            register_pressure_before: 4,
+            register_pressure_after: 4,
+            ir_heap_allocations_before: 0,
+            ir_heap_allocations_after: 0,
+            ir_heap_bytes_before: 0,
+            ir_heap_bytes_after: 0,
+            research_trace: None,
+        }
+    }
+
+    fn report_with(metric: PassRunMetric) -> OptimizerRunReport {
+        OptimizerRunReport {
+            program: tiny_program(),
+            passes: vec![metric],
+        }
     }
 
     #[test]
@@ -262,6 +434,57 @@ mod tests {
         );
         assert!(decisions[0].selected);
         assert_eq!(decisions[0].reason, PassSelectionReason::HotPathTelemetry);
+        assert_eq!(
+            decisions[0].priority,
+            selection_priority(PassSelectionReason::HotPathTelemetry)
+        );
+        assert!(decisions[0].priority > selection_priority(PassSelectionReason::PassCostReport));
+    }
+
+    #[test]
+    fn pass_cost_report_selects_cold_expensive_pass() {
+        let report = report_with(pass_metric("decode_scan_fuse", true, 10, 3));
+        let decisions = select_pass_metadata_for_program_with_report(
+            &[meta(
+                "decode_scan_fuse",
+                CostModelFamily::Memory,
+                PassPhase::Memory,
+                &[],
+            )],
+            OptimizerProfile::Release,
+            &tiny_program(),
+            &HotPathHints::default(),
+            Some(&report),
+        );
+        assert!(decisions[0].selected);
+        assert_eq!(decisions[0].reason, PassSelectionReason::PassCostReport);
+        assert_eq!(
+            decisions[0].priority,
+            selection_priority(PassSelectionReason::PassCostReport)
+        );
+    }
+
+    #[test]
+    fn non_reducing_cost_report_preserves_cold_fallback() {
+        let report = report_with(pass_metric("decode_scan_fuse", false, 10, 3));
+        let decisions = select_pass_metadata_for_program_with_report(
+            &[meta(
+                "decode_scan_fuse",
+                CostModelFamily::Memory,
+                PassPhase::Memory,
+                &[],
+            )],
+            OptimizerProfile::Release,
+            &tiny_program(),
+            &HotPathHints::default(),
+            Some(&report),
+        );
+        assert!(!decisions[0].selected);
+        assert_eq!(decisions[0].reason, PassSelectionReason::BelowThreshold);
+        assert_eq!(
+            decisions[0].priority,
+            selection_priority(PassSelectionReason::BelowThreshold)
+        );
     }
 
     #[test]

@@ -1,0 +1,37 @@
+# Research source integrity gates for VX-701 and VX-702.
+# The research ledger is the single source registry for external basis keys.
+
+schema = "vyre.research.source_integrity_gate.v1"
+owner = "coordination"
+evidence_tokens = ["SLSA_PROVENANCE", "SPDX_SBOM", "SIGSTORE_REKOR", "OPENSSF_SCORECARD"]
+
+required_ledger_fields = [
+  "key",
+  "url",
+  "source_class",
+  "baseline_type",
+  "reproducibility_class",
+  "artifact_state",
+  "release_floor_eligible",
+  "artifact_url",
+  "vx_rows",
+  "digest_material",
+]
+
+[[gate]]
+id = "source-key-coverage"
+checked_artifact = "docs/optimization/RESEARCH_SOURCE_LEDGER.toml"
+required_property = "every evidence token used by VX rows resolves to a ledger key or a local research artifact"
+failure_diagnostic = "VYRE_RESEARCH_SOURCE_KEY_MISSING"
+
+[[gate]]
+id = "canonical-url-digest"
+checked_artifact = "docs/optimization/RESEARCH_SOURCE_LEDGER.toml"
+required_property = "canonical URL and digest material are stable for audit hashing"
+failure_diagnostic = "VYRE_RESEARCH_SOURCE_DIGEST_MISMATCH"
+
+[[gate]]
+id = "primary-source-preference"
+checked_artifact = "docs/optimization/RESEARCH_SOURCE_LEDGER.toml"
+required_property = "official specs, official docs, source code, or peer papers are preferred over summaries"
+failure_diagnostic = "VYRE_RESEARCH_SOURCE_NOT_PRIMARY"

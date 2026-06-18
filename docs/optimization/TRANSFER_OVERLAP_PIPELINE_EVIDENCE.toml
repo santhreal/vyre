@@ -1,0 +1,54 @@
+# Transfer overlap pipeline evidence proves copy, prefetch, compute, and readback overlap without weakening output truth.
+
+schema = "vyre.memory.transfer_overlap_pipeline_evidence.v1"
+owner = "driver_shared"
+evidence_tokens = ["CUDA_RUNTIME_MEMORY_API", "VULKAN_MEMORY_ALLOCATION", "WEBGPU_BUFFER_MAPPING", "METAL_RESOURCE_STORAGE_MODES", "OPENTELEMETRY_TRACES"]
+
+required_fields = [
+  "pipeline_id",
+  "copy_surface",
+  "producer_policy",
+  "consumer_policy",
+  "overlap_window_policy",
+  "counter_policy",
+  "correctness_policy",
+  "failure_policy",
+  "authority_links",
+  "diagnostic",
+]
+
+[[pipeline]]
+pipeline_id = "upload-compute-double-buffer-overlap"
+copy_surface = "host-to-device-upload-prefetch-or-staging-copy-overlapped-with-prior-compute"
+producer_policy = "host-staging-writer-seals-buffer-and-records-byte-digest-before transfer-submit"
+consumer_policy = "device-kernel-consumes-only-after-copy-event-or-queue-dependency"
+overlap_window_policy = "record-copy-start-copy-end-compute-start-compute-end-stream-or-queue-id-and-resource-range"
+counter_policy = "record-host-to-device-bytes-device-read-bytes-copy-engine-time-SM-time-and-stall-reason"
+correctness_policy = "overlapped-output-digest-matches-serial-copy-then-compute-baseline-for-same-input"
+failure_policy = "missing-event-stale-digest-page-fault-spike-or-copy-engine-contention-blocks-overlap-speed-claim"
+authority_links = ["PINNED_STAGING_TRANSFER_POLICY.toml", "HOST_DEVICE_VISIBILITY_POLICY.toml", "PROFILE_TRACE_METRIC_CORRELATION_POLICY.toml", "STATISTICAL_REGRESSION_GATES.toml"]
+diagnostic = "VYRE_UPLOAD_COMPUTE_OVERLAP_EVIDENCE_REQUIRED"
+
+[[pipeline]]
+pipeline_id = "managed-prefetch-compute-overlap"
+copy_surface = "cuda-managed-prefetch-or-memory-advice-overlapped-with-independent-device-work"
+producer_policy = "prefetch-range-selected-from-hot-window-and-corpus-chunk-plan"
+consumer_policy = "kernel-uses-prefetched-range-only-after-prefetch-stream-dependency-or-recorded-fault-budget"
+overlap_window_policy = "record-prefetch-start-prefetch-end-independent-work-window-and-dependent-kernel-start"
+counter_policy = "record-prefetch-bytes-page-migration-bytes-page-fault-count-free-memory-and-device-id"
+correctness_policy = "managed-prefetch-output-digest-matches-explicit-copy-baseline-and-page-fault-budget"
+failure_policy = "unsupported-managed-paradigm-concurrent-access-limit-or-fault-budget-excess-routes-to-explicit-copy"
+authority_links = ["MEMORY_RESIDENCY_TIER_CONTRACTS.toml", "MEMORY_PRESSURE_OVERSUBSCRIPTION_RESPONSE.toml", "CORPUS_PAGING_PLANNER.toml", "BACKEND_CAPABILITY_DIGESTS.toml"]
+diagnostic = "VYRE_MANAGED_PREFETCH_OVERLAP_EVIDENCE_REQUIRED"
+
+[[pipeline]]
+pipeline_id = "device-output-readback-overlap"
+copy_surface = "device-to-host-readback-copy-overlapped-with-subsequent-independent-dispatch"
+producer_policy = "output-slab-epoch-sealed-before readback-copy-or-map-request"
+consumer_policy = "reporter-consumes-readback-only-after-host-visible-state-and-epoch-match"
+overlap_window_policy = "record-readback-copy-window-subsequent-dispatch-window-output-slab-id-and-completion-edge"
+counter_policy = "record-device-to-host-bytes-map-wait-time-copy-engine-time-and-stale-read-rejections"
+correctness_policy = "overlapped-readback-report-bytes-rule-count-line-count-and-digest-match-serial-readback-baseline"
+failure_policy = "stale-epoch-map-pending-resource-destroyed-or-missing-completion-edge-invalidates-overlap-claim"
+authority_links = ["OUTPUT_SLAB_PROVENANCE.toml", "HOST_DEVICE_VISIBILITY_POLICY.toml", "CROSS_SIGNAL_AUDIT_CORRELATION.toml", "SUBMISSION_REPLAY_EVIDENCE_POLICY.toml"]
+diagnostic = "VYRE_READBACK_OVERLAP_EVIDENCE_REQUIRED"

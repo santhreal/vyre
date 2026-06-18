@@ -8,6 +8,85 @@
 
 use crate::ir::BinOp;
 
+/// Stable proof id for `x + 0 -> x`.
+pub const REWRITE_ID_IDENTITY_ELIM_ADD_ZERO: &str = "identity_elim_add_zero";
+/// Stable proof id for `x * 1 -> x`.
+pub const REWRITE_ID_IDENTITY_ELIM_MUL_ONE: &str = "identity_elim_mul_one";
+/// Stable proof id for integer `x * 0 -> 0`.
+pub const REWRITE_ID_IDENTITY_ELIM_MUL_ZERO: &str = "identity_elim_mul_zero";
+/// Stable proof id for `x * 2 -> x << 1`.
+pub const REWRITE_ID_STRENGTH_REDUCE_MUL_POW2_TWO: &str = "strength_reduce_mul_pow2_two";
+/// Stable proof id for `x * 4 -> x << 2`.
+pub const REWRITE_ID_STRENGTH_REDUCE_MUL_POW2_FOUR: &str = "strength_reduce_mul_pow2_four";
+/// Stable proof id for `x * 8 -> x << 3`.
+pub const REWRITE_ID_STRENGTH_REDUCE_MUL_POW2_EIGHT: &str = "strength_reduce_mul_pow2_eight";
+/// Stable proof id for literal `2 + 3 -> 5`.
+pub const REWRITE_ID_CONST_FOLD_ADD_LITERALS: &str = "const_fold_add_literals";
+/// Stable proof id for literal `4 * 5 -> 20`.
+pub const REWRITE_ID_CONST_FOLD_MUL_LITERALS: &str = "const_fold_mul_literals";
+/// Stable proof id for `x + y -> y + x`.
+pub const REWRITE_ID_CANONICALIZE_ADD_COMMUTATIVE: &str = "canonicalize_add_commutative";
+/// Stable proof id for `x * y -> y * x`.
+pub const REWRITE_ID_CANONICALIZE_MUL_COMMUTATIVE: &str = "canonicalize_mul_commutative";
+
+/// Arithmetic rewrite proof-registration row.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ArithmeticRewriteProofContract {
+    /// Stable proof id shared by optimizer registration and SMT obligation.
+    pub rewrite_id: &'static str,
+    /// Rewrite family that owns the proof id.
+    pub family: &'static str,
+}
+
+const ARITHMETIC_REWRITE_PROOF_CONTRACTS: &[ArithmeticRewriteProofContract] = &[
+    ArithmeticRewriteProofContract {
+        rewrite_id: REWRITE_ID_IDENTITY_ELIM_ADD_ZERO,
+        family: "identity_elim",
+    },
+    ArithmeticRewriteProofContract {
+        rewrite_id: REWRITE_ID_IDENTITY_ELIM_MUL_ONE,
+        family: "identity_elim",
+    },
+    ArithmeticRewriteProofContract {
+        rewrite_id: REWRITE_ID_IDENTITY_ELIM_MUL_ZERO,
+        family: "identity_elim",
+    },
+    ArithmeticRewriteProofContract {
+        rewrite_id: REWRITE_ID_STRENGTH_REDUCE_MUL_POW2_TWO,
+        family: "strength_reduce",
+    },
+    ArithmeticRewriteProofContract {
+        rewrite_id: REWRITE_ID_STRENGTH_REDUCE_MUL_POW2_FOUR,
+        family: "strength_reduce",
+    },
+    ArithmeticRewriteProofContract {
+        rewrite_id: REWRITE_ID_STRENGTH_REDUCE_MUL_POW2_EIGHT,
+        family: "strength_reduce",
+    },
+    ArithmeticRewriteProofContract {
+        rewrite_id: REWRITE_ID_CONST_FOLD_ADD_LITERALS,
+        family: "const_fold",
+    },
+    ArithmeticRewriteProofContract {
+        rewrite_id: REWRITE_ID_CONST_FOLD_MUL_LITERALS,
+        family: "const_fold",
+    },
+    ArithmeticRewriteProofContract {
+        rewrite_id: REWRITE_ID_CANONICALIZE_ADD_COMMUTATIVE,
+        family: "canonicalize",
+    },
+    ArithmeticRewriteProofContract {
+        rewrite_id: REWRITE_ID_CANONICALIZE_MUL_COMMUTATIVE,
+        family: "canonicalize",
+    },
+];
+
+/// Arithmetic rewrite proof ids that must emit solver-consumable artifacts.
+#[must_use]
+pub const fn arithmetic_rewrite_proof_contracts() -> &'static [ArithmeticRewriteProofContract] {
+    ARITHMETIC_REWRITE_PROOF_CONTRACTS
+}
+
 /// Literal scalar value normalized across Program IR and lowered descriptor IR.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ScalarLiteral {

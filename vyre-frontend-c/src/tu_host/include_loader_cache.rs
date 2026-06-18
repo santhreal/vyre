@@ -96,15 +96,13 @@ impl ResidentIncludeResolveCache {
             .iter()
             .position(|entry| entry.key.matches(dir, is_system, is_next, name))?;
         let next_epoch = self.next_epoch();
-        let entry = self
+        let Some(entry) = self
             .entries
             .get_mut(&hash)
             .and_then(|bucket| bucket.get_mut(index))
-            .unwrap_or_else(|| {
-                panic!(
-                    "vyre-frontend-c include resolve cache lost an entry during lookup. Fix: repair cache synchronization before sharing resident include loaders."
-                )
-            });
+        else {
+            return None;
+        };
         entry.last_access = next_epoch;
         Some(entry.value.clone())
     }
@@ -131,11 +129,7 @@ impl ResidentIncludeResolveCache {
                 value,
                 last_access,
             });
-        self.len = self.len.checked_add(1).unwrap_or_else(|| {
-            panic!(
-                "vyre-frontend-c include resolve cache entry count overflowed. Fix: lower resident include resolve cache limits."
-            )
-        });
+        self.len = self.len.saturating_add(1);
     }
 
     #[cfg(test)]
@@ -172,20 +166,12 @@ impl ResidentIncludeResolveCache {
         if remove_bucket {
             self.entries.remove(&hash);
         }
-        self.len = self.len.checked_sub(1).unwrap_or_else(|| {
-            panic!(
-                "vyre-frontend-c include resolve cache entry count underflowed during eviction. Fix: repair cache accounting before relying on include resolution reuse."
-            )
-        });
+        self.len = self.len.saturating_sub(1);
         Some(entry)
     }
 
     fn next_epoch(&mut self) -> u64 {
-        self.epoch = self.epoch.checked_add(1).unwrap_or_else(|| {
-            panic!(
-                "vyre-frontend-c include resolve cache epoch overflowed. Fix: recreate the resident include loader before continuing an unbounded translation-unit stream."
-            )
-        });
+        self.epoch = self.epoch.saturating_add(1);
         self.epoch
     }
 
@@ -280,11 +266,7 @@ impl ResidentIncludeFileCache {
             self.remove(&evict_key);
         }
         let last_access = self.next_epoch();
-        self.bytes = self.bytes.checked_add(bytes.len()).unwrap_or_else(|| {
-            panic!(
-                "vyre-frontend-c include file cache byte accounting overflowed during insert. Fix: lower include cache limits or shard resident include loaders."
-            )
-        });
+        self.bytes = self.bytes.saturating_add(bytes.len());
         self.entries.insert(
             path,
             ResidentIncludeFileEntry {
@@ -327,21 +309,13 @@ impl ResidentIncludeFileCache {
 
     fn remove(&mut self, path: &Path) -> Option<ResidentIncludeFileEntry> {
         let entry = self.entries.remove(path)?;
-        self.bytes = self.bytes.checked_sub(entry.bytes.len()).unwrap_or_else(|| {
-            panic!(
-                "vyre-frontend-c include file cache byte accounting underflowed during eviction. Fix: repair include cache accounting before relying on memory limits."
-            )
-        });
+        self.bytes = self.bytes.saturating_sub(entry.bytes.len());
         self.stats.evictions = self.stats.evictions.saturating_add(1);
         Some(entry)
     }
 
     fn next_epoch(&mut self) -> u64 {
-        self.epoch = self.epoch.checked_add(1).unwrap_or_else(|| {
-            panic!(
-                "vyre-frontend-c include file cache epoch overflowed. Fix: recreate the resident include loader before continuing an unbounded translation-unit stream."
-            )
-        });
+        self.epoch = self.epoch.saturating_add(1);
         self.epoch
     }
 

@@ -12,6 +12,7 @@ cargo xtask <subcommand> [options]
 
 | Subcommand | Description |
 |------------|-------------|
+| `acceleration-plan-gate [--plan PATH]` | Enforces evidence-backed VX row shape in `docs/optimization/ALL_AXES_ACCELERATION_PLAN.md`. |
 | `generate-tests [--op NAME \| --all]` | Wraps `vyre-gen-tests` to materialize generated conformance tests. |
 | `mutation-gate [--tests PATH]` | Wraps H6 (mutation gate) to probe agent-written tests for surviving mutations. |
 | `coverage-check` | Runs the workspace coverage check target. |

@@ -1,0 +1,82 @@
+# Completion attestation bundle for VX-1007 through VX-1011 and VX-1017.
+# PROV entities and activities, in-toto materials/products, SSDF practices, OSCAL control mapping, and GUAC-style relationships share one bundle.
+
+schema = "vyre.plan.completion_attestation_bundle.v1"
+owner = "coordination"
+evidence_tokens = ["W3C_PROV_DM", "IN_TOTO_ATTESTATION", "NIST_SSDF", "NIST_OSCAL", "OPENSSF_GUAC"]
+
+required_fields = [
+  "attestation_id",
+  "predicate_family",
+  "prov_entity",
+  "prov_activity",
+  "prov_agent",
+  "materials",
+  "products",
+  "byproducts",
+  "ssdf_practice",
+  "oscal_control_family",
+  "guac_relationship",
+  "publication_class",
+  "completion_effect",
+]
+
+[[attestation]]
+attestation_id = "plan-row-closure-attestation"
+predicate_family = "in-toto-link-plus-prov-derivation"
+prov_entity = "ALL_AXES_ACCELERATION_PLAN.md"
+prov_activity = "plan-row-extension-and-review"
+prov_agent = "local-main-codex-thread"
+materials = ["RESEARCH_SOURCE_LEDGER.toml", "OWNERSHIP.toml"]
+products = ["PLAN_EXECUTION_DAG.toml", "PLAN_ARTIFACT_AUTHORITY_MAP.toml"]
+byproducts = ["row-range-vx-1001-through-vx-1020"]
+ssdf_practice = "PO.1-define-security-requirements-for-software-development"
+oscal_control_family = "program-management-and-system-services"
+guac_relationship = "plan-row-generates-execution-node"
+publication_class = "public-vyre-safe"
+completion_effect = "adds-execution-topology-without-marking-completion"
+
+[[attestation]]
+attestation_id = "release-gate-attestation"
+predicate_family = "in-toto-link-plus-prov-usage"
+prov_entity = "FINAL_RELEASE_GATE_MANIFEST.toml"
+prov_activity = "gate-evidence-consumption"
+prov_agent = "user-authorized-validation"
+materials = ["FINAL_RELEASE_GATE_MANIFEST.toml", "COMPLETION_AUDIT_EVIDENCE_MATRIX.toml"]
+products = ["release-gate-result-artifacts"]
+byproducts = ["redacted-local-evidence-summary"]
+ssdf_practice = "PW.8-protect-code-from-vulnerabilities-and-verify-release"
+oscal_control_family = "assessment-authorization-and-monitoring"
+guac_relationship = "gate-consumes-artifact-and-produces-evidence"
+publication_class = "public-vyre-safe-with-private-redaction"
+completion_effect = "blocks-completion-until-direct-gate-evidence-exists"
+
+[[attestation]]
+attestation_id = "dedup-authority-attestation"
+predicate_family = "prov-specialization-plus-authority-map"
+prov_entity = "PLAN_ARTIFACT_AUTHORITY_MAP.toml"
+prov_activity = "duplicate-authority-elimination"
+prov_agent = "organization_dedup"
+materials = ["RESEARCH_SOURCE_LEDGER.toml", "PUBLICATION_BOUNDARY_MANIFEST.toml", "FINAL_RELEASE_GATE_MANIFEST.toml"]
+products = ["single-authority-artifact-map"]
+byproducts = ["duplicate-policy-import-only-records"]
+ssdf_practice = "PO.3-implement-supporting-toolchains-and-processes"
+oscal_control_family = "configuration-management"
+guac_relationship = "artifact-authority-normalizes-duplicate-relationships"
+publication_class = "public-vyre-safe"
+completion_effect = "prevents-parallel-registries-from-becoming-competing-truth-sources"
+
+[[attestation]]
+attestation_id = "public-private-boundary-attestation"
+predicate_family = "in-toto-link-plus-prov-attribution"
+prov_entity = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+prov_activity = "public-package-boundary-enforcement"
+prov_agent = "coordination"
+materials = ["PUBLICATION_BOUNDARY_MANIFEST.toml", "PLAN_ARTIFACT_AUTHORITY_MAP.toml"]
+products = ["public-vyre-package-boundary-evidence"]
+byproducts = ["private-santh-exclusion-record"]
+ssdf_practice = "PS.3-archive-and-protect-software-release-materials"
+oscal_control_family = "system-and-information-integrity"
+guac_relationship = "public-artifact-excludes-private-worktree-material"
+publication_class = "public-vyre-safe"
+completion_effect = "keeps-santh-private-and-vyre-public-boundaries-explicit"

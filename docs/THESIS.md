@@ -41,7 +41,7 @@ Read [`THESIS.md`](../THESIS.md) for the full contract.
 Read [`ARCHITECTURE.md`](../ARCHITECTURE.md) for the engineering rules
 and the three architectural laws (A  -  no closed IR enums, B  -  no
 string-based WGSL, C  -  supported_ops capability negotiation).
-Read [`VISION.md`](../../docs/VISION.md) for the long-range product direction.
+Read [`VISION.md`](VISION.md) for the long-range product direction.
 Read [`docs/memory-model.md`](memory-model.md) for the authoritative
 memory contract backends implement against.
 Read [`docs/targets.md`](targets.md) for the supported-target matrix

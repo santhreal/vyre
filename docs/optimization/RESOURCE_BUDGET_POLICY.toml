@@ -1,0 +1,51 @@
+# Resource budget policy for VX-921 through VX-925.
+# Memory, CPU time, GPU memory, queue slots, recursion depth, and file bytes use one operator-visible budget contract.
+
+schema = "vyre.resource.budget_policy.v1"
+owner = "security_reliability"
+evidence_tokens = ["CWE_400_RESOURCE_CONSUMPTION", "CWE_770_RESOURCE_ALLOCATION", "NIST_SP_800_190"]
+
+required_fields = [
+  "budget_id",
+  "resource_class",
+  "tier_a_config",
+  "default_limit",
+  "hard_limit",
+  "measurement_unit",
+  "operator_visible_effect",
+  "exhaustion_diagnostic",
+  "metrics_link",
+]
+
+[[budget]]
+budget_id = "scan-input-bytes"
+resource_class = "memory-and-io"
+tier_a_config = "scan.max_input_bytes"
+default_limit = "1GiB"
+hard_limit = "8GiB"
+measurement_unit = "bytes"
+operator_visible_effect = "refuse scan before unbounded allocation"
+exhaustion_diagnostic = "VYRE_RESOURCE_INPUT_BYTES_LIMIT"
+metrics_link = "METRICS_EXPOSITION_CONTRACTS.toml"
+
+[[budget]]
+budget_id = "gpu-resident-memory"
+resource_class = "gpu-memory"
+tier_a_config = "runtime.max_gpu_resident_bytes"
+default_limit = "device-capability-derived"
+hard_limit = "operator-configured-upper-bound"
+measurement_unit = "bytes"
+operator_visible_effect = "route to CPU or chunked GPU execution"
+exhaustion_diagnostic = "VYRE_RESOURCE_GPU_MEMORY_LIMIT"
+metrics_link = "BACKEND_CAPABILITY_DIGESTS.toml"
+
+[[budget]]
+budget_id = "parser-recursion-depth"
+resource_class = "stack-and-recursion"
+tier_a_config = "parser.max_recursion_depth"
+default_limit = "1024"
+hard_limit = "16384"
+measurement_unit = "frames"
+operator_visible_effect = "fail closed with partial diagnostic"
+exhaustion_diagnostic = "VYRE_RESOURCE_RECURSION_LIMIT"
+metrics_link = "METRICS_EXPOSITION_CONTRACTS.toml"

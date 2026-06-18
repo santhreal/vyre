@@ -466,16 +466,19 @@ fn dispatch_resident_queue_sequence(
         program: &prepared.reset_program,
         resources: &reset_resources,
         grid_override: Some(QUEUE_RESET_GRID),
+        workgroup_override: None,
     };
     let high_reset_step = ResidentDispatchStep {
         program: &prepared.reset_program,
         resources: &high_reset_resources,
         grid_override: Some(QUEUE_RESET_GRID),
+        workgroup_override: None,
     };
     let queue_step = ResidentDispatchStep {
         program: &prepared.queue_program,
         resources: &queue_resources,
         grid_override: Some(frontier_word_grid(prepared.stats.frontier_words, workgroup)),
+        workgroup_override: None,
     };
 
     let mut frontier_output = Vec::with_capacity(prepared.baseline_output.len());
@@ -493,11 +496,13 @@ fn dispatch_resident_queue_sequence(
             program: &prepared.traverse_program,
             resources: &split_resources,
             grid_override: Some(prepared.traverse_grid),
+            workgroup_override: None,
         };
         let high_step = ResidentDispatchStep {
             program: high_program,
             resources: &high_resources,
             grid_override: Some(prepared.high_traverse_grid),
+            workgroup_override: None,
         };
         let read_ranges = [ResidentReadRange {
             resource: &high_resources[5],
@@ -524,6 +529,7 @@ fn dispatch_resident_queue_sequence(
             program: &prepared.traverse_program,
             resources: &traverse_resources,
             grid_override: Some(prepared.traverse_grid),
+            workgroup_override: None,
         };
         let read_ranges = [ResidentReadRange {
             resource: &traverse_resources[5],

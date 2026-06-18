@@ -42,7 +42,7 @@ mod args;
 mod ptx;
 
 #[cfg(test)]
-#[path = "egraph_kernel_plan/tests.rs"]
+#[path = "egraph_kernel_plan/tests/mod.rs"]
 mod tests;
 
 pub use constants::{

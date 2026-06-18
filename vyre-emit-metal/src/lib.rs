@@ -197,8 +197,8 @@ pub fn emit_optimized(desc: &KernelDescriptor) -> Result<String, EmitError> {
 pub fn emit_optimized_with_stats(
     desc: &KernelDescriptor,
 ) -> Result<(String, vyre_lower::rewrites::OptimizationStats), EmitError> {
-    let (optimized, stats) =
-        vyre_lower::verify_then_optimize(desc).map_err(|error| EmitError::NagaValidation(format!("{error:?}")))?;
+    let (optimized, stats) = vyre_lower::verify_then_optimize(desc)
+        .map_err(|error| EmitError::NagaValidation(format!("{error:?}")))?;
     let source = emit(&optimized)?;
     Ok((source, stats))
 }
@@ -362,7 +362,10 @@ fn emit_from_naga_module_with_resource_indices(
     Ok((source, entry_point, resource_map.sizes_buffer_index))
 }
 
-fn ensure_compute_entry_point(module: &naga::Module, entry_point: &str) -> Result<usize, EmitError> {
+fn ensure_compute_entry_point(
+    module: &naga::Module,
+    entry_point: &str,
+) -> Result<usize, EmitError> {
     let Some((index, ep)) = module
         .entry_points
         .iter()
@@ -400,9 +403,8 @@ fn metal_entry_point_resource_map(
             .ok_or_else(|| EmitError::BindingMap {
                 group: binding.group,
                 binding: binding.binding,
-                reason:
-                    "resource binding was not present in the dense Metal buffer index map"
-                        .to_string(),
+                reason: "resource binding was not present in the dense Metal buffer index map"
+                    .to_string(),
             })?;
         resources.resources.insert(
             binding,
@@ -411,7 +413,7 @@ fn metal_entry_point_resource_map(
                 texture: None,
                 sampler: None,
                 mutable: true,
-                },
+            },
         );
         max_buffer = Some(max_buffer.map_or(buffer, |max| max.max(buffer)));
     }
@@ -420,9 +422,8 @@ fn metal_entry_point_resource_map(
             max.checked_add(1).ok_or_else(|| EmitError::BindingMap {
                 group: 0,
                 binding: u32::from(max),
-                reason:
-                    "no free Metal buffer slot remains for Naga's _buffer_sizes sidecar"
-                        .to_string(),
+                reason: "no free Metal buffer slot remains for Naga's _buffer_sizes sidecar"
+                    .to_string(),
             })
         })
         .transpose()?;
@@ -538,9 +539,8 @@ fn metal_bindings(
                 .ok_or_else(|| EmitError::BindingMap {
                     group,
                     binding: slot.slot,
-                    reason:
-                        "descriptor slot was missing from the dense Metal buffer index map"
-                            .to_string(),
+                    reason: "descriptor slot was missing from the dense Metal buffer index map"
+                        .to_string(),
                 })?;
         out.push(MetalBindingMetadata {
             name: slot.name.clone(),
@@ -576,13 +576,14 @@ fn metal_threadgroup_memories(
             binding: slot.slot,
             reason: "threadgroup memory requires static element_count metadata".to_string(),
         })?;
-        let element_size = u64::try_from(slot.element_type.min_bytes().max(4)).map_err(|error| {
-            EmitError::BindingMap {
-                group: 0,
-                binding: slot.slot,
-                reason: format!("threadgroup element byte size does not fit u64: {error}"),
-            }
-        })?;
+        let element_size =
+            u64::try_from(slot.element_type.min_bytes().max(4)).map_err(|error| {
+                EmitError::BindingMap {
+                    group: 0,
+                    binding: slot.slot,
+                    reason: format!("threadgroup element byte size does not fit u64: {error}"),
+                }
+            })?;
         let byte_length = u64::from(element_count)
             .checked_mul(element_size)
             .ok_or_else(|| EmitError::BindingMap {
@@ -834,11 +835,7 @@ mod tests {
 
     #[test]
     fn trap_sidecar_compare_exchange_emits_msl_helper() {
-        let program = Program::wrapped(
-            vec![],
-            [64, 1, 1],
-            vec![Node::trap(Expr::u32(7), "fault")],
-        );
+        let program = Program::wrapped(vec![], [64, 1, 1], vec![Node::trap(Expr::u32(7), "fault")]);
         let desc = vyre_lower::lower(&program).expect("Fix: trap programs must descriptor-lower");
         let artifact = emit_artifact(&desc).expect("Fix: trap descriptors must emit Metal MSL");
 

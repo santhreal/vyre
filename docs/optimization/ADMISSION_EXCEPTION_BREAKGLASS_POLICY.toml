@@ -1,0 +1,43 @@
+# Admission exception and breakglass policy for VX-1350, VX-1351, VX-1354, VX-1355, and VX-1357.
+# Exception scope, authorization, expiry, audit, remediation, and release gate effects share one controlled-bypass seam.
+
+schema = "vyre.ops.admission_exception_breakglass_policy.v1"
+owner = "coordination"
+evidence_tokens = ["KUBERNETES_DYNAMIC_ADMISSION", "KUBERNETES_VALIDATING_ADMISSION_POLICY", "KUBERNETES_AUDITING", "FIRST_PSIRT_SERVICES_FRAMEWORK"]
+
+required_fields = [
+  "exception_id",
+  "trigger_policy",
+  "scope_policy",
+  "authorization_policy",
+  "expiry_policy",
+  "audit_policy",
+  "remediation_policy",
+  "privacy_boundary",
+  "release_gate_effect",
+  "diagnostic",
+]
+
+[[exception]]
+exception_id = "operator-recovery-breakglass"
+trigger_policy = "restore-rollback-security-incident-or-cluster-recovery-action-cannot-complete-under-current-admission-denial"
+scope_policy = "namespace-resource-kind-object-name-policy-id-duration-and-requesting-identity-recorded-before-bypass"
+authorization_policy = "authorized-owner-route-security-or-release-incident-id-and-two-person-review-required-for-release-critical-bypass"
+expiry_policy = "time-bounded-single-purpose-exception-with-automatic-expiration-and-no-open-ended-namespace-exemption"
+audit_policy = "Kubernetes-audit-event-policy-decision-user-groups-objectRef-reason-and-post-action-result-captured"
+remediation_policy = "exception-must-end-with-policy-fix-resource-fix-or-rollback-forward-fix-decision-record"
+privacy_boundary = "public-status-redacts-user-sensitive-detail-secrets-private-Santh-paths-and-exploit-reproducer-material"
+release_gate_effect = "active-unexpired-exception-blocks-full-promotion-unless-release-health-record-identifies-accepted-public-impact"
+diagnostic = "VYRE_OPERATOR_RECOVERY_BREAKGLASS_REQUIRED"
+
+[[exception]]
+exception_id = "policy-audit-to-enforce-promotion"
+trigger_policy = "policy-starts-in-Warn-Audit-or-policy-report-mode-before-enforced-Deny-mode"
+scope_policy = "policy-id-engine-id-namespace-selector-resource-kind-and-negative-fixture-scope-recorded"
+authorization_policy = "promotion-to-Deny-requires-owner-route-clean-audit-window-negative-case-proof-and-no-release-blocker"
+expiry_policy = "audit-only-mode-has-explicit-promotion-gate-and-expiry-before-public-readiness-claim"
+audit_policy = "violations-summarized-by-policy-id-resource-kind-namespace-class-and-redacted-owner-route"
+remediation_policy = "all-current-violations-fixed-or-risk-recorded-before-Deny-mode-release-gate-clears"
+privacy_boundary = "policy-report-output-excludes-private-hostnames-device-serials-secret-values-and-Santh-private-roots"
+release_gate_effect = "audit-only-policy-cannot-satisfy-enforced-control-claim-without-promotion-record"
+diagnostic = "VYRE_POLICY_AUDIT_TO_ENFORCE_PROMOTION_REQUIRED"

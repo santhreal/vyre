@@ -112,6 +112,22 @@ pub mod edge_kind {
     /// source on every recv / memcpy / copy_from_user shape).
     pub const SIZE_ARG: u32 = 1 << 24;
 
+    /// Block-membership edge: a CFG basic-block's entry node and every
+    /// AST node contained in that block are joined by a BIDIRECTIONAL
+    /// `BLOCK_MEMBER` pair (`block_entry -> node` and `node ->
+    /// block_entry`). DOMINANCE idom edges only connect block-entry
+    /// nodes to each other, so `dominates($a, $b)` on call-expression
+    /// operands (which hang off blocks via PARENT, not the idom chain)
+    /// would otherwise see an empty dominance graph. The
+    /// `dominator_tree` shim traverses `DOMINANCE | BLOCK_MEMBER`, so a
+    /// backward step from a call node reaches its block entry, walks the
+    /// idom chain, then descends into each dominating block's contained
+    /// nodes — yielding correct block-level dominance for arbitrary
+    /// operands. Deliberately NOT in the CONTROL|DOMINANCE mask the CPU
+    /// dominator bitmap (`sanitized_by`) uses, so that subsystem is
+    /// unaffected.
+    pub const BLOCK_MEMBER: u32 = 1 << 25;
+
     /// Build the per-slot mask. Slot N maps to
     /// `CALL_ARG_SLOT_BASE << N` for N in 0..=7. Beyond that the
     /// caller must fall back to the generic CALL_ARG bit (recall-safe

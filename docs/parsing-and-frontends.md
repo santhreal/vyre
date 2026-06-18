@@ -101,6 +101,39 @@ An `ast_walk_preorder` dispatched over a `PackedAst` buffer:
 Nothing language-specific. Same op works for C, Rust, Go, Python  -  as
 long as the frontend emitted a valid `PackedAst`.
 
+## Incremental edit-corpus registry
+
+Changed-range parser evidence is source-owned in `vyre_foundation::vast`,
+not inferred from benchmark prose. The registry types are
+`VastEditCorpusCase`, `VastEdit`, `VastChangedRange`, and
+`VastEditCorpusEvidence`; the validator is `vast_edit_corpus_evidence`.
+
+Each edit-corpus row records:
+- `before_bytes`: old source bytes.
+- `edits`: sorted, non-overlapping half-open old-source byte ranges plus replacement bytes.
+- `changed_ranges`: old/new byte ranges derived from the edit script.
+- `reused_node_count`: VAST nodes reused from the old tree.
+- `updated_vast` and `full_reparse_vast`: byte-identical VAST outputs required for acceptance.
+- `vast_digest`, `full_reparse_vast_digest`, and `diagnostic_digest`: BLAKE3 evidence fields.
+
+Parser benchmarks consume this registry when claiming incremental parsing:
+the changed-range update and full parse must emit identical VAST bytes, and
+the diagnostic digest must be tied to the edited source.
+
+## Parser tokenization fallback policy
+
+Release evidence: `release/evidence/docs/parser-doc-proof.md`.
+
+Parser tokenization may use regex-style fallback paths only when the policy
+is explicit in the benchmark or frontend evidence row:
+- `literal anchor`: the token family names its anchoring byte sequence, prefix, or delimiter set before invoking a broader verifier.
+- `verifier rule`: every candidate path names the exact verifier predicate that accepts or rejects the token span.
+- `quadratic guard`: each fallback records a guard counter or byte budget proving it cannot turn nested comments, escaped strings, or incomplete tokens into quadratic work.
+- `host-loop ban`: parser hot paths must not hide an unbounded host loop behind a GPU tokenization claim; host setup must be named as a separate stage boundary.
+
+The docs matrix gate treats missing literal anchors, verifier rules,
+quadratic guard counters, or host-loop bans as parser documentation blockers.
+
 ## Where the code lives  -  **0.6.x (current tree)**
 
 C11 work is **not** a separate `vyre-libs-parse-c` crate yet. It is Tier 3

@@ -157,7 +157,7 @@ Every capability below callable from a SURGE rule, compiles to vyre IR, fuses in
 - Incremental rebuild: change one file, only the affected slice recompiles.
 
 ### B.3 Battle-tested frontends (source + binary + network + package)
-Surgec is the universal vuln/malware detection engine. Every artifact class a security researcher analyzes needs a first-class frontend. See `libs/tools/surgec/SCOPE.md` for the full catalog; the shipping minimum is:
+Surgec is the universal vuln/malware detection engine. Every artifact class a security researcher analyzes needs a first-class frontend. See `libs/surge/surgec/SCOPE.md` for the full catalog; the shipping minimum is:
 
 **Source languages** (each: GPU-dispatched lex + parse + AST; corpus test on a real codebase with parse-success rate published in CI)
 - **C** — ISO C + preprocessor-faithful + bitfields + `_Atomic` + VLAs + GCC/Clang extensions (SURGE-C grammar gen). Corpus: Linux kernel + Chromium C extension.
@@ -192,7 +192,7 @@ Every frontend listed in B.3 ships with:
 - A SURGE `lang:` gate — `rust:unsafe_block`, `go:init_import`, `dex:export_method`, `terraform:public_ingress`, etc. — so rule authors attach rules to frontend-specific predicates without adapter plumbing.
 
 ### B.4 The 20 impeccable launch rules (shipping minimum — stdlib is open-ended)
-Surgec covers every vuln/malware class enumerated in `libs/tools/surgec/SCOPE.md`. The 20 rules below are the **minimum shipping batch** — the stdlib keeps growing forever. Every rule: real CVE-class, 100s of SURGE lines allowed, cross-file, dataflow-driven, zero false negatives on known corpora, measured FP rate, ships with positive + negative test corpus, latency budget, published finding rate.
+Surgec covers every vuln/malware class enumerated in `libs/surge/surgec/SCOPE.md`. The 20 rules below are the **minimum shipping batch** — the stdlib keeps growing forever. Every rule: real CVE-class, 100s of SURGE lines allowed, cross-file, dataflow-driven, zero false negatives on known corpora, measured FP rate, ships with positive + negative test corpus, latency budget, published finding rate.
 
 1. SQL injection (taint → SQL driver, sanitizer-aware, ORM-aware).
 2. Command injection (→ exec/system/subprocess, `shell=True` aware).
@@ -247,7 +247,7 @@ Surgec covers every vuln/malware class enumerated in `libs/tools/surgec/SCOPE.md
 
 ### C.2 Organization to Linux subsystem standard
 - `libs/surge/` = language only (AST, lexer, parser, type system, zero runtime/GPU/vyre deps).
-- `libs/tools/surgec/` = compiler only (SURGE AST → vyre IR, no runtime/IO).
+- `libs/surge/surgec/` = compiler only (SURGE AST → vyre IR, no runtime/IO).
 - Runtime (scan engine) separated from `compile/`.
 - Stdlib rules in `surgec/rules/stdlib/*.srg` — houses the 20 launch rules.
 - Pyrograph absorbed.
@@ -326,7 +326,7 @@ Critical path: **P0 → P2 → P1 → P4** (hygiene → real lowering → scan e
 ### Phase 0 — Workspace hygiene (Torvalds-level organization)
 Rule: if it doesn't run, it doesn't exist.
 
-- **P0.1** Move `libs/performance/matching/vyre/surgec-grammar-gen/` → `libs/surge/grammar-gen/` or `libs/tools/surgec/grammar-gen/`. Cargo path fix, zero new code. Acceptance: `cargo test -p surgec-grammar-gen` passes at the new location.
+- **P0.1** Move `libs/performance/matching/vyre/surgec-grammar-gen/` → `libs/surge/grammar-gen/` or `libs/surge/surgec/grammar-gen/`. Cargo path fix, zero new code. Acceptance: `cargo test -p surgec-grammar-gen` passes at the new location.
 - **P0.2** Prune hollow workspace crates:
   - Delete `vyre-libs-extern` (13 LOC empty lib.rs).
   - Delete or move-to-examples `vyre-libs-template` (134 LOC scaffold).
@@ -451,7 +451,7 @@ Every `I.*` in Section I lands. Each innovation carries a bench proving its clai
 
 ## SECTION F — line-level findings (every flaw, every file)
 
-Source: line-by-line read of ~50 source files across `libs/surge/`, `libs/tools/surgec/`, `libs/performance/matching/vyre/`. Each finding has file + line. Findings that a Phase task already covers are cross-referenced; new findings get `F-*` IDs and map into Phase 8.
+Source: line-by-line read of ~50 source files across `libs/surge/`, `libs/surge/surgec/`, `libs/performance/matching/vyre/`. Each finding has file + line. Findings that a Phase task already covers are cross-referenced; new findings get `F-*` IDs and map into Phase 8.
 
 ### A — Architectural cracks
 - **A1 🔴 Two disconnected lowering pipelines.** `compile/compile.rs:153` calls `ir_emit::compile_scanner_predicate()`; `lower/mod.rs:177` ignores `ir_emit` and dispatches to `vyre-primitives` + `vyre-libs::security`. Two independent compilation backends for the same input. → **P2.1.**

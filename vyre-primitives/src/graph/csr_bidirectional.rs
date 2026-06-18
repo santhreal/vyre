@@ -958,7 +958,11 @@ where
 #[must_use]
 
 pub fn merge_frontier_or_changed(current: &mut [u32], next: &[u32]) -> bool {
-    try_merge_frontier_or_changed(current, next).unwrap_or_else(|err| panic!("{err}"))
+    // Fail fast on a caller contract violation (mismatched bitset lengths).
+    // `unwrap_or(false)` would silently report "no change" for an unmergeable
+    // pair, hiding a fixpoint bug. Use `try_merge_frontier_or_changed` to handle
+    // it structurally.
+    try_merge_frontier_or_changed(current, next).unwrap_or_else(|error| panic!("{error}"))
 }
 
 /// Fallible variant of [`merge_frontier_or_changed`].

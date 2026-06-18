@@ -1,0 +1,37 @@
+# URL canonicalization policy for VX-861 through VX-864.
+# URL parsing, normalization, host classification, and origin comparison use one policy.
+
+schema = "vyre.network.url_canonicalization_policy.v1"
+owner = "security_reliability"
+evidence_tokens = ["WHATWG_URL", "OWASP_SSRF"]
+
+required_fields = [
+  "policy_id",
+  "parser",
+  "normalization_steps",
+  "host_classification",
+  "scheme_policy",
+  "port_policy",
+  "origin_policy",
+  "diagnostic",
+]
+
+[[policy]]
+policy_id = "operator-supplied-url"
+parser = "whatwg-url-compatible"
+normalization_steps = ["percent-decode-for-host-classification", "idna-normalize-host", "remove-default-port", "normalize-path-dot-segments"]
+host_classification = "classify-before-and-after-resolution"
+scheme_policy = "allow-http-https-only-by-default"
+port_policy = "explicit-allowlist-or-default-port"
+origin_policy = "scheme-host-port-origin"
+diagnostic = "VYRE_URL_CANONICALIZATION_REFUSED"
+
+[[policy]]
+policy_id = "report-link-url"
+parser = "whatwg-url-compatible"
+normalization_steps = ["reject-control-characters", "normalize-fragment-policy", "redact-secret-like-query-values"]
+host_classification = "public-link-only"
+scheme_policy = "allow-https-for-public-docs"
+port_policy = "default-port-only"
+origin_policy = "public-origin-required"
+diagnostic = "VYRE_URL_PUBLIC_LINK_REFUSED"

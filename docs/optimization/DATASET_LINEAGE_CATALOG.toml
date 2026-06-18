@@ -1,0 +1,55 @@
+# Dataset and corpus lineage catalog for VX-841 through VX-847.
+# Benchmark corpora, fuzz seeds, fixtures, rules, and release evidence use one catalog and provenance seam.
+
+schema = "vyre.data.dataset_lineage_catalog.v1"
+owner = "bench_harness"
+evidence_tokens = ["W3C_PROV_O", "W3C_DCAT_3"]
+
+required_fields = [
+  "dataset_id",
+  "catalog_entry",
+  "entity_digest",
+  "activity",
+  "agent",
+  "distribution",
+  "license_class",
+  "access_rights",
+  "derived_from",
+  "publication_class",
+]
+
+[[dataset]]
+dataset_id = "scan-regex-batch-fixtures"
+catalog_entry = "benchmark-corpus"
+entity_digest = "sha256:scan-regex-batch-fixtures"
+activity = "generated-from-public-fixtures-and-synthetic-patterns"
+agent = "vyre-bench"
+distribution = "local-fixture-and-public-summary"
+license_class = "public-compatible"
+access_rights = "public-summary-private-raw-if-local"
+derived_from = ["synthetic-pattern-generator", "public-test-fixtures"]
+publication_class = "public-vyre-artifact"
+
+[[dataset]]
+dataset_id = "fuzz-scan-wire-seeds"
+catalog_entry = "fuzz-corpus"
+entity_digest = "sha256:scan-wire-seeds"
+activity = "minimized-from-structured-wire-inputs"
+agent = "vyre-libs"
+distribution = "checked-in-minimized-seeds"
+license_class = "project-owned-synthetic"
+access_rights = "public"
+derived_from = ["FUZZ_CORPUS_MINIMIZATION.toml"]
+publication_class = "public-vyre-artifact"
+
+[[dataset]]
+dataset_id = "private-local-debug-corpus"
+catalog_entry = "local-debug-corpus"
+entity_digest = "sha256:private-local-debug-corpus"
+activity = "captured-from-private-worktree-debugging"
+agent = "local-audit"
+distribution = "not-published"
+license_class = "private-local"
+access_rights = "private"
+derived_from = ["santh-private-root"]
+publication_class = "local-only-nonpublished-doc"

@@ -120,4 +120,4 @@ Release definition: this plan is complete only when the code, tests, benchmarks,
 97. Run deep personal review of every public crate file touched by the release and fix every finding before publishing.
 98. Run the full GPU validation and benchmark suite on local RTX 5090 and record exact hardware, driver, and command outputs in release artifacts.
 99. Publish only after the release checklist is green: cargo_full checks/tests, GPU tests, fuzz/gap findings triaged, benchmarks, docs, crate metadata, and public API review.
-100. Final launch step: cargo_full publish the approved crates, make the repositories public, and git push the release branch and tags.
+100. Final launch step: cargo_full publish the approved crates, verify `santhsecurity/vyre` is public without changing `Santh`, and git push the release branch and tags.

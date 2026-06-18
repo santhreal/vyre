@@ -1,0 +1,29 @@
+# Operator UX governance tranche coverage for VX-821 through VX-840.
+# CLI surface, structured errors, exit/stream policy, docs/help coherence, and publication boundaries share one coverage row.
+
+schema = "vyre.plan.operator_ux_governance_tranche_coverage.v1"
+owner = "coordination"
+evidence_tokens = ["RFC_9457_PROBLEM_DETAILS", "CLAP_RS", "GNU_CLI_STANDARDS", "POSIX_UTILITY_CONVENTIONS"]
+
+required_fields = [
+  "vx_id_range",
+  "cli_surface_contract",
+  "structured_error_contract",
+  "exit_stream_policy",
+  "docs_help_example_coherence",
+  "source_ledger_coverage",
+  "publication_boundary",
+  "dedup_seam",
+  "proof_gate",
+]
+
+[[coverage]]
+vx_id_range = "VX-821..VX-840"
+cli_surface_contract = "CLI_SURFACE_CONTRACTS.toml"
+structured_error_contract = "STRUCTURED_ERROR_PROBLEM_DETAILS.toml"
+exit_stream_policy = "EXIT_CODE_AND_STREAM_POLICY.toml"
+docs_help_example_coherence = "DOCS_HELP_EXAMPLE_COHERENCE.toml"
+source_ledger_coverage = "RESEARCH_SOURCE_LEDGER.toml"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+dedup_seam = "one-cli-contract-one-error-contract-one-exit-stream-policy-one-docs-coherence-contract"
+proof_gate = "operator_ux_governance.rs"

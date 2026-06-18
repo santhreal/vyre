@@ -1,0 +1,31 @@
+# End-to-end package registry and consumer tranche coverage for VX-1121 through VX-1140.
+# crates.io publication, docs.rs/rustdoc, consumer install modes, API semver/MSRV, existing package metadata, and proof gate share one coverage row.
+
+schema = "vyre.release.end_to_end_package_registry_consumer_tranche_coverage.v1"
+owner = "coordination"
+evidence_tokens = ["CARGO_PUBLISH", "CARGO_RUST_VERSION_FIELD", "DOCS_RS_BUILDS", "DOCS_RS_METADATA", "RUSTDOC_BOOK", "SEMVER_2_0", "RUST_API_GUIDELINES"]
+
+required_fields = [
+  "vx_id_range",
+  "crates_io_registry_publication_policy",
+  "docs_rs_rustdoc_publication_policy",
+  "consumer_install_compatibility_matrix",
+  "public_api_semver_msrv_policy",
+  "package_metadata_publication_policy",
+  "crate_boundary_feature_matrix",
+  "publication_boundary",
+  "dedup_seam",
+  "proof_gate",
+]
+
+[[coverage]]
+vx_id_range = "VX-1121..VX-1140"
+crates_io_registry_publication_policy = "CRATES_IO_REGISTRY_PUBLICATION_POLICY.toml"
+docs_rs_rustdoc_publication_policy = "DOCS_RS_RUSTDOC_PUBLICATION_POLICY.toml"
+consumer_install_compatibility_matrix = "CONSUMER_INSTALL_COMPATIBILITY_MATRIX.toml"
+public_api_semver_msrv_policy = "PUBLIC_API_SEMVER_MSRV_POLICY.toml"
+package_metadata_publication_policy = "PACKAGE_METADATA_PUBLICATION_POLICY.toml"
+crate_boundary_feature_matrix = "CRATE_BOUNDARY_FEATURE_MATRIX.toml"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+dedup_seam = "one-crates-io-policy-one-docs-rs-policy-one-consumer-compatibility-matrix-one-public-api-semver-msrv-policy"
+proof_gate = "package_registry_consumer_governance.rs"

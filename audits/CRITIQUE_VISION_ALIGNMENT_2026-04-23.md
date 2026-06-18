@@ -2,7 +2,7 @@
 
 **Date:** 2026-04-23  
 **Scope:** vyre-foundation, vyre-core, vyre-intrinsics, vyre-libs, vyre-driver-wgpu, vyre-runtime, surgec  
-**Source of truth:** `VISION.md` (vyre), `docs/library-tiers.md`, `docs/primitives-tier.md`, `docs/region-chain.md`, `libs/tools/surgec/README.md`  
+**Source of truth:** `VISION.md` (vyre), `docs/library-tiers.md`, `docs/primitives-tier.md`, `docs/region-chain.md`, `libs/surge/surgec/README.md`  
 **Authored by:** Claude, hands-on read.
 
 This file tracks where the codebase drifts from the north star. The vision is:
@@ -85,7 +85,7 @@ should never have been in foundation. Fixing V1 fixes V2 automatically.
 ## V3  -  surgec's SURGE lowering has string-domain predicates that don't yet map to arbitrary compute
 
 **Severity:** HIGH  
-**File:** `libs/tools/surgec/src/compile/ir_emit.rs:386-520` (`emit_predicate`)
+**File:** `libs/surge/surgec/src/compile/ir_emit.rs:386-520` (`emit_predicate`)
 
 **Drift:** surgec's `emit_predicate` has 20+ hard-coded `Predicate::*`
 variants (`Any`, `All`, `Count`, `FileSize`, `Before`, `After`, `Near`,
@@ -107,7 +107,7 @@ Program` via `Predicate::Opaque(DialectId)`. No edits to surgec core.
 Mirrors vyre's `Expr::Opaque` / `Node::Opaque` extension mechanism.
 
 **Status:** surgec has a `PredicateDef` registry file
-(`libs/tools/surgec/src/compile/predicates/`). Confirm every built-in
+(`libs/surge/surgec/src/compile/predicates/`). Confirm every built-in
 predicate is registered through the same door (not hard-coded in
 `emit_predicate`). Lowering should be
 `registry.get(pred_id).lower(args)?`, never a match arm per built-in.
@@ -122,7 +122,7 @@ match pred.kind() {
 ```
 Every other arm in today's `emit_predicate` becomes a registered
 built-in, each a file under
-`libs/tools/surgec/src/compile/predicates/` that ships its
+`libs/surge/surgec/src/compile/predicates/` that ships its
 `fn(args) -> Program`.
 
 ---
@@ -130,7 +130,7 @@ built-in, each a file under
 ## V4  -  Promise vs reality: "arbitrary compute" is still rule-shaped surface
 
 **Severity:** HIGH (this is the biggest drift)  
-**Files:** `libs/tools/surgec/src/cli/mod.rs` (subcommands), `src/scan/*`
+**Files:** `libs/surge/surgec/src/cli/mod.rs` (subcommands), `src/scan/*`
 
 **Drift:** surgec's CLI exposes `scan`, `compile`, `bundle`,
 `diff-replay`, `watch`, `distribute`. Every verb is scan-shaped. The
@@ -164,7 +164,7 @@ arbitrary-compute path goes through `run` and emits raw bytes.
 ## V5  -  `vyre-libs::security` is Tier-3, but `surgec::compile::ir_emit` calls it directly
 
 **Severity:** MEDIUM  
-**File:** `libs/tools/surgec/src/compile/ir_emit.rs:7,410,421` (`use vyre_libs::security::topology::match_order`)
+**File:** `libs/surge/surgec/src/compile/ir_emit.rs:7,410,421` (`use vyre_libs::security::topology::match_order`)
 
 **Drift:** surgec reaches into `vyre_libs::security::topology`  -  a
 Tier-3 dialect  -  to get `match_order`. That's correct IF surgec is a
@@ -251,7 +251,7 @@ does: compile a `.surge` expressing matrix multiply / convolution /
 generic dataflow → dispatch through wgpu → assert raw output bytes.
 Until that test exists, "arbitrary compute" is a claim not a capability.
 
-**Fix:** add `libs/tools/surgec/tests/run_arbitrary.rs` with one
+**Fix:** add `libs/surge/surgec/tests/run_arbitrary.rs` with one
 hand-rolled program (e.g., `gemv` 32x32) that compiles, dispatches,
 and asserts bytewise-correct output against a CPU reference.
 

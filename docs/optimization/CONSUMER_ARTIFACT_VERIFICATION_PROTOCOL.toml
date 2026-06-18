@@ -1,0 +1,55 @@
+# Consumer artifact verification protocol for VX-1164, VX-1167, VX-1170, VX-1172, VX-1173, and VX-1178.
+# Cargo checksum verification, Sigstore Cosign, SLSA verifier, trust roots, failure handling, and offline bundles share one consumer verification seam.
+
+schema = "vyre.release.consumer_artifact_verification_protocol.v1"
+owner = "dogfood_ux"
+evidence_tokens = ["CARGO_REGISTRY_INDEX_CHECKSUM", "SIGSTORE_COSIGN_VERIFY", "SLSA_VERIFIER", "IN_TOTO_ATTESTATION", "SLSA_PROVENANCE"]
+
+required_fields = [
+  "verifier_id",
+  "consumer_surface",
+  "trust_root_policy",
+  "fetch_policy",
+  "digest_check",
+  "signature_attestation_check",
+  "source_expectation_check",
+  "failure_policy",
+  "offline_policy",
+  "diagnostic",
+]
+
+[[verifier]]
+verifier_id = "cargo-package-consumer"
+consumer_surface = "cargo-install-or-cargo-add"
+trust_root_policy = "Cargo-registry-index-and-crates-io-download-checksum"
+fetch_policy = "download-public-crate-package-through-Cargo-registry"
+digest_check = "crate-archive-sha256-matches-registry-index-checksum"
+signature_attestation_check = "optional-release-metadata-bundle-check-when-operator-requests-extra-verification"
+source_expectation_check = "crate-name-version-and-public-repository-link-match-vyre-release-record"
+failure_policy = "checksum-or-source-mismatch-is-install-integrity-failure"
+offline_policy = "vendor-or-mirror-bundle-must-preserve-registry-checksum-and-public-release-metadata"
+diagnostic = "VYRE_CONSUMER_CARGO_CHECKSUM_VERIFICATION"
+
+[[verifier]]
+verifier_id = "github-release-asset-consumer"
+consumer_surface = "downloaded-binary-or-archive-asset"
+trust_root_policy = "public-vyre-release-signing-identity-and-immutable-release-tag"
+fetch_policy = "fetch-asset-checksum-signature-bundle-provenance-and-SBOM-from-public-release"
+digest_check = "downloaded-asset-digest-matches-RELEASE_ARTIFACT_INTEGRITY_INDEX.toml"
+signature_attestation_check = "cosign-verify-blob-bundle-and-slsa-verifier-provenance-checks-required"
+source_expectation_check = "source-uri-santhsecurity-vyre-and-source-tag-match-release-version"
+failure_policy = "signature-provenance-or-source-expectation-mismatch-blocks-use"
+offline_policy = "offline-bundle-carries-asset-signature-certificate-bundle-provenance-SBOM-and-checksum"
+diagnostic = "VYRE_CONSUMER_RELEASE_ASSET_VERIFICATION"
+
+[[verifier]]
+verifier_id = "enterprise-mirror-consumer"
+consumer_surface = "internal-mirror-or-airgapped-install"
+trust_root_policy = "mirror-trust-does-not-replace-public-vyre-release-trust-root"
+fetch_policy = "mirror-import-preserves-artifact-digest-provenance-SBOM-signature-and-transparency-entry"
+digest_check = "mirrored-artifact-digest-equals-public-release-index-digest"
+signature_attestation_check = "cosign-and-SLSA-verification-use-original-public-vyre-identities"
+source_expectation_check = "mirror-metadata-records-original-public-source-tag-and-repository"
+failure_policy = "mirror-drift-or-missing-verification-bundle-blocks-release-health-clearance"
+offline_policy = "TUF-style-metadata-bundle-required-for-rollback-and-freeze protection"
+diagnostic = "VYRE_CONSUMER_MIRROR_VERIFICATION_REQUIRED"

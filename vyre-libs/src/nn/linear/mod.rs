@@ -8,5 +8,6 @@ pub use inner::{
 #[cfg(feature = "nn-linear-4bit")]
 pub use inner::{
     linear_4bit, linear_4bit_affine_grouped, linear_4bit_affine_grouped_typed,
-    QuantizedLinear4BitSpec,
+    linear_4bit_affine_grouped_planner_evidence, QuantizedLinear4BitPlannerEvidence,
+    QuantizedLinear4BitSpec, LINEAR_4BIT_AFFINE_GROUPED_OUTPUT_DRIFT_ABS_TOLERANCE,
 };

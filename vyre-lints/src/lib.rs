@@ -24,8 +24,44 @@ mod paths;
 pub mod production_cpu_fallbacks;
 pub mod raw_ir_in_libs;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
+use std::io::Read;
 use std::path::Path;
+
+const LINT_SOURCE_READ_CAP: usize = 64 * 1024 * 1024;
+
+pub(crate) fn read_source_bounded(path: &Path) -> Result<String> {
+    let mut file = std::fs::File::open(path)
+        .with_context(|| format!("open {}", path.display()))?;
+    let len = file
+        .metadata()
+        .with_context(|| format!("stat {}", path.display()))?
+        .len();
+    if len > LINT_SOURCE_READ_CAP as u64 {
+        anyhow::bail!(
+            "{} exceeds {LINT_SOURCE_READ_CAP} byte lint source read cap",
+            path.display()
+        );
+    }
+    let mut bytes = Vec::with_capacity(len as usize);
+    let mut buf = [0u8; 8192];
+    while bytes.len() <= LINT_SOURCE_READ_CAP {
+        let read = file
+            .read(&mut buf)
+            .with_context(|| format!("read {}", path.display()))?;
+        if read == 0 {
+            break;
+        }
+        bytes.extend_from_slice(&buf[..read]);
+        if bytes.len() > LINT_SOURCE_READ_CAP {
+            anyhow::bail!(
+                "{} exceeded {LINT_SOURCE_READ_CAP} byte lint source read cap while reading",
+                path.display()
+            );
+        }
+    }
+    String::from_utf8(bytes).with_context(|| format!("decode UTF-8 {}", path.display()))
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Violation {

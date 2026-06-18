@@ -13,10 +13,9 @@ use vyre_foundation::ir::Program;
 use vyre_runtime::megakernel::io::{
     try_encode_empty_io_queue_into, validate_io_queue_bytes, IO_SLOT_COUNT,
 };
-use vyre_runtime::megakernel::protocol;
 use vyre_runtime::megakernel::{
     build_program_sharded_once_slots_control_report_shared, build_scallop_lineage_with_scratch,
-    plan_compact_fusion_into, prune_redundant_work_items_with_scratch_into,
+    plan_compact_fusion_into, try_prune_redundant_work_items_with_scratch_into,
     CompactFusionPlanningScratch, CrossArmRedundancy, Megakernel, MegakernelConfig,
     MegakernelDispatch, MegakernelLaunchRecommendation, MegakernelReport, MegakernelTelemetry,
     MegakernelWorkItem, RedundantWorkItemPruneScratch, IO_SLOT_WORDS,
@@ -34,6 +33,9 @@ pub mod dispatcher;
 #[cfg(feature = "megakernel-batch")]
 #[path = "megakernel/pipeline_cache.rs"]
 pub(crate) mod pipeline_cache;
+#[cfg(feature = "megakernel-batch")]
+#[path = "megakernel/segmentation.rs"]
+pub mod segmentation;
 
 #[cfg(feature = "megakernel-batch")]
 pub use batch::{
@@ -45,7 +47,9 @@ pub use dispatch_plan::BatchDispatchPlan;
 #[cfg(feature = "megakernel-batch")]
 pub use dispatcher::{
     BatchDispatchConfig, BatchDispatchReport, BatchDispatchSummary, BatchDispatchTelemetry,
-    BatchDispatcher, BatchHitWriter,
+    BatchDispatcher, BatchHitWriter, WgpuScanBatchSegmentationError,
+    WgpuScanBatchSegmentationEvidence, WgpuScanBatchSegmentationRequest,
+    WGPU_SCAN_BATCH_SEGMENTATION_SCHEMA_VERSION, wgpu_scan_batch_segmentation_evidence,
 };
 
 thread_local! {
@@ -199,11 +203,12 @@ impl<'a> WgpuMegakernelDispatcher<'a> {
         }
 
         let plan_start = Instant::now();
-        let redundancy = prune_redundant_work_items_with_scratch_into(
+        let redundancy = try_prune_redundant_work_items_with_scratch_into(
             work_items,
             &mut scratch.deduped_items,
             &mut scratch.dedupe,
-        );
+        )
+        .map_err(|error| BackendError::new(error.to_string()))?;
         let planning_items = if redundancy.is_empty() {
             work_items
         } else {
@@ -465,7 +470,7 @@ fn strict_done_ring_slots_from_outputs(
             "megakernel item_count {item_count} cannot fit u32 for ring decode: {source}. Fix: shard megakernel dispatches before protocol ring sizing."
         ))
     })?;
-    let ring_bytes = protocol::ring_byte_len(item_count_u32).ok_or_else(|| {
+    let ring_bytes = Megakernel::ring_byte_len(item_count_u32).ok_or_else(|| {
         BackendError::new(
             "megakernel item_count ring byte length overflowed. Fix: shard megakernel dispatches before protocol ring sizing.".to_string(),
         )
@@ -477,7 +482,7 @@ fn strict_done_ring_slots_from_outputs(
             continue;
         }
         saw_ring_output = true;
-        let done = protocol::try_count_done_ring_slots(bytes, item_count)
+        let done = Megakernel::try_count_done_ring_slots(bytes, item_count)
             .map_err(|source| BackendError::new(source.to_string()))?;
         max_done = max_done.max(done);
     }
@@ -806,7 +811,7 @@ fn ensure_empty_io_queue_bytes(bytes: &mut Vec<u8>) -> Result<(), BackendError> 
 }
 
 fn ensure_control_bytes(bytes: &mut Vec<u8>) -> Result<(), BackendError> {
-    let expected = protocol::control_byte_len(0).ok_or_else(|| {
+    let expected = Megakernel::control_byte_len(0).ok_or_else(|| {
         BackendError::new(
             "megakernel control byte length overflowed usize. Fix: reduce observable slot count."
                 .to_string(),
@@ -820,13 +825,14 @@ fn ensure_control_bytes(bytes: &mut Vec<u8>) -> Result<(), BackendError> {
 }
 
 fn ensure_empty_debug_log_bytes(bytes: &mut Vec<u8>) -> Result<(), BackendError> {
-    let expected = protocol::debug_log_byte_len(protocol::debug::RECORD_CAPACITY).ok_or_else(|| {
+    let record_capacity = Megakernel::debug_record_capacity();
+    let expected = Megakernel::debug_log_byte_len(record_capacity).ok_or_else(|| {
         BackendError::new(
             "megakernel debug-log byte length overflowed usize. Fix: reduce debug record capacity.".to_string(),
         )
     })?;
     if bytes.len() != expected {
-        Megakernel::try_encode_empty_debug_log_into(protocol::debug::RECORD_CAPACITY, bytes)
+        Megakernel::try_encode_empty_debug_log_into(record_capacity, bytes)
             .map_err(|error| BackendError::new(error.to_string()))?;
     }
     Ok(())

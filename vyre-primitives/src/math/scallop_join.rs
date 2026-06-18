@@ -150,11 +150,7 @@ pub fn scallop_join(
     }
 
     // n*n cells, each one u32  -  one "word" per cell for ping-pong.
-    let words = n.checked_mul(n).unwrap_or_else(|| {
-        panic!(
-            "scallop_join n={n} overflows relation matrix word count. Fix: shard the relation matrix before GPU dispatch."
-        )
-    });
+    let words = n.saturating_mul(n);
 
     let body = if words <= SCALLOP_JOIN_WORKGROUP_SIZE[0] {
         single_word_lineage_body(

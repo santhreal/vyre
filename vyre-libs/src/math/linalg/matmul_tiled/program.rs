@@ -7,6 +7,7 @@ use crate::tensor_ref::TensorRefError;
 
 use super::body::cooperative_matmul_body;
 use super::mma_body::cooperative_matmul_body_mma;
+use super::mma_fragment::{gate_mma_path, MmaCapabilityRecord};
 use super::shape::{output_tile_shape, padded_tile_lane_count, MatrixShape, TileShape};
 use super::tensor_core_policy::{select_matmul_kernel, MatmulKernelPath};
 
@@ -25,6 +26,7 @@ pub(super) struct MatmulTiledProgramSpec<'a> {
     pub(super) dtype: DataType,
     pub(super) a_tile_name: &'a str,
     pub(super) b_tile_name: &'a str,
+    pub(super) mma_capabilities: MmaCapabilityRecord,
 }
 
 pub(super) fn build_matmul_tiled_program(
@@ -45,6 +47,7 @@ pub(super) fn build_matmul_tiled_program(
         dtype,
         a_tile_name,
         b_tile_name,
+        mma_capabilities,
     } = spec;
 
     if tile == 0 {
@@ -57,8 +60,10 @@ pub(super) fn build_matmul_tiled_program(
     }
 
     let matrix_shape = MatrixShape { m, k, n };
+    let selected_kernel = select_matmul_kernel(&dtype, matrix_shape, tile);
+    let mma_gate = gate_mma_path(selected_kernel, mma_capabilities);
     let (a_tile_count, b_tile_count, padded_out_count, dispatch_wg, kernel_body) =
-        if select_matmul_kernel(&dtype, matrix_shape, tile) == MatmulKernelPath::TensorCoreM16N8K16
+        if mma_gate.selected_path == MatmulKernelPath::TensorCoreF16M16N8K16
         {
             let mma_wg = [32, 1, 1];
             let mma_out_rows = 16u32;
@@ -205,4 +210,50 @@ fn checked_element_count(name: &str, rows: u32, cols: u32) -> Result<u32, Tensor
             name: name.to_string(),
             shape: vec![rows, cols],
         })
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn f16_mma_spec(capabilities: MmaCapabilityRecord) -> MatmulTiledProgramSpec<'static> {
+        MatmulTiledProgramSpec {
+            op_id: "matmul_tiled.test",
+            a: "a",
+            b: "b",
+            bias: None,
+            out: "out",
+            m: 32,
+            k: 16,
+            n: 16,
+            tile: 16,
+            workgroup: [16, 16, 1],
+            generator: "matmul_tiled.test",
+            dtype: DataType::F16,
+            a_tile_name: "matmul_a_tile",
+            b_tile_name: "matmul_b_tile",
+            mma_capabilities: capabilities,
+        }
+    }
+
+    #[test]
+    fn supported_ptx_mma_capabilities_emit_mma_body() {
+        let program = build_matmul_tiled_program(f16_mma_spec(MmaCapabilityRecord::ptx_sm80()))
+            .expect("Fix: PTX F16 M16N8K16 tiled matmul spec must build.");
+        let debug = format!("{:?}", program.entry());
+
+        assert!(debug.contains("mma_c0"));
+        assert_eq!(program.workgroup_size(), [32, 1, 1]);
+    }
+
+    #[test]
+    fn unsupported_mma_backend_capabilities_emit_cooperative_body() {
+        for capabilities in [MmaCapabilityRecord::metal(), MmaCapabilityRecord::wgpu()] {
+            let program = build_matmul_tiled_program(f16_mma_spec(capabilities))
+                .expect("Fix: unsupported MMA backends must fall back to cooperative matmul.");
+            let debug = format!("{:?}", program.entry());
+
+            assert!(!debug.contains("mma_c0"));
+            assert_ne!(program.workgroup_size(), [32, 1, 1]);
+        }
+    }
 }

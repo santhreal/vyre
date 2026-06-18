@@ -1,0 +1,48 @@
+# API compatibility governance for VX-807 through VX-808 and VX-812 through VX-814.
+# Public API snapshots, SemVer impact, and migration records share one compatibility seam.
+
+schema = "vyre.api.compatibility_governance.v1"
+owner = "organization_dedup"
+evidence_tokens = ["SEMVER_2_0", "RUST_API_GUIDELINES"]
+extends = "PUBLIC_API_OWNERSHIP_SNAPSHOTS.toml"
+
+required_fields = [
+  "api_id",
+  "public_surface",
+  "stability_class",
+  "semver_impact",
+  "migration_record",
+  "feature_gate",
+  "documentation_gate",
+  "compatibility_diagnostic",
+]
+
+[[api]]
+api_id = "backend-capability-record"
+public_surface = "vyre_driver::BackendCapability"
+stability_class = "public-evolving"
+semver_impact = "minor-compatible-field-addition-only"
+migration_record = "PUBLIC_API_OWNERSHIP_SNAPSHOTS.toml"
+feature_gate = "driver"
+documentation_gate = "README-help-and-api-docs-agree"
+compatibility_diagnostic = "VYRE_API_COMPAT_BACKEND_CAPABILITY_BREAK"
+
+[[api]]
+api_id = "scan-database-header"
+public_surface = "vyre_foundation::serial::wire::ScanDatabaseHeader"
+stability_class = "public-stable"
+semver_impact = "major-required-for-breaking-layout-change"
+migration_record = "scan-header-compatibility-trailer"
+feature_gate = "foundation"
+documentation_gate = "wire-format-docs-and-decode-errors-agree"
+compatibility_diagnostic = "VYRE_API_COMPAT_SCAN_HEADER_BREAK"
+
+[[api]]
+api_id = "graph-motif"
+public_surface = "vyre_primitives::graph::Motif"
+stability_class = "public-stable"
+semver_impact = "major-required-for-removing-variant"
+migration_record = "PUBLIC_API_OWNERSHIP_SNAPSHOTS.toml"
+feature_gate = "graph"
+documentation_gate = "graph-api-docs-and-examples-agree"
+compatibility_diagnostic = "VYRE_API_COMPAT_GRAPH_MOTIF_BREAK"

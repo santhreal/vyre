@@ -1,0 +1,72 @@
+# Binary asset platform matrix for VX-1185, VX-1187, VX-1192, VX-1194, and VX-1197.
+# Platform triples, archive formats, install docs, shell assets, checksums, signatures, and parity with Cargo/OCI/Homebrew share one binary asset seam.
+
+schema = "vyre.release.binary_asset_platform_matrix.v1"
+owner = "coordination"
+evidence_tokens = ["GITHUB_RELEASES", "GITHUB_IMMUTABLE_RELEASES", "SIGSTORE_COSIGN_VERIFY", "SLSA_VERIFIER", "SPDX_SBOM"]
+
+required_fields = [
+  "asset_id",
+  "platform_triple",
+  "archive_format",
+  "binary_entrypoint",
+  "ancillary_assets_policy",
+  "checksum_policy",
+  "signature_policy",
+  "install_doc_policy",
+  "channel_parity_policy",
+  "private_boundary_policy",
+  "diagnostic",
+]
+
+[[asset]]
+asset_id = "vyre-linux-x86_64-gnu"
+platform_triple = "x86_64-unknown-linux-gnu"
+archive_format = "tar.gz"
+binary_entrypoint = "vyre"
+ancillary_assets_policy = "shell-completions-manpage-and-license-files-included-if-generated-by-release-command"
+checksum_policy = "sha256-listed-in-release-metadata-bundle"
+signature_policy = "cosign-verify-blob-bundle-or-SLSA-attestation-required"
+install_doc_policy = "copyable-linux-install-snippet-with-digest-verification"
+channel_parity_policy = "behavior-matches-cargo-install-and-OCI-image-version-for-public-cli-contract"
+private_boundary_policy = "archive-excludes-private-Santh-paths-corpora-and-credentials"
+diagnostic = "VYRE_BINARY_ASSET_LINUX_X86_64_READY"
+
+[[asset]]
+asset_id = "vyre-linux-aarch64-gnu"
+platform_triple = "aarch64-unknown-linux-gnu"
+archive_format = "tar.gz"
+binary_entrypoint = "vyre"
+ancillary_assets_policy = "shell-completions-manpage-and-license-files-included-if-generated-by-release-command"
+checksum_policy = "sha256-listed-in-release-metadata-bundle"
+signature_policy = "cosign-verify-blob-bundle-or-SLSA-attestation-required"
+install_doc_policy = "copyable-linux-arm64-install-snippet-with-digest-verification"
+channel_parity_policy = "behavior-matches-cargo-install-and-OCI-image-version-for-public-cli-contract"
+private_boundary_policy = "archive-excludes-private-Santh-paths-corpora-and-credentials"
+diagnostic = "VYRE_BINARY_ASSET_LINUX_AARCH64_READY"
+
+[[asset]]
+asset_id = "vyre-macos-universal"
+platform_triple = "universal-apple-darwin"
+archive_format = "tar.gz"
+binary_entrypoint = "vyre"
+ancillary_assets_policy = "shell-completions-manpage-and-license-files-included-if-generated-by-release-command"
+checksum_policy = "sha256-listed-in-release-metadata-bundle-and-homebrew-bottle-when-published"
+signature_policy = "cosign-verify-blob-bundle-or-platform-signing-record-required"
+install_doc_policy = "copyable-macos-install-and-homebrew-snippets-with-verification"
+channel_parity_policy = "behavior-matches-cargo-install-and-homebrew-formula-version-for-public-cli-contract"
+private_boundary_policy = "archive-excludes-private-Santh-paths-corpora-and-credentials"
+diagnostic = "VYRE_BINARY_ASSET_MACOS_UNIVERSAL_READY"
+
+[[asset]]
+asset_id = "vyre-windows-x86_64-msvc"
+platform_triple = "x86_64-pc-windows-msvc"
+archive_format = "zip"
+binary_entrypoint = "vyre.exe"
+ancillary_assets_policy = "powershell-completion-license-and-readme-files-included-if-generated-by-release-command"
+checksum_policy = "sha256-listed-in-release-metadata-bundle"
+signature_policy = "cosign-verify-blob-bundle-or-platform-signing-record-required"
+install_doc_policy = "copyable-windows-install-snippet-with-digest-verification"
+channel_parity_policy = "behavior-matches-cargo-install-public-cli-contract"
+private_boundary_policy = "archive-excludes-private-Santh-paths-corpora-and-credentials"
+diagnostic = "VYRE_BINARY_ASSET_WINDOWS_X86_64_READY"

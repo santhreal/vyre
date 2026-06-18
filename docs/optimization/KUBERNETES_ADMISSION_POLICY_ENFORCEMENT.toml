@@ -1,0 +1,43 @@
+# Kubernetes admission policy enforcement for VX-1342, VX-1343, VX-1344, VX-1346, VX-1351, and VX-1357.
+# Admission phases, validating policies, webhooks, failure behavior, and runtime policy coverage share one cluster-enforcement seam.
+
+schema = "vyre.ops.kubernetes_admission_policy_enforcement.v1"
+owner = "security_reliability"
+evidence_tokens = ["KUBERNETES_ADMISSION_CONTROLLERS", "KUBERNETES_DYNAMIC_ADMISSION", "KUBERNETES_VALIDATING_ADMISSION_POLICY", "KUBERNETES_POD_SECURITY_ADMISSION"]
+
+required_fields = [
+  "enforcement_id",
+  "target_surface",
+  "admission_phase_policy",
+  "validation_policy",
+  "mutation_policy",
+  "failure_policy",
+  "match_scope_policy",
+  "authority_link_policy",
+  "release_gate_effect",
+  "diagnostic",
+]
+
+[[enforcement]]
+enforcement_id = "public-vyre-workload-admission"
+target_surface = "Deployment-StatefulSet-DaemonSet-Pod-Job-Service-ConfigMap-Secret-reference-and-HPA-objects-for-public-Vyre-operator"
+admission_phase_policy = "mutating-defaults-before-validating-denials-with-final-state-enforced-by-validating-policy"
+validation_policy = "ValidatingAdmissionPolicy-CEL-or-validating-webhook-denies-missing-image-digest-resource-limits-security-context-PodSecurity-and-public-boundary-labels"
+mutation_policy = "mutation-limited-to-safe-default-labels-annotations-and-non-secret-runtime-defaults-no-secret-or-private-path-injection"
+failure_policy = "fail-closed-for-release-critical-controls-warn-audit-only-allowed-with-recorded-promotion-blocker"
+match_scope_policy = "matchResources-namespaceSelector-objectSelector-matchConditions-and-apiGroups-apiVersions-resources-recorded"
+authority_link_policy = "KUBERNETES_HELM_DEPLOYMENT_POLICY.toml-OPERATOR_RUNTIME_CONFIGURATION_POLICY.toml-PUBLICATION_BOUNDARY_MANIFEST.toml"
+release_gate_effect = "missing-or-bypassable-admission-control-blocks-operator-deployment-and-release-readiness-claim"
+diagnostic = "VYRE_WORKLOAD_ADMISSION_ENFORCEMENT_REQUIRED"
+
+[[enforcement]]
+enforcement_id = "autoscaling-and-capacity-admission"
+target_surface = "HorizontalPodAutoscaler-ScaledObject-PDB-PriorityClass-topology-spread-toleration-and-GPU-resource-manifests"
+admission_phase_policy = "capacity-and-placement-objects-validated-after-mutation-so-operator-defaults-cannot-hide-invalid-bounds"
+validation_policy = "deny-HPA-without-metric-freshness-bounds-KEDA-without-fallback-capacity-without-requests-or-GPU-without-device-plugin-contract"
+mutation_policy = "no-automatic-priority-taint-toleration-GPU-resource-or-replica-bound-mutation-without-owner-route"
+failure_policy = "fail-closed-for-GPU-capacity-priority-and-public-release-scaling-controls"
+match_scope_policy = "matchConditions-exclude-non-Vyre-namespaces-and-record-breakglass-route-for-authorized-recovery-only"
+authority_link_policy = "END_TO_END_CAPACITY_AUTOSCALING_TRANCHE_COVERAGE.toml-RESOURCE_DOS_GOVERNANCE_TRANCHE_COVERAGE.toml"
+release_gate_effect = "invalid-autoscaling-or-placement-admission-policy-invalidates-capacity-and-performance-claims"
+diagnostic = "VYRE_CAPACITY_ADMISSION_ENFORCEMENT_REQUIRED"

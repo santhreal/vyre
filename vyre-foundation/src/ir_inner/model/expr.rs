@@ -52,6 +52,17 @@ impl Ident {
         Arc::clone(&self.text)
     }
 
+    /// Return another identifier handle to the same interned text without
+    /// reallocating text or recomputing the cached hash.
+    #[must_use]
+    #[inline]
+    pub fn duplicate_handle(&self) -> Self {
+        Self {
+            text: Arc::clone(&self.text),
+            hash: self.hash,
+        }
+    }
+
     /// Return the identifier text.
     #[must_use]
     #[inline]

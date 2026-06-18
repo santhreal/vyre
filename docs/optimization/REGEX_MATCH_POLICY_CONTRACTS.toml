@@ -1,0 +1,70 @@
+schema_version = 1
+
+required_policies = [
+  "leftmost_first",
+  "leftmost_longest",
+  "all_matches",
+  "overlapping",
+  "start_of_match",
+  "vectored_haystack",
+]
+
+[[policy]]
+policy_id = "leftmost_first"
+offset_sequence = "first-accepted-alternative"
+requires_ordered_patterns = true
+requires_overlap_scan = false
+requires_start_of_match = false
+backend_restriction = "backend-must-preserve-pattern-priority"
+diagnostic_code = "VYRE_SCAN_POLICY_LEFTMOST_FIRST_REQUIRED"
+evidence_path = "vyre-libs/tests/regex_match_policy_contracts.rs"
+
+[[policy]]
+policy_id = "leftmost_longest"
+offset_sequence = "longest-match-at-leftmost-start"
+requires_ordered_patterns = false
+requires_overlap_scan = false
+requires_start_of_match = false
+backend_restriction = "backend-must-report-length-before-priority"
+diagnostic_code = "VYRE_SCAN_POLICY_LEFTMOST_LONGEST_REQUIRED"
+evidence_path = "vyre-libs/tests/regex_match_policy_contracts.rs"
+
+[[policy]]
+policy_id = "all_matches"
+offset_sequence = "every-non-overlapping-match"
+requires_ordered_patterns = false
+requires_overlap_scan = false
+requires_start_of_match = false
+backend_restriction = "backend-must-not-stop-after-first-match"
+diagnostic_code = "VYRE_SCAN_POLICY_ALL_MATCHES_REQUIRED"
+evidence_path = "vyre-libs/tests/regex_match_policy_contracts.rs"
+
+[[policy]]
+policy_id = "overlapping"
+offset_sequence = "every-overlapping-match"
+requires_ordered_patterns = false
+requires_overlap_scan = true
+requires_start_of_match = false
+backend_restriction = "backend-must-support-overlap-or-use-verifier"
+diagnostic_code = "VYRE_SCAN_POLICY_OVERLAP_REQUIRES_VERIFIER"
+evidence_path = "vyre-libs/tests/regex_match_policy_contracts.rs"
+
+[[policy]]
+policy_id = "start_of_match"
+offset_sequence = "start-and-end-offsets"
+requires_ordered_patterns = false
+requires_overlap_scan = false
+requires_start_of_match = true
+backend_restriction = "backend-must-carry-start-offset-state"
+diagnostic_code = "VYRE_SCAN_POLICY_SOM_REQUIRED"
+evidence_path = "vyre-libs/tests/regex_match_policy_contracts.rs"
+
+[[policy]]
+policy_id = "vectored_haystack"
+offset_sequence = "absolute-offsets-over-concatenated-vector"
+requires_ordered_patterns = false
+requires_overlap_scan = false
+requires_start_of_match = true
+backend_restriction = "backend-must-preserve-segment-boundary-state"
+diagnostic_code = "VYRE_SCAN_POLICY_VECTORED_STATE_REQUIRED"
+evidence_path = "vyre-libs/tests/regex_match_policy_contracts.rs"

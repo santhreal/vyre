@@ -214,10 +214,6 @@ fn now_unix_ms() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(0, |duration| {
-            u64::try_from(duration.as_millis().min(u128::from(u64::MAX))).unwrap_or_else(|source| {
-                panic!(
-                    "clamped UNIX millisecond timestamp cannot fit u64: {source}. Fix: inspect platform integer conversion."
-                )
-            })
+            u64::try_from(duration.as_millis().min(u128::from(u64::MAX))).unwrap_or(u64::MAX)
         })
 }

@@ -1,0 +1,37 @@
+# End-to-end admission policy enforcement tranche coverage for VX-1341 through VX-1360.
+# This tranche adds Kubernetes admission enforcement, policy engine parity, controlled exceptions, and admission audit evidence while reusing plan-policy, deployment, resource, capacity, rollout, recovery, operational readiness, and publication authorities.
+
+schema = "vyre.ops.admission_policy_enforcement_tranche_coverage.v1"
+owner = "coordination"
+evidence_tokens = ["KUBERNETES_ADMISSION_CONTROLLERS", "KUBERNETES_DYNAMIC_ADMISSION", "KUBERNETES_VALIDATING_ADMISSION_POLICY", "KUBERNETES_AUDITING", "OPA_GATEKEEPER", "KYVERNO_VALIDATE_RULES"]
+
+required_fields = [
+  "coverage_id",
+  "vx_id_range",
+  "kubernetes_admission_policy_enforcement",
+  "policy_engine_parity_deployment_matrix",
+  "admission_exception_breakglass_policy",
+  "admission_audit_evidence_policy",
+  "plan_policy_enforcement_coverage",
+  "operator_deployment_coverage",
+  "capacity_autoscaling_coverage",
+  "operational_readiness_coverage",
+  "publication_boundary",
+  "dedup_seam",
+  "proof_gate",
+]
+
+[[coverage]]
+coverage_id = "admission-policy-enforcement-end-to-end"
+vx_id_range = "VX-1341..VX-1360"
+kubernetes_admission_policy_enforcement = "KUBERNETES_ADMISSION_POLICY_ENFORCEMENT.toml"
+policy_engine_parity_deployment_matrix = "POLICY_ENGINE_PARITY_DEPLOYMENT_MATRIX.toml"
+admission_exception_breakglass_policy = "ADMISSION_EXCEPTION_BREAKGLASS_POLICY.toml"
+admission_audit_evidence_policy = "ADMISSION_AUDIT_EVIDENCE_POLICY.toml"
+plan_policy_enforcement_coverage = "END_TO_END_POLICY_ENFORCEMENT_TRANCHE_COVERAGE.toml"
+operator_deployment_coverage = "END_TO_END_OPERATOR_DEPLOYMENT_TRANCHE_COVERAGE.toml"
+capacity_autoscaling_coverage = "END_TO_END_CAPACITY_AUTOSCALING_TRANCHE_COVERAGE.toml"
+operational_readiness_coverage = "END_TO_END_OPERATIONAL_READINESS_TRANCHE_COVERAGE.toml"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+dedup_seam = "admission-enforcement-policy-engine-parity-breakglass-and-admission-audit-policies-own-runtime-cluster-policy-while-plan-policy-deployment-resource-capacity-rollout-recovery-readiness-and-publication-registries-remain-source-authorities"
+proof_gate = "conform/vyre-conform-enforce/tests/admission_policy_enforcement_governance.rs"

@@ -2,6 +2,7 @@ use std::path::Path;
 
 use super::super::checks::*;
 use super::super::types::Requirement;
+use crate::release_train;
 
 pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut Vec<String>) {
     if !requirement.evidence.iter().any(|evidence| {
@@ -31,18 +32,20 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
         .get("requested_vyre_release")
         .and_then(serde_json::Value::as_str)
         .unwrap_or("");
-    if vyre_release != "0.6.1" {
+    if vyre_release != release_train::vyre_version() {
         failures.push(format!(
-            "requirement `version-story` requested_vyre_release is `{vyre_release}`, expected `0.6.1`"
+            "requirement `version-story` requested_vyre_release is `{vyre_release}`, expected `{}`",
+            release_train::vyre_version()
         ));
     }
     let weir_release = matrix
         .get("requested_weir_release")
         .and_then(serde_json::Value::as_str)
         .unwrap_or("");
-    if weir_release != "0.1.0" {
+    if weir_release != release_train::weir_version() {
         failures.push(format!(
-            "requirement `version-story` requested_weir_release is `{weir_release}`, expected `0.1.0`"
+            "requirement `version-story` requested_weir_release is `{weir_release}`, expected `{}`",
+            release_train::weir_version()
         ));
     }
     if matrix
@@ -51,7 +54,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
         .is_none_or(|findings| !findings.is_empty())
     {
         failures.push(
-            "requirement `version-story` release docs must not contain bare v0.6.1 tag commands"
+            "requirement `version-story` release docs must not contain bare v0.6.3 tag commands"
                 .to_string(),
         );
     }
@@ -81,12 +84,12 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
         .cloned()
         .unwrap_or_default();
     for required_package in [
-        "vyre@0.6.1",
-        "vyre-driver-cuda@0.6.1",
-        "vyre-driver-wgpu@0.6.1",
+        "vyre@0.6.3",
+        "vyre-driver-cuda@0.6.3",
+        "vyre-driver-wgpu@0.6.3",
         "weir@0.1.0",
         "vyrec@0.1.0",
-        "vyre-frontend-c@0.6.1",
+        "vyre-frontend-c@0.6.3",
     ] {
         if !required_release_packages
             .iter()
@@ -105,17 +108,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
             .push("requirement `version-story` version matrix is missing `tag_story`".to_string());
         return;
     };
-    for (field, expected) in [
-        ("vyre_rc_tag", "vyre-v0.6.1-rc.1"),
-        ("weir_rc_tag", "weir-v0.1.0-rc.1"),
-        (
-            "combined_release_train_rc_tag",
-            "vyre-0.6.1-weir-0.1.0-rc.1",
-        ),
-        ("vyre_tag", "vyre-v0.6.1"),
-        ("weir_tag", "weir-v0.1.0"),
-        ("combined_release_train_tag", "vyre-0.6.1-weir-0.1.0"),
-    ] {
+    for (field, expected) in release_train::tag_story_fields() {
         let actual = tag_story
             .get(field)
             .and_then(serde_json::Value::as_str)
@@ -126,18 +119,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
             ));
         }
     }
-    for required in [
-        "vyre 0.6.1",
-        "weir 0.1.0",
-        "vyre-driver-cuda@0.6.1",
-        "vyre-driver-wgpu@0.6.1",
-        "vyre-v0.6.1-rc.1",
-        "weir-v0.1.0-rc.1",
-        "vyre-0.6.1-weir-0.1.0-rc.1",
-        "vyre-v0.6.1",
-        "weir-v0.1.0",
-        "vyre-0.6.1-weir-0.1.0",
-    ] {
+    for required in release_train::required_release_note_tokens() {
         let present = tag_story
             .get("required_in_release_notes")
             .and_then(serde_json::Value::as_array)
@@ -160,17 +142,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
                 "requirement `version-story` release-tag-plan reports {tag_plan_blockers} blocker(s)"
             ));
         }
-        for (field, expected) in [
-            ("vyre_rc_tag", "vyre-v0.6.1-rc.1"),
-            ("weir_rc_tag", "weir-v0.1.0-rc.1"),
-            (
-                "combined_release_train_rc_tag",
-                "vyre-0.6.1-weir-0.1.0-rc.1",
-            ),
-            ("vyre_tag", "vyre-v0.6.1"),
-            ("weir_tag", "weir-v0.1.0"),
-            ("combined_release_train_tag", "vyre-0.6.1-weir-0.1.0"),
-        ] {
+        for (field, expected) in release_train::tag_story_fields() {
             if tag_plan.get(field).and_then(serde_json::Value::as_str) != Some(expected) {
                 failures.push(format!(
                     "requirement `version-story` release-tag-plan {field} must be `{expected}`"
@@ -202,11 +174,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
             .iter()
             .filter_map(serde_json::Value::as_str)
             .collect::<Vec<_>>();
-        for (rc, final_tag) in [
-            ("vyre-v0.6.1-rc.1", "vyre-v0.6.1"),
-            ("weir-v0.1.0-rc.1", "weir-v0.1.0"),
-            ("vyre-0.6.1-weir-0.1.0-rc.1", "vyre-0.6.1-weir-0.1.0"),
-        ] {
+        for (rc, final_tag) in release_train::rc_to_final_tags() {
             let rc_index = ordered_tags.iter().position(|tag| *tag == rc);
             let final_index = ordered_tags.iter().position(|tag| *tag == final_tag);
             if !matches!((rc_index, final_index), (Some(left), Some(right)) if left < right) {

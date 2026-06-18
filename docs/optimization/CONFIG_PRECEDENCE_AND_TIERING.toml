@@ -1,0 +1,61 @@
+# Config precedence and Tier A/B separation for VX-804 through VX-806 and VX-811.
+# Operational knobs and data registries have separate paths, precedence, diagnostics, and wiring proof.
+
+schema = "vyre.config.precedence_tiering.v1"
+owner = "foundation_config"
+evidence_tokens = ["TOML_1_0"]
+
+tier_a_precedence = [
+  "compiled_default",
+  "tool_toml",
+  "cli_override",
+]
+
+tier_b_sources = [
+  "rules_toml",
+  "signatures_toml",
+  "grammars_toml",
+  "wordlists_toml",
+  "strategies_toml",
+]
+
+required_fields = [
+  "config_id",
+  "tier",
+  "source",
+  "operator_visible_effect",
+  "precedence_rule",
+  "cli_allowed",
+  "wiring_gate",
+  "diagnostic",
+]
+
+[[entry]]
+config_id = "scan-timeout-ms"
+tier = "A"
+source = "tool.toml"
+operator_visible_effect = "scan timeout bound"
+precedence_rule = "compiled_default < tool_toml < cli_override"
+cli_allowed = true
+wiring_gate = "config value reaches scheduler timeout"
+diagnostic = "VYRE_CONFIG_TIMEOUT_INVALID"
+
+[[entry]]
+config_id = "regex-signature-rules"
+tier = "B"
+source = "rules/regex_signatures.toml"
+operator_visible_effect = "regex rule corpus"
+precedence_rule = "data file only"
+cli_allowed = false
+wiring_gate = "rule file digest reaches scanner plan"
+diagnostic = "VYRE_CONFIG_TIER_B_CLI_OVERRIDE_REFUSED"
+
+[[entry]]
+config_id = "frontend-dialect-contracts"
+tier = "B"
+source = "docs/optimization/FRONTEND_DIALECT_CONTRACTS.toml"
+operator_visible_effect = "parser dialect acceptance"
+precedence_rule = "data file only"
+cli_allowed = false
+wiring_gate = "dialect contract reaches parser gate"
+diagnostic = "VYRE_CONFIG_DIALECT_CONTRACT_INVALID"

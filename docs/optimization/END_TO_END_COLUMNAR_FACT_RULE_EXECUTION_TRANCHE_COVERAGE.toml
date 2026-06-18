@@ -1,0 +1,68 @@
+[tranche]
+id = "VX-1601..VX-1620"
+title = "End-to-end columnar fact store and vectorized rule execution governance coverage"
+owner = "scanner_frontends"
+status = "planned_contract"
+plan = "ALL_AXES_ACCELERATION_PLAN.md"
+research_sources = [
+  "APACHE_ARROW_COLUMNAR_FORMAT",
+  "APACHE_DATAFUSION_QUERY_OPTIMIZER",
+  "DUCKDB_VECTOR_EXECUTION_FORMAT",
+  "SUBSTRAIT_SPECIFICATION",
+  "ROARING",
+]
+
+[artifacts]
+created = [
+  "COLUMNAR_FACT_STORE_LAYOUT.toml",
+  "VECTORIZED_RULE_EXECUTION_PLAN.toml",
+  "FACT_QUERY_COST_MODEL_POLICY.toml",
+  "FACT_STORE_REUSE_EVIDENCE.toml",
+  "END_TO_END_COLUMNAR_FACT_RULE_EXECUTION_TRANCHE_COVERAGE.toml",
+  "conform/vyre-conform-enforce/tests/columnar_fact_rule_execution_governance.rs",
+]
+linked_existing = [
+  "SEMANTIC_FACT_INDEX_SCHEMA.toml",
+  "INCREMENTAL_DATAFLOW_FACT_REUSE_POLICY.toml",
+  "SEMANTIC_FACT_INDEX_EVIDENCE.toml",
+  "LANGUAGE_DEPENDENCY_EDGE_MATRIX.toml",
+  "CROSS_FILE_INVALIDATION_PROPAGATION_POLICY.toml",
+  "DEPENDENCY_GRAPH_REUSE_EVIDENCE.toml",
+  "REGEX_LOGICAL_PATTERN_PLANNER.toml",
+  "MEMORY_RESIDENCY_TIER_CONTRACTS.toml",
+  "MULTI_GPU_SHARDING_AGGREGATION_PLAN.toml",
+  "OUTPUT_SLAB_SCHEMA_PROVENANCE.toml",
+  "BENCHMARK_PROFILING_CAPTURE_POLICY.toml",
+  "STATISTICAL_PERFORMANCE_GATES.toml",
+  "RUNTIME_WATCHDOG_PROOFS.toml",
+]
+
+[ownership_boundary]
+this_tranche_owns = [
+  "physical columnar relation batches",
+  "selection vectors and compressed fact domains",
+  "vectorized semantic rule operator plans",
+  "fact query cost model and optimizer rewrite evidence",
+  "CPU vector, GPU batch, and portable iterator route comparison",
+]
+existing_tranches_own = [
+  "semantic fact meaning and schema compatibility",
+  "incremental dataflow reuse truth gates",
+  "language dependency edge extraction and propagation",
+  "regex-specific logical pattern planning",
+  "GPU memory residency and multi-accelerator sharding",
+  "output schema provenance",
+  "profiling capture, statistical release gates, and watchdog policy",
+]
+
+[conformance]
+proof = "conform/vyre-conform-enforce/tests/columnar_fact_rule_execution_governance.rs"
+required_assertions = [
+  "new source keys are present in the research ledger",
+  "all new artifacts declare research sources, ownership boundaries, and tranche id",
+  "columnar layout covers relation batches, buffers, dictionaries, selection vectors, join keys, and compressed domains",
+  "vectorized execution plan covers filters, projections, joins, semi-joins, anti-joins, aggregation, fusion, and execution routes",
+  "cost model covers selectivity, join ordering, predicate pushdown, projection pruning, bitmap domains, GPU route, and plan digests",
+  "reuse evidence records per-run, per-operator, truth gate, route, and publication fields",
+  "the plan contains VX-1601 through VX-1620 rows",
+]

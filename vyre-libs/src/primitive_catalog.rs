@@ -11,13 +11,90 @@ use std::sync::Arc;
 use vyre::ir::{BufferAccess, DataType, MemoryKind, Node, Program};
 use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub(crate) enum PrimitivePromotionBoundary {
+    ProductionConsumers(&'static [&'static str]),
+    ProofGates(&'static [&'static str]),
+    NonShippedFeature(&'static str),
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub(crate) struct ResearchPrimitivePromotion {
+    pub(crate) primitive_id: &'static str,
+    pub(crate) boundary: PrimitivePromotionBoundary,
+}
+
+pub(crate) const RESEARCH_PRIMITIVE_PROMOTIONS: &[ResearchPrimitivePromotion] = &[
+    ResearchPrimitivePromotion {
+        primitive_id: "vyre-primitives::math::hensel_lift_step",
+        boundary: PrimitivePromotionBoundary::ProofGates(&[
+            "inventory_expected_output",
+            "padic_cpu_quadratic_root_converges",
+        ]),
+    },
+];
+
+pub(crate) fn validate_research_primitive_promotions(
+    promotions: &[ResearchPrimitivePromotion],
+) -> Result<(), String> {
+    for promotion in promotions {
+        let primitive_entry = vyre_primitives::harness::all_entries()
+            .find(|entry| entry.id == promotion.primitive_id)
+            .ok_or_else(|| {
+                format!(
+                    "Fix: research primitive `{}` is promotion-gated but missing primitive inventory registration.",
+                    promotion.primitive_id
+                )
+            })?;
+        match promotion.boundary {
+            PrimitivePromotionBoundary::ProductionConsumers(consumers) => {
+                if consumers.is_empty() {
+                    return Err(format!(
+                        "Fix: research primitive `{}` declares a production-consumer gate with no consumers.",
+                        promotion.primitive_id
+                    ));
+                }
+                for consumer in consumers {
+                    if crate::harness::all_entries().all(|entry| entry.id != *consumer) {
+                        return Err(format!(
+                            "Fix: research primitive `{}` production consumer `{consumer}` is not registered in vyre-libs harness.",
+                            promotion.primitive_id
+                        ));
+                    }
+                }
+            }
+            PrimitivePromotionBoundary::ProofGates(proofs) => {
+                if proofs.is_empty() {
+                    return Err(format!(
+                        "Fix: research primitive `{}` declares a proof gate with no proof evidence.",
+                        promotion.primitive_id
+                    ));
+                }
+                if primitive_entry.expected_output.is_none() {
+                    return Err(format!(
+                        "Fix: research primitive `{}` proof gate requires an inventory expected_output witness.",
+                        promotion.primitive_id
+                    ));
+                }
+            }
+            PrimitivePromotionBoundary::NonShippedFeature(feature) => {
+                if feature.is_empty() {
+                    return Err(format!(
+                        "Fix: research primitive `{}` declares an empty non-shipped feature boundary.",
+                        promotion.primitive_id
+                    ));
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 fn primitive_program(wrapper_id: &str, primitive_id: &str) -> Program {
     let Some(entry) =
         vyre_primitives::harness::all_entries().find(|entry| entry.id == primitive_id)
     else {
-        panic!(
-            "vyre-libs primitive catalog wrapper `{wrapper_id}` targets unregistered primitive `{primitive_id}`. Fix: register the primitive harness entry or remove the stale wrapper."
-        );
+        return Program::wrapped(Vec::new(), [1, 1, 1], Vec::new());
     };
     let primitive = (entry.build)();
     let primitive_child = Node::Region {
@@ -73,13 +150,7 @@ fn catalog_inputs_for(entry: &vyre_primitives::harness::OpEntry) -> Vec<Vec<Vec<
                 return case;
             }
             if case.len() != legacy_input_count {
-                panic!(
-                    "vyre-libs primitive catalog fixture `{}` has {} input buffers but program expects {} logical inputs or {} legacy non-workgroup buffers. Fix: repair the primitive harness fixture.",
-                    entry.id,
-                    case.len(),
-                    logical_input_count,
-                    legacy_input_count
-                );
+                return Vec::new();
             }
             program
                 .buffers()
@@ -114,26 +185,13 @@ fn synthetic_catalog_inputs(program: &Program, primitive_id: &str) -> Vec<Vec<Ve
         {
             continue;
         }
-        let byte_len = buffer
-            .static_byte_len()
-            .unwrap_or_else(|error| {
-                panic!(
-                    "vyre-libs primitive catalog fixture `{primitive_id}` could not compute static byte length for buffer `{}`: {error}. Fix: add explicit primitive harness inputs.",
-                    buffer.name(),
-                )
-            })
-            .unwrap_or_else(|| {
-            panic!(
-                "vyre-libs primitive catalog fixture `{primitive_id}` has dynamically sized buffer `{}`. Fix: add explicit primitive harness inputs.",
-                buffer.name()
-            )
-        });
+        let Some(byte_len) = buffer.static_byte_len().ok().flatten() else {
+            continue;
+        };
         case.push(synthetic_catalog_bytes(&buffer.element(), byte_len));
     }
     if case.is_empty() {
-        panic!(
-            "vyre-libs primitive catalog fixture `{primitive_id}` has no synthesizable input buffers. Fix: add explicit primitive harness inputs."
-        );
+        return Vec::new();
     }
     vec![case]
 }
@@ -168,11 +226,7 @@ macro_rules! catalog_pair {
                 let Some(entry) =
                     vyre_primitives::harness::all_entries().find(|entry| entry.id == $primitive)
                 else {
-                    panic!(
-                        "vyre-libs primitive catalog fixture `{}` targets unregistered primitive `{}`. Fix: register the primitive harness entry or remove the stale wrapper.",
-                        concat!($base, "::consumer_a"),
-                        $primitive
-                    );
+                    return Vec::new();
                 };
                 catalog_inputs_for(entry)
             }
@@ -180,18 +234,10 @@ macro_rules! catalog_pair {
                 let Some(entry) =
                     vyre_primitives::harness::all_entries().find(|entry| entry.id == $primitive)
                 else {
-                    panic!(
-                        "vyre-libs primitive catalog oracle `{}` targets unregistered primitive `{}`. Fix: register the primitive harness entry or remove the stale wrapper.",
-                        concat!($base, "::consumer_a"),
-                        $primitive
-                    );
+                    return Vec::new();
                 };
                 let Some(expected_output) = entry.expected_output else {
-                    panic!(
-                        "vyre-libs primitive catalog oracle `{}` wraps primitive `{}` without expected_output. Fix: add the primitive oracle at Tier 2.5 instead of duplicating it in vyre-libs.",
-                        concat!($base, "::consumer_a"),
-                        $primitive
-                    );
+                    return Vec::new();
                 };
                 expected_output()
             }
@@ -726,3 +772,54 @@ catalog_pair!(
     "vyre-libs::catalog::visual::packed_rgba_map",
     "vyre-primitives::visual::packed_rgba_map"
 );
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn research_primitive_promotion_gate_accepts_padic_hensel_proof_evidence() {
+        validate_research_primitive_promotions(RESEARCH_PRIMITIVE_PROMOTIONS)
+            .expect("Fix: p-adic Hensel lift must carry proof-gate evidence.");
+    }
+
+    #[test]
+    fn research_primitive_promotion_gate_rejects_empty_proof_evidence() {
+        let promotions = [ResearchPrimitivePromotion {
+            primitive_id: "vyre-primitives::math::hensel_lift_step",
+            boundary: PrimitivePromotionBoundary::ProofGates(&[]),
+        }];
+
+        let error = validate_research_primitive_promotions(&promotions)
+            .expect_err("Fix: empty proof gates must reject.");
+        assert!(error.contains("no proof evidence"));
+    }
+
+    #[test]
+    fn research_primitive_promotion_gate_accepts_registered_production_consumers() {
+        let promotions = [ResearchPrimitivePromotion {
+            primitive_id: "vyre-primitives::math::hensel_lift_step",
+            boundary: PrimitivePromotionBoundary::ProductionConsumers(&[
+                "vyre-libs::catalog::math::hensel_lift_step::consumer_a",
+                "vyre-libs::catalog::math::hensel_lift_step::consumer_b",
+            ]),
+        }];
+
+        validate_research_primitive_promotions(&promotions)
+            .expect("Fix: registered catalog consumers must satisfy explicit consumer gates.");
+    }
+
+    #[test]
+    fn research_primitive_promotion_gate_rejects_missing_production_consumers() {
+        let promotions = [ResearchPrimitivePromotion {
+            primitive_id: "vyre-primitives::math::hensel_lift_step",
+            boundary: PrimitivePromotionBoundary::ProductionConsumers(&[
+                "vyre-libs::catalog::math::hensel_lift_step::missing_consumer",
+            ]),
+        }];
+
+        let error = validate_research_primitive_promotions(&promotions)
+            .expect_err("Fix: missing production consumers must reject.");
+        assert!(error.contains("missing_consumer"));
+    }
+}

@@ -654,11 +654,8 @@ fn kernel_record_span_usize(
 }
 
 fn kernel_offset_usize_or_panic(value: u32, label: &'static str) -> usize {
-    usize::try_from(value).unwrap_or_else(|source| {
-        panic!(
-            "io_uring {label} value {value} cannot fit usize: {source}. Fix: use a supported kernel/userspace ABI or reduce ring entries."
-        )
-    })
+    let _ = label;
+    value as usize
 }
 
 fn slice_len_u32(value: usize, label: &'static str) -> Result<u32, PipelineError> {

@@ -86,10 +86,7 @@ fn scan_root(
             .push(ModuleHit {
                 root_index,
                 path: workspace_relative(path),
-                symbols: function_symbols(
-                    &std::fs::read_to_string(path)
-                        .with_context(|| format!("read {}", path.display()))?,
-                ),
+                symbols: function_symbols(&crate::read_source_bounded(path)?),
             });
     }
     Ok(())

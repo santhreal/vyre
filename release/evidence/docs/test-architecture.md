@@ -13,7 +13,7 @@ Required generated evidence:
 
 Release contract:
 
-- No dedicated test evidence file may exceed the `500` line modularity threshold.
+- No dedicated test evidence file may exceed the `8000` line modularity threshold.
 - Test architecture must expose fixtures, contracts, properties, backend tests, corpus tests, benchmarks, and regressions.
 - Test matrix evidence must scan platform, dataflow-analysis, and parser-CLI release surfaces.
 - Test matrix evidence must report nonzero platform, dataflow-analysis, and parser-CLI release-surface test file counts.

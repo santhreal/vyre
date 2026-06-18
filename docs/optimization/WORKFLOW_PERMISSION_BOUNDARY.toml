@@ -1,0 +1,40 @@
+# Workflow permission boundary for VX-1102 through VX-1104 and VX-1107 through VX-1109.
+# Public Vyre workflows, GITHUB_TOKEN permissions, OIDC identity, secrets, event trust, and Santh-private exclusion share one boundary.
+
+schema = "vyre.cicd.workflow_permission_boundary.v1"
+owner = "coordination"
+evidence_tokens = ["GITHUB_ACTIONS_SECURE_USE", "GITHUB_ACTIONS_TOKEN_PERMISSIONS", "GITHUB_ACTIONS_OIDC", "SECRET_MATERIAL_HANDLING_POLICY"]
+
+required_fields = [
+  "workflow_class",
+  "trigger_trust_policy",
+  "default_permissions_policy",
+  "job_permissions_policy",
+  "oidc_policy",
+  "secret_policy",
+  "untrusted_input_policy",
+  "private_santh_boundary",
+  "diagnostic",
+]
+
+[[boundary]]
+workflow_class = "public-pr-validation"
+trigger_trust_policy = "pull-request-from-fork-runs-with-read-only-token-no-secrets-no-release-uploads"
+default_permissions_policy = "contents-read-only"
+job_permissions_policy = "no-write-permissions-unless-job-has-explicit-release-gate"
+oidc_policy = "id-token-none"
+secret_policy = "no-repository-or-environment-secrets"
+untrusted_input_policy = "context-values-pass-through-env-or-typed-action-not-inline-shell"
+private_santh_boundary = "workflow-cannot-check-out-or-reference-santh-private-root"
+diagnostic = "VYRE_WORKFLOW_PUBLIC_PR_PERMISSION_OK"
+
+[[boundary]]
+workflow_class = "public-release-publication"
+trigger_trust_policy = "protected-main-or-protected-release-tag-after-final-gates"
+default_permissions_policy = "contents-read-only"
+job_permissions_policy = "attestations-write-id-token-write-contents-read-packages-write-only-for-release-jobs"
+oidc_policy = "short-lived-identity-bound-to-public-vyre-repository-workflow-ref-and-release-environment"
+secret_policy = "prefer-oidc-over-long-lived-secrets-and-mask-derived-sensitive-values"
+untrusted_input_policy = "release-inputs-validated-before-shell-or-package-command"
+private_santh_boundary = "release-workflow-inputs-and-artifacts-must-not-include-santh-private-root"
+diagnostic = "VYRE_WORKFLOW_RELEASE_PERMISSION_OK"

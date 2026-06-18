@@ -2,7 +2,7 @@ use crate::api::case::{
     BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
     BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
 };
-use crate::api::metric::{BenchMetrics, MetricPoint};
+use crate::api::metric::{digest64_buffers, BenchMetrics, MetricPoint};
 use crate::api::resident::{
     dispatch_program_timed, input_bytes_total, ResidentInputPool, ResidentInputSet,
     TransferAccounting,
@@ -16,6 +16,18 @@ const METADATA_CONDITION_RESIDENT_BATCH_SIZE: usize = 16;
 pub struct SparseOutputCompactionCount;
 pub struct CallgraphReachabilityStep;
 pub struct MetadataConditionBatch;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ReleaseMacroFamily {
+    Scan,
+    Flow,
+    Graph,
+    Parser,
+    Egraph,
+    Resident,
+    Matrix,
+    Condition,
+}
 
 struct MetadataConditionPrepared {
     program: Program,
@@ -38,6 +50,7 @@ struct SyntheticCountWorkload {
     primitive: &'static str,
     baseline: &'static str,
     metric_name: &'static str,
+    family: ReleaseMacroFamily,
     records: u32,
     min_speedup_x: f64,
     pattern: SyntheticPattern,
@@ -77,6 +90,10 @@ pub struct ReleaseMacroProgramSpec {
     pub input_buffers: usize,
     /// Minimum CUDA speedup contract attached to this release workload.
     pub min_speedup_x: u32,
+    /// Typed release workload family.
+    pub family: ReleaseMacroFamily,
+    /// Owner crate responsible for this workload.
+    pub owner_crate: &'static str,
 }
 
 /// Generated release workload case with concrete inputs and CPU-oracle outputs.
@@ -90,6 +107,160 @@ pub struct ReleaseMacroGeneratedCase {
     pub inputs: Vec<Vec<u8>>,
     /// Expected output byte buffers from the CPU oracle.
     pub expected_outputs: Vec<Vec<u8>>,
+    /// Total logical input bytes for the generated inputs.
+    pub input_bytes_total: u64,
+    /// Digest of expected output bytes.
+    pub expected_output_digest: u64,
+}
+
+/// Runtime evidence required for held-out math and NN release kernels.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct ReleaseMathNnKernelEvidence {
+    /// Stable benchmark case id.
+    pub case_id: &'static str,
+    /// CPU oracle output digest.
+    pub cpu_digest: u64,
+    /// GPU/backend output digest.
+    pub gpu_digest: u64,
+    /// Absolute tolerance scaled by 1e9.
+    pub tolerance_abs_e9: u64,
+    /// Active kernel/device time in nanoseconds, or wall time when unavailable.
+    pub active_time_ns: u64,
+    /// Accounted transfer bytes for this run.
+    pub transfer_bytes: u64,
+    /// Selected planner/kernel path.
+    pub selected_kernel_path: &'static str,
+}
+
+/// Validate held-out math and NN release-kernel evidence.
+///
+/// # Errors
+/// Returns `Err` when digests, tolerance, active time, transfer accounting, or
+/// planner path evidence is missing.
+pub fn validate_release_math_nn_kernel_evidence(
+    evidence: &ReleaseMathNnKernelEvidence,
+) -> Result<(), String> {
+    if evidence.cpu_digest == 0 {
+        return Err(format!(
+            "Fix: release math/NN evidence `{}` is missing cpu_digest.",
+            evidence.case_id
+        ));
+    }
+    if evidence.gpu_digest == 0 {
+        return Err(format!(
+            "Fix: release math/NN evidence `{}` is missing gpu_digest.",
+            evidence.case_id
+        ));
+    }
+    if evidence.tolerance_abs_e9 == 0 {
+        return Err(format!(
+            "Fix: release math/NN evidence `{}` is missing tolerance_abs_e9.",
+            evidence.case_id
+        ));
+    }
+    if evidence.active_time_ns == 0 {
+        return Err(format!(
+            "Fix: release math/NN evidence `{}` is missing active_time_ns.",
+            evidence.case_id
+        ));
+    }
+    if evidence.transfer_bytes == 0 {
+        return Err(format!(
+            "Fix: release math/NN evidence `{}` is missing transfer_bytes.",
+            evidence.case_id
+        ));
+    }
+    if evidence.selected_kernel_path.is_empty() {
+        return Err(format!(
+            "Fix: release math/NN evidence `{}` is missing selected_kernel_path.",
+            evidence.case_id
+        ));
+    }
+    Ok(())
+}
+
+/// Scan competitor corpus metadata required for release workload evidence.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct ReleaseScanCompetitorCorpusMetadata {
+    /// Stable benchmark case id.
+    pub case_id: &'static str,
+    /// Rule family, for example literal, regex, mixed, or secret-token.
+    pub rule_family: &'static str,
+    /// Number of patterns in the rule set.
+    pub pattern_count: u32,
+    /// Literal density in basis points across the pattern set.
+    pub literal_density_bps: u16,
+    /// Construct classes represented by this scan corpus.
+    pub construct_classes: &'static [&'static str],
+    /// Haystack corpus id.
+    pub haystack_corpus_id: &'static str,
+    /// Competitor baseline engine.
+    pub baseline_engine: &'static str,
+    /// Exact semantic exclusions for unsupported competitor constructs.
+    pub unsupported_construct_reasons: &'static [&'static str],
+}
+
+/// Validate scan competitor corpus metadata.
+///
+/// # Errors
+/// Returns `Err` when required corpus, pattern, construct, baseline, or
+/// unsupported-construct fields are missing or malformed.
+pub fn validate_release_scan_competitor_corpus_metadata(
+    metadata: &ReleaseScanCompetitorCorpusMetadata,
+) -> Result<(), String> {
+    if metadata.case_id.is_empty() {
+        return Err("Fix: scan competitor metadata case_id must be non-empty.".to_string());
+    }
+    if metadata.rule_family.is_empty() {
+        return Err(format!(
+            "Fix: scan competitor metadata `{}` is missing rule_family.",
+            metadata.case_id
+        ));
+    }
+    if metadata.pattern_count == 0 {
+        return Err(format!(
+            "Fix: scan competitor metadata `{}` must record a positive pattern_count.",
+            metadata.case_id
+        ));
+    }
+    if metadata.literal_density_bps > 10_000 {
+        return Err(format!(
+            "Fix: scan competitor metadata `{}` literal_density_bps must be <= 10000.",
+            metadata.case_id
+        ));
+    }
+    if metadata.construct_classes.is_empty()
+        || metadata
+            .construct_classes
+            .iter()
+            .any(|construct| construct.is_empty())
+    {
+        return Err(format!(
+            "Fix: scan competitor metadata `{}` must record non-empty construct_classes.",
+            metadata.case_id
+        ));
+    }
+    if metadata.haystack_corpus_id.is_empty() {
+        return Err(format!(
+            "Fix: scan competitor metadata `{}` is missing haystack_corpus_id.",
+            metadata.case_id
+        ));
+    }
+    if metadata.baseline_engine.is_empty() {
+        return Err(format!(
+            "Fix: scan competitor metadata `{}` is missing baseline_engine.",
+            metadata.case_id
+        ));
+    }
+    for reason in metadata.unsupported_construct_reasons {
+        if reason.is_empty() || !reason.contains("Fix:") {
+            return Err(format!(
+                "Fix: scan competitor metadata `{}` unsupported construct reasons must be exact and actionable.",
+                metadata.case_id
+            ));
+        }
+    }
+    Ok(())
 }
 
 #[derive(Clone, Copy, Eq, PartialEq)]
@@ -105,6 +276,15 @@ enum SyntheticPattern {
     MegakernelQueuedBatch,
     EgraphSaturation,
 }
+
+#[path = "release_workloads/families.rs"]
+mod release_workload_families;
+use release_workload_families::{
+    release_macro_workloads, release_macro_workloads_for_family, ALIAS_REACHING_DEF,
+    C_AST_TRAVERSAL, CONDITION_EVAL_BATCH, EGRAPH_SATURATION, ENTROPY_WINDOW, IFDS_WITNESS,
+    MEGAKERNEL_QUEUE,
+    OFFSET_COUNT_AGGREGATION, QUANTIFIED_LOOPS, STRING_BITMAP_SCATTER,
+};
 
 const RELEASE_SUITES: &[crate::api::suite::SuiteKind] = &[
     crate::api::suite::SuiteKind::Release,
@@ -999,12 +1179,7 @@ impl BenchCase for SyntheticCountWorkload {
             } => {
                 let baseline_words =
                     string_bitmap_scatter_expected_words(pattern_bitmap, rule_bitmap, self.records);
-                vec![baseline_words
-                    .first()
-                    .copied()
-                    .unwrap_or(0)
-                    .to_le_bytes()
-                    .to_vec()]
+                vec![encode_u32_words(&baseline_words)]
             }
         };
         let baseline_wall = baseline_start.elapsed().as_nanos() as u64;
@@ -1120,6 +1295,7 @@ struct StringBitmapScatterInputs {
 }
 
 fn string_bitmap_scatter_inputs(records: u32) -> StringBitmapScatterInputs {
+    let output_words = records.div_ceil(32) as usize;
     let mut pattern_bitmap = Vec::with_capacity(records as usize);
     let mut rule_bitmap = Vec::with_capacity(records as usize);
     for index in 0..records {
@@ -1128,6 +1304,7 @@ fn string_bitmap_scatter_inputs(records: u32) -> StringBitmapScatterInputs {
         rule_bitmap.push(row[1]);
     }
     let inputs = vec![
+        vec![0u8; output_words * 4],
         encode_u32_words(&pattern_bitmap),
         encode_u32_words(&rule_bitmap),
     ];
@@ -1258,9 +1435,9 @@ fn string_bitmap_scatter_program(records: u32) -> Program {
     let output_words = records.div_ceil(32);
     Program::wrapped(
         vec![
-            BufferDecl::output("out_flags", 0, DataType::U32)
+            BufferDecl::storage("out_flags", 0, BufferAccess::ReadWrite, DataType::U32)
                 .with_count(output_words)
-                .with_output_byte_range(0..4),
+                .with_output_byte_range(0..(output_words as usize * 4)),
             BufferDecl::storage("pattern_bitmap", 1, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(records),
             BufferDecl::storage("rule_bitmap", 2, BufferAccess::ReadOnly, DataType::U32)
@@ -2591,10 +2768,9 @@ fn linear_graph_inputs() -> GraphInputs {
     let extra_bits = (CALLGRAPH_WORDS as u32 * 32).saturating_sub(CALLGRAPH_NODES);
     if extra_bits > 0 {
         let live_bits = 32 - extra_bits;
-        let last = frontier_in
-            .last_mut()
-            .expect("Fix: CALLGRAPH_WORDS is derived from a nonzero node count");
-        *last = (1u32 << live_bits) - 1;
+        if let Some(last) = frontier_in.last_mut() {
+            *last = (1u32 << live_bits) - 1;
+        }
     }
     let frontier_out_seed = vec![0; CALLGRAPH_WORDS];
     let inputs = vec![
@@ -2878,161 +3054,6 @@ fn gb_per_second(bytes: u64, ns: u64) -> f64 {
     bytes as f64 / ns as f64
 }
 
-static CONDITION_EVAL_BATCH: SyntheticCountWorkload = SyntheticCountWorkload {
-    id: "release.condition_eval.1m",
-    name: "Release Condition Evaluation 1M",
-    description: "Bytecode-compatible condition evaluation over a 1M rule-record batch",
-    tags: &["condition", "bytecode", "rules"],
-    owner_crate: "vyre",
-    primitive: "bytecode-compatible conditional evaluation",
-    baseline: "optimized CPU rule-condition evaluator with SIMD-friendly bitmap inputs",
-    metric_name: "condition_records",
-    records: 1_048_576,
-    min_speedup_x: 100.0,
-    pattern: SyntheticPattern::ConditionEval,
-};
-
-static STRING_BITMAP_SCATTER: SyntheticCountWorkload = SyntheticCountWorkload {
-    id: "release.string_bitmap_scatter.1m",
-    name: "Release String Bitmap Scatter 1M",
-    description: "Pattern-match bitmap scatter feeding per-rule condition evaluation",
-    tags: &["string", "bitmap", "scatter"],
-    owner_crate: "vyre-libs",
-    primitive: "pattern-match bitmap scatter",
-    baseline: "Hyperscan/ripgrep-class CPU pattern bitmap materialization",
-    metric_name: "scatter_records",
-    records: 1_048_576,
-    min_speedup_x: 100.0,
-    pattern: SyntheticPattern::StringBitmapScatter,
-};
-
-static OFFSET_COUNT_AGGREGATION: SyntheticCountWorkload = SyntheticCountWorkload {
-    id: "release.offset_count_aggregation.1m",
-    name: "Release Offset Count Aggregation 1M",
-    description: "String offset, length, and count aggregation without CPU-side post-processing",
-    tags: &["offset", "count", "aggregation"],
-    owner_crate: "vyre-libs",
-    primitive: "count/offset/length aggregation",
-    baseline: "SIMD CPU aggregation over sorted match streams",
-    metric_name: "aggregation_records",
-    records: 1_048_576,
-    min_speedup_x: 100.0,
-    pattern: SyntheticPattern::OffsetCountAggregation,
-};
-
-static ENTROPY_WINDOW: SyntheticCountWorkload = SyntheticCountWorkload {
-    id: "release.entropy_window.1m",
-    name: "Release Entropy Window 1M",
-    description: "Rolling entropy-style window predicates over a byte-statistics stream",
-    tags: &["entropy", "window", "statistics"],
-    owner_crate: "vyre-libs",
-    primitive: "rolling entropy/window predicates",
-    baseline: "SIMD CPU rolling histogram entropy implementation",
-    metric_name: "entropy_records",
-    records: 1_048_576,
-    min_speedup_x: 100.0,
-    pattern: SyntheticPattern::EntropyWindow,
-};
-
-static QUANTIFIED_LOOPS: SyntheticCountWorkload = SyntheticCountWorkload {
-    id: "release.quantified_condition_loops.1m",
-    name: "Release Quantified Condition Loops 1M",
-    description: "Bounded FOR-ANY, FOR-ALL, and FOR-N style condition evaluation",
-    tags: &["quantifier", "loop", "predicate"],
-    owner_crate: "vyre",
-    primitive: "bounded quantified condition loops",
-    baseline: "optimized CPU short-circuit quantified-condition evaluator",
-    metric_name: "quantified_records",
-    records: 1_048_576,
-    min_speedup_x: 100.0,
-    pattern: SyntheticPattern::QuantifiedLoops,
-};
-
-static ALIAS_REACHING_DEF: SyntheticCountWorkload = SyntheticCountWorkload {
-    id: "release.alias_reaching_def.1m",
-    name: "Release Alias Reaching Definition 1M",
-    description: "Alias-aware reaching-definition predicate workload used by optimization passes",
-    tags: &["alias", "reaching-def", "dataflow"],
-    owner_crate: "vyre-bench",
-    primitive: "alias-aware reaching-definition optimization",
-    baseline: "LLVM-style sparse dataflow and alias analysis baseline",
-    metric_name: "alias_records",
-    records: 1_048_576,
-    min_speedup_x: 100.0,
-    pattern: SyntheticPattern::AliasReachingDef,
-};
-
-static IFDS_WITNESS: SyntheticCountWorkload = SyntheticCountWorkload {
-    id: "release.ifds_witness.1m",
-    name: "Release IFDS Witness 1M",
-    description: "IFDS frontier and edge-kind predicate stage for witness extraction",
-    tags: &["ifds", "witness", "dataflow"],
-    owner_crate: "vyre-bench",
-    primitive: "IFDS reachability and witness extraction",
-    baseline: "optimized CPU graph reachability and witness extraction",
-    metric_name: "ifds_records",
-    records: 1_048_576,
-    min_speedup_x: 100.0,
-    pattern: SyntheticPattern::IfdsWitness,
-};
-
-static C_AST_TRAVERSAL: SyntheticCountWorkload = SyntheticCountWorkload {
-    id: "release.c_ast_traversal.1m",
-    name: "Release C AST Traversal 1M",
-    description: "C AST node motif predicate traversal over parser-produced node buffers",
-    tags: &["c", "ast", "parser"],
-    owner_crate: "vyre-frontend-c",
-    primitive: "C AST traversal and motif predicates",
-    baseline: "tree-sitter/libclang-class CPU AST traversal baseline",
-    metric_name: "ast_nodes",
-    records: 1_048_576,
-    min_speedup_x: 100.0,
-    pattern: SyntheticPattern::CAstTraversal,
-};
-
-static MEGAKERNEL_QUEUE: SyntheticCountWorkload = SyntheticCountWorkload {
-    id: "release.megakernel_queue.1m",
-    name: "Release Megakernel Queue 1M",
-    description: "Persistent megakernel queue predicate workload for repeated condition batches",
-    tags: &["megakernel", "queue", "runtime"],
-    owner_crate: "vyre-runtime",
-    primitive: "persistent megakernel queued condition batches",
-    baseline: "optimized CPU batched condition evaluator",
-    metric_name: "queued_records",
-    records: 1_048_576,
-    min_speedup_x: 100.0,
-    pattern: SyntheticPattern::MegakernelQueuedBatch,
-};
-
-static EGRAPH_SATURATION: SyntheticCountWorkload = SyntheticCountWorkload {
-    id: "release.egraph_saturation.1m",
-    name: "Release Egraph Saturation 1M",
-    description: "Rewrite-equivalence predicate workload for optimization saturation evidence",
-    tags: &["egraph", "optimization", "rewrite"],
-    owner_crate: "vyre-lower",
-    primitive: "optimization rewrite saturation",
-    baseline: "egg/egraph CPU saturation baseline with equivalent rewrite set",
-    metric_name: "rewrite_records",
-    records: 1_048_576,
-    min_speedup_x: 100.0,
-    pattern: SyntheticPattern::EgraphSaturation,
-};
-
-fn release_macro_workloads() -> [&'static SyntheticCountWorkload; 10] {
-    [
-        &CONDITION_EVAL_BATCH,
-        &STRING_BITMAP_SCATTER,
-        &OFFSET_COUNT_AGGREGATION,
-        &ENTROPY_WINDOW,
-        &QUANTIFIED_LOOPS,
-        &ALIAS_REACHING_DEF,
-        &IFDS_WITNESS,
-        &C_AST_TRAVERSAL,
-        &MEGAKERNEL_QUEUE,
-        &EGRAPH_SATURATION,
-    ]
-}
-
 fn release_macro_workload(id: &str) -> Option<&'static SyntheticCountWorkload> {
     release_macro_workloads()
         .into_iter()
@@ -3049,6 +3070,8 @@ fn release_macro_program_spec(
         records,
         input_buffers: pattern_input_count(workload.pattern),
         min_speedup_x: workload.min_speedup_x as u32,
+        family: workload.family,
+        owner_crate: workload.owner_crate,
     }
 }
 
@@ -3065,6 +3088,18 @@ pub fn release_macro_program_specs() -> Vec<ReleaseMacroProgramSpec> {
 pub fn release_macro_program_specs_for_records(records: u32) -> Vec<ReleaseMacroProgramSpec> {
     release_macro_workloads()
         .into_iter()
+        .map(|workload| release_macro_program_spec(workload, records))
+        .collect()
+}
+
+/// Return release macro descriptors for one typed workload family.
+#[must_use]
+pub fn release_macro_program_specs_for_family_and_records(
+    family: ReleaseMacroFamily,
+    records: u32,
+) -> Vec<ReleaseMacroProgramSpec> {
+    release_macro_workloads_for_family(family)
+        .iter()
         .map(|workload| release_macro_program_spec(workload, records))
         .collect()
 }
@@ -3102,6 +3137,25 @@ pub fn build_release_macro_case_for_records(
     records: u32,
 ) -> Option<ReleaseMacroGeneratedCase> {
     let workload = release_macro_workload(id)?;
+    Some(build_release_macro_case_from_workload(workload, records))
+}
+
+/// Build all generated release macro cases for one typed workload family.
+#[must_use]
+pub fn build_release_macro_cases_for_family_and_records(
+    family: ReleaseMacroFamily,
+    records: u32,
+) -> Vec<ReleaseMacroGeneratedCase> {
+    release_macro_workloads_for_family(family)
+        .iter()
+        .map(|workload| build_release_macro_case_from_workload(workload, records))
+        .collect()
+}
+
+fn build_release_macro_case_from_workload(
+    workload: &SyntheticCountWorkload,
+    records: u32,
+) -> ReleaseMacroGeneratedCase {
     let spec = release_macro_program_spec(workload, records);
     let program = build_synthetic_release_program(workload.pattern, records);
     let (inputs, expected_outputs) = match workload.pattern {
@@ -3127,18 +3181,21 @@ pub fn build_release_macro_case_for_records(
             let expected = synthetic_cpu_count(workload.pattern, records);
             assert_eq!(
                 generated.expected, expected,
-                "Fix: release macro generated input oracle diverged from CPU count oracle for {id}"
+                "Fix: release macro generated input oracle diverged from CPU count oracle for {}",
+                workload.id
             );
             (generated.inputs, vec![expected.to_le_bytes().to_vec()])
         }
     };
 
-    Some(ReleaseMacroGeneratedCase {
+    ReleaseMacroGeneratedCase {
+        input_bytes_total: input_bytes_total(&inputs),
+        expected_output_digest: digest64_buffers(&expected_outputs),
         spec,
         program,
         inputs,
         expected_outputs,
-    })
+    }
 }
 
 /// Build a reduced or stress-scale release macro case whose output is one
@@ -3308,14 +3365,19 @@ mod tests {
 
             assert_eq!(
                 generated.inputs.len(),
-                2,
-                "records={records} must pass only read-only bitmap inputs"
+                3,
+                "records={records} must pass initialized out_flags plus read-only bitmap inputs"
             );
-            assert_eq!(generated.inputs[0].len(), records as usize * 4);
+            assert_eq!(generated.inputs[0].len(), output_words * 4);
             assert_eq!(generated.inputs[1].len(), records as usize * 4);
+            assert_eq!(generated.inputs[2].len(), records as usize * 4);
             assert_eq!(program.buffers()[0].name.as_ref(), "out_flags");
             assert_eq!(program.buffers()[0].count, records.div_ceil(32));
-            assert_eq!(program.buffers()[0].output_byte_range(), Some(0..4));
+            assert_eq!(program.buffers()[0].access(), BufferAccess::ReadWrite);
+            assert_eq!(
+                program.buffers()[0].output_byte_range(),
+                Some(0..output_words * 4)
+            );
             assert_eq!(program.buffers()[1].name.as_ref(), "pattern_bitmap");
             assert_eq!(program.buffers()[1].count, records);
             assert_eq!(program.buffers()[2].name.as_ref(), "rule_bitmap");
@@ -3353,13 +3415,8 @@ mod tests {
 
             assert_eq!(
                 outputs,
-                vec![expected_words
-                    .first()
-                    .copied()
-                    .unwrap_or(0)
-                    .to_le_bytes()
-                    .to_vec()],
-                "records={records} must scatter the CPU oracle bitmap and expose the configured proof word"
+                vec![encode_u32_words(&expected_words)],
+                "records={records} must scatter the full CPU oracle bitmap"
             );
         }
     }
@@ -3392,5 +3449,257 @@ mod tests {
             Some(3),
             "Fix: dataflow release evidence must expose ceil(nodes/32) bitset words under the gate-visible metric name."
         );
+    }
+
+    #[test]
+    fn release_math_nn_kernel_evidence_accepts_complete_digest_and_planner_record() {
+        let evidence = ReleaseMathNnKernelEvidence {
+            case_id: "nn.linear_4bit_affine_grouped.1m",
+            cpu_digest: 1,
+            gpu_digest: 1,
+            tolerance_abs_e9: 100_000,
+            active_time_ns: 42,
+            transfer_bytes: 64,
+            selected_kernel_path: "cooperative",
+        };
+
+        validate_release_math_nn_kernel_evidence(&evidence)
+            .expect("Fix: complete math/NN release evidence must pass.");
+    }
+
+    #[test]
+    fn release_math_nn_kernel_evidence_rejects_missing_digest_or_planner_path() {
+        let missing_digest = ReleaseMathNnKernelEvidence {
+            case_id: "nn.linear_4bit_affine_grouped.1m",
+            cpu_digest: 0,
+            gpu_digest: 1,
+            tolerance_abs_e9: 100_000,
+            active_time_ns: 42,
+            transfer_bytes: 64,
+            selected_kernel_path: "cooperative",
+        };
+        let error = validate_release_math_nn_kernel_evidence(&missing_digest)
+            .expect_err("Fix: missing CPU digest must reject.");
+        assert!(error.contains("cpu_digest"));
+
+        let missing_path = ReleaseMathNnKernelEvidence {
+            selected_kernel_path: "",
+            cpu_digest: 1,
+            ..missing_digest
+        };
+        let error = validate_release_math_nn_kernel_evidence(&missing_path)
+            .expect_err("Fix: missing planner path must reject.");
+        assert!(error.contains("selected_kernel_path"));
+    }
+
+    #[test]
+    fn scan_competitor_corpus_metadata_accepts_complete_scan_baseline_record() {
+        let metadata = ReleaseScanCompetitorCorpusMetadata {
+            case_id: "release.scan_ac_irregular.1m",
+            rule_family: "mixed-literal-regex",
+            pattern_count: 128,
+            literal_density_bps: 6_250,
+            construct_classes: &["literal", "bounded-repeat", "ascii-class"],
+            haystack_corpus_id: "heldout:scan:irregular:1m",
+            baseline_engine: "hyperscan-compatible",
+            unsupported_construct_reasons: &[
+                "look-around excluded from Hyperscan-compatible baseline. Fix: compare this fixture against regex-automata or route unsupported constructs to verifier-only evidence.",
+            ],
+        };
+
+        validate_release_scan_competitor_corpus_metadata(&metadata)
+            .expect("Fix: complete scan competitor metadata must pass");
+    }
+
+    #[test]
+    fn scan_competitor_corpus_metadata_rejects_missing_baseline_or_weak_exclusion() {
+        let missing_baseline = ReleaseScanCompetitorCorpusMetadata {
+            case_id: "release.scan_ac_irregular.1m",
+            rule_family: "mixed-literal-regex",
+            pattern_count: 128,
+            literal_density_bps: 6_250,
+            construct_classes: &["literal"],
+            haystack_corpus_id: "heldout:scan:irregular:1m",
+            baseline_engine: "",
+            unsupported_construct_reasons: &[],
+        };
+        let error = validate_release_scan_competitor_corpus_metadata(&missing_baseline)
+            .expect_err("Fix: missing scan baseline engine must reject");
+        assert!(error.contains("baseline_engine"));
+
+        let weak_exclusion = ReleaseScanCompetitorCorpusMetadata {
+            baseline_engine: "hyperscan-compatible",
+            unsupported_construct_reasons: &["look-around"],
+            ..missing_baseline
+        };
+        let error = validate_release_scan_competitor_corpus_metadata(&weak_exclusion)
+            .expect_err("Fix: weak unsupported construct reason must reject");
+        assert!(error.contains("unsupported construct"));
+    }
+
+    #[test]
+    fn release_macro_family_registry_preserves_exact_ids_owners_and_families() {
+        let specs = release_macro_program_specs_for_records(33);
+        let observed = specs
+            .iter()
+            .map(|spec| (spec.id, spec.owner_crate, spec.family, spec.input_buffers))
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            observed,
+            vec![
+                (
+                    "release.condition_eval.1m",
+                    "vyre",
+                    ReleaseMacroFamily::Condition,
+                    3,
+                ),
+                (
+                    "release.string_bitmap_scatter.1m",
+                    "vyre-libs",
+                    ReleaseMacroFamily::Scan,
+                    2,
+                ),
+                (
+                    "release.offset_count_aggregation.1m",
+                    "vyre-libs",
+                    ReleaseMacroFamily::Scan,
+                    3,
+                ),
+                (
+                    "release.entropy_window.1m",
+                    "vyre-libs",
+                    ReleaseMacroFamily::Scan,
+                    3,
+                ),
+                (
+                    "release.quantified_condition_loops.1m",
+                    "vyre",
+                    ReleaseMacroFamily::Condition,
+                    3,
+                ),
+                (
+                    "release.alias_reaching_def.1m",
+                    "weir",
+                    ReleaseMacroFamily::Flow,
+                    3,
+                ),
+                (
+                    "release.ifds_witness.1m",
+                    "weir",
+                    ReleaseMacroFamily::Flow,
+                    3,
+                ),
+                (
+                    "release.c_ast_traversal.1m",
+                    "vyre-frontend-c",
+                    ReleaseMacroFamily::Parser,
+                    3,
+                ),
+                (
+                    "release.megakernel_queue.1m",
+                    "vyre-runtime",
+                    ReleaseMacroFamily::Resident,
+                    3,
+                ),
+                (
+                    "release.egraph_saturation.1m",
+                    "vyre-lower",
+                    ReleaseMacroFamily::Egraph,
+                    3,
+                ),
+            ],
+            "Fix: typed release family registry must preserve the exact release macro case surface."
+        );
+    }
+
+    #[test]
+    fn release_macro_typed_family_builders_preserve_weir_flow_and_empty_families() {
+        let flow_specs =
+            release_macro_program_specs_for_family_and_records(ReleaseMacroFamily::Flow, 33);
+        assert_eq!(
+            flow_specs
+                .iter()
+                .map(|spec| (spec.id, spec.owner_crate, spec.family, spec.input_buffers))
+                .collect::<Vec<_>>(),
+            vec![
+                (
+                    "release.alias_reaching_def.1m",
+                    "weir",
+                    ReleaseMacroFamily::Flow,
+                    3,
+                ),
+                (
+                    "release.ifds_witness.1m",
+                    "weir",
+                    ReleaseMacroFamily::Flow,
+                    3,
+                ),
+            ],
+            "Fix: flow release workloads must stay attached to Weir ownership and not drift into benchmark-local flow."
+        );
+
+        let flow_cases =
+            build_release_macro_cases_for_family_and_records(ReleaseMacroFamily::Flow, 33);
+        assert_eq!(flow_cases.len(), flow_specs.len());
+        for case in flow_cases {
+            assert_eq!(case.input_bytes_total, 396);
+            assert_eq!(
+                case.expected_output_digest,
+                digest64_buffers(&case.expected_outputs)
+            );
+            assert_ne!(
+                case.expected_output_digest, 0,
+                "Fix: Weir flow release case {} must carry a nonzero CPU-oracle digest.",
+                case.spec.id
+            );
+        }
+
+        for workload in release_macro_workloads_for_family(ReleaseMacroFamily::Flow) {
+            assert!(
+                workload.tags.contains(&"weir"),
+                "Fix: Weir flow workload {} must advertise the Weir boundary in tags.",
+                workload.id
+            );
+            assert!(
+                workload.primitive.contains("Weir"),
+                "Fix: Weir flow workload {} must name the actual Weir primitive.",
+                workload.id
+            );
+        }
+
+        assert!(
+            release_macro_program_specs_for_family_and_records(ReleaseMacroFamily::Graph, 33)
+                .is_empty()
+        );
+        assert!(
+            build_release_macro_cases_for_family_and_records(ReleaseMacroFamily::Matrix, 33)
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn release_macro_generated_cases_record_input_bytes_and_expected_output_digest() {
+        for spec in release_macro_program_specs_for_records(33) {
+            let case = build_release_macro_case_for_records(spec.id, spec.records)
+                .expect("Fix: every release macro spec must build a generated case.");
+            let expected_input_bytes = match spec.id {
+                "release.string_bitmap_scatter.1m" => 272,
+                _ => 396,
+            };
+
+            assert_eq!(case.spec.owner_crate, spec.owner_crate);
+            assert_eq!(case.spec.family, spec.family);
+            assert_eq!(case.input_bytes_total, expected_input_bytes);
+            assert_eq!(
+                case.expected_output_digest,
+                digest64_buffers(&case.expected_outputs)
+            );
+            assert_ne!(
+                case.expected_output_digest, 0,
+                "Fix: generated release macro case {} must expose a nonzero expected output digest.",
+                spec.id
+            );
+        }
     }
 }

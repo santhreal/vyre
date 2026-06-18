@@ -1,0 +1,55 @@
+# Target instruction capability records for VX-680.
+# PTX, WGSL, SPIR-V, and MSL emitters select instructions only through target capability gates.
+
+schema = "vyre.lower.target_instruction_capabilities.v1"
+owner = "lower_emit"
+evidence_tokens = ["PTX_ISA", "WGSL_SUBGROUPS", "METAL_SIMDGROUPS"]
+
+targets = [
+  "ptx",
+  "wgsl",
+  "spirv",
+  "msl",
+]
+
+capability_kinds = [
+  "atomics",
+  "subgroup_ops",
+  "memory_ordering",
+  "async_copies",
+  "tensor_ops",
+  "scan_intrinsics",
+]
+
+required_fields = [
+  "target",
+  "capability",
+  "instruction",
+  "available",
+  "fallback_instruction",
+  "diagnostic",
+]
+
+[[capability]]
+target = "ptx"
+capability = "async_copies"
+instruction = "cp.async"
+available = true
+fallback_instruction = "ld.global; st.shared"
+diagnostic = "none"
+
+[[capability]]
+target = "wgsl"
+capability = "subgroup_ops"
+instruction = "subgroupBroadcast"
+available = false
+fallback_instruction = "workgroup-memory-scan"
+diagnostic = "VYRE_WGSL_SUBGROUP_CAPABILITY_MISSING"
+
+[[capability]]
+target = "msl"
+capability = "scan_intrinsics"
+instruction = "simd_prefix_exclusive_sum"
+available = true
+fallback_instruction = "threadgroup-tree-scan"
+diagnostic = "none"

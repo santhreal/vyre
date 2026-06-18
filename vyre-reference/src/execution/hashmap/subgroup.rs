@@ -166,14 +166,17 @@ mod tests {
     fn snapshot_lane(index: u32, value: Value, source_lane: u32) -> HashmapInvocationSnapshot {
         let entry: &[Node] = &[];
         let mut invocation = HashmapInvocation::new(InvocationIds::ZERO, index, entry);
-        invocation
-            .locals
-            .bind("lane_value", value)
-            .expect("Fix: lane_value binding must be unique.");
-        invocation
-            .locals
-            .bind("source_lane", Value::U32(source_lane))
-            .expect("Fix: source_lane binding must be unique.");
+        assert!(
+            invocation.locals.bind("lane_value", value).is_ok(),
+            "Fix: lane_value binding must be unique."
+        );
+        assert!(
+            invocation
+                .locals
+                .bind("source_lane", Value::U32(source_lane))
+                .is_ok(),
+            "Fix: source_lane binding must be unique."
+        );
         HashmapInvocationSnapshot {
             ids: invocation.ids,
             linear_local_index: invocation.linear_local_index,

@@ -1,0 +1,40 @@
+# Release workflow attestation policy for VX-1105, VX-1110, VX-1115, and VX-1118.
+# GitHub artifact attestations, reproducible build attestations, SLSA provenance, SBOMs, and release gates share one policy.
+
+schema = "vyre.cicd.release_workflow_attestation_policy.v1"
+owner = "security_reliability"
+evidence_tokens = ["GITHUB_ARTIFACT_ATTESTATIONS", "SLSA_PROVENANCE", "IN_TOTO_ATTESTATION", "SPDX_SBOM"]
+
+required_fields = [
+  "attestation_surface",
+  "subject_policy",
+  "predicate_policy",
+  "signer_policy",
+  "verification_policy",
+  "sbom_policy",
+  "reproducibility_link",
+  "publication_boundary",
+  "diagnostic",
+]
+
+[[attestation]]
+attestation_surface = "public-crate-release"
+subject_policy = "crate-package-archive-digest-and-public-source-tag"
+predicate_policy = "github-artifact-attestation-plus-slsa-provenance"
+signer_policy = "public-vyre-release-workflow-on-protected-ref"
+verification_policy = "attestation-verified-before-release-completion-claim"
+sbom_policy = "spdx-sbom-attestation-linked-to-public-package"
+reproducibility_link = "REPRODUCIBLE_BUILD_RELEASE_ATTESTATION.toml"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+diagnostic = "VYRE_RELEASE_ARTIFACT_ATTESTATION_REQUIRED"
+
+[[attestation]]
+attestation_surface = "benchmark-and-dogfood-evidence"
+subject_policy = "public-benchmark-summary-and-dogfood-report-digest"
+predicate_policy = "workflow-run-provenance-and-redacted-evidence-summary"
+signer_policy = "public-vyre-validation-workflow"
+verification_policy = "attestation-or-redacted-summary-required-before-public-claim"
+sbom_policy = "not-applicable-unless-artifact-is-packaged-software"
+reproducibility_link = "DOGFOOD_WORKFLOW_EVIDENCE.toml"
+publication_boundary = "PERFORMANCE_ARTIFACT_PUBLICATION.toml"
+diagnostic = "VYRE_DOGFOOD_ARTIFACT_ATTESTATION_REQUIRED"

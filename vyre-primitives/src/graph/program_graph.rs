@@ -102,9 +102,12 @@ impl ProgramGraphShape {
     /// own RW output buffers starting at [`BINDING_PRIMITIVE_START`].
     #[must_use]
     pub fn read_only_buffers(&self) -> Vec<BufferDecl> {
-        self.try_read_only_buffers().expect(
-            "Fix: ProgramGraphShape::read_only_buffers requires a prevalidated graph shape; use try_read_only_buffers at plan/build time.",
-        )
+        // Fail fast: an overflowing graph shape must NOT silently degrade to an
+        // empty buffer set (`unwrap_or_default`) — that would hand the GPU
+        // dispatch a degenerate, mis-sized ABI with no signal. Callers needing
+        // to handle oversized graphs use `try_read_only_buffers`.
+        self.try_read_only_buffers()
+            .unwrap_or_else(|error| panic!("{error}"))
     }
 
     /// Emit the canonical read-only ProgramGraph bindings with checked

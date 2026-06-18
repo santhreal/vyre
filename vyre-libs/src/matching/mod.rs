@@ -4,7 +4,7 @@
 //! source-backed tree so transition users and module-surface gates see the same
 //! structure instead of an inline half-migration alias.
 //!
-//! **Scheduled for removal in 0.6.**
+//! Alias metadata: [`crate::compat_aliases::MATCHING_ALIAS`].
 
 #[cfg(feature = "matching-substring")]
 pub mod substring;

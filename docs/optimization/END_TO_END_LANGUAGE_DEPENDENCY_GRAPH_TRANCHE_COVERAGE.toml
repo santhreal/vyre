@@ -1,0 +1,73 @@
+[tranche]
+id = "VX-1561..VX-1580"
+title = "End-to-end language dependency graph invalidation governance coverage"
+owner = "scanner_frontends"
+status = "planned_contract"
+plan = "ALL_AXES_ACCELERATION_PLAN.md"
+
+[research]
+source_keys = [
+  "GCC_PREPROCESSOR_DEPENDENCIES",
+  "CLANG_DEPENDENCY_SCANNING",
+  "PYTHON_IMPORT_SYSTEM",
+  "RUST_MODULES_REFERENCE",
+  "BLAKE3_SPEC",
+  "SQLITE_WAL",
+]
+
+[artifacts]
+created = [
+  "LANGUAGE_DEPENDENCY_EDGE_MATRIX.toml",
+  "MODULE_IMPORT_RESOLUTION_CONTRACTS.toml",
+  "CROSS_FILE_INVALIDATION_PROPAGATION_POLICY.toml",
+  "DEPENDENCY_GRAPH_REUSE_EVIDENCE.toml",
+  "END_TO_END_LANGUAGE_DEPENDENCY_GRAPH_TRANCHE_COVERAGE.toml",
+  "conform/vyre-conform-enforce/tests/language_dependency_graph_governance.rs",
+]
+linked_existing = [
+  "INCREMENTAL_CORPUS_CHANGE_JOURNAL.toml",
+  "CORPUS_CONTENT_IDENTITY_INDEX.toml",
+  "INCREMENTAL_RESCAN_INVALIDATION_EVIDENCE.toml",
+  "FILESYSTEM_WATCHER_EVENT_POLICY.toml",
+  "DIRECTORY_ENUMERATION_METADATA_POLICY.toml",
+  "SAFE_OPEN_HANDLE_READ_POLICY.toml",
+  "FILE_INGRESS_ASYNC_IO_PIPELINE.toml",
+  "SOURCE_IMPACT_GRAPH.toml",
+  "OUTPUT_SLAB_SCHEMA_PROVENANCE.toml",
+  "BENCHMARK_PROFILING_CAPTURE_POLICY.toml",
+  "STATISTICAL_PERFORMANCE_GATES.toml",
+  "DOGFOOD_FINDING_LOOP.toml",
+  "ROADMAP.md#E2",
+  "ROADMAP.md#E3",
+]
+
+[ownership_boundary]
+this_tranche_owns = [
+  "language dependency edge extraction",
+  "module/import/include resolver input digests",
+  "unresolved and ambiguous edge policy",
+  "rule-scope aware cross-file invalidation propagation",
+  "dependency graph reuse evidence",
+]
+existing_tranches_own = [
+  "file content identity and watcher replay",
+  "filesystem enumeration and safe handles",
+  "parser cache object lifecycle",
+  "optimizer subtree artifact reuse",
+  "generic plan impact graph audits",
+  "scan execution and GPU scheduling",
+  "output schema provenance",
+  "profiling capture and statistical decisions",
+]
+
+[conformance]
+proof = "conform/vyre-conform-enforce/tests/language_dependency_graph_governance.rs"
+required_assertions = [
+  "new source keys are present in the research ledger",
+  "all new artifacts declare research sources, ownership boundaries, and tranche id",
+  "edge matrix covers C/C++, Python, and Rust rows",
+  "resolution contracts cover resolved, unresolved, ambiguous, dynamic, and cycle states",
+  "propagation policy contains positive, negative, adversarial, and cross-file truth requirements",
+  "reuse evidence records false reuse, unresolved edges, ambiguous edges, and bytes avoided",
+  "the plan contains VX-1561 through VX-1580 rows",
+]

@@ -1,0 +1,65 @@
+schema_version = 1
+
+[[row]]
+engine = "Vyre"
+workload_class = "GPU-composed scan, parser, graph, and rule-engine workloads"
+positioning = "Primary project surface for GPU-resident composition and release claims."
+benchmark_artifact = "release/evidence/benchmarks/cuda-release-suite.json"
+semantic_exclusion = ""
+unsupported_capability_reason = ""
+
+[[row]]
+engine = "Hyperscan"
+workload_class = "CPU multi-pattern regular expression databases"
+positioning = "CPU-SOTA decomposition baseline for literal and automata-heavy regex corpora."
+benchmark_artifact = "release/evidence/benchmarks/frontier-leaderboard.json"
+semantic_exclusion = ""
+unsupported_capability_reason = ""
+
+[[row]]
+engine = "Vectorscan"
+workload_class = "Portable SIMD Hyperscan-compatible literal and regex matching"
+positioning = "Portable SIMD baseline for AVX2, AVX-512, Neon, SVE, and SIMDe-class literal engines."
+benchmark_artifact = "release/evidence/benchmarks/frontier-leaderboard.json"
+semantic_exclusion = ""
+unsupported_capability_reason = ""
+
+[[row]]
+engine = "Rust regex"
+workload_class = "Safe nonbacktracking CPU regex with Unicode and byte-mode semantics"
+positioning = "Semantic compatibility and unsupported-construct comparator for CPU regex behavior."
+benchmark_artifact = ""
+semantic_exclusion = "Backreferences and arbitrary look-around are excluded from Rust regex semantics; Vyre must report unsupported or verifier-only diagnostics for those constructs."
+unsupported_capability_reason = ""
+
+[[row]]
+engine = "Aho-Corasick"
+workload_class = "Literal-set and multi-pattern substring matching"
+positioning = "Literal automata baseline for exact byte-pattern workloads and prefilter candidate generation."
+benchmark_artifact = "release/evidence/benchmarks/frontier-leaderboard.json"
+semantic_exclusion = ""
+unsupported_capability_reason = ""
+
+[[row]]
+engine = "memchr"
+workload_class = "SIMD byte and substring prefilter search"
+positioning = "Lowest-level CPU SIMD byte-search baseline for rare-byte and literal prefilter claims."
+benchmark_artifact = "release/evidence/benchmarks/frontier-leaderboard.json"
+semantic_exclusion = ""
+unsupported_capability_reason = ""
+
+[[row]]
+engine = "Hardware regex"
+workload_class = "Dedicated regex accelerator offload"
+positioning = "Hardware-offload comparison class for RXP-like accelerators where available."
+benchmark_artifact = ""
+semantic_exclusion = ""
+unsupported_capability_reason = "No local hardware regex accelerator is part of the required Vyre release fleet; claims require an external artifact and cannot be inferred from CUDA/WGPU/Metal results."
+
+[[row]]
+engine = "FPGA offload"
+workload_class = "Anchor-DFA plus verifier regex acceleration"
+positioning = "Research offload baseline for anchor-DFA and verification architectures."
+benchmark_artifact = ""
+semantic_exclusion = ""
+unsupported_capability_reason = "No FPGA backend is a supported Vyre release backend; FPGA rows are research comparators only until a backend capability digest and parity artifact exist."

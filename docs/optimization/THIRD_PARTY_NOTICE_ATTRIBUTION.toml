@@ -1,0 +1,40 @@
+# Third-party notice and attribution registry for VX-1063, VX-1068, VX-1071, and VX-1073.
+# SPDX license ids, REUSE file metadata, notices, attributions, and bundled artifact policy share one registry.
+
+schema = "vyre.release.third_party_notice_attribution.v1"
+owner = "coordination"
+evidence_tokens = ["SPDX_LICENSE_LIST", "REUSE_SPEC", "SPDX_SBOM"]
+
+required_fields = [
+  "component_id",
+  "component_source",
+  "license_ids",
+  "copyright_record",
+  "notice_requirement",
+  "attribution_text_policy",
+  "bundled_artifact_policy",
+  "reuse_metadata_policy",
+  "publication_boundary",
+]
+
+[[component]]
+component_id = "rust-crate-dependency"
+component_source = "cargo-lock-and-sbom"
+license_ids = ["spdx-license-expression-from-package-metadata"]
+copyright_record = "source-package-copyright-or-license-file"
+notice_requirement = "include-required-notice-when-license-obligation-demands-it"
+attribution_text_policy = "public-notice-file-contains-component-name-version-license-and-source"
+bundled_artifact_policy = "bundled-code-or-generated-assets-require-notice-entry"
+reuse_metadata_policy = "source-files-carry-spdx-file-copyright-and-license-or-dep5-entry"
+publication_boundary = "public-vyre-safe"
+
+[[component]]
+component_id = "private-local-evidence"
+component_source = "santh-private-root"
+license_ids = ["not-for-public-package"]
+copyright_record = "private-record-not-published"
+notice_requirement = "excluded-from-public-third-party-notices"
+attribution_text_policy = "public-summary-may-reference-public-artifact-only"
+bundled_artifact_policy = "never-bundled-in-public-vyre-crate"
+reuse_metadata_policy = "not-applicable-to-public-package"
+publication_boundary = "santh-private-excluded"

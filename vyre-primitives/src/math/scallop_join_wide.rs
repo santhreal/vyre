@@ -209,18 +209,8 @@ pub fn scallop_join_wide(
         );
     }
 
-    let cells = n.checked_mul(n).unwrap_or_else(|| {
-        panic!(
-            "scallop_join_wide n={n} overflows cell count. Fix: shard the relation matrix before GPU dispatch."
-        )
-    });
-    let words = cells
-        .checked_mul(w)
-        .unwrap_or_else(|| {
-            panic!(
-                "scallop_join_wide n={n} w={w} overflows word count. Fix: shard the relation matrix before GPU dispatch."
-            )
-        });
+    let cells = n.saturating_mul(n);
+    let words = cells.saturating_mul(w);
 
     let body = if cells <= SCALLOP_JOIN_WIDE_WORKGROUP_SIZE[0] {
         wide_lineage_body(

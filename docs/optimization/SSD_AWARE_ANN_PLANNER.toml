@@ -1,0 +1,36 @@
+# SSD-aware ANN planner for VX-685.
+# DiskANN, LAANN, and PipeANN storage cues feed candidate prefetch and graph cache planning.
+
+schema = "vyre.ann.ssd_aware_planner.v1"
+owner = "sparse_math_ai"
+evidence_tokens = ["DISKANN", "LAANN", "PIPEANN"]
+
+required_fields = [
+  "candidate_prefetch",
+  "queue_depth",
+  "graph_cache_hit",
+  "read_bytes",
+  "recall_floor",
+  "p99_latency_ns",
+  "blocker_reason",
+]
+
+[[plan]]
+id = "ssd-prefetch-high-cache"
+candidate_prefetch = 2048
+queue_depth = 32
+graph_cache_hit = "0.91"
+read_bytes = 134217728
+recall_floor = "0.95@10"
+p99_latency_ns = 1900000
+blocker_reason = "none"
+
+[[plan]]
+id = "queue-depth-blocked"
+candidate_prefetch = 512
+queue_depth = 2
+graph_cache_hit = "0.42"
+read_bytes = 536870912
+recall_floor = "0.95@10"
+p99_latency_ns = 9200000
+blocker_reason = "storage-queue-depth-too-low"

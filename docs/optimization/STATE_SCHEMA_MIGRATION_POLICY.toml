@@ -1,0 +1,43 @@
+# State schema migration policy for VX-1287, VX-1288, VX-1289, VX-1292, and VX-1297.
+# Runtime state, rule data, scan databases, and persistent queues use explicit schema version, compatibility, idempotence, and restore contracts.
+
+schema = "vyre.ops.state_schema_migration_policy.v1"
+owner = "organization_dedup"
+evidence_tokens = ["JSON_SCHEMA_2020_12", "SEMVER_2_0", "ETCD_DISASTER_RECOVERY"]
+
+required_fields = [
+  "migration_id",
+  "state_surface",
+  "schema_version_policy",
+  "compatibility_policy",
+  "migration_direction_policy",
+  "idempotence_policy",
+  "preflight_policy",
+  "rollback_restore_policy",
+  "evidence_policy",
+  "diagnostic",
+]
+
+[[migration]]
+migration_id = "operator-runtime-state-schema"
+state_surface = "operator-runtime-state-release-health-alert-silence-runbook-action-and-rollout-history-records"
+schema_version_policy = "state-records-carry-schema-version-release-version-owner-lane-and-publication-class"
+compatibility_policy = "compatible-additive-fields-allowed-breaking-field-removal-requires-release-gate-and-migration-record"
+migration_direction_policy = "forward-migration-only-unless-prior-schema-restore-target-is-explicitly-verified"
+idempotence_policy = "migration-can-be-replayed-with-same-input-digest-without-duplicating-actions-or-alert-state"
+preflight_policy = "dry-run-counts-records-schema-versions-private-boundary-findings-and-required-authority-links"
+rollback_restore_policy = "restore-from-verified-backup-before-applying-non-compatible-state-migration"
+evidence_policy = "record-source-schema-target-schema-input-digest-output-digest-record-count-error-count-and-release-gate-effect"
+diagnostic = "VYRE_OPERATOR_STATE_SCHEMA_MIGRATION_REQUIRED"
+
+[[migration]]
+migration_id = "rule-data-and-scan-database-state"
+state_surface = "Tier-B-rule-data-compiled-rule-databases-scan-database-headers-and-compatibility-trailers"
+schema_version_policy = "rule-data-version-construct-tier-digest-dialect-digest-compiler-version-and-reader-compatibility-class-recorded"
+compatibility_policy = "reader-rejects-unknown-required-fields-digest-mismatch-unsupported-construct-tier-or-incompatible-dialect"
+migration_direction_policy = "compiled-database-rebuild-preferred-over-mutating-binary-cache-when-source-rule-data-is-available"
+idempotence_policy = "same-rule-data-digest-and-compiler-capability-digest-produce-same-compatibility-record"
+preflight_policy = "check-Tier-B-source-digest-schema-version-rule-count-unsupported-constructs-and-cache-key-material-before-use"
+rollback_restore_policy = "restore-source-rule-data-and-rebuild-compiled-database-rather-than-trusting-stale-cache"
+evidence_policy = "record-rule-data-digest-scan-database-digest-compatibility-record-cache-key-and-rebuild-result"
+diagnostic = "VYRE_RULE_DATA_SCAN_DATABASE_MIGRATION_REQUIRED"

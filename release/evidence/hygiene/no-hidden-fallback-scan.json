@@ -3,13 +3,41 @@
   "scan": "no-hidden-fallback",
   "findings": [
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/pipeline/parse_driver.rs",
-      "line": 53,
-      "pattern": "cpu_fallback",
-      "text": "note = \"CpuRayonParseDriver is a temporary CPU fallback. Use VyreGpuParseDriver when available.\""
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/grid_sync.rs",
+      "line": 603,
+      "pattern": "fallback_dispatch",
+      "text": "/// the fallback dispatch path (`dispatch_with_grid_sync_split*`) validates and"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/backend/regex_accelerator.rs",
+      "line": 5,
+      "pattern": "software_fallback",
+      "text": "//! makes software fallback, stream mode, match schema, parity, and transfer"
+    }
+  ],
+  "release_blocking_findings": [
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/grid_sync.rs",
+      "line": 603,
+      "pattern": "fallback_dispatch",
+      "owner_lane": "driver_shared",
+      "surface": "production",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/backend/regex_accelerator.rs",
+      "line": 5,
+      "pattern": "software_fallback",
+      "owner_lane": "driver_shared",
+      "surface": "production",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
     }
   ],
   "blockers": [
-    "1 `no-hidden-fallback` finding(s) remain"
+    "2 release-blocking `no-hidden-fallback` finding(s) remain"
   ]
 }

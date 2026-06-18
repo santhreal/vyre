@@ -1,0 +1,40 @@
+# Release notes and changelog governance for VX-1085, VX-1090, VX-1095, and VX-1097.
+# GitHub releases, semver, changelog sections, security advisories, package artifacts, and private boundary checks share one registry.
+
+schema = "vyre.release.release_notes_changelog_governance.v1"
+owner = "coordination"
+evidence_tokens = ["GITHUB_RELEASES", "KEEP_A_CHANGELOG", "SEMVER_2_0", "GITHUB_REPOSITORY_SECURITY_ADVISORIES"]
+
+required_fields = [
+  "release_record_id",
+  "version_policy",
+  "tag_policy",
+  "release_notes_policy",
+  "changelog_policy",
+  "security_advisory_link_policy",
+  "artifact_link_policy",
+  "private_boundary_policy",
+  "diagnostic",
+]
+
+[[release_record]]
+release_record_id = "public-vyre-release"
+version_policy = "semver-compatible-public-version"
+tag_policy = "git-tag-matches-public-version-and-release-provenance"
+release_notes_policy = "github-release-notes-list-user-visible-changes-artifacts-and-security-impact"
+changelog_policy = "keep-a-changelog-style-added-changed-fixed-security-sections"
+security_advisory_link_policy = "security-fix-release-links-public-repository-advisory"
+artifact_link_policy = "links-to-public-crate-sbom-provenance-and-benchmark-summary-only"
+private_boundary_policy = "release-notes-must-not-link-private-santh-paths-or-local-evidence"
+diagnostic = "VYRE_RELEASE_NOTES_PUBLIC_READY"
+
+[[release_record]]
+release_record_id = "private-local-evidence-summary"
+version_policy = "not-a-public-version"
+tag_policy = "not-a-public-tag"
+release_notes_policy = "not-published-as-github-release"
+changelog_policy = "private-evidence-summary-redacted-before-public-use"
+security_advisory_link_policy = "private-details-redacted-before-public-advisory"
+artifact_link_policy = "local-only-artifacts-not-linked"
+private_boundary_policy = "santh-private-material-excluded"
+diagnostic = "VYRE_RELEASE_NOTES_PRIVATE_EVIDENCE_EXCLUDED"

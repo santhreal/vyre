@@ -1,0 +1,47 @@
+# Crate boundary and feature matrix for VX-809 through VX-810.
+# CLI, library, feature-gated subcomponents, and parent tool ownership share one matrix.
+
+schema = "vyre.crate.boundary_feature_matrix.v1"
+owner = "organization_dedup"
+evidence_tokens = ["RUST_API_GUIDELINES", "SEMVER_2_0"]
+
+required_fields = [
+  "crate_id",
+  "consumption_modes",
+  "parent_tool",
+  "feature_gates",
+  "public_reexports",
+  "dependency_direction",
+  "thin_wrapper_risk",
+  "boundary_diagnostic",
+]
+
+[[crate]]
+crate_id = "vyre-libs"
+consumption_modes = ["library"]
+parent_tool = "vyre"
+feature_gates = ["parser_frontend", "graph_flow_compiler", "reporting"]
+public_reexports = ["shared registries and analysis contracts"]
+dependency_direction = "domain-to-consumer"
+thin_wrapper_risk = "low-shared-domain-crate"
+boundary_diagnostic = "VYRE_CRATE_BOUNDARY_DOMAIN_IMPORTS_CLI"
+
+[[crate]]
+crate_id = "vyre-driver"
+consumption_modes = ["library", "backend-dispatch-component"]
+parent_tool = "vyre"
+feature_gates = ["cuda", "wgpu", "metal", "cpu"]
+public_reexports = ["backend capability and dispatch evidence"]
+dependency_direction = "driver-to-runtime"
+thin_wrapper_risk = "medium-backend-specific-routing"
+boundary_diagnostic = "VYRE_CRATE_BOUNDARY_BACKEND_LEAK"
+
+[[crate]]
+crate_id = "vyre"
+consumption_modes = ["cli", "library"]
+parent_tool = "vyre"
+feature_gates = ["default-cli", "driver", "frontend", "rules"]
+public_reexports = ["one public entrypoint per domain"]
+dependency_direction = "cli-to-domain"
+thin_wrapper_risk = "high-if-only-reexports-without-tool-contract"
+boundary_diagnostic = "VYRE_CRATE_BOUNDARY_THIN_WRAPPER_REFUSED"

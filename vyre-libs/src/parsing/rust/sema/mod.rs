@@ -143,6 +143,12 @@ pub enum RustSemaError {
         /// The immutable binding being assigned.
         name: String,
     },
+    /// Internal pass invariant failed.
+    #[error("internal Rust semantic invariant failed: {message}")]
+    InternalInvariant {
+        /// Actionable invariant diagnostic.
+        message: String,
+    },
 }
 
 /// Recover the identifier text that begins at `offset` in `source`.
@@ -205,7 +211,13 @@ struct Resolver<'a> {
 }
 
 impl Resolver<'_> {
-    fn declare(&mut self, name: String, mutable: bool, ty: Type, def_offset: u32) {
+    fn declare(
+        &mut self,
+        name: String,
+        mutable: bool,
+        ty: Type,
+        def_offset: u32,
+    ) -> Result<(), RustSemaError> {
         let id = self.bindings.len();
         self.bindings.push(Binding {
             name: name.clone(),
@@ -214,10 +226,16 @@ impl Resolver<'_> {
             def_offset,
             function: self.function,
         });
-        self.scopes
+        let scope = self
+            .scopes
             .last_mut()
-            .expect("Fix: resolver scope stack must be non-empty when declaring a binding")
-            .insert(name, id);
+            .ok_or_else(|| RustSemaError::InternalInvariant {
+                message:
+                    "resolver scope stack was empty while declaring a binding; seed the function scope before resolution"
+                        .to_string(),
+            })?;
+        scope.insert(name, id);
+        Ok(())
     }
 
     fn lookup(&self, name: &str) -> Option<BindingId> {
@@ -301,7 +319,7 @@ impl Resolver<'_> {
                 } => {
                     self.resolve_expr(init)?;
                     let recovered = ident_at(self.source, *name);
-                    self.declare(recovered, *mutable, ty.clone(), *name);
+                    self.declare(recovered, *mutable, ty.clone(), *name)?;
                 }
                 Stmt::Expr(expr) => self.resolve_expr(expr)?,
                 Stmt::Assign { name, value } => {
@@ -338,7 +356,7 @@ impl Resolver<'_> {
                     self.resolve_expr(end)?;
                     self.scopes.push(HashMap::new());
                     let recovered = ident_at(self.source, *name);
-                    self.declare(recovered, false, Type::I32, *name);
+                    self.declare(recovered, false, Type::I32, *name)?;
                     let r = self.resolve_block(body);
                     self.scopes.pop();
                     r?;
@@ -381,7 +399,7 @@ pub fn resolve(module: &Module, source: &[u8]) -> Result<Resolution, RustSemaErr
         resolver.scopes = vec![HashMap::new()];
         for (offset, ty) in &func.params {
             let name = ident_at(source, *offset);
-            resolver.declare(name, false, ty.clone(), *offset);
+            resolver.declare(name, false, ty.clone(), *offset)?;
         }
         resolver.resolve_block(&func.body)?;
     }
@@ -415,11 +433,13 @@ impl TypeCk<'_> {
             Expr::LiteralInt(..) => Ok(Type::I32),
             Expr::LiteralBool(..) => Ok(Type::Bool),
             Expr::Var(offset) => {
-                let id = *self
-                    .resolution
-                    .uses
-                    .get(offset)
-                    .expect("Fix: resolve must record every variable use before typeck runs");
+                let id = *self.resolution.uses.get(offset).ok_or_else(|| {
+                    RustSemaError::InternalInvariant {
+                        message: format!(
+                            "resolve did not record variable use at byte {offset} before typeck"
+                        ),
+                    }
+                })?;
                 Ok(self.resolution.bindings[id].ty.clone())
             }
             Expr::Binary { op, lhs, rhs } => {

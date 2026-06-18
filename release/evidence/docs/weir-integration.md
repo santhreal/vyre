@@ -10,7 +10,7 @@ Required generated evidence:
 - `release/evidence/weir/weir-vyre-integration-tests.json`
 - `release/evidence/weir/weir-readme-contracts.json`
 - `release/evidence/optimization/weir-facts-pass-firing.json`
-- `release/evidence/benchmarks/weir-dataflow-release.json`
+- `release/evidence/benchmarks/dataflow-analysis-release.json`
 
 Release contract:
 

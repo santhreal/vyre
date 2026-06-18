@@ -324,7 +324,19 @@ mod tests {
                 ),
                 include_str!("../../../../release/evidence/benchmarks/dataflow-analysis-release.json"),
             ],
-            include_str!("../../../../vyre-driver-cuda/tests/csr_frontier_queue_gpu_parity.rs"),
+            // The CSR-frontier-queue parity tests were split out of the parent
+            // file into per-concern submodules; concatenate the ones that carry
+            // the resident-CSR-queue API + caller-owned-scratch contracts so the
+            // source evidence is read where it now lives.
+            &format!(
+                "{}\n{}",
+                include_str!(
+                    "../../../../vyre-driver-cuda/tests/csr_frontier_queue_gpu_parity/resident_graph_contracts.rs"
+                ),
+                include_str!(
+                    "../../../../vyre-driver-cuda/tests/csr_frontier_queue_gpu_parity/batch_contracts.rs"
+                ),
+            ),
             include_str!("../../../../vyre-runtime/tests/megakernel_rule_catalog_scratch.rs"),
             include_str!("../../../../vyre-runtime/tests/megakernel_allocation_bounds.rs"),
         )

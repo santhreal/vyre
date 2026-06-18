@@ -18,6 +18,12 @@ pub struct ResidentDispatchStep<'a> {
     pub resources: &'a [Resource],
     /// Optional CUDA/grid-style launch override.
     pub grid_override: Option<[u32; 3]>,
+    /// Optional workgroup override. MUST be carried alongside `grid_override`:
+    /// a caller that sizes its grid for a specific workgroup (grid =
+    /// ceil(work / workgroup)) will under-cover the work if the step falls back
+    /// to a different default workgroup. `None` keeps the backend's resolved
+    /// default (correct only when `grid_override` is also `None`).
+    pub workgroup_override: Option<[u32; 3]>,
 }
 
 /// One compact byte range to read from a backend-resident resource.
@@ -1271,11 +1277,13 @@ mod tests {
                 program: &program,
                 resources: &first_resources,
                 grid_override: Some([1, 1, 1]),
+                workgroup_override: None,
             },
             ResidentDispatchStep {
                 program: &program,
                 resources: &second_resources,
                 grid_override: Some([2, 1, 1]),
+                workgroup_override: None,
             },
         ];
         let read_resource = Resource::Resident(33);

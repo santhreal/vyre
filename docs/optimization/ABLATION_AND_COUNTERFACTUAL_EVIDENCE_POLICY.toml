@@ -1,0 +1,66 @@
+# Ablation and counterfactual evidence owns causal isolation of optimization changes; profiling owns root-cause frames and statistics gates own measured significance.
+
+schema = "vyre.performance.ablation_counterfactual_evidence_policy.v1"
+owner = "bench_harness"
+evidence_tokens = ["NIST_DOE_OBJECTIVES", "NIST_DOE_FACTOR_SELECTION", "NIST_FULL_FACTORIAL_DESIGN", "CRITERION_ANALYSIS_PROCESS"]
+
+required_fields = [
+  "ablation_id",
+  "target_change",
+  "baseline_policy",
+  "candidate_policy",
+  "ablation_policy",
+  "counterfactual_policy",
+  "control_policy",
+  "interaction_policy",
+  "evidence_policy",
+  "decision_policy",
+  "privacy_boundary",
+  "authority_links",
+  "diagnostic",
+]
+
+[[ablation]]
+ablation_id = "regex-prefilter-route-ablation"
+target_change = "regex-prefilter-route-selection"
+baseline_policy = "baseline-records-current-route-config-construct-tier-dialect-profile-and-fixture-digest"
+candidate_policy = "candidate-records-new-route-config-single-change-digest-and-feature-flag-state"
+ablation_policy = "ablation-disables-prefilter-while-preserving-parser-lowering-verifier-and-runtime-settings"
+counterfactual_policy = "counterfactual-runs-same-corpus-with-old-route-plus-new-nonroute-changes-when-release-branch-contains-multiple-changes"
+control_policy = "negative-control-no-op-config-and-positive-control-known-prefilter-friendly-fixture-required-when-available"
+interaction_policy = "interaction-records-prefilter-x-dialect-prefilter-x-corpus-density-and-prefilter-x-backend-class"
+evidence_policy = "evidence-links-run-matrix-statistical-gate-profile-correlation-and-output-parity-record"
+decision_policy = "route-change-allowed-only-when-candidate-beats-baseline-ablation-supports-causal-claim-and-output-parity-holds"
+privacy_boundary = "public-record-uses-rule-class-and-fixture-id-not-private-patterns-or-corpus-paths"
+authority_links = ["OPTIMIZATION_EXPERIMENT_DESIGN_POLICY.toml", "STATISTICAL_REGRESSION_GATES.toml", "PROFILE_TRACE_METRIC_CORRELATION_POLICY.toml", "REGEX_ENGINE_COMPARATORS.toml"]
+diagnostic = "VYRE_REGEX_PREFILTER_ABLATION_REQUIRED"
+
+[[ablation]]
+ablation_id = "gpu-fusion-pass-ablation"
+target_change = "GPU-fusion-optimizer-pass"
+baseline_policy = "baseline-records-unfused-pass-pipeline-backend-capability-digest-kernel-profile-and-workload-digest"
+candidate_policy = "candidate-records-fused-pass-pipeline-single-change-digest-emitter-version-and-kernel-profile"
+ablation_policy = "ablation-turns-off-fusion-pass-with-all-other-optimizer-emitter-runtime-and-capacity-settings-held-constant"
+counterfactual_policy = "counterfactual-runs-fusion-enabled-with-disabled-related-optimization-to-isolate-interaction"
+control_policy = "include-current-unfused-pipeline-negative-control-and-known-fusion-benefit-fixture-positive-control"
+interaction_policy = "interaction-records-fusion-x-vector-width-fusion-x-memory-layout-and-fusion-x-device-class"
+evidence_policy = "evidence-links-factorial-run-matrix-roofline-counters-GPU-profile-triage-and-statistical-decision"
+decision_policy = "fusion-pass-enabled-only-when-ablation-proves-cause-and-multiple-comparison-policy-clears-tested-factor-family"
+privacy_boundary = "public-record-redacts-private-kernel-paths-hostnames-driver-paths-and-device-serials"
+authority_links = ["PASS_RESEARCH_TRACE_ARTIFACTS.toml", "ROOFLINE_COUNTER_EVIDENCE.toml", "PERFORMANCE_REGRESSION_PROFILE_TRIAGE_POLICY.toml", "MULTIPLE_COMPARISON_DECISION_POLICY.toml"]
+diagnostic = "VYRE_GPU_FUSION_ABLATION_REQUIRED"
+
+[[ablation]]
+ablation_id = "cache-invalidation-policy-ablation"
+target_change = "compiled-pipeline-cache-invalidation-policy"
+baseline_policy = "baseline-records-current-cache-key-material-hit-rate-stale-read-policy-and-rule-data-digest"
+candidate_policy = "candidate-records-new-cache-key-material-single-change-digest-and-rebuild-policy"
+ablation_policy = "ablation-disables-cache-or-reverts-key-component-while-holding-rule-data-backend-and-workload-constant"
+counterfactual_policy = "counterfactual-runs-new-cache-policy-against-old-rule-data-and-new-rule-data-to-separate-cache-from-content-change"
+control_policy = "negative-control-disabled-cache-and-positive-control-repeated-identical-input-cache-hit-run"
+interaction_policy = "interaction-records-cache-policy-x-rule-data-digest-cache-policy-x-backend-class-and-cache-policy-x-memory-budget"
+evidence_policy = "evidence-links-cache-rebuild-policy-resource-budget-allocation-profile-and-statistical-decision"
+decision_policy = "cache-policy-change-allowed-only-when-stale-read-refusal-holds-and-performance-effect-survives-ablation"
+privacy_boundary = "public-record-redacts-cache-roots-private-corpus-names-object-values-and-local-paths"
+authority_links = ["CACHE_REBUILD_INVALIDATION_POLICY.toml", "RESOURCE_BUDGET_POLICY.toml", "PERFORMANCE_REGRESSION_PROFILE_TRIAGE_POLICY.toml", "STATISTICAL_REGRESSION_GATES.toml"]
+diagnostic = "VYRE_CACHE_POLICY_ABLATION_REQUIRED"

@@ -32,6 +32,8 @@
 
 use std::collections::{HashMap, HashSet};
 
+use crate::dataflow::{SharedFactHeader, SharedFactKind, Soundness};
+
 /// A program point id (interned from a rustc point atom).
 pub type Point = u32;
 /// A loan id (interned from a rustc loan atom such as `bw0`).
@@ -289,6 +291,77 @@ pub fn load_facts(read: impl Fn(&str) -> String) -> RustcNllFacts {
 }
 
 impl RustcNllFacts {
+    /// Convert rustc NLL relations into shared fact headers.
+    #[must_use]
+    pub fn shared_fact_headers(&self, producer: &str) -> Vec<SharedFactHeader> {
+        let mut headers = Vec::new();
+        let mut next_id = 1u64;
+        for &(from, to) in &self.cfg_edge {
+            headers.push(
+                SharedFactHeader::new(
+                    producer,
+                    SharedFactKind::GraphEdge,
+                    next_id,
+                    u64::from(from),
+                    Soundness::Exact,
+                )
+                .with_object(u64::from(to)),
+            );
+            next_id += 1;
+        }
+        for &(origin, loan, point) in &self.loan_issued_at {
+            headers.push(
+                SharedFactHeader::new(
+                    producer,
+                    SharedFactKind::BorrowLoan,
+                    next_id,
+                    u64::from(loan),
+                    Soundness::Exact,
+                )
+                .with_object(u64::from(origin))
+                .with_aux(u64::from(point)),
+            );
+            next_id += 1;
+        }
+        for &(origin, loan) in &self.placeholder {
+            headers.push(
+                SharedFactHeader::new(
+                    producer,
+                    SharedFactKind::BorrowOrigin,
+                    next_id,
+                    u64::from(origin),
+                    Soundness::Exact,
+                )
+                .with_object(u64::from(loan)),
+            );
+            next_id += 1;
+        }
+        for &(left, right) in &self.known_placeholder_subset {
+            headers.push(
+                SharedFactHeader::new(
+                    producer,
+                    SharedFactKind::BorrowSubset,
+                    next_id,
+                    u64::from(left),
+                    Soundness::Exact,
+                )
+                .with_object(u64::from(right)),
+            );
+            next_id += 1;
+        }
+        for &origin in &self.universal_region {
+            headers.push(SharedFactHeader::new(
+                producer,
+                SharedFactKind::BorrowOrigin,
+                next_id,
+                u64::from(origin),
+                Soundness::Exact,
+            ));
+            next_id += 1;
+        }
+        headers
+    }
+
     /// Backward variable liveness: `live(V,P)` if `V` is used at `P`, or live at
     /// a CFG successor and not defined at `P`.
     fn var_liveness(&self, seeds: &[(Var, Point)]) -> HashSet<(Var, Point)> {

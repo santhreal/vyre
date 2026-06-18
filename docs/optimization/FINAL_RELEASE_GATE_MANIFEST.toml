@@ -1,0 +1,57 @@
+# Final release gate manifest for VX-981 through VX-984 and VX-991 through VX-993.
+# Package, docs, conformance, benchmark, dogfood, security, and publication gates share one manifest.
+
+schema = "vyre.release.final_gate_manifest.v1"
+owner = "coordination"
+evidence_tokens = ["CARGO_PUBLISH", "GITHUB_ACTIONS_WORKFLOW", "SLSA_PROVENANCE"]
+
+required_fields = [
+  "gate_id",
+  "gate_class",
+  "command_class",
+  "required_artifact",
+  "publication_boundary",
+  "private_santh_policy",
+  "public_vyre_policy",
+  "completion_blocker_if_missing",
+]
+
+[[gate]]
+gate_id = "package-public-vyre"
+gate_class = "package"
+command_class = "cargo-package-or-release-packaging"
+required_artifact = "public-package-manifest-and-crate-contents"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+private_santh_policy = "must-not-appear-in-public-package"
+public_vyre_policy = "public-package-metadata-required"
+completion_blocker_if_missing = true
+
+[[gate]]
+gate_id = "conformance-proof-gates"
+gate_class = "test"
+command_class = "conformance-test-suite"
+required_artifact = "all-tranche-proof-gates-executed"
+publication_boundary = "local-evidence-redacted-summary"
+private_santh_policy = "local-paths-redacted"
+public_vyre_policy = "public-summary-can-reference-vyre-relative-paths"
+completion_blocker_if_missing = true
+
+[[gate]]
+gate_id = "benchmark-evidence-gates"
+gate_class = "benchmark"
+command_class = "bench-harness-with-reproducibility-capsules"
+required_artifact = "performance-methodology-and-regression-evidence"
+publication_boundary = "PERFORMANCE_ARTIFACT_PUBLICATION.toml"
+private_santh_policy = "raw-private-corpora-blocked"
+public_vyre_policy = "public-summary-only-after-privacy-gate"
+completion_blocker_if_missing = true
+
+[[gate]]
+gate_id = "security-governance-gates"
+gate_class = "security"
+command_class = "security-and-boundary-conformance"
+required_artifact = "security-insights-and-policy-gate-summary"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+private_santh_policy = "private-worktree-material-blocked"
+public_vyre_policy = "public-security-summary-required"
+completion_blocker_if_missing = true

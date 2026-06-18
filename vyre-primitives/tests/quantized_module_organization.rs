@@ -6,7 +6,7 @@ fn quantized_module_is_split_by_responsibility() {
     let cpu = include_str!("../src/math/quantized/cpu.rs");
     let programs = include_str!("../src/math/quantized/programs.rs");
     let helpers = include_str!("../src/math/quantized/program_helpers.rs");
-    let tests = include_str!("../src/math/quantized/tests.rs");
+    let tests = include_str!("../src/math/quantized/tests/mod.rs");
 
     assert!(
         root.contains("mod cpu;")
@@ -21,7 +21,7 @@ fn quantized_module_is_split_by_responsibility() {
         ("quantized/cpu.rs", cpu),
         ("quantized/programs.rs", programs),
         ("quantized/program_helpers.rs", helpers),
-        ("quantized/tests.rs", tests),
+        ("quantized/tests/mod.rs", tests),
     ] {
         assert!(
             source.starts_with("//!"),

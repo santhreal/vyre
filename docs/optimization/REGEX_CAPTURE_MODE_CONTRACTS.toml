@@ -1,0 +1,68 @@
+schema_version = 1
+
+required_modes = [
+  "noncapture",
+  "count",
+  "span",
+  "named_capture",
+  "repeated_capture",
+  "group_extraction",
+]
+
+required_output_fields = [
+  "match_id",
+  "pattern_id",
+  "start",
+  "end",
+  "group_id",
+  "group_name",
+  "nullable",
+]
+
+[[mode]]
+mode_id = "noncapture"
+output_shape = "whole_match_only"
+accelerator_eligible = true
+verifier_required = false
+null_policy = "not_applicable"
+evidence_path = "vyre-libs/tests/regex_capture_mode_contracts.rs"
+
+[[mode]]
+mode_id = "count"
+output_shape = "match_count_per_pattern"
+accelerator_eligible = true
+verifier_required = false
+null_policy = "not_applicable"
+evidence_path = "vyre-libs/tests/regex_capture_mode_contracts.rs"
+
+[[mode]]
+mode_id = "span"
+output_shape = "whole_match_span"
+accelerator_eligible = true
+verifier_required = false
+null_policy = "absent-match-has-no-span"
+evidence_path = "vyre-libs/tests/regex_capture_mode_contracts.rs"
+
+[[mode]]
+mode_id = "named_capture"
+output_shape = "named_group_span_records"
+accelerator_eligible = false
+verifier_required = true
+null_policy = "unmatched-group-null"
+evidence_path = "vyre-libs/tests/regex_capture_mode_contracts.rs"
+
+[[mode]]
+mode_id = "repeated_capture"
+output_shape = "ordered_group_span_list"
+accelerator_eligible = false
+verifier_required = true
+null_policy = "empty-repeat-yields-empty-list"
+evidence_path = "vyre-libs/tests/regex_capture_mode_contracts.rs"
+
+[[mode]]
+mode_id = "group_extraction"
+output_shape = "row_group_value_table"
+accelerator_eligible = false
+verifier_required = true
+null_policy = "unmatched-group-null"
+evidence_path = "vyre-libs/tests/regex_capture_mode_contracts.rs"

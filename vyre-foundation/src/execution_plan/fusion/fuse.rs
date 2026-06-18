@@ -5,7 +5,9 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::execution_plan::SchedulingPolicy;
 use crate::ir::{BufferAccess, BufferDecl, Ident, Node, Program};
 
-use super::alpha_rename::push_alpha_renamed_arm_entry_node;
+use super::alpha_rename::{
+    multiply_declared_names, push_alpha_renamed_arm_entry_node, ArmRenamer,
+};
 use super::collectors::collect_buffer_targets;
 use super::divergence::{
     has_divergent_invocation_gated_store, has_launch_geometry_dependent_write,
@@ -51,7 +53,58 @@ pub fn fuse_programs_vec(mut programs: Vec<Program>) -> Result<Program, FusionEr
     }
 }
 
+/// How a fused arm's local names and scope relate to the other arms.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ArmNamespace {
+    /// Arms are **independent** programs (inter-rule batch fusion, the
+    /// megakernel builder). Each arm allocates temps from its own counter,
+    /// so two arms can reuse the same temp name for different values. The
+    /// fuser alpha-renames every arm-local name with the arm index and wraps
+    /// each arm body in its own `Block` scope, so the reused names cannot
+    /// collide in the combined program.
+    Isolated,
+    /// Arms are **sub-programs of one rule** that share a single global temp
+    /// namespace (one monotonic `temp_counter` per `LowerCtx`; recursion is
+    /// handled by the fixpoint operator, not by re-instantiating bodies, so
+    /// no name is ever reused for two values). Renaming such names is not
+    /// only unnecessary, it is actively wrong: a value produced in one arm
+    /// (`let __cmp_N = load(__quant_flag_…)`) and consumed in another arm
+    /// (`Var(__cmp_N)`) must keep ONE consistent name and live in ONE shared
+    /// scope, or the consumer references an undeclared variable. Shared arms
+    /// are therefore spliced flat — no per-arm rename, no per-arm `Block` —
+    /// preserving decl→use linkage across the merge boundary.
+    Shared,
+}
+
+/// Merge sub-programs that share one rule's global temp namespace into a
+/// single program, preserving decl→use linkage across the merge boundary.
+///
+/// Same hazard analysis, buffer union, binding renumbering, and barrier
+/// insertion as [`fuse_programs`]; the only difference is that arm-local
+/// names and scopes are **shared**, not isolated (see [`ArmNamespace`]).
+/// This is the correct primitive for surgec's intra-rule
+/// `lower_expr`/quantifier/predicate composition, where alpha-renaming would
+/// desync a quantifier-flag readback from its consumer.
+///
+/// # Errors
+///
+/// Returns [`FusionError`] under the same conditions as [`fuse_programs`].
+pub fn merge_programs_shared(programs: &[Program]) -> Result<Program, FusionError> {
+    match programs.len() {
+        0 => Ok(Program::empty()),
+        1 => Ok(programs[0].clone()),
+        _ => fuse_programs_multi_with(programs, ArmNamespace::Shared),
+    }
+}
+
 fn fuse_programs_multi(programs: &[Program]) -> Result<Program, FusionError> {
+    fuse_programs_multi_with(programs, ArmNamespace::Isolated)
+}
+
+fn fuse_programs_multi_with(
+    programs: &[Program],
+    namespace: ArmNamespace,
+) -> Result<Program, FusionError> {
     reject_non_composable_self_fusion(programs)?;
 
     // ------------------------------------------------------------------
@@ -82,6 +135,20 @@ fn fuse_programs_multi(programs: &[Program]) -> Result<Program, FusionError> {
 
     let mut arm_entries: Vec<Vec<Node>> = Vec::with_capacity(programs.len());
 
+    // Shared-namespace merge prefixes ONLY names declared in ≥2 arms (genuine
+    // collisions, e.g. a primitive's internal `acc`). A name declared in
+    // exactly one arm — including a value produced in one arm and consumed in
+    // another (`let __cmp_N = …` / `Var(__cmp_N)`) — is globally unique and
+    // stays unrenamed so the decl→use link survives. Isolated fusion renames
+    // every name (the set is unused for that mode).
+    let multiply_declared: FxHashSet<Ident> = match namespace {
+        ArmNamespace::Isolated => FxHashSet::default(),
+        ArmNamespace::Shared => {
+            let entries: Vec<&[Node]> = programs.iter().map(Program::entry).collect();
+            multiply_declared_names(&entries)
+        }
+    };
+
     for (arm_idx, prog) in programs.iter().enumerate() {
         // Walk entry nodes once: clone into segment and collect both
         // atomic targets (writes) and Load targets (reads). Buffers
@@ -99,7 +166,15 @@ fn fuse_programs_multi(programs: &[Program]) -> Result<Program, FusionError> {
         let mut store_targets: FxHashSet<Ident> = FxHashSet::default();
         let mut divergent_store_seen = false;
         for node in entry {
-            push_alpha_renamed_arm_entry_node(&mut segment, node, arm_idx);
+            match namespace {
+                ArmNamespace::Isolated => {
+                    push_alpha_renamed_arm_entry_node(&mut segment, node, arm_idx);
+                }
+                ArmNamespace::Shared => {
+                    ArmRenamer::shared(arm_idx, &multiply_declared)
+                        .push_entry_node(&mut segment, node);
+                }
+            }
             collect_buffer_targets(
                 node,
                 &mut load_targets,
@@ -204,6 +279,7 @@ fn fuse_programs_multi(programs: &[Program]) -> Result<Program, FusionError> {
         &barrier_after_arm,
         &grid_sync_writer_arms,
         programs.len(),
+        namespace,
     );
     reject_overdispatch(fused_workgroup, max_arm_threads)?;
     Ok(Program::wrapped(
@@ -283,11 +359,19 @@ fn flatten_arm_entries(
     barrier_after_arm: &FxHashSet<usize>,
     grid_sync_writer_arms: &FxHashSet<usize>,
     program_count: usize,
+    namespace: ArmNamespace,
 ) -> Vec<Node> {
     let total_nodes: usize = arm_entries.iter().map(Vec::len).sum();
     let mut combined_entry = Vec::with_capacity(total_nodes + program_count);
     for (arm_idx, segment) in arm_entries.into_iter().enumerate() {
-        combined_entry.push(Node::Block(segment));
+        match namespace {
+            // Isolated arms each get their own `Block` scope so reused
+            // arm-local names cannot collide across arms.
+            ArmNamespace::Isolated => combined_entry.push(Node::Block(segment)),
+            // Shared arms splice flat into the one rule-wide scope, so a
+            // `let` in an earlier arm stays visible to a later arm's use.
+            ArmNamespace::Shared => combined_entry.extend(segment),
+        }
         if barrier_after_arm.contains(&arm_idx) {
             // Workgroup `SeqCst` (`bar.sync 0`) is sufficient only when the
             // prior write is uniform across the launch. Launch-geometry

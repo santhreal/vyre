@@ -7,6 +7,8 @@
 use vyre_bench::api::suite::SuiteKind;
 use vyre_bench::runner::{execute_suite, RunConfig};
 
+const ELEMENTWISE_CASE_ID: &str = "foundation.elementwise.add.1m";
+
 #[test]
 fn test_cross_backend_elementwise() {
     let registry = vyre_bench::registry::collect_all();
@@ -31,23 +33,34 @@ fn test_cross_backend_elementwise() {
         config.measured_samples = Some(30);
         config.determinism_runs = 1;
         config.backend_id = Some(backend_id.to_string());
-        config.case_ids = vec!["foundation.elementwise.add.1m".to_string()];
+        config.case_ids = vec![ELEMENTWISE_CASE_ID.to_string()];
 
         let report = execute_suite(&registry, SuiteKind::Smoke, &config);
 
-        assert!(
-            !report.cases.is_empty(),
-            "backend {backend_id} produced no benchmark cases for foundation.elementwise.add.1m. Fix: keep the smoke suite registry wired for every dispatch-capable backend instead of silently dropping the case."
+        assert_eq!(
+            report.cases.len(),
+            1,
+            "backend {backend_id} must produce exactly one benchmark case for {ELEMENTWISE_CASE_ID}. Fix: keep the smoke suite registry wired for every dispatch-capable backend instead of silently dropping or duplicating the case."
         );
 
         let case = &report.cases[0];
+        assert_eq!(
+            case.id, ELEMENTWISE_CASE_ID,
+            "backend {backend_id} must preserve the requested benchmark case id"
+        );
+        assert_eq!(
+            case.backend_id.as_deref(),
+            Some(*backend_id),
+            "benchmark report must retain the selected backend id for {ELEMENTWISE_CASE_ID}"
+        );
         results.push((backend_id.to_string(), case.status.clone()));
     }
 
     // At least one backend should produce a result
-    assert!(
-        !results.is_empty(),
-        "At least one backend must produce results for elementwise.add"
+    assert_eq!(
+        results.len(),
+        backends.len(),
+        "Every dispatch-capable backend must produce results for elementwise.add"
     );
 
     // All backends that produced a result should pass

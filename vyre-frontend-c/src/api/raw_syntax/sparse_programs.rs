@@ -73,11 +73,7 @@ pub(super) fn sparse_token_block_totals_program(
         body.push(Node::Barrier {
             ordering: vyre_foundation::MemoryOrdering::SeqCst,
         });
-        stride = stride.checked_mul(2).unwrap_or_else(|| {
-            panic!(
-                "raw syntax prefix scan stride overflowed u32. Fix: reduce BLOCK_LANES or shard sparse compaction."
-            )
-        });
+        stride = stride.saturating_mul(2);
     }
     body.push(Node::if_then(
         Expr::and(
@@ -186,11 +182,7 @@ pub(super) fn sparse_token_block_compact_program(
         body.push(Node::Barrier {
             ordering: vyre_foundation::MemoryOrdering::SeqCst,
         });
-        stride = stride.checked_mul(2).unwrap_or_else(|| {
-            panic!(
-                "raw syntax dense rewrite stride overflowed u32. Fix: reduce BLOCK_LANES or shard sparse compaction."
-            )
-        });
+        stride = stride.saturating_mul(2);
     }
     body.extend([
         Node::let_bind("offset", Expr::u32(0)),
@@ -372,11 +364,7 @@ pub(super) fn sparse_token_type_block_compact_program(
         body.push(Node::Barrier {
             ordering: vyre_foundation::MemoryOrdering::SeqCst,
         });
-        stride = stride.checked_mul(2).unwrap_or_else(|| {
-            panic!(
-                "raw syntax sparse rewrite stride overflowed u32. Fix: reduce BLOCK_LANES or shard sparse compaction."
-            )
-        });
+        stride = stride.saturating_mul(2);
     }
     body.extend([
         Node::let_bind("offset", Expr::u32(0)),

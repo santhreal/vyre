@@ -107,12 +107,50 @@ required_evidence = [
 [lane.driver_spirv]
 purpose = "SPIR-V experimental backend boundaries, lowering, and parity experiments."
 layer = "Layer 2 experimental"
+parent_axis = "driver_shared"
+support_reason = "Experimental SPIR-V backend ownership stays below shared backend contracts while emitter parity rows stay under lower_emit."
 write = [
   "vyre-driver-spirv/src/**",
   "vyre-driver-spirv/tests/**",
 ]
 required_commands = [
   "cargo_full check -p vyre-driver-spirv -p vyre-driver",
+]
+
+[lane.driver_metal]
+purpose = "Native Apple Metal backend boundaries, MSL artifacts, resident resources, command reuse, metrics, and Mac validation evidence."
+layer = "Layer 2 native"
+write = [
+  "vyre-driver-metal/src/**",
+  "vyre-driver-metal/tests/**",
+  "vyre-emit-metal/src/**",
+  "vyre-emit-metal/tests/**",
+]
+avoid = [
+  "vyre-driver-cuda/src/**",
+  "vyre-driver-wgpu/src/**",
+]
+required_commands = [
+  "cargo_full check -p vyre-driver-metal -p vyre-emit-metal -p vyre-driver",
+]
+
+[lane.lower_emit]
+purpose = "Substrate-neutral lowering and target artifact emission hot paths."
+layer = "Lower/emit"
+write = [
+  "vyre-lower/src/**",
+  "vyre-lower/tests/**",
+  "vyre-emit-naga/src/**",
+  "vyre-emit-naga/tests/**",
+  "vyre-emit-ptx/src/**",
+  "vyre-emit-ptx/tests/**",
+  "vyre-emit-spirv/src/**",
+  "vyre-emit-spirv/tests/**",
+  "vyre-emit-metal/src/**",
+  "vyre-emit-metal/tests/**",
+]
+required_commands = [
+  "cargo_full test -p vyre-lower -p vyre-emit-naga -p vyre-emit-ptx -p vyre-emit-spirv -p vyre-emit-metal",
 ]
 
 [lane.runtime_megakernel]
@@ -125,6 +163,29 @@ write = [
 ]
 required_commands = [
   "cargo_full test -p vyre-runtime megakernel",
+]
+
+[lane.runtime_residency]
+purpose = "Cross-backend resident execution seam: graph replay, retained resources, resident IO certificates, cache identity, runtime tenancy, and backend evidence handoff."
+layer = "Runtime/driver seam"
+write = [
+  "vyre-runtime/src/**",
+  "vyre-driver/src/**",
+  "vyre-driver-cuda/src/**",
+  "vyre-driver-wgpu/src/**",
+  "vyre-driver-metal/src/**",
+  "vyre-bench/src/api/resident.rs",
+  "release/evidence/backends/**",
+  "release/evidence/benchmarks/**",
+]
+avoid = [
+  "vyre-libs/src/parsing/**",
+  "vyre-libs/src/security/**",
+  "vyre-primitives/src/**",
+]
+required_commands = [
+  "cargo_full test -p vyre-runtime -p vyre-driver",
+  "cargo_full test -p vyre-driver-cuda -p vyre-driver-wgpu -p vyre-driver-metal",
 ]
 
 [lane.bench_harness]
@@ -140,9 +201,301 @@ required_commands = [
   "cargo_full check -p vyre-bench",
 ]
 
+[lane.graph_flow_compiler]
+purpose = "Graph/dataflow compiler seam: frontier policies, CSR contracts, semiring formulations, relation facts, compressed domains, and Weir handoff boundaries."
+layer = "Graph/flow compiler seam"
+write = [
+  "vyre-primitives/src/graph/**",
+  "vyre-primitives/src/bitset/**",
+  "vyre-self-substrate/src/analysis/**",
+  "vyre-self-substrate/src/graph/**",
+  "vyre-libs/src/dataflow/**",
+  "vyre-libs/src/security/**",
+  "../../../dataflow/weir/src/**",
+  "../../../dataflow/weir/tests/**",
+  "../../../dataflow/weir/benches/**",
+]
+avoid = [
+  "vyre-driver-cuda/src/**",
+  "vyre-driver-wgpu/src/**",
+  "vyre-runtime/src/megakernel/**",
+]
+required_commands = [
+  "cargo_full test -p vyre-primitives graph",
+  "cargo_full test -p vyre-self-substrate dataflow",
+  "cargo_full run -p xtask --bin xtask -- weir-matrix",
+]
+
+[lane.parser_frontend]
+purpose = "Parser/frontend research seam: VAST source-of-truth types, changed-range parsing, Tree-sitter baselines, parser evidence, and frontend handoff certificates."
+layer = "Frontend research seam"
+write = [
+  "vyre-foundation/src/vast.rs",
+  "vyre-libs/src/parsing/**",
+  "vyre-frontend-c/src/**",
+  "vyre-frontend-rust/src/**",
+  "vyre-libs/tests/*parser*",
+  "vyre-libs/tests/*frontend*",
+  "examples/c_lex_on_gpu/**",
+  "xtask/src/c_parser_bench.rs",
+  "xtask/src/c_parser_corpus.rs",
+  "release/evidence/parser/**",
+  "docs/parsing-and-frontends.md",
+]
+avoid = [
+  "vyre-driver-cuda/src/**",
+  "vyre-driver-wgpu/src/**",
+  "vyre-runtime/src/megakernel/**",
+]
+required_commands = [
+  "cargo_full test -p vyre-libs parsing",
+  "cargo_full check -p vyre-frontend-c -p vyre-frontend-rust",
+]
+
+[lane.scan_static]
+purpose = "Literal, regex, automata, decode-scan, and static scan primitives with shared result compaction."
+layer = "Scan/static analysis"
+write = [
+  "vyre-libs/src/scan/**",
+  "vyre-libs/src/decode/**",
+  "vyre-primitives/src/matching/**",
+  "vyre-libs/tests/*scan*",
+  "vyre-libs/tests/*regex*",
+]
+required_commands = [
+  "cargo_full test -p vyre-libs scan",
+  "cargo_full test -p vyre-primitives matching",
+]
+
+[lane.scan_automata]
+purpose = "Scan/automata seam: literal, regex, DFA/NFA/PFAC-style planners, resident automata databases, streaming scan state, and scan-to-flow finding relations."
+layer = "Scan/automata seam"
+write = [
+  "vyre-libs/src/scan/**",
+  "vyre-libs/src/matching/**",
+  "vyre-primitives/src/matching/**",
+  "vyre-primitives/src/text/**",
+  "vyre-libs/tests/*scan*",
+  "vyre-libs/tests/*regex*",
+  "release/evidence/benchmarks/**",
+]
+avoid = [
+  "vyre-libs/src/parsing/**",
+  "vyre-runtime/src/megakernel/**",
+]
+required_commands = [
+  "cargo_full test -p vyre-libs scan",
+  "cargo_full test -p vyre-primitives matching",
+]
+
+[lane.security_dataflow]
+purpose = "Security predicate tables, taint/dataflow facts, borrow facts, semiring fixpoint, and static-analysis convergence proof."
+layer = "Security/dataflow"
+write = [
+  "vyre-libs/src/security/**",
+  "vyre-libs/src/dataflow/**",
+  "vyre-libs/src/borrowck/**",
+  "vyre-self-substrate/src/analysis/**",
+  "vyre-foundation/src/pass_substrate/**",
+  "vyre-foundation/src/transform/compiler/dataflow_fixpoint.rs",
+]
+required_commands = [
+  "cargo_full test -p vyre-libs security",
+  "cargo_full test -p vyre-self-substrate dataflow",
+]
+
+[lane.security_reliability]
+purpose = "Security and reliability seam: FFI safety, decode budgets, VAST validation, finding evidence, fallback policy, cache integrity, tenant DoS guards, and release script safety."
+layer = "Security/reliability"
+write = [
+  "vyre-foundation/src/serial/**",
+  "vyre-foundation/src/vast.rs",
+  "vyre-driver/src/**",
+  "vyre-driver-cuda/src/**",
+  "vyre-driver-wgpu/src/**",
+  "vyre-runtime/src/**",
+  "vyre-libs/src/security/**",
+  "vyre-libs/src/scan/**",
+  "scripts/**",
+  "release/evidence/**",
+]
+avoid = [
+  "docs/optimization/ALL_AXES_ACCELERATION_PLAN.md",
+]
+required_commands = [
+  "cargo_full test -p vyre-foundation wire",
+  "cargo_full test -p vyre-driver -p vyre-runtime",
+  "cargo_full run -p xtask --bin xtask -- hygiene-matrix",
+]
+
+[lane.flow_weir]
+purpose = "Weir/Vyre flow boundary, IFDS, reaching, slicing, witness extraction, resident fixed-point execution, and cross-language dataflow integration."
+layer = "Flow/dataflow"
+write = [
+  "../../../dataflow/weir/src/**",
+  "../../../dataflow/weir/tests/**",
+  "../../../dataflow/weir/benches/**",
+  "vyre-libs/src/security/**",
+  "vyre-libs/src/dataflow/**",
+  "vyre-self-substrate/src/analysis/**",
+  "release/evidence/weir/**",
+]
+required_commands = [
+  "cargo_full test --manifest-path ../../../dataflow/weir/Cargo.toml --features cpu-parity",
+  "cargo_full run -p xtask --bin xtask -- weir-matrix",
+]
+
+[lane.nn_math]
+purpose = "Attention, tiled matmul, tensor-core policy, quantized linear paths, and research primitive promotion gates."
+layer = "NN/math"
+write = [
+  "vyre-libs/src/nn/**",
+  "vyre-libs/src/math/**",
+  "vyre-primitives/src/math/**",
+  "vyre-libs/tests/*matmul*",
+  "vyre-libs/tests/*attention*",
+]
+required_commands = [
+  "cargo_full test -p vyre-libs matmul",
+  "cargo_full test -p vyre-primitives math",
+]
+
+[lane.sparse_math_ai]
+purpose = "Sparse math and AI seam: tensor-core policy, quantized matmul, GraphBLAS/cuSPARSE-style baselines, semiring GEMM, sparse workload evidence, and NN claim boundaries."
+layer = "Sparse math/AI seam"
+write = [
+  "vyre-libs/src/math/**",
+  "vyre-libs/src/nn/**",
+  "vyre-primitives/src/math/**",
+  "vyre-libs/tests/*matmul*",
+  "vyre-libs/tests/*attention*",
+  "vyre-bench/src/**",
+  "docs/MATH_PRIMITIVES_PLACEMENT.md",
+]
+avoid = [
+  "vyre-libs/src/security/**",
+  "vyre-libs/src/parsing/**",
+]
+required_commands = [
+  "cargo_full test -p vyre-libs matmul",
+  "cargo_full test -p vyre-primitives math",
+  "cargo_full check -p vyre-bench",
+]
+
+[lane.testing_evidence]
+purpose = "Cross-cutting evidence matrices, docs claims, conformance schemas, hygiene classifiers, duplicate detectors, and proof truth gates."
+layer = "Testing/evidence"
+write = [
+  "xtask/src/acceleration_plan_gate.rs",
+  "xtask/src/artifact_paths.rs",
+  "xtask/src/command_matrix.rs",
+  "xtask/src/hot_path_scan.rs",
+  "xtask/src/launch_contract.rs",
+  "release/repo-boundary.toml",
+  "xtask/src/repo_boundary.rs",
+  "xtask/src/research_basis.rs",
+  "xtask/src/research_key.rs",
+  "xtask/src/research_source_ledger.rs",
+  "xtask/src/research_audit.rs",
+  "xtask/src/research_audit/**",
+  "docs/optimization/FRONTIER_LEADERBOARD_BASELINES.toml",
+  "docs/optimization/RESEARCH_SOURCE_LEDGER.toml",
+  "xtask/src/release_evidence/expected_artifacts.rs",
+  "xtask/src/release_train.rs",
+  "xtask/src/source_similar.rs",
+  "xtask/src/toml_config.rs",
+  "xtask/src/vx_plan_table.rs",
+  "xtask/src/**",
+  "release/release-train.toml",
+  "release/evidence/**",
+  "docs/optimization/**",
+]
+avoid = [
+  "vyre-driver-cuda/src/**",
+  "vyre-driver-wgpu/src/**",
+  "vyre-driver-metal/src/**",
+  "vyre-libs/src/**",
+]
+required_commands = [
+  "cargo_full test -p xtask",
+]
+
+[lane.compiler_optimizer]
+purpose = "Compiler optimizer seam: IR passes, descriptor rewrites, encoded optimizer relations, pass traces, specialization cost models, and emitter validation phases."
+layer = "Compiler optimizer seam"
+write = [
+  "vyre-foundation/src/optimizer/**",
+  "vyre-foundation/src/transform/**",
+  "vyre-lower/src/**",
+  "vyre-emit-naga/src/**",
+  "vyre-emit-ptx/src/**",
+  "vyre-emit-spirv/src/**",
+  "vyre-emit-metal/src/**",
+  "vyre-self-substrate/src/optimizer/**",
+  "vyre-driver/src/specialization.rs",
+  "vyre-driver/src/launch_fusion.rs",
+]
+avoid = [
+  "vyre-libs/src/parsing/**",
+  "vyre-libs/src/security/**",
+  "release/evidence/**",
+]
+required_commands = [
+  "cargo_full test -p vyre-foundation optimizer",
+  "cargo_full test -p vyre-lower -p vyre-emit-naga -p vyre-emit-ptx -p vyre-emit-spirv -p vyre-emit-metal",
+]
+
+[lane.evidence_truth]
+purpose = "Evidence truth seam: benchmark semantics, release gates, launch evidence, docs claims, matrix schemas, generated artifacts, and duplicate-detection reports."
+layer = "Evidence truth"
+write = [
+  "release/evidence/**",
+  "docs/optimization/**",
+  "scripts/final-launch.sh",
+  "scripts/lib/repo_boundary.sh",
+  "scripts/lib/release_train.sh",
+  "scripts/lib/toml_reader.sh",
+  "scripts/publish-release.sh",
+  "vyre-bench/src/cases/**",
+]
+avoid = [
+  "vyre-driver-cuda/src/backend/**",
+  "vyre-driver-wgpu/src/backend_impl.rs",
+  "vyre-libs/src/parsing/**",
+  "vyre-libs/src/security/**",
+]
+required_commands = [
+  "cargo_full test -p xtask",
+  "cargo_full check -p vyre-bench",
+]
+
+[lane.product_dogfood]
+purpose = "Product dogfood seam: public examples, benchmark dashboards, API task maps, positioning matrices, AOT evidence packages, and consumer compatibility reports."
+layer = "Product/dogfood"
+write = [
+  "README.md",
+  "docs/**",
+  "examples/**",
+  "vyre-debug/src/**",
+  "vyre-aot/src/**",
+  "vyre-bench/src/**",
+  "vyre-core/src/lib.rs",
+  "vyre-lints/src/**",
+]
+avoid = [
+  "vyre-driver-cuda/src/backend/**",
+  "vyre-runtime/src/megakernel/**",
+  "release/evidence/final/**",
+]
+required_commands = [
+  "cargo_full check -p vyre-core -p vyre-debug -p vyre-aot -p vyre-bench -p vyre-lints",
+]
+
 [lane.op_matrix]
 purpose = "Op/backend coverage tracking, tier placement, parity status."
 layer = "Coordination"
+parent_axis = "coordination"
+support_reason = "Op/backend coverage files support coordination evidence and are not a separate implementation axis."
 write = [
   "docs/optimization/OP_MATRIX.toml",
   "docs/catalog/**",

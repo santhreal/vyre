@@ -1,0 +1,49 @@
+# Operator reporting interchange for VX-721 through VX-723.
+# Findings use one SARIF-compatible contract before reporters shape JSON, SARIF, console, or release evidence.
+
+schema = "vyre.reporting.operator_interchange.v1"
+owner = "security_reliability"
+evidence_tokens = ["SARIF_2_1_0", "CODEQL_FLOW"]
+
+required_fields = [
+  "result_id",
+  "rule_id",
+  "level",
+  "message",
+  "artifact_uri",
+  "region",
+  "fingerprints",
+  "thread_flow",
+  "fix",
+  "redaction_state",
+]
+
+levels = [
+  "note",
+  "warning",
+  "error",
+]
+
+[[result]]
+result_id = "finding-untrusted-url"
+rule_id = "VYRE_SSRF_UNTRUSTED_URL"
+level = "error"
+message = "untrusted URL reaches network sink"
+artifact_uri = "public-vyre-relative-path"
+region = "line:17,column:9"
+fingerprints = ["primary-location-hash", "flow-path-hash"]
+thread_flow = "source->sanitizer-check-missing->sink"
+fix = "validate URL scheme and host before request"
+redaction_state = "private-paths-redacted"
+
+[[result]]
+result_id = "diagnostic-unsupported-subgroup"
+rule_id = "VYRE_WGPU_SUBGROUP_UNSUPPORTED"
+level = "warning"
+message = "subgroup route unavailable for selected backend"
+artifact_uri = "public-vyre-relative-path"
+region = "line:1,column:1"
+fingerprints = ["backend-capability-hash"]
+thread_flow = "capability-check->fallback-route"
+fix = "use scalar WGSL fallback or select supported backend"
+redaction_state = "private-paths-redacted"

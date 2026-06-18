@@ -1,0 +1,54 @@
+# NUMA memory placement owns host allocation locality; memory residency owns backend memory tier semantics.
+
+schema = "vyre.host.numa_memory_placement_policy.v1"
+owner = "driver_shared"
+evidence_tokens = ["LINUX_KERNEL_NUMA_MEMORY_POLICY", "LINUX_KERNEL_CPUSETS", "KUBERNETES_TOPOLOGY_MANAGER", "KUBERNETES_CPU_MANAGER"]
+
+required_fields = [
+  "placement_id",
+  "allocation_surface",
+  "policy_mode",
+  "node_selection_policy",
+  "first_touch_policy",
+  "migration_policy",
+  "claim_scope_policy",
+  "failure_policy",
+  "authority_links",
+  "diagnostic",
+]
+
+[[placement]]
+placement_id = "pinned-staging-numa-placement"
+allocation_surface = "pinned-host-upload-readback-slabs-and-copy-worker-command-buffers"
+policy_mode = "bind-or-preferred-local-node-when-GPU-affinity-and-cpuset-allow-local-allocation"
+node_selection_policy = "target-device-local-NUMA-node-selected-from-CPU_GPU_TOPOLOGY_AFFINITY_MATRIX"
+first_touch_policy = "allocation-initialization-thread-affinity-matches-selected-node-before pin-or-register"
+migration_policy = "remote-page-observation-or-auto-NUMA-migration-recorded-before overlap-claim-generalizes"
+claim_scope_policy = "throughput-claim-scoped-to-observed-NUMA-placement-and-device-locality-class"
+failure_policy = "local-node-memory-pressure-routes-to-interleave-or-smaller-batch-with-explicit-diagnostic"
+authority_links = ["PINNED_STAGING_TRANSFER_POLICY.toml", "MEMORY_PRESSURE_OVERSUBSCRIPTION_RESPONSE.toml", "TRANSFER_OVERLAP_PIPELINE_EVIDENCE.toml", "RESOURCE_BUDGET_POLICY.toml"]
+diagnostic = "VYRE_PINNED_STAGING_NUMA_PLACEMENT_REQUIRED"
+
+[[placement]]
+placement_id = "mmap-corpus-numa-placement"
+allocation_surface = "mmap-corpus-pages-parser-working-set-and-CPU-reference-scan-buffers"
+policy_mode = "local-or-interleave-based-on-corpus-route-and-thread-pool-locality"
+node_selection_policy = "storage-local-CPU-node-and-target-GPU-node-recorded-before direct-storage-or-prefetch-claim"
+first_touch_policy = "mmap-page-fault-and-prefetch-worker-mask-recorded-for-corpus-window"
+migration_policy = "cross-node-page-fault-rate-or-balancing-migration-recorded-as-stratum-factor"
+claim_scope_policy = "corpus-ingress-claim-limited-to-observed-memory-policy-page-size-and-node-class"
+failure_policy = "remote-memory-pressure-routes-to-smaller-window-CPU-staging-or-direct-GPU-DMA-fallback"
+authority_links = ["CORPUS_PAGING_PLANNER.toml", "GPU_DIRECT_CORPUS_PAGING_CAPABILITIES.toml", "HOST_LOCALITY_AFFINITY_CONTRACTS.toml", "HARDWARE_WORKLOAD_STRATIFICATION_MATRIX.toml"]
+diagnostic = "VYRE_MMAP_CORPUS_NUMA_PLACEMENT_REQUIRED"
+
+[[placement]]
+placement_id = "operator-container-numa-alignment"
+allocation_surface = "operator-worker-pod-CPU-memory-and-device-resource-alignment"
+policy_mode = "Kubernetes-Topology-Manager-policy-recorded-as-none-best-effort-restricted-or-single-numa-node"
+node_selection_policy = "CPU-Manager-exclusive-CPU-set-memory-node-and-device-hint-records-link-to-placement-policy"
+first_touch_policy = "container-start-and-worker-pool-initialization-record-effective-cpuset-and-memset"
+migration_policy = "pod-reschedule-cpuset-change-or-node-policy-change-invalidates-locality-evidence"
+claim_scope_policy = "operator-performance-claim-scoped-to-topology-manager-policy-and-observed-node-class"
+failure_policy = "topology-admission-failure-or-policy-mismatch-blocks-locality-sensitive-release-claim"
+authority_links = ["SCHEDULING_PLACEMENT_TOPOLOGY_POLICY.toml", "GPU_DEVICE_CAPACITY_PLACEMENT_POLICY.toml", "OPERATOR_RUNTIME_CONFIGURATION_POLICY.toml", "RELEASE_ROLLOUT_STRATEGY_POLICY.toml"]
+diagnostic = "VYRE_OPERATOR_CONTAINER_NUMA_ALIGNMENT_REQUIRED"

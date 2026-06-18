@@ -1,0 +1,70 @@
+# Optimization experiment design owns hypotheses, factors, controls, blocking, and decision class; benchmark methodology owns measurement mechanics.
+
+schema = "vyre.performance.optimization_experiment_design_policy.v1"
+owner = "bench_harness"
+evidence_tokens = ["NIST_DOE_DESIGN_SELECTION", "NIST_DOE_OBJECTIVES", "NIST_DOE_FACTOR_SELECTION", "NIST_RANDOMIZED_BLOCK_DESIGN", "NIST_FULL_FACTORIAL_DESIGN"]
+
+required_fields = [
+  "experiment_id",
+  "objective_class",
+  "hypothesis_policy",
+  "primary_factor_policy",
+  "nuisance_factor_policy",
+  "response_policy",
+  "design_selection_policy",
+  "factor_level_policy",
+  "blocking_policy",
+  "randomization_policy",
+  "control_policy",
+  "run_matrix_policy",
+  "decision_sink",
+  "diagnostic",
+]
+
+[[experiment]]
+experiment_id = "regex-route-selection-experiment"
+objective_class = "comparative-confirmatory"
+hypothesis_policy = "predeclare-route-selection-change-hypothesis-baseline-route-candidate-route-primary-response-and-minimum-effect"
+primary_factor_policy = "primary-factor-is-route-implementation-with-baseline-and-candidate-levels"
+nuisance_factor_policy = "record-backend-device-class-driver-class-corpus-digest-cache-state-clock-class-and-threading-mode"
+response_policy = "primary-response-throughput-secondary-responses-latency-cpu-time-memory-bytes-and-profile-diff-id"
+design_selection_policy = "randomized-block-design-selected-when-device-driver-or-corpus-class-is-a-controlled-nuisance-factor"
+factor_level_policy = "factor-levels-use-registered-route-ids-and-public-corpus-fixture-digests"
+blocking_policy = "block-by-hardware-class-driver-class-and-corpus-family-then-compare-routes-within-block"
+randomization_policy = "randomize-run-order-inside-blocks-and-record-seed-run-index-and-cache-reset-state"
+control_policy = "include-baseline-route-negative-control-no-op-config-and-positive-control-known-fast-path-when-available"
+run_matrix_policy = "run-matrix-records-block-id-factor-levels-replication-count-center-point-eligibility-and-impossible-combinations"
+decision_sink = "STATISTICAL_REGRESSION_GATES.toml-and-PERFORMANCE_REGRESSION_PROFILE_TRIAGE_POLICY.toml"
+diagnostic = "VYRE_REGEX_ROUTE_EXPERIMENT_DESIGN_REQUIRED"
+
+[[experiment]]
+experiment_id = "gpu-kernel-tuning-factorial-experiment"
+objective_class = "screening-and-response-surface"
+hypothesis_policy = "predeclare-kernel-tuning-factors-expected-throughput-response-interaction-terms-and-resource-risk"
+primary_factor_policy = "primary-factors-include-block-size-vector-width-prefetch-depth-resident-set-class-and-fusion-mode"
+nuisance_factor_policy = "record-GPU-class-driver-version-clock-class-thermal-state-input-size-class-and-capacity-envelope"
+response_policy = "responses-include-throughput-kernel-time-device-sync-time-occupancy-memory-bandwidth-and-GPU-profile-triage-id"
+design_selection_policy = "full-factorial-for-two-to-four-factors-fractional-or-screening-design-when-factor-count-exceeds-budget"
+factor_level_policy = "two-level-or-three-level-coded-factor-settings-record-high-low-center-and-feasibility"
+blocking_policy = "block-by-GPU-class-driver-class-and-input-size-class-before-cross-device-generalization"
+randomization_policy = "randomize-factor-combination-order-within-each-hardware-block-and-record-seed"
+control_policy = "include-current-kernel-baseline-disabled-optimization-ablation-and-known-safe-reference-route"
+run_matrix_policy = "run-matrix-records-coded-factor-settings-interaction-columns-replications-center-points-and-failed-feasibility-checks"
+decision_sink = "MULTIPLE_COMPARISON_DECISION_POLICY.toml-and-GPU_DEVICE_CAPACITY_PLACEMENT_POLICY.toml"
+diagnostic = "VYRE_GPU_KERNEL_FACTORIAL_EXPERIMENT_REQUIRED"
+
+[[experiment]]
+experiment_id = "allocation-cache-policy-ablation-experiment"
+objective_class = "screening-comparative"
+hypothesis_policy = "predeclare-cache-policy-change-memory-response-throughput-response-and-expected-allocation-hot-callsite"
+primary_factor_policy = "primary-factor-is-cache-policy-with-current-candidate-disabled-and-eviction-threshold-levels"
+nuisance_factor_policy = "record-workload-digest-cache-warmth-memory-budget-class-worker-class-and-rule-data-digest"
+response_policy = "responses-include-retained-bytes-allocation-rate-throughput-latency-cache-hit-rate-and-allocation-profile-id"
+design_selection_policy = "comparative-design-for-single-policy-change-screening-design-when-cache-thresholds-and-worker-classes-vary"
+factor_level_policy = "factor-levels-use-Tier-A-config-values-or-Tier-B-data-digests-with-explicit-source"
+blocking_policy = "block-by-workload-family-memory-budget-class-and-cache-warmth-before-comparing-policy levels"
+randomization_policy = "randomize-cache-policy-order-and-record-cache-reset-or-warm-state-transition"
+control_policy = "include-disabled-cache-negative-control-current-policy-baseline-and-safe-high-memory-reference"
+run_matrix_policy = "run-matrix-records-policy-level-cache-state-replication-count-resource-limit-and-profile-window"
+decision_sink = "ABLATION_AND_COUNTERFACTUAL_EVIDENCE_POLICY.toml-and-RESOURCE_BUDGET_POLICY.toml"
+diagnostic = "VYRE_ALLOCATION_CACHE_EXPERIMENT_DESIGN_REQUIRED"

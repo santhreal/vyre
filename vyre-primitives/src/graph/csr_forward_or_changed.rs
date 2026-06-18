@@ -34,7 +34,7 @@ mod validate;
 mod registry;
 
 #[cfg(test)]
-#[path = "csr_forward_or_changed/tests.rs"]
+#[path = "csr_forward_or_changed/tests/mod.rs"]
 mod tests;
 
 pub use body::{

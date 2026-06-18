@@ -1,0 +1,51 @@
+# Dedup seam and completion audit for VX-717 through VX-720.
+# Completion is proven by seam ownership, source impact, proof gates, and explicit tranche coverage.
+
+schema = "vyre.plan.dedup_seam_completion_audit.v1"
+owner = "organization_dedup"
+evidence_tokens = ["MLIR_PASS", "CODEQL_FLOW", "OPENSSF_SCORECARD"]
+
+required_fields = [
+  "seam_id",
+  "owning_crate",
+  "shared_registry",
+  "duplicate_risk",
+  "source_impact_edge",
+  "proof_gate",
+  "completion_evidence",
+]
+
+[[seam]]
+seam_id = "research-source-ledger"
+owning_crate = "conform/vyre-conform-enforce"
+shared_registry = "RESEARCH_SOURCE_LEDGER.toml"
+duplicate_risk = "parallel-source-registry"
+source_impact_edge = "SOURCE_IMPACT_GRAPH.toml"
+proof_gate = "research_supply_chain_governance.rs"
+completion_evidence = "ledger-keys-and-canonical-urls"
+
+[[seam]]
+seam_id = "public-private-publication-boundary"
+owning_crate = "conform/vyre-conform-enforce"
+shared_registry = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+duplicate_risk = "private-path-in-public-artifact"
+source_impact_edge = "REPO_BOUNDARY_PUBLICATION_CHECKS.toml"
+proof_gate = "release_publication_boundary.rs"
+completion_evidence = "allowed-and-blocked-roots"
+
+[[seam]]
+seam_id = "benchmark-reproducibility-capsule"
+owning_crate = "vyre-bench"
+shared_registry = "REPRODUCIBILITY_CAPSULES.toml"
+duplicate_risk = "backend-local-counter-shapes"
+source_impact_edge = "CROSS_BACKEND_COUNTER_SCHEMA.toml"
+proof_gate = "reproducibility_capsules.rs"
+completion_evidence = "input-environment-hardware-output-digests"
+
+[[coverage]]
+vx_id_range = "VX-701..VX-720"
+local_evidence = "present"
+research_source = "present"
+dedup_seam = "present"
+public_private_boundary = "present"
+proof_gate = "present"

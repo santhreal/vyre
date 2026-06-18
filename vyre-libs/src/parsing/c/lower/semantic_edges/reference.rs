@@ -6,6 +6,7 @@ pub(crate) fn resolved_semantic_edges(
     node_count: usize,
     kind: u32,
 ) -> (SemanticEdge, SemanticEdge) {
+    assert_vast_rows_present(vast_nodes, node_count);
     match kind {
         C_AST_KIND_GOTO_STMT => {
             let target = resolved_goto_target_label(vast_nodes, node_idx, node_count);
@@ -59,6 +60,25 @@ pub(crate) fn resolved_semantic_edges(
     }
 }
 
+/// Fail fast when the VAST row buffer is too short to cover `node_count` nodes.
+///
+/// `field_if_valid` returns the `u32::MAX` sentinel for an out-of-buffer word,
+/// so resolving edges over a truncated buffer would SILENTLY emit `NONE` edges
+/// (dropped control-flow/semantic edges) with no signal. Prevalidate the buffer
+/// shape once at the entry so every downstream field read is in bounds.
+fn assert_vast_rows_present(vast_nodes: &[u32], node_count: usize) {
+    let required = node_count
+        .checked_mul(VAST_NODE_STRIDE_U32 as usize)
+        .expect("truncated VAST: node_count * row stride overflowed usize");
+    assert!(
+        vast_nodes.len() >= required,
+        "truncated VAST: {} row word(s) for {node_count} node(s); need {required} \
+         (node_count * {VAST_NODE_STRIDE_U32}). Fix: pass the full VAST node-row buffer — \
+         resolving semantic edges over a truncated buffer would silently drop edges.",
+        vast_nodes.len()
+    );
+}
+
 pub(crate) fn field_if_valid(
     vast_nodes: &[u32],
     node_idx: usize,
@@ -68,18 +88,13 @@ pub(crate) fn field_if_valid(
     if node_idx >= node_count {
         return u32::MAX;
     }
-    let word_idx = node_idx
+    let Some(word_idx) = node_idx
         .checked_mul(VAST_NODE_STRIDE_U32 as usize)
         .and_then(|base| base.checked_add(field))
-        .unwrap_or_else(|| {
-            panic!("vyre-libs semantic edge resolver VAST index overflow: node_idx={node_idx}, field={field}. Fix: bound VAST node counts before semantic lowering.")
-        });
-    *vast_nodes.get(word_idx).unwrap_or_else(|| {
-        panic!(
-            "vyre-libs semantic edge resolver received truncated VAST: node_idx={node_idx}, field={field}, word_idx={word_idx}, words={}. Fix: pass exactly node_count * {VAST_NODE_STRIDE_U32} VAST words.",
-            vast_nodes.len()
-        )
-    })
+    else {
+        return u32::MAX;
+    };
+    *vast_nodes.get(word_idx).unwrap_or(&u32::MAX)
 }
 
 pub(crate) fn root_idx(vast_nodes: &[u32], node_idx: usize, node_count: usize) -> u32 {

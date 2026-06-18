@@ -315,6 +315,9 @@ pub fn persistent_bfs_batch(
     edge_kind_mask: u32,
     max_iters: u32,
 ) -> Program {
+    // Fail fast on an invalid flat-frontier shape rather than silently degrading
+    // to an inert empty kernel (silent recall loss). Use
+    // `try_persistent_bfs_batch` for structured handling.
     try_persistent_bfs_batch(
         shape,
         frontier_in,
@@ -324,7 +327,7 @@ pub fn persistent_bfs_batch(
         edge_kind_mask,
         max_iters,
     )
-    .unwrap_or_else(|err| panic!("{err}"))
+    .unwrap_or_else(|error| panic!("{error}"))
 }
 
 /// Build a batched persistent-BFS Program with checked flat-frontier sizing.

@@ -1,0 +1,42 @@
+schema_version = 1
+
+planner_id = "cuda-scan-memory-pools:v1"
+
+required_pools = [
+  "compile_scratch",
+  "scan_scratch",
+  "pattern_database",
+  "graph_capture_staging",
+]
+
+[[pool]]
+pool_id = "compile_scratch"
+stream_ordered = true
+capture_eligible = false
+max_bytes_field = "max_compile_scratch_bytes"
+miss_diagnostic = "VYRE_CUDA_SCAN_COMPILE_POOL_MISS"
+evidence_path = "vyre-driver-cuda/tests/cuda_scan_memory_pool_registry.rs"
+
+[[pool]]
+pool_id = "scan_scratch"
+stream_ordered = true
+capture_eligible = true
+max_bytes_field = "max_scan_scratch_bytes"
+miss_diagnostic = "VYRE_CUDA_SCAN_SCRATCH_POOL_MISS"
+evidence_path = "vyre-driver-cuda/tests/cuda_scan_memory_pool_registry.rs"
+
+[[pool]]
+pool_id = "pattern_database"
+stream_ordered = true
+capture_eligible = true
+max_bytes_field = "max_pattern_database_bytes"
+miss_diagnostic = "VYRE_CUDA_SCAN_DATABASE_POOL_MISS"
+evidence_path = "vyre-driver-cuda/tests/cuda_scan_memory_pool_registry.rs"
+
+[[pool]]
+pool_id = "graph_capture_staging"
+stream_ordered = true
+capture_eligible = true
+max_bytes_field = "max_graph_capture_staging_bytes"
+miss_diagnostic = "VYRE_CUDA_SCAN_GRAPH_CAPTURE_POOL_MISS"
+evidence_path = "vyre-driver-cuda/tests/cuda_scan_memory_pool_registry.rs"

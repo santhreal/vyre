@@ -1,0 +1,36 @@
+# CUDA graph update evidence for VX-674.
+# Replay and recapture decisions require topology, node diff, pointer, shape, and output evidence.
+
+schema = "vyre.cuda.graph_update_evidence.v1"
+owner = "driver_cuda"
+evidence_tokens = ["CUDA_GRAPHS", "CUDA_BEST_PRACTICES"]
+
+required_fields = [
+  "topology_id",
+  "node_parameter_diff",
+  "pointer_identity",
+  "shape_digest",
+  "replay_count",
+  "decision",
+  "output_digest",
+]
+
+[[update]]
+id = "same-topology-param-update"
+topology_id = "scan-graph-topology-a"
+node_parameter_diff = "pattern-buffer-offset-only"
+pointer_identity = "stable"
+shape_digest = "sha256:scan-shape-a"
+replay_count = 128
+decision = "update-node-params"
+output_digest = "sha256:same-topology-output"
+
+[[update]]
+id = "shape-change-recapture"
+topology_id = "scan-graph-topology-a"
+node_parameter_diff = "workgroup-count-changed"
+pointer_identity = "changed"
+shape_digest = "sha256:scan-shape-b"
+replay_count = 0
+decision = "recapture"
+output_digest = "sha256:shape-change-output"

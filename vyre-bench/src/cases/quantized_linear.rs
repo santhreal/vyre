@@ -7,6 +7,9 @@
 //! advantage rather than changing math.
 
 use super::byte_pack::{f32_bytes, u32_bytes};
+use super::release_workloads::{
+    validate_release_math_nn_kernel_evidence, ReleaseMathNnKernelEvidence,
+};
 use crate::api::case::{
     BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
     BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
@@ -39,10 +42,28 @@ const SUITES: &[SuiteKind] = &[
     SuiteKind::Honest,
 ];
 
+fn digest64(bytes: &[u8]) -> u64 {
+    let hash = blake3::hash(bytes);
+    let mut digest = [0u8; 8];
+    digest.copy_from_slice(&hash.as_bytes()[..8]);
+    u64::from_le_bytes(digest)
+}
+
+fn kernel_path_id(path: &str) -> u64 {
+    match path {
+        "cooperative" => 1,
+        "tensor_core_f16_m16n8k16" => 2,
+        "tensor_core_bf16_m16n8k16" => 3,
+        "tensor_core_tf32_m16n8k4" => 4,
+        _ => 0,
+    }
+}
+
 pub struct QuantizedLinear4BitAffineGrouped;
 
 struct QuantizedLinearPrepared {
     program: Program,
+    evidence: vyre_libs::nn::QuantizedLinear4BitPlannerEvidence,
     inputs: Vec<Vec<u8>>,
     input_bytes_total: u64,
     baseline_output: Vec<u8>,
@@ -110,6 +131,8 @@ impl BenchCase for QuantizedLinear4BitAffineGrouped {
     fn prepare(&self, ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
         let spec =
             vyre_libs::nn::QuantizedLinear4BitSpec::affine_grouped(IN_DIM, OUT_DIM, GROUP_SIZE);
+        let evidence = vyre_libs::nn::linear_4bit_affine_grouped_planner_evidence(&spec)
+            .map_err(BenchError::ExecutionFailed)?;
         let program = vyre_libs::nn::linear_4bit_affine_grouped_typed(
             &spec, "x", "w", "scale", "zp", "b", "out",
         )
@@ -140,6 +163,7 @@ impl BenchCase for QuantizedLinear4BitAffineGrouped {
 
         Ok(Box::new(QuantizedLinearPrepared {
             program,
+            evidence,
             inputs,
             input_bytes_total,
             baseline_output,
@@ -198,6 +222,21 @@ impl BenchCase for QuantizedLinear4BitAffineGrouped {
             output_bytes,
             dispatch.resident_used,
         );
+        let cpu_digest = digest64(&prepared.baseline_output);
+        let gpu_digest = outputs.first().map_or(0, |output| digest64(output));
+        let tolerance_abs_e9 =
+            (prepared.evidence.output_drift_abs_tolerance * 1.0e9) as u64;
+        let release_evidence = ReleaseMathNnKernelEvidence {
+            case_id: "nn.linear_4bit_affine_grouped.1m",
+            cpu_digest,
+            gpu_digest,
+            tolerance_abs_e9,
+            active_time_ns: timed.device_ns.unwrap_or(timed.wall_ns),
+            transfer_bytes: accounting.bytes_touched,
+            selected_kernel_path: prepared.evidence.matmul_selected_path,
+        };
+        validate_release_math_nn_kernel_evidence(&release_evidence)
+            .map_err(BenchError::ExecutionFailed)?;
 
         Ok(BenchRun {
             metrics: BenchMetrics {
@@ -215,19 +254,71 @@ impl BenchCase for QuantizedLinear4BitAffineGrouped {
                     },
                     MetricPoint {
                         name: "quantized_group_size".to_string(),
-                        value: u64::from(GROUP_SIZE),
+                        value: u64::from(prepared.evidence.group_size),
                     },
                     MetricPoint {
                         name: "quantized_sidecar_groups".to_string(),
-                        value: u64::from(GROUP_COUNT),
+                        value: u64::from(prepared.evidence.group_count),
                     },
                     MetricPoint {
                         name: "packed_weight_bytes".to_string(),
-                        value: u64::from(PACKED_WORDS) * 4,
+                        value: prepared.evidence.packed_weight_bytes,
                     },
                     MetricPoint {
                         name: "unpacked_weight_bytes_elided".to_string(),
-                        value: u64::from(IN_DIM) * u64::from(OUT_DIM) * 4,
+                        value: prepared.evidence.dequant_bytes_elided,
+                    },
+                    MetricPoint {
+                        name: "dequantized_weight_bytes".to_string(),
+                        value: prepared.evidence.dequantized_weight_bytes,
+                    },
+                    MetricPoint {
+                        name: "matmul_planner_m".to_string(),
+                        value: u64::from(prepared.evidence.matmul_m),
+                    },
+                    MetricPoint {
+                        name: "matmul_planner_k".to_string(),
+                        value: u64::from(prepared.evidence.matmul_k),
+                    },
+                    MetricPoint {
+                        name: "matmul_planner_n".to_string(),
+                        value: u64::from(prepared.evidence.matmul_n),
+                    },
+                    MetricPoint {
+                        name: "matmul_planner_tile".to_string(),
+                        value: u64::from(prepared.evidence.matmul_tile),
+                    },
+                    MetricPoint {
+                        name: "matmul_planner_tensor_core_eligible".to_string(),
+                        value: if prepared.evidence.tensor_core_eligible {
+                            1
+                        } else {
+                            0
+                        },
+                    },
+                    MetricPoint {
+                        name: "output_drift_abs_tolerance_e9".to_string(),
+                        value: release_evidence.tolerance_abs_e9,
+                    },
+                    MetricPoint {
+                        name: "release_math_nn_cpu_digest".to_string(),
+                        value: release_evidence.cpu_digest,
+                    },
+                    MetricPoint {
+                        name: "release_math_nn_gpu_digest".to_string(),
+                        value: release_evidence.gpu_digest,
+                    },
+                    MetricPoint {
+                        name: "release_math_nn_active_time_ns".to_string(),
+                        value: release_evidence.active_time_ns,
+                    },
+                    MetricPoint {
+                        name: "release_math_nn_transfer_bytes".to_string(),
+                        value: release_evidence.transfer_bytes,
+                    },
+                    MetricPoint {
+                        name: "matmul_planner_selected_path_id".to_string(),
+                        value: kernel_path_id(release_evidence.selected_kernel_path),
                     },
                     MetricPoint {
                         name: "weight_compression_ratio_x100".to_string(),

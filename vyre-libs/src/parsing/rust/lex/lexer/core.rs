@@ -15,10 +15,19 @@ pub struct Token {
 }
 
 impl Token {
+    /// Return the token's text with checked bounds and UTF-8 validation.
+    pub fn try_text<'a>(&self, source: &'a [u8]) -> Result<&'a str, usize> {
+        let start = usize::try_from(self.start).map_err(|_| source.len())?;
+        let end = start.checked_add(usize::from(self.len)).ok_or(start)?;
+        let span = source.get(start..end).ok_or(start)?;
+        std::str::from_utf8(span).map_err(|error| start.saturating_add(error.valid_up_to()))
+    }
+
     /// Return the token's text as a `&str` from the source buffer.
+    #[cfg(test)]
     pub fn text<'a>(&self, source: &'a [u8]) -> &'a str {
-        std::str::from_utf8(&source[self.start as usize..(self.start + self.len as u32) as usize])
-            .expect("Fix: lexer must reject invalid UTF-8 spans; return Lex error instead of panicking - lexer only produces valid UTF-8 spans")
+        self.try_text(source)
+            .expect("test token text should be addressable and valid UTF-8")
     }
 }
 
@@ -77,7 +86,10 @@ pub fn lex(source: &[u8]) -> Result<Vec<Token>, usize> {
             while i < source.len() && (source[i].is_ascii_alphanumeric() || source[i] == b'_') {
                 i += 1;
             }
-            let text = std::str::from_utf8(&source[start..i]).unwrap();
+            let text = match std::str::from_utf8(&source[start..i]) {
+                Ok(text) => text,
+                Err(_) => "",
+            };
             let kind = promote(text).unwrap_or(IDENT);
             tokens.push(Token {
                 kind,

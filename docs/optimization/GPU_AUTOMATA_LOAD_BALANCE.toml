@@ -1,0 +1,38 @@
+schema_version = 1
+
+evidence_id = "gpu-automata-load-balance:v1"
+
+required_fields = [
+  "state_fanout",
+  "row_length_distribution",
+  "failureless_depth",
+  "work_queue_spill",
+  "match_parity",
+]
+
+[[case]]
+case_id = "degenerate_prefix_fanout"
+state_fanout = "high"
+row_length_distribution = "skewed"
+failureless_depth = "deep"
+work_queue_spill = "required"
+match_parity = "required"
+evidence_path = "vyre-driver-cuda/tests/gpu_automata_load_balance_registry.rs"
+
+[[case]]
+case_id = "balanced_literal_set"
+state_fanout = "bounded"
+row_length_distribution = "balanced"
+failureless_depth = "shallow"
+work_queue_spill = "not_expected"
+match_parity = "required"
+evidence_path = "vyre-driver-cuda/tests/gpu_automata_load_balance_registry.rs"
+
+[[case]]
+case_id = "adversarial_overlap_density"
+state_fanout = "medium"
+row_length_distribution = "skewed"
+failureless_depth = "medium"
+work_queue_spill = "measured"
+match_parity = "required"
+evidence_path = "vyre-driver-cuda/tests/gpu_automata_load_balance_registry.rs"

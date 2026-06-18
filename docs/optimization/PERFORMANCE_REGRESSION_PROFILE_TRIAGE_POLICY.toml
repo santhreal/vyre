@@ -1,0 +1,66 @@
+# Regression triage owns profile-backed attribution and release gate effects; SLO, rollout, capacity, and benchmark artifacts remain source authorities.
+
+schema = "vyre.observability.performance_regression_profile_triage.v1"
+owner = "performance_observability"
+evidence_tokens = ["OPENTELEMETRY_PROFILES_SPEC", "OPENTELEMETRY_PROFILE_SIGNAL", "GOOGLE_PPROF", "GRAFANA_PYROSCOPE", "PROMETHEUS_RECORDING_RULES"]
+
+required_fields = [
+  "triage_id",
+  "trigger_policy",
+  "baseline_policy",
+  "candidate_policy",
+  "profile_diff_policy",
+  "hot_path_policy",
+  "attribution_policy",
+  "operator_action_policy",
+  "rollout_policy",
+  "privacy_boundary",
+  "release_gate_effect",
+  "authority_links",
+  "diagnostic",
+]
+
+[[triage]]
+triage_id = "scan-latency-regression-profile-triage"
+trigger_policy = "scan-latency-SLO-burn-benchmark-regression-or-release-health-signal-starts-profile-triage"
+baseline_policy = "baseline-records-release-version-artifact-digest-profile-id-workload-digest-capacity-envelope-and-SLI-window"
+candidate_policy = "candidate-records-release-version-artifact-digest-profile-id-workload-digest-capacity-envelope-and-SLI-window"
+profile_diff_policy = "profile-diff-records-added-removed-and-expanded-hot-stacks-with-sample-counts-percent-change-and-symbolization-digest"
+hot_path_policy = "diff-attribution-links-to-HOT_PATHS-budget-fields-before-operator-visible-cause-claim"
+attribution_policy = "cause-claim-requires-profile-diff-metric-delta-trace-route-and-artifact-identity-agreement"
+operator_action_policy = "operator-output-names-regressed-route-public-symbol-frame-budget-impact-and-runbook-link"
+rollout_policy = "release-rollout-pauses-or-rolls-back-when-profile-backed-regression-crosses-recorded-gate"
+privacy_boundary = "public-triage-excludes-private-paths-hostnames-device-serials-usernames-secret-values-and-private-corpus-names"
+release_gate_effect = "release-performance-claim-invalid-until-regression-profile-triage-record-is-clean-or-actioned"
+authority_links = ["SERVICE_LEVEL_OBJECTIVE_POLICY.toml", "RELEASE_HEALTH_FEEDBACK_LOOP.toml", "RELEASE_ROLLOUT_STRATEGY_POLICY.toml", "HOT_PATHS.toml"]
+diagnostic = "VYRE_SCAN_LATENCY_PROFILE_TRIAGE_REQUIRED"
+
+[[triage]]
+triage_id = "gpu-throughput-profile-triage"
+trigger_policy = "GPU-throughput-drop-capacity-saturation-or-benchmark-diff-starts-profile-triage"
+baseline_policy = "baseline-records-GPU-class-driver-version-kernel-route-artifact-digest-profile-id-and-capacity-envelope"
+candidate_policy = "candidate-records-GPU-class-driver-version-kernel-route-artifact-digest-profile-id-and-capacity-envelope"
+profile_diff_policy = "diff-records-host-stack-device-submit-path-copy-path-kernel-wait-and-symbolized-runtime-frame-changes"
+hot_path_policy = "attribution-links-to-CUDA-WGPU-Vulkan-or-Metal-hot-path-budget-before-backend-cause-claim"
+attribution_policy = "cause-claim-requires-profile-diff-device-metric-capacity-envelope-and-backend-capability-digest-agreement"
+operator_action_policy = "operator-output-identifies-route-backend-capacity-class-profile-diff-summary-and-fix-owner"
+rollout_policy = "rollout-canary-analysis-consumes-profile-backed-GPU-regression-result-before-promotion"
+privacy_boundary = "device-serials-hostnames-private-fleet-labels-and-local-driver-paths-are-redacted"
+release_gate_effect = "GPU-performance-claim-invalid-without-profile-backed-attribution-when-throughput-regresses"
+authority_links = ["GPU_DEVICE_CAPACITY_PLACEMENT_POLICY.toml", "RESOURCE_RIGHTSIZING_CAPACITY_POLICY.toml", "PROGRESSIVE_DELIVERY_CANARY_POLICY.toml", "BACKEND_CAPABILITY_DIGESTS.toml"]
+diagnostic = "VYRE_GPU_PROFILE_TRIAGE_REQUIRED"
+
+[[triage]]
+triage_id = "allocation-regression-profile-triage"
+trigger_policy = "heap-growth-OOM-risk-resource-budget-burn-or-cache-rebuild-regression-starts-profile-triage"
+baseline_policy = "baseline-records-memory-budget-class-cache-state-artifact-digest-profile-id-and-workload-digest"
+candidate_policy = "candidate-records-memory-budget-class-cache-state-artifact-digest-profile-id-and-workload-digest"
+profile_diff_policy = "allocation-diff-records-retained-bytes-allocation-rate-expanded-stack-and-cache-key-class"
+hot_path_policy = "allocation-hot-path-links-to-resource-budget-cache-rebuild-and-output-slab-provenance"
+attribution_policy = "cause-claim-requires-allocation-profile-diff-resource-metric-cache-state-and-release-version-agreement"
+operator_action_policy = "operator-output-identifies-public-callsite-class-budget-impact-runbook-link-and-cache-action"
+rollout_policy = "rollout-pauses-when-allocation-regression-exceeds-resource-budget-and-profile-diff-confirms-cause"
+privacy_boundary = "object-values-request-payloads-private-paths-cache-roots-and-private-corpus-identifiers-omitted"
+release_gate_effect = "memory-performance-claim-invalid-without-profile-backed-allocation-triage-when-budget-burns"
+authority_links = ["RESOURCE_BUDGET_POLICY.toml", "CACHE_REBUILD_INVALIDATION_POLICY.toml", "OPERATOR_RUNBOOK_ROLLBACK_POLICY.toml", "RELEASE_HEALTH_FEEDBACK_LOOP.toml"]
+diagnostic = "VYRE_ALLOCATION_PROFILE_TRIAGE_REQUIRED"

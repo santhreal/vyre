@@ -222,20 +222,20 @@ pub use dispatch_shape::{
     borrowed_input_batch_shapes_match, borrowed_input_shapes_match,
     dispatch_configs_share_launch_shape,
 };
+pub use error::Error;
 pub use evidence::{
     capture_git_info, capture_git_info_at, source_fingerprint, source_tree_fingerprint,
     source_tree_fingerprint_at, DispatchTimingEvidence, EvidenceArtifact, EvidenceBundle,
     ReplayEvidence, SourceProvenance,
 };
-pub use error::Error;
 pub use fixpoint_iterations::{resolve_fixpoint_iterations, resolve_fixpoint_iterations_usize};
 pub use launch::{program_vsa_fingerprint, program_vsa_fingerprint_words, LaunchPlan};
 pub use pipeline::{
     compile, compile_owned, compile_owned_with_telemetry, compile_shared,
     compile_shared_with_telemetry, compile_with_telemetry, hex_encode, hex_short,
     CompiledPipelineBuild, DiskPipelineCache, PipelineCacheIdentity, PipelineCacheKey,
-    PipelineCacheMissEvidence, PipelineCacheMissReason, PipelineCacheSnapshot, PipelineDeviceFingerprint,
-    PipelineFeatureFlags, CURRENT_PIPELINE_CACHE_KEY_VERSION,
+    PipelineCacheMissEvidence, PipelineCacheMissReason, PipelineCacheSnapshot,
+    PipelineDeviceFingerprint, PipelineFeatureFlags, CURRENT_PIPELINE_CACHE_KEY_VERSION,
 };
 pub use program_walks::{
     coerce_to_pow2_with_tail_mask, dispatch_element_count, dispatch_element_count_for_program,

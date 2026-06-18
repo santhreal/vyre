@@ -1,0 +1,29 @@
+# End-to-end policy enforcement tranche coverage for VX-1021 through VX-1040.
+# Policy rules, schema constraints, graph queries, execution DAG, artifact authority, and proof gate share one coverage row.
+
+schema = "vyre.plan.end_to_end_policy_enforcement_tranche_coverage.v1"
+owner = "coordination"
+evidence_tokens = ["OPEN_POLICY_AGENT_REGO", "CUE_LANG", "CEL_SPEC", "W3C_SHACL", "JSON_SCHEMA_2020_12", "SOUFFLE_CC"]
+
+required_fields = [
+  "vx_id_range",
+  "policy_as_code_rules",
+  "schema_and_constraint_validation",
+  "graph_query_audits",
+  "execution_dag",
+  "artifact_authority_map",
+  "publication_boundary",
+  "dedup_seam",
+  "proof_gate",
+]
+
+[[coverage]]
+vx_id_range = "VX-1021..VX-1040"
+policy_as_code_rules = "PLAN_POLICY_AS_CODE_RULES.toml"
+schema_and_constraint_validation = "PLAN_SCHEMA_AND_CONSTRAINT_VALIDATION.toml"
+graph_query_audits = "PLAN_GRAPH_QUERY_AUDITS.toml"
+execution_dag = "PLAN_EXECUTION_DAG.toml"
+artifact_authority_map = "PLAN_ARTIFACT_AUTHORITY_MAP.toml"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+dedup_seam = "one-policy-rule-registry-one-schema-constraint-registry-one-graph-query-audit-registry"
+proof_gate = "plan_policy_enforcement_governance.rs"

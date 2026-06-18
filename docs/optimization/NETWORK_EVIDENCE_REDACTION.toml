@@ -1,0 +1,37 @@
+# Network evidence redaction for VX-875 through VX-879.
+# URLs, hosts, headers, proxy settings, DNS answers, and traces use one redaction and publication contract.
+
+schema = "vyre.network.evidence_redaction.v1"
+owner = "security_reliability"
+evidence_tokens = ["OWASP_SSRF", "RFC_9457_PROBLEM_DETAILS", "OPENTELEMETRY_SEMCONV"]
+
+required_fields = [
+  "evidence_id",
+  "raw_fields",
+  "redacted_fields",
+  "secret_detection",
+  "publication_class",
+  "trace_link",
+  "operator_error",
+  "retention_policy",
+]
+
+[[evidence]]
+evidence_id = "blocked-ssrf-url"
+raw_fields = ["scheme", "host", "port", "path", "query", "dns_answers"]
+redacted_fields = ["query", "private-host-labels", "internal-addresses"]
+secret_detection = "secret-like-query-and-header-values"
+publication_class = "local-only-nonpublished-doc"
+trace_link = "TRACE_CONTEXT_TELEMETRY_CONTRACTS.toml"
+operator_error = "STRUCTURED_ERROR_PROBLEM_DETAILS.toml"
+retention_policy = "DATA_RETENTION_MEDIA_CONTROLS.toml"
+
+[[evidence]]
+evidence_id = "public-source-fetch-summary"
+raw_fields = ["scheme", "host", "status_class", "redirect_count"]
+redacted_fields = ["none-if-public-host-and-no-query-secrets"]
+secret_detection = "headers-and-url-components"
+publication_class = "public-vyre-artifact"
+trace_link = "TRACE_CONTEXT_TELEMETRY_CONTRACTS.toml"
+operator_error = "STRUCTURED_ERROR_PROBLEM_DETAILS.toml"
+retention_policy = "DATA_RETENTION_MEDIA_CONTROLS.toml"

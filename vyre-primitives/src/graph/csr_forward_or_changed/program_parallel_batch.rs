@@ -24,6 +24,9 @@ pub fn csr_forward_or_changed_parallel_batch(
     edge_kind_mask: u32,
     query_count: u32,
 ) -> Program {
+    // Fail fast on an invalid flat-frontier shape rather than silently degrading
+    // to an inert empty kernel (silent recall loss). Use
+    // `try_csr_forward_or_changed_parallel_batch` for structured handling.
     try_csr_forward_or_changed_parallel_batch(
         shape,
         frontier_out,
@@ -31,7 +34,7 @@ pub fn csr_forward_or_changed_parallel_batch(
         edge_kind_mask,
         query_count,
     )
-    .unwrap_or_else(|err| panic!("{err}"))
+    .unwrap_or_else(|error| panic!("{error}"))
 }
 
 /// Parallel in-place expansion for several frontier accumulators with checked

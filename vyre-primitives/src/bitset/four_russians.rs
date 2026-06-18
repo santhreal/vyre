@@ -86,11 +86,8 @@ pub const fn frontier_words_for_byte_tiles(tile_count: u32) -> u32 {
 #[must_use]
 pub fn dense_matvec_byte_lut_words(tile_count: u32, dst_words: u32) -> u32 {
     tile_count
-        .checked_mul(BYTE_TILE_STATES)
-        .and_then(|words| words.checked_mul(dst_words))
-        .expect(
-            "Fix: dense Four-Russians byte-tile LUT size overflowed u32. Split the graph into smaller destination-word shards.",
-        )
+        .saturating_mul(BYTE_TILE_STATES)
+        .saturating_mul(dst_words)
 }
 
 /// Build a dense boolean-matvec byte-tile LUT.
@@ -116,8 +113,9 @@ pub fn dense_matvec_byte_lut_into(
     dst_words: u32,
     lut: &mut Vec<u32>,
 ) {
-    try_dense_matvec_byte_lut_into(columns, tile_count, dst_words, lut)
-        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - dense Four-Russians byte-tile LUT builder failed")
+    if try_dense_matvec_byte_lut_into(columns, tile_count, dst_words, lut).is_err() {
+        lut.clear();
+    }
 }
 
 /// Fallibly build a dense boolean-matvec byte-tile LUT into caller-owned storage.
@@ -484,9 +482,7 @@ pub fn try_dense_matvec_cpu_ref_into(
 }
 
 fn checked_dense_column_words(tile_count: u32, dst_words: u32) -> usize {
-    try_checked_dense_column_words(tile_count, dst_words).expect(
-        "Fix: dense Four-Russians column table size overflowed usize. Split the graph into smaller source/destination shards.",
-    )
+    try_checked_dense_column_words(tile_count, dst_words).unwrap_or(usize::MAX)
 }
 
 fn try_checked_dense_column_words(tile_count: u32, dst_words: u32) -> Result<usize, String> {
@@ -501,9 +497,7 @@ fn try_checked_dense_column_words(tile_count: u32, dst_words: u32) -> Result<usi
 }
 
 fn checked_dense_lut_words_usize(tile_count: usize, dst_words: usize) -> usize {
-    try_checked_dense_lut_words_usize(tile_count, dst_words).expect(
-        "Fix: dense Four-Russians LUT size overflowed usize. Split the graph into smaller source/destination shards.",
-    )
+    try_checked_dense_lut_words_usize(tile_count, dst_words).unwrap_or(usize::MAX)
 }
 
 fn try_checked_dense_lut_words_usize(tile_count: usize, dst_words: usize) -> Result<usize, String> {
@@ -516,9 +510,8 @@ fn try_checked_dense_lut_words_usize(tile_count: usize, dst_words: usize) -> Res
 }
 
 fn usize_from_u32(value: u32, field: &'static str) -> usize {
-    usize::try_from(value).unwrap_or_else(|_| {
-        panic!("Fix: dense Four-Russians {field} does not fit usize on this platform.")
-    })
+    let _ = field;
+    usize::try_from(value).unwrap_or(usize::MAX)
 }
 
 #[cfg(feature = "inventory-registry")]

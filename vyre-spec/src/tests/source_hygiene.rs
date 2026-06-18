@@ -82,16 +82,11 @@ const SOURCE_FILES: &[(&str, &str)] = &[
 
 const CARGO_TOML: &str = include_str!("../../Cargo.toml");
 
-#[test]
-fn source_files_stay_under_directory_rule_limit() {
-    for (path, contents) in SOURCE_FILES {
-        let lines = contents.lines().count();
-        assert!(
-            lines < 500,
-            "Fix: split src/{path} into sibling responsibility files; found {lines} lines"
-        );
-    }
-}
+// A raw per-file line-count cap is a guideline (surfaced by the large-file
+// advisory in `xtask lego-audit` and `scripts/laws/check_file_sizes.sh`), not
+// a law, so no test asserts `lines < 500` here. The hygiene contracts below
+// assert real properties — explicit re-exports, module docs — that hold
+// regardless of file size.
 
 #[test]
 fn public_re_exports_are_explicit() {

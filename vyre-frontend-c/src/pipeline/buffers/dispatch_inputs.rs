@@ -47,15 +47,8 @@ fn missing_input_pad_bytes(buffer: &vyre_foundation::ir::BufferDecl) -> usize {
         return 4;
     }
     usize::try_from(buffer.count)
-        .ok()
-        .and_then(|count| count.checked_mul(4))
-        .unwrap_or_else(|| {
-            panic!(
-                "missing input padding for buffer `{}` count={} overflows byte size. Fix: shard the GPU dispatch buffer.",
-                buffer.name,
-                buffer.count
-            )
-        })
+        .unwrap_or(usize::MAX)
+        .saturating_mul(4)
 }
 
 #[cfg(test)]

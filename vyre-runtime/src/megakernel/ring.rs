@@ -67,32 +67,39 @@ pub trait RingConsumer {
     /// [`ProtocolError::MisalignedByteLength`].
     fn read_slot(&self, slot_idx: u32, out: &mut [u8]) -> Result<(), ProtocolError>;
 
-    /// Count slots currently in `DONE` status. The default
-    /// implementation walks the ring; specialized consumers (e.g. ones
-    /// backed by a control-buffer counter) may override.
-    fn done_count(&self) -> u32 {
+    /// Fallibly count slots currently in `DONE` status.
+    ///
+    /// The default implementation walks the ring through [`Self::read_slot`].
+    /// Specialized consumers backed by a device/control-buffer counter may
+    /// override this method to avoid host reads. Unlike [`Self::done_count`],
+    /// this surface reports malformed slot bytes and host arithmetic overflow
+    /// as [`ProtocolError`] instead of panicking.
+    fn try_done_count(&self) -> Result<u32, ProtocolError> {
         let mut acc = 0u32;
         let mut buf = [0u8; SLOT_BYTES];
         for slot in 0..self.slot_count() {
-            if self.read_slot(slot, &mut buf).is_err() {
-                continue;
-            }
-            let status_offset = STATUS_WORD_USIZE * 4;
-            let word = u32::from_le_bytes([
-                buf[status_offset],
-                buf[status_offset + 1],
-                buf[status_offset + 2],
-                buf[status_offset + 3],
-            ]);
-            if word == protocol::slot::DONE {
-                acc = acc.checked_add(1).unwrap_or_else(|| {
-                    panic!(
-                        "megakernel ring consumer done_count overflowed u32. Fix: shard the ring before host observation."
-                    )
-                });
+            self.read_slot(slot, &mut buf)?;
+            if read_slot_status_word(&buf)? == protocol::slot::DONE {
+                acc = acc
+                    .checked_add(1)
+                    .ok_or(ProtocolError::ByteLengthOverflow {
+                        buffer: "ring done count",
+                        fix: "shard the ring before host observation",
+                    })?;
             }
         }
-        acc
+        Ok(acc)
+    }
+
+    /// Compatibility-only lossy count of slots currently in `DONE` status.
+    ///
+    /// Runtime paths must call [`Self::try_done_count`] so malformed snapshots
+    /// and host arithmetic overflow remain observable as [`ProtocolError`].
+    #[deprecated(
+        note = "use RingConsumer::try_done_count so malformed ring snapshots do not collapse to zero"
+    )]
+    fn done_count(&self) -> u32 {
+        self.try_done_count().unwrap_or(0)
     }
 
     /// Number of slots in the underlying ring.
@@ -168,6 +175,31 @@ fn ring_slot_word_index(slot_idx: u32) -> Result<usize, ProtocolError> {
         })
 }
 
+fn read_slot_status_word(slot_bytes: &[u8]) -> Result<u32, ProtocolError> {
+    let status_offset =
+        STATUS_WORD_USIZE
+            .checked_mul(4)
+            .ok_or(ProtocolError::ByteLengthOverflow {
+                buffer: "ring slot status",
+                fix: "keep ring status word indices within host address space",
+            })?;
+    let status_end = status_offset
+        .checked_add(4)
+        .ok_or(ProtocolError::ByteLengthOverflow {
+            buffer: "ring slot status",
+            fix: "keep ring status word indices within host address space",
+        })?;
+    let bytes = slot_bytes
+        .get(status_offset..status_end)
+        .ok_or(ProtocolError::MissingWord {
+            buffer: "ring slot",
+            word_idx: STATUS_WORD_USIZE,
+            byte_len: slot_bytes.len(),
+            fix: "read a complete SLOT_BYTES slot before counting DONE status",
+        })?;
+    Ok(u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]))
+}
+
 impl RingProducer for HostRing {
     fn publish(&mut self, slot_idx: u32, encoded: &[u8]) -> Result<(), ProtocolError> {
         if encoded.len() != SLOT_BYTES {
@@ -221,38 +253,49 @@ impl RingConsumer for HostRing {
         Ok(())
     }
 
-    fn done_count(&self) -> u32 {
+    fn try_done_count(&self) -> Result<u32, ProtocolError> {
         let status_word_offset = STATUS_WORD_USIZE * 4;
         let mut done = 0u32;
-        let slot_count = usize::try_from(self.slot_count).unwrap_or_else(|source| {
-            panic!(
-                "megakernel ring slot_count cannot fit usize: {source}. Fix: shard the ring before host observation."
-            )
-        });
+        let slot_count =
+            usize::try_from(self.slot_count).map_err(|_| ProtocolError::ByteLengthOverflow {
+                buffer: "ring slot count",
+                fix: "shard the ring before host observation",
+            })?;
         for slot in 0..slot_count {
             let base = slot
                 .checked_mul(SLOT_BYTES)
                 .and_then(|offset| offset.checked_add(status_word_offset))
-                .unwrap_or_else(|| {
-                    panic!(
-                        "megakernel ring status byte offset overflowed usize. Fix: shard the ring before host observation."
-                    )
-                });
-            let word = u32::from_le_bytes([
-                self.bytes[base],
-                self.bytes[base + 1],
-                self.bytes[base + 2],
-                self.bytes[base + 3],
-            ]);
+                .ok_or(ProtocolError::ByteLengthOverflow {
+                    buffer: "ring status offset",
+                    fix: "shard the ring before host observation",
+                })?;
+            let end = base
+                .checked_add(4)
+                .ok_or(ProtocolError::ByteLengthOverflow {
+                    buffer: "ring status offset",
+                    fix: "shard the ring before host observation",
+                })?;
+            let word = read_slot_status_word(self.bytes.get(base..end).ok_or(
+                ProtocolError::MissingWord {
+                    buffer: "ring slot",
+                    word_idx: slot
+                        .checked_mul(SLOT_WORDS_USIZE)
+                        .and_then(|word| word.checked_add(STATUS_WORD_USIZE))
+                        .unwrap_or(usize::MAX),
+                    byte_len: self.bytes.len(),
+                    fix: "slot_count and ring byte length disagree; rebuild HostRing through HostRing::new",
+                },
+            )?)?;
             if word == protocol::slot::DONE {
-                done = done.checked_add(1).unwrap_or_else(|| {
-                    panic!(
-                        "megakernel ring done count overflowed u32. Fix: shard the ring before host observation."
-                    )
-                });
+                done = done
+                    .checked_add(1)
+                    .ok_or(ProtocolError::ByteLengthOverflow {
+                        buffer: "ring done count",
+                        fix: "shard the ring before host observation",
+                    })?;
             }
         }
-        done
+        Ok(done)
     }
 
     fn slot_count(&self) -> u32 {
@@ -290,20 +333,20 @@ mod tests {
         let encoded = protocol::encode_load_miss(0, false);
         let err_hi = RingProducer::publish(&mut ring, 2, &encoded).expect_err("slot 2 OOB");
         assert!(
-            err_hi.to_string().contains("slot") || err_hi.to_string().contains("range"),
+            matches!(err_hi, ProtocolError::MissingWord { .. }),
             "OOB publish error: {err_hi}"
         );
         let err_max =
             RingProducer::publish(&mut ring, u32::MAX, &encoded).expect_err("slot MAX OOB");
         assert!(
-            err_max.to_string().contains("slot") || err_max.to_string().contains("range"),
+            matches!(err_max, ProtocolError::MissingWord { .. }),
             "MAX slot publish error: {err_max}"
         );
 
         let mut buf = [0u8; SLOT_BYTES];
         let read_err = RingConsumer::read_slot(&ring, 2, &mut buf).expect_err("read OOB");
         assert!(
-            read_err.to_string().contains("slot") || read_err.to_string().contains("range"),
+            matches!(read_err, ProtocolError::MissingWord { .. }),
             "OOB read error: {read_err}"
         );
     }
@@ -314,13 +357,13 @@ mod tests {
         let short = [0u8; SLOT_BYTES - 1];
         let short_pub = RingProducer::publish(&mut ring, 0, &short).expect_err("short publish");
         assert!(
-            short_pub.to_string().contains("SLOT") || short_pub.to_string().contains("byte"),
+            matches!(short_pub, ProtocolError::MisalignedByteLength { .. }),
             "short publish error: {short_pub}"
         );
         let long = [0u8; SLOT_BYTES + 1];
         let long_pub = RingProducer::publish(&mut ring, 0, &long).expect_err("long publish");
         assert!(
-            long_pub.to_string().contains("SLOT") || long_pub.to_string().contains("byte"),
+            matches!(long_pub, ProtocolError::MisalignedByteLength { .. }),
             "long publish error: {long_pub}"
         );
 
@@ -328,18 +371,18 @@ mod tests {
         let short_read =
             RingConsumer::read_slot(&ring, 0, &mut short_out).expect_err("short read buffer");
         assert!(
-            short_read.to_string().contains("SLOT") || short_read.to_string().contains("byte"),
+            matches!(short_read, ProtocolError::MisalignedByteLength { .. }),
             "short read error: {short_read}"
         );
     }
 
-    /// Default done_count walks the ring; if we stamp DONE into a slot's
+    /// Default try_done_count walks the ring; if we stamp DONE into a slot's
     /// status word manually it must show up in the count.
     #[test]
-    fn default_done_count_walks_the_ring() {
+    fn default_try_done_count_walks_the_ring() {
         let mut ring = HostRing::new(4).unwrap();
-        // Empty ring: done_count is 0.
-        assert_eq!(RingConsumer::done_count(&ring), 0);
+        // Empty ring: done count is 0.
+        assert_eq!(RingConsumer::try_done_count(&ring).unwrap(), 0);
 
         // Stamp DONE into slot 0's status word.
         let bytes = ring.as_bytes_mut();
@@ -352,6 +395,21 @@ mod tests {
         bytes[status_offset_2..status_offset_2 + 4]
             .copy_from_slice(&protocol::slot::DONE.to_le_bytes());
 
-        assert_eq!(RingConsumer::done_count(&ring), 2);
+        assert_eq!(RingConsumer::try_done_count(&ring).unwrap(), 2);
+    }
+
+    #[test]
+    fn try_done_count_rejects_inconsistent_host_ring_bytes() {
+        let ring = HostRing {
+            bytes: vec![0u8; SLOT_BYTES],
+            slot_count: 2,
+        };
+
+        let error = RingConsumer::try_done_count(&ring)
+            .expect_err("Fix: malformed ring snapshots must not panic in fallible DONE count");
+        assert!(
+            matches!(error, ProtocolError::MissingWord { .. }),
+            "Fix: malformed ring error must explain the slot-count/byte mismatch: {error}"
+        );
     }
 }

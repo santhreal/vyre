@@ -1,0 +1,35 @@
+# End-to-end public intake, vulnerability response, and release-health feedback tranche coverage for VX-1141 through VX-1160.
+# This tranche connects public user feedback, private security response, owner routing, and release gates without replacing existing advisory or release authorities.
+
+schema = "vyre.release.public_intake_response_tranche_coverage.v1"
+owner = "coordination"
+evidence_tokens = ["GITHUB_ISSUE_FORMS", "GITHUB_SUPPORT_RESOURCES", "GITHUB_LABELS", "GITHUB_CODEOWNERS", "GITHUB_PRIVATE_VULNERABILITY_REPORTING", "FIRST_PSIRT_SERVICES_FRAMEWORK"]
+
+required_fields = [
+  "coverage_id",
+  "vx_id_range",
+  "public_issue_support_intake_policy",
+  "private_vulnerability_response_runbook",
+  "maintainer_ownership_escalation_map",
+  "release_health_feedback_loop",
+  "repository_security_disclosure_policy",
+  "security_advisory_exchange_policy",
+  "public_repository_health_governance",
+  "publication_boundary",
+  "dedup_seam",
+  "proof_gate",
+]
+
+[[coverage]]
+coverage_id = "public-intake-response-end-to-end"
+vx_id_range = "VX-1141..VX-1160"
+public_issue_support_intake_policy = "PUBLIC_ISSUE_SUPPORT_INTAKE_POLICY.toml"
+private_vulnerability_response_runbook = "PRIVATE_VULNERABILITY_RESPONSE_RUNBOOK.toml"
+maintainer_ownership_escalation_map = "MAINTAINER_OWNERSHIP_ESCALATION_MAP.toml"
+release_health_feedback_loop = "RELEASE_HEALTH_FEEDBACK_LOOP.toml"
+repository_security_disclosure_policy = "REPOSITORY_SECURITY_DISCLOSURE_POLICY.toml"
+security_advisory_exchange_policy = "SECURITY_ADVISORY_EXCHANGE_POLICY.toml"
+public_repository_health_governance = "PUBLIC_REPOSITORY_HEALTH_GOVERNANCE.toml"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+dedup_seam = "issue-support-intake-private-vulnerability-response-owner-escalation-and-release-health-feedback-are-distinct-authorities"
+proof_gate = "conform/vyre-conform-enforce/tests/public_intake_response_governance.rs"

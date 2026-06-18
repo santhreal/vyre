@@ -1,0 +1,37 @@
+# Filesystem path canonicalization policy for VX-901 through VX-904 and VX-914.
+# Path traversal, allowed roots, symlinks, file kinds, and diagnostic redaction use one policy.
+
+schema = "vyre.filesystem.path_canonicalization_policy.v1"
+owner = "security_reliability"
+evidence_tokens = ["OWASP_PATH_TRAVERSAL", "CWE_22_PATH_TRAVERSAL"]
+
+required_fields = [
+  "policy_id",
+  "input_class",
+  "allowed_root",
+  "canonicalization_order",
+  "symlink_policy",
+  "file_kind_policy",
+  "escape_check",
+  "diagnostic",
+]
+
+[[policy]]
+policy_id = "release-artifact-path"
+input_class = "operator-supplied-output-or-artifact-path"
+allowed_root = "vyre-public-root-or-local-evidence-root"
+canonicalization_order = ["reject-empty", "reject-nul", "join-under-root", "canonicalize-parent", "open-relative-to-root", "verify-final-path-under-root"]
+symlink_policy = "reject-symlink-escape"
+file_kind_policy = "regular-file-or-directory-only"
+escape_check = "canonical-path-prefix-and-open-directory-handle"
+diagnostic = "VYRE_PATH_TRAVERSAL_REFUSED"
+
+[[policy]]
+policy_id = "fixture-path"
+input_class = "checked-in-fixture-reference"
+allowed_root = "repo-fixtures-root"
+canonicalization_order = ["reject-absolute-path", "reject-dot-dot", "normalize-separators", "verify-under-fixtures-root"]
+symlink_policy = "reject-symlink-fixtures"
+file_kind_policy = "regular-file-only"
+escape_check = "repo-relative-path-only"
+diagnostic = "VYRE_FIXTURE_PATH_REFUSED"

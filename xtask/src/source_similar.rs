@@ -10,6 +10,14 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process;
 
+use crate::dedup_report::{
+    duplicate_family_report, duplicate_report_generator_command, duplicate_report_json_path,
+    duplicate_severity, source_duplicate_family_id, source_duplicate_subject,
+    source_token_fingerprint,
+    write_duplicate_report_json, DuplicateEvidence, DuplicateFamilyFinding, DuplicateFamilyReport,
+};
+use crate::ownership::{load_ownership_lanes, owner_lane_for_file, OwnershipLaneRule};
+
 const DEFAULT_TOP_N: usize = 20;
 const DEFAULT_MIN_SCORE: f64 = 0.86;
 const DEFAULT_MAX_FILE_BYTES: u64 = 512 * 1024;
@@ -26,6 +34,7 @@ struct Config {
     max_file_bytes: u64,
     fail_on_findings: bool,
     include_untracked: bool,
+    duplicate_report_json: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone)]
@@ -33,6 +42,7 @@ struct SourceFingerprint {
     path: PathBuf,
     bytes: u64,
     tokens: usize,
+    fingerprint: String,
     shingles: HashMap<u64, u32>,
     magnitude: f64,
 }
@@ -53,6 +63,16 @@ pub(crate) struct SourceSimilarityFinding {
     pub(crate) right_tokens: usize,
     pub(crate) left_bytes: u64,
     pub(crate) right_bytes: u64,
+    pub(crate) left_fingerprint: String,
+    pub(crate) right_fingerprint: String,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+struct DedupGuidance {
+    left_owner_lane: String,
+    right_owner_lane: String,
+    import_owner: String,
+    import_target: String,
 }
 
 pub(crate) fn run(args: &[String]) {
@@ -78,6 +98,39 @@ pub(crate) fn run(args: &[String]) {
             process::exit(1);
         }
     };
+    let workspace_root = match workspace_root() {
+        Some(root) => root,
+        None => {
+            eprintln!("Fix: source-similar must run from an xtask crate with a workspace parent.");
+            process::exit(1);
+        }
+    };
+    let ownership_path = workspace_root
+        .join("docs")
+        .join("optimization")
+        .join("OWNERSHIP.toml");
+    let ownership_lanes = match load_ownership_lanes(&ownership_path) {
+        Ok(lanes) => lanes,
+        Err(error) => {
+            eprintln!(
+                "Fix: source-similar could not load ownership map `{}`: {error}",
+                ownership_path.display()
+            );
+            process::exit(1);
+        }
+    };
+    if let Some(path) = config.duplicate_report_json.as_ref() {
+        let generator_command = duplicate_report_generator_command("source-similar", path);
+        let duplicate_report =
+            source_similarity_duplicate_report(&report, &ownership_lanes, &generator_command);
+        if let Err(error) = write_duplicate_report_json(path, &duplicate_report) {
+            eprintln!(
+                "Fix: source-similar could not write duplicate family report `{}`: {error}",
+                path.display()
+            );
+            process::exit(1);
+        }
+    }
 
     println!(
         "source-similar: scanned {} Rust files under {} root(s) (min={:.2}, top={}, shingle_width={})",
@@ -105,6 +158,14 @@ pub(crate) fn run(args: &[String]) {
         println!(
             "      B: {} tokens={} bytes={}",
             finding.right, finding.right_tokens, finding.right_bytes
+        );
+        let guidance = dedup_guidance_for_pair(&finding.left, &finding.right, &ownership_lanes);
+        println!(
+            "      Dedup: left_owner={} right_owner={} import_owner={} import_target={}",
+            guidance.left_owner_lane,
+            guidance.right_owner_lane,
+            guidance.import_owner,
+            guidance.import_target
         );
     }
     if config.fail_on_findings {
@@ -151,6 +212,8 @@ pub(crate) fn find_similar_sources(
                 right_tokens: right.tokens,
                 left_bytes: left.bytes,
                 right_bytes: right.bytes,
+                left_fingerprint: left.fingerprint.clone(),
+                right_fingerprint: right.fingerprint.clone(),
             }
         })
         .collect();
@@ -167,6 +230,7 @@ fn parse_args(args: &[String]) -> Result<Config, String> {
     let mut max_file_bytes = DEFAULT_MAX_FILE_BYTES;
     let mut fail_on_findings = false;
     let mut include_untracked = false;
+    let mut duplicate_report_json = None;
     let mut index = 2usize;
     while index < args.len() {
         match args[index].as_str() {
@@ -219,6 +283,14 @@ fn parse_args(args: &[String]) -> Result<Config, String> {
             "--include-untracked" => {
                 include_untracked = true;
             }
+            "--duplicate-report-json" => {
+                index += 1;
+                duplicate_report_json = Some(duplicate_report_json_path(
+                    "--duplicate-report-json",
+                    args.get(index).map(String::as_str),
+                    "--duplicate-report-json requires a path",
+                )?);
+            }
             "--help" | "-h" => {
                 print_usage();
                 process::exit(0);
@@ -237,14 +309,75 @@ fn parse_args(args: &[String]) -> Result<Config, String> {
         max_file_bytes,
         fail_on_findings,
         include_untracked,
+        duplicate_report_json,
     })
+}
+
+pub(crate) fn source_similarity_duplicate_report(
+    report: &SourceSimilarityReport,
+    ownership_lanes: &[OwnershipLaneRule],
+    generator_command: &str,
+) -> DuplicateFamilyReport {
+    let families = report
+        .findings
+        .iter()
+        .map(|finding| {
+            let guidance =
+                dedup_guidance_for_pair(&finding.left, &finding.right, ownership_lanes);
+            DuplicateFamilyFinding {
+                family_id: source_duplicate_family_id(&finding.left, &finding.right),
+                detector: "source-similar".to_string(),
+                severity: duplicate_severity(finding.score),
+                score: finding.score,
+                left: source_duplicate_subject(
+                    &finding.left,
+                    &guidance.left_owner_lane,
+                    &finding.left_fingerprint,
+                    finding.left_tokens,
+                    finding.left_bytes,
+                ),
+                right: source_duplicate_subject(
+                    &finding.right,
+                    &guidance.right_owner_lane,
+                    &finding.right_fingerprint,
+                    finding.right_tokens,
+                    finding.right_bytes,
+                ),
+                import_owner: guidance.import_owner,
+                import_target: guidance.import_target,
+                evidence: DuplicateEvidence {
+                    similarity_metric: "normalized-token-shingle-cosine",
+                    left_metric: format!(
+                        "tokens={}:bytes={}",
+                        finding.left_tokens, finding.left_bytes
+                    ),
+                    right_metric: format!(
+                        "tokens={}:bytes={}",
+                        finding.right_tokens, finding.right_bytes
+                    ),
+                    dedup_action: "extract_shared_module_or_import_existing_owner",
+                },
+            }
+        })
+        .collect();
+    duplicate_family_report(
+        generator_command,
+        "rust-source-token-shingles",
+        families,
+    )
 }
 
 fn print_usage() {
     eprintln!(
-        "USAGE:\n  cargo_full run --bin xtask -- source-similar [--root PATH] [--top N] [--min SCORE] [--max-file-bytes BYTES] [--fail-on-findings] [--include-untracked]\n\n\
+        "USAGE:\n  cargo_full run --bin xtask -- source-similar [--root PATH] [--top N] [--min SCORE] [--max-file-bytes BYTES] [--fail-on-findings] [--include-untracked] [--duplicate-report-json PATH]\n\n\
          Defaults scan tracked Rust files under the Vyre workspace source roots and report high-confidence renamed/forked source skeletons."
     );
+}
+
+fn workspace_root() -> Option<PathBuf> {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .map(Path::to_path_buf)
 }
 
 fn default_roots() -> Vec<PathBuf> {
@@ -446,10 +579,12 @@ fn fingerprint_files(files: &[PathBuf]) -> Vec<SourceFingerprint> {
             continue;
         }
         let magnitude = magnitude(&shingles);
+        let fingerprint = source_token_fingerprint(&tokens);
         out.push(SourceFingerprint {
             path: path.clone(),
             bytes: source.len() as u64,
             tokens: tokens.len(),
+            fingerprint,
             shingles,
             magnitude,
         });
@@ -866,6 +1001,131 @@ fn pair_verdict(score: f64) -> &'static str {
     }
 }
 
+fn dedup_guidance_for_pair(
+    left: &str,
+    right: &str,
+    ownership_lanes: &[OwnershipLaneRule],
+) -> DedupGuidance {
+    let left_owner_lane = owner_lane_for_file(left, ownership_lanes).to_string();
+    let right_owner_lane = owner_lane_for_file(right, ownership_lanes).to_string();
+    let import_owner = preferred_import_owner(left, right, &left_owner_lane, &right_owner_lane);
+    let import_target = dedup_import_target(left, right, &import_owner);
+    DedupGuidance {
+        left_owner_lane,
+        right_owner_lane,
+        import_owner,
+        import_target,
+    }
+}
+
+fn preferred_import_owner(left: &str, right: &str, left_lane: &str, right_lane: &str) -> String {
+    if left_lane == right_lane {
+        return left_lane.to_string();
+    }
+    let mut candidates = [
+        (lane_import_priority(left_lane), left_lane, left),
+        (lane_import_priority(right_lane), right_lane, right),
+    ];
+    candidates.sort_by(|a, b| {
+        a.0.cmp(&b.0)
+            .then_with(|| a.1.cmp(b.1))
+            .then_with(|| a.2.cmp(b.2))
+    });
+    candidates[0].1.to_string()
+}
+
+fn lane_import_priority(lane: &str) -> usize {
+    match lane {
+        "foundation_optimizer" | "foundation_wire" => 10,
+        "driver_shared" => 20,
+        "driver_cuda" | "driver_wgpu" | "driver_spirv" => 30,
+        "runtime_megakernel" => 40,
+        "op_matrix" => 50,
+        "bench_harness" => 60,
+        "coordination" => 90,
+        "unowned" => 1000,
+        _ => 500,
+    }
+}
+
+fn dedup_import_target(left: &str, right: &str, import_owner: &str) -> String {
+    let module = shared_module_name(left, right);
+    let root = owner_import_root(import_owner)
+        .or_else(|| common_crate_import_root(left, right))
+        .unwrap_or("shared");
+    format!("{root}::dedup::{module}")
+}
+
+fn owner_import_root(owner: &str) -> Option<&'static str> {
+    match owner {
+        "foundation_optimizer" | "foundation_wire" => Some("vyre_foundation"),
+        "driver_shared" => Some("vyre_driver"),
+        "driver_cuda" => Some("vyre_driver_cuda"),
+        "driver_wgpu" => Some("vyre_driver_wgpu"),
+        "driver_spirv" => Some("vyre_driver_spirv"),
+        "runtime_megakernel" => Some("vyre_runtime::megakernel"),
+        "bench_harness" => Some("vyre_bench"),
+        "coordination" => Some("xtask"),
+        "op_matrix" => Some("xtask::op_matrix"),
+        _ => None,
+    }
+}
+
+fn common_crate_import_root(left: &str, right: &str) -> Option<&'static str> {
+    let left_crate = left.split('/').next()?;
+    let right_crate = right.split('/').next()?;
+    if left_crate != right_crate {
+        return None;
+    }
+    match left_crate {
+        "vyre-foundation" => Some("vyre_foundation"),
+        "vyre-driver" => Some("vyre_driver"),
+        "vyre-driver-cuda" => Some("vyre_driver_cuda"),
+        "vyre-driver-wgpu" => Some("vyre_driver_wgpu"),
+        "vyre-driver-spirv" => Some("vyre_driver_spirv"),
+        "vyre-runtime" => Some("vyre_runtime"),
+        "vyre-libs" => Some("vyre_libs"),
+        "vyre-primitives" => Some("vyre_primitives"),
+        "vyre-bench" => Some("vyre_bench"),
+        "xtask" => Some("xtask"),
+        _ => None,
+    }
+}
+
+fn shared_module_name(left: &str, right: &str) -> String {
+    let mut stems = [file_stem_slug(left), file_stem_slug(right)];
+    stems.sort();
+    if stems[0] == stems[1] {
+        format!("shared_{}", stems[0])
+    } else {
+        format!("shared_{}_{}", stems[0], stems[1])
+    }
+}
+
+fn file_stem_slug(path: &str) -> String {
+    Path::new(path)
+        .file_stem()
+        .and_then(|stem| stem.to_str())
+        .map(slug_identifier)
+        .filter(|stem| !stem.is_empty())
+        .unwrap_or_else(|| "helper".to_string())
+}
+
+fn slug_identifier(raw: &str) -> String {
+    let mut out = String::new();
+    for byte in raw.bytes() {
+        if byte.is_ascii_alphanumeric() {
+            out.push((byte as char).to_ascii_lowercase());
+        } else if byte == b'_' || byte == b'-' {
+            out.push('_');
+        }
+    }
+    while out.contains("__") {
+        out = out.replace("__", "_");
+    }
+    out.trim_matches('_').to_string()
+}
+
 fn display_path(path: &Path) -> String {
     path.to_string_lossy().replace('\\', "/")
 }
@@ -887,6 +1147,7 @@ mod tests {
             path: PathBuf::from("left.rs"),
             bytes: 1,
             tokens: left.len(),
+            fingerprint: source_token_fingerprint(&left),
             magnitude: magnitude(&left_counts),
             shingles: left_counts,
         };
@@ -894,6 +1155,7 @@ mod tests {
             path: PathBuf::from("right.rs"),
             bytes: 1,
             tokens: right.len(),
+            fingerprint: source_token_fingerprint(&right),
             magnitude: magnitude(&right_counts),
             shingles: right_counts,
         };
@@ -1153,6 +1415,7 @@ mod tests {
                     path: PathBuf::from(format!("{idx}.rs")),
                     bytes: 1,
                     tokens: tokens.len(),
+                    fingerprint: source_token_fingerprint(tokens),
                     magnitude: magnitude(&shingles),
                     shingles,
                 }
@@ -1162,6 +1425,48 @@ mod tests {
         assert!(
             candidates.contains(&(0, 1)),
             "renamed duplicate skeletons must become scoring candidates"
+        );
+    }
+
+    #[test]
+    fn dedup_guidance_points_duplicate_helpers_at_one_import_owner() {
+        let lanes = vec![
+            OwnershipLaneRule {
+                lane: "foundation_optimizer".to_string(),
+                write_patterns: vec!["vyre-foundation/src/optimizer/**".to_string()],
+            },
+            OwnershipLaneRule {
+                lane: "driver_shared".to_string(),
+                write_patterns: vec!["vyre-driver/src/**".to_string()],
+            },
+        ];
+
+        let same_lane = dedup_guidance_for_pair(
+            "vyre-foundation/src/optimizer/range_scan.rs",
+            "vyre-foundation/src/optimizer/range_scan_fork.rs",
+            &lanes,
+        );
+
+        assert_eq!(same_lane.left_owner_lane, "foundation_optimizer");
+        assert_eq!(same_lane.right_owner_lane, "foundation_optimizer");
+        assert_eq!(same_lane.import_owner, "foundation_optimizer");
+        assert_eq!(
+            same_lane.import_target,
+            "vyre_foundation::dedup::shared_range_scan_range_scan_fork"
+        );
+
+        let cross_lane = dedup_guidance_for_pair(
+            "vyre-driver-cuda/src/backend/dispatch_clone.rs",
+            "vyre-driver/src/backend/dispatch.rs",
+            &lanes,
+        );
+
+        assert_eq!(cross_lane.left_owner_lane, "unowned");
+        assert_eq!(cross_lane.right_owner_lane, "driver_shared");
+        assert_eq!(cross_lane.import_owner, "driver_shared");
+        assert_eq!(
+            cross_lane.import_target,
+            "vyre_driver::dedup::shared_dispatch_dispatch_clone"
         );
     }
 }

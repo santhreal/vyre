@@ -1,6 +1,7 @@
 //! Host protocol API wrappers for megakernel control/ring buffers.
 
 mod publish;
+pub use publish::RingSlotTransition;
 
 use crate::PipelineError;
 
@@ -8,6 +9,30 @@ use super::protocol::{self, DebugRecord};
 use super::Megakernel;
 
 impl Megakernel {
+    /// Byte length of a control buffer for `observable_slots`.
+    #[must_use]
+    pub fn control_byte_len(observable_slots: u32) -> Option<usize> {
+        protocol::control_byte_len(observable_slots)
+    }
+
+    /// Byte length of a ring buffer for `slot_count`.
+    #[must_use]
+    pub fn ring_byte_len(slot_count: u32) -> Option<usize> {
+        protocol::ring_byte_len(slot_count)
+    }
+
+    /// Byte length of a debug-log buffer for `record_capacity`.
+    #[must_use]
+    pub fn debug_log_byte_len(record_capacity: u32) -> Option<usize> {
+        protocol::debug_log_byte_len(record_capacity)
+    }
+
+    /// Default debug-log record capacity owned by the runtime protocol.
+    #[must_use]
+    pub fn debug_record_capacity() -> u32 {
+        protocol::debug::RECORD_CAPACITY
+    }
+
     /// Encode a control-buffer payload.
     ///
     /// # Errors

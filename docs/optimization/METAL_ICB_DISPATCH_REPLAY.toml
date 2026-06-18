@@ -1,0 +1,38 @@
+# Metal indirect command buffer replay for VX-677.
+# Stable dispatches compare direct command encoding and ICB reuse.
+
+schema = "vyre.metal.icb_dispatch_replay.v1"
+owner = "driver_metal"
+evidence_tokens = ["METAL_ICB", "METAL_COMPUTE"]
+
+routes = [
+  "direct_command_encoding",
+  "icb_reuse",
+]
+
+required_metrics = [
+  "descriptor_digest",
+  "command_reuse_evidence",
+  "cpu_submit_ns",
+  "gpu_ns",
+  "output_digest",
+  "route_reason",
+]
+
+[[case]]
+id = "stable-scan-icb"
+descriptor_digest = "sha256:metal-scan-descriptor"
+command_reuse_evidence = "icb-descriptor-stable"
+cpu_submit_ns = 9200
+gpu_ns = 35000
+output_digest = "sha256:metal-scan-output"
+route_reason = "stable-dispatch-shape"
+
+[[case]]
+id = "dynamic-shape-direct"
+descriptor_digest = "sha256:metal-dynamic-descriptor"
+command_reuse_evidence = "shape-varies"
+cpu_submit_ns = 22100
+gpu_ns = 36000
+output_digest = "sha256:metal-dynamic-output"
+route_reason = "dynamic-shape-uses-direct-command-encoding"

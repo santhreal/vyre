@@ -1,0 +1,65 @@
+schema_version = 1
+
+planner_id = "regex-prefilter-planner:v1"
+
+required_routes = [
+  "exact_automata",
+  "literal_prefilter_plus_verifier",
+  "broader_prefilter_plus_verifier",
+]
+
+required_metrics = [
+  "candidate_count",
+  "verifier_work_units",
+  "match_parity",
+  "active_ns",
+  "unsupported_reason",
+]
+
+[[route]]
+route_id = "exact_automata"
+exactness = "exact"
+accelerator_candidate = false
+verifier_required = false
+comparator = "literal_prefilter_plus_verifier"
+candidate_policy = "all-matches-from-automata"
+match_parity_required = true
+evidence_path = "vyre-libs/tests/regex_prefilter_planner_registry.rs"
+
+[[route]]
+route_id = "literal_prefilter_plus_verifier"
+exactness = "verified"
+accelerator_candidate = true
+verifier_required = true
+comparator = "exact_automata"
+candidate_policy = "literal-factor-candidates"
+match_parity_required = true
+evidence_path = "vyre-libs/tests/regex_prefilter_planner_registry.rs"
+
+[[route]]
+route_id = "broader_prefilter_plus_verifier"
+exactness = "approximate-prefilter-verified"
+accelerator_candidate = true
+verifier_required = true
+comparator = "exact_automata"
+candidate_policy = "broader-construct-candidates"
+match_parity_required = true
+evidence_path = "vyre-libs/tests/regex_prefilter_planner_registry.rs"
+
+[[rejection]]
+reason_id = "missing_verifier"
+diagnostic_code = "VYRE_SCAN_APPROXIMATION_REQUIRES_VERIFIER"
+fix = "Enable verifier fragments or reject the approximate prefilter route."
+evidence_path = "vyre-libs/tests/regex_prefilter_planner_registry.rs"
+
+[[rejection]]
+reason_id = "candidate_saturation"
+diagnostic_code = "VYRE_SCAN_PREFILTER_CANDIDATE_SATURATION"
+fix = "Reject the route or choose exact automata when candidate count exceeds verifier budget."
+evidence_path = "vyre-libs/tests/regex_prefilter_planner_registry.rs"
+
+[[rejection]]
+reason_id = "parity_missing"
+diagnostic_code = "VYRE_SCAN_PREFILTER_PARITY_MISSING"
+fix = "Reject performance claims until final match offsets are byte-identical to the exact comparator."
+evidence_path = "vyre-libs/tests/regex_prefilter_planner_registry.rs"

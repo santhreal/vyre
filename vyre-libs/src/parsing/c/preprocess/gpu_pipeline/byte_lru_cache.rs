@@ -85,10 +85,7 @@ where
             self.remove(&evict_key);
         }
         let last_access = self.next_epoch();
-        self.bytes = self
-            .bytes
-            .checked_add(entry_bytes)
-            .unwrap_or_else(|| panic!("{}", self.labels.byte_add_overflow));
+        self.bytes = self.bytes.saturating_add(entry_bytes);
         self.entries.insert(
             key.clone(),
             ByteLruEntry {
@@ -123,18 +120,12 @@ where
 
     fn remove(&mut self, key: &K) -> Option<V> {
         let entry = self.entries.remove(key)?;
-        self.bytes = self
-            .bytes
-            .checked_sub(entry.bytes)
-            .unwrap_or_else(|| panic!("{}", self.labels.byte_sub_underflow));
+        self.bytes = self.bytes.saturating_sub(entry.bytes);
         Some(entry.value)
     }
 
     fn next_epoch(&mut self) -> u64 {
-        self.epoch = self
-            .epoch
-            .checked_add(1)
-            .unwrap_or_else(|| panic!("{}", self.labels.epoch_overflow));
+        self.epoch = self.epoch.saturating_add(1);
         self.epoch
     }
 

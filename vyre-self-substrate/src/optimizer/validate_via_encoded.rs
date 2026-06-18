@@ -35,12 +35,24 @@ use super::dispatcher::{DispatchError, OptimizerDispatcher, ResidentDispatchStep
 use super::encode::{encode_program, EncodeError};
 use super::expr_arena::{encode_expr_arena, ExprArenaEncoding};
 
-/// Max accepted expression nesting depth (mirrors
-/// `vyre_foundation::validate::depth::DEFAULT_MAX_EXPR_DEPTH`).
+/// Max expression nesting depth this GPU-native pre-filter flags.
+///
+/// This is a CHEAP PRE-FILTER, not the authoritative gate: it runs over the
+/// encoded arena to reject obviously-oversized programs without a CPU walk.
+/// It is intentionally MORE PERMISSIVE than foundation's strict V033 ceiling
+/// (`DEFAULT_MAX_EXPR_DEPTH = 128`) so the cheap path never *falsely* rejects
+/// — anything between 128 and this bound is caught by the strict CPU
+/// validator in `vyre_foundation::validate`. The CAS-loop reduction below
+/// relies on depths being bounded by this value.
 pub const DEFAULT_MAX_EXPR_DEPTH: u32 = 1024;
-/// Max accepted statement-node count (mirrors
-/// `vyre_foundation::validate::depth::DEFAULT_MAX_NODE_COUNT`).
-pub const DEFAULT_MAX_NODE_COUNT: u32 = 100_000;
+/// Max accepted statement-node count. Derived from the foundation ceiling so
+/// the two CANNOT diverge: for node count the encoded validator and the CPU
+/// validator must agree exactly, or a fused bundle between the two ceilings
+/// passes one and is rejected by the other (the V019 regression that broke
+/// `surgec scan --class <megakernel-bundle>`). Single source of truth lives
+/// in `vyre_foundation::validate::depth`.
+pub const DEFAULT_MAX_NODE_COUNT: u32 =
+    vyre_foundation::validate::depth::DEFAULT_MAX_NODE_COUNT as u32;
 
 /// Workgroup size for the limit-validator kernel.
 const VALIDATOR_WORKGROUP_X: u32 = 256;

@@ -60,11 +60,7 @@ fn remove_cache_entry_file(path: &Path) -> std::io::Result<()> {
 }
 
 pub(crate) fn cache_entry_path(dir: &Path, key: &str, suffix: &str) -> PathBuf {
-    let file_name_len = key.len().checked_add(suffix.len()).unwrap_or_else(|| {
-        panic!(
-            "pipeline disk-cache file name length overflowed usize. Fix: reject oversized cache keys before path construction."
-        )
-    });
+    let file_name_len = key.len().saturating_add(suffix.len());
     let mut file_name = String::with_capacity(file_name_len);
     file_name.push_str(key);
     file_name.push_str(suffix);

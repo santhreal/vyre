@@ -320,7 +320,7 @@ mod tests {
     #[test]
     fn launch_sequence_rejects_tag_plan_without_release_gate() {
         let err = validate_release_tag_plan_artifact(
-            r#"{"vyre_rc_tag":"vyre-v0.6.1-rc.1","weir_rc_tag":"weir-v0.1.0-rc.1","combined_release_train_rc_tag":"x","vyre_tag":"vyre-v0.6.1","weir_tag":"weir-v0.1.0","combined_release_train_tag":"x","tag_creation_order":[],"required_gate_before_rc_tag":"release-completion-audit && apply-branch-protection.sh","version_matrix_blocker_count":0,"blockers":[]}"#,
+            r#"{"vyre_rc_tag":"vyre-v0.6.3-rc.1","weir_rc_tag":"weir-v0.1.0-rc.1","combined_release_train_rc_tag":"x","vyre_tag":"vyre-v0.6.3","weir_tag":"weir-v0.1.0","combined_release_train_tag":"x","tag_creation_order":[],"required_gate_before_rc_tag":"release-completion-audit && apply-branch-protection.sh","version_matrix_blocker_count":0,"blockers":[]}"#,
         )
         .expect_err("tag plan without release gate should fail");
 

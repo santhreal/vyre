@@ -1,0 +1,43 @@
+# Workload autoscaling policy for VX-1322, VX-1323, VX-1325, VX-1326, VX-1333, and VX-1336.
+# HPA, KEDA, scale signals, pause controls, and rollout interactions share one scaling decision seam.
+
+schema = "vyre.ops.workload_autoscaling_policy.v1"
+owner = "performance"
+evidence_tokens = ["KUBERNETES_HPA", "KEDA_SCALING_DEPLOYMENTS", "OPENSLO_SPEC", "PROMETHEUS_RECORDING_RULES"]
+
+required_fields = [
+  "autoscale_id",
+  "workload_surface",
+  "scale_signal_policy",
+  "replica_bounds_policy",
+  "scale_behavior_policy",
+  "metric_freshness_policy",
+  "pause_policy",
+  "rollout_interaction_policy",
+  "release_gate_effect",
+  "diagnostic",
+]
+
+[[autoscale]]
+autoscale_id = "operator-api-hpa"
+workload_surface = "public-Vyre-operator-api-and-daemon-surface-with-Deployment-or-StatefulSet-scale-subresource"
+scale_signal_policy = "HPA-uses-redacted-public-SLI-recording-rules-for-cpu-memory-queue-depth-or-request-rate-no-private-labels"
+replica_bounds_policy = "minReplicas-maxReplicas-target-utilization-and-scale-target-reference-recorded"
+scale_behavior_policy = "scale-up-scale-down-stabilization-window-tolerance-and-rate-limit-recorded-before-release-claim"
+metric_freshness_policy = "metrics-age-scrape-interval-recording-rule-and-missing-metric-behavior-recorded"
+pause_policy = "scale-paused-only-through-release-rollout-or-recovery-decision-record"
+rollout_interaction_policy = "HPA-bounds-and-stabilization-window-compatible-with-canary-bluegreen-and-progress-deadline-policies"
+release_gate_effect = "missing-or-stale-scale-metric-blocks-autoscaling-and-operator-readiness-claim"
+diagnostic = "VYRE_OPERATOR_HPA_AUTOSCALING_POLICY_REQUIRED"
+
+[[autoscale]]
+autoscale_id = "event-driven-worker-keda"
+workload_surface = "scan-parser-flow-worker-Deployment-StatefulSet-or-custom-resource-with-scale-subresource"
+scale_signal_policy = "KEDA-ScaledObject-trigger-metric-activation-threshold-scaling-threshold-and-fallback-replica-policy-recorded"
+replica_bounds_policy = "minReplicaCount-maxReplicaCount-idleReplicaCount-and-scale-to-zero-cold-start-budget-recorded"
+scale_behavior_policy = "activation-phase-scaling-phase-polling-interval-metric-caching-and-trigger-failure-behavior-recorded"
+metric_freshness_policy = "trigger-metric-cache-age-polling-interval-and-failed-trigger-fallback-state-recorded"
+pause_policy = "paused-paused-replicas-paused-scale-in-paused-scale-out-and-force-activation-annotations-require-owner-route"
+rollout_interaction_policy = "KEDA-generated-HPA-or-custom-scale-target-must-not-fight-rollout-pause-or-recovery-restore-state"
+release_gate_effect = "scale-to-zero-cold-start-or-trigger-failure-without-fallback-blocks-worker-readiness-claim"
+diagnostic = "VYRE_EVENT_DRIVEN_KEDA_AUTOSCALING_POLICY_REQUIRED"

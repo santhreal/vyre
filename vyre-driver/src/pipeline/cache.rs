@@ -2,7 +2,8 @@
 
 use super::hashing::{
     dispatch_policy_cache_digest, dispatch_policy_cache_string, hex_encode,
-    normalized_program_cache_digest, try_normalized_program_cache_digest, PipelineDeviceFingerprint,
+    normalized_program_cache_digest, try_normalized_program_cache_digest,
+    PipelineDeviceFingerprint,
 };
 use super::CURRENT_PIPELINE_CACHE_KEY_VERSION;
 use crate::backend::DispatchConfig;
@@ -20,11 +21,11 @@ pub struct DiskPipelineCache {
 }
 
 impl DiskPipelineCache {
-    fn lock_pending_flushes(&self) -> MutexGuard<'_, Vec<std::path::PathBuf>> {
-        self.pending_flushes.lock().unwrap_or_else(|error| {
-            panic!(
+    fn try_lock_pending_flushes(&self) -> std::io::Result<MutexGuard<'_, Vec<std::path::PathBuf>>> {
+        self.pending_flushes.lock().map_err(|error| {
+            std::io::Error::other(format!(
                 "Vyre disk pipeline cache pending-flush lock was poisoned: {error}. Fix: discard this cache instance after a panic; continuing could lose or duplicate compiled-pipeline fsync work."
-            )
+            ))
         })
     }
 
@@ -139,7 +140,7 @@ impl DiskPipelineCache {
             remove_failed_atomic_write(&tmp)?;
         }
         write_result?;
-        self.lock_pending_flushes().push(path);
+        self.try_lock_pending_flushes()?.push(path);
         Ok(())
     }
 
@@ -150,13 +151,13 @@ impl DiskPipelineCache {
     /// Returns when a pending path cannot be flushed.
     pub fn flush(&self) -> std::io::Result<()> {
         let paths = {
-            let mut pending = self.lock_pending_flushes();
+            let mut pending = self.try_lock_pending_flushes()?;
             pending.sort();
             pending.dedup();
             std::mem::take(&mut *pending)
         };
         if let Err(error) = flush_paths(&paths) {
-            self.lock_pending_flushes().extend(paths);
+            self.try_lock_pending_flushes()?.extend(paths);
             return Err(error);
         }
         Ok(())
@@ -803,7 +804,10 @@ mod pipeline_cache_key_tests {
 
     #[test]
     fn miss_reason_metric_suffixes_are_stable_snake_case() {
-        assert_eq!(PipelineCacheMissReason::EmptyCache.metric_suffix(), "empty_cache");
+        assert_eq!(
+            PipelineCacheMissReason::EmptyCache.metric_suffix(),
+            "empty_cache"
+        );
         assert_eq!(
             PipelineCacheMissReason::ProgramChanged.metric_suffix(),
             "program_changed"
@@ -816,7 +820,10 @@ mod pipeline_cache_key_tests {
             PipelineCacheMissReason::DeviceOrRuntimeChanged.metric_suffix(),
             "device_or_runtime_changed"
         );
-        assert_eq!(PipelineCacheMissReason::KeyAbsent.metric_suffix(), "key_absent");
+        assert_eq!(
+            PipelineCacheMissReason::KeyAbsent.metric_suffix(),
+            "key_absent"
+        );
     }
 
     #[test]
@@ -835,21 +842,36 @@ mod pipeline_cache_key_tests {
         );
         assert_eq!(
             PipelineCacheMissReason::classify_identities(
-                [PipelineCacheIdentity::from_parts(other_program, policy, device)].iter(),
+                [PipelineCacheIdentity::from_parts(
+                    other_program,
+                    policy,
+                    device
+                )]
+                .iter(),
                 &requested,
             ),
             PipelineCacheMissReason::ProgramChanged
         );
         assert_eq!(
             PipelineCacheMissReason::classify_identities(
-                [PipelineCacheIdentity::from_parts(program, other_policy, device)].iter(),
+                [PipelineCacheIdentity::from_parts(
+                    program,
+                    other_policy,
+                    device
+                )]
+                .iter(),
                 &requested,
             ),
             PipelineCacheMissReason::DispatchPolicyChanged
         );
         assert_eq!(
             PipelineCacheMissReason::classify_identities(
-                [PipelineCacheIdentity::from_parts(program, policy, other_device)].iter(),
+                [PipelineCacheIdentity::from_parts(
+                    program,
+                    policy,
+                    other_device
+                )]
+                .iter(),
                 &requested,
             ),
             PipelineCacheMissReason::DeviceOrRuntimeChanged
@@ -864,27 +886,24 @@ mod pipeline_cache_key_tests {
     }
 
     #[test]
-    fn poisoned_pending_flush_lock_is_not_silently_recovered() {
+    fn poisoned_pending_flush_lock_returns_structured_error() {
         let cache = Arc::new(DiskPipelineCache {
             root: std::env::temp_dir(),
             pending_flushes: std::sync::Mutex::new(Vec::new()),
         });
         let poisoned = Arc::clone(&cache);
         let _ = std::thread::spawn(move || {
-            let _guard = poisoned.lock_pending_flushes();
+            let _guard = poisoned
+                .try_lock_pending_flushes()
+                .expect("Fix: first pending-flush lock acquisition should succeed");
             panic!("poison disk pipeline cache pending flushes");
         })
         .join();
 
-        let panic = std::panic::catch_unwind(|| {
-            drop(cache.lock_pending_flushes());
-        })
-        .expect_err("poisoned disk pipeline cache must panic instead of recovering");
-        let message = panic
-            .downcast_ref::<String>()
-            .map(String::as_str)
-            .or_else(|| panic.downcast_ref::<&'static str>().copied())
-            .unwrap_or("<non-string panic>");
+        let error = cache
+            .flush()
+            .expect_err("poisoned disk pipeline cache must return an io error");
+        let message = error.to_string();
         assert!(
             message.contains("pending-flush lock was poisoned"),
             "{message}"

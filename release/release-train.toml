@@ -4,11 +4,11 @@
 # expects them at top level) and made `xtask version-matrix` fail to parse this
 # file ("missing field required_release_note_tokens"). Keep them here at top level.
 required_release_note_tokens = [
-  "vyre 0.6.2",
-  "vyre-driver-cuda@0.6.2",
-  "vyre-driver-wgpu@0.6.2",
-  "vyre-v0.6.2-rc.1",
-  "vyre-v0.6.2",
+  "vyre 0.6.3",
+  "vyre-driver-cuda@0.6.3",
+  "vyre-driver-wgpu@0.6.3",
+  "vyre-v0.6.3-rc.1",
+  "vyre-v0.6.3",
 ]
 
 required_packaging_steps = [
@@ -19,18 +19,23 @@ required_packaging_steps = [
 ]
 
 package_verify_passed = [
-  "vyre-macros@0.6.2",
-  "vyre-spec@0.6.2",
-  "vyre-lints@0.6.2",
+  "vyre-macros@0.6.3",
+  "vyre-spec@0.6.3",
+  "vyre-lints@0.6.3",
 ]
 
 [versions]
-vyre = "0.6.2"
+vyre = "0.6.3"
+weir = "0.1.0"
 vyrec = "0.1.0"
 vyrec_train = "0.1.0-beta"
-vyre_frontend_c = "0.6.2"
+vyre_frontend_c = "0.6.3"
 
 [tags]
-vyre_rc = "vyre-v0.6.2-rc.1"
-vyre = "vyre-v0.6.2"
-policy = "Release packaging must use explicit product-scoped RC and final tags, not a bare v0.6.2 tag that could ambiguously refer to the root monorepo or Vyre crates."
+vyre_rc = "vyre-v0.6.3-rc.1"
+weir_rc = "weir-v0.1.0-rc.1"
+combined_release_train_rc = "vyre-0.6.3-weir-0.1.0-rc.1"
+vyre = "vyre-v0.6.3"
+weir = "weir-v0.1.0"
+combined_release_train = "vyre-0.6.3-weir-0.1.0"
+policy = "Release packaging must use explicit product-scoped RC and final tags, not a bare v0.6.3 tag that could ambiguously refer to the root monorepo or Vyre crates."

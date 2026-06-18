@@ -1,4 +1,6 @@
-# Active optimization claims.
+# Optimization claims and historical proof evidence.
+# status = "active" rows are current requirements with proof_required entries.
+# status = "done" rows are closed proof records and must not act as a roadmap.
 # Claims are coordination records, not ownership of architecture decisions.
 # The main integrator may cross lanes when wiring shared boundaries.
 

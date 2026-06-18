@@ -1,0 +1,37 @@
+# Constant-time crypto contracts for VX-889 through VX-890 and VX-895 through VX-897.
+# Secret comparisons, token checks, MAC checks, and key-dependent operations use one side-channel policy.
+
+schema = "vyre.crypto.constant_time_contract.v1"
+owner = "security_reliability"
+evidence_tokens = ["OWASP_ASVS_CRYPTO", "RFC_8446_TLS13", "OWASP_CRYPTO_STORAGE"]
+
+required_fields = [
+  "operation_id",
+  "secret_inputs",
+  "public_inputs",
+  "comparison_policy",
+  "branch_policy",
+  "memory_access_policy",
+  "negative_test",
+  "diagnostic",
+]
+
+[[operation]]
+operation_id = "token-digest-compare"
+secret_inputs = ["expected-token-digest"]
+public_inputs = ["candidate-token-digest-length-bounded"]
+comparison_policy = "constant-time-equality-for-equal-length-digests"
+branch_policy = "no-secret-dependent-branch"
+memory_access_policy = "no-secret-dependent-index"
+negative_test = "reject-early-return-byte-compare"
+diagnostic = "VYRE_CONSTANT_TIME_COMPARE_REQUIRED"
+
+[[operation]]
+operation_id = "mac-verification"
+secret_inputs = ["mac-key", "expected-mac"]
+public_inputs = ["message", "candidate-mac"]
+comparison_policy = "verify-with-authenticated-primitive"
+branch_policy = "authentication-result-branches-only-after-constant-time-verify"
+memory_access_policy = "primitive-owned"
+negative_test = "reject-manual-mac-loop"
+diagnostic = "VYRE_CONSTANT_TIME_MAC_POLICY_REFUSED"

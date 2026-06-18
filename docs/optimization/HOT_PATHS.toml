@@ -16,52 +16,200 @@ schema = 1
 [[hot_path]]
 file = "vyre-foundation/src/optimizer/scheduler/mod.rs"
 reason = "Pass-scheduler iteration loop; runs once per fixpoint round per Program."
+max_findings = 1
+max_allocation_findings = 1
+max_clone_findings = 0
+max_lock_findings = 0
+max_sleep_findings = 0
+max_panic_findings = 0
 
 # ProgramFacts SoA  -  built once per Program but every pass queries it.
 [[hot_path]]
 file = "vyre-foundation/src/optimizer/program_soa.rs"
 reason = "SoA fact view; queried per-Node by every alias/range/escape pass."
+max_findings = 3
+max_allocation_findings = 2
+max_clone_findings = 1
+max_lock_findings = 0
+max_sleep_findings = 0
+max_panic_findings = 0
 
 # Validator skip cache  -  the K1 short-circuit.
 [[hot_path]]
 file = "vyre-foundation/src/ir_inner/model/program/meta.rs"
 reason = "Validator skip-cache; called on every Program::validate()."
+max_findings = 11
+max_allocation_findings = 11
+max_clone_findings = 0
+max_lock_findings = 0
+max_sleep_findings = 0
+max_panic_findings = 0
 
 # Hot-path hints LRU  -  recorded after every dispatch.
 [[hot_path]]
 file = "vyre-foundation/src/optimizer/hot_path_hints.rs"
 reason = "I1 LRU; written after every kernel dispatch on the runtime hot path."
+max_findings = 4
+max_allocation_findings = 1
+max_clone_findings = 3
+max_lock_findings = 0
+max_sleep_findings = 0
+max_panic_findings = 0
 
 # Naga emit module cache  -  B2.
 [[hot_path]]
 file = "vyre-emit-naga/src/lib.rs"
 reason = "Per-dispatch shader emission; B2 module cache lookup must stay allocation-free."
+max_findings = 9
+max_allocation_findings = 2
+max_clone_findings = 6
+max_lock_findings = 1
+max_sleep_findings = 0
+max_panic_findings = 0
+
+[[hot_path]]
+file = "vyre-emit-naga/src/emitter/op_dispatch.rs"
+reason = "Descriptor op dispatch in shared Naga emission; every emitted op routes through this decision surface."
+max_findings = 0
+max_allocation_findings = 0
+max_clone_findings = 0
+max_lock_findings = 0
+max_sleep_findings = 0
+max_panic_findings = 0
+
+# Canonical lower/emit boundary.
+[[hot_path]]
+file = "vyre-lower/src/pre_emit.rs"
+reason = "Program-to-KernelDescriptor production boundary; every concrete backend emission enters through this path."
+max_findings = 8
+max_allocation_findings = 7
+max_clone_findings = 1
+max_lock_findings = 0
+max_sleep_findings = 0
+max_panic_findings = 0
 
 # Specialization cache key.
 [[hot_path]]
 file = "vyre-driver/src/specialization.rs"
 reason = "F1 cache key; computed for every dispatch."
+max_findings = 1
+max_allocation_findings = 0
+max_clone_findings = 1
+max_lock_findings = 0
+max_sleep_findings = 0
+max_panic_findings = 0
+
+[[hot_path]]
+file = "vyre-driver/src/backend/compiled_pipeline.rs"
+reason = "Shared compiled-pipeline dispatch surface; every compiled backend pipeline submits through this contract."
+max_findings = 6
+max_allocation_findings = 6
+max_clone_findings = 0
+max_lock_findings = 0
+max_sleep_findings = 0
+max_panic_findings = 0
+
+[[hot_path]]
+file = "vyre-driver/src/launch_fusion.rs"
+reason = "Shared launch-fusion planner; release workloads compare fused launch, graph replay, and megakernel dispatch here."
+max_findings = 6
+max_allocation_findings = 6
+max_clone_findings = 0
+max_lock_findings = 0
+max_sleep_findings = 0
+max_panic_findings = 0
 
 # Wire encode/decode  -  per Program serialisation.
 [[hot_path]]
 file = "vyre-foundation/src/serial/wire/encode.rs"
 reason = "Wire encode; runs whenever a Program crosses the inter-process boundary."
+max_findings = 0
+max_allocation_findings = 0
+max_clone_findings = 0
+max_lock_findings = 0
+max_sleep_findings = 0
+max_panic_findings = 0
 
 # Reaching-def propagate  -  runs per pass round.
 [[hot_path]]
 file = "vyre-foundation/src/optimizer/passes/algebraic/const_fold/reaching_def_propagate.rs"
 reason = "A11 cross-CFG const fold; one pass call per Program per round."
+max_findings = 7
+max_allocation_findings = 3
+max_clone_findings = 4
+max_lock_findings = 0
+max_sleep_findings = 0
+max_panic_findings = 0
 
 # Loop fission/fusion  -  A26/A27.
 [[hot_path]]
 file = "vyre-foundation/src/optimizer/passes/loops/loop_fusion.rs"
 reason = "A26; bodies scanned per loop pair per pass round."
+max_findings = 18
+max_allocation_findings = 1
+max_clone_findings = 17
+max_lock_findings = 0
+max_sleep_findings = 0
+max_panic_findings = 0
 
 [[hot_path]]
 file = "vyre-foundation/src/optimizer/passes/loops/loop_fission.rs"
 reason = "A27; bodies scanned per loop per pass round."
+max_findings = 18
+max_allocation_findings = 2
+max_clone_findings = 16
+max_lock_findings = 0
+max_sleep_findings = 0
+max_panic_findings = 0
 
 # CUDA resident dispatch  -  long-lived buffer launch + sequence replay.
 [[hot_path]]
 file = "vyre-driver-cuda/src/backend/resident_dispatch.rs"
 reason = "S4 CUDA resident launch; every fixed-graph replay and resident-sequence step."
+max_findings = 0
+max_allocation_findings = 0
+max_clone_findings = 0
+max_lock_findings = 0
+max_sleep_findings = 0
+max_panic_findings = 0
+
+[[hot_path]]
+file = "vyre-driver-cuda/src/backend/dispatch.rs"
+reason = "CUDA host dispatch surface; every non-resident CUDA Program launch passes through this path."
+max_findings = 15
+max_allocation_findings = 11
+max_clone_findings = 2
+max_lock_findings = 2
+max_sleep_findings = 0
+max_panic_findings = 0
+
+[[hot_path]]
+file = "vyre-driver-cuda/src/backend/cuda_graph.rs"
+reason = "CUDA graph capture/replay path; repeated-shape dispatches depend on zero allocation during capture and stable replay keys."
+max_findings = 20
+max_allocation_findings = 19
+max_clone_findings = 1
+max_lock_findings = 0
+max_sleep_findings = 0
+max_panic_findings = 0
+
+# Persistent megakernel runtime surfaces.
+[[hot_path]]
+file = "vyre-runtime/src/megakernel/ring.rs"
+reason = "Megakernel host ring producer/consumer seam; persistent dispatch publishes work through this ABI."
+max_findings = 6
+max_allocation_findings = 6
+max_clone_findings = 0
+max_lock_findings = 0
+max_sleep_findings = 0
+max_panic_findings = 0
+
+[[hot_path]]
+file = "vyre-runtime/src/megakernel/telemetry.rs"
+reason = "Megakernel control/ring telemetry decode; release evidence and scheduler tuning consume this snapshot."
+max_findings = 9
+max_allocation_findings = 9
+max_clone_findings = 0
+max_lock_findings = 0
+max_sleep_findings = 0
+max_panic_findings = 0

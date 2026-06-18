@@ -1,0 +1,43 @@
+# Policy engine parity and deployment matrix for VX-1345, VX-1347, VX-1348, VX-1353, and VX-1358.
+# Native ValidatingAdmissionPolicy, Gatekeeper, Kyverno, and plan-policy engines map to one runtime policy parity seam.
+
+schema = "vyre.ops.policy_engine_parity_deployment_matrix.v1"
+owner = "organization_dedup"
+evidence_tokens = ["KUBERNETES_VALIDATING_ADMISSION_POLICY", "OPA_GATEKEEPER", "KYVERNO_VALIDATE_RULES", "OPEN_POLICY_AGENT_REGO", "CEL_SPEC"]
+
+required_fields = [
+  "engine_id",
+  "policy_surface",
+  "decision_mode_policy",
+  "parameter_policy",
+  "audit_mode_policy",
+  "negative_case_policy",
+  "portability_policy",
+  "dedup_authority_policy",
+  "release_gate_effect",
+  "diagnostic",
+]
+
+[[engine]]
+engine_id = "native-validating-admission-policy"
+policy_surface = "Kubernetes-native-CEL-validation-for-stable-API-object-fields-and-release-critical-admission-denials"
+decision_mode_policy = "validationActions-Deny-Warn-Audit-and-failurePolicy-recorded-for-each-binding"
+parameter_policy = "paramKind-paramRef-parameterNotFoundAction-and-namespace-scoped-parameters-recorded-when-used"
+audit_mode_policy = "Warn-or-Audit-only-policy-cannot-clear-release-gate-unless-promoted-to-Deny-or-risk-accepted-in-decision-record"
+negative_case_policy = "invalid-resource-fixture-must-produce-deny-warning-or-audit-result-matching-declared-mode"
+portability_policy = "CEL-expression-source-and-required-Kubernetes-version-recorded-no-webhook-only-assumption"
+dedup_authority_policy = "PLAN_SCHEMA_AND_CONSTRAINT_VALIDATION.toml-remains-plan-validator-authority-this-matrix-only-governs-cluster-admission"
+release_gate_effect = "native-policy-without-binding-negative-case-or-failure-policy-blocks-enforcement-claim"
+diagnostic = "VYRE_NATIVE_VALIDATING_ADMISSION_PARITY_REQUIRED"
+
+[[engine]]
+engine_id = "gatekeeper-kyverno-runtime-policy"
+policy_surface = "Gatekeeper-constraints-constraint-templates-mutation-audit-and-Kyverno-validate-rules-for-portable-cluster-policy"
+decision_mode_policy = "Gatekeeper-enforcement-action-or-Kyverno-failureAction-Enforce-Audit-recorded-with-policy-report-link"
+parameter_policy = "constraint-parameters-Kyverno-pattern-deny-conditions-and-external-data-use-recorded"
+audit_mode_policy = "Gatekeeper-audit-or-Kyverno-policy-report-violations-feed-release-health-but-do-not-equal-enforced-denial"
+negative_case_policy = "non-compliant-manifest-fixture-must-fail-in-Enforce-mode-and-appear-in-audit-report-in-Audit-mode"
+portability_policy = "policy-source-maps-to-infrastructure-as-code-check-and-cluster-admission-check-with-same-deny-reason"
+dedup_authority_policy = "PLAN_POLICY_AS_CODE_RULES.toml-remains-optimization-plan-policy-authority-runtime-engine-rules-must-link-back"
+release_gate_effect = "policy-engine-parity-gap-blocks-public-operator-policy-enforcement-claim"
+diagnostic = "VYRE_GATEKEEPER_KYVERNO_PARITY_REQUIRED"

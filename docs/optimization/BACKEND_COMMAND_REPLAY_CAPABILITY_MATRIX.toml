@@ -1,0 +1,66 @@
+# Backend command replay capabilities map native replay objects to one shared decision seam.
+
+schema = "vyre.driver.backend_command_replay_capability_matrix.v1"
+owner = "driver_shared"
+evidence_tokens = ["CUDA_GRAPHS", "VULKAN_COMMAND_BUFFERS", "WEBGPU_COMMAND_BUFFERS", "WGPU_COMMANDS", "METAL_INDIRECT_COMMAND_BUFFERS"]
+
+required_fields = [
+  "backend_id",
+  "replay_surface",
+  "reusable_object_policy",
+  "update_policy",
+  "pending_or_capture_policy",
+  "dynamic_parameter_policy",
+  "unsupported_case_policy",
+  "capability_probe_policy",
+  "authority_links",
+  "diagnostic",
+]
+
+[[backend]]
+backend_id = "cuda-graph-replay"
+replay_surface = "cudaGraphExec-host-launch-and-device-graph-launch-where-supported"
+reusable_object_policy = "instantiated-graph-exec-reused-across-topology-identical-dispatches-with-stable-resource-identity"
+update_policy = "node-parameter-update-or-whole-graph-update-allowed-only-when-topology-and-dependency-order-match"
+pending_or_capture_policy = "stream-capture-must-not-contain-disallowed-synchronous-operations-and-device-graph-cannot-be-launched-twice-from-device-concurrently"
+dynamic_parameter_policy = "kernel-params-copy-params-and-device-accessibility-recorded-in-replay-key"
+unsupported_case_policy = "topology-change-peer-access-change-unsupported-node-or-device-launch-conflict-forces-plain-dispatch-or-recapture"
+capability_probe_policy = "driver-cuda-probe-records-graph-support-update-support-device-launch-support-and-capture-limitations"
+authority_links = ["CUDA_GRAPH_UPDATE_EVIDENCE.toml", "COMMAND_TOPOLOGY_STABILITY_CONTRACTS.toml", "BACKEND_CAPABILITY_DIGESTS.toml", "HOST_DEVICE_VISIBILITY_POLICY.toml"]
+diagnostic = "VYRE_CUDA_GRAPH_REPLAY_CAPABILITY_REQUIRED"
+
+[[backend]]
+backend_id = "vulkan-command-buffer-replay"
+replay_surface = "primary-command-buffer-secondary-command-buffer-and-command-pool-recording"
+reusable_object_policy = "command-buffer-recorded-with-reuse-compatible-flags-may-return-to-executable-after-completion"
+update_policy = "resource-binding-or-pipeline-change-requires-rerecord-or-secondary-command-buffer-replacement"
+pending_or_capture_policy = "pending-command-buffer-must-not-be-modified-reset-or-resubmitted-without-simultaneous-use-policy"
+dynamic_parameter_policy = "descriptor-set-dynamic-offset-push-constant-and-indirect-dispatch-buffer-identity-recorded-in-replay-key"
+unsupported_case_policy = "destroyed-bound-object-command-pool-reset-one-time-submit-or-invalid-secondary-buffer-blocks-replay"
+capability_probe_policy = "driver-vulkan-probe-records-command-buffer-levels-simultaneous-use-secondary-nesting-and-queue-family"
+authority_links = ["COMMAND_TOPOLOGY_STABILITY_CONTRACTS.toml", "HOST_DEVICE_VISIBILITY_POLICY.toml", "GPU_BARRIER_SCOPE_MATRIX.toml", "BACKEND_HANDLE_LIFETIME_PROVENANCE.toml"]
+diagnostic = "VYRE_VULKAN_COMMAND_REPLAY_CAPABILITY_REQUIRED"
+
+[[backend]]
+backend_id = "webgpu-wgpu-command-template"
+replay_surface = "GPUCommandEncoder-finish-GPUCommandBuffer-GPUQueue-submit-and-native-wgpu-command-encoder-template"
+reusable_object_policy = "WebGPU-command-buffer-object-is-one-submit-reuse-means-rebuild-from-template-bind-group-cache-and-pipeline-cache"
+update_policy = "resource-shape-pipeline-layout-or-bind-group-change-rebuilds-template-key-before-submit"
+pending_or_capture_policy = "queue-submit-validation-requires-live-unmapped-undestroyed-resources-and-no-duplicate-command-buffer-in-submit-list"
+dynamic_parameter_policy = "bind-group-digest-indirect-dispatch-buffer-and-buffer-shape-recorded-by-WGPU-command-reuse-classifier"
+unsupported_case_policy = "same-GPUCommandBuffer-object-resubmission-is-refused-and-recorded-as-template-only-replay"
+capability_probe_policy = "driver-wgpu-probe-records-command-encoder-features-timestamp-support-bind-group-cache-and-adapter-limits"
+authority_links = ["WGPU_COMMAND_REUSE_CLASSIFIER.toml", "COMMAND_TOPOLOGY_STABILITY_CONTRACTS.toml", "BACKEND_CAPABILITY_DIGESTS.toml", "BACKEND_HANDLE_LIFETIME_PROVENANCE.toml"]
+diagnostic = "VYRE_WEBGPU_TEMPLATE_REPLAY_CAPABILITY_REQUIRED"
+
+[[backend]]
+backend_id = "metal-indirect-command-buffer-replay"
+replay_surface = "MTLIndirectCommandBuffer-plus-command-buffer-encoder-execute-range"
+reusable_object_policy = "indirect-command-buffer-stores-encoded-GPU-commands-for-reuse-when-resource-and-argument-identity-match"
+update_policy = "argument-buffer-resource-binding-dispatch-range-or-pipeline-change-reencodes-affected-indirect-command-range"
+pending_or_capture_policy = "command-buffer-and-fence-completion-records-required-before-mutating-or-reusing-resources-referenced-by-ICB"
+dynamic_parameter_policy = "indirect-range-command-count-argument-buffer-digest-and-dispatch-threadgroup-shape-recorded-in-replay-key"
+unsupported_case_policy = "unsupported-ICB-feature-resource-hazard-or-argument-buffer-mismatch-forces-normal-command-encoding"
+capability_probe_policy = "driver-metal-probe-records-ICB-support-command-types-argument-buffer-support-and-resource-hazard-mode"
+authority_links = ["COMMAND_TOPOLOGY_STABILITY_CONTRACTS.toml", "HOST_DEVICE_VISIBILITY_POLICY.toml", "GPU_BARRIER_SCOPE_MATRIX.toml", "BACKEND_HANDLE_LIFETIME_PROVENANCE.toml"]
+diagnostic = "VYRE_METAL_ICB_REPLAY_CAPABILITY_REQUIRED"

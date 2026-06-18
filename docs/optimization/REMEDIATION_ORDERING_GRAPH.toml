@@ -1,0 +1,51 @@
+# Remediation ordering graph for VX-1052 through VX-1054 and VX-1057 through VX-1058.
+# Risk buckets, affectedness statuses, dependency reachability, and release gates share one ordered remediation graph.
+
+schema = "vyre.security.remediation_ordering_graph.v1"
+owner = "security_reliability"
+evidence_tokens = ["FIRST_CVSS_V4", "FIRST_EPSS", "CISA_KEV", "OPENVEX_SPEC", "OPENSSF_GUAC"]
+
+required_fields = [
+  "order_id",
+  "input_nodes",
+  "priority_rule",
+  "tie_breaker",
+  "blocked_gate",
+  "required_output",
+  "dedup_key",
+  "operator_result",
+  "publication_class",
+]
+
+[[order]]
+order_id = "release-blocker-first"
+input_nodes = ["known-exploited-release-blocker", "affected-public-vyre-dependency"]
+priority_rule = "known-exploited-and-affected-public-artifact-before-all-other-security-work"
+tie_breaker = "public-artifact-reachability-then-runtime-exposure-then-cvss-impact"
+blocked_gate = "FINAL_RELEASE_GATE_MANIFEST.toml"
+required_output = "fixed-version-mitigation-or-not-affected-proof"
+dedup_key = "vulnerability-id-plus-product-identity-plus-affectedness-status"
+operator_result = "list-blocked-gate-vulnerability-product-and-required-output"
+publication_class = "public-vyre-safe-with-private-redaction"
+
+[[order]]
+order_id = "probable-exploitation-second"
+input_nodes = ["high-probability-exploitability", "affected-public-vyre-dependency"]
+priority_rule = "high-exploit-probability-and-affected-public-artifact-before-severe-impact-only"
+tie_breaker = "epss-percentile-then-dependency-depth-then-cvss-impact"
+blocked_gate = "SECURITY_INSIGHTS_RELEASE_SUMMARY.toml"
+required_output = "upgrade-patch-mitigation-or-accepted-not-affected-record"
+dedup_key = "vulnerability-id-plus-package-version-range"
+operator_result = "list-prioritized-vulnerability-epss-cvss-and-dependency-path"
+publication_class = "public-vyre-safe-with-private-redaction"
+
+[[order]]
+order_id = "severe-impact-review"
+input_nodes = ["severe-impact-without-known-exploitation", "under-investigation-blocker"]
+priority_rule = "critical-impact-or-under-investigation-before-public-completion-claim"
+tie_breaker = "cvss-impact-vector-then-weakness-class-then-package-exposure"
+blocked_gate = "COMPLETION_AUDIT_EVIDENCE_MATRIX.toml"
+required_output = "review-record-and-affectedness-decision"
+dedup_key = "vulnerability-id-plus-cwe-plus-product-identity"
+operator_result = "list-review-required-vulnerability-weakness-and-missing-proof"
+publication_class = "public-vyre-safe-with-private-redaction"

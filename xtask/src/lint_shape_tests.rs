@@ -3,7 +3,7 @@
 // Enforces AGENTS.md real-tests rule: a test must assert specific expected
 // values, not merely check that something parsed, succeeded, or is non-empty.
 //
-// Walks every `#[test]` / `#[tokio::test]` in vyre-* + libs/tools/surgec +
+// Walks every `#[test]` / `#[tokio::test]` in vyre-* + libs/surge/surgec +
 // libs/surge.  Flags as SHAPE any test whose `assert*!` calls are exclusively:
 //   - `assert!(result.is_ok())`
 //   - `assert!(result.is_err())`
@@ -24,6 +24,9 @@
 mod classify {
     include!("lint_shape_tests/classify.rs");
 }
+mod proof {
+    include!("lint_shape_tests/proof.rs");
+}
 mod report {
     include!("lint_shape_tests/report.rs");
 }
@@ -37,9 +40,13 @@ use syn::spanned::Spanned;
 use syn::{Attribute, File, Item, ItemFn};
 
 use classify::classify_test;
+use proof::{plan_proof_shape_failures, release_evidence_shape_failures};
+#[cfg(test)]
+use proof::release_evidence_doc_shape_failures;
 use report::write_report;
 
 const MAX_LINT_SHAPE_SOURCE_BYTES: u64 = 2_097_152;
+const RELEASE_EVIDENCE_DOC_DIR: &str = "release/evidence/docs";
 
 /// Classification of a single test function.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -88,6 +95,21 @@ pub(crate) fn run(args: &[String]) {
 
     let mut findings = Vec::new();
     let mut scan_errors = Vec::new();
+    let mut proof_failures = Vec::new();
+
+    let plan_path = vyre_workspace.join("docs/optimization/ALL_AXES_ACCELERATION_PLAN.md");
+    match read_text_bounded(&plan_path) {
+        Ok(plan_text) => proof_failures.extend(plan_proof_shape_failures(&plan_text)),
+        Err(error) => scan_errors.push(format!(
+            "could not read acceleration plan for proof-row shape audit `{}`: {error}",
+            plan_path.display()
+        )),
+    }
+    let release_evidence_docs = vyre_workspace.join(RELEASE_EVIDENCE_DOC_DIR);
+    proof_failures.extend(release_evidence_shape_failures(
+        &release_evidence_docs,
+        &mut scan_errors,
+    ));
 
     // vyre-* crates live under the vyre workspace root.
     for entry in std::fs::read_dir(&vyre_workspace).unwrap_or_else(|e| {
@@ -115,7 +137,7 @@ pub(crate) fn run(args: &[String]) {
 
     // Additional out-of-workspace crates (optional - skip quietly if absent).
     for (path, name) in [
-        (repo_root.join("libs/tools/surgec"), "surgec"),
+        (repo_root.join("libs/surge/surgec"), "surgec"),
         (repo_root.join("libs/surge"), "surge"),
     ] {
         if path.exists() {
@@ -157,6 +179,18 @@ pub(crate) fn run(args: &[String]) {
         );
         for error in &scan_errors {
             eprintln!("  - {error}");
+        }
+        process::exit(1);
+    }
+
+    if !proof_failures.is_empty() {
+        eprintln!();
+        eprintln!(
+            "Fix: lint-shape-tests found {} proof/evidence claim(s) backed only by shape-style, status-only, smoke, or non-empty language:",
+            proof_failures.len()
+        );
+        for failure in &proof_failures {
+            eprintln!("  - {failure}");
         }
         process::exit(1);
     }
@@ -368,3 +402,7 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
     }
     Ok(text)
 }
+
+#[cfg(test)]
+#[path = "lint_shape_tests/plan_proof_tests.rs"]
+mod plan_proof_tests;

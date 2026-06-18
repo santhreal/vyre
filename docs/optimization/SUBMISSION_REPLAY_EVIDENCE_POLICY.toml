@@ -1,0 +1,62 @@
+# Submission replay evidence records the measured reason a replay route was adopted, rebuilt, or rejected.
+
+schema = "vyre.driver.submission_replay_evidence_policy.v1"
+owner = "driver_shared"
+evidence_tokens = ["CUDA_GRAPHS", "VULKAN_COMMAND_BUFFERS", "WEBGPU_COMMAND_BUFFERS", "METAL_INDIRECT_COMMAND_BUFFERS", "OPENTELEMETRY_TRACES"]
+
+required_fields = [
+  "evidence_id",
+  "backend_surface",
+  "topology_digest",
+  "repeat_count_policy",
+  "capture_or_record_cost_policy",
+  "replay_cost_policy",
+  "update_or_reencode_policy",
+  "correctness_equivalence_policy",
+  "invalidation_reason_policy",
+  "privacy_boundary",
+  "authority_links",
+  "diagnostic",
+]
+
+[[evidence]]
+evidence_id = "cuda-graph-update-replay-record"
+backend_surface = "cuda-graph-exec-update-and-launch"
+topology_digest = "graph-node-types-dependency-order-sink-order-kernel-params-copy-params-and-resource-identities"
+repeat_count_policy = "record-observed-repeat-window-replay-count-and-plain-launch-comparator-count"
+capture_or_record_cost_policy = "record-stream-capture-instantiation-or-update-cost-with-driver-version-and-device-signature"
+replay_cost_policy = "record-graph-launch-cost-output-digest-and-profile-span-correlation"
+update_or_reencode_policy = "whole-graph-update-or-node-update-decision-links-to-CUDA_GRAPH_UPDATE_EVIDENCE"
+correctness_equivalence_policy = "plain-dispatch-and-graph-replay-output-digest-line-rule-and-slab-epoch-match"
+invalidation_reason_policy = "topology-change-resource-identity-change-peer-access-change-or-unsupported-node-recorded"
+privacy_boundary = "public-record-excludes-private-paths-device-serials-pointer-values-and-corpus-excerpts"
+authority_links = ["CUDA_GRAPH_UPDATE_EVIDENCE.toml", "COMMAND_TOPOLOGY_STABILITY_CONTRACTS.toml", "PROFILE_TRACE_METRIC_CORRELATION_POLICY.toml", "OUTPUT_SLAB_PROVENANCE.toml"]
+diagnostic = "VYRE_CUDA_GRAPH_REPLAY_EVIDENCE_REQUIRED"
+
+[[evidence]]
+evidence_id = "webgpu-reencode-template-record"
+backend_surface = "wgpu-command-template-to-new-command-buffer-submit"
+topology_digest = "pipeline-bind-group-layout-dispatch-shape-copy-range-and-output-readback-template"
+repeat_count_policy = "record-template-hit-count-new-command-buffer-count-and-submit-count"
+capture_or_record_cost_policy = "record-command-encoder-build-cost-bind-group-cache-hit-rate-and-pipeline-cache-hit-rate"
+replay_cost_policy = "record-submit-cost-template-rebuild-cost-and-readback-completion-latency"
+update_or_reencode_policy = "WebGPU-command-buffer-object-is-not-resubmitted-template-rebuild-is-recorded-as-reencode"
+correctness_equivalence_policy = "template-reencoded-output-digest-and-report-bytes-match-plain-encoding-baseline"
+invalidation_reason_policy = "duplicate-command-buffer-submit-destroyed-resource-mapped-resource-bind-group-change-or-shape-change-recorded"
+privacy_boundary = "public-record-excludes-browser-profile-private-paths-adapter-unique-ids-and-private-corpus-snippets"
+authority_links = ["WGPU_COMMAND_REUSE_CLASSIFIER.toml", "BACKEND_COMMAND_REPLAY_CAPABILITY_MATRIX.toml", "HOST_DEVICE_VISIBILITY_POLICY.toml", "OUTPUT_SLAB_PROVENANCE.toml"]
+diagnostic = "VYRE_WEBGPU_TEMPLATE_REENCODE_EVIDENCE_REQUIRED"
+
+[[evidence]]
+evidence_id = "vulkan-metal-reusable-command-record"
+backend_surface = "vulkan-command-buffer-reuse-and-metal-indirect-command-buffer-reuse"
+topology_digest = "command-buffer-level-secondary-links-ICB-command-range-resource-bindings-dispatch-shape-and-copy-edges"
+repeat_count_policy = "record-submit-count-reuse-count-pending-count-and-rerecord-count-per-topology-key"
+capture_or_record_cost_policy = "record-command-record-cost-command-pool-or-ICB-allocation-cost-and-resource-hazard-cost"
+replay_cost_policy = "record-submit-or-execute-range-cost-completion-edge-and-output-readback-latency"
+update_or_reencode_policy = "Vulkan-rerecords-invalidated-command-buffers-Metal-reencodes-affected-ICB-command-range"
+correctness_equivalence_policy = "reused-command-output-digest-readback-epoch-and-hazard-certificate-match-plain-dispatch"
+invalidation_reason_policy = "pending-state-one-time-submit-destroyed-bound-object-command-pool-reset-resource-hazard-or-ICB-argument-change-recorded"
+privacy_boundary = "public-record-excludes-private-device-layouts-pointer-values-command-buffer-handles-and-Santh-paths"
+authority_links = ["BACKEND_COMMAND_REPLAY_CAPABILITY_MATRIX.toml", "COMMAND_TOPOLOGY_STABILITY_CONTRACTS.toml", "BACKEND_HANDLE_LIFETIME_PROVENANCE.toml", "HOST_DEVICE_VISIBILITY_POLICY.toml"]
+diagnostic = "VYRE_NATIVE_COMMAND_REPLAY_EVIDENCE_REQUIRED"

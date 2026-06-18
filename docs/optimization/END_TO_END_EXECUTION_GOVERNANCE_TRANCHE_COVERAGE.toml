@@ -1,0 +1,27 @@
+# End-to-end execution governance tranche coverage for VX-1001 through VX-1020.
+# Execution DAG, artifact authority map, attestation bundle, source ledger, publication boundary, and proof gate share one coverage row.
+
+schema = "vyre.plan.end_to_end_execution_governance_tranche_coverage.v1"
+owner = "coordination"
+evidence_tokens = ["W3C_PROV_DM", "IN_TOTO_ATTESTATION", "NIST_SSDF", "NIST_OSCAL", "OPENSSF_GUAC"]
+
+required_fields = [
+  "vx_id_range",
+  "plan_execution_dag",
+  "plan_artifact_authority_map",
+  "plan_completion_attestation_bundle",
+  "source_ledger_coverage",
+  "publication_boundary",
+  "dedup_seam",
+  "proof_gate",
+]
+
+[[coverage]]
+vx_id_range = "VX-1001..VX-1020"
+plan_execution_dag = "PLAN_EXECUTION_DAG.toml"
+plan_artifact_authority_map = "PLAN_ARTIFACT_AUTHORITY_MAP.toml"
+plan_completion_attestation_bundle = "PLAN_COMPLETION_ATTESTATION_BUNDLE.toml"
+source_ledger_coverage = "RESEARCH_SOURCE_LEDGER.toml"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+dedup_seam = "one-execution-dag-one-artifact-authority-map-one-completion-attestation-bundle"
+proof_gate = "plan_execution_governance.rs"

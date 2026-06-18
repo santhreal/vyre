@@ -1,0 +1,43 @@
+# C ABI header and library policy for VX-1203, VX-1208, VX-1209, and VX-1215.
+# Rust linkage types, C-compatible symbol exports, public headers, ownership transfer, errors, and unwinding share one C ABI publication seam.
+
+schema = "vyre.release.c_abi_header_library_policy.v1"
+owner = "security_reliability"
+evidence_tokens = ["RUST_REFERENCE_LINKAGE", "RUST_NOMICON_FFI", "RUST_RFC_2945_C_UNWIND", "RUST_API_GUIDELINES"]
+
+required_fields = [
+  "c_api_id",
+  "crate_type_policy",
+  "symbol_policy",
+  "header_policy",
+  "layout_policy",
+  "ownership_policy",
+  "error_policy",
+  "unwind_policy",
+  "versioning_policy",
+  "diagnostic",
+]
+
+[[c_api]]
+c_api_id = "vyre-public-c-library"
+crate_type_policy = "cdylib-or-staticlib-only-for-C-consumers-no-rust-dylib-as-public-C-ABI"
+symbol_policy = "vyre-prefixed-extern-C-symbols-with-no-driver-internal-symbol-export"
+header_policy = "generated-or-reviewed-public-header-matches-exported-symbols-and-types"
+layout_policy = "repr-C-types-only-no-Rust-layout-private-generics-or-unspecified-enums"
+ownership_policy = "caller-owned-buffers-and-vyre-owned-handles-have-explicit-create-destroy-functions"
+error_policy = "fallible-functions-return-status-code-and-fill-public-error-record-with-redacted-message"
+unwind_policy = "panic-or-foreign-exception-must-not-cross-C-ABI-boundary"
+versioning_policy = "header-symbol-error-and-struct-layout-changes-go-through-PUBLIC_API_SEMVER_MSRV_POLICY.toml"
+diagnostic = "VYRE_C_ABI_LIBRARY_POLICY_REQUIRED"
+
+[[c_api]]
+c_api_id = "vyre-callback-bridge"
+crate_type_policy = "included-only-when-callback-feature-gate-is-public-and-tested"
+symbol_policy = "callback-registration-symbols-prefix-callback-contract-version"
+header_policy = "callback-types-declare-threading-lifetime-and-reentrancy-constraints"
+layout_policy = "callback-userdata-is-opaque-pointer-never-Rust-reference"
+ownership_policy = "callback-userdata-lifetime-owned-by-caller-and-deregistered-before-destroy"
+error_policy = "callback-errors-map-to-public-status-with-no-longjmp-or-unwind"
+unwind_policy = "callback-panic-caught-and-reported-as-foreign-callback-failure"
+versioning_policy = "callback-signature-change-is-C-ABI-breaking-change"
+diagnostic = "VYRE_C_ABI_CALLBACK_POLICY_REQUIRED"

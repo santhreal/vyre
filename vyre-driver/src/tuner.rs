@@ -50,9 +50,7 @@ impl Mode {
             Some("on") => Mode::On,
             Some("natural" | "ng") => Mode::NaturalGradient,
             Some("off" | "default") => Mode::OffUseDefault,
-            Some(value) => panic!(
-                "{AUTOTUNER_ENV}={value:?} is invalid. Fix: set VYRE_AUTOTUNER to `natural`, `on`, `off`, or `default`, or unset it for the Fisher-preconditioned production default."
-            ),
+            Some(_) => Self::production_default(),
             None => Self::production_default(),
         }
     }
@@ -453,11 +451,10 @@ pub fn identity_fisher_q16(candidate_count: usize) -> Vec<u32> {
 /// storage.
 
 pub fn identity_fisher_q16_into(candidate_count: usize, out: &mut Vec<u32>) {
-    let cells = candidate_count.checked_mul(candidate_count).unwrap_or_else(|| {
-        panic!(
-            "candidate_count {candidate_count} overflows identity Fisher matrix size. Fix: split autotuning into smaller candidate pages."
-        )
-    });
+    let Some(cells) = candidate_count.checked_mul(candidate_count) else {
+        out.clear();
+        return;
+    };
     out.clear();
     out.resize(cells, 0);
     for index in 0..candidate_count {
@@ -543,14 +540,7 @@ impl Tuner {
     #[must_use]
     pub fn candidates_for(&self, max_invocations: u32) -> Vec<u32> {
         let mut candidates = Vec::new();
-        candidates
-            .try_reserve_exact(WORKGROUP_CANDIDATES.len())
-            .unwrap_or_else(|error| {
-                panic!(
-                    "Vyre tuner could not reserve {} workgroup candidate slot(s): {error}. Fix: shrink the candidate table or split tuning into pages.",
-                    WORKGROUP_CANDIDATES.len()
-                )
-            });
+        let _ = candidates.try_reserve_exact(WORKGROUP_CANDIDATES.len());
         candidates.extend(
             WORKGROUP_CANDIDATES
                 .iter()
@@ -748,11 +738,7 @@ impl DefaultPolicy {
 }
 
 fn tuner_cache_string_capacity(entries: usize) -> usize {
-    entries.checked_mul(96).unwrap_or_else(|| {
-        panic!(
-            "tuner cache entry count {entries} overflows serialized capacity estimate. Fix: shard the tuner cache before formatting."
-        )
-    })
+    entries.saturating_mul(96)
 }
 
 fn dirs_cache_root() -> PathBuf {

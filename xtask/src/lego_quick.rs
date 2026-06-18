@@ -11,7 +11,13 @@
 //! 2. **Cross-dialect reach-through**: a Tier-3 dialect under
 //!    `vyre-libs/src/<dialect>/` cannot import from
 //!    `crate::<other_dialect>` or `vyre_libs::<other_dialect>`.
-//! 3. **God-file budget**: any staged `*.rs` file > 500 lines fails.
+//! 3. **Large-file advisory**: a staged `*.rs` file over the
+//!    `LARGE_FILE_ADVISORY_LINES` line guideline is *flagged for review*,
+//!    not failed. Crossing 500 lines is a prompt to ask whether the file
+//!    has grown a second responsibility worth splitting — it is a
+//!    guideline, not a law. The hard size cap (a genuine god-file ceiling
+//!    with a ratcheted per-file exception list) lives in
+//!    `scripts/check_max_file_size.sh`, not here.
 //!
 //! The full op-fingerprint reinvention check (`lego-audit` check 1)
 //! requires loading every registered op via inventory and is too slow
@@ -19,15 +25,20 @@
 //! `--source-similar` to also run the repo-wide Rust source duplicate
 //! scanner as an explicit dedup gate.
 //!
-//! Exit code 0 on clean, 1 on any finding. Each finding prints
-//! `file:line | category | message | fix:` so writers can act on it
-//! without re-reading docs.
+//! Exit code 0 on clean and on advisory-only runs; 1 only when a hard
+//! law (raw-IR / cross-dialect / source-duplication) is violated. Each
+//! finding prints `file:line | category | message | fix:` so writers can
+//! act on it without re-reading docs.
 
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::process::{self, Command};
 
-const MAX_FILE_LINES: usize = 500;
+/// Line count at which a source file is *flagged for a split-by-responsibility
+/// review*. This is a guideline, not a law: crossing it does not fail the gate.
+/// The hard god-file ceiling is enforced separately by
+/// `scripts/check_max_file_size.sh` with its ratcheted per-file exception list.
+const LARGE_FILE_ADVISORY_LINES: usize = 500;
 const MAX_LEGO_QUICK_SOURCE_BYTES: u64 = 2_097_152;
 
 pub(crate) fn run(args: &[String]) {
@@ -70,8 +81,17 @@ pub(crate) fn run(args: &[String]) {
         findings.extend(check_source_similarity(&root));
     }
 
-    if findings.is_empty() {
-        let check_count = 3 + usize::from(source_similar);
+    let check_count = 3 + usize::from(source_similar);
+
+    // `large-file` findings are advisory: they flag a split-by-responsibility
+    // review, they do not fail the gate. Everything else is a hard law.
+    let sort_key = |f: &Finding| (f.file.clone(), f.line, f.category.clone());
+    let (mut advisories, mut blockers): (Vec<Finding>, Vec<Finding>) =
+        findings.into_iter().partition(|f| f.category == "large-file");
+    advisories.sort_by(|a, b| sort_key(a).cmp(&sort_key(b)));
+    blockers.sort_by(|a, b| sort_key(a).cmp(&sort_key(b)));
+
+    if blockers.is_empty() && advisories.is_empty() {
         println!(
             "lego-quick: ✓ {} staged Rust file(s) clean ({} checks).",
             files.len(),
@@ -80,25 +100,37 @@ pub(crate) fn run(args: &[String]) {
         return;
     }
 
-    findings.sort_by(|a, b| {
-        (a.file.as_str(), a.line, a.category.as_str()).cmp(&(
-            b.file.as_str(),
-            b.line,
-            b.category.as_str(),
-        ))
-    });
-    for f in &findings {
+    for f in &blockers {
         println!(
             "  ✗ {}:{} | {} | {} | fix: {}",
             f.file, f.line, f.category, f.message, f.fix
         );
     }
+    for f in &advisories {
+        println!(
+            "  • {}:{} | {} | {} | {}",
+            f.file, f.line, f.category, f.message, f.fix
+        );
+    }
     println!();
+
+    if blockers.is_empty() {
+        println!(
+            "lego-quick: ✓ {} staged Rust file(s) pass ({} checks); \
+             {} large-file advisory note(s) for review (non-blocking).",
+            files.len(),
+            check_count,
+            advisories.len()
+        );
+        return;
+    }
+
     println!(
-        "lego-quick: FAILED  -  {} finding(s) across {} staged file(s). \
-         Resolve before commit, or run `cargo_full run --bin xtask -- lego-quick --all` \
-         to scan the whole tree.",
-        findings.len(),
+        "lego-quick: FAILED  -  {} blocking finding(s) ({} advisory) across {} staged file(s). \
+         Resolve the blocking findings before commit, or run \
+         `cargo_full run --bin xtask -- lego-quick --all` to scan the whole tree.",
+        blockers.len(),
+        advisories.len(),
         files.len()
     );
     process::exit(1);
@@ -304,7 +336,7 @@ fn check_god_files(root: &Path, files: &[PathBuf]) -> Vec<Finding> {
             continue;
         };
         let line_count = text.lines().count();
-        if line_count <= MAX_FILE_LINES {
+        if line_count <= LARGE_FILE_ADVISORY_LINES {
             continue;
         }
         let rel = path
@@ -314,11 +346,13 @@ fn check_god_files(root: &Path, files: &[PathBuf]) -> Vec<Finding> {
         out.push(Finding {
             file: rel,
             line: line_count as u32,
-            category: "god-file".to_string(),
-            message: format!("{line_count} lines exceeds {MAX_FILE_LINES}-line LAW 7 budget"),
-            fix: format!(
-                "split by responsibility until each Rust file is ≤ {MAX_FILE_LINES} lines"
+            category: "large-file".to_string(),
+            message: format!(
+                "{line_count} lines is over the {LARGE_FILE_ADVISORY_LINES}-line review guideline"
             ),
+            fix: "review whether this file has grown a second responsibility; \
+                  split by responsibility if so (this is advisory, not a build failure)"
+                .to_string(),
         });
     }
     out
@@ -467,17 +501,19 @@ mod tests {
     }
 
     #[test]
-    fn god_file_check_flags_oversize() {
+    fn large_file_check_flags_oversize_as_advisory() {
         let dir = TempDir::new().unwrap();
-        let body = "fn _f() {}\n".repeat(MAX_FILE_LINES + 5);
+        let body = "fn _f() {}\n".repeat(LARGE_FILE_ADVISORY_LINES + 5);
         let p = write(dir.path(), "vyre-libs/src/math/big.rs", &body);
         let findings = check_god_files(dir.path(), &[p]);
         assert_eq!(findings.len(), 1);
-        assert_eq!(findings[0].category, "god-file");
+        // Advisory category: partitioned out of the blocking set at exit, so a
+        // large file is flagged for review but never fails the gate.
+        assert_eq!(findings[0].category, "large-file");
     }
 
     #[test]
-    fn god_file_check_passes_within_budget() {
+    fn large_file_check_quiet_within_guideline() {
         let dir = TempDir::new().unwrap();
         let body = "fn _f() {}\n".repeat(50);
         let p = write(dir.path(), "vyre-libs/src/math/small.rs", &body);

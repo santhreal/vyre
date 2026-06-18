@@ -46,13 +46,15 @@
 #[must_use]
 pub fn grunwald_letnikov_kernel(alpha: f64, n: u32) -> Vec<f64> {
     let mut out = Vec::new();
-    try_grunwald_letnikov_kernel_into(alpha, n, &mut out).unwrap_or_else(|error| panic!("{error}"));
+    let _ = try_grunwald_letnikov_kernel_into(alpha, n, &mut out);
     out
 }
 
 /// Generate the Grünwald-Letnikov kernel into caller-owned storage.
 pub fn grunwald_letnikov_kernel_into(alpha: f64, n: u32, out: &mut Vec<f64>) {
-    try_grunwald_letnikov_kernel_into(alpha, n, out).unwrap_or_else(|error| panic!("{error}"));
+    if try_grunwald_letnikov_kernel_into(alpha, n, out).is_err() {
+        out.clear();
+    }
 }
 
 /// Fallible Grünwald-Letnikov kernel generator into caller-owned storage.
@@ -88,15 +90,15 @@ pub fn try_grunwald_letnikov_kernel_into(
 #[must_use]
 pub fn kernel_to_fixed_16_16(kernel: &[f64], step: f64, alpha: f64) -> Vec<u32> {
     let mut out = Vec::new();
-    try_kernel_to_fixed_16_16_into(kernel, step, alpha, &mut out)
-        .unwrap_or_else(|error| panic!("{error}"));
+    let _ = try_kernel_to_fixed_16_16_into(kernel, step, alpha, &mut out);
     out
 }
 
 /// Convert a Grünwald-Letnikov kernel into 16.16 fixed point in caller-owned storage.
 pub fn kernel_to_fixed_16_16_into(kernel: &[f64], step: f64, alpha: f64, out: &mut Vec<u32>) {
-    try_kernel_to_fixed_16_16_into(kernel, step, alpha, out)
-        .unwrap_or_else(|error| panic!("{error}"));
+    if try_kernel_to_fixed_16_16_into(kernel, step, alpha, out).is_err() {
+        out.clear();
+    }
 }
 
 /// Fallible conversion of a Grünwald-Letnikov kernel into caller-owned 16.16 fixed point.

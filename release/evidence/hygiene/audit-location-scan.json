@@ -1,6 +1,123 @@
 {
   "schema_version": 1,
   "scan": "audit-location",
-  "findings": [],
-  "blockers": []
+  "findings": [
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/docs/optimization/PLAN_ARTIFACT_AUTHORITY_MAP.toml",
+      "line": 1,
+      "pattern": "stray_audit_report",
+      "text": "audit, findings, and plan reports must live under .audits/"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/docs/optimization/PLAN_EXECUTION_DAG.toml",
+      "line": 1,
+      "pattern": "stray_audit_report",
+      "text": "audit, findings, and plan reports must live under .audits/"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/docs/optimization/PLAN_SCHEMA_AND_CONSTRAINT_VALIDATION.toml",
+      "line": 1,
+      "pattern": "stray_audit_report",
+      "text": "audit, findings, and plan reports must live under .audits/"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/docs/optimization/PLAN_RESEARCH_LINKAGE_AUDIT.toml",
+      "line": 1,
+      "pattern": "stray_audit_report",
+      "text": "audit, findings, and plan reports must live under .audits/"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/docs/optimization/PLAN_COMPLETION_ATTESTATION_BUNDLE.toml",
+      "line": 1,
+      "pattern": "stray_audit_report",
+      "text": "audit, findings, and plan reports must live under .audits/"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/docs/optimization/PLAN_GRAPH_QUERY_AUDITS.toml",
+      "line": 1,
+      "pattern": "stray_audit_report",
+      "text": "audit, findings, and plan reports must live under .audits/"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/docs/optimization/PLAN_POLICY_AS_CODE_RULES.toml",
+      "line": 1,
+      "pattern": "stray_audit_report",
+      "text": "audit, findings, and plan reports must live under .audits/"
+    }
+  ],
+  "release_blocking_findings": [
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/docs/optimization/PLAN_ARTIFACT_AUTHORITY_MAP.toml",
+      "line": 1,
+      "pattern": "stray_audit_report",
+      "owner_lane": "testing_evidence",
+      "surface": "docs",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/docs/optimization/PLAN_EXECUTION_DAG.toml",
+      "line": 1,
+      "pattern": "stray_audit_report",
+      "owner_lane": "testing_evidence",
+      "surface": "docs",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/docs/optimization/PLAN_SCHEMA_AND_CONSTRAINT_VALIDATION.toml",
+      "line": 1,
+      "pattern": "stray_audit_report",
+      "owner_lane": "testing_evidence",
+      "surface": "docs",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/docs/optimization/PLAN_RESEARCH_LINKAGE_AUDIT.toml",
+      "line": 1,
+      "pattern": "stray_audit_report",
+      "owner_lane": "testing_evidence",
+      "surface": "docs",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/docs/optimization/PLAN_COMPLETION_ATTESTATION_BUNDLE.toml",
+      "line": 1,
+      "pattern": "stray_audit_report",
+      "owner_lane": "testing_evidence",
+      "surface": "docs",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/docs/optimization/PLAN_GRAPH_QUERY_AUDITS.toml",
+      "line": 1,
+      "pattern": "stray_audit_report",
+      "owner_lane": "testing_evidence",
+      "surface": "docs",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/docs/optimization/PLAN_POLICY_AS_CODE_RULES.toml",
+      "line": 1,
+      "pattern": "stray_audit_report",
+      "owner_lane": "testing_evidence",
+      "surface": "docs",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    }
+  ],
+  "blockers": [
+    "7 release-blocking `audit-location` finding(s) remain"
+  ]
 }

@@ -25,11 +25,13 @@ mod store;
 #[cfg(test)]
 pub(super) mod test_helpers;
 
-pub use disk::{DiskCache, DiskCacheError, PersistentPipelineCacheStore};
+pub use disk::{
+    DiskCache, DiskCacheDurabilityReport, DiskCacheError, PersistentPipelineCacheStore,
+};
 pub use fingerprint::PipelineFingerprint;
-pub use in_memory::InMemoryPipelineCache;
-pub use layered::LayeredPipelineCache;
-pub use metrics::PipelineCacheMetrics;
+pub use in_memory::{InMemoryEvictionReason, InMemoryEvictionReport, InMemoryPipelineCache};
+pub use layered::{LayeredPipelineCache, LayeredPromotionReport};
+pub use metrics::{PipelineCacheMetricError, PipelineCacheMetrics};
 #[cfg(feature = "remote-cache")]
 pub use remote::RemoteCache;
 pub use store::PipelineCacheStore;

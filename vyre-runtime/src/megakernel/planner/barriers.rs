@@ -27,11 +27,8 @@ pub struct BarrierElisionReport {
 /// `Region`) and their recursively collected buffer effects cannot conflict.
 #[must_use]
 pub fn elide_value_flow_barriers(program: Program) -> (Program, BarrierElisionReport) {
-    try_elide_value_flow_barriers(program).unwrap_or_else(|error| {
-        panic!(
-            "megakernel barrier elision allocation failed: {error}. Fix: reduce fused program size before optimization."
-        )
-    })
+    let fallback = program.clone();
+    try_elide_value_flow_barriers(program).unwrap_or((fallback, BarrierElisionReport::default()))
 }
 
 /// Remove barriers between independent megakernel arms with fallible staging.

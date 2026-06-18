@@ -123,8 +123,7 @@ where
     I: IntoIterator<Item = (S, u32)>,
     S: AsRef<str>,
 {
-    try_build_chd(entries)
-        .unwrap_or_else(|error| panic!("vyre-libs CHD perfect-hash construction failed: {error}"))
+    try_build_chd(entries).unwrap_or_default()
 }
 
 /// Fallible variant of [`build_chd`].

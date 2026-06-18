@@ -7,7 +7,19 @@ pub const DEFAULT_MAX_CALL_DEPTH: usize = 32;
 pub const DEFAULT_MAX_NESTING_DEPTH: usize = 64;
 
 /// Default maximum statement node count accepted by validation.
-pub const DEFAULT_MAX_NODE_COUNT: usize = 8_192;
+///
+/// This is a megakernel substrate: the launch path fuses every rule in a
+/// class into ONE program (see surge's `fuse::dispatch::build`), so the
+/// statement-node ceiling must accommodate a fully fused bundle, not a
+/// single hand-written kernel. The value mirrors the GPU-native limit
+/// validator in `vyre-self-substrate`'s `optimizer::validate_via_encoded`
+/// (`DEFAULT_MAX_NODE_COUNT = 100_000`), which is exercised at that scale by
+/// the substrate's corpus-parity integration evidence. The two MUST agree:
+/// a program the encoded validator blesses must not be rejected here, or
+/// fused bundles between the two ceilings pass GPU validation and fail CPU
+/// validation. Above this ceiling, V019's advice still holds — split into
+/// smaller kernels or run an optimization pass before lowering.
+pub const DEFAULT_MAX_NODE_COUNT: usize = 100_000;
 
 /// Default maximum expression nesting accepted by validation.
 pub const DEFAULT_MAX_EXPR_DEPTH: usize = 128;

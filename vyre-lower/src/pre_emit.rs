@@ -217,6 +217,78 @@ mod tests {
     }
 
     #[test]
+    fn concrete_backend_program_descriptor_lowering_is_single_sourced() {
+        use std::fmt::Write as _;
+
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .expect("Fix: vyre-lower must live under the vyre workspace root.");
+        let mut files = Vec::default();
+        for rel in [
+            "vyre-driver/src",
+            "vyre-driver-cuda/src",
+            "vyre-driver-metal/src",
+            "vyre-driver-wgpu/src",
+            "vyre-emit-naga/src",
+            "vyre-emit-ptx/src",
+        ] {
+            collect_rust_files(&root.join(rel), &mut files)
+                .expect("Fix: boundary scan must read concrete backend source trees.");
+        }
+
+        let mut violations = Vec::default();
+        for path in files {
+            let text = std::fs::read_to_string(&path)
+                .expect("Fix: boundary scan must read Rust source files.");
+            for (line_no, line) in text.lines().enumerate() {
+                let trimmed = line.trim_start();
+                if trimmed.starts_with("//") {
+                    continue;
+                }
+                if trimmed.starts_with("#[cfg(test)]") {
+                    break;
+                }
+                if line.contains("vyre_lower::lower(")
+                    || line.contains("vyre_lower::prepare_program_for_emit(")
+                    || line.contains("vyre_foundation::optimizer::pre_lowering::optimize(")
+                    || line.contains("vyre_foundation::ir::inline_calls(")
+                {
+                    let mut violation = String::default();
+                    let _ = write!(
+                        &mut violation,
+                        "{}:{}:{}",
+                        path.strip_prefix(root).unwrap_or(&path).display(),
+                        line_no + 1,
+                        trimmed
+                    );
+                    violations.push(violation);
+                }
+            }
+        }
+
+        assert!(
+            violations.is_empty(),
+            "Fix: concrete backend Program input must enter through vyre_lower::lower_for_emit or consume a typed KernelDescriptor artifact, not raw lowering steps: {violations:?}"
+        );
+    }
+
+    fn collect_rust_files(
+        dir: &std::path::Path,
+        out: &mut Vec<std::path::PathBuf>,
+    ) -> std::io::Result<()> {
+        for entry in std::fs::read_dir(dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_dir() {
+                collect_rust_files(&path, out)?;
+            } else if path.extension().is_some_and(|extension| extension == "rs") {
+                out.push(path);
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
     fn lower_for_emit_preserves_loop_carrier_swap_snapshot() {
         let program = Program::wrapped(
             vec![

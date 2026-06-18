@@ -1,0 +1,76 @@
+schema_version = 1
+
+required_profiles = [
+  "byte",
+  "utf8_scalar",
+  "unicode_class",
+  "simple_fold",
+  "full_fold",
+  "normalization_sensitive",
+]
+
+[[profile]]
+profile_id = "byte"
+encoding_contract = "raw-bytes"
+class_semantics = "byte-class"
+case_fold = "none"
+normalization = "none"
+gpu_eligible = true
+verifier_required = false
+unsupported_diagnostic_code = "VYRE_SCAN_UNSUPPORTED_NOT_APPLICABLE"
+evidence_path = "vyre-libs/tests/regex_unicode_profiles.rs"
+
+[[profile]]
+profile_id = "utf8_scalar"
+encoding_contract = "valid-utf8-scalar-boundaries"
+class_semantics = "scalar"
+case_fold = "none"
+normalization = "none"
+gpu_eligible = false
+verifier_required = true
+unsupported_diagnostic_code = "VYRE_SCAN_UNSUPPORTED_UNICODE_MODE_GPU"
+evidence_path = "vyre-libs/tests/regex_unicode_profiles.rs"
+
+[[profile]]
+profile_id = "unicode_class"
+encoding_contract = "valid-utf8-scalar-boundaries"
+class_semantics = "unicode-general-category"
+case_fold = "none"
+normalization = "none"
+gpu_eligible = false
+verifier_required = true
+unsupported_diagnostic_code = "VYRE_SCAN_UNSUPPORTED_UNICODE_MODE_GPU"
+evidence_path = "vyre-libs/tests/regex_unicode_profiles.rs"
+
+[[profile]]
+profile_id = "simple_fold"
+encoding_contract = "valid-utf8-scalar-boundaries"
+class_semantics = "scalar"
+case_fold = "simple"
+normalization = "none"
+gpu_eligible = false
+verifier_required = true
+unsupported_diagnostic_code = "VYRE_SCAN_UNSUPPORTED_UNICODE_MODE_GPU"
+evidence_path = "vyre-libs/tests/regex_unicode_profiles.rs"
+
+[[profile]]
+profile_id = "full_fold"
+encoding_contract = "valid-utf8-scalar-boundaries"
+class_semantics = "scalar"
+case_fold = "full"
+normalization = "none"
+gpu_eligible = false
+verifier_required = true
+unsupported_diagnostic_code = "VYRE_SCAN_UNSUPPORTED_UNICODE_MODE_GPU"
+evidence_path = "vyre-libs/tests/regex_unicode_profiles.rs"
+
+[[profile]]
+profile_id = "normalization_sensitive"
+encoding_contract = "valid-utf8-scalar-boundaries"
+class_semantics = "scalar"
+case_fold = "profile-dependent"
+normalization = "caller-owned-normalization"
+gpu_eligible = false
+verifier_required = true
+unsupported_diagnostic_code = "VYRE_SCAN_UNSUPPORTED_UNICODE_NORMALIZATION"
+evidence_path = "vyre-libs/tests/regex_unicode_profiles.rs"

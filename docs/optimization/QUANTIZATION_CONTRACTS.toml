@@ -1,0 +1,34 @@
+# Quantization contracts for VX-687.
+# Low-bit math and ANN routes publish exact parity, bounded error, recall floor, and storage accounting.
+
+schema = "vyre.math.quantization_contract.v1"
+owner = "sparse_math_ai"
+evidence_tokens = ["IVF_RABITQ", "CUTLASS_GEMM"]
+
+required_fields = [
+  "source_type",
+  "quantizer_id",
+  "accumulator_type",
+  "error_bound",
+  "recall_floor",
+  "storage_bytes",
+  "exact_small_fixture_parity",
+]
+
+[[contract]]
+source_type = "f32"
+quantizer_id = "rabitq-4bit"
+accumulator_type = "i32"
+error_bound = "relative_l2<=0.015"
+recall_floor = "0.94@10"
+storage_bytes = 268435456
+exact_small_fixture_parity = true
+
+[[contract]]
+source_type = "f16"
+quantizer_id = "pq-8x8"
+accumulator_type = "f32"
+error_bound = "relative_l2<=0.010"
+recall_floor = "0.96@10"
+storage_bytes = 536870912
+exact_small_fixture_parity = true

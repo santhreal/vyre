@@ -124,28 +124,68 @@ pub use codec::{
 /// - arg1 = prefetch as u32
 #[must_use]
 pub fn encode_load_miss(resource_id: u32, prefetch: bool) -> Vec<u8> {
-    let mut bytes = vec![0u8; slot_byte_len_or_panic()];
-    codec::write_word(
+    try_encode_load_miss(resource_id, prefetch).unwrap_or_default()
+}
+
+/// Strictly encode a single ring-buffer slot for a load-miss request.
+///
+/// # Errors
+///
+/// Returns [`ProtocolError`] when slot sizing, word indexing, or host staging
+/// reservation fails.
+pub fn try_encode_load_miss(resource_id: u32, prefetch: bool) -> Result<Vec<u8>, ProtocolError> {
+    let total_bytes = try_slot_byte_len()?;
+    let mut bytes = Vec::new();
+    codec::try_reserve_protocol_capacity(
         &mut bytes,
-        word_index_or_panic(STATUS_WORD),
-        slot::PUBLISHED,
-    );
+        total_bytes,
+        "slot",
+        "load-miss slot encode could not reserve host staging bytes; reuse a preallocated slot buffer",
+    )?;
+    try_encode_load_miss_into(resource_id, prefetch, &mut bytes)?;
+    Ok(bytes)
+}
+
+/// Strictly encode a load-miss slot into caller-owned storage.
+///
+/// Clears and resizes `dst` to exactly one protocol slot, reusing allocation.
+///
+/// # Errors
+///
+/// Returns [`ProtocolError`] when slot sizing, word indexing, or host staging
+/// reservation fails.
+pub fn try_encode_load_miss_into(
+    resource_id: u32,
+    prefetch: bool,
+    dst: &mut Vec<u8>,
+) -> Result<(), ProtocolError> {
+    let total_bytes = try_slot_byte_len()?;
+    dst.clear();
+    codec::try_reserve_protocol_capacity(
+        dst,
+        total_bytes,
+        "slot",
+        "load-miss slot encode could not reserve caller-owned staging bytes; reuse a larger slot buffer",
+    )?;
+    dst.resize(total_bytes, 0);
+
+    codec::write_word(dst, try_slot_word_index(0, STATUS_WORD)?, slot::PUBLISHED);
+    codec::write_word(dst, try_slot_word_index(0, OPCODE_WORD)?, opcode::LOAD_MISS);
+    codec::write_word(dst, try_slot_word_index(0, TENANT_WORD)?, 0);
+    codec::write_word(dst, try_slot_word_index(0, PRIORITY_WORD)?, 0);
+    codec::write_word(dst, try_slot_word_index(0, ARG0_WORD)?, resource_id);
+    let prefetch_word = ARG0_WORD
+        .checked_add(1)
+        .ok_or(ProtocolError::ByteLengthOverflow {
+            buffer: "slot",
+            fix: "load-miss argument word overflows u32; keep ARG0_WORD within SLOT_WORDS",
+        })?;
     codec::write_word(
-        &mut bytes,
-        word_index_or_panic(OPCODE_WORD),
-        opcode::LOAD_MISS,
-    );
-    codec::write_word(&mut bytes, word_index_or_panic(TENANT_WORD), 0);
-    codec::write_word(&mut bytes, word_index_or_panic(PRIORITY_WORD), 0);
-    codec::write_word(&mut bytes, word_index_or_panic(ARG0_WORD), resource_id);
-    codec::write_word(
-        &mut bytes,
-        word_index_or_panic(ARG0_WORD.checked_add(1).unwrap_or_else(|| {
-            panic!("megakernel load-miss arg word overflowed u32. Fix: keep ARG0_WORD within SLOT_WORDS.")
-        })),
+        dst,
+        try_slot_word_index(0, prefetch_word)?,
         u32::from(prefetch),
     );
-    bytes
+    Ok(())
 }
 
 /// Decode a load-miss slot from ring-buffer bytes.
@@ -155,43 +195,76 @@ pub fn encode_load_miss(resource_id: u32, prefetch: bool) -> Vec<u8> {
 /// too short or the opcode does not match.
 #[must_use]
 pub fn decode_load_miss(ring_bytes: &[u8], slot: u32) -> Option<(u32, bool)> {
-    let slot_base = slot_word_base(slot)?;
-    let opcode_word = codec::read_word(ring_bytes, checked_slot_word(slot_base, OPCODE_WORD)?)?;
+    let opcode_word = codec::read_word(ring_bytes, try_slot_word_index(slot, OPCODE_WORD).ok()?)?;
     if opcode_word != opcode::LOAD_MISS {
         return None;
     }
-    let resource_id = codec::read_word(ring_bytes, checked_slot_word(slot_base, ARG0_WORD)?)?;
-    let prefetch = codec::read_word(
-        ring_bytes,
-        checked_slot_word(slot_base, ARG0_WORD.checked_add(1)?)?,
-    )? != 0;
+    let resource_id = codec::read_word(ring_bytes, try_slot_word_index(slot, ARG0_WORD).ok()?)?;
+    let prefetch_word = ARG0_WORD.checked_add(1)?;
+    let prefetch =
+        codec::read_word(ring_bytes, try_slot_word_index(slot, prefetch_word).ok()?)? != 0;
     Some((resource_id, prefetch))
 }
 
-fn slot_byte_len_or_panic() -> usize {
-    usize::try_from(SLOT_WORDS)
-        .unwrap_or_else(|error| {
-            panic!("SLOT_WORDS cannot fit usize: {error}. Fix: keep SLOT_WORDS within the host index ABI.")
-        })
-        .checked_mul(4)
-        .unwrap_or_else(|| {
-            panic!("megakernel slot byte length overflowed usize. Fix: keep SLOT_WORDS within the host index ABI.")
-        })
-}
-
-fn word_index_or_panic(word: u32) -> usize {
-    usize::try_from(word).unwrap_or_else(|error| {
-        panic!("megakernel protocol word index cannot fit usize: {error}. Fix: keep protocol word constants within the host index ABI.")
+/// Return the byte length of one ring-buffer slot.
+///
+/// # Errors
+///
+/// Returns [`ProtocolError`] when slot sizing overflows host address space.
+pub fn try_slot_byte_len() -> Result<usize, ProtocolError> {
+    codec::words_to_bytes(SLOT_WORDS).ok_or(ProtocolError::ByteLengthOverflow {
+        buffer: "slot",
+        fix: "slot byte length overflows host address space; keep SLOT_WORDS within the host index ABI",
     })
 }
 
-fn slot_word_base(slot: u32) -> Option<usize> {
-    let base_words = slot.checked_mul(SLOT_WORDS)?;
-    usize::try_from(base_words).ok()
+/// Convert a protocol-local word index into a host index.
+///
+/// # Errors
+///
+/// Returns [`ProtocolError`] when the word index cannot fit host address space.
+pub fn try_word_index(word: u32) -> Result<usize, ProtocolError> {
+    usize::try_from(word).map_err(|_| ProtocolError::ByteLengthOverflow {
+        buffer: "slot",
+        fix: "protocol word index cannot fit host usize; keep protocol word constants within the host index ABI",
+    })
 }
 
-fn checked_slot_word(slot_base: usize, word: u32) -> Option<usize> {
-    slot_base.checked_add(usize::try_from(word).ok()?)
+/// Return the first word index for `slot`.
+///
+/// # Errors
+///
+/// Returns [`ProtocolError`] when slot multiplication overflows the u32 wire
+/// ABI or host address space.
+pub fn try_slot_word_base(slot: u32) -> Result<usize, ProtocolError> {
+    let base_words = slot
+        .checked_mul(SLOT_WORDS)
+        .ok_or(ProtocolError::ByteLengthOverflow {
+            buffer: "ring",
+            fix: "slot word base overflows the u32 protocol word ABI; shard the megakernel ring before host access",
+        })?;
+    try_word_index(base_words)
+}
+
+/// Return the absolute ring word index for a slot-local word.
+///
+/// # Errors
+///
+/// Returns [`ProtocolError`] when `word` is outside one slot or when addition
+/// overflows host address space.
+pub fn try_slot_word_index(slot: u32, word: u32) -> Result<usize, ProtocolError> {
+    if word >= SLOT_WORDS {
+        return Err(ProtocolError::ByteLengthOverflow {
+            buffer: "slot",
+            fix: "slot-local word is outside SLOT_WORDS; keep protocol constants within the slot layout",
+        });
+    }
+    try_slot_word_base(slot)?
+        .checked_add(try_word_index(word)?)
+        .ok_or(ProtocolError::ByteLengthOverflow {
+            buffer: "ring",
+            fix: "slot word index overflows host address space; shard the megakernel ring before host access",
+        })
 }
 
 /// Deprecated alias for [`encode_load_miss`]. The old MoE-specific

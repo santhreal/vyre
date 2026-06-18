@@ -39,9 +39,16 @@
 //! registered (even draft) entry. This is the right gate: if you
 //! cannot register the op, you do not yet know what shape it builds.
 
+use std::path::PathBuf;
 use std::process;
 
-use crate::lego_audit::{collect_ops, structural_similarity, OpInfo, Tier};
+use crate::dedup_report::{
+    duplicate_family_report, duplicate_report_generator_command, duplicate_report_json_path,
+    duplicate_severity, registered_op_duplicate_family_id, registered_op_duplicate_subject,
+    registered_op_owner_lane, structural_similarity, write_duplicate_report_json,
+    DuplicateEvidence, DuplicateFamilyFinding, DuplicateFamilyReport, DuplicateSubject,
+};
+use crate::lego_audit::{collect_ops, OpInfo, Tier};
 
 const DEFAULT_TOP_N: usize = 5;
 const DEFAULT_MIN_SCORE: f64 = 0.20;
@@ -59,12 +66,29 @@ pub(crate) fn run(args: &[String]) {
 
     let ops = collect_ops();
     match &cli.mode {
-        Mode::Target(op_id) => run_target_query(&ops, op_id, cli.top_n, cli.min_score),
-        Mode::All => run_all_pairs_query(&ops, cli.top_n, cli.min_score),
+        Mode::Target(op_id) => run_target_query(
+            &ops,
+            op_id,
+            cli.top_n,
+            cli.min_score,
+            cli.duplicate_report_json.as_ref(),
+        ),
+        Mode::All => run_all_pairs_query(
+            &ops,
+            cli.top_n,
+            cli.min_score,
+            cli.duplicate_report_json.as_ref(),
+        ),
     }
 }
 
-fn run_target_query(ops: &[OpInfo], op_id: &str, top_n: usize, min_score: f64) {
+fn run_target_query(
+    ops: &[OpInfo],
+    op_id: &str,
+    top_n: usize,
+    min_score: f64,
+    duplicate_report_json: Option<&PathBuf>,
+) {
     let target = match ops.iter().find(|o| o.id == op_id) {
         Some(op) => op,
         None => {
@@ -91,6 +115,20 @@ fn run_target_query(ops: &[OpInfo], op_id: &str, top_n: usize, min_score: f64) {
         .collect();
     scored.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
     scored.truncate(top_n);
+    if let Some(path) = duplicate_report_json {
+        let generator_command = duplicate_report_generator_command(
+            &format!("whats-similar --op-id {}", target.id),
+            path,
+        );
+        let report = target_duplicate_report(target, &scored, &generator_command);
+        if let Err(error) = write_duplicate_report_json(path, &report) {
+            eprintln!(
+                "Fix: whats-similar could not write duplicate family report `{}`: {error}",
+                path.display()
+            );
+            process::exit(1);
+        }
+    }
 
     println!(
         "whats-similar: target `{}` (tier={}, own_nodes={}, composed_nodes={}, fingerprint={} bytes)",
@@ -150,7 +188,12 @@ fn run_target_query(ops: &[OpInfo], op_id: &str, top_n: usize, min_score: f64) {
     );
 }
 
-fn run_all_pairs_query(ops: &[OpInfo], top_n: usize, min_score: f64) {
+fn run_all_pairs_query(
+    ops: &[OpInfo],
+    top_n: usize,
+    min_score: f64,
+    duplicate_report_json: Option<&PathBuf>,
+) {
     let eligible: Vec<&OpInfo> = ops.iter().filter(|op| op.fingerprint.len() >= 10).collect();
     let mut pairs: Vec<(f64, &OpInfo, &OpInfo)> = Vec::new();
     let mut contract_variants = 0usize;
@@ -180,6 +223,17 @@ fn run_all_pairs_query(ops: &[OpInfo], top_n: usize, min_score: f64) {
     }
     pairs.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
     pairs.truncate(top_n);
+    if let Some(path) = duplicate_report_json {
+        let generator_command = duplicate_report_generator_command("whats-similar --all", path);
+        let report = all_pairs_duplicate_report(&pairs, &generator_command);
+        if let Err(error) = write_duplicate_report_json(path, &report) {
+            eprintln!(
+                "Fix: whats-similar could not write duplicate family report `{}`: {error}",
+                path.display()
+            );
+            process::exit(1);
+        }
+    }
 
     println!(
         "whats-similar: scanned {} registered ops for all-pairs duplicate candidates (min={:.2}, top={})",
@@ -228,6 +282,134 @@ fn run_all_pairs_query(ops: &[OpInfo], top_n: usize, min_score: f64) {
             right.own_nodes,
             right.composed_nodes
         );
+    }
+}
+
+fn target_duplicate_report(
+    target: &OpInfo,
+    scored: &[(f64, bool, bool, &OpInfo)],
+    generator_command: &str,
+) -> DuplicateFamilyReport {
+    let families = scored
+        .iter()
+        .map(|(score, same_contract, same_family, op)| {
+            registered_op_duplicate_family(
+                *score,
+                target,
+                *op,
+                *same_contract,
+                *same_family,
+            )
+        })
+        .collect();
+    duplicate_family_report(
+        generator_command,
+        "registered-op-ir-shape",
+        families,
+    )
+}
+
+fn all_pairs_duplicate_report(
+    pairs: &[(f64, &OpInfo, &OpInfo)],
+    generator_command: &str,
+) -> DuplicateFamilyReport {
+    let families = pairs
+        .iter()
+        .map(|(score, left, right)| {
+            registered_op_duplicate_family(*score, *left, *right, true, false)
+        })
+        .collect();
+    duplicate_family_report(
+        generator_command,
+        "registered-op-ir-shape",
+        families,
+    )
+}
+
+fn registered_op_duplicate_family(
+    score: f64,
+    left: &OpInfo,
+    right: &OpInfo,
+    same_contract: bool,
+    same_family: bool,
+) -> DuplicateFamilyFinding {
+    DuplicateFamilyFinding {
+        family_id: registered_op_duplicate_family_id(&left.id, &right.id),
+        detector: "whats-similar".to_string(),
+        severity: duplicate_severity(score),
+        score,
+        left: registered_op_subject(left),
+        right: registered_op_subject(right),
+        import_owner: registered_op_import_owner(left, right, same_family),
+        import_target: registered_op_import_target(left, right, same_contract, same_family),
+        evidence: DuplicateEvidence {
+            similarity_metric: "ir-shape-bigram-cosine",
+            left_metric: format!(
+                "tier={}:own_nodes={}:composed_nodes={}:fingerprint_bytes={}",
+                tier_label(left.tier),
+                left.own_nodes,
+                left.composed_nodes,
+                left.fingerprint.len()
+            ),
+            right_metric: format!(
+                "tier={}:own_nodes={}:composed_nodes={}:fingerprint_bytes={}",
+                tier_label(right.tier),
+                right.own_nodes,
+                right.composed_nodes,
+                right.fingerprint.len()
+            ),
+            dedup_action: if same_family {
+                "keep_shared_builder_family_and_remove_duplicate_registration"
+            } else if same_contract {
+                "extract_shared_primitive_or_reuse_existing_op"
+            } else {
+                "share_helper_without_merging_distinct_contracts"
+            },
+        },
+    }
+}
+
+fn registered_op_subject(op: &OpInfo) -> DuplicateSubject {
+    registered_op_duplicate_subject(
+        &op.id,
+        &op.fingerprint,
+        op.own_nodes + op.composed_nodes,
+    )
+}
+
+fn registered_op_import_owner(left: &OpInfo, right: &OpInfo, same_family: bool) -> String {
+    if same_family {
+        return implementation_family(left)
+            .or_else(|| implementation_family(right))
+            .map(ToString::to_string)
+            .unwrap_or_else(|| registered_op_owner_lane(&left.id).to_string());
+    }
+    if left.tier <= right.tier {
+        registered_op_owner_lane(&left.id).to_string()
+    } else {
+        registered_op_owner_lane(&right.id).to_string()
+    }
+}
+
+fn registered_op_import_target(
+    left: &OpInfo,
+    right: &OpInfo,
+    same_contract: bool,
+    same_family: bool,
+) -> String {
+    if same_family {
+        return implementation_family(left)
+            .or_else(|| implementation_family(right))
+            .map(ToString::to_string)
+            .unwrap_or_else(|| "shared_registered_op_family".to_string());
+    }
+    if !same_contract {
+        return "shared_helper_for_contract_variants".to_string();
+    }
+    if left.tier <= right.tier {
+        left.id.clone()
+    } else {
+        right.id.clone()
     }
 }
 
@@ -427,6 +609,7 @@ struct Cli {
     mode: Mode,
     top_n: usize,
     min_score: f64,
+    duplicate_report_json: Option<PathBuf>,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -440,6 +623,7 @@ fn parse_args(args: &[String]) -> Result<Cli, String> {
     let mut all = false;
     let mut top_n = DEFAULT_TOP_N;
     let mut min_score = None;
+    let mut duplicate_report_json = None;
     let mut iter = args.iter().skip(2);
     while let Some(a) = iter.next() {
         match a.as_str() {
@@ -476,6 +660,13 @@ fn parse_args(args: &[String]) -> Result<Cli, String> {
                 }
                 min_score = Some(parsed_min_score);
             }
+            "--duplicate-report-json" => {
+                duplicate_report_json = Some(duplicate_report_json_path(
+                    "--duplicate-report-json",
+                    iter.next().map(String::as_str),
+                    "--duplicate-report-json needs a value",
+                )?);
+            }
             "--file" => {
                 return Err(
                     "Fix: whats-similar compares registered OpEntry programs; register the candidate and pass its id with --op-id <id>"
@@ -501,6 +692,7 @@ fn parse_args(args: &[String]) -> Result<Cli, String> {
         mode,
         top_n,
         min_score,
+        duplicate_report_json,
     })
 }
 
@@ -508,6 +700,7 @@ fn print_usage() {
     eprintln!(
         "Usage: cargo_full run --bin xtask -- whats-similar --op-id <id> [--top N] [--min FLOAT]\n\
          Usage: cargo_full run --bin xtask -- whats-similar --all [--top N] [--min FLOAT]\n\
+         Add --duplicate-report-json PATH to write the shared duplicate-family report schema.\n\
          \n\
          Pre-write similarity query: report the top-N ops most structurally\n\
          similar to <id> by IR-shape bigram cosine. Use BEFORE shipping a new\n\
@@ -561,6 +754,25 @@ mod tests {
         assert_eq!(cli.mode, Mode::Target("x".to_string()));
         assert_eq!(cli.top_n, 10);
         assert!((cli.min_score - 0.05).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn parse_duplicate_report_json_path() {
+        let args = vec![
+            "xtask".to_string(),
+            "whats-similar".to_string(),
+            "--all".to_string(),
+            "--duplicate-report-json".to_string(),
+            "release/evidence/dedup/registered-op-duplicates.json".to_string(),
+        ];
+        let cli = parse_args(&args).unwrap();
+        assert_eq!(cli.mode, Mode::All);
+        assert_eq!(
+            cli.duplicate_report_json,
+            Some(PathBuf::from(
+                "release/evidence/dedup/registered-op-duplicates.json"
+            ))
+        );
     }
 
     #[test]

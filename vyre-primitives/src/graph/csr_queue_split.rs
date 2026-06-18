@@ -87,6 +87,20 @@ pub fn csr_queue_split_low_forward_traverse(
     let lane = Expr::InvocationId { axis: 0 };
     let words = bitset_words(node_count);
     let physical_edge_count = edge_count.max(1);
+    let edge_offset_count = match crate::graph::checked_csr_offset_count(
+        node_count,
+        "csr_queue_split_low_forward_traverse",
+    ) {
+        Ok(edge_offset_count) => edge_offset_count,
+        Err(error) => {
+            return crate::invalid_output_program(
+                CSR_QUEUE_SPLIT_LOW_FORWARD_OP_ID,
+                frontier_out,
+                DataType::U32,
+                error,
+            );
+        }
+    };
     let scalar_emit = || {
         scalar_emit_nodes(
             edge_targets,
@@ -158,7 +172,7 @@ pub fn csr_queue_split_low_forward_traverse(
                 .with_count(queue_capacity),
             BufferDecl::storage(queue_len, 1, BufferAccess::ReadOnly, DataType::U32).with_count(1),
             BufferDecl::storage(edge_offsets, 2, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(node_count + 1),
+                .with_count(edge_offset_count),
             BufferDecl::storage(edge_targets, 3, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(physical_edge_count),
             BufferDecl::storage(edge_kind_mask, 4, BufferAccess::ReadOnly, DataType::U32)

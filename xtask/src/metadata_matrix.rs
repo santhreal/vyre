@@ -5,6 +5,8 @@ use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 
 use serde::Serialize;
+
+use crate::release_train;
 use walkdir::WalkDir;
 
 #[derive(Debug, Serialize)]
@@ -57,44 +59,46 @@ struct RequiredReleaseSurface {
 const MAX_MANIFEST_BYTES: u64 = 1_048_576;
 const MAX_README_BYTES: u64 = 2_097_152;
 
-const REQUIRED_RELEASE_SURFACES: &[RequiredReleaseSurface] = &[
+fn required_release_surfaces() -> Vec<RequiredReleaseSurface> {
+    vec![
     RequiredReleaseSurface {
         name: "vyre",
-        expected_version: "0.6.1",
+        expected_version: release_train::vyre_version(),
         release_kind: Some("publishable-crate"),
         release_surface: "vyre-engine",
     },
     RequiredReleaseSurface {
         name: "vyre-driver-cuda",
-        expected_version: "0.6.1",
+        expected_version: release_train::vyre_version(),
         release_kind: Some("publishable-crate"),
         release_surface: "cuda-backend",
     },
     RequiredReleaseSurface {
         name: "vyre-driver-wgpu",
-        expected_version: "0.6.1",
+        expected_version: release_train::vyre_version(),
         release_kind: Some("publishable-crate"),
         release_surface: "wgpu-backend",
     },
     RequiredReleaseSurface {
         name: "weir",
-        expected_version: "0.1.0",
+        expected_version: release_train::weir_version(),
         release_kind: Some("publishable-crate"),
         release_surface: "dataflow-analysis",
     },
     RequiredReleaseSurface {
         name: "vyrec",
-        expected_version: "0.1.0",
+        expected_version: release_train::vyrec_version(),
         release_kind: Some("non-publishable-release-surface"),
         release_surface: "parser-cli",
     },
     RequiredReleaseSurface {
         name: "vyre-frontend-c",
-        expected_version: "0.6.1",
+        expected_version: release_train::vyre_frontend_c_version(),
         release_kind: Some("non-publishable-release-surface"),
         release_surface: "c-frontend",
     },
-];
+    ]
+}
 
 pub(crate) fn run(args: &[String]) {
     let output = match parse_output(args) {
@@ -140,8 +144,8 @@ pub(crate) fn run(args: &[String]) {
         santh_root.join("tools/vyrec/Cargo.toml"),
     ]);
     packages.sort_by(|left, right| left.name.cmp(&right.name));
-    let required_release_surfaces = REQUIRED_RELEASE_SURFACES
-        .iter()
+    let required_release_surfaces = required_release_surfaces()
+        .into_iter()
         .map(|surface| surface.name)
         .collect::<Vec<_>>();
     let missing_required_release_surfaces = missing_required_release_surfaces(&packages);
@@ -567,8 +571,8 @@ fn package_examples(manifest: &Path, package_name: &str, readme: Option<&str>) -
 }
 
 fn missing_required_release_surfaces(packages: &[PackageMetadata]) -> Vec<String> {
-    REQUIRED_RELEASE_SURFACES
-        .iter()
+    required_release_surfaces()
+        .into_iter()
         .filter_map(|required| {
             let present = packages.iter().any(|package| {
                 package.name == required.name
@@ -640,9 +644,8 @@ fn release_kind(name: &str, publish: Option<bool>) -> &'static str {
 }
 
 fn required_release_surface(name: &str) -> Option<RequiredReleaseSurface> {
-    REQUIRED_RELEASE_SURFACES
-        .iter()
-        .copied()
+    required_release_surfaces()
+        .into_iter()
         .find(|surface| surface.name == name)
 }
 
@@ -681,11 +684,7 @@ fn expected_version(name: &str, release_group: &str, release_kind: &str) -> Opti
     if let Some(required) = required_release_surface(name) {
         return Some(required.expected_version);
     }
-    match release_group {
-        "vyre" => Some("0.6.1"),
-        "weir" => Some("0.1.0"),
-        _ => None,
-    }
+    release_train::release_group_version(release_group)
 }
 
 fn read_text_bounded(path: &Path, max_bytes: u64) -> io::Result<String> {

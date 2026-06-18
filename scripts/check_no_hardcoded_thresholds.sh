@@ -30,6 +30,7 @@ SCAN_ROOTS=(
     vyre-driver-wgpu/src/runtime
     vyre-driver-wgpu/src/buffer
 )
+POLICY="docs/optimization/THRESHOLD_POLICY.toml"
 
 mode="${1:-enforce}"
 
@@ -41,23 +42,24 @@ if [[ -n "$hits" ]]; then
 fi
 
 if [[ "$mode" == "--report" ]]; then
-    echo "no-hardcoded-thresholds: $count sites"
+    echo "no-hardcoded-thresholds: $count sites; policy=$POLICY"
     if (( count > 0 )); then
         printf '%s\n' "$hits"
     fi
     exit 0
 fi
 
-# Floor at gate-authoring; downward ratchet.
-FLOOR=13
+# Floor at policy-authoring; per-threshold unit, provenance, and Tier
+# placement live in docs/optimization/THRESHOLD_POLICY.toml.
+FLOOR=14
 
 if (( count > FLOOR )); then
     echo "no-hardcoded-thresholds gate: $count threshold sites (floor=$FLOOR)." >&2
     printf '%s\n' "$hits" >&2
     echo >&2
-    echo "Fix: route the new threshold through Tier-A config (env var" >&2
-    echo "+ TOML default + CLI flag). The audit doctrine: knobs operators" >&2
-    echo "would want to tune cannot live as compile-time consts." >&2
+    echo "Fix: route the new threshold through Tier-A config where it is" >&2
+    echo "operator-tunable, or mark it structural in $POLICY with unit," >&2
+    echo "provenance, override path, evidence link, and VX-475 ownership." >&2
     exit 1
 fi
 

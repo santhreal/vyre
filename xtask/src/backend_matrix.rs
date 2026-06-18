@@ -26,6 +26,7 @@ struct BackendMatrix {
     gpu_probe: GpuProbe,
     cuda_feature_markers: Vec<BackendFeatureMarker>,
     wgpu_feature_markers: Vec<BackendFeatureMarker>,
+    capability_rows: Vec<BackendCapabilityRow>,
     hidden_fallback_findings: Vec<BackendSourceFinding>,
     hidden_fallback_scan_errors: Vec<String>,
     backends: Vec<BackendEntry>,
@@ -78,6 +79,17 @@ struct BackendSourceFinding {
     path: String,
     line: usize,
     pattern: &'static str,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct BackendCapabilityRow {
+    backend_id: String,
+    capability_id: String,
+    probe_source: String,
+    probed_value: Option<String>,
+    supported: bool,
+    unsupported_reason: Option<String>,
+    fix: String,
 }
 
 struct BackendFeatureRequirement {
@@ -401,8 +413,10 @@ pub(crate) fn run(args: &[String]) {
                 .to_string(),
         );
     }
+    let capability_rows = collect_backend_capability_rows(&backends, &gpu_probe);
+    blockers.extend(capability_contract_blockers(&capability_rows));
     let matrix = BackendMatrix {
-        schema_version: 2,
+        schema_version: 3,
         cuda_first,
         wgpu_fallback_present,
         preferred_backend_id,
@@ -410,6 +424,7 @@ pub(crate) fn run(args: &[String]) {
         gpu_probe,
         cuda_feature_markers,
         wgpu_feature_markers,
+        capability_rows,
         hidden_fallback_findings,
         hidden_fallback_scan_errors,
         backends,
@@ -519,6 +534,219 @@ fn collect_feature_markers(
         });
     }
     markers
+}
+
+fn collect_backend_capability_rows(
+    backends: &[BackendEntry],
+    gpu_probe: &GpuProbe,
+) -> Vec<BackendCapabilityRow> {
+    let cuda = backends.iter().find(|backend| backend.id == "cuda");
+    let wgpu = backends.iter().find(|backend| backend.id == "wgpu");
+    let mut rows = Vec::new();
+    rows.push(registry_capability_row("cuda", cuda));
+    rows.push(registry_capability_row("wgpu", wgpu));
+
+    let cuda_sm = highest_cuda_compute_capability(gpu_probe);
+    let cuda_sm_supported = cuda_sm.is_some_and(|(major, minor)| (major, minor) >= (8, 0));
+    rows.push(BackendCapabilityRow {
+        backend_id: "cuda".to_string(),
+        capability_id: "live-sm-release-floor".to_string(),
+        probe_source: "nvidia-smi --query-gpu=compute_cap".to_string(),
+        probed_value: cuda_sm.map(|(major, minor)| format!("sm_{major}{minor}")),
+        supported: cuda_sm_supported,
+        unsupported_reason: (!cuda_sm_supported).then(|| {
+            "no live NVIDIA device reported compute capability >= 8.0".to_string()
+        }),
+        fix: "Fix: repair CUDA driver/device visibility or route release benchmarks to a supported NVIDIA GPU.".to_string(),
+    });
+
+    let max_memory = max_cuda_memory_mib(gpu_probe);
+    let memory_supported = max_memory.is_some_and(|mib| mib >= 16 * 1024);
+    rows.push(BackendCapabilityRow {
+        backend_id: "cuda".to_string(),
+        capability_id: "live-memory-release-floor".to_string(),
+        probe_source: "nvidia-smi --query-gpu=memory.total".to_string(),
+        probed_value: max_memory.map(|mib| format!("{mib} MiB")),
+        supported: memory_supported,
+        unsupported_reason: (!memory_supported).then(|| {
+            "no live NVIDIA device reported >=16384 MiB memory".to_string()
+        }),
+        fix: "Fix: run release benchmark evidence on a CUDA GPU with at least 16 GiB VRAM.".to_string(),
+    });
+
+    let warp_supported = gpu_probe.nvidia_smi_ok && cuda_sm.is_some();
+    rows.push(BackendCapabilityRow {
+        backend_id: "cuda".to_string(),
+        capability_id: "warp-width-contract".to_string(),
+        probe_source: "CUDA warp-size contract gated by live NVIDIA device probe".to_string(),
+        probed_value: warp_supported.then(|| "32 lanes".to_string()),
+        supported: warp_supported,
+        unsupported_reason: (!warp_supported).then(|| {
+            "CUDA warp-width contract is unavailable without a live NVIDIA GPU probe".to_string()
+        }),
+        fix: "Fix: expose a live CUDA device before using warp-width-sensitive benchmark claims.".to_string(),
+    });
+
+    rows.push(BackendCapabilityRow {
+        backend_id: "cuda".to_string(),
+        capability_id: "mlir-transform-support".to_string(),
+        probe_source: "backend-matrix transform support registry".to_string(),
+        probed_value: None,
+        supported: false,
+        unsupported_reason: Some(
+            "CUDA backend does not expose a live MLIR transform-dialect capability probe"
+                .to_string(),
+        ),
+        fix: "Fix: wire transform capability probing before claiming transform-scheduled CUDA lowering.".to_string(),
+    });
+
+    rows.push(BackendCapabilityRow {
+        backend_id: "wgpu".to_string(),
+        capability_id: "adapter-live-acquire".to_string(),
+        probe_source: "vyre_driver::backend::acquire(\"wgpu\")".to_string(),
+        probed_value: wgpu.map(|backend| {
+            format!(
+                "dispatches={},acquire_ok={},precedence={}",
+                backend.dispatches, backend.acquire_ok, backend.precedence
+            )
+        }),
+        supported: wgpu.is_some_and(|backend| backend.dispatches && backend.acquire_ok),
+        unsupported_reason: (!wgpu.is_some_and(|backend| backend.dispatches && backend.acquire_ok))
+            .then(|| {
+                wgpu.and_then(|backend| backend.acquire_error.clone())
+                    .unwrap_or_else(|| "wgpu backend is not registered or acquireable".to_string())
+            }),
+        fix: "Fix: configure vyre-driver-wgpu so fallback evidence is backed by an acquireable adapter.".to_string(),
+    });
+
+    rows.push(BackendCapabilityRow {
+        backend_id: "wgpu".to_string(),
+        capability_id: "mlir-transform-support".to_string(),
+        probe_source: "backend-matrix transform support registry".to_string(),
+        probed_value: None,
+        supported: false,
+        unsupported_reason: Some(
+            "WGPU backend does not expose a live MLIR transform-dialect capability probe"
+                .to_string(),
+        ),
+        fix: "Fix: wire transform capability probing before claiming transform-scheduled WGPU lowering.".to_string(),
+    });
+
+    rows
+}
+
+fn registry_capability_row(backend_id: &str, backend: Option<&BackendEntry>) -> BackendCapabilityRow {
+    let supported = backend.is_some_and(|backend| backend.dispatches && backend.acquire_ok);
+    BackendCapabilityRow {
+        backend_id: backend_id.to_string(),
+        capability_id: "registered-dispatch-backend".to_string(),
+        probe_source: "vyre_driver::backend registry plus acquire()".to_string(),
+        probed_value: backend.map(|backend| {
+            format!(
+                "dispatches={},acquire_ok={},precedence={}",
+                backend.dispatches, backend.acquire_ok, backend.precedence
+            )
+        }),
+        supported,
+        unsupported_reason: (!supported).then(|| {
+            backend
+                .and_then(|backend| backend.acquire_error.clone())
+                .unwrap_or_else(|| format!("{backend_id} backend is not dispatchable/acquireable"))
+        }),
+        fix: format!(
+            "Fix: register and configure `{backend_id}` before publishing backend support claims."
+        ),
+    }
+}
+
+fn highest_cuda_compute_capability(gpu_probe: &GpuProbe) -> Option<(u32, u32)> {
+    gpu_probe
+        .nvidia_smi_device_details
+        .iter()
+        .filter_map(|device| {
+            Some((
+                device.compute_capability_major?,
+                device.compute_capability_minor?,
+            ))
+        })
+        .max()
+}
+
+fn max_cuda_memory_mib(gpu_probe: &GpuProbe) -> Option<u64> {
+    gpu_probe
+        .nvidia_smi_device_details
+        .iter()
+        .filter_map(|device| device.memory_total_mib)
+        .max()
+}
+
+fn capability_contract_blockers(rows: &[BackendCapabilityRow]) -> Vec<String> {
+    let mut blockers = Vec::new();
+    if rows.is_empty() {
+        blockers.push("backend capability matrix emitted zero capability rows".to_string());
+        return blockers;
+    }
+    let mut seen = std::collections::BTreeSet::new();
+    for row in rows {
+        if row.backend_id.trim().is_empty() {
+            blockers.push("backend capability row has blank backend_id".to_string());
+        }
+        if row.capability_id.trim().is_empty() {
+            blockers.push(format!(
+                "backend capability row for `{}` has blank capability_id",
+                row.backend_id
+            ));
+        }
+        if !seen.insert((row.backend_id.clone(), row.capability_id.clone())) {
+            blockers.push(format!(
+                "backend capability row duplicates `{}`/`{}`",
+                row.backend_id, row.capability_id
+            ));
+        }
+        if row.probe_source.trim().is_empty() {
+            blockers.push(format!(
+                "backend capability `{}`/`{}` has no probe_source",
+                row.backend_id, row.capability_id
+            ));
+        }
+        if row.supported && row.probed_value.as_deref().is_none_or(str::is_empty) {
+            blockers.push(format!(
+                "backend capability `{}`/`{}` is supported but has no probed_value",
+                row.backend_id, row.capability_id
+            ));
+        }
+        if !row.supported
+            && row
+                .unsupported_reason
+                .as_deref()
+                .is_none_or(|reason| reason.trim().is_empty())
+        {
+            blockers.push(format!(
+                "backend capability `{}`/`{}` is unsupported but has no unsupported_reason",
+                row.backend_id, row.capability_id
+            ));
+        }
+        if row.fix.trim().is_empty() || !row.fix.starts_with("Fix:") {
+            blockers.push(format!(
+                "backend capability `{}`/`{}` must include actionable Fix text",
+                row.backend_id, row.capability_id
+            ));
+        }
+        let assumption_text = format!(
+            "{} {} {}",
+            row.probe_source,
+            row.probed_value.as_deref().unwrap_or_default(),
+            row.fix
+        )
+        .to_ascii_lowercase();
+        if assumption_text.contains("hardcoded") || assumption_text.contains("assume gpu") {
+            blockers.push(format!(
+                "backend capability `{}`/`{}` contains hardcoded capability language",
+                row.backend_id, row.capability_id
+            ));
+        }
+    }
+    blockers
 }
 
 fn scan_hidden_fallback_language(
@@ -800,4 +1028,76 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
         ));
     }
     Ok(text)
+}
+
+#[cfg(test)]
+mod capability_contract_tests {
+    use super::*;
+
+    #[test]
+    fn unsupported_capability_rows_require_reason_and_fix() {
+        let rows = vec![BackendCapabilityRow {
+            backend_id: "cuda".to_string(),
+            capability_id: "mlir-transform-support".to_string(),
+            probe_source: "backend-matrix transform support registry".to_string(),
+            probed_value: None,
+            supported: false,
+            unsupported_reason: None,
+            fix: "missing".to_string(),
+        }];
+
+        let blockers = capability_contract_blockers(&rows);
+
+        assert!(blockers
+            .iter()
+            .any(|blocker| blocker.contains("unsupported_reason")));
+        assert!(blockers.iter().any(|blocker| blocker.contains("Fix")));
+    }
+
+    #[test]
+    fn cuda_capability_rows_include_live_sm_memory_and_warp_contracts() {
+        let backends = vec![BackendEntry {
+            id: "cuda".to_string(),
+            precedence: 0,
+            dispatches: true,
+            acquire_ok: true,
+            acquire_error: None,
+        }];
+        let probe = GpuProbe {
+            nvidia_smi_ok: true,
+            nvidia_smi_devices: vec!["GPU 0: NVIDIA RTX 5090".to_string()],
+            nvidia_smi_device_details: vec![GpuProbeDevice {
+                name: "NVIDIA RTX 5090".to_string(),
+                driver_version: "580.0".to_string(),
+                memory_total_mib: Some(32 * 1024),
+                compute_capability_major: Some(12),
+                compute_capability_minor: Some(0),
+            }],
+            nvidia_driver_version: Some("580.0".to_string()),
+            nvidia_cuda_version: Some("13.0".to_string()),
+            nvidia_smi_error: None,
+        };
+
+        let rows = collect_backend_capability_rows(&backends, &probe);
+
+        assert!(rows.iter().any(|row| {
+            row.backend_id == "cuda"
+                && row.capability_id == "live-sm-release-floor"
+                && row.supported
+                && row.probed_value.as_deref() == Some("sm_120")
+        }));
+        assert!(rows.iter().any(|row| {
+            row.backend_id == "cuda"
+                && row.capability_id == "live-memory-release-floor"
+                && row.supported
+                && row.probed_value.as_deref() == Some("32768 MiB")
+        }));
+        assert!(rows.iter().any(|row| {
+            row.backend_id == "cuda"
+                && row.capability_id == "warp-width-contract"
+                && row.supported
+                && row.probed_value.as_deref() == Some("32 lanes")
+        }));
+        assert!(capability_contract_blockers(&rows).is_empty());
+    }
 }

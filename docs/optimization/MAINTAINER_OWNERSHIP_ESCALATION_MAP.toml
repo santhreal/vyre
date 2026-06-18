@@ -1,0 +1,51 @@
+# Maintainer ownership escalation map for VX-1151, VX-1152, and VX-1157.
+# Issue labels, CODEOWNERS, security managers, ownership lanes, and public/private repository boundaries share one escalation seam.
+
+schema = "vyre.release.maintainer_ownership_escalation_map.v1"
+owner = "coordination"
+evidence_tokens = ["GITHUB_CODEOWNERS", "GITHUB_LABELS", "GITHUB_ISSUE_FORMS", "NIST_SSDF"]
+
+required_fields = [
+  "escalation_id",
+  "intake_surface",
+  "routing_key_policy",
+  "owner_authority",
+  "codeowners_policy",
+  "security_manager_policy",
+  "fallback_policy",
+  "boundary_policy",
+  "diagnostic",
+]
+
+[[escalation]]
+escalation_id = "public-issue-owner-route"
+intake_surface = "PUBLIC_ISSUE_SUPPORT_INTAKE_POLICY.toml"
+routing_key_policy = "kind-surface-and-status-labels-map-to-OWNERSHIP.toml-lanes-and-CODEOWNERS-paths"
+owner_authority = "OWNERSHIP.toml"
+codeowners_policy = "public-vyre-CODEOWNERS-on-base-branch-routes-review-to-visible-write-permission-owners"
+security_manager_policy = "security-sensitive-items-route-to-PRIVATE_VULNERABILITY_RESPONSE_RUNBOOK.toml"
+fallback_policy = "unowned-public-surface-blocks-release-health-closure-until-owner-lane-is-declared"
+boundary_policy = "santhsecurity/vyre-public-only-Santh-and-santhsecurity/Santh-are-not-routing-authorities"
+diagnostic = "VYRE_PUBLIC_ISSUE_OWNER_ROUTE_REQUIRED"
+
+[[escalation]]
+escalation_id = "private-security-owner-route"
+intake_surface = "PRIVATE_VULNERABILITY_RESPONSE_RUNBOOK.toml"
+routing_key_policy = "security-report-state-and-affected-public-surface-map-to-security-owner-and-release-owner"
+owner_authority = "REPOSITORY_SECURITY_DISCLOSURE_POLICY.toml"
+codeowners_policy = "CODEOWNERS-review-does-not-replace-security-manager-authorization-for-private-advisory-collaboration"
+security_manager_policy = "authorized-security-managers-control-private-report-acceptance-collaborators-and-public-disclosure"
+fallback_policy = "missing-security-owner-keeps-report-under-investigation-and-blocks-public-release-clearance"
+boundary_policy = "private-vulnerability-evidence-stays-off-public-issues-until-redacted-public-disclosure"
+diagnostic = "VYRE_PRIVATE_SECURITY_OWNER_ROUTE_REQUIRED"
+
+[[escalation]]
+escalation_id = "release-health-owner-route"
+intake_surface = "RELEASE_HEALTH_FEEDBACK_LOOP.toml"
+routing_key_policy = "feedback-signal-class-maps-to-bench-docs-package-security-or-runtime-owner-lane"
+owner_authority = "PLAN_ARTIFACT_AUTHORITY_MAP.toml"
+codeowners_policy = "public-codeowner-review-required-for-public-facing-docs-config-cli-and-package-surface-changes"
+security_manager_policy = "security-class-feedback-enters-private-response-runbook-before-public-release-claim"
+fallback_policy = "unrouted-feedback-signal-remains-release-health-blocker"
+boundary_policy = "release-health-evidence-published-only-through-public-safe-artifacts"
+diagnostic = "VYRE_RELEASE_HEALTH_OWNER_ROUTE_REQUIRED"

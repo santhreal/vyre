@@ -24,6 +24,34 @@ mod use_facts;
 
 use self::use_facts::derive_use_facts;
 
+/// Typed fact partitions exposed by the optimizer fact substrate.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+pub(crate) enum FactPartition {
+    /// Graph/topology facts derived from shape and use dependency data.
+    Graph,
+    /// Scalar and expression type facts.
+    Type,
+    /// Static per-buffer shape facts.
+    Shape,
+    /// Variable and buffer use facts.
+    Use,
+    /// Side-effect and write-dependency facts backed by use analysis.
+    Effects,
+    /// Dataflow frontier dependencies backed by use analysis.
+    DataflowFrontier,
+}
+
+impl FactPartition {
+    pub(crate) const ALL: [Self; 6] = [
+        Self::Graph,
+        Self::Type,
+        Self::Shape,
+        Self::Use,
+        Self::Effects,
+        Self::DataflowFrontier,
+    ];
+}
+
 /// Unified fact cache for a single program revision.
 ///
 /// Passes that need shape, use, or type information call
@@ -209,9 +237,24 @@ impl FactSubstrate {
     /// Drop every cached fact. Called by the scheduler after a pass
     /// changes the program.
     pub fn invalidate(&mut self) {
-        self.invalidate_shape();
-        self.invalidate_use_facts();
-        self.invalidate_type_map();
+        self.invalidate_partition(FactPartition::Shape);
+        self.invalidate_partition(FactPartition::Use);
+        self.invalidate_partition(FactPartition::Type);
+    }
+
+    /// Drop one typed partition and every cached view that depends on it.
+    pub(crate) fn invalidate_partition(&mut self, partition: FactPartition) {
+        match partition {
+            FactPartition::Graph => {
+                self.invalidate_shape();
+                self.invalidate_use_facts();
+            }
+            FactPartition::Type => self.invalidate_type_map(),
+            FactPartition::Shape => self.invalidate_shape(),
+            FactPartition::Use | FactPartition::Effects | FactPartition::DataflowFrontier => {
+                self.invalidate_use_facts();
+            }
+        }
     }
 
     /// Drop only shape facts.
@@ -233,26 +276,53 @@ impl FactSubstrate {
     /// True when the cached facts are known to match `program`.
     #[must_use]
     pub fn is_fresh_for(&self, program: &Program) -> bool {
-        self.fingerprint == program.fingerprint()
-            && self.shape.is_some()
-            && self.use_facts.is_some()
-            && self.use_counts.is_some()
-            && self.type_map.is_some()
+        self.fresh_partitions_for(program).len() == FactPartition::ALL.len()
     }
 
     /// True when cached use facts match `program`.
     #[must_use]
     pub fn has_fresh_use_facts_for(&self, program: &Program) -> bool {
-        self.fingerprint == program.fingerprint() && self.use_facts.is_some()
+        self.has_fresh_partition_for(program, FactPartition::Use)
     }
 
     /// True when cached shape and use facts match `program`.
     #[must_use]
     pub fn has_fresh_shape_and_use_for(&self, program: &Program) -> bool {
         self.fingerprint == program.fingerprint()
-            && self.shape.is_some()
-            && self.use_facts.is_some()
-            && self.use_counts.is_some()
+            && self.has_partition(FactPartition::Shape)
+            && self.has_partition(FactPartition::Use)
+    }
+
+    /// True when a typed fact partition is present, independent of fingerprint.
+    #[must_use]
+    pub(crate) fn has_partition(&self, partition: FactPartition) -> bool {
+        match partition {
+            FactPartition::Graph => self.shape.is_some() && self.use_facts.is_some(),
+            FactPartition::Type => self.type_map.is_some(),
+            FactPartition::Shape => self.shape.is_some(),
+            FactPartition::Use => self.use_facts.is_some() && self.use_counts.is_some(),
+            FactPartition::Effects | FactPartition::DataflowFrontier => self.use_facts.is_some(),
+        }
+    }
+
+    /// True when a typed fact partition is present and matches `program`.
+    #[must_use]
+    pub(crate) fn has_fresh_partition_for(
+        &self,
+        program: &Program,
+        partition: FactPartition,
+    ) -> bool {
+        self.fingerprint == program.fingerprint() && self.has_partition(partition)
+    }
+
+    /// All typed fact partitions currently fresh for `program`.
+    #[must_use]
+    pub(crate) fn fresh_partitions_for(&self, program: &Program) -> Vec<FactPartition> {
+        FactPartition::ALL
+            .iter()
+            .copied()
+            .filter(|partition| self.has_fresh_partition_for(program, *partition))
+            .collect()
     }
 
     /// Shared use-fact lookup.

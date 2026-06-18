@@ -1,33 +1,42 @@
 #!/usr/bin/env bash
 #
-# Guarded public launch launcher for Vyre 0.4.2 / Weir 0.1.0.
+# Guarded public launch launcher for the configured Vyre / Weir release train.
 #
 # This script intentionally refuses to run unless the maintainer sets:
-#   VYRE_RELEASE_APPROVED=launch-vyre-0.4.2-weir-0.1.0
+#   VYRE_RELEASE_APPROVED=<token derived by scripts/lib/release_train.sh>
 #
-# It performs the three approval-gated actions that complete
+# It performs the approval-gated publish and push, and records the launch
+# verification that completes
 # release/plans/paradigm-shift-100-concrete.md:
 #   1. cargo_full publish in audited dependency order.
-#   2. make approved GitHub repositories public.
+#   2. verify the configured public repository without changing the private repository.
 #   3. push the release branch and product-scoped tags.
 
 set -euo pipefail
 
-VYRE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$VYRE_ROOT"
-source scripts/lib/cargo_runner.sh
-vyre_select_cargo_runner
-
-APPROVAL_TOKEN="launch-vyre-0.4.2-weir-0.1.0"
-if [[ "${VYRE_RELEASE_APPROVED:-}" != "$APPROVAL_TOKEN" ]]; then
-    printf 'Fix: refusing final launch without explicit approval.\n' >&2
-    printf 'Set VYRE_RELEASE_APPROVED=%s only after maintainer approval for publish, public visibility, and git push.\n' "$APPROVAL_TOKEN" >&2
+PREFLIGHT=0
+if [[ "${1:-}" == "--preflight" ]]; then
+    PREFLIGHT=1
+    shift
+fi
+if [[ "$#" -ne 0 ]]; then
+    printf 'Fix: unknown final-launch argument(s): %s\n' "$*" >&2
     exit 2
 fi
 
-if [[ -z "${VYRE_RELEASE_REPOS:-}" ]]; then
-    printf 'Fix: VYRE_RELEASE_REPOS must list approved GitHub repos to make public, separated by spaces.\n' >&2
-    printf 'Example: VYRE_RELEASE_REPOS="santhsecurity/vyre santhsecurity/weir"\n' >&2
+VYRE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$VYRE_ROOT"
+source scripts/lib/cargo_runner.sh
+source scripts/lib/repo_boundary.sh
+source scripts/lib/release_train.sh
+vyre_select_cargo_runner
+vyre_load_repo_boundary
+vyre_load_release_train
+
+APPROVAL_TOKEN="$VYRE_RELEASE_LAUNCH_APPROVAL_TOKEN"
+if [[ "$PREFLIGHT" != "1" && "${VYRE_RELEASE_APPROVED:-}" != "$APPROVAL_TOKEN" ]]; then
+    printf 'Fix: refusing final launch without explicit approval.\n' >&2
+    printf 'Set VYRE_RELEASE_APPROVED=%s only after maintainer approval for publish and git push. This script verifies %s is already public and does not change %s visibility.\n' "$APPROVAL_TOKEN" "$VYRE_RELEASE_PUBLIC_REPO" "$VYRE_RELEASE_PRIVATE_REPO" >&2
     exit 2
 fi
 
@@ -37,7 +46,7 @@ if ! command -v jq >/dev/null 2>&1; then
 fi
 
 if ! command -v gh >/dev/null 2>&1; then
-    printf 'Fix: GitHub CLI `gh` is required for repository visibility changes.\n' >&2
+    printf 'Fix: GitHub CLI `gh` is required for repository visibility verification.\n' >&2
     exit 2
 fi
 
@@ -56,13 +65,15 @@ if ! release_branch="$(git symbolic-ref --quiet --short HEAD)"; then
     exit 2
 fi
 
-if [[ -n "$(git status --porcelain)" ]]; then
+if [[ -n "$(git status --porcelain)" && "$PREFLIGHT" != "1" ]]; then
     printf 'Fix: working tree has uncommitted or untracked changes; commit or intentionally clear them before final launch.\n' >&2
     exit 2
 fi
+if [[ "$PREFLIGHT" == "1" && -n "$(git status --porcelain)" ]]; then
+    printf 'final-launch preflight note: working tree is dirty; real launch will refuse until committed or intentionally cleared.\n'
+fi
 
-RELEASE_TAGS=(vyre-v0.4.2 weir-v0.1.0 vyre-0.4.2-weir-0.1.0)
-for tag in "${RELEASE_TAGS[@]}"; do
+for tag in "${VYRE_RELEASE_TAGS[@]}"; do
     if git rev-parse --verify "refs/tags/${tag}" >/dev/null 2>&1; then
         printf 'Fix: release tag %s already exists locally; refusing to risk stale tag target.\n' "$tag" >&2
         exit 2
@@ -73,12 +84,21 @@ for tag in "${RELEASE_TAGS[@]}"; do
     fi
 done
 
-for repo in ${VYRE_RELEASE_REPOS}; do
-    if ! gh repo view "$repo" >/dev/null 2>&1; then
-        printf 'Fix: GitHub repository %s is not visible to gh; refusing final launch before publish.\n' "$repo" >&2
-        exit 2
-    fi
-done
+repo_visibility="$(gh repo view "$VYRE_RELEASE_PUBLIC_REPO" --json visibility --jq '.visibility' 2>/dev/null || true)"
+if [[ -z "$repo_visibility" ]]; then
+    printf 'Fix: GitHub repository %s is not visible to gh; refusing final launch before publish.\n' "$VYRE_RELEASE_PUBLIC_REPO" >&2
+    exit 2
+fi
+if [[ "${repo_visibility^^}" != "PUBLIC" ]]; then
+    printf 'Fix: GitHub repository %s visibility is %s, expected PUBLIC. %s visibility is intentionally untouched.\n' "$VYRE_RELEASE_PUBLIC_REPO" "$repo_visibility" "$VYRE_RELEASE_PRIVATE_REPO" >&2
+    exit 2
+fi
+
+if [[ "$PREFLIGHT" == "1" ]]; then
+    bash scripts/publish-release.sh --preflight
+    printf 'final-launch preflight passed; no publish, evidence commit, tag, or push performed.\n'
+    exit 0
+fi
 
 export VYRE_RELEASE_BACKEND="${VYRE_RELEASE_BACKEND:-all}"
 export VYRE_RELEASE_SHARDS="${VYRE_RELEASE_SHARDS:-64}"
@@ -93,33 +113,36 @@ if [[ ! -s "$release_conformance_evidence" ]]; then
     exit 1
 fi
 
-VYRE_RELEASE_APPROVED=publish-vyre-0.4.2-weir-0.1.0 bash scripts/publish-release.sh
+VYRE_RELEASE_APPROVED="$VYRE_RELEASE_PUBLISH_APPROVAL_TOKEN" bash scripts/publish-release.sh
 
-for repo in ${VYRE_RELEASE_REPOS}; do
-    printf 'making GitHub repository public: %s\n' "$repo"
-    gh repo edit "$repo" --visibility public --accept-visibility-change-consequences
-done
+printf 'verified GitHub repository is public: %s\n' "$VYRE_RELEASE_PUBLIC_REPO"
 
 mkdir -p release/evidence/final
 jq -n \
-    --arg repos "$VYRE_RELEASE_REPOS" \
+    --arg public_repo "$VYRE_RELEASE_PUBLIC_REPO" \
     --arg branch "$release_branch" \
     --arg conformance "$release_conformance_evidence" \
+    --arg vyre_version "$VYRE_RELEASE_VYRE_VERSION" \
+    --arg weir_version "$VYRE_RELEASE_WEIR_VERSION" \
+    --arg verify_public_repo_action "$VYRE_RELEASE_VERIFY_PUBLIC_REPO_ACTION" \
+    --arg vyre_tag "$VYRE_RELEASE_TAG_VYRE" \
+    --arg weir_tag "$VYRE_RELEASE_TAG_WEIR" \
+    --arg combined_tag "$VYRE_RELEASE_TAG_COMBINED" \
     '{
         schema_version: 1,
         release_train: {
-            vyre: "0.4.2",
-            weir: "0.1.0"
+            vyre: $vyre_version,
+            weir: $weir_version
         },
         git: {
             branch: $branch,
             tags: [
-                "vyre-v0.4.2",
-                "weir-v0.1.0",
-                "vyre-0.4.2-weir-0.1.0"
+                $vyre_tag,
+                $weir_tag,
+                $combined_tag
             ]
         },
-        repositories_public: ($repos | split(" ") | map(select(length > 0))),
+        public_repository: $public_repo,
         external_actions: [
             {
                 action: "prove sharded all-backend conformance certificate",
@@ -132,14 +155,14 @@ jq -n \
                 evidence: "scripts/publish-release.sh"
             },
             {
-                action: "make repositories public",
+                action: $verify_public_repo_action,
                 status: "complete",
-                evidence: $repos
+                evidence: ("gh repo view " + $public_repo + " --json visibility")
             },
             {
                 action: "git push release branch and tags",
                 status: "complete",
-                evidence: "git push origin release branch && git push origin vyre-v0.4.2 weir-v0.1.0 vyre-0.4.2-weir-0.1.0"
+                evidence: ("git push origin release branch && git push origin " + $vyre_tag + " " + $weir_tag + " " + $combined_tag)
             }
         ],
         completion_status: "complete"
@@ -155,14 +178,14 @@ git add \
     release/evidence/final/public-launch-completion.json \
     release/evidence/final/public-launch-state.json \
     release/evidence/final/completion-audit.json
-git commit -m "Record Vyre 0.4.2 and Weir 0.1.0 public launch"
+git commit -m "Record ${VYRE_RELEASE_DISPLAY} public launch"
 
-for tag in "${RELEASE_TAGS[@]}"; do
+for tag in "${VYRE_RELEASE_TAGS[@]}"; do
     git tag -a "$tag" -m "$tag"
 done
 
 printf 'pushing release branch and product-scoped tags\n'
 git push origin "$release_branch"
-git push origin "${RELEASE_TAGS[@]}"
+git push origin "${VYRE_RELEASE_TAGS[@]}"
 
-printf 'Vyre 0.4.2 / Weir 0.1.0 public launch actions completed.\n'
+printf '%s public launch actions completed.\n' "$VYRE_RELEASE_DISPLAY"

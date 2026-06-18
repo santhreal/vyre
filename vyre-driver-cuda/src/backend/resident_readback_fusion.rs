@@ -34,7 +34,7 @@ pub(crate) fn validate_fused_resident_readbacks(
     if fused.views.len() != requested_output_slots {
         return Err(BackendError::InvalidProgram {
             fix: format!(
-                "Fix: CUDA {context} fused readback produced {} output view(s) for {} requested slot(s). Keep resident readback fusion cardinality-preserving before materializing outputs.",
+                "Fix: CUDA {context} fused readback view count {} does not match {} requested output slot(s). Keep resident readback fusion cardinality-preserving before materializing outputs.",
                 fused.views.len(),
                 requested_output_slots
             ),
@@ -71,7 +71,7 @@ pub(crate) fn validate_fused_resident_readbacks(
     if fused.bytes != staged_copy_bytes {
         return Err(BackendError::InvalidProgram {
             fix: format!(
-                "Fix: CUDA {context} fused readback reports {} byte(s) but stages {} byte(s). Keep resident readback telemetry equal to the fused copy plan.",
+                "Fix: CUDA {context} fused readback reports {} telemetry bytes but stages {} bytes. Keep resident readback telemetry equal to the fused copy plan.",
                 fused.bytes, staged_copy_bytes
             ),
         });
@@ -83,7 +83,7 @@ pub(crate) fn validate_fused_resident_readbacks(
         let Some(copy) = fused.copies.get(view.copy_slot) else {
             return Err(BackendError::InvalidProgram {
                 fix: format!(
-                    "Fix: CUDA {context} fused readback view {view_index} references missing copy slot {} for {} byte(s). Rebuild the resident readback fusion plan before materializing outputs.",
+                    "Fix: CUDA {context} fused readback view {view_index} references missing copy_slot {} for {} byte(s). Rebuild the resident readback fusion plan before materializing outputs.",
                     view.copy_slot,
                     view.byte_len
                 ),
@@ -101,7 +101,7 @@ pub(crate) fn validate_fused_resident_readbacks(
         if view_end > copy.byte_len {
             return Err(BackendError::InvalidProgram {
                 fix: format!(
-                    "Fix: CUDA {context} fused readback view {view_index} requested bytes [{}..{}) from a {} byte fused copy. Rebuild the resident readback fusion plan before materializing outputs.",
+                    "Fix: CUDA {context} fused readback view {view_index} requested bytes [{}..{}) which exceeds the {} byte fused copy. Rebuild the resident readback fusion plan before materializing outputs.",
                     view.byte_offset, view_end, copy.byte_len
                 ),
             });
@@ -206,9 +206,12 @@ mod tests {
             non_empty_copy_count: 1,
             bytes: 4,
         };
-        assert!(
-            validate_fused_resident_readbacks(&bad_cardinality, 1, "test").is_err(),
-            "Fix: CUDA fused readback validation must reject plans that would silently skip output slots."
+        let cardinality = validate_fused_resident_readbacks(&bad_cardinality, 1, "test")
+            .unwrap_err();
+        assert_eq!(
+            cardinality.to_string().contains("view count"),
+            true,
+            "Fix: CUDA fused readback validation must reject plans that would silently skip output slots: {cardinality}"
         );
 
         let bad_slot = FusedResidentReadbacks {
@@ -225,9 +228,11 @@ mod tests {
             non_empty_copy_count: 1,
             bytes: 4,
         };
-        assert!(
-            validate_fused_resident_readbacks(&bad_slot, 1, "test").is_err(),
-            "Fix: CUDA fused readback validation must reject views pointing outside staged copy slots."
+        let slot = validate_fused_resident_readbacks(&bad_slot, 1, "test").unwrap_err();
+        assert_eq!(
+            slot.to_string().contains("copy_slot"),
+            true,
+            "Fix: CUDA fused readback validation must reject views pointing outside staged copy slots: {slot}"
         );
 
         let bad_range = FusedResidentReadbacks {
@@ -244,9 +249,11 @@ mod tests {
             non_empty_copy_count: 1,
             bytes: 4,
         };
-        assert!(
-            validate_fused_resident_readbacks(&bad_range, 1, "test").is_err(),
-            "Fix: CUDA fused readback validation must reject output views that overrun the fused copy."
+        let range = validate_fused_resident_readbacks(&bad_range, 1, "test").unwrap_err();
+        assert_eq!(
+            range.to_string().contains("exceeds"),
+            true,
+            "Fix: CUDA fused readback validation must reject output views that overrun the fused copy: {range}"
         );
 
         let bad_bytes = FusedResidentReadbacks {
@@ -263,9 +270,11 @@ mod tests {
             non_empty_copy_count: 1,
             bytes: 3,
         };
-        assert!(
-            validate_fused_resident_readbacks(&bad_bytes, 1, "test").is_err(),
-            "Fix: CUDA fused readback validation must reject telemetry byte counts that drift from staged copies."
+        let bytes = validate_fused_resident_readbacks(&bad_bytes, 1, "test").unwrap_err();
+        assert_eq!(
+            bytes.to_string().contains("bytes"),
+            true,
+            "Fix: CUDA fused readback validation must reject telemetry byte counts that drift from staged copies: {bytes}"
         );
     }
 

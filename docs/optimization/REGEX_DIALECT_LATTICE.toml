@@ -1,0 +1,75 @@
+schema_version = 1
+
+dialect_values = [
+  "vyre_regular",
+  "re2",
+  "rust_regex",
+  "hyperscan",
+  "vectorscan",
+  "pcre2",
+  "libcudf_regex",
+]
+
+exactness_values = [
+  "exact",
+  "unsupported",
+  "prefilter",
+  "verifier",
+  "host-reference",
+]
+
+fallback_values = [
+  "native",
+  "reject",
+  "prefilter-plus-verifier",
+  "host-reference",
+  "streaming-state",
+]
+
+[[construct]]
+id = "literal"
+syntax_family = "regular"
+support = { vyre_regular = "exact", re2 = "exact", rust_regex = "exact", hyperscan = "exact", vectorscan = "exact", pcre2 = "exact", libcudf_regex = "exact" }
+fallback_route = "native"
+diagnostic_code = "VYRE_SCAN_OK_LITERAL"
+evidence_path = "vyre-libs/tests/regex_dialect_lattice.rs"
+
+[[construct]]
+id = "capture_groups"
+syntax_family = "capture"
+support = { vyre_regular = "verifier", re2 = "exact", rust_regex = "exact", hyperscan = "unsupported", vectorscan = "unsupported", pcre2 = "exact", libcudf_regex = "exact" }
+fallback_route = "prefilter-plus-verifier"
+diagnostic_code = "VYRE_SCAN_CAPTURE_EXTRACTION_REQUIRES_VERIFIER"
+evidence_path = "vyre-libs/tests/regex_dialect_lattice.rs"
+
+[[construct]]
+id = "lookaround"
+syntax_family = "pcre-compatible"
+support = { vyre_regular = "verifier", re2 = "unsupported", rust_regex = "unsupported", hyperscan = "prefilter", vectorscan = "prefilter", pcre2 = "exact", libcudf_regex = "unsupported" }
+fallback_route = "prefilter-plus-verifier"
+diagnostic_code = "VYRE_SCAN_APPROXIMATED_LOOKAROUND_REQUIRES_VERIFIER"
+evidence_path = "vyre-libs/tests/regex_dialect_lattice.rs"
+
+[[construct]]
+id = "backreference"
+syntax_family = "backtracking"
+support = { vyre_regular = "unsupported", re2 = "unsupported", rust_regex = "unsupported", hyperscan = "unsupported", vectorscan = "unsupported", pcre2 = "exact", libcudf_regex = "unsupported" }
+fallback_route = "reject"
+diagnostic_code = "VYRE_SCAN_UNSUPPORTED_BACKREFERENCE"
+evidence_path = "vyre-libs/tests/regex_dialect_lattice.rs"
+
+[[construct]]
+id = "unicode_classes"
+syntax_family = "unicode"
+support = { vyre_regular = "verifier", re2 = "exact", rust_regex = "exact", hyperscan = "unsupported", vectorscan = "unsupported", pcre2 = "exact", libcudf_regex = "exact" }
+fallback_route = "host-reference"
+diagnostic_code = "VYRE_SCAN_UNSUPPORTED_UNICODE_MODE_GPU"
+evidence_path = "vyre-libs/tests/regex_dialect_lattice.rs"
+
+[[construct]]
+id = "streaming_chunks"
+syntax_family = "streaming"
+support = { vyre_regular = "exact", re2 = "host-reference", rust_regex = "host-reference", hyperscan = "exact", vectorscan = "exact", pcre2 = "host-reference", libcudf_regex = "unsupported" }
+fallback_route = "streaming-state"
+diagnostic_code = "VYRE_SCAN_OK_STREAMING_STATE"
+evidence_path = "vyre-libs/tests/regex_dialect_lattice.rs"

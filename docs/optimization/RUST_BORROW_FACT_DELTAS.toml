@@ -1,0 +1,41 @@
+# Rust borrow fact relation deltas for VX-654.
+# These rows turn frontend borrow state into reusable relation input.
+
+schema = "vyre.frontend.rust.borrow_fact_delta.v1"
+owner = "parser_frontend"
+evidence_tokens = ["CODEQL_FLOW", "DATAFROG"]
+
+fact_kinds = [
+  "borrow",
+  "region",
+  "loan",
+  "alias",
+  "escape",
+]
+
+required_fields = [
+  "fact_kind",
+  "tuple",
+  "source_span",
+  "provenance",
+  "delta_op",
+  "diagnostic_parity",
+]
+
+[[delta]]
+id = "mutable-borrow-insert"
+fact_kind = "borrow"
+tuple = "borrow(owner=x, loan=L1, region='a, mutability=mutable)"
+source_span = "src/lib.rs:11:8..11:16"
+provenance = "hir-lowering"
+delta_op = "insert"
+diagnostic_parity = "matches-rustc"
+
+[[delta]]
+id = "escaped-reference-delete"
+fact_kind = "escape"
+tuple = "escape(value=ref_y, sink=return)"
+source_span = "src/lib.rs:29:5..29:12"
+provenance = "region-solver"
+delta_op = "delete"
+diagnostic_parity = "matches-rustc-negative"

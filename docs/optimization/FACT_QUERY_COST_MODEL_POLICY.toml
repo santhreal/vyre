@@ -1,0 +1,54 @@
+[artifact]
+id = "FACT_QUERY_COST_MODEL_POLICY"
+title = "Fact query cost model and optimizer policy"
+tranche = "VX-1601..VX-1620"
+owner = "scanner_frontends"
+status = "planned_contract"
+research_sources = [
+  "APACHE_DATAFUSION_QUERY_OPTIMIZER",
+  "SUBSTRAIT_SPECIFICATION",
+  "DUCKDB_VECTOR_EXECUTION_FORMAT",
+]
+
+[scope]
+owns = [
+  "semantic fact query cost inputs and selectivity estimates",
+  "logical-to-physical rule plan rewrite admission",
+  "join ordering, predicate pushdown, projection pruning, and bitmap domain choice",
+  "plan stability and regression evidence for optimizer changes",
+  "operator-visible explanation of rule-plan decisions",
+]
+does_not_own = [
+  "semantic correctness of rules, owned by scanner rule contracts",
+  "dependency invalidation correctness, owned by CROSS_FILE_INVALIDATION_PROPAGATION_POLICY",
+  "fact extraction correctness, owned by SEMANTIC_FACT_INDEX_SCHEMA",
+  "benchmark statistical gates, owned by STATISTICAL_PERFORMANCE_GATES",
+]
+
+[cost_inputs]
+required = [
+  "relation_row_count",
+  "relation_batch_count",
+  "column_width_bytes",
+  "null_density",
+  "dictionary_cardinality",
+  "selection_density",
+  "join_key_cardinality",
+  "estimated_output_rows",
+  "batch_size",
+  "route_transfer_bytes",
+  "operator_cpu_ns",
+  "operator_gpu_ns",
+]
+
+[rewrite_policy]
+predicate_pushdown = "push filters below joins and projections only when null, unknown, and ambiguous-edge semantics are preserved"
+projection_pruning = "drop unused columns only after output provenance and diagnostics declare them unnecessary"
+join_reordering = "reorder associative joins only when rule semantics, side conditions, and cardinality confidence allow it"
+bitmap_domain = "choose compressed bitmap domains when selection density and operation mix beat row-vector scans"
+gpu_route = "choose GPU batch execution only when transfer, residency, and output-equivalence evidence beats CPU vector route"
+
+[plan_stability]
+plan_digest = "logical plan digest, optimized plan digest, physical plan digest, and cost-input digest are recorded per rule group"
+explain_required = "each nontrivial rewrite records rule name, before digest, after digest, reason, and rejected alternatives"
+regression_response = "plan changes that slow p95 or increase false reuse disable the rewrite class until stronger evidence exists"

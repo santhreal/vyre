@@ -16,11 +16,15 @@ use crate::PipelineError;
 
 mod sketch;
 mod types;
+mod errors;
 pub use sketch::{CountMinSketch, SketchTelemetry, SketchTelemetryScratch};
 use types::WindowAccumulator;
 pub use types::{
-    ControlSnapshot, MegakernelRuntimeCounters, MegakernelWatchdogSnapshot, RingOccupancy,
-    RingSlotSnapshot, RingStatus, RingTelemetry, TelemetryDecodeScratch, WindowTelemetry,
+    ControlSnapshot, MegakernelRuntimeCounters, MegakernelRuntimeEvidence,
+    MegakernelWatchdogSnapshot, RingOccupancy, RingSlotSnapshot, RingStatus, RingTelemetry,
+    RuntimeEvidenceMetricCoverage, RuntimeEvidenceMetricFamily, TelemetryDecodeCapacityEvidence,
+    TelemetryDecodeScratch, WindowTelemetry, RUNTIME_IO_EVIDENCE_SCHEMA_VERSION,
+    TELEMETRY_DECODE_CAPACITY_SCHEMA_VERSION,
 };
 
 const SLOT_WORDS_USIZE: usize = 16;
@@ -32,20 +36,18 @@ fn read_word(buf: &[u8], word_idx: usize) -> Option<u32> {
     Some(u32::from_le_bytes(bytes.try_into().ok()?))
 }
 
-fn read_slot_chunk_word_exact(slot_bytes: &[u8], word_idx: u32) -> u32 {
-    let off = telemetry_u32_to_usize(word_idx, "slot word index")
-        .checked_mul(4)
-        .unwrap_or_else(|| {
-            panic!(
-                "megakernel telemetry slot word byte offset overflowed usize. Fix: keep slot word indices within host address space."
-            )
-        });
-    u32::from_le_bytes([
-        slot_bytes[off],
-        slot_bytes[off + 1],
-        slot_bytes[off + 2],
-        slot_bytes[off + 3],
-    ])
+fn try_read_slot_chunk_word(slot_bytes: &[u8], word_idx: u32) -> Result<u32, PipelineError> {
+    let word_idx = telemetry_u32_to_usize(word_idx, "slot word index")?;
+    let off = word_idx.checked_mul(4).ok_or_else(|| {
+        errors::slot_word_offset_overflow()
+    })?;
+    let end = off.checked_add(4).ok_or_else(|| {
+        errors::slot_word_end_overflow()
+    })?;
+    let bytes = slot_bytes.get(off..end).ok_or_else(|| {
+        errors::missing_slot_word(word_idx, slot_bytes.len())
+    })?;
+    Ok(u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]))
 }
 
 fn is_sorted_unique_u32(values: &[u32]) -> bool {
@@ -55,23 +57,32 @@ fn is_sorted_unique_u32(values: &[u32]) -> bool {
 impl ControlSnapshot {
     /// Decode a structured control-buffer view.
     #[must_use]
+    #[cfg(any(test, feature = "legacy-infallible"))]
     pub fn decode(control_bytes: &[u8]) -> Self {
-        let mut out = Self::default();
-        Self::try_decode_into(control_bytes, &mut out).unwrap_or_else(|source| {
-            panic!(
-                "megakernel control telemetry decode failed: {source}. Fix: capture the full control buffer before telemetry decode."
-            )
-        });
-        out
+        match Self::try_decode(control_bytes) {
+            Ok(snapshot) => snapshot,
+            Err(_) => Self::default(),
+        }
     }
 
     /// Decode a structured control-buffer view into caller-owned storage.
+    #[cfg(any(test, feature = "legacy-infallible"))]
     pub fn decode_into(control_bytes: &[u8], out: &mut Self) {
-        Self::try_decode_into(control_bytes, out).unwrap_or_else(|source| {
-            panic!(
-                "megakernel control telemetry decode failed: {source}. Fix: capture the full control buffer before telemetry decode."
-            )
-        });
+        if Self::try_decode_into(control_bytes, out).is_err() {
+            *out = Self::default();
+        }
+    }
+
+    /// Strictly decode a structured control-buffer view into owned storage.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PipelineError`] when any fixed control word is missing from
+    /// the control snapshot.
+    pub fn try_decode(control_bytes: &[u8]) -> Result<Self, PipelineError> {
+        let mut out = Self::default();
+        Self::try_decode_into(control_bytes, &mut out)?;
+        Ok(out)
     }
 
     /// Strictly decode a structured control-buffer view.
@@ -90,7 +101,7 @@ impl ControlSnapshot {
         out.metrics.clear();
         reserve_target_capacity(
             &mut out.metrics,
-            telemetry_u32_to_usize(control::METRICS_SLOTS, "metrics slot count"),
+            telemetry_u32_to_usize(control::METRICS_SLOTS, "metrics slot count")?,
             "metrics",
         )?;
         for i in 0..control::METRICS_SLOTS {
@@ -105,7 +116,7 @@ impl ControlSnapshot {
         out.tenant_fairness.clear();
         reserve_target_capacity(
             &mut out.tenant_fairness,
-            telemetry_u32_to_usize(control::TENANT_FAIRNESS_SLOTS, "tenant fairness slot count"),
+            telemetry_u32_to_usize(control::TENANT_FAIRNESS_SLOTS, "tenant fairness slot count")?,
             "tenant fairness",
         )?;
         for i in 0..control::TENANT_FAIRNESS_SLOTS {
@@ -120,7 +131,7 @@ impl ControlSnapshot {
             telemetry_u32_to_usize(
                 control::PRIORITY_FAIRNESS_SLOTS,
                 "priority fairness slot count",
-            ),
+            )?,
             "priority fairness",
         )?;
         for i in 0..control::PRIORITY_FAIRNESS_SLOTS {
@@ -136,6 +147,7 @@ impl ControlSnapshot {
 impl RingTelemetry {
     /// Decode the ring and control buffers into one structured snapshot.
     #[must_use]
+    #[cfg(any(test, feature = "legacy-infallible"))]
     pub fn decode(control_bytes: &[u8], ring_bytes: &[u8]) -> Self {
         Self::decode_with_window_opcodes(control_bytes, ring_bytes, &[])
     }
@@ -154,35 +166,21 @@ impl RingTelemetry {
     /// whose opcode is present in `window_opcodes` into ticketed route-window
     /// telemetry records.
     #[must_use]
+    #[cfg(any(test, feature = "legacy-infallible"))]
     pub fn decode_with_window_opcodes(
         control_bytes: &[u8],
         ring_bytes: &[u8],
         window_opcodes: &[u32],
     ) -> Self {
-        validate_telemetry_buffers(control_bytes, ring_bytes).unwrap_or_else(|source| {
-            panic!(
-                "megakernel ring telemetry decode failed: {source}. Fix: capture full control and whole ring-slot buffers before telemetry decode."
-            )
-        });
-        let mut out = Self::default();
-        let mut scratch = TelemetryDecodeScratch::new();
-        Self::try_decode_with_window_opcodes_into_unchecked(
-            control_bytes,
-            ring_bytes,
-            window_opcodes,
-            &mut out,
-            &mut scratch,
-        )
-        .unwrap_or_else(|source| {
-            panic!(
-                "megakernel ring telemetry decode failed: {source}. Fix: capture full control and whole ring-slot buffers before telemetry decode."
-            )
-        });
-        out
+        match Self::try_decode_with_window_opcodes(control_bytes, ring_bytes, window_opcodes) {
+            Ok(telemetry) => telemetry,
+            Err(_) => Self::default(),
+        }
     }
 
     /// Decode the ring and control buffers into caller-owned telemetry and
     /// scratch storage.
+    #[cfg(any(test, feature = "legacy-infallible"))]
     pub fn decode_with_window_opcodes_into(
         control_bytes: &[u8],
         ring_bytes: &[u8],
@@ -190,22 +188,16 @@ impl RingTelemetry {
         out: &mut Self,
         scratch: &mut TelemetryDecodeScratch,
     ) {
-        validate_telemetry_buffers(control_bytes, ring_bytes).unwrap_or_else(|source| {
-            panic!(
-                "megakernel ring telemetry decode failed: {source}. Fix: capture full control and whole ring-slot buffers before telemetry decode."
-            )
-        });
-        Self::try_decode_with_window_opcodes_into_unchecked(
+        Self::try_decode_with_window_opcodes_into(
             control_bytes,
             ring_bytes,
             window_opcodes,
             out,
             scratch,
         )
-        .unwrap_or_else(|source| {
-            panic!(
-                "megakernel ring telemetry decode failed: {source}. Fix: capture full control and whole ring-slot buffers before telemetry decode."
-            )
+        .unwrap_or_else(|_| {
+            *out = Self::default();
+            scratch.clear();
         });
     }
 
@@ -225,7 +217,7 @@ impl RingTelemetry {
         }
 
         ControlSnapshot::try_decode_into(control_bytes, &mut out.control)?;
-        let slot_count = ring_bytes.len() / slot_byte_len();
+        let slot_count = ring_bytes.len() / slot_byte_len()?;
         out.occupancy = RingOccupancy::default();
         out.slots.clear();
         reserve_target_capacity(&mut out.slots, slot_count, "ring slots")?;
@@ -268,14 +260,14 @@ impl RingTelemetry {
         }
         let decode_windows = !matches!(window_opcode_matcher, WindowOpcodeMatcher::None);
 
-        let slot_byte_len = slot_byte_len();
+        let slot_byte_len = slot_byte_len()?;
         for (slot_idx, slot_bytes) in ring_bytes.chunks_exact(slot_byte_len).enumerate() {
-            let slot_idx = u32::try_from(slot_idx).unwrap_or_else(|source| {
-                panic!(
+            let slot_idx = u32::try_from(slot_idx).map_err(|source| {
+                PipelineError::Backend(format!(
                     "megakernel telemetry slot index cannot fit u32: {source}. Fix: shard ring snapshots before host decode."
-                )
-            });
-            let status_raw = read_slot_chunk_word_exact(slot_bytes, STATUS_WORD);
+                ))
+            })?;
+            let status_raw = try_read_slot_chunk_word(slot_bytes, STATUS_WORD)?;
             let status = RingStatus::from_raw(status_raw);
             match status {
                 RingStatus::Empty => out.occupancy.empty += 1,
@@ -288,12 +280,12 @@ impl RingTelemetry {
                 RingStatus::Fault => out.occupancy.fault += 1,
                 RingStatus::Unknown(_) => out.occupancy.unknown += 1,
             }
-            let tenant_id = read_slot_chunk_word_exact(slot_bytes, TENANT_WORD);
-            let opcode = read_slot_chunk_word_exact(slot_bytes, OPCODE_WORD);
+            let tenant_id = try_read_slot_chunk_word(slot_bytes, TENANT_WORD)?;
+            let opcode = try_read_slot_chunk_word(slot_bytes, OPCODE_WORD)?;
             let args_prefix = [
-                read_slot_chunk_word_exact(slot_bytes, ARG0_WORD),
-                read_slot_chunk_word_exact(slot_bytes, ARG0_WORD + 1),
-                read_slot_chunk_word_exact(slot_bytes, ARG0_WORD + 2),
+                try_read_slot_chunk_word(slot_bytes, ARG0_WORD)?,
+                try_read_slot_chunk_word(slot_bytes, ARG0_WORD + 1)?,
+                try_read_slot_chunk_word(slot_bytes, ARG0_WORD + 2)?,
             ];
             let is_window_opcode = match window_opcode_matcher {
                 WindowOpcodeMatcher::None => false,
@@ -416,12 +408,12 @@ impl RingTelemetry {
 
     /// Active slots matching a given opcode.
     #[must_use]
+    #[cfg(any(test, feature = "legacy-infallible"))]
     pub fn active_slots_for_opcode(&self, opcode: u32) -> Vec<&RingSlotSnapshot> {
-        self.try_active_slots_for_opcode(opcode).unwrap_or_else(|source| {
-            panic!(
-                "megakernel active-slot telemetry query failed: {source}. Fix: decode into caller-owned reusable slot scratch."
-            )
-        })
+        match self.try_active_slots_for_opcode(opcode) {
+            Ok(slots) => slots,
+            Err(_) => Vec::default(),
+        }
     }
 
     /// Active slots matching a given opcode with fallible output staging.
@@ -433,7 +425,7 @@ impl RingTelemetry {
         &self,
         opcode: u32,
     ) -> Result<Vec<&RingSlotSnapshot>, PipelineError> {
-        let mut out = Vec::new();
+        let mut out = Vec::default();
         self.try_active_slots_for_opcode_into(opcode, &mut out)?;
         Ok(out)
     }
@@ -449,17 +441,15 @@ impl RingTelemetry {
     }
 
     /// Active slots matching a given opcode into caller-owned storage.
+    #[cfg(any(test, feature = "legacy-infallible"))]
     pub fn active_slots_for_opcode_into<'a>(
         &'a self,
         opcode: u32,
         out: &mut Vec<&'a RingSlotSnapshot>,
     ) {
-        self.try_active_slots_for_opcode_into(opcode, out)
-            .unwrap_or_else(|source| {
-                panic!(
-                    "megakernel active-slot telemetry query failed: {source}. Fix: decode into caller-owned reusable slot scratch."
-                )
-            });
+        if self.try_active_slots_for_opcode_into(opcode, out).is_err() {
+            out.clear();
+        }
     }
 
     /// Active slots matching a given opcode into caller-owned storage.
@@ -483,12 +473,12 @@ impl RingTelemetry {
 
     /// Unfinished ticketed windows.
     #[must_use]
+    #[cfg(any(test, feature = "legacy-infallible"))]
     pub fn active_windows(&self) -> Vec<&WindowTelemetry> {
-        self.try_active_windows().unwrap_or_else(|source| {
-            panic!(
-                "megakernel active-window telemetry query failed: {source}. Fix: decode into caller-owned reusable window scratch."
-            )
-        })
+        match self.try_active_windows() {
+            Ok(windows) => windows,
+            Err(_) => Vec::default(),
+        }
     }
 
     /// Unfinished ticketed windows with fallible output staging.
@@ -497,18 +487,17 @@ impl RingTelemetry {
     ///
     /// Returns [`PipelineError`] when output storage cannot be reserved.
     pub fn try_active_windows(&self) -> Result<Vec<&WindowTelemetry>, PipelineError> {
-        let mut out = Vec::new();
+        let mut out = Vec::default();
         self.try_active_windows_into(&mut out)?;
         Ok(out)
     }
 
     /// Unfinished ticketed windows into caller-owned storage.
+    #[cfg(any(test, feature = "legacy-infallible"))]
     pub fn active_windows_into<'a>(&'a self, out: &mut Vec<&'a WindowTelemetry>) {
-        self.try_active_windows_into(out).unwrap_or_else(|source| {
-            panic!(
-                "megakernel active-window telemetry query failed: {source}. Fix: decode into caller-owned reusable window scratch."
-            )
-        });
+        if self.try_active_windows_into(out).is_err() {
+            out.clear();
+        }
     }
 
     /// Unfinished ticketed windows into caller-owned storage.
@@ -542,7 +531,21 @@ impl RingTelemetry {
     /// Aggregate queue, idle, fairness, and drain counters into one cheap
     /// runtime snapshot for SRE dashboards and launch-policy feedback.
     #[must_use]
+    #[cfg(any(test, feature = "legacy-infallible"))]
     pub fn runtime_counters(&self) -> MegakernelRuntimeCounters {
+        match self.try_runtime_counters() {
+            Ok(counters) => counters,
+            Err(_) => zero_runtime_counters(),
+        }
+    }
+
+    /// Fallibly aggregate queue, idle, fairness, and drain counters.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PipelineError`] when counter aggregation overflows or decoded
+    /// telemetry contains an impossible relationship.
+    pub fn try_runtime_counters(&self) -> Result<MegakernelRuntimeCounters, PipelineError> {
         let total_slots = self.occupancy.total_slots();
         let queue_depth = self.occupancy.queue_depth();
         let gpu_idle_slots = self.occupancy.empty;
@@ -552,31 +555,21 @@ impl RingTelemetry {
             let raw_idle_ppm = (u64::from(gpu_idle_slots) * 1_000_000) / u64::from(total_slots);
             raw_idle_ppm.min(1_000_000) as u32
         };
-        let frontier_density_bps = density_bps(queue_depth, total_slots);
+        let frontier_density_bps = try_density_bps(queue_depth, total_slots)?;
         let active_slots = total_slots.saturating_sub(gpu_idle_slots);
-        let occupancy_proxy_bps = density_bps(active_slots, total_slots);
-        let tenant_fairness_total = self
-            .control
-            .tenant_fairness
-            .iter()
-            .try_fold(0u64, |acc, &count| acc.checked_add(u64::from(count)))
-            .unwrap_or_else(|| {
-                panic!(
-                    "megakernel tenant fairness total overflowed u64. Fix: shard tenant counters before telemetry aggregation."
-                )
-            });
-        let priority_fairness_total = self
-            .control
-            .priority_fairness
-            .iter()
-            .try_fold(0u64, |acc, &count| acc.checked_add(u64::from(count)))
-            .unwrap_or_else(|| {
-                panic!(
-                    "megakernel priority fairness total overflowed u64. Fix: shard priority counters before telemetry aggregation."
-                )
-            });
-        let tenant_fairness_skew = fairness_skew(&self.control.tenant_fairness);
-        MegakernelRuntimeCounters {
+        let occupancy_proxy_bps = try_density_bps(active_slots, total_slots)?;
+        let tenant_fairness_total = try_sum_u32_as_u64(
+            &self.control.tenant_fairness,
+            "tenant fairness total",
+            "shard tenant counters before telemetry aggregation",
+        )?;
+        let priority_fairness_total = try_sum_u32_as_u64(
+            &self.control.priority_fairness,
+            "priority fairness total",
+            "shard priority counters before telemetry aggregation",
+        )?;
+        let tenant_fairness_skew = try_fairness_skew(&self.control.tenant_fairness)?;
+        Ok(MegakernelRuntimeCounters {
             total_slots,
             queue_depth,
             gpu_idle_slots,
@@ -590,35 +583,48 @@ impl RingTelemetry {
             priority_fairness_total,
             requeue_slots: self.occupancy.requeue,
             fault_slots: self.occupancy.fault,
-        }
+        })
     }
 
     /// Derive persistent-kernel health from two snapshots without polling the
     /// device or synchronizing with the GPU.
     #[must_use]
+    #[cfg(any(test, feature = "legacy-infallible"))]
     pub fn health_since(&self, previous: &RingTelemetry) -> MegakernelWatchdogSnapshot {
-        let counters = self.runtime_counters();
+        match self.try_health_since(previous) {
+            Ok(snapshot) => snapshot,
+            Err(_) => zero_watchdog_snapshot(),
+        }
+    }
+
+    /// Fallibly derive persistent-kernel health from two snapshots.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PipelineError`] when counters wrap, move backwards, or cannot
+    /// be aggregated without overflow.
+    pub fn try_health_since(
+        &self,
+        previous: &RingTelemetry,
+    ) -> Result<MegakernelWatchdogSnapshot, PipelineError> {
+        let counters = self.try_runtime_counters()?;
         let done_delta = self
             .control
             .done_count
             .checked_sub(previous.control.done_count)
-            .unwrap_or_else(|| {
-                panic!(
-                    "megakernel done counter moved backwards from {} to {}. Fix: treat counter reset/wrap as a new telemetry epoch.",
-                    previous.control.done_count,
-                    self.control.done_count
-                )
-            });
+            .ok_or_else(|| {
+                errors::done_counter_backwards(previous.control.done_count, self.control.done_count)
+            })?;
         let suspected_stall =
             counters.queue_depth > 0 && done_delta == 0 && counters.fault_slots == 0;
-        MegakernelWatchdogSnapshot {
+        Ok(MegakernelWatchdogSnapshot {
             done_delta,
             queue_depth: counters.queue_depth,
             fault_slots: counters.fault_slots,
             requeue_slots: counters.requeue_slots,
             gpu_idle_ppm: counters.gpu_idle_ppm,
             suspected_stall,
-        }
+        })
     }
 
     /// Feed telemetry into the shared launch policy.
@@ -630,7 +636,9 @@ impl RingTelemetry {
         &self,
         mut request: MegakernelLaunchRequest,
     ) -> Result<MegakernelLaunchRecommendation, vyre_driver::BackendError> {
-        let counters = self.runtime_counters();
+        let counters = self
+            .try_runtime_counters()
+            .map_err(errors::launch_telemetry_failed)?;
         if request.graph_node_count == 0 {
             request.graph_node_count = counters.total_slots;
         }
@@ -647,62 +655,77 @@ impl RingTelemetry {
             .filter(|(_, count)| *count > 0)
             .count()
             .try_into()
-            .unwrap_or_else(|source| {
-                panic!(
-                    "megakernel hot opcode count cannot fit u32: {source}. Fix: cap metrics slots at the protocol boundary."
-                )
-            });
-        request.hot_window_count = self
-            .windows
-            .iter()
-            .filter(|window| {
-                window
-                    .required_slots
-                    .checked_add(window.lookahead_slots)
-                    .unwrap_or_else(|| {
-                        panic!(
-                            "megakernel route-window slot demand overflowed u32. Fix: shard route windows before telemetry aggregation."
-                        )
-                    })
-                    >= 4
-            })
-            .count()
+            .map_err(errors::hot_opcode_count_overflow)?;
+        let mut hot_window_count = 0usize;
+        for window in &self.windows {
+            let demand = window
+                .required_slots
+                .checked_add(window.lookahead_slots)
+                .ok_or_else(|| {
+                    errors::route_window_demand_overflow()
+                })?;
+            if demand >= 4 {
+                hot_window_count = hot_window_count.checked_add(1).ok_or_else(|| {
+                    errors::hot_window_count_overflow()
+                })?;
+            }
+        }
+        request.hot_window_count = hot_window_count
             .try_into()
-            .unwrap_or_else(|source| {
-                panic!(
-                    "megakernel hot window count cannot fit u32: {source}. Fix: shard telemetry windows before launch recommendation."
-                )
-            });
+            .map_err(errors::hot_window_count_too_wide)?;
         request.requeue_count = request
             .requeue_count
             .checked_add(u64::from(self.occupancy.requeue))
-            .unwrap_or_else(|| {
-                panic!(
-                    "megakernel requeue count overflowed u64. Fix: shard telemetry windows before launch recommendation."
-                )
-            });
+            .ok_or_else(errors::requeue_count_overflow)?;
         MegakernelLaunchPolicy::standard().recommend(request)
     }
 }
 
-fn read_required_control_word(control_bytes: &[u8], word_idx: usize) -> Result<u32, PipelineError> {
-    read_word(control_bytes, word_idx).ok_or_else(|| {
-        PipelineError::Backend(format!(
-            "megakernel control snapshot is missing required word {word_idx}. Fix: capture the full control buffer before telemetry decode."
-        ))
-    })
+/// All-zero runtime counters, returned by the infallible `runtime_counters`
+/// accessor when the fallible decode path reports an error.
+#[cfg(any(test, feature = "legacy-infallible"))]
+fn zero_runtime_counters() -> MegakernelRuntimeCounters {
+    MegakernelRuntimeCounters {
+        total_slots: 0,
+        queue_depth: 0,
+        gpu_idle_slots: 0,
+        gpu_idle_ppm: 0,
+        frontier_density_bps: 0,
+        occupancy_proxy_bps: 0,
+        drained_slots: 0,
+        unreclaimed_done_slots: 0,
+        tenant_fairness_total: 0,
+        tenant_fairness_skew: 0,
+        priority_fairness_total: 0,
+        requeue_slots: 0,
+        fault_slots: 0,
+    }
 }
 
-fn density_bps(numerator: u32, denominator: u32) -> u16 {
+/// All-zero watchdog snapshot, returned by the infallible `health_since`
+/// accessor when the fallible derivation path reports an error.
+#[cfg(any(test, feature = "legacy-infallible"))]
+fn zero_watchdog_snapshot() -> MegakernelWatchdogSnapshot {
+    MegakernelWatchdogSnapshot {
+        done_delta: 0,
+        queue_depth: 0,
+        fault_slots: 0,
+        requeue_slots: 0,
+        gpu_idle_ppm: 0,
+        suspected_stall: false,
+    }
+}
+
+fn read_required_control_word(control_bytes: &[u8], word_idx: usize) -> Result<u32, PipelineError> {
+    read_word(control_bytes, word_idx).ok_or_else(|| errors::missing_control_word(word_idx))
+}
+
+fn try_density_bps(numerator: u32, denominator: u32) -> Result<u16, PipelineError> {
     if denominator == 0 {
-        return 0;
+        return Ok(0);
     }
     let bps = (u64::from(numerator) * 10_000) / u64::from(denominator);
-    u16::try_from(bps.min(u64::from(u16::MAX))).unwrap_or_else(|source| {
-        panic!(
-            "megakernel density bps cannot fit u16 after clamp: {source}. Fix: repair density accounting."
-        )
-    })
+    u16::try_from(bps.min(u64::from(u16::MAX))).map_err(errors::density_bps_overflow)
 }
 
 fn validate_telemetry_buffers(
@@ -710,73 +733,64 @@ fn validate_telemetry_buffers(
     ring_bytes: &[u8],
 ) -> Result<(), PipelineError> {
     validate_control_snapshot(control_bytes)?;
-    let slot_bytes = slot_byte_len();
+    let slot_bytes = slot_byte_len()?;
     if ring_bytes.len() % slot_bytes != 0 {
-        return Err(PipelineError::Backend(format!(
-            "megakernel ring snapshot has {} bytes, not a multiple of slot size {slot_bytes}. Fix: capture whole ring slots.",
-            ring_bytes.len()
-        )));
+        return Err(errors::ring_slot_alignment(ring_bytes.len(), slot_bytes));
     }
     let slot_count = ring_bytes.len() / slot_bytes;
     if u32::try_from(slot_count).is_err() {
-        return Err(PipelineError::Backend(format!(
-            "megakernel ring snapshot has {slot_count} slots, above the u32 telemetry ABI. Fix: shard ring snapshots before host decode."
-        )));
+        return Err(errors::ring_slot_count_too_wide(slot_count));
     }
     Ok(())
 }
 
 fn validate_control_snapshot(control_bytes: &[u8]) -> Result<(), PipelineError> {
     let min_control = super::protocol::control_byte_len(0).ok_or_else(|| {
-        PipelineError::Backend(
-            "megakernel control length overflowed usize. Fix: keep protocol constants bounded."
-                .to_string(),
-        )
+        errors::control_length_overflow()
     })?;
     if control_bytes.len() < min_control || control_bytes.len() % 4 != 0 {
-        return Err(PipelineError::Backend(format!(
-            "megakernel control snapshot has {} bytes, expected at least {min_control} and 4-byte alignment. Fix: capture the full control buffer.",
-            control_bytes.len()
-        )));
+        return Err(errors::bad_control_snapshot(
+            control_bytes.len(),
+            min_control,
+        ));
     }
     Ok(())
 }
 
-fn slot_byte_len() -> usize {
-    SLOT_WORDS_USIZE.checked_mul(4).unwrap_or_else(|| {
-        panic!(
-            "megakernel telemetry slot byte width overflowed usize. Fix: keep SLOT_WORDS within host address space."
-        )
+fn slot_byte_len() -> Result<usize, PipelineError> {
+    SLOT_WORDS_USIZE.checked_mul(4).ok_or_else(|| {
+        errors::slot_byte_width_overflow()
     })
 }
 
-fn telemetry_u32_to_usize(value: u32, label: &'static str) -> usize {
-    usize::try_from(value).unwrap_or_else(|source| {
-        panic!(
-            "megakernel telemetry {label} value {value} cannot fit usize: {source}. Fix: shard telemetry buffers before host decode."
-        )
-    })
+fn telemetry_u32_to_usize(value: u32, label: &'static str) -> Result<usize, PipelineError> {
+    usize::try_from(value).map_err(|source| errors::telemetry_u32_to_usize(value, label, source))
 }
 
 fn control_word_index(word: u32) -> Result<usize, PipelineError> {
-    usize::try_from(word).map_err(|source| {
-        PipelineError::Backend(format!(
-            "megakernel control word index {word} cannot fit usize: {source}. Fix: keep control ABI words within host address space."
-        ))
-    })
+    usize::try_from(word).map_err(|source| errors::control_word_index(word, source))
 }
 
 fn control_offset_index(base: u32, offset: u32) -> Result<usize, PipelineError> {
     let word = base.checked_add(offset).ok_or_else(|| {
-        PipelineError::Backend(
-            "megakernel control word offset overflowed u32. Fix: shard telemetry arrays before host decode."
-                .to_string(),
-        )
+        errors::control_word_offset_overflow()
     })?;
     control_word_index(word)
 }
 
-fn fairness_skew(counters: &[u32]) -> u32 {
+fn try_sum_u32_as_u64(
+    counters: &[u32],
+    label: &'static str,
+    fix: &'static str,
+) -> Result<u64, PipelineError> {
+    counters.iter().try_fold(0u64, |acc, &count| {
+        acc.checked_add(u64::from(count)).ok_or_else(|| {
+            errors::counter_sum_overflow(label, fix)
+        })
+    })
+}
+
+fn try_fairness_skew(counters: &[u32]) -> Result<u32, PipelineError> {
     let mut min_nonzero = u32::MAX;
     let mut max = 0u32;
     for &count in counters {
@@ -786,12 +800,10 @@ fn fairness_skew(counters: &[u32]) -> u32 {
         }
     }
     if min_nonzero == u32::MAX {
-        0
+        Ok(0)
     } else {
-        max.checked_sub(min_nonzero).unwrap_or_else(|| {
-            panic!(
-                "megakernel fairness skew saw max {max} below min_nonzero {min_nonzero}. Fix: reject malformed fairness counters before telemetry aggregation."
-            )
+        max.checked_sub(min_nonzero).ok_or_else(|| {
+            errors::fairness_skew_invalid(max, min_nonzero)
         })
     }
 }

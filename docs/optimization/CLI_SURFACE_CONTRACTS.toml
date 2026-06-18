@@ -1,0 +1,40 @@
+# CLI surface contracts for VX-821 through VX-825 and VX-831.
+# Command grammar, help, config/env wiring, completions, and TTY behavior share one surface contract.
+
+schema = "vyre.operator.cli_surface_contract.v1"
+owner = "reporting"
+evidence_tokens = ["CLAP_RS", "GNU_CLI_STANDARDS", "POSIX_UTILITY_CONVENTIONS"]
+
+required_fields = [
+  "command_id",
+  "subcommand",
+  "option_contract",
+  "help_contract",
+  "config_binding",
+  "env_binding",
+  "completion_contract",
+  "tty_policy",
+  "machine_output_policy",
+]
+
+[[command]]
+command_id = "vyre-scan"
+subcommand = "scan"
+option_contract = "short-and-long-options-with-stable-long-names"
+help_contract = "short-help-and-long-help-include-config-precedence"
+config_binding = "CONFIG_PRECEDENCE_AND_TIERING.toml"
+env_binding = "documented-env-vars-only"
+completion_contract = "shell-completions-generated-from-cli-schema"
+tty_policy = "human-progress-only-on-tty"
+machine_output_policy = "json-sarif-and-quiet-modes-are-stable"
+
+[[command]]
+command_id = "vyre-explain"
+subcommand = "explain"
+option_contract = "long-options-preferred-for-public-docs"
+help_contract = "examples-and-exit-codes-listed"
+config_binding = "CONFIG_PRECEDENCE_AND_TIERING.toml"
+env_binding = "documented-env-vars-only"
+completion_contract = "shell-completions-generated-from-cli-schema"
+tty_policy = "no-color-when-non-tty-or-no-color"
+machine_output_policy = "structured-error-and-report-fields-are-stable"

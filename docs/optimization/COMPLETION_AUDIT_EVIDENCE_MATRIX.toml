@@ -1,0 +1,57 @@
+# Completion audit evidence matrix for VX-997 through VX-1000.
+# Completion is blocked until every explicit requirement has direct current-state evidence.
+
+schema = "vyre.release.completion_audit_evidence_matrix.v1"
+owner = "coordination"
+evidence_tokens = ["GITHUB_ACTIONS_WORKFLOW", "SLSA_PROVENANCE", "OPENSSF_SECURITY_INSIGHTS"]
+
+required_fields = [
+  "requirement_id",
+  "scope",
+  "authoritative_evidence",
+  "evidence_status",
+  "completion_decision",
+  "blocker_if_unverified",
+  "publication_boundary",
+  "proof_gate",
+]
+
+[[requirement]]
+requirement_id = "all-vx-rows-have-registries-and-proof-gates"
+scope = "ALL_AXES_ACCELERATION_PLAN.md"
+authoritative_evidence = "row-to-registry-to-proof-gate-current-state-audit"
+evidence_status = "requires-explicit-audit"
+completion_decision = "not-complete-until-audit-passes"
+blocker_if_unverified = true
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+proof_gate = "release_completion_governance.rs"
+
+[[requirement]]
+requirement_id = "public-private-repo-boundary"
+scope = "public-vyre-private-santh"
+authoritative_evidence = "publication-boundary-manifest-and-package-contents"
+evidence_status = "requires-package-audit"
+completion_decision = "not-complete-until-public-package-audit-passes"
+blocker_if_unverified = true
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+proof_gate = "release_completion_governance.rs"
+
+[[requirement]]
+requirement_id = "tests-gates-generators-git-status"
+scope = "full-release-validation"
+authoritative_evidence = "explicit-user-authorized-validation-output"
+evidence_status = "not-run-in-this-session"
+completion_decision = "not-complete-without-user-authorized-validation"
+blocker_if_unverified = true
+publication_boundary = "local-evidence-redacted-summary"
+proof_gate = "release_completion_governance.rs"
+
+[[requirement]]
+requirement_id = "research-source-ledger-closure"
+scope = "all evidence tokens"
+authoritative_evidence = "source-ledger-key-coverage-audit"
+evidence_status = "requires-explicit-audit"
+completion_decision = "not-complete-until-ledger-closure-passes"
+blocker_if_unverified = true
+publication_boundary = "public-vyre-artifact"
+proof_gate = "release_completion_governance.rs"

@@ -1,6 +1,10 @@
 //! Generated live CUDA-resident sequence/reference differential matrix.
 
 mod common;
+#[path = "generated_resident_sequence_cuda_reference_matrix/basic_sequence_contracts.rs"]
+mod basic_sequence_contracts;
+#[path = "generated_resident_sequence_cuda_reference_matrix/repeated_sequence_contracts.rs"]
+mod repeated_sequence_contracts;
 
 use common::{
     assert_compact_ranges_match, assert_f32_output_lanes, assert_u32_output_lanes, bool_bytes,
@@ -16,212 +20,6 @@ use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 const OUTPUT_BYTES: usize = LANE_COUNT * std::mem::size_of::<u32>();
 const MAX_F32_ULP: u32 = 1;
-
-#[test]
-fn generated_resident_u32_sequence_matches_reference_on_live_cuda() {
-    let backend = CudaBackendRegistration::new(live_backend());
-    let input = generated_u32_values(0x1020_3040);
-    let input_bytes = u32_bytes(&input);
-    let first = u32_sequence_first_program();
-    let second = u32_sequence_second_program();
-    let expected_tmp = reference_outputs(
-        &first,
-        std::slice::from_ref(&input_bytes),
-        "resident_u32_sequence_first",
-    );
-    let expected = reference_outputs(&second, &expected_tmp, "resident_u32_sequence_second");
-    let actual = dispatch_two_step_sequence(
-        &backend,
-        &first,
-        &second,
-        &input_bytes,
-        DataType::U32,
-        "resident_u32_sequence",
-    );
-    let checked = assert_u32_output_lanes(
-        "resident_u32_sequence",
-        LANE_COUNT,
-        std::slice::from_ref(&actual),
-        &expected,
-    );
-    assert_eq!(
-        checked, LANE_COUNT,
-        "Fix: resident u32 sequence matrix must compare every output lane."
-    );
-}
-
-#[test]
-fn generated_resident_bool_sequence_matches_reference_on_live_cuda() {
-    let backend = CudaBackendRegistration::new(live_backend());
-    let input = generated_bool_values(0x3141_5926);
-    let input_bytes = bool_bytes(&input);
-    let first = bool_sequence_first_program();
-    let second = bool_sequence_second_program();
-    let expected_tmp = reference_outputs(
-        &first,
-        std::slice::from_ref(&input_bytes),
-        "resident_bool_sequence_first",
-    );
-    let expected = reference_outputs(&second, &expected_tmp, "resident_bool_sequence_second");
-    let actual = dispatch_two_step_sequence(
-        &backend,
-        &first,
-        &second,
-        &input_bytes,
-        DataType::Bool,
-        "resident_bool_sequence",
-    );
-    let checked = assert_u32_output_lanes(
-        "resident_bool_sequence",
-        LANE_COUNT,
-        std::slice::from_ref(&actual),
-        &expected,
-    );
-    assert_eq!(
-        checked, LANE_COUNT,
-        "Fix: resident Bool sequence matrix must compare every output lane."
-    );
-}
-
-#[test]
-fn generated_resident_f32_sequence_matches_reference_on_live_cuda() {
-    let backend = CudaBackendRegistration::new(live_backend());
-    let input = generated_f32_values(0x2718_2818);
-    let input_bytes = f32_bytes(&input);
-    let first = f32_sequence_first_program();
-    let second = f32_sequence_second_program();
-    let expected_tmp = reference_outputs(
-        &first,
-        std::slice::from_ref(&input_bytes),
-        "resident_f32_sequence_first",
-    );
-    let expected = reference_outputs(&second, &expected_tmp, "resident_f32_sequence_second");
-    let actual = dispatch_two_step_sequence(
-        &backend,
-        &first,
-        &second,
-        &input_bytes,
-        DataType::F32,
-        "resident_f32_sequence",
-    );
-    let checked = assert_f32_output_lanes(
-        "resident_f32_sequence",
-        LANE_COUNT,
-        MAX_F32_ULP,
-        std::slice::from_ref(&actual),
-        &expected,
-    );
-    assert_eq!(
-        checked, LANE_COUNT,
-        "Fix: resident f32 sequence matrix must compare every output lane."
-    );
-}
-
-#[test]
-fn generated_resident_u32_sequence_compact_multi_range_readback_matches_reference_on_live_cuda() {
-    let backend = CudaBackendRegistration::new(live_backend());
-    let input = generated_u32_values(0x0bad_c0de);
-    let input_bytes = u32_bytes(&input);
-    let first = u32_sequence_first_program();
-    let second = u32_sequence_second_program();
-    let expected_tmp = reference_outputs(
-        &first,
-        std::slice::from_ref(&input_bytes),
-        "resident_u32_sequence_compact_first",
-    );
-    let expected = reference_outputs(
-        &second,
-        &expected_tmp,
-        "resident_u32_sequence_compact_second",
-    );
-    let ranges = compact_word_ranges();
-    let actual = dispatch_two_step_sequence_read_ranges(
-        &backend,
-        &first,
-        &second,
-        &input_bytes,
-        &ranges,
-        DataType::U32,
-        "resident_u32_sequence_compact_multi_range",
-    );
-    assert_compact_ranges_match(
-        "resident_u32_sequence_compact_multi_range",
-        &actual,
-        &expected[0],
-        &ranges,
-    );
-}
-
-#[test]
-fn generated_resident_bool_sequence_compact_multi_range_readback_matches_reference_on_live_cuda() {
-    let backend = CudaBackendRegistration::new(live_backend());
-    let input = generated_bool_values(0x5afe_b001);
-    let input_bytes = bool_bytes(&input);
-    let first = bool_sequence_first_program();
-    let second = bool_sequence_second_program();
-    let expected_tmp = reference_outputs(
-        &first,
-        std::slice::from_ref(&input_bytes),
-        "resident_bool_sequence_compact_first",
-    );
-    let expected = reference_outputs(
-        &second,
-        &expected_tmp,
-        "resident_bool_sequence_compact_second",
-    );
-    let ranges = compact_word_ranges();
-    let actual = dispatch_two_step_sequence_read_ranges(
-        &backend,
-        &first,
-        &second,
-        &input_bytes,
-        &ranges,
-        DataType::Bool,
-        "resident_bool_sequence_compact_multi_range",
-    );
-    assert_compact_ranges_match(
-        "resident_bool_sequence_compact_multi_range",
-        &actual,
-        &expected[0],
-        &ranges,
-    );
-}
-
-#[test]
-fn generated_resident_u32_sequence_overlapping_multi_range_readback_matches_reference_on_live_cuda()
-{
-    let backend = CudaBackendRegistration::new(live_backend());
-    let input = generated_u32_values(0xf005_ba11);
-    let input_bytes = u32_bytes(&input);
-    let first = u32_sequence_first_program();
-    let second = u32_sequence_second_program();
-    let expected_tmp = reference_outputs(
-        &first,
-        std::slice::from_ref(&input_bytes),
-        "resident_u32_sequence_overlap_first",
-    );
-    let expected = reference_outputs(
-        &second,
-        &expected_tmp,
-        "resident_u32_sequence_overlap_second",
-    );
-    let ranges = overlapping_word_ranges();
-    let actual = dispatch_two_step_sequence_read_ranges(
-        &backend,
-        &first,
-        &second,
-        &input_bytes,
-        &ranges,
-        DataType::U32,
-        "resident_u32_sequence_overlapping_multi_range",
-    );
-    assert_compact_ranges_match(
-        "resident_u32_sequence_overlapping_multi_range",
-        &actual,
-        &expected[0],
-        &ranges,
-    );
-}
 
 fn dispatch_two_step_sequence(
     backend: &CudaBackendRegistration,
@@ -268,11 +66,13 @@ fn dispatch_two_step_sequence_read_ranges(
                 program: first,
                 resources: &first_resources,
                 grid_override: None,
+                workgroup_override: None,
             },
             ResidentDispatchStep {
                 program: second,
                 resources: &second_resources,
                 grid_override: None,
+                workgroup_override: None,
             },
         ];
         let read_ranges: Vec<_> = ranges
@@ -472,195 +272,6 @@ fn generated_f32_values(salt: u32) -> Vec<f32> {
         .collect()
 }
 
-#[test]
-fn generated_repeated_resident_u32_sequence_matches_reference_on_live_cuda() {
-    let backend = CudaBackendRegistration::new(live_backend());
-    let prefix = repeated_u32_prefix_program();
-    let repeated = repeated_u32_step_program();
-    let input = u32_bytes(&generated_u32_values(0xfeed_beef));
-    let repeat_count = 5;
-    let expected = repeated_reference_outputs(&prefix, &repeated, &input, repeat_count, "u32");
-    let actual = dispatch_repeated_in_place_sequence(
-        &backend,
-        &prefix,
-        &repeated,
-        &input,
-        repeat_count,
-        DataType::U32,
-        "repeated_resident_u32_sequence",
-    );
-    let checked = assert_u32_output_lanes(
-        "repeated_resident_u32_sequence",
-        LANE_COUNT,
-        std::slice::from_ref(&actual),
-        &expected,
-    );
-    assert_eq!(
-        checked, LANE_COUNT,
-        "Fix: repeated resident u32 sequence must compare every output lane."
-    );
-}
-
-#[test]
-fn generated_repeated_resident_bool_sequence_matches_reference_on_live_cuda() {
-    let backend = CudaBackendRegistration::new(live_backend());
-    let prefix = repeated_bool_prefix_program();
-    let repeated = repeated_bool_step_program();
-    let input = bool_bytes(&generated_bool_values(0xdec0_ded1));
-    let repeat_count = 7;
-    let expected = repeated_reference_outputs(&prefix, &repeated, &input, repeat_count, "bool");
-    let actual = dispatch_repeated_in_place_sequence(
-        &backend,
-        &prefix,
-        &repeated,
-        &input,
-        repeat_count,
-        DataType::Bool,
-        "repeated_resident_bool_sequence",
-    );
-    let checked = assert_u32_output_lanes(
-        "repeated_resident_bool_sequence",
-        LANE_COUNT,
-        std::slice::from_ref(&actual),
-        &expected,
-    );
-    assert_eq!(
-        checked, LANE_COUNT,
-        "Fix: repeated resident Bool sequence must compare every output lane."
-    );
-}
-
-#[test]
-fn generated_repeated_resident_f32_sequence_matches_reference_on_live_cuda() {
-    let backend = CudaBackendRegistration::new(live_backend());
-    let prefix = repeated_f32_prefix_program();
-    let repeated = repeated_f32_step_program();
-    let input = f32_bytes(&generated_f32_values(0xabcdef01));
-    let repeat_count = 4;
-    let expected = repeated_reference_outputs(&prefix, &repeated, &input, repeat_count, "f32");
-    let actual = dispatch_repeated_in_place_sequence(
-        &backend,
-        &prefix,
-        &repeated,
-        &input,
-        repeat_count,
-        DataType::F32,
-        "repeated_resident_f32_sequence",
-    );
-    let checked = assert_f32_output_lanes(
-        "repeated_resident_f32_sequence",
-        LANE_COUNT,
-        MAX_F32_ULP,
-        std::slice::from_ref(&actual),
-        &expected,
-    );
-    assert_eq!(
-        checked, LANE_COUNT,
-        "Fix: repeated resident f32 sequence must compare every output lane."
-    );
-}
-
-#[test]
-fn generated_repeated_resident_u32_sequence_compact_multi_range_readback_matches_reference_on_live_cuda(
-) {
-    let backend = CudaBackendRegistration::new(live_backend());
-    let prefix = repeated_u32_prefix_program();
-    let repeated = repeated_u32_step_program();
-    let input = u32_bytes(&generated_u32_values(0x51f7_beef));
-    let repeat_count = 6;
-    let expected = repeated_reference_outputs(
-        &prefix,
-        &repeated,
-        &input,
-        repeat_count,
-        "u32_compact_multi_range",
-    );
-    let ranges = compact_word_ranges();
-    let actual = dispatch_repeated_in_place_sequence_read_ranges(
-        &backend,
-        &prefix,
-        &repeated,
-        &input,
-        repeat_count,
-        &ranges,
-        DataType::U32,
-        "repeated_resident_u32_sequence_compact_multi_range",
-    );
-    assert_compact_ranges_match(
-        "repeated_resident_u32_sequence_compact_multi_range",
-        &actual,
-        &expected[0],
-        &ranges,
-    );
-}
-
-#[test]
-fn generated_repeated_resident_bool_sequence_compact_multi_range_readback_matches_reference_on_live_cuda(
-) {
-    let backend = CudaBackendRegistration::new(live_backend());
-    let prefix = repeated_bool_prefix_program();
-    let repeated = repeated_bool_step_program();
-    let input = bool_bytes(&generated_bool_values(0xb001_b1a5));
-    let repeat_count = 8;
-    let expected = repeated_reference_outputs(
-        &prefix,
-        &repeated,
-        &input,
-        repeat_count,
-        "bool_compact_multi_range",
-    );
-    let ranges = compact_word_ranges();
-    let actual = dispatch_repeated_in_place_sequence_read_ranges(
-        &backend,
-        &prefix,
-        &repeated,
-        &input,
-        repeat_count,
-        &ranges,
-        DataType::Bool,
-        "repeated_resident_bool_sequence_compact_multi_range",
-    );
-    assert_compact_ranges_match(
-        "repeated_resident_bool_sequence_compact_multi_range",
-        &actual,
-        &expected[0],
-        &ranges,
-    );
-}
-
-#[test]
-fn generated_repeated_resident_bool_sequence_overlapping_multi_range_readback_matches_reference_on_live_cuda(
-) {
-    let backend = CudaBackendRegistration::new(live_backend());
-    let prefix = repeated_bool_prefix_program();
-    let repeated = repeated_bool_step_program();
-    let input = bool_bytes(&generated_bool_values(0x0b00_1f15));
-    let repeat_count = 9;
-    let expected = repeated_reference_outputs(
-        &prefix,
-        &repeated,
-        &input,
-        repeat_count,
-        "bool_overlapping_multi_range",
-    );
-    let ranges = overlapping_word_ranges();
-    let actual = dispatch_repeated_in_place_sequence_read_ranges(
-        &backend,
-        &prefix,
-        &repeated,
-        &input,
-        repeat_count,
-        &ranges,
-        DataType::Bool,
-        "repeated_resident_bool_sequence_overlapping_multi_range",
-    );
-    assert_compact_ranges_match(
-        "repeated_resident_bool_sequence_overlapping_multi_range",
-        &actual,
-        &expected[0],
-        &ranges,
-    );
-}
 
 fn repeated_reference_outputs(
     prefix: &Program,
@@ -727,11 +338,13 @@ fn dispatch_repeated_in_place_sequence_read_ranges(
             program: prefix,
             resources: &prefix_resources,
             grid_override: None,
+            workgroup_override: None,
         }];
         let repeated_steps = [ResidentDispatchStep {
             program: repeated,
             resources: &repeated_resources,
             grid_override: None,
+            workgroup_override: None,
         }];
         let read_ranges: Vec<_> = ranges
             .iter()

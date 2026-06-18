@@ -54,6 +54,7 @@ use rustc_hash::FxHashSet;
     requires = [],
     invalidates = []
 )]
+/// ABI-preserving loop fission pass for buffer-disjoint partitionable loop bodies.
 pub struct LoopFission;
 
 impl LoopFission {
@@ -823,9 +824,9 @@ mod tests {
     fn analyze_skips_program_with_no_loops() {
         let entry = vec![Node::store("a", Expr::u32(0), Expr::u32(1))];
         let program = program_with_entry(vec![buf("a")], entry);
-        match crate::optimizer::ProgramPass::analyze(&LoopFission, &program) {
-            PassAnalysis::SKIP => {}
-            other => panic!("expected SKIP, got {other:?}"),
-        }
+        assert!(matches!(
+            crate::optimizer::ProgramPass::analyze(&LoopFission, &program),
+            PassAnalysis::SKIP
+        ));
     }
 }

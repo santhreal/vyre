@@ -316,4 +316,4 @@ This is the execution backlog for turning Vyre, Weir, and the active beta Vyre C
 297. Confirm `vyrec` is labeled beta/not-production everywhere unless parity evidence exists.
 298. Confirm Weir dataflow demo shows scale-dependent megakernel/resident-GPU advantage.
 299. Run final `cargo_full publish --dry-run` for every publishable crate in release order.
-300. Execute the public launch: `cargo_full publish` for approved crates, change the repository visibility to public, then `git push` the release branch and tags.
+300. Execute the public launch: `cargo_full publish` for approved crates, verify `santhsecurity/vyre` is public without changing `Santh`, then `git push` the release branch and tags.

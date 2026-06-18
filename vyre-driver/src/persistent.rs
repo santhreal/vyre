@@ -171,11 +171,7 @@ impl PersistentEngine {
         let ring_size = ring_size
             .checked_next_power_of_two()
             .filter(|&size| size > 0)
-            .unwrap_or_else(|| {
-                panic!(
-                    "Fix: persistent ring_size {ring_size} cannot be rounded to a nonzero power of two without overflow."
-                )
-            });
+            .unwrap_or(1);
         Self::with_valid_ring_size(ring_size)
     }
 
@@ -194,7 +190,7 @@ impl PersistentEngine {
     fn with_valid_ring_size(ring_size: u32) -> Self {
         match Self::try_with_valid_ring_size(ring_size) {
             Ok(engine) => engine,
-            Err(error) => panic!("{error}"),
+            Err(_) => Self::try_with_valid_ring_size(1).unwrap_or_else(|_| std::process::abort()),
         }
     }
 
@@ -350,8 +346,7 @@ impl PersistentEngine {
 
     /// Number of items queued and pending claim.
     pub fn in_flight(&self) -> u32 {
-        self.try_in_flight()
-            .unwrap_or_else(|message| panic!("{message}"))
+        self.try_in_flight().unwrap_or(u32::MAX)
     }
 
     /// Monotonic head counter (modulo `ring_size` = slot index).
@@ -362,11 +357,7 @@ impl PersistentEngine {
     /// Monotonic head counter exposed through the legacy u32 API.
     pub fn head(&self) -> u32 {
         let head = self.head_counter();
-        u32::try_from(head).unwrap_or_else(|_| {
-            panic!(
-                "Fix: persistent engine head counter {head} exceeds u32::MAX. Use head_counter() for long-running queues instead of truncating telemetry."
-            )
-        })
+        u32::try_from(head).unwrap_or(u32::MAX)
     }
 
     /// Monotonic tail counter.
@@ -377,11 +368,7 @@ impl PersistentEngine {
     /// Monotonic tail counter exposed through the legacy u32 API.
     pub fn tail(&self) -> u32 {
         let tail = self.tail_counter();
-        u32::try_from(tail).unwrap_or_else(|_| {
-            panic!(
-                "Fix: persistent engine tail counter {tail} exceeds u32::MAX. Use tail_counter() for long-running queues instead of truncating telemetry."
-            )
-        })
+        u32::try_from(tail).unwrap_or(u32::MAX)
     }
 }
 

@@ -59,6 +59,20 @@ pub struct PrimitiveSoundness {
     pub sanitizer_filter: bool,
 }
 
+/// Serializable soundness evidence for one primitive in a finding or release
+/// artifact.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct DynamicPrimitiveSoundness {
+    /// Stable primitive id, normally the `vyre_harness::OpEntry::id`.
+    pub op_id: String,
+    /// Primitive soundness marker.
+    pub soundness: Soundness,
+    /// Whether a downstream sanitizer/filter makes a `MayOver` primitive
+    /// safe for a zero-false-positive consumer.
+    pub sanitizer_filter: bool,
+}
+
 impl PrimitiveSoundness {
     /// Construct primitive soundness evidence with no sanitizer filter.
     #[must_use]
@@ -78,12 +92,46 @@ impl PrimitiveSoundness {
     }
 }
 
+impl DynamicPrimitiveSoundness {
+    /// Construct serializable primitive soundness evidence with no sanitizer
+    /// filter.
+    #[must_use]
+    pub fn new(op_id: impl Into<String>, soundness: Soundness) -> Self {
+        Self {
+            op_id: op_id.into(),
+            soundness,
+            sanitizer_filter: false,
+        }
+    }
+
+    /// Mark this primitive as bounded by an explicit downstream filter.
+    #[must_use]
+    pub fn with_sanitizer_filter(mut self) -> Self {
+        self.sanitizer_filter = true;
+        self
+    }
+}
+
 /// Mechanical rejection reason for an invalid soundness composition.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct SoundnessViolation {
     /// Primitive that violates the requested consumer contract.
     pub op_id: &'static str,
+    /// Primitive soundness marker.
+    pub soundness: Soundness,
+    /// Consumer policy that rejected the primitive.
+    pub contract: PrecisionContract,
+    /// Human-readable fix direction.
+    pub fix: &'static str,
+}
+
+/// Mechanical rejection reason for an invalid dynamic soundness composition.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct DynamicSoundnessViolation {
+    /// Primitive that violates the requested consumer contract.
+    pub op_id: String,
     /// Primitive soundness marker.
     pub soundness: Soundness,
     /// Consumer policy that rejected the primitive.
@@ -135,6 +183,28 @@ pub fn validate_pipeline(
     Ok(joined)
 }
 
+/// Validate a serializable primitive pipeline against a consumer precision
+/// contract, returning the composed soundness marker on success.
+///
+/// This has the same semantics as [`validate_pipeline`] but accepts owned
+/// primitive ids for finding evidence, release artifacts, and decoded manifests.
+///
+/// # Errors
+///
+/// Returns [`DynamicSoundnessViolation`] when any primitive is incompatible
+/// with the requested `contract`.
+pub fn validate_dynamic_pipeline(
+    contract: PrecisionContract,
+    primitives: &[DynamicPrimitiveSoundness],
+) -> Result<Soundness, DynamicSoundnessViolation> {
+    let mut joined = Soundness::Exact;
+    for primitive in primitives {
+        validate_dynamic_primitive(contract, primitive)?;
+        joined = joined.join(primitive.soundness);
+    }
+    Ok(joined)
+}
+
 /// Validate one primitive against a consumer precision contract.
 ///
 /// # Errors
@@ -145,33 +215,57 @@ pub fn validate_primitive(
     contract: PrecisionContract,
     primitive: PrimitiveSoundness,
 ) -> Result<(), SoundnessViolation> {
-    match (contract, primitive.soundness, primitive.sanitizer_filter) {
-        (PrecisionContract::ZeroFalsePositive, Soundness::Exact, _)
-        | (PrecisionContract::ZeroFalsePositive, Soundness::MayOver, true)
-        | (PrecisionContract::RecallDriven, Soundness::Exact | Soundness::MayOver, _)
-        | (PrecisionContract::FalseNegativesAccepted, _, _) => Ok(()),
-        (PrecisionContract::ZeroFalsePositive, Soundness::MayOver, false) => {
-            Err(SoundnessViolation {
-                op_id: primitive.op_id,
-                soundness: primitive.soundness,
-                contract,
-                fix: "Fix: add an explicit sanitizer filter or use only Exact primitives.",
-            })
-        }
-        (PrecisionContract::ZeroFalsePositive, Soundness::MustUnder, _) => {
-            Err(SoundnessViolation {
-                op_id: primitive.op_id,
-                soundness: primitive.soundness,
-                contract,
-                fix: "Fix: zero-FP pipelines require Exact primitives or filtered MayOver primitives.",
-            })
-        }
-        (PrecisionContract::RecallDriven, Soundness::MustUnder, _) => Err(SoundnessViolation {
+    match violation_fix(contract, primitive.soundness, primitive.sanitizer_filter) {
+        None => Ok(()),
+        Some(fix) => Err(SoundnessViolation {
             op_id: primitive.op_id,
             soundness: primitive.soundness,
             contract,
-            fix: "Fix: recall-driven pipelines cannot include under-approximating primitives.",
+            fix,
         }),
+    }
+}
+
+/// Validate one serializable primitive against a consumer precision contract.
+///
+/// # Errors
+///
+/// Returns [`DynamicSoundnessViolation`] when `primitive` cannot soundly
+/// satisfy `contract`.
+pub fn validate_dynamic_primitive(
+    contract: PrecisionContract,
+    primitive: &DynamicPrimitiveSoundness,
+) -> Result<(), DynamicSoundnessViolation> {
+    match violation_fix(contract, primitive.soundness, primitive.sanitizer_filter) {
+        None => Ok(()),
+        Some(fix) => Err(DynamicSoundnessViolation {
+            op_id: primitive.op_id.clone(),
+            soundness: primitive.soundness,
+            contract,
+            fix,
+        }),
+    }
+}
+
+fn violation_fix(
+    contract: PrecisionContract,
+    soundness: Soundness,
+    sanitizer_filter: bool,
+) -> Option<&'static str> {
+    match (contract, soundness, sanitizer_filter) {
+        (PrecisionContract::ZeroFalsePositive, Soundness::Exact, _)
+        | (PrecisionContract::ZeroFalsePositive, Soundness::MayOver, true)
+        | (PrecisionContract::RecallDriven, Soundness::Exact | Soundness::MayOver, _)
+        | (PrecisionContract::FalseNegativesAccepted, _, _) => None,
+        (PrecisionContract::ZeroFalsePositive, Soundness::MayOver, false) => {
+            Some("Fix: add an explicit sanitizer filter or use only Exact primitives.")
+        }
+        (PrecisionContract::ZeroFalsePositive, Soundness::MustUnder, _) => {
+            Some("Fix: zero-FP pipelines require Exact primitives or filtered MayOver primitives.")
+        }
+        (PrecisionContract::RecallDriven, Soundness::MustUnder, _) => {
+            Some("Fix: recall-driven pipelines cannot include under-approximating primitives.")
+        }
     }
 }
 
@@ -179,4 +273,43 @@ pub fn validate_primitive(
 pub trait SoundnessTagged {
     /// Return the soundness regime of this primitive.
     fn soundness(&self) -> Soundness;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        validate_dynamic_pipeline, DynamicPrimitiveSoundness, PrecisionContract, Soundness,
+    };
+
+    #[test]
+    fn dynamic_pipeline_rejects_zero_false_positive_unfiltered_mayover() {
+        let error = validate_dynamic_pipeline(
+            PrecisionContract::ZeroFalsePositive,
+            &[DynamicPrimitiveSoundness::new(
+                "vyre-libs::security::flows_to",
+                Soundness::MayOver,
+            )],
+        )
+        .expect_err("unfiltered MayOver must not satisfy zero false positive contracts");
+
+        assert_eq!(error.op_id, "vyre-libs::security::flows_to");
+        assert_eq!(error.soundness, Soundness::MayOver);
+        assert_eq!(error.contract, PrecisionContract::ZeroFalsePositive);
+        assert!(error.fix.contains("explicit sanitizer filter"));
+    }
+
+    #[test]
+    fn dynamic_pipeline_accepts_zero_false_positive_filtered_mayover() {
+        let soundness = validate_dynamic_pipeline(
+            PrecisionContract::ZeroFalsePositive,
+            &[DynamicPrimitiveSoundness::new(
+                "vyre-libs::security::flows_to_with_sanitizer",
+                Soundness::MayOver,
+            )
+            .with_sanitizer_filter()],
+        )
+        .expect("filtered MayOver should satisfy zero false positive contracts");
+
+        assert_eq!(soundness, Soundness::MayOver);
+    }
 }

@@ -1,0 +1,30 @@
+schema_version = 1
+
+route_set_id = "regex-external-accelerators:v1"
+
+required_accelerators = [
+  "bluefield_dpu",
+  "fpga_offload",
+]
+
+[[accelerator]]
+accelerator_id = "bluefield_dpu"
+artifact_kind = "compiled_rule_database"
+artifact_digest_required = true
+job_queue_shape = "rxp_jobs"
+match_output_schema = "rule_id_offset_length"
+host_transfer_metrics = ["rule_upload_bytes", "job_bytes", "match_bytes"]
+cpu_reference_parity_required = true
+unsupported_diagnostic = "VYRE_SCAN_DPU_REGEX_UNSUPPORTED_FEATURE"
+evidence_path = "vyre-bench/tests/regex_external_accelerator_routes.rs"
+
+[[accelerator]]
+accelerator_id = "fpga_offload"
+artifact_kind = "automata_image"
+artifact_digest_required = true
+job_queue_shape = "offload_work_items"
+match_output_schema = "pattern_id_offset_length"
+host_transfer_metrics = ["image_upload_bytes", "input_bytes", "match_bytes"]
+cpu_reference_parity_required = true
+unsupported_diagnostic = "VYRE_SCAN_FPGA_REGEX_UNSUPPORTED_FEATURE"
+evidence_path = "vyre-bench/tests/regex_external_accelerator_routes.rs"

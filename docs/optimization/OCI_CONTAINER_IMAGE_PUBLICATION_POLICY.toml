@@ -1,0 +1,46 @@
+# OCI container image publication policy for VX-1183, VX-1186, VX-1188, VX-1189, VX-1192, VX-1193, and VX-1195.
+# OCI manifests, indexes, layers, annotations, GHCR repository linkage, digest pulls, SBOMs, signatures, and attestations share one container seam.
+
+schema = "vyre.release.oci_container_image_publication_policy.v1"
+owner = "security_reliability"
+evidence_tokens = ["OCI_IMAGE_SPEC", "OCI_DISTRIBUTION_SPEC", "GITHUB_CONTAINER_REGISTRY", "SLSA_PROVENANCE", "SPDX_SBOM", "SIGSTORE_COSIGN_VERIFY"]
+
+required_fields = [
+  "image_id",
+  "registry_policy",
+  "manifest_policy",
+  "platform_index_policy",
+  "layer_policy",
+  "annotation_policy",
+  "tag_policy",
+  "digest_pull_policy",
+  "sbom_attestation_policy",
+  "private_boundary_policy",
+  "diagnostic",
+]
+
+[[image]]
+image_id = "vyre-cli-oci-image"
+registry_policy = "published-to-ghcr.io-santhsecurity-vyre-linked-to-public-repository"
+manifest_policy = "OCI-image-manifest-records-config-layers-and-content-digests"
+platform_index_policy = "linux-amd64-linux-arm64-platform-index-required-before-multiarch-claim"
+layer_policy = "minimal-runtime-layers-no-build-cache-secrets-private-paths-or-credential-files"
+annotation_policy = "org.opencontainers.image.source-points-to-public-santhsecurity-vyre"
+tag_policy = "version-tag-and-digest-recorded-latest-tag-not-used-for-reproducibility-claims"
+digest_pull_policy = "consumer-docs-prefer-ghcr-image-by-sha256-digest-for-reproducible-use"
+sbom_attestation_policy = "image-SBOM-and-SLSA-provenance-linked-to-release-artifact-integrity-index"
+private_boundary_policy = "Santh-and-santhsecurity-Santh-private-or-backup-roots-excluded-from-layers-labels-history"
+diagnostic = "VYRE_OCI_IMAGE_PUBLICATION_REQUIRED"
+
+[[image]]
+image_id = "vyre-dogfood-oci-image"
+registry_policy = "published-only-if-public-dogfood-image-is-release-supported"
+manifest_policy = "OCI-image-manifest-records-tool-version-config-and-layer-digests"
+platform_index_policy = "platform-list-matches-dogfood-workflow-evidence"
+layer_policy = "includes-public-sample-inputs-only-no-private-corpora"
+annotation_policy = "annotations-link-dogfood-workflow-evidence-and-public-source"
+tag_policy = "dogfood-image-tag-matches-release-version-or-redacted-evidence-version"
+digest_pull_policy = "dogfood-evidence-records-image-digest-not-floating-tag"
+sbom_attestation_policy = "image-software-inventory-linked-to-SPDX-SBOM"
+private_boundary_policy = "private-corpus-and-local-worktree-material-blocked"
+diagnostic = "VYRE_DOGFOOD_OCI_IMAGE_PUBLICATION_REQUIRED"

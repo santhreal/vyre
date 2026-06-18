@@ -234,7 +234,7 @@ pub(crate) fn run(args: &[String]) {
     let closed_requirements = audits.iter().filter(|audit| audit.complete).count();
     let audit = CompletionAudit {
         schema_version: 1,
-        objective: "Make Vyre 0.4.2 and Weir 0.1.0 release-ready end to end",
+        objective: "Make Vyre 0.6.3 and Weir 0.1.0 release-ready end to end",
         success_criteria: vec![
             "1. CUDA-first execution path is documented, benchmarked, and selected as the fast release substrate.",
             "2. WGPU fallback is functional, tested, benchmarked, and never hides a CUDA or CPU downgrade.",
@@ -249,7 +249,7 @@ pub(crate) fn run(args: &[String]) {
             "11. Conformance gates block release for every claimed op/backend path with zero blocked_release OP_MATRIX rows.",
             "12. Test organization is modular, including distributed parser CLI evidence for tools/vyrec.",
             "13. Documentation is coherent and every release claim links to concrete evidence.",
-            "14. Crate metadata, feature surfaces, readmes, examples, license, and version policy are consistent for Vyre 0.4.2 / Weir 0.1.0.",
+            "14. Crate metadata, feature surfaces, readmes, examples, license, and version policy are consistent for Vyre 0.6.3 / Weir 0.1.0.",
             "15. Final hygiene review finds no unbounded caches, hidden fallbacks, placeholders, library panics, unactionable errors, or undocumented public API.",
         ],
         prompt_to_artifact_checklist: checklist,

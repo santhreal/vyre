@@ -1,0 +1,43 @@
+# Exit code and stream policy for VX-827 through VX-830 and VX-835.
+# Exit status, stdout, stderr, TTY, and machine-readable modes share one contract.
+
+schema = "vyre.operator.exit_code_stream_policy.v1"
+owner = "reporting"
+evidence_tokens = ["GNU_CLI_STANDARDS", "POSIX_UTILITY_CONVENTIONS"]
+
+required_fields = [
+  "case_id",
+  "exit_code",
+  "stdout_contract",
+  "stderr_contract",
+  "tty_behavior",
+  "machine_mode_behavior",
+  "diagnostic_contract",
+]
+
+[[case]]
+case_id = "success-no-findings"
+exit_code = 0
+stdout_contract = "requested report format only"
+stderr_contract = "human progress only when tty"
+tty_behavior = "color-and-progress-allowed"
+machine_mode_behavior = "no-progress-no-color-stable-fields"
+diagnostic_contract = "none"
+
+[[case]]
+case_id = "usage-error"
+exit_code = 64
+stdout_contract = "empty-unless-help-requested"
+stderr_contract = "structured-problem-summary-and-fix"
+tty_behavior = "human-readable-fix"
+machine_mode_behavior = "problem-json-on-configured-error-output"
+diagnostic_contract = "STRUCTURED_ERROR_PROBLEM_DETAILS.toml"
+
+[[case]]
+case_id = "release-boundary-error"
+exit_code = 78
+stdout_contract = "empty"
+stderr_contract = "redacted-boundary-diagnostic"
+tty_behavior = "human-readable-fix"
+machine_mode_behavior = "problem-json-on-configured-error-output"
+diagnostic_contract = "STRUCTURED_ERROR_PROBLEM_DETAILS.toml"

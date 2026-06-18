@@ -1,0 +1,58 @@
+# Stratification owns benchmark blocks across hardware, driver, capacity, and workload classes; capacity and reproducibility artifacts own raw environment facts.
+
+schema = "vyre.performance.hardware_workload_stratification_matrix.v1"
+owner = "bench_harness"
+evidence_tokens = ["NIST_RANDOMIZED_BLOCK_DESIGN", "NIST_DOE_FACTOR_SELECTION", "NIST_FULL_FACTORIAL_DESIGN", "CRITERION_ANALYSIS_PROCESS"]
+
+required_fields = [
+  "stratum_id",
+  "stratification_surface",
+  "block_factor_policy",
+  "workload_factor_policy",
+  "hardware_factor_policy",
+  "capacity_factor_policy",
+  "replication_policy",
+  "generalization_policy",
+  "privacy_boundary",
+  "authority_links",
+  "diagnostic",
+]
+
+[[stratum]]
+stratum_id = "cpu-regex-workload-blocks"
+stratification_surface = "CPU-regex-route-comparison"
+block_factor_policy = "block-by-CPU-family-core-count-SIMD-class-governor-class-and-corpus-family"
+workload_factor_policy = "workload-factors-include-pattern-count-input-size-encoding-mode-streaming-mode-and-match-density-class"
+hardware_factor_policy = "hardware-factors-use-capability-digest-not-hostname-or-private-fleet-label"
+capacity_factor_policy = "capacity-envelope-links-container-limits-thread-count-memory-budget-and-cache-state"
+replication_policy = "replicate-within-each-block-before-cross-block-geomean-or-generalization-claim"
+generalization_policy = "claim-scope-limited-to-observed-blocks-unless-factorial-design-covers-missing-interactions"
+privacy_boundary = "public-strata-use-capability-classes-and-fixture-ids-not-hostnames-device-serials-or-private-paths"
+authority_links = ["REPRODUCIBILITY_CAPSULES.toml", "BENCHMARK_METHODOLOGY_CONTRACTS.toml", "REGEX_ENGINE_COMPARATORS.toml", "RESOURCE_RIGHTSIZING_CAPACITY_POLICY.toml"]
+diagnostic = "VYRE_CPU_REGEX_STRATIFICATION_REQUIRED"
+
+[[stratum]]
+stratum_id = "gpu-backend-workload-blocks"
+stratification_surface = "GPU-backend-throughput-and-kernel-tuning"
+block_factor_policy = "block-by-GPU-class-driver-class-runtime-class-clock-class-MIG-or-sharing-class-and-input-size-class"
+workload_factor_policy = "workload-factors-include-batch-size-corpus-digest-rule-class-output-density-and-transfer-size-class"
+hardware_factor_policy = "hardware-factors-link-to-backend-capability-digest-and-GPU-capacity-placement-policy"
+capacity_factor_policy = "capacity-envelope-records-exclusive-shared-or-MIG-class-resident-bytes-and-resource-limits"
+replication_policy = "replicate-factor-combinations-within-hardware-block-before-comparing-across-backends"
+generalization_policy = "cross-GPU-claim-requires-same-factor-levels-or-explicit-missing-stratum-record"
+privacy_boundary = "public-GPU-strata-redact-serials-hostnames-private-fleet-layout-and-local-driver-paths"
+authority_links = ["BACKEND_CAPABILITY_DIGESTS.toml", "GPU_DEVICE_CAPACITY_PLACEMENT_POLICY.toml", "PROFILING_COLLECTION_SECURITY_POLICY.toml", "PERFORMANCE_REGRESSION_PROFILE_TRIAGE_POLICY.toml"]
+diagnostic = "VYRE_GPU_WORKLOAD_STRATIFICATION_REQUIRED"
+
+[[stratum]]
+stratum_id = "operator-load-release-blocks"
+stratification_surface = "operator-release-load-and-autoscaling"
+block_factor_policy = "block-by-node-class-replica-class-queue-depth-class-autoscaling-mode-and-release-phase"
+workload_factor_policy = "workload-factors-include-request-rate-scan-mix-diagnostic-mix-cache-warmth-and-policy-enforcement-mode"
+hardware_factor_policy = "hardware-factors-use-public-node-capacity-class-and-topology-class"
+capacity_factor_policy = "capacity-envelope-links-HPA-KEDA-rightsizing-and-resource-budget-evidence"
+replication_policy = "replicate-steady-state-and-canary-phase-runs-before-release-promotion-claim"
+generalization_policy = "operator-load-claim-scope-limited-to-declared-replica-capacity-and-observed-autoscaling-range"
+privacy_boundary = "public-load-strata-redact-private-tenant-identifiers-hostnames-and-Santh-roots"
+authority_links = ["WORKLOAD_AUTOSCALING_POLICY.toml", "RESOURCE_RIGHTSIZING_CAPACITY_POLICY.toml", "RELEASE_ROLLOUT_STRATEGY_POLICY.toml", "SERVICE_LEVEL_OBJECTIVE_POLICY.toml"]
+diagnostic = "VYRE_OPERATOR_LOAD_STRATIFICATION_REQUIRED"

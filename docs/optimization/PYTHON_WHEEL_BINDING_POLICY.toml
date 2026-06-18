@@ -1,0 +1,43 @@
+# Python wheel binding policy for VX-1204, VX-1210, VX-1211, VX-1216, and VX-1217.
+# PyO3 modules, maturin builds, Python wheels, package metadata, platform tags, import tests, and private-boundary checks share one Python binding seam.
+
+schema = "vyre.release.python_wheel_binding_policy.v1"
+owner = "dogfood_ux"
+evidence_tokens = ["PYO3_USER_GUIDE", "MATURIN_USER_GUIDE", "PYTHON_WHEEL_SPEC", "PUBLIC_API_SEMVER_MSRV_POLICY"]
+
+required_fields = [
+  "wheel_id",
+  "module_policy",
+  "build_policy",
+  "wheel_tag_policy",
+  "metadata_policy",
+  "api_mapping_policy",
+  "import_test_policy",
+  "artifact_integrity_policy",
+  "private_boundary_policy",
+  "diagnostic",
+]
+
+[[wheel]]
+wheel_id = "vyre-python-extension"
+module_policy = "PyO3-module-wraps-public-safe-Vyre-API-no-raw-GPU-driver-handle-exposure"
+build_policy = "maturin-build-uses-public-vyre-source-release-version-and-public-feature-gates"
+wheel_tag_policy = "wheel-filename-tags-match-python-abi-platform-and-supported-interpreter-policy"
+metadata_policy = "wheel-metadata-name-version-license-requires-python-and-project-urls-match-public-release-record"
+api_mapping_policy = "Python-functions-map-to-public-Rust-API-snapshots-and-structured-error-contracts"
+import_test_policy = "wheel-import-and-version-check-required-before-public-python-install-claim"
+artifact_integrity_policy = "wheel-digest-signature-attestation-and-SBOM-link-recorded-in-release-artifact-integrity-index"
+private_boundary_policy = "wheel-sdist-records-build-logs-and-examples-exclude-private-Santh-paths-and-secrets"
+diagnostic = "VYRE_PYTHON_WHEEL_BINDING_POLICY_REQUIRED"
+
+[[wheel]]
+wheel_id = "vyre-python-platform-wheel"
+module_policy = "platform-specific-extension-declares-runtime-backend-support-and-fallback-diagnostics"
+build_policy = "platform-wheel-build-matrix-reuses-binary-asset-platform-and-release-gate-policies"
+wheel_tag_policy = "platform-tag-claim-backed-by-import-test-and-backend-capability-record"
+metadata_policy = "wheel-metadata-links-public-docs-rustdoc-and-consumer-install-guidance"
+api_mapping_policy = "Python-exceptions-map-to-problem-detail-and-public-error-codes"
+import_test_policy = "each-published-platform-wheel-imports-with-no-private-files-or-network-secrets"
+artifact_integrity_policy = "wheel-verification-bundle-uses-existing-consumer-artifact-verification-protocol"
+private_boundary_policy = "platform-wheel-does-not-embed-private-corpora-device-serials-or-local-toolchain-paths"
+diagnostic = "VYRE_PYTHON_PLATFORM_WHEEL_POLICY_REQUIRED"

@@ -1,0 +1,40 @@
+# Docs, help, and example coherence for VX-832 through VX-838.
+# README, --help, examples, JSON fields, SARIF fields, exit codes, and config docs share one coherence contract.
+
+schema = "vyre.operator.docs_help_example_coherence.v1"
+owner = "coordination"
+evidence_tokens = ["CLAP_RS", "GNU_CLI_STANDARDS", "SARIF_2_1_0"]
+
+required_fields = [
+  "coherence_id",
+  "readme_claim",
+  "help_claim",
+  "example_path",
+  "json_field_contract",
+  "sarif_field_contract",
+  "exit_code_contract",
+  "config_contract",
+  "publication_class",
+]
+
+[[coherence]]
+coherence_id = "scan-json-example"
+readme_claim = "scan command emits stable JSON findings"
+help_claim = "vyre scan --format json"
+example_path = "examples/scan-json.md"
+json_field_contract = "OPERATOR_REPORTING_INTERCHANGE.toml"
+sarif_field_contract = "OPERATOR_REPORTING_INTERCHANGE.toml"
+exit_code_contract = "EXIT_CODE_AND_STREAM_POLICY.toml"
+config_contract = "CONFIG_PRECEDENCE_AND_TIERING.toml"
+publication_class = "public-vyre-artifact"
+
+[[coherence]]
+coherence_id = "release-boundary-example"
+readme_claim = "public artifacts exclude private Santh workspace references"
+help_claim = "vyre release evidence --public"
+example_path = "examples/release-boundary.md"
+json_field_contract = "STRUCTURED_ERROR_PROBLEM_DETAILS.toml"
+sarif_field_contract = "OPERATOR_REPORTING_INTERCHANGE.toml"
+exit_code_contract = "EXIT_CODE_AND_STREAM_POLICY.toml"
+config_contract = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+publication_class = "public-vyre-artifact"

@@ -6,9 +6,11 @@ use std::collections::BTreeMap;
 use std::time::Instant;
 
 use crate::api::case::{BenchContext, Correctness, PerformanceContract, PerformanceEvaluation};
-use crate::api::metric::MetricStats;
+use crate::api::metric::{digest64_buffers, MetricStats};
 use crate::api::suite::SuiteKind;
-use crate::report::json::CaseReport;
+use crate::report::json::{
+    benchmark_device_signature, benchmark_held_out_corpus_id, CaseReport,
+};
 
 use super::collect::collect_samples;
 use super::stats::{compute_stats, percentile};
@@ -68,6 +70,8 @@ pub(super) fn run_case(
     }
 
     let mut determinism_p50s = Vec::new();
+    let mut cpu_digest = None;
+    let mut gpu_digest = None;
 
     for _d_run in 0..config.determinism_runs {
         let mut d_samples: BTreeMap<&'static str, Vec<u64>> = BTreeMap::new();
@@ -100,6 +104,10 @@ pub(super) fn run_case(
                     case.verify(ctx, &run_result)
                         .map_err(|error| format!("Verify error: {error}"))?,
                 );
+                if let Some(outputs) = run_result.baseline_outputs.as_ref() {
+                    cpu_digest.get_or_insert_with(|| digest64_buffers(outputs));
+                }
+                gpu_digest.get_or_insert_with(|| digest64_buffers(&run_result.outputs));
             }
 
             // Only capture NVIDIA hardware telemetry on the final CUDA sample to avoid jitter.
@@ -117,18 +125,21 @@ pub(super) fn run_case(
         }
 
         // B-4: Ensure we got enough samples before timing out
-        let actual_samples = samples.get("wall_ns").map(|v| v.len()).unwrap_or(0);
+            let actual_samples = samples.get("wall_ns").map(|v| v.len()).unwrap_or(0);
         if actual_samples < 30 && std::env::var("VYRE_ALLOW_FEW_SAMPLES").is_err() {
             let requirements = case.requirements();
             let case_id = meta.id.0;
+            let workload_fingerprint = workload_fingerprint(case_id.as_str(), None);
             return Ok(CaseReport {
                 id: case_id.clone(),
-                workload_fingerprint: workload_fingerprint(case_id.as_str(), None),
+                workload_fingerprint: workload_fingerprint.clone(),
                 name: meta.name,
                 owner_crate: meta.owner_crate,
                 workload_class: format!("{:?}", meta.workload),
                 tags: meta.tags,
                 backend_id: Some(ctx.preferred_backend.id().to_string()),
+                device_signature: Some(benchmark_device_signature(ctx.preferred_backend.device_profile())),
+                held_out_corpus_id: Some(benchmark_held_out_corpus_id(&workload_fingerprint)),
                 needs_gpu: requirements.needs_gpu,
                 min_vram_bytes: requirements.min_vram_bytes,
                 min_input_bytes: requirements.min_input_bytes,
@@ -214,6 +225,7 @@ pub(super) fn run_case(
             .or_insert_with(|| single_sample_stats(value));
     }
     normalize_release_evidence_metrics(&mut metrics, ctx.preferred_backend.id());
+    normalize_benchmark_evidence_metrics(&mut metrics, cpu_digest, gpu_digest);
 
     let contract = case.performance_contract();
     let performance = contract
@@ -276,14 +288,17 @@ pub(super) fn run_case(
     let optimization_passes_applied =
         infer_optimization_passes_applied(&metrics, ctx.preferred_backend.id());
     let case_id = meta.id.0;
+    let workload_fingerprint = workload_fingerprint(case_id.as_str(), program_fingerprint);
     Ok(CaseReport {
         id: case_id.clone(),
-        workload_fingerprint: workload_fingerprint(case_id.as_str(), program_fingerprint),
+        workload_fingerprint: workload_fingerprint.clone(),
         name: meta.name,
         owner_crate: meta.owner_crate,
         workload_class: format!("{:?}", meta.workload),
         tags: meta.tags,
         backend_id: Some(ctx.preferred_backend.id().to_string()),
+        device_signature: Some(benchmark_device_signature(ctx.preferred_backend.device_profile())),
+        held_out_corpus_id: Some(benchmark_held_out_corpus_id(&workload_fingerprint)),
         needs_gpu: requirements.needs_gpu,
         min_vram_bytes: requirements.min_vram_bytes,
         min_input_bytes: requirements.min_input_bytes,
@@ -297,6 +312,65 @@ pub(super) fn run_case(
         optimization_passes_applied,
         artifacts: vec![],
     })
+}
+
+fn normalize_benchmark_evidence_metrics(
+    metrics: &mut BTreeMap<String, MetricStats>,
+    cpu_digest: Option<u64>,
+    gpu_digest: Option<u64>,
+) {
+    if let Some(cpu_digest) = cpu_digest {
+        metrics
+            .entry("cpu_digest".to_string())
+            .or_insert_with(|| single_sample_stats(cpu_digest));
+    }
+    if let Some(gpu_digest) = gpu_digest {
+        metrics
+            .entry("gpu_digest".to_string())
+            .or_insert_with(|| single_sample_stats(gpu_digest));
+    }
+    if let Some(active_time) = metrics
+        .get("kernel_execute_ns")
+        .or_else(|| metrics.get("dispatch_ns"))
+        .or_else(|| metrics.get("wall_ns"))
+        .cloned()
+    {
+        metrics
+            .entry("active_time_ns".to_string())
+            .or_insert(active_time);
+    }
+    if let (Some(input), Some(output)) = (
+        metrics.get("host_to_device_bytes").cloned(),
+        metrics.get("device_to_host_bytes").cloned(),
+    ) {
+        metrics
+            .entry("transfer_bytes".to_string())
+            .or_insert_with(|| sum_metric_stats(&input, &output));
+    } else if let Some(bytes) = metrics
+        .get("bytes_touched")
+        .or_else(|| metrics.get("bytes_read"))
+        .or_else(|| metrics.get("bytes_written"))
+        .cloned()
+    {
+        metrics.entry("transfer_bytes".to_string()).or_insert(bytes);
+    }
+}
+
+fn sum_metric_stats(left: &MetricStats, right: &MetricStats) -> MetricStats {
+    MetricStats {
+        min: left.min.saturating_add(right.min),
+        p50: left.p50.saturating_add(right.p50),
+        p90: left.p90.saturating_add(right.p90),
+        p95: left.p95.saturating_add(right.p95),
+        p99: left.p99.saturating_add(right.p99),
+        p999: left.p999.saturating_add(right.p999),
+        p9999: left.p9999.saturating_add(right.p9999),
+        max: left.max.saturating_add(right.max),
+        mean: left.mean + right.mean,
+        stddev: (left.stddev.mul_add(left.stddev, right.stddev * right.stddev)).sqrt(),
+        samples: left.samples.min(right.samples),
+        determinism_cv: None,
+    }
 }
 
 /// ROADMAP M3 helper: produce a degenerate `MetricStats` for a single

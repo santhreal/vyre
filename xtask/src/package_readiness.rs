@@ -7,6 +7,8 @@ use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
+use crate::release_train;
+
 const MAX_JSON_BYTES: u64 = 8_388_608;
 const MAX_MANIFEST_BYTES: u64 = 1_048_576;
 
@@ -72,40 +74,44 @@ struct VersionedLocalDependency {
     source: &'static str,
 }
 
-const PUBLISH_ORDER: &[PublishStep] = &[
-    step("vyre-macros", "0.6.1", "vyre-macros/Cargo.toml"),
-    step("vyre-spec", "0.6.1", "vyre-spec/Cargo.toml"),
-    step("vyre-lints", "0.6.1", "vyre-lints/Cargo.toml"),
-    step("vyre-foundation", "0.6.1", "vyre-foundation/Cargo.toml"),
-    step("vyre-lower", "0.6.1", "vyre-lower/Cargo.toml"),
-    step("vyre-emit-ptx", "0.6.1", "vyre-emit-ptx/Cargo.toml"),
-    step("vyre-primitives", "0.6.1", "vyre-primitives/Cargo.toml"),
-    step("vyre-reference", "0.6.1", "vyre-reference/Cargo.toml"),
+fn publish_order() -> Vec<PublishStep> {
+    vec![
+    step("vyre-macros", release_train::vyre_version(), "vyre-macros/Cargo.toml"),
+    step("vyre-spec", release_train::vyre_version(), "vyre-spec/Cargo.toml"),
+    step("vyre-lints", release_train::vyre_version(), "vyre-lints/Cargo.toml"),
+    step("vyre-foundation", release_train::vyre_version(), "vyre-foundation/Cargo.toml"),
+    step("vyre-lower", release_train::vyre_version(), "vyre-lower/Cargo.toml"),
+    step("vyre-emit-ptx", release_train::vyre_version(), "vyre-emit-ptx/Cargo.toml"),
+    step("vyre-primitives", release_train::vyre_version(), "vyre-primitives/Cargo.toml"),
+    step("vyre-reference", release_train::vyre_version(), "vyre-reference/Cargo.toml"),
     step(
         "vyre-self-substrate",
-        "0.6.1",
+        release_train::vyre_version(),
         "vyre-self-substrate/Cargo.toml",
     ),
-    step("vyre-driver", "0.6.1", "vyre-driver/Cargo.toml"),
-    step("vyre-runtime", "0.6.1", "vyre-runtime/Cargo.toml"),
-    step("vyre-emit-naga", "0.6.1", "vyre-emit-naga/Cargo.toml"),
-    step("vyre-driver-cuda", "0.6.1", "vyre-driver-cuda/Cargo.toml"),
-    step("vyre-driver-wgpu", "0.6.1", "vyre-driver-wgpu/Cargo.toml"),
-    step("vyre-driver-spirv", "0.6.1", "vyre-driver-spirv/Cargo.toml"),
+    step("vyre-driver", release_train::vyre_version(), "vyre-driver/Cargo.toml"),
+    step("vyre-runtime", release_train::vyre_version(), "vyre-runtime/Cargo.toml"),
+    step("vyre-emit-naga", release_train::vyre_version(), "vyre-emit-naga/Cargo.toml"),
+    step("vyre-emit-metal", release_train::vyre_version(), "vyre-emit-metal/Cargo.toml"),
+    step("vyre-driver-cuda", release_train::vyre_version(), "vyre-driver-cuda/Cargo.toml"),
+    step("vyre-driver-wgpu", release_train::vyre_version(), "vyre-driver-wgpu/Cargo.toml"),
+    step("vyre-driver-metal", release_train::vyre_version(), "vyre-driver-metal/Cargo.toml"),
+    step("vyre-driver-spirv", release_train::vyre_version(), "vyre-driver-spirv/Cargo.toml"),
     step(
         "vyre-driver-reference",
-        "0.6.1",
+        release_train::vyre_version(),
         "vyre-driver-reference/Cargo.toml",
     ),
-    step("vyre", "0.6.1", "vyre-core/Cargo.toml"),
-    step("vyre-harness", "0.6.1", "vyre-harness/Cargo.toml"),
-    step("weir", "0.1.0", "../../../dataflow/weir/Cargo.toml"),
-    step("vyre-intrinsics", "0.6.1", "vyre-intrinsics/Cargo.toml"),
-    step("vyre-libs", "0.6.1", "vyre-libs/Cargo.toml"),
-    step("vyre-debug", "0.6.1", "vyre-debug/Cargo.toml"),
-    step("vyre-aot", "0.6.1", "vyre-aot/Cargo.toml"),
-    step("vyre-emit-spirv", "0.6.1", "vyre-emit-spirv/Cargo.toml"),
-];
+    step("vyre", release_train::vyre_version(), "vyre-core/Cargo.toml"),
+    step("vyre-harness", release_train::vyre_version(), "vyre-harness/Cargo.toml"),
+    step("weir", release_train::weir_version(), "../../../dataflow/weir/Cargo.toml"),
+    step("vyre-intrinsics", release_train::vyre_version(), "vyre-intrinsics/Cargo.toml"),
+    step("vyre-libs", release_train::vyre_version(), "vyre-libs/Cargo.toml"),
+    step("vyre-debug", release_train::vyre_version(), "vyre-debug/Cargo.toml"),
+    step("vyre-aot", release_train::vyre_version(), "vyre-aot/Cargo.toml"),
+    step("vyre-emit-spirv", release_train::vyre_version(), "vyre-emit-spirv/Cargo.toml"),
+    ]
+}
 
 const fn step(package: &'static str, version: &'static str, manifest: &'static str) -> PublishStep {
     PublishStep {
@@ -130,7 +136,8 @@ pub(crate) fn run(args: &[String]) {
     let metadata_path = vyre_root.join("release/evidence/metadata/metadata-matrix.json");
     let mut blockers = Vec::new();
     let metadata_packages = metadata_publishable_packages(&metadata_path, &mut blockers);
-    let ordered_packages = PUBLISH_ORDER
+    let publish_order = publish_order();
+    let ordered_packages = publish_order
         .iter()
         .map(|step| step.package.to_string())
         .collect::<BTreeSet<_>>();
@@ -153,14 +160,14 @@ pub(crate) fn run(args: &[String]) {
         ));
     }
 
-    let order_index = PUBLISH_ORDER
+    let order_index = publish_order
         .iter()
         .enumerate()
         .map(|(index, step)| (step.package, index))
         .collect::<BTreeMap<_, _>>();
     let mut dependency_order_edges = Vec::new();
     let mut versioned_local_dependencies = Vec::new();
-    for (consumer_index, step) in PUBLISH_ORDER.iter().enumerate() {
+    for (consumer_index, step) in publish_order.iter().enumerate() {
         let manifest = vyre_root.join(step.manifest);
         check_manifest_package(step, &manifest, &mut blockers);
         collect_dependency_edges(
@@ -188,37 +195,37 @@ pub(crate) fn run(args: &[String]) {
     let readiness = PackageReadiness {
         schema_version: 1,
         release_train: ReleaseTrain {
-            vyre: "0.6.1",
-            weir: "0.1.0",
-            vyrec: "0.1.0-beta",
+            vyre: release_train::vyre_version(),
+            weir: release_train::weir_version(),
+            vyrec: release_train::vyrec_train_version(),
             cuda_release_path: true,
         },
-        publish_order: PUBLISH_ORDER.to_vec(),
+        publish_order,
         non_publish_release_surfaces: vec![
             ReleaseSurface {
                 package: "vyre-frontend-c",
-                version: "0.6.1",
+                version: release_train::vyre_frontend_c_version(),
                 surface: "c-frontend",
                 reason: "library release surface for beta Vyrec, intentionally not published as a standalone crate",
             },
             ReleaseSurface {
                 package: "vyrec",
-                version: "0.1.0",
+                version: release_train::vyrec_version(),
                 surface: "parser-cli",
                 reason: "beta compiler CLI release surface, intentionally not published to crates.io in this release",
             },
         ],
-        package_verify_passed: vec!["vyre-macros@0.6.1", "vyre-spec@0.6.1", "vyre-lints@0.6.1"],
+        package_verify_passed: release_train::package_verify_passed(),
         observed_package_failures: vec![
             ObservedPackageFailure {
-                package: "vyre-lower@0.6.1",
+                package: "vyre-lower@0.6.3",
                 command: "cargo_full package --allow-dirty --manifest-path vyre-lower/Cargo.toml",
-                reason: "crates.io does not yet contain vyre-foundation@0.6.1",
+                reason: "crates.io does not yet contain vyre-foundation@0.6.3",
             },
             ObservedPackageFailure {
                 package: "weir@0.1.0",
                 command: "cargo_full package --allow-dirty --manifest-path libs/dataflow/weir/Cargo.toml",
-                reason: "crates.io does not yet contain vyre@0.6.1",
+                reason: "crates.io does not yet contain vyre@0.6.3",
             },
         ],
         missing_metadata_packages,

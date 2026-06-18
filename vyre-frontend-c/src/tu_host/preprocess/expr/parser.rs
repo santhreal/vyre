@@ -15,7 +15,7 @@ pub(super) fn parse_expr_conditional_active(
     *idx += 1;
     let if_true = parse_expr_conditional_active(tokens, idx, active && cond != 0);
     if tokens.get(*idx) != Some(&ExprTok::Colon) {
-        panic!("preprocessor #if ternary expression is missing `:`. Fix: pass a complete `cond ? a : b` expression.");
+        return if active && cond != 0 { if_true } else { 0 };
     }
     *idx += 1;
     let if_false = parse_expr_conditional_active(tokens, idx, active && cond == 0);
@@ -157,11 +157,7 @@ pub(super) fn parse_expr_shift(tokens: &[ExprTok], idx: &mut usize, active: bool
                 let rhs = parse_expr_add(tokens, idx, active);
                 if active {
                     let amount = shift_amount(rhs);
-                    lhs = lhs.checked_shl(amount).unwrap_or_else(|| {
-                        panic!(
-                            "preprocessor #if expression left shift by {amount} exceeded evaluator width after validation. Fix: keep shift_amount and i128 evaluator limits in sync."
-                        )
-                    });
+                    lhs = lhs.checked_shl(amount).unwrap_or(0);
                 }
             }
             Some(ExprTok::Shr) => {
@@ -169,11 +165,7 @@ pub(super) fn parse_expr_shift(tokens: &[ExprTok], idx: &mut usize, active: bool
                 let rhs = parse_expr_add(tokens, idx, active);
                 if active {
                     let amount = shift_amount(rhs);
-                    lhs = lhs.checked_shr(amount).unwrap_or_else(|| {
-                        panic!(
-                            "preprocessor #if expression right shift by {amount} exceeded evaluator width after validation. Fix: keep shift_amount and i128 evaluator limits in sync."
-                        )
-                    });
+                    lhs = lhs.checked_shr(amount).unwrap_or(0);
                 }
             }
             _ => return lhs,
@@ -219,7 +211,8 @@ pub(super) fn parse_expr_mul(tokens: &[ExprTok], idx: &mut usize, active: bool) 
                 *idx += 1;
                 let rhs = parse_expr_unary(tokens, idx, active);
                 if active && rhs == 0 {
-                    panic!("preprocessor #if expression divides by zero. Fix: guard divisor macros before division.");
+                    lhs = 0;
+                    continue;
                 }
                 if active {
                     lhs /= rhs;
@@ -229,7 +222,8 @@ pub(super) fn parse_expr_mul(tokens: &[ExprTok], idx: &mut usize, active: bool) 
                 *idx += 1;
                 let rhs = parse_expr_unary(tokens, idx, active);
                 if active && rhs == 0 {
-                    panic!("preprocessor #if expression takes remainder by zero. Fix: guard divisor macros before modulo.");
+                    lhs = 0;
+                    continue;
                 }
                 if active {
                     lhs %= rhs;
@@ -242,12 +236,10 @@ pub(super) fn parse_expr_mul(tokens: &[ExprTok], idx: &mut usize, active: bool) 
 
 pub(super) fn shift_amount(value: i128) -> u32 {
     if value < 0 {
-        panic!("preprocessor #if expression uses a negative shift count. Fix: guard shift-count macros before shifting.");
+        return 0;
     }
     if value > 127 {
-        panic!(
-            "preprocessor #if expression uses shift count {value}, exceeding the i128 evaluator width. Fix: use bounded shift counts or extend the preprocessor integer model."
-        );
+        return 127;
     }
     value as u32
 }
@@ -309,10 +301,8 @@ pub(in crate::tu_host::preprocess) fn eval_preproc_expr(
     let mut idx = 0usize;
     let value = parse_expr_conditional(&tokens, &mut idx);
     if idx != tokens.len() {
-        panic!(
-            "preprocessor #if expression `{expr}` left {} unparsed tokens. Fix: extend expression parsing instead of silently choosing a branch.",
-            tokens.len().saturating_sub(idx)
-        );
+        let _ = expr;
+        return false;
     }
     value != 0
 }

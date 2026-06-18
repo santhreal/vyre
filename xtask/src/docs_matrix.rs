@@ -1,10 +1,11 @@
 //! Release documentation evidence matrix.
 
+use std::collections::BTreeSet;
 use std::fs;
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize)]
 struct DocsMatrix {
@@ -12,6 +13,11 @@ struct DocsMatrix {
     curated_proof_docs_preserved: bool,
     docs: Vec<DocEntry>,
     limitation_findings: Vec<DocLimitationFinding>,
+    authority_link_findings: Vec<MarkdownLinkFinding>,
+    stale_generated_artifact_findings: Vec<StaleGeneratedArtifactFinding>,
+    parallel_active_plan_findings: Vec<ParallelActivePlanFinding>,
+    behavior_coherence_findings: Vec<BehaviorCoherenceFinding>,
+    scan_positioning_findings: Vec<ScanPositioningFinding>,
     blockers: Vec<String>,
 }
 
@@ -50,10 +56,72 @@ struct DocLimitationFinding {
     text: String,
 }
 
+#[derive(Debug, Clone, Serialize)]
+struct MarkdownLinkFinding {
+    path: String,
+    line: usize,
+    target: String,
+    resolved: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct StaleGeneratedArtifactFinding {
+    stale_path: String,
+    canonical_path: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct ParallelActivePlanFinding {
+    path: String,
+    line: usize,
+    marker: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct BehaviorCoherenceFinding {
+    behavior_id: &'static str,
+    path: String,
+    missing_tokens: Vec<&'static str>,
+    evidence_artifact: &'static str,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct ScanPositioningFinding {
+    row_index: Option<usize>,
+    engine: String,
+    issue: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct ScanPositioningMatrix {
+    schema_version: u32,
+    row: Vec<ScanPositioningRow>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ScanPositioningRow {
+    engine: String,
+    workload_class: String,
+    positioning: String,
+    #[serde(default)]
+    benchmark_artifact: String,
+    #[serde(default)]
+    semantic_exclusion: String,
+    #[serde(default)]
+    unsupported_capability_reason: String,
+}
+
 struct RequiredDoc {
     id: &'static str,
     relative: &'static str,
     topics: &'static [&'static str],
+}
+
+struct BehaviorContract {
+    id: &'static str,
+    relative: &'static str,
+    evidence_artifact: &'static str,
+    required_tokens: &'static [&'static str],
 }
 
 const REQUIRED_DOCS: &[RequiredDoc] = &[
@@ -131,6 +199,19 @@ const REQUIRED_DOCS: &[RequiredDoc] = &[
         topics: &["c", "parser", "linux", "evidence"],
     },
     RequiredDoc {
+        id: "parsing-frontends",
+        relative: "docs/parsing-and-frontends.md",
+        topics: &[
+            "parser",
+            "tokenization",
+            "literal anchor",
+            "verifier rule",
+            "quadratic guard",
+            "host-loop ban",
+            "release/evidence/docs/parser-doc-proof.md",
+        ],
+    },
+    RequiredDoc {
         id: "vyrec-readme",
         relative: "../../../../tools/vyrec/README.md",
         topics: &["vyrec", "parser", "cuda", "evidence"],
@@ -187,6 +268,98 @@ const UNRESOLVED_MARKERS: &[&str] = &[
     "to be filled",
 ];
 
+const AUTHORITY_LINK_DOCS: &[&str] = &["docs/THESIS.md"];
+const ACTIVE_ACCELERATION_PLAN: &str = "docs/optimization/ALL_AXES_ACCELERATION_PLAN.md";
+const ACTIVE_PLAN_SCAN_ROOTS: &[&str] = &["README.md", "docs", "audits", "vyre-bench"];
+const SCAN_POSITIONING_MATRIX: &str = "docs/optimization/SCAN_POSITIONING_MATRIX.toml";
+const REQUIRED_SCAN_POSITIONING_ENGINES: &[&str] = &[
+    "Vyre",
+    "Hyperscan",
+    "Vectorscan",
+    "Rust regex",
+    "Aho-Corasick",
+    "memchr",
+    "Hardware regex",
+    "FPGA offload",
+];
+const STALE_GENERATED_DOC_ALIASES: &[(&str, &str)] = &[(
+    "docs/optimization/COMMAND_MATRIX.md",
+    "docs/optimization/XTASK_COMMAND_MATRIX.md",
+)];
+const BEHAVIOR_CONTRACTS: &[BehaviorContract] = &[
+    BehaviorContract {
+        id: "release-evidence-external-artifacts",
+        relative: "docs/RELEASE_ENGINEERING.md",
+        evidence_artifact: "release/evidence/final/expected-artifacts.json",
+        required_tokens: &[
+            "release-evidence",
+            "external-artifacts-only",
+            "command_mode",
+            "artifact_contracts",
+            "blockers",
+            "exit",
+            "release/evidence/final/expected-artifacts.json",
+        ],
+    },
+    BehaviorContract {
+        id: "release-evidence-external-benchmark-freshness",
+        relative: "docs/RELEASE_ENGINEERING.md",
+        evidence_artifact: "release/evidence/final/release-evidence-run.json",
+        required_tokens: &[
+            "release-benchmarks",
+            "external-artifacts-only",
+            "command_mode",
+            "source_digest",
+            "command_digest",
+            "hardware_digest",
+            "schema_digest_chain",
+            "release/evidence/benchmarks/cuda-release-suite.json",
+            "release/evidence/final/release-evidence-run.json",
+        ],
+    },
+    BehaviorContract {
+        id: "command-matrix-provenance",
+        relative: "docs/optimization/XTASK_COMMAND_MATRIX.md",
+        evidence_artifact: "docs/optimization/XTASK_COMMAND_MATRIX.md",
+        required_tokens: &[
+            "command-matrix",
+            "source files",
+            "source loc",
+            "duplicate-risk score",
+            "shared sources",
+            "source digest",
+            "source-count provenance",
+        ],
+    },
+    BehaviorContract {
+        id: "research-audit-schema",
+        relative: "docs/optimization/AGENT_CONTRACT.md",
+        evidence_artifact: "release/evidence/optimization/research-audit.json",
+        required_tokens: &[
+            "research-audit",
+            "schema",
+            "source_digest",
+            "source_ledger_findings",
+            "blockers",
+            "exit",
+            "release/evidence/optimization/research-audit.json",
+        ],
+    },
+    BehaviorContract {
+        id: "frontier-leaderboard-contract",
+        relative: "vyre-bench/README.md",
+        evidence_artifact: "release/evidence/benchmarks/frontier-leaderboard.json",
+        required_tokens: &[
+            "release-benchmarks",
+            "frontier-leaderboard",
+            "baseline",
+            "metric_family",
+            "comparator",
+            "blockers",
+            "release/evidence/benchmarks/frontier-leaderboard.json",
+        ],
+    },
+];
 const MAX_RELEASE_DOC_BYTES: u64 = 4_194_304;
 
 pub(crate) fn run(args: &[String]) {
@@ -221,12 +394,7 @@ pub(crate) fn run(args: &[String]) {
             .map(|text| text.to_ascii_lowercase())
             .unwrap_or_default();
         let contains_release_evidence_rule = lowered.contains("evidence");
-        let missing_topics = required
-            .topics
-            .iter()
-            .copied()
-            .filter(|topic| !lowered.contains(topic))
-            .collect::<Vec<_>>();
+        let missing_topics = missing_required_topics(&lowered, required.topics);
         let unresolved_markers = UNRESOLVED_MARKERS
             .iter()
             .copied()
@@ -306,11 +474,54 @@ pub(crate) fn run(args: &[String]) {
             finding.path, finding.line, finding.text
         ));
     }
+    let authority_link_findings = collect_authority_link_findings(&vyre_root);
+    for finding in &authority_link_findings {
+        blockers.push(format!(
+            "authority documentation `{}`:{} links to missing `{}` resolved as `{}`",
+            finding.path, finding.line, finding.target, finding.resolved
+        ));
+    }
+    let stale_generated_artifact_findings = collect_stale_generated_artifact_findings(&vyre_root);
+    for finding in &stale_generated_artifact_findings {
+        blockers.push(format!(
+            "stale generated documentation alias `{}` exists; canonical generated artifact is `{}`",
+            finding.stale_path, finding.canonical_path
+        ));
+    }
+    let parallel_active_plan_findings = collect_parallel_active_plan_findings(&vyre_root);
+    for finding in &parallel_active_plan_findings {
+        blockers.push(format!(
+            "documentation `{}`:{} contains parallel active VX marker `{}`; move active work to `{ACTIVE_ACCELERATION_PLAN}`",
+            finding.path, finding.line, finding.marker
+        ));
+    }
+    let behavior_coherence_findings = collect_behavior_coherence_findings(&vyre_root);
+    for finding in &behavior_coherence_findings {
+        blockers.push(format!(
+            "user-visible behavior `{}` in `{}` is missing {} docs/help/example/JSON/exit/evidence token(s) for `{}`",
+            finding.behavior_id,
+            finding.path,
+            finding.missing_tokens.len(),
+            finding.evidence_artifact
+        ));
+    }
+    let scan_positioning_findings = collect_scan_positioning_findings(&vyre_root);
+    for finding in &scan_positioning_findings {
+        blockers.push(format!(
+            "scan positioning matrix row {:?} for `{}` is invalid: {}",
+            finding.row_index, finding.engine, finding.issue
+        ));
+    }
     let matrix = DocsMatrix {
-        schema_version: 2,
+        schema_version: 5,
         curated_proof_docs_preserved: true,
         docs,
         limitation_findings,
+        authority_link_findings,
+        stale_generated_artifact_findings,
+        parallel_active_plan_findings,
+        behavior_coherence_findings,
+        scan_positioning_findings,
         blockers,
     };
     let json = match serde_json::to_string_pretty(&matrix) {
@@ -362,11 +573,319 @@ fn collect_limitation_findings(path: &Path, text: &str, findings: &mut Vec<DocLi
     }
 }
 
+fn collect_authority_link_findings(vyre_root: &Path) -> Vec<MarkdownLinkFinding> {
+    let mut findings = Vec::new();
+    for relative in AUTHORITY_LINK_DOCS {
+        let path = vyre_root.join(relative);
+        let text = match read_text_bounded(&path) {
+            Ok(text) => text,
+            Err(error) => {
+                findings.push(MarkdownLinkFinding {
+                    path: relative.to_string(),
+                    line: 0,
+                    target: "<read-error>".to_string(),
+                    resolved: error.to_string(),
+                });
+                continue;
+            }
+        };
+        collect_missing_markdown_links(vyre_root, relative, &text, &mut findings);
+    }
+    findings
+}
+
+fn collect_missing_markdown_links(
+    vyre_root: &Path,
+    source_relative: &str,
+    text: &str,
+    findings: &mut Vec<MarkdownLinkFinding>,
+) {
+    for (line_index, line) in text.lines().enumerate() {
+        for target in markdown_link_targets(line) {
+            if markdown_target_is_external_or_anchor(&target) {
+                continue;
+            }
+            let target_without_fragment = target
+                .split_once('#')
+                .map(|(path, _fragment)| path)
+                .unwrap_or(&target)
+                .trim();
+            if target_without_fragment.is_empty() {
+                continue;
+            }
+            let resolved = vyre_root
+                .join(source_relative)
+                .parent()
+                .unwrap_or(vyre_root)
+                .join(target_without_fragment);
+            if resolved.exists() {
+                continue;
+            }
+            findings.push(MarkdownLinkFinding {
+                path: source_relative.to_string(),
+                line: line_index + 1,
+                target,
+                resolved: resolved.to_string_lossy().replace('\\', "/"),
+            });
+        }
+    }
+}
+
+fn markdown_link_targets(line: &str) -> Vec<String> {
+    let mut targets = Vec::new();
+    let mut rest = line;
+    while let Some(link_start) = rest.find("](") {
+        let after_start = &rest[link_start + 2..];
+        let Some(link_end) = after_start.find(')') else {
+            break;
+        };
+        let target = after_start[..link_end].trim();
+        if !target.is_empty() {
+            targets.push(target.to_string());
+        }
+        rest = &after_start[link_end + 1..];
+    }
+    targets
+}
+
+fn markdown_target_is_external_or_anchor(target: &str) -> bool {
+    target.starts_with('#')
+        || target.starts_with("http://")
+        || target.starts_with("https://")
+        || target.starts_with("mailto:")
+}
+
+fn collect_stale_generated_artifact_findings(
+    vyre_root: &Path,
+) -> Vec<StaleGeneratedArtifactFinding> {
+    STALE_GENERATED_DOC_ALIASES
+        .iter()
+        .filter(|(stale, _canonical)| vyre_root.join(stale).exists())
+        .map(|(stale, canonical)| StaleGeneratedArtifactFinding {
+            stale_path: (*stale).to_string(),
+            canonical_path: (*canonical).to_string(),
+        })
+        .collect()
+}
+
+fn collect_parallel_active_plan_findings(vyre_root: &Path) -> Vec<ParallelActivePlanFinding> {
+    let mut findings = Vec::new();
+    for relative in collect_active_plan_scan_paths(vyre_root) {
+        if relative == ACTIVE_ACCELERATION_PLAN {
+            continue;
+        }
+        let path = vyre_root.join(&relative);
+        let text = match read_text_bounded(&path) {
+            Ok(text) => text,
+            Err(_) => continue,
+        };
+        for (line_index, line) in text.lines().enumerate() {
+            let trimmed = line.trim_start();
+            if trimmed.starts_with("| VX-") {
+                findings.push(ParallelActivePlanFinding {
+                    path: relative.clone(),
+                    line: line_index + 1,
+                    marker: trimmed
+                        .split('|')
+                        .nth(1)
+                        .map(str::trim)
+                        .unwrap_or("VX row")
+                        .to_string(),
+                });
+            }
+        }
+    }
+    findings
+}
+
+fn collect_active_plan_scan_paths(vyre_root: &Path) -> Vec<String> {
+    let mut paths = Vec::new();
+    for root in ACTIVE_PLAN_SCAN_ROOTS {
+        let path = vyre_root.join(root);
+        if path.is_file() {
+            if path.extension().is_some_and(|ext| ext == "md") {
+                paths.push((*root).to_string());
+            }
+            continue;
+        }
+        collect_markdown_paths(vyre_root, &path, &mut paths);
+    }
+    paths.sort();
+    paths.dedup();
+    paths
+}
+
+fn collect_markdown_paths(vyre_root: &Path, dir: &Path, paths: &mut Vec<String>) {
+    let Ok(entries) = fs::read_dir(dir) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            collect_markdown_paths(vyre_root, &path, paths);
+            continue;
+        }
+        if !path.extension().is_some_and(|ext| ext == "md") {
+            continue;
+        }
+        if let Ok(relative) = path.strip_prefix(vyre_root) {
+            paths.push(relative.to_string_lossy().replace('\\', "/"));
+        }
+    }
+}
+
+fn collect_behavior_coherence_findings(vyre_root: &Path) -> Vec<BehaviorCoherenceFinding> {
+    BEHAVIOR_CONTRACTS
+        .iter()
+        .filter_map(|contract| {
+            let path = vyre_root.join(contract.relative);
+            let text = read_text_bounded(&path).unwrap_or_default();
+            let lowered = text.to_ascii_lowercase();
+            let missing_tokens = contract
+                .required_tokens
+                .iter()
+                .copied()
+                .filter(|token| !lowered.contains(&token.to_ascii_lowercase()))
+                .collect::<Vec<_>>();
+            if missing_tokens.is_empty() {
+                return None;
+            }
+            Some(BehaviorCoherenceFinding {
+                behavior_id: contract.id,
+                path: contract.relative.to_string(),
+                missing_tokens,
+                evidence_artifact: contract.evidence_artifact,
+            })
+        })
+        .collect()
+}
+
+fn collect_scan_positioning_findings(vyre_root: &Path) -> Vec<ScanPositioningFinding> {
+    let mut findings = Vec::new();
+    let path = vyre_root.join(SCAN_POSITIONING_MATRIX);
+    let text = match read_text_bounded(&path) {
+        Ok(text) => text,
+        Err(error) => {
+            findings.push(ScanPositioningFinding {
+                row_index: None,
+                engine: "<matrix>".to_string(),
+                issue: format!(
+                    "could not read `{SCAN_POSITIONING_MATRIX}`: {error}. Fix: keep scan positioning in the canonical matrix file."
+                ),
+            });
+            return findings;
+        }
+    };
+    let matrix = match toml::from_str::<ScanPositioningMatrix>(&text) {
+        Ok(matrix) => matrix,
+        Err(error) => {
+            findings.push(ScanPositioningFinding {
+                row_index: None,
+                engine: "<matrix>".to_string(),
+                issue: format!(
+                    "could not parse `{SCAN_POSITIONING_MATRIX}`: {error}. Fix: use [[row]] entries with engine, workload_class, positioning, and proof fields."
+                ),
+            });
+            return findings;
+        }
+    };
+    if matrix.schema_version != 1 {
+        findings.push(ScanPositioningFinding {
+            row_index: None,
+            engine: "<matrix>".to_string(),
+            issue: format!(
+                "schema_version {} is unsupported; expected 1",
+                matrix.schema_version
+            ),
+        });
+    }
+    let mut seen_engines = BTreeSet::new();
+    let mut seen_rows = BTreeSet::new();
+    for (index, row) in matrix.row.iter().enumerate() {
+        let row_index = Some(index);
+        let engine = row.engine.trim();
+        let workload_class = row.workload_class.trim();
+        let positioning = row.positioning.trim();
+        if engine.is_empty() {
+            findings.push(ScanPositioningFinding {
+                row_index,
+                engine: "<empty>".to_string(),
+                issue: "missing engine. Fix: name the compared scan engine.".to_string(),
+            });
+        } else {
+            seen_engines.insert(engine.to_string());
+        }
+        if workload_class.is_empty() {
+            findings.push(ScanPositioningFinding {
+                row_index,
+                engine: row.engine.clone(),
+                issue: "missing workload_class. Fix: state the workload class this row covers."
+                    .to_string(),
+            });
+        }
+        if positioning.is_empty() {
+            findings.push(ScanPositioningFinding {
+                row_index,
+                engine: row.engine.clone(),
+                issue: "missing positioning. Fix: state how Vyre compares to this engine."
+                    .to_string(),
+            });
+        }
+        let row_key = format!("{engine}\n{workload_class}");
+        if !engine.is_empty() && !workload_class.is_empty() && !seen_rows.insert(row_key) {
+            findings.push(ScanPositioningFinding {
+                row_index,
+                engine: row.engine.clone(),
+                issue: "duplicate engine/workload_class row. Fix: dedup through one canonical positioning row."
+                    .to_string(),
+            });
+        }
+        let benchmark = row.benchmark_artifact.trim();
+        let semantic_exclusion = row.semantic_exclusion.trim();
+        let unsupported = row.unsupported_capability_reason.trim();
+        if benchmark.is_empty() && semantic_exclusion.is_empty() && unsupported.is_empty() {
+            findings.push(ScanPositioningFinding {
+                row_index,
+                engine: row.engine.clone(),
+                issue: "missing proof field. Fix: provide benchmark_artifact, semantic_exclusion, or unsupported_capability_reason."
+                    .to_string(),
+            });
+        }
+        if !benchmark.is_empty() && !vyre_root.join(benchmark).is_file() {
+            findings.push(ScanPositioningFinding {
+                row_index,
+                engine: row.engine.clone(),
+                issue: format!(
+                    "benchmark_artifact `{benchmark}` does not exist. Fix: point at a concrete release/evidence benchmark artifact or use a semantic exclusion/unsupported reason."
+                ),
+            });
+        }
+    }
+    for required in REQUIRED_SCAN_POSITIONING_ENGINES {
+        if !seen_engines.contains(*required) {
+            findings.push(ScanPositioningFinding {
+                row_index: None,
+                engine: (*required).to_string(),
+                issue: "required engine is missing from the scan positioning matrix".to_string(),
+            });
+        }
+    }
+    findings
+}
+
 fn doc_contains_unresolved_marker(text: &str, marker: &str) -> bool {
     text.lines().any(|line| {
         let lowered = line.to_ascii_lowercase();
         !doc_line_is_release_rule_text(&lowered) && lowered.contains(marker)
     })
+}
+
+fn missing_required_topics<'a>(lowered_doc: &str, topics: &'a [&'a str]) -> Vec<&'a str> {
+    topics
+        .iter()
+        .copied()
+        .filter(|topic| !lowered_doc.contains(topic))
+        .collect()
 }
 
 fn doc_line_is_release_rule_text(lowered: &str) -> bool {
@@ -566,9 +1085,12 @@ fn render_doc_proof(title: &str, matrix: &DocsMatrix, doc_ids: &[&str]) -> Strin
     let mut out = String::new();
     out.push_str("# ");
     out.push_str(title);
-    out.push_str(
-        "\n\nGenerated by `cargo_full run --bin xtask -- docs-matrix`; do not hand-edit this evidence artifact.\n\nRelease train: `vyre 0.6.1`, `weir 0.1.0`, `vyre-v0.6.1`, `weir-v0.1.0`, `vyre-0.6.1-weir-0.1.0`.\n\nStatus: ",
-    );
+    // Release-train identity from the single TOML source, not stale literals.
+    let vyre_v = crate::release_train::vyre_version();
+    let weir_v = crate::release_train::weir_version();
+    out.push_str(&format!(
+        "\n\nGenerated by `cargo_full run --bin xtask -- docs-matrix`; do not hand-edit this evidence artifact.\n\nRelease train: `vyre {vyre_v}`, `weir {weir_v}`, `vyre-v{vyre_v}`, `weir-v{weir_v}`, `vyre-{vyre_v}-weir-{weir_v}`.\n\nStatus: ",
+    ));
     out.push_str(status);
     out.push_str("\n\nEvidence sources:\n");
     for doc in &selected {
@@ -715,7 +1237,9 @@ fn write_vyre_readme_contract(parent: &Path) {
     };
     let lowered = text.to_ascii_lowercase();
     let required_tokens = vec![
-        "0.6.1",
+        // Single source of truth: the release-train TOML version, not a stale
+        // hardcoded literal (this was pinned at "0.6.3" while the train moved on).
+        crate::release_train::vyre_version(),
         "vyre",
         "gpu",
         "cuda",
@@ -835,4 +1359,148 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
         ));
     }
     Ok(text)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parser_tokenization_policy_topics_require_anchor_verifier_guard_and_host_loop_ban() {
+        let topics = [
+            "tokenization",
+            "literal anchor",
+            "verifier rule",
+            "quadratic guard",
+            "host-loop ban",
+        ];
+        let missing = missing_required_topics("tokenization uses a literal anchor", &topics);
+
+        assert_eq!(
+            missing,
+            vec!["verifier rule", "quadratic guard", "host-loop ban"]
+        );
+
+        let complete = missing_required_topics(
+            "tokenization policy: literal anchor, verifier rule, quadratic guard, host-loop ban",
+            &topics,
+        );
+        assert!(complete.is_empty());
+    }
+
+    #[test]
+    fn missing_authority_markdown_link_is_reported() {
+        let mut findings = Vec::new();
+        let tmp = tempfile::tempdir().unwrap();
+
+        collect_missing_markdown_links(
+            tmp.path(),
+            "docs/THESIS.md",
+            "Read [root thesis](../THESIS.md).\n",
+            &mut findings,
+        );
+
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].path, "docs/THESIS.md");
+        assert_eq!(findings[0].line, 1);
+        assert_eq!(findings[0].target, "../THESIS.md");
+    }
+
+    #[test]
+    fn existing_authority_markdown_link_passes() {
+        let mut findings = Vec::new();
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(tmp.path().join("docs")).unwrap();
+        std::fs::write(tmp.path().join("THESIS.md"), "# Thesis\n").unwrap();
+
+        collect_missing_markdown_links(
+            tmp.path(),
+            "docs/THESIS.md",
+            "Read [root thesis](../THESIS.md).\n",
+            &mut findings,
+        );
+
+        assert!(findings.is_empty(), "{findings:?}");
+    }
+
+    #[test]
+    fn stale_generated_doc_alias_is_reported() {
+        let tmp = tempfile::tempdir().unwrap();
+        let alias = tmp.path().join("docs/optimization/COMMAND_MATRIX.md");
+        std::fs::create_dir_all(alias.parent().unwrap()).unwrap();
+        std::fs::write(&alias, "# stale\n").unwrap();
+
+        let findings = collect_stale_generated_artifact_findings(tmp.path());
+
+        assert_eq!(findings.len(), 1);
+        assert_eq!(
+            findings[0].canonical_path,
+            "docs/optimization/XTASK_COMMAND_MATRIX.md"
+        );
+    }
+
+    #[test]
+    fn behavior_coherence_finding_reports_missing_user_visible_tokens() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(tmp.path().join("docs")).unwrap();
+        std::fs::create_dir_all(tmp.path().join("docs/optimization")).unwrap();
+        std::fs::create_dir_all(tmp.path().join("vyre-bench")).unwrap();
+        std::fs::write(
+            tmp.path().join("docs/RELEASE_ENGINEERING.md"),
+            "release-evidence writes blockers and expected artifacts.\n",
+        )
+        .unwrap();
+        std::fs::write(
+            tmp.path().join("docs/optimization/XTASK_COMMAND_MATRIX.md"),
+            "command-matrix source files source loc duplicate-risk score shared sources source digest source-count provenance.\n",
+        )
+        .unwrap();
+        std::fs::write(
+            tmp.path().join("docs/optimization/AGENT_CONTRACT.md"),
+            "research-audit schema source_digest source_ledger_findings blockers exit release/evidence/optimization/research-audit.json.\n",
+        )
+        .unwrap();
+        std::fs::write(
+            tmp.path().join("vyre-bench/README.md"),
+            "release-benchmarks frontier-leaderboard baseline metric_family comparator blockers release/evidence/benchmarks/frontier-leaderboard.json.\n",
+        )
+        .unwrap();
+
+        let findings = collect_behavior_coherence_findings(tmp.path());
+
+        let release = findings
+            .iter()
+            .find(|finding| finding.behavior_id == "release-evidence-external-artifacts")
+            .expect("Fix: release-evidence behavior fixture must report missing tokens.");
+        assert!(release
+            .missing_tokens
+            .iter()
+            .any(|token| *token == "external-artifacts-only"));
+        assert!(findings
+            .iter()
+            .all(|finding| finding.behavior_id != "command-matrix-provenance"));
+    }
+
+    #[test]
+    fn parallel_active_plan_marker_is_reported_outside_canonical_plan() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(tmp.path().join("docs/optimization")).unwrap();
+        std::fs::write(
+            tmp.path().join("docs/optimization/ALL_AXES_ACCELERATION_PLAN.md"),
+            "| VX-001 | canonical |\n",
+        )
+        .unwrap();
+        std::fs::write(
+            tmp.path().join("docs/optimization/OLD_PLAN.md"),
+            "| VX-999 | stale active row |\n",
+        )
+        .unwrap();
+
+        let findings = collect_parallel_active_plan_findings(tmp.path());
+
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].path, "docs/optimization/OLD_PLAN.md");
+        assert_eq!(findings[0].line, 1);
+        assert_eq!(findings[0].marker, "VX-999");
+    }
 }

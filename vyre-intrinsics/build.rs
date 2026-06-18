@@ -13,7 +13,10 @@
 //! heuristic is reliable for the current source style.
 
 use std::fs;
+use std::io::Read;
 use std::path::Path;
+
+const MAX_CATEGORY_SCAN_SOURCE_BYTES: u64 = 8 * 1024 * 1024;
 
 fn fail(message: impl std::fmt::Display) -> ! {
     eprintln!("Fix: {message}");
@@ -44,7 +47,7 @@ fn main() {
         if !path.exists() {
             continue;
         }
-        let src = fs::read_to_string(path).unwrap_or_else(|e| {
+        let src = read_category_scan_source_bounded(path).unwrap_or_else(|e| {
             fail(format!(
                 "cannot read {} for category scan: {e}",
                 path.display()
@@ -52,6 +55,28 @@ fn main() {
         });
         check_file(path, &src);
     }
+}
+
+fn read_category_scan_source_bounded(path: &Path) -> Result<String, String> {
+    let mut reader = fs::File::open(path).map_err(|error| error.to_string())?;
+    let mut bytes = Vec::new();
+    let mut total = 0u64;
+    let mut chunk = [0u8; 8192];
+    loop {
+        let read = reader.read(&mut chunk).map_err(|error| error.to_string())?;
+        if read == 0 {
+            break;
+        }
+        let read = read as u64;
+        total = total.saturating_add(read);
+        if total > MAX_CATEGORY_SCAN_SOURCE_BYTES {
+            return Err(format!(
+                "source file exceeds {MAX_CATEGORY_SCAN_SOURCE_BYTES} byte category-scan cap"
+            ));
+        }
+        bytes.extend_from_slice(&chunk[..read as usize]);
+    }
+    String::from_utf8(bytes).map_err(|error| error.to_string())
 }
 
 fn check_file(path: &Path, src: &str) {

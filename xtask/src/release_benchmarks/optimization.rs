@@ -16,7 +16,7 @@ use super::suite_inspect::{
 use super::types::MAX_RELEASE_BENCHMARK_TEXT_BYTES;
 use super::types::{
     OptimizationArtifactInspection, OptimizationBenchmarkEvidence, OptimizationBenchmarkManifest,
-    ReleaseAxesEvidence,
+    OptimizationBenchmarkManifestSummary, ReleaseAxesEvidence,
 };
 
 pub(super) fn metric_p50(metric: &Value) -> Option<u64> {
@@ -477,6 +477,12 @@ pub(super) fn inspect_optimization_benchmark_artifact(
         return OptimizationArtifactInspection {
             exists,
             read_error,
+            selected_backend: None,
+            source_fingerprint: None,
+            source_tree_fingerprint: None,
+            environment: None,
+            summary_total_time_ns: None,
+            summary_cache_hit_rate: None,
             case_count: 0,
             min_wall_samples: None,
             min_wall_p50: None,
@@ -524,6 +530,29 @@ pub(super) fn inspect_optimization_benchmark_artifact(
             report.get("selected_backend").and_then(Value::as_str)
         ));
     }
+    let selected_backend = report
+        .get("selected_backend")
+        .and_then(Value::as_str)
+        .map(str::to_string);
+    let source_fingerprint = report
+        .get("source_fingerprint")
+        .and_then(Value::as_str)
+        .filter(|value| !value.trim().is_empty())
+        .map(str::to_string);
+    let source_tree_fingerprint = report
+        .get("source_tree_fingerprint")
+        .and_then(Value::as_str)
+        .filter(|value| !value.trim().is_empty())
+        .map(str::to_string);
+    let environment = report.get("environment").cloned();
+    let summary_total_time_ns = report
+        .get("summary")
+        .and_then(|summary| summary.get("total_time_ns"))
+        .and_then(Value::as_u64);
+    let summary_cache_hit_rate = report
+        .get("summary")
+        .and_then(|summary| summary.get("cache_hit_rate"))
+        .and_then(Value::as_f64);
     crate::benchmark_evidence_semantics::inspect_source_artifact_case_integrity(
         artifact,
         &report,
@@ -683,6 +712,12 @@ pub(super) fn inspect_optimization_benchmark_artifact(
     OptimizationArtifactInspection {
         exists,
         read_error,
+        selected_backend,
+        source_fingerprint,
+        source_tree_fingerprint,
+        environment,
+        summary_total_time_ns,
+        summary_cache_hit_rate,
         case_count: cases.len(),
         min_wall_samples,
         min_wall_p50,
@@ -996,6 +1031,11 @@ pub(super) fn write_optimization_benchmark_manifest(workspace_root: &Path, backe
     let required_case_count = specs.len();
     let mut blockers = Vec::new();
     let mut covered_pass_families = Vec::new();
+    let mut source_fingerprint = None::<String>;
+    let mut source_tree_fingerprint = None::<String>;
+    let mut environment = None::<Value>;
+    let mut total_time_ns = 0u64;
+    let mut cache_hit_rates = Vec::new();
     let cases = specs
         .into_iter()
         .map(|(
@@ -1023,9 +1063,34 @@ pub(super) fn write_optimization_benchmark_manifest(workspace_root: &Path, backe
             for family in &pass_families {
                 covered_pass_families.push(*family);
             }
+            if source_fingerprint.is_none() {
+                source_fingerprint = inspection.source_fingerprint.clone();
+            }
+            if source_tree_fingerprint.is_none() {
+                source_tree_fingerprint = inspection.source_tree_fingerprint.clone();
+            }
+            if environment.is_none() {
+                environment = inspection.environment.clone();
+            }
+            total_time_ns =
+                total_time_ns.saturating_add(inspection.summary_total_time_ns.unwrap_or(0));
+            if let Some(cache_hit_rate) = inspection.summary_cache_hit_rate {
+                cache_hit_rates.push(cache_hit_rate);
+            }
+            let status = if inspection.exists && inspection.blockers.is_empty() {
+                "pass"
+            } else {
+                "failed"
+            };
             OptimizationBenchmarkEvidence {
+                id: case_id,
                 case_id,
                 artifact,
+                backend_id: inspection
+                    .selected_backend
+                    .clone()
+                    .unwrap_or_else(|| backend.to_string()),
+                status: status.to_string(),
                 covered_pass_families: pass_families,
                 required_custom_metrics,
                 required_positive_metrics,
@@ -1060,11 +1125,52 @@ pub(super) fn write_optimization_benchmark_manifest(workspace_root: &Path, backe
             "required optimization pass family `{family}` has no benchmark manifest coverage"
         ));
     }
+    let source_fingerprint = source_fingerprint.unwrap_or_else(|| {
+        blockers.push("optimization benchmark manifest is missing source_fingerprint".to_string());
+        String::new()
+    });
+    let source_tree_fingerprint = source_tree_fingerprint.unwrap_or_else(|| {
+        blockers
+            .push("optimization benchmark manifest is missing source_tree_fingerprint".to_string());
+        String::new()
+    });
+    let environment = environment.unwrap_or_else(|| {
+        blockers.push("optimization benchmark manifest is missing environment".to_string());
+        json!({})
+    });
+    if environment
+        .get("cpu_model")
+        .and_then(Value::as_str)
+        .filter(|value| !value.trim().is_empty())
+        .is_none()
+    {
+        blockers.push(
+            "optimization benchmark manifest environment is missing cpu_model".to_string(),
+        );
+    }
+    let passed = cases.iter().filter(|case| case.status == "pass").count();
+    let failed = cases.len().saturating_sub(passed);
+    let cache_hit_rate = if cache_hit_rates.is_empty() {
+        None
+    } else {
+        Some(cache_hit_rates.iter().sum::<f64>() / cache_hit_rates.len() as f64)
+    };
     write_json(
         &workspace_root.join("release/evidence/optimization/pass-family-benchmark-manifest.json"),
         &OptimizationBenchmarkManifest {
-            schema_version: 1,
+            schema_version: 2,
             backend: backend.to_string(),
+            selected_backend: backend.to_string(),
+            source_fingerprint,
+            source_tree_fingerprint,
+            environment,
+            summary: OptimizationBenchmarkManifestSummary {
+                total_cases: cases.len(),
+                passed,
+                failed,
+                total_time_ns,
+                cache_hit_rate,
+            },
             required_case_count,
             required_pass_families,
             covered_pass_families,

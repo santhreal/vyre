@@ -105,11 +105,7 @@ impl<K> LruIndex<K> {
     }
 
     fn next_serial(&mut self) -> u64 {
-        self.serial = self.serial.checked_add(1).unwrap_or_else(|| {
-            panic!(
-                "vyre-libs gpu preprocessor LRU index serial overflowed. Fix: recreate process-local preprocessor caches before continuing an unbounded translation-unit stream."
-            )
-        });
+        self.serial = self.serial.saturating_add(1);
         self.serial
     }
 }

@@ -6,6 +6,8 @@ use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
+use crate::release_train;
+
 const MAX_VERSION_EVIDENCE_TEXT_BYTES: u64 = 8_388_608;
 
 #[derive(Debug, Serialize)]
@@ -93,15 +95,6 @@ struct ReleaseNoteTokenFinding {
     missing: String,
 }
 
-const REQUIRED_RELEASE_PACKAGES: &[(&str, &str, &str)] = &[
-    ("vyre", "0.6.1", "vyre"),
-    ("vyre-driver-cuda", "0.6.1", "vyre"),
-    ("vyre-driver-wgpu", "0.6.1", "vyre"),
-    ("weir", "0.1.0", "weir"),
-    ("vyrec", "0.1.0", "vyre"),
-    ("vyre-frontend-c", "0.6.1", "vyre"),
-];
-
 pub(crate) fn run(args: &[String]) {
     let output = match parse_output(args) {
         Ok(output) => output,
@@ -187,13 +180,17 @@ pub(crate) fn run(args: &[String]) {
             continue;
         }
         match krate.release_group {
-            "vyre" if krate.version != "0.6.1" => blockers.push(format!(
-                "{} is version {}, requested Vyre release is 0.6.1",
-                krate.package, krate.version
+            "vyre" if krate.version != release_train::vyre_version() => blockers.push(format!(
+                "{} is version {}, requested Vyre release is {}",
+                krate.package,
+                krate.version,
+                release_train::vyre_version()
             )),
-            "weir" if krate.version != "0.1.0" => blockers.push(format!(
-                "{} is version {}, requested Weir release is 0.1.0",
-                krate.package, krate.version
+            "weir" if krate.version != release_train::weir_version() => blockers.push(format!(
+                "{} is version {}, requested Weir release is {}",
+                krate.package,
+                krate.version,
+                release_train::weir_version()
             )),
             _ => {}
         }
@@ -242,11 +239,11 @@ pub(crate) fn run(args: &[String]) {
 
     let matrix = VersionMatrix {
         schema_version: 1,
-        requested_vyre_release: "0.6.1",
-        requested_weir_release: "0.1.0",
+        requested_vyre_release: release_train::vyre_version(),
+        requested_weir_release: release_train::weir_version(),
         tag_story: release_tag_story(),
-        required_release_packages: REQUIRED_RELEASE_PACKAGES
-            .iter()
+        required_release_packages: release_train::required_release_packages()
+            .into_iter()
             .map(|(package, version, _)| format!("{package}@{version}"))
             .collect(),
         missing_required_release_packages,
@@ -282,13 +279,13 @@ pub(crate) fn run(args: &[String]) {
 }
 
 fn missing_required_release_packages(crates: &[CrateVersion]) -> Vec<String> {
-    REQUIRED_RELEASE_PACKAGES
-        .iter()
+    release_train::required_release_packages()
+        .into_iter()
         .filter_map(|(required_package, expected_version, expected_group)| {
             let present = crates.iter().any(|krate| {
-                krate.package == *required_package
-                    && krate.version == *expected_version
-                    && krate.release_group == *expected_group
+                krate.package == required_package
+                    && krate.version == expected_version
+                    && krate.release_group == expected_group
             });
             (!present).then(|| format!("{required_package}@{expected_version}:{expected_group}"))
         })
@@ -312,14 +309,7 @@ fn write_release_tag_plan(output: &Path, matrix: &VersionMatrix) {
         vyre_tag: tag_story.vyre_tag,
         weir_tag: tag_story.weir_tag,
         combined_release_train_tag: tag_story.combined_release_train_tag,
-        tag_creation_order: vec![
-            tag_story.vyre_rc_tag,
-            tag_story.weir_rc_tag,
-            tag_story.combined_release_train_rc_tag,
-            tag_story.vyre_tag,
-            tag_story.weir_tag,
-            tag_story.combined_release_train_tag,
-        ],
+        tag_creation_order: release_train::tag_creation_order().to_vec(),
         required_gate_before_rc_tag: "cargo_full run --bin xtask -- version-matrix --output release/evidence/version/version-matrix.json && cargo_full run --bin xtask -- release-completion-audit --output release/evidence/final/completion-audit.json && cargo_full run --bin xtask -- vyre-release-gate && scripts/apply-branch-protection.sh main",
         required_gate_before_tag: "cargo_full run --bin xtask -- version-matrix --output release/evidence/version/version-matrix.json && cargo_full run --bin xtask -- release-completion-audit --output release/evidence/final/completion-audit.json && cargo_full run --bin xtask -- vyre-release-gate && scripts/apply-branch-protection.sh main",
         version_matrix_blocker_count: matrix.blockers.len(),
@@ -423,31 +413,15 @@ fn release_doc_paths(vyre_root: &Path, santh_root: &Path) -> Vec<PathBuf> {
 
 fn release_tag_story() -> ReleaseTagStory {
     ReleaseTagStory {
-        vyre_rc_tag: "vyre-v0.6.1-rc.1",
-        weir_rc_tag: "weir-v0.1.0-rc.1",
-        combined_release_train_rc_tag: "vyre-0.6.1-weir-0.1.0-rc.1",
-        vyre_tag: "vyre-v0.6.1",
-        weir_tag: "weir-v0.1.0",
-        combined_release_train_tag: "vyre-0.6.1-weir-0.1.0",
-        policy: "Release packaging must use explicit product-scoped RC and final tags, not a bare v0.6.1 tag that could ambiguously refer to the root monorepo, Vyre-only crates, or Weir.",
-        required_in_release_notes: vec![
-            "vyre 0.6.1",
-            "weir 0.1.0",
-            "vyre-driver-cuda@0.6.1",
-            "vyre-driver-wgpu@0.6.1",
-            "vyre-v0.6.1-rc.1",
-            "weir-v0.1.0-rc.1",
-            "vyre-0.6.1-weir-0.1.0-rc.1",
-            "vyre-v0.6.1",
-            "weir-v0.1.0",
-            "vyre-0.6.1-weir-0.1.0",
-        ],
-        required_in_packaging: vec![
-            "package versions align before tag creation",
-            "release candidate tags are cut before final tags",
-            "release notes cite the product-scoped tags",
-            "release artifacts are generated after the version matrix has zero blockers",
-        ],
+        vyre_rc_tag: release_train::vyre_rc_tag(),
+        weir_rc_tag: release_train::weir_rc_tag(),
+        combined_release_train_rc_tag: release_train::combined_release_train_rc_tag(),
+        vyre_tag: release_train::vyre_tag(),
+        weir_tag: release_train::weir_tag(),
+        combined_release_train_tag: release_train::combined_release_train_tag(),
+        policy: release_train::tag_policy(),
+        required_in_release_notes: release_train::required_release_note_tokens(),
+        required_in_packaging: release_train::required_packaging_steps(),
     }
 }
 
@@ -613,7 +587,7 @@ fn collect_dependency_table(
 
 fn expected_dependency_version(dependency: &str) -> Option<(&'static str, &'static str)> {
     if dependency == "weir" {
-        return Some(("0.1.0", "weir"));
+        return Some((release_train::weir_version(), "weir"));
     }
     if matches!(
         dependency,
@@ -627,7 +601,7 @@ fn expected_dependency_version(dependency: &str) -> Option<(&'static str, &'stat
         return None;
     }
     if dependency == "vyre" || dependency.starts_with("vyre-") {
-        return Some(("0.6.1", "vyre"));
+        return Some((release_train::vyre_version(), "vyre"));
     }
     None
 }

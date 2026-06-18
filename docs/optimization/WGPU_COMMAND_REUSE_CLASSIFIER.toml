@@ -1,0 +1,36 @@
+# WGPU command reuse classifier for VX-675.
+# Command encoder reuse aligns with CUDA graph and Metal ICB evidence.
+
+schema = "vyre.wgpu.command_reuse_classifier.v1"
+owner = "driver_wgpu"
+evidence_tokens = ["WGPU_COMMANDS", "WEBGPU_SPEC"]
+
+required_fields = [
+  "bind_group_digest",
+  "pipeline_id",
+  "buffer_shape",
+  "timestamp_capability",
+  "topology_digest",
+  "invalidation_reason",
+  "reuse_allowed",
+]
+
+[[command]]
+id = "stable-bindings-reuse"
+bind_group_digest = "sha256:wgpu-bindings-a"
+pipeline_id = "scan_pipeline_subgroup"
+buffer_shape = "input:64MiB,output:4MiB"
+timestamp_capability = "available"
+topology_digest = "sha256:wgpu-topology-a"
+invalidation_reason = "none"
+reuse_allowed = true
+
+[[command]]
+id = "shape-change-invalidates"
+bind_group_digest = "sha256:wgpu-bindings-b"
+pipeline_id = "scan_pipeline_subgroup"
+buffer_shape = "input:128MiB,output:8MiB"
+timestamp_capability = "available"
+topology_digest = "sha256:wgpu-topology-b"
+invalidation_reason = "buffer-shape-changed"
+reuse_allowed = false

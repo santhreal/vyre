@@ -1,0 +1,42 @@
+# Frontend language dialect contracts for VX-659.
+# Parser claims must name a language version, feature set, unsupported diagnostics, and fallback route.
+
+schema = "vyre.frontend.dialect_contract.v1"
+owner = "parser_frontend"
+evidence_tokens = ["MLIR_PASS", "TREE_SITTER"]
+
+required_fields = [
+  "language",
+  "version",
+  "extension_flags",
+  "parser_feature_gates",
+  "unsupported_syntax_diagnostics",
+  "fallback_route",
+]
+
+[[dialect]]
+id = "rust-2021-default"
+language = "rust"
+version = "2021"
+extension_flags = ["edition_2021"]
+parser_feature_gates = ["async_fn", "const_generics", "or_patterns"]
+unsupported_syntax_diagnostics = ["VYRE_RUST_UNSUPPORTED_EXPERIMENTAL_FEATURE"]
+fallback_route = "tree-sitter-rust-recovery"
+
+[[dialect]]
+id = "gnu11-c"
+language = "c"
+version = "gnu11"
+extension_flags = ["gnu_statement_expression", "typeof"]
+parser_feature_gates = ["preprocessor_conditionals", "compound_literals"]
+unsupported_syntax_diagnostics = ["VYRE_C_UNSUPPORTED_VENDOR_EXTENSION"]
+fallback_route = "c-preprocess-then-tree-sitter"
+
+[[dialect]]
+id = "python-3-12"
+language = "python"
+version = "3.12"
+extension_flags = ["pattern_matching", "type_parameter_syntax"]
+parser_feature_gates = ["indentation_tokens", "f_string_parser"]
+unsupported_syntax_diagnostics = ["VYRE_PYTHON_UNSUPPORTED_VERSION_SYNTAX"]
+fallback_route = "python-ast-recovery"

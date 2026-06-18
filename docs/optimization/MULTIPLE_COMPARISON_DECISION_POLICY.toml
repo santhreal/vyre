@@ -1,0 +1,62 @@
+# Multiple-comparison decisions own comparison families and correction policy; statistical regression gates own individual benchmark decisions.
+
+schema = "vyre.performance.multiple_comparison_decision_policy.v1"
+owner = "bench_harness"
+evidence_tokens = ["NIST_MULTIPLE_COMPARISONS", "GOOGLE_BENCHMARK_COMPARE_TOOLS", "CRITERION_ANALYSIS_PROCESS", "NIST_FULL_FACTORIAL_DESIGN"]
+
+required_fields = [
+  "comparison_family_id",
+  "family_scope_policy",
+  "primary_endpoint_policy",
+  "comparison_set_policy",
+  "correction_policy",
+  "alpha_policy",
+  "effect_size_policy",
+  "exploratory_policy",
+  "winner_policy",
+  "rollback_policy",
+  "authority_links",
+  "diagnostic",
+]
+
+[[comparison_family]]
+comparison_family_id = "regex-route-family-comparison"
+family_scope_policy = "all-route-variants-tested-against-same-corpus-family-backend-class-and-release-candidate-belong-to-one-comparison-family"
+primary_endpoint_policy = "primary-endpoint-throughput-predeclared-before-running-route-family"
+comparison_set_policy = "comparison-set-records-baseline-route-candidate-routes-repetitions-blocks-and-excluded-impossible-combinations"
+correction_policy = "use-Bonferroni-or-Tukey-family-policy-recorded-before-public-winner-claim"
+alpha_policy = "family-alpha-recorded-and-individual-threshold-derived-before-route-decision"
+effect_size_policy = "winner-must-clear-corrected-significance-noise-floor-output-parity-and-minimum-effect-size"
+exploratory_policy = "exploratory-route-finds-recorded-separately-and-cannot-update-default-route-without-confirmatory-family-run"
+winner_policy = "single-public-winner-claim-names-family-scope-baseline-run-matrix-and-corrected-decision"
+rollback_policy = "winner-invalidated-if-profile-triage-or-release-health-contradicts-corrected-decision"
+authority_links = ["STATISTICAL_REGRESSION_GATES.toml", "REGEX_ENGINE_COMPARATORS.toml", "PROFILE_TRACE_METRIC_CORRELATION_POLICY.toml", "RELEASE_HEALTH_FEEDBACK_LOOP.toml"]
+diagnostic = "VYRE_REGEX_ROUTE_MULTIPLE_COMPARISON_POLICY_REQUIRED"
+
+[[comparison_family]]
+comparison_family_id = "gpu-tuning-factor-family-comparison"
+family_scope_policy = "all-factor-combinations-in-one-kernel-tuning-design-belong-to-one-comparison-family-per-hardware-block"
+primary_endpoint_policy = "primary-endpoint-throughput-or-kernel-time-selected-before-factorial-run"
+comparison_set_policy = "comparison-set-records-factor-levels-interaction-terms-center-points-blocks-and-replications"
+correction_policy = "use-Scheffe-or-Bonferroni-policy-for-many-factor-or-interaction-claims-recorded-before-decision"
+alpha_policy = "family-alpha-and-per-comparison-alpha-recorded-with-hardware-block-id"
+effect_size_policy = "selected-factor-combination-must-clear-corrected-decision-resource-budget-roofline-and-profile-triage"
+exploratory_policy = "screening-design-winners-require-confirmatory-run-before-default-kernel-selection"
+winner_policy = "winner-record-names-factor-levels-hardware-scope-profile-id-roofline-counter-set-and-corrected-decision"
+rollback_policy = "selected-kernel-invalidated-if-capacity-envelope-or-profile-triage-contradicts-family winner"
+authority_links = ["OPTIMIZATION_EXPERIMENT_DESIGN_POLICY.toml", "ROOFLINE_COUNTER_EVIDENCE.toml", "PERFORMANCE_REGRESSION_PROFILE_TRIAGE_POLICY.toml", "GPU_DEVICE_CAPACITY_PLACEMENT_POLICY.toml"]
+diagnostic = "VYRE_GPU_TUNING_MULTIPLE_COMPARISON_POLICY_REQUIRED"
+
+[[comparison_family]]
+comparison_family_id = "operator-release-load-comparison"
+family_scope_policy = "all-release-candidate-load-variants-tested-under-one-capacity-envelope-and-rollout-phase-belong-to-one-comparison-family"
+primary_endpoint_policy = "primary-endpoint-SLO-burn-or-p99-latency-predeclared-before-canary-analysis"
+comparison_set_policy = "comparison-set-records-baseline-release-candidate-release-autoscaling-mode-replica-class-and-workload-mix"
+correction_policy = "use-Bonferroni-policy-for-release-blocker-claims-across-SLO-latency-throughput-and-error-rate-endpoints"
+alpha_policy = "release-family-alpha-recorded-before-promotion-gate-decision"
+effect_size_policy = "candidate-must-clear-corrected-SLO-decision-capacity-envelope-and-profile-backed-regression-triage"
+exploratory_policy = "exploratory-load-findings-feed-runbook-or-capacity-policy-but-do-not-pass-promotion-gate-alone"
+winner_policy = "promotion-claim-names-release-family-scope-capacity-envelope-runbook-links-and-corrected-decision"
+rollback_policy = "promotion-invalidated-if-rollout-analysis-alerts-or-incident-retrospective-contradict-corrected-decision"
+authority_links = ["SERVICE_LEVEL_OBJECTIVE_POLICY.toml", "PROGRESSIVE_DELIVERY_CANARY_POLICY.toml", "RESOURCE_RIGHTSIZING_CAPACITY_POLICY.toml", "PERFORMANCE_REGRESSION_PROFILE_TRIAGE_POLICY.toml"]
+diagnostic = "VYRE_OPERATOR_RELEASE_MULTIPLE_COMPARISON_POLICY_REQUIRED"

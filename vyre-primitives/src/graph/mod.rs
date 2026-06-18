@@ -22,6 +22,14 @@ pub mod reachable;
 pub mod program_graph;
 pub(crate) mod scratch;
 
+pub(crate) fn checked_csr_offset_count(node_count: u32, op_name: &str) -> Result<u32, String> {
+    node_count.checked_add(1).ok_or_else(|| {
+        format!(
+            "Fix: {op_name} node_count + 1 overflows u32 for node_count={node_count}. Shard the CSR graph before GPU dispatch."
+        )
+    })
+}
+
 /// One BFS step that accumulates into frontier_out and reports changes.
 pub mod csr_forward_or_changed;
 /// One BFS frontier step over ProgramGraph CSR.
@@ -71,6 +79,9 @@ pub mod motif;
 /// ProgramGraph CSR.
 pub mod scc_decompose;
 
+/// Vector nearest-neighbor graph construction plus graph-ranking parity.
+pub mod vector_neighbor_graph;
+
 /// Exploded-supergraph builder  -  (CFG × fact) pairs as graph vertices
 /// so IFDS/IDE reduces to `csr_forward_traverse`.
 pub mod exploded;
@@ -78,6 +89,8 @@ pub mod exploded;
 /// Adaptive CSR / dense bitmatrix traversal  -  picks representation
 /// per tile based on frontier density.
 pub mod adaptive_traverse;
+/// Shared state/index frontier headers for graph and automata worklists.
+pub mod state_index_frontier;
 
 /// Persistent BFS  -  multi-step frontier expansion in a single dispatch.
 pub mod persistent_bfs;

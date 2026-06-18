@@ -1,0 +1,37 @@
+# SSRF and DNS rebinding guards for VX-865 through VX-869.
+# URL allowlists, DNS resolution, address classification, redirect rechecks, and cache policy share one guard.
+
+schema = "vyre.network.ssrf_dns_rebinding_guard.v1"
+owner = "security_reliability"
+evidence_tokens = ["OWASP_SSRF", "RFC_1035_DNS", "WHATWG_URL"]
+
+required_fields = [
+  "guard_id",
+  "url_policy",
+  "dns_resolution_policy",
+  "address_classification",
+  "rebinding_check",
+  "redirect_revalidation",
+  "cache_policy",
+  "refusal_diagnostic",
+]
+
+[[guard]]
+guard_id = "release-artifact-fetch"
+url_policy = "URL_CANONICALIZATION_POLICY.toml"
+dns_resolution_policy = "resolve-then-classify-every-network-use"
+address_classification = ["block-loopback", "block-link-local", "block-private-ranges", "block-metadata-service"]
+rebinding_check = "pin-and-recheck-address-before-connect"
+redirect_revalidation = "re-run-url-and-address-policy-on-every-hop"
+cache_policy = "bounded-ttl-with-revalidation"
+refusal_diagnostic = "VYRE_SSRF_GUARD_REFUSED"
+
+[[guard]]
+guard_id = "operator-url-validation"
+url_policy = "URL_CANONICALIZATION_POLICY.toml"
+dns_resolution_policy = "offline-validate-allowlist-then-runtime-recheck"
+address_classification = ["allow-public-routable-only"]
+rebinding_check = "reject-if-address-class-changes"
+redirect_revalidation = "same-origin-or-explicit-allowlist"
+cache_policy = "no-cache-for-security-decision"
+refusal_diagnostic = "VYRE_DNS_REBINDING_REFUSED"

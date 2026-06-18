@@ -1,0 +1,86 @@
+[artifact]
+id = "IO_PIPELINE_BACKPRESSURE_EVIDENCE"
+title = "I/O pipeline backpressure and evidence contract"
+tranche = "VX-1521..VX-1540"
+owner = "runtime_io"
+status = "planned_contract"
+research_sources = [
+  "LINUX_IO_URING_SETUP",
+  "LINUX_IO_URING_ENTER",
+  "LINUX_IO_URING_REGISTER",
+  "LINUX_GETDENTS64",
+  "LINUX_READV_PREADV2",
+]
+
+[scope]
+owns = [
+  "read queue pressure telemetry before scan handoff",
+  "submission/completion imbalance detection",
+  "directory enumeration pressure propagation",
+  "read amplification accounting",
+  "async cancellation and terminal-state evidence",
+]
+does_not_own = [
+  "global queue quotas, owned by BACKPRESSURE_QUEUE_QUOTA_POLICY",
+  "resource ceilings, owned by RESOURCE_BUDGET_POLICY",
+  "statistical release gates, owned by STATISTICAL_PERFORMANCE_GATES",
+  "profiling capture format, owned by BENCHMARK_PROFILING_CAPTURE_POLICY",
+]
+
+[pressure_model]
+queues = [
+  "directory_enumeration",
+  "metadata_fetch",
+  "open_handle",
+  "read_submission",
+  "read_completion",
+  "scan_handoff",
+]
+pressure_signals = [
+  "queued_items",
+  "queued_bytes",
+  "oldest_item_age_ns",
+  "submission_ring_fill_ratio",
+  "completion_ring_lag",
+  "retry_budget_consumed",
+  "downstream_scan_wait_ns",
+]
+backpressure_actions = [
+  "pause_directory_expansion",
+  "cap_metadata_fetch",
+  "stop_new_read_submissions",
+  "drain_completions",
+  "release_unused_buffers",
+  "emit_operator_visible_pressure_event",
+]
+
+[evidence]
+required_per_run = [
+  "files_seen",
+  "files_opened",
+  "files_read",
+  "bytes_requested",
+  "bytes_delivered_to_scanner",
+  "read_amplification_ratio",
+  "direct_io_attempts",
+  "direct_io_admissions",
+  "buffered_downgrades",
+  "partial_reads",
+  "read_retries",
+  "cancellations",
+  "queue_pressure_events",
+]
+required_per_pressure_event = [
+  "queue_name",
+  "threshold",
+  "observed_value",
+  "action",
+  "duration_ns",
+  "bytes_blocked",
+  "candidate_files_blocked",
+]
+
+[regression_linkage]
+profiling = "BENCHMARK_PROFILING_CAPTURE_POLICY records syscall count, queue latency, and handoff latency"
+statistics = "STATISTICAL_PERFORMANCE_GATES compares p50/p95/p99 ingress latency, bytes/sec, and CPU per GiB against baseline"
+dogfood = "DOGFOOD_FINDING_LOOP records real corpus pressure cases and requires fixes to shared queues, not one-off bypasses"

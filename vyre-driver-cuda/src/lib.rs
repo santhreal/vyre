@@ -450,6 +450,7 @@ impl CudaBackendRegistration {
         for (step, handles) in steps.iter().zip(handle_sets.iter()) {
             let mut config = DispatchConfig::default();
             config.grid_override = step.grid_override;
+            config.workgroup_override = step.workgroup_override;
             concrete_steps.push(crate::backend::CudaResidentDispatchStep {
                 program: step.program,
                 handles,

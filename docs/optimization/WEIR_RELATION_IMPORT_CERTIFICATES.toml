@@ -1,0 +1,38 @@
+# Weir relation import certificates for VX-660.
+# Tuple transport must preserve source witnesses across the Weir/Vyre boundary.
+
+schema = "vyre.weir.relation_import_certificate.v1"
+owner = "graph_flow_compiler"
+evidence_tokens = ["CODEQL_FLOW", "DATAFROG"]
+
+required_fields = [
+  "relation_name",
+  "endpoint_domains",
+  "call_string_ids",
+  "sanitizer_ids",
+  "tuple_digest",
+  "source_span_mapping",
+  "malformed_bytes_policy",
+  "witness_path_policy",
+]
+
+malformed_bytes_policy = "fail_closed"
+witness_path_policy = "preserve_source_span_chain"
+
+[[certificate]]
+id = "weir-to-vyre-taint-edge"
+relation_name = "taint_edge"
+endpoint_domains = ["source_node", "sink_node"]
+call_string_ids = ["cs:main:parse:0", "cs:main:render:1"]
+sanitizer_ids = ["sanitize_html", "validate_url"]
+tuple_digest = "sha256:weir-taint-edge-tuples"
+source_span_mapping = "sha256:weir-taint-source-spans"
+
+[[certificate]]
+id = "weir-to-vyre-call-summary"
+relation_name = "call_summary"
+endpoint_domains = ["caller", "callee"]
+call_string_ids = ["cs:api:handle:2"]
+sanitizer_ids = []
+tuple_digest = "sha256:weir-call-summary-tuples"
+source_span_mapping = "sha256:weir-call-summary-spans"

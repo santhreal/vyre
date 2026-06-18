@@ -154,6 +154,17 @@
       "release_policy": "CUDA backend crate keeps default empty and is selected explicitly by release tooling"
     },
     {
+      "name": "vyre-driver-metal",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-metal/Cargo.toml",
+      "feature_count": 0,
+      "has_default_feature": false,
+      "default_feature_members": [],
+      "features": [],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
       "name": "vyre-driver-reference",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-reference/Cargo.toml",
       "feature_count": 0,
@@ -198,6 +209,17 @@
       "malformed_features": [],
       "unresolved_feature_members": [],
       "release_policy": "WGPU backend crate keeps default empty as fallback path"
+    },
+    {
+      "name": "vyre-emit-metal",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-metal/Cargo.toml",
+      "feature_count": 0,
+      "has_default_feature": false,
+      "default_feature_members": [],
+      "features": [],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
     },
     {
       "name": "vyre-emit-naga",
@@ -263,12 +285,13 @@
     {
       "name": "vyre-frontend-c",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/Cargo.toml",
-      "feature_count": 2,
+      "feature_count": 3,
       "has_default_feature": true,
       "default_feature_members": [],
       "features": [
         "cpu-oracle",
-        "default"
+        "default",
+        "legacy-infallible"
       ],
       "malformed_features": [],
       "unresolved_feature_members": [],
@@ -489,12 +512,13 @@
     {
       "name": "vyre-runtime",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/Cargo.toml",
-      "feature_count": 8,
+      "feature_count": 9,
       "has_default_feature": true,
       "default_feature_members": [],
       "features": [
         "c-frontend-adapter",
         "default",
+        "legacy-infallible",
         "megakernel-batch",
         "remote",
         "remote-cache",
@@ -559,7 +583,7 @@
     {
       "name": "weir",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/Cargo.toml",
-      "feature_count": 6,
+      "feature_count": 7,
       "has_default_feature": true,
       "default_feature_members": [
         "test-harness"
@@ -568,6 +592,7 @@
         "cpu-parity",
         "default",
         "gpu-telemetry",
+        "legacy-infallible",
         "serde",
         "simd-oracle",
         "test-harness"

@@ -1,0 +1,34 @@
+# Plan research linkage audit for VX-711 through VX-714.
+# VX rows, source keys, web-citation snapshots, private-path redaction, and benchmark capsules share one audit path.
+
+schema = "vyre.plan.research_linkage_audit.v1"
+owner = "coordination"
+evidence_tokens = ["SLSA_PROVENANCE", "SIGSTORE_REKOR", "NSIGHT_COMPUTE", "MLIR_PASS"]
+
+required_fields = [
+  "vx_id",
+  "evidence_token",
+  "source_ledger_key",
+  "citation_snapshot",
+  "provenance_link",
+  "private_path_redaction",
+  "benchmark_capsule",
+]
+
+[[link]]
+vx_id = "VX-703"
+evidence_token = "SLSA_PROVENANCE"
+source_ledger_key = "SLSA_PROVENANCE"
+citation_snapshot = "2026-06-10:slsa-spec-v1.2"
+provenance_link = "release-artifact-provenance"
+private_path_redaction = "required"
+benchmark_capsule = "not-applicable"
+
+[[link]]
+vx_id = "VX-714"
+evidence_token = "NSIGHT_COMPUTE"
+source_ledger_key = "NSIGHT_COMPUTE"
+citation_snapshot = "local-ledger"
+provenance_link = "bench-artifact-provenance"
+private_path_redaction = "required"
+benchmark_capsule = "required"

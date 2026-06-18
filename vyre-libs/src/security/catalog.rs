@@ -10,12 +10,12 @@ macro_rules! bitset_and_entry {
             OpEntry {
                 id: super::$module::OP_ID,
                 build: $build,
-                test_inputs: Some(|| vec![vec![
-                    u32s(&[0b1100]),
-                    u32s(&[0b1010]),
-                    u32s(&[0]),
-                ]]),
-                expected_output: Some(|| vec![vec![u32s(&[0b1000])]]),
+                test_inputs: Some(|| {
+                    super::predicate_catalog::packed_witness_inputs(super::$module::OP_ID)
+                }),
+                expected_output: Some(|| {
+                    super::predicate_catalog::packed_witness_expected(super::$module::OP_ID)
+                }),
                 category: Some("security"),
             }
         }
@@ -28,12 +28,12 @@ macro_rules! bitset_and_not_entry {
             OpEntry {
                 id: super::$module::OP_ID,
                 build: $build,
-                test_inputs: Some(|| vec![vec![
-                    u32s(&[0b1111]),
-                    u32s(&[0b1100]),
-                    u32s(&[0]),
-                ]]),
-                expected_output: Some(|| vec![vec![u32s(&[0b0011])]]),
+                test_inputs: Some(|| {
+                    super::predicate_catalog::packed_witness_inputs(super::$module::OP_ID)
+                }),
+                expected_output: Some(|| {
+                    super::predicate_catalog::packed_witness_expected(super::$module::OP_ID)
+                }),
                 category: Some("security"),
             }
         }

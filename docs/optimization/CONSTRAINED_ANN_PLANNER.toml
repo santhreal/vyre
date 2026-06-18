@@ -1,0 +1,36 @@
+# Constrained ANN planner for VX-688.
+# Predicate automata and vector search cooperate before verifier acceptance.
+
+schema = "vyre.ann.constrained_planner.v1"
+owner = "sparse_math_ai"
+evidence_tokens = ["VECTOR_MATON", "HYPERSCAN_NSDI"]
+
+required_fields = [
+  "predicate_automata",
+  "vector_route",
+  "candidate_count",
+  "precision",
+  "recall",
+  "verifier_proof",
+  "blocker_reason",
+]
+
+[[plan]]
+id = "regex-filtered-cagra"
+predicate_automata = "sha256:email-domain-regex-automata"
+vector_route = "cagra"
+candidate_count = 4096
+precision = "0.88"
+recall = "0.97@10"
+verifier_proof = "predicate-parity-with-regex-engine"
+blocker_reason = "none"
+
+[[plan]]
+id = "security-predicate-fallback"
+predicate_automata = "sha256:ssrf-url-predicate"
+vector_route = "ivf"
+candidate_count = 16384
+precision = "0.72"
+recall = "0.92@10"
+verifier_proof = "requires-cpu-verifier"
+blocker_reason = "predicate-uses-backreference"

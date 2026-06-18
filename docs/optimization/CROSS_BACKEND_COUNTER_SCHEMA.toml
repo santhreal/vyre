@@ -1,0 +1,46 @@
+# Cross-backend counter schema for VX-679.
+# CUDA, WGPU, Metal, CPU, DPU, and FPGA timing evidence share comparable fields.
+
+schema = "vyre.bench.cross_backend_counter.v1"
+owner = "driver_shared"
+evidence_tokens = ["NSIGHT_COMPUTE", "METAL_COUNTERS", "WEBGPU_SPEC", "NVIDIA_RXP"]
+
+backends = [
+  "cuda",
+  "wgpu",
+  "metal",
+  "cpu",
+  "dpu",
+  "fpga",
+]
+
+required_fields = [
+  "source",
+  "unit",
+  "kernel_id",
+  "command_id",
+  "timestamp_availability",
+  "memory_bytes",
+  "occupancy_proxy",
+  "unavailable_reason",
+]
+
+[[counter]]
+source = "nsight_compute"
+unit = "nanoseconds"
+kernel_id = "cuda_scan_kernel"
+command_id = "cuda-graph-node-7"
+timestamp_availability = "device"
+memory_bytes = 67108864
+occupancy_proxy = "sm_active_pct"
+unavailable_reason = "none"
+
+[[counter]]
+source = "webgpu_timestamp_query"
+unit = "nanoseconds"
+kernel_id = "wgpu_scan_pipeline"
+command_id = "encoder-pass-3"
+timestamp_availability = "adapter-dependent"
+memory_bytes = 67108864
+occupancy_proxy = "not-available"
+unavailable_reason = "occupancy-counter-not-exposed"

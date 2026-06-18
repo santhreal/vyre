@@ -207,7 +207,7 @@ pub fn validate_public_api_source_boundaries(
             "Dataflow consumer serde feature token",
             "\"serde_evidence\"",
         ),
-        (docs_matrix, "docs matrix schema", "\"schema_version\": 2"),
+        (docs_matrix, "docs matrix schema", "\"schema_version\": 5"),
         (
             docs_matrix,
             "docs matrix blockers inventory",
@@ -448,7 +448,7 @@ mod tests {
         let dataflow_source = dataflow_consumer_source();
         let surfaces = source_surfaces(&dataflow_source);
         let docs_matrix = include_str!("../../../../release/evidence/docs/docs-matrix.json")
-            .replace("\"schema_version\": 2", "\"schema_version\": 1");
+            .replace("\"schema_version\": 5", "\"schema_version\": 1");
 
         assert_eq!(
             validate_public_api_source_boundaries(

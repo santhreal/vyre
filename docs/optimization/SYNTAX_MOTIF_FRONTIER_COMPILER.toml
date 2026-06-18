@@ -1,0 +1,43 @@
+# Syntax motif frontier compiler plan for VX-656.
+# One motif contract selects AST walker, graph motif engine, or GPU frontier execution.
+
+schema = "vyre.syntax_motif.frontier_compiler.v1"
+owner = "parser_frontend"
+evidence_tokens = ["GUNROCK", "TREE_SITTER"]
+
+route_kinds = [
+  "ast_walker",
+  "graph_motif_engine",
+  "gpu_frontier",
+]
+
+required_fields = [
+  "motif_id",
+  "syntax_nodes",
+  "edge_constraints",
+  "span_policy",
+  "route",
+  "route_reason",
+  "node_id_policy",
+  "match_count_contract",
+]
+
+[[motif]]
+motif_id = "unsafe-call-inside-loop"
+syntax_nodes = ["loop_expression", "unsafe_block", "call_expression"]
+edge_constraints = ["loop_expression contains unsafe_block", "unsafe_block contains call_expression"]
+span_policy = "outermost-loop-span"
+route = "graph_motif_engine"
+route_reason = "three-node-contained-motif"
+node_id_policy = "stable-ast-node-ids"
+match_count_contract = "equal-to-ast-walker"
+
+[[motif]]
+motif_id = "wide-identifier-fanout"
+syntax_nodes = ["identifier", "reference", "definition"]
+edge_constraints = ["identifier resolves_to definition", "reference resolves_to definition"]
+span_policy = "identifier-span"
+route = "gpu_frontier"
+route_reason = "high-fanout-resolution-frontier"
+node_id_policy = "stable-graph-node-ids"
+match_count_contract = "equal-to-cpu-graph-motif-engine"

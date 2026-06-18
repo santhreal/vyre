@@ -10,6 +10,11 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
+use crate::dataflow::{
+    validate_dynamic_pipeline, DynamicPrimitiveSoundness, DynamicSoundnessViolation,
+    PrecisionContract, SharedFactHeader, SharedFactKind, Soundness,
+};
+
 /// Stable fact identifier.
 #[derive(
     Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
@@ -199,6 +204,38 @@ impl AnalysisFact {
         }
         Ok(())
     }
+
+    /// Convert this security fact into the shared dataflow fact header.
+    #[must_use]
+    pub fn shared_header(&self, producer: &str) -> SharedFactHeader {
+        let mut header = SharedFactHeader::new(
+            producer,
+            shared_kind_for_security_fact(self.kind),
+            self.id.0,
+            self.subject,
+            Soundness::Exact,
+        )
+        .with_span(self.span.file_id, self.span.start_byte, self.span.end_byte);
+        if let Some(object) = self.object {
+            header = header.with_object(object);
+        }
+        header
+    }
+}
+
+fn shared_kind_for_security_fact(kind: FactKind) -> SharedFactKind {
+    match kind {
+        FactKind::Source => SharedFactKind::Source,
+        FactKind::Sink => SharedFactKind::Sink,
+        FactKind::Sanitizer => SharedFactKind::Sanitizer,
+        FactKind::Dataflow => SharedFactKind::Taint,
+        FactKind::Edge | FactKind::Call | FactKind::Control => SharedFactKind::GraphEdge,
+        FactKind::Auth => SharedFactKind::Dominance,
+        FactKind::Lifetime => SharedFactKind::BorrowOrigin,
+        FactKind::Provenance => SharedFactKind::Witness,
+        FactKind::Type => SharedFactKind::Range,
+        FactKind::Node | FactKind::Symbol | FactKind::Concurrency => SharedFactKind::Taint,
+    }
 }
 
 /// Canonical fact table.
@@ -261,12 +298,16 @@ impl AnalysisFactTable {
             columns
                 .payload_digests
                 .push(payload_digest(&fact.payload, &fact.reason));
-            columns.provenance_offsets.push(columns.provenance_ids.len() as u32);
+            columns
+                .provenance_offsets
+                .push(columns.provenance_ids.len() as u32);
             columns
                 .provenance_ids
                 .extend(fact.provenance.iter().map(|parent| parent.0));
         }
-        columns.provenance_offsets.push(columns.provenance_ids.len() as u32);
+        columns
+            .provenance_offsets
+            .push(columns.provenance_ids.len() as u32);
         Ok(columns)
     }
 
@@ -359,6 +400,12 @@ pub struct FindingProofBundle {
     pub backend_id: String,
     /// Driver evidence bundle digest, report digest, or replay id.
     pub evidence_digest: String,
+    /// Consumer precision contract this finding claims to satisfy.
+    pub precision_contract: PrecisionContract,
+    /// Conservative composed soundness marker for the primitive evidence.
+    pub soundness: Soundness,
+    /// Primitive soundness evidence used by the query.
+    pub primitive_soundness: Vec<DynamicPrimitiveSoundness>,
     /// Facts used by the finding.
     pub fact_ids: Vec<FactId>,
     /// Ordered proof path.
@@ -380,6 +427,8 @@ pub struct SourceToSinkFindingRequest {
     pub backend_id: String,
     /// Driver evidence bundle digest, report digest, or replay id.
     pub evidence_digest: String,
+    /// Consumer precision contract this finding must satisfy.
+    pub precision_contract: PrecisionContract,
     /// Source fact id.
     pub source_fact_id: FactId,
     /// Sink fact id.
@@ -425,6 +474,23 @@ impl FindingProofBundle {
         }
         if self.reason.trim().is_empty() {
             return Err(AnalysisFactError::InvalidFindingIdentity { field: "reason" });
+        }
+        if self.primitive_soundness.is_empty() {
+            return Err(AnalysisFactError::FindingHasNoSoundnessEvidence {
+                finding_id: self.finding_id.clone(),
+            });
+        }
+        let joined = validate_dynamic_pipeline(self.precision_contract, &self.primitive_soundness)
+            .map_err(|violation| AnalysisFactError::FindingSoundnessViolation {
+                finding_id: self.finding_id.clone(),
+                violation,
+            })?;
+        if joined != self.soundness {
+            return Err(AnalysisFactError::FindingSoundnessMismatch {
+                finding_id: self.finding_id.clone(),
+                declared: self.soundness,
+                computed: joined,
+            });
         }
         if self.confidence_bps > 10_000 {
             return Err(AnalysisFactError::InvalidFindingConfidence {
@@ -480,12 +546,7 @@ pub fn finding_from_sanitized_source_to_sink_query(
     request: SourceToSinkFindingRequest,
 ) -> Result<Option<FindingProofBundle>, AnalysisFactError> {
     table.validate()?;
-    let source = require_fact_kind(
-        table,
-        request.source_fact_id,
-        "source",
-        &[FactKind::Source],
-    )?;
+    let source = require_fact_kind(table, request.source_fact_id, "source", &[FactKind::Source])?;
     let sink = require_fact_kind(table, request.sink_fact_id, "sink", &[FactKind::Sink])?;
     for fact_id in &request.path_fact_ids {
         let _ = require_fact_kind(
@@ -506,6 +567,16 @@ pub fn finding_from_sanitized_source_to_sink_query(
     if request.query_hit == 0 {
         return Ok(None);
     }
+    let primitive_soundness = vec![DynamicPrimitiveSoundness::new(
+        request.query_id.clone(),
+        Soundness::MayOver,
+    )
+    .with_sanitizer_filter()];
+    let soundness = validate_dynamic_pipeline(request.precision_contract, &primitive_soundness)
+        .map_err(|violation| AnalysisFactError::FindingSoundnessViolation {
+            finding_id: request.finding_id.clone(),
+            violation,
+        })?;
 
     let mut fact_ids = Vec::new();
     push_unique_fact(&mut fact_ids, source.id);
@@ -518,26 +589,28 @@ pub fn finding_from_sanitized_source_to_sink_query(
     push_unique_fact(&mut fact_ids, sink.id);
 
     let mut proof_path = Vec::new();
-    proof_path.push(FindingProofStep::new(source.id, source.span.clone(), "source"));
+    proof_path.push(FindingProofStep::new(
+        source.id,
+        source.span.clone(),
+        "source",
+    ));
     for fact_id in &request.path_fact_ids {
-        let fact = table
-            .get(*fact_id)
-            .expect("validated path fact id must exist");
-        proof_path.push(FindingProofStep::new(
-            fact.id,
-            fact.span.clone(),
-            "dataflow-path",
-        ));
+        if let Some(fact) = table.get(*fact_id) {
+            proof_path.push(FindingProofStep::new(
+                fact.id,
+                fact.span.clone(),
+                "dataflow-path",
+            ));
+        }
     }
     for fact_id in &request.sanitizer_fact_ids {
-        let fact = table
-            .get(*fact_id)
-            .expect("validated sanitizer fact id must exist");
-        proof_path.push(FindingProofStep::new(
-            fact.id,
-            fact.span.clone(),
-            "sanitizer-considered",
-        ));
+        if let Some(fact) = table.get(*fact_id) {
+            proof_path.push(FindingProofStep::new(
+                fact.id,
+                fact.span.clone(),
+                "sanitizer-considered",
+            ));
+        }
     }
     proof_path.push(FindingProofStep::new(sink.id, sink.span.clone(), "sink"));
 
@@ -546,6 +619,9 @@ pub fn finding_from_sanitized_source_to_sink_query(
         query_id: request.query_id,
         backend_id: request.backend_id,
         evidence_digest: request.evidence_digest,
+        precision_contract: request.precision_contract,
+        soundness,
+        primitive_soundness,
         fact_ids,
         proof_path,
         confidence_bps: request.confidence_bps,
@@ -561,12 +637,13 @@ fn require_fact_kind<'a>(
     role: &'static str,
     expected: &'static [FactKind],
 ) -> Result<&'a AnalysisFact, AnalysisFactError> {
-    let fact = table
-        .get(fact_id)
-        .ok_or_else(|| AnalysisFactError::FindingReferencesMissingFact {
-            finding_id: format!("<{role}>"),
-            fact_id,
-        })?;
+    let fact =
+        table
+            .get(fact_id)
+            .ok_or_else(|| AnalysisFactError::FindingReferencesMissingFact {
+                finding_id: format!("<{role}>"),
+                fact_id,
+            })?;
     if !expected.contains(&fact.kind) {
         return Err(AnalysisFactError::UnexpectedFactKind {
             id: fact_id,
@@ -676,10 +753,42 @@ pub enum AnalysisFactError {
         finding_id: String,
     },
     /// Finding had no proof path.
-    #[error("finding `{finding_id}` has no proof path. Fix: include source-to-sink/auth path steps.")]
+    #[error(
+        "finding `{finding_id}` has no proof path. Fix: include source-to-sink/auth path steps."
+    )]
     FindingHasNoProofPath {
         /// Finding id.
         finding_id: String,
+    },
+    /// Finding had no primitive soundness evidence.
+    #[error(
+        "finding `{finding_id}` has no primitive soundness evidence. Fix: attach the query primitive ids and soundness tags before reporting."
+    )]
+    FindingHasNoSoundnessEvidence {
+        /// Finding id.
+        finding_id: String,
+    },
+    /// Finding primitive evidence violated its precision contract.
+    #[error(
+        "finding `{finding_id}` soundness evidence violates its precision contract: {violation:?}."
+    )]
+    FindingSoundnessViolation {
+        /// Finding id.
+        finding_id: String,
+        /// Canonical dynamic soundness violation.
+        violation: DynamicSoundnessViolation,
+    },
+    /// Finding declared a composed soundness marker inconsistent with evidence.
+    #[error(
+        "finding `{finding_id}` declares soundness {declared:?} but primitive evidence computes {computed:?}. Fix: recompute soundness from primitive evidence."
+    )]
+    FindingSoundnessMismatch {
+        /// Finding id.
+        finding_id: String,
+        /// Declared soundness.
+        declared: Soundness,
+        /// Computed soundness.
+        computed: Soundness,
     },
     /// Finding referenced an absent fact.
     #[error(
@@ -745,7 +854,9 @@ mod tests {
 
     fn table() -> AnalysisFactTable {
         let mut source = fact(1, FactKind::Source, 10);
-        source.payload.insert("name".to_string(), "req.user".to_string());
+        source
+            .payload
+            .insert("name".to_string(), "req.user".to_string());
         let mut edge = fact(2, FactKind::Dataflow, 10);
         edge.object = Some(20);
         edge.provenance.push(FactId(1));
@@ -831,6 +942,12 @@ mod tests {
             query_id: "vyre-libs::security::flows_to_with_sanitizer".to_string(),
             backend_id: "cpu-ref".to_string(),
             evidence_digest: "evidence:abc123".to_string(),
+            precision_contract: PrecisionContract::ZeroFalsePositive,
+            soundness: Soundness::Exact,
+            primitive_soundness: vec![DynamicPrimitiveSoundness::new(
+                "vyre-libs::security::sanitizer_dominates",
+                Soundness::Exact,
+            )],
             fact_ids: vec![FactId(1), FactId(2), FactId(3)],
             proof_path: vec![
                 FindingProofStep::new(FactId(1), span(1), "source"),
@@ -854,6 +971,12 @@ mod tests {
             query_id: "manual".to_string(),
             backend_id: "cpu-ref".to_string(),
             evidence_digest: "evidence:abc123".to_string(),
+            precision_contract: PrecisionContract::ZeroFalsePositive,
+            soundness: Soundness::Exact,
+            primitive_soundness: vec![DynamicPrimitiveSoundness::new(
+                "manual",
+                Soundness::Exact,
+            )],
             fact_ids: Vec::new(),
             proof_path: vec![FindingProofStep::new(FactId(1), span(1), "source")],
             confidence_bps: 5000,
@@ -880,6 +1003,12 @@ mod tests {
             query_id: "vyre-libs::security::flows_to".to_string(),
             backend_id: "cpu-ref".to_string(),
             evidence_digest: "evidence:abc123".to_string(),
+            precision_contract: PrecisionContract::ZeroFalsePositive,
+            soundness: Soundness::Exact,
+            primitive_soundness: vec![DynamicPrimitiveSoundness::new(
+                "vyre-libs::security::sanitizer_dominates",
+                Soundness::Exact,
+            )],
             fact_ids: vec![FactId(1), FactId(42)],
             proof_path: vec![FindingProofStep::new(FactId(1), span(1), "source")],
             confidence_bps: 9000,
@@ -895,6 +1024,87 @@ mod tests {
             AnalysisFactError::FindingReferencesMissingFact {
                 finding_id: "finding.missing-fact".to_string(),
                 fact_id: FactId(42),
+            }
+        );
+    }
+
+    #[test]
+    fn finding_proof_bundle_rejects_zero_false_positive_unfiltered_mayover() {
+        let fact_table = table();
+        let bundle = FindingProofBundle {
+            finding_id: "finding.unfiltered-mayover".to_string(),
+            query_id: "vyre-libs::security::flows_to".to_string(),
+            backend_id: "cpu-ref".to_string(),
+            evidence_digest: "evidence:abc123".to_string(),
+            precision_contract: PrecisionContract::ZeroFalsePositive,
+            soundness: Soundness::MayOver,
+            primitive_soundness: vec![DynamicPrimitiveSoundness::new(
+                "vyre-libs::security::flows_to",
+                Soundness::MayOver,
+            )],
+            fact_ids: vec![FactId(1), FactId(2), FactId(3)],
+            proof_path: vec![
+                FindingProofStep::new(FactId(1), span(1), "source"),
+                FindingProofStep::new(FactId(2), span(2), "dataflow-edge"),
+                FindingProofStep::new(FactId(3), span(3), "sink"),
+            ],
+            confidence_bps: 9000,
+            reason: "unfiltered over-approximate flow should not ship as zero-FP".to_string(),
+        };
+
+        let error = bundle
+            .validate_against(&fact_table)
+            .expect_err("Fix: unfiltered MayOver must not validate as zero false positive");
+
+        match error {
+            AnalysisFactError::FindingSoundnessViolation {
+                finding_id,
+                violation,
+            } => {
+                assert_eq!(finding_id, "finding.unfiltered-mayover");
+                assert_eq!(violation.op_id, "vyre-libs::security::flows_to");
+                assert_eq!(violation.soundness, Soundness::MayOver);
+                assert_eq!(violation.contract, PrecisionContract::ZeroFalsePositive);
+            }
+            other => panic!("unexpected soundness validation error: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn finding_proof_bundle_rejects_declared_soundness_mismatch() {
+        let fact_table = table();
+        let bundle = FindingProofBundle {
+            finding_id: "finding.soundness-mismatch".to_string(),
+            query_id: "vyre-libs::security::flows_to_with_sanitizer".to_string(),
+            backend_id: "cpu-ref".to_string(),
+            evidence_digest: "evidence:abc123".to_string(),
+            precision_contract: PrecisionContract::ZeroFalsePositive,
+            soundness: Soundness::Exact,
+            primitive_soundness: vec![DynamicPrimitiveSoundness::new(
+                "vyre-libs::security::flows_to_with_sanitizer",
+                Soundness::MayOver,
+            )
+            .with_sanitizer_filter()],
+            fact_ids: vec![FactId(1), FactId(2), FactId(3)],
+            proof_path: vec![
+                FindingProofStep::new(FactId(1), span(1), "source"),
+                FindingProofStep::new(FactId(2), span(2), "dataflow-edge"),
+                FindingProofStep::new(FactId(3), span(3), "sink"),
+            ],
+            confidence_bps: 9000,
+            reason: "declared exact despite MayOver primitive evidence".to_string(),
+        };
+
+        let error = bundle
+            .validate_against(&fact_table)
+            .expect_err("Fix: declared soundness must match primitive evidence join");
+
+        assert_eq!(
+            error,
+            AnalysisFactError::FindingSoundnessMismatch {
+                finding_id: "finding.soundness-mismatch".to_string(),
+                declared: Soundness::Exact,
+                computed: Soundness::MayOver,
             }
         );
     }

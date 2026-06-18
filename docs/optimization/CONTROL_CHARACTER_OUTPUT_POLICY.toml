@@ -1,0 +1,47 @@
+# Control character output policy for VX-945 through VX-948.
+# CRLF, log injection, terminal escape, progress output, and diagnostics share one neutralization policy.
+
+schema = "vyre.injection.control_character_output_policy.v1"
+owner = "reporting"
+evidence_tokens = ["CWE_93_CRLF_INJECTION", "CWE_117_LOG_NEUTRALIZATION"]
+
+required_fields = [
+  "surface_id",
+  "output_surface",
+  "forbidden_controls",
+  "neutralization_policy",
+  "terminal_policy",
+  "log_policy",
+  "machine_output_policy",
+  "diagnostic",
+]
+
+[[surface]]
+surface_id = "human-terminal-output"
+output_surface = "tty"
+forbidden_controls = ["escape", "c0-controls-except-tab-newline", "osc-sequences", "device-control-sequences"]
+neutralization_policy = "escape-or-render-visible-control-pictures"
+terminal_policy = "color-only-from-trusted-renderer"
+log_policy = "not-applicable"
+machine_output_policy = "not-used-for-machine-mode"
+diagnostic = "VYRE_TERMINAL_CONTROL_OUTPUT_REFUSED"
+
+[[surface]]
+surface_id = "structured-logs"
+output_surface = "log"
+forbidden_controls = ["cr", "lf", "nul", "escape"]
+neutralization_policy = "encode-control-characters-before-log-write"
+terminal_policy = "not-applicable"
+log_policy = "one-event-per-record-no-embedded-linebreaks"
+machine_output_policy = "json-lines-compatible-escaping"
+diagnostic = "VYRE_LOG_CONTROL_OUTPUT_REFUSED"
+
+[[surface]]
+surface_id = "http-like-header-output"
+output_surface = "header-like-field"
+forbidden_controls = ["cr", "lf", "nul"]
+neutralization_policy = "reject-untrusted-crlf-before-field-write"
+terminal_policy = "not-applicable"
+log_policy = "redacted-rejection-record"
+machine_output_policy = "problem-json-diagnostic"
+diagnostic = "VYRE_CRLF_OUTPUT_REFUSED"

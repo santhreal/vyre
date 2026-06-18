@@ -1,0 +1,40 @@
+# Shared semiring registry for VX-663.
+# Graph, flow, and sparse kernels select equivalent algebra through one source of truth.
+
+schema = "vyre.graph.semiring_registry.v1"
+owner = "graph_flow_compiler"
+evidence_tokens = ["GRAPHBLAS", "CUSPARSE"]
+
+required_fields = [
+  "semiring_id",
+  "add_op",
+  "mul_op",
+  "add_identity",
+  "mul_identity",
+  "annihilator",
+  "mask_policy",
+  "sparsity_class",
+  "backend_eligibility",
+]
+
+[[semiring]]
+semiring_id = "boolean-reachability"
+add_op = "or"
+mul_op = "and"
+add_identity = "false"
+mul_identity = "true"
+annihilator = "false"
+mask_policy = "structural-mask"
+sparsity_class = "sparse-binary"
+backend_eligibility = ["cpu", "cuda-graphblas", "wgpu-bitset"]
+
+[[semiring]]
+semiring_id = "min-plus-distance"
+add_op = "min"
+mul_op = "plus"
+add_identity = "infinity"
+mul_identity = "zero"
+annihilator = "infinity"
+mask_policy = "value-mask"
+sparsity_class = "weighted-sparse"
+backend_eligibility = ["cpu", "cuda-cusparse"]

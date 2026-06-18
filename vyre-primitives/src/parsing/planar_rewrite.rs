@@ -65,11 +65,7 @@ pub fn planar_rewrite_schedule(candidates: &str, chosen: &str, h: u32, w: u32, k
         );
     }
 
-    let cells = h.checked_mul(w).unwrap_or_else(|| {
-        panic!(
-            "planar_rewrite_schedule h*w overflows candidate grid cell count for h={h}, w={w}. Fix: tile the planar rewrite grid before GPU dispatch."
-        )
-    });
+    let cells = h.saturating_mul(w);
     let t = Expr::InvocationId { axis: 0 };
 
     // Lane 0 loops over all (r, c) cells in row-major order. For each:
@@ -78,74 +74,69 @@ pub fn planar_rewrite_schedule(candidates: &str, chosen: &str, h: u32, w: u32, k
     //       i ∈ [r - (k-1), r], j ∈ [c - (k-1), c]. If none, set chosen.
     let body = vec![Node::if_then(
         Expr::eq(t.clone(), Expr::u32(0)),
-        vec![
-            Node::loop_for(
-                "r",
+        vec![Node::loop_for(
+            "r",
+            Expr::u32(0),
+            Expr::u32(h),
+            vec![Node::loop_for(
+                "c",
                 Expr::u32(0),
-                Expr::u32(h),
-                vec![Node::loop_for(
-                    "c",
-                    Expr::u32(0),
-                    Expr::u32(w),
-                    vec![
-                        Node::let_bind(
-                            "addr",
-                            Expr::add(Expr::mul(Expr::var("r"), Expr::u32(w)), Expr::var("c")),
-                        ),
-                        Node::store(chosen, Expr::var("addr"), Expr::u32(0)),
-                        Node::if_then(
-                            Expr::ne(Expr::load(candidates, Expr::var("addr")), Expr::u32(0)),
-                            vec![
-                                Node::let_bind("conflict", Expr::u32(0)),
-                                // Exclusion zone scan
-                                Node::loop_for(
-                                    "di",
+                Expr::u32(w),
+                vec![
+                    Node::let_bind(
+                        "addr",
+                        Expr::add(Expr::mul(Expr::var("r"), Expr::u32(w)), Expr::var("c")),
+                    ),
+                    Node::store(chosen, Expr::var("addr"), Expr::u32(0)),
+                    Node::if_then(
+                        Expr::ne(Expr::load(candidates, Expr::var("addr")), Expr::u32(0)),
+                        vec![
+                            Node::let_bind("conflict", Expr::u32(0)),
+                            // Exclusion zone scan
+                            Node::loop_for(
+                                "di",
+                                Expr::u32(0),
+                                Expr::u32(k),
+                                vec![Node::loop_for(
+                                    "dj",
                                     Expr::u32(0),
                                     Expr::u32(k),
-                                    vec![Node::loop_for(
-                                        "dj",
-                                        Expr::u32(0),
-                                        Expr::u32(k),
+                                    vec![Node::if_then(
+                                        Expr::and(
+                                            Expr::ge(Expr::var("r"), Expr::var("di")),
+                                            Expr::ge(Expr::var("c"), Expr::var("dj")),
+                                        ),
                                         vec![Node::if_then(
-                                            Expr::and(
-                                                Expr::ge(Expr::var("r"), Expr::var("di")),
-                                                Expr::ge(Expr::var("c"), Expr::var("dj")),
-                                            ),
-                                            vec![Node::if_then(
-                                                Expr::ne(
-                                                    Expr::load(
-                                                        chosen,
-                                                        Expr::add(
-                                                            Expr::mul(
-                                                                Expr::sub(
-                                                                    Expr::var("r"),
-                                                                    Expr::var("di"),
-                                                                ),
-                                                                Expr::u32(w),
-                                                            ),
+                                            Expr::ne(
+                                                Expr::load(
+                                                    chosen,
+                                                    Expr::add(
+                                                        Expr::mul(
                                                             Expr::sub(
-                                                                Expr::var("c"),
-                                                                Expr::var("dj"),
+                                                                Expr::var("r"),
+                                                                Expr::var("di"),
                                                             ),
+                                                            Expr::u32(w),
                                                         ),
+                                                        Expr::sub(Expr::var("c"), Expr::var("dj")),
                                                     ),
-                                                    Expr::u32(0),
                                                 ),
-                                                vec![Node::assign("conflict", Expr::u32(1))],
-                                            )],
+                                                Expr::u32(0),
+                                            ),
+                                            vec![Node::assign("conflict", Expr::u32(1))],
                                         )],
                                     )],
-                                ),
-                                Node::if_then(
-                                    Expr::eq(Expr::var("conflict"), Expr::u32(0)),
-                                    vec![Node::store(chosen, Expr::var("addr"), Expr::u32(1))],
-                                ),
-                            ],
-                        ),
-                    ],
-                )],
-            ),
-        ],
+                                )],
+                            ),
+                            Node::if_then(
+                                Expr::eq(Expr::var("conflict"), Expr::u32(0)),
+                                vec![Node::store(chosen, Expr::var("addr"), Expr::u32(1))],
+                            ),
+                        ],
+                    ),
+                ],
+            )],
+        )],
     )];
 
     Program::wrapped(

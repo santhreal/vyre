@@ -34,6 +34,145 @@ use crate::security::flow_composition::sanitized_dataflow_hit_cpu_ref;
 use crate::security::flow_composition::sanitized_dataflow_hit_program;
 
 pub(crate) const OP_ID: &str = "vyre-libs::security::flows_to_with_sanitizer";
+/// Stable primitive id for a converged sanitizer-gated source-to-sink fixpoint.
+pub const FIXPOINT_OP_ID: &str = "vyre-libs::security::flows_to_with_sanitizer::fixpoint";
+
+/// Execution mode for sanitizer-gated source-to-sink flow.
+///
+/// `OneStep` is the single Region emitted by [`flows_to_with_sanitizer`].
+/// It is an intermediate Weir taint state, not a final vulnerability proof.
+/// `FixpointConverged` is the contract a driver emits after repeatedly
+/// applying the same sanitizer-gated step until a no-change check succeeds.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum SanitizedFlowExecutionMode {
+    /// One sanitizer-gated propagation step.
+    OneStep,
+    /// The sanitizer-gated propagation loop reached a no-change fixpoint.
+    FixpointConverged {
+        /// Number of driver iterations completed before convergence was observed.
+        iterations: u32,
+    },
+}
+
+/// Mode-aware soundness contract for sanitizer-gated flow.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct SanitizedFlowSoundnessContract {
+    /// Execution mode that produced the flow result.
+    pub mode: SanitizedFlowExecutionMode,
+    /// Stable primitive id to place in finding evidence.
+    pub op_id: &'static str,
+    /// Soundness marker for this mode.
+    pub soundness: crate::dataflow::Soundness,
+    /// Whether the result is bounded by an explicit sanitizer mask.
+    pub sanitizer_filter: bool,
+    /// Shared fact kind Weir should use when writing this result.
+    pub weir_fact_kind: crate::dataflow::SharedFactKind,
+    /// Stable Weir role string for blackboard/fact consumers.
+    pub weir_role: &'static str,
+}
+
+/// Rejection for attempts to use an intermediate sanitizer-flow step as a
+/// final proof.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct SanitizedFlowContractViolation {
+    /// Rejected execution mode.
+    pub mode: SanitizedFlowExecutionMode,
+    /// Soundness marker that made the mode invalid for final proof evidence.
+    pub soundness: crate::dataflow::Soundness,
+    /// Operator-facing fix direction.
+    pub fix: &'static str,
+}
+
+impl SanitizedFlowExecutionMode {
+    /// Return true when the execution mode carries a converged fixpoint proof.
+    #[must_use]
+    pub const fn is_converged_fixpoint(self) -> bool {
+        matches!(self, Self::FixpointConverged { .. })
+    }
+
+    /// Stable label for logs, Weir roles, and tests.
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::OneStep => "one_step",
+            Self::FixpointConverged { .. } => "fixpoint_converged",
+        }
+    }
+}
+
+impl SanitizedFlowSoundnessContract {
+    /// Convert this contract into serializable primitive evidence for findings.
+    #[must_use]
+    pub fn primitive_soundness(&self) -> crate::dataflow::DynamicPrimitiveSoundness {
+        let evidence = crate::dataflow::DynamicPrimitiveSoundness::new(self.op_id, self.soundness);
+        if self.sanitizer_filter {
+            evidence.with_sanitizer_filter()
+        } else {
+            evidence
+        }
+    }
+}
+
+/// Return the mode-aware sanitizer-flow soundness contract.
+#[must_use]
+pub const fn sanitized_flow_soundness_contract(
+    mode: SanitizedFlowExecutionMode,
+) -> SanitizedFlowSoundnessContract {
+    match mode {
+        SanitizedFlowExecutionMode::OneStep => SanitizedFlowSoundnessContract {
+            mode,
+            op_id: OP_ID,
+            soundness: crate::dataflow::Soundness::MayOver,
+            sanitizer_filter: true,
+            weir_fact_kind: crate::dataflow::SharedFactKind::Taint,
+            weir_role: "weir.flow.one_step.sanitizer_gated",
+        },
+        SanitizedFlowExecutionMode::FixpointConverged { .. } => SanitizedFlowSoundnessContract {
+            mode,
+            op_id: FIXPOINT_OP_ID,
+            soundness: crate::dataflow::Soundness::Exact,
+            sanitizer_filter: false,
+            weir_fact_kind: crate::dataflow::SharedFactKind::Witness,
+            weir_role: "weir.flow.fixpoint_converged.sanitizer_gated",
+        },
+    }
+}
+
+/// Return final-proof sanitizer-flow evidence, rejecting one-step results.
+///
+/// Finding builders should use this helper when they need proof-grade evidence
+/// rather than intermediate Weir taint state.
+///
+/// # Errors
+///
+/// Returns [`SanitizedFlowContractViolation`] when `mode` is not a converged
+/// fixpoint.
+pub fn sanitized_flow_final_soundness_contract(
+    mode: SanitizedFlowExecutionMode,
+) -> Result<SanitizedFlowSoundnessContract, SanitizedFlowContractViolation> {
+    let contract = sanitized_flow_soundness_contract(mode);
+    if mode.is_converged_fixpoint() {
+        Ok(contract)
+    } else {
+        Err(SanitizedFlowContractViolation {
+            mode,
+            soundness: contract.soundness,
+            fix: "Fix: run the sanitizer-gated flow driver to a no-change fixpoint before emitting final proof evidence.",
+        })
+    }
+}
+
+/// Return serializable final finding evidence for sanitizer-gated flow.
+///
+/// # Errors
+///
+/// Returns [`SanitizedFlowContractViolation`] when `mode` is not a converged
+/// fixpoint.
+pub fn sanitized_flow_final_finding_soundness(
+    mode: SanitizedFlowExecutionMode,
+) -> Result<crate::dataflow::DynamicPrimitiveSoundness, SanitizedFlowContractViolation> {
+    sanitized_flow_final_soundness_contract(mode).map(|contract| contract.primitive_soundness())
+}
 
 /// Build one BFS step of `source \ sanitizers` along dataflow edges,
 /// re-killed by `sanitizers` on landing, intersected with `sink`,
@@ -143,6 +282,65 @@ mod tests {
         AnalysisSourceSpan, FactId, FactKind, SourceToSinkFindingRequest,
     };
     use crate::security::flow_composition::linear_dataflow;
+    use crate::dataflow::{PrecisionContract, Soundness};
+
+    #[test]
+    fn sanitizer_flow_contract_labels_one_step_and_weir_fixpoint_distinctly() {
+        let one_step = sanitized_flow_soundness_contract(SanitizedFlowExecutionMode::OneStep);
+        let fixpoint = sanitized_flow_soundness_contract(
+            SanitizedFlowExecutionMode::FixpointConverged { iterations: 4 },
+        );
+
+        assert_eq!(one_step.mode.label(), "one_step");
+        assert_eq!(one_step.op_id, OP_ID);
+        assert_eq!(one_step.soundness, Soundness::MayOver);
+        assert!(one_step.sanitizer_filter);
+        assert_eq!(one_step.weir_fact_kind, crate::dataflow::SharedFactKind::Taint);
+        assert_eq!(one_step.weir_role, "weir.flow.one_step.sanitizer_gated");
+
+        assert_eq!(fixpoint.mode.label(), "fixpoint_converged");
+        assert_eq!(fixpoint.op_id, FIXPOINT_OP_ID);
+        assert_eq!(fixpoint.soundness, Soundness::Exact);
+        assert!(!fixpoint.sanitizer_filter);
+        assert_eq!(
+            fixpoint.weir_fact_kind,
+            crate::dataflow::SharedFactKind::Witness
+        );
+        assert_eq!(
+            fixpoint.weir_role,
+            "weir.flow.fixpoint_converged.sanitizer_gated"
+        );
+    }
+
+    #[test]
+    fn final_sanitizer_flow_contract_rejects_one_step_as_final_proof() {
+        let error = sanitized_flow_final_soundness_contract(SanitizedFlowExecutionMode::OneStep)
+            .expect_err("Fix: one-step sanitizer flow must not become final proof evidence");
+
+        assert_eq!(error.mode, SanitizedFlowExecutionMode::OneStep);
+        assert_eq!(error.soundness, Soundness::MayOver);
+        assert!(error.fix.contains("no-change fixpoint"));
+    }
+
+    #[test]
+    fn final_sanitizer_flow_finding_evidence_requires_exact_fixpoint_tag() {
+        let evidence = sanitized_flow_final_finding_soundness(
+            SanitizedFlowExecutionMode::FixpointConverged { iterations: 4 },
+        )
+        .expect("Fix: converged sanitizer flow should emit final finding evidence");
+
+        assert_eq!(evidence.op_id, FIXPOINT_OP_ID);
+        assert_eq!(evidence.soundness, Soundness::Exact);
+        assert!(!evidence.sanitizer_filter);
+
+        let soundness = crate::dataflow::validate_dynamic_pipeline(
+            PrecisionContract::ZeroFalsePositive,
+            &[evidence],
+        )
+        .expect("Fix: exact fixpoint evidence must satisfy zero-FP finding contracts");
+
+        assert_eq!(soundness, Soundness::Exact);
+    }
 
     #[test]
     fn unsanitized_source_reaches_sink_returns_one() {
@@ -205,6 +403,7 @@ mod tests {
                 query_id: OP_ID.to_string(),
                 backend_id: "cpu-ref".to_string(),
                 evidence_digest: "evidence:test".to_string(),
+                precision_contract: PrecisionContract::ZeroFalsePositive,
                 source_fact_id: FactId(1),
                 sink_fact_id: FactId(3),
                 path_fact_ids: vec![FactId(2)],
@@ -219,7 +418,16 @@ mod tests {
         .expect("Fix: positive sanitized source-to-sink query should emit finding");
 
         assert_eq!(bundle.query_id, OP_ID);
-        assert_eq!(bundle.fact_ids, vec![FactId(1), FactId(2), FactId(4), FactId(3)]);
+        assert_eq!(bundle.precision_contract, PrecisionContract::ZeroFalsePositive);
+        assert_eq!(bundle.soundness, Soundness::MayOver);
+        assert_eq!(bundle.primitive_soundness.len(), 1);
+        assert_eq!(bundle.primitive_soundness[0].op_id, OP_ID);
+        assert_eq!(bundle.primitive_soundness[0].soundness, Soundness::MayOver);
+        assert!(bundle.primitive_soundness[0].sanitizer_filter);
+        assert_eq!(
+            bundle.fact_ids,
+            vec![FactId(1), FactId(2), FactId(4), FactId(3)]
+        );
         assert_eq!(bundle.proof_path[0].role, "source");
         assert_eq!(bundle.proof_path[1].role, "dataflow-path");
         assert_eq!(bundle.proof_path[2].role, "sanitizer-considered");
@@ -240,6 +448,7 @@ mod tests {
                 query_id: OP_ID.to_string(),
                 backend_id: "cpu-ref".to_string(),
                 evidence_digest: "evidence:test".to_string(),
+                precision_contract: PrecisionContract::ZeroFalsePositive,
                 source_fact_id: FactId(1),
                 sink_fact_id: FactId(3),
                 path_fact_ids: vec![FactId(2)],

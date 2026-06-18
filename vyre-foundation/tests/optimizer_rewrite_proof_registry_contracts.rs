@@ -1,5 +1,8 @@
 //! Integration contracts for shipped optimizer rewrite proof obligations.
 
+use std::collections::BTreeSet;
+
+use vyre_foundation::optimizer::algebraic_rules::arithmetic_rewrite_proof_contracts;
 use vyre_foundation::optimizer::rewrite_proof_registry::shipped_obligations;
 
 #[test]
@@ -47,7 +50,39 @@ fn every_obligation_emits_well_formed_smt2() {
             "{} emits malformed SMT2 token",
             obligation.rewrite
         );
+        assert_eq!(
+            obligation.before.sort(),
+            obligation.after.sort(),
+            "{} before/after sorts must match before SMT emission",
+            obligation.rewrite
+        );
+        assert!(
+            smt.contains(&format!("; rewrite: {}", obligation.rewrite)),
+            "{} missing rewrite id comment",
+            obligation.rewrite
+        );
+        assert!(
+            smt.contains("(assert (not "),
+            "{} missing negated before/after equivalence assertion",
+            obligation.rewrite
+        );
     }
+}
+
+#[test]
+fn every_registered_arithmetic_rewrite_has_a_solver_artifact() {
+    let registered = arithmetic_rewrite_proof_contracts()
+        .iter()
+        .map(|contract| contract.rewrite_id.to_string())
+        .collect::<BTreeSet<_>>();
+    let shipped = shipped_obligations()
+        .into_iter()
+        .map(|obligation| obligation.rewrite.to_string())
+        .collect::<BTreeSet<_>>();
+    assert_eq!(
+        shipped, registered,
+        "shipped SMT obligations must match registered arithmetic rewrite proof ids"
+    );
 }
 
 #[test]

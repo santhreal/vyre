@@ -1,0 +1,39 @@
+# Relation engine comparator lanes for VX-662.
+# Vyre, Datafrog-style, and Souffle-generated execution consume identical tuple corpora.
+
+schema = "vyre.relation.engine_comparator.v1"
+owner = "graph_flow_compiler"
+evidence_tokens = ["DATAFROG", "SOUFFLE_CC"]
+
+engines = [
+  "vyre_relation",
+  "datafrog_style",
+  "souffle_generated",
+]
+
+required_metrics = [
+  "tuple_corpus_digest",
+  "tuple_count",
+  "witness_path_digest",
+  "iteration_count",
+  "route_reason",
+  "output_relation_digest",
+]
+
+[[corpus]]
+id = "taint-flow-small"
+tuple_corpus_digest = "sha256:taint-flow-small-tuples"
+tuple_count = 421
+witness_path_digest = "sha256:taint-flow-small-witnesses"
+iteration_count = 5
+route_reason = "low-cardinality-uses-vyre-relation"
+output_relation_digest = "sha256:taint-flow-small-output"
+
+[[corpus]]
+id = "call-graph-large"
+tuple_corpus_digest = "sha256:call-graph-large-tuples"
+tuple_count = 1200031
+witness_path_digest = "sha256:call-graph-large-witnesses"
+iteration_count = 17
+route_reason = "high-cardinality-compares-generated-engine"
+output_relation_digest = "sha256:call-graph-large-output"

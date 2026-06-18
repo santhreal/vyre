@@ -8,19 +8,19 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/Cargo.toml",
       "exists": true,
       "read_error": null,
-      "source_bytes": 7024
+      "source_bytes": 7199
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/lib.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 25306
+      "source_bytes": 25452
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/README.md",
       "exists": true,
       "read_error": null,
-      "source_bytes": 12317
+      "source_bytes": 12324
     }
   ],
   "required_terms": [
@@ -54,21 +54,21 @@
       "tree": "tests",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests",
       "exists": true,
-      "source_bytes": 595121,
+      "source_bytes": 613848,
       "unreadable_file_count": 0
     },
     {
       "tree": "benches",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/benches",
       "exists": true,
-      "source_bytes": 50613,
+      "source_bytes": 54610,
       "unreadable_file_count": 0
     },
     {
       "tree": "fuzz",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz",
       "exists": true,
-      "source_bytes": 32987,
+      "source_bytes": 34759,
       "unreadable_file_count": 0
     }
   ],

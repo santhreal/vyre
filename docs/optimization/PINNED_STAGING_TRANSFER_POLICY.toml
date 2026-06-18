@@ -1,0 +1,58 @@
+# Pinned staging transfer policy owns host staging allocation, registration, overlap, and zero-copy admission.
+
+schema = "vyre.memory.pinned_staging_transfer_policy.v1"
+owner = "driver_shared"
+evidence_tokens = ["CUDA_RUNTIME_MEMORY_API", "CUDA_BEST_PRACTICES", "WEBGPU_BUFFER_MAPPING", "METAL_RESOURCE_STORAGE_MODES"]
+
+required_fields = [
+  "transfer_id",
+  "source_tier",
+  "destination_tier",
+  "pinning_policy",
+  "alignment_policy",
+  "zero_copy_policy",
+  "async_overlap_policy",
+  "budget_policy",
+  "equivalence_policy",
+  "authority_links",
+  "diagnostic",
+]
+
+[[transfer]]
+transfer_id = "scan-input-pinned-upload"
+source_tier = "host-pinned-page-locked-input-batch"
+destination_tier = "device-local-or-managed-prefetched-scan-input"
+pinning_policy = "cudaHostAlloc-or-cudaHostRegister-byte-range-recorded-with-unpin-owner-and-NUMA-class"
+alignment_policy = "align-to-device-DMA-page-and-backend-copy-granularity-before-claiming-overlap"
+zero_copy_policy = "zero-copy-refused-for-reused-discrete-GPU-scan-inputs-unless-access-is-single-pass-coalesced-and-copy-cost-exceeds-PCIe-load-cost"
+async_overlap_policy = "host-to-device-copy-enqueued-on-transfer-stream-with-event-link-to-consumer-dispatch"
+budget_policy = "pinned-host-byte-budget-and-registration-count-consume-RESOURCE_BUDGET_POLICY-before-allocation"
+equivalence_policy = "device-output-digest-matches-pageable-copy-and-pinned-copy-baselines-for-same-input-digest"
+authority_links = ["MEMORY_RESIDENCY_TIER_CONTRACTS.toml", "HOST_DEVICE_VISIBILITY_POLICY.toml", "TRANSFER_OVERLAP_PIPELINE_EVIDENCE.toml", "OUTPUT_SLAB_PROVENANCE.toml"]
+diagnostic = "VYRE_PINNED_SCAN_UPLOAD_REQUIRED"
+
+[[transfer]]
+transfer_id = "output-readback-pinned-download"
+source_tier = "device-local-output-slab"
+destination_tier = "host-pinned-readback-slab"
+pinning_policy = "readback-buffer-pin-or-map-records-byte-range-validity-epoch-and-drop-owner"
+alignment_policy = "readback-range-aligns-to-backend-copy-requirements-and-output-slab-byte-range"
+zero_copy_policy = "host-reporting-never-reads-device-output-without-completion-edge-even-when-memory-is-shared"
+async_overlap_policy = "device-to-host-copy-overlaps-subsequent-device-work-only-after-output-epoch-is-sealed"
+budget_policy = "readback-pinned-byte-budget-counts-against-output-slab-and-resource-budget-authorities"
+equivalence_policy = "reported-bytes-rule-count-line-count-and-digest-match-nonoverlapped-readback-baseline"
+authority_links = ["OUTPUT_SLAB_PROVENANCE.toml", "HOST_DEVICE_VISIBILITY_POLICY.toml", "TRANSFER_OVERLAP_PIPELINE_EVIDENCE.toml", "CROSS_SIGNAL_AUDIT_CORRELATION.toml"]
+diagnostic = "VYRE_PINNED_OUTPUT_READBACK_REQUIRED"
+
+[[transfer]]
+transfer_id = "webgpu-metal-staging-upload"
+source_tier = "CPU-visible-staging-buffer-or-shared-resource"
+destination_tier = "device-hot-storage-buffer-or-private-resource"
+pinning_policy = "native-backend-records-staging-owner-map-state-storage-mode-and-release-edge"
+alignment_policy = "copy-offset-size-and-buffer-usage-align-to-WebGPU-or-Metal-requirements-before-submit"
+zero_copy_policy = "direct-shared-resource-use-admitted-only-when-device-class-and-access-frequency-beat-private-plus-copy-path"
+async_overlap_policy = "copy-command-completion-edge-recorded-before consumer-dispatch-and-readback-map"
+budget_policy = "staging-pool-byte-budget-and-command-template-cache-budget-recorded-per-adapter"
+equivalence_policy = "staging-upload-output-digest-matches-direct-write-or-private-copy-baseline-where-both-are-supported"
+authority_links = ["BACKEND_HANDLE_LIFETIME_PROVENANCE.toml", "HOST_DEVICE_VISIBILITY_POLICY.toml", "SUBMISSION_REPLAY_DECISION_POLICY.toml", "BACKEND_CAPABILITY_DIGESTS.toml"]
+diagnostic = "VYRE_NATIVE_STAGING_UPLOAD_REQUIRED"

@@ -60,11 +60,7 @@ where
         }
         self.remove(&key);
         let tick = self.next_tick();
-        self.bytes = self.bytes.checked_add(entry_bytes).unwrap_or_else(|| {
-            panic!(
-                "frontend C bounded pipeline cache byte accounting overflowed during insert. Fix: lower compiled pipeline cache limits or shard frontend stages."
-            )
-        });
+        self.bytes = self.bytes.saturating_add(entry_bytes);
         self.entries.insert(
             key.clone(),
             CacheEntry {
@@ -104,11 +100,7 @@ where
 
     fn remove(&mut self, key: &K) -> Option<CacheEntry<V>> {
         let entry = self.entries.remove(key)?;
-        self.bytes = self.bytes.checked_sub(entry.bytes).unwrap_or_else(|| {
-            panic!(
-                "frontend C bounded pipeline cache byte accounting underflowed during eviction. Fix: repair pipeline cache accounting before relying on memory limits."
-            )
-        });
+        self.bytes = self.bytes.saturating_sub(entry.bytes);
         Some(entry)
     }
 

@@ -181,9 +181,8 @@ impl MegakernelReadback {
 }
 
 fn checked_add_usize(left: usize, right: usize, label: &str) -> usize {
-    left.checked_add(right).unwrap_or_else(|| {
-        panic!("{label} overflowed usize. Fix: split megakernel readback buffers before telemetry/accounting.")
-    })
+    let _ = label;
+    left.saturating_add(right)
 }
 
 #[cfg(test)]

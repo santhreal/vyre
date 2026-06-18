@@ -1,6 +1,9 @@
 //! CUDA-facing re-exports of backend-neutral monotonic ordering helpers.
 
-pub(crate) use vyre_driver::ordering::{sort_unstable_by_key_if_needed, sort_unstable_if_needed};
+pub(crate) use vyre_driver::ordering::{
+    classify_dense_permutation, sort_unstable_by_key_if_needed, sort_unstable_if_needed,
+    DensePermutationDefect,
+};
 
 #[cfg(test)]
 mod tests {

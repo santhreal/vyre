@@ -25,7 +25,10 @@
 //!     opcode:         u32                (4 bytes)
 //!     args:           [u32; 4]           (16 bytes)
 //!     epoch:          u32                (4 bytes)   -  observed at publish time
-//!     reserved:       u32                (4 bytes)   -  future use; zero for v1
+//!     slot_status:    u32                (4 bytes)   -  terminal ring status, zero when unknown
+//!     failure_class:  u32                (4 bytes)   -  [`ReplayFailureClass`] discriminant
+//!     backend_code:   u32                (4 bytes)   -  stable [`vyre_driver::backend::ErrorCode`]
+//!     output_digest:  u64                (8 bytes)   -  digest of output bytes observed at failure
 //! ```
 //!
 //! Record size = 52 bytes ≤ 64. Aligning to 64 by padding the reserved
@@ -44,7 +47,9 @@ use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::Path;
 use std::sync::Arc;
 
+use crate::megakernel::recovery::{classify_backend_recovery_error, MegakernelRecoveryClass};
 use crate::PipelineError;
+use vyre_driver::backend::BackendError;
 
 const LOG_MAGIC: &[u8; 8] = b"VRRL0001";
 const LOG_VERSION: u32 = 1;
@@ -71,6 +76,114 @@ pub struct RecordedSlot {
     /// on the same backend must reach the same epoch in the same
     /// order  -  divergence is the load-bearing signal.
     pub epoch: u32,
+}
+
+/// One replay record including optional failure evidence.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ReplayRecord {
+    /// Published ring slot.
+    pub slot: RecordedSlot,
+    /// Backend/runtime failure evidence captured for this slot.
+    pub failure: Option<ReplayFailureEvidence>,
+}
+
+/// Backend/runtime failure class encoded into the replay record tail.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum ReplayFailureClass {
+    /// No failure evidence was recorded for this published slot.
+    #[default]
+    None,
+    /// Backend context, adapter, or compiled-pipeline state was lost or stale.
+    DeviceLoss,
+    /// Queue/resource pressure that can be retried without recompilation.
+    TransientQueue,
+    /// Program/lowering/kernel-source failure that should not be retried as-is.
+    ProgramBug,
+    /// Failure did not match a known automated recovery class.
+    Unclassified,
+}
+
+impl ReplayFailureClass {
+    const NONE: u32 = 0;
+    const DEVICE_LOSS: u32 = 1;
+    const TRANSIENT_QUEUE: u32 = 2;
+    const PROGRAM_BUG: u32 = 3;
+    const UNCLASSIFIED: u32 = 4;
+
+    const fn encode(self) -> u32 {
+        match self {
+            Self::None => Self::NONE,
+            Self::DeviceLoss => Self::DEVICE_LOSS,
+            Self::TransientQueue => Self::TRANSIENT_QUEUE,
+            Self::ProgramBug => Self::PROGRAM_BUG,
+            Self::Unclassified => Self::UNCLASSIFIED,
+        }
+    }
+
+    const fn decode(raw: u32) -> Self {
+        match raw {
+            Self::NONE => Self::None,
+            Self::DEVICE_LOSS => Self::DeviceLoss,
+            Self::TRANSIENT_QUEUE => Self::TransientQueue,
+            Self::PROGRAM_BUG => Self::ProgramBug,
+            Self::UNCLASSIFIED => Self::Unclassified,
+            _ => Self::Unclassified,
+        }
+    }
+
+    const fn from_recovery_class(class: MegakernelRecoveryClass) -> Self {
+        match class {
+            MegakernelRecoveryClass::DeviceLoss => Self::DeviceLoss,
+            MegakernelRecoveryClass::TransientQueue => Self::TransientQueue,
+            MegakernelRecoveryClass::ProgramBug => Self::ProgramBug,
+            MegakernelRecoveryClass::Unclassified => Self::Unclassified,
+        }
+    }
+}
+
+/// Failure evidence captured in a replay record.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ReplayFailureEvidence {
+    /// Terminal or observed ring status word for the failed slot.
+    pub slot_status: u32,
+    /// Recovery-oriented failure class.
+    pub failure_class: ReplayFailureClass,
+    /// Stable backend error code. Zero means no backend error was known.
+    pub backend_error_code: u32,
+    /// Stable digest over output bytes observed before/at failure.
+    pub output_digest: u64,
+}
+
+impl ReplayFailureEvidence {
+    /// Build replay failure evidence from a backend error and observed output bytes.
+    #[must_use]
+    pub fn from_backend_error(slot_status: u32, error: &BackendError, output_bytes: &[u8]) -> Self {
+        Self {
+            slot_status,
+            failure_class: ReplayFailureClass::from_recovery_class(
+                classify_backend_recovery_error(error),
+            ),
+            backend_error_code: error.code().stable_id(),
+            output_digest: output_digest(output_bytes),
+        }
+    }
+
+    fn from_words(
+        slot_status: u32,
+        failure_class: u32,
+        backend_error_code: u32,
+        output_digest: u64,
+    ) -> Option<Self> {
+        if slot_status == 0 && failure_class == 0 && backend_error_code == 0 && output_digest == 0 {
+            return None;
+        }
+        Some(Self {
+            slot_status,
+            failure_class: ReplayFailureClass::decode(failure_class),
+            backend_error_code,
+            output_digest,
+        })
+    }
 }
 
 /// Errors surfaced by the replay-log surface. Every variant carries
@@ -248,6 +361,29 @@ impl RingLog {
     ///
     /// Propagates [`ReplayLogError::Io`] on any file I/O failure.
     pub fn append(&mut self, slot: RecordedSlot) -> Result<(), ReplayLogError> {
+        self.append_record(ReplayRecord {
+            slot,
+            failure: None,
+        })
+    }
+
+    /// Append a record with backend/runtime failure evidence.
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`ReplayLogError::Io`] on any file I/O failure.
+    pub fn append_with_failure(
+        &mut self,
+        slot: RecordedSlot,
+        failure: ReplayFailureEvidence,
+    ) -> Result<(), ReplayLogError> {
+        self.append_record(ReplayRecord {
+            slot,
+            failure: Some(failure),
+        })
+    }
+
+    fn append_record(&mut self, record: ReplayRecord) -> Result<(), ReplayLogError> {
         let record_offset = log_record_offset(self.next_slot)?;
         self.file
             .seek(SeekFrom::Start(record_offset))
@@ -255,16 +391,21 @@ impl RingLog {
 
         let mut buf = [0u8; RECORD_BYTES as usize];
         buf[0..4].copy_from_slice(&RECORD_MAGIC.to_le_bytes());
-        buf[4..12].copy_from_slice(&slot.timestamp_ns.to_le_bytes());
-        buf[12..16].copy_from_slice(&slot.slot_idx.to_le_bytes());
-        buf[16..20].copy_from_slice(&slot.tenant_id.to_le_bytes());
-        buf[20..24].copy_from_slice(&slot.opcode.to_le_bytes());
-        buf[24..28].copy_from_slice(&slot.args[0].to_le_bytes());
-        buf[28..32].copy_from_slice(&slot.args[1].to_le_bytes());
-        buf[32..36].copy_from_slice(&slot.args[2].to_le_bytes());
-        buf[36..40].copy_from_slice(&slot.args[3].to_le_bytes());
-        buf[40..44].copy_from_slice(&slot.epoch.to_le_bytes());
-        // bytes 44..64 reserved  -  explicitly zeroed by the buf init.
+        buf[4..12].copy_from_slice(&record.slot.timestamp_ns.to_le_bytes());
+        buf[12..16].copy_from_slice(&record.slot.slot_idx.to_le_bytes());
+        buf[16..20].copy_from_slice(&record.slot.tenant_id.to_le_bytes());
+        buf[20..24].copy_from_slice(&record.slot.opcode.to_le_bytes());
+        buf[24..28].copy_from_slice(&record.slot.args[0].to_le_bytes());
+        buf[28..32].copy_from_slice(&record.slot.args[1].to_le_bytes());
+        buf[32..36].copy_from_slice(&record.slot.args[2].to_le_bytes());
+        buf[36..40].copy_from_slice(&record.slot.args[3].to_le_bytes());
+        buf[40..44].copy_from_slice(&record.slot.epoch.to_le_bytes());
+        if let Some(failure) = record.failure {
+            buf[44..48].copy_from_slice(&failure.slot_status.to_le_bytes());
+            buf[48..52].copy_from_slice(&failure.failure_class.encode().to_le_bytes());
+            buf[52..56].copy_from_slice(&failure.backend_error_code.to_le_bytes());
+            buf[56..64].copy_from_slice(&failure.output_digest.to_le_bytes());
+        }
         self.file
             .write_all(&buf)
             .map_err(|e| self.io_err("write", e))?;
@@ -293,6 +434,20 @@ impl RingLog {
     ///
     /// Propagates [`ReplayLogError::Io`] on read failure.
     pub fn replay_all(&mut self) -> Result<Vec<RecordedSlot>, ReplayLogError> {
+        Ok(self
+            .replay_records()?
+            .into_iter()
+            .map(|record| record.slot)
+            .collect())
+    }
+
+    /// Walk the log in publish order and return full records, including
+    /// optional failure evidence.
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`ReplayLogError::Io`] on read failure.
+    pub fn replay_records(&mut self) -> Result<Vec<ReplayRecord>, ReplayLogError> {
         let capacity =
             usize::try_from(self.capacity).map_err(|_| ReplayLogError::CapacityOverflow {
                 count: self.capacity,
@@ -319,7 +474,7 @@ impl RingLog {
                     path: self.path_repr.clone(),
                 });
             }
-            out.push(RecordedSlot {
+            let slot = RecordedSlot {
                 timestamp_ns: read_u64(&buf, 4),
                 slot_idx: read_u32(&buf, 12),
                 tenant_id: read_u32(&buf, 16),
@@ -331,6 +486,15 @@ impl RingLog {
                     read_u32(&buf, 36),
                 ],
                 epoch: read_u32(&buf, 40),
+            };
+            out.push(ReplayRecord {
+                slot,
+                failure: ReplayFailureEvidence::from_words(
+                    read_u32(&buf, 44),
+                    read_u32(&buf, 48),
+                    read_u32(&buf, 52),
+                    read_u64(&buf, 56),
+                ),
             });
         }
         Ok(out)
@@ -407,6 +571,13 @@ fn read_u64(buf: &[u8], offset: usize) -> u64 {
     u64::from_le_bytes(bytes)
 }
 
+fn output_digest(bytes: &[u8]) -> u64 {
+    let digest = blake3::hash(bytes);
+    let mut out = [0u8; 8];
+    out.copy_from_slice(&digest.as_bytes()[..8]);
+    u64::from_le_bytes(out)
+}
+
 /// Let callers bridge ReplayLogError into the unified PipelineError
 /// surface when driving the log from the megakernel pump loop.
 impl From<ReplayLogError> for PipelineError {
@@ -456,6 +627,52 @@ mod tests {
         assert_eq!(replay[0].epoch, 10);
         assert_eq!(replay[1].slot_idx, 2);
         assert_eq!(replay[1].epoch, 11);
+    }
+
+    #[test]
+    fn append_with_failure_round_trips_reproduction_evidence() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("log.vrrl");
+        let mut log = RingLog::open(&path, 4)
+            .expect("Fix: open fresh log; restore this invariant before continuing.");
+        let backend_error = BackendError::DispatchFailed {
+            code: Some(17),
+            message: "DeviceLost after queue submit".to_string(),
+        };
+        let failure =
+            ReplayFailureEvidence::from_backend_error(3, &backend_error, b"partial-output");
+
+        assert_eq!(failure.failure_class, ReplayFailureClass::DeviceLoss);
+        assert_eq!(failure.backend_error_code, backend_error.code().stable_id());
+        assert_ne!(failure.output_digest, 0);
+
+        log.append_with_failure(rec(7, 44), failure).unwrap();
+        log.sync().unwrap();
+
+        let replay = log
+            .replay_records()
+            .expect("Fix: replay records; restore this invariant before continuing.");
+        assert_eq!(replay.len(), 1);
+        assert_eq!(replay[0].slot.slot_idx, 7);
+        assert_eq!(replay[0].slot.epoch, 44);
+        assert_eq!(replay[0].failure, Some(failure));
+    }
+
+    #[test]
+    fn append_without_failure_has_no_failure_evidence() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("log.vrrl");
+        let mut log = RingLog::open(&path, 2)
+            .expect("Fix: open fresh log; restore this invariant before continuing.");
+
+        log.append(rec(1, 10)).unwrap();
+
+        let replay = log
+            .replay_records()
+            .expect("Fix: replay records; restore this invariant before continuing.");
+        assert_eq!(replay.len(), 1);
+        assert_eq!(replay[0].slot.slot_idx, 1);
+        assert_eq!(replay[0].failure, None);
     }
 
     #[test]

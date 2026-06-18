@@ -1,0 +1,41 @@
+# Output slab provenance for VX-670.
+# Reported output names producer kernel, byte range, validity epoch, readback state, and consumer.
+
+schema = "vyre.runtime.output_slab_provenance.v1"
+owner = "runtime_residency"
+evidence_tokens = ["CUDA_BEST_PRACTICES", "WEBGPU_SPEC"]
+
+required_fields = [
+  "slab_id",
+  "producer_kernel",
+  "byte_range",
+  "validity_epoch",
+  "readback_state",
+  "reporter_consumer",
+  "stale_policy",
+]
+
+readback_states = [
+  "device_resident",
+  "readback_pending",
+  "host_visible",
+  "stale",
+]
+
+[[slab]]
+slab_id = "scan-output-0007"
+producer_kernel = "scan_regex_batch"
+byte_range = "0..4096"
+validity_epoch = 77
+readback_state = "host_visible"
+reporter_consumer = "json_reporter"
+stale_policy = "reject"
+
+[[slab]]
+slab_id = "graph-output-0019"
+producer_kernel = "frontier_expand"
+byte_range = "4096..8192"
+validity_epoch = 78
+readback_state = "device_resident"
+reporter_consumer = "metrics_reporter"
+stale_policy = "reject"

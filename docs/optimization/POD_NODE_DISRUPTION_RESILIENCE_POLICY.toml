@@ -1,0 +1,43 @@
+# Pod and node disruption resilience policy for VX-1303, VX-1307, VX-1314, and VX-1318.
+# Pod kill, pod failure, container kill, disruption budgets, readiness, and recovery observations share one Kubernetes disruption seam.
+
+schema = "vyre.ops.pod_node_disruption_resilience_policy.v1"
+owner = "security_reliability"
+evidence_tokens = ["CHAOS_MESH_PODCHAOS", "KUBERNETES_DISRUPTIONS", "KUBERNETES_PDB"]
+
+required_fields = [
+  "disruption_id",
+  "fault_action_policy",
+  "target_policy",
+  "availability_budget_policy",
+  "probe_policy",
+  "recovery_policy",
+  "runbook_policy",
+  "release_gate_effect",
+  "evidence_policy",
+  "diagnostic",
+]
+
+[[disruption]]
+disruption_id = "pod-failure-readiness-resilience"
+fault_action_policy = "pod-failure-duration-mode-selector-and-release-label-recorded"
+target_policy = "Deployment-StatefulSet-or-DaemonSet-controller-required-independent-Pod-target-rejected-for-release-claim"
+availability_budget_policy = "PDB-minAvailable-or-maxUnavailable-status-currentHealthy-desiredHealthy-and-allowedDisruptions-recorded"
+probe_policy = "liveness-readiness-startup-probe-behavior-must-detect-pause-image-or-unavailable-service-state"
+recovery_policy = "replacement-or-restarted-pod-must-return-ready-and-SLO-state-must-recover-within-recorded-window"
+runbook_policy = "OPERATOR_RUNBOOK_ROLLBACK_POLICY.toml"
+release_gate_effect = "failed-pod-disruption-resilience-blocks-operator-readiness-and-rollout-promotion-claim"
+evidence_policy = "capture-target-pod-controller-replica-count-PDB-status-probe-state-alerts-and-post-recovery-SLI"
+diagnostic = "VYRE_POD_FAILURE_RESILIENCE_REQUIRED"
+
+[[disruption]]
+disruption_id = "container-kill-driver-worker-resilience"
+fault_action_policy = "container-kill-target-container-name-mode-selector-and-grace-period-recorded"
+target_policy = "driver-worker-or-operator-sidecar-targets-allowed-only-when-owner-route-and-restart-policy-are-declared"
+availability_budget_policy = "replica-count-and-PDB-status-must-leave-operator-facing-surface-above-minimum-service-objective"
+probe_policy = "container-restart-readiness-transition-and-no-secret-diagnostic-output-recorded"
+recovery_policy = "worker-rejoins-without-duplicating-accepted-work-or-corrupting-cache-state"
+runbook_policy = "ALERT_ROUTING_ESCALATION_POLICY.toml"
+release_gate_effect = "duplicate-work-data-loss-or-stale-cache-after-container-kill-blocks-release-health-clearance"
+evidence_policy = "capture-container-name-restart-count-work-id-dedup-key-cache-key-alert-id-and-post-fault-output-digest"
+diagnostic = "VYRE_CONTAINER_KILL_RESILIENCE_REQUIRED"

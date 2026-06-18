@@ -1,0 +1,66 @@
+# Profiling collection owns sampling authority, privilege boundaries, overhead budgets, and profile storage safety; deployment and admission policies own runtime enforcement.
+
+schema = "vyre.observability.profiling_collection_security.v1"
+owner = "performance_observability"
+evidence_tokens = ["LINUX_PERF_SECURITY", "PYROSCOPE_CLIENT_COLLECTION", "GRAFANA_PYROSCOPE", "KUBERNETES_ADMISSION_CONTROLLERS", "KUBERNETES_AUDITING"]
+
+required_fields = [
+  "collector_id",
+  "collection_mode",
+  "target_surface",
+  "privilege_policy",
+  "sampling_policy",
+  "overhead_budget_policy",
+  "cardinality_policy",
+  "storage_policy",
+  "network_policy",
+  "redaction_policy",
+  "failure_policy",
+  "authority_links",
+  "diagnostic",
+]
+
+[[collector]]
+collector_id = "linux-perf-operator-runtime"
+collection_mode = "perf-events-per-process"
+target_surface = "operator-runtime-processes-and-batch-workers"
+privilege_policy = "prefer-CAP_PERFMON-scoped-collector-group-perf-event-paranoid-recorded-no-root-daemon-default"
+sampling_policy = "sampling-frequency-period-duration-target-selector-and-window-id-recorded-per-profile"
+overhead_budget_policy = "collector-overhead-budget-records-cpu-percent-memory-mmap-pages-open-fd-count-and-drop-rate"
+cardinality_policy = "labels-limited-to-public-backend-route-version-worker-class-profile-type-and-profile-id"
+storage_policy = "raw-perf-data-private-profile-proto-public-redacted-aggregate-release-summary"
+network_policy = "local-collector-first-forwarding-uses-existing-network-redaction-and-secret-boundary"
+redaction_policy = "symbol-path-host-device-user-and-private-root-redaction-before-public-evidence"
+failure_policy = "profiling-unavailable-or-overhead-budget-exceeded-blocks-profile-backed-performance-claims-but-not-core-detection"
+authority_links = ["OPERATOR_DEPLOYMENT_SURFACE_MATRIX.toml", "KUBERNETES_ADMISSION_POLICY_ENFORCEMENT.toml", "ADMISSION_AUDIT_EVIDENCE_POLICY.toml"]
+diagnostic = "VYRE_PERF_PROFILE_COLLECTION_POLICY_REQUIRED"
+
+[[collector]]
+collector_id = "pyroscope-alloy-ebpf-profile-collector"
+collection_mode = "alloy-ebpf-auto-instrumentation"
+target_surface = "rust-native-operator-and-worker-binaries"
+privilege_policy = "collector-privileges-recorded-as-runtime-capability-policy-and-admission-enforced-security-context"
+sampling_policy = "eBPF-CPU-profile-collection-records-target-selector-language-runtime-version-and-sample-period"
+overhead_budget_policy = "overhead-budget-records-sample-rate-profile-bytes-export-queue-depth-and-local-forwarding-latency"
+cardinality_policy = "tenant-service-version-route-and-worker-labels-are-bounded-and-public-safe"
+storage_policy = "tenant-scoped-profile-store-separates-private-raw-profiles-from-public-aggregate-results"
+network_policy = "profiles-sent-through-local-collector-before-remote-store-and-use-existing-egress-allowlist"
+redaction_policy = "module-path-function-name-and-label-redaction-applied-before-cross-signal-publication"
+failure_policy = "collector-misconfiguration-invalidates-continuous-profile-coverage-and-release-profile-correlation-claims"
+authority_links = ["OPERATOR_RUNTIME_CONFIG_POLICY.toml", "NETWORK_EVIDENCE_REDACTION.toml", "PUBLICATION_BOUNDARY_CLASSIFICATION.toml"]
+diagnostic = "VYRE_PYROSCOPE_COLLECTOR_POLICY_REQUIRED"
+
+[[collector]]
+collector_id = "bench-harness-profile-capture"
+collection_mode = "controlled-benchmark-profile"
+target_surface = "bench-harness-release-candidate-workloads"
+privilege_policy = "bench-profile-capture-records-local-user-capability-debug-symbol-access-and-private-artifact-root"
+sampling_policy = "profile-window-covers-warmup-steady-state-and-targeted-hot-stage-with-run-id"
+overhead_budget_policy = "benchmark-profile-overhead-recorded-and-subtracted-only-when paired-control-run-exists"
+cardinality_policy = "case-id-stage-backend-route-and-workload-digest-labels-bounded-by-benchmark-manifest"
+storage_policy = "profile-artifacts-live-with-reproducibility-capsule-and-release-evidence-digest"
+network_policy = "no-network-export-required-for-local-benchmark-profile-evidence"
+redaction_policy = "local-paths-private-corpus-names-and-machine-identifiers-redacted-before-public-report"
+failure_policy = "missing-benchmark-profile-invalidates-regression-attribution-claim-for-affected-hot-path"
+authority_links = ["REPRODUCIBILITY_CAPSULES.toml", "HOT_PATHS.toml", "PERFORMANCE_REGRESSION_PROFILE_TRIAGE_POLICY.toml"]
+diagnostic = "VYRE_BENCH_PROFILE_CAPTURE_POLICY_REQUIRED"

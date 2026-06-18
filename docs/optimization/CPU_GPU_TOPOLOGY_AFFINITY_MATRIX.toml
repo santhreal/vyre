@@ -1,0 +1,54 @@
+# CPU/GPU topology affinity matrix records local CPU, memory node, PCI locality, and operator-visible class for each accelerator surface.
+
+schema = "vyre.host.cpu_gpu_topology_affinity_matrix.v1"
+owner = "driver_shared"
+evidence_tokens = ["NVML_CPU_MEMORY_AFFINITY", "HWLOC_TOPOLOGY_API", "KUBERNETES_TOPOLOGY_MANAGER", "KUBERNETES_CPU_MANAGER", "LINUX_KERNEL_CPUSETS"]
+
+required_fields = [
+  "affinity_id",
+  "accelerator_surface",
+  "cpu_set_policy",
+  "memory_node_policy",
+  "io_topology_policy",
+  "kubernetes_alignment_policy",
+  "sharing_policy",
+  "privacy_boundary",
+  "authority_links",
+  "diagnostic",
+]
+
+[[affinity]]
+affinity_id = "nvidia-gpu-local-cpu-mask"
+accelerator_surface = "CUDA-and-NVML-visible-GPU-device-class-used-by-scan-flow-graph-and-resident-dispatch"
+cpu_set_policy = "NVML-node-or-socket-affinity-CPU-mask-recorded-as-public-capacity-class-not-raw-private-topology"
+memory_node_policy = "preferred-NUMA-memory-node-recorded-for-pinned-staging-managed-prefetch-and-readback-slab"
+io_topology_policy = "hwloc-PCI-device-locality-records-GPU-near-CPU-class-and-PCI-root-class"
+kubernetes_alignment_policy = "Topology-Manager-and-CPU-Manager-state-recorded-when-running-in-operator-pod"
+sharing_policy = "MIG-or-shared-GPU-class-inherits-placement-and-capacity-isolation-policy-before locality-claim"
+privacy_boundary = "public-record-redacts-hostnames-full-PCI-address-device-serial-raw-cpuset-and-Santh-path"
+authority_links = ["GPU_DEVICE_CAPACITY_PLACEMENT_POLICY.toml", "MULTI_ACCELERATOR_TOPOLOGY_CAPABILITY_MATRIX.toml", "HOST_LOCALITY_AFFINITY_CONTRACTS.toml", "PUBLICATION_BOUNDARY_CLASSIFICATION.toml"]
+diagnostic = "VYRE_NVIDIA_GPU_CPU_AFFINITY_REQUIRED"
+
+[[affinity]]
+affinity_id = "storage-device-ingress-locality"
+accelerator_surface = "NVMe-corpus-ingress-GDS-or-CPU-staging-feed-into-GPU-routes"
+cpu_set_policy = "IO-thread-mask-records-local-CPU-class-for-storage-controller-and-target-GPU-transfer-path"
+memory_node_policy = "mmap-or-staging-buffers-use-local-or-interleaved-NUMA-node-policy-based-on-storage-to-GPU-route"
+io_topology_policy = "storage-PCI-locality-GPU-PCI-locality-and-host-bounce-node-recorded-before direct-storage-speed-claim"
+kubernetes_alignment_policy = "operator-pod-resource-alignment-records-storage-node-class-GPU-node-class-and-topology-manager-admission"
+sharing_policy = "shared-storage-or-shared-GPU-contention-recorded-as-capacity-stratum"
+privacy_boundary = "public-record-uses-storage-class-and-node-class-not-device-paths-hostnames-or-fleet-layout"
+authority_links = ["CORPUS_PAGING_PLANNER.toml", "GPU_DIRECT_CORPUS_PAGING_CAPABILITIES.toml", "MEMORY_RESIDENCY_TIER_CONTRACTS.toml", "TRANSFER_OVERLAP_PIPELINE_EVIDENCE.toml"]
+diagnostic = "VYRE_STORAGE_GPU_LOCALITY_REQUIRED"
+
+[[affinity]]
+affinity_id = "cpu-reference-route-locality"
+accelerator_surface = "CPU-reference-regex-parser-and-verifier-routes-used-for-parity-and-fallback"
+cpu_set_policy = "CPU-reference-thread-mask-records-core-count-SIMD-class-socket-class-and-cgroup-effective-CPU-set"
+memory_node_policy = "CPU-reference-working-set-records-local-interleave-or-bind-memory-policy-with-page-fault-class"
+io_topology_policy = "cache-hierarchy-and-NUMA-distance-recorded-for-throughput-comparison-strata"
+kubernetes_alignment_policy = "CPU-manager-static-or-none-policy-recorded-before release-load-CPU-reference-claim"
+sharing_policy = "no-exclusive-CPU-claim-without-Guaranteed-pod-integer-CPU-request-and-static-policy-evidence"
+privacy_boundary = "public-record-redacts-hostname-raw-core-list-and-private-corpus-paths"
+authority_links = ["REGEX_CPU_GPU_PARTITION.toml", "HARDWARE_WORKLOAD_STRATIFICATION_MATRIX.toml", "RESOURCE_RIGHTSIZING_CAPACITY_POLICY.toml", "BENCHMARK_METHODOLOGY_CONTRACTS.toml"]
+diagnostic = "VYRE_CPU_REFERENCE_LOCALITY_REQUIRED"

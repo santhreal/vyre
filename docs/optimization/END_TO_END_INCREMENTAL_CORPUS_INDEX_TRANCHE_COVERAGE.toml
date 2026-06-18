@@ -1,0 +1,73 @@
+[tranche]
+id = "VX-1541..VX-1560"
+title = "End-to-end incremental corpus identity and change journal governance coverage"
+owner = "runtime_io"
+status = "planned_contract"
+plan = "ALL_AXES_ACCELERATION_PLAN.md"
+
+[research]
+source_keys = [
+  "LINUX_INOTIFY",
+  "LINUX_FANOTIFY",
+  "SQLITE_WAL",
+  "BLAKE3_SPEC",
+  "LINUX_STATX",
+  "LINUX_OPENAT2",
+]
+
+[artifacts]
+created = [
+  "INCREMENTAL_CORPUS_CHANGE_JOURNAL.toml",
+  "FILESYSTEM_WATCHER_EVENT_POLICY.toml",
+  "CORPUS_CONTENT_IDENTITY_INDEX.toml",
+  "INCREMENTAL_RESCAN_INVALIDATION_EVIDENCE.toml",
+  "END_TO_END_INCREMENTAL_CORPUS_INDEX_TRANCHE_COVERAGE.toml",
+  "conform/vyre-conform-enforce/tests/incremental_corpus_index_governance.rs",
+]
+linked_existing = [
+  "DIRECTORY_ENUMERATION_METADATA_POLICY.toml",
+  "FILE_INGRESS_ASYNC_IO_PIPELINE.toml",
+  "SAFE_OPEN_HANDLE_READ_POLICY.toml",
+  "FILESYSTEM_PATH_CANONICALIZATION_POLICY.toml",
+  "ATOMIC_FILE_OPERATION_RACE_POLICY.toml",
+  "CORPUS_INGRESS_GUARDS.toml",
+  "BACKPRESSURE_QUEUE_QUOTA_POLICY.toml",
+  "RESOURCE_BUDGET_POLICY.toml",
+  "OUTPUT_SLAB_SCHEMA_PROVENANCE.toml",
+  "BENCHMARK_PROFILING_CAPTURE_POLICY.toml",
+  "STATISTICAL_PERFORMANCE_GATES.toml",
+  "DOGFOOD_FINDING_LOOP.toml",
+  "ROADMAP.md#E2",
+  "ROADMAP.md#E3",
+]
+
+[ownership_boundary]
+this_tranche_owns = [
+  "watcher event normalization",
+  "persistent corpus identity snapshots",
+  "append-only change journal records",
+  "incremental rescan invalidation decisions",
+  "content digest and chunk digest reuse policy",
+  "watch overflow repair evidence",
+]
+existing_tranches_own = [
+  "initial filesystem enumeration and metadata batching",
+  "safe file-handle opening and async read scheduling",
+  "path traversal, TOCTOU, archive, and redaction controls",
+  "parser cache object lifecycle",
+  "foundation optimizer subtree diff compilation",
+  "global resource and queue quotas",
+  "reported output provenance and publication privacy",
+  "profiling capture and statistical release decisions",
+]
+
+[conformance]
+proof = "conform/vyre-conform-enforce/tests/incremental_corpus_index_governance.rs"
+required_assertions = [
+  "new source keys are present in the research ledger",
+  "new artifacts declare research sources, ownership boundaries, and tranche id",
+  "watcher policy handles rename pairing, overflow, backend selection, and pressure handoff",
+  "identity index separates content hashes from authentication and parser/optimizer caches",
+  "invalidation evidence records positive, negative, adversarial, and cross-file truth gates",
+  "the plan contains VX-1541 through VX-1560 rows",
+]

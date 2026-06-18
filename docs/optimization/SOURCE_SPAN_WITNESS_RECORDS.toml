@@ -1,0 +1,33 @@
+# Source-span witness records for VX-657.
+# Every finding or diagnostic must retain a chain from original bytes to reporter output.
+
+schema = "vyre.source_span_witness.v1"
+owner = "parser_frontend"
+evidence_tokens = ["CODEQL_FLOW", "MLIR_PASS"]
+
+required_fields = [
+  "original_file_digest",
+  "byte_range",
+  "transformed_node_id",
+  "diagnostic_id",
+  "reporter_field",
+  "witness_chain_digest",
+]
+
+[[witness]]
+id = "flow-finding-source-chain"
+original_file_digest = "sha256:src-lib-rs"
+byte_range = "144..196"
+transformed_node_id = "hir:fn:parse_input:block:2"
+diagnostic_id = "VYRE_FLOW_UNTRUSTED_INPUT"
+reporter_field = "finding.primary_span"
+witness_chain_digest = "sha256:flow-source-witness"
+
+[[witness]]
+id = "compile-diagnostic-source-chain"
+original_file_digest = "sha256:kernel-vyre"
+byte_range = "88..125"
+transformed_node_id = "mlir:func:scan_block:op:7"
+diagnostic_id = "VYRE_LOWER_UNSUPPORTED_CAPTURE"
+reporter_field = "diagnostic.span"
+witness_chain_digest = "sha256:compile-source-witness"

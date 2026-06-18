@@ -438,8 +438,12 @@ mod tests {
         assert_eq!(
             validate_deep_review_hygiene_artifacts(hygiene_matrix, proof, scan, docs)
                 .expect_err("hygiene blockers should fail"),
+            // The fixture carries the dataflow workspace root (/libs/dataflow/weir)
+            // but omits the `weir_crate` surface flag, so the first failing check
+            // is the crate-surface evidence the migration added after this test
+            // was first written.
             DeepReviewGateError::ArtifactMissingEvidence {
-                evidence: "dataflow workspace root coverage",
+                evidence: "dataflow crate surface",
             }
         );
     }

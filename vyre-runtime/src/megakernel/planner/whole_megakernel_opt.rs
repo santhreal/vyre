@@ -71,12 +71,7 @@ impl RedundantWorkItemPruneScratch {
 
     fn try_prepare_for_len(&mut self, len: usize) -> Result<(), PipelineError> {
         self.first_seen.clear();
-        let retained_ceiling = len.checked_mul(4).unwrap_or_else(|| {
-            panic!(
-                "megakernel redundant-work scratch retained ceiling overflowed usize. Fix: shard the work batch before pruning."
-            )
-        })
-        .max(1024);
+        let retained_ceiling = len.checked_mul(4).unwrap_or(usize::MAX).max(1024);
         if self.first_seen.capacity() > retained_ceiling {
             self.first_seen.shrink_to(len);
         }
@@ -103,6 +98,7 @@ impl RedundantWorkItemPruneScratch {
 /// O(total_ops)  -  uses one pass + one hash table. Allocation only
 /// for the redundancy report and the seen-set.
 #[must_use]
+#[cfg(any(test, feature = "legacy-infallible"))]
 pub fn detect_cross_arm_redundancy(arms: &[&[MegakernelWorkItem]]) -> CrossArmRedundancy {
     try_detect_cross_arm_redundancy(arms).unwrap_or_else(|error| {
         panic!(
@@ -166,6 +162,7 @@ pub fn try_detect_cross_arm_redundancy(
 /// When no duplicates are found, `out` is left empty so hot callers can keep
 /// using the original borrowed queue without paying an avoidable copy.
 ///
+#[cfg(any(test, feature = "legacy-infallible"))]
 pub fn prune_redundant_work_items_into(
     items: &[MegakernelWorkItem],
     out: &mut Vec<MegakernelWorkItem>,
@@ -198,6 +195,7 @@ pub fn try_prune_redundant_work_items_into(
 /// This is the hot megakernel-dispatch entry point. The legacy
 /// [`prune_redundant_work_items_into`] wrapper remains for callers that do not
 /// own persistent dispatch scratch.
+#[cfg(any(test, feature = "legacy-infallible"))]
 pub fn prune_redundant_work_items_with_scratch_into(
     items: &[MegakernelWorkItem],
     out: &mut Vec<MegakernelWorkItem>,
@@ -327,41 +325,27 @@ fn output_handles_are_dense_unique(items: &[MegakernelWorkItem]) -> bool {
         min = min.min(item.output_handle);
         max = max.max(item.output_handle);
     }
-    let range = u64::from(max)
+    let Some(range) = u64::from(max)
         .checked_sub(u64::from(min))
         .and_then(|value| value.checked_add(1))
-        .unwrap_or_else(|| {
-            panic!(
-                "megakernel dense output-handle range overflowed u64. Fix: shard the work batch before uniqueness pruning."
-            )
-        });
+    else {
+        return false;
+    };
     if range > DENSE_OUTPUT_UNIQUE_BITS as u64 {
         return false;
     }
 
     let mut seen = [0u64; DENSE_OUTPUT_UNIQUE_WORDS];
     for item in items {
-        let offset = usize::try_from(item.output_handle.checked_sub(min).unwrap_or_else(|| {
-            panic!(
-                "megakernel output handle underflowed dense uniqueness offset. Fix: rebuild output handle range."
-            )
-        }))
-        .unwrap_or_else(|error| {
-            panic!(
-                "megakernel output handle offset cannot fit usize: {error}. Fix: shard the work batch before uniqueness pruning."
-            )
-        });
-        let word = offset
-            / usize::try_from(u64::BITS).unwrap_or_else(|error| {
-                panic!("u64::BITS cannot fit usize: {error}. Fix: unsupported host index width.")
-            });
+        let Some(delta) = item.output_handle.checked_sub(min) else {
+            return false;
+        };
+        let Ok(offset) = usize::try_from(delta) else {
+            return false;
+        };
+        let word = offset / 64;
         let bit = 1u64
-            << (offset
-                % usize::try_from(u64::BITS).unwrap_or_else(|error| {
-                    panic!(
-                        "u64::BITS cannot fit usize: {error}. Fix: unsupported host index width."
-                    )
-                }));
+            << (offset % 64);
         if (seen[word] & bit) != 0 {
             return false;
         }

@@ -1,0 +1,51 @@
+# Backend handle lifetime provenance for VX-973 through VX-977.
+# CUDA, WGPU, Metal, CPU, and external handles use one owner, lifetime, sync, and release evidence contract.
+
+schema = "vyre.driver.backend_handle_lifetime_provenance.v1"
+owner = "driver_shared"
+evidence_tokens = ["RUST_NOMICON_FFI", "CUDA_BEST_PRACTICES", "WEBGPU_SPEC", "METAL_COMPUTE"]
+
+required_fields = [
+  "handle_id",
+  "backend",
+  "origin",
+  "owner",
+  "lifetime_scope",
+  "synchronization_policy",
+  "release_policy",
+  "use_after_release_guard",
+  "diagnostic",
+]
+
+[[handle]]
+handle_id = "cuda-device-buffer"
+backend = "cuda"
+origin = "cuda-driver-allocation"
+owner = "stream-ordered-pool-owner"
+lifetime_scope = "pool-block-until-event-complete"
+synchronization_policy = "event-linked-before-reuse"
+release_policy = "stream-ordered-free-or-pool-return"
+use_after_release_guard = "generation-id-and-validity-epoch"
+diagnostic = "VYRE_BACKEND_HANDLE_CUDA_LIFETIME_REFUSED"
+
+[[handle]]
+handle_id = "wgpu-buffer"
+backend = "wgpu"
+origin = "device-create-buffer"
+owner = "wgpu-resource-owner"
+lifetime_scope = "command-submission-until-map-or-drop-complete"
+synchronization_policy = "queue-submit-and-map-state"
+release_policy = "drop-after-no-command-references"
+use_after_release_guard = "resource-generation-and-command-topology-digest"
+diagnostic = "VYRE_BACKEND_HANDLE_WGPU_LIFETIME_REFUSED"
+
+[[handle]]
+handle_id = "metal-buffer"
+backend = "metal"
+origin = "metal-device-buffer"
+owner = "metal-resource-owner"
+lifetime_scope = "command-buffer-dependency-chain"
+synchronization_policy = "hazard-certificate-required"
+release_policy = "release-after-command-completion"
+use_after_release_guard = "hazard-certificate-and-validity-epoch"
+diagnostic = "VYRE_BACKEND_HANDLE_METAL_LIFETIME_REFUSED"

@@ -7,7 +7,7 @@
 //! context or consumer integration examples.
 
 use crate::{paths::workspace_relative, Violation, ViolationKind};
-use anyhow::{Context, Result};
+use anyhow::Result;
 use std::path::Path;
 
 const CONSUMER_NAMES: &[&str] = &["weir", "surgec", "gossan", "keyhog", "flare-native"];
@@ -66,8 +66,7 @@ fn is_exempt_path(workspace_rel: &str) -> bool {
 }
 
 fn scan_file(path: &Path, workspace_rel: &str) -> Result<Vec<Violation>> {
-    let source =
-        std::fs::read_to_string(path).with_context(|| format!("read {}", path.display()))?;
+    let source = crate::read_source_bounded(path)?;
     let is_markdown = path.extension().and_then(|ext| ext.to_str()) == Some("md");
     let mut violations = Vec::new();
 

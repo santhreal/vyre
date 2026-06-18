@@ -15,7 +15,7 @@ mod payload_keys;
 #[path = "cache/payload_memory.rs"]
 mod payload_memory;
 #[cfg(test)]
-#[path = "cache/tests.rs"]
+#[path = "cache/tests/mod.rs"]
 mod tests;
 
 pub(super) use classified_disk::{load_classified_from_disk, store_classified_to_disk};

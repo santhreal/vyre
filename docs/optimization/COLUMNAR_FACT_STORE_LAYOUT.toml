@@ -1,0 +1,46 @@
+[artifact]
+id = "COLUMNAR_FACT_STORE_LAYOUT"
+title = "Columnar semantic fact store layout contract"
+tranche = "VX-1601..VX-1620"
+owner = "scanner_frontends"
+status = "planned_contract"
+research_sources = [
+  "APACHE_ARROW_COLUMNAR_FORMAT",
+  "SOUFFLE_RELATIONS",
+  "ROARING",
+]
+
+[scope]
+owns = [
+  "physical columnar layout for semantic fact relations",
+  "validity bitmap and dictionary encoding policy for fact columns",
+  "selection vector and compressed bitmap materialization boundaries",
+  "relation batch sizing and alignment contracts",
+  "zero-copy batch handoff from fact index to rule execution",
+]
+does_not_own = [
+  "semantic fact table meaning, owned by SEMANTIC_FACT_INDEX_SCHEMA",
+  "dataflow relation reuse semantics, owned by INCREMENTAL_DATAFLOW_FACT_REUSE_POLICY",
+  "language dependency edges, owned by LANGUAGE_DEPENDENCY_EDGE_MATRIX",
+  "GPU memory residency, owned by MEMORY_RESIDENCY_TIER_CONTRACTS",
+  "output finding schema, owned by OUTPUT_SLAB_SCHEMA_PROVENANCE",
+]
+
+[physical_layout]
+relation_batch = "each semantic relation is materialized as columnar batches with stable relation name, schema digest, row count, and batch ordinal"
+column_buffers = "primitive columns use contiguous value buffers with explicit validity bitmaps when nullability is admitted by the schema"
+dictionary_columns = "symbol ids, language ids, relation names, fact kinds, and rule ids may use dictionary encoding only with dictionary digest evidence"
+selection_vectors = "filters produce selection vectors or compressed bitmaps instead of row copies until a downstream operator requires materialization"
+join_keys = "join key columns are stored contiguously and may expose sorted, hash-partitioned, or dictionary-coded layout hints"
+
+[batch_policy]
+default_batch_size = "Tier A operational knob constrained by cache size, SIMD width, GPU transfer size, and backpressure budget"
+small_relation_policy = "small relations may stay in single-batch form when metadata overhead would dominate"
+wide_relation_policy = "wide relations may project only required columns for rule evaluation"
+mutation_policy = "batches are immutable after publication to a fact index epoch; changes create delta batches"
+zero_copy_boundary = "zero-copy handoff is allowed only when consumer lifetime and schema digest match the batch evidence"
+
+[compressed_domains]
+bitmap_source = "ROARING-backed domains may represent sparse symbol, file, rule, and relation-row sets"
+bitmap_semantics = "bitmap membership is an execution acceleration only and cannot replace semantic reuse gates"
+materialization = "bitmap-to-row materialization records row count, density, and operator reason"

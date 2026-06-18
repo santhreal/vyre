@@ -199,7 +199,7 @@ pub fn validate_public_api_docs_artifacts(
         ("Vyre README exists", "\"exists\": true"),
         ("Vyre no missing tokens", "\"missing_tokens\": []"),
         ("Vyre zero blockers", "\"blockers\": []"),
-        ("Vyre version token", "\"0.6.1\""),
+        ("Vyre version token", "\"0.6.3\""),
         ("Vyre crate token", "\"vyre\""),
         ("CUDA token", "\"cuda\""),
         ("WGPU token", "\"wgpu\""),
@@ -230,7 +230,7 @@ pub fn validate_public_api_docs_artifacts(
         artifact_contains(readme_contracts, evidence, needle)?;
     }
     for (evidence, needle) in [
-        ("docs matrix schema", "\"schema_version\": 2"),
+        ("docs matrix schema", "\"schema_version\": 5"),
         ("docs matrix blockers inventory", "\"blockers\""),
         (
             "curated proof docs preserved",
@@ -407,7 +407,7 @@ mod tests {
           "exists": true,
           "missing_tokens": [],
           "blockers": [],
-          "required_tokens": ["0.6.1", "vyre", "cuda", "wgpu", "vyre::program", "cargo add vyre", "release/evidence"],
+          "required_tokens": ["0.6.3", "vyre", "cuda", "wgpu", "vyre::program", "cargo add vyre", "release/evidence"],
           "example_count": 0
         }"#;
 

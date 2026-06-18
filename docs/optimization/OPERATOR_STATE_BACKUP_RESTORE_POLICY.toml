@@ -1,0 +1,43 @@
+# Operator state backup and restore policy for VX-1282, VX-1283, VX-1284, VX-1285, VX-1295, and VX-1296.
+# Backup scope, restore target, integrity, privacy, and existing-resource handling share one state recovery seam.
+
+schema = "vyre.ops.operator_state_backup_restore_policy.v1"
+owner = "security_reliability"
+evidence_tokens = ["VELERO_BACKUP_REFERENCE", "VELERO_RESTORE_REFERENCE", "KUBERNETES_VOLUME_SNAPSHOTS"]
+
+required_fields = [
+  "backup_id",
+  "state_surface",
+  "backup_scope_policy",
+  "schedule_policy",
+  "snapshot_policy",
+  "integrity_policy",
+  "restore_target_policy",
+  "existing_resource_policy",
+  "privacy_boundary",
+  "diagnostic",
+]
+
+[[backup]]
+backup_id = "kubernetes-operator-state-backup"
+state_surface = "Kubernetes-resources-PVCs-ConfigMaps-secret-references-and-release-labels-owned-by-public-Vyre-operator"
+backup_scope_policy = "include-namespaces-label-selectors-ordered-resources-PVCs-and-cluster-resources-required-for-operator-recovery"
+schedule_policy = "backup-schedule-and-manual-trigger-recorded-with-timezone-and-owner-route"
+snapshot_policy = "VolumeSnapshot-or-backup-tool-snapshot-records-source-PVC-volume-snapshot-class-ready-state-and-content-handle"
+integrity_policy = "backup-metadata-digest-resource-count-volume-snapshot-id-artifact-version-and-tool-version-recorded-before-restore"
+restore_target_policy = "restore-target-cluster-namespace-mapping-storage-class-and-image-remap-recorded-before-apply"
+existing_resource_policy = "default-restore-is-non-destructive-update-policy-requires-explicit-decision-record"
+privacy_boundary = "secrets-values-private-Santh-paths-device-identifiers-and-private-corpus-excerpts-excluded-from-public-backup-evidence"
+diagnostic = "VYRE_OPERATOR_STATE_BACKUP_POLICY_REQUIRED"
+
+[[backup]]
+backup_id = "release-evidence-state-backup"
+state_surface = "release-evidence-indexes-public-artifact-metadata-operator-runbook-records-and-release-health-state"
+backup_scope_policy = "public-release-evidence-metadata-backed-up-without-private-local-evidence-or-secret-material"
+schedule_policy = "backup-created-before-major-release-promotion-and-after-runbook-decision-record"
+snapshot_policy = "object-store-or-filesystem-snapshot-records-manifest-digest-and-source-archive-durability-link"
+integrity_policy = "snapshot-digest-signature-release-version-and-public-artifact-index-cross-check-required"
+restore_target_policy = "restore-rehydrates-release-health-artifact-integrity-and-runbook-evidence-indexes-before-status-publication"
+existing_resource_policy = "existing-public-evidence-records-are-append-only-replacement-requires-artifact-integrity-conflict-record"
+privacy_boundary = "release-evidence-backup-publishes-only-public-artifact-identity-health-state-and-redacted-operator-impact"
+diagnostic = "VYRE_RELEASE_EVIDENCE_STATE_BACKUP_REQUIRED"

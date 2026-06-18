@@ -73,7 +73,9 @@ pub fn kernel_time_table_json(report: &ReportSchema) -> String {
             "kernel_execute_ns_p99": case.metrics.get("kernel_execute_ns").map(|kernel| kernel.p99),
         });
 
-        let map = entry.as_object_mut().unwrap();
+        let Some(map) = entry.as_object_mut() else {
+            continue;
+        };
 
         if let Some(bytes_touched) = case.metrics.get("bytes_touched") {
             map.insert(
@@ -98,7 +100,7 @@ pub fn kernel_time_table_json(report: &ReportSchema) -> String {
 
         entries.push(entry);
     }
-    serde_json::to_string(&entries).expect("Fix: JSON serialization cannot fail for basic types")
+    serde_json::Value::Array(entries).to_string()
 }
 
 #[cfg(test)]
@@ -140,6 +142,8 @@ mod tests {
             workload_class: "Micro".to_string(),
             tags: Vec::new(),
             backend_id: Some("test".to_string()),
+            device_signature: Some("device-profile-v1:test".to_string()),
+            held_out_corpus_id: Some(format!("heldout:bench-case:{id}")),
             needs_gpu: false,
             min_vram_bytes: None,
             min_input_bytes: None,

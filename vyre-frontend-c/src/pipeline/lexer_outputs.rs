@@ -61,11 +61,7 @@ pub(super) fn bucketed_dense_lex_haystack<'a>(
         haystack_len.max(1) as usize,
         4096,
     ) as u32;
-    let bucket_bytes = (bucket as usize).checked_mul(4).unwrap_or_else(|| {
-        panic!(
-            "dense lexer haystack bucket {bucket} overflows host byte indexing. Fix: shard dense lexing before GPU dispatch."
-        )
-    });
+    let bucket_bytes = (bucket as usize).saturating_mul(4);
     if haystack.len() >= bucket_bytes {
         return (haystack, bucket);
     }

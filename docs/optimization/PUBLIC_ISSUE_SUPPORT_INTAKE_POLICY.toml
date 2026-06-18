@@ -1,0 +1,62 @@
+# Public issue and support intake policy for VX-1142, VX-1143, VX-1144, VX-1145, VX-1147, and VX-1154.
+# GitHub issue forms, SUPPORT.md, labels, and public repository health share one reporter-facing intake seam.
+
+schema = "vyre.release.public_issue_support_intake_policy.v1"
+owner = "dogfood_ux"
+evidence_tokens = ["GITHUB_ISSUE_FORMS", "GITHUB_SUPPORT_RESOURCES", "GITHUB_LABELS", "PUBLIC_REPOSITORY_HEALTH_GOVERNANCE"]
+
+required_fields = [
+  "intake_id",
+  "surface",
+  "required_reporter_inputs",
+  "default_labels",
+  "routing_policy",
+  "security_misroute_policy",
+  "privacy_boundary",
+  "release_gate_link",
+  "diagnostic",
+]
+
+[[intake]]
+intake_id = "public-bug-report"
+surface = "github-issue-form"
+required_reporter_inputs = ["vyre-version", "install-mode", "command-line", "expected-behavior", "actual-behavior", "minimal-public-reproducer"]
+default_labels = ["kind:bug", "status:needs-triage", "surface:public"]
+routing_policy = "labels-route-to-OWNERSHIP.toml-lane-and-public-CODEOWNERS-path"
+security_misroute_policy = "security-sensitive-details-moved-to-private-vulnerability-reporting-and-public-body-redacted"
+privacy_boundary = "public-vyre-relative-paths-only-private-santh-paths-and-secrets-rejected"
+release_gate_link = "RELEASE_HEALTH_FEEDBACK_LOOP.toml"
+diagnostic = "VYRE_PUBLIC_BUG_INTAKE_READY"
+
+[[intake]]
+intake_id = "performance-regression-report"
+surface = "github-issue-form"
+required_reporter_inputs = ["vyre-version", "hardware-class", "input-size-class", "baseline-version", "current-result", "public-reproducer-or-benchmark-id"]
+default_labels = ["kind:performance", "status:needs-triage", "surface:public"]
+routing_policy = "routes-to-bench-harness-hot-path-budget-and-owner-lane"
+security_misroute_policy = "security-sensitive-perf-artifacts-redacted-and-escalated-private"
+privacy_boundary = "no-device-serials-private-corpora-private-santh-paths-or-secret-env-values"
+release_gate_link = "RELEASE_HEALTH_FEEDBACK_LOOP.toml"
+diagnostic = "VYRE_PERFORMANCE_REGRESSION_INTAKE_READY"
+
+[[intake]]
+intake_id = "docs-install-support"
+surface = "SUPPORT.md-and-github-issue-form"
+required_reporter_inputs = ["install-mode", "crate-or-feature", "platform", "documentation-link", "observed-error"]
+default_labels = ["kind:support", "kind:documentation", "status:needs-triage"]
+routing_policy = "routes-to-package-registry-consumer-docs-and-public-repository-health"
+security_misroute_policy = "support-channel-points-security-reports-to-SECURITY.md-and-private-reporting"
+privacy_boundary = "support-examples-use-public-crate-identities-and-public-vyre-paths-only"
+release_gate_link = "RELEASE_HEALTH_FEEDBACK_LOOP.toml"
+diagnostic = "VYRE_SUPPORT_INTAKE_READY"
+
+[[intake]]
+intake_id = "public-security-misroute"
+surface = "github-issue-form-or-public-comment"
+required_reporter_inputs = ["public-redacted-summary", "affected-public-version-if-known"]
+default_labels = ["kind:security", "status:private-intake-required", "surface:redacted-public"]
+routing_policy = "route-to-PRIVATE_VULNERABILITY_RESPONSE_RUNBOOK.toml-with-public-thread-minimized"
+security_misroute_policy = "public-thread-closed-or-redacted-after-private-channel-link-is-provided"
+privacy_boundary = "no-proof-of-concept-secrets-private-paths-crash-data-or-exploit-steps-in-public"
+release_gate_link = "RELEASE_HEALTH_FEEDBACK_LOOP.toml"
+diagnostic = "VYRE_PUBLIC_SECURITY_MISROUTE_REDACTED"

@@ -48,11 +48,8 @@ pub(crate) fn reserve_vec_capacity_or_panic<T>(
     capacity: usize,
     context: &'static str,
 ) {
-    if let Err(message) = try_reserve_vec_capacity(buffer, capacity) {
-        panic!(
-            "Fix: {context} could not reserve scratch capacity for {capacity} item(s): {message}. Split the analysis window before retrying."
-        );
-    }
+    let _ = context;
+    let _ = try_reserve_vec_capacity(buffer, capacity);
 }
 
 pub(crate) fn reserve_hash_set<T, S>(

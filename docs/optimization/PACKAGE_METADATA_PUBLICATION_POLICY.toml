@@ -1,0 +1,40 @@
+# Package metadata publication policy for VX-1075 through VX-1078.
+# Cargo manifest license fields, package include/exclude, readme links, repository links, and crate boundaries share one policy.
+
+schema = "vyre.release.package_metadata_publication_policy.v1"
+owner = "coordination"
+evidence_tokens = ["CARGO_MANIFEST_LICENSE_FIELDS", "CARGO_PUBLISH", "PUBLICATION_BOUNDARY_MANIFEST"]
+
+required_fields = [
+  "metadata_id",
+  "manifest_fields",
+  "include_exclude_policy",
+  "readme_policy",
+  "repository_policy",
+  "documentation_policy",
+  "license_boundary",
+  "private_boundary",
+  "diagnostic",
+]
+
+[[metadata]]
+metadata_id = "public-crate-metadata"
+manifest_fields = ["license", "license-file", "readme", "repository", "documentation", "homepage"]
+include_exclude_policy = "package-include-must-be-allowlist-or-package-exclude-must-block-private-roots"
+readme_policy = "readme-links-public-vyre-artifacts-only"
+repository_policy = "repository-points-to-public-vyre-repo-not-private-santh-backup"
+documentation_policy = "docs-rs-and-public-doc-links-must-not-reference-private-paths"
+license_boundary = "license-or-license-file-required-before-public-package"
+private_boundary = "santh-private-root-and-private-evidence-paths-refused"
+diagnostic = "VYRE_PACKAGE_METADATA_PUBLICATION_OK"
+
+[[metadata]]
+metadata_id = "tool-subcrate-metadata"
+manifest_fields = ["license", "license-file", "features", "categories", "keywords"]
+include_exclude_policy = "subcrate-package-scope-matches-parent-feature-boundary"
+readme_policy = "subcrate-readme-explains-parent-feature-gate-and-public-install-path"
+repository_policy = "same-public-vyre-repository-as-parent"
+documentation_policy = "subcrate-docs-link-to-public-parent-api"
+license_boundary = "inherits-public-license-policy-or-records-explicit-spdx-expression"
+private_boundary = "no-santh-private-material-in-subcrate-metadata"
+diagnostic = "VYRE_SUBCRATE_METADATA_PUBLICATION_OK"

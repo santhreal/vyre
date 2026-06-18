@@ -1,0 +1,43 @@
+# Cache rebuild and invalidation policy for VX-1290, VX-1291, VX-1292, and VX-1297.
+# Non-authoritative caches use explicit key material, invalidation triggers, rebuild rules, stale-read refusal, and privacy boundaries.
+
+schema = "vyre.ops.cache_rebuild_invalidation_policy.v1"
+owner = "performance"
+evidence_tokens = ["SLSA_PROVENANCE", "KUBERNETES_VOLUME_SNAPSHOTS", "ETCD_DISASTER_RECOVERY"]
+
+required_fields = [
+  "cache_id",
+  "cache_surface",
+  "key_material_policy",
+  "invalidation_trigger_policy",
+  "rebuild_policy",
+  "stale_read_policy",
+  "artifact_identity_policy",
+  "privacy_boundary",
+  "release_gate_effect",
+  "diagnostic",
+]
+
+[[cache]]
+cache_id = "compiled-pipeline-cache"
+cache_surface = "CUDA-WGPU-Metal-compiled-kernels-pipeline-layouts-graph-replay-and-resident-dispatch-cache"
+key_material_policy = "Program-fingerprint-DispatchConfig-fingerprint-backend-capability-digest-driver-version-device-signature-and-emitter-version"
+invalidation_trigger_policy = "source-fingerprint-emitter-backend-capability-driver-runtime-security-policy-or-resource-contract-change-invalidates-cache"
+rebuild_policy = "cache-miss-rebuilds-from-authoritative-source-descriptor-and-records-new-artifact-identity"
+stale_read_policy = "stale-or-partial-cache-entry-fails-closed-and-rebuilds-no-fallback-to-unverified-binary-artifact"
+artifact_identity_policy = "rebuilt-artifact-records-digest-target-backend-feature-set-and-release-evidence-link"
+privacy_boundary = "device-identifiers-are-public-safe-signatures-no-serials-private-paths-or-local-cache-roots-in-public-report"
+release_gate_effect = "stale-cache-hit-invalidates-performance-and-correctness-release-claim-until-rebuilt-evidence-exists"
+diagnostic = "VYRE_COMPILED_PIPELINE_CACHE_REBUILD_REQUIRED"
+
+[[cache]]
+cache_id = "rule-and-scan-database-cache"
+cache_surface = "compiled-Tier-B-rule-data-regex-automata-literal-sets-scan-database-and-prefilter-cache"
+key_material_policy = "rule-data-digest-schema-version-scanner-version-construct-tier-digest-dialect-digest-and-target-capability-digest"
+invalidation_trigger_policy = "rule-data-schema-scanner-feature-dialect-unsupported-construct-or-reader-compatibility-change-invalidates-cache"
+rebuild_policy = "rebuild-from-Tier-B-rule-data-and-record-compiled-database-compatibility-trailer"
+stale_read_policy = "cache-entry-with-missing-or-mismatched-compatibility-record-is-rejected-before-payload-trust"
+artifact_identity_policy = "compiled-rule-database-digest-reader-compatibility-class-and-source-rule-data-digest-recorded"
+privacy_boundary = "private-rule-test-corpus-and-local-worktree-paths-excluded-from-public-cache-evidence"
+release_gate_effect = "stale-scan-database-cache-blocks-release-speed-or-detection-claim-until-rebuild-proof-exists"
+diagnostic = "VYRE_RULE_SCAN_CACHE_REBUILD_REQUIRED"

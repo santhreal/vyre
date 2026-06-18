@@ -65,7 +65,7 @@ pub(crate) fn release_checklist() -> Vec<ChecklistItem> {
     vec![
         ChecklistItem {
             requirement_id: "version-story",
-            explicit_requirement: "Vyre manifests, dependency hints, lockfile path packages, docs, release notes, packaging, and product-scoped tags use the selected Vyre 0.6.1 / Weir 0.1.0 version story.",
+            explicit_requirement: "Vyre manifests, dependency hints, lockfile path packages, docs, release notes, packaging, and product-scoped tags use the selected Vyre 0.6.3 / Weir 0.1.0 version story.",
             required_artifacts_or_commands: vec![
                 "cargo_full run --bin xtask -- version-matrix --output release/evidence/version/version-matrix.json",
                 "release/evidence/version/version-matrix.json",
@@ -308,6 +308,7 @@ pub(crate) fn release_checklist() -> Vec<ChecklistItem> {
             required_artifacts_or_commands: vec![
                 "cargo_full run --bin xtask -- hygiene-matrix --output release/evidence/hygiene/hygiene-matrix.json",
                 "release/evidence/hygiene/hygiene-matrix.json",
+                "release/evidence/hygiene/threshold-policy.json",
                 "release/evidence/hygiene/no-stubs-scan.json",
                 "release/evidence/hygiene/no-hidden-fallback-scan.json",
                 "release/evidence/hygiene/resource-bound-scan.json",

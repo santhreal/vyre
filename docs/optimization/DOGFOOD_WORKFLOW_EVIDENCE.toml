@@ -1,0 +1,47 @@
+# Dogfood workflow evidence for VX-994 through VX-996.
+# Real scans, release packaging, benchmark replay, and report generation share one operator workflow evidence schema.
+
+schema = "vyre.release.dogfood_workflow_evidence.v1"
+owner = "coordination"
+evidence_tokens = ["GITHUB_ACTIONS_WORKFLOW", "CRITERION_RS", "SARIF_2_1_0"]
+
+required_fields = [
+  "workflow_id",
+  "workflow_class",
+  "input_scope",
+  "expected_artifacts",
+  "operator_visible_result",
+  "privacy_gate",
+  "publication_boundary",
+  "completion_blocker_if_missing",
+]
+
+[[workflow]]
+workflow_id = "dogfood-vyre-on-vyre"
+workflow_class = "self-scan"
+input_scope = "public-vyre-repo-content"
+expected_artifacts = ["operator-report", "sarif-report", "structured-errors-if-any"]
+operator_visible_result = "findings-and-diagnostics-are-actionable"
+privacy_gate = "public-vyre-only"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+completion_blocker_if_missing = true
+
+[[workflow]]
+workflow_id = "dogfood-release-package"
+workflow_class = "release-packaging"
+input_scope = "public-package-candidate"
+expected_artifacts = ["crate-package-summary", "publication-boundary-report", "supply-chain-provenance"]
+operator_visible_result = "public package contains no private Santh material"
+privacy_gate = "public-vyre-only"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+completion_blocker_if_missing = true
+
+[[workflow]]
+workflow_id = "dogfood-benchmark-replay"
+workflow_class = "benchmark-replay"
+input_scope = "public-or-redacted-fixtures"
+expected_artifacts = ["reproducibility-capsule", "statistical-regression-summary", "roofline-summary"]
+operator_visible_result = "performance claims are reproducible or blocked"
+privacy_gate = "public-summary-or-local-only"
+publication_boundary = "PERFORMANCE_ARTIFACT_PUBLICATION.toml"
+completion_blocker_if_missing = true

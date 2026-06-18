@@ -1,0 +1,53 @@
+# Formal model contracts for VX-761 through VX-765.
+# TLA+, Alloy, and Kani evidence share one invariant and assumption contract.
+
+schema = "vyre.correctness.formal_model_contract.v1"
+owner = "coordination"
+evidence_tokens = ["TLA_PLUS", "ALLOY_ANALYZER", "KANI_RUST_VERIFIER"]
+
+model_kinds = [
+  "state_machine",
+  "relational_model",
+  "rust_model_check_harness",
+]
+
+required_fields = [
+  "model_id",
+  "model_kind",
+  "owning_crate",
+  "invariant",
+  "assumptions",
+  "bounded_scope",
+  "counterexample_artifact",
+  "source_impact_edge",
+]
+
+[[model]]
+model_id = "resident-runtime-queue-fairness"
+model_kind = "state_machine"
+owning_crate = "vyre-driver"
+invariant = "every enabled queue class drains within bounded steps or reports watchdog blocker"
+assumptions = ["finite queue classes", "bounded work item cost"]
+bounded_scope = "queues<=5,steps<=8192"
+counterexample_artifact = "trace-context-telemetry-contract"
+source_impact_edge = "SOURCE_IMPACT_GRAPH.toml"
+
+[[model]]
+model_id = "relation-import-witness-preservation"
+model_kind = "relational_model"
+owning_crate = "vyre-libs"
+invariant = "every imported tuple keeps endpoint domains and source-span witness mapping"
+assumptions = ["finite relation tuple set", "canonical source-span digest"]
+bounded_scope = "relations<=8,tuples<=1024"
+counterexample_artifact = "weir-relation-import-certificate"
+source_impact_edge = "SOURCE_IMPACT_GRAPH.toml"
+
+[[model]]
+model_id = "wire-decode-fail-closed"
+model_kind = "rust_model_check_harness"
+owning_crate = "vyre-libs"
+invariant = "malformed wire bytes cannot produce an accepted unsafe route"
+assumptions = ["bounded byte slice", "deterministic decoder"]
+bounded_scope = "bytes<=4096"
+counterexample_artifact = "minimized-input-plus-target-id"
+source_impact_edge = "SOURCE_IMPACT_GRAPH.toml"

@@ -1,0 +1,51 @@
+# Repository ruleset and release protection for VX-1082, VX-1087, VX-1092, and VX-1095.
+# Branch rules, tag rules, release tags, bypass policy, required gates, and private path push refusal share one registry.
+
+schema = "vyre.release.repository_ruleset_release_protection.v1"
+owner = "coordination"
+evidence_tokens = ["GITHUB_REPOSITORY_RULESETS", "GITHUB_RELEASES", "SLSA_PROVENANCE"]
+
+required_fields = [
+  "ruleset_id",
+  "target",
+  "enforcement",
+  "protected_ref_policy",
+  "required_gate_policy",
+  "bypass_policy",
+  "private_path_policy",
+  "release_tag_policy",
+  "diagnostic",
+]
+
+[[ruleset]]
+ruleset_id = "public-main-branch"
+target = "refs/heads/main"
+enforcement = "active-before-public-release"
+protected_ref_policy = "no-force-push-no-delete-required-review-required-status-gates"
+required_gate_policy = "FINAL_RELEASE_GATE_MANIFEST.toml"
+bypass_policy = "no-undocumented-bypass-for-release-branch"
+private_path_policy = "pushes-containing-santh-private-root-or-private-evidence-paths-refused"
+release_tag_policy = "release-tags-created-from-main-only-after-gates-pass"
+diagnostic = "VYRE_PUBLIC_MAIN_RULESET_REQUIRED"
+
+[[ruleset]]
+ruleset_id = "public-release-tags"
+target = "refs/tags/v*"
+enforcement = "active-before-public-release"
+protected_ref_policy = "no-delete-no-move-release-tag-after-publication"
+required_gate_policy = "REPRODUCIBLE_BUILD_RELEASE_ATTESTATION.toml"
+bypass_policy = "tag-bypass-requires-recorded-incident-and-reissue-plan"
+private_path_policy = "tagged-source-archive-must-not-contain-santh-private-root"
+release_tag_policy = "tag-identifies-exact-source-for-github-release-crate-and-provenance"
+diagnostic = "VYRE_PUBLIC_RELEASE_TAG_RULESET_REQUIRED"
+
+[[ruleset]]
+ruleset_id = "public-push-boundary"
+target = "repository-push"
+enforcement = "active-before-public-release"
+protected_ref_policy = "push-rules-cover-file-path-size-and-private-root-patterns"
+required_gate_policy = "REPO_BOUNDARY_PUBLICATION_CHECKS.toml"
+bypass_policy = "no-private-boundary-bypass-for-public-repository"
+private_path_policy = "santh-private-root-private-credentials-and-local-evidence-paths-refused"
+release_tag_policy = "not-applicable"
+diagnostic = "VYRE_PUBLIC_PUSH_BOUNDARY_RULESET_REQUIRED"

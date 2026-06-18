@@ -39,7 +39,7 @@ impl Allowlist {
 }
 
 pub fn load(path: &Path) -> Result<Allowlist> {
-    let bytes = std::fs::read_to_string(path)
+    let bytes = crate::read_source_bounded(path)
         .with_context(|| format!("read allowlist {}", path.display()))?;
     let parsed: AllowlistFile =
         toml::from_str(&bytes).with_context(|| format!("parse allowlist {}", path.display()))?;

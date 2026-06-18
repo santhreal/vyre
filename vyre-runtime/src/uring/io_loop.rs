@@ -46,28 +46,16 @@ impl IdleBackoff {
         if shutdown.load(Ordering::Acquire) {
             return;
         }
-        self.polls = self.polls.checked_add(1).unwrap_or_else(|| {
-            panic!(
-                "megakernel IO loop idle poll counter overflowed u32. Fix: reset idle backoff before polling indefinitely."
-            )
-        });
+        self.polls = self.polls.saturating_add(1);
         if self.polls <= IDLE_SPINS {
             std::hint::spin_loop();
             return;
         }
         let shift = (self.polls - IDLE_SPINS).min(7);
-        let multiplier = 1_u32.checked_shl(shift).unwrap_or_else(|| {
-            panic!(
-                "megakernel IO loop idle park multiplier overflowed u32. Fix: lower idle backoff shift."
-            )
-        });
+        let multiplier = 1_u32 << shift;
         let park = MIN_IDLE_PARK
             .checked_mul(multiplier)
-            .unwrap_or_else(|| {
-                panic!(
-                    "megakernel IO loop idle park duration overflowed. Fix: lower idle backoff bounds."
-                )
-            })
+            .unwrap_or(MAX_IDLE_PARK)
             .min(MAX_IDLE_PARK);
         thread::park_timeout(park);
     }
@@ -112,11 +100,14 @@ impl MegakernelIoLoop {
                     let res = cqe.res;
                     let slot_idx = cqe.user_data;
                     stream.ring_state.advance_cq();
-                    stream.inflight = stream.inflight.checked_sub(1).unwrap_or_else(|| {
-                        panic!(
-                            "megakernel IO loop completion arrived with no inflight SQE. Fix: rebuild the IO stream state."
-                        )
-                    });
+                    stream.inflight =
+                        stream
+                            .inflight
+                            .checked_sub(1)
+                            .ok_or(PipelineError::QueueFull {
+                                queue: "io_uring",
+                                fix: "megakernel IO loop completion arrived with no inflight SQE; rebuild the IO stream state",
+                            })?;
                     let slot_idx = u32::try_from(slot_idx).map_err(|error| {
                         PipelineError::QueueFull {
                             queue: "completion",

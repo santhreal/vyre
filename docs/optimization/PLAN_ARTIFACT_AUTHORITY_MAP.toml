@@ -1,0 +1,77 @@
+# Artifact authority map for VX-1004 through VX-1006 and VX-1013 through VX-1016.
+# Shared registries have one owning file and all other consumers import or link to it.
+
+schema = "vyre.plan.artifact_authority_map.v1"
+owner = "organization_dedup"
+evidence_tokens = ["W3C_PROV_DM", "OPENSSF_GUAC", "SLSA_PROVENANCE"]
+
+required_fields = [
+  "artifact_id",
+  "authoritative_file",
+  "owning_seam",
+  "consumed_by",
+  "duplicate_policy",
+  "import_rule",
+  "publication_boundary",
+  "stale_invalidation_policy",
+]
+
+[[artifact]]
+artifact_id = "research-source-ledger"
+authoritative_file = "RESEARCH_SOURCE_LEDGER.toml"
+owning_seam = "docs/optimization/research-ledger"
+consumed_by = ["ALL_AXES_ACCELERATION_PLAN.md", "conform/vyre-conform-enforce/tests"]
+duplicate_policy = "no-parallel-source-ledgers"
+import_rule = "reference-source-key-not-copy-source-metadata"
+publication_boundary = "public-vyre-safe"
+stale_invalidation_policy = "source-key-change-invalidates-plan-row-and-proof-gate"
+
+[[artifact]]
+artifact_id = "publication-boundary"
+authoritative_file = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+owning_seam = "docs/optimization/release-boundary"
+consumed_by = ["FINAL_RELEASE_GATE_MANIFEST.toml", "COMPLETION_AUDIT_EVIDENCE_MATRIX.toml", "DOGFOOD_WORKFLOW_EVIDENCE.toml"]
+duplicate_policy = "no-second-public-private-boundary-file"
+import_rule = "reference-publication-boundary-id-not-copy-root-policy"
+publication_boundary = "public-vyre-safe"
+stale_invalidation_policy = "boundary-change-invalidates-release-gates-and-dogfood-evidence"
+
+[[artifact]]
+artifact_id = "final-release-gates"
+authoritative_file = "FINAL_RELEASE_GATE_MANIFEST.toml"
+owning_seam = "docs/optimization/final-release-gates"
+consumed_by = ["COMPLETION_AUDIT_EVIDENCE_MATRIX.toml", "PLAN_EXECUTION_DAG.toml"]
+duplicate_policy = "no-parallel-completion-gate-list"
+import_rule = "reference-gate-id-not-copy-command-class"
+publication_boundary = "public-vyre-safe-with-private-redaction"
+stale_invalidation_policy = "gate-change-invalidates-completion-matrix-and-attestation-bundle"
+
+[[artifact]]
+artifact_id = "completion-audit-matrix"
+authoritative_file = "COMPLETION_AUDIT_EVIDENCE_MATRIX.toml"
+owning_seam = "docs/optimization/completion-audit"
+consumed_by = ["FINAL_COMPLETION_GOVERNANCE_TRANCHE_COVERAGE.toml", "PLAN_COMPLETION_ATTESTATION_BUNDLE.toml"]
+duplicate_policy = "no-narrative-completion-claims-outside-matrix"
+import_rule = "reference-requirement-id-not-copy-completion-decision"
+publication_boundary = "public-vyre-safe-with-private-redaction"
+stale_invalidation_policy = "requirement-change-invalidates-completion-decision"
+
+[[artifact]]
+artifact_id = "plan-execution-dag"
+authoritative_file = "PLAN_EXECUTION_DAG.toml"
+owning_seam = "docs/optimization/execution-dag"
+consumed_by = ["PLAN_COMPLETION_ATTESTATION_BUNDLE.toml", "END_TO_END_EXECUTION_GOVERNANCE_TRANCHE_COVERAGE.toml"]
+duplicate_policy = "no-second-plan-execution-graph"
+import_rule = "reference-node-id-not-copy-predecessor-list"
+publication_boundary = "public-vyre-safe"
+stale_invalidation_policy = "dag-node-change-invalidates-attestation-materials-and-coverage"
+
+[[artifact]]
+artifact_id = "plan-attestation-bundle"
+authoritative_file = "PLAN_COMPLETION_ATTESTATION_BUNDLE.toml"
+owning_seam = "docs/optimization/completion-attestation"
+consumed_by = ["END_TO_END_EXECUTION_GOVERNANCE_TRANCHE_COVERAGE.toml", "conform/vyre-conform-enforce/tests/plan_execution_governance.rs"]
+duplicate_policy = "no-parallel-provenance-or-attestation-bundle"
+import_rule = "reference-attestation-id-not-copy-materials-products"
+publication_boundary = "public-vyre-safe-with-private-redaction"
+stale_invalidation_policy = "attestation-material-change-invalidates-proof-gate"

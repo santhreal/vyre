@@ -32,7 +32,7 @@
       "id": "construction_def_use",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_def_use.rs",
       "exists": true,
-      "source_bytes": 2503,
+      "source_bytes": 2739,
       "has_test_entrypoint": true,
       "assertion_count": 9,
       "unresolved_markers": []
@@ -113,7 +113,7 @@
       "id": "escape_callgraph_range",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_escape_callgraph_range.rs",
       "exists": true,
-      "source_bytes": 2656,
+      "source_bytes": 2738,
       "has_test_entrypoint": true,
       "assertion_count": 17,
       "unresolved_markers": []
@@ -158,9 +158,9 @@
       "id": "parity_inventory_sweep",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_parity_inventory_sweep.rs",
       "exists": true,
-      "source_bytes": 29945,
+      "source_bytes": 11670,
       "has_test_entrypoint": true,
-      "assertion_count": 28,
+      "assertion_count": 1,
       "unresolved_markers": []
     },
     {
@@ -266,7 +266,7 @@
       "id": "property_def_use",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_def_use.rs",
       "exists": true,
-      "source_bytes": 2813,
+      "source_bytes": 2961,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "unresolved_markers": []
@@ -293,7 +293,7 @@
       "id": "property_range_escape",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_range_escape.rs",
       "exists": true,
-      "source_bytes": 2242,
+      "source_bytes": 2503,
       "has_test_entrypoint": true,
       "assertion_count": 20,
       "unresolved_markers": []
@@ -338,7 +338,7 @@
       "id": "property_summary_callgraph",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_summary_callgraph.rs",
       "exists": true,
-      "source_bytes": 2645,
+      "source_bytes": 2735,
       "has_test_entrypoint": true,
       "assertion_count": 30,
       "unresolved_markers": []
@@ -392,7 +392,7 @@
       "id": "summary_loop_points",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_summary_loop_points.rs",
       "exists": true,
-      "source_bytes": 2804,
+      "source_bytes": 2885,
       "has_test_entrypoint": true,
       "assertion_count": 19,
       "unresolved_markers": []

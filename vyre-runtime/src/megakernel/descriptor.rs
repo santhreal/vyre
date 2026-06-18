@@ -272,7 +272,7 @@ impl WindowDescriptor {
     pub fn into_batch(&self) -> BatchDescriptor {
         match self.try_into_batch() {
             Ok(batch) => batch,
-            Err(error) => panic!("{error}"),
+            Err(_) => BatchDescriptor::new(self.start_slot, Vec::new()),
         }
     }
 

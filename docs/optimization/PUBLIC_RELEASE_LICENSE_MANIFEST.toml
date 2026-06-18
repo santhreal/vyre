@@ -1,0 +1,40 @@
+# Public release license manifest for VX-1062, VX-1065, VX-1067, and VX-1070.
+# Crate license metadata, SPDX identifiers, license-file policy, and public/private package boundaries share one manifest.
+
+schema = "vyre.release.public_license_manifest.v1"
+owner = "coordination"
+evidence_tokens = ["SPDX_LICENSE_LIST", "CARGO_MANIFEST_LICENSE_FIELDS", "OSI_OPEN_SOURCE_DEFINITION"]
+
+required_fields = [
+  "crate_id",
+  "package_scope",
+  "license_expression_policy",
+  "license_file_policy",
+  "spdx_identifier_policy",
+  "license_exception_policy",
+  "public_package_metadata",
+  "private_santh_boundary",
+  "diagnostic",
+]
+
+[[crate]]
+crate_id = "vyre-public-root"
+package_scope = "public-vyre-crates-only"
+license_expression_policy = "cargo-license-field-uses-valid-spdx-expression-or-license-file-is-present"
+license_file_policy = "license-file-path-must-resolve-inside-public-vyre-root"
+spdx_identifier_policy = "identifiers-and-exceptions-must-match-spdx-license-list"
+license_exception_policy = "WITH-exceptions-require-spdx-exception-id"
+public_package_metadata = ["license", "license-file", "repository", "readme", "documentation"]
+private_santh_boundary = "santh-private-root-cannot-appear-in-license-file-readme-repository-or-documentation"
+diagnostic = "VYRE_PUBLIC_LICENSE_MANIFEST_OK"
+
+[[crate]]
+crate_id = "vyre-tool-subcrate"
+package_scope = "public-tool-subcrate-feature-gated-by-parent"
+license_expression_policy = "inherits-public-root-license-unless-explicit-public-spdx-expression-recorded"
+license_file_policy = "no-private-license-file-references"
+spdx_identifier_policy = "no-custom-license-id-without-license-file-and-review-record"
+license_exception_policy = "exception-use-listed-in-third-party-notices"
+public_package_metadata = ["license", "license-file", "package.include", "package.exclude"]
+private_santh_boundary = "package-include-exclude-must-not-package-santh-private-root"
+diagnostic = "VYRE_TOOL_SUBCRATE_LICENSE_BOUNDARY_OK"

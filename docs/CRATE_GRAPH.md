@@ -84,3 +84,13 @@ Every new crate must slot into the graph above without
 introducing a cycle. Adding a top-level crate requires updating
 this doc + `docs/library-tiers.md` + the lego-audit expected-
 dialect list.
+
+## Cross-crate promotion patch contract
+
+Any cross-crate promotion, facade move, or tier-boundary import change must land as one atomic patch that updates all three ownership surfaces:
+
+- `docs/CRATE_GRAPH.md` records the dependency direction and crate owner.
+- `docs/primitives-tier.md` or `docs/library-tiers.md` records the tier rule that permits the promotion.
+- An import-path migration test proves the old call path, new canonical call path, or explicit compatibility shim behavior.
+
+`check-tier-deps` rejects unowned dependency-direction changes, and `lego-audit` rejects cross-tier or cross-dialect imports that bypass the canonical owner.

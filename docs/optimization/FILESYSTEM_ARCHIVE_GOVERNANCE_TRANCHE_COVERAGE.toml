@@ -1,0 +1,29 @@
+# Filesystem and archive governance tranche coverage for VX-901 through VX-920.
+# Path canonicalization, archive bomb guards, atomic race policy, evidence redaction, and publication boundaries share one coverage row.
+
+schema = "vyre.plan.filesystem_archive_governance_tranche_coverage.v1"
+owner = "coordination"
+evidence_tokens = ["OWASP_PATH_TRAVERSAL", "CWE_22_PATH_TRAVERSAL", "CWE_367_TOCTOU", "SEI_CERT_FIO45_C", "PKWARE_APPNOTE"]
+
+required_fields = [
+  "vx_id_range",
+  "path_canonicalization_policy",
+  "archive_extraction_bomb_guards",
+  "atomic_file_operation_race_policy",
+  "filesystem_evidence_redaction",
+  "source_ledger_coverage",
+  "publication_boundary",
+  "dedup_seam",
+  "proof_gate",
+]
+
+[[coverage]]
+vx_id_range = "VX-901..VX-920"
+path_canonicalization_policy = "FILESYSTEM_PATH_CANONICALIZATION_POLICY.toml"
+archive_extraction_bomb_guards = "ARCHIVE_EXTRACTION_BOMB_GUARDS.toml"
+atomic_file_operation_race_policy = "ATOMIC_FILE_OPERATION_RACE_POLICY.toml"
+filesystem_evidence_redaction = "FILESYSTEM_EVIDENCE_REDACTION.toml"
+source_ledger_coverage = "RESEARCH_SOURCE_LEDGER.toml"
+publication_boundary = "PUBLICATION_BOUNDARY_MANIFEST.toml"
+dedup_seam = "one-path-policy-one-archive-guard-one-atomic-file-policy-one-filesystem-redaction-contract"
+proof_gate = "filesystem_archive_governance.rs"
