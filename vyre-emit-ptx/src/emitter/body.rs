@@ -25,7 +25,31 @@ impl BodyCtx<'_> {
                 idx += 1;
                 continue;
             }
-            if let Some(chain) = self.collect_vec_load_chain(body, &facts, idx)? {
+            let vec_chain = self.collect_vec_load_chain(body, &facts, idx)?;
+            // Law 10: if two or more adjacent GlobalLoad ops at the same binding
+            // slot existed but `align_vector_chain` could not prove alignment,
+            // the fusion falls back silently to scalar loads. We emit a PTX
+            // comment so the operator can detect and diagnose scalar fallback by
+            // grepping the emitted PTX for `vector-fusion-skipped`. We only emit
+            // when the NEXT op is also a LoadGlobal at the same slot, meaning
+            // at least two adjacent loads were present — this suppresses noise
+            // for isolated loads that were never eligible for fusion.
+            if vec_chain.is_none() {
+                if let Some(slot) = body.ops[idx].operands.first().copied() {
+                    let is_load_global = matches!(body.ops[idx].kind, KernelOpKind::LoadGlobal);
+                    let next_is_adjacent_load = body.ops.get(idx + 1).map_or(false, |next| {
+                        matches!(next.kind, KernelOpKind::LoadGlobal)
+                            && next.operands.first().copied() == Some(slot)
+                    });
+                    if is_load_global && next_is_adjacent_load {
+                        let _ = writeln!(
+                            self.text,
+                            "    // vyre: vector-fusion-skipped slot={slot} op={idx} reason=alignment-unknown"
+                        );
+                    }
+                }
+            }
+            if let Some(chain) = vec_chain {
                 self.emit_vec_load_chain(body, &chain)
                     .map_err(|error| emit_context_error(error, body, idx))?;
                 for &op_idx in chain.iter().skip(1) {

@@ -336,11 +336,20 @@ impl BodyCtx<'_> {
                 let binding_slot = *op.operands.first().ok_or_else(|| {
                     EmitError::InvalidDescriptor("BufferLength missing slot".into())
                 })?;
+                // Checked arithmetic: slot byte offset in the params buffer is
+                // `4 + slot * 4`. An overflowing slot would wrap silently and
+                // produce a wrong PTX address; reject it with a structured error.
+                let byte_offset = binding_slot
+                    .checked_mul(4)
+                    .and_then(|v| v.checked_add(4))
+                    .ok_or_else(|| EmitError::InvalidBinding {
+                        slot: binding_slot,
+                        reason: "BufferLength slot byte offset (4 + slot * 4) overflows u32".into(),
+                    })?;
                 let reg = self.alloc(PtxType::U32);
                 let _ = writeln!(
                     self.text,
-                    "    ld.global.u32    {reg}, [%rd0 + {}];",
-                    4 + binding_slot * 4
+                    "    ld.global.u32    {reg}, [%rd0 + {byte_offset}];"
                 );
                 self.bind_result(op, reg)?;
             }

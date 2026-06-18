@@ -55,6 +55,16 @@ fn atomic_add_emits_statement() {
         }),
         "Fix: descriptor buffers targeted by atomics must use atomic element types, otherwise Naga rejects the emitted atomic pointer."
     );
+    // Also assert the atomic operation was actually emitted in the function
+    // body — not just that the global variable type is correct. A regressor
+    // that sets up the global correctly but drops the Statement::Atomic from
+    // the body would pass the type-only check above while silently omitting
+    // the atomic operation.
+    assert!(
+        block_has_atomic(&module.entry_points[0].function.body),
+        "AtomicAdd must emit Statement::Atomic in the function body, not just declare \
+         the global variable with an atomic element type"
+    );
 }
 
 #[test]

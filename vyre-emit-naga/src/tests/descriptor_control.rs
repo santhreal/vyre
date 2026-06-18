@@ -205,3 +205,49 @@ fn atomic_result_can_feed_later_descriptor_ops() {
 
     emit(&desc).expect("atomic RMW old value must remain usable by later descriptor ops");
 }
+
+/// vyre.literal.u64 must emit as Literal::U64 preserving the full 64-bit
+/// value, not narrow to u32 or error. A value above u32::MAX (1u64 << 40 =
+/// 0x10000000000) would previously hard-error with "exceeds u32::MAX"; after
+/// the fix it emits as Literal::U64(0x10000000000) with type u64_ty.
+#[test]
+fn opaque_u64_literal_above_u32_max_emits_as_u64() {
+    let value: u64 = 1u64 << 40; // 0x10000000000 — above u32::MAX
+    let desc = KernelDescriptor {
+        id: "opaque-u64-wide".into(),
+        bindings: BindingLayout { slots: vec![] },
+        dispatch: Dispatch::new(1, 1, 1),
+        body: KernelBody {
+            literals: vec![],
+            child_bodies: vec![],
+            ops: vec![KernelOp {
+                kind: KernelOpKind::OpaqueExpr(Box::new(vyre_lower::OpaqueExprData {
+                    extension_id: 1,
+                    extension_kind: "vyre.literal.u64".to_owned(),
+                    payload: value.to_le_bytes().to_vec(),
+                })),
+                operands: vec![],
+                result: Some(0),
+            }],
+        },
+    };
+    // Before the fix: hard-errors with InvalidDescriptor("u64 literal ... exceeds u32::MAX").
+    // After the fix: emits Literal::U64(0x10000000000) successfully.
+    let module = emit(&desc)
+        .expect("vyre.literal.u64 with value above u32::MAX must emit as Literal::U64, not error");
+
+    // Verify the expression arena contains the full-width u64 literal, not a
+    // truncated or type-changed value.
+    use naga::{Expression, Literal};
+    let entry = &module.entry_points[0];
+    let has_u64_literal = entry
+        .function
+        .expressions
+        .iter()
+        .any(|(_, expr)| matches!(expr, Expression::Literal(Literal::U64(v)) if *v == value));
+    assert!(
+        has_u64_literal,
+        "vyre.literal.u64 must emit Literal::U64({value}) in the expression arena; \
+         got a u32 narrowing or missing literal instead"
+    );
+}

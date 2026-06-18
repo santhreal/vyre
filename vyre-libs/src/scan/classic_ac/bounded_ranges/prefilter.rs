@@ -185,23 +185,15 @@ pub fn build_ac_bounded_ranges_prefilter_program_ext(
     ) {
         Ok(program) => program,
         Err(error) => {
-            eprintln!("vyre-libs AC bounded-ranges prefilter program build failed: {error}");
-            classic_ac_bounded_ranges_prefilter_program_ext(
-                "haystack",
-                "transitions",
-                "output_offsets",
-                "output_records",
-                "pattern_lengths",
-                "haystack_len",
-                "match_count",
-                "candidate_end_mask",
-                "matches",
-                1,
-                0,
-                0,
-                max_matches,
-                0,
-                use_subgroup_coalesce,
+            // Returning an empty-mask prefilter program would silently suppress
+            // every candidate position — a total recall-loss silent fallback.
+            // Fail closed instead. Callers that need graceful overflow handling
+            // must call try_build_ac_bounded_ranges_prefilter_program_ext
+            // directly and shard oversized DFAs across multiple programs.
+            panic!(
+                "AC bounded-ranges prefilter program build failed: {error} — \
+                 returning an empty-mask program would silently suppress every match; \
+                 use try_build_ac_bounded_ranges_prefilter_program_ext and shard oversized DFAs."
             )
         }
     }
@@ -323,6 +315,32 @@ mod tests {
         actual.sort_unstable();
 
         assert_eq!(actual, expected);
+    }
+
+    /// Regression guard: build_ac_bounded_ranges_prefilter_program_ext must
+    /// never silently return an empty-mask program when the DFA is oversized.
+    /// Before this fix the error arm called eprintln! and fell back to the
+    /// classic_ac_bounded_ranges_prefilter_program_ext with state_count=1 and
+    /// output_records_len=0, causing every candidate position to be suppressed
+    /// with no signal to the caller.
+    #[test]
+    fn infallible_prefilter_builder_panics_not_falls_back() {
+        let src = std::fs::read_to_string(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/scan/classic_ac/bounded_ranges/prefilter.rs"
+        ))
+        .expect("Fix: prefilter source must be readable for regression guard");
+        let production = src
+            .split("\n#[cfg(test)]")
+            .next()
+            .expect("Fix: prefilter source must have a test section");
+        // The old silent-fallback arm called classic_ac_bounded_ranges_prefilter_program_ext
+        // directly inside the Err branch. Check it is absent from the production path.
+        assert!(
+            !production.contains("eprintln!(\"vyre-libs AC bounded-ranges prefilter"),
+            "build_ac_bounded_ranges_prefilter_program_ext must not silently log and \
+             return an empty-mask program on error — use panic!() instead."
+        );
     }
 
     #[test]

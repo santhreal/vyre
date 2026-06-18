@@ -163,6 +163,58 @@ fn emit_emits_literal_mov_then_store() {
     assert!(s.contains("st.global.u32"));
 }
 
+/// A binding slot large enough that `4 + slot * 4` overflows u32 must produce
+/// `EmitError::InvalidBinding`, not silently wrap to a plausible address and
+/// emit wrong PTX that reads the length register from a garbage offset.
+///
+/// Before this fix, `4u32 + binding.slot * 4` in `preload_bindings` (and the
+/// equivalent expression in `BufferLength`) used bare wrapping arithmetic, so
+/// slot >= 1_073_741_823 wrapped to a small-but-wrong offset and the GPU's
+/// bounds-check predicate was silently wrong.
+#[test]
+fn slot_offset_overflow_returns_invalid_binding_error() {
+    let overflow_slot: u32 = 1_073_741_824; // slot * 4 = 0x1_0000_0000, overflows u32
+    let desc = KernelDescriptor {
+        id: "overflow_slot".into(),
+        bindings: BindingLayout {
+            slots: vec![BindingSlot {
+                slot: overflow_slot,
+                element_type: DataType::U32,
+                element_count: None,
+                memory_class: MemoryClass::Global,
+                visibility: BindingVisibility::ReadOnly,
+                name: "huge".into(),
+            }],
+        },
+        dispatch: Dispatch::new(1, 1, 1),
+        body: KernelBody {
+            ops: vec![],
+            child_bodies: vec![],
+            literals: vec![],
+        },
+    };
+    let result = emit(&desc);
+    match result {
+        Err(crate::EmitError::InvalidBinding { slot, reason }) => {
+            assert_eq!(
+                slot, overflow_slot,
+                "Fix: error must name the overflowing slot exactly"
+            );
+            assert!(
+                reason.contains("overflow"),
+                "Fix: error reason must mention 'overflow'; got: {reason}"
+            );
+        }
+        Ok(ptx) => panic!(
+            "Fix: emit must return Err(InvalidBinding) for overflowing slot, \
+             not Ok with wrapped address in PTX:\n{ptx}"
+        ),
+        Err(other) => panic!(
+            "Fix: expected EmitError::InvalidBinding for overflowing slot, got: {other:?}"
+        ),
+    }
+}
+
 #[test]
 fn scalar_kernel_keeps_entry_element_count_guard() {
     let s = emit(&one_store_kernel()).unwrap();

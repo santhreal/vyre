@@ -268,12 +268,22 @@ impl WindowDescriptor {
     }
 
     /// Convert the window into a typed batch publication.
+    ///
+    /// # Panics
+    ///
+    /// Panics when `try_into_batch` fails (oversized payload, OOM, or slot
+    /// overflow). The panic message names the failing condition and directs the
+    /// caller to `try_into_batch`. Panicking here is intentional: silently
+    /// returning an empty `BatchDescriptor` would publish zero ring slots and
+    /// lose all window work with no operator signal (Law 10). In production
+    /// code, call `try_into_batch` directly so errors can be propagated.
     #[must_use]
     pub fn into_batch(&self) -> BatchDescriptor {
-        match self.try_into_batch() {
-            Ok(batch) => batch,
-            Err(_) => BatchDescriptor::new(self.start_slot, Vec::new()),
-        }
+        self.try_into_batch().unwrap_or_else(|e| {
+            panic!(
+                "WindowDescriptor::into_batch failed: {e}. Fix: call try_into_batch() and propagate the error instead of using the infallible wrapper."
+            )
+        })
     }
 
     /// Convert the window into a typed batch publication with explicit staging

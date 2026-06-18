@@ -56,6 +56,100 @@ fn pre_lowering_scheduler(phases: &'static [PassPhase]) -> Result<PassScheduler,
         .with_shape_predicate_enforcement(true))
 }
 
+/// Run the unified pre-lowering optimization pipeline, propagating errors.
+///
+/// Identical to [`optimize`] but returns `Err(OptimizerError)` when a
+/// phase-2 or phase-4 scheduler fails to converge or cannot be constructed,
+/// instead of silently returning the un-optimized program. Callers that can
+/// handle failure should prefer this function; `optimize` is kept for
+/// backward-compatible call sites in crates that cannot handle `Result`.
+///
+/// # Errors
+///
+/// Returns `Err` when the phase-2 or phase-4 `PassScheduler` fails to
+/// converge within its iteration cap, or when scheduler construction fails
+/// due to inconsistent pass metadata.
+pub fn try_optimize(program: Program) -> Result<Program, OptimizerError> {
+    use crate::optimizer::passes::algebraic::canonicalize_engine;
+    use crate::optimizer::passes::algebraic::const_fold::ConstFold;
+    use crate::optimizer::passes::cleanup::region_inline_engine;
+    use crate::optimizer::passes::cleanup::rematerialize_cheap_let::RematerializeCheapLetPass;
+
+    let prepared =
+        region_inline_engine::run(canonicalize_engine::run(program)).reconcile_runnable_top_level();
+
+    let phase2_output = {
+        let phase2_scheduler =
+            PHASE2_SCHEDULER.get_or_init(|| pre_lowering_scheduler(PHASE2_SELECTION));
+        let phase2_input = prepared;
+        match phase2_scheduler {
+            Ok(phase2_scheduler) => match phase2_scheduler.run(phase2_input.clone()) {
+                Ok(output) => output,
+                Err(error) => {
+                    tracing::error!(
+                        error = %error,
+                        "pre-lowering phase 2 did not converge. Fix: inspect the pass set for oscillating rewrites."
+                    );
+                    return Err(error);
+                }
+            },
+            Err(error) => {
+                tracing::error!(
+                    error = %error,
+                    "pre-lowering phase 2 scheduler construction failed. Fix: repair optimizer pass metadata."
+                );
+                return Err(error.clone());
+            }
+        }
+    };
+
+    let cleaned = canonicalize_engine::run(region_inline_engine::run(
+        crate::optimizer::passes::fusion_cse::dce::engine::dce(
+            crate::optimizer::passes::fusion_cse::cse::engine::cse(phase2_output),
+        ),
+    ));
+
+    let phase4 = {
+        let scheduler = PHASE4_SCHEDULER.get_or_init(|| pre_lowering_scheduler(PHASE4_SELECTION));
+        let phase4_input = cleaned;
+        match scheduler {
+            Ok(scheduler) => match scheduler.run(phase4_input.clone()) {
+                Ok(output) => output,
+                Err(error) => {
+                    tracing::error!(
+                        error = %error,
+                        "pre-lowering phase 4 did not converge after 50 iterations. Fix: inspect the phase for oscillating rewrites or raise the cap only with a convergence certificate."
+                    );
+                    return Err(error);
+                }
+            },
+            Err(error) => {
+                tracing::error!(
+                    error = %error,
+                    "pre-lowering phase 4 scheduler construction failed. Fix: repair optimizer pass metadata."
+                );
+                return Err(error.clone());
+            }
+        }
+    };
+
+    let rematerialized = RematerializeCheapLetPass::transform(phase4).program;
+    let folded = ConstFold::transform(canonicalize_engine::run(rematerialized)).program;
+    let cleaned = canonicalize_engine::run(region_inline_engine::run(
+        crate::optimizer::passes::fusion_cse::dce::engine::dce(
+            crate::optimizer::passes::fusion_cse::cse::engine::cse(folded),
+        ),
+    ));
+    let refolded = ConstFold::transform(cleaned).program;
+    let stabilized = canonicalize_engine::run(region_inline_engine::run(
+        crate::optimizer::passes::fusion_cse::dce::engine::dce(
+            crate::optimizer::passes::fusion_cse::cse::engine::cse(refolded),
+        ),
+    ));
+
+    Ok(stabilized.reconcile_runnable_top_level())
+}
+
 /// Run the unified pre-lowering optimization pipeline.
 ///
 /// Pipeline stages (in order):

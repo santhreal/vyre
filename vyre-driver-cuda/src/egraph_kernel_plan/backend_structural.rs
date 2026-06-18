@@ -208,19 +208,36 @@ impl CudaBackend {
             })?;
         let device_reported_count = read_u64_le(count_bytes, "structural equivalence count")?;
         let planned_capacity = artifact.output.max_equivalences;
-        let capped_count = device_reported_count.min(planned_capacity);
+        // Fail closed: do NOT silently truncate the equivalence set.  A capped
+        // result fed into `plan_cuda_egraph_union_compaction` would produce an
+        // incomplete union plan and corrupt the e-graph canonicalization with no
+        // visible error.  The caller must re-plan with a larger `max_equivalences`
+        // (or the planner must raise the cap automatically) and retry.
+        if device_reported_count > planned_capacity {
+            return Err(BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: CUDA e-graph structural-equivalence kernel reported {device_reported_count} \
+                     equivalence pairs but the planned output buffer holds at most {planned_capacity}. \
+                     Re-plan with a larger `max_equivalences` before re-launching; the current result \
+                     is incomplete and must not be used for union compaction."
+                ),
+            });
+        }
         let pair_bytes = pair_bytes
             .get(..scratch.output_pairs_bytes)
             .ok_or_else(|| BackendError::InvalidProgram {
                 fix: "Fix: CUDA e-graph fused scratch readback did not contain the planned structural equivalence output-pair range.".to_string(),
             })?;
         let (emitted_pair_count, unique) =
-            decode_unique_equivalence_pairs(&pair_bytes, capped_count)?;
+            decode_unique_equivalence_pairs(&pair_bytes, device_reported_count)?;
         Ok(CudaEGraphStructuralEquivalenceKernelResult {
             emitted_pair_count,
             unique,
             device_reported_count,
-            overflowed_output_capacity: device_reported_count > planned_capacity,
+            // Always false after the fail-closed guard above: kept in the struct
+            // so that callers which snapshot telemetry can record the value, and
+            // so that the existing integration-test assertions remain valid.
+            overflowed_output_capacity: false,
         })
     }
 }

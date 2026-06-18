@@ -38,6 +38,7 @@ vyre-foundation = { workspace = true }
 vyre-lower = { workspace = true }
 vyre-emit-metal = { workspace = true }
 inventory.workspace = true
+tracing.workspace = true
 
 [target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies]
 metal.workspace = true

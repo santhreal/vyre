@@ -492,7 +492,18 @@ fn read_ptx_disk_cache_source_bounded(
             });
         }
         let read = read as u64;
-        total = total.saturating_add(read);
+        // Use checked_add, matching the checked-arithmetic contract that every
+        // other counter in this module follows (see `pinning_atomic_increment_u64`
+        // and the source-contract test `module_cache_eviction_buffers_fit_soft_cap_inline`).
+        // saturating_add would silently freeze `total` at u64::MAX on
+        // pathological input, breaking the safety-cap check that follows.
+        total = total.checked_add(read).ok_or_else(|| {
+            BackendError::new(format!(
+                "CUDA PTX source cache `{}` size accumulator overflowed u64 during bounded read. \
+                 Fix: remove the corrupt cache artifact and re-prime the cache.",
+                path.display()
+            ))
+        })?;
         if total > PTX_SOURCE_CACHE_MAX_ARTIFACT_BYTES {
             return Err(BackendError::new(format!(
                 "CUDA PTX source cache `{}` exceeds the {} byte safety limit while reading. Fix: remove the corrupt cache artifact or raise the cap deliberately after reviewing compile-cache memory pressure.",
@@ -1548,6 +1559,52 @@ mod module_lifecycle_tests {
             !helper_section.contains(&["blake", "3::Hasher::new()"].concat())
                 && !key_section.contains(&["blake", "3::Hasher::new()"].concat()),
             "Fix: CUDA module cache source/raw-artifact key derivation must not fork local tuple hashing."
+        );
+    }
+
+    /// Source-contract canary: the production section of
+    /// `read_ptx_disk_cache_source_bounded` must use `checked_add`, not
+    /// `saturating_add`, matching the pinning-counter contract used throughout
+    /// this module.
+    ///
+    /// This test FAILS against the pre-fix code (which had `saturating_add`)
+    /// and PASSES after the fix (which uses `checked_add`).
+    ///
+    /// Why not a fully-behavioral test?  The safety cap is 1 GiB; writing a
+    /// 1 GiB temp file in a unit test would be prohibitively slow and disk-
+    /// intensive.  The source-text canary is the correct mechanism here:
+    /// `saturating_add` at `u64::MAX` would freeze `total`, disabling the
+    /// cap check — any future edit that reintroduces it is caught immediately
+    /// by this test failing, while the existing
+    /// `module_cache_eviction_buffers_fit_soft_cap_inline` test reinforces
+    /// the wider module-level contract.
+    #[test]
+    fn ptx_disk_cache_size_accumulator_uses_checked_not_saturating() {
+        let source = include_str!("module_cache.rs");
+        // Isolate the body of `read_ptx_disk_cache_source_bounded` up to the
+        // next `fn` definition so we check only that function's accumulator.
+        let fn_body = source
+            .split("fn read_ptx_disk_cache_source_bounded(")
+            .nth(1)
+            .expect("Fix: read_ptx_disk_cache_source_bounded must exist in this file.")
+            .split("\nfn ")
+            .next()
+            .expect("Fix: function body must be followed by another fn or EOF.");
+        // Match the CALL syntax `saturating_add(`, not the bare word: the
+        // accumulator's explanatory comment legitimately mentions
+        // "saturating_add" when stating why it is forbidden, and a bare-word
+        // match would false-positive on that comment even though the code is
+        // correct. Only an actual `.saturating_add(` call is a regression.
+        assert!(
+            !fn_body.contains("saturating_add("),
+            "Fix: PTX disk-cache size accumulator must use checked_add, not saturating_add — \
+             every other counter in this module uses the checked pinning contract. \
+             saturating_add freezes at u64::MAX, bypassing the safety-cap check."
+        );
+        assert!(
+            fn_body.contains("checked_add"),
+            "Fix: PTX disk-cache size accumulator must use checked_add to match the \
+             pinning-counter contract used by every other counter in this module."
         );
     }
 }

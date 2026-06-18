@@ -138,12 +138,38 @@ fn lock_module_cache() -> MutexGuard<'static, ModuleCache> {
     }
 }
 
+/// A `std::hash::Hasher` adapter that feeds bytes directly into a
+/// `blake3::Hasher`. This lets us derive cache keys from the `Hash` impl of
+/// `KernelDescriptor`, which already handles `LiteralValue::F32` by bit
+/// pattern (`to_bits()`). Using `format!("{desc:?}")` here would collapse
+/// all NaN variants to the same Debug string "NaN", causing two descriptors
+/// with distinct NaN bit patterns to produce the same cache key but compare
+/// unequal — either a spurious miss (NaN != NaN via PartialEq) or a spurious
+/// hit (NaN1 and NaN2 with identical bit patterns via some future
+/// bit-exact PartialEq). The Hash impl is the correct oracle.
+struct Blake3StdHasher(blake3::Hasher);
+
+impl std::hash::Hasher for Blake3StdHasher {
+    fn write(&mut self, bytes: &[u8]) {
+        self.0.update(bytes);
+    }
+
+    fn finish(&self) -> u64 {
+        // The truncated u64 is never used as the final key; only the
+        // `blake3::Hasher`'s internal state matters. Return a dummy value.
+        0
+    }
+}
+
 fn descriptor_cache_key(desc: &KernelDescriptor) -> ModuleCacheKey {
-    let mut hasher = blake3::Hasher::new();
-    let stable_debug = format!("{desc:?}");
-    hasher.update(&(stable_debug.len() as u64).to_le_bytes());
-    hasher.update(stable_debug.as_bytes());
-    let digest = hasher.finalize();
+    use std::hash::Hash;
+    // Hash via the `Hash` impl, not Debug output. The `LiteralValue::Hash`
+    // impl already feeds f32/f64 as raw bits, so NaN bit-patterns are
+    // distinguished correctly. This avoids the Debug-collapse-to-"NaN" bug
+    // that caused spurious cache misses for NaN-containing descriptors.
+    let mut std_hasher = Blake3StdHasher(blake3::Hasher::new());
+    desc.hash(&mut std_hasher);
+    let digest = std_hasher.0.finalize();
     let mut out = [0u8; 16];
     out.copy_from_slice(&digest.as_bytes()[..16]);
     ModuleCacheKey(out)
@@ -184,11 +210,36 @@ pub fn emit_optimized(desc: &KernelDescriptor) -> Result<naga::Module, EmitError
 pub fn emit_optimized_with_stats(
     desc: &KernelDescriptor,
 ) -> Result<(naga::Module, vyre_lower::rewrites::OptimizationStats), EmitError> {
+    // Verify the INPUT descriptor before the rewrite pipeline. Each rewrite
+    // pass assumes a valid descriptor and, in debug builds, `assert!`s validity
+    // after every pass (`debug_verify_after_rewrite`); feeding an already-invalid
+    // descriptor would therefore panic inside a pass rather than surface as a
+    // structured error. Fail closed here so invalid input is rejected identically
+    // in debug and release, before any pass runs.
+    vyre_lower::verify::verify(desc).map_err(|errors| {
+        EmitError::InvalidDescriptor(format!(
+            "invalid descriptor: input failed verification before optimization — {} error(s). \
+             Fix: see vyre_lower::verify for the invariants the descriptor violated. \
+             First error: {:?}",
+            errors.len(),
+            errors.first()
+        ))
+    })?;
     let (optimized, stats) = vyre_lower::rewrites::run_all_with_stats(desc);
-    debug_assert!(
-        vyre_lower::verify::verify(&optimized).is_ok(),
-        "rewrite pipeline produced an invalid descriptor  -  see vyre_lower::verify for the contract"
-    );
+    // Unconditionally verify the rewrite pipeline output. A `debug_assert!`
+    // here silently skips this gate in release builds, where a buggy rewrite
+    // could produce an invalid descriptor that proceeds to Naga emission and
+    // yields a SPIR-V binary with different semantics from the original — a
+    // silently-wrong result. Fail closed with a structured error instead.
+    vyre_lower::verify::verify(&optimized).map_err(|errors| {
+        EmitError::InvalidDescriptor(format!(
+            "rewrite pipeline produced an invalid descriptor — {} error(s). \
+             Fix: see vyre_lower::verify for the invariants the rewrite violated. \
+             First error: {:?}",
+            errors.len(),
+            errors.first()
+        ))
+    })?;
     let module = emit(&optimized)?;
     Ok((module, stats))
 }

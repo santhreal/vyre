@@ -17,6 +17,10 @@ use smallvec::SmallVec;
 struct BufferAccesses {
     atomic_adds: u32,
     other_accesses: u32,
+    /// Ordering of the first (and expected to be the sole) AtomicAdd access.
+    /// Only meaningful when `atomic_adds == 1 && other_accesses == 0`.
+    /// Defaults to `Relaxed` but is overwritten on first atomic-add encounter.
+    sole_atomic_ordering: MemoryOrdering,
 }
 
 /// Replace identity-op Relaxed atomics with plain `Expr::Load`, and rewrite single-writer atomics.
@@ -65,9 +69,17 @@ impl AtomicMinimizePass {
     pub fn transform(program: Program) -> PassResult {
         let mut access_counts = HashMap::default();
         count_buffer_accesses(program.entry(), &mut access_counts);
+        // Only Relaxed single-writer atomics are eligible for the load+store
+        // rewrite. SeqCst/AcqRel/Acquire/Release atomics provide ordering
+        // guarantees to concurrent readers; replacing them with a plain store
+        // would silently drop those guarantees even when there is only one
+        // writer. The ordering guard is applied here, not just in
+        // count_expr_accesses, so the set only contains buffers whose sole
+        // atomic-add access is Relaxed.
         let eligible_buffers: HashSet<_> = access_counts
             .into_iter()
             .filter(|(_, counts)| counts.atomic_adds == 1 && counts.other_accesses == 0)
+            .filter(|(_, counts)| counts.sole_atomic_ordering == MemoryOrdering::Relaxed)
             .map(|(buf, _)| buf)
             .collect();
 
@@ -687,10 +699,17 @@ fn count_expr_accesses(expr: &Expr, counts: &mut HashMap<crate::ir::Ident, Buffe
                 index,
                 expected,
                 value,
-                ..
+                ordering,
             } => {
                 if *op == AtomicOp::Add && expected.is_none() {
-                    counts.entry(buffer.clone()).or_default().atomic_adds += 1;
+                    let entry = counts.entry(buffer.clone()).or_default();
+                    entry.atomic_adds += 1;
+                    // Record the ordering on the first encounter. If
+                    // atomic_adds later exceeds 1 the buffer is ineligible
+                    // regardless, so the recorded value is never misused.
+                    if entry.atomic_adds == 1 {
+                        entry.sole_atomic_ordering = *ordering;
+                    }
                 } else {
                     counts.entry(buffer.clone()).or_default().other_accesses += 1;
                 }
@@ -862,10 +881,16 @@ mod tests {
         )];
         let result = AtomicMinimizePass::transform(program(entry));
         assert!(result.changed);
-        assert!(matches!(
+        // Must collapse to a Load on exactly the same buffer and index, not
+        // just any Expr::Load (guards against wrong-buffer/index regressions).
+        assert_eq!(
             extract_let_value(&result.program, "x"),
-            Expr::Load { .. }
-        ));
+            Expr::Load {
+                buffer: Ident::from("buf"),
+                index: Box::new(Expr::u32(0)),
+            },
+            "Or(x, 0) Relaxed must collapse to Load {{ buffer: \"buf\", index: 0 }}"
+        );
     }
 
     #[test]
@@ -876,10 +901,14 @@ mod tests {
         )];
         let result = AtomicMinimizePass::transform(program(entry));
         assert!(result.changed);
-        assert!(matches!(
+        assert_eq!(
             extract_let_value(&result.program, "x"),
-            Expr::Load { .. }
-        ));
+            Expr::Load {
+                buffer: Ident::from("buf"),
+                index: Box::new(Expr::u32(0)),
+            },
+            "Xor(x, 0) Relaxed must collapse to Load {{ buffer: \"buf\", index: 0 }}"
+        );
     }
 
     #[test]
@@ -890,10 +919,14 @@ mod tests {
         )];
         let result = AtomicMinimizePass::transform(program(entry));
         assert!(result.changed);
-        assert!(matches!(
+        assert_eq!(
             extract_let_value(&result.program, "x"),
-            Expr::Load { .. }
-        ));
+            Expr::Load {
+                buffer: Ident::from("buf"),
+                index: Box::new(Expr::u32(0)),
+            },
+            "And(x, u32::MAX) Relaxed must collapse to Load {{ buffer: \"buf\", index: 0 }}"
+        );
     }
 
     #[test]
@@ -1052,7 +1085,12 @@ mod tests {
     }
 
     #[test]
-    fn seq_cst_not_identity_but_maybe_single_writer() {
+    fn seq_cst_single_writer_ordering_preserved() {
+        // A SeqCst single-writer atomic-add must NOT be rewritten to a plain
+        // Load+Store. SeqCst provides sequential-consistency guarantees to
+        // concurrent readers; silently replacing it with a non-atomic store
+        // drops those guarantees. Only Relaxed single-writer atomics are
+        // eligible for the rewrite.
         let entry = vec![Node::let_bind(
             "x",
             Expr::Atomic {
@@ -1061,11 +1099,26 @@ mod tests {
                 index: Box::new(Expr::u32(0)),
                 expected: None,
                 value: Box::new(Expr::u32(42)),
-                ordering: MemoryOrdering::SeqCst, // Even if it's SeqCst, single-writer eliminates it, since there are no other accesses. Wait, if it's single writer, is SeqCst allowed to be eliminated? "even for non-identity ops ... Conservative: if any other access exists, do nothing." The prompt says "AND that atomic is AtomicOp::Add with expected: None", doesn't restrict ordering! Let's see if we rewrite it.
+                ordering: MemoryOrdering::SeqCst,
             },
         )];
         let result = AtomicMinimizePass::transform(program(entry));
-        assert!(result.changed);
+        assert!(
+            !result.changed,
+            "SeqCst single-writer atomic must NOT be rewritten to plain Load+Store: \
+             the rewrite would silently drop SeqCst ordering guarantees visible to concurrent readers"
+        );
+        // The atomic must still be present in the output, unchanged.
+        assert!(
+            matches!(
+                extract_let_value(&result.program, "x"),
+                Expr::Atomic {
+                    ordering: MemoryOrdering::SeqCst,
+                    ..
+                }
+            ),
+            "SeqCst atomic must remain in the program after transform"
+        );
     }
 
     #[test]

@@ -427,7 +427,20 @@ impl BodyCtx<'_> {
             return reg;
         }
         let reg = self.alloc(PtxType::U32);
-        let byte_offset = 4u32 + binding_slot * 4;
+        // All valid slots were already registered by `preload_bindings`, which
+        // performs a checked computation and returns Err on overflow. Reaching
+        // this branch with a slot that was NOT registered by preload indicates
+        // a caller bug. The checked_mul/checked_add here is a defence-in-depth
+        // belt: if an overflow would occur we emit `u32::MAX` as an obviously-
+        // wrong sentinel offset (PTX will read at a garbage address and fail
+        // under CUDA validation) rather than silently wrapping to a plausible
+        // address and producing wrong-but-undetectable bounds-check behaviour.
+        debug_assert!(
+            binding_slot.checked_mul(4).and_then(|v| v.checked_add(4)).is_some(),
+            "ensure_buffer_length_reg: slot={binding_slot} byte offset overflows u32; \
+             preload_bindings should have rejected this slot"
+        );
+        let byte_offset = binding_slot.saturating_mul(4).saturating_add(4);
         let _ = writeln!(
             self.text,
             "    ld.global.ca.u32    {reg}, [%rd0 + {byte_offset}];"

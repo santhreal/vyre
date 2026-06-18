@@ -3,7 +3,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::c_void;
 use std::sync::{
-    atomic::{AtomicU64, Ordering},
+    atomic::{AtomicU32, AtomicU64, Ordering},
     Arc, Mutex, MutexGuard,
 };
 use std::time::Instant;
@@ -32,6 +32,11 @@ pub struct MetalBackend {
     next_resident: AtomicU64,
     pipeline_cache: Mutex<BTreeMap<[u8; 32], MetalCompiledPipeline>>,
     metrics: MetalMetricCounters,
+    /// SIMD-group width as reported by the first compiled `ComputePipelineState`.
+    /// `0` means "not yet probed". Metal does not expose this at the Device level;
+    /// it is pipeline-state-dependent and queried via
+    /// `MTLComputePipelineState::threadExecutionWidth` after the first compile.
+    cached_simd_width: AtomicU32,
 }
 
 impl std::fmt::Debug for MetalBackend {
@@ -403,6 +408,7 @@ impl MetalBackend {
             next_resident: AtomicU64::new(1),
             pipeline_cache: Mutex::new(BTreeMap::new()),
             metrics: Arc::new(MetalMetrics::default()),
+            cached_simd_width: AtomicU32::new(0),
         })
     }
 
@@ -477,6 +483,20 @@ impl MetalBackend {
                     artifact.entry_point
                 ),
             })?;
+        // Cache the SIMD-group width from the first successfully compiled pipeline.
+        // Metal exposes this per-pipeline-state (not per-device), so we store it
+        // on first compile. If concurrent compiles race here we may call
+        // compare_exchange twice; both are racing to write the same value for a
+        // given device family, so the last writer wins and no correctness is lost.
+        let thread_width = ns_uint_to_u32_saturating(pipeline.thread_execution_width());
+        if thread_width > 0 {
+            let _ = self.cached_simd_width.compare_exchange(
+                0,
+                thread_width,
+                Ordering::Relaxed,
+                Ordering::Relaxed,
+            );
+        }
         let compiled = MetalCompiledPipeline {
             identity: cache_identity,
             artifact,
@@ -765,7 +785,19 @@ impl VyreBackend for MetalBackend {
     }
 
     fn subgroup_size(&self) -> Option<u32> {
-        Some(32)
+        // Metal's SIMD-group width is pipeline-state-dependent, not device-level.
+        // We probe it from `ComputePipelineState::threadExecutionWidth` on the
+        // first successful `compile_pipeline` call and cache the result here.
+        // `0` means "not yet probed" — return `None` so callers can handle
+        // the unknown case rather than receiving a potentially-wrong constant.
+        // In practice the first dispatch fills the cache so `subgroup_size()`
+        // always returns `Some` after the first kernel is compiled on this backend.
+        let cached = self.cached_simd_width.load(Ordering::Relaxed);
+        if cached > 0 {
+            Some(cached)
+        } else {
+            None
+        }
     }
 
     fn max_compute_workgroups_per_dimension(&self) -> u32 {
@@ -1228,17 +1260,39 @@ impl VyreBackend for MetalBackend {
             "metal_output_readback_bytes",
             self.metrics.output_readback_bytes.load(Ordering::Relaxed),
         ));
-        if let Ok(table) = self.resident_buffers.lock() {
-            metrics.push(("metal_resident_buffer_count", table.len() as u64));
-            let resident_bytes = table
-                .values()
-                .try_fold(0_u64, |total, resident| {
-                    u64::try_from(resident.byte_len)
-                        .ok()
-                        .and_then(|byte_len| total.checked_add(byte_len))
-                })
-                .unwrap_or(u64::MAX);
-            metrics.push(("metal_resident_bytes", resident_bytes));
+        // Law 10: do NOT silently discard Mutex-poisoned state. If a background
+        // thread panicked while holding `resident_buffers`, callers cannot
+        // distinguish "zero resident buffers" from "poisoned backend". We push
+        // u64::MAX as an unambiguous sentinel so any downstream metric gate or
+        // benchmark comparison fires immediately rather than observing a silent
+        // gap.
+        match self.resident_buffers.lock() {
+            Ok(table) => {
+                metrics.push(("metal_resident_buffer_count", table.len() as u64));
+                let resident_bytes = table
+                    .values()
+                    .try_fold(0_u64, |total, resident| {
+                        u64::try_from(resident.byte_len)
+                            .ok()
+                            .and_then(|byte_len| total.checked_add(byte_len))
+                    })
+                    .unwrap_or(u64::MAX);
+                metrics.push(("metal_resident_bytes", resident_bytes));
+            }
+            Err(_poison) => {
+                // Sentinel values: u64::MAX is unambiguously wrong and will
+                // trigger any downstream alert that compares against normal
+                // buffer counts or byte totals.
+                metrics.push(("metal_resident_buffer_count", u64::MAX));
+                metrics.push(("metal_resident_bytes", u64::MAX));
+                metrics.push(("metal_resident_buffer_error", 1_u64));
+                tracing::error!(
+                    "metal resident_buffers Mutex is poisoned; \
+                     resident buffer metrics are sentinel values (u64::MAX). \
+                     Fix: a background dispatch thread panicked while holding \
+                     the resident buffer table lock."
+                );
+            }
         }
         metrics
     }

@@ -295,15 +295,45 @@ pub fn try_encode_empty_debug_log_into(
 }
 
 /// Decode the kernel's `done_count` from a control buffer.
+///
+/// On a malformed or truncated control buffer this returns `0` **and emits a
+/// `tracing::error!`** so the stall is operator-visible. Prefer
+/// [`try_read_done_count`] in new code — a silent `0` is indistinguishable from
+/// the initial kernel state and can cause the host pump to stall indefinitely.
 #[must_use]
 pub fn read_done_count(control_bytes: &[u8]) -> u32 {
-    try_read_done_count(control_bytes).unwrap_or(0)
+    match try_read_done_count(control_bytes) {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::error!(
+                error = %e,
+                buf_len = control_bytes.len(),
+                "read_done_count: malformed control buffer — returning 0 instead of real count. Fix: ensure the DMA readback covers the full control buffer produced by the matching encoder."
+            );
+            0
+        }
+    }
 }
 
 /// Read the epoch counter from a control buffer.
+///
+/// On a malformed or truncated control buffer this returns `0` **and emits a
+/// `tracing::error!`** so the stall is operator-visible. Prefer
+/// [`try_read_epoch`] in new code — a silent `0` lets the host pump conclude no
+/// batch has completed, stalling dispatch indefinitely.
 #[must_use]
 pub fn read_epoch(control_bytes: &[u8]) -> u32 {
-    try_read_epoch(control_bytes).unwrap_or(0)
+    match try_read_epoch(control_bytes) {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::error!(
+                error = %e,
+                buf_len = control_bytes.len(),
+                "read_epoch: malformed control buffer — returning 0 instead of real epoch. Fix: ensure the DMA readback covers the full control buffer produced by the matching encoder."
+            );
+            0
+        }
+    }
 }
 
 /// Strictly decode the kernel's `done_count` from a control buffer.
@@ -335,9 +365,25 @@ pub fn try_read_epoch(control_bytes: &[u8]) -> Result<u32, ProtocolError> {
 }
 
 /// Read an observable result word from a control buffer.
+///
+/// On a malformed or truncated control buffer this returns `0` **and emits a
+/// `tracing::error!`** so the miss is operator-visible. Prefer
+/// [`try_read_observable`] in new code — a silent `0` is indistinguishable from
+/// an observable slot that was never written.
 #[must_use]
 pub fn read_observable(control_bytes: &[u8], index: u32) -> u32 {
-    try_read_observable(control_bytes, index).unwrap_or(0)
+    match try_read_observable(control_bytes, index) {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::error!(
+                error = %e,
+                buf_len = control_bytes.len(),
+                index,
+                "read_observable: malformed control buffer — returning 0 instead of real observable. Fix: ensure the DMA readback covers the full control buffer produced by the matching encoder."
+            );
+            0
+        }
+    }
 }
 
 /// Strictly read an observable result word from a control buffer.
@@ -370,6 +416,12 @@ pub fn read_metrics(control_bytes: &[u8]) -> Vec<(u32, u32)> {
 /// Read per-opcode metrics counters into caller-owned storage.
 ///
 /// Clears `out`, then reuses its allocation.
+///
+/// On an allocation failure this returns with `out` cleared **and emits a
+/// `tracing::error!`** so the empty result is operator-visible. An empty `out`
+/// on non-empty control bytes therefore always indicates either (a) no non-zero
+/// counters or (b) an OOM that was surfaced loudly. Prefer
+/// [`try_read_metrics_into`] in code paths where the caller can propagate errors.
 pub fn read_metrics_into(control_bytes: &[u8], out: &mut Vec<(u32, u32)>) {
     out.clear();
     let Ok(metrics_base) = control_word_index(control::METRICS_BASE, "metrics base word") else {
@@ -381,7 +433,12 @@ pub fn read_metrics_into(control_bytes: &[u8], out: &mut Vec<(u32, u32)>) {
     }
     let available_slots = (available_words - metrics_base).min(control::METRICS_SLOTS as usize);
     let nonzero = count_nonzero_metrics_truncated(control_bytes, metrics_base, available_slots);
-    if try_reserve_target_capacity(out, nonzero).is_err() {
+    if let Err(e) = try_reserve_target_capacity(out, nonzero) {
+        tracing::error!(
+            error = %e,
+            nonzero_count = nonzero,
+            "read_metrics_into: allocation failed — returning empty metrics. Fix: reduce metrics fanout or decode into a pre-allocated scratch vector."
+        );
         return;
     }
     for slot in 0..available_slots {

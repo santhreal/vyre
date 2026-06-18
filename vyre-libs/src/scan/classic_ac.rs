@@ -430,7 +430,12 @@ mod tests {
 
     #[test]
     fn bounded_ranges_builder_exposes_checked_metadata_variant() {
-        let production = include_str!("classic_ac/bounded_ranges.rs");
+        // Inspect only the production section — everything before the file's own
+        // `#[cfg(test)]` block. That test module legitimately uses .expect()/
+        // .unwrap(), which must not trip the "builder must not panic" guard below
+        // (the guard concerns the production builder, not its tests).
+        let full = include_str!("classic_ac/bounded_ranges.rs");
+        let production = full.split("\n#[cfg(test)]").next().unwrap_or(full);
 
         assert!(
             production.contains("try_build_ac_bounded_ranges_program_ext"),

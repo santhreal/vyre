@@ -16,7 +16,7 @@ documentation = "https://docs.rs/vyre-reference"
 [dependencies]
 rayon = { workspace = true }
 vyre-foundation.workspace = true
-vyre-primitives = { workspace = true, features = ["hash"] }
+vyre-primitives = { workspace = true, features = ["hash", "matching"] }
 
 vyre-spec.workspace = true
 blake3.workspace = true

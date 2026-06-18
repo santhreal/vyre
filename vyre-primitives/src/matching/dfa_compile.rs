@@ -284,13 +284,12 @@ impl CompiledDfa {
                 reason: "output_offsets entries must be within output_records",
             });
         }
-        if max_pattern_len == 0
-            && (accept.iter().any(|&state_accept| state_accept != 0) || !output_records.is_empty())
-        {
-            return Err(DfaWireError::ShapeMismatch {
-                reason: "max_pattern_len is zero for a non-empty accepting DFA",
-            });
-        }
+        // Note: max_pattern_len == 0 with non-empty accept states is VALID when the
+        // compiled pattern set contains a zero-length pattern (the empty string matches
+        // at every position; the root state is an accept state). The former guard that
+        // rejected this combination was overly strict and broke round-trips for
+        // dfa_compile(&[b""]). The structural guards above (transitions/accept lengths,
+        // offset monotonicity, bounds) are sufficient to ensure a valid DFA.
 
         Ok(Self {
             transitions,
@@ -426,7 +425,17 @@ fn dfa_compile_inner_capped(
             }
         }
         local_accepts[cur].push(pattern_idx as u32);
-        accept[cur] = (pattern_idx as u32) + 1;
+        // The accept fast-path field stores the FIRST (lowest) pattern id that reaches
+        // a given trie node, encoded as pid+1. Using the first-inserted pattern preserves
+        // the stable, predictable semantics documented at CompiledDfa.accept: the
+        // lowest pattern id is canonical. If we overwrote on each iteration, the last
+        // pattern would win — silently misreporting earlier patterns on the fast path
+        // (output_records is unaffected and always carries all pids).
+        if accept[cur] == 0 {
+            accept[cur] = (pattern_idx as u32)
+                .checked_add(1)
+                .expect("pattern_idx must be <= u32::MAX - 1 to fit the pid+1 encoding");
+        }
     }
 
     let state_count = trie.len();
@@ -582,15 +591,39 @@ mod tests {
     fn single_string_matches_only_its_suffix() {
         let dfa = dfa_compile(&[b"abc"]);
         let input = b"xxabcxx";
-        let mut state = 0u32;
-        let mut matched = false;
-        for &b in input {
-            state = dfa.transitions[(state as usize) * 256 + (b as usize)];
-            if dfa.accept[state as usize] != 0 {
-                matched = true;
-            }
+
+        // Walk to the state immediately after scanning "xxabc" (before the trailing xx).
+        // We can't stop mid-scan in a loop; trace the exact 5-byte prefix instead.
+        let mut s = 0usize;
+        for &b in b"xxabc" {
+            s = dfa.transitions[s * 256 + b as usize] as usize;
         }
-        assert!(matched, "DFA must match `abc` inside `xxabcxx`");
+        // Pattern 0 encodes as accept = pid+1 = 0+1 = 1. Asserting == 1 catches both
+        // "no match" (accept=0) and wrong pid (accept != 1) — including the pid+1 wrap
+        // bug where pid=u32::MAX would encode as 0 and silence the match.
+        assert_eq!(
+            dfa.accept[s],
+            1,
+            "after 'xxabc' the DFA must be in a state that accepts pattern 0 (encoded as 1); \
+             got accept[{s}] = {}",
+            dfa.accept[s]
+        );
+        // Verify output_records carries the correct pid for the full-match path.
+        let rec_start = dfa.output_offsets[s] as usize;
+        let rec_end = dfa.output_offsets[s + 1] as usize;
+        assert_eq!(
+            &dfa.output_records[rec_start..rec_end],
+            &[0u32],
+            "output_records for the accept state must contain exactly [0] (pid=0)"
+        );
+
+        // Negative: after trailing 'x' the DFA must have left the accept state.
+        let s_after_x = dfa.transitions[s * 256 + b'x' as usize] as usize;
+        assert_eq!(
+            dfa.accept[s_after_x],
+            0,
+            "after trailing 'x' the DFA must not accept; pattern 'abc' ends before it"
+        );
     }
 
     #[test]
@@ -684,6 +717,62 @@ mod tests {
             err,
             DfaCompileError::TooLarge { .. } | DfaCompileError::TrieStateCapExceeded { .. }
         ));
+    }
+
+    /// Finding #13 (P2): accept field last-writer-wins bug.
+    /// When two patterns share a final trie node (duplicate literals or suffix patterns),
+    /// the accept fast-path field must store the FIRST (lowest) pattern id, not the last.
+    /// Before the fix, accept[state_B] = 2 (pid=1, last writer) instead of 1 (pid=0, first).
+    /// Finding #14 (P2): from_bytes incorrectly rejected DFAs compiled from
+    /// zero-length patterns because max_pattern_len==0 with accept states was
+    /// treated as "corrupt sentinel" rather than "empty-pattern accept".
+    #[test]
+    fn empty_pattern_dfa_round_trips() {
+        let dfa = dfa_compile(&[b"".as_slice()]);
+        // The root state must accept (empty string matches everywhere).
+        assert_eq!(
+            dfa.accept[0],
+            1,
+            "dfa_compile(&[b\"\"]) root state must accept pattern 0 (accept=1)"
+        );
+        assert_eq!(
+            dfa.max_pattern_len, 0,
+            "empty pattern must produce max_pattern_len=0"
+        );
+        let bytes = dfa.to_bytes().expect("Fix: serialization must succeed for empty-pattern DFA");
+        let dfa2 =
+            CompiledDfa::from_bytes(&bytes).expect("Fix: round-trip must succeed for empty-pattern DFA");
+        assert_eq!(
+            dfa2.accept[0], 1,
+            "deserialized DFA must preserve accept[0]=1 for empty-pattern compile"
+        );
+        assert_eq!(
+            dfa2.max_pattern_len, 0,
+            "deserialized DFA must preserve max_pattern_len=0"
+        );
+    }
+
+    #[test]
+    fn duplicate_literal_accept_field_contains_first_pattern() {
+        // dfa_compile(&[b"B", b"B"]): both patterns share trie state 1 (after b'B').
+        // pid=0 is inserted first → accept[state_B] must be 1 (0+1).
+        // pid=1 is inserted second → must not overwrite → accept[state_B] stays 1.
+        let dfa = dfa_compile(&[b"B".as_slice(), b"B".as_slice()]);
+        let state_b = dfa.transitions[b'B' as usize] as usize;
+        assert_eq!(
+            dfa.accept[state_b],
+            1,
+            "first duplicate literal (pid=0) must win the accept fast-path field (encoded as pid+1=1); \
+             last-writer-wins would give 2 (pid=1)"
+        );
+        // The output_records must still carry both pids for the full-match path.
+        let start = dfa.output_offsets[state_b] as usize;
+        let end = dfa.output_offsets[state_b + 1] as usize;
+        assert_eq!(
+            &dfa.output_records[start..end],
+            &[0u32, 1u32],
+            "duplicate literals must both appear in output_records"
+        );
     }
 
     #[test]

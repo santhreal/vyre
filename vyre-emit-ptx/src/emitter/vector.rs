@@ -370,5 +370,11 @@ fn vector_memory_type(element_type: &DataType, elem_ty: PtxType) -> PtxType {
 }
 
 fn is_vector_load_op(kind: &KernelOpKind) -> bool {
-    matches!(kind, KernelOpKind::LoadGlobal | KernelOpKind::LoadConstant)
+    // `LoadConstant` is intentionally excluded: constant-memory buffers use the
+    // `.const` address space in PTX (separate cache hierarchy) and require a
+    // different address-operand path. Including them in global-space vector
+    // fusion caused `ld.global.nc.vN` to be emitted for `.const`-space pointers,
+    // which is either a PTX validation error or silently bypasses the constant
+    // cache. Constant loads fall through to the scalar `emit_op` path instead.
+    matches!(kind, KernelOpKind::LoadGlobal)
 }

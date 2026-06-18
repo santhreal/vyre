@@ -666,6 +666,56 @@ mod tests {
         assert!(packed.rejected_rules.is_empty());
     }
 
+    /// Regression for P2 decoration test: the structural shared-storage checks
+    /// above were not sufficient — a refactor could share the WRONG compressed
+    /// block and still pass the field-equality assertion. This test packs TWO
+    /// identical copies of the non-trivial 3-class DFA from
+    /// `byte_class_compression_is_lossless` and then calls `packed_next_state`
+    /// on BOTH meta indices for every (state, byte) pair, asserting both return
+    /// the same value AND that value matches the dense source table.
+    #[test]
+    fn duplicate_dfas_shared_storage_both_rules_fire_correctly() {
+        // 3-state, 3-class DFA — same fixture as byte_class_compression_is_lossless.
+        let states = 3usize;
+        let mut dense = vec![0u32; states * 256];
+        dense[0 * 256 + 0x41] = 1; // state 0: 'A' -> 1
+        dense[1 * 256 + 0x41] = 2; // state 1: 'A' -> 2
+        dense[1 * 256 + 0x42] = 2; // state 1: 'B' -> 2
+        dense[2 * 256 + 0x41] = 2; // state 2: 'A' -> 2
+        let accept = vec![0u32, 0, 1];
+
+        let rule0 = BatchRuleProgram::new(0, dense.clone(), accept.clone(), states as u32).unwrap();
+        let rule1 = BatchRuleProgram::new(1, dense.clone(), accept.clone(), states as u32).unwrap();
+        let packed = pack_rule_catalog(&[rule0, rule1]).unwrap();
+
+        assert!(packed.rejected_rules.is_empty());
+        // Both rules must share storage.
+        assert_eq!(packed.rule_meta[0].transition_base, packed.rule_meta[1].transition_base,
+            "Fix: duplicate DFAs must share transition storage");
+        assert_eq!(packed.rule_meta[0].accept_base, packed.rule_meta[1].accept_base,
+            "Fix: duplicate DFAs must share accept storage");
+
+        // Critical: verify BOTH meta indices yield the correct DFA output for
+        // every (state, byte) — structural field sharing is necessary but not
+        // sufficient; the shared block must actually encode the right DFA.
+        for state in 0..states as u32 {
+            for byte in 0u16..256 {
+                let byte = byte as u8;
+                let expected = dense[state as usize * 256 + byte as usize];
+                let got0 = packed_next_state(&packed, 0, state, byte);
+                let got1 = packed_next_state(&packed, 1, state, byte);
+                assert_eq!(
+                    got0, expected,
+                    "Fix: rule0 compressed transition mismatch at state {state} byte {byte:#x}: expected {expected} got {got0}"
+                );
+                assert_eq!(
+                    got1, expected,
+                    "Fix: rule1 compressed transition mismatch at state {state} byte {byte:#x}: expected {expected} got {got1}"
+                );
+            }
+        }
+    }
+
     #[test]
     fn duplicate_dfas_do_not_reserve_raw_duplicate_storage() {
         let rules = (0..32)
@@ -819,8 +869,24 @@ mod tests {
             &packed.class_maps[..ALPHABET_SIZE as usize],
             &vec![0; ALPHABET_SIZE as usize]
         );
-        // The rejected slot, driven on ANY byte from state 0, stays in state 0
-        // (never matches) — the loud-isolation contract.
-        assert_eq!(packed_next_state(&packed, 1, 0, b'X'), 0);
+        // Regression for P2 decoration test: a single-byte spot check is not
+        // sufficient — a corrupt inert row could have non-zero entries at other
+        // bytes or at the accept table while still passing b'X'. This loop
+        // proves the inert slot self-loops to state 0 on EVERY byte value and
+        // that the accept entry for the inert slot is zero (can never match).
+        for byte in 0u16..256 {
+            let byte = byte as u8;
+            assert_eq!(
+                packed_next_state(&packed, 1, 0, byte),
+                0,
+                "Fix: inert slot must self-loop to state 0 for every byte, failed at byte {byte:#x}"
+            );
+        }
+        // Accept entry for the inert slot at state 0 must be zero (no match).
+        assert_eq!(
+            packed.accept[packed.rule_meta[1].accept_base as usize],
+            0,
+            "Fix: inert slot accept entry at state 0 must be 0 — the inert DFA must never produce a match"
+        );
     }
 }

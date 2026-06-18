@@ -6,7 +6,9 @@ use crate::serial::wire::framing::{
     FLAG_COMPRESSED, FLAG_OPAQUE_ENDIAN_FIXED, FLAG_SEALED, MAGIC, WIRE_FORMAT_VERSION,
 };
 use crate::serial::wire::tags::access_from_tag::access_from_tag;
-use crate::serial::wire::{BufferDecl, Program, Reader, MAX_BUFFERS, MAX_NODES, MAX_PROGRAM_BYTES};
+use crate::serial::wire::{
+    BufferDecl, Program, Reader, MAX_BUFFERS, MAX_NODES, MAX_OPAQUE_PAYLOAD_LEN, MAX_PROGRAM_BYTES,
+};
 use payload::{
     data_type_from_tag, memory_kind_from_tag, read_dense_quantization_scale,
     read_dense_quantization_zero_point, read_hints,
@@ -262,7 +264,12 @@ fn read_node_record<'a>(
     node_index: usize,
 ) -> Result<(String, &'a [u8], Vec<u32>), String> {
     let op_id = reader.leb_string()?;
-    let payload_len = reader.leb_len(usize::MAX, "node payload length")?;
+    // Bound node payload length to MAX_OPAQUE_PAYLOAD_LEN so an oversized
+    // length field produces an actionable "exceeds limit" error at the gate,
+    // not a confusing "truncated" error from the body read that follows.
+    // The encoder already enforces this limit on write (put_node.rs:211), so
+    // any blob claiming more is either corrupt or crafted.
+    let payload_len = reader.leb_len(MAX_OPAQUE_PAYLOAD_LEN, "node payload length")?;
     let payload = reader.take(payload_len)?;
     let operand_count = reader.leb_len(MAX_NODES, "operand count")?;
     let mut operands = Vec::new();

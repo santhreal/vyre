@@ -1,18 +1,38 @@
 use crate::{dual_impls::common, workgroup::Memory};
+use vyre_primitives::matching::CompiledDfa;
 use vyre_primitives::PatternMatchDfa;
-
-const HEADER_LEN: usize = 16;
-const MAGIC: &[u8; 4] = b"VDFA";
 
 impl common::ReferenceEvaluator for PatternMatchDfa {
     fn evaluate(&self, inputs: &[Memory]) -> Result<Memory, common::EvalError> {
         let haystack = common::one_input(inputs, "scan_dfa")?;
-        let dfa = ParsedDfa::parse(&self.dfa)?;
-        let mut state = dfa.start;
+        // Decode using the canonical V2 wire format produced by CompiledDfa::to_bytes.
+        // The old hand-rolled V1 parser (magic + state_count + start + accept_count)
+        // does not match the V2 envelope (magic + version + state_count + max_pattern_len
+        // + length-prefixed sections). Using from_bytes here keeps the reference oracle
+        // byte-identical with every other consumer of the DFA wire format.
+        let compiled = CompiledDfa::from_bytes(&self.dfa).map_err(|e| {
+            common::EvalError::new(format!(
+                "primitive `scan_dfa` could not decode DFA wire blob: {e}. \
+                 Fix: populate PatternMatchDfa.dfa via CompiledDfa::to_bytes()."
+            ))
+        })?;
+
+        // State 0 is always the root/start state in the Aho-Corasick DFA produced
+        // by dfa_compile. There is no separate start field in the V2 format.
+        let mut state = 0usize;
         let mut offsets = Vec::new();
         for (offset, byte) in haystack.iter().copied().enumerate() {
-            state = dfa.step(state, byte)?;
-            if dfa.accepts[state] {
+            let next_state_idx = state * 256 + usize::from(byte);
+            let next = compiled.transitions[next_state_idx] as usize;
+            if next >= compiled.state_count as usize {
+                return Err(common::EvalError::new(
+                    "primitive `scan_dfa` transition targets an out-of-range state. \
+                     Fix: validate every transition target in the DFA.",
+                ));
+            }
+            state = next;
+            // accept[state] is non-zero when the state matches at least one pattern.
+            if compiled.accept[state] != 0 {
                 offsets.push(u32::try_from(offset).map_err(|_| {
                     common::EvalError::new(
                         "primitive `scan_dfa` offset exceeds u32. Fix: split haystacks before 4 GiB.",
@@ -24,91 +44,43 @@ impl common::ReferenceEvaluator for PatternMatchDfa {
     }
 }
 
-struct ParsedDfa {
-    start: usize,
-    accepts: Vec<bool>,
-    transitions: Vec<u32>,
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dual_impls::common::ReferenceEvaluator;
+    use vyre_primitives::matching::dfa_compile;
+    use crate::workgroup::Memory;
 
-impl ParsedDfa {
-    fn parse(bytes: &[u8]) -> Result<Self, common::EvalError> {
-        if bytes.len() < HEADER_LEN || &bytes[..4] != MAGIC {
-            return Err(common::EvalError::new(
-                "primitive `scan_dfa` expected VDFA header. Fix: encode magic, state_count, start, and accept_count.",
-            ));
-        }
-        let state_count = read_u32_at(bytes, 4)? as usize;
-        let start = read_u32_at(bytes, 8)? as usize;
-        let accept_count = read_u32_at(bytes, 12)? as usize;
-        if state_count == 0 || start >= state_count {
-            return Err(common::EvalError::new(
-                "primitive `scan_dfa` has invalid state count/start. Fix: provide at least one state and a valid start state.",
-            ));
-        }
-        let accept_bytes = accept_count.checked_mul(4).ok_or_else(|| {
-            common::EvalError::new(
-                "primitive `scan_dfa` accept table size overflow. Fix: bound DFA state metadata.",
-            )
-        })?;
-        let transition_start = HEADER_LEN + accept_bytes;
-        let transition_words = state_count.checked_mul(256).ok_or_else(|| {
-            common::EvalError::new(
-                "primitive `scan_dfa` transition table size overflow. Fix: bound DFA state count.",
-            )
-        })?;
-        let transition_bytes = transition_words.checked_mul(4).ok_or_else(|| {
-            common::EvalError::new(
-                "primitive `scan_dfa` transition byte size overflow. Fix: bound DFA state count.",
-            )
-        })?;
-        if bytes.len() != transition_start + transition_bytes {
-            return Err(common::EvalError::new(format!(
-                "primitive `scan_dfa` byte length mismatch: got {}, expected {}. Fix: encode accept states followed by state_count*256 u32 transitions.",
-                bytes.len(),
-                transition_start + transition_bytes
-            )));
-        }
-        let mut accepts = vec![false; state_count];
-        for accept in 0..accept_count {
-            let state = read_u32_at(bytes, HEADER_LEN + accept * 4)? as usize;
-            if state >= state_count {
-                return Err(common::EvalError::new(
-                    "primitive `scan_dfa` accept state is out of range. Fix: keep accept states below state_count.",
-                ));
-            }
-            accepts[state] = true;
-        }
-        let transitions = common::u32_words(&bytes[transition_start..], "scan_dfa")?;
-        Ok(Self {
-            start,
-            accepts,
-            transitions,
-        })
-    }
+    /// Verifies that the reference evaluator correctly decodes a V2 wire blob
+    /// and finds the pattern at the expected offset. Before the fix the parser
+    /// read a V1 layout (misaligned fields) and would return a length-mismatch
+    /// error or wrong offsets for every real V2 DFA.
+    #[test]
+    fn test_dfa_reference_v2_roundtrip() {
+        // Build a real V2 DFA for pattern "abc".
+        let compiled = dfa_compile(&[b"abc"]);
+        let wire_bytes = compiled
+            .to_bytes()
+            .expect("Fix: dfa_compile must produce a serializable DFA");
 
-    fn step(&self, state: usize, byte: u8) -> Result<usize, common::EvalError> {
-        let offset = state * 256 + usize::from(byte);
-        let next = self.transitions[offset] as usize;
-        if next >= self.accepts.len() {
-            Err(common::EvalError::new(
-                "primitive `scan_dfa` transition targets an out-of-range state. Fix: validate every transition target.",
-            ))
-        } else {
-            Ok(next)
-        }
-    }
-}
+        let primitive = PatternMatchDfa { dfa: wire_bytes };
+        // Haystack: "xxabcxx" — pattern starts at byte 2, ends (accepting) at byte 4.
+        let haystack = Memory::from_bytes(b"xxabcxx".to_vec());
+        let result = primitive
+            .evaluate(&[haystack])
+            .expect("Fix: V2 DFA roundtrip must succeed on valid haystack");
 
-fn read_u32_at(bytes: &[u8], offset: usize) -> Result<u32, common::EvalError> {
-    if offset + 4 > bytes.len() {
-        return Err(common::EvalError::new(
-            "primitive `scan_dfa` truncated u32 field. Fix: encode all header fields.",
-        ));
+        // The evaluator records the offset of the accepting byte (offset 4, 0-indexed).
+        let offsets: Vec<u32> = result
+            .bytes()
+            .chunks_exact(4)
+            .map(|chunk| u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
+            .collect();
+        // "abc" completes at index 4 (x=0,x=1,a=2,b=3,c=4).
+        assert_eq!(
+            offsets,
+            vec![4u32],
+            "Fix: V2 DFA reference evaluator must report offset 4 for 'abc' in 'xxabcxx'"
+        );
     }
-    Ok(u32::from_le_bytes([
-        bytes[offset],
-        bytes[offset + 1],
-        bytes[offset + 2],
-        bytes[offset + 3],
-    ]))
 }

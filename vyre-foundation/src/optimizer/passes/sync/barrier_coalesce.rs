@@ -436,5 +436,25 @@ mod tests {
         let program = program_with_entry(entry);
         let result = BarrierCoalescePass::transform(program);
         assert!(result.changed, "coalesce must recurse into If branches");
+        // Verify the coalesce was correct: exactly one barrier must survive in
+        // the if-then branch, and it must carry SeqCst (not be downgraded or
+        // dropped entirely). A regression that coalesces to Relaxed or removes
+        // both barriers would have passed the old `changed == true` check.
+        assert_eq!(
+            result.program.entry().iter().map(count_barriers).sum::<usize>(),
+            1,
+            "two SeqCst barriers in if-then must coalesce to exactly one"
+        );
+        let ordering = result
+            .program
+            .entry()
+            .iter()
+            .find_map(first_barrier_ordering)
+            .expect("Fix: a barrier must exist after coalesce inside if-then branch");
+        assert_eq!(
+            ordering,
+            MemoryOrdering::SeqCst,
+            "SeqCst ⊔ SeqCst must preserve SeqCst ordering, not downgrade"
+        );
     }
 }

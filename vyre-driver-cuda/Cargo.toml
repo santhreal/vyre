@@ -49,3 +49,14 @@ libc.workspace = true
 tempfile.workspace = true
 serde_json.workspace = true
 pollster.workspace = true
+# Required by tests/common/mod.rs (vyre::ir, vyre::DispatchConfig) and by
+# many live CUDA integration tests. `vyre` optionally depends on
+# vyre-driver-cuda behind `features = ["cuda"]`; adding it here as a dev-dep
+# without that feature flag does not create a cycle. Cargo dev-deps are only
+# compiled for the crate being tested, not for its dependents.
+vyre = { workspace = true }
+# Required by tests/common/mod.rs (vyre_reference::value::Value,
+# vyre_reference::reference_eval) and by differential tests.
+vyre-reference = { workspace = true }
+# Required by several _gpu_parity tests that import vyre_primitives::*.
+vyre-primitives = { workspace = true }

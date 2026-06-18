@@ -86,11 +86,35 @@ pub fn emit_optimized(desc: &KernelDescriptor) -> Result<Vec<u32>, EmitError> {
 pub fn emit_optimized_with_stats(
     desc: &KernelDescriptor,
 ) -> Result<(Vec<u32>, vyre_lower::rewrites::OptimizationStats), EmitError> {
+    // Verify the INPUT descriptor before the rewrite pipeline. Each rewrite
+    // pass assumes a valid descriptor and, in debug builds, `assert!`s validity
+    // after every pass; an already-invalid descriptor would panic inside a pass
+    // rather than surface as a structured error. Fail closed here so invalid
+    // input is rejected identically in debug and release, before any pass runs.
+    vyre_lower::verify::verify(desc).map_err(|errors| {
+        EmitError::NagaEmit(vyre_emit_naga::EmitError::InvalidDescriptor(format!(
+            "invalid descriptor: input failed verification before optimization — {} error(s). \
+             Fix: see vyre_lower::verify for the invariants the descriptor violated. \
+             First error: {:?}",
+            errors.len(),
+            errors.first()
+        )))
+    })?;
     let (optimized, stats) = vyre_lower::rewrites::run_all_with_stats(desc);
-    debug_assert!(
-        vyre_lower::verify::verify(&optimized).is_ok(),
-        "rewrite pipeline produced an invalid descriptor  -  see vyre_lower::verify for the contract"
-    );
+    // Unconditionally verify the rewrite pipeline output. A `debug_assert!`
+    // here silently skips this gate in release builds, where a buggy rewrite
+    // could produce an invalid descriptor that proceeds to SPIR-V emission and
+    // yields a binary with semantics different from the original — a
+    // silently-wrong result with no diagnostics. Fail closed instead.
+    vyre_lower::verify::verify(&optimized).map_err(|errors| {
+        EmitError::NagaEmit(vyre_emit_naga::EmitError::InvalidDescriptor(format!(
+            "rewrite pipeline produced an invalid descriptor — {} error(s). \
+             Fix: see vyre_lower::verify for the invariants the rewrite violated. \
+             First error: {:?}",
+            errors.len(),
+            errors.first()
+        )))
+    })?;
     let words = emit(&optimized)?;
     Ok((words, stats))
 }
@@ -443,5 +467,39 @@ mod tests {
         .unwrap();
         let words = emit_from_naga_module(&module).unwrap();
         assert_eq!(words[0], SPIRV_MAGIC);
+    }
+
+    /// `emit_optimized` must return a structured error for a descriptor that
+    /// fails the post-rewrite verification gate. Previously `debug_assert!`
+    /// compiled to nothing in release builds, letting an invalid optimized
+    /// descriptor silently proceed to SPIR-V emission and produce a binary
+    /// with different semantics from the original. Replacing it with an
+    /// unconditional `?` propagation makes this an observable failure in
+    /// all build profiles.
+    #[test]
+    fn emit_optimized_errors_on_invalid_rewrite_output() {
+        // A zero workgroup dimension is preserved unchanged by the rewrite
+        // pipeline and always triggers VerifyErrorKind::DispatchZeroDim.
+        let bad = KernelDescriptor {
+            id: "zero_dim".into(),
+            bindings: BindingLayout { slots: vec![] },
+            dispatch: Dispatch::new(0, 1, 1),
+            body: KernelBody {
+                ops: vec![],
+                child_bodies: vec![],
+                literals: vec![],
+            },
+        };
+        let result = emit_optimized(&bad);
+        assert!(
+            result.is_err(),
+            "emit_optimized must return Err for a descriptor that fails post-rewrite verify; \
+             the old debug_assert! would silently proceed in release builds"
+        );
+        let err_msg = format!("{}", result.unwrap_err());
+        assert!(
+            err_msg.contains("invalid descriptor"),
+            "error message must mention 'invalid descriptor', got: {err_msg}"
+        );
     }
 }

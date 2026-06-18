@@ -27,6 +27,7 @@
 use std::collections::BTreeMap;
 
 use naga::back::msl::{BindTarget, EntryPointResources, Options, PipelineOptions};
+use naga::{AddressSpace, StorageAccess};
 use naga::valid::{Capabilities, ValidationFlags, Validator};
 use thiserror::Error;
 use vyre_lower::{BindingSlot, KernelDescriptor, MemoryClass};
@@ -406,13 +407,22 @@ fn metal_entry_point_resource_map(
                 reason: "resource binding was not present in the dense Metal buffer index map"
                     .to_string(),
             })?;
+        // Naga MSL backend uses `mutable` to choose between `const device T*`
+        // (read-only) and `device T*` (read-write). We derive the flag from
+        // the address space recorded on the global variable by vyre-emit-naga:
+        // `AddressSpace::Storage { access: LOAD }` is read-only; any access
+        // that includes STORE is mutable. Hardcoding `true` prevents Metal's
+        // compiler from alias-analysing read-only inputs and can produce
+        // undefined behaviour under strict Metal validation.
+        let is_read_only =
+            matches!(global.space, AddressSpace::Storage { access } if access == StorageAccess::LOAD);
         resources.resources.insert(
             binding,
             BindTarget {
                 buffer: Some(buffer),
                 texture: None,
                 sampler: None,
-                mutable: true,
+                mutable: !is_read_only,
             },
         );
         max_buffer = Some(max_buffer.map_or(buffer, |max| max.max(buffer)));
@@ -854,6 +864,81 @@ mod tests {
             sidecar.element_count,
             Some(vyre_lower::TRAP_SIDECAR_WORDS),
             "Fix: trap sidecar metadata must preserve the four-word runtime ABI."
+        );
+    }
+
+    /// A read-only binding must produce `const device` in MSL, not a mutable
+    /// `device` pointer. Before this fix `mutable: true` was hardcoded for
+    /// every binding regardless of `BindingVisibility`, which prevented Naga's
+    /// MSL backend from emitting `const device T*` and could cause silent
+    /// miscompilation under Metal's strict aliasing rules.
+    #[test]
+    fn readonly_binding_emits_const_device_pointer() {
+        let desc = KernelDescriptor {
+            id: "readonly_smoke".into(),
+            bindings: BindingLayout {
+                slots: vec![
+                    BindingSlot {
+                        slot: 0,
+                        element_type: DataType::U32,
+                        element_count: Some(16),
+                        memory_class: MemoryClass::Global,
+                        visibility: BindingVisibility::ReadOnly,
+                        name: "input".into(),
+                    },
+                    BindingSlot {
+                        slot: 1,
+                        element_type: DataType::U32,
+                        element_count: Some(16),
+                        memory_class: MemoryClass::Global,
+                        visibility: BindingVisibility::ReadWrite,
+                        name: "output".into(),
+                    },
+                ],
+            },
+            dispatch: Dispatch::new(16, 1, 1),
+            body: KernelBody {
+                ops: vec![
+                    KernelOp {
+                        kind: KernelOpKind::Literal,
+                        operands: vec![0],
+                        result: Some(0),
+                    },
+                    KernelOp {
+                        kind: KernelOpKind::LoadGlobal,
+                        operands: vec![0, 0],
+                        result: Some(1),
+                    },
+                    KernelOp {
+                        kind: KernelOpKind::StoreGlobal,
+                        operands: vec![1, 0, 1],
+                        result: None,
+                    },
+                ],
+                child_bodies: vec![],
+                literals: vec![LiteralValue::U32(0)],
+            },
+        };
+        let msl = emit(&desc)
+            .expect("Fix: read-only + read-write kernel must emit MSL without error.");
+        // Naga's MSL backend emits a read-only storage buffer as a CONST
+        // reference (`device <type> const& name`) and a read-write buffer as a
+        // mutable reference (`device <type>& name`). The read-only "input"
+        // binding (BindingVisibility::ReadOnly -> AddressSpace access LOAD ->
+        // BindTarget.mutable = false) MUST be const-qualified; the read-write
+        // "output" binding MUST NOT be. Before the fix `mutable: true` was
+        // hardcoded for every binding, regressing "input" to a mutable
+        // `device input_elements&` and losing Metal's read-only aliasing
+        // guarantees. (Naga spells it `device T const&`, not `const device T*`.)
+        assert!(
+            msl.contains("input_elements const&"),
+            "read-only `input` binding must emit a `device <type> const&` reference, not a mutable one. MSL excerpt:\n{}",
+            &msl[..msl.len().min(800)]
+        );
+        assert!(
+            !msl.contains("output_elements const&"),
+            "read-write `output` binding must NOT be const-qualified. MSL excerpt:\n{}",
+            &msl[..msl.len().min(800)]
         );
     }
 }

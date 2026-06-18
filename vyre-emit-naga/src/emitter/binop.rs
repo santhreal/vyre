@@ -408,10 +408,14 @@ impl<'a> BodyBuilder<'a> {
         let folded = match (left_lit, right_lit) {
             (Literal::U32(a), Literal::U32(b)) => match binop {
                 BinOp::Add | BinOp::WrappingAdd => Literal::U32(a.wrapping_add(b)),
-                // Sub uses saturating semantics on under-flow: this
-                // matches the guarded `select(cond, x - 1, 0)` shape
-                // every Program builder uses for safe index decrement.
-                BinOp::Sub | BinOp::WrappingSub => Literal::U32(a.saturating_sub(b)),
+                // WGSL u32 subtraction wraps at runtime (two's complement).
+                // Both BinOp::Sub and BinOp::WrappingSub must produce the
+                // same bit-for-bit result as the GPU would: e.g. 0u32 - 1u32
+                // == 0xFFFF_FFFF. The previous saturating_sub was a
+                // mis-fold: it produced 0 for underflow, diverging from
+                // the runtime value. WrappingSub in particular has an
+                // explicit wrapping contract that saturating_sub violates.
+                BinOp::Sub | BinOp::WrappingSub => Literal::U32(a.wrapping_sub(b)),
                 BinOp::Mul => Literal::U32(a.wrapping_mul(b)),
                 BinOp::Div if b != 0 => Literal::U32(a / b),
                 BinOp::Mod if b != 0 => Literal::U32(a % b),

@@ -173,7 +173,19 @@ impl<'a> BodyCtx<'a> {
                 continue;
             }
             let len_reg = self.alloc(PtxType::U32);
-            let byte_offset = 4u32 + binding.slot * 4;
+            // Checked arithmetic: slot * 4 + 4 is the byte offset into the
+            // params-buffer header for this binding's element-count word.
+            // A slot number large enough to overflow u32 here would produce a
+            // wrapped address and silently read the wrong length register,
+            // causing every subsequent bounds-check predicate to be wrong.
+            let byte_offset = binding
+                .slot
+                .checked_mul(4)
+                .and_then(|v| v.checked_add(4))
+                .ok_or_else(|| EmitError::InvalidBinding {
+                    slot: binding.slot,
+                    reason: "slot byte offset (4 + slot * 4) overflows u32".into(),
+                })?;
             let _ = writeln!(
                 self.text,
                 "    ld.global.ca.u32    {len_reg}, [%rd0 + {byte_offset}];"

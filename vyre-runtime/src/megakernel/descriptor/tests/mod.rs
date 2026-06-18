@@ -1,6 +1,55 @@
 use super::*;
 use crate::megakernel::protocol::{slot, ARGS_PER_SLOT, SLOT_WORDS, STATUS_WORD};
 
+/// Regression test for the P0 Law-10 silent-fallback bug:
+/// WindowDescriptor::into_batch previously returned an empty BatchDescriptor
+/// (silently dropping ALL window work) when try_into_batch failed.
+///
+/// After the fix, into_batch panics loudly on failure so the operator
+/// cannot miss the error.  The caller is directed to try_into_batch.
+///
+/// Concretely: a payload with 11 u32 args plus the 2-word [ticket, class]
+/// prefix = 13 words > ARGS_PER_SLOT_USIZE (12), so try_into_batch returns
+/// QueueFull.  The old into_batch silently dropped everything; the new one
+/// panics.
+#[test]
+#[should_panic(expected = "WindowDescriptor::into_batch failed")]
+fn into_batch_oversized_payload_panics_not_silent_drop() {
+    // payload of 11 u32s: ticket(1) + class(1) + payload(11) = 13 > 12 max args
+    let window = WindowDescriptor::new(
+        0,
+        0,
+        SlotOpcode::Builtin(BuiltinOpcode::Nop),
+        1,
+        vec![vec![0u32; 11]],
+        vec![],
+    );
+    // This must panic, not silently return an empty BatchDescriptor.
+    let _ = window.into_batch();
+}
+
+/// try_into_batch on a well-formed window must return a BatchDescriptor with
+/// exactly as many items as required + lookahead entries combined.
+#[test]
+fn try_into_batch_well_formed_window_returns_all_items() {
+    let window = WindowDescriptor::new(
+        0,
+        0,
+        SlotOpcode::Builtin(BuiltinOpcode::Nop),
+        99,
+        vec![vec![1u32], vec![2u32]],   // 2 required
+        vec![vec![3u32]],               // 1 lookahead
+    );
+    let batch = window
+        .try_into_batch()
+        .expect("Fix: well-formed window must produce a BatchDescriptor");
+    assert_eq!(
+        batch.items.len(),
+        3,
+        "Fix: try_into_batch must return all 3 slot descriptors (2 required + 1 lookahead), not drop any"
+    );
+}
+
 fn read_word(buf: &[u8], slot_idx: u32, word_idx: u32) -> u32 {
     let base = (slot_idx as usize) * (SLOT_WORDS as usize) * 4;
     let off = base + (word_idx as usize) * 4;

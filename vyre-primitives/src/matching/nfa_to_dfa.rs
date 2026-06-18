@@ -159,6 +159,15 @@ pub fn nfa_to_dfa(
             reason: "num_states exceeds LANES * 32 bit-set capacity",
         });
     }
+    // Cap max_dfa_states to u32::MAX so DFA state IDs stored as u32 never wrap.
+    // State IDs are used as array indices (transitions, accept, output_offsets),
+    // so wrapping would alias existing states and corrupt the automaton silently.
+    if max_dfa_states > u32::MAX as usize {
+        return Err(NfaToDfaError::StateExplosion {
+            produced: 0,
+            cap: max_dfa_states,
+        });
+    }
     if tables.transition_table.len() != n * 256 * LANES {
         return Err(NfaToDfaError::ShapeMismatch {
             reason: "transition_table length != num_states * 256 * LANES",
@@ -173,6 +182,17 @@ pub fn nfa_to_dfa(
         return Err(NfaToDfaError::ShapeMismatch {
             reason: "accept_state_ids and accept_pattern_ids length disagree",
         });
+    }
+    // Validate every accept_state_id is within [0, num_states). Without this,
+    // a state id >= num_states reaches test_bit() with lane = state/32 that
+    // indexes outside the [u32; LANES] StateSet array, causing an OOB panic
+    // instead of a structured ShapeMismatch error.
+    for &id in tables.accept_state_ids {
+        if id >= n as u32 {
+            return Err(NfaToDfaError::ShapeMismatch {
+                reason: "accept_state_ids entry >= num_states",
+            });
+        }
     }
 
     // Per-NFA-state ε-closure, precomputed once. Subset construction
@@ -241,6 +261,8 @@ pub fn nfa_to_dfa(
                         cap: max_dfa_states,
                     });
                 }
+                // Safe: max_dfa_states <= u32::MAX (guarded at function entry), and
+                // the StateExplosion guard above ensures len < max_dfa_states <= u32::MAX.
                 let new_id = dfa_state_sets.len() as u32;
                 dfa_state_index.insert(closed, new_id);
                 dfa_state_sets.push(closed);
@@ -256,6 +278,8 @@ pub fn nfa_to_dfa(
     // in the DFA state's bitset. Stable order in `accept_state_ids` →
     // stable order in `output_records` slice per state, which matches
     // the contract `dfa_compile` exposes.
+    // Safe: max_dfa_states <= u32::MAX (guarded at function entry), and
+    // dfa_state_sets.len() <= max_dfa_states at this point.
     let state_count = dfa_state_sets.len() as u32;
     let mut accept: Vec<u32> = vec![0; state_count as usize];
     let mut output_offsets: Vec<u32> = Vec::with_capacity(state_count as usize + 1);
@@ -273,8 +297,34 @@ pub fn nfa_to_dfa(
                 output_records.push(pid);
             }
         }
-        accept[dfa_state_id as usize] = first_accept_pid.map(|pid| pid + 1).unwrap_or(0);
-        output_offsets.push(output_records.len() as u32);
+        // accept[state] encodes the first accepting pattern id as `pid + 1` so that 0
+        // means "no match". pid = u32::MAX would wrap to 0, silently marking the state
+        // as non-accepting even though an NFA accept state is in its bitset.
+        // Use checked_add to surface this as a loud error instead of a silent miss.
+        accept[dfa_state_id as usize] = first_accept_pid
+            .map(|pid| {
+                pid.checked_add(1).unwrap_or_else(|| {
+                    panic!(
+                        "accept pattern id u32::MAX cannot be encoded as pid+1 in the accept \
+                         field (would wrap to 0, silently hiding the match). Fix: pattern ids \
+                         must be <= u32::MAX - 1."
+                    )
+                })
+            })
+            .unwrap_or(0);
+        // output_records.len() as u32: safe because max_dfa_states <= u32::MAX (guarded at
+        // function entry), and each DFA state contributes at most num_states accept records,
+        // so output_records.len() <= dfa_state_sets.len() * num_states <= u32::MAX * 1024.
+        // That exceeds u32::MAX, so use a checked conversion to catch overflow.
+        let output_offset = u32::try_from(output_records.len()).unwrap_or_else(|_| {
+            panic!(
+                "output_records length {} overflowed u32; the GPU kernel indexes output_records \
+                 via u32 offsets so this would produce corrupt pattern ids. Fix: shard the \
+                 pattern set or reduce num_states before calling nfa_to_dfa.",
+                output_records.len()
+            )
+        });
+        output_offsets.push(output_offset);
     }
 
     Ok(CompiledDfa {
@@ -633,6 +683,8 @@ fn ensure_dead_state(
             cap: max_dfa_states,
         });
     }
+    // Safe: the StateExplosion guard above ensures sets.len() < max_dfa_states,
+    // and max_dfa_states <= u32::MAX is guarded at nfa_to_dfa entry.
     let dead_id = sets.len() as u32;
     index.insert(EMPTY_SET, dead_id);
     sets.push(EMPTY_SET);
@@ -1150,9 +1202,24 @@ mod tests {
         let s_a = dfa.transitions[0 * 256 + b'a' as usize];
         let s_ab = dfa.transitions[(s_a as usize) * 256 + b'b' as usize];
         let s_abc = dfa.transitions[(s_ab as usize) * 256 + b'c' as usize];
-        assert!(
-            dfa.accept[s_abc as usize] != 0,
-            "DFA state after 'abc' must accept pattern 0"
+        // The accept field encodes pid+1, so pattern 0 → value 1. Asserting
+        // != 0 only proves some pattern accepted; asserting == 1 proves the
+        // correct pattern id is stored. A pid transposition or the pid+1 wrap
+        // bug (finding #3: pid=u32::MAX→0) would pass != 0 but fail == 1.
+        assert_eq!(
+            dfa.accept[s_abc as usize],
+            1,
+            "DFA state after 'abc' must accept pattern 0 encoded as pid+1=1; \
+             got {} (0=no match, n=pattern n-1 accepted)",
+            dfa.accept[s_abc as usize]
+        );
+        // Verify output_records carries the correct pid for the full-match path.
+        let rec_start = dfa.output_offsets[s_abc as usize] as usize;
+        let rec_end = dfa.output_offsets[s_abc as usize + 1] as usize;
+        assert_eq!(
+            &dfa.output_records[rec_start..rec_end],
+            &[0u32],
+            "output_records for the abc-accept state must contain exactly [0] (pid=0)"
         );
         // Negative twin: 'a' 'b' 'x' must not accept.
         let s_x = dfa.transitions[(s_ab as usize) * 256 + b'x' as usize];
@@ -1233,5 +1300,106 @@ mod tests {
             }
             other => panic!("expected ShapeMismatch, got {other:?}"),
         }
+    }
+
+    /// Finding #4 (P0): accept_state_ids entries are not validated to be < num_states.
+    /// Before the fix, nfa_state=1024 produced lane=32 which is OOB on StateSet=[u32;32],
+    /// causing a panic instead of a structured ShapeMismatch error.
+    #[test]
+    fn accept_state_id_ge_num_states_is_shape_mismatch() {
+        let (transition, epsilon, _, _) = literal_abc_tables();
+        // Declare 4 states but put accept_state_id=1024 (way out of range).
+        let tables = NfaTables {
+            num_states: 4,
+            transition_table: &transition,
+            epsilon_table: &epsilon,
+            accept_state_ids: &[1024],
+            accept_pattern_ids: &[0],
+            max_pattern_len: 3,
+        };
+        let result = nfa_to_dfa(&tables, 64);
+        assert!(
+            matches!(result, Err(NfaToDfaError::ShapeMismatch { .. })),
+            "accept_state_id >= num_states must return ShapeMismatch, not panic; got {result:?}"
+        );
+    }
+
+    /// Finding #4: also verify accept_state_id exactly equal to num_states is rejected.
+    #[test]
+    fn accept_state_id_equal_to_num_states_is_shape_mismatch() {
+        let (transition, epsilon, _, _) = literal_abc_tables();
+        // num_states=4, so valid ids are 0..3; id=4 is OOB.
+        let tables = NfaTables {
+            num_states: 4,
+            transition_table: &transition,
+            epsilon_table: &epsilon,
+            accept_state_ids: &[4],
+            accept_pattern_ids: &[0],
+            max_pattern_len: 3,
+        };
+        let result = nfa_to_dfa(&tables, 64);
+        assert!(
+            matches!(result, Err(NfaToDfaError::ShapeMismatch { .. })),
+            "accept_state_id == num_states must be rejected; got {result:?}"
+        );
+    }
+
+    /// Finding #2+8 (P0/P1): max_dfa_states > u32::MAX must return StateExplosion
+    /// rather than allowing dfa_state_sets.len() to grow past u32::MAX and wrap
+    /// the as u32 cast to 0, aliasing existing DFA states and corrupting the automaton.
+    #[test]
+    fn max_dfa_states_above_u32_max_returns_state_explosion() {
+        let (transition, epsilon, accepts, pids) = literal_abc_tables();
+        let tables = NfaTables {
+            num_states: 4,
+            transition_table: &transition,
+            epsilon_table: &epsilon,
+            accept_state_ids: &accepts,
+            accept_pattern_ids: &pids,
+            max_pattern_len: 3,
+        };
+        // (u32::MAX as usize) + 1 is the first value that exceeds the u32 domain.
+        let result = nfa_to_dfa(&tables, (u32::MAX as usize) + 1);
+        assert!(
+            matches!(result, Err(NfaToDfaError::StateExplosion { .. })),
+            "max_dfa_states > u32::MAX must return StateExplosion before any state is allocated; \
+             got {result:?}"
+        );
+    }
+
+    /// Finding #3 (P0): the accept field encodes pid+1 so that 0 means no match.
+    /// For pattern 0, the encoded value must be exactly 1, not some other nonzero value.
+    /// This test replaces the existing decoration test that only checked != 0.
+    #[test]
+    fn literal_abc_accept_field_is_exactly_one() {
+        let (transition, epsilon, accepts, pids) = literal_abc_tables();
+        let tables = NfaTables {
+            num_states: 4,
+            transition_table: &transition,
+            epsilon_table: &epsilon,
+            accept_state_ids: &accepts,
+            accept_pattern_ids: &pids,
+            max_pattern_len: 3,
+        };
+        let dfa = nfa_to_dfa(&tables, 1024).expect("Fix: literal NFA must lower cleanly");
+        let s_a = dfa.transitions[b'a' as usize];
+        let s_ab = dfa.transitions[s_a as usize * 256 + b'b' as usize];
+        let s_abc = dfa.transitions[s_ab as usize * 256 + b'c' as usize];
+        // Pattern 0 is encoded as pid+1 = 0+1 = 1. Any other nonzero value means
+        // the wrong pattern id is reported on the fast-path field.
+        assert_eq!(
+            dfa.accept[s_abc as usize], 1,
+            "pattern 0 must be encoded as pid+1=1 in the accept fast-path field; \
+             got {} (accept field encodes pid+1, 0=no match)",
+            dfa.accept[s_abc as usize]
+        );
+        // Also verify output_records carries the correct pid for the full-match path.
+        let start = dfa.output_offsets[s_abc as usize] as usize;
+        let end = dfa.output_offsets[s_abc as usize + 1] as usize;
+        assert_eq!(
+            &dfa.output_records[start..end],
+            &[0u32],
+            "output_records for the abc-accept state must contain exactly [0] (pid=0)"
+        );
     }
 }

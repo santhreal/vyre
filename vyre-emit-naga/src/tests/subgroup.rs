@@ -1,6 +1,34 @@
 //! Test: subgroup.
 use super::*;
 
+fn block_has_subgroup_collective(block: &naga::Block) -> bool {
+    block.iter().any(|statement| match statement {
+        Statement::SubgroupCollectiveOperation { .. } => true,
+        Statement::Block(child) => block_has_subgroup_collective(child),
+        Statement::If { accept, reject, .. } => {
+            block_has_subgroup_collective(accept) || block_has_subgroup_collective(reject)
+        }
+        Statement::Loop {
+            body, continuing, ..
+        } => block_has_subgroup_collective(body) || block_has_subgroup_collective(continuing),
+        _ => false,
+    })
+}
+
+fn block_has_subgroup_ballot(block: &naga::Block) -> bool {
+    block.iter().any(|statement| match statement {
+        Statement::SubgroupBallot { .. } => true,
+        Statement::Block(child) => block_has_subgroup_ballot(child),
+        Statement::If { accept, reject, .. } => {
+            block_has_subgroup_ballot(accept) || block_has_subgroup_ballot(reject)
+        }
+        Statement::Loop {
+            body, continuing, ..
+        } => block_has_subgroup_ballot(body) || block_has_subgroup_ballot(continuing),
+        _ => false,
+    })
+}
+
 #[test]
 fn subgroup_add_emits_collective_operation() {
     let desc = KernelDescriptor {
@@ -25,8 +53,15 @@ fn subgroup_add_emits_collective_operation() {
         },
     };
     let module = emit(&desc).unwrap();
-    assert_eq!(module.entry_points.len(), 1);
-    assert_eq!(module.entry_points[0].name, "main");
+    // Assert the SubgroupCollectiveOperation statement is present in the body,
+    // not just that the module compiled. A refactor that converts SubgroupAdd
+    // into a no-op would still produce entry_points[0].name == "main" and
+    // pass the old name-only assertion while silently dropping the operation.
+    let body = &module.entry_points[0].function.body;
+    assert!(
+        block_has_subgroup_collective(body),
+        "SubgroupAdd must emit Statement::SubgroupCollectiveOperation in the function body"
+    );
 }
 
 #[test]
@@ -53,8 +88,13 @@ fn subgroup_ballot_emits_ballot_statement() {
         },
     };
     let module = emit(&desc).unwrap();
-    assert_eq!(module.entry_points.len(), 1);
-    assert_eq!(module.entry_points[0].name, "main");
+    // Assert Statement::SubgroupBallot is present. A no-op refactor would
+    // still pass the old name-only assertion.
+    let body = &module.entry_points[0].function.body;
+    assert!(
+        block_has_subgroup_ballot(body),
+        "SubgroupBallot must emit Statement::SubgroupBallot in the function body"
+    );
 }
 
 #[test]

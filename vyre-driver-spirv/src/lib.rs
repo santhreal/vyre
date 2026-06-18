@@ -144,10 +144,20 @@ impl VyreBackend for SpirvBackendRegistration {
 
     fn free_device_buffer(
         &self,
-        buffer: Box<dyn vyre_driver::DeviceBuffer>,
+        _buffer: Box<dyn vyre_driver::DeviceBuffer>,
     ) -> Result<(), BackendError> {
-        drop(buffer);
-        Err(spirv_device_buffer_unsupported())
+        // The SPIRV backend never allocates DeviceBuffers (allocate_device_buffer
+        // always returns Err). Reaching this function means the caller obtained a
+        // DeviceBuffer through some path the SPIRV backend does not own, which is a
+        // caller contract violation. Avoid silently dropping the buffer and then
+        // returning an error (which would imply the caller did something wrong after
+        // the buffer was already destroyed).
+        unreachable!(
+            "SPIRV backend never allocates DeviceBuffer; \
+             free_device_buffer cannot be called on a SPIRV-backend buffer. \
+             Fix: do not call free_device_buffer on a DeviceBuffer that was \
+             not produced by this backend's allocate_device_buffer."
+        )
     }
 
     fn dispatch_with_device_buffers(
@@ -253,13 +263,16 @@ pub fn spirv_factory() -> Result<Box<dyn VyreBackend>, BackendError> {
     SpirvBackendRegistration::acquire().map(|backend| Box::new(backend) as Box<dyn VyreBackend>)
 }
 
-/// Op-support set  -  SPIR-V through naga supports every op the naga::Module
-/// builders already emit. Empty at the registration layer; the conform runner
-/// populates real coverage at runtime.
+/// Op-support set for the SPIR-V backend.
+///
+/// The SPIRV/naga path supports the same core IR ops as every other vyre backend
+/// (arithmetic, bitwise, control-flow, memory, collectives). Using `core_supported_ops`
+/// here keeps the inventory-registered op set consistent with what the router
+/// sees at runtime. A permanently-empty set here would cause the router to skip
+/// all SPIRV dispatch even when the op is supported, silently degrading to a
+/// lower-precedence backend.
 pub fn spirv_supported_ops() -> &'static std::collections::HashSet<vyre_foundation::ir::OpId> {
-    use std::sync::OnceLock;
-    static OPS: OnceLock<std::collections::HashSet<vyre_foundation::ir::OpId>> = OnceLock::new();
-    OPS.get_or_init(std::collections::HashSet::new)
+    vyre_driver::backend::core_supported_ops()
 }
 
 inventory::submit! {
@@ -267,6 +280,25 @@ inventory::submit! {
         id: SPIRV_BACKEND_ID,
         factory: spirv_factory,
         supported_ops: spirv_supported_ops,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Before the fix, spirv_supported_ops() returned a permanently-empty OnceLock.
+    /// The router would see zero supported ops and skip ALL SPIRV dispatch silently.
+    /// After the fix, it delegates to core_supported_ops() which is non-empty.
+    #[test]
+    fn test_spirv_supported_ops_is_not_empty() {
+        let ops = spirv_supported_ops();
+        assert!(
+            !ops.is_empty(),
+            "Fix: spirv_supported_ops must not be empty; a permanently-empty set causes \
+             the router to skip all SPIRV dispatch. Got {} ops.",
+            ops.len()
+        );
     }
 }
 

@@ -276,8 +276,15 @@ impl VulkanDevice {
             )
         })?;
 
+        // Helper: free the command buffer on any early-exit below. The fence is
+        // created later; its own cleanup guard is added at that point.
+        let free_cb = |device: &ash::Device, pool: vk::CommandPool, cb: vk::CommandBuffer| {
+            // SAFETY: cb was allocated from pool and is no longer submitted.
+            unsafe { device.free_command_buffers(pool, &[cb]) };
+        };
+
         // SAFETY: Safe FFI / low-level operation verified and audited for Release compliance.
-        unsafe {
+        if let Err(e) = unsafe {
             self.device.begin_command_buffer(
                 command_buffer,
                 &vk::CommandBufferBeginInfo {
@@ -285,12 +292,12 @@ impl VulkanDevice {
                     ..Default::default()
                 },
             )
-        }
-        .map_err(|e| {
-            BackendError::new(format!(
+        } {
+            free_cb(&self.device, self.command_pool, command_buffer);
+            return Err(BackendError::new(format!(
                 "Vulkan command buffer begin failed: {e}. Fix: check command buffer state."
-            ))
-        })?;
+            )));
+        }
 
         // SAFETY: Safe FFI / low-level operation verified and audited for Release compliance.
         unsafe {
@@ -309,22 +316,35 @@ impl VulkanDevice {
         }
 
         // SAFETY: Safe FFI / low-level operation verified and audited for Release compliance.
-        unsafe { self.device.end_command_buffer(command_buffer) }.map_err(|e| {
-            BackendError::new(format!(
+        if let Err(e) = unsafe { self.device.end_command_buffer(command_buffer) } {
+            free_cb(&self.device, self.command_pool, command_buffer);
+            return Err(BackendError::new(format!(
                 "Vulkan command buffer end failed: {e}. Fix: check recorded commands."
-            ))
-        })?;
+            )));
+        }
 
         // SAFETY: Fence creation is a standard Vulkan device operation, parameters are valid defaults.
-        let fence = unsafe {
+        let fence = match unsafe {
             self.device
                 .create_fence(&vk::FenceCreateInfo::default(), None)
-        }
-        .map_err(|e| {
-            BackendError::new(format!(
-                "Vulkan fence creation failed: {e}. Fix: check device limits."
-            ))
-        })?;
+        } {
+            Ok(f) => f,
+            Err(e) => {
+                free_cb(&self.device, self.command_pool, command_buffer);
+                return Err(BackendError::new(format!(
+                    "Vulkan fence creation failed: {e}. Fix: check device limits."
+                )));
+            }
+        };
+
+        // From here both `fence` and `command_buffer` must be released on any error path.
+        let cleanup = |device: &ash::Device, pool: vk::CommandPool, f: vk::Fence, cb: vk::CommandBuffer| {
+            // SAFETY: fence and cb were created/allocated successfully and are owned here.
+            unsafe {
+                device.destroy_fence(f, None);
+                device.free_command_buffers(pool, &[cb]);
+            }
+        };
 
         let submit_info = vk::SubmitInfo {
             command_buffer_count: 1,
@@ -332,18 +352,20 @@ impl VulkanDevice {
             ..Default::default()
         };
         // SAFETY: Safe FFI / low-level operation verified and audited for Release compliance.
-        unsafe { self.device.queue_submit(self.queue, &[submit_info], fence) }.map_err(|e| {
-            BackendError::new(format!(
+        if let Err(e) = unsafe { self.device.queue_submit(self.queue, &[submit_info], fence) } {
+            cleanup(&self.device, self.command_pool, fence, command_buffer);
+            return Err(BackendError::new(format!(
                 "Vulkan queue submit failed: {e}. Fix: verify queue and command buffer state."
-            ))
-        })?;
+            )));
+        }
 
         // SAFETY: The fence was created successfully and successfully submitted to the queue.
-        unsafe { self.device.wait_for_fences(&[fence], true, u64::MAX) }.map_err(|e| {
-            BackendError::new(format!(
+        if let Err(e) = unsafe { self.device.wait_for_fences(&[fence], true, u64::MAX) } {
+            cleanup(&self.device, self.command_pool, fence, command_buffer);
+            return Err(BackendError::new(format!(
                 "Vulkan fence wait failed: {e}. Fix: check for device loss."
-            ))
-        })?;
+            )));
+        }
 
         // SAFETY: Safe FFI / low-level operation verified and audited for Release compliance.
         unsafe {
@@ -461,8 +483,28 @@ pub(crate) unsafe fn dispatch_program(
                 let input = inputs[input_index];
                 input.len()
             } else if binding.output_index.is_some() {
-                // Output buffer without input: size from element type.
-                element_size
+                // Runtime-sized output with no paired input: infer capacity from the
+                // largest input buffer passed to this dispatch. A one-element fallback
+                // would silently truncate any scan that produces more than one match
+                // (the GPU writes beyond the mapped range). If no inputs are present,
+                // require an explicit grid_override to bound the output; the caller
+                // must supply DispatchConfig::output_size_hint or grid_override in
+                // that case.
+                let max_input_bytes = inputs.iter().map(|s| s.len()).max().unwrap_or(0);
+                if max_input_bytes == 0 {
+                    return Err(BackendError::InvalidProgram {
+                        fix: format!(
+                            "Fix: runtime-sized output buffer `{}` has no input to infer size from. \
+                             Pass at least one non-empty input or set DispatchConfig::grid_override \
+                             so the backend can bound the output allocation.",
+                            buffer.name()
+                        ),
+                    });
+                }
+                // Conservatively match the largest input buffer size so the GPU
+                // cannot overflow. Downstream readback trims to the actual output
+                // via the match-count metadata that the GPU kernel writes.
+                max_input_bytes
             } else {
                 return Err(BackendError::InvalidProgram {
                     fix: format!(
@@ -747,8 +789,15 @@ pub(crate) unsafe fn dispatch_program(
     Ok(outputs)
 }
 
-/// Infer the dispatch grid from the program's output buffer sizes.
-
+/// Infer the dispatch grid from the program's buffer element counts.
+///
+/// When all output buffers are runtime-sized (count == 0) the grid cannot be
+/// derived from outputs alone. Fall back to the largest *input* buffer element
+/// count so that programs with a single runtime-sized output (e.g. scan result
+/// buffers) still launch one thread per input element rather than exactly one
+/// workgroup. If both outputs and inputs are runtime-sized the caller must
+/// supply `DispatchConfig::grid_override`; otherwise a 1-workgroup launch would
+/// silently process only `workgroup_size[0]` elements.
 fn infer_grid(program: &Program, workgroup_size: [u32; 3]) -> Result<[u32; 3], BackendError> {
     if workgroup_size[1] != 1 || workgroup_size[2] != 1 {
         return Err(BackendError::new(format!(
@@ -757,15 +806,110 @@ fn infer_grid(program: &Program, workgroup_size: [u32; 3]) -> Result<[u32; 3], B
         )));
     }
 
-    let max_count = program
+    // Prefer the largest statically-declared output element count.
+    let max_output_count = program
         .buffers()
         .iter()
         .filter(|b| b.is_output())
         .map(|b| b.count())
         .max()
-        .unwrap_or(1);
+        .unwrap_or(0);
+
+    let effective_count = if max_output_count > 0 {
+        max_output_count
+    } else {
+        // All outputs are runtime-sized: derive from input buffers instead.
+        let max_input_count = program
+            .buffers()
+            .iter()
+            .filter(|b| !b.is_output())
+            .map(|b| b.count())
+            .max()
+            .unwrap_or(0);
+
+        if max_input_count == 0 {
+            return Err(BackendError::new(
+                "Fix: all buffers have runtime size (count == 0). \
+                 Set DispatchConfig::grid_override to bound the dispatch grid \
+                 when no statically-sized buffer exists.",
+            ));
+        }
+        max_input_count
+    };
 
     let lanes = workgroup_size[0];
-    let x = max_count.div_ceil(lanes).max(1);
+    let x = effective_count.div_ceil(lanes).max(1);
     Ok([x, 1, 1])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+
+    /// Before the fix, a program with count=0 output and count=512 input launched exactly
+    /// 1 workgroup (max_output_count==0 → div_ceil(lanes).max(1)==1). After the fix it
+    /// falls back to the input count and launches ceil(512/lanes) workgroups.
+    #[test]
+    fn test_infer_grid_runtime_sized_output_falls_back_to_input_count() {
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::read("input", 0, DataType::U32).with_count(512),
+                BufferDecl::output("out", 1, DataType::U32), // count=0: runtime-sized
+            ],
+            [64, 1, 1],
+            vec![Node::store("out", Expr::gid_x(), Expr::load("input", Expr::gid_x()))],
+        );
+        let grid = infer_grid(&program, [64, 1, 1])
+            .expect("Fix: infer_grid must succeed when input count is non-zero");
+        assert!(
+            grid[0] >= 512 / 64,
+            "Fix: grid x must be at least ceil(512/64)=8, got {}",
+            grid[0]
+        );
+    }
+
+    /// A program where all buffers have count=0 must return an error requiring
+    /// grid_override rather than silently launching 1 workgroup.
+    #[test]
+    fn test_infer_grid_all_runtime_sized_requires_grid_override() {
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::read("input", 0, DataType::U32), // count=0
+                BufferDecl::output("out", 1, DataType::U32), // count=0
+            ],
+            [64, 1, 1],
+            vec![Node::store("out", Expr::gid_x(), Expr::load("input", Expr::gid_x()))],
+        );
+        let result = infer_grid(&program, [64, 1, 1]);
+        assert!(
+            result.is_err(),
+            "Fix: all-runtime-sized program must require grid_override, not silently launch 1 workgroup"
+        );
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("Fix:"),
+            "Fix: error must carry Fix: hint, got: {err}"
+        );
+    }
+
+    /// Static-count output still uses output count (unchanged behavior after fix).
+    #[test]
+    fn test_infer_grid_static_output_count_unchanged() {
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::output("out", 0, DataType::U32).with_count(256),
+            ],
+            [64, 1, 1],
+            vec![Node::store("out", Expr::gid_x(), Expr::u32(0))],
+        );
+        let grid = infer_grid(&program, [64, 1, 1])
+            .expect("Fix: static output count must succeed");
+        assert_eq!(
+            grid[0],
+            4, // ceil(256/64) = 4
+            "Fix: grid x must be ceil(256/64)=4, got {}",
+            grid[0]
+        );
+    }
 }

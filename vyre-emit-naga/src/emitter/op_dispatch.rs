@@ -224,25 +224,6 @@ fn wide_literal_payload_message(extension_kind: &str, payload_len: usize) -> Str
     message
 }
 
-fn u64_literal_too_wide_message(value: u64) -> String {
-    let mut message: String = Default::default();
-    message.push_str("u64 literal ");
-    let _ = write!(&mut message, "{value}");
-    message
-        .push_str(" exceeds u32::MAX. Fix: split wide integers before descriptor Naga emission.");
-    message
-}
-
-fn i64_literal_outside_i32_message(value: i64) -> String {
-    let mut message: String = Default::default();
-    message.push_str("i64 literal ");
-    let _ = write!(&mut message, "{value}");
-    message.push_str(
-        " is outside i32 range. Fix: split wide integers before descriptor Naga emission.",
-    );
-    message
-}
-
 fn wide_literal_kind_gate_message(kind: &str) -> String {
     let mut message: String = Default::default();
     message.push_str("wide-literal kind `");
@@ -534,12 +515,27 @@ impl BodyBuilder<'_> {
             ),
             OpDispatchRoute::AsyncLoad => self.emit_async_load(op),
             OpDispatchRoute::AsyncStore => self.emit_async_store(op),
+            // AsyncWait is a documented no-op in the Naga backend. The Naga
+            // backend lowers AsyncLoad and AsyncStore as fully synchronous
+            // counted copy loops — the copy completes before the next op
+            // executes. There is no deferred or out-of-order DMA in this path,
+            // so no fence or barrier is needed: the copy is already done.
+            // Backends that use real hardware async DMA (e.g. PTX cp.async)
+            // must emit a hardware-level wait instruction here.
             OpDispatchRoute::AsyncWait => Ok(()),
             OpDispatchRoute::Trap => with_route_kind!(
                 op,
                 route,
                 KernelOpKind::Trap { tag } => self.emit_trap(op, tag)
             ),
+            // Resume is a runtime sequencing marker that the Naga backend
+            // treats as a no-op. The Trap protocol in this backend emits an
+            // unconditional Return after the sidecar write (see emit_trap),
+            // so any statements after a Trap are not executed. Resume carries
+            // sequencing intent for higher-level passes (scheduling, analysis)
+            // but does not map to a Naga IR statement. On backends with real
+            // continuations (e.g. PTX setmaxnreg + bar.sync) this must emit
+            // the continuation resume instruction.
             OpDispatchRoute::Resume => Ok(()),
             OpDispatchRoute::Barrier => with_route_kind!(op, route, KernelOpKind::Barrier { ordering } => {
                 let barrier = barrier_flags(*ordering)?;
@@ -569,7 +565,22 @@ impl BodyBuilder<'_> {
             } => {
                 self.emit_atomic(op, *atomic_op)
             }),
-            OpDispatchRoute::IndirectDispatch => Ok(()),
+            // IndirectDispatch has no Naga lowering. Naga compute shaders fix
+            // the workgroup size in the @workgroup_size attribute at
+            // compile time. Writing a dispatch-count buffer at runtime
+            // (the IndirectDispatch semantic) is not a shader-internal
+            // operation in the WGSL/Naga model — it must be done by the
+            // host before launching the next dispatch. Fix: perform the
+            // indirect count buffer write on the host side (or via a
+            // separate count-kernel dispatch) rather than embedding it in
+            // the main compute shader.
+            OpDispatchRoute::IndirectDispatch => Err(EmitError::InvalidDescriptor(
+                "IndirectDispatch reached the Naga emitter. Naga compute shaders cannot write \
+                 dispatch count buffers from within a shader; the workgroup size is fixed at \
+                 compile time. Fix: compute and write the indirect count buffer on the host, or \
+                 via a dedicated count-kernel dispatch, before launching the indirect dispatch."
+                    .into(),
+            )),
             OpDispatchRoute::MatrixMma => Err(EmitError::InvalidDescriptor(
                 "MatrixMma reached descriptor Naga emission. Fix: route MatrixMma through a concrete tensor-core backend or lower it before Naga emission.".into(),
             )),
@@ -1170,19 +1181,23 @@ impl BodyBuilder<'_> {
                 ))
             })?;
             let (literal, ty) = match extension_kind {
+                // Emit the full 64-bit literal directly. Naga's IR supports
+                // Literal::U64 and the type handle u64_ty is already
+                // registered in TypeHandles. Previously this narrowed to u32,
+                // which silently produced the wrong type (and hard-errored for
+                // values above u32::MAX), diverging from f64 which already
+                // used Literal::F64. Callers that ask for vyre.literal.u64
+                // always want a u64 result.
                 "vyre.literal.u64" => {
                     let value = u64::from_le_bytes(bytes);
-                    let narrow: u32 = value.try_into().map_err(|_| {
-                        EmitError::InvalidDescriptor(u64_literal_too_wide_message(value))
-                    })?;
-                    (Literal::U32(narrow), self.types.u32_ty)
+                    (Literal::U64(value), self.types.u64_ty)
                 }
+                // Emit the full 64-bit signed literal directly, matching the
+                // u64 fix above. Previously narrowed to i32 and hard-errored
+                // for values outside i32 range.
                 "vyre.literal.i64" => {
                     let value = i64::from_le_bytes(bytes);
-                    let narrow: i32 = value.try_into().map_err(|_| {
-                        EmitError::InvalidDescriptor(i64_literal_outside_i32_message(value))
-                    })?;
-                    (Literal::I32(narrow), self.types.i32_ty)
+                    (Literal::I64(value), self.types.i64_ty)
                 }
                 "vyre.literal.f64" => (Literal::F64(f64::from_le_bytes(bytes)), self.types.f64_ty),
                 other => {

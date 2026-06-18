@@ -86,3 +86,42 @@ fn emit_optimized_drops_dead_arithmetic_before_lowering() {
     // Both must produce a valid main entry point.
     assert_eq!(optimized.entry_points[0].name, "main");
 }
+
+/// `emit_optimized` must surface a structured error when the rewrite pipeline
+/// produces an invalid descriptor. Previously this check was a
+/// `debug_assert!` that compiled to nothing in release builds, letting an
+/// invalid optimized descriptor silently proceed to Naga emission and produce
+/// a SPIR-V binary with different semantics from the original.
+///
+/// This test uses a descriptor with workgroup_size[0] == 0, which the verify
+/// pass flags as `VerifyErrorKind::DispatchZeroDim`. The rewrite pipeline
+/// preserves dispatch dimensions unchanged, so the output also has the zero
+/// dim and verify fires unconditionally.
+#[test]
+fn emit_optimized_errors_on_invalid_rewrite_output() {
+    // Construct a descriptor that verify() will reject. A zero workgroup
+    // dimension is preserved unchanged by the rewrite pipeline, so the
+    // post-rewrite verify must catch it and return an error.
+    let bad = KernelDescriptor {
+        id: "zero_dim".into(),
+        bindings: BindingLayout { slots: vec![] },
+        // Workgroup size 0 is invalid: verify() flags DispatchZeroDim.
+        dispatch: Dispatch::new(0, 1, 1),
+        body: KernelBody {
+            ops: vec![],
+            child_bodies: vec![],
+            literals: vec![],
+        },
+    };
+    let result = emit_optimized(&bad);
+    assert!(
+        result.is_err(),
+        "emit_optimized must return Err for a descriptor that fails verification; \
+         the old debug_assert! would silently proceed in release builds"
+    );
+    let err_msg = format!("{}", result.unwrap_err());
+    assert!(
+        err_msg.contains("invalid descriptor"),
+        "error message must mention 'invalid descriptor', got: {err_msg}"
+    );
+}

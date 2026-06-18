@@ -528,8 +528,16 @@ pub fn build_ac_bounded_ranges_program_ext(
     ) {
         Ok(program) => program,
         Err(error) => {
-            eprintln!("vyre-libs AC bounded-ranges program build failed: {error}");
-            empty_ac_bounded_ranges_program(max_matches, use_subgroup_coalesce)
+            // Returning an empty-rejecting program would silently drop every
+            // match without the caller knowing — a total recall-loss silent
+            // fallback. Fail closed instead. Callers that need graceful
+            // overflow handling must call try_build_ac_bounded_ranges_program_ext
+            // directly and shard oversized DFAs across multiple programs.
+            panic!(
+                "AC bounded-ranges program build failed: {error} — \
+                 returning an empty rejecting automaton would silently drop every match; \
+                 use try_build_ac_bounded_ranges_program_ext and shard oversized DFAs."
+            )
         }
     }
 }
@@ -621,11 +629,106 @@ pub fn classic_ac_bounded_ranges_scan(
         let begin = dfa.output_offsets[state as usize] as usize;
         let end_off = dfa.output_offsets[state as usize + 1] as usize;
         for &pid in &dfa.output_records[begin..end_off] {
-            let pat_len = pattern_lengths.get(pid as usize).copied().unwrap_or(0);
+            // Index directly so an OOB pid panics here rather than silently
+            // producing a zero-length hit. A mismatch between pattern_count
+            // and the actual max pid in output_records is a caller bug; the
+            // GPU kernel does an unchecked load that is UB on the same input,
+            // so the CPU reference must fail loud-and-early instead of clamping.
+            let pat_len = pattern_lengths[pid as usize];
             let end_pos = (pos as u32).saturating_add(1);
             let start = end_pos.saturating_sub(pat_len);
             out.push((pid, start, end_pos));
         }
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::scan::classic_ac::classic_ac_compile;
+
+    /// Regression guard: build_ac_bounded_ranges_program_ext must never
+    /// silently return an empty-rejecting program when the DFA is oversized.
+    /// Before this fix the error arm called eprintln! and returned
+    /// empty_ac_bounded_ranges_program, causing zero matches without any
+    /// signal to the caller.
+    #[test]
+    fn infallible_ac_program_builder_panics_not_falls_back() {
+        let src = std::fs::read_to_string(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/scan/classic_ac/bounded_ranges.rs"
+        ))
+        .expect("Fix: bounded_ranges source must be readable for regression guard");
+        let production = src
+            .split("\n#[cfg(test)]")
+            .next()
+            .expect("Fix: bounded_ranges source must have a test section");
+        // The old silent-fallback arm used eprintln! to swallow the error before
+        // returning an empty-rejecting program. Check the eprintln! is gone.
+        assert!(
+            !production.contains("eprintln!(\"vyre-libs AC bounded-ranges program build failed"),
+            "build_ac_bounded_ranges_program_ext must not silently log and return an empty \
+             program on error — use panic!() so callers are forced to use \
+             try_build_ac_bounded_ranges_program_ext."
+        );
+    }
+
+    /// Verify try_build_ac_bounded_ranges_program_ext returns Ok for a valid
+    /// small DFA, proving the success path is intact after the panic-on-error fix.
+    #[test]
+    fn try_build_ac_bounded_ranges_program_ext_succeeds_for_valid_dfa() {
+        let ac = classic_ac_compile(&[b"abc", b"de"]);
+        let result = try_build_ac_bounded_ranges_program_ext(&ac.dfa, 2, 128, false);
+        assert!(
+            result.is_ok(),
+            "try_build must succeed for a valid small DFA: {:?}",
+            result.err()
+        );
+        // Verify the program has the correct buffer shape for the DFA size.
+        let program = result.unwrap();
+        assert_eq!(
+            program.workgroup_size(),
+            [128, 1, 1],
+            "workgroup size must be [128, 1, 1]"
+        );
+    }
+
+    /// Verify the CPU reference scan panics (not silently zero-lengths) when
+    /// the DFA output_records contain a pid beyond pattern_lengths.len().
+    /// Before the fix, pattern_lengths.get(pid).copied().unwrap_or(0) would
+    /// silently treat the OOB pid as pat_len=0, producing a zero-length match
+    /// at the right position — masking the root cause of the mismatch and
+    /// making parity tests impossible to detect the bug.
+    #[test]
+    #[should_panic]
+    fn classic_ac_bounded_ranges_scan_panics_on_oob_pid() {
+        use crate::scan::dfa::CompiledDfa;
+
+        // Craft a ClassicAcAutomaton whose output_records contains pid=5
+        // but we only supply pattern_lengths of length 3.
+        // state 0 -b'A'-> state 1, state 1 accepts pid=5.
+        let transitions: Vec<u32> = {
+            let mut t = vec![0u32; 2 * 256]; // 2 states
+            t[0 * 256 + b'A' as usize] = 1; // state 0 --'A'--> state 1
+            // state 1 loops to 0 on all other bytes (default 0)
+            t
+        };
+        let accept = vec![0u32, 6u32]; // state 1: accept=6 (pid=5, encoded as 5+1)
+        let output_offsets = vec![0u32, 0u32, 1u32]; // state 0: [], state 1: [5]
+        let output_records = vec![5u32]; // pid=5
+
+        let dfa = CompiledDfa {
+            transitions,
+            accept,
+            state_count: 2,
+            max_pattern_len: 1,
+            output_offsets,
+            output_records,
+        };
+        let ac = crate::scan::classic_ac::ClassicAcAutomaton { dfa };
+        // pattern_lengths only has 3 entries (pids 0..2) — pid=5 is OOB.
+        // This must panic, not silently produce a zero-length match.
+        let _result = classic_ac_bounded_ranges_scan(&ac, &[1u32, 2u32, 3u32], b"A");
+    }
 }

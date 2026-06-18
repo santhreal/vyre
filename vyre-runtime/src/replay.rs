@@ -466,7 +466,26 @@ impl RingLog {
                 .map_err(|e| self.io_err("read", e))?;
             let magic = read_u32(&buf, 0);
             if magic == 0 {
-                // Untouched record  -  log has not wrapped past this slot yet.
+                // Zero-magic means the slot was never written (pre-wrap sentinel).
+                // In a ring that has not yet wrapped, zero-magic slots at the scan
+                // frontier are expected and skipped. However, if the ring HAS
+                // wrapped, a zero-magic slot is a corruption gap (sector fault,
+                // partial crash, or explicit zeroing of a live record) — the log
+                // has no wrapped-flag field to distinguish these cases.
+                //
+                // Emit a warning so post-wrap corruption is operator-visible
+                // rather than silently producing a shorter-than-expected replay.
+                // A differential replay run comparing epoch sequences must treat
+                // a warning here as a potential corruption event.
+                tracing::warn!(
+                    slot_index,
+                    next_slot = self.next_slot,
+                    log_capacity = self.capacity,
+                    step,
+                    "replay_records: zero-magic record at slot_index {slot_index} (step {step}). \
+                     If the log has wrapped this is a corruption gap — the replay will be shorter than expected. \
+                     Fix: ensure the replay-log file is not subject to external zeroing or partial-write truncation."
+                );
                 continue;
             }
             if magic != RECORD_MAGIC {
@@ -784,5 +803,75 @@ mod tests {
                 max: MAX_REPLAY_RECORDS
             } if count == MAX_REPLAY_RECORDS + 1
         ));
+    }
+
+    /// Regression test for the P1 zero-magic skip behavior.
+    ///
+    /// Before the fix the skip was completely silent — an operator observing a
+    /// replay shorter than expected had no signal that a zero-magic record had
+    /// been encountered. After the fix the skip emits `tracing::warn!`. We
+    /// cannot assert tracing output in a unit test, but we CAN assert the
+    /// observable contract: a zero-magic slot in the middle of the scan range
+    /// must NOT produce an Err (it must still be skipped gracefully), AND the
+    /// replay result must be shorter than the number of appended records,
+    /// confirming the gap is present and observable to the caller through the
+    /// length discrepancy.
+    #[test]
+    fn replay_zero_magic_mid_sequence_skips_gracefully_and_produces_shorter_result() {
+        use std::io::{Seek, SeekFrom, Write as _};
+
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("log.vrrl");
+        let mut log = RingLog::open(&path, 4)
+            .expect("Fix: open fresh log; restore this invariant before continuing.");
+
+        // Append 3 records into a 4-slot capacity log.
+        log.append(rec(10, 100)).unwrap();
+        log.append(rec(20, 200)).unwrap();
+        log.append(rec(30, 300)).unwrap();
+        log.sync().unwrap();
+
+        // Verify a clean replay first: cursor = 3, scan starts at slot 3 (empty),
+        // then wraps to 0, 1, 2 — so we get exactly 3 records.
+        {
+            let records = log
+                .replay_all()
+                .expect("Fix: replay of 3 records must succeed");
+            assert_eq!(records.len(), 3, "Fix: 3 appended records must all replay");
+        }
+
+        // Now zero out the record at slot 1 (record 20) directly via file I/O.
+        // This simulates a sector fault / partial crash zeroing a live slot.
+        let slot1_offset = HEADER_BYTES + RECORD_BYTES; // slot 0 is at HEADER_BYTES; slot 1 follows
+        {
+            let mut f = std::fs::OpenOptions::new()
+                .write(true)
+                .open(&path)
+                .unwrap();
+            f.seek(SeekFrom::Start(slot1_offset)).unwrap();
+            f.write_all(&[0u8; RECORD_BYTES as usize]).unwrap();
+            f.sync_all().unwrap();
+        }
+
+        // Re-open the log to pick up the zeroed slot.
+        let mut log2 = RingLog::open(&path, 4)
+            .expect("Fix: reopen after zeroing must succeed");
+
+        // Replay must not return Err — the zero-magic skip is graceful.
+        let records = log2
+            .replay_all()
+            .expect("Fix: replay with a zeroed slot must not error");
+
+        // We should now see only 2 records (slot 0 = rec(10) and slot 2 = rec(30)).
+        // The scan order from cursor=3: slots 3 (empty), 0 (rec 10), 1 (zeroed → skip), 2 (rec 30).
+        assert_eq!(
+            records.len(),
+            2,
+            "Fix: zeroed slot must be skipped, yielding 2 out of 3 records; got: {:?}",
+            records.iter().map(|r| r.slot_idx).collect::<Vec<_>>()
+        );
+        // Record 10 must come before record 30 in publish order.
+        assert_eq!(records[0].slot_idx, 10, "Fix: first replayed record must be slot_idx=10");
+        assert_eq!(records[1].slot_idx, 30, "Fix: second replayed record must be slot_idx=30");
     }
 }

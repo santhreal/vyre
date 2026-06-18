@@ -1,10 +1,12 @@
 use super::{
     control, count_done_ring_slots, debug, decode_load_miss, encode_load_miss, read_debug_log,
-    read_debug_log_into, read_metrics_into, slot, try_encode_control, try_encode_empty_debug_log,
-    try_encode_empty_ring, try_encode_empty_ring_into, try_encode_load_miss,
-    try_encode_load_miss_into, try_read_debug_log, try_read_debug_log_into, try_read_metrics_into,
-    try_slot_byte_len, try_slot_word_base, try_slot_word_index, MAX_ENCODED_DEBUG_RECORDS,
-    MAX_ENCODED_OBSERVABLE_SLOTS, MAX_ENCODED_RING_SLOTS, STATUS_WORD,
+    read_debug_log_into, read_done_count, read_epoch, read_metrics_into, read_observable, slot,
+    try_encode_control, try_encode_empty_debug_log, try_encode_empty_ring,
+    try_encode_empty_ring_into, try_encode_load_miss, try_encode_load_miss_into,
+    try_read_debug_log, try_read_debug_log_into, try_read_done_count, try_read_epoch,
+    try_read_metrics_into, try_read_observable, try_slot_byte_len, try_slot_word_base,
+    try_slot_word_index, ProtocolError, MAX_ENCODED_DEBUG_RECORDS, MAX_ENCODED_OBSERVABLE_SLOTS,
+    MAX_ENCODED_RING_SLOTS, STATUS_WORD,
 };
 
 #[test]
@@ -248,4 +250,104 @@ fn decode_load_miss_uses_slot_index_correctly() {
     assert_eq!(decode_load_miss(&ring, 0), Some((7, false)));
     assert_eq!(decode_load_miss(&ring, 1), Some((99, true)));
     assert_eq!(decode_load_miss(&ring, 2), None);
+}
+
+// ── Regression tests for the Law-10 / P0 silent-fallback bugs ──────────────────────────────
+
+/// try_read_epoch must return a structured Err on a truncated control buffer;
+/// the infallible read_epoch must NOT simply return 0 without any diagnostic
+/// (before the fix it did — the pump would stall indefinitely on malformed DMA
+/// readbacks with no signal).
+#[test]
+fn read_epoch_on_truncated_control_returns_err_not_zero() {
+    // 4 bytes is too short to contain the epoch word — not a valid control buffer.
+    let short = [0u8; 4];
+    let err = try_read_epoch(&short)
+        .expect_err("Fix: try_read_epoch must return Err on a 4-byte truncated buffer");
+    // Confirm the error names the missing word or the misalignment rather than
+    // succeeding with a stale zero.
+    let msg = err.to_string();
+    assert!(
+        msg.contains("control") && (msg.contains("missing") || msg.contains("mismatch") || msg.contains("bytes")),
+        "Fix: error must describe the control-buffer defect, got: {msg}"
+    );
+    // read_epoch returns the same 0 it always did, but the infallible path
+    // now emits tracing::error! — we cannot assert the log in a unit test,
+    // but we CAN assert that the strict counterpart disagrees.
+    let silent = read_epoch(&short);
+    assert_eq!(
+        silent, 0,
+        "read_epoch on truncated buffer must return the sentinel 0 (loud, not silent — see tracing::error! emitted above)"
+    );
+}
+
+/// try_read_done_count must return a structured Err on a truncated buffer.
+#[test]
+fn read_done_count_on_truncated_control_returns_err_not_zero() {
+    let short = [0u8; 4];
+    let err = try_read_done_count(&short)
+        .expect_err("Fix: try_read_done_count must return Err on a 4-byte truncated buffer");
+    assert!(
+        err.to_string().contains("control"),
+        "Fix: error must name the control buffer, got: {}",
+        err
+    );
+    // The infallible read_done_count returns 0 and emits tracing::error!.
+    // Prove the infallible path disagrees with try_read_done_count:
+    assert_eq!(read_done_count(&short), 0);
+}
+
+/// try_read_observable on a truncated buffer must Err; read_observable must not
+/// silently return 0 — observable index 0 at truncated size cannot be valid.
+#[test]
+fn read_observable_on_truncated_control_returns_err_not_zero() {
+    let short = [0u8; 4];
+    let err = try_read_observable(&short, 0)
+        .expect_err("Fix: try_read_observable must return Err on a 4-byte truncated buffer");
+    // The error must mention the control buffer and missing data.
+    let msg = err.to_string();
+    assert!(
+        msg.contains("control"),
+        "Fix: error must name the control buffer, got: {msg}"
+    );
+    // Infallible read_observable falls back to 0 loudly.
+    assert_eq!(read_observable(&short, 0), 0);
+}
+
+/// Strict decode paths parse real epoch values correctly from a well-formed buffer,
+/// proving try_read_epoch is not just always-Err.
+#[test]
+fn try_read_epoch_parses_real_epoch_from_well_formed_control() {
+    let control = try_encode_control(false, 1, 0)
+        .expect("Fix: well-formed control encode must succeed");
+    // Fresh kernel: epoch starts at 0.
+    let epoch = try_read_epoch(&control)
+        .expect("Fix: try_read_epoch must succeed on a well-formed control buffer");
+    assert_eq!(epoch, 0, "Fix: fresh epoch must be 0");
+
+    // Inject a non-zero epoch word to prove the decoder reads the right offset.
+    let epoch_word_idx = super::control::EPOCH as usize;
+    let mut patched = control.clone();
+    patched[epoch_word_idx * 4..epoch_word_idx * 4 + 4]
+        .copy_from_slice(&42_u32.to_le_bytes());
+    let patched_epoch = try_read_epoch(&patched)
+        .expect("Fix: try_read_epoch must succeed on a patched well-formed buffer");
+    assert_eq!(patched_epoch, 42, "Fix: patched epoch must be the injected value 42");
+}
+
+/// Misaligned control buffers (not a multiple of 4 bytes) must be an Err,
+/// not a silent 0.  This is the MisalignedByteLength code path.
+#[test]
+fn read_epoch_on_misaligned_control_returns_err() {
+    // Take a valid control buffer and add one byte to make it misaligned.
+    let control = try_encode_control(false, 1, 0)
+        .expect("Fix: well-formed control encode must succeed");
+    let mut misaligned = control.clone();
+    misaligned.push(0xAB);
+    let err = try_read_epoch(&misaligned)
+        .expect_err("Fix: try_read_epoch must Err on misaligned buffer (len % 4 != 0)");
+    assert!(
+        matches!(err, ProtocolError::MisalignedByteLength { .. }),
+        "Fix: misaligned buffer must produce MisalignedByteLength, got: {err:?}"
+    );
 }

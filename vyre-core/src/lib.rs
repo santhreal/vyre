@@ -245,7 +245,11 @@ pub fn optimize(program: Program) -> Result<Program, vyre_foundation::optimizer:
     if let Some(cached) = optimize_cache::get(&key) {
         return Ok(cached);
     }
-    let optimized = vyre_foundation::optimizer::pre_lowering::optimize(program);
+    // Use try_optimize so scheduler failures (non-convergence, bad pass
+    // metadata) propagate as structured errors rather than silently returning
+    // an un-optimized program. This makes the Err variant of this function's
+    // Result type reachable for the first time.
+    let optimized = vyre_foundation::optimizer::pre_lowering::try_optimize(program)?;
     optimize_cache::put(key, &optimized);
     Ok(optimized)
 }
@@ -287,8 +291,14 @@ pub fn optimize_for_backend(
 }
 
 fn device_optimize_key(program: &Program, profile: &vyre_driver::DeviceProfile) -> [u8; 32] {
+    // Hash ALL fields consumed by adapter_caps() (device_profile.rs:213-235).
+    // Any field that influences Autotune::transform_for_adapter or other
+    // per-adapter passes MUST be included here, otherwise two calls with
+    // programs of the same fingerprint but different adapter profiles can
+    // collide on the same cache key and the second call silently gets the
+    // first profile's optimized IR with the wrong workgroup size / tile / etc.
     let mut hasher = blake3::Hasher::new();
-    hasher.update(b"vyre-core-optimize-device-v1\0");
+    hasher.update(b"vyre-core-optimize-device-v2\0"); // version bump: key now covers all adapter fields
     hasher.update(&program.fingerprint());
     hasher.update(profile.backend.as_bytes());
     hasher.update(&[u8::from(profile.supports_subgroup_ops)]);
@@ -296,15 +306,26 @@ fn device_optimize_key(program: &Program, profile: &vyre_driver::DeviceProfile) 
     hasher.update(&[u8::from(profile.supports_f16)]);
     hasher.update(&[u8::from(profile.supports_bf16)]);
     hasher.update(&[u8::from(profile.supports_tensor_cores)]);
+    hasher.update(&[u8::from(profile.supports_specialization_constants)]);
     hasher.update(&profile.max_workgroup_size[0].to_le_bytes());
     hasher.update(&profile.max_workgroup_size[1].to_le_bytes());
     hasher.update(&profile.max_workgroup_size[2].to_le_bytes());
     hasher.update(&profile.max_invocations_per_workgroup.to_le_bytes());
     hasher.update(&profile.max_shared_memory_bytes.to_le_bytes());
+    hasher.update(&profile.max_storage_buffer_binding_size.to_le_bytes());
     hasher.update(&profile.subgroup_size.to_le_bytes());
     hasher.update(&profile.compute_units.to_le_bytes());
+    hasher.update(&profile.regs_per_thread_max.to_le_bytes());
+    hasher.update(&profile.l1_cache_bytes.to_le_bytes());
+    hasher.update(&profile.l2_cache_bytes.to_le_bytes());
+    hasher.update(&profile.mem_bw_gbps.to_le_bytes());
     hasher.update(&profile.ideal_unroll_depth.to_le_bytes());
     hasher.update(&profile.ideal_vector_pack_bits.to_le_bytes());
+    hasher.update(&profile.ideal_workgroup_tile[0].to_le_bytes());
+    hasher.update(&profile.ideal_workgroup_tile[1].to_le_bytes());
+    hasher.update(&profile.ideal_workgroup_tile[2].to_le_bytes());
+    hasher.update(&profile.shared_memory_bank_count.to_le_bytes());
+    hasher.update(&profile.shared_memory_bank_width_bytes.to_le_bytes());
     *hasher.finalize().as_bytes()
 }
 
@@ -384,63 +405,88 @@ mod optimize_cache {
     }
 
     pub(super) fn get(key: &[u8; 32]) -> Option<Program> {
-        let cache = cache().lock().ok()?;
+        // Recover from mutex poison: the poisoned thread already panicked and
+        // is gone; the cache data it held is still structurally valid. Silently
+        // returning None (the old `.ok()?` path) caused infinite re-optimization
+        // in a recovered daemon with no operator-visible signal. Recovery
+        // preserves cache correctness; if the state were corrupt, Put would
+        // have been the corrupt write and the subsequent Get would simply miss.
+        let cache = cache()
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
         cache.host.get(key)
     }
 
     pub(super) fn put(key: [u8; 32], program: &Program) {
-        let Ok(mut cache) = cache().lock() else {
-            return;
-        };
+        // Same recovery rationale as get(): silently skipping the write on
+        // poison caused every subsequent call to pay the full optimization
+        // cost forever. Recovering the guard lets us still store the result.
+        let mut cache = cache()
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
         cache.host.put(key, program);
     }
 
     pub(super) fn get_device(key: &[u8; 32]) -> Option<Program> {
-        let cache = cache().lock().ok()?;
+        let cache = cache()
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
         cache.device.get(key)
     }
 
     pub(super) fn put_device(key: [u8; 32], program: &Program) {
-        let Ok(mut cache) = cache().lock() else {
-            return;
-        };
+        let mut cache = cache()
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
         cache.device.put(key, program);
     }
 
     #[cfg(test)]
     pub(super) fn clear() {
-        if let Ok(mut cache) = cache().lock() {
-            cache.host.clear();
-            cache.device.clear();
-        }
+        let mut cache = cache().lock().unwrap_or_else(|e| e.into_inner());
+        cache.host.clear();
+        cache.device.clear();
     }
 
     #[cfg(test)]
     pub(super) fn len() -> usize {
-        cache().lock().map(|c| c.host.len()).unwrap_or(0)
+        cache().lock().unwrap_or_else(|e| e.into_inner()).host.len()
     }
 
     #[cfg(test)]
     pub(super) fn len_device() -> usize {
-        cache().lock().map(|c| c.device.len()).unwrap_or(0)
+        cache().lock().unwrap_or_else(|e| e.into_inner()).device.len()
+    }
+
+    /// Single process-wide serialization guard shared by EVERY cache test,
+    /// across all test modules. The optimize cache is a process-global
+    /// singleton; any test that asserts on `len()`/`len_device()` or relies on
+    /// `clear()` must hold this guard so a concurrent test in another module
+    /// cannot insert/evict between the clear and the assertion. A per-module
+    /// mutex is insufficient — two modules with separate mutexes still race on
+    /// the one shared cache (observed: device len 5≠1, 248≠256).
+    #[cfg(test)]
+    pub(super) fn test_serial() -> std::sync::MutexGuard<'static, ()> {
+        use std::sync::{Mutex, OnceLock};
+        static M: OnceLock<Mutex<()>> = OnceLock::new();
+        M.get_or_init(|| Mutex::new(()))
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
     }
 }
 
 #[cfg(test)]
 mod optimize_tests {
     use super::*;
-    use std::sync::{Mutex, MutexGuard, OnceLock};
+    use std::sync::MutexGuard;
     use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node};
 
-    /// Serialise tests in this module so they don't race on the
-    /// process-global cache. Each test takes the guard at entry and
-    /// drops it at exit; the eviction test takes ~256 inserts which
-    /// otherwise pollutes the count the other tests assert on.
+    /// Serialise cache tests against the process-global singleton. Delegates to
+    /// the ONE shared guard in `optimize_cache` so this module mutually excludes
+    /// with `optimize_cache_runtime_tests` too — a per-module mutex would let
+    /// the other module's eviction-fill race this module's count assertions.
     fn serial() -> MutexGuard<'static, ()> {
-        static M: OnceLock<Mutex<()>> = OnceLock::new();
-        M.get_or_init(|| Mutex::new(()))
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
+        optimize_cache::test_serial()
     }
 
     fn sample_program() -> Program {
@@ -451,6 +497,32 @@ mod optimize_tests {
         )
     }
 
+    /// Return true iff the program's entry contains a Store of exactly u32
+    /// literal `expected_value` into the "out" buffer — recursing through
+    /// `Region` wrappers. `Program::wrapped` nests the body inside a
+    /// `vyre.program.root` Region, so the Store is never a top-level entry
+    /// node; a non-recursive scan false-negatives on every correctly
+    /// optimized program.
+    fn entry_stores_literal(program: &Program, expected_value: u32) -> bool {
+        use vyre_foundation::ir::Node;
+        fn node_stores_literal(n: &Node, expected_value: u32) -> bool {
+            match n {
+                Node::Store {
+                    value: Expr::LitU32(v),
+                    ..
+                } => *v == expected_value,
+                Node::Region { body, .. } => body
+                    .iter()
+                    .any(|child| node_stores_literal(child, expected_value)),
+                _ => false,
+            }
+        }
+        program
+            .entry()
+            .iter()
+            .any(|n| node_stores_literal(n, expected_value))
+    }
+
     #[test]
     fn optimize_is_cached_by_fingerprint() {
         let _g = serial();
@@ -458,15 +530,19 @@ mod optimize_tests {
         let p1 = sample_program();
         let p2 = sample_program();
         let first = optimize(p1).expect("Fix: optimize must succeed on sample_program");
+        // sample_program stores LitU32(42) — after optimization the store must
+        // still be present with the correct value, not just be non-empty.
         assert!(
-            !first.entry().is_empty(),
-            "optimized program must retain work"
+            entry_stores_literal(&first, 42),
+            "optimized sample_program must contain a Store of LitU32(42): {:?}",
+            first.entry()
         );
         let before = optimize_cache::len();
         let second = optimize(p2).expect("Fix: optimize must succeed on cache-hit path");
         assert!(
-            !second.entry().is_empty(),
-            "cached optimized program must retain work"
+            entry_stores_literal(&second, 42),
+            "cache-hit optimized sample_program must contain a Store of LitU32(42): {:?}",
+            second.entry()
         );
         let after = optimize_cache::len();
         assert_eq!(
@@ -490,30 +566,82 @@ mod optimize_tests {
         );
     }
 
+    fn program_with_literal(value: u32) -> Program {
+        Program::wrapped(
+            vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+            [1, 1, 1],
+            vec![Node::store("out", Expr::u32(0), Expr::u32(value))],
+        )
+    }
+
     #[test]
     fn optimize_cache_evicts_at_capacity() {
         let _g = serial();
         optimize_cache::clear();
-        // Build OPTIMIZE_CACHE_CAPACITY + 1 distinct programs by
-        // varying the stored literal  -  each gets a unique fingerprint.
-        for i in 0..(OPTIMIZE_CACHE_CAPACITY + 1) {
-            let prog = Program::wrapped(
-                vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
-                [1, 1, 1],
-                vec![Node::store("out", Expr::u32(0), Expr::u32(i as u32))],
+
+        // Build OPTIMIZE_CACHE_CAPACITY + 1 distinct programs by varying the
+        // stored literal — each gets a unique fingerprint. Capture the key of
+        // the first-inserted program to verify FIFO eviction.
+        let first_key = {
+            let p0 = program_with_literal(0);
+            let key = p0.fingerprint();
+            let opt = optimize(p0).expect("Fix: optimize must succeed on first eviction probe");
+            assert!(
+                entry_stores_literal(&opt, 0),
+                "optimize of literal-0 program must preserve LitU32(0): {:?}",
+                opt.entry()
             );
+            key
+        };
+
+        for i in 1..=(OPTIMIZE_CACHE_CAPACITY) {
+            let prog = program_with_literal(i as u32);
             let optimized =
                 optimize(prog).expect("Fix: optimize must succeed on cache-eviction probe");
             assert!(
-                !optimized.entry().is_empty(),
-                "optimized cache-entry program must retain work"
+                entry_stores_literal(&optimized, i as u32),
+                "optimized program must store literal {i}: {:?}",
+                optimized.entry()
             );
         }
+
         assert_eq!(
             optimize_cache::len(),
             OPTIMIZE_CACHE_CAPACITY,
             "cache must cap at OPTIMIZE_CACHE_CAPACITY entries"
         );
+
+        // FIFO: the first-inserted entry (literal 0) must be evicted.
+        assert!(
+            optimize_cache::get(&first_key).is_none(),
+            "Fix: FIFO eviction must have removed the first-inserted entry (literal 0)"
+        );
+
+        // The last-inserted entry must survive.
+        let last_key = program_with_literal(OPTIMIZE_CACHE_CAPACITY as u32).fingerprint();
+        assert!(
+            optimize_cache::get(&last_key).is_some(),
+            "Fix: last-inserted entry (literal {OPTIMIZE_CACHE_CAPACITY}) must survive eviction"
+        );
+
+        // Cache hit for a surviving entry must return the correct program.
+        let cached = optimize_cache::get(&last_key)
+            .expect("Fix: surviving cache entry must be retrievable");
+        assert!(
+            entry_stores_literal(&cached, OPTIMIZE_CACHE_CAPACITY as u32),
+            "cached surviving program must store the correct literal {OPTIMIZE_CACHE_CAPACITY}: {:?}",
+            cached.entry()
+        );
+    }
+
+    fn program_with_buffer_and_workgroup_1_1_1() -> Program {
+        // A 1D kernel with a large buffer — Autotune will upscale the
+        // workgroup to max_invocations_per_workgroup for this shape.
+        Program::wrapped(
+            vec![BufferDecl::output("out", 0, DataType::U32).with_count(4096)],
+            [1, 1, 1],
+            vec![Node::store("out", Expr::u32(0), Expr::u32(1))],
+        )
     }
 
     #[test]
@@ -541,26 +669,159 @@ mod optimize_tests {
             "device optimization should still reuse the canonical optimize cache after tuning"
         );
     }
+
+    #[test]
+    fn optimize_for_device_different_ideal_workgroup_tile_produces_different_cached_program() {
+        // Regression test for the missing `ideal_workgroup_tile` field in
+        // device_optimize_key: two profiles that differ only in
+        // ideal_workgroup_tile must produce different cache keys and different
+        // optimized programs. Before the fix, both calls returned the first
+        // profile's optimized IR — silently wrong workgroup size.
+        let _g = serial();
+        optimize_cache::clear();
+
+        let p = program_with_buffer_and_workgroup_1_1_1();
+
+        let mut compact = vyre_driver::DeviceProfile::conservative("test");
+        compact.max_workgroup_size = [256, 256, 64];
+        compact.max_invocations_per_workgroup = 256;
+        compact.subgroup_size = 32;
+        compact.ideal_workgroup_tile = [8, 8, 1];
+
+        let mut wide = compact.clone();
+        wide.ideal_workgroup_tile = [16, 16, 1];
+
+        let r_compact = optimize_for_device(p.clone(), &compact)
+            .expect("Fix: optimize_for_device with compact tile must succeed");
+        let r_wide = optimize_for_device(p.clone(), &wide)
+            .expect("Fix: optimize_for_device with wide tile must succeed");
+
+        assert_ne!(
+            r_compact.fingerprint(),
+            r_wide.fingerprint(),
+            "Fix: different ideal_workgroup_tile must produce different optimized programs \
+             (different cache keys); if this fails, device_optimize_key is missing \
+             ideal_workgroup_tile[0..2]"
+        );
+
+        // Autotune with compact [8,8,1] tile → workgroup [64,1,1];
+        // with wide [16,16,1] tile → workgroup [256,1,1].
+        // (These values match the existing autotune.rs test at line 433-434.)
+        assert_eq!(
+            r_compact.workgroup_size(),
+            [64, 1, 1],
+            "compact ideal_workgroup_tile [8,8,1] must autotune to workgroup [64,1,1]"
+        );
+        assert_eq!(
+            r_wide.workgroup_size(),
+            [256, 1, 1],
+            "wide ideal_workgroup_tile [16,16,1] must autotune to workgroup [256,1,1]"
+        );
+    }
 }
 
 #[cfg(test)]
+mod optimize_cache_runtime_tests {
+    use super::*;
+    use std::sync::MutexGuard;
+    use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node};
 
-mod optimize_cache_structure_tests {
+    /// Delegates to the ONE shared cache-test guard so this module's
+    /// CAPACITY+1 eviction fills mutually exclude with `optimize_tests`'
+    /// exact-count assertions on the same process-global cache.
+    fn serial() -> MutexGuard<'static, ()> {
+        optimize_cache::test_serial()
+    }
+
+    fn program_with_literal(value: u32) -> Program {
+        Program::wrapped(
+            vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+            [1, 1, 1],
+            vec![Node::store("out", Expr::u32(0), Expr::u32(value))],
+        )
+    }
+
     #[test]
-    fn host_and_device_optimize_caches_share_one_bounded_shard_type() {
-        let source = include_str!("lib.rs");
-        let release_path = source
-            .split("\n#[cfg(test)]\nmod optimize_tests")
-            .next()
-            .expect("Fix: optimize cache release source must be visible");
+    fn host_cache_fifo_eviction() {
+        // Replaces the source-text assertion test: verifies runtime FIFO
+        // eviction behavior of the shared ProgramCacheShard used by both
+        // host and device caches.
+        let _g = serial();
+        optimize_cache::clear();
 
-        assert!(
-            release_path.contains("struct ProgramCacheShard"),
-            "Fix: optimize cache must centralize bounded cache behavior in one shard type."
+        // Fill the host cache exactly to capacity.
+        let first_key = program_with_literal(0).fingerprint();
+        for i in 0..=OPTIMIZE_CACHE_CAPACITY {
+            let p = program_with_literal(i as u32);
+            optimize(p).expect("Fix: optimize must succeed filling host cache");
+        }
+
+        assert_eq!(
+            optimize_cache::len(),
+            OPTIMIZE_CACHE_CAPACITY,
+            "host cache must stay at capacity after inserting CAPACITY+1 entries"
         );
         assert!(
-            !release_path.contains("device_entries") && !release_path.contains("device_fifo"),
-            "Fix: host/device optimize caches must not duplicate eviction fields."
+            optimize_cache::get(&first_key).is_none(),
+            "Fix: FIFO eviction must remove the first-inserted host cache entry"
+        );
+    }
+
+    #[test]
+    fn device_cache_fifo_eviction() {
+        let _g = serial();
+        optimize_cache::clear();
+
+        let mut profile = vyre_driver::DeviceProfile::conservative("test");
+        profile.max_workgroup_size = [256, 1, 1];
+        profile.max_invocations_per_workgroup = 256;
+
+        let first_key = {
+            let p = program_with_literal(0);
+            let key = super::device_optimize_key(&p, &profile);
+            optimize_for_device(p, &profile)
+                .expect("Fix: optimize_for_device must succeed filling device cache");
+            key
+        };
+
+        for i in 1..=OPTIMIZE_CACHE_CAPACITY {
+            let p = program_with_literal(i as u32);
+            optimize_for_device(p, &profile)
+                .expect("Fix: optimize_for_device must succeed in device eviction fill");
+        }
+
+        assert_eq!(
+            optimize_cache::len_device(),
+            OPTIMIZE_CACHE_CAPACITY,
+            "device cache must stay at capacity after inserting CAPACITY+1 entries"
+        );
+        assert!(
+            optimize_cache::get_device(&first_key).is_none(),
+            "Fix: FIFO eviction must remove the first-inserted device cache entry"
+        );
+    }
+
+    #[test]
+    fn host_and_device_caches_are_independent() {
+        // A host-cache hit for key K must not satisfy a device-cache lookup
+        // for key K (the two shards are separate; using the same backing
+        // structure does not mean the same logical space).
+        let _g = serial();
+        optimize_cache::clear();
+
+        let p = program_with_literal(99);
+        let host_key = p.fingerprint();
+        optimize(p.clone()).expect("Fix: optimize must populate host cache");
+
+        // Only the host cache should have the entry; the device cache is empty.
+        assert!(
+            optimize_cache::get(&host_key).is_some(),
+            "Fix: host cache must contain the entry just inserted"
+        );
+        assert_eq!(
+            optimize_cache::len_device(),
+            0,
+            "device cache must be empty when only host-optimize was called"
         );
     }
 }

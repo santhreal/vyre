@@ -44,6 +44,45 @@ fn module_cache_key_is_128_bit_and_descriptor_sensitive() {
     assert_ne!(a, b);
 }
 
+/// Two descriptors whose only difference is the NaN bit-payload of an F32
+/// literal must produce DIFFERENT cache keys. With `format!("{desc:?}")` both
+/// would format as `"F32(NaN)"` regardless of bit pattern → same hash →
+/// spurious hit or spurious miss (depending on which direction the collision
+/// fires). The fix: derive the key from the `Hash` impl, which uses
+/// `v.to_bits()` for F32 and therefore distinguishes NaN payloads.
+#[test]
+fn cache_key_distinguishes_nan_bit_patterns() {
+    fn desc_with_nan(nan_bits: u32) -> KernelDescriptor {
+        KernelDescriptor {
+            id: "nan_test".into(),
+            bindings: BindingLayout { slots: vec![] },
+            dispatch: Dispatch::new(1, 1, 1),
+            body: KernelBody {
+                ops: vec![KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(0),
+                }],
+                child_bodies: vec![],
+                literals: vec![LiteralValue::F32(f32::from_bits(nan_bits))],
+            },
+        }
+    }
+    // Two quiet NaN bit patterns with distinct payloads.
+    let quiet_nan_a = 0x7FC0_0001u32; // quiet NaN, payload 1
+    let quiet_nan_b = 0x7FC0_0002u32; // quiet NaN, payload 2
+    assert!(f32::from_bits(quiet_nan_a).is_nan());
+    assert!(f32::from_bits(quiet_nan_b).is_nan());
+
+    let key_a = descriptor_cache_key(&desc_with_nan(quiet_nan_a));
+    let key_b = descriptor_cache_key(&desc_with_nan(quiet_nan_b));
+    assert_ne!(
+        key_a, key_b,
+        "descriptors differing only in NaN bit payload must have different cache keys; \
+         Debug-based keys would incorrectly collapse both to 'F32(NaN)'"
+    );
+}
+
 #[test]
 fn op_dispatch_route_cache_hits_preserve_uncached_classification() {
     let kinds = [
@@ -161,6 +200,7 @@ fn block_has_atomic(block: &Block) -> bool {
 }
 
 mod atomics;
+mod binop;
 mod byte_element_load;
 mod cache_entry;
 mod descriptor_control;
