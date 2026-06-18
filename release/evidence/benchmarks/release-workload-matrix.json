@@ -28,7 +28,7 @@
   ],
   "missing_required_cpu_sota_100x_families": [],
   "matched_required_families": 13,
-  "release_suite_case_count": 26,
+  "release_suite_case_count": 27,
   "cpu_sota_contract_count": 39,
   "cpu_sota_100x_contract_count": 15,
   "cpu_sota_100x_contract_cases": [
@@ -315,16 +315,16 @@
         "release.workload.alias_reaching_def"
       ],
       "cpu_sota_contracts": [
-        "release.alias_reaching_def.1m => LLVM-style sparse dataflow and alias analysis baseline 100x"
+        "release.alias_reaching_def.1m => Weir sparse dataflow and alias-analysis CPU baseline 100x"
       ],
       "cpu_sota_100x_cases": [
         "release.alias_reaching_def.1m"
       ],
       "cpu_sota_baseline_names": [
-        "LLVM-style sparse dataflow and alias analysis baseline"
+        "Weir sparse dataflow and alias-analysis CPU baseline"
       ],
       "cpu_sota_baseline_crates": [
-        "vyre-bench"
+        "weir"
       ],
       "cpu_sota_backend_ids": [
         "cuda",
@@ -354,16 +354,16 @@
         "release.workload.ifds_witness"
       ],
       "cpu_sota_contracts": [
-        "release.ifds_witness.1m => optimized CPU graph reachability and witness extraction 100x"
+        "release.ifds_witness.1m => Weir IFDS CPU reachability and witness extraction 100x"
       ],
       "cpu_sota_100x_cases": [
         "release.ifds_witness.1m"
       ],
       "cpu_sota_baseline_names": [
-        "optimized CPU graph reachability and witness extraction"
+        "Weir IFDS CPU reachability and witness extraction"
       ],
       "cpu_sota_baseline_crates": [
-        "vyre-bench"
+        "weir"
       ],
       "cpu_sota_backend_ids": [
         "cuda",
@@ -496,6 +496,7 @@
       "matched_cases": [
         "conditions.yara_like.batch.16x64k",
         "dataflow.ifds.skewed.queue_closure.1m",
+        "parser.c_lexer.small_state_transition.4k",
         "primitives.graph.csr_skewed_queue_closure.1m",
         "sparse.compaction.count.1m"
       ],
