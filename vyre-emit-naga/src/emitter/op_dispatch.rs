@@ -13,7 +13,7 @@ use vyre_lower::{KernelBody, KernelOp, KernelOpKind, LiteralValue};
 
 use super::op_lookup::{
     barrier_flags, binary_math_function, binary_operator, naga_literal, scalar_cast_target,
-    unary_math_function, unary_operator,
+    unary_math_function, unary_operator, unpack_shift_mask,
 };
 use super::BodyBuilder;
 use crate::EmitError;
@@ -434,6 +434,28 @@ impl BodyBuilder<'_> {
                         op,
                         left: abs,
                         right: max,
+                    })
+                } else if let Some((shift, mask)) = unpack_shift_mask(unop) {
+                    // Nibble/byte unpack has no Naga intrinsic; lower to an
+                    // explicit `(value >> shift) & mask` on u32 (semantics match
+                    // ir_eval). Without this the emitter rejected with "unary op
+                    // `Unpack4Low` has no direct Naga unary operator".
+                    let shifted = if shift == 0 {
+                        expr
+                    } else {
+                        let shift_lit =
+                            self.append_expr(Expression::Literal(Literal::U32(shift)));
+                        self.append_expr(Expression::Binary {
+                            op: BinaryOperator::ShiftRight,
+                            left: expr,
+                            right: shift_lit,
+                        })
+                    };
+                    let mask_lit = self.append_expr(Expression::Literal(Literal::U32(mask)));
+                    self.append_expr(Expression::Binary {
+                        op: BinaryOperator::And,
+                        left: shifted,
+                        right: mask_lit,
                     })
                 } else if let Some(fun) = unary_math_function(unop) {
                     self.append_expr(Expression::Math {

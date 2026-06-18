@@ -117,6 +117,21 @@ pub(super) fn unary_math_function(op: &UnOp) -> Option<naga::MathFunction> {
     })
 }
 
+/// The `(right_shift, and_mask)` lowering for the nibble/byte unpack UnOps.
+/// WGSL/Naga has no pack/unpack intrinsic, so these compile to an explicit
+/// `(value >> shift) & mask` on u32. The semantics mirror `ir_eval` exactly:
+/// `Unpack4Low = v & 0x0F`, `Unpack4High = (v >> 4) & 0x0F`,
+/// `Unpack8Low = v & 0xFF`, `Unpack8High = (v >> 24) & 0xFF`.
+pub(super) fn unpack_shift_mask(op: &UnOp) -> Option<(u32, u32)> {
+    Some(match op {
+        UnOp::Unpack4Low => (0, 0x0F),
+        UnOp::Unpack4High => (4, 0x0F),
+        UnOp::Unpack8Low => (0, 0xFF),
+        UnOp::Unpack8High => (24, 0xFF),
+        _ => return None,
+    })
+}
+
 pub(super) fn scalar_cast_target(target: &DataType) -> Result<(ScalarKind, u8), EmitError> {
     match target {
         DataType::Bool => Ok((ScalarKind::Bool, 1)),
