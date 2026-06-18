@@ -32,6 +32,11 @@ pub(super) struct TypeHandles {
     pub(super) f64_ty: naga::Handle<Type>,
     pub(super) u64_ty: naga::Handle<Type>,
     pub(super) i64_ty: naga::Handle<Type>,
+    /// WGSL has no native 64-bit integer, so buffer-backed `U64`/`I64`/`Vec2U32`
+    /// values are represented as `vec2<u32>` (low word `.x`, high word `.y`).
+    /// `u64_ty`/`i64_ty` above stay native scalars for the subgroup/literal
+    /// paths that emit them directly under a u64 capability.
+    pub(super) vec2_u32_ty: naga::Handle<Type>,
     pub(super) vec3_u32_ty: naga::Handle<Type>,
     pub(super) atomic_compare_exchange_u32_ty: naga::Handle<Type>,
 }
@@ -131,6 +136,19 @@ impl ModuleBuilder {
         let f64_ty = insert_scalar(&mut module, ScalarKind::Float, 8);
         let u64_ty = insert_scalar(&mut module, ScalarKind::Uint, 8);
         let i64_ty = insert_scalar(&mut module, ScalarKind::Sint, 8);
+        let vec2_u32_ty = module.types.insert(
+            Type {
+                name: Some("__vyre_vec2_u32".to_owned()),
+                inner: TypeInner::Vector {
+                    size: VectorSize::Bi,
+                    scalar: Scalar {
+                        kind: ScalarKind::Uint,
+                        width: 4,
+                    },
+                },
+            },
+            Span::UNDEFINED,
+        );
         let vec3_u32_ty = module.types.insert(
             Type {
                 name: Some("__vyre_vec3_u32".to_owned()),
@@ -184,6 +202,7 @@ impl ModuleBuilder {
                 f64_ty,
                 u64_ty,
                 i64_ty,
+                vec2_u32_ty,
                 vec3_u32_ty,
                 atomic_compare_exchange_u32_ty,
             },
@@ -280,6 +299,11 @@ impl ModuleBuilder {
             DataType::U8 | DataType::U16 | DataType::U32 | DataType::Bytes => Ok(self.types.u32_ty),
             DataType::I8 | DataType::I16 | DataType::I32 => Ok(self.types.i32_ty),
             DataType::F32 => Ok(self.types.f32_ty),
+            // WGSL has no native 64-bit integer: back U64/I64 (and the explicit
+            // Vec2U32 pair) with `vec2<u32>` (low word `.x`, high word `.y`).
+            // Componentwise bitwise ops stay correct; carry-dependent arithmetic
+            // is rejected in emit_binop until a carry-propagating pass lands.
+            DataType::U64 | DataType::I64 | DataType::Vec2U32 => Ok(self.types.vec2_u32_ty),
             other => Err(EmitError::InvalidBinding {
                 slot,
                 reason: format!(

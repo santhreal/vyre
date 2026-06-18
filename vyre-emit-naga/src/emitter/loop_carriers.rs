@@ -125,14 +125,18 @@ impl BodyBuilder<'_> {
     ) -> naga::Handle<LocalVariable> {
         // Decide the authoritative type for this id at THIS point in
         // emission. value_types[id] is set by `bind_result_typed`, which
-        // runs BEFORE bind_result. Constrain to a canonical scalar type
-        // only  -  non-scalar handles (atomic / array / struct) are
-        // rejected by naga as `LocalVariable` types with `InvalidType`.
+        // runs BEFORE bind_result. Constrain to types naga accepts as a
+        // `LocalVariable`: canonical scalars AND the `vec2<u32>`/`vec3<u32>`
+        // backings (U64/I64 lower to vec2<u32>). Atomic / array / struct
+        // handles are still rejected by naga with `InvalidType`, so they
+        // fall through to the scalar-kind heuristic below.
         let value_types_scalar = self.value_types.get(&id).copied().filter(|ty| {
             *ty == self.types.bool_ty
                 || *ty == self.types.u32_ty
                 || *ty == self.types.i32_ty
                 || *ty == self.types.f32_ty
+                || *ty == self.types.vec2_u32_ty
+                || *ty == self.types.vec3_u32_ty
         });
         let ty = value_types_scalar.unwrap_or_else(|| {
             match self.scalar_kind_of_expression(*init_handle, 0) {
@@ -177,19 +181,22 @@ impl BodyBuilder<'_> {
         id: u32,
         init_handle: &naga::Handle<Expression>,
     ) -> naga::Handle<LocalVariable> {
-        // Decide the canonical scalar type for THIS binding FIRST (the cache
-        // reuse below depends on it). Constrain to a canonical scalar type
-        // only: the naïve `value_types.get(&id).unwrap_or(u32_ty)` fallback
-        // returned non-scalar handles (atomic / array / struct) when the
-        // vyre op produced them, and naga rejects `LocalVariable` of
-        // those types with `InvalidType`. Default to u32 in the
-        // ambiguous case  -  block-scope round-trips only need to preserve
-        // scalar values across block boundaries.
+        // Decide the canonical local type for THIS binding FIRST (the cache
+        // reuse below depends on it). Constrain to types naga accepts as a
+        // `LocalVariable`: canonical scalars AND the `vec2<u32>`/`vec3<u32>`
+        // backings (U64/I64 lower to vec2<u32>, so a block-scoped 64-bit value
+        // needs a vec2 local — not a u32 default, which would make the coerced
+        // Store fail `InvalidStoreTypes`). The naïve
+        // `value_types.get(&id).unwrap_or(u32_ty)` fallback also returned
+        // atomic / array / struct handles, which naga rejects with
+        // `InvalidType`; those still fall through to the u32 default below.
         let value_types_scalar = self.value_types.get(&id).copied().filter(|ty| {
             *ty == self.types.bool_ty
                 || *ty == self.types.u32_ty
                 || *ty == self.types.i32_ty
                 || *ty == self.types.f32_ty
+                || *ty == self.types.vec2_u32_ty
+                || *ty == self.types.vec3_u32_ty
         });
         let ty = match self.scalar_kind_of_expression(*init_handle, 0) {
             Some(naga::ScalarKind::Bool) => self.types.bool_ty,

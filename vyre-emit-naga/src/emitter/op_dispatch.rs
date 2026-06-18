@@ -451,6 +451,21 @@ impl BodyBuilder<'_> {
             }),
             OpDispatchRoute::Cast => with_route_kind!(op, route, KernelOpKind::Cast { target } => {
                 let expr = self.value_operand(op, 0)?;
+                if matches!(target, DataType::U64 | DataType::I64 | DataType::Vec2U32) {
+                    // WGSL has no native 64-bit integer; U64/I64 are backed by
+                    // vec2<u32> (low word `.x`, high word `.y`). A widening cast
+                    // from a 32-bit value fills the low word and zeroes the high
+                    // word: vec2<u32>(x, 0u). This is componentwise-safe — no
+                    // carry is involved — unlike 64-bit arithmetic, which
+                    // emit_binop rejects until a carry-propagating pass lands.
+                    let low = self.coerce_value_to_type(expr, self.types.u32_ty);
+                    let high = self.append_expr(Expression::Literal(naga::Literal::U32(0)));
+                    let value = self.append_expr(Expression::Compose {
+                        ty: self.types.vec2_u32_ty,
+                        components: vec![low, high],
+                    });
+                    return self.bind_result_typed(op, value, self.types.vec2_u32_ty);
+                }
                 let (kind, width) = scalar_cast_target(target)?;
                 let value = self.append_expr(Expression::As {
                     expr,
@@ -773,6 +788,30 @@ impl BodyBuilder<'_> {
     fn emit_binop(&mut self, op: &KernelOp, binop: BinOp) -> Result<(), EmitError> {
         let left = self.value_operand(op, 0)?;
         let right = self.value_operand(op, 1)?;
+        // 64-bit gate: U64/I64 are backed by vec2<u32> (the vec2_u32_ty handle).
+        // Componentwise bitwise AND/OR/XOR on the pair are mathematically
+        // correct, but add/sub/mul/compare/shift need carry/borrow propagation
+        // between the low and high words — a componentwise vec2 op would be
+        // SILENTLY WRONG arithmetic. Fail closed (Law 10) rather than emit it.
+        let lhs_is_u64 = self
+            .value_type_operand(op, 0)
+            .map(|h| h == self.types.vec2_u32_ty)
+            .unwrap_or(false);
+        let rhs_is_u64 = self
+            .value_type_operand(op, 1)
+            .map(|h| h == self.types.vec2_u32_ty)
+            .unwrap_or(false);
+        if (lhs_is_u64 || rhs_is_u64)
+            && !matches!(binop, BinOp::BitAnd | BinOp::BitOr | BinOp::BitXor)
+        {
+            return Err(EmitError::NagaConstructionFailed(format!(
+                "64-bit (U64/I64) `{binop:?}` is not lowered: the vec2<u32> backing \
+                 carries no carry/borrow between the low and high words, so a \
+                 componentwise op would be silently wrong. Only bitwise AND/OR/XOR \
+                 are supported on 64-bit values. Fix: add a carry-propagating U64 \
+                 emulation pass before this op reaches Naga emission."
+            )));
+        }
         if let Some(folded) = self.fold_literal_binop(left, right, binop) {
             let ty = self.binary_result_type(op, binop)?;
             return self.bind_result_typed(op, folded, ty);

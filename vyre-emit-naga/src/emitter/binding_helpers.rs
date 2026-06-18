@@ -435,10 +435,13 @@ impl BodyBuilder<'_> {
         match data_type {
             DataType::Bool => Ok(self.types.bool_ty),
             DataType::U8 | DataType::U16 | DataType::U32 | DataType::Bytes => Ok(self.types.u32_ty),
-            DataType::U64 => Ok(self.types.u64_ty),
             DataType::I8 | DataType::I16 | DataType::I32 => Ok(self.types.i32_ty),
-            DataType::I64 => Ok(self.types.i64_ty),
             DataType::F32 => Ok(self.types.f32_ty),
+            // WGSL has no native 64-bit integer: U64/I64/Vec2U32 values are
+            // backed by vec2<u32> (low word `.x`, high word `.y`). The native
+            // `u64_ty`/`i64_ty` handles are reserved for the subgroup/literal
+            // paths that emit them directly under a u64 capability.
+            DataType::U64 | DataType::I64 | DataType::Vec2U32 => Ok(self.types.vec2_u32_ty),
             other => Err(EmitError::NagaConstructionFailed(format!(
                 "data type `{other:?}` has no scalar Naga descriptor type"
             ))),
