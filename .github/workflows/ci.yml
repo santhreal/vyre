@@ -43,6 +43,16 @@ jobs:
         shell: bash
         run: ./cargo_full test --workspace
 
+      - name: segmentation parity oracle (megakernel-batch, CPU)
+        shell: bash
+        # The GPU segmentation algorithm's CPU correctness oracle (dense vs
+        # segmented Aho-Corasick scan, every-offset-owned-once, emit-range
+        # tiling) lives behind the non-default `megakernel-batch` feature, so the
+        # `--workspace` default-feature run above never compiles it. These are
+        # pure-CPU tests; gate them directly here so a segmentation regression
+        # fails the main PR check, not only the slower --all-features coverage job.
+        run: ./cargo_full test -p vyre-driver-wgpu --features megakernel-batch --lib -- segment
+
       - name: cargo_full doc
         shell: bash
         run: ./cargo_full doc --workspace
