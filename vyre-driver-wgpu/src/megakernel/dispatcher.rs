@@ -1,8 +1,8 @@
 //! Batched megakernel dispatch built on a persistent device work queue.
 
 use super::batch::{
-    persistent_storage_binding_usage, queue_state_word, FileBatch, HitRecord, FILE_METADATA_WORDS,
-    HIT_RECORD_WORDS, QUEUE_STATE_WORDS,
+    persistent_storage_binding_usage, queue_state_word, CombinedBatch, FileBatch, HitRecord,
+    FILE_METADATA_WORDS, HIT_RECORD_WORDS, QUEUE_STATE_WORDS,
 };
 use super::dispatch_plan::{BatchDispatchPlan, BatchDispatchPlanCache, BatchDispatchPlanLookup};
 use super::segmentation::SEGMENT_WORDS;
@@ -1873,6 +1873,176 @@ fn dfa_byte_scanner(hit_writer: BatchHitWriter) -> Vec<Node> {
             ],
         ),
     ]
+}
+
+/// Caller-owns-hit-storage counters for one combined-AC dispatch.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CombinedDispatchSummary {
+    /// Sparse hit count written by the device (clamped to `hit_capacity`).
+    pub hit_count: u32,
+    /// Matches produced BEYOND `hit_capacity` and therefore DROPPED from the
+    /// ring (raw atomic head minus capacity). `> 0` means the hit set is
+    /// INCOMPLETE — a recall-critical overflow the caller must recover, never
+    /// treat as complete (Law 10). Zero on a healthy dispatch.
+    pub dropped_hits: u32,
+    /// Segments the device finished (`DONE_COUNT`).
+    pub items_processed: u32,
+    /// Wall-clock GPU execution time.
+    pub wall_time: Duration,
+}
+
+/// Persistent dispatcher for the combined-AC segmented megakernel.
+///
+/// The combined twin of [`BatchDispatcher`] minus the per-rule catalog
+/// machinery (no fingerprints, no `rule_meta`/`transitions`/`accept` upload):
+/// the automaton is resident in the [`CombinedBatch`]. It compiles the
+/// combined persistent program (the backend pipeline cache dedups the WGSL
+/// compile by program+adapter+config), drains the whole `segment_count` queue,
+/// and reads back the sparse hit ring with the SAME Law-10 overflow +
+/// incomplete-drain guards as the per-rule path.
+pub struct CombinedDispatcher {
+    backend: WgpuBackend,
+    config: BatchDispatchConfig,
+    queue_state_bytes: Vec<u8>,
+    hit_bytes: Vec<u8>,
+}
+
+impl CombinedDispatcher {
+    /// Build a combined dispatcher over a live backend.
+    #[must_use]
+    pub fn new(backend: WgpuBackend, config: BatchDispatchConfig) -> Self {
+        Self {
+            backend,
+            config,
+            queue_state_bytes: Vec::new(),
+            hit_bytes: Vec::new(),
+        }
+    }
+
+    /// Dispatch the combined automaton over every segment of `batch`,
+    /// compacting decoded hits into caller-owned `hits`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PipelineError`] on pipeline compilation failure, dispatch
+    /// timeout, an incomplete drain (loud, never a silent partial), or readback
+    /// failure.
+    pub fn dispatch_into(
+        &mut self,
+        batch: &CombinedBatch,
+        hits: &mut Vec<HitRecord>,
+    ) -> Result<CombinedDispatchSummary, PipelineError> {
+        let queue_len = batch.queue_len();
+        if queue_len == 0 {
+            // Every file empty ⇒ no segments ⇒ nothing to scan.
+            hits.clear();
+            return Ok(CombinedDispatchSummary {
+                hit_count: 0,
+                dropped_hits: 0,
+                items_processed: 0,
+                wall_time: Duration::ZERO,
+            });
+        }
+        let worker_groups = if self.config.worker_groups != 0 {
+            self.config.worker_groups
+        } else {
+            self.config
+                .launch_recommendation(self.backend.device_limits(), queue_len)?
+                .worker_groups
+        };
+        let program =
+            build_combined_batch_program(self.config.workgroup_size_x, batch.hit_capacity());
+        let pipeline = self
+            .backend
+            .compile_persistent(&program, &DispatchConfig::default())?;
+        batch.reset_queue_state();
+
+        let inputs = batch.input_buffers();
+        let outputs = batch.output_buffers();
+        let start = Instant::now();
+        pipeline.dispatch_persistent_borrowed(&inputs, &outputs, None, [worker_groups, 1, 1])?;
+        let (device, queue) = &*self.backend.device_queue();
+        wait_for_persistent_dispatch(device, start, self.config.timeout)?;
+        let wall_time = start.elapsed();
+
+        self.queue_state_bytes.clear();
+        let queue_state_readback_bytes = batch_fixed_resident_overhead_bytes();
+        batch.queue_state().readback_prefix(
+            device,
+            queue,
+            queue_state_readback_bytes,
+            &mut self.queue_state_bytes,
+        )?;
+        let queue_state_word_count =
+            validate_u32_readback_words(&self.queue_state_bytes, "queue-state")?;
+        if queue_state_word_count < QUEUE_STATE_WORDS {
+            return Err(PipelineError::Backend(format!(
+                "queue-state readback exposed {} words, expected at least {}. Fix: keep the queue-state buffer sized for every control word.",
+                queue_state_word_count, QUEUE_STATE_WORDS
+            )));
+        }
+        let raw_hit_head = read_u32_word(
+            &self.queue_state_bytes,
+            "queue-state",
+            queue_state_word::HIT_HEAD,
+        )?;
+        let (hit_count, dropped_hits) = split_hit_overflow(raw_hit_head, batch.hit_capacity());
+        let items_processed = read_u32_word(
+            &self.queue_state_bytes,
+            "queue-state",
+            queue_state_word::DONE_COUNT,
+        )?;
+        // Fail-closed drain guard (Law 10): HEAD < queue_len ⇒ the dispatch was
+        // cut short, leaving segments `[HEAD, queue_len)` unscanned with their
+        // matches missing and `dropped_hits == 0` — an INVISIBLE recall loss.
+        let claims_attempted = read_u32_word(
+            &self.queue_state_bytes,
+            "queue-state",
+            queue_state_word::HEAD,
+        )?;
+        if claims_attempted < queue_len {
+            return Err(PipelineError::Backend(format!(
+                "combined megakernel drain incomplete: only {claims_attempted} of {queue_len} segments were \
+                 claimed before the dispatch ended, so {} segment(s) went unscanned and their matches were \
+                 dropped. This dispatch's hit set is INCOMPLETE. Fix: raise BatchDispatchConfig.timeout so the \
+                 drain loop can exhaust the queue, or shard the batch.",
+                queue_len.saturating_sub(claims_attempted)
+            )));
+        }
+
+        self.hit_bytes.clear();
+        let hit_readback_bytes = u64::from(hit_count)
+            .checked_mul(dispatcher_usize_to_u64(
+                HIT_RECORD_WORDS,
+                "hit-record word count",
+            ))
+            .and_then(|words| {
+                words.checked_mul(dispatcher_usize_to_u64(
+                    std::mem::size_of::<u32>(),
+                    "u32 byte width",
+                ))
+            })
+            .ok_or_else(|| {
+                PipelineError::Backend(
+                    "combined hit-ring readback length overflowed u64. Fix: reduce hit_capacity or shard the batch."
+                        .to_string(),
+                )
+            })?;
+        batch.hit_ring().readback_prefix(
+            device,
+            queue,
+            hit_readback_bytes,
+            &mut self.hit_bytes,
+        )?;
+        decode_hits_from_readback_into(&self.hit_bytes, hit_count, hits)?;
+
+        Ok(CombinedDispatchSummary {
+            hit_count,
+            dropped_hits,
+            items_processed,
+            wall_time,
+        })
+    }
 }
 
 fn hit_writer_node(hit_writer: BatchHitWriter) -> Node {

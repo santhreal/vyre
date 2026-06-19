@@ -39,17 +39,19 @@ pub mod segmentation;
 
 #[cfg(feature = "megakernel-batch")]
 pub use batch::{
-    queue_state_word, BatchFile, FileBatch, FileBatchRefreshReport, FileMetadata, HitRecord,
-    WorkTriple, FILE_METADATA_WORDS, HIT_RECORD_WORDS, QUEUE_STATE_WORDS, WORK_TRIPLE_WORDS,
+    queue_state_word, BatchFile, CombinedBatch, FileBatch, FileBatchRefreshReport, FileMetadata,
+    HitRecord, WorkTriple, FILE_METADATA_WORDS, HIT_RECORD_WORDS, QUEUE_STATE_WORDS,
+    WORK_TRIPLE_WORDS,
 };
 #[cfg(feature = "megakernel-batch")]
 pub use dispatch_plan::BatchDispatchPlan;
 #[cfg(feature = "megakernel-batch")]
 pub use dispatcher::{
     BatchDispatchConfig, BatchDispatchReport, BatchDispatchSummary, BatchDispatchTelemetry,
-    BatchDispatcher, BatchHitWriter, WgpuScanBatchSegmentationError,
-    WgpuScanBatchSegmentationEvidence, WgpuScanBatchSegmentationRequest,
-    WGPU_SCAN_BATCH_SEGMENTATION_SCHEMA_VERSION, wgpu_scan_batch_segmentation_evidence,
+    BatchDispatcher, BatchHitWriter, CombinedDispatchSummary, CombinedDispatcher,
+    WgpuScanBatchSegmentationError, WgpuScanBatchSegmentationEvidence,
+    WgpuScanBatchSegmentationRequest, WGPU_SCAN_BATCH_SEGMENTATION_SCHEMA_VERSION,
+    wgpu_scan_batch_segmentation_evidence,
 };
 
 thread_local! {

@@ -505,6 +505,291 @@ impl FileBatch {
     }
 }
 
+/// Device-resident batch for the COMBINED Aho-Corasick segmented megakernel.
+///
+/// Where [`FileBatch`] uploads per-rule DFA tables and runs one work item per
+/// `(segment, rule)`, `CombinedBatch` uploads ONE flattened combined automaton
+/// (`transitions` / `output_offsets` / `output_records`) and runs one work item
+/// per segment (`queue_len = segment_count`). It reuses every FileBatch host
+/// primitive (metadata, offsets, haystack packing, segment tiling, queue-state
+/// header, sparse hit ring) verbatim; only the automaton buffers and the work
+/// dimension differ.
+///
+/// LAYERING: this type takes the automaton as RAW flattened `u32` arrays — it
+/// holds NO pattern / Aho-Corasick knowledge. Building the automaton from
+/// patterns (`vyre_libs::scan::classic_ac::classic_ac_compile`) lives in the
+/// caller, because `vyre-libs` sits ABOVE this crate in the dependency graph.
+///
+/// SOUNDNESS: the segment warm-up `overlap` is fixed to `max_pattern_len` (a
+/// match ending at a window's `emit_start` can begin up to `max_pattern_len-1`
+/// bytes earlier, so the window must rescan that prefix to reconstruct the DFA
+/// state). This is the overlap the `segmentation.rs` `combined_segmented_scan`
+/// CPU oracle proves equal to a linear `classic_ac_scan`. It is NOT caller-
+/// tunable: the automaton determines it.
+#[derive(Clone)]
+pub struct CombinedBatch {
+    device_queue: Arc<(wgpu::Device, wgpu::Queue)>,
+    file_metadata: Vec<FileMetadata>,
+    queue_len: u32,
+    hit_capacity: u32,
+    max_pattern_len: u32,
+    haystack: GpuBufferHandle,
+    offsets: GpuBufferHandle,
+    metadata: GpuBufferHandle,
+    transitions: GpuBufferHandle,
+    output_offsets: GpuBufferHandle,
+    output_records: GpuBufferHandle,
+    segments: GpuBufferHandle,
+    queue_state: GpuBufferHandle,
+    hit_ring: GpuBufferHandle,
+}
+
+impl std::fmt::Debug for CombinedBatch {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("CombinedBatch")
+            .field("file_count", &self.file_metadata.len())
+            .field("queue_len", &self.queue_len)
+            .field("hit_capacity", &self.hit_capacity)
+            .field("max_pattern_len", &self.max_pattern_len)
+            .finish()
+    }
+}
+
+impl CombinedBatch {
+    /// Upload a combined-AC batch into persistent GPU buffers.
+    ///
+    /// `transitions` is the dense `state_count * 256` byte→next-state table,
+    /// `output_offsets` the `state_count + 1` CSR row pointers, and
+    /// `output_records` the flat pattern-id payload. `max_pattern_len` is the
+    /// longest pattern in the automaton (the warm-up overlap). `seg_len` is the
+    /// per-segment owned width; pass `u32::MAX` for one segment per file.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PipelineError::QueueFull`] when the batch exceeds `u32` table
+    /// limits or the work queue overflows, or [`PipelineError::Backend`] when
+    /// the automaton arrays are internally inconsistent (a malformed automaton
+    /// is rejected, never silently scanned).
+    #[allow(clippy::too_many_arguments)]
+    pub fn upload(
+        device_queue: Arc<(wgpu::Device, wgpu::Queue)>,
+        files: &[BatchFile],
+        transitions: &[u32],
+        output_offsets: &[u32],
+        output_records: &[u32],
+        state_count: u32,
+        max_pattern_len: u32,
+        seg_len: u32,
+        hit_capacity: u32,
+    ) -> Result<Self, PipelineError> {
+        validate_hit_capacity(hit_capacity)?;
+        validate_combined_automaton(
+            transitions,
+            output_offsets,
+            output_records,
+            state_count,
+        )?;
+        if seg_len == 0 {
+            return Err(PipelineError::QueueFull {
+                queue: "submission",
+                fix: "segment owned-width (seg_len) must be > 0; pass u32::MAX for one segment per file",
+            });
+        }
+        let (device, queue) = &*device_queue;
+        let mut file_metadata = Vec::new();
+        let mut file_offsets = Vec::new();
+        let mut haystack_words = Vec::new();
+        build_metadata_into(files, &mut file_metadata)?;
+        build_offsets_into(files, &mut file_offsets)?;
+        flatten_haystack_words_into(files, &mut haystack_words)?;
+        let segment_words = build_segment_table(&file_metadata, seg_len, max_pattern_len);
+        // One work item per segment: rule_count == 1 in the dense primitive.
+        let queue_len = segment_queue_len(&segment_words, 1)?;
+        let queue_state_words = initial_queue_state(queue_len, hit_capacity, 1);
+
+        let usage = persistent_storage_binding_usage();
+        let haystack =
+            GpuBufferHandle::upload(device, queue, bytemuck::cast_slice(&haystack_words), usage)?;
+        let offsets =
+            GpuBufferHandle::upload(device, queue, bytemuck::cast_slice(&file_offsets), usage)?;
+        let metadata =
+            GpuBufferHandle::upload(device, queue, bytemuck::cast_slice(&file_metadata), usage)?;
+        let transitions =
+            GpuBufferHandle::upload(device, queue, bytemuck::cast_slice(transitions), usage)?;
+        let output_offsets =
+            GpuBufferHandle::upload(device, queue, bytemuck::cast_slice(output_offsets), usage)?;
+        let output_records =
+            GpuBufferHandle::upload(device, queue, bytemuck::cast_slice(output_records), usage)?;
+        let segments =
+            GpuBufferHandle::upload(device, queue, bytemuck::cast_slice(&segment_words), usage)?;
+        let queue_state =
+            GpuBufferHandle::upload(device, queue, bytemuck::cast_slice(&queue_state_words), usage)?;
+        let hit_ring_bytes = hit_ring_byte_len(hit_capacity)?;
+        let hit_ring = GpuBufferHandle::alloc(device, hit_ring_bytes, usage)?;
+
+        Ok(Self {
+            device_queue,
+            file_metadata,
+            queue_len,
+            hit_capacity,
+            max_pattern_len,
+            haystack,
+            offsets,
+            metadata,
+            transitions,
+            output_offsets,
+            output_records,
+            segments,
+            queue_state,
+            hit_ring,
+        })
+    }
+
+    /// Re-tile this batch at a new segment owned-width, keeping the proven
+    /// `overlap = max_pattern_len`. `seg_len = u32::MAX` restores one segment
+    /// per file.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PipelineError::QueueFull`] when `seg_len == 0` or the new work
+    /// queue overflows, or [`PipelineError::Backend`] on upload failure.
+    pub fn set_segmentation(&mut self, seg_len: u32) -> Result<(), PipelineError> {
+        if seg_len == 0 {
+            return Err(PipelineError::QueueFull {
+                queue: "submission",
+                fix: "segment owned-width (seg_len) must be > 0; pass u32::MAX for one segment per file",
+            });
+        }
+        let segment_words = build_segment_table(&self.file_metadata, seg_len, self.max_pattern_len);
+        let queue_len = segment_queue_len(&segment_words, 1)?;
+        self.queue_len = queue_len;
+        let queue_state_words = initial_queue_state(queue_len, self.hit_capacity, 1);
+        let (device, queue) = &*self.device_queue;
+        let mut report = FileBatchRefreshReport::default();
+        accumulate_refresh(
+            &mut report,
+            &mut self.segments,
+            device,
+            queue,
+            bytemuck::cast_slice(&segment_words),
+            persistent_storage_binding_usage(),
+        )?;
+        queue.write_buffer(
+            self.queue_state.buffer(),
+            0,
+            bytemuck::cast_slice(&queue_state_words),
+        );
+        Ok(())
+    }
+
+    /// Reset the persistent queue indices before another dispatch.
+    pub fn reset_queue_state(&self) {
+        let (_, queue) = &*self.device_queue;
+        let words = initial_queue_state(self.queue_len, self.hit_capacity, 1);
+        queue.write_buffer(self.queue_state.buffer(), 0, bytemuck::cast_slice(&words));
+    }
+
+    /// Device work-queue length (== segment count).
+    #[must_use]
+    pub const fn queue_len(&self) -> u32 {
+        self.queue_len
+    }
+
+    /// Sparse hit-ring capacity.
+    #[must_use]
+    pub const fn hit_capacity(&self) -> u32 {
+        self.hit_capacity
+    }
+
+    /// Shared device + queue handle.
+    #[must_use]
+    pub fn device_queue(&self) -> Arc<(wgpu::Device, wgpu::Queue)> {
+        Arc::clone(&self.device_queue)
+    }
+
+    /// Read-only input buffers in `combined_batch_program_buffers` declaration
+    /// order (file_offsets, file_metadata, haystack, transitions,
+    /// output_offsets, output_records, segments). The persistent pipeline binds
+    /// inputs positionally in this order.
+    #[must_use]
+    pub fn input_buffers(&self) -> [&GpuBufferHandle; 7] {
+        [
+            &self.offsets,
+            &self.metadata,
+            &self.haystack,
+            &self.transitions,
+            &self.output_offsets,
+            &self.output_records,
+            &self.segments,
+        ]
+    }
+
+    /// Writable buffers in declaration order (queue_state, then the hit_ring
+    /// output).
+    #[must_use]
+    pub const fn output_buffers(&self) -> [&GpuBufferHandle; 2] {
+        [&self.queue_state, &self.hit_ring]
+    }
+
+    /// Persistent queue-state buffer (control words).
+    #[must_use]
+    pub const fn queue_state(&self) -> &GpuBufferHandle {
+        &self.queue_state
+    }
+
+    /// Sparse hit-ring buffer.
+    #[must_use]
+    pub const fn hit_ring(&self) -> &GpuBufferHandle {
+        &self.hit_ring
+    }
+}
+
+/// Reject a structurally inconsistent combined automaton at the boundary rather
+/// than uploading tables the kernel would index out of range (Law 10: fail
+/// closed, never silently scan a malformed automaton).
+fn validate_combined_automaton(
+    transitions: &[u32],
+    output_offsets: &[u32],
+    output_records: &[u32],
+    state_count: u32,
+) -> Result<(), PipelineError> {
+    if state_count == 0 {
+        return Err(PipelineError::Backend(
+            "combined automaton has state_count 0. Fix: compile at least one pattern before upload."
+                .to_string(),
+        ));
+    }
+    let state_count_usize = state_count as usize;
+    let expected_transitions = state_count_usize.checked_mul(256).ok_or_else(|| {
+        PipelineError::Backend(
+            "combined transition table size (state_count * 256) overflowed usize. Fix: shard the pattern catalog."
+                .to_string(),
+        )
+    })?;
+    if transitions.len() != expected_transitions {
+        return Err(PipelineError::Backend(format!(
+            "combined transition table has {} words, expected state_count*256 = {expected_transitions}. Fix: pass the dense classic-AC transition table.",
+            transitions.len()
+        )));
+    }
+    if output_offsets.len() != state_count_usize + 1 {
+        return Err(PipelineError::Backend(format!(
+            "combined output_offsets has {} entries, expected state_count+1 = {}. Fix: pass the CSR row-pointer array.",
+            output_offsets.len(),
+            state_count_usize + 1
+        )));
+    }
+    let last_offset = *output_offsets.last().expect("non-empty: checked above") as usize;
+    if last_offset != output_records.len() {
+        return Err(PipelineError::Backend(format!(
+            "combined output_offsets terminator {last_offset} != output_records length {}. Fix: keep the CSR payload and row pointers consistent.",
+            output_records.len()
+        )));
+    }
+    Ok(())
+}
+
 fn accumulate_refresh(
     report: &mut FileBatchRefreshReport,
     handle: &mut GpuBufferHandle,
