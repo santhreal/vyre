@@ -401,6 +401,28 @@ impl BodyBuilder<'_> {
                     }
                     _ => self.value_type_operand(op, 0)?,
                 };
+                // 64-bit gate (mirrors the binop gate): U64/I64 are backed by
+                // vec2<u32>. A Naga unary applied to the pair runs PER-WORD, so
+                // popcount/clz/ctz/reverse/negate on a 64-bit value would be
+                // SILENTLY WRONG (popcount/clz/ctz count a single word;
+                // reverse_bits reverses each word without swapping them; negate
+                // carries no borrow). Only bitwise NOT is correct componentwise.
+                // Fail closed (Law 10) rather than emit a per-word result.
+                let operand_is_u64 = self
+                    .value_type_operand(op, 0)
+                    .map(|h| h == self.types.vec2_u32_ty)
+                    .unwrap_or(false);
+                if operand_is_u64 && !matches!(unop, UnOp::BitNot) {
+                    return Err(EmitError::NagaConstructionFailed(format!(
+                        "64-bit (U64/I64) unary `{unop:?}` is not lowered: the \
+                         vec2<u32> backing would apply it per-word, so the 64-bit \
+                         result would be silently wrong (popcount/clz/ctz count a \
+                         single word; reverse_bits does not swap words; negate \
+                         carries no borrow). Only bitwise NOT is correct \
+                         componentwise on a 64-bit value. Fix: add a cross-word \
+                         U64 emulation pass before this op reaches Naga emission."
+                    )));
+                }
                 // Naga's `LogicalNot` requires a Bool operand. When the
                 // operand was published via a u32 carrier local (e.g. a
                 // bool result that was bind_result_typed as u32 because

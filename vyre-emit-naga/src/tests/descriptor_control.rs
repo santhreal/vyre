@@ -261,6 +261,110 @@ fn u32_div_desc(binop: BinOp) -> KernelDescriptor {
     }
 }
 
+/// Load a U64 (vec2<u32> backing), apply `unop`, store to a U64 out.
+fn u64_unop_desc(unop: UnOp) -> KernelDescriptor {
+    KernelDescriptor {
+        id: "u64_unop".into(),
+        bindings: BindingLayout {
+            slots: vec![
+                BindingSlot {
+                    slot: 0,
+                    element_type: DataType::U64,
+                    element_count: Some(4),
+                    memory_class: MemoryClass::Global,
+                    visibility: BindingVisibility::ReadOnly,
+                    name: "src".into(),
+                },
+                BindingSlot {
+                    slot: 1,
+                    element_type: DataType::U64,
+                    element_count: Some(4),
+                    memory_class: MemoryClass::Global,
+                    visibility: BindingVisibility::ReadWrite,
+                    name: "out".into(),
+                },
+            ],
+        },
+        dispatch: Dispatch::new(1, 1, 1),
+        body: KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(0),
+                },
+                KernelOp {
+                    kind: KernelOpKind::LoadGlobal,
+                    operands: vec![0, 0],
+                    result: Some(1),
+                },
+                KernelOp {
+                    kind: KernelOpKind::UnOpKind(unop),
+                    operands: vec![1],
+                    result: Some(2),
+                },
+                KernelOp {
+                    kind: KernelOpKind::StoreGlobal,
+                    operands: vec![1, 0, 2],
+                    result: None,
+                },
+            ],
+            child_bodies: vec![],
+            literals: vec![LiteralValue::U32(0)],
+        },
+    }
+}
+
+#[test]
+fn u64_cross_word_unary_ops_fail_closed_not_silently_per_word() {
+    // popcount/clz/ctz/reverse_bits/negate on a vec2<u32>-backed 64-bit value
+    // would run PER-WORD on the GPU (a valid-but-wrong naga Math/Unary), so the
+    // 64-bit result silently diverges from the reference's true 64-bit count.
+    // The gate must fail closed with its real diagnostic for each.
+    for unop in [
+        UnOp::Popcount,
+        UnOp::Clz,
+        UnOp::Ctz,
+        UnOp::ReverseBits,
+        UnOp::Negate,
+    ] {
+        let label = format!("{unop:?}");
+        let err = emit(&u64_unop_desc(unop))
+            .expect_err(&format!("{label} on vec2<u32>-backed u64 must fail closed"));
+        let msg = format!("{err:?}");
+        assert!(
+            msg.contains("is not lowered") && msg.contains("per-word"),
+            "{label}: fail-closed error must name the per-word hazard, got: {msg}"
+        );
+    }
+}
+
+#[test]
+fn u64_bitwise_not_emits_valid_componentwise_wgsl() {
+    use naga::valid::{Capabilities, ValidationFlags, Validator};
+    // ~x on a 64-bit value IS correct componentwise (flip every bit of both
+    // words), so BitNot is the one unary the gate admits: it must emit, validate,
+    // and keep the vec2<u32> backing.
+    let module = emit(&u64_unop_desc(UnOp::BitNot)).expect("u64 BitNot must emit");
+    Validator::new(ValidationFlags::all(), Capabilities::all())
+        .validate(&module)
+        .unwrap_or_else(|e| panic!("u64 BitNot: INVALID WGSL: {e:?}"));
+    let entry = module.entry_points.first().expect("entry point");
+    let has_bitwise_not = entry.function.expressions.iter().any(|(_, e)| {
+        matches!(
+            e,
+            naga::Expression::Unary {
+                op: naga::UnaryOperator::BitwiseNot,
+                ..
+            }
+        )
+    });
+    assert!(
+        has_bitwise_not,
+        "u64 BitNot must emit a componentwise BitwiseNot over the vec2<u32> backing"
+    );
+}
+
 /// Shift `x` (slot 0 idx 0) left/right by a runtime amount (slot 0 idx 1),
 /// store to a u32 out. The amount is a load, so it is NOT a known constant.
 fn u32_variable_shift_desc(binop: BinOp) -> KernelDescriptor {
