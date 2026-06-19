@@ -1004,15 +1004,47 @@ impl BodyBuilder<'_> {
         }
         let left_kind = self.scalar_kind_of_expression(left_eff, 0);
         let right_kind = self.scalar_kind_of_expression(right_eff, 0);
-        if let (Some(lk), Some(rk)) = (left_kind, right_kind) {
-            if lk != rk {
-                let target = match lk {
-                    naga::ScalarKind::Bool => self.types.bool_ty,
-                    naga::ScalarKind::Sint => self.types.i32_ty,
-                    naga::ScalarKind::Float => self.types.f32_ty,
-                    _ => self.types.u32_ty,
-                };
-                right_eff = self.coerce_value_to_type(right_eff, target);
+        // Shifts are the exception to operand-kind unification: the amount must
+        // stay u32 regardless of the value's signedness (the value's signedness
+        // selects arithmetic vs logical shift). Coercing the amount to the
+        // value's kind here would force `i32 >> 1`'s amount to Sint; the shift
+        // block below owns the amount's type (coerce-to-u32 + bit-width mask).
+        let is_shift = matches!(effective_binop, BinOp::Shl | BinOp::Shr);
+        if !is_shift {
+            if let (Some(lk), Some(rk)) = (left_kind, right_kind) {
+                if lk != rk {
+                    let target = match lk {
+                        naga::ScalarKind::Bool => self.types.bool_ty,
+                        naga::ScalarKind::Sint => self.types.i32_ty,
+                        naga::ScalarKind::Float => self.types.f32_ty,
+                        _ => self.types.u32_ty,
+                    };
+                    right_eff = self.coerce_value_to_type(right_eff, target);
+                }
+            }
+        }
+        // Backend contract: the shift amount is taken modulo the bit width (32).
+        // The reference oracle masks (`right & 31`) and PTX masks
+        // (`and.b32 …,31`), but a bare naga ShiftLeft/ShiftRight leaves an
+        // amount >= 32 undefined per the SPIR-V/WGSL shift rules — a silent
+        // CPU/GPU divergence (Law 10). Mask here so the wgpu/spirv/metal path
+        // matches PTX and the oracle. A known in-range constant amount (the
+        // `x >> 16` hot path) is left untouched — it would fold to itself — so
+        // the mask only costs an `& 31` on genuinely variable shift counts.
+        // (u64 shifts never reach here: the 64-bit gate fails them closed.)
+        if is_shift {
+            let amount_in_range = matches!(
+                self.function.expressions.try_get(right_eff),
+                Ok(Expression::Literal(Literal::U32(v))) if *v < 32
+            );
+            if !amount_in_range {
+                right_eff = self.coerce_value_to_type(right_eff, self.types.u32_ty);
+                let mask31 = self.append_expr(Expression::Literal(Literal::U32(31)));
+                right_eff = self.append_expr(Expression::Binary {
+                    op: BinaryOperator::And,
+                    left: right_eff,
+                    right: mask31,
+                });
             }
         }
         let value =

@@ -261,6 +261,145 @@ fn u32_div_desc(binop: BinOp) -> KernelDescriptor {
     }
 }
 
+/// Shift `x` (slot 0 idx 0) left/right by a runtime amount (slot 0 idx 1),
+/// store to a u32 out. The amount is a load, so it is NOT a known constant.
+fn u32_variable_shift_desc(binop: BinOp) -> KernelDescriptor {
+    let mut desc = u32_div_desc(binop);
+    desc.id = "u32_var_shift".into();
+    desc
+}
+
+/// Shift `x` (slot 0 idx 0) by a constant in-range `amount` literal.
+fn u32_const_shift_desc(binop: BinOp, amount: u32) -> KernelDescriptor {
+    KernelDescriptor {
+        id: "u32_const_shift".into(),
+        bindings: BindingLayout {
+            slots: vec![
+                BindingSlot {
+                    slot: 0,
+                    element_type: DataType::U32,
+                    element_count: Some(4),
+                    memory_class: MemoryClass::Global,
+                    visibility: BindingVisibility::ReadOnly,
+                    name: "src".into(),
+                },
+                BindingSlot {
+                    slot: 1,
+                    element_type: DataType::U32,
+                    element_count: Some(4),
+                    memory_class: MemoryClass::Global,
+                    visibility: BindingVisibility::ReadWrite,
+                    name: "out".into(),
+                },
+            ],
+        },
+        dispatch: Dispatch::new(1, 1, 1),
+        body: KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(0),
+                },
+                KernelOp {
+                    kind: KernelOpKind::LoadGlobal,
+                    operands: vec![0, 0],
+                    result: Some(1),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![1],
+                    result: Some(2),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(binop),
+                    operands: vec![1, 2],
+                    result: Some(3),
+                },
+                KernelOp {
+                    kind: KernelOpKind::StoreGlobal,
+                    operands: vec![1, 0, 3],
+                    result: None,
+                },
+            ],
+            child_bodies: vec![],
+            literals: vec![LiteralValue::U32(0), LiteralValue::U32(amount)],
+        },
+    }
+}
+
+#[test]
+fn variable_shift_amount_is_masked_to_bit_width() {
+    use naga::valid::{Capabilities, ValidationFlags, Validator};
+    // A runtime shift amount must be masked to `& 31` so the wgpu/spirv/metal
+    // path matches PTX and the reference oracle for amounts >= 32 (bare naga
+    // shift leaves them undefined). Prove the mask is emitted and validates.
+    for binop in [BinOp::Shl, BinOp::Shr] {
+        let module = emit(&u32_variable_shift_desc(binop))
+            .unwrap_or_else(|e| panic!("{binop:?}: emit failed: {e}"));
+        Validator::new(ValidationFlags::all(), Capabilities::all())
+            .validate(&module)
+            .unwrap_or_else(|e| panic!("{binop:?} variable shift: INVALID WGSL: {e:?}"));
+        let entry = module.entry_points.first().expect("entry point");
+        let arena = &entry.function.expressions;
+        let expected_shift = if matches!(binop, BinOp::Shl) {
+            naga::BinaryOperator::ShiftLeft
+        } else {
+            naga::BinaryOperator::ShiftRight
+        };
+        // The shift's amount operand must be `something & 31`.
+        let shift_amount_is_masked = arena.iter().any(|(_, e)| {
+            if let naga::Expression::Binary { op, right, .. } = e {
+                if *op == expected_shift {
+                    return matches!(
+                        arena.try_get(*right),
+                        Ok(naga::Expression::Binary {
+                            op: naga::BinaryOperator::And,
+                            right: mask,
+                            ..
+                        }) if matches!(
+                            arena.try_get(*mask),
+                            Ok(naga::Expression::Literal(naga::Literal::U32(31)))
+                        )
+                    );
+                }
+            }
+            false
+        });
+        assert!(
+            shift_amount_is_masked,
+            "{binop:?}: variable shift amount must be masked with `& 31`"
+        );
+    }
+}
+
+#[test]
+fn constant_in_range_shift_amount_skips_the_mask() {
+    // A known in-range constant shift amount (`x >> 16`) must NOT grow an `& 31`
+    // mask — it would fold to itself, so the hot path stays a bare shift.
+    let module = emit(&u32_const_shift_desc(BinOp::Shr, 16)).expect("const shift emits");
+    let entry = module.entry_points.first().expect("entry point");
+    let arena = &entry.function.expressions;
+    let shift_amount_is_bare_literal = arena.iter().any(|(_, e)| {
+        if let naga::Expression::Binary {
+            op: naga::BinaryOperator::ShiftRight,
+            right,
+            ..
+        } = e
+        {
+            return matches!(
+                arena.try_get(*right),
+                Ok(naga::Expression::Literal(naga::Literal::U32(16)))
+            );
+        }
+        false
+    });
+    assert!(
+        shift_amount_is_bare_literal,
+        "in-range constant shift amount must stay a bare literal (no `& 31`)"
+    );
+}
+
 #[test]
 fn unsigned_div_by_zero_is_guarded_to_oracle_max() {
     use naga::valid::{Capabilities, ValidationFlags, Validator};
