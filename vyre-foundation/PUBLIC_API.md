@@ -2471,6 +2471,7 @@ impl<T> typenum::type_operators::Same for vyre_foundation::execution_plan::fusio
 pub type vyre_foundation::execution_plan::fusion::FusionSelfAliasingError::Output = T
 pub fn vyre_foundation::execution_plan::fusion::fuse_programs(programs: &[vyre_foundation::ir::Program]) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::execution_plan::fusion::FusionError>
 pub fn vyre_foundation::execution_plan::fusion::fuse_programs_vec(programs: alloc::vec::Vec<vyre_foundation::ir::Program>) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::execution_plan::fusion::FusionError>
+pub fn vyre_foundation::execution_plan::fusion::merge_programs_shared(programs: &[vyre_foundation::ir::Program]) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::execution_plan::fusion::FusionError>
 pub mod vyre_foundation::execution_plan::memory_budget
 pub struct vyre_foundation::execution_plan::memory_budget::DeviceMemoryBudget
 pub vyre_foundation::execution_plan::memory_budget::DeviceMemoryBudget::backend: &'static str
@@ -17632,6 +17633,7 @@ pub fn vyre_foundation::optimizer::planar_batch::default_planar_rewrite_batch_th
 pub fn vyre_foundation::optimizer::planar_batch::planar_rewrite_schedule_mask(candidates: &[u32], height: u32, width: u32, footprint: u32) -> alloc::vec::Vec<u32>
 pub mod vyre_foundation::optimizer::pre_lowering
 pub fn vyre_foundation::optimizer::pre_lowering::optimize(program: vyre_foundation::ir::Program) -> vyre_foundation::ir::Program
+pub fn vyre_foundation::optimizer::pre_lowering::try_optimize(program: vyre_foundation::ir::Program) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::optimizer::OptimizerError>
 pub mod vyre_foundation::optimizer::program_shape_facts
 pub struct vyre_foundation::optimizer::program_shape_facts::BufferShapeFacts
 pub vyre_foundation::optimizer::program_shape_facts::BufferShapeFacts::binding: u32
@@ -19601,6 +19603,7 @@ pub vyre_foundation::optimizer::PassRunMetric::refusal_kind: core::option::Optio
 pub vyre_foundation::optimizer::PassRunMetric::register_pressure_after: u32
 pub vyre_foundation::optimizer::PassRunMetric::register_pressure_before: u32
 pub vyre_foundation::optimizer::PassRunMetric::required_analyses: &'static [&'static str]
+pub vyre_foundation::optimizer::PassRunMetric::research_trace: core::option::Option<vyre_foundation::optimizer::scheduler::PassResearchTrace>
 pub vyre_foundation::optimizer::PassRunMetric::runtime_ns: u128
 pub vyre_foundation::optimizer::PassRunMetric::shape_predicate_violations_after: usize
 pub vyre_foundation::optimizer::PassRunMetric::shape_predicate_violations_before: usize
@@ -19671,12 +19674,14 @@ pub fn vyre_foundation::optimizer::PassScheduler::invalidation_closure(&self) ->
 pub fn vyre_foundation::optimizer::PassScheduler::ordering_cost(passes: &[&'static vyre_foundation::optimizer::ProgramPassRegistration], order: &[usize]) -> u64
 pub fn vyre_foundation::optimizer::PassScheduler::pair_commutes(&self, pass_a: &str, pass_b: &str) -> bool
 pub fn vyre_foundation::optimizer::PassScheduler::reaches(&self, from: &str, to: &str) -> bool
+pub fn vyre_foundation::optimizer::PassScheduler::research_trace_for(&self, pass_name: &str) -> core::option::Option<vyre_foundation::optimizer::scheduler::PassResearchTrace>
 pub fn vyre_foundation::optimizer::PassScheduler::smooth_pass_system(&self, b: &[f64], x_in: &[f64], weight: f64) -> alloc::vec::Vec<f64>
 pub fn vyre_foundation::optimizer::PassScheduler::transitive_dependents(&self, pass_name: &str) -> alloc::vec::Vec<&'static str>
 pub fn vyre_foundation::optimizer::PassScheduler::triple_associates(&self, pass_a: &str, pass_b: &str, pass_c: &str) -> core::option::Option<bool>
 pub fn vyre_foundation::optimizer::PassScheduler::try_with_passes(passes: alloc::vec::Vec<vyre_foundation::optimizer::ProgramPassKind>) -> core::result::Result<Self, vyre_foundation::optimizer::PassSchedulingError>
 pub fn vyre_foundation::optimizer::PassScheduler::with_max_iterations(self, max_iterations: usize) -> Self
 pub fn vyre_foundation::optimizer::PassScheduler::with_passes(passes: alloc::vec::Vec<vyre_foundation::optimizer::ProgramPassKind>) -> Self
+pub fn vyre_foundation::optimizer::PassScheduler::with_research_trace(self, pass_name: &'static str, trace: vyre_foundation::optimizer::scheduler::PassResearchTrace) -> Self
 impl vyre_foundation::optimizer::PassScheduler
 pub fn vyre_foundation::optimizer::PassScheduler::run(&self, program: vyre_foundation::ir::Program) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::optimizer::OptimizerError>
 pub fn vyre_foundation::optimizer::PassScheduler::run_with_metrics(&self, program: vyre_foundation::ir::Program) -> core::result::Result<vyre_foundation::optimizer::OptimizerRunReport, vyre_foundation::optimizer::OptimizerError>
@@ -21746,7 +21751,852 @@ pub mod vyre_foundation::serial::wire::decode
 pub mod vyre_foundation::serial::wire::decode::from_wire
 pub fn vyre_foundation::serial::wire::decode::from_wire::from_wire(bytes: &[u8]) -> core::result::Result<vyre_foundation::ir::Program, alloc::string::String>
 pub mod vyre_foundation::serial::wire::decode::impl_reader
+pub mod vyre_foundation::serial::wire::decode::scan_database_budget
+pub enum vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::ConstructBudgetExceeded
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::ConstructBudgetExceeded::actual: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::ConstructBudgetExceeded::construct_id: &'static str
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::ConstructBudgetExceeded::field: &'static str
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::ConstructBudgetExceeded::max: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::DuplicateSectionsExceeded
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::DuplicateSectionsExceeded::actual: usize
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::DuplicateSectionsExceeded::max: usize
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::SectionCountExceeded
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::SectionCountExceeded::actual: usize
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::SectionCountExceeded::max: usize
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::TableBytesExceeded
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::TableBytesExceeded::actual: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::TableBytesExceeded::max: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::TableBytesOverflow
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::TransitionDensityExceeded
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::TransitionDensityExceeded::actual_bps: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::TransitionDensityExceeded::max_bps: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::VerifierFragmentBytesExceeded
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::VerifierFragmentBytesExceeded::actual: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::VerifierFragmentBytesExceeded::max: u64
+impl core::clone::Clone for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::clone(&self) -> vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+impl core::cmp::Eq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+impl core::cmp::PartialEq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::eq(&self, other: &vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError) -> bool
+impl core::error::Error for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+impl core::fmt::Debug for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+impl core::marker::StructuralPartialEq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+impl core::marker::Freeze for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+impl core::marker::Send for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+impl core::marker::Sync for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+impl core::marker::Unpin for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+impl core::marker::UnsafeUnpin for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError where U: core::convert::From<T>
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError where U: core::convert::Into<T>
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::Error = core::convert::Infallible
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError where U: core::convert::TryFrom<T>
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError where T: core::clone::Clone
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::Owned = T
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::to_owned(&self) -> T
+impl<T> alloc::string::ToString for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError where T: core::fmt::Display + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::to_string(&self) -> alloc::string::String
+impl<T> core::any::Any for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError where T: core::clone::Clone
+pub unsafe fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+impl<T> typenum::type_operators::Same for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::Output = T
+pub struct vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::construct_id: &'static str
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::max_capture_slots: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::max_literal_bytes: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::max_states: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::max_transitions: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::max_unicode_table_bytes: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::max_verifier_fragment_bytes: u64
+impl core::clone::Clone for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::clone(&self) -> vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+impl core::cmp::Eq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+impl core::cmp::PartialEq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::eq(&self, other: &vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget) -> bool
+impl core::fmt::Debug for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+impl core::marker::StructuralPartialEq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+impl core::marker::Freeze for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+impl core::marker::Send for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+impl core::marker::Sync for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+impl core::marker::Unpin for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+impl core::marker::UnsafeUnpin for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget where U: core::convert::From<T>
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget where U: core::convert::Into<T>
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::Error = core::convert::Infallible
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget where U: core::convert::TryFrom<T>
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget where T: core::clone::Clone
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::Owned = T
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget where T: core::clone::Clone
+pub unsafe fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+impl<T> typenum::type_operators::Same for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::Output = T
+pub struct vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::capture_slots: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::construct_id: &'static str
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::literal_bytes: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::max_capture_slots: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::max_literal_bytes: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::max_states: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::max_transitions: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::max_unicode_table_bytes: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::max_verifier_fragment_bytes: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::states: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::transitions: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::unicode_table_bytes: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::verifier_fragment_bytes: u64
+impl vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+pub const fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::within_budget(&self) -> bool
+impl core::clone::Clone for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::clone(&self) -> vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+impl core::cmp::Eq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+impl core::cmp::PartialEq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::eq(&self, other: &vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence) -> bool
+impl core::fmt::Debug for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+impl core::marker::StructuralPartialEq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+impl core::marker::Freeze for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+impl core::marker::Send for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+impl core::marker::Sync for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+impl core::marker::Unpin for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+impl core::marker::UnsafeUnpin for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence where U: core::convert::From<T>
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence where U: core::convert::Into<T>
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::Error = core::convert::Infallible
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence where U: core::convert::TryFrom<T>
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence where T: core::clone::Clone
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::Owned = T
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence where T: core::clone::Clone
+pub unsafe fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+impl<T> typenum::type_operators::Same for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::Output = T
+pub struct vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::capture_slots: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::construct_id: &'static str
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::literal_bytes: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::states: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::transitions: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::unicode_table_bytes: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::verifier_fragment_bytes: u64
+impl core::clone::Clone for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::clone(&self) -> vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+impl core::cmp::Eq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+impl core::cmp::PartialEq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::eq(&self, other: &vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape) -> bool
+impl core::fmt::Debug for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+impl core::marker::StructuralPartialEq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+impl core::marker::Freeze for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+impl core::marker::Send for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+impl core::marker::Sync for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+impl core::marker::Unpin for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+impl core::marker::UnsafeUnpin for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape where U: core::convert::From<T>
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape where U: core::convert::Into<T>
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::Error = core::convert::Infallible
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape where U: core::convert::TryFrom<T>
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape where T: core::clone::Clone
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::Owned = T
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape where T: core::clone::Clone
+pub unsafe fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+impl<T> typenum::type_operators::Same for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::Output = T
+pub struct vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::max_duplicate_section_kinds: usize
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::max_section_count: usize
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::max_total_table_bytes: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::max_transition_density_bps: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::max_verifier_fragment_bytes: u64
+impl core::clone::Clone for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::clone(&self) -> vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+impl core::cmp::Eq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+impl core::cmp::PartialEq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::eq(&self, other: &vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget) -> bool
+impl core::default::Default for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::default() -> Self
+impl core::fmt::Debug for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+impl core::marker::StructuralPartialEq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+impl core::marker::Freeze for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+impl core::marker::Send for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+impl core::marker::Sync for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+impl core::marker::Unpin for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+impl core::marker::UnsafeUnpin for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget where U: core::convert::From<T>
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget where U: core::convert::Into<T>
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::Error = core::convert::Infallible
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget where U: core::convert::TryFrom<T>
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget where T: core::clone::Clone
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::Owned = T
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget where T: core::clone::Clone
+pub unsafe fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+impl<T> typenum::type_operators::Same for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::Output = T
+pub struct vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::duplicate_section_kinds: usize
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::max_duplicate_section_kinds: usize
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::max_section_count: usize
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::max_total_table_bytes: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::max_transition_density_bps: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::max_verifier_fragment_bytes: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::section_count: usize
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::total_table_bytes: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::transition_density_bps: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::verifier_fragment_bytes: u64
+impl vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+pub const fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::within_budget(&self) -> bool
+impl core::clone::Clone for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::clone(&self) -> vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+impl core::cmp::Eq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+impl core::cmp::PartialEq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::eq(&self, other: &vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence) -> bool
+impl core::fmt::Debug for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+impl core::marker::StructuralPartialEq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+impl core::marker::Freeze for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+impl core::marker::Send for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+impl core::marker::Sync for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+impl core::marker::Unpin for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+impl core::marker::UnsafeUnpin for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence where U: core::convert::From<T>
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence where U: core::convert::Into<T>
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::Error = core::convert::Infallible
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence where U: core::convert::TryFrom<T>
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence where T: core::clone::Clone
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::Owned = T
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence where T: core::clone::Clone
+pub unsafe fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+impl<T> typenum::type_operators::Same for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::Output = T
+pub struct vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::state_count: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::transition_count: u64
+pub vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::verifier_fragment_bytes: u64
+impl core::clone::Clone for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::clone(&self) -> vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+impl core::cmp::Eq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+impl core::cmp::PartialEq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::eq(&self, other: &vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape) -> bool
+impl core::fmt::Debug for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+impl core::marker::StructuralPartialEq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+impl core::marker::Freeze for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+impl core::marker::Send for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+impl core::marker::Sync for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+impl core::marker::Unpin for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+impl core::marker::UnsafeUnpin for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape where U: core::convert::From<T>
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape where U: core::convert::Into<T>
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::Error = core::convert::Infallible
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape where U: core::convert::TryFrom<T>
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape where T: core::clone::Clone
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::Owned = T
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape where T: core::clone::Clone
+pub unsafe fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+impl<T> typenum::type_operators::Same for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::Output = T
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::validate_scan_construct_decode_budget(shape: vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape, budget: vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget) -> core::result::Result<vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence, vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError>
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::validate_scan_database_decode_budget(header: &vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader, shape: vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape, budget: vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget) -> core::result::Result<vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence, vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError>
+pub enum vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetError
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetError::ConstructBudgetExceeded
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetError::ConstructBudgetExceeded::actual: u64
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetError::ConstructBudgetExceeded::construct_id: &'static str
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetError::ConstructBudgetExceeded::field: &'static str
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetError::ConstructBudgetExceeded::max: u64
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetError::DuplicateSectionsExceeded
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetError::DuplicateSectionsExceeded::actual: usize
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetError::DuplicateSectionsExceeded::max: usize
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetError::SectionCountExceeded
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetError::SectionCountExceeded::actual: usize
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetError::SectionCountExceeded::max: usize
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetError::TableBytesExceeded
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetError::TableBytesExceeded::actual: u64
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetError::TableBytesExceeded::max: u64
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetError::TableBytesOverflow
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetError::TransitionDensityExceeded
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetError::TransitionDensityExceeded::actual_bps: u64
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetError::TransitionDensityExceeded::max_bps: u64
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetError::VerifierFragmentBytesExceeded
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetError::VerifierFragmentBytesExceeded::actual: u64
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetError::VerifierFragmentBytesExceeded::max: u64
+impl core::clone::Clone for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::clone(&self) -> vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+impl core::cmp::Eq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+impl core::cmp::PartialEq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::eq(&self, other: &vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError) -> bool
+impl core::error::Error for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+impl core::fmt::Debug for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+impl core::marker::StructuralPartialEq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+impl core::marker::Freeze for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+impl core::marker::Send for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+impl core::marker::Sync for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+impl core::marker::Unpin for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+impl core::marker::UnsafeUnpin for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError where U: core::convert::From<T>
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError where U: core::convert::Into<T>
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::Error = core::convert::Infallible
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError where U: core::convert::TryFrom<T>
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError where T: core::clone::Clone
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::Owned = T
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::to_owned(&self) -> T
+impl<T> alloc::string::ToString for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError where T: core::fmt::Display + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::to_string(&self) -> alloc::string::String
+impl<T> core::any::Any for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError where T: core::clone::Clone
+pub unsafe fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+impl<T> typenum::type_operators::Same for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError::Output = T
+pub struct vyre_foundation::serial::wire::decode::ScanConstructDecodeBudget
+pub vyre_foundation::serial::wire::decode::ScanConstructDecodeBudget::construct_id: &'static str
+pub vyre_foundation::serial::wire::decode::ScanConstructDecodeBudget::max_capture_slots: u64
+pub vyre_foundation::serial::wire::decode::ScanConstructDecodeBudget::max_literal_bytes: u64
+pub vyre_foundation::serial::wire::decode::ScanConstructDecodeBudget::max_states: u64
+pub vyre_foundation::serial::wire::decode::ScanConstructDecodeBudget::max_transitions: u64
+pub vyre_foundation::serial::wire::decode::ScanConstructDecodeBudget::max_unicode_table_bytes: u64
+pub vyre_foundation::serial::wire::decode::ScanConstructDecodeBudget::max_verifier_fragment_bytes: u64
+impl core::clone::Clone for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::clone(&self) -> vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+impl core::cmp::Eq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+impl core::cmp::PartialEq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::eq(&self, other: &vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget) -> bool
+impl core::fmt::Debug for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+impl core::marker::StructuralPartialEq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+impl core::marker::Freeze for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+impl core::marker::Send for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+impl core::marker::Sync for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+impl core::marker::Unpin for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+impl core::marker::UnsafeUnpin for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget where U: core::convert::From<T>
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget where U: core::convert::Into<T>
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::Error = core::convert::Infallible
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget where U: core::convert::TryFrom<T>
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget where T: core::clone::Clone
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::Owned = T
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget where T: core::clone::Clone
+pub unsafe fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+impl<T> typenum::type_operators::Same for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget::Output = T
+pub struct vyre_foundation::serial::wire::decode::ScanConstructDecodeBudgetEvidence
+pub vyre_foundation::serial::wire::decode::ScanConstructDecodeBudgetEvidence::capture_slots: u64
+pub vyre_foundation::serial::wire::decode::ScanConstructDecodeBudgetEvidence::construct_id: &'static str
+pub vyre_foundation::serial::wire::decode::ScanConstructDecodeBudgetEvidence::literal_bytes: u64
+pub vyre_foundation::serial::wire::decode::ScanConstructDecodeBudgetEvidence::max_capture_slots: u64
+pub vyre_foundation::serial::wire::decode::ScanConstructDecodeBudgetEvidence::max_literal_bytes: u64
+pub vyre_foundation::serial::wire::decode::ScanConstructDecodeBudgetEvidence::max_states: u64
+pub vyre_foundation::serial::wire::decode::ScanConstructDecodeBudgetEvidence::max_transitions: u64
+pub vyre_foundation::serial::wire::decode::ScanConstructDecodeBudgetEvidence::max_unicode_table_bytes: u64
+pub vyre_foundation::serial::wire::decode::ScanConstructDecodeBudgetEvidence::max_verifier_fragment_bytes: u64
+pub vyre_foundation::serial::wire::decode::ScanConstructDecodeBudgetEvidence::states: u64
+pub vyre_foundation::serial::wire::decode::ScanConstructDecodeBudgetEvidence::transitions: u64
+pub vyre_foundation::serial::wire::decode::ScanConstructDecodeBudgetEvidence::unicode_table_bytes: u64
+pub vyre_foundation::serial::wire::decode::ScanConstructDecodeBudgetEvidence::verifier_fragment_bytes: u64
+impl vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+pub const fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::within_budget(&self) -> bool
+impl core::clone::Clone for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::clone(&self) -> vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+impl core::cmp::Eq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+impl core::cmp::PartialEq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::eq(&self, other: &vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence) -> bool
+impl core::fmt::Debug for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+impl core::marker::StructuralPartialEq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+impl core::marker::Freeze for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+impl core::marker::Send for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+impl core::marker::Sync for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+impl core::marker::Unpin for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+impl core::marker::UnsafeUnpin for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence where U: core::convert::From<T>
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence where U: core::convert::Into<T>
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::Error = core::convert::Infallible
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence where U: core::convert::TryFrom<T>
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence where T: core::clone::Clone
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::Owned = T
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence where T: core::clone::Clone
+pub unsafe fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+impl<T> typenum::type_operators::Same for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence::Output = T
+pub struct vyre_foundation::serial::wire::decode::ScanConstructDecodeShape
+pub vyre_foundation::serial::wire::decode::ScanConstructDecodeShape::capture_slots: u64
+pub vyre_foundation::serial::wire::decode::ScanConstructDecodeShape::construct_id: &'static str
+pub vyre_foundation::serial::wire::decode::ScanConstructDecodeShape::literal_bytes: u64
+pub vyre_foundation::serial::wire::decode::ScanConstructDecodeShape::states: u64
+pub vyre_foundation::serial::wire::decode::ScanConstructDecodeShape::transitions: u64
+pub vyre_foundation::serial::wire::decode::ScanConstructDecodeShape::unicode_table_bytes: u64
+pub vyre_foundation::serial::wire::decode::ScanConstructDecodeShape::verifier_fragment_bytes: u64
+impl core::clone::Clone for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::clone(&self) -> vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+impl core::cmp::Eq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+impl core::cmp::PartialEq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::eq(&self, other: &vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape) -> bool
+impl core::fmt::Debug for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+impl core::marker::StructuralPartialEq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+impl core::marker::Freeze for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+impl core::marker::Send for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+impl core::marker::Sync for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+impl core::marker::Unpin for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+impl core::marker::UnsafeUnpin for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape where U: core::convert::From<T>
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape where U: core::convert::Into<T>
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::Error = core::convert::Infallible
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape where U: core::convert::TryFrom<T>
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape where T: core::clone::Clone
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::Owned = T
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape where T: core::clone::Clone
+pub unsafe fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+impl<T> typenum::type_operators::Same for vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape::Output = T
+pub struct vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudget
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudget::max_duplicate_section_kinds: usize
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudget::max_section_count: usize
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudget::max_total_table_bytes: u64
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudget::max_transition_density_bps: u64
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudget::max_verifier_fragment_bytes: u64
+impl core::clone::Clone for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::clone(&self) -> vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+impl core::cmp::Eq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+impl core::cmp::PartialEq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::eq(&self, other: &vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget) -> bool
+impl core::default::Default for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::default() -> Self
+impl core::fmt::Debug for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+impl core::marker::StructuralPartialEq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+impl core::marker::Freeze for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+impl core::marker::Send for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+impl core::marker::Sync for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+impl core::marker::Unpin for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+impl core::marker::UnsafeUnpin for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget where U: core::convert::From<T>
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget where U: core::convert::Into<T>
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::Error = core::convert::Infallible
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget where U: core::convert::TryFrom<T>
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget where T: core::clone::Clone
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::Owned = T
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget where T: core::clone::Clone
+pub unsafe fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+impl<T> typenum::type_operators::Same for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget::Output = T
+pub struct vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetEvidence
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetEvidence::duplicate_section_kinds: usize
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetEvidence::max_duplicate_section_kinds: usize
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetEvidence::max_section_count: usize
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetEvidence::max_total_table_bytes: u64
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetEvidence::max_transition_density_bps: u64
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetEvidence::max_verifier_fragment_bytes: u64
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetEvidence::section_count: usize
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetEvidence::total_table_bytes: u64
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetEvidence::transition_density_bps: u64
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetEvidence::verifier_fragment_bytes: u64
+impl vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+pub const fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::within_budget(&self) -> bool
+impl core::clone::Clone for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::clone(&self) -> vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+impl core::cmp::Eq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+impl core::cmp::PartialEq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::eq(&self, other: &vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence) -> bool
+impl core::fmt::Debug for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+impl core::marker::StructuralPartialEq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+impl core::marker::Freeze for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+impl core::marker::Send for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+impl core::marker::Sync for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+impl core::marker::Unpin for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+impl core::marker::UnsafeUnpin for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence where U: core::convert::From<T>
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence where U: core::convert::Into<T>
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::Error = core::convert::Infallible
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence where U: core::convert::TryFrom<T>
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence where T: core::clone::Clone
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::Owned = T
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence where T: core::clone::Clone
+pub unsafe fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+impl<T> typenum::type_operators::Same for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence::Output = T
+pub struct vyre_foundation::serial::wire::decode::ScanDatabaseDecodeShape
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeShape::state_count: u64
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeShape::transition_count: u64
+pub vyre_foundation::serial::wire::decode::ScanDatabaseDecodeShape::verifier_fragment_bytes: u64
+impl core::clone::Clone for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::clone(&self) -> vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+impl core::cmp::Eq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+impl core::cmp::PartialEq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::eq(&self, other: &vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape) -> bool
+impl core::fmt::Debug for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+impl core::marker::StructuralPartialEq for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+impl core::marker::Freeze for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+impl core::marker::Send for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+impl core::marker::Sync for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+impl core::marker::Unpin for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+impl core::marker::UnsafeUnpin for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape where U: core::convert::From<T>
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape where U: core::convert::Into<T>
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::Error = core::convert::Infallible
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape where U: core::convert::TryFrom<T>
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape where T: core::clone::Clone
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::Owned = T
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape where T: core::clone::Clone
+pub unsafe fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+pub fn vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+impl<T> typenum::type_operators::Same for vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape
+pub type vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape::Output = T
 pub fn vyre_foundation::serial::wire::decode::from_wire(bytes: &[u8]) -> core::result::Result<vyre_foundation::ir::Program, alloc::string::String>
+pub fn vyre_foundation::serial::wire::decode::validate_scan_construct_decode_budget(shape: vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeShape, budget: vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudget) -> core::result::Result<vyre_foundation::serial::wire::decode::scan_database_budget::ScanConstructDecodeBudgetEvidence, vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError>
+pub fn vyre_foundation::serial::wire::decode::validate_scan_database_decode_budget(header: &vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader, shape: vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeShape, budget: vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudget) -> core::result::Result<vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetEvidence, vyre_foundation::serial::wire::decode::scan_database_budget::ScanDatabaseDecodeBudgetError>
 pub mod vyre_foundation::serial::wire::encode
 pub mod vyre_foundation::serial::wire::encode::error
 pub enum vyre_foundation::serial::wire::encode::error::WireEncodeErr
@@ -21810,10 +22660,600 @@ impl<T> typenum::type_operators::Same for vyre_foundation::serial::wire::encode:
 pub type vyre_foundation::serial::wire::encode::error::WireEncodeErr::Output = T
 pub mod vyre_foundation::serial::wire::encode::put_nodes
 pub fn vyre_foundation::serial::wire::encode::put_nodes::put_nodes(out: &mut alloc::vec::Vec<u8>, nodes: &[vyre_foundation::ir::Node]) -> core::result::Result<(), vyre_foundation::serial::wire::encode::error::WireEncodeErr>
+pub mod vyre_foundation::serial::wire::encode::scan_database_header
+pub enum vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::Block
+pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::Streaming
+pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::Vectored
+impl core::clone::Clone for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::clone(&self) -> vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+impl core::cmp::Eq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+impl core::cmp::PartialEq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::eq(&self, other: &vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode) -> bool
+impl core::fmt::Debug for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+impl core::marker::StructuralPartialEq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+impl serde_core::ser::Serialize for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+impl core::marker::Send for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+impl core::marker::Sync for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+impl core::marker::Unpin for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+impl core::marker::UnsafeUnpin for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode where U: core::convert::From<T>
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode where U: core::convert::Into<T>
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::Error = core::convert::Infallible
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode where U: core::convert::TryFrom<T>
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode where T: core::clone::Clone
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::Owned = T
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode where T: core::clone::Clone
+pub unsafe fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> tracing::instrument::Instrument for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+impl<T> typenum::type_operators::Same for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::Output = T
+pub enum vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::Compatible
+pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::Incompatible
+pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::RequiresVerifier
+impl core::clone::Clone for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::clone(&self) -> vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+impl core::cmp::Eq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+impl core::cmp::PartialEq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::eq(&self, other: &vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility) -> bool
+impl core::fmt::Debug for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+impl core::marker::StructuralPartialEq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+impl serde_core::ser::Serialize for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+impl core::marker::Send for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+impl core::marker::Sync for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+impl core::marker::Unpin for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+impl core::marker::UnsafeUnpin for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility where U: core::convert::From<T>
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility where U: core::convert::Into<T>
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::Error = core::convert::Infallible
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility where U: core::convert::TryFrom<T>
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility where T: core::clone::Clone
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::Owned = T
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility where T: core::clone::Clone
+pub unsafe fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> tracing::instrument::Instrument for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+impl<T> typenum::type_operators::Same for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::Output = T
+pub enum vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::AutomataTable
+pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::LiteralTable
+pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::OutputLayout
+pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::RelationSeeds
+pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::StreamingState
+pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::VerifierFragments
+impl core::clone::Clone for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::clone(&self) -> vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+impl core::cmp::Eq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+impl core::cmp::PartialEq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::eq(&self, other: &vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind) -> bool
+impl core::fmt::Debug for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+impl core::marker::StructuralPartialEq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+impl serde_core::ser::Serialize for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+impl core::marker::Send for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+impl core::marker::Sync for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+impl core::marker::Unpin for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+impl core::marker::UnsafeUnpin for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind where U: core::convert::From<T>
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind where U: core::convert::Into<T>
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::Error = core::convert::Infallible
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind where U: core::convert::TryFrom<T>
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind where T: core::clone::Clone
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::Owned = T
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind where T: core::clone::Clone
+pub unsafe fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> tracing::instrument::Instrument for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+impl<T> typenum::type_operators::Same for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::Output = T
+pub struct vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::construct_tier_digest: u64
+pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::dialect_digest: u64
+pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::reader_compatibility: vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+impl core::clone::Clone for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::clone(&self) -> vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+impl core::cmp::Eq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+impl core::cmp::PartialEq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::eq(&self, other: &vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord) -> bool
+impl core::fmt::Debug for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::StructuralPartialEq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+impl serde_core::ser::Serialize for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+impl core::marker::Send for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+impl core::marker::Sync for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+impl core::marker::Unpin for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+impl core::marker::UnsafeUnpin for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord where U: core::convert::From<T>
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord where U: core::convert::Into<T>
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::Error = core::convert::Infallible
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord where U: core::convert::TryFrom<T>
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord where T: core::clone::Clone
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::Owned = T
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord where T: core::clone::Clone
+pub unsafe fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> tracing::instrument::Instrument for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+impl<T> typenum::type_operators::Same for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::Output = T
+pub struct vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::compatibility: vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::compiler_version: alloc::string::String
+pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::mode: vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::pattern_set_digest: [u8; 32]
+pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::table_sections: alloc::vec::Vec<vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader>
+pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::unsupported_features: alloc::vec::Vec<vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature>
+impl vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::section_count(&self) -> usize
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::unsupported_feature_count(&self) -> usize
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::validate_compatible(&self, expected_compiler_version: &str, expected_mode: vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::validate_database_compatibility(&self, expected_construct_tier_digest: u64, expected_dialect_digest: u64, accepted_reader_compatibility: &[vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility]) -> core::result::Result<(), alloc::string::String>
+impl core::clone::Clone for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::clone(&self) -> vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+impl core::cmp::Eq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+impl core::cmp::PartialEq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::eq(&self, other: &vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader) -> bool
+impl core::fmt::Debug for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::StructuralPartialEq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+impl serde_core::ser::Serialize for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+impl core::marker::Send for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+impl core::marker::Sync for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+impl core::marker::Unpin for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+impl core::marker::UnsafeUnpin for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader where U: core::convert::From<T>
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader where U: core::convert::Into<T>
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::Error = core::convert::Infallible
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader where U: core::convert::TryFrom<T>
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader where T: core::clone::Clone
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::Owned = T
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader where T: core::clone::Clone
+pub unsafe fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> tracing::instrument::Instrument for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+impl<T> typenum::type_operators::Same for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::Output = T
+pub struct vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::byte_len: u64
+pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::kind: vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::offset: u64
+pub vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::section_digest: u64
+impl core::clone::Clone for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::clone(&self) -> vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+impl core::cmp::Eq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+impl core::cmp::PartialEq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::eq(&self, other: &vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader) -> bool
+impl core::fmt::Debug for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::StructuralPartialEq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+impl serde_core::ser::Serialize for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+impl core::marker::Send for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+impl core::marker::Sync for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+impl core::marker::Unpin for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+impl core::marker::UnsafeUnpin for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader where U: core::convert::From<T>
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader where U: core::convert::Into<T>
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::Error = core::convert::Infallible
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader where U: core::convert::TryFrom<T>
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader where T: core::clone::Clone
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::Owned = T
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader where T: core::clone::Clone
+pub unsafe fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> tracing::instrument::Instrument for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+impl<T> typenum::type_operators::Same for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::Output = T
+pub struct vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+pub vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::feature: alloc::string::String
+pub vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::pattern_index: u32
+impl core::clone::Clone for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::clone(&self) -> vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+impl core::cmp::Eq for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+impl core::cmp::PartialEq for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::eq(&self, other: &vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature) -> bool
+impl core::fmt::Debug for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::StructuralPartialEq for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+impl serde_core::ser::Serialize for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+impl core::marker::Send for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+impl core::marker::Sync for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+impl core::marker::Unpin for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+impl core::marker::UnsafeUnpin for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature where U: core::convert::From<T>
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature where U: core::convert::Into<T>
+pub type vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::Error = core::convert::Infallible
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature where U: core::convert::TryFrom<T>
+pub type vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature where T: core::clone::Clone
+pub type vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::Owned = T
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature where T: core::clone::Clone
+pub unsafe fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> tracing::instrument::Instrument for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+impl<T> typenum::type_operators::Same for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+pub type vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::Output = T
+pub const vyre_foundation::serial::wire::encode::scan_database_header::MAX_SCAN_DATABASE_SECTIONS: usize
+pub const vyre_foundation::serial::wire::encode::scan_database_header::MAX_SCAN_DATABASE_UNSUPPORTED_FEATURES: usize
+pub const vyre_foundation::serial::wire::encode::scan_database_header::SCAN_DATABASE_HEADER_MAGIC: &[u8; 4]
+pub const vyre_foundation::serial::wire::encode::scan_database_header::SCAN_DATABASE_HEADER_VERSION: u32
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::decode_compatible_scan_database_header(bytes: &[u8], expected_compiler_version: &str, expected_mode: vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode) -> core::result::Result<vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader, alloc::string::String>
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::decode_scan_database_header(bytes: &[u8]) -> core::result::Result<vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader, alloc::string::String>
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::decode_scan_database_header_with_compatibility(bytes: &[u8], expected_compiler_version: &str, expected_mode: vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode, expected_construct_tier_digest: u64, expected_dialect_digest: u64, accepted_reader_compatibility: &[vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility]) -> core::result::Result<vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader, alloc::string::String>
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::encode_scan_database_header(header: &vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader) -> core::result::Result<alloc::vec::Vec<u8>, vyre_foundation::serial::wire::encode::error::WireEncodeErr>
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::put_scan_database_header(out: &mut alloc::vec::Vec<u8>, header: &vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader) -> core::result::Result<(), vyre_foundation::serial::wire::encode::error::WireEncodeErr>
 pub mod vyre_foundation::serial::wire::encode::to_wire
 pub fn vyre_foundation::serial::wire::encode::to_wire::to_wire(program: &vyre_foundation::ir::Program) -> core::result::Result<alloc::vec::Vec<u8>, alloc::string::String>
 pub fn vyre_foundation::serial::wire::encode::to_wire::to_wire_into(program: &vyre_foundation::ir::Program, dst: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_foundation::serial::wire::encode::to_wire::to_wire_with_buffer_order_into(program: &vyre_foundation::ir::Program, buffers: &[vyre_foundation::ir::BufferDecl], dst: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), vyre_foundation::serial::wire::encode::error::WireEncodeErr>
+pub enum vyre_foundation::serial::wire::encode::ScanDatabaseMode
+pub vyre_foundation::serial::wire::encode::ScanDatabaseMode::Block
+pub vyre_foundation::serial::wire::encode::ScanDatabaseMode::Streaming
+pub vyre_foundation::serial::wire::encode::ScanDatabaseMode::Vectored
+impl core::clone::Clone for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::clone(&self) -> vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+impl core::cmp::Eq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+impl core::cmp::PartialEq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::eq(&self, other: &vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode) -> bool
+impl core::fmt::Debug for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+impl core::marker::StructuralPartialEq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+impl serde_core::ser::Serialize for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+impl core::marker::Send for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+impl core::marker::Sync for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+impl core::marker::Unpin for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+impl core::marker::UnsafeUnpin for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode where U: core::convert::From<T>
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode where U: core::convert::Into<T>
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::Error = core::convert::Infallible
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode where U: core::convert::TryFrom<T>
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode where T: core::clone::Clone
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::Owned = T
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode where T: core::clone::Clone
+pub unsafe fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> tracing::instrument::Instrument for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+impl<T> typenum::type_operators::Same for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode::Output = T
+pub enum vyre_foundation::serial::wire::encode::ScanDatabaseReaderCompatibility
+pub vyre_foundation::serial::wire::encode::ScanDatabaseReaderCompatibility::Compatible
+pub vyre_foundation::serial::wire::encode::ScanDatabaseReaderCompatibility::Incompatible
+pub vyre_foundation::serial::wire::encode::ScanDatabaseReaderCompatibility::RequiresVerifier
+impl core::clone::Clone for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::clone(&self) -> vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+impl core::cmp::Eq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+impl core::cmp::PartialEq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::eq(&self, other: &vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility) -> bool
+impl core::fmt::Debug for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+impl core::marker::StructuralPartialEq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+impl serde_core::ser::Serialize for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+impl core::marker::Send for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+impl core::marker::Sync for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+impl core::marker::Unpin for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+impl core::marker::UnsafeUnpin for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility where U: core::convert::From<T>
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility where U: core::convert::Into<T>
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::Error = core::convert::Infallible
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility where U: core::convert::TryFrom<T>
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility where T: core::clone::Clone
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::Owned = T
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility where T: core::clone::Clone
+pub unsafe fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> tracing::instrument::Instrument for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+impl<T> typenum::type_operators::Same for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility::Output = T
+pub enum vyre_foundation::serial::wire::encode::ScanDatabaseSectionKind
+pub vyre_foundation::serial::wire::encode::ScanDatabaseSectionKind::AutomataTable
+pub vyre_foundation::serial::wire::encode::ScanDatabaseSectionKind::LiteralTable
+pub vyre_foundation::serial::wire::encode::ScanDatabaseSectionKind::OutputLayout
+pub vyre_foundation::serial::wire::encode::ScanDatabaseSectionKind::RelationSeeds
+pub vyre_foundation::serial::wire::encode::ScanDatabaseSectionKind::StreamingState
+pub vyre_foundation::serial::wire::encode::ScanDatabaseSectionKind::VerifierFragments
+impl core::clone::Clone for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::clone(&self) -> vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+impl core::cmp::Eq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+impl core::cmp::PartialEq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::eq(&self, other: &vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind) -> bool
+impl core::fmt::Debug for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+impl core::marker::StructuralPartialEq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+impl serde_core::ser::Serialize for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+impl core::marker::Send for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+impl core::marker::Sync for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+impl core::marker::Unpin for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+impl core::marker::UnsafeUnpin for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind where U: core::convert::From<T>
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind where U: core::convert::Into<T>
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::Error = core::convert::Infallible
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind where U: core::convert::TryFrom<T>
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind where T: core::clone::Clone
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::Owned = T
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind where T: core::clone::Clone
+pub unsafe fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> tracing::instrument::Instrument for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+impl<T> typenum::type_operators::Same for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind::Output = T
 pub enum vyre_foundation::serial::wire::encode::WireEncodeErr
 pub vyre_foundation::serial::wire::encode::WireEncodeErr::Dynamic(alloc::boxed::Box<arrayvec::array_string::ArrayString<256>>)
 pub vyre_foundation::serial::wire::encode::WireEncodeErr::Static(&'static str)
@@ -21873,10 +23313,251 @@ impl<T> tracing::instrument::Instrument for vyre_foundation::serial::wire::encod
 impl<T> tracing::instrument::WithSubscriber for vyre_foundation::serial::wire::encode::error::WireEncodeErr
 impl<T> typenum::type_operators::Same for vyre_foundation::serial::wire::encode::error::WireEncodeErr
 pub type vyre_foundation::serial::wire::encode::error::WireEncodeErr::Output = T
+pub struct vyre_foundation::serial::wire::encode::ScanDatabaseCompatibilityRecord
+pub vyre_foundation::serial::wire::encode::ScanDatabaseCompatibilityRecord::construct_tier_digest: u64
+pub vyre_foundation::serial::wire::encode::ScanDatabaseCompatibilityRecord::dialect_digest: u64
+pub vyre_foundation::serial::wire::encode::ScanDatabaseCompatibilityRecord::reader_compatibility: vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility
+impl core::clone::Clone for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::clone(&self) -> vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+impl core::cmp::Eq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+impl core::cmp::PartialEq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::eq(&self, other: &vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord) -> bool
+impl core::fmt::Debug for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::StructuralPartialEq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+impl serde_core::ser::Serialize for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+impl core::marker::Send for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+impl core::marker::Sync for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+impl core::marker::Unpin for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+impl core::marker::UnsafeUnpin for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord where U: core::convert::From<T>
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord where U: core::convert::Into<T>
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::Error = core::convert::Infallible
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord where U: core::convert::TryFrom<T>
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord where T: core::clone::Clone
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::Owned = T
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord where T: core::clone::Clone
+pub unsafe fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> tracing::instrument::Instrument for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+impl<T> typenum::type_operators::Same for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord::Output = T
+pub struct vyre_foundation::serial::wire::encode::ScanDatabaseHeader
+pub vyre_foundation::serial::wire::encode::ScanDatabaseHeader::compatibility: vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseCompatibilityRecord
+pub vyre_foundation::serial::wire::encode::ScanDatabaseHeader::compiler_version: alloc::string::String
+pub vyre_foundation::serial::wire::encode::ScanDatabaseHeader::mode: vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode
+pub vyre_foundation::serial::wire::encode::ScanDatabaseHeader::pattern_set_digest: [u8; 32]
+pub vyre_foundation::serial::wire::encode::ScanDatabaseHeader::table_sections: alloc::vec::Vec<vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader>
+pub vyre_foundation::serial::wire::encode::ScanDatabaseHeader::unsupported_features: alloc::vec::Vec<vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature>
+impl vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::section_count(&self) -> usize
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::unsupported_feature_count(&self) -> usize
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::validate_compatible(&self, expected_compiler_version: &str, expected_mode: vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::validate_database_compatibility(&self, expected_construct_tier_digest: u64, expected_dialect_digest: u64, accepted_reader_compatibility: &[vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility]) -> core::result::Result<(), alloc::string::String>
+impl core::clone::Clone for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::clone(&self) -> vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+impl core::cmp::Eq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+impl core::cmp::PartialEq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::eq(&self, other: &vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader) -> bool
+impl core::fmt::Debug for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::StructuralPartialEq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+impl serde_core::ser::Serialize for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+impl core::marker::Send for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+impl core::marker::Sync for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+impl core::marker::Unpin for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+impl core::marker::UnsafeUnpin for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader where U: core::convert::From<T>
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader where U: core::convert::Into<T>
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::Error = core::convert::Infallible
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader where U: core::convert::TryFrom<T>
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader where T: core::clone::Clone
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::Owned = T
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader where T: core::clone::Clone
+pub unsafe fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> tracing::instrument::Instrument for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+impl<T> typenum::type_operators::Same for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader::Output = T
+pub struct vyre_foundation::serial::wire::encode::ScanDatabaseSectionHeader
+pub vyre_foundation::serial::wire::encode::ScanDatabaseSectionHeader::byte_len: u64
+pub vyre_foundation::serial::wire::encode::ScanDatabaseSectionHeader::kind: vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionKind
+pub vyre_foundation::serial::wire::encode::ScanDatabaseSectionHeader::offset: u64
+pub vyre_foundation::serial::wire::encode::ScanDatabaseSectionHeader::section_digest: u64
+impl core::clone::Clone for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::clone(&self) -> vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+impl core::cmp::Eq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+impl core::cmp::PartialEq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::eq(&self, other: &vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader) -> bool
+impl core::fmt::Debug for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::StructuralPartialEq for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+impl serde_core::ser::Serialize for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+impl core::marker::Send for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+impl core::marker::Sync for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+impl core::marker::Unpin for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+impl core::marker::UnsafeUnpin for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader where U: core::convert::From<T>
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader where U: core::convert::Into<T>
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::Error = core::convert::Infallible
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader where U: core::convert::TryFrom<T>
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader where T: core::clone::Clone
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::Owned = T
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader where T: core::clone::Clone
+pub unsafe fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> tracing::instrument::Instrument for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+impl<T> typenum::type_operators::Same for vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader
+pub type vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseSectionHeader::Output = T
+pub struct vyre_foundation::serial::wire::encode::UnsupportedScanFeature
+pub vyre_foundation::serial::wire::encode::UnsupportedScanFeature::feature: alloc::string::String
+pub vyre_foundation::serial::wire::encode::UnsupportedScanFeature::pattern_index: u32
+impl core::clone::Clone for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::clone(&self) -> vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+impl core::cmp::Eq for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+impl core::cmp::PartialEq for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::eq(&self, other: &vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature) -> bool
+impl core::fmt::Debug for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::StructuralPartialEq for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+impl serde_core::ser::Serialize for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+impl core::marker::Send for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+impl core::marker::Sync for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+impl core::marker::Unpin for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+impl core::marker::UnsafeUnpin for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature where U: core::convert::From<T>
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature where U: core::convert::Into<T>
+pub type vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::Error = core::convert::Infallible
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature where U: core::convert::TryFrom<T>
+pub type vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature where T: core::clone::Clone
+pub type vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::Owned = T
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature where T: ?core::marker::Sized
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature where T: core::clone::Clone
+pub unsafe fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+pub fn vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> tracing::instrument::Instrument for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+impl<T> typenum::type_operators::Same for vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature
+pub type vyre_foundation::serial::wire::encode::scan_database_header::UnsupportedScanFeature::Output = T
+pub const vyre_foundation::serial::wire::encode::MAX_SCAN_DATABASE_SECTIONS: usize
+pub const vyre_foundation::serial::wire::encode::MAX_SCAN_DATABASE_UNSUPPORTED_FEATURES: usize
 pub const vyre_foundation::serial::wire::encode::PROGRAM_WIRE_DIGEST_VERSION: &str
+pub const vyre_foundation::serial::wire::encode::SCAN_DATABASE_HEADER_MAGIC: &[u8; 4]
+pub const vyre_foundation::serial::wire::encode::SCAN_DATABASE_HEADER_VERSION: u32
+pub fn vyre_foundation::serial::wire::encode::decode_compatible_scan_database_header(bytes: &[u8], expected_compiler_version: &str, expected_mode: vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode) -> core::result::Result<vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader, alloc::string::String>
+pub fn vyre_foundation::serial::wire::encode::decode_scan_database_header(bytes: &[u8]) -> core::result::Result<vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader, alloc::string::String>
+pub fn vyre_foundation::serial::wire::encode::decode_scan_database_header_with_compatibility(bytes: &[u8], expected_compiler_version: &str, expected_mode: vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseMode, expected_construct_tier_digest: u64, expected_dialect_digest: u64, accepted_reader_compatibility: &[vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseReaderCompatibility]) -> core::result::Result<vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader, alloc::string::String>
+pub fn vyre_foundation::serial::wire::encode::encode_scan_database_header(header: &vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader) -> core::result::Result<alloc::vec::Vec<u8>, vyre_foundation::serial::wire::encode::error::WireEncodeErr>
 pub fn vyre_foundation::serial::wire::encode::put_expr(out: &mut alloc::vec::Vec<u8>, expr: &vyre_foundation::ir::Expr) -> core::result::Result<(), vyre_foundation::serial::wire::encode::error::WireEncodeErr>
 pub fn vyre_foundation::serial::wire::encode::put_node(out: &mut alloc::vec::Vec<u8>, node: &vyre_foundation::ir::Node) -> core::result::Result<(), vyre_foundation::serial::wire::encode::error::WireEncodeErr>
 pub fn vyre_foundation::serial::wire::encode::put_nodes(out: &mut alloc::vec::Vec<u8>, nodes: &[vyre_foundation::ir::Node]) -> core::result::Result<(), vyre_foundation::serial::wire::encode::error::WireEncodeErr>
+pub fn vyre_foundation::serial::wire::encode::put_scan_database_header(out: &mut alloc::vec::Vec<u8>, header: &vyre_foundation::serial::wire::encode::scan_database_header::ScanDatabaseHeader) -> core::result::Result<(), vyre_foundation::serial::wire::encode::error::WireEncodeErr>
 pub fn vyre_foundation::serial::wire::encode::to_wire(program: &vyre_foundation::ir::Program) -> core::result::Result<alloc::vec::Vec<u8>, alloc::string::String>
 pub fn vyre_foundation::serial::wire::encode::to_wire_into(program: &vyre_foundation::ir::Program, dst: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_foundation::serial::wire::encode::to_wire_with_buffer_order_into(program: &vyre_foundation::ir::Program, buffers: &[vyre_foundation::ir::BufferDecl], dst: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), vyre_foundation::serial::wire::encode::error::WireEncodeErr>
@@ -22151,6 +23832,112 @@ impl<T> tracing::instrument::Instrument for vyre_foundation::soundness::Soundnes
 impl<T> tracing::instrument::WithSubscriber for vyre_foundation::soundness::Soundness
 impl<T> typenum::type_operators::Same for vyre_foundation::soundness::Soundness
 pub type vyre_foundation::soundness::Soundness::Output = T
+pub struct vyre_foundation::soundness::DynamicPrimitiveSoundness
+pub vyre_foundation::soundness::DynamicPrimitiveSoundness::op_id: alloc::string::String
+pub vyre_foundation::soundness::DynamicPrimitiveSoundness::sanitizer_filter: bool
+pub vyre_foundation::soundness::DynamicPrimitiveSoundness::soundness: vyre_foundation::soundness::Soundness
+impl vyre_foundation::soundness::DynamicPrimitiveSoundness
+pub fn vyre_foundation::soundness::DynamicPrimitiveSoundness::new(op_id: impl core::convert::Into<alloc::string::String>, soundness: vyre_foundation::soundness::Soundness) -> Self
+pub fn vyre_foundation::soundness::DynamicPrimitiveSoundness::with_sanitizer_filter(self) -> Self
+impl core::clone::Clone for vyre_foundation::soundness::DynamicPrimitiveSoundness
+pub fn vyre_foundation::soundness::DynamicPrimitiveSoundness::clone(&self) -> vyre_foundation::soundness::DynamicPrimitiveSoundness
+impl core::cmp::Eq for vyre_foundation::soundness::DynamicPrimitiveSoundness
+impl core::cmp::PartialEq for vyre_foundation::soundness::DynamicPrimitiveSoundness
+pub fn vyre_foundation::soundness::DynamicPrimitiveSoundness::eq(&self, other: &vyre_foundation::soundness::DynamicPrimitiveSoundness) -> bool
+impl core::fmt::Debug for vyre_foundation::soundness::DynamicPrimitiveSoundness
+pub fn vyre_foundation::soundness::DynamicPrimitiveSoundness::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_foundation::soundness::DynamicPrimitiveSoundness
+pub fn vyre_foundation::soundness::DynamicPrimitiveSoundness::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::StructuralPartialEq for vyre_foundation::soundness::DynamicPrimitiveSoundness
+impl core::marker::Freeze for vyre_foundation::soundness::DynamicPrimitiveSoundness
+impl core::marker::Send for vyre_foundation::soundness::DynamicPrimitiveSoundness
+impl core::marker::Sync for vyre_foundation::soundness::DynamicPrimitiveSoundness
+impl core::marker::Unpin for vyre_foundation::soundness::DynamicPrimitiveSoundness
+impl core::marker::UnsafeUnpin for vyre_foundation::soundness::DynamicPrimitiveSoundness
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::soundness::DynamicPrimitiveSoundness
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::soundness::DynamicPrimitiveSoundness
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::soundness::DynamicPrimitiveSoundness where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::soundness::DynamicPrimitiveSoundness::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::soundness::DynamicPrimitiveSoundness where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::soundness::DynamicPrimitiveSoundness::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::soundness::DynamicPrimitiveSoundness where U: core::convert::From<T>
+pub fn vyre_foundation::soundness::DynamicPrimitiveSoundness::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::soundness::DynamicPrimitiveSoundness where U: core::convert::Into<T>
+pub type vyre_foundation::soundness::DynamicPrimitiveSoundness::Error = core::convert::Infallible
+pub fn vyre_foundation::soundness::DynamicPrimitiveSoundness::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::soundness::DynamicPrimitiveSoundness where U: core::convert::TryFrom<T>
+pub type vyre_foundation::soundness::DynamicPrimitiveSoundness::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::soundness::DynamicPrimitiveSoundness::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::soundness::DynamicPrimitiveSoundness where T: core::clone::Clone
+pub type vyre_foundation::soundness::DynamicPrimitiveSoundness::Owned = T
+pub fn vyre_foundation::soundness::DynamicPrimitiveSoundness::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::soundness::DynamicPrimitiveSoundness::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::soundness::DynamicPrimitiveSoundness where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::soundness::DynamicPrimitiveSoundness::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::soundness::DynamicPrimitiveSoundness where T: ?core::marker::Sized
+pub fn vyre_foundation::soundness::DynamicPrimitiveSoundness::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::soundness::DynamicPrimitiveSoundness where T: ?core::marker::Sized
+pub fn vyre_foundation::soundness::DynamicPrimitiveSoundness::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::soundness::DynamicPrimitiveSoundness where T: core::clone::Clone
+pub unsafe fn vyre_foundation::soundness::DynamicPrimitiveSoundness::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::soundness::DynamicPrimitiveSoundness
+pub fn vyre_foundation::soundness::DynamicPrimitiveSoundness::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_foundation::soundness::DynamicPrimitiveSoundness
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::soundness::DynamicPrimitiveSoundness
+impl<T> typenum::type_operators::Same for vyre_foundation::soundness::DynamicPrimitiveSoundness
+pub type vyre_foundation::soundness::DynamicPrimitiveSoundness::Output = T
+pub struct vyre_foundation::soundness::DynamicSoundnessViolation
+pub vyre_foundation::soundness::DynamicSoundnessViolation::contract: vyre_foundation::soundness::PrecisionContract
+pub vyre_foundation::soundness::DynamicSoundnessViolation::fix: &'static str
+pub vyre_foundation::soundness::DynamicSoundnessViolation::op_id: alloc::string::String
+pub vyre_foundation::soundness::DynamicSoundnessViolation::soundness: vyre_foundation::soundness::Soundness
+impl core::clone::Clone for vyre_foundation::soundness::DynamicSoundnessViolation
+pub fn vyre_foundation::soundness::DynamicSoundnessViolation::clone(&self) -> vyre_foundation::soundness::DynamicSoundnessViolation
+impl core::cmp::Eq for vyre_foundation::soundness::DynamicSoundnessViolation
+impl core::cmp::PartialEq for vyre_foundation::soundness::DynamicSoundnessViolation
+pub fn vyre_foundation::soundness::DynamicSoundnessViolation::eq(&self, other: &vyre_foundation::soundness::DynamicSoundnessViolation) -> bool
+impl core::fmt::Debug for vyre_foundation::soundness::DynamicSoundnessViolation
+pub fn vyre_foundation::soundness::DynamicSoundnessViolation::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_foundation::soundness::DynamicSoundnessViolation
+pub fn vyre_foundation::soundness::DynamicSoundnessViolation::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::StructuralPartialEq for vyre_foundation::soundness::DynamicSoundnessViolation
+impl core::marker::Freeze for vyre_foundation::soundness::DynamicSoundnessViolation
+impl core::marker::Send for vyre_foundation::soundness::DynamicSoundnessViolation
+impl core::marker::Sync for vyre_foundation::soundness::DynamicSoundnessViolation
+impl core::marker::Unpin for vyre_foundation::soundness::DynamicSoundnessViolation
+impl core::marker::UnsafeUnpin for vyre_foundation::soundness::DynamicSoundnessViolation
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::soundness::DynamicSoundnessViolation
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::soundness::DynamicSoundnessViolation
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::soundness::DynamicSoundnessViolation where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::soundness::DynamicSoundnessViolation::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::soundness::DynamicSoundnessViolation where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::soundness::DynamicSoundnessViolation::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::soundness::DynamicSoundnessViolation where U: core::convert::From<T>
+pub fn vyre_foundation::soundness::DynamicSoundnessViolation::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::soundness::DynamicSoundnessViolation where U: core::convert::Into<T>
+pub type vyre_foundation::soundness::DynamicSoundnessViolation::Error = core::convert::Infallible
+pub fn vyre_foundation::soundness::DynamicSoundnessViolation::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::soundness::DynamicSoundnessViolation where U: core::convert::TryFrom<T>
+pub type vyre_foundation::soundness::DynamicSoundnessViolation::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::soundness::DynamicSoundnessViolation::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::soundness::DynamicSoundnessViolation where T: core::clone::Clone
+pub type vyre_foundation::soundness::DynamicSoundnessViolation::Owned = T
+pub fn vyre_foundation::soundness::DynamicSoundnessViolation::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::soundness::DynamicSoundnessViolation::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::soundness::DynamicSoundnessViolation where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::soundness::DynamicSoundnessViolation::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::soundness::DynamicSoundnessViolation where T: ?core::marker::Sized
+pub fn vyre_foundation::soundness::DynamicSoundnessViolation::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::soundness::DynamicSoundnessViolation where T: ?core::marker::Sized
+pub fn vyre_foundation::soundness::DynamicSoundnessViolation::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::soundness::DynamicSoundnessViolation where T: core::clone::Clone
+pub unsafe fn vyre_foundation::soundness::DynamicSoundnessViolation::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::soundness::DynamicSoundnessViolation
+pub fn vyre_foundation::soundness::DynamicSoundnessViolation::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_foundation::soundness::DynamicSoundnessViolation
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::soundness::DynamicSoundnessViolation
+impl<T> typenum::type_operators::Same for vyre_foundation::soundness::DynamicSoundnessViolation
+pub type vyre_foundation::soundness::DynamicSoundnessViolation::Output = T
 pub struct vyre_foundation::soundness::PrimitiveSoundness
 pub vyre_foundation::soundness::PrimitiveSoundness::op_id: &'static str
 pub vyre_foundation::soundness::PrimitiveSoundness::sanitizer_filter: bool
@@ -22261,6 +24048,8 @@ impl<T> typenum::type_operators::Same for vyre_foundation::soundness::SoundnessV
 pub type vyre_foundation::soundness::SoundnessViolation::Output = T
 pub trait vyre_foundation::soundness::SoundnessTagged
 pub fn vyre_foundation::soundness::SoundnessTagged::soundness(&self) -> vyre_foundation::soundness::Soundness
+pub fn vyre_foundation::soundness::validate_dynamic_pipeline(contract: vyre_foundation::soundness::PrecisionContract, primitives: &[vyre_foundation::soundness::DynamicPrimitiveSoundness]) -> core::result::Result<vyre_foundation::soundness::Soundness, vyre_foundation::soundness::DynamicSoundnessViolation>
+pub fn vyre_foundation::soundness::validate_dynamic_primitive(contract: vyre_foundation::soundness::PrecisionContract, primitive: &vyre_foundation::soundness::DynamicPrimitiveSoundness) -> core::result::Result<(), vyre_foundation::soundness::DynamicSoundnessViolation>
 pub fn vyre_foundation::soundness::validate_pipeline(contract: vyre_foundation::soundness::PrecisionContract, primitives: &[vyre_foundation::soundness::PrimitiveSoundness]) -> core::result::Result<vyre_foundation::soundness::Soundness, vyre_foundation::soundness::SoundnessViolation>
 pub fn vyre_foundation::soundness::validate_primitive(contract: vyre_foundation::soundness::PrecisionContract, primitive: vyre_foundation::soundness::PrimitiveSoundness) -> core::result::Result<(), vyre_foundation::soundness::SoundnessViolation>
 pub mod vyre_foundation::transform
@@ -24058,6 +25847,7 @@ pub const vyre_foundation::validate::validate::DEFAULT_MAX_CALL_DEPTH: usize
 pub const vyre_foundation::validate::validate::DEFAULT_MAX_EXPR_DEPTH: usize
 pub const vyre_foundation::validate::validate::DEFAULT_MAX_NESTING_DEPTH: usize
 pub const vyre_foundation::validate::validate::DEFAULT_MAX_NODE_COUNT: usize
+pub fn vyre_foundation::validate::validate::fma_f32_violations(program: &vyre_foundation::ir::Program) -> alloc::vec::Vec<vyre_foundation::validate::validation_error::ValidationError>
 pub fn vyre_foundation::validate::validate::validate(program: &vyre_foundation::ir::Program) -> alloc::vec::Vec<vyre_foundation::validate::validation_error::ValidationError>
 pub fn vyre_foundation::validate::validate::validate_with_options(program: &vyre_foundation::ir::Program, options: vyre_foundation::validate::options::ValidationOptions<'_>) -> vyre_foundation::validate::report::ValidationReport
 pub mod vyre_foundation::validate::validation_error
@@ -24431,9 +26221,88 @@ pub fn vyre_foundation::validate::BackendValidationCapabilities::supports_distri
 pub fn vyre_foundation::validate::BackendValidationCapabilities::supports_indirect_dispatch(&self) -> bool
 pub fn vyre_foundation::validate::BackendValidationCapabilities::supports_specialization_constants(&self) -> bool
 pub fn vyre_foundation::validate::BackendValidationCapabilities::supports_subgroup_ops(&self) -> bool
+pub fn vyre_foundation::validate::fma_f32_violations(program: &vyre_foundation::ir::Program) -> alloc::vec::Vec<vyre_foundation::validate::validation_error::ValidationError>
 pub fn vyre_foundation::validate::validate(program: &vyre_foundation::ir::Program) -> alloc::vec::Vec<vyre_foundation::validate::validation_error::ValidationError>
 pub fn vyre_foundation::validate::validate_with_options(program: &vyre_foundation::ir::Program, options: vyre_foundation::validate::options::ValidationOptions<'_>) -> vyre_foundation::validate::report::ValidationReport
 pub mod vyre_foundation::vast
+pub enum vyre_foundation::vast::VastEditCorpusError
+pub vyre_foundation::vast::VastEditCorpusError::ChangedRangeMismatch
+pub vyre_foundation::vast::VastEditCorpusError::ChangedRangeMismatch::actual: alloc::vec::Vec<vyre_foundation::vast::VastChangedRange>
+pub vyre_foundation::vast::VastEditCorpusError::ChangedRangeMismatch::expected: alloc::vec::Vec<vyre_foundation::vast::VastChangedRange>
+pub vyre_foundation::vast::VastEditCorpusError::EditRangeOutOfBounds
+pub vyre_foundation::vast::VastEditCorpusError::EditRangeOutOfBounds::before_len: u32
+pub vyre_foundation::vast::VastEditCorpusError::EditRangeOutOfBounds::index: usize
+pub vyre_foundation::vast::VastEditCorpusError::EditRangeOutOfBounds::old_end: u32
+pub vyre_foundation::vast::VastEditCorpusError::EditedSourceTooLarge
+pub vyre_foundation::vast::VastEditCorpusError::EmptyCaseId
+pub vyre_foundation::vast::VastEditCorpusError::EmptyEditScript
+pub vyre_foundation::vast::VastEditCorpusError::FullReparseMismatch
+pub vyre_foundation::vast::VastEditCorpusError::FullReparseMismatch::full_reparse_digest: vyre_foundation::vast::VastEditDigest
+pub vyre_foundation::vast::VastEditCorpusError::FullReparseMismatch::updated_digest: vyre_foundation::vast::VastEditDigest
+pub vyre_foundation::vast::VastEditCorpusError::InvalidEditRange
+pub vyre_foundation::vast::VastEditCorpusError::InvalidEditRange::index: usize
+pub vyre_foundation::vast::VastEditCorpusError::InvalidEditRange::old_end: u32
+pub vyre_foundation::vast::VastEditCorpusError::InvalidEditRange::old_start: u32
+pub vyre_foundation::vast::VastEditCorpusError::InvalidVast
+pub vyre_foundation::vast::VastEditCorpusError::InvalidVast::context: &'static str
+pub vyre_foundation::vast::VastEditCorpusError::InvalidVast::reason: alloc::string::String
+pub vyre_foundation::vast::VastEditCorpusError::OverlappingEdit
+pub vyre_foundation::vast::VastEditCorpusError::OverlappingEdit::index: usize
+pub vyre_foundation::vast::VastEditCorpusError::OverlappingEdit::old_start: u32
+pub vyre_foundation::vast::VastEditCorpusError::OverlappingEdit::previous_end: u32
+pub vyre_foundation::vast::VastEditCorpusError::ReusedNodeCountTooLarge
+pub vyre_foundation::vast::VastEditCorpusError::ReusedNodeCountTooLarge::node_count: u32
+pub vyre_foundation::vast::VastEditCorpusError::ReusedNodeCountTooLarge::reused_node_count: u32
+impl core::clone::Clone for vyre_foundation::vast::VastEditCorpusError
+pub fn vyre_foundation::vast::VastEditCorpusError::clone(&self) -> vyre_foundation::vast::VastEditCorpusError
+impl core::cmp::Eq for vyre_foundation::vast::VastEditCorpusError
+impl core::cmp::PartialEq for vyre_foundation::vast::VastEditCorpusError
+pub fn vyre_foundation::vast::VastEditCorpusError::eq(&self, other: &vyre_foundation::vast::VastEditCorpusError) -> bool
+impl core::error::Error for vyre_foundation::vast::VastEditCorpusError
+impl core::fmt::Debug for vyre_foundation::vast::VastEditCorpusError
+pub fn vyre_foundation::vast::VastEditCorpusError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for vyre_foundation::vast::VastEditCorpusError
+pub fn vyre_foundation::vast::VastEditCorpusError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for vyre_foundation::vast::VastEditCorpusError
+impl core::marker::Freeze for vyre_foundation::vast::VastEditCorpusError
+impl core::marker::Send for vyre_foundation::vast::VastEditCorpusError
+impl core::marker::Sync for vyre_foundation::vast::VastEditCorpusError
+impl core::marker::Unpin for vyre_foundation::vast::VastEditCorpusError
+impl core::marker::UnsafeUnpin for vyre_foundation::vast::VastEditCorpusError
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::vast::VastEditCorpusError
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::vast::VastEditCorpusError
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::vast::VastEditCorpusError where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::vast::VastEditCorpusError::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::vast::VastEditCorpusError where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::vast::VastEditCorpusError::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::vast::VastEditCorpusError where U: core::convert::From<T>
+pub fn vyre_foundation::vast::VastEditCorpusError::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::vast::VastEditCorpusError where U: core::convert::Into<T>
+pub type vyre_foundation::vast::VastEditCorpusError::Error = core::convert::Infallible
+pub fn vyre_foundation::vast::VastEditCorpusError::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::vast::VastEditCorpusError where U: core::convert::TryFrom<T>
+pub type vyre_foundation::vast::VastEditCorpusError::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::vast::VastEditCorpusError::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::vast::VastEditCorpusError where T: core::clone::Clone
+pub type vyre_foundation::vast::VastEditCorpusError::Owned = T
+pub fn vyre_foundation::vast::VastEditCorpusError::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::vast::VastEditCorpusError::to_owned(&self) -> T
+impl<T> alloc::string::ToString for vyre_foundation::vast::VastEditCorpusError where T: core::fmt::Display + ?core::marker::Sized
+pub fn vyre_foundation::vast::VastEditCorpusError::to_string(&self) -> alloc::string::String
+impl<T> core::any::Any for vyre_foundation::vast::VastEditCorpusError where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::vast::VastEditCorpusError::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::vast::VastEditCorpusError where T: ?core::marker::Sized
+pub fn vyre_foundation::vast::VastEditCorpusError::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::vast::VastEditCorpusError where T: ?core::marker::Sized
+pub fn vyre_foundation::vast::VastEditCorpusError::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::vast::VastEditCorpusError where T: core::clone::Clone
+pub unsafe fn vyre_foundation::vast::VastEditCorpusError::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::vast::VastEditCorpusError
+pub fn vyre_foundation::vast::VastEditCorpusError::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_foundation::vast::VastEditCorpusError
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::vast::VastEditCorpusError
+impl<T> typenum::type_operators::Same for vyre_foundation::vast::VastEditCorpusError
+pub type vyre_foundation::vast::VastEditCorpusError::Output = T
 pub enum vyre_foundation::vast::VastError
 pub vyre_foundation::vast::VastError::BadAttrSpan
 pub vyre_foundation::vast::VastError::BadAttrSpan::attr_blob_len: u32
@@ -24476,8 +26345,11 @@ pub fn vyre_foundation::vast::VastError::clone(&self) -> vyre_foundation::vast::
 impl core::cmp::Eq for vyre_foundation::vast::VastError
 impl core::cmp::PartialEq for vyre_foundation::vast::VastError
 pub fn vyre_foundation::vast::VastError::eq(&self, other: &vyre_foundation::vast::VastError) -> bool
+impl core::error::Error for vyre_foundation::vast::VastError
 impl core::fmt::Debug for vyre_foundation::vast::VastError
 pub fn vyre_foundation::vast::VastError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for vyre_foundation::vast::VastError
+pub fn vyre_foundation::vast::VastError::fmt(&self, __formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::marker::StructuralPartialEq for vyre_foundation::vast::VastError
 impl core::marker::Freeze for vyre_foundation::vast::VastError
 impl core::marker::Send for vyre_foundation::vast::VastError
@@ -24502,6 +26374,8 @@ impl<T> alloc::borrow::ToOwned for vyre_foundation::vast::VastError where T: cor
 pub type vyre_foundation::vast::VastError::Owned = T
 pub fn vyre_foundation::vast::VastError::clone_into(&self, target: &mut T)
 pub fn vyre_foundation::vast::VastError::to_owned(&self) -> T
+impl<T> alloc::string::ToString for vyre_foundation::vast::VastError where T: core::fmt::Display + ?core::marker::Sized
+pub fn vyre_foundation::vast::VastError::to_string(&self) -> alloc::string::String
 impl<T> core::any::Any for vyre_foundation::vast::VastError where T: 'static + ?core::marker::Sized
 pub fn vyre_foundation::vast::VastError::type_id(&self) -> core::any::TypeId
 impl<T> core::borrow::Borrow<T> for vyre_foundation::vast::VastError where T: ?core::marker::Sized
@@ -24516,6 +26390,211 @@ impl<T> tracing::instrument::Instrument for vyre_foundation::vast::VastError
 impl<T> tracing::instrument::WithSubscriber for vyre_foundation::vast::VastError
 impl<T> typenum::type_operators::Same for vyre_foundation::vast::VastError
 pub type vyre_foundation::vast::VastError::Output = T
+pub struct vyre_foundation::vast::VastChangedRange
+pub vyre_foundation::vast::VastChangedRange::new_end: u32
+pub vyre_foundation::vast::VastChangedRange::new_start: u32
+pub vyre_foundation::vast::VastChangedRange::old_end: u32
+pub vyre_foundation::vast::VastChangedRange::old_start: u32
+impl core::clone::Clone for vyre_foundation::vast::VastChangedRange
+pub fn vyre_foundation::vast::VastChangedRange::clone(&self) -> vyre_foundation::vast::VastChangedRange
+impl core::cmp::Eq for vyre_foundation::vast::VastChangedRange
+impl core::cmp::PartialEq for vyre_foundation::vast::VastChangedRange
+pub fn vyre_foundation::vast::VastChangedRange::eq(&self, other: &vyre_foundation::vast::VastChangedRange) -> bool
+impl core::fmt::Debug for vyre_foundation::vast::VastChangedRange
+pub fn vyre_foundation::vast::VastChangedRange::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for vyre_foundation::vast::VastChangedRange
+impl core::marker::StructuralPartialEq for vyre_foundation::vast::VastChangedRange
+impl core::marker::Freeze for vyre_foundation::vast::VastChangedRange
+impl core::marker::Send for vyre_foundation::vast::VastChangedRange
+impl core::marker::Sync for vyre_foundation::vast::VastChangedRange
+impl core::marker::Unpin for vyre_foundation::vast::VastChangedRange
+impl core::marker::UnsafeUnpin for vyre_foundation::vast::VastChangedRange
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::vast::VastChangedRange
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::vast::VastChangedRange
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::vast::VastChangedRange where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::vast::VastChangedRange::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::vast::VastChangedRange where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::vast::VastChangedRange::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::vast::VastChangedRange where U: core::convert::From<T>
+pub fn vyre_foundation::vast::VastChangedRange::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::vast::VastChangedRange where U: core::convert::Into<T>
+pub type vyre_foundation::vast::VastChangedRange::Error = core::convert::Infallible
+pub fn vyre_foundation::vast::VastChangedRange::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::vast::VastChangedRange where U: core::convert::TryFrom<T>
+pub type vyre_foundation::vast::VastChangedRange::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::vast::VastChangedRange::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::vast::VastChangedRange where T: core::clone::Clone
+pub type vyre_foundation::vast::VastChangedRange::Owned = T
+pub fn vyre_foundation::vast::VastChangedRange::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::vast::VastChangedRange::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::vast::VastChangedRange where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::vast::VastChangedRange::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::vast::VastChangedRange where T: ?core::marker::Sized
+pub fn vyre_foundation::vast::VastChangedRange::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::vast::VastChangedRange where T: ?core::marker::Sized
+pub fn vyre_foundation::vast::VastChangedRange::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::vast::VastChangedRange where T: core::clone::Clone
+pub unsafe fn vyre_foundation::vast::VastChangedRange::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::vast::VastChangedRange
+pub fn vyre_foundation::vast::VastChangedRange::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_foundation::vast::VastChangedRange
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::vast::VastChangedRange
+impl<T> typenum::type_operators::Same for vyre_foundation::vast::VastChangedRange
+pub type vyre_foundation::vast::VastChangedRange::Output = T
+pub struct vyre_foundation::vast::VastEdit<'a>
+pub vyre_foundation::vast::VastEdit::old_end: u32
+pub vyre_foundation::vast::VastEdit::old_start: u32
+pub vyre_foundation::vast::VastEdit::replacement: &'a [u8]
+impl<'a> core::clone::Clone for vyre_foundation::vast::VastEdit<'a>
+pub fn vyre_foundation::vast::VastEdit<'a>::clone(&self) -> vyre_foundation::vast::VastEdit<'a>
+impl<'a> core::cmp::Eq for vyre_foundation::vast::VastEdit<'a>
+impl<'a> core::cmp::PartialEq for vyre_foundation::vast::VastEdit<'a>
+pub fn vyre_foundation::vast::VastEdit<'a>::eq(&self, other: &vyre_foundation::vast::VastEdit<'a>) -> bool
+impl<'a> core::fmt::Debug for vyre_foundation::vast::VastEdit<'a>
+pub fn vyre_foundation::vast::VastEdit<'a>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<'a> core::marker::Copy for vyre_foundation::vast::VastEdit<'a>
+impl<'a> core::marker::StructuralPartialEq for vyre_foundation::vast::VastEdit<'a>
+impl<'a> core::marker::Freeze for vyre_foundation::vast::VastEdit<'a>
+impl<'a> core::marker::Send for vyre_foundation::vast::VastEdit<'a>
+impl<'a> core::marker::Sync for vyre_foundation::vast::VastEdit<'a>
+impl<'a> core::marker::Unpin for vyre_foundation::vast::VastEdit<'a>
+impl<'a> core::marker::UnsafeUnpin for vyre_foundation::vast::VastEdit<'a>
+impl<'a> core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::vast::VastEdit<'a>
+impl<'a> core::panic::unwind_safe::UnwindSafe for vyre_foundation::vast::VastEdit<'a>
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::vast::VastEdit<'a> where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::vast::VastEdit<'a>::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::vast::VastEdit<'a> where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::vast::VastEdit<'a>::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::vast::VastEdit<'a> where U: core::convert::From<T>
+pub fn vyre_foundation::vast::VastEdit<'a>::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::vast::VastEdit<'a> where U: core::convert::Into<T>
+pub type vyre_foundation::vast::VastEdit<'a>::Error = core::convert::Infallible
+pub fn vyre_foundation::vast::VastEdit<'a>::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::vast::VastEdit<'a> where U: core::convert::TryFrom<T>
+pub type vyre_foundation::vast::VastEdit<'a>::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::vast::VastEdit<'a>::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::vast::VastEdit<'a> where T: core::clone::Clone
+pub type vyre_foundation::vast::VastEdit<'a>::Owned = T
+pub fn vyre_foundation::vast::VastEdit<'a>::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::vast::VastEdit<'a>::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::vast::VastEdit<'a> where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::vast::VastEdit<'a>::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::vast::VastEdit<'a> where T: ?core::marker::Sized
+pub fn vyre_foundation::vast::VastEdit<'a>::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::vast::VastEdit<'a> where T: ?core::marker::Sized
+pub fn vyre_foundation::vast::VastEdit<'a>::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::vast::VastEdit<'a> where T: core::clone::Clone
+pub unsafe fn vyre_foundation::vast::VastEdit<'a>::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::vast::VastEdit<'a>
+pub fn vyre_foundation::vast::VastEdit<'a>::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_foundation::vast::VastEdit<'a>
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::vast::VastEdit<'a>
+impl<T> typenum::type_operators::Same for vyre_foundation::vast::VastEdit<'a>
+pub type vyre_foundation::vast::VastEdit<'a>::Output = T
+pub struct vyre_foundation::vast::VastEditCorpusCase<'a>
+pub vyre_foundation::vast::VastEditCorpusCase::before_bytes: &'a [u8]
+pub vyre_foundation::vast::VastEditCorpusCase::changed_ranges: &'a [vyre_foundation::vast::VastChangedRange]
+pub vyre_foundation::vast::VastEditCorpusCase::diagnostics: &'a [u8]
+pub vyre_foundation::vast::VastEditCorpusCase::edits: &'a [vyre_foundation::vast::VastEdit<'a>]
+pub vyre_foundation::vast::VastEditCorpusCase::full_reparse_vast: &'a [u8]
+pub vyre_foundation::vast::VastEditCorpusCase::id: &'a str
+pub vyre_foundation::vast::VastEditCorpusCase::reused_node_count: u32
+pub vyre_foundation::vast::VastEditCorpusCase::updated_vast: &'a [u8]
+impl<'a> core::clone::Clone for vyre_foundation::vast::VastEditCorpusCase<'a>
+pub fn vyre_foundation::vast::VastEditCorpusCase<'a>::clone(&self) -> vyre_foundation::vast::VastEditCorpusCase<'a>
+impl<'a> core::fmt::Debug for vyre_foundation::vast::VastEditCorpusCase<'a>
+pub fn vyre_foundation::vast::VastEditCorpusCase<'a>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<'a> core::marker::Copy for vyre_foundation::vast::VastEditCorpusCase<'a>
+impl<'a> core::marker::Freeze for vyre_foundation::vast::VastEditCorpusCase<'a>
+impl<'a> core::marker::Send for vyre_foundation::vast::VastEditCorpusCase<'a>
+impl<'a> core::marker::Sync for vyre_foundation::vast::VastEditCorpusCase<'a>
+impl<'a> core::marker::Unpin for vyre_foundation::vast::VastEditCorpusCase<'a>
+impl<'a> core::marker::UnsafeUnpin for vyre_foundation::vast::VastEditCorpusCase<'a>
+impl<'a> core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::vast::VastEditCorpusCase<'a>
+impl<'a> core::panic::unwind_safe::UnwindSafe for vyre_foundation::vast::VastEditCorpusCase<'a>
+impl<T, U> core::convert::Into<U> for vyre_foundation::vast::VastEditCorpusCase<'a> where U: core::convert::From<T>
+pub fn vyre_foundation::vast::VastEditCorpusCase<'a>::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::vast::VastEditCorpusCase<'a> where U: core::convert::Into<T>
+pub type vyre_foundation::vast::VastEditCorpusCase<'a>::Error = core::convert::Infallible
+pub fn vyre_foundation::vast::VastEditCorpusCase<'a>::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::vast::VastEditCorpusCase<'a> where U: core::convert::TryFrom<T>
+pub type vyre_foundation::vast::VastEditCorpusCase<'a>::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::vast::VastEditCorpusCase<'a>::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::vast::VastEditCorpusCase<'a> where T: core::clone::Clone
+pub type vyre_foundation::vast::VastEditCorpusCase<'a>::Owned = T
+pub fn vyre_foundation::vast::VastEditCorpusCase<'a>::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::vast::VastEditCorpusCase<'a>::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::vast::VastEditCorpusCase<'a> where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::vast::VastEditCorpusCase<'a>::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::vast::VastEditCorpusCase<'a> where T: ?core::marker::Sized
+pub fn vyre_foundation::vast::VastEditCorpusCase<'a>::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::vast::VastEditCorpusCase<'a> where T: ?core::marker::Sized
+pub fn vyre_foundation::vast::VastEditCorpusCase<'a>::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::vast::VastEditCorpusCase<'a> where T: core::clone::Clone
+pub unsafe fn vyre_foundation::vast::VastEditCorpusCase<'a>::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::vast::VastEditCorpusCase<'a>
+pub fn vyre_foundation::vast::VastEditCorpusCase<'a>::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_foundation::vast::VastEditCorpusCase<'a>
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::vast::VastEditCorpusCase<'a>
+impl<T> typenum::type_operators::Same for vyre_foundation::vast::VastEditCorpusCase<'a>
+pub type vyre_foundation::vast::VastEditCorpusCase<'a>::Output = T
+pub struct vyre_foundation::vast::VastEditCorpusEvidence
+pub vyre_foundation::vast::VastEditCorpusEvidence::after_byte_len: u32
+pub vyre_foundation::vast::VastEditCorpusEvidence::before_byte_len: u32
+pub vyre_foundation::vast::VastEditCorpusEvidence::changed_range_count: u32
+pub vyre_foundation::vast::VastEditCorpusEvidence::diagnostic_digest: vyre_foundation::vast::VastEditDigest
+pub vyre_foundation::vast::VastEditCorpusEvidence::edit_count: u32
+pub vyre_foundation::vast::VastEditCorpusEvidence::full_reparse_vast_digest: vyre_foundation::vast::VastEditDigest
+pub vyre_foundation::vast::VastEditCorpusEvidence::reused_node_count: u32
+pub vyre_foundation::vast::VastEditCorpusEvidence::schema_version: u32
+pub vyre_foundation::vast::VastEditCorpusEvidence::update_matches_full_reparse: bool
+pub vyre_foundation::vast::VastEditCorpusEvidence::vast_digest: vyre_foundation::vast::VastEditDigest
+impl core::clone::Clone for vyre_foundation::vast::VastEditCorpusEvidence
+pub fn vyre_foundation::vast::VastEditCorpusEvidence::clone(&self) -> vyre_foundation::vast::VastEditCorpusEvidence
+impl core::cmp::Eq for vyre_foundation::vast::VastEditCorpusEvidence
+impl core::cmp::PartialEq for vyre_foundation::vast::VastEditCorpusEvidence
+pub fn vyre_foundation::vast::VastEditCorpusEvidence::eq(&self, other: &vyre_foundation::vast::VastEditCorpusEvidence) -> bool
+impl core::fmt::Debug for vyre_foundation::vast::VastEditCorpusEvidence
+pub fn vyre_foundation::vast::VastEditCorpusEvidence::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for vyre_foundation::vast::VastEditCorpusEvidence
+impl core::marker::StructuralPartialEq for vyre_foundation::vast::VastEditCorpusEvidence
+impl core::marker::Freeze for vyre_foundation::vast::VastEditCorpusEvidence
+impl core::marker::Send for vyre_foundation::vast::VastEditCorpusEvidence
+impl core::marker::Sync for vyre_foundation::vast::VastEditCorpusEvidence
+impl core::marker::Unpin for vyre_foundation::vast::VastEditCorpusEvidence
+impl core::marker::UnsafeUnpin for vyre_foundation::vast::VastEditCorpusEvidence
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::vast::VastEditCorpusEvidence
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::vast::VastEditCorpusEvidence
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::vast::VastEditCorpusEvidence where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::vast::VastEditCorpusEvidence::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::vast::VastEditCorpusEvidence where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::vast::VastEditCorpusEvidence::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::vast::VastEditCorpusEvidence where U: core::convert::From<T>
+pub fn vyre_foundation::vast::VastEditCorpusEvidence::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::vast::VastEditCorpusEvidence where U: core::convert::Into<T>
+pub type vyre_foundation::vast::VastEditCorpusEvidence::Error = core::convert::Infallible
+pub fn vyre_foundation::vast::VastEditCorpusEvidence::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::vast::VastEditCorpusEvidence where U: core::convert::TryFrom<T>
+pub type vyre_foundation::vast::VastEditCorpusEvidence::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::vast::VastEditCorpusEvidence::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::vast::VastEditCorpusEvidence where T: core::clone::Clone
+pub type vyre_foundation::vast::VastEditCorpusEvidence::Owned = T
+pub fn vyre_foundation::vast::VastEditCorpusEvidence::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::vast::VastEditCorpusEvidence::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::vast::VastEditCorpusEvidence where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::vast::VastEditCorpusEvidence::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::vast::VastEditCorpusEvidence where T: ?core::marker::Sized
+pub fn vyre_foundation::vast::VastEditCorpusEvidence::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::vast::VastEditCorpusEvidence where T: ?core::marker::Sized
+pub fn vyre_foundation::vast::VastEditCorpusEvidence::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::vast::VastEditCorpusEvidence where T: core::clone::Clone
+pub unsafe fn vyre_foundation::vast::VastEditCorpusEvidence::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::vast::VastEditCorpusEvidence
+pub fn vyre_foundation::vast::VastEditCorpusEvidence::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_foundation::vast::VastEditCorpusEvidence
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::vast::VastEditCorpusEvidence
+impl<T> typenum::type_operators::Same for vyre_foundation::vast::VastEditCorpusEvidence
+pub type vyre_foundation::vast::VastEditCorpusEvidence::Output = T
 pub struct vyre_foundation::vast::VastFile
 pub vyre_foundation::vast::VastFile::path_len: u32
 pub vyre_foundation::vast::VastFile::path_off: u32
@@ -24687,12 +26766,18 @@ pub type vyre_foundation::vast::VastNode::Output = T
 pub const vyre_foundation::vast::HEADER_LEN: usize
 pub const vyre_foundation::vast::NODE_STRIDE_U32: usize
 pub const vyre_foundation::vast::SENTINEL: u32
+pub const vyre_foundation::vast::VAST_EDIT_CORPUS_SCHEMA_VERSION: u32
 pub const vyre_foundation::vast::VAST_MAGIC: [u8; 4]
 pub const vyre_foundation::vast::VAST_VERSION: u16
+pub fn vyre_foundation::vast::apply_vast_edit_script(before: &[u8], edits: &[vyre_foundation::vast::VastEdit<'_>]) -> core::result::Result<alloc::vec::Vec<u8>, vyre_foundation::vast::VastEditCorpusError>
+pub fn vyre_foundation::vast::changed_ranges_from_vast_edits(before: &[u8], edits: &[vyre_foundation::vast::VastEdit<'_>]) -> core::result::Result<alloc::vec::Vec<vyre_foundation::vast::VastChangedRange>, vyre_foundation::vast::VastEditCorpusError>
 pub fn vyre_foundation::vast::pack_spine_vast(node_kinds: &[u32]) -> alloc::vec::Vec<u8>
 pub fn vyre_foundation::vast::validate_vast(bytes: &[u8]) -> core::result::Result<vyre_foundation::vast::VastHeader, vyre_foundation::vast::VastError>
+pub fn vyre_foundation::vast::vast_edit_corpus_evidence(case: &vyre_foundation::vast::VastEditCorpusCase<'_>) -> core::result::Result<vyre_foundation::vast::VastEditCorpusEvidence, vyre_foundation::vast::VastEditCorpusError>
+pub fn vyre_foundation::vast::vast_edit_digest(bytes: &[u8]) -> vyre_foundation::vast::VastEditDigest
 pub fn vyre_foundation::vast::walk_postorder_indices(node_bytes: &[u8], node_count: u32, max_stack: usize) -> core::result::Result<alloc::vec::Vec<u32>, vyre_foundation::vast::VastError>
 pub fn vyre_foundation::vast::walk_preorder_indices(node_bytes: &[u8], node_count: u32, max_stack: usize) -> core::result::Result<alloc::vec::Vec<u32>, vyre_foundation::vast::VastError>
+pub type vyre_foundation::vast::VastEditDigest = [u8; 32]
 pub mod vyre_foundation::visit
 pub mod vyre_foundation::visit::expr
 pub trait vyre_foundation::visit::expr::ExprVisitor

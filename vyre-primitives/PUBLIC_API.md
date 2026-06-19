@@ -23,6 +23,8 @@ pub fn vyre_primitives::prelude::pack_u32_slice_into_uninit(words: &[u32]) -> al
 pub fn vyre_primitives::prelude::pack_u32_slice_min_words_into(words: &[u32], min_words: u32, out: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_primitives::prelude::pack_u64_slice(values: &[u64]) -> alloc::vec::Vec<u8>
 pub fn vyre_primitives::prelude::pack_u64_slice_into(values: &[u64], out: &mut alloc::vec::Vec<u8>)
+pub fn vyre_primitives::prelude::read_f32_le_word(bytes: &[u8], word_index: usize, label: &str) -> core::result::Result<f32, alloc::string::String>
+pub fn vyre_primitives::prelude::read_u32_le_word(bytes: &[u8], word_index: usize, label: &str) -> core::result::Result<u32, alloc::string::String>
 pub fn vyre_primitives::prelude::unpack_f32_slice(bytes: &[u8], count: usize, label: &str) -> core::result::Result<alloc::vec::Vec<f32>, alloc::string::String>
 pub fn vyre_primitives::prelude::unpack_f32_slice_into(bytes: &[u8], count: usize, label: &str, out: &mut alloc::vec::Vec<f32>) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_primitives::prelude::unpack_u32_slice_into(bytes: &[u8], count: usize, label: &str, out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
@@ -109,6 +111,7 @@ pub fn vyre_primitives::wire::pack_u32_slice_into_uninit(words: &[u32]) -> alloc
 pub fn vyre_primitives::wire::pack_u32_slice_min_words_into(words: &[u32], min_words: u32, out: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_primitives::wire::pack_u64_slice(values: &[u64]) -> alloc::vec::Vec<u8>
 pub fn vyre_primitives::wire::pack_u64_slice_into(values: &[u64], out: &mut alloc::vec::Vec<u8>)
+pub fn vyre_primitives::wire::read_f32_le_word(bytes: &[u8], word_index: usize, label: &str) -> core::result::Result<f32, alloc::string::String>
 pub fn vyre_primitives::wire::read_u32_le_word(bytes: &[u8], word_index: usize, label: &str) -> core::result::Result<u32, alloc::string::String>
 pub fn vyre_primitives::wire::try_pack_bytes_as_u32_slice_into(bytes: &[u8], out: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_primitives::wire::try_pack_f32_slice_into(values: &[f32], out: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), alloc::string::String>

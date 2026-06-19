@@ -702,6 +702,10 @@ pub fn vyre_driver::backend::validation::default_supported_ops_with_trap() -> &'
 pub fn vyre_driver::backend::validation::node_op_id(node: &vyre_foundation::ir_inner::model::generated::Node) -> &'static str
 pub fn vyre_driver::backend::validation::validate_program(program: &vyre_foundation::ir_inner::model::program::core::Program, backend: &dyn vyre_driver::backend::Backend) -> core::result::Result<(), vyre_foundation::validate::validation_error::ValidationError>
 #[non_exhaustive] pub enum vyre_driver::backend::BackendError
+pub vyre_driver::backend::BackendError::CooperativeResidencyExceeded
+pub vyre_driver::backend::BackendError::CooperativeResidencyExceeded::detail: alloc::string::String
+pub vyre_driver::backend::BackendError::CooperativeResidencyExceeded::grid_blocks: u64
+pub vyre_driver::backend::BackendError::CooperativeResidencyExceeded::resident_limit: u64
 pub vyre_driver::backend::BackendError::DeviceOutOfMemory
 pub vyre_driver::backend::BackendError::DeviceOutOfMemory::available: u64
 pub vyre_driver::backend::BackendError::DeviceOutOfMemory::requested: u64
@@ -779,6 +783,7 @@ impl<T> tracing::instrument::WithSubscriber for vyre_driver::BackendError
 impl<T> typenum::type_operators::Same for vyre_driver::BackendError
 pub type vyre_driver::BackendError::Output = T
 #[non_exhaustive] pub enum vyre_driver::backend::ErrorCode
+pub vyre_driver::backend::ErrorCode::CooperativeResidencyExceeded
 pub vyre_driver::backend::ErrorCode::DeviceOutOfMemory
 pub vyre_driver::backend::ErrorCode::DispatchFailed
 pub vyre_driver::backend::ErrorCode::InvalidProgram
@@ -834,6 +839,171 @@ impl<T> tracing::instrument::Instrument for vyre_driver::backend::ErrorCode
 impl<T> tracing::instrument::WithSubscriber for vyre_driver::backend::ErrorCode
 impl<T> typenum::type_operators::Same for vyre_driver::backend::ErrorCode
 pub type vyre_driver::backend::ErrorCode::Output = T
+pub enum vyre_driver::backend::RegexAcceleratorClass
+pub vyre_driver::backend::RegexAcceleratorClass::Dpu
+pub vyre_driver::backend::RegexAcceleratorClass::Fpga
+pub vyre_driver::backend::RegexAcceleratorClass::RxpLike
+pub vyre_driver::backend::RegexAcceleratorClass::Software
+impl vyre_driver::backend::RegexAcceleratorClass
+pub const fn vyre_driver::backend::RegexAcceleratorClass::as_str(self) -> &'static str
+impl core::clone::Clone for vyre_driver::backend::RegexAcceleratorClass
+pub fn vyre_driver::backend::RegexAcceleratorClass::clone(&self) -> vyre_driver::backend::RegexAcceleratorClass
+impl core::cmp::Eq for vyre_driver::backend::RegexAcceleratorClass
+impl core::cmp::PartialEq for vyre_driver::backend::RegexAcceleratorClass
+pub fn vyre_driver::backend::RegexAcceleratorClass::eq(&self, other: &vyre_driver::backend::RegexAcceleratorClass) -> bool
+impl core::fmt::Debug for vyre_driver::backend::RegexAcceleratorClass
+pub fn vyre_driver::backend::RegexAcceleratorClass::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_driver::backend::RegexAcceleratorClass
+pub fn vyre_driver::backend::RegexAcceleratorClass::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_driver::backend::RegexAcceleratorClass
+impl core::marker::StructuralPartialEq for vyre_driver::backend::RegexAcceleratorClass
+impl core::marker::Freeze for vyre_driver::backend::RegexAcceleratorClass
+impl core::marker::Send for vyre_driver::backend::RegexAcceleratorClass
+impl core::marker::Sync for vyre_driver::backend::RegexAcceleratorClass
+impl core::marker::Unpin for vyre_driver::backend::RegexAcceleratorClass
+impl core::marker::UnsafeUnpin for vyre_driver::backend::RegexAcceleratorClass
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::backend::RegexAcceleratorClass
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::backend::RegexAcceleratorClass
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::backend::RegexAcceleratorClass where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::backend::RegexAcceleratorClass::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::backend::RegexAcceleratorClass where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::backend::RegexAcceleratorClass::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::backend::RegexAcceleratorClass where U: core::convert::From<T>
+pub fn vyre_driver::backend::RegexAcceleratorClass::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::backend::RegexAcceleratorClass where U: core::convert::Into<T>
+pub type vyre_driver::backend::RegexAcceleratorClass::Error = core::convert::Infallible
+pub fn vyre_driver::backend::RegexAcceleratorClass::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::backend::RegexAcceleratorClass where U: core::convert::TryFrom<T>
+pub type vyre_driver::backend::RegexAcceleratorClass::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::backend::RegexAcceleratorClass::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::backend::RegexAcceleratorClass where T: core::clone::Clone
+pub type vyre_driver::backend::RegexAcceleratorClass::Owned = T
+pub fn vyre_driver::backend::RegexAcceleratorClass::clone_into(&self, target: &mut T)
+pub fn vyre_driver::backend::RegexAcceleratorClass::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::backend::RegexAcceleratorClass where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::backend::RegexAcceleratorClass::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::backend::RegexAcceleratorClass where T: ?core::marker::Sized
+pub fn vyre_driver::backend::RegexAcceleratorClass::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::backend::RegexAcceleratorClass where T: ?core::marker::Sized
+pub fn vyre_driver::backend::RegexAcceleratorClass::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::backend::RegexAcceleratorClass where T: core::clone::Clone
+pub unsafe fn vyre_driver::backend::RegexAcceleratorClass::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::backend::RegexAcceleratorClass
+pub fn vyre_driver::backend::RegexAcceleratorClass::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_driver::backend::RegexAcceleratorClass
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::backend::RegexAcceleratorClass
+impl<T> typenum::type_operators::Same for vyre_driver::backend::RegexAcceleratorClass
+pub type vyre_driver::backend::RegexAcceleratorClass::Output = T
+pub enum vyre_driver::backend::RegexAcceleratorMatchSchema
+pub vyre_driver::backend::RegexAcceleratorMatchSchema::Offsets
+pub vyre_driver::backend::RegexAcceleratorMatchSchema::PatternIdOffsets
+pub vyre_driver::backend::RegexAcceleratorMatchSchema::StreamPatternIdOffsets
+pub vyre_driver::backend::RegexAcceleratorMatchSchema::Unavailable
+impl vyre_driver::backend::RegexAcceleratorMatchSchema
+pub const fn vyre_driver::backend::RegexAcceleratorMatchSchema::as_str(self) -> &'static str
+impl core::clone::Clone for vyre_driver::backend::RegexAcceleratorMatchSchema
+pub fn vyre_driver::backend::RegexAcceleratorMatchSchema::clone(&self) -> vyre_driver::backend::RegexAcceleratorMatchSchema
+impl core::cmp::Eq for vyre_driver::backend::RegexAcceleratorMatchSchema
+impl core::cmp::PartialEq for vyre_driver::backend::RegexAcceleratorMatchSchema
+pub fn vyre_driver::backend::RegexAcceleratorMatchSchema::eq(&self, other: &vyre_driver::backend::RegexAcceleratorMatchSchema) -> bool
+impl core::fmt::Debug for vyre_driver::backend::RegexAcceleratorMatchSchema
+pub fn vyre_driver::backend::RegexAcceleratorMatchSchema::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_driver::backend::RegexAcceleratorMatchSchema
+pub fn vyre_driver::backend::RegexAcceleratorMatchSchema::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_driver::backend::RegexAcceleratorMatchSchema
+impl core::marker::StructuralPartialEq for vyre_driver::backend::RegexAcceleratorMatchSchema
+impl core::marker::Freeze for vyre_driver::backend::RegexAcceleratorMatchSchema
+impl core::marker::Send for vyre_driver::backend::RegexAcceleratorMatchSchema
+impl core::marker::Sync for vyre_driver::backend::RegexAcceleratorMatchSchema
+impl core::marker::Unpin for vyre_driver::backend::RegexAcceleratorMatchSchema
+impl core::marker::UnsafeUnpin for vyre_driver::backend::RegexAcceleratorMatchSchema
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::backend::RegexAcceleratorMatchSchema
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::backend::RegexAcceleratorMatchSchema
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::backend::RegexAcceleratorMatchSchema where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::backend::RegexAcceleratorMatchSchema::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::backend::RegexAcceleratorMatchSchema where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::backend::RegexAcceleratorMatchSchema::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::backend::RegexAcceleratorMatchSchema where U: core::convert::From<T>
+pub fn vyre_driver::backend::RegexAcceleratorMatchSchema::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::backend::RegexAcceleratorMatchSchema where U: core::convert::Into<T>
+pub type vyre_driver::backend::RegexAcceleratorMatchSchema::Error = core::convert::Infallible
+pub fn vyre_driver::backend::RegexAcceleratorMatchSchema::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::backend::RegexAcceleratorMatchSchema where U: core::convert::TryFrom<T>
+pub type vyre_driver::backend::RegexAcceleratorMatchSchema::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::backend::RegexAcceleratorMatchSchema::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::backend::RegexAcceleratorMatchSchema where T: core::clone::Clone
+pub type vyre_driver::backend::RegexAcceleratorMatchSchema::Owned = T
+pub fn vyre_driver::backend::RegexAcceleratorMatchSchema::clone_into(&self, target: &mut T)
+pub fn vyre_driver::backend::RegexAcceleratorMatchSchema::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::backend::RegexAcceleratorMatchSchema where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::backend::RegexAcceleratorMatchSchema::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::backend::RegexAcceleratorMatchSchema where T: ?core::marker::Sized
+pub fn vyre_driver::backend::RegexAcceleratorMatchSchema::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::backend::RegexAcceleratorMatchSchema where T: ?core::marker::Sized
+pub fn vyre_driver::backend::RegexAcceleratorMatchSchema::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::backend::RegexAcceleratorMatchSchema where T: core::clone::Clone
+pub unsafe fn vyre_driver::backend::RegexAcceleratorMatchSchema::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::backend::RegexAcceleratorMatchSchema
+pub fn vyre_driver::backend::RegexAcceleratorMatchSchema::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_driver::backend::RegexAcceleratorMatchSchema
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::backend::RegexAcceleratorMatchSchema
+impl<T> typenum::type_operators::Same for vyre_driver::backend::RegexAcceleratorMatchSchema
+pub type vyre_driver::backend::RegexAcceleratorMatchSchema::Output = T
+pub enum vyre_driver::backend::RegexAcceleratorStreamMode
+pub vyre_driver::backend::RegexAcceleratorStreamMode::Block
+pub vyre_driver::backend::RegexAcceleratorStreamMode::StatefulStreaming
+pub vyre_driver::backend::RegexAcceleratorStreamMode::Streaming
+pub vyre_driver::backend::RegexAcceleratorStreamMode::Unavailable
+impl vyre_driver::backend::RegexAcceleratorStreamMode
+pub const fn vyre_driver::backend::RegexAcceleratorStreamMode::as_str(self) -> &'static str
+impl core::clone::Clone for vyre_driver::backend::RegexAcceleratorStreamMode
+pub fn vyre_driver::backend::RegexAcceleratorStreamMode::clone(&self) -> vyre_driver::backend::RegexAcceleratorStreamMode
+impl core::cmp::Eq for vyre_driver::backend::RegexAcceleratorStreamMode
+impl core::cmp::PartialEq for vyre_driver::backend::RegexAcceleratorStreamMode
+pub fn vyre_driver::backend::RegexAcceleratorStreamMode::eq(&self, other: &vyre_driver::backend::RegexAcceleratorStreamMode) -> bool
+impl core::fmt::Debug for vyre_driver::backend::RegexAcceleratorStreamMode
+pub fn vyre_driver::backend::RegexAcceleratorStreamMode::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_driver::backend::RegexAcceleratorStreamMode
+pub fn vyre_driver::backend::RegexAcceleratorStreamMode::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_driver::backend::RegexAcceleratorStreamMode
+impl core::marker::StructuralPartialEq for vyre_driver::backend::RegexAcceleratorStreamMode
+impl core::marker::Freeze for vyre_driver::backend::RegexAcceleratorStreamMode
+impl core::marker::Send for vyre_driver::backend::RegexAcceleratorStreamMode
+impl core::marker::Sync for vyre_driver::backend::RegexAcceleratorStreamMode
+impl core::marker::Unpin for vyre_driver::backend::RegexAcceleratorStreamMode
+impl core::marker::UnsafeUnpin for vyre_driver::backend::RegexAcceleratorStreamMode
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::backend::RegexAcceleratorStreamMode
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::backend::RegexAcceleratorStreamMode
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::backend::RegexAcceleratorStreamMode where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::backend::RegexAcceleratorStreamMode::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::backend::RegexAcceleratorStreamMode where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::backend::RegexAcceleratorStreamMode::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::backend::RegexAcceleratorStreamMode where U: core::convert::From<T>
+pub fn vyre_driver::backend::RegexAcceleratorStreamMode::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::backend::RegexAcceleratorStreamMode where U: core::convert::Into<T>
+pub type vyre_driver::backend::RegexAcceleratorStreamMode::Error = core::convert::Infallible
+pub fn vyre_driver::backend::RegexAcceleratorStreamMode::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::backend::RegexAcceleratorStreamMode where U: core::convert::TryFrom<T>
+pub type vyre_driver::backend::RegexAcceleratorStreamMode::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::backend::RegexAcceleratorStreamMode::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::backend::RegexAcceleratorStreamMode where T: core::clone::Clone
+pub type vyre_driver::backend::RegexAcceleratorStreamMode::Owned = T
+pub fn vyre_driver::backend::RegexAcceleratorStreamMode::clone_into(&self, target: &mut T)
+pub fn vyre_driver::backend::RegexAcceleratorStreamMode::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::backend::RegexAcceleratorStreamMode where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::backend::RegexAcceleratorStreamMode::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::backend::RegexAcceleratorStreamMode where T: ?core::marker::Sized
+pub fn vyre_driver::backend::RegexAcceleratorStreamMode::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::backend::RegexAcceleratorStreamMode where T: ?core::marker::Sized
+pub fn vyre_driver::backend::RegexAcceleratorStreamMode::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::backend::RegexAcceleratorStreamMode where T: core::clone::Clone
+pub unsafe fn vyre_driver::backend::RegexAcceleratorStreamMode::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::backend::RegexAcceleratorStreamMode
+pub fn vyre_driver::backend::RegexAcceleratorStreamMode::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_driver::backend::RegexAcceleratorStreamMode
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::backend::RegexAcceleratorStreamMode
+impl<T> typenum::type_operators::Same for vyre_driver::backend::RegexAcceleratorStreamMode
+pub type vyre_driver::backend::RegexAcceleratorStreamMode::Output = T
 pub enum vyre_driver::backend::Resource
 pub vyre_driver::backend::Resource::Borrowed(alloc::vec::Vec<u8>)
 pub vyre_driver::backend::Resource::Resident(u64)
@@ -1243,10 +1413,131 @@ impl<T> tracing::instrument::Instrument for vyre_driver::backend::OutputSlotStat
 impl<T> tracing::instrument::WithSubscriber for vyre_driver::backend::OutputSlotStats
 impl<T> typenum::type_operators::Same for vyre_driver::backend::OutputSlotStats
 pub type vyre_driver::backend::OutputSlotStats::Output = T
+pub struct vyre_driver::backend::RegexAcceleratorCapability
+pub vyre_driver::backend::RegexAcceleratorCapability::accelerator_class: vyre_driver::backend::RegexAcceleratorClass
+pub vyre_driver::backend::RegexAcceleratorCapability::backend: &'static str
+pub vyre_driver::backend::RegexAcceleratorCapability::device_signature: &'static str
+pub vyre_driver::backend::RegexAcceleratorCapability::match_schema: vyre_driver::backend::RegexAcceleratorMatchSchema
+pub vyre_driver::backend::RegexAcceleratorCapability::rule_capacity: u32
+pub vyre_driver::backend::RegexAcceleratorCapability::stream_mode: vyre_driver::backend::RegexAcceleratorStreamMode
+pub vyre_driver::backend::RegexAcceleratorCapability::supported: bool
+pub vyre_driver::backend::RegexAcceleratorCapability::unsupported_reason: &'static str
+impl vyre_driver::backend::RegexAcceleratorCapability
+pub const fn vyre_driver::backend::RegexAcceleratorCapability::evidence(self, transfer_bytes: u64) -> vyre_driver::backend::RegexAcceleratorEvidence
+pub fn vyre_driver::backend::RegexAcceleratorCapability::require_supported(self) -> core::result::Result<Self, vyre_driver::BackendError>
+pub const fn vyre_driver::backend::RegexAcceleratorCapability::supported(backend: &'static str, accelerator_class: vyre_driver::backend::RegexAcceleratorClass, device_signature: &'static str, rule_capacity: u32, stream_mode: vyre_driver::backend::RegexAcceleratorStreamMode, match_schema: vyre_driver::backend::RegexAcceleratorMatchSchema) -> Self
+pub const fn vyre_driver::backend::RegexAcceleratorCapability::unsupported(backend: &'static str, accelerator_class: vyre_driver::backend::RegexAcceleratorClass, unsupported_reason: &'static str) -> Self
+impl core::clone::Clone for vyre_driver::backend::RegexAcceleratorCapability
+pub fn vyre_driver::backend::RegexAcceleratorCapability::clone(&self) -> vyre_driver::backend::RegexAcceleratorCapability
+impl core::cmp::Eq for vyre_driver::backend::RegexAcceleratorCapability
+impl core::cmp::PartialEq for vyre_driver::backend::RegexAcceleratorCapability
+pub fn vyre_driver::backend::RegexAcceleratorCapability::eq(&self, other: &vyre_driver::backend::RegexAcceleratorCapability) -> bool
+impl core::fmt::Debug for vyre_driver::backend::RegexAcceleratorCapability
+pub fn vyre_driver::backend::RegexAcceleratorCapability::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for vyre_driver::backend::RegexAcceleratorCapability
+impl core::marker::StructuralPartialEq for vyre_driver::backend::RegexAcceleratorCapability
+impl core::marker::Freeze for vyre_driver::backend::RegexAcceleratorCapability
+impl core::marker::Send for vyre_driver::backend::RegexAcceleratorCapability
+impl core::marker::Sync for vyre_driver::backend::RegexAcceleratorCapability
+impl core::marker::Unpin for vyre_driver::backend::RegexAcceleratorCapability
+impl core::marker::UnsafeUnpin for vyre_driver::backend::RegexAcceleratorCapability
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::backend::RegexAcceleratorCapability
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::backend::RegexAcceleratorCapability
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::backend::RegexAcceleratorCapability where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::backend::RegexAcceleratorCapability::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::backend::RegexAcceleratorCapability where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::backend::RegexAcceleratorCapability::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::backend::RegexAcceleratorCapability where U: core::convert::From<T>
+pub fn vyre_driver::backend::RegexAcceleratorCapability::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::backend::RegexAcceleratorCapability where U: core::convert::Into<T>
+pub type vyre_driver::backend::RegexAcceleratorCapability::Error = core::convert::Infallible
+pub fn vyre_driver::backend::RegexAcceleratorCapability::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::backend::RegexAcceleratorCapability where U: core::convert::TryFrom<T>
+pub type vyre_driver::backend::RegexAcceleratorCapability::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::backend::RegexAcceleratorCapability::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::backend::RegexAcceleratorCapability where T: core::clone::Clone
+pub type vyre_driver::backend::RegexAcceleratorCapability::Owned = T
+pub fn vyre_driver::backend::RegexAcceleratorCapability::clone_into(&self, target: &mut T)
+pub fn vyre_driver::backend::RegexAcceleratorCapability::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::backend::RegexAcceleratorCapability where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::backend::RegexAcceleratorCapability::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::backend::RegexAcceleratorCapability where T: ?core::marker::Sized
+pub fn vyre_driver::backend::RegexAcceleratorCapability::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::backend::RegexAcceleratorCapability where T: ?core::marker::Sized
+pub fn vyre_driver::backend::RegexAcceleratorCapability::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::backend::RegexAcceleratorCapability where T: core::clone::Clone
+pub unsafe fn vyre_driver::backend::RegexAcceleratorCapability::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::backend::RegexAcceleratorCapability
+pub fn vyre_driver::backend::RegexAcceleratorCapability::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_driver::backend::RegexAcceleratorCapability
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::backend::RegexAcceleratorCapability
+impl<T> typenum::type_operators::Same for vyre_driver::backend::RegexAcceleratorCapability
+pub type vyre_driver::backend::RegexAcceleratorCapability::Output = T
+pub struct vyre_driver::backend::RegexAcceleratorEvidence
+pub vyre_driver::backend::RegexAcceleratorEvidence::accelerator_class: vyre_driver::backend::RegexAcceleratorClass
+pub vyre_driver::backend::RegexAcceleratorEvidence::backend: &'static str
+pub vyre_driver::backend::RegexAcceleratorEvidence::device_signature: &'static str
+pub vyre_driver::backend::RegexAcceleratorEvidence::match_parity_required: bool
+pub vyre_driver::backend::RegexAcceleratorEvidence::match_schema: vyre_driver::backend::RegexAcceleratorMatchSchema
+pub vyre_driver::backend::RegexAcceleratorEvidence::rule_capacity: u32
+pub vyre_driver::backend::RegexAcceleratorEvidence::schema_version: u32
+pub vyre_driver::backend::RegexAcceleratorEvidence::stream_mode: vyre_driver::backend::RegexAcceleratorStreamMode
+pub vyre_driver::backend::RegexAcceleratorEvidence::supported: bool
+pub vyre_driver::backend::RegexAcceleratorEvidence::transfer_bytes: u64
+pub vyre_driver::backend::RegexAcceleratorEvidence::unsupported_reason: &'static str
+impl vyre_driver::backend::RegexAcceleratorEvidence
+pub fn vyre_driver::backend::RegexAcceleratorEvidence::is_complete(self) -> bool
+impl core::clone::Clone for vyre_driver::backend::RegexAcceleratorEvidence
+pub fn vyre_driver::backend::RegexAcceleratorEvidence::clone(&self) -> vyre_driver::backend::RegexAcceleratorEvidence
+impl core::cmp::Eq for vyre_driver::backend::RegexAcceleratorEvidence
+impl core::cmp::PartialEq for vyre_driver::backend::RegexAcceleratorEvidence
+pub fn vyre_driver::backend::RegexAcceleratorEvidence::eq(&self, other: &vyre_driver::backend::RegexAcceleratorEvidence) -> bool
+impl core::fmt::Debug for vyre_driver::backend::RegexAcceleratorEvidence
+pub fn vyre_driver::backend::RegexAcceleratorEvidence::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for vyre_driver::backend::RegexAcceleratorEvidence
+impl core::marker::StructuralPartialEq for vyre_driver::backend::RegexAcceleratorEvidence
+impl core::marker::Freeze for vyre_driver::backend::RegexAcceleratorEvidence
+impl core::marker::Send for vyre_driver::backend::RegexAcceleratorEvidence
+impl core::marker::Sync for vyre_driver::backend::RegexAcceleratorEvidence
+impl core::marker::Unpin for vyre_driver::backend::RegexAcceleratorEvidence
+impl core::marker::UnsafeUnpin for vyre_driver::backend::RegexAcceleratorEvidence
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::backend::RegexAcceleratorEvidence
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::backend::RegexAcceleratorEvidence
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::backend::RegexAcceleratorEvidence where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::backend::RegexAcceleratorEvidence::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::backend::RegexAcceleratorEvidence where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::backend::RegexAcceleratorEvidence::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::backend::RegexAcceleratorEvidence where U: core::convert::From<T>
+pub fn vyre_driver::backend::RegexAcceleratorEvidence::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::backend::RegexAcceleratorEvidence where U: core::convert::Into<T>
+pub type vyre_driver::backend::RegexAcceleratorEvidence::Error = core::convert::Infallible
+pub fn vyre_driver::backend::RegexAcceleratorEvidence::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::backend::RegexAcceleratorEvidence where U: core::convert::TryFrom<T>
+pub type vyre_driver::backend::RegexAcceleratorEvidence::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::backend::RegexAcceleratorEvidence::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::backend::RegexAcceleratorEvidence where T: core::clone::Clone
+pub type vyre_driver::backend::RegexAcceleratorEvidence::Owned = T
+pub fn vyre_driver::backend::RegexAcceleratorEvidence::clone_into(&self, target: &mut T)
+pub fn vyre_driver::backend::RegexAcceleratorEvidence::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::backend::RegexAcceleratorEvidence where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::backend::RegexAcceleratorEvidence::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::backend::RegexAcceleratorEvidence where T: ?core::marker::Sized
+pub fn vyre_driver::backend::RegexAcceleratorEvidence::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::backend::RegexAcceleratorEvidence where T: ?core::marker::Sized
+pub fn vyre_driver::backend::RegexAcceleratorEvidence::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::backend::RegexAcceleratorEvidence where T: core::clone::Clone
+pub unsafe fn vyre_driver::backend::RegexAcceleratorEvidence::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::backend::RegexAcceleratorEvidence
+pub fn vyre_driver::backend::RegexAcceleratorEvidence::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_driver::backend::RegexAcceleratorEvidence
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::backend::RegexAcceleratorEvidence
+impl<T> typenum::type_operators::Same for vyre_driver::backend::RegexAcceleratorEvidence
+pub type vyre_driver::backend::RegexAcceleratorEvidence::Output = T
 pub struct vyre_driver::backend::ResidentDispatchStep<'a>
 pub vyre_driver::backend::ResidentDispatchStep::grid_override: core::option::Option<[u32; 3]>
 pub vyre_driver::backend::ResidentDispatchStep::program: &'a vyre_foundation::ir_inner::model::program::core::Program
 pub vyre_driver::backend::ResidentDispatchStep::resources: &'a [vyre_driver::Resource]
+pub vyre_driver::backend::ResidentDispatchStep::workgroup_override: core::option::Option<[u32; 3]>
 impl<'a> core::marker::Freeze for vyre_driver::ResidentDispatchStep<'a>
 impl<'a> core::marker::Send for vyre_driver::ResidentDispatchStep<'a>
 impl<'a> core::marker::Sync for vyre_driver::ResidentDispatchStep<'a>
@@ -1305,6 +1596,58 @@ impl<T> tracing::instrument::Instrument for vyre_driver::ResidentReadRange<'a>
 impl<T> tracing::instrument::WithSubscriber for vyre_driver::ResidentReadRange<'a>
 impl<T> typenum::type_operators::Same for vyre_driver::ResidentReadRange<'a>
 pub type vyre_driver::ResidentReadRange<'a>::Output = T
+pub struct vyre_driver::backend::ResidentSequenceTiming
+pub vyre_driver::backend::ResidentSequenceTiming::device_ns: core::option::Option<u64>
+pub vyre_driver::backend::ResidentSequenceTiming::enqueue_ns: core::option::Option<u64>
+pub vyre_driver::backend::ResidentSequenceTiming::wait_ns: core::option::Option<u64>
+pub vyre_driver::backend::ResidentSequenceTiming::wall_ns: u64
+impl core::clone::Clone for vyre_driver::ResidentSequenceTiming
+pub fn vyre_driver::ResidentSequenceTiming::clone(&self) -> vyre_driver::ResidentSequenceTiming
+impl core::cmp::Eq for vyre_driver::ResidentSequenceTiming
+impl core::cmp::PartialEq for vyre_driver::ResidentSequenceTiming
+pub fn vyre_driver::ResidentSequenceTiming::eq(&self, other: &vyre_driver::ResidentSequenceTiming) -> bool
+impl core::default::Default for vyre_driver::ResidentSequenceTiming
+pub fn vyre_driver::ResidentSequenceTiming::default() -> vyre_driver::ResidentSequenceTiming
+impl core::fmt::Debug for vyre_driver::ResidentSequenceTiming
+pub fn vyre_driver::ResidentSequenceTiming::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for vyre_driver::ResidentSequenceTiming
+impl core::marker::Freeze for vyre_driver::ResidentSequenceTiming
+impl core::marker::Send for vyre_driver::ResidentSequenceTiming
+impl core::marker::Sync for vyre_driver::ResidentSequenceTiming
+impl core::marker::Unpin for vyre_driver::ResidentSequenceTiming
+impl core::marker::UnsafeUnpin for vyre_driver::ResidentSequenceTiming
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::ResidentSequenceTiming
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::ResidentSequenceTiming
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::ResidentSequenceTiming where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::ResidentSequenceTiming::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::ResidentSequenceTiming where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::ResidentSequenceTiming::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::ResidentSequenceTiming where U: core::convert::From<T>
+pub fn vyre_driver::ResidentSequenceTiming::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::ResidentSequenceTiming where U: core::convert::Into<T>
+pub type vyre_driver::ResidentSequenceTiming::Error = core::convert::Infallible
+pub fn vyre_driver::ResidentSequenceTiming::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::ResidentSequenceTiming where U: core::convert::TryFrom<T>
+pub type vyre_driver::ResidentSequenceTiming::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::ResidentSequenceTiming::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::ResidentSequenceTiming where T: core::clone::Clone
+pub type vyre_driver::ResidentSequenceTiming::Owned = T
+pub fn vyre_driver::ResidentSequenceTiming::clone_into(&self, target: &mut T)
+pub fn vyre_driver::ResidentSequenceTiming::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::ResidentSequenceTiming where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::ResidentSequenceTiming::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::ResidentSequenceTiming where T: ?core::marker::Sized
+pub fn vyre_driver::ResidentSequenceTiming::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::ResidentSequenceTiming where T: ?core::marker::Sized
+pub fn vyre_driver::ResidentSequenceTiming::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::ResidentSequenceTiming where T: core::clone::Clone
+pub unsafe fn vyre_driver::ResidentSequenceTiming::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::ResidentSequenceTiming
+pub fn vyre_driver::ResidentSequenceTiming::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_driver::ResidentSequenceTiming
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::ResidentSequenceTiming
+impl<T> typenum::type_operators::Same for vyre_driver::ResidentSequenceTiming
+pub type vyre_driver::ResidentSequenceTiming::Output = T
 pub struct vyre_driver::backend::TimedDispatchResult
 pub vyre_driver::backend::TimedDispatchResult::device_ns: core::option::Option<u64>
 pub vyre_driver::backend::TimedDispatchResult::enqueue_ns: core::option::Option<u64>
@@ -1357,6 +1700,7 @@ impl<T> tracing::instrument::WithSubscriber for vyre_driver::TimedDispatchResult
 impl<T> typenum::type_operators::Same for vyre_driver::TimedDispatchResult
 pub type vyre_driver::TimedDispatchResult::Output = T
 pub const vyre_driver::backend::DEVICE_BUFFER_FEATURE: &str
+pub const vyre_driver::backend::REGEX_ACCELERATOR_EVIDENCE_SCHEMA_VERSION: u32
 pub trait vyre_driver::backend::Backend: core::marker::Send + core::marker::Sync
 pub fn vyre_driver::backend::Backend::id(&self) -> &'static str
 pub fn vyre_driver::backend::Backend::supported_ops(&self) -> &std::collections::hash::set::HashSet<vyre_foundation::ir_inner::model::node_kind::OpId>
@@ -1377,6 +1721,7 @@ pub fn vyre_driver::backend::CompiledPipeline::dispatch_persistent_handles(&self
 pub fn vyre_driver::backend::CompiledPipeline::dispatch_persistent_handles_batched(&self, batches: &[&[vyre_driver::Resource]], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<vyre_driver::OutputBuffers>, vyre_driver::BackendError>
 pub fn vyre_driver::backend::CompiledPipeline::dispatch_persistent_handles_batched_into(&self, batches: &[&[vyre_driver::Resource]], config: &vyre_driver::DispatchConfig, outputs: &mut alloc::vec::Vec<vyre_driver::OutputBuffers>) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::backend::CompiledPipeline::dispatch_persistent_handles_into(&self, inputs: &[vyre_driver::Resource], config: &vyre_driver::DispatchConfig, outputs: &mut vyre_driver::OutputBuffers) -> core::result::Result<(), vyre_driver::BackendError>
+pub fn vyre_driver::backend::CompiledPipeline::dispatch_persistent_handles_timed(&self, inputs: &[vyre_driver::Resource], config: &vyre_driver::DispatchConfig) -> core::result::Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError>
 pub fn vyre_driver::backend::CompiledPipeline::dispatch_persistent_resource_outputs(&self, _inputs: &[vyre_driver::Resource], _config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<vyre_driver::Resource>, vyre_driver::BackendError>
 pub fn vyre_driver::backend::CompiledPipeline::id(&self) -> &str
 pub trait vyre_driver::backend::DeviceBuffer: core::any::Any + core::marker::Send + core::marker::Sync + core::fmt::Debug
@@ -1423,6 +1768,7 @@ pub fn vyre_driver::backend::VyreBackend::allows_host_grid_sync_split(&self) -> 
 pub fn vyre_driver::backend::VyreBackend::backend_metric_snapshot(&self) -> alloc::vec::Vec<(&'static str, u64)>
 pub fn vyre_driver::backend::VyreBackend::compile_native(&self, _program: &vyre_foundation::ir_inner::model::program::core::Program, _config: &vyre_driver::DispatchConfig) -> core::result::Result<core::option::Option<alloc::sync::Arc<dyn vyre_driver::CompiledPipeline>>, vyre_driver::BackendError>
 pub fn vyre_driver::backend::VyreBackend::compile_native_shared(&self, program: alloc::sync::Arc<vyre_foundation::ir_inner::model::program::core::Program>, config: &vyre_driver::DispatchConfig) -> core::result::Result<core::option::Option<alloc::sync::Arc<dyn vyre_driver::CompiledPipeline>>, vyre_driver::BackendError>
+pub fn vyre_driver::backend::VyreBackend::cooperative_grid_sync_fits(&self, _program: &vyre_foundation::ir_inner::model::program::core::Program, _inputs: &[&[u8]], _config: &vyre_driver::DispatchConfig) -> core::result::Result<bool, vyre_driver::BackendError>
 pub fn vyre_driver::backend::VyreBackend::device_lost(&self) -> bool
 pub fn vyre_driver::backend::VyreBackend::device_profile(&self) -> vyre_driver::device_profile::DeviceProfile
 pub fn vyre_driver::backend::VyreBackend::dispatch(&self, program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[alloc::vec::Vec<u8>], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::BackendError>
@@ -1433,6 +1779,7 @@ pub fn vyre_driver::backend::VyreBackend::dispatch_borrowed_into(&self, program:
 pub fn vyre_driver::backend::VyreBackend::dispatch_borrowed_timed(&self, program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig) -> core::result::Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError>
 pub fn vyre_driver::backend::VyreBackend::dispatch_resident_repeated_sequence_read_ranges_into(&self, prefix_steps: &[vyre_driver::ResidentDispatchStep<'_>], repeated_steps: &[vyre_driver::ResidentDispatchStep<'_>], repeat_count: u32, read_ranges: &[vyre_driver::ResidentReadRange<'_>], outputs: &mut [&mut alloc::vec::Vec<u8>]) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::backend::VyreBackend::dispatch_resident_sequence_read_ranges_into(&self, steps: &[vyre_driver::ResidentDispatchStep<'_>], read_ranges: &[vyre_driver::ResidentReadRange<'_>], outputs: &mut [&mut alloc::vec::Vec<u8>]) -> core::result::Result<(), vyre_driver::BackendError>
+pub fn vyre_driver::backend::VyreBackend::dispatch_resident_sequence_read_ranges_timed_into(&self, steps: &[vyre_driver::ResidentDispatchStep<'_>], read_ranges: &[vyre_driver::ResidentReadRange<'_>], outputs: &mut [&mut alloc::vec::Vec<u8>]) -> core::result::Result<vyre_driver::ResidentSequenceTiming, vyre_driver::BackendError>
 pub fn vyre_driver::backend::VyreBackend::dispatch_resident_timed(&self, _program: &vyre_foundation::ir_inner::model::program::core::Program, _resources: &[vyre_driver::Resource], _config: &vyre_driver::DispatchConfig) -> core::result::Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError>
 pub fn vyre_driver::backend::VyreBackend::dispatch_with_device_buffers(&self, _program: &vyre_foundation::ir_inner::model::program::core::Program, _inputs: &[&dyn vyre_driver::DeviceBuffer], _outputs: &mut [&mut dyn vyre_driver::DeviceBuffer], _config: &vyre_driver::DispatchConfig) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::backend::VyreBackend::download_device_buffer(&self, _buffer: &dyn vyre_driver::DeviceBuffer) -> core::result::Result<alloc::vec::Vec<u8>, vyre_driver::BackendError>
@@ -1462,6 +1809,7 @@ pub fn vyre_driver::backend::VyreBackend::supports_f16(&self) -> bool
 pub fn vyre_driver::backend::VyreBackend::supports_grid_sync(&self) -> bool
 pub fn vyre_driver::backend::VyreBackend::supports_indirect_dispatch(&self) -> bool
 pub fn vyre_driver::backend::VyreBackend::supports_persistent_thread_dispatch(&self) -> bool
+pub fn vyre_driver::backend::VyreBackend::supports_resident_dispatch(&self) -> bool
 pub fn vyre_driver::backend::VyreBackend::supports_speculation(&self) -> bool
 pub fn vyre_driver::backend::VyreBackend::supports_subgroup_ops(&self) -> bool
 pub fn vyre_driver::backend::VyreBackend::supports_tensor_cores(&self) -> bool
@@ -3238,6 +3586,59 @@ pub type vyre_driver::device_extraction::ExtractionDevice<'a>::Output = T
 pub fn vyre_driver::device_extraction::extract_best_for_device<L, B, H>(egraph: &vyre_foundation::optimizer::eqsat::EGraph<L>, root: vyre_foundation::optimizer::eqsat::EClassId, device: vyre_driver::device_extraction::ExtractionDevice<'_>, base_cost: B, hint_lookup: H) -> core::option::Option<vyre_driver::device_extraction::DeviceExtraction<L>> where L: vyre_foundation::optimizer::eqsat::ENodeLang, B: core::ops::function::Fn(&L) -> u64, H: core::ops::function::Fn(&L) -> vyre_driver::extraction_cost::NodeHints
 pub fn vyre_driver::device_extraction::extract_best_for_devices<'a, L, B, H>(egraph: &vyre_foundation::optimizer::eqsat::EGraph<L>, root: vyre_foundation::optimizer::eqsat::EClassId, devices: impl core::iter::traits::collect::IntoIterator<Item = vyre_driver::device_extraction::ExtractionDevice<'a>>, base_cost: B, hint_lookup: H) -> smallvec::SmallVec<[vyre_driver::device_extraction::DeviceExtraction<L>; 4]> where L: vyre_foundation::optimizer::eqsat::ENodeLang, B: core::ops::function::Fn(&L) -> u64, H: core::ops::function::Fn(&L) -> vyre_driver::extraction_cost::NodeHints
 pub mod vyre_driver::device_profile
+pub enum vyre_driver::device_profile::DeviceTimingQuality
+pub vyre_driver::device_profile::DeviceTimingQuality::DeviceTimestamps
+pub vyre_driver::device_profile::DeviceTimingQuality::HardwareCounters
+pub vyre_driver::device_profile::DeviceTimingQuality::HostEnqueueWait
+pub vyre_driver::device_profile::DeviceTimingQuality::HostOnly
+impl vyre_driver::device_profile::DeviceTimingQuality
+pub const fn vyre_driver::device_profile::DeviceTimingQuality::as_str(self) -> &'static str
+impl core::clone::Clone for vyre_driver::device_profile::DeviceTimingQuality
+pub fn vyre_driver::device_profile::DeviceTimingQuality::clone(&self) -> vyre_driver::device_profile::DeviceTimingQuality
+impl core::cmp::Eq for vyre_driver::device_profile::DeviceTimingQuality
+impl core::cmp::PartialEq for vyre_driver::device_profile::DeviceTimingQuality
+pub fn vyre_driver::device_profile::DeviceTimingQuality::eq(&self, other: &vyre_driver::device_profile::DeviceTimingQuality) -> bool
+impl core::fmt::Debug for vyre_driver::device_profile::DeviceTimingQuality
+pub fn vyre_driver::device_profile::DeviceTimingQuality::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for vyre_driver::device_profile::DeviceTimingQuality
+impl core::marker::StructuralPartialEq for vyre_driver::device_profile::DeviceTimingQuality
+impl core::marker::Freeze for vyre_driver::device_profile::DeviceTimingQuality
+impl core::marker::Send for vyre_driver::device_profile::DeviceTimingQuality
+impl core::marker::Sync for vyre_driver::device_profile::DeviceTimingQuality
+impl core::marker::Unpin for vyre_driver::device_profile::DeviceTimingQuality
+impl core::marker::UnsafeUnpin for vyre_driver::device_profile::DeviceTimingQuality
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::device_profile::DeviceTimingQuality
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::device_profile::DeviceTimingQuality
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::device_profile::DeviceTimingQuality where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::device_profile::DeviceTimingQuality::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::device_profile::DeviceTimingQuality where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::device_profile::DeviceTimingQuality::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::device_profile::DeviceTimingQuality where U: core::convert::From<T>
+pub fn vyre_driver::device_profile::DeviceTimingQuality::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::device_profile::DeviceTimingQuality where U: core::convert::Into<T>
+pub type vyre_driver::device_profile::DeviceTimingQuality::Error = core::convert::Infallible
+pub fn vyre_driver::device_profile::DeviceTimingQuality::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::device_profile::DeviceTimingQuality where U: core::convert::TryFrom<T>
+pub type vyre_driver::device_profile::DeviceTimingQuality::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::device_profile::DeviceTimingQuality::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::device_profile::DeviceTimingQuality where T: core::clone::Clone
+pub type vyre_driver::device_profile::DeviceTimingQuality::Owned = T
+pub fn vyre_driver::device_profile::DeviceTimingQuality::clone_into(&self, target: &mut T)
+pub fn vyre_driver::device_profile::DeviceTimingQuality::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::device_profile::DeviceTimingQuality where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::device_profile::DeviceTimingQuality::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::device_profile::DeviceTimingQuality where T: ?core::marker::Sized
+pub fn vyre_driver::device_profile::DeviceTimingQuality::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::device_profile::DeviceTimingQuality where T: ?core::marker::Sized
+pub fn vyre_driver::device_profile::DeviceTimingQuality::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::device_profile::DeviceTimingQuality where T: core::clone::Clone
+pub unsafe fn vyre_driver::device_profile::DeviceTimingQuality::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::device_profile::DeviceTimingQuality
+pub fn vyre_driver::device_profile::DeviceTimingQuality::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_driver::device_profile::DeviceTimingQuality
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::device_profile::DeviceTimingQuality
+impl<T> typenum::type_operators::Same for vyre_driver::device_profile::DeviceTimingQuality
+pub type vyre_driver::device_profile::DeviceTimingQuality::Output = T
 pub struct vyre_driver::device_profile::DeviceProfile
 pub vyre_driver::device_profile::DeviceProfile::backend: &'static str
 pub vyre_driver::device_profile::DeviceProfile::compute_units: u32
@@ -3261,13 +3662,16 @@ pub vyre_driver::device_profile::DeviceProfile::shared_memory_bank_count: u32
 pub vyre_driver::device_profile::DeviceProfile::shared_memory_bank_width_bytes: u32
 pub vyre_driver::device_profile::DeviceProfile::subgroup_size: u32
 pub vyre_driver::device_profile::DeviceProfile::supports_bf16: bool
+pub vyre_driver::device_profile::DeviceProfile::supports_device_timestamps: bool
 pub vyre_driver::device_profile::DeviceProfile::supports_distributed_collectives: bool
 pub vyre_driver::device_profile::DeviceProfile::supports_f16: bool
+pub vyre_driver::device_profile::DeviceProfile::supports_hardware_counters: bool
 pub vyre_driver::device_profile::DeviceProfile::supports_indirect_dispatch: bool
 pub vyre_driver::device_profile::DeviceProfile::supports_specialization_constants: bool
 pub vyre_driver::device_profile::DeviceProfile::supports_subgroup_ops: bool
 pub vyre_driver::device_profile::DeviceProfile::supports_tensor_cores: bool
 pub vyre_driver::device_profile::DeviceProfile::supports_trap_propagation: bool
+pub vyre_driver::device_profile::DeviceProfile::timing_quality: vyre_driver::device_profile::DeviceTimingQuality
 impl vyre_driver::device_profile::DeviceProfile
 pub const fn vyre_driver::device_profile::DeviceProfile::adapter_caps(self) -> vyre_foundation::optimizer::ctx::AdapterCaps
 pub const fn vyre_driver::device_profile::DeviceProfile::conservative(backend: &'static str) -> Self
@@ -4225,6 +4629,384 @@ pub mod vyre_driver::dispatch_shape
 pub fn vyre_driver::dispatch_shape::borrowed_input_batch_shapes_match(batches: &[&[&[u8]]]) -> bool
 pub fn vyre_driver::dispatch_shape::borrowed_input_shapes_match(left: &[&[u8]], right: &[&[u8]]) -> bool
 pub fn vyre_driver::dispatch_shape::dispatch_configs_share_launch_shape(compiled: &vyre_driver::DispatchConfig, runtime: &vyre_driver::DispatchConfig) -> bool
+pub mod vyre_driver::evidence
+pub struct vyre_driver::evidence::DispatchTimingEvidence
+pub vyre_driver::evidence::DispatchTimingEvidence::device_ns: core::option::Option<u64>
+pub vyre_driver::evidence::DispatchTimingEvidence::enqueue_ns: core::option::Option<u64>
+pub vyre_driver::evidence::DispatchTimingEvidence::wait_ns: core::option::Option<u64>
+pub vyre_driver::evidence::DispatchTimingEvidence::wall_ns: core::option::Option<u64>
+impl vyre_driver::evidence::DispatchTimingEvidence
+pub fn vyre_driver::evidence::DispatchTimingEvidence::from_timed_dispatch(result: &vyre_driver::TimedDispatchResult) -> Self
+pub fn vyre_driver::evidence::DispatchTimingEvidence::has_timing(&self) -> bool
+impl core::clone::Clone for vyre_driver::evidence::DispatchTimingEvidence
+pub fn vyre_driver::evidence::DispatchTimingEvidence::clone(&self) -> vyre_driver::evidence::DispatchTimingEvidence
+impl core::cmp::Eq for vyre_driver::evidence::DispatchTimingEvidence
+impl core::cmp::PartialEq for vyre_driver::evidence::DispatchTimingEvidence
+pub fn vyre_driver::evidence::DispatchTimingEvidence::eq(&self, other: &vyre_driver::evidence::DispatchTimingEvidence) -> bool
+impl core::default::Default for vyre_driver::evidence::DispatchTimingEvidence
+pub fn vyre_driver::evidence::DispatchTimingEvidence::default() -> vyre_driver::evidence::DispatchTimingEvidence
+impl core::fmt::Debug for vyre_driver::evidence::DispatchTimingEvidence
+pub fn vyre_driver::evidence::DispatchTimingEvidence::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for vyre_driver::evidence::DispatchTimingEvidence
+impl serde_core::ser::Serialize for vyre_driver::evidence::DispatchTimingEvidence
+pub fn vyre_driver::evidence::DispatchTimingEvidence::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for vyre_driver::evidence::DispatchTimingEvidence
+pub fn vyre_driver::evidence::DispatchTimingEvidence::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for vyre_driver::evidence::DispatchTimingEvidence
+impl core::marker::Send for vyre_driver::evidence::DispatchTimingEvidence
+impl core::marker::Sync for vyre_driver::evidence::DispatchTimingEvidence
+impl core::marker::Unpin for vyre_driver::evidence::DispatchTimingEvidence
+impl core::marker::UnsafeUnpin for vyre_driver::evidence::DispatchTimingEvidence
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::evidence::DispatchTimingEvidence
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::evidence::DispatchTimingEvidence
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::evidence::DispatchTimingEvidence where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::evidence::DispatchTimingEvidence::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::evidence::DispatchTimingEvidence where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::evidence::DispatchTimingEvidence::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::evidence::DispatchTimingEvidence where U: core::convert::From<T>
+pub fn vyre_driver::evidence::DispatchTimingEvidence::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::evidence::DispatchTimingEvidence where U: core::convert::Into<T>
+pub type vyre_driver::evidence::DispatchTimingEvidence::Error = core::convert::Infallible
+pub fn vyre_driver::evidence::DispatchTimingEvidence::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::evidence::DispatchTimingEvidence where U: core::convert::TryFrom<T>
+pub type vyre_driver::evidence::DispatchTimingEvidence::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::evidence::DispatchTimingEvidence::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::evidence::DispatchTimingEvidence where T: core::clone::Clone
+pub type vyre_driver::evidence::DispatchTimingEvidence::Owned = T
+pub fn vyre_driver::evidence::DispatchTimingEvidence::clone_into(&self, target: &mut T)
+pub fn vyre_driver::evidence::DispatchTimingEvidence::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::evidence::DispatchTimingEvidence where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::evidence::DispatchTimingEvidence::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::evidence::DispatchTimingEvidence where T: ?core::marker::Sized
+pub fn vyre_driver::evidence::DispatchTimingEvidence::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::evidence::DispatchTimingEvidence where T: ?core::marker::Sized
+pub fn vyre_driver::evidence::DispatchTimingEvidence::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::evidence::DispatchTimingEvidence where T: core::clone::Clone
+pub unsafe fn vyre_driver::evidence::DispatchTimingEvidence::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::evidence::DispatchTimingEvidence
+pub fn vyre_driver::evidence::DispatchTimingEvidence::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for vyre_driver::evidence::DispatchTimingEvidence where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> tracing::instrument::Instrument for vyre_driver::evidence::DispatchTimingEvidence
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::evidence::DispatchTimingEvidence
+impl<T> typenum::type_operators::Same for vyre_driver::evidence::DispatchTimingEvidence
+pub type vyre_driver::evidence::DispatchTimingEvidence::Output = T
+pub struct vyre_driver::evidence::EvidenceArtifact
+pub vyre_driver::evidence::EvidenceArtifact::backend_id: core::option::Option<alloc::string::String>
+pub vyre_driver::evidence::EvidenceArtifact::digest: core::option::Option<alloc::string::String>
+pub vyre_driver::evidence::EvidenceArtifact::kind: alloc::string::String
+pub vyre_driver::evidence::EvidenceArtifact::path: core::option::Option<alloc::string::String>
+impl vyre_driver::evidence::EvidenceArtifact
+pub fn vyre_driver::evidence::EvidenceArtifact::from_pipeline_manifest(manifest: &vyre_driver::pipeline::PipelineReproManifest) -> Self
+pub fn vyre_driver::evidence::EvidenceArtifact::new(kind: impl core::convert::Into<alloc::string::String>, backend_id: core::option::Option<alloc::string::String>, path: core::option::Option<alloc::string::String>, digest: core::option::Option<alloc::string::String>) -> Self
+impl core::clone::Clone for vyre_driver::evidence::EvidenceArtifact
+pub fn vyre_driver::evidence::EvidenceArtifact::clone(&self) -> vyre_driver::evidence::EvidenceArtifact
+impl core::cmp::Eq for vyre_driver::evidence::EvidenceArtifact
+impl core::cmp::PartialEq for vyre_driver::evidence::EvidenceArtifact
+pub fn vyre_driver::evidence::EvidenceArtifact::eq(&self, other: &vyre_driver::evidence::EvidenceArtifact) -> bool
+impl core::fmt::Debug for vyre_driver::evidence::EvidenceArtifact
+pub fn vyre_driver::evidence::EvidenceArtifact::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for vyre_driver::evidence::EvidenceArtifact
+impl serde_core::ser::Serialize for vyre_driver::evidence::EvidenceArtifact
+pub fn vyre_driver::evidence::EvidenceArtifact::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for vyre_driver::evidence::EvidenceArtifact
+pub fn vyre_driver::evidence::EvidenceArtifact::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for vyre_driver::evidence::EvidenceArtifact
+impl core::marker::Send for vyre_driver::evidence::EvidenceArtifact
+impl core::marker::Sync for vyre_driver::evidence::EvidenceArtifact
+impl core::marker::Unpin for vyre_driver::evidence::EvidenceArtifact
+impl core::marker::UnsafeUnpin for vyre_driver::evidence::EvidenceArtifact
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::evidence::EvidenceArtifact
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::evidence::EvidenceArtifact
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::evidence::EvidenceArtifact where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::evidence::EvidenceArtifact::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::evidence::EvidenceArtifact where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::evidence::EvidenceArtifact::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::evidence::EvidenceArtifact where U: core::convert::From<T>
+pub fn vyre_driver::evidence::EvidenceArtifact::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::evidence::EvidenceArtifact where U: core::convert::Into<T>
+pub type vyre_driver::evidence::EvidenceArtifact::Error = core::convert::Infallible
+pub fn vyre_driver::evidence::EvidenceArtifact::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::evidence::EvidenceArtifact where U: core::convert::TryFrom<T>
+pub type vyre_driver::evidence::EvidenceArtifact::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::evidence::EvidenceArtifact::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::evidence::EvidenceArtifact where T: core::clone::Clone
+pub type vyre_driver::evidence::EvidenceArtifact::Owned = T
+pub fn vyre_driver::evidence::EvidenceArtifact::clone_into(&self, target: &mut T)
+pub fn vyre_driver::evidence::EvidenceArtifact::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::evidence::EvidenceArtifact where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::evidence::EvidenceArtifact::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::evidence::EvidenceArtifact where T: ?core::marker::Sized
+pub fn vyre_driver::evidence::EvidenceArtifact::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::evidence::EvidenceArtifact where T: ?core::marker::Sized
+pub fn vyre_driver::evidence::EvidenceArtifact::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::evidence::EvidenceArtifact where T: core::clone::Clone
+pub unsafe fn vyre_driver::evidence::EvidenceArtifact::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::evidence::EvidenceArtifact
+pub fn vyre_driver::evidence::EvidenceArtifact::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for vyre_driver::evidence::EvidenceArtifact where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> tracing::instrument::Instrument for vyre_driver::evidence::EvidenceArtifact
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::evidence::EvidenceArtifact
+impl<T> typenum::type_operators::Same for vyre_driver::evidence::EvidenceArtifact
+pub type vyre_driver::evidence::EvidenceArtifact::Output = T
+pub struct vyre_driver::evidence::EvidenceBundle
+pub vyre_driver::evidence::EvidenceBundle::artifacts: alloc::vec::Vec<vyre_driver::evidence::EvidenceArtifact>
+pub vyre_driver::evidence::EvidenceBundle::backend_id: alloc::string::String
+pub vyre_driver::evidence::EvidenceBundle::backend_version: alloc::string::String
+pub vyre_driver::evidence::EvidenceBundle::digest_ledger: vyre_driver::evidence::EvidenceDigestLedger
+pub vyre_driver::evidence::EvidenceBundle::dispatch_policy: alloc::string::String
+pub vyre_driver::evidence::EvidenceBundle::program_digest: alloc::string::String
+pub vyre_driver::evidence::EvidenceBundle::replay: core::option::Option<vyre_driver::evidence::ReplayEvidence>
+pub vyre_driver::evidence::EvidenceBundle::schema: u32
+pub vyre_driver::evidence::EvidenceBundle::source: vyre_driver::evidence::SourceProvenance
+pub vyre_driver::evidence::EvidenceBundle::timing: vyre_driver::evidence::DispatchTimingEvidence
+impl vyre_driver::evidence::EvidenceBundle
+pub const vyre_driver::evidence::EvidenceBundle::SCHEMA: u32
+pub fn vyre_driver::evidence::EvidenceBundle::for_program(backend: &dyn vyre_driver::VyreBackend, program: &vyre_foundation::ir_inner::model::program::core::Program, config: &vyre_driver::DispatchConfig, source: vyre_driver::evidence::SourceProvenance) -> core::result::Result<Self, vyre_driver::BackendError>
+pub fn vyre_driver::evidence::EvidenceBundle::validate(&self) -> core::result::Result<(), vyre_driver::BackendError>
+pub fn vyre_driver::evidence::EvidenceBundle::with_artifact(self, artifact: vyre_driver::evidence::EvidenceArtifact) -> Self
+pub fn vyre_driver::evidence::EvidenceBundle::with_replay(self, replay: vyre_driver::evidence::ReplayEvidence) -> Self
+pub fn vyre_driver::evidence::EvidenceBundle::with_timed_dispatch(self, result: &vyre_driver::TimedDispatchResult) -> Self
+impl core::clone::Clone for vyre_driver::evidence::EvidenceBundle
+pub fn vyre_driver::evidence::EvidenceBundle::clone(&self) -> vyre_driver::evidence::EvidenceBundle
+impl core::cmp::Eq for vyre_driver::evidence::EvidenceBundle
+impl core::cmp::PartialEq for vyre_driver::evidence::EvidenceBundle
+pub fn vyre_driver::evidence::EvidenceBundle::eq(&self, other: &vyre_driver::evidence::EvidenceBundle) -> bool
+impl core::fmt::Debug for vyre_driver::evidence::EvidenceBundle
+pub fn vyre_driver::evidence::EvidenceBundle::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for vyre_driver::evidence::EvidenceBundle
+impl serde_core::ser::Serialize for vyre_driver::evidence::EvidenceBundle
+pub fn vyre_driver::evidence::EvidenceBundle::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for vyre_driver::evidence::EvidenceBundle
+pub fn vyre_driver::evidence::EvidenceBundle::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for vyre_driver::evidence::EvidenceBundle
+impl core::marker::Send for vyre_driver::evidence::EvidenceBundle
+impl core::marker::Sync for vyre_driver::evidence::EvidenceBundle
+impl core::marker::Unpin for vyre_driver::evidence::EvidenceBundle
+impl core::marker::UnsafeUnpin for vyre_driver::evidence::EvidenceBundle
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::evidence::EvidenceBundle
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::evidence::EvidenceBundle
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::evidence::EvidenceBundle where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::evidence::EvidenceBundle::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::evidence::EvidenceBundle where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::evidence::EvidenceBundle::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::evidence::EvidenceBundle where U: core::convert::From<T>
+pub fn vyre_driver::evidence::EvidenceBundle::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::evidence::EvidenceBundle where U: core::convert::Into<T>
+pub type vyre_driver::evidence::EvidenceBundle::Error = core::convert::Infallible
+pub fn vyre_driver::evidence::EvidenceBundle::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::evidence::EvidenceBundle where U: core::convert::TryFrom<T>
+pub type vyre_driver::evidence::EvidenceBundle::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::evidence::EvidenceBundle::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::evidence::EvidenceBundle where T: core::clone::Clone
+pub type vyre_driver::evidence::EvidenceBundle::Owned = T
+pub fn vyre_driver::evidence::EvidenceBundle::clone_into(&self, target: &mut T)
+pub fn vyre_driver::evidence::EvidenceBundle::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::evidence::EvidenceBundle where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::evidence::EvidenceBundle::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::evidence::EvidenceBundle where T: ?core::marker::Sized
+pub fn vyre_driver::evidence::EvidenceBundle::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::evidence::EvidenceBundle where T: ?core::marker::Sized
+pub fn vyre_driver::evidence::EvidenceBundle::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::evidence::EvidenceBundle where T: core::clone::Clone
+pub unsafe fn vyre_driver::evidence::EvidenceBundle::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::evidence::EvidenceBundle
+pub fn vyre_driver::evidence::EvidenceBundle::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for vyre_driver::evidence::EvidenceBundle where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> tracing::instrument::Instrument for vyre_driver::evidence::EvidenceBundle
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::evidence::EvidenceBundle
+impl<T> typenum::type_operators::Same for vyre_driver::evidence::EvidenceBundle
+pub type vyre_driver::evidence::EvidenceBundle::Output = T
+pub struct vyre_driver::evidence::EvidenceDigestLedger
+pub vyre_driver::evidence::EvidenceDigestLedger::environment_digest: alloc::string::String
+pub vyre_driver::evidence::EvidenceDigestLedger::environment_version: alloc::string::String
+pub vyre_driver::evidence::EvidenceDigestLedger::normalized_program_digest: alloc::string::String
+pub vyre_driver::evidence::EvidenceDigestLedger::normalized_program_version: alloc::string::String
+pub vyre_driver::evidence::EvidenceDigestLedger::program_wire_digest: alloc::string::String
+pub vyre_driver::evidence::EvidenceDigestLedger::program_wire_version: alloc::string::String
+pub vyre_driver::evidence::EvidenceDigestLedger::schema: u32
+pub vyre_driver::evidence::EvidenceDigestLedger::source_fingerprint: alloc::string::String
+pub vyre_driver::evidence::EvidenceDigestLedger::source_tree_fingerprint: alloc::string::String
+pub vyre_driver::evidence::EvidenceDigestLedger::source_tree_version: alloc::string::String
+pub vyre_driver::evidence::EvidenceDigestLedger::source_version: alloc::string::String
+pub vyre_driver::evidence::EvidenceDigestLedger::workload_digest: alloc::string::String
+pub vyre_driver::evidence::EvidenceDigestLedger::workload_version: alloc::string::String
+impl vyre_driver::evidence::EvidenceDigestLedger
+pub const vyre_driver::evidence::EvidenceDigestLedger::SCHEMA: u32
+pub fn vyre_driver::evidence::EvidenceDigestLedger::for_inputs(backend_id: &str, backend_version: &str, program: &vyre_foundation::ir_inner::model::program::core::Program, config: &vyre_driver::DispatchConfig, source: &vyre_driver::evidence::SourceProvenance) -> core::result::Result<Self, vyre_driver::BackendError>
+pub fn vyre_driver::evidence::EvidenceDigestLedger::validate(&self) -> core::result::Result<(), vyre_driver::BackendError>
+impl core::clone::Clone for vyre_driver::evidence::EvidenceDigestLedger
+pub fn vyre_driver::evidence::EvidenceDigestLedger::clone(&self) -> vyre_driver::evidence::EvidenceDigestLedger
+impl core::cmp::Eq for vyre_driver::evidence::EvidenceDigestLedger
+impl core::cmp::PartialEq for vyre_driver::evidence::EvidenceDigestLedger
+pub fn vyre_driver::evidence::EvidenceDigestLedger::eq(&self, other: &vyre_driver::evidence::EvidenceDigestLedger) -> bool
+impl core::fmt::Debug for vyre_driver::evidence::EvidenceDigestLedger
+pub fn vyre_driver::evidence::EvidenceDigestLedger::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for vyre_driver::evidence::EvidenceDigestLedger
+impl serde_core::ser::Serialize for vyre_driver::evidence::EvidenceDigestLedger
+pub fn vyre_driver::evidence::EvidenceDigestLedger::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for vyre_driver::evidence::EvidenceDigestLedger
+pub fn vyre_driver::evidence::EvidenceDigestLedger::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for vyre_driver::evidence::EvidenceDigestLedger
+impl core::marker::Send for vyre_driver::evidence::EvidenceDigestLedger
+impl core::marker::Sync for vyre_driver::evidence::EvidenceDigestLedger
+impl core::marker::Unpin for vyre_driver::evidence::EvidenceDigestLedger
+impl core::marker::UnsafeUnpin for vyre_driver::evidence::EvidenceDigestLedger
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::evidence::EvidenceDigestLedger
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::evidence::EvidenceDigestLedger
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::evidence::EvidenceDigestLedger where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::evidence::EvidenceDigestLedger::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::evidence::EvidenceDigestLedger where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::evidence::EvidenceDigestLedger::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::evidence::EvidenceDigestLedger where U: core::convert::From<T>
+pub fn vyre_driver::evidence::EvidenceDigestLedger::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::evidence::EvidenceDigestLedger where U: core::convert::Into<T>
+pub type vyre_driver::evidence::EvidenceDigestLedger::Error = core::convert::Infallible
+pub fn vyre_driver::evidence::EvidenceDigestLedger::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::evidence::EvidenceDigestLedger where U: core::convert::TryFrom<T>
+pub type vyre_driver::evidence::EvidenceDigestLedger::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::evidence::EvidenceDigestLedger::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::evidence::EvidenceDigestLedger where T: core::clone::Clone
+pub type vyre_driver::evidence::EvidenceDigestLedger::Owned = T
+pub fn vyre_driver::evidence::EvidenceDigestLedger::clone_into(&self, target: &mut T)
+pub fn vyre_driver::evidence::EvidenceDigestLedger::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::evidence::EvidenceDigestLedger where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::evidence::EvidenceDigestLedger::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::evidence::EvidenceDigestLedger where T: ?core::marker::Sized
+pub fn vyre_driver::evidence::EvidenceDigestLedger::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::evidence::EvidenceDigestLedger where T: ?core::marker::Sized
+pub fn vyre_driver::evidence::EvidenceDigestLedger::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::evidence::EvidenceDigestLedger where T: core::clone::Clone
+pub unsafe fn vyre_driver::evidence::EvidenceDigestLedger::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::evidence::EvidenceDigestLedger
+pub fn vyre_driver::evidence::EvidenceDigestLedger::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for vyre_driver::evidence::EvidenceDigestLedger where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> tracing::instrument::Instrument for vyre_driver::evidence::EvidenceDigestLedger
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::evidence::EvidenceDigestLedger
+impl<T> typenum::type_operators::Same for vyre_driver::evidence::EvidenceDigestLedger
+pub type vyre_driver::evidence::EvidenceDigestLedger::Output = T
+pub struct vyre_driver::evidence::ReplayEvidence
+pub vyre_driver::evidence::ReplayEvidence::capsule_digest: core::option::Option<alloc::string::String>
+pub vyre_driver::evidence::ReplayEvidence::command: alloc::string::String
+impl vyre_driver::evidence::ReplayEvidence
+pub fn vyre_driver::evidence::ReplayEvidence::new(command: impl core::convert::Into<alloc::string::String>, capsule_digest: core::option::Option<alloc::string::String>) -> Self
+impl core::clone::Clone for vyre_driver::evidence::ReplayEvidence
+pub fn vyre_driver::evidence::ReplayEvidence::clone(&self) -> vyre_driver::evidence::ReplayEvidence
+impl core::cmp::Eq for vyre_driver::evidence::ReplayEvidence
+impl core::cmp::PartialEq for vyre_driver::evidence::ReplayEvidence
+pub fn vyre_driver::evidence::ReplayEvidence::eq(&self, other: &vyre_driver::evidence::ReplayEvidence) -> bool
+impl core::fmt::Debug for vyre_driver::evidence::ReplayEvidence
+pub fn vyre_driver::evidence::ReplayEvidence::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for vyre_driver::evidence::ReplayEvidence
+impl serde_core::ser::Serialize for vyre_driver::evidence::ReplayEvidence
+pub fn vyre_driver::evidence::ReplayEvidence::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for vyre_driver::evidence::ReplayEvidence
+pub fn vyre_driver::evidence::ReplayEvidence::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for vyre_driver::evidence::ReplayEvidence
+impl core::marker::Send for vyre_driver::evidence::ReplayEvidence
+impl core::marker::Sync for vyre_driver::evidence::ReplayEvidence
+impl core::marker::Unpin for vyre_driver::evidence::ReplayEvidence
+impl core::marker::UnsafeUnpin for vyre_driver::evidence::ReplayEvidence
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::evidence::ReplayEvidence
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::evidence::ReplayEvidence
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::evidence::ReplayEvidence where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::evidence::ReplayEvidence::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::evidence::ReplayEvidence where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::evidence::ReplayEvidence::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::evidence::ReplayEvidence where U: core::convert::From<T>
+pub fn vyre_driver::evidence::ReplayEvidence::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::evidence::ReplayEvidence where U: core::convert::Into<T>
+pub type vyre_driver::evidence::ReplayEvidence::Error = core::convert::Infallible
+pub fn vyre_driver::evidence::ReplayEvidence::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::evidence::ReplayEvidence where U: core::convert::TryFrom<T>
+pub type vyre_driver::evidence::ReplayEvidence::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::evidence::ReplayEvidence::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::evidence::ReplayEvidence where T: core::clone::Clone
+pub type vyre_driver::evidence::ReplayEvidence::Owned = T
+pub fn vyre_driver::evidence::ReplayEvidence::clone_into(&self, target: &mut T)
+pub fn vyre_driver::evidence::ReplayEvidence::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::evidence::ReplayEvidence where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::evidence::ReplayEvidence::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::evidence::ReplayEvidence where T: ?core::marker::Sized
+pub fn vyre_driver::evidence::ReplayEvidence::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::evidence::ReplayEvidence where T: ?core::marker::Sized
+pub fn vyre_driver::evidence::ReplayEvidence::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::evidence::ReplayEvidence where T: core::clone::Clone
+pub unsafe fn vyre_driver::evidence::ReplayEvidence::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::evidence::ReplayEvidence
+pub fn vyre_driver::evidence::ReplayEvidence::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for vyre_driver::evidence::ReplayEvidence where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> tracing::instrument::Instrument for vyre_driver::evidence::ReplayEvidence
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::evidence::ReplayEvidence
+impl<T> typenum::type_operators::Same for vyre_driver::evidence::ReplayEvidence
+pub type vyre_driver::evidence::ReplayEvidence::Output = T
+pub struct vyre_driver::evidence::SourceProvenance
+pub vyre_driver::evidence::SourceProvenance::git: alloc::collections::btree::map::BTreeMap<alloc::string::String, alloc::string::String>
+pub vyre_driver::evidence::SourceProvenance::source_fingerprint: alloc::string::String
+pub vyre_driver::evidence::SourceProvenance::source_tree_fingerprint: alloc::string::String
+impl vyre_driver::evidence::SourceProvenance
+pub fn vyre_driver::evidence::SourceProvenance::capture_at(workspace_root: &std::path::Path) -> Self
+pub fn vyre_driver::evidence::SourceProvenance::capture_current() -> Self
+pub fn vyre_driver::evidence::SourceProvenance::validate(&self) -> core::result::Result<(), vyre_driver::BackendError>
+impl core::clone::Clone for vyre_driver::evidence::SourceProvenance
+pub fn vyre_driver::evidence::SourceProvenance::clone(&self) -> vyre_driver::evidence::SourceProvenance
+impl core::cmp::Eq for vyre_driver::evidence::SourceProvenance
+impl core::cmp::PartialEq for vyre_driver::evidence::SourceProvenance
+pub fn vyre_driver::evidence::SourceProvenance::eq(&self, other: &vyre_driver::evidence::SourceProvenance) -> bool
+impl core::fmt::Debug for vyre_driver::evidence::SourceProvenance
+pub fn vyre_driver::evidence::SourceProvenance::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for vyre_driver::evidence::SourceProvenance
+impl serde_core::ser::Serialize for vyre_driver::evidence::SourceProvenance
+pub fn vyre_driver::evidence::SourceProvenance::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for vyre_driver::evidence::SourceProvenance
+pub fn vyre_driver::evidence::SourceProvenance::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for vyre_driver::evidence::SourceProvenance
+impl core::marker::Send for vyre_driver::evidence::SourceProvenance
+impl core::marker::Sync for vyre_driver::evidence::SourceProvenance
+impl core::marker::Unpin for vyre_driver::evidence::SourceProvenance
+impl core::marker::UnsafeUnpin for vyre_driver::evidence::SourceProvenance
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::evidence::SourceProvenance
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::evidence::SourceProvenance
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::evidence::SourceProvenance where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::evidence::SourceProvenance::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::evidence::SourceProvenance where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::evidence::SourceProvenance::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::evidence::SourceProvenance where U: core::convert::From<T>
+pub fn vyre_driver::evidence::SourceProvenance::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::evidence::SourceProvenance where U: core::convert::Into<T>
+pub type vyre_driver::evidence::SourceProvenance::Error = core::convert::Infallible
+pub fn vyre_driver::evidence::SourceProvenance::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::evidence::SourceProvenance where U: core::convert::TryFrom<T>
+pub type vyre_driver::evidence::SourceProvenance::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::evidence::SourceProvenance::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::evidence::SourceProvenance where T: core::clone::Clone
+pub type vyre_driver::evidence::SourceProvenance::Owned = T
+pub fn vyre_driver::evidence::SourceProvenance::clone_into(&self, target: &mut T)
+pub fn vyre_driver::evidence::SourceProvenance::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::evidence::SourceProvenance where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::evidence::SourceProvenance::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::evidence::SourceProvenance where T: ?core::marker::Sized
+pub fn vyre_driver::evidence::SourceProvenance::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::evidence::SourceProvenance where T: ?core::marker::Sized
+pub fn vyre_driver::evidence::SourceProvenance::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::evidence::SourceProvenance where T: core::clone::Clone
+pub unsafe fn vyre_driver::evidence::SourceProvenance::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::evidence::SourceProvenance
+pub fn vyre_driver::evidence::SourceProvenance::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for vyre_driver::evidence::SourceProvenance where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> tracing::instrument::Instrument for vyre_driver::evidence::SourceProvenance
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::evidence::SourceProvenance
+impl<T> typenum::type_operators::Same for vyre_driver::evidence::SourceProvenance
+pub type vyre_driver::evidence::SourceProvenance::Output = T
+pub const vyre_driver::evidence::ENVIRONMENT_FINGERPRINT_VERSION: &str
+pub const vyre_driver::evidence::NORMALIZED_PROGRAM_DIGEST_VERSION: &str
+pub const vyre_driver::evidence::SOURCE_FINGERPRINT_VERSION: &str
+pub const vyre_driver::evidence::SOURCE_TREE_FINGERPRINT_VERSION: &str
+pub const vyre_driver::evidence::WORKLOAD_FINGERPRINT_VERSION: &str
+pub fn vyre_driver::evidence::capture_git_info() -> alloc::collections::btree::map::BTreeMap<alloc::string::String, alloc::string::String>
+pub fn vyre_driver::evidence::capture_git_info_at(workspace_root: &std::path::Path) -> alloc::collections::btree::map::BTreeMap<alloc::string::String, alloc::string::String>
+pub fn vyre_driver::evidence::source_fingerprint(git: &alloc::collections::btree::map::BTreeMap<alloc::string::String, alloc::string::String>) -> alloc::string::String
+pub fn vyre_driver::evidence::source_tree_fingerprint() -> alloc::string::String
+pub fn vyre_driver::evidence::source_tree_fingerprint_at(workspace_root: &std::path::Path) -> alloc::string::String
 pub mod vyre_driver::extraction_cost
 pub struct vyre_driver::extraction_cost::NodeHints
 pub vyre_driver::extraction_cost::NodeHints::compile_time_constant: bool
@@ -4467,6 +5249,168 @@ impl<T> tracing::instrument::WithSubscriber for vyre_driver::fusion::FusionPass
 impl<T> typenum::type_operators::Same for vyre_driver::fusion::FusionPass
 pub type vyre_driver::fusion::FusionPass::Output = T
 pub mod vyre_driver::graph_capture
+pub enum vyre_driver::graph_capture::GraphCaptureEditAction
+pub vyre_driver::graph_capture::GraphCaptureEditAction::Recapture
+pub vyre_driver::graph_capture::GraphCaptureEditAction::Replay
+pub vyre_driver::graph_capture::GraphCaptureEditAction::Update
+impl vyre_driver::graph_capture::GraphCaptureEditAction
+pub const fn vyre_driver::graph_capture::GraphCaptureEditAction::as_str(self) -> &'static str
+impl core::clone::Clone for vyre_driver::graph_capture::GraphCaptureEditAction
+pub fn vyre_driver::graph_capture::GraphCaptureEditAction::clone(&self) -> vyre_driver::graph_capture::GraphCaptureEditAction
+impl core::cmp::Eq for vyre_driver::graph_capture::GraphCaptureEditAction
+impl core::cmp::PartialEq for vyre_driver::graph_capture::GraphCaptureEditAction
+pub fn vyre_driver::graph_capture::GraphCaptureEditAction::eq(&self, other: &vyre_driver::graph_capture::GraphCaptureEditAction) -> bool
+impl core::fmt::Debug for vyre_driver::graph_capture::GraphCaptureEditAction
+pub fn vyre_driver::graph_capture::GraphCaptureEditAction::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_driver::graph_capture::GraphCaptureEditAction
+pub fn vyre_driver::graph_capture::GraphCaptureEditAction::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_driver::graph_capture::GraphCaptureEditAction
+impl core::marker::StructuralPartialEq for vyre_driver::graph_capture::GraphCaptureEditAction
+impl core::marker::Freeze for vyre_driver::graph_capture::GraphCaptureEditAction
+impl core::marker::Send for vyre_driver::graph_capture::GraphCaptureEditAction
+impl core::marker::Sync for vyre_driver::graph_capture::GraphCaptureEditAction
+impl core::marker::Unpin for vyre_driver::graph_capture::GraphCaptureEditAction
+impl core::marker::UnsafeUnpin for vyre_driver::graph_capture::GraphCaptureEditAction
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::graph_capture::GraphCaptureEditAction
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::graph_capture::GraphCaptureEditAction
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::graph_capture::GraphCaptureEditAction where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::graph_capture::GraphCaptureEditAction::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::graph_capture::GraphCaptureEditAction where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::graph_capture::GraphCaptureEditAction::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::graph_capture::GraphCaptureEditAction where U: core::convert::From<T>
+pub fn vyre_driver::graph_capture::GraphCaptureEditAction::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::graph_capture::GraphCaptureEditAction where U: core::convert::Into<T>
+pub type vyre_driver::graph_capture::GraphCaptureEditAction::Error = core::convert::Infallible
+pub fn vyre_driver::graph_capture::GraphCaptureEditAction::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::graph_capture::GraphCaptureEditAction where U: core::convert::TryFrom<T>
+pub type vyre_driver::graph_capture::GraphCaptureEditAction::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::graph_capture::GraphCaptureEditAction::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::graph_capture::GraphCaptureEditAction where T: core::clone::Clone
+pub type vyre_driver::graph_capture::GraphCaptureEditAction::Owned = T
+pub fn vyre_driver::graph_capture::GraphCaptureEditAction::clone_into(&self, target: &mut T)
+pub fn vyre_driver::graph_capture::GraphCaptureEditAction::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::graph_capture::GraphCaptureEditAction where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::graph_capture::GraphCaptureEditAction::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::graph_capture::GraphCaptureEditAction where T: ?core::marker::Sized
+pub fn vyre_driver::graph_capture::GraphCaptureEditAction::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::graph_capture::GraphCaptureEditAction where T: ?core::marker::Sized
+pub fn vyre_driver::graph_capture::GraphCaptureEditAction::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::graph_capture::GraphCaptureEditAction where T: core::clone::Clone
+pub unsafe fn vyre_driver::graph_capture::GraphCaptureEditAction::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::graph_capture::GraphCaptureEditAction
+pub fn vyre_driver::graph_capture::GraphCaptureEditAction::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_driver::graph_capture::GraphCaptureEditAction
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::graph_capture::GraphCaptureEditAction
+impl<T> typenum::type_operators::Same for vyre_driver::graph_capture::GraphCaptureEditAction
+pub type vyre_driver::graph_capture::GraphCaptureEditAction::Output = T
+pub enum vyre_driver::graph_capture::GraphCaptureEditStability
+pub vyre_driver::graph_capture::GraphCaptureEditStability::GraphBreaking
+pub vyre_driver::graph_capture::GraphCaptureEditStability::GraphStable
+impl vyre_driver::graph_capture::GraphCaptureEditStability
+pub const fn vyre_driver::graph_capture::GraphCaptureEditStability::as_str(self) -> &'static str
+impl core::clone::Clone for vyre_driver::graph_capture::GraphCaptureEditStability
+pub fn vyre_driver::graph_capture::GraphCaptureEditStability::clone(&self) -> vyre_driver::graph_capture::GraphCaptureEditStability
+impl core::cmp::Eq for vyre_driver::graph_capture::GraphCaptureEditStability
+impl core::cmp::PartialEq for vyre_driver::graph_capture::GraphCaptureEditStability
+pub fn vyre_driver::graph_capture::GraphCaptureEditStability::eq(&self, other: &vyre_driver::graph_capture::GraphCaptureEditStability) -> bool
+impl core::fmt::Debug for vyre_driver::graph_capture::GraphCaptureEditStability
+pub fn vyre_driver::graph_capture::GraphCaptureEditStability::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_driver::graph_capture::GraphCaptureEditStability
+pub fn vyre_driver::graph_capture::GraphCaptureEditStability::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_driver::graph_capture::GraphCaptureEditStability
+impl core::marker::StructuralPartialEq for vyre_driver::graph_capture::GraphCaptureEditStability
+impl core::marker::Freeze for vyre_driver::graph_capture::GraphCaptureEditStability
+impl core::marker::Send for vyre_driver::graph_capture::GraphCaptureEditStability
+impl core::marker::Sync for vyre_driver::graph_capture::GraphCaptureEditStability
+impl core::marker::Unpin for vyre_driver::graph_capture::GraphCaptureEditStability
+impl core::marker::UnsafeUnpin for vyre_driver::graph_capture::GraphCaptureEditStability
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::graph_capture::GraphCaptureEditStability
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::graph_capture::GraphCaptureEditStability
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::graph_capture::GraphCaptureEditStability where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::graph_capture::GraphCaptureEditStability::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::graph_capture::GraphCaptureEditStability where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::graph_capture::GraphCaptureEditStability::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::graph_capture::GraphCaptureEditStability where U: core::convert::From<T>
+pub fn vyre_driver::graph_capture::GraphCaptureEditStability::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::graph_capture::GraphCaptureEditStability where U: core::convert::Into<T>
+pub type vyre_driver::graph_capture::GraphCaptureEditStability::Error = core::convert::Infallible
+pub fn vyre_driver::graph_capture::GraphCaptureEditStability::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::graph_capture::GraphCaptureEditStability where U: core::convert::TryFrom<T>
+pub type vyre_driver::graph_capture::GraphCaptureEditStability::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::graph_capture::GraphCaptureEditStability::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::graph_capture::GraphCaptureEditStability where T: core::clone::Clone
+pub type vyre_driver::graph_capture::GraphCaptureEditStability::Owned = T
+pub fn vyre_driver::graph_capture::GraphCaptureEditStability::clone_into(&self, target: &mut T)
+pub fn vyre_driver::graph_capture::GraphCaptureEditStability::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::graph_capture::GraphCaptureEditStability where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::graph_capture::GraphCaptureEditStability::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::graph_capture::GraphCaptureEditStability where T: ?core::marker::Sized
+pub fn vyre_driver::graph_capture::GraphCaptureEditStability::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::graph_capture::GraphCaptureEditStability where T: ?core::marker::Sized
+pub fn vyre_driver::graph_capture::GraphCaptureEditStability::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::graph_capture::GraphCaptureEditStability where T: core::clone::Clone
+pub unsafe fn vyre_driver::graph_capture::GraphCaptureEditStability::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::graph_capture::GraphCaptureEditStability
+pub fn vyre_driver::graph_capture::GraphCaptureEditStability::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_driver::graph_capture::GraphCaptureEditStability
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::graph_capture::GraphCaptureEditStability
+impl<T> typenum::type_operators::Same for vyre_driver::graph_capture::GraphCaptureEditStability
+pub type vyre_driver::graph_capture::GraphCaptureEditStability::Output = T
+pub enum vyre_driver::graph_capture::ScanGraphCaptureEditKind
+pub vyre_driver::graph_capture::ScanGraphCaptureEditKind::HaystackBufferChange
+pub vyre_driver::graph_capture::ScanGraphCaptureEditKind::OutputSlabResize
+pub vyre_driver::graph_capture::ScanGraphCaptureEditKind::PatternDatabaseUpload
+pub vyre_driver::graph_capture::ScanGraphCaptureEditKind::VerifierChange
+impl vyre_driver::graph_capture::ScanGraphCaptureEditKind
+pub const fn vyre_driver::graph_capture::ScanGraphCaptureEditKind::as_str(self) -> &'static str
+impl core::clone::Clone for vyre_driver::graph_capture::ScanGraphCaptureEditKind
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEditKind::clone(&self) -> vyre_driver::graph_capture::ScanGraphCaptureEditKind
+impl core::cmp::Eq for vyre_driver::graph_capture::ScanGraphCaptureEditKind
+impl core::cmp::PartialEq for vyre_driver::graph_capture::ScanGraphCaptureEditKind
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEditKind::eq(&self, other: &vyre_driver::graph_capture::ScanGraphCaptureEditKind) -> bool
+impl core::fmt::Debug for vyre_driver::graph_capture::ScanGraphCaptureEditKind
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEditKind::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_driver::graph_capture::ScanGraphCaptureEditKind
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEditKind::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_driver::graph_capture::ScanGraphCaptureEditKind
+impl core::marker::StructuralPartialEq for vyre_driver::graph_capture::ScanGraphCaptureEditKind
+impl core::marker::Freeze for vyre_driver::graph_capture::ScanGraphCaptureEditKind
+impl core::marker::Send for vyre_driver::graph_capture::ScanGraphCaptureEditKind
+impl core::marker::Sync for vyre_driver::graph_capture::ScanGraphCaptureEditKind
+impl core::marker::Unpin for vyre_driver::graph_capture::ScanGraphCaptureEditKind
+impl core::marker::UnsafeUnpin for vyre_driver::graph_capture::ScanGraphCaptureEditKind
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::graph_capture::ScanGraphCaptureEditKind
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::graph_capture::ScanGraphCaptureEditKind
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::graph_capture::ScanGraphCaptureEditKind where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEditKind::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::graph_capture::ScanGraphCaptureEditKind where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEditKind::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::graph_capture::ScanGraphCaptureEditKind where U: core::convert::From<T>
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEditKind::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::graph_capture::ScanGraphCaptureEditKind where U: core::convert::Into<T>
+pub type vyre_driver::graph_capture::ScanGraphCaptureEditKind::Error = core::convert::Infallible
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEditKind::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::graph_capture::ScanGraphCaptureEditKind where U: core::convert::TryFrom<T>
+pub type vyre_driver::graph_capture::ScanGraphCaptureEditKind::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEditKind::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::graph_capture::ScanGraphCaptureEditKind where T: core::clone::Clone
+pub type vyre_driver::graph_capture::ScanGraphCaptureEditKind::Owned = T
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEditKind::clone_into(&self, target: &mut T)
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEditKind::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::graph_capture::ScanGraphCaptureEditKind where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEditKind::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::graph_capture::ScanGraphCaptureEditKind where T: ?core::marker::Sized
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEditKind::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::graph_capture::ScanGraphCaptureEditKind where T: ?core::marker::Sized
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEditKind::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::graph_capture::ScanGraphCaptureEditKind where T: core::clone::Clone
+pub unsafe fn vyre_driver::graph_capture::ScanGraphCaptureEditKind::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::graph_capture::ScanGraphCaptureEditKind
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEditKind::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_driver::graph_capture::ScanGraphCaptureEditKind
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::graph_capture::ScanGraphCaptureEditKind
+impl<T> typenum::type_operators::Same for vyre_driver::graph_capture::ScanGraphCaptureEditKind
+pub type vyre_driver::graph_capture::ScanGraphCaptureEditKind::Output = T
 pub struct vyre_driver::graph_capture::GraphCaptureBindingPlan
 pub vyre_driver::graph_capture::GraphCaptureBindingPlan::input_device_capacity: usize
 pub vyre_driver::graph_capture::GraphCaptureBindingPlan::kernel_argument_capacity: usize
@@ -4520,13 +5464,130 @@ impl<T> tracing::instrument::Instrument for vyre_driver::graph_capture::GraphCap
 impl<T> tracing::instrument::WithSubscriber for vyre_driver::graph_capture::GraphCaptureBindingPlan
 impl<T> typenum::type_operators::Same for vyre_driver::graph_capture::GraphCaptureBindingPlan
 pub type vyre_driver::graph_capture::GraphCaptureBindingPlan::Output = T
+pub struct vyre_driver::graph_capture::ScanGraphCaptureEdit
+pub vyre_driver::graph_capture::ScanGraphCaptureEdit::kind: vyre_driver::graph_capture::ScanGraphCaptureEditKind
+pub vyre_driver::graph_capture::ScanGraphCaptureEdit::next_byte_len: u64
+pub vyre_driver::graph_capture::ScanGraphCaptureEdit::next_digest: u64
+pub vyre_driver::graph_capture::ScanGraphCaptureEdit::previous_byte_len: u64
+pub vyre_driver::graph_capture::ScanGraphCaptureEdit::previous_digest: u64
+impl vyre_driver::graph_capture::ScanGraphCaptureEdit
+pub const fn vyre_driver::graph_capture::ScanGraphCaptureEdit::new(kind: vyre_driver::graph_capture::ScanGraphCaptureEditKind, previous_byte_len: u64, next_byte_len: u64, previous_digest: u64, next_digest: u64) -> Self
+impl core::clone::Clone for vyre_driver::graph_capture::ScanGraphCaptureEdit
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEdit::clone(&self) -> vyre_driver::graph_capture::ScanGraphCaptureEdit
+impl core::cmp::Eq for vyre_driver::graph_capture::ScanGraphCaptureEdit
+impl core::cmp::PartialEq for vyre_driver::graph_capture::ScanGraphCaptureEdit
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEdit::eq(&self, other: &vyre_driver::graph_capture::ScanGraphCaptureEdit) -> bool
+impl core::fmt::Debug for vyre_driver::graph_capture::ScanGraphCaptureEdit
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEdit::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_driver::graph_capture::ScanGraphCaptureEdit
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEdit::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_driver::graph_capture::ScanGraphCaptureEdit
+impl core::marker::StructuralPartialEq for vyre_driver::graph_capture::ScanGraphCaptureEdit
+impl core::marker::Freeze for vyre_driver::graph_capture::ScanGraphCaptureEdit
+impl core::marker::Send for vyre_driver::graph_capture::ScanGraphCaptureEdit
+impl core::marker::Sync for vyre_driver::graph_capture::ScanGraphCaptureEdit
+impl core::marker::Unpin for vyre_driver::graph_capture::ScanGraphCaptureEdit
+impl core::marker::UnsafeUnpin for vyre_driver::graph_capture::ScanGraphCaptureEdit
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::graph_capture::ScanGraphCaptureEdit
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::graph_capture::ScanGraphCaptureEdit
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::graph_capture::ScanGraphCaptureEdit where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEdit::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::graph_capture::ScanGraphCaptureEdit where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEdit::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::graph_capture::ScanGraphCaptureEdit where U: core::convert::From<T>
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEdit::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::graph_capture::ScanGraphCaptureEdit where U: core::convert::Into<T>
+pub type vyre_driver::graph_capture::ScanGraphCaptureEdit::Error = core::convert::Infallible
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEdit::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::graph_capture::ScanGraphCaptureEdit where U: core::convert::TryFrom<T>
+pub type vyre_driver::graph_capture::ScanGraphCaptureEdit::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEdit::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::graph_capture::ScanGraphCaptureEdit where T: core::clone::Clone
+pub type vyre_driver::graph_capture::ScanGraphCaptureEdit::Owned = T
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEdit::clone_into(&self, target: &mut T)
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEdit::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::graph_capture::ScanGraphCaptureEdit where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEdit::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::graph_capture::ScanGraphCaptureEdit where T: ?core::marker::Sized
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEdit::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::graph_capture::ScanGraphCaptureEdit where T: ?core::marker::Sized
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEdit::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::graph_capture::ScanGraphCaptureEdit where T: core::clone::Clone
+pub unsafe fn vyre_driver::graph_capture::ScanGraphCaptureEdit::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::graph_capture::ScanGraphCaptureEdit
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEdit::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_driver::graph_capture::ScanGraphCaptureEdit
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::graph_capture::ScanGraphCaptureEdit
+impl<T> typenum::type_operators::Same for vyre_driver::graph_capture::ScanGraphCaptureEdit
+pub type vyre_driver::graph_capture::ScanGraphCaptureEdit::Output = T
+pub struct vyre_driver::graph_capture::ScanGraphCaptureEditClassification
+pub vyre_driver::graph_capture::ScanGraphCaptureEditClassification::action: vyre_driver::graph_capture::GraphCaptureEditAction
+pub vyre_driver::graph_capture::ScanGraphCaptureEditClassification::edit_kind: vyre_driver::graph_capture::ScanGraphCaptureEditKind
+pub vyre_driver::graph_capture::ScanGraphCaptureEditClassification::graph_breaking: bool
+pub vyre_driver::graph_capture::ScanGraphCaptureEditClassification::graph_stable: bool
+pub vyre_driver::graph_capture::ScanGraphCaptureEditClassification::parameter_update_required: bool
+pub vyre_driver::graph_capture::ScanGraphCaptureEditClassification::reason: &'static str
+pub vyre_driver::graph_capture::ScanGraphCaptureEditClassification::schema_version: u32
+pub vyre_driver::graph_capture::ScanGraphCaptureEditClassification::stability: vyre_driver::graph_capture::GraphCaptureEditStability
+impl vyre_driver::graph_capture::ScanGraphCaptureEditClassification
+pub const fn vyre_driver::graph_capture::ScanGraphCaptureEditClassification::is_complete(self) -> bool
+impl core::clone::Clone for vyre_driver::graph_capture::ScanGraphCaptureEditClassification
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEditClassification::clone(&self) -> vyre_driver::graph_capture::ScanGraphCaptureEditClassification
+impl core::cmp::Eq for vyre_driver::graph_capture::ScanGraphCaptureEditClassification
+impl core::cmp::PartialEq for vyre_driver::graph_capture::ScanGraphCaptureEditClassification
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEditClassification::eq(&self, other: &vyre_driver::graph_capture::ScanGraphCaptureEditClassification) -> bool
+impl core::fmt::Debug for vyre_driver::graph_capture::ScanGraphCaptureEditClassification
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEditClassification::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for vyre_driver::graph_capture::ScanGraphCaptureEditClassification
+impl core::marker::StructuralPartialEq for vyre_driver::graph_capture::ScanGraphCaptureEditClassification
+impl core::marker::Freeze for vyre_driver::graph_capture::ScanGraphCaptureEditClassification
+impl core::marker::Send for vyre_driver::graph_capture::ScanGraphCaptureEditClassification
+impl core::marker::Sync for vyre_driver::graph_capture::ScanGraphCaptureEditClassification
+impl core::marker::Unpin for vyre_driver::graph_capture::ScanGraphCaptureEditClassification
+impl core::marker::UnsafeUnpin for vyre_driver::graph_capture::ScanGraphCaptureEditClassification
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::graph_capture::ScanGraphCaptureEditClassification
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::graph_capture::ScanGraphCaptureEditClassification
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::graph_capture::ScanGraphCaptureEditClassification where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEditClassification::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::graph_capture::ScanGraphCaptureEditClassification where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEditClassification::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::graph_capture::ScanGraphCaptureEditClassification where U: core::convert::From<T>
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEditClassification::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::graph_capture::ScanGraphCaptureEditClassification where U: core::convert::Into<T>
+pub type vyre_driver::graph_capture::ScanGraphCaptureEditClassification::Error = core::convert::Infallible
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEditClassification::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::graph_capture::ScanGraphCaptureEditClassification where U: core::convert::TryFrom<T>
+pub type vyre_driver::graph_capture::ScanGraphCaptureEditClassification::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEditClassification::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::graph_capture::ScanGraphCaptureEditClassification where T: core::clone::Clone
+pub type vyre_driver::graph_capture::ScanGraphCaptureEditClassification::Owned = T
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEditClassification::clone_into(&self, target: &mut T)
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEditClassification::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::graph_capture::ScanGraphCaptureEditClassification where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEditClassification::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::graph_capture::ScanGraphCaptureEditClassification where T: ?core::marker::Sized
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEditClassification::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::graph_capture::ScanGraphCaptureEditClassification where T: ?core::marker::Sized
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEditClassification::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::graph_capture::ScanGraphCaptureEditClassification where T: core::clone::Clone
+pub unsafe fn vyre_driver::graph_capture::ScanGraphCaptureEditClassification::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::graph_capture::ScanGraphCaptureEditClassification
+pub fn vyre_driver::graph_capture::ScanGraphCaptureEditClassification::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_driver::graph_capture::ScanGraphCaptureEditClassification
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::graph_capture::ScanGraphCaptureEditClassification
+impl<T> typenum::type_operators::Same for vyre_driver::graph_capture::ScanGraphCaptureEditClassification
+pub type vyre_driver::graph_capture::ScanGraphCaptureEditClassification::Output = T
+pub const vyre_driver::graph_capture::SCAN_GRAPH_CAPTURE_EDIT_SCHEMA_VERSION: u32
+pub const fn vyre_driver::graph_capture::classify_scan_graph_capture_edit(edit: vyre_driver::graph_capture::ScanGraphCaptureEdit) -> vyre_driver::graph_capture::ScanGraphCaptureEditClassification
 pub fn vyre_driver::graph_capture::plan_graph_capture_bindings(bindings: &vyre_driver::binding::BindingPlan) -> core::result::Result<vyre_driver::graph_capture::GraphCaptureBindingPlan, vyre_driver::BackendError>
 pub mod vyre_driver::grid_sync
 pub fn vyre_driver::grid_sync::contains_grid_sync(program: &vyre_foundation::ir_inner::model::program::core::Program) -> bool
+pub fn vyre_driver::grid_sync::dispatch_resident_grid_sync_fixpoint_into(backend: &dyn vyre_driver::VyreBackend, program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig, outputs: &mut vyre_driver::OutputBuffers) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::grid_sync::dispatch_resident_with_grid_sync_split_timed(backend: &dyn vyre_driver::VyreBackend, program: &vyre_foundation::ir_inner::model::program::core::Program, resources: &[vyre_driver::Resource], config: &vyre_driver::DispatchConfig) -> core::result::Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError>
 pub fn vyre_driver::grid_sync::dispatch_with_grid_sync_split(backend: &dyn vyre_driver::VyreBackend, program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::BackendError>
 pub fn vyre_driver::grid_sync::dispatch_with_grid_sync_split_into(backend: &dyn vyre_driver::VyreBackend, program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig, outputs: &mut vyre_driver::OutputBuffers) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::grid_sync::dispatch_with_grid_sync_split_timed(backend: &dyn vyre_driver::VyreBackend, program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig) -> core::result::Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError>
+pub fn vyre_driver::grid_sync::plan_host_grid_sync_segment_programs(program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<alloc::vec::Vec<vyre_foundation::ir_inner::model::program::core::Program>, vyre_driver::BackendError>
 pub fn vyre_driver::grid_sync::split_on_grid_sync(program: &vyre_foundation::ir_inner::model::program::core::Program) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::program::core::Program>
 pub fn vyre_driver::grid_sync::try_split_on_grid_sync(program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<alloc::vec::Vec<vyre_foundation::ir_inner::model::program::core::Program>, vyre_driver::BackendError>
 pub mod vyre_driver::input_identity
@@ -6142,6 +7203,7 @@ impl vyre_driver::observability::DriverObservability
 pub fn vyre_driver::observability::DriverObservability::snapshot() -> Self
 pub fn vyre_driver::observability::DriverObservability::to_audit_log(&self) -> alloc::string::String
 pub fn vyre_driver::observability::DriverObservability::to_prometheus(&self) -> alloc::string::String
+pub fn vyre_driver::observability::DriverObservability::try_snapshot() -> core::result::Result<Self, vyre_driver::BackendError>
 impl core::clone::Clone for vyre_driver::observability::DriverObservability
 pub fn vyre_driver::observability::DriverObservability::clone(&self) -> vyre_driver::observability::DriverObservability
 impl core::fmt::Debug for vyre_driver::observability::DriverObservability
@@ -6239,6 +7301,63 @@ pub fn vyre_driver::observability::record_output_slot_stats(stats: vyre_driver::
 pub fn vyre_driver::observability::record_substrate_audit_event(event: vyre_driver::observability::SubstrateAuditEvent)
 pub fn vyre_driver::observability::snapshot_dispatch_telemetry() -> vyre_driver::observability::DispatchTelemetry
 pub mod vyre_driver::ordering
+pub enum vyre_driver::ordering::DensePermutationDefect
+pub vyre_driver::ordering::DensePermutationDefect::Duplicate
+pub vyre_driver::ordering::DensePermutationDefect::Duplicate::index: usize
+pub vyre_driver::ordering::DensePermutationDefect::Duplicate::slot: usize
+pub vyre_driver::ordering::DensePermutationDefect::LengthMismatch
+pub vyre_driver::ordering::DensePermutationDefect::LengthMismatch::expected: usize
+pub vyre_driver::ordering::DensePermutationDefect::LengthMismatch::resolved: usize
+pub vyre_driver::ordering::DensePermutationDefect::Sparse
+pub vyre_driver::ordering::DensePermutationDefect::Sparse::index: usize
+pub vyre_driver::ordering::DensePermutationDefect::Sparse::slot: usize
+impl core::clone::Clone for vyre_driver::ordering::DensePermutationDefect
+pub fn vyre_driver::ordering::DensePermutationDefect::clone(&self) -> vyre_driver::ordering::DensePermutationDefect
+impl core::cmp::Eq for vyre_driver::ordering::DensePermutationDefect
+impl core::cmp::PartialEq for vyre_driver::ordering::DensePermutationDefect
+pub fn vyre_driver::ordering::DensePermutationDefect::eq(&self, other: &vyre_driver::ordering::DensePermutationDefect) -> bool
+impl core::fmt::Debug for vyre_driver::ordering::DensePermutationDefect
+pub fn vyre_driver::ordering::DensePermutationDefect::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for vyre_driver::ordering::DensePermutationDefect
+impl core::marker::StructuralPartialEq for vyre_driver::ordering::DensePermutationDefect
+impl core::marker::Freeze for vyre_driver::ordering::DensePermutationDefect
+impl core::marker::Send for vyre_driver::ordering::DensePermutationDefect
+impl core::marker::Sync for vyre_driver::ordering::DensePermutationDefect
+impl core::marker::Unpin for vyre_driver::ordering::DensePermutationDefect
+impl core::marker::UnsafeUnpin for vyre_driver::ordering::DensePermutationDefect
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::ordering::DensePermutationDefect
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::ordering::DensePermutationDefect
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::ordering::DensePermutationDefect where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::ordering::DensePermutationDefect::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::ordering::DensePermutationDefect where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::ordering::DensePermutationDefect::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::ordering::DensePermutationDefect where U: core::convert::From<T>
+pub fn vyre_driver::ordering::DensePermutationDefect::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::ordering::DensePermutationDefect where U: core::convert::Into<T>
+pub type vyre_driver::ordering::DensePermutationDefect::Error = core::convert::Infallible
+pub fn vyre_driver::ordering::DensePermutationDefect::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::ordering::DensePermutationDefect where U: core::convert::TryFrom<T>
+pub type vyre_driver::ordering::DensePermutationDefect::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::ordering::DensePermutationDefect::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::ordering::DensePermutationDefect where T: core::clone::Clone
+pub type vyre_driver::ordering::DensePermutationDefect::Owned = T
+pub fn vyre_driver::ordering::DensePermutationDefect::clone_into(&self, target: &mut T)
+pub fn vyre_driver::ordering::DensePermutationDefect::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::ordering::DensePermutationDefect where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::ordering::DensePermutationDefect::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::ordering::DensePermutationDefect where T: ?core::marker::Sized
+pub fn vyre_driver::ordering::DensePermutationDefect::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::ordering::DensePermutationDefect where T: ?core::marker::Sized
+pub fn vyre_driver::ordering::DensePermutationDefect::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::ordering::DensePermutationDefect where T: core::clone::Clone
+pub unsafe fn vyre_driver::ordering::DensePermutationDefect::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::ordering::DensePermutationDefect
+pub fn vyre_driver::ordering::DensePermutationDefect::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_driver::ordering::DensePermutationDefect
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::ordering::DensePermutationDefect
+impl<T> typenum::type_operators::Same for vyre_driver::ordering::DensePermutationDefect
+pub type vyre_driver::ordering::DensePermutationDefect::Output = T
+pub fn vyre_driver::ordering::classify_dense_permutation(sorted_indices: &[usize], expected_len: usize) -> core::result::Result<(), vyre_driver::ordering::DensePermutationDefect>
 pub fn vyre_driver::ordering::iter_is_monotonic_by_key<I, K, F>(items: I, key: F) -> bool where I: core::iter::traits::collect::IntoIterator, K: core::cmp::Ord, F: core::ops::function::FnMut(<I as core::iter::traits::collect::IntoIterator>::Item) -> K
 pub fn vyre_driver::ordering::sort_by_key_if_needed<T, K, F>(items: &mut [T], key: F) where K: core::cmp::Ord, F: core::ops::function::FnMut(&T) -> K
 pub fn vyre_driver::ordering::sort_unstable_by_key_if_needed<T, K, F>(items: &mut [T], key: F) where K: core::cmp::Ord, F: core::ops::function::FnMut(&T) -> K
@@ -6698,6 +7817,62 @@ pub type vyre_driver::persistent_kernel_policy::PersistentKernelInputs::Output =
 pub fn vyre_driver::persistent_kernel_policy::decide_persistent_kernel(inputs: vyre_driver::persistent_kernel_policy::PersistentKernelInputs) -> vyre_driver::persistent_kernel_policy::PersistentKernelDecision
 pub mod vyre_driver::pipeline
 pub mod vyre_driver::pipeline::cache
+pub enum vyre_driver::pipeline::cache::PipelineCacheMissReason
+pub vyre_driver::pipeline::cache::PipelineCacheMissReason::DeviceOrRuntimeChanged
+pub vyre_driver::pipeline::cache::PipelineCacheMissReason::DispatchPolicyChanged
+pub vyre_driver::pipeline::cache::PipelineCacheMissReason::EmptyCache
+pub vyre_driver::pipeline::cache::PipelineCacheMissReason::KeyAbsent
+pub vyre_driver::pipeline::cache::PipelineCacheMissReason::ProgramChanged
+impl vyre_driver::pipeline::cache::PipelineCacheMissReason
+pub const fn vyre_driver::pipeline::cache::PipelineCacheMissReason::classify(evidence: vyre_driver::pipeline::cache::PipelineCacheMissEvidence) -> Self
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::classify_identities<'a>(cached: impl core::iter::traits::iterator::Iterator<Item = &'a vyre_driver::pipeline::cache::PipelineCacheIdentity>, requested: &vyre_driver::pipeline::cache::PipelineCacheIdentity) -> Self
+pub const fn vyre_driver::pipeline::cache::PipelineCacheMissReason::metric_suffix(self) -> &'static str
+impl core::clone::Clone for vyre_driver::pipeline::cache::PipelineCacheMissReason
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::clone(&self) -> vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl core::cmp::Eq for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl core::cmp::PartialEq for vyre_driver::pipeline::cache::PipelineCacheMissReason
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::eq(&self, other: &vyre_driver::pipeline::cache::PipelineCacheMissReason) -> bool
+impl core::fmt::Debug for vyre_driver::pipeline::cache::PipelineCacheMissReason
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl core::marker::StructuralPartialEq for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl core::marker::Freeze for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl core::marker::Send for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl core::marker::Sync for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl core::marker::Unpin for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl core::marker::UnsafeUnpin for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::pipeline::cache::PipelineCacheMissReason where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::pipeline::cache::PipelineCacheMissReason where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::pipeline::cache::PipelineCacheMissReason where U: core::convert::From<T>
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::pipeline::cache::PipelineCacheMissReason where U: core::convert::Into<T>
+pub type vyre_driver::pipeline::cache::PipelineCacheMissReason::Error = core::convert::Infallible
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::pipeline::cache::PipelineCacheMissReason where U: core::convert::TryFrom<T>
+pub type vyre_driver::pipeline::cache::PipelineCacheMissReason::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::pipeline::cache::PipelineCacheMissReason where T: core::clone::Clone
+pub type vyre_driver::pipeline::cache::PipelineCacheMissReason::Owned = T
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::clone_into(&self, target: &mut T)
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::pipeline::cache::PipelineCacheMissReason where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::pipeline::cache::PipelineCacheMissReason where T: ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::pipeline::cache::PipelineCacheMissReason where T: ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::pipeline::cache::PipelineCacheMissReason where T: core::clone::Clone
+pub unsafe fn vyre_driver::pipeline::cache::PipelineCacheMissReason::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::pipeline::cache::PipelineCacheMissReason
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl<T> typenum::type_operators::Same for vyre_driver::pipeline::cache::PipelineCacheMissReason
+pub type vyre_driver::pipeline::cache::PipelineCacheMissReason::Output = T
 pub struct vyre_driver::pipeline::cache::DiskPipelineCache
 impl vyre_driver::pipeline::cache::DiskPipelineCache
 pub fn vyre_driver::pipeline::cache::DiskPipelineCache::default_root() -> std::path::PathBuf
@@ -6735,6 +7910,62 @@ impl<T> tracing::instrument::Instrument for vyre_driver::pipeline::cache::DiskPi
 impl<T> tracing::instrument::WithSubscriber for vyre_driver::pipeline::cache::DiskPipelineCache
 impl<T> typenum::type_operators::Same for vyre_driver::pipeline::cache::DiskPipelineCache
 pub type vyre_driver::pipeline::cache::DiskPipelineCache::Output = T
+pub struct vyre_driver::pipeline::cache::PipelineCacheIdentity
+pub vyre_driver::pipeline::cache::PipelineCacheIdentity::device_fingerprint: vyre_driver::pipeline::hashing::PipelineDeviceFingerprint
+pub vyre_driver::pipeline::cache::PipelineCacheIdentity::digest: [u8; 32]
+pub vyre_driver::pipeline::cache::PipelineCacheIdentity::policy_digest: [u8; 32]
+pub vyre_driver::pipeline::cache::PipelineCacheIdentity::program_digest: [u8; 32]
+impl vyre_driver::pipeline::cache::PipelineCacheIdentity
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::from_parts(program_digest: [u8; 32], policy_digest: [u8; 32], device_fingerprint: vyre_driver::pipeline::hashing::PipelineDeviceFingerprint) -> Self
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::try_from_program(program: &vyre_foundation::ir_inner::model::program::core::Program, config: &vyre_driver::DispatchConfig, device_fingerprint: vyre_driver::pipeline::hashing::PipelineDeviceFingerprint) -> core::result::Result<Self, alloc::string::String>
+impl core::clone::Clone for vyre_driver::pipeline::cache::PipelineCacheIdentity
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::clone(&self) -> vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl core::cmp::Eq for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl core::cmp::PartialEq for vyre_driver::pipeline::cache::PipelineCacheIdentity
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::eq(&self, other: &vyre_driver::pipeline::cache::PipelineCacheIdentity) -> bool
+impl core::fmt::Debug for vyre_driver::pipeline::cache::PipelineCacheIdentity
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_driver::pipeline::cache::PipelineCacheIdentity
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl core::marker::StructuralPartialEq for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl core::marker::Freeze for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl core::marker::Send for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl core::marker::Sync for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl core::marker::Unpin for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl core::marker::UnsafeUnpin for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::pipeline::cache::PipelineCacheIdentity where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::pipeline::cache::PipelineCacheIdentity where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::pipeline::cache::PipelineCacheIdentity where U: core::convert::From<T>
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::pipeline::cache::PipelineCacheIdentity where U: core::convert::Into<T>
+pub type vyre_driver::pipeline::cache::PipelineCacheIdentity::Error = core::convert::Infallible
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::pipeline::cache::PipelineCacheIdentity where U: core::convert::TryFrom<T>
+pub type vyre_driver::pipeline::cache::PipelineCacheIdentity::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::pipeline::cache::PipelineCacheIdentity where T: core::clone::Clone
+pub type vyre_driver::pipeline::cache::PipelineCacheIdentity::Owned = T
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::clone_into(&self, target: &mut T)
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::pipeline::cache::PipelineCacheIdentity where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::pipeline::cache::PipelineCacheIdentity where T: ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::pipeline::cache::PipelineCacheIdentity where T: ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::pipeline::cache::PipelineCacheIdentity where T: core::clone::Clone
+pub unsafe fn vyre_driver::pipeline::cache::PipelineCacheIdentity::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::pipeline::cache::PipelineCacheIdentity
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl<T> typenum::type_operators::Same for vyre_driver::pipeline::cache::PipelineCacheIdentity
+pub type vyre_driver::pipeline::cache::PipelineCacheIdentity::Output = T
 pub struct vyre_driver::pipeline::cache::PipelineCacheKey
 pub vyre_driver::pipeline::cache::PipelineCacheKey::backend_id: vyre_spec::intrinsic_descriptor::BackendId
 pub vyre_driver::pipeline::cache::PipelineCacheKey::bind_group_layout_hash: [u8; 32]
@@ -6792,6 +8023,61 @@ impl<T> tracing::instrument::Instrument for vyre_driver::pipeline::cache::Pipeli
 impl<T> tracing::instrument::WithSubscriber for vyre_driver::pipeline::cache::PipelineCacheKey
 impl<T> typenum::type_operators::Same for vyre_driver::pipeline::cache::PipelineCacheKey
 pub type vyre_driver::pipeline::cache::PipelineCacheKey::Output = T
+pub struct vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+pub vyre_driver::pipeline::cache::PipelineCacheMissEvidence::same_program_and_policy_entries: usize
+pub vyre_driver::pipeline::cache::PipelineCacheMissEvidence::same_program_entries: usize
+pub vyre_driver::pipeline::cache::PipelineCacheMissEvidence::same_program_policy_and_device_entries: usize
+pub vyre_driver::pipeline::cache::PipelineCacheMissEvidence::total_entries: usize
+impl vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::from_identities<'a>(cached: impl core::iter::traits::iterator::Iterator<Item = &'a vyre_driver::pipeline::cache::PipelineCacheIdentity>, requested: &vyre_driver::pipeline::cache::PipelineCacheIdentity) -> Self
+impl core::clone::Clone for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::clone(&self) -> vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl core::cmp::Eq for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl core::cmp::PartialEq for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::eq(&self, other: &vyre_driver::pipeline::cache::PipelineCacheMissEvidence) -> bool
+impl core::default::Default for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::default() -> vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl core::fmt::Debug for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl core::marker::StructuralPartialEq for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl core::marker::Freeze for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl core::marker::Send for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl core::marker::Sync for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl core::marker::Unpin for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl core::marker::UnsafeUnpin for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::pipeline::cache::PipelineCacheMissEvidence where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::pipeline::cache::PipelineCacheMissEvidence where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::pipeline::cache::PipelineCacheMissEvidence where U: core::convert::From<T>
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::pipeline::cache::PipelineCacheMissEvidence where U: core::convert::Into<T>
+pub type vyre_driver::pipeline::cache::PipelineCacheMissEvidence::Error = core::convert::Infallible
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::pipeline::cache::PipelineCacheMissEvidence where U: core::convert::TryFrom<T>
+pub type vyre_driver::pipeline::cache::PipelineCacheMissEvidence::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::pipeline::cache::PipelineCacheMissEvidence where T: core::clone::Clone
+pub type vyre_driver::pipeline::cache::PipelineCacheMissEvidence::Owned = T
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::clone_into(&self, target: &mut T)
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::pipeline::cache::PipelineCacheMissEvidence where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::pipeline::cache::PipelineCacheMissEvidence where T: ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::pipeline::cache::PipelineCacheMissEvidence where T: ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::pipeline::cache::PipelineCacheMissEvidence where T: core::clone::Clone
+pub unsafe fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl<T> typenum::type_operators::Same for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+pub type vyre_driver::pipeline::cache::PipelineCacheMissEvidence::Output = T
 pub struct vyre_driver::pipeline::cache::PipelineFeatureFlags(pub u32)
 impl vyre_driver::pipeline::cache::PipelineFeatureFlags
 pub const vyre_driver::pipeline::cache::PipelineFeatureFlags::ASYNC_COMPUTE: Self
@@ -6936,6 +8222,62 @@ pub fn vyre_driver::pipeline::hashing::hex_short(bytes: &[u8; 32]) -> alloc::str
 pub fn vyre_driver::pipeline::hashing::normalized_program_cache_digest(program: &vyre_foundation::ir_inner::model::program::core::Program) -> [u8; 32]
 pub fn vyre_driver::pipeline::hashing::try_normalized_program_cache_digest(program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<[u8; 32], alloc::string::String>
 pub fn vyre_driver::pipeline::hashing::update_dispatch_policy_cache_hash(hasher: &mut blake3::Hasher, config: &vyre_driver::DispatchConfig)
+pub enum vyre_driver::pipeline::PipelineCacheMissReason
+pub vyre_driver::pipeline::PipelineCacheMissReason::DeviceOrRuntimeChanged
+pub vyre_driver::pipeline::PipelineCacheMissReason::DispatchPolicyChanged
+pub vyre_driver::pipeline::PipelineCacheMissReason::EmptyCache
+pub vyre_driver::pipeline::PipelineCacheMissReason::KeyAbsent
+pub vyre_driver::pipeline::PipelineCacheMissReason::ProgramChanged
+impl vyre_driver::pipeline::cache::PipelineCacheMissReason
+pub const fn vyre_driver::pipeline::cache::PipelineCacheMissReason::classify(evidence: vyre_driver::pipeline::cache::PipelineCacheMissEvidence) -> Self
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::classify_identities<'a>(cached: impl core::iter::traits::iterator::Iterator<Item = &'a vyre_driver::pipeline::cache::PipelineCacheIdentity>, requested: &vyre_driver::pipeline::cache::PipelineCacheIdentity) -> Self
+pub const fn vyre_driver::pipeline::cache::PipelineCacheMissReason::metric_suffix(self) -> &'static str
+impl core::clone::Clone for vyre_driver::pipeline::cache::PipelineCacheMissReason
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::clone(&self) -> vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl core::cmp::Eq for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl core::cmp::PartialEq for vyre_driver::pipeline::cache::PipelineCacheMissReason
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::eq(&self, other: &vyre_driver::pipeline::cache::PipelineCacheMissReason) -> bool
+impl core::fmt::Debug for vyre_driver::pipeline::cache::PipelineCacheMissReason
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl core::marker::StructuralPartialEq for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl core::marker::Freeze for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl core::marker::Send for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl core::marker::Sync for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl core::marker::Unpin for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl core::marker::UnsafeUnpin for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::pipeline::cache::PipelineCacheMissReason where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::pipeline::cache::PipelineCacheMissReason where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::pipeline::cache::PipelineCacheMissReason where U: core::convert::From<T>
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::pipeline::cache::PipelineCacheMissReason where U: core::convert::Into<T>
+pub type vyre_driver::pipeline::cache::PipelineCacheMissReason::Error = core::convert::Infallible
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::pipeline::cache::PipelineCacheMissReason where U: core::convert::TryFrom<T>
+pub type vyre_driver::pipeline::cache::PipelineCacheMissReason::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::pipeline::cache::PipelineCacheMissReason where T: core::clone::Clone
+pub type vyre_driver::pipeline::cache::PipelineCacheMissReason::Owned = T
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::clone_into(&self, target: &mut T)
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::pipeline::cache::PipelineCacheMissReason where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::pipeline::cache::PipelineCacheMissReason where T: ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::pipeline::cache::PipelineCacheMissReason where T: ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::pipeline::cache::PipelineCacheMissReason where T: core::clone::Clone
+pub unsafe fn vyre_driver::pipeline::cache::PipelineCacheMissReason::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::pipeline::cache::PipelineCacheMissReason
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl<T> typenum::type_operators::Same for vyre_driver::pipeline::cache::PipelineCacheMissReason
+pub type vyre_driver::pipeline::cache::PipelineCacheMissReason::Output = T
 pub struct vyre_driver::pipeline::CompiledPipelineBuild
 pub vyre_driver::pipeline::CompiledPipelineBuild::cache_hit: core::option::Option<bool>
 pub vyre_driver::pipeline::CompiledPipelineBuild::manifest: vyre_driver::pipeline::PipelineReproManifest
@@ -7102,6 +8444,62 @@ impl<T> tracing::instrument::Instrument for vyre_driver::pipeline::PipelineCache
 impl<T> tracing::instrument::WithSubscriber for vyre_driver::pipeline::PipelineCacheAuditReport
 impl<T> typenum::type_operators::Same for vyre_driver::pipeline::PipelineCacheAuditReport
 pub type vyre_driver::pipeline::PipelineCacheAuditReport::Output = T
+pub struct vyre_driver::pipeline::PipelineCacheIdentity
+pub vyre_driver::pipeline::PipelineCacheIdentity::device_fingerprint: vyre_driver::pipeline::hashing::PipelineDeviceFingerprint
+pub vyre_driver::pipeline::PipelineCacheIdentity::digest: [u8; 32]
+pub vyre_driver::pipeline::PipelineCacheIdentity::policy_digest: [u8; 32]
+pub vyre_driver::pipeline::PipelineCacheIdentity::program_digest: [u8; 32]
+impl vyre_driver::pipeline::cache::PipelineCacheIdentity
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::from_parts(program_digest: [u8; 32], policy_digest: [u8; 32], device_fingerprint: vyre_driver::pipeline::hashing::PipelineDeviceFingerprint) -> Self
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::try_from_program(program: &vyre_foundation::ir_inner::model::program::core::Program, config: &vyre_driver::DispatchConfig, device_fingerprint: vyre_driver::pipeline::hashing::PipelineDeviceFingerprint) -> core::result::Result<Self, alloc::string::String>
+impl core::clone::Clone for vyre_driver::pipeline::cache::PipelineCacheIdentity
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::clone(&self) -> vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl core::cmp::Eq for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl core::cmp::PartialEq for vyre_driver::pipeline::cache::PipelineCacheIdentity
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::eq(&self, other: &vyre_driver::pipeline::cache::PipelineCacheIdentity) -> bool
+impl core::fmt::Debug for vyre_driver::pipeline::cache::PipelineCacheIdentity
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_driver::pipeline::cache::PipelineCacheIdentity
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl core::marker::StructuralPartialEq for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl core::marker::Freeze for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl core::marker::Send for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl core::marker::Sync for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl core::marker::Unpin for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl core::marker::UnsafeUnpin for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::pipeline::cache::PipelineCacheIdentity where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::pipeline::cache::PipelineCacheIdentity where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::pipeline::cache::PipelineCacheIdentity where U: core::convert::From<T>
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::pipeline::cache::PipelineCacheIdentity where U: core::convert::Into<T>
+pub type vyre_driver::pipeline::cache::PipelineCacheIdentity::Error = core::convert::Infallible
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::pipeline::cache::PipelineCacheIdentity where U: core::convert::TryFrom<T>
+pub type vyre_driver::pipeline::cache::PipelineCacheIdentity::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::pipeline::cache::PipelineCacheIdentity where T: core::clone::Clone
+pub type vyre_driver::pipeline::cache::PipelineCacheIdentity::Owned = T
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::clone_into(&self, target: &mut T)
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::pipeline::cache::PipelineCacheIdentity where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::pipeline::cache::PipelineCacheIdentity where T: ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::pipeline::cache::PipelineCacheIdentity where T: ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::pipeline::cache::PipelineCacheIdentity where T: core::clone::Clone
+pub unsafe fn vyre_driver::pipeline::cache::PipelineCacheIdentity::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::pipeline::cache::PipelineCacheIdentity
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl<T> typenum::type_operators::Same for vyre_driver::pipeline::cache::PipelineCacheIdentity
+pub type vyre_driver::pipeline::cache::PipelineCacheIdentity::Output = T
 pub struct vyre_driver::pipeline::PipelineCacheKey
 pub vyre_driver::pipeline::PipelineCacheKey::backend_id: vyre_spec::intrinsic_descriptor::BackendId
 pub vyre_driver::pipeline::PipelineCacheKey::bind_group_layout_hash: [u8; 32]
@@ -7159,6 +8557,61 @@ impl<T> tracing::instrument::Instrument for vyre_driver::pipeline::cache::Pipeli
 impl<T> tracing::instrument::WithSubscriber for vyre_driver::pipeline::cache::PipelineCacheKey
 impl<T> typenum::type_operators::Same for vyre_driver::pipeline::cache::PipelineCacheKey
 pub type vyre_driver::pipeline::cache::PipelineCacheKey::Output = T
+pub struct vyre_driver::pipeline::PipelineCacheMissEvidence
+pub vyre_driver::pipeline::PipelineCacheMissEvidence::same_program_and_policy_entries: usize
+pub vyre_driver::pipeline::PipelineCacheMissEvidence::same_program_entries: usize
+pub vyre_driver::pipeline::PipelineCacheMissEvidence::same_program_policy_and_device_entries: usize
+pub vyre_driver::pipeline::PipelineCacheMissEvidence::total_entries: usize
+impl vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::from_identities<'a>(cached: impl core::iter::traits::iterator::Iterator<Item = &'a vyre_driver::pipeline::cache::PipelineCacheIdentity>, requested: &vyre_driver::pipeline::cache::PipelineCacheIdentity) -> Self
+impl core::clone::Clone for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::clone(&self) -> vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl core::cmp::Eq for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl core::cmp::PartialEq for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::eq(&self, other: &vyre_driver::pipeline::cache::PipelineCacheMissEvidence) -> bool
+impl core::default::Default for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::default() -> vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl core::fmt::Debug for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl core::marker::StructuralPartialEq for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl core::marker::Freeze for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl core::marker::Send for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl core::marker::Sync for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl core::marker::Unpin for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl core::marker::UnsafeUnpin for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::pipeline::cache::PipelineCacheMissEvidence where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::pipeline::cache::PipelineCacheMissEvidence where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::pipeline::cache::PipelineCacheMissEvidence where U: core::convert::From<T>
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::pipeline::cache::PipelineCacheMissEvidence where U: core::convert::Into<T>
+pub type vyre_driver::pipeline::cache::PipelineCacheMissEvidence::Error = core::convert::Infallible
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::pipeline::cache::PipelineCacheMissEvidence where U: core::convert::TryFrom<T>
+pub type vyre_driver::pipeline::cache::PipelineCacheMissEvidence::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::pipeline::cache::PipelineCacheMissEvidence where T: core::clone::Clone
+pub type vyre_driver::pipeline::cache::PipelineCacheMissEvidence::Owned = T
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::clone_into(&self, target: &mut T)
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::pipeline::cache::PipelineCacheMissEvidence where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::pipeline::cache::PipelineCacheMissEvidence where T: ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::pipeline::cache::PipelineCacheMissEvidence where T: ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::pipeline::cache::PipelineCacheMissEvidence where T: core::clone::Clone
+pub unsafe fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl<T> typenum::type_operators::Same for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+pub type vyre_driver::pipeline::cache::PipelineCacheMissEvidence::Output = T
 pub struct vyre_driver::pipeline::PipelineCacheSnapshot
 pub vyre_driver::pipeline::PipelineCacheSnapshot::hits: u64
 pub vyre_driver::pipeline::PipelineCacheSnapshot::misses: u64
@@ -12745,6 +14198,10 @@ pub fn vyre_driver::validation::validate_launch_geometry(workgroup: [u32; 3], gr
 pub fn vyre_driver::validation::validate_program_contract(program: &vyre_foundation::ir_inner::model::program::core::Program, validation_options: vyre_foundation::validate::options::ValidationOptions<'_>, supported_ops: &std::collections::hash::set::HashSet<vyre_foundation::ir_inner::model::node_kind::OpId>, caps: vyre_driver::validation::ProgramValidationCaps) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::validation::validate_program_for_backend(backend: &dyn vyre_driver::VyreBackend, program: &vyre_foundation::ir_inner::model::program::core::Program, config: &vyre_driver::DispatchConfig) -> core::result::Result<(), vyre_driver::BackendError>
 #[non_exhaustive] pub enum vyre_driver::BackendError
+pub vyre_driver::BackendError::CooperativeResidencyExceeded
+pub vyre_driver::BackendError::CooperativeResidencyExceeded::detail: alloc::string::String
+pub vyre_driver::BackendError::CooperativeResidencyExceeded::grid_blocks: u64
+pub vyre_driver::BackendError::CooperativeResidencyExceeded::resident_limit: u64
 pub vyre_driver::BackendError::DeviceOutOfMemory
 pub vyre_driver::BackendError::DeviceOutOfMemory::available: u64
 pub vyre_driver::BackendError::DeviceOutOfMemory::requested: u64
@@ -12927,6 +14384,59 @@ impl<T> tracing::instrument::Instrument for vyre_driver::binding::BindingRole
 impl<T> tracing::instrument::WithSubscriber for vyre_driver::binding::BindingRole
 impl<T> typenum::type_operators::Same for vyre_driver::binding::BindingRole
 pub type vyre_driver::binding::BindingRole::Output = T
+pub enum vyre_driver::DeviceTimingQuality
+pub vyre_driver::DeviceTimingQuality::DeviceTimestamps
+pub vyre_driver::DeviceTimingQuality::HardwareCounters
+pub vyre_driver::DeviceTimingQuality::HostEnqueueWait
+pub vyre_driver::DeviceTimingQuality::HostOnly
+impl vyre_driver::device_profile::DeviceTimingQuality
+pub const fn vyre_driver::device_profile::DeviceTimingQuality::as_str(self) -> &'static str
+impl core::clone::Clone for vyre_driver::device_profile::DeviceTimingQuality
+pub fn vyre_driver::device_profile::DeviceTimingQuality::clone(&self) -> vyre_driver::device_profile::DeviceTimingQuality
+impl core::cmp::Eq for vyre_driver::device_profile::DeviceTimingQuality
+impl core::cmp::PartialEq for vyre_driver::device_profile::DeviceTimingQuality
+pub fn vyre_driver::device_profile::DeviceTimingQuality::eq(&self, other: &vyre_driver::device_profile::DeviceTimingQuality) -> bool
+impl core::fmt::Debug for vyre_driver::device_profile::DeviceTimingQuality
+pub fn vyre_driver::device_profile::DeviceTimingQuality::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for vyre_driver::device_profile::DeviceTimingQuality
+impl core::marker::StructuralPartialEq for vyre_driver::device_profile::DeviceTimingQuality
+impl core::marker::Freeze for vyre_driver::device_profile::DeviceTimingQuality
+impl core::marker::Send for vyre_driver::device_profile::DeviceTimingQuality
+impl core::marker::Sync for vyre_driver::device_profile::DeviceTimingQuality
+impl core::marker::Unpin for vyre_driver::device_profile::DeviceTimingQuality
+impl core::marker::UnsafeUnpin for vyre_driver::device_profile::DeviceTimingQuality
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::device_profile::DeviceTimingQuality
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::device_profile::DeviceTimingQuality
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::device_profile::DeviceTimingQuality where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::device_profile::DeviceTimingQuality::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::device_profile::DeviceTimingQuality where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::device_profile::DeviceTimingQuality::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::device_profile::DeviceTimingQuality where U: core::convert::From<T>
+pub fn vyre_driver::device_profile::DeviceTimingQuality::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::device_profile::DeviceTimingQuality where U: core::convert::Into<T>
+pub type vyre_driver::device_profile::DeviceTimingQuality::Error = core::convert::Infallible
+pub fn vyre_driver::device_profile::DeviceTimingQuality::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::device_profile::DeviceTimingQuality where U: core::convert::TryFrom<T>
+pub type vyre_driver::device_profile::DeviceTimingQuality::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::device_profile::DeviceTimingQuality::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::device_profile::DeviceTimingQuality where T: core::clone::Clone
+pub type vyre_driver::device_profile::DeviceTimingQuality::Owned = T
+pub fn vyre_driver::device_profile::DeviceTimingQuality::clone_into(&self, target: &mut T)
+pub fn vyre_driver::device_profile::DeviceTimingQuality::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::device_profile::DeviceTimingQuality where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::device_profile::DeviceTimingQuality::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::device_profile::DeviceTimingQuality where T: ?core::marker::Sized
+pub fn vyre_driver::device_profile::DeviceTimingQuality::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::device_profile::DeviceTimingQuality where T: ?core::marker::Sized
+pub fn vyre_driver::device_profile::DeviceTimingQuality::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::device_profile::DeviceTimingQuality where T: core::clone::Clone
+pub unsafe fn vyre_driver::device_profile::DeviceTimingQuality::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::device_profile::DeviceTimingQuality
+pub fn vyre_driver::device_profile::DeviceTimingQuality::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_driver::device_profile::DeviceTimingQuality
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::device_profile::DeviceTimingQuality
+impl<T> typenum::type_operators::Same for vyre_driver::device_profile::DeviceTimingQuality
+pub type vyre_driver::device_profile::DeviceTimingQuality::Output = T
 #[non_exhaustive] pub enum vyre_driver::EnforceVerdict
 pub vyre_driver::EnforceVerdict::Allow
 pub vyre_driver::EnforceVerdict::Deny
@@ -13033,6 +14543,62 @@ impl<T> tracing::instrument::Instrument for vyre_driver::registry::mutation::Mut
 impl<T> tracing::instrument::WithSubscriber for vyre_driver::registry::mutation::MutationClass
 impl<T> typenum::type_operators::Same for vyre_driver::registry::mutation::MutationClass
 pub type vyre_driver::registry::mutation::MutationClass::Output = T
+pub enum vyre_driver::PipelineCacheMissReason
+pub vyre_driver::PipelineCacheMissReason::DeviceOrRuntimeChanged
+pub vyre_driver::PipelineCacheMissReason::DispatchPolicyChanged
+pub vyre_driver::PipelineCacheMissReason::EmptyCache
+pub vyre_driver::PipelineCacheMissReason::KeyAbsent
+pub vyre_driver::PipelineCacheMissReason::ProgramChanged
+impl vyre_driver::pipeline::cache::PipelineCacheMissReason
+pub const fn vyre_driver::pipeline::cache::PipelineCacheMissReason::classify(evidence: vyre_driver::pipeline::cache::PipelineCacheMissEvidence) -> Self
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::classify_identities<'a>(cached: impl core::iter::traits::iterator::Iterator<Item = &'a vyre_driver::pipeline::cache::PipelineCacheIdentity>, requested: &vyre_driver::pipeline::cache::PipelineCacheIdentity) -> Self
+pub const fn vyre_driver::pipeline::cache::PipelineCacheMissReason::metric_suffix(self) -> &'static str
+impl core::clone::Clone for vyre_driver::pipeline::cache::PipelineCacheMissReason
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::clone(&self) -> vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl core::cmp::Eq for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl core::cmp::PartialEq for vyre_driver::pipeline::cache::PipelineCacheMissReason
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::eq(&self, other: &vyre_driver::pipeline::cache::PipelineCacheMissReason) -> bool
+impl core::fmt::Debug for vyre_driver::pipeline::cache::PipelineCacheMissReason
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl core::marker::StructuralPartialEq for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl core::marker::Freeze for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl core::marker::Send for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl core::marker::Sync for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl core::marker::Unpin for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl core::marker::UnsafeUnpin for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::pipeline::cache::PipelineCacheMissReason where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::pipeline::cache::PipelineCacheMissReason where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::pipeline::cache::PipelineCacheMissReason where U: core::convert::From<T>
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::pipeline::cache::PipelineCacheMissReason where U: core::convert::Into<T>
+pub type vyre_driver::pipeline::cache::PipelineCacheMissReason::Error = core::convert::Infallible
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::pipeline::cache::PipelineCacheMissReason where U: core::convert::TryFrom<T>
+pub type vyre_driver::pipeline::cache::PipelineCacheMissReason::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::pipeline::cache::PipelineCacheMissReason where T: core::clone::Clone
+pub type vyre_driver::pipeline::cache::PipelineCacheMissReason::Owned = T
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::clone_into(&self, target: &mut T)
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::pipeline::cache::PipelineCacheMissReason where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::pipeline::cache::PipelineCacheMissReason where T: ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::pipeline::cache::PipelineCacheMissReason where T: ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::pipeline::cache::PipelineCacheMissReason where T: core::clone::Clone
+pub unsafe fn vyre_driver::pipeline::cache::PipelineCacheMissReason::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::pipeline::cache::PipelineCacheMissReason
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissReason::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::pipeline::cache::PipelineCacheMissReason
+impl<T> typenum::type_operators::Same for vyre_driver::pipeline::cache::PipelineCacheMissReason
+pub type vyre_driver::pipeline::cache::PipelineCacheMissReason::Output = T
 pub enum vyre_driver::ResidentGraphReuseTelemetryError
 pub vyre_driver::ResidentGraphReuseTelemetryError::ByteCounterOverflow
 pub vyre_driver::ResidentGraphReuseTelemetryError::ByteCounterOverflow::counter: &'static str
@@ -13955,13 +15521,16 @@ pub vyre_driver::DeviceProfile::shared_memory_bank_count: u32
 pub vyre_driver::DeviceProfile::shared_memory_bank_width_bytes: u32
 pub vyre_driver::DeviceProfile::subgroup_size: u32
 pub vyre_driver::DeviceProfile::supports_bf16: bool
+pub vyre_driver::DeviceProfile::supports_device_timestamps: bool
 pub vyre_driver::DeviceProfile::supports_distributed_collectives: bool
 pub vyre_driver::DeviceProfile::supports_f16: bool
+pub vyre_driver::DeviceProfile::supports_hardware_counters: bool
 pub vyre_driver::DeviceProfile::supports_indirect_dispatch: bool
 pub vyre_driver::DeviceProfile::supports_specialization_constants: bool
 pub vyre_driver::DeviceProfile::supports_subgroup_ops: bool
 pub vyre_driver::DeviceProfile::supports_tensor_cores: bool
 pub vyre_driver::DeviceProfile::supports_trap_propagation: bool
+pub vyre_driver::DeviceProfile::timing_quality: vyre_driver::device_profile::DeviceTimingQuality
 impl vyre_driver::device_profile::DeviceProfile
 pub const fn vyre_driver::device_profile::DeviceProfile::adapter_caps(self) -> vyre_foundation::optimizer::ctx::AdapterCaps
 pub const fn vyre_driver::device_profile::DeviceProfile::conservative(backend: &'static str) -> Self
@@ -14479,6 +16048,66 @@ impl<T> tracing::instrument::Instrument for vyre_driver::DispatchConfig
 impl<T> tracing::instrument::WithSubscriber for vyre_driver::DispatchConfig
 impl<T> typenum::type_operators::Same for vyre_driver::DispatchConfig
 pub type vyre_driver::DispatchConfig::Output = T
+pub struct vyre_driver::DispatchTimingEvidence
+pub vyre_driver::DispatchTimingEvidence::device_ns: core::option::Option<u64>
+pub vyre_driver::DispatchTimingEvidence::enqueue_ns: core::option::Option<u64>
+pub vyre_driver::DispatchTimingEvidence::wait_ns: core::option::Option<u64>
+pub vyre_driver::DispatchTimingEvidence::wall_ns: core::option::Option<u64>
+impl vyre_driver::evidence::DispatchTimingEvidence
+pub fn vyre_driver::evidence::DispatchTimingEvidence::from_timed_dispatch(result: &vyre_driver::TimedDispatchResult) -> Self
+pub fn vyre_driver::evidence::DispatchTimingEvidence::has_timing(&self) -> bool
+impl core::clone::Clone for vyre_driver::evidence::DispatchTimingEvidence
+pub fn vyre_driver::evidence::DispatchTimingEvidence::clone(&self) -> vyre_driver::evidence::DispatchTimingEvidence
+impl core::cmp::Eq for vyre_driver::evidence::DispatchTimingEvidence
+impl core::cmp::PartialEq for vyre_driver::evidence::DispatchTimingEvidence
+pub fn vyre_driver::evidence::DispatchTimingEvidence::eq(&self, other: &vyre_driver::evidence::DispatchTimingEvidence) -> bool
+impl core::default::Default for vyre_driver::evidence::DispatchTimingEvidence
+pub fn vyre_driver::evidence::DispatchTimingEvidence::default() -> vyre_driver::evidence::DispatchTimingEvidence
+impl core::fmt::Debug for vyre_driver::evidence::DispatchTimingEvidence
+pub fn vyre_driver::evidence::DispatchTimingEvidence::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for vyre_driver::evidence::DispatchTimingEvidence
+impl serde_core::ser::Serialize for vyre_driver::evidence::DispatchTimingEvidence
+pub fn vyre_driver::evidence::DispatchTimingEvidence::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for vyre_driver::evidence::DispatchTimingEvidence
+pub fn vyre_driver::evidence::DispatchTimingEvidence::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for vyre_driver::evidence::DispatchTimingEvidence
+impl core::marker::Send for vyre_driver::evidence::DispatchTimingEvidence
+impl core::marker::Sync for vyre_driver::evidence::DispatchTimingEvidence
+impl core::marker::Unpin for vyre_driver::evidence::DispatchTimingEvidence
+impl core::marker::UnsafeUnpin for vyre_driver::evidence::DispatchTimingEvidence
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::evidence::DispatchTimingEvidence
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::evidence::DispatchTimingEvidence
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::evidence::DispatchTimingEvidence where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::evidence::DispatchTimingEvidence::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::evidence::DispatchTimingEvidence where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::evidence::DispatchTimingEvidence::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::evidence::DispatchTimingEvidence where U: core::convert::From<T>
+pub fn vyre_driver::evidence::DispatchTimingEvidence::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::evidence::DispatchTimingEvidence where U: core::convert::Into<T>
+pub type vyre_driver::evidence::DispatchTimingEvidence::Error = core::convert::Infallible
+pub fn vyre_driver::evidence::DispatchTimingEvidence::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::evidence::DispatchTimingEvidence where U: core::convert::TryFrom<T>
+pub type vyre_driver::evidence::DispatchTimingEvidence::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::evidence::DispatchTimingEvidence::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::evidence::DispatchTimingEvidence where T: core::clone::Clone
+pub type vyre_driver::evidence::DispatchTimingEvidence::Owned = T
+pub fn vyre_driver::evidence::DispatchTimingEvidence::clone_into(&self, target: &mut T)
+pub fn vyre_driver::evidence::DispatchTimingEvidence::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::evidence::DispatchTimingEvidence where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::evidence::DispatchTimingEvidence::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::evidence::DispatchTimingEvidence where T: ?core::marker::Sized
+pub fn vyre_driver::evidence::DispatchTimingEvidence::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::evidence::DispatchTimingEvidence where T: ?core::marker::Sized
+pub fn vyre_driver::evidence::DispatchTimingEvidence::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::evidence::DispatchTimingEvidence where T: core::clone::Clone
+pub unsafe fn vyre_driver::evidence::DispatchTimingEvidence::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::evidence::DispatchTimingEvidence
+pub fn vyre_driver::evidence::DispatchTimingEvidence::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for vyre_driver::evidence::DispatchTimingEvidence where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> tracing::instrument::Instrument for vyre_driver::evidence::DispatchTimingEvidence
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::evidence::DispatchTimingEvidence
+impl<T> typenum::type_operators::Same for vyre_driver::evidence::DispatchTimingEvidence
+pub type vyre_driver::evidence::DispatchTimingEvidence::Output = T
 pub struct vyre_driver::Distribution
 impl vyre_driver::routing::Distribution
 pub fn vyre_driver::routing::Distribution::observe(values: &[u32]) -> Self
@@ -14583,6 +16212,132 @@ impl<T> tracing::instrument::Instrument for vyre_driver::registry::registry::Dup
 impl<T> tracing::instrument::WithSubscriber for vyre_driver::registry::registry::DuplicateOpIdError
 impl<T> typenum::type_operators::Same for vyre_driver::registry::registry::DuplicateOpIdError
 pub type vyre_driver::registry::registry::DuplicateOpIdError::Output = T
+pub struct vyre_driver::EvidenceArtifact
+pub vyre_driver::EvidenceArtifact::backend_id: core::option::Option<alloc::string::String>
+pub vyre_driver::EvidenceArtifact::digest: core::option::Option<alloc::string::String>
+pub vyre_driver::EvidenceArtifact::kind: alloc::string::String
+pub vyre_driver::EvidenceArtifact::path: core::option::Option<alloc::string::String>
+impl vyre_driver::evidence::EvidenceArtifact
+pub fn vyre_driver::evidence::EvidenceArtifact::from_pipeline_manifest(manifest: &vyre_driver::pipeline::PipelineReproManifest) -> Self
+pub fn vyre_driver::evidence::EvidenceArtifact::new(kind: impl core::convert::Into<alloc::string::String>, backend_id: core::option::Option<alloc::string::String>, path: core::option::Option<alloc::string::String>, digest: core::option::Option<alloc::string::String>) -> Self
+impl core::clone::Clone for vyre_driver::evidence::EvidenceArtifact
+pub fn vyre_driver::evidence::EvidenceArtifact::clone(&self) -> vyre_driver::evidence::EvidenceArtifact
+impl core::cmp::Eq for vyre_driver::evidence::EvidenceArtifact
+impl core::cmp::PartialEq for vyre_driver::evidence::EvidenceArtifact
+pub fn vyre_driver::evidence::EvidenceArtifact::eq(&self, other: &vyre_driver::evidence::EvidenceArtifact) -> bool
+impl core::fmt::Debug for vyre_driver::evidence::EvidenceArtifact
+pub fn vyre_driver::evidence::EvidenceArtifact::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for vyre_driver::evidence::EvidenceArtifact
+impl serde_core::ser::Serialize for vyre_driver::evidence::EvidenceArtifact
+pub fn vyre_driver::evidence::EvidenceArtifact::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for vyre_driver::evidence::EvidenceArtifact
+pub fn vyre_driver::evidence::EvidenceArtifact::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for vyre_driver::evidence::EvidenceArtifact
+impl core::marker::Send for vyre_driver::evidence::EvidenceArtifact
+impl core::marker::Sync for vyre_driver::evidence::EvidenceArtifact
+impl core::marker::Unpin for vyre_driver::evidence::EvidenceArtifact
+impl core::marker::UnsafeUnpin for vyre_driver::evidence::EvidenceArtifact
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::evidence::EvidenceArtifact
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::evidence::EvidenceArtifact
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::evidence::EvidenceArtifact where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::evidence::EvidenceArtifact::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::evidence::EvidenceArtifact where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::evidence::EvidenceArtifact::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::evidence::EvidenceArtifact where U: core::convert::From<T>
+pub fn vyre_driver::evidence::EvidenceArtifact::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::evidence::EvidenceArtifact where U: core::convert::Into<T>
+pub type vyre_driver::evidence::EvidenceArtifact::Error = core::convert::Infallible
+pub fn vyre_driver::evidence::EvidenceArtifact::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::evidence::EvidenceArtifact where U: core::convert::TryFrom<T>
+pub type vyre_driver::evidence::EvidenceArtifact::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::evidence::EvidenceArtifact::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::evidence::EvidenceArtifact where T: core::clone::Clone
+pub type vyre_driver::evidence::EvidenceArtifact::Owned = T
+pub fn vyre_driver::evidence::EvidenceArtifact::clone_into(&self, target: &mut T)
+pub fn vyre_driver::evidence::EvidenceArtifact::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::evidence::EvidenceArtifact where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::evidence::EvidenceArtifact::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::evidence::EvidenceArtifact where T: ?core::marker::Sized
+pub fn vyre_driver::evidence::EvidenceArtifact::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::evidence::EvidenceArtifact where T: ?core::marker::Sized
+pub fn vyre_driver::evidence::EvidenceArtifact::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::evidence::EvidenceArtifact where T: core::clone::Clone
+pub unsafe fn vyre_driver::evidence::EvidenceArtifact::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::evidence::EvidenceArtifact
+pub fn vyre_driver::evidence::EvidenceArtifact::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for vyre_driver::evidence::EvidenceArtifact where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> tracing::instrument::Instrument for vyre_driver::evidence::EvidenceArtifact
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::evidence::EvidenceArtifact
+impl<T> typenum::type_operators::Same for vyre_driver::evidence::EvidenceArtifact
+pub type vyre_driver::evidence::EvidenceArtifact::Output = T
+pub struct vyre_driver::EvidenceBundle
+pub vyre_driver::EvidenceBundle::artifacts: alloc::vec::Vec<vyre_driver::evidence::EvidenceArtifact>
+pub vyre_driver::EvidenceBundle::backend_id: alloc::string::String
+pub vyre_driver::EvidenceBundle::backend_version: alloc::string::String
+pub vyre_driver::EvidenceBundle::digest_ledger: vyre_driver::evidence::EvidenceDigestLedger
+pub vyre_driver::EvidenceBundle::dispatch_policy: alloc::string::String
+pub vyre_driver::EvidenceBundle::program_digest: alloc::string::String
+pub vyre_driver::EvidenceBundle::replay: core::option::Option<vyre_driver::evidence::ReplayEvidence>
+pub vyre_driver::EvidenceBundle::schema: u32
+pub vyre_driver::EvidenceBundle::source: vyre_driver::evidence::SourceProvenance
+pub vyre_driver::EvidenceBundle::timing: vyre_driver::evidence::DispatchTimingEvidence
+impl vyre_driver::evidence::EvidenceBundle
+pub const vyre_driver::evidence::EvidenceBundle::SCHEMA: u32
+pub fn vyre_driver::evidence::EvidenceBundle::for_program(backend: &dyn vyre_driver::VyreBackend, program: &vyre_foundation::ir_inner::model::program::core::Program, config: &vyre_driver::DispatchConfig, source: vyre_driver::evidence::SourceProvenance) -> core::result::Result<Self, vyre_driver::BackendError>
+pub fn vyre_driver::evidence::EvidenceBundle::validate(&self) -> core::result::Result<(), vyre_driver::BackendError>
+pub fn vyre_driver::evidence::EvidenceBundle::with_artifact(self, artifact: vyre_driver::evidence::EvidenceArtifact) -> Self
+pub fn vyre_driver::evidence::EvidenceBundle::with_replay(self, replay: vyre_driver::evidence::ReplayEvidence) -> Self
+pub fn vyre_driver::evidence::EvidenceBundle::with_timed_dispatch(self, result: &vyre_driver::TimedDispatchResult) -> Self
+impl core::clone::Clone for vyre_driver::evidence::EvidenceBundle
+pub fn vyre_driver::evidence::EvidenceBundle::clone(&self) -> vyre_driver::evidence::EvidenceBundle
+impl core::cmp::Eq for vyre_driver::evidence::EvidenceBundle
+impl core::cmp::PartialEq for vyre_driver::evidence::EvidenceBundle
+pub fn vyre_driver::evidence::EvidenceBundle::eq(&self, other: &vyre_driver::evidence::EvidenceBundle) -> bool
+impl core::fmt::Debug for vyre_driver::evidence::EvidenceBundle
+pub fn vyre_driver::evidence::EvidenceBundle::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for vyre_driver::evidence::EvidenceBundle
+impl serde_core::ser::Serialize for vyre_driver::evidence::EvidenceBundle
+pub fn vyre_driver::evidence::EvidenceBundle::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for vyre_driver::evidence::EvidenceBundle
+pub fn vyre_driver::evidence::EvidenceBundle::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for vyre_driver::evidence::EvidenceBundle
+impl core::marker::Send for vyre_driver::evidence::EvidenceBundle
+impl core::marker::Sync for vyre_driver::evidence::EvidenceBundle
+impl core::marker::Unpin for vyre_driver::evidence::EvidenceBundle
+impl core::marker::UnsafeUnpin for vyre_driver::evidence::EvidenceBundle
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::evidence::EvidenceBundle
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::evidence::EvidenceBundle
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::evidence::EvidenceBundle where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::evidence::EvidenceBundle::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::evidence::EvidenceBundle where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::evidence::EvidenceBundle::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::evidence::EvidenceBundle where U: core::convert::From<T>
+pub fn vyre_driver::evidence::EvidenceBundle::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::evidence::EvidenceBundle where U: core::convert::Into<T>
+pub type vyre_driver::evidence::EvidenceBundle::Error = core::convert::Infallible
+pub fn vyre_driver::evidence::EvidenceBundle::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::evidence::EvidenceBundle where U: core::convert::TryFrom<T>
+pub type vyre_driver::evidence::EvidenceBundle::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::evidence::EvidenceBundle::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::evidence::EvidenceBundle where T: core::clone::Clone
+pub type vyre_driver::evidence::EvidenceBundle::Owned = T
+pub fn vyre_driver::evidence::EvidenceBundle::clone_into(&self, target: &mut T)
+pub fn vyre_driver::evidence::EvidenceBundle::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::evidence::EvidenceBundle where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::evidence::EvidenceBundle::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::evidence::EvidenceBundle where T: ?core::marker::Sized
+pub fn vyre_driver::evidence::EvidenceBundle::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::evidence::EvidenceBundle where T: ?core::marker::Sized
+pub fn vyre_driver::evidence::EvidenceBundle::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::evidence::EvidenceBundle where T: core::clone::Clone
+pub unsafe fn vyre_driver::evidence::EvidenceBundle::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::evidence::EvidenceBundle
+pub fn vyre_driver::evidence::EvidenceBundle::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for vyre_driver::evidence::EvidenceBundle where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> tracing::instrument::Instrument for vyre_driver::evidence::EvidenceBundle
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::evidence::EvidenceBundle
+impl<T> typenum::type_operators::Same for vyre_driver::evidence::EvidenceBundle
+pub type vyre_driver::evidence::EvidenceBundle::Output = T
 pub struct vyre_driver::ExtractionDevice<'a>
 pub vyre_driver::ExtractionDevice::autotune_record: core::option::Option<&'a vyre_driver::autotune_store::AutotuneRecord>
 pub vyre_driver::ExtractionDevice::hot_path: bool
@@ -15000,6 +16755,62 @@ impl<T> tracing::instrument::Instrument for vyre_driver::OutputLayout
 impl<T> tracing::instrument::WithSubscriber for vyre_driver::OutputLayout
 impl<T> typenum::type_operators::Same for vyre_driver::OutputLayout
 pub type vyre_driver::OutputLayout::Output = T
+pub struct vyre_driver::PipelineCacheIdentity
+pub vyre_driver::PipelineCacheIdentity::device_fingerprint: vyre_driver::pipeline::hashing::PipelineDeviceFingerprint
+pub vyre_driver::PipelineCacheIdentity::digest: [u8; 32]
+pub vyre_driver::PipelineCacheIdentity::policy_digest: [u8; 32]
+pub vyre_driver::PipelineCacheIdentity::program_digest: [u8; 32]
+impl vyre_driver::pipeline::cache::PipelineCacheIdentity
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::from_parts(program_digest: [u8; 32], policy_digest: [u8; 32], device_fingerprint: vyre_driver::pipeline::hashing::PipelineDeviceFingerprint) -> Self
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::try_from_program(program: &vyre_foundation::ir_inner::model::program::core::Program, config: &vyre_driver::DispatchConfig, device_fingerprint: vyre_driver::pipeline::hashing::PipelineDeviceFingerprint) -> core::result::Result<Self, alloc::string::String>
+impl core::clone::Clone for vyre_driver::pipeline::cache::PipelineCacheIdentity
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::clone(&self) -> vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl core::cmp::Eq for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl core::cmp::PartialEq for vyre_driver::pipeline::cache::PipelineCacheIdentity
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::eq(&self, other: &vyre_driver::pipeline::cache::PipelineCacheIdentity) -> bool
+impl core::fmt::Debug for vyre_driver::pipeline::cache::PipelineCacheIdentity
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_driver::pipeline::cache::PipelineCacheIdentity
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl core::marker::StructuralPartialEq for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl core::marker::Freeze for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl core::marker::Send for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl core::marker::Sync for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl core::marker::Unpin for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl core::marker::UnsafeUnpin for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::pipeline::cache::PipelineCacheIdentity where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::pipeline::cache::PipelineCacheIdentity where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::pipeline::cache::PipelineCacheIdentity where U: core::convert::From<T>
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::pipeline::cache::PipelineCacheIdentity where U: core::convert::Into<T>
+pub type vyre_driver::pipeline::cache::PipelineCacheIdentity::Error = core::convert::Infallible
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::pipeline::cache::PipelineCacheIdentity where U: core::convert::TryFrom<T>
+pub type vyre_driver::pipeline::cache::PipelineCacheIdentity::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::pipeline::cache::PipelineCacheIdentity where T: core::clone::Clone
+pub type vyre_driver::pipeline::cache::PipelineCacheIdentity::Owned = T
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::clone_into(&self, target: &mut T)
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::pipeline::cache::PipelineCacheIdentity where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::pipeline::cache::PipelineCacheIdentity where T: ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::pipeline::cache::PipelineCacheIdentity where T: ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::pipeline::cache::PipelineCacheIdentity where T: core::clone::Clone
+pub unsafe fn vyre_driver::pipeline::cache::PipelineCacheIdentity::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::pipeline::cache::PipelineCacheIdentity
+pub fn vyre_driver::pipeline::cache::PipelineCacheIdentity::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::pipeline::cache::PipelineCacheIdentity
+impl<T> typenum::type_operators::Same for vyre_driver::pipeline::cache::PipelineCacheIdentity
+pub type vyre_driver::pipeline::cache::PipelineCacheIdentity::Output = T
 pub struct vyre_driver::PipelineCacheKey
 pub vyre_driver::PipelineCacheKey::backend_id: vyre_spec::intrinsic_descriptor::BackendId
 pub vyre_driver::PipelineCacheKey::bind_group_layout_hash: [u8; 32]
@@ -15057,6 +16868,61 @@ impl<T> tracing::instrument::Instrument for vyre_driver::pipeline::cache::Pipeli
 impl<T> tracing::instrument::WithSubscriber for vyre_driver::pipeline::cache::PipelineCacheKey
 impl<T> typenum::type_operators::Same for vyre_driver::pipeline::cache::PipelineCacheKey
 pub type vyre_driver::pipeline::cache::PipelineCacheKey::Output = T
+pub struct vyre_driver::PipelineCacheMissEvidence
+pub vyre_driver::PipelineCacheMissEvidence::same_program_and_policy_entries: usize
+pub vyre_driver::PipelineCacheMissEvidence::same_program_entries: usize
+pub vyre_driver::PipelineCacheMissEvidence::same_program_policy_and_device_entries: usize
+pub vyre_driver::PipelineCacheMissEvidence::total_entries: usize
+impl vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::from_identities<'a>(cached: impl core::iter::traits::iterator::Iterator<Item = &'a vyre_driver::pipeline::cache::PipelineCacheIdentity>, requested: &vyre_driver::pipeline::cache::PipelineCacheIdentity) -> Self
+impl core::clone::Clone for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::clone(&self) -> vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl core::cmp::Eq for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl core::cmp::PartialEq for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::eq(&self, other: &vyre_driver::pipeline::cache::PipelineCacheMissEvidence) -> bool
+impl core::default::Default for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::default() -> vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl core::fmt::Debug for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl core::marker::StructuralPartialEq for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl core::marker::Freeze for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl core::marker::Send for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl core::marker::Sync for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl core::marker::Unpin for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl core::marker::UnsafeUnpin for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::pipeline::cache::PipelineCacheMissEvidence where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::pipeline::cache::PipelineCacheMissEvidence where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::pipeline::cache::PipelineCacheMissEvidence where U: core::convert::From<T>
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::pipeline::cache::PipelineCacheMissEvidence where U: core::convert::Into<T>
+pub type vyre_driver::pipeline::cache::PipelineCacheMissEvidence::Error = core::convert::Infallible
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::pipeline::cache::PipelineCacheMissEvidence where U: core::convert::TryFrom<T>
+pub type vyre_driver::pipeline::cache::PipelineCacheMissEvidence::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::pipeline::cache::PipelineCacheMissEvidence where T: core::clone::Clone
+pub type vyre_driver::pipeline::cache::PipelineCacheMissEvidence::Owned = T
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::clone_into(&self, target: &mut T)
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::pipeline::cache::PipelineCacheMissEvidence where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::pipeline::cache::PipelineCacheMissEvidence where T: ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::pipeline::cache::PipelineCacheMissEvidence where T: ?core::marker::Sized
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::pipeline::cache::PipelineCacheMissEvidence where T: core::clone::Clone
+pub unsafe fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+pub fn vyre_driver::pipeline::cache::PipelineCacheMissEvidence::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+impl<T> typenum::type_operators::Same for vyre_driver::pipeline::cache::PipelineCacheMissEvidence
+pub type vyre_driver::pipeline::cache::PipelineCacheMissEvidence::Output = T
 pub struct vyre_driver::PipelineCacheSnapshot
 pub vyre_driver::PipelineCacheSnapshot::hits: u64
 pub vyre_driver::PipelineCacheSnapshot::misses: u64
@@ -15233,10 +17099,66 @@ impl<T> tracing::instrument::Instrument for vyre_driver::pipeline::cache::Pipeli
 impl<T> tracing::instrument::WithSubscriber for vyre_driver::pipeline::cache::PipelineFeatureFlags
 impl<T> typenum::type_operators::Same for vyre_driver::pipeline::cache::PipelineFeatureFlags
 pub type vyre_driver::pipeline::cache::PipelineFeatureFlags::Output = T
+pub struct vyre_driver::ReplayEvidence
+pub vyre_driver::ReplayEvidence::capsule_digest: core::option::Option<alloc::string::String>
+pub vyre_driver::ReplayEvidence::command: alloc::string::String
+impl vyre_driver::evidence::ReplayEvidence
+pub fn vyre_driver::evidence::ReplayEvidence::new(command: impl core::convert::Into<alloc::string::String>, capsule_digest: core::option::Option<alloc::string::String>) -> Self
+impl core::clone::Clone for vyre_driver::evidence::ReplayEvidence
+pub fn vyre_driver::evidence::ReplayEvidence::clone(&self) -> vyre_driver::evidence::ReplayEvidence
+impl core::cmp::Eq for vyre_driver::evidence::ReplayEvidence
+impl core::cmp::PartialEq for vyre_driver::evidence::ReplayEvidence
+pub fn vyre_driver::evidence::ReplayEvidence::eq(&self, other: &vyre_driver::evidence::ReplayEvidence) -> bool
+impl core::fmt::Debug for vyre_driver::evidence::ReplayEvidence
+pub fn vyre_driver::evidence::ReplayEvidence::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for vyre_driver::evidence::ReplayEvidence
+impl serde_core::ser::Serialize for vyre_driver::evidence::ReplayEvidence
+pub fn vyre_driver::evidence::ReplayEvidence::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for vyre_driver::evidence::ReplayEvidence
+pub fn vyre_driver::evidence::ReplayEvidence::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for vyre_driver::evidence::ReplayEvidence
+impl core::marker::Send for vyre_driver::evidence::ReplayEvidence
+impl core::marker::Sync for vyre_driver::evidence::ReplayEvidence
+impl core::marker::Unpin for vyre_driver::evidence::ReplayEvidence
+impl core::marker::UnsafeUnpin for vyre_driver::evidence::ReplayEvidence
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::evidence::ReplayEvidence
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::evidence::ReplayEvidence
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::evidence::ReplayEvidence where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::evidence::ReplayEvidence::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::evidence::ReplayEvidence where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::evidence::ReplayEvidence::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::evidence::ReplayEvidence where U: core::convert::From<T>
+pub fn vyre_driver::evidence::ReplayEvidence::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::evidence::ReplayEvidence where U: core::convert::Into<T>
+pub type vyre_driver::evidence::ReplayEvidence::Error = core::convert::Infallible
+pub fn vyre_driver::evidence::ReplayEvidence::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::evidence::ReplayEvidence where U: core::convert::TryFrom<T>
+pub type vyre_driver::evidence::ReplayEvidence::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::evidence::ReplayEvidence::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::evidence::ReplayEvidence where T: core::clone::Clone
+pub type vyre_driver::evidence::ReplayEvidence::Owned = T
+pub fn vyre_driver::evidence::ReplayEvidence::clone_into(&self, target: &mut T)
+pub fn vyre_driver::evidence::ReplayEvidence::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::evidence::ReplayEvidence where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::evidence::ReplayEvidence::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::evidence::ReplayEvidence where T: ?core::marker::Sized
+pub fn vyre_driver::evidence::ReplayEvidence::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::evidence::ReplayEvidence where T: ?core::marker::Sized
+pub fn vyre_driver::evidence::ReplayEvidence::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::evidence::ReplayEvidence where T: core::clone::Clone
+pub unsafe fn vyre_driver::evidence::ReplayEvidence::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::evidence::ReplayEvidence
+pub fn vyre_driver::evidence::ReplayEvidence::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for vyre_driver::evidence::ReplayEvidence where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> tracing::instrument::Instrument for vyre_driver::evidence::ReplayEvidence
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::evidence::ReplayEvidence
+impl<T> typenum::type_operators::Same for vyre_driver::evidence::ReplayEvidence
+pub type vyre_driver::evidence::ReplayEvidence::Output = T
 pub struct vyre_driver::ResidentDispatchStep<'a>
 pub vyre_driver::ResidentDispatchStep::grid_override: core::option::Option<[u32; 3]>
 pub vyre_driver::ResidentDispatchStep::program: &'a vyre_foundation::ir_inner::model::program::core::Program
 pub vyre_driver::ResidentDispatchStep::resources: &'a [vyre_driver::Resource]
+pub vyre_driver::ResidentDispatchStep::workgroup_override: core::option::Option<[u32; 3]>
 impl<'a> core::marker::Freeze for vyre_driver::ResidentDispatchStep<'a>
 impl<'a> core::marker::Send for vyre_driver::ResidentDispatchStep<'a>
 impl<'a> core::marker::Sync for vyre_driver::ResidentDispatchStep<'a>
@@ -15359,6 +17281,58 @@ impl<T> tracing::instrument::Instrument for vyre_driver::ResidentReadRange<'a>
 impl<T> tracing::instrument::WithSubscriber for vyre_driver::ResidentReadRange<'a>
 impl<T> typenum::type_operators::Same for vyre_driver::ResidentReadRange<'a>
 pub type vyre_driver::ResidentReadRange<'a>::Output = T
+pub struct vyre_driver::ResidentSequenceTiming
+pub vyre_driver::ResidentSequenceTiming::device_ns: core::option::Option<u64>
+pub vyre_driver::ResidentSequenceTiming::enqueue_ns: core::option::Option<u64>
+pub vyre_driver::ResidentSequenceTiming::wait_ns: core::option::Option<u64>
+pub vyre_driver::ResidentSequenceTiming::wall_ns: u64
+impl core::clone::Clone for vyre_driver::ResidentSequenceTiming
+pub fn vyre_driver::ResidentSequenceTiming::clone(&self) -> vyre_driver::ResidentSequenceTiming
+impl core::cmp::Eq for vyre_driver::ResidentSequenceTiming
+impl core::cmp::PartialEq for vyre_driver::ResidentSequenceTiming
+pub fn vyre_driver::ResidentSequenceTiming::eq(&self, other: &vyre_driver::ResidentSequenceTiming) -> bool
+impl core::default::Default for vyre_driver::ResidentSequenceTiming
+pub fn vyre_driver::ResidentSequenceTiming::default() -> vyre_driver::ResidentSequenceTiming
+impl core::fmt::Debug for vyre_driver::ResidentSequenceTiming
+pub fn vyre_driver::ResidentSequenceTiming::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for vyre_driver::ResidentSequenceTiming
+impl core::marker::Freeze for vyre_driver::ResidentSequenceTiming
+impl core::marker::Send for vyre_driver::ResidentSequenceTiming
+impl core::marker::Sync for vyre_driver::ResidentSequenceTiming
+impl core::marker::Unpin for vyre_driver::ResidentSequenceTiming
+impl core::marker::UnsafeUnpin for vyre_driver::ResidentSequenceTiming
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::ResidentSequenceTiming
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::ResidentSequenceTiming
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::ResidentSequenceTiming where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::ResidentSequenceTiming::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::ResidentSequenceTiming where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::ResidentSequenceTiming::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::ResidentSequenceTiming where U: core::convert::From<T>
+pub fn vyre_driver::ResidentSequenceTiming::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::ResidentSequenceTiming where U: core::convert::Into<T>
+pub type vyre_driver::ResidentSequenceTiming::Error = core::convert::Infallible
+pub fn vyre_driver::ResidentSequenceTiming::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::ResidentSequenceTiming where U: core::convert::TryFrom<T>
+pub type vyre_driver::ResidentSequenceTiming::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::ResidentSequenceTiming::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::ResidentSequenceTiming where T: core::clone::Clone
+pub type vyre_driver::ResidentSequenceTiming::Owned = T
+pub fn vyre_driver::ResidentSequenceTiming::clone_into(&self, target: &mut T)
+pub fn vyre_driver::ResidentSequenceTiming::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::ResidentSequenceTiming where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::ResidentSequenceTiming::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::ResidentSequenceTiming where T: ?core::marker::Sized
+pub fn vyre_driver::ResidentSequenceTiming::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::ResidentSequenceTiming where T: ?core::marker::Sized
+pub fn vyre_driver::ResidentSequenceTiming::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::ResidentSequenceTiming where T: core::clone::Clone
+pub unsafe fn vyre_driver::ResidentSequenceTiming::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::ResidentSequenceTiming
+pub fn vyre_driver::ResidentSequenceTiming::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_driver::ResidentSequenceTiming
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::ResidentSequenceTiming
+impl<T> typenum::type_operators::Same for vyre_driver::ResidentSequenceTiming
+pub type vyre_driver::ResidentSequenceTiming::Output = T
 pub struct vyre_driver::RoutingTable
 impl vyre_driver::routing::RoutingTable
 pub fn vyre_driver::routing::RoutingTable::distribution(&self, call_site: &str) -> core::option::Option<vyre_driver::routing::Distribution>
@@ -15394,6 +17368,64 @@ impl<T> tracing::instrument::Instrument for vyre_driver::routing::RoutingTable
 impl<T> tracing::instrument::WithSubscriber for vyre_driver::routing::RoutingTable
 impl<T> typenum::type_operators::Same for vyre_driver::routing::RoutingTable
 pub type vyre_driver::routing::RoutingTable::Output = T
+pub struct vyre_driver::SourceProvenance
+pub vyre_driver::SourceProvenance::git: alloc::collections::btree::map::BTreeMap<alloc::string::String, alloc::string::String>
+pub vyre_driver::SourceProvenance::source_fingerprint: alloc::string::String
+pub vyre_driver::SourceProvenance::source_tree_fingerprint: alloc::string::String
+impl vyre_driver::evidence::SourceProvenance
+pub fn vyre_driver::evidence::SourceProvenance::capture_at(workspace_root: &std::path::Path) -> Self
+pub fn vyre_driver::evidence::SourceProvenance::capture_current() -> Self
+pub fn vyre_driver::evidence::SourceProvenance::validate(&self) -> core::result::Result<(), vyre_driver::BackendError>
+impl core::clone::Clone for vyre_driver::evidence::SourceProvenance
+pub fn vyre_driver::evidence::SourceProvenance::clone(&self) -> vyre_driver::evidence::SourceProvenance
+impl core::cmp::Eq for vyre_driver::evidence::SourceProvenance
+impl core::cmp::PartialEq for vyre_driver::evidence::SourceProvenance
+pub fn vyre_driver::evidence::SourceProvenance::eq(&self, other: &vyre_driver::evidence::SourceProvenance) -> bool
+impl core::fmt::Debug for vyre_driver::evidence::SourceProvenance
+pub fn vyre_driver::evidence::SourceProvenance::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for vyre_driver::evidence::SourceProvenance
+impl serde_core::ser::Serialize for vyre_driver::evidence::SourceProvenance
+pub fn vyre_driver::evidence::SourceProvenance::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for vyre_driver::evidence::SourceProvenance
+pub fn vyre_driver::evidence::SourceProvenance::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for vyre_driver::evidence::SourceProvenance
+impl core::marker::Send for vyre_driver::evidence::SourceProvenance
+impl core::marker::Sync for vyre_driver::evidence::SourceProvenance
+impl core::marker::Unpin for vyre_driver::evidence::SourceProvenance
+impl core::marker::UnsafeUnpin for vyre_driver::evidence::SourceProvenance
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::evidence::SourceProvenance
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::evidence::SourceProvenance
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::evidence::SourceProvenance where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::evidence::SourceProvenance::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::evidence::SourceProvenance where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::evidence::SourceProvenance::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::evidence::SourceProvenance where U: core::convert::From<T>
+pub fn vyre_driver::evidence::SourceProvenance::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::evidence::SourceProvenance where U: core::convert::Into<T>
+pub type vyre_driver::evidence::SourceProvenance::Error = core::convert::Infallible
+pub fn vyre_driver::evidence::SourceProvenance::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::evidence::SourceProvenance where U: core::convert::TryFrom<T>
+pub type vyre_driver::evidence::SourceProvenance::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::evidence::SourceProvenance::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::evidence::SourceProvenance where T: core::clone::Clone
+pub type vyre_driver::evidence::SourceProvenance::Owned = T
+pub fn vyre_driver::evidence::SourceProvenance::clone_into(&self, target: &mut T)
+pub fn vyre_driver::evidence::SourceProvenance::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::evidence::SourceProvenance where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::evidence::SourceProvenance::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::evidence::SourceProvenance where T: ?core::marker::Sized
+pub fn vyre_driver::evidence::SourceProvenance::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::evidence::SourceProvenance where T: ?core::marker::Sized
+pub fn vyre_driver::evidence::SourceProvenance::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::evidence::SourceProvenance where T: core::clone::Clone
+pub unsafe fn vyre_driver::evidence::SourceProvenance::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::evidence::SourceProvenance
+pub fn vyre_driver::evidence::SourceProvenance::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for vyre_driver::evidence::SourceProvenance where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> tracing::instrument::Instrument for vyre_driver::evidence::SourceProvenance
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::evidence::SourceProvenance
+impl<T> typenum::type_operators::Same for vyre_driver::evidence::SourceProvenance
+pub type vyre_driver::evidence::SourceProvenance::Output = T
 pub struct vyre_driver::SpecCacheKey
 pub vyre_driver::SpecCacheKey::binding_sig: u64
 pub vyre_driver::SpecCacheKey::shader_hash: u64
@@ -15808,6 +17840,7 @@ pub fn vyre_driver::CompiledPipeline::dispatch_persistent_handles(&self, _inputs
 pub fn vyre_driver::CompiledPipeline::dispatch_persistent_handles_batched(&self, batches: &[&[vyre_driver::Resource]], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<vyre_driver::OutputBuffers>, vyre_driver::BackendError>
 pub fn vyre_driver::CompiledPipeline::dispatch_persistent_handles_batched_into(&self, batches: &[&[vyre_driver::Resource]], config: &vyre_driver::DispatchConfig, outputs: &mut alloc::vec::Vec<vyre_driver::OutputBuffers>) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::CompiledPipeline::dispatch_persistent_handles_into(&self, inputs: &[vyre_driver::Resource], config: &vyre_driver::DispatchConfig, outputs: &mut vyre_driver::OutputBuffers) -> core::result::Result<(), vyre_driver::BackendError>
+pub fn vyre_driver::CompiledPipeline::dispatch_persistent_handles_timed(&self, inputs: &[vyre_driver::Resource], config: &vyre_driver::DispatchConfig) -> core::result::Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError>
 pub fn vyre_driver::CompiledPipeline::dispatch_persistent_resource_outputs(&self, _inputs: &[vyre_driver::Resource], _config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<vyre_driver::Resource>, vyre_driver::BackendError>
 pub fn vyre_driver::CompiledPipeline::id(&self) -> &str
 pub trait vyre_driver::DeviceBuffer: core::any::Any + core::marker::Send + core::marker::Sync + core::fmt::Debug
@@ -15858,6 +17891,7 @@ pub fn vyre_driver::VyreBackend::allows_host_grid_sync_split(&self) -> bool
 pub fn vyre_driver::VyreBackend::backend_metric_snapshot(&self) -> alloc::vec::Vec<(&'static str, u64)>
 pub fn vyre_driver::VyreBackend::compile_native(&self, _program: &vyre_foundation::ir_inner::model::program::core::Program, _config: &vyre_driver::DispatchConfig) -> core::result::Result<core::option::Option<alloc::sync::Arc<dyn vyre_driver::CompiledPipeline>>, vyre_driver::BackendError>
 pub fn vyre_driver::VyreBackend::compile_native_shared(&self, program: alloc::sync::Arc<vyre_foundation::ir_inner::model::program::core::Program>, config: &vyre_driver::DispatchConfig) -> core::result::Result<core::option::Option<alloc::sync::Arc<dyn vyre_driver::CompiledPipeline>>, vyre_driver::BackendError>
+pub fn vyre_driver::VyreBackend::cooperative_grid_sync_fits(&self, _program: &vyre_foundation::ir_inner::model::program::core::Program, _inputs: &[&[u8]], _config: &vyre_driver::DispatchConfig) -> core::result::Result<bool, vyre_driver::BackendError>
 pub fn vyre_driver::VyreBackend::device_lost(&self) -> bool
 pub fn vyre_driver::VyreBackend::device_profile(&self) -> vyre_driver::device_profile::DeviceProfile
 pub fn vyre_driver::VyreBackend::dispatch(&self, program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[alloc::vec::Vec<u8>], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::BackendError>
@@ -15868,6 +17902,7 @@ pub fn vyre_driver::VyreBackend::dispatch_borrowed_into(&self, program: &vyre_fo
 pub fn vyre_driver::VyreBackend::dispatch_borrowed_timed(&self, program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig) -> core::result::Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError>
 pub fn vyre_driver::VyreBackend::dispatch_resident_repeated_sequence_read_ranges_into(&self, prefix_steps: &[vyre_driver::ResidentDispatchStep<'_>], repeated_steps: &[vyre_driver::ResidentDispatchStep<'_>], repeat_count: u32, read_ranges: &[vyre_driver::ResidentReadRange<'_>], outputs: &mut [&mut alloc::vec::Vec<u8>]) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::VyreBackend::dispatch_resident_sequence_read_ranges_into(&self, steps: &[vyre_driver::ResidentDispatchStep<'_>], read_ranges: &[vyre_driver::ResidentReadRange<'_>], outputs: &mut [&mut alloc::vec::Vec<u8>]) -> core::result::Result<(), vyre_driver::BackendError>
+pub fn vyre_driver::VyreBackend::dispatch_resident_sequence_read_ranges_timed_into(&self, steps: &[vyre_driver::ResidentDispatchStep<'_>], read_ranges: &[vyre_driver::ResidentReadRange<'_>], outputs: &mut [&mut alloc::vec::Vec<u8>]) -> core::result::Result<vyre_driver::ResidentSequenceTiming, vyre_driver::BackendError>
 pub fn vyre_driver::VyreBackend::dispatch_resident_timed(&self, _program: &vyre_foundation::ir_inner::model::program::core::Program, _resources: &[vyre_driver::Resource], _config: &vyre_driver::DispatchConfig) -> core::result::Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError>
 pub fn vyre_driver::VyreBackend::dispatch_with_device_buffers(&self, _program: &vyre_foundation::ir_inner::model::program::core::Program, _inputs: &[&dyn vyre_driver::DeviceBuffer], _outputs: &mut [&mut dyn vyre_driver::DeviceBuffer], _config: &vyre_driver::DispatchConfig) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::VyreBackend::download_device_buffer(&self, _buffer: &dyn vyre_driver::DeviceBuffer) -> core::result::Result<alloc::vec::Vec<u8>, vyre_driver::BackendError>
@@ -15897,6 +17932,7 @@ pub fn vyre_driver::VyreBackend::supports_f16(&self) -> bool
 pub fn vyre_driver::VyreBackend::supports_grid_sync(&self) -> bool
 pub fn vyre_driver::VyreBackend::supports_indirect_dispatch(&self) -> bool
 pub fn vyre_driver::VyreBackend::supports_persistent_thread_dispatch(&self) -> bool
+pub fn vyre_driver::VyreBackend::supports_resident_dispatch(&self) -> bool
 pub fn vyre_driver::VyreBackend::supports_speculation(&self) -> bool
 pub fn vyre_driver::VyreBackend::supports_subgroup_ops(&self) -> bool
 pub fn vyre_driver::VyreBackend::supports_tensor_cores(&self) -> bool
@@ -15911,6 +17947,8 @@ pub fn vyre_driver::binding_plans_share_layout(a: &vyre_driver::binding::Binding
 pub fn vyre_driver::borrowed_input_batch_shapes_match(batches: &[&[&[u8]]]) -> bool
 pub fn vyre_driver::borrowed_input_shapes_match(left: &[&[u8]], right: &[&[u8]]) -> bool
 pub fn vyre_driver::borrowed_input_slices<'a>(inputs: &'a [alloc::vec::Vec<u8>], field: &'static str) -> core::result::Result<smallvec::SmallVec<[&'a [u8]; 8]>, vyre_driver::BackendError>
+pub fn vyre_driver::capture_git_info() -> alloc::collections::btree::map::BTreeMap<alloc::string::String, alloc::string::String>
+pub fn vyre_driver::capture_git_info_at(workspace_root: &std::path::Path) -> alloc::collections::btree::map::BTreeMap<alloc::string::String, alloc::string::String>
 pub fn vyre_driver::coerce_to_pow2_with_tail_mask(element_count: u32) -> vyre_driver::TailMaskPolicy
 pub fn vyre_driver::compile(backend: alloc::sync::Arc<dyn vyre_driver::VyreBackend>, program: &vyre_foundation::ir_inner::model::program::core::Program, config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::sync::Arc<dyn vyre_driver::CompiledPipeline>, vyre_driver::BackendError>
 pub fn vyre_driver::compile_owned(backend: alloc::sync::Arc<dyn vyre_driver::VyreBackend>, program: vyre_foundation::ir_inner::model::program::core::Program, config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::sync::Arc<dyn vyre_driver::CompiledPipeline>, vyre_driver::BackendError>
@@ -15922,6 +17960,7 @@ pub fn vyre_driver::default_dispatch_with_device_buffers(backend: &dyn vyre_driv
 pub fn vyre_driver::default_validator() -> bool
 pub fn vyre_driver::dispatch_configs_share_launch_shape(compiled: &vyre_driver::DispatchConfig, runtime: &vyre_driver::DispatchConfig) -> bool
 pub fn vyre_driver::dispatch_element_count(bindings: &[vyre_driver::binding::Binding]) -> u32
+pub fn vyre_driver::dispatch_element_count_for_program(program: &vyre_foundation::ir_inner::model::program::core::Program, bindings: &[vyre_driver::binding::Binding]) -> u32
 pub fn vyre_driver::dispatch_param_words_into(bindings: &[vyre_driver::binding::Binding], element_count: u32, words: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_driver::element_size_bytes(data_type: &vyre_spec::data_type::DataType) -> core::result::Result<usize, vyre_driver::BackendError>
 pub fn vyre_driver::emit_aot_target(target: &str, program: &vyre_foundation::ir_inner::model::program::core::Program, config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<u8>, vyre_driver::BackendError>
@@ -15944,6 +17983,9 @@ pub fn vyre_driver::replace_output_buffers_preserving_slots(incoming: vyre_drive
 pub fn vyre_driver::resolve_fixpoint_iterations(config: &vyre_driver::DispatchConfig, backend: &str) -> core::result::Result<u32, vyre_driver::BackendError>
 pub fn vyre_driver::resolve_fixpoint_iterations_usize(config: &vyre_driver::DispatchConfig, backend: &str) -> core::result::Result<usize, vyre_driver::BackendError>
 pub fn vyre_driver::select_sort_backend(distribution: vyre_driver::routing::Distribution) -> vyre_driver::routing::SortBackend
+pub fn vyre_driver::source_fingerprint(git: &alloc::collections::btree::map::BTreeMap<alloc::string::String, alloc::string::String>) -> alloc::string::String
+pub fn vyre_driver::source_tree_fingerprint() -> alloc::string::String
+pub fn vyre_driver::source_tree_fingerprint_at(workspace_root: &std::path::Path) -> alloc::string::String
 pub fn vyre_driver::try_coerce_to_pow2_with_tail_mask(element_count: u32) -> core::result::Result<vyre_driver::TailMaskPolicy, vyre_driver::BackendError>
 pub fn vyre_driver::try_dispatch_param_words(bindings: &[vyre_driver::binding::Binding], element_count: u32) -> core::result::Result<alloc::vec::Vec<u32>, alloc::string::String>
 pub fn vyre_driver::try_dispatch_param_words_into(bindings: &[vyre_driver::binding::Binding], element_count: u32, words: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
