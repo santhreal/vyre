@@ -92,6 +92,29 @@ fn u64_shared_binop(op: &BinOp, left: u64, right: u64) -> Option<Value> {
 }
 
 pub(super) fn eval_unop(op: &UnOp, operand: Value) -> Result<Value, vyre::Error> {
+    // Bit-unpack ops extract a nibble/byte from a 32-bit integer's bit pattern
+    // into a u32 (doc: "Unpack lower/upper N-bits of a u8/u32 into a u32"). They
+    // are SHARED across operand type — handled here before per-type dispatch,
+    // mirroring the Min/Max/AbsDiff shared-binop path. They match the emit
+    // lowering (`vyre-emit-naga` op_lookup `unpack_shift_mask`: `(v >> shift) &
+    // mask`) and foundation `ir_eval`. The reference previously REJECTED them
+    // (the integer-unop macro's `_ => Err` arm), so an Unpack-bearing program
+    // could not be evaluated by the oracle even though every backend + ir_eval
+    // lower it — a coherence gap (the oracle must be at least as complete as the
+    // layers it certifies). The trailing `& mask` makes the shift's signedness
+    // irrelevant, so U32 and I32 operands extract identical bits.
+    if let Some((shift, mask)) = unpack_shift_mask(op) {
+        let bits = match operand {
+            Value::U32(v) => v,
+            Value::I32(v) => v as u32,
+            other => {
+                return Err(Error::interp(format!(
+                    "unary op `{op:?}` (bit unpack) requires a 32-bit integer operand, got {other:?}. Fix: cast to u32/i32 before unpacking."
+                )))
+            }
+        };
+        return Ok(Value::U32((bits >> shift) & mask));
+    }
     match operand {
         Value::U32(value) => unop_u32(op, value),
         Value::I32(value) => unop_i32(op, value),
@@ -101,6 +124,21 @@ pub(super) fn eval_unop(op: &UnOp, operand: Value) -> Result<Value, vyre::Error>
         value => Err(Error::interp(format!(
             "unary op `{op:?}` received non-primitive operand {value:?}. Fix: load or cast to a scalar primitive before applying unary ops."
         ))),
+    }
+}
+
+/// `(shift, mask)` for the bit-unpack unary ops, identical to the emit lowering
+/// (`vyre-emit-naga` `op_lookup::unpack_shift_mask`) and foundation `ir_eval`:
+/// `Unpack4Low = v & 0x0F`, `Unpack4High = (v >> 4) & 0x0F`,
+/// `Unpack8Low = v & 0xFF`, `Unpack8High = (v >> 24) & 0xFF`. `None` for every
+/// other unary op so the normal per-type dispatch handles them.
+fn unpack_shift_mask(op: &UnOp) -> Option<(u32, u32)> {
+    match op {
+        UnOp::Unpack4Low => Some((0, 0x0F)),
+        UnOp::Unpack4High => Some((4, 0x0F)),
+        UnOp::Unpack8Low => Some((0, 0xFF)),
+        UnOp::Unpack8High => Some((24, 0xFF)),
+        _ => None,
     }
 }
 
@@ -652,6 +690,60 @@ mod tests {
             )
             .unwrap(),
             Value::Bool(false)
+        );
+    }
+
+    /// The oracle implements the bit-unpack ops with the SAME semantics as the
+    /// emit lowering (`op_lookup::unpack_shift_mask`) and foundation `ir_eval`:
+    /// nibble/byte extraction into a u32. Before this, the reference rejected
+    /// them ("unsupported IR"), so Unpack-bearing programs could not be
+    /// differentially validated against the oracle.
+    #[test]
+    fn unpack_ops_extract_nibble_and_byte_matching_emit_lowering() {
+        // 0x89ABCDEF: bytes 0x89(hi) 0xAB 0xCD 0xEF(lo); low nibble 0xF, bits4-7 0xE.
+        let v = Value::U32(0x89AB_CDEF);
+        assert_eq!(
+            eval_unop(&UnOp::Unpack4Low, v.clone()).unwrap(),
+            Value::U32(0x0F),
+            "Unpack4Low = v & 0x0F"
+        );
+        assert_eq!(
+            eval_unop(&UnOp::Unpack4High, v.clone()).unwrap(),
+            Value::U32(0x0E),
+            "Unpack4High = (v >> 4) & 0x0F"
+        );
+        assert_eq!(
+            eval_unop(&UnOp::Unpack8Low, v.clone()).unwrap(),
+            Value::U32(0xEF),
+            "Unpack8Low = v & 0xFF (byte 0)"
+        );
+        assert_eq!(
+            eval_unop(&UnOp::Unpack8High, v).unwrap(),
+            Value::U32(0x89),
+            "Unpack8High = (v >> 24) & 0xFF (byte 3)"
+        );
+    }
+
+    /// `& mask` makes the shift's signedness irrelevant: an i32 carrying the
+    /// same bit pattern extracts identical nibbles/bytes as the u32 (proves the
+    /// reference can soundly treat both as the raw bit pattern, matching the
+    /// backends where the trailing mask discards the arithmetic-shift sign fill).
+    #[test]
+    fn unpack_on_signed_operand_extracts_identical_bits() {
+        let i = Value::I32(0x89AB_CDEFu32 as i32); // a negative i32
+        assert_eq!(eval_unop(&UnOp::Unpack8High, i.clone()).unwrap(), Value::U32(0x89));
+        assert_eq!(eval_unop(&UnOp::Unpack4High, i.clone()).unwrap(), Value::U32(0x0E));
+        assert_eq!(eval_unop(&UnOp::Unpack8Low, i).unwrap(), Value::U32(0xEF));
+    }
+
+    /// A non-integer operand to an unpack op fails LOUDLY (not silently), since
+    /// bit extraction is only defined on a 32-bit integer bit pattern.
+    #[test]
+    fn unpack_on_float_operand_fails_loudly() {
+        let err = eval_unop(&UnOp::Unpack8Low, Value::Float(1.5)).unwrap_err();
+        assert!(
+            format!("{err}").contains("bit unpack"),
+            "unpack on a float must surface a loud bit-unpack type error, got: {err}"
         );
     }
 }
