@@ -62,7 +62,10 @@ fn cast_program(target: DataType, n: u32) -> Program {
 }
 
 fn run_cast(backend: &WgpuBackend, target: DataType) -> Vec<u32> {
-    let inputs = cast_inputs();
+    run_cast_inputs(backend, target, &cast_inputs())
+}
+
+fn run_cast_inputs(backend: &WgpuBackend, target: DataType, inputs: &[f32]) -> Vec<u32> {
     let n = inputs.len() as u32;
     let program = cast_program(target, n);
     // Pack the raw f32 bit patterns into the input buffer.
@@ -201,5 +204,60 @@ fn f32_to_i32_cast_saturates_like_reference_including_nan() {
         cast_inputs(),
         expected,
         gpu
+    );
+}
+
+#[test]
+fn f32_to_int_cast_threshold_boundaries_match_reference() {
+    // The fix's overflow threshold is 2^31 (i32) / 2^32 (u32). Exercise the exact
+    // boundary: the largest f32 strictly inside the integer range (must convert
+    // exactly, NOT saturate) vs the first f32 at/above the threshold (must
+    // saturate to INT_MAX). There is no representable f32 between these two, so
+    // the threshold must land precisely or an in-range value wrongly saturates
+    // (or an overflow wrongly converts). Negative boundaries confirm the FClamp
+    // low bound (i32::MIN is exactly f32-representable) still matches.
+    let backend = WgpuBackend::acquire()
+        .expect("Fix: float→int cast parity requires a live GPU backend.");
+
+    // i32 boundaries.
+    //   2147483520 = 0x4EFFFFFF f32 = largest f32 <= i32::MAX (in range, exact).
+    //   2147483648 = 2^31       f32 = first f32 above i32::MAX (overflow).
+    //  -2147483648 = -2^31      f32 = i32::MIN exactly (in range).
+    //  -2147483904               = next f32 below -2^31 (underflow -> i32::MIN).
+    let i_inputs = [
+        2_147_483_520.0_f32,
+        2_147_483_648.0_f32,
+        -2_147_483_648.0_f32,
+        -2_147_483_904.0_f32,
+    ];
+    let gpu_i: Vec<i32> = run_cast_inputs(&backend, DataType::I32, &i_inputs)
+        .iter()
+        .map(|&w| w as i32)
+        .collect();
+    let ref_i: Vec<i32> = i_inputs.iter().map(|&f| f64::from(f) as i32).collect();
+    assert_eq!(
+        ref_i,
+        vec![2_147_483_520, i32::MAX, i32::MIN, i32::MIN],
+        "i32 reference boundary values drifted"
+    );
+    assert_eq!(
+        gpu_i, ref_i,
+        "GPU f32→i32 boundary cast diverged.\n  inputs:   {i_inputs:?}\n  expected: {ref_i:?}\n  gpu:      {gpu_i:?}"
+    );
+
+    // u32 boundaries.
+    //   4294967040 = largest f32 <= u32::MAX (in range, exact).
+    //   4294967296 = 2^32 = first f32 above u32::MAX (overflow).
+    let u_inputs = [4_294_967_040.0_f32, 4_294_967_296.0_f32, 0.0_f32];
+    let gpu_u = run_cast_inputs(&backend, DataType::U32, &u_inputs);
+    let ref_u: Vec<u32> = u_inputs.iter().map(|&f| f64::from(f) as u32).collect();
+    assert_eq!(
+        ref_u,
+        vec![4_294_967_040, u32::MAX, 0],
+        "u32 reference boundary values drifted"
+    );
+    assert_eq!(
+        gpu_u, ref_u,
+        "GPU f32→u32 boundary cast diverged.\n  inputs:   {u_inputs:?}\n  expected: {ref_u:?}\n  gpu:      {gpu_u:?}"
     );
 }
