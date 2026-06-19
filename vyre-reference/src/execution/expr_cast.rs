@@ -39,10 +39,23 @@ pub(crate) fn cast_value(target: &DataType, value: &Value) -> Result<Value, vyre
                 .map(|value| Value::I32(value as i32))
                 .ok_or_else(|| invalid_cast(target, value)),
         },
-        DataType::U64 => value
-            .try_as_u64()
-            .map(Value::U64)
-            .ok_or_else(|| invalid_cast(target, value)),
+        // 64-bit integer widening. `I64` and `U64` share the `Value::U64`
+        // bit-pattern representation (the model has no distinct `I64`). The
+        // high bits extend per the SOURCE's signedness so the reference matches
+        // the backends (PTX `cvt.s64.s32`, naga sign-replicate) and Rust `as`:
+        // a signed `i32` SIGN-extends (`-1i32 -> 0xFFFF_FFFF_FFFF_FFFF`), an
+        // unsigned/bool source zero-extends. `try_as_u64`'s `u64::try_from`
+        // would instead REJECT negative `i32` — diverging from every backend —
+        // so the signed case is handled explicitly here before delegating the
+        // rest. Adding `I64` here also removes it from the `_ => to_bytes()`
+        // catch-all, which silently produced a 4-byte payload with no extension.
+        DataType::U64 | DataType::I64 => match value {
+            Value::I32(v) => Ok(Value::U64(*v as i64 as u64)),
+            _ => value
+                .try_as_u64()
+                .map(Value::U64)
+                .ok_or_else(|| invalid_cast(target, value)),
+        },
         DataType::F32 => match value {
             // Integer → float is a value conversion, not a bit-cast,
             // matching backend `f32(u32_value)` semantics. Without this
@@ -115,6 +128,55 @@ mod tests {
             value.to_bytes(),
             (0u8..16).collect::<Vec<_>>(),
             "Fix: vector casts must truncate oversized payloads at the declared lane width."
+        );
+    }
+
+    /// Signed 32-bit widened to a 64-bit integer must SIGN-extend so the
+    /// reference matches the backends (PTX `cvt.s64.s32`, naga sign-replicate)
+    /// and Rust `i32 as i64`. Before the fix `try_as_u64`'s `u64::try_from`
+    /// REJECTED negatives, so a negative `i32 -> u64` cast errored in the oracle
+    /// while every backend produced a value — a silent divergence. And `I64`
+    /// had no arm at all (fell to the `to_bytes()` catch-all, 4 bytes, no
+    /// extension).
+    #[test]
+    fn cast_i32_to_u64_and_i64_sign_extends_negative() {
+        // -1i32 -> 0xFFFF_FFFF_FFFF_FFFF in both U64 and I64 (shared bits).
+        assert_eq!(
+            cast_value(&DataType::U64, &Value::I32(-1)).expect("i32->u64 must succeed"),
+            Value::U64(0xFFFF_FFFF_FFFF_FFFF),
+            "negative i32 -> u64 must sign-extend, not reject or zero-extend"
+        );
+        assert_eq!(
+            cast_value(&DataType::I64, &Value::I32(-1)).expect("i32->i64 must succeed"),
+            Value::U64(0xFFFF_FFFF_FFFF_FFFF),
+            "negative i32 -> i64 must sign-extend (shares the U64 bit pattern)"
+        );
+        // A different negative proves true sign extension, not a constant.
+        assert_eq!(
+            cast_value(&DataType::I64, &Value::I32(-2)).expect("i32->i64 must succeed"),
+            Value::U64(0xFFFF_FFFF_FFFF_FFFE),
+            "i32 -2 -> i64 must be 0xFFFF_FFFF_FFFF_FFFE"
+        );
+    }
+
+    /// The non-negative twin: u32 and non-negative i32 ZERO-extend into the
+    /// 64-bit value (high bits clear).
+    #[test]
+    fn cast_to_u64_zero_extends_non_negative() {
+        assert_eq!(
+            cast_value(&DataType::U64, &Value::U32(7)).expect("u32->u64 must succeed"),
+            Value::U64(7),
+            "u32 -> u64 must zero-extend"
+        );
+        assert_eq!(
+            cast_value(&DataType::I64, &Value::U32(0xDEAD_BEEF)).expect("u32->i64 must succeed"),
+            Value::U64(0x0000_0000_DEAD_BEEF),
+            "u32 -> i64 must zero-extend (high word clear)"
+        );
+        assert_eq!(
+            cast_value(&DataType::U64, &Value::I32(5)).expect("i32->u64 must succeed"),
+            Value::U64(5),
+            "non-negative i32 -> u64 must equal the value (sign bit clear)"
         );
     }
 

@@ -144,6 +144,83 @@ fn cast_i32_to_u64_sign_extends() {
     );
 }
 
+/// I32 → I64 must sign-extend via `cvt.s64.s32`, exactly like I32 → U64: the
+/// I64 target shares the 64-bit register class (`PtxType::U64`). Before
+/// `from_dtype` mapped I64, this valid cast (`cast_is_valid` allows i32→i64)
+/// errored with `UnsupportedDataType(I64)`.
+#[test]
+fn cast_i32_to_i64_sign_extends() {
+    let kernel = KernelDescriptor {
+        id: "cast_i32_i64".into(),
+        bindings: BindingLayout { slots: vec![] },
+        dispatch: Dispatch::new(1, 1, 1),
+        body: KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(0),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Cast {
+                        target: DataType::I32,
+                    },
+                    operands: vec![0],
+                    result: Some(1),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Cast {
+                        target: DataType::I64,
+                    },
+                    operands: vec![1],
+                    result: Some(2),
+                },
+            ],
+            child_bodies: vec![],
+            literals: vec![LiteralValue::U32(3)],
+        },
+    };
+    let s = emit(&kernel).unwrap();
+    assert!(
+        s.contains("cvt.s64.s32"),
+        "I32 → I64 must sign-extend via cvt.s64.s32:\n{s}"
+    );
+}
+
+/// U32 → I64 must zero-extend via `cvt.u64.u32` (non-negative source), the
+/// unsigned twin of the sign-extend above.
+#[test]
+fn cast_u32_to_i64_zero_extends() {
+    let kernel = KernelDescriptor {
+        id: "cast_u32_i64".into(),
+        bindings: BindingLayout { slots: vec![] },
+        dispatch: Dispatch::new(1, 1, 1),
+        body: KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(0),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Cast {
+                        target: DataType::I64,
+                    },
+                    operands: vec![0],
+                    result: Some(1),
+                },
+            ],
+            child_bodies: vec![],
+            literals: vec![LiteralValue::U32(9)],
+        },
+    };
+    let s = emit(&kernel).unwrap();
+    assert!(
+        s.contains("cvt.u64.u32"),
+        "U32 → I64 must zero-extend via cvt.u64.u32:\n{s}"
+    );
+}
+
 #[test]
 fn f32_to_bool_cast_uses_unordered_not_equal_for_nan_truthiness() {
     let kernel = KernelDescriptor {

@@ -48,7 +48,14 @@ impl PtxType {
             DataType::U8 | DataType::U16 | DataType::U32 => Ok(Self::U32),
             DataType::I8 | DataType::I16 | DataType::I32 => Ok(Self::I32),
             DataType::F16 | DataType::BF16 | DataType::F32 => Ok(Self::F32),
-            DataType::U64 => Ok(Self::U64),
+            // PTX 64-bit registers (`%rd`, `.u64`) are typeless bit containers
+            // — signedness is per-instruction, not per-register — so both U64
+            // and I64 map here. `validate::cast::cast_is_valid` allows
+            // `i32 -> i64`, and `emit_cast`'s `(I32, U64) => cvt.s64.s32`
+            // sign-extend / `(U32, U64) => cvt.u64.u32` zero-extend arms then
+            // produce the correct 64-bit pattern. Before this, I64 fell to the
+            // `other` arm and a valid `Cast { target: I64 }` errored.
+            DataType::U64 | DataType::I64 => Ok(Self::U64),
             // `Bytes` is a packed-byte buffer-element marker, NOT a scalar
             // register type. Folding it into `.u32` here would silently
             // reinterpret a byte stream as a word (Law 10): a `Bytes` buffer
