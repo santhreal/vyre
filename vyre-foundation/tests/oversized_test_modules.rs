@@ -30,31 +30,13 @@ fn workspace_oversized_test_modules_are_baselined() {
         "conform/vyre-test-harness",
     ];
 
-    let mut known: HashMap<String, usize> = HashMap::new();
-    known.insert(
-        "vyre-frontend-c/tests/r2_corpus_measurement.rs".to_string(),
-        884,
-    );
-    known.insert(
-        "vyre-frontend-c/tests/gpu_prep_kernel_libc_shape.rs".to_string(),
-        1034,
-    );
-    known.insert(
-        "vyre-frontend-c/tests/support/ast_oracle.rs".to_string(),
-        1012,
-    );
-    known.insert(
-        "conform/vyre-conform-runner/tests/release_gate_contracts.rs".to_string(),
-        856,
-    );
-    known.insert(
-        "conform/vyre-conform-runner/tests/cert_artifact.rs".to_string(),
-        823,
-    );
-    known.insert(
-        "vyre-primitives/tests/adversarial_graph_csr_validation_contracts.rs".to_string(),
-        885,
-    );
+    // Baseline of grandfathered oversized (>800-line) test modules. Every prior
+    // entry (r2_corpus_measurement, gpu_prep_kernel_libc_shape, ast_oracle,
+    // release_gate_contracts, cert_artifact, adversarial_graph_csr_validation_
+    // contracts) has since been split below the threshold, so the baseline is
+    // now EMPTY: any tests/ module that grows past 800 lines must be split or
+    // explicitly re-added here with justification.
+    let known: HashMap<String, usize> = HashMap::new();
 
     let known_set: HashSet<String> = known.keys().cloned().collect();
 
