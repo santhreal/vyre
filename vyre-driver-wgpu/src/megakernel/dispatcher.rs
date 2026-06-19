@@ -1416,6 +1416,253 @@ fn batch_program_buffers(hit_capacity: u32) -> Vec<BufferDecl> {
     ]
 }
 
+// ─── Combined-AC segmented megakernel ──────────────────────────────────────
+//
+// The per-rule path above runs ONE 2-/N-state DFA per (segment, rule) work
+// item, so a catalog of K patterns multiplies the queue by K: every byte is
+// re-read K times. The combined path compiles ALL patterns into ONE
+// Aho-Corasick automaton (`vyre_libs::scan::classic_ac::classic_ac_compile`)
+// and runs it ONCE per segment: `queue_len = segment_count` (no rule
+// dimension). Each accepting state emits the SET of pattern ids that match
+// there via the `output_offsets`/`output_records` flat arrays, so a single
+// transition read per byte covers every pattern. The window decode, warm-up
+// prefix, and emit-guard are byte-for-byte the per-rule path's — the SAME
+// `plan_segments`/`segment_table` geometry and the SAME
+// `byte_pos >= emit_start` ownership rule the `segmentation.rs`
+// `combined_segmented_scan` CPU oracle proves equal to a linear
+// `classic_ac_scan`.
+
+/// Buffer layout for the combined-AC segmented megakernel.
+///
+/// Mirrors [`batch_program_buffers`] but swaps the four per-rule automaton
+/// buffers (`class_maps`/`rule_meta`/`transitions`/`accept`) for the three
+/// combined-AC buffers (`transitions`/`output_offsets`/`output_records`) and
+/// drops the rule dimension. `segments` stays last so it occupies the final
+/// positional input slot, exactly as the per-rule path requires.
+fn combined_batch_program_buffers(hit_capacity: u32) -> Vec<BufferDecl> {
+    let hit_ring_words = hit_capacity.saturating_mul(4);
+    vec![
+        BufferDecl::storage("file_offsets", 0, BufferAccess::ReadOnly, DataType::U32),
+        BufferDecl::storage("file_metadata", 1, BufferAccess::ReadOnly, DataType::U32),
+        BufferDecl::storage("haystack", 2, BufferAccess::ReadOnly, DataType::U32),
+        // Combined Aho-Corasick automaton, flattened:
+        //   transitions:    state_count * 256   (dense byte->next-state table)
+        //   output_offsets: state_count + 1     (CSR row pointers per state)
+        //   output_records: output_records_len  (flat pattern_id payload)
+        BufferDecl::storage("transitions", 3, BufferAccess::ReadOnly, DataType::U32),
+        BufferDecl::storage("output_offsets", 4, BufferAccess::ReadOnly, DataType::U32),
+        BufferDecl::storage("output_records", 5, BufferAccess::ReadOnly, DataType::U32),
+        BufferDecl::storage("queue_state", 6, BufferAccess::ReadWrite, DataType::U32).with_count(
+            dispatcher_abi_u32(QUEUE_STATE_WORDS, "queue-state word count"),
+        ),
+        BufferDecl::output("hit_ring", 7, DataType::U32).with_count(hit_ring_words),
+        BufferDecl::storage("segments", 8, BufferAccess::ReadOnly, DataType::U32),
+    ]
+}
+
+/// Build the combined-AC segmented megakernel program.
+///
+/// Identical drain loop to [`build_batch_program`] (`forever` + `claim >=
+/// QUEUE_LEN` Return, Law-10 no under-claim), with the per-rule claim body
+/// replaced by [`execute_combined_claim_body`]. `queue_len = segment_count`
+/// (one work item per segment), set by the host.
+pub(crate) fn build_combined_batch_program(workgroup_size_x: u32, hit_capacity: u32) -> Program {
+    let queue_len = atomic_load_relaxed(
+        "queue_state",
+        Expr::u32(dispatcher_abi_u32(
+            queue_state_word::QUEUE_LEN,
+            "queue-state length word",
+        )),
+    );
+    let mut loop_body = vec![
+        Node::let_bind(
+            "claim",
+            Expr::atomic_add(
+                "queue_state",
+                Expr::u32(dispatcher_abi_u32(
+                    queue_state_word::HEAD,
+                    "queue-state head word",
+                )),
+                Expr::u32(1),
+            ),
+        ),
+        Node::if_then(
+            Expr::ge(Expr::var("claim"), queue_len),
+            vec![Node::Return],
+        ),
+    ];
+    loop_body.extend(execute_combined_claim_body());
+
+    Program::wrapped(
+        combined_batch_program_buffers(hit_capacity),
+        [workgroup_size_x, 1, 1],
+        vec![Node::forever(loop_body)],
+    )
+}
+
+/// Decode one combined-AC claim into its file window and scan it.
+///
+/// `queue_len = segment_count`, so the claim IS the segment index directly (no
+/// `/ rule_count` — there is no rule dimension). The segment row layout
+/// `[file_idx, scan_start, emit_start, emit_end]` and the absolute-bounds
+/// arithmetic are identical to [`execute_batch_claim_body`].
+fn execute_combined_claim_body() -> Vec<Node> {
+    vec![
+        // claim == seg_idx (one work item per segment).
+        Node::let_bind("seg_idx", Expr::var("claim")),
+        Node::let_bind(
+            "seg_base",
+            Expr::mul(
+                Expr::var("seg_idx"),
+                Expr::u32(dispatcher_abi_u32(SEGMENT_WORDS, "segment table word count")),
+            ),
+        ),
+        Node::let_bind("file_idx", Expr::load("segments", Expr::var("seg_base"))),
+        Node::let_bind(
+            "scan_start_rel",
+            Expr::load("segments", Expr::add(Expr::var("seg_base"), Expr::u32(1))),
+        ),
+        Node::let_bind(
+            "emit_start_rel",
+            Expr::load("segments", Expr::add(Expr::var("seg_base"), Expr::u32(2))),
+        ),
+        Node::let_bind(
+            "emit_end_rel",
+            Expr::load("segments", Expr::add(Expr::var("seg_base"), Expr::u32(3))),
+        ),
+        Node::let_bind(
+            "metadata_base",
+            Expr::mul(
+                Expr::var("file_idx"),
+                Expr::u32(dispatcher_abi_u32(
+                    FILE_METADATA_WORDS,
+                    "file metadata word count",
+                )),
+            ),
+        ),
+        Node::let_bind(
+            "layer_idx",
+            Expr::load(
+                "file_metadata",
+                Expr::add(Expr::var("metadata_base"), Expr::u32(3)),
+            ),
+        ),
+        Node::let_bind(
+            "file_start",
+            Expr::load("file_offsets", Expr::var("file_idx")),
+        ),
+        Node::let_bind(
+            "scan_start",
+            Expr::add(Expr::var("file_start"), Expr::var("scan_start_rel")),
+        ),
+        Node::let_bind(
+            "emit_start",
+            Expr::add(Expr::var("file_start"), Expr::var("emit_start_rel")),
+        ),
+        Node::let_bind(
+            "emit_end",
+            Expr::add(Expr::var("file_start"), Expr::var("emit_end_rel")),
+        ),
+        Node::Block(combined_dfa_byte_scanner()),
+        Node::let_bind(
+            "done_prev",
+            Expr::atomic_add(
+                "queue_state",
+                Expr::u32(dispatcher_abi_u32(
+                    queue_state_word::DONE_COUNT,
+                    "queue-state done-count word",
+                )),
+                Expr::u32(1),
+            ),
+        ),
+    ]
+}
+
+/// Combined Aho-Corasick window scan with per-state multi-emit.
+///
+/// Walks the dense combined automaton over `[scan_start, emit_end)` from state
+/// 0; the `[scan_start, emit_start)` prefix is warm-up (advances state, emits
+/// nothing). Once `byte_pos >= emit_start`, every pattern id in this state's
+/// CSR row `output_records[output_offsets[state] .. output_offsets[state+1]]`
+/// is emitted at `match_offset = byte_pos - file_start`. This is the only
+/// place the kernel diverges from the per-rule scanner: a CSR multi-emit loop
+/// instead of a single `accept[state]` flag, mirroring the
+/// `combined_segmented_scan` CPU oracle exactly.
+fn combined_dfa_byte_scanner() -> Vec<Node> {
+    vec![
+        Node::let_bind("state", Expr::u32(0)),
+        Node::loop_for(
+            "byte_pos",
+            Expr::var("scan_start"),
+            Expr::var("emit_end"),
+            vec![
+                Node::let_bind(
+                    "haystack_word_index",
+                    Expr::div(Expr::var("byte_pos"), Expr::u32(4)),
+                ),
+                Node::let_bind(
+                    "haystack_shift",
+                    Expr::mul(Expr::rem(Expr::var("byte_pos"), Expr::u32(4)), Expr::u32(8)),
+                ),
+                Node::let_bind(
+                    "byte",
+                    Expr::bitand(
+                        Expr::shr(
+                            Expr::load("haystack", Expr::var("haystack_word_index")),
+                            Expr::var("haystack_shift"),
+                        ),
+                        Expr::u32(0xFF),
+                    ),
+                ),
+                // Dense combined transition: state = transitions[state*256 + byte].
+                Node::assign(
+                    "state",
+                    Expr::load(
+                        "transitions",
+                        Expr::add(Expr::mul(Expr::var("state"), Expr::u32(256)), Expr::var("byte")),
+                    ),
+                ),
+                // Emit guard: only positions owned by this window
+                // (`byte_pos >= emit_start`; the loop bound enforces
+                // `byte_pos < emit_end`). Warm-up bytes advance state but emit
+                // nothing, so adjacent windows tile each file with no double
+                // count and no miss.
+                Node::if_then(
+                    Expr::ge(Expr::var("byte_pos"), Expr::var("emit_start")),
+                    vec![
+                        Node::let_bind(
+                            "out_begin",
+                            Expr::load("output_offsets", Expr::var("state")),
+                        ),
+                        Node::let_bind(
+                            "out_end",
+                            Expr::load(
+                                "output_offsets",
+                                Expr::add(Expr::var("state"), Expr::u32(1)),
+                            ),
+                        ),
+                        // Multi-emit: one HitRecord per pattern id accepting at
+                        // this state. `rule_idx` carries the pattern id (the
+                        // combined automaton's pattern == the catalog rule).
+                        Node::loop_for(
+                            "out_idx",
+                            Expr::var("out_begin"),
+                            Expr::var("out_end"),
+                            vec![
+                                Node::let_bind(
+                                    "rule_idx",
+                                    Expr::load("output_records", Expr::var("out_idx")),
+                                ),
+                                Node::Block(record_hit_to_ring()),
+                            ],
+                        ),
+                    ],
+                ),
+            ],
+        ),
+    ]
+}
+
 fn execute_batch_claim_body(hit_writer: BatchHitWriter) -> Vec<Node> {
     vec![
         Node::let_bind(
@@ -1795,6 +2042,74 @@ fn decode_hits_from_readback_into(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The combined-AC segmented program must lower through the REAL WGSL
+    /// pipeline (`descriptor_gate::validate_and_analyze` → `vyre_emit_naga::emit`
+    /// → Naga validation → WGSL writer). Naga's validator rejects malformed
+    /// control flow, type errors, or invalid buffer access, so a successful
+    /// lower is a genuine proof the multi-emit nested loops + combined
+    /// transition read are valid GPU code — not a shape check. We additionally
+    /// assert every combined-automaton buffer and the multi-emit payload buffer
+    /// survive into the emitted WGSL (Naga names globals after the BufferDecl),
+    /// so the kernel actually reads the combined tables rather than lowering to
+    /// a stripped no-op.
+    #[test]
+    fn combined_batch_program_lowers_to_valid_wgsl_referencing_combined_tables() {
+        let program = build_combined_batch_program(64, 1024);
+        let wgsl = crate::emit::lower(&program)
+            .expect("Fix: combined-AC segmented program must lower to valid WGSL");
+        for needle in [
+            "transitions",
+            "output_offsets",
+            "output_records",
+            "segments",
+            "hit_ring",
+            "file_offsets",
+        ] {
+            assert!(
+                wgsl.contains(needle),
+                "emitted WGSL must reference the `{needle}` buffer; the combined kernel \
+                 read it in IR but it vanished from the shader (got {} bytes of WGSL)",
+                wgsl.len()
+            );
+        }
+    }
+
+    /// Pin the combined-AC ABI: nine buffers in the exact binding order the host
+    /// `CombinedBatch` upload must mirror, with `hit_ring` the sole output at
+    /// binding 7 and `segments` last (final positional input). A drift here
+    /// silently misbinds the automaton tables.
+    #[test]
+    fn combined_batch_program_buffer_abi_is_pinned() {
+        let buffers = combined_batch_program_buffers(1024);
+        let layout: Vec<(&str, u32, bool, bool)> = buffers
+            .iter()
+            .map(|b| {
+                (
+                    b.name(),
+                    b.binding(),
+                    b.is_output(),
+                    matches!(b.access(), BufferAccess::ReadWrite),
+                )
+            })
+            .collect();
+        assert_eq!(
+            layout,
+            vec![
+                ("file_offsets", 0, false, false),
+                ("file_metadata", 1, false, false),
+                ("haystack", 2, false, false),
+                ("transitions", 3, false, false),
+                ("output_offsets", 4, false, false),
+                ("output_records", 5, false, false),
+                ("queue_state", 6, false, true),
+                // hit_ring is a writable output ⇒ ReadWrite access.
+                ("hit_ring", 7, true, true),
+                ("segments", 8, false, false),
+            ],
+            "combined-AC buffer ABI drifted; the host CombinedBatch upload binds by this order"
+        );
+    }
 
     #[test]
     fn hit_overflow_split_reports_dropped_matches() {
