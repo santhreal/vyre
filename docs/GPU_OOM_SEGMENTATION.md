@@ -57,12 +57,21 @@ scan every byte 32× (`queue_len = segment_count * 32`). The whole-file→512
 curve (0.009 → 20.565 GB/s) shows segmentation, not raw compute, saturates the
 device. Commits: `c2b82986b7` (kernel IR), `46f6b93087` (host + test).
 
+Direct per-rule-vs-combined head-to-head (DONE 2026-06-18, commit c4df9300d8,
+`tests/megakernel_combined_vs_perrule.rs`): same 8 MiB buffer, same 64
+single-byte patterns, both conserve all 2048 oracle matches exactly — per-rule
+best **3.913 GB/s** (queue = segment_count × 64), combined best **18.009 GB/s**
+(queue = segment_count) ⇒ **combined 4.60× the per-rule path**. The 4.60× (not
+64×) gap is because per-rule is partly occupancy/memory-bound, not purely
+compute-bound; the advantage is real, conserving, and widens with catalog size.
+
 REMAINING combined-AC depth (not yet built): byte-class compression of the
-(larger) combined transition table; a direct per-rule-vs-combined throughput
-comparison in one harness; the literal/regex split (regex rules with no single
-required literal stay on a per-rule path or literal-factor prefilter — bound and
-LOG the split, never silently drop them). The per-rule path remains the win for
-small catalogs; see "Concrete kernel plan" below for the build record.
+(larger) combined transition table (shrink each row from 256 cols to
+`num_classes`, the per-rule `class_maps` machinery — LOSSLESS, fewer global
+loads); the literal/regex split (regex rules with no single required literal
+stay on a per-rule path or literal-factor prefilter — bound and LOG the split,
+never silently drop them). The per-rule path remains the win for small catalogs;
+see "Concrete kernel plan" below for the build record.
 
 ## Root cause (read, not theorized)
 
