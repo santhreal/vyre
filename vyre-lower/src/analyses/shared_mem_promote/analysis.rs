@@ -159,7 +159,7 @@ mod tests {
         }
     }
 
-    // ============== Positive truth (candidate detected) ==============
+    // Positive truth (candidate detected)
 
     #[test]
     fn positive_buffer_read_twice_is_candidate() {
@@ -221,7 +221,7 @@ mod tests {
         assert!((p.candidates[0].estimated_speedup_factor - 13.0).abs() < 1e-5);
     }
 
-    // ============== Negative precision (rule does NOT fire) ==============
+    // Negative precision (rule does NOT fire)
 
     #[test]
     fn negative_buffer_read_only_once_not_a_candidate() {
@@ -272,7 +272,7 @@ mod tests {
         assert_eq!(p.total_tile_bytes, 0);
     }
 
-    // ============== Adversarial / boundary ==============
+    // Adversarial / boundary
 
     #[test]
     fn adversarial_load_inside_if_body_counted() {
@@ -372,7 +372,7 @@ mod tests {
         assert!(p.candidates.is_empty());
     }
 
-    // ============== Budget behavior ==============
+    // Budget behavior
 
     #[test]
     fn fits_in_budget_when_sum_below_limit() {
@@ -404,7 +404,7 @@ mod tests {
         assert!(!p.fits_in_budget());
     }
 
-    // ============== Element-type bytes ==============
+    // Element-type bytes
 
     #[test]
     fn bytes_per_element_for_each_scalar_type() {

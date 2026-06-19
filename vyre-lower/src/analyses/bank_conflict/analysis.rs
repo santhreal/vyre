@@ -312,7 +312,7 @@ mod tests {
         }
     }
 
-    // ============== Positive truth (no conflict detected) ==============
+    // Positive truth (no conflict detected)
 
     #[test]
     fn positive_load_at_tid_no_conflict() {
@@ -378,7 +378,7 @@ mod tests {
         assert_eq!(r.sites[0].conflict, BankConflictKind::BroadcastSafe);
     }
 
-    // ============== Conflict detection (the headline) ==============
+    // Conflict detection (the headline)
 
     #[test]
     fn conflict_stride_2_is_2_way() {
@@ -515,7 +515,7 @@ mod tests {
         assert_eq!(r.sites[0].conflict, BankConflictKind::BroadcastSafe);
     }
 
-    // ============== Negative precision (rule does NOT fire) ==============
+    // Negative precision (rule does NOT fire)
 
     #[test]
     fn negative_global_load_not_analyzed() {
@@ -578,7 +578,7 @@ mod tests {
         assert!(r.sites.is_empty());
     }
 
-    // ============== Adversarial / boundary ==============
+    // Adversarial / boundary
 
     #[test]
     fn adversarial_load_inside_loop_body_counted() {
@@ -656,7 +656,7 @@ mod tests {
         assert!(r.sites.is_empty());
     }
 
-    // ============== Bank-count override ==============
+    // Bank-count override
 
     #[test]
     fn analyze_with_16_banks_changes_classification() {
@@ -690,7 +690,7 @@ mod tests {
         );
     }
 
-    // ============== gcd helper ==============
+    // gcd helper
 
     #[test]
     fn gcd_basic_cases() {

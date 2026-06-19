@@ -254,7 +254,7 @@ mod tests {
         }
     }
 
-    // ============== Positive truth (coalesced detected) ==============
+    // Positive truth (coalesced detected)
 
     #[test]
     fn positive_load_at_local_invocation_id_is_coalesced() {
@@ -334,7 +334,7 @@ mod tests {
         assert_eq!(r.sites[0].pattern, AccessPattern::Scattered);
     }
 
-    // ============== Strided detection ==============
+    // Strided detection
 
     #[test]
     fn strided_4_detected_as_stride_4() {
@@ -402,7 +402,7 @@ mod tests {
         assert_eq!(r.sites[0].pattern, AccessPattern::Strided { stride: 4 });
     }
 
-    // ============== Broadcast (constant index) ==============
+    // Broadcast (constant index)
 
     #[test]
     fn constant_index_is_broadcast() {
@@ -417,7 +417,7 @@ mod tests {
         assert_eq!(r.sites[0].pattern, AccessPattern::Broadcast);
     }
 
-    // ============== Negative precision (rule does NOT fire) ==============
+    // Negative precision (rule does NOT fire)
 
     #[test]
     fn negative_load_index_from_unrelated_op_is_scattered() {
@@ -499,7 +499,7 @@ mod tests {
         assert!(r.sites.is_empty());
     }
 
-    // ============== Adversarial ==============
+    // Adversarial
 
     #[test]
     fn adversarial_mul_by_one_is_coalesced_not_strided() {
@@ -579,7 +579,7 @@ mod tests {
         assert_eq!(r.sites[0].pattern, AccessPattern::CoalescedUnitStride);
     }
 
-    // ============== Report aggregation ==============
+    // Report aggregation
 
     #[test]
     fn waste_score_reflects_mixed_kernel() {
