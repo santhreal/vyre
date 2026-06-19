@@ -48,8 +48,13 @@ pub(crate) fn reserve_vec_capacity_or_panic<T>(
     capacity: usize,
     context: &'static str,
 ) {
-    let _ = context;
-    let _ = try_reserve_vec_capacity(buffer, capacity);
+    // The name promises a panic on failure; the old body did `let _ = …`,
+    // silently swallowing the reservation error (and discarding `context`) —
+    // a name/behavior incoherence and a silent fallback (Law 10). Honor the
+    // contract: fail loud with context.
+    if let Err(message) = try_reserve_vec_capacity(buffer, capacity) {
+        panic!("{context} could not reserve scratch capacity for {capacity} item(s): {message}");
+    }
 }
 
 pub(crate) fn reserve_hash_set<T, S>(

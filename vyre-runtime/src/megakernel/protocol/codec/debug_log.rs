@@ -11,8 +11,11 @@ pub fn read_debug_log(debug_bytes: &[u8]) -> Vec<DebugRecord> {
 ///
 /// Clears `out`, then reuses its allocation.
 pub fn read_debug_log_into(debug_bytes: &[u8], out: &mut Vec<DebugRecord>) {
-    if try_read_debug_log_into(debug_bytes, out).is_err() {
-        out.clear();
+    // Clearing to empty on a decode failure silently drops the PRINTF records
+    // the kernel emitted — the operator sees "no debug output" instead of the
+    // decode error (Law 10). Fail loud; callers use try_read_debug_log_into.
+    if let Err(error) = try_read_debug_log_into(debug_bytes, out) {
+        panic!("vyre-runtime debug-log decode failed: {error}");
     }
 }
 

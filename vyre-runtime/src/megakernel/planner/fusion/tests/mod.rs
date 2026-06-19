@@ -428,23 +428,19 @@ fn checked_selector_reports_shape_errors() {
 }
 
 #[test]
-fn selector_into_clears_scratch_state_on_shape_error() {
+#[should_panic(expected = "subset selection failed on malformed planner input")]
+fn dense_selector_into_fails_loud_on_shape_error() {
+    // Malformed planner input must fail LOUD, not silently clear the scratch
+    // (which would degrade to the slower unfused path with no signal; Law 10/7).
     let mut scratch = FusionSelectionScratch::default();
-    scratch.result.push(7);
-    scratch.order.push(99);
-    scratch.selected.push(5);
     select_fused_subset_into(&[1.0], 2, &[0, 0, 0, 0], &mut scratch);
-    assert!(scratch.result.is_empty());
-    assert!(scratch.order.is_empty());
-    assert!(scratch.selected.is_empty());
+}
 
-    scratch.result.push(7);
-    scratch.order.push(99);
-    scratch.selected.push(5);
+#[test]
+#[should_panic(expected = "subset selection failed on malformed planner input")]
+fn compact_selector_into_fails_loud_on_shape_error() {
+    let mut scratch = FusionSelectionScratch::default();
     select_fused_subset_compact_into(&[1_u16, 2], 2, &[0], &mut scratch);
-    assert!(scratch.result.is_empty());
-    assert!(scratch.order.is_empty());
-    assert!(scratch.selected.is_empty());
 }
 
 #[test]

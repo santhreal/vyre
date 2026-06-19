@@ -86,8 +86,11 @@ impl WorkStealingScheduler {
     /// uses [`Self::claim_next_unit`] to let worker threads atomically
     /// claim units so fast backends steal more work.
     pub fn partition_into(&self, total_len: usize, out: &mut Vec<Shard>) {
-        if self.try_partition_into(total_len, out).is_err() {
-            out.clear();
+        // Clearing to empty on failure leaves NO work units — the dispatch loop
+        // then claims nothing and the scan silently processes nothing (Law 10
+        // recall loss). Fail loud; callers use try_partition_into.
+        if let Err(error) = self.try_partition_into(total_len, out) {
+            panic!("vyre-runtime work-unit partition failed: {error}");
         }
     }
 

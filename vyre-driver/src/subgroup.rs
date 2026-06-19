@@ -103,8 +103,11 @@ pub fn try_reduction_offsets(subgroup_size: u32) -> Result<Vec<u32>, String> {
 
 /// Write canonical reduction offsets into caller-owned storage.
 pub fn reduction_offsets_into(subgroup_size: u32, offsets: &mut Vec<u32>) {
-    if try_reduction_offsets_into(subgroup_size, offsets).is_err() {
-        offsets.clear();
+    // Clearing to empty on failure silently produces a degenerate reduction
+    // (no offsets -> the subgroup reduction reads nothing) — a silent fallback
+    // (Law 10). Fail loud; callers use try_reduction_offsets_into.
+    if let Err(error) = try_reduction_offsets_into(subgroup_size, offsets) {
+        panic!("vyre-driver reduction offsets generation failed: {error}");
     }
 }
 
@@ -169,12 +172,17 @@ mod tests {
     }
 
     #[test]
-    fn legacy_reduction_offset_wrapper_clears_invalid_width() {
+    #[should_panic(expected = "reduction offsets generation failed")]
+    fn reduction_offsets_into_fails_loud_on_invalid_width() {
+        // An un-representable subgroup width must fail LOUD, not silently clear
+        // the buffer (which would yield a degenerate reduction; Law 10).
         let mut offsets = vec![16, 8, 4];
-
         reduction_offsets_into(u32::MAX, &mut offsets);
+    }
 
-        assert!(offsets.is_empty());
-        assert!(reduction_offsets(u32::MAX).is_empty());
+    #[test]
+    #[should_panic(expected = "reduction offsets generation failed")]
+    fn reduction_offsets_owned_fails_loud_on_invalid_width() {
+        let _ = reduction_offsets(u32::MAX);
     }
 }
