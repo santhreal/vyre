@@ -103,6 +103,89 @@ fn cast_u64_to_u32_truncates_low_word() {
     );
 }
 
+/// U64 → I32 narrows to the low 32 bits via `cvt.u32.u64` (the low word's bit
+/// pattern IS the i32). wgpu/naga supports this, so CUDA must too — never fail
+/// closed.
+#[test]
+fn cast_u64_to_i32_narrows_low_word() {
+    let kernel = KernelDescriptor {
+        id: "cast_u64_i32".into(),
+        bindings: BindingLayout { slots: vec![] },
+        dispatch: Dispatch::new(1, 1, 1),
+        body: KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(0),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Cast {
+                        target: DataType::U64,
+                    },
+                    operands: vec![0],
+                    result: Some(1),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Cast {
+                        target: DataType::I32,
+                    },
+                    operands: vec![1],
+                    result: Some(2),
+                },
+            ],
+            child_bodies: vec![],
+            literals: vec![LiteralValue::U32(9)],
+        },
+    };
+    let s = emit(&kernel).unwrap();
+    assert!(
+        s.contains("cvt.u32.u64"),
+        "U64 → I32 must narrow via cvt.u32.u64 (low word):\n{s}"
+    );
+}
+
+/// U64 → Bool tests the FULL 64 bits (`setp.ne.u64 …, 0`), matching the
+/// reference `value != 0` — never just the low word.
+#[test]
+fn cast_u64_to_bool_tests_full_width() {
+    let kernel = KernelDescriptor {
+        id: "cast_u64_bool".into(),
+        bindings: BindingLayout { slots: vec![] },
+        dispatch: Dispatch::new(1, 1, 1),
+        body: KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(0),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Cast {
+                        target: DataType::U64,
+                    },
+                    operands: vec![0],
+                    result: Some(1),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Cast {
+                        target: DataType::Bool,
+                    },
+                    operands: vec![1],
+                    result: Some(2),
+                },
+            ],
+            child_bodies: vec![],
+            literals: vec![LiteralValue::U32(9)],
+        },
+    };
+    let s = emit(&kernel).unwrap();
+    assert!(
+        s.contains("setp.ne.u64"),
+        "U64 → Bool must test the full 64 bits via setp.ne.u64:\n{s}"
+    );
+}
+
 /// I32 → U64 must sign-extend via `cvt.s64.s32` so negative values carry their
 /// full 64-bit two's-complement pattern.
 #[test]

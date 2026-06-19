@@ -650,6 +650,18 @@ impl BodyCtx<'_> {
                 // Explicit narrowing: keep the low 32 bits.
                 let _ = writeln!(self.text, "    cvt.u32.u64    {dst}, {src};");
             }
+            (PtxType::U64, PtxType::I32) => {
+                // Narrowing to a signed 32-bit value: keep the low 32 bits; the
+                // bit pattern of the low word IS the i32 (matches naga's low-word
+                // bitcast and the reference's low-word narrowing). NEVER fail
+                // closed here — wgpu/naga supports u64->i32, so CUDA must too.
+                let _ = writeln!(self.text, "    cvt.u32.u64    {dst}, {src};");
+            }
+            (PtxType::U64, PtxType::Bool) => {
+                // Truthiness over the FULL 64 bits (not just the low word):
+                // matches the reference `value != 0` and naga's (low | high) != 0.
+                let _ = writeln!(self.text, "    setp.ne.u64    {dst}, {src}, 0;");
+            }
             (PtxType::U64, PtxType::F32) => {
                 // Full 64-bit → F32 with round-to-nearest. NEVER narrow to u32
                 // first: that silently discards the high 32 bits.
