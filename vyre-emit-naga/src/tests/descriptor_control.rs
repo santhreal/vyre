@@ -261,6 +261,152 @@ fn u32_div_desc(binop: BinOp) -> KernelDescriptor {
     }
 }
 
+/// Load a U64 (vec2<u32>), cast to `target`, store to an `out_elem` buffer.
+fn u64_narrow_cast_desc(target: DataType, out_elem: DataType) -> KernelDescriptor {
+    KernelDescriptor {
+        id: "u64_narrow".into(),
+        bindings: BindingLayout {
+            slots: vec![
+                BindingSlot {
+                    slot: 0,
+                    element_type: DataType::U64,
+                    element_count: Some(4),
+                    memory_class: MemoryClass::Global,
+                    visibility: BindingVisibility::ReadOnly,
+                    name: "src".into(),
+                },
+                BindingSlot {
+                    slot: 1,
+                    element_type: out_elem,
+                    element_count: Some(4),
+                    memory_class: MemoryClass::Global,
+                    visibility: BindingVisibility::ReadWrite,
+                    name: "out".into(),
+                },
+            ],
+        },
+        dispatch: Dispatch::new(1, 1, 1),
+        body: KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(0),
+                },
+                KernelOp {
+                    kind: KernelOpKind::LoadGlobal,
+                    operands: vec![0, 0],
+                    result: Some(1),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Cast { target },
+                    operands: vec![1],
+                    result: Some(2),
+                },
+                KernelOp {
+                    kind: KernelOpKind::StoreGlobal,
+                    operands: vec![1, 0, 2],
+                    result: None,
+                },
+            ],
+            child_bodies: vec![],
+            literals: vec![LiteralValue::U32(0)],
+        },
+    }
+}
+
+#[test]
+fn u64_to_u32_narrowing_cast_extracts_low_word_and_validates() {
+    use naga::valid::{Capabilities, ValidationFlags, Validator};
+    // Regression: a plain `As` on the vec2<u32> backing produced InvalidStoreTypes
+    // (invalid WGSL). The fix takes the low word (lane 0) — truncation matching
+    // PTX cvt.u32.u64 and the reference's low-word narrowing.
+    let module = emit(&u64_narrow_cast_desc(DataType::U32, DataType::U32))
+        .expect("u64->u32 cast must emit");
+    Validator::new(ValidationFlags::all(), Capabilities::all())
+        .validate(&module)
+        .unwrap_or_else(|e| panic!("u64->u32 cast: INVALID WGSL: {e:?}"));
+    let entry = module.entry_points.first().expect("entry point");
+    let has_low_lane = entry.function.expressions.iter().any(|(_, e)| {
+        matches!(e, naga::Expression::AccessIndex { index: 0, .. })
+    });
+    assert!(
+        has_low_lane,
+        "u64->u32 must extract the low word via AccessIndex(index: 0)"
+    );
+}
+
+#[test]
+fn u64_to_i32_narrowing_cast_validates() {
+    use naga::valid::{Capabilities, ValidationFlags, Validator};
+    let module = emit(&u64_narrow_cast_desc(DataType::I32, DataType::I32))
+        .expect("u64->i32 cast must emit");
+    Validator::new(ValidationFlags::all(), Capabilities::all())
+        .validate(&module)
+        .unwrap_or_else(|e| panic!("u64->i32 cast: INVALID WGSL: {e:?}"));
+}
+
+#[test]
+fn u64_to_f32_cast_reconstructs_full_value_and_validates() {
+    use naga::valid::{Capabilities, ValidationFlags, Validator};
+    // u64->f32 must use BOTH words (low | high<<32) then convert, not just the
+    // low word — so a ShiftLeft (the high<<32) and a float As must be present.
+    let module = emit(&u64_narrow_cast_desc(DataType::F32, DataType::F32))
+        .expect("u64->f32 cast must emit");
+    Validator::new(ValidationFlags::all(), Capabilities::all())
+        .validate(&module)
+        .unwrap_or_else(|e| panic!("u64->f32 cast: INVALID WGSL: {e:?}"));
+    let entry = module.entry_points.first().expect("entry point");
+    let arena = &entry.function.expressions;
+    let has_high_shift = arena.iter().any(|(_, e)| {
+        matches!(
+            e,
+            naga::Expression::Binary {
+                op: naga::BinaryOperator::ShiftLeft,
+                ..
+            }
+        )
+    });
+    let has_float_convert = arena.iter().any(|(_, e)| {
+        matches!(
+            e,
+            naga::Expression::As {
+                kind: naga::ScalarKind::Float,
+                ..
+            }
+        )
+    });
+    assert!(
+        has_high_shift && has_float_convert,
+        "u64->f32 must reconstruct (low | high<<32) then convert to float"
+    );
+}
+
+#[test]
+fn u64_to_bool_cast_uses_both_words_and_validates() {
+    use naga::valid::{Capabilities, ValidationFlags, Validator};
+    // u64 truthiness must consider both words: (low | high) != 0.
+    let module = emit(&u64_narrow_cast_desc(DataType::Bool, DataType::U32))
+        .expect("u64->bool cast must emit");
+    Validator::new(ValidationFlags::all(), Capabilities::all())
+        .validate(&module)
+        .unwrap_or_else(|e| panic!("u64->bool cast: INVALID WGSL: {e:?}"));
+    let entry = module.entry_points.first().expect("entry point");
+    let has_ne_zero = entry.function.expressions.iter().any(|(_, e)| {
+        matches!(
+            e,
+            naga::Expression::Binary {
+                op: naga::BinaryOperator::NotEqual,
+                ..
+            }
+        )
+    });
+    assert!(
+        has_ne_zero,
+        "u64->bool must test (low | high) != 0 for full-width truthiness"
+    );
+}
+
 /// Load a U64 (vec2<u32> backing), apply `unop`, store to a U64 out.
 fn u64_unop_desc(unop: UnOp) -> KernelDescriptor {
     KernelDescriptor {

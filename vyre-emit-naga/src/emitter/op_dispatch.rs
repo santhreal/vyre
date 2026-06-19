@@ -524,6 +524,89 @@ impl BodyBuilder<'_> {
             }),
             OpDispatchRoute::Cast => with_route_kind!(op, route, KernelOpKind::Cast { target } => {
                 let expr = self.value_operand(op, 0)?;
+                // Narrowing FROM a 64-bit value: U64/I64 are vec2<u32>-backed, so
+                // a plain `As` would run on the whole vector and bind a vec2 as a
+                // scalar — an InvalidStoreTypes miscompile (invalid WGSL, not just
+                // wrong output). Lower each scalar target explicitly from the two
+                // lanes, matching PTX `cvt.<t>.u64` truncation and the reference:
+                //   * integer target -> low word (lane 0), truncated, then the
+                //     scalar cast reinterprets it (u64->u32 keeps the low 32 bits);
+                //   * F32 -> reconstruct the native 64-bit value (low | high<<32)
+                //     and ConvertUToF, so the high word is NOT dropped (matches
+                //     the reference `u64 as f32`);
+                //   * Bool -> truthy over the FULL 64 bits: `(low | high) != 0`.
+                let source_is_wide = self
+                    .value_type_operand(op, 0)
+                    .map(|h| h == self.types.vec2_u32_ty)
+                    .unwrap_or(false);
+                let target_is_wide = matches!(
+                    target,
+                    DataType::U64 | DataType::I64 | DataType::Vec2U32 | DataType::Vec4U32
+                );
+                if source_is_wide && !target_is_wide {
+                    let low = self.append_expr(Expression::AccessIndex { base: expr, index: 0 });
+                    let high = self.append_expr(Expression::AccessIndex { base: expr, index: 1 });
+                    let value = match target {
+                        DataType::F32 => {
+                            let low_u64 = self.append_expr(Expression::As {
+                                expr: low,
+                                kind: ScalarKind::Uint,
+                                convert: Some(8),
+                            });
+                            let high_u64 = self.append_expr(Expression::As {
+                                expr: high,
+                                kind: ScalarKind::Uint,
+                                convert: Some(8),
+                            });
+                            let shift = self
+                                .append_expr(Expression::Literal(naga::Literal::U32(32)));
+                            let shift_u64 = self.append_expr(Expression::As {
+                                expr: shift,
+                                kind: ScalarKind::Uint,
+                                convert: Some(8),
+                            });
+                            let high_shifted = self.append_expr(Expression::Binary {
+                                op: BinaryOperator::ShiftLeft,
+                                left: high_u64,
+                                right: shift_u64,
+                            });
+                            let full = self.append_expr(Expression::Binary {
+                                op: BinaryOperator::InclusiveOr,
+                                left: low_u64,
+                                right: high_shifted,
+                            });
+                            self.append_expr(Expression::As {
+                                expr: full,
+                                kind: ScalarKind::Float,
+                                convert: Some(4),
+                            })
+                        }
+                        DataType::Bool => {
+                            let merged = self.append_expr(Expression::Binary {
+                                op: BinaryOperator::InclusiveOr,
+                                left: low,
+                                right: high,
+                            });
+                            let zero = self
+                                .append_expr(Expression::Literal(naga::Literal::U32(0)));
+                            self.append_expr(Expression::Binary {
+                                op: BinaryOperator::NotEqual,
+                                left: merged,
+                                right: zero,
+                            })
+                        }
+                        _ => {
+                            let (kind, width) = scalar_cast_target(target)?;
+                            self.append_expr(Expression::As {
+                                expr: low,
+                                kind,
+                                convert: Some(width),
+                            })
+                        }
+                    };
+                    let ty = self.type_for_data_type(target)?;
+                    return self.bind_result_typed(op, value, ty);
+                }
                 if matches!(target, DataType::U64 | DataType::I64 | DataType::Vec2U32) {
                     // WGSL has no native 64-bit integer; U64/I64 are backed by
                     // vec2<u32> (low word `.x`, high word `.y`). The low word is
