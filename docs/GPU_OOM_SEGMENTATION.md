@@ -27,10 +27,42 @@ megakernel_segmentation_conservation_and_throughput -- --ignored --nocapture`
 Best conserving geometry **18.686 GB/s = 12.46× the 1.5 GB/s Hyperscan floor**;
 every geometry conserves all markers with 0 dropped. The pre-segmentation
 baseline was 4.1× SLOWER at 17% occupancy — segmentation flipped a 4.1× loss
-into a 12.46× win. The REMAINING frontier is the COMBINED-AC path (one
-transition read per byte regardless of pattern count, killing the `rule_count`
-queue multiplier) — see "Concrete kernel plan" at the end; the per-rule path
-above is already an OOM win for small catalogs.
+into a 12.46× win.
+
+## STATUS: COMBINED-AC path BUILT + GPU-verified (2026-06-18, RTX 5090)
+The combined-Aho-Corasick path — one dense automaton, `queue_len =
+segment_count` (NO `rule_count` multiplier), per-state multi-emit via
+`output_offsets`/`output_records` CSR — is wired end to end and verified:
+`build_combined_batch_program` + `CombinedBatch` (host upload, takes raw
+flattened automaton arrays; `classic_ac_compile` stays in the caller because
+vyre-libs is ABOVE vyre-driver-wgpu) + `CombinedDispatcher`. Verified on the
+5090 via `cargo test -p vyre-driver-wgpu --features megakernel-batch,wgpu
+--test megakernel_combined_scan -- --ignored --nocapture` — a DIFFERENTIAL test
+whose ground truth is `classic_ac_scan` over the whole 8 MiB buffer (32-pattern
+catalog, 2115 oracle matches):
+
+| seg_len | found/2115 | dropped | GB/s   | vs HS  |
+|---------|------------|---------|--------|--------|
+| whole   | 2115       | 0       | 0.009  | 0.01×  |
+| 65536   | 2115       | 0       | 0.873  | 0.58×  |
+| 16384   | 2115       | 0       | 3.144  | 2.10×  |
+| 4096    | 2115       | 0       | 10.202 | 6.80×  |
+| 1024    | 2115       | 0       | 19.266 | 12.84× |
+| 512     | 2115       | 0       | 20.565 | 13.71× |
+
+Every geometry reproduces the oracle hit set EXACTLY (no miss / dup /
+fabrication, 0 dropped). Best conserving geometry **20.565 GB/s = 13.71× the
+Hyperscan floor** with 32 patterns in ONE automaton — the per-rule path would
+scan every byte 32× (`queue_len = segment_count * 32`). The whole-file→512
+curve (0.009 → 20.565 GB/s) shows segmentation, not raw compute, saturates the
+device. Commits: `c2b82986b7` (kernel IR), `46f6b93087` (host + test).
+
+REMAINING combined-AC depth (not yet built): byte-class compression of the
+(larger) combined transition table; a direct per-rule-vs-combined throughput
+comparison in one harness; the literal/regex split (regex rules with no single
+required literal stay on a per-rule path or literal-factor prefilter — bound and
+LOG the split, never silently drop them). The per-rule path remains the win for
+small catalogs; see "Concrete kernel plan" below for the build record.
 
 ## Root cause (read, not theorized)
 
