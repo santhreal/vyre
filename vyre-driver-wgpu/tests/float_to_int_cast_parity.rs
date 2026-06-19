@@ -113,6 +113,71 @@ fn f32_to_u32_cast_saturates_like_reference_including_nan() {
 }
 
 #[test]
+fn computed_f32_overflow_casts_saturate_like_reference() {
+    // The saturating guard must fire for a COMPUTED float source (an arithmetic
+    // result), not only a buffer load — the emitter detects the float source via
+    // both the bound type handle AND the scalar-kind resolver, so a computed
+    // float can't silently skip the guard back onto the diverging bare `As`.
+    // fma(1e20, 1e20, 0) overflows: +inf in f32 on the GPU, 1e40 in the f64
+    // reference; both saturate through the cast to the integer max.
+    let backend = WgpuBackend::acquire()
+        .expect("Fix: float→int cast parity requires a live GPU backend.");
+
+    let program = |target: DataType| {
+        Program::wrapped(
+            vec![
+                BufferDecl::storage("out", 0, BufferAccess::ReadWrite, target.clone()).with_count(1),
+                BufferDecl::storage("a", 1, BufferAccess::ReadOnly, DataType::F32).with_count(1),
+                BufferDecl::storage("b", 2, BufferAccess::ReadOnly, DataType::F32).with_count(1),
+            ],
+            [1, 1, 1],
+            vec![Node::store(
+                "out",
+                Expr::u32(0),
+                Expr::cast(
+                    target,
+                    Expr::fma(
+                        Expr::load("a", Expr::u32(0)),
+                        Expr::load("b", Expr::u32(0)),
+                        Expr::f32(0.0),
+                    ),
+                ),
+            )],
+        )
+    };
+    let a = u32_bytes(&[1.0e20_f32.to_bits()]);
+    let b = u32_bytes(&[1.0e20_f32.to_bits()]);
+
+    let u_out = backend
+        .dispatch_borrowed(
+            &program(DataType::U32),
+            &[u32_bytes(&[0]).as_slice(), a.as_slice(), b.as_slice()],
+            &DispatchConfig::default(),
+        )
+        .expect("dispatch computed f32->u32");
+    let u = u32::from_le_bytes([u_out[0][0], u_out[0][1], u_out[0][2], u_out[0][3]]);
+    assert_eq!(
+        u,
+        u32::MAX,
+        "computed fma overflow → u32 must saturate to u32::MAX (got {u})"
+    );
+
+    let i_out = backend
+        .dispatch_borrowed(
+            &program(DataType::I32),
+            &[u32_bytes(&[0]).as_slice(), a.as_slice(), b.as_slice()],
+            &DispatchConfig::default(),
+        )
+        .expect("dispatch computed f32->i32");
+    let i = u32::from_le_bytes([i_out[0][0], i_out[0][1], i_out[0][2], i_out[0][3]]) as i32;
+    assert_eq!(
+        i,
+        i32::MAX,
+        "computed fma overflow → i32 must saturate to i32::MAX (got {i})"
+    );
+}
+
+#[test]
 fn f32_to_i32_cast_saturates_like_reference_including_nan() {
     let backend = WgpuBackend::acquire()
         .expect("Fix: float→int cast parity requires a live GPU backend.");

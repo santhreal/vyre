@@ -720,10 +720,20 @@ impl BodyBuilder<'_> {
                 // so they keep naga's `As`. Only a Float source to a 32-bit int
                 // target is rewritten; integer->int and narrow targets are
                 // unchanged.
+                //
+                // Detect the float source via BOTH the bound type handle AND the
+                // scalar-kind resolver: `value_type_operand == f32_ty` catches
+                // buffer loads (scalar_kind_of_expression returns None through an
+                // Access->Load chain), while `scalar_kind_of_expression == Float`
+                // catches computed floats (arithmetic results) whose type handle
+                // may not be a literal `f32_ty`. Either alone leaves a silent-skip
+                // hole that would drop a real float cast back onto the diverging
+                // bare `As` (Law 10). Neither over-matches a non-float.
                 let source_is_f32 = self
                     .value_type_operand(op, 0)
                     .map(|h| h == self.types.f32_ty)
-                    .unwrap_or(false);
+                    .unwrap_or(false)
+                    || self.scalar_kind_of_expression(expr, 0) == Some(ScalarKind::Float);
                 if source_is_f32 && matches!(target, DataType::U32 | DataType::I32) {
                     let converted = self.append_expr(Expression::As {
                         expr,
