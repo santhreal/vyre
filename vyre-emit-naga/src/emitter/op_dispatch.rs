@@ -450,6 +450,25 @@ impl BodyBuilder<'_> {
                     // explicit `(value >> shift) & mask` on u32 (semantics match
                     // ir_eval). Without this the emitter rejected with "unary op
                     // `Unpack4Low` has no direct Naga unary operator".
+                    //
+                    // Unpack is UNSIGNED bit extraction. Reinterpret the source
+                    // to u32 first so a signed source (e.g. a load from an i32
+                    // buffer, whose kind does not resolve through the
+                    // `Load(Access)` chain) does not emit `ShiftRight(i32, u32)`
+                    // / `And(i32, u32)`, which naga rejects. A source already
+                    // known to be u32 is left untouched (no redundant bitcast).
+                    let expr = if matches!(
+                        self.scalar_kind_of_expression(expr, 0),
+                        Some(ScalarKind::Uint)
+                    ) {
+                        expr
+                    } else {
+                        self.append_expr(Expression::As {
+                            expr,
+                            kind: ScalarKind::Uint,
+                            convert: None,
+                        })
+                    };
                     let shifted = if shift == 0 {
                         expr
                     } else {

@@ -50,6 +50,70 @@ fn high_word_of_only_vec2_compose(module: &naga::Module) -> naga::Expression {
 }
 
 #[test]
+fn unpack_on_signed_buffer_load_emits_valid_wgsl() {
+    use naga::valid::{Capabilities, ValidationFlags, Validator};
+    // `Unpack8Low` lowers to `(v >> shift) & mask` with a u32 mask. When the
+    // source `v` is a load from a SIGNED (i32) buffer, the value is Sint and its
+    // `scalar_kind` does not resolve through the `Load(Access)` chain, so
+    // `unify_binary_operand_types` cannot match the `& mask` operands → it would
+    // emit `And(i32, u32)`, which naga rejects.
+    let desc = KernelDescriptor {
+        id: "unpack_signed".into(),
+        bindings: BindingLayout {
+            slots: vec![
+                vyre_lower::BindingSlot {
+                    slot: 0,
+                    element_type: DataType::I32,
+                    element_count: Some(4),
+                    memory_class: MemoryClass::Global,
+                    visibility: BindingVisibility::ReadOnly,
+                    name: "src".into(),
+                },
+                vyre_lower::BindingSlot {
+                    slot: 1,
+                    element_type: DataType::U32,
+                    element_count: Some(4),
+                    memory_class: MemoryClass::Global,
+                    visibility: BindingVisibility::ReadWrite,
+                    name: "out".into(),
+                },
+            ],
+        },
+        dispatch: Dispatch::new(1, 1, 1),
+        body: KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(0),
+                },
+                KernelOp {
+                    kind: KernelOpKind::LoadGlobal,
+                    operands: vec![0, 0],
+                    result: Some(1),
+                },
+                KernelOp {
+                    kind: KernelOpKind::UnOpKind(UnOp::Unpack8Low),
+                    operands: vec![1],
+                    result: Some(2),
+                },
+                KernelOp {
+                    kind: KernelOpKind::StoreGlobal,
+                    operands: vec![1, 0, 2],
+                    result: None,
+                },
+            ],
+            child_bodies: vec![],
+            literals: vec![LiteralValue::U32(0)],
+        },
+    };
+    let module = emit(&desc).expect("unpack-on-signed-load must emit");
+    Validator::new(ValidationFlags::all(), Capabilities::all())
+        .validate(&module)
+        .expect("unpack on a signed buffer load must produce valid WGSL");
+}
+
+#[test]
 fn signed_i32_arithmetic_shift_right_emits_valid_wgsl() {
     use naga::valid::{Capabilities, ValidationFlags, Validator};
     // `i32 >> n` is an ARITHMETIC shift (sign-preserving). validate's IR allows
