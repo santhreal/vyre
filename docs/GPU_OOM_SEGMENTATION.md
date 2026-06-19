@@ -464,3 +464,48 @@ Regex rules (no single required literal) cannot join the literal AC and must
 stay on a per-rule path or a literal-factor prefilter (Hyperscan's design); the
 combined path is the win for the literal-coverable majority. Bound the split and
 log it (Law 10) — never silently drop the regex rules from the combined pass.
+
+## Combined-AC build: the code-grounded integration seam (next, 2026-06-18)
+The per-rule path above is the verified OOM win for small catalogs; the
+combined-AC path removes the `rule_count` queue multiplier so a many-pattern
+catalog scans in ONE transition read per byte. Foundation is already green:
+- CPU oracle: `segmentation.rs::combined_segmented_scan` +
+  `combined_segmented_equals_linear_classic_ac_scan` (proptest) prove the
+  combined `classic_ac_compile` automaton, scanned in `plan_segments` windows
+  with `overlap >= max_pattern_len` and the `byte_pos >= emit_start` guard,
+  equals the linear `classic_ac_scan` `(pattern_id, end)` set for any seg_len.
+- Combined automaton + buffer surface already exist in
+  `vyre-libs/src/scan/classic_ac.rs`: `classic_ac_compile(patterns)` →
+  `ClassicAcAutomaton { dfa: { transitions[state*256+byte], output_offsets
+  [state_count+1], output_records[len], state_count } }`. (`classic_ac_program`
+  there is a TEST-ONLY O(n^2) per-position reference, NOT the segmented kernel.)
+
+MAXIMAL-REUSE seam (do NOT fork the FileBatch machinery):
+1. Host `CombinedBatch::upload(device, files, patterns, hit_capacity)` mirrors
+   `FileBatch::upload` EXACTLY for haystack / file_offsets / file_metadata /
+   segments / queue_state / hit_ring, with `overlap = max_pattern_len` and
+   `queue_len = segment_count` (i.e. `rule_count = 1`: one work item per
+   segment). It REPLACES the four per-rule automaton buffers
+   (`class_maps`/`rule_meta`/`transitions`/`accept`) with three combined ones:
+   `transitions` (state_count*256), `output_offsets` (state_count+1),
+   `output_records` (len). Keep `RULE_COUNT` queue word = 1 so the existing
+   `seg_idx = claim / rule_count`, drain loop, and DONE/HEAD accounting are
+   byte-for-byte reused.
+2. `dispatcher.rs::build_combined_batch_program` = `build_batch_program` with
+   `batch_program_buffers` swapped for the combined buffer list and
+   `execute_batch_claim_body` → `execute_combined_claim_body` (same segment-row
+   decode; drops rule_base/transition_base/accept_base/class_map; binds
+   `out_begin/out_end` from output_offsets).
+3. `combined_dfa_byte_scanner`: `state=0; for byte_pos in [scan_start, emit_end):
+   state = transitions[state*256 + byte]; if byte_pos >= emit_start { for out_idx
+   in output_offsets[state]..output_offsets[state+1]: emit HitRecord{ file_idx,
+   rule_idx = output_records[out_idx], match_offset = byte_pos } }`. Reuses the
+   exact warm-up + emit-guard the per-rule scanner proved.
+4. Verify: (a) naga emit of the combined program compiles to valid WGSL
+   (emit-level unit test, no GPU); (b) extend the throughput oracle with a
+   many-pattern catalog (hundreds of literals) and assert the combined `(seg)`
+   conserves the planted markers AND beats the per-rule `(seg,rule)` phase-1
+   time — the per-rule multiplier should vanish (one transition read per byte).
+5. Regex rules with no single required literal cannot join the literal AC: keep
+   them on the per-rule path or a literal-factor prefilter; bound the split and
+   LOG it (Law 10) — never silently drop regex rules from the combined pass.
