@@ -77,6 +77,18 @@ pub fn emit_module_with_features(
             "vyre IR `{kind}` node reached the Program-compatibility Naga emit entry, which does not run the async/trap resolution pass that gives it meaning. Fix: resolve {kind} nodes before emit_module (run the async lowering / resolution pass), or build a KernelDescriptor and call the descriptor emitter directly."
         )));
     }
+    // Workgroup (shared) buffers lower to a fixed-size `var<workgroup>` array,
+    // so they need a positive static element count. A zero-count one is pruned
+    // when unused (silently vanishing) or would emit a zero-length array — both
+    // wrong — so reject it at the boundary before lowering can drop it.
+    for buffer in program.buffers() {
+        if buffer.access == BufferAccess::Workgroup && buffer.count == 0 {
+            return Err(LoweringError::invalid(format!(
+                "workgroup buffer `{}` has zero static element count; shared memory needs a positive fixed size. Fix: declare a positive element count on the workgroup buffer.",
+                buffer.name
+            )));
+        }
+    }
     let mut lowered = vyre_lower::lower_for_emit(program).map_err(|error| {
         LoweringError::invalid(format!(
             "canonical pre-emit lowering failed before Naga Program compatibility emission: {error}. Fix: route callers through vyre-lower::lower_for_emit and descriptor emit instead of direct Program emission."

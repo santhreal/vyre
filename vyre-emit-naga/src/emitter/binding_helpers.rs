@@ -442,6 +442,7 @@ impl BodyBuilder<'_> {
             // `u64_ty`/`i64_ty` handles are reserved for the subgroup/literal
             // paths that emit them directly under a u64 capability.
             DataType::U64 | DataType::I64 | DataType::Vec2U32 => Ok(self.types.vec2_u32_ty),
+            DataType::Vec4U32 => Ok(self.types.vec4_u32_ty),
             other => Err(EmitError::NagaConstructionFailed(format!(
                 "data type `{other:?}` has no scalar Naga descriptor type"
             ))),

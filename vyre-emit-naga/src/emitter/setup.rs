@@ -46,6 +46,7 @@ pub(super) struct TypeHandles {
     /// paths that emit them directly under a u64 capability.
     pub(super) vec2_u32_ty: naga::Handle<Type>,
     pub(super) vec3_u32_ty: naga::Handle<Type>,
+    pub(super) vec4_u32_ty: naga::Handle<Type>,
     pub(super) atomic_compare_exchange_u32_ty: naga::Handle<Type>,
 }
 
@@ -170,6 +171,19 @@ impl ModuleBuilder {
             },
             Span::UNDEFINED,
         );
+        let vec4_u32_ty = module.types.insert(
+            Type {
+                name: Some("__vyre_vec4_u32".to_owned()),
+                inner: TypeInner::Vector {
+                    size: VectorSize::Quad,
+                    scalar: Scalar {
+                        kind: ScalarKind::Uint,
+                        width: 4,
+                    },
+                },
+            },
+            Span::UNDEFINED,
+        );
         let atomic_compare_exchange_u32_ty = module.types.insert(
             Type {
                 name: Some("__atomic_compare_exchange_result_u32".to_owned()),
@@ -212,6 +226,7 @@ impl ModuleBuilder {
                 i64_ty,
                 vec2_u32_ty,
                 vec3_u32_ty,
+                vec4_u32_ty,
                 atomic_compare_exchange_u32_ty,
             },
             bindings: FxHashMap::default(),
@@ -313,7 +328,7 @@ impl ModuleBuilder {
     ) -> Result<naga::Handle<Type>, EmitError> {
         match data_type {
             DataType::Bool => Ok(self.types.u32_ty),
-            DataType::U8 | DataType::U16 | DataType::U32 | DataType::Bytes => Ok(self.types.u32_ty),
+            DataType::U8 | DataType::U16 | DataType::U32 => Ok(self.types.u32_ty),
             DataType::I8 | DataType::I16 | DataType::I32 => Ok(self.types.i32_ty),
             DataType::F32 => Ok(self.types.f32_ty),
             // WGSL has no native 64-bit integer: back U64/I64 (and the explicit
@@ -321,6 +336,36 @@ impl ModuleBuilder {
             // Componentwise bitwise ops stay correct; carry-dependent arithmetic
             // is rejected in emit_binop until a carry-propagating pass lands.
             DataType::U64 | DataType::I64 | DataType::Vec2U32 => Ok(self.types.vec2_u32_ty),
+            DataType::Vec4U32 => Ok(self.types.vec4_u32_ty),
+            // `Bytes` is NOT a 4-byte word: lowering it as `array<u32>` would
+            // silently reinterpret packed bytes as words (a recall/correctness
+            // hazard). Require the explicit pack-to-u32 pre-pass instead.
+            DataType::Bytes => Err(EmitError::InvalidBinding {
+                slot,
+                reason: "raw `Bytes` buffers must run the pack-to-u32 pre-pass before Naga \
+                         emission; lowering them directly as `array<u32>` would reinterpret \
+                         packed bytes as words. Fix: run the byte-packing pre-pass."
+                    .to_owned(),
+            }),
+            DataType::F16 => Err(EmitError::InvalidBinding {
+                slot,
+                reason: "`F16` buffers need WGSL `enable f16;`, which this Naga stack cannot \
+                         parse yet. Fix: keep half data packed as u32 until the f16 extension \
+                         is wired."
+                    .to_owned(),
+            }),
+            // A 4-byte array element is just a u32 word; any other element size
+            // needs a struct-backed array (WGSL `array<u32>` cannot represent a
+            // non-word stride without silently truncating).
+            DataType::Array { element_size } if *element_size == 4 => Ok(self.types.u32_ty),
+            DataType::Array { element_size } => Err(EmitError::InvalidBinding {
+                slot,
+                reason: format!(
+                    "array element size {element_size} is not a 4-byte word and needs a \
+                     struct-backed array lowering, not `array<u32>`. Fix: add struct-backed \
+                     array emission or pack the elements to 4-byte words."
+                ),
+            }),
             other => Err(EmitError::InvalidBinding {
                 slot,
                 reason: format!(
