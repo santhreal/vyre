@@ -485,13 +485,53 @@ impl BodyBuilder<'_> {
                 let expr = self.value_operand(op, 0)?;
                 if matches!(target, DataType::U64 | DataType::I64 | DataType::Vec2U32) {
                     // WGSL has no native 64-bit integer; U64/I64 are backed by
-                    // vec2<u32> (low word `.x`, high word `.y`). A widening cast
-                    // from a 32-bit value fills the low word and zeroes the high
-                    // word: vec2<u32>(x, 0u). This is componentwise-safe — no
-                    // carry is involved — unlike 64-bit arithmetic, which
-                    // emit_binop rejects until a carry-propagating pass lands.
+                    // vec2<u32> (low word `.x`, high word `.y`). The low word is
+                    // always the source's 32-bit pattern. The HIGH word depends
+                    // on what the cast means:
+                    //   * `Vec2U32` is a STRUCTURAL 2-word vector — lane 1 is
+                    //     zero-filled (matches the reference `widen_to_words` /
+                    //     `cast_to_vec2` zero-pad), never sign-extended.
+                    //   * `U64`/`I64` are 64-bit INTEGERS — the high word must
+                    //     extend per the SOURCE's signedness. A signed (i32)
+                    //     source SIGN-extends so a negative value carries its
+                    //     full two's-complement high word (matching the PTX
+                    //     `cvt.s64.s32` path and Rust `i32 as i64`); an unsigned
+                    //     source zero-extends. Zeroing the high word
+                    //     unconditionally — as this did before — silently turned
+                    //     every negative `i32 -> i64/u64` into a large positive
+                    //     value (Law 10 miscompile). This stays componentwise
+                    //     (the high word is derived from the low word's sign bit,
+                    //     no cross-lane carry), unlike 64-bit arithmetic which
+                    //     emit_binop still rejects until a carry pass lands.
+                    let src_is_signed = matches!(
+                        self.scalar_kind_of_expression(expr, 0),
+                        Some(ScalarKind::Sint)
+                    );
                     let low = self.coerce_value_to_type(expr, self.types.u32_ty);
-                    let high = self.append_expr(Expression::Literal(naga::Literal::U32(0)));
+                    let high = if src_is_signed
+                        && matches!(target, DataType::U64 | DataType::I64)
+                    {
+                        // sign_bit = low >> 31 (logical shift on a u32 → 0 or 1);
+                        // high = sign_bit * 0xFFFF_FFFF → 0x0000_0000 when the
+                        // sign bit is clear, 0xFFFF_FFFF when set. No branch, no
+                        // carry — a pure componentwise sign replicate.
+                        let thirty_one =
+                            self.append_expr(Expression::Literal(naga::Literal::U32(31)));
+                        let sign_bit = self.append_expr(Expression::Binary {
+                            op: BinaryOperator::ShiftRight,
+                            left: low,
+                            right: thirty_one,
+                        });
+                        let all_ones = self
+                            .append_expr(Expression::Literal(naga::Literal::U32(0xFFFF_FFFF)));
+                        self.append_expr(Expression::Binary {
+                            op: BinaryOperator::Multiply,
+                            left: sign_bit,
+                            right: all_ones,
+                        })
+                    } else {
+                        self.append_expr(Expression::Literal(naga::Literal::U32(0)))
+                    };
                     let value = self.append_expr(Expression::Compose {
                         ty: self.types.vec2_u32_ty,
                         components: vec![low, high],

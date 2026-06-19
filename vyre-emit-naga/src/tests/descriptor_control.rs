@@ -1,6 +1,141 @@
 //! Test: descriptor control.
 use super::*;
 
+/// Build `literal -> Cast(target)` so the emitted module's 64-bit backing
+/// `Compose(vec2<u32>)` can be inspected for the high-word extension policy.
+fn cast_widen_desc(literal: LiteralValue, target: DataType) -> KernelDescriptor {
+    KernelDescriptor {
+        id: "cast_widen".into(),
+        bindings: BindingLayout { slots: vec![] },
+        dispatch: Dispatch::new(1, 1, 1),
+        body: KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(0),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Cast { target },
+                    operands: vec![0],
+                    result: Some(1),
+                },
+            ],
+            child_bodies: vec![],
+            literals: vec![literal],
+        },
+    }
+}
+
+/// The single 2-component `Compose` (the vec2<u32> 64-bit backing) high-word
+/// expression, so a test can assert zero- vs sign-extension.
+fn high_word_of_only_vec2_compose(module: &naga::Module) -> naga::Expression {
+    let entry = module.entry_points.first().expect("entry point");
+    let arena = &entry.function.expressions;
+    let composes: Vec<_> = arena
+        .iter()
+        .filter_map(|(_, e)| match e {
+            naga::Expression::Compose { components, .. } if components.len() == 2 => {
+                Some(components.clone())
+            }
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        composes.len(),
+        1,
+        "a single scalar->64-bit cast must emit exactly one vec2<u32> Compose"
+    );
+    arena[composes[0][1]].clone()
+}
+
+#[test]
+fn cast_i32_to_i64_sign_extends_high_word() {
+    // A signed 32-bit source widened to a 64-bit integer must SIGN-extend:
+    // the high word replicates the source's sign bit so a negative value keeps
+    // its two's-complement pattern (matching the PTX `cvt.s64.s32` path and
+    // Rust `i32 as i64`). Before the fix the high word was an unconditional
+    // literal 0, silently turning every negative `i32 -> i64` into a large
+    // positive value (Law 10 miscompile).
+    let module = emit(&cast_widen_desc(LiteralValue::I32(-1), DataType::I64))
+        .expect("i32 -> i64 cast must emit");
+    let entry = module.entry_points.first().expect("entry point");
+    let arena = &entry.function.expressions;
+    let high = high_word_of_only_vec2_compose(&module);
+    let naga::Expression::Binary {
+        op: naga::BinaryOperator::Multiply,
+        left,
+        right,
+    } = &high
+    else {
+        panic!("i32 -> i64 high word must be a sign replicate (Multiply); got {high:?}");
+    };
+    assert!(
+        matches!(
+            &arena[*right],
+            naga::Expression::Literal(naga::Literal::U32(0xFFFF_FFFF))
+        ),
+        "sign replicate must multiply the sign bit by 0xFFFFFFFF"
+    );
+    let naga::Expression::Binary {
+        op: naga::BinaryOperator::ShiftRight,
+        right: shift_amount,
+        ..
+    } = &arena[*left]
+    else {
+        panic!("sign bit must be extracted via a ShiftRight of the low word");
+    };
+    assert!(
+        matches!(
+            &arena[*shift_amount],
+            naga::Expression::Literal(naga::Literal::U32(31))
+        ),
+        "sign bit must be the low word shifted right by 31"
+    );
+}
+
+#[test]
+fn cast_u32_to_i64_zero_extends_high_word() {
+    // The unsigned twin: a u32 source widened to a 64-bit integer ZERO-extends
+    // (the source is non-negative), so the high word stays a literal 0 and the
+    // sign-replicate chain must NOT appear.
+    let module = emit(&cast_widen_desc(LiteralValue::U32(7), DataType::I64))
+        .expect("u32 -> i64 cast must emit");
+    let high = high_word_of_only_vec2_compose(&module);
+    assert!(
+        matches!(high, naga::Expression::Literal(naga::Literal::U32(0))),
+        "u32 -> i64 high word must be a literal 0 (zero-extend); got {high:?}"
+    );
+    let entry = module.entry_points.first().expect("entry point");
+    let has_sign_replicate = entry.function.expressions.iter().any(|(_, e)| {
+        matches!(
+            e,
+            naga::Expression::Binary {
+                op: naga::BinaryOperator::Multiply,
+                ..
+            }
+        )
+    });
+    assert!(
+        !has_sign_replicate,
+        "u32 -> i64 must not emit a sign-replicate Multiply; zero-extend only"
+    );
+}
+
+#[test]
+fn cast_i32_to_vec2_zero_fills_lane_one() {
+    // `Vec2U32` is a STRUCTURAL 2-word vector, not a 64-bit integer: lane 1 is
+    // always zero-filled (matching the reference `widen_to_words`/`cast_to_vec2`
+    // zero-pad), never sign-extended — even from a signed source.
+    let module = emit(&cast_widen_desc(LiteralValue::I32(-1), DataType::Vec2U32))
+        .expect("i32 -> vec2<u32> cast must emit");
+    let high = high_word_of_only_vec2_compose(&module);
+    assert!(
+        matches!(high, naga::Expression::Literal(naga::Literal::U32(0))),
+        "i32 -> Vec2U32 lane 1 must be a literal 0 (structural zero-pad); got {high:?}"
+    );
+}
+
 #[test]
 fn descriptor_async_load_emits_bounded_copy_loop() {
     let desc = async_copy_desc(KernelOpKind::AsyncLoad { tag: "load".into() });
