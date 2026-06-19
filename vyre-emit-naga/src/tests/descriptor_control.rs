@@ -407,6 +407,105 @@ fn u64_to_bool_cast_uses_both_words_and_validates() {
     );
 }
 
+/// Load a `src_elem` value, cast to `target`, store to an `out_elem` buffer.
+fn wide_cast_desc(src_elem: DataType, target: DataType, out_elem: DataType) -> KernelDescriptor {
+    KernelDescriptor {
+        id: "wide_cast".into(),
+        bindings: BindingLayout {
+            slots: vec![
+                BindingSlot {
+                    slot: 0,
+                    element_type: src_elem,
+                    element_count: Some(4),
+                    memory_class: MemoryClass::Global,
+                    visibility: BindingVisibility::ReadOnly,
+                    name: "src".into(),
+                },
+                BindingSlot {
+                    slot: 1,
+                    element_type: out_elem,
+                    element_count: Some(4),
+                    memory_class: MemoryClass::Global,
+                    visibility: BindingVisibility::ReadWrite,
+                    name: "out".into(),
+                },
+            ],
+        },
+        dispatch: Dispatch::new(1, 1, 1),
+        body: KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(0),
+                },
+                KernelOp {
+                    kind: KernelOpKind::LoadGlobal,
+                    operands: vec![0, 0],
+                    result: Some(1),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Cast { target },
+                    operands: vec![1],
+                    result: Some(2),
+                },
+                KernelOp {
+                    kind: KernelOpKind::StoreGlobal,
+                    operands: vec![1, 0, 2],
+                    result: None,
+                },
+            ],
+            child_bodies: vec![],
+            literals: vec![LiteralValue::U32(0)],
+        },
+    }
+}
+
+#[test]
+fn vec4_source_casts_emit_valid_wgsl() {
+    use naga::valid::{Capabilities, ValidationFlags, Validator};
+    // Vec4U32 is backed by vec4<u32>; like the vec2 case, a plain `As` over the
+    // whole vector produced invalid WGSL. Every Vec4U32-source cast must now
+    // lower via lane extraction and validate.
+    let mut validator = Validator::new(ValidationFlags::all(), Capabilities::all());
+    for (target, out) in [
+        (DataType::U32, DataType::U32),
+        (DataType::I32, DataType::I32),
+        (DataType::Bool, DataType::U32),
+        (DataType::U64, DataType::U64),
+        (DataType::Vec2U32, DataType::U64),
+    ] {
+        let label = format!("Vec4U32->{target:?}");
+        let module = emit(&wide_cast_desc(DataType::Vec4U32, target, out))
+            .unwrap_or_else(|e| panic!("{label}: emit failed: {e}"));
+        validator
+            .validate(&module)
+            .unwrap_or_else(|e| panic!("{label}: INVALID WGSL: {e:?}"));
+    }
+}
+
+#[test]
+fn wide_source_to_wide_target_casts_emit_valid_wgsl() {
+    use naga::valid::{Capabilities, ValidationFlags, Validator};
+    // Previously even U64->U64 identity and Vec2U32->Vec2U32 emitted invalid
+    // WGSL because the widening path assumed a scalar source. Lane-compose makes
+    // wide->wide casts valid.
+    let mut validator = Validator::new(ValidationFlags::all(), Capabilities::all());
+    for (src, target, out) in [
+        (DataType::U64, DataType::U64, DataType::U64),
+        (DataType::Vec2U32, DataType::Vec2U32, DataType::U64),
+        (DataType::U64, DataType::Vec2U32, DataType::U64),
+        (DataType::Vec2U32, DataType::U64, DataType::U64),
+    ] {
+        let label = format!("{src:?}->{target:?}");
+        let module = emit(&wide_cast_desc(src, target, out))
+            .unwrap_or_else(|e| panic!("{label}: emit failed: {e}"));
+        validator
+            .validate(&module)
+            .unwrap_or_else(|e| panic!("{label}: INVALID WGSL: {e:?}"));
+    }
+}
+
 /// Load a U64 (vec2<u32> backing), apply `unop`, store to a U64 out.
 fn u64_unop_desc(unop: UnOp) -> KernelDescriptor {
     KernelDescriptor {

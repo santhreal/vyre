@@ -524,29 +524,61 @@ impl BodyBuilder<'_> {
             }),
             OpDispatchRoute::Cast => with_route_kind!(op, route, KernelOpKind::Cast { target } => {
                 let expr = self.value_operand(op, 0)?;
-                // Narrowing FROM a 64-bit value: U64/I64 are vec2<u32>-backed, so
-                // a plain `As` would run on the whole vector and bind a vec2 as a
-                // scalar — an InvalidStoreTypes miscompile (invalid WGSL, not just
-                // wrong output). Lower each scalar target explicitly from the two
-                // lanes, matching PTX `cvt.<t>.u64` truncation and the reference:
-                //   * integer target -> low word (lane 0), truncated, then the
+                // A multi-word-backed SOURCE (U64/I64/Vec2U32 -> vec2<u32>,
+                // Vec4U32 -> vec4<u32>) cannot go through the scalar `As` path or
+                // the scalar-source widening path below: both assume a scalar
+                // source, so a plain `As` over the whole vector (or coercing the
+                // vector to u32) yields invalid WGSL (InvalidStoreTypes / Compose
+                // arity). Lower EVERY cast from a wide source by extracting its
+                // lanes explicitly, matching the reference + PTX:
+                //   * 2-word target (U64/I64/Vec2U32) -> low two words;
+                //   * Vec4U32 -> the four words (identity, vec4 source only);
+                //   * scalar integer -> low word (lane 0), truncated, then the
                 //     scalar cast reinterprets it (u64->u32 keeps the low 32 bits);
-                //   * F32 -> reconstruct the native 64-bit value (low | high<<32)
-                //     and ConvertUToF, so the high word is NOT dropped (matches
-                //     the reference `u64 as f32`);
-                //   * Bool -> truthy over the FULL 64 bits: `(low | high) != 0`.
-                let source_is_wide = self
-                    .value_type_operand(op, 0)
-                    .map(|h| h == self.types.vec2_u32_ty)
-                    .unwrap_or(false);
-                let target_is_wide = matches!(
-                    target,
-                    DataType::U64 | DataType::I64 | DataType::Vec2U32 | DataType::Vec4U32
-                );
-                if source_is_wide && !target_is_wide {
-                    let low = self.append_expr(Expression::AccessIndex { base: expr, index: 0 });
-                    let high = self.append_expr(Expression::AccessIndex { base: expr, index: 1 });
-                    let value = match target {
+                //   * F32 -> reconstruct (low | high<<32) then ConvertUToF, so the
+                //     high word is NOT dropped (matches the reference u64 as f32);
+                //   * Bool -> truthy over ALL source words: OR the lanes, != 0.
+                let source_lanes = self.value_type_operand(op, 0).ok().and_then(|h| {
+                    if h == self.types.vec4_u32_ty {
+                        Some(4u32)
+                    } else if h == self.types.vec2_u32_ty {
+                        Some(2u32)
+                    } else {
+                        None
+                    }
+                });
+                if let Some(lanes) = source_lanes {
+                    let lane_handles: Vec<_> = (0..lanes)
+                        .map(|i| {
+                            self.append_expr(Expression::AccessIndex { base: expr, index: i })
+                        })
+                        .collect();
+                    let low = lane_handles[0];
+                    match target {
+                        DataType::U64 | DataType::I64 | DataType::Vec2U32 => {
+                            let composed = self.append_expr(Expression::Compose {
+                                ty: self.types.vec2_u32_ty,
+                                components: vec![low, lane_handles[1]],
+                            });
+                            return self
+                                .bind_result_typed(op, composed, self.types.vec2_u32_ty);
+                        }
+                        DataType::Vec4U32 => {
+                            if lanes < 4 {
+                                return Err(EmitError::NagaConstructionFailed(format!(
+                                    "cast to Vec4U32 from a {lanes}-word source is not \
+                                     representable: only a 4-word (Vec4U32) source can \
+                                     widen to Vec4U32. Fix: route through a Vec2U32 \
+                                     intermediate or zero-fill the upper lanes explicitly."
+                                )));
+                            }
+                            let composed = self.append_expr(Expression::Compose {
+                                ty: self.types.vec4_u32_ty,
+                                components: lane_handles,
+                            });
+                            return self
+                                .bind_result_typed(op, composed, self.types.vec4_u32_ty);
+                        }
                         DataType::F32 => {
                             let low_u64 = self.append_expr(Expression::As {
                                 expr: low,
@@ -554,7 +586,7 @@ impl BodyBuilder<'_> {
                                 convert: Some(8),
                             });
                             let high_u64 = self.append_expr(Expression::As {
-                                expr: high,
+                                expr: lane_handles[1],
                                 kind: ScalarKind::Uint,
                                 convert: Some(8),
                             });
@@ -575,37 +607,44 @@ impl BodyBuilder<'_> {
                                 left: low_u64,
                                 right: high_shifted,
                             });
-                            self.append_expr(Expression::As {
+                            let value = self.append_expr(Expression::As {
                                 expr: full,
                                 kind: ScalarKind::Float,
                                 convert: Some(4),
-                            })
+                            });
+                            let ty = self.type_for_data_type(target)?;
+                            return self.bind_result_typed(op, value, ty);
                         }
                         DataType::Bool => {
-                            let merged = self.append_expr(Expression::Binary {
-                                op: BinaryOperator::InclusiveOr,
-                                left: low,
-                                right: high,
-                            });
+                            let mut merged = low;
+                            for &lane in &lane_handles[1..] {
+                                merged = self.append_expr(Expression::Binary {
+                                    op: BinaryOperator::InclusiveOr,
+                                    left: merged,
+                                    right: lane,
+                                });
+                            }
                             let zero = self
                                 .append_expr(Expression::Literal(naga::Literal::U32(0)));
-                            self.append_expr(Expression::Binary {
+                            let value = self.append_expr(Expression::Binary {
                                 op: BinaryOperator::NotEqual,
                                 left: merged,
                                 right: zero,
-                            })
+                            });
+                            let ty = self.type_for_data_type(target)?;
+                            return self.bind_result_typed(op, value, ty);
                         }
                         _ => {
                             let (kind, width) = scalar_cast_target(target)?;
-                            self.append_expr(Expression::As {
+                            let value = self.append_expr(Expression::As {
                                 expr: low,
                                 kind,
                                 convert: Some(width),
-                            })
+                            });
+                            let ty = self.type_for_data_type(target)?;
+                            return self.bind_result_typed(op, value, ty);
                         }
-                    };
-                    let ty = self.type_for_data_type(target)?;
-                    return self.bind_result_typed(op, value, ty);
+                    }
                 }
                 if matches!(target, DataType::U64 | DataType::I64 | DataType::Vec2U32) {
                     // WGSL has no native 64-bit integer; U64/I64 are backed by
