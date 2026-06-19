@@ -111,11 +111,26 @@ fn feature_matrix_drift_is_baselined() {
                     } else if path.extension().and_then(|s| s.to_str()) == Some("rs") {
                         let content = std::fs::read_to_string(&path).unwrap();
                         for line in content.lines() {
-                            if let Some(start) = line.find("cfg(feature = \"") {
-                                let after = &line[start + 15..];
-                                if let Some(end) = after.find('"') {
-                                    let feat = &after[..end];
-                                    found_in_source.insert(feat.to_string());
+                            // A feature gate appears as `feature = "NAME"` inside a
+                            // `cfg(...)`. The old `cfg(feature = "..."` match only
+                            // caught the BARE form and missed every compound cfg —
+                            // `cfg(any(test, feature = "x"))`, `cfg(all(...))`,
+                            // `cfg(not(...))` — falsely reporting such features as
+                            // unused. Scan every `feature = "NAME"` on any cfg line.
+                            if !line.contains("cfg") {
+                                continue;
+                            }
+                            for seg in line.split("feature").skip(1) {
+                                let seg = seg.trim_start();
+                                let Some(seg) = seg.strip_prefix('=') else {
+                                    continue;
+                                };
+                                let seg = seg.trim_start();
+                                let Some(seg) = seg.strip_prefix('"') else {
+                                    continue;
+                                };
+                                if let Some(end) = seg.find('"') {
+                                    found_in_source.insert(seg[..end].to_string());
                                 }
                             }
                         }
