@@ -5,6 +5,33 @@ Goal: on a single 8 MiB scan, the wgpu megakernel must beat Hyperscan (~1.5 GB/s
 bandwidth-bound scan of 8 MiB is ~5 µs — a ~1000× ceiling physically exists. The
 gap today is **parallel decomposition + per-lane inner-loop cost**, not physics.
 
+## STATUS: GOAL MET — per-rule segmentation path (verified 2026-06-18, RTX 5090)
+The intra-file `(segment × rule)` geometry is wired end to end (host `segments`
+table at binding 9 + `seg_idx = claim/rule_count` decode + warm-up prefix
+`[scan_start, emit_start)` + emit-guard `byte_pos >= emit_start` mirroring the
+`segmentation.rs` CPU oracle) and the drain loop (`forever` + `claim>=QUEUE_LEN`)
+removed the fixed-budget under-claim silent-drop. Re-measured on the 5090 via
+`cargo test -p vyre-driver-wgpu --features megakernel-batch,wgpu --test
+megakernel_segmentation_conservation_and_throughput -- --ignored --nocapture`
+(8 MiB, 8 rules, 137 planted markers):
+
+| seg_len | wgroups | found/137 | dropped | GB/s   | vs HS  |
+|---------|---------|-----------|---------|--------|--------|
+| 1024    | 1024    | 137       | 0       | 13.594 | 9.06×  |
+| 1024    | 2048    | 137       | 0       | 18.519 | 12.35× |
+| 512     | 1024    | 137       | 0       | 13.425 | 8.95×  |
+| 512     | 2048    | 137       | 0       | 17.752 | 11.83× |
+| 256     | 2048    | 137       | 0       | 18.247 | 12.16× |
+| 128     | 4096    | 137       | 0       | 18.686 | 12.46× |
+
+Best conserving geometry **18.686 GB/s = 12.46× the 1.5 GB/s Hyperscan floor**;
+every geometry conserves all markers with 0 dropped. The pre-segmentation
+baseline was 4.1× SLOWER at 17% occupancy — segmentation flipped a 4.1× loss
+into a 12.46× win. The REMAINING frontier is the COMBINED-AC path (one
+transition read per byte regardless of pattern count, killing the `rule_count`
+queue multiplier) — see "Concrete kernel plan" at the end; the per-rule path
+above is already an OOM win for small catalogs.
+
 ## Root cause (read, not theorized)
 
 1. **Work-item geometry is (file × rule), never (segment × rule).**
