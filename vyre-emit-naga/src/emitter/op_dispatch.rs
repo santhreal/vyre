@@ -1375,7 +1375,24 @@ impl BodyBuilder<'_> {
             right: eight,
         });
         let pointer = self.binding_element_pointer_by_slot(slot, word_index)?;
-        let word = self.append_expr(Expression::Load { pointer });
+        let word_bits = self.append_expr(Expression::Load { pointer });
+        // The byte-extract shift+mask is UNSIGNED bit manipulation. An `I8`
+        // buffer is backed by `array<i32>` (scalar_type maps I8 -> i32_ty), so
+        // the loaded word is Sint; masking it with the u32 `0xff`/shift literals
+        // would emit `And(i32, u32)` / `ShiftRight(i32, u32)` which naga rejects
+        // (InvalidBinaryOperandTypes) — the I8 byte-extract emitted invalid WGSL.
+        // Reinterpret the word's bits to u32 so the whole extraction is u32; the
+        // I8 case re-signs only at the final `(byte << 24) as i32 >> 24` step.
+        // `U8` is already `array<u32>`, so its word needs no reinterpret.
+        let word = if matches!(data_type, DataType::I8) {
+            self.append_expr(Expression::As {
+                expr: word_bits,
+                kind: naga::ScalarKind::Uint,
+                convert: None,
+            })
+        } else {
+            word_bits
+        };
         let shifted = self.append_expr(Expression::Binary {
             op: BinaryOperator::ShiftRight,
             left: word,
@@ -1493,9 +1510,26 @@ impl BodyBuilder<'_> {
             left: value_byte,
             right: shift_bits,
         });
+        // An `I8` buffer is backed by `array<i32>` (scalar_type maps I8 ->
+        // i32_ty). The read-modify-write below is UNSIGNED bit manipulation
+        // (mask/clear/merge with u32 literals), so on a Sint word it would emit
+        // `And(i32, u32)` which naga rejects. Reinterpret the loaded word to u32
+        // for the RMW, then reinterpret the merged result back to i32 before the
+        // Store (whose value must match the array<i32> element type). `U8` is
+        // already `array<u32>`, so it needs neither reinterpret.
+        let is_signed_byte = matches!(self.binding_data_types.get(&slot), Some(DataType::I8));
         // Read-modify-write the u32 word.
         let pointer = self.binding_element_pointer_by_slot(slot, word_index)?;
-        let word = self.append_expr(Expression::Load { pointer });
+        let word_bits = self.append_expr(Expression::Load { pointer });
+        let word = if is_signed_byte {
+            self.append_expr(Expression::As {
+                expr: word_bits,
+                kind: naga::ScalarKind::Uint,
+                convert: None,
+            })
+        } else {
+            word_bits
+        };
         let cleared = self.append_expr(Expression::Binary {
             op: BinaryOperator::And,
             left: word,
@@ -1506,6 +1540,16 @@ impl BodyBuilder<'_> {
             left: cleared,
             right: value_in_word,
         });
+        // Re-sign the merged u32 word to the buffer's i32 element type for I8.
+        let store_value = if is_signed_byte {
+            self.append_expr(Expression::As {
+                expr: merged,
+                kind: naga::ScalarKind::Sint,
+                convert: None,
+            })
+        } else {
+            merged
+        };
         // Re-emit the pointer Access expression: naga's Statement::Store
         // requires a pointer that is in scope at the store site, and
         // the earlier `pointer` handle was consumed by the `Load`
@@ -1514,7 +1558,7 @@ impl BodyBuilder<'_> {
         self.function.body.push(
             Statement::Store {
                 pointer: store_pointer,
-                value: merged,
+                value: store_value,
             },
             Span::UNDEFINED,
         );

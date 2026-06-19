@@ -370,3 +370,31 @@ fn u32_load_global_unchanged_by_byte_extract_path() {
         "U32 LoadGlobal must not emit any byte-shift ShiftRight ops"
     );
 }
+
+/// The byte-extract load/store chains are emitted for REAL byte-addressed
+/// buffer scans, yet the shape tests above never ran naga's validator — a
+/// latent-invalidity blind spot. The I8 LOAD in particular sign-extends with an
+/// arithmetic `>> 24` on an i32 value: before the shift-amount fix (commit
+/// 1a8682c399), `unify_binary_operand_types` coerced that u32 shift amount to
+/// i32, emitting `ShiftRight(i32, i32)` which naga REJECTS — so the I8
+/// byte-extract emitted invalid WGSL that no test caught. This pins that every
+/// byte-extract geometry passes naga's real `Validator`, not just an `is_ok`.
+#[test]
+fn byte_extract_loads_and_stores_emit_valid_wgsl() {
+    use naga::valid::{Capabilities, ValidationFlags, Validator};
+    let mut validator = Validator::new(ValidationFlags::all(), Capabilities::all());
+    let cases = [
+        ("u8 load", byte_load_desc(DataType::U8)),
+        ("i8 load (arithmetic >>24 sign-extend)", byte_load_desc(DataType::I8)),
+        ("u32 load", byte_load_desc(DataType::U32)),
+        ("u8 store", byte_store_desc(DataType::U8)),
+        ("i8 store", byte_store_desc(DataType::I8)),
+        ("u32 store", byte_store_desc(DataType::U32)),
+    ];
+    for (label, desc) in cases {
+        let module = emit(&desc).unwrap_or_else(|e| panic!("{label}: emit failed: {e}"));
+        validator
+            .validate(&module)
+            .unwrap_or_else(|e| panic!("{label}: byte-extract emitted INVALID WGSL: {e:?}"));
+    }
+}
