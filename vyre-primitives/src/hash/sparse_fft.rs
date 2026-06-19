@@ -121,10 +121,10 @@ pub fn sparse_fft_bin_hash_cpu(signal: &[u32], a: u32, c: u32, b: u32) -> Vec<u3
     let mut bins = Vec::new();
     match try_sparse_fft_bin_hash_cpu_into(signal, a, c, b, &mut bins) {
         Ok(()) => bins,
-        Err(error) => {
-            eprintln!("vyre-primitives sparse FFT bin-hash CPU reference failed: {error}");
-            Vec::new()
-        }
+        // A parity oracle that returns empty on failure makes the GPU-vs-CPU
+        // assertion pass on empty==empty, silently masking a divergence
+        // (Law 10 / Law 6). Fail loud; callers use the try_ variant.
+        Err(error) => panic!("vyre-primitives sparse FFT bin-hash CPU reference failed: {error}"),
     }
 }
 
@@ -132,8 +132,7 @@ pub fn sparse_fft_bin_hash_cpu(signal: &[u32], a: u32, c: u32, b: u32) -> Vec<u3
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn sparse_fft_bin_hash_cpu_into(signal: &[u32], a: u32, c: u32, b: u32, bins: &mut Vec<u32>) {
     if let Err(error) = try_sparse_fft_bin_hash_cpu_into(signal, a, c, b, bins) {
-        eprintln!("vyre-primitives sparse FFT bin-hash CPU reference failed: {error}");
-        bins.clear();
+        panic!("vyre-primitives sparse FFT bin-hash CPU reference failed: {error}");
     }
 }
 
@@ -185,9 +184,11 @@ pub fn voting_recovery_cpu(
     let mut out = Vec::new();
     match try_voting_recovery_cpu_into(binnings, threshold, n, b, &mut votes, &mut out) {
         Ok(()) => out,
+        // A parity oracle that returns empty on failure makes the GPU-vs-CPU
+        // assertion pass on empty==empty, silently masking a divergence
+        // (Law 10 / Law 6). Fail loud; callers use the try_ variant.
         Err(error) => {
-            eprintln!("vyre-primitives sparse FFT voting recovery CPU reference failed: {error}");
-            Vec::new()
+            panic!("vyre-primitives sparse FFT voting recovery CPU reference failed: {error}")
         }
     }
 }
@@ -203,9 +204,7 @@ pub fn voting_recovery_cpu_into(
     out: &mut Vec<u32>,
 ) {
     if let Err(error) = try_voting_recovery_cpu_into(binnings, threshold, n, b, votes, out) {
-        eprintln!("vyre-primitives sparse FFT voting recovery CPU reference failed: {error}");
-        votes.clear();
-        out.clear();
+        panic!("vyre-primitives sparse FFT voting recovery CPU reference failed: {error}");
     }
 }
 

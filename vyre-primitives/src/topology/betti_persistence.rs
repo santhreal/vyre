@@ -40,10 +40,10 @@
 pub fn betti_persistence_cpu(mask: &[u32], n: u32) -> (u32, u32, u32) {
     match try_betti_persistence_cpu(mask, n) {
         Ok(result) => result,
-        Err(error) => {
-            eprintln!("vyre-primitives betti_persistence CPU reference failed: {error}");
-            (0, 0, 0)
-        }
+        // A parity oracle that returns zeros on failure makes the GPU-vs-CPU
+        // assertion pass on (0,0,0)==(0,0,0), silently masking a divergence
+        // (Law 10 / Law 6). Fail loud; callers use the try_ variant.
+        Err(error) => panic!("vyre-primitives betti_persistence CPU reference failed: {error}"),
     }
 }
 
@@ -317,8 +317,12 @@ mod tests {
     }
 
     #[test]
-    fn compatibility_wrapper_returns_zero_tuple_on_invalid_mask() {
-        assert_eq!(betti_persistence_cpu(&[0, 1, 0], 2), (0, 0, 0));
+    #[should_panic(expected = "betti_persistence CPU reference failed")]
+    fn compatibility_wrapper_fails_loud_on_invalid_mask() {
+        // An invalid mask must fail LOUD, not silently return (0,0,0) — a
+        // GPU-vs-CPU parity assertion would accept (0,0,0)==(0,0,0) as a match
+        // and hide the divergence (Law 10 / Law 6).
+        let _ = betti_persistence_cpu(&[0, 1, 0], 2);
     }
 
     #[test]

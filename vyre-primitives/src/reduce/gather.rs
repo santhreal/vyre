@@ -48,10 +48,10 @@ pub fn cpu_ref(src: &[u32], indices: &[u32]) -> Vec<u32> {
     let mut out = Vec::new();
     match try_cpu_ref_into(src, indices, &mut out) {
         Ok(()) => out,
-        Err(error) => {
-            eprintln!("vyre-primitives gather CPU reference failed: {error}");
-            Vec::new()
-        }
+        // A parity oracle that returns empty on failure makes the GPU-vs-CPU
+        // assertion pass on empty==empty, silently masking a divergence
+        // (Law 10 / Law 6). Fail loud; callers use try_cpu_ref_into.
+        Err(error) => panic!("vyre-primitives gather CPU reference failed: {error}"),
     }
 }
 

@@ -174,8 +174,10 @@ pub fn pack_u32_slice(words: &[u32]) -> Vec<u8> {
 /// so the wire format is identical across hosts.
 pub fn pack_u32_slice_into(words: &[u32], out: &mut Vec<u8>) {
     if let Err(error) = try_pack_u32_slice_into(words, out) {
-        eprintln!("vyre-primitives u32 wire pack failed: {error}");
-        out.clear();
+        // Returning empty bytes would upload an EMPTY input buffer to the GPU —
+        // the kernel then scans nothing and silently reports a clean result
+        // (Law 10). Fail loud; callers use try_pack_u32_slice_into.
+        panic!("vyre-primitives u32 wire pack failed: {error}");
     }
 }
 
@@ -248,18 +250,16 @@ pub fn pack_bytes_as_u32_slice(bytes: &[u8]) -> Vec<u8> {
     let mut out = Vec::new();
     match try_pack_bytes_as_u32_slice_into(bytes, &mut out) {
         Ok(()) => out,
-        Err(error) => {
-            eprintln!("vyre-primitives byte-lane wire pack failed: {error}");
-            Vec::new()
-        }
+        // Empty bytes would upload an empty GPU input buffer — silent scan-nothing
+        // (Law 10). Fail loud; callers use try_pack_bytes_as_u32_slice_into.
+        Err(error) => panic!("vyre-primitives byte-lane wire pack failed: {error}"),
     }
 }
 
 /// Pack raw bytes into per-lane `u32` storage using caller-owned byte storage.
 pub fn pack_bytes_as_u32_slice_into(bytes: &[u8], out: &mut Vec<u8>) {
     if let Err(error) = try_pack_bytes_as_u32_slice_into(bytes, out) {
-        eprintln!("vyre-primitives byte-lane wire pack failed: {error}");
-        out.clear();
+        panic!("vyre-primitives byte-lane wire pack failed: {error}");
     }
 }
 
@@ -328,8 +328,9 @@ pub fn pack_f32_slice(values: &[f32]) -> Vec<u8> {
 /// `cast_slice` copy on LE hosts, scalar fallback on BE hosts.
 pub fn pack_f32_slice_into(values: &[f32], out: &mut Vec<u8>) {
     if let Err(error) = try_pack_f32_slice_into(values, out) {
-        eprintln!("vyre-primitives f32 wire pack failed: {error}");
-        out.clear();
+        // Empty bytes would upload an empty GPU input buffer — silent
+        // scan-nothing (Law 10). Fail loud; callers use try_pack_f32_slice_into.
+        panic!("vyre-primitives f32 wire pack failed: {error}");
     }
 }
 

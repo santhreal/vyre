@@ -82,10 +82,10 @@ pub fn cpu_ref(input: &[u32], segment_offsets: &[u32]) -> Vec<u32> {
     let mut out = Vec::new();
     match try_cpu_ref_into(input, segment_offsets, &mut out) {
         Ok(()) => out,
-        Err(error) => {
-            eprintln!("vyre-primitives segment_reduce_sum CPU reference failed: {error}");
-            Vec::new()
-        }
+        // A parity oracle that returns empty on failure makes the GPU-vs-CPU
+        // assertion pass on empty==empty, silently masking a divergence
+        // (Law 10 / Law 6). Fail loud; callers use try_cpu_ref_into.
+        Err(error) => panic!("vyre-primitives segment_reduce_sum CPU reference failed: {error}"),
     }
 }
 
@@ -96,8 +96,7 @@ pub fn cpu_ref(input: &[u32], segment_offsets: &[u32]) -> Vec<u32> {
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn cpu_ref_into(input: &[u32], segment_offsets: &[u32], out: &mut Vec<u32>) {
     if let Err(error) = try_cpu_ref_into(input, segment_offsets, out) {
-        eprintln!("vyre-primitives segment_reduce_sum CPU reference failed: {error}");
-        out.clear();
+        panic!("vyre-primitives segment_reduce_sum CPU reference failed: {error}");
     }
 }
 
@@ -250,11 +249,20 @@ mod tests {
             .next()
             .expect("Fix: segment_reduce.rs must contain production section");
 
+        // No LAZY panics (no fix hint); an explicit panic!() fail-loud IS the
+        // blessed Law-10 fix for an infallible parity wrapper.
         assert!(
-            !production.contains(".expect(")
-                && !production.contains(".unwrap(")
-                && !production.contains("panic!("),
-            "Fix: segment_reduce_sum production path must not panic."
+            !production.contains(".expect(") && !production.contains(".unwrap("),
+            "Fix: segment_reduce_sum production wrappers must not use bare .unwrap()/.expect() — use an explicit panic!() with the error."
+        );
+        // No SILENT fallback: returning empty on failure masks a parity divergence (Law 10/6).
+        assert!(
+            !production.contains(concat!("eprintln", "!(\"vyre-primitives segment_reduce_sum")),
+            "Fix: segment_reduce_sum CPU oracle must not log-and-return empty on error — fail loud via panic!() so callers use the try_ variant."
+        );
+        assert!(
+            production.contains("panic!("),
+            "Fix: segment_reduce_sum CPU oracle must panic!() when it cannot compute the reference, never return an empty vec."
         );
     }
 

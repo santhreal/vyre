@@ -124,10 +124,10 @@ pub fn decoded_capacity(input_len: u32) -> u32 {
 pub fn decode_standard_packed_reference(input: &[u8]) -> (Vec<u32>, u32) {
     match try_decode_standard_packed_reference(input) {
         Ok(decoded) => decoded,
-        Err(error) => {
-            eprintln!("{error}");
-            (Vec::new(), 0)
-        }
+        // A decode oracle that returns empty on failure makes the GPU-vs-CPU
+        // assertion pass on empty==empty, silently masking a divergence
+        // (Law 10 / Law 6). Fail loud; callers use the try_ variant.
+        Err(error) => panic!("vyre-primitives base64 decode reference failed: {error}"),
     }
 }
 
@@ -140,11 +140,9 @@ pub fn decode_standard_packed_reference(input: &[u8]) -> (Vec<u32>, u32) {
 pub fn decode_standard_packed_reference_into(input: &[u8], out: &mut Vec<u32>) -> u32 {
     match try_decode_standard_packed_reference_into(input, out) {
         Ok(decoded_len) => decoded_len,
-        Err(error) => {
-            eprintln!("{error}");
-            out.clear();
-            0
-        }
+        // Clearing and returning 0 on failure silently masks a parity
+        // divergence (Law 10 / Law 6). Fail loud; callers use the try_ variant.
+        Err(error) => panic!("vyre-primitives base64 decode reference failed: {error}"),
     }
 }
 

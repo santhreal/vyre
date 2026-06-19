@@ -207,10 +207,10 @@ pub fn xor_bind_cpu(a: &[u32], b: &[u32]) -> Vec<u32> {
     let mut out = Vec::new();
     match try_xor_bind_cpu_into(a, b, &mut out) {
         Ok(()) => out,
-        Err(error) => {
-            eprintln!("vyre-primitives hypervector XOR bind CPU reference failed: {error}");
-            Vec::new()
-        }
+        // A parity oracle that returns empty on failure makes the GPU-vs-CPU
+        // assertion pass on empty==empty, silently masking a divergence
+        // (Law 10 / Law 6). Fail loud; callers use the try_ variant.
+        Err(error) => panic!("vyre-primitives hypervector XOR bind CPU reference failed: {error}"),
     }
 }
 
@@ -218,8 +218,7 @@ pub fn xor_bind_cpu(a: &[u32], b: &[u32]) -> Vec<u32> {
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn xor_bind_cpu_into(a: &[u32], b: &[u32], out: &mut Vec<u32>) {
     if let Err(error) = try_xor_bind_cpu_into(a, b, out) {
-        eprintln!("vyre-primitives hypervector XOR bind CPU reference failed: {error}");
-        out.clear();
+        panic!("vyre-primitives hypervector XOR bind CPU reference failed: {error}");
     }
 }
 
@@ -245,9 +244,11 @@ pub fn majority_bundle_cpu(hvs: &[Vec<u32>]) -> Vec<u32> {
     let mut out = Vec::new();
     match try_majority_bundle_cpu_into(hvs, &mut out) {
         Ok(()) => out,
+        // A parity oracle that returns empty on failure makes the GPU-vs-CPU
+        // assertion pass on empty==empty, silently masking a divergence
+        // (Law 10 / Law 6). Fail loud; callers use the try_ variant.
         Err(error) => {
-            eprintln!("vyre-primitives hypervector majority bundle CPU reference failed: {error}");
-            Vec::new()
+            panic!("vyre-primitives hypervector majority bundle CPU reference failed: {error}")
         }
     }
 }
@@ -256,8 +257,7 @@ pub fn majority_bundle_cpu(hvs: &[Vec<u32>]) -> Vec<u32> {
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn majority_bundle_cpu_into(hvs: &[Vec<u32>], out: &mut Vec<u32>) {
     if let Err(error) = try_majority_bundle_cpu_into(hvs, out) {
-        eprintln!("vyre-primitives hypervector majority bundle CPU reference failed: {error}");
-        out.clear();
+        panic!("vyre-primitives hypervector majority bundle CPU reference failed: {error}");
     }
 }
 
@@ -517,11 +517,20 @@ mod tests {
             .next()
             .expect("Fix: hypervector.rs must contain production section");
 
+        // No LAZY panics (no fix hint); an explicit panic!() fail-loud IS the
+        // blessed Law-10 fix for an infallible parity wrapper.
         assert!(
-            !production.contains(".expect(")
-                && !production.contains(".unwrap(")
-                && !production.contains("panic!("),
-            "Fix: hypervector production path must not panic."
+            !production.contains(".expect(") && !production.contains(".unwrap("),
+            "Fix: hypervector production wrappers must not use bare .unwrap()/.expect() — use an explicit panic!() with the error."
+        );
+        // No SILENT fallback: returning empty on failure masks a parity divergence (Law 10/6).
+        assert!(
+            !production.contains(concat!("eprintln", "!(\"vyre-primitives hypervector")),
+            "Fix: hypervector CPU oracle must not log-and-return empty on error — fail loud via panic!() so callers use the try_ variant."
+        );
+        assert!(
+            production.contains("panic!("),
+            "Fix: hypervector CPU oracle must panic!() when it cannot compute the reference, never return an empty vec."
         );
     }
 

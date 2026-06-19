@@ -91,8 +91,10 @@ pub(crate) fn indexed_move_cpu_ref_into(
     dst: &mut Vec<u32>,
 ) {
     if let Err(error) = try_indexed_move_cpu_ref_into(kind, src, indices, dst_len, dst) {
-        eprintln!("vyre-primitives indexed {kind:?} CPU reference failed: {error}");
-        dst.clear();
+        // A parity oracle that clears to empty on failure makes the GPU-vs-CPU
+        // assertion pass on empty==empty, silently masking a divergence
+        // (Law 10 / Law 6). Fail loud; callers use the try_ variant.
+        panic!("vyre-primitives indexed {kind:?} CPU reference failed: {error}");
     }
 }
 

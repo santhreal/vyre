@@ -36,10 +36,10 @@ pub fn cpu_ref(a: &[u32], b: &[u32]) -> Vec<u32> {
     let mut out = Vec::new();
     match try_cpu_ref_into(a, b, &mut out) {
         Ok(()) => out,
-        Err(error) => {
-            eprintln!("vyre-primitives stochastic bitstream cpu_ref failed: {error}");
-            Vec::new()
-        }
+        // A parity oracle that returns empty on failure makes the GPU-vs-CPU
+        // assertion pass on empty==empty, silently masking a divergence
+        // (Law 10 / Law 6). Fail loud; callers use try_cpu_ref_into.
+        Err(error) => panic!("vyre-primitives stochastic bitstream cpu_ref failed: {error}"),
     }
 }
 
@@ -47,8 +47,7 @@ pub fn cpu_ref(a: &[u32], b: &[u32]) -> Vec<u32> {
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn cpu_ref_into(a: &[u32], b: &[u32], out: &mut Vec<u32>) {
     if let Err(error) = try_cpu_ref_into(a, b, out) {
-        eprintln!("vyre-primitives stochastic bitstream cpu_ref_into failed: {error}");
-        out.clear();
+        panic!("vyre-primitives stochastic bitstream cpu_ref_into failed: {error}");
     }
 }
 
@@ -72,18 +71,17 @@ pub fn encode_bitstream(p: f64, len_bits: usize, seed: u32) -> Vec<u32> {
     let mut out = Vec::new();
     match try_encode_bitstream_into(p, len_bits, seed, &mut out) {
         Ok(()) => out,
-        Err(error) => {
-            eprintln!("vyre-primitives stochastic bitstream encode failed: {error}");
-            Vec::new()
-        }
+        // Returning an empty bitstream on failure silently corrupts the encoded
+        // probability (downstream stochastic math reads zeros) — a silent
+        // fallback (Law 10). Fail loud; callers use try_encode_bitstream_into.
+        Err(error) => panic!("vyre-primitives stochastic bitstream encode failed: {error}"),
     }
 }
 
 /// CPU helper: encode into a caller-owned bitstream buffer.
 pub fn encode_bitstream_into(p: f64, len_bits: usize, seed: u32, out: &mut Vec<u32>) {
     if let Err(error) = try_encode_bitstream_into(p, len_bits, seed, out) {
-        eprintln!("vyre-primitives stochastic bitstream encode_into failed: {error}");
-        out.clear();
+        panic!("vyre-primitives stochastic bitstream encode_into failed: {error}");
     }
 }
 

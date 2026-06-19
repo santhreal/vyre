@@ -101,9 +101,11 @@ pub fn vietoris_rips_edge_filter_cpu(dist_matrix: &[f64], epsilon: f64, n: u32) 
     let mut out = Vec::new();
     match try_vietoris_rips_edge_filter_cpu_into(dist_matrix, epsilon, n, &mut out) {
         Ok(()) => out,
+        // A parity oracle that returns empty on failure makes the GPU-vs-CPU
+        // assertion pass on empty==empty, silently masking a divergence
+        // (Law 10 / Law 6). Fail loud; callers use the try_ variant.
         Err(error) => {
-            eprintln!("vyre-primitives Vietoris-Rips edge filter CPU reference failed: {error}");
-            Vec::new()
+            panic!("vyre-primitives Vietoris-Rips edge filter CPU reference failed: {error}")
         }
     }
 }
@@ -148,11 +150,11 @@ pub fn extract_edges_cpu(edge_mask: &[u32], n: u32) -> Vec<(u32, u32)> {
     let mut edges = Vec::new();
     match try_extract_edges_cpu_into(edge_mask, n, &mut edges) {
         Ok(()) => edges,
+        // A parity oracle that returns empty on failure makes the GPU-vs-CPU
+        // assertion pass on empty==empty, silently masking a divergence
+        // (Law 10 / Law 6). Fail loud; callers use the try_ variant.
         Err(error) => {
-            eprintln!(
-                "vyre-primitives Vietoris-Rips edge extraction CPU reference failed: {error}"
-            );
-            Vec::new()
+            panic!("vyre-primitives Vietoris-Rips edge extraction CPU reference failed: {error}")
         }
     }
 }

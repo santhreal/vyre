@@ -32,10 +32,10 @@ pub fn cpu_ref(input: &[u32]) -> Vec<u32> {
     let mut out = Vec::new();
     match try_cpu_ref_into(input, &mut out) {
         Ok(()) => out,
-        Err(error) => {
-            eprintln!("vyre-primitives bitset_not cpu_ref failed: {error}");
-            Vec::new()
-        }
+        // A parity oracle that returns empty on failure makes the GPU-vs-CPU
+        // assertion pass on empty==empty, silently masking a real divergence
+        // (Law 10 / Law 6). Fail loud; callers use try_cpu_ref_into.
+        Err(error) => panic!("vyre-primitives bitset_not cpu_ref failed: {error}"),
     }
 }
 
@@ -43,8 +43,7 @@ pub fn cpu_ref(input: &[u32]) -> Vec<u32> {
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn cpu_ref_into(input: &[u32], out: &mut Vec<u32>) {
     if let Err(error) = try_cpu_ref_into(input, out) {
-        eprintln!("vyre-primitives bitset_not cpu_ref_into failed: {error}");
-        out.clear();
+        panic!("vyre-primitives bitset_not cpu_ref_into failed: {error}");
     }
 }
 
@@ -142,7 +141,15 @@ mod tests {
 
         assert!(
             !production.contains(".expect(") && !production.contains(".unwrap("),
-            "Fix: bitset_not CPU parity wrappers must not panic in production."
+            "Fix: bitset_not CPU parity wrappers must not use bare .unwrap()/.expect() — use an explicit panic!() with the error."
+        );
+        assert!(
+            !production.contains(concat!("eprintln", "!(\"vyre-primitives bitset_not")),
+            "Fix: bitset_not CPU oracle must not log-and-return empty on error (silently masks a parity divergence, Law 10) — fail loud via panic!() so callers use try_cpu_ref_into."
+        );
+        assert!(
+            production.contains("panic!("),
+            "Fix: bitset_not CPU oracle must panic!() when it cannot compute the reference, never return an empty vec."
         );
     }
 

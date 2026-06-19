@@ -55,10 +55,10 @@ pub fn cpu_ref(src: &[u32], indices: &[u32], dst_len: usize) -> Vec<u32> {
     let mut dst = Vec::new();
     match try_cpu_ref_into(src, indices, dst_len, &mut dst) {
         Ok(()) => dst,
-        Err(error) => {
-            eprintln!("vyre-primitives scatter CPU reference failed: {error}");
-            Vec::new()
-        }
+        // A parity oracle that returns empty on failure makes the GPU-vs-CPU
+        // assertion pass on empty==empty, silently masking a divergence
+        // (Law 10 / Law 6). Fail loud; callers use try_cpu_ref_into.
+        Err(error) => panic!("vyre-primitives scatter CPU reference failed: {error}"),
     }
 }
 

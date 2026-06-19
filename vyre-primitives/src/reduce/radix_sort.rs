@@ -121,10 +121,10 @@ pub fn cpu_ref(input: &[u32], bits: u32) -> Vec<u32> {
     let mut scratch = Vec::new();
     match try_cpu_ref_into(input, bits, &mut out, &mut scratch) {
         Ok(()) => out,
-        Err(error) => {
-            eprintln!("vyre-primitives radix_sort CPU reference failed: {error}");
-            Vec::new()
-        }
+        // A parity oracle that returns empty on failure makes the GPU-vs-CPU
+        // assertion pass on empty==empty, silently masking a divergence
+        // (Law 10 / Law 6). Fail loud; callers use try_cpu_ref_into.
+        Err(error) => panic!("vyre-primitives radix_sort CPU reference failed: {error}"),
     }
 }
 
@@ -132,9 +132,7 @@ pub fn cpu_ref(input: &[u32], bits: u32) -> Vec<u32> {
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn cpu_ref_into(input: &[u32], bits: u32, out: &mut Vec<u32>, scratch: &mut Vec<u32>) {
     if let Err(error) = try_cpu_ref_into(input, bits, out, scratch) {
-        eprintln!("vyre-primitives radix_sort CPU reference failed: {error}");
-        out.clear();
-        scratch.clear();
+        panic!("vyre-primitives radix_sort CPU reference failed: {error}");
     }
 }
 

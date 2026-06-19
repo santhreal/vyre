@@ -151,10 +151,10 @@ pub fn cpu_ref(input: &[u32], num_bins: u32) -> Vec<u32> {
     let mut out = Vec::new();
     match try_cpu_ref_into(input, num_bins, &mut out) {
         Ok(()) => out,
-        Err(error) => {
-            eprintln!("vyre-primitives histogram CPU reference failed: {error}");
-            Vec::new()
-        }
+        // A parity oracle that returns empty on failure makes the GPU-vs-CPU
+        // assertion pass on empty==empty, silently masking a divergence
+        // (Law 10 / Law 6). Fail loud; callers use try_cpu_ref_into.
+        Err(error) => panic!("vyre-primitives histogram CPU reference failed: {error}"),
     }
 }
 
@@ -162,8 +162,7 @@ pub fn cpu_ref(input: &[u32], num_bins: u32) -> Vec<u32> {
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn cpu_ref_into(input: &[u32], num_bins: u32, out: &mut Vec<u32>) {
     if let Err(error) = try_cpu_ref_into(input, num_bins, out) {
-        eprintln!("vyre-primitives histogram CPU reference failed: {error}");
-        out.clear();
+        panic!("vyre-primitives histogram CPU reference failed: {error}");
     }
 }
 

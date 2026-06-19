@@ -250,9 +250,9 @@ pub fn rle_segment_lengths_cpu(segments_in: &[u32]) -> (Vec<u32>, Vec<u32>) {
     let mut lengths = Vec::new();
     let mut values = Vec::new();
     if let Err(error) = try_rle_segment_lengths_cpu_into(segments_in, &mut lengths, &mut values) {
-        eprintln!("{error}");
-        lengths.clear();
-        values.clear();
+        // A decode oracle that clears to empty on failure silently masks a
+        // parity divergence (Law 10 / Law 6). Fail loud; use the try_ variant.
+        panic!("vyre-primitives RLE segment-lengths reference failed: {error}");
     }
     (lengths, values)
 }
@@ -267,9 +267,7 @@ pub fn rle_segment_lengths_cpu_into(
     values: &mut Vec<u32>,
 ) {
     if let Err(error) = try_rle_segment_lengths_cpu_into(segments_in, lengths, values) {
-        eprintln!("{error}");
-        lengths.clear();
-        values.clear();
+        panic!("vyre-primitives RLE segment-lengths reference failed: {error}");
     }
 }
 
@@ -313,11 +311,9 @@ pub fn rle_segment_start_offsets_cpu(segment_lengths: &[u32]) -> (Vec<u32>, u32)
     let mut offsets = Vec::new();
     let total = match try_rle_segment_start_offsets_cpu_into(segment_lengths, &mut offsets) {
         Ok(total) => total,
-        Err(error) => {
-            eprintln!("{error}");
-            offsets.clear();
-            0
-        }
+        // Clearing and returning 0 on failure silently masks a parity
+        // divergence (Law 10 / Law 6). Fail loud; use the try_ variant.
+        Err(error) => panic!("vyre-primitives RLE start-offsets reference failed: {error}"),
     };
     (offsets, total)
 }
@@ -330,11 +326,7 @@ pub fn rle_segment_start_offsets_cpu(segment_lengths: &[u32]) -> (Vec<u32>, u32)
 pub fn rle_segment_start_offsets_cpu_into(segment_lengths: &[u32], offsets: &mut Vec<u32>) -> u32 {
     match try_rle_segment_start_offsets_cpu_into(segment_lengths, offsets) {
         Ok(total) => total,
-        Err(error) => {
-            eprintln!("{error}");
-            offsets.clear();
-            0
-        }
+        Err(error) => panic!("vyre-primitives RLE start-offsets reference failed: {error}"),
     }
 }
 
@@ -367,8 +359,9 @@ pub fn try_rle_segment_start_offsets_cpu_into(
 pub fn rle_decode_cpu(segments_in: &[u32]) -> Vec<u8> {
     let mut output = Vec::new();
     if let Err(error) = try_rle_decode_cpu_into(segments_in, &mut output) {
-        eprintln!("{error}");
-        output.clear();
+        // Clearing to empty on failure silently masks a parity divergence
+        // (Law 10 / Law 6). Fail loud; use the try_ variant.
+        panic!("vyre-primitives RLE decode reference failed: {error}");
     }
     output
 }
@@ -381,8 +374,7 @@ pub fn rle_decode_cpu(segments_in: &[u32]) -> Vec<u8> {
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn rle_decode_cpu_into(segments_in: &[u32], output: &mut Vec<u8>) {
     if let Err(error) = try_rle_decode_cpu_into(segments_in, output) {
-        eprintln!("{error}");
-        output.clear();
+        panic!("vyre-primitives RLE decode reference failed: {error}");
     }
 }
 

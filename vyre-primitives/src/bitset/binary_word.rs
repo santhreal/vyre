@@ -164,10 +164,10 @@ macro_rules! define_bitwise_binary_op {
             let mut out = Vec::new();
             match try_cpu_ref_into(lhs, rhs, &mut out) {
                 Ok(()) => out,
-                Err(error) => {
-                    eprintln!("vyre-primitives {OP_ID} cpu_ref failed: {error}");
-                    Vec::new()
-                }
+                // A parity oracle that returns empty on failure makes the
+                // GPU-vs-CPU assertion pass on empty==empty, silently masking a
+                // divergence (Law 10 / Law 6). Fail loud; use try_cpu_ref_into.
+                Err(error) => panic!("vyre-primitives {OP_ID} cpu_ref failed: {error}"),
             }
         }
 
@@ -175,8 +175,7 @@ macro_rules! define_bitwise_binary_op {
         #[cfg(any(test, feature = "cpu-parity"))]
         pub fn cpu_ref_into(lhs: &[u32], rhs: &[u32], out: &mut Vec<u32>) {
             if let Err(error) = try_cpu_ref_into(lhs, rhs, out) {
-                eprintln!("vyre-primitives {OP_ID} cpu_ref_into failed: {error}");
-                out.clear();
+                panic!("vyre-primitives {OP_ID} cpu_ref_into failed: {error}");
             }
         }
 

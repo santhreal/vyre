@@ -98,8 +98,10 @@ pub(crate) fn nodeset_filter_cpu_ref_into(
     out: &mut Vec<u32>,
 ) {
     if let Err(error) = try_nodeset_filter_cpu_ref_into(values, filter, out) {
-        eprintln!("vyre-primitives nodeset_filter CPU reference failed: {error}");
-        out.clear();
+        // A parity oracle that clears to empty on failure makes the GPU-vs-CPU
+        // assertion pass on empty==empty, silently masking a divergence
+        // (Law 10 / Law 6). Fail loud; callers use the try_ variant.
+        panic!("vyre-primitives nodeset_filter CPU reference failed: {error}");
     }
 }
 
