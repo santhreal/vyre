@@ -329,6 +329,10 @@ fn no_root_stray_plan_docs() {
         "SECURITY.md",
         "STATUS.md",
         "ADVERSARIAL_TEST_STRATEGY.md",
+        // Conventional top-level project overview docs (shipped in v0.6.3),
+        // parallel to README — durable architecture/rationale, not plan docs.
+        "ARCHITECTURE.md",
+        "THESIS.md",
         // Gitignored working-set files that local checkouts may carry
         // but CI never sees. Baselining them here keeps the local test
         // green without weakening the contract  -  the .gitignore is
