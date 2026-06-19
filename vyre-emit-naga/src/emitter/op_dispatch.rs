@@ -1034,6 +1034,37 @@ impl BodyBuilder<'_> {
                     right: right_eff,
                 })
             };
+        // Div/Mod by zero is backend-divergent: naga 25 overrides a zero
+        // divisor to 1 (so `x / 0 == x`, `x % 0 == 0`), while PTX leaves it to
+        // unspecified hardware. The vyre-reference oracle documents a single
+        // total contract (`u32 x / 0 == u32::MAX`, `x % 0 == 0`) with explicit
+        // tests, so a bare Naga `Divide` makes the wgpu backend silently
+        // disagree with its own oracle. Force the oracle contract here so every
+        // backend is uniform and the CPU oracle stays sound (Law 10). Only the
+        // unsigned divisor is guarded — signed div-by-zero / INT_MIN÷-1 are
+        // rejected upstream as undefined backend semantics.
+        let value = if matches!(binop, BinOp::Div | BinOp::Mod)
+            && matches!(right_kind, Some(naga::ScalarKind::Uint))
+        {
+            let zero = self.append_expr(Expression::Literal(Literal::U32(0)));
+            let divisor_is_zero = self.append_expr(Expression::Binary {
+                op: BinaryOperator::Equal,
+                left: right_eff,
+                right: zero,
+            });
+            let sentinel = if matches!(binop, BinOp::Div) {
+                self.append_expr(Expression::Literal(Literal::U32(u32::MAX)))
+            } else {
+                zero
+            };
+            self.append_expr(Expression::Select {
+                condition: divisor_is_zero,
+                accept: sentinel,
+                reject: value,
+            })
+        } else {
+            value
+        };
         let ty = self.binary_result_type(op, binop)?;
         self.bind_result_typed(op, value, ty)
     }

@@ -195,6 +195,156 @@ fn u64_bitwise_binops_emit_valid_componentwise_wgsl() {
     }
 }
 
+/// Load `x` and a divisor `y` from a u32 buffer, apply `binop` (Div/Mod), store
+/// to a u32 out. Both operands are runtime loads so no constant fold short-
+/// circuits the divide.
+fn u32_div_desc(binop: BinOp) -> KernelDescriptor {
+    KernelDescriptor {
+        id: "u32_div".into(),
+        bindings: BindingLayout {
+            slots: vec![
+                BindingSlot {
+                    slot: 0,
+                    element_type: DataType::U32,
+                    element_count: Some(4),
+                    memory_class: MemoryClass::Global,
+                    visibility: BindingVisibility::ReadOnly,
+                    name: "src".into(),
+                },
+                BindingSlot {
+                    slot: 1,
+                    element_type: DataType::U32,
+                    element_count: Some(4),
+                    memory_class: MemoryClass::Global,
+                    visibility: BindingVisibility::ReadWrite,
+                    name: "out".into(),
+                },
+            ],
+        },
+        dispatch: Dispatch::new(1, 1, 1),
+        body: KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(0),
+                },
+                KernelOp {
+                    kind: KernelOpKind::LoadGlobal,
+                    operands: vec![0, 0],
+                    result: Some(1),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![1],
+                    result: Some(2),
+                },
+                KernelOp {
+                    kind: KernelOpKind::LoadGlobal,
+                    operands: vec![0, 2],
+                    result: Some(3),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(binop),
+                    operands: vec![1, 3],
+                    result: Some(4),
+                },
+                KernelOp {
+                    kind: KernelOpKind::StoreGlobal,
+                    operands: vec![1, 0, 4],
+                    result: None,
+                },
+            ],
+            child_bodies: vec![],
+            literals: vec![LiteralValue::U32(0), LiteralValue::U32(1)],
+        },
+    }
+}
+
+#[test]
+fn unsigned_div_by_zero_is_guarded_to_oracle_max() {
+    use naga::valid::{Capabilities, ValidationFlags, Validator};
+    // The wgpu/naga backend must produce the vyre-reference oracle contract
+    // (u32 x/0 -> u32::MAX), not naga's bare divisor-override-to-1 result (x/0
+    // -> x). Prove the guard is wired: a Select gated on `divisor == 0` whose
+    // accept arm is the u32::MAX sentinel, plus the module validates.
+    let module = emit(&u32_div_desc(BinOp::Div)).expect("u32 Div must emit");
+    Validator::new(ValidationFlags::all(), Capabilities::all())
+        .validate(&module)
+        .unwrap_or_else(|e| panic!("guarded u32 Div: INVALID WGSL: {e:?}"));
+    let entry = module.entry_points.first().expect("entry point");
+    let arena = &entry.function.expressions;
+    let has_max_sentinel = arena.iter().any(|(_, e)| {
+        matches!(e, naga::Expression::Literal(naga::Literal::U32(v)) if *v == u32::MAX)
+    });
+    assert!(
+        has_max_sentinel,
+        "Div-by-zero guard must materialize the u32::MAX oracle sentinel"
+    );
+    let select_over_zero_check = arena.iter().any(|(_, e)| {
+        if let naga::Expression::Select { condition, accept, .. } = e {
+            let cond_is_eq_zero = matches!(
+                arena.try_get(*condition),
+                Ok(naga::Expression::Binary {
+                    op: naga::BinaryOperator::Equal,
+                    ..
+                })
+            );
+            let accept_is_max = matches!(
+                arena.try_get(*accept),
+                Ok(naga::Expression::Literal(naga::Literal::U32(v))) if *v == u32::MAX
+            );
+            cond_is_eq_zero && accept_is_max
+        } else {
+            false
+        }
+    });
+    assert!(
+        select_over_zero_check,
+        "Div-by-zero must be a Select(divisor == 0 ? u32::MAX : x/y)"
+    );
+}
+
+#[test]
+fn unsigned_mod_by_zero_is_guarded_and_valid() {
+    use naga::valid::{Capabilities, ValidationFlags, Validator};
+    // u32 x % 0 -> 0 (oracle contract). The guard wraps the Modulo in a Select
+    // gated on `divisor == 0`; module must validate and contain both.
+    let module = emit(&u32_div_desc(BinOp::Mod)).expect("u32 Mod must emit");
+    Validator::new(ValidationFlags::all(), Capabilities::all())
+        .validate(&module)
+        .unwrap_or_else(|e| panic!("guarded u32 Mod: INVALID WGSL: {e:?}"));
+    let entry = module.entry_points.first().expect("entry point");
+    let arena = &entry.function.expressions;
+    let has_modulo = arena.iter().any(|(_, e)| {
+        matches!(
+            e,
+            naga::Expression::Binary {
+                op: naga::BinaryOperator::Modulo,
+                ..
+            }
+        )
+    });
+    let has_guard_select = arena.iter().any(|(_, e)| {
+        if let naga::Expression::Select { condition, .. } = e {
+            matches!(
+                arena.try_get(*condition),
+                Ok(naga::Expression::Binary {
+                    op: naga::BinaryOperator::Equal,
+                    ..
+                })
+            )
+        } else {
+            false
+        }
+    });
+    assert!(has_modulo, "u32 Mod must still emit a Modulo op");
+    assert!(
+        has_guard_select,
+        "u32 Mod-by-zero must be guarded by a Select(divisor == 0 ? 0 : x%y)"
+    );
+}
+
 #[test]
 fn comparisons_on_signed_buffer_load_emit_valid_wgsl() {
     use naga::valid::{Capabilities, ValidationFlags, Validator};
