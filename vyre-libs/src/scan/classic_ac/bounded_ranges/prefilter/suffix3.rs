@@ -579,10 +579,16 @@ pub fn build_ac_bounded_ranges_suffix3_prefilter_program_ext(
     ) {
         Ok(program) => program,
         Err(error) => {
-            eprintln!(
-                "vyre-libs AC bounded-ranges suffix3 prefilter program build failed: {error}"
-            );
-            empty_ac_bounded_ranges_suffix3_prefilter_program(max_matches, use_subgroup_coalesce)
+            // Returning an empty-rejecting program would silently drop every
+            // match without the caller knowing — a total recall-loss silent
+            // fallback (Law 10). Fail closed instead. Callers that need graceful
+            // overflow handling call try_build_ac_bounded_ranges_suffix3_prefilter_program_ext
+            // directly and shard oversized DFAs across multiple programs.
+            panic!(
+                "vyre-libs AC bounded-ranges suffix3 prefilter program build failed: {error} — \
+                 returning an empty rejecting automaton would silently drop every match; \
+                 use try_build_ac_bounded_ranges_suffix3_prefilter_program_ext and shard oversized DFAs."
+            )
         }
     }
 }
@@ -640,31 +646,6 @@ pub fn try_build_ac_bounded_ranges_suffix3_prefilter_program_ext(
     ))
 }
 
-fn empty_ac_bounded_ranges_suffix3_prefilter_program(
-    max_matches: u32,
-    use_subgroup_coalesce: bool,
-) -> Program {
-    classic_ac_bounded_ranges_suffix3_prefilter_program_ext(
-        "haystack",
-        "transitions",
-        "output_offsets",
-        "output_records",
-        "pattern_lengths",
-        "haystack_len",
-        "match_count",
-        "candidate_end_mask",
-        "candidate_suffix2_mask",
-        "candidate_suffix3_bloom",
-        "matches",
-        1,
-        0,
-        0,
-        max_matches,
-        0,
-        use_subgroup_coalesce,
-    )
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -674,6 +655,29 @@ mod tests {
         classic_ac_compile,
     };
     use crate::scan::{pack_haystack_u32, pack_u32_slice};
+
+    #[test]
+    fn suffix3_prefilter_builder_fails_loud_not_silent_fallback() {
+        // Law 10 regression guard: the infallible suffix3 prefilter program
+        // builder must not swallow a build error into an empty rejecting
+        // program (which silently drops every match). The old arm logged the
+        // failure and returned a degenerate empty program via a dedicated
+        // helper; assert that fallback helper is gone and an explicit panic!()
+        // fail-loud arm is present. (The "build failed" message string itself
+        // now lives in the panic! arm, so it cannot be used as the signal.)
+        let production = include_str!("suffix3.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .expect("Fix: suffix3.rs must contain a production section");
+        assert!(
+            !production.contains(concat!("empty_ac_bounded_ranges", "_suffix3_prefilter_program")),
+            "Fix: suffix3 prefilter builder must not fall back to an empty rejecting program on error — fail loud via panic!() so callers use the try_ variant."
+        );
+        assert!(
+            production.contains("panic!("),
+            "Fix: suffix3 prefilter builder must panic!() on an unrepresentable DFA, never return an empty rejecting program."
+        );
+    }
 
     fn decode_u32(bytes: &[u8]) -> Vec<u32> {
         bytes

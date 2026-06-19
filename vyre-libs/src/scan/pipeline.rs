@@ -64,19 +64,29 @@ impl<E: MatchScan> Pipeline<E> {
         })
     }
 
-    /// Reference oracle one-shot that surfaces post-processing contract errors.
+    /// Reference oracle one-shot that surfaces BOTH scan and post-processing
+    /// errors.
+    ///
+    /// Unlike [`Self::reference_scan_processed`], a CPU-stepper failure (a
+    /// haystack exceeding the `u32` match ABI) propagates as a [`BackendError`]
+    /// instead of aborting — and instead of being swallowed into an empty
+    /// match set, which would be a silent recall lie (Law 10). This mirrors the
+    /// [`Self::scan_processed`] GPU contract: every full-pipeline entry point
+    /// reports failure through the same error type so a consumer recovers
+    /// uniformly.
     ///
     /// # Errors
     ///
-    /// Returns a [`PostProcessError`] when a scan engine reports a match range
-    /// outside the scanned haystack.
+    /// Returns a [`BackendError`] when the reference scan cannot honor the
+    /// `u32` match ABI, or when a scan engine reports a match range outside the
+    /// scanned haystack (a post-processing contract violation).
     #[cfg(any(test, feature = "cpu-parity"))]
     pub fn try_reference_scan_processed(
         &self,
         haystack: &[u8],
-    ) -> Result<Vec<PostProcessedMatch>, PostProcessError> {
-        let raw = self.engine.reference_scan(haystack);
-        (self.post_process)(&raw, haystack)
+    ) -> Result<Vec<PostProcessedMatch>, BackendError> {
+        let raw = self.engine.try_reference_scan(haystack)?;
+        (self.post_process)(&raw, haystack).map_err(|error| BackendError::new(error.to_string()))
     }
 
     /// Full GPU dispatch + post-process. Mirrors `MatchScan::scan` and

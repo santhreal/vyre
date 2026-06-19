@@ -274,13 +274,23 @@ struct LiteralSetPrefilterTables {
 
 impl GpuLiteralSet {
     /// Compile a set of literal patterns into a GPU-ready matcher.
+    ///
+    /// # Panics
+    ///
+    /// Aborts when staging allocation fails or a pattern count/length cannot be
+    /// represented by the GPU ABI. Returning an empty matcher would silently
+    /// match NOTHING — reporting every input as clean (Law 10). Fail closed
+    /// instead; callers that must recover use [`Self::try_compile`].
     #[must_use]
     pub fn compile(patterns: &[&[u8]]) -> Self {
         match Self::try_compile(patterns) {
             Ok(compiled) => compiled,
             Err(error) => {
-                eprintln!("vyre-libs GpuLiteralSet::compile failed: {error}");
-                Self::empty_after_compile_failure()
+                panic!(
+                    "vyre-libs GpuLiteralSet::compile failed: {error} — \
+                     returning an empty matcher would silently match nothing and report every input as clean; \
+                     use try_compile and reduce the pattern set below the GPU ABI limits."
+                )
             }
         }
     }
@@ -345,19 +355,6 @@ impl GpuLiteralSet {
             pattern_lengths,
             program,
         })
-    }
-
-    fn empty_after_compile_failure() -> Self {
-        let dfa = dfa_compile(&[]);
-        let program = build_literal_set_program(&dfa, 0);
-
-        Self {
-            dfa,
-            pattern_bytes: Vec::new(),
-            pattern_offsets: Vec::new(),
-            pattern_lengths: Vec::new(),
-            program,
-        }
     }
 
     /// Reference oracle implementation for parity testing.
@@ -864,7 +861,7 @@ impl GpuLiteralSet {
             dispatch_io::scan_guard(haystack, "literal_set", dispatch_io::DEFAULT_MAX_SCAN_BYTES)?;
 
         // Buffer order matches the BufferDecl declaration in
-        // `build_literal_set_program`; reordering here would silently
+        // `try_build_literal_set_program`; reordering here would silently
         // miswire the GPU program.
         dispatch_io::pack_haystack_u32_into(haystack, &mut scratch.haystack_bytes)?;
         let haystack_bytes = scratch.haystack_bytes.as_slice();
@@ -2211,9 +2208,24 @@ mod compile_tests {
                 && !production.contains(concat!("pack_haystack_u32", "(haystack)")),
             "Fix: literal scan hot path must expose reusable dispatch scratch and avoid fresh haystack packing allocations."
         );
+        // No LAZY panics (no fix hint); explicit panic!() fail-loud is allowed.
         assert!(
             !production.contains(".expect(") && !production.contains(".unwrap("),
-            "Fix: literal_set production wrappers must not panic."
+            "Fix: literal_set production wrappers must not use bare .unwrap()/.expect() — use an explicit panic!() with a fix hint."
+        );
+        // Law 10 regression guard: GpuLiteralSet::compile must not swallow a
+        // compile error into an empty matcher (which silently matches nothing,
+        // reporting every input as clean). The old arm used
+        // `eprintln! + empty_after_compile_failure()`; assert it is gone and a
+        // fail-loud panic!() is present.
+        assert!(
+            !production.contains("eprintln!(\"vyre-libs GpuLiteralSet::compile failed")
+                && !production.contains("empty_after_compile_failure"),
+            "Fix: GpuLiteralSet::compile must not log-and-return an empty matcher on error — fail loud via panic!() so callers use try_compile."
+        );
+        assert!(
+            production.contains("panic!("),
+            "Fix: GpuLiteralSet::compile must panic!() on an unrepresentable pattern set, never fabricate an empty matcher."
         );
         let program_debug = format!("{:#?}", GpuLiteralSet::compile(&[b"a".as_slice()]).program);
         assert!(
@@ -2524,15 +2536,6 @@ impl std::error::Error for LiteralSetWireError {}
 
 fn try_build_literal_set_program(dfa: &CompiledDfa, pattern_count: u32) -> Result<Program, String> {
     try_build_ac_bounded_ranges_suffix3_prefilter_program_ext(
-        dfa,
-        pattern_count,
-        LITERAL_SET_DEFAULT_MAX_MATCHES,
-        false,
-    )
-}
-
-fn build_literal_set_program(dfa: &CompiledDfa, pattern_count: u32) -> Program {
-    build_ac_bounded_ranges_suffix3_prefilter_program_ext(
         dfa,
         pattern_count,
         LITERAL_SET_DEFAULT_MAX_MATCHES,

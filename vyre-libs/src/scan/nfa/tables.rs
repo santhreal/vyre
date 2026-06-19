@@ -10,13 +10,27 @@ use vyre_primitives::nfa::subgroup_nfa::LANES_PER_SUBGROUP;
 /// destination bitset held by `dst_lane` when state `src` sees `byte`.
 ///
 /// [`subgroup_nfa::nfa_step`]: vyre_primitives::nfa::subgroup_nfa::nfa_step
+///
+/// # Panics
+///
+/// Aborts when the plan or table allocation cannot be represented safely. This
+/// is LOUD on purpose (Law 10): returning an empty `Vec` here would build an
+/// NFA with no transitions — a scanner that silently matches NOTHING, reporting
+/// every input as clean. Callers that must recover use
+/// [`try_build_transition_table`].
 #[must_use]
 pub fn build_transition_table(patterns: &[&str]) -> Vec<u32> {
     match try_build_transition_table(patterns) {
         Ok(table) => table,
         Err(error) => {
-            eprintln!("vyre-libs NFA transition-table build failed: {error}");
-            Vec::new()
+            // An empty table builds an NFA with no transitions — a scanner that
+            // silently matches NOTHING, reporting every input as clean. That is
+            // a total recall-loss silent fallback (Law 10). Fail closed.
+            panic!(
+                "vyre-libs NFA transition-table build failed: {error} — \
+                 returning an empty table would build a scanner that silently matches nothing; \
+                 use try_build_transition_table and reduce the pattern set below the state cap."
+            )
         }
     }
 }
@@ -69,13 +83,25 @@ pub fn try_build_transition_table(patterns: &[&str]) -> Result<Vec<u32>, NfaComp
 /// aligns each byte's row to a multiple of the subgroup width, ensuring
 /// that cross-lane addresses in a workgroup dispatch fall on different
 /// cache banks and avoid bank conflicts.
+///
+/// # Panics
+///
+/// Aborts when the plan or table allocation cannot be represented safely —
+/// loudly, never an empty `Vec` (Law 10: an empty table is a scanner that
+/// silently matches nothing). Callers that must recover use
+/// [`try_build_transition_table_lane_major`].
 #[must_use]
 pub fn build_transition_table_lane_major(patterns: &[&str]) -> Vec<u32> {
     match try_build_transition_table_lane_major(patterns) {
         Ok(table) => table,
         Err(error) => {
-            eprintln!("vyre-libs NFA lane-major transition-table build failed: {error}");
-            Vec::new()
+            // An empty table is a scanner that silently matches nothing — a
+            // total recall-loss silent fallback (Law 10). Fail closed.
+            panic!(
+                "vyre-libs NFA lane-major transition-table build failed: {error} — \
+                 returning an empty table would build a scanner that silently matches nothing; \
+                 use try_build_transition_table_lane_major and reduce the pattern set below the state cap."
+            )
         }
     }
 }
@@ -112,13 +138,24 @@ pub fn try_build_transition_table_lane_major(
 
 /// Build the `nfa_epsilon` lane-major table
 /// `[num_states × LANES_PER_SUBGROUP]`. Literal-only → all zero.
+///
+/// # Panics
+///
+/// Aborts when the plan or table allocation cannot be represented safely —
+/// loudly, never an empty `Vec` (Law 10). Callers that must recover use
+/// [`try_build_epsilon_table`].
 #[must_use]
 pub fn build_epsilon_table(patterns: &[&str]) -> Vec<u32> {
     match try_build_epsilon_table(patterns) {
         Ok(table) => table,
         Err(error) => {
-            eprintln!("vyre-libs NFA epsilon-table build failed: {error}");
-            Vec::new()
+            // An empty epsilon table drops the ε-closures that wire each
+            // pattern's start state — a silent recall fallback (Law 10). Fail closed.
+            panic!(
+                "vyre-libs NFA epsilon-table build failed: {error} — \
+                 returning an empty table would silently drop pattern ε-wiring; \
+                 use try_build_epsilon_table and reduce the pattern set below the state cap."
+            )
         }
     }
 }
@@ -191,15 +228,27 @@ mod tests {
     }
 
     #[test]
-    fn production_table_wrappers_have_no_raw_panic_path() {
+    fn table_wrappers_fail_loud_not_silent_fallback() {
         let production = include_str!("tables.rs")
             .split("#[cfg(test)]")
             .next()
             .expect("Fix: tables.rs must contain production section");
 
+        // No LAZY panics: `.unwrap()`/`.expect()` give the operator no fix hint.
         assert!(
             !production.contains(".expect(") && !production.contains(".unwrap("),
-            "Fix: NFA table compatibility wrappers must not panic in production."
+            "Fix: NFA table wrappers must not use bare .unwrap()/.expect() — use an explicit panic!() with a fix hint."
+        );
+        // No SILENT fallback: the old `eprintln! + Vec::new()` arm built an NFA
+        // with no transitions — a scanner that silently matches nothing (Law 10).
+        assert!(
+            !production.contains("eprintln!(\"vyre-libs NFA"),
+            "Fix: NFA table builders must not log-and-return an empty table on error — fail loud via panic!() so callers use the try_ variants."
+        );
+        // Fail-loud is present (one panic arm per infallible wrapper).
+        assert!(
+            production.matches("panic!(").count() >= 3,
+            "Fix: each infallible NFA table builder must panic!() on an unrepresentable table, never return an empty Vec."
         );
     }
 }

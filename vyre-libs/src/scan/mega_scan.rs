@@ -223,13 +223,30 @@ impl RulePipeline {
     ///
     /// This is intentionally O(n × patterns)  -  it is only meant for
     /// parity / debugging, not production scanning.
+    ///
+    /// # Panics
+    ///
+    /// Aborts when the CPU stepper cannot honor the `u32` match ABI the GPU
+    /// path uses (a haystack longer than `u32::MAX` bytes). This is a LOUD
+    /// failure on purpose: an empty `Vec<Match>` is indistinguishable from "no
+    /// secrets here", so swallowing a scan failure into `[]` would be a silent
+    /// recall lie — a >4 GiB haystack would be reported clean (Law 10).
+    /// Callers that must handle an over-`u32` haystack without unwinding use
+    /// the fallible [`Self::try_reference_scan`] instead.
     #[must_use]
     pub fn reference_scan(&self, haystack: &[u8]) -> Vec<Match> {
         match self.try_reference_scan(haystack) {
             Ok(matches) => matches,
             Err(error) => {
-                eprintln!("vyre-libs RulePipeline::reference_scan failed: {error}");
-                Vec::new()
+                // Returning an empty match set would be indistinguishable from
+                // "no secrets here" — a total recall-loss silent fallback
+                // (Law 10). Fail closed instead. Callers that must handle a
+                // >u32 haystack without unwinding call try_reference_scan.
+                panic!(
+                    "vyre-libs RulePipeline::reference_scan cannot honor the u32 match ABI for this haystack: {error} — \
+                     returning an empty match set would silently report the input as clean; \
+                     use try_reference_scan and split the haystack below u32::MAX bytes."
+                )
             }
         }
     }
@@ -739,6 +756,83 @@ mod tests {
         assert_eq!(scratch, owned);
         assert!(scratch.capacity() >= retained_capacity);
         assert_eq!(scratch, vec![Match::new(0, 1, 3), Match::new(1, 2, 4)]);
+    }
+
+    #[test]
+    fn rule_pipeline_reference_scan_forwards_through_fallible_and_trait_object() {
+        // The infallible wrapper, the inherent fallible scan, and the
+        // `dyn MatchScan` fallible method must all yield the SAME real matches.
+        // This pins that the trait override forwards to the real fallible
+        // stepper (not the panicking default) and that the infallible wrapper
+        // returns the fallible result verbatim — asserted on concrete triples,
+        // never `is_empty`.
+        use crate::scan::engine::MatchScan;
+
+        let pipe = build(&["ab", "bc"], "input", "hits", 16);
+        let haystack = b"zabc";
+        let expected = vec![Match::new(0, 1, 3), Match::new(1, 2, 4)];
+
+        let infallible = pipe.reference_scan(haystack);
+        let fallible = pipe
+            .try_reference_scan(haystack)
+            .expect("Fix: small-haystack reference scan must succeed");
+        let via_trait = MatchScan::try_reference_scan(&pipe, haystack)
+            .expect("Fix: trait-object reference scan must succeed");
+
+        assert_eq!(infallible, expected, "infallible reference_scan content");
+        assert_eq!(
+            fallible, expected,
+            "inherent try_reference_scan must match infallible result verbatim"
+        );
+        assert_eq!(
+            via_trait, expected,
+            "dyn MatchScan::try_reference_scan must forward to the real fallible stepper, not the panicking default"
+        );
+    }
+
+    #[cfg(target_pointer_width = "64")]
+    #[test]
+    fn rule_pipeline_reference_scan_fails_loud_not_empty_on_oversized_haystack() {
+        // Law 10: a >u32 haystack must NOT be swallowed into an empty match set
+        // (which reads as "clean"); it must surface loudly. The infallible
+        // wrapper aborts; the fallible variant returns Err — neither returns an
+        // empty Vec.
+        //
+        // The guard rejects on length BEFORE the scan loop reads a single byte,
+        // so the 4 GiB+1 backing allocation stays lazily zero-paged (only page
+        // tables are committed, not 4 GiB of RAM).
+        let oversized = vec![0u8; (u32::MAX as usize) + 1];
+        let pipe = build(&["ab"], "input", "hits", 16);
+
+        // Fallible path: a real error, not a fabricated-empty success.
+        let err = pipe
+            .try_reference_scan(&oversized)
+            .expect_err("Fix: an over-u32 haystack must error, never report zero matches");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("RulePipeline::reference_scan") && msg.contains("u32"),
+            "error must name the scan and the u32 ABI limit, got: {msg}"
+        );
+
+        // Infallible path: aborts loudly instead of swallowing to `[]`.
+        let prior_hook = std::panic::take_hook();
+        std::panic::set_hook(Box::new(|_| {})); // keep the test log quiet
+        let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            pipe.reference_scan(&oversized)
+        }));
+        std::panic::set_hook(prior_hook);
+
+        let panic_payload = outcome
+            .expect_err("Fix: reference_scan must panic on an over-u32 haystack, never return empty");
+        let panic_msg = panic_payload
+            .downcast_ref::<String>()
+            .map(String::as_str)
+            .or_else(|| panic_payload.downcast_ref::<&str>().copied())
+            .unwrap_or("");
+        assert!(
+            panic_msg.contains("try_reference_scan"),
+            "panic must point operators at the fallible variant, got: {panic_msg}"
+        );
     }
 
     #[test]

@@ -54,13 +54,23 @@ pub struct ScanDispatchScratch {
 ///
 /// This is the layout every vyre matcher's `BufferDecl::storage(..,
 /// DataType::U32, ReadOnly)` haystack input expects.
+///
+/// # Panics
+///
+/// Aborts when padded length arithmetic or allocation fails. Returning an empty
+/// packed buffer would make the GPU scan an EMPTY haystack — silently finding
+/// nothing and reporting the real input as clean (Law 10). Fail closed instead;
+/// callers that must recover use [`try_pack_haystack_u32`].
 #[must_use]
 pub fn pack_haystack_u32(haystack: &[u8]) -> Vec<u8> {
     match try_pack_haystack_u32(haystack) {
         Ok(packed) => packed,
         Err(error) => {
-            eprintln!("vyre-libs scan dispatch pack_haystack_u32 failed: {error}");
-            Vec::new()
+            panic!(
+                "vyre-libs scan dispatch pack_haystack_u32 failed: {error} — \
+                 returning an empty packed buffer would make the GPU scan an empty haystack and silently report the input as clean; \
+                 use try_pack_haystack_u32 and split the haystack before dispatch."
+            )
         }
     }
 }
@@ -306,8 +316,14 @@ pub fn unpack_match_triples(
     match try_unpack_match_triples(triples_bytes, count) {
         Ok(results) => results,
         Err(error) => {
-            eprintln!("vyre-libs scan dispatch unpack_match_triples failed: {error}");
-            Vec::new()
+            // Returning an empty match set would silently drop every match the
+            // GPU actually found — a recall-loss silent fallback (Law 10). Fail
+            // closed; callers that must recover use try_unpack_match_triples.
+            panic!(
+                "vyre-libs scan dispatch unpack_match_triples failed: {error} — \
+                 returning an empty match set would silently drop matches the GPU found; \
+                 use try_unpack_match_triples and reduce the match count or reserve more storage."
+            )
         }
     }
 }
@@ -340,8 +356,14 @@ pub fn unpack_match_triples_into(
     results: &mut Vec<vyre_foundation::match_result::Match>,
 ) {
     if let Err(error) = try_unpack_match_triples_into(triples_bytes, count, results) {
-        eprintln!("vyre-libs scan dispatch unpack_match_triples_into failed: {error}");
-        results.clear();
+        // Clearing `results` would silently drop every match the GPU found — a
+        // recall-loss silent fallback (Law 10). Fail closed; callers that must
+        // recover use try_unpack_match_triples_into.
+        panic!(
+            "vyre-libs scan dispatch unpack_match_triples_into failed: {error} — \
+             clearing the result buffer would silently drop matches the GPU found; \
+             use try_unpack_match_triples_into and reduce the match count or reserve more storage."
+        )
     }
 }
 
@@ -443,6 +465,25 @@ fn required_match_triple_bytes(count: u32) -> Result<usize, BackendError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn dispatch_io_wrappers_fail_loud_not_silent_fallback() {
+        // Law 10 regression guard: the infallible pack/unpack wrappers must
+        // never swallow an error into an empty buffer (GPU scans nothing / GPU
+        // matches silently dropped). The old arms logged the failure and then
+        // returned/cleared to empty instead of failing loud. Scan the WHOLE
+        // file (this file has two test modules with production code between
+        // them, so a "split on first cfg-test" slice would miss the unpack
+        // region). The swallow marker is assembled with concat! and is NOT
+        // written contiguously anywhere else in this file (including comments),
+        // so this assertion never matches its own source text.
+        let src = include_str!("dispatch_io.rs");
+        let swallow_marker = concat!("eprintln", "!(\"vyre-libs scan dispatch ");
+        assert!(
+            !src.contains(swallow_marker),
+            "Fix: a dispatch wrapper reintroduced an eprintln!-then-return-empty silent fallback (Law 10) — fail loud via panic!() so callers use the try_ variants."
+        );
+    }
 
     #[test]
     fn pack_haystack_aligned() {

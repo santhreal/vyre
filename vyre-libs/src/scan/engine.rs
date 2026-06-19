@@ -120,7 +120,28 @@ pub trait MatchScan {
     /// `vyre-conform`; engines that lack a meaningful CPU stepper
     /// (none today) can return an empty vec but should never fabricate
     /// results.
+    ///
+    /// Engines whose CPU stepper can fail (e.g. a haystack exceeding the
+    /// `u32` match ABI) must abort loudly here rather than returning an empty
+    /// vec — an empty result is a silent recall lie (Law 10). Such engines
+    /// override [`Self::try_reference_scan`] so `dyn MatchScan` consumers can
+    /// recover the error instead of unwinding.
     fn reference_scan(&self, haystack: &[u8]) -> Vec<Match>;
+
+    /// Fallible reference oracle scan. Surfaces a CPU-stepper failure (a
+    /// haystack longer than the `u32` match ABI the GPU path uses) as an error
+    /// instead of aborting, so consumers holding `dyn MatchScan` can recover.
+    /// The default delegates to the infallible [`Self::reference_scan`] for
+    /// engines whose stepper genuinely cannot fail; engines with a fallible
+    /// stepper override this to forward to their real fallible scan (and never
+    /// route through the panicking infallible wrapper).
+    ///
+    /// # Errors
+    /// Engine-specific [`vyre::BackendError`] when the CPU oracle cannot honor
+    /// the same `u32` match ABI the GPU path uses for this haystack.
+    fn try_reference_scan(&self, haystack: &[u8]) -> Result<Vec<Match>, vyre::BackendError> {
+        Ok(self.reference_scan(haystack))
+    }
 
     /// Stable identity for cache filenames + telemetry. Engines hash
     /// their pattern set + version constant. Consumers pass this
@@ -384,6 +405,16 @@ mod rule_pipeline_impls {
 
         fn reference_scan(&self, haystack: &[u8]) -> Vec<Match> {
             RulePipeline::reference_scan(self, haystack)
+        }
+
+        fn try_reference_scan(
+            &self,
+            haystack: &[u8],
+        ) -> Result<Vec<Match>, vyre::BackendError> {
+            // Forward to the inherent fallible scan, NOT the default — the
+            // default would call the panicking infallible `reference_scan`,
+            // turning a recoverable >u32 haystack into an abort.
+            RulePipeline::try_reference_scan(self, haystack)
         }
 
         fn cache_key(&self) -> String {
