@@ -49,6 +49,152 @@ fn high_word_of_only_vec2_compose(module: &naga::Module) -> naga::Expression {
     arena[composes[0][1]].clone()
 }
 
+/// Load two `U64` elements (vec2<u32> backing) and apply `binop`, storing into
+/// a `U64` out buffer. Used to prove the 64-bit carry gate fires for arithmetic
+/// and admits the carry-free bitwise ops.
+fn u64_binop_desc(binop: BinOp) -> KernelDescriptor {
+    KernelDescriptor {
+        id: "u64_binop".into(),
+        bindings: BindingLayout {
+            slots: vec![
+                BindingSlot {
+                    slot: 0,
+                    element_type: DataType::U64,
+                    element_count: Some(4),
+                    memory_class: MemoryClass::Global,
+                    visibility: BindingVisibility::ReadOnly,
+                    name: "src".into(),
+                },
+                BindingSlot {
+                    slot: 1,
+                    element_type: DataType::U64,
+                    element_count: Some(4),
+                    memory_class: MemoryClass::Global,
+                    visibility: BindingVisibility::ReadWrite,
+                    name: "out".into(),
+                },
+            ],
+        },
+        dispatch: Dispatch::new(1, 1, 1),
+        body: KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(0),
+                },
+                KernelOp {
+                    kind: KernelOpKind::LoadGlobal,
+                    operands: vec![0, 0],
+                    result: Some(1),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![1],
+                    result: Some(2),
+                },
+                KernelOp {
+                    kind: KernelOpKind::LoadGlobal,
+                    operands: vec![0, 2],
+                    result: Some(3),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(binop),
+                    operands: vec![1, 3],
+                    result: Some(4),
+                },
+                KernelOp {
+                    kind: KernelOpKind::StoreGlobal,
+                    operands: vec![1, 0, 4],
+                    result: None,
+                },
+            ],
+            child_bodies: vec![],
+            literals: vec![LiteralValue::U32(0), LiteralValue::U32(1)],
+        },
+    }
+}
+
+#[test]
+fn u64_carry_sensitive_binops_fail_closed_not_silently_componentwise() {
+    // A vec2<u32>-backed 64-bit value has NO carry between its low and high
+    // word, so a componentwise vec2 Add/Sub/Mul/Shift/Compare is silently WRONG
+    // arithmetic — and crucially it would VALIDATE through naga (vec2 ops are
+    // legal WGSL), so only an explicit fail-closed gate catches the bug. Pin
+    // that the gate fires with its real diagnostic for every carry-sensitive op.
+    for binop in [
+        BinOp::Add,
+        BinOp::Sub,
+        BinOp::Mul,
+        BinOp::Shl,
+        BinOp::Shr,
+        BinOp::Lt,
+        BinOp::Gt,
+        BinOp::Eq,
+    ] {
+        let err = emit(&u64_binop_desc(binop))
+            .expect_err(&format!("{binop:?} on vec2<u32>-backed u64 must fail closed"));
+        let msg = format!("{err:?}");
+        assert!(
+            msg.contains("is not lowered") && msg.contains("carry"),
+            "{binop:?}: fail-closed error must name the missing carry lowering, got: {msg}"
+        );
+    }
+}
+
+#[test]
+fn u64_bitwise_binops_emit_valid_componentwise_wgsl() {
+    use naga::valid::{Capabilities, ValidationFlags, Validator};
+    // BitAnd/BitOr/BitXor carry NO information between words, so componentwise
+    // vec2<u32> is the correct lowering — these must emit and validate, and the
+    // stored result keeps the vec2<u32> 64-bit backing.
+    let mut validator = Validator::new(ValidationFlags::all(), Capabilities::all());
+    for binop in [BinOp::BitAnd, BinOp::BitOr, BinOp::BitXor] {
+        let module =
+            emit(&u64_binop_desc(binop)).unwrap_or_else(|e| panic!("{binop:?}: emit failed: {e}"));
+        validator
+            .validate(&module)
+            .unwrap_or_else(|e| panic!("{binop:?} on u64: INVALID WGSL: {e:?}"));
+        // Validation passing already proves type-correctness; additionally pin
+        // that the 64-bit value was NOT collapsed to one word — the out buffer
+        // must remain array<vec2<u32>> and a Binary of this operator must exist.
+        let out_is_vec2 = module.global_variables.iter().any(|(_, g)| {
+            if let naga::TypeInner::Array { base, .. } = module.types[g.ty].inner {
+                matches!(
+                    module.types[base].inner,
+                    naga::TypeInner::Vector {
+                        size: naga::VectorSize::Bi,
+                        scalar: naga::Scalar {
+                            kind: naga::ScalarKind::Uint,
+                            ..
+                        },
+                    }
+                )
+            } else {
+                false
+            }
+        });
+        assert!(
+            out_is_vec2,
+            "{binop:?}: u64 buffer must stay backed by array<vec2<u32>>"
+        );
+        let entry = module.entry_points.first().expect("entry point");
+        let expected = match binop {
+            BinOp::BitAnd => naga::BinaryOperator::And,
+            BinOp::BitOr => naga::BinaryOperator::InclusiveOr,
+            BinOp::BitXor => naga::BinaryOperator::ExclusiveOr,
+            _ => unreachable!(),
+        };
+        let has_op = entry.function.expressions.iter().any(|(_, e)| {
+            matches!(e, naga::Expression::Binary { op, .. } if *op == expected)
+        });
+        assert!(
+            has_op,
+            "{binop:?}: expected a Binary {expected:?} over the vec2<u32> backing"
+        );
+    }
+}
+
 #[test]
 fn comparisons_on_signed_buffer_load_emit_valid_wgsl() {
     use naga::valid::{Capabilities, ValidationFlags, Validator};
