@@ -533,12 +533,19 @@ pub struct CombinedBatch {
     queue_len: u32,
     hit_capacity: u32,
     max_pattern_len: u32,
+    /// Byte-class count of the compressed transition table (`<= 256`). Baked
+    /// into the kernel program (the automaton fixes it), so the pipeline is
+    /// compiled once per resident catalog.
+    num_classes: u32,
     haystack: GpuBufferHandle,
     offsets: GpuBufferHandle,
     metadata: GpuBufferHandle,
+    /// Byte-class compressed transition table (`state_count * num_classes`).
     transitions: GpuBufferHandle,
     output_offsets: GpuBufferHandle,
     output_records: GpuBufferHandle,
+    /// 256-entry byte→class map.
+    class_maps: GpuBufferHandle,
     segments: GpuBufferHandle,
     queue_state: GpuBufferHandle,
     hit_ring: GpuBufferHandle,
@@ -608,6 +615,26 @@ impl CombinedBatch {
         let queue_len = segment_queue_len(&segment_words, 1)?;
         let queue_state_words = initial_queue_state(queue_len, hit_capacity, 1);
 
+        // LOSSLESS byte-class compression of the dense combined transition table,
+        // reusing the SAME primitive the per-rule catalog packer uses (so the
+        // "identical column ⇒ same class" contract has one owner). Shrinks the
+        // table from `state_count * 256` to `state_count * num_classes`, which
+        // is what keeps a thousand-state catalog resident in L2.
+        let mut class_map = Vec::new();
+        let num_classes = vyre_runtime::megakernel::rule_catalog::build_byte_class_map_for_table(
+            transitions,
+            state_count as usize,
+            &mut class_map,
+        );
+        let mut compressed_transitions = Vec::new();
+        vyre_runtime::megakernel::rule_catalog::compress_dense_transitions_into(
+            transitions,
+            state_count as usize,
+            &class_map,
+            num_classes,
+            &mut compressed_transitions,
+        );
+
         let usage = persistent_storage_binding_usage();
         let haystack =
             GpuBufferHandle::upload(device, queue, bytemuck::cast_slice(&haystack_words), usage)?;
@@ -615,12 +642,18 @@ impl CombinedBatch {
             GpuBufferHandle::upload(device, queue, bytemuck::cast_slice(&file_offsets), usage)?;
         let metadata =
             GpuBufferHandle::upload(device, queue, bytemuck::cast_slice(&file_metadata), usage)?;
-        let transitions =
-            GpuBufferHandle::upload(device, queue, bytemuck::cast_slice(transitions), usage)?;
+        let transitions = GpuBufferHandle::upload(
+            device,
+            queue,
+            bytemuck::cast_slice(&compressed_transitions),
+            usage,
+        )?;
         let output_offsets =
             GpuBufferHandle::upload(device, queue, bytemuck::cast_slice(output_offsets), usage)?;
         let output_records =
             GpuBufferHandle::upload(device, queue, bytemuck::cast_slice(output_records), usage)?;
+        let class_maps =
+            GpuBufferHandle::upload(device, queue, bytemuck::cast_slice(&class_map), usage)?;
         let segments =
             GpuBufferHandle::upload(device, queue, bytemuck::cast_slice(&segment_words), usage)?;
         let queue_state =
@@ -634,12 +667,14 @@ impl CombinedBatch {
             queue_len,
             hit_capacity,
             max_pattern_len,
+            num_classes,
             haystack,
             offsets,
             metadata,
             transitions,
             output_offsets,
             output_records,
+            class_maps,
             segments,
             queue_state,
             hit_ring,
@@ -708,12 +743,19 @@ impl CombinedBatch {
         Arc::clone(&self.device_queue)
     }
 
+    /// Byte-class count of the compressed transition table (`<= 256`), baked
+    /// into the kernel program.
+    #[must_use]
+    pub const fn num_classes(&self) -> u32 {
+        self.num_classes
+    }
+
     /// Read-only input buffers in `combined_batch_program_buffers` declaration
     /// order (file_offsets, file_metadata, haystack, transitions,
-    /// output_offsets, output_records, segments). The persistent pipeline binds
-    /// inputs positionally in this order.
+    /// output_offsets, output_records, class_maps, segments). The persistent
+    /// pipeline binds inputs positionally in this order.
     #[must_use]
-    pub fn input_buffers(&self) -> [&GpuBufferHandle; 7] {
+    pub fn input_buffers(&self) -> [&GpuBufferHandle; 8] {
         [
             &self.offsets,
             &self.metadata,
@@ -721,6 +763,7 @@ impl CombinedBatch {
             &self.transitions,
             &self.output_offsets,
             &self.output_records,
+            &self.class_maps,
             &self.segments,
         ]
     }

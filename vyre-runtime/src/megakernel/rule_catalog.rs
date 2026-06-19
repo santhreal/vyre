@@ -340,7 +340,11 @@ pub fn pack_rule_catalog_into(
             // transition block. `num_classes <= 256`, with equality only when
             // every byte transitions differently in some state — the common
             // secret-detector DFAs collapse to a handful of classes.
-            let num_classes = build_byte_class_map(rule, &mut scratch.class_scratch);
+            let num_classes = build_byte_class_map_for_table(
+                &rule.transitions,
+                rule.state_count as usize,
+                &mut scratch.class_scratch,
+            );
 
             let class_map_base =
                 u32::try_from(scratch.class_maps.len()).map_err(|_| PipelineError::QueueFull {
@@ -407,25 +411,16 @@ pub fn pack_rule_catalog_into(
                 accept_target,
                 "flattened accept storage",
             )?;
-            // Emit one compressed transition per (state, class). For class `c`
-            // pick ANY byte that maps to it (the first); the dense column for
-            // every byte in that class is identical by construction, so the
-            // value is well-defined and lossless.
-            let mut class_representative = vec![0usize; num_classes as usize];
-            let mut seen = vec![false; num_classes as usize];
-            for (byte, &class) in scratch.class_scratch.iter().enumerate() {
-                let class = class as usize;
-                if !seen[class] {
-                    seen[class] = true;
-                    class_representative[class] = byte;
-                }
-            }
-            for state in 0..rule.state_count as usize {
-                let dense_row = state * ALPHABET_SIZE_USIZE;
-                for &rep_byte in &class_representative {
-                    scratch.transitions.push(rule.transitions[dense_row + rep_byte]);
-                }
-            }
+            // Emit the compressed `state * num_classes + class` transition block
+            // via the shared primitive (lossless: every byte in a class shares
+            // its dense column).
+            compress_dense_transitions_into(
+                &rule.transitions,
+                rule.state_count as usize,
+                &scratch.class_scratch,
+                num_classes,
+                &mut scratch.transitions,
+            );
             scratch.accept.extend_from_slice(&rule.accept);
 
             let layout = UniqueStorageLayout {
@@ -470,10 +465,26 @@ pub fn pack_rule_catalog_into(
 /// ~987 MB catalog without changing a single firing.
 ///
 /// `out` is cleared/reused so the hot resident-refresh path allocates nothing.
-fn build_byte_class_map(rule: &BatchRuleProgram, out: &mut Vec<u32>) -> u32 {
+/// Build the LOSSLESS byte→class map for a dense `state_count * 256` DFA
+/// transition table into `out` (resized to 256) and return the class count.
+///
+/// Two bytes share a class iff their transition COLUMN is identical across every
+/// state: `transitions[s*256 + a] == transitions[s*256 + b]` for all `s`. Class
+/// ids are assigned in order of first byte appearance, so the map is
+/// deterministic. The returned `num_classes` is `<= 256`.
+///
+/// This is the shared compression primitive: the per-rule catalog packer and
+/// the combined-AC megakernel both call it so a single definition owns the
+/// "identical column ⇒ same class" contract. `out` is cleared/reused so hot
+/// paths allocate nothing.
+#[must_use]
+pub fn build_byte_class_map_for_table(
+    transitions: &[u32],
+    state_count: usize,
+    out: &mut Vec<u32>,
+) -> u32 {
     out.clear();
     out.resize(ALPHABET_SIZE_USIZE, 0);
-    let state_count = rule.state_count as usize;
     // Column signature per byte = its next-state across every state. Group by
     // signature. `FxHashMap` keyed on the column bytes; the first byte to
     // produce a signature owns a fresh class id.
@@ -483,7 +494,7 @@ fn build_byte_class_map(rule: &BatchRuleProgram, out: &mut Vec<u32>) -> u32 {
     for byte in 0..ALPHABET_SIZE_USIZE {
         signature.clear();
         for state in 0..state_count {
-            signature.push(rule.transitions[state * ALPHABET_SIZE_USIZE + byte]);
+            signature.push(transitions[state * ALPHABET_SIZE_USIZE + byte]);
         }
         let class = match signature_to_class.get(&signature) {
             Some(&class) => class,
@@ -497,6 +508,39 @@ fn build_byte_class_map(rule: &BatchRuleProgram, out: &mut Vec<u32>) -> u32 {
         out[byte] = class;
     }
     next_class
+}
+
+/// Append the compressed `state_count * num_classes` transition block for a
+/// dense `state_count * 256` table to `out`, given the byte→class `class_map`
+/// from [`build_byte_class_map_for_table`].
+///
+/// For class `c` it copies the dense column of ANY byte mapping to `c` (the
+/// first; every byte in a class has an identical column by construction, so the
+/// value is well-defined and LOSSLESS). Shared by the per-rule packer and the
+/// combined-AC megakernel.
+pub fn compress_dense_transitions_into(
+    dense: &[u32],
+    state_count: usize,
+    class_map: &[u32],
+    num_classes: u32,
+    out: &mut Vec<u32>,
+) {
+    let num_classes = num_classes as usize;
+    let mut class_representative = vec![0usize; num_classes];
+    let mut seen = vec![false; num_classes];
+    for (byte, &class) in class_map.iter().enumerate() {
+        let class = class as usize;
+        if !seen[class] {
+            seen[class] = true;
+            class_representative[class] = byte;
+        }
+    }
+    for state in 0..state_count {
+        let dense_row = state * ALPHABET_SIZE_USIZE;
+        for &rep_byte in &class_representative {
+            out.push(dense[dense_row + rep_byte]);
+        }
+    }
 }
 
 fn validate_rule_shape(

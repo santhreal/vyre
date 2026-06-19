@@ -1445,18 +1445,24 @@ fn combined_batch_program_buffers(hit_capacity: u32) -> Vec<BufferDecl> {
         BufferDecl::storage("file_offsets", 0, BufferAccess::ReadOnly, DataType::U32),
         BufferDecl::storage("file_metadata", 1, BufferAccess::ReadOnly, DataType::U32),
         BufferDecl::storage("haystack", 2, BufferAccess::ReadOnly, DataType::U32),
-        // Combined Aho-Corasick automaton, flattened:
-        //   transitions:    state_count * 256   (dense byte->next-state table)
-        //   output_offsets: state_count + 1     (CSR row pointers per state)
-        //   output_records: output_records_len  (flat pattern_id payload)
+        // Combined Aho-Corasick automaton, flattened + byte-class compressed:
+        //   transitions:    state_count * num_classes  (compressed next-state)
+        //   output_offsets: state_count + 1            (CSR row pointers)
+        //   output_records: output_records_len         (flat pattern_id payload)
+        //   class_maps:     256                        (byte -> class column id)
+        // The kernel folds each byte through `class_maps` then indexes the
+        // compressed `state * num_classes + class` row — LOSSLESS (every byte in
+        // a class shares its dense column), shrinking the transition table from
+        // `state_count * 256` to `state_count * num_classes`.
         BufferDecl::storage("transitions", 3, BufferAccess::ReadOnly, DataType::U32),
         BufferDecl::storage("output_offsets", 4, BufferAccess::ReadOnly, DataType::U32),
         BufferDecl::storage("output_records", 5, BufferAccess::ReadOnly, DataType::U32),
-        BufferDecl::storage("queue_state", 6, BufferAccess::ReadWrite, DataType::U32).with_count(
+        BufferDecl::storage("class_maps", 6, BufferAccess::ReadOnly, DataType::U32),
+        BufferDecl::storage("queue_state", 7, BufferAccess::ReadWrite, DataType::U32).with_count(
             dispatcher_abi_u32(QUEUE_STATE_WORDS, "queue-state word count"),
         ),
-        BufferDecl::output("hit_ring", 7, DataType::U32).with_count(hit_ring_words),
-        BufferDecl::storage("segments", 8, BufferAccess::ReadOnly, DataType::U32),
+        BufferDecl::output("hit_ring", 8, DataType::U32).with_count(hit_ring_words),
+        BufferDecl::storage("segments", 9, BufferAccess::ReadOnly, DataType::U32),
     ]
 }
 
@@ -1466,7 +1472,11 @@ fn combined_batch_program_buffers(hit_capacity: u32) -> Vec<BufferDecl> {
 /// QUEUE_LEN` Return, Law-10 no under-claim), with the per-rule claim body
 /// replaced by [`execute_combined_claim_body`]. `queue_len = segment_count`
 /// (one work item per segment), set by the host.
-pub(crate) fn build_combined_batch_program(workgroup_size_x: u32, hit_capacity: u32) -> Program {
+pub(crate) fn build_combined_batch_program(
+    workgroup_size_x: u32,
+    hit_capacity: u32,
+    num_classes: u32,
+) -> Program {
     let queue_len = atomic_load_relaxed(
         "queue_state",
         Expr::u32(dispatcher_abi_u32(
@@ -1491,7 +1501,7 @@ pub(crate) fn build_combined_batch_program(workgroup_size_x: u32, hit_capacity: 
             vec![Node::Return],
         ),
     ];
-    loop_body.extend(execute_combined_claim_body());
+    loop_body.extend(execute_combined_claim_body(num_classes));
 
     Program::wrapped(
         combined_batch_program_buffers(hit_capacity),
@@ -1506,7 +1516,7 @@ pub(crate) fn build_combined_batch_program(workgroup_size_x: u32, hit_capacity: 
 /// `/ rule_count` — there is no rule dimension). The segment row layout
 /// `[file_idx, scan_start, emit_start, emit_end]` and the absolute-bounds
 /// arithmetic are identical to [`execute_batch_claim_body`].
-fn execute_combined_claim_body() -> Vec<Node> {
+fn execute_combined_claim_body(num_classes: u32) -> Vec<Node> {
     vec![
         // claim == seg_idx (one work item per segment).
         Node::let_bind("seg_idx", Expr::var("claim")),
@@ -1563,7 +1573,7 @@ fn execute_combined_claim_body() -> Vec<Node> {
             "emit_end",
             Expr::add(Expr::var("file_start"), Expr::var("emit_end_rel")),
         ),
-        Node::Block(combined_dfa_byte_scanner()),
+        Node::Block(combined_dfa_byte_scanner(num_classes)),
         Node::let_bind(
             "done_prev",
             Expr::atomic_add(
@@ -1588,7 +1598,7 @@ fn execute_combined_claim_body() -> Vec<Node> {
 /// place the kernel diverges from the per-rule scanner: a CSR multi-emit loop
 /// instead of a single `accept[state]` flag, mirroring the
 /// `combined_segmented_scan` CPU oracle exactly.
-fn combined_dfa_byte_scanner() -> Vec<Node> {
+fn combined_dfa_byte_scanner(num_classes: u32) -> Vec<Node> {
     vec![
         Node::let_bind("state", Expr::u32(0)),
         Node::loop_for(
@@ -1614,12 +1624,24 @@ fn combined_dfa_byte_scanner() -> Vec<Node> {
                         Expr::u32(0xFF),
                     ),
                 ),
-                // Dense combined transition: state = transitions[state*256 + byte].
+                // Byte-class compressed combined transition (lossless): fold the
+                // byte through the 256-entry class map, then index the compressed
+                // `state * num_classes + class` row. `num_classes` is baked as a
+                // literal — the automaton fixes it, so the pipeline is compiled
+                // once per resident catalog. Firings are byte-for-byte identical
+                // to the dense `state * 256 + byte` table.
+                Node::let_bind(
+                    "byte_class",
+                    Expr::load("class_maps", Expr::var("byte")),
+                ),
                 Node::assign(
                     "state",
                     Expr::load(
                         "transitions",
-                        Expr::add(Expr::mul(Expr::var("state"), Expr::u32(256)), Expr::var("byte")),
+                        Expr::add(
+                            Expr::mul(Expr::var("state"), Expr::u32(num_classes)),
+                            Expr::var("byte_class"),
+                        ),
                     ),
                 ),
                 // Emit guard: only positions owned by this window
@@ -1950,8 +1972,11 @@ impl CombinedDispatcher {
                 .launch_recommendation(self.backend.device_limits(), queue_len)?
                 .worker_groups
         };
-        let program =
-            build_combined_batch_program(self.config.workgroup_size_x, batch.hit_capacity());
+        let program = build_combined_batch_program(
+            self.config.workgroup_size_x,
+            batch.hit_capacity(),
+            batch.num_classes(),
+        );
         let pipeline = self
             .backend
             .compile_persistent(&program, &DispatchConfig::default())?;
@@ -2225,13 +2250,14 @@ mod tests {
     /// a stripped no-op.
     #[test]
     fn combined_batch_program_lowers_to_valid_wgsl_referencing_combined_tables() {
-        let program = build_combined_batch_program(64, 1024);
+        let program = build_combined_batch_program(64, 1024, 40);
         let wgsl = crate::emit::lower(&program)
             .expect("Fix: combined-AC segmented program must lower to valid WGSL");
         for needle in [
             "transitions",
             "output_offsets",
             "output_records",
+            "class_maps",
             "segments",
             "hit_ring",
             "file_offsets",
@@ -2272,10 +2298,11 @@ mod tests {
                 ("transitions", 3, false, false),
                 ("output_offsets", 4, false, false),
                 ("output_records", 5, false, false),
-                ("queue_state", 6, false, true),
+                ("class_maps", 6, false, false),
+                ("queue_state", 7, false, true),
                 // hit_ring is a writable output ⇒ ReadWrite access.
-                ("hit_ring", 7, true, true),
-                ("segments", 8, false, false),
+                ("hit_ring", 8, true, true),
+                ("segments", 9, false, false),
             ],
             "combined-AC buffer ABI drifted; the host CombinedBatch upload binds by this order"
         );

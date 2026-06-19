@@ -178,6 +178,25 @@ fn combined_scan_conserves_every_match_and_beats_hyperscan() {
     let output_records = &ac.dfa.output_records;
     let state_count = ac.dfa.state_count;
 
+    // The combined kernel byte-class compresses this dense table. Confirm the
+    // compression is REAL (fewer than 256 classes) for this catalog, so the
+    // conservation result below actually exercises the compressed transition
+    // path, not a 256-class identity passthrough.
+    let mut class_map = Vec::new();
+    let num_classes = vyre_runtime::megakernel::rule_catalog::build_byte_class_map_for_table(
+        transitions,
+        state_count as usize,
+        &mut class_map,
+    );
+    assert!(
+        num_classes < 256,
+        "expected byte-class compression to collapse the alphabet (<256 classes) for this \
+         catalog; got {num_classes} — the compressed-transition path would be untested"
+    );
+    eprintln!(
+        "combined automaton: {state_count} states, {num_classes} byte-classes (dense 256 → compressed {num_classes})",
+    );
+
     // seg_len = u32::MAX is one segment per file (whole-file, no segmentation);
     // the rest tile the 8 MiB file into many windows to saturate the device.
     let geometries = [u32::MAX, 65_536u32, 16_384, 4_096, 1_024, 512];
