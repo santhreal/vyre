@@ -278,6 +278,69 @@ fn u32_store_global_unchanged_by_byte_rmw_path() {
     );
 }
 
+/// A `Cast` whose target is `Bytes` is INVALID per the foundation cast table
+/// (`validate::cast::cast_is_valid` rejects every cast to/from `Bytes`), but the
+/// descriptor emitter does not re-run that table — so before this guard the
+/// scalar-cast emit path silently mapped `Bytes → u32` (`scalar_cast_target` and
+/// `type_for_data_type` both grouped `Bytes` with `U8/U16/U32`), reinterpreting
+/// a packed-byte target as a 32-bit word (Law 10). `Bytes` is a buffer-element
+/// marker that needs a pack-to-u32 pre-pass; the emitter must fail closed, never
+/// silently widen. This is the value/cast twin of the buffer-element rejection
+/// in `naga_type_buffer_followup::bytes_buffers`.
+fn cast_to_bytes_desc() -> KernelDescriptor {
+    KernelDescriptor {
+        id: "cast_to_bytes".into(),
+        bindings: BindingLayout {
+            slots: vec![vyre_lower::BindingSlot {
+                slot: 0,
+                element_type: DataType::U32,
+                element_count: Some(1),
+                memory_class: MemoryClass::Global,
+                visibility: BindingVisibility::ReadWrite,
+                name: "out".into(),
+            }],
+        },
+        dispatch: Dispatch::new(1, 1, 1),
+        body: KernelBody {
+            ops: vec![
+                // result 0: a u32 literal value
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(0),
+                },
+                // result 1: cast that u32 -> Bytes. This is the invalid op that
+                // must fail closed, NOT silently emit a u32 `As` conversion.
+                KernelOp {
+                    kind: KernelOpKind::Cast {
+                        target: DataType::Bytes,
+                    },
+                    operands: vec![0],
+                    result: Some(1),
+                },
+            ],
+            child_bodies: vec![],
+            literals: vec![LiteralValue::U32(0xab)],
+        },
+    }
+}
+
+#[test]
+fn cast_to_bytes_fails_closed_instead_of_silent_u32_reinterpret() {
+    let desc = cast_to_bytes_desc();
+    let err = emit(&desc).expect_err(
+        "Cast-to-Bytes must fail closed: `Bytes` is a packed-byte element, not a \
+         castable scalar — silently emitting a u32 `As` conversion is a Law-10 \
+         byte-as-word reinterpret",
+    );
+    let msg = err.to_string();
+    assert!(
+        msg.contains("Bytes") && msg.contains("pack-to-u32 pre-pass"),
+        "Cast-to-Bytes rejection must name the type and the fix (pack-to-u32 \
+         pre-pass); got: {msg}"
+    );
+}
+
 #[test]
 fn u32_load_global_unchanged_by_byte_extract_path() {
     // Regression guard: U32 buffers must NOT trigger the byte-extract

@@ -135,9 +135,21 @@ pub(super) fn unpack_shift_mask(op: &UnOp) -> Option<(u32, u32)> {
 pub(super) fn scalar_cast_target(target: &DataType) -> Result<(ScalarKind, u8), EmitError> {
     match target {
         DataType::Bool => Ok((ScalarKind::Bool, 1)),
-        DataType::U8 | DataType::U16 | DataType::U32 | DataType::Bytes => Ok((ScalarKind::Uint, 4)),
+        DataType::U8 | DataType::U16 | DataType::U32 => Ok((ScalarKind::Uint, 4)),
         DataType::I8 | DataType::I16 | DataType::I32 => Ok((ScalarKind::Sint, 4)),
         DataType::F32 => Ok((ScalarKind::Float, 4)),
+        // `Bytes` is a packed-byte buffer-element marker, NOT a castable scalar.
+        // The foundation cast table (`validate::cast::cast_is_valid`) rejects
+        // every cast to/from `Bytes`, but the Program-compatibility `emit_module`
+        // path does NOT run full validation, so a `Cast { target: Bytes }` can
+        // reach here. Mapping it to a 32-bit uint would SILENTLY reinterpret a
+        // byte target as a word (Law 10). Fail closed and name the fix.
+        DataType::Bytes => Err(EmitError::NagaConstructionFailed(
+            "cast target `Bytes` is not a scalar: `Bytes` is a packed-byte buffer \
+             element and must be unpacked via a pack-to-u32 pre-pass before \
+             emission, never reinterpreted as a u32 word"
+                .to_owned(),
+        )),
         other => Err(EmitError::NagaConstructionFailed(format!(
             "cast target `{other:?}` is not supported by the scalar Naga emitter"
         ))),

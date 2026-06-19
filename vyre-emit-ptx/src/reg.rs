@@ -45,10 +45,22 @@ impl PtxType {
     pub(crate) fn from_dtype(dt: &DataType) -> Result<Self, EmitError> {
         match dt {
             DataType::Bool => Ok(Self::Bool),
-            DataType::U8 | DataType::U16 | DataType::U32 | DataType::Bytes => Ok(Self::U32),
+            DataType::U8 | DataType::U16 | DataType::U32 => Ok(Self::U32),
             DataType::I8 | DataType::I16 | DataType::I32 => Ok(Self::I32),
             DataType::F16 | DataType::BF16 | DataType::F32 => Ok(Self::F32),
             DataType::U64 => Ok(Self::U64),
+            // `Bytes` is a packed-byte buffer-element marker, NOT a scalar
+            // register type. Folding it into `.u32` here would silently
+            // reinterpret a byte stream as a word (Law 10): a `Bytes` buffer
+            // load would index words instead of bytes, and a `Cast { Bytes }`
+            // of a u32 would no-op (src == dst == .u32). It needs a pack-to-u32
+            // pre-pass before emission, so fail closed and name the fix.
+            DataType::Bytes => Err(EmitError::UnsupportedDataType(
+                "Bytes is a packed-byte buffer element, not a scalar register \
+                 type; it requires a pack-to-u32 pre-pass before PTX emission \
+                 and must never be reinterpreted as a u32 word"
+                    .to_owned(),
+            )),
             other => Err(EmitError::UnsupportedDataType(format!("{other:?}"))),
         }
     }

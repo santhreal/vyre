@@ -434,9 +434,20 @@ impl BodyBuilder<'_> {
     ) -> Result<naga::Handle<Type>, EmitError> {
         match data_type {
             DataType::Bool => Ok(self.types.bool_ty),
-            DataType::U8 | DataType::U16 | DataType::U32 | DataType::Bytes => Ok(self.types.u32_ty),
+            DataType::U8 | DataType::U16 | DataType::U32 => Ok(self.types.u32_ty),
             DataType::I8 | DataType::I16 | DataType::I32 => Ok(self.types.i32_ty),
             DataType::F32 => Ok(self.types.f32_ty),
+            // `Bytes` has no scalar Naga value type: it is a packed-byte buffer
+            // element. Lowering it to `u32_ty` would silently reinterpret a byte
+            // stream as a word (Law 10). The buffer-element path already rejects
+            // `Bytes` (it needs a pack-to-u32 pre-pass); the value/cast path must
+            // be symmetric and fail closed too, never widen a byte to a word.
+            DataType::Bytes => Err(EmitError::NagaConstructionFailed(
+                "data type `Bytes` has no scalar Naga value type: `Bytes` is a \
+                 packed-byte buffer element and must be unpacked via a pack-to-u32 \
+                 pre-pass, never reinterpreted as a u32 word"
+                    .to_owned(),
+            )),
             // WGSL has no native 64-bit integer: U64/I64/Vec2U32 values are
             // backed by vec2<u32> (low word `.x`, high word `.y`). The native
             // `u64_ty`/`i64_ty` handles are reserved for the subgroup/literal

@@ -32,6 +32,24 @@ fn ptx_type_from_dtype_rejects_unsupported() {
 }
 
 #[test]
+fn ptx_type_from_dtype_rejects_bytes_instead_of_silent_u32() {
+    // `Bytes` is a packed-byte buffer element, not a scalar register type.
+    // Before this guard it was folded into `.u32` (grouped with U8/U16/U32),
+    // silently reinterpreting a byte stream as a word: a `Bytes` buffer load
+    // would index words not bytes, and a `Cast { Bytes }` of a u32 would no-op
+    // (src == dst). The emitter must fail closed and name the pack-to-u32 fix.
+    let err = PtxType::from_dtype(&DataType::Bytes)
+        .expect_err("from_dtype(Bytes) must fail closed, not silently map to .u32");
+    let EmitError::UnsupportedDataType(msg) = &err else {
+        panic!("Bytes rejection must be UnsupportedDataType; got {err:?}");
+    };
+    assert!(
+        msg.contains("Bytes") && msg.contains("pack-to-u32 pre-pass"),
+        "Bytes rejection must name the type and the fix (pack-to-u32 pre-pass); got: {msg}"
+    );
+}
+
+#[test]
 fn reg_display_uses_correct_prefix() {
     assert_eq!(format!("{}", Reg(PtxType::U32, 5)), "%r5");
     assert_eq!(format!("{}", Reg(PtxType::I32, 0)), "%s0");
