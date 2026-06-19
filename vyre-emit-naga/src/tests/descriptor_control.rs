@@ -50,6 +50,110 @@ fn high_word_of_only_vec2_compose(module: &naga::Module) -> naga::Expression {
 }
 
 #[test]
+fn signed_i32_arithmetic_shift_right_emits_valid_wgsl() {
+    use naga::valid::{Capabilities, ValidationFlags, Validator};
+    // `i32 >> n` is an ARITHMETIC shift (sign-preserving). validate's IR allows
+    // it. naga makes `>>` arithmetic when the LEFT operand is Sint, but WGSL
+    // requires the shift AMOUNT (right operand) to be u32. The probe: emit a
+    // real signed shift and run naga's validator — if the emitter coerced the
+    // shift amount to i32 (to match the signed left), the module is invalid WGSL.
+    let desc = KernelDescriptor {
+        id: "signed_shr".into(),
+        bindings: BindingLayout {
+            slots: vec![vyre_lower::BindingSlot {
+                slot: 0,
+                element_type: DataType::I32,
+                element_count: Some(1),
+                memory_class: MemoryClass::Global,
+                visibility: BindingVisibility::ReadWrite,
+                name: "out".into(),
+            }],
+        },
+        dispatch: Dispatch::new(1, 1, 1),
+        body: KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(0),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Cast {
+                        target: DataType::I32,
+                    },
+                    operands: vec![0],
+                    result: Some(1),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![1],
+                    result: Some(2),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Shr),
+                    operands: vec![1, 2],
+                    result: Some(3),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![2],
+                    result: Some(4),
+                },
+                KernelOp {
+                    kind: KernelOpKind::StoreGlobal,
+                    operands: vec![0, 4, 3],
+                    result: None,
+                },
+            ],
+            child_bodies: vec![],
+            literals: vec![
+                LiteralValue::U32(0x8000_0000),
+                LiteralValue::U32(1),
+                LiteralValue::U32(0),
+            ],
+        },
+    };
+    let module = emit(&desc).expect("i32 >> 1 must emit");
+    let mut validator = Validator::new(ValidationFlags::all(), Capabilities::all());
+    validator
+        .validate(&module)
+        .expect("signed arithmetic shift-right must produce valid WGSL (shift amount stays u32)");
+
+    // Pin the semantics, not just validity: the shift must be ARITHMETIC — its
+    // value operand stays Sint (that is what makes naga emit a sign-preserving
+    // `>>`) while the amount is Uint (u32).
+    let entry = module.entry_points.first().expect("entry point");
+    let arena = &entry.function.expressions;
+    let shift = arena
+        .iter()
+        .find_map(|(_, e)| match e {
+            naga::Expression::Binary {
+                op: naga::BinaryOperator::ShiftRight,
+                left,
+                right,
+            } => Some((*left, *right)),
+            _ => None,
+        })
+        .expect("a ShiftRight must be emitted");
+    let kind_of = |h: naga::Handle<naga::Expression>| match &arena[h] {
+        naga::Expression::As { kind, .. } => Some(*kind),
+        naga::Expression::Literal(naga::Literal::U32(_)) => Some(naga::ScalarKind::Uint),
+        naga::Expression::Literal(naga::Literal::I32(_)) => Some(naga::ScalarKind::Sint),
+        _ => None,
+    };
+    assert_eq!(
+        kind_of(shift.0),
+        Some(naga::ScalarKind::Sint),
+        "the shifted value must stay Sint so `>>` is arithmetic (sign-preserving)"
+    );
+    assert_eq!(
+        kind_of(shift.1),
+        Some(naga::ScalarKind::Uint),
+        "the shift amount must be u32, never coerced to the value's signedness"
+    );
+}
+
+#[test]
 fn cast_i32_to_i64_sign_extends_high_word() {
     // A signed 32-bit source widened to a 64-bit integer must SIGN-extend:
     // the high word replicates the source's sign bit so a negative value keeps

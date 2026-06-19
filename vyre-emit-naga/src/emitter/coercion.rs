@@ -83,6 +83,29 @@ impl BodyBuilder<'_> {
                         };
                     }
                 }
+                // Shifts are ASYMMETRIC: `e1 >> e2` takes its result type from
+                // the value `e1` (whose signedness selects arithmetic vs logical
+                // shift) and REQUIRES the amount `e2` to be u32. The symmetric
+                // `lk != rk` unification below would coerce the amount to the
+                // value's type, emitting e.g. `ShiftRight(i32, i32)` — which naga
+                // rejects (InvalidBinaryOperandTypes), so signed arithmetic
+                // shifts (and signed-value rotates, whose synthetic lowering
+                // reuses this path) could not be emitted at all. Coerce ONLY the
+                // amount, ONLY to u32, and never touch the value's type.
+                if matches!(
+                    op,
+                    BinaryOperator::ShiftLeft | BinaryOperator::ShiftRight
+                ) {
+                    if right_kind != Some(naga::ScalarKind::Uint) {
+                        let new_right = self.coerce_value_to_type(right, self.types.u32_ty);
+                        return Expression::Binary {
+                            op,
+                            left,
+                            right: new_right,
+                        };
+                    }
+                    return Expression::Binary { op, left, right };
+                }
                 if let (Some(lk), Some(rk)) = (left_kind, right_kind) {
                     if lk != rk {
                         let target = match lk {
