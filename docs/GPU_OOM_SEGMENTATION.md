@@ -65,13 +65,28 @@ best **3.913 GB/s** (queue = segment_count × 64), combined best **18.009 GB/s**
 64×) gap is because per-rule is partly occupancy/memory-bound, not purely
 compute-bound; the advantage is real, conserving, and widens with catalog size.
 
-REMAINING combined-AC depth (not yet built): byte-class compression of the
-(larger) combined transition table (shrink each row from 256 cols to
-`num_classes`, the per-rule `class_maps` machinery — LOSSLESS, fewer global
-loads); the literal/regex split (regex rules with no single required literal
-stay on a per-rule path or literal-factor prefilter — bound and LOG the split,
-never silently drop them). The per-rule path remains the win for small catalogs;
-see "Concrete kernel plan" below for the build record.
+Byte-class compression of the combined transition table (DONE 2026-06-18,
+commit 5fe8f5fa64): the kernel now folds each byte through a 256-entry
+`class_maps` then indexes the compressed `state * num_classes + class` row
+(`num_classes` baked as a literal), shrinking the table from `state_count * 256`
+to `state_count * num_classes` — LOSSLESS (proved by both differential GPU tests
+still reproducing the oracle exactly: 32-keyword catalog 187 states → 46
+classes, 2115/2115; 64 single-byte 2048/2048, combined now 6.00× per-rule). The
+compression primitives (`build_byte_class_map_for_table` /
+`compress_dense_transitions_into`) are SHARED with the per-rule packer in
+vyre-runtime (one owner of the "identical column ⇒ same class" contract).
+Throughput is neutral on cache-resident catalogs (table already fit L2); the win
+is structural for large catalogs whose dense table would overflow L2 —
+**measuring that L2-residency win on a thousand-state catalog is the open
+follow-up** (needs a dense-vs-compressed A/B, currently only the compressed path
+ships).
+
+REMAINING combined-AC depth (not yet built): the large-catalog dense-vs-compressed
+throughput A/B (prove the L2 win); the literal/regex split (regex rules with no
+single required literal stay on a per-rule path or literal-factor prefilter —
+bound and LOG the split, never silently drop them). The per-rule path remains
+the win for small catalogs; see "Concrete kernel plan" below for the build
+record.
 
 ## Root cause (read, not theorized)
 
