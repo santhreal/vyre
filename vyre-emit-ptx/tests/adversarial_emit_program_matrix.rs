@@ -98,6 +98,20 @@ fn assert_ptx_structure(case: &EmitAdversarialCase, ptx: &str) {
                 ptx
             );
         }
+        EmitAdversarialFamily::SignedBufferArithmetic => {
+            assert!(
+                ptx.contains("and.b32"),
+                "{}: signed buffer bit-and must lower to a real and.b32\n{}",
+                case.id,
+                ptx
+            );
+            assert!(
+                ptx.contains("shr.") && ptx.contains("st.global.u32"),
+                "{}: signed buffer arithmetic must shift and store the narrowed result\n{}",
+                case.id,
+                ptx
+            );
+        }
         EmitAdversarialFamily::RejectCall | EmitAdversarialFamily::RejectGridSyncBarrier => {
             panic!(
                 "{}: rejection case must not reach PTX structure oracle",

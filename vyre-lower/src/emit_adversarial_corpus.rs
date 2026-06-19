@@ -26,6 +26,7 @@ pub enum EmitAdversarialFamily {
     AtomicCounter,
     DeadIdentityChain,
     VecLoadFusion,
+    SignedBufferArithmetic,
     RejectCall,
     RejectGridSyncBarrier,
 }
@@ -549,6 +550,67 @@ fn reject_grid_sync_barrier() -> EmitAdversarialCase {
     }
 }
 
+/// Signed (`i32`) buffer load feeding a mixed-kind arithmetic chain against
+/// unsigned literals, result narrowed into a `u32` output buffer.
+///
+/// This is the shape that hid a whole class of emit-validity bugs: the loaded
+/// word is `Sint`, but bit/shift arithmetic against `u32` literals (and the
+/// final store into a `u32` buffer) requires operand-kind reconciliation. WGSL
+/// rejects `BitAnd(i32, u32)` and a shift whose amount is not `u32`; PTX must
+/// pick the signed vs unsigned form. Every backend must reconcile the kinds —
+/// validating emitters (naga) catch any regression at the matrix gate.
+fn signed_buffer_arithmetic() -> EmitAdversarialCase {
+    EmitAdversarialCase {
+        id: "adv_signed_buffer_arith",
+        family: EmitAdversarialFamily::SignedBufferArithmetic,
+        outcome: EmitOutcome::Success,
+        descriptor: KernelDescriptor {
+            id: "adv_signed_buffer_arith".into(),
+            bindings: BindingLayout {
+                slots: vec![
+                    slot(
+                        0,
+                        "src",
+                        DataType::I32,
+                        MemoryClass::Global,
+                        BindingVisibility::ReadOnly,
+                        Some(4),
+                    ),
+                    slot(
+                        1,
+                        "out",
+                        DataType::U32,
+                        MemoryClass::Global,
+                        BindingVisibility::ReadWrite,
+                        Some(4),
+                    ),
+                ],
+            },
+            dispatch: Dispatch::new(1, 1, 1),
+            body: KernelBody {
+                ops: vec![
+                    lit(0, 0),
+                    op(KernelOpKind::LoadGlobal, vec![0, 0], Some(1)),
+                    lit(1, 2),
+                    op(KernelOpKind::BinOpKind(BinOp::BitAnd), vec![1, 2], Some(3)),
+                    lit(2, 4),
+                    op(KernelOpKind::BinOpKind(BinOp::Shr), vec![3, 4], Some(5)),
+                    lit(3, 6),
+                    op(KernelOpKind::BinOpKind(BinOp::Add), vec![5, 6], Some(7)),
+                    op(KernelOpKind::StoreGlobal, vec![1, 0, 7], None),
+                ],
+                child_bodies: vec![],
+                literals: vec![
+                    LiteralValue::U32(0),
+                    LiteralValue::U32(0xff),
+                    LiteralValue::U32(3),
+                    LiteralValue::U32(1),
+                ],
+            },
+        },
+    }
+}
+
 /// Full adversarial emit corpus (success + rejection cases).
 #[must_use]
 pub fn corpus() -> Vec<EmitAdversarialCase> {
@@ -561,6 +623,7 @@ pub fn corpus() -> Vec<EmitAdversarialCase> {
         atomic_counter(),
         dead_identity_chain(),
         vec_load_fusion(),
+        signed_buffer_arithmetic(),
         reject_call(),
         reject_grid_sync_barrier(),
     ]

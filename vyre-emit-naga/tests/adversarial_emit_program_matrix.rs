@@ -135,7 +135,9 @@ fn assert_naga_structure(case: &EmitAdversarialCase, module: &naga::Module) {
                 case.id
             );
         }
-        EmitAdversarialFamily::DeadIdentityChain | EmitAdversarialFamily::VecLoadFusion => {}
+        EmitAdversarialFamily::DeadIdentityChain
+        | EmitAdversarialFamily::VecLoadFusion
+        | EmitAdversarialFamily::SignedBufferArithmetic => {}
         EmitAdversarialFamily::RejectCall | EmitAdversarialFamily::RejectGridSyncBarrier => {
             panic!(
                 "{}: rejection case must not reach naga structure oracle",

@@ -75,7 +75,8 @@ fn assert_metal_artifact_structure(
         | EmitAdversarialFamily::LoopWithBarrier
         | EmitAdversarialFamily::AtomicCounter
         | EmitAdversarialFamily::DeadIdentityChain
-        | EmitAdversarialFamily::VecLoadFusion => {}
+        | EmitAdversarialFamily::VecLoadFusion
+        | EmitAdversarialFamily::SignedBufferArithmetic => {}
         EmitAdversarialFamily::RejectCall | EmitAdversarialFamily::RejectGridSyncBarrier => {
             panic!(
                 "{}: rejection case must not reach Metal artifact structure oracle",
