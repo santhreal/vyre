@@ -498,12 +498,10 @@ pub fn sinkhorn_iterate_f64_into(
 ) -> u32 {
     match try_sinkhorn_iterate_f64_into(k, a, b, tolerance, max_iterations, u, v, u_old) {
         Ok(iters) => iters,
-        Err(_) => {
-            u.clear();
-            v.clear();
-            u_old.clear();
-            0
-        }
+        // Clearing the buffers and returning 0 iterations on failure makes a
+        // GPU-vs-CPU parity assertion pass on empty==empty, silently masking a
+        // divergence (Law 10 / Law 6). Fail loud; callers use the try_ variant.
+        Err(error) => panic!("vyre-primitives Sinkhorn iterate CPU reference failed: {error}"),
     }
 }
 

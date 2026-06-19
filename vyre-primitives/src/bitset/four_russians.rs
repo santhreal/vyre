@@ -113,8 +113,11 @@ pub fn dense_matvec_byte_lut_into(
     dst_words: u32,
     lut: &mut Vec<u32>,
 ) {
-    if try_dense_matvec_byte_lut_into(columns, tile_count, dst_words, lut).is_err() {
-        lut.clear();
+    // Clearing the LUT to empty on failure silently produces an all-zero
+    // boolean-matvec (every product reads zero) — a silent fallback (Law 10).
+    // Fail loud; callers use try_dense_matvec_byte_lut_into.
+    if let Err(error) = try_dense_matvec_byte_lut_into(columns, tile_count, dst_words, lut) {
+        panic!("vyre-primitives dense boolean-matvec LUT build failed: {error}");
     }
 }
 

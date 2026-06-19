@@ -46,14 +46,19 @@
 #[must_use]
 pub fn grunwald_letnikov_kernel(alpha: f64, n: u32) -> Vec<f64> {
     let mut out = Vec::new();
-    let _ = try_grunwald_letnikov_kernel_into(alpha, n, &mut out);
+    // Returning an empty/partial kernel on failure silently corrupts every
+    // downstream convolution (it reads zeros) — a silent fallback (Law 10).
+    // Fail loud; callers use try_grunwald_letnikov_kernel_into.
+    if let Err(error) = try_grunwald_letnikov_kernel_into(alpha, n, &mut out) {
+        panic!("vyre-primitives Grünwald-Letnikov kernel generation failed: {error}");
+    }
     out
 }
 
 /// Generate the Grünwald-Letnikov kernel into caller-owned storage.
 pub fn grunwald_letnikov_kernel_into(alpha: f64, n: u32, out: &mut Vec<f64>) {
-    if try_grunwald_letnikov_kernel_into(alpha, n, out).is_err() {
-        out.clear();
+    if let Err(error) = try_grunwald_letnikov_kernel_into(alpha, n, out) {
+        panic!("vyre-primitives Grünwald-Letnikov kernel generation failed: {error}");
     }
 }
 
@@ -90,14 +95,19 @@ pub fn try_grunwald_letnikov_kernel_into(
 #[must_use]
 pub fn kernel_to_fixed_16_16(kernel: &[f64], step: f64, alpha: f64) -> Vec<u32> {
     let mut out = Vec::new();
-    let _ = try_kernel_to_fixed_16_16_into(kernel, step, alpha, &mut out);
+    // Returning an empty/partial fixed-point kernel on failure silently
+    // corrupts the conv1d input — a silent fallback (Law 10). Fail loud;
+    // callers use try_kernel_to_fixed_16_16_into.
+    if let Err(error) = try_kernel_to_fixed_16_16_into(kernel, step, alpha, &mut out) {
+        panic!("vyre-primitives 16.16 fixed-point kernel conversion failed: {error}");
+    }
     out
 }
 
 /// Convert a Grünwald-Letnikov kernel into 16.16 fixed point in caller-owned storage.
 pub fn kernel_to_fixed_16_16_into(kernel: &[f64], step: f64, alpha: f64, out: &mut Vec<u32>) {
-    if try_kernel_to_fixed_16_16_into(kernel, step, alpha, out).is_err() {
-        out.clear();
+    if let Err(error) = try_kernel_to_fixed_16_16_into(kernel, step, alpha, out) {
+        panic!("vyre-primitives 16.16 fixed-point kernel conversion failed: {error}");
     }
 }
 

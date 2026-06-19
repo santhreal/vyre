@@ -275,7 +275,10 @@ pub fn ddnnf_evaluate_cpu(
 ) -> Vec<u32> {
     match try_ddnnf_evaluate_cpu(nodes, node_var, children, var_assignments, topo_order) {
         Ok(out) => out,
-        Err(_) => Vec::new(),
+        // Returning empty on failure makes a GPU-vs-CPU parity assertion pass on
+        // empty==empty, silently masking a divergence (Law 10 / Law 6). Fail
+        // loud; callers use try_ddnnf_evaluate_cpu.
+        Err(error) => panic!("vyre-primitives d-DNNF evaluate CPU reference failed: {error}"),
     }
 }
 

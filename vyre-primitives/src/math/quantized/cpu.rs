@@ -10,7 +10,12 @@ use super::{i4_packed_words, I4_LANES_PER_WORD};
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn pack_i4x8_cpu(values: &[i32]) -> Vec<u32> {
     let mut out = Vec::new();
-    let _ = try_pack_i4x8_cpu_into(values, &mut out);
+    // Discarding the error and returning a partial/empty buffer makes a
+    // GPU-vs-CPU parity assertion pass on empty==empty, silently masking a
+    // divergence (Law 10 / Law 6). Fail loud; callers use try_pack_i4x8_cpu_into.
+    if let Err(error) = try_pack_i4x8_cpu_into(values, &mut out) {
+        panic!("vyre-primitives pack_i4x8 CPU reference failed: {error}");
+    }
     out
 }
 
@@ -18,8 +23,10 @@ pub fn pack_i4x8_cpu(values: &[i32]) -> Vec<u32> {
 /// Pack signed INT4 values into caller-owned u32 word storage.
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn pack_i4x8_cpu_into(values: &[i32], out: &mut Vec<u32>) {
-    if try_pack_i4x8_cpu_into(values, out).is_err() {
-        out.clear();
+    // Clearing to empty on failure silently masks a parity divergence
+    // (Law 10 / Law 6). Fail loud; callers use try_pack_i4x8_cpu_into.
+    if let Err(error) = try_pack_i4x8_cpu_into(values, out) {
+        panic!("vyre-primitives pack_i4x8 CPU reference failed: {error}");
     }
 }
 

@@ -204,11 +204,13 @@ pub fn qsvt_apply_cpu_into(
     t_curr: &mut Vec<f64>,
     t_next: &mut Vec<f64>,
 ) {
-    if try_qsvt_apply_cpu_into(a_scaled, v, coeffs, n, out, t_prev, t_curr, t_next).is_err() {
-        out.clear();
-        t_prev.clear();
-        t_curr.clear();
-        t_next.clear();
+    // Clearing the buffers on failure makes a GPU-vs-CPU parity assertion pass
+    // on empty==empty, silently masking a divergence (Law 10 / Law 6). Fail
+    // loud; callers use try_qsvt_apply_cpu_into.
+    if let Err(error) =
+        try_qsvt_apply_cpu_into(a_scaled, v, coeffs, n, out, t_prev, t_curr, t_next)
+    {
+        panic!("vyre-primitives QSVT apply CPU reference failed: {error}");
     }
 }
 

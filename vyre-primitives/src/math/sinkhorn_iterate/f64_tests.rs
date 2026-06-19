@@ -152,17 +152,18 @@ fn three_by_three_uniform_kernel() {
 }
 
 #[test]
-fn zero_tolerance_returns_empty_state() {
-    let (u, v, iters) = sinkhorn_iterate_f64(&[1.0], &[1.0], &[1.0], 0.0, 10);
-    assert!(u.is_empty());
-    assert!(v.is_empty());
-    assert_eq!(iters, 0);
+#[should_panic(expected = "Sinkhorn iterate CPU reference failed")]
+fn zero_tolerance_fails_loud() {
+    // A non-positive tolerance is rejected by the fallible core; the infallible
+    // wrapper must surface that loudly, not silently return an empty state
+    // (Law 10/6).
+    let _ = sinkhorn_iterate_f64(&[1.0], &[1.0], &[1.0], 0.0, 10);
 }
 
 #[test]
-fn shape_mismatch_returns_empty_state() {
-    let (u, v, iters) = sinkhorn_iterate_f64(&[1.0, 2.0], &[1.0, 1.0], &[1.0, 1.0], 1e-6, 10);
-    assert!(u.is_empty());
-    assert!(v.is_empty());
-    assert_eq!(iters, 0);
+#[should_panic(expected = "Sinkhorn iterate CPU reference failed")]
+fn shape_mismatch_fails_loud() {
+    // A malformed (non-m*n) kernel must fail LOUD, not silently return an empty
+    // state a GPU-vs-CPU parity assertion would accept as a match (Law 10/6).
+    let _ = sinkhorn_iterate_f64(&[1.0, 2.0], &[1.0, 1.0], &[1.0, 1.0], 1e-6, 10);
 }
