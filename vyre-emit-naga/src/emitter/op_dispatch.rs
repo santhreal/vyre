@@ -702,6 +702,87 @@ impl BodyBuilder<'_> {
                     return self.bind_result_typed(op, value, self.types.vec2_u32_ty);
                 }
                 let (kind, width) = scalar_cast_target(target)?;
+                // Float->{U32,I32}: naga's SPIR-V backend lowers `As` as
+                // `FClamp(x, min_repr, max_repr)` then ConvertFTo{U,S}. That
+                // DIVERGES from the reference oracle (Rust saturating `as`) two
+                // ways, both confirmed on a live 5090:
+                //   1. OVERFLOW: FClamp pins to the largest *f32-representable*
+                //      value <= target max (i32 -> 2147483520, u32 -> 4294967040),
+                //      but the oracle + PTX `cvt.rzi.sat` saturate to the exact
+                //      INTEGER max (i32::MAX, u32::MAX). Diverges for EVERY
+                //      positive overflow including +inf.
+                //   2. NaN: `FClamp(NaN, ..)` is SPIR-V-undefined (observed
+                //      i32::MIN on the 5090); the oracle defines NaN -> 0.
+                // Restore the reference's saturating semantics explicitly:
+                // NaN -> 0, x >= 2^bits -> INT_MAX. The in-range and
+                // negative-overflow paths already match (min_repr is exactly
+                // f32-representable, so naga's FClamp low bound == the oracle),
+                // so they keep naga's `As`. Only a Float source to a 32-bit int
+                // target is rewritten; integer->int and narrow targets are
+                // unchanged.
+                let source_is_f32 = self
+                    .value_type_operand(op, 0)
+                    .map(|h| h == self.types.f32_ty)
+                    .unwrap_or(false);
+                if source_is_f32 && matches!(target, DataType::U32 | DataType::I32) {
+                    let converted = self.append_expr(Expression::As {
+                        expr,
+                        kind,
+                        convert: Some(width),
+                    });
+                    // is_finite_ordered = (x == x): TRUE for every non-NaN value,
+                    // FALSE for NaN. We must NOT use `x != x` here: naga lowers a
+                    // float `!=` to the ORDERED `FOrdNotEqual`, and
+                    // `FOrdNotEqual(NaN, NaN)` is FALSE (ordered comparisons are
+                    // false whenever an operand is NaN) — the canonical `x != x`
+                    // NaN idiom is silently dead in naga. `Equal` lowers to
+                    // `FOrdEqual`, and `FOrdEqual(NaN, NaN)` is likewise FALSE, so
+                    // `x == x` is the portable not-NaN predicate.
+                    let is_not_nan = self.append_expr(Expression::Binary {
+                        op: BinaryOperator::Equal,
+                        left: expr,
+                        right: expr,
+                    });
+                    let (overflow_threshold, int_max, int_zero) = match target {
+                        DataType::I32 => (
+                            naga::Literal::F32(2_147_483_648.0), // 2^31
+                            naga::Literal::I32(i32::MAX),
+                            naga::Literal::I32(0),
+                        ),
+                        // U32 (the only other arm the outer `matches!` allows).
+                        _ => (
+                            naga::Literal::F32(4_294_967_296.0), // 2^32
+                            naga::Literal::U32(u32::MAX),
+                            naga::Literal::U32(0),
+                        ),
+                    };
+                    let threshold = self.append_expr(Expression::Literal(overflow_threshold));
+                    // too_high = (x >= 2^bits): true for positive overflow and
+                    // +inf; false for NaN (ordered compare is false for NaN), so
+                    // the outer not-NaN select still wins for NaN regardless of
+                    // `converted`/`saturated_high`.
+                    let too_high = self.append_expr(Expression::Binary {
+                        op: BinaryOperator::GreaterEqual,
+                        left: expr,
+                        right: threshold,
+                    });
+                    let max_lit = self.append_expr(Expression::Literal(int_max));
+                    let saturated_high = self.append_expr(Expression::Select {
+                        condition: too_high,
+                        accept: max_lit,
+                        reject: converted,
+                    });
+                    let zero_lit = self.append_expr(Expression::Literal(int_zero));
+                    // non-NaN -> the saturated conversion; NaN -> 0 (the oracle's
+                    // `NaN as {i32,u32}`).
+                    let value = self.append_expr(Expression::Select {
+                        condition: is_not_nan,
+                        accept: saturated_high,
+                        reject: zero_lit,
+                    });
+                    let ty = self.type_for_data_type(target)?;
+                    return self.bind_result_typed(op, value, ty);
+                }
                 let value = self.append_expr(Expression::As {
                     expr,
                     kind,

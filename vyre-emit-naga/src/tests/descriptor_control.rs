@@ -346,6 +346,134 @@ fn u64_to_i32_narrowing_cast_validates() {
         .unwrap_or_else(|e| panic!("u64->i32 cast: INVALID WGSL: {e:?}"));
 }
 
+/// Load an `F32` element, `Cast(target)` it to a 32-bit integer, store. Used to
+/// prove the Float->{U32,I32} cast emits the explicit Rust-saturating guard
+/// (NaN->0, overflow->INT_MAX) instead of naga's bare clamp-to-representable-f32.
+fn f32_to_int_cast_desc(target: DataType, out_elem: DataType) -> KernelDescriptor {
+    KernelDescriptor {
+        id: "f32_to_int".into(),
+        bindings: BindingLayout {
+            slots: vec![
+                BindingSlot {
+                    slot: 0,
+                    element_type: DataType::F32,
+                    element_count: Some(4),
+                    memory_class: MemoryClass::Global,
+                    visibility: BindingVisibility::ReadOnly,
+                    name: "src".into(),
+                },
+                BindingSlot {
+                    slot: 1,
+                    element_type: out_elem,
+                    element_count: Some(4),
+                    memory_class: MemoryClass::Global,
+                    visibility: BindingVisibility::ReadWrite,
+                    name: "out".into(),
+                },
+            ],
+        },
+        dispatch: Dispatch::new(1, 1, 1),
+        body: KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(0),
+                },
+                KernelOp {
+                    kind: KernelOpKind::LoadGlobal,
+                    operands: vec![0, 0],
+                    result: Some(1),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Cast { target },
+                    operands: vec![1],
+                    result: Some(2),
+                },
+                KernelOp {
+                    kind: KernelOpKind::StoreGlobal,
+                    operands: vec![1, 0, 2],
+                    result: None,
+                },
+            ],
+            child_bodies: vec![],
+            literals: vec![LiteralValue::U32(0)],
+        },
+    }
+}
+
+#[test]
+fn f32_to_u32_cast_emits_saturating_guard_and_validates() {
+    use naga::valid::{Capabilities, ValidationFlags, Validator};
+    // The reference oracle (Rust saturating `as`) maps overflow/+inf -> u32::MAX
+    // and NaN -> 0, but naga's bare `As` lowers to FClamp(x, min_repr, max_repr)
+    // + ConvertFToU, which pins overflow to the largest *f32-representable* value
+    // (4294967040, not u32::MAX) and leaves NaN SPIR-V-undefined. The emitter
+    // rewrites it to `select((x==x), select((x>=2^32), u32::MAX, As(x)), 0u)`.
+    let module = emit(&f32_to_int_cast_desc(DataType::U32, DataType::U32))
+        .expect("f32->u32 cast must emit");
+    Validator::new(ValidationFlags::all(), Capabilities::all())
+        .validate(&module)
+        .unwrap_or_else(|e| panic!("f32->u32 saturating cast: INVALID WGSL: {e:?}"));
+    let arena = &module.entry_points.first().expect("entry point").function.expressions;
+    let select_count = arena
+        .iter()
+        .filter(|(_, e)| matches!(e, naga::Expression::Select { .. }))
+        .count();
+    assert!(
+        select_count >= 2,
+        "saturating f32->u32 must emit the nested NaN+overflow Selects, found {select_count}"
+    );
+    let has_u32_max = arena.iter().any(|(_, e)| {
+        matches!(e, naga::Expression::Literal(naga::Literal::U32(u)) if *u == u32::MAX)
+    });
+    assert!(
+        has_u32_max,
+        "saturating f32->u32 must materialize the u32::MAX overflow sentinel"
+    );
+    // The not-NaN predicate is `x == x` (FOrdEqual), NEVER `x != x`: naga's
+    // FOrdNotEqual(NaN,NaN) is false, so `x != x` would be a dead NaN test.
+    let has_equal = arena.iter().any(|(_, e)| {
+        matches!(
+            e,
+            naga::Expression::Binary {
+                op: naga::BinaryOperator::Equal,
+                ..
+            }
+        )
+    });
+    assert!(
+        has_equal,
+        "the NaN guard must use ordered `x == x` (Equal), not the dead `x != x`"
+    );
+}
+
+#[test]
+fn f32_to_i32_cast_emits_saturating_guard_and_validates() {
+    use naga::valid::{Capabilities, ValidationFlags, Validator};
+    let module = emit(&f32_to_int_cast_desc(DataType::I32, DataType::I32))
+        .expect("f32->i32 cast must emit");
+    Validator::new(ValidationFlags::all(), Capabilities::all())
+        .validate(&module)
+        .unwrap_or_else(|e| panic!("f32->i32 saturating cast: INVALID WGSL: {e:?}"));
+    let arena = &module.entry_points.first().expect("entry point").function.expressions;
+    let select_count = arena
+        .iter()
+        .filter(|(_, e)| matches!(e, naga::Expression::Select { .. }))
+        .count();
+    assert!(
+        select_count >= 2,
+        "saturating f32->i32 must emit the nested NaN+overflow Selects, found {select_count}"
+    );
+    let has_i32_max = arena.iter().any(|(_, e)| {
+        matches!(e, naga::Expression::Literal(naga::Literal::I32(v)) if *v == i32::MAX)
+    });
+    assert!(
+        has_i32_max,
+        "saturating f32->i32 must materialize the i32::MAX overflow sentinel"
+    );
+}
+
 #[test]
 fn u64_to_f32_cast_reconstructs_full_value_and_validates() {
     use naga::valid::{Capabilities, ValidationFlags, Validator};

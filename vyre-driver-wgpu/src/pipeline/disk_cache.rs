@@ -22,7 +22,7 @@ pub(crate) use super::disk_cache_invalidation::{
 const DISK_PIPELINE_CACHE_VERSION: u32 = 5;
 const NAGA_VERSION: &str = env!("VYRE_NAGA_VERSION");
 const WGSL_LOWERING_CONTRACT: &str =
-    "vyre-wgpu-lowering-contract:v16:region-phi-named-carrier+ssa-carrier-snapshots+block-shadowed-carriers+carrier-rebind-invalidates-stale-blocks+restored-loop-and-block-carrier-scope+nonfinite-f32-bitcast+per-word-byte-compact+no-mutable-loop-unroll+licm-keeps-reassigned-loop-locals+runtime-storage-buffer-lengths";
+    "vyre-wgpu-lowering-contract:v17:region-phi-named-carrier+ssa-carrier-snapshots+block-shadowed-carriers+carrier-rebind-invalidates-stale-blocks+restored-loop-and-block-carrier-scope+nonfinite-f32-bitcast+per-word-byte-compact+no-mutable-loop-unroll+licm-keeps-reassigned-loop-locals+runtime-storage-buffer-lengths+saturating-f32-to-int-cast";
 const MAX_WGSL_CACHE_BYTES: u64 = 64 * 1024 * 1024;
 const MAX_COMPILED_PIPELINE_CACHE_BLOB_BYTES: u64 = 64 * 1024 * 1024;
 const MAX_PIPELINE_CACHE_METADATA_BYTES: u64 = 64 * 1024;
