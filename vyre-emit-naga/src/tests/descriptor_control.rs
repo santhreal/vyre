@@ -50,6 +50,87 @@ fn high_word_of_only_vec2_compose(module: &naga::Module) -> naga::Expression {
 }
 
 #[test]
+fn bitops_on_signed_buffer_load_emit_valid_wgsl() {
+    use naga::valid::{Capabilities, ValidationFlags, Validator};
+    // Systematic sweep of the mixed-i32/u32 class: a value loaded from a SIGNED
+    // (i32) buffer (whose kind doesn't resolve through Load(Access)) combined
+    // with a u32 literal. naga requires matching operand kinds; if `unify` can't
+    // resolve the load it emits e.g. `And(i32, u32)` and the module is invalid.
+    let mut validator = Validator::new(ValidationFlags::all(), Capabilities::all());
+    let ops = [
+        BinOp::BitAnd,
+        BinOp::BitOr,
+        BinOp::BitXor,
+        BinOp::Shl,
+        BinOp::Shr,
+        BinOp::Add,
+        BinOp::Sub,
+        BinOp::Mul,
+    ];
+    for binop in ops {
+        let desc = KernelDescriptor {
+            id: "signed_bitop".into(),
+            bindings: BindingLayout {
+                slots: vec![
+                    BindingSlot {
+                        slot: 0,
+                        element_type: DataType::I32,
+                        element_count: Some(4),
+                        memory_class: MemoryClass::Global,
+                        visibility: BindingVisibility::ReadOnly,
+                        name: "src".into(),
+                    },
+                    BindingSlot {
+                        slot: 1,
+                        element_type: DataType::U32,
+                        element_count: Some(4),
+                        memory_class: MemoryClass::Global,
+                        visibility: BindingVisibility::ReadWrite,
+                        name: "out".into(),
+                    },
+                ],
+            },
+            dispatch: Dispatch::new(1, 1, 1),
+            body: KernelBody {
+                ops: vec![
+                    KernelOp {
+                        kind: KernelOpKind::Literal,
+                        operands: vec![0],
+                        result: Some(0),
+                    },
+                    KernelOp {
+                        kind: KernelOpKind::LoadGlobal,
+                        operands: vec![0, 0],
+                        result: Some(1),
+                    },
+                    KernelOp {
+                        kind: KernelOpKind::Literal,
+                        operands: vec![1],
+                        result: Some(2),
+                    },
+                    KernelOp {
+                        kind: KernelOpKind::BinOpKind(binop),
+                        operands: vec![1, 2],
+                        result: Some(3),
+                    },
+                    KernelOp {
+                        kind: KernelOpKind::StoreGlobal,
+                        operands: vec![1, 0, 3],
+                        result: None,
+                    },
+                ],
+                child_bodies: vec![],
+                literals: vec![LiteralValue::U32(0), LiteralValue::U32(0xff)],
+            },
+        };
+        let module = emit(&desc).unwrap_or_else(|e| panic!("{binop:?}: emit failed: {e}"));
+        validator
+            .validate(&module)
+            .unwrap_or_else(|e| panic!("{binop:?} on a signed buffer load: INVALID WGSL: {e:?}"));
+    }
+}
+
+#[test]
 fn unpack_on_signed_buffer_load_emits_valid_wgsl() {
     use naga::valid::{Capabilities, ValidationFlags, Validator};
     // `Unpack8Low` lowers to `(v >> shift) & mask` with a u32 mask. When the

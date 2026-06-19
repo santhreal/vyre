@@ -85,6 +85,23 @@ impl<'a> BodyBuilder<'a> {
             Expression::AccessIndex { base, .. } => {
                 self.scalar_kind_of_expression(*base, depth + 1)
             }
+            // A dynamic `array[index]` access into a buffer: resolve through the
+            // base, exactly like the constant-index `AccessIndex`. Without this,
+            // a load from a buffer indexed by a runtime value (every real scan)
+            // could not resolve its scalar kind.
+            Expression::Access { base, .. } => self.scalar_kind_of_expression(*base, depth + 1),
+            // A storage/uniform buffer global. Resolve its ELEMENT scalar kind
+            // via the slot's recorded element type. This is what lets a value
+            // loaded from a SIGNED (i32) buffer resolve to `Sint`, so
+            // `unify_binary_operand_types` can match `i32_load & u32_literal`
+            // instead of emitting `And(i32, u32)` — invalid WGSL naga rejects.
+            // (The `globals` map is slot -> global handle; reverse it.)
+            Expression::GlobalVariable(handle) => self
+                .globals
+                .iter()
+                .find(|(_, g)| **g == *handle)
+                .and_then(|(slot, _)| self.binding_types.get(slot).copied())
+                .and_then(|ty| self.binding_types_lookup(ty)),
             Expression::FunctionArgument(_) => Some(ScalarKind::Uint),
             _ => None,
         }
