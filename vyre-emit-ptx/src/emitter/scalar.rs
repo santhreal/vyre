@@ -746,34 +746,38 @@ impl BodyCtx<'_> {
         let acc = self.alloc(PtxType::F32);
         let mask = self.alloc(PtxType::U32);
         let lane = self.alloc(PtxType::U32);
-        let lane_mask = self.subgroup_lane_mask();
+        // XOR (butterfly) all-reduce: every lane exchanges with lane^offset and
+        // combines, so after log2(width) steps EVERY lane holds the full
+        // reduction — matching the all-lane-broadcast contract of WGSL
+        // subgroupAdd / redux.sync / the reference oracle. (A shfl.down tree
+        // only feeds lane 0.)
+        //
+        // The exchange is emitted in `.idx` mode with an explicitly XORed source
+        // lane (`laneid ^ offset`), NOT `.bfly` mode: hardware testing on sm_80+
+        // showed the `.bfly` form with a full-warp `c=0x1f` clamp silently
+        // failing to move data here (every lane kept its own value) while the
+        // identical `.idx` shuffle moved data correctly. `c = subgroup_size - 1`
+        // is the standard full-warp clamp (segmask=0); the XOR partner is always
+        // in-range for a power-of-two width so no predication is needed.
+        let idx_clamp = self.subgroup_lane_mask();
         let _ = writeln!(self.text, "    mov.f32    {acc}, {value};");
         let _ = writeln!(self.text, "    activemask.b32    {mask};");
         let _ = writeln!(self.text, "    mov.u32    {lane}, %laneid;");
 
         let mut offset = self.options.subgroup_size / 2;
         while offset > 0 {
-            let source_lane = self.alloc(PtxType::U32);
-            let has_source = self.alloc(PtxType::Bool);
+            let src_lane = self.alloc(PtxType::U32);
             let bits = self.alloc(PtxType::U32);
             let shuffled_bits = self.alloc(PtxType::U32);
             let shuffled = self.alloc(PtxType::F32);
-            let _ = writeln!(self.text, "    add.u32    {source_lane}, {lane}, {offset};");
-            let _ = writeln!(
-                self.text,
-                "    setp.lt.u32    {has_source}, {source_lane}, {};",
-                self.options.subgroup_size
-            );
+            let _ = writeln!(self.text, "    xor.b32    {src_lane}, {lane}, {offset};");
             let _ = writeln!(self.text, "    mov.b32    {bits}, {acc};");
             let _ = writeln!(
                 self.text,
-                "    shfl.sync.down.b32    {shuffled_bits}, {bits}, {offset}, 0x{lane_mask:x}, {mask};"
+                "    shfl.sync.idx.b32    {shuffled_bits}, {bits}, {src_lane}, 0x{idx_clamp:x}, {mask};"
             );
             let _ = writeln!(self.text, "    mov.b32    {shuffled}, {shuffled_bits};");
-            let _ = writeln!(
-                self.text,
-                "    @{has_source} {combine}.f32    {acc}, {acc}, {shuffled};"
-            );
+            let _ = writeln!(self.text, "    {combine}.f32    {acc}, {acc}, {shuffled};");
             offset /= 2;
         }
         Ok(acc)

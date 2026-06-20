@@ -119,9 +119,23 @@ fn f32_subgroup_add_emits_shuffle_tree() {
     };
     let s = emit(&kernel).unwrap();
     assert!(s.contains("activemask.b32"));
-    assert!(s.contains("shfl.sync.down.b32"));
+    // All-lane broadcast contract: f32 reduction uses an XOR all-reduce so every
+    // lane ends with the full result, NOT a shfl.down tree (which only feeds
+    // lane 0). The exchange uses `.idx` mode with an explicit `laneid ^ offset`
+    // source — `.bfly` mode was verified to silently drop data on sm_80+.
+    // log2(32) = 5 exchange steps.
     assert!(s.contains("%laneid"));
-    assert!(s.matches("setp.lt.u32").count() >= 5);
+    assert!(s.contains("shfl.sync.idx.b32"));
+    assert!(!s.contains("shfl.sync.down.b32"));
+    assert!(!s.contains("shfl.sync.bfly.b32"));
+    assert!(
+        s.matches("xor.b32").count() >= 5,
+        "expected >=5 XOR-partner steps for a 32-lane warp, got: {s}"
+    );
+    assert!(
+        s.matches("shfl.sync.idx.b32").count() >= 5,
+        "expected >=5 idx-shuffle exchange steps for a 32-lane warp, got: {s}"
+    );
     assert!(s.contains("add.f32"));
     assert!(!s.contains("redux.sync.add.f32"));
 }

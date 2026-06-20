@@ -84,7 +84,13 @@ foundation lowering max (single + two-level -inf neutral); naga per-op→Subgrou
 mapping; reference oracle u32 max/xor, f32 -inf max, f32-bitwise fail-loud.
 
 Open follow-ons (NOT regressions; the lowering only emits Add/Max today):
-- PTX f32 shfl-down butterfly yields the full reduction only at lane 0 (pre-existing
-  for Add; redux.sync integer path is all-lane-uniform). If a consumer needs the f32
-  result broadcast to every lane, the butterfly needs an up-sweep or a final broadcast.
+- PTX f32 reduction now emits an XOR all-reduce via `shfl.sync.idx` (explicit
+  `laneid ^ offset` source) so every lane ends with the full reduction (was a
+  `shfl.sync.down` tree that fed only lane 0). Unit + reference tests cover it.
+- **Live-GPU BLOCKER (driver, not vyre):** on Blackwell (sm_120, driver 570.x)
+  the driver JIT silently miscompiles BOTH this f32 shfl all-reduce AND the
+  integer `redux.sync` reduction on a globally-loaded value (every lane keeps
+  its own value). AOT/`ptxas` compiles the same PTX correctly. The four
+  `subgroup_reduce_gpu_parity` tests are `#[ignore]`d; full evidence + the AOT
+  cubin-compilation fix are in `docs/CUDA_DRIVER_JIT_F32_SHFL_BUG.md`.
 - integer subgroup Mul has no PTX redux; add a shfl butterfly if a generator needs it.
