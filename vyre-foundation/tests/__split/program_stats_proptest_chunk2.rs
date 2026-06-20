@@ -68,7 +68,7 @@ fn manual_walk_expr(
     bits: &mut u32,
 ) {
     match expr {
-        Expr::SubgroupAdd { value } => {
+        Expr::SubgroupReduce { value, .. } => {
             *bits |= CAP_SUBGROUP_OPS;
             manual_walk_expr(value, nodes, regions, calls, opaque, bits);
         }

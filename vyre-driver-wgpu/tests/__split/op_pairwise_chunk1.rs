@@ -178,7 +178,8 @@ fn rename_buffer_in_expr(expr: &Expr, old: &str, new: &str) -> Expr {
             value: Box::new(rename_buffer_in_expr(value, old, new)),
             lane: Box::new(rename_buffer_in_expr(lane, old, new)),
         },
-        Expr::SubgroupAdd { value } => Expr::SubgroupAdd {
+        Expr::SubgroupReduce { op, value } => Expr::SubgroupReduce {
+            op: *op,
             value: Box::new(rename_buffer_in_expr(value, old, new)),
         },
         // Leaf expressions  -  no buffers inside.

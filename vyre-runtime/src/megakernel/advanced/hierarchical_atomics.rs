@@ -191,7 +191,7 @@ mod tests {
                 node,
                 Node::Let {
                     value: Expr::SubgroupBallot { .. }
-                        | Expr::SubgroupAdd { .. }
+                        | Expr::SubgroupReduce { .. }
                         | Expr::SubgroupShuffle { .. },
                     ..
                 }
@@ -242,7 +242,7 @@ mod tests {
             Expr::SubgroupShuffle { value, lane } => {
                 expr_contains_subgroup_local_id(value) || expr_contains_subgroup_local_id(lane)
             }
-            Expr::SubgroupAdd { value } => expr_contains_subgroup_local_id(value),
+            Expr::SubgroupReduce { value, .. } => expr_contains_subgroup_local_id(value),
             Expr::Load { index, .. } => expr_contains_subgroup_local_id(index),
             Expr::Atomic {
                 index,

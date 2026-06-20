@@ -1,10 +1,31 @@
 //! Subgroup operation lowering.
 
 use naga::{Expression, Span, Statement};
-use vyre_lower::KernelOp;
+use vyre_foundation::ir::SubgroupReduceOp;
+use vyre_lower::{KernelOp, KernelOpKind};
 
 use super::BodyBuilder;
 use crate::EmitError;
+
+/// Map a neutral [`SubgroupReduceOp`] to naga's collective operation.
+fn naga_subgroup_operation(op: SubgroupReduceOp) -> Result<naga::SubgroupOperation, EmitError> {
+    Ok(match op {
+        SubgroupReduceOp::Add => naga::SubgroupOperation::Add,
+        SubgroupReduceOp::Mul => naga::SubgroupOperation::Mul,
+        SubgroupReduceOp::Min => naga::SubgroupOperation::Min,
+        SubgroupReduceOp::Max => naga::SubgroupOperation::Max,
+        SubgroupReduceOp::And => naga::SubgroupOperation::And,
+        SubgroupReduceOp::Or => naga::SubgroupOperation::Or,
+        SubgroupReduceOp::Xor => naga::SubgroupOperation::Xor,
+        // SubgroupReduceOp is #[non_exhaustive]; a future operator with no
+        // naga spelling fails loud rather than silently emitting Add.
+        other => {
+            return Err(EmitError::InvalidDescriptor(format!(
+                "subgroup reduction operator {other:?} has no naga SubgroupOperation. Fix: extend naga_subgroup_operation."
+            )))
+        }
+    })
+}
 
 impl BodyBuilder<'_> {
     pub(super) fn emit_subgroup_ballot(&mut self, op: &KernelOp) -> Result<(), EmitError> {
@@ -96,13 +117,23 @@ impl BodyBuilder<'_> {
         }
     }
 
-    pub(super) fn emit_subgroup_add(&mut self, op: &KernelOp) -> Result<(), EmitError> {
+    pub(super) fn emit_subgroup_reduce(&mut self, op: &KernelOp) -> Result<(), EmitError> {
+        let reduce_op = match &op.kind {
+            KernelOpKind::SubgroupReduce { op: reduce_op } => naga_subgroup_operation(*reduce_op)?,
+            other => {
+                return Err(EmitError::InvalidDescriptor(format!(
+                    "emit_subgroup_reduce dispatched on non-SubgroupReduce op {other:?}"
+                )))
+            }
+        };
         let value_id = *op
             .operands
             .first()
-            .ok_or_else(|| EmitError::InvalidDescriptor("SubgroupAdd missing value".into()))?;
+            .ok_or_else(|| EmitError::InvalidDescriptor("SubgroupReduce missing value".into()))?;
         let argument = self.values.get(&value_id).copied().ok_or_else(|| {
-            EmitError::InvalidDescriptor(format!("SubgroupAdd value id {value_id} not yet emitted"))
+            EmitError::InvalidDescriptor(format!(
+                "SubgroupReduce value id {value_id} not yet emitted"
+            ))
         })?;
         let result = self.function.expressions.append(
             Expression::SubgroupOperationResult {
@@ -112,7 +143,7 @@ impl BodyBuilder<'_> {
         );
         self.function.body.push(
             Statement::SubgroupCollectiveOperation {
-                op: naga::SubgroupOperation::Add,
+                op: reduce_op,
                 collective_op: naga::CollectiveOperation::Reduce,
                 argument,
                 result,

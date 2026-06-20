@@ -407,9 +407,7 @@ fn arb_expr() -> BoxedStrategy<Expr> {
                     value: Box::new(value),
                     ordering: MemoryOrdering::SeqCst,
                 }),
-            inner.clone().prop_map(|value| Expr::SubgroupAdd {
-                value: Box::new(value),
-            }),
+            inner.clone().prop_map(|value| Expr::subgroup_add(value)),
             (inner.clone(), inner.clone()).prop_map(|(value, lane)| Expr::SubgroupShuffle {
                 value: Box::new(value),
                 lane: Box::new(lane),

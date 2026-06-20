@@ -435,7 +435,7 @@ pub(crate) fn expr_type(
                     values.push(Some(crate::ir_inner::model::types::DataType::U32));
                 }
                 // Both operations produce the same type as their value operand.
-                Expr::SubgroupShuffle { value, .. } | Expr::SubgroupAdd { value } => {
+                Expr::SubgroupShuffle { value, .. } | Expr::SubgroupReduce { value, .. } => {
                     frames.push(Frame::Un);
                     frames.push(Frame::Enter(value));
                 }

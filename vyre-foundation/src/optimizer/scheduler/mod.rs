@@ -401,7 +401,7 @@ fn estimate_expr_allocations(expr: &Expr, estimate: &mut IrAllocationEstimate) {
         Expr::UnOp { operand, .. }
         | Expr::Cast { value: operand, .. }
         | Expr::SubgroupBallot { cond: operand }
-        | Expr::SubgroupAdd { value: operand } => {
+        | Expr::SubgroupReduce { value: operand, .. } => {
             estimate.add_box::<Expr>();
             estimate_expr_allocations(operand, estimate);
         }

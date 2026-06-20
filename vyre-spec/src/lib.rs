@@ -117,6 +117,9 @@ pub mod op_signature;
 pub mod pg_node_kind;
 /// Canonical semiring selector for dataflow and algebraic kernels.
 pub mod semiring;
+/// Subgroup (warp) reduction operator enum  -  add/mul/min/max/and/or/xor.
+/// Specification element.
+pub mod subgroup_reduce_op;
 /// Ternary operator enum  -  select, FMA, mask-merge.
 /// Specification element.
 pub mod ternary_op;
@@ -225,6 +228,9 @@ pub use op_signature::OpSignature;
 pub use pg_node_kind::PgNodeKind;
 /// See [`semiring::Semiring`].
 pub use semiring::Semiring;
+/// See [`subgroup_reduce_op::SubgroupReduceOp`].
+/// Specification element.
+pub use subgroup_reduce_op::SubgroupReduceOp;
 /// See [`ternary_op::TernaryOp`].
 /// Specification element.
 pub use ternary_op::TernaryOp;

@@ -71,7 +71,7 @@ pub(crate) fn is_uniform(expr: &Expr, scope: &FxHashMap<crate::ir::Ident, Bindin
             | Expr::Atomic { .. }
             | Expr::SubgroupBallot { .. }
             | Expr::SubgroupShuffle { .. }
-            | Expr::SubgroupAdd { .. }
+            | Expr::SubgroupReduce { .. }
             | Expr::Opaque(_) => return false,
         }
     }

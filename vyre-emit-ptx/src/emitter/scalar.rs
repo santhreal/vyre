@@ -1,6 +1,6 @@
 use std::fmt::Write as _;
 
-use vyre_foundation::ir::{BinOp, DataType, UnOp};
+use vyre_foundation::ir::{BinOp, DataType, SubgroupReduceOp, UnOp};
 
 use super::format::ptx_binop_suffix;
 use super::names::unop_name;
@@ -681,22 +681,68 @@ impl BodyCtx<'_> {
         self.options.subgroup_size.saturating_sub(1)
     }
 
-    pub(super) fn emit_subgroup_add(&mut self, value: Reg) -> Reg {
+    pub(super) fn emit_subgroup_reduce(
+        &mut self,
+        op: SubgroupReduceOp,
+        value: Reg,
+    ) -> Result<Reg, EmitError> {
         if value.0 == PtxType::F32 {
-            return self.emit_f32_subgroup_add(value);
+            return self.emit_f32_subgroup_reduce(op, value);
         }
+        // redux.sync handles add/min/max with the signed/unsigned type and
+        // and/or/xor as bitwise `.b32`. It has no integer product reduction.
+        let (op_str, type_str) = match op {
+            SubgroupReduceOp::Add => ("add", value.0.ptx_type_str()),
+            SubgroupReduceOp::Min => ("min", value.0.ptx_type_str()),
+            SubgroupReduceOp::Max => ("max", value.0.ptx_type_str()),
+            SubgroupReduceOp::And => ("and", "b32"),
+            SubgroupReduceOp::Or => ("or", "b32"),
+            SubgroupReduceOp::Xor => ("xor", "b32"),
+            SubgroupReduceOp::Mul => {
+                return Err(EmitError::InvalidDescriptor(
+                    "PTX redux.sync has no integer product reduction. Fix: emit a shfl butterfly for integer subgroup Mul or use a float operand.".into(),
+                ))
+            }
+            other => {
+                return Err(EmitError::InvalidDescriptor(format!(
+                    "PTX subgroup reduction operator {other:?} is not supported. Fix: extend emit_subgroup_reduce."
+                )))
+            }
+        };
         let result = self.alloc(value.0);
         let mask = self.alloc(PtxType::U32);
         let _ = writeln!(self.text, "    activemask.b32    {mask};");
-        let ptx_type = value.0.ptx_type_str();
         let _ = writeln!(
             self.text,
-            "    redux.sync.add.{ptx_type}    {result}, {value}, {mask};"
+            "    redux.sync.{op_str}.{type_str}    {result}, {value}, {mask};"
         );
-        result
+        Ok(result)
     }
 
-    fn emit_f32_subgroup_add(&mut self, value: Reg) -> Reg {
+    fn emit_f32_subgroup_reduce(
+        &mut self,
+        op: SubgroupReduceOp,
+        value: Reg,
+    ) -> Result<Reg, EmitError> {
+        // f32 has no redux.sync; reduce with a shfl.down butterfly whose
+        // combine instruction is the reduction operator. Bitwise ops are
+        // undefined on floats and fail closed.
+        let combine = match op {
+            SubgroupReduceOp::Add => "add",
+            SubgroupReduceOp::Mul => "mul",
+            SubgroupReduceOp::Min => "min",
+            SubgroupReduceOp::Max => "max",
+            SubgroupReduceOp::And | SubgroupReduceOp::Or | SubgroupReduceOp::Xor => {
+                return Err(EmitError::InvalidDescriptor(
+                    "subgroup bitwise reduction (and/or/xor) is undefined on f32. Fix: use an integer operand.".into(),
+                ))
+            }
+            other => {
+                return Err(EmitError::InvalidDescriptor(format!(
+                    "PTX f32 subgroup reduction operator {other:?} is not supported. Fix: extend emit_f32_subgroup_reduce."
+                )))
+            }
+        };
         let acc = self.alloc(PtxType::F32);
         let mask = self.alloc(PtxType::U32);
         let lane = self.alloc(PtxType::U32);
@@ -726,10 +772,10 @@ impl BodyCtx<'_> {
             let _ = writeln!(self.text, "    mov.b32    {shuffled}, {shuffled_bits};");
             let _ = writeln!(
                 self.text,
-                "    @{has_source} add.f32    {acc}, {acc}, {shuffled};"
+                "    @{has_source} {combine}.f32    {acc}, {acc}, {shuffled};"
             );
             offset /= 2;
         }
-        acc
+        Ok(acc)
     }
 }

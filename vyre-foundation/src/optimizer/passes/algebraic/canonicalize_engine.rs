@@ -282,7 +282,7 @@ fn expr_sort_key(expr: &Expr) -> u64 {
         Expr::Atomic { .. } => 0xc_0000_0000,
         Expr::SubgroupBallot { .. } => 0xd_0000_0000,
         Expr::SubgroupShuffle { .. } => 0xe_0000_0000,
-        Expr::SubgroupAdd { .. } => 0xf_0000_0000,
+        Expr::SubgroupReduce { .. } => 0xf_0000_0000,
         Expr::SubgroupLocalId | Expr::SubgroupSize => 0x20_0000_0000,
         Expr::Opaque(_) => 0x10_0000_0000,
     }

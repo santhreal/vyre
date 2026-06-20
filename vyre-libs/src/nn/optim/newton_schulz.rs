@@ -99,7 +99,7 @@ mod tests {
             | Expr::UnOp { operand: index, .. }
             | Expr::Cast { value: index, .. }
             | Expr::SubgroupBallot { cond: index }
-            | Expr::SubgroupAdd { value: index } => count_expr(index),
+            | Expr::SubgroupReduce { value: index, .. } => count_expr(index),
             Expr::BinOp { left, right, .. }
             | Expr::SubgroupShuffle {
                 value: left,

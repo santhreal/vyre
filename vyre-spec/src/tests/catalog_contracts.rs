@@ -114,7 +114,7 @@ fn expr_variant_catalog_is_complete_and_unique() {
         "Atomic",
         "SubgroupBallot",
         "SubgroupShuffle",
-        "SubgroupAdd",
+        "SubgroupReduce",
         "Opaque",
     ];
     let actual = expr_variants();

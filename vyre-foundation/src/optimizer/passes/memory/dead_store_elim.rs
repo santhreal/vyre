@@ -288,7 +288,7 @@ fn expr_touches_buffer(expr: &Expr, buffer: &Ident) -> bool {
                 || expr_touches_buffer(false_val, buffer)
         }
         Expr::Call { args, .. } => args.iter().any(|a| expr_touches_buffer(a, buffer)),
-        Expr::SubgroupShuffle { value, .. } | Expr::SubgroupAdd { value } => {
+        Expr::SubgroupShuffle { value, .. } | Expr::SubgroupReduce { value, .. } => {
             expr_touches_buffer(value, buffer)
         }
         Expr::SubgroupBallot { cond } => expr_touches_buffer(cond, buffer),

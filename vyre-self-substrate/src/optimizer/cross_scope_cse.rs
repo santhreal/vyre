@@ -348,7 +348,7 @@ fn expr_no_atomic(expr: &Expr) -> bool {
         Expr::Call { args, .. } => args.iter().all(expr_no_atomic),
         Expr::SubgroupBallot { cond } => expr_no_atomic(cond),
         Expr::SubgroupShuffle { value, lane } => expr_no_atomic(value) && expr_no_atomic(lane),
-        Expr::SubgroupAdd { value } => expr_no_atomic(value),
+        Expr::SubgroupReduce { value, .. } => expr_no_atomic(value),
         Expr::Opaque(_) => false,
         _ => true,
     }

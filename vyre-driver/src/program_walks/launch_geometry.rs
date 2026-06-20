@@ -92,7 +92,7 @@ fn expr_uses_launch_geometry_ids(expr: &Expr) -> bool {
         Expr::SubgroupShuffle { value, lane } => {
             expr_uses_launch_geometry_ids(value) || expr_uses_launch_geometry_ids(lane)
         }
-        Expr::SubgroupAdd { value } => expr_uses_launch_geometry_ids(value),
+        Expr::SubgroupReduce { value, .. } => expr_uses_launch_geometry_ids(value),
         Expr::LitU32(_)
         | Expr::LitI32(_)
         | Expr::LitF32(_)

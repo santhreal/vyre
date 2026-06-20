@@ -158,7 +158,7 @@ impl InlineCtx {
             | Expr::SubgroupSize
             | Expr::SubgroupBallot { .. }
             | Expr::SubgroupShuffle { .. }
-            | Expr::SubgroupAdd { .. }
+            | Expr::SubgroupReduce { .. }
             | Expr::Opaque(_) => Ok((Vec::new(), expr.clone())),
             Expr::Load { buffer, index } => {
                 let (prefix, index) = self.inline_expr(index)?;

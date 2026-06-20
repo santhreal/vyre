@@ -2,7 +2,9 @@
 
 use crate::ir_inner::model::expr::{ExprNode, GeneratorRef, Ident};
 use crate::ir_inner::model::node::NodeExtension;
-use crate::ir_inner::model::types::{AtomicOp, BinOp, CollectiveOp, CommGroup, DataType, UnOp};
+use crate::ir_inner::model::types::{
+    AtomicOp, BinOp, CollectiveOp, CommGroup, DataType, SubgroupReduceOp, UnOp,
+};
 use std::sync::Arc;
 
 vyre_macros::vyre_ast_registry! {
@@ -51,7 +53,7 @@ vyre_macros::vyre_ast_registry! {
         Atomic { op: AtomicOp, buffer: Ident, index: Box<Expr>, expected: Option<Box<Expr>>, value: Box<Expr>, ordering: crate::memory_model::MemoryOrdering },
         SubgroupBallot { cond: Box<Expr> },
         SubgroupShuffle { value: Box<Expr>, lane: Box<Expr> },
-        SubgroupAdd { value: Box<Expr> },
+        SubgroupReduce { op: SubgroupReduceOp, value: Box<Expr> },
         SubgroupLocalId,
         SubgroupSize,
         Opaque(Arc<dyn ExprNode>),

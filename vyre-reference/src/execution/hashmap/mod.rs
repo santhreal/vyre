@@ -16,7 +16,7 @@ use state::HashmapInvocationSnapshot;
 use state::{create_invocations, run_invocations, HashmapInvocation};
 use step::{axis_value, eval_call, eval_to_index};
 #[cfg(feature = "subgroup-ops")]
-use subgroup::{eval_subgroup_add, eval_subgroup_ballot, eval_subgroup_shuffle};
+use subgroup::{eval_subgroup_ballot, eval_subgroup_reduce, eval_subgroup_shuffle};
 use sync::element_count;
 
 use crate::{
@@ -421,13 +421,16 @@ fn eval_expr(
                 })
             }
         }
-        Expr::SubgroupAdd { value } => {
+        Expr::SubgroupReduce { op, value } => {
             #[cfg(feature = "subgroup-ops")]
             {
-                eval_subgroup_add(value, invocation, snapshots, memory)
+                eval_subgroup_reduce(*op, value, invocation, snapshots, memory)
             }
             #[cfg(not(feature = "subgroup-ops"))]
             {
+                // Single-lane interpreter: a reduction over one lane is that
+                // lane's value for every operator (Add/Mul/Min/Max/And/Or/Xor).
+                let _ = op;
                 eval_expr(value, invocation, memory)
             }
         }

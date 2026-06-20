@@ -183,7 +183,7 @@ fn expr_is_observably_free(expr: &Expr) -> bool {
         | Expr::Opaque(_)
         | Expr::SubgroupBallot { .. }
         | Expr::SubgroupShuffle { .. }
-        | Expr::SubgroupAdd { .. }
+        | Expr::SubgroupReduce { .. }
         | Expr::SubgroupLocalId
         | Expr::SubgroupSize => false,
         Expr::LitU32(_)

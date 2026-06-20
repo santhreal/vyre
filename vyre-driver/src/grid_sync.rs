@@ -386,7 +386,7 @@ fn collect_referenced_vars(expr: &Expr, vars: &mut std::collections::HashSet<Str
             collect_referenced_vars(value, vars);
             collect_referenced_vars(lane, vars);
         }
-        Expr::SubgroupAdd { value } => {
+        Expr::SubgroupReduce { value, .. } => {
             collect_referenced_vars(value, vars);
         }
         _ => {}
@@ -975,7 +975,7 @@ fn collect_segment_expr_targets(
             collect_segment_expr_targets(value, reads, writes);
             collect_segment_expr_targets(lane, reads, writes);
         }
-        Expr::SubgroupAdd { value } => collect_segment_expr_targets(value, reads, writes),
+        Expr::SubgroupReduce { value, .. } => collect_segment_expr_targets(value, reads, writes),
         _ => {}
     }
 }

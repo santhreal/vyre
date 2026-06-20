@@ -113,7 +113,7 @@ pub mod ir {
     pub use crate::ir_inner::model::program::ProgramStats;
     pub use crate::ir_inner::model::types::{
         AtomicOp, BinOp, BufferAccess, CollectiveOp, CommGroup, Convention, DataType, OpSignature,
-        UnOp,
+        SubgroupReduceOp, UnOp,
     };
     pub use crate::memory_model;
     pub use crate::memory_model::MemoryOrdering;

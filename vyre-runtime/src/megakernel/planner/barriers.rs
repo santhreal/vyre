@@ -342,7 +342,7 @@ fn collect_expr_access<'a>(expr: &'a Expr, out: &mut AccessSet<'a>) {
             collect_expr_access(value, out);
             collect_expr_access(lane, out);
         }
-        Expr::SubgroupAdd { value } => collect_expr_access(value, out),
+        Expr::SubgroupReduce { value, .. } => collect_expr_access(value, out),
         Expr::Atomic {
             buffer,
             index,

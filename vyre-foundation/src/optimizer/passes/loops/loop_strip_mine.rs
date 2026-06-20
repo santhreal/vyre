@@ -272,7 +272,7 @@ fn collect_names_in_expr(expr: &Expr, out: &mut Vec<Ident>) {
             collect_names_in_expr(true_val, out);
             collect_names_in_expr(false_val, out);
         }
-        Expr::Cast { value, .. } | Expr::SubgroupAdd { value } => {
+        Expr::Cast { value, .. } | Expr::SubgroupReduce { value, .. } => {
             collect_names_in_expr(value, out);
         }
         Expr::Fma { a, b, c } => {

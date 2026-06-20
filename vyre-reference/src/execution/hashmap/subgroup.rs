@@ -16,7 +16,7 @@ use smallvec::SmallVec;
 #[cfg(feature = "subgroup-ops")]
 use std::sync::OnceLock;
 #[cfg(feature = "subgroup-ops")]
-use vyre::ir::Expr;
+use vyre::ir::{Expr, SubgroupReduceOp};
 #[cfg(feature = "subgroup-ops")]
 use vyre::Error;
 
@@ -86,29 +86,41 @@ pub(crate) fn eval_subgroup_shuffle(
 }
 
 #[cfg(feature = "subgroup-ops")]
-pub(crate) fn eval_subgroup_add(
+pub(crate) fn eval_subgroup_reduce(
+    op: SubgroupReduceOp,
     value: &Expr,
     invocation: &HashmapInvocation<'_>,
     snapshots: &[HashmapInvocationSnapshot],
     memory: &HashmapMemory,
 ) -> Result<Value, Error> {
     let values = collect_lane_values(value, invocation.linear_local_index, snapshots, memory)?;
+    let width = subgroup_simulator().width();
     if values.iter().all(|value| matches!(value, Value::U32(_))) {
-        let lanes = values
-            .iter()
-            .filter_map(Value::try_as_u32)
-            .collect::<SmallVec<[u32; 32]>>();
-        return Ok(Value::U32(subgroup_simulator().add(&lanes)));
+        let lanes = values.iter().filter_map(Value::try_as_u32).take(width);
+        // SubgroupReduceOp::reduce_u32 is the single source of truth for the
+        // operator's integer semantics (shared with const folding / spec).
+        return Ok(Value::U32(op.reduce_u32(lanes)));
     }
     if values.iter().all(|value| matches!(value, Value::Float(_))) {
-        let sum = values.iter().fold(0.0f32, |acc, value| match value {
-            Value::Float(lane) => crate::execution::typed_ops::canonical_f32(acc + (*lane as f32)),
-            _ => acc,
-        });
-        return Ok(Value::Float(f64::from(sum)));
+        let Some(identity) = op.f32_identity() else {
+            return Err(Error::interp(
+                "subgroup bitwise reduction (and/or/xor) requires integer lanes, not f32. Fix: use an integer value or a non-bitwise reduction operator.",
+            ));
+        };
+        let mut acc = identity;
+        for value in values.iter().take(width) {
+            let Value::Float(lane) = value else { continue };
+            let Some(combined) = op.combine_f32(acc, *lane as f32) else {
+                return Err(Error::interp(
+                    "subgroup reduction operator is not defined on f32 lanes. Fix: extend SubgroupReduceOp::combine_f32 or use integer lanes.",
+                ));
+            };
+            acc = crate::execution::typed_ops::canonical_f32(combined);
+        }
+        return Ok(Value::Float(f64::from(acc)));
     }
     Err(Error::interp(
-        "subgroup_add lanes have mixed or unsupported value types. Fix: cast every lane value to the same primitive u32 or f32 type before the subgroup collective.",
+        "subgroup reduce lanes have mixed or unsupported value types. Fix: cast every lane value to the same primitive u32 or f32 type before the subgroup collective.",
     ))
 }
 
@@ -227,5 +239,94 @@ mod tests {
         .expect("Fix: f32 subgroup shuffle must evaluate.");
 
         assert_eq!(value, Value::Float(0.0));
+    }
+
+    fn reduce_snapshots(values: &[Value]) -> Vec<HashmapInvocationSnapshot> {
+        values
+            .iter()
+            .enumerate()
+            .map(|(index, value)| snapshot_lane(index as u32, value.clone(), 0))
+            .collect()
+    }
+
+    #[test]
+    fn u32_max_reduces_across_lanes() {
+        let snapshots = reduce_snapshots(&[Value::U32(3), Value::U32(9), Value::U32(1)]);
+        let entry: &[Node] = &[];
+        let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
+        let memory = HashmapMemory::new(FxHashMap::default());
+
+        let value = eval_subgroup_reduce(
+            SubgroupReduceOp::Max,
+            &Expr::var("lane_value"),
+            &invocation,
+            &snapshots,
+            &memory,
+        )
+        .expect("u32 subgroup max must evaluate");
+
+        assert_eq!(value, Value::U32(9));
+    }
+
+    #[test]
+    fn u32_xor_reduces_across_lanes() {
+        let snapshots = reduce_snapshots(&[Value::U32(0b1100), Value::U32(0b1010)]);
+        let entry: &[Node] = &[];
+        let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
+        let memory = HashmapMemory::new(FxHashMap::default());
+
+        let value = eval_subgroup_reduce(
+            SubgroupReduceOp::Xor,
+            &Expr::var("lane_value"),
+            &invocation,
+            &snapshots,
+            &memory,
+        )
+        .expect("u32 subgroup xor must evaluate");
+
+        assert_eq!(value, Value::U32(0b0110));
+    }
+
+    #[test]
+    fn f32_max_uses_neg_inf_identity_for_all_negative_lanes() {
+        // The -inf identity is load-bearing: a 0 identity would wrongly win
+        // when every lane is negative.
+        let snapshots = reduce_snapshots(&[Value::Float(-5.0), Value::Float(-2.0)]);
+        let entry: &[Node] = &[];
+        let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
+        let memory = HashmapMemory::new(FxHashMap::default());
+
+        let value = eval_subgroup_reduce(
+            SubgroupReduceOp::Max,
+            &Expr::var("lane_value"),
+            &invocation,
+            &snapshots,
+            &memory,
+        )
+        .expect("f32 subgroup max must evaluate");
+
+        assert_eq!(value, Value::Float(-2.0));
+    }
+
+    #[test]
+    fn f32_bitwise_reduce_fails_loud() {
+        let snapshots = reduce_snapshots(&[Value::Float(1.0)]);
+        let entry: &[Node] = &[];
+        let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
+        let memory = HashmapMemory::new(FxHashMap::default());
+
+        let error = eval_subgroup_reduce(
+            SubgroupReduceOp::And,
+            &Expr::var("lane_value"),
+            &invocation,
+            &snapshots,
+            &memory,
+        )
+        .expect_err("bitwise reduction on f32 must fail loud, not silently degrade");
+
+        assert!(
+            format!("{error}").contains("bitwise"),
+            "error must name the bitwise/f32 mismatch: {error}"
+        );
     }
 }

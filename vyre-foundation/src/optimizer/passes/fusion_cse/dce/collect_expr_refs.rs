@@ -60,7 +60,7 @@ pub(crate) fn collect_expr_refs(expr: &Expr, refs: &mut HashSet<Ident>) {
             | Expr::SubgroupSize
             | Expr::SubgroupBallot { .. }
             | Expr::SubgroupShuffle { .. }
-            | Expr::SubgroupAdd { .. }
+            | Expr::SubgroupReduce { .. }
             | Expr::Opaque(_) => {}
         }
     }

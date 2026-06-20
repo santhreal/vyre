@@ -177,7 +177,7 @@ impl CalleeExpander<'_> {
             | Expr::BufLen { .. }
             | Expr::SubgroupBallot { .. }
             | Expr::SubgroupShuffle { .. }
-            | Expr::SubgroupAdd { .. }
+            | Expr::SubgroupReduce { .. }
             | Expr::Opaque(_) => values.push(expr.clone()),
         }
     }

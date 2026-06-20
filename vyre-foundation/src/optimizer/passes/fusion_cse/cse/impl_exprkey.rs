@@ -77,7 +77,7 @@ impl CseCtx {
             Expr::Atomic { .. } => ExprKey::Atomic,
             &Expr::SubgroupBallot { .. }
             | &Expr::SubgroupShuffle { .. }
-            | &Expr::SubgroupAdd { .. } => {
+            | &Expr::SubgroupReduce { .. } => {
                 let id = self.subgroup_counter;
                 self.subgroup_counter = self.subgroup_counter.wrapping_add(1);
                 ExprKey::Subgroup(id)

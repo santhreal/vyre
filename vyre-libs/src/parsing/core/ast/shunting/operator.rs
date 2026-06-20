@@ -194,7 +194,7 @@ mod tests {
                     stack.push(value);
                     stack.push(lane);
                 }
-                Expr::SubgroupAdd { value } => stack.push(value),
+                Expr::SubgroupReduce { value, .. } => stack.push(value),
                 Expr::LitU32(_)
                 | Expr::LitI32(_)
                 | Expr::LitF32(_)

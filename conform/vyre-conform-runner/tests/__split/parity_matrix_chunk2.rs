@@ -32,9 +32,7 @@ fn synthetic_expr_variant_contract_program() -> Program {
                     ),
                     Node::let_bind(
                         "subgroup_add",
-                        Expr::SubgroupAdd {
-                            value: Box::new(Expr::LitU32(7)),
-                        },
+                        Expr::subgroup_add(Expr::LitU32(7)),
                     ),
                     Node::let_bind("opaque", Expr::Opaque(Arc::new(SyntheticOpaqueExpr))),
                 ],
@@ -223,8 +221,8 @@ fn collect_expr_variants(expr: &vyre::ir::Expr, variants: &mut BTreeSet<&'static
             collect_expr_variants(value, variants);
             collect_expr_variants(lane, variants);
         }
-        Expr::SubgroupAdd { value } => {
-            variants.insert("SubgroupAdd");
+        Expr::SubgroupReduce { value, .. } => {
+            variants.insert("SubgroupReduce");
             collect_expr_variants(value, variants);
         }
         Expr::SubgroupLocalId => {

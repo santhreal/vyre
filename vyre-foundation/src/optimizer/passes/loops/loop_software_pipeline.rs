@@ -350,7 +350,7 @@ fn expr_visit_check(expr: &Expr, name: &Ident, reads_name: &mut bool) -> bool {
         | Expr::Opaque(_)
         | Expr::SubgroupBallot { .. }
         | Expr::SubgroupShuffle { .. }
-        | Expr::SubgroupAdd { .. }
+        | Expr::SubgroupReduce { .. }
         | Expr::SubgroupLocalId
         | Expr::SubgroupSize => false,
     }

@@ -312,7 +312,7 @@ fn collect_buffers_in_expr(expr: &Expr, out: &mut FxHashSet<Ident>) {
                 collect_buffers_in_expr(a, out);
             }
         }
-        Expr::SubgroupShuffle { value, .. } | Expr::SubgroupAdd { value } => {
+        Expr::SubgroupShuffle { value, .. } | Expr::SubgroupReduce { value, .. } => {
             collect_buffers_in_expr(value, out);
         }
         Expr::SubgroupBallot { cond } => collect_buffers_in_expr(cond, out),
@@ -427,7 +427,7 @@ fn collect_vars_in_expr(expr: &Expr, out: &mut FxHashSet<Ident>) {
                 collect_vars_in_expr(a, out);
             }
         }
-        Expr::SubgroupShuffle { value, .. } | Expr::SubgroupAdd { value } => {
+        Expr::SubgroupShuffle { value, .. } | Expr::SubgroupReduce { value, .. } => {
             collect_vars_in_expr(value, out);
         }
         Expr::SubgroupBallot { cond } => collect_vars_in_expr(cond, out),
@@ -569,7 +569,7 @@ fn rename_var_in_expr(expr: Expr, from: &Ident, to: &Ident) -> Expr {
             value: Box::new(rename_var_in_expr(*value, from, to)),
             lane: Box::new(rename_var_in_expr(*lane, from, to)),
         },
-        Expr::SubgroupAdd { value } => Expr::SubgroupAdd {
+        Expr::SubgroupReduce { op, value } => Expr::SubgroupReduce { op,
             value: Box::new(rename_var_in_expr(*value, from, to)),
         },
         Expr::SubgroupBallot { cond } => Expr::SubgroupBallot {

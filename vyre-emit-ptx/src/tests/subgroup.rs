@@ -108,7 +108,7 @@ fn f32_subgroup_add_emits_shuffle_tree() {
                     result: Some(0),
                 },
                 KernelOp {
-                    kind: KernelOpKind::SubgroupAdd,
+                    kind: KernelOpKind::SubgroupReduce { op: vyre_lower::SubgroupReduceOp::Add },
                     operands: vec![0],
                     result: Some(1),
                 },
@@ -140,7 +140,7 @@ fn u32_subgroup_add_emits_redux_sync() {
                     result: Some(0),
                 },
                 KernelOp {
-                    kind: KernelOpKind::SubgroupAdd,
+                    kind: KernelOpKind::SubgroupReduce { op: vyre_lower::SubgroupReduceOp::Add },
                     operands: vec![0],
                     result: Some(1),
                 },

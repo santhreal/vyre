@@ -324,7 +324,7 @@ impl<'a> ArmRenamer<'a> {
                 value: Box::new(self.expr(value)),
                 lane: Box::new(self.expr(lane)),
             },
-            Expr::SubgroupAdd { value } => Expr::SubgroupAdd {
+            Expr::SubgroupReduce { op, value } => Expr::SubgroupReduce { op: *op,
                 value: Box::new(self.expr(value)),
             },
             Expr::LitU32(_)

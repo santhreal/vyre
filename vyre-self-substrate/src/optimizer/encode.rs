@@ -587,7 +587,7 @@ pub fn collect_expr_var_refs(expr: &Expr, out: &mut Vec<Ident>) {
             collect_expr_var_refs(value, out);
             collect_expr_var_refs(lane, out);
         }
-        Expr::SubgroupAdd { value } => collect_expr_var_refs(value, out),
+        Expr::SubgroupReduce { value, .. } => collect_expr_var_refs(value, out),
         Expr::LitU32(_)
         | Expr::LitI32(_)
         | Expr::LitF32(_)

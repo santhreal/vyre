@@ -62,7 +62,7 @@ impl CalleeExpander<'_> {
                 value,
                 ordering,
             } => self.atomic(*op, buffer, index, expected.as_deref(), value, *ordering),
-            &Expr::SubgroupBallot { .. } | &Expr::SubgroupShuffle { .. } | &Expr::SubgroupAdd { .. } => {
+            &Expr::SubgroupBallot { .. } | &Expr::SubgroupShuffle { .. } | &Expr::SubgroupReduce { .. } => {
                 Err(crate::error::Error::lowering(
                     "inliner cannot expand subgroup intrinsics; RFC 0004 gates this on target builder 25+. Fix: avoid inlining across subgroup-op boundaries.".to_string(),
                 ))

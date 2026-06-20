@@ -568,7 +568,7 @@ fn substitute_expr(expr: &Expr, replacements: &PendingReplacements) -> Expr {
         | Expr::SubgroupSize
         | Expr::SubgroupBallot { .. }
         | Expr::SubgroupShuffle { .. }
-        | Expr::SubgroupAdd { .. }
+        | Expr::SubgroupReduce { .. }
         | Expr::Opaque(_) => expr.clone(),
     }
 }
@@ -596,7 +596,7 @@ fn is_fusable_expr(expr: &Expr) -> bool {
         | Expr::Opaque(_)
         | Expr::SubgroupBallot { .. }
         | Expr::SubgroupShuffle { .. }
-        | Expr::SubgroupAdd { .. }
+        | Expr::SubgroupReduce { .. }
         // Trivial leaves  -  not worth a dedicated let binding.
         | Expr::LitU32(_)
         | Expr::LitI32(_)
@@ -624,7 +624,7 @@ fn is_pure_expr(expr: &Expr) -> bool {
             | Expr::Call { .. }
             | Expr::SubgroupBallot { .. }
             | Expr::SubgroupShuffle { .. }
-            | Expr::SubgroupAdd { .. }
+            | Expr::SubgroupReduce { .. }
             | Expr::Opaque(_) => return false,
             _ => push_expr_children(expr, &mut stack),
         }
@@ -789,7 +789,7 @@ fn push_expr_children<'a>(expr: &'a Expr, stack: &mut SmallVec<[&'a Expr; 16]>) 
             stack.push(true_val);
             stack.push(false_val);
         }
-        Expr::Cast { value, .. } | Expr::SubgroupAdd { value } => stack.push(value),
+        Expr::Cast { value, .. } | Expr::SubgroupReduce { value, .. } => stack.push(value),
         Expr::Fma { a, b, c } => {
             stack.push(a);
             stack.push(b);

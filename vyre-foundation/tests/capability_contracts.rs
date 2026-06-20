@@ -20,9 +20,7 @@ fn missing_subgroup_ops_is_reported() {
         [1, 1, 1],
         vec![Node::let_bind(
             "s",
-            Expr::SubgroupAdd {
-                value: Box::new(Expr::u32(1)),
-            },
+            Expr::subgroup_add(Expr::u32(1)),
         )],
     );
     let required = scan(&program);

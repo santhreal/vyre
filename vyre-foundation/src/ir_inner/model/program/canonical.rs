@@ -274,7 +274,8 @@ impl CanonicalCtx {
                 value: Box::new(self.canonicalize_expr(value)),
                 lane: Box::new(self.canonicalize_expr(lane)),
             },
-            Expr::SubgroupAdd { value } => Expr::SubgroupAdd {
+            Expr::SubgroupReduce { op, value } => Expr::SubgroupReduce {
+                op: *op,
                 value: Box::new(self.canonicalize_expr(value)),
             },
             other => other.clone(),

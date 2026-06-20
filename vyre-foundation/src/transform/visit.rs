@@ -183,7 +183,7 @@ fn drain_expr_stack<'a>(
             | Expr::SubgroupSize
             | Expr::SubgroupBallot { .. }
             | Expr::SubgroupShuffle { .. }
-            | Expr::SubgroupAdd { .. }
+            | Expr::SubgroupReduce { .. }
             | Expr::Opaque(_) => {}
             Expr::BinOp { left, right, .. } => {
                 expr_stack.push(right);

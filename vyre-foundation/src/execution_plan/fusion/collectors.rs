@@ -136,7 +136,7 @@ fn collect_buffer_targets_from_expr(
             collect_buffer_targets_from_expr(value, loads, atomics);
             collect_buffer_targets_from_expr(lane, loads, atomics);
         }
-        Expr::SubgroupAdd { value } => collect_buffer_targets_from_expr(value, loads, atomics),
+        Expr::SubgroupReduce { value, .. } => collect_buffer_targets_from_expr(value, loads, atomics),
         _ => {}
     }
 }

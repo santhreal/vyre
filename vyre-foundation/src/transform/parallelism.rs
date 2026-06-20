@@ -211,7 +211,7 @@ fn collect_expr_reads(expr: &Expr, access: &mut AccessSet) {
             | Expr::SubgroupSize
             | Expr::SubgroupBallot { .. }
             | Expr::SubgroupShuffle { .. }
-            | Expr::SubgroupAdd { .. } => {}
+            | Expr::SubgroupReduce { .. } => {}
             Expr::Opaque(_) => {
                 access.serial_boundary = true;
             }

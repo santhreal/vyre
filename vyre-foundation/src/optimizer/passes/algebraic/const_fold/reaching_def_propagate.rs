@@ -306,7 +306,7 @@ fn substitute_expr(expr: Expr, propagations: &FxHashMap<String, Expr>, changed: 
             value: Box::new(substitute_expr(*value, propagations, changed)),
             lane: Box::new(substitute_expr(*lane, propagations, changed)),
         },
-        Expr::SubgroupAdd { value } => Expr::SubgroupAdd {
+        Expr::SubgroupReduce { op, value } => Expr::SubgroupReduce { op,
             value: Box::new(substitute_expr(*value, propagations, changed)),
         },
         other => other,

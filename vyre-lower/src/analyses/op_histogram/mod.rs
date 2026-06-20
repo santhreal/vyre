@@ -168,7 +168,7 @@ fn bump(kind: &KernelOpKind, h: &mut OpHistogram) {
         | Return
         | Trap { .. }
         | Resume { .. } => h.control_flow += 1,
-        SubgroupBallot | SubgroupShuffle | SubgroupBroadcast | SubgroupAdd => h.subgroup += 1,
+        SubgroupBallot | SubgroupShuffle | SubgroupBroadcast | SubgroupReduce { .. } => h.subgroup += 1,
         LocalInvocationId
         | GlobalInvocationId
         | WorkgroupId

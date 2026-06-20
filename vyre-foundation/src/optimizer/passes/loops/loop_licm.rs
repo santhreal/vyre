@@ -296,7 +296,7 @@ fn expr_references_any_except(expr: &Expr, mutated: &FxHashSet<Ident>, ignore: &
                     .is_some_and(|e| expr_references_any_except(e, mutated, ignore))
                 || expr_references_any_except(value, mutated, ignore)
         }
-        Expr::SubgroupShuffle { value, .. } | Expr::SubgroupAdd { value } => {
+        Expr::SubgroupShuffle { value, .. } | Expr::SubgroupReduce { value, .. } => {
             expr_references_any_except(value, mutated, ignore)
         }
         Expr::SubgroupBallot { cond } => expr_references_any_except(cond, mutated, ignore),
@@ -351,7 +351,7 @@ fn expr_references_any(expr: &Expr, mutated: &FxHashSet<Ident>) -> bool {
                     .is_some_and(|e| expr_references_any(e, mutated))
                 || expr_references_any(value, mutated)
         }
-        Expr::SubgroupShuffle { value, .. } | Expr::SubgroupAdd { value } => {
+        Expr::SubgroupShuffle { value, .. } | Expr::SubgroupReduce { value, .. } => {
             expr_references_any(value, mutated)
         }
         Expr::SubgroupBallot { cond } => expr_references_any(cond, mutated),
@@ -412,7 +412,7 @@ fn expr_is_observably_free(expr: &Expr) -> bool {
         | Expr::Call { .. }
         | Expr::Opaque(_)
         | Expr::SubgroupShuffle { .. }
-        | Expr::SubgroupAdd { .. }
+        | Expr::SubgroupReduce { .. }
         | Expr::SubgroupBallot { .. }
         | Expr::SubgroupLocalId
         | Expr::SubgroupSize => false,

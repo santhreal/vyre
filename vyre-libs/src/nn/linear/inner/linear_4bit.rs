@@ -700,7 +700,7 @@ mod tests {
         match expr {
             Expr::Load { index, .. }
             | Expr::Cast { value: index, .. }
-            | Expr::SubgroupAdd { value: index }
+            | Expr::SubgroupReduce { value: index, .. }
             | Expr::SubgroupBallot { cond: index }
             | Expr::UnOp { operand: index, .. } => expr_contains_subgroup_shuffle(index),
             Expr::BinOp { left, right, .. }

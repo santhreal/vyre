@@ -4558,6 +4558,7 @@ pub use vyre_foundation::ir::CommGroup
 pub use vyre_foundation::ir::Convention
 pub use vyre_foundation::ir::DataType
 pub use vyre_foundation::ir::OpSignature
+pub use vyre_foundation::ir::SubgroupReduceOp
 pub use vyre_foundation::ir::UnOp
 pub mod vyre_foundation::ir::cse
 pub mod vyre_foundation::ir::cse::cse_ctx
@@ -5071,11 +5072,12 @@ pub vyre_foundation::ir::model::expr::Expr::Select
 pub vyre_foundation::ir::model::expr::Expr::Select::cond: alloc::boxed::Box<vyre_foundation::ir::Expr>
 pub vyre_foundation::ir::model::expr::Expr::Select::false_val: alloc::boxed::Box<vyre_foundation::ir::Expr>
 pub vyre_foundation::ir::model::expr::Expr::Select::true_val: alloc::boxed::Box<vyre_foundation::ir::Expr>
-pub vyre_foundation::ir::model::expr::Expr::SubgroupAdd
-pub vyre_foundation::ir::model::expr::Expr::SubgroupAdd::value: alloc::boxed::Box<vyre_foundation::ir::Expr>
 pub vyre_foundation::ir::model::expr::Expr::SubgroupBallot
 pub vyre_foundation::ir::model::expr::Expr::SubgroupBallot::cond: alloc::boxed::Box<vyre_foundation::ir::Expr>
 pub vyre_foundation::ir::model::expr::Expr::SubgroupLocalId
+pub vyre_foundation::ir::model::expr::Expr::SubgroupReduce
+pub vyre_foundation::ir::model::expr::Expr::SubgroupReduce::op: vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+pub vyre_foundation::ir::model::expr::Expr::SubgroupReduce::value: alloc::boxed::Box<vyre_foundation::ir::Expr>
 pub vyre_foundation::ir::model::expr::Expr::SubgroupShuffle
 pub vyre_foundation::ir::model::expr::Expr::SubgroupShuffle::lane: alloc::boxed::Box<vyre_foundation::ir::Expr>
 pub vyre_foundation::ir::model::expr::Expr::SubgroupShuffle::value: alloc::boxed::Box<vyre_foundation::ir::Expr>
@@ -5169,10 +5171,17 @@ pub fn vyre_foundation::ir::Expr::parallel_region_y() -> Self
 pub fn vyre_foundation::ir::Expr::parallel_region_z() -> Self
 pub fn vyre_foundation::ir::Expr::select(cond: Self, true_val: Self, false_val: Self) -> Self
 pub fn vyre_foundation::ir::Expr::subgroup_add(value: Self) -> Self
+pub fn vyre_foundation::ir::Expr::subgroup_and(value: Self) -> Self
 pub fn vyre_foundation::ir::Expr::subgroup_ballot(cond: Self) -> Self
 pub fn vyre_foundation::ir::Expr::subgroup_local_id() -> Self
+pub fn vyre_foundation::ir::Expr::subgroup_max(value: Self) -> Self
+pub fn vyre_foundation::ir::Expr::subgroup_min(value: Self) -> Self
+pub fn vyre_foundation::ir::Expr::subgroup_mul(value: Self) -> Self
+pub fn vyre_foundation::ir::Expr::subgroup_or(value: Self) -> Self
+pub fn vyre_foundation::ir::Expr::subgroup_reduce(op: vyre_spec::subgroup_reduce_op::SubgroupReduceOp, value: Self) -> Self
 pub fn vyre_foundation::ir::Expr::subgroup_shuffle(value: Self, lane: Self) -> Self
 pub fn vyre_foundation::ir::Expr::subgroup_size() -> Self
+pub fn vyre_foundation::ir::Expr::subgroup_xor(value: Self) -> Self
 pub fn vyre_foundation::ir::Expr::u32(value: u32) -> Self
 pub fn vyre_foundation::ir::Expr::var(name: impl core::convert::Into<vyre_foundation::ir::Ident>) -> Self
 pub fn vyre_foundation::ir::Expr::workgroup_x() -> Self
@@ -5407,11 +5416,12 @@ pub vyre_foundation::ir::model::generated::Expr::Select
 pub vyre_foundation::ir::model::generated::Expr::Select::cond: alloc::boxed::Box<vyre_foundation::ir::Expr>
 pub vyre_foundation::ir::model::generated::Expr::Select::false_val: alloc::boxed::Box<vyre_foundation::ir::Expr>
 pub vyre_foundation::ir::model::generated::Expr::Select::true_val: alloc::boxed::Box<vyre_foundation::ir::Expr>
-pub vyre_foundation::ir::model::generated::Expr::SubgroupAdd
-pub vyre_foundation::ir::model::generated::Expr::SubgroupAdd::value: alloc::boxed::Box<vyre_foundation::ir::Expr>
 pub vyre_foundation::ir::model::generated::Expr::SubgroupBallot
 pub vyre_foundation::ir::model::generated::Expr::SubgroupBallot::cond: alloc::boxed::Box<vyre_foundation::ir::Expr>
 pub vyre_foundation::ir::model::generated::Expr::SubgroupLocalId
+pub vyre_foundation::ir::model::generated::Expr::SubgroupReduce
+pub vyre_foundation::ir::model::generated::Expr::SubgroupReduce::op: vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+pub vyre_foundation::ir::model::generated::Expr::SubgroupReduce::value: alloc::boxed::Box<vyre_foundation::ir::Expr>
 pub vyre_foundation::ir::model::generated::Expr::SubgroupShuffle
 pub vyre_foundation::ir::model::generated::Expr::SubgroupShuffle::lane: alloc::boxed::Box<vyre_foundation::ir::Expr>
 pub vyre_foundation::ir::model::generated::Expr::SubgroupShuffle::value: alloc::boxed::Box<vyre_foundation::ir::Expr>
@@ -5505,10 +5515,17 @@ pub fn vyre_foundation::ir::Expr::parallel_region_y() -> Self
 pub fn vyre_foundation::ir::Expr::parallel_region_z() -> Self
 pub fn vyre_foundation::ir::Expr::select(cond: Self, true_val: Self, false_val: Self) -> Self
 pub fn vyre_foundation::ir::Expr::subgroup_add(value: Self) -> Self
+pub fn vyre_foundation::ir::Expr::subgroup_and(value: Self) -> Self
 pub fn vyre_foundation::ir::Expr::subgroup_ballot(cond: Self) -> Self
 pub fn vyre_foundation::ir::Expr::subgroup_local_id() -> Self
+pub fn vyre_foundation::ir::Expr::subgroup_max(value: Self) -> Self
+pub fn vyre_foundation::ir::Expr::subgroup_min(value: Self) -> Self
+pub fn vyre_foundation::ir::Expr::subgroup_mul(value: Self) -> Self
+pub fn vyre_foundation::ir::Expr::subgroup_or(value: Self) -> Self
+pub fn vyre_foundation::ir::Expr::subgroup_reduce(op: vyre_spec::subgroup_reduce_op::SubgroupReduceOp, value: Self) -> Self
 pub fn vyre_foundation::ir::Expr::subgroup_shuffle(value: Self, lane: Self) -> Self
 pub fn vyre_foundation::ir::Expr::subgroup_size() -> Self
+pub fn vyre_foundation::ir::Expr::subgroup_xor(value: Self) -> Self
 pub fn vyre_foundation::ir::Expr::u32(value: u32) -> Self
 pub fn vyre_foundation::ir::Expr::var(name: impl core::convert::Into<vyre_foundation::ir::Ident>) -> Self
 pub fn vyre_foundation::ir::Expr::workgroup_x() -> Self
@@ -6949,6 +6966,7 @@ pub use vyre_foundation::ir::model::types::CommGroup
 pub use vyre_foundation::ir::model::types::Convention
 pub use vyre_foundation::ir::model::types::DataType
 pub use vyre_foundation::ir::model::types::OpSignature
+pub use vyre_foundation::ir::model::types::SubgroupReduceOp
 pub use vyre_foundation::ir::model::types::UnOp
 pub mod vyre_foundation::ir::stats
 pub const vyre_foundation::ir::stats::NODE_KIND_ALL_GATHER: u32
@@ -7141,11 +7159,12 @@ pub vyre_foundation::ir::Expr::Select
 pub vyre_foundation::ir::Expr::Select::cond: alloc::boxed::Box<vyre_foundation::ir::Expr>
 pub vyre_foundation::ir::Expr::Select::false_val: alloc::boxed::Box<vyre_foundation::ir::Expr>
 pub vyre_foundation::ir::Expr::Select::true_val: alloc::boxed::Box<vyre_foundation::ir::Expr>
-pub vyre_foundation::ir::Expr::SubgroupAdd
-pub vyre_foundation::ir::Expr::SubgroupAdd::value: alloc::boxed::Box<vyre_foundation::ir::Expr>
 pub vyre_foundation::ir::Expr::SubgroupBallot
 pub vyre_foundation::ir::Expr::SubgroupBallot::cond: alloc::boxed::Box<vyre_foundation::ir::Expr>
 pub vyre_foundation::ir::Expr::SubgroupLocalId
+pub vyre_foundation::ir::Expr::SubgroupReduce
+pub vyre_foundation::ir::Expr::SubgroupReduce::op: vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+pub vyre_foundation::ir::Expr::SubgroupReduce::value: alloc::boxed::Box<vyre_foundation::ir::Expr>
 pub vyre_foundation::ir::Expr::SubgroupShuffle
 pub vyre_foundation::ir::Expr::SubgroupShuffle::lane: alloc::boxed::Box<vyre_foundation::ir::Expr>
 pub vyre_foundation::ir::Expr::SubgroupShuffle::value: alloc::boxed::Box<vyre_foundation::ir::Expr>
@@ -7239,10 +7258,17 @@ pub fn vyre_foundation::ir::Expr::parallel_region_y() -> Self
 pub fn vyre_foundation::ir::Expr::parallel_region_z() -> Self
 pub fn vyre_foundation::ir::Expr::select(cond: Self, true_val: Self, false_val: Self) -> Self
 pub fn vyre_foundation::ir::Expr::subgroup_add(value: Self) -> Self
+pub fn vyre_foundation::ir::Expr::subgroup_and(value: Self) -> Self
 pub fn vyre_foundation::ir::Expr::subgroup_ballot(cond: Self) -> Self
 pub fn vyre_foundation::ir::Expr::subgroup_local_id() -> Self
+pub fn vyre_foundation::ir::Expr::subgroup_max(value: Self) -> Self
+pub fn vyre_foundation::ir::Expr::subgroup_min(value: Self) -> Self
+pub fn vyre_foundation::ir::Expr::subgroup_mul(value: Self) -> Self
+pub fn vyre_foundation::ir::Expr::subgroup_or(value: Self) -> Self
+pub fn vyre_foundation::ir::Expr::subgroup_reduce(op: vyre_spec::subgroup_reduce_op::SubgroupReduceOp, value: Self) -> Self
 pub fn vyre_foundation::ir::Expr::subgroup_shuffle(value: Self, lane: Self) -> Self
 pub fn vyre_foundation::ir::Expr::subgroup_size() -> Self
+pub fn vyre_foundation::ir::Expr::subgroup_xor(value: Self) -> Self
 pub fn vyre_foundation::ir::Expr::u32(value: u32) -> Self
 pub fn vyre_foundation::ir::Expr::var(name: impl core::convert::Into<vyre_foundation::ir::Ident>) -> Self
 pub fn vyre_foundation::ir::Expr::workgroup_x() -> Self
@@ -11714,11 +11740,12 @@ pub vyre_foundation::optimizer::expr_arena::FlatExpr::Select
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::Select::cond: vyre_foundation::optimizer::expr_arena::ExprId
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::Select::false_val: vyre_foundation::optimizer::expr_arena::ExprId
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::Select::true_val: vyre_foundation::optimizer::expr_arena::ExprId
-pub vyre_foundation::optimizer::expr_arena::FlatExpr::SubgroupAdd
-pub vyre_foundation::optimizer::expr_arena::FlatExpr::SubgroupAdd::value: vyre_foundation::optimizer::expr_arena::ExprId
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::SubgroupBallot
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::SubgroupBallot::cond: vyre_foundation::optimizer::expr_arena::ExprId
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::SubgroupLocalId
+pub vyre_foundation::optimizer::expr_arena::FlatExpr::SubgroupReduce
+pub vyre_foundation::optimizer::expr_arena::FlatExpr::SubgroupReduce::op: vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+pub vyre_foundation::optimizer::expr_arena::FlatExpr::SubgroupReduce::value: vyre_foundation::optimizer::expr_arena::ExprId
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::SubgroupShuffle
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::SubgroupShuffle::lane: vyre_foundation::optimizer::expr_arena::ExprId
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::SubgroupShuffle::value: vyre_foundation::optimizer::expr_arena::ExprId

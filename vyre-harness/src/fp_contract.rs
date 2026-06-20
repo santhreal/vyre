@@ -124,7 +124,7 @@ fn expr_has_transcendental(expr: &Expr) -> bool {
                 || expected.as_deref().is_some_and(expr_has_transcendental)
                 || expr_has_transcendental(value)
         }
-        Expr::SubgroupAdd { value } | Expr::SubgroupBallot { cond: value } => {
+        Expr::SubgroupReduce { value, .. } | Expr::SubgroupBallot { cond: value } => {
             expr_has_transcendental(value)
         }
         Expr::SubgroupShuffle { value, lane } => {

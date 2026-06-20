@@ -198,8 +198,9 @@ pub fn put_expr(out: &mut Vec<u8>, expr: &Expr) -> Result<(), WireEncodeErr> {
                     }
                     stack.push(Step::Encode(index));
                 }
-                Expr::SubgroupAdd { value } => {
+                Expr::SubgroupReduce { op, value } => {
                     put_u8(out, 17);
+                    put_u8(out, op.builtin_wire_tag());
                     stack.push(Step::Encode(value));
                 }
                 Expr::SubgroupShuffle { value, lane } => {

@@ -165,7 +165,7 @@ fn count_expr(expr: &Expr, stats: &mut Complexity) {
             count_expr(value, stats);
             count_expr(lane, stats);
         }
-        Expr::SubgroupAdd { value } => {
+        Expr::SubgroupReduce { value, .. } => {
             count_expr(value, stats);
         }
         Expr::Call { args, .. } => {
@@ -399,7 +399,7 @@ fn hash_expr(expr: &Expr, h: &mut u64) {
             hash_expr(value, h);
             hash_expr(lane, h);
         }
-        Expr::SubgroupAdd { value } => {
+        Expr::SubgroupReduce { value, .. } => {
             mix(h, 119);
             hash_expr(value, h);
         }

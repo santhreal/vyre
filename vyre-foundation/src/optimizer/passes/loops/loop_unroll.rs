@@ -293,7 +293,7 @@ fn push_expr_children<'a>(expr: &'a Expr, stack: &mut SmallVec<[&'a Expr; 16]>) 
             stack.push(true_val);
             stack.push(false_val);
         }
-        Expr::Cast { value, .. } | Expr::SubgroupAdd { value } => stack.push(value),
+        Expr::Cast { value, .. } | Expr::SubgroupReduce { value, .. } => stack.push(value),
         Expr::Fma { a, b, c } => {
             stack.push(a);
             stack.push(b);

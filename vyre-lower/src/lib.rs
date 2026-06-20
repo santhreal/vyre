@@ -317,6 +317,9 @@ pub use descriptor::{
     TRAP_SIDECAR_WORDS,
 };
 pub use error::LowerError;
+/// Re-exported so consumers matching/constructing `KernelOpKind::SubgroupReduce`
+/// can name the reduction operator without depending on `vyre-foundation`.
+pub use vyre_foundation::ir::SubgroupReduceOp;
 pub use lower::lower;
 pub use pre_emit::{lower_for_emit, prepare_program_for_emit, LoweredKernel, PreEmitError};
 

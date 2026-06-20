@@ -5,7 +5,7 @@
 //! reports native subgroup support and the workgroup shape fits the
 //! subgroup size.
 
-use crate::ir::{Expr, Node, Program};
+use crate::ir::{Expr, Node, Program, SubgroupReduceOp};
 use crate::optimizer::ctx::AdapterCaps;
 use std::borrow::Cow;
 use std::sync::Arc;
@@ -28,10 +28,25 @@ enum ReductionValueType {
 }
 
 impl ReductionValueType {
-    fn neutral(self) -> Expr {
-        match self {
-            Self::F32 => Expr::f32(0.0),
-            Self::U32 => Expr::u32(0),
+    /// Identity element for `op` at this value type. Used as the second-level
+    /// `select` fill for out-of-range lanes so they cannot perturb the result:
+    /// `0` for `Add` (sum), `-inf`/`0` for `Max`, etc.
+    fn neutral(self, op: SubgroupReduceOp) -> Expr {
+        match (op, self) {
+            (SubgroupReduceOp::Add, Self::F32) => Expr::f32(0.0),
+            (SubgroupReduceOp::Add, Self::U32) => Expr::u32(0),
+            (SubgroupReduceOp::Mul, Self::F32) => Expr::f32(1.0),
+            (SubgroupReduceOp::Mul, Self::U32) => Expr::u32(1),
+            (SubgroupReduceOp::Max, Self::F32) => Expr::f32(f32::NEG_INFINITY),
+            (SubgroupReduceOp::Max, Self::U32) => Expr::u32(0),
+            (SubgroupReduceOp::Min, Self::F32) => Expr::f32(f32::INFINITY),
+            (SubgroupReduceOp::Min, Self::U32) => Expr::u32(u32::MAX),
+            (SubgroupReduceOp::And, _) => Expr::u32(u32::MAX),
+            (SubgroupReduceOp::Or | SubgroupReduceOp::Xor, _) => Expr::u32(0),
+            // #[non_exhaustive]: an unknown future op falls back to the additive
+            // identity, which is only reached if a new generator is wired
+            // without updating this table.
+            _ => Expr::u32(0),
         }
     }
 }
@@ -175,21 +190,39 @@ fn try_lower_workgroup_reduction(
     let scope = detect_scope(body)?;
 
     if let Some(value_type) = workgroup_sum_value_type(generator) {
-        Some(subgroup_sum_body(&scratch, scope, plan, value_type))
-    } else if generator.starts_with(WORKGROUP_MAX_PREFIX) {
-        // Max reductions are lowered via a shuffle-based tree using
-        // subgroup_shuffle.  For simplicity we emit the same load+
-        // shuffle-tree pattern, but here we just keep the original
-        // body  -  the task focuses on sum reductions (attention softmax,
-        // MoE routing, KV cache compaction).
-        None
+        Some(subgroup_reduce_body(
+            SubgroupReduceOp::Add,
+            &scratch,
+            scope,
+            plan,
+            value_type,
+        ))
+    } else if let Some(value_type) = workgroup_max_value_type(generator) {
+        // Max reductions lower to `subgroup_reduce(Max, ...)`, mirroring the
+        // sum path but with the max identity (`-inf`) filling out-of-range
+        // lanes in the two-level reduction. Backends emit the native
+        // `subgroupMax` / `redux.sync.max` instead of the slow shared tree.
+        Some(subgroup_reduce_body(
+            SubgroupReduceOp::Max,
+            &scratch,
+            scope,
+            plan,
+            value_type,
+        ))
     } else {
         None
     }
 }
 
 fn workgroup_sum_value_type(generator: &str) -> Option<ReductionValueType> {
-    let suffix = generator.strip_prefix(WORKGROUP_SUM_PREFIX)?;
+    reduction_value_type(generator.strip_prefix(WORKGROUP_SUM_PREFIX)?)
+}
+
+fn workgroup_max_value_type(generator: &str) -> Option<ReductionValueType> {
+    reduction_value_type(generator.strip_prefix(WORKGROUP_MAX_PREFIX)?)
+}
+
+fn reduction_value_type(suffix: &str) -> Option<ReductionValueType> {
     if suffix.starts_with("f32") {
         Some(ReductionValueType::F32)
     } else if suffix.starts_with("u32") {
@@ -270,21 +303,26 @@ fn contains_workgroup_zero_guard(expr: &Expr) -> bool {
     }
 }
 
-fn subgroup_sum_body(
+fn subgroup_reduce_body(
+    op: SubgroupReduceOp,
     scratch: &str,
     scope: ReductionScope,
     plan: SubgroupReductionPlan,
     value_type: ReductionValueType,
 ) -> Vec<Node> {
     if plan.workgroup_total <= plan.subgroup_size {
-        return single_subgroup_sum_body(scratch, scope);
+        return single_subgroup_reduce_body(op, scratch, scope);
     }
-    two_level_subgroup_sum_body(scratch, scope, plan, value_type)
+    two_level_subgroup_reduce_body(op, scratch, scope, plan, value_type)
 }
 
-fn single_subgroup_sum_body(scratch: &str, scope: ReductionScope) -> Vec<Node> {
+fn single_subgroup_reduce_body(
+    op: SubgroupReduceOp,
+    scratch: &str,
+    scope: ReductionScope,
+) -> Vec<Node> {
     let load_expr = Expr::load(scratch, Expr::var("local"));
-    let subgroup_expr = Expr::subgroup_add(load_expr);
+    let subgroup_expr = Expr::subgroup_reduce(op, load_expr);
     let store_node = Node::store(scratch, Expr::var("local"), subgroup_expr);
 
     match scope {
@@ -299,7 +337,8 @@ fn single_subgroup_sum_body(scratch: &str, scope: ReductionScope) -> Vec<Node> {
     }
 }
 
-fn two_level_subgroup_sum_body(
+fn two_level_subgroup_reduce_body(
+    op: SubgroupReduceOp,
     scratch: &str,
     scope: ReductionScope,
     plan: SubgroupReductionPlan,
@@ -307,7 +346,7 @@ fn two_level_subgroup_sum_body(
 ) -> Vec<Node> {
     let subgroup_count = plan.workgroup_total.div_ceil(plan.subgroup_size);
     let subgroup_slot = Expr::div(Expr::var("local"), Expr::u32(plan.subgroup_size));
-    let subgroup_sum = Expr::subgroup_add(Expr::load(scratch, Expr::var("local")));
+    let subgroup_sum = Expr::subgroup_reduce(op, Expr::load(scratch, Expr::var("local")));
     let subgroup_head = Expr::eq(Expr::subgroup_local_id(), Expr::u32(0));
     let first_level = vec![
         Node::let_bind("vyre_subgroup_sum", subgroup_sum),
@@ -320,11 +359,14 @@ fn two_level_subgroup_sum_body(
             )],
         ),
     ];
-    let second_level_sum = Expr::subgroup_add(Expr::select(
-        Expr::lt(Expr::var("local"), Expr::u32(subgroup_count)),
-        Expr::load(scratch, Expr::var("local")),
-        value_type.neutral(),
-    ));
+    let second_level_sum = Expr::subgroup_reduce(
+        op,
+        Expr::select(
+            Expr::lt(Expr::var("local"), Expr::u32(subgroup_count)),
+            Expr::load(scratch, Expr::var("local")),
+            value_type.neutral(op),
+        ),
+    );
     let second_level = vec![
         Node::let_bind("vyre_workgroup_sum", second_level_sum),
         Node::if_then(
@@ -510,7 +552,7 @@ mod tests {
             | Expr::UnOp { operand: index, .. }
             | Expr::Cast { value: index, .. }
             | Expr::SubgroupBallot { cond: index }
-            | Expr::SubgroupAdd { value: index } => expr_contains_select_false(index, predicate),
+            | Expr::SubgroupReduce { value: index, .. } => expr_contains_select_false(index, predicate),
             Expr::BinOp { left, right, .. }
             | Expr::SubgroupShuffle {
                 value: left,
@@ -660,12 +702,145 @@ mod tests {
             matches!(&body[0], Node::Store { buffer, index, value } if
                 buffer.as_str() == "scratch" &&
                 matches!(index, Expr::Var(v) if v.as_str() == "local") &&
-                matches!(value, Expr::SubgroupAdd { .. })
+                matches!(value, Expr::SubgroupReduce { .. })
             ),
             "expected subgroup_add store, got {:?}",
             body[0]
         );
         assert!(matches!(&body[1], Node::Barrier { .. }));
+    }
+
+    #[test]
+    fn lowers_every_workgroup_max_to_subgroup_reduce_max() {
+        // workgroup_max_f32 must now lower to the native subgroup Max reduction
+        // instead of being kept as the slow shared-memory tree.
+        let Node::Region { body, .. } = workgroup_sum_region("scratch", ReductionScope::EveryWorkgroup)
+        else {
+            panic!("workgroup_sum_region must build a Region");
+        };
+        let region = Node::Region {
+            generator: "vyre-primitives::reduce::workgroup_max_f32".into(),
+            source_region: None,
+            body,
+        };
+        let program = Program::wrapped(
+            vec![BufferDecl::workgroup("scratch", 4, DataType::F32)],
+            [4, 1, 1],
+            vec![region],
+        );
+        let lowered = lower_subgroup_reductions(program, &caps_with_subgroup(32));
+
+        let entry = lowered.entry();
+        assert_eq!(entry.len(), 1);
+        let Node::Region { body, .. } = &entry[0] else {
+            panic!("expected Region");
+        };
+        assert_eq!(
+            body.len(),
+            2,
+            "single-subgroup max lowers to store+barrier, got {body:?}"
+        );
+        let Node::Store { buffer, value, .. } = &body[0] else {
+            panic!("expected a store, got {:?}", body[0]);
+        };
+        assert_eq!(buffer.as_str(), "scratch");
+        assert!(
+            matches!(
+                value,
+                Expr::SubgroupReduce {
+                    op: SubgroupReduceOp::Max,
+                    ..
+                }
+            ),
+            "workgroup_max must lower to subgroup_reduce(Max), got {value:?}"
+        );
+        assert!(matches!(&body[1], Node::Barrier { .. }));
+    }
+
+    #[test]
+    fn lowers_two_level_workgroup_max_uses_neg_inf_neutral() {
+        // The two-level max reduction must fill out-of-range lanes with the
+        // max identity (-inf), not 0 — a 0 fill would clobber all-negative
+        // inputs. This is the op-aware neutral.
+        let Node::Region { body, .. } = workgroup_sum_region("scratch", ReductionScope::EveryWorkgroup)
+        else {
+            panic!("workgroup_sum_region must build a Region");
+        };
+        let region = Node::Region {
+            generator: "vyre-primitives::reduce::workgroup_max_f32".into(),
+            source_region: None,
+            body,
+        };
+        let program = Program::wrapped(
+            vec![BufferDecl::workgroup("scratch", 256, DataType::F32)],
+            [256, 1, 1],
+            vec![region],
+        );
+        let lowered = lower_subgroup_reductions(program, &caps_with_subgroup(32));
+        let entry = lowered.entry();
+        let Node::Region { body, .. } = &entry[0] else {
+            panic!("expected Region");
+        };
+        assert!(
+            node_contains_subgroup_reduce_max(&body[0]) && node_contains_subgroup_reduce_max(&body[3]),
+            "both levels of the 256-lane max reduction must use subgroup_reduce(Max): {body:?}"
+        );
+        assert!(
+            nodes_contain_neg_inf_select_neutral(body),
+            "two-level max must use a -inf select neutral for out-of-range lanes: {body:?}"
+        );
+    }
+
+    fn node_contains_subgroup_reduce_max(node: &Node) -> bool {
+        fn expr_has(expr: &Expr) -> bool {
+            match expr {
+                Expr::SubgroupReduce {
+                    op: SubgroupReduceOp::Max,
+                    ..
+                } => true,
+                Expr::SubgroupReduce { value, .. }
+                | Expr::Load { index: value, .. }
+                | Expr::Cast { value, .. }
+                | Expr::SubgroupShuffle { value, .. }
+                | Expr::SubgroupBallot { cond: value } => expr_has(value),
+                Expr::BinOp { left, right, .. } => expr_has(left) || expr_has(right),
+                Expr::Select {
+                    cond,
+                    true_val,
+                    false_val,
+                } => expr_has(cond) || expr_has(true_val) || expr_has(false_val),
+                _ => false,
+            }
+        }
+        match node {
+            Node::Let { value, .. } | Node::Assign { value, .. } => expr_has(value),
+            Node::Store { value, .. } => expr_has(value),
+            Node::If { then, .. } => then.iter().any(node_contains_subgroup_reduce_max),
+            _ => false,
+        }
+    }
+
+    fn nodes_contain_neg_inf_select_neutral(nodes: &[Node]) -> bool {
+        fn expr_has(expr: &Expr) -> bool {
+            match expr {
+                Expr::Select { false_val, .. } => {
+                    matches!(false_val.as_ref(), Expr::LitF32(v) if *v == f32::NEG_INFINITY)
+                        || expr_has(false_val)
+                }
+                Expr::SubgroupReduce { value, .. } => expr_has(value),
+                _ => false,
+            }
+        }
+        fn node_has(node: &Node) -> bool {
+            match node {
+                Node::Let { value, .. } | Node::Assign { value, .. } | Node::Store { value, .. } => {
+                    expr_has(value)
+                }
+                Node::If { then, .. } => then.iter().any(node_has),
+                _ => false,
+            }
+        }
+        nodes.iter().any(node_has)
     }
 
     #[test]
@@ -805,7 +980,7 @@ mod tests {
 
     fn expr_contains_subgroup_add(expr: &Expr) -> bool {
         match expr {
-            Expr::SubgroupAdd { .. } => true,
+            Expr::SubgroupReduce { .. } => true,
             Expr::Load { index, .. }
             | Expr::Cast { value: index, .. }
             | Expr::SubgroupShuffle { value: index, .. }

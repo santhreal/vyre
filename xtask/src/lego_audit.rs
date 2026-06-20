@@ -504,7 +504,7 @@ fn fingerprint_expr(expr: &Expr, out: &mut Vec<u8>) {
             fingerprint_expr(value, out);
             fingerprint_expr(lane, out);
         }
-        Expr::SubgroupAdd { value } => {
+        Expr::SubgroupReduce { value, .. } => {
             out.push(0x34);
             fingerprint_expr(value, out);
         }

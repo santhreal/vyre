@@ -171,7 +171,7 @@ impl TypeFactCtx {
                 self.record_expr_type(lane);
                 value_ty
             }
-            Expr::SubgroupAdd { value } => self.expr_type(value),
+            Expr::SubgroupReduce { value, .. } => self.expr_type(value),
             Expr::Opaque(extension) => extension.result_type(),
         };
         if let Some(ty) = &ty {

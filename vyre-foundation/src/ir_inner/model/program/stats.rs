@@ -401,7 +401,7 @@ fn walk_expr(
     ir: &mut IrCounters,
 ) {
     match expr {
-        Expr::SubgroupAdd { value } => {
+        Expr::SubgroupReduce { value, .. } => {
             *bits |= CAP_SUBGROUP_OPS;
             ir.instruction();
             walk_expr(value, nodes, regions, calls, opaque, bits, kinds, ir);

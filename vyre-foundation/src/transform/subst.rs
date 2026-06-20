@@ -179,7 +179,7 @@ fn substitute_expr(expr: &Expr, var: &Ident, replacement: &Expr) -> Expr {
             substitute_expr(value, var, replacement),
             substitute_expr(lane, var, replacement),
         ),
-        Expr::SubgroupAdd { value } => Expr::subgroup_add(substitute_expr(value, var, replacement)),
+        Expr::SubgroupReduce { value, .. } => Expr::subgroup_add(substitute_expr(value, var, replacement)),
         _ => expr.clone(),
     }
 }

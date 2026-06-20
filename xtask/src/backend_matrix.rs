@@ -137,7 +137,7 @@ const CUDA_FEATURE_MARKERS: &[BackendFeatureRequirement] = &[
         tokens: &[
             "KernelOpKind::Fma",
             "KernelOpKind::MatrixMma",
-            "KernelOpKind::SubgroupAdd",
+            "KernelOpKind::SubgroupReduce",
         ],
     },
     BackendFeatureRequirement {

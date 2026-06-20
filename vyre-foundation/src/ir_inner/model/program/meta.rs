@@ -271,8 +271,9 @@ impl ExprVisitor for FallbackWireHasher<'_> {
             Expr::SubgroupShuffle { .. } => {
                 h.update(b"e:SubgroupShuffle\0");
             }
-            Expr::SubgroupAdd { .. } => {
-                h.update(b"e:SubgroupAdd\0");
+            Expr::SubgroupReduce { op, .. } => {
+                h.update(b"e:SubgroupReduce\0");
+                h.update(&[op.builtin_wire_tag()]);
             }
             Expr::SubgroupLocalId => {
                 h.update(b"e:SubgroupLocalId\0");
@@ -842,7 +843,7 @@ impl Program {
             Expr::SubgroupShuffle { value, lane } => Self::expr_intensity(value)
                 .max(Self::expr_intensity(lane))
                 .max(OpIntensity::Heavy),
-            Expr::SubgroupAdd { value } => Self::expr_intensity(value).max(OpIntensity::Heavy),
+            Expr::SubgroupReduce { value, .. } => Self::expr_intensity(value).max(OpIntensity::Heavy),
             _ => OpIntensity::Free,
         }
     }

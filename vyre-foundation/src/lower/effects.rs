@@ -210,7 +210,7 @@ fn walk_expr(expr: &Expr, effects: &mut ProgramEffects) {
             walk_expr(true_val, effects);
             walk_expr(false_val, effects);
         }
-        Expr::Cast { value, .. } | Expr::SubgroupAdd { value } => walk_expr(value, effects),
+        Expr::Cast { value, .. } | Expr::SubgroupReduce { value, .. } => walk_expr(value, effects),
         Expr::Fma { a, b, c } => {
             walk_expr(a, effects);
             walk_expr(b, effects);

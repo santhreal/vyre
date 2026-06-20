@@ -881,7 +881,7 @@ fn walk_expr(expr: &Expr, owning_node: NodeIndex, facts: &mut ProgramFacts) {
             walk_expr(true_val, owning_node, facts);
             walk_expr(false_val, owning_node, facts);
         }
-        Expr::Cast { value, .. } | Expr::SubgroupAdd { value } => {
+        Expr::Cast { value, .. } | Expr::SubgroupReduce { value, .. } => {
             walk_expr(value, owning_node, facts);
         }
         Expr::Fma { a, b, c } => {

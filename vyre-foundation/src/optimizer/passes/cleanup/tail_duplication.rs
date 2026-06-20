@@ -209,7 +209,7 @@ fn expr_is_pure(expr: &Expr) -> bool {
         // divergent If is the *opposite* of safe.
         | Expr::SubgroupBallot { .. }
         | Expr::SubgroupShuffle { .. }
-        | Expr::SubgroupAdd { .. }
+        | Expr::SubgroupReduce { .. }
         // Lane-correlated builtins  -  value is always equal across
         // hoisted/unhoisted positions, but downstream lane-uniform
         // analyses treat hoisted Lets as uniform-by-construction. Keep

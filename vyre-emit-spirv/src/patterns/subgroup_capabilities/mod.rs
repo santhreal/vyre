@@ -61,7 +61,7 @@ fn walk_body(body: &KernelBody, caps: &mut SubgroupCapabilities) {
         match &op.kind {
             KernelOpKind::SubgroupBallot => caps.ballot = true,
             KernelOpKind::SubgroupShuffle => caps.shuffle = true,
-            KernelOpKind::SubgroupAdd => caps.arithmetic = true,
+            KernelOpKind::SubgroupReduce { .. } => caps.arithmetic = true,
             KernelOpKind::SubgroupLocalId | KernelOpKind::SubgroupSize => caps.basic = true,
             KernelOpKind::StructuredIfThen
             | KernelOpKind::StructuredIfThenElse
@@ -138,7 +138,7 @@ mod tests {
         });
         desc.body.literals.push(LiteralValue::U32(5));
         desc.body.ops.push(KernelOp {
-            kind: KernelOpKind::SubgroupAdd,
+            kind: KernelOpKind::SubgroupReduce { op: vyre_lower::SubgroupReduceOp::Add },
             operands: vec![0],
             result: Some(1),
         });
@@ -216,7 +216,7 @@ mod tests {
             result: Some(2),
         });
         desc.body.ops.push(KernelOp {
-            kind: KernelOpKind::SubgroupAdd,
+            kind: KernelOpKind::SubgroupReduce { op: vyre_lower::SubgroupReduceOp::Add },
             operands: vec![2],
             result: Some(3),
         });

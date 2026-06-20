@@ -28,7 +28,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use vyre_foundation::ir::{AtomicOp, BinOp, DataType, UnOp};
+use vyre_foundation::ir::{AtomicOp, BinOp, DataType, SubgroupReduceOp, UnOp};
 use vyre_foundation::runtime::memory_model::MemoryOrdering;
 
 pub const TRAP_SIDECAR_NAME: &str = "__vyre_descriptor_trap_sidecar";
@@ -877,9 +877,9 @@ pub enum KernelOpKind {
     /// Distinct from `SubgroupShuffle` (per-lane source) — broadcast requires a
     /// uniform source lane and emits `subgroupBroadcast`.
     SubgroupBroadcast,
-    /// Operand 0 = value_op_id. Sums across the subgroup; result has
-    /// the value's dtype.
-    SubgroupAdd,
+    /// Operand 0 = value_op_id. Reduces across the subgroup with `op`;
+    /// result has the value's dtype.
+    SubgroupReduce { op: SubgroupReduceOp },
 
     // ---------- Structured control flow ----------
     /// `if (cond) { body }`. Operands: [cond_op_id, child_body_index].

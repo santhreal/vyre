@@ -48,7 +48,7 @@ pub(super) enum OpDispatchRoute {
     Barrier,
     Return,
     SubgroupBallot,
-    SubgroupAdd,
+    SubgroupReduce,
     SubgroupShuffle,
     SubgroupBroadcast,
     Atomic,
@@ -140,7 +140,7 @@ fn classify_op_dispatch_route(kind: &KernelOpKind) -> OpDispatchRoute {
         KernelOpKind::Barrier { .. } => OpDispatchRoute::Barrier,
         KernelOpKind::Return => OpDispatchRoute::Return,
         KernelOpKind::SubgroupBallot => OpDispatchRoute::SubgroupBallot,
-        KernelOpKind::SubgroupAdd => OpDispatchRoute::SubgroupAdd,
+        KernelOpKind::SubgroupReduce { .. } => OpDispatchRoute::SubgroupReduce,
         KernelOpKind::SubgroupShuffle => OpDispatchRoute::SubgroupShuffle,
         KernelOpKind::SubgroupBroadcast => OpDispatchRoute::SubgroupBroadcast,
         KernelOpKind::Atomic { .. } => OpDispatchRoute::Atomic,
@@ -894,8 +894,8 @@ impl BodyBuilder<'_> {
             OpDispatchRoute::SubgroupBallot => {
                 self.emit_subgroup_ballot(op)
             }
-            OpDispatchRoute::SubgroupAdd => {
-                self.emit_subgroup_add(op)
+            OpDispatchRoute::SubgroupReduce => {
+                self.emit_subgroup_reduce(op)
             }
             OpDispatchRoute::SubgroupShuffle => {
                 self.emit_subgroup_shuffle(op)

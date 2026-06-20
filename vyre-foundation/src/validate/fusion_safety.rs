@@ -261,7 +261,7 @@ pub(crate) fn collect_expr_accesses(expr: &Expr, accesses: &mut NodeAccesses) {
                 stack.push(lane);
                 stack.push(value);
             }
-            Expr::SubgroupAdd { value } => stack.push(value),
+            Expr::SubgroupReduce { value, .. } => stack.push(value),
             Expr::LitU32(_)
             | Expr::LitI32(_)
             | Expr::LitF32(_)

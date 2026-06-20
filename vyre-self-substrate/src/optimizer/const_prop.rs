@@ -505,7 +505,8 @@ fn rewrite_expr(expr: &Expr, env: &ConstEnv) -> Expr {
             value: Box::new(rewrite_expr(value, env)),
             lane: Box::new(rewrite_expr(lane, env)),
         },
-        Expr::SubgroupAdd { value } => Expr::SubgroupAdd {
+        Expr::SubgroupReduce { op, value } => Expr::SubgroupReduce {
+            op: *op,
             value: Box::new(rewrite_expr(value, env)),
         },
         // Literals + builtins pass through.

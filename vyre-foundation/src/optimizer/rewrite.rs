@@ -206,7 +206,7 @@ pub(crate) fn rewrite_expr<'a>(
                         stack.push(Frame::Expr(true_val));
                         stack.push(Frame::Expr(cond));
                     }
-                    Expr::Cast { value, .. } | Expr::SubgroupAdd { value } => {
+                    Expr::Cast { value, .. } | Expr::SubgroupReduce { value, .. } => {
                         stack.push(Frame::Expr(value));
                     }
                     Expr::Fma { a, b, c } => {
@@ -365,11 +365,12 @@ pub(crate) fn rewrite_expr<'a>(
                             }),
                         }
                     }
-                    Expr::SubgroupAdd { .. } => {
-                        let value = pop_rewrite_result(&mut results, "subgroup add value");
+                    Expr::SubgroupReduce { op, .. } => {
+                        let value = pop_rewrite_result(&mut results, "subgroup reduce value");
                         match value {
                             Cow::Borrowed(_) => Cow::Borrowed(e),
-                            Cow::Owned(value) => Cow::Owned(Expr::SubgroupAdd {
+                            Cow::Owned(value) => Cow::Owned(Expr::SubgroupReduce {
+                                op: *op,
                                 value: Box::new(value),
                             }),
                         }

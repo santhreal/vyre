@@ -3,7 +3,7 @@
 // Every expression evaluates to a typed value. Expressions are pure:
 // they read state but do not modify it.
 
-use crate::ir_inner::model::types::DataType;
+use crate::ir_inner::model::types::{DataType, SubgroupReduceOp};
 use rustc_hash::FxHasher;
 use std::borrow::Borrow;
 use std::fmt;
@@ -434,13 +434,63 @@ impl Expr {
         }
     }
 
-    /// Subgroup inclusive-add reduction across the active subgroup.
+    /// Subgroup reduction across the active subgroup with the given operator.
+    #[must_use]
+    #[inline]
+    pub fn subgroup_reduce(op: SubgroupReduceOp, value: Self) -> Self {
+        Self::SubgroupReduce {
+            op,
+            value: Box::new(value),
+        }
+    }
+
+    /// Subgroup sum reduction across the active subgroup.
     #[must_use]
     #[inline]
     pub fn subgroup_add(value: Self) -> Self {
-        Self::SubgroupAdd {
-            value: Box::new(value),
-        }
+        Self::subgroup_reduce(SubgroupReduceOp::Add, value)
+    }
+
+    /// Subgroup product reduction across the active subgroup.
+    #[must_use]
+    #[inline]
+    pub fn subgroup_mul(value: Self) -> Self {
+        Self::subgroup_reduce(SubgroupReduceOp::Mul, value)
+    }
+
+    /// Subgroup minimum reduction across the active subgroup.
+    #[must_use]
+    #[inline]
+    pub fn subgroup_min(value: Self) -> Self {
+        Self::subgroup_reduce(SubgroupReduceOp::Min, value)
+    }
+
+    /// Subgroup maximum reduction across the active subgroup.
+    #[must_use]
+    #[inline]
+    pub fn subgroup_max(value: Self) -> Self {
+        Self::subgroup_reduce(SubgroupReduceOp::Max, value)
+    }
+
+    /// Subgroup bitwise-AND reduction across the active subgroup.
+    #[must_use]
+    #[inline]
+    pub fn subgroup_and(value: Self) -> Self {
+        Self::subgroup_reduce(SubgroupReduceOp::And, value)
+    }
+
+    /// Subgroup bitwise-OR reduction across the active subgroup.
+    #[must_use]
+    #[inline]
+    pub fn subgroup_or(value: Self) -> Self {
+        Self::subgroup_reduce(SubgroupReduceOp::Or, value)
+    }
+
+    /// Subgroup bitwise-XOR reduction across the active subgroup.
+    #[must_use]
+    #[inline]
+    pub fn subgroup_xor(value: Self) -> Self {
+        Self::subgroup_reduce(SubgroupReduceOp::Xor, value)
     }
 
     /// Subgroup shuffle: broadcast `value` from the given lane id to

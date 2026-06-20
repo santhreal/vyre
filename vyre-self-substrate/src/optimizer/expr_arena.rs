@@ -336,7 +336,7 @@ impl ArenaCtx {
             )),
             Expr::SubgroupBallot { .. }
             | Expr::SubgroupShuffle { .. }
-            | Expr::SubgroupAdd { .. } => Err(EncodeError::Unsupported(
+            | Expr::SubgroupReduce { .. } => Err(EncodeError::Unsupported(
                 "ExprArena V1: Subgroup{Ballot,Shuffle,Add} not yet encoded",
             )),
             Expr::Opaque(_) => Err(EncodeError::Unsupported(

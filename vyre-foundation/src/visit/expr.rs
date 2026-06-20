@@ -264,7 +264,7 @@ pub fn walk_expr_children_default<V: ExprVisitor>(
         }
         Expr::Cast { value, .. }
         | Expr::SubgroupBallot { cond: value }
-        | Expr::SubgroupAdd { value } => visit_with_order(visitor, value, order),
+        | Expr::SubgroupReduce { value, .. } => visit_with_order(visitor, value, order),
         Expr::Fma { a, b, c } => {
             visit_with_order(visitor, a, order)?;
             visit_with_order(visitor, b, order)?;
@@ -318,7 +318,7 @@ fn push_expr_children_reverse<'a>(stack: &mut SmallVec<[&'a Expr; 32]>, expr: &'
         | Expr::UnOp { operand: index, .. }
         | Expr::Cast { value: index, .. }
         | Expr::SubgroupBallot { cond: index }
-        | Expr::SubgroupAdd { value: index } => stack.push(index),
+        | Expr::SubgroupReduce { value: index, .. } => stack.push(index),
         Expr::BinOp { left, right, .. } => {
             stack.push(right);
             stack.push(left);
@@ -382,7 +382,7 @@ fn push_expr_child_tasks_reverse<'a>(
         | Expr::UnOp { operand: index, .. }
         | Expr::Cast { value: index, .. }
         | Expr::SubgroupBallot { cond: index }
-        | Expr::SubgroupAdd { value: index } => stack.push(ExprVisitTask::Visit(index)),
+        | Expr::SubgroupReduce { value: index, .. } => stack.push(ExprVisitTask::Visit(index)),
         Expr::BinOp { left, right, .. } => {
             stack.push(ExprVisitTask::Visit(right));
             stack.push(ExprVisitTask::Visit(left));
@@ -462,7 +462,7 @@ fn dispatch_expr<V: ExprVisitor>(visitor: &mut V, expr: &Expr) -> ControlFlow<V:
         } => visitor.visit_atomic(expr, op, buffer, index, expected.as_deref(), value),
         Expr::SubgroupBallot { cond } => visitor.visit_subgroup_ballot(expr, cond),
         Expr::SubgroupShuffle { value, lane } => visitor.visit_subgroup_shuffle(expr, value, lane),
-        Expr::SubgroupAdd { value } => visitor.visit_subgroup_add(expr, value),
+        Expr::SubgroupReduce { value, .. } => visitor.visit_subgroup_add(expr, value),
         Expr::SubgroupLocalId => visitor.visit_subgroup_local_id(expr),
         Expr::SubgroupSize => visitor.visit_subgroup_size(expr),
         Expr::Opaque(extension) => visitor.visit_opaque_expr(expr, extension.as_ref()),

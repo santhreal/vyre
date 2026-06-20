@@ -383,7 +383,7 @@ impl BodyCtx<'_> {
             | KernelOpKind::SubgroupLocalId
             | KernelOpKind::SubgroupSize
             | KernelOpKind::SubgroupBallot => Some(PtxType::U32),
-            KernelOpKind::Copy | KernelOpKind::SubgroupAdd => {
+            KernelOpKind::Copy | KernelOpKind::SubgroupReduce { .. } => {
                 self.result_ptx_type(body, facts, *producer.operands.first()?, depth + 1)
             }
             KernelOpKind::Cast { target } => PtxType::from_dtype(target).ok(),

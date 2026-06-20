@@ -252,7 +252,7 @@ fn is_pure_bool_expr(expr: &Expr) -> bool {
         | Expr::Opaque(_)
         | Expr::SubgroupBallot { .. }
         | Expr::SubgroupShuffle { .. }
-        | Expr::SubgroupAdd { .. } => false,
+        | Expr::SubgroupReduce { .. } => false,
     }
 }
 

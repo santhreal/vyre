@@ -19,6 +19,7 @@ use std::sync::Arc;
 use vyre_foundation::ir::model::node::node_op_id;
 use vyre_foundation::ir::{
     AtomicOp, BinOp, BufferAccess, BufferDecl, DataType, Expr, Ident, MemoryKind, Node, Program,
+    SubgroupReduceOp,
 };
 
 /// Maximum nested-body depth before lowering refuses with
@@ -749,7 +750,13 @@ impl LowerCtx {
                         // and the binary spelling carries no reduce-op selector,
                         // so WaveReduce lowers to a subgroup sum across the wave.
                         let value_id = self.lower_expr(left, body)?;
-                        self.unary(body, KernelOpKind::SubgroupAdd, value_id)
+                        self.unary(
+                            body,
+                            KernelOpKind::SubgroupReduce {
+                                op: SubgroupReduceOp::Add,
+                            },
+                            value_id,
+                        )
                     }
                     _ => {
                         let left_id = self.lower_expr(left, body)?;
@@ -860,9 +867,9 @@ impl LowerCtx {
                 let lane_id = self.lower_expr(lane, body)?;
                 self.binary(body, KernelOpKind::SubgroupShuffle, value_id, lane_id)
             }
-            Expr::SubgroupAdd { value } => {
+            Expr::SubgroupReduce { op, value } => {
                 let value_id = self.lower_expr(value, body)?;
-                self.unary(body, KernelOpKind::SubgroupAdd, value_id)
+                self.unary(body, KernelOpKind::SubgroupReduce { op: *op }, value_id)
             }
             Expr::SubgroupLocalId => self.simple_result(body, KernelOpKind::SubgroupLocalId),
             Expr::SubgroupSize => self.simple_result(body, KernelOpKind::SubgroupSize),

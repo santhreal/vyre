@@ -511,7 +511,8 @@ impl Reader<'_> {
                 b: Box::new(self.expr()?),
                 c: Box::new(self.expr()?),
             }),
-            17 => Ok(Expr::SubgroupAdd {
+            17 => Ok(Expr::SubgroupReduce {
+                op: crate::ir::SubgroupReduceOp::from_wire_tag(self.u8()?)?,
                 value: Box::new(self.expr()?),
             }),
             18 => Ok(Expr::SubgroupShuffle {

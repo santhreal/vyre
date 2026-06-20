@@ -469,7 +469,7 @@ fn body_uses_subgroup(body: &KernelBody) -> bool {
             KernelOpKind::SubgroupBallot
                 | KernelOpKind::SubgroupShuffle
                 | KernelOpKind::SubgroupBroadcast
-                | KernelOpKind::SubgroupAdd
+                | KernelOpKind::SubgroupReduce { .. }
                 | KernelOpKind::SubgroupLocalId
                 | KernelOpKind::SubgroupSize
         )

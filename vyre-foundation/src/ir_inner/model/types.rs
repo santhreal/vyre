@@ -34,5 +34,6 @@
 /// crate, frontends and backends can depend on them without pulling in
 /// the full compiler.
 pub use vyre_spec::{
-    AtomicOp, BinOp, BufferAccess, CollectiveOp, CommGroup, Convention, DataType, OpSignature, UnOp,
+    AtomicOp, BinOp, BufferAccess, CollectiveOp, CommGroup, Convention, DataType, OpSignature,
+    SubgroupReduceOp, UnOp,
 };

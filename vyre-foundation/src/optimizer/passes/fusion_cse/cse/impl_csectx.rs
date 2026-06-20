@@ -338,7 +338,7 @@ impl CseCtx {
             | Expr::LocalId { .. }
             | Expr::SubgroupBallot { .. }
             | Expr::SubgroupShuffle { .. }
-            | Expr::SubgroupAdd { .. }
+            | Expr::SubgroupReduce { .. }
             | Expr::SubgroupLocalId
             | Expr::SubgroupSize
             | Expr::Opaque(_) => Cow::Borrowed(expr),

@@ -33,9 +33,7 @@ fn plan_marks_subgroup_program_accuracy_sensitive() {
         [1, 1, 1],
         vec![Node::let_bind(
             "x",
-            Expr::SubgroupAdd {
-                value: Box::new(Expr::u32(1)),
-            },
+            Expr::subgroup_add(Expr::u32(1)),
         )],
     );
     let options = ValidationOptions::default().with_backend_capabilities(BackendCapabilities {
@@ -54,9 +52,7 @@ fn plan_rejects_subgroup_program_without_capability_context() {
         [1, 1, 1],
         vec![Node::let_bind(
             "x",
-            Expr::SubgroupAdd {
-                value: Box::new(Expr::u32(1)),
-            },
+            Expr::subgroup_add(Expr::u32(1)),
         )],
     );
     let err = plan(&program).expect_err("subgroup program needs backend capability context");

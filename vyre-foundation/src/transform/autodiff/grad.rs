@@ -346,7 +346,7 @@ impl AdjointEnv {
             | Expr::Atomic { .. }
             | Expr::SubgroupBallot { .. }
             | Expr::SubgroupShuffle { .. }
-            | Expr::SubgroupAdd { .. } => Some(DataType::U32),
+            | Expr::SubgroupReduce { .. } => Some(DataType::U32),
             Expr::LitI32(_) => Some(DataType::I32),
             Expr::LitF32(_) => Some(DataType::F32),
             Expr::LitBool(_) => Some(DataType::Bool),

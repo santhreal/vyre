@@ -284,7 +284,7 @@ fn substitute_var_in_expr(expr: &mut Expr, name: &str, value: &Expr) {
             substitute_var_in_expr(true_val, name, value);
             substitute_var_in_expr(false_val, name, value);
         }
-        Expr::Cast { value: v, .. } | Expr::SubgroupAdd { value: v } => {
+        Expr::Cast { value: v, .. } | Expr::SubgroupReduce { value: v, .. } => {
             substitute_var_in_expr(v, name, value);
         }
         Expr::Fma { a, b, c } => {

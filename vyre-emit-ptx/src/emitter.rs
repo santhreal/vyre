@@ -673,12 +673,12 @@ impl BodyCtx<'_> {
                 }
                 self.bind_result(op, result)?;
             }
-            SubgroupAdd => {
+            SubgroupReduce { op: reduce_op } => {
                 let value_id = *op.operands.first().ok_or_else(|| {
-                    EmitError::InvalidDescriptor("SubgroupAdd missing value".into())
+                    EmitError::InvalidDescriptor("SubgroupReduce missing value".into())
                 })?;
                 let value = self.lookup_operand(value_id)?;
-                let result = self.emit_subgroup_add(value);
+                let result = self.emit_subgroup_reduce(*reduce_op, value)?;
                 self.bind_result(op, result)?;
             }
             SubgroupLocalId => {

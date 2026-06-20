@@ -372,9 +372,7 @@ mod tests {
             [1, 1, 1],
             vec![IrNode::let_bind(
                 "s",
-                IrExpr::SubgroupAdd {
-                    value: Box::new(IrExpr::u32(1)),
-                },
+                IrExpr::subgroup_add(IrExpr::u32(1)),
             )],
         );
         let caps = scan(&program);

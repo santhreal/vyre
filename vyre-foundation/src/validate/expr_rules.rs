@@ -180,7 +180,7 @@ pub(crate) fn validate_expr(
             validate_expr(lane, buffers, scope, options, report, depth_level + 1);
             validate_subgroup_expr_support(&mut report.errors, options);
         }
-        Expr::SubgroupAdd { value } => {
+        Expr::SubgroupReduce { value, .. } => {
             validate_expr(value, buffers, scope, options, report, depth_level + 1);
             validate_subgroup_expr_support(&mut report.errors, options);
         }
@@ -512,7 +512,7 @@ mod tests {
                 | Expr::Atomic { .. }
                 | Expr::SubgroupBallot { .. }
                 | Expr::SubgroupShuffle { .. }
-                | Expr::SubgroupAdd { .. }
+                | Expr::SubgroupReduce { .. }
                 | Expr::Opaque(_) => {}
             }
         }
@@ -575,9 +575,7 @@ mod tests {
                 value: Box::new(Expr::u32(1)),
                 lane: Box::new(Expr::u32(0)),
             },
-            Expr::SubgroupAdd {
-                value: Box::new(Expr::u32(1)),
-            },
+            Expr::subgroup_add(Expr::u32(1)),
             Expr::Opaque(Arc::new(TestExprExtension)),
         ];
 
@@ -589,9 +587,7 @@ mod tests {
     #[test]
     fn subgroup_expression_without_backend_is_rejected() {
         let report = validate_subgroup_expr(
-            Expr::SubgroupAdd {
-                value: Box::new(Expr::u32(1)),
-            },
+            Expr::subgroup_add(Expr::u32(1)),
             ValidationOptions::default(),
         );
         assert!(

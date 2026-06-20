@@ -31,7 +31,7 @@ pub fn expr_has_effect(expr: &Expr) -> bool {
         | Expr::SubgroupSize
         | Expr::SubgroupBallot { .. }
         | Expr::SubgroupShuffle { .. }
-        | Expr::SubgroupAdd { .. } => false,
+        | Expr::SubgroupReduce { .. } => false,
         Expr::Opaque(extension) => !extension.cse_safe(),
     }
 }

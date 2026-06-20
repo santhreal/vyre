@@ -97,9 +97,7 @@ fn every_expression_variant_roundtrips_in_one_program() {
             ),
             Node::let_bind(
                 "subgroup_add",
-                Expr::SubgroupAdd {
-                    value: Box::new(Expr::u32(6)),
-                },
+                Expr::subgroup_add(Expr::u32(6)),
             ),
             Node::let_bind("opaque", opaque_expr()),
             Node::Return,

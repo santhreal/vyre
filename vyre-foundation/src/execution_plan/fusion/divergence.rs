@@ -169,7 +169,7 @@ fn cond_depends_on_invocation_id(expr: &Expr) -> bool {
                 || cond_depends_on_invocation_id(true_val)
                 || cond_depends_on_invocation_id(false_val)
         }
-        Expr::Cast { value, .. } | Expr::SubgroupAdd { value } => {
+        Expr::Cast { value, .. } | Expr::SubgroupReduce { value, .. } => {
             cond_depends_on_invocation_id(value)
         }
         Expr::Fma { a, b, c } => {
@@ -227,7 +227,7 @@ fn expr_depends_on_launch_geometry(expr: &Expr, launch_vars: &FxHashSet<Ident>) 
                 || expr_depends_on_launch_geometry(true_val, launch_vars)
                 || expr_depends_on_launch_geometry(false_val, launch_vars)
         }
-        Expr::Cast { value, .. } | Expr::SubgroupAdd { value } => {
+        Expr::Cast { value, .. } | Expr::SubgroupReduce { value, .. } => {
             expr_depends_on_launch_geometry(value, launch_vars)
         }
         Expr::Fma { a, b, c } => {
@@ -283,7 +283,7 @@ pub(super) fn expr_writes_atomic(expr: &Expr) -> bool {
                 || expr_writes_atomic(true_val)
                 || expr_writes_atomic(false_val)
         }
-        Expr::Cast { value, .. } | Expr::SubgroupAdd { value } => expr_writes_atomic(value),
+        Expr::Cast { value, .. } | Expr::SubgroupReduce { value, .. } => expr_writes_atomic(value),
         Expr::Fma { a, b, c } => {
             expr_writes_atomic(a) || expr_writes_atomic(b) || expr_writes_atomic(c)
         }

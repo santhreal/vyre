@@ -23,7 +23,7 @@ pub(crate) fn operand_is_result_reference(kind: &KernelOpKind, pos: usize) -> bo
         StoreGlobal | StoreShared => pos != 0,
         Copy | BinOpKind(_) | UnOpKind(_) | Fma | MatrixMma { .. } | Select | Cast { .. } => true,
         Atomic { .. } => pos != 0,
-        SubgroupBallot | SubgroupShuffle | SubgroupBroadcast | SubgroupAdd => true,
+        SubgroupBallot | SubgroupShuffle | SubgroupBroadcast | SubgroupReduce { .. } => true,
         StructuredIfThen | StructuredIfThenElse => pos == 0,
         StructuredForLoop { .. } => pos != 2,
         StructuredBlock | Region { .. } => false,

@@ -334,7 +334,7 @@ mod tests {
             dispatch: Dispatch::new(1, 1, 1),
             body: KernelBody {
                 ops: vec![KernelOp {
-                    kind: KernelOpKind::SubgroupAdd,
+                    kind: KernelOpKind::SubgroupReduce { op: vyre_lower::SubgroupReduceOp::Add },
                     operands: vec![0],
                     result: Some(0),
                 }],

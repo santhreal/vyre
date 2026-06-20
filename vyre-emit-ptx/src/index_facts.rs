@@ -355,7 +355,7 @@ fn visit_value_operands(op: &KernelOp, mut visit: impl FnMut(u32)) {
         | KernelOpKind::SubgroupBallot
         | KernelOpKind::SubgroupShuffle
         | KernelOpKind::SubgroupBroadcast
-        | KernelOpKind::SubgroupAdd
+        | KernelOpKind::SubgroupReduce { .. }
         | KernelOpKind::Trap { .. }
         | KernelOpKind::Call { .. }
         | KernelOpKind::OpaqueExpr(_)

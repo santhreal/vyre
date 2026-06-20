@@ -322,9 +322,7 @@ fn ptx_emits_integer_subgroup_ops() {
         ),
         (
             "subgroup_add",
-            Expr::SubgroupAdd {
-                value: Box::new(Expr::gid_x()),
-            },
+            Expr::subgroup_add(Expr::gid_x()),
             "redux.sync.add.u32",
         ),
     ];

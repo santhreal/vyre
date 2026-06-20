@@ -59,7 +59,7 @@
 //!   exist today.
 
 use crate::ir::model::expr::ExprNode;
-use crate::ir::{AtomicOp, BinOp, DataType, Expr, Ident, MemoryOrdering, UnOp};
+use crate::ir::{AtomicOp, BinOp, DataType, Expr, Ident, MemoryOrdering, SubgroupReduceOp, UnOp};
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
 
@@ -158,7 +158,8 @@ pub enum FlatExpr {
         value: ExprId,
         lane: ExprId,
     },
-    SubgroupAdd {
+    SubgroupReduce {
+        op: SubgroupReduceOp,
         value: ExprId,
     },
     SubgroupLocalId,
@@ -310,7 +311,8 @@ impl ExprArena {
                 value: Box::new(self.rebuild(value)),
                 lane: Box::new(self.rebuild(lane)),
             },
-            FlatExpr::SubgroupAdd { value } => Expr::SubgroupAdd {
+            FlatExpr::SubgroupReduce { op, value } => Expr::SubgroupReduce {
+                op,
                 value: Box::new(self.rebuild(value)),
             },
             FlatExpr::SubgroupLocalId => Expr::SubgroupLocalId,
@@ -413,7 +415,8 @@ impl ExprArena {
                 value: self.intern(value),
                 lane: self.intern(lane),
             },
-            Expr::SubgroupAdd { value } => FlatExpr::SubgroupAdd {
+            Expr::SubgroupReduce { op, value } => FlatExpr::SubgroupReduce {
+                op: *op,
                 value: self.intern(value),
             },
             Expr::SubgroupLocalId => FlatExpr::SubgroupLocalId,

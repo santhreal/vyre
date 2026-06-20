@@ -3,7 +3,7 @@
 //!
 //! Op id: `vyre-foundation::optimizer::passes::atomic_minimize`.
 
-use crate::ir::{AtomicOp, Expr, Node, Program};
+use crate::ir::{AtomicOp, Expr, Node, Program, SubgroupReduceOp};
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 use crate::runtime::memory_model::MemoryOrdering;
 // Ident hashes well into the FxHash64-mixed bucket; the std SipHash-13
@@ -318,7 +318,7 @@ fn rewrite_expr(expr: Expr, changed: &mut bool) -> Expr {
         },
         SubgroupBallot,
         SubgroupShuffle,
-        SubgroupAdd,
+        SubgroupReduce(SubgroupReduceOp),
     }
 
     let mut stack = vec![Frame::Expr(expr)];
@@ -395,8 +395,8 @@ fn rewrite_expr(expr: Expr, changed: &mut bool) -> Expr {
                     stack.push(Frame::Expr(*lane));
                     stack.push(Frame::Expr(*value));
                 }
-                Expr::SubgroupAdd { value } => {
-                    stack.push(Frame::SubgroupAdd);
+                Expr::SubgroupReduce { op, value } => {
+                    stack.push(Frame::SubgroupReduce(op));
                     stack.push(Frame::Expr(*value));
                 }
                 terminal => results.push(terminal),
@@ -507,9 +507,10 @@ fn rewrite_expr(expr: Expr, changed: &mut bool) -> Expr {
                     lane: Box::new(lane),
                 });
             }
-            Frame::SubgroupAdd => {
-                let value = pop_owned_expr_result(&mut results, "subgroup add value");
-                results.push(Expr::SubgroupAdd {
+            Frame::SubgroupReduce(op) => {
+                let value = pop_owned_expr_result(&mut results, "subgroup reduce value");
+                results.push(Expr::SubgroupReduce {
+                    op,
                     value: Box::new(value),
                 });
             }
@@ -751,7 +752,7 @@ fn push_expr_children<'a>(stack: &mut SmallVec<[&'a Expr; 32]>, expr: &'a Expr) 
             push_expr_child(stack, true_val);
             push_expr_child(stack, cond);
         }
-        Expr::Cast { value, .. } | Expr::SubgroupAdd { value } => {
+        Expr::Cast { value, .. } | Expr::SubgroupReduce { value, .. } => {
             push_expr_child(stack, value);
         }
         Expr::Fma { a, b, c } => {

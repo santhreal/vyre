@@ -2440,6 +2440,69 @@ pub unsafe fn vyre_spec::semiring::Semiring::clone_to_uninit(&self, dest: *mut u
 impl<T> core::convert::From<T> for vyre_spec::semiring::Semiring
 pub fn vyre_spec::semiring::Semiring::from(t: T) -> T
 impl<T> serde_core::de::DeserializeOwned for vyre_spec::semiring::Semiring where T: for<'de> serde_core::de::Deserialize<'de>
+pub mod vyre_spec::subgroup_reduce_op
+#[non_exhaustive] pub enum vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+pub vyre_spec::subgroup_reduce_op::SubgroupReduceOp::Add
+pub vyre_spec::subgroup_reduce_op::SubgroupReduceOp::And
+pub vyre_spec::subgroup_reduce_op::SubgroupReduceOp::Max
+pub vyre_spec::subgroup_reduce_op::SubgroupReduceOp::Min
+pub vyre_spec::subgroup_reduce_op::SubgroupReduceOp::Mul
+pub vyre_spec::subgroup_reduce_op::SubgroupReduceOp::Or
+pub vyre_spec::subgroup_reduce_op::SubgroupReduceOp::Xor
+impl vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+pub const vyre_spec::subgroup_reduce_op::SubgroupReduceOp::ALL: [Self; 7]
+pub const fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::as_str(self) -> &'static str
+pub const fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::builtin_wire_tag(self) -> u8
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::combine_f32(self, acc: f32, lane: f32) -> core::option::Option<f32>
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::f32_identity(self) -> core::option::Option<f32>
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::from_wire_tag(tag: u8) -> core::result::Result<Self, alloc::string::String>
+pub const fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::is_bitwise(self) -> bool
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::reduce_u32(self, lanes: impl core::iter::traits::collect::IntoIterator<Item = u32>) -> u32
+impl core::clone::Clone for vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::clone(&self) -> vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+impl core::cmp::Eq for vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+impl core::cmp::PartialEq for vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::eq(&self, other: &vyre_spec::subgroup_reduce_op::SubgroupReduceOp) -> bool
+impl core::fmt::Debug for vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+impl core::marker::StructuralPartialEq for vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+impl serde_core::ser::Serialize for vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+impl core::marker::Send for vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+impl core::marker::Sync for vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+impl core::marker::Unpin for vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+impl core::marker::UnsafeUnpin for vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+impl core::panic::unwind_safe::UnwindSafe for vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+impl<T, U> core::convert::Into<U> for vyre_spec::subgroup_reduce_op::SubgroupReduceOp where U: core::convert::From<T>
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_spec::subgroup_reduce_op::SubgroupReduceOp where U: core::convert::Into<T>
+pub type vyre_spec::subgroup_reduce_op::SubgroupReduceOp::Error = core::convert::Infallible
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_spec::subgroup_reduce_op::SubgroupReduceOp where U: core::convert::TryFrom<T>
+pub type vyre_spec::subgroup_reduce_op::SubgroupReduceOp::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_spec::subgroup_reduce_op::SubgroupReduceOp where T: core::clone::Clone
+pub type vyre_spec::subgroup_reduce_op::SubgroupReduceOp::Owned = T
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::clone_into(&self, target: &mut T)
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_spec::subgroup_reduce_op::SubgroupReduceOp where T: 'static + ?core::marker::Sized
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_spec::subgroup_reduce_op::SubgroupReduceOp where T: ?core::marker::Sized
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_spec::subgroup_reduce_op::SubgroupReduceOp where T: ?core::marker::Sized
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_spec::subgroup_reduce_op::SubgroupReduceOp where T: core::clone::Clone
+pub unsafe fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for vyre_spec::subgroup_reduce_op::SubgroupReduceOp where T: for<'de> serde_core::de::Deserialize<'de>
 pub mod vyre_spec::ternary_op
 #[non_exhaustive] pub enum vyre_spec::ternary_op::TernaryOp
 pub vyre_spec::ternary_op::TernaryOp::Fma
@@ -3891,6 +3954,68 @@ pub unsafe fn vyre_spec::op_contract::SideEffectClass::clone_to_uninit(&self, de
 impl<T> core::convert::From<T> for vyre_spec::op_contract::SideEffectClass
 pub fn vyre_spec::op_contract::SideEffectClass::from(t: T) -> T
 impl<T> serde_core::de::DeserializeOwned for vyre_spec::op_contract::SideEffectClass where T: for<'de> serde_core::de::Deserialize<'de>
+#[non_exhaustive] pub enum vyre_spec::SubgroupReduceOp
+pub vyre_spec::SubgroupReduceOp::Add
+pub vyre_spec::SubgroupReduceOp::And
+pub vyre_spec::SubgroupReduceOp::Max
+pub vyre_spec::SubgroupReduceOp::Min
+pub vyre_spec::SubgroupReduceOp::Mul
+pub vyre_spec::SubgroupReduceOp::Or
+pub vyre_spec::SubgroupReduceOp::Xor
+impl vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+pub const vyre_spec::subgroup_reduce_op::SubgroupReduceOp::ALL: [Self; 7]
+pub const fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::as_str(self) -> &'static str
+pub const fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::builtin_wire_tag(self) -> u8
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::combine_f32(self, acc: f32, lane: f32) -> core::option::Option<f32>
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::f32_identity(self) -> core::option::Option<f32>
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::from_wire_tag(tag: u8) -> core::result::Result<Self, alloc::string::String>
+pub const fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::is_bitwise(self) -> bool
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::reduce_u32(self, lanes: impl core::iter::traits::collect::IntoIterator<Item = u32>) -> u32
+impl core::clone::Clone for vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::clone(&self) -> vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+impl core::cmp::Eq for vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+impl core::cmp::PartialEq for vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::eq(&self, other: &vyre_spec::subgroup_reduce_op::SubgroupReduceOp) -> bool
+impl core::fmt::Debug for vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+impl core::marker::StructuralPartialEq for vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+impl serde_core::ser::Serialize for vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+impl core::marker::Send for vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+impl core::marker::Sync for vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+impl core::marker::Unpin for vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+impl core::marker::UnsafeUnpin for vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+impl core::panic::unwind_safe::UnwindSafe for vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+impl<T, U> core::convert::Into<U> for vyre_spec::subgroup_reduce_op::SubgroupReduceOp where U: core::convert::From<T>
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_spec::subgroup_reduce_op::SubgroupReduceOp where U: core::convert::Into<T>
+pub type vyre_spec::subgroup_reduce_op::SubgroupReduceOp::Error = core::convert::Infallible
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_spec::subgroup_reduce_op::SubgroupReduceOp where U: core::convert::TryFrom<T>
+pub type vyre_spec::subgroup_reduce_op::SubgroupReduceOp::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_spec::subgroup_reduce_op::SubgroupReduceOp where T: core::clone::Clone
+pub type vyre_spec::subgroup_reduce_op::SubgroupReduceOp::Owned = T
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::clone_into(&self, target: &mut T)
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_spec::subgroup_reduce_op::SubgroupReduceOp where T: 'static + ?core::marker::Sized
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_spec::subgroup_reduce_op::SubgroupReduceOp where T: ?core::marker::Sized
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_spec::subgroup_reduce_op::SubgroupReduceOp where T: ?core::marker::Sized
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_spec::subgroup_reduce_op::SubgroupReduceOp where T: core::clone::Clone
+pub unsafe fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+pub fn vyre_spec::subgroup_reduce_op::SubgroupReduceOp::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for vyre_spec::subgroup_reduce_op::SubgroupReduceOp where T: for<'de> serde_core::de::Deserialize<'de>
 #[non_exhaustive] pub enum vyre_spec::TernaryOp
 pub vyre_spec::TernaryOp::Fma
 pub vyre_spec::TernaryOp::Opaque(vyre_spec::extension::ExtensionTernaryOpId)

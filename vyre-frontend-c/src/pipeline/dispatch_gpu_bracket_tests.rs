@@ -188,7 +188,7 @@ fn expr_has_invocation_zero_eq(expr: &Expr) -> bool {
         Expr::SubgroupShuffle { value, lane } => {
             expr_has_invocation_zero_eq(value) || expr_has_invocation_zero_eq(lane)
         }
-        Expr::SubgroupAdd { value } => expr_has_invocation_zero_eq(value),
+        Expr::SubgroupReduce { value, .. } => expr_has_invocation_zero_eq(value),
         Expr::LitU32(_)
         | Expr::LitI32(_)
         | Expr::LitF32(_)
