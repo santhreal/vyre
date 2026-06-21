@@ -359,4 +359,85 @@ mod tests {
             );
         }
     }
+
+    /// A tensor whose rank is exactly `MAX_TENSOR_RANK` must still round-trip:
+    /// the I10 bound is inclusive, so it must not reject the largest valid rank.
+    #[test]
+    fn tensor_rank_at_limit_round_trips() {
+        use crate::serial::wire::MAX_TENSOR_RANK;
+        let shape: smallvec::SmallVec<[u32; 4]> = (0..MAX_TENSOR_RANK as u32).collect();
+        let ty = DataType::TensorShaped {
+            element: Box::new(DataType::F32),
+            shape,
+        };
+        let mut encoded = Vec::new();
+        put_data_type(&mut encoded, &ty).expect("encode max-rank tensor");
+        let mut reader = Reader {
+            bytes: &encoded,
+            pos: 0,
+            depth: 0,
+        };
+        let decoded = reader.data_type().expect("max-rank tensor must decode");
+        assert_eq!(decoded, ty, "rank == MAX_TENSOR_RANK must round-trip");
+    }
+
+    /// A tensor declaring a rank above `MAX_TENSOR_RANK` must be rejected at the
+    /// I10 `bounded_len` gate (O(1), naming the field) — never by attempting to
+    /// read the dimensions. Crafted by encoding a rank-0 tensor (whose final 4
+    /// bytes are the rank u32) and overwriting the rank with the limit + 1.
+    #[test]
+    fn tensor_rank_exceeding_limit_is_rejected() {
+        use crate::serial::wire::MAX_TENSOR_RANK;
+        let mut encoded = Vec::new();
+        put_data_type(
+            &mut encoded,
+            &DataType::TensorShaped {
+                element: Box::new(DataType::F32),
+                shape: smallvec![],
+            },
+        )
+        .expect("encode rank-0 tensor");
+        let cut = encoded.len() - 4;
+        encoded.truncate(cut);
+        encoded.extend_from_slice(&(MAX_TENSOR_RANK as u32 + 1).to_le_bytes());
+
+        let mut reader = Reader {
+            bytes: &encoded,
+            pos: 0,
+            depth: 0,
+        };
+        let err = reader
+            .data_type()
+            .expect_err("over-limit tensor rank must be rejected, not read dim-by-dim");
+        assert!(
+            err.contains("tensor rank") && err.contains("exceeds"),
+            "rejection must name the tensor rank limit and 'exceeds': {err}"
+        );
+    }
+
+    /// The device-mesh twin: an axis count above `MAX_MESH_AXES` is rejected at
+    /// the same I10 gate.
+    #[test]
+    fn device_mesh_axes_exceeding_limit_is_rejected() {
+        use crate::serial::wire::MAX_MESH_AXES;
+        let mut encoded = Vec::new();
+        put_data_type(&mut encoded, &DataType::DeviceMesh { axes: smallvec![] })
+            .expect("encode 0-axis device mesh");
+        let cut = encoded.len() - 4;
+        encoded.truncate(cut);
+        encoded.extend_from_slice(&(MAX_MESH_AXES as u32 + 1).to_le_bytes());
+
+        let mut reader = Reader {
+            bytes: &encoded,
+            pos: 0,
+            depth: 0,
+        };
+        let err = reader
+            .data_type()
+            .expect_err("over-limit device-mesh axis count must be rejected");
+        assert!(
+            err.contains("device-mesh axes count") && err.contains("exceeds"),
+            "rejection must name the mesh axes limit and 'exceeds': {err}"
+        );
+    }
 }

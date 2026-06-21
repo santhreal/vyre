@@ -3,7 +3,9 @@ use crate::serial::wire::decode::reject_reserved_extension_id;
 use crate::serial::wire::tags::{
     atomic_op_from_tag, bin_op_from_tag, data_type_from_tag, un_op_from_tag,
 };
-use crate::serial::wire::{Expr, Node, Reader, MAX_ARGS, MAX_DECODE_DEPTH, MAX_NODES};
+use crate::serial::wire::{
+    Expr, Node, Reader, MAX_ARGS, MAX_DECODE_DEPTH, MAX_MESH_AXES, MAX_NODES, MAX_TENSOR_RANK,
+};
 
 impl Reader<'_> {
     /// Decode a statement-node vector from the wire format.
@@ -289,9 +291,12 @@ impl Reader<'_> {
         }
         if tag == 0x15 {
             let element = Box::new(self.data_type()?);
-            let len = usize::try_from(self.u32()?).map_err(|err| {
-                format!("Fix: tensor rank cannot fit usize on this target ({err}); reject this VIR0 blob.")
-            })?;
+            // I10: bound the rank before reading dimensions (consistent with
+            // node/arg/buffer counts) so a hostile blob declaring a huge rank is
+            // rejected O(1) with a clear limit error instead of allocating up to
+            // `MAX_PROGRAM_BYTES / 4` dimensions. Enforces the "rank-limited
+            // shape" contract on `DataType::TensorShaped`.
+            let len = self.bounded_len(MAX_TENSOR_RANK, "tensor rank")?;
             let mut shape = smallvec::SmallVec::<[u32; 4]>::new();
             for _ in 0..len {
                 shape.push(self.u32()?);
@@ -317,11 +322,8 @@ impl Reader<'_> {
             });
         }
         if tag == 0x1E {
-            let len = usize::try_from(self.u32()?).map_err(|err| {
-                format!(
-                    "Fix: device-mesh axes count cannot fit usize on this target ({err}); reject this VIR0 blob."
-                )
-            })?;
+            // I10: bound the axis count before reading axes (see MAX_MESH_AXES).
+            let len = self.bounded_len(MAX_MESH_AXES, "device-mesh axes count")?;
             let mut axes = smallvec::SmallVec::<[u32; 3]>::new();
             for _ in 0..len {
                 axes.push(self.u32()?);

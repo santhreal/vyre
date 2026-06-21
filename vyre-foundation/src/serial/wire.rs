@@ -28,6 +28,25 @@ pub const MAX_NODES: usize = 1_000_000;
 /// I10 requires expression argument vectors to be bounded before allocation.
 pub const MAX_ARGS: usize = 4_096;
 
+/// Maximum tensor rank (dimension count) accepted from a wire-format
+/// `DataType::TensorShaped` shape.
+///
+/// I10 requires the shape vector to be bounded before the decoder reads each
+/// dimension. Real tensors are single-digit rank (the inline `SmallVec`
+/// capacity is 4); this ceiling is generous enough never to reject a real
+/// program yet bounds the shape allocation to a small fixed size instead of the
+/// transitive `MAX_PROGRAM_BYTES / 4` worst case. Makes the "rank-limited shape"
+/// contract on `DataType::TensorShaped` actually enforced.
+pub const MAX_TENSOR_RANK: usize = 4_096;
+
+/// Maximum device-mesh axis count accepted from a wire-format
+/// `DataType::DeviceMesh`.
+///
+/// I10 requires the axis vector to be bounded before the decoder reads each
+/// axis. Real meshes have a handful of axes (data/model/pipeline parallelism);
+/// this ceiling never rejects a real program yet bounds the allocation.
+pub const MAX_MESH_AXES: usize = 4_096;
+
 /// Maximum UTF-8 string length accepted from the IR wire format.
 ///
 /// I10 bounds allocation for names and operation identifiers carried by
