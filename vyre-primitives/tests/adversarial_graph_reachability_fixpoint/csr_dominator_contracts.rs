@@ -58,8 +58,16 @@ fn csr_forward_or_changed_edge_mask_blocks() {
 
 #[test]
 fn csr_forward_or_changed_zero_nodes() {
+    // A 0-node graph still yields a ONE-word frontier: the layout computes
+    // frontier_words = bitset_words(0).max(1) = 1 (csr_forward_or_changed/
+    // validate.rs:66), a deliberate min-1-word invariant shared with
+    // node_words/edge_storage_words so GPU buffer bindings are never
+    // zero-sized. frontier_words drives the launch-plan buffer size, so the GPU
+    // writes one cleared word; the CPU oracle MUST mirror that layout. The
+    // expanded frontier is therefore a single zero word, not empty, with no
+    // change because there are no source nodes to expand from.
     let (frontier, changed) = csr_cpu_ref(0, &[0], &[], &[], &[], 1);
-    assert!(frontier.is_empty());
+    assert_eq!(frontier, vec![0]);
     assert_eq!(changed, 0);
 }
 
@@ -99,8 +107,12 @@ fn dominator_frontier_join_node_appears() {
 }
 
 #[test]
-#[should_panic(expected = "complete seed bitset")]
+#[should_panic(expected = "expected seed length 1 words for 2 nodes")]
 fn dominator_frontier_missing_seed_fails_loudly() {
+    // An empty seed for a 2-node graph is incomplete: the bitset needs
+    // ceil(2/32) = 1 word. The oracle fails loud naming the EXACT shortfall
+    // ("expected seed length 1 words for 2 nodes, got 0") rather than a vague
+    // phrase, so the contract assertion pins the real required/actual counts.
     let _ = dom_cpu_ref(2, &[0, 0, 0], &[], &[0, 0, 0], &[], &[]);
 }
 
