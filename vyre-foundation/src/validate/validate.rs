@@ -644,14 +644,7 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
             }
             if let Some(value_ty) = expr_type(value, &self.buffers, &self.scope) {
                 let elem = &buffer.element;
-                let compatible = value_ty == *elem
-                    || matches!(
-                        (&value_ty, elem),
-                        (DataType::U32, DataType::Bytes | DataType::Bool)
-                            | (DataType::Bytes | DataType::Bool, DataType::U32)
-                            | (DataType::F32, DataType::F32)
-                    )
-                    || nodes::same_width_int_reinterpret(&value_ty, elem);
+                let compatible = nodes::store_value_compatible(&value_ty, elem);
                 if !compatible {
                     self.errors.push(err(format!(
                         "V045: assignment to buffer `{name}` has type `{value_ty}` but the buffer element type is `{elem}`. Fix: cast the value to `{elem}` or write to a buffer with the intended element type."
@@ -693,13 +686,7 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
         if let Some(buf) = self.buffers.get(buffer.as_str()) {
             if let Some(val_ty) = expr_type(value, &self.buffers, &self.scope) {
                 let elem = &buf.element;
-                let compatible = val_ty == *elem
-                    || matches!(
-                        (&val_ty, elem),
-                        (DataType::U32, DataType::Bytes) | (DataType::Bytes, DataType::U32)
-                    )
-                    || matches!((&val_ty, elem), (DataType::F32, DataType::F32))
-                    || nodes::same_width_int_reinterpret(&val_ty, elem);
+                let compatible = nodes::store_value_compatible(&val_ty, elem);
                 if !compatible {
                     let legal_targets = nodes::store_value_targets(elem);
                     self.errors.push(err(format!(

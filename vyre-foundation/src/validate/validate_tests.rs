@@ -610,3 +610,30 @@ fn assign_signed_remainder_to_i32_buffer_validates() {
         "assigning a same-width int (rem result) to an i32 buffer must validate, got: {errors:?}"
     );
 }
+
+#[test]
+fn store_bool_comparison_result_into_u32_buffer_validates() {
+    // A comparison produces Bool; storing the 0/1 flag into a U32 output buffer
+    // is a common, sound pattern (the emitter coerces Bool -> u32). The buffer
+    // ASSIGN path always allowed it, but Node::Store rejected it until the compat
+    // rule was unified into one `store_value_compatible` predicate.
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::output("out", 0, DataType::U32).with_count(4),
+            BufferDecl::read("a", 1, DataType::I32).with_count(4),
+            BufferDecl::read("b", 2, DataType::I32).with_count(4),
+        ],
+        [1, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::u32(0),
+            Expr::lt(Expr::load("a", Expr::u32(0)), Expr::load("b", Expr::u32(0))),
+        )],
+    );
+    let errors = validate(&program);
+    assert!(
+        !errors.iter().any(|e| e.message().contains("V045")
+            || e.message().contains("value has type")),
+        "storing a bool comparison result into a u32 buffer must validate, got: {errors:?}"
+    );
+}

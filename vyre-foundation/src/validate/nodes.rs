@@ -167,16 +167,7 @@ fn validate_node_inner(
                 }
                 if let Some(value_ty) = expr_type(value, buffers, scope) {
                     let elem = &buf.element;
-                    let compatible = value_ty == *elem
-                        || matches!(
-                            (&value_ty, elem),
-                            (DataType::U32, DataType::Bytes)
-                                | (DataType::Bytes, DataType::U32)
-                                | (DataType::U32, DataType::Bool)
-                                | (DataType::Bool, DataType::U32)
-                                | (DataType::F32, DataType::F32)
-                        )
-                        || same_width_int_reinterpret(&value_ty, elem);
+                    let compatible = store_value_compatible(&value_ty, elem);
                     if !compatible {
                         report.errors.push(err(format!(
                             "V045: assignment to buffer `{name}` has type `{value_ty}` but the buffer element type is `{elem}`. Fix: cast the value to `{elem}` or write to a buffer with the intended element type."
@@ -205,13 +196,7 @@ fn validate_node_inner(
             if let Some(buf) = buffers.get(buffer.as_str()) {
                 if let Some(val_ty) = expr_type(value, buffers, scope) {
                     let elem = &buf.element;
-                    let compatible = val_ty == *elem
-                        || matches!(
-                            (&val_ty, elem),
-                            (DataType::U32, DataType::Bytes) | (DataType::Bytes, DataType::U32)
-                        )
-                        || matches!((&val_ty, elem), (DataType::F32, DataType::F32))
-                        || same_width_int_reinterpret(&val_ty, elem);
+                    let compatible = store_value_compatible(&val_ty, elem);
                     if !compatible {
                         let legal_targets = store_value_targets(elem);
                         report.errors.push(err(format!(
@@ -598,6 +583,38 @@ pub(crate) fn same_width_int_reinterpret(value: &DataType, element: &DataType) -
     )
 }
 
+/// The single source of truth for whether a value of type `value` may be written
+/// into a buffer whose element type is `element` (by `Node::Store` OR by an
+/// assignment to a buffer binding — both write the same raw word, so they MUST
+/// agree; they previously diverged, with the assign path silently accepting
+/// `Bool <-> U32` that `Node::Store` rejected).
+///
+/// Permitted beyond an exact match, all bit-preserving or backend-coerced writes:
+///   * `U32 <-> Bytes` — a packed-byte buffer round-trip.
+///   * `U32 <-> Bool` — a comparison/flag (0/1) stored into a u32 buffer (the
+///     emitter coerces Bool via `x != 0` / `select(1u, 0u)`); the `U32 -> Bool`
+///     direction is inert because a `bool` storage-buffer element is not
+///     host-shareable in WGSL, but it is kept for symmetry with the assign path.
+///   * `F32 -> F32` — identity (named explicitly so the `Bytes`/vector arms above
+///     cannot be reached for a float).
+///   * same-width signed/unsigned integer reinterpret (`U32<->I32`, `U64<->I64`).
+/// A float-to-int, int-to-float, or differing-width write is NOT permitted (it
+/// would change bits) and must use an explicit `Cast`.
+#[inline]
+#[must_use]
+pub(crate) fn store_value_compatible(value: &DataType, element: &DataType) -> bool {
+    value == element
+        || matches!(
+            (value, element),
+            (DataType::U32, DataType::Bytes)
+                | (DataType::Bytes, DataType::U32)
+                | (DataType::U32, DataType::Bool)
+                | (DataType::Bool, DataType::U32)
+                | (DataType::F32, DataType::F32)
+        )
+        || same_width_int_reinterpret(value, element)
+}
+
 #[inline]
 pub(crate) fn store_value_targets(element: &DataType) -> String {
     let mut targets = vec![element.clone()];
@@ -673,6 +690,25 @@ mod tests {
         assert!(!same_width_int_reinterpret(&DataType::F32, &DataType::U32));
         assert!(!same_width_int_reinterpret(&DataType::U32, &DataType::F32));
         assert!(!same_width_int_reinterpret(&DataType::U32, &DataType::U32));
+    }
+
+    #[test]
+    fn store_value_compatible_unifies_store_and_assign_rules() {
+        // Exact match, byte round-trip, bool flag, f32 identity, same-width int.
+        assert!(store_value_compatible(&DataType::U32, &DataType::U32));
+        assert!(store_value_compatible(&DataType::U32, &DataType::Bytes));
+        assert!(store_value_compatible(&DataType::Bytes, &DataType::U32));
+        assert!(store_value_compatible(&DataType::Bool, &DataType::U32));
+        assert!(store_value_compatible(&DataType::U32, &DataType::Bool));
+        assert!(store_value_compatible(&DataType::F32, &DataType::F32));
+        assert!(store_value_compatible(&DataType::I32, &DataType::U32));
+        assert!(store_value_compatible(&DataType::U64, &DataType::I64));
+        // Bit-changing writes are NOT permitted (need an explicit Cast).
+        assert!(!store_value_compatible(&DataType::F32, &DataType::U32));
+        assert!(!store_value_compatible(&DataType::U32, &DataType::F32));
+        assert!(!store_value_compatible(&DataType::Bool, &DataType::F32));
+        assert!(!store_value_compatible(&DataType::U32, &DataType::U64));
+        assert!(!store_value_compatible(&DataType::U8, &DataType::U32));
     }
 
     #[test]
