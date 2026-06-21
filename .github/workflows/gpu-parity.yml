@@ -60,6 +60,8 @@ jobs:
         run: ./cargo_full test -p vyre-driver-wgpu --test fnv1a64_gpu_parity -- --test-threads=1 --nocapture
       - name: CRC-32 (real workload, nested loop + per-bit conditional polynomial) parity vs reference on real GPU
         run: ./cargo_full test -p vyre-driver-wgpu --test crc32_gpu_parity -- --test-threads=1 --nocapture
+      - name: Adler-32 (real workload, dual accumulator + u32 mod 65521 in loop) parity vs reference on real GPU
+        run: ./cargo_full test -p vyre-driver-wgpu --test adler32_gpu_parity -- --test-threads=1 --nocapture
       - name: synthetic u32 binop (mulhi/abs_diff/saturating/rotate) parity vs oracle on real GPU
         run: ./cargo_full test -p vyre-driver-wgpu --test synthetic_binop_parity -- --test-threads=1 --nocapture
       - name: integer unary (negate/bitnot/popcount/clz/ctz/reverse_bits) parity vs oracle on real GPU
