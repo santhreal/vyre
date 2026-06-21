@@ -11,11 +11,25 @@
 const RESIDENT_DISPATCH_SOURCE: &str =
     include_str!("../../vyre-driver-cuda/src/backend/resident_dispatch.rs");
 
+// The resident-batch async path was split out of the monolithic
+// resident_dispatch.rs into the `resident_dispatch/batch.rs` submodule (LAW7
+// module split), so the batch-pending delegation contract is verified against
+// that file. The format!/Vec::new budget below still tracks the parent file.
+const RESIDENT_DISPATCH_BATCH_SOURCE: &str =
+    include_str!("../../vyre-driver-cuda/src/backend/resident_dispatch/batch.rs");
+
 fn production_source() -> &'static str {
     RESIDENT_DISPATCH_SOURCE
         .split("#[cfg(test)]")
         .next()
         .expect("Fix: resident_dispatch.rs production source must precede tests.")
+}
+
+fn batch_production_source() -> &'static str {
+    RESIDENT_DISPATCH_BATCH_SOURCE
+        .split("#[cfg(test)]")
+        .next()
+        .expect("Fix: resident_dispatch/batch.rs production source must precede tests.")
 }
 
 fn count_pattern(source: &str, pattern: &str) -> usize {
@@ -48,7 +62,7 @@ fn cuda_resident_dispatch_hot_path_waiver_budget_is_not_exceeded() {
 
 #[test]
 fn cuda_resident_batch_pending_does_not_construct_outputs_in_hot_path_file() {
-    let production = production_source();
+    let production = batch_production_source();
     assert!(
         production.contains("CudaPendingDispatch::new_resident_batch_pending("),
         "Fix: CUDA resident batch async must delegate empty host-output construction to stream.rs."
