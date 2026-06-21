@@ -22,24 +22,41 @@ pub(crate) fn spec_output_value(ty: DataType, bytes: &[u8]) -> Value {
 }
 
 pub(crate) fn cast_value(target: &DataType, value: &Value) -> Result<Value, vyre::Error> {
-    // A float source converts numerically ONLY to U32/I32 (saturating), Bool
-    // (truthy), or F32 (identity). There is NO defined float -> {narrow int,
-    // 64-bit int, vector, bytes} conversion: the foundation validator
-    // (`validate::cast::cast_is_valid`) rejects these, and the naga and PTX
-    // emitters fail closed on them. Without this guard the bytes/widen fallbacks
-    // below would return a meaningless byte payload (the float's raw bits) for
-    // such a cast, silently diverging from every backend. Fail closed so the
-    // reference SPEC agrees with the emitters (Law 10 coherence).
+    // A float source converts NUMERICALLY only to U32/I32 (saturating), Bool
+    // (truthy), or F32 (identity). It has NO defined ARITHMETIC conversion to a
+    // narrow int (U8/U16/I8/I16), a 64-bit int (U64/I64), or any other exotic
+    // scalar: the foundation validator (`validate::cast::cast_is_valid`) rejects
+    // those, and the naga/PTX emitters fail closed on them. Without this guard
+    // the narrow/widen arms (or the `_ => to_bytes()` catch-all) would return a
+    // meaningless byte payload (the float's raw bits) for such a cast, silently
+    // diverging from every backend. Fail closed so the reference SPEC agrees
+    // with the emitters (Law 10 coherence).
+    //
+    // The fixed-width BYTE-REINTERPRET targets (Vec2U32, Vec4U32, Bytes) are NOT
+    // rejected here: `cast_value` is a source-type-agnostic byte primitive for
+    // them — a scalar cast to a vector packs the scalar's canonical bytes and
+    // zero-fills/truncates to the lane width, identically for u32/i32/bool/f32
+    // sources (proven by `vector_cast_generated_matrix`'s 32768 cases and the
+    // `cast_to_vec*` unit tests). validate still gates f32->vector out at the
+    // program level, so this permissive byte primitive is only ever reached by
+    // direct callers that want the byte encoding.
     if matches!(value, Value::Float(_))
         && !matches!(
             target,
-            DataType::U32 | DataType::I32 | DataType::Bool | DataType::F32
+            DataType::U32
+                | DataType::I32
+                | DataType::Bool
+                | DataType::F32
+                | DataType::Vec2U32
+                | DataType::Vec4U32
+                | DataType::Bytes
         )
     {
         return Err(Error::interp(format!(
             "cast from f32 to {target:?} has no defined conversion: a float source \
-             converts only to u32/i32 (saturating), bool (truthy), or f32. Fix: cast \
-             the f32 to u32 or i32 first, then narrow or widen the integer."
+             converts numerically only to u32/i32 (saturating), bool (truthy), or f32, \
+             or byte-reinterprets to a fixed-width vector. Fix: cast the f32 to u32 or \
+             i32 first, then narrow or widen the integer."
         )));
     }
     match target {
@@ -200,11 +217,13 @@ mod tests {
         );
     }
 
-    /// A float source has no defined conversion to a narrow int, a 64-bit int, a
-    /// vector, or bytes — the validator rejects these and the naga/PTX emitters
-    /// fail closed, so the reference SPEC must too (rather than returning the
-    /// float's raw bytes via the catch-all). Only u32/i32 (saturating), bool, and
-    /// f32 are valid float targets.
+    /// A float source has no defined ARITHMETIC conversion to a narrow int
+    /// (U8/U16/I8/I16) or a 64-bit int (U64/I64) — the validator rejects these
+    /// and the naga/PTX emitters fail closed, so the reference SPEC must too
+    /// (rather than returning the float's raw bytes via the narrow/widen arms or
+    /// the catch-all). The fixed-width byte-reinterpret targets (Vec2U32/Vec4U32/
+    /// Bytes) are intentionally NOT in this list — see
+    /// `cast_f32_to_fixed_width_vector_byte_packs` and `vector_cast_generated_matrix`.
     #[test]
     fn cast_f32_to_undefined_target_fails_closed() {
         for target in [
@@ -214,9 +233,6 @@ mod tests {
             DataType::I16,
             DataType::U64,
             DataType::I64,
-            DataType::Vec2U32,
-            DataType::Vec4U32,
-            DataType::Bytes,
         ] {
             let err = cast_value(&target, &Value::Float(3.5))
                 .expect_err(&format!("f32 -> {target:?} must fail closed in the oracle"));
@@ -225,6 +241,49 @@ mod tests {
                 "f32 -> {target:?} must fail closed with the float-cast message, got: {err:?}"
             );
         }
+    }
+
+    /// A float source byte-reinterprets to a fixed-width vector exactly like any
+    /// other scalar: the f32's canonical 4 bytes occupy the low lane and the
+    /// remaining lanes are zero-filled. This is the source-agnostic byte
+    /// primitive `vector_cast_generated_matrix` exercises across 32768 cases; a
+    /// guard that rejected f32 here (as an over-broad earlier version did)
+    /// regresses that matrix. validate still gates f32->vector out at the
+    /// program level, so only direct byte-encoding callers reach this.
+    #[test]
+    fn cast_f32_to_fixed_width_vector_byte_packs() {
+        // `Value::Float` holds an f64, and its canonical encoding is the f64's
+        // 8 little-endian bytes (copy_raw_bytes_prefix -> f64::to_le_bytes), so a
+        // vector byte-pack lays those 8 bytes down then zero-fills to lane width.
+        // 2.5 is exactly representable, so f64::from(2.5f32) == 2.5f64 =
+        // 0x4004_0000_0000_0000 -> LE [00,00,00,00,00,00,04,40].
+        let f = 2.5_f32;
+        let f64_le = f64::from(f).to_le_bytes(); // 8 bytes
+        assert_eq!(
+            f64_le,
+            [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x40],
+            "precondition: 2.5f64 little-endian encoding"
+        );
+
+        // Vec2U32 is exactly 8 bytes -> the full f64 encoding, no padding.
+        assert_eq!(
+            cast_value(&DataType::Vec2U32, &Value::Float(f64::from(f)))
+                .expect("f32 -> vec2<u32> must byte-pack, not fail closed")
+                .to_bytes(),
+            f64_le.to_vec(),
+            "f32 -> Vec2U32 must be the f64 little-endian bytes filling both lanes"
+        );
+
+        // Vec4U32 is 16 bytes -> f64 bytes in the low 8, zero-fill the high 8.
+        let mut expected_vec4 = f64_le.to_vec();
+        expected_vec4.extend_from_slice(&[0u8; 8]);
+        assert_eq!(
+            cast_value(&DataType::Vec4U32, &Value::Float(f64::from(f)))
+                .expect("f32 -> vec4<u32> must byte-pack, not fail closed")
+                .to_bytes(),
+            expected_vec4,
+            "f32 -> Vec4U32 must place the f64 bytes in lanes 0..2 and zero-fill lanes 2..4"
+        );
     }
 
     /// The positive twin: the float targets every layer permits still convert,
