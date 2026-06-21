@@ -23620,10 +23620,12 @@ pub mod vyre_foundation::serial::wire::tags::un_op_tag
 pub const vyre_foundation::serial::wire::MAX_ARGS: usize
 pub const vyre_foundation::serial::wire::MAX_BUFFERS: usize
 pub const vyre_foundation::serial::wire::MAX_DECODE_DEPTH: u32
+pub const vyre_foundation::serial::wire::MAX_MESH_AXES: usize
 pub const vyre_foundation::serial::wire::MAX_NODES: usize
 pub const vyre_foundation::serial::wire::MAX_OPAQUE_PAYLOAD_LEN: usize
 pub const vyre_foundation::serial::wire::MAX_PROGRAM_BYTES: usize
 pub const vyre_foundation::serial::wire::MAX_STRING_LEN: usize
+pub const vyre_foundation::serial::wire::MAX_TENSOR_RANK: usize
 pub fn vyre_foundation::serial::wire::append_data_type_fingerprint(buf: &mut alloc::vec::Vec<u8>, value: &vyre_spec::data_type::DataType) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_foundation::serial::wire::append_node_list_fingerprint(buf: &mut alloc::vec::Vec<u8>, nodes: &[vyre_foundation::ir::Node]) -> core::result::Result<(), alloc::string::String>
 #[non_exhaustive] pub enum vyre_foundation::serial::EnvelopeError
