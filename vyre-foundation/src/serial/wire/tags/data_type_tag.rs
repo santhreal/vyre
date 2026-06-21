@@ -1,6 +1,7 @@
 use crate::ir::DataType;
 use crate::serial::wire::encode::WireEncodeErr;
 use crate::serial::wire::framing::{put_u32, put_u8};
+use crate::serial::wire::{MAX_MESH_AXES, MAX_TENSOR_RANK};
 
 /// Encode a [`DataType`] into its stable VIR0 wire-format tag byte.
 ///
@@ -108,6 +109,19 @@ pub(crate) fn put_data_type(out: &mut Vec<u8>, value: &DataType) -> Result<(), W
         }
         DataType::TensorShaped { element, shape } => {
             put_data_type(out, element)?;
+            // Encoder/decoder limit symmetry: the decoder rejects ranks above
+            // MAX_TENSOR_RANK, so refuse to emit an over-limit (undecodable) blob
+            // here instead — fail loudly at encode with the actual rank and the
+            // limit named (cf. MAX_OPAQUE_PAYLOAD_LEN's encoder/decoder pairing).
+            if shape.len() > MAX_TENSOR_RANK {
+                return Err(WireEncodeErr::fmt_usize2(
+                    "Fix: tensor shape rank ",
+                    shape.len(),
+                    " exceeds the wire-format limit ",
+                    MAX_TENSOR_RANK,
+                    "; cap rank before serialization (the decoder rejects ranks above this).",
+                ));
+            }
             let len = u32::try_from(shape.len()).map_err(|_| {
                 WireEncodeErr::fmt_usize(
                     "Fix: tensor shape rank ",
@@ -133,6 +147,16 @@ pub(crate) fn put_data_type(out: &mut Vec<u8>, value: &DataType) -> Result<(), W
             put_u32(out, *block_cols);
         }
         DataType::DeviceMesh { axes } => {
+            // Encoder/decoder limit symmetry (see TensorShaped above).
+            if axes.len() > MAX_MESH_AXES {
+                return Err(WireEncodeErr::fmt_usize2(
+                    "Fix: device-mesh axes count ",
+                    axes.len(),
+                    " exceeds the wire-format limit ",
+                    MAX_MESH_AXES,
+                    "; cap mesh rank before serialization (the decoder rejects counts above this).",
+                ));
+            }
             let len = u32::try_from(axes.len()).map_err(|_| {
                 WireEncodeErr::fmt_usize(
                     "Fix: device-mesh axes count ",
@@ -438,6 +462,44 @@ mod tests {
         assert!(
             err.contains("device-mesh axes count") && err.contains("exceeds"),
             "rejection must name the mesh axes limit and 'exceeds': {err}"
+        );
+    }
+
+    /// Encoder/decoder symmetry: the encoder must refuse to emit a tensor whose
+    /// rank exceeds `MAX_TENSOR_RANK` (which the decoder would reject), failing
+    /// loudly instead of producing an undecodable blob.
+    #[test]
+    fn encoding_tensor_rank_above_limit_is_rejected() {
+        use crate::serial::wire::MAX_TENSOR_RANK;
+        // 0..=MAX_TENSOR_RANK is MAX_TENSOR_RANK + 1 elements.
+        let shape: smallvec::SmallVec<[u32; 4]> = (0..=MAX_TENSOR_RANK as u32).collect();
+        let ty = DataType::TensorShaped {
+            element: Box::new(DataType::F32),
+            shape,
+        };
+        let mut out = Vec::new();
+        let err = put_data_type(&mut out, &ty)
+            .expect_err("encoding an over-limit tensor rank must fail, not emit a blob");
+        let msg = format!("{err:?}");
+        assert!(
+            msg.contains("tensor shape rank") && msg.contains("exceeds"),
+            "encoder rejection must name the rank and 'exceeds': {msg}"
+        );
+    }
+
+    /// The device-mesh twin of the encoder symmetry check.
+    #[test]
+    fn encoding_device_mesh_axes_above_limit_is_rejected() {
+        use crate::serial::wire::MAX_MESH_AXES;
+        let axes: smallvec::SmallVec<[u32; 3]> = (0..=MAX_MESH_AXES as u32).collect();
+        let ty = DataType::DeviceMesh { axes };
+        let mut out = Vec::new();
+        let err = put_data_type(&mut out, &ty)
+            .expect_err("encoding an over-limit device-mesh axis count must fail");
+        let msg = format!("{err:?}");
+        assert!(
+            msg.contains("device-mesh axes count") && msg.contains("exceeds"),
+            "encoder rejection must name the axes count and 'exceeds': {msg}"
         );
     }
 }
