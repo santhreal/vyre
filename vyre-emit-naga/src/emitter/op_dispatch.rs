@@ -1384,25 +1384,56 @@ impl BodyBuilder<'_> {
                 });
             }
         }
-        let value =
-            if let Some(value) = self.emit_synthetic_binop(effective_binop, left_eff, right_eff) {
-                value
-            } else if let Some(fun) = binary_math_function(effective_binop) {
-                self.append_expr(Expression::Math {
-                    fun,
-                    arg: left_eff,
-                    arg1: Some(right_eff),
-                    arg2: None,
-                    arg3: None,
-                })
-            } else {
-                let naga_op = binary_operator(effective_binop)?;
-                self.append_expr(Expression::Binary {
-                    op: naga_op,
-                    left: left_eff,
-                    right: right_eff,
-                })
-            };
+        // naga's `BinaryOperator::Modulo` lowers to an UNSIGNED remainder on the
+        // SPIR-V backend even for SIGNED operands — a vendored-naga bug verified
+        // on the 5090: `rem(i32, i32)` of (-7, 3) returned 0 (== unsigned
+        // 0xFFFF_FFF9 % 3), not the signed -1, while `div(i32, i32)` of (-7, 3)
+        // correctly returned -2 (naga's `Divide` DOES pick SDiv). naga's signed
+        // Divide is trustworthy, so synthesize the signed remainder from the
+        // truncating-division identity `a - (a / b) * b` (-7 - (-2)*3 = -1),
+        // bypassing the buggy Modulo. Unsigned Mod keeps naga's `Modulo` (correct
+        // for Uint, plus the divisor-zero guard below). The result type of a Mod
+        // is its operand type (`binary_result_type` -> operand 0), so an i32_ty
+        // result means signed operands. wgpu/spirv/metal all route through this
+        // emitter, so the one fix covers every naga-derived backend.
+        let signed_mod = matches!(effective_binop, BinOp::Mod)
+            && self.binary_result_type(op, effective_binop)? == self.types.i32_ty;
+        let value = if signed_mod {
+            let quotient = self.append_expr(Expression::Binary {
+                op: BinaryOperator::Divide,
+                left: left_eff,
+                right: right_eff,
+            });
+            let product = self.append_expr(Expression::Binary {
+                op: BinaryOperator::Multiply,
+                left: quotient,
+                right: right_eff,
+            });
+            self.append_expr(Expression::Binary {
+                op: BinaryOperator::Subtract,
+                left: left_eff,
+                right: product,
+            })
+        } else if let Some(value) =
+            self.emit_synthetic_binop(effective_binop, left_eff, right_eff)
+        {
+            value
+        } else if let Some(fun) = binary_math_function(effective_binop) {
+            self.append_expr(Expression::Math {
+                fun,
+                arg: left_eff,
+                arg1: Some(right_eff),
+                arg2: None,
+                arg3: None,
+            })
+        } else {
+            let naga_op = binary_operator(effective_binop)?;
+            self.append_expr(Expression::Binary {
+                op: naga_op,
+                left: left_eff,
+                right: right_eff,
+            })
+        };
         // Div/Mod by zero is backend-divergent: naga 25 overrides a zero
         // divisor to 1 (so `x / 0 == x`, `x % 0 == 0`), while PTX leaves it to
         // unspecified hardware. The vyre-reference oracle documents a single

@@ -261,6 +261,128 @@ fn u32_div_desc(binop: BinOp) -> KernelDescriptor {
     }
 }
 
+/// Signed (I32) twin of `u32_div_desc`: loads two i32 values and applies `binop`,
+/// storing into an i32 buffer. Used to exercise the signed div/mod emit path.
+fn i32_div_desc(binop: BinOp) -> KernelDescriptor {
+    KernelDescriptor {
+        id: "i32_div".into(),
+        bindings: BindingLayout {
+            slots: vec![
+                BindingSlot {
+                    slot: 0,
+                    element_type: DataType::I32,
+                    element_count: Some(4),
+                    memory_class: MemoryClass::Global,
+                    visibility: BindingVisibility::ReadOnly,
+                    name: "src".into(),
+                },
+                BindingSlot {
+                    slot: 1,
+                    element_type: DataType::I32,
+                    element_count: Some(4),
+                    memory_class: MemoryClass::Global,
+                    visibility: BindingVisibility::ReadWrite,
+                    name: "out".into(),
+                },
+            ],
+        },
+        dispatch: Dispatch::new(1, 1, 1),
+        body: KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(0),
+                },
+                KernelOp {
+                    kind: KernelOpKind::LoadGlobal,
+                    operands: vec![0, 0],
+                    result: Some(1),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![1],
+                    result: Some(2),
+                },
+                KernelOp {
+                    kind: KernelOpKind::LoadGlobal,
+                    operands: vec![0, 2],
+                    result: Some(3),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(binop),
+                    operands: vec![1, 3],
+                    result: Some(4),
+                },
+                KernelOp {
+                    kind: KernelOpKind::StoreGlobal,
+                    operands: vec![1, 0, 4],
+                    result: None,
+                },
+            ],
+            child_bodies: vec![],
+            literals: vec![LiteralValue::U32(0), LiteralValue::U32(1)],
+        },
+    }
+}
+
+/// naga's `BinaryOperator::Modulo` lowers to an UNSIGNED remainder on the SPIR-V
+/// backend even for signed operands (a vendored-naga bug confirmed on the 5090:
+/// `rem(i32,i32)` of (-7,3) returned 0, the unsigned remainder, not -1). naga's
+/// `Divide` is signedness-correct, so the emitter synthesizes signed remainder
+/// as `a - (a / b) * b` and must NOT emit a `Modulo` for signed operands.
+#[test]
+fn signed_modulo_emits_division_identity_not_modulo_and_validates() {
+    use naga::valid::{Capabilities, ValidationFlags, Validator};
+    let module = emit(&i32_div_desc(BinOp::Mod)).expect("i32 Mod must emit");
+    Validator::new(ValidationFlags::all(), Capabilities::all())
+        .validate(&module)
+        .unwrap_or_else(|e| panic!("signed mod identity: INVALID WGSL: {e:?}"));
+    let arena = &module
+        .entry_points
+        .first()
+        .expect("entry point")
+        .function
+        .expressions;
+    let has = |want: naga::BinaryOperator| {
+        arena
+            .iter()
+            .any(|(_, e)| matches!(e, naga::Expression::Binary { op, .. } if *op == want))
+    };
+    assert!(
+        !has(naga::BinaryOperator::Modulo),
+        "signed i32 Mod must NOT emit naga Modulo (it lowers to unsigned UMod on the GPU)"
+    );
+    assert!(
+        has(naga::BinaryOperator::Divide)
+            && has(naga::BinaryOperator::Multiply)
+            && has(naga::BinaryOperator::Subtract),
+        "signed i32 Mod must synthesize `a - (a / b) * b` (Divide + Multiply + Subtract)"
+    );
+}
+
+/// The negative twin: a SIGNED Div still emits a single naga `Divide` (which is
+/// signedness-correct) — the signed-mod workaround must not perturb Div.
+#[test]
+fn signed_division_still_emits_single_divide() {
+    use naga::valid::{Capabilities, ValidationFlags, Validator};
+    let module = emit(&i32_div_desc(BinOp::Div)).expect("i32 Div must emit");
+    Validator::new(ValidationFlags::all(), Capabilities::all())
+        .validate(&module)
+        .unwrap_or_else(|e| panic!("signed div: INVALID WGSL: {e:?}"));
+    let arena = &module
+        .entry_points
+        .first()
+        .expect("entry point")
+        .function
+        .expressions;
+    let divides = arena
+        .iter()
+        .filter(|(_, e)| matches!(e, naga::Expression::Binary { op: naga::BinaryOperator::Divide, .. }))
+        .count();
+    assert_eq!(divides, 1, "signed Div must emit exactly one naga Divide, found {divides}");
+}
+
 /// Load a U64 (vec2<u32>), cast to `target`, store to an `out_elem` buffer.
 fn u64_narrow_cast_desc(target: DataType, out_elem: DataType) -> KernelDescriptor {
     KernelDescriptor {
