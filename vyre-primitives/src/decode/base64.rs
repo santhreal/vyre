@@ -542,17 +542,28 @@ mod tests {
         assert_eq!(out, before);
     }
 
+    // The infallible base64 oracle wrappers must FAIL LOUD on malformed input,
+    // not silently return empty. An empty result would let a GPU-vs-CPU parity
+    // assertion pass on empty==empty and hide a real divergence (Law 10 / Law 6).
+    // Each wrapper gets its own #[should_panic] behavioral proof; callers that
+    // need to tolerate bad input use the try_ fallible variants instead.
     #[test]
-    fn compatibility_wrappers_do_not_panic_on_invalid_length() {
-        let (decoded, decoded_len) = decode_standard_packed_reference(b"abc");
-        assert!(decoded.is_empty());
-        assert_eq!(decoded_len, 0);
+    #[should_panic(expected = "vyre-primitives base64 decode reference failed")]
+    fn decode_reference_fails_loud_on_invalid_length() {
+        let _ = decode_standard_packed_reference(b"abc");
+    }
 
+    #[test]
+    #[should_panic(expected = "vyre-primitives base64 decode reference failed")]
+    fn decode_reference_into_fails_loud_on_invalid_length() {
         let mut out = vec![1, 2, 3];
-        let decoded_len = decode_standard_packed_reference_into(b"abc", &mut out);
-        assert_eq!(decoded_len, 0);
-        assert!(out.is_empty());
-        assert!(cpu_base64_decode(b"abc").is_empty());
+        let _ = decode_standard_packed_reference_into(b"abc", &mut out);
+    }
+
+    #[test]
+    #[should_panic(expected = "vyre-primitives base64 decode reference failed")]
+    fn cpu_base64_decode_fails_loud_on_invalid_length() {
+        let _ = cpu_base64_decode(b"abc");
     }
 
     #[test]
@@ -563,9 +574,22 @@ mod tests {
             .expect(
             "Fix: unit-test oracle precondition - base64 source must include production section",
         );
-        assert!(!production.contains(".expect("));
-        assert!(!production.contains(".unwrap("));
-        assert!(!production.contains("panic!("));
+
+        // No LAZY panics (no fix hint); an explicit panic!() fail-loud IS the
+        // blessed Law-10 fix for an infallible parity wrapper.
+        assert!(
+            !production.contains(".expect(") && !production.contains(".unwrap("),
+            "Fix: base64 production wrappers must not use bare .unwrap()/.expect() — use an explicit panic!() with the error."
+        );
+        // No SILENT fallback: returning empty on failure masks a parity divergence (Law 10/6).
+        assert!(
+            !production.contains(concat!("eprintln", "!(\"vyre-primitives base64")),
+            "Fix: base64 CPU oracle must not log-and-return empty on error — fail loud via panic!() so callers use the try_ variant."
+        );
+        assert!(
+            production.contains("panic!("),
+            "Fix: base64 CPU oracle must panic!() when it cannot compute the reference, never return an empty vec."
+        );
     }
 
     #[test]

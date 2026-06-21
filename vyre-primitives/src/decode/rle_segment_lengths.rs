@@ -861,8 +861,21 @@ mod non_panicking_wrapper_tests {
             .expect(
                 "Fix: unit-test oracle precondition - RLE source must include production section",
             );
-        assert!(!production.contains(".expect("));
-        assert!(!production.contains(".unwrap("));
-        assert!(!production.contains("panic!("));
+
+        // No LAZY panics (no fix hint); an explicit panic!() fail-loud IS the
+        // blessed Law-10 fix for an infallible parity wrapper.
+        assert!(
+            !production.contains(".expect(") && !production.contains(".unwrap("),
+            "Fix: RLE production wrappers must not use bare .unwrap()/.expect() — use an explicit panic!() with the error."
+        );
+        // No SILENT fallback: returning empty on failure masks a parity divergence (Law 10/6).
+        assert!(
+            !production.contains(concat!("eprintln", "!(\"vyre-primitives RLE")),
+            "Fix: RLE CPU oracle must not log-and-return empty on error — fail loud via panic!() so callers use the try_ variant."
+        );
+        assert!(
+            production.contains("panic!("),
+            "Fix: RLE CPU oracle must panic!() when it cannot compute the reference, never return an empty vec."
+        );
     }
 }
