@@ -212,6 +212,50 @@ fn u32_subgroup_mul_emits_idx_butterfly_not_redux() {
 }
 
 #[test]
+fn f32_subgroup_mul_emits_mul_f32_butterfly_not_redux() {
+    // f32 product has no `redux.sync` (redux is integer-only); it reduces with
+    // the shared shfl.idx XOR butterfly and a `mul.f32` combine, bitcasting the
+    // accumulator through b32 around each shuffle. All-lane broadcast.
+    let kernel = KernelDescriptor {
+        id: "mul_f32".into(),
+        bindings: BindingLayout { slots: vec![] },
+        dispatch: Dispatch::new(64, 1, 1),
+        body: KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(0),
+                },
+                KernelOp {
+                    kind: KernelOpKind::SubgroupReduce { op: vyre_lower::SubgroupReduceOp::Mul },
+                    operands: vec![0],
+                    result: Some(1),
+                },
+            ],
+            child_bodies: vec![],
+            literals: vec![LiteralValue::F32(3.0)],
+        },
+    };
+    let s = emit(&kernel).unwrap();
+    assert!(s.contains("activemask.b32"));
+    assert!(s.contains("%laneid"));
+    assert!(s.contains("mul.f32"));
+    assert!(!s.contains("redux.sync"));
+    // Float path shuffles via b32 bitcast and must NOT use the integer product.
+    assert!(!s.contains("mul.lo"));
+    assert!(s.contains("mov.b32"));
+    assert!(
+        s.matches("xor.b32").count() >= 5,
+        "expected >=5 XOR-partner steps for a 32-lane warp, got: {s}"
+    );
+    assert!(
+        s.matches("shfl.sync.idx.b32").count() >= 5,
+        "expected >=5 idx-shuffle exchange steps for a 32-lane warp, got: {s}"
+    );
+}
+
+#[test]
 fn subgroup_local_id_emits_laneid() {
     let kernel = KernelDescriptor {
         id: "lane".into(),
