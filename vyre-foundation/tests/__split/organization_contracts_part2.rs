@@ -339,6 +339,16 @@ fn foundation_inline_test_modules_are_baselined() {
         "src/serial/wire/decode/from_wire.rs",
         "src/serial/wire/tags/op_tag_decode.rs",
         "src/transform/collectives.rs",
+        // Pre-existing inline `#[cfg(test)]` modules that predate this baseline
+        // snapshot but were never recorded; each owns unit tests next to its
+        // implementation. Tracked under ROADMAP S13 for eventual extraction to
+        // sibling `_tests.rs` files, same as the entries above.
+        "src/execution_plan/fusion/alpha_rename.rs",
+        "src/ir_inner/model/expr/builders/operators.rs",
+        "src/serial/wire/decode/scan_database_budget.rs",
+        "src/serial/wire/encode/scan_database_header.rs",
+        "src/soundness.rs",
+        "src/vast/edit_corpus.rs",
     ]
     .iter()
     .map(|s| s.to_string())
