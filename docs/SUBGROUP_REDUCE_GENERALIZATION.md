@@ -98,8 +98,15 @@ u32 max (63), all passing. (`in` is declared read-only so the dispatch returns
 only `out` as `outputs[0]`; a read-write input is also returned, ahead of `out`,
 which once made these tests read back the unchanged input.)
 
+f32-bitwise (And/Or/Xor) is rejected at THREE layers now, not just emit: the
+foundation validator fails closed at the type boundary (`V047`, expr_rules.rs —
+`op.is_bitwise() && operand:f32`), the PTX emitter fails closed at emit, and the
+reference oracle returns None for the f32 combine. Positive twins keep the gate
+honest: integer And/Or/Xor and f32 Add/Mul/Min/Max all validate clean. This makes
+the rejection uniform across every backend instead of surfacing late (and only on
+backends whose emit happens to catch it).
+
 Open follow-ons:
 - None for the reduce-op lowering itself: every (op,dtype) the lowering can emit
   is now either a hardware `redux.sync` or the shared idx-XOR butterfly, and each
-  is GPU-verified. f32-bitwise (And/Or/Xor) remains a deliberate loud fail-closed
-  (no meaningful bitwise reduction over floats).
+  is GPU-verified; f32-bitwise is rejected at validate/emit/oracle (above).

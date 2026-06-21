@@ -180,9 +180,22 @@ pub(crate) fn validate_expr(
             validate_expr(lane, buffers, scope, options, report, depth_level + 1);
             validate_subgroup_expr_support(&mut report.errors, options);
         }
-        Expr::SubgroupReduce { value, .. } => {
+        Expr::SubgroupReduce { op, value } => {
             validate_expr(value, buffers, scope, options, report, depth_level + 1);
             validate_subgroup_expr_support(&mut report.errors, options);
+            // V047: bitwise subgroup reductions (And/Or/Xor) are undefined over
+            // floats — both the PTX emitter and the reference oracle already fail
+            // closed on an f32 operand (`SubgroupReduceOp::combine_f32` returns
+            // None for bitwise ops). Reject it here at the type boundary so the
+            // failure is uniform across every backend instead of surfacing late
+            // (and only on backends whose emit happens to catch it).
+            if op.is_bitwise() {
+                if let Some(DataType::F32) = expr_type(value, buffers, scope) {
+                    report.errors.push(err(format!(
+                        "V047: subgroup `{op:?}` is a bitwise reduction and rejects f32 operands (its value has type `f32`). Fix: use an integer operand (u32/i32) for And/Or/Xor, or use Add/Mul/Min/Max for a float reduction."
+                    )));
+                }
+            }
         }
         Expr::SubgroupLocalId | Expr::SubgroupSize => {
             validate_subgroup_expr_support(&mut report.errors, options);
@@ -616,6 +629,88 @@ mod tests {
             "supported subgroup backend must allow validation, got {:?}",
             report.errors
         );
+    }
+
+    #[test]
+    fn subgroup_bitwise_reduction_rejects_f32_operand() {
+        // V047: And/Or/Xor are bitwise reductions with no meaning over floats.
+        // The PTX emitter and reference oracle both fail closed on an f32
+        // operand; validation must reject it at the type boundary too, with a
+        // backend that DOES support subgroup ops (so V041 is not the reason).
+        let backend = SubgroupBackend {
+            supports_subgroup_ops: true,
+        };
+        let cases: [(fn(Expr) -> Expr, &str); 3] = [
+            (Expr::subgroup_and, "And"),
+            (Expr::subgroup_or, "Or"),
+            (Expr::subgroup_xor, "Xor"),
+        ];
+        for (ctor, op_name) in cases {
+            let report = validate_subgroup_expr(
+                ctor(Expr::LitF32(1.5)),
+                ValidationOptions::default().with_backend(&backend),
+            );
+            assert!(
+                report.errors.iter().any(|error| {
+                    let m = error.message();
+                    m.starts_with("V047:")
+                        && m.contains(op_name)
+                        && m.contains("bitwise reduction")
+                        && m.contains("rejects f32 operands")
+                        && m.contains("Fix:")
+                }),
+                "subgroup `{op_name}` over an f32 operand must be rejected with V047, got {:?}",
+                report.errors
+            );
+        }
+    }
+
+    #[test]
+    fn subgroup_bitwise_reduction_accepts_integer_operand() {
+        // The positive twin: u32 is a valid operand for And/Or/Xor — no V047.
+        let backend = SubgroupBackend {
+            supports_subgroup_ops: true,
+        };
+        for ctor in [Expr::subgroup_and, Expr::subgroup_or, Expr::subgroup_xor] {
+            let report = validate_subgroup_expr(
+                ctor(Expr::u32(0b1010)),
+                ValidationOptions::default().with_backend(&backend),
+            );
+            assert!(
+                report.errors.is_empty(),
+                "integer bitwise subgroup reduction is valid and must not be flagged, got {:?}",
+                report.errors
+            );
+        }
+    }
+
+    #[test]
+    fn subgroup_arithmetic_reduction_accepts_f32_operand() {
+        // f32 is rejected ONLY for bitwise ops — Add/Mul/Min/Max over f32 are
+        // legitimate (the whole point of generalizing workgroup_max_f32 to a
+        // subgroup reduction), so V047 must not fire for them.
+        let backend = SubgroupBackend {
+            supports_subgroup_ops: true,
+        };
+        for ctor in [
+            Expr::subgroup_add,
+            Expr::subgroup_mul,
+            Expr::subgroup_min,
+            Expr::subgroup_max,
+        ] {
+            let report = validate_subgroup_expr(
+                ctor(Expr::LitF32(2.5)),
+                ValidationOptions::default().with_backend(&backend),
+            );
+            assert!(
+                !report
+                    .errors
+                    .iter()
+                    .any(|error| error.message().starts_with("V047:")),
+                "f32 arithmetic subgroup reduction must not be rejected as bitwise, got {:?}",
+                report.errors
+            );
+        }
     }
 
     #[test]
