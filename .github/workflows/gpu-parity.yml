@@ -81,8 +81,8 @@ jobs:
       # gates above transfer nothing — the CUDA route needs its own live-GPU
       # differential. These per-test matrices were developer-run only (named in no
       # workflow); this job gates them on the real device.
-      - name: generated i32/scalar/cast IR semantics differential vs reference on real CUDA
-        run: ./cargo_full test -p vyre-driver-cuda --features cuda --test generated_i32_cuda_reference_matrix --test generated_scalar_cuda_reference_matrix --test generated_cast_fma_cuda_reference_matrix -- --test-threads=1 --nocapture
+      - name: generated IR-semantics differential matrices vs reference on real CUDA
+        run: ./cargo_full test -p vyre-driver-cuda --features cuda --test generated_i32_cuda_reference_matrix --test generated_scalar_cuda_reference_matrix --test generated_cast_fma_cuda_reference_matrix --test generated_atomic_cuda_reference_matrix --test generated_control_cuda_reference_matrix --test generated_f32_cuda_reference_matrix --test generated_memory_cuda_reference_matrix --test generated_resident_cuda_reference_matrix --test generated_resident_sequence_cuda_reference_matrix -- --test-threads=1 --nocapture
       - name: 64-bit widening cast (i32/u32 -> i64/u64) sign/zero-extend parity on real CUDA
         run: ./cargo_full test -p vyre-driver-cuda --features cuda --test widening_cast_64_cuda_parity -- --test-threads=1 --nocapture
       - name: integer-narrowing cast (u32 -> u8/u16/i8/i16) truncate/sign-extend parity on real CUDA
