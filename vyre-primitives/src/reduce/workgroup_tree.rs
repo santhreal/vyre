@@ -16,6 +16,8 @@ pub const SUM_F32_OP_ID: &str = "vyre-primitives::reduce::workgroup_sum_f32";
 pub const SUM_U32_OP_ID: &str = "vyre-primitives::reduce::workgroup_sum_u32";
 /// Canonical op id for an f32 workgroup maximum over a scratch buffer.
 pub const MAX_F32_OP_ID: &str = "vyre-primitives::reduce::workgroup_max_f32";
+/// Canonical op id for a u32 workgroup maximum over a scratch buffer.
+pub const MAX_U32_OP_ID: &str = "vyre-primitives::reduce::workgroup_max_u32";
 
 /// Scope for a workgroup-local reduction.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -71,6 +73,17 @@ pub fn max_f32_child(
     child_region(MAX_F32_OP_ID, parent_op_id, max_body(tile, scratch, scope))
 }
 
+/// Emit a child region that maximizes u32 lane partials in `scratch`.
+#[must_use]
+pub fn max_u32_child(
+    parent_op_id: &str,
+    tile: u32,
+    scratch: &'static str,
+    scope: WorkgroupReductionScope,
+) -> Node {
+    child_region(MAX_U32_OP_ID, parent_op_id, max_body(tile, scratch, scope))
+}
+
 /// Build a standalone f32 workgroup sum Program.
 #[must_use]
 pub fn workgroup_sum_f32(values: &str, out: &str, count: u32, tile: u32) -> Program {
@@ -114,6 +127,28 @@ pub fn workgroup_max_f32(values: &str, out: &str, count: u32, tile: u32) -> Prog
         tile,
         DataType::F32,
         Expr::f32(f32::MIN),
+        Expr::max,
+        |tile, scratch| max_body(tile, scratch, WorkgroupReductionScope::FirstWorkgroup),
+    )
+}
+
+/// Build a standalone u32 workgroup maximum Program.
+///
+/// The u32 twin of [`workgroup_max_f32`], closing the
+/// sum-has-both-types / max-has-only-f32 asymmetry. `0` (`u32::MIN`) is the
+/// neutral for an unsigned max, and the subgroup-first lowering already
+/// recognizes the `workgroup_max_` prefix with a u32 value type, so this gets
+/// the fast warp-reduction path on subgroup-capable backends for free.
+#[must_use]
+pub fn workgroup_max_u32(values: &str, out: &str, count: u32, tile: u32) -> Program {
+    reduction_program(
+        MAX_U32_OP_ID,
+        values,
+        out,
+        count,
+        tile,
+        DataType::U32,
+        Expr::u32(u32::MIN),
         Expr::max,
         |tile, scratch| max_body(tile, scratch, WorkgroupReductionScope::FirstWorkgroup),
     )
@@ -380,6 +415,27 @@ mod tests {
         assert_eq!(
             crate::wire::decode_f32_le_bytes_all(&outputs[0].to_bytes())[0],
             9.5
+        );
+    }
+
+    #[test]
+    fn standalone_max_u32_matches_reference_arithmetic() {
+        // Max (42) is at index 3, not 0, so a broken reduction that kept the
+        // first lane or the `0` identity would be caught.
+        let values = [3_u32, 17, 5, 42, 8, 1];
+        let program = workgroup_max_u32("values", "out", values.len() as u32, 4);
+        let outputs = vyre_reference::reference_eval(
+            &program,
+            &[
+                Value::from(crate::wire::pack_u32_slice(&values)),
+                Value::from(vec![0_u8; core::mem::size_of::<u32>()]),
+            ],
+        )
+        .expect("Fix: workgroup_max_u32 must execute in the reference interpreter.");
+        assert_eq!(
+            crate::wire::decode_u32_le_bytes_all(&outputs[0].to_bytes())[0],
+            values.iter().copied().max().expect("non-empty"),
+            "workgroup_max_u32 must compute the unsigned max (42)"
         );
     }
 
