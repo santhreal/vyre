@@ -54,6 +54,10 @@ impl Expr {
         shl => BinOp::Shl;
         /// Shift right.
         shr => BinOp::Shr;
+        /// Rotate left by `right & 31` bits (32-bit barrel rotate).
+        rotate_left => BinOp::RotateLeft;
+        /// Rotate right by `right & 31` bits (32-bit barrel rotate).
+        rotate_right => BinOp::RotateRight;
         /// Equality comparison.
         eq => BinOp::Eq;
         /// Strict less-than comparison.
@@ -135,6 +139,30 @@ impl Expr {
         binary(BinOp::SaturatingSub, left, right)
     }
 
+    /// `saturating_add(a, b)` for unsigned operands; clamps to `u32::MAX` on
+    /// overflow instead of wrapping.
+    ///
+    /// Emits `BinOp::SaturatingAdd` (wire tag `0x16`) directly so the builder
+    /// form and the direct-opcode form share one canonical fingerprint — the
+    /// same first-class-opcode contract as [`Expr::saturating_sub`]. The WGSL
+    /// lowering (overflow-detect `select`) is the backend's concern.
+    #[must_use]
+    #[inline]
+    pub fn saturating_add(left: Expr, right: Expr) -> Expr {
+        binary(BinOp::SaturatingAdd, left, right)
+    }
+
+    /// `saturating_mul(a, b)` for unsigned operands; clamps to `u32::MAX` on
+    /// overflow instead of wrapping.
+    ///
+    /// Emits `BinOp::SaturatingMul` (wire tag `0x18`) directly, mirroring
+    /// [`Expr::saturating_add`]/[`Expr::saturating_sub`].
+    #[must_use]
+    #[inline]
+    pub fn saturating_mul(left: Expr, right: Expr) -> Expr {
+        binary(BinOp::SaturatingMul, left, right)
+    }
+
     /// Construct a wrapping addition node.
     #[must_use]
     #[inline]
@@ -197,5 +225,48 @@ mod tests {
             fp_builder, fp_opcode,
             "Expr::saturating_sub must emit BinOp::SaturatingSub so fingerprints agree"
         );
+    }
+
+    fn fingerprint_of(value: Expr) -> [u8; 32] {
+        Program::wrapped(
+            vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+            [1, 1, 1],
+            vec![Node::Store {
+                buffer: "out".into(),
+                index: Expr::u32(0),
+                value,
+            }],
+        )
+        .fingerprint()
+    }
+
+    /// Each newly added first-class binop builder must emit its exact opcode so
+    /// the builder form and the direct `Expr::BinOp` form share one canonical
+    /// fingerprint — the same contract `saturating_sub` already holds. A builder
+    /// that lowered to a multi-node idiom (e.g. rotate as shift-or) would
+    /// serialise differently and silently break opcode-keyed optimizer rules.
+    #[test]
+    fn new_first_class_binop_builders_emit_their_opcode() {
+        let cases: [(fn(Expr, Expr) -> Expr, BinOp); 4] = [
+            (Expr::rotate_left, BinOp::RotateLeft),
+            (Expr::rotate_right, BinOp::RotateRight),
+            (Expr::saturating_add, BinOp::SaturatingAdd),
+            (Expr::saturating_mul, BinOp::SaturatingMul),
+        ];
+        for (builder, op) in cases {
+            let a = Expr::var("a");
+            let b = Expr::var("b");
+            let via_builder = builder(a.clone(), b.clone());
+            let via_opcode = Expr::BinOp {
+                op,
+                left: Box::new(a),
+                right: Box::new(b),
+            };
+            assert_eq!(
+                fingerprint_of(via_builder),
+                fingerprint_of(via_opcode),
+                "Expr builder for {op:?} must emit that exact opcode so fingerprints agree"
+            );
+        }
     }
 }

@@ -6,7 +6,7 @@
 
 use std::sync::Arc;
 use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
-use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Stable Tier 2.5 op id for the BLAKE3 `G` mixing function.
 pub const BLAKE3_G_OP_ID: &str = "vyre-primitives::hash::blake3_g";
@@ -171,11 +171,10 @@ pub fn blake3_round_program(state: &str, message: &str, out: &str) -> Program {
 }
 
 fn rotate_right(x: Expr, n: u32) -> Expr {
-    Expr::BinOp {
-        op: BinOp::RotateRight,
-        left: Box::new(x),
-        right: Box::new(Expr::u32(n)),
-    }
+    // Delegate to the public first-class builder (single construction path for
+    // BinOp::RotateRight) instead of hand-assembling the node — they share one
+    // canonical fingerprint, proven by the operators.rs builder tests.
+    Expr::rotate_right(x, Expr::u32(n))
 }
 
 fn load_state_nodes(state: &str) -> Vec<Node> {
