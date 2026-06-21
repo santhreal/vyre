@@ -18,6 +18,10 @@ pub const SUM_U32_OP_ID: &str = "vyre-primitives::reduce::workgroup_sum_u32";
 pub const MAX_F32_OP_ID: &str = "vyre-primitives::reduce::workgroup_max_f32";
 /// Canonical op id for a u32 workgroup maximum over a scratch buffer.
 pub const MAX_U32_OP_ID: &str = "vyre-primitives::reduce::workgroup_max_u32";
+/// Canonical op id for an f32 workgroup minimum over a scratch buffer.
+pub const MIN_F32_OP_ID: &str = "vyre-primitives::reduce::workgroup_min_f32";
+/// Canonical op id for a u32 workgroup minimum over a scratch buffer.
+pub const MIN_U32_OP_ID: &str = "vyre-primitives::reduce::workgroup_min_u32";
 
 /// Scope for a workgroup-local reduction.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -82,6 +86,28 @@ pub fn max_u32_child(
     scope: WorkgroupReductionScope,
 ) -> Node {
     child_region(MAX_U32_OP_ID, parent_op_id, max_body(tile, scratch, scope))
+}
+
+/// Emit a child region that minimizes f32 lane partials in `scratch`.
+#[must_use]
+pub fn min_f32_child(
+    parent_op_id: &str,
+    tile: u32,
+    scratch: &'static str,
+    scope: WorkgroupReductionScope,
+) -> Node {
+    child_region(MIN_F32_OP_ID, parent_op_id, min_body(tile, scratch, scope))
+}
+
+/// Emit a child region that minimizes u32 lane partials in `scratch`.
+#[must_use]
+pub fn min_u32_child(
+    parent_op_id: &str,
+    tile: u32,
+    scratch: &'static str,
+    scope: WorkgroupReductionScope,
+) -> Node {
+    child_region(MIN_U32_OP_ID, parent_op_id, min_body(tile, scratch, scope))
 }
 
 /// Build a standalone f32 workgroup sum Program.
@@ -151,6 +177,44 @@ pub fn workgroup_max_u32(values: &str, out: &str, count: u32, tile: u32) -> Prog
         Expr::u32(u32::MIN),
         Expr::max,
         |tile, scratch| max_body(tile, scratch, WorkgroupReductionScope::FirstWorkgroup),
+    )
+}
+
+/// Build a standalone f32 workgroup minimum Program.
+///
+/// `f32::MAX` is the neutral for a minimum (any real value is smaller). The
+/// subgroup-first lowering recognizes the `workgroup_min_` prefix, so this gets
+/// the native warp `subgroupMin` / `redux.sync.min` path on capable backends.
+#[must_use]
+pub fn workgroup_min_f32(values: &str, out: &str, count: u32, tile: u32) -> Program {
+    reduction_program(
+        MIN_F32_OP_ID,
+        values,
+        out,
+        count,
+        tile,
+        DataType::F32,
+        Expr::f32(f32::MAX),
+        Expr::min,
+        |tile, scratch| min_body(tile, scratch, WorkgroupReductionScope::FirstWorkgroup),
+    )
+}
+
+/// Build a standalone u32 workgroup minimum Program.
+///
+/// `u32::MAX` is the neutral for an unsigned minimum.
+#[must_use]
+pub fn workgroup_min_u32(values: &str, out: &str, count: u32, tile: u32) -> Program {
+    reduction_program(
+        MIN_U32_OP_ID,
+        values,
+        out,
+        count,
+        tile,
+        DataType::U32,
+        Expr::u32(u32::MAX),
+        Expr::min,
+        |tile, scratch| min_body(tile, scratch, WorkgroupReductionScope::FirstWorkgroup),
     )
 }
 
@@ -250,6 +314,10 @@ fn sum_body(tile: u32, scratch: &'static str, scope: WorkgroupReductionScope) ->
 
 fn max_body(tile: u32, scratch: &'static str, scope: WorkgroupReductionScope) -> Vec<Node> {
     tree_body(tile, scratch, scope, Expr::max)
+}
+
+fn min_body(tile: u32, scratch: &'static str, scope: WorkgroupReductionScope) -> Vec<Node> {
+    tree_body(tile, scratch, scope, Expr::min)
 }
 
 fn tree_body<F>(
@@ -436,6 +504,45 @@ mod tests {
             crate::wire::decode_u32_le_bytes_all(&outputs[0].to_bytes())[0],
             values.iter().copied().max().expect("non-empty"),
             "workgroup_max_u32 must compute the unsigned max (42)"
+        );
+    }
+
+    #[test]
+    fn standalone_min_f32_matches_reference_arithmetic() {
+        // Min (-2.5) is not at index 0; an f32::MAX-identity or kept-first bug fails.
+        let values = [3.0_f32, 9.5, -2.5, 1.25, 8.0];
+        let program = workgroup_min_f32("values", "out", values.len() as u32, 4);
+        let outputs = vyre_reference::reference_eval(
+            &program,
+            &[
+                Value::from(crate::wire::pack_f32_slice(&values)),
+                Value::from(vec![0_u8; core::mem::size_of::<f32>()]),
+            ],
+        )
+        .expect("Fix: workgroup_min_f32 must execute in the reference interpreter.");
+        assert_eq!(
+            crate::wire::decode_f32_le_bytes_all(&outputs[0].to_bytes())[0],
+            values.iter().copied().fold(f32::INFINITY, f32::min),
+            "workgroup_min_f32 must compute the min (-2.5)"
+        );
+    }
+
+    #[test]
+    fn standalone_min_u32_matches_reference_arithmetic() {
+        let values = [17_u32, 3, 42, 8, 25];
+        let program = workgroup_min_u32("values", "out", values.len() as u32, 4);
+        let outputs = vyre_reference::reference_eval(
+            &program,
+            &[
+                Value::from(crate::wire::pack_u32_slice(&values)),
+                Value::from(vec![0_u8; core::mem::size_of::<u32>()]),
+            ],
+        )
+        .expect("Fix: workgroup_min_u32 must execute in the reference interpreter.");
+        assert_eq!(
+            crate::wire::decode_u32_le_bytes_all(&outputs[0].to_bytes())[0],
+            values.iter().copied().min().expect("non-empty"),
+            "workgroup_min_u32 must compute the unsigned min (3)"
         );
     }
 

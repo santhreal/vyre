@@ -13,6 +13,7 @@ use std::sync::Arc;
 /// Canonical generator prefixes emitted by `vyre-primitives::reduce::workgroup_tree`.
 const WORKGROUP_SUM_PREFIX: &str = "vyre-primitives::reduce::workgroup_sum_";
 const WORKGROUP_MAX_PREFIX: &str = "vyre-primitives::reduce::workgroup_max_";
+const WORKGROUP_MIN_PREFIX: &str = "vyre-primitives::reduce::workgroup_min_";
 
 /// Scope deduced from a workgroup reduction region body.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -209,6 +210,17 @@ fn try_lower_workgroup_reduction(
             plan,
             value_type,
         ))
+    } else if let Some(value_type) = workgroup_min_value_type(generator) {
+        // Min reductions lower to `subgroup_reduce(Min, ...)`, with the min
+        // identity (`+inf` for f32, `u32::MAX` for u32) filling out-of-range
+        // lanes. Backends emit the native `subgroupMin` / `redux.sync.min`.
+        Some(subgroup_reduce_body(
+            SubgroupReduceOp::Min,
+            &scratch,
+            scope,
+            plan,
+            value_type,
+        ))
     } else {
         None
     }
@@ -220,6 +232,10 @@ fn workgroup_sum_value_type(generator: &str) -> Option<ReductionValueType> {
 
 fn workgroup_max_value_type(generator: &str) -> Option<ReductionValueType> {
     reduction_value_type(generator.strip_prefix(WORKGROUP_MAX_PREFIX)?)
+}
+
+fn workgroup_min_value_type(generator: &str) -> Option<ReductionValueType> {
+    reduction_value_type(generator.strip_prefix(WORKGROUP_MIN_PREFIX)?)
 }
 
 fn reduction_value_type(suffix: &str) -> Option<ReductionValueType> {
@@ -795,6 +811,83 @@ mod tests {
                 }
             ),
             "workgroup_max_u32 must lower to subgroup_reduce(Max), got {value:?}"
+        );
+    }
+
+    #[test]
+    fn lowers_workgroup_min_f32_to_subgroup_reduce_min() {
+        // workgroup_min_f32 must lower to subgroup_reduce(Min) — the warp-reduce
+        // fast path. A missing Min prefix arm would leave the slow shared-memory
+        // tree in place (correct, but pessimal — Law 7).
+        let Node::Region { body, .. } = workgroup_sum_region("scratch", ReductionScope::EveryWorkgroup)
+        else {
+            panic!("workgroup_sum_region must build a Region");
+        };
+        let region = Node::Region {
+            generator: "vyre-primitives::reduce::workgroup_min_f32".into(),
+            source_region: None,
+            body,
+        };
+        let program = Program::wrapped(
+            vec![BufferDecl::workgroup("scratch", 4, DataType::F32)],
+            [4, 1, 1],
+            vec![region],
+        );
+        let lowered = lower_subgroup_reductions(program, &caps_with_subgroup(32));
+
+        let Node::Region { body, .. } = &lowered.entry()[0] else {
+            panic!("expected Region");
+        };
+        let Node::Store { value, .. } = &body[0] else {
+            panic!("expected a store, got {:?}", body[0]);
+        };
+        assert!(
+            matches!(
+                value,
+                Expr::SubgroupReduce {
+                    op: SubgroupReduceOp::Min,
+                    ..
+                }
+            ),
+            "workgroup_min_f32 must lower to subgroup_reduce(Min), got {value:?}"
+        );
+    }
+
+    #[test]
+    fn lowers_workgroup_min_u32_to_subgroup_reduce_min() {
+        // The u32 twin of the Min lowering — exercises the unsigned value-type
+        // branch of workgroup_min_value_type.
+        let Node::Region { body, .. } = workgroup_sum_region("scratch", ReductionScope::EveryWorkgroup)
+        else {
+            panic!("workgroup_sum_region must build a Region");
+        };
+        let region = Node::Region {
+            generator: "vyre-primitives::reduce::workgroup_min_u32".into(),
+            source_region: None,
+            body,
+        };
+        let program = Program::wrapped(
+            vec![BufferDecl::workgroup("scratch", 4, DataType::U32)],
+            [4, 1, 1],
+            vec![region],
+        );
+        let lowered = lower_subgroup_reductions(program, &caps_with_subgroup(32));
+
+        let Node::Region { body, .. } = &lowered.entry()[0] else {
+            panic!("expected Region");
+        };
+        let Node::Store { value, .. } = &body[0] else {
+            panic!("expected a store, got {:?}", body[0]);
+        };
+        assert!(
+            matches!(
+                value,
+                Expr::SubgroupReduce {
+                    op: SubgroupReduceOp::Min,
+                    ..
+                }
+            ),
+            "workgroup_min_u32 must lower to subgroup_reduce(Min), got {value:?}"
         );
     }
 
