@@ -72,10 +72,12 @@ Landed:
 - vyre-lower: `KernelOpKind::SubgroupReduce { op }`; both lowering sites thread the op;
   re-exports `SubgroupReduceOp`.
 - Backends: naga maps op→`naga::SubgroupOperation` (all 7); ptx uses `redux.sync.{op}`
-  for integer add/min/max/and/or/xor and a shfl butterfly with the op's combine instr
-  for f32 add/mul/min/max — integer-mul and f32-bitwise FAIL CLOSED LOUD (no silent
-  wrong code). spirv = capability-only (arithmetic bit for all ops); metal has no
-  subgroup path. Reference oracle folds via the spec helpers.
+  for integer add/min/max/and/or/xor and a shfl-idx XOR butterfly (one shared
+  `emit_subgroup_xor_butterfly` helper) with the op's combine instr for f32
+  add/mul/min/max AND integer mul (`mul.lo.{u32,s32}`, no hardware redux). Only
+  f32-bitwise FAILS CLOSED LOUD (no silent wrong code). spirv = capability-only
+  (arithmetic bit for all ops); metal has no subgroup path. Reference oracle folds
+  via the spec helpers.
 - Lowering payoff: `workgroup_max_*` now lowers to `subgroup_reduce(Max)` with the
   `-inf` two-level neutral (was a dead `None` keeping the slow shared tree).
 
@@ -83,15 +85,21 @@ Tests added (assert real values): spec reduce_u32 exact values + wrap + neutrals
 foundation lowering max (single + two-level -inf neutral); naga per-op→SubgroupOperation
 mapping; reference oracle u32 max/xor, f32 -inf max, f32-bitwise fail-loud.
 
-PTX f32 reduction now emits an XOR all-reduce via `shfl.sync.idx` (explicit
-`laneid ^ offset` source) so every lane ends with the full reduction (was a
-`shfl.sync.down` tree that fed only lane 0). Verified end-to-end on a real
-RTX 5090 (sm_120): `vyre-driver-cuda/tests/subgroup_reduce_gpu_parity.rs` runs
+PTX f32 reduction (and integer Mul, which also has no hardware redux) emit an XOR
+all-reduce via `shfl.sync.idx` (explicit `laneid ^ offset` source) so every lane
+ends with the full reduction (was a `shfl.sync.down` tree that fed only lane 0).
+Both go through one shared `emit_subgroup_xor_butterfly` helper (f32 bitcasts
+through b32 around the shuffle; the integer path shuffles the accumulator directly
+and combines with `mul.lo.{u32,s32}`). Verified end-to-end on a real RTX 5090
+(sm_120): `vyre-driver-cuda/tests/subgroup_reduce_gpu_parity.rs` runs
 `subgroup_reduce` over a 32-lane warp and asserts every lane holds the full
-reduction — f32 add (528) / f32 max (12.5) / u32 add (528) / u32 max (63), all
-passing. (`in` is declared read-only so the dispatch returns only `out` as
-`outputs[0]`; a read-write input is also returned, ahead of `out`, which once
-made these tests read back the unchanged input.)
+reduction — f32 add (528) / f32 max (12.5) / u32 add (528) / u32 mul (2310) /
+u32 max (63), all passing. (`in` is declared read-only so the dispatch returns
+only `out` as `outputs[0]`; a read-write input is also returned, ahead of `out`,
+which once made these tests read back the unchanged input.)
 
-Open follow-ons (NOT regressions; the lowering only emits Add/Max today):
-- integer subgroup Mul has no PTX redux; add a shfl butterfly if a generator needs it.
+Open follow-ons:
+- None for the reduce-op lowering itself: every (op,dtype) the lowering can emit
+  is now either a hardware `redux.sync` or the shared idx-XOR butterfly, and each
+  is GPU-verified. f32-bitwise (And/Or/Xor) remains a deliberate loud fail-closed
+  (no meaningful bitwise reduction over floats).

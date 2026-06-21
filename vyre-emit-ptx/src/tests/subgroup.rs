@@ -122,8 +122,9 @@ fn f32_subgroup_add_emits_shuffle_tree() {
     // All-lane broadcast contract: f32 reduction uses an XOR all-reduce so every
     // lane ends with the full result, NOT a shfl.down tree (which only feeds
     // lane 0). The exchange uses `.idx` mode with an explicit `laneid ^ offset`
-    // source — `.bfly` mode was verified to silently drop data on sm_80+.
-    // log2(32) = 5 exchange steps.
+    // source, mirroring the verified `subgroup_shuffle` lowering (idx-mode is
+    // proven all-lane correct on sm_120; we standardize on it rather than `.bfly`
+    // so one shuffle path is exercised everywhere). log2(32) = 5 exchange steps.
     assert!(s.contains("%laneid"));
     assert!(s.contains("shfl.sync.idx.b32"));
     assert!(!s.contains("shfl.sync.down.b32"));
@@ -165,6 +166,49 @@ fn u32_subgroup_add_emits_redux_sync() {
     };
     let s = emit(&kernel).unwrap();
     assert!(s.contains("redux.sync.add.u32"));
+}
+
+#[test]
+fn u32_subgroup_mul_emits_idx_butterfly_not_redux() {
+    // Integer product has no `redux.sync`; it must reduce with the shfl.idx XOR
+    // butterfly (laneid^offset source) and `mul.lo.u32`, all-lane-broadcast.
+    let kernel = KernelDescriptor {
+        id: "mul_u32".into(),
+        bindings: BindingLayout { slots: vec![] },
+        dispatch: Dispatch::new(64, 1, 1),
+        body: KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(0),
+                },
+                KernelOp {
+                    kind: KernelOpKind::SubgroupReduce { op: vyre_lower::SubgroupReduceOp::Mul },
+                    operands: vec![0],
+                    result: Some(1),
+                },
+            ],
+            child_bodies: vec![],
+            literals: vec![LiteralValue::U32(3)],
+        },
+    };
+    let s = emit(&kernel).unwrap();
+    assert!(s.contains("activemask.b32"));
+    assert!(s.contains("%laneid"));
+    assert!(s.contains("mul.lo.u32"));
+    assert!(!s.contains("redux.sync"));
+    assert!(
+        s.matches("xor.b32").count() >= 5,
+        "expected >=5 XOR-partner steps for a 32-lane warp, got: {s}"
+    );
+    assert!(
+        s.matches("shfl.sync.idx.b32").count() >= 5,
+        "expected >=5 idx-shuffle exchange steps for a 32-lane warp, got: {s}"
+    );
+    // Integer path shuffles the accumulator directly — no f32<->b32 bitcast pair
+    // and no float combine.
+    assert!(!s.contains(".f32"));
 }
 
 #[test]

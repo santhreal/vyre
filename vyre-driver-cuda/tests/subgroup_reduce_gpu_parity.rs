@@ -145,6 +145,28 @@ fn cuda_subgroup_add_u32_broadcasts_full_reduction_to_every_lane() {
 }
 
 #[test]
+fn cuda_subgroup_mul_u32_broadcasts_full_product_to_every_lane() {
+    // Integer product has no `redux.sync`; it lowers to the shfl.idx XOR
+    // butterfly. Most lanes are 1 with a few small primes so the product
+    // (2*3*5*7*11 = 2310) fits u32 and is order-independent.
+    let mut input = vec![1u32; LANES as usize];
+    for (slot, prime) in [2u32, 3, 5, 7, 11].into_iter().enumerate() {
+        input[slot * 5] = prime;
+    }
+    let expected: u32 = input.iter().product();
+    assert_eq!(expected, 2310, "2*3*5*7*11 sanity");
+
+    let out = run_reduce_u32(Expr::subgroup_mul, &input);
+
+    for (lane, &value) in out.iter().enumerate() {
+        assert_eq!(
+            value, expected,
+            "u32 subgroup_mul must broadcast the full product ({expected}) to lane {lane}, got {value}"
+        );
+    }
+}
+
+#[test]
 fn cuda_subgroup_max_u32_broadcasts_full_reduction_to_every_lane() {
     // Interleaved so the max (63) is NOT at lane 0 — a reduce-to-lane-0 path
     // would leave most lanes wrong.

@@ -288,6 +288,28 @@ mod tests {
     }
 
     #[test]
+    fn u32_mul_reduces_across_lanes() {
+        // Product is the differential ground truth for the PTX integer
+        // shfl-butterfly path (which has no `redux.sync`): 2*3*5*7 = 210.
+        let snapshots =
+            reduce_snapshots(&[Value::U32(2), Value::U32(3), Value::U32(5), Value::U32(7)]);
+        let entry: &[Node] = &[];
+        let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
+        let memory = HashmapMemory::new(FxHashMap::default());
+
+        let value = eval_subgroup_reduce(
+            SubgroupReduceOp::Mul,
+            &Expr::var("lane_value"),
+            &invocation,
+            &snapshots,
+            &memory,
+        )
+        .expect("u32 subgroup mul must evaluate");
+
+        assert_eq!(value, Value::U32(210));
+    }
+
+    #[test]
     fn f32_max_uses_neg_inf_identity_for_all_negative_lanes() {
         // The -inf identity is load-bearing: a 0 identity would wrongly win
         // when every lane is negative.
