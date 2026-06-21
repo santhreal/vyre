@@ -152,10 +152,18 @@ mod tests {
             )],
         );
 
-        assert_eq!(
-            f32_ulp_tolerance(&program),
+        // An elementary a*b+c program gets the program-level f32 policy budget:
+        // the FMA-contraction window (4 ULP) under the default lax policy, but
+        // EXACTLY 0 under `strict-fp`, which forbids contraction and demands
+        // bit-identical IEEE results (f32_ulp_tolerance's strict-fp arm). The
+        // assertion must track the active policy or it is wrong under
+        // --all-features (which enables strict-fp).
+        let expected = if cfg!(feature = "strict-fp") {
+            0
+        } else {
             BACKEND_ELEMENTARY_F32_ULP_BUDGET
-        );
+        };
+        assert_eq!(f32_ulp_tolerance(&program), expected);
     }
 
     #[test]

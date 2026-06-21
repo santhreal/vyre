@@ -29,7 +29,14 @@ vyre-foundation.workspace = true
 inventory.workspace = true
 
 [dev-dependencies]
-# integration tests/benches assert against these crates' public APIs
-vyre-primitives = { workspace = true }
-vyre-self-substrate = { workspace = true }
+# Integration tests assert against these crates' public APIs. The reference_* /
+# *_cpu oracles they call (reference_provenance_closure, reference_fingerprint,
+# sheaf_diffusion_step_cpu, compose_ir_arrows, ...) are
+# `#[cfg(any(test, feature = "cpu-parity"))]`, and a DEPENDENCY is never built
+# with the `test` cfg, so `cpu-parity` must be enabled here or the imports are
+# unresolved under --all-features. `graph` gates `vyre_primitives::graph::sheaf`
+# for the direct sheaf import; self-substrate's cpu-parity also propagates to
+# vyre-primitives/cpu-parity (belt-and-suspenders, matching its own dev-dep).
+vyre-primitives = { workspace = true, features = ["graph", "cpu-parity"] }
+vyre-self-substrate = { workspace = true, features = ["cpu-parity"] }
 proptest.workspace = true
