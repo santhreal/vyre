@@ -248,3 +248,40 @@ fn canonical_fingerprint_preserves_binding_block_scope() {
     );
 }
 
+#[test]
+fn canonical_fingerprint_distinguishes_subgroup_reduce_ops() {
+    // The structural fingerprint folds the SubgroupReduceOp wire tag (meta.rs's
+    // `Expr::SubgroupReduce` arm: `h.update(&[op.builtin_wire_tag()])`). If that
+    // fold were dropped, CSE would merge e.g. `subgroup_max(x)` with
+    // `subgroup_add(x)` into ONE reduction — a silent miscompile. Every distinct
+    // reduce op over the SAME operand must therefore hash distinctly.
+    let ops: [(&str, fn(Expr) -> Expr); 7] = [
+        ("add", Expr::subgroup_add),
+        ("mul", Expr::subgroup_mul),
+        ("min", Expr::subgroup_min),
+        ("max", Expr::subgroup_max),
+        ("and", Expr::subgroup_and),
+        ("or", Expr::subgroup_or),
+        ("xor", Expr::subgroup_xor),
+    ];
+    let mut seen: Vec<(&str, [u8; 32])> = Vec::new();
+    for (name, ctor) in ops {
+        let program = Program::wrapped(
+            vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+            [1, 1, 1],
+            vec![Node::store("out", Expr::u32(0), ctor(Expr::var("x")))],
+        );
+        let fingerprint = program.fingerprint();
+        for (other_name, other_fingerprint) in &seen {
+            assert_ne!(
+                fingerprint, *other_fingerprint,
+                "Fix: subgroup_{name} and subgroup_{other_name} must have distinct \
+                 fingerprints — the structural hash must fold the reduce op, else CSE \
+                 merges different reductions into one."
+            );
+        }
+        seen.push((name, fingerprint));
+    }
+    assert_eq!(seen.len(), 7, "all seven subgroup reduce ops must be fingerprinted");
+}
+
