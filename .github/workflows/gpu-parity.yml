@@ -89,6 +89,8 @@ jobs:
         run: ./cargo_full test -p vyre-driver-cuda --features cuda --test narrowing_cast_cuda_parity -- --test-threads=1 --nocapture
       - name: synthetic u32 binop (mulhi/abs_diff/saturating/rotate) parity vs oracle on real CUDA
         run: ./cargo_full test -p vyre-driver-cuda --features cuda --test synthetic_binop_cuda_parity -- --test-threads=1 --nocapture
+      - name: div/mod-by-zero sentinel + oversized-shift-mask oracle parity on real CUDA
+        run: ./cargo_full test -p vyre-driver-cuda --features cuda --test div_zero_shift_mask_cuda_parity -- --test-threads=1 --nocapture
 
   composition-parity-gpu:
     name: Composition parity on real GPU
