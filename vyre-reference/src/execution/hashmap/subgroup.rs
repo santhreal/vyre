@@ -351,4 +351,53 @@ mod tests {
             "error must name the bitwise/f32 mismatch: {error}"
         );
     }
+
+    #[test]
+    fn f32_mul_reduces_across_lanes() {
+        // Spec ground truth for the f32 shfl-butterfly `mul.f32` combine. The
+        // factors are exact dyadic values (2*3*0.5*4 = 12.0) matching the live
+        // GPU parity test `cuda_subgroup_mul_f32_*`, so oracle and hardware form
+        // a true differential pair on the same value.
+        let snapshots = reduce_snapshots(&[
+            Value::Float(2.0),
+            Value::Float(3.0),
+            Value::Float(0.5),
+            Value::Float(4.0),
+        ]);
+        let entry: &[Node] = &[];
+        let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
+        let memory = HashmapMemory::new(FxHashMap::default());
+
+        let value = eval_subgroup_reduce(
+            SubgroupReduceOp::Mul,
+            &Expr::var("lane_value"),
+            &invocation,
+            &snapshots,
+            &memory,
+        )
+        .expect("f32 subgroup mul must evaluate");
+
+        assert_eq!(value, Value::Float(12.0));
+    }
+
+    #[test]
+    fn f32_add_reduces_across_lanes() {
+        // The 0.0 additive identity fold: 1.0 + 2.5 + 3.5 = 7.0.
+        let snapshots =
+            reduce_snapshots(&[Value::Float(1.0), Value::Float(2.5), Value::Float(3.5)]);
+        let entry: &[Node] = &[];
+        let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
+        let memory = HashmapMemory::new(FxHashMap::default());
+
+        let value = eval_subgroup_reduce(
+            SubgroupReduceOp::Add,
+            &Expr::var("lane_value"),
+            &invocation,
+            &snapshots,
+            &memory,
+        )
+        .expect("f32 subgroup add must evaluate");
+
+        assert_eq!(value, Value::Float(7.0));
+    }
 }
