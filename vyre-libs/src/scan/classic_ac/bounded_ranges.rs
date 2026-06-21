@@ -17,12 +17,14 @@ pub use prefilter::{
     classic_ac_bounded_ranges_prefilter_program, classic_ac_bounded_ranges_prefilter_program_ext,
     classic_ac_bounded_ranges_suffix3_prefilter_program,
     classic_ac_bounded_ranges_suffix3_prefilter_program_ext,
+    classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_ext,
     classic_ac_bounded_ranges_suffix3_presence_by_region_program_ext,
     classic_ac_bounded_ranges_suffix3_presence_program_ext, presence_bitmap_words,
     presence_by_region_words, try_build_ac_bounded_ranges_prefilter_program,
     try_build_ac_bounded_ranges_prefilter_program_ext,
     try_build_ac_bounded_ranges_suffix3_prefilter_program,
     try_build_ac_bounded_ranges_suffix3_prefilter_program_ext,
+    try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program,
     try_build_ac_bounded_ranges_suffix3_presence_by_region_program,
     try_build_ac_bounded_ranges_suffix3_presence_program,
 };
@@ -458,6 +460,188 @@ fn bounded_ranges_presence_by_region_nodes(
                             Expr::bitand(Expr::var("pattern_id"), Expr::u32(31)),
                         ),
                     ),
+                ),
+            ]
+        }),
+    ];
+
+    vec![
+        Node::let_bind("state", Expr::u32(0)),
+        Node::let_bind("scan_start", scan_start),
+        Node::let_bind("scan_end", end),
+        Node::loop_for(
+            "step",
+            Expr::var("scan_start"),
+            Expr::var("scan_end"),
+            vec![
+                load_step_byte,
+                Node::assign(
+                    "state",
+                    Expr::load(
+                        transitions,
+                        Expr::add(Expr::mul(Expr::var("state"), Expr::u32(256)), step_byte),
+                    ),
+                ),
+            ],
+        ),
+        Node::let_bind("out_begin", Expr::load(output_offsets, Expr::var("state"))),
+        Node::let_bind(
+            "out_end",
+            Expr::load(output_offsets, Expr::add(Expr::var("state"), Expr::u32(1))),
+        ),
+        Node::if_then(
+            Expr::lt(Expr::var("out_begin"), Expr::var("out_end")),
+            region_and_emit,
+        ),
+    ]
+}
+
+/// FUSED presence-AND-positions region replay: one bounded-window DFA walk that, at
+/// each accepted candidate, emits BOTH the per-region presence bit (idempotent
+/// `atomic_or`, exactly as [`bounded_ranges_presence_by_region_nodes`]) AND the
+/// `(pattern_id, start, end)` match triple (atomic append, exactly as
+/// [`bounded_ranges_scan_nodes`]).
+///
+/// Innovation: a coalesced-batch consumer (keyhog's GPU phase-1) needs the per-file
+/// trigger SET *and* the anchor/keyword match POSITIONS. Today it pays TWO full GPU
+/// scans of the same haystack — `scan_presence_by_region` (bitmap) then a second
+/// `scan_into` (triples) — because the presence bitmap carries no positions. Both
+/// scans run the IDENTICAL suffix3 candidate gate + bounded DFA replay over the same
+/// `output_records`; only the per-record EMISSION differs. Fusing them runs the
+/// expensive walk ONCE and drives both outputs from the single `output_records`
+/// loop, halving the consumer's phase-1 work. Recall-identical to the two separate
+/// scans by construction: same candidate set, same walk, same iteration order — the
+/// presence bits equal `scan_presence_by_region`'s and the triples equal
+/// `scan_into`'s, just produced together.
+#[allow(clippy::too_many_arguments)]
+fn bounded_ranges_presence_and_positions_by_region_nodes(
+    haystack: &str,
+    transitions: &str,
+    output_offsets: &str,
+    output_records: &str,
+    pattern_lengths: &str,
+    presence: &str,
+    region_starts: &str,
+    region_base: &str,
+    match_count: &str,
+    matches: &str,
+    max_pattern_len: u32,
+    presence_words: u32,
+    log2_max_regions: u32,
+) -> Vec<Node> {
+    let max_pattern_len = max_pattern_len.max(1);
+    let i = Expr::var("i");
+    let end = Expr::add(i.clone(), Expr::u32(1));
+    let scan_start = Expr::select(
+        Expr::lt(i.clone(), Expr::u32(max_pattern_len - 1)),
+        Expr::u32(0),
+        Expr::sub(end.clone(), Expr::u32(max_pattern_len)),
+    );
+    let (load_step_byte, step_byte) = load_packed_byte(haystack, Expr::var("step"));
+
+    // Region binary search (identical to the presence-only builder), then ONE
+    // `output_records` loop that emits the region presence bit AND the match triple
+    // per accepted pattern. `pos = i + region_base` is the GLOBAL byte position so a
+    // sharded dispatch attributes against the whole-batch region table; see
+    // [`bounded_ranges_presence_by_region_nodes`] for the underflow-on-rejected-arm
+    // soundness note.
+    let region_and_emit = vec![
+        Node::let_bind(
+            "rs_pos",
+            Expr::add(i.clone(), Expr::load(region_base, Expr::u32(0))),
+        ),
+        Node::let_bind("rs_lo", Expr::u32(0)),
+        Node::let_bind(
+            "rs_hi",
+            Expr::sub(Expr::buf_len(region_starts), Expr::u32(1)),
+        ),
+        Node::loop_for(
+            "rs_step",
+            Expr::u32(0),
+            Expr::u32(log2_max_regions.max(1)),
+            vec![
+                Node::let_bind(
+                    "rs_mid",
+                    Expr::div(
+                        Expr::add(
+                            Expr::add(Expr::var("rs_lo"), Expr::var("rs_hi")),
+                            Expr::u32(1),
+                        ),
+                        Expr::u32(2),
+                    ),
+                ),
+                Node::let_bind(
+                    "rs_cond",
+                    Expr::le(
+                        Expr::load(region_starts, Expr::var("rs_mid")),
+                        Expr::var("rs_pos"),
+                    ),
+                ),
+                Node::assign(
+                    "rs_lo",
+                    Expr::select(
+                        Expr::var("rs_cond"),
+                        Expr::var("rs_mid"),
+                        Expr::var("rs_lo"),
+                    ),
+                ),
+                Node::assign(
+                    "rs_hi",
+                    Expr::select(
+                        Expr::var("rs_cond"),
+                        Expr::var("rs_hi"),
+                        Expr::sub(Expr::var("rs_mid"), Expr::u32(1)),
+                    ),
+                ),
+            ],
+        ),
+        Node::let_bind(
+            "rs_base",
+            Expr::mul(Expr::var("rs_lo"), Expr::u32(presence_words.max(1))),
+        ),
+        Node::loop_for("out_idx", Expr::var("out_begin"), Expr::var("out_end"), {
+            vec![
+                Node::let_bind(
+                    "pattern_id",
+                    Expr::load(output_records, Expr::var("out_idx")),
+                ),
+                Node::let_bind(
+                    "pat_len",
+                    Expr::load(pattern_lengths, Expr::var("pattern_id")),
+                ),
+                Node::let_bind(
+                    "match_start",
+                    Expr::select(
+                        Expr::lt(Expr::var("scan_end"), Expr::var("pat_len")),
+                        Expr::u32(0),
+                        Expr::sub(Expr::var("scan_end"), Expr::var("pat_len")),
+                    ),
+                ),
+                // presence[rs_base + (pattern_id >> 5)] |= 1u32 << (pattern_id & 31).
+                Node::let_bind(
+                    "_vyre_presence_prev",
+                    Expr::atomic_or(
+                        presence,
+                        Expr::add(
+                            Expr::var("rs_base"),
+                            Expr::shr(Expr::var("pattern_id"), Expr::u32(5)),
+                        ),
+                        Expr::shl(
+                            Expr::u32(1),
+                            Expr::bitand(Expr::var("pattern_id"), Expr::u32(31)),
+                        ),
+                    ),
+                ),
+                // (pattern_id, match_start, scan_end) triple append (same format as
+                // the match-emitting scan). No subgroup coalesce: the CUDA backend
+                // can't lower subgroup ops and the dense-hit benefit is the presence
+                // bitmap's job, not this fused path's.
+                append_match(
+                    matches,
+                    match_count,
+                    Expr::var("pattern_id"),
+                    Expr::var("match_start"),
+                    Expr::var("scan_end"),
                 ),
             ]
         }),

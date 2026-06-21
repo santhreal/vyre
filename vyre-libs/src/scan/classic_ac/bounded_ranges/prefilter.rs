@@ -14,10 +14,12 @@ pub use suffix3::{
     build_ac_bounded_ranges_suffix3_prefilter_program_ext,
     classic_ac_bounded_ranges_suffix3_prefilter_program,
     classic_ac_bounded_ranges_suffix3_prefilter_program_ext,
+    classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_ext,
     classic_ac_bounded_ranges_suffix3_presence_by_region_program_ext,
     classic_ac_bounded_ranges_suffix3_presence_program_ext, presence_bitmap_words,
     presence_by_region_words, try_build_ac_bounded_ranges_suffix3_prefilter_program,
     try_build_ac_bounded_ranges_suffix3_prefilter_program_ext,
+    try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program,
     try_build_ac_bounded_ranges_suffix3_presence_by_region_program,
     try_build_ac_bounded_ranges_suffix3_presence_program,
 };

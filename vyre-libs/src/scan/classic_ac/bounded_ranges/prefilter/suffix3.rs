@@ -8,6 +8,7 @@ use super::super::super::count_program::{
     suffix3_bloom_bit_index_expr, CLASSIC_AC_SUFFIX2_MASK_WORDS, CLASSIC_AC_SUFFIX3_BLOOM_WORDS,
 };
 use super::super::{
+    bounded_ranges_presence_and_positions_by_region_nodes,
     bounded_ranges_presence_by_region_nodes, bounded_ranges_presence_nodes,
     bounded_ranges_scan_nodes,
 };
@@ -548,6 +549,162 @@ pub fn try_build_ac_bounded_ranges_suffix3_presence_by_region_program(
             pattern_count,
             dfa.max_pattern_len,
             max_regions,
+        ),
+    )
+}
+
+/// FUSED region-presence + match-positions program: one suffix3-gated bounded-ranges
+/// scan that writes BOTH the per-region presence bitmap (binding 6, `atomic_or`, like
+/// [`classic_ac_bounded_ranges_suffix3_presence_by_region_program_ext`]) AND the
+/// `(pattern_id, start, end)` match triples (bindings 12 `match_count` + 13 `matches`,
+/// like [`classic_ac_bounded_ranges_suffix3_prefilter_program_ext`]).
+///
+/// Bindings 0-11 are byte-identical to the presence-by-region program (so an
+/// integration can share every uploaded static table and the `region_starts`/
+/// `region_base` inputs); bindings 12-13 add the match counter + triple output. A
+/// consumer that today dispatches the presence-by-region scan AND a separate
+/// position scan over the same haystack collapses both into ONE dispatch with this
+/// program — the expensive candidate gate + DFA replay runs once. The two outputs
+/// are recall-identical to the separate scans by construction (same candidate set,
+/// same `output_records` iteration).
+#[must_use]
+#[allow(clippy::too_many_arguments)]
+pub fn classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_ext(
+    haystack: &str,
+    transitions: &str,
+    output_offsets: &str,
+    output_records: &str,
+    pattern_lengths: &str,
+    haystack_len: &str,
+    presence: &str,
+    candidate_end_mask: &str,
+    candidate_suffix2_mask: &str,
+    candidate_suffix3_bloom: &str,
+    region_starts: &str,
+    region_base: &str,
+    match_count: &str,
+    matches: &str,
+    state_count: u32,
+    output_records_len: u32,
+    pattern_count: u32,
+    max_pattern_len: u32,
+    max_regions: u32,
+    max_matches: u32,
+) -> Program {
+    let presence_words = presence_bitmap_words(pattern_count);
+    let total_presence_words = presence_by_region_words(pattern_count, max_regions);
+    let replay_nodes = bounded_ranges_presence_and_positions_by_region_nodes(
+        haystack,
+        transitions,
+        output_offsets,
+        output_records,
+        pattern_lengths,
+        presence,
+        region_starts,
+        region_base,
+        match_count,
+        matches,
+        max_pattern_len,
+        presence_words,
+        ceil_log2(max_regions),
+    );
+    let body = suffix3_prefilter_body(
+        haystack,
+        haystack_len,
+        candidate_end_mask,
+        candidate_suffix2_mask,
+        candidate_suffix3_bloom,
+        replay_nodes,
+    );
+
+    Program::wrapped(
+        vec![
+            BufferDecl::storage(haystack, 0, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage(transitions, 1, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(state_count.saturating_mul(256)),
+            BufferDecl::storage(output_offsets, 2, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(state_count.saturating_add(1)),
+            BufferDecl::storage(output_records, 3, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(output_records_len),
+            BufferDecl::storage(pattern_lengths, 4, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(pattern_count),
+            BufferDecl::storage(haystack_len, 5, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(1),
+            BufferDecl::read_write(presence, 6, DataType::U32).with_count(total_presence_words),
+            BufferDecl::storage(candidate_end_mask, 7, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(8),
+            BufferDecl::storage(
+                candidate_suffix2_mask,
+                8,
+                BufferAccess::ReadOnly,
+                DataType::U32,
+            )
+            .with_count(CLASSIC_AC_SUFFIX2_MASK_WORDS as u32),
+            BufferDecl::storage(
+                candidate_suffix3_bloom,
+                9,
+                BufferAccess::ReadOnly,
+                DataType::U32,
+            )
+            .with_count(CLASSIC_AC_SUFFIX3_BLOOM_WORDS as u32),
+            BufferDecl::storage(region_starts, 10, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage(region_base, 11, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(1),
+            // Match counter (binding 12) + triple output (binding 13): the position
+            // half of the fused output. `append_match` bounds writes to
+            // `buf_len(matches) / 3 == max_matches`.
+            BufferDecl::read_write(match_count, 12, DataType::U32).with_count(1),
+            BufferDecl::output(matches, 13, DataType::U32)
+                .with_count(max_matches.saturating_mul(3)),
+        ],
+        [128, 1, 1],
+        vec![wrap_anonymous(
+            "vyre-libs::matching::classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region",
+            body,
+        )],
+    )
+}
+
+/// Build the fused region-presence + match-positions suffix3 program for a compiled
+/// DFA, sized for up to `max_regions` coalesced files and `max_matches` triples.
+///
+/// # Errors
+/// Returns an actionable error when DFA output-record metadata exceeds the u32 GPU
+/// buffer-count ABI.
+pub fn try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program(
+    dfa: &CompiledDfa,
+    pattern_count: u32,
+    max_regions: u32,
+    max_matches: u32,
+) -> Result<Program, String> {
+    let output_records_len = u32::try_from(dfa.output_records.len()).map_err(|source| {
+        format!(
+            "AC bounded-ranges suffix3 region-presence+positions DFA output record count {} exceeds u32 GPU buffer metadata: {source}. Fix: shard the pattern set or lower the DFA budget before dispatch.",
+            dfa.output_records.len()
+        )
+    })?;
+    Ok(
+        classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_ext(
+            "haystack",
+            "transitions",
+            "output_offsets",
+            "output_records",
+            "pattern_lengths",
+            "haystack_len",
+            "presence",
+            "candidate_end_mask",
+            "candidate_suffix2_mask",
+            "candidate_suffix3_bloom",
+            "region_starts",
+            "region_base",
+            "match_count",
+            "matches",
+            dfa.state_count,
+            output_records_len,
+            pattern_count,
+            dfa.max_pattern_len,
+            max_regions,
+            max_matches,
         ),
     )
 }

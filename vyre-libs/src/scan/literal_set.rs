@@ -4,9 +4,9 @@
 
 use crate::scan::classic_ac::{
     build_ac_bounded_count_suffix3_prefilter_program,
-    build_ac_bounded_ranges_suffix3_prefilter_program_ext,
     classic_ac_candidate_suffix3_bloom_words, presence_bitmap_words, presence_by_region_words,
     try_build_ac_bounded_ranges_suffix3_prefilter_program_ext,
+    try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program,
     try_build_ac_bounded_ranges_suffix3_presence_by_region_program,
     try_build_ac_bounded_ranges_suffix3_presence_program, CLASSIC_AC_SUFFIX2_MASK_WORDS,
 };
@@ -842,6 +842,159 @@ impl GpuLiteralSet {
             .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
             .collect();
         Ok(words)
+    }
+
+    /// FUSED region-presence + match-positions GPU scan: ONE dispatch returns BOTH
+    /// the per-region presence bitmap (the return value, identical to
+    /// [`Self::scan_presence_by_region`]) AND the `(pattern_id, start, end)` match
+    /// triples (decoded into `matches`, identical to [`Self::scan_into`]).
+    ///
+    /// This collapses the two-pass pattern a coalesced consumer uses today — a
+    /// presence-by-region scan to learn WHICH patterns fired per file, then a
+    /// SEPARATE position scan over the same haystack to learn WHERE — into a single
+    /// suffix3-gated walk. Both outputs are recall-identical to the separate scans by
+    /// construction: the same candidate gate, DFA replay, and `output_records`
+    /// iteration drive both, so the presence bits equal
+    /// [`Self::scan_presence_by_region`]'s and the triples equal [`Self::scan_into`]'s.
+    ///
+    /// `region_starts` / `region_base` behave as in
+    /// [`Self::scan_presence_by_region_with_scratch`]; `max_matches` bounds the triple
+    /// output as in [`Self::scan_into`]. The returned bitmap is
+    /// `region_starts.len() × presence_bitmap_words(pattern_count)` words.
+    ///
+    /// # Errors
+    /// Returns [`vyre::BackendError`] on dispatch/readback failure, scan-boundary
+    /// validation, an empty or non-zero-based `region_starts`, or a pattern/region
+    /// count exceeding the u32 GPU ABI.
+    #[allow(clippy::too_many_arguments)]
+    pub fn scan_presence_and_positions_by_region_with_scratch<B: VyreBackend + ?Sized>(
+        &self,
+        backend: &B,
+        haystack: &[u8],
+        region_starts: &[u32],
+        region_base: u32,
+        max_matches: u32,
+        matches: &mut Vec<Match>,
+        scratch: &mut ScanDispatchScratch,
+    ) -> Result<Vec<u32>, vyre::BackendError> {
+        use crate::scan::dispatch_io;
+
+        matches.clear();
+        let pattern_count = u32::try_from(self.pattern_lengths.len()).map_err(|_| {
+            vyre::BackendError::new(
+                "literal_set region-presence+positions: pattern count exceeds u32 GPU ABI"
+                    .to_string(),
+            )
+        })?;
+        let region_count = u32::try_from(region_starts.len()).map_err(|_| {
+            vyre::BackendError::new(
+                "literal_set region-presence+positions: region count exceeds u32 GPU ABI"
+                    .to_string(),
+            )
+        })?;
+        if region_count == 0 {
+            return Err(vyre::BackendError::new(
+                "literal_set region-presence+positions: region_starts must be non-empty. Fix: pass one start offset per coalesced file, beginning with 0.".to_string(),
+            ));
+        }
+        if region_starts[0] != 0 {
+            return Err(vyre::BackendError::new(
+                "literal_set region-presence+positions: region_starts[0] must be 0 (the kernel binary-search lower bound). Fix: the first coalesced file must start at offset 0.".to_string(),
+            ));
+        }
+        let total_words = presence_by_region_words(pattern_count, region_count) as usize;
+        let program =
+            try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program(
+                &self.dfa,
+                pattern_count,
+                region_count,
+                max_matches,
+            )
+            .map_err(vyre::BackendError::new)?;
+        let prefilter_tables = self.build_prefilter_tables()?;
+
+        let haystack_len = dispatch_io::scan_guard(
+            haystack,
+            "literal_set_presence_and_positions_by_region",
+            dispatch_io::DEFAULT_MAX_SCAN_BYTES,
+        )?;
+        dispatch_io::pack_haystack_u32_into(haystack, &mut scratch.haystack_bytes)?;
+        let haystack_bytes = scratch.haystack_bytes.as_slice();
+        let transition_bytes = dispatch_io::u32_words_as_le_bytes(&self.dfa.transitions);
+        let output_offset_bytes = dispatch_io::u32_words_as_le_bytes(&self.dfa.output_offsets);
+        let output_record_bytes = dispatch_io::u32_words_as_le_bytes(&self.dfa.output_records);
+        let pattern_length_bytes = dispatch_io::u32_words_as_le_bytes(&self.pattern_lengths);
+        let candidate_end_mask_bytes =
+            dispatch_io::u32_words_as_le_bytes(&prefilter_tables.candidate_end_mask);
+        let candidate_suffix2_mask_bytes =
+            dispatch_io::u32_words_as_le_bytes(&prefilter_tables.candidate_suffix2_mask);
+        let candidate_suffix3_bloom_bytes =
+            dispatch_io::u32_words_as_le_bytes(&prefilter_tables.candidate_suffix3_bloom);
+        let haystack_len_word = [haystack_len];
+        let haystack_len_bytes = dispatch_io::u32_words_as_le_bytes(&haystack_len_word);
+        let region_starts_bytes = dispatch_io::u32_words_as_le_bytes(region_starts);
+        let region_base_bytes = region_base.to_le_bytes();
+        // Both read-write buffers are uploaded zeroed; the matches output (binding
+        // 13) is a pure `BufferDecl::output` the backend allocates from the program.
+        let presence_zeroed = vec![0u8; total_words.saturating_mul(4)];
+        let match_count_bytes = [0u8; 4];
+
+        let config =
+            dispatch_io::byte_scan_dispatch_config(haystack_len, program.workgroup_size[0]);
+        let borrowed_inputs: smallvec::SmallVec<[&[u8]; 13]> = [
+            haystack_bytes,                         // 0: haystack (Packed U32)
+            transition_bytes.as_ref(),              // 1: transitions
+            output_offset_bytes.as_ref(),           // 2: output_offsets
+            output_record_bytes.as_ref(),           // 3: output_records
+            pattern_length_bytes.as_ref(),          // 4: pattern_lengths
+            haystack_len_bytes.as_ref(),            // 5: haystack_len
+            presence_zeroed.as_slice(),             // 6: per-region presence (read_write)
+            candidate_end_mask_bytes.as_ref(),      // 7: candidate_end_mask
+            candidate_suffix2_mask_bytes.as_ref(),  // 8: candidate_suffix2_mask
+            candidate_suffix3_bloom_bytes.as_ref(), // 9: candidate_suffix3_bloom
+            region_starts_bytes.as_ref(),           // 10: region_starts
+            region_base_bytes.as_slice(),           // 11: region_base (shard offset)
+            match_count_bytes.as_slice(),           // 12: match_count (read_write)
+                                                    // 13: matches output (backend-allocated)
+        ]
+        .into_iter()
+        .collect();
+        let outputs = backend.dispatch_borrowed(&program, &borrowed_inputs, &config)?;
+
+        // Output ordering = read_write + output buffers by binding:
+        // presence(6) -> outputs[0], match_count(12) -> outputs[1], matches(13) -> outputs[2].
+        let presence_bytes = dispatch_io::try_output_bytes(
+            &outputs,
+            0,
+            "literal_set presence_and_positions_by_region presence",
+        )?;
+        let presence_words: Vec<u32> = presence_bytes
+            .chunks_exact(4)
+            .take(total_words)
+            .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
+            .collect();
+
+        let count_bytes = dispatch_io::try_output_bytes(
+            &outputs,
+            1,
+            "literal_set presence_and_positions_by_region match count",
+        )?;
+        let count = dispatch_io::try_read_u32_prefix(
+            count_bytes,
+            "literal_set presence_and_positions_by_region match count",
+        )?;
+        let matches_bytes = dispatch_io::try_output_bytes(
+            &outputs,
+            2,
+            "literal_set presence_and_positions_by_region matches",
+        )?;
+        dispatch_io::try_unpack_match_triples_exact_prefix_into(
+            matches_bytes,
+            count.min(max_matches),
+            matches,
+        )?;
+
+        Ok(presence_words)
     }
 
     fn scan_into_with_program<B: VyreBackend + ?Sized>(
@@ -2372,6 +2525,142 @@ mod compile_tests {
         expected.sort_unstable();
 
         assert_eq!(actual, expected);
+    }
+
+    /// CPU reference oracle for the FUSED region-presence + match-positions program.
+    /// One `reference_eval` of the fused suffix3 program must produce BOTH outputs
+    /// recall-identically to running the two scans separately:
+    ///   - the match triples must equal `reference_scan` (the linear AC oracle), and
+    ///   - each region's presence bits must equal the set of pattern ids whose match
+    ///     end falls in that region.
+    /// This is the soundness contract keyhog's GPU phase-1 fold depends on: collapsing
+    /// `scan_presence_by_region` + a separate position scan into one walk must change
+    /// neither output. CPU-only (no GPU) so it runs in the lib gate.
+    #[test]
+    fn fused_presence_and_positions_by_region_reference_eval_matches_both_oracles() {
+        // patterns -> ids 0=abc, 1=xyz, 2=BEGIN (compile preserves input order).
+        let patterns: [&[u8]; 3] = [b"abc", b"xyz", b"BEGIN"];
+        // Two coalesced regions; no match spans the boundary.
+        //   region 0 = [0, 7)  "ooabcoo"     -> holds "abc"
+        //   region 1 = [7, 21) "ooxyzooBEGINoo" -> holds "xyz" and "BEGIN"
+        let haystack = b"ooabcooooxyzooBEGINoo";
+        let region_starts: [u32; 2] = [0, 7];
+        let pattern_count: u32 = 3;
+        let region_count: u32 = 2;
+        let max_matches: u32 = 64;
+
+        let engine = GpuLiteralSet::compile(&patterns);
+        let prefilter = engine
+            .build_prefilter_tables()
+            .expect("Fix: small literal-set prefilter tables should build");
+        let total_presence_words =
+            presence_by_region_words(pattern_count, region_count) as usize;
+
+        // Inputs in binding order (read-write buffers passed zeroed; the matches
+        // output at binding 13 is backend-allocated and not passed).
+        let inputs = vec![
+            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_haystack_u32(
+                haystack,
+            )),
+            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(
+                &engine.dfa.transitions,
+            )),
+            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(
+                &engine.dfa.output_offsets,
+            )),
+            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(
+                &engine.dfa.output_records,
+            )),
+            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(
+                &engine.pattern_lengths,
+            )),
+            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(&[
+                haystack.len() as u32,
+            ])),
+            // 6: per-region presence, zeroed.
+            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(
+                &vec![0u32; total_presence_words],
+            )),
+            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(
+                &prefilter.candidate_end_mask,
+            )),
+            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(
+                &prefilter.candidate_suffix2_mask,
+            )),
+            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(
+                &prefilter.candidate_suffix3_bloom,
+            )),
+            // 10: region_starts, 11: region_base (0), 12: match_count (zeroed).
+            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(
+                &region_starts,
+            )),
+            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(&[0u32])),
+            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(&[0u32])),
+        ];
+
+        let program = try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program(
+            &engine.dfa,
+            pattern_count,
+            region_count,
+            max_matches,
+        )
+        .expect("Fix: fused presence+positions program should build for a 3-pattern set");
+        let outputs = vyre_reference::reference_eval(&program, &inputs)
+            .expect("Fix: fused presence+positions program should evaluate in the reference backend");
+
+        // outputs[0] = presence (read_write binding 6), [1] = match_count (12),
+        // [2] = matches (13).
+        let presence = decode_u32_words(&outputs[0].to_bytes());
+        let count = decode_u32_words(&outputs[1].to_bytes())[0] as usize;
+        let mut actual_matches: Vec<Match> = decode_u32_words(&outputs[2].to_bytes())
+            .into_iter()
+            .take(count.saturating_mul(3))
+            .collect::<Vec<_>>()
+            .chunks_exact(3)
+            .map(|chunk| Match::new(chunk[0], chunk[1], chunk[2]))
+            .collect();
+
+        // (1) Positions: the fused triples must equal the linear AC oracle exactly.
+        let mut expected_matches = engine.reference_scan(haystack);
+        actual_matches.sort_unstable();
+        expected_matches.sort_unstable();
+        assert_eq!(
+            actual_matches, expected_matches,
+            "fused match triples must equal reference_scan; got count={count}"
+        );
+        assert_eq!(count, 3, "exactly abc + xyz + BEGIN should match");
+
+        // (2) Presence: derive the expected per-region bitmap from the SAME oracle
+        // matches (region = largest r with region_starts[r] <= end-1; pid<32 so one
+        // word per region) and require the fused presence to equal it bit-for-bit.
+        assert_eq!(
+            presence.len(),
+            total_presence_words,
+            "fused presence must be region_count x presence_words"
+        );
+        let presence_words = presence_bitmap_words(pattern_count) as usize;
+        let mut expected_presence = vec![0u32; total_presence_words];
+        for m in &expected_matches {
+            let pos = m.end - 1;
+            let region = region_starts
+                .iter()
+                .rposition(|&start| start <= pos)
+                .expect("every match position lands in a region (region_starts[0]==0)");
+            expected_presence[region * presence_words + (m.pattern_id >> 5) as usize] |=
+                1u32 << (m.pattern_id & 31);
+        }
+        assert_eq!(
+            presence, expected_presence,
+            "fused per-region presence must equal the region-mapped firing set"
+        );
+        // Concrete cross-check of the derived expectation: region 0 = {abc(id0)},
+        // region 1 = {xyz(id1), BEGIN(id2)}.
+        assert_eq!(presence[0], 1 << 0, "region 0 presence must be exactly {{abc}}");
+        assert_eq!(
+            presence[1],
+            (1 << 1) | (1 << 2),
+            "region 1 presence must be exactly {{xyz, BEGIN}}"
+        );
     }
 
     #[test]
