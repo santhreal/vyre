@@ -210,6 +210,29 @@ impl BodyCtx<'_> {
                 let _ = writeln!(self.text, "    selp.u32    {out}, 0, {diff}, {underflow};");
                 Ok((out, PtxType::U32))
             }
+            BinOp::SaturatingMul if ty == PtxType::U32 || ty == PtxType::Bool => {
+                // Full 64-bit product via the native widening multiply, clamped to
+                // u32::MAX when it overflows 32 bits — i.e. when the product's high
+                // word is non-zero. Byte-for-byte `u32::saturating_mul` and the
+                // oracle's `select(b != 0 && a > MAX/b, MAX, a*b)` contract, without
+                // an emulated division.
+                let prod = self.alloc(PtxType::U64);
+                let prod_hi64 = self.alloc(PtxType::U64);
+                let lo = self.alloc(PtxType::U32);
+                let hi = self.alloc(PtxType::U32);
+                let overflow = self.alloc(PtxType::Bool);
+                let out = self.alloc(PtxType::U32);
+                let _ = writeln!(self.text, "    mul.wide.u32    {prod}, {left}, {right};");
+                let _ = writeln!(self.text, "    cvt.u32.u64    {lo}, {prod};");
+                let _ = writeln!(self.text, "    shr.u64    {prod_hi64}, {prod}, 32;");
+                let _ = writeln!(self.text, "    cvt.u32.u64    {hi}, {prod_hi64};");
+                let _ = writeln!(self.text, "    setp.ne.u32    {overflow}, {hi}, 0;");
+                let _ = writeln!(
+                    self.text,
+                    "    selp.u32    {out}, 0xffffffff, {lo}, {overflow};"
+                );
+                Ok((out, PtxType::U32))
+            }
             _ => {
                 let out_ty = if matches!(op, BinOp::And | BinOp::Or) && ty == PtxType::Bool {
                     PtxType::Bool

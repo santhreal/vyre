@@ -67,6 +67,29 @@ jobs:
       - name: integer unary (negate/bitnot/popcount/clz/ctz/reverse_bits) parity vs oracle on real GPU
         run: ./cargo_full test -p vyre-driver-wgpu --test unary_int_parity -- --test-threads=1 --nocapture
 
+  cuda-driver-contracts:
+    name: CUDA backend contracts
+    needs: gpu-adapter-probe
+    runs-on: [self-hosted, gpu-5090]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      # The PTX/CUDA backend lowers casts and synthetic binops DIFFERENTLY from
+      # naga (native cvt/mul.hi/shf vs vec2/select synthesis), so the wgpu parity
+      # gates above transfer nothing — the CUDA route needs its own live-GPU
+      # differential. These per-test matrices were developer-run only (named in no
+      # workflow); this job gates them on the real device.
+      - name: generated i32/scalar/cast IR semantics differential vs reference on real CUDA
+        run: ./cargo_full test -p vyre-driver-cuda --features cuda --test generated_i32_cuda_reference_matrix --test generated_scalar_cuda_reference_matrix --test generated_cast_fma_cuda_reference_matrix -- --test-threads=1 --nocapture
+      - name: 64-bit widening cast (i32/u32 -> i64/u64) sign/zero-extend parity on real CUDA
+        run: ./cargo_full test -p vyre-driver-cuda --features cuda --test widening_cast_64_cuda_parity -- --test-threads=1 --nocapture
+      - name: integer-narrowing cast (u32 -> u8/u16/i8/i16) truncate/sign-extend parity on real CUDA
+        run: ./cargo_full test -p vyre-driver-cuda --features cuda --test narrowing_cast_cuda_parity -- --test-threads=1 --nocapture
+      - name: synthetic u32 binop (mulhi/abs_diff/saturating/rotate) parity vs oracle on real CUDA
+        run: ./cargo_full test -p vyre-driver-cuda --features cuda --test synthetic_binop_cuda_parity -- --test-threads=1 --nocapture
+
   composition-parity-gpu:
     name: Composition parity on real GPU
     needs: gpu-adapter-probe
