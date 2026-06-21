@@ -110,10 +110,51 @@ pub(crate) fn cast_value(target: &DataType, value: &Value) -> Result<Value, vyre
                 .ok_or_else(|| invalid_cast(target, value)),
         },
         DataType::Bool => Ok(Value::Bool(value.truthy())),
+        // Narrowing integer casts TRUNCATE the high bits and keep the low
+        // `width` bits, matching the documented V035 contract ("narrowing cast
+        // may truncate high bits"), Rust `value as u8/u16/i8/i16`, and the masked
+        // narrowing the naga/PTX emitters now apply. WGSL/PTX have no native
+        // 8/16-bit scalar register, so a narrowed value is held in a 32-bit slot:
+        // U8/U16 keep the masked unsigned magnitude (`Value::U32`), while I8/I16
+        // SIGN-extend from the new top bit (`Value::I32`) so e.g. `200 as i8`
+        // == -56 and `-1i32 as u8` == 255. Before this arm existed these targets
+        // fell through to the `_ => to_bytes()` catch-all, which returned the
+        // source's full-width raw bytes (a `Value::Bytes`, neither a scalar nor
+        // narrowed) — diverging from every backend AND from the V035 contract.
+        // The float source is already rejected above (a float has no defined
+        // conversion to a narrow int), so `source_low_word` only sees integers.
+        DataType::U8 => narrow_low_word(target, value).map(|bits| Value::U32(bits & 0xFF)),
+        DataType::U16 => narrow_low_word(target, value).map(|bits| Value::U32(bits & 0xFFFF)),
+        DataType::I8 => {
+            narrow_low_word(target, value).map(|bits| Value::I32(i32::from(bits as u8 as i8)))
+        }
+        DataType::I16 => {
+            narrow_low_word(target, value).map(|bits| Value::I32(i32::from(bits as u16 as i16)))
+        }
         DataType::Bytes => Ok(Value::from(value.to_bytes())),
         DataType::Vec2U32 => Ok(Value::from(widen_to_words(value, 2))),
         DataType::Vec4U32 => Ok(Value::from(widen_to_words(value, 4))),
         _ => Ok(Value::from(value.to_bytes())),
+    }
+}
+
+/// The raw low 32 bits of an integer-like scalar source, sign-agnostic.
+///
+/// Distinct from `Value::try_as_u32`, which REJECTS negative `i32`/out-of-range
+/// `u64` (it answers "does this value fit losslessly in a u32?"). A narrowing
+/// cast instead reinterprets the source's bit pattern and discards the high
+/// bits, so it must read the low word even for a negative source: `-1i32` has
+/// bits `0xFFFF_FFFF`, and `-1i32 as u8` == `0xFF` == 255. Fails closed for a
+/// `Float`/`Array` source (a float is already rejected upstream for narrow
+/// targets; an array is not a scalar).
+fn narrow_low_word(target: &DataType, value: &Value) -> Result<u32, vyre::Error> {
+    match value {
+        Value::U32(v) => Ok(*v),
+        Value::I32(v) => Ok(*v as u32),
+        Value::U64(v) => Ok(*v as u32),
+        Value::Bool(b) => Ok(u32::from(*b)),
+        Value::Bytes(bytes) => Ok(read_u32_prefix(bytes)),
+        Value::Float(_) | Value::Array(_) => Err(invalid_cast(target, value)),
     }
 }
 
@@ -314,6 +355,96 @@ mod tests {
             cast_value(&DataType::F32, &Value::Float(2.5)).expect("f32->f32 must succeed"),
             Value::Float(2.5),
             "f32 -> f32 is identity"
+        );
+    }
+
+    /// Unsigned narrowing truncates to the low `width` bits (Rust `as u8/u16`),
+    /// keeping the masked magnitude in a u32 slot. Before the explicit arm these
+    /// targets fell to the `_ => to_bytes()` catch-all and returned a 4-byte
+    /// `Value::Bytes` (the source's full word), never the narrowed scalar.
+    #[test]
+    fn cast_to_unsigned_narrow_int_truncates_high_bits() {
+        // 300 = 0x12C; low byte 0x2C = 44.
+        assert_eq!(
+            cast_value(&DataType::U8, &Value::U32(300)).expect("u32->u8 must succeed"),
+            Value::U32(44),
+            "300u32 as u8 must truncate to 44, not stay 300 or become Bytes"
+        );
+        // 0x1_2345 -> low 16 bits 0x2345.
+        assert_eq!(
+            cast_value(&DataType::U16, &Value::U32(0x0001_2345)).expect("u32->u16 must succeed"),
+            Value::U32(0x2345),
+            "0x12345u32 as u16 must keep the low 16 bits"
+        );
+        // A negative i32 reinterprets its bits, not rejected: -1i32 bits 0xFFFF_FFFF.
+        assert_eq!(
+            cast_value(&DataType::U8, &Value::I32(-1)).expect("i32->u8 must succeed"),
+            Value::U32(255),
+            "-1i32 as u8 must be 255 (low byte of 0xFFFFFFFF), not a rejection"
+        );
+        // A 64-bit source narrows through its low word.
+        assert_eq!(
+            cast_value(&DataType::U8, &Value::U64(0xDEAD_BEEF_0000_01FF))
+                .expect("u64->u8 must succeed"),
+            Value::U32(0xFF),
+            "u64 as u8 must take the low byte of the low word"
+        );
+    }
+
+    /// Signed narrowing truncates to the low `width` bits then SIGN-extends from
+    /// the new top bit (Rust `as i8/i16`), held as a sign-extended i32.
+    #[test]
+    fn cast_to_signed_narrow_int_truncates_and_sign_extends() {
+        // 200 & 0xFF = 200; as i8 the top bit is set -> -56.
+        assert_eq!(
+            cast_value(&DataType::I8, &Value::U32(200)).expect("u32->i8 must succeed"),
+            Value::I32(-56),
+            "200u32 as i8 must sign-extend to -56"
+        );
+        // 44 stays positive (top bit clear).
+        assert_eq!(
+            cast_value(&DataType::I8, &Value::U32(300)).expect("u32->i8 must succeed"),
+            Value::I32(44),
+            "300u32 as i8 truncates to 44 (positive)"
+        );
+        // 0xFFFF as i16 -> -1.
+        assert_eq!(
+            cast_value(&DataType::I16, &Value::U32(0xFFFF)).expect("u32->i16 must succeed"),
+            Value::I32(-1),
+            "0xFFFFu32 as i16 must sign-extend to -1"
+        );
+        // 0x8000 as i16 -> i16::MIN = -32768.
+        assert_eq!(
+            cast_value(&DataType::I16, &Value::U32(0x8000)).expect("u32->i16 must succeed"),
+            Value::I32(-32768),
+            "0x8000u32 as i16 is i16::MIN"
+        );
+        // -1i32 as i8 stays -1 (all low bits set, sign-extends back).
+        assert_eq!(
+            cast_value(&DataType::I8, &Value::I32(-1)).expect("i32->i8 must succeed"),
+            Value::I32(-1),
+            "-1i32 as i8 is -1"
+        );
+    }
+
+    /// A narrowing cast of a NON-scalar/float source fails closed (a float has
+    /// no defined narrow conversion; an array is not a scalar), rather than
+    /// silently byte-copying through the old catch-all.
+    #[test]
+    fn cast_to_narrow_int_from_undefined_source_fails_closed() {
+        // Float -> U8 is rejected by the upstream float guard.
+        let err = cast_value(&DataType::U8, &Value::Float(3.5))
+            .expect_err("f32 -> u8 must fail closed");
+        assert!(
+            format!("{err:?}").contains("no defined conversion"),
+            "f32 -> u8 must use the float-cast message, got: {err:?}"
+        );
+        // Array -> I16 is rejected by narrow_low_word.
+        let err = cast_value(&DataType::I16, &Value::Array(vec![Value::U32(1)]))
+            .expect_err("array -> i16 must fail closed");
+        assert!(
+            format!("{err:?}").contains("cannot represent"),
+            "array -> i16 must use the invalid-cast message, got: {err:?}"
         );
     }
 

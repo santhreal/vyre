@@ -584,6 +584,85 @@ fn u64_to_bool_cast_uses_both_words_and_validates() {
 }
 
 /// Load a `src_elem` value, cast to `target`, store to an `out_elem` buffer.
+/// A narrowing integer cast (u32 -> u8/u16) must TRUNCATE the high bits to the
+/// target width, not keep the full 32-bit word. WGSL has no u8/u16 scalar, so
+/// `scalar_cast_target` backs them with a `Uint` (u32) register and the bare
+/// `As` is a no-op for a u32 source — the emitter must mask `& 0xFF` / `& 0xFFFF`
+/// so the result matches Rust `as u8/u16`, the V035 contract, and the reference
+/// oracle. Stores the narrowed value into a U32 out buffer so the truncation is
+/// visible as a full word (not masked again by a byte-element store).
+#[test]
+fn unsigned_narrowing_cast_masks_to_width_and_validates() {
+    use naga::valid::{Capabilities, ValidationFlags, Validator};
+    for (target, mask) in [(DataType::U8, 0xFFu32), (DataType::U16, 0xFFFFu32)] {
+        let module = emit(&wide_cast_desc(DataType::U32, target.clone(), DataType::U32))
+            .unwrap_or_else(|e| panic!("u32->{target:?} cast must emit: {e}"));
+        Validator::new(ValidationFlags::all(), Capabilities::all())
+            .validate(&module)
+            .unwrap_or_else(|e| panic!("u32->{target:?} narrowing cast: INVALID WGSL: {e:?}"));
+        let arena = &module
+            .entry_points
+            .first()
+            .expect("entry point")
+            .function
+            .expressions;
+        let has_mask_literal = arena.iter().any(|(_, e)| {
+            matches!(e, naga::Expression::Literal(naga::Literal::U32(m)) if *m == mask)
+        });
+        assert!(
+            has_mask_literal,
+            "u32->{target:?} must materialize the 0x{mask:X} width mask"
+        );
+        let has_and = arena
+            .iter()
+            .any(|(_, e)| matches!(e, naga::Expression::Binary { op, .. } if *op == naga::BinaryOperator::And));
+        assert!(
+            has_and,
+            "u32->{target:?} must AND the value with the width mask to truncate high bits"
+        );
+    }
+}
+
+/// A signed narrowing cast (u32 -> i8/i16) must truncate to the target width and
+/// SIGN-extend from the new top bit (Rust `as i8/i16`), emitted as the
+/// `(x << shift) >> shift` arithmetic-shift idiom (`shift` = 24 for i8, 16 for
+/// i16). Stores into an I32 out buffer to surface the sign-extended value.
+#[test]
+fn signed_narrowing_cast_sign_extends_and_validates() {
+    use naga::valid::{Capabilities, ValidationFlags, Validator};
+    for (target, shift) in [(DataType::I8, 24u32), (DataType::I16, 16u32)] {
+        let module = emit(&wide_cast_desc(DataType::U32, target.clone(), DataType::I32))
+            .unwrap_or_else(|e| panic!("u32->{target:?} cast must emit: {e}"));
+        Validator::new(ValidationFlags::all(), Capabilities::all())
+            .validate(&module)
+            .unwrap_or_else(|e| panic!("u32->{target:?} narrowing cast: INVALID WGSL: {e:?}"));
+        let arena = &module
+            .entry_points
+            .first()
+            .expect("entry point")
+            .function
+            .expressions;
+        let has_shift_literal = arena.iter().any(|(_, e)| {
+            matches!(e, naga::Expression::Literal(naga::Literal::U32(s)) if *s == shift)
+        });
+        assert!(
+            has_shift_literal,
+            "i{} narrowing must materialize the shift amount {shift}",
+            if matches!(target, DataType::I8) { 8 } else { 16 }
+        );
+        let shift_left = arena.iter().any(|(_, e)| {
+            matches!(e, naga::Expression::Binary { op, .. } if *op == naga::BinaryOperator::ShiftLeft)
+        });
+        let shift_right = arena.iter().any(|(_, e)| {
+            matches!(e, naga::Expression::Binary { op, .. } if *op == naga::BinaryOperator::ShiftRight)
+        });
+        assert!(
+            shift_left && shift_right,
+            "u32->{target:?} must sign-extend via (x << {shift}) >> {shift}"
+        );
+    }
+}
+
 fn wide_cast_desc(src_elem: DataType, target: DataType, out_elem: DataType) -> KernelDescriptor {
     KernelDescriptor {
         id: "wide_cast".into(),

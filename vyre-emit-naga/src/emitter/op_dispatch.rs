@@ -641,6 +641,11 @@ impl BodyBuilder<'_> {
                                 kind,
                                 convert: Some(width),
                             });
+                            // A 64-bit source narrowing to u8/u16/i8/i16 keeps
+                            // only the low word's low bits — truncate the `As`
+                            // result to the narrow target width (matches the
+                            // oracle's `u64 as u8` low-byte semantics).
+                            let value = self.apply_narrow_mask(value, target);
                             let ty = self.type_for_data_type(target)?;
                             return self.bind_result_typed(op, value, ty);
                         }
@@ -833,6 +838,10 @@ impl BodyBuilder<'_> {
                     kind,
                     convert: Some(width),
                 });
+                // Integer narrowing (u32 -> u8/u16/i8/i16): the `As` above keeps
+                // the full 32-bit word; mask/sign-extend to the target width so
+                // the emitter matches Rust `as` and the reference oracle.
+                let value = self.apply_narrow_mask(value, target);
                 let ty = self.type_for_data_type(target)?;
                 self.bind_result_typed(op, value, ty)
             }),
@@ -995,6 +1004,64 @@ impl BodyBuilder<'_> {
                 route,
                 KernelOpKind::LoopCarrierEnd { name } => self.emit_loop_carrier_end(op, name)
             ),
+        }
+    }
+
+    /// Truncate a 32-bit scalar cast result to a narrow integer target's width.
+    ///
+    /// WGSL has no native 8/16-bit integer scalar, so `scalar_cast_target` backs
+    /// U8/U16 with a `Uint` (u32) and I8/I16 with a `Sint` (i32) register. The
+    /// bare `As` that produces that register does NOT discard the high bits — a
+    /// u32 source to a U8 target stays the full word — so a narrowing cast would
+    /// silently keep the high bits, diverging from the V035 contract ("narrowing
+    /// cast may truncate high bits"), Rust `as u8/u16/i8/i16`, and the reference
+    /// oracle (`cast_value`). This applies the missing truncation:
+    ///   * U8/U16: bitwise-AND with the low-`width` mask (`& 0xFF` / `& 0xFFFF`).
+    ///   * I8/I16: truncate then SIGN-extend from the new top bit via
+    ///     `(x << shift) >> shift` with an arithmetic (Sint) right shift — the
+    ///     same idiom `emit_byte_element_load` uses for an I8 buffer byte, so e.g.
+    ///     `200 as i8 == -56`, `-1 as i8 == -1`. The signed `>>` lowers to a naga
+    ///     arithmetic shift (the shift-emit fix keeps the Sint value's signedness
+    ///     while forcing the amount to u32).
+    /// A non-narrow target returns the value unchanged.
+    fn apply_narrow_mask(
+        &mut self,
+        value: naga::Handle<Expression>,
+        target: &DataType,
+    ) -> naga::Handle<Expression> {
+        match target {
+            DataType::U8 | DataType::U16 => {
+                let mask = if matches!(target, DataType::U8) {
+                    0xFFu32
+                } else {
+                    0xFFFFu32
+                };
+                let mask_lit = self.append_expr(Expression::Literal(Literal::U32(mask)));
+                self.append_expr(Expression::Binary {
+                    op: BinaryOperator::And,
+                    left: value,
+                    right: mask_lit,
+                })
+            }
+            DataType::I8 | DataType::I16 => {
+                let shift = if matches!(target, DataType::I8) {
+                    24u32
+                } else {
+                    16u32
+                };
+                let shift_lit = self.append_expr(Expression::Literal(Literal::U32(shift)));
+                let shifted_left = self.append_expr(Expression::Binary {
+                    op: BinaryOperator::ShiftLeft,
+                    left: value,
+                    right: shift_lit,
+                });
+                self.append_expr(Expression::Binary {
+                    op: BinaryOperator::ShiftRight,
+                    left: shifted_left,
+                    right: shift_lit,
+                })
+            }
+            _ => value,
         }
     }
 

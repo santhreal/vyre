@@ -622,6 +622,50 @@ impl BodyCtx<'_> {
                  Fix: cast the f32 to u32 or i32 first, then narrow the integer."
             )));
         }
+        // Narrowing to a sub-word integer (u8/u16/i8/i16). `from_dtype` collapses
+        // these to U32/I32, so the `src.0 == dst_ty` identity check below would
+        // treat `u32 -> u8` as a no-op and KEEP the high bits — a silent
+        // non-narrowing that diverges from Rust `as`, the V035 contract, and the
+        // reference oracle. PTX has no sub-word register, but it has the canonical
+        // narrowing converts: `cvt.u32.u8` zero-extends the low byte (== `& 0xFF`)
+        // and `cvt.s32.s8` sign-extends it (`200 as i8 == -56`). Reduce the source
+        // to its low 32-bit word first, then emit the narrowing convert.
+        let narrow = match target {
+            DataType::U8 => Some(("u32", "u8")),
+            DataType::U16 => Some(("u32", "u16")),
+            DataType::I8 => Some(("s32", "s8")),
+            DataType::I16 => Some(("s32", "s16")),
+            _ => None,
+        };
+        if let Some((dst_t, src_t)) = narrow {
+            let base = match src.0 {
+                PtxType::U32 | PtxType::I32 => src,
+                PtxType::Bool => {
+                    let word = self.alloc(PtxType::U32);
+                    let _ = writeln!(self.text, "    selp.u32    {word}, 1, 0, {src};");
+                    word
+                }
+                PtxType::U64 => {
+                    let word = self.alloc(PtxType::U32);
+                    let _ = writeln!(self.text, "    cvt.u32.u64    {word}, {src};");
+                    word
+                }
+                PtxType::F32 | PtxType::B16 => {
+                    // F32 is already rejected by the guard above; B16 (packed
+                    // f16/bf16) is not an integer-like narrowing source. Fail
+                    // closed rather than reinterpret float bits as an integer.
+                    return Err(EmitError::PtxConstructionFailed(format!(
+                        "cast from {:?} to `{target:?}` has no defined integer \
+                         narrowing: only an integer-like scalar source narrows. \
+                         Fix: cast to u32 or i32 first, then narrow.",
+                        src.0
+                    )));
+                }
+            };
+            let dst = self.alloc(dst_ty);
+            let _ = writeln!(self.text, "    cvt.{dst_t}.{src_t}    {dst}, {base};");
+            return Ok(dst);
+        }
         if src.0 == dst_ty {
             return Ok(src);
         }

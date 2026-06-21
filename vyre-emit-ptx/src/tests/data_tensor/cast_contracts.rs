@@ -507,3 +507,68 @@ fn f32_to_permitted_targets_still_emit() {
             .unwrap_or_else(|e| panic!("f32 -> {target:?} is a permitted cast and must emit: {e}"));
     }
 }
+
+/// A `u32`-source cast kernel: load a u32 literal, cast it to `target`. Used to
+/// exercise the integer narrowing path (`from_dtype` collapses u8/u16->u32 and
+/// i8/i16->i32, so a same-width identity check would skip the truncation).
+fn u32_cast_kernel(target: DataType) -> KernelDescriptor {
+    KernelDescriptor {
+        id: "cast_u32".into(),
+        bindings: BindingLayout { slots: vec![] },
+        dispatch: Dispatch::new(1, 1, 1),
+        body: KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(0),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Cast { target },
+                    operands: vec![0],
+                    result: Some(1),
+                },
+            ],
+            child_bodies: vec![],
+            literals: vec![LiteralValue::U32(300)],
+        },
+    }
+}
+
+/// Unsigned narrowing `u32 -> u8/u16` must TRUNCATE to the low byte/half via the
+/// canonical PTX zero-extending convert (`cvt.u32.u8` / `cvt.u32.u16`), NOT keep
+/// the full 32-bit word. Before the narrow path, `from_dtype(U8) == U32 == src`
+/// hit the `src.0 == dst_ty` early-return and emitted no narrowing at all,
+/// silently diverging from Rust `as u8`, the V035 contract, and the oracle.
+#[test]
+fn u32_to_unsigned_narrow_emits_zero_extending_convert() {
+    for (target, instr) in [
+        (DataType::U8, "cvt.u32.u8"),
+        (DataType::U16, "cvt.u32.u16"),
+    ] {
+        let s = emit(&u32_cast_kernel(target.clone()))
+            .unwrap_or_else(|e| panic!("u32 -> {target:?} must emit: {e}"));
+        assert!(
+            s.contains(instr),
+            "u32 -> {target:?} must narrow via {instr} (truncate high bits):\n{s}"
+        );
+    }
+}
+
+/// Signed narrowing `u32 -> i8/i16` must truncate then SIGN-extend from the new
+/// top bit via the canonical PTX sign-extending convert (`cvt.s32.s8` /
+/// `cvt.s32.s16`), matching Rust `as i8/i16` and the reference oracle.
+#[test]
+fn u32_to_signed_narrow_emits_sign_extending_convert() {
+    for (target, instr) in [
+        (DataType::I8, "cvt.s32.s8"),
+        (DataType::I16, "cvt.s32.s16"),
+    ] {
+        let s = emit(&u32_cast_kernel(target.clone()))
+            .unwrap_or_else(|e| panic!("u32 -> {target:?} must emit: {e}"));
+        assert!(
+            s.contains(instr),
+            "u32 -> {target:?} must sign-extend via {instr}:\n{s}"
+        );
+    }
+}
