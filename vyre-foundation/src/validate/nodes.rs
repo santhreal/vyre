@@ -209,7 +209,8 @@ fn validate_node_inner(
                             (&val_ty, elem),
                             (DataType::U32, DataType::Bytes) | (DataType::Bytes, DataType::U32)
                         )
-                        || matches!((&val_ty, elem), (DataType::F32, DataType::F32));
+                        || matches!((&val_ty, elem), (DataType::F32, DataType::F32))
+                        || same_width_int_reinterpret(&val_ty, elem);
                     if !compatible {
                         let legal_targets = store_value_targets(elem);
                         report.errors.push(err(format!(
@@ -569,12 +570,42 @@ pub(crate) fn restore_scope(scope: &mut FxHashMap<Ident, Binding>, mut scope_log
     }
 }
 
+/// True if `value` and `element` are the SAME-WIDTH integer type differing only
+/// in signedness (U32<->I32, U64<->I64).
+///
+/// A buffer element's signedness is observed only on LOAD (sign- vs zero-extend
+/// on use); a STORE writes the raw little-endian word, so storing a U32-typed
+/// value into an I32 buffer (or the 64-bit pair) is a bit-exact reinterpret —
+/// exactly `i32_slot = u32_val as i32` in Rust. This is load-bearing because the
+/// typechecker types Mod/bitwise/shift results as U32 regardless of operand
+/// signedness (Add/Sub/Mul/Div preserve the operand type via Frame::Bin), so a
+/// valid `store(i32_buffer, rem(i32, i32))` would otherwise be rejected. Every
+/// lower layer already reinterprets: the naga emitter coerces the store value to
+/// the element type (`coerce_value_to_type` -> `As{Sint/Uint, 4}`), PTX stores
+/// are typeless `st.global.b32`, and the reference oracle stores the value's raw
+/// bytes. NOT a widening/narrowing coercion (those change bits): only the
+/// same-width signed/unsigned reinterpret is bit-preserving and allowed here.
+#[inline]
+#[must_use]
+pub(crate) fn same_width_int_reinterpret(value: &DataType, element: &DataType) -> bool {
+    matches!(
+        (value, element),
+        (DataType::U32, DataType::I32)
+            | (DataType::I32, DataType::U32)
+            | (DataType::U64, DataType::I64)
+            | (DataType::I64, DataType::U64)
+    )
+}
+
 #[inline]
 pub(crate) fn store_value_targets(element: &DataType) -> String {
     let mut targets = vec![element.clone()];
     let legal = match element {
-        DataType::U32 => vec![DataType::Bytes],
+        DataType::U32 => vec![DataType::Bytes, DataType::I32],
         DataType::Bytes => vec![DataType::U32],
+        DataType::I32 => vec![DataType::U32],
+        DataType::U64 => vec![DataType::I64],
+        DataType::I64 => vec![DataType::U64],
         _ => Vec::new(),
     };
     for target in legal {
@@ -596,7 +627,7 @@ mod tests {
     use crate::ir::{BufferDecl, DataType, Expr, Ident};
 
     #[test]
-    fn store_value_targets_u32_includes_bytes_only() {
+    fn store_value_targets_u32_includes_bytes_and_i32() {
         let targets = store_value_targets(&DataType::U32);
         assert!(
             targets.contains("u32"),
@@ -606,9 +637,18 @@ mod tests {
             targets.contains("bytes"),
             "target list should contain bytes: {targets}"
         );
+        // i32 is the same-width signed sibling: a bit-exact reinterpret store.
+        assert!(
+            targets.contains("i32"),
+            "target list should contain i32 (same-width reinterpret): {targets}"
+        );
         assert!(
             !targets.contains("bool"),
             "target list must not allow bool/u32 store coercion: {targets}"
+        );
+        assert!(
+            !targets.contains("f32"),
+            "target list must not allow f32/u32 store coercion (different bit semantics): {targets}"
         );
     }
 
@@ -617,6 +657,21 @@ mod tests {
         let targets = store_value_targets(&DataType::F32);
         assert!(targets.contains("f32"));
         assert!(!targets.contains("u32"));
+    }
+
+    #[test]
+    fn same_width_int_reinterpret_only_same_width_signedness() {
+        // The bit-exact same-width pairs are allowed.
+        assert!(same_width_int_reinterpret(&DataType::U32, &DataType::I32));
+        assert!(same_width_int_reinterpret(&DataType::I32, &DataType::U32));
+        assert!(same_width_int_reinterpret(&DataType::U64, &DataType::I64));
+        assert!(same_width_int_reinterpret(&DataType::I64, &DataType::U64));
+        // Different-width or non-integer pairs are NOT (they would change bits).
+        assert!(!same_width_int_reinterpret(&DataType::U32, &DataType::U64));
+        assert!(!same_width_int_reinterpret(&DataType::U32, &DataType::U8));
+        assert!(!same_width_int_reinterpret(&DataType::F32, &DataType::U32));
+        assert!(!same_width_int_reinterpret(&DataType::U32, &DataType::F32));
+        assert!(!same_width_int_reinterpret(&DataType::U32, &DataType::U32));
     }
 
     #[test]

@@ -697,7 +697,8 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
                         (&val_ty, elem),
                         (DataType::U32, DataType::Bytes) | (DataType::Bytes, DataType::U32)
                     )
-                    || matches!((&val_ty, elem), (DataType::F32, DataType::F32));
+                    || matches!((&val_ty, elem), (DataType::F32, DataType::F32))
+                    || nodes::same_width_int_reinterpret(&val_ty, elem);
                 if !compatible {
                     let legal_targets = nodes::store_value_targets(elem);
                     self.errors.push(err(format!(

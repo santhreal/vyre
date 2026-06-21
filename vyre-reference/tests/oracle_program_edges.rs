@@ -353,3 +353,62 @@ fn signed_division_errors_are_structured_at_program_boundary() {
         "signed division overflow must surface an actionable program-boundary error, got `{error}`"
     );
 }
+
+/// A signed remainder (`BinOp::Mod` on i32 operands) is typed U32 by the
+/// foundation typechecker but evaluates to a SIGNED `Value::I32`; storing it into
+/// an I32 output buffer and reading back must yield the signed remainder bits.
+/// This is the end-to-end semantics the same-width store coercion now permits
+/// (`store(i32_buffer, rem(i32, i32))` — previously rejected V045). The oracle
+/// stores the value's raw little-endian bytes, so the bit pattern round-trips
+/// regardless of the U32-vs-I32 type label.
+#[test]
+fn signed_remainder_stored_into_i32_buffer_reads_back_signed() {
+    let program = output_program(
+        DataType::I32,
+        1,
+        vec![store(
+            0,
+            Expr::BinOp {
+                op: BinOp::Mod,
+                left: Box::new(Expr::i32(-7)),
+                right: Box::new(Expr::i32(3)),
+            },
+        )],
+    );
+    let bytes = run_output_bytes(&program);
+    let value = i32::from_le_bytes(bytes[..4].try_into().expect("4 output bytes"));
+    assert_eq!(
+        value, -1,
+        "-7 % 3 must read back as the signed remainder -1 from the i32 buffer, \
+         got {value} (bytes {bytes:?})"
+    );
+}
+
+/// The reverse direction: a signed quotient (`BinOp::Div` on i32 operands, typed
+/// I32 via Frame::Bin) stored into a U32 buffer must preserve the signed bit
+/// pattern (two's-complement), proving the same-width store coercion is a
+/// bit-exact reinterpret in both directions.
+#[test]
+fn signed_quotient_stored_into_u32_buffer_preserves_bits() {
+    let program = output_program(
+        DataType::U32,
+        1,
+        vec![store(
+            0,
+            Expr::BinOp {
+                op: BinOp::Div,
+                left: Box::new(Expr::i32(-7)),
+                right: Box::new(Expr::i32(3)),
+            },
+        )],
+    );
+    let bytes = run_output_bytes(&program);
+    // -7 / 3 truncates toward zero = -2; its two's-complement bits = 0xFFFF_FFFE.
+    let as_u32 = u32::from_le_bytes(bytes[..4].try_into().expect("4 output bytes"));
+    assert_eq!(
+        as_u32, 0xFFFF_FFFE,
+        "-7 / 3 = -2 stored into a u32 buffer must keep the two's-complement bits, \
+         got {as_u32:#010x}"
+    );
+    assert_eq!(as_u32 as i32, -2, "the bits reinterpret to -2 as i32");
+}

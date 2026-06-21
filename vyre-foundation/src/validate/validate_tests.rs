@@ -491,3 +491,97 @@ fn validate_rejects_non_integer_unpack_operand_on_type_not_existence() {
         "unpack op must be rejected on operand type, not treated as unrecognized, got: {errors:?}"
     );
 }
+
+// ------------------------------------------------------------------
+// Same-width integer store coercion (U32 <-> I32, U64 <-> I64).
+//
+// The typechecker types Mod / bitwise / shift results as U32 regardless of
+// operand signedness (typecheck.rs `_ => DataType::U32`), while Add/Sub/Mul/Div
+// preserve the operand type via Frame::Bin. A buffer element only distinguishes
+// signedness when LOADED (sign- vs zero-extend on use); a STORE writes the raw
+// 32/64-bit word, so storing a U32-typed value into an I32 buffer (or vice
+// versa) is a bit-exact reinterpret. The naga emitter already coerces the store
+// value to the element type (coerce_value_to_type -> As{Sint/Uint}), PTX stores
+// are typeless `st.global.b32`, and the reference oracle stores the value's
+// bytes — so every lower layer is byte-correct. The validator was the lone
+// over-strict layer: it rejected `store(i32_buffer, rem(i32, i32))` (a valid,
+// common signed-remainder store) with V045. These pin the coercion.
+// ------------------------------------------------------------------
+#[test]
+fn store_signed_remainder_into_i32_buffer_validates() {
+    // rem(i32, i32) is U32-typed but carries the SIGNED remainder bits; storing
+    // it into an I32 buffer is a same-width reinterpret. Before the coercion this
+    // was wrongly rejected V045 (the documented Mod-result-type gap).
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::output("out", 0, DataType::I32).with_count(4),
+            BufferDecl::read("a", 1, DataType::I32).with_count(4),
+            BufferDecl::read("b", 2, DataType::I32).with_count(4),
+        ],
+        [1, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::u32(0),
+            Expr::rem(Expr::load("a", Expr::u32(0)), Expr::load("b", Expr::u32(0))),
+        )],
+    );
+    let errors = validate(&program);
+    assert!(
+        !errors.iter().any(|e| e.message().contains("V045")
+            || e.message().contains("value has type")),
+        "store of a same-width int (rem result, u32-typed) into an i32 buffer must \
+         validate (bit-exact reinterpret), got: {errors:?}"
+    );
+}
+
+#[test]
+fn store_signed_div_into_u32_buffer_validates() {
+    // The reverse direction: div(i32, i32) is I32-typed (Frame::Bin preserves the
+    // operand type); storing it into a U32 buffer is the same same-width
+    // reinterpret and must also validate.
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::output("out", 0, DataType::U32).with_count(4),
+            BufferDecl::read("a", 1, DataType::I32).with_count(4),
+            BufferDecl::read("b", 2, DataType::I32).with_count(4),
+        ],
+        [1, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::u32(0),
+            Expr::div(Expr::load("a", Expr::u32(0)), Expr::load("b", Expr::u32(0))),
+        )],
+    );
+    let errors = validate(&program);
+    assert!(
+        !errors.iter().any(|e| e.message().contains("V045")
+            || e.message().contains("value has type")),
+        "store of an i32-typed value into a u32 buffer must validate, got: {errors:?}"
+    );
+}
+
+#[test]
+fn store_float_into_int_buffer_still_rejected() {
+    // The coercion is ONLY same-width INTEGER reinterpret. A float value into an
+    // i32 buffer is a real type error (different bit semantics, needs an explicit
+    // cast) and must STILL be rejected — proving the coercion did not over-broaden.
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::output("out", 0, DataType::I32).with_count(4),
+            BufferDecl::read("f", 1, DataType::F32).with_count(4),
+        ],
+        [1, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::u32(0),
+            Expr::load("f", Expr::u32(0)),
+        )],
+    );
+    let errors = validate(&program);
+    assert!(
+        errors.iter().any(|e| e.message().contains("Node::Store")
+            && e.message().contains("element type")),
+        "storing an f32 value into an i32 buffer must still be rejected (no int/float \
+         coercion), got: {errors:?}"
+    );
+}
