@@ -40,6 +40,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: capability + async dispatch contracts
         run: ./cargo_full test -p vyre-driver-wgpu --test capability_contract --test async_dispatch_contract -- --nocapture
+      - name: cast parity on real GPU (float saturation + integer narrowing)
+        run: ./cargo_full test -p vyre-driver-wgpu --test float_to_int_cast_parity --test narrowing_cast_parity -- --test-threads=1 --nocapture
 
   composition-parity-gpu:
     name: Composition parity on real GPU
