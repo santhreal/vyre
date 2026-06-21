@@ -392,6 +392,28 @@ lanes/output, 8 outputs/workgroup).
 
 ## END-TO-END RESULT (the thesis MEASURED on the real keyhog catalog)
 
+> CURRENT (2026-06-21, RTX 5090, keyhog HEAD `0ca6985a6`): **GPU WINS — the
+> "3.15× SLOWER" / "1.15×" numbers below are STALE.** `cargo bench -p
+> keyhog-scanner --bench gpu_vs_hs_8mib -- --perf-trace`, 8 MiB / 902 detectors /
+> median of 20:
+>
+> | backend | wall (median) | hits |
+> |---|---|---|
+> | SimdCpu (Hyperscan) | **397.78 ms** | 136 |
+> | Gpu (region presence, CUDA) | **46.57 ms** | 136 |
+>
+> **ratio 0.12× = GPU 8.5× FASTER, recall parity 136 == 136.** Per-iter trace: GPU
+> phase-1 dispatch ~3 ms vs Hyperscan phase-1 ~357 ms (shared phase-2 ~40 ms for
+> both). The win lever IS live: the GPU emits `confirmed_anchor_candidates=1143` +
+> `generic_keyword_candidates=127` (positioned-literal evidence) and
+> `extract_confirmed_patterns` SKIPS the whole-chunk regex on those anchors — the
+> "fold GPU-confirmed firings into one anchored extraction pass" lever this doc
+> called the remaining gap is DONE. The Hyperscan/SimdCpu phase-1 is now the slow
+> side (0.021 GB/s — `mark_hs_trigger` is O(matches×detectors) on dense text; the
+> "without-GPU-must-also-win" lane wants a CPU region-presence prefilter, NOT
+> per-match marking). Always measure in a git worktree (main tree is concurrently
+> dirty). The historical analysis below is kept for the root-cause record.
+
 The segmentation API shipped in **vyre 0.6.3** (`FileBatch::set_segmentation` +
 `segmentation::catalog_sync_overlap`, kernel decode + emit-guard in
 `dispatcher.rs`). keyhog 0.6.3 now drives it from `MegakernelCatalog::scan`:
