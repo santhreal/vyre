@@ -168,6 +168,14 @@ impl BackendValidationCapabilities for WgpuBackend {
                 | DataType::I8
                 | DataType::I16
                 | DataType::I32
+                // I64 is backed by the SAME `vec2<u32>` emulation as U64 (see
+                // `binding_helpers`/`setup` buffer lowering and the op_dispatch
+                // cast path, which treat `U64 | I64` identically and sign-extend
+                // the high word for a signed source). Omitting it here falsely
+                // rejected `i32 -> i64` casts the emitter and hardware handle
+                // correctly — a capability/coherence gap, NOT a real limit
+                // (verified on the live 5090 by `widening_cast_64_parity`).
+                | DataType::I64
                 | DataType::F32
                 | DataType::Vec2U32
                 | DataType::Vec4U32

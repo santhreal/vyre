@@ -42,6 +42,8 @@ jobs:
         run: ./cargo_full test -p vyre-driver-wgpu --test capability_contract --test async_dispatch_contract -- --nocapture
       - name: cast parity on real GPU (float saturation + integer narrowing)
         run: ./cargo_full test -p vyre-driver-wgpu --test float_to_int_cast_parity --test narrowing_cast_parity -- --test-threads=1 --nocapture
+      - name: 64-bit widening cast (i32/u32 -> i64/u64) sign/zero-extend parity on real GPU
+        run: ./cargo_full test -p vyre-driver-wgpu --test widening_cast_64_parity -- --test-threads=1 --nocapture
       - name: same-width integer store-coercion parity on real GPU
         run: ./cargo_full test -p vyre-driver-wgpu --test same_width_store_parity -- --test-threads=1 --nocapture
       - name: signed integer modulo/division parity on real GPU
