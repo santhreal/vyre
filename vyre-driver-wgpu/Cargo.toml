@@ -67,7 +67,7 @@ stats_alloc.workspace = true
 tokio.workspace = true
 tempfile.workspace = true
 proptest.workspace = true
-vyre-libs = { version = "0.6.1", path = "../vyre-libs", features = ["matching", "parsing", "c-parser", "nn-attention", "cpu-parity"] }
+vyre-libs = { version = "0.6.1", path = "../vyre-libs", features = ["matching", "parsing", "c-parser", "nn-attention", "cpu-parity", "crypto-blake3"] }
 # The integration tests under tests/ exercise the public `vyre` umbrella facade
 # (vyre::ir, vyre::{DispatchConfig, VyreBackend, validate, ...}) — the ergonomic
 # surface a real consumer uses. The 0.6.2 refactor dropped this dev-dep, which
