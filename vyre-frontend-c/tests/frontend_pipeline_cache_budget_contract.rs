@@ -15,7 +15,13 @@ fn compiled_pipeline_caches_are_entry_and_byte_bounded() {
     assert!(cache_utils.contains("insert_with_cost"));
     assert!(cache_utils.contains("entry_bytes > max_bytes"));
     assert!(cache_utils.contains("self.bytes > max_bytes"));
-    assert!(cache_utils.contains("checked_add(entry_bytes)"));
+    // The running byte total must accumulate through an OVERFLOW-SAFE add, never
+    // a raw `+`/`+=` that could wrap and defeat the budget. The implementation
+    // uses `saturating_add`: on the (physically unreachable, ~2^64-byte) overflow
+    // it pins to usize::MAX, which immediately trips the `self.bytes > max_bytes`
+    // eviction loop above — a complete bound, equivalent in safety to a checked
+    // add with an explicit reject branch.
+    assert!(cache_utils.contains("saturating_add(entry_bytes)"));
 
     let backend_select = read("src/pipeline/backend_select.rs");
     assert!(backend_select.contains("COMPILED_PIPELINE_CACHE_MAX_ENTRIES"));
