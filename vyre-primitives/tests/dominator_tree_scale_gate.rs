@@ -74,8 +74,11 @@ fn scale_gate_program_builds_for_10m_without_panic() {
     let p = try_dominator_tree_program(n, e, e, "idom").expect("10M-node program must build");
     assert_eq!(
         p.buffers().len(),
-        4,
-        "dominator tree program declares four CSR buffers"
+        6,
+        "dominator tree program declares six buffers: four CSR inputs \
+         (pg_edge_offsets, pg_edge_targets, pred_offsets, pred_targets) plus the \
+         idom_out result and the depth scratch buffer (Cooper-Harvey-Kennedy \
+         depth-based intersection); both program builders declare exactly these six"
     );
 }
 
