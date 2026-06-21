@@ -844,6 +844,33 @@ impl GpuLiteralSet {
         Ok(words)
     }
 
+    /// FUSED region-presence + match-positions GPU scan with a default dispatch
+    /// scratch. See [`Self::scan_presence_and_positions_by_region_with_scratch`] for
+    /// the hot-loop variant that reuses caller-owned staging.
+    ///
+    /// # Errors
+    /// See [`Self::scan_presence_and_positions_by_region_with_scratch`].
+    pub fn scan_presence_and_positions_by_region<B: VyreBackend + ?Sized>(
+        &self,
+        backend: &B,
+        haystack: &[u8],
+        region_starts: &[u32],
+        region_base: u32,
+        max_matches: u32,
+        matches: &mut Vec<Match>,
+    ) -> Result<Vec<u32>, vyre::BackendError> {
+        let mut scratch = ScanDispatchScratch::default();
+        self.scan_presence_and_positions_by_region_with_scratch(
+            backend,
+            haystack,
+            region_starts,
+            region_base,
+            max_matches,
+            matches,
+            &mut scratch,
+        )
+    }
+
     /// FUSED region-presence + match-positions GPU scan: ONE dispatch returns BOTH
     /// the per-region presence bitmap (the return value, identical to
     /// [`Self::scan_presence_by_region`]) AND the `(pattern_id, start, end)` match
@@ -861,6 +888,17 @@ impl GpuLiteralSet {
     /// [`Self::scan_presence_by_region_with_scratch`]; `max_matches` bounds the triple
     /// output as in [`Self::scan_into`]. The returned bitmap is
     /// `region_starts.len() × presence_bitmap_words(pattern_count)` words.
+    ///
+    /// ## PERF CAVEAT (MEASURED, RTX 5090 / wgpu / release)
+    /// This is a CORRECTNESS-equivalent primitive, NOT (yet) a perf win. Although it
+    /// does one haystack walk instead of two, it is ~20x SLOWER than calling
+    /// [`Self::scan_presence_by_region`] + [`Self::scan_into`] separately. Cause: the
+    /// suffix3 prefilter inlines the replay 3x (i==0 / i==1 / general exits); the
+    /// fused replay (region binary search + atomic_or + triple append) is large, so
+    /// the fused kernel is ~3x bigger → register/occupancy collapse slows the whole
+    /// scan. Prefer the two separate scans until the prefilter calls the replay as a
+    /// function rather than inlining it (or a CUDA-backend measurement justifies the
+    /// fused path). Proof + numbers: `tests/literal_set_presence_and_positions_gpu.rs`.
     ///
     /// # Errors
     /// Returns [`vyre::BackendError`] on dispatch/readback failure, scan-boundary
