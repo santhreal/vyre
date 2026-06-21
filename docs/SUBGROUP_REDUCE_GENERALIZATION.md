@@ -83,14 +83,15 @@ Tests added (assert real values): spec reduce_u32 exact values + wrap + neutrals
 foundation lowering max (single + two-level -inf neutral); naga per-op→SubgroupOperation
 mapping; reference oracle u32 max/xor, f32 -inf max, f32-bitwise fail-loud.
 
+PTX f32 reduction now emits an XOR all-reduce via `shfl.sync.idx` (explicit
+`laneid ^ offset` source) so every lane ends with the full reduction (was a
+`shfl.sync.down` tree that fed only lane 0). Verified end-to-end on a real
+RTX 5090 (sm_120): `vyre-driver-cuda/tests/subgroup_reduce_gpu_parity.rs` runs
+`subgroup_reduce` over a 32-lane warp and asserts every lane holds the full
+reduction — f32 add (528) / f32 max (12.5) / u32 add (528) / u32 max (63), all
+passing. (`in` is declared read-only so the dispatch returns only `out` as
+`outputs[0]`; a read-write input is also returned, ahead of `out`, which once
+made these tests read back the unchanged input.)
+
 Open follow-ons (NOT regressions; the lowering only emits Add/Max today):
-- PTX f32 reduction now emits an XOR all-reduce via `shfl.sync.idx` (explicit
-  `laneid ^ offset` source) so every lane ends with the full reduction (was a
-  `shfl.sync.down` tree that fed only lane 0). Unit + reference tests cover it.
-- **Live-GPU BLOCKER (driver, not vyre):** on Blackwell (sm_120, driver 570.x)
-  the driver JIT silently miscompiles BOTH this f32 shfl all-reduce AND the
-  integer `redux.sync` reduction on a globally-loaded value (every lane keeps
-  its own value). AOT/`ptxas` compiles the same PTX correctly. The four
-  `subgroup_reduce_gpu_parity` tests are `#[ignore]`d; full evidence + the AOT
-  cubin-compilation fix are in `docs/CUDA_DRIVER_JIT_F32_SHFL_BUG.md`.
 - integer subgroup Mul has no PTX redux; add a shfl butterfly if a generator needs it.
