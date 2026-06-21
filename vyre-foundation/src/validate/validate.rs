@@ -650,7 +650,8 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
                         (DataType::U32, DataType::Bytes | DataType::Bool)
                             | (DataType::Bytes | DataType::Bool, DataType::U32)
                             | (DataType::F32, DataType::F32)
-                    );
+                    )
+                    || nodes::same_width_int_reinterpret(&value_ty, elem);
                 if !compatible {
                     self.errors.push(err(format!(
                         "V045: assignment to buffer `{name}` has type `{value_ty}` but the buffer element type is `{elem}`. Fix: cast the value to `{elem}` or write to a buffer with the intended element type."

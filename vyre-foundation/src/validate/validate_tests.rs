@@ -585,3 +585,28 @@ fn store_float_into_int_buffer_still_rejected() {
          coercion), got: {errors:?}"
     );
 }
+
+#[test]
+fn assign_signed_remainder_to_i32_buffer_validates() {
+    // The buffer-ASSIGN path (visit_assign) must apply the same same-width int
+    // reinterpret coercion as Node::Store — otherwise `buf = rem(i32, i32)` is
+    // rejected while the equivalent store is allowed (an inconsistency between
+    // two writes of the same logical value).
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::read_write("buf", 0, DataType::I32).with_count(4),
+            BufferDecl::read("a", 1, DataType::I32).with_count(4),
+            BufferDecl::read("b", 2, DataType::I32).with_count(4),
+        ],
+        [1, 1, 1],
+        vec![Node::assign(
+            "buf",
+            Expr::rem(Expr::load("a", Expr::u32(0)), Expr::load("b", Expr::u32(0))),
+        )],
+    );
+    let errors = validate(&program);
+    assert!(
+        !errors.iter().any(|e| e.message().contains("V045")),
+        "assigning a same-width int (rem result) to an i32 buffer must validate, got: {errors:?}"
+    );
+}

@@ -175,7 +175,8 @@ fn validate_node_inner(
                                 | (DataType::U32, DataType::Bool)
                                 | (DataType::Bool, DataType::U32)
                                 | (DataType::F32, DataType::F32)
-                        );
+                        )
+                        || same_width_int_reinterpret(&value_ty, elem);
                     if !compatible {
                         report.errors.push(err(format!(
                             "V045: assignment to buffer `{name}` has type `{value_ty}` but the buffer element type is `{elem}`. Fix: cast the value to `{elem}` or write to a buffer with the intended element type."
