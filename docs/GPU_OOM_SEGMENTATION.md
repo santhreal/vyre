@@ -231,6 +231,22 @@ geometry that silently dropped half before now conserves), and the best beats th
 Hyperscan 1.5 GB/s floor by 15.34×. Proof: the conservation+throughput oracle
 (green on live GPU) + 219 wgpu lib unit tests.
 
+Independently reproduced (2026-06-21, second RTX 5090 run, same oracle) — the
+result is stable across runs, not a one-off:
+
+      seg_len  wgroups  found  dropped     GB/s   vs HS   conserves?
+         1024     1024    137        0   16.307  10.87x   conserves
+         1024     2048    137        0   20.335  13.56x   conserves
+          512     1024    137        0   14.179    9.45x   conserves
+          512     2048    137        0   17.730  11.82x   conserves
+          256     2048    137        0   19.647  13.10x   conserves
+          128     4096    137        0   24.164  16.11x   conserves
+
+Best conserving geometry 24.164 GB/s = 16.11× the 1.5 GB/s Hyperscan floor;
+canonical 1024×1024 geometry holds at 10.87×. Same conservation invariant (137/137,
+0 dropped) on every geometry. Run-to-run GB/s varies within ~±10% (thermal/clock);
+the GPU-wins-and-conserves conclusion does not.
+
 ### F2 — Dense-permutation index validation triple-duplicated → single-sourced
 Three sites independently re-implemented "is this sorted index slice a dense
 permutation of `0..N`": `resident_dispatch/helpers.rs::validate_dense_resident_indices`,
