@@ -56,6 +56,8 @@ jobs:
         run: ./cargo_full test -p vyre-driver-wgpu --test blake3_compress_gpu_parity -- --test-threads=1 --nocapture
       - name: synthetic u32 binop (mulhi/abs_diff/saturating/rotate) parity vs oracle on real GPU
         run: ./cargo_full test -p vyre-driver-wgpu --test synthetic_binop_parity -- --test-threads=1 --nocapture
+      - name: integer unary (negate/bitnot/popcount/clz/ctz/reverse_bits) parity vs oracle on real GPU
+        run: ./cargo_full test -p vyre-driver-wgpu --test unary_int_parity -- --test-threads=1 --nocapture
 
   composition-parity-gpu:
     name: Composition parity on real GPU

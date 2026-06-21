@@ -2,9 +2,23 @@
 
 use vyre_driver::DispatchConfig;
 use vyre_emit_naga::program::emit_module;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, MemoryKind, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, MemoryKind, Node, Program};
 
 const TEST_WORKGROUP_SIZE: [u32; 3] = [1, 1, 1];
+
+/// Emit `program` to a naga module and assert it passes naga's full validator —
+/// the same validation the wgpu backend runs before dispatch.
+fn emit_validated_module(program: &Program) -> naga::Module {
+    let module = emit_module(program, &DispatchConfig::default(), TEST_WORKGROUP_SIZE)
+        .expect("Fix: test program must lower to valid Naga.");
+    naga::valid::Validator::new(
+        naga::valid::ValidationFlags::all(),
+        naga::valid::Capabilities::all(),
+    )
+    .validate(&module)
+    .expect("Fix: lowered test module must validate.");
+    module
+}
 
 fn emit_wgsl(program: &Program) -> String {
     let module = emit_module(program, &DispatchConfig::default(), TEST_WORKGROUP_SIZE)
@@ -17,6 +31,53 @@ fn emit_wgsl(program: &Program) -> String {
     .expect("Fix: lowered test module must validate.");
     naga::back::wgsl::write_string(&module, &info, naga::back::wgsl::WriterFlags::empty())
         .expect("Fix: lowered test module must serialize to WGSL.")
+}
+
+/// `negate(u32)` must lower to a wrapping `0u - v` SUBTRACT, never `Unary(Negate)`
+/// on a Uint. vyre's typecheck legalises integer `Negate` for `u32` (not raw
+/// `i32`, whose `i32::MIN` overflow is rejected upstream) and the reference
+/// oracle computes `0u32.wrapping_sub(v)`, but naga REJECTS unary minus on an
+/// unsigned operand (`InvalidUnaryOperandType`). Before the emitter synthesized
+/// `0u - v`, this exact module FAILED naga validation — so a u32 negate the
+/// front-end + CPU oracle accepted could not be dispatched on the GPU (Law 10).
+/// This is the CPU-side deterministic guard for that fix (the live-GPU twin is
+/// `unary_int_parity::negate_u32_wraps_two_complement_on_gpu`).
+#[test]
+fn u32_negate_lowers_to_wrapping_subtract_and_validates() {
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(1),
+            BufferDecl::storage("a", 1, BufferAccess::ReadOnly, DataType::U32).with_count(1),
+        ],
+        [1, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::u32(0),
+            Expr::negate(Expr::load("a", Expr::u32(0))),
+        )],
+    );
+
+    // The regression: emit_validated_module panics here if naga rejects the
+    // lowering (it did, with InvalidUnaryOperandType(Negate), before the fix).
+    let module = emit_validated_module(&program);
+
+    let exprs: Vec<&naga::Expression> = module
+        .entry_points
+        .iter()
+        .flat_map(|ep| ep.function.expressions.iter().map(|(_, e)| e))
+        .collect();
+    assert!(
+        exprs
+            .iter()
+            .any(|e| matches!(e, naga::Expression::Binary { op, .. } if *op == naga::BinaryOperator::Subtract)),
+        "Fix: u32 negate must lower to a `0u - v` Subtract.",
+    );
+    assert!(
+        !exprs
+            .iter()
+            .any(|e| matches!(e, naga::Expression::Unary { op, .. } if *op == naga::UnaryOperator::Negate)),
+        "Fix: u32 negate must NOT emit a naga Unary(Negate) (invalid on an unsigned operand).",
+    );
 }
 
 #[test]

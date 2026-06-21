@@ -516,6 +516,26 @@ impl BodyBuilder<'_> {
                         arg2: None,
                         arg3: None,
                     })
+                } else if matches!(unop, UnOp::Negate)
+                    && self.scalar_kind_of_expression(expr, 0) == Some(ScalarKind::Uint)
+                {
+                    // WGSL/naga reject unary minus on an UNSIGNED operand
+                    // (`InvalidUnaryOperandType(Negate)`), but vyre's typecheck
+                    // legalises integer `Negate` exactly for `u32` (the total,
+                    // wrapping case — raw i32 negate is rejected upstream for its
+                    // i32::MIN overflow), and the reference oracle defines it as
+                    // `0u32.wrapping_sub(v)`. Emitting `Unary(Negate, u32)` made
+                    // every u32 negate validate + run correctly on the CPU oracle
+                    // yet HARD-FAIL at GPU dispatch — a front-end-accepts /
+                    // backend-can't-emit coherence gap (Law 10). naga's `Subtract`
+                    // on a Uint wraps in two's complement, so synthesize the
+                    // unsigned negate as `0u - v`, matching the oracle exactly.
+                    let zero = self.append_expr(Expression::Literal(Literal::U32(0)));
+                    self.append_expr(Expression::Binary {
+                        op: BinaryOperator::Subtract,
+                        left: zero,
+                        right: expr,
+                    })
                 } else {
                     let naga_op = unary_operator(unop)?;
                     self.append_expr(Expression::Unary { op: naga_op, expr })
