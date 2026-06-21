@@ -475,6 +475,54 @@ fn f32_to_i32_cast_emits_saturating_guard_and_validates() {
 }
 
 #[test]
+fn f32_to_non_u32_i32_int_cast_fails_closed() {
+    // A float source converts numerically ONLY to u32/i32 (saturating), bool
+    // (truthy), or f32. The foundation validator (`cast_is_valid`) already
+    // rejects f32 -> {U8,U16,I8,I16,U64,I64,Vec2U32,Vec4U32}; the no-validation
+    // `emit_module` path must ALSO fail closed (Law 10) instead of silently
+    // miscompiling: a narrow target (U8/U16/I8/I16, all 32-bit-backed) would take
+    // a bare `As` that skips the saturating guard (NaN -> undefined, overflow ->
+    // FClamp divergence) and does NOT narrow, while the U64/I64/Vec2U32 wide path
+    // reinterprets the float through a u32 coerce that drops the high word.
+    for target in [
+        DataType::U8,
+        DataType::U16,
+        DataType::I8,
+        DataType::I16,
+        DataType::U64,
+        DataType::I64,
+        DataType::Vec2U32,
+        DataType::Vec4U32,
+    ] {
+        let err = emit(&f32_to_int_cast_desc(target.clone(), DataType::U32)).expect_err(&format!(
+            "f32 -> {target:?} has no defined float conversion and must fail closed, not emit"
+        ));
+        let msg = format!("{err:?}");
+        assert!(
+            msg.contains("cast from f32 to")
+                && msg.contains("no defined conversion")
+                && msg.contains("Fix:"),
+            "f32 -> {target:?} must fail closed with the actionable float-cast message, got: {msg}"
+        );
+    }
+}
+
+#[test]
+fn f32_to_u32_i32_bool_casts_still_emit() {
+    // The positive twin: the THREE float targets the validator permits must keep
+    // emitting (the fail-closed guard must not over-reach). u32/i32 go through the
+    // saturating rewrite; bool through the truthy `As`.
+    for (target, out_elem) in [
+        (DataType::U32, DataType::U32),
+        (DataType::I32, DataType::I32),
+        (DataType::Bool, DataType::U32),
+    ] {
+        emit(&f32_to_int_cast_desc(target.clone(), out_elem))
+            .unwrap_or_else(|e| panic!("f32 -> {target:?} is a permitted cast and must emit: {e}"));
+    }
+}
+
+#[test]
 fn u64_to_f32_cast_reconstructs_full_value_and_validates() {
     use naga::valid::{Capabilities, ValidationFlags, Validator};
     // u64->f32 must use BOTH words (low | high<<32) then convert, not just the

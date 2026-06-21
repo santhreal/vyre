@@ -22,6 +22,26 @@ pub(crate) fn spec_output_value(ty: DataType, bytes: &[u8]) -> Value {
 }
 
 pub(crate) fn cast_value(target: &DataType, value: &Value) -> Result<Value, vyre::Error> {
+    // A float source converts numerically ONLY to U32/I32 (saturating), Bool
+    // (truthy), or F32 (identity). There is NO defined float -> {narrow int,
+    // 64-bit int, vector, bytes} conversion: the foundation validator
+    // (`validate::cast::cast_is_valid`) rejects these, and the naga and PTX
+    // emitters fail closed on them. Without this guard the bytes/widen fallbacks
+    // below would return a meaningless byte payload (the float's raw bits) for
+    // such a cast, silently diverging from every backend. Fail closed so the
+    // reference SPEC agrees with the emitters (Law 10 coherence).
+    if matches!(value, Value::Float(_))
+        && !matches!(
+            target,
+            DataType::U32 | DataType::I32 | DataType::Bool | DataType::F32
+        )
+    {
+        return Err(Error::interp(format!(
+            "cast from f32 to {target:?} has no defined conversion: a float source \
+             converts only to u32/i32 (saturating), bool (truthy), or f32. Fix: cast \
+             the f32 to u32 or i32 first, then narrow or widen the integer."
+        )));
+    }
     match target {
         DataType::U32 => match value {
             Value::I32(v) => Ok(Value::U32(*v as u32)),
@@ -177,6 +197,64 @@ mod tests {
             cast_value(&DataType::U64, &Value::I32(5)).expect("i32->u64 must succeed"),
             Value::U64(5),
             "non-negative i32 -> u64 must equal the value (sign bit clear)"
+        );
+    }
+
+    /// A float source has no defined conversion to a narrow int, a 64-bit int, a
+    /// vector, or bytes — the validator rejects these and the naga/PTX emitters
+    /// fail closed, so the reference SPEC must too (rather than returning the
+    /// float's raw bytes via the catch-all). Only u32/i32 (saturating), bool, and
+    /// f32 are valid float targets.
+    #[test]
+    fn cast_f32_to_undefined_target_fails_closed() {
+        for target in [
+            DataType::U8,
+            DataType::U16,
+            DataType::I8,
+            DataType::I16,
+            DataType::U64,
+            DataType::I64,
+            DataType::Vec2U32,
+            DataType::Vec4U32,
+            DataType::Bytes,
+        ] {
+            let err = cast_value(&target, &Value::Float(3.5))
+                .expect_err(&format!("f32 -> {target:?} must fail closed in the oracle"));
+            assert!(
+                format!("{err:?}").contains("no defined conversion"),
+                "f32 -> {target:?} must fail closed with the float-cast message, got: {err:?}"
+            );
+        }
+    }
+
+    /// The positive twin: the float targets every layer permits still convert,
+    /// with the saturating (truncate-toward-zero) / truthy / identity semantics.
+    #[test]
+    fn cast_f32_to_permitted_targets_converts() {
+        assert_eq!(
+            cast_value(&DataType::U32, &Value::Float(3.9)).expect("f32->u32 must succeed"),
+            Value::U32(3),
+            "f32 3.9 -> u32 truncates toward zero"
+        );
+        assert_eq!(
+            cast_value(&DataType::I32, &Value::Float(-2.9)).expect("f32->i32 must succeed"),
+            Value::I32(-2),
+            "f32 -2.9 -> i32 truncates toward zero"
+        );
+        assert_eq!(
+            cast_value(&DataType::Bool, &Value::Float(0.0)).expect("f32->bool must succeed"),
+            Value::Bool(false),
+            "f32 0.0 -> bool is false"
+        );
+        assert_eq!(
+            cast_value(&DataType::Bool, &Value::Float(1.5)).expect("f32->bool must succeed"),
+            Value::Bool(true),
+            "f32 1.5 -> bool is true"
+        );
+        assert_eq!(
+            cast_value(&DataType::F32, &Value::Float(2.5)).expect("f32->f32 must succeed"),
+            Value::Float(2.5),
+            "f32 -> f32 is identity"
         );
     }
 

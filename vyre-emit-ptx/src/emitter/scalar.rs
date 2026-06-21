@@ -600,6 +600,28 @@ impl BodyCtx<'_> {
 
     pub(super) fn emit_cast(&mut self, src: Reg, target: &DataType) -> Result<Reg, EmitError> {
         let dst_ty = PtxType::from_dtype(target)?;
+        // A float source has no defined narrowing integer conversion: it converts
+        // only to u32/i32 (saturating `cvt.rzi`, below), bool (truthy), or f32.
+        // `from_dtype` collapses U8/U16->U32 and I8/I16->I32, so WITHOUT this guard
+        // an f32->u8 would silently emit a non-narrowing `cvt.rzi.u32.f32` (a full
+        // u32-range value claimed as a u8). The foundation cast table
+        // (`validate::cast::cast_is_valid`) rejects these casts, but the
+        // no-validation emit path can reach here. Fail closed (Law 10), matching
+        // the naga emitter and the `Bytes` arm in `from_dtype`. (f32->u64/i64 maps
+        // to PtxType::U64 != F32, so it already fails closed via the unmatched `_`
+        // arm below; this closes the narrow-int holes that `from_dtype` masks.)
+        if src.0 == PtxType::F32
+            && matches!(
+                target,
+                DataType::U8 | DataType::U16 | DataType::I8 | DataType::I16
+            )
+        {
+            return Err(EmitError::PtxConstructionFailed(format!(
+                "cast from f32 to `{target:?}` has no defined conversion: a float \
+                 source converts only to u32/i32 (saturating), bool (truthy), or f32. \
+                 Fix: cast the f32 to u32 or i32 first, then narrow the integer."
+            )));
+        }
         if src.0 == dst_ty {
             return Ok(src);
         }

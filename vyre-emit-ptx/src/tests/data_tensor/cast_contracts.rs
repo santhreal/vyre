@@ -438,3 +438,72 @@ fn bool_to_i32_cast_materializes_predicate_word() {
         "Bool->I32 must materialize %p as a 0/1 word:\n{s}"
     );
 }
+
+fn f32_cast_kernel(target: DataType) -> KernelDescriptor {
+    KernelDescriptor {
+        id: "cast_f32".into(),
+        bindings: BindingLayout { slots: vec![] },
+        dispatch: Dispatch::new(1, 1, 1),
+        body: KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(0),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Cast { target },
+                    operands: vec![0],
+                    result: Some(1),
+                },
+            ],
+            child_bodies: vec![],
+            literals: vec![LiteralValue::F32(3.5)],
+        },
+    }
+}
+
+/// A float source has no defined narrowing integer conversion. `from_dtype`
+/// collapses U8/U16->U32 and I8/I16->I32, which would otherwise let an f32->u8
+/// silently emit a non-narrowing `cvt.rzi.u32.f32` (a full u32-range value
+/// claimed as a u8). The validator rejects these casts; the emitter must ALSO
+/// fail closed (Law 10), matching the naga emitter.
+#[test]
+fn f32_to_narrow_int_cast_fails_closed() {
+    for target in [DataType::U8, DataType::U16, DataType::I8, DataType::I16] {
+        let err = emit(&f32_cast_kernel(target.clone())).expect_err(&format!(
+            "f32 -> {target:?} has no defined float conversion and must fail closed, not emit"
+        ));
+        let msg = format!("{err:?}");
+        assert!(
+            msg.contains("cast from f32 to")
+                && msg.contains("no defined conversion")
+                && msg.contains("Fix:"),
+            "f32 -> {target:?} must fail closed with the actionable float-cast message, got: {msg}"
+        );
+    }
+}
+
+/// The 64-bit twins: `from_dtype` maps U64/I64 to `PtxType::U64` (!= F32), so the
+/// `(F32, U64)` pair has no `emit_cast` arm and already fails closed. Pin it so a
+/// future arm cannot silently reintroduce a high-word-dropping f32->u64 path.
+#[test]
+fn f32_to_wide_int_cast_fails_closed() {
+    for target in [DataType::U64, DataType::I64] {
+        assert!(
+            emit(&f32_cast_kernel(target.clone())).is_err(),
+            "f32 -> {target:?} must fail closed (no defined float-to-64-bit-int conversion)"
+        );
+    }
+}
+
+/// The positive twin: the float targets the validator permits (u32/i32 saturating,
+/// bool truthy, f32 identity) must keep emitting — the fail-closed guard must not
+/// over-reach.
+#[test]
+fn f32_to_permitted_targets_still_emit() {
+    for target in [DataType::U32, DataType::I32, DataType::Bool, DataType::F32] {
+        emit(&f32_cast_kernel(target.clone()))
+            .unwrap_or_else(|e| panic!("f32 -> {target:?} is a permitted cast and must emit: {e}"));
+    }
+}

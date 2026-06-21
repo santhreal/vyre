@@ -646,6 +646,51 @@ impl BodyBuilder<'_> {
                         }
                     }
                 }
+                // Detect a float source via BOTH the bound type handle AND the
+                // scalar-kind resolver: `value_type_operand == f32_ty` catches
+                // buffer loads (scalar_kind_of_expression returns None through an
+                // Access->Load chain), while `scalar_kind_of_expression == Float`
+                // catches computed floats (arithmetic results) whose type handle
+                // may not be a literal `f32_ty`. Either alone leaves a silent-skip
+                // hole. Neither over-matches a non-float.
+                let source_is_f32 = self
+                    .value_type_operand(op, 0)
+                    .map(|h| h == self.types.f32_ty)
+                    .unwrap_or(false)
+                    || self.scalar_kind_of_expression(expr, 0) == Some(ScalarKind::Float);
+                // A float source converts numerically ONLY to u32/i32 (saturating,
+                // below), bool (truthy), or f32 (identity). The foundation cast
+                // table (`validate::cast::cast_is_valid`) rejects f32 -> {U8, U16,
+                // I8, I16, U64, I64, Vec2U32, Vec4U32} for exactly this reason. But
+                // the Program-compat `emit_module` path does NOT run full
+                // validation, so such a cast can reach here — and the paths below
+                // would SILENTLY miscompile it: the U64/I64/Vec2U32 wide path
+                // reinterprets the float through a u32 coerce (dropping the high
+                // word), and a narrow int target (U8/U16/I8/I16, all backed by a
+                // 32-bit scalar) takes a bare `As` that skips the saturating guard
+                // (NaN -> undefined, overflow -> FClamp divergence) AND does not
+                // narrow. Fail closed (Law 10), mirroring the `Bytes` arm in
+                // `scalar_cast_target`, and name the fix.
+                if source_is_f32
+                    && matches!(
+                        target,
+                        DataType::U8
+                            | DataType::U16
+                            | DataType::I8
+                            | DataType::I16
+                            | DataType::U64
+                            | DataType::I64
+                            | DataType::Vec2U32
+                            | DataType::Vec4U32
+                    )
+                {
+                    return Err(EmitError::NagaConstructionFailed(format!(
+                        "cast from f32 to `{target:?}` has no defined conversion: a \
+                         float source converts only to u32/i32 (saturating), bool \
+                         (truthy), or f32. Fix: cast the f32 to u32 or i32 first, then \
+                         narrow or widen the integer."
+                    )));
+                }
                 if matches!(target, DataType::U64 | DataType::I64 | DataType::Vec2U32) {
                     // WGSL has no native 64-bit integer; U64/I64 are backed by
                     // vec2<u32> (low word `.x`, high word `.y`). The low word is
@@ -721,19 +766,9 @@ impl BodyBuilder<'_> {
                 // target is rewritten; integer->int and narrow targets are
                 // unchanged.
                 //
-                // Detect the float source via BOTH the bound type handle AND the
-                // scalar-kind resolver: `value_type_operand == f32_ty` catches
-                // buffer loads (scalar_kind_of_expression returns None through an
-                // Access->Load chain), while `scalar_kind_of_expression == Float`
-                // catches computed floats (arithmetic results) whose type handle
-                // may not be a literal `f32_ty`. Either alone leaves a silent-skip
-                // hole that would drop a real float cast back onto the diverging
-                // bare `As` (Law 10). Neither over-matches a non-float.
-                let source_is_f32 = self
-                    .value_type_operand(op, 0)
-                    .map(|h| h == self.types.f32_ty)
-                    .unwrap_or(false)
-                    || self.scalar_kind_of_expression(expr, 0) == Some(ScalarKind::Float);
+                // `source_is_f32` was computed once above (it also gates the
+                // fail-closed guard that rejects float -> non-{u32,i32,bool,f32}
+                // targets), so by here the only float targets left are U32/I32.
                 if source_is_f32 && matches!(target, DataType::U32 | DataType::I32) {
                     let converted = self.append_expr(Expression::As {
                         expr,
