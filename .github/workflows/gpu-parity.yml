@@ -50,6 +50,8 @@ jobs:
         run: ./cargo_full test -p vyre-driver-wgpu --test signed_modulo_parity -- --test-threads=1 --nocapture
       - name: signed integer min/max/comparison parity on real GPU
         run: ./cargo_full test -p vyre-driver-wgpu --test signed_int_op_parity -- --test-threads=1 --nocapture
+      - name: div/mod-by-zero + oversized-shift-mask oracle parity on real GPU
+        run: ./cargo_full test -p vyre-driver-wgpu --test div_zero_shift_mask_parity -- --test-threads=1 --nocapture
 
   composition-parity-gpu:
     name: Composition parity on real GPU
