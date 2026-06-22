@@ -156,6 +156,7 @@ impl ExprVisitor for CountingExprVisitor {
     }
 }
 
+mod bound_names;
 mod break_defaults;
 mod node_opaque;
 mod postorder_short_circuit;
