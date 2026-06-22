@@ -294,3 +294,165 @@ fn combined_scan_conserves_every_match_and_beats_hyperscan() {
         "no conserving combined-AC geometry beat Hyperscan: best {best_ok_gbps:.3} GB/s <= {HS_FLOOR_GBPS} GB/s"
     );
 }
+
+/// ~2048 distinct secret-shaped literals approximating keyhog's many-literal
+/// catalog (the real workload is ~6000): varied real-detector prefixes + base62
+/// bodies of varied length, so the combined Aho-Corasick has thousands of states
+/// and a realistically compressed byte alphabet. Deterministic (no RNG) so the
+/// oracle ground truth is stable across runs.
+fn large_catalog() -> Vec<Vec<u8>> {
+    let prefixes: &[&[u8]] = &[
+        b"AKIA", b"ghp_", b"gho_", b"xoxb-", b"xoxp-", b"AIza", b"sk-", b"pk_",
+        b"rk_", b"glpat-", b"ya29.", b"ASIA", b"SG.", b"shpat_", b"AccountKey=",
+        b"eyJ", b"-----BEGIN", b"npm_", b"dop_v1_", b"sk_live_",
+    ];
+    let body: &[u8] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    let mut out: Vec<Vec<u8>> = Vec::with_capacity(2048);
+    let mut seen = std::collections::HashSet::new();
+    let mut i = 0usize;
+    while out.len() < 2048 {
+        let prefix = prefixes[i % prefixes.len()];
+        let len = 6 + (i % 27); // bodies 6..=32 bytes
+        let mut p = prefix.to_vec();
+        for k in 0..len {
+            // Deterministic, well-spread index into the base62 alphabet.
+            let idx = i
+                .wrapping_mul(2_654_435_761)
+                .wrapping_add(k.wrapping_mul(40_503))
+                % body.len();
+            p.push(body[idx]);
+        }
+        if seen.insert(p.clone()) {
+            out.push(p);
+        }
+        i += 1;
+    }
+    out
+}
+
+#[test]
+#[ignore = "live GPU; run with --ignored --nocapture"]
+fn combined_scan_beats_hyperscan_at_keyhog_catalog_scale() {
+    // The KEYSTONE the smaller test does not cover: keyhog's catalog is thousands
+    // of literals ("few files × MANY literals"), not the 32 above. The combined-AC
+    // geometry collapse is O(input) and INDEPENDENT of rule count, so the 8 MiB
+    // win must HOLD as the automaton grows to thousands of states. This proves it
+    // on a realistic-scale catalog: still 0 dropped, still beats Hyperscan.
+    let backend = WgpuBackend::new()
+        .expect("Fix: live GPU required (missing GPU is a configuration bug, not a fallback)");
+
+    let owned = large_catalog();
+    let patterns: Vec<&[u8]> = owned.iter().map(|p| p.as_slice()).collect();
+    let max_pattern_len = patterns
+        .iter()
+        .map(|p| p.len())
+        .max()
+        .expect("non-empty catalog") as u32;
+    let buf = build_haystack(&patterns);
+
+    let ac = classic_ac_compile(&patterns);
+    let oracle: BTreeSet<(u32, u32)> = classic_ac_scan(&ac, &buf).into_iter().collect();
+    assert!(
+        oracle.len() > 10_000,
+        "a {}-literal catalog planted across 8 MiB must yield a large oracle; got {}",
+        patterns.len(),
+        oracle.len()
+    );
+
+    let transitions = &ac.dfa.transitions;
+    let output_offsets = &ac.dfa.output_offsets;
+    let output_records = &ac.dfa.output_records;
+    let state_count = ac.dfa.state_count;
+
+    let mut class_map = Vec::new();
+    let num_classes = vyre_runtime::megakernel::rule_catalog::build_byte_class_map_for_table(
+        transitions,
+        state_count as usize,
+        &mut class_map,
+    );
+    eprintln!(
+        "keyhog-scale combined automaton: {} patterns, {state_count} states, {num_classes} byte-classes",
+        patterns.len()
+    );
+    assert!(
+        state_count > 5_000,
+        "a {}-literal catalog must build a large automaton (>5000 states) to exercise scale; got {state_count}",
+        patterns.len()
+    );
+
+    // Segmenting geometries only (no whole-file: at this scale the unsegmented
+    // pass is the slow path the segmentation exists to beat). Swept down to very
+    // fine windows because a large automaton is memory-bound — more, smaller
+    // segments trade warm-up overhead for parallelism, and the sweep finds where
+    // that balance peaks for a thousands-of-states catalog.
+    let geometries = [16_384u32, 4_096, 1_024, 512, 256, 128];
+    eprintln!(
+        "8 MiB / {} patterns — combined-AC conservation + throughput (oracle {} matches, Hyperscan {HS_FLOOR_GBPS} GB/s):",
+        patterns.len(),
+        oracle.len()
+    );
+    eprintln!(
+        "  {:>9}  {:>8}  {:>8}  {:>8}  {:>6}  {:>9}",
+        "seg_len", "found", "dropped", "GB/s", "vs HS", "conserves?"
+    );
+
+    let mut results = Vec::new();
+    for seg_len in geometries {
+        let r = run_geometry(
+            &backend,
+            &buf,
+            transitions,
+            output_offsets,
+            output_records,
+            state_count,
+            max_pattern_len,
+            seg_len,
+        );
+        let conserves = r.found == oracle && r.dropped == 0;
+        let status = if conserves {
+            "conserves"
+        } else if r.under_claimed {
+            "LOUD-underclaim"
+        } else {
+            "DIVERGES"
+        };
+        eprintln!(
+            "  {:>9}  {:>8}  {:>8}  {:>8.3}  {:>5.2}x  {:>15}",
+            r.seg_len, r.found.len(), r.dropped, r.gbps, r.gbps / HS_FLOOR_GBPS, status,
+        );
+        results.push(r);
+    }
+
+    // Conservation: every non-under-claimed geometry must reproduce the oracle
+    // EXACTLY at scale — no miss, dup, or fabrication when the automaton is large.
+    for r in &results {
+        if r.under_claimed {
+            continue;
+        }
+        assert_eq!(
+            r.found, oracle,
+            "seg_len={} diverged from the oracle at keyhog scale (found {}, oracle {}, dropped {})",
+            r.seg_len,
+            r.found.len(),
+            oracle.len(),
+            r.dropped
+        );
+        assert_eq!(r.dropped, 0, "seg_len={} dropped {} hits", r.seg_len, r.dropped);
+    }
+
+    let best_ok_gbps = results
+        .iter()
+        .filter(|r| r.found == oracle && r.dropped == 0)
+        .map(|r| r.gbps)
+        .fold(0.0f64, f64::max);
+    eprintln!(
+        "best conserving throughput at {}-literal scale: {best_ok_gbps:.3} GB/s ⇒ combined-AC {} Hyperscan",
+        patterns.len(),
+        if best_ok_gbps > HS_FLOOR_GBPS { "BEATS" } else { "does NOT beat" }
+    );
+    assert!(
+        best_ok_gbps > HS_FLOOR_GBPS,
+        "the combined-AC win did NOT hold at {}-literal keyhog scale: best {best_ok_gbps:.3} GB/s <= {HS_FLOOR_GBPS} GB/s",
+        patterns.len()
+    );
+}
