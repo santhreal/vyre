@@ -1107,3 +1107,96 @@ fix_plan = """
 3. Re-run universal_harness; optimize(optimize(p)) must equal optimize(p) for
    scallop_join_wide::consumer_b without regressing other ops' idempotence.
 """
+
+[[finding]]
+id = "FINDING-CUDA-SELFOPT-1"
+date_opened = "2026-06-22"
+owner = "santhreal"
+test = "vyre_driver_cuda::tests::self_optimizer_pipeline_resident_e2e"
+status = "open"
+title = "self-optimizer GPU resident pipeline (gpu_pipeline_resident) wires the wrong resident-handle count -> 85 self_optimizer CUDA e2e tests fail 'expected 7 ... but received 3'"
+blocker = """
+Revealed 2026-06-22 once the vyre-driver-cuda build breaks were fixed (the suite
+had not compiled, so these never ran). 85 self_optimizer_* CUDA e2e tests fail with
+ONE shared error from the CUDA resident dispatch:
+
+  Dispatch(BackendError("Fix: CUDA resident dispatch expected 7 resident buffer
+  handle(s) but received 3."))
+
+emitted at vyre-driver-cuda/src/backend/dispatch.rs:229 (and the sibling resident
+paths backend/resident_dispatch/{batch.rs:63, async_dispatch.rs:121, borrowed.rs:103}).
+Call path: the tests call vyre_self_substrate::optimizer::pipeline_resident::
+gpu_pipeline_resident(p, &CudaOptimizerDispatcher), which allocates resident handles
+for the arena optimizer passes and dispatches. One pass's Program declares 7 buffers
+but gpu_pipeline_resident provides only 3 resident handles -> hard contract violation.
+
+NOT a CUDA-backend bug and NOT caused by the build-break fix: keyhog's own resident
+consumer (ResidentPresencePipeline) passes the SAME dispatch path with the correct
+handle count -- `resident_presence_cuda_parity::
+resident_region_presence_matches_borrowed_and_planted_hits_on_cuda` is GREEN. So the
+resident-dispatch contract works; the defect is in gpu_pipeline_resident's per-pass
+handle wiring. Deterministic (all 85 hit it). Off keyhog's matching lane (self-hosted
+optimizer-on-GPU), but it gates the whole self_optimizer CUDA suite.
+
+Failing files (share the error): self_optimizer_pattern_match_extended.rs:36 (34),
+self_optimizer_const_prop_e2e.rs:22 (13), self_optimizer_dead_branch_e2e.rs:19 (11),
+self_optimizer_const_fold_extended.rs:16 (9), self_optimizer_differential.rs:32 (7),
+self_optimizer_licm_e2e.rs:15 (4), self_optimizer_cross_scope_cse_e2e.rs:20 (4),
+self_optimizer_pipeline_resident_e2e.rs (cse/dce/loop-elim/idempotence cases).
+"""
+fix_plan = """
+1. In vyre-self-substrate/src/optimizer/pipeline_resident.rs::gpu_pipeline_resident,
+   find the arena pass whose Program declares 7 resident buffers (kinds/depth + the
+   CSE structural-hash/canonical/table scratch + ...) and confirm how many handles
+   are passed to the dispatch (currently 3). Either the handle vector is missing the
+   4 CSE/scratch handles for that pass, or the pass's buffer list grew (7) without
+   the handle wiring being updated.
+2. Make the resident-handle vector passed to each pass's dispatch match that pass's
+   Program buffer count exactly (the dispatch counts BufferDecls and requires one
+   resident handle per non-inlined buffer).
+3. Re-run `cargo test -p vyre-driver-cuda --no-fail-fast` (needs the dev-dep features
+   from bd8e0b70f9); the 85 self_optimizer failures must clear. Assert the dispatched
+   results equal the CPU-optimized reference (the tests already do), not just non-empty.
+"""
+
+[[finding]]
+id = "FINDING-CUDA-MISC-1"
+date_opened = "2026-06-22"
+owner = "santhreal"
+test = "vyre_driver_cuda::tests::cuda_graph_dispatch_parity::latency_cache_contracts"
+status = "open"
+title = "~11 other vyre-driver-cuda tests fail (distinct clusters) once the suite compiles -- cuda-graph timing, release-gate, scan_prefix_sum, ptx, scallop"
+blocker = """
+The build-break fix (bd8e0b70f9) also revealed ~11 failures NOT in the
+gpu_pipeline_resident cluster (FINDING-CUDA-SELFOPT-1). Each is a distinct cluster
+needing its own triage (none on keyhog's matching path; all pre-existing, hidden by
+the build break). Total suite state: 1158 passed, 96 failed (85 = SELFOPT-1, 11 here):
+  - cuda_graph timed-replay materialized-cache contracts (left None, right Some(0)):
+    latency_cache_contracts::cuda_graph_timed_replay_uses_exact_materialized_cache_without_device_work,
+    compiled_pipeline_contracts::compiled_pipeline_repeated_timed_single_dispatch_reports_materialized_zero_device_work
+    (cuda_graph_dispatch_parity/*.rs) -- timed cudaGraph materialized hits must report
+    zero device work but report None.
+  - cuda_release_surface_contracts.rs: cuda_release_path_tracks_resident_borrowed_fallback_telemetry_gate,
+    cuda_release_gate_evidence_matches_executable_gate (release telemetry gate).
+  - cuda_vyre_libs_scan_prefix_sum_recursive_block_totals (scan prefix-sum block totals).
+  - __split/ptx_codegen_smoke_part2.rs: ptx_emits_integer_comparisons,
+    ptx_lowers_workgroup_sum_region_to_subgroup_reduction (PTX emission shape).
+  - cuda_scallop_join_high_cell_chain_converges,
+    cuda_scallop_join_wide_copies_high_words_past_cell_lane_count (datalog join;
+    related to FINDING-OPT-IDEM-1's scallop_join_wide non-idempotence).
+"""
+fix_plan = """
+Triage each cluster separately (do NOT lump):
+1. cuda_graph timing: inspect the materialized-cache timed-replay telemetry in
+   backend/cuda_graph_replay.rs -- a timed replay of a materialized graph must report
+   device_ns Some(0) (cached, no launch) not None. Likely a telemetry plumbing gap on
+   the cached path.
+2. release-gate: cuda_release_surface_contracts asserts the release evidence matches
+   the executable gate; reconcile the gate after recent backend changes.
+3. scan_prefix_sum recursive block totals: differential vs the CPU oracle for the
+   multi-block recursive path.
+4. ptx_codegen_smoke_part2: PTX emission shape for integer comparisons + workgroup-sum
+   subgroup reduction; compare emitted PTX against the expected lowering.
+5. scallop_join: shares the high-word/cell-lane handling with FINDING-OPT-IDEM-1; fix
+   together. Re-run the suite after each; assert real result equality, never non-empty.
+"""
