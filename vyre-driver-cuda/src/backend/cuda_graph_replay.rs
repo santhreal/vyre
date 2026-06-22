@@ -337,11 +337,15 @@ impl CudaBackend {
             outputs,
         )? {
             // Materialized output cache hit: outputs were copied from host-side
-            // cache without launching any kernel.  No CUDA event timing was
-            // performed, so there is no device_ns to report.  Return None so
-            // the caller routes this to timed_dispatches_missing_device_time
-            // instead of injecting a fabricated 0-ns measurement.
-            return Ok(None);
+            // cache without launching any kernel.  Zero kernels launched means
+            // the device performed exactly zero work, so report Some(0) -- the
+            // exact, non-fabricated device time for a hit.  None would mean
+            // "device time unknown" and route this to
+            // timed_dispatches_missing_device_time, which is wrong: we know the
+            // device did nothing.  Some(0) also lets the release perf gate see
+            // the cache eliminate device work (0 ns) rather than an ambiguous
+            // missing measurement.
+            return Ok(Some(0));
         }
         self.warmup()?;
         let prepared = prepare_cuda_graph_replay_launch(cached, inputs, &input_state)?;
