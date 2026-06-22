@@ -166,7 +166,19 @@ fn unroll_values(from: &Expr, to: &Expr, body: &[Node]) -> Option<Range<u32>> {
         return None;
     }
     let body_cost = unroll_body_cost(body)?;
-    if body_cost.saturating_mul(trip_count) > MAX_UNROLLED_BODY_COST {
+    // A trip-count-1 loop inlines its body EXACTLY once: there is no
+    // duplication, so the size-blowup cap (which bounds code growth from copying
+    // the body `trip_count` times) does not apply. Gating trip-1 promotion on
+    // body cost made loop_unroll non-idempotent (FINDING-OPT-IDEM-1): a body
+    // whose cost exceeds the cap is left as a `Loop { from 0, to 1 }` in phase 2,
+    // then the phase-3 CSE/DCE cleanup that runs *after* this pass shrinks the
+    // body below the cap, so the trip-1 Loop->Block promotion fired on the
+    // *second* optimize() but not the first. Lifting the cap for trip_count == 1
+    // promotes it on the first pass; the rewrite is strictly cost-monotone
+    // (it removes loop control overhead and never grows the body), so the
+    // scheduler's cost-monotone gate accepts it. For trip_count > 1 the cap
+    // still guards real code-size blowup from duplication.
+    if trip_count > 1 && body_cost.saturating_mul(trip_count) > MAX_UNROLLED_BODY_COST {
         return None;
     }
     Some(from..to)

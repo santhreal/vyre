@@ -1099,9 +1099,10 @@ Verified: region_chain_invariant -> 1 passed/0 failed; vyre-primitives integrati
 [[finding]]
 id = "FINDING-OPT-IDEM-1"
 date_opened = "2026-06-22"
+date_fixed = "2026-06-22"
 owner = "santhreal"
-test = "vyre_libs::tests::universal_harness::universal_cat_a_harness"
-status = "open"
+test = "vyre_libs::tests::loop_unroll_trip1_idempotence::scallop_join_wide_consumer_b_optimize_is_idempotent"
+status = "fixed"
 title = "optimizer is non-idempotent: optimize(optimize(p)) != optimize(p) for scallop_join_wide::consumer_b"
 blocker = """
 universal_harness.rs asserts optimize(optimize(p)) == optimize(p) (one-pass
@@ -1126,6 +1127,34 @@ fix_plan = """
    first pass mutates the surrounding region).
 3. Re-run universal_harness; optimize(optimize(p)) must equal optimize(p) for
    scallop_join_wide::consumer_b without regressing other ops' idempotence.
+"""
+resolution = """
+Root cause (verified by dumping both optimize passes' IR): the write-back
+`__sjw_chunk` loop has a BUILD-TIME constant trip count of 1
+(`cell_chunks = ceil_div(cells, lanes).max(1) = 1`), so it is `from 0, to 1` from
+the start — the bound is never "folded late". `loop_unroll` runs only in
+pre_lowering phase 2 (PassPhase::Loop ∈ PHASE2_SELECTION, ∉ PHASE4_SELECTION).
+On the first optimize(), phase 2 sees the *pre-cleanup* loop body whose
+`unroll_body_cost` exceeds MAX_UNROLLED_BODY_COST (64), so `unroll_values`
+returned None and the trip-1 Loop was left intact. Phase 3 CSE/DCE (which run
+AFTER phase 2) then shrank the body below the cap, so the SECOND optimize()'s
+phase 2 unrolled it to a Block — hence optimize(optimize(p)) != optimize(p).
+
+Fix (vyre-foundation/src/optimizer/passes/loops/loop_unroll.rs, `unroll_values`):
+a trip-count-1 loop inlines its body EXACTLY once, so there is no duplication and
+the size-blowup cap is meaningless for it. Gate the cap on `trip_count > 1`; for
+trip_count == 1 only the costability check (`unroll_body_cost(body)?`) still
+applies. The rewrite is strictly cost-monotone (removes loop control, never grows
+the body), so the phase-2 scheduler's cost-monotone gate accepts it. This promotes
+the trip-1 Loop on the FIRST pass, making optimize() idempotent for this shape.
+
+Verified: loop_unroll unit tests 7/0 (keeps_small_trip_loop_when_body_cost_would_bloat_ir
+[trip 4], keeps_loop_with_barrier [trip 2, uncostable], keeps_large_loop_bounded
+[trip 17] all still pass — cap unchanged for trip>1); optimizer_idempotence_proptest
+3/0; new focused regression loop_unroll_trip1_idempotence 1/0 (asserts the assign-free
+trip-1 loop is promoted on pass 1 AND the assign-bearing transfer loop is left as a
+Loop); universal_cat_a_harness 1/0 (every Cat-A op idempotent + oracle pass, no
+regressions).
 """
 
 [[finding]]
