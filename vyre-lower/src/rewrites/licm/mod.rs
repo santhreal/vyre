@@ -542,39 +542,65 @@ fn load_is_loop_invariant_memory(
     })
 }
 
+/// Hoist-safety classifier: `true` only for ops that may be lifted out of a
+/// loop (no memory write, no sync/control/dispatch effect, not a loop-varying
+/// value). EXHAUSTIVE ON PURPOSE (no `_` wildcard): a future `KernelOpKind`
+/// with a side effect must be classified here rather than silently defaulting
+/// to "pure" and being hoisted out of the loop — a miscompile.
 fn is_pure(kind: &KernelOpKind) -> bool {
-    !matches!(
-        kind,
+    match kind {
+        // Pure value / builtin / arithmetic ops: no memory or control effect.
+        KernelOpKind::Literal
+        | KernelOpKind::Copy
+        | KernelOpKind::LocalInvocationId
+        | KernelOpKind::GlobalInvocationId
+        | KernelOpKind::WorkgroupId
+        | KernelOpKind::SubgroupLocalId
+        | KernelOpKind::SubgroupSize
+        | KernelOpKind::BufferLength
+        | KernelOpKind::BinOpKind(_)
+        | KernelOpKind::UnOpKind(_)
+        | KernelOpKind::Fma
+        | KernelOpKind::MatrixMma { .. }
+        | KernelOpKind::Select
+        | KernelOpKind::Cast { .. }
+        | KernelOpKind::SubgroupBallot
+        | KernelOpKind::SubgroupShuffle
+        | KernelOpKind::SubgroupBroadcast
+        | KernelOpKind::SubgroupReduce { .. } => true,
+        // Writes / atomics / barriers / async / traps / dispatch / calls /
+        // opaque: a side or sync effect, never hoist.
         KernelOpKind::StoreGlobal
-            | KernelOpKind::StoreShared
-            | KernelOpKind::Barrier { .. }
-            | KernelOpKind::Atomic { .. }
-            | KernelOpKind::AsyncLoad { .. }
-            | KernelOpKind::AsyncStore { .. }
-            | KernelOpKind::AsyncWait { .. }
-            | KernelOpKind::Trap { .. }
-            | KernelOpKind::Resume { .. }
-            | KernelOpKind::IndirectDispatch { .. }
-            | KernelOpKind::Return
-            | KernelOpKind::StructuredIfThen
-            | KernelOpKind::StructuredIfThenElse
-            | KernelOpKind::StructuredForLoop { .. }
-            | KernelOpKind::StructuredBlock
-            | KernelOpKind::Region { .. }
-            | KernelOpKind::Call { .. }
-            | KernelOpKind::OpaqueExpr(..)
-            | KernelOpKind::OpaqueNode(..)
-            // Loop induction variable is not invariant.
-            | KernelOpKind::LoopIndex { .. }
-            | KernelOpKind::LoopCarrierInit { .. }
-            | KernelOpKind::LoopCarrier { .. }
-            | KernelOpKind::LoopCarrierEnd { .. }
-            // Loads aren't safely hoistable  -  the underlying buffer
-            // could be written by another thread between iterations.
-            | KernelOpKind::LoadGlobal
-            | KernelOpKind::LoadShared
-            | KernelOpKind::LoadConstant
-    )
+        | KernelOpKind::StoreShared
+        | KernelOpKind::Barrier { .. }
+        | KernelOpKind::Atomic { .. }
+        | KernelOpKind::AsyncLoad { .. }
+        | KernelOpKind::AsyncStore { .. }
+        | KernelOpKind::AsyncWait { .. }
+        | KernelOpKind::Trap { .. }
+        | KernelOpKind::Resume { .. }
+        | KernelOpKind::IndirectDispatch { .. }
+        | KernelOpKind::Return
+        | KernelOpKind::StructuredIfThen
+        | KernelOpKind::StructuredIfThenElse
+        | KernelOpKind::StructuredForLoop { .. }
+        | KernelOpKind::StructuredBlock
+        | KernelOpKind::Region { .. }
+        | KernelOpKind::Call { .. }
+        | KernelOpKind::OpaqueExpr(..)
+        | KernelOpKind::OpaqueNode(..)
+        // Loop induction / carrier values are not loop-invariant.
+        | KernelOpKind::LoopIndex { .. }
+        | KernelOpKind::LoopCarrierInit { .. }
+        | KernelOpKind::LoopCarrier { .. }
+        | KernelOpKind::LoopCarrierEnd { .. }
+        // Loads aren't safely hoistable here  -  the underlying buffer could be
+        // written by another thread between iterations (the dedicated
+        // `load_is_loop_invariant_memory` path handles the provable cases).
+        | KernelOpKind::LoadGlobal
+        | KernelOpKind::LoadShared
+        | KernelOpKind::LoadConstant => false,
+    }
 }
 
 #[cfg(test)]
