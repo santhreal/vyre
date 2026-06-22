@@ -64,6 +64,7 @@
     "scc_decompose_gpu_parity",
     "semiring_gemm_gpu_parity",
     "sketch_sparse_fft_gpu_parity",
+    "subgroup_reduce_gpu_parity",
     "tensor_flow_forward_gpu_parity",
     "tensor_scc_gpu_parity",
     "text_primitives_gpu_parity",
