@@ -238,6 +238,30 @@ the number of elements the shader body writes.
 Applies to every Cat-A op that doesn't already set `.with_count`
 on its output: dot (1), scan_prefix_sum (n), broadcast (varies),
 relu (n), fnv1a32 (n), substring_search (n), aho_corasick (n).
+"""
+fix_plan = """
+Walk every Cat-A builder and add `.with_count(N)` on the output
+`BufferDecl::output(...)`. For scan_prefix_sum, broadcast, relu,
+fnv1a32, substring_search, aho_corasick the `n` parameter is
+already a function argument; plumb it into `with_count`.
+
+Dot's output is one u32 (the reduced scalar)  -  `.with_count(1)`.
+
+After this closes, re-run tests/cat_a_gpu_differential.rs. Any
+remaining divergence is a true shader-semantics bug not a
+metadata gap.
+"""
+resolution = """
+Fixed 2026-04-20. The Cat-A output builders now declare `.with_count` on their
+output decls — broadcast (with_count(n)), relu (with_count(n.max(1))),
+substring_search (with_count(output_count)), aho_corasick
+(BufferDecl::output(matches, ...).with_count(haystack_len)), etc. The wgpu backend
+sizes output readback as count*element_size, so non-empty results come back.
+(2026-06-22: this entry's blocker was missing its closing triple-quote, which
+swallowed downstream findings as string content and made findings.toml invalid
+TOML; the closing delimiter, the displaced fix_plan, and this resolution were
+restored.)
+"""
 
 [[finding]]
 id = "FINDING-V7-TEST-009-DOT"
@@ -317,9 +341,10 @@ fix_plan = """
 [[finding]]
 id = "FINDING-V7-TEST-011-BLAKE3-SIZE"
 date_opened = "2026-04-21"
+date_fixed = "2026-06-22"
 owner = "santhreal"
-test = "vyre_libraries::tests::blake3_wrong_size::*"
-status = "open"
+test = "vyre_libs::tests::blake3_wrong_size::{blake3_compress_errors_on_wrong_chaining_value_words, blake3_compress_errors_on_wrong_message_block_words}"
+status = "fixed"
 title = "blake3_compress accepts wrong-sized chaining_value and message_block buffers"
 blocker = """
 The new `#[should_panic]` tests prove `vyre-libs::hash::blake3_compress`
@@ -338,20 +363,19 @@ fix_plan = """
    byte count.
 3. Un-ignore `blake3_wrong_size.rs` once both malformed-buffer tests panic.
 """
-Ops that already call `.with_count`: matmul, matmul_tiled,
-attention, softmax, layer_norm, blake3_compress.
-"""
-fix_plan = """
-Walk every Cat-A builder and add `.with_count(N)` on the output
-`BufferDecl::output(...)`. For scan_prefix_sum, broadcast, relu,
-fnv1a32, substring_search, aho_corasick the `n` parameter is
-already a function argument; plumb it into `with_count`.
-
-Dot's output is one u32 (the reduced scalar)  -  `.with_count(1)`.
-
-After this closes, re-run tests/cat_a_gpu_differential.rs. Any
-remaining divergence is a true shader-semantics bug not a
-metadata gap.
+resolution = """
+Fixed (was a stale-open ledger entry). The hashmap reference interpreter
+(vyre-reference/src/execution/hashmap/mod.rs:124) validates every input buffer's
+provided byte length against its declared count*stride and fails closed:
+"buffer `{name}` has {n} bytes but requires at least {required} bytes ({count}
+elements of {ty}). Fix: provide a larger input buffer." blake3_compress declares
+cv_in with count 8 (32 bytes) and msg with count 16 (64 bytes), so a 7-word
+cv_in (28 bytes) and a 15-word msg (60 bytes) both error before execution — no
+silent nonsensical digest. The per-load OOB zero-fill rule in oob.rs is a
+separate, deliberate cross-backend-parity behavior and is unchanged; this fix is
+at the input-setup boundary, not the load path. The two regression tests are
+live (not #[ignore]d) and green: blake3_compress_errors_on_wrong_chaining_value_words,
+blake3_compress_errors_on_wrong_message_block_words (2/0).
 """
 
 [[finding]]
