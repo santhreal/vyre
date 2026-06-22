@@ -1158,22 +1158,37 @@ convolution.rs reference tests must stay green (no numeric regression).
 resolution = """
 Fixed in region_inline_engine (vyre-foundation/src/optimizer/passes/cleanup/
 region_inline_engine.rs), the scope-safe class fix the fix_plan asked for —
-realized by Block-wrapping rather than alpha-renaming. When the flatten branch
-inlines a Region whose (fully-flattened) body has top-level `Let` bindings, the
-body is wrapped in a `Node::Block` (a lexical scope V032 honors) instead of being
-spliced as bare siblings. This preserves the exact Region-as-scope contract every
-composed op relies on, fixes the whole class (any sub-op inlined more than once
-into one region), and avoids the rejected per-invocation-prefix workaround — all
-without the risk of rewriting every `Expr::var` reference that alpha-renaming
-entails. Bodies with no top-level lets still splice freely (the common case; every
-region_inline unit test still passes).
+realized by collision-aware Block-wrapping rather than alpha-renaming. When the
+flatten branch inlines a Region, it checks whether any top-level `Let` in the
+(fully-flattened) body shares its name with a top-level `Let` already emitted into
+the destination (`inlined_top_level_let_collides`). ONLY on an actual collision is
+the inlined body wrapped in a `Node::Block` (a lexical scope V032 honors), keeping
+those binds in a distinct scope; with no collision the body splices flat exactly as
+before. So in fft_convolve the first FFT stage splices flat and the second/third —
+which re-bind `u_re_s1_b0_k0` etc. — are Block-scoped, eliminating the duplicate
+siblings while leaving every non-colliding program byte-for-byte unchanged. This
+preserves the Region-as-scope contract, fixes the whole class (any sub-op inlined
+more than once into one region), avoids the rejected per-invocation-prefix
+workaround, and avoids rewriting every `Expr::var` reference that alpha-renaming
+entails.
 
-Verified: new CPU regression
+An earlier iteration Block-wrapped EVERY let-declaring region unconditionally; that
+was over-broad — it re-wrapped single-region const_fold/cse unit-test programs
+(`[Region[Let x]]` -> `[Block[Let x]]`), breaking 8 vyre-foundation unit tests via
+`test_util::region_body` extraction. The collision-aware predicate fixes those by
+construction (no collision -> splice flat), so the over-broad change was not
+shipped.
+
+Verified: CPU regression
 vyre-libs/tests/region_inline_let_scope.rs::fft_convolve_optimizes_without_duplicate_sibling_let
-(build fft_convolve n=4 -> pre_lowering::optimize -> validate has zero errors,
-1/0); region_inline_engine unit tests 5/0; universal_cat_a_harness 1/0;
-optimizer_idempotence_proptest 3/0; and end-to-end the live RTX 5090
-diff_universal_registry now passes 1/0 (was 1 failed on
+(build fft_convolve n=4 -> pre_lowering::optimize -> validate has zero errors, 1/0);
+new region_inline_engine unit test
+`colliding_sibling_lets_are_block_scoped_not_spliced_flat` (two siblings binding the
+same name -> exactly one top-level Let survives spliced, the other is Block-wrapped);
+all region_inline_engine + region_inline unit tests 10/0; full vyre-foundation --lib
+1491/0 (the 8 previously-collateral const_fold/cse/region_inline failures now green);
+universal_cat_a_harness 1/0; optimizer_idempotence_proptest 3/0; and end-to-end the
+live RTX 5090 diff_universal_registry passes 1/0 (was 1 failed on
 fft_convolve_circular_complex), 102s, with convolution.rs reference tests green.
 """
 

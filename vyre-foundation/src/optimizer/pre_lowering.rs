@@ -182,9 +182,17 @@ fn stabilize(phase4: Program) -> Program {
 pub fn optimize(program: Program) -> Program {
     // Same 5-stage pipeline as `try_optimize`, but infallible (back-compat): on a
     // phase-2/phase-4 scheduler error (a should-never-happen optimizer-metadata
-    // bug, already logged loudly inside run_phase*), continue with that stage's
-    // input rather than propagating. The stage's input was cloned for the
-    // scheduler run, so the fallback adds no extra clone.
+    // bug or non-convergence, already logged loudly inside run_phase*), continue
+    // with that stage's input rather than propagating, so GPU lowering's many
+    // `optimize(_) -> Program` call sites never have to thread a Result.
+    //
+    // The `.clone()` retains a fallback copy because `PassScheduler::run` consumes
+    // its input and does not return it on error. This is a deliberate cost: it
+    // runs at pipeline-BUILD time (once per program), which `ResidentPresencePipeline`
+    // amortizes over millions of scans — it is NOT on the per-scan hot path. The
+    // error branch itself is unreachable in a correct build (pass metadata is
+    // validated by `pass_order::tests::live_registered_order_validates`), so on the
+    // taken path the clone is pure insurance against a build-level optimizer bug.
     let prepared = prepare(program);
     let phase2_output = run_phase2(prepared.clone()).unwrap_or(prepared);
     let cleaned = cleanup_after_phase2(phase2_output);

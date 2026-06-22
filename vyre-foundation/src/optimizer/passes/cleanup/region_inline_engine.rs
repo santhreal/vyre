@@ -13,7 +13,9 @@
 
 use crate::ir_inner::model::node::Node;
 use crate::ir_inner::model::program::Program;
+use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
+use std::sync::Arc;
 
 /// Default node-count threshold. Regions whose bodies count ≤ this many
 /// nodes inline; larger Regions stay wrapped so tracing spans and
@@ -21,24 +23,16 @@ use smallvec::SmallVec;
 /// [`run_with_threshold`].
 pub const DEFAULT_INLINE_THRESHOLD: usize = 64;
 
-/// Grab a cleared vec with at least `min_capacity` from the scratch
-/// pool, or allocate a fresh one if nothing in the pool is large
-/// enough.
-fn take_scratch(pool: &mut Vec<Vec<Node>>, min_capacity: usize) -> Vec<Node> {
-    if let Some(idx) = pool.iter().position(|v| v.capacity() >= min_capacity) {
-        let mut v = pool.swap_remove(idx);
-        v.clear();
-        v
-    } else {
-        Vec::with_capacity(min_capacity)
-    }
-}
-
-/// Return an empty vec to the scratch pool so its capacity can be
-/// reused by a later inline pass.
-fn return_scratch(pool: &mut Vec<Vec<Node>>, mut v: Vec<Node>) {
-    v.clear();
-    pool.push(v);
+/// A child node after recursive flattening, awaiting the level-wide
+/// collision decision made in [`inline_nodes_into`]'s second pass.
+enum Staged {
+    /// A fully-flattened, inlinable Region body. Whether it splices flat or
+    /// is wrapped in a `Node::Block` depends on whether any of its top-level
+    /// `Let` names also occurs in another sibling at this level.
+    FlatRegion(Vec<Node>),
+    /// Any other node, emitted verbatim (its children already recursively
+    /// flattened).
+    Keep(Node),
 }
 
 /// Run the pass with the default threshold.
@@ -53,25 +47,36 @@ pub fn run(program: Program) -> Program {
 pub fn run_with_threshold(program: Program, threshold: usize) -> Program {
     program.map_entry(|owned_entry| {
         let mut entry = Vec::with_capacity(owned_entry.len());
-        let mut scratch_pool = Vec::new();
-        inline_nodes_into(owned_entry, threshold, &mut scratch_pool, &mut entry);
+        inline_nodes_into(owned_entry, threshold, &mut entry);
         entry
     })
 }
 
 /// Recursively inline regions, writing the transformed nodes into `out`.
 ///
-/// Inlined regions append directly into `out`, avoiding an
-/// intermediate allocation.  Non-inlined constructs (kept Regions,
-/// Blocks, Loops, Ifs) borrow a temporary buffer from the thread-local
-/// scratch pool, pre-sized with [`Vec::with_capacity`] based on the
-/// respective body length.
-fn inline_nodes_into(
-    nodes: Vec<Node>,
-    threshold: usize,
-    scratch_pool: &mut Vec<Vec<Node>>,
-    out: &mut Vec<Node>,
-) {
+/// A flattenable Region's body normally splices straight into `out`, dropping
+/// the Region wrapper. But a Region exists precisely to SCOPE its `Let`
+/// bindings, and the same sub-op composed more than once into one parent emits
+/// the SAME binding names each time (e.g. three FFT stages each binding
+/// `u_re_s1_b0_k0` — FINDING-GPU-11). Splicing those flat collides the names as
+/// duplicate siblings (V032); wrapping only some of them re-collides as a
+/// wrapped sibling shadowing a flat one (V008). So this runs in two passes:
+///
+/// 1. Recursively flatten every child into a [`Staged`] record and tally how
+///    many times each top-level `Let` name occurs across the whole sibling
+///    level (a flattened region's top-level names plus any bare sibling `Let`).
+/// 2. Emit in order. A flattened region whose body declares a top-level `Let`
+///    whose name occurs more than once at this level is wrapped in a
+///    `Node::Block` (a lexical scope the validator honors) so EVERY colliding
+///    sibling lands in its own scope. Regions whose names are all unique at this
+///    level splice flat — the common case, including the lone root Region every
+///    `Program::wrapped` builds, so non-colliding programs are byte-unchanged.
+fn inline_nodes_into(nodes: Vec<Node>, threshold: usize, out: &mut Vec<Node>) {
+    let mut staged: Vec<Staged> = Vec::with_capacity(nodes.len());
+    // Keyed by the interned text handle (cheap to clone, hashes by string
+    // value) so two distinct `Ident`s with the same text count as one name.
+    let mut top_level_let_counts: FxHashMap<Arc<str>, usize> = FxHashMap::default();
+
     for node in nodes {
         match node {
             Node::Region {
@@ -80,53 +85,37 @@ fn inline_nodes_into(
                 source_region,
             } => {
                 let count = count_nodes_capped(&body, threshold);
-                // VYRE_IR_HOTSPOTS CRIT: `(*body).clone()` cloned the
-                // whole inner Vec<Node> unconditionally. try_unwrap
-                // first so a uniquely-owned Arc yields the inner Vec
-                // without copying; fall back to clone only when
+                // VYRE_IR_HOTSPOTS CRIT: `(*body).clone()` cloned the whole inner
+                // Vec<Node> unconditionally. try_unwrap first so a uniquely-owned
+                // Arc yields the inner Vec without copying; clone only when
                 // another owner still holds the Arc.
-                let body_vec = match std::sync::Arc::try_unwrap(body) {
+                let body_vec = match Arc::try_unwrap(body) {
                     Ok(v) => v,
                     Err(arc) => (*arc).clone(),
                 };
                 if count <= threshold {
-                    // Flatten the region's body. Normally we splice it straight
-                    // into `out`, dropping the Region wrapper. But if the body
-                    // declares top-level `Let` bindings, splicing them as
-                    // siblings of the parent can collide with identically-named
-                    // lets from another flattened sibling region — e.g. two FFT
-                    // butterfly stages each binding `u_re_s1_b0_k0` — producing a
-                    // V032 "duplicate sibling let binding ... in the same region"
-                    // that the backend rejects (FINDING-GPU-11). Wrap such a body
-                    // in a `Node::Block`, a lexical scope V032 honors, so the lets
-                    // stay distinct (and stay scoped exactly as the Region scoped
-                    // them) without the Region's tracing weight. Bodies with no
-                    // top-level lets splice freely — the common case, and what
-                    // every region_inline unit test exercises.
-                    let mut inlined = take_scratch(scratch_pool, body_vec.len());
-                    inline_nodes_into(body_vec, threshold, scratch_pool, &mut inlined);
-                    if inlined.iter().any(|node| matches!(node, Node::Let { .. })) {
-                        out.push(Node::Block(std::mem::take(&mut inlined)));
-                    } else {
-                        out.append(&mut inlined);
+                    let mut inlined = Vec::with_capacity(body_vec.len());
+                    inline_nodes_into(body_vec, threshold, &mut inlined);
+                    for inner in &inlined {
+                        if let Node::Let { name, .. } = inner {
+                            *top_level_let_counts.entry(name.shared_text()).or_insert(0) += 1;
+                        }
                     }
-                    return_scratch(scratch_pool, inlined);
+                    staged.push(Staged::FlatRegion(inlined));
                 } else {
-                    let mut new_body = take_scratch(scratch_pool, body_vec.len());
-                    inline_nodes_into(body_vec, threshold, scratch_pool, &mut new_body);
-                    out.push(Node::Region {
+                    let mut new_body = Vec::with_capacity(body_vec.len());
+                    inline_nodes_into(body_vec, threshold, &mut new_body);
+                    staged.push(Staged::Keep(Node::Region {
                         generator,
                         source_region,
-                        body: std::sync::Arc::new(std::mem::take(&mut new_body)),
-                    });
-                    return_scratch(scratch_pool, new_body);
+                        body: Arc::new(new_body),
+                    }));
                 }
             }
             Node::Block(children) => {
-                let mut new_children = take_scratch(scratch_pool, children.len());
-                inline_nodes_into(children, threshold, scratch_pool, &mut new_children);
-                out.push(Node::Block(std::mem::take(&mut new_children)));
-                return_scratch(scratch_pool, new_children);
+                let mut new_children = Vec::with_capacity(children.len());
+                inline_nodes_into(children, threshold, &mut new_children);
+                staged.push(Staged::Keep(Node::Block(new_children)));
             }
             Node::Loop {
                 var,
@@ -134,34 +123,56 @@ fn inline_nodes_into(
                 to,
                 body,
             } => {
-                let mut new_body = take_scratch(scratch_pool, body.len());
-                inline_nodes_into(body, threshold, scratch_pool, &mut new_body);
-                out.push(Node::Loop {
+                let mut new_body = Vec::with_capacity(body.len());
+                inline_nodes_into(body, threshold, &mut new_body);
+                staged.push(Staged::Keep(Node::Loop {
                     var,
                     from,
                     to,
-                    body: std::mem::take(&mut new_body),
-                });
-                return_scratch(scratch_pool, new_body);
+                    body: new_body,
+                }));
             }
             Node::If {
                 cond,
                 then,
                 otherwise,
             } => {
-                let mut new_then = take_scratch(scratch_pool, then.len());
-                let mut new_otherwise = take_scratch(scratch_pool, otherwise.len());
-                inline_nodes_into(then, threshold, scratch_pool, &mut new_then);
-                inline_nodes_into(otherwise, threshold, scratch_pool, &mut new_otherwise);
-                out.push(Node::If {
+                let mut new_then = Vec::with_capacity(then.len());
+                let mut new_otherwise = Vec::with_capacity(otherwise.len());
+                inline_nodes_into(then, threshold, &mut new_then);
+                inline_nodes_into(otherwise, threshold, &mut new_otherwise);
+                staged.push(Staged::Keep(Node::If {
                     cond,
-                    then: std::mem::take(&mut new_then),
-                    otherwise: std::mem::take(&mut new_otherwise),
-                });
-                return_scratch(scratch_pool, new_then);
-                return_scratch(scratch_pool, new_otherwise);
+                    then: new_then,
+                    otherwise: new_otherwise,
+                }));
             }
-            other => out.push(other),
+            node @ Node::Let { .. } => {
+                if let Node::Let { name, .. } = &node {
+                    *top_level_let_counts.entry(name.shared_text()).or_insert(0) += 1;
+                }
+                staged.push(Staged::Keep(node));
+            }
+            other => staged.push(Staged::Keep(other)),
+        }
+    }
+
+    for item in staged {
+        match item {
+            Staged::FlatRegion(mut body) => {
+                let collides = body.iter().any(|node| match node {
+                    Node::Let { name, .. } => {
+                        top_level_let_counts.get(name.as_str()).copied().unwrap_or(0) >= 2
+                    }
+                    _ => false,
+                });
+                if collides {
+                    out.push(Node::Block(body));
+                } else {
+                    out.append(&mut body);
+                }
+            }
+            Staged::Keep(node) => out.push(node),
         }
     }
 }
@@ -281,6 +292,60 @@ mod tests {
         // Both Regions inlined  -  only the Store remains.
         assert_eq!(optimized.entry().len(), 1);
         assert!(matches!(&optimized.entry()[0], Node::Store { .. }));
+    }
+
+    #[test]
+    fn colliding_sibling_lets_are_each_block_scoped() {
+        // Two sibling regions that each bind the SAME name (the FFT-stage
+        // pattern behind FINDING-GPU-11). Splicing either flat would expose
+        // `u_re_s1_b0_k0` at the parent scope, so the other sibling — whether
+        // spliced (V032 duplicate sibling) or wrapped (V008 shadow of the flat
+        // one) — would fail validation. The collision is detected level-wide,
+        // so BOTH siblings are wrapped in their own Block: two co-equal scopes,
+        // neither shadowing the other, the shared name absent from top level.
+        let mk = |gen: &str| Node::Region {
+            generator: gen.into(),
+            source_region: None,
+            body: Arc::new(vec![
+                Node::let_bind("u_re_s1_b0_k0", Expr::u32(1)),
+                Node::store("out", Expr::u32(0), Expr::var("u_re_s1_b0_k0")),
+            ]),
+        };
+        let prog = Program::wrapped(
+            vec![BufferDecl::read_write("out", 0, DataType::U32)],
+            [1, 1, 1],
+            vec![mk("fft_stage_a"), mk("fft_stage_b")],
+        );
+        let entry = run(prog).into_entry_vec();
+
+        // No surviving Region wrappers, and the shared name is NEVER a
+        // top-level sibling — it lives only inside the per-sibling Blocks.
+        assert!(
+            !entry.iter().any(|n| matches!(n, Node::Region { .. })),
+            "both small regions must inline, got {entry:?}"
+        );
+        assert!(
+            !entry
+                .iter()
+                .any(|n| matches!(n, Node::Let { name, .. } if name == "u_re_s1_b0_k0")),
+            "the shared name must not appear at top level (would collide), got {entry:?}"
+        );
+
+        // Exactly two Blocks, each carrying its own copy of the binding.
+        let blocks: Vec<&Vec<Node>> = entry
+            .iter()
+            .filter_map(|n| match n {
+                Node::Block(b) => Some(b),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(blocks.len(), 2, "each colliding sibling gets its own Block");
+        for block_body in blocks {
+            assert!(
+                matches!(&block_body[0], Node::Let { name, .. } if name == "u_re_s1_b0_k0"),
+                "each Block scopes one copy of the shared let, got {block_body:?}"
+            );
+        }
     }
 
     #[test]
