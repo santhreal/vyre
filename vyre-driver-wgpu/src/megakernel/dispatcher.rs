@@ -2371,6 +2371,90 @@ mod tests {
         );
     }
 
+    /// Cross-OS shader VALIDITY for the combined segmented megakernel — the
+    /// program that wins 8.81× vs Hyperscan and runs live on Vulkan (Linux) and
+    /// DX12 (Windows). Those runs implicitly prove SPIR-V and HLSL validity, but
+    /// macOS/Metal is hardware-blocked, leaving its shader validity unproven.
+    /// `vyre-emit-metal` lowers the descriptor through `naga::back::msl`, whose
+    /// writer runs `naga::valid::Validator` first — a successful emit is therefore
+    /// a genuine proof the megakernel is valid Metal Shading Language, verifiable
+    /// WITHOUT an Apple GPU (the throughput-win on Metal stays separately
+    /// hardware-blocked). SPIR-V is emitted explicitly too rather than relying on
+    /// the live Vulkan run. BOTH transition widths are checked: the u16 path adds
+    /// a div/shr/mask unpack in the hot loop, so its Metal/SPIR-V validity is not
+    /// implied by the u32 path's.
+    #[test]
+    fn combined_megakernel_lowers_to_valid_msl_and_spirv_for_all_os() {
+        for width in [TransitionWidth::Bits32, TransitionWidth::Bits16] {
+            let program = build_combined_batch_program(64, 1024, 40, width);
+            let lowered = vyre_lower::lower_for_emit(&program).unwrap_or_else(|e| {
+                panic!("Fix: combined megakernel ({width:?}) must lower to a KernelDescriptor: {e:?}")
+            });
+
+            // The full combined program (not a stripped kernel) must reach the
+            // backend: its ten-buffer ABI survives into the descriptor bindings.
+            let slot_names: Vec<&str> = lowered
+                .descriptor
+                .bindings
+                .slots
+                .iter()
+                .map(|s| s.name.as_str())
+                .collect();
+            for needle in [
+                "file_offsets",
+                "file_metadata",
+                "haystack",
+                "transitions",
+                "output_offsets",
+                "output_records",
+                "class_maps",
+                "queue_state",
+                "hit_ring",
+                "segments",
+            ] {
+                assert!(
+                    slot_names.contains(&needle),
+                    "combined megakernel descriptor ({width:?}) is missing the `{needle}` buffer; \
+                     a stripped descriptor would silently emit a no-op kernel. Got {slot_names:?}"
+                );
+            }
+
+            // macOS/Metal: a successful emit ⇒ naga validated the module ⇒ the
+            // kernel is valid MSL on Apple GPUs.
+            let msl = vyre_emit_metal::emit(&lowered.descriptor).unwrap_or_else(|e| {
+                panic!(
+                    "Fix: combined megakernel ({width:?}) must lower to valid MSL for macOS/Metal: {e:?}"
+                )
+            });
+            assert!(
+                msl.contains("kernel "),
+                "MSL ({width:?}) must declare a Metal compute entry (`kernel `); got {} bytes",
+                msl.len()
+            );
+            assert!(
+                msl.len() > 500,
+                "MSL ({width:?}) for the multi-emit combined kernel is implausibly small \
+                 ({} bytes) — that is a stripped no-op, not the real automaton scan",
+                msl.len()
+            );
+
+            // Vulkan/SPIR-V: explicit proof, independent of the live Vulkan run.
+            let spirv = vyre_emit_spirv::emit(&lowered.descriptor).unwrap_or_else(|e| {
+                panic!("Fix: combined megakernel ({width:?}) must lower to valid SPIR-V: {e:?}")
+            });
+            assert_eq!(
+                spirv.first().copied(),
+                Some(vyre_emit_spirv::SPIRV_MAGIC),
+                "SPIR-V ({width:?}) must begin with the magic word"
+            );
+            assert!(
+                spirv.len() > 200,
+                "SPIR-V ({width:?}) module is implausibly small ({} words)",
+                spirv.len()
+            );
+        }
+    }
+
     #[test]
     fn hit_overflow_split_reports_dropped_matches() {
         // No overflow: every produced match fits the ring.
@@ -2641,6 +2725,40 @@ mod tests {
             .expect("Fix: an over-provisioned hit ring must decode the realized hit_count");
         assert_eq!(hits.len(), 2, "must decode exactly hit_count, not the ring capacity");
         assert_eq!(hits[1].match_offset, 100);
+    }
+
+    /// Law 10 on the queue-state readback decode: `read_u32_word` is the
+    /// fail-closed accessor that pulls `hit_head` / `items_processed` /
+    /// `claims_attempted` out of the queue-state buffer. `hit_head` BOUNDS how many
+    /// hits the host then decodes from the hit ring, so a silent default (0 /
+    /// garbage) on a short queue-state readback would corrupt that bound and lose
+    /// hits invisibly. A word index past the readback end must error loudly, never
+    /// return a default. Valid indices decode the exact little-endian word.
+    #[test]
+    fn read_u32_word_past_end_fails_closed_not_silent_default() {
+        let mut bytes = Vec::new();
+        for word in [11u32, 22] {
+            bytes.extend_from_slice(&word.to_le_bytes());
+        }
+        assert_eq!(
+            read_u32_word(&bytes, "queue-state", 0).expect("word 0 is in range"),
+            11
+        );
+        assert_eq!(
+            read_u32_word(&bytes, "queue-state", 1).expect("word 1 is in range"),
+            22
+        );
+
+        let err = read_u32_word(&bytes, "queue-state", 2).expect_err(
+            "Fix: reading past the readback end must fail closed, never return a silent default",
+        );
+        let PipelineError::Backend(message) = err else {
+            panic!("Fix: out-of-range word read must surface a Backend error, got {err:?}");
+        };
+        assert!(
+            message.contains("queue-state readback is missing u32 word 2"),
+            "Fix: the error must name the label and the missing word index; got {message:?}"
+        );
     }
 
     #[test]

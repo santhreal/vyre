@@ -82,6 +82,15 @@ vyre = { path = "../vyre-core", default-features = false }
 # A handful of tests reach `vyre_primitives::wire::pack_u32_iter` directly (the
 # facade doesn't re-export the wire POD helpers). Also dropped in the 0.6.2 refactor.
 vyre-primitives = { workspace = true }
+# Cross-OS shader-VALIDITY coverage for the combined segmented megakernel: the
+# winning Vulkan/DX12 runs implicitly prove SPIR-V/HLSL validity, but macOS/Metal
+# is hardware-blocked, so the megakernel descriptor is lowered to MSL here (naga's
+# MSL backend runs the validator, so a successful emit IS a Metal-validity proof)
+# and to SPIR-V (explicit, not run-implied). PATH-ONLY (no version), like the `vyre`
+# dev-dep above: cargo strips path-only dev-deps at publish, so this never creates a
+# publish-ordering constraint, and `--edges=normal` keeps it out of the layering lint.
+vyre-emit-metal = { path = "../vyre-emit-metal" }
+vyre-emit-spirv = { path = "../vyre-emit-spirv" }
 # A CPU-reference parity test (`c_ast_expression_support`) compares against vyre-reference.
 vyre-reference = { workspace = true }
 # `lens_gpu_parity` (and other GPU parity tests) use the shared conform harness.
