@@ -202,7 +202,15 @@ fn combined_scan_conserves_every_match_and_beats_hyperscan() {
 
     // seg_len = u32::MAX is one segment per file (whole-file, no segmentation);
     // the rest tile the 8 MiB file into many windows to saturate the device.
-    let geometries = [u32::MAX, 65_536u32, 16_384, 4_096, 1_024, 512];
+    // The sub-512 tail (256/128/64) probes the saturation/overlap-waste turnover:
+    // at seg_len=512 the 8 MiB file is only 16_384 segments — fewer than the
+    // device's resident-thread count — so smaller windows raise parallelism until
+    // the fixed `overlap = max_pattern_len` (19 B here) per window dominates. The
+    // boundary seeds (500/1020/4090/65530) straddle 512/1024/4096, all multiples
+    // of 64/128/256, so every sub-512 geometry's seams are still covered.
+    let geometries = [
+        u32::MAX, 65_536u32, 16_384, 4_096, 1_024, 512, 256, 128, 64,
+    ];
 
     eprintln!(
         "8 MiB / {} patterns — combined-AC conservation + throughput (oracle has {} matches, Hyperscan {HS_FLOOR_GBPS} GB/s):",
