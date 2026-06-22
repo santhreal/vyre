@@ -413,6 +413,60 @@ pub fn presence_by_region_words(pattern_count: u32, max_regions: u32) -> u32 {
     presence_bitmap_words(pattern_count).saturating_mul(max_regions.max(1))
 }
 
+/// Bindings 0-11 of the region-presence program, shared BYTE-IDENTICALLY by the
+/// presence-only program ([`classic_ac_bounded_ranges_suffix3_presence_by_region_program_ext`])
+/// and the fused presence+positions program
+/// ([`classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_ext`],
+/// which appends its match-counter binding 12 + triple-output binding 13). One
+/// source of truth keeps the shared static-table / region-attribution ABI identical
+/// across both builders — a binding added or resized here reaches both at once.
+#[allow(clippy::too_many_arguments)]
+fn presence_by_region_base_buffer_decls(
+    haystack: &str,
+    transitions: &str,
+    output_offsets: &str,
+    output_records: &str,
+    pattern_lengths: &str,
+    haystack_len: &str,
+    presence: &str,
+    candidate_end_mask: &str,
+    candidate_suffix2_mask: &str,
+    candidate_suffix3_bloom: &str,
+    region_starts: &str,
+    region_base: &str,
+    state_count: u32,
+    output_records_len: u32,
+    pattern_count: u32,
+    total_presence_words: u32,
+) -> Vec<BufferDecl> {
+    vec![
+        BufferDecl::storage(haystack, 0, BufferAccess::ReadOnly, DataType::U32),
+        BufferDecl::storage(transitions, 1, BufferAccess::ReadOnly, DataType::U32)
+            .with_count(state_count.saturating_mul(256)),
+        BufferDecl::storage(output_offsets, 2, BufferAccess::ReadOnly, DataType::U32)
+            .with_count(state_count.saturating_add(1)),
+        BufferDecl::storage(output_records, 3, BufferAccess::ReadOnly, DataType::U32)
+            .with_count(output_records_len),
+        BufferDecl::storage(pattern_lengths, 4, BufferAccess::ReadOnly, DataType::U32)
+            .with_count(pattern_count),
+        BufferDecl::storage(haystack_len, 5, BufferAccess::ReadOnly, DataType::U32).with_count(1),
+        BufferDecl::read_write(presence, 6, DataType::U32).with_count(total_presence_words),
+        BufferDecl::storage(candidate_end_mask, 7, BufferAccess::ReadOnly, DataType::U32)
+            .with_count(8),
+        BufferDecl::storage(candidate_suffix2_mask, 8, BufferAccess::ReadOnly, DataType::U32)
+            .with_count(CLASSIC_AC_SUFFIX2_MASK_WORDS as u32),
+        BufferDecl::storage(candidate_suffix3_bloom, 9, BufferAccess::ReadOnly, DataType::U32)
+            .with_count(CLASSIC_AC_SUFFIX3_BLOOM_WORDS as u32),
+        // Region start offsets (ascending, region_starts[0] == 0). Dynamic length:
+        // the kernel reads region_count via buf_len(region_starts).
+        BufferDecl::storage(region_starts, 10, BufferAccess::ReadOnly, DataType::U32),
+        // Shard base offset (1 u32) added to each local candidate position so a
+        // sharded dispatch attributes against the whole-batch region table (0 for
+        // the single-dispatch path).
+        BufferDecl::storage(region_base, 11, BufferAccess::ReadOnly, DataType::U32).with_count(1),
+    ]
+}
+
 /// Region-attributed variant of [`classic_ac_bounded_ranges_suffix3_presence_program_ext`]:
 /// the presence bitmap (binding 6) is `max_regions × presence_bitmap_words(pattern_count)`
 /// words, and a `region_starts` table (binding 10, the ascending file start
@@ -467,44 +521,24 @@ pub fn classic_ac_bounded_ranges_suffix3_presence_by_region_program_ext(
     );
 
     Program::wrapped(
-        vec![
-            BufferDecl::storage(haystack, 0, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(transitions, 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(state_count.saturating_mul(256)),
-            BufferDecl::storage(output_offsets, 2, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(state_count.saturating_add(1)),
-            BufferDecl::storage(output_records, 3, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(output_records_len),
-            BufferDecl::storage(pattern_lengths, 4, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(pattern_count),
-            BufferDecl::storage(haystack_len, 5, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(1),
-            BufferDecl::read_write(presence, 6, DataType::U32).with_count(total_presence_words),
-            BufferDecl::storage(candidate_end_mask, 7, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(8),
-            BufferDecl::storage(
-                candidate_suffix2_mask,
-                8,
-                BufferAccess::ReadOnly,
-                DataType::U32,
-            )
-            .with_count(CLASSIC_AC_SUFFIX2_MASK_WORDS as u32),
-            BufferDecl::storage(
-                candidate_suffix3_bloom,
-                9,
-                BufferAccess::ReadOnly,
-                DataType::U32,
-            )
-            .with_count(CLASSIC_AC_SUFFIX3_BLOOM_WORDS as u32),
-            // Region start offsets (ascending, region_starts[0] == 0). Dynamic
-            // length: the kernel reads region_count via buf_len(region_starts).
-            BufferDecl::storage(region_starts, 10, BufferAccess::ReadOnly, DataType::U32),
-            // Shard base offset (1 u32): added to each local candidate position so
-            // a sharded dispatch attributes against the whole-batch region table.
-            // 0 for the single-dispatch path.
-            BufferDecl::storage(region_base, 11, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(1),
-        ],
+        presence_by_region_base_buffer_decls(
+            haystack,
+            transitions,
+            output_offsets,
+            output_records,
+            pattern_lengths,
+            haystack_len,
+            presence,
+            candidate_end_mask,
+            candidate_suffix2_mask,
+            candidate_suffix3_bloom,
+            region_starts,
+            region_base,
+            state_count,
+            output_records_len,
+            pattern_count,
+            total_presence_words,
+        ),
         [128, 1, 1],
         vec![wrap_anonymous(
             "vyre-libs::matching::classic_ac_bounded_ranges_suffix3_presence_by_region",
@@ -617,46 +651,34 @@ pub fn classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_progra
         replay_nodes,
     );
 
+    let mut buffers = presence_by_region_base_buffer_decls(
+        haystack,
+        transitions,
+        output_offsets,
+        output_records,
+        pattern_lengths,
+        haystack_len,
+        presence,
+        candidate_end_mask,
+        candidate_suffix2_mask,
+        candidate_suffix3_bloom,
+        region_starts,
+        region_base,
+        state_count,
+        output_records_len,
+        pattern_count,
+        total_presence_words,
+    );
+    // Match counter (binding 12) + triple output (binding 13): the position half of
+    // the fused output. `append_match` bounds writes to `buf_len(matches) / 3 ==
+    // max_matches`.
+    buffers.push(BufferDecl::read_write(match_count, 12, DataType::U32).with_count(1));
+    buffers.push(
+        BufferDecl::output(matches, 13, DataType::U32).with_count(max_matches.saturating_mul(3)),
+    );
+
     Program::wrapped(
-        vec![
-            BufferDecl::storage(haystack, 0, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(transitions, 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(state_count.saturating_mul(256)),
-            BufferDecl::storage(output_offsets, 2, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(state_count.saturating_add(1)),
-            BufferDecl::storage(output_records, 3, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(output_records_len),
-            BufferDecl::storage(pattern_lengths, 4, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(pattern_count),
-            BufferDecl::storage(haystack_len, 5, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(1),
-            BufferDecl::read_write(presence, 6, DataType::U32).with_count(total_presence_words),
-            BufferDecl::storage(candidate_end_mask, 7, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(8),
-            BufferDecl::storage(
-                candidate_suffix2_mask,
-                8,
-                BufferAccess::ReadOnly,
-                DataType::U32,
-            )
-            .with_count(CLASSIC_AC_SUFFIX2_MASK_WORDS as u32),
-            BufferDecl::storage(
-                candidate_suffix3_bloom,
-                9,
-                BufferAccess::ReadOnly,
-                DataType::U32,
-            )
-            .with_count(CLASSIC_AC_SUFFIX3_BLOOM_WORDS as u32),
-            BufferDecl::storage(region_starts, 10, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(region_base, 11, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(1),
-            // Match counter (binding 12) + triple output (binding 13): the position
-            // half of the fused output. `append_match` bounds writes to
-            // `buf_len(matches) / 3 == max_matches`.
-            BufferDecl::read_write(match_count, 12, DataType::U32).with_count(1),
-            BufferDecl::output(matches, 13, DataType::U32)
-                .with_count(max_matches.saturating_mul(3)),
-        ],
+        buffers,
         [128, 1, 1],
         vec![wrap_anonymous(
             "vyre-libs::matching::classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region",
