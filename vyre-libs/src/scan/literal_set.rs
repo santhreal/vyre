@@ -14,6 +14,7 @@ use crate::scan::dfa::{dfa_compile, CompiledDfa};
 use crate::scan::dispatch_io::ScanDispatchScratch;
 use std::borrow::Cow;
 use std::collections::TryReserveError;
+use vyre::backend::PendingDispatch;
 use vyre::ir::{Expr, Node, Program};
 use vyre::{DispatchConfig, VyreBackend};
 pub use vyre_foundation::match_result::Match;
@@ -270,6 +271,57 @@ struct LiteralSetPrefilterTables {
     candidate_end_mask: [u32; 8],
     candidate_suffix2_mask: [u32; CLASSIC_AC_SUFFIX2_MASK_WORDS],
     candidate_suffix3_bloom: Vec<u32>,
+}
+
+/// In-flight handle for [`GpuLiteralSet::scan_presence_by_region_async`].
+///
+/// Returned the moment the GPU dispatch is submitted, so the caller can run
+/// host-side work concurrently with the device scan, then decode the per-region
+/// presence bitmap with [`Self::await_words`]. The owned input buffers the scan
+/// was submitted with are retained here (never read again on the host) so their
+/// backing memory stays valid for the whole dispatch on backends whose async
+/// upload reads host memory after submit returns.
+pub struct PendingPresenceByRegion {
+    pending: Box<dyn PendingDispatch>,
+    total_words: usize,
+    // Owned dispatch inputs kept alive until `await_words`. Retained purely so
+    // the device-side async upload's backing memory remains valid for the whole
+    // dispatch; never read again on the host.
+    _inputs: Vec<Vec<u8>>,
+}
+
+impl PendingPresenceByRegion {
+    /// Non-blocking readiness probe. `true` means [`Self::await_words`] will not
+    /// block the caller thread. Backends that cannot probe without cost report
+    /// `true` unconditionally (the caller then blocks inside `await_words`). See
+    /// [`vyre::backend::PendingDispatch::is_ready`].
+    #[must_use]
+    pub fn is_ready(&self) -> bool {
+        self.pending.is_ready()
+    }
+
+    /// Block until the GPU scan completes and decode the per-region presence
+    /// bitmap: `region_count × presence_bitmap_words(pattern_count)` packed `u32`
+    /// words, IDENTICAL to [`GpuLiteralSet::scan_presence_by_region`]'s return
+    /// (bit `p` of region `r`'s row is set iff pattern `p`'s literal occurs in
+    /// region `r`). Calling this when [`Self::is_ready`] is `true` does not block.
+    ///
+    /// # Errors
+    /// Returns [`vyre::BackendError`] on dispatch/readback failure.
+    pub fn await_words(self) -> Result<Vec<u32>, vyre::BackendError> {
+        let outputs = self.pending.await_result()?;
+        let presence_bytes = crate::scan::dispatch_io::try_output_bytes(
+            &outputs,
+            0,
+            "literal_set presence_by_region async",
+        )?;
+        let words: Vec<u32> = presence_bytes
+            .chunks_exact(4)
+            .take(self.total_words)
+            .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
+            .collect();
+        Ok(words)
+    }
 }
 
 impl GpuLiteralSet {
@@ -842,6 +894,114 @@ impl GpuLiteralSet {
             .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
             .collect();
         Ok(words)
+    }
+
+    /// ASYNC counterpart of [`Self::scan_presence_by_region_with_scratch`]: submit
+    /// the GPU region-presence dispatch and return a [`PendingPresenceByRegion`]
+    /// handle IMMEDIATELY, so the caller can OVERLAP host-side work (e.g. keyhog's
+    /// trigger-independent entropy-candidate generation) with the in-flight GPU
+    /// scan, then decode the per-region bitmap via
+    /// [`PendingPresenceByRegion::await_words`].
+    ///
+    /// On a backend that genuinely pipelines host/device work (wgpu, cuda) the GPU
+    /// scan executes while the caller does host work; on a backend that cannot
+    /// (the synchronous default in [`VyreBackend::dispatch_async`]) the handle is
+    /// trivially ready and this is equivalent — same bitmap, no overlap, no silent
+    /// change of result. See [`vyre::backend::PendingDispatch`].
+    ///
+    /// Unlike the synchronous entry there is NO `scratch` parameter: the async
+    /// dispatch ABI is `&[Vec<u8>]`, so inputs are built into OWNED buffers that
+    /// the returned handle RETAINS until `await_words`. This keeps the device-side
+    /// upload's backing memory valid for the whole dispatch — required on backends
+    /// (e.g. the CUDA stream h2d copy) whose async upload reads host memory after
+    /// this call returns.
+    ///
+    /// `region_base` has the same sharded-offset meaning as in
+    /// [`Self::scan_presence_by_region_with_scratch`] (pass `0` for a single-shard
+    /// scan).
+    ///
+    /// # Errors
+    /// See [`Self::scan_presence_by_region`]. Errors that surface only during GPU
+    /// execution come back from [`PendingPresenceByRegion::await_words`], not here.
+    pub fn scan_presence_by_region_async<B: VyreBackend + ?Sized>(
+        &self,
+        backend: &B,
+        haystack: &[u8],
+        region_starts: &[u32],
+        region_base: u32,
+    ) -> Result<PendingPresenceByRegion, vyre::BackendError> {
+        use crate::scan::dispatch_io;
+
+        let pattern_count = u32::try_from(self.pattern_lengths.len()).map_err(|_| {
+            vyre::BackendError::new(
+                "literal_set region-presence async: pattern count exceeds u32 GPU ABI".to_string(),
+            )
+        })?;
+        let region_count = u32::try_from(region_starts.len()).map_err(|_| {
+            vyre::BackendError::new(
+                "literal_set region-presence async: region count exceeds u32 GPU ABI".to_string(),
+            )
+        })?;
+        if region_count == 0 {
+            return Err(vyre::BackendError::new(
+                "literal_set region-presence async: region_starts must be non-empty. Fix: pass one start offset per coalesced file, beginning with 0.".to_string(),
+            ));
+        }
+        if region_starts[0] != 0 {
+            return Err(vyre::BackendError::new(
+                "literal_set region-presence async: region_starts[0] must be 0 (the kernel binary-search lower bound). Fix: the first coalesced file must start at offset 0.".to_string(),
+            ));
+        }
+        let total_words = presence_by_region_words(pattern_count, region_count) as usize;
+        let program = try_build_ac_bounded_ranges_suffix3_presence_by_region_program(
+            &self.dfa,
+            pattern_count,
+            region_count,
+        )
+        .map_err(vyre::BackendError::new)?;
+        let prefilter_tables = self.build_prefilter_tables()?;
+
+        let haystack_len = dispatch_io::scan_guard(
+            haystack,
+            "literal_set_presence_by_region_async",
+            dispatch_io::DEFAULT_MAX_SCAN_BYTES,
+        )?;
+        // OWNED inputs in the exact binding order of the synchronous entry. The
+        // async dispatch ABI takes `&[Vec<u8>]`; we keep `into_owned()`/`to_vec()`
+        // copies so they outlive the call (the handle retains them).
+        let mut haystack_packed = Vec::new();
+        dispatch_io::pack_haystack_u32_into(haystack, &mut haystack_packed)?;
+        let haystack_len_word = [haystack_len];
+        let region_base_bytes = region_base.to_le_bytes();
+        // Per-region presence buffer (binding 6) is read-write: uploaded zeroed,
+        // dispatched, read back. It is the entire output.
+        let presence_zeroed = vec![0u8; total_words.saturating_mul(4)];
+
+        let inputs: Vec<Vec<u8>> = vec![
+            haystack_packed, // 0: haystack (Packed U32)
+            dispatch_io::u32_words_as_le_bytes(&self.dfa.transitions).into_owned(), // 1: transitions
+            dispatch_io::u32_words_as_le_bytes(&self.dfa.output_offsets).into_owned(), // 2: output_offsets
+            dispatch_io::u32_words_as_le_bytes(&self.dfa.output_records).into_owned(), // 3: output_records
+            dispatch_io::u32_words_as_le_bytes(&self.pattern_lengths).into_owned(), // 4: pattern_lengths
+            dispatch_io::u32_words_as_le_bytes(&haystack_len_word).into_owned(), // 5: haystack_len
+            presence_zeroed, // 6: per-region presence (read_write)
+            dispatch_io::u32_words_as_le_bytes(&prefilter_tables.candidate_end_mask).into_owned(), // 7: candidate_end_mask
+            dispatch_io::u32_words_as_le_bytes(&prefilter_tables.candidate_suffix2_mask)
+                .into_owned(), // 8: candidate_suffix2_mask
+            dispatch_io::u32_words_as_le_bytes(&prefilter_tables.candidate_suffix3_bloom)
+                .into_owned(), // 9: candidate_suffix3_bloom
+            dispatch_io::u32_words_as_le_bytes(region_starts).into_owned(), // 10: region_starts
+            region_base_bytes.to_vec(),                                    // 11: region_base
+        ];
+
+        let config =
+            dispatch_io::byte_scan_dispatch_config(haystack_len, program.workgroup_size[0]);
+        let pending = backend.dispatch_async(&program, &inputs, &config)?;
+        Ok(PendingPresenceByRegion {
+            pending,
+            total_words,
+            _inputs: inputs,
+        })
     }
 
     /// FUSED region-presence + match-positions GPU scan with a default dispatch
