@@ -206,7 +206,46 @@ fn invalidated_store_scope(
         Trap { .. } | Resume { .. } | Return => Invalidation::All,
         // Calls: opaque side effects.
         Call { .. } | OpaqueExpr(..) | OpaqueNode(..) => Invalidation::All,
-        _ => Invalidation::None,
+        // Indirect dispatch READS `count_buffer[count_offset]` (a global
+        // binding, operand 0) to pick the dispatch shape, so any pending global
+        // store it may read must stay live. It touches only global memory,
+        // never shared.
+        IndirectDispatch { .. } => Invalidation::OnlySpace(MemorySpace::Global),
+        // Everything below reads no writable global/shared buffer memory, so it
+        // can never make a pending store live: pure value/builtin/arith ops,
+        // function-local loop-carrier slots (a distinct address space that
+        // cannot alias a tracked buffer store), read-only `LoadConstant`, and
+        // the metadata-only `BufferLength`. `StoreGlobal`/`StoreShared` reach
+        // this arm only for exhaustiveness — a store is keyed by `store_key`,
+        // never classified as a reader here. EXHAUSTIVE ON PURPOSE (no `_`
+        // wildcard): a future `KernelOpKind` that reads memory must be
+        // classified by hand rather than silently defaulting to `None` and
+        // eliminating a store it actually reads (a miscompile).
+        Literal
+        | Copy
+        | LocalInvocationId
+        | GlobalInvocationId
+        | WorkgroupId
+        | SubgroupLocalId
+        | SubgroupSize
+        | LoopIndex { .. }
+        | LoopCarrierInit { .. }
+        | LoopCarrier { .. }
+        | LoopCarrierEnd { .. }
+        | LoadConstant
+        | BufferLength
+        | BinOpKind(_)
+        | UnOpKind(_)
+        | Fma
+        | MatrixMma { .. }
+        | Select
+        | Cast { .. }
+        | SubgroupBallot
+        | SubgroupShuffle
+        | SubgroupBroadcast
+        | SubgroupReduce { .. }
+        | StoreGlobal
+        | StoreShared => Invalidation::None,
     }
 }
 
@@ -387,6 +426,83 @@ mod tests {
             .filter(|o| matches!(o.kind, KernelOpKind::StoreGlobal))
             .count();
         assert_eq!(store_count, 2);
+    }
+
+    #[test]
+    fn intervening_indirect_dispatch_keeps_first_store_alive() {
+        // Regression: `IndirectDispatch` READS `count_buffer[count_offset]` (a
+        // global binding) to choose the dispatch shape, so a `StoreGlobal` it
+        // may read must NOT be eliminated by a later same-address store. Before
+        // the exhaustive-match fix, `IndirectDispatch` fell into the optimistic
+        // `_ => Invalidation::None` wildcard and the first store was wrongly
+        // elided — a miscompile. Mirrors `intervening_load_keeps_first_store_alive`.
+        let mut binding = out_binding();
+        binding.visibility = BindingVisibility::ReadWrite;
+        let desc = KernelDescriptor {
+            id: "store_indirectdispatch_store".into(),
+            bindings: BindingLayout {
+                slots: vec![binding],
+            },
+            dispatch: Dispatch::new(1, 1, 1),
+            body: KernelBody {
+                ops: vec![
+                    KernelOp {
+                        kind: KernelOpKind::Literal,
+                        operands: vec![0],
+                        result: Some(0),
+                    },
+                    KernelOp {
+                        kind: KernelOpKind::Literal,
+                        operands: vec![1],
+                        result: Some(1),
+                    },
+                    KernelOp {
+                        kind: KernelOpKind::Literal,
+                        operands: vec![2],
+                        result: Some(2),
+                    },
+                    KernelOp {
+                        kind: KernelOpKind::StoreGlobal,
+                        operands: vec![0, 0, 1],
+                        result: None,
+                    },
+                    // Reads count_buffer = global binding slot 0.
+                    KernelOp {
+                        kind: KernelOpKind::IndirectDispatch { count_offset: 0 },
+                        operands: vec![0],
+                        result: None,
+                    },
+                    KernelOp {
+                        kind: KernelOpKind::StoreGlobal,
+                        operands: vec![0, 0, 2],
+                        result: None,
+                    },
+                ],
+                child_bodies: vec![],
+                literals: vec![
+                    LiteralValue::U32(0),
+                    LiteralValue::U32(7),
+                    LiteralValue::U32(99),
+                ],
+            },
+        };
+        let out = dead_store(&desc);
+        let store_count = out
+            .body
+            .ops
+            .iter()
+            .filter(|o| matches!(o.kind, KernelOpKind::StoreGlobal))
+            .count();
+        assert_eq!(
+            store_count, 2,
+            "IndirectDispatch reads count_buffer; the first store it may read must stay live"
+        );
+        // The IndirectDispatch op itself is preserved (the pass never elides it).
+        assert!(out
+            .body
+            .ops
+            .iter()
+            .any(|o| matches!(o.kind, KernelOpKind::IndirectDispatch { .. })));
     }
 
     #[test]
