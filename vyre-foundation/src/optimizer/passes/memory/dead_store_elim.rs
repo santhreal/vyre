@@ -171,18 +171,19 @@ fn any_node_observes_buffer(nodes: &[Node], buffer: &Ident) -> bool {
 fn node_observes_buffer(node: &Node, buffer: &Ident) -> bool {
     match node {
         Node::Store {
-            buffer: other,
+            buffer: _target,
             index,
             value,
         } => {
-            // A different store to the same buffer (different index)
-            // is not an observation, but the index/value subexpressions
-            // might Load from the buffer.
-            if other == buffer {
-                false
-            } else {
-                expr_touches_buffer(index, buffer) || expr_touches_buffer(value, buffer)
-            }
+            // The store's WRITE does not read `buffer`'s pre-store contents,
+            // but its index and value subexpressions are evaluated first and
+            // may Load from `buffer` (e.g. `A[A[j]] = A[k]`). This holds
+            // whether or not the store targets `buffer` itself: a same-buffer
+            // store that addresses or sources from `buffer` still observes the
+            // pre-store value, so an earlier store to it cannot be dropped.
+            // (Previously a same-buffer store short-circuited to `false`,
+            // skipping these subexpression reads — a dead-store miscompile.)
+            expr_touches_buffer(index, buffer) || expr_touches_buffer(value, buffer)
         }
         Node::Let { value, .. } | Node::Assign { value, .. } => expr_touches_buffer(value, buffer),
         Node::If {
@@ -440,6 +441,48 @@ mod tests {
         assert!(result.changed);
         let total: usize = result.program.entry().iter().map(count_stores).sum();
         assert_eq!(total, 1, "only the overwritten store is removed");
+    }
+
+    #[test]
+    fn keeps_first_store_when_later_same_buffer_store_index_reads_it() {
+        // Store(buf,0,1); Store(buf, Load(buf,0), 2); Store(buf,0,3)
+        // The middle store writes to the SAME buffer, but its INDEX reads
+        // buf[0] — the first store's value — to compute where it writes.
+        // Dropping the first store would change that index: a miscompile.
+        let entry = vec![
+            Node::store("buf", Expr::u32(0), Expr::u32(1)),
+            Node::store("buf", Expr::load("buf", Expr::u32(0)), Expr::u32(2)),
+            Node::store("buf", Expr::u32(0), Expr::u32(3)),
+        ];
+        let program = program_with_entry(entry);
+        let result = DeadStoreElim::transform(program);
+        assert!(
+            !result.changed,
+            "a same-buffer store whose index reads buf observes the first store"
+        );
+        let total: usize = result.program.entry().iter().map(count_stores).sum();
+        assert_eq!(total, 3, "all three stores must survive");
+    }
+
+    #[test]
+    fn keeps_first_store_when_later_same_buffer_store_value_reads_it() {
+        // Store(buf,0,1); Store(buf, 9, Load(buf,0)); Store(buf,0,3)
+        // The middle store targets a different index of the SAME buffer, but
+        // its VALUE reads buf[0] (the first store's value). Dropping the first
+        // store would change that value: a miscompile.
+        let entry = vec![
+            Node::store("buf", Expr::u32(0), Expr::u32(1)),
+            Node::store("buf", Expr::u32(9), Expr::load("buf", Expr::u32(0))),
+            Node::store("buf", Expr::u32(0), Expr::u32(3)),
+        ];
+        let program = program_with_entry(entry);
+        let result = DeadStoreElim::transform(program);
+        assert!(
+            !result.changed,
+            "a same-buffer store whose value reads buf observes the first store"
+        );
+        let total: usize = result.program.entry().iter().map(count_stores).sum();
+        assert_eq!(total, 3, "all three stores must survive");
     }
 
     #[test]
