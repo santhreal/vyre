@@ -46,8 +46,9 @@ dashmap.workspace = true
 libc.workspace = true
 
 [dev-dependencies]
-# integration tests/benches assert against these crates' public APIs
-vyre-libs = { workspace = true }
+# integration tests/benches assert against these crates' public APIs.
+# `matching-nfa` (dev-only) enables `ResidentRulePipeline` for its CUDA parity test.
+vyre-libs = { workspace = true, features = ["matching-nfa"] }
 tempfile.workspace = true
 serde_json.workspace = true
 pollster.workspace = true

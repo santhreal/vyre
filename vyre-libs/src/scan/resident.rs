@@ -14,17 +14,19 @@
 //! [`ResidentRulePipeline`] uploads the transition and epsilon tables **once**
 //! into backend-resident resources and keeps them resident for the lifetime of
 //! the session. Each [`scan`](ResidentRulePipeline::scan_into) then transfers
-//! only the haystack (a ranged upload into the resident haystack buffer) and a
-//! 4-byte hit-counter reset, dispatches against the resident tables, and decodes
-//! the hit buffer — the per-scan transfer drops from `O(tables + haystack)` to
-//! `O(haystack)`. This is the regex-path counterpart of
+//! only the haystack (a ranged upload into the resident haystack buffer), a
+//! 4-byte hit-counter reset, and the two 4-byte control values (haystack length
+//! and the per-workgroup scan bound), dispatches against the resident tables, and
+//! decodes the hit buffer — the per-scan transfer drops from `O(tables + haystack)`
+//! to `O(haystack)`. This is the regex-path counterpart of
 //! [`GpuLiteralSet::prepare_scan_dispatch`](super::literal_set::GpuLiteralSet::prepare_scan_dispatch).
 //!
 //! The match wire format is byte-identical to [`RulePipeline::scan`] (slot 0 =
 //! atomic counter, then `(pattern_id, start, end)` triples), so a consumer can
 //! swap the borrowed path for a resident session without changing any
-//! post-processing — proven by the GPU parity test in the keyhog scanner crate
-//! and the host-orchestration unit test below.
+//! post-processing — proven by the host-orchestration unit test below and the
+//! CUDA backend parity test
+//! (`vyre-driver-cuda/tests/resident_rule_pipeline_cuda_parity.rs`).
 //!
 //! # Backend support
 //!
@@ -66,6 +68,10 @@ pub struct ResidentRulePipeline {
     epsilon: Resource,
     /// Resident hit buffer (`max_matches × 3 + 1` u32s); counter reset per scan.
     hits: Resource,
+    /// Resident haystack-length control buffer (1 u32; re-uploaded per scan).
+    haystack_len_buf: Resource,
+    /// Resident max-scan-bytes control buffer (1 u32; re-uploaded per scan).
+    max_scan_bytes_buf: Resource,
     /// Padded byte capacity of the resident haystack buffer.
     haystack_capacity: usize,
     /// Match cap this session's hit buffer was sized for.
@@ -115,12 +121,23 @@ impl RulePipeline {
         let hit_capacity = hit_buffer_byte_len(max_matches)?;
         let hits = backend.allocate_resident(hit_capacity)?;
 
+        // The two 1-u32 control buffers (haystack_len, max_scan_bytes) are ALSO
+        // resident. The CUDA backend's resident dispatch rejects any borrowed
+        // resource (it resolves every binding to a resident handle), so a resident
+        // dispatch must be ALL-resident — a borrowed-control mix works on wgpu but
+        // fails closed on CUDA. They are allocated once here and re-uploaded per scan.
+        let control_byte_len = std::mem::size_of::<u32>();
+        let haystack_len_buf = backend.allocate_resident(control_byte_len)?;
+        let max_scan_bytes_buf = backend.allocate_resident(control_byte_len)?;
+
         Ok(ResidentRulePipeline {
             program: self.program.clone(),
             haystack,
             transition,
             epsilon,
             hits,
+            haystack_len_buf,
+            max_scan_bytes_buf,
             haystack_capacity,
             max_matches,
         })
@@ -191,18 +208,25 @@ impl ResidentRulePipeline {
         // hit-buffer clear.
         backend.upload_resident_at(&self.hits, 0, &0u32.to_le_bytes())?;
 
+        // Stage the two 1-u32 control buffers into their resident slots. They MUST
+        // be resident, not borrowed: the CUDA resident dispatch resolves every
+        // binding to a resident handle and rejects a borrowed mix, so an all-resident
+        // dispatch is the only form portable across wgpu AND CUDA. The upload copies
+        // the source synchronously, so reusing the just-staged `scratch` above is
+        // safe.
+        backend.upload_resident_at(&self.haystack_len_buf, 0, &haystack_len.to_le_bytes())?;
+        backend.upload_resident_at(&self.max_scan_bytes_buf, 0, &max_scan_bytes.to_le_bytes())?;
+
         // Buffer binding order MUST match `nfa::nfa_scan`'s BufferDecl order:
         // input(0), nfa_transition(1), nfa_epsilon(2), hits(3),
-        // nfa_haystack_len(4), nfa_max_scan_bytes(5). The two 1-u32 control
-        // buffers stay Borrowed — they are 4 bytes each and change per scan, so
-        // host replication is cheaper than a resident round-trip.
+        // nfa_haystack_len(4), nfa_max_scan_bytes(5) — every binding resident.
         let resources = [
             self.haystack.clone(),
             self.transition.clone(),
             self.epsilon.clone(),
             self.hits.clone(),
-            Resource::Borrowed(haystack_len.to_le_bytes().to_vec()),
-            Resource::Borrowed(max_scan_bytes.to_le_bytes().to_vec()),
+            self.haystack_len_buf.clone(),
+            self.max_scan_bytes_buf.clone(),
         ];
 
         let mut config = DispatchConfig::default();
@@ -255,7 +279,14 @@ impl ResidentRulePipeline {
     /// resources are still attempted.
     pub fn free(self, backend: &dyn VyreBackend) -> Result<(), BackendError> {
         let mut first_err = None;
-        for resource in [self.haystack, self.transition, self.epsilon, self.hits] {
+        for resource in [
+            self.haystack,
+            self.transition,
+            self.epsilon,
+            self.hits,
+            self.haystack_len_buf,
+            self.max_scan_bytes_buf,
+        ] {
             if let Err(error) = backend.free_resident(resource) {
                 first_err.get_or_insert(error);
             }
@@ -355,11 +386,15 @@ mod tests {
         ) -> Result<TimedDispatchResult, BackendError> {
             // Contract checks the consumer relies on:
             assert_eq!(resources.len(), 6, "nfa_scan binds six buffers");
-            assert!(
-                matches!(resources[1], Resource::Resident(_))
-                    && matches!(resources[2], Resource::Resident(_)),
-                "transition + epsilon tables must be resident, not re-uploaded"
-            );
+            // EVERY binding must be resident — the CUDA resident dispatch rejects a
+            // borrowed-resource mix, so no binding (not even the two 1-u32 control
+            // buffers) may be Borrowed.
+            for (idx, resource) in resources.iter().enumerate() {
+                assert!(
+                    matches!(resource, Resource::Resident(_)),
+                    "binding {idx} must be resident (no borrowed mix in a resident dispatch)"
+                );
+            }
             assert!(
                 config.grid_override.is_some(),
                 "resident scan must supply candidate-start grid override"
@@ -395,8 +430,9 @@ mod tests {
             .prepare_resident(&backend, 4096, 64)
             .expect("mock backend supports resident allocation");
 
-        // Four resident allocations: haystack, transition, epsilon, hits.
-        assert_eq!(backend.allocations.lock().unwrap().len(), 4);
+        // Six resident allocations: haystack, transition, epsilon, hits, and the two
+        // 1-u32 control buffers (haystack_len, max_scan_bytes).
+        assert_eq!(backend.allocations.lock().unwrap().len(), 6);
         // The two immutable tables are uploaded exactly once, at prepare time.
         assert_eq!(backend.full_uploads.load(Ordering::Relaxed), 2);
         assert_eq!(backend.ranged_uploads.load(Ordering::Relaxed), 0);
@@ -412,9 +448,9 @@ mod tests {
         // Decode parity: canned triples surface byte-identically to the borrowed
         // path's `Match` decode.
         assert_eq!(matches, vec![Match::new(0, 1, 3), Match::new(1, 5, 7)]);
-        // No further full uploads after prepare; each scan does exactly two
-        // ranged uploads (haystack stage + counter reset) — the tables never
-        // move again.
+        // No further full uploads after prepare; each scan does exactly four ranged
+        // uploads (haystack stage + counter reset + haystack_len + max_scan_bytes) —
+        // the immutable tables never move again.
         assert_eq!(
             backend.full_uploads.load(Ordering::Relaxed),
             2,
@@ -422,8 +458,8 @@ mod tests {
         );
         assert_eq!(
             backend.ranged_uploads.load(Ordering::Relaxed),
-            6,
-            "3 scans × (haystack + counter reset)"
+            12,
+            "3 scans × (haystack + counter reset + haystack_len + max_scan_bytes)"
         );
     }
 
