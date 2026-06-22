@@ -35,22 +35,48 @@ impl DeadBufferElim {
         if live.len() == program.buffers().len() {
             return PassResult::unchanged(program);
         }
-        // `live.len()` is the exact post-filter buffer count; pre-size
-        // so collect doesn't grow-by-doubling on programs with many
-        // buffers (the launch shapes carry 60+).
-        let mut buffers: Vec<_> = Vec::with_capacity(live.len());
+        let workgroup_size = program.workgroup_size();
+        let entry_op_id = program.entry_op_id().map(ToOwned::to_owned);
+        let non_composable = program.is_non_composable_with_self();
+
+        // Drop stores to dead buffers first; the surviving nodes then decide
+        // which DECLARATIONS must stay. Output-liveness answers "which stores
+        // are dead", but it is the wrong question for "which buffers to keep":
+        // a buffer read only in a control position -- an `If`/`Loop` guard
+        // whose body has no live store -- feeds no output yet is still
+        // referenced by the surviving guard (`filter_nodes` removes dead-target
+        // stores, never the guard itself). Keeping only output-live buffers
+        // would drop its declaration and leave a dangling load that fails IR
+        // validation ("load from unknown buffer"). The keep-set is therefore
+        // output-liveness UNION reference-liveness over the filtered program:
+        // keep a buffer if it feeds an output OR is still read/written by a
+        // surviving node.
+        let staged = Program::wrapped(
+            program.buffers().to_vec(),
+            workgroup_size,
+            filter_nodes(program.entry(), &live),
+        );
+        let referenced = referenced_buffers(&staged);
+
+        // `live` already counts outputs (the launch shapes carry 60+ buffers),
+        // so the kept set is at most the original count; pre-size to avoid
+        // grow-by-doubling.
+        let mut buffers: Vec<_> = Vec::with_capacity(program.buffers().len());
         buffers.extend(
             program
                 .buffers()
                 .iter()
-                .filter(|buffer| live.contains(buffer.name.as_ref()))
+                .filter(|buffer| {
+                    let name = buffer.name.as_ref();
+                    live.contains(name) || referenced.contains(name)
+                })
                 .cloned(),
         );
-        let entry = filter_nodes(program.entry(), &live);
+        let entry = staged.into_entry_vec();
 
-        let optimized = Program::wrapped(buffers, program.workgroup_size(), entry)
-            .with_optional_entry_op_id(program.entry_op_id().map(ToOwned::to_owned))
-            .with_non_composable_with_self(program.is_non_composable_with_self());
+        let optimized = Program::wrapped(buffers, workgroup_size, entry)
+            .with_optional_entry_op_id(entry_op_id)
+            .with_non_composable_with_self(non_composable);
         PassResult {
             program: optimized,
             changed: true,
@@ -69,6 +95,30 @@ fn live_buffers(program: &Program) -> LiveBufferSet<'_> {
             live.contains(buffer.name.as_ref())
                 .then_some(buffer.name.as_ref())
         })
+        .collect()
+}
+
+/// Every buffer still read or written by `staged` (the program AFTER
+/// dead-target stores were filtered out). Reuses the canonical use-fact
+/// derivation, so control-position reads (`If`/`Loop` guards), addressing
+/// reads, `buflen`, collective and async accesses are all counted -- exactly
+/// the buffer references the IR validator requires to be declared. A buffer
+/// absent from this set AND from output-liveness has no surviving reference
+/// and is safe to drop.
+///
+/// `staged` is reached only for non-opaque programs (an opaque program keeps
+/// every buffer live, so `transform` returns before building `staged`), so
+/// `buffer_reads`/`buffer_writes` capture the complete reference surface.
+fn referenced_buffers(staged: &Program) -> FxHashSet<Ident> {
+    let substrate = FactSubstrate::derive_use_only(staged);
+    let use_facts = substrate.use_facts().unwrap_or_else(|| {
+        unreachable!("derive_use_only contract: use_facts is always populated")
+    });
+    use_facts
+        .buffer_reads
+        .keys()
+        .chain(use_facts.buffer_writes.keys())
+        .cloned()
         .collect()
 }
 
