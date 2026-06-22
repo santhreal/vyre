@@ -1,5 +1,5 @@
-use super::substitution::{substitute_node, substitute_nodes};
-use crate::ir::{Expr, Ident, Node, Program};
+use super::substitution::{body_writes_loop_var, substitute_node, substitute_nodes};
+use crate::ir::{Expr, Node, Program};
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 use smallvec::SmallVec;
 use std::borrow::Cow;
@@ -192,20 +192,10 @@ fn literal_u32(expr: &Expr) -> Option<u32> {
     }
 }
 
-fn body_writes_loop_var(nodes: &[Node], var: &Ident) -> bool {
-    nodes.iter().any(|node| match node {
-        Node::Let { name, .. } | Node::Assign { name, .. } => name == var,
-        Node::If {
-            then, otherwise, ..
-        } => body_writes_loop_var(then, var) || body_writes_loop_var(otherwise, var),
-        Node::Loop {
-            var: inner, body, ..
-        } => inner != var && body_writes_loop_var(body, var),
-        Node::Block(body) => body_writes_loop_var(body, var),
-        Node::Region { body, .. } => body_writes_loop_var(body, var),
-        _ => false,
-    })
-}
+// `body_writes_loop_var` lives in `super::substitution` (one canonical copy
+// shared by every loop pass that reasons about induction-variable stability).
+// `body_contains_assign` below is unroll-specific (any Assign at all is unsafe
+// to duplicate across unrolled copies, not just an assign to the loop var).
 
 fn body_contains_assign(nodes: &[Node]) -> bool {
     nodes.iter().any(|node| match node {

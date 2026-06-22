@@ -48,6 +48,7 @@
 //!   has the inner If folded against `j`'s range first if `j`
 //!   appears in the condition, then against `i`'s range.
 
+use super::substitution::body_rebinds_var;
 use crate::ir::{BinOp, Expr, Ident, Node, Program};
 use crate::optimizer::program_shape_facts::ProgramShapeFacts;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
@@ -336,32 +337,9 @@ fn bound_range(expr: &Expr, shape_facts: &ProgramShapeFacts) -> Option<BoundRang
     }
 }
 
-fn body_rebinds_var(body: &[Node], var: &Ident) -> bool {
-    body.iter().any(|n| node_rebinds_var(n, var))
-}
-
-fn node_rebinds_var(node: &Node, var: &Ident) -> bool {
-    match node {
-        Node::Assign { name, .. } | Node::Let { name, .. } => name == var,
-        Node::Loop {
-            var: inner, body, ..
-        } => {
-            if inner == var {
-                return true;
-            }
-            body.iter().any(|n| node_rebinds_var(n, var))
-        }
-        Node::If {
-            then, otherwise, ..
-        } => {
-            then.iter().any(|n| node_rebinds_var(n, var))
-                || otherwise.iter().any(|n| node_rebinds_var(n, var))
-        }
-        Node::Block(body) => body.iter().any(|n| node_rebinds_var(n, var)),
-        Node::Region { body, .. } => body.iter().any(|n| node_rebinds_var(n, var)),
-        _ => false,
-    }
-}
+// `body_rebinds_var` lives in `super::substitution` (one canonical copy shared
+// with loop_lower_bound_normalize; both fold against a derived induction-var
+// range and decline whenever the induction name is reintroduced).
 
 fn has_foldable_if(node: &Node, shape_facts: &ProgramShapeFacts) -> bool {
     if let Node::Loop {

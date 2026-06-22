@@ -46,6 +46,7 @@
 //! Conservative because the IR value-set fact table only admits this exact
 //! literal-bound implication today.
 
+use super::substitution::body_writes_loop_var;
 use crate::ir::{BinOp, Expr, Node, Program};
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 
@@ -163,8 +164,15 @@ fn elide_in_node_with_ctx(node: Node, loop_ctx: Option<(&str, u32)>, changed: &m
             body,
         } => {
             // The loop establishes a fresh ctx; only fires when `to` is a
-            // literal (the conservative analysis we documented above).
-            let new_ctx = lit_u32_value(&to).map(|to_lit| (var.as_str(), to_lit));
+            // literal (the conservative analysis we documented above) AND the
+            // body never rebinds the loop var. If a `Let`/`Assign` shadows the
+            // induction variable (e.g. `let i = load(idx, i)` — a gathered
+            // index), a later `if i < to` is a *real* bounds check, not a
+            // redundant one; eliding it would drop the guard and admit an
+            // out-of-range access. strip_mine / unroll gate the same way.
+            let new_ctx = lit_u32_value(&to)
+                .filter(|_| !body_writes_loop_var(&body, &var))
+                .map(|to_lit| (var.as_str(), to_lit));
             let body = elide_in_sequence(body, new_ctx, changed);
             Node::Loop {
                 var,
@@ -230,7 +238,9 @@ fn has_redundant_guard_with_ctx(node: &Node, loop_ctx: Option<(&str, u32)>) -> b
                     .any(|n| has_redundant_guard_with_ctx(n, loop_ctx))
         }
         Node::Loop { var, to, body, .. } => {
-            let new_ctx = lit_u32_value(to).map(|to_lit| (var.as_str(), to_lit));
+            let new_ctx = lit_u32_value(to)
+                .filter(|_| !body_writes_loop_var(body, var))
+                .map(|to_lit| (var.as_str(), to_lit));
             body.iter()
                 .any(|n| has_redundant_guard_with_ctx(n, new_ctx))
         }
@@ -504,6 +514,61 @@ mod tests {
         assert!(
             !result.changed,
             "inner-loop scope must shadow outer; if-guard against outer var stays"
+        );
+    }
+
+    #[test]
+    fn transform_does_not_elide_when_body_rebinds_loop_var() {
+        // The loop body shadows the induction variable `i` with a value
+        // loaded from a buffer (a gathered index that may be out of range).
+        // The subsequent `if i < 4` is then a REAL bounds check on the loaded
+        // index, not a redundant re-check of the loop range. Eliding it would
+        // drop the guard and let `store(buf, i, ..)` run with an out-of-range
+        // `i`. The pass must decline. Pre-fix the guard was elided (the pass
+        // matched the cond by loop-var name without noticing the rebind).
+        let entry = vec![loop_with_body(
+            "i",
+            4,
+            vec![
+                // i := buf[i]  -  i is now an arbitrary loaded value.
+                Node::let_bind(
+                    "i",
+                    Expr::Load {
+                        buffer: Ident::from("buf"),
+                        index: Box::new(Expr::var("i")),
+                    },
+                ),
+                Node::if_then(
+                    Expr::lt(Expr::var("i"), Expr::u32(4)),
+                    vec![Node::store("buf", Expr::var("i"), Expr::u32(7))],
+                ),
+            ],
+        )];
+        let program = program_with_entry(entry);
+        let result = LoopRedundantBoundCheckElidePass::transform(Clone::clone(&program));
+        assert!(
+            !result.changed,
+            "a guard after the loop var is rebound is a real bounds check, \
+             not a redundant one  -  the pass must not elide it"
+        );
+        // The `if i < 4` guard node must structurally survive (it is NOT
+        // rewritten into a Block). count_redundant_if_guards reports the
+        // surviving If; an elided guard (replaced by Block) would count 0.
+        let total: usize = result
+            .program
+            .entry()
+            .iter()
+            .map(|n| count_redundant_if_guards(n, None))
+            .sum();
+        assert_eq!(
+            total, 1,
+            "the real bounds-check guard must remain in the loop body"
+        );
+        // analyze must also decline (SKIP), staying coherent with transform.
+        assert_eq!(
+            crate::optimizer::ProgramPass::analyze(&LoopRedundantBoundCheckElidePass, &program),
+            PassAnalysis::SKIP,
+            "analyze must agree with transform: no redundant guard to elide"
         );
     }
 

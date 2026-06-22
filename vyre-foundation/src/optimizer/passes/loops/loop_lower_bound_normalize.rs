@@ -53,6 +53,7 @@
 //!   contain a nested Loop that re-binds the same name. Both
 //!   collisions block the rewrite.
 
+use super::substitution::body_rebinds_var;
 use crate::ir::{BinOp, Expr, Ident, Node, Program};
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 use crate::visit::node_map;
@@ -161,28 +162,8 @@ fn is_normalizable_loop(node: &Node) -> bool {
     }
 }
 
-fn body_rebinds_var(body: &[Node], var: &Ident) -> bool {
-    fn check(node: &Node, var: &Ident) -> bool {
-        match node {
-            Node::Assign { name, .. } | Node::Let { name, .. } => name == var,
-            Node::Loop {
-                var: inner, body, ..
-            } => {
-                if inner == var {
-                    return true;
-                }
-                body.iter().any(|n| check(n, var))
-            }
-            Node::If {
-                then, otherwise, ..
-            } => then.iter().any(|n| check(n, var)) || otherwise.iter().any(|n| check(n, var)),
-            Node::Block(body) => body.iter().any(|n| check(n, var)),
-            Node::Region { body, .. } => body.iter().any(|n| check(n, var)),
-            _ => false,
-        }
-    }
-    body.iter().any(|n| check(n, var))
-}
+// `body_rebinds_var` lives in `super::substitution` (one canonical copy shared
+// with loop_var_range_fold; both fold against a derived induction-var range).
 
 #[expect(
     clippy::too_many_lines,

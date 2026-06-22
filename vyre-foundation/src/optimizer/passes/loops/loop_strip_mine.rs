@@ -9,7 +9,7 @@
 //! loop to unroll/vectorization and tiled-memory rewrites while keeping
 //! code size bounded.
 
-use super::substitution::substitute_nodes;
+use super::substitution::{body_writes_loop_var, substitute_nodes};
 use crate::ir::{Expr, Ident, Node, Program};
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 use crate::visit::node_map;
@@ -311,20 +311,8 @@ fn collect_names_in_expr(expr: &Expr, out: &mut Vec<Ident>) {
     }
 }
 
-fn body_writes_loop_var(nodes: &[Node], var: &Ident) -> bool {
-    nodes.iter().any(|node| match node {
-        Node::Let { name, .. } | Node::Assign { name, .. } => name == var,
-        Node::If {
-            then, otherwise, ..
-        } => body_writes_loop_var(then, var) || body_writes_loop_var(otherwise, var),
-        Node::Loop {
-            var: inner, body, ..
-        } => inner != var && body_writes_loop_var(body, var),
-        Node::Block(body) => body_writes_loop_var(body, var),
-        Node::Region { body, .. } => body_writes_loop_var(body, var),
-        _ => false,
-    })
-}
+// `body_writes_loop_var` lives in `super::substitution` (one canonical copy
+// shared by every loop pass that reasons about induction-variable stability).
 
 #[cfg(test)]
 mod tests {
