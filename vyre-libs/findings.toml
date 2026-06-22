@@ -948,3 +948,55 @@ fix_plan = """
 3. Remove the ignore from tests/logical_should_panic.rs and keep the panic
    contract locked in for every backend path.
 """
+
+[[finding]]
+id = "FINDING-GPU-11"
+date_opened = "2026-06-21"
+owner = "santhreal"
+test = "vyre_driver_wgpu::tests::cat_a_gpu_differential::diff_universal_registry"
+status = "open"
+title = "region_inline flattens identically-named Region-scoped Let bindings into colliding siblings (fft_convolve_circular_complex fails V032 on the 5090)"
+blocker = """
+Surfaced 2026-06-21 by the universal GPU differential sweep on a live
+RTX 5090: `vyre-libs::math::fft::fft_convolve_circular_complex` panics at
+cat_a_gpu_differential.rs:74 (run_gpu .expect) with
+
+  InvalidProgram { fix: "V032: duplicate sibling let binding
+  `u_re_s1_b0_k0` in the same region. Fix: rename one binding or move one
+  declaration into an inner Block/Region/Loop if a new scope is intended." }
+
+Root cause is NOT in the FFT op itself. `fft_convolve_circular_complex`
+(math/fft/convolution.rs) invokes `fft_region` THREE times (FFT(signal),
+FFT(kernel), FFT(product)), each wrapping `fft_radix2_complex` in a
+`Node::Region` specifically to SCOPE its Let bindings (see the comment at
+convolution.rs:53-55). All three invocations use n=4, so the radix-2
+butterfly (fft_radix2.rs:83-121) emits the IDENTICAL binding names
+`{u,l,t}_{re,im}_s{stage}_b{block}_k{k}` in each. The CPU reference
+interpreter honors the Region scope, so the op executes correctly there
+(convolution.rs unit + adversarial tests all pass). But the GPU lowering
+path runs `vyre_foundation::optimizer::pre_lowering::optimize`
+(region_inline), which UNWRAPS the `Node::Region` wrappers into the parent
+region WITHOUT alpha-renaming the inlined Let bindings — so the three FFTs'
+`u_re_s1_b0_k0` (etc.) collapse into colliding siblings and V032 fires at
+naga validation. Any op composed by inlining the same sub-op more than once
+into one region hits this; FFT-convolve is just the first reproducer.
+"""
+fix_plan = """
+CORRECT FIX (Law 4 — fix the architecture): make region_inline scope-safe.
+When `pre_lowering`/region_inline unwraps a `Node::Region` whose Let
+bindings would collide with names already live in the destination region,
+alpha-rename the inlined region's bindings (and every Expr::var reference
+within that region's subtree) to fresh unique names before splicing. This
+preserves the Region-as-scope contract every composed op relies on and
+fixes the whole class, not just FFT. Files: the region_inline pass in
+vyre-foundation/src/optimizer/pre_lowering/ (+ a rename-on-inline helper).
+LOCAL WORKAROUND (rejected here as a silent mask, Law 10): prefixing
+fft_radix2 bindings with a per-invocation tag (e.g. the sanitized output
+buffer name) would unblock FFT-convolve but leave every other twice-inlined
+composition silently exposed — do not ship the workaround without the
+general fix.
+VERIFY: re-run `cargo test -p vyre-driver-wgpu --test cat_a_gpu_differential
+--features math-linalg,math-scan diff_universal_registry` on a GPU host;
+fft_convolve_circular_complex must leave the failures list, and the
+convolution.rs reference tests must stay green (no numeric regression).
+"""
