@@ -207,10 +207,16 @@ impl RulePipeline {
         // index 0 of `outputs`.
         let hit_bytes = dispatch_io::try_output_bytes(&outputs, 0, "RulePipeline hit buffer")?;
         let count = dispatch_io::try_read_u32_prefix(hit_bytes, "RulePipeline hit buffer")?;
-        // Triples start at byte 4 (after the atomic counter).
-        dispatch_io::try_unpack_match_triples_exact_prefix_into(
+        // Triples start at byte 4 (after the atomic counter). The counter is an
+        // atomic incremented for every match found — including matches past slot
+        // `max_matches` the kernel could not write — so a count over the cap means
+        // matches were dropped. Fail closed rather than silently decode the
+        // truncated prefix (Law 10).
+        dispatch_io::try_unpack_match_triples_capped_into(
             &hit_bytes[4..],
-            count.min(max_matches),
+            count,
+            max_matches,
+            "RulePipeline hit buffer",
             matches,
         )?;
         Ok(())
@@ -720,6 +726,52 @@ mod tests {
         bytes.extend_from_slice(&start.to_le_bytes());
         bytes.extend_from_slice(&end.to_le_bytes());
         bytes
+    }
+
+    #[test]
+    fn scan_fails_closed_when_kernel_count_exceeds_cap() {
+        // Law 10 regression at the RulePipeline decode call site: the kernel's
+        // atomic counter reports 9 hits into a buffer sized for the cap of 4
+        // triples. The capped decode must error (naming the overflow and the 5
+        // dropped matches) instead of silently returning the truncated 4 — a
+        // false negative the caller could not detect.
+        let pipe = build(&["ab"], "input", "hits", 16);
+        let triples: Vec<u8> = (0..4u32)
+            .flat_map(|i| match_triple_bytes(0, i, i + 2))
+            .collect();
+        let backend = RuleReadbackBackend {
+            outputs: vec![hit_buffer_bytes(9, &triples)],
+        };
+        let mut matches = vec![Match::new(7, 7, 7)];
+        let err = pipe
+            .scan_into(&backend, b"abab", 4, &mut matches)
+            .expect_err("count 9 over cap 4 must fail closed, not truncate to 4");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("RulePipeline hit buffer")
+                && msg.contains("exceeds the output-buffer cap 4")
+                && msg.contains("drop 5 match(es)")
+                && matches.is_empty(),
+            "RulePipeline must surface the dropped-match overflow and expose no partial set: {msg}"
+        );
+    }
+
+    #[test]
+    fn scan_decodes_exact_set_within_cap() {
+        // The positive twin: a count within the cap decodes the real triples
+        // verbatim (assert concrete values, never is_empty), proving the guard
+        // does not reject legitimate in-bounds results.
+        let pipe = build(&["ab"], "input", "hits", 16);
+        let mut triples = Vec::new();
+        triples.extend_from_slice(&match_triple_bytes(0, 1, 3));
+        triples.extend_from_slice(&match_triple_bytes(1, 2, 4));
+        let backend = RuleReadbackBackend {
+            outputs: vec![hit_buffer_bytes(2, &triples)],
+        };
+        let mut matches = vec![Match::new(9, 9, 9)];
+        pipe.scan_into(&backend, b"abab", 8, &mut matches)
+            .expect("count 2 within cap 8 must decode");
+        assert_eq!(matches, vec![Match::new(0, 1, 3), Match::new(1, 2, 4)]);
     }
 
     #[test]

@@ -268,17 +268,16 @@ impl ResidentRulePipeline {
         let count = dispatch_io::try_read_u32_prefix(hit_bytes, "ResidentRulePipeline hit buffer")?;
         // Truncation guard: the resident hit buffer is fixed-size, so a batch
         // that overflows `max_matches` would silently drop matches (a false
-        // negative). Surface it as an error so the consumer degrades to a
-        // per-batch-sized borrowed dispatch instead — exactly the
-        // `match count exceeded cap` reroute the borrowed megascan path already
-        // takes. Never decode a truncated set.
-        if count > self.max_matches {
-            return Err(BackendError::new(format!(
-                "ResidentRulePipeline hit count {count} exceeds the resident cap {}. Fix: re-dispatch this batch through the per-batch-sized borrowed RulePipeline::scan (truncation would drop matches).",
-                self.max_matches
-            )));
-        }
-        dispatch_io::try_unpack_match_triples_exact_prefix_into(&hit_bytes[4..], count, matches)
+        // negative). The shared capped decode surfaces it as an error so the
+        // consumer degrades to a per-batch-sized borrowed dispatch instead.
+        // Never decode a truncated set.
+        dispatch_io::try_unpack_match_triples_capped_into(
+            &hit_bytes[4..],
+            count,
+            self.max_matches,
+            "ResidentRulePipeline hit buffer",
+            matches,
+        )
     }
 
     /// The match cap this session's resident hit buffer was sized for.
@@ -505,9 +504,12 @@ mod tests {
         let err = session
             .scan_into(&backend, b"ab", &mut matches, &mut scratch)
             .expect_err("hit count over the resident cap must error, not truncate");
+        let msg = err.to_string();
         assert!(
-            err.to_string().contains("exceeds the resident cap") && matches.is_empty(),
-            "truncation guard must name the cap and expose no partial matches: {err}"
+            msg.contains("exceeds the output-buffer cap 4")
+                && msg.contains("drop 5 match(es)")
+                && matches.is_empty(),
+            "truncation guard must name the cap, the dropped count, and expose no partial matches: {err}"
         );
     }
 

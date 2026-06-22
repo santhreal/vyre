@@ -414,9 +414,16 @@ pub fn try_unpack_match_triples_into(
 ///
 /// Unlike [`try_unpack_match_triples_into`], this helper rejects a backend
 /// buffer that cannot hold exactly the `count` complete triples requested by
-/// the caller. Use it after clamping an over-capacity kernel counter to the
-/// caller's `max_matches`; short buffers are backend/readback corruption, not
-/// a successful partial decode.
+/// the caller; short buffers are backend/readback corruption, not a successful
+/// partial decode.
+///
+/// `count` MUST already be proven `<= max_matches` (the fixed output-buffer
+/// capacity). Do NOT pass `count.min(max_matches)` here to clamp an
+/// over-capacity kernel counter: that hands back a truncated set the caller
+/// cannot distinguish from a complete one — a SILENT dropped-match false
+/// negative (Law 10). Route every fixed-capacity GPU match readback through
+/// [`try_unpack_match_triples_capped_into`], which fails closed on overflow and
+/// only then calls this.
 ///
 /// # Errors
 ///
@@ -437,6 +444,44 @@ pub fn try_unpack_match_triples_exact_prefix_into(
         )));
     }
     try_unpack_match_triples_into(triples_bytes, count, results)
+}
+
+/// Capacity-guarded match-triple decode: the ONE primitive every fixed-capacity
+/// GPU match readback must use. Fails closed when the kernel's reported `count`
+/// exceeds the output-buffer cap.
+///
+/// The GPU match counter is an atomic incremented for EVERY match the kernel
+/// finds — including matches at slots past `cap` it could not write (the emit
+/// is guarded by `slot < cap`, the counter is not). So `count > cap` is the
+/// exact, host-detectable signal that `count - cap` matches were dropped.
+/// Decoding the `min(count, cap)` prefix instead would return a truncated set
+/// indistinguishable from a complete scan: a SILENT false negative — the worst
+/// failure mode for a scanner (Law 10). This surfaces the overflow as an error
+/// naming the shortfall and the fix; on success `count` is proven `<= cap` and
+/// decoded exactly via [`try_unpack_match_triples_exact_prefix_into`].
+///
+/// `context` labels the readback (e.g. `"RulePipeline hit buffer"`) so the
+/// error points the operator at the dispatch that overflowed.
+///
+/// # Errors
+///
+/// Returns [`BackendError`] when `count > cap` (overflow ⇒ dropped matches), or
+/// for any error [`try_unpack_match_triples_exact_prefix_into`] raises.
+pub fn try_unpack_match_triples_capped_into(
+    triples_bytes: &[u8],
+    count: u32,
+    cap: u32,
+    context: &str,
+    results: &mut Vec<vyre_foundation::match_result::Match>,
+) -> Result<(), BackendError> {
+    if count > cap {
+        results.clear();
+        return Err(BackendError::new(format!(
+            "{context}: GPU match count {count} exceeds the output-buffer cap {cap}; decoding would silently drop {} match(es). Fix: raise the match cap (max_matches) or split the scan before dispatch.",
+            count - cap
+        )));
+    }
+    try_unpack_match_triples_exact_prefix_into(triples_bytes, count, results)
 }
 
 #[inline]
@@ -483,6 +528,64 @@ mod tests {
             !src.contains(swallow_marker),
             "Fix: a dispatch wrapper reintroduced an eprintln!-then-return-empty silent fallback (Law 10) — fail loud via panic!() so callers use the try_ variants."
         );
+    }
+
+    #[test]
+    fn capped_decode_fails_closed_when_count_exceeds_cap() {
+        // Law 10 regression: the kernel's atomic match counter overcounts past
+        // the fixed output cap (the emit is `slot < cap`-guarded, the counter is
+        // not), so `count > cap` means matches were dropped. The capped decode
+        // MUST surface that, never hand back the silently-truncated prefix.
+        // Forge 4 complete triples but a counter claiming 9 hits.
+        let mut triples = Vec::new();
+        for i in 0..4u32 {
+            triples.extend_from_slice(&i.to_le_bytes()); // pattern_id
+            triples.extend_from_slice(&i.to_le_bytes()); // start
+            triples.extend_from_slice(&(i + 2).to_le_bytes()); // end
+        }
+        let mut results = vec![vyre_foundation::match_result::Match::new(7, 7, 7)];
+        let err = try_unpack_match_triples_capped_into(&triples, 9, 4, "unit cap test", &mut results)
+            .expect_err("count 9 over cap 4 must fail closed, not truncate");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("unit cap test")
+                && msg.contains("exceeds the output-buffer cap 4")
+                && msg.contains("drop 5 match(es)"),
+            "error must name the context, cap, and dropped count: {msg}"
+        );
+        assert!(
+            results.is_empty(),
+            "a failed capped decode must expose no partial matches, got {results:?}"
+        );
+    }
+
+    #[test]
+    fn capped_decode_passes_and_decodes_exactly_within_cap() {
+        // Within the cap the decode is exact: count == 3 of a 4-slot buffer
+        // yields exactly those 3 triples (assert the real values, not is_empty).
+        let mut triples = Vec::new();
+        for i in 0..4u32 {
+            triples.extend_from_slice(&(i + 10).to_le_bytes()); // pattern_id
+            triples.extend_from_slice(&i.to_le_bytes()); // start
+            triples.extend_from_slice(&(i + 1).to_le_bytes()); // end
+        }
+        let mut results = Vec::new();
+        try_unpack_match_triples_capped_into(&triples, 3, 4, "unit within-cap", &mut results)
+            .expect("count 3 within cap 4 must decode");
+        assert_eq!(
+            results,
+            vec![
+                vyre_foundation::match_result::Match::new(10, 0, 1),
+                vyre_foundation::match_result::Match::new(11, 1, 2),
+                vyre_foundation::match_result::Match::new(12, 2, 3),
+            ],
+            "within-cap decode must yield exactly the first `count` triples"
+        );
+        // The exact-cap boundary (count == cap) is allowed, not an overflow.
+        let mut at_cap = Vec::new();
+        try_unpack_match_triples_capped_into(&triples, 4, 4, "unit at-cap", &mut at_cap)
+            .expect("count == cap is not an overflow");
+        assert_eq!(at_cap.len(), 4, "count == cap must decode all four");
     }
 
     #[test]

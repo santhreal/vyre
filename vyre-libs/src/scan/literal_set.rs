@@ -1465,9 +1465,16 @@ impl GpuLiteralSet {
             2,
             "literal_set presence_and_positions_by_region matches",
         )?;
-        dispatch_io::try_unpack_match_triples_exact_prefix_into(
+        // The kernel's atomic match counter overcounts past the fixed cap, so a
+        // count over `max_matches` means positions were dropped: fail closed
+        // instead of silently decoding the truncated prefix (Law 10). Presence
+        // bits stay exact (one bit per region/pattern, never truncated); it is
+        // the positions list that overflows, so the overflow is surfaced here.
+        dispatch_io::try_unpack_match_triples_capped_into(
             matches_bytes,
-            count.min(max_matches),
+            count,
+            max_matches,
+            "literal_set presence_and_positions_by_region matches",
             matches,
         )?;
 
@@ -2246,9 +2253,14 @@ fn decode_literal_set_outputs_into(
     let matches_bytes =
         crate::scan::dispatch_io::try_output_bytes(outputs, 1, "literal_set matches")?;
 
-    crate::scan::dispatch_io::try_unpack_match_triples_exact_prefix_into(
+    // The kernel's atomic match counter overcounts past the fixed cap, so a
+    // count over `max_matches` means matches were dropped: fail closed instead
+    // of silently decoding the truncated prefix (Law 10).
+    crate::scan::dispatch_io::try_unpack_match_triples_capped_into(
         matches_bytes,
-        count.min(max_matches),
+        count,
+        max_matches,
+        "literal_set matches",
         matches,
     )
 }
@@ -2504,6 +2516,47 @@ mod compile_tests {
             .chunks_exact(3)
             .map(|chunk| Match::new(chunk[0], chunk[1], chunk[2]))
             .collect()
+    }
+
+    #[test]
+    fn decode_outputs_fails_closed_when_count_exceeds_cap() {
+        // Law 10 regression at the shared literal_set decode call site
+        // (`decode_literal_set_outputs_into`, used by GpuLiteralSet::scan): the
+        // kernel's atomic counter reports 7 matches into a buffer holding the cap
+        // of 3 triples. The capped decode must error (naming the 4 dropped
+        // matches), not silently return the truncated 3.
+        let mut triples = Vec::new();
+        for i in 0..3u32 {
+            triples.extend_from_slice(&match_triple_bytes(0, i, i + 1));
+        }
+        let outputs = vec![match_count_bytes(7), triples];
+        let mut matches = vec![Match::new(5, 5, 5)];
+        let err = decode_literal_set_outputs_into(&outputs, 3, &mut matches)
+            .expect_err("count 7 over cap 3 must fail closed, not truncate");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("literal_set matches")
+                && msg.contains("exceeds the output-buffer cap 3")
+                && msg.contains("drop 4 match(es)")
+                && matches.is_empty(),
+            "literal_set decode must surface the dropped-match overflow and expose no partial set: {msg}"
+        );
+    }
+
+    #[test]
+    fn decode_outputs_decodes_exact_set_within_cap() {
+        // Positive twin: a count within the cap decodes the real triples verbatim
+        // (the buffer physically holds 4 slots; the counter reports 2).
+        let mut triples = Vec::new();
+        triples.extend_from_slice(&match_triple_bytes(2, 0, 2));
+        triples.extend_from_slice(&match_triple_bytes(5, 3, 6));
+        triples.extend_from_slice(&match_triple_bytes(0, 0, 0));
+        triples.extend_from_slice(&match_triple_bytes(0, 0, 0));
+        let outputs = vec![match_count_bytes(2), triples];
+        let mut matches = Vec::new();
+        decode_literal_set_outputs_into(&outputs, 4, &mut matches)
+            .expect("count 2 within cap 4 must decode");
+        assert_eq!(matches, vec![Match::new(2, 0, 2), Match::new(5, 3, 6)]);
     }
 
     #[test]
@@ -3186,17 +3239,45 @@ mod compile_tests {
     }
 
     #[test]
-    fn literal_scan_zero_match_cap_reads_no_match_payload() {
+    fn literal_scan_zero_cap_fails_closed_when_a_match_is_found() {
+        // Law 10 boundary: a zero-capacity position buffer that the kernel still
+        // counts a match into must FAIL CLOSED, not silently return empty.
+        // `scan_into` exposes only `matches`, so returning empty here would hide a
+        // real match with no signal — exactly the silent false negative the capped
+        // decode forbids. A caller wanting presence/count without positions uses
+        // `scan_presence_by_region`; a 0-cap positions scan that finds a match has
+        // dropped it, so surface that.
         let engine = GpuLiteralSet::compile(&[b"a".as_slice()]);
         let backend = RecordingLiteralBackend::new(vec![match_count_bytes(1), Vec::new()]);
         let mut matches = vec![Match::new(99, 1, 2)];
 
-        engine
+        let err = engine
             .scan_into(&backend, b"a", 0, &mut matches)
-            .expect("Fix: literal scan with zero cap should return an empty decoded prefix");
-
-        assert!(matches.is_empty());
+            .expect_err("zero cap with a counted match must error, not silently drop it");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("exceeds the output-buffer cap 0")
+                && msg.contains("drop 1 match(es)")
+                && matches.is_empty(),
+            "zero-cap overflow must name the drop and expose no partial matches: {msg}"
+        );
+        // The dispatch still happened: the readback observed the true count and a
+        // zero-length match payload before the decode failed closed.
         assert_eq!(backend.observed_matches_layouts(), vec![(1, Some(0..0))]);
+    }
+
+    #[test]
+    fn literal_scan_zero_cap_with_no_matches_is_empty_ok() {
+        // The benign twin: zero cap AND zero matches is not an overflow (count 0
+        // is not > cap 0), so it returns empty without error.
+        let engine = GpuLiteralSet::compile(&[b"a".as_slice()]);
+        let backend = RecordingLiteralBackend::new(vec![match_count_bytes(0), Vec::new()]);
+        let mut matches = vec![Match::new(99, 1, 2)];
+
+        engine
+            .scan_into(&backend, b"zzz", 0, &mut matches)
+            .expect("zero cap with zero matches must succeed with an empty result");
+        assert!(matches.is_empty());
     }
 
     #[test]
