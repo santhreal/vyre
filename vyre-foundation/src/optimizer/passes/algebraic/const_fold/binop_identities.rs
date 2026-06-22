@@ -55,8 +55,11 @@ fn lit_int(expr: &Expr) -> Option<()> {
 }
 
 /// True for expressions that are pure and side-effect-free.
-/// Used to guard reflexive equality folding so we never elide a Load
-/// whose ordering matters.
+/// Used to guard reflexive *idempotent* folding (`x & x → x`,
+/// `min(x, x) → x`) so we never elide a Load whose ordering matters.
+/// Those folds return the operand itself, so they are sound for every
+/// type — including a float `x` that is `NaN`, where `min(NaN, NaN)`
+/// is `NaN` and the rule yields `x` unchanged.
 pub(super) fn is_simple_pure(expr: &Expr) -> bool {
     matches!(
         expr,
@@ -65,6 +68,48 @@ pub(super) fn is_simple_pure(expr: &Expr) -> bool {
             | Expr::LitF32(_)
             | Expr::LitBool(_)
             | Expr::Var(_)
+            | Expr::InvocationId { .. }
+            | Expr::WorkgroupId { .. }
+            | Expr::LocalId { .. }
+            | Expr::SubgroupLocalId
+            | Expr::SubgroupSize
+    )
+}
+
+/// True for operands where reflexive *comparison* folding (`x == x → true`,
+/// `x != x → false`, `x < x → false`, …) is sound.
+///
+/// This is strictly stronger than [`is_simple_pure`]. Comparison folds
+/// collapse the operand to a constant `bool`, so they are only valid
+/// when reflexivity actually holds — which fails for IEEE-754 `NaN`:
+/// `NaN == NaN` is `false` and `NaN != NaN` is `true`, and both the
+/// reference oracle (`vyre-reference::binop_f32`) and the SPIR-V
+/// emitter (`OpFOrdEqual`) honor that. `x != x` is the canonical
+/// hand-rolled NaN test, so folding it away type-blind is a real
+/// miscompile, not a corner case.
+///
+/// `Var` is therefore EXCLUDED: const_fold is type-blind, so a bare
+/// `Var` may bind a float that is `NaN` at runtime. `LitF32` is excluded
+/// too — two float literals are folded by the typed literal evaluator,
+/// which computes `NaN == NaN → false` correctly; this structural rule
+/// must not shortcut it. (A `LitF32(NaN)` would also fail the
+/// `left == right` precondition under the IR's native-`f32` equality,
+/// but excluding it here keeps the contract explicit rather than
+/// load-bearing on that subtlety.) Integer/bool literals and the u32
+/// lane/workgroup builtins are always reflexive-safe.
+///
+/// Recovering reflexive comparison folding for a *provably-integer*
+/// `Var` requires the type-fact substrate
+/// (`optimizer::fact_substrate::type_facts`) to be threaded into
+/// const_fold so the operand's `DataType` can be proven non-float
+/// before the fold fires; until then this declines `Var`, per the
+/// soundness-over-reach contract.
+fn is_reflexive_cmp_safe(expr: &Expr) -> bool {
+    matches!(
+        expr,
+        Expr::LitU32(_)
+            | Expr::LitI32(_)
+            | Expr::LitBool(_)
             | Expr::InvocationId { .. }
             | Expr::WorkgroupId { .. }
             | Expr::LocalId { .. }
@@ -543,21 +588,28 @@ pub(super) fn simplify_binop(op: crate::ir::BinOp, left: &Expr, right: &Expr) ->
         BinOp::BitOr if left == right => Some(left.clone()),
 
         // ─── Comparison self-identities ──────────────────────
-        // x == x → true,  x != x → false   -  only when `x` is purely
-        // value-deterministic. Two `Load` reads of the same buffer can
-        // observe distinct values under relaxed memory ordering, so
-        // folding `Eq(Load, Load) → true` would be unsound. The
-        // `is_simple_pure` guard keeps us inside the safe envelope
-        // (Var/Lit/builtin) where repeated evaluation is observably
-        // free.
-        BinOp::Eq if left == right && is_simple_pure(left) => Some(Expr::bool(true)),
-        BinOp::Ne if left == right && is_simple_pure(left) => Some(Expr::bool(false)),
-        // x < x → false,  x > x → false   -  same purity caveat applies.
-        BinOp::Lt if left == right && is_simple_pure(left) => Some(Expr::bool(false)),
-        BinOp::Gt if left == right && is_simple_pure(left) => Some(Expr::bool(false)),
+        // x == x → true,  x != x → false   -  only when `x` is provably
+        // non-float AND value-deterministic. Two guards apply:
+        //   1. Relaxed memory ordering: two `Load` reads of the same
+        //      buffer can observe distinct values, so `Eq(Load, Load)`
+        //      must not fold.
+        //   2. IEEE-754 NaN: for a float `x` that is `NaN` at runtime,
+        //      `x == x` is *false* and `x != x` is *true* (the
+        //      reference oracle and the SPIR-V `OpFOrdEqual` emitter
+        //      both honor this), so folding type-blind would miscompile
+        //      the canonical hand-rolled NaN check.
+        // `is_reflexive_cmp_safe` admits only integer/bool literals and
+        // the u32 builtins — it EXCLUDES `Var` (unknown type, may be a
+        // float NaN) and `LitF32`. See its doc for how a provably-integer
+        // `Var` could be recovered via the type-fact substrate.
+        BinOp::Eq if left == right && is_reflexive_cmp_safe(left) => Some(Expr::bool(true)),
+        BinOp::Ne if left == right && is_reflexive_cmp_safe(left) => Some(Expr::bool(false)),
+        // x < x → false,  x > x → false   -  same guards apply.
+        BinOp::Lt if left == right && is_reflexive_cmp_safe(left) => Some(Expr::bool(false)),
+        BinOp::Gt if left == right && is_reflexive_cmp_safe(left) => Some(Expr::bool(false)),
         // x <= x → true,  x >= x → true
-        BinOp::Le if left == right && is_simple_pure(left) => Some(Expr::bool(true)),
-        BinOp::Ge if left == right && is_simple_pure(left) => Some(Expr::bool(true)),
+        BinOp::Le if left == right && is_reflexive_cmp_safe(left) => Some(Expr::bool(true)),
+        BinOp::Ge if left == right && is_reflexive_cmp_safe(left) => Some(Expr::bool(true)),
 
         // ─── Modulo identities ───────────────────────────────
         // x % 1 → 0  (any integer mod 1 is zero)
@@ -672,8 +724,8 @@ pub(super) fn simplify_binop(op: crate::ir::BinOp, left: &Expr, right: &Expr) ->
             Some(right.clone())
         }
         // (Reflexive Eq/Ne handled in the comparison-self-identities
-        // section above  -  guarded by `is_simple_pure` for soundness
-        // under relaxed memory ordering.)
+        // section above  -  guarded by `is_reflexive_cmp_safe` for
+        // soundness under relaxed memory ordering and IEEE-754 NaN.)
 
         // ─── BitAnd with all-ones mask → identity ────────────
         BinOp::BitAnd if matches!(right, Expr::LitU32(u32::MAX)) => Some(left.clone()),

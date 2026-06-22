@@ -17,8 +17,6 @@
 //! 2. **Hoist literal-left**: when only one operand of a commutative
 //!    op is a literal, order is literal-on-right. Canonical form
 //!    for constant folding.
-//! 3. **Fold `x == x` and `x != x`** where both operands are
-//!    syntactically identical `Var` references to literal identities.
 //!
 //! Rules owned by CSE / DCE / rewrite passes:
 //!
@@ -27,6 +25,18 @@
 //!   registration lookup; next pass.
 //! - Associativity-rearranging  -  left-fold stays left, no right-
 //!   rotation.
+//! - **Reflexive-comparison value folding (`x == x → true`,
+//!   `x != x → false`) is deliberately NOT done here.** canonicalize is
+//!   type-blind (it has no `DataType` for a bare `Var`), and reflexive
+//!   comparison is *unsound* for float operands: a float `x` that is
+//!   `NaN` at runtime makes `x == x` false and `x != x` true under
+//!   IEEE-754, which the reference oracle (`vyre-reference`
+//!   `binop_f32`) and the SPIR-V emitter (`OpFOrdEqual`) both honor.
+//!   Folding it to a bool literal here would (a) miscompile NaN checks
+//!   and (b) corrupt the content-addressed cache by giving the
+//!   genuinely-distinct programs `x == x` and `true` the same
+//!   fingerprint. Type-aware value folding lives in `const_fold`, where
+//!   the operand type can be proven before the fold fires.
 //!
 //! The pass is idempotent: `canonicalize(canonicalize(p)) ==
 //! canonicalize(p)` on every valid `Program`.
@@ -152,17 +162,11 @@ fn canonicalize_expr(expr: Expr) -> Expr {
                     std::mem::swap(&mut l, &mut r);
                 }
             }
-            // Rule 3: fold `x == x` → true and `x != x` → false when both
-            // operands are syntactically identical `Var` references.
-            if let (Expr::Var(l_name), Expr::Var(r_name)) = (&l, &r) {
-                if l_name == r_name {
-                    match op {
-                        BinOp::Eq => return Expr::LitBool(true),
-                        BinOp::Ne => return Expr::LitBool(false),
-                        _ => {}
-                    }
-                }
-            }
+            // NOTE: reflexive comparison (`x == x`, `x != x`) is NOT folded
+            // here. canonicalize is type-blind and the fold is unsound for
+            // float NaN — see the module-level doc. Operand-order
+            // canonicalization (above) is the only rewrite Eq/Ne gets; that
+            // is sound for every type because `a == b` ≡ `b == a`.
             Expr::BinOp {
                 op,
                 left: Box::new(l),
@@ -443,27 +447,54 @@ mod tests {
     }
 
     #[test]
-    fn eq_same_var_folds_to_true() {
+    fn eq_same_var_not_folded_by_canonicalize() {
+        // canonicalize must NOT fold `a == a` to `true`. The pass is
+        // type-blind, and for a float `a` that is NaN at runtime
+        // `a == a` is *false* under IEEE-754 (the reference oracle's
+        // `binop_f32` and the SPIR-V `OpFOrdEqual` emitter both agree).
+        // Folding it to a bool literal would miscompile NaN checks and
+        // collide distinct programs in the content-addressed cache.
+        // The Eq node is preserved verbatim (operand order unchanged
+        // because both operands are the same Var).
         let p = scalar_out_prog(vec![Node::let_bind("t", E::eq(E::var("a"), E::var("a")))]);
         let canonical = run(p);
         let entry_body = crate::test_util::region_body(&canonical);
         match &entry_body[0] {
-            Node::Let { value, .. } => {
-                assert_eq!(*value, Expr::LitBool(true), "a == a must fold to true");
-            }
+            Node::Let { value, .. } => match value {
+                Expr::BinOp {
+                    op: BinOp::Eq,
+                    left,
+                    right,
+                } => {
+                    assert_eq!(left.as_ref(), &Expr::var("a"), "lhs preserved as Var(a)");
+                    assert_eq!(right.as_ref(), &Expr::var("a"), "rhs preserved as Var(a)");
+                }
+                other => panic!("a == a must be preserved as an Eq BinOp, got {other:?}"),
+            },
             other => panic!("expected Let, got {other:?}"),
         }
     }
 
     #[test]
-    fn ne_same_var_folds_to_false() {
+    fn ne_same_var_not_folded_by_canonicalize() {
+        // Symmetric to `eq_same_var_not_folded_by_canonicalize`: for a
+        // float NaN, `a != a` is *true*, not false, so canonicalize must
+        // not fold it to a bool literal. The Ne node is preserved.
         let p = scalar_out_prog(vec![Node::let_bind("t", E::ne(E::var("a"), E::var("a")))]);
         let canonical = run(p);
         let entry_body = crate::test_util::region_body(&canonical);
         match &entry_body[0] {
-            Node::Let { value, .. } => {
-                assert_eq!(*value, Expr::LitBool(false), "a != a must fold to false");
-            }
+            Node::Let { value, .. } => match value {
+                Expr::BinOp {
+                    op: BinOp::Ne,
+                    left,
+                    right,
+                } => {
+                    assert_eq!(left.as_ref(), &Expr::var("a"), "lhs preserved as Var(a)");
+                    assert_eq!(right.as_ref(), &Expr::var("a"), "rhs preserved as Var(a)");
+                }
+                other => panic!("a != a must be preserved as an Ne BinOp, got {other:?}"),
+            },
             other => panic!("expected Let, got {other:?}"),
         }
     }

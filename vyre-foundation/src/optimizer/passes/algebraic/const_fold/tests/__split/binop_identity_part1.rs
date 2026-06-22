@@ -1,7 +1,18 @@
 use super::*;
 
+// ──── Reflexive comparison folds: `Var` must NOT fold (float-NaN) ────
+//
+// const_fold is type-blind: a bare `Var` may bind a float that is `NaN`
+// at runtime, where `x == x` is *false* and `x != x` is *true* under
+// IEEE-754 (the `vyre-reference::binop_f32` oracle and the SPIR-V
+// `OpFOrdEqual` emitter both honor this). Folding `Var cmp Var` to a
+// bool literal type-blind miscompiles the canonical hand-rolled NaN
+// check, so the `is_reflexive_cmp_safe` guard rejects `Var`. These six
+// tests pin the decline; before the guard was tightened they asserted
+// the (unsound) folded bool literal.
+
 #[test]
-fn eq_self_is_true() {
+fn eq_self_var_does_not_fold() {
     let x = Expr::var("x");
     assert_eq!(
         fold_expr(&Expr::BinOp {
@@ -9,11 +20,12 @@ fn eq_self_is_true() {
             left: Box::new(x.clone()),
             right: Box::new(x)
         }),
-        Some(Expr::bool(true))
+        None,
+        "Eq(Var, Var) must not fold: x may be float NaN where x == x is false"
     );
 }
 #[test]
-fn ne_self_is_false() {
+fn ne_self_var_does_not_fold() {
     let x = Expr::var("x");
     assert_eq!(
         fold_expr(&Expr::BinOp {
@@ -21,11 +33,12 @@ fn ne_self_is_false() {
             left: Box::new(x.clone()),
             right: Box::new(x)
         }),
-        Some(Expr::bool(false))
+        None,
+        "Ne(Var, Var) must not fold: x may be float NaN where x != x is true"
     );
 }
 #[test]
-fn lt_self_is_false() {
+fn lt_self_var_does_not_fold() {
     let x = Expr::var("x");
     assert_eq!(
         fold_expr(&Expr::BinOp {
@@ -33,11 +46,12 @@ fn lt_self_is_false() {
             left: Box::new(x.clone()),
             right: Box::new(x)
         }),
-        Some(Expr::bool(false))
+        None,
+        "Lt(Var, Var) must not fold: float NaN comparisons are all false"
     );
 }
 #[test]
-fn gt_self_is_false() {
+fn gt_self_var_does_not_fold() {
     let x = Expr::var("x");
     assert_eq!(
         fold_expr(&Expr::BinOp {
@@ -45,11 +59,12 @@ fn gt_self_is_false() {
             left: Box::new(x.clone()),
             right: Box::new(x)
         }),
-        Some(Expr::bool(false))
+        None,
+        "Gt(Var, Var) must not fold: float NaN comparisons are all false"
     );
 }
 #[test]
-fn le_self_is_true() {
+fn le_self_var_does_not_fold() {
     let x = Expr::var("x");
     assert_eq!(
         fold_expr(&Expr::BinOp {
@@ -57,11 +72,12 @@ fn le_self_is_true() {
             left: Box::new(x.clone()),
             right: Box::new(x)
         }),
-        Some(Expr::bool(true))
+        None,
+        "Le(Var, Var) must not fold: NaN <= NaN is false, not true"
     );
 }
 #[test]
-fn ge_self_is_true() {
+fn ge_self_var_does_not_fold() {
     let x = Expr::var("x");
     assert_eq!(
         fold_expr(&Expr::BinOp {
@@ -69,7 +85,55 @@ fn ge_self_is_true() {
             left: Box::new(x.clone()),
             right: Box::new(x)
         }),
-        Some(Expr::bool(true))
+        None,
+        "Ge(Var, Var) must not fold: NaN >= NaN is false, not true"
+    );
+}
+
+// ──── Reflexive comparison folds: provably-u32 builtins DO fold ────
+//
+// `InvocationId` is a deterministic u32 lane index that can never be a
+// float NaN, so reflexive comparison folding stays sound and active for
+// it. These prove the sound path is preserved (not blanket-disabled).
+
+#[test]
+fn eq_self_invocation_id_folds_true() {
+    let g = Expr::InvocationId { axis: 0 };
+    assert_eq!(
+        fold_expr(&Expr::BinOp {
+            op: crate::ir::BinOp::Eq,
+            left: Box::new(g.clone()),
+            right: Box::new(g)
+        }),
+        Some(Expr::bool(true)),
+        "Eq(InvocationId, InvocationId) is a sound reflexive fold (u32, never NaN)"
+    );
+}
+#[test]
+fn ne_self_invocation_id_folds_false() {
+    let g = Expr::InvocationId { axis: 0 };
+    assert_eq!(
+        fold_expr(&Expr::BinOp {
+            op: crate::ir::BinOp::Ne,
+            left: Box::new(g.clone()),
+            right: Box::new(g)
+        }),
+        Some(Expr::bool(false)),
+        "Ne(InvocationId, InvocationId) folds to false (u32, never NaN)"
+    );
+}
+#[test]
+fn lt_self_literal_folds_false() {
+    // Integer-literal self-comparison stays foldable.
+    let k = Expr::u32(7);
+    assert_eq!(
+        fold_expr(&Expr::BinOp {
+            op: crate::ir::BinOp::Lt,
+            left: Box::new(k.clone()),
+            right: Box::new(k)
+        }),
+        Some(Expr::bool(false)),
+        "Lt(7, 7) folds to false"
     );
 }
 
