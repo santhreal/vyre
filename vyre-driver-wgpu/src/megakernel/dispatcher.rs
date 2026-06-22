@@ -2570,6 +2570,79 @@ mod tests {
         assert_eq!(hits.as_ptr(), ptr);
     }
 
+    /// Law 10 (no silent fallback) on the megakernel hit-decode path: a hit-ring
+    /// readback that exposes FEWER words than `hit_count` demands must FAIL CLOSED
+    /// with a loud, actionable error — never silently decode the few hits it can
+    /// reach, which would drop the rest and lose recall invisibly. `hit_count = 2`
+    /// needs 8 words (2 hits × 4 u32 each); supplying only 4 words (one hit's
+    /// worth) must be rejected, not decoded as a single hit.
+    #[test]
+    fn hit_readback_under_provisioned_ring_fails_closed_not_silent_truncation() {
+        let mut bytes = Vec::new();
+        for word in [7u32, 3, 2, 99] {
+            bytes.extend_from_slice(&word.to_le_bytes());
+        }
+        // Pre-seed the scratch so a silent partial decode would be observable as
+        // leftover/short content rather than an error.
+        let mut hits = vec![
+            HitRecord {
+                file_idx: 0,
+                rule_idx: 0,
+                layer_idx: 0,
+                match_offset: 0,
+            };
+            5
+        ];
+
+        let err = decode_hits_from_readback_into(&bytes, 2, &mut hits)
+            .expect_err("Fix: an under-provisioned hit ring must fail closed, never silently drop hits");
+        let PipelineError::Backend(message) = err else {
+            panic!("Fix: under-provisioned hit ring must surface a Backend error, got {err:?}");
+        };
+        assert!(
+            message.contains("hit-ring exposed 4 words, expected at least 8"),
+            "Fix: the fail-closed message must name the exposed vs required word counts so the \
+             operator can size the ring; got {message:?}"
+        );
+    }
+
+    /// A hit-ring readback whose byte length is not a whole number of u32 words is
+    /// corrupt and must fail closed (the decode reinterprets bytes as packed u32
+    /// records, so a ragged tail would mis-align every record). 6 bytes is 1.5
+    /// words — never a valid readback.
+    #[test]
+    fn hit_readback_misaligned_byte_length_fails_closed() {
+        let bytes = [0u8; 6];
+        let mut hits = Vec::new();
+
+        let err = decode_hits_from_readback_into(&bytes, 1, &mut hits)
+            .expect_err("Fix: a non-4-byte-aligned hit readback must fail closed");
+        let PipelineError::Backend(message) = err else {
+            panic!("Fix: misaligned hit readback must surface a Backend error, got {err:?}");
+        };
+        assert!(
+            message.contains("not a whole number of u32 words"),
+            "Fix: misaligned-readback error must explain the 4-byte-alignment contract; got {message:?}"
+        );
+    }
+
+    /// The under-provisioned guard is `word_count < needed_words` (strict), so an
+    /// OVER-provisioned ring (more words than `hit_count` demands) decodes exactly
+    /// `hit_count` hits and ignores the trailing slack — the GPU sizes the ring for
+    /// `hit_capacity`, which is an upper bound, not the realized hit count.
+    #[test]
+    fn hit_readback_over_provisioned_ring_decodes_exactly_hit_count() {
+        let mut bytes = Vec::new();
+        for word in [7u32, 3, 2, 99, 8, 4, 1, 100, 555, 666, 777, 888] {
+            bytes.extend_from_slice(&word.to_le_bytes());
+        }
+
+        let hits = decode_hits_from_readback(&bytes, 2)
+            .expect("Fix: an over-provisioned hit ring must decode the realized hit_count");
+        assert_eq!(hits.len(), 2, "must decode exactly hit_count, not the ring capacity");
+        assert_eq!(hits[1].match_offset, 100);
+    }
+
     #[test]
     fn occupancy_proxy_caps_at_full_utilization() {
         assert_eq!(occupancy_proxy_bps(32, 1, 64), 5_000);
