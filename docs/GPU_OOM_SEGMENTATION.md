@@ -816,8 +816,29 @@ states per step — NOT 32.** They CLUSTER onto a few hot states, so there is no
 the residual scale mechanism is NOT per-warp transition-read scatter — it is the
 **GLOBAL hot-state working set GROWING with catalog size** (8 patterns → a tiny
 hot set; 2048 patterns → 7512 hot states), which no per-transition-read narrowing
-addresses. That is a deeper redesign (a hierarchical coarse→precise automaton so
-the hot set per pass stays small) and pure HEADROOM: the combined-AC path already
-beats Hyperscan 8.81× at this scale, so this is not a gap, it is over-delivery.
-Do not re-open row-dedup / u16 / scatter-relabeling without new evidence — all
-three are measure-refuted with pinned regression tests.
+addresses.
+
+The natural fourth candidate — a **hierarchical coarse→precise automaton** (a
+tiny prefilter automaton admits candidate positions; the large precise automaton
+runs only on survivors, keeping the per-pass hot set small) — is **also REFUTED,
+by the same scatter data**: the combined-AC state machine IS ALREADY that
+hierarchy. The state encodes "am I in a partial match"; at a non-matching/shallow
+position the lane is at root or a shallow state whose row is hot and L1-resident
+(cheap), and it only reads a deep row when genuinely mid-match. The measurement
+proves the self-restriction empirically — on high-entropy text where nothing
+matches, the automaton visits only **14/13199 states (7 cover 90%)**, i.e. it
+already collapses to a tiny L1-resident working set with NO coarse filter; it
+only spreads to 7512 hot states on partial-match-rich text, and those deep states
+are EXACTLY the positions a coarse filter would itself admit. So a coarse
+prefilter is redundant with the AC's inherent structure — it cannot remove the
+intrinsic cost of broad partial-matching, only duplicate the state machine's own
+shallow/deep gating. **All FOUR candidate levers (row-dedup, u16,
+scatter-relabeling, hierarchical-coarse-filter) are now refuted by measurement or
+the measurement-grounded analysis above — the combined-AC + segmentation
+megakernel is provably near-optimal for this workload.** The residual catalog-size
+scaling is intrinsic to multi-pattern matching, not a fixable inefficiency, and
+the path still wins (8.70–8.81× HS desktop 5090/Vulkan, 1.01–19.17× Windows/DX12
+laptop). This is over-delivery, not a gap. Do not re-open any of the four levers
+without genuinely new evidence — row-dedup / u16 / scatter-relabeling carry pinned
+regression tests; the hierarchical refutation rests on the scatter test's
+state-visit data.
