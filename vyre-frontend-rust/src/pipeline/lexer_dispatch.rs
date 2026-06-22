@@ -297,7 +297,10 @@ fn source_words(source: &[u8]) -> Vec<u32> {
 }
 
 fn u32s_to_bytes(words: &[u32]) -> Vec<u8> {
-    words.iter().flat_map(|word| word.to_le_bytes()).collect()
+    // Canonical LE-pack: wire's bytemuck `cast_slice` fast-path is a single memcpy
+    // on little-endian hosts vs the per-word `flat_map(to_le_bytes)` this replaced
+    // (NO DUPLICATION; Law 7). Big-endian falls back to per-word inside wire.
+    vyre_primitives::wire::pack_u32_slice(words)
 }
 
 #[cfg(test)]

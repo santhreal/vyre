@@ -204,7 +204,7 @@ mod tests {
         assert!(error.contains("too short"));
     }
 
-    fn pack_words(words: &[u32]) -> Vec<u8> {
-        words.iter().flat_map(|word| word.to_le_bytes()).collect()
-    }
+    // Canonical LE-pack — no hand-rolled reimplementation (matches the production
+    // path's `vyre_primitives::wire` alias and uses wire's bytemuck fast-path).
+    use vyre_primitives::wire::pack_u32_slice as pack_words;
 }
