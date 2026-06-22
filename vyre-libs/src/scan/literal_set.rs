@@ -312,6 +312,30 @@ impl LiteralSetPreparedPresenceByRegion {
     }
 }
 
+/// The seven corpus-invariant region-presence table byte buffers, at their program
+/// binding positions. ONE source of truth for which region-presence tables are
+/// immutable across a corpus: shared by [`GpuLiteralSet::build_presence_by_region_dispatch`]
+/// (the borrowed / async / prepared paths) and
+/// [`GpuLiteralSet::resident_presence_tables`] (the resident pipeline), so all four
+/// paths encode byte-identical tables. Every buffer is built through the fail-closed
+/// `copy_u32_words_as_le_bytes`.
+struct PresenceImmutableTableBytes {
+    /// Lane-major DFA transition table (binding 1).
+    transitions: Vec<u8>,
+    /// DFA output-offset table (binding 2).
+    output_offsets: Vec<u8>,
+    /// DFA output-record table (binding 3).
+    output_records: Vec<u8>,
+    /// Per-pattern length table (binding 4).
+    pattern_lengths: Vec<u8>,
+    /// Suffix prefilter end mask (binding 7).
+    candidate_end_mask: Vec<u8>,
+    /// Suffix prefilter 2-gram mask (binding 8).
+    candidate_suffix2_mask: Vec<u8>,
+    /// Suffix prefilter 3-gram bloom (binding 9).
+    candidate_suffix3_bloom: Vec<u8>,
+}
+
 /// IMMUTABLE region-presence tables (corpus-invariant) plus a `max_regions`-sized
 /// program, produced by [`GpuLiteralSet::resident_presence_tables`] and consumed
 /// by [`ResidentPresencePipeline`](crate::scan::resident_presence::ResidentPresencePipeline).
@@ -1046,6 +1070,44 @@ impl GpuLiteralSet {
     ///
     /// # Errors
     /// See [`Self::scan_presence_by_region`].
+    /// Encode the seven corpus-invariant region-presence tables into owned
+    /// little-endian byte buffers through the fail-closed `copy_u32_words_as_le_bytes`.
+    /// The single source of truth for which tables are immutable across a corpus —
+    /// reused by the borrowed/async/prepared builder and the resident pipeline so
+    /// every path encodes byte-identical tables.
+    fn presence_immutable_table_bytes(
+        &self,
+        prefilter: &LiteralSetPrefilterTables,
+    ) -> Result<PresenceImmutableTableBytes, vyre::BackendError> {
+        Ok(PresenceImmutableTableBytes {
+            transitions: copy_u32_words_as_le_bytes(&self.dfa.transitions, "transition table")?,
+            output_offsets: copy_u32_words_as_le_bytes(
+                &self.dfa.output_offsets,
+                "output offset table",
+            )?,
+            output_records: copy_u32_words_as_le_bytes(
+                &self.dfa.output_records,
+                "output record table",
+            )?,
+            pattern_lengths: copy_u32_words_as_le_bytes(
+                &self.pattern_lengths,
+                "pattern length table",
+            )?,
+            candidate_end_mask: copy_u32_words_as_le_bytes(
+                &prefilter.candidate_end_mask,
+                "candidate end mask",
+            )?,
+            candidate_suffix2_mask: copy_u32_words_as_le_bytes(
+                &prefilter.candidate_suffix2_mask,
+                "candidate suffix2 mask",
+            )?,
+            candidate_suffix3_bloom: copy_u32_words_as_le_bytes(
+                &prefilter.candidate_suffix3_bloom,
+                "candidate suffix3 bloom",
+            )?,
+        })
+    }
+
     fn build_presence_by_region_dispatch(
         &self,
         haystack: &[u8],
@@ -1107,34 +1169,17 @@ impl GpuLiteralSet {
                 "literal_set region-presence could not reserve {PRESENCE_BY_REGION_INPUT_COUNT} input buffer slot(s): {source}. Fix: shard the literal set or haystack before dispatch."
             ))
         })?;
+        let tables = self.presence_immutable_table_bytes(&prefilter_tables)?;
         inputs.push(haystack_packed); // 0: haystack (Packed U32)
-        inputs.push(copy_u32_words_as_le_bytes(&self.dfa.transitions, "transition table")?); // 1
-        inputs.push(copy_u32_words_as_le_bytes(
-            &self.dfa.output_offsets,
-            "output offset table",
-        )?); // 2
-        inputs.push(copy_u32_words_as_le_bytes(
-            &self.dfa.output_records,
-            "output record table",
-        )?); // 3
-        inputs.push(copy_u32_words_as_le_bytes(
-            &self.pattern_lengths,
-            "pattern length table",
-        )?); // 4
+        inputs.push(tables.transitions); // 1
+        inputs.push(tables.output_offsets); // 2
+        inputs.push(tables.output_records); // 3
+        inputs.push(tables.pattern_lengths); // 4
         inputs.push(copy_u32_words_as_le_bytes(&haystack_len_word, "haystack length")?); // 5
         inputs.push(presence_zeroed); // 6: per-region presence (read_write)
-        inputs.push(copy_u32_words_as_le_bytes(
-            &prefilter_tables.candidate_end_mask,
-            "candidate end mask",
-        )?); // 7
-        inputs.push(copy_u32_words_as_le_bytes(
-            &prefilter_tables.candidate_suffix2_mask,
-            "candidate suffix2 mask",
-        )?); // 8
-        inputs.push(copy_u32_words_as_le_bytes(
-            &prefilter_tables.candidate_suffix3_bloom,
-            "candidate suffix3 bloom",
-        )?); // 9
+        inputs.push(tables.candidate_end_mask); // 7
+        inputs.push(tables.candidate_suffix2_mask); // 8
+        inputs.push(tables.candidate_suffix3_bloom); // 9
         inputs.push(copy_u32_words_as_le_bytes(region_starts, "region starts")?); // 10
         inputs.push(region_base_bytes.to_vec()); // 11: region_base (4 bytes)
 
@@ -1244,35 +1289,18 @@ impl GpuLiteralSet {
         )
         .map_err(vyre::BackendError::new)?;
         let prefilter_tables = self.build_prefilter_tables()?;
+        let tables = self.presence_immutable_table_bytes(&prefilter_tables)?;
         let presence_words = presence_bitmap_words(pattern_count);
         let workgroup_x = program.workgroup_size[0];
         Ok(ResidentPresenceTables {
             program,
-            transitions: copy_u32_words_as_le_bytes(&self.dfa.transitions, "transition table")?,
-            output_offsets: copy_u32_words_as_le_bytes(
-                &self.dfa.output_offsets,
-                "output offset table",
-            )?,
-            output_records: copy_u32_words_as_le_bytes(
-                &self.dfa.output_records,
-                "output record table",
-            )?,
-            pattern_lengths: copy_u32_words_as_le_bytes(
-                &self.pattern_lengths,
-                "pattern length table",
-            )?,
-            candidate_end_mask: copy_u32_words_as_le_bytes(
-                &prefilter_tables.candidate_end_mask,
-                "candidate end mask",
-            )?,
-            candidate_suffix2_mask: copy_u32_words_as_le_bytes(
-                &prefilter_tables.candidate_suffix2_mask,
-                "candidate suffix2 mask",
-            )?,
-            candidate_suffix3_bloom: copy_u32_words_as_le_bytes(
-                &prefilter_tables.candidate_suffix3_bloom,
-                "candidate suffix3 bloom",
-            )?,
+            transitions: tables.transitions,
+            output_offsets: tables.output_offsets,
+            output_records: tables.output_records,
+            pattern_lengths: tables.pattern_lengths,
+            candidate_end_mask: tables.candidate_end_mask,
+            candidate_suffix2_mask: tables.candidate_suffix2_mask,
+            candidate_suffix3_bloom: tables.candidate_suffix3_bloom,
             pattern_count,
             presence_words,
             workgroup_x,
