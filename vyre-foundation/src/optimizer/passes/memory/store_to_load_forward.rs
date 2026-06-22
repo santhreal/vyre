@@ -39,10 +39,17 @@
 //!   is observably side-effecting (e.g. contains an Atomic), forwarding
 //!   would duplicate the side effect  -  `value_is_observably_free`
 //!   rejects that case.
+//! - `v` is re-evaluated at the LOAD position, so every input it reads must
+//!   be invariant across the gap. `value_is_observably_free` already excludes
+//!   buffer loads, leaving scalar variables; if one of `v`'s free variables is
+//!   reassigned by an intervening `Node::Assign` (vyre scalars are mutable),
+//!   the forwarded expression would observe the new value, not the stored one.
+//!   `find_forwarding_store` rejects that case (`node_reassigns_any_var`).
 
 use crate::ir::{Expr, Ident, Node, Program};
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 use crate::visit::node_map;
+use rustc_hash::FxHashSet;
 
 /// `ProgramPass` registration for the store-to-load forwarding rewrite
 /// (ROADMAP A22).
@@ -150,7 +157,7 @@ fn forward_in_body(body: Vec<Node>, changed: &mut bool) -> Vec<Node> {
 /// `index`. Return the stored value `v`. Bail out the moment any
 /// intervening node could observe or mutate `buffer`.
 fn find_forwarding_store(prev_siblings: &[Node], buffer: &Ident, index: &Expr) -> Option<Expr> {
-    for prev in prev_siblings.iter().rev() {
+    for (passed, prev) in prev_siblings.iter().rev().enumerate() {
         if let Node::Store {
             buffer: store_buffer,
             index: store_index,
@@ -158,6 +165,24 @@ fn find_forwarding_store(prev_siblings: &[Node], buffer: &Ident, index: &Expr) -
         } = prev
         {
             if store_buffer == buffer && store_index == index {
+                // The bytes are forwardable, but `value` is cloned to the
+                // LOAD position and re-evaluated there -- so every input it
+                // reads must be invariant across the gap. Loads/atomics/calls
+                // are already rejected by `value_is_observably_free`, leaving
+                // scalar variables as the only mutable input. vyre scalars are
+                // reassignable via `Node::Assign` (only loop vars are
+                // immutable), so if one of `value`'s free variables is
+                // reassigned between this store and the load, the forwarded
+                // expression would observe the NEW value, not the stored one.
+                // The `passed` siblings already walked are exactly that gap.
+                let mut vars = FxHashSet::default();
+                collect_value_vars(value, &mut vars);
+                if !vars.is_empty() {
+                    let gap = &prev_siblings[prev_siblings.len() - passed..];
+                    if gap.iter().any(|n| node_reassigns_any_var(n, &vars)) {
+                        return None;
+                    }
+                }
                 return Some(value.clone());
             }
             // A different-index Store to the same buffer is not a
@@ -172,6 +197,65 @@ fn find_forwarding_store(prev_siblings: &[Node], buffer: &Ident, index: &Expr) -
         }
     }
     None
+}
+
+/// Collect every `Expr::Var` name in `value`. By the time forwarding is
+/// considered, `value` has passed [`value_is_observably_free`], so it contains
+/// no `Load`/`Atomic`/`Call`/subgroup ops -- its only runtime-mutable inputs
+/// are these scalar variables (literals and invocation/workgroup/local ids are
+/// invariant within an invocation's straight-line execution).
+fn collect_value_vars(value: &Expr, out: &mut FxHashSet<Ident>) {
+    match value {
+        Expr::Var(name) => {
+            out.insert(name.clone());
+        }
+        Expr::BinOp { left, right, .. } => {
+            collect_value_vars(left, out);
+            collect_value_vars(right, out);
+        }
+        Expr::UnOp { operand, .. } | Expr::Cast { value: operand, .. } => {
+            collect_value_vars(operand, out);
+        }
+        Expr::Fma { a, b, c } => {
+            collect_value_vars(a, out);
+            collect_value_vars(b, out);
+            collect_value_vars(c, out);
+        }
+        Expr::Select {
+            cond,
+            true_val,
+            false_val,
+        } => {
+            collect_value_vars(cond, out);
+            collect_value_vars(true_val, out);
+            collect_value_vars(false_val, out);
+        }
+        // Leaves with no variable, plus the kinds `value_is_observably_free`
+        // already rejected (Load/Atomic/Call/BufLen/subgroup/Opaque) which
+        // never reach a forwarded value.
+        _ => {}
+    }
+}
+
+/// True if `node` -- or any node nested in its bodies -- reassigns a variable
+/// in `vars` via `Node::Assign`. Reassignment is the only way a scalar's value
+/// changes between two siblings: loop variables are immutable, and `Let`
+/// cannot rebind an in-scope name (shadowing is rejected). So this is the
+/// complete set of value-invalidating motions for a forwarded expression.
+fn node_reassigns_any_var(node: &Node, vars: &FxHashSet<Ident>) -> bool {
+    match node {
+        Node::Assign { name, .. } => vars.contains(name),
+        Node::If {
+            then, otherwise, ..
+        } => {
+            then.iter().any(|n| node_reassigns_any_var(n, vars))
+                || otherwise.iter().any(|n| node_reassigns_any_var(n, vars))
+        }
+        Node::Loop { body, .. } => body.iter().any(|n| node_reassigns_any_var(n, vars)),
+        Node::Block(body) => body.iter().any(|n| node_reassigns_any_var(n, vars)),
+        Node::Region { body, .. } => body.iter().any(|n| node_reassigns_any_var(n, vars)),
+        _ => false,
+    }
 }
 
 /// True if `node` could read or otherwise observe `buffer`'s contents
@@ -550,5 +634,74 @@ mod tests {
             crate::optimizer::ProgramPass::analyze(&StoreToLoadForward, &program(entry)),
             PassAnalysis::RUN
         );
+    }
+
+    #[test]
+    fn does_not_forward_when_forwarded_var_is_reassigned() {
+        // store(a, 0, t); assign t = 99; let x = load(a, 0). Forwarding would
+        // make `x = t`, but `t` is 99 at the load point while a[0] holds 5.
+        // The reassignment never touches buffer `a`, so only the value-var
+        // invalidation check catches it. (Oracle-differential proof:
+        // tests/store_to_load_forward_value_invalidation.rs.)
+        let entry = vec![
+            Node::let_bind("t", Expr::u32(5)),
+            Node::store("a", Expr::u32(0), Expr::var("t")),
+            Node::assign("t", Expr::u32(99)),
+            Node::let_bind("x", Expr::load("a", Expr::u32(0))),
+        ];
+        let result = StoreToLoadForward::transform(program(entry));
+        assert!(
+            !result.changed,
+            "reassignment of the forwarded value's variable blocks forwarding"
+        );
+        let body = region_body(result.program.entry());
+        assert_eq!(
+            count_loads_in_lets(&body),
+            1,
+            "the Load must survive: forwarding `t` would read the reassigned 99"
+        );
+    }
+
+    #[test]
+    fn still_forwards_var_when_not_reassigned_in_gap() {
+        // The fix must NOT over-block: a forwarded variable that is untouched
+        // across an unrelated write still forwards.
+        let entry = vec![
+            Node::let_bind("t", Expr::u32(5)),
+            Node::store("a", Expr::u32(0), Expr::var("t")),
+            Node::store("b", Expr::u32(0), Expr::u32(1)), // unrelated; t untouched
+            Node::let_bind("x", Expr::load("a", Expr::u32(0))),
+        ];
+        let result = StoreToLoadForward::transform(program(entry));
+        assert!(
+            result.changed,
+            "an unmodified forwarded variable must still forward"
+        );
+        let body = region_body(result.program.entry());
+        assert_eq!(
+            count_loads_in_lets(&body),
+            0,
+            "the Load forwards to Var(t), which is invariant across the gap"
+        );
+    }
+
+    #[test]
+    fn does_not_forward_when_var_reassigned_inside_intervening_if() {
+        // The reassignment is nested inside an intervening `If` whose body does
+        // not touch buffer `a`, so the buffer-only block misses it; the
+        // value-var check must recurse into the If body.
+        let entry = vec![
+            Node::let_bind("t", Expr::u32(5)),
+            Node::store("a", Expr::u32(0), Expr::var("t")),
+            Node::if_then_else(Expr::bool(true), vec![Node::assign("t", Expr::u32(99))], vec![]),
+            Node::let_bind("x", Expr::load("a", Expr::u32(0))),
+        ];
+        let result = StoreToLoadForward::transform(program(entry));
+        assert!(
+            !result.changed,
+            "reassignment nested in an intervening If still blocks forwarding"
+        );
+        let body = region_body(result.program.entry());
+        assert_eq!(count_loads_in_lets(&body), 1, "the Load must survive");
     }
 }
