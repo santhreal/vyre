@@ -48,7 +48,8 @@ pub use dispatch_plan::BatchDispatchPlan;
 #[cfg(feature = "megakernel-batch")]
 pub use dispatcher::{
     BatchDispatchConfig, BatchDispatchReport, BatchDispatchSummary, BatchDispatchTelemetry,
-    BatchDispatcher, BatchHitWriter, CombinedDispatchSummary, CombinedDispatcher, TransitionWidth,
+    BatchDispatcher, BatchHitWriter, CombinedDispatchSummary, CombinedDispatcher,
+    SegLenCalibration, SegLenMeasurement, TransitionWidth, DEFAULT_SEG_LEN_CANDIDATES,
     WgpuScanBatchSegmentationError, WgpuScanBatchSegmentationEvidence,
     WgpuScanBatchSegmentationRequest, WGPU_SCAN_BATCH_SEGMENTATION_SCHEMA_VERSION,
     wgpu_scan_batch_segmentation_evidence,

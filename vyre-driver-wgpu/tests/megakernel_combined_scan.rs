@@ -25,6 +25,7 @@ use std::time::Duration;
 
 use vyre_driver_wgpu::megakernel::{
     BatchDispatchConfig, BatchFile, CombinedBatch, CombinedDispatcher, HitRecord, TransitionWidth,
+    DEFAULT_SEG_LEN_CANDIDATES,
 };
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_libs::scan::classic_ac::{classic_ac_compile, classic_ac_scan};
@@ -863,5 +864,127 @@ fn warp_state_scatter_bounds_the_relabeling_lever_at_keyhog_scale() {
         "a warp's lanes cluster on few hot states (refuting the 32-wide-scatter premise); \
          if E[distinct] approaches the 32 warp width the relabeling lever must be revisited \
          (sparse {sparse_ed:.2}, dense {dense_ed:.2})",
+    );
+}
+
+/// `CombinedDispatcher::calibrate_seg_len` must MEASURE the per-device window
+/// optimum and leave the batch tiled at a FAST, CONSERVING geometry — the
+/// autoroute-honest answer to "the optimum shifts by device." We deliberately
+/// upload at the whole-file `u32::MAX` floor (the ~0.01x-HS correctness default a
+/// naive caller would inherit); calibration must move off it. Asserts the
+/// selection is the fastest COMPLETE candidate (real value, not shape), every
+/// candidate's measurement is exposed (decision inputs visible — never a silent
+/// pick), and the chosen geometry reproduces the CPU oracle exactly while beating
+/// Hyperscan. Device-robust: it pins the CONTRACT, not a specific seg_len.
+#[test]
+#[ignore = "live GPU; run with --ignored --nocapture"]
+fn calibrate_seg_len_lands_on_a_fast_conserving_geometry_on_this_device() {
+    let backend = WgpuBackend::new()
+        .expect("Fix: live GPU required (missing GPU is a configuration bug, not a fallback)");
+
+    let patterns = catalog();
+    let max_pattern_len = patterns
+        .iter()
+        .map(|p| p.len())
+        .max()
+        .expect("non-empty catalog") as u32;
+    let buf = build_haystack(&patterns);
+    let ac = classic_ac_compile(&patterns);
+    let oracle: BTreeSet<(u32, u32)> = classic_ac_scan(&ac, &buf).into_iter().collect();
+    assert!(!oracle.is_empty(), "fixture must plant matches");
+
+    let hit_capacity: u32 = 1 << 20;
+    // Upload at the WHOLE-FILE floor on purpose: calibration must improve on it.
+    let mut batch = CombinedBatch::upload(
+        backend.device_queue(),
+        &[BatchFile::new(0xC0FFEE, 0, buf.clone())],
+        &ac.dfa.transitions,
+        &ac.dfa.output_offsets,
+        &ac.dfa.output_records,
+        ac.dfa.state_count,
+        max_pattern_len,
+        u32::MAX,
+        hit_capacity,
+    )
+    .expect("Fix: CombinedBatch upload must succeed for a valid automaton");
+
+    let config = BatchDispatchConfig {
+        workgroup_size_x: 64,
+        worker_groups: 2048,
+        hit_capacity,
+        timeout: Duration::from_secs(120),
+        ..Default::default()
+    };
+    let mut dispatcher = CombinedDispatcher::new(backend.clone(), config);
+
+    let cal = dispatcher
+        .calibrate_seg_len(&mut batch, DEFAULT_SEG_LEN_CANDIDATES, 3)
+        .expect("Fix: at least one default candidate must dispatch completely on a live GPU");
+
+    // Every candidate measured — the decision inputs are fully visible.
+    assert_eq!(
+        cal.measurements.len(),
+        DEFAULT_SEG_LEN_CANDIDATES.len(),
+        "calibration must report a measurement for every candidate it tried"
+    );
+    assert!(
+        DEFAULT_SEG_LEN_CANDIDATES.contains(&cal.chosen),
+        "chosen seg_len {} must be one of the candidates",
+        cal.chosen
+    );
+
+    // The chosen geometry is COMPLETE and is the FASTEST complete one measured.
+    let chosen_m = cal
+        .measurements
+        .iter()
+        .find(|m| m.seg_len == cal.chosen)
+        .expect("chosen seg_len must appear in the measurements");
+    assert!(
+        chosen_m.complete && chosen_m.dropped_hits == 0,
+        "chosen geometry must be complete (clean drain, 0 dropped); got {chosen_m:?}"
+    );
+    for m in &cal.measurements {
+        if m.complete {
+            assert!(
+                chosen_m.wall_time <= m.wall_time,
+                "chosen seg_len={} ({:?}) is not the fastest complete geometry; \
+                 seg_len={} ran in {:?}",
+                cal.chosen,
+                chosen_m.wall_time,
+                m.seg_len,
+                m.wall_time
+            );
+        }
+    }
+
+    // The batch is left tiled at the winner: a dispatch now must CONSERVE the
+    // full oracle hit set with 0 dropped — calibration never trades recall.
+    let mut hits: Vec<HitRecord> = Vec::new();
+    let summary = dispatcher
+        .dispatch_into(&batch, &mut hits)
+        .expect("dispatch at the calibrated geometry must succeed");
+    let found: BTreeSet<(u32, u32)> = hits
+        .iter()
+        .map(|h| (h.rule_idx, h.match_offset))
+        .collect();
+    assert_eq!(
+        found, oracle,
+        "the calibrated geometry must reproduce the classic_ac_scan oracle exactly"
+    );
+    assert_eq!(summary.dropped_hits, 0, "calibrated dispatch must drop nothing");
+
+    // And it must beat Hyperscan — calibration off the whole-file floor is the
+    // whole point. (Device-robust: we assert the HS floor, not an exact seg_len.)
+    let chosen_gbps = FILE_LEN as f64 / chosen_m.wall_time.as_secs_f64() / 1e9;
+    assert!(
+        chosen_gbps > HS_FLOOR_GBPS,
+        "calibrated seg_len={} ran at {chosen_gbps:.3} GB/s, must beat Hyperscan {HS_FLOOR_GBPS} GB/s",
+        cal.chosen
+    );
+    eprintln!(
+        "calibrated seg_len={} ⇒ {chosen_gbps:.3} GB/s ({:.2}x Hyperscan); measurements: {:?}",
+        cal.chosen,
+        chosen_gbps / HS_FLOOR_GBPS,
+        cal.measurements
     );
 }

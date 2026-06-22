@@ -2125,6 +2125,156 @@ impl CombinedDispatcher {
             wall_time,
         })
     }
+
+    /// Measure-based `seg_len` selection for THIS device. Re-tiles `batch` at
+    /// each candidate window width — keeping the caller's proven
+    /// `overlap = max_pattern_len`, so correctness is GEOMETRY-INVARIANT and only
+    /// throughput changes — times a warm best-of-`reps` dispatch, and returns the
+    /// FASTEST geometry whose dispatch was COMPLETE (clean drain, `dropped_hits
+    /// == 0`). No per-call oracle is needed: every candidate shares the caller's
+    /// sound overlap, so all COMPLETE dispatches yield the identical hit set and
+    /// this only optimizes speed among them. An under-claiming (drain-incomplete)
+    /// or ring-overflowing geometry is recorded but EXCLUDED, never silently
+    /// selected; if no candidate dispatches completely the call FAILS CLOSED.
+    ///
+    /// This is the autoroute-honest way to hold the GPU win across devices: the
+    /// per-device optimum (~128 on an RTX 5090, coarser on a low-core laptop) is
+    /// MEASURED here, not assumed — and every candidate's measurement is returned
+    /// so the decision inputs are visible. On success `batch` is left re-tiled at
+    /// the winning geometry, ready to dispatch.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PipelineError`] when `candidates` is empty, when a dispatch fails
+    /// for a non-geometry reason, or (fail closed) when NO candidate dispatched
+    /// completely.
+    pub fn calibrate_seg_len(
+        &mut self,
+        batch: &mut CombinedBatch,
+        candidates: &[u32],
+        reps: u32,
+    ) -> Result<SegLenCalibration, PipelineError> {
+        if candidates.is_empty() {
+            return Err(PipelineError::Backend(
+                "seg_len calibration needs at least one candidate geometry; pass \
+                 DEFAULT_SEG_LEN_CANDIDATES or an operator set."
+                    .to_string(),
+            ));
+        }
+        let reps = reps.max(1);
+        let mut scratch: Vec<HitRecord> = Vec::new();
+        let mut measurements = Vec::with_capacity(candidates.len());
+        for &seg_len in candidates {
+            batch.set_segmentation(seg_len)?;
+            // Warm once: compile + first-touch out of the timing. A warm-up that
+            // under-claims is fine — the timed loop below records it as incomplete.
+            let _ = self.dispatch_into(batch, &mut scratch);
+            let mut best_wall = Duration::MAX;
+            let mut dropped_hits = 0u32;
+            let mut complete = true;
+            for _ in 0..reps {
+                match self.dispatch_into(batch, &mut scratch) {
+                    Ok(summary) => {
+                        best_wall = best_wall.min(summary.wall_time);
+                        dropped_hits = summary.dropped_hits;
+                        if summary.dropped_hits != 0 {
+                            // Hit ring overflowed: this dispatch's set is INCOMPLETE,
+                            // so its time is not a valid complete-scan measurement.
+                            complete = false;
+                        }
+                    }
+                    // Drain-incomplete = the geometry could not exhaust the queue in
+                    // the timeout (loud under-claim). Record + exclude, never select.
+                    Err(e) if e.to_string().contains("drain incomplete") => {
+                        complete = false;
+                        break;
+                    }
+                    Err(other) => return Err(other),
+                }
+            }
+            if best_wall == Duration::MAX {
+                // Never produced a timed Ok (immediate under-claim every rep).
+                best_wall = Duration::ZERO;
+                complete = false;
+            }
+            measurements.push(SegLenMeasurement {
+                seg_len,
+                wall_time: best_wall,
+                dropped_hits,
+                complete,
+            });
+        }
+        let chosen = select_fastest_complete(&measurements)?;
+        // Leave the batch at the winning geometry so the caller dispatches fast.
+        batch.set_segmentation(chosen)?;
+        Ok(SegLenCalibration {
+            chosen,
+            measurements,
+        })
+    }
+}
+
+/// A vetted default `seg_len` candidate set for [`CombinedDispatcher::calibrate_seg_len`],
+/// spanning the saturation curve from coarse (fewer segments — best on low-core
+/// devices) to fine (more parallel windows — best on high-core devices), so
+/// calibration adapts to the host instead of assuming one optimum. Operators may
+/// pass their own set. Deliberately excludes `u32::MAX` (whole-file): that is a
+/// correctness floor, never a throughput candidate (see `CombinedBatch::upload`).
+pub const DEFAULT_SEG_LEN_CANDIDATES: &[u32] = &[4096, 2048, 1024, 512, 256, 128, 64];
+
+/// One geometry's measurement during `seg_len` calibration: the candidate window
+/// width, its best wall-clock dispatch time over the timed reps, the hit-ring
+/// overflow count, and whether the dispatch was COMPLETE (clean drain AND
+/// `dropped_hits == 0`). Only `complete` geometries are eligible to win.
+#[derive(Debug, Clone)]
+pub struct SegLenMeasurement {
+    /// The candidate per-segment owned width that was measured.
+    pub seg_len: u32,
+    /// Best (minimum) wall-clock dispatch time observed over the timed reps;
+    /// `Duration::ZERO` for a geometry that never produced a timed complete run.
+    pub wall_time: Duration,
+    /// Hits the GPU emitted beyond `hit_capacity` (ring overflow); non-zero marks
+    /// the measurement INCOMPLETE.
+    pub dropped_hits: u32,
+    /// True iff every timed rep drained cleanly with no dropped hits — the only
+    /// state in which `wall_time` represents a full, conserving scan.
+    pub complete: bool,
+}
+
+/// The result of [`CombinedDispatcher::calibrate_seg_len`]: the fastest COMPLETE
+/// geometry plus EVERY candidate's measurement, so the selection's decision
+/// inputs are fully visible to the operator (never a silent pick).
+#[derive(Debug, Clone)]
+pub struct SegLenCalibration {
+    /// The winning per-segment owned width; the batch is left re-tiled here.
+    pub chosen: u32,
+    /// Per-candidate measurements in the order the candidates were supplied.
+    pub measurements: Vec<SegLenMeasurement>,
+}
+
+/// Pick the COMPLETE geometry with the smallest wall time, breaking ties toward
+/// the COARSER (larger) `seg_len` — fewer segments means less queue-drain and
+/// warm-up overhead at equal measured speed. Fails closed when no candidate is
+/// complete: returns an error rather than an unsound or incomplete geometry.
+fn select_fastest_complete(measurements: &[SegLenMeasurement]) -> Result<u32, PipelineError> {
+    measurements
+        .iter()
+        .filter(|m| m.complete)
+        .min_by(|a, b| {
+            a.wall_time
+                .cmp(&b.wall_time)
+                .then_with(|| b.seg_len.cmp(&a.seg_len))
+        })
+        .map(|m| m.seg_len)
+        .ok_or_else(|| {
+            PipelineError::Backend(
+                "seg_len calibration found no complete geometry: every candidate \
+                 under-claimed (drain incomplete) or overflowed the hit ring. Fix: \
+                 raise BatchDispatchConfig.timeout and/or hit_capacity, or pass \
+                 coarser candidates (larger seg_len = fewer segments to drain)."
+                    .to_string(),
+            )
+        })
 }
 
 fn hit_writer_node(hit_writer: BatchHitWriter) -> Node {
@@ -2294,6 +2444,94 @@ fn decode_hits_from_readback_into(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn measurement(seg_len: u32, micros: u64, dropped_hits: u32, complete: bool) -> SegLenMeasurement {
+        SegLenMeasurement {
+            seg_len,
+            wall_time: Duration::from_micros(micros),
+            dropped_hits,
+            complete,
+        }
+    }
+
+    /// The calibrator picks the fastest COMPLETE geometry — and must NOT pick a
+    /// faster-but-incomplete one. A geometry that drained faster only because it
+    /// dropped hits (ring overflow) is a false speedup; selecting it would ship a
+    /// silently-truncated scan (Law 10). Here seg_len=64 is the fastest wall time
+    /// but incomplete, so the fastest COMPLETE geometry (128) must win.
+    #[test]
+    fn calibration_selects_fastest_complete_not_faster_incomplete() {
+        let measurements = vec![
+            measurement(512, 900, 0, true),
+            measurement(256, 700, 0, true),
+            measurement(128, 400, 0, true), // fastest complete
+            measurement(64, 300, 12, false), // faster wall, but dropped 12 ⇒ excluded
+        ];
+        assert_eq!(
+            select_fastest_complete(&measurements).expect("a complete geometry exists"),
+            128,
+            "must select the fastest COMPLETE geometry (128), never the faster-but-truncated 64"
+        );
+    }
+
+    /// No complete geometry ⇒ fail closed with an actionable error, never return
+    /// an unsound/incomplete geometry as if it were a valid pick.
+    #[test]
+    fn calibration_fails_closed_when_every_geometry_is_incomplete() {
+        let measurements = vec![
+            measurement(128, 0, 5, false),
+            measurement(64, 0, 9, false),
+        ];
+        let err = select_fastest_complete(&measurements)
+            .expect_err("no complete geometry must error, not silently pick one");
+        assert!(
+            err.to_string().contains("no complete geometry"),
+            "fail-closed error must name the cause; got: {err}"
+        );
+    }
+
+    /// Equal measured speed ⇒ prefer the COARSER (larger seg_len) geometry: fewer
+    /// segments means less queue-drain and per-window warm-up overhead, and is
+    /// less likely to under-claim on a slower device.
+    #[test]
+    fn calibration_tie_breaks_toward_coarser_geometry() {
+        let measurements = vec![
+            measurement(256, 500, 0, true),
+            measurement(128, 500, 0, true),
+            measurement(64, 500, 0, true),
+        ];
+        assert_eq!(
+            select_fastest_complete(&measurements).expect("complete geometries exist"),
+            256,
+            "equal wall time ⇒ pick the coarsest (256), the fewest-segments geometry"
+        );
+    }
+
+    /// The shipped default candidate set must be non-empty, strictly descending
+    /// (coarse→fine, the order calibration walks the saturation curve), and must
+    /// exclude the whole-file `u32::MAX` correctness floor — it is never a
+    /// throughput candidate.
+    #[test]
+    fn default_seg_len_candidates_are_descending_and_exclude_whole_file() {
+        assert!(!DEFAULT_SEG_LEN_CANDIDATES.is_empty());
+        assert!(
+            !DEFAULT_SEG_LEN_CANDIDATES.contains(&u32::MAX),
+            "whole-file is a correctness floor, never a calibration candidate"
+        );
+        for pair in DEFAULT_SEG_LEN_CANDIDATES.windows(2) {
+            assert!(
+                pair[0] > pair[1],
+                "candidates must be strictly descending coarse→fine; {} !> {}",
+                pair[0],
+                pair[1]
+            );
+        }
+        assert_eq!(
+            *DEFAULT_SEG_LEN_CANDIDATES.last().unwrap(),
+            64,
+            "finest default candidate is 64 (overlap-waste dominates below it for MiB inputs)"
+        );
+    }
 
     /// The combined-AC segmented program must lower through the REAL WGSL
     /// pipeline (`descriptor_gate::validate_and_analyze` → `vyre_emit_naga::emit`
