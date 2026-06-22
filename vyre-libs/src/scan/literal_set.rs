@@ -974,25 +974,56 @@ impl GpuLiteralSet {
         let haystack_len_word = [haystack_len];
         let region_base_bytes = region_base.to_le_bytes();
         // Per-region presence buffer (binding 6) is read-write: uploaded zeroed,
-        // dispatched, read back. It is the entire output.
+        // dispatched, read back. It is the entire output. (Same `vec!` idiom as
+        // the synchronous entry's presence output.)
         let presence_zeroed = vec![0u8; total_words.saturating_mul(4)];
 
-        let inputs: Vec<Vec<u8>> = vec![
-            haystack_packed, // 0: haystack (Packed U32)
-            dispatch_io::u32_words_as_le_bytes(&self.dfa.transitions).into_owned(), // 1: transitions
-            dispatch_io::u32_words_as_le_bytes(&self.dfa.output_offsets).into_owned(), // 2: output_offsets
-            dispatch_io::u32_words_as_le_bytes(&self.dfa.output_records).into_owned(), // 3: output_records
-            dispatch_io::u32_words_as_le_bytes(&self.pattern_lengths).into_owned(), // 4: pattern_lengths
-            dispatch_io::u32_words_as_le_bytes(&haystack_len_word).into_owned(), // 5: haystack_len
-            presence_zeroed, // 6: per-region presence (read_write)
-            dispatch_io::u32_words_as_le_bytes(&prefilter_tables.candidate_end_mask).into_owned(), // 7: candidate_end_mask
-            dispatch_io::u32_words_as_le_bytes(&prefilter_tables.candidate_suffix2_mask)
-                .into_owned(), // 8: candidate_suffix2_mask
-            dispatch_io::u32_words_as_le_bytes(&prefilter_tables.candidate_suffix3_bloom)
-                .into_owned(), // 9: candidate_suffix3_bloom
-            dispatch_io::u32_words_as_le_bytes(region_starts).into_owned(), // 10: region_starts
-            region_base_bytes.to_vec(),                                    // 11: region_base
-        ];
+        // OWNED inputs in the exact binding order of the synchronous entry, built
+        // through the fallible `copy_u32_words_as_le_bytes` so an allocation
+        // failure fails CLOSED (BackendError) instead of aborting on OOM — the
+        // same contract as `prepare_scan_dispatch`. The handle retains them until
+        // `await_words`.
+        const PRESENCE_BY_REGION_INPUT_COUNT: usize = 12;
+        let mut inputs: Vec<Vec<u8>> = Vec::new();
+        vyre_foundation::allocation::try_reserve_vec_to_capacity(
+            &mut inputs,
+            PRESENCE_BY_REGION_INPUT_COUNT,
+        )
+        .map_err(|source| {
+            vyre::BackendError::new(format!(
+                "literal_set region-presence async could not reserve {PRESENCE_BY_REGION_INPUT_COUNT} input buffer slot(s): {source}. Fix: shard the literal set or haystack before async dispatch."
+            ))
+        })?;
+        inputs.push(haystack_packed); // 0: haystack (Packed U32)
+        inputs.push(copy_u32_words_as_le_bytes(&self.dfa.transitions, "transition table")?); // 1
+        inputs.push(copy_u32_words_as_le_bytes(
+            &self.dfa.output_offsets,
+            "output offset table",
+        )?); // 2
+        inputs.push(copy_u32_words_as_le_bytes(
+            &self.dfa.output_records,
+            "output record table",
+        )?); // 3
+        inputs.push(copy_u32_words_as_le_bytes(
+            &self.pattern_lengths,
+            "pattern length table",
+        )?); // 4
+        inputs.push(copy_u32_words_as_le_bytes(&haystack_len_word, "haystack length")?); // 5
+        inputs.push(presence_zeroed); // 6: per-region presence (read_write)
+        inputs.push(copy_u32_words_as_le_bytes(
+            &prefilter_tables.candidate_end_mask,
+            "candidate end mask",
+        )?); // 7
+        inputs.push(copy_u32_words_as_le_bytes(
+            &prefilter_tables.candidate_suffix2_mask,
+            "candidate suffix2 mask",
+        )?); // 8
+        inputs.push(copy_u32_words_as_le_bytes(
+            &prefilter_tables.candidate_suffix3_bloom,
+            "candidate suffix3 bloom",
+        )?); // 9
+        inputs.push(copy_u32_words_as_le_bytes(region_starts, "region starts")?); // 10
+        inputs.push(region_base_bytes.to_vec()); // 11: region_base (4 bytes)
 
         let config =
             dispatch_io::byte_scan_dispatch_config(haystack_len, program.workgroup_size[0]);
