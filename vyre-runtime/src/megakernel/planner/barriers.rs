@@ -6,10 +6,8 @@
 //! neighboring arms have known buffer effects and no same-buffer read/write or
 //! write/write dependency crosses the barrier.
 
-use super::super::staging_reserve::reserve_vec_capacity as reserve_generic_vec;
 use std::sync::Arc;
 
-use crate::PipelineError;
 use smallvec::SmallVec;
 use vyre_foundation::ir::{Expr, Ident, Node, Program};
 
@@ -25,32 +23,27 @@ pub struct BarrierElisionReport {
 /// The rewrite is intentionally conservative. It only removes a barrier when
 /// the previous and next sibling are explicit arm containers (`Block` or
 /// `Region`) and their recursively collected buffer effects cannot conflict.
+///
+/// INFALLIBLE by construction (Law 10): every working buffer is sized by the
+/// program's IR node count — kernel STRUCTURE (the fused arms + scan loop), NOT
+/// input/catalog/data-scaled — so it is bounded and reserved with
+/// `Vec::with_capacity`, exactly like the sibling `rule_catalog` host build.
+/// There is therefore no fallible-staging error to swallow, so the pass ALWAYS
+/// elides; the previous `try_*` + `Err(_) => fallback` silently shipped the
+/// un-elided (slower) program on a staging-reserve failure, which this removes.
 #[must_use]
 pub fn elide_value_flow_barriers(program: Program) -> (Program, BarrierElisionReport) {
-    let fallback = program.clone();
-    try_elide_value_flow_barriers(program).unwrap_or((fallback, BarrierElisionReport::default()))
-}
-
-/// Remove barriers between independent megakernel arms with fallible staging.
-///
-/// # Errors
-///
-/// Returns [`PipelineError::Backend`] when host staging for the rewritten IR
-/// cannot be reserved.
-pub fn try_elide_value_flow_barriers(
-    program: Program,
-) -> Result<(Program, BarrierElisionReport), PipelineError> {
     let mut report = BarrierElisionReport::default();
     if !nodes_have_barrier(program.entry()) {
-        return Ok((program, report));
+        return (program, report);
     }
-    let entry = try_rewrite_nodes(clone_nodes(program.entry(), "barrier entry")?, &mut report)?;
+    let entry = rewrite_nodes(program.entry().to_vec(), &mut report);
     let rewritten = if report.removed == 0 {
         program
     } else {
         program.with_rewritten_entry(entry)
     };
-    Ok((rewritten, report))
+    (rewritten, report)
 }
 
 fn nodes_have_barrier(nodes: &[Node]) -> bool {
@@ -69,76 +62,65 @@ fn node_has_barrier(node: &Node) -> bool {
     }
 }
 
-fn try_rewrite_nodes(
-    nodes: Vec<Node>,
-    report: &mut BarrierElisionReport,
-) -> Result<Vec<Node>, PipelineError> {
+fn rewrite_nodes(nodes: Vec<Node>, report: &mut BarrierElisionReport) -> Vec<Node> {
     if !nodes_have_barrier(&nodes) {
-        return Ok(nodes);
+        return nodes;
     }
-    let mut rewritten = Vec::new();
-    reserve_generic_vec(&mut rewritten, nodes.len(), "barrier rewrite nodes")?;
+    let mut rewritten = Vec::with_capacity(nodes.len());
     for node in nodes {
-        rewritten.push(try_rewrite_node(node, report)?);
+        rewritten.push(rewrite_node(node, report));
     }
-    try_elide_barrier_siblings(rewritten, report)
+    elide_barrier_siblings(rewritten, report)
 }
 
-fn try_rewrite_node(node: Node, report: &mut BarrierElisionReport) -> Result<Node, PipelineError> {
+fn rewrite_node(node: Node, report: &mut BarrierElisionReport) -> Node {
     match node {
         Node::If {
             cond,
             then,
             otherwise,
-        } => Ok(Node::If {
+        } => Node::If {
             cond,
-            then: try_rewrite_nodes(then, report)?,
-            otherwise: try_rewrite_nodes(otherwise, report)?,
-        }),
+            then: rewrite_nodes(then, report),
+            otherwise: rewrite_nodes(otherwise, report),
+        },
         Node::Loop {
             var,
             from,
             to,
             body,
-        } => Ok(Node::Loop {
+        } => Node::Loop {
             var,
             from,
             to,
-            body: try_rewrite_nodes(body, report)?,
-        }),
-        Node::Block(body) => Ok(Node::Block(try_rewrite_nodes(body, report)?)),
+            body: rewrite_nodes(body, report),
+        },
+        Node::Block(body) => Node::Block(rewrite_nodes(body, report)),
         Node::Region {
             generator,
             source_region,
             body,
         } => {
             if !nodes_have_barrier(&body) {
-                Ok(Node::Region {
+                Node::Region {
                     generator,
                     source_region,
                     body,
-                })
+                }
             } else {
-                Ok(Node::Region {
+                Node::Region {
                     generator,
                     source_region,
-                    body: Arc::new(try_rewrite_nodes(
-                        try_arc_vec_into_vec(body, "barrier region body")?,
-                        report,
-                    )?),
-                })
+                    body: Arc::new(rewrite_nodes(arc_vec_into_vec(body), report)),
+                }
             }
         }
-        other => Ok(other),
+        other => other,
     }
 }
 
-fn try_elide_barrier_siblings(
-    nodes: Vec<Node>,
-    report: &mut BarrierElisionReport,
-) -> Result<Vec<Node>, PipelineError> {
-    let mut out = Vec::new();
-    reserve_generic_vec(&mut out, nodes.len(), "barrier sibling output")?;
+fn elide_barrier_siblings(nodes: Vec<Node>, report: &mut BarrierElisionReport) -> Vec<Node> {
+    let mut out = Vec::with_capacity(nodes.len());
     let mut iter = nodes.into_iter().peekable();
     while let Some(node) = iter.next() {
         if matches!(&node, Node::Barrier { .. }) {
@@ -154,29 +136,16 @@ fn try_elide_barrier_siblings(
         }
         out.push(node);
     }
-    Ok(out)
+    out
 }
 
-fn try_arc_vec_into_vec<T: Clone>(
-    body: Arc<Vec<T>>,
-    label: &'static str,
-) -> Result<Vec<T>, PipelineError> {
+/// Take ownership of an `Arc<Vec<T>>`'s contents without the shared `Arc`: the
+/// sole owner is moved out, otherwise the bounded inner `Vec` is cloned.
+fn arc_vec_into_vec<T: Clone>(body: Arc<Vec<T>>) -> Vec<T> {
     match Arc::try_unwrap(body) {
-        Ok(nodes) => Ok(nodes),
-        Err(shared) => {
-            let mut nodes = Vec::new();
-            reserve_generic_vec(&mut nodes, shared.len(), label)?;
-            nodes.extend(shared.iter().cloned());
-            Ok(nodes)
-        }
+        Ok(nodes) => nodes,
+        Err(shared) => shared.as_ref().clone(),
     }
-}
-
-fn clone_nodes(nodes: &[Node], label: &'static str) -> Result<Vec<Node>, PipelineError> {
-    let mut cloned = Vec::new();
-    reserve_generic_vec(&mut cloned, nodes.len(), label)?;
-    cloned.extend(nodes.iter().cloned());
-    Ok(cloned)
 }
 
 fn is_runtime_arm(node: &Node) -> bool {
@@ -397,6 +366,21 @@ mod tests {
             .sum()
     }
 
+    fn store_count(nodes: &[Node]) -> usize {
+        nodes
+            .iter()
+            .map(|node| match node {
+                Node::Store { .. } => 1,
+                Node::If {
+                    then, otherwise, ..
+                } => store_count(then) + store_count(otherwise),
+                Node::Loop { body, .. } | Node::Block(body) => store_count(body),
+                Node::Region { body, .. } => store_count(body),
+                _ => 0,
+            })
+            .sum()
+    }
+
     #[test]
     fn removes_barrier_between_disjoint_runtime_arms() {
         let program = Program::wrapped(
@@ -413,6 +397,47 @@ mod tests {
 
         assert_eq!(report.removed, 1);
         assert_eq!(barrier_count(rewritten.entry()), 0);
+    }
+
+    /// Law 10 / infallibility lock: a program with SEVERAL barriers between
+    /// pairwise-disjoint runtime arms must have EVERY such barrier elided in one
+    /// pass. The pass is infallible (its working buffers are sized by the bounded
+    /// IR node count, reserved with `Vec::with_capacity`), so it can never bail to
+    /// the old `Err(_) => fallback` that silently shipped the un-elided program
+    /// with these barriers still present. Three barriers between four disjoint
+    /// arms must all go (removed == 3, zero barriers left).
+    #[test]
+    fn elides_every_barrier_across_many_disjoint_arms_in_one_pass() {
+        let program = Program::wrapped(
+            vec![
+                buffer("a", 0),
+                buffer("b", 1),
+                buffer("c", 2),
+                buffer("d", 3),
+            ],
+            [64, 1, 1],
+            vec![
+                Node::Block(vec![Node::store("a", Expr::u32(0), Expr::u32(1))]),
+                Node::barrier(),
+                Node::Block(vec![Node::store("b", Expr::u32(0), Expr::u32(2))]),
+                Node::barrier(),
+                Node::Block(vec![Node::store("c", Expr::u32(0), Expr::u32(3))]),
+                Node::barrier(),
+                Node::Block(vec![Node::store("d", Expr::u32(0), Expr::u32(4))]),
+            ],
+        );
+
+        let (rewritten, report) = elide_value_flow_barriers(program);
+
+        assert_eq!(report.removed, 3, "all three disjoint-arm barriers must be elided");
+        assert_eq!(barrier_count(rewritten.entry()), 0);
+        // All four independent store arms must survive the rewrite (no arm dropped
+        // while elliding barriers, regardless of how `Program::wrapped` nests them).
+        assert_eq!(
+            store_count(rewritten.entry()),
+            4,
+            "all four independent store arms must survive the rewrite"
+        );
     }
 
     #[test]

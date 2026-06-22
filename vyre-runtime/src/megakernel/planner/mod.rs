@@ -16,9 +16,7 @@ mod provenance;
 mod sizing;
 mod whole_megakernel_opt;
 
-pub use barriers::{
-    elide_value_flow_barriers, try_elide_value_flow_barriers, BarrierElisionReport,
-};
+pub use barriers::{elide_value_flow_barriers, BarrierElisionReport};
 pub use caps::{MegakernelCaps, MegakernelReport, MegakernelTelemetry, MegakernelWorkItem};
 pub use config::{MegakernelConfig, MegakernelWorkloadHints};
 pub use cross_pipeline::{

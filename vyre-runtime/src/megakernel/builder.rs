@@ -282,11 +282,10 @@ fn wrap_megakernel_program(workgroup_size_x: u32, slot_count: u32, body: Vec<Nod
 }
 
 fn optimize_megakernel_program(program: Program) -> Program {
-    let fallback = program.clone();
-    let program = match super::planner::try_elide_value_flow_barriers(program) {
-        Ok((program, _)) => program,
-        Err(_) => fallback,
-    };
+    // Barrier elision is infallible (its working buffers are sized by the bounded
+    // IR node count), so there is no staging-failure fallback that could silently
+    // ship the un-elided program — the pass always runs (Law 10).
+    let (program, _) = super::planner::elide_value_flow_barriers(program);
     vyre_foundation::optimizer::pre_lowering::optimize(program)
 }
 
