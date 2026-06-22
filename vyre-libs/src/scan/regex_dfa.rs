@@ -346,7 +346,7 @@ mod tests {
 
     /// The unanchored build must match a pattern at ANY offset under a single
     /// forward pass (find-anywhere), while the anchored build dies on a
-    /// non-matching prefix. This is the property the keyhog megakernel fallback
+    /// non-matching prefix. This is the property the megakernel fallback
     /// port depends on (a secret is rarely at byte 0).
     #[test]
     fn unanchored_dfa_matches_at_any_offset_single_pass() {
@@ -376,7 +376,7 @@ mod tests {
         );
     }
 
-    /// Regression: the GPU parity gate (keyhog) missed a real `ghp_` token whose
+    /// Regression: a downstream GPU parity gate missed a real `ghp_` token whose
     /// 36-char body contains g/h/p (the prefix chars) — a prefix/body overlap
     /// under the `.*` self-loop. This CPU single-pass DFA check isolates whether
     /// the miss is in THIS primitive's construction or downstream on the GPU.
@@ -385,7 +385,7 @@ mod tests {
         let dfa = build_regex_dfa_unanchored(&["ghp_[A-Za-z0-9]{36}"], 1024, 16384)
             .expect("compiles")
             .dfa;
-        // Exact missed content from the keyhog cpu_parity gate (file 120).
+        // Exact missed content from a downstream cpu_parity gate (file 120).
         let hay = b"at = \"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\"";
         let ends = single_pass_accept_ends(&dfa, hay);
         assert_eq!(

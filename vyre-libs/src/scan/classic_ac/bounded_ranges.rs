@@ -257,7 +257,7 @@ fn bounded_ranges_scan_nodes(
 /// 30 bytes) make the triple-append path output-bound — every hit takes an atomic
 /// counter increment + three global stores, and the host reads back tens of
 /// thousands of triples. Measured on a 5090 that collapses a 676 MB/s scan kernel
-/// to 4.5 MB/s. But a prefilter consumer (e.g. keyhog's `collect_triggered_patterns`)
+/// to 4.5 MB/s. But a prefilter consumer (e.g. a downstream scanner's `collect_triggered_patterns`)
 /// only needs to know WHICH patterns fired, not where. Setting a presence bit is
 /// IDEMPOTENT, so concurrent lanes hitting the same pattern need no counter and no
 /// per-hit serialization — just an `atomic_or` into a ~`ceil(patterns/32)`-word
@@ -334,7 +334,7 @@ fn bounded_ranges_presence_nodes(
 /// Region-attributed counterpart of [`bounded_ranges_presence_nodes`]: write the
 /// presence bit into a per-REGION bitmap row instead of one global bitmap.
 ///
-/// Innovation: keyhog (and any coalesced-batch consumer) packs N independent
+/// Innovation: a coalesced-batch consumer packs N independent
 /// files into one haystack and needs to know which patterns fired *in each file*,
 /// not just somewhere in the batch. The triple-append path gives exact spans the
 /// consumer then reduces to a per-file trigger set on the host — paying the dense
@@ -527,7 +527,7 @@ fn region_search_prologue_nodes(
 /// `(pattern_id, start, end)` match triple (atomic append, exactly as
 /// [`bounded_ranges_scan_nodes`]).
 ///
-/// Innovation: a coalesced-batch consumer (keyhog's GPU phase-1) needs the per-file
+/// Innovation: a coalesced-batch consumer (a GPU phase-1 scanner) needs the per-file
 /// trigger SET *and* the anchor/keyword match POSITIONS. Today it pays TWO full GPU
 /// scans of the same haystack — `scan_presence_by_region` (bitmap) then a second
 /// `scan_into` (triples) — because the presence bitmap carries no positions. Both

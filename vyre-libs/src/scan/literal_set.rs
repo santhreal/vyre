@@ -869,7 +869,7 @@ impl GpuLiteralSet {
     /// idempotent-`atomic_or` output (no per-hit counter, no triple readback, so it
     /// stays near the scan-throughput ceiling on match-dense corpora) while
     /// preserving per-file attribution, which the global presence bitmap loses. The
-    /// consumer (e.g. keyhog's coalesced GPU phase-1) gets the exact per-file
+    /// consumer (e.g. a coalesced GPU phase-1 scanner) gets the exact per-file
     /// trigger set it needs without materializing spans or reducing triples on the
     /// host.
     ///
@@ -994,8 +994,8 @@ impl GpuLiteralSet {
 
     /// ASYNC counterpart of [`Self::scan_presence_by_region_with_scratch`]: submit
     /// the GPU region-presence dispatch and return a [`PendingPresenceByRegion`]
-    /// handle IMMEDIATELY, so the caller can OVERLAP host-side work (e.g. keyhog's
-    /// trigger-independent entropy-candidate generation) with the in-flight GPU
+    /// handle IMMEDIATELY, so the caller can OVERLAP host-side work (e.g. a downstream
+    /// scanner's trigger-independent entropy-candidate generation) with the in-flight GPU
     /// scan, then decode the per-region bitmap via
     /// [`PendingPresenceByRegion::await_words`].
     ///
@@ -3036,7 +3036,7 @@ mod compile_tests {
     ///   - the match triples must equal `reference_scan` (the linear AC oracle), and
     ///   - each region's presence bits must equal the set of pattern ids whose match
     ///     end falls in that region.
-    /// This is the soundness contract keyhog's GPU phase-1 fold depends on: collapsing
+    /// This is the soundness contract a downstream GPU phase-1 fold depends on: collapsing
     /// `scan_presence_by_region` + a separate position scan into one walk must change
     /// neither output. CPU-only (no GPU) so it runs in the lib gate.
     #[test]

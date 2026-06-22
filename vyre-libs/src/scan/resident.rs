@@ -117,7 +117,7 @@ impl RulePipeline {
         // (`vyre-driver-cuda/.../resident_dispatch/batch.rs`), but wgpu tolerates an
         // oversized/undersized buffer. Without this guard an undersized
         // `haystack_capacity_bytes` PASSES on wgpu (the dev backend) and fails only
-        // at dispatch on CUDA (keyhog's backend) with a confusing late
+        // at dispatch on CUDA (a downstream consumer's backend) with a confusing late
         // `InvalidProgram` — a dev-passes / prod-fails backend divergence. Surface
         // it here, portably, at prepare time. Reuses `BufferDecl::static_byte_len`,
         // the exact source CUDA checks against, so a runtime-sized input
@@ -332,7 +332,7 @@ mod tests {
     /// Mock backend that records resident traffic and returns a canned hit
     /// buffer, so the host orchestration (table-upload-once, per-scan haystack
     /// staging, counter reset, decode) is validated without a GPU. Real
-    /// GPU resident-vs-borrowed parity is asserted in the keyhog scanner crate
+    /// GPU resident-vs-borrowed parity is asserted in the downstream scanner crate
     /// where a live wgpu/CUDA backend is available. `VyreBackend` requires
     /// `Send + Sync`, so the counters use atomics/`Mutex`, not `RefCell`.
     struct MockResidentBackend {

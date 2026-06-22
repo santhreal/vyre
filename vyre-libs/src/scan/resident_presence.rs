@@ -9,8 +9,8 @@
 //! table, and the three suffix-prefilter masks (end mask, 2-gram mask, 3-gram
 //! bloom). For a large detector set the DFA transition table alone is
 //! `state_count × 256` u32s — multiple MiB — and it is *identical* across every
-//! file of a corpus. A consumer that scans many coalesced batches (keyhog's
-//! phase-1 layout) pays that multi-MiB host→device transfer once per batch even
+//! file of a corpus. A consumer that scans many coalesced batches (a downstream
+//! consumer's phase-1 layout) pays that multi-MiB host→device transfer once per batch even
 //! though only the haystack and the per-region presence output actually change.
 //!
 //! [`ResidentPresencePipeline`] uploads those seven tables **once** into
@@ -191,8 +191,8 @@ impl GpuLiteralSet {
         // The three per-scan control buffers are ALSO resident. The CUDA backend's
         // resident dispatch rejects any borrowed resource (it resolves every binding
         // to a resident handle), so a resident dispatch must be ALL-resident — a
-        // borrowed-control mix works on wgpu but fails closed on CUDA, keyhog's
-        // backend. haystack_len and region_base are one u32 each; region_starts is
+        // borrowed-control mix works on wgpu but fails closed on CUDA, a downstream
+        // consumer's backend. haystack_len and region_base are one u32 each; region_starts is
         // sized for the full max_regions cap and padded per scan so its `buf_len`
         // (the kernel's live region count) stays fixed at max_regions.
         let region_starts_capacity_bytes =
@@ -362,7 +362,7 @@ impl ResidentPresencePipeline {
         // borrowed: the CUDA resident dispatch resolves every binding to a resident
         // handle and rejects a borrowed mix (`cuda_compiled_persistent_borrowed_resource`),
         // so an all-resident dispatch is the only form portable across wgpu AND CUDA
-        // (keyhog's backend). haystack_len and region_base are one u32 each.
+        // (a downstream consumer's backend). haystack_len and region_base are one u32 each.
         backend.upload_resident_at(&self.haystack_len_buf, 0, &haystack_len.to_le_bytes())?;
         backend.upload_resident_at(&self.region_base_buf, 0, &region_base.to_le_bytes())?;
 
