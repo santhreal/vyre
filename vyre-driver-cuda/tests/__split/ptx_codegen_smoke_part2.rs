@@ -72,6 +72,14 @@ fn grouped_int4_affine_ptx_broadcasts_packed_weight_words() {
 
 #[test]
 fn ptx_emits_integer_comparisons() {
+    // The `cmp_normalize` lowering pass (vyre-lower) canonicalizes the
+    // inverse-relation comparisons for CSE: `Gt(a, b)` -> `Lt(b, a)` and
+    // `Ge(a, b)` -> `Le(b, a)`. Backend emitters produce equivalent code
+    // for Lt/Gt and Le/Ge, so the canonical direction is free at codegen.
+    // Therefore a `gt` Expr reaches PTX as `lt` (operands swapped) and
+    // emits `setp.lt.u32`; a `ge` Expr emits `setp.le.u32`. Asserting the
+    // normalized instruction still proves the chain fired -- an
+    // un-normalized `Gt` would emit `setp.gt.u32` and fail this check.
     let ops = [
         (
             "eq",
@@ -89,9 +97,10 @@ fn ptx_emits_integer_comparisons() {
             "setp.lt.u32",
         ),
         (
+            // Gt(input, 5) -> Lt(5, input) via cmp_normalize.
             "gt",
             Expr::gt(Expr::load("input", Expr::u32(0)), Expr::u32(5)),
-            "setp.gt.u32",
+            "setp.lt.u32",
         ),
         (
             "le",
@@ -99,9 +108,10 @@ fn ptx_emits_integer_comparisons() {
             "setp.le.u32",
         ),
         (
+            // Ge(input, 5) -> Le(5, input) via cmp_normalize.
             "ge",
             Expr::ge(Expr::load("input", Expr::u32(0)), Expr::u32(5)),
-            "setp.ge.u32",
+            "setp.le.u32",
         ),
     ];
     for (name, expr, expected_insn) in ops {
@@ -374,10 +384,18 @@ fn ptx_lowers_workgroup_sum_region_to_subgroup_reduction() {
 
     let secondary_text = program_to_ptx_for_sm_and_subgroup(&program, &default_config(), 120, 32)
         .expect("Fix: CUDA codegen must lower canonical workgroup sum regions to PTX.");
+    // f32 has no redux.sync support, so the canonical workgroup-sum lowering
+    // reduces with a shfl XOR butterfly: shfl.sync.idx.b32 with an explicit
+    // `laneid ^ offset` source, combined by add.f32. Two instructions must NOT
+    // appear: redux.sync.add.f32 (invalid PTX for f32), and shfl.sync.down.b32
+    // (a down-tree feeds only lane 0, violating the all-lane-broadcast contract
+    // that subgroup_reduce_gpu_parity verifies on a live sm_120 GPU).
     assert!(
-        secondary_text.contains("shfl.sync.down.b32")
-            && !secondary_text.contains("redux.sync.add.f32"),
-        "Fix: CUDA codegen must invoke f32-safe subgroup lowering before PTX emission for workgroup-tree reductions, got:\n{secondary_text}"
+        secondary_text.contains("shfl.sync.idx.b32")
+            && secondary_text.contains("add.f32")
+            && !secondary_text.contains("redux.sync.add.f32")
+            && !secondary_text.contains("shfl.sync.down.b32"),
+        "Fix: CUDA codegen must invoke f32-safe XOR-butterfly subgroup lowering (shfl.sync.idx.b32 + add.f32, no redux.sync.add.f32, no shfl.sync.down.b32) before PTX emission for workgroup-tree reductions, got:\n{secondary_text}"
     );
 }
 
