@@ -37,7 +37,7 @@ fn live_conditional_cache_is_entry_and_byte_bounded() {
     assert!(
         byte_lru_cache.contains("entry_bytes > self.max_bytes")
             && byte_lru_cache.contains(".checked_add(entry_bytes)")
-            && byte_lru_cache.contains("checked_sub(entry.bytes)"),
+            && byte_lru_cache.contains("saturating_sub(entry.bytes)"),
         "Fix: shared GPU preprocessor cache core must reject oversized entries, evict to byte budget, and update byte accounting."
     );
 }
