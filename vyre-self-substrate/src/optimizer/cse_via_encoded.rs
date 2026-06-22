@@ -535,8 +535,22 @@ pub fn build_canonical_id_program(expr_count: u32, capacity: u32) -> Program {
                 // re-reading the same arena row on every inner iteration).
                 Node::let_bind("my_kind", Expr::load("arena_kinds", Expr::var("i"))),
                 Node::let_bind("my_a0", Expr::load("arena_arg0", Expr::var("i"))),
-                Node::let_bind("my_a1", Expr::load("arena_arg1", Expr::var("i"))),
-                Node::let_bind("my_a2", Expr::load("arena_arg2", Expr::var("i"))),
+                // Child structural HASHES, not raw arg1/arg2. For BIN_OP /
+                // UN_OP / LOAD the arg1/arg2 slots hold arena child indices,
+                // which differ between structurally-equal duplicates that sit
+                // at different positions; a raw index comparison would reject
+                // those true duplicates (the hash mixer mixes child hashes for
+                // exactly this reason). For every leaf kind arg1 = arg2 = 0, so
+                // hash[0] == hash[0] holds trivially and leaf identity is
+                // decided by `my_kind` + `my_a0` below.
+                Node::let_bind(
+                    "my_h1",
+                    Expr::load("hash", Expr::load("arena_arg1", Expr::var("i"))),
+                ),
+                Node::let_bind(
+                    "my_h2",
+                    Expr::load("hash", Expr::load("arena_arg2", Expr::var("i"))),
+                ),
                 Node::let_bind("found_canonical", Expr::var("i")),
                 Node::loop_for(
                     "j",
@@ -546,12 +560,14 @@ pub fn build_canonical_id_program(expr_count: u32, capacity: u32) -> Program {
                         Node::let_bind("their_hash", Expr::load("hash", Expr::var("j"))),
                         // Gate 1: hash pre-filter. Mismatched hashes
                         // structurally different exprs almost always.
-                        // Gate 2: full tuple comparison. Hash equality
+                        // Gate 2: structural confirmation. Hash equality
                         // alone is not structural identity because two
                         // distinct exprs can share a 32-bit hash value
-                        // (birthday collision). We must confirm all four
-                        // encoding fields match before declaring `j`
-                        // canonical for `i`.
+                        // (birthday collision). Confirm kind, arg0 (op tag /
+                        // payload), and BOTH child structural hashes match
+                        // before declaring `j` canonical for `i`. The child
+                        // hashes (not raw child indices) are what make
+                        // position-independent duplicates compare equal.
                         // Gate 3: only take the first (smallest-index)
                         // match by checking `found_canonical == i`.
                         Node::if_then(
@@ -575,13 +591,19 @@ pub fn build_canonical_id_program(expr_count: u32, capacity: u32) -> Program {
                                             ),
                                         ),
                                         Expr::eq(
-                                            Expr::load("arena_arg1", Expr::var("j")),
-                                            Expr::var("my_a1"),
+                                            Expr::load(
+                                                "hash",
+                                                Expr::load("arena_arg1", Expr::var("j")),
+                                            ),
+                                            Expr::var("my_h1"),
                                         ),
                                     ),
                                     Expr::eq(
-                                        Expr::load("arena_arg2", Expr::var("j")),
-                                        Expr::var("my_a2"),
+                                        Expr::load(
+                                            "hash",
+                                            Expr::load("arena_arg2", Expr::var("j")),
+                                        ),
+                                        Expr::var("my_h2"),
                                     ),
                                 ),
                                 Expr::eq(Expr::var("found_canonical"), Expr::var("i")),
