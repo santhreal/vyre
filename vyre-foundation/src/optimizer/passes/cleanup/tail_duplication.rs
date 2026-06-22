@@ -20,7 +20,9 @@
 //!
 //! A32  -  tail duplication for divergent branches.
 
-use crate::ir::{Expr, Node, Program};
+use rustc_hash::FxHashSet;
+
+use crate::ir::{Expr, Ident, Node, Program};
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 use crate::visit::node_map;
 
@@ -134,10 +136,96 @@ fn try_extract_tail(then: &[Node], otherwise: &[Node]) -> Option<(Vec<Node>, Vec
         return None;
     }
 
-    let tail = then_tail.clone();
     let new_then = then[..then.len() - 1].to_vec();
     let new_otherwise = otherwise[..otherwise.len() - 1].to_vec();
+
+    // The tail is sunk PAST the If. A variable bound inside an arm (by a
+    // `let` or loop var, before the tail) is out of scope once the tail is
+    // hoisted out — sinking a read of it produces scope-invalid IR (the
+    // reference interpreter and IR validator reject "reference to
+    // undeclared variable"). Refuse when the tail reads any name bound in
+    // either arm body. Names the tail reads that are NOT bound in an arm
+    // must come from an enclosing scope (shadowing is disallowed), so they
+    // remain in scope after the If and are safe to sink past.
+    let mut arm_bound: FxHashSet<Ident> = FxHashSet::default();
+    collect_bound_names(&new_then, &mut arm_bound);
+    collect_bound_names(&new_otherwise, &mut arm_bound);
+    if !arm_bound.is_empty() && node_reads_any(then_tail, &arm_bound) {
+        return None;
+    }
+
+    let tail = then_tail.clone();
     Some((new_then, new_otherwise, tail))
+}
+
+/// Collect every variable name bound by a `Let` or loop variable anywhere
+/// in `nodes` (recursively). Used to detect when sinking a tail past the If
+/// would move a read out of the arm-local scope that defines it.
+///
+/// Over-approximating (collecting names bound in nested blocks too) only
+/// makes the guard more conservative, never unsound: a tail can validly
+/// reference a name only if it is in scope at the tail position, and any
+/// arm-bound name the tail reads is necessarily arm-local (shadowing an
+/// enclosing binding is disallowed by the IR), so refusing on any
+/// intersection never drops a sound hoist.
+fn collect_bound_names(nodes: &[Node], out: &mut FxHashSet<Ident>) {
+    for node in nodes {
+        match node {
+            Node::Let { name, .. } => {
+                out.insert(name.clone());
+            }
+            Node::Loop { var, body, .. } => {
+                out.insert(var.clone());
+                collect_bound_names(body, out);
+            }
+            Node::If {
+                then, otherwise, ..
+            } => {
+                collect_bound_names(then, out);
+                collect_bound_names(otherwise, out);
+            }
+            Node::Block(body) => collect_bound_names(body, out),
+            Node::Region { body, .. } => collect_bound_names(body, out),
+            _ => {}
+        }
+    }
+}
+
+/// True iff `node` reads (via an `Expr::Var`) any name in `names`. `node` is
+/// an observably-free tail (a pure `Let`, or a `Block` of such), so only the
+/// pure expression forms can appear; effectful forms are handled defensively.
+fn node_reads_any(node: &Node, names: &FxHashSet<Ident>) -> bool {
+    match node {
+        Node::Let { value, .. } => expr_reads_any(value, names),
+        Node::Block(body) => body.iter().any(|n| node_reads_any(n, names)),
+        _ => false,
+    }
+}
+
+/// True iff `expr` references any name in `names`.
+fn expr_reads_any(expr: &Expr, names: &FxHashSet<Ident>) -> bool {
+    match expr {
+        Expr::Var(name) => names.contains(name),
+        Expr::BinOp { left, right, .. } => {
+            expr_reads_any(left, names) || expr_reads_any(right, names)
+        }
+        Expr::UnOp { operand, .. } => expr_reads_any(operand, names),
+        Expr::Select {
+            cond,
+            true_val,
+            false_val,
+        } => {
+            expr_reads_any(cond, names)
+                || expr_reads_any(true_val, names)
+                || expr_reads_any(false_val, names)
+        }
+        Expr::Cast { value, .. } => expr_reads_any(value, names),
+        Expr::Fma { a, b, c } => {
+            expr_reads_any(a, names) || expr_reads_any(b, names) || expr_reads_any(c, names)
+        }
+        Expr::Load { index, .. } => expr_reads_any(index, names),
+        _ => false,
+    }
 }
 
 /// True iff `node` has no observable side effects (no Store, Atomic,
@@ -438,5 +526,48 @@ mod tests {
         let program = program_with_entry(entry);
         let result = TailDuplicationPass::transform(program);
         assert!(result.changed);
+    }
+
+    /// Negative (scope): a tail `let y = t + 1` where `t` is bound INSIDE the
+    /// arm must NOT be hoisted — sinking it past the If would read `t` out of
+    /// scope, producing scope-invalid IR (the reference interpreter rejects
+    /// "reference to undeclared variable `t`"). The oracle-differential proof
+    /// lives in `tests/tail_duplication_scope.rs`.
+    #[test]
+    fn keeps_tail_reading_arm_local_binding() {
+        let tail = Node::let_bind("y", Expr::add(Expr::var("t"), Expr::u32(1)));
+        let entry = vec![Node::If {
+            cond: Expr::var("c"),
+            then: vec![Node::let_bind("t", Expr::u32(5)), tail.clone()],
+            otherwise: vec![Node::let_bind("t", Expr::u32(9)), tail],
+        }];
+        let program = program_with_entry(entry);
+        let result = TailDuplicationPass::transform(program);
+        assert!(
+            !result.changed,
+            "tail reading arm-local `t` must not be sunk past the If (would read t out of scope)"
+        );
+    }
+
+    /// Positive (scope): a tail reading a variable bound in an ENCLOSING
+    /// scope (still in scope after the If) hoists normally — the guard is
+    /// precise, not a blanket disable of every Var-reading tail.
+    #[test]
+    fn hoists_tail_reading_enclosing_binding() {
+        let tail = Node::let_bind("y", Expr::add(Expr::var("outer"), Expr::u32(1)));
+        let entry = vec![
+            Node::let_bind("outer", Expr::u32(3)),
+            Node::If {
+                cond: Expr::var("c"),
+                then: vec![Node::store("buf", Expr::u32(0), Expr::u32(1)), tail.clone()],
+                otherwise: vec![Node::store("buf", Expr::u32(0), Expr::u32(2)), tail],
+            },
+        ];
+        let program = program_with_entry(entry);
+        let result = TailDuplicationPass::transform(program);
+        assert!(
+            result.changed,
+            "tail reading enclosing-scope `outer` must still hoist (it stays in scope after the If)"
+        );
     }
 }
