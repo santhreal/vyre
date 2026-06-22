@@ -19,6 +19,13 @@ use crate::optimizer::{
 };
 use std::sync::OnceLock;
 
+use crate::optimizer::passes::algebraic::canonicalize_engine;
+use crate::optimizer::passes::algebraic::const_fold::ConstFold;
+use crate::optimizer::passes::cleanup::region_inline_engine;
+use crate::optimizer::passes::cleanup::rematerialize_cheap_let::RematerializeCheapLetPass;
+use crate::optimizer::passes::fusion_cse::cse::engine::cse;
+use crate::optimizer::passes::fusion_cse::dce::engine::dce;
+
 // Per-phase PassScheduler instances are stateless across runs (their
 // only mutation lives inside `run()`'s local variables) so a single
 // OnceLock-cached scheduler can serve every `optimize()` invocation.
@@ -70,84 +77,91 @@ fn pre_lowering_scheduler(phases: &'static [PassPhase]) -> Result<PassScheduler,
 /// converge within its iteration cap, or when scheduler construction fails
 /// due to inconsistent pass metadata.
 pub fn try_optimize(program: Program) -> Result<Program, OptimizerError> {
-    use crate::optimizer::passes::algebraic::canonicalize_engine;
-    use crate::optimizer::passes::algebraic::const_fold::ConstFold;
-    use crate::optimizer::passes::cleanup::region_inline_engine;
-    use crate::optimizer::passes::cleanup::rematerialize_cheap_let::RematerializeCheapLetPass;
+    let prepared = prepare(program);
+    let phase2_output = run_phase2(prepared)?;
+    let cleaned = cleanup_after_phase2(phase2_output);
+    let phase4 = run_phase4(cleaned)?;
+    Ok(stabilize(phase4))
+}
 
-    let prepared =
-        region_inline_engine::run(canonicalize_engine::run(program)).reconcile_runnable_top_level();
+// ---- Shared pre-lowering pipeline stages -----------------------------------
+// `try_optimize` (fallible) and `optimize` (infallible, back-compat) run the
+// identical 5-stage pipeline; only the phase-2/phase-4 scheduler error policy
+// differs (propagate vs log-and-continue-with-the-stage-input). Factor the
+// stages here so the two entry points cannot drift.
 
-    let phase2_output = {
-        let phase2_scheduler =
-            PHASE2_SCHEDULER.get_or_init(|| pre_lowering_scheduler(PHASE2_SELECTION));
-        let phase2_input = prepared;
-        match phase2_scheduler {
-            Ok(phase2_scheduler) => match phase2_scheduler.run(phase2_input.clone()) {
-                Ok(output) => output,
-                Err(error) => {
-                    tracing::error!(
-                        error = %error,
-                        "pre-lowering phase 2 did not converge. Fix: inspect the pass set for oscillating rewrites."
-                    );
-                    return Err(error);
-                }
-            },
-            Err(error) => {
-                tracing::error!(
-                    error = %error,
-                    "pre-lowering phase 2 scheduler construction failed. Fix: repair optimizer pass metadata."
-                );
-                return Err(error.clone());
-            }
+/// Phase 1: canonicalize + region-inline into a stable, content-addressable
+/// form with a single runnable top level.
+fn prepare(program: Program) -> Program {
+    region_inline_engine::run(canonicalize_engine::run(program)).reconcile_runnable_top_level()
+}
+
+/// Phase 2: expression-level optimizer fixpoint
+/// (`const_fold`/`loop_*`/`strength_reduce`/`normalize_atomics`). Logs and
+/// returns `Err` on scheduler construction failure or non-convergence; the
+/// caller decides whether to propagate or fall back.
+fn run_phase2(input: Program) -> Result<Program, OptimizerError> {
+    match PHASE2_SCHEDULER.get_or_init(|| pre_lowering_scheduler(PHASE2_SELECTION)) {
+        Ok(scheduler) => scheduler.run(input).map_err(|error| {
+            tracing::error!(
+                error = %error,
+                "pre-lowering phase 2 did not converge. Fix: inspect the pass set for oscillating rewrites."
+            );
+            error
+        }),
+        Err(error) => {
+            tracing::error!(
+                error = %error,
+                "pre-lowering phase 2 scheduler construction failed. Fix: repair optimizer pass metadata."
+            );
+            Err(error.clone())
         }
-    };
+    }
+}
 
-    let cleaned = canonicalize_engine::run(region_inline_engine::run(
-        crate::optimizer::passes::fusion_cse::dce::engine::dce(
-            crate::optimizer::passes::fusion_cse::cse::engine::cse(phase2_output),
-        ),
-    ));
+/// Phase 3: CSE + DCE, then region-inline (flatten any empty regions DCE
+/// exposed) and re-canonicalize so a second optimize run is byte-stable.
+fn cleanup_after_phase2(phase2_output: Program) -> Program {
+    canonicalize_engine::run(region_inline_engine::run(dce(cse(phase2_output))))
+}
 
-    let phase4 = {
-        let scheduler = PHASE4_SCHEDULER.get_or_init(|| pre_lowering_scheduler(PHASE4_SELECTION));
-        let phase4_input = cleaned;
-        match scheduler {
-            Ok(scheduler) => match scheduler.run(phase4_input.clone()) {
-                Ok(output) => output,
-                Err(error) => {
-                    tracing::error!(
-                        error = %error,
-                        "pre-lowering phase 4 did not converge after 50 iterations. Fix: inspect the phase for oscillating rewrites or raise the cap only with a convergence certificate."
-                    );
-                    return Err(error);
-                }
-            },
-            Err(error) => {
-                tracing::error!(
-                    error = %error,
-                    "pre-lowering phase 4 scheduler construction failed. Fix: repair optimizer pass metadata."
-                );
-                return Err(error.clone());
-            }
+/// Phase 4: final ConstFold sweep family. The phase-3 canonicalize can expose
+/// new fold-eligible patterns by sorting commutative operands so any literal
+/// lands on the right (e.g. an upstream `Ge(t, 0)` folded to `LitBool(true)`
+/// then appearing as `And { right: LitBool(true) }`, which `And(x, true) -> x`
+/// catches in one more pass). Without this, `optimize(p)` is not idempotent on
+/// programs whose Select.cond chains mix literal and non-literal logical ops.
+/// Same log-and-Err policy as [`run_phase2`].
+fn run_phase4(input: Program) -> Result<Program, OptimizerError> {
+    match PHASE4_SCHEDULER.get_or_init(|| pre_lowering_scheduler(PHASE4_SELECTION)) {
+        Ok(scheduler) => scheduler.run(input).map_err(|error| {
+            tracing::error!(
+                error = %error,
+                "pre-lowering phase 4 did not converge after 50 iterations. Fix: inspect the phase for oscillating rewrites or raise the cap only with a convergence certificate."
+            );
+            error
+        }),
+        Err(error) => {
+            tracing::error!(
+                error = %error,
+                "pre-lowering phase 4 scheduler construction failed. Fix: repair optimizer pass metadata."
+            );
+            Err(error.clone())
         }
-    };
+    }
+}
 
+/// Phase 5: stabilization sweep. Phase 4 can expose cheap aliases or foldable
+/// leaf substitutions after its last CSE/DCE opportunity; finish with the same
+/// ABI-preserving cleanup family (twice) so `optimize(optimize(p)) == optimize(p)`
+/// for backend-visible IR.
+fn stabilize(phase4: Program) -> Program {
     let rematerialized = RematerializeCheapLetPass::transform(phase4).program;
     let folded = ConstFold::transform(canonicalize_engine::run(rematerialized)).program;
-    let cleaned = canonicalize_engine::run(region_inline_engine::run(
-        crate::optimizer::passes::fusion_cse::dce::engine::dce(
-            crate::optimizer::passes::fusion_cse::cse::engine::cse(folded),
-        ),
-    ));
+    let cleaned = canonicalize_engine::run(region_inline_engine::run(dce(cse(folded))));
     let refolded = ConstFold::transform(cleaned).program;
-    let stabilized = canonicalize_engine::run(region_inline_engine::run(
-        crate::optimizer::passes::fusion_cse::dce::engine::dce(
-            crate::optimizer::passes::fusion_cse::cse::engine::cse(refolded),
-        ),
-    ));
-
-    Ok(stabilized.reconcile_runnable_top_level())
+    let stabilized = canonicalize_engine::run(region_inline_engine::run(dce(cse(refolded))));
+    stabilized.reconcile_runnable_top_level()
 }
 
 /// Run the unified pre-lowering optimization pipeline.
@@ -166,105 +180,16 @@ pub fn try_optimize(program: Program) -> Result<Program, OptimizerError> {
 #[must_use]
 #[inline]
 pub fn optimize(program: Program) -> Program {
-    use crate::optimizer::passes::algebraic::canonicalize_engine;
-    use crate::optimizer::passes::algebraic::const_fold::ConstFold;
-    use crate::optimizer::passes::cleanup::region_inline_engine;
-    use crate::optimizer::passes::cleanup::rematerialize_cheap_let::RematerializeCheapLetPass;
-
-    // Phase 1: canonicalize + region_inline (preparation)
-    let prepared =
-        region_inline_engine::run(canonicalize_engine::run(program)).reconcile_runnable_top_level();
-
-    // Phase 2: expression-level optimizer fixpoint.
-    // Only runs passes that preserve buffer declarations and top-level
-    // runnable shape  -  safe for programs with fixed GPU bind-group layouts.
-    let phase2_output = {
-        let phase2_scheduler =
-            PHASE2_SCHEDULER.get_or_init(|| pre_lowering_scheduler(PHASE2_SELECTION));
-        let phase2_input = prepared;
-        match phase2_scheduler {
-            Ok(phase2_scheduler) => match phase2_scheduler.run(phase2_input.clone()) {
-                Ok(output) => output,
-                Err(error) => {
-                    tracing::error!(
-                        error = %error,
-                        "pre-lowering phase 2 did not converge. Fix: inspect the pass set for oscillating rewrites."
-                    );
-                    phase2_input
-                }
-            },
-            Err(error) => {
-                tracing::error!(
-                    error = %error,
-                    "pre-lowering phase 2 scheduler construction failed. Fix: repair optimizer pass metadata."
-                );
-                phase2_input
-            }
-        }
-    };
-
-    // Phase 3: CSE + DCE (cleanup), then region-inline (flatten any empty
-    // regions DCE exposed), then re-canonicalize so a second optimize run
-    // is byte-stable.
-    let cleaned = canonicalize_engine::run(region_inline_engine::run(
-        crate::optimizer::passes::fusion_cse::dce::engine::dce(
-            crate::optimizer::passes::fusion_cse::cse::engine::cse(phase2_output),
-        ),
-    ));
-
-    // Phase 4: final ConstFold sweep. The phase-3 canonicalize sometimes
-    // exposes new fold-eligible patterns by sorting commutative-op
-    // operands so any literal lands on the right (e.g. an upstream
-    // `Ge(t, 0)` that the PassScheduler folded to `LitBool(true)` then
-    // appears as `BinOp::And { right: LitBool(true) }` after the final
-    // canonicalize, which the binop_identities `And(x, true) → x` rule
-    // catches in one more pass). Without this sweep, `optimize(p)` is
-    // not idempotent on programs whose Select.cond chains contain
-    // mixed literal-and-non-literal logical ops; the universal_cat_a
-    // harness on `vyre-libs::visual::gradient` catches that gap.
-    let phase4 = {
-        let scheduler = PHASE4_SCHEDULER.get_or_init(|| pre_lowering_scheduler(PHASE4_SELECTION));
-        let phase4_input = cleaned;
-        match scheduler {
-            Ok(scheduler) => match scheduler.run(phase4_input.clone()) {
-                Ok(output) => output,
-                Err(error) => {
-                    tracing::error!(
-                        error = %error,
-                        "pre-lowering phase 4 did not converge after 50 iterations. Fix: inspect the phase for oscillating rewrites or raise the cap only with a convergence certificate."
-                    );
-                    phase4_input
-                }
-            },
-            Err(error) => {
-                tracing::error!(
-                    error = %error,
-                    "pre-lowering phase 4 scheduler construction failed. Fix: repair optimizer pass metadata."
-                );
-                phase4_input
-            }
-        }
-    };
-
-    // Phase 5: stabilization sweep. Phase 4 can expose cheap aliases or
-    // foldable leaf substitutions after its last CSE/DCE opportunity.
-    // Finish with the same ABI-preserving cleanup family so
-    // `optimize(optimize(p)) == optimize(p)` for backend-visible IR.
-    let rematerialized = RematerializeCheapLetPass::transform(phase4).program;
-    let folded = ConstFold::transform(canonicalize_engine::run(rematerialized)).program;
-    let cleaned = canonicalize_engine::run(region_inline_engine::run(
-        crate::optimizer::passes::fusion_cse::dce::engine::dce(
-            crate::optimizer::passes::fusion_cse::cse::engine::cse(folded),
-        ),
-    ));
-    let refolded = ConstFold::transform(cleaned).program;
-    let stabilized = canonicalize_engine::run(region_inline_engine::run(
-        crate::optimizer::passes::fusion_cse::dce::engine::dce(
-            crate::optimizer::passes::fusion_cse::cse::engine::cse(refolded),
-        ),
-    ));
-
-    stabilized.reconcile_runnable_top_level()
+    // Same 5-stage pipeline as `try_optimize`, but infallible (back-compat): on a
+    // phase-2/phase-4 scheduler error (a should-never-happen optimizer-metadata
+    // bug, already logged loudly inside run_phase*), continue with that stage's
+    // input rather than propagating. The stage's input was cloned for the
+    // scheduler run, so the fallback adds no extra clone.
+    let prepared = prepare(program);
+    let phase2_output = run_phase2(prepared.clone()).unwrap_or(prepared);
+    let cleaned = cleanup_after_phase2(phase2_output);
+    let phase4 = run_phase4(cleaned.clone()).unwrap_or(cleaned);
+    stabilize(phase4)
 }
 
 #[cfg(test)]
