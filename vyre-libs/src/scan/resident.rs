@@ -56,6 +56,7 @@ use super::mega_scan::{hit_buffer_byte_len, RulePipeline};
 /// The session is `Send + Sync`: the resident handles are opaque ids and all
 /// mutation happens through the borrowed `backend`, so a single session can be
 /// shared across scan threads (each thread supplies its own packing scratch).
+#[derive(Debug)]
 pub struct ResidentRulePipeline {
     /// The pipeline's compiled GPU program (cheap to hold; the heavy tables are
     /// resident, not in this clone).
@@ -108,6 +109,30 @@ impl RulePipeline {
         max_matches: u32,
     ) -> Result<ResidentRulePipeline, BackendError> {
         let haystack_capacity = dispatch_io::haystack_padded_u32_byte_len(haystack_capacity_bytes)?;
+
+        // Fail closed early if the resident haystack would be SMALLER than the NFA
+        // program's static input-buffer decl. A resident dispatch binds this buffer
+        // to the program input (binding 0); the CUDA backend rejects a resident
+        // buffer whose byte length is below the binding's `static_byte_len`
+        // (`vyre-driver-cuda/.../resident_dispatch/batch.rs`), but wgpu tolerates an
+        // oversized/undersized buffer. Without this guard an undersized
+        // `haystack_capacity_bytes` PASSES on wgpu (the dev backend) and fails only
+        // at dispatch on CUDA (keyhog's backend) with a confusing late
+        // `InvalidProgram` — a dev-passes / prod-fails backend divergence. Surface
+        // it here, portably, at prepare time. Reuses `BufferDecl::static_byte_len`,
+        // the exact source CUDA checks against, so a runtime-sized input
+        // (`count == 0` → `Ok(None)`) correctly imposes no requirement.
+        if let Some(input_decl) = self.program.buffers().iter().find(|decl| decl.binding == 0) {
+            if let Some(required_bytes) = input_decl.static_byte_len().map_err(BackendError::new)? {
+                if haystack_capacity < required_bytes {
+                    return Err(BackendError::new(format!(
+                        "ResidentRulePipeline::prepare_resident: the NFA program's input buffer (binding 0) statically declares {required_bytes} byte(s) (input_len = {input_len}), but the requested resident haystack capacity is only {haystack_capacity} padded byte(s). A resident dispatch binds this buffer to the program input; the CUDA backend requires the resident buffer to be at least the static decl, so this would fail at dispatch with a confusing late error (wgpu would silently tolerate it). Fix: pass haystack_capacity_bytes >= {input_len} to prepare_resident, or rebuild the RulePipeline (build / build_rule_pipeline) with a smaller input_len.",
+                        input_len = self.plan.input_len,
+                    )));
+                }
+            }
+        }
+
         let haystack = backend.allocate_resident(haystack_capacity)?;
 
         let transition_bytes = dispatch_io::u32_words_as_le_bytes(&self.transition_table);
@@ -488,7 +513,10 @@ mod tests {
 
     #[test]
     fn scan_rejects_haystack_larger_than_resident_capacity() {
-        let pipeline = super::super::mega_scan::build(&["ab"], "input", "hits", 64);
+        // Build the program's static input decl to match the resident capacity (16
+        // bytes) so the prepare-time decl guard passes; the scan-time guard below is
+        // what this test exercises (a 64-byte haystack into a 16-byte buffer).
+        let pipeline = super::super::mega_scan::build(&["ab"], "input", "hits", 16);
         let backend = MockResidentBackend::new(hit_buffer_with(&[]));
         let session = pipeline
             .prepare_resident(&backend, 16, 8)
@@ -503,5 +531,52 @@ mod tests {
             err.to_string().contains("resident buffer holds") && matches.is_empty(),
             "capacity error must name the limit and expose no stale matches: {err}"
         );
+    }
+
+    #[test]
+    fn prepare_resident_rejects_capacity_below_static_input_decl() {
+        // The NFA program declares a STATIC input buffer of input_len=64 → 16 u32
+        // words → 64 bytes (binding 0). The CUDA backend rejects a resident input
+        // buffer smaller than that static decl; wgpu silently tolerates it. The
+        // prepare-time guard turns that dev-passes / prod-fails divergence into one
+        // portable, actionable error BEFORE any allocation.
+        let pipeline = super::super::mega_scan::build(&["ab"], "input", "hits", 64);
+        let backend = MockResidentBackend::new(hit_buffer_with(&[]));
+
+        // Under-capacity (16 < 64): must fail closed at prepare time, naming the
+        // declared bytes, the input_len, the requested capacity, and the fix — and
+        // it must NOT have allocated anything (the guard precedes allocation).
+        let err = pipeline
+            .prepare_resident(&backend, 16, 8)
+            .expect_err("capacity 16 below the 64-byte static input decl must be rejected");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("statically declares 64 byte(s)")
+                && msg.contains("input_len = 64")
+                && msg.contains("only 16 padded byte(s)")
+                && msg.contains("Fix: pass haystack_capacity_bytes >= 64"),
+            "prepare guard must name decl bytes, input_len, capacity, and the fix: {msg}"
+        );
+        assert_eq!(
+            backend.allocations.lock().unwrap().len(),
+            0,
+            "guard must fail BEFORE allocating any resident resource"
+        );
+
+        // Boundary (capacity == decl == 64): allowed. CUDA requires byte_len >= decl.
+        pipeline
+            .prepare_resident(&backend, 64, 8)
+            .expect("capacity exactly equal to the static input decl must prepare");
+        assert_eq!(
+            backend.allocations.lock().unwrap().len(),
+            6,
+            "the boundary-equal prepare allocates all six resident buffers"
+        );
+
+        // Over-capacity (128 > 64): allowed — the CUDA contract is `>= decl`, not
+        // exact equality, so a larger resident haystack buffer is valid.
+        pipeline
+            .prepare_resident(&backend, 128, 8)
+            .expect("capacity above the static input decl must prepare (CUDA allows >= decl)");
     }
 }
