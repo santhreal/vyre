@@ -73,9 +73,6 @@ pub fn run_with_threshold(program: Program, threshold: usize) -> Program {
 ///    `Program::wrapped` builds, so non-colliding programs are byte-unchanged.
 fn inline_nodes_into(nodes: Vec<Node>, threshold: usize, out: &mut Vec<Node>) {
     let mut staged: Vec<Staged> = Vec::with_capacity(nodes.len());
-    // Keyed by the interned text handle (cheap to clone, hashes by string
-    // value) so two distinct `Ident`s with the same text count as one name.
-    let mut top_level_let_counts: FxHashMap<Arc<str>, usize> = FxHashMap::default();
 
     for node in nodes {
         match node {
@@ -96,11 +93,6 @@ fn inline_nodes_into(nodes: Vec<Node>, threshold: usize, out: &mut Vec<Node>) {
                 if count <= threshold {
                     let mut inlined = Vec::with_capacity(body_vec.len());
                     inline_nodes_into(body_vec, threshold, &mut inlined);
-                    for inner in &inlined {
-                        if let Node::Let { name, .. } = inner {
-                            *top_level_let_counts.entry(name.shared_text()).or_insert(0) += 1;
-                        }
-                    }
                     staged.push(Staged::FlatRegion(inlined));
                 } else {
                     let mut new_body = Vec::with_capacity(body_vec.len());
@@ -147,13 +139,26 @@ fn inline_nodes_into(nodes: Vec<Node>, threshold: usize, out: &mut Vec<Node>) {
                     otherwise: new_otherwise,
                 }));
             }
-            node @ Node::Let { .. } => {
-                if let Node::Let { name, .. } = &node {
-                    *top_level_let_counts.entry(name.shared_text()).or_insert(0) += 1;
-                }
-                staged.push(Staged::Keep(node));
-            }
             other => staged.push(Staged::Keep(other)),
+        }
+    }
+
+    // Count every binding (each `Let` name and loop variable) at this
+    // sibling level, recursively. A flattened Region's top-level `let x`
+    // leaks into the parent scope; if `x` is ALSO bound anywhere else at
+    // this level — another top-level let, OR a binding NESTED inside a
+    // sibling's If/Loop/Block — the leaked binding overlaps that other
+    // binder and collides ("V008: duplicate local binding `x`"). The IR
+    // disallows shadowing, so each name binds at most once per live scope:
+    // a level-wide count >= 2 means two distinct binders that the original
+    // Region scope kept apart. (The earlier tally counted only TOP-LEVEL
+    // sibling lets, so it missed nested binders — see
+    // tests/region_inline_scope.rs for the oracle-differential proof.)
+    let mut bound_counts: FxHashMap<Arc<str>, usize> = FxHashMap::default();
+    for item in &staged {
+        match item {
+            Staged::FlatRegion(body) => count_bound_names(body, &mut bound_counts),
+            Staged::Keep(node) => count_bound_names(std::slice::from_ref(node), &mut bound_counts),
         }
     }
 
@@ -162,7 +167,7 @@ fn inline_nodes_into(nodes: Vec<Node>, threshold: usize, out: &mut Vec<Node>) {
             Staged::FlatRegion(mut body) => {
                 let collides = body.iter().any(|node| match node {
                     Node::Let { name, .. } => {
-                        top_level_let_counts.get(name.as_str()).copied().unwrap_or(0) >= 2
+                        bound_counts.get(name.as_str()).copied().unwrap_or(0) >= 2
                     }
                     _ => false,
                 });
@@ -208,6 +213,34 @@ fn count_nodes_capped(nodes: &[Node], threshold: usize) -> usize {
     }
 
     count
+}
+
+/// Count every variable name bound by a `Let` or loop variable anywhere in
+/// `nodes` (recursively), keyed by interned text so two `Ident`s with the
+/// same text count as one name. Used by [`inline_nodes_into`] to detect when
+/// flattening a Region would leak a top-level `let` into a parent scope that
+/// already binds the same name — including a binding nested inside a sibling.
+fn count_bound_names(nodes: &[Node], counts: &mut FxHashMap<Arc<str>, usize>) {
+    for node in nodes {
+        match node {
+            Node::Let { name, .. } => {
+                *counts.entry(name.shared_text()).or_insert(0) += 1;
+            }
+            Node::Loop { var, body, .. } => {
+                *counts.entry(var.shared_text()).or_insert(0) += 1;
+                count_bound_names(body, counts);
+            }
+            Node::If {
+                then, otherwise, ..
+            } => {
+                count_bound_names(then, counts);
+                count_bound_names(otherwise, counts);
+            }
+            Node::Block(body) => count_bound_names(body, counts),
+            Node::Region { body, .. } => count_bound_names(body, counts),
+            _ => {}
+        }
+    }
 }
 
 #[cfg(test)]
@@ -369,6 +402,70 @@ mod tests {
         assert!(
             matches!(&body[0], Node::Store { .. }),
             "Region inside Loop must inline to just the Store"
+        );
+    }
+
+    /// Structural twin of `tests/region_inline_scope.rs`: a small Region
+    /// binding `let x` followed by a sibling `if c { let x = ... }`. The
+    /// nested `let x` lives in a scope the original Region kept disjoint, so
+    /// flattening the Region must NOT splice its `let x` flat into the parent
+    /// (that would leak `x` live across the If, colliding with the nested
+    /// binder -> "V008: duplicate local binding `x`"). The level-wide
+    /// bound-name count sees the nested `x`, so the flattened Region is
+    /// wrapped in its own `Block`.
+    ///
+    /// Pre-fix the tally counted only TOP-LEVEL sibling lets, missed the
+    /// nested `let x`, and spliced the Region flat -> `out[0]` was a bare
+    /// leaked `Node::Let`, not a `Node::Block`. (The oracle-differential proof
+    /// that the leaked program is scope-invalid lives in
+    /// `tests/region_inline_scope.rs`.)
+    #[test]
+    fn region_with_nested_sibling_binder_is_block_scoped() {
+        let region = Node::Region {
+            generator: "stage".into(),
+            source_region: None,
+            body: Arc::new(vec![
+                Node::let_bind("x", Expr::u32(1)),
+                Node::store("out", Expr::u32(0), Expr::var("x")),
+            ]),
+        };
+        let sibling = Node::If {
+            cond: Expr::eq(Expr::u32(0), Expr::u32(0)),
+            then: vec![
+                Node::let_bind("x", Expr::u32(2)),
+                Node::store("out", Expr::u32(0), Expr::var("x")),
+            ],
+            otherwise: vec![],
+        };
+
+        let mut out = Vec::new();
+        inline_nodes_into(vec![region, sibling], DEFAULT_INLINE_THRESHOLD, &mut out);
+
+        // The Region must NOT be spliced flat: its `let x` collides level-wide
+        // with the If's nested `let x`, so it is re-wrapped in its own Block.
+        assert_eq!(out.len(), 2, "Region wrapped + If kept, got {out:?}");
+        let Node::Block(block_body) = &out[0] else {
+            panic!(
+                "flattened Region must be re-wrapped in a Block, got {:?}",
+                out[0]
+            );
+        };
+        assert!(
+            matches!(&block_body[0], Node::Let { name, .. } if name == "x"),
+            "the Block scopes the Region's `let x`, got {block_body:?}"
+        );
+        // The sibling If is untouched and still binds its own nested `x`.
+        assert!(
+            matches!(&out[1], Node::If { .. }),
+            "sibling If preserved, got {:?}",
+            out[1]
+        );
+        // `x` must NEVER appear as a bare top-level Let -- that is the leak.
+        assert!(
+            !out
+                .iter()
+                .any(|n| matches!(n, Node::Let { name, .. } if name == "x")),
+            "no bare top-level `let x` may leak into the parent scope, got {out:?}"
         );
     }
 }
