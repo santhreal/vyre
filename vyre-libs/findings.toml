@@ -1000,3 +1000,110 @@ VERIFY: re-run `cargo test -p vyre-driver-wgpu --test cat_a_gpu_differential
 fft_convolve_circular_complex must leave the failures list, and the
 convolution.rs reference tests must stay green (no numeric regression).
 """
+
+[[finding]]
+id = "FINDING-BOUNDARY-1"
+date_opened = "2026-06-22"
+owner = "santhreal"
+test = "vyre_libs::tests::consumer_boundary::library_source_does_not_name_downstream_consumers"
+status = "open"
+title = "security/dataflow layer names the Weir bridge partner in public API, conflicting with the no-downstream-consumer-names contract"
+blocker = """
+consumer_boundary.rs asserts vyre-libs/src/**/*.rs contains none of the
+forbidden consumer names {weir, surgec, gosan, keyhog}. The MATCHING/scan layer
+violations (keyhog, in doc comments of resident_presence.rs, resident.rs,
+bounded_ranges.rs, literal_set.rs, regex_dfa.rs) were genericized 2026-06-22 — a
+reusable matching library should not name a specific consumer; that part now
+satisfies the contract.
+
+The remaining violations are NOT doc comments and NOT cleanly removable: the
+security/ + dataflow/ layer names "weir" 113 times (and "surgec" once) as PUBLIC
+API and architectural fact:
+  - dataflow/mod.rs is explicitly "the Weir/Vyre bridge"; SharedFactHeader uses
+    producer id "weir".
+  - public struct fields: weir_fact_kind, weir_role, weir_mapping,
+    weir_tuple_count, weir_finding_count.
+  - a feature-gated `pub mod weir_ifds` integration + `weir_ifds_external_engine`
+    feature.
+So the security/dataflow layer is DESIGNED as a Weir bridge: Weir is a peer the
+shared-fact schema interoperates with, not a downstream consumer in the same
+sense keyhog is a downstream of the matching layer. The contract and the
+architecture genuinely conflict here.
+"""
+fix_plan = """
+DESIGN DECISION (not a mechanical fix):
+(a) PREFERRED — scope the consumer_boundary contract to the layers where it is
+    a true one-way boundary (scan/ matching, math/, nn/, the reusable primitive
+    layers) and EXEMPT the security/dataflow bridge layer, which interoperates
+    with Weir by explicit schema contract. Encode the exemption as an allowlist
+    of (path-prefix) in consumer_boundary.rs with a comment explaining why the
+    bridge layer is exempt, OR move the Weir-named fact-schema types behind a
+    neutral `bridge`/`partner` naming with Weir as one configured producer-id
+    string value rather than a compile-time symbol.
+(b) ALTERNATIVE — rename every weir_* public field/symbol to a neutral
+    `partner_*`/`bridge_*` scheme and carry "weir" only as a runtime producer-id
+    string. This is a large breaking API change across security/dataflow and
+    must be done with the downstream Weir bridge's buy-in.
+Until decided, this test stays red on the weir/surgec API; the scan-layer
+(keyhog) half is already satisfied.
+"""
+
+[[finding]]
+id = "FINDING-REGION-CHAIN-1"
+date_opened = "2026-06-22"
+owner = "santhreal"
+test = "vyre_libs::tests::region_chain_invariant::every_tier3_op_region_chain_resolves_to_registered_generators"
+status = "open"
+title = "line_index catalog ops name an unregistered generator vyre-primitives::reduce::multi_block_prefix_scan::guarded_single_block in their Region chain"
+blocker = """
+region_chain_invariant.rs requires every generator named in a registered op's
+Region chain to either (a) be a known registered op id or (b) open with
+anonymous / inline / vyre.program.root / vyre-runtime::. Two registered ops fail:
+  - vyre-libs::catalog::text::line_index::consumer_a
+  - vyre-libs::catalog::text::line_index::consumer_b
+both name `vyre-primitives::reduce::multi_block_prefix_scan::guarded_single_block`
+in their Region chain, and that generator id does not resolve to a registered op.
+Tagged CRITIQUE_VISION_ALIGNMENT_2026-04-23 V7 regression. Off the keyhog matching
+lane (text::line_index), but a real op-registration coherence gap: a generator
+name is emitted that the registry cannot resolve.
+"""
+fix_plan = """
+1. Determine whether `multi_block_prefix_scan::guarded_single_block` is meant to
+   be a registered op (then register it via inventory::submit! with the matching
+   id) OR an internal sub-region (then have line_index open that Region with one
+   of the allowed neutral prefixes, e.g. anonymous/inline, instead of a bare
+   vyre-primitives:: generator name that implies a registered op).
+2. Re-run region_chain_invariant; the offenders list must be empty.
+"""
+
+[[finding]]
+id = "FINDING-OPT-IDEM-1"
+date_opened = "2026-06-22"
+owner = "santhreal"
+test = "vyre_libs::tests::universal_harness::universal_cat_a_harness"
+status = "open"
+title = "optimizer is non-idempotent: optimize(optimize(p)) != optimize(p) for scallop_join_wide::consumer_b"
+blocker = """
+universal_harness.rs asserts optimize(optimize(p)) == optimize(p) (one-pass
+fixpoint) for every Cat-A op. It fails for
+vyre-libs::catalog::math::scallop_join_wide::consumer_b. Diffing the two
+Programs: after the FIRST optimize the final write-back stays a single-iteration
+`Loop { var __sjw_chunk, from 0, to 1, body: [... If cell<4 ...] }`; the SECOND
+optimize promotes that trip-count-1 Loop into a `Block([If cell<4 ...])` (a
+loop-unroll/promote that only fires on the already-once-optimized form). So the
+loop-promotion pass is not run to fixpoint within a single optimize() call — the
+optimizer needs two passes to stabilize this program. Off the keyhog matching
+lane (scallop/datalog join), but a real optimizer-contract violation: idempotence
+is a stated harness invariant.
+"""
+fix_plan = """
+1. Identify the pass that promotes a trip-count-1 Loop to a Block (likely a
+   loop-unroll / region_promote_singleton_block style cleanup pass) in
+   vyre-foundation/src/optimizer/passes/cleanup/.
+2. Either run the cleanup passes to a fixpoint within optimize() (iterate until
+   no pass mutates), or make the trip-count-1 promotion fire on the first pass
+   for this Loop shape (it is gated on some precondition only satisfied after the
+   first pass mutates the surrounding region).
+3. Re-run universal_harness; optimize(optimize(p)) must equal optimize(p) for
+   scallop_join_wide::consumer_b without regressing other ops' idempotence.
+"""
