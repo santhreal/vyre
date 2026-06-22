@@ -46,9 +46,17 @@ dashmap.workspace = true
 libc.workspace = true
 
 [dev-dependencies]
-# integration tests/benches assert against these crates' public APIs.
-# `matching-nfa` (dev-only) enables `ResidentRulePipeline` for its CUDA parity test.
-vyre-libs = { workspace = true, features = ["matching-nfa"] }
+# integration tests/benches assert against these crates' public APIs across a broad
+# op surface (math conv/fft/scan, nn linear-4bit, parsing::c gpu_pipeline, scan/NFA),
+# so the dev-build enables that surface. All dev-only -> gated out of the production
+# lib build keyhog links.
+#   - `full`        : math-* + nn-* (incl nn-linear-4bit for QuantizedLinear4BitSpec)
+#                     + matching-substring/dfa + hash/decode/crypto.
+#   - `c-parser`    : `vyre_libs::parsing::c::preprocess::gpu_pipeline::*` for the
+#                     c_preprocess_{tokenize,filter,macro_expansion,payloads}_cuda tests.
+#   - `matching-nfa`: `ResidentRulePipeline` for the CUDA resident parity test
+#                     (not pulled by `full`).
+vyre-libs = { workspace = true, features = ["full", "c-parser", "matching-nfa"] }
 tempfile.workspace = true
 serde_json.workspace = true
 pollster.workspace = true
@@ -65,3 +73,10 @@ vyre-reference = { workspace = true }
 # `cpu-parity` exposes the CPU reference oracles (hex_decode_reference_packed, …)
 # these parity tests diff the GPU output against; gated out of production builds.
 vyre-primitives = { workspace = true, features = ["cpu-parity"] }
+# Required by tests/union_find_gpu_parity.rs, which imports the CPU union-find
+# reference oracles `union_find_emit::{canonicalize_parent_to_roots,
+# reference_union_find_alias}`. Those are `#[cfg(any(test, feature = "cpu-parity"))]`
+# in vyre-self-substrate, so a downstream test build must enable `cpu-parity`
+# explicitly (the `test` cfg only applies to that crate's own tests, not ours).
+# Dev-dep only -> gated out of the production lib build keyhog links.
+vyre-self-substrate = { workspace = true, features = ["cpu-parity"] }
