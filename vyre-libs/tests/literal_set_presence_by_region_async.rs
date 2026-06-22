@@ -1,25 +1,29 @@
-//! Real-GPU proof for the ASYNC region-presence scan method
+//! Proof for the ASYNC region-presence scan method
 //! (`GpuLiteralSet::scan_presence_by_region_async`).
 //!
 //! The async entry submits the dispatch and hands back a
 //! `PendingPresenceByRegion` so a caller can overlap host work with the
-//! in-flight GPU scan, then decode via `await_words`. This test exercises that
-//! plumbing on the real wgpu backend (the RTX 5090 here) and asserts:
-//!   (1) the async bitmap equals `scan_presence_by_region`'s, WORD FOR WORD —
-//!       the async path must be a correctness-equivalent of the sync path, and
-//!   (2) the decoded per-region bit SETS are exactly the planted hits (real
-//!       values, not "non-empty"): region 0 = {key,token,secret,AKIA,api},
-//!       region 1 = {ghp_,sk_live_,password}, region 2 = {} (no anchors).
-//!   (3) `is_ready()` is a callable non-blocking probe and `await_words`
-//!       returns the full `region_count * words` bitmap.
+//! in-flight scan, then decode via `await_words`. Two tests pin it:
 //!
-//! Skips cleanly when no GPU is available.
+//!   * `async_region_presence_matches_sync_and_planted_hits_on_gpu` — REAL GPU
+//!     (wgpu, the RTX 5090 here): the async bitmap equals
+//!     `scan_presence_by_region`'s word-for-word AND the decoded per-region bit
+//!     SETS are exactly the planted hits. Skips cleanly with no GPU.
+//!
+//!   * `async_region_presence_equals_sync_on_cpu_reference` — CPU reference
+//!     backend, runs EVERYWHERE (incl. GPU-less CI, where the GPU test skips).
+//!     On a backend that does not pipeline host/device work, `dispatch_async`
+//!     uses the synchronous default and the handle is trivially ready: this
+//!     asserts `is_ready()` is `true`, the async words equal the sync words
+//!     (NO silent change of result on the degraded path — Law 10), and the same
+//!     exact planted bit sets.
 //!
 //! Run:
 //!   cargo test -p vyre-libs --test literal_set_presence_by_region_async --release -- --nocapture
 
 use std::collections::BTreeSet;
 
+use vyre_driver_reference::CpuRefBackend;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_libs::scan::GpuLiteralSet;
 
@@ -37,31 +41,9 @@ fn file_with(hits: &str) -> Vec<u8> {
     v
 }
 
-/// Decode one region's presence row into the set of pattern ids whose bit is set.
-fn present_ids(row: &[u32], pattern_count: u32) -> BTreeSet<u32> {
-    (0..pattern_count)
-        .filter(|&p| {
-            let w = (p >> 5) as usize;
-            let b = p & 31;
-            row.get(w).is_some_and(|word| (word >> b) & 1 == 1)
-        })
-        .collect()
-}
-
-#[test]
-fn async_region_presence_matches_sync_and_planted_hits_on_gpu() {
-    let backend = match WgpuBackend::shared() {
-        Ok(b) => b,
-        Err(e) => {
-            eprintln!("no wgpu backend ({e}); skipping async region-presence GPU test");
-            return;
-        }
-    };
-    let matcher = GpuLiteralSet::compile(LITERALS);
-    let pattern_count = LITERALS.len() as u32;
-    let words = pattern_count.div_ceil(32).max(1) as usize;
-
-    // Three coalesced files with distinct, known hit sets.
+/// Three coalesced files with distinct, KNOWN hit sets, returned as a coalesced
+/// haystack + ascending region starts (the keyhog phase-1 layout).
+fn planted_corpus() -> (Vec<u8>, Vec<u32>) {
     let files = [
         file_with("api key here AKIA token secret"), // {api,key,AKIA,token,secret} = {7,0,3,1,2}
         file_with("ghp_abc sk_live_xyz password"),    // {ghp_,sk_live_,password} = {4,5,6}
@@ -73,38 +55,24 @@ fn async_region_presence_matches_sync_and_planted_hits_on_gpu() {
         region_starts.push(haystack.len() as u32);
         haystack.extend_from_slice(f);
     }
-    let region_count = region_starts.len();
+    (haystack, region_starts)
+}
 
-    // ---- Sync reference ----
-    let sync_words = matcher
-        .scan_presence_by_region(backend.as_ref(), &haystack, &region_starts)
-        .expect("sync gpu presence-by-region scan");
+/// Decode one region's presence row into the set of pattern ids whose bit is set.
+fn present_ids(row: &[u32], pattern_count: u32) -> BTreeSet<u32> {
+    (0..pattern_count)
+        .filter(|&p| {
+            let w = (p >> 5) as usize;
+            let b = p & 31;
+            row.get(w).is_some_and(|word| (word >> b) & 1 == 1)
+        })
+        .collect()
+}
 
-    // ---- Async: submit, probe, decode ----
-    let pending = matcher
-        .scan_presence_by_region_async(backend.as_ref(), &haystack, &region_starts, 0)
-        .expect("async gpu presence-by-region submit");
-    // Exercise the non-blocking probe (value is backend/timing-dependent, so we
-    // only require it be callable without blocking — not a fixed bool).
-    let _ready_before_await = pending.is_ready();
-    let async_words = pending.await_words().expect("async gpu presence-by-region await");
-
-    // (1) Async bitmap == sync bitmap, WORD FOR WORD.
-    assert_eq!(
-        async_words, sync_words,
-        "async region-presence bitmap must equal scan_presence_by_region word-for-word"
-    );
-
-    // (3) Full bitmap shape: region_count rows of `words` words each.
-    assert_eq!(
-        async_words.len(),
-        region_count * words,
-        "async bitmap must be region_count ({region_count}) * words ({words}) = {} u32s",
-        region_count * words
-    );
-
-    // (2) Exact planted bit sets per region (real values, not non-empty).
-    let row = |r: usize| &async_words[r * words..(r + 1) * words];
+/// Assert the full `region_count * words` bitmap carries EXACTLY the planted hit
+/// sets per region (real values, not "non-empty").
+fn assert_planted_bits(words_per_region: usize, pattern_count: u32, bitmap: &[u32]) {
+    let row = |r: usize| &bitmap[r * words_per_region..(r + 1) * words_per_region];
     assert_eq!(
         present_ids(row(0), pattern_count),
         BTreeSet::from([0, 1, 2, 3, 7]),
@@ -120,4 +88,85 @@ fn async_region_presence_matches_sync_and_planted_hits_on_gpu() {
         BTreeSet::new(),
         "region 2 has no literal occurrence and must be all-zero"
     );
+}
+
+#[test]
+fn async_region_presence_matches_sync_and_planted_hits_on_gpu() {
+    let backend = match WgpuBackend::shared() {
+        Ok(b) => b,
+        Err(e) => {
+            eprintln!("no wgpu backend ({e}); skipping async region-presence GPU test");
+            return;
+        }
+    };
+    let matcher = GpuLiteralSet::compile(LITERALS);
+    let pattern_count = LITERALS.len() as u32;
+    let words = pattern_count.div_ceil(32).max(1) as usize;
+    let (haystack, region_starts) = planted_corpus();
+    let region_count = region_starts.len();
+
+    let sync_words = matcher
+        .scan_presence_by_region(backend.as_ref(), &haystack, &region_starts)
+        .expect("sync gpu presence-by-region scan");
+
+    let pending = matcher
+        .scan_presence_by_region_async(backend.as_ref(), &haystack, &region_starts, 0)
+        .expect("async gpu presence-by-region submit");
+    // Exercise the non-blocking probe (value is backend/timing-dependent on a
+    // pipelining backend, so we only require it be callable without blocking).
+    let _ready_before_await = pending.is_ready();
+    let async_words = pending.await_words().expect("async gpu presence-by-region await");
+
+    // (1) Async bitmap == sync bitmap, WORD FOR WORD.
+    assert_eq!(
+        async_words, sync_words,
+        "async region-presence bitmap must equal scan_presence_by_region word-for-word"
+    );
+    // (2) Full bitmap shape.
+    assert_eq!(
+        async_words.len(),
+        region_count * words,
+        "async bitmap must be region_count ({region_count}) * words ({words}) u32s"
+    );
+    // (3) Exact planted bit sets per region.
+    assert_planted_bits(words, pattern_count, &async_words);
+}
+
+#[test]
+fn async_region_presence_equals_sync_on_cpu_reference() {
+    // CPU reference backend: no GPU, runs everywhere. dispatch_async here uses the
+    // synchronous default (the backend does not pipeline host/device work), so the
+    // pending handle is trivially ready and MUST yield the same bitmap as the sync
+    // entry — the degraded path changes nothing about the result (Law 10).
+    let matcher = GpuLiteralSet::compile(LITERALS);
+    let pattern_count = LITERALS.len() as u32;
+    let words = pattern_count.div_ceil(32).max(1) as usize;
+    let (haystack, region_starts) = planted_corpus();
+    let region_count = region_starts.len();
+
+    let sync_words = matcher
+        .scan_presence_by_region(&CpuRefBackend, &haystack, &region_starts)
+        .expect("sync cpu-reference presence-by-region scan");
+
+    let pending = matcher
+        .scan_presence_by_region_async(&CpuRefBackend, &haystack, &region_starts, 0)
+        .expect("async cpu-reference presence-by-region submit");
+    // Non-pipelining backend -> trivially-ready handle: is_ready is deterministically true.
+    assert!(
+        pending.is_ready(),
+        "a non-pipelining backend must return a trivially-ready handle (is_ready == true)"
+    );
+    let async_words = pending.await_words().expect("async cpu-reference await");
+
+    assert_eq!(
+        async_words, sync_words,
+        "async region-presence on the CPU reference backend must equal the sync result \
+         word-for-word — the non-overlapping path must not change the bitmap"
+    );
+    assert_eq!(
+        async_words.len(),
+        region_count * words,
+        "async bitmap must be region_count ({region_count}) * words ({words}) u32s"
+    );
+    assert_planted_bits(words, pattern_count, &async_words);
 }
