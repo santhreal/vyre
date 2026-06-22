@@ -543,6 +543,62 @@ pub fn compress_dense_transitions_into(
     }
 }
 
+/// Pack a byte-class-compressed `state_count * num_classes` transition table
+/// (from [`compress_dense_transitions_into`]) into u16 targets stored two per
+/// u32 word: the LOW half holds the even flat index, the HIGH half the odd
+/// index. Halves the device transition footprint and bytes-per-transaction —
+/// the lever the keyhog-scale L1 working-set analysis identified as the one that
+/// directly narrows each transition read (`docs/GPU_OOM_SEGMENTATION.md`; row
+/// deduplication was measured and refuted there).
+///
+/// FAIL CLOSED (Law 10): every transition target is a state index, so it must
+/// fit `u16`. If ANY target exceeds `u16::MAX` this REFUSES the pack — a silent
+/// `& 0xFFFF` truncation would repoint a next-state at the wrong state, an
+/// invisible recall loss. Callers gate on `state_count <= 65536`; this is the
+/// enforcing check, not an assumption. `out` is cleared/reused so the hot
+/// resident-refresh path allocates nothing.
+///
+/// # Errors
+///
+/// Returns [`PipelineError::Backend`] naming the offending index/target when a
+/// transition target does not fit `u16`.
+pub fn try_pack_u16_transitions_into(
+    compressed: &[u32],
+    out: &mut Vec<u32>,
+) -> Result<(), PipelineError> {
+    for (idx, &target) in compressed.iter().enumerate() {
+        if target > u32::from(u16::MAX) {
+            return Err(PipelineError::Backend(format!(
+                "transition target {target} at index {idx} exceeds u16::MAX ({}); u16 packing \
+                 would silently truncate it and corrupt the automaton. Fix: keep this catalog on \
+                 the u32 transition path (state_count must be <= 65536 for u16 packing).",
+                u16::MAX
+            )));
+        }
+    }
+    out.clear();
+    out.reserve(compressed.len().div_ceil(2));
+    let mut chunks = compressed.chunks_exact(2);
+    for pair in chunks.by_ref() {
+        // Both halves validated <= 0xFFFF above, so no masking is needed.
+        out.push(pair[0] | (pair[1] << 16));
+    }
+    if let [last] = chunks.remainder() {
+        out.push(*last);
+    }
+    Ok(())
+}
+
+/// Unpack the `flat_index`-th u16 transition target from a table packed by
+/// [`try_pack_u16_transitions_into`]. The exact CPU mirror of the kernel's
+/// unpack (`word = packed[idx/2]; (word >> ((idx & 1) * 16)) & 0xFFFF`), so the
+/// round-trip can be proven lossless without a GPU.
+#[must_use]
+pub fn unpack_u16_transition(packed: &[u32], flat_index: usize) -> u32 {
+    let word = packed[flat_index / 2];
+    (word >> ((flat_index & 1) * 16)) & 0xFFFF
+}
+
 fn validate_rule_shape(
     rule_idx: u32,
     transitions: &[u32],
@@ -708,6 +764,41 @@ mod tests {
             packed.rule_meta[0].accept_base as usize + 1
         );
         assert!(packed.rejected_rules.is_empty());
+    }
+
+    #[test]
+    fn u16_pack_round_trips_losslessly_including_odd_tail() {
+        // Odd element count exercises the lone-remainder path; 65535 is the max
+        // legal u16 target.
+        let compressed: Vec<u32> = vec![0, 1, 2, 65_535, 100, 0, 42];
+        let mut packed = Vec::new();
+        try_pack_u16_transitions_into(&compressed, &mut packed).expect("all targets fit u16");
+        // Two u16 per u32 word, rounding up for the odd tail.
+        assert_eq!(packed.len(), compressed.len().div_ceil(2));
+        // Every flat index unpacks to EXACTLY the original target — proving the
+        // pack→kernel-unpack round-trip changes no transition (Law 6).
+        for (idx, &original) in compressed.iter().enumerate() {
+            assert_eq!(
+                unpack_u16_transition(&packed, idx),
+                original,
+                "u16 round-trip diverged at flat index {idx}",
+            );
+        }
+    }
+
+    #[test]
+    fn u16_pack_fails_closed_on_target_exceeding_u16() {
+        // 70000 > u16::MAX: packing MUST refuse, never silently `& 0xFFFF` it to a
+        // wrong next-state (Law 10 — that truncation is an invisible recall loss).
+        let compressed: Vec<u32> = vec![0, 1, 70_000, 3];
+        let mut out = Vec::new();
+        let err = try_pack_u16_transitions_into(&compressed, &mut out)
+            .expect_err("a target above u16::MAX must be refused");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("70000") && msg.contains("index 2") && msg.contains("u16"),
+            "error must name the offending target/index and the u16 cause: {msg}",
+        );
     }
 
     /// Regression for P2 decoration test: the structural shared-storage checks

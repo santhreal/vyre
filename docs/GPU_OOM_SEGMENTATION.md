@@ -729,16 +729,39 @@ pinned as regressions):
   distinct-rows-per-warp working set that IS the named L1 limiter. Net
   pessimization. The test asserts the kill (`dedup_ratio < 1.5`) so it fires if a
   future build ever makes rows redundant enough to reconsider.
-- **u16 transition targets — CONFIRMED as the lever (one GPU-profile question
-  left).** `state_count = 13,199`, `max_target = 13,198 ≪ 65,535`, so u16 packing
-  is viable and **halves** the byte-class table exactly (3454 → 1727 KiB, 2.000×,
-  asserted) with NO extra indirection load — it directly halves bytes/transaction
-  and doubles the rows that fit L1. The ONLY remaining unknown is whether the WGSL
-  u16-in-u32 unpack ALU in the hot loop costs more than the transaction saving —
-  that is the single thing to PROFILE (Nsight Compute: l1tex hit-rate,
-  sectors/request, dram throughput at 32 vs 2048 patterns) before emitting the u16
-  kernel. The CPU work that could be done without a GPU is done; coding u16 blind
-  is still refused until that one profile lands.
+- **u16 transition targets — BUILT, proven LOSSLESS on GPU, MEASURED NEUTRAL
+  (does NOT help).** `state_count = 13,199`, `max_target = 13,198 ≪ 65,535`, so
+  u16 packing is viable and halves the byte-class table exactly (3454 → 1727 KiB,
+  2.000×) with no indirection load. Rather than profile a proxy (ncu can't
+  attribute the wgpu/Vulkan kernel anyway — it's a CUDA profiler), the u16 kernel
+  was BUILT as a real opt-in path (`TransitionWidth::Bits16`, host packer
+  `try_pack_u16_transitions_into` fail-closed on any target > u16::MAX) and A/B'd
+  DIRECTLY on the RTX 5090 against u32 at the fine geometries where the scale win
+  lives — see `megakernel_combined_scan.rs::u16_transitions_are_lossless_and_measured_vs_u32_at_keyhog_scale`
+  (8 MiB, 2048 patterns, 13199 states, oracle 280337 matches):
 
-Either way the table is already L2-resident — do not re-state the L2-capacity
-premise.
+  | seg_len | u32 GB/s | u16 GB/s | u16/u32 | both conserve? |
+  |---------|----------|----------|---------|----------------|
+  | 512     | 9.744    | 9.026    | 0.926×  | yes (280337/0) |
+  | 256     | 10.785   | 11.525   | 1.069×  | yes (280337/0) |
+  | 128     | 12.777   | 12.762   | 0.999×  | yes (280337/0) |
+
+  **u16 is bit-exact lossless** (both widths reproduce the full oracle, 0 dropped,
+  every geometry — asserted) but **throughput-neutral** (0.93–1.07×, thermal noise
+  around 1.0×; exactly 0.999× at the best seg_len=128). Halving bytes/transaction
+  is fully offset by the unpack ALU in the hot loop. This is the doc's anticipated
+  "u16 does not help" outcome, now MEASURED not guessed: the keyhog-scale L1
+  limiter is **scatter/latency-bound, not bytes-per-transaction-bound**. The u16
+  path STAYS as a correct, fail-closed, opt-in capability (the default is u32) —
+  it could win on a memory-bandwidth-bound GPU or a catalog large enough to spill
+  L2, and the A/B test makes re-measuring there one command — but it is NOT shipped
+  as the default and is NOT a throughput win on this hardware. No overclaiming.
+
+**Both transition-read narrowing levers (row-dedup, u16) are now exhausted by
+measurement — neither moves throughput.** The table is already L2-resident (do not
+re-state the L2-capacity premise), and the residual scale degradation is pure
+scatter/latency, not bytes moved. A genuine future lever would have to reduce the
+SCATTER itself (warp-cooperative scanning of consecutive windows for coalesced
+transition-row access, or a state relabeling that clusters a warp's lanes onto
+nearby rows) — a deeper redesign, and pure HEADROOM: the combined-AC path already
+beats Hyperscan 8.81× at this scale, so this is not a gap, it is over-delivery.

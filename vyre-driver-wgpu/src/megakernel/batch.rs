@@ -4,6 +4,7 @@
 //! uploads the prefix-sum offsets + metadata tables once, and keeps a
 //! persistent device-derived work schedule + sparse hit ring alive across dispatches.
 
+use super::dispatcher::TransitionWidth;
 use super::segmentation;
 use crate::buffer::GpuBufferHandle;
 use crate::staging_reserve::reserve_vec_exact_for_len;
@@ -537,10 +538,14 @@ pub struct CombinedBatch {
     /// into the kernel program (the automaton fixes it), so the pipeline is
     /// compiled once per resident catalog.
     num_classes: u32,
+    /// Device packing of each transition target (`Bits32` default, or `Bits16`
+    /// two-per-word). The dispatcher reads this to build a matching kernel.
+    transition_width: TransitionWidth,
     haystack: GpuBufferHandle,
     offsets: GpuBufferHandle,
     metadata: GpuBufferHandle,
-    /// Byte-class compressed transition table (`state_count * num_classes`).
+    /// Byte-class compressed transition table (`state_count * num_classes`),
+    /// packed per [`CombinedBatch::transition_width`].
     transitions: GpuBufferHandle,
     output_offsets: GpuBufferHandle,
     output_records: GpuBufferHandle,
@@ -590,6 +595,42 @@ impl CombinedBatch {
         seg_len: u32,
         hit_capacity: u32,
     ) -> Result<Self, PipelineError> {
+        Self::upload_with_transition_width(
+            device_queue,
+            files,
+            transitions,
+            output_offsets,
+            output_records,
+            state_count,
+            max_pattern_len,
+            seg_len,
+            hit_capacity,
+            TransitionWidth::Bits32,
+        )
+    }
+
+    /// Like [`CombinedBatch::upload`] but choosing the device transition-table
+    /// packing. `TransitionWidth::Bits16` halves the table and bytes-per-
+    /// transaction (the keyhog-scale L1 lever) and FAILS CLOSED if any target
+    /// exceeds `u16::MAX` — never silently truncates a next-state (Law 10).
+    ///
+    /// # Errors
+    ///
+    /// As [`CombinedBatch::upload`], plus [`PipelineError::Backend`] when
+    /// `Bits16` is requested but a transition target does not fit `u16`.
+    #[allow(clippy::too_many_arguments)]
+    pub fn upload_with_transition_width(
+        device_queue: Arc<(wgpu::Device, wgpu::Queue)>,
+        files: &[BatchFile],
+        transitions: &[u32],
+        output_offsets: &[u32],
+        output_records: &[u32],
+        state_count: u32,
+        max_pattern_len: u32,
+        seg_len: u32,
+        hit_capacity: u32,
+        transition_width: TransitionWidth,
+    ) -> Result<Self, PipelineError> {
         validate_hit_capacity(hit_capacity)?;
         validate_combined_automaton(
             transitions,
@@ -634,6 +675,20 @@ impl CombinedBatch {
             num_classes,
             &mut compressed_transitions,
         );
+        // Bits16 packs two targets per word (halving bytes/transaction) and FAILS
+        // CLOSED on any target > u16::MAX — never silently truncates (Law 10). The
+        // kernel built by the dispatcher unpacks to match `transition_width`.
+        let transition_table = match transition_width {
+            TransitionWidth::Bits32 => compressed_transitions,
+            TransitionWidth::Bits16 => {
+                let mut packed = Vec::new();
+                vyre_runtime::megakernel::rule_catalog::try_pack_u16_transitions_into(
+                    &compressed_transitions,
+                    &mut packed,
+                )?;
+                packed
+            }
+        };
 
         let usage = persistent_storage_binding_usage();
         let haystack =
@@ -645,7 +700,7 @@ impl CombinedBatch {
         let transitions = GpuBufferHandle::upload(
             device,
             queue,
-            bytemuck::cast_slice(&compressed_transitions),
+            bytemuck::cast_slice(&transition_table),
             usage,
         )?;
         let output_offsets =
@@ -668,6 +723,7 @@ impl CombinedBatch {
             hit_capacity,
             max_pattern_len,
             num_classes,
+            transition_width,
             haystack,
             offsets,
             metadata,
@@ -748,6 +804,13 @@ impl CombinedBatch {
     #[must_use]
     pub const fn num_classes(&self) -> u32 {
         self.num_classes
+    }
+
+    /// Device packing of each transition target. The dispatcher MUST build the
+    /// kernel with this width so the unpack matches the uploaded table.
+    #[must_use]
+    pub const fn transition_width(&self) -> TransitionWidth {
+        self.transition_width
     }
 
     /// Read-only input buffers in `combined_batch_program_buffers` declaration

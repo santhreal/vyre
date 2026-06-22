@@ -1466,16 +1466,37 @@ fn combined_batch_program_buffers(hit_capacity: u32) -> Vec<BufferDecl> {
     ]
 }
 
+/// Width of each combined-AC transition target in the device transition table.
+///
+/// `Bits32` is the shipping default — one `u32` per target, indexed
+/// `transitions[state * num_classes + class]`. `Bits16` packs two targets per
+/// `u32` word (low half = even flat index, high half = odd; host packer
+/// [`vyre_runtime::megakernel::rule_catalog::try_pack_u16_transitions_into`]),
+/// halving the transition table and bytes-per-transaction — the
+/// keyhog-scale L1 working-set lever (`docs/GPU_OOM_SEGMENTATION.md`) — at the
+/// cost of an unpack shift/mask in the hot loop. Sound ONLY when every target
+/// fits `u16` (`state_count <= 65536`); the host packer fails closed otherwise.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TransitionWidth {
+    /// One `u32` per transition target (default).
+    Bits32,
+    /// Two `u16` targets packed per `u32` word.
+    Bits16,
+}
+
 /// Build the combined-AC segmented megakernel program.
 ///
 /// Identical drain loop to [`build_batch_program`] (`forever` + `claim >=
 /// QUEUE_LEN` Return, Law-10 no under-claim), with the per-rule claim body
 /// replaced by [`execute_combined_claim_body`]. `queue_len = segment_count`
-/// (one work item per segment), set by the host.
+/// (one work item per segment), set by the host. `transition_width` selects the
+/// device transition-table packing (see [`TransitionWidth`]); the host MUST
+/// upload a table packed to match.
 pub(crate) fn build_combined_batch_program(
     workgroup_size_x: u32,
     hit_capacity: u32,
     num_classes: u32,
+    transition_width: TransitionWidth,
 ) -> Program {
     let queue_len = atomic_load_relaxed(
         "queue_state",
@@ -1501,7 +1522,7 @@ pub(crate) fn build_combined_batch_program(
             vec![Node::Return],
         ),
     ];
-    loop_body.extend(execute_combined_claim_body(num_classes));
+    loop_body.extend(execute_combined_claim_body(num_classes, transition_width));
 
     Program::wrapped(
         combined_batch_program_buffers(hit_capacity),
@@ -1516,7 +1537,7 @@ pub(crate) fn build_combined_batch_program(
 /// `/ rule_count` — there is no rule dimension). The segment row layout
 /// `[file_idx, scan_start, emit_start, emit_end]` and the absolute-bounds
 /// arithmetic are identical to [`execute_batch_claim_body`].
-fn execute_combined_claim_body(num_classes: u32) -> Vec<Node> {
+fn execute_combined_claim_body(num_classes: u32, transition_width: TransitionWidth) -> Vec<Node> {
     vec![
         // claim == seg_idx (one work item per segment).
         Node::let_bind("seg_idx", Expr::var("claim")),
@@ -1573,7 +1594,7 @@ fn execute_combined_claim_body(num_classes: u32) -> Vec<Node> {
             "emit_end",
             Expr::add(Expr::var("file_start"), Expr::var("emit_end_rel")),
         ),
-        Node::Block(combined_dfa_byte_scanner(num_classes)),
+        Node::Block(combined_dfa_byte_scanner(num_classes, transition_width)),
         Node::let_bind(
             "done_prev",
             Expr::atomic_add(
@@ -1598,91 +1619,126 @@ fn execute_combined_claim_body(num_classes: u32) -> Vec<Node> {
 /// place the kernel diverges from the per-rule scanner: a CSR multi-emit loop
 /// instead of a single `accept[state]` flag, mirroring the
 /// `combined_segmented_scan` CPU oracle exactly.
-fn combined_dfa_byte_scanner(num_classes: u32) -> Vec<Node> {
+fn combined_dfa_byte_scanner(num_classes: u32, transition_width: TransitionWidth) -> Vec<Node> {
+    let mut loop_body = vec![
+        Node::let_bind(
+            "haystack_word_index",
+            Expr::div(Expr::var("byte_pos"), Expr::u32(4)),
+        ),
+        Node::let_bind(
+            "haystack_shift",
+            Expr::mul(Expr::rem(Expr::var("byte_pos"), Expr::u32(4)), Expr::u32(8)),
+        ),
+        Node::let_bind(
+            "byte",
+            Expr::bitand(
+                Expr::shr(
+                    Expr::load("haystack", Expr::var("haystack_word_index")),
+                    Expr::var("haystack_shift"),
+                ),
+                Expr::u32(0xFF),
+            ),
+        ),
+        // Byte-class compressed combined transition (lossless): fold the byte
+        // through the 256-entry class map, then index the compressed
+        // `state * num_classes + class` row. `num_classes` is baked as a literal
+        // — the automaton fixes it, so the pipeline is compiled once per resident
+        // catalog. Firings are byte-for-byte identical to the dense
+        // `state * 256 + byte` table.
+        Node::let_bind("byte_class", Expr::load("class_maps", Expr::var("byte"))),
+    ];
+    // The transition read narrows by `transition_width`: Bits32 loads the target
+    // directly; Bits16 unpacks two targets per word (half the bytes/transaction).
+    loop_body.extend(combined_transition_read(num_classes, transition_width));
+    // Emit guard: only positions owned by this window (`byte_pos >= emit_start`;
+    // the loop bound enforces `byte_pos < emit_end`). Warm-up bytes advance state
+    // but emit nothing, so adjacent windows tile each file with no double count
+    // and no miss.
+    loop_body.push(Node::if_then(
+        Expr::ge(Expr::var("byte_pos"), Expr::var("emit_start")),
+        vec![
+            Node::let_bind(
+                "out_begin",
+                Expr::load("output_offsets", Expr::var("state")),
+            ),
+            Node::let_bind(
+                "out_end",
+                Expr::load(
+                    "output_offsets",
+                    Expr::add(Expr::var("state"), Expr::u32(1)),
+                ),
+            ),
+            // Multi-emit: one HitRecord per pattern id accepting at this state.
+            // `rule_idx` carries the pattern id (the combined automaton's pattern
+            // == the catalog rule).
+            Node::loop_for(
+                "out_idx",
+                Expr::var("out_begin"),
+                Expr::var("out_end"),
+                vec![
+                    Node::let_bind(
+                        "rule_idx",
+                        Expr::load("output_records", Expr::var("out_idx")),
+                    ),
+                    Node::Block(record_hit_to_ring()),
+                ],
+            ),
+        ],
+    ));
+
     vec![
         Node::let_bind("state", Expr::u32(0)),
         Node::loop_for(
             "byte_pos",
             Expr::var("scan_start"),
             Expr::var("emit_end"),
-            vec![
-                Node::let_bind(
-                    "haystack_word_index",
-                    Expr::div(Expr::var("byte_pos"), Expr::u32(4)),
-                ),
-                Node::let_bind(
-                    "haystack_shift",
-                    Expr::mul(Expr::rem(Expr::var("byte_pos"), Expr::u32(4)), Expr::u32(8)),
-                ),
-                Node::let_bind(
-                    "byte",
-                    Expr::bitand(
-                        Expr::shr(
-                            Expr::load("haystack", Expr::var("haystack_word_index")),
-                            Expr::var("haystack_shift"),
-                        ),
-                        Expr::u32(0xFF),
-                    ),
-                ),
-                // Byte-class compressed combined transition (lossless): fold the
-                // byte through the 256-entry class map, then index the compressed
-                // `state * num_classes + class` row. `num_classes` is baked as a
-                // literal — the automaton fixes it, so the pipeline is compiled
-                // once per resident catalog. Firings are byte-for-byte identical
-                // to the dense `state * 256 + byte` table.
-                Node::let_bind(
-                    "byte_class",
-                    Expr::load("class_maps", Expr::var("byte")),
-                ),
-                Node::assign(
-                    "state",
-                    Expr::load(
-                        "transitions",
-                        Expr::add(
-                            Expr::mul(Expr::var("state"), Expr::u32(num_classes)),
-                            Expr::var("byte_class"),
-                        ),
-                    ),
-                ),
-                // Emit guard: only positions owned by this window
-                // (`byte_pos >= emit_start`; the loop bound enforces
-                // `byte_pos < emit_end`). Warm-up bytes advance state but emit
-                // nothing, so adjacent windows tile each file with no double
-                // count and no miss.
-                Node::if_then(
-                    Expr::ge(Expr::var("byte_pos"), Expr::var("emit_start")),
-                    vec![
-                        Node::let_bind(
-                            "out_begin",
-                            Expr::load("output_offsets", Expr::var("state")),
-                        ),
-                        Node::let_bind(
-                            "out_end",
-                            Expr::load(
-                                "output_offsets",
-                                Expr::add(Expr::var("state"), Expr::u32(1)),
-                            ),
-                        ),
-                        // Multi-emit: one HitRecord per pattern id accepting at
-                        // this state. `rule_idx` carries the pattern id (the
-                        // combined automaton's pattern == the catalog rule).
-                        Node::loop_for(
-                            "out_idx",
-                            Expr::var("out_begin"),
-                            Expr::var("out_end"),
-                            vec![
-                                Node::let_bind(
-                                    "rule_idx",
-                                    Expr::load("output_records", Expr::var("out_idx")),
-                                ),
-                                Node::Block(record_hit_to_ring()),
-                            ],
-                        ),
-                    ],
-                ),
-            ],
+            loop_body,
         ),
     ]
+}
+
+/// The combined-AC transition step `state := transition(state, byte_class)`,
+/// emitting the read for the chosen [`TransitionWidth`].
+///
+/// `Bits32` loads `transitions[state * num_classes + class]` directly. `Bits16`
+/// computes that same flat index, loads the packed word at `idx / 2`, and
+/// extracts the `u16` half selected by `idx & 1` — the EXACT mirror of
+/// [`vyre_runtime::megakernel::rule_catalog::unpack_u16_transition`], so a
+/// u16-packed table reproduces the u32 firings byte-for-byte (proven on the GPU
+/// by the differential conservation test, which runs both widths).
+fn combined_transition_read(num_classes: u32, transition_width: TransitionWidth) -> Vec<Node> {
+    let flat_index = Expr::add(
+        Expr::mul(Expr::var("state"), Expr::u32(num_classes)),
+        Expr::var("byte_class"),
+    );
+    match transition_width {
+        TransitionWidth::Bits32 => {
+            vec![Node::assign("state", Expr::load("transitions", flat_index))]
+        }
+        TransitionWidth::Bits16 => vec![
+            Node::let_bind("trans_idx", flat_index),
+            Node::let_bind(
+                "trans_word",
+                Expr::load(
+                    "transitions",
+                    Expr::div(Expr::var("trans_idx"), Expr::u32(2)),
+                ),
+            ),
+            Node::assign(
+                "state",
+                Expr::bitand(
+                    Expr::shr(
+                        Expr::var("trans_word"),
+                        Expr::mul(
+                            Expr::rem(Expr::var("trans_idx"), Expr::u32(2)),
+                            Expr::u32(16),
+                        ),
+                    ),
+                    Expr::u32(0xFFFF),
+                ),
+            ),
+        ],
+    }
 }
 
 fn execute_batch_claim_body(hit_writer: BatchHitWriter) -> Vec<Node> {
@@ -1976,6 +2032,7 @@ impl CombinedDispatcher {
             self.config.workgroup_size_x,
             batch.hit_capacity(),
             batch.num_classes(),
+            batch.transition_width(),
         );
         let pipeline = self
             .backend
@@ -2250,24 +2307,30 @@ mod tests {
     /// a stripped no-op.
     #[test]
     fn combined_batch_program_lowers_to_valid_wgsl_referencing_combined_tables() {
-        let program = build_combined_batch_program(64, 1024, 40);
-        let wgsl = crate::emit::lower(&program)
-            .expect("Fix: combined-AC segmented program must lower to valid WGSL");
-        for needle in [
-            "transitions",
-            "output_offsets",
-            "output_records",
-            "class_maps",
-            "segments",
-            "hit_ring",
-            "file_offsets",
-        ] {
-            assert!(
-                wgsl.contains(needle),
-                "emitted WGSL must reference the `{needle}` buffer; the combined kernel \
-                 read it in IR but it vanished from the shader (got {} bytes of WGSL)",
-                wgsl.len()
-            );
+        // BOTH transition widths must lower through the real Naga pipeline: the
+        // u16 path adds a div/shr/mask unpack in the hot loop, so its validity is
+        // not implied by the u32 path's.
+        for width in [TransitionWidth::Bits32, TransitionWidth::Bits16] {
+            let program = build_combined_batch_program(64, 1024, 40, width);
+            let wgsl = crate::emit::lower(&program).unwrap_or_else(|e| {
+                panic!("Fix: combined-AC {width:?} program must lower to valid WGSL: {e:?}")
+            });
+            for needle in [
+                "transitions",
+                "output_offsets",
+                "output_records",
+                "class_maps",
+                "segments",
+                "hit_ring",
+                "file_offsets",
+            ] {
+                assert!(
+                    wgsl.contains(needle),
+                    "emitted WGSL ({width:?}) must reference the `{needle}` buffer; the combined \
+                     kernel read it in IR but it vanished from the shader (got {} bytes of WGSL)",
+                    wgsl.len()
+                );
+            }
         }
     }
 

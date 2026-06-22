@@ -24,7 +24,7 @@ use std::collections::BTreeSet;
 use std::time::Duration;
 
 use vyre_driver_wgpu::megakernel::{
-    BatchDispatchConfig, BatchFile, CombinedBatch, CombinedDispatcher, HitRecord,
+    BatchDispatchConfig, BatchFile, CombinedBatch, CombinedDispatcher, HitRecord, TransitionWidth,
 };
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_libs::scan::classic_ac::{classic_ac_compile, classic_ac_scan};
@@ -77,6 +77,7 @@ struct GeomResult {
     under_claimed: bool,
 }
 
+#[allow(clippy::too_many_arguments)]
 fn run_geometry(
     backend: &WgpuBackend,
     buf: &[u8],
@@ -86,6 +87,7 @@ fn run_geometry(
     state_count: u32,
     max_pattern_len: u32,
     seg_len: u32,
+    transition_width: TransitionWidth,
 ) -> GeomResult {
     let hit_capacity: u32 = 1 << 20;
     let config = BatchDispatchConfig {
@@ -96,7 +98,7 @@ fn run_geometry(
         ..Default::default()
     };
     let files = vec![BatchFile::new(0xC0FFEE, 0, buf.to_vec())];
-    let mut batch = CombinedBatch::upload(
+    let mut batch = CombinedBatch::upload_with_transition_width(
         backend.device_queue(),
         &files,
         transitions,
@@ -106,6 +108,7 @@ fn run_geometry(
         max_pattern_len,
         seg_len,
         hit_capacity,
+        transition_width,
     )
     .expect("Fix: CombinedBatch upload must succeed for a valid automaton");
     let mut dispatcher = CombinedDispatcher::new(backend.clone(), config);
@@ -222,6 +225,7 @@ fn combined_scan_conserves_every_match_and_beats_hyperscan() {
             state_count,
             max_pattern_len,
             seg_len,
+            TransitionWidth::Bits32,
         );
         let conserves = r.found == oracle && r.dropped == 0;
         let status = if conserves {
@@ -407,6 +411,7 @@ fn combined_scan_beats_hyperscan_at_keyhog_catalog_scale() {
             state_count,
             max_pattern_len,
             seg_len,
+            TransitionWidth::Bits32,
         );
         let conserves = r.found == oracle && r.dropped == 0;
         let status = if conserves {
@@ -455,6 +460,110 @@ fn combined_scan_beats_hyperscan_at_keyhog_catalog_scale() {
         "the combined-AC win did NOT hold at {}-literal keyhog scale: best {best_ok_gbps:.3} GB/s <= {HS_FLOOR_GBPS} GB/s",
         patterns.len()
     );
+}
+
+/// The DECISIVE u16 A/B (the GPU half of the profile-first lane the CPU
+/// measurement opened). The CPU ceiling test confirmed u16 halves the
+/// transition table at keyhog scale; this proves on the real RTX 5090 that the
+/// u16 packing is (1) LOSSLESS — its hit set equals BOTH the u32 path's and the
+/// `classic_ac_scan` oracle, with 0 dropped, at every fine geometry — and (2)
+/// measures whether halving bytes/transaction actually beats the added unpack
+/// ALU. Soundness is asserted; the speedup is reported (its sign is the answer
+/// the doc's open question wanted, and it varies run-to-run within thermal
+/// noise, so it is logged, not asserted).
+#[test]
+#[ignore = "live GPU; run with --ignored --nocapture"]
+fn u16_transitions_are_lossless_and_measured_vs_u32_at_keyhog_scale() {
+    let backend = WgpuBackend::new()
+        .expect("Fix: live GPU required (missing GPU is a configuration bug, not a fallback)");
+
+    let owned = large_catalog();
+    let patterns: Vec<&[u8]> = owned.iter().map(|p| p.as_slice()).collect();
+    let max_pattern_len = patterns.iter().map(|p| p.len()).max().expect("non-empty") as u32;
+    let buf = build_haystack(&patterns);
+
+    let ac = classic_ac_compile(&patterns);
+    let oracle: BTreeSet<(u32, u32)> = classic_ac_scan(&ac, &buf).into_iter().collect();
+    let transitions = &ac.dfa.transitions;
+    let output_offsets = &ac.dfa.output_offsets;
+    let output_records = &ac.dfa.output_records;
+    let state_count = ac.dfa.state_count;
+    assert!(
+        state_count <= u16::MAX as u32 + 1,
+        "u16 packing requires state_count <= 65536; got {state_count} — this catalog must stay on u32",
+    );
+
+    // Fine windows only: the keyhog-scale win lives at seg_len <= 512 (coarse
+    // loses), and that is exactly where the transition table is hammered hardest,
+    // so it is where u16 has the most to give.
+    let geometries = [512u32, 256, 128];
+    eprintln!(
+        "8 MiB / {} patterns / {state_count} states — u16 vs u32 transition A/B (oracle {} matches):",
+        patterns.len(),
+        oracle.len()
+    );
+    eprintln!(
+        "  {:>9}  {:>10}  {:>10}  {:>8}  {:>8}  {:>8}",
+        "seg_len", "u32 GB/s", "u16 GB/s", "u16/u32", "u32 ok?", "u16 ok?"
+    );
+
+    for seg_len in geometries {
+        let u32_r = run_geometry(
+            &backend,
+            &buf,
+            transitions,
+            output_offsets,
+            output_records,
+            state_count,
+            max_pattern_len,
+            seg_len,
+            TransitionWidth::Bits32,
+        );
+        let u16_r = run_geometry(
+            &backend,
+            &buf,
+            transitions,
+            output_offsets,
+            output_records,
+            state_count,
+            max_pattern_len,
+            seg_len,
+            TransitionWidth::Bits16,
+        );
+        let u32_ok = u32_r.found == oracle && u32_r.dropped == 0;
+        let u16_ok = u16_r.found == oracle && u16_r.dropped == 0;
+        eprintln!(
+            "  {:>9}  {:>10.3}  {:>10.3}  {:>7.3}x  {:>8}  {:>8}",
+            seg_len,
+            u32_r.gbps,
+            u16_r.gbps,
+            if u32_r.gbps > 0.0 {
+                u16_r.gbps / u32_r.gbps
+            } else {
+                0.0
+            },
+            u32_ok,
+            u16_ok,
+        );
+
+        // SOUNDNESS (asserted): the u16-packed table must reproduce the oracle
+        // EXACTLY — identical to the u32 path and to classic_ac_scan, 0 dropped.
+        // A single divergence means the pack/unpack corrupted a transition.
+        assert!(
+            !u32_r.under_claimed && !u16_r.under_claimed,
+            "seg_len={seg_len}: a width under-claimed (drain incomplete) — raise timeout/worker_groups",
+        );
+        assert_eq!(
+            u32_r.found, oracle,
+            "seg_len={seg_len}: the u32 baseline diverged from the oracle",
+        );
+        assert_eq!(
+            u16_r.found, oracle,
+            "seg_len={seg_len}: the u16-packed transitions diverged from the oracle — \
+             the pack/unpack is NOT lossless on the GPU",
+        );
+        assert_eq!(u16_r.dropped, 0, "seg_len={seg_len}: u16 dropped hits");
+    }
 }
 
 /// PROFILE-FIRST measurement for the megakernel's open optimization lane
