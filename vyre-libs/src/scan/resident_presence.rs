@@ -16,7 +16,8 @@
 //! [`ResidentPresencePipeline`] uploads those seven tables **once** into
 //! backend-resident resources and keeps them resident for the session lifetime.
 //! Each [`scan_into`](ResidentPresencePipeline::scan_into) then transfers only the
-//! per-file haystack (a ranged upload into the resident haystack buffer) and
+//! per-file haystack (a ranged upload into the resident haystack buffer), the small
+//! per-scan control values (haystack length, region starts, region base), and
 //! zeroes the used prefix of the resident presence buffer, dispatches against the
 //! resident tables, and reads back the per-region presence bitmap — the per-scan
 //! transfer drops from `O(tables + haystack)` to `O(haystack + region rows)`.
