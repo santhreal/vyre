@@ -1111,9 +1111,10 @@ fix_plan = """
 [[finding]]
 id = "FINDING-CUDA-SELFOPT-1"
 date_opened = "2026-06-22"
+date_fixed = "2026-06-22"
 owner = "santhreal"
 test = "vyre_driver_cuda::tests::self_optimizer_pipeline_resident_e2e"
-status = "open"
+status = "fixed"
 title = "self-optimizer GPU resident pipeline (gpu_pipeline_resident) wires the wrong resident-handle count -> 85 self_optimizer CUDA e2e tests fail 'expected 7 ... but received 3'"
 blocker = """
 Revealed 2026-06-22 once the vyre-driver-cuda build breaks were fixed (the suite
@@ -1158,13 +1159,31 @@ fix_plan = """
    from bd8e0b70f9); the 85 self_optimizer failures must clear. Assert the dispatched
    results equal the CPU-optimized reference (the tests already do), not just non-empty.
 """
+resolution = """
+RESOLVED 2026-06-22 @1663e564e1 on a live RTX 5090. Root cause confirmed:
+gpu_pipeline_resident's canonical-id step bound 3 resident handles
+(hash, canonical, table_canonical) but build_canonical_id_program declares
+7 buffers -- it had been extended with the four structural-tuple RO buffers
+(arena_kinds, arena_arg0, arena_arg1, arena_arg2) that back the Gate-2
+structural-identity check, and the resident handle list was never updated
+to match (the borrowed path cse_via_encoded::gpu_cse was updated to write
+all 7 input slots; only the resident path was stale). Fixed by binding all
+7 handles in binding-index order; the four arena handles are the same
+resident uploads canon/const-fold/hash/pattern already bind. The other five
+resident steps were verified count-correct (canon 5, const-fold 8, hash 7,
+pattern 6, delta 4). Cleared 74 of the 96 CUDA failures; the remaining 14
+across 6 clusters are tracked + resolved under FINDING-CUDA-MISC-1. Verified:
+self_optimizer_pipeline_resident_e2e 0/3 -> 3/3, and the whole
+self_optimizer CUDA suite green.
+"""
 
 [[finding]]
 id = "FINDING-CUDA-MISC-1"
 date_opened = "2026-06-22"
+date_fixed = "2026-06-22"
 owner = "santhreal"
 test = "vyre_driver_cuda::tests::cuda_graph_dispatch_parity::latency_cache_contracts"
-status = "open"
+status = "fixed"
 title = "~11 other vyre-driver-cuda tests fail (distinct clusters) once the suite compiles -- cuda-graph timing, release-gate, scan_prefix_sum, ptx, scallop"
 blocker = """
 The build-break fix (bd8e0b70f9) also revealed ~11 failures NOT in the
@@ -1199,4 +1218,42 @@ Triage each cluster separately (do NOT lump):
    subgroup reduction; compare emitted PTX against the expected lowering.
 5. scallop_join: shares the high-word/cell-lane handling with FINDING-OPT-IDEM-1; fix
    together. Re-run the suite after each; assert real result equality, never non-empty.
+"""
+resolution = """
+RESOLVED 2026-06-22 on a live RTX 5090; all 14 remaining failures (the count
+was 14 individual tests, not ~11) cleared across the 5 clusters, each with the
+real code/contract fix:
+  - cuda_graph timing @4180e5dca9: timed materialized-cache hits returned
+    device_ns None and were recorded as timed_dispatches_missing_device_time. A
+    cache hit launches no kernel = exactly zero device work, so report Some(0)
+    (cuda_graph_replay.rs + pipeline/compiled_dispatch.rs). The persistent-handles
+    fallback path keeps None (unmeasured real work).
+  - release-gate @8af083a305: (a) added subgroup_reduce_gpu_parity to the evidence
+    manifest release/evidence/tests/cuda-release-gate.json (auto-discovered on disk
+    but missing from the manifest); (b) wrote the real contract test
+    release_path_resident_dispatch_keeps_borrowed_fallback_counter_at_zero asserting
+    resident_borrowed_fallback_dispatches == 0 on a native resident dispatch (Law 10).
+  - scan_prefix_sum @6e5cdd9a85: the recursive multi-block scan's pass-B grid (1025
+    blocks) exceeded the device cooperative-residency limit (170) and failed
+    CooperativeResidencyExceeded. Host-split routing only fired when the device
+    lacked grid-sync support; now also fires when the grid-sync program's grid
+    exceeds cooperative residency (host-split = regular per-segment launches, no
+    co-residency requirement). launch.rs cooperative_residency_admits +
+    host_dispatch.rs grid_sync_program_needs_host_split, on both sync entrypoints.
+  - ptx_codegen_smoke_part2 @baadce9602: both were WRONG TEST EXPECTATIONS, not code
+    bugs. gt/ge expected setp.gt/ge.u32 but cmp_normalize canonicalizes Gt->Lt-swap /
+    Ge->Le-swap (documented CSE win) so they emit setp.lt/le.u32. The workgroup-sum
+    f32 reduction expected shfl.sync.down.b32 but the emitter intentionally uses the
+    shfl.sync.idx.b32 XOR-butterfly (shfl.down feeds only lane 0, violating the
+    all-lane contract verified by subgroup_reduce_gpu_parity). Corrected both to the
+    true, stronger contracts.
+  - scallop_join @321c3bf0a1: NOT the same as FINDING-OPT-IDEM-1. The grid-sync
+    phase bodies (single_word/wide _lineage_grid_sync_body) flattened the transfer
+    and compare phases into one region with body.extend(); each phase opens with its
+    own `let __sj_cell`/`__sjw_cell`, so the two became duplicate sibling lets and
+    tripped validator V032. Wrapped each phase in Node::Block (a scope); the grid-sync
+    barrier stays at region level between phases.
+The shared self-substrate CSE canonical-id fix @0deb729bc0 (Gate-2 compared raw
+child indices instead of child structural hashes) cleared a 5-test CSE cluster
+within self_optimizer that was counted under SELFOPT-1's domain.
 """
