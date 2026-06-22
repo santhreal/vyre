@@ -668,3 +668,34 @@ MAXIMAL-REUSE seam (do NOT fork the FileBatch machinery):
 5. Regex rules with no single required literal cannot join the literal AC: keep
    them on the per-rule path or a literal-factor prefilter; bound the split and
    LOG it (Law 10) — never silently drop regex rules from the combined pass.
+
+## STATUS (2026-06-22): verified live on RTX 5090, including at keyhog scale
+
+The combined `(seg)` path of item 4 above is implemented and the planned
+many-pattern verification is DONE — three `#[ignore]` live-GPU tests in
+`vyre-driver-wgpu/tests/` (run with `--features megakernel-batch,wgpu --
+--ignored --nocapture`):
+
+- `megakernel_segmentation_conservation_and_throughput` — 8 MiB / 8 rules:
+  137 markers, **0 dropped** every geometry, best **23.7 GB/s ≈ 15.8×** the
+  1.5 GB/s Hyperscan floor (seg_len=128).
+- `megakernel_combined_vs_perrule` — 8 MiB / 64 patterns: per-rule best
+  4.0 GB/s vs **combined 23.0 GB/s = 5.71× the per-rule path** — the
+  `(seg,rule)→(seg)`+multi-emit collapse of item 4 erases the per-rule
+  multiplier exactly as designed.
+- `combined_scan_beats_hyperscan_at_keyhog_catalog_scale` (commit cc8f067cbe)
+  — 8 MiB / **2048** distinct secret-shaped literals → 13199-state combined
+  automaton (256→67 byte-class compression): 280337 matches, **0 dropped**
+  every geometry, best **13.2 GB/s = 8.81×** HS (seg_len=128).
+
+**Scale finding (the load-bearing constraint for the keyhog/KH-VYRE-7 consumer):**
+peak throughput DEGRADES with automaton size (8 rules ≈ 16–23 GB/s → 2048
+literals ≈ 13 GB/s at the optimum) because a large transition table is
+memory-bound (less L2-resident). It still beats HS comfortably, BUT only with
+FINE windows — at 2048 literals throughput climbs monotonically as seg_len
+shrinks: 16384→0.86× (LOSES), 4096→1.55×, 1024→4.51×, 512→6.72×, 256→7.38×,
+128→**8.81×**. So the consumer MUST pick a fine seg_len (~128) for the real
+~6000-literal catalog; coarse segmentation loses at scale. Open optimization
+lane (deep, not yet done): shrink the resident transition footprint further
+(beyond byte-class compression) so it stays L2-resident as state_count grows,
+to recover the small-catalog ~16–23 GB/s at thousands of literals.
