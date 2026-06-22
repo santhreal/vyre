@@ -1051,9 +1051,10 @@ Until decided, this test stays red on the weir/surgec API; the scan-layer
 [[finding]]
 id = "FINDING-REGION-CHAIN-1"
 date_opened = "2026-06-22"
+date_fixed = "2026-06-22"
 owner = "santhreal"
 test = "vyre_libs::tests::region_chain_invariant::every_tier3_op_region_chain_resolves_to_registered_generators"
-status = "open"
+status = "fixed"
 title = "line_index catalog ops name an unregistered generator vyre-primitives::reduce::multi_block_prefix_scan::guarded_single_block in their Region chain"
 blocker = """
 region_chain_invariant.rs requires every generator named in a registered op's
@@ -1074,6 +1075,25 @@ fix_plan = """
    of the allowed neutral prefixes, e.g. anonymous/inline, instead of a bare
    vyre-primitives:: generator name that implies a registered op).
 2. Re-run region_chain_invariant; the offenders list must be empty.
+"""
+resolution = """
+Chose option 1 (register), which is the consolidating fix the registry intends:
+`guarded_single_block`/`pass_a`/`pass_c` ARE the sub-passes of the inclusive
+sum-scan op, so they should resolve to that op's id, not a neutral prefix.
+- vyre-primitives/src/reduce/multi_block_prefix_scan.rs: added a feature-gated
+  (`inventory-registry`) `inventory::submit!` registering OP_ID_INCLUSIVE_SUM
+  (`vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum`) as a
+  harness op (build = small n=64 guarded single-block program, no GridSync;
+  fixtures None — no vyre-primitives differential walks them today). Renamed the
+  three Region generators from `...multi_block_prefix_scan::{guarded_single_block,
+  pass_a,pass_c}` to `...multi_block_prefix_scan_inclusive_sum::<subpass>` so they
+  resolve via region_chain_invariant rule (b) `<registered_op_id>::<subpass>`.
+- vyre-self-substrate/src/data/reduce_dispatch_pipeline.rs: updated the two
+  provenance-contract assertions (prefix_pipeline_exposes_fused_and_resident_passes)
+  in lockstep with the rename — pass_a/pass_c now assert the `_inclusive_sum::` form.
+Verified: region_chain_invariant -> 1 passed/0 failed; vyre-primitives integration
+-> 1 passed (new id accepted by the id-set/fnv1a checks); reduce_dispatch_pipeline
+-> 5 passed (renamed assertions green).
 """
 
 [[finding]]

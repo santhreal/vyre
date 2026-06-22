@@ -87,6 +87,25 @@ pub fn multi_block_prefix_scan_sum_u32(input: &str, output: &str, n: u32) -> Pro
     }
 }
 
+// Provenance registration so the op id is known to `harness::all_entries()`.
+// region_chain_invariant resolves the three sub-region generators below
+// (`<OP_ID_INCLUSIVE_SUM>::{guarded_single_block,pass_a,pass_c}`) against this
+// registered id. `n = 64 (<= BLOCK_LANES)` keeps the build on the guarded
+// single-block path (no GridSync), so the entry constructs cleanly without a
+// host-split. Fixtures are `None`: no vyre-primitives differential walks these
+// fixtures today (universal_harness/cpu_witnesses iterate vyre-libs entries),
+// so a witness here would assert nothing — registration is provenance-only.
+#[cfg(feature = "inventory-registry")]
+inventory::submit! {
+    crate::harness::OpEntry::new(
+        OP_ID_INCLUSIVE_SUM,
+        || multi_block_prefix_scan_sum_u32("input", "output", 64),
+        None,
+        None,
+    )
+    .with_category("reduce")
+}
+
 fn try_multi_block_prefix_scan_sum_u32(
     input: &str,
     output: &str,
@@ -224,7 +243,7 @@ fn try_guarded_single_block_scan(input: &str, output: &str, n: u32) -> Result<Pr
         [BLOCK_LANES, 1, 1],
         vec![Node::Region {
             generator: Ident::from(
-                "vyre-primitives::reduce::multi_block_prefix_scan::guarded_single_block",
+                "vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum::guarded_single_block",
             ),
             source_region: None,
             body: Arc::new(body),
@@ -404,7 +423,9 @@ fn try_pass_a_local_scan(
         buffers,
         [BLOCK_LANES, 1, 1],
         vec![Node::Region {
-            generator: Ident::from("vyre-primitives::reduce::multi_block_prefix_scan::pass_a"),
+            generator: Ident::from(
+                "vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum::pass_a",
+            ),
             source_region: None,
             body: Arc::new(body),
         }],
@@ -505,7 +526,9 @@ fn try_pass_c_broadcast_offsets(
         buffers,
         [BLOCK_LANES, 1, 1],
         vec![Node::Region {
-            generator: Ident::from("vyre-primitives::reduce::multi_block_prefix_scan::pass_c"),
+            generator: Ident::from(
+                "vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum::pass_c",
+            ),
             source_region: None,
             body: Arc::new(body),
         }],
