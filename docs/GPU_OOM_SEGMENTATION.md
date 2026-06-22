@@ -681,6 +681,13 @@ OS, and it beats the 1.5 GB/s Hyperscan floor at the optimal geometry:
 | combined_scan ... beats_hyperscan (32 patterns, 2115 matches) | 2115/2115, 0 dropped | 8.736 (seg 512) | **5.82×** |
 | combined_scan_beats_hyperscan_at_keyhog_catalog_scale (2048, 280337) | 280337/280337, 0 dropped | 1.520 (seg 128) | **1.01×** |
 | u16 A/B (2048) | both widths conserve 280337, 0 dropped | — | u16 **lossless on DX12** |
+| segmentation_conserves... (8 rules, 137 markers) | 137/137 every geometry, 0 dropped | 9.092 (seg 512) | **6.06×** |
+| combined_vs_perrule (64 patterns, 2048 matches) | conserves both paths | per-rule 0.683 → combined 13.091 | **19.17× per-rule** |
+
+ALL FIVE megakernel live-GPU tests pass on Windows/DX12 — every geometry conserves
+the exact oracle, 0 dropped, and the geometry collapse (combined 19.17× per-rule)
++ segmentation win (6.06× HS) hold identically to Linux/Vulkan. The cross-OS GPU
+path is comprehensively verified on the second OS.
 
 HONEST margin note: the keyhog-scale Windows win is THIN (1.01×, 1.520 GB/s)
 because the RTX 3000 Ada is a weak LAPTOP GPU (~1/8th the 5090's memory
