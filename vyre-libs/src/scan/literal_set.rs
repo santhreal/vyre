@@ -303,12 +303,7 @@ impl LiteralSetPreparedPresenceByRegion {
             0,
             "literal_set prepared presence_by_region",
         )?;
-        let words: Vec<u32> = presence_bytes
-            .chunks_exact(4)
-            .take(self.total_words)
-            .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-            .collect();
-        Ok(words)
+        Ok(decode_presence_words(presence_bytes, self.total_words))
     }
 }
 
@@ -431,12 +426,7 @@ impl PendingPresenceByRegion {
             0,
             "literal_set presence_by_region async",
         )?;
-        let words: Vec<u32> = presence_bytes
-            .chunks_exact(4)
-            .take(self.total_words)
-            .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-            .collect();
-        Ok(words)
+        Ok(decode_presence_words(presence_bytes, self.total_words))
     }
 }
 
@@ -866,12 +856,7 @@ impl GpuLiteralSet {
         let outputs = backend.dispatch_borrowed(&program, &borrowed_inputs, &config)?;
         // `presence` is the only read-write/output buffer, so it is outputs[0].
         let presence_bytes = dispatch_io::try_output_bytes(&outputs, 0, "literal_set presence")?;
-        let words: Vec<u32> = presence_bytes
-            .chunks_exact(4)
-            .take(presence_words)
-            .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-            .collect();
-        Ok(words)
+        Ok(decode_presence_words(presence_bytes, presence_words))
     }
 
     /// GPU REGION-PRESENCE scan: return a per-REGION presence bitmap, where region
@@ -1004,12 +989,7 @@ impl GpuLiteralSet {
         let outputs = backend.dispatch_borrowed(&program, &borrowed_inputs, &config)?;
         let presence_bytes =
             dispatch_io::try_output_bytes(&outputs, 0, "literal_set presence_by_region")?;
-        let words: Vec<u32> = presence_bytes
-            .chunks_exact(4)
-            .take(total_words)
-            .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-            .collect();
-        Ok(words)
+        Ok(decode_presence_words(presence_bytes, total_words))
     }
 
     /// ASYNC counterpart of [`Self::scan_presence_by_region_with_scratch`]: submit
@@ -1469,11 +1449,7 @@ impl GpuLiteralSet {
             0,
             "literal_set presence_and_positions_by_region presence",
         )?;
-        let presence_words: Vec<u32> = presence_bytes
-            .chunks_exact(4)
-            .take(total_words)
-            .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-            .collect();
+        let presence_words = decode_presence_words(presence_bytes, total_words);
 
         let count_bytes = dispatch_io::try_output_bytes(
             &outputs,
@@ -2230,6 +2206,32 @@ fn copy_u32_words_as_le_bytes(
         }
     }
     Ok(bytes)
+}
+
+/// Decode the first `total_words` little-endian `u32` words of a presence readback
+/// into `out` (cleared first). The single decoder for EVERY region-presence wire
+/// result — sync, async, prepared, fused, and resident — so the bit layout has one
+/// source. Trailing bytes beyond `total_words` are ignored: a resident readback may
+/// return the full buffer capacity, of which only the used prefix is meaningful.
+pub(crate) fn decode_presence_words_into(
+    presence_bytes: &[u8],
+    total_words: usize,
+    out: &mut Vec<u32>,
+) {
+    out.clear();
+    out.extend(
+        presence_bytes
+            .chunks_exact(4)
+            .take(total_words)
+            .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]])),
+    );
+}
+
+/// [`decode_presence_words_into`] returning a freshly-allocated `Vec`.
+pub(crate) fn decode_presence_words(presence_bytes: &[u8], total_words: usize) -> Vec<u32> {
+    let mut out = Vec::new();
+    decode_presence_words_into(presence_bytes, total_words, &mut out);
+    out
 }
 
 fn decode_literal_set_outputs_into(

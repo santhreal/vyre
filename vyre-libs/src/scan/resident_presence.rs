@@ -59,7 +59,7 @@ use vyre_driver::Resource;
 use vyre_foundation::ir::Program;
 
 use super::dispatch_io;
-use super::literal_set::GpuLiteralSet;
+use super::literal_set::{decode_presence_words_into, GpuLiteralSet};
 
 const U32_BYTES: usize = std::mem::size_of::<u32>();
 
@@ -391,12 +391,9 @@ impl ResidentPresencePipeline {
             0,
             "ResidentPresencePipeline presence buffer",
         )?;
-        out.extend(
-            presence_bytes
-                .chunks_exact(4)
-                .take(used_words)
-                .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]])),
-        );
+        // The single region-presence wire decoder (shared with the sync / async /
+        // prepared / fused paths in literal_set), filling the caller's `out`.
+        decode_presence_words_into(presence_bytes, used_words, out);
         // Fail CLOSED on a short readback: a presence resource that returns fewer
         // than the used words would otherwise hand back a silently truncated bitmap
         // (some regions reported clean that were never scanned — Law 10).
