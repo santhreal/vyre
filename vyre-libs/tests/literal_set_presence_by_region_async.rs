@@ -21,75 +21,13 @@
 //! Run:
 //!   cargo test -p vyre-libs --test literal_set_presence_by_region_async --release -- --nocapture
 
-use std::collections::BTreeSet;
+mod presence_corpus;
 
+use presence_corpus::{assert_planted_bits, planted_corpus, LITERALS};
 use vyre::VyreBackend;
 use vyre_driver_reference::CpuRefBackend;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_libs::scan::GpuLiteralSet;
-
-// pattern_id order: key=0 token=1 secret=2 AKIA=3 ghp_=4 sk_live_=5 password=6 api=7
-const LITERALS: &[&[u8]] = &[
-    b"key", b"token", b"secret", b"AKIA", b"ghp_", b"sk_live_", b"password", b"api",
-];
-
-/// A "file" carrying a known subset of literal hits, terminated by a separator
-/// byte (newline) that is in NO literal, so no match spans the region boundary —
-/// exactly keyhog's coalesced-batch layout.
-fn file_with(hits: &str) -> Vec<u8> {
-    let mut v = hits.as_bytes().to_vec();
-    v.push(b'\n');
-    v
-}
-
-/// Three coalesced files with distinct, KNOWN hit sets, returned as a coalesced
-/// haystack + ascending region starts (the keyhog phase-1 layout).
-fn planted_corpus() -> (Vec<u8>, Vec<u32>) {
-    let files = [
-        file_with("api key here AKIA token secret"), // {api,key,AKIA,token,secret} = {7,0,3,1,2}
-        file_with("ghp_abc sk_live_xyz password"),    // {ghp_,sk_live_,password} = {4,5,6}
-        file_with("plain prose with no anchors here"), // {} (no literal occurs)
-    ];
-    let mut haystack = Vec::new();
-    let mut region_starts = Vec::new();
-    for f in &files {
-        region_starts.push(haystack.len() as u32);
-        haystack.extend_from_slice(f);
-    }
-    (haystack, region_starts)
-}
-
-/// Decode one region's presence row into the set of pattern ids whose bit is set.
-fn present_ids(row: &[u32], pattern_count: u32) -> BTreeSet<u32> {
-    (0..pattern_count)
-        .filter(|&p| {
-            let w = (p >> 5) as usize;
-            let b = p & 31;
-            row.get(w).is_some_and(|word| (word >> b) & 1 == 1)
-        })
-        .collect()
-}
-
-/// Assert the full `region_count * words` bitmap carries EXACTLY the planted hit
-/// sets per region (real values, not "non-empty").
-fn assert_planted_bits(words_per_region: usize, pattern_count: u32, bitmap: &[u32]) {
-    let row = |r: usize| &bitmap[r * words_per_region..(r + 1) * words_per_region];
-    assert_eq!(
-        present_ids(row(0), pattern_count),
-        BTreeSet::from([0, 1, 2, 3, 7]),
-        "region 0 must carry exactly {{key,token,secret,AKIA,api}}"
-    );
-    assert_eq!(
-        present_ids(row(1), pattern_count),
-        BTreeSet::from([4, 5, 6]),
-        "region 1 must carry exactly {{ghp_,sk_live_,password}}"
-    );
-    assert_eq!(
-        present_ids(row(2), pattern_count),
-        BTreeSet::new(),
-        "region 2 has no literal occurrence and must be all-zero"
-    );
-}
 
 #[test]
 fn async_region_presence_matches_sync_and_planted_hits_on_gpu() {

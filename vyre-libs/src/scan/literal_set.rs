@@ -312,6 +312,38 @@ impl LiteralSetPreparedPresenceByRegion {
     }
 }
 
+/// IMMUTABLE region-presence tables (corpus-invariant) plus a `max_regions`-sized
+/// program, produced by [`GpuLiteralSet::resident_presence_tables`] and consumed
+/// by [`ResidentPresencePipeline`](crate::scan::resident_presence::ResidentPresencePipeline).
+///
+/// Every field here is a function of the compiled matcher alone — none depends on
+/// the haystack or region layout — so a resident session uploads them once and
+/// re-dispatches across a whole corpus.
+pub(crate) struct ResidentPresenceTables {
+    /// Region-presence program sized for up to `max_regions` coalesced files.
+    pub(crate) program: Program,
+    /// Lane-major DFA transition table bytes (binding 1).
+    pub(crate) transitions: Vec<u8>,
+    /// DFA output-offset table bytes (binding 2).
+    pub(crate) output_offsets: Vec<u8>,
+    /// DFA output-record table bytes (binding 3).
+    pub(crate) output_records: Vec<u8>,
+    /// Per-pattern length table bytes (binding 4).
+    pub(crate) pattern_lengths: Vec<u8>,
+    /// Suffix prefilter end-mask bytes (binding 7).
+    pub(crate) candidate_end_mask: Vec<u8>,
+    /// Suffix prefilter 2-gram mask bytes (binding 8).
+    pub(crate) candidate_suffix2_mask: Vec<u8>,
+    /// Suffix prefilter 3-gram bloom bytes (binding 9).
+    pub(crate) candidate_suffix3_bloom: Vec<u8>,
+    /// Pattern count (bit width of each per-region presence row).
+    pub(crate) pattern_count: u32,
+    /// Presence bitmap `u32` words per region (`presence_bitmap_words(pattern_count)`).
+    pub(crate) presence_words: u32,
+    /// Program workgroup X extent, for the per-scan byte-scan dispatch geometry.
+    pub(crate) workgroup_x: u32,
+}
+
 #[derive(Debug)]
 struct CachedLiteralSetProgram {
     base_fingerprint: [u8; 32],
@@ -1159,6 +1191,91 @@ impl GpuLiteralSet {
             total_words,
             presence_output_bytes,
             encoded_input_bytes,
+        })
+    }
+
+    /// Extract the IMMUTABLE region-presence tables — everything that does NOT
+    /// change across the files of a corpus — plus a `max_regions`-sized program,
+    /// for [`ResidentPresencePipeline`](crate::scan::resident_presence::ResidentPresencePipeline)
+    /// to upload into backend-resident resources ONCE.
+    ///
+    /// The borrowed / async / prepared presence paths re-encode and re-upload the
+    /// DFA transition / output / pattern-length tables and the suffix prefilter
+    /// masks on EVERY dispatch (see [`Self::build_presence_by_region_dispatch`]).
+    /// Those seven buffers depend only on `self`, not on the haystack or region
+    /// layout, so a resident session uploads them once and re-dispatches across a
+    /// corpus, transferring only the per-file haystack and the binding-6 presence
+    /// reset. This is the presence sibling of
+    /// [`RulePipeline::prepare_resident`](crate::scan::mega_scan::RulePipeline::prepare_resident)'s
+    /// table extraction.
+    ///
+    /// The returned [`program`](ResidentPresenceTables::program) is sized for
+    /// `max_regions` coalesced files (binding 6's element count and the kernel's
+    /// `ceil_log2(max_regions)` region binary-search width); the actual per-scan
+    /// region count is read dynamically from `buf_len(region_starts)`, so the same
+    /// program serves any batch with `region_count <= max_regions`.
+    ///
+    /// Bytes are built through the same fallible `copy_u32_words_as_le_bytes` the
+    /// prepared path uses, so an allocation failure fails CLOSED (`BackendError`)
+    /// instead of aborting on OOM.
+    ///
+    /// # Errors
+    /// Returns [`vyre::BackendError`] when `max_regions` is zero, the pattern
+    /// count exceeds the u32 GPU ABI, the presence program cannot be built, or any
+    /// table allocation fails.
+    pub(crate) fn resident_presence_tables(
+        &self,
+        max_regions: u32,
+    ) -> Result<ResidentPresenceTables, vyre::BackendError> {
+        let pattern_count = u32::try_from(self.pattern_lengths.len()).map_err(|_| {
+            vyre::BackendError::new(
+                "literal_set region-presence: pattern count exceeds u32 GPU ABI".to_string(),
+            )
+        })?;
+        if max_regions == 0 {
+            return Err(vyre::BackendError::new(
+                "literal_set resident region-presence: max_regions must be >= 1 (it sizes the resident presence buffer and the kernel's region binary-search width). Fix: pass the largest coalesced-batch file count the session will scan.".to_string(),
+            ));
+        }
+        let program = try_build_ac_bounded_ranges_suffix3_presence_by_region_program(
+            &self.dfa,
+            pattern_count,
+            max_regions,
+        )
+        .map_err(vyre::BackendError::new)?;
+        let prefilter_tables = self.build_prefilter_tables()?;
+        let presence_words = presence_bitmap_words(pattern_count);
+        let workgroup_x = program.workgroup_size[0];
+        Ok(ResidentPresenceTables {
+            program,
+            transitions: copy_u32_words_as_le_bytes(&self.dfa.transitions, "transition table")?,
+            output_offsets: copy_u32_words_as_le_bytes(
+                &self.dfa.output_offsets,
+                "output offset table",
+            )?,
+            output_records: copy_u32_words_as_le_bytes(
+                &self.dfa.output_records,
+                "output record table",
+            )?,
+            pattern_lengths: copy_u32_words_as_le_bytes(
+                &self.pattern_lengths,
+                "pattern length table",
+            )?,
+            candidate_end_mask: copy_u32_words_as_le_bytes(
+                &prefilter_tables.candidate_end_mask,
+                "candidate end mask",
+            )?,
+            candidate_suffix2_mask: copy_u32_words_as_le_bytes(
+                &prefilter_tables.candidate_suffix2_mask,
+                "candidate suffix2 mask",
+            )?,
+            candidate_suffix3_bloom: copy_u32_words_as_le_bytes(
+                &prefilter_tables.candidate_suffix3_bloom,
+                "candidate suffix3 bloom",
+            )?,
+            pattern_count,
+            presence_words,
+            workgroup_x,
         })
     }
 

@@ -61,6 +61,7 @@ pub const API_INDEX: &[(&str, ApiKind, Option<&str>)] = &[
     ("LiteralSetScanScratch", ApiKind::Struct, None),
     ("LiteralSetWireError", ApiKind::Enum, None),
     ("PendingPresenceByRegion", ApiKind::Struct, None),
+    ("ResidentPresencePipeline", ApiKind::Struct, None),
     ("LITERAL_SET_COUNT_RESOURCE_INDEX", ApiKind::Const, None),
     (
         "LITERAL_SET_PRESENCE_BY_REGION_OUTPUT_RESOURCE_INDEX",
@@ -119,6 +120,7 @@ pub const API_INDEX: &[(&str, ApiKind, Option<&str>)] = &[
     ),
     ("PipelineWireError", ApiKind::Enum, Some("matching-nfa")),
     ("RulePipeline", ApiKind::Struct, Some("matching-nfa")),
+    ("ResidentRulePipeline", ApiKind::Struct, Some("matching-nfa")),
     // matching-regex.
     (
         "build_rule_pipeline_from_regex",
@@ -252,6 +254,14 @@ pub mod mega_scan;
 #[cfg(feature = "matching-nfa")]
 pub mod resident;
 
+/// Resident-buffer dispatch session for [`literal_set::GpuLiteralSet`]
+/// region-presence scans. Uploads the immutable DFA + suffix-prefilter tables into
+/// backend-resident resources once, so repeated coalesced-batch presence scans
+/// transfer only the per-file haystack and a presence-prefix reset instead of
+/// re-uploading the multi-MiB tables on every dispatch (the borrowed
+/// `GpuLiteralSet::scan_presence_by_region` cost).
+pub mod resident_presence;
+
 /// Regex AST → NfaPlan frontend. Lowers a regex string into the same
 /// `(NfaPlan, transition_table, epsilon_table)` triple that
 /// [`nfa::compile`] produces for literals, so every downstream component
@@ -310,6 +320,7 @@ pub use regex_dfa::{
 };
 #[cfg(feature = "matching-nfa")]
 pub use resident::ResidentRulePipeline;
+pub use resident_presence::ResidentPresencePipeline;
 #[cfg(feature = "matching-substring")]
 pub use substring::{substring_search, SCAN_SUBSTRING_OP_ID};
 // Re-export the cross-program fusion API at the matching layer so consumers
