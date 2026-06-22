@@ -988,3 +988,115 @@ fn calibrate_seg_len_lands_on_a_fast_conserving_geometry_on_this_device() {
         cal.measurements
     );
 }
+
+/// Calibration must hold at keyhog's REAL catalog scale (thousands of literals,
+/// ~280k planted matches), not just the 32-literal smoke catalog. The combined-AC
+/// geometry collapse is O(input) and rule-count-independent, so the calibrator's
+/// measure-and-pick must still land on a fast geometry that reproduces the large
+/// oracle EXACTLY — no dropped hits even as the automaton grows to thousands of
+/// states and the hit set approaches the ring capacity. Same contract as the
+/// smaller calibrator test, exercised at the scale that actually matters.
+#[test]
+#[ignore = "live GPU; run with --ignored --nocapture"]
+fn calibrate_seg_len_holds_at_keyhog_catalog_scale() {
+    let backend = WgpuBackend::new()
+        .expect("Fix: live GPU required (missing GPU is a configuration bug, not a fallback)");
+
+    let owned = large_catalog();
+    let patterns: Vec<&[u8]> = owned.iter().map(|p| p.as_slice()).collect();
+    let max_pattern_len = patterns
+        .iter()
+        .map(|p| p.len())
+        .max()
+        .expect("non-empty catalog") as u32;
+    let buf = build_haystack(&patterns);
+    let ac = classic_ac_compile(&patterns);
+    let oracle: BTreeSet<(u32, u32)> = classic_ac_scan(&ac, &buf).into_iter().collect();
+    assert!(
+        oracle.len() > 10_000,
+        "keyhog-scale fixture must plant a large oracle; got {}",
+        oracle.len()
+    );
+
+    let hit_capacity: u32 = 1 << 20;
+    // Start at the whole-file floor; calibration must move us off it even at scale.
+    let mut batch = CombinedBatch::upload(
+        backend.device_queue(),
+        &[BatchFile::new(0xC0FFEE, 0, buf.clone())],
+        &ac.dfa.transitions,
+        &ac.dfa.output_offsets,
+        &ac.dfa.output_records,
+        ac.dfa.state_count,
+        max_pattern_len,
+        u32::MAX,
+        hit_capacity,
+    )
+    .expect("Fix: CombinedBatch upload must succeed for a valid automaton");
+
+    let config = BatchDispatchConfig {
+        workgroup_size_x: 64,
+        worker_groups: 2048,
+        hit_capacity,
+        timeout: Duration::from_secs(120),
+        ..Default::default()
+    };
+    let mut dispatcher = CombinedDispatcher::new(backend.clone(), config);
+
+    let cal = dispatcher
+        .calibrate_seg_len(&mut batch, DEFAULT_SEG_LEN_CANDIDATES, 3)
+        .expect("Fix: a default candidate must dispatch completely at keyhog scale");
+
+    // The pick is the fastest COMPLETE geometry measured.
+    let chosen_m = cal
+        .measurements
+        .iter()
+        .find(|m| m.seg_len == cal.chosen)
+        .expect("chosen seg_len must appear in the measurements");
+    assert!(
+        chosen_m.complete && chosen_m.dropped_hits == 0,
+        "chosen geometry must be complete at scale (clean drain, 0 dropped); got {chosen_m:?}"
+    );
+    for m in &cal.measurements {
+        if m.complete {
+            assert!(
+                chosen_m.wall_time <= m.wall_time,
+                "chosen seg_len={} ({:?}) is not the fastest complete; seg_len={} ran in {:?}",
+                cal.chosen,
+                chosen_m.wall_time,
+                m.seg_len,
+                m.wall_time
+            );
+        }
+    }
+
+    // The calibrated geometry must reproduce the LARGE oracle exactly — calibration
+    // must never trade recall for speed, even when the hit set is ~280k.
+    let mut hits: Vec<HitRecord> = Vec::new();
+    let summary = dispatcher
+        .dispatch_into(&batch, &mut hits)
+        .expect("dispatch at the calibrated geometry must succeed");
+    let found: BTreeSet<(u32, u32)> = hits
+        .iter()
+        .map(|h| (h.rule_idx, h.match_offset))
+        .collect();
+    assert_eq!(
+        found, oracle,
+        "the calibrated keyhog-scale geometry must conserve every one of the {} oracle matches",
+        oracle.len()
+    );
+    assert_eq!(summary.dropped_hits, 0, "calibrated dispatch must drop nothing at scale");
+
+    let chosen_gbps = FILE_LEN as f64 / chosen_m.wall_time.as_secs_f64() / 1e9;
+    assert!(
+        chosen_gbps > HS_FLOOR_GBPS,
+        "calibrated keyhog-scale seg_len={} ran at {chosen_gbps:.3} GB/s, must beat Hyperscan {HS_FLOOR_GBPS} GB/s",
+        cal.chosen
+    );
+    eprintln!(
+        "keyhog-scale calibrated seg_len={} ⇒ {chosen_gbps:.3} GB/s ({:.2}x HS) over {} patterns / {} matches",
+        cal.chosen,
+        chosen_gbps / HS_FLOOR_GBPS,
+        patterns.len(),
+        oracle.len()
+    );
+}
