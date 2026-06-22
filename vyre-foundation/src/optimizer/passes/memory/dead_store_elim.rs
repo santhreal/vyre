@@ -43,7 +43,10 @@
 //!     yet);
 //!   - stores where the value of the first one is later read via
 //!     `Load(buffer, *)`  -  `expr_touches_buffer` keeps the first
-//!     store alive when any node between the two reads from `buffer`.
+//!     store alive when any node between the two reads from `buffer`,
+//!     INCLUDING the overwriting store's own index/value subexpressions
+//!     (a read-modify-write like `Store(b,0, Load(b,0)+5)` reads the
+//!     first store before overwriting it, so the first store is live).
 
 use crate::ir::{AtomicOp, Expr, Ident, Node, Program};
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
@@ -133,9 +136,18 @@ fn drop_dead_stores(body: Vec<Node>, changed: &mut bool) -> Vec<Node> {
                 Node::Store {
                     buffer: second_buf,
                     index: second_idx_expr,
-                    ..
+                    value: second_value,
                 } if second_buf == first_buf
-                    && expr_structurally_eq(first_idx_expr, second_idx_expr) =>
+                    && expr_structurally_eq(first_idx_expr, second_idx_expr)
+                    // The overwriting store evaluates its index and value
+                    // BEFORE writing, so if either reads `first_buf` it observes
+                    // the first store's value (e.g. `Store(b,0, Load(b,0)+5)` is
+                    // a read-modify-write). Only a write that does NOT read the
+                    // buffer makes the earlier store dead. (Without this the
+                    // first arm matched on `(buffer,index)` alone and dropped a
+                    // store its overwriter still read — a dead-store miscompile.)
+                    && !expr_touches_buffer(second_idx_expr, first_buf)
+                    && !expr_touches_buffer(second_value, first_buf) =>
                 {
                     keep[first_idx] = false;
                     *changed = true;
@@ -597,5 +609,50 @@ mod tests {
             crate::optimizer::ProgramPass::analyze(&DeadStoreElim, &program),
             PassAnalysis::RUN
         );
+    }
+
+    #[test]
+    fn keeps_first_store_when_overwriter_value_reads_it() {
+        // Store(buf,0,1); Store(buf,0, Load(buf,0)+5). The OVERWRITING store
+        // (same buffer+index) reads buf[0] in its value to compute what to
+        // write -- a read-modify-write. Dropping the first store changes that
+        // read. (Oracle-differential proof:
+        // tests/dead_store_elim_overwriter_reads.rs.)
+        let entry = vec![
+            Node::store("buf", Expr::u32(0), Expr::u32(1)),
+            Node::store(
+                "buf",
+                Expr::u32(0),
+                Expr::add(Expr::load("buf", Expr::u32(0)), Expr::u32(5)),
+            ),
+        ];
+        let program = program_with_entry(entry);
+        let result = DeadStoreElim::transform(program);
+        assert!(
+            !result.changed,
+            "an overwriter that reads the buffer in its value observes the first store"
+        );
+        let total: usize = result.program.entry().iter().map(count_stores).sum();
+        assert_eq!(total, 2, "both stores must survive");
+    }
+
+    #[test]
+    fn keeps_first_store_when_overwriter_index_reads_it() {
+        // Store(buf, Load(buf,0), 1); Store(buf, Load(buf,0), 2). The indices
+        // are structurally equal, but each reads buf[0] -- which the first
+        // store may change -- so the two writes can target different slots.
+        // Conservative: keep the first store.
+        let entry = vec![
+            Node::store("buf", Expr::load("buf", Expr::u32(0)), Expr::u32(1)),
+            Node::store("buf", Expr::load("buf", Expr::u32(0)), Expr::u32(2)),
+        ];
+        let program = program_with_entry(entry);
+        let result = DeadStoreElim::transform(program);
+        assert!(
+            !result.changed,
+            "an overwriter whose index reads the buffer observes the first store"
+        );
+        let total: usize = result.program.entry().iter().map(count_stores).sum();
+        assert_eq!(total, 2, "both stores must survive");
     }
 }
