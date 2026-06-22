@@ -144,9 +144,11 @@ fn recurse(node: Node, changed: &mut bool) -> Node {
     node_map::map_body(recursed, &mut |body| fission_in_body(body, changed))
 }
 
-/// True iff `nodes` contains a Barrier / `IndirectDispatch` / `AsyncWait`
-/// anywhere in the immediate sequence (we only check direct siblings
-/// because the partition itself only splits direct siblings).
+/// True iff `nodes` contains an op whose ordering or cross-thread
+/// synchronization semantics fission's intra-thread buffer-disjointness
+/// analysis cannot safely reorder: a Barrier, `IndirectDispatch`, async op,
+/// cross-thread collective, trap, or opaque node. We only check direct
+/// siblings because the partition itself only splits direct siblings.
 fn has_barrier_like(nodes: &[Node]) -> bool {
     nodes.iter().any(|n| {
         matches!(
@@ -159,6 +161,14 @@ fn has_barrier_like(nodes: &[Node]) -> bool {
                 | Node::Trap { .. }
                 | Node::Resume { .. }
                 | Node::Opaque(_)
+                // Cross-thread collectives synchronize a CommGroup; splitting a
+                // loop reorders them relative to surrounding code, which the
+                // intra-thread buffer-disjointness check cannot prove safe.
+                // loop_unroll / loop_strip_mine already block on these.
+                | Node::AllReduce { .. }
+                | Node::AllGather { .. }
+                | Node::ReduceScatter { .. }
+                | Node::Broadcast { .. }
         )
     })
 }
@@ -744,6 +754,37 @@ mod tests {
         let program = program_with_entry(vec![buf("a"), buf("b")], entry);
         let result = LoopFission::transform(program);
         assert!(!result.changed, "Barrier must block fission");
+        assert_eq!(count_loops(result.program.entry()), 1);
+    }
+
+    /// Negative: a cross-thread collective (AllReduce) in the loop body
+    /// synchronizes a CommGroup across threads. Fission's intra-thread
+    /// buffer-disjointness check cannot prove that reordering the collective
+    /// into a separate loop preserves cross-thread semantics, so it must block
+    /// the split — exactly as a Barrier does, and as loop_unroll /
+    /// loop_strip_mine already do. (Before the fix, the disjoint `a`/`b`
+    /// buffers let fission split this loop, reordering the collective.)
+    #[test]
+    fn keeps_when_body_contains_collective() {
+        let entry = vec![Node::Loop {
+            var: Ident::from("i"),
+            from: Expr::u32(0),
+            to: Expr::u32(8),
+            body: vec![
+                Node::AllReduce {
+                    buffer: Ident::from("a"),
+                    op: crate::ir::CollectiveOp::Sum,
+                    group: crate::ir::CommGroup::WORLD,
+                },
+                Node::store("b", Expr::var("i"), Expr::u32(2)),
+            ],
+        }];
+        let program = program_with_entry(vec![buf("a"), buf("b")], entry);
+        let result = LoopFission::transform(program);
+        assert!(
+            !result.changed,
+            "a cross-thread collective must block fission like a barrier"
+        );
         assert_eq!(count_loops(result.program.entry()), 1);
     }
 
