@@ -254,7 +254,14 @@ pub fn validate_hostile_input_artifacts(
         (
             cache_budget_source,
             "cache overflow guard",
-            "checked_add(entry_bytes)",
+            // The committed cache-budget contract documents the overflow guard
+            // as `saturating_add(entry_bytes)`: the byte accumulator pins to
+            // usize::MAX on the (physically unreachable) overflow, which then
+            // trips the `self.bytes > max_bytes` budget check. The earlier
+            // `checked_add(entry_bytes)` needle predates that migration; the
+            // contract artifact now asserts the saturating form, so the needle
+            // tracks the artifact's actual overflow-guard evidence.
+            "saturating_add(entry_bytes)",
         ),
     ] {
         artifact_contains(source, evidence, needle)?;
