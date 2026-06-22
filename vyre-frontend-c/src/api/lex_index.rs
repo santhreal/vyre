@@ -203,13 +203,8 @@ fn decode_vyrecob1_lex_section(section: &[u8]) -> Result<(String, Vec<CObjectTok
 }
 
 fn read_u32(bytes: &[u8], offset: usize, label: &str) -> Result<u32, String> {
-    let end = offset.checked_add(4).ok_or_else(|| {
-        format!("{label} at byte {offset} overflows usize. Fix: regenerate the object.")
-    })?;
-    let word = bytes
-        .get(offset..end)
-        .ok_or_else(|| format!("{label} at byte {offset} is truncated"))?;
-    Ok(u32::from_le_bytes([word[0], word[1], word[2], word[3]]))
+    // Canonical LEGO: byte-offset LE u32 read lives once in vyre-primitives::wire.
+    vyre_primitives::wire::read_u32_le_at(bytes, offset, label)
 }
 
 #[cfg(test)]

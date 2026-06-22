@@ -145,13 +145,6 @@ mod tests {
 }
 
 fn read_u32_word(bytes: &[u8], offset: usize, label: &str) -> Result<u32, String> {
-    let end = offset.checked_add(4).ok_or_else(|| {
-        format!("{label} at byte offset {offset} overflows usize. Fix: regenerate the object.")
-    })?;
-    let word: [u8; 4] = bytes
-        .get(offset..end)
-        .ok_or_else(|| format!("{label} at byte offset {offset} is truncated"))?
-        .try_into()
-        .map_err(|_| format!("{label} at byte offset {offset} is not a u32"))?;
-    Ok(u32::from_le_bytes(word))
+    // Canonical LEGO: byte-offset LE u32 read lives once in vyre-primitives::wire.
+    vyre_primitives::wire::read_u32_le_at(bytes, offset, label)
 }

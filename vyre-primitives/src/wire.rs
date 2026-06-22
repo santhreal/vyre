@@ -731,9 +731,49 @@ pub fn read_u32_le_word(bytes: &[u8], word_index: usize, label: &str) -> Result<
     Ok(u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
 }
 
+/// Read one little-endian `u32` at a BYTE offset into `bytes` — the byte-addressed
+/// companion to [`read_u32_le_word`] (which is word-indexed). Use this when the
+/// caller already holds a byte offset rather than a word index; both share the
+/// same checked bounds and actionable diagnostics, so the workspace's byte-offset
+/// u32 readers decode through ONE implementation instead of re-rolling it.
+///
+/// # Errors
+/// Returns an error when `byte_offset + 4` overflows host indexing or when the
+/// four requested bytes are not fully present in `bytes`.
+pub fn read_u32_le_at(bytes: &[u8], byte_offset: usize, label: &str) -> Result<u32, String> {
+    let end = byte_offset
+        .checked_add(core::mem::size_of::<u32>())
+        .ok_or_else(|| {
+            format!("{label}: u32 byte offset {byte_offset} overflows host byte indexing. Fix: shard the decode.")
+        })?;
+    let chunk = bytes.get(byte_offset..end).ok_or_else(|| {
+        format!(
+            "{label}: u32 at byte offset {byte_offset} requires bytes {byte_offset}..{end}, but stream has {} bytes. Fix: backend output is truncated.",
+            bytes.len()
+        )
+    })?;
+    Ok(u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn read_u32_le_at_reads_byte_offset_and_agrees_with_word_reader() {
+        // word 0 = 0, word 1 @ byte 4 = 0x12345678
+        let bytes = [0u8, 0, 0, 0, 0x78, 0x56, 0x34, 0x12];
+        assert_eq!(read_u32_le_at(&bytes, 0, "t").unwrap(), 0);
+        assert_eq!(read_u32_le_at(&bytes, 4, "t").unwrap(), 0x1234_5678);
+        // The byte-offset reader at 4*word must equal the word-indexed reader at word.
+        assert_eq!(
+            read_u32_le_at(&bytes, 4, "t").unwrap(),
+            read_u32_le_word(&bytes, 1, "t").unwrap()
+        );
+        // Truncation fails closed (bytes 5..9 but only 8 present), never a silent read.
+        let err = read_u32_le_at(&bytes, 5, "t").unwrap_err();
+        assert!(err.contains("truncated"), "expected truncation error, got: {err}");
+    }
 
     #[test]
     fn byte_lane_pack_sets_low_byte_and_zeroes_high_bytes() {

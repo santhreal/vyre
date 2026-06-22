@@ -6,19 +6,9 @@ pub(crate) fn fast_pack_u32_le(words: &[u32]) -> Vec<u8> {
 }
 
 pub(crate) fn read_u32_at(buf: &[u8], off: usize) -> Result<u32, String> {
-    let end = off.checked_add(4).ok_or_else(|| {
-        format!("buffer u32 read offset {off} overflows byte index. Fix: repair parser buffer offsets before readback.")
-    })?;
-    if end > buf.len() {
-        return Err(format!(
-            "buffer too short for u32 read at byte {off}: need {end} bytes, have {}",
-            buf.len()
-        ));
-    }
-    let bytes: [u8; 4] = buf[off..end]
-        .try_into()
-        .map_err(|_| format!("failed to decode u32 at byte {off}"))?;
-    Ok(u32::from_le_bytes(bytes))
+    // Canonical LEGO: byte-offset LE u32 read lives once in vyre-primitives::wire
+    // (same checked bounds + diagnostics). Local duplicate removed.
+    vyre_primitives::wire::read_u32_le_at(buf, off, "parser buffer")
 }
 
 pub(crate) fn pack_haystack(source: &str) -> Result<(Vec<u8>, u32), String> {
