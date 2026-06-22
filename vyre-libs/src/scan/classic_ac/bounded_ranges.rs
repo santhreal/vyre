@@ -386,10 +386,88 @@ fn bounded_ranges_presence_by_region_nodes(
     // evaluates both arms, so the `rs_mid - 1` arm can underflow to u32::MAX on
     // the rejected branch — it is discarded (rs_mid == 0 only when rs_lo == rs_hi
     // == 0, where region_starts[0] == 0 <= pos forces the `cond` arm), harmless.
-    let region_and_emit = vec![
+    let mut region_and_emit =
+        region_search_prologue_nodes(region_starts, region_base, presence_words, log2_max_regions);
+    region_and_emit.push(Node::loop_for(
+        "out_idx",
+        Expr::var("out_begin"),
+        Expr::var("out_end"),
+        vec![
+            Node::let_bind(
+                "pattern_id",
+                Expr::load(output_records, Expr::var("out_idx")),
+            ),
+            // presence[rs_base + (pattern_id >> 5)] |= 1u32 << (pattern_id & 31).
+            Node::let_bind(
+                "_vyre_presence_prev",
+                Expr::atomic_or(
+                    presence,
+                    Expr::add(
+                        Expr::var("rs_base"),
+                        Expr::shr(Expr::var("pattern_id"), Expr::u32(5)),
+                    ),
+                    Expr::shl(
+                        Expr::u32(1),
+                        Expr::bitand(Expr::var("pattern_id"), Expr::u32(31)),
+                    ),
+                ),
+            ),
+        ],
+    ));
+
+    vec![
+        Node::let_bind("state", Expr::u32(0)),
+        Node::let_bind("scan_start", scan_start),
+        Node::let_bind("scan_end", end),
+        Node::loop_for(
+            "step",
+            Expr::var("scan_start"),
+            Expr::var("scan_end"),
+            vec![
+                load_step_byte,
+                Node::assign(
+                    "state",
+                    Expr::load(
+                        transitions,
+                        Expr::add(Expr::mul(Expr::var("state"), Expr::u32(256)), step_byte),
+                    ),
+                ),
+            ],
+        ),
+        Node::let_bind("out_begin", Expr::load(output_offsets, Expr::var("state"))),
+        Node::let_bind(
+            "out_end",
+            Expr::load(output_offsets, Expr::add(Expr::var("state"), Expr::u32(1))),
+        ),
+        Node::if_then(
+            Expr::lt(Expr::var("out_begin"), Expr::var("out_end")),
+            region_and_emit,
+        ),
+    ]
+}
+
+/// The region binary-search PROLOGUE shared verbatim by the presence-only
+/// ([`bounded_ranges_presence_by_region_nodes`]) and the fused presence+positions
+/// ([`bounded_ranges_presence_and_positions_by_region_nodes`]) builders. Computes
+/// `rs_pos = i + region_base` (the GLOBAL byte position so a sharded dispatch
+/// attributes against the whole-batch region table), binary-searches `region_starts`
+/// for the largest region whose start `<= rs_pos`, and binds `rs_base = region *
+/// presence_words` (the per-region presence-row offset). The caller appends its own
+/// per-record emit loop after these nodes. The `rs_mid - 1` arm can underflow to
+/// `u32::MAX` on the rejected `select` branch; it is discarded harmlessly
+/// (`rs_mid == 0` only when `rs_lo == rs_hi == 0`, where `region_starts[0] == 0 <=
+/// rs_pos` forces the `cond` arm). One source of truth for the lookup keeps the two
+/// builders bit-identical by construction.
+fn region_search_prologue_nodes(
+    region_starts: &str,
+    region_base: &str,
+    presence_words: u32,
+    log2_max_regions: u32,
+) -> Vec<Node> {
+    vec![
         Node::let_bind(
             "rs_pos",
-            Expr::add(i.clone(), Expr::load(region_base, Expr::u32(0))),
+            Expr::add(Expr::var("i"), Expr::load(region_base, Expr::u32(0))),
         ),
         Node::let_bind("rs_lo", Expr::u32(0)),
         Node::let_bind(
@@ -439,59 +517,6 @@ fn bounded_ranges_presence_by_region_nodes(
         Node::let_bind(
             "rs_base",
             Expr::mul(Expr::var("rs_lo"), Expr::u32(presence_words.max(1))),
-        ),
-        Node::loop_for("out_idx", Expr::var("out_begin"), Expr::var("out_end"), {
-            vec![
-                Node::let_bind(
-                    "pattern_id",
-                    Expr::load(output_records, Expr::var("out_idx")),
-                ),
-                // presence[rs_base + (pattern_id >> 5)] |= 1u32 << (pattern_id & 31).
-                Node::let_bind(
-                    "_vyre_presence_prev",
-                    Expr::atomic_or(
-                        presence,
-                        Expr::add(
-                            Expr::var("rs_base"),
-                            Expr::shr(Expr::var("pattern_id"), Expr::u32(5)),
-                        ),
-                        Expr::shl(
-                            Expr::u32(1),
-                            Expr::bitand(Expr::var("pattern_id"), Expr::u32(31)),
-                        ),
-                    ),
-                ),
-            ]
-        }),
-    ];
-
-    vec![
-        Node::let_bind("state", Expr::u32(0)),
-        Node::let_bind("scan_start", scan_start),
-        Node::let_bind("scan_end", end),
-        Node::loop_for(
-            "step",
-            Expr::var("scan_start"),
-            Expr::var("scan_end"),
-            vec![
-                load_step_byte,
-                Node::assign(
-                    "state",
-                    Expr::load(
-                        transitions,
-                        Expr::add(Expr::mul(Expr::var("state"), Expr::u32(256)), step_byte),
-                    ),
-                ),
-            ],
-        ),
-        Node::let_bind("out_begin", Expr::load(output_offsets, Expr::var("state"))),
-        Node::let_bind(
-            "out_end",
-            Expr::load(output_offsets, Expr::add(Expr::var("state"), Expr::u32(1))),
-        ),
-        Node::if_then(
-            Expr::lt(Expr::var("out_begin"), Expr::var("out_end")),
-            region_and_emit,
         ),
     ]
 }
@@ -545,107 +570,57 @@ fn bounded_ranges_presence_and_positions_by_region_nodes(
     // sharded dispatch attributes against the whole-batch region table; see
     // [`bounded_ranges_presence_by_region_nodes`] for the underflow-on-rejected-arm
     // soundness note.
-    let region_and_emit = vec![
-        Node::let_bind(
-            "rs_pos",
-            Expr::add(i.clone(), Expr::load(region_base, Expr::u32(0))),
-        ),
-        Node::let_bind("rs_lo", Expr::u32(0)),
-        Node::let_bind(
-            "rs_hi",
-            Expr::sub(Expr::buf_len(region_starts), Expr::u32(1)),
-        ),
-        Node::loop_for(
-            "rs_step",
-            Expr::u32(0),
-            Expr::u32(log2_max_regions.max(1)),
-            vec![
-                Node::let_bind(
-                    "rs_mid",
-                    Expr::div(
-                        Expr::add(
-                            Expr::add(Expr::var("rs_lo"), Expr::var("rs_hi")),
-                            Expr::u32(1),
-                        ),
-                        Expr::u32(2),
+    let mut region_and_emit =
+        region_search_prologue_nodes(region_starts, region_base, presence_words, log2_max_regions);
+    region_and_emit.push(Node::loop_for(
+        "out_idx",
+        Expr::var("out_begin"),
+        Expr::var("out_end"),
+        vec![
+            Node::let_bind(
+                "pattern_id",
+                Expr::load(output_records, Expr::var("out_idx")),
+            ),
+            Node::let_bind(
+                "pat_len",
+                Expr::load(pattern_lengths, Expr::var("pattern_id")),
+            ),
+            Node::let_bind(
+                "match_start",
+                Expr::select(
+                    Expr::lt(Expr::var("scan_end"), Expr::var("pat_len")),
+                    Expr::u32(0),
+                    Expr::sub(Expr::var("scan_end"), Expr::var("pat_len")),
+                ),
+            ),
+            // presence[rs_base + (pattern_id >> 5)] |= 1u32 << (pattern_id & 31).
+            Node::let_bind(
+                "_vyre_presence_prev",
+                Expr::atomic_or(
+                    presence,
+                    Expr::add(
+                        Expr::var("rs_base"),
+                        Expr::shr(Expr::var("pattern_id"), Expr::u32(5)),
+                    ),
+                    Expr::shl(
+                        Expr::u32(1),
+                        Expr::bitand(Expr::var("pattern_id"), Expr::u32(31)),
                     ),
                 ),
-                Node::let_bind(
-                    "rs_cond",
-                    Expr::le(
-                        Expr::load(region_starts, Expr::var("rs_mid")),
-                        Expr::var("rs_pos"),
-                    ),
-                ),
-                Node::assign(
-                    "rs_lo",
-                    Expr::select(
-                        Expr::var("rs_cond"),
-                        Expr::var("rs_mid"),
-                        Expr::var("rs_lo"),
-                    ),
-                ),
-                Node::assign(
-                    "rs_hi",
-                    Expr::select(
-                        Expr::var("rs_cond"),
-                        Expr::var("rs_hi"),
-                        Expr::sub(Expr::var("rs_mid"), Expr::u32(1)),
-                    ),
-                ),
-            ],
-        ),
-        Node::let_bind(
-            "rs_base",
-            Expr::mul(Expr::var("rs_lo"), Expr::u32(presence_words.max(1))),
-        ),
-        Node::loop_for("out_idx", Expr::var("out_begin"), Expr::var("out_end"), {
-            vec![
-                Node::let_bind(
-                    "pattern_id",
-                    Expr::load(output_records, Expr::var("out_idx")),
-                ),
-                Node::let_bind(
-                    "pat_len",
-                    Expr::load(pattern_lengths, Expr::var("pattern_id")),
-                ),
-                Node::let_bind(
-                    "match_start",
-                    Expr::select(
-                        Expr::lt(Expr::var("scan_end"), Expr::var("pat_len")),
-                        Expr::u32(0),
-                        Expr::sub(Expr::var("scan_end"), Expr::var("pat_len")),
-                    ),
-                ),
-                // presence[rs_base + (pattern_id >> 5)] |= 1u32 << (pattern_id & 31).
-                Node::let_bind(
-                    "_vyre_presence_prev",
-                    Expr::atomic_or(
-                        presence,
-                        Expr::add(
-                            Expr::var("rs_base"),
-                            Expr::shr(Expr::var("pattern_id"), Expr::u32(5)),
-                        ),
-                        Expr::shl(
-                            Expr::u32(1),
-                            Expr::bitand(Expr::var("pattern_id"), Expr::u32(31)),
-                        ),
-                    ),
-                ),
-                // (pattern_id, match_start, scan_end) triple append (same format as
-                // the match-emitting scan). No subgroup coalesce: the CUDA backend
-                // can't lower subgroup ops and the dense-hit benefit is the presence
-                // bitmap's job, not this fused path's.
-                append_match(
-                    matches,
-                    match_count,
-                    Expr::var("pattern_id"),
-                    Expr::var("match_start"),
-                    Expr::var("scan_end"),
-                ),
-            ]
-        }),
-    ];
+            ),
+            // (pattern_id, match_start, scan_end) triple append (same format as
+            // the match-emitting scan). No subgroup coalesce: the CUDA backend
+            // can't lower subgroup ops and the dense-hit benefit is the presence
+            // bitmap's job, not this fused path's.
+            append_match(
+                matches,
+                match_count,
+                Expr::var("pattern_id"),
+                Expr::var("match_start"),
+                Expr::var("scan_end"),
+            ),
+        ],
+    ));
 
     vec![
         Node::let_bind("state", Expr::u32(0)),
