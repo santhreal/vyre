@@ -55,7 +55,7 @@
 //! (fail closed, or a loud/recorded fallback), never degrade silently.
 
 use vyre::{BackendError, VyreBackend};
-use vyre_driver::Resource;
+use vyre_driver::{Resource, TimedDispatchResult};
 use vyre_foundation::ir::Program;
 
 use super::dispatch_io;
@@ -267,6 +267,29 @@ impl ResidentPresencePipeline {
         out: &mut Vec<u32>,
         scratch: &mut Vec<u8>,
     ) -> Result<(), BackendError> {
+        self.scan_into_timed(backend, haystack, region_starts, region_base, out, scratch)?;
+        Ok(())
+    }
+
+    /// Like [`scan_into`](Self::scan_into) but returns the dispatch's
+    /// [`TimedDispatchResult`] so a consumer or benchmark can attribute the
+    /// per-scan cost between the GPU kernel (`device_ns`) and host-side
+    /// staging/readback (`wall_ns - device_ns`). The decoded per-region presence
+    /// bitmap is written to `out` identically to [`scan_into`](Self::scan_into);
+    /// the returned result's `outputs` are the same raw presence bytes already
+    /// decoded into `out`.
+    ///
+    /// # Errors
+    /// Same as [`scan_into`](Self::scan_into).
+    pub fn scan_into_timed(
+        &self,
+        backend: &dyn VyreBackend,
+        haystack: &[u8],
+        region_starts: &[u32],
+        region_base: u32,
+        out: &mut Vec<u32>,
+        scratch: &mut Vec<u8>,
+    ) -> Result<TimedDispatchResult, BackendError> {
         out.clear();
 
         let region_count = u32::try_from(region_starts.len()).map_err(|_| {
@@ -404,7 +427,7 @@ impl ResidentPresencePipeline {
                 "ResidentPresencePipeline presence readback returned {returned} u32 word(s) but the {region_count}-region scan needs {used_words}. Fix: ensure the backend reads back the full binding-6 presence resource."
             )));
         }
-        Ok(())
+        Ok(timed)
     }
 
     /// Largest coalesced-file count this session's presence buffer was sized for.
