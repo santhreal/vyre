@@ -12,6 +12,31 @@ fn forbidden_consumer_names() -> [&'static str; 4] {
     ]
 }
 
+/// The `security/` + `dataflow/` layer is the Weir/Vyre shared-fact BRIDGE: it
+/// interoperates with Weir (and the surge compiler `surgec`) as a *peer* through
+/// an explicit shared-fact schema contract — `SharedFactHeader` carries a
+/// producer id, `pub mod weir_ifds` is a feature-gated integration, and the
+/// `weir_*` public fields name the partner's schema fields. Naming the partner
+/// there is architectural fact, not a downstream-consumer leak. The one-way
+/// "no consumer names" contract is meaningful for the *reusable primitive*
+/// layers (scan/, math/, nn/, parsing/, …) that must not bind to a specific
+/// consumer; the bridge layer is exempt for the partner names only.
+fn is_bridge_layer_path(path: &Path) -> bool {
+    path.components().any(|component| {
+        matches!(
+            component.as_os_str().to_str(),
+            Some("security") | Some("dataflow")
+        )
+    })
+}
+
+/// Partner peers the bridge layer is allowed to name (and ONLY in the bridge
+/// layer). `gosan`/`keyhog` are never exempt; `weir`/`surgec` outside the bridge
+/// layer are still violations.
+fn is_bridge_partner_name(name: &str) -> bool {
+    name == concat!("we", "ir") || name == concat!("sur", "gec")
+}
+
 fn source_files_under(root: &Path, out: &mut Vec<PathBuf>) {
     let entries = fs::read_dir(root).unwrap_or_else(|error| {
         panic!(
@@ -58,16 +83,26 @@ fn library_source_does_not_name_downstream_consumers() {
                 source_file.display()
             )
         });
+        let in_bridge_layer = is_bridge_layer_path(&source_file);
         for name in forbidden {
-            if contents.contains(name) {
-                violations.push(format!("{} contains {name}", source_file.display()));
+            if !contents.contains(name) {
+                continue;
             }
+            // Exempt ONLY the bridge-partner names in the bridge layer. Every
+            // other (name, path) pairing is still a violation: weir/surgec
+            // leaking out of security//dataflow into a reusable layer, and
+            // gosan/keyhog anywhere, both still fail.
+            if in_bridge_layer && is_bridge_partner_name(name) {
+                continue;
+            }
+            violations.push(format!("{} contains {name}", source_file.display()));
         }
     }
 
     assert!(
         violations.is_empty(),
-        "vyre-libs is a reusable library layer and must not name downstream consumers:\n{}",
+        "vyre-libs reusable layers must not name downstream consumers (the security/dataflow \
+         Weir bridge is exempt for partner names only):\n{}",
         violations.join("\n")
     );
 }

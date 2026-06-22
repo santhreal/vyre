@@ -90,8 +90,27 @@ fn inline_nodes_into(
                     Err(arc) => (*arc).clone(),
                 };
                 if count <= threshold {
-                    // Flatten directly into `out`  -  no intermediate vec.
-                    inline_nodes_into(body_vec, threshold, scratch_pool, out);
+                    // Flatten the region's body. Normally we splice it straight
+                    // into `out`, dropping the Region wrapper. But if the body
+                    // declares top-level `Let` bindings, splicing them as
+                    // siblings of the parent can collide with identically-named
+                    // lets from another flattened sibling region — e.g. two FFT
+                    // butterfly stages each binding `u_re_s1_b0_k0` — producing a
+                    // V032 "duplicate sibling let binding ... in the same region"
+                    // that the backend rejects (FINDING-GPU-11). Wrap such a body
+                    // in a `Node::Block`, a lexical scope V032 honors, so the lets
+                    // stay distinct (and stay scoped exactly as the Region scoped
+                    // them) without the Region's tracing weight. Bodies with no
+                    // top-level lets splice freely — the common case, and what
+                    // every region_inline unit test exercises.
+                    let mut inlined = take_scratch(scratch_pool, body_vec.len());
+                    inline_nodes_into(body_vec, threshold, scratch_pool, &mut inlined);
+                    if inlined.iter().any(|node| matches!(node, Node::Let { .. })) {
+                        out.push(Node::Block(std::mem::take(&mut inlined)));
+                    } else {
+                        out.append(&mut inlined);
+                    }
+                    return_scratch(scratch_pool, inlined);
                 } else {
                     let mut new_body = take_scratch(scratch_pool, body_vec.len());
                     inline_nodes_into(body_vec, threshold, scratch_pool, &mut new_body);
