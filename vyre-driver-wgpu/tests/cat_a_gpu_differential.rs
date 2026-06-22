@@ -247,6 +247,20 @@ fn diff_fnv1a64_then_catalog_fnv1a64_regression() {
     run_entry_diff(entry_by_id("vyre-libs::catalog::hash::fnv1a64::consumer_a"));
 }
 
+/// FINDING-GPU-7 regression. `substring_search` (binding 0 haystack, 1 needle,
+/// 2 matches; body = nested `If`(overflow-safe guard) -> `Loop`(per-needle-byte
+/// equality fold) -> `Store`) once tripped the wgpu validator at
+/// `wgpu_core.rs:1187` on that nested control-flow emission. The naga-emit
+/// control-flow lowering work since 0.6.3 resolved it; this pins the
+/// GPU-vs-CPU byte-identity of the matches buffer so the validator crash
+/// cannot silently return. Asserts real bytes (matches buffer equality) via
+/// `run_entry_diff` -> `assert_diff`, not a shape check.
+#[cfg(feature = "matching-substring")]
+#[test]
+fn diff_substring_search_gpu_regression() {
+    run_entry_diff(entry_by_id("vyre-libs::scan::substring_search"));
+}
+
 #[test]
 fn diff_universal_registry() {
     let mut failures = Vec::new();

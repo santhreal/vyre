@@ -416,9 +416,10 @@ Compare the naga-emitted WGSL against a known-good matmul
 [[finding]]
 id = "FINDING-GPU-7"
 date_opened = "2026-04-20"
+date_fixed = "2026-06-21"
 owner = "santhreal"
-test = "vyre_driver_wgpu::tests::cat_a_gpu_differential::diff_matching_substring_search"
-status = "open"
+test = "vyre_driver_wgpu::tests::cat_a_gpu_differential::diff_substring_search_gpu_regression"
+status = "fixed"
 title = "substring_search dispatch panics wgpu_core.rs:1187"
 blocker = """
 After Loop + output count fixes, substring_search panics in
@@ -431,6 +432,24 @@ Enable `RUST_LOG=wgpu_core=debug` when running the test, collect
 the full stack trace. Likely candidates: (a) bind-group layout
 mismatch from nested If + Loop emission, (b) storage-buffer
 binding count exceeds device limits for haystack+needle+matches.
+"""
+resolution = """
+RESOLVED 2026-06-21 on a live RTX 5090. Hypothesis (b) was ruled out:
+the program declares only three storage bindings (haystack/needle/
+matches), far under device limits. The crash was hypothesis (a) -
+the nested If + Loop control-flow emission - and was fixed by the
+naga-emit control-flow lowering work landed since 0.6.3 (the same
+loop/conditional path now exercised green by the CRC-32 / FNV-1a /
+BLAKE3 real-workload GPU-verify tests). substring_search now
+dispatches BYTE-IDENTICAL to the CPU reference on the wgpu 5090.
+Verified via the universal registry sweep (op present, NOT in the
+failures list) and pinned by a dedicated regression:
+`diff_substring_search_gpu_regression` (run_entry_diff ->
+assert_diff on the matches buffer, tolerance 0). The earlier
+per-op test name `diff_matching_substring_search` was consolidated
+into `diff_universal_registry` (V7-TEST-025); the new focused test
+restores a named GPU regression for this op so the crash cannot
+silently return.
 """
 
 [[finding]]
