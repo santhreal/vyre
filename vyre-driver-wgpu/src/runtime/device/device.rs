@@ -651,4 +651,58 @@ mod tests {
             "Fix: WGPU device acquisition should reuse the backend staging reservation policy."
         );
     }
+
+    /// Regression guard for the Apple-Silicon GPU crash: Metal (and GL / WebGPU)
+    /// advertise the `PIPELINE_CACHE` adapter feature under wgpu 25 but then fail
+    /// `device_create_pipeline_cache_init` with a fatal, un-catchable validation
+    /// error. `enabled_features_for_adapter` MUST gate the feature off on those
+    /// backends even when the adapter advertises it; dropping the
+    /// `backend_implements_pipeline_cache` guard silently reintroduces a hard macOS
+    /// crash that no Linux/Windows host would surface. These are pure functions of
+    /// the backend enum, so this locks the cross-OS guard without a Mac or a GPU.
+    #[test]
+    fn pipeline_cache_enabled_only_on_backends_that_implement_it() {
+        let limits = wgpu::Limits::default();
+        let advertises = wgpu::Features::PIPELINE_CACHE;
+
+        // Backends wgpu actually implements the persistent cache on -> enable it.
+        for backend in [wgpu::Backend::Vulkan, wgpu::Backend::Dx12] {
+            assert!(
+                backend_implements_pipeline_cache(backend),
+                "{backend:?} implements the persistent pipeline cache (Vulkan/DX12)"
+            );
+            let (features, enabled) = enabled_features_for_adapter(advertises, &limits, backend);
+            assert!(
+                features.contains(wgpu::Features::PIPELINE_CACHE) && enabled.pipeline_cache,
+                "{backend:?} advertises AND implements PIPELINE_CACHE -> must be enabled"
+            );
+        }
+
+        // Backends that advertise the feature but crash on init -> gate OFF.
+        for backend in [
+            wgpu::Backend::Metal,
+            wgpu::Backend::Gl,
+            wgpu::Backend::BrowserWebGpu,
+            wgpu::Backend::Noop,
+        ] {
+            assert!(
+                !backend_implements_pipeline_cache(backend),
+                "{backend:?} does not implement the persistent pipeline cache"
+            );
+            let (features, enabled) = enabled_features_for_adapter(advertises, &limits, backend);
+            assert!(
+                !features.contains(wgpu::Features::PIPELINE_CACHE) && !enabled.pipeline_cache,
+                "{backend:?} advertises PIPELINE_CACHE but crashes on init -> must be gated OFF (Apple-Silicon crash guard)"
+            );
+        }
+
+        // An implementing backend that does NOT advertise the feature -> still off
+        // (no phantom enable when the adapter never offered it).
+        let (features, enabled) =
+            enabled_features_for_adapter(wgpu::Features::empty(), &limits, wgpu::Backend::Vulkan);
+        assert!(
+            !features.contains(wgpu::Features::PIPELINE_CACHE) && !enabled.pipeline_cache,
+            "Vulkan without the adapter feature must not phantom-enable PIPELINE_CACHE"
+        );
+    }
 }
