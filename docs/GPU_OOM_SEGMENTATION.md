@@ -430,6 +430,43 @@ lanes/output, 8 outputs/workgroup).
 > per-match marking). Always measure in a git worktree (main tree is concurrently
 > dirty). The historical analysis below is kept for the root-cause record.
 
+> **STATUS CORRECTION (2026-06-21, RTX 5090, keyhog `a0e2735d9` — 39 commits after
+> `0ca6985a6` above). The "8.5× WIN" is CORPUS-DENSITY-DEPENDENT and does NOT hold
+> on the current canonical bench.** Same command (`gpu_vs_hs_8mib --perf-trace`,
+> 8 MiB, median 20), but the canonical corpus is now SPARSE-hit:
+>
+> | backend | wall (median) | hits |
+> |---|---|---|
+> | SimdCpu (Hyperscan) | **18.52 ms** | 127 |
+> | Gpu (region presence, CUDA) | **20.55 ms** | 127 |
+>
+> **ratio 1.11× = GPU SLOWER, recall parity 127 == 127.** The 8.5×-win run above
+> emitted `confirmed_anchor_candidates=1143 generic_keyword_candidates=127` (DENSE
+> hits → Hyperscan `mark_hs_trigger` O(matches×detectors) blows up to 397 ms). This
+> run emits `confirmed_anchor_candidates=0 generic_keyword_candidates=0
+> gpu_presence_bits=28` — SPARSE, so Hyperscan phase-1 is only ~3.5 ms and there is
+> nothing for `mark_hs_trigger` to explode on. **Both numbers are real; the winner
+> flips with corpus density.** Per-iter trace on the sparse run: `phase2=0.015s`
+> (shared always-active extraction, 73% of GPU wall) · GPU `dispatch=0.005s` ·
+> Hyperscan phase-1 ≈3.5 ms. So on the sparse (harder-for-GPU) corpus there are TWO
+> gaps, both still open:
+> 1. **phase-2 (dominant, KEYHOG lever):** the trace shows
+>    `phase2_gpu_complete=true phase2_gpu_admitted=0` — the GPU proved no
+>    always-active pattern matches, yet the triggered branch (`trigger_bits=75`)
+>    still runs the 15 ms always-active prefilter. The admission oracle is computed
+>    then DISCARDED. Skipping it puts GPU at ≈ dispatch(5) + residual(2) ≈ 7 ms vs
+>    HS 18.5 ms = a robust ~2.6× win. (keyhog `scan_coalesced.rs` /
+>    `backend_triggered.rs` / `phase2_compiled.rs`.)
+> 2. **phase-1 (secondary, VYRE lever):** GPU `dispatch=5 ms` > HS phase-1 ≈3.5 ms.
+>    5 ms for an 8 MiB presence scan is ~1000× the RTX-5090 bandwidth floor
+>    (8 MiB / 1.7 TB/s ≈ 5 µs) ⇒ transition-table-latency-bound (same root cause as
+>    the megakernel section below). Cutting the region-presence kernel latency makes
+>    GPU phase-1 beat HS phase-1 even on sparse text; it compounds with lever 1.
+>
+> Bottom line: "GPU wins 8 MiB" is TRUE on dense-hit corpora TODAY and FALSE on the
+> sparse canonical bench until both levers land. Do not cite the 8.5× as the
+> settled state of the canonical bench.
+
 The segmentation API shipped in **vyre 0.6.3** (`FileBatch::set_segmentation` +
 `segmentation::catalog_sync_overlap`, kernel decode + emit-guard in
 `dispatcher.rs`). keyhog 0.6.3 now drives it from `MegakernelCatalog::scan`:
