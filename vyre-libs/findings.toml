@@ -36,9 +36,10 @@ fix_plan = """
 [[finding]]
 id = "FINDING-PRIM-1"
 date_opened = "2026-04-20"
+date_fixed = "2026-06-22"
 owner = "santhreal"
-test = "vyre_libs::tests::primitive_gaps::gap_workgroup_cooperative_scan"
-status = "open"
+test = "vyre_libs::tests::workgroup_cooperative_tiling::{softmax_runs_cooperatively_tiled_not_scalar, layer_norm_runs_cooperatively_tiled_not_scalar}"
+status = "fixed"
 title = "Workgroup-cooperative scan primitive not yet wired"
 blocker = """
 Cat-A softmax, layer_norm, attention currently run in [1, 1, 1]
@@ -52,6 +53,24 @@ fix_plan = """
 2. Add per-backend lowerings (naga::Statement::Barrier + shared var).
 3. Rewrite the 3-pass softmax/layer_norm bodies to dispatch through
    this primitive when `workgroup_size_x > 1`.
+"""
+resolution = """
+Resolved by outcome (the original gap-marker test `gap_workgroup_cooperative_scan`
+no longer exists; the capability it tracked is delivered). softmax and layer_norm
+now build cooperative *tiled* reductions, not [1,1,1] scalar dispatches:
+- softmax (vyre-libs/src/nn/attention/softmax.rs) dispatches
+  `workgroup_size.unwrap_or([SOFTMAX_TILE, 1, 1])` with SOFTMAX_TILE = 256 and
+  Node::barrier() reductions; the [1,1,1] form is only the CPU reference program.
+- layer_norm (vyre-libs/src/nn/norm/layer_norm.rs) dispatches
+  `[LAYER_NORM_TILE, 1, 1]` (256) with barriers.
+- attention is cooperatively tiled at COOPERATIVE_TILED_WORKGROUP_LANES = 64
+  (planner.rs); FlashAttention-2 builders exist (flash_attention_2*).
+The reduction is wired as inline shared-memory + Node::Barrier in the op bodies
+rather than a standalone `workgroup_scan_u32` op id, which achieves the finding's
+actual goal (cooperative tiled execution). New regression test
+vyre-libs/tests/workgroup_cooperative_tiling.rs pins it: softmax and layer_norm
+each assert workgroup_size == [256,1,1] (x>1) AND a workgroup Barrier in the
+program. Verified 2/0 with `--features nn-attention,nn-norm`.
 """
 
 [[finding]]
@@ -311,9 +330,10 @@ fix_plan = """
 [[finding]]
 id = "FINDING-V7-TEST-008-F32-HARNESS"
 date_opened = "2026-04-21"
+date_fixed = "2026-06-22"
 owner = "santhreal"
-test = "vyre_libraries::tests::f32_adversarial::*"
-status = "open"
+test = "vyre_libs::tests::f32_adversarial::{softmax_special_values_match_harness, layer_norm_special_values_match_harness, attention_special_values_match_harness}"
+status = "fixed"
 title = "Universal harness path is not bit-identical to direct reference execution on NaN/Inf/subnormal f32 inputs"
 blocker = """
 The new proptest-driven hostile inputs for softmax, layer_norm, and attention
@@ -336,6 +356,24 @@ fix_plan = """
 2. Identify the first transformation that changes NaN sign/payload bits.
 3. Fix the transform or wire codec so IEEE-754 bit identity is preserved.
 4. Un-ignore `f32_adversarial.rs` once all 3 ops match direct reference bytes.
+"""
+resolution = """
+Fixed (was a stale-open ledger entry). The three proptests are live (not
+#[ignore]d; the file is feature-gated `#![cfg(all(feature="nn-attention",
+feature="nn-norm"))]`) and green: softmax/layer_norm/attention
+*_special_values_match_harness, 128 cases each over NaN / NaN-payload /
+±Inf / ±0 / subnormal / arbitrary-bits f32. harness_path_outputs exercises the
+exact path the finding flagged — build -> validate -> to_wire -> from_wire ->
+optimize -> optimize-again (idempotence asserted) -> execute — and asserts its
+output bytes equal direct reference execution.
+
+Mechanism: the reference interpreter canonicalizes f32 deterministically on every
+load/store via typed_ops::canonical_f32 (subnormals -> ±0, NaN payloads ->
+0x7fc0_0000; see oob.rs load/store and the f32_*_canonicalizes_subnormal_and_nan_payloads
+unit tests). So any NaN sign/payload bits the wire codec or optimizer might alter
+in the IR are normalized at execution, and both the harness path and the direct
+path yield identical output bytes. Run with `--features nn-attention,nn-norm`:
+3 passed / 0 failed.
 """
 
 [[finding]]
