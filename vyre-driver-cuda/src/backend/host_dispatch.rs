@@ -6,7 +6,7 @@ use std::sync::Arc;
 use cudarc::driver::sys::CUstream;
 use smallvec::SmallVec;
 use vyre_driver::accounting::checked_add_usize_lazy;
-use vyre_driver::binding::BindingRole;
+use vyre_driver::binding::{BindingPlan, BindingRole};
 use vyre_driver::transfer_accounting::TransferAccountingPolicy;
 use vyre_driver::{BackendError, DispatchConfig, OutputBuffers, PendingDispatch, VyreBackend};
 use vyre_foundation::ir::Program;
@@ -154,6 +154,31 @@ impl CudaBackend {
         vyre_driver::grid_sync::dispatch_with_grid_sync_split(&adapter, program, inputs, config)
     }
 
+    /// Whether a grid-sync `program` must be dispatched via the host-split path
+    /// (its barriers split into separate regular kernel launches) rather than a
+    /// single cooperative launch. True when either the device lacks native
+    /// grid-sync support, or the program's launch grid exceeds the device's
+    /// cooperative thread-residency limit: a cooperative launch needs every CTA
+    /// co-resident, so an over-residency grid would fail with
+    /// `CooperativeResidencyExceeded`. Host-split segments are regular launches
+    /// with no co-residency requirement, so they run at any grid size (e.g. the
+    /// recursive multi-block prefix scan whose pass-B grid can exceed the
+    /// cooperative residency limit). Caller has already confirmed
+    /// `contains_grid_sync(program)`.
+    fn grid_sync_program_needs_host_split(
+        &self,
+        program: &Program,
+        inputs: &[&[u8]],
+        config: &DispatchConfig,
+    ) -> Result<bool, BackendError> {
+        if !self.supports_grid_sync() {
+            return Ok(true);
+        }
+        let bindings = BindingPlan::from_borrowed_inputs(program, inputs)?;
+        let launch = self.prepare_launch_plan(program, &bindings, config)?;
+        Ok(!self.cooperative_residency_admits(&launch)?)
+    }
+
     /// Dispatch a vyre Program synchronously on this CUDA device with borrowed inputs.
     pub fn dispatch_borrowed(
         &self,
@@ -161,7 +186,9 @@ impl CudaBackend {
         inputs: &[&[u8]],
         config: &DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, BackendError> {
-        if vyre_driver::grid_sync::contains_grid_sync(program) && !self.supports_grid_sync() {
+        if vyre_driver::grid_sync::contains_grid_sync(program)
+            && self.grid_sync_program_needs_host_split(program, inputs, config)?
+        {
             return self.dispatch_borrowed_with_grid_sync_split(program, inputs, config);
         }
         self.dispatch_borrowed_async(program, inputs, config)?
@@ -841,7 +868,7 @@ impl CudaBackend {
         .map_err(|error| BackendError::InvalidProgram {
             fix: error.to_string(),
         })?;
-        if vyre_driver::grid_sync::contains_grid_sync(program) && !self.supports_grid_sync() {
+        if vyre_driver::grid_sync::contains_grid_sync(program) {
             let mut borrowed_inputs = SmallVec::<[&[u8]; 8]>::new();
             reserve_smallvec(
                 &mut borrowed_inputs,
@@ -849,7 +876,10 @@ impl CudaBackend {
                 "grid-sync CUDA dispatch input",
             )?;
             borrowed_inputs.extend(inputs.iter().map(Vec::as_slice));
-            return self.dispatch_borrowed_with_grid_sync_split(program, &borrowed_inputs, config);
+            if self.grid_sync_program_needs_host_split(program, &borrowed_inputs, config)? {
+                return self
+                    .dispatch_borrowed_with_grid_sync_split(program, &borrowed_inputs, config);
+            }
         }
         self.dispatch_async(program, inputs, config)?.await_result()
     }

@@ -165,14 +165,15 @@ impl CudaBackend {
         self.validate_cooperative_function_residency(func, launch, cooperative)
     }
 
-    fn validate_cooperative_residency(
+    /// Grid block count and cooperative thread-residency block limit for
+    /// `launch`. Shared by `validate_cooperative_residency` (which errors when
+    /// the grid exceeds the limit) and `cooperative_residency_admits` (which
+    /// returns the boolean so the borrowed-host path can route over-residency
+    /// grid-sync programs to host-split) so the two never disagree.
+    fn cooperative_residency_bounds(
         &self,
         launch: &LaunchPlan,
-        cooperative: bool,
-    ) -> Result<(), BackendError> {
-        if !cooperative {
-            return Ok(());
-        }
+    ) -> Result<(u64, u64), BackendError> {
         let total_blocks = launch_axis_product("grid", launch.grid)?;
         let threads_per_block = launch_axis_product("workgroup", launch.workgroup)?;
         let threads_per_block = u32::try_from(threads_per_block).map_err(|error| {
@@ -185,6 +186,31 @@ impl CudaBackend {
         })?;
         let resident_block_limit =
             cooperative_thread_residency_block_limit(&self.caps, threads_per_block);
+        Ok((total_blocks, resident_block_limit))
+    }
+
+    /// Whether a cooperative (grid-sync) `launch` fits the device's cooperative
+    /// thread-residency block limit. A cooperative launch requires every CTA
+    /// co-resident, so a grid larger than this bound cannot launch
+    /// cooperatively. Returns `false` (route elsewhere) when the device cannot
+    /// run cooperative launch at all (`resident_block_limit == 0`).
+    pub(crate) fn cooperative_residency_admits(
+        &self,
+        launch: &LaunchPlan,
+    ) -> Result<bool, BackendError> {
+        let (total_blocks, resident_block_limit) = self.cooperative_residency_bounds(launch)?;
+        Ok(resident_block_limit != 0 && total_blocks <= resident_block_limit)
+    }
+
+    fn validate_cooperative_residency(
+        &self,
+        launch: &LaunchPlan,
+        cooperative: bool,
+    ) -> Result<(), BackendError> {
+        if !cooperative {
+            return Ok(());
+        }
+        let (total_blocks, resident_block_limit) = self.cooperative_residency_bounds(launch)?;
         if resident_block_limit == 0 || total_blocks > resident_block_limit {
             let envelope = self.cooperative_residency_diagnostic(launch);
             return Err(BackendError::CooperativeResidencyExceeded {
