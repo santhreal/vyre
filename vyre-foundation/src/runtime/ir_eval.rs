@@ -153,23 +153,29 @@ fn fold_i32_binary(op: BinOp, a: i32, b: i32) -> Option<Expr> {
         BinOp::Add | BinOp::WrappingAdd => Expr::LitI32(a.wrapping_add(b)),
         BinOp::Sub | BinOp::WrappingSub => Expr::LitI32(a.wrapping_sub(b)),
         BinOp::Mul => Expr::LitI32(a.wrapping_mul(b)),
-        // I32 Div / Mod: deterministic target-safe folding that matches the
-        // dynamic integer division contract used by target emitters.
-        // divisor == 0 → 0 (both Div and Mod). i32::MIN / -1 → i32::MIN
-        // (Rust's wrapping_div), i32::MIN % -1 → 0 (Rust's wrapping_rem).
+        // I32 Div / Mod: signed division by zero and the i32::MIN / -1 overflow
+        // are UNDEFINED on the target backends, so the folder must NOT fabricate
+        // a value for them. The reference oracle errors on both (see
+        // vyre-reference div_i32 / rem_i32: "undefined backend semantics"), and
+        // the Naga emitter lowers signed division to a raw SDiv with no
+        // divisor-zero guard (the Select(divisor==0 ? max : x/y) guard is
+        // emitted only for UNSIGNED operands — unsigned div-by-zero is the one
+        // defined case, u32::MAX, handled in fold_u32_binary). Folding `x / 0`
+        // to 0 would make the optimized program produce a value the unoptimized
+        // program never produces. Decline instead, mirroring the f32 div-by-zero
+        // path below; a correct program guards the signed divisor before
+        // lowering. Defined signed cases fold via wrapping_div / wrapping_rem.
         BinOp::Div => {
-            if b == 0 {
-                Expr::LitI32(0)
-            } else {
-                Expr::LitI32(a.wrapping_div(b))
+            if b == 0 || (a == i32::MIN && b == -1) {
+                return None;
             }
+            Expr::LitI32(a.wrapping_div(b))
         }
         BinOp::Mod => {
-            if b == 0 {
-                Expr::LitI32(0)
-            } else {
-                Expr::LitI32(a.wrapping_rem(b))
+            if b == 0 || (a == i32::MIN && b == -1) {
+                return None;
             }
+            Expr::LitI32(a.wrapping_rem(b))
         }
         BinOp::BitAnd => Expr::LitI32(a & b),
         BinOp::BitOr => Expr::LitI32(a | b),

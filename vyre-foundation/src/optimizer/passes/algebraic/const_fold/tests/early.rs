@@ -197,27 +197,42 @@ fn const_fold_bool_xor_uses_shared_literal_eval() {
 }
 
 #[test]
-fn const_fold_signed_undefined_division_matches_backend_safe_contract() {
-    // The const-fold contract for I32 Div / Mod matches the dynamic
-    // safe-divisor lowering used by target emitters:
-    // divisor == 0 → 0 (both Div and Mod). i32::MIN / -1 → i32::MIN
-    // (Rust's wrapping_div), i32::MIN % -1 → 0 (Rust's wrapping_rem).
-    let cases: &[(Expr, Expr)] = &[
-        (Expr::div(Expr::i32(7), Expr::i32(0)), Expr::i32(0)),
-        (Expr::rem(Expr::i32(7), Expr::i32(0)), Expr::i32(0)),
-        (
-            Expr::div(Expr::i32(i32::MIN), Expr::i32(-1)),
-            Expr::i32(i32::MIN),
-        ),
-        (Expr::rem(Expr::i32(i32::MIN), Expr::i32(-1)), Expr::i32(0)),
+fn const_fold_does_not_fabricate_values_for_undefined_signed_division() {
+    // Signed division by zero and the i32::MIN / -1 overflow are UNDEFINED on
+    // the target backends, so const-fold must NOT fabricate a value for them:
+    //   - the reference oracle ERRORS on both (vyre-reference div_i32 / rem_i32:
+    //     "undefined backend semantics"), and
+    //   - the Naga emitter lowers signed division to a raw SDiv with no
+    //     divisor-zero guard (only UNSIGNED div-by-zero is guarded, to u32::MAX).
+    // Folding `i32 x / 0` to 0 (or i32::MIN / -1 to i32::MIN) would make the
+    // optimized program produce a value the unoptimized program never produces.
+    // The folder must decline, mirroring the f32 div-by-zero path, leaving the
+    // raw division for the divisor guard / oracle to handle.
+    let undefined = &[
+        Expr::div(Expr::i32(7), Expr::i32(0)),
+        Expr::rem(Expr::i32(7), Expr::i32(0)),
+        Expr::div(Expr::i32(i32::MIN), Expr::i32(-1)),
+        Expr::rem(Expr::i32(i32::MIN), Expr::i32(-1)),
     ];
-    for (expr, expected) in cases {
+    for expr in undefined {
         assert_eq!(
-            fold_expr(expr).as_ref(),
-            Some(expected),
-            "signed target-text-undefined division/remainder must fold to the deterministic backend-safe value"
+            fold_expr(expr),
+            None,
+            "undefined signed division/remainder must NOT be const-folded: {expr:?}"
         );
     }
+
+    // Sanity: the DEFINED signed cases still fold via wrapping arithmetic.
+    assert_eq!(
+        fold_expr(&Expr::div(Expr::i32(-7), Expr::i32(3))),
+        Some(Expr::i32(-2)),
+        "defined signed division must still fold"
+    );
+    assert_eq!(
+        fold_expr(&Expr::rem(Expr::i32(-7), Expr::i32(3))),
+        Some(Expr::i32(-1)),
+        "defined signed remainder must still fold"
+    );
 }
 
 #[test]
