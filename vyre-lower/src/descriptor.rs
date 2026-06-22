@@ -1222,31 +1222,74 @@ impl KernelDescriptor {
         clone
     }
 
-    /// True iff the descriptor has at least one side-effecting op
-    /// (Store*, Atomic, AsyncStore, Barrier, Trap, Resume, Return,
-    /// Call, Opaque*). A pure descriptor with no side effects produces
-    /// no observable output  -  the emitter is free to drop it entirely.
+    /// True iff the descriptor has at least one side-effecting op (memory
+    /// write, atomic, sync/async op, barrier, control exit, indirect dispatch,
+    /// call, or opaque extension). A pure descriptor with no side effects
+    /// produces no observable output, so a caller is free to drop it entirely.
+    ///
+    /// "Side effect" here means observable-or-cross-thread: `AsyncLoad` writes
+    /// shared memory other threads read, `AsyncWait`/`Barrier` are sync points,
+    /// and `IndirectDispatch` reconfigures the grid — all are unsafe to drop
+    /// even though none produces a global-buffer write.
     #[must_use]
     pub fn has_side_effects(&self) -> bool {
         fn walk(b: &KernelBody) -> bool {
             for op in &b.ops {
                 use KernelOpKind::*;
-                if matches!(
-                    op.kind,
+                // EXHAUSTIVE ON PURPOSE (no `_` wildcard): a future KernelOpKind
+                // with an observable or cross-thread effect must be classified
+                // here, never silently default to "droppable".
+                let effecting = match op.kind {
                     StoreGlobal
-                        | StoreShared
-                        | LoopCarrierInit { .. }
-                        | LoopCarrierEnd { .. }
-                        | Atomic { .. }
-                        | AsyncStore { .. }
-                        | Barrier { .. }
-                        | Trap { .. }
-                        | Resume { .. }
-                        | Return
-                        | Call { .. }
-                        | OpaqueExpr(..)
-                        | OpaqueNode(..)
-                ) {
+                    | StoreShared
+                    | LoopCarrierInit { .. }
+                    | LoopCarrierEnd { .. }
+                    | Atomic { .. }
+                    | AsyncLoad { .. }
+                    | AsyncStore { .. }
+                    | AsyncWait { .. }
+                    | Barrier { .. }
+                    | Trap { .. }
+                    | Resume { .. }
+                    | Return
+                    | IndirectDispatch { .. }
+                    | Call { .. }
+                    | OpaqueExpr(..)
+                    | OpaqueNode(..) => true,
+                    // Structured control flow / Region carry no direct effect:
+                    // their child bodies are walked separately below.
+                    StructuredIfThen
+                    | StructuredIfThenElse
+                    | StructuredForLoop { .. }
+                    | StructuredBlock
+                    | Region { .. } => false,
+                    // Pure value/builtin/arith ops and READS (loads, carrier
+                    // read, buffer length): no observable or cross-thread effect.
+                    Literal
+                    | Copy
+                    | LocalInvocationId
+                    | GlobalInvocationId
+                    | WorkgroupId
+                    | SubgroupLocalId
+                    | SubgroupSize
+                    | LoopIndex { .. }
+                    | LoopCarrier { .. }
+                    | LoadGlobal
+                    | LoadShared
+                    | LoadConstant
+                    | BufferLength
+                    | BinOpKind(_)
+                    | UnOpKind(_)
+                    | Fma
+                    | MatrixMma { .. }
+                    | Select
+                    | Cast { .. }
+                    | SubgroupBallot
+                    | SubgroupShuffle
+                    | SubgroupBroadcast
+                    | SubgroupReduce { .. } => false,
+                };
+                if effecting {
                     return true;
                 }
             }
@@ -1745,6 +1788,35 @@ mod desc_helper_tests {
             vec![],
         );
         assert!(!d.has_side_effects());
+    }
+
+    #[test]
+    fn has_side_effects_true_for_async_and_indirect_dispatch_ops() {
+        // Regression: AsyncLoad writes shared memory other threads read,
+        // AsyncWait is a sync point, and IndirectDispatch reconfigures the grid
+        // — all cross-thread/dispatch effects (like the already-listed Barrier /
+        // AsyncStore), so a descriptor containing one is NOT droppable. They
+        // were omitted from the side-effecting set before the exhaustive-match
+        // change, which would have let a "drop pure descriptor" caller drop one.
+        for kind in [
+            KernelOpKind::AsyncLoad { tag: "t".into() },
+            KernelOpKind::AsyncWait { tag: "t".into() },
+            KernelOpKind::IndirectDispatch { count_offset: 0 },
+        ] {
+            let d = build(
+                vec![KernelOp {
+                    kind: kind.clone(),
+                    operands: vec![0],
+                    result: None,
+                }],
+                vec![],
+            );
+            assert!(
+                d.has_side_effects(),
+                "{kind:?} is a cross-thread/dispatch effect and must not be droppable"
+            );
+            assert!(!d.is_pure(), "{kind:?} must not be classified pure");
+        }
     }
 
     #[test]
