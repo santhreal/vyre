@@ -669,6 +669,35 @@ MAXIMAL-REUSE seam (do NOT fork the FileBatch machinery):
    them on the per-rule path or a literal-factor prefilter; bound the split and
    LOG it (Law 10) — never silently drop regex rules from the combined pass.
 
+## STATUS: CROSS-OS GPU win VERIFIED — Windows/DX12 (2026-06-22, RTX 3000 Ada)
+
+The GPU 8 MiB win is no longer Linux-only. The SAME three `#[ignore]` live-GPU
+tests were run on **windows-thinkpad (Windows 10, NVIDIA RTX 3000 Ada Laptop GPU,
+wgpu DX12 backend)** — all 3 PASS, the megakernel CONSERVES EXACTLY on a second
+OS, and it beats the 1.5 GB/s Hyperscan floor at the optimal geometry:
+
+| test (Windows/DX12, RTX 3000 Ada) | conserves | best GB/s | vs HS |
+|---|---|---|---|
+| combined_scan ... beats_hyperscan (32 patterns, 2115 matches) | 2115/2115, 0 dropped | 8.736 (seg 512) | **5.82×** |
+| combined_scan_beats_hyperscan_at_keyhog_catalog_scale (2048, 280337) | 280337/280337, 0 dropped | 1.520 (seg 128) | **1.01×** |
+| u16 A/B (2048) | both widths conserve 280337, 0 dropped | — | u16 **lossless on DX12** |
+
+HONEST margin note: the keyhog-scale Windows win is THIN (1.01×, 1.520 GB/s)
+because the RTX 3000 Ada is a weak LAPTOP GPU (~1/8th the 5090's memory
+bandwidth) — the SAME test on the desktop RTX 5090/Vulkan hits 8.70× (13.051
+GB/s). What is OS-invariant is CORRECTNESS: every geometry reproduces the exact
+oracle hit set (2115/2115 and 280337/280337, 0 dropped) on DX12 identically to
+Vulkan — segmentation + combined-AC + the u16 unpack are all bit-exact across
+backends. Throughput scales with the GPU; a desktop Windows GPU gets the same
+multi-× as Linux. So "GPU wins 8 MiB across all OS" is VERIFIED on the reachable
+second OS (Windows); macOS/Metal remains host-blocked (tt-macbook ssh-denied).
+Build note (reusable): vyre cannot `cargo build` over the Z: NFS mount from
+Windows (`Cargo.lock` os error 33 — NFS-client byte-range lock incompatibility,
+even with `--locked`); robocopy to a local `C:\vyre-xos` and build there with
+`CARGO_TARGET_DIR=C:\cargo-target`. The PIPELINE_CACHE guard
+(`matches!(backend, Vulkan | Dx12)`) correctly ENABLES the cache on DX12 — no
+crash, unlike the Metal path it gates off.
+
 ## STATUS (2026-06-22): verified live on RTX 5090, including at keyhog scale
 
 The combined `(seg)` path of item 4 above is implemented and the planned
