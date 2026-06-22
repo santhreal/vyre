@@ -127,11 +127,16 @@ fn drop_dead_stores(body: Vec<Node>, changed: &mut bool) -> Vec<Node> {
         else {
             continue;
         };
+        // Scan forward over siblings. The `node_observes_buffer` arm below
+        // breaks the instant a sibling could observe `first_buf`'s pre-store
+        // value, so reaching iteration `second_idx` already proves every
+        // earlier sibling took the transparent `_` arm (it did NOT observe
+        // `first_buf`). Re-scanning the `[first_idx+1, second_idx)` gap each
+        // step would therefore be a provably-redundant O(n^2)-per-store
+        // re-walk over the same `node_observes_buffer` predicate -- and it
+        // re-descends nested `If`/`Loop`/`Region` bodies every step. The gap
+        // check lives entirely in the per-sibling match instead.
         for second_idx in (first_idx + 1)..body.len() {
-            let between = &body[(first_idx + 1)..second_idx];
-            if any_node_observes_buffer(between, first_buf) {
-                break;
-            }
             match &body[second_idx] {
                 Node::Store {
                     buffer: second_buf,
@@ -654,5 +659,53 @@ mod tests {
         );
         let total: usize = result.program.entry().iter().map(count_stores).sum();
         assert_eq!(total, 2, "both stores must survive");
+    }
+
+    #[test]
+    fn drops_first_across_two_transparent_gap_siblings() {
+        // Two siblings that do NOT touch `buf` sit between the dead store and
+        // its overwriter. The forward scan treats both as transparent (`_`
+        // arm) and still drops the first store -- exercising a multi-sibling
+        // gap that the per-sibling `node_observes_buffer` break handles
+        // incrementally, with no whole-gap re-scan.
+        let entry = vec![
+            Node::store("buf", Expr::u32(0), Expr::u32(1)),
+            Node::let_bind("x", Expr::load("other", Expr::u32(0))),
+            Node::let_bind("y", Expr::u32(7)),
+            Node::store("buf", Expr::u32(0), Expr::u32(2)),
+        ];
+        let program = program_with_entry(entry);
+        let result = DeadStoreElim::transform(program);
+        assert!(result.changed);
+        let total: usize = result.program.entry().iter().map(count_stores).sum();
+        assert_eq!(
+            total, 1,
+            "first store dies across two buf-transparent siblings"
+        );
+    }
+
+    #[test]
+    fn keeps_first_when_a_non_adjacent_gap_sibling_observes_buf() {
+        // The observing reader is NOT the sibling immediately after the first
+        // store -- a transparent Let precedes it. The per-sibling break must
+        // still fire on the second, observing Let and keep the first store
+        // alive. This is exactly the coverage the removed whole-gap re-scan
+        // used to provide; the incremental break must subsume it, so this
+        // test fails if a future change reintroduces a gap that only checks
+        // the immediately-adjacent sibling.
+        let entry = vec![
+            Node::store("buf", Expr::u32(0), Expr::u32(1)),
+            Node::let_bind("x", Expr::load("other", Expr::u32(0))),
+            Node::let_bind("y", Expr::load("buf", Expr::u32(0))),
+            Node::store("buf", Expr::u32(0), Expr::u32(2)),
+        ];
+        let program = program_with_entry(entry);
+        let result = DeadStoreElim::transform(program);
+        assert!(
+            !result.changed,
+            "an observing reader anywhere in the gap keeps the first store"
+        );
+        let total: usize = result.program.entry().iter().map(count_stores).sum();
+        assert_eq!(total, 2, "both stores survive");
     }
 }
