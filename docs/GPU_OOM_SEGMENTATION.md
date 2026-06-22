@@ -757,11 +757,31 @@ pinned as regressions):
   L2, and the A/B test makes re-measuring there one command — but it is NOT shipped
   as the default and is NOT a throughput win on this hardware. No overclaiming.
 
-**Both transition-read narrowing levers (row-dedup, u16) are now exhausted by
-measurement — neither moves throughput.** The table is already L2-resident (do not
-re-state the L2-capacity premise), and the residual scale degradation is pure
-scatter/latency, not bytes moved. A genuine future lever would have to reduce the
-SCATTER itself (warp-cooperative scanning of consecutive windows for coalesced
-transition-row access, or a state relabeling that clusters a warp's lanes onto
-nearby rows) — a deeper redesign, and pure HEADROOM: the combined-AC path already
+**All THREE levers (row-dedup, u16, scatter-relabeling) are now exhausted by
+measurement — none moves throughput.** The table is already L2-resident (do not
+re-state the L2-capacity premise). The third lever — a state RELABELING to reduce
+per-warp transition-read scatter — was the last candidate; it is now REFUTED by a
+CPU measurement of the warp-lane state distribution (test
+`warp_state_scatter_bounds_the_relabeling_lever_at_keyhog_scale`, exact values
+pinned). The metric is the expected distinct states among a warp's 32 lanes
+(`Σ_s [1-(1-p_s)^32]` over the automaton's state-visit distribution; lane `i`
+reads byte `base + i*seg_len + k`, so the 32 lanes sample the file strided by
+`seg_len`):
+
+| text | states visited | hot (90% of visits) | E[distinct among 32 lanes] |
+|------|----------------|---------------------|----------------------------|
+| realistic (planted secrets in filler) | 13199/13199 | 7512 | **12.72/32** |
+| high-entropy base62 | 14/13199 | 7 | **5.85/32** |
+
+A warp's 32 lanes touch only **~6 (high-entropy) to ~13 (realistic) DISTINCT
+states per step — NOT 32.** They CLUSTER onto a few hot states, so there is no
+32-wide scatter for a fixed relabeling to coalesce; and the realistic hot set is
+7512 states (~2 MB of rows), far too large to pack into L1 by any relabeling. So
+the residual scale mechanism is NOT per-warp transition-read scatter — it is the
+**GLOBAL hot-state working set GROWING with catalog size** (8 patterns → a tiny
+hot set; 2048 patterns → 7512 hot states), which no per-transition-read narrowing
+addresses. That is a deeper redesign (a hierarchical coarse→precise automaton so
+the hot set per pass stays small) and pure HEADROOM: the combined-AC path already
 beats Hyperscan 8.81× at this scale, so this is not a gap, it is over-delivery.
+Do not re-open row-dedup / u16 / scatter-relabeling without new evidence — all
+three are measure-refuted with pinned regression tests.

@@ -728,3 +728,132 @@ fn row_dedup_and_u16_ceiling_on_keyhog_scale_combined_automaton() {
         "u16 packing must halve the byte-class transition table exactly",
     );
 }
+
+/// Settle the doc's LAST open GPU-scale lever — "reduce the SCATTER itself".
+///
+/// The keyhog-scale throughput degradation is an L1 working-set effect: a GPU
+/// warp's 32 lanes (32 consecutive segments) sit at 32 DIFFERENT DFA states each
+/// step, so their `transitions[state*nc+class]` reads scatter across the table.
+/// With row-dedup + u16 measure-exhausted, the only lever left is reducing that
+/// scatter via a state relabeling. But a FIXED relabeling can only change WHICH
+/// addresses 32 rows occupy — it can NEVER reduce the COUNT of distinct states a
+/// warp touches, which is data-determined. This measures that count.
+///
+/// Metric (modeling-free): the EXPECTED number of distinct states among 32
+/// samples of the automaton's state-visit distribution = Σ_s [1 - (1-p_s)^32].
+/// A warp's lane `i` reads byte `base + i*seg_len + k`, so its 32 lanes sample
+/// the file strided by `seg_len` — ≈independent draws for high-entropy text,
+/// identical for a dot run. If E[distinct] ≈ 32 even on high-entropy text, every
+/// warp-step touches ~32 distinct rows no matter how states are numbered ⇒
+/// relabeling cannot shrink the working set ⇒ the scatter lever is REFUTED. If
+/// ≪ 32, a few hot states dominate ⇒ their rows stay L1-resident ⇒ scatter is
+/// not the limiter on that text. Measured on BOTH a sparse (dot-heavy) and a
+/// high-entropy buffer because scatter is a property of the TEXT, not the
+/// automaton. CPU-only (no GPU).
+#[test]
+fn warp_state_scatter_bounds_the_relabeling_lever_at_keyhog_scale() {
+    const WARP: i32 = 32;
+    let owned = large_catalog();
+    let patterns: Vec<&[u8]> = owned.iter().map(|p| p.as_slice()).collect();
+    let ac = classic_ac_compile(&patterns);
+    let state_count = ac.dfa.state_count as usize;
+    let transitions = &ac.dfa.transitions;
+
+    let walk_hist = |buf: &[u8]| -> (Vec<u64>, u64) {
+        let mut hist = vec![0u64; state_count];
+        let mut state = 0u32;
+        for &b in buf {
+            state = transitions[state as usize * 256 + b as usize];
+            hist[state as usize] += 1;
+        }
+        (hist, buf.len() as u64)
+    };
+    // E[distinct states among WARP i.i.d. samples of the visit distribution].
+    let expected_distinct = |hist: &[u64], total: u64| -> f64 {
+        if total == 0 {
+            return 0.0;
+        }
+        let total = total as f64;
+        hist.iter()
+            .filter(|&&c| c > 0)
+            .map(|&c| {
+                let p = c as f64 / total;
+                1.0 - (1.0 - p).powi(WARP)
+            })
+            .sum()
+    };
+    // How many distinct states cover `frac` of all visits (concentration).
+    let states_covering = |hist: &[u64], total: u64, frac: f64| -> usize {
+        let mut v: Vec<u64> = hist.iter().copied().filter(|&c| c > 0).collect();
+        v.sort_unstable_by(|a, b| b.cmp(a));
+        let target = (total as f64 * frac) as u64;
+        let (mut acc, mut n) = (0u64, 0usize);
+        for c in v {
+            acc += c;
+            n += 1;
+            if acc >= target {
+                break;
+            }
+        }
+        n
+    };
+
+    // Buffer A: the sparse planted corpus (mostly b'.').
+    let sparse = build_haystack(&patterns);
+    // Buffer B: deterministic high-entropy base62 — the worst case for scatter.
+    let body: &[u8] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    let mut dense: Vec<u8> = Vec::with_capacity(FILE_LEN);
+    for i in 0..FILE_LEN {
+        let idx = i.wrapping_mul(2_654_435_761).wrapping_add(i >> 3) % body.len();
+        dense.push(body[idx]);
+    }
+
+    let (sparse_hist, sparse_total) = walk_hist(&sparse);
+    let (dense_hist, dense_total) = walk_hist(&dense);
+    let sparse_visited = sparse_hist.iter().filter(|&&c| c > 0).count();
+    let dense_visited = dense_hist.iter().filter(|&&c| c > 0).count();
+    let sparse_hot90 = states_covering(&sparse_hist, sparse_total, 0.90);
+    let dense_hot90 = states_covering(&dense_hist, dense_total, 0.90);
+    let sparse_ed = expected_distinct(&sparse_hist, sparse_total);
+    let dense_ed = expected_distinct(&dense_hist, dense_total);
+    eprintln!(
+        "   sparse/realistic: states visited {sparse_visited}/{state_count}, hot (90%) {sparse_hot90}, \
+         E[distinct among 32 lanes] = {sparse_ed:.2}/32",
+    );
+    eprintln!(
+        "high-entropy base62: states visited {dense_visited}/{state_count}, hot (90%) {dense_hot90}, \
+         E[distinct among 32 lanes] = {dense_ed:.2}/32",
+    );
+
+    // --- Pinned regression facts (deterministic catalog + buffers) ---
+    assert_eq!(dense_visited, 14, "high-entropy state-visit set drifted");
+    assert_eq!(dense_hot90, 7, "high-entropy hot-state (90%) count drifted");
+    assert_eq!(sparse_visited, 13_199, "sparse buffer must exercise every state");
+    assert_eq!(sparse_hot90, 7_512, "sparse hot-state (90%) count drifted");
+    assert!(
+        (12.5..13.0).contains(&sparse_ed),
+        "sparse E[distinct among 32] drifted: {sparse_ed}",
+    );
+    assert!(
+        (5.7..6.0).contains(&dense_ed),
+        "high-entropy E[distinct among 32] drifted: {dense_ed}",
+    );
+
+    // DECISION ENCODED — the relabeling/scatter lever is REFUTED:
+    //
+    // A warp's 32 lanes touch only ~6 (high-entropy) to ~13 (realistic) DISTINCT
+    // states per step, NOT 32 — they CLUSTER onto a few hot states, so there is no
+    // 32-wide scatter for a fixed relabeling to coalesce. And the hot set on
+    // realistic text is 7512 states (~2 MB of rows) — far too large to pack into
+    // L1 by any relabeling. So the real scale mechanism is the GLOBAL hot-state set
+    // growing with catalog size (8 patterns: tiny → 2048 patterns: 7512 hot),
+    // NOT per-warp transition-read scatter. If a future build pushes the per-warp
+    // distinct count toward the warp width (>= 24/32), this assert fires so the
+    // relabeling lever is reconsidered with fresh evidence.
+    assert!(
+        sparse_ed < 24.0 && dense_ed < 24.0,
+        "a warp's lanes cluster on few hot states (refuting the 32-wide-scatter premise); \
+         if E[distinct] approaches the 32 warp width the relabeling lever must be revisited \
+         (sparse {sparse_ed:.2}, dense {dense_ed:.2})",
+    );
+}
