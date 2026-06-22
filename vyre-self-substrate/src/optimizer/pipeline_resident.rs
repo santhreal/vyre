@@ -240,7 +240,25 @@ pub fn gpu_pipeline_resident(
         max_depth_h,
         hash_h,
     ];
-    let canonical_handles = [hash_h, canonical_h, table_canonical_h];
+    // `build_canonical_id_program` declares 7 buffers in binding-index
+    // order: hash(0), canonical(1), table_canonical(2), then the four
+    // structural-tuple RO buffers arena_kinds(3), arena_arg0(4),
+    // arena_arg1(5), arena_arg2(6). The tuple buffers back the Gate-2
+    // full structural comparison that prevents a 32-bit hash collision
+    // from declaring two distinct exprs equivalent (a CSE correctness
+    // guard). All four are the same resident uploads canon/const-fold/
+    // hash/pattern already bind, so reuse those handles here. Order MUST
+    // match the BufferDecl binding indices: the resident dispatch
+    // consumes handle_ids in non-shared binding order.
+    let canonical_handles = [
+        hash_h,
+        canonical_h,
+        table_canonical_h,
+        kinds_h,
+        arg0_h,
+        arg1_h,
+        arg2_h,
+    ];
     let pattern_handles = [
         kinds_h,
         arg0_h,
