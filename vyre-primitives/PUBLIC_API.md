@@ -112,6 +112,7 @@ pub fn vyre_primitives::wire::pack_u32_slice_min_words_into(words: &[u32], min_w
 pub fn vyre_primitives::wire::pack_u64_slice(values: &[u64]) -> alloc::vec::Vec<u8>
 pub fn vyre_primitives::wire::pack_u64_slice_into(values: &[u64], out: &mut alloc::vec::Vec<u8>)
 pub fn vyre_primitives::wire::read_f32_le_word(bytes: &[u8], word_index: usize, label: &str) -> core::result::Result<f32, alloc::string::String>
+pub fn vyre_primitives::wire::read_u32_le_at(bytes: &[u8], byte_offset: usize, label: &str) -> core::result::Result<u32, alloc::string::String>
 pub fn vyre_primitives::wire::read_u32_le_word(bytes: &[u8], word_index: usize, label: &str) -> core::result::Result<u32, alloc::string::String>
 pub fn vyre_primitives::wire::try_pack_bytes_as_u32_slice_into(bytes: &[u8], out: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_primitives::wire::try_pack_f32_slice_into(values: &[f32], out: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), alloc::string::String>
