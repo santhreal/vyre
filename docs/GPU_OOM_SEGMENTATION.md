@@ -457,15 +457,43 @@ lanes/output, 8 outputs/workgroup).
 >    then DISCARDED. Skipping it puts GPU at ≈ dispatch(5) + residual(2) ≈ 7 ms vs
 >    HS 18.5 ms = a robust ~2.6× win. (keyhog `scan_coalesced.rs` /
 >    `backend_triggered.rs` / `phase2_compiled.rs`.)
-> 2. **phase-1 (secondary, VYRE lever):** GPU `dispatch=5 ms` > HS phase-1 ≈3.5 ms.
->    5 ms for an 8 MiB presence scan is ~1000× the RTX-5090 bandwidth floor
->    (8 MiB / 1.7 TB/s ≈ 5 µs) ⇒ transition-table-latency-bound (same root cause as
->    the megakernel section below). Cutting the region-presence kernel latency makes
->    GPU phase-1 beat HS phase-1 even on sparse text; it compounds with lever 1.
+> 2. **phase-1 (VYRE lever — ATTRIBUTED 2026-06-21, the kernel is NOT the cost):**
+>    a direct CUDA dispatch attribution (`vyre-driver-cuda/tests/resident_presence_8mib_dispatch_attribution.rs`,
+>    via the new `ResidentPresencePipeline::scan_into_timed`, 900 synth detectors,
+>    8 MiB, median 20) splits the region-presence dispatch:
+>    `device_ns` (GPU **kernel**) = **0.041 ms** · resident dispatch wall 0.114 ms ·
+>    resident total-call **0.914 ms** (staging+decode 0.800 ms) · **borrowed
+>    `scan_presence_by_region` (keyhog's actual path) = 1.655 ms** (= resident +
+>    0.741 ms of per-scan TABLE RE-UPLOAD, which scales with DFA size — keyhog's
+>    real 895-detector table is what inflates its measured ~5 ms borrowed dispatch).
+>    So the earlier "transition-table-latency-bound, cut the kernel" claim here was
+>    **WRONG** — the suffix3-gated region-presence kernel is ~41 µs (near the
+>    bandwidth floor); the megakernel section below is the brute-force path, a
+>    different kernel. **The phase-1 win is NOT a kernel rewrite — it is the RESIDENT
+>    presence pipeline** (`ResidentPresencePipeline`, vyre main; upload the immutable
+>    tables ONCE, re-dispatch per coalesced batch). Resident ≈ 0.9 ms vs HS phase-1
+>    ≈ 3.5 ms ⇒ GPU phase-1 wins by ~2.6 ms, flipping the FULL bench to a GPU win
+>    even WITHOUT lever 1 (GPU ≈ 0.9 + 15 = 15.9 ms vs HS 18.5 ms); lever 1 then
+>    compounds it to a multi-× win.
 >
-> Bottom line: "GPU wins 8 MiB" is TRUE on dense-hit corpora TODAY and FALSE on the
-> sparse canonical bench until both levers land. Do not cite the 8.5× as the
-> settled state of the canonical bench.
+> **TURNKEY ADOPTION (post-publish):** the resident pipeline lives in vyre MAIN, not
+> published 0.6.3, and keyhog pins published vyre by exact registry version with no
+> path overrides (keyhog/Cargo.toml:117). So landing the phase-1 win needs: (a) a
+> vyre **0.6.4 publish** carrying `ResidentPresencePipeline` + `scan_into_timed`
+> (user-gated); (b) keyhog bumps the pin to 0.6.4; (c) keyhog's GPU phase-1 swaps
+> the per-batch borrowed call (`crates/scanner/src/engine/gpu_literal_scratch.rs:76`
+> `scan_presence_by_region_with_scratch`, dispatched from
+> `gpu_region_dispatch.rs:188`) for a `prepare_resident_presence` session built once
+> and reused across the corpus's coalesced batches (cap `haystack_capacity_bytes` to
+> the batch size, `max_regions` to the max coalesced file count; fall back LOUDLY to
+> the borrowed path when a batch exceeds the cap — never silently). None of (a)-(c)
+> is a kernel change. `gpu_literal_scratch.rs`/`gpu_region_dispatch.rs` are not in
+> the codex-owned phase2 hot-path set.
+>
+> Bottom line: "GPU wins 8 MiB" is TRUE on dense-hit corpora TODAY, PROVEN-achievable
+> on the sparse bench via the resident path (kernel is a non-issue), and gated only
+> on a vyre 0.6.4 publish + keyhog adoption — not on any kernel rewrite. Do not cite
+> the 8.5× as the settled state of the canonical bench.
 
 The segmentation API shipped in **vyre 0.6.3** (`FileBatch::set_segmentation` +
 `segmentation::catalog_sync_overlap`, kernel decode + emit-guard in
