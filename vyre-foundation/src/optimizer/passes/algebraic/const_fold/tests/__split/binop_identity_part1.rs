@@ -151,7 +151,10 @@ fn mod_one_is_zero() {
     );
 }
 #[test]
-fn mod_self_is_zero() {
+fn mod_self_var_does_not_fold() {
+    // x % x must NOT fold to 0: const_fold is type/value-blind, and
+    // signed `0 % 0` errors in the oracle (rem_i32). Folding to 0
+    // fabricates a value where the i32 program is undefined.
     let x = Expr::var("x");
     assert_eq!(
         fold_expr(&Expr::BinOp {
@@ -159,7 +162,31 @@ fn mod_self_is_zero() {
             left: Box::new(x.clone()),
             right: Box::new(x)
         }),
-        Some(Expr::u32(0))
+        None,
+        "Mod(Var, Var) must not fold: signed 0 % 0 is undefined in the oracle"
+    );
+}
+#[test]
+fn mod_literal_self_still_folds() {
+    // The typed literal evaluator still folds concrete `k % k`, and
+    // reproduces the oracle's unsigned `0 % 0 = 0` (rem_u32).
+    assert_eq!(
+        fold_expr(&Expr::BinOp {
+            op: crate::ir::BinOp::Mod,
+            left: Box::new(Expr::u32(6)),
+            right: Box::new(Expr::u32(6))
+        }),
+        Some(Expr::u32(0)),
+        "6 % 6 folds to 0 via the literal evaluator"
+    );
+    assert_eq!(
+        fold_expr(&Expr::BinOp {
+            op: crate::ir::BinOp::Mod,
+            left: Box::new(Expr::u32(0)),
+            right: Box::new(Expr::u32(0))
+        }),
+        Some(Expr::u32(0)),
+        "unsigned 0 % 0 folds to 0, matching the rem_u32 oracle"
     );
 }
 #[test]
@@ -187,9 +214,32 @@ fn max_self_is_self() {
     );
 }
 #[test]
-fn div_self_is_one() {
+fn div_self_var_does_not_fold() {
+    // x / x must NOT fold to 1: unsigned `0 / 0` is u32::MAX in the
+    // oracle (div_u32) and the guarded SPIR-V emitter — not 1 — and
+    // signed `0 / 0` errors (div_i32). const_fold cannot prove x != 0
+    // or that x is unsigned, so folding to 1 is a miscompile for x=0.
     let x = Expr::var("x");
-    assert_eq!(fold_expr(&Expr::div(x.clone(), x)), Some(Expr::u32(1)));
+    assert_eq!(
+        fold_expr(&Expr::div(x.clone(), x)),
+        None,
+        "Div(Var, Var) must not fold: 0 / 0 is u32::MAX (u32) or undefined (i32), never 1"
+    );
+}
+#[test]
+fn div_literal_self_still_folds() {
+    // Concrete `k / k` still folds, and `0 / 0` reproduces the oracle's
+    // unsigned u32::MAX (div_u32) rather than the bogus 1.
+    assert_eq!(
+        fold_expr(&Expr::div(Expr::u32(6), Expr::u32(6))),
+        Some(Expr::u32(1)),
+        "6 / 6 folds to 1 via the literal evaluator"
+    );
+    assert_eq!(
+        fold_expr(&Expr::div(Expr::u32(0), Expr::u32(0))),
+        Some(Expr::u32(u32::MAX)),
+        "unsigned 0 / 0 folds to u32::MAX, matching the div_u32 oracle"
+    );
 }
 
 // ──── binop_identities: wrapping/saturating ────────────────

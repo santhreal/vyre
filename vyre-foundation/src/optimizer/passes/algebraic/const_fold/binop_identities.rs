@@ -528,10 +528,15 @@ pub(super) fn simplify_binop(op: crate::ir::BinOp, left: &Expr, right: &Expr) ->
                     });
                 }
             }
-            // x / x → 1  (integer only; float needs NaN/zero guard)
-            if left == right && !is_float_expr(left) {
-                return Some(Expr::u32(1));
-            }
+            // x / x is NOT folded to 1: it is unsound when x can be 0.
+            // The reference oracle defines unsigned `0 / 0` as `u32::MAX`
+            // (`div_u32`) — not 1 — and the SPIR-V emitter's guarded
+            // `div_u32` Select agrees, so folding to 1 diverges from BOTH
+            // for u32 x=0; signed `0 / 0` errors in the oracle
+            // (`div_i32`). const_fold is type- and value-blind here, so it
+            // cannot prove x != 0 (or that x is unsigned). Decline.
+            // Literal `k / k` still folds via the typed literal evaluator
+            // (which reproduces the oracle's `u32::MAX` for 0/0).
             None
         }
 
@@ -614,8 +619,14 @@ pub(super) fn simplify_binop(op: crate::ir::BinOp, left: &Expr, right: &Expr) ->
         // ─── Modulo identities ───────────────────────────────
         // x % 1 → 0  (any integer mod 1 is zero)
         BinOp::Mod if is_one(right) => Some(Expr::u32(0)),
-        // x % x → 0  (self-modulo is zero for non-zero x)
-        BinOp::Mod if left == right => Some(Expr::u32(0)),
+        // x % x is NOT folded to 0: it is unsound when x can be 0.
+        // Unsigned `0 % 0` is defined as 0 by the oracle (`rem_u32`) and
+        // would agree, BUT signed `0 % 0` *errors* in the oracle
+        // (`rem_i32`), so a type-blind fold to 0 fabricates a value where
+        // the i32 program is undefined — the same divergence the i32
+        // literal div/mod fix declines. const_fold cannot prove x is
+        // unsigned or non-zero here, so it declines. Literal `k % k`
+        // still folds via the typed literal evaluator.
 
         // ─── Min/Max absorption ──────────────────────────────
         // min(x, x) → x,  max(x, x) → x
