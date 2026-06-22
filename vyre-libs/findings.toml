@@ -926,9 +926,10 @@ fix_plan = """
 [[finding]]
 id = "FINDING-BGL-1"
 date_opened = "2026-04-20"
+date_fixed = "2026-06-22"
 owner = "santhreal"
-test = "vyre_driver_wgpu::tests::gap_determinism_contract::dispatch_is_deterministic"
-status = "open"
+test = "vyre_driver_wgpu::tests::determinism_contract::dispatch_is_deterministic"
+status = "fixed"
 title = "wgpu bind-group-layout reflection drift breaks dispatch determinism"
 blocker = """
 The dispatch_is_deterministic test is #[ignore]d pending a fix to the
@@ -943,6 +944,16 @@ fix_plan = """
 2. Reproduce the drift in a unit test and pin the root cause.
 3. Remove the #[ignore] attribute once the test passes on both fresh
    and warm pipeline caches.
+"""
+resolution = """
+Resolved (stale-open ledger entry, verified). dispatch_is_deterministic in
+vyre-driver-wgpu/tests/determinism_contract.rs is now a LIVE proptest (no
+#[ignore]): 32 generated Programs, each dispatched twice through the real wgpu
+backend, asserting byte-identical output (prop_assert_eq). It passes on a live
+RTX 5090 (1/0, 0 ignored, 2026-06-22), so two dispatches of byte-identical
+Programs no longer diverge — the BGL-handle keying is stable across fresh and warm
+pipeline-cache states. (The finding's module path `gap_determinism_contract` was
+renamed to `determinism_contract`; test field updated.)
 """
 
 [[finding]]
