@@ -456,3 +456,166 @@ fn combined_scan_beats_hyperscan_at_keyhog_catalog_scale() {
         patterns.len()
     );
 }
+
+/// PROFILE-FIRST measurement for the megakernel's open optimization lane
+/// (`docs/GPU_OOM_SEGMENTATION.md`: the throughput degradation at catalog scale
+/// is an L1 working-set / memory-transaction effect, NOT L2 capacity). Two
+/// candidate levers narrow each transition read: (1) **row deduplication** —
+/// merge identical compressed transition rows behind a `state → row`
+/// indirection, shrinking the count of DISTINCT physical rows a warp's 32 lanes
+/// touch; (2) **u16 targets** — halve every transition word when
+/// `state_count <= 65535`. The doc says both are profile-gated for the
+/// *throughput* claim, but their *ceilings* are exact CPU facts that decide
+/// whether either is worth a kernel change at all. This test pins those facts on
+/// the real keyhog-scale combined automaton (CPU-only — no GPU), so the lever
+/// choice is grounded in measured structure, not a guess.
+///
+/// It also PROVES the row→indirection transform is LOSSLESS: every state's
+/// deduplicated row must be byte-identical to its compressed row, so adopting it
+/// cannot change a single firing (Law 6/9). The distinct-row count is asserted
+/// EXACTLY (the catalog is deterministic) — a real regression value, not a shape
+/// check.
+#[test]
+fn row_dedup_and_u16_ceiling_on_keyhog_scale_combined_automaton() {
+    use std::collections::HashMap;
+    use vyre_runtime::megakernel::rule_catalog::{
+        build_byte_class_map_for_table, compress_dense_transitions_into,
+    };
+
+    let owned = large_catalog();
+    let patterns: Vec<&[u8]> = owned.iter().map(|p| p.as_slice()).collect();
+    let ac = classic_ac_compile(&patterns);
+    let state_count = ac.dfa.state_count as usize;
+
+    // Compress the dense state*256 table to state*num_classes (the form the
+    // kernel actually indexes), via the SHARED primitive — no fork.
+    let mut class_map = Vec::new();
+    let num_classes =
+        build_byte_class_map_for_table(&ac.dfa.transitions, state_count, &mut class_map) as usize;
+    let mut compressed = Vec::with_capacity(state_count * num_classes);
+    compress_dense_transitions_into(
+        &ac.dfa.transitions,
+        state_count,
+        &class_map,
+        num_classes as u32,
+        &mut compressed,
+    );
+    assert_eq!(compressed.len(), state_count * num_classes);
+
+    // (1) Row-dedup ceiling: assign each DISTINCT compressed row a physical id,
+    // build the state→row indirection, and count distinct rows.
+    let mut row_to_id: HashMap<&[u32], u32> = HashMap::with_capacity(state_count);
+    let mut row_of: Vec<u32> = Vec::with_capacity(state_count);
+    let mut distinct_rows: Vec<&[u32]> = Vec::new();
+    for s in 0..state_count {
+        let row = &compressed[s * num_classes..(s + 1) * num_classes];
+        let id = *row_to_id.entry(row).or_insert_with(|| {
+            let id = distinct_rows.len() as u32;
+            distinct_rows.push(row);
+            id
+        });
+        row_of.push(id);
+    }
+    let distinct = distinct_rows.len();
+
+    // LOSSLESS: reconstruct each state's row from the deduped table + indirection
+    // and assert byte-identity with the compressed row. A deduped table that
+    // changed any transition would silently drop/forge matches — refuse it.
+    for s in 0..state_count {
+        let original = &compressed[s * num_classes..(s + 1) * num_classes];
+        let deduped = distinct_rows[row_of[s] as usize];
+        assert_eq!(
+            original, deduped,
+            "state {s}: deduped row diverged from compressed row — the indirection is NOT lossless",
+        );
+    }
+
+    // (2) u16 viability: every transition target is a state index < state_count;
+    // u16 packing is sound iff state_count fits u16.
+    let max_target = ac.dfa.transitions.iter().copied().max().unwrap_or(0);
+    let u16_viable = state_count <= u16::MAX as usize + 1 && max_target <= u16::MAX as u32;
+
+    // Byte accounting (u32 words today).
+    let dense_bytes = state_count * 256 * 4;
+    let compressed_bytes = state_count * num_classes * 4;
+    let deduped_bytes = distinct * num_classes * 4 + state_count * 4; // table + indirection
+    let u16_compressed_bytes = state_count * num_classes * 2;
+
+    eprintln!("keyhog-scale combined automaton (CPU profile-first):");
+    eprintln!("  patterns            = {}", patterns.len());
+    eprintln!("  states              = {state_count}");
+    eprintln!("  byte-classes        = {num_classes}");
+    eprintln!(
+        "  dense table         = {} KiB ({state_count} x 256 x 4B)",
+        dense_bytes / 1024
+    );
+    eprintln!(
+        "  byte-class table    = {} KiB ({state_count} x {num_classes} x 4B)  [SHIPS today]",
+        compressed_bytes / 1024
+    );
+    eprintln!(
+        "  distinct rows       = {distinct}  ({:.1}% of states)  ratio {:.3}x",
+        100.0 * distinct as f64 / state_count as f64,
+        state_count as f64 / distinct as f64
+    );
+    eprintln!(
+        "  + row-dedup table   = {} KiB (table {} KiB + indirection {} KiB)  => {:.3}x vs byte-class",
+        deduped_bytes / 1024,
+        distinct * num_classes * 4 / 1024,
+        state_count * 4 / 1024,
+        compressed_bytes as f64 / deduped_bytes as f64,
+    );
+    eprintln!(
+        "  + u16 table         = {} KiB  => {:.3}x vs byte-class  (viable: {u16_viable}, max_target {max_target})",
+        u16_compressed_bytes / 1024,
+        compressed_bytes as f64 / u16_compressed_bytes as f64,
+    );
+
+    // --- Pinned regression facts (deterministic catalog ⇒ exact values).
+    // Measured once on CPU; a build-side change (alphabet, DFA construction) that
+    // shifts these is caught. Update deliberately with a note, never to paper over
+    // an unexplained drift. ---
+    assert_eq!(
+        patterns.len(),
+        2048,
+        "large_catalog() must yield 2048 literals"
+    );
+    assert_eq!(
+        state_count, 13_199,
+        "combined automaton state count drifted"
+    );
+    assert_eq!(num_classes, 67, "byte-class count drifted");
+    assert_eq!(
+        distinct, 12_579,
+        "row-dedup ceiling (distinct compressed rows) drifted"
+    );
+
+    // DECISION ENCODED — row-dedup is REFUTED at this scale, u16 is the lever:
+    //
+    // 95.3% of compressed rows are already distinct (ratio 1.049x), so a
+    // `state -> row` indirection shrinks the byte-class table by only ~3% while
+    // ADDING a per-byte `row_of[state]` load to the hot loop and barely reducing
+    // the distinct-rows-per-warp working set that is the named L1 limiter. That is
+    // a net pessimization, not a win — do NOT build it. If a future build ever
+    // makes rows highly redundant (dedup ratio >= 1.5x), this assert fires so the
+    // decision is revisited with fresh evidence rather than silently stale.
+    let dedup_ratio = state_count as f64 / distinct as f64;
+    assert!(
+        dedup_ratio < 1.5,
+        "row-dedup was refuted at {dedup_ratio:.3}x; a >=1.5x ratio means rows are now \
+         redundant enough to reconsider the state->row indirection lever",
+    );
+
+    // u16 is the structurally stronger lever: viable at this scale (13k states <<
+    // 65535) and HALVES the byte-class table with NO extra indirection load. The
+    // only open question is the WGSL u16-unpack ALU cost (GPU-profile-gated).
+    assert!(
+        u16_viable,
+        "u16 targets must be viable at keyhog scale ({state_count} states, max_target {max_target})",
+    );
+    assert_eq!(
+        compressed_bytes,
+        2 * u16_compressed_bytes,
+        "u16 packing must halve the byte-class transition table exactly",
+    );
+}

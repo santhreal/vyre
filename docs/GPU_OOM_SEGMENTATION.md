@@ -713,14 +713,32 @@ nothing spills out of L2.
 
 **Open optimization lane (deep; MEASURE before coding):** because the limiter is
 transaction volume / L1 working-set — NOT L2 capacity — the lever is *narrowing
-each transition read*, not "make it fit L2" (it already fits). Candidate: u16
-transition targets when `state_count ≤ 65535` (halves the table to 1.69 MiB,
-doubles the rows that fit L1, halves bytes/transaction). BUT the payoff is bounded
-by how much of the loss is transaction-volume (u16 helps) vs pure scatter/latency
-(u16 does not), and the WGSL u16-in-u32 unpack adds ALU in the hot loop — so it
-must be PROFILED first (Nsight Compute: l1tex hit-rate, sectors/request, dram
-throughput at 32 vs 2048 patterns) before any kernel change; coding u16 blind
-risks adding unpack ALU for no net win. Row deduplication (merge identical
-compressed transition rows behind a state→row indirection) is the other candidate,
-same profile-first caveat. Either way the table is already L2-resident — do not
-re-state the L2-capacity premise.
+each transition read*, not "make it fit L2" (it already fits). Two candidates were
+posed; the CPU profile-first step (the cheap prerequisite that does not need a GPU)
+is now DONE and it RESOLVES the choice — see
+`vyre-driver-wgpu/tests/megakernel_combined_scan.rs::row_dedup_and_u16_ceiling_on_keyhog_scale_combined_automaton`
+(measured on the real 2048-literal `large_catalog()` automaton, exact values
+pinned as regressions):
+
+- **Row deduplication — MEASURED and REFUTED (do NOT build).** Merging identical
+  compressed transition rows behind a `state → row` indirection was a candidate.
+  Measured: the 13,199-state automaton has **12,579 DISTINCT compressed rows
+  (95.3% of states) — dedup ratio only 1.049×.** So the indirection shrinks the
+  byte-class table by ~3% (3454 → 3343 KiB) while ADDING a per-byte
+  `row_of[state]` load to the hot loop and barely reducing the
+  distinct-rows-per-warp working set that IS the named L1 limiter. Net
+  pessimization. The test asserts the kill (`dedup_ratio < 1.5`) so it fires if a
+  future build ever makes rows redundant enough to reconsider.
+- **u16 transition targets — CONFIRMED as the lever (one GPU-profile question
+  left).** `state_count = 13,199`, `max_target = 13,198 ≪ 65,535`, so u16 packing
+  is viable and **halves** the byte-class table exactly (3454 → 1727 KiB, 2.000×,
+  asserted) with NO extra indirection load — it directly halves bytes/transaction
+  and doubles the rows that fit L1. The ONLY remaining unknown is whether the WGSL
+  u16-in-u32 unpack ALU in the hot loop costs more than the transaction saving —
+  that is the single thing to PROFILE (Nsight Compute: l1tex hit-rate,
+  sectors/request, dram throughput at 32 vs 2048 patterns) before emitting the u16
+  kernel. The CPU work that could be done without a GPU is done; coding u16 blind
+  is still refused until that one profile lands.
+
+Either way the table is already L2-resident — do not re-state the L2-capacity
+premise.
