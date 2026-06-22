@@ -384,6 +384,54 @@ struct LiteralSetPrefilterTables {
     candidate_suffix3_bloom: Vec<u32>,
 }
 
+/// Borrowed little-endian byte views of the DFA + prefilter `u32` tables, prepared
+/// once and then referenced (in binding order) by a GPU dispatch's `borrowed_inputs`
+/// array.
+///
+/// Four scan entry points — [`GpuLiteralSet::scan_presence`],
+/// [`GpuLiteralSet::scan_presence_by_region_with_scratch`],
+/// [`GpuLiteralSet::scan_presence_and_positions_by_region`] (via its scratch entry),
+/// and `scan_into_with_program` — declared the IDENTICAL seven-view block inline.
+/// This is the single source of that byte prep so the view set cannot drift between
+/// the four kernels (a divergence would silently miswire one dispatch's bindings).
+/// On little-endian hosts every view is a zero-copy borrow
+/// ([`dispatch_io::u32_words_as_le_bytes`] → `bytemuck::cast_slice`); on big-endian
+/// it owns a byte-swapped copy. The fields' lifetimes are tied to the source `dfa`,
+/// `pattern_lengths`, and prefilter tables, so this struct must outlive the
+/// `borrowed_inputs` array that references it.
+///
+/// `count_with_program` deliberately keeps its own NARROWER prep: the count-only
+/// kernel never reads `output_records`/`pattern_lengths`, so building them there
+/// would be misleading (it would imply the count kernel consumes them).
+struct DfaPrefilterByteViews<'a> {
+    transitions: Cow<'a, [u8]>,
+    output_offsets: Cow<'a, [u8]>,
+    output_records: Cow<'a, [u8]>,
+    pattern_lengths: Cow<'a, [u8]>,
+    candidate_end_mask: Cow<'a, [u8]>,
+    candidate_suffix2_mask: Cow<'a, [u8]>,
+    candidate_suffix3_bloom: Cow<'a, [u8]>,
+}
+
+impl<'a> DfaPrefilterByteViews<'a> {
+    fn new(
+        dfa: &'a CompiledDfa,
+        pattern_lengths: &'a [u32],
+        prefilter: &'a LiteralSetPrefilterTables,
+    ) -> Self {
+        use crate::scan::dispatch_io::u32_words_as_le_bytes;
+        Self {
+            transitions: u32_words_as_le_bytes(&dfa.transitions),
+            output_offsets: u32_words_as_le_bytes(&dfa.output_offsets),
+            output_records: u32_words_as_le_bytes(&dfa.output_records),
+            pattern_lengths: u32_words_as_le_bytes(pattern_lengths),
+            candidate_end_mask: u32_words_as_le_bytes(&prefilter.candidate_end_mask),
+            candidate_suffix2_mask: u32_words_as_le_bytes(&prefilter.candidate_suffix2_mask),
+            candidate_suffix3_bloom: u32_words_as_le_bytes(&prefilter.candidate_suffix3_bloom),
+        }
+    }
+}
+
 /// In-flight handle for [`GpuLiteralSet::scan_presence_by_region_async`].
 ///
 /// Returned the moment the GPU dispatch is submitted, so the caller can run
@@ -821,16 +869,7 @@ impl GpuLiteralSet {
         )?;
         dispatch_io::pack_haystack_u32_into(haystack, &mut scratch.haystack_bytes)?;
         let haystack_bytes = scratch.haystack_bytes.as_slice();
-        let transition_bytes = dispatch_io::u32_words_as_le_bytes(&self.dfa.transitions);
-        let output_offset_bytes = dispatch_io::u32_words_as_le_bytes(&self.dfa.output_offsets);
-        let output_record_bytes = dispatch_io::u32_words_as_le_bytes(&self.dfa.output_records);
-        let pattern_length_bytes = dispatch_io::u32_words_as_le_bytes(&self.pattern_lengths);
-        let candidate_end_mask_bytes =
-            dispatch_io::u32_words_as_le_bytes(&prefilter_tables.candidate_end_mask);
-        let candidate_suffix2_mask_bytes =
-            dispatch_io::u32_words_as_le_bytes(&prefilter_tables.candidate_suffix2_mask);
-        let candidate_suffix3_bloom_bytes =
-            dispatch_io::u32_words_as_le_bytes(&prefilter_tables.candidate_suffix3_bloom);
+        let views = DfaPrefilterByteViews::new(&self.dfa, &self.pattern_lengths, &prefilter_tables);
         let haystack_len_word = [haystack_len];
         let haystack_len_bytes = dispatch_io::u32_words_as_le_bytes(&haystack_len_word);
         // Presence buffer (binding 6) is read-write: uploaded zeroed, dispatched,
@@ -841,15 +880,15 @@ impl GpuLiteralSet {
             dispatch_io::byte_scan_dispatch_config(haystack_len, program.workgroup_size[0]);
         let borrowed_inputs: smallvec::SmallVec<[&[u8]; 10]> = [
             haystack_bytes,                         // 0: haystack (Packed U32)
-            transition_bytes.as_ref(),              // 1: transitions
-            output_offset_bytes.as_ref(),           // 2: output_offsets
-            output_record_bytes.as_ref(),           // 3: output_records
-            pattern_length_bytes.as_ref(),          // 4: pattern_lengths
+            views.transitions.as_ref(),             // 1: transitions
+            views.output_offsets.as_ref(),          // 2: output_offsets
+            views.output_records.as_ref(),          // 3: output_records
+            views.pattern_lengths.as_ref(),         // 4: pattern_lengths
             haystack_len_bytes.as_ref(),            // 5: haystack_len
             presence_zeroed.as_slice(),             // 6: presence (read_write)
-            candidate_end_mask_bytes.as_ref(),      // 7: candidate_end_mask
-            candidate_suffix2_mask_bytes.as_ref(),  // 8: candidate_suffix2_mask
-            candidate_suffix3_bloom_bytes.as_ref(), // 9: candidate_suffix3_bloom
+            views.candidate_end_mask.as_ref(),      // 7: candidate_end_mask
+            views.candidate_suffix2_mask.as_ref(),  // 8: candidate_suffix2_mask
+            views.candidate_suffix3_bloom.as_ref(), // 9: candidate_suffix3_bloom
         ]
         .into_iter()
         .collect();
@@ -950,16 +989,7 @@ impl GpuLiteralSet {
         )?;
         dispatch_io::pack_haystack_u32_into(haystack, &mut scratch.haystack_bytes)?;
         let haystack_bytes = scratch.haystack_bytes.as_slice();
-        let transition_bytes = dispatch_io::u32_words_as_le_bytes(&self.dfa.transitions);
-        let output_offset_bytes = dispatch_io::u32_words_as_le_bytes(&self.dfa.output_offsets);
-        let output_record_bytes = dispatch_io::u32_words_as_le_bytes(&self.dfa.output_records);
-        let pattern_length_bytes = dispatch_io::u32_words_as_le_bytes(&self.pattern_lengths);
-        let candidate_end_mask_bytes =
-            dispatch_io::u32_words_as_le_bytes(&prefilter_tables.candidate_end_mask);
-        let candidate_suffix2_mask_bytes =
-            dispatch_io::u32_words_as_le_bytes(&prefilter_tables.candidate_suffix2_mask);
-        let candidate_suffix3_bloom_bytes =
-            dispatch_io::u32_words_as_le_bytes(&prefilter_tables.candidate_suffix3_bloom);
+        let views = DfaPrefilterByteViews::new(&self.dfa, &self.pattern_lengths, &prefilter_tables);
         let haystack_len_word = [haystack_len];
         let haystack_len_bytes = dispatch_io::u32_words_as_le_bytes(&haystack_len_word);
         let region_starts_bytes = dispatch_io::u32_words_as_le_bytes(region_starts);
@@ -972,15 +1002,15 @@ impl GpuLiteralSet {
             dispatch_io::byte_scan_dispatch_config(haystack_len, program.workgroup_size[0]);
         let borrowed_inputs: smallvec::SmallVec<[&[u8]; 12]> = [
             haystack_bytes,                         // 0: haystack (Packed U32)
-            transition_bytes.as_ref(),              // 1: transitions
-            output_offset_bytes.as_ref(),           // 2: output_offsets
-            output_record_bytes.as_ref(),           // 3: output_records
-            pattern_length_bytes.as_ref(),          // 4: pattern_lengths
+            views.transitions.as_ref(),             // 1: transitions
+            views.output_offsets.as_ref(),          // 2: output_offsets
+            views.output_records.as_ref(),          // 3: output_records
+            views.pattern_lengths.as_ref(),         // 4: pattern_lengths
             haystack_len_bytes.as_ref(),            // 5: haystack_len
             presence_zeroed.as_slice(),             // 6: per-region presence (read_write)
-            candidate_end_mask_bytes.as_ref(),      // 7: candidate_end_mask
-            candidate_suffix2_mask_bytes.as_ref(),  // 8: candidate_suffix2_mask
-            candidate_suffix3_bloom_bytes.as_ref(), // 9: candidate_suffix3_bloom
+            views.candidate_end_mask.as_ref(),      // 7: candidate_end_mask
+            views.candidate_suffix2_mask.as_ref(),  // 8: candidate_suffix2_mask
+            views.candidate_suffix3_bloom.as_ref(), // 9: candidate_suffix3_bloom
             region_starts_bytes.as_ref(),           // 10: region_starts
             region_base_bytes.as_slice(),           // 11: region_base (shard offset)
         ]
@@ -1401,16 +1431,7 @@ impl GpuLiteralSet {
         )?;
         dispatch_io::pack_haystack_u32_into(haystack, &mut scratch.haystack_bytes)?;
         let haystack_bytes = scratch.haystack_bytes.as_slice();
-        let transition_bytes = dispatch_io::u32_words_as_le_bytes(&self.dfa.transitions);
-        let output_offset_bytes = dispatch_io::u32_words_as_le_bytes(&self.dfa.output_offsets);
-        let output_record_bytes = dispatch_io::u32_words_as_le_bytes(&self.dfa.output_records);
-        let pattern_length_bytes = dispatch_io::u32_words_as_le_bytes(&self.pattern_lengths);
-        let candidate_end_mask_bytes =
-            dispatch_io::u32_words_as_le_bytes(&prefilter_tables.candidate_end_mask);
-        let candidate_suffix2_mask_bytes =
-            dispatch_io::u32_words_as_le_bytes(&prefilter_tables.candidate_suffix2_mask);
-        let candidate_suffix3_bloom_bytes =
-            dispatch_io::u32_words_as_le_bytes(&prefilter_tables.candidate_suffix3_bloom);
+        let views = DfaPrefilterByteViews::new(&self.dfa, &self.pattern_lengths, &prefilter_tables);
         let haystack_len_word = [haystack_len];
         let haystack_len_bytes = dispatch_io::u32_words_as_le_bytes(&haystack_len_word);
         let region_starts_bytes = dispatch_io::u32_words_as_le_bytes(region_starts);
@@ -1424,15 +1445,15 @@ impl GpuLiteralSet {
             dispatch_io::byte_scan_dispatch_config(haystack_len, program.workgroup_size[0]);
         let borrowed_inputs: smallvec::SmallVec<[&[u8]; 13]> = [
             haystack_bytes,                         // 0: haystack (Packed U32)
-            transition_bytes.as_ref(),              // 1: transitions
-            output_offset_bytes.as_ref(),           // 2: output_offsets
-            output_record_bytes.as_ref(),           // 3: output_records
-            pattern_length_bytes.as_ref(),          // 4: pattern_lengths
+            views.transitions.as_ref(),             // 1: transitions
+            views.output_offsets.as_ref(),          // 2: output_offsets
+            views.output_records.as_ref(),          // 3: output_records
+            views.pattern_lengths.as_ref(),         // 4: pattern_lengths
             haystack_len_bytes.as_ref(),            // 5: haystack_len
             presence_zeroed.as_slice(),             // 6: per-region presence (read_write)
-            candidate_end_mask_bytes.as_ref(),      // 7: candidate_end_mask
-            candidate_suffix2_mask_bytes.as_ref(),  // 8: candidate_suffix2_mask
-            candidate_suffix3_bloom_bytes.as_ref(), // 9: candidate_suffix3_bloom
+            views.candidate_end_mask.as_ref(),      // 7: candidate_end_mask
+            views.candidate_suffix2_mask.as_ref(),  // 8: candidate_suffix2_mask
+            views.candidate_suffix3_bloom.as_ref(), // 9: candidate_suffix3_bloom
             region_starts_bytes.as_ref(),           // 10: region_starts
             region_base_bytes.as_slice(),           // 11: region_base (shard offset)
             match_count_bytes.as_slice(),           // 12: match_count (read_write)
@@ -1502,16 +1523,7 @@ impl GpuLiteralSet {
         // miswire the GPU program.
         dispatch_io::pack_haystack_u32_into(haystack, &mut scratch.haystack_bytes)?;
         let haystack_bytes = scratch.haystack_bytes.as_slice();
-        let transition_bytes = dispatch_io::u32_words_as_le_bytes(&self.dfa.transitions);
-        let output_offset_bytes = dispatch_io::u32_words_as_le_bytes(&self.dfa.output_offsets);
-        let output_record_bytes = dispatch_io::u32_words_as_le_bytes(&self.dfa.output_records);
-        let pattern_length_bytes = dispatch_io::u32_words_as_le_bytes(&self.pattern_lengths);
-        let candidate_end_mask_bytes =
-            dispatch_io::u32_words_as_le_bytes(&prefilter_tables.candidate_end_mask);
-        let candidate_suffix2_mask_bytes =
-            dispatch_io::u32_words_as_le_bytes(&prefilter_tables.candidate_suffix2_mask);
-        let candidate_suffix3_bloom_bytes =
-            dispatch_io::u32_words_as_le_bytes(&prefilter_tables.candidate_suffix3_bloom);
+        let views = DfaPrefilterByteViews::new(&self.dfa, &self.pattern_lengths, prefilter_tables);
         let haystack_len_word = [haystack_len];
         let haystack_len_bytes = dispatch_io::u32_words_as_le_bytes(&haystack_len_word);
         let match_count_bytes = [0u8; 4];
@@ -1524,23 +1536,23 @@ impl GpuLiteralSet {
             // 0: haystack (Packed U32)
             haystack_bytes,
             // 1: transitions
-            transition_bytes.as_ref(),
+            views.transitions.as_ref(),
             // 2: output_offsets
-            output_offset_bytes.as_ref(),
+            views.output_offsets.as_ref(),
             // 3: output_records
-            output_record_bytes.as_ref(),
+            views.output_records.as_ref(),
             // 4: pattern_lengths
-            pattern_length_bytes.as_ref(),
+            views.pattern_lengths.as_ref(),
             // 5: haystack_len
             haystack_len_bytes.as_ref(),
             // 6: match_count atomic counter
             match_count_bytes.as_slice(),
             // 7: candidate_end_mask
-            candidate_end_mask_bytes.as_ref(),
+            views.candidate_end_mask.as_ref(),
             // 8: candidate_suffix2_mask
-            candidate_suffix2_mask_bytes.as_ref(),
+            views.candidate_suffix2_mask.as_ref(),
             // 9: candidate_suffix3_bloom
-            candidate_suffix3_bloom_bytes.as_ref(),
+            views.candidate_suffix3_bloom.as_ref(),
             // 10: matches is a pure `BufferDecl::output`; the backend
             // allocates it from the Program declaration.
         ]
@@ -3216,6 +3228,91 @@ mod compile_tests {
             presence[1],
             (1 << 1) | (1 << 2),
             "region 1 presence must be exactly {{xyz, BEGIN}}"
+        );
+    }
+
+    #[test]
+    fn scan_presence_by_region_binds_dfa_and_prefilter_views_in_declared_order() {
+        // Regression guard for the shared `DfaPrefilterByteViews` byte-prep: the four
+        // borrowed-dispatch scan methods (`scan_presence`, this one,
+        // `scan_presence_and_positions_by_region`, `scan_into_with_program`) now fill
+        // their `borrowed_inputs` array by referencing the struct's fields BY NAME, so
+        // a field/binding swap would silently miswire the GPU program with no compile
+        // error. This is the only DEFAULT-GATE test that drives a `scan_presence*`
+        // method's binding assembly end to end (the live-GPU integration tests cover
+        // the megakernel, not `GpuLiteralSet`). The three patterns are chosen so the
+        // four DFA tables have mutually DISTINCT byte lengths, which is what lets the
+        // observed per-binding length vector detect a swap among bindings 1..=4.
+        // `"bc"` is a suffix of `"abc"`, so the `abc` accepting state emits TWO pattern
+        // ids — that pushes `output_records` (binding 3) past the pattern count, so it
+        // differs in length from `pattern_lengths` (binding 4) and a 3<->4 swap is
+        // observable (with no suffix sharing both would be `pattern_count` long).
+        let patterns: [&[u8]; 3] = [b"abc", b"bc", b"xyz"];
+        let engine = GpuLiteralSet::compile(&patterns);
+        let prefilter = engine
+            .build_prefilter_tables()
+            .expect("Fix: small literal-set prefilter tables should build");
+
+        let haystack = b"ooabcooxyzoo";
+        let region_starts: [u32; 1] = [0];
+        let pattern_count = patterns.len() as u32;
+        let region_count = region_starts.len() as u32;
+        let total_words = presence_by_region_words(pattern_count, region_count) as usize;
+
+        // The DFA tables must be mutually distinct in length, or the length-vector
+        // assertion below could not catch a swap among them.
+        let dfa_lens = [
+            engine.dfa.transitions.len(),
+            engine.dfa.output_offsets.len(),
+            engine.dfa.output_records.len(),
+            engine.pattern_lengths.len(),
+        ];
+        for i in 0..dfa_lens.len() {
+            for j in (i + 1)..dfa_lens.len() {
+                assert_ne!(
+                    dfa_lens[i], dfa_lens[j],
+                    "Fix: test DFA tables (transitions/output_offsets/output_records/pattern_lengths) \
+                     must have distinct lengths so a binding swap is observable"
+                );
+            }
+        }
+
+        // `RecordingCountBackend` echoes outputs[0] (the presence buffer) and records
+        // every borrowed input's byte length in binding order, with no required output
+        // buffer — `RecordingLiteralBackend` insists on a `matches` buffer the
+        // presence-only program does not declare.
+        let backend = RecordingCountBackend::new(vec![vec![0u8; total_words * 4]]);
+        let presence = engine
+            .scan_presence_by_region(&backend, haystack, &region_starts)
+            .expect("Fix: recording backend should accept the region-presence dispatch");
+        assert_eq!(
+            presence.len(),
+            total_words,
+            "Fix: region-presence output must be region_count x presence_words"
+        );
+
+        // Expected per-binding byte layout in declared ABI order (see
+        // `scan_presence_by_region_with_scratch`): 0 haystack, 1 transitions,
+        // 2 output_offsets, 3 output_records, 4 pattern_lengths, 5 haystack_len,
+        // 6 presence (zeroed), 7..=9 prefilter masks, 10 region_starts, 11 region_base.
+        let expected = vec![
+            crate::scan::dispatch_io::pack_haystack_u32(haystack).len(),
+            engine.dfa.transitions.len() * 4,
+            engine.dfa.output_offsets.len() * 4,
+            engine.dfa.output_records.len() * 4,
+            engine.pattern_lengths.len() * 4,
+            4, // haystack_len: one u32 word
+            total_words * 4, // per-region presence buffer (uploaded zeroed)
+            prefilter.candidate_end_mask.len() * 4,
+            prefilter.candidate_suffix2_mask.len() * 4,
+            prefilter.candidate_suffix3_bloom.len() * 4,
+            region_starts.len() * 4,
+            4, // region_base: one u32 word
+        ];
+        assert_eq!(
+            backend.observed_input_lengths()[0],
+            expected,
+            "Fix: scan_presence_by_region must bind DfaPrefilterByteViews fields in declared ABI order"
         );
     }
 

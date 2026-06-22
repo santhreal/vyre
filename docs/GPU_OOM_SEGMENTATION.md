@@ -690,12 +690,37 @@ many-pattern verification is DONE — three `#[ignore]` live-GPU tests in
 
 **Scale finding (the load-bearing constraint for the keyhog/KH-VYRE-7 consumer):**
 peak throughput DEGRADES with automaton size (8 rules ≈ 16–23 GB/s → 2048
-literals ≈ 13 GB/s at the optimum) because a large transition table is
-memory-bound (less L2-resident). It still beats HS comfortably, BUT only with
+literals ≈ 13 GB/s at the optimum). It still beats HS comfortably, BUT only with
 FINE windows — at 2048 literals throughput climbs monotonically as seg_len
 shrinks: 16384→0.86× (LOSES), 4096→1.55×, 1024→4.51×, 512→6.72×, 256→7.38×,
 128→**8.81×**. So the consumer MUST pick a fine seg_len (~128) for the real
-~6000-literal catalog; coarse segmentation loses at scale. Open optimization
-lane (deep, not yet done): shrink the resident transition footprint further
-(beyond byte-class compression) so it stays L2-resident as state_count grows,
-to recover the small-catalog ~16–23 GB/s at thousands of literals.
+~6000-literal catalog; coarse segmentation loses at scale.
+
+**Cause — CORRECTED (2026-06-22): NOT L2 capacity.** An earlier revision of this
+note blamed "less L2-resident"; that premise is REFUTED on this hardware. The
+2048-literal combined automaton is 13199 states × 67 byte-classes × 4 B =
+**3.37 MiB** — only **3.5–4.7 %** of the RTX 5090's L2 (tens of MiB; the
+comparable AD102/RTX 4090 has 72 MiB and GB202/5090 is in that class or larger).
+You would need **~280k–375k** states to *fill* L2; the measured range tops out at
+13,199, so the whole transition table stays L2-resident across the entire
+32→2048-pattern sweep. L2 *capacity* is therefore not the limiter here. The
+degradation is instead an **L1 working-set / memory-transaction effect**: each
+state row is 67×4 = 268 B (~4 cache lines), and as the automaton grows a warp's
+32 lanes occupy MORE DISTINCT states, so their `transitions[state*n + class]`
+reads scatter across more rows than fit in L1 and cost more transactions per
+warp — effective bandwidth slides from L1-speed toward L2-speed even though
+nothing spills out of L2.
+
+**Open optimization lane (deep; MEASURE before coding):** because the limiter is
+transaction volume / L1 working-set — NOT L2 capacity — the lever is *narrowing
+each transition read*, not "make it fit L2" (it already fits). Candidate: u16
+transition targets when `state_count ≤ 65535` (halves the table to 1.69 MiB,
+doubles the rows that fit L1, halves bytes/transaction). BUT the payoff is bounded
+by how much of the loss is transaction-volume (u16 helps) vs pure scatter/latency
+(u16 does not), and the WGSL u16-in-u32 unpack adds ALU in the hot loop — so it
+must be PROFILED first (Nsight Compute: l1tex hit-rate, sectors/request, dram
+throughput at 32 vs 2048 patterns) before any kernel change; coding u16 blind
+risks adding unpack ALU for no net win. Row deduplication (merge identical
+compressed transition rows behind a state→row indirection) is the other candidate,
+same profile-first caveat. Either way the table is already L2-resident — do not
+re-state the L2-capacity premise.
