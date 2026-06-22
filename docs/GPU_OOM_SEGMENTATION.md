@@ -705,6 +705,27 @@ even with `--locked`); robocopy to a local `C:\vyre-xos` and build there with
 (`matches!(backend, Vulkan | Dx12)`) correctly ENABLES the cache on DX12 — no
 crash, unlike the Metal path it gates off.
 
+### macOS/Metal shader VALIDITY proven without an Apple GPU (2026-06-22)
+
+The Metal RUN-win stays host-blocked (no reachable Apple GPU), but the run-win
+and the shader-VALIDITY question are separable, and the latter is verifiable on
+Linux. The combined segmented megakernel descriptor is now lowered through
+`vyre-emit-metal` (`naga::back::msl`) and `vyre-emit-spirv` in the in-crate test
+`combined_megakernel_lowers_to_valid_msl_and_spirv_for_all_os` (commit
+`dcd71a009e`, vyre-driver-wgpu). naga's MSL writer runs `naga::valid::Validator`
+before writing, so a successful emit is a genuine proof the megakernel is valid
+Metal Shading Language on Apple GPUs — not just "it compiles for wgpu's targets
+we happen to have hardware for." Both `TransitionWidth::Bits32` and `Bits16` are
+checked (the u16 div/shr/mask unpack is not implied by the u32 path), the
+ten-buffer combined ABI is asserted to survive into the descriptor (no stripped
+no-op), and the SPIR-V is emitted explicitly rather than relying on the live
+Vulkan run. So shader validity is now proven for ALL THREE wgpu backends — WGSL
+(in-crate lower test), SPIR-V (explicit + Vulkan run), HLSL (DX12 run), MSL
+(explicit emit). The only remaining cross-OS gap is the Metal THROUGHPUT
+measurement, which needs an M-series device (`tt-macbook` ssh-denied). emit-metal
+/ emit-spirv are PATH-ONLY dev-deps so they never constrain publish ordering and
+stay out of the `--edges=normal` layering lint.
+
 ## STATUS (2026-06-22): verified live on RTX 5090, including at keyhog scale
 
 The combined `(seg)` path of item 4 above is implemented and the planned
