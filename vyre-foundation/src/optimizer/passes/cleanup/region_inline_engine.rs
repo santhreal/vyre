@@ -11,8 +11,10 @@
 //! Keeping the threshold prevents 100-op compositions from inlining
 //! and hiding the Region boundary in backtraces.
 
+use crate::ir::Ident;
 use crate::ir_inner::model::node::Node;
 use crate::ir_inner::model::program::Program;
+use crate::visit::bound_names::count_bound_names;
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
 use std::sync::Arc;
@@ -154,7 +156,7 @@ fn inline_nodes_into(nodes: Vec<Node>, threshold: usize, out: &mut Vec<Node>) {
     // Region scope kept apart. (The earlier tally counted only TOP-LEVEL
     // sibling lets, so it missed nested binders — see
     // tests/region_inline_scope.rs for the oracle-differential proof.)
-    let mut bound_counts: FxHashMap<Arc<str>, usize> = FxHashMap::default();
+    let mut bound_counts: FxHashMap<Ident, usize> = FxHashMap::default();
     for item in &staged {
         match item {
             Staged::FlatRegion(body) => count_bound_names(body, &mut bound_counts),
@@ -213,34 +215,6 @@ fn count_nodes_capped(nodes: &[Node], threshold: usize) -> usize {
     }
 
     count
-}
-
-/// Count every variable name bound by a `Let` or loop variable anywhere in
-/// `nodes` (recursively), keyed by interned text so two `Ident`s with the
-/// same text count as one name. Used by [`inline_nodes_into`] to detect when
-/// flattening a Region would leak a top-level `let` into a parent scope that
-/// already binds the same name — including a binding nested inside a sibling.
-fn count_bound_names(nodes: &[Node], counts: &mut FxHashMap<Arc<str>, usize>) {
-    for node in nodes {
-        match node {
-            Node::Let { name, .. } => {
-                *counts.entry(name.shared_text()).or_insert(0) += 1;
-            }
-            Node::Loop { var, body, .. } => {
-                *counts.entry(var.shared_text()).or_insert(0) += 1;
-                count_bound_names(body, counts);
-            }
-            Node::If {
-                then, otherwise, ..
-            } => {
-                count_bound_names(then, counts);
-                count_bound_names(otherwise, counts);
-            }
-            Node::Block(body) => count_bound_names(body, counts),
-            Node::Region { body, .. } => count_bound_names(body, counts),
-            _ => {}
-        }
-    }
 }
 
 #[cfg(test)]

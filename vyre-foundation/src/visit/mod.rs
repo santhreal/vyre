@@ -24,6 +24,10 @@ pub mod expr;
 pub mod node_map;
 /// Cross-cutting visitor contracts: `NodeVisitor`, `Lowerable`, `Evaluatable`.
 pub mod traits;
+/// Canonical bound-name (`Let` / `Loop` variable) collector shared by the
+/// scope-aware passes (`region_inline`, `tail_duplication`,
+/// `read_only_load_hoist`).
+pub mod bound_names;
 
 /// Recursive traversal order for visitor entry points and default child walking.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -24,6 +24,7 @@ use rustc_hash::FxHashSet;
 
 use crate::ir::{Expr, Ident, Node, Program};
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
+use crate::visit::bound_names::collect_bound_names;
 use crate::visit::node_map;
 
 /// Hoist common side-effect-free tails out of `Node::If`.
@@ -158,38 +159,6 @@ fn try_extract_tail(then: &[Node], otherwise: &[Node]) -> Option<(Vec<Node>, Vec
     Some((new_then, new_otherwise, tail))
 }
 
-/// Collect every variable name bound by a `Let` or loop variable anywhere
-/// in `nodes` (recursively). Used to detect when sinking a tail past the If
-/// would move a read out of the arm-local scope that defines it.
-///
-/// Over-approximating (collecting names bound in nested blocks too) only
-/// makes the guard more conservative, never unsound: a tail can validly
-/// reference a name only if it is in scope at the tail position, and any
-/// arm-bound name the tail reads is necessarily arm-local (shadowing an
-/// enclosing binding is disallowed by the IR), so refusing on any
-/// intersection never drops a sound hoist.
-fn collect_bound_names(nodes: &[Node], out: &mut FxHashSet<Ident>) {
-    for node in nodes {
-        match node {
-            Node::Let { name, .. } => {
-                out.insert(name.clone());
-            }
-            Node::Loop { var, body, .. } => {
-                out.insert(var.clone());
-                collect_bound_names(body, out);
-            }
-            Node::If {
-                then, otherwise, ..
-            } => {
-                collect_bound_names(then, out);
-                collect_bound_names(otherwise, out);
-            }
-            Node::Block(body) => collect_bound_names(body, out),
-            Node::Region { body, .. } => collect_bound_names(body, out),
-            _ => {}
-        }
-    }
-}
 
 /// True iff `node` reads (via an `Expr::Var`) any name in `names`. `node` is
 /// an observably-free tail (a pure `Let`, or a `Block` of such), so only the

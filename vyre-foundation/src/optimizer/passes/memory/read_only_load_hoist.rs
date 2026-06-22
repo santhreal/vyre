@@ -51,9 +51,10 @@
 //! full aliasing substrate would deliver, while the fact-driven
 //! variant lands beside the downstream alias pass.
 
-use crate::ir::{BufferAccess, Expr, Node, Program};
+use crate::ir::{BufferAccess, Expr, Ident, Node, Program};
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use rustc_hash::FxHashSet;
+use crate::visit::bound_names::count_bound_names;
+use rustc_hash::{FxHashMap, FxHashSet};
 use std::sync::Arc;
 
 /// Hoist Loads on declared-ReadOnly buffers out of common
@@ -107,12 +108,7 @@ impl ReadOnlyLoadHoistPass {
             };
         }
         let mut changed = false;
-        let program = program.map_entry(|entry| {
-            entry
-                .into_iter()
-                .flat_map(|node| hoist_prefix(node, &read_only, &mut changed))
-                .collect()
-        });
+        let program = program.map_entry(|entry| hoist_in_body(entry, &read_only, &mut changed));
         PassResult { program, changed }
     }
 }
@@ -126,43 +122,56 @@ fn read_only_buffer_set(program: &Program) -> FxHashSet<crate::ir::Ident> {
         .collect()
 }
 
-fn hoist_prefix(
-    node: Node,
-    read_only: &FxHashSet<crate::ir::Ident>,
-    changed: &mut bool,
-) -> Vec<Node> {
-    let recursed = recurse_children(node, read_only, changed);
-    if let Node::If {
-        cond,
-        then,
-        otherwise,
-    } = recursed
-    {
-        let (prefix, new_then, new_otherwise) = extract_common_prefix(then, otherwise, read_only);
-        if !prefix.is_empty() {
-            *changed = true;
-            let mut out = prefix;
+/// Hoist common Read-Only-Load prefixes out of every `If` in `body`, after
+/// recursing into nested bodies.
+///
+/// Hoisting a prefix `let x = load(ro, idx)` to before the `If` moves `x` from
+/// arm scope -- which the block-scoped IR pops at arm exit -- to THIS enclosing
+/// scope, where `x` now lives across the `If` and the rest of `body`. That is
+/// sound only if no other node in `body` binds `x`; otherwise the hoisted
+/// binding collides with that other binder, which the validator rejects as a
+/// duplicate sibling (V032) or a shadow (V008). A name bound at the front of
+/// both arms is counted exactly twice over `body` (once per arm) iff this `If`
+/// is its only binder, so `count_bound_names(body)[x] == 2` is the scope-safety
+/// gate (see `extract_common_prefix`).
+fn hoist_in_body(body: Vec<Node>, read_only: &FxHashSet<Ident>, changed: &mut bool) -> Vec<Node> {
+    // Recurse first so nested `If`s hoist within their own bodies; any prefix a
+    // nested `If` lifts up becomes a sibling here and is reflected in the counts.
+    let recursed: Vec<Node> = body
+        .into_iter()
+        .map(|node| recurse_children(node, read_only, changed))
+        .collect();
+
+    let mut body_counts: FxHashMap<Ident, usize> = FxHashMap::default();
+    count_bound_names(&recursed, &mut body_counts);
+
+    let mut out = Vec::with_capacity(recursed.len());
+    for node in recursed {
+        if let Node::If {
+            cond,
+            then,
+            otherwise,
+        } = node
+        {
+            let (prefix, new_then, new_otherwise) =
+                extract_common_prefix(then, otherwise, read_only, &body_counts);
+            if !prefix.is_empty() {
+                *changed = true;
+                out.extend(prefix);
+            }
             out.push(Node::If {
                 cond,
                 then: new_then,
                 otherwise: new_otherwise,
             });
-            return out;
+        } else {
+            out.push(node);
         }
-        return vec![Node::If {
-            cond,
-            then: new_then,
-            otherwise: new_otherwise,
-        }];
     }
-    vec![recursed]
+    out
 }
 
-fn recurse_children(
-    node: Node,
-    read_only: &FxHashSet<crate::ir::Ident>,
-    changed: &mut bool,
-) -> Node {
+fn recurse_children(node: Node, read_only: &FxHashSet<Ident>, changed: &mut bool) -> Node {
     match node {
         Node::If {
             cond,
@@ -170,14 +179,8 @@ fn recurse_children(
             otherwise,
         } => Node::If {
             cond,
-            then: then
-                .into_iter()
-                .flat_map(|n| hoist_prefix(n, read_only, changed))
-                .collect(),
-            otherwise: otherwise
-                .into_iter()
-                .flat_map(|n| hoist_prefix(n, read_only, changed))
-                .collect(),
+            then: hoist_in_body(then, read_only, changed),
+            otherwise: hoist_in_body(otherwise, read_only, changed),
         },
         Node::Loop {
             var,
@@ -188,16 +191,9 @@ fn recurse_children(
             var,
             from,
             to,
-            body: body
-                .into_iter()
-                .flat_map(|n| hoist_prefix(n, read_only, changed))
-                .collect(),
+            body: hoist_in_body(body, read_only, changed),
         },
-        Node::Block(body) => Node::Block(
-            body.into_iter()
-                .flat_map(|n| hoist_prefix(n, read_only, changed))
-                .collect(),
-        ),
+        Node::Block(body) => Node::Block(hoist_in_body(body, read_only, changed)),
         Node::Region {
             generator,
             source_region,
@@ -210,12 +206,7 @@ fn recurse_children(
             Node::Region {
                 generator,
                 source_region,
-                body: Arc::new(
-                    body_vec
-                        .into_iter()
-                        .flat_map(|n| hoist_prefix(n, read_only, changed))
-                        .collect(),
-                ),
+                body: Arc::new(hoist_in_body(body_vec, read_only, changed)),
             }
         }
         other => other,
@@ -225,12 +216,19 @@ fn recurse_children(
 fn extract_common_prefix(
     mut then: Vec<Node>,
     mut otherwise: Vec<Node>,
-    read_only: &FxHashSet<crate::ir::Ident>,
+    read_only: &FxHashSet<Ident>,
+    body_counts: &FxHashMap<Ident, usize>,
 ) -> (Vec<Node>, Vec<Node>, Vec<Node>) {
     let prefix_len = then
         .iter()
         .zip(otherwise.iter())
-        .take_while(|(t, o)| is_hoistable_pair(t, o, read_only))
+        .take_while(|(t, o)| {
+            // Structurally hoistable AND scope-safe: bound only by this `If`'s
+            // two arm prefixes (count == 2), so hoisting introduces no
+            // colliding sibling/shadow binding in the enclosing scope.
+            is_hoistable_load_pair(t, o, read_only)
+                && matches!(t, Node::Let { name, .. } if body_counts.get(name).copied().unwrap_or(0) == 2)
+        })
         .count();
     if prefix_len == 0 {
         return (Vec::new(), then, otherwise);
@@ -240,7 +238,12 @@ fn extract_common_prefix(
     (prefix, then, otherwise)
 }
 
-fn is_hoistable_pair(a: &Node, b: &Node, read_only: &FxHashSet<crate::ir::Ident>) -> bool {
+/// The structural half of the hoist test: both arms bind the SAME name to the
+/// SAME read-only load with an observably-free index. Scope safety (the name
+/// not being bound elsewhere in the enclosing body) is gated separately in
+/// [`extract_common_prefix`] via `body_counts`; the analyze path uses only this
+/// structural predicate, so it may over-approximate `RUN` (a no-op transform).
+fn is_hoistable_load_pair(a: &Node, b: &Node, read_only: &FxHashSet<Ident>) -> bool {
     let Node::Let {
         name: name_a,
         value: value_a,
@@ -309,7 +312,7 @@ fn has_candidate(node: &Node, read_only: &FxHashSet<crate::ir::Ident>) -> bool {
             then, otherwise, ..
         } => match (then.first(), otherwise.first()) {
             (Some(t), Some(o)) => {
-                is_hoistable_pair(t, o, read_only)
+                is_hoistable_load_pair(t, o, read_only)
                     || then.iter().any(|n| has_candidate(n, read_only))
                     || otherwise.iter().any(|n| has_candidate(n, read_only))
             }
@@ -520,5 +523,73 @@ mod tests {
         assert!(siblings.len() >= 3);
         assert!(matches!(&siblings[0], Node::Let { name, .. } if name.as_str() == "a"));
         assert!(matches!(&siblings[1], Node::Let { name, .. } if name.as_str() == "b"));
+    }
+
+    /// Negative (scope extension): the hoisted name `x` is rebound by a later
+    /// sibling. Hoisting moves `x` from arm scope to the enclosing scope, where
+    /// it lives across the If and collides with the trailing `let x` -- a
+    /// duplicate sibling binding the validator rejects (V032). The pass must
+    /// decline. (Oracle-differential proof: tests/read_only_load_hoist_scope.rs.)
+    #[test]
+    fn keeps_when_hoisted_name_rebound_by_later_sibling() {
+        let load = Expr::Load {
+            buffer: Ident::from("ro"),
+            index: Box::new(Expr::u32(0)),
+        };
+        let entry = vec![
+            Node::If {
+                cond: Expr::var("c"),
+                then: vec![
+                    Node::let_bind("x", load.clone()),
+                    Node::store("rw", Expr::u32(0), Expr::var("x")),
+                ],
+                otherwise: vec![
+                    Node::let_bind("x", load),
+                    Node::store("rw", Expr::u32(1), Expr::var("x")),
+                ],
+            },
+            Node::let_bind("x", Expr::u32(7)), // rebinds `x` after the If
+            Node::store("rw", Expr::u32(2), Expr::var("x")),
+        ];
+        let prog = program(vec![ro_buf("ro"), rw_buf("rw")], entry);
+        let result = ReadOnlyLoadHoistPass::transform(prog);
+        assert!(
+            !result.changed,
+            "hoisting `x` would collide with the later `let x`; pass must decline"
+        );
+    }
+
+    /// Positive (no over-block): a later sibling that binds a DIFFERENT name
+    /// must not block the hoist -- the scope-safety gate keys on the hoisted
+    /// name only.
+    #[test]
+    fn hoists_when_later_sibling_binds_a_different_name() {
+        let load = Expr::Load {
+            buffer: Ident::from("ro"),
+            index: Box::new(Expr::u32(0)),
+        };
+        let entry = vec![
+            Node::If {
+                cond: Expr::var("c"),
+                then: vec![
+                    Node::let_bind("x", load.clone()),
+                    Node::store("rw", Expr::u32(0), Expr::var("x")),
+                ],
+                otherwise: vec![
+                    Node::let_bind("x", load),
+                    Node::store("rw", Expr::u32(1), Expr::var("x")),
+                ],
+            },
+            Node::let_bind("y", Expr::u32(7)), // different name; no collision
+            Node::store("rw", Expr::u32(2), Expr::var("y")),
+        ];
+        let prog = program(vec![ro_buf("ro"), rw_buf("rw")], entry);
+        let result = ReadOnlyLoadHoistPass::transform(prog);
+        assert!(
+            result.changed,
+            "a later sibling binding a different name must not block the hoist"
+        );
+        let siblings = find_siblings(result.program.entry()).expect("hoisted Let + If present");
+        assert!(matches!(&siblings[0], Node::Let { name, .. } if name.as_str() == "x"));
     }
 }
