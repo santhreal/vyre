@@ -575,7 +575,27 @@ impl CombinedBatch {
     /// `output_offsets` the `state_count + 1` CSR row pointers, and
     /// `output_records` the flat pattern-id payload. `max_pattern_len` is the
     /// longest pattern in the automaton (the warm-up overlap). `seg_len` is the
-    /// per-segment owned width; pass `u32::MAX` for one segment per file.
+    /// per-segment owned width.
+    ///
+    /// # Throughput — `seg_len` is the device-saturation lever, choose it
+    ///
+    /// `seg_len = u32::MAX` is one segment per file: a single serial DFA walk
+    /// with NO intra-file parallelism. It is correctness-equivalent to the
+    /// pre-segmentation path but leaves the device almost entirely idle —
+    /// ~0.01x Hyperscan on an 8 MiB input on the reference RTX 5090. It is a
+    /// correctness floor, never a performance default; passing it (or any
+    /// coarse `seg_len`) silently lands the caller on the slow path.
+    ///
+    /// Tiling the file into many overlapping windows is what saturates the
+    /// device. Throughput climbs as `seg_len` shrinks (more resident windows)
+    /// until the fixed `overlap = max_pattern_len` warm-up per window starts to
+    /// dominate, then turns over. On the reference RTX 5090 the 8 MiB optimum is
+    /// `seg_len ~= 128` (~15.6x Hyperscan for a 32-literal catalog, ~8.5x at
+    /// 2048 literals), turning over by 64 — see the `megakernel_combined_scan`
+    /// geometry sweep, which pins the conservation + throughput contract across
+    /// `u32::MAX..=64`. The exact optimum shifts with device core count and
+    /// catalog, so tune per host; but ANY fine window beats whole-file by orders
+    /// of magnitude, so never ship `u32::MAX` as the production geometry.
     ///
     /// # Errors
     ///
