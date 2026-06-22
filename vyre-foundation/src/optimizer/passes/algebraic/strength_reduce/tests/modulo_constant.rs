@@ -21,7 +21,7 @@ fn rem_u32(divisor: u32) -> Expr {
 /// rewrite and Granlund-Montgomery division produce: {Var, LitU32, Add, Sub,
 /// Mul, Shr, Shl, BitAnd, Mod, MulHigh}. `MulHigh` matches the crate's own
 /// definition: `((a as u64) * (b as u64)) >> 32`.
-fn eval_u32(expr: &Expr, x: u32) -> u32 {
+pub(super) fn eval_u32(expr: &Expr, x: u32) -> u32 {
     match expr {
         Expr::LitU32(v) => *v,
         Expr::LitI32(v) => *v as u32,
@@ -50,7 +50,7 @@ fn eval_u32(expr: &Expr, x: u32) -> u32 {
 }
 
 /// Broad input set: small values, powers of two, and the high/edge u32 range.
-const FUZZ_INPUTS: [u32; 16] = [
+pub(super) const FUZZ_INPUTS: [u32; 16] = [
     0,
     1,
     2,
@@ -70,7 +70,7 @@ const FUZZ_INPUTS: [u32; 16] = [
 ];
 
 /// Non-power-of-two divisors gm-division is proven to handle.
-const DIVISORS: [u32; 15] = [
+pub(super) const DIVISORS: [u32; 15] = [
     3, 5, 6, 7, 9, 10, 11, 12, 15, 100, 255, 1000, 65_535, 7919, 1_000_003,
 ];
 
