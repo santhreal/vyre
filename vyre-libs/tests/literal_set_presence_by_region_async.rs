@@ -23,6 +23,7 @@
 
 use std::collections::BTreeSet;
 
+use vyre::VyreBackend;
 use vyre_driver_reference::CpuRefBackend;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_libs::scan::GpuLiteralSet;
@@ -169,4 +170,50 @@ fn async_region_presence_equals_sync_on_cpu_reference() {
         "async bitmap must be region_count ({region_count}) * words ({words}) u32s"
     );
     assert_planted_bits(words, pattern_count, &async_words);
+}
+
+#[test]
+fn prepared_region_presence_payload_reproduces_sync_scan_on_cpu_reference() {
+    // The RESIDENT prepared payload: a resident runtime uploads `inputs` once and
+    // re-dispatches across a corpus; a direct caller dispatches the borrowed inputs
+    // through the backend and decodes binding 0. Prove the payload reproduces
+    // scan_presence_by_region exactly (CPU reference, runs everywhere).
+    let matcher = GpuLiteralSet::compile(LITERALS);
+    let pattern_count = LITERALS.len() as u32;
+    let words = pattern_count.div_ceil(32).max(1) as usize;
+    let (haystack, region_starts) = planted_corpus();
+    let region_count = region_starts.len();
+
+    let sync_words = matcher
+        .scan_presence_by_region(&CpuRefBackend, &haystack, &region_starts)
+        .expect("sync cpu-reference presence-by-region scan");
+
+    let prepared = matcher
+        .prepare_presence_by_region_dispatch(&haystack, &region_starts, 0)
+        .expect("prepare region-presence dispatch payload");
+    // Payload shape assertions (real values, not just non-empty).
+    assert_eq!(prepared.region_count as usize, region_count);
+    assert_eq!(prepared.total_words, region_count * words);
+    assert_eq!(prepared.presence_output_bytes, region_count * words * 4);
+    assert_eq!(prepared.inputs.len(), 12, "region-presence has 12 bindings");
+    assert!(
+        prepared.encoded_input_bytes > 0,
+        "encoded input byte total must be the sum of all 12 buffers"
+    );
+
+    // Dispatch the prepared inputs exactly as a resident runtime would on its
+    // first upload, then decode binding 0.
+    let borrowed: Vec<&[u8]> = prepared.inputs.iter().map(Vec::as_slice).collect();
+    let outputs = CpuRefBackend
+        .dispatch_borrowed(&prepared.program, &borrowed, &prepared.dispatch_config)
+        .expect("dispatch prepared region-presence payload");
+    let prepared_words = prepared
+        .decode_presence(&outputs)
+        .expect("decode prepared region-presence bitmap");
+
+    assert_eq!(
+        prepared_words, sync_words,
+        "prepared region-presence payload must reproduce scan_presence_by_region word-for-word"
+    );
+    assert_planted_bits(words, pattern_count, &prepared_words);
 }

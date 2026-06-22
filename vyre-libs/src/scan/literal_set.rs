@@ -252,6 +252,66 @@ impl LiteralSetPreparedCount {
     }
 }
 
+/// Resident-resource index of the per-region presence read-write buffer in a
+/// prepared region-presence dispatch: the one resource a resident runtime resets
+/// (zeroes) before each scan and reads back after.
+pub const LITERAL_SET_PRESENCE_BY_REGION_OUTPUT_RESOURCE_INDEX: usize = 6;
+
+/// Backend-neutral prepared RESIDENT region-presence dispatch payload.
+///
+/// The presence sibling of [`LiteralSetPreparedScan`] / [`LiteralSetPreparedCount`].
+/// Owns the exact byte buffers consumed by the region-presence program. A
+/// resident runtime uploads the immutable DFA / suffix-prefilter tables ONCE,
+/// resets [`LITERAL_SET_PRESENCE_BY_REGION_OUTPUT_RESOURCE_INDEX`], dispatches,
+/// and reads back the per-region presence bitmap — re-uploading only the haystack
+/// across the files of a corpus. A direct caller can dispatch `inputs` through a
+/// borrowed-input backend and decode binding 0 via [`Self::decode_presence`].
+#[derive(Clone, Debug)]
+pub struct LiteralSetPreparedPresenceByRegion {
+    /// Region-presence dispatch program.
+    pub program: Program,
+    /// Input buffers in program binding order (binding 6 is the zeroed per-region
+    /// presence read-write resource = the whole output).
+    pub inputs: Vec<Vec<u8>>,
+    /// Standard byte-scan dispatch geometry for `haystack_len`.
+    pub dispatch_config: DispatchConfig,
+    /// Validated haystack byte length.
+    pub haystack_len: u32,
+    /// Number of coalesced regions (rows in the presence bitmap).
+    pub region_count: u32,
+    /// Total `u32` words in the per-region presence bitmap
+    /// (`region_count * presence_bitmap_words(pattern_count)`).
+    pub total_words: usize,
+    /// Byte size of the binding-6 presence resource (`total_words * 4`): the
+    /// reset + readback length for a resident dispatch.
+    pub presence_output_bytes: usize,
+    /// Total bytes in `inputs`.
+    pub encoded_input_bytes: u64,
+}
+
+impl LiteralSetPreparedPresenceByRegion {
+    /// Decode the per-region presence bitmap from a dispatch's output buffers:
+    /// `region_count * presence_bitmap_words(pattern_count)` packed `u32` words,
+    /// IDENTICAL to [`GpuLiteralSet::scan_presence_by_region`]'s return.
+    /// `outputs[0]` is the presence-resource readback.
+    ///
+    /// # Errors
+    /// Returns [`vyre::BackendError`] when the output slot is missing or too short.
+    pub fn decode_presence(&self, outputs: &[Vec<u8>]) -> Result<Vec<u32>, vyre::BackendError> {
+        let presence_bytes = crate::scan::dispatch_io::try_output_bytes(
+            outputs,
+            0,
+            "literal_set prepared presence_by_region",
+        )?;
+        let words: Vec<u32> = presence_bytes
+            .chunks_exact(4)
+            .take(self.total_words)
+            .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
+            .collect();
+        Ok(words)
+    }
+}
+
 #[derive(Debug)]
 struct CachedLiteralSetProgram {
     base_fingerprint: [u8; 32],
@@ -930,26 +990,56 @@ impl GpuLiteralSet {
         region_starts: &[u32],
         region_base: u32,
     ) -> Result<PendingPresenceByRegion, vyre::BackendError> {
+        let (program, inputs, config, total_words, _haystack_len) =
+            self.build_presence_by_region_dispatch(haystack, region_starts, region_base)?;
+        let pending = backend.dispatch_async(&program, &inputs, &config)?;
+        Ok(PendingPresenceByRegion {
+            pending,
+            total_words,
+            _inputs: inputs,
+        })
+    }
+
+    /// Build the OWNED region-presence dispatch payload shared by
+    /// [`Self::scan_presence_by_region_async`] and
+    /// [`Self::prepare_presence_by_region_dispatch`]: the cap-specific program,
+    /// the 12 input buffers in binding order (binding 6 is the zeroed per-region
+    /// presence read-write resource = the whole output), the byte-scan dispatch
+    /// config, and the total presence-bitmap `u32` word count.
+    ///
+    /// Inputs are OWNED (the async ABI is `&[Vec<u8>]`, and a resident runtime
+    /// uploads them once), built through the fallible `copy_u32_words_as_le_bytes`
+    /// so an allocation failure fails CLOSED (`BackendError`) instead of aborting
+    /// on OOM — the same contract as [`Self::prepare_scan_dispatch`].
+    ///
+    /// # Errors
+    /// See [`Self::scan_presence_by_region`].
+    fn build_presence_by_region_dispatch(
+        &self,
+        haystack: &[u8],
+        region_starts: &[u32],
+        region_base: u32,
+    ) -> Result<(Program, Vec<Vec<u8>>, DispatchConfig, usize, u32), vyre::BackendError> {
         use crate::scan::dispatch_io;
 
         let pattern_count = u32::try_from(self.pattern_lengths.len()).map_err(|_| {
             vyre::BackendError::new(
-                "literal_set region-presence async: pattern count exceeds u32 GPU ABI".to_string(),
+                "literal_set region-presence: pattern count exceeds u32 GPU ABI".to_string(),
             )
         })?;
         let region_count = u32::try_from(region_starts.len()).map_err(|_| {
             vyre::BackendError::new(
-                "literal_set region-presence async: region count exceeds u32 GPU ABI".to_string(),
+                "literal_set region-presence: region count exceeds u32 GPU ABI".to_string(),
             )
         })?;
         if region_count == 0 {
             return Err(vyre::BackendError::new(
-                "literal_set region-presence async: region_starts must be non-empty. Fix: pass one start offset per coalesced file, beginning with 0.".to_string(),
+                "literal_set region-presence: region_starts must be non-empty. Fix: pass one start offset per coalesced file, beginning with 0.".to_string(),
             ));
         }
         if region_starts[0] != 0 {
             return Err(vyre::BackendError::new(
-                "literal_set region-presence async: region_starts[0] must be 0 (the kernel binary-search lower bound). Fix: the first coalesced file must start at offset 0.".to_string(),
+                "literal_set region-presence: region_starts[0] must be 0 (the kernel binary-search lower bound). Fix: the first coalesced file must start at offset 0.".to_string(),
             ));
         }
         let total_words = presence_by_region_words(pattern_count, region_count) as usize;
@@ -963,26 +1053,17 @@ impl GpuLiteralSet {
 
         let haystack_len = dispatch_io::scan_guard(
             haystack,
-            "literal_set_presence_by_region_async",
+            "literal_set_presence_by_region",
             dispatch_io::DEFAULT_MAX_SCAN_BYTES,
         )?;
-        // OWNED inputs in the exact binding order of the synchronous entry. The
-        // async dispatch ABI takes `&[Vec<u8>]`; we keep `into_owned()`/`to_vec()`
-        // copies so they outlive the call (the handle retains them).
         let mut haystack_packed = Vec::new();
         dispatch_io::pack_haystack_u32_into(haystack, &mut haystack_packed)?;
         let haystack_len_word = [haystack_len];
         let region_base_bytes = region_base.to_le_bytes();
         // Per-region presence buffer (binding 6) is read-write: uploaded zeroed,
-        // dispatched, read back. It is the entire output. (Same `vec!` idiom as
-        // the synchronous entry's presence output.)
+        // dispatched, read back. It is the entire output.
         let presence_zeroed = vec![0u8; total_words.saturating_mul(4)];
 
-        // OWNED inputs in the exact binding order of the synchronous entry, built
-        // through the fallible `copy_u32_words_as_le_bytes` so an allocation
-        // failure fails CLOSED (BackendError) instead of aborting on OOM — the
-        // same contract as `prepare_scan_dispatch`. The handle retains them until
-        // `await_words`.
         const PRESENCE_BY_REGION_INPUT_COUNT: usize = 12;
         let mut inputs: Vec<Vec<u8>> = Vec::new();
         vyre_foundation::allocation::try_reserve_vec_to_capacity(
@@ -991,7 +1072,7 @@ impl GpuLiteralSet {
         )
         .map_err(|source| {
             vyre::BackendError::new(format!(
-                "literal_set region-presence async could not reserve {PRESENCE_BY_REGION_INPUT_COUNT} input buffer slot(s): {source}. Fix: shard the literal set or haystack before async dispatch."
+                "literal_set region-presence could not reserve {PRESENCE_BY_REGION_INPUT_COUNT} input buffer slot(s): {source}. Fix: shard the literal set or haystack before dispatch."
             ))
         })?;
         inputs.push(haystack_packed); // 0: haystack (Packed U32)
@@ -1027,11 +1108,57 @@ impl GpuLiteralSet {
 
         let config =
             dispatch_io::byte_scan_dispatch_config(haystack_len, program.workgroup_size[0]);
-        let pending = backend.dispatch_async(&program, &inputs, &config)?;
-        Ok(PendingPresenceByRegion {
-            pending,
+        Ok((program, inputs, config, total_words, haystack_len))
+    }
+
+    /// Prepare a backend-neutral RESIDENT region-presence dispatch payload: the
+    /// same owned buffers [`Self::scan_presence_by_region_async`] dispatches, but
+    /// returned for a resident runtime to upload ONCE (the immutable DFA /
+    /// suffix-prefilter tables) and re-dispatch across many files of a corpus,
+    /// re-uploading only the haystack and resetting the binding-6 presence
+    /// resource ([`LITERAL_SET_PRESENCE_BY_REGION_OUTPUT_RESOURCE_INDEX`]). This
+    /// is the presence sibling of [`Self::prepare_scan_dispatch`].
+    ///
+    /// A direct caller can also dispatch `inputs` through a normal borrowed-input
+    /// backend and decode binding 0 via [`LiteralSetPreparedPresenceByRegion::decode_presence`].
+    ///
+    /// # Errors
+    /// See [`Self::scan_presence_by_region`].
+    pub fn prepare_presence_by_region_dispatch(
+        &self,
+        haystack: &[u8],
+        region_starts: &[u32],
+        region_base: u32,
+    ) -> Result<LiteralSetPreparedPresenceByRegion, vyre::BackendError> {
+        let region_count = u32::try_from(region_starts.len()).map_err(|_| {
+            vyre::BackendError::new(
+                "literal_set region-presence: region count exceeds u32 GPU ABI".to_string(),
+            )
+        })?;
+        let (program, inputs, dispatch_config, total_words, haystack_len) =
+            self.build_presence_by_region_dispatch(haystack, region_starts, region_base)?;
+        let presence_output_bytes = total_words.saturating_mul(U32_BYTES);
+        let encoded_input_bytes = inputs.iter().try_fold(0_u64, |sum, input| {
+            let len = u64::try_from(input.len()).map_err(|source| {
+                vyre::BackendError::new(format!(
+                    "literal_set prepared region-presence input byte length does not fit u64: {source}. Fix: shard the scan before dispatch."
+                ))
+            })?;
+            sum.checked_add(len).ok_or_else(|| {
+                vyre::BackendError::new(
+                    "literal_set prepared region-presence input byte total overflowed u64. Fix: shard the scan before dispatch.",
+                )
+            })
+        })?;
+        Ok(LiteralSetPreparedPresenceByRegion {
+            program,
+            inputs,
+            dispatch_config,
+            haystack_len,
+            region_count,
             total_words,
-            _inputs: inputs,
+            presence_output_bytes,
+            encoded_input_bytes,
         })
     }
 
