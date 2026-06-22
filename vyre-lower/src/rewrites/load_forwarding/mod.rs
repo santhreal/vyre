@@ -237,8 +237,39 @@ fn load_forwarding_body(
             | KernelOpKind::OpaqueNode(..) => {
                 clear_mutable_cache(&mut cache);
             }
-            // Pure ops  -  no memory effect.
-            _ => {}
+            // IndirectDispatch READS count_buffer[count_offset] but writes no
+            // buffer memory in this kernel, so cached load values stay valid: a
+            // read never makes a forwarded value stale. (Contrast dead-store
+            // elimination, where this op's READ keeps a store live.)
+            KernelOpKind::IndirectDispatch { .. } => {}
+            // Pure value/builtin/arith ops and function-local loop-carrier
+            // slots: no global/shared/constant buffer WRITE, so they cannot
+            // stale a cached load. EXHAUSTIVE ON PURPOSE (no `_` wildcard): a
+            // future `KernelOpKind` that writes buffer memory must be added here
+            // as an invalidation rather than silently defaulting to "no effect"
+            // and forwarding a stale value past it (a miscompile).
+            KernelOpKind::Literal
+            | KernelOpKind::Copy
+            | KernelOpKind::LocalInvocationId
+            | KernelOpKind::GlobalInvocationId
+            | KernelOpKind::WorkgroupId
+            | KernelOpKind::SubgroupLocalId
+            | KernelOpKind::SubgroupSize
+            | KernelOpKind::LoopIndex { .. }
+            | KernelOpKind::LoopCarrierInit { .. }
+            | KernelOpKind::LoopCarrier { .. }
+            | KernelOpKind::LoopCarrierEnd { .. }
+            | KernelOpKind::BufferLength
+            | KernelOpKind::BinOpKind(_)
+            | KernelOpKind::UnOpKind(_)
+            | KernelOpKind::Fma
+            | KernelOpKind::MatrixMma { .. }
+            | KernelOpKind::Select
+            | KernelOpKind::Cast { .. }
+            | KernelOpKind::SubgroupBallot
+            | KernelOpKind::SubgroupShuffle
+            | KernelOpKind::SubgroupBroadcast
+            | KernelOpKind::SubgroupReduce { .. } => {}
         }
     }
 
@@ -713,6 +744,68 @@ mod tests {
             out.body.ops[6].operands,
             vec![0, 1, 3],
             "load at a remapped-equivalent index should forward from the earlier store"
+        );
+    }
+
+    #[test]
+    fn pure_op_between_store_and_load_does_not_invalidate_cache() {
+        // A pure op (here `Copy`) between a store and a load of the SAME address
+        // must NOT clear the forward cache — pure ops write no buffer memory.
+        // The exhaustive-match change lists pure ops explicitly as no-effect
+        // (replacing the optimistic `_ => {}` wildcard); this pins that contract
+        // so a future op that wrongly clears the cache (blocking a sound
+        // forward) — or worse, a memory-writer silently treated as no-effect —
+        // is caught.
+        let desc = KernelDescriptor {
+            id: "pure_between_store_load".into(),
+            bindings: BindingLayout {
+                slots: vec![rw_slot()],
+            },
+            dispatch: Dispatch::new(1, 1, 1),
+            body: KernelBody {
+                ops: vec![
+                    KernelOp {
+                        kind: KernelOpKind::Literal,
+                        operands: vec![0],
+                        result: Some(0),
+                    }, // index
+                    KernelOp {
+                        kind: KernelOpKind::Literal,
+                        operands: vec![1],
+                        result: Some(1),
+                    }, // stored value
+                    KernelOp {
+                        kind: KernelOpKind::StoreGlobal,
+                        operands: vec![0, 0, 1], // slot0[idx0] = val1
+                        result: None,
+                    },
+                    KernelOp {
+                        kind: KernelOpKind::Copy,
+                        operands: vec![1], // pure: snapshot val1
+                        result: Some(2),
+                    },
+                    KernelOp {
+                        kind: KernelOpKind::LoadGlobal,
+                        operands: vec![0, 0], // load slot0[idx0]
+                        result: Some(3),
+                    },
+                    KernelOp {
+                        kind: KernelOpKind::StoreGlobal,
+                        operands: vec![0, 0, 3], // uses the load result so the forward is observable
+                        result: None,
+                    },
+                ],
+                child_bodies: vec![],
+                literals: vec![LiteralValue::U32(5), LiteralValue::U32(7)],
+            },
+        };
+        let out = load_forwarding(&desc);
+        // The load (result 3) forwards the stored value (id 1) across the pure
+        // Copy, so the final store's value operand is remapped 3 -> 1.
+        assert_eq!(
+            out.body.ops.last().unwrap().operands,
+            vec![0, 0, 1],
+            "pure op must not invalidate the cache; the load must forward the stored value across it"
         );
     }
 
