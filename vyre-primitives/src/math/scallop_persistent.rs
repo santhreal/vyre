@@ -74,22 +74,30 @@ pub(crate) fn single_word_lineage_grid_sync_body(
             Expr::eq(lane.clone(), Expr::u32(0)),
             vec![Node::store(changed, Expr::u32(0), Expr::u32(0))],
         ));
-        body.extend(single_word_transfer_body(
+        // Each phase body opens with its own `let __sj_cell`. The
+        // workgroup path (single_word_lineage_body) isolates them in
+        // separate `__sj_chunk` loops; the grid-sync path has no such
+        // loop, so flattening both phases into this region would make
+        // the two `let __sj_cell` declarations siblings and trip V032.
+        // Wrap each phase in its own Block scope. The grid-sync barrier
+        // stays at region level between them so it still synchronizes
+        // the whole grid between the transfer and compare phases.
+        body.push(Node::Block(single_word_transfer_body(
             state,
             next,
             join_rules,
             n,
             cells,
             lane.clone(),
-        ));
+        )));
         body.push(grid_sync_barrier());
-        body.extend(single_word_compare_body(
+        body.push(Node::Block(single_word_compare_body(
             state,
             next,
             changed,
             cells,
             lane.clone(),
-        ));
+        )));
         if iter + 1 < max_iterations {
             body.push(grid_sync_barrier());
         }
@@ -424,7 +432,11 @@ pub(crate) fn wide_lineage_grid_sync_body(
             Expr::eq(lane.clone(), Expr::u32(0)),
             vec![Node::store(changed, Expr::u32(0), Expr::u32(0))],
         ));
-        body.extend(wide_transfer_body(
+        // See single_word_lineage_grid_sync_body: each phase opens with
+        // its own `let __sjw_cell`; wrap each in a Block so the two are
+        // not V032-colliding siblings, keeping the grid-sync barrier at
+        // region level between the transfer and compare phases.
+        body.push(Node::Block(wide_transfer_body(
             state,
             next,
             join_rules,
@@ -432,16 +444,16 @@ pub(crate) fn wide_lineage_grid_sync_body(
             w,
             cells,
             lane.clone(),
-        ));
+        )));
         body.push(grid_sync_barrier());
-        body.extend(wide_compare_body(
+        body.push(Node::Block(wide_compare_body(
             state,
             next,
             changed,
             w,
             cells,
             lane.clone(),
-        ));
+        )));
         if iter + 1 < max_iterations {
             body.push(grid_sync_barrier());
         }
