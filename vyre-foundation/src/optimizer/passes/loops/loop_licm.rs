@@ -42,12 +42,20 @@
 //! - Skips Lets whose value references the loop var, any other Let
 //!   shadowed inside the body that is itself loop-carrying, or any
 //!   `Node::Assign` target in the body.
+//! - Skips Lets whose name is bound elsewhere in the enclosing body's
+//!   subtree (`count_bound_names != 1`). Hoisting binds the name in the
+//!   enclosing scope, so a name shared with a sibling loop / sibling Let /
+//!   loop var would become a duplicate sibling binding (V032) or shadow
+//!   (V008). The block-scoped IR pops loop-body bindings at loop exit, so
+//!   two sibling loops binding the same `t` are legal pre-hoist but collide
+//!   once both are flat-spliced into the shared body.
 //! - Walks one container body at a time. Nested loops get their own
 //!   pass invocation through the recursion.
 
 use crate::ir::{Expr, Ident, Node, Program};
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use rustc_hash::FxHashSet;
+use crate::visit::bound_names::count_bound_names;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 /// Hoist loop-invariant `Node::Let` bindings out of `Node::Loop`
 /// bodies whenever they have no observable side effect and reference
@@ -95,6 +103,15 @@ impl LoopLicm {
 /// Walk one container body, recursing into every nested container,
 /// and hoist invariant Lets out of every `Node::Loop` we find.
 fn hoist_in_body(body: Vec<Node>, changed: &mut bool) -> Vec<Node> {
+    // Names bound anywhere in THIS enclosing body's subtree, with multiplicity.
+    // A Let hoisted out of a loop lands in this body's scope, so it is only
+    // safe to flat-splice when its name is bound nowhere else here (count == 1);
+    // otherwise two sibling loops binding the same name would each hoist it and
+    // produce a duplicate sibling binding the validator rejects (V032).
+    // Hoisting only moves a binding WITHIN this subtree, so these counts stay
+    // valid for every hoist that lands in `body`.
+    let mut bound_counts: FxHashMap<Ident, usize> = FxHashMap::default();
+    count_bound_names(&body, &mut bound_counts);
     let mut out: Vec<Node> = Vec::with_capacity(body.len());
     for node in body {
         match node {
@@ -105,7 +122,7 @@ fn hoist_in_body(body: Vec<Node>, changed: &mut bool) -> Vec<Node> {
                 body: loop_body,
             } => {
                 let inner = hoist_in_body(loop_body, changed);
-                let (hoisted, kept) = split_invariant_lets(&var, inner, changed);
+                let (hoisted, kept) = split_invariant_lets(&var, inner, &bound_counts, changed);
                 for h in hoisted {
                     out.push(h);
                 }
@@ -160,6 +177,7 @@ fn hoist_in_body(body: Vec<Node>, changed: &mut bool) -> Vec<Node> {
 fn split_invariant_lets(
     loop_var: &Ident,
     body: Vec<Node>,
+    enclosing_bound_counts: &FxHashMap<Ident, usize>,
     changed: &mut bool,
 ) -> (Vec<Node>, Vec<Node>) {
     let mut mutated: FxHashSet<Ident> = FxHashSet::default();
@@ -177,8 +195,17 @@ fn split_invariant_lets(
             Node::Let { name, value } => {
                 let any_dependency_mutated = expr_references_any(&value, &mutated);
                 let name_reassigned_in_loop = assigned.contains(&name);
+                // SCOPE-EXTENSION guard. Hoisting binds `name` in the enclosing
+                // body. That is sound only if `name` is bound nowhere else in
+                // that body's subtree (count == 1, i.e. this Let is its sole
+                // binding); otherwise the hoist would duplicate a sibling
+                // binding (V032) or shadow a loop var / disjoint child binding
+                // (V008). Two sibling loops each binding `t` count 2 and are
+                // both held back -- conservative but always well-scoped.
+                let name_unique_in_enclosing = enclosing_bound_counts.get(&name) == Some(&1);
                 if !name_reassigned_in_loop
                     && !any_dependency_mutated
+                    && name_unique_in_enclosing
                     && expr_is_observably_free(&value)
                 {
                     *changed = true;
