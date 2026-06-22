@@ -71,6 +71,49 @@ pub enum PipelineError {
     /// Backend error bubbled up from compile or dispatch.
     #[error("backend error: {0}")]
     Backend(String),
+    /// A megakernel dispatch ended before its work queue drained: only
+    /// `claimed` of `expected` `unit` were claimed, so the rest went unscanned
+    /// and this dispatch's hit set is INCOMPLETE — never a silent partial
+    /// (Law 10). A first-class variant (not a `Backend` string) so callers such
+    /// as the `seg_len` calibrator can EXCLUDE a too-fine geometry by matching
+    /// the type, never by substring-scanning the message text.
+    #[error(
+        "{descriptor} drain incomplete: only {claimed} of {expected} {unit} were claimed before \
+         the dispatch ended, so {unscanned} {unit} went unscanned and their matches were dropped. \
+         This dispatch's hit set is INCOMPLETE. Fix: raise the dispatch timeout \
+         (BatchDispatchConfig.timeout) so the drain loop can exhaust the queue, or shard the batch \
+         into smaller queues.",
+        unscanned = expected.saturating_sub(*claimed),
+    )]
+    DrainIncomplete {
+        /// Which dispatch path under-drained: `"megakernel"` (per-rule) or
+        /// `"combined megakernel"` (combined-AC). Names the failing path in the
+        /// operator message without a second string variant.
+        descriptor: &'static str,
+        /// Work-items/segments actually claimed before the dispatch ended.
+        claimed: u32,
+        /// Work-items/segments that should have been claimed (full queue length).
+        expected: u32,
+        /// The unit being drained: `"work-items"` (per-rule) or `"segments"`
+        /// (combined-AC). Interpolated twice for a grammatical message.
+        unit: &'static str,
+    },
+}
+
+impl PipelineError {
+    /// True iff this is a [`PipelineError::DrainIncomplete`]: a dispatch that
+    /// could not exhaust its work queue within the timeout.
+    ///
+    /// Distinct from a hard backend failure — the `seg_len` calibrator
+    /// EXCLUDES a geometry that drains incompletely (too fine to drain in the
+    /// configured timeout) rather than aborting the whole calibration, while it
+    /// must still PROPAGATE any other [`PipelineError`]. Match on this predicate
+    /// instead of substring-scanning the Display message, which is fragile to
+    /// wording changes.
+    #[must_use]
+    pub fn is_drain_incomplete(&self) -> bool {
+        matches!(self, Self::DrainIncomplete { .. })
+    }
 }
 
 impl From<vyre_driver::backend::BackendError> for PipelineError {
@@ -315,5 +358,56 @@ mod tests {
     fn poll_without_uring_returns_zero() {
         let mut stream = GpuStream::new();
         assert_eq!(stream.poll().unwrap(), 0);
+    }
+
+    #[test]
+    fn drain_incomplete_is_distinguishable_by_type_not_substring() {
+        // Regression: the seg_len calibrator must EXCLUDE a too-fine geometry
+        // (drain-incomplete) but PROPAGATE every other backend failure. It used
+        // to discriminate by `to_string().contains("drain incomplete")`, which
+        // silently turns into "abort the whole calibration" the moment the
+        // message wording drifts. The structured variant + predicate is the
+        // contract; this test pins it.
+        let drain = PipelineError::DrainIncomplete {
+            descriptor: "combined megakernel",
+            claimed: 3,
+            expected: 10,
+            unit: "segments",
+        };
+        assert!(drain.is_drain_incomplete());
+
+        // The Display message stays operator-actionable AND keeps the
+        // "drain incomplete" phrase + computed unscanned count, so legacy
+        // substring matchers and operator logs do not regress.
+        let msg = drain.to_string();
+        assert_eq!(
+            msg,
+            "combined megakernel drain incomplete: only 3 of 10 segments were claimed before the \
+             dispatch ended, so 7 segments went unscanned and their matches were dropped. This \
+             dispatch's hit set is INCOMPLETE. Fix: raise the dispatch timeout \
+             (BatchDispatchConfig.timeout) so the drain loop can exhaust the queue, or shard the \
+             batch into smaller queues."
+        );
+
+        // The per-rule path uses the same variant with a different descriptor/unit.
+        let per_rule = PipelineError::DrainIncomplete {
+            descriptor: "megakernel",
+            claimed: 0,
+            expected: 4,
+            unit: "work-items",
+        };
+        assert!(per_rule.is_drain_incomplete());
+        assert!(
+            per_rule.to_string().starts_with(
+                "megakernel drain incomplete: only 0 of 4 work-items were claimed"
+            ),
+            "msg was: {}",
+            per_rule
+        );
+
+        // A genuine backend failure is NOT a drain-incomplete: it must surface
+        // as a hard error, never be excluded-and-continued by the calibrator.
+        let backend = PipelineError::Backend("adapter lost".to_string());
+        assert!(!backend.is_drain_incomplete());
     }
 }

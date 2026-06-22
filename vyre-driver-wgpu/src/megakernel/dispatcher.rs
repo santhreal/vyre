@@ -1000,13 +1000,12 @@ impl BatchDispatcher {
         )?;
         let expected_items = batch.queue_len();
         if claims_attempted < expected_items {
-            return Err(PipelineError::Backend(format!(
-                "megakernel drain incomplete: only {claims_attempted} of {expected_items} work-items were \
-                 claimed before the dispatch ended, so {} work-item(s) went unscanned and their matches were \
-                 dropped. This dispatch's hit set is INCOMPLETE. Fix: raise the dispatch timeout so the drain \
-                 loop can exhaust the queue, or shard the batch into smaller queues.",
-                expected_items.saturating_sub(claims_attempted)
-            )));
+            return Err(PipelineError::DrainIncomplete {
+                descriptor: "megakernel",
+                claimed: claims_attempted,
+                expected: expected_items,
+                unit: "work-items",
+            });
         }
 
         self.hit_bytes.clear();
@@ -2083,13 +2082,12 @@ impl CombinedDispatcher {
             queue_state_word::HEAD,
         )?;
         if claims_attempted < queue_len {
-            return Err(PipelineError::Backend(format!(
-                "combined megakernel drain incomplete: only {claims_attempted} of {queue_len} segments were \
-                 claimed before the dispatch ended, so {} segment(s) went unscanned and their matches were \
-                 dropped. This dispatch's hit set is INCOMPLETE. Fix: raise BatchDispatchConfig.timeout so the \
-                 drain loop can exhaust the queue, or shard the batch.",
-                queue_len.saturating_sub(claims_attempted)
-            )));
+            return Err(PipelineError::DrainIncomplete {
+                descriptor: "combined megakernel",
+                claimed: claims_attempted,
+                expected: queue_len,
+                unit: "segments",
+            });
         }
 
         self.hit_bytes.clear();
@@ -2185,7 +2183,9 @@ impl CombinedDispatcher {
                     }
                     // Drain-incomplete = the geometry could not exhaust the queue in
                     // the timeout (loud under-claim). Record + exclude, never select.
-                    Err(e) if e.to_string().contains("drain incomplete") => {
+                    // Matched on the typed predicate, not the message text, so a
+                    // wording change can never silently turn this into a hard abort.
+                    Err(e) if e.is_drain_incomplete() => {
                         complete = false;
                         break;
                     }

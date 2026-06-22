@@ -171,7 +171,7 @@ fn combined_beats_per_rule_on_a_many_pattern_catalog() {
                         found = hits.iter().map(|h| (h.rule_idx, h.match_offset)).collect();
                         dropped = s.dropped_hits;
                     }
-                    Err(e) if e.to_string().contains("drain incomplete") => return None,
+                    Err(e) if e.is_drain_incomplete() => return None,
                     Err(e) => panic!("per-rule dispatch error at seg_len={seg_len}: {e}"),
                 }
             }
@@ -224,7 +224,7 @@ fn combined_beats_per_rule_on_a_many_pattern_catalog() {
                         found = hits.iter().map(|h| (h.rule_idx, h.match_offset)).collect();
                         dropped = s.dropped_hits;
                     }
-                    Err(e) if e.to_string().contains("drain incomplete") => return None,
+                    Err(e) if e.is_drain_incomplete() => return None,
                     Err(e) => panic!("combined dispatch error at seg_len={seg_len}: {e}"),
                 }
             }

@@ -134,7 +134,7 @@ fn run_geometry(
                     .collect::<BTreeSet<_>>();
                 dropped = summary.dropped_hits;
             }
-            Err(e) if e.to_string().contains("drain incomplete") => {
+            Err(e) if e.is_drain_incomplete() => {
                 under_claimed = true;
                 break;
             }
