@@ -740,9 +740,10 @@ surface.
 [[finding]]
 id = "FINDING-FOUNDATION-1"
 date_opened = "2026-04-20"
+date_fixed = "2026-06-22"
 owner = "santhreal"
-test = "vyre_foundation::tests::adversarial_graph_canonical_laws::{malformed_cycle_graph_is_rejected_without_panic, malformed_dangling_edge_graph_is_rejected_without_panic, malformed_orphan_phi_graph_is_rejected_without_panic}"
-status = "open"
+test = "vyre_foundation::tests::adversarial_graph_canonical_laws::{malformed_cycle_graph_is_rejected_without_panic, malformed_dangling_edge_graph_is_rejected_without_panic, malformed_orphan_phi_graph_is_rejected_without_panic, deep_linear_chain_lowers_without_stack_overflow, deep_cycle_is_detected_without_stack_overflow}"
+status = "fixed"
 title = "graph_view::from_graph silently lowers malformed NodeGraph topology instead of rejecting it"
 blocker = """
 `vyre_foundation::graph_view::from_graph` currently returns `Program`
@@ -769,6 +770,34 @@ fix_plan = """
    dropping them.
 5. Keep the existing valid-case guarantee: synthetic, well-formed Phi
    chains still lower by dropping Phi nodes after topology validation.
+"""
+resolution = """
+Two parts, both verified.
+
+(1) Silent acceptance (fix_plan 1-5) was already implemented in
+graph_view::try_into_program / from_graph (returns Result<Program,
+GraphValidateError>; validates dangling edges -> DanglingEdge, orphan/oob-pred
+Phi -> OrphanPhi, directed cycles via DFS -> Cycle; drops well-formed Phi after
+validation). The three named adversarial tests pass; the ledger entry was simply
+stale (never flipped to fixed).
+
+(2) Hardened the cycle check against deep input. The cycle DFS was RECURSIVE
+(one frame per node along a path), so a deep or adversarial linear graph — e.g.
+a 200k-statement chain round-tripped through to_graph — would overflow the call
+stack and PANIC, contradicting the finding's "reject without panicking at
+internet scale" intent. Rewrote it as an explicit-stack (iterative) three-color
+DFS in vyre-foundation/src/analysis/graph_view.rs with identical cycle semantics
+and cycle-path reconstruction; traversal state now lives on the heap. Removed the
+now-unneeded #[expect(clippy::items_after_statements)] (the nested fn is gone).
+Added two regression tests (DEPTH=200_000): deep_linear_chain_lowers_without_stack_overflow
+(asserts all 200k statements survive via a recursive store count) and
+deep_cycle_is_detected_without_stack_overflow (asserts a back edge across the full
+chain still yields Err(Cycle), no panic).
+
+Verified: adversarial_graph_canonical_laws 16/0 (incl. both deep tests),
+graph_invariants 9/0, organization_contracts 16/0. from_graph has no production
+(src/) callers — it is an analysis/round-trip public API — so this was a
+latent panic vector for external consumers, now closed.
 """
 
 [[finding]]
@@ -819,9 +848,10 @@ fix_plan = """
 [[finding]]
 id = "FINDING-REF-PROP-SELECT"
 date_opened = "2026-04-20"
+date_fixed = "2026-06-22"
 owner = "santhreal"
-test = "vyre_reference::tests::expr_adversarial_proptest::prop_call_primitive_select"
-status = "open"
+test = "vyre_reference::tests::expr_adversarial_proptest::prop_select_matches_conditional"
+status = "fixed"
 title = "prop_call_primitive_select is #[ignore]d without a documented reason"
 blocker = """
 The prop_call_primitive_select proptest is #[ignore]d with no finding
@@ -837,6 +867,19 @@ fix_plan = """
 2. Either fix the interpreter path or update the test's proptest
    invariant to match the corrected semantic.
 3. Remove the #[ignore] once the test is green.
+"""
+resolution = """
+Obsolete: the `primitive.compare.select` op the ignored test exercised via
+Expr::Call was deprecated and replaced by the first-class `Expr::Select` IR
+variant (direct evaluator, no call-inlining). The coverage was migrated to a
+LIVE, non-ignored proptest with the same semantics (`cond != 0 ? value : 0`):
+`prop_select_matches_conditional` in
+vyre-reference/tests/__split/expr_adversarial_proptest_part2_chunk4.rs:57 (256
+cases, real-value `prop_assert_eq!(result, expected)`). Verified: the whole
+expr_adversarial_proptest suite runs 102 tests with 0 ignored — there is no
+remaining undocumented `#[ignore]` in vyre-reference, and select evaluation is
+still adversarially covered. No `prop_call_primitive_select` symbol exists in the
+tree.
 """
 
 [[finding]]

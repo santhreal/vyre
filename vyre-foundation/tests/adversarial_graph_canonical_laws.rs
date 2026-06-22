@@ -239,6 +239,67 @@ fn phi_chain_is_dropped_on_lowering() {
     );
 }
 
+fn count_stores(nodes: &[Node]) -> usize {
+    nodes
+        .iter()
+        .map(|node| match node {
+            Node::Store { .. } => 1,
+            Node::If { then, otherwise, .. } => count_stores(then) + count_stores(otherwise),
+            Node::Loop { body, .. } | Node::Block(body) => count_stores(body),
+            Node::Region { body, .. } => count_stores(body),
+            _ => 0,
+        })
+        .sum()
+}
+
+/// A deep linear graph (one ordering edge per node) must lower without a
+/// stack overflow. The cycle check is an explicit-stack DFS; a recursive DFS
+/// would recurse once per node and panic on a chain this long
+/// (FINDING-FOUNDATION-1: reject/accept topology *without panicking* at scale).
+#[test]
+fn deep_linear_chain_lowers_without_stack_overflow() {
+    const DEPTH: usize = 200_000;
+    let body = (0..DEPTH)
+        .map(|index| Node::store("out", Expr::u32(0), Expr::u32((index % 7) as u32)))
+        .collect::<Vec<_>>();
+    let graph = to_graph(&raw_program_with_body(body));
+    // to_graph emits a 0->1->2->... ordering chain DEPTH nodes deep.
+    assert!(graph.nodes.len() >= DEPTH, "expected a chain of >= DEPTH nodes");
+
+    let lowered = from_graph(graph).expect("a deep acyclic chain is well-formed and must lower");
+    // from_graph wraps the lowered statements in one root Region, so assert the
+    // real invariant: every Statement node survives lowering (none dropped).
+    assert_eq!(
+        count_stores(lowered.entry()),
+        DEPTH,
+        "every Statement node in the chain must lower to one statement"
+    );
+}
+
+/// A cycle buried at the end of a very deep chain must still be detected and
+/// rejected, and must do so without a stack overflow.
+#[test]
+fn deep_cycle_is_detected_without_stack_overflow() {
+    const DEPTH: usize = 200_000;
+    let body = (0..DEPTH)
+        .map(|index| Node::store("out", Expr::u32(0), Expr::u32((index % 7) as u32)))
+        .collect::<Vec<_>>();
+    let mut graph = to_graph(&raw_program_with_body(body));
+    let last = (graph.nodes.len() - 1) as u32;
+    // Back edge from the deepest node to the root closes a giant cycle.
+    graph.edges.push(vyre_foundation::graph_view::DataEdge::new(
+        last,
+        0,
+        vyre_foundation::graph_view::EdgeKind::Ordering,
+    ));
+
+    let result = from_graph(graph);
+    assert!(
+        matches!(result, Err(GraphValidateError::Cycle { .. })),
+        "Fix: a cycle in a deep chain must be rejected (not lowered, not a panic), got {result:?}"
+    );
+}
+
 #[test]
 fn commutative_binops_canonicalize_to_the_same_operand_order() {
     for op in safe_to_sort_nonliterals_binops() {

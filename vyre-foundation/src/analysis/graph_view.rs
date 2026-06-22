@@ -247,10 +247,6 @@ impl NodeGraph {
     /// a non-existent node id, `GraphValidateError::Cycle` if the graph
     /// contains a directed cycle, or `GraphValidateError::OrphanPhi` if
     /// a Phi node has no predecessors.
-    #[expect(
-        clippy::items_after_statements,
-        reason = "local DFS keeps cycle validation state private to graph lowering"
-    )]
     pub fn try_into_program(self) -> Result<Program, GraphValidateError> {
         let node_count = u32::try_from(self.nodes.len()).unwrap_or(u32::MAX);
 
@@ -278,45 +274,61 @@ impl NodeGraph {
             }
         }
 
-        // 3. Check for cycles via DFS.
+        // 3. Check for cycles via an explicit-stack (iterative) DFS. A recursive
+        //    DFS recurses once per node along a path, so a deep or adversarial
+        //    linear graph (e.g. a 200k-statement chain round-tripped through
+        //    to_graph) would overflow the call stack and panic. Validation must
+        //    reject malformed topology *without panicking* at any scale
+        //    (FINDING-FOUNDATION-1), so the traversal state lives on the heap.
         let mut adj: Vec<Vec<u32>> = vec![Vec::new(); self.nodes.len()];
         for edge in &self.edges {
             adj[edge.from as usize].push(edge.to);
         }
 
-        let mut state = vec![0u8; self.nodes.len()]; // 0 = unvisited, 1 = visiting, 2 = done
-        let mut path = Vec::new();
+        // 0 = unvisited, 1 = on the current DFS path (gray), 2 = fully explored (black).
+        let mut state = vec![0u8; self.nodes.len()];
+        // Gray nodes on the current root->frontier path; used to reconstruct the
+        // cycle when a back edge is found.
+        let mut path: Vec<u32> = Vec::new();
+        // Explicit DFS frames: (node, index of the next child to visit).
+        let mut stack: Vec<(u32, usize)> = Vec::new();
 
-        fn dfs(
-            node: u32,
-            adj: &[Vec<u32>],
-            state: &mut [u8],
-            path: &mut Vec<u32>,
-        ) -> Option<Vec<u32>> {
-            let idx = node as usize;
-            if state[idx] == 1 {
-                let cycle_start = path.iter().position(|&n| n == node).unwrap_or(0);
-                return Some(path[cycle_start..].to_vec());
+        for root in 0..node_count {
+            if state[root as usize] != 0 {
+                continue;
             }
-            if state[idx] == 2 {
-                return None;
-            }
-            state[idx] = 1;
-            path.push(node);
-            for &next in &adj[idx] {
-                if let Some(cycle) = dfs(next, adj, state, path) {
-                    return Some(cycle);
-                }
-            }
-            path.pop();
-            state[idx] = 2;
-            None
-        }
+            state[root as usize] = 1;
+            path.push(root);
+            stack.push((root, 0));
 
-        for i in 0..node_count {
-            if state[i as usize] == 0 {
-                if let Some(cycle_path) = dfs(i, &adj, &mut state, &mut path) {
-                    return Err(GraphValidateError::Cycle { path: cycle_path });
+            while let Some(&(node, child_idx)) = stack.last() {
+                let children = &adj[node as usize];
+                if child_idx < children.len() {
+                    // Advance this frame's cursor before descending.
+                    stack
+                        .last_mut()
+                        .expect("stack is non-empty inside `while let Some(..) = stack.last()`")
+                        .1 += 1;
+                    let next = children[child_idx];
+                    match state[next as usize] {
+                        0 => {
+                            state[next as usize] = 1;
+                            path.push(next);
+                            stack.push((next, 0));
+                        }
+                        1 => {
+                            // Back edge to a gray node: a directed cycle.
+                            let cycle_start = path.iter().position(|&n| n == next).unwrap_or(0);
+                            return Err(GraphValidateError::Cycle {
+                                path: path[cycle_start..].to_vec(),
+                            });
+                        }
+                        _ => {} // black: fully explored, no cycle through it.
+                    }
+                } else {
+                    state[node as usize] = 2;
+                    path.pop();
+                    stack.pop();
                 }
             }
         }
