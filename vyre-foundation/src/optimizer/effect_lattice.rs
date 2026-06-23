@@ -334,9 +334,19 @@ pub fn node_effect_level(node: &Node) -> EffectLevel {
         | Node::AllGather { .. }
         | Node::ReduceScatter { .. }
         | Node::Broadcast { .. } => EffectLevel::Synchronized(SyncScope::Grid),
-        Node::Trap { .. } | Node::Resume { .. } | Node::Return | Node::Opaque(_) => {
-            EffectLevel::Pure
-        }
+        // A pure control-flow terminator: no memory or synchronization effect.
+        Node::Return => EffectLevel::Pure,
+        // Trap runs a host-side effect handler that may read or write any device
+        // memory; Resume continues from it; an Opaque extension node carries a
+        // backend-defined effect no analysis can name. Their effect is
+        // UNKNOWABLE, so they take the lattice top (`Diverging`): composing
+        // memory ops across them must REFUSE rather than silently treat them as
+        // `Pure` (the join identity), which would let a fusion pass reorder or
+        // fuse an effectful escape hatch as if it were a no-op — the exact
+        // silent miscompile this lattice exists to refuse. `Pure` here would also
+        // make a `Block`/`Region`/`Loop` whose only child is one of these
+        // summarise to `Pure`, hiding the effect from `program_effect_level`.
+        Node::Trap { .. } | Node::Resume { .. } | Node::Opaque(_) => EffectLevel::Diverging,
     }
 }
 
@@ -672,6 +682,45 @@ mod tests {
             "a pure program (just Return) must stay Pure  -  without this every pass would \
              see a stronger effect than the program actually has"
         );
+    }
+
+    #[test]
+    fn trap_and_resume_lift_to_diverging_not_pure() {
+        // Trap runs a host-side effect handler that may touch any device memory,
+        // and Resume continues from it; their memory effect is unknowable. The
+        // lattice must treat them as the conservative top (Diverging) so a fusion
+        // pass cannot compose memory ops across them as if they were Pure. Opaque
+        // extension nodes share this arm for the same reason.
+        assert_eq!(
+            node_effect_level(&Node::Trap {
+                address: Box::new(Expr::u32(0)),
+                tag: "t".into(),
+            }),
+            EffectLevel::Diverging,
+            "Trap's host effect handler is unknowable; must not summarise to Pure",
+        );
+        assert_eq!(
+            node_effect_level(&Node::Resume { tag: "t".into() }),
+            EffectLevel::Diverging,
+            "Resume continues a host effect handler; must not summarise to Pure",
+        );
+        // Reachable via the public summary: a program whose only statement is a
+        // Trap must surface Diverging, not be silently summarised as Pure.
+        let program = Program::wrapped(
+            vec![buf()],
+            [1, 1, 1],
+            vec![Node::Trap {
+                address: Box::new(Expr::u32(0)),
+                tag: "t".into(),
+            }],
+        );
+        assert_eq!(
+            program_effect_level(&program),
+            EffectLevel::Diverging,
+            "a program containing a host Trap must surface its unknowable effect",
+        );
+        // Return is a pure control-flow terminator and must stay Pure.
+        assert_eq!(node_effect_level(&Node::Return), EffectLevel::Pure);
     }
 
     #[test]
