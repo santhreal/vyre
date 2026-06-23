@@ -368,8 +368,13 @@ fn expr_touches_buffer(expr: &Expr, buffer: &Ident) -> bool {
                 || expr_touches_buffer(false_val, buffer)
         }
         Expr::Call { args, .. } => args.iter().any(|a| expr_touches_buffer(a, buffer)),
-        Expr::SubgroupShuffle { value, .. } | Expr::SubgroupReduce { value, .. } => {
-            expr_touches_buffer(value, buffer)
+        Expr::SubgroupReduce { value, .. } => expr_touches_buffer(value, buffer),
+        Expr::SubgroupShuffle { value, lane } => {
+            // The lane index may itself touch `buffer` (e.g. an atomic RMW or a
+            // load used as a gather index); a write there invalidates a
+            // forwarded value just as a top-level access would, so descend into
+            // the lane as well as the shuffled value.
+            expr_touches_buffer(value, buffer) || expr_touches_buffer(lane, buffer)
         }
         Expr::SubgroupBallot { cond } => expr_touches_buffer(cond, buffer),
         Expr::Opaque(_) => true,
@@ -501,6 +506,47 @@ mod tests {
                 _ => 0,
             })
             .sum()
+    }
+
+    #[test]
+    fn does_not_forward_across_a_shuffle_lane_atomic_write() {
+        use crate::ir::AtomicOp;
+        use crate::memory_model::MemoryOrdering;
+        // Store(a, 0, 7); Let(t, shuffle(5, atomic_add(a[0], 1))); Let(x, Load(a, 0))
+        // The shuffle's LANE performs an atomic RMW on a[0]  -  a write that
+        // invalidates the stored 7. `node_blocks_forwarding` scans intervening
+        // nodes via `expr_touches_buffer`, which dropped `SubgroupShuffle.lane`,
+        // so the atomic write was invisible and `Load(a, 0)` got forwarded to
+        // the stale literal 7. The lane must be inspected so the hidden write
+        // blocks forwarding.
+        let entry = vec![
+            Node::store("a", Expr::u32(0), Expr::u32(7)),
+            Node::let_bind(
+                "t",
+                Expr::subgroup_shuffle(
+                    Expr::u32(5),
+                    Expr::Atomic {
+                        op: AtomicOp::Add,
+                        buffer: "a".into(),
+                        index: Box::new(Expr::u32(0)),
+                        expected: None,
+                        value: Box::new(Expr::u32(1)),
+                        ordering: MemoryOrdering::Relaxed,
+                    },
+                ),
+            ),
+            Node::let_bind("x", Expr::load("a", Expr::u32(0))),
+        ];
+        let result = StoreToLoadForward::transform(program(entry));
+        assert!(
+            !result.changed,
+            "an atomic RMW in a shuffle lane writes the buffer; the later load must not be forwarded to the stale store value"
+        );
+        assert_eq!(
+            count_loads_in_lets(&region_body(result.program.entry())),
+            1,
+            "the load must survive (not be forwarded to a stale literal) across a lane atomic write"
+        );
     }
 
     #[test]
