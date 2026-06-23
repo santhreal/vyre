@@ -526,14 +526,22 @@ fn is_pure(kind: &KernelOpKind) -> bool {
         | KernelOpKind::Fma
         | KernelOpKind::MatrixMma { .. }
         | KernelOpKind::Select
-        | KernelOpKind::Cast { .. }
-        | KernelOpKind::SubgroupBallot
+        | KernelOpKind::Cast { .. } => true,
+        // Convergent subgroup collectives: the result depends on the SET of
+        // lanes participating at this program point. Hoisting one out of a loop
+        // changes its execution count (N → 1) and therefore its participation
+        // context, so it must stay inside the loop. The authoritative foundation
+        // hoist gate `expr_is_observably_free` (vyre-foundation loop_licm)
+        // rejects every subgroup op for exactly this reason; these four are the
+        // value-unsafe collective subset. (`SubgroupLocalId`/`SubgroupSize` are
+        // per-lane loop-invariant constants and remain hoistable above.)
+        KernelOpKind::SubgroupBallot
         | KernelOpKind::SubgroupShuffle
         | KernelOpKind::SubgroupBroadcast
-        | KernelOpKind::SubgroupReduce { .. } => true,
+        | KernelOpKind::SubgroupReduce { .. }
         // Writes / atomics / barriers / async / traps / dispatch / calls /
         // opaque: a side or sync effect, never hoist.
-        KernelOpKind::StoreGlobal
+        | KernelOpKind::StoreGlobal
         | KernelOpKind::StoreShared
         | KernelOpKind::Barrier { .. }
         | KernelOpKind::Atomic { .. }
@@ -788,6 +796,83 @@ mod tests {
             .iter()
             .any(|o| matches!(o.kind, KernelOpKind::LoadGlobal));
         assert!(has_load, "Load must stay inside the loop");
+    }
+
+    #[test]
+    fn licm_does_not_hoist_convergent_subgroup_reduce() {
+        // A subgroup reduce is a CONVERGENT collective: its result depends on
+        // the set of lanes participating at the program point. Hoisting it out
+        // of a loop changes that participation context, so it must stay inside
+        // the loop even when its value operand is loop-invariant. This matches
+        // the authoritative foundation hoist gate `expr_is_observably_free`
+        // (vyre-foundation loop_licm), which rejects EVERY subgroup op for
+        // exactly this reason ("per-invocation lane state could make repeated
+        // evaluation observably different ... when the loop is hoisted").
+        //
+        //   for i in 0..8 { let v = lit(0); let r = subgroupAdd(v); }
+        //
+        // The invariant literal `v` may hoist; the convergent reduce may not.
+        let desc = KernelDescriptor {
+            id: "subgroup_reduce_loop".into(),
+            bindings: BindingLayout { slots: vec![] },
+            dispatch: Dispatch::new(64, 1, 1),
+            body: KernelBody {
+                ops: vec![
+                    KernelOp {
+                        kind: KernelOpKind::Literal,
+                        operands: vec![0],
+                        result: Some(0),
+                    },
+                    KernelOp {
+                        kind: KernelOpKind::Literal,
+                        operands: vec![1],
+                        result: Some(1),
+                    },
+                    KernelOp {
+                        kind: KernelOpKind::StructuredForLoop {
+                            loop_var: "i".into(),
+                        },
+                        operands: vec![0, 1, 0],
+                        result: None,
+                    },
+                ],
+                child_bodies: vec![KernelBody {
+                    ops: vec![
+                        KernelOp {
+                            kind: KernelOpKind::Literal,
+                            operands: vec![0],
+                            result: Some(10),
+                        },
+                        // Convergent SubgroupReduce(value = r10) — must NOT hoist.
+                        KernelOp {
+                            kind: KernelOpKind::SubgroupReduce {
+                                op: crate::SubgroupReduceOp::Add,
+                            },
+                            operands: vec![10],
+                            result: Some(11),
+                        },
+                    ],
+                    child_bodies: vec![],
+                    literals: vec![LiteralValue::U32(0)],
+                }],
+                literals: vec![LiteralValue::U32(0), LiteralValue::U32(8)],
+            },
+        };
+        assert_eq!(crate::verify::verify(&desc), Ok(()));
+        let out = licm(&desc);
+        let loop_body = &out.body.child_bodies[0];
+        assert!(
+            loop_body
+                .ops
+                .iter()
+                .any(|o| matches!(o.kind, KernelOpKind::SubgroupReduce { .. })),
+            "convergent SubgroupReduce was hoisted out of the loop — a \
+             miscompile: hoisting a subgroup collective changes the lane \
+             participation context. It must stay inside the loop."
+        );
+        // The hoist of the invariant literal must leave a valid descriptor
+        // (the reduce's operand is remapped to the hoisted parent id).
+        assert_eq!(crate::verify::verify(&out), Ok(()));
     }
 
     #[test]
