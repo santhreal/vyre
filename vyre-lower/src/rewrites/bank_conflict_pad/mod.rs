@@ -35,7 +35,9 @@ pub fn bank_conflict_pad_with_bank_count(
     if bank_count <= 1 {
         return desc.clone();
     }
-    let Some(plan) = plan_body(&desc.body, &desc.bindings, bank_count) else {
+    let mut tree_uses = FxHashMap::default();
+    collect_tree_use_counts(&desc.body, &mut tree_uses);
+    let Some(plan) = plan_body(&desc.body, &desc.bindings, bank_count, &tree_uses) else {
         return desc.clone();
     };
     if plan.is_empty() {
@@ -90,7 +92,12 @@ struct SwizzleUpdate {
     local_id_result_id: u32,
 }
 
-fn plan_body(body: &KernelBody, bindings: &BindingLayout, bank_count: u32) -> Option<PaddingPlan> {
+fn plan_body(
+    body: &KernelBody,
+    bindings: &BindingLayout,
+    bank_count: u32,
+    tree_uses: &FxHashMap<u32, u32>,
+) -> Option<PaddingPlan> {
     let mut plan = PaddingPlan::default();
     let index = BodyIndex::new(body);
     let shared_slots = bindings
@@ -124,7 +131,16 @@ fn plan_body(body: &KernelBody, bindings: &BindingLayout, bank_count: u32) -> Op
         let mut updated_stride_for_slot = false;
         if gcd_u32(padded_stride, bank_count) == 1 {
             for (literal_result_id, target_mul_results) in target_mul_results_by_literal {
-                if index.use_count_of(literal_result_id) as usize != target_mul_results.len() {
+                // SSA result ids are tree-global: padding the literal re-points
+                // its single producer, changing the value EVERYWHERE it is used,
+                // including child bodies the per-body `index` cannot see. Only
+                // pad when every use across the whole tree is one of the target
+                // stride muls; otherwise fail closed to the swizzle path. A
+                // per-body count here silently corrupts a child-body consumer of
+                // the stride literal.
+                let total_uses =
+                    tree_uses.get(&literal_result_id).copied().unwrap_or(0) as usize;
+                if total_uses != target_mul_results.len() {
                     continue;
                 }
                 plan.literal_updates
@@ -155,7 +171,7 @@ fn plan_body(body: &KernelBody, bindings: &BindingLayout, bank_count: u32) -> Op
     }
 
     for (child_index, child) in body.child_bodies.iter().enumerate() {
-        let child_plan = plan_body(child, bindings, bank_count)?;
+        let child_plan = plan_body(child, bindings, bank_count, tree_uses)?;
         if child_plan.is_empty() {
             continue;
         }
@@ -169,6 +185,26 @@ fn plan_body(body: &KernelBody, bindings: &BindingLayout, bank_count: u32) -> Op
     }
 
     Some(plan)
+}
+
+/// Tally operand uses of every result id across the entire body tree.
+///
+/// [`BodyIndex`] counts uses within a single body only, but SSA result ids are
+/// tree-global. The bank-conflict pad rewrite mutates a stride literal's
+/// producer in place (changing its value everywhere it is referenced), so its
+/// safety guard must reason about the literal's uses tree-wide. Counting
+/// structured-control operands the same way [`BodyIndex`] does keeps the guard
+/// conservative: over-counting only ever forces the safe swizzle path, never an
+/// unsound in-place pad.
+fn collect_tree_use_counts(body: &KernelBody, counts: &mut FxHashMap<u32, u32>) {
+    for op in &body.ops {
+        for operand in &op.operands {
+            *counts.entry(*operand).or_insert(0) += 1;
+        }
+    }
+    for child in &body.child_bodies {
+        collect_tree_use_counts(child, counts);
+    }
 }
 
 fn shared_accesses_for_slot(
@@ -419,5 +455,54 @@ mod tests {
             Some(LiteralValue::U32(33))
         ));
         assert_eq!(output.bindings.slots[0].element_count, Some(1056));
+    }
+
+    #[test]
+    fn does_not_corrupt_stride_literal_consumed_in_child_body() {
+        // The stride literal (result 1) feeds the shared-access mul in the top
+        // body AND is consumed by an op living in a CHILD body. SSA result ids
+        // are tree-global, so padding the literal in place (re-pointing its
+        // producer to STRIDE+1) silently changes the child's value too. The
+        // per-body use-count guard cannot see the child use, so without a
+        // tree-wide guard it wrongly pads and corrupts the child consumer.
+        // The pass must fail closed to the swizzle path and leave result 1 == 32.
+        let mut input = kernel(32, 1024);
+        input
+            .body
+            .ops
+            .push(op(KernelOpKind::StructuredBlock, vec![0], None));
+        input.body.child_bodies = vec![KernelBody {
+            ops: vec![op(
+                KernelOpKind::BinOpKind(BinOp::Add),
+                vec![1, 1],
+                Some(4),
+            )],
+            child_bodies: vec![],
+            literals: vec![],
+        }];
+
+        let output = bank_conflict_pad(&input);
+
+        // Resolve the value that result 1 (the stride literal) produces and
+        // assert it is unchanged: padding it would corrupt the child consumer.
+        let lit_op = output
+            .body
+            .ops
+            .iter()
+            .find(|o| o.result == Some(1))
+            .expect("stride literal op survives the rewrite");
+        assert!(
+            matches!(lit_op.kind, KernelOpKind::Literal),
+            "result 1 is still the stride literal"
+        );
+        let pool_idx = lit_op.operands[0] as usize;
+        assert_eq!(
+            output.body.literals[pool_idx],
+            LiteralValue::U32(32),
+            "stride literal is consumed in a child body; padding it in place \
+             corrupts that tree-global use"
+        );
+        // The child consumer of result 1 is left referencing the literal.
+        assert_eq!(output.body.child_bodies[0].ops[0].operands, vec![1, 1]);
     }
 }
