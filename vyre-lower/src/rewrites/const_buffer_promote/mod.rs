@@ -6,6 +6,10 @@
 //! and rewrites all matching `LoadGlobal` ops to `LoadConstant` across nested
 //! bodies. Stores/atomics/async stores against a candidate slot veto the
 //! promotion even if a malformed descriptor claims the binding is read-only.
+//! Opaque escape hatches (`Call` / `OpaqueExpr` / `OpaqueNode`) carry
+//! backend-defined effects with no addressable slot operand and could write any
+//! global buffer, so their presence anywhere in the tree also vetoes promotion:
+//! we fail closed rather than risk serving stale constant-cached data.
 
 use crate::{KernelBody, KernelDescriptor, KernelOpKind, MemoryClass};
 use rustc_hash::FxHashSet;
@@ -34,7 +38,7 @@ pub fn const_buffer_promote_with_budget(
         .candidates
         .iter()
         .map(|candidate| candidate.binding_slot)
-        .filter(|slot| !slot_has_writes(&desc.body, *slot))
+        .filter(|slot| !slot_may_be_written(&desc.body, *slot))
         .collect::<FxHashSet<_>>();
     if candidates.is_empty() {
         return desc.clone();
@@ -68,17 +72,30 @@ fn rewrite_body_loads(body: &mut KernelBody, slots: &FxHashSet<u32>) {
     }
 }
 
-fn slot_has_writes(body: &KernelBody, slot: u32) -> bool {
+/// True when the pass cannot prove `slot` stays read-only for the kernel's
+/// lifetime, so promoting it to a constant buffer would be unsound.
+///
+/// An addressed store (`StoreGlobal` / `StoreShared` / `Atomic` / `AsyncStore`)
+/// names its target slot in `operands[0]`, so we check it directly. Opaque
+/// escape hatches (`Call` / `OpaqueExpr` / `OpaqueNode`) carry backend-defined
+/// effects with NO addressable slot operand: they may write any global buffer,
+/// including this candidate. Their effect is unknowable from the descriptor, so
+/// we fail closed and treat the slot as possibly-written rather than promote it
+/// and risk a backend serving stale constant-cached data after the opaque write.
+fn slot_may_be_written(body: &KernelBody, slot: u32) -> bool {
     body.ops.iter().any(|op| match &op.kind {
         KernelOpKind::StoreGlobal
         | KernelOpKind::StoreShared
         | KernelOpKind::Atomic { .. }
         | KernelOpKind::AsyncStore { .. } => op.operands.first().copied() == Some(slot),
+        KernelOpKind::Call { .. }
+        | KernelOpKind::OpaqueExpr(..)
+        | KernelOpKind::OpaqueNode(..) => true,
         _ => false,
     }) || body
         .child_bodies
         .iter()
-        .any(|child| slot_has_writes(child, slot))
+        .any(|child| slot_may_be_written(child, slot))
 }
 
 #[cfg(test)]
@@ -86,6 +103,7 @@ mod tests {
     use super::*;
     use crate::{
         BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelOp, LiteralValue,
+        OpaqueNodeData,
     };
     use vyre_foundation::ir::DataType;
 
@@ -191,6 +209,69 @@ mod tests {
         );
         let output = const_buffer_promote(&input);
 
+        assert_eq!(output, input);
+    }
+
+    #[test]
+    fn opaque_node_writer_vetoes_promotion() {
+        // An OpaqueNode is a backend-defined escape hatch with no addressable
+        // slot operand: it may write ANY global buffer, including this
+        // read-only-DECLARED candidate. The pass cannot prove the slot stays
+        // read-only, so it must fail closed and NOT promote it to Constant —
+        // promoting would let a backend serve stale constant-cached data after
+        // the opaque op writes the buffer.
+        let input = kernel(
+            vec![
+                op(KernelOpKind::Literal, vec![0], Some(0)),
+                op(KernelOpKind::LoadGlobal, vec![0, 0], Some(1)),
+                op(KernelOpKind::LoadGlobal, vec![0, 0], Some(2)),
+                op(
+                    KernelOpKind::OpaqueNode(Box::new(OpaqueNodeData {
+                        extension_kind: "backend-write".into(),
+                        payload: Vec::new(),
+                    })),
+                    vec![],
+                    None,
+                ),
+            ],
+            vec![],
+        );
+        let output = const_buffer_promote(&input);
+
+        assert_eq!(output.bindings.slots[0].memory_class, MemoryClass::Global);
+        assert!(matches!(output.body.ops[1].kind, KernelOpKind::LoadGlobal));
+        assert!(matches!(output.body.ops[2].kind, KernelOpKind::LoadGlobal));
+        assert_eq!(output, input);
+    }
+
+    #[test]
+    fn opaque_node_writer_in_child_body_vetoes_promotion() {
+        // The unprovable-effect veto must be tree-wide: an opaque writer hiding
+        // in a child body is just as dangerous as one in the entry body.
+        let child = KernelBody {
+            ops: vec![op(
+                KernelOpKind::OpaqueNode(Box::new(OpaqueNodeData {
+                    extension_kind: "backend-write".into(),
+                    payload: Vec::new(),
+                })),
+                vec![],
+                None,
+            )],
+            child_bodies: vec![],
+            literals: vec![],
+        };
+        let input = kernel(
+            vec![
+                op(KernelOpKind::Literal, vec![0], Some(0)),
+                op(KernelOpKind::LoadGlobal, vec![0, 0], Some(1)),
+                op(KernelOpKind::LoadGlobal, vec![0, 0], Some(2)),
+                op(KernelOpKind::StructuredBlock, vec![0], None),
+            ],
+            vec![child],
+        );
+        let output = const_buffer_promote(&input);
+
+        assert_eq!(output.bindings.slots[0].memory_class, MemoryClass::Global);
         assert_eq!(output, input);
     }
 
