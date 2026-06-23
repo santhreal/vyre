@@ -496,96 +496,24 @@ fn collect_used_vars(expr: &Expr, used: &mut FxHashSet<Ident>) {
     }
 }
 
+/// Copy-propagation substitution: replace every pending `Var` with its bound
+/// expression, leaving all other expressions -- and the replacement's own body
+/// -- verbatim.
+///
+/// This is exactly the canonical `rewrite_expr` contract (a single-shot,
+/// post-order transform whose output is inserted without re-rewriting), so it
+/// routes through that driver rather than a hand-rolled match. The driver
+/// descends into EVERY subexpression -- subgroup operands (`SubgroupBallot`/
+/// `SubgroupShuffle`/`SubgroupReduce`), `Call` args, `Fma`, `Atomic`, ... --
+/// which structurally precludes the "forgot the subgroup operand" omission
+/// class (the bug a hand-rolled descent had to be patched for): adding an
+/// `Expr` variant can never silently skip substitution here again.
 fn substitute_expr(expr: &Expr, replacements: &PendingReplacements) -> Expr {
-    match expr {
-        Expr::Var(name) => replacements
-            .get(name)
-            .map_or_else(|| expr.clone(), |pending| pending.expr.clone()),
-        Expr::Load { buffer, index } => Expr::Load {
-            buffer: buffer.clone(),
-            index: Box::new(substitute_expr(index, replacements)),
-        },
-        Expr::BinOp { op, left, right } => Expr::BinOp {
-            op: *op,
-            left: Box::new(substitute_expr(left, replacements)),
-            right: Box::new(substitute_expr(right, replacements)),
-        },
-        Expr::UnOp { op, operand } => Expr::UnOp {
-            op: op.clone(),
-            operand: Box::new(substitute_expr(operand, replacements)),
-        },
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => Expr::Select {
-            cond: Box::new(substitute_expr(cond, replacements)),
-            true_val: Box::new(substitute_expr(true_val, replacements)),
-            false_val: Box::new(substitute_expr(false_val, replacements)),
-        },
-        Expr::Cast { target, value } => Expr::Cast {
-            target: target.clone(),
-            value: Box::new(substitute_expr(value, replacements)),
-        },
-        Expr::Fma { a, b, c } => Expr::Fma {
-            a: Box::new(substitute_expr(a, replacements)),
-            b: Box::new(substitute_expr(b, replacements)),
-            c: Box::new(substitute_expr(c, replacements)),
-        },
-        Expr::Atomic {
-            op,
-            buffer,
-            index,
-            expected,
-            value,
-            ordering,
-        } => Expr::Atomic {
-            op: *op,
-            buffer: buffer.clone(),
-            index: Box::new(substitute_expr(index, replacements)),
-            expected: expected
-                .as_deref()
-                .map(|expected| Box::new(substitute_expr(expected, replacements))),
-            value: Box::new(substitute_expr(value, replacements)),
-            ordering: *ordering,
-        },
-        Expr::Call { op_id, args } => Expr::Call {
-            op_id: op_id.clone(),
-            args: args
-                .iter()
-                .map(|arg| substitute_expr(arg, replacements))
-                .collect(),
-        },
-        // Subgroup ops carry value-expression operands that can reference a
-        // pending replacement. A single-use, fusable `let v = ..` is dropped
-        // from the output and inlined at its one use site; if that use sits in
-        // a subgroup operand, cloning the node verbatim leaves `v` referencing
-        // a binding that no longer exists (the use-counter and
-        // `collect_used_vars` both descend here, so the pending entry was
-        // already dropped by `drop_used`). Descend so the operand is rewritten.
-        Expr::SubgroupBallot { cond } => Expr::SubgroupBallot {
-            cond: Box::new(substitute_expr(cond, replacements)),
-        },
-        Expr::SubgroupShuffle { value, lane } => Expr::SubgroupShuffle {
-            value: Box::new(substitute_expr(value, replacements)),
-            lane: Box::new(substitute_expr(lane, replacements)),
-        },
-        Expr::SubgroupReduce { op, value } => Expr::SubgroupReduce {
-            op: *op,
-            value: Box::new(substitute_expr(value, replacements)),
-        },
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::BufLen { .. }
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize
-        | Expr::Opaque(_) => expr.clone(),
-    }
+    crate::optimizer::rewrite::rewrite_expr(expr, &mut |e| match e {
+        Expr::Var(name) => replacements.get(name).map(|pending| pending.expr.clone()),
+        _ => None,
+    })
+    .into_owned()
 }
 
 /// An expression is fusable if it is non-trivial (worth inlining because it
