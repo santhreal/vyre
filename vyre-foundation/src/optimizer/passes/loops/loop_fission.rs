@@ -182,25 +182,30 @@ fn has_barrier_like(nodes: &[Node]) -> bool {
 /// cross-iteration dependency break. Node-level opaque/async/trap ops are
 /// already refused by [`has_barrier_like`]; this closes the expression-level
 /// hole (an `Expr::Opaque` embedded in a `Let`/`Store`/`If`-cond/`Loop` bound).
+/// The per-expression test reuses [`substitution::expr_contains_opaque`], the
+/// one exhaustive opaque-expr walker shared with [`super::loop_fusion`].
 fn has_opaque_expr(nodes: &[Node]) -> bool {
     nodes.iter().any(node_has_opaque_expr)
 }
 
 fn node_has_opaque_expr(node: &Node) -> bool {
+    use super::substitution::expr_contains_opaque;
     match node {
-        Node::Let { value, .. } | Node::Assign { value, .. } => expr_has_opaque(value),
-        Node::Store { index, value, .. } => expr_has_opaque(index) || expr_has_opaque(value),
+        Node::Let { value, .. } | Node::Assign { value, .. } => expr_contains_opaque(value),
+        Node::Store { index, value, .. } => {
+            expr_contains_opaque(index) || expr_contains_opaque(value)
+        }
         Node::If {
             cond,
             then,
             otherwise,
-        } => expr_has_opaque(cond) || has_opaque_expr(then) || has_opaque_expr(otherwise),
+        } => expr_contains_opaque(cond) || has_opaque_expr(then) || has_opaque_expr(otherwise),
         Node::Loop {
             from, to, body, ..
-        } => expr_has_opaque(from) || expr_has_opaque(to) || has_opaque_expr(body),
+        } => expr_contains_opaque(from) || expr_contains_opaque(to) || has_opaque_expr(body),
         Node::Block(body) => has_opaque_expr(body),
         Node::Region { body, .. } => has_opaque_expr(body),
-        Node::Trap { address, .. } => expr_has_opaque(address),
+        Node::Trap { address, .. } => expr_contains_opaque(address),
         // The remaining node kinds are already refused by `has_barrier_like`
         // (async/collective/opaque/indirect-dispatch/resume) or carry no Expr
         // operand (Barrier/Return); none reach a fission split with an
@@ -217,50 +222,6 @@ fn node_has_opaque_expr(node: &Node) -> bool {
         | Node::AllGather { .. }
         | Node::ReduceScatter { .. }
         | Node::Broadcast { .. } => false,
-    }
-}
-
-fn expr_has_opaque(expr: &Expr) -> bool {
-    match expr {
-        Expr::Opaque(_) => true,
-        Expr::Load { index, .. } => expr_has_opaque(index),
-        Expr::BufLen { .. } => false,
-        Expr::Atomic {
-            index,
-            expected,
-            value,
-            ..
-        } => {
-            expr_has_opaque(index)
-                || expr_has_opaque(value)
-                || matches!(expected.as_deref(), Some(e) if expr_has_opaque(e))
-        }
-        Expr::BinOp { left, right, .. } => expr_has_opaque(left) || expr_has_opaque(right),
-        Expr::UnOp { operand, .. } => expr_has_opaque(operand),
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => expr_has_opaque(cond) || expr_has_opaque(true_val) || expr_has_opaque(false_val),
-        Expr::Cast { value, .. } | Expr::SubgroupReduce { value, .. } => expr_has_opaque(value),
-        Expr::Fma { a, b, c } => {
-            expr_has_opaque(a) || expr_has_opaque(b) || expr_has_opaque(c)
-        }
-        Expr::Call { args, .. } => args.iter().any(expr_has_opaque),
-        Expr::SubgroupBallot { cond } => expr_has_opaque(cond),
-        Expr::SubgroupShuffle { value, lane } => {
-            expr_has_opaque(value) || expr_has_opaque(lane)
-        }
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::Var(_)
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize => false,
     }
 }
 

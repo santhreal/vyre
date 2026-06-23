@@ -141,6 +141,8 @@ fn fuse_in_body(body: Vec<Node>, changed: &mut bool) -> Vec<Node> {
         if !bounds_match(&from_a, &to_a, &from_b, &to_b)
             || var_a == var_b
             || !buffers_disjoint(&body_a, &body_b)
+            || has_unsummarisable_effect(&body_a)
+            || has_unsummarisable_effect(&body_b)
             || body_a_let_names_collide_with_b(&body_a, &body_b, &var_b)
             || fusion_collides_bindings(&body_a, &body_b, &var_a, &var_b)
             || fusion_has_scalar_dependency(&body_a, &body_b)
@@ -341,6 +343,72 @@ fn collect_buffers_in_expr(expr: &Expr, out: &mut FxHashSet<Ident>) {
         | Expr::SubgroupLocalId
         | Expr::SubgroupSize
         | Expr::Opaque(_) => {}
+    }
+}
+
+/// True iff `nodes` contains an operation whose memory effect cannot be
+/// summarised by [`collect_touched_buffers`] — an opaque extension node or
+/// expression, or a trap/resume host handler.
+///
+/// `collect_touched_buffers` reports `Node::Opaque`/`Expr::Opaque` as touching
+/// NO buffer and a `Trap` as touching only its explicit `address` operand, but
+/// their real effect may read or write ANY buffer: an opaque payload is
+/// backend-defined, and a trap invokes an unknowable host handler (see
+/// `effect_lattice`, which lifts all three to the `Diverging` lattice top).
+/// Fusion interleaves the iterations of the two loops, so such a hidden access
+/// could be reordered past the sibling loop's writes, breaking a cross-loop
+/// dependency the [`buffers_disjoint`] proof never saw. Either loop containing
+/// one keeps the pair unfused.
+///
+/// Async / collective / indirect-dispatch nodes are intentionally NOT included:
+/// their buffer operands ARE captured by `collect_touched_buffers`, so the
+/// disjointness test already covers them — refusing them here would needlessly
+/// forbid legal fusions of loops whose async/collective ops touch disjoint
+/// buffers.
+fn has_unsummarisable_effect(nodes: &[Node]) -> bool {
+    nodes.iter().any(node_has_unsummarisable_effect)
+}
+
+fn node_has_unsummarisable_effect(node: &Node) -> bool {
+    use super::substitution::expr_contains_opaque;
+    match node {
+        // Unknowable host/backend effect regardless of any operand.
+        Node::Opaque(_) | Node::Trap { .. } | Node::Resume { .. } => true,
+        Node::Let { value, .. } | Node::Assign { value, .. } => expr_contains_opaque(value),
+        Node::Store { index, value, .. } => {
+            expr_contains_opaque(index) || expr_contains_opaque(value)
+        }
+        Node::If {
+            cond,
+            then,
+            otherwise,
+        } => {
+            expr_contains_opaque(cond)
+                || has_unsummarisable_effect(then)
+                || has_unsummarisable_effect(otherwise)
+        }
+        Node::Loop {
+            from, to, body, ..
+        } => {
+            expr_contains_opaque(from)
+                || expr_contains_opaque(to)
+                || has_unsummarisable_effect(body)
+        }
+        Node::Block(body) => has_unsummarisable_effect(body),
+        Node::Region { body, .. } => has_unsummarisable_effect(body),
+        Node::AsyncLoad { offset, size, .. } | Node::AsyncStore { offset, size, .. } => {
+            expr_contains_opaque(offset) || expr_contains_opaque(size)
+        }
+        // Buffer operands captured by `collect_touched_buffers`; no Expr operand
+        // that could hide an opaque payload.
+        Node::Barrier { .. }
+        | Node::Return
+        | Node::IndirectDispatch { .. }
+        | Node::AsyncWait { .. }
+        | Node::AllReduce { .. }
+        | Node::AllGather { .. }
+        | Node::ReduceScatter { .. }
+        | Node::Broadcast { .. } => false,
     }
 }
 
@@ -713,6 +781,8 @@ fn body_has_fusable_pair(body: &[Node]) -> bool {
             if bounds_match(from_a, to_a, from_b, to_b)
                 && var_a != var_b
                 && buffers_disjoint(body_a, body_b)
+                && !has_unsummarisable_effect(body_a)
+                && !has_unsummarisable_effect(body_b)
                 && !body_a_let_names_collide_with_b(body_a, body_b, var_b)
                 && !fusion_collides_bindings(body_a, body_b, var_a, var_b)
                 && !fusion_has_scalar_dependency(body_a, body_b)
@@ -727,7 +797,7 @@ fn body_has_fusable_pair(body: &[Node]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ir::{BufferAccess, BufferDecl, DataType, Expr, Node};
+    use crate::ir::{BufferAccess, BufferDecl, DataType, Expr, ExprNode, Node, NodeExtension};
 
     fn buf(name: &str) -> BufferDecl {
         BufferDecl::storage(name, 0, BufferAccess::ReadWrite, DataType::U32).with_count(8)
@@ -735,6 +805,126 @@ mod tests {
 
     fn program(entry: Vec<Node>) -> Program {
         Program::wrapped(vec![buf("a"), buf("b")], [1, 1, 1], entry)
+    }
+
+    /// An opaque expression whose real buffer effect (it may read or write ANY
+    /// buffer) is invisible to `collect_buffers_in_expr`, which summarises
+    /// `Expr::Opaque(_)` as touching no buffers.
+    #[derive(Debug)]
+    struct OpaqueReader;
+
+    impl ExprNode for OpaqueReader {
+        fn extension_kind(&self) -> &'static str {
+            "test.fusion.opaque_buffer_reader"
+        }
+        fn debug_identity(&self) -> &str {
+            "opaque_reader"
+        }
+        fn result_type(&self) -> Option<DataType> {
+            Some(DataType::U32)
+        }
+        fn cse_safe(&self) -> bool {
+            false
+        }
+        fn stable_fingerprint(&self) -> [u8; 32] {
+            [13; 32]
+        }
+        fn validate_extension(&self) -> std::result::Result<(), String> {
+            Ok(())
+        }
+        fn as_any(&self) -> &dyn std::any::Any {
+            self
+        }
+    }
+
+    /// An opaque statement node whose real buffer effect is invisible to
+    /// `collect_touched_buffers`, which summarises `Node::Opaque(_)` as
+    /// touching no buffers.
+    #[derive(Debug)]
+    struct OpaqueWriter;
+
+    impl NodeExtension for OpaqueWriter {
+        fn extension_kind(&self) -> &'static str {
+            "test.fusion.opaque_buffer_writer"
+        }
+        fn debug_identity(&self) -> &str {
+            "opaque_writer"
+        }
+        fn stable_fingerprint(&self) -> [u8; 32] {
+            [14; 32]
+        }
+        fn validate_extension(&self) -> std::result::Result<(), String> {
+            Ok(())
+        }
+        fn as_any(&self) -> &dyn std::any::Any {
+            self
+        }
+    }
+
+    #[test]
+    fn does_not_fuse_when_a_body_holds_an_opaque_expr() {
+        // body_a's only explicit buffer is `a`, body_b's is `b`, so
+        // `buffers_disjoint` reports them disjoint  -  but body_a's stored
+        // value is an opaque expression that may read or write `b`. Fusing
+        // would interleave that unknowable access with body_b's writes to
+        // `b`, breaking a cross-loop dependency the disjointness proof cannot
+        // see. The pass must keep the two loops separate.
+        let entry = vec![
+            Node::loop_for(
+                "i",
+                Expr::u32(0),
+                Expr::u32(8),
+                vec![Node::store("a", Expr::var("i"), Expr::opaque(OpaqueReader))],
+            ),
+            Node::loop_for(
+                "j",
+                Expr::u32(0),
+                Expr::u32(8),
+                vec![Node::store("b", Expr::var("j"), Expr::u32(2))],
+            ),
+        ];
+        let result = LoopFusion::transform(program(entry));
+        assert!(
+            !result.changed,
+            "an opaque expression's unknowable buffer effect must block fusion"
+        );
+        assert_eq!(
+            count_loops(&region_body(result.program.entry())),
+            2,
+            "loops bracketing an opaque-valued store must not fuse"
+        );
+    }
+
+    #[test]
+    fn does_not_fuse_when_a_body_holds_an_opaque_node() {
+        // body_a is a single opaque node touching no buffer that
+        // `collect_touched_buffers` can see, so it reports `{}`  -  trivially
+        // disjoint from body_b's `{b}`. But the opaque node may write `b`;
+        // fusing would interleave that hidden write with body_b's stores.
+        let entry = vec![
+            Node::loop_for(
+                "i",
+                Expr::u32(0),
+                Expr::u32(8),
+                vec![Node::opaque(OpaqueWriter)],
+            ),
+            Node::loop_for(
+                "j",
+                Expr::u32(0),
+                Expr::u32(8),
+                vec![Node::store("b", Expr::var("j"), Expr::u32(2))],
+            ),
+        ];
+        let result = LoopFusion::transform(program(entry));
+        assert!(
+            !result.changed,
+            "an opaque node's unknowable buffer effect must block fusion"
+        );
+        assert_eq!(
+            count_loops(&region_body(result.program.entry())),
+            2,
+            "a loop whose body is an opaque node must not fuse with its sibling"
+        );
     }
 
     fn region_body(program_entry: &[Node]) -> Vec<Node> {

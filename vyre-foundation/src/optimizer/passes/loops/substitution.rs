@@ -7,7 +7,73 @@
 
 pub(super) use crate::transform::subst::{substitute_node, substitute_nodes};
 
-use crate::ir::{Ident, Node};
+use crate::ir::{Expr, Ident, Node};
+
+/// True iff `expr` contains an `Expr::Opaque` anywhere in its tree.
+///
+/// An opaque expression is a backend-defined escape hatch whose memory effect
+/// no analysis can name: it may read or write any buffer. The loop passes that
+/// reorder memory across iterations ([`super::loop_fission`] splitting one loop
+/// into two, [`super::loop_fusion`] interleaving two into one) prove safety by
+/// collecting the buffers a body touches and requiring the two halves to be
+/// disjoint — but a buffer access hidden inside an opaque expression is
+/// invisible to that collector, so it would be silently dropped from the
+/// touched set and the disjointness proof would be unsound. Both passes call
+/// this to fail closed: any opaque expression in the body keeps it whole. The
+/// walk is exhaustive over every `Expr` operand position (including
+/// `SubgroupShuffle`'s `lane`, which the buffer collectors elide) so an opaque
+/// payload can never be reordered past a dependent access it cannot see.
+pub(super) fn expr_contains_opaque(expr: &Expr) -> bool {
+    match expr {
+        Expr::Opaque(_) => true,
+        Expr::Load { index, .. } => expr_contains_opaque(index),
+        Expr::BufLen { .. } => false,
+        Expr::Atomic {
+            index,
+            expected,
+            value,
+            ..
+        } => {
+            expr_contains_opaque(index)
+                || expr_contains_opaque(value)
+                || matches!(expected.as_deref(), Some(e) if expr_contains_opaque(e))
+        }
+        Expr::BinOp { left, right, .. } => {
+            expr_contains_opaque(left) || expr_contains_opaque(right)
+        }
+        Expr::UnOp { operand, .. } => expr_contains_opaque(operand),
+        Expr::Select {
+            cond,
+            true_val,
+            false_val,
+        } => {
+            expr_contains_opaque(cond)
+                || expr_contains_opaque(true_val)
+                || expr_contains_opaque(false_val)
+        }
+        Expr::Cast { value, .. } | Expr::SubgroupReduce { value, .. } => {
+            expr_contains_opaque(value)
+        }
+        Expr::Fma { a, b, c } => {
+            expr_contains_opaque(a) || expr_contains_opaque(b) || expr_contains_opaque(c)
+        }
+        Expr::Call { args, .. } => args.iter().any(expr_contains_opaque),
+        Expr::SubgroupBallot { cond } => expr_contains_opaque(cond),
+        Expr::SubgroupShuffle { value, lane } => {
+            expr_contains_opaque(value) || expr_contains_opaque(lane)
+        }
+        Expr::LitU32(_)
+        | Expr::LitI32(_)
+        | Expr::LitF32(_)
+        | Expr::LitBool(_)
+        | Expr::Var(_)
+        | Expr::InvocationId { .. }
+        | Expr::WorkgroupId { .. }
+        | Expr::LocalId { .. }
+        | Expr::SubgroupLocalId
+        | Expr::SubgroupSize => false,
+    }
+}
 
 /// True iff any node in `nodes` rebinds `var` — a `Let` or `Assign` whose
 /// name equals `var`. This is the precondition guard for every loop pass that
