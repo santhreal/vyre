@@ -1,6 +1,6 @@
 [package]
 name = "vyre-spec"
-version = "0.6.3"
+version = "0.6.4"
 edition.workspace = true
 rust-version.workspace = true
 description = "Frozen data contracts for vyre  -  OpDef, AlgebraicLaw, Category, IntrinsicTable"
