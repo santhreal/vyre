@@ -1445,3 +1445,184 @@ mod tests {
         assert_eq!(stats.bindings_dropped(), 0);
     }
 }
+
+#[cfg(test)]
+mod value_differential {
+    //! Bootstrap-validated scalar SSA value differential for the arithmetic
+    //! literal-chain combine rewrites. The per-rewrite contract tests assert op
+    //! SHAPE (combined literal, operand ids); this asserts the COMPUTED u32
+    //! value of `(gid ∘ a) ∘ b` is preserved for every input — the SSA analog
+    //! of the foundation value-differential suites. It catches a wrong
+    //! reassociation or an unguarded combined-literal overflow that a shape
+    //! check cannot see.
+    //!
+    //! A minimal interpreter over the arithmetic `KernelOpKind` subset evaluates
+    //! the descriptor before and after each rewrite across adversarial
+    //! `GlobalInvocationId` seeds. The interpreter is validated against
+    //! hand-computed values first (`evaluator_is_validated_on_known_values`), so
+    //! a divergence is the rewrite's fault, not the harness's. It panics — never
+    //! silently guesses — on any op or literal outside the validated scalar
+    //! subset, so an unexpected lowering shape fails loudly instead of producing
+    //! a false "values match".
+
+    use super::rhs_lit_chain::test_support::{
+        binop, descriptor_with, empty_body, lit_u32, nonliteral_source,
+    };
+    use crate::{KernelDescriptor, KernelOp, KernelOpKind, LiteralValue};
+    use std::collections::HashMap;
+    use vyre_foundation::ir::BinOp;
+
+    /// vyre u32 BinOp semantics (wrapping add/sub/mul, floor div/rem, shift
+    /// amount masked mod 32) — the subset the arithmetic chains use. Matches the
+    /// reference oracle's integer contract.
+    fn apply_u32(op: BinOp, l: u32, r: u32) -> u32 {
+        match op {
+            BinOp::Add => l.wrapping_add(r),
+            BinOp::Sub => l.wrapping_sub(r),
+            BinOp::Mul => l.wrapping_mul(r),
+            BinOp::Div => {
+                if r == 0 {
+                    0
+                } else {
+                    l / r
+                }
+            }
+            BinOp::Mod => {
+                if r == 0 {
+                    0
+                } else {
+                    l % r
+                }
+            }
+            BinOp::BitAnd => l & r,
+            BinOp::BitOr => l | r,
+            BinOp::BitXor => l ^ r,
+            BinOp::Shl => l.wrapping_shl(r & 31),
+            BinOp::Shr => l.wrapping_shr(r & 31),
+            other => panic!("value_differential evaluator: unhandled BinOp {other:?}"),
+        }
+    }
+
+    /// Resolve the value at `id` by recursively evaluating its producer's
+    /// operands. Order-independent: it does not assume where a rewrite inserted
+    /// the freshly combined literal op relative to its consumer in `ops`.
+    fn eval_id(
+        id: u32,
+        producers: &HashMap<u32, &KernelOp>,
+        literals: &[LiteralValue],
+        gid: u32,
+        memo: &mut HashMap<u32, u32>,
+    ) -> u32 {
+        if let Some(v) = memo.get(&id) {
+            return *v;
+        }
+        let op = producers
+            .get(&id)
+            .unwrap_or_else(|| panic!("value_differential: result id {id} has no producer"));
+        let value = match &op.kind {
+            KernelOpKind::GlobalInvocationId => gid,
+            KernelOpKind::Literal => {
+                match literals
+                    .get(op.operands[0] as usize)
+                    .expect("literal pool index in range")
+                {
+                    LiteralValue::U32(v) => *v,
+                    other => panic!("value_differential: non-u32 literal {other:?}"),
+                }
+            }
+            KernelOpKind::Copy => eval_id(op.operands[0], producers, literals, gid, memo),
+            KernelOpKind::BinOpKind(b) => {
+                let l = eval_id(op.operands[0], producers, literals, gid, memo);
+                let r = eval_id(op.operands[1], producers, literals, gid, memo);
+                apply_u32(*b, l, r)
+            }
+            other => panic!("value_differential evaluator: unhandled op kind {other:?}"),
+        };
+        memo.insert(id, value);
+        value
+    }
+
+    fn eval_scalar(desc: &KernelDescriptor, output_id: u32, gid: u32) -> u32 {
+        let mut producers: HashMap<u32, &KernelOp> = HashMap::new();
+        for op in &desc.body.ops {
+            if let Some(rid) = op.result {
+                producers.insert(rid, op);
+            }
+        }
+        let mut memo = HashMap::new();
+        eval_id(output_id, &producers, &desc.body.literals, gid, &mut memo)
+    }
+
+    /// `result 4 = (gid ∘ a) ∘ b`; gid = `GlobalInvocationId` at result 0,
+    /// a/b are rhs literals. Mirrors the per-rewrite combine fixtures so the
+    /// rewrite actually fires (non-literal base, single-consumer intermediate).
+    fn chain(op: BinOp, a: u32, b: u32) -> KernelDescriptor {
+        let mut body = empty_body();
+        nonliteral_source(&mut body, 0);
+        lit_u32(&mut body, a, 1);
+        binop(&mut body, op, 0, 1, 2);
+        lit_u32(&mut body, b, 3);
+        binop(&mut body, op, 2, 3, 4);
+        descriptor_with("value_differential", body)
+    }
+
+    const PROBES: &[u32] = &[
+        0,
+        1,
+        2,
+        3,
+        7,
+        8,
+        255,
+        256,
+        0x0001_0000,
+        0x5555_5555,
+        0xAAAA_AAAA,
+        0x8000_0000,
+        0x7FFF_FFFF,
+        0xFFFF_FFFF,
+    ];
+
+    #[test]
+    fn evaluator_is_validated_on_known_values() {
+        assert_eq!(eval_scalar(&chain(BinOp::Add, 3, 5), 4, 10), 18); // (10+3)+5
+        assert_eq!(eval_scalar(&chain(BinOp::Mul, 3, 5), 4, 4), 60); // (4*3)*5
+        assert_eq!(eval_scalar(&chain(BinOp::Div, 3, 5), 4, 100), 6); // ⌊⌊100/3⌋/5⌋
+        assert_eq!(eval_scalar(&chain(BinOp::Sub, 3, 5), 4, 20), 12); // (20-3)-5
+    }
+
+    #[test]
+    fn arithmetic_chain_combines_preserve_value_for_every_input() {
+        type Rewrite = fn(&KernelDescriptor) -> KernelDescriptor;
+        let cases: &[(&str, Rewrite, BinOp)] = &[
+            (
+                "add_combine",
+                super::arithmetic_combine::add_combine::add_combine,
+                BinOp::Add,
+            ),
+            (
+                "mul_combine",
+                super::arithmetic_combine::mul_combine::mul_combine,
+                BinOp::Mul,
+            ),
+            ("sub_combine", super::sub_combine::sub_combine, BinOp::Sub),
+            ("div_combine", super::div_combine::div_combine, BinOp::Div),
+        ];
+        // a=3, b=5: combined literal (8 / 15 / 8 / 15) neither wraps nor zeroes;
+        // divisors are non-zero. The combine therefore fires (not the
+        // overflow-guard decline path), so this exercises the rewritten op.
+        for (name, rewrite, op) in cases {
+            let original = chain(*op, 3, 5);
+            let rewritten = rewrite(&original);
+            for &gid in PROBES {
+                let before = eval_scalar(&original, 4, gid);
+                let after = eval_scalar(&rewritten, 4, gid);
+                assert_eq!(
+                    before, after,
+                    "{name} changed the computed value of (gid {op:?} 3) {op:?} 5 \
+                     at gid={gid:#010x}: {before} -> {after}"
+                );
+            }
+        }
+    }
+}
