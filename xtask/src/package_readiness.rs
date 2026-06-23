@@ -351,10 +351,21 @@ fn collect_dependency_edges(
             };
             let Some(version) = dependency_version(spec, &workspace_dependencies, dependency)
             else {
-                blockers.push(format!(
-                    "{} dependency `{dependency}` in [{table_name}] has local path `{local_path}` but no crates.io version",
-                    manifest.display()
-                ));
+                // Path-only `[dev-dependencies]` are NOT a publish blocker: cargo
+                // strips dev-dependencies that carry no version from the published
+                // manifest (they cannot be resolved from crates.io and never reach
+                // downstream consumers), so the crate publishes cleanly. This is how
+                // the 0.6.3 train shipped — its publish-readiness recorded zero
+                // blockers with these same path-only dev-deps, several of which are
+                // deliberately path-only to break the dev-dependency publish cycle
+                // (the dependency is published AFTER its consumer). Regular and build
+                // dependencies still block: those DO ship in the published manifest.
+                if table_name != "dev-dependencies" {
+                    blockers.push(format!(
+                        "{} dependency `{dependency}` in [{table_name}] has local path `{local_path}` but no crates.io version",
+                        manifest.display()
+                    ));
+                }
                 continue;
             };
             versioned_local_dependencies.push(VersionedLocalDependency {
