@@ -214,6 +214,27 @@ fn canonicalize_expr(expr: Expr) -> Expr {
             value: Box::new(canonicalize_expr(*value)),
             ordering,
         },
+        // Compound operand-bearing exprs must canonicalize their children too,
+        // or a commutative BinOp nested inside them (e.g. `subgroup_add(1 + a)`,
+        // `f(1 + a)`) stays un-normalized and two semantically-equal Programs
+        // produce different wire bytes — fragmenting the content-addressed
+        // pipeline cache the canonical form is the foundation for. Fields that
+        // are not operands (`Call.op_id`, `SubgroupReduce.op`) are preserved.
+        Expr::Call { op_id, args } => Expr::Call {
+            op_id,
+            args: args.into_iter().map(canonicalize_expr).collect(),
+        },
+        Expr::SubgroupBallot { cond } => Expr::SubgroupBallot {
+            cond: Box::new(canonicalize_expr(*cond)),
+        },
+        Expr::SubgroupShuffle { value, lane } => Expr::SubgroupShuffle {
+            value: Box::new(canonicalize_expr(*value)),
+            lane: Box::new(canonicalize_expr(*lane)),
+        },
+        Expr::SubgroupReduce { op, value } => Expr::SubgroupReduce {
+            op,
+            value: Box::new(canonicalize_expr(*value)),
+        },
         other => other,
     }
 }
@@ -497,6 +518,58 @@ mod tests {
             },
             other => panic!("expected Let, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn canonicalize_descends_into_subgroup_reduce_operand() {
+        // The pass's contract is "semantically-equal Programs have byte-equal
+        // wire output" (the content-addressed pipeline-cache fingerprint).
+        // A commutative BinOp nested inside a subgroup operand must therefore
+        // canonicalize just like a top-level one: `subgroup_add(1 + a)` and
+        // `subgroup_add(a + 1)` are the same computation and must produce the
+        // same wire bytes. If canonicalize_expr's catch-all swallows
+        // SubgroupReduce, the inner `1 + a` stays un-normalized and the two
+        // fingerprints diverge (cache fragmentation).
+        let p1 = scalar_out_prog(vec![Node::store(
+            "out",
+            E::u32(0),
+            E::subgroup_add(E::add(E::u32(1), E::var("a"))),
+        )]);
+        let p2 = scalar_out_prog(vec![Node::store(
+            "out",
+            E::u32(0),
+            E::subgroup_add(E::add(E::var("a"), E::u32(1))),
+        )]);
+        let c1 = run(p1).to_wire().unwrap();
+        let c2 = run(p2).to_wire().unwrap();
+        assert_eq!(
+            c1, c2,
+            "canonicalize(subgroup_add(1 + a)) must equal canonicalize(subgroup_add(a + 1))"
+        );
+    }
+
+    #[test]
+    fn canonicalize_descends_into_call_args() {
+        // Same contract for Call arguments: `f(1 + a)` and `f(a + 1)` are the
+        // same computation and must canonicalize to the same wire bytes. A
+        // catch-all that skips Call leaves the arg's commutative BinOp
+        // un-normalized.
+        let p1 = scalar_out_prog(vec![Node::store(
+            "out",
+            E::u32(0),
+            E::call("f", vec![E::add(E::u32(1), E::var("a"))]),
+        )]);
+        let p2 = scalar_out_prog(vec![Node::store(
+            "out",
+            E::u32(0),
+            E::call("f", vec![E::add(E::var("a"), E::u32(1))]),
+        )]);
+        let c1 = run(p1).to_wire().unwrap();
+        let c2 = run(p2).to_wire().unwrap();
+        assert_eq!(
+            c1, c2,
+            "canonicalize(f(1 + a)) must equal canonicalize(f(a + 1))"
+        );
     }
 
     #[test]
