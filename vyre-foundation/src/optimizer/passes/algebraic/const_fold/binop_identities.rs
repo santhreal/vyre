@@ -567,12 +567,26 @@ pub(super) fn simplify_binop(op: crate::ir::BinOp, left: &Expr, right: &Expr) ->
             {
                 if *inner_op == op {
                     if let (Expr::LitU32(a), Expr::LitU32(b)) = (inner_shift.as_ref(), right) {
-                        let fused = a.saturating_add(*b).min(31);
-                        return Some(Expr::BinOp {
-                            op,
-                            left: x.clone(),
-                            right: Box::new(Expr::u32(fused)),
-                        });
+                        // Each shift masks its amount mod 32 and shifts bits off
+                        // the top, so the two compose into a single shift by
+                        // `(a & 31) + (b & 31)`. The IR's single shift ALSO masks
+                        // mod 32, so it can only represent a combined amount < 32;
+                        // for >= 32 every bit is shifted out of the 32-bit word
+                        // (the result is 0), which `x << k` cannot express
+                        // (it evaluates to `x << (k & 31)`, which is non-zero for
+                        // odd x). Only fuse while the combined amount stays in
+                        // range; otherwise leave the double shift for the backend,
+                        // which evaluates it correctly. The previous `.min(31)`
+                        // invented `x << 31`, miscompiling e.g. `(x << 16) << 16`
+                        // from 0 to `(x & 1) << 31`.
+                        let total = (a & 31) + (b & 31);
+                        if total < 32 {
+                            return Some(Expr::BinOp {
+                                op,
+                                left: x.clone(),
+                                right: Box::new(Expr::u32(total)),
+                            });
+                        }
                     }
                 }
             }
