@@ -167,7 +167,18 @@ impl BenchCase for BinarySearchU32 {
         let queries = build_queries();
         let inputs = vec![u32_bytes(&keys), u32_bytes(&queries)];
         let input_bytes_total = input_bytes_total(&inputs);
-        let resident = ResidentInputSet::upload_optional(ctx, &inputs, "binary search bench")?;
+        // Raw-IR resident dispatch (`dispatch_program_timed`) routes through the
+        // CUDA `prepare_resident_dispatch` ABI, which requires one resident
+        // handle per non-shared binding -- INCLUDING the `results` output. The
+        // inputs-only `upload_optional` provides keys+queries (2) but the program
+        // has 3 non-shared bindings, so dispatch fails closed ("expected 3 ...
+        // received 2"). Build inputs + a zeroed output resource in binding order.
+        let resident = ResidentInputSet::upload_program_ordered_with_zeroed_outputs_optional(
+            ctx,
+            &program,
+            &inputs,
+            "binary search bench",
+        )?;
 
         Ok(Box::new(BinarySearchPrepared {
             program,

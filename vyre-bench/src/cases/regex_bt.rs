@@ -234,7 +234,17 @@ impl BenchCase for RegexBacktracking {
         let input_bytes = vec![0x61u8; TOTAL_WORDS as usize * 4];
         let inputs = vec![input_bytes.clone()];
         let input_bytes_total = input_bytes_total(&inputs);
-        let resident = ResidentInputSet::upload_optional(ctx, &inputs, "regex backtracking bench")?;
+        // Raw-IR resident dispatch requires one resident handle per non-shared
+        // binding -- the `results` output included. Inputs-only `upload_optional`
+        // supplies just `input` (1) while the program has 2 non-shared bindings,
+        // so dispatch fails closed ("expected 2 ... received 1"). Build inputs +
+        // a zeroed output resource in binding order.
+        let resident = ResidentInputSet::upload_program_ordered_with_zeroed_outputs_optional(
+            ctx,
+            &prog,
+            &inputs,
+            "regex backtracking bench",
+        )?;
         Ok(Box::new(RegexBacktrackingPrepared {
             program: prog,
             regex,

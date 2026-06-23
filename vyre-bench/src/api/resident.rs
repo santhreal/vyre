@@ -1058,4 +1058,76 @@ mod tests {
         assert_eq!(program.buffers()[0].access, BufferAccess::ReadWrite);
         assert_eq!(program.buffers()[0].count, 1);
     }
+
+    /// Module-pair contract: the bench-side resident payload builder
+    /// (`program_order_resident_payloads`, used by
+    /// `upload_program_ordered_with_zeroed_outputs_optional`) must produce
+    /// exactly one resident handle per non-shared binding required by the
+    /// driver-side `prepare_resident_dispatch` ABI -- the OUTPUT binding
+    /// included.
+    ///
+    /// Regression for the `search.binary.u32.1m` / `regex.backtracking.adversarial`
+    /// hard errors: those cases uploaded inputs-only via `upload_optional`, which
+    /// under-provisions resident handles by exactly the output count, so raw-IR
+    /// resident dispatch failed closed with "expected N resident buffer
+    /// handle(s) but received N-1". This test reproduces the driver's
+    /// `required_handles = bindings.len() - shared_indices.len()` count and
+    /// asserts the program-ordered builder matches it while inputs-only does not.
+    #[test]
+    fn resident_payloads_cover_every_non_shared_binding_including_outputs() {
+        // Mirrors the binary-search binding layout: two ReadOnly inputs plus a
+        // dedicated output buffer.
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::storage("keys", 0, BufferAccess::ReadOnly, DataType::U32).with_count(8),
+                BufferDecl::storage("queries", 1, BufferAccess::ReadOnly, DataType::U32)
+                    .with_count(8),
+                BufferDecl::output("results", 2, DataType::U32).with_count(8),
+            ],
+            [1, 1, 1],
+            vec![],
+        );
+        let inputs = vec![vec![0u8; 32], vec![0u8; 32]]; // keys, queries (8 u32 each)
+
+        // Driver-side requirement: one resident handle per non-shared binding.
+        let plan = vyre_driver::binding::BindingPlan::build(&program)
+            .expect("binding plan for a well-formed program must build");
+        let required_handles = plan.bindings.len() - plan.shared_indices.len();
+        assert_eq!(
+            required_handles, 3,
+            "keys + queries + results are all non-shared bindings the resident ABI must bind"
+        );
+
+        // The old inputs-only path (`upload_optional`) under-provisions by exactly
+        // the output count -- this is the bug that fails dispatch closed.
+        assert_eq!(inputs.len(), 2, "inputs-only would supply only keys + queries");
+        assert!(
+            inputs.len() < required_handles,
+            "inputs-only ({}) under-provisions the {required_handles} required handles",
+            inputs.len()
+        );
+
+        // The fixed path (`upload_program_ordered_with_zeroed_outputs_optional`)
+        // builds exactly one payload per non-shared binding, with the output
+        // binding receiving a zeroed resident resource.
+        let payloads = program_order_resident_payloads(&program, &inputs, "resident contract test")
+            .expect("program-ordered resident payloads must build for inputs + outputs");
+        assert_eq!(
+            payloads.len(),
+            required_handles,
+            "program-ordered resident payloads must cover every non-shared binding"
+        );
+        assert!(
+            matches!(payloads[0], ResidentResourcePayload::Input(bytes) if bytes == inputs[0]),
+            "binding 0 (keys) must carry its input bytes"
+        );
+        assert!(
+            matches!(payloads[1], ResidentResourcePayload::Input(bytes) if bytes == inputs[1]),
+            "binding 1 (queries) must carry its input bytes"
+        );
+        assert!(
+            matches!(payloads[2], ResidentResourcePayload::Zeroed(32)),
+            "binding 2 (results output) must get a 32-byte zeroed resident resource"
+        );
+    }
 }
