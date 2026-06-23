@@ -69,13 +69,44 @@ pub(super) fn collect_buffer_targets(
             loads.insert(input.clone());
             stores.insert(output.clone());
         }
-        Node::IndirectDispatch { .. }
-        | Node::Return
+        // Async copies are genuine buffer accesses: `source` is read and
+        // `destination` is written (vyre-reference `eval_async_load` /
+        // `eval_async_store` both read_bytes(source) then write destination).
+        // Dropping them hid a cross-arm RAW/WAR hazard from the barrier-
+        // insertion pass, letting a later arm read a buffer an earlier arm
+        // async-wrote before the write was made visible — the stale-read
+        // miscompile this collector exists to prevent. offset/size may Load.
+        Node::AsyncLoad {
+            source,
+            destination,
+            offset,
+            size,
+            ..
+        }
+        | Node::AsyncStore {
+            source,
+            destination,
+            offset,
+            size,
+            ..
+        } => {
+            loads.insert(source.clone());
+            stores.insert(destination.clone());
+            collect_buffer_targets_from_expr(offset, loads, atomics);
+            collect_buffer_targets_from_expr(size, loads, atomics);
+        }
+        // IndirectDispatch reads `count_buffer` to derive the launch geometry;
+        // an earlier arm writing that buffer is a RAW hazard for the dispatch.
+        Node::IndirectDispatch { count_buffer, .. } => {
+            loads.insert(count_buffer.clone());
+        }
+        // A trap address expression may Load from a buffer.
+        Node::Trap { address, .. } => {
+            collect_buffer_targets_from_expr(address, loads, atomics);
+        }
+        Node::Return
         | Node::Barrier { .. }
-        | Node::AsyncLoad { .. }
-        | Node::AsyncStore { .. }
         | Node::AsyncWait { .. }
-        | Node::Trap { .. }
         | Node::Resume { .. }
         | Node::Opaque(_) => {}
     }
