@@ -297,6 +297,14 @@ fn apply_pipeline(plan: &PipelinePlan) -> Vec<Node> {
         index: Expr::u32(plan.hi - 1),
         value: pipe_value,
     };
+    // The epilogue is the last iteration (`i == hi - 1`) hoisted OUT of the
+    // steady loop, so the loop variable is no longer in scope at this point.
+    // The store value may legitimately reference it (e.g. `buf_out[i] = x + i`),
+    // so substitute the loop var with the concrete last-iteration index. The
+    // steady-state store keeps `Var(loop_var)` (still in scope inside the loop).
+    // Reuses the canonical induction-var substitution rather than a local copy.
+    let epilogue =
+        crate::transform::subst::substitute_node(&epilogue, &plan.loop_var, &Expr::u32(plan.hi - 1));
     vec![prologue, steady, epilogue]
 }
 
