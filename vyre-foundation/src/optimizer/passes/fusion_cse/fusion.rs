@@ -556,6 +556,24 @@ fn substitute_expr(expr: &Expr, replacements: &PendingReplacements) -> Expr {
                 .map(|arg| substitute_expr(arg, replacements))
                 .collect(),
         },
+        // Subgroup ops carry value-expression operands that can reference a
+        // pending replacement. A single-use, fusable `let v = ..` is dropped
+        // from the output and inlined at its one use site; if that use sits in
+        // a subgroup operand, cloning the node verbatim leaves `v` referencing
+        // a binding that no longer exists (the use-counter and
+        // `collect_used_vars` both descend here, so the pending entry was
+        // already dropped by `drop_used`). Descend so the operand is rewritten.
+        Expr::SubgroupBallot { cond } => Expr::SubgroupBallot {
+            cond: Box::new(substitute_expr(cond, replacements)),
+        },
+        Expr::SubgroupShuffle { value, lane } => Expr::SubgroupShuffle {
+            value: Box::new(substitute_expr(value, replacements)),
+            lane: Box::new(substitute_expr(lane, replacements)),
+        },
+        Expr::SubgroupReduce { op, value } => Expr::SubgroupReduce {
+            op: *op,
+            value: Box::new(substitute_expr(value, replacements)),
+        },
         Expr::LitU32(_)
         | Expr::LitI32(_)
         | Expr::LitF32(_)
@@ -566,9 +584,6 @@ fn substitute_expr(expr: &Expr, replacements: &PendingReplacements) -> Expr {
         | Expr::LocalId { .. }
         | Expr::SubgroupLocalId
         | Expr::SubgroupSize
-        | Expr::SubgroupBallot { .. }
-        | Expr::SubgroupShuffle { .. }
-        | Expr::SubgroupReduce { .. }
         | Expr::Opaque(_) => expr.clone(),
     }
 }
