@@ -46,6 +46,12 @@
 //!   and a body_b binding of `i` shadows the loop var (V008). The block-scoped
 //!   IR pops each loop body's bindings at loop exit, so two sibling loops
 //!   binding the same local are legal pre-fusion but collide once merged.
+//! - Neither body may `Assign` a scalar the other body reads or assigns: fusion
+//!   interleaves the bodies (`A(0); B(0); A(1); B(1); ...`), so a scalar one
+//!   loop writes and the other touches is a cross-loop dependency the original
+//!   ordering (all of loop_a, then all of loop_b) does not have, and the
+//!   interleaving silently changes the observed values. Assign-free bodies (the
+//!   common map/transform loops) take the fast path and are unaffected.
 
 use crate::ir::{Expr, Ident, Node, Program};
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
@@ -137,6 +143,7 @@ fn fuse_in_body(body: Vec<Node>, changed: &mut bool) -> Vec<Node> {
             || !buffers_disjoint(&body_a, &body_b)
             || body_a_let_names_collide_with_b(&body_a, &body_b, &var_b)
             || fusion_collides_bindings(&body_a, &body_b, &var_a, &var_b)
+            || fusion_has_scalar_dependency(&body_a, &body_b)
         {
             // Cannot fuse  -  emit the first loop, push the second back
             // for the next iteration to consider against its successor.
@@ -380,6 +387,58 @@ fn fusion_collides_bindings(
         // body_a already binds (duplicate sibling, V032).
         fused_name == var_a || a_lets.contains(fused_name)
     })
+}
+
+/// Collect every `Node::Assign` target name in `nodes` (recursively). These are
+/// the scalars a body MUTATES (as opposed to merely binds via `Let` or reads).
+fn collect_assign_targets(nodes: &[Node], out: &mut FxHashSet<Ident>) {
+    for node in nodes {
+        match node {
+            Node::Assign { name, .. } => {
+                out.insert(name.clone());
+            }
+            Node::If {
+                then, otherwise, ..
+            } => {
+                collect_assign_targets(then, out);
+                collect_assign_targets(otherwise, out);
+            }
+            Node::Loop { body, .. } | Node::Block(body) => collect_assign_targets(body, out),
+            Node::Region { body, .. } => collect_assign_targets(body, out),
+            _ => {}
+        }
+    }
+}
+
+/// True iff fusing the two bodies would reorder a cross-loop dependency through
+/// a shared mutable scalar. `buffers_disjoint` rules out memory dependencies and
+/// `body_a_let_names_collide_with_b` rules out body_b capturing a body_a
+/// binding, but NEITHER covers a scalar that one body WRITES (via `Node::Assign`)
+/// and the other body reads or writes. The original program runs loop_a entirely
+/// before loop_b; fusing interleaves them, so any such scalar dependency changes
+/// the observed values (a silent value miscompile, e.g. body_a reading an outer
+/// `s` that body_b overwrites). Conservative and name-based (recurses into
+/// nested scopes): if either body assigns a name the other body references,
+/// refuse. The early return keeps the common assign-free map/transform loops on
+/// the fast path.
+fn fusion_has_scalar_dependency(body_a: &[Node], body_b: &[Node]) -> bool {
+    let mut writes_a: FxHashSet<Ident> = FxHashSet::default();
+    collect_assign_targets(body_a, &mut writes_a);
+    let mut writes_b: FxHashSet<Ident> = FxHashSet::default();
+    collect_assign_targets(body_b, &mut writes_b);
+    if writes_a.is_empty() && writes_b.is_empty() {
+        return false; // neither body mutates a scalar -> no scalar dependency
+    }
+    // refs_x = every name body_x reads OR writes.
+    let mut refs_a: FxHashSet<Ident> = FxHashSet::default();
+    collect_var_reads(body_a, &mut refs_a);
+    refs_a.extend(writes_a.iter().cloned());
+    let mut refs_b: FxHashSet<Ident> = FxHashSet::default();
+    collect_var_reads(body_b, &mut refs_b);
+    refs_b.extend(writes_b.iter().cloned());
+    // A scalar written by one body and touched by the other is a cross-loop
+    // dependency the interleaving would violate.
+    !writes_a.is_disjoint(&refs_b) || !writes_b.is_disjoint(&refs_a)
 }
 
 fn collect_let_names(nodes: &[Node], out: &mut FxHashSet<Ident>) {
@@ -656,6 +715,7 @@ fn body_has_fusable_pair(body: &[Node]) -> bool {
                 && buffers_disjoint(body_a, body_b)
                 && !body_a_let_names_collide_with_b(body_a, body_b, var_b)
                 && !fusion_collides_bindings(body_a, body_b, var_a, var_b)
+                && !fusion_has_scalar_dependency(body_a, body_b)
             {
                 return true;
             }
@@ -924,6 +984,79 @@ mod tests {
         assert!(
             result.changed,
             "distinct local names must still allow fusion"
+        );
+        assert_eq!(
+            count_loops(&region_body(result.program.entry())),
+            1,
+            "the two loops fuse into one"
+        );
+    }
+
+    #[test]
+    fn does_not_fuse_when_body_b_writes_a_scalar_body_a_reads() {
+        // body_a reads outer scalar `s`; body_b writes it via Assign. The
+        // original runs loop_a fully (observing s's pre-loop value) before
+        // loop_b; fusing interleaves the read and write, changing observed
+        // values -- a silent value miscompile. Refuse. (Oracle-differential
+        // proof: tests/loop_fusion_scalar_dependency.rs.)
+        let entry = vec![
+            Node::let_bind("s", Expr::u32(0)),
+            Node::loop_for(
+                "i",
+                Expr::u32(0),
+                Expr::u32(8),
+                vec![Node::store("a", Expr::var("i"), Expr::var("s"))],
+            ),
+            Node::loop_for(
+                "j",
+                Expr::u32(0),
+                Expr::u32(8),
+                vec![Node::assign("s", Expr::var("j"))],
+            ),
+        ];
+        let result = LoopFusion::transform(program(entry));
+        assert!(
+            !result.changed,
+            "a cross-loop scalar read/write dependency blocks fusion"
+        );
+        assert_eq!(
+            count_loops(&region_body(result.program.entry())),
+            2,
+            "both loops survive unfused"
+        );
+    }
+
+    #[test]
+    fn fuses_when_bodies_mutate_independent_scalars() {
+        // Each body mutates its OWN distinct outer scalar (acc1 vs acc2); there
+        // is no cross-loop dependency, so the scalar-dependency guard must NOT
+        // block this fusion.
+        let entry = vec![
+            Node::let_bind("acc1", Expr::u32(0)),
+            Node::let_bind("acc2", Expr::u32(0)),
+            Node::loop_for(
+                "i",
+                Expr::u32(0),
+                Expr::u32(8),
+                vec![
+                    Node::assign("acc1", Expr::add(Expr::var("acc1"), Expr::var("i"))),
+                    Node::store("a", Expr::var("i"), Expr::var("acc1")),
+                ],
+            ),
+            Node::loop_for(
+                "j",
+                Expr::u32(0),
+                Expr::u32(8),
+                vec![
+                    Node::assign("acc2", Expr::add(Expr::var("acc2"), Expr::var("j"))),
+                    Node::store("b", Expr::var("j"), Expr::var("acc2")),
+                ],
+            ),
+        ];
+        let result = LoopFusion::transform(program(entry));
+        assert!(
+            result.changed,
+            "independent scalar accumulators must still allow fusion"
         );
         assert_eq!(
             count_loops(&region_body(result.program.entry())),
