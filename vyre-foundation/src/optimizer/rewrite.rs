@@ -137,11 +137,57 @@ fn rewrite_node_cow<'a>(
                 body: Arc::new(body),
             }),
         },
+        // Async copies carry `offset`/`size` EXPRESSIONS (Box<Expr>); the
+        // canonical "rewrite every node" driver must descend into them just
+        // like Trap's address above. Omitting them silently skipped two
+        // expression positions for every pass routed through rewrite_program
+        // (const_fold/strength_reduce left them unoptimized; a correctness
+        // rewrite would have left a dangling reference there).
+        Node::AsyncLoad {
+            source,
+            destination,
+            offset,
+            size,
+            tag,
+        } => {
+            let off = rewrite_expr(offset, expr);
+            let sz = rewrite_expr(size, expr);
+            if matches!((&off, &sz), (Cow::Borrowed(_), Cow::Borrowed(_))) {
+                Cow::Borrowed(node)
+            } else {
+                Cow::Owned(Node::async_load_ext(
+                    source.clone(),
+                    destination.clone(),
+                    off.into_owned(),
+                    sz.into_owned(),
+                    tag.clone(),
+                ))
+            }
+        }
+        Node::AsyncStore {
+            source,
+            destination,
+            offset,
+            size,
+            tag,
+        } => {
+            let off = rewrite_expr(offset, expr);
+            let sz = rewrite_expr(size, expr);
+            if matches!((&off, &sz), (Cow::Borrowed(_), Cow::Borrowed(_))) {
+                Cow::Borrowed(node)
+            } else {
+                Cow::Owned(Node::async_store(
+                    source.clone(),
+                    destination.clone(),
+                    off.into_owned(),
+                    sz.into_owned(),
+                    tag.clone(),
+                ))
+            }
+        }
         Node::Return
         | Node::Barrier { .. }
         | Node::IndirectDispatch { .. }
-        | Node::AsyncLoad { .. }
-        | Node::AsyncStore { .. }
         | Node::AllReduce { .. }
         | Node::AllGather { .. }
         | Node::ReduceScatter { .. }
