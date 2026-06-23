@@ -328,8 +328,17 @@ fn collect_buffers_in_expr(expr: &Expr, out: &mut FxHashSet<Ident>) {
                 collect_buffers_in_expr(a, out);
             }
         }
-        Expr::SubgroupShuffle { value, .. } | Expr::SubgroupReduce { value, .. } => {
+        Expr::SubgroupReduce { value, .. } => {
             collect_buffers_in_expr(value, out);
+        }
+        Expr::SubgroupShuffle { value, lane } => {
+            // The lane operand selects which subgroup lane's `value` to read and
+            // may itself load from a buffer (a gather/permute index); descend
+            // into it so that buffer joins the touched set. Dropping it would
+            // let fusion reorder a hidden lane-index load past a sibling loop's
+            // writes to the same buffer.
+            collect_buffers_in_expr(value, out);
+            collect_buffers_in_expr(lane, out);
         }
         Expr::SubgroupBallot { cond } => collect_buffers_in_expr(cond, out),
         Expr::LitU32(_)
@@ -924,6 +933,45 @@ mod tests {
             count_loops(&region_body(result.program.entry())),
             2,
             "a loop whose body is an opaque node must not fuse with its sibling"
+        );
+    }
+
+    #[test]
+    fn does_not_fuse_when_a_shuffle_lane_loads_the_siblings_buffer() {
+        // body_a stores to `a`, but the stored value is a subgroup shuffle
+        // whose LANE index is loaded from `b`. `collect_buffers_in_expr`
+        // elided `SubgroupShuffle.lane`, so it reported body_a touching only
+        // `{a}`  -  disjoint from body_b's `{b}`  -  and the loops fused. But the
+        // lane load reads `b`, which body_b writes; interleaving the two loops
+        // reorders that read across the writes. The collector must descend into
+        // the lane operand so the shared buffer blocks fusion.
+        let entry = vec![
+            Node::loop_for(
+                "i",
+                Expr::u32(0),
+                Expr::u32(8),
+                vec![Node::store(
+                    "a",
+                    Expr::var("i"),
+                    Expr::subgroup_shuffle(Expr::u32(5), Expr::load("b", Expr::var("i"))),
+                )],
+            ),
+            Node::loop_for(
+                "j",
+                Expr::u32(0),
+                Expr::u32(8),
+                vec![Node::store("b", Expr::var("j"), Expr::u32(2))],
+            ),
+        ];
+        let result = LoopFusion::transform(program(entry));
+        assert!(
+            !result.changed,
+            "a buffer load hidden in a shuffle lane must block fusion"
+        );
+        assert_eq!(
+            count_loops(&region_body(result.program.entry())),
+            2,
+            "loops sharing buffer `b` through a shuffle lane load must not fuse"
         );
     }
 
