@@ -679,10 +679,22 @@ fn count_buffer_accesses(nodes: &[Node], counts: &mut HashMap<crate::ir::Ident, 
                 counts.entry(output.clone()).or_default().other_accesses += 1;
             }
             Node::Trap { address, .. } => count_expr_accesses(address, counts),
+            Node::IndirectDispatch { count_buffer, .. } => {
+                // The indirect dispatch reads `count_buffer` to derive the
+                // launch geometry. It is a genuine reader of the buffer: if a
+                // buffer's sole atomic-add feeds this read, downgrading that
+                // atomic to a non-atomic load+store (the single-writer rewrite)
+                // would let parallel lanes race the very count the dispatch
+                // depends on. Count it so such a buffer is never mistaken for a
+                // single-writer buffer.
+                counts
+                    .entry(count_buffer.clone())
+                    .or_default()
+                    .other_accesses += 1;
+            }
             Node::Barrier { .. }
             | Node::Return
             | Node::Resume { .. }
-            | Node::IndirectDispatch { .. }
             | Node::AsyncWait { .. }
             | Node::Opaque(_) => {}
         }
@@ -1012,6 +1024,43 @@ mod tests {
             extract_let_value(&result.program, "x"),
             Expr::Atomic { .. }
         ));
+    }
+
+    #[test]
+    fn indirect_dispatch_count_buffer_read_blocks_single_writer_rewrite() {
+        // `buf` is atomically incremented once and then consumed as the count
+        // buffer of an indirect dispatch (the canonical atomic-append ->
+        // indirect-launch / stream-compaction pattern). The indirect-dispatch
+        // read derives the launch geometry from buf's value, so the atomic
+        // MUST stay atomic: downgrading it to a non-atomic load+store under the
+        // "single writer" rule would let parallel lanes race the very count the
+        // dispatch depends on. The buffer-access collector must therefore treat
+        // IndirectDispatch's `count_buffer` as a genuine read (other_accesses
+        // += 1), making `buf` ineligible for the single-writer rewrite.
+        let entry = vec![
+            Node::let_bind("x", relaxed_atomic(AtomicOp::Add, Expr::u32(42))),
+            Node::IndirectDispatch {
+                count_buffer: Ident::from("buf"),
+                count_offset: 0,
+            },
+        ];
+        let result = AtomicMinimizePass::transform(program(entry));
+        assert!(
+            !result.changed,
+            "IndirectDispatch reads buf as its count buffer; the single-writer \
+             rewrite must be blocked so the atomic increment stays atomic"
+        );
+        assert!(
+            matches!(
+                extract_let_value(&result.program, "x"),
+                Expr::Atomic {
+                    op: AtomicOp::Add,
+                    ordering: MemoryOrdering::Relaxed,
+                    ..
+                }
+            ),
+            "atomic_add must remain Atomic because buf is also read by indirect dispatch"
+        );
     }
 
     #[test]
