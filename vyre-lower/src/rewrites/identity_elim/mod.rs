@@ -134,31 +134,32 @@ fn identity_elim_body(mut body: KernelBody) -> KernelBody {
                 }
             }
             KernelOpKind::Fma => {
-                // Fma(a, b, c) = a*b + c. When either factor is
-                // Literal(0), the result equals c  -  substitute the
-                // Fma's result-id with c's id. (Lit(1) cases would
-                // simplify to Add(other_factor, c) but require
-                // synthesizing a new op; that's outside identity_elim's
-                // pure id-substitution model.)
+                // Fma(a, b, c) = a*b + c. The result equals `c` (substitute the
+                // Fma's result-id with c's id) ONLY when one factor is a literal
+                // numeric zero AND the OTHER factor is a FINITE literal. With a
+                // non-literal or non-finite other factor the product is not
+                // provably 0: `0.0 * inf = 0.0 * NaN = NaN`, so the result is
+                // NaN, not `c`. This matches the foundation `simplify_fma` guard
+                // ("Do not apply when the other multiplier is non-literal: 0 *
+                // NaN and 0 * inf must stay NaN") — one auditable contract for
+                // the Program and lowered-descriptor rewrites. (Lit(1) cases
+                // would simplify to Add(other_factor, c) but require synthesizing
+                // a new op; that's outside identity_elim's id-substitution model.)
                 if op.operands.len() < 3 {
                     continue;
                 }
-                let a_raw = op.operands[0];
-                let b_raw = op.operands[1];
-                let c_raw = op.operands[2];
-                let a = resolve(a_raw, &id_remap);
-                let b = resolve(b_raw, &id_remap);
-                let c = resolve(c_raw, &id_remap);
+                let a = resolve(op.operands[0], &id_remap);
+                let b = resolve(op.operands[1], &id_remap);
+                let c = resolve(op.operands[2], &id_remap);
                 let Some(rid) = op.result else { continue };
-                let a_zero = lit_value
-                    .get(&a)
-                    .map(|value| scalar_literal(value).is_numeric_zero())
-                    .unwrap_or(false);
-                let b_zero = lit_value
-                    .get(&b)
-                    .map(|value| scalar_literal(value).is_numeric_zero())
-                    .unwrap_or(false);
-                if a_zero || b_zero {
+                let a_lit = lit_value.get(&a).map(scalar_literal);
+                let b_lit = lit_value.get(&b).map(scalar_literal);
+                let a_zero = a_lit.is_some_and(ScalarLiteral::is_numeric_zero);
+                let b_zero = b_lit.is_some_and(ScalarLiteral::is_numeric_zero);
+                let a_finite = a_lit.is_some_and(ScalarLiteral::is_finite_numeric);
+                let b_finite = b_lit.is_some_and(ScalarLiteral::is_finite_numeric);
+                // fma(0, finite, c) → c  or  fma(finite, 0, c) → c
+                if (a_zero && b_finite) || (b_zero && a_finite) {
                     id_remap.insert(rid, c);
                 }
             }
@@ -332,6 +333,66 @@ mod tests {
         );
         let out = identity_elim(&desc);
         assert_eq!(out.body.ops[3].operands, vec![0, 0, 1]);
+    }
+
+    #[test]
+    fn fma_zero_times_infinity_must_not_fold_to_addend() {
+        // Fma(a, b, c) = a*b + c. The descriptor fold collapsed Fma → c
+        // whenever a FACTOR was a literal numeric zero, with NO check on the
+        // OTHER factor. But 0.0 * inf = NaN (and 0.0 * NaN = NaN), so
+        // Fma(0.0, inf, c) evaluates to NaN, NOT c. The foundation
+        // `simplify_fma` guards this exact case ("Do not apply when the other
+        // multiplier is non-literal: 0 * NaN and 0 * inf must stay NaN", and it
+        // requires the other factor `is_finite()`); the descriptor pass must
+        // match that contract.
+        //
+        //   r0 = Lit(0.0f32), r1 = Lit(+inf f32), r2 = Lit(7.0f32),
+        //   r3 = Fma(r0, r1, r2), Store(_, _, r3)
+        let desc = empty_desc(
+            vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(0),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![1],
+                    result: Some(1),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![2],
+                    result: Some(2),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Fma,
+                    operands: vec![0, 1, 2],
+                    result: Some(3),
+                },
+                KernelOp {
+                    kind: KernelOpKind::StoreGlobal,
+                    operands: vec![0, 0, 3],
+                    result: None,
+                },
+            ],
+            vec![
+                LiteralValue::F32(0.0),
+                LiteralValue::F32(f32::INFINITY),
+                LiteralValue::F32(7.0),
+            ],
+        );
+        let out = identity_elim(&desc);
+        // The store must still read the Fma result (r3), NOT the addend r2:
+        // folding here would silently replace a NaN with 7.0.
+        let store = out.body.ops.last().expect("store op present");
+        assert_eq!(store.kind, KernelOpKind::StoreGlobal);
+        assert_eq!(
+            store.operands,
+            vec![0, 0, 3],
+            "Fma(0.0, inf, c) was folded to its addend c — a miscompile: \
+             0.0 * inf = NaN, so the result is NaN, not c"
+        );
     }
 
     #[test]

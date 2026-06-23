@@ -9463,6 +9463,7 @@ pub vyre_foundation::optimizer::algebraic_rules::ScalarLiteral::U32(u32)
 impl vyre_foundation::optimizer::algebraic_rules::ScalarLiteral
 pub fn vyre_foundation::optimizer::algebraic_rules::ScalarLiteral::is_bit_all_ones(self) -> bool
 pub fn vyre_foundation::optimizer::algebraic_rules::ScalarLiteral::is_false(self) -> bool
+pub fn vyre_foundation::optimizer::algebraic_rules::ScalarLiteral::is_finite_numeric(self) -> bool
 pub fn vyre_foundation::optimizer::algebraic_rules::ScalarLiteral::is_integer_zero(self) -> bool
 pub fn vyre_foundation::optimizer::algebraic_rules::ScalarLiteral::is_numeric_one(self) -> bool
 pub fn vyre_foundation::optimizer::algebraic_rules::ScalarLiteral::is_numeric_zero(self) -> bool
