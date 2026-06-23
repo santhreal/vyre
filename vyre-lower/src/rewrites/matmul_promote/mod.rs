@@ -38,11 +38,14 @@
 //! the existing emit path activates without explicit MatrixMma in
 //! the input descriptor.
 
+use std::collections::BTreeMap;
+
 use super::literal::ResultAllocator;
 use crate::descriptor::{
     KernelBody, KernelDescriptor, KernelOp, KernelOpKind, MatrixMmaElement, MatrixMmaLayout,
     MatrixMmaShape,
 };
+use crate::operand_semantics::remap_body_result_ids;
 
 const MATMUL_TILE_LEN: usize = 4; // 4 Fma ops produce c0..c3
 const A_FRAGMENT_LEN: usize = 4;
@@ -80,18 +83,33 @@ pub fn infer_matmul_tile_loops(desc: &KernelDescriptor) -> Vec<MatmulTileLoopPla
 pub fn matmul_promote(desc: &KernelDescriptor) -> KernelDescriptor {
     let mut out = desc.clone();
     let mut allocator = ResultAllocator::for_body_tree(&desc.body);
-    out.body = promote_body(&out.body, &mut allocator);
+    // Each promotion collapses 4 Fma ops (which produced the 4 accumulator
+    // result ids) into one MatrixMma carrying a FRESH 4-wide result block. The
+    // old accumulator ids vanish, so every downstream consumer of them must be
+    // re-pointed at the matching MatrixMma lane or it would dangle on an id no
+    // op produces. `id_map` records old-accumulator -> new-lane for the whole
+    // tree; the final pass re-points consumers in one sound, operand-aware walk.
+    let mut id_map = BTreeMap::new();
+    out.body = promote_body(&out.body, &mut allocator, &mut id_map);
+    if !id_map.is_empty() {
+        out.body = remap_body_result_ids(&out.body, &id_map);
+    }
     out
 }
 
-fn promote_body(body: &KernelBody, allocator: &mut ResultAllocator) -> KernelBody {
+fn promote_body(
+    body: &KernelBody,
+    allocator: &mut ResultAllocator,
+    id_map: &mut BTreeMap<u32, u32>,
+) -> KernelBody {
     let mut new_ops: Vec<KernelOp> = Vec::with_capacity(body.ops.len());
 
     let ops = &body.ops;
     let mut i = 0;
     while i < ops.len() {
-        if let Some((promoted, advance)) = try_promote_at(ops, i, allocator) {
+        if let Some((promoted, advance, remap)) = try_promote_at(ops, i, allocator) {
             new_ops.push(promoted);
+            id_map.extend(remap);
             i += advance;
         } else {
             new_ops.push(ops[i].clone());
@@ -102,7 +120,7 @@ fn promote_body(body: &KernelBody, allocator: &mut ResultAllocator) -> KernelBod
     let new_children: Vec<KernelBody> = body
         .child_bodies
         .iter()
-        .map(|c| promote_body(c, allocator))
+        .map(|c| promote_body(c, allocator, id_map))
         .collect();
 
     KernelBody {
@@ -155,11 +173,12 @@ fn try_promote_at(
     ops: &[KernelOp],
     i: usize,
     allocator: &mut ResultAllocator,
-) -> Option<(KernelOp, usize)> {
+) -> Option<(KernelOp, usize, [(u32, u32); MATMUL_TILE_LEN])> {
     let FragmentMatch {
         a_ids,
         b_unique,
         c_ids,
+        c_out,
     } = match_fragment_at(ops, i)?;
 
     let mut operands = Vec::with_capacity(A_FRAGMENT_LEN + B_FRAGMENT_LEN + MATMUL_TILE_LEN);
@@ -182,13 +201,25 @@ fn try_promote_at(
         result: Some(result_base),
     };
 
-    Some((promoted, MATMUL_TILE_LEN))
+    // Output lane k of the MatrixMma is the updated accumulator that Fma k
+    // produced, so old c_out[k] is replaced by result_base + k. Consumers of
+    // the dropped Fma results are re-pointed via this map.
+    let remap = [
+        (c_out[0], result_base),
+        (c_out[1], result_base + 1),
+        (c_out[2], result_base + 2),
+        (c_out[3], result_base + 3),
+    ];
+
+    Some((promoted, MATMUL_TILE_LEN, remap))
 }
 
 struct FragmentMatch {
     a_ids: [u32; A_FRAGMENT_LEN],
     b_unique: [u32; B_FRAGMENT_LEN],
     c_ids: [u32; MATMUL_TILE_LEN],
+    /// The 4 Fma result ids (the accumulator outputs) the MatrixMma replaces.
+    c_out: [u32; MATMUL_TILE_LEN],
 }
 
 fn match_fragment_at(ops: &[KernelOp], i: usize) -> Option<FragmentMatch> {
@@ -221,6 +252,15 @@ fn match_fragment_at(ops: &[KernelOp], i: usize) -> Option<FragmentMatch> {
     if !all_distinct(&c_ids) {
         return None;
     }
+    // The 4 Fma RESULT ids (accumulator outputs). The block was already
+    // checked to have a result on every op; capture them so consumers can be
+    // re-pointed to the MatrixMma after the Fmas are dropped.
+    let c_out = [
+        block[0].result?,
+        block[1].result?,
+        block[2].result?,
+        block[3].result?,
+    ];
     // a operand cycles 4-wide; b cycles 2-wide.
     let a_ids = [
         block[0].operands[0],
@@ -249,6 +289,7 @@ fn match_fragment_at(ops: &[KernelOp], i: usize) -> Option<FragmentMatch> {
         a_ids,
         b_unique: [b_unique[0], b_unique[1]],
         c_ids,
+        c_out,
     })
 }
 
@@ -287,6 +328,14 @@ mod tests {
             kind: KernelOpKind::Fma,
             operands: vec![a, b, c],
             result: Some(result),
+        }
+    }
+
+    fn store_global(slot: u32, idx: u32, val: u32) -> KernelOp {
+        KernelOp {
+            kind: KernelOpKind::StoreGlobal,
+            operands: vec![slot, idx, val],
+            result: None,
         }
     }
 
@@ -356,6 +405,77 @@ mod tests {
         assert!(matches!(mma.kind, KernelOpKind::MatrixMma { .. }));
         // operand layout: [a0..a3, b0..b1, c0..c3]
         assert_eq!(mma.operands, vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    }
+
+    #[test]
+    fn promotion_keeps_accumulator_consumers_wired() {
+        // A real tiled matmul consumes the 4 accumulator outputs downstream
+        // (store to the output tile / loop carry). Collapsing the 4 Fmas to a
+        // MatrixMma allocates a fresh result block, so the dropped Fma result
+        // ids must not be left dangling in their consumers: every SSA id still
+        // referenced after promotion must have a producer.
+        let prelude = (0..10).map(lit).collect::<Vec<_>>();
+        let fmas = vec![
+            fma(0, 4, 6, 10),
+            fma(1, 5, 7, 11),
+            fma(2, 4, 8, 12),
+            fma(3, 5, 9, 13),
+        ];
+        // Downstream consumers: store each accumulator result to a buffer.
+        let stores = vec![
+            store_global(0, 0, 10),
+            store_global(0, 0, 11),
+            store_global(0, 0, 12),
+            store_global(0, 0, 13),
+        ];
+        let mut ops = prelude;
+        ops.extend(fmas);
+        ops.extend(stores);
+        let desc = empty_desc(KernelBody {
+            ops,
+            child_bodies: vec![],
+            literals: vec![],
+        });
+        let out = matmul_promote(&desc);
+
+        // The promotion must have fired: 4 Fmas collapsed into 1 MatrixMma.
+        assert_eq!(
+            out.body
+                .ops
+                .iter()
+                .filter(|op| matches!(op.kind, KernelOpKind::Fma))
+                .count(),
+            0,
+            "all four Fmas collapse"
+        );
+        assert_eq!(
+            out.body
+                .ops
+                .iter()
+                .filter(|op| matches!(op.kind, KernelOpKind::MatrixMma { .. }))
+                .count(),
+            1,
+            "into exactly one MatrixMma"
+        );
+
+        // No-dangling contract: every value still consumed by a StoreGlobal
+        // must be produced by some op in the body.
+        let produced: Vec<u32> = out.body.ops.iter().flat_map(|op| op.result_ids()).collect();
+        let store_values: Vec<u32> = out
+            .body
+            .ops
+            .iter()
+            .filter(|op| matches!(op.kind, KernelOpKind::StoreGlobal))
+            .map(|op| op.operands[2])
+            .collect();
+        assert_eq!(store_values.len(), 4, "all four stores survive");
+        for value in &store_values {
+            assert!(
+                produced.contains(value),
+                "store value {value} dangles: promotion dropped the Fma that \
+                 produced it without re-pointing the consumer to the MatrixMma"
+            );
+        }
     }
 
     #[test]

@@ -20,7 +20,9 @@ use super::dataflow_facts::resolve_reaching_def_id as resolve;
 use super::memory_address::{
     locations_may_alias, AddressKey, MemoryLocation, MemoryTarget, SlotAliasPolicy,
 };
-use crate::operand_semantics::operand_is_result_reference;
+use crate::operand_semantics::{
+    operand_is_result_reference, remap_body_result_ids as remap_body_ids,
+};
 use crate::{BindingVisibility, KernelBody, KernelDescriptor, KernelOp, KernelOpKind};
 
 /// Returns an iterator over the operand positions that carry child-body
@@ -342,45 +344,6 @@ fn licm_body(
         ops: new_ops,
         child_bodies: final_children,
         literals: new_literals,
-    }
-}
-
-/// Recursively apply `id_map` to every result-reference operand in
-/// `body` and all nested child bodies. Result ids of ops themselves
-/// are left unchanged  -  only operand refs are rewritten.
-fn remap_body_ids(body: &KernelBody, id_map: &BTreeMap<u32, u32>) -> KernelBody {
-    let new_ops: Vec<KernelOp> = body
-        .ops
-        .iter()
-        .map(|op| {
-            let new_operands: Vec<u32> = op
-                .operands
-                .iter()
-                .enumerate()
-                .map(|(pos, val)| {
-                    if operand_is_result_reference(&op.kind, pos) {
-                        *id_map.get(val).unwrap_or(val)
-                    } else {
-                        *val
-                    }
-                })
-                .collect();
-            KernelOp {
-                kind: op.kind.clone(),
-                operands: new_operands,
-                result: op.result.map(|r| *id_map.get(&r).unwrap_or(&r)),
-            }
-        })
-        .collect();
-    let new_children: Vec<KernelBody> = body
-        .child_bodies
-        .iter()
-        .map(|c| remap_body_ids(c, id_map))
-        .collect();
-    KernelBody {
-        ops: new_ops,
-        child_bodies: new_children,
-        literals: body.literals.clone(),
     }
 }
 
