@@ -78,7 +78,7 @@ pub fn grad_with_pullback(
     // SSA-validator-friendly and preserves accumulated adjoints.
     let mut local_targets = Vec::new();
     collect_adjoint_targets(forward_nodes, &mut local_targets);
-    for name in local_targets {
+    for name in &local_targets {
         let adj_name = adjoint_env.ensure_adjoint_var(name.as_str());
         body.push(Node::Let {
             name: adj_name.into(),
@@ -135,10 +135,119 @@ pub fn grad_with_pullback(
         }
     }
 
+    // Fail closed on dangling forward-local references.
+    //
+    // Reverse-mode adjoints for nonlinear ops carry the forward operand's value
+    // (e.g. `d(a*a)` accumulates `adjoint * a`, referencing the forward local
+    // `a`). The backward Program re-declares forward BUFFERS as ReadOnly so
+    // forward buffer loads are recoverable, but it does NOT re-materialize
+    // forward LOCALS (`let`/`assign` results): there is no forward-value
+    // recompute or tape. So if any adjoint expression embeds a `Var` naming a
+    // forward local, that reference dangles -- the emitted backward Program
+    // would fail validation ("reference to undeclared variable").
+    //
+    // A local used only LINEARLY (its adjoint never multiplies in the local's
+    // value -- e.g. `out = xw + x`) never embeds `Var(xw)` in an emitted adjoint
+    // expression, so it is NOT flagged: those programs still differentiate. We
+    // refuse only when the forward value is genuinely required, turning a silent
+    // invalid-Program into an honest, actionable error at `grad()` time rather
+    // than a validation failure when the caller later runs the backward pass.
+    if let Some(local) = first_dangling_forward_local(&body, &local_targets) {
+        return Err(AutodiffError::NotDifferentiable {
+            op: format!("forward local `{local}`"),
+            fix: "reverse-mode autodiff needs the forward value of this local for a nonlinear \
+                  adjoint, but cannot recompute it. Inline the local's definition into its uses \
+                  (so the adjoint reads buffers directly), or keep it out of the gradient path"
+                .into(),
+        });
+    }
+
     Ok((
         Program::wrapped(back_buffers, program.workgroup_size(), body),
         pullbacks,
     ))
+}
+
+/// Find the first forward-local name (a `let`/`assign` target) that appears as a
+/// `Var` reference anywhere in the emitted backward `body`.
+///
+/// The backward Program never declares forward locals, so any such reference is
+/// a dangling use of an un-recomputed forward value (see the call site). Adjoint
+/// accumulator bindings are named `_adj_*` and forward loop variables are bound
+/// by the backward loop, so neither is in `local_targets`; only genuine
+/// forward-local value references match.
+fn first_dangling_forward_local(body: &[Node], local_targets: &[Ident]) -> Option<String> {
+    fn expr_ref<'a>(expr: &Expr, locals: &'a [Ident]) -> Option<&'a Ident> {
+        match expr {
+            Expr::Var(name) => locals.iter().find(|local| local.as_str() == name.as_str()),
+            Expr::Load { index, .. } => expr_ref(index, locals),
+            Expr::UnOp { operand, .. } | Expr::Cast { value: operand, .. } => {
+                expr_ref(operand, locals)
+            }
+            Expr::BinOp { left, right, .. } => {
+                expr_ref(left, locals).or_else(|| expr_ref(right, locals))
+            }
+            Expr::Fma { a, b, c } => expr_ref(a, locals)
+                .or_else(|| expr_ref(b, locals))
+                .or_else(|| expr_ref(c, locals)),
+            Expr::Select {
+                cond,
+                true_val,
+                false_val,
+            } => expr_ref(cond, locals)
+                .or_else(|| expr_ref(true_val, locals))
+                .or_else(|| expr_ref(false_val, locals)),
+            Expr::Call { args, .. } => args.iter().find_map(|arg| expr_ref(arg, locals)),
+            Expr::Atomic {
+                index,
+                expected,
+                value,
+                ..
+            } => expr_ref(index, locals)
+                .or_else(|| expected.as_deref().and_then(|e| expr_ref(e, locals)))
+                .or_else(|| expr_ref(value, locals)),
+            Expr::SubgroupBallot { cond } => expr_ref(cond, locals),
+            Expr::SubgroupShuffle { value, lane } => {
+                expr_ref(value, locals).or_else(|| expr_ref(lane, locals))
+            }
+            Expr::SubgroupReduce { value, .. } => expr_ref(value, locals),
+            Expr::LitU32(_)
+            | Expr::LitI32(_)
+            | Expr::LitF32(_)
+            | Expr::LitBool(_)
+            | Expr::BufLen { .. }
+            | Expr::InvocationId { .. }
+            | Expr::WorkgroupId { .. }
+            | Expr::LocalId { .. }
+            | Expr::SubgroupLocalId
+            | Expr::SubgroupSize
+            | Expr::Opaque(_) => None,
+        }
+    }
+    fn node_ref<'a>(node: &Node, locals: &'a [Ident]) -> Option<&'a Ident> {
+        match node {
+            Node::Let { value, .. } | Node::Assign { value, .. } => expr_ref(value, locals),
+            Node::Store { index, value, .. } => {
+                expr_ref(index, locals).or_else(|| expr_ref(value, locals))
+            }
+            Node::If {
+                cond,
+                then,
+                otherwise,
+            } => expr_ref(cond, locals)
+                .or_else(|| then.iter().find_map(|n| node_ref(n, locals)))
+                .or_else(|| otherwise.iter().find_map(|n| node_ref(n, locals))),
+            Node::Loop { from, to, body, .. } => expr_ref(from, locals)
+                .or_else(|| expr_ref(to, locals))
+                .or_else(|| body.iter().find_map(|n| node_ref(n, locals))),
+            Node::Block(body) => body.iter().find_map(|n| node_ref(n, locals)),
+            Node::Region { body, .. } => body.iter().find_map(|n| node_ref(n, locals)),
+            _ => None,
+        }
+    }
+    body.iter()
+        .find_map(|node| node_ref(node, local_targets))
+        .map(|ident| ident.as_str().to_string())
 }
 
 fn validate_buffer_names(
