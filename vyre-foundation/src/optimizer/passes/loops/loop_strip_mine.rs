@@ -56,26 +56,32 @@ impl LoopStripMine {
     pub fn transform(program: Program) -> PassResult {
         let mut changed = false;
         let program = program.map_entry(|entry| {
+            // Every name bound or referenced anywhere in the program. Synthesized
+            // tile/lane loop variables must avoid ALL of them -- not just the
+            // names in the loop body -- so a generated `<var>_tile` cannot shadow
+            // an (otherwise unused) enclosing binding of the same name (V008).
+            let scope_names = names_in_nodes(&entry);
             entry
                 .into_iter()
-                .map(|node| rewrite_node(node, &mut changed))
+                .map(|node| rewrite_node(node, &scope_names, &mut changed))
                 .collect()
         });
         PassResult { program, changed }
     }
 }
 
-fn rewrite_node(node: Node, changed: &mut bool) -> Node {
-    let recursed = node_map::map_children(node, &mut |child| rewrite_node(child, changed));
+fn rewrite_node(node: Node, scope_names: &[Ident], changed: &mut bool) -> Node {
+    let recursed =
+        node_map::map_children(node, &mut |child| rewrite_node(child, scope_names, changed));
     let recursed = node_map::map_body(recursed, &mut |body| {
         body.into_iter()
-            .map(|child| rewrite_node(child, changed))
+            .map(|child| rewrite_node(child, scope_names, changed))
             .collect()
     });
-    strip_mine_if_eligible(recursed, changed)
+    strip_mine_if_eligible(recursed, scope_names, changed)
 }
 
-fn strip_mine_if_eligible(node: Node, changed: &mut bool) -> Node {
+fn strip_mine_if_eligible(node: Node, scope_names: &[Ident], changed: &mut bool) -> Node {
     let Node::Loop {
         var,
         from,
@@ -110,9 +116,11 @@ fn strip_mine_if_eligible(node: Node, changed: &mut bool) -> Node {
         };
     }
 
-    let names = names_in_nodes(&body);
-    let outer_var = fresh_ident(&var, "tile", &names);
-    let lane_var = fresh_ident(&var, "lane", &names);
+    // Avoid every name in scope (enclosing bindings + this body), not just the
+    // body's names, so the synthesized tile/lane vars cannot shadow an outer
+    // binding (V008). `scope_names` already includes this loop's body names.
+    let outer_var = fresh_ident(&var, "tile", scope_names);
+    let lane_var = fresh_ident(&var, "lane", scope_names);
     let tile_count = trip_count.div_ceil(DEFAULT_STRIP_MINE_TILE);
     let tile_offset = Expr::add(
         Expr::mul(
