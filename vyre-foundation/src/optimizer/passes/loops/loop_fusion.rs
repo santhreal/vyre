@@ -604,8 +604,12 @@ fn collect_vars_in_expr(expr: &Expr, out: &mut FxHashSet<Ident>) {
                 collect_vars_in_expr(a, out);
             }
         }
-        Expr::SubgroupShuffle { value, .. } | Expr::SubgroupReduce { value, .. } => {
+        Expr::SubgroupReduce { value, .. } => collect_vars_in_expr(value, out),
+        Expr::SubgroupShuffle { value, lane } => {
+            // The lane index is a read just like the shuffled value; a scalar
+            // referenced there is a real cross-loop dependency, so descend.
             collect_vars_in_expr(value, out);
+            collect_vars_in_expr(lane, out);
         }
         Expr::SubgroupBallot { cond } => collect_vars_in_expr(cond, out),
         _ => {}
@@ -972,6 +976,50 @@ mod tests {
             count_loops(&region_body(result.program.entry())),
             2,
             "loops sharing buffer `b` through a shuffle lane load must not fuse"
+        );
+    }
+
+    #[test]
+    fn does_not_fuse_when_a_shuffle_lane_reads_a_cross_loop_scalar() {
+        // The scalar `s` is written every iteration of loop_a and read by
+        // loop_b ONLY through a shuffle lane. `fusion_has_scalar_dependency`
+        // collects body_b's reads via collect_var_reads -> collect_vars_in_expr,
+        // which dropped `SubgroupShuffle.lane`; the read of `s` was therefore
+        // invisible and the loops fused. After fusing, body_b observes `s == j`
+        // each iteration instead of the value loop_a left behind  -  a silent
+        // value miscompile. The lane read must register as a cross-loop scalar
+        // dependency that blocks fusion.
+        let entry = vec![
+            Node::let_bind("s", Expr::u32(0)),
+            Node::loop_for(
+                "i",
+                Expr::u32(0),
+                Expr::u32(8),
+                vec![
+                    Node::assign("s", Expr::var("i")),
+                    Node::store("a", Expr::var("i"), Expr::var("s")),
+                ],
+            ),
+            Node::loop_for(
+                "j",
+                Expr::u32(0),
+                Expr::u32(8),
+                vec![Node::store(
+                    "b",
+                    Expr::var("j"),
+                    Expr::subgroup_shuffle(Expr::u32(5), Expr::var("s")),
+                )],
+            ),
+        ];
+        let result = LoopFusion::transform(program(entry));
+        assert!(
+            !result.changed,
+            "a scalar read hidden in a shuffle lane is a cross-loop dependency; the loops must not fuse"
+        );
+        assert_eq!(
+            count_loops(&region_body(result.program.entry())),
+            2,
+            "loops with a shuffle-lane scalar dependency must stay separate"
         );
     }
 
