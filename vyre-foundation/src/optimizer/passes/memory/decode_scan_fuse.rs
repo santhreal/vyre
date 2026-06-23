@@ -33,7 +33,7 @@
 
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::ir::{BufferAccess, BufferDecl, DataType, Ident, Program};
+use crate::ir::{BufferAccess, BufferDecl, DataType, Ident, Node, Program};
 use crate::optimizer::{fingerprint_program, vyre_pass, PassAnalysis, PassResult};
 
 /// Conservative ceiling on workgroup-promoted buffer size.
@@ -66,6 +66,58 @@ fn fits_workgroup_budget(buf: &BufferDecl) -> bool {
         return false;
     };
     bytes > 0 && bytes <= MAX_WORKGROUP_PROMOTION_BYTES
+}
+
+/// The single promotability predicate shared by [`run`], [`count_opportunities`]
+/// and [`candidate_handoffs`] so all three agree exactly on what is a handoff.
+///
+/// A buffer is a promotable handoff when it is `ReadWrite` (written then read),
+/// statically sized (`count > 0` — workgroup allocations must be compile-time
+/// sized), not externally observed (`!pipeline_live_out` — workgroup buffers do
+/// not survive past dispatch end), fits the workgroup byte budget, AND is not
+/// referenced by a cross-workgroup op (see [`cross_workgroup_buffers`]).
+fn is_promotable_handoff(buf: &BufferDecl, cross_workgroup: &FxHashSet<Ident>) -> bool {
+    buf.access() == BufferAccess::ReadWrite
+        && buf.count() > 0
+        && !buf.is_pipeline_live_out()
+        && fits_workgroup_budget(buf)
+        && !cross_workgroup.contains(&Ident::from(buf.name()))
+}
+
+/// Collect every buffer referenced by a CROSS-WORKGROUP op anywhere in `nodes`.
+///
+/// Collectives (`AllReduce`/`Broadcast`/`AllGather`/`ReduceScatter`) move data
+/// between workgroups over a `CommGroup`. Workgroup memory is per-workgroup-
+/// private, so promoting such a buffer would give each workgroup its own copy
+/// and silently destroy the cross-workgroup dataflow (the reduction/gather/
+/// broadcast would see only one workgroup's data). `decode_scan_fuse` must
+/// therefore never promote a buffer that any collective touches — its decl
+/// alone (ReadWrite + sized + not live-out) cannot reveal this; only the body
+/// can. (The promotion precondition already excludes externally-observed
+/// buffers; a collective is an in-program cross-workgroup observation the
+/// `pipeline_live_out` flag does not cover.)
+fn cross_workgroup_buffers(nodes: &[Node], out: &mut FxHashSet<Ident>) {
+    for node in nodes {
+        match node {
+            Node::AllReduce { buffer, .. } | Node::Broadcast { buffer, .. } => {
+                out.insert(buffer.clone());
+            }
+            Node::AllGather { input, output, .. }
+            | Node::ReduceScatter { input, output, .. } => {
+                out.insert(input.clone());
+                out.insert(output.clone());
+            }
+            Node::If {
+                then, otherwise, ..
+            } => {
+                cross_workgroup_buffers(then, out);
+                cross_workgroup_buffers(otherwise, out);
+            }
+            Node::Loop { body, .. } | Node::Block(body) => cross_workgroup_buffers(body, out),
+            Node::Region { body, .. } => cross_workgroup_buffers(body, out),
+            _ => {}
+        }
+    }
 }
 
 /// Built-in optimizer pass for in-program decode/scan handoff fusion.
@@ -107,19 +159,12 @@ impl DecodeScanFuse {
 /// buffers (`pipeline_live_out = true`) are preserved as-is.
 #[must_use]
 pub fn run(program: Program) -> Program {
+    let mut cross_workgroup: FxHashSet<Ident> = FxHashSet::default();
+    cross_workgroup_buffers(program.entry(), &mut cross_workgroup);
     let promotable: FxHashSet<Ident> = program
         .buffers
         .iter()
-        .filter(|b| {
-            // Promotability criteria: `ReadWrite` (written then read within
-            // one dispatch), static count (workgroup allocs must be compile-
-            // time sized), and not externally observed (workgroup buffers
-            // don't survive past dispatch end).
-            b.access() == BufferAccess::ReadWrite
-                && b.count() > 0
-                && !b.is_pipeline_live_out()
-                && fits_workgroup_budget(b)
-        })
+        .filter(|b| is_promotable_handoff(b, &cross_workgroup))
         .map(|b| Ident::from(b.name()))
         .collect();
 
@@ -152,16 +197,12 @@ pub fn run(program: Program) -> Program {
 /// buffers `run` would promote. Identical filter to `run`.
 #[must_use]
 pub fn count_opportunities(program: &Program) -> usize {
+    let mut cross_workgroup: FxHashSet<Ident> = FxHashSet::default();
+    cross_workgroup_buffers(program.entry(), &mut cross_workgroup);
     program
         .buffers
         .iter()
-        .filter(|b| {
-            // Same promotability criteria as `run`.
-            b.access() == BufferAccess::ReadWrite
-                && b.count() > 0
-                && !b.is_pipeline_live_out()
-                && fits_workgroup_budget(b)
-        })
+        .filter(|b| is_promotable_handoff(b, &cross_workgroup))
         .count()
 }
 
@@ -169,11 +210,16 @@ pub fn count_opportunities(program: &Program) -> usize {
 /// count. Parallel to [`count_opportunities`] with names exposed.
 #[must_use]
 pub fn candidate_handoffs(program: &Program) -> FxHashMap<Ident, u32> {
+    let mut cross_workgroup: FxHashSet<Ident> = FxHashSet::default();
+    cross_workgroup_buffers(program.entry(), &mut cross_workgroup);
     let mut out = FxHashMap::default();
     for buf in program.buffers.iter() {
-        // Same promotability criteria as `run` and `count_opportunities`.
-        if buf.access() == BufferAccess::ReadWrite && buf.count() > 0 && !buf.is_pipeline_live_out()
-        {
+        // Same promotability criteria as `run` and `count_opportunities`
+        // (shared predicate). NOTE: this previously omitted the workgroup-byte
+        // budget check that `run` enforces, so it reported oversize buffers as
+        // candidates that `run` would never promote; routing through
+        // `is_promotable_handoff` fixes that divergence.
+        if is_promotable_handoff(buf, &cross_workgroup) {
             out.insert(Ident::from(buf.name()), buf.count());
         }
     }
@@ -237,6 +283,78 @@ mod tests {
         let r = after.buffers.iter().find(|b| b.name() == "result").unwrap();
         assert_eq!(r.access(), BufferAccess::ReadWrite);
         assert!(r.is_pipeline_live_out());
+    }
+
+    #[test]
+    fn run_does_not_promote_a_buffer_reduced_across_workgroups() {
+        use crate::ir::{CollectiveOp, CommGroup, Node};
+        // `b` satisfies every decl criterion (ReadWrite, static count, not
+        // live-out, fits the workgroup budget) but it is the target of an
+        // AllReduce  -  a CROSS-WORKGROUP reduction over CommGroup::WORLD.
+        // Workgroup memory is per-workgroup-private, so promoting `b` would
+        // give each workgroup its own copy and silently destroy the reduction.
+        // The decl-only filter promoted it; the body must veto the promotion.
+        let p = Program::wrapped(
+            vec![BufferDecl::storage("b", 0, BufferAccess::ReadWrite, DataType::U32).with_count(16)],
+            [64, 1, 1],
+            vec![Node::AllReduce {
+                buffer: "b".into(),
+                op: CollectiveOp::Sum,
+                group: CommGroup::WORLD,
+            }],
+        );
+        let after = run(p);
+        let b = after.buffers.iter().find(|x| x.name() == "b").unwrap();
+        assert_eq!(
+            b.access(),
+            BufferAccess::ReadWrite,
+            "a buffer reduced across workgroups by AllReduce must not be promoted to workgroup-private memory"
+        );
+        assert_eq!(
+            count_opportunities(&Program::wrapped(
+                vec![
+                    BufferDecl::storage("b", 0, BufferAccess::ReadWrite, DataType::U32)
+                        .with_count(16)
+                ],
+                [64, 1, 1],
+                vec![Node::AllReduce {
+                    buffer: "b".into(),
+                    op: CollectiveOp::Sum,
+                    group: CommGroup::WORLD,
+                }],
+            )),
+            0,
+            "count_opportunities must agree with run and report no promotable handoff"
+        );
+    }
+
+    #[test]
+    fn run_does_not_promote_an_all_gather_input_or_output() {
+        use crate::ir::{CommGroup, Node};
+        // AllGather moves data ACROSS workgroups from `src` into `dst`; both
+        // endpoints are cross-workgroup and must not be promoted to per-
+        // workgroup-private memory even though both decls qualify.
+        let p = Program::wrapped(
+            vec![
+                BufferDecl::storage("src", 0, BufferAccess::ReadWrite, DataType::U32).with_count(8),
+                BufferDecl::storage("dst", 1, BufferAccess::ReadWrite, DataType::U32).with_count(8),
+            ],
+            [64, 1, 1],
+            vec![Node::AllGather {
+                input: "src".into(),
+                output: "dst".into(),
+                group: CommGroup::WORLD,
+            }],
+        );
+        let after = run(p);
+        for name in ["src", "dst"] {
+            let b = after.buffers.iter().find(|x| x.name() == name).unwrap();
+            assert_eq!(
+                b.access(),
+                BufferAccess::ReadWrite,
+                "an all-gather endpoint must not be promoted to workgroup-private memory"
+            );
+        }
     }
 
     #[test]
