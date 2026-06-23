@@ -8,9 +8,14 @@
 //!
 //! ```text
 //! Loop(i, lo, hi, [..., If(Lt(Var(i), LitU32(n)), then, otherwise), ...])
-//!     where n >= hi  → If condition is always true  → splat `then`
-//!     where n <= lo  → If condition is always false → splat `otherwise`
+//!     where n >= hi  → If condition is always true  → Block(`then`)
+//!     where n <= lo  → If condition is always false → Block(`otherwise`)
 //! ```
+//!
+//! The surviving arm replaces the `If` as a scope-preserving `Block` (NOT
+//! spliced into the enclosing body): an arm-local `let x` must stay scoped, or
+//! it would collide with a sibling `let x` in the loop body (V032). The Block
+//! runs unconditionally, so the always-true/false arm's semantics are exact.
 //!
 //! Same for `Le`, `Gt`, `Ge`, `Eq`, `Ne` with the appropriate
 //! range comparisons.
@@ -22,9 +27,9 @@
 //! range gives the same value at every iteration, so replacing
 //! the `If` with the constant arm changes nothing observable.
 //!
-//! Cost direction: monotone-down on `node_count` (one fewer If
-//! wrapper per fired fold) and monotone-down on per-iteration
-//! branch overhead.
+//! Cost direction: monotone-down on `node_count` (the untaken arm is
+//! dropped; the `If` becomes a single `Block`) and monotone-down on
+//! per-iteration branch overhead (the proved-constant branch is gone).
 //!
 //! Preserves: every analysis. Invalidates: nothing  -  the surviving
 //! arm executes on every iteration just as it did before.
@@ -145,17 +150,11 @@ fn recurse(
                     hi,
                 };
                 body.into_iter()
-                    .flat_map(|n| {
-                        let folded = recurse(n, Some(inner_range), shape_facts, changed);
-                        flatten_block(folded)
-                    })
+                    .map(|n| recurse(n, Some(inner_range), shape_facts, changed))
                     .collect()
             } else {
                 body.into_iter()
-                    .flat_map(|n| {
-                        let folded = recurse(n, range, shape_facts, changed);
-                        flatten_block(folded)
-                    })
+                    .map(|n| recurse(n, range, shape_facts, changed))
                     .collect()
             };
             Node::Loop {
@@ -178,12 +177,13 @@ fn recurse(
                         .into_iter()
                         .map(|n| recurse(n, Some(range), shape_facts, changed))
                         .collect();
-                    if folded.len() == 1 {
-                        return folded
-                            .into_iter()
-                            .next()
-                            .unwrap_or_else(|| unreachable!("folded.len() == 1 by guard above"));
-                    }
+                    // The chosen arm is a SCOPE (If arms pop their bindings on
+                    // exit). The condition was proved always-true/false, so the
+                    // arm now runs unconditionally -- but its bindings must stay
+                    // scoped. Wrap in a Block (a scope) rather than splicing the
+                    // arm's nodes into the enclosing body: a bare arm-local
+                    // `let x` would collide with a sibling `let x` (V032). The
+                    // Block runs unconditionally, so semantics are preserved.
                     return Node::Block(folded);
                 }
             }
@@ -201,10 +201,7 @@ fn recurse(
         }
         Node::Block(body) => Node::Block(
             body.into_iter()
-                .flat_map(|n| {
-                    let folded = recurse(n, range, shape_facts, changed);
-                    flatten_block(folded)
-                })
+                .map(|n| recurse(n, range, shape_facts, changed))
                 .collect(),
         ),
         Node::Region {
@@ -222,22 +219,12 @@ fn recurse(
                 body: std::sync::Arc::new(
                     body_vec
                         .into_iter()
-                        .flat_map(|n| {
-                            let folded = recurse(n, range, shape_facts, changed);
-                            flatten_block(folded)
-                        })
+                        .map(|n| recurse(n, range, shape_facts, changed))
                         .collect(),
                 ),
             }
         }
         other => other,
-    }
-}
-
-fn flatten_block(node: Node) -> Vec<Node> {
-    match node {
-        Node::Block(body) => body,
-        other => vec![other],
     }
 }
 
