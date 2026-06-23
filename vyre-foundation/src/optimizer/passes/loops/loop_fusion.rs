@@ -595,8 +595,21 @@ fn collect_vars_in_expr(expr: &Expr, out: &mut FxHashSet<Ident>) {
             collect_vars_in_expr(true_val, out);
             collect_vars_in_expr(false_val, out);
         }
-        Expr::Atomic { index, value, .. } => {
+        Expr::Atomic {
+            index,
+            expected,
+            value,
+            ..
+        } => {
             collect_vars_in_expr(index, out);
+            // The compare-exchange `expected` operand is a read just like
+            // `index`/`value`; a scalar referenced there is a real cross-loop
+            // dependency. Dropping it let `fusion_has_scalar_dependency` fuse
+            // across a CAS whose `expected` reads a scalar the sibling loop
+            // mutates (see loop_fusion_atomic_expected_scalar_dependency).
+            if let Some(expected) = expected.as_deref() {
+                collect_vars_in_expr(expected, out);
+            }
             collect_vars_in_expr(value, out);
         }
         Expr::Call { args, .. } => {
@@ -612,7 +625,20 @@ fn collect_vars_in_expr(expr: &Expr, out: &mut FxHashSet<Ident>) {
             collect_vars_in_expr(lane, out);
         }
         Expr::SubgroupBallot { cond } => collect_vars_in_expr(cond, out),
-        _ => {}
+        // Exhaustive leaf set (no `_` catch-all): a future operand-bearing Expr
+        // variant must be wired in explicitly, not silently dropped from the
+        // cross-loop dependency analysis.
+        Expr::LitU32(_)
+        | Expr::LitI32(_)
+        | Expr::LitF32(_)
+        | Expr::LitBool(_)
+        | Expr::BufLen { .. }
+        | Expr::InvocationId { .. }
+        | Expr::WorkgroupId { .. }
+        | Expr::LocalId { .. }
+        | Expr::SubgroupLocalId
+        | Expr::SubgroupSize
+        | Expr::Opaque(_) => {}
     }
 }
 
