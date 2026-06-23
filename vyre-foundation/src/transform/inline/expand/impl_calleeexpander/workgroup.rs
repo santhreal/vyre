@@ -43,35 +43,63 @@ impl CalleeExpander<'_> {
                 count_buffer: count_buffer.clone(),
                 count_offset: *count_offset,
             }]),
+            // Async offset/size are expressions that can reference callee-local
+            // variables; they must be alpha-renamed (and any nested call
+            // hoisted) exactly like a Store index, or a callee-local in the
+            // offset dangles against its renamed `let` declaration.
             Node::AsyncLoad {
                 source,
                 destination,
                 offset,
                 size,
                 tag,
-            } => Ok(vec![Node::async_load_ext(
-                source.clone(),
-                destination.clone(),
-                (**offset).clone(),
-                (**size).clone(),
-                tag.clone(),
-            )]),
+            } => {
+                let (mut prefix, offset) = self.expr(offset)?;
+                let (size_prefix, size) = self.expr(size)?;
+                prefix.extend(size_prefix);
+                prefix.push(Node::async_load_ext(
+                    source.clone(),
+                    destination.clone(),
+                    offset,
+                    size,
+                    tag.clone(),
+                ));
+                Ok(prefix)
+            }
             Node::AsyncStore {
                 source,
                 destination,
                 offset,
                 size,
                 tag,
-            } => Ok(vec![Node::async_store(
-                source.clone(),
-                destination.clone(),
-                (**offset).clone(),
-                (**size).clone(),
-                tag.clone(),
-            )]),
+            } => {
+                let (mut prefix, offset) = self.expr(offset)?;
+                let (size_prefix, size) = self.expr(size)?;
+                prefix.extend(size_prefix);
+                prefix.push(Node::async_store(
+                    source.clone(),
+                    destination.clone(),
+                    offset,
+                    size,
+                    tag.clone(),
+                ));
+                Ok(prefix)
+            }
             Node::AsyncWait { tag } => Ok(vec![Node::async_wait(tag)]),
-            Node::Trap { .. }
-            | Node::Resume { .. }
+            // A trap address is an expression that can reference a callee-local;
+            // rename it like any other expression position.
+            Node::Trap { address, tag } => {
+                let (mut prefix, address) = self.expr(address)?;
+                prefix.push(Node::Trap {
+                    address: Box::new(address),
+                    tag: tag.clone(),
+                });
+                Ok(prefix)
+            }
+            // Resume carries only an async tag; the collectives reference only
+            // global buffer names. Neither holds a callee-local value
+            // expression, so cloning verbatim preserves correctness.
+            Node::Resume { .. }
             | Node::AllReduce { .. }
             | Node::AllGather { .. }
             | Node::ReduceScatter { .. }
