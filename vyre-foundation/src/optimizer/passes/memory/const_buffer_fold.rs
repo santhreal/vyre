@@ -194,6 +194,23 @@ fn fold_expr(expr: &Expr, constant: &ConstBuffer) -> Expr {
             op_id,
             args.iter().map(|arg| fold_expr(arg, constant)).collect(),
         ),
+        // Subgroup operands are ordinary sub-expressions: a `Load` from the
+        // const buffer nested inside `subgroup_add(load(lut, i))` must fold too.
+        // Leaving it to the `_` catch-all (clone, no descent) would silently
+        // skip the fold, so a caller that drops the now-immutable binding would
+        // dangle the residual load. Reconstruct each variant field-preservingly
+        // (SubgroupReduce keeps `op`).
+        Expr::SubgroupBallot { cond } => Expr::SubgroupBallot {
+            cond: Box::new(fold_expr(cond, constant)),
+        },
+        Expr::SubgroupShuffle { value, lane } => Expr::SubgroupShuffle {
+            value: Box::new(fold_expr(value, constant)),
+            lane: Box::new(fold_expr(lane, constant)),
+        },
+        Expr::SubgroupReduce { op, value } => Expr::SubgroupReduce {
+            op: *op,
+            value: Box::new(fold_expr(value, constant)),
+        },
         _ => expr.clone(),
     }
 }
@@ -235,6 +252,54 @@ mod tests {
                 ..
             }
         ));
+    }
+
+    #[test]
+    fn const_buffer_folds_inside_subgroup_operand() {
+        // Regression: a load from the const buffer nested inside a subgroup
+        // operand (`subgroup_add(load(lut, 7))`) must fold to the literal too.
+        // Before the fix, `fold_expr`'s `_ => expr.clone()` catch-all covered
+        // `SubgroupReduce` and skipped the descent, leaving the load in place --
+        // so a caller that then drops the immutable `lut` binding would dangle
+        // the residual load. `result.changed` stayed false and the store value
+        // remained `subgroup_add(load(...))`.
+        let program =
+            crate::optimizer::passes::cleanup::region_inline_engine::run(Program::wrapped(
+                vec![
+                    BufferDecl::read("lut", 0, DataType::U32).with_count(256),
+                    BufferDecl::output("out", 1, DataType::U32).with_count(1),
+                ],
+                [1, 1, 1],
+                vec![Node::store(
+                    "out",
+                    Expr::u32(0),
+                    Expr::subgroup_add(Expr::load("lut", Expr::u32(7))),
+                )],
+            ));
+        let result = fold_const_buffer(
+            &program,
+            &ConstBuffer {
+                name: "lut".into(),
+                values: (0..256).map(|value| value * 3).collect(),
+            },
+        );
+
+        assert!(
+            result.changed,
+            "folding the lut load inside subgroup_add must change the program"
+        );
+        let body = crate::test_util::region_body(&result.program);
+        let Node::Store { value, .. } = &body[0] else {
+            panic!("expected a store, got {:?}", body[0]);
+        };
+        let Expr::SubgroupReduce { value: inner, .. } = value else {
+            panic!("store value must remain a subgroup reduce, got {value:?}");
+        };
+        assert_eq!(
+            **inner,
+            Expr::LitU32(21),
+            "lut[7] == 7*3 == 21 must be folded into the subgroup operand, not left as a load"
+        );
     }
 
     #[test]
