@@ -40,6 +40,12 @@
 //! - The second loop's body is rewritten so every `Expr::Var(j)`
 //!   becomes `Expr::Var(i)`. A Let in body_a whose name shadows `j`
 //!   (or vice versa) blocks the fusion to keep the rewrite local.
+//! - The two bodies must not bind a common local name, and body_b must not
+//!   bind the fused loop variable `i`: fusion merges both bodies into ONE
+//!   scope, so a shared `let` name becomes a duplicate sibling binding (V032)
+//!   and a body_b binding of `i` shadows the loop var (V008). The block-scoped
+//!   IR pops each loop body's bindings at loop exit, so two sibling loops
+//!   binding the same local are legal pre-fusion but collide once merged.
 
 use crate::ir::{Expr, Ident, Node, Program};
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
@@ -130,6 +136,7 @@ fn fuse_in_body(body: Vec<Node>, changed: &mut bool) -> Vec<Node> {
             || var_a == var_b
             || !buffers_disjoint(&body_a, &body_b)
             || body_a_let_names_collide_with_b(&body_a, &body_b, &var_b)
+            || fusion_collides_bindings(&body_a, &body_b, &var_a, &var_b)
         {
             // Cannot fuse  -  emit the first loop, push the second back
             // for the next iteration to consider against its successor.
@@ -339,6 +346,40 @@ fn body_a_let_names_collide_with_b(body_a: &[Node], body_b: &[Node], var_b: &Ide
     collect_var_reads(body_b, &mut b_reads);
     b_reads.remove(var_b);
     !a_lets.is_disjoint(&b_reads)
+}
+
+/// True iff fusing the two bodies would introduce a duplicate or shadowing
+/// binding the validator rejects. Fusion concatenates the bodies into ONE loop
+/// scope (`fused = body_a ++ rename(body_b, var_b -> var_a)`), so a name bound
+/// by BOTH bodies becomes a duplicate sibling binding (V032), and a body_b
+/// binding of the fused loop variable `var_a` shadows it (V008). The block-scoped
+/// IR pops each loop body's bindings at loop exit, so two sibling loops binding
+/// the same local are legal pre-fusion but collide once merged.
+///
+/// `collect_let_names` recurses into nested scopes (and counts `Assign`
+/// targets), so this is conservative: it may refuse a fusion whose shared name
+/// actually sits in disjoint nested scopes, but it never permits a real
+/// collision. This is disjoint from the *capture* hazard guarded by
+/// [`body_a_let_names_collide_with_b`] (body_b READING a body_a binding); this
+/// is the duplicate-BINDING hazard.
+fn fusion_collides_bindings(
+    body_a: &[Node],
+    body_b: &[Node],
+    var_a: &Ident,
+    var_b: &Ident,
+) -> bool {
+    let mut a_lets: FxHashSet<Ident> = FxHashSet::default();
+    collect_let_names(body_a, &mut a_lets);
+    let mut b_lets: FxHashSet<Ident> = FxHashSet::default();
+    collect_let_names(body_b, &mut b_lets);
+    b_lets.iter().any(|name| {
+        // body_b is rewritten var_b -> var_a before splicing, so a body_b
+        // binding of var_b lands as var_a in the fused scope.
+        let fused_name = if name == var_b { var_a } else { name };
+        // Collides with the fused loop variable (shadow, V008) or with a name
+        // body_a already binds (duplicate sibling, V032).
+        fused_name == var_a || a_lets.contains(fused_name)
+    })
 }
 
 fn collect_let_names(nodes: &[Node], out: &mut FxHashSet<Ident>) {
@@ -614,6 +655,7 @@ fn body_has_fusable_pair(body: &[Node]) -> bool {
                 && var_a != var_b
                 && buffers_disjoint(body_a, body_b)
                 && !body_a_let_names_collide_with_b(body_a, body_b, var_b)
+                && !fusion_collides_bindings(body_a, body_b, var_a, var_b)
             {
                 return true;
             }
@@ -811,6 +853,83 @@ mod tests {
         ];
         let result = LoopFusion::transform(program(entry));
         assert!(!result.changed, "shared name `tmp` blocks fusion");
+    }
+
+    #[test]
+    fn does_not_fuse_when_both_bodies_bind_same_local() {
+        // Both bodies bind `x` in their own loop scopes (valid pre-fusion).
+        // body_b does NOT read `x`, so the capture guard
+        // (body_a_let_names_collide_with_b) passes -- but fusing concatenates
+        // the two `let x` into one loop scope, a duplicate sibling binding the
+        // validator rejects (V032). Refuse. (Oracle-differential proof:
+        // tests/loop_fusion_binding_collision.rs.)
+        let entry = vec![
+            Node::loop_for(
+                "i",
+                Expr::u32(0),
+                Expr::u32(8),
+                vec![
+                    Node::let_bind("x", Expr::u32(1)),
+                    Node::store("a", Expr::var("i"), Expr::var("x")),
+                ],
+            ),
+            Node::loop_for(
+                "j",
+                Expr::u32(0),
+                Expr::u32(8),
+                // binds `x` but never reads it -> capture guard does not fire
+                vec![
+                    Node::let_bind("x", Expr::u32(2)),
+                    Node::store("b", Expr::var("j"), Expr::u32(9)),
+                ],
+            ),
+        ];
+        let result = LoopFusion::transform(program(entry));
+        assert!(
+            !result.changed,
+            "a local name bound by both bodies blocks fusion (duplicate sibling)"
+        );
+        assert_eq!(
+            count_loops(&region_body(result.program.entry())),
+            2,
+            "both loops must survive unfused"
+        );
+    }
+
+    #[test]
+    fn fuses_when_bodies_bind_distinct_locals() {
+        // Distinct local names (`x` vs `y`) cannot collide, so the
+        // duplicate-binding guard must NOT block this fusion.
+        let entry = vec![
+            Node::loop_for(
+                "i",
+                Expr::u32(0),
+                Expr::u32(8),
+                vec![
+                    Node::let_bind("x", Expr::u32(1)),
+                    Node::store("a", Expr::var("i"), Expr::var("x")),
+                ],
+            ),
+            Node::loop_for(
+                "j",
+                Expr::u32(0),
+                Expr::u32(8),
+                vec![
+                    Node::let_bind("y", Expr::u32(2)),
+                    Node::store("b", Expr::var("j"), Expr::var("y")),
+                ],
+            ),
+        ];
+        let result = LoopFusion::transform(program(entry));
+        assert!(
+            result.changed,
+            "distinct local names must still allow fusion"
+        );
+        assert_eq!(
+            count_loops(&region_body(result.program.entry())),
+            1,
+            "the two loops fuse into one"
+        );
     }
 
     #[test]
