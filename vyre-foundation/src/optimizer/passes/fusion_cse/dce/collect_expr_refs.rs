@@ -48,6 +48,16 @@ pub(crate) fn collect_expr_refs(expr: &Expr, refs: &mut HashSet<Ident>) {
                 }
                 stack.push(value);
             }
+            // Subgroup operands reference variables too: a `let x` used only in
+            // `subgroup_add(x)` must stay live, or DCE drops it and dangles the
+            // `Var(x)` still inside the op. (Matches cse::expr_has_effect and
+            // fusion_safety::collect_expr_accesses, which both descend here.)
+            Expr::SubgroupBallot { cond } => stack.push(cond),
+            Expr::SubgroupShuffle { value, lane } => {
+                stack.push(value);
+                stack.push(lane);
+            }
+            Expr::SubgroupReduce { value, .. } => stack.push(value),
             Expr::LitU32(_)
             | Expr::LitI32(_)
             | Expr::LitF32(_)
@@ -58,9 +68,6 @@ pub(crate) fn collect_expr_refs(expr: &Expr, refs: &mut HashSet<Ident>) {
             | Expr::LocalId { .. }
             | Expr::SubgroupLocalId
             | Expr::SubgroupSize
-            | Expr::SubgroupBallot { .. }
-            | Expr::SubgroupShuffle { .. }
-            | Expr::SubgroupReduce { .. }
             | Expr::Opaque(_) => {}
         }
     }
