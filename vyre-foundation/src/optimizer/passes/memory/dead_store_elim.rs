@@ -306,8 +306,12 @@ fn expr_touches_buffer(expr: &Expr, buffer: &Ident) -> bool {
                 || expr_touches_buffer(false_val, buffer)
         }
         Expr::Call { args, .. } => args.iter().any(|a| expr_touches_buffer(a, buffer)),
-        Expr::SubgroupShuffle { value, .. } | Expr::SubgroupReduce { value, .. } => {
-            expr_touches_buffer(value, buffer)
+        Expr::SubgroupReduce { value, .. } => expr_touches_buffer(value, buffer),
+        Expr::SubgroupShuffle { value, lane } => {
+            // The lane index may itself load from `buffer` (a gather/permute);
+            // a read there observes the prior store just as a top-level load
+            // would, so descend into the lane too.
+            expr_touches_buffer(value, buffer) || expr_touches_buffer(lane, buffer)
         }
         Expr::SubgroupBallot { cond } => expr_touches_buffer(cond, buffer),
         Expr::Opaque(_) => true,
@@ -441,6 +445,33 @@ mod tests {
         assert!(
             !result.changed,
             "must not drop a store whose value is observably read before the overwrite"
+        );
+    }
+
+    #[test]
+    fn keeps_first_store_when_a_shuffle_lane_loads_it() {
+        // Store(buf, 0, 1); Let(x, shuffle(5, Load(buf, 0))); Store(buf, 0, 2)
+        // The first store is observed by a Load hidden in the shuffle's LANE
+        // operand. `expr_touches_buffer` must descend into the lane; otherwise
+        // the read is invisible and the live first store is wrongly eliminated.
+        let entry = vec![
+            Node::store("buf", Expr::u32(0), Expr::u32(1)),
+            Node::let_bind(
+                "x",
+                Expr::subgroup_shuffle(Expr::u32(5), Expr::load("buf", Expr::u32(0))),
+            ),
+            Node::store("buf", Expr::u32(0), Expr::u32(2)),
+        ];
+        let program = program_with_entry(entry);
+        let result = DeadStoreElim::transform(program);
+        assert!(
+            !result.changed,
+            "a load in a shuffle lane observes the first store; it must not be dropped"
+        );
+        let total: usize = result.program.entry().iter().map(count_stores).sum();
+        assert_eq!(
+            total, 2,
+            "both stores must survive when a shuffle lane reads the first"
         );
     }
 
