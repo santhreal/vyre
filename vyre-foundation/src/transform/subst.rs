@@ -179,7 +179,14 @@ fn substitute_expr(expr: &Expr, var: &Ident, replacement: &Expr) -> Expr {
             substitute_expr(value, var, replacement),
             substitute_expr(lane, var, replacement),
         ),
-        Expr::SubgroupReduce { value, .. } => Expr::subgroup_add(substitute_expr(value, var, replacement)),
+        Expr::SubgroupReduce { op, value } => {
+            // Preserve the reduction operator. Rebuilding unconditionally as
+            // `subgroup_add` silently rewrote Max/Min/Mul/And/Or/Xor reductions
+            // to Add -- a wrong reduction in unroll/strip-mine and a wrong
+            // reversed gradient in autodiff (grad.rs substitutes the reversed
+            // index into the adjoint body through this path).
+            Expr::subgroup_reduce(*op, substitute_expr(value, var, replacement))
+        }
         _ => expr.clone(),
     }
 }
