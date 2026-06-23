@@ -323,8 +323,10 @@ fn expr_references_any_except(expr: &Expr, mutated: &FxHashSet<Ident>, ignore: &
                     .is_some_and(|e| expr_references_any_except(e, mutated, ignore))
                 || expr_references_any_except(value, mutated, ignore)
         }
-        Expr::SubgroupShuffle { value, .. } | Expr::SubgroupReduce { value, .. } => {
+        Expr::SubgroupReduce { value, .. } => expr_references_any_except(value, mutated, ignore),
+        Expr::SubgroupShuffle { value, lane } => {
             expr_references_any_except(value, mutated, ignore)
+                || expr_references_any_except(lane, mutated, ignore)
         }
         Expr::SubgroupBallot { cond } => expr_references_any_except(cond, mutated, ignore),
         Expr::LitU32(_)
@@ -378,8 +380,9 @@ fn expr_references_any(expr: &Expr, mutated: &FxHashSet<Ident>) -> bool {
                     .is_some_and(|e| expr_references_any(e, mutated))
                 || expr_references_any(value, mutated)
         }
-        Expr::SubgroupShuffle { value, .. } | Expr::SubgroupReduce { value, .. } => {
-            expr_references_any(value, mutated)
+        Expr::SubgroupReduce { value, .. } => expr_references_any(value, mutated),
+        Expr::SubgroupShuffle { value, lane } => {
+            expr_references_any(value, mutated) || expr_references_any(lane, mutated)
         }
         Expr::SubgroupBallot { cond } => expr_references_any(cond, mutated),
         Expr::LitU32(_)
@@ -526,6 +529,27 @@ mod tests {
             }
         }
         0
+    }
+
+    #[test]
+    fn references_helpers_see_a_var_inside_a_shuffle_lane() {
+        // The invariance helpers must report a mutated var referenced ANYWHERE
+        // in the expression, including a `SubgroupShuffle`'s lane operand. The
+        // hoist gate also independently refuses any shuffle today (via
+        // `expr_is_observably_free`), so a dropped lane is currently masked; this
+        // guards the helpers' own completeness so a future uniform-shuffle hoist
+        // cannot silently treat a lane-dependent value as loop-invariant.
+        let mut mutated: FxHashSet<Ident> = FxHashSet::default();
+        mutated.insert(Ident::from("m"));
+        let shuffle_by_mutated = Expr::subgroup_shuffle(Expr::u32(5), Expr::var("m"));
+        assert!(
+            expr_references_any(&shuffle_by_mutated, &mutated),
+            "expr_references_any must see the mutated var `m` in the shuffle lane"
+        );
+        assert!(
+            expr_references_any_except(&shuffle_by_mutated, &mutated, &Ident::from("other")),
+            "expr_references_any_except must see the mutated var `m` in the shuffle lane"
+        );
     }
 
     #[test]
