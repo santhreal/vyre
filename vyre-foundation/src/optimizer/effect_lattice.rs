@@ -337,11 +337,46 @@ fn join_arms<'a>(nodes: impl IntoIterator<Item = &'a Node>) -> EffectLevel {
 }
 
 fn expr_effect_level(expr: &Expr) -> EffectLevel {
-    match expr {
-        Expr::Atomic { .. } => EffectLevel::ReadWriteAtomic(AtomicOrdering::SeqCst),
-        Expr::Load { .. } => EffectLevel::ReadAtomic,
-        _ => EffectLevel::Pure,
+    use crate::visit::expr::{visit_preorder, ExprVisitor};
+    use std::ops::ControlFlow;
+
+    // A shallow top-level match summarises an effectful VALUE expression as
+    // `Pure` whenever the memory access is nested -- `load(buf,i) + 1`,
+    // `atomic_add(ctr,0,1) * 2`, or a load buried inside a `select`/subgroup
+    // operand all matched the old `_ => Pure` arm. Under-stating an effect to
+    // `Pure` is the UNSOUND direction for an effect lattice (a fusion pass that
+    // later trusts this would treat effectful code as pure), so walk every
+    // subexpression via the canonical visitor and join the memory effects.
+    struct EffectAccum(EffectLevel);
+    impl ExprVisitor for EffectAccum {
+        type Break = ();
+        fn visit_load(
+            &mut self,
+            _expr: &Expr,
+            _buffer: &crate::ir::Ident,
+            _index: &Expr,
+        ) -> ControlFlow<()> {
+            self.0 = lattice_join(self.0, EffectLevel::ReadAtomic);
+            ControlFlow::Continue(())
+        }
+        fn visit_atomic(
+            &mut self,
+            _expr: &Expr,
+            _op: &crate::ir::AtomicOp,
+            _buffer: &crate::ir::Ident,
+            _index: &Expr,
+            _expected: Option<&Expr>,
+            _value: &Expr,
+        ) -> ControlFlow<()> {
+            self.0 = lattice_join(self.0, EffectLevel::ReadWriteAtomic(AtomicOrdering::SeqCst));
+            ControlFlow::Continue(())
+        }
     }
+
+    let mut accum = EffectAccum(EffectLevel::Pure);
+    // The visitor never returns `Break`, so traversal always completes.
+    let _ = visit_preorder(&mut accum, expr);
+    accum.0
 }
 
 #[allow(unreachable_patterns)]
@@ -531,6 +566,33 @@ mod tests {
             "a program containing `if invocation_id == K {{ store ... }}` must surface as \
              Diverging at the program level  -  without this the fusion-refusal pass cannot \
              catch the recall-zero-past-block-zero shape"
+        );
+    }
+
+    #[test]
+    fn nested_memory_access_in_let_value_surfaces_its_effect() {
+        // Regression: a load buried inside an arithmetic value expr
+        // (`let x = buf[0] + 1`) must surface as ReadAtomic, not Pure. The old
+        // shallow `expr_effect_level` matched only the top-level BinOp and fell
+        // through to `_ => Pure`, silently under-stating the memory read -- the
+        // unsound direction for the fusion-refusal moat.
+        let program = Program::wrapped(
+            vec![buf()],
+            [1, 1, 1],
+            vec![Node::let_bind(
+                "x",
+                Expr::BinOp {
+                    op: BinOp::Add,
+                    left: Box::new(Expr::load("buf", Expr::u32(0))),
+                    right: Box::new(Expr::u32(1)),
+                },
+            )],
+        );
+        assert_eq!(
+            program_effect_level(&program),
+            EffectLevel::ReadAtomic,
+            "a load nested inside a let-value BinOp must lift the program to ReadAtomic, \
+             not be silently summarised as Pure"
         );
     }
 
