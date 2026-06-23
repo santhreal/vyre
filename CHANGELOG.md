@@ -231,6 +231,27 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 ### Fixed
 
+- **Descriptor `identity_elim` fma-zero fold ignored inf/NaN**  -  it folded
+  `Fma(a, b, c) → c` whenever a factor was a literal numeric zero, with no
+  check on the other factor. vyre Fma is float-only and `0.0 * inf =
+  0.0 * NaN = NaN`, so `Fma(0.0, inf, c)` is NaN, not `c` — the fold silently
+  replaced a NaN with the addend. Now requires the other factor to be a
+  *finite literal*, matching the foundation `simplify_fma` guard (one
+  auditable contract via the new `ScalarLiteral::is_finite_numeric`).
+  Regression test asserts `Fma(0.0, inf, c)` is not folded.
+- **Descriptor LICM hoisted convergent subgroup collectives out of loops**  -
+  `SubgroupBallot/Shuffle/Broadcast/Reduce` were classified hoistable. Their
+  result depends on the participating-lane set, so lifting one out of a loop
+  (execution count N → 1) changes that context and the result. Now fail-closed
+  for the four collectives, matching the authoritative foundation
+  `expr_is_observably_free` gate; `SubgroupLocalId`/`SubgroupSize` stay
+  hoistable as per-lane loop-invariant constants. Regression test asserts a
+  `subgroupAdd` of a loop-invariant value stays inside the loop.
+- **Loop fusion fused across a compare-exchange `expected` cross-loop read**  -
+  `collect_vars_in_expr` walked an atomic's `index` and `value` but dropped the
+  CAS `expected` operand, so a fusion that reordered a scalar the `expected`
+  reads was not blocked. Now walks `expected` (and is exhaustive over leaf
+  variants); proven by a `reference_eval` oracle differential.
 - **LAW 1 placeholder in `vyre-libs::matching::substring_search`**  -  the
   inner-byte check was `Expr::u32(1)` (matched every position); now
   `load(haystack, i+k) == load(needle, k)` routed through a select to
