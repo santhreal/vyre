@@ -173,6 +173,97 @@ fn has_barrier_like(nodes: &[Node]) -> bool {
     })
 }
 
+/// True iff any expression anywhere in `nodes` is an `Expr::Opaque`. An opaque
+/// expression carries backend-defined behavior that may read or write any
+/// buffer, but [`collect_buffers_in_expr`] cannot see through it and summarises
+/// it as touching NO buffers. Fission relies on a complete touched-buffer set to
+/// prove the two halves disjoint, so a hidden opaque buffer access would let it
+/// reorder that access past a sibling touching the same buffer — a
+/// cross-iteration dependency break. Node-level opaque/async/trap ops are
+/// already refused by [`has_barrier_like`]; this closes the expression-level
+/// hole (an `Expr::Opaque` embedded in a `Let`/`Store`/`If`-cond/`Loop` bound).
+fn has_opaque_expr(nodes: &[Node]) -> bool {
+    nodes.iter().any(node_has_opaque_expr)
+}
+
+fn node_has_opaque_expr(node: &Node) -> bool {
+    match node {
+        Node::Let { value, .. } | Node::Assign { value, .. } => expr_has_opaque(value),
+        Node::Store { index, value, .. } => expr_has_opaque(index) || expr_has_opaque(value),
+        Node::If {
+            cond,
+            then,
+            otherwise,
+        } => expr_has_opaque(cond) || has_opaque_expr(then) || has_opaque_expr(otherwise),
+        Node::Loop {
+            from, to, body, ..
+        } => expr_has_opaque(from) || expr_has_opaque(to) || has_opaque_expr(body),
+        Node::Block(body) => has_opaque_expr(body),
+        Node::Region { body, .. } => has_opaque_expr(body),
+        Node::Trap { address, .. } => expr_has_opaque(address),
+        // The remaining node kinds are already refused by `has_barrier_like`
+        // (async/collective/opaque/indirect-dispatch/resume) or carry no Expr
+        // operand (Barrier/Return); none reach a fission split with an
+        // inspectable embedded expression.
+        Node::Barrier { .. }
+        | Node::Return
+        | Node::IndirectDispatch { .. }
+        | Node::AsyncLoad { .. }
+        | Node::AsyncStore { .. }
+        | Node::AsyncWait { .. }
+        | Node::Resume { .. }
+        | Node::Opaque(_)
+        | Node::AllReduce { .. }
+        | Node::AllGather { .. }
+        | Node::ReduceScatter { .. }
+        | Node::Broadcast { .. } => false,
+    }
+}
+
+fn expr_has_opaque(expr: &Expr) -> bool {
+    match expr {
+        Expr::Opaque(_) => true,
+        Expr::Load { index, .. } => expr_has_opaque(index),
+        Expr::BufLen { .. } => false,
+        Expr::Atomic {
+            index,
+            expected,
+            value,
+            ..
+        } => {
+            expr_has_opaque(index)
+                || expr_has_opaque(value)
+                || matches!(expected.as_deref(), Some(e) if expr_has_opaque(e))
+        }
+        Expr::BinOp { left, right, .. } => expr_has_opaque(left) || expr_has_opaque(right),
+        Expr::UnOp { operand, .. } => expr_has_opaque(operand),
+        Expr::Select {
+            cond,
+            true_val,
+            false_val,
+        } => expr_has_opaque(cond) || expr_has_opaque(true_val) || expr_has_opaque(false_val),
+        Expr::Cast { value, .. } | Expr::SubgroupReduce { value, .. } => expr_has_opaque(value),
+        Expr::Fma { a, b, c } => {
+            expr_has_opaque(a) || expr_has_opaque(b) || expr_has_opaque(c)
+        }
+        Expr::Call { args, .. } => args.iter().any(expr_has_opaque),
+        Expr::SubgroupBallot { cond } => expr_has_opaque(cond),
+        Expr::SubgroupShuffle { value, lane } => {
+            expr_has_opaque(value) || expr_has_opaque(lane)
+        }
+        Expr::LitU32(_)
+        | Expr::LitI32(_)
+        | Expr::LitF32(_)
+        | Expr::LitBool(_)
+        | Expr::Var(_)
+        | Expr::InvocationId { .. }
+        | Expr::WorkgroupId { .. }
+        | Expr::LocalId { .. }
+        | Expr::SubgroupLocalId
+        | Expr::SubgroupSize => false,
+    }
+}
+
 /// Partition the body into the largest prefix + non-empty suffix
 /// whose touched-buffer sets are disjoint AND whose name-flow does
 /// not cross the split. Returns `(prefix, suffix)` if such a split
@@ -181,7 +272,10 @@ fn try_partition(body: &[Node], loop_var: &Ident) -> Option<(Vec<Node>, Vec<Node
     if body.len() < 2 {
         return None;
     }
-    if has_barrier_like(body) {
+    // A barrier-like node, or an opaque expression with unknowable buffer
+    // effects, defeats the disjoint-buffer proof fission depends on. Either
+    // one must keep the body whole.
+    if has_barrier_like(body) || has_opaque_expr(body) {
         return None;
     }
     for split in 1..body.len() {
@@ -639,7 +733,34 @@ fn is_fissionable_loop(node: &Node) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ir::{BufferAccess, BufferDecl, DataType, Expr, Node};
+    use crate::ir::{BufferAccess, BufferDecl, DataType, Expr, ExprNode, Node};
+
+    #[derive(Debug)]
+    struct OpaqueReader;
+
+    impl ExprNode for OpaqueReader {
+        fn extension_kind(&self) -> &'static str {
+            "test.opaque_buffer_reader"
+        }
+        fn debug_identity(&self) -> &str {
+            "opaque_reader"
+        }
+        fn result_type(&self) -> Option<DataType> {
+            Some(DataType::U32)
+        }
+        fn cse_safe(&self) -> bool {
+            false
+        }
+        fn stable_fingerprint(&self) -> [u8; 32] {
+            [11; 32]
+        }
+        fn validate_extension(&self) -> std::result::Result<(), String> {
+            Ok(())
+        }
+        fn as_any(&self) -> &dyn std::any::Any {
+            self
+        }
+    }
 
     fn buf(name: &str) -> BufferDecl {
         BufferDecl::storage(name, 0, BufferAccess::ReadWrite, DataType::U32).with_count(8)
@@ -691,6 +812,36 @@ mod tests {
             count_loops(result.program.entry()),
             2,
             "exactly two sibling loops after fission"
+        );
+    }
+
+    /// Negative: an opaque expression's buffer effects are unknowable, so the
+    /// touched-buffer disjointness check cannot see them. `collect_buffers_in_expr`
+    /// summarises `Expr::Opaque` as touching no buffers, so a naive split would
+    /// declare the halves disjoint and reorder the opaque's hidden buffer
+    /// accesses past a sibling store — breaking a possible cross-iteration
+    /// dependency. Fission must refuse, like it does for Node-level opaque ops.
+    #[test]
+    fn keeps_when_body_contains_opaque_expr() {
+        let entry = vec![Node::Loop {
+            var: Ident::from("i"),
+            from: Expr::u32(0),
+            to: Expr::u32(8),
+            body: vec![
+                Node::store("a", Expr::var("i"), Expr::opaque(OpaqueReader)),
+                Node::store("b", Expr::var("i"), Expr::u32(2)),
+            ],
+        }];
+        let program = program_with_entry(vec![buf("a"), buf("b")], entry);
+        let result = LoopFission::transform(program);
+        assert!(
+            !result.changed,
+            "an opaque expression's unknowable buffer effects must block fission",
+        );
+        assert_eq!(
+            count_loops(result.program.entry()),
+            1,
+            "a loop with an opaque-valued store must not fission",
         );
     }
 
