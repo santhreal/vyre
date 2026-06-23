@@ -304,14 +304,30 @@ pub fn node_effect_level(node: &Node) -> EffectLevel {
             otherwise,
         } => {
             // Divergence check: `if invocation_id == K { ... }` makes this
-            // node Diverging at this site. Otherwise the effect is the join
-            // of the two arms.
+            // node Diverging at this site (and Diverging dominates any memory
+            // effect the cond could carry, so the early return loses nothing).
             if is_invocation_id_eq_constant(cond) {
                 return EffectLevel::Diverging;
             }
-            join_arms(then.iter().chain(otherwise.iter()))
+            // The condition is an evaluated expression: `if buf[0] > 0 { ... }`
+            // READS memory before either arm runs, so its effect must join into
+            // the node's. Feeding only the arms through summarisation (the old
+            // behaviour) under-stated a memory access in the guard to Pure.
+            lattice_join(
+                expr_effect_level(cond),
+                join_arms(then.iter().chain(otherwise.iter())),
+            )
         }
-        Node::Loop { body, .. } | Node::Block(body) => join_arms(body.iter()),
+        // The loop bounds are evaluated expressions too: `loop i in 0..n[0]`
+        // reads memory to compute the trip count. Join `from`/`to` effects with
+        // the body's; the old `Loop | Block` shared arm dropped the bounds.
+        Node::Loop {
+            from, to, body, ..
+        } => lattice_join(
+            lattice_join(expr_effect_level(from), expr_effect_level(to)),
+            join_arms(body.iter()),
+        ),
+        Node::Block(body) => join_arms(body.iter()),
         Node::Region { body, .. } => join_arms(body.iter()),
         Node::IndirectDispatch { .. } => EffectLevel::Synchronized(SyncScope::Grid),
         Node::AllReduce { .. }
@@ -593,6 +609,56 @@ mod tests {
             EffectLevel::ReadAtomic,
             "a load nested inside a let-value BinOp must lift the program to ReadAtomic, \
              not be silently summarised as Pure"
+        );
+    }
+
+    #[test]
+    fn memory_read_in_if_condition_surfaces_its_effect() {
+        // Regression for the disclosed node-level residual: `if buf[0] > 0 { }`
+        // reads memory in the GUARD before either arm runs. The old
+        // node_effect_level summarised only the arms (Pure here), dropping the
+        // condition's read. The cond is not an `invocation_id == K` pattern, so
+        // it is not Diverging -- it must surface as ReadAtomic.
+        let program = Program::wrapped(
+            vec![buf()],
+            [1, 1, 1],
+            vec![Node::if_then(
+                Expr::BinOp {
+                    op: BinOp::Gt,
+                    left: Box::new(Expr::load("buf", Expr::u32(0))),
+                    right: Box::new(Expr::u32(0)),
+                },
+                vec![],
+            )],
+        );
+        assert_eq!(
+            program_effect_level(&program),
+            EffectLevel::ReadAtomic,
+            "a load in an if-condition must lift the program to ReadAtomic, not be \
+             dropped because both arms are empty"
+        );
+    }
+
+    #[test]
+    fn memory_read_in_loop_bound_surfaces_its_effect() {
+        // Regression for the disclosed node-level residual: `loop i in 0..buf[0]`
+        // reads memory to compute the trip count. The old `Loop | Block` shared
+        // arm summarised only the body (Pure here), dropping the bound's read.
+        let program = Program::wrapped(
+            vec![buf()],
+            [1, 1, 1],
+            vec![Node::loop_for(
+                "i",
+                Expr::u32(0),
+                Expr::load("buf", Expr::u32(0)),
+                vec![],
+            )],
+        );
+        assert_eq!(
+            program_effect_level(&program),
+            EffectLevel::ReadAtomic,
+            "a load in a loop upper bound must lift the program to ReadAtomic, not be \
+             dropped because the body is empty"
         );
     }
 
