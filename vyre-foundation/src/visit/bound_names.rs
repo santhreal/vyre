@@ -2,7 +2,7 @@
 //!
 //! A *bound name* is a name a node introduces into local scope: a `Let`
 //! binding or a `Loop` variable. Several scope-aware optimizer passes need
-//! this set or its per-name counts — any transform that MOVES, FLATTENS, or
+//! this set or its per-name counts, any transform that MOVES, FLATTENS, or
 //! EXTENDS a binding's scope (`region_inline`, `tail_duplication`,
 //! `read_only_load_hoist`) must reason about which names are bound where to
 //! avoid producing duplicate / shadowing bindings that the block-scoped IR
@@ -46,7 +46,7 @@ pub(crate) fn collect_bound_names(nodes: &[Node], out: &mut FxHashSet<Ident>) {
 }
 
 /// Tally how many times each name is bound in `nodes` (a name bound in both
-/// arms of an `If` counts twice — once per arm — which is exactly what
+/// arms of an `If` counts twice, once per arm, which is exactly what
 /// scope-extension passes check against).
 pub(crate) fn count_bound_names(nodes: &[Node], counts: &mut FxHashMap<Ident, usize>) {
     for_each_bound_name(nodes, &mut |name| {

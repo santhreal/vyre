@@ -208,7 +208,7 @@ fn flatten_autodiff_test_nodes(nodes: &[Node]) -> Vec<&Node> {
 /// Backward: for i in 0..N { accumulate into grad_x[N-1-i] and grad_w[N-1-i] }
 ///
 /// Before the fix, adj_body used the raw `i` variable so every backward
-/// iteration wrote to the *same* forward index — identical to a non-reversed
+/// iteration wrote to the *same* forward index, identical to a non-reversed
 /// pass, which is wrong for any asymmetric operation.
 ///
 /// After the fix, every Store inside the backward loop body must index its
@@ -216,7 +216,6 @@ fn flatten_autodiff_test_nodes(nodes: &[Node]) -> Vec<&Node> {
 /// iteration 0 addresses element N-1, iteration 1 addresses N-2, etc.
 #[test]
 fn backward_loop_body_uses_reversed_index_not_forward_var() {
-
     // Forward: for i in 0..4 { out[i] = x[i] * w[i] }
     let program = Program::wrapped(
         vec![
@@ -240,16 +239,20 @@ fn backward_loop_body_uses_reversed_index_not_forward_var() {
         }],
     );
 
-    let backward = grad(&program, &["out"], &["x", "w"])
-        .expect("forward loop program must be differentiable");
+    let backward =
+        grad(&program, &["out"], &["x", "w"]).expect("forward loop program must be differentiable");
 
     // Find the backward Loop node.
     let all_nodes = flatten_autodiff_test_nodes(backward.entry());
     let loop_node = all_nodes.iter().find(|n| matches!(n, Node::Loop { .. }));
-    let loop_node = loop_node.expect(
-        "Fix: backward program for a forward loop must contain a backward Loop node"
-    );
-    let Node::Loop { var: bwd_var, from: bwd_from, to: bwd_to, body: bwd_body } = loop_node
+    let loop_node = loop_node
+        .expect("Fix: backward program for a forward loop must contain a backward Loop node");
+    let Node::Loop {
+        var: bwd_var,
+        from: bwd_from,
+        to: bwd_to,
+        body: bwd_body,
+    } = loop_node
     else {
         unreachable!()
     };
@@ -270,8 +273,7 @@ fn backward_loop_body_uses_reversed_index_not_forward_var() {
             Expr::Var(name) => name.as_str() == var_name,
             Expr::Load { index, .. } => contains_bare_loop_var(index, var_name),
             Expr::BinOp { left, right, .. } => {
-                contains_bare_loop_var(left, var_name)
-                    || contains_bare_loop_var(right, var_name)
+                contains_bare_loop_var(left, var_name) || contains_bare_loop_var(right, var_name)
             }
             _ => false,
         }
@@ -282,7 +284,9 @@ fn backward_loop_body_uses_reversed_index_not_forward_var() {
             match node {
                 Node::Store { index, .. } => out.push(index),
                 Node::Loop { body, .. } | Node::Block(body) => store_indices_in_nodes(body, out),
-                Node::If { then, otherwise, .. } => {
+                Node::If {
+                    then, otherwise, ..
+                } => {
                     store_indices_in_nodes(then, out);
                     store_indices_in_nodes(otherwise, out);
                 }
@@ -305,7 +309,7 @@ fn backward_loop_body_uses_reversed_index_not_forward_var() {
         assert!(
             !matches!(index, Expr::Var(name) if name.as_str() == bwd_var.as_str()),
             "Fix: backward loop body Store index must not be the bare induction variable \
-             `{bwd_var}` — that would write in forward order. \
+             `{bwd_var}`: that would write in forward order. \
              The index must be the reversed expression `(to-1) - (var - from)`. \
              Got index: {index:?}"
         );

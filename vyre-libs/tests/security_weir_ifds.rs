@@ -14,21 +14,25 @@ use std::collections::BTreeMap;
 
 use external_dataflow_engine::ifds_gpu::{ifds_gpu_step, IfdsShape, OP_ID as WEIR_IFDS_GPU_OP_ID};
 use external_dataflow_engine::reachability_witness::{ExtractedPath, ExtractedStatement};
-use vyre_primitives::predicate::edge_kind;
-use vyre_libs::{
-    dataflow::{DynamicPrimitiveSoundness, PrecisionContract, Soundness},
-    security::{
-        route_security_taint_through_weir_ifds, security_witness_path_from_weir, AnalysisFact, AnalysisFactTable,
-        AnalysisSourceSpan, FactId, FactKind, WeirIfdsSecurityBuffers, WEIR_IFDS_SECURITY_BACKEND_ID,
-    },
-};
 use vyre_libs::security::facts::{
     FindingProofBundle, FindingProofStep, SourceToSinkFindingRequest,
 };
+use vyre_libs::{
+    dataflow::{DynamicPrimitiveSoundness, PrecisionContract, Soundness},
+    security::{
+        route_security_taint_through_weir_ifds, security_witness_path_from_weir, AnalysisFact,
+        AnalysisFactTable, AnalysisSourceSpan, FactId, FactKind, WeirIfdsSecurityBuffers,
+        WEIR_IFDS_SECURITY_BACKEND_ID,
+    },
+};
+use vyre_primitives::predicate::edge_kind;
 
 #[test]
 fn source_to_sink_query_dispatches_through_weir_ifds_and_returns_witness_seed() {
-    let table = AnalysisFactTable::new(vec![fact(1, FactKind::Source, 1), fact(2, FactKind::Sink, 3)]);
+    let table = AnalysisFactTable::new(vec![
+        fact(1, FactKind::Source, 1),
+        fact(2, FactKind::Sink, 3),
+    ]);
     let shape = IfdsShape::new(1, 4, 1, 3);
     let buffers = WeirIfdsSecurityBuffers::new(
         "pg_edge_offsets",
@@ -105,7 +109,11 @@ fn weir_witness_path_attaches_rule_spans_edge_kinds_soundness_and_source_bytes()
         )],
         fact_ids: vec![FactId(1), FactId(2)],
         proof_path: vec![
-            FindingProofStep::new(FactId(1), AnalysisSourceSpan::byte_range(7, 0, 15), "source"),
+            FindingProofStep::new(
+                FactId(1),
+                AnalysisSourceSpan::byte_range(7, 0, 15),
+                "source",
+            ),
             FindingProofStep::new(FactId(2), AnalysisSourceSpan::byte_range(7, 27, 35), "sink"),
         ],
         confidence_bps: 10_000,
@@ -134,7 +142,10 @@ fn weir_witness_path_attaches_rule_spans_edge_kinds_soundness_and_source_bytes()
     assert_eq!(witness.query_id, WEIR_IFDS_GPU_OP_ID);
     assert_eq!(witness.backend_id, WEIR_IFDS_SECURITY_BACKEND_ID);
     assert_eq!(witness.soundness, Soundness::Exact);
-    assert_eq!(witness.source_span, AnalysisSourceSpan::byte_range(7, 0, 15));
+    assert_eq!(
+        witness.source_span,
+        AnalysisSourceSpan::byte_range(7, 0, 15)
+    );
     assert_eq!(witness.sink_span, AnalysisSourceSpan::byte_range(7, 27, 35));
     assert_eq!(witness.edge_kinds, edge_kinds);
     assert_eq!(witness.statements.len(), 3);
@@ -164,7 +175,12 @@ fn fact(id: u64, kind: FactKind, subject: u64) -> AnalysisFact {
     fact
 }
 
-fn statement(description: &str, node_id: u32, byte_start: u32, byte_end: u32) -> ExtractedStatement {
+fn statement(
+    description: &str,
+    node_id: u32,
+    byte_start: u32,
+    byte_end: u32,
+) -> ExtractedStatement {
     ExtractedStatement {
         adapter: "c-c11".to_string(),
         description: description.to_string(),

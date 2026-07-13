@@ -4,6 +4,7 @@ use super::*;
 pub(crate) fn emit_typedef_visibility_scan_precomputed_context(
     vast_nodes: &str,
     decl_contexts: &str,
+    visible_type: &str,
     t: Expr,
 ) -> Vec<Node> {
     let prefix = "current_visible_typedef_precomputed";
@@ -70,6 +71,7 @@ pub(crate) fn emit_typedef_visibility_scan_precomputed_context(
     same_candidate_body.extend(emit_precomputed_declaration_kind_for_index(
         vast_nodes,
         decl_contexts,
+        visible_type,
         Expr::var(&chain_cursor),
         &scan_decl_kind,
         &format!("{prefix}_scan_decl"),

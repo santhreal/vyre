@@ -319,7 +319,7 @@ fn cuda_grid_sync_capability_reflects_native_cooperative_lowering() {
     assert_eq!(
         backend.supports_grid_sync(),
         backend.hardware_supports_grid_sync(),
-        "Fix: with native cooperative lowering present, supports_grid_sync() must equal hardware_supports_grid_sync() — true exactly when the device can run a resident cooperative grid."
+        "Fix: with native cooperative lowering present, supports_grid_sync() must equal hardware_supports_grid_sync() (true exactly when the device can run a resident cooperative grid)."
     );
 }
 

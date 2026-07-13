@@ -248,18 +248,8 @@ pub fn versioned_specialization_artifact_key(
     hasher.update(backend_fingerprint.as_bytes());
     let hash = hasher.finalize();
     let mut key = String::with_capacity(64);
-    push_lower_hex(hash.as_bytes(), &mut key);
+    crate::pipeline::hashing::push_lower_hex(hash.as_bytes(), &mut key);
     key
-}
-
-fn push_lower_hex(bytes: &[u8], out: &mut String) {
-    const HEX: &[u8; 16] = b"0123456789abcdef";
-    let additional = bytes.len().saturating_mul(2);
-    let _ = out.try_reserve(additional);
-    for &byte in bytes {
-        out.push(HEX[(byte >> 4) as usize] as char);
-        out.push(HEX[(byte & 0x0f) as usize] as char);
-    }
 }
 
 #[cfg(test)]

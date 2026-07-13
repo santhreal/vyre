@@ -5,15 +5,15 @@
 //! re-uploads the tables on every dispatch. This test runs both paths against a
 //! live WGPU adapter and asserts:
 //!
-//!   1. **Parity** — the resident match set is byte-identical to the borrowed
+//!   1. **Parity**: the resident match set is byte-identical to the borrowed
 //!      `scan` (and to the CPU `reference_scan`) for every haystack. This is the
 //!      recall guarantee: switching keyhog's megascan path to the resident
 //!      session must not drop or invent a single match.
-//!   2. **Stability across reuse** — repeated scans on one session return the
+//!   2. **Stability across reuse**: repeated scans on one session return the
 //!      same matches, proving the resident tables survive (and the per-scan
 //!      counter reset works) across dispatches.
 //!
-//! Fails loudly if no GPU adapter is present — these machines must have one.
+//! Fails loudly if no GPU adapter is present (these machines must have one).
 
 use std::time::Instant;
 
@@ -103,7 +103,7 @@ fn resident_rule_pipeline_matches_borrowed_on_real_gpu() {
     session.free(&backend).expect("free resident resources");
 }
 
-/// Amortization signal (not a hard gate — printed under `--nocapture`). Times a
+/// Amortization signal (not a hard gate, printed under `--nocapture`). Times a
 /// batch of identical scans through the borrowed path (re-uploads tables each
 /// call) versus a resident session (tables uploaded once). The resident path
 /// should not be slower; on large pattern sets it is materially faster because

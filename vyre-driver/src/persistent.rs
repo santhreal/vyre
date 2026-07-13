@@ -349,12 +349,14 @@ impl PersistentEngine {
         self.try_in_flight().unwrap_or(u32::MAX)
     }
 
-    /// Monotonic head counter (modulo `ring_size` = slot index).
+    /// Raw monotonic head counter (total enqueues), not a `counter % ring_size`
+    /// slot index. Take `head_counter() % ring_size` for the slot.
     pub fn head_counter(&self) -> u64 {
         self.atomics.head.load(Ordering::Acquire)
     }
 
-    /// Monotonic head counter exposed through the legacy u32 API.
+    /// Raw monotonic head counter through the legacy u32 API, saturated at
+    /// `u32::MAX` past 4G enqueues (not a modulo slot index).
     pub fn head(&self) -> u32 {
         let head = self.head_counter();
         u32::try_from(head).unwrap_or(u32::MAX)

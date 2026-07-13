@@ -73,7 +73,7 @@ pub enum PipelineError {
     Backend(String),
     /// A megakernel dispatch ended before its work queue drained: only
     /// `claimed` of `expected` `unit` were claimed, so the rest went unscanned
-    /// and this dispatch's hit set is INCOMPLETE — never a silent partial
+    /// and this dispatch's hit set is INCOMPLETE, never a silent partial
     /// (Law 10). A first-class variant (not a `Backend` string) so callers such
     /// as the `seg_len` calibrator can EXCLUDE a too-fine geometry by matching
     /// the type, never by substring-scanning the message text.
@@ -104,7 +104,7 @@ impl PipelineError {
     /// True iff this is a [`PipelineError::DrainIncomplete`]: a dispatch that
     /// could not exhaust its work queue within the timeout.
     ///
-    /// Distinct from a hard backend failure — the `seg_len` calibrator
+    /// Distinct from a hard backend failure, the `seg_len` calibrator
     /// EXCLUDES a geometry that drains incompletely (too fine to drain in the
     /// configured timeout) rather than aborting the whole calibration, while it
     /// must still PROPAGATE any other [`PipelineError`]. Match on this predicate

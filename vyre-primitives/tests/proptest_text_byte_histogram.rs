@@ -6,16 +6,8 @@
 use proptest::prelude::*;
 use vyre_foundation::ir::DataType;
 use vyre_primitives::text::byte_histogram::{byte_histogram_256_u8, reference_byte_histogram};
+use vyre_primitives::wire::decode_u32_le_bytes_all as unpack_u32s;
 use vyre_reference::value::Value;
-
-fn unpack_u32s(bytes: &[u8]) -> Vec<u32> {
-    bytes
-        .chunks_exact(4)
-        .map(|chunk| {
-            u32::from_le_bytes(chunk.try_into().expect("Fix: u32 chunk conversion failed"))
-        })
-        .collect()
-}
 
 fn run_packed_u8_program(source: &[u8]) -> Vec<u32> {
     let program = byte_histogram_256_u8("source", "histogram", source.len() as u32);

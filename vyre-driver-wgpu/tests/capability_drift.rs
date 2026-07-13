@@ -47,7 +47,7 @@ fn backend_validation_capabilities_do_not_drift_from_vyre_backend() {
     );
     assert!(
         BackendValidationCapabilities::supports_cast_target(&backend, &vyre::ir::DataType::I64),
-        "Fix: wgpu validation must accept I64 cast targets — same vec2<u32> backing as U64, sign-extended on hardware"
+        "Fix: wgpu validation must accept I64 cast targets, same vec2<u32> backing as U64, sign-extended on hardware"
     );
     assert!(
         !BackendValidationCapabilities::supports_cast_target(&backend, &vyre::ir::DataType::F16),

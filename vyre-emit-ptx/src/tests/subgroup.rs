@@ -206,7 +206,7 @@ fn u32_subgroup_mul_emits_idx_butterfly_not_redux() {
         s.matches("shfl.sync.idx.b32").count() >= 5,
         "expected >=5 idx-shuffle exchange steps for a 32-lane warp, got: {s}"
     );
-    // Integer path shuffles the accumulator directly — no f32<->b32 bitcast pair
+    // Integer path shuffles the accumulator directly, no f32<->b32 bitcast pair
     // and no float combine.
     assert!(!s.contains(".f32"));
 }

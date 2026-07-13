@@ -1,7 +1,6 @@
 //! Regex match policy contracts test suite.
 
-const CONTRACTS: &str =
-    include_str!("../../docs/optimization/REGEX_MATCH_POLICY_CONTRACTS.toml");
+const CONTRACTS: &str = include_str!("../../docs/optimization/REGEX_MATCH_POLICY_CONTRACTS.toml");
 
 const REQUIRED_POLICIES: &[&str] = &[
     "leftmost_first",

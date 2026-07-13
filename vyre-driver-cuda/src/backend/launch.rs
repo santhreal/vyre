@@ -139,7 +139,81 @@ pub(crate) fn launch_cuda_function(
     Ok(())
 }
 
+/// The single FFI boundary for the CUDA driver's occupancy calculator: how many
+/// blocks of `block_size` threads can be co-resident on one SM for `func`, with
+/// zero dynamic shared memory (every launch path uses `sharedMemBytes=0`). Both
+/// the cooperative-residency validator and the per-launch occupancy-evidence
+/// recorder go through here (ONE PLACE), so `cuOccupancyMaxActiveBlocksPerMultiprocessor`
+/// has exactly one call site. Returns the raw driver `i32`; callers convert and
+/// attach their own context.
+fn query_active_blocks_per_sm_raw(func: CUfunction, block_size: i32) -> Result<i32, BackendError> {
+    let mut active_blocks_per_sm = 0_i32;
+    // SAFETY: FFI to libcuda.so. `func` is a loaded module entry; `block_size` is
+    // a validated positive thread count; dynamic shared memory is zero.
+    unsafe {
+        cuda_check(
+            cudarc::driver::sys::cuOccupancyMaxActiveBlocksPerMultiprocessor(
+                &mut active_blocks_per_sm,
+                func,
+                block_size,
+                0,
+            ),
+            "cuOccupancyMaxActiveBlocksPerMultiprocessor",
+        )?;
+    }
+    Ok(active_blocks_per_sm)
+}
+
 impl CudaBackend {
+    /// Measure this launch's achieved occupancy and record it as telemetry
+    /// evidence (W3-6). Occupancy per `(func, block_size)` is constant, so the
+    /// driver query is cached, after the first launch of a kernel shape it is a
+    /// map lookup, never per-launch FFI (Law 7). A launch whose geometry or driver
+    /// query is unusable is counted as UNMEASURED (loud), never silently dropped
+    /// (Law 10). This never fails the launch (the kernel has already run).
+    fn record_launch_occupancy(&self, func: CUfunction, launch: &LaunchPlan) {
+        let Ok(threads_per_block) = launch_axis_product("workgroup", launch.workgroup) else {
+            self.telemetry.record_launch_occupancy_unmeasured();
+            return;
+        };
+        let (Ok(threads_u32), Ok(block_size)) = (
+            u32::try_from(threads_per_block),
+            i32::try_from(threads_per_block),
+        ) else {
+            self.telemetry.record_launch_occupancy_unmeasured();
+            return;
+        };
+        if threads_u32 == 0 {
+            self.telemetry.record_launch_occupancy_unmeasured();
+            return;
+        }
+        let key = (func as usize, threads_u32);
+        let active_blocks = if let Some(cached) = self.occupancy_blocks_cache.get(&key) {
+            *cached
+        } else {
+            match query_active_blocks_per_sm_raw(func, block_size)
+                .ok()
+                .and_then(|raw| u32::try_from(raw).ok())
+            {
+                Some(blocks) => {
+                    self.occupancy_blocks_cache.insert(key, blocks);
+                    blocks
+                }
+                None => {
+                    self.telemetry.record_launch_occupancy_unmeasured();
+                    return;
+                }
+            }
+        };
+        let estimate = crate::occupancy::occupancy_estimate_from_blocks(
+            &self.caps,
+            threads_u32,
+            active_blocks,
+        );
+        self.telemetry
+            .record_launch_occupancy_bps(u64::from(estimate.occupancy_bps));
+    }
+
     pub(crate) fn resolve_launch_function(
         &self,
         ptx_src: &str,
@@ -244,23 +318,8 @@ impl CudaBackend {
                 ),
             }
         })?;
-        let mut active_blocks_per_sm = 0_i32;
-        // SAFETY: FFI to libcuda.so. `func` is the loaded entry returned by
-        // `module_for_ptx_with_key`; block_size was checked above; dynamic
-        // shared memory is zero because `launch_resolved_function` launches
-        // with sharedMemBytes=0 on this path.
-        unsafe {
-            cuda_check(
-                cudarc::driver::sys::cuOccupancyMaxActiveBlocksPerMultiprocessor(
-                    &mut active_blocks_per_sm,
-                    func,
-                    block_size,
-                    0,
-                ),
-                "cuOccupancyMaxActiveBlocksPerMultiprocessor",
-            )?;
-        }
-        let active_blocks_per_sm = u64::try_from(active_blocks_per_sm).map_err(|error| {
+        let active_blocks_raw = query_active_blocks_per_sm_raw(func, block_size)?;
+        let active_blocks_per_sm = u64::try_from(active_blocks_raw).map_err(|error| {
             BackendError::InvalidProgram {
                 fix: format!(
                     "Fix: CUDA cooperative occupancy returned negative active-block count for grid {:?}, workgroup {:?}: {error}. Inspect the loaded PTX resource usage.",
@@ -405,6 +464,7 @@ impl CudaBackend {
             self.telemetry.record_sync_point();
         }
         self.telemetry.record_kernel_launch(launch);
+        self.record_launch_occupancy(func, launch);
         Ok(())
     }
 }
@@ -619,7 +679,7 @@ mod tests {
     /// Behavioral proof that `kernel_args_into` returns a structured `Err` when
     /// the kernel argument staging reservation fails at runtime.
     ///
-    /// This test drives the *actual* `reserve_smallvec` error path — not just
+    /// This test drives the *actual* `reserve_smallvec` error path, not just
     /// the source-text canary `kernel_args_source_uses_checked_fallible_argument_table_reservation`.
     /// It requests a reservation of `usize::MAX` elements (always OOM) via a
     /// SmallVec that already holds one item, confirming that the structured
@@ -632,7 +692,7 @@ mod tests {
     fn kernel_args_into_returns_err_on_allocation_failure() {
         // Build a ptrs slice whose length is `usize::MAX - 1`, which forces
         // `checked_add(1)` to produce `usize::MAX`, and then `reserve_smallvec`
-        // to request `usize::MAX` slots — always an allocation failure.
+        // to request `usize::MAX` slots (always an allocation failure).
         //
         // We can't actually allocate a `SmallVec` with `usize::MAX - 1` elements,
         // so instead we test the `checked_add` overflow path directly by
@@ -645,18 +705,17 @@ mod tests {
         // This is the closest safe behavioral proof: `kernel_args_into` with a
         // 3-element ptrs slice succeeds with the correct concrete pointer values
         // (covered by `kernel_args_preserves_descriptor_argument_slots`).
-        // The error path requires OOM — we trigger it by pre-reserving a huge
+        // The error path requires OOM, we trigger it by pre-reserving a huge
         // SmallVec and then calling the helper directly.
         use super::super::staging_reserve::reserve_smallvec;
         // Request usize::MAX capacity on a fresh SmallVec<[*mut c_void; 8]>;
         // this will always fail with allocation error because no host can
         // provide usize::MAX bytes of contiguous memory for pointer-sized words.
         let mut args: SmallVec<[*mut std::ffi::c_void; 8]> = SmallVec::new();
-        let err = reserve_smallvec(&mut args, usize::MAX, "kernel argument pointer")
-            .expect_err(
-                "Fix: reserve_smallvec with usize::MAX capacity must fail; \
-                 the kernel_args_into error path would be unreachable otherwise."
-            );
+        let err = reserve_smallvec(&mut args, usize::MAX, "kernel argument pointer").expect_err(
+            "Fix: reserve_smallvec with usize::MAX capacity must fail; \
+                 the kernel_args_into error path would be unreachable otherwise.",
+        );
         let msg = err.to_string();
         assert!(
             msg.contains("kernel argument pointer") || msg.contains("CUDA backend staging"),

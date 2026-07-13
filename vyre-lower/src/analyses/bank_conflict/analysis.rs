@@ -25,7 +25,7 @@
 
 use super::report::{BankAccessSite, BankConflictKind, BankConflictReport};
 use super::DEFAULT_BANK_COUNT;
-use crate::analyses::AccessKind;
+use crate::analyses::{child_body_operands, AccessKind};
 use crate::{KernelBody, KernelDescriptor, KernelOpKind, LiteralValue, MemoryClass};
 use rustc_hash::FxHashMap;
 use vyre_foundation::ir::BinOp;
@@ -67,7 +67,7 @@ fn walk_body(
             | KernelOpKind::StructuredBlock
             | KernelOpKind::Region { .. } => {
                 for child_id in child_body_operands(&op.kind, &op.operands) {
-                    if let Some(child) = body.child_bodies.get(*child_id as usize) {
+                    if let Some(child) = body.child_bodies.get(child_id as usize) {
                         walk_body(
                             child,
                             bindings,
@@ -252,19 +252,6 @@ fn gcd_u32(a: u32, b: u32) -> u32 {
         b = t;
     }
     a
-}
-
-fn child_body_operands<'a>(
-    kind: &KernelOpKind,
-    operands: &'a [u32],
-) -> impl Iterator<Item = &'a u32> {
-    let start = match kind {
-        KernelOpKind::StructuredIfThen | KernelOpKind::StructuredIfThenElse => 1,
-        KernelOpKind::StructuredForLoop { .. } => 2,
-        KernelOpKind::StructuredBlock | KernelOpKind::Region { .. } => 0,
-        _ => operands.len(),
-    };
-    operands.iter().skip(start)
 }
 
 #[cfg(test)]

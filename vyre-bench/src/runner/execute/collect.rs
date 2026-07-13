@@ -34,7 +34,7 @@ pub(super) fn collect_metric_fields(
     metrics: &crate::api::metric::BenchMetrics,
     samples: &mut BTreeMap<&'static str, Vec<u64>>,
 ) {
-    // The cold_* fields of BenchMetrics are never populated by case::run() — they
+    // The cold_* fields of BenchMetrics are never populated by case::run(), they
     // are filled by run_case.rs directly from the first warmup wall-clock and the
     // stored cold_metrics snapshot, bypassing collect_metric_fields entirely and
     // inserting single-sample MetricStats rows into the final BTreeMap.  Entries
@@ -115,7 +115,7 @@ pub(super) fn collect_derived_metrics(
     });
     // device_gb_s_x1000 requires explicit bytes_read + bytes_written from the case.
     // If neither is set, omit device_gb_s_x1000 entirely rather than substituting
-    // host_bytes — that substitution would report a spurious device bandwidth figure
+    // host_bytes, that substitution would report a spurious device bandwidth figure
     // computed from host I/O, which is a metric miscompile (Law 10 silent fallback).
     let device_bytes = match (metrics.bytes_read, metrics.bytes_written) {
         (Some(r), Some(w)) => {
@@ -209,11 +209,11 @@ mod tests {
     /// input_bytes/output_bytes (host-side I/O) and no bytes_read/bytes_written,
     /// device_gb_s_x1000 must be absent from the sample map.  Before the fix,
     /// device_bytes silently fell back to host_bytes and device_gb_s_x1000 was
-    /// emitted as if the GPU had transferred 512 MiB of device memory — a metric
+    /// emitted as if the GPU had transferred 512 MiB of device memory, a metric
     /// miscompile that cannot be distinguished from a real device bandwidth measurement.
     #[test]
     fn device_gb_s_x1000_absent_when_no_device_bytes_set() {
-        // 512 MiB of host input, 1 second wall time — no bytes_read/bytes_written.
+        // 512 MiB of host input, 1 second wall time (no bytes_read/bytes_written).
         let metrics = metrics_with_host_only(512 * 1024 * 1024, 1_000_000_000);
         let mut samples: BTreeMap<&'static str, Vec<u64>> = BTreeMap::new();
         collect_derived_metrics("", &metrics, &mut samples);
@@ -225,7 +225,7 @@ mod tests {
              Got samples: {:?}",
             samples.keys().collect::<Vec<_>>()
         );
-        // wall_gb_s_x1000 MUST still be present — host bandwidth is unaffected.
+        // wall_gb_s_x1000 MUST still be present (host bandwidth is unaffected).
         assert!(
             samples.contains_key("wall_gb_s_x1000"),
             "Fix: wall_gb_s_x1000 must still be emitted when host bytes are present."
@@ -294,7 +294,7 @@ mod tests {
         ] {
             assert!(
                 !samples.contains_key(cold_key),
-                "Fix: collect_metric_fields must not emit `{cold_key}` — cold-path metrics are \
+                "Fix: collect_metric_fields must not emit `{cold_key}`: cold-path metrics are \
                  populated by run_case.rs directly and do not route through collect_metric_fields."
             );
         }

@@ -25,8 +25,8 @@ pub struct BarrierElisionReport {
 /// `Region`) and their recursively collected buffer effects cannot conflict.
 ///
 /// INFALLIBLE by construction (Law 10): every working buffer is sized by the
-/// program's IR node count — kernel STRUCTURE (the fused arms + scan loop), NOT
-/// input/catalog/data-scaled — so it is bounded and reserved with
+/// program's IR node count, kernel STRUCTURE (the fused arms + scan loop), NOT
+/// input/catalog/data-scaled, so it is bounded and reserved with
 /// `Vec::with_capacity`, exactly like the sibling `rule_catalog` host build.
 /// There is therefore no fallible-staging error to swallow, so the pass ALWAYS
 /// elides; the previous `try_*` + `Err(_) => fallback` silently shipped the

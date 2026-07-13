@@ -17,7 +17,7 @@ pub const DEFAULT_MAX_NESTING_DEPTH: usize = 64;
 /// the substrate's corpus-parity integration evidence. The two MUST agree:
 /// a program the encoded validator blesses must not be rejected here, or
 /// fused bundles between the two ceilings pass GPU validation and fail CPU
-/// validation. Above this ceiling, V019's advice still holds — split into
+/// validation. Above this ceiling, V019's advice still holds, split into
 /// smaller kernels or run an optimization pass before lowering.
 pub const DEFAULT_MAX_NODE_COUNT: usize = 100_000;
 

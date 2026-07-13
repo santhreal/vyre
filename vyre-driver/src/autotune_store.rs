@@ -99,12 +99,8 @@ impl AutotuneKey {
             bytes[i] ^= ((wg >> (i * 8)) & 0xFF) as u8;
             bytes[8 + i] ^= ((spec.binding_sig >> (i * 8)) & 0xFF) as u8;
         }
-        const HEX: &[u8; 16] = b"0123456789abcdef";
         let mut key_hex = String::with_capacity(32);
-        for &b in &bytes {
-            key_hex.push(HEX[(b >> 4) as usize] as char);
-            key_hex.push(HEX[(b & 0x0f) as usize] as char);
-        }
+        crate::pipeline::hashing::push_lower_hex(&bytes, &mut key_hex);
         Self {
             key_hex,
             adapter_id: adapter_id.into(),

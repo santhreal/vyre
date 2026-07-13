@@ -1,7 +1,6 @@
 //! Secret crypto policies test suite.
 
-const SECRETS: &str =
-    include_str!("../../docs/optimization/SECRET_MATERIAL_HANDLING_POLICY.toml");
+const SECRETS: &str = include_str!("../../docs/optimization/SECRET_MATERIAL_HANDLING_POLICY.toml");
 const CONSTANT_TIME: &str =
     include_str!("../../docs/optimization/CONSTANT_TIME_CRYPTO_CONTRACTS.toml");
 const PASSWORDS: &str =

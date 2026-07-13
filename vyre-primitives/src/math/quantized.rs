@@ -79,7 +79,12 @@ inventory::submit! {
     crate::harness::OpEntry::new(
         UNPACK_I4_OP_ID,
         || unpack_i4x8("packed_words", "out_lanes", 8),
-        Some(|| vec![vec![u32s(&[0x7621_0F98])]]),
+        // `out_lanes` is a ReadWrite in/out buffer (not a backend-allocated `output`),
+        // so, like byte_histogram's histogram and persistent_bfs's frontier_out, the
+        // fixture must seed it (zeros) as its own input Value. Omitting it makes the
+        // reference interpreter reject the fixture ("missing input for buffer
+        // `out_lanes`"), silently dropping this op from every registry parity gate.
+        Some(|| vec![vec![u32s(&[0x7621_0F98]), i32s(&[0; 8])]]),
         Some(|| vec![vec![i32s(&[-8, -7, -1, 0, 1, 2, 6, 7])]]),
     ).with_category("math")
 }

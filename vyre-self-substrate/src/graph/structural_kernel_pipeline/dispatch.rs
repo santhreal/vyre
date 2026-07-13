@@ -7,8 +7,9 @@ use vyre_primitives::{
         csr_backward_traverse::csr_backward_traverse,
         csr_frontier_queue::{csr_queue_forward_traverse, frontier_to_queue},
         do_calculus::{
-            do_intervention_delete_incoming, do_rule2_reverse_incoming,
+            do_intervention_delete_incoming, do_rule2_reverse_incoming, do_rule3_subgraph,
             try_do_intervention_delete_incoming, try_do_rule2_reverse_incoming,
+            try_do_rule3_subgraph,
         },
         dominator_frontier::{dominator_frontier, try_dominator_frontier},
         exploded::build_ifds_csr_program,
@@ -560,6 +561,31 @@ pub fn dispatch_do_rule2_reverse_incoming(
     n: u32,
 ) -> Program {
     do_rule2_reverse_incoming(adjacency, treatment_mask, out_adjacency, n)
+}
+
+/// Build a checked do-calculus Rule-3 subgraph-extraction dispatch.
+pub fn dispatch_do_rule3_subgraph_checked(
+    adjacency: &str,
+    keep_mask: &str,
+    reduced: &str,
+    kept: &str,
+    kept_len: &str,
+    n: u32,
+) -> Result<Program, String> {
+    try_do_rule3_subgraph(adjacency, keep_mask, reduced, kept, kept_len, n)
+}
+
+/// Build a do-calculus Rule-3 subgraph-extraction dispatch.
+#[must_use]
+pub fn dispatch_do_rule3_subgraph(
+    adjacency: &str,
+    keep_mask: &str,
+    reduced: &str,
+    kept: &str,
+    kept_len: &str,
+    n: u32,
+) -> Program {
+    do_rule3_subgraph(adjacency, keep_mask, reduced, kept, kept_len, n)
 }
 
 /// Build a tensor-SCC bitset fixpoint dispatch.

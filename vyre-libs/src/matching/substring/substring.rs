@@ -4,11 +4,8 @@ use vyre::ir::Program;
 
 use crate::scan::substring::{substring_search_with_op_id, LEGACY_MATCHING_SUBSTRING_OP_ID};
 
-/// Canonical replacement module path for diagnostics and generated docs.
-pub const CANONICAL_SUBSTRING_MODULE: &str = "vyre_libs::scan::substring";
-
-/// Legacy module path retained for backwards-compatible imports.
-pub const LEGACY_SUBSTRING_MODULE: &str = "vyre_libs::matching::substring";
+// The canonical/legacy substring module paths have a single owner:
+// `crate::compat_aliases::MATCHING_SUBSTRING_ALIAS.{canonical_path,deprecated_path}`.
 
 /// Build a substring-search Program with the legacy matching op id.
 #[must_use]

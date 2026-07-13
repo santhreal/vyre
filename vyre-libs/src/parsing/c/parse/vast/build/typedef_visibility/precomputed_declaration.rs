@@ -3,6 +3,7 @@ use super::*;
 pub(crate) fn emit_precomputed_declaration_kind_for_index(
     vast_nodes: &str,
     decl_contexts: &str,
+    visible_type: &str,
     idx: Expr,
     out_name: &str,
     prefix: &str,
@@ -100,6 +101,20 @@ pub(crate) fn emit_precomputed_declaration_kind_for_index(
                             TOK_INLINE,
                             TOK_ALIGNAS,
                         ],
+                    ),
+                    vec![Node::assign(&has_type, Expr::u32(1))],
+                ),
+                // A prefix identifier that resolves as a visible typedef-name (or a
+                // GNU `typeof` keyword-hash) also counts as the declaration's TYPE.
+                // The base annotator resolves this inline per prefix row; here we
+                // read the precomputed per-node bit produced by
+                // `c11_precompute_vast_visible_type`, closing the divergence where a
+                // declarator whose type is a typedef-name was dropped because the
+                // haystack-free prefix scan matched only builtin type keywords.
+                Node::if_then(
+                    Expr::eq(
+                        Expr::load(visible_type, Expr::var(&prefix_idx)),
+                        Expr::u32(1),
                     ),
                     vec![Node::assign(&has_type, Expr::u32(1))],
                 ),

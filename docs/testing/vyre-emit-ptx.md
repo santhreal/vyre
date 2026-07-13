@@ -1,4 +1,4 @@
-# Testing program — vyre-emit-ptx
+# Testing program, vyre-emit-ptx
 
 | Kind | Location |
 |------|----------|

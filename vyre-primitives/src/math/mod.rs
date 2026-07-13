@@ -112,6 +112,10 @@ pub mod amg_v_cycle;
 /// dispatch-graph sheaf Laplacian.
 pub mod sheaf_laplacian_eigenvalue;
 
+/// Symmetric eigendecomposition via cyclic (max-pivot) Jacobi rotations (f32, serial single-lane).
+/// The numerical core of the tensor-train SVD; reusable for any dense symmetric eigenproblem.
+pub mod symmetric_eigen_jacobi;
+
 /// Full Edmonds augmenting-path matroid intersection (#P-PRIM-10).
 /// User: combinatorial scheduling, bipartite matching. Self:
 /// megakernel scheduler fusion-grouping.

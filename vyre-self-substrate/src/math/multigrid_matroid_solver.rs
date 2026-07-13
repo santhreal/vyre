@@ -181,7 +181,12 @@ pub fn matroid_solve_step_fixed_via_with_scratch_into(
     bump(&multigrid_matroid_solver_calls);
 
     let cells = checked_square_cells(n, "matroid_solve_step_fixed_via")?;
-    let cells_u32 = u32::try_from(cells).map_err(|_| {
+    // Validate the n*n matrix count fits u32 for the a-buffer binding (fail fast with a clear
+    // message before building the program). The dispatch grid below uses `n`, not this value:
+    // `jacobi_smooth_step` is a per-ROW kernel (lane `t` relaxes row t, looping j internally), so
+    // only n lanes do work, dispatching n*n lanes would launch up to n× the useful invocations on
+    // a real backend (the extra lanes are guarded out by `t < n`, so parity can't see the waste).
+    let _matrix_cells_fit_u32 = u32::try_from(cells).map_err(|_| {
         DispatchError::BadInputs(format!(
             "Fix: matroid_solve_step_fixed_via n*n exceeds the primitive u32 lane limit for n={n}."
         ))
@@ -224,7 +229,7 @@ pub fn matroid_solve_step_fixed_via_with_scratch_into(
     let outputs = dispatcher.dispatch(
         &program,
         &scratch.inputs,
-        Some([ceil_div_u32(cells_u32, 256), 1, 1]),
+        Some([ceil_div_u32(n, 256), 1, 1]),
     )?;
     if outputs.is_empty() {
         return Err(DispatchError::BackendError(format!(
@@ -466,6 +471,45 @@ mod tests {
         )
         .unwrap();
         assert_eq!(out, vec![3 * one, 4 * one]);
+    }
+
+    // Regression lock for the per-row dispatch-count fix. A weighted-Jacobi step is a per-ROW
+    // kernel (lane `t` relaxes row t, looping over j internally), so it needs ceil_div(n, 256)
+    // workgroups: NOT ceil_div(n*n, 256). Over-dispatching n*n lanes launches up to n× the useful
+    // invocations on a real backend; the extra lanes are guarded out by `t < n`, so a value-parity
+    // test can never see the waste. This asserts the grid the consumer actually requests.
+    struct GridAssertDispatcher;
+
+    impl OptimizerDispatcher for GridAssertDispatcher {
+        fn dispatch(
+            &self,
+            _program: &Program,
+            inputs: &[Vec<u8>],
+            grid_override: Option<[u32; 3]>,
+        ) -> Result<Vec<Vec<u8>>, DispatchError> {
+            let n = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]).len() as u32;
+            let expected = ceil_div_u32(n, 256);
+            assert_eq!(
+                grid_override,
+                Some([expected, 1, 1]),
+                "per-row Jacobi kernel must dispatch ceil_div(n,256)={expected} workgroups for \
+                 n={n}, not ceil_div(n*n,256)"
+            );
+            Ok(vec![u32_slice_to_le_bytes(&vec![0u32; n as usize])])
+        }
+    }
+
+    #[test]
+    fn fixed_via_dispatches_one_workgroup_row_per_256_rows_not_per_cell() {
+        // n=257 → per-row ceil_div(257,256)=2 workgroups; the old per-cell bug would request
+        // ceil_div(257*257,256)=ceil_div(66049,256)=259 → the assertion in GridAssertDispatcher
+        // fails under the bug and passes only with the per-row grid.
+        let n = 257u32;
+        let a = vec![0u32; (n as usize) * (n as usize)];
+        let b = vec![0u32; n as usize];
+        let x_in = vec![0u32; n as usize];
+        matroid_solve_step_fixed_via(&GridAssertDispatcher, &a, &b, &x_in, 1 << 16, n)
+            .expect("per-row dispatch must succeed");
     }
 
     #[test]

@@ -1,6 +1,6 @@
 [package]
 name = "vyre-frontend-rust"
-version = "0.6.4"
+version = "0.6.5"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -32,8 +32,8 @@ vyre-driver-cuda = { workspace = true }
 
 [dev-dependencies]
 proptest = { workspace = true }
-vyre-reference = { workspace = true }
-vyre-driver-reference = { workspace = true }
+vyre-reference = { path = "../vyre-reference" }
+vyre-driver-reference = { path = "../vyre-driver-reference" }
 # CPU oracle: the official rustc lexer. Test-only differential against the
 # reusable Rust lexer substrate; not a runtime dependency of the frontend.
 rustc_lexer = { workspace = true }

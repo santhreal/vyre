@@ -56,7 +56,7 @@ fn deeply_nested_loop_exceeds_nesting_limit() {
 
 #[test]
 fn huge_node_count_exceeds_limit() {
-    // The statement-node ceiling is deliberately large — 100_000, the value of
+    // The statement-node ceiling is deliberately large: 100_000, the value of
     // vyre-foundation's validate::depth::DEFAULT_MAX_NODE_COUNT, which must admit
     // a fully fused megakernel bundle AND agree with the substrate's GPU-native
     // encoded validator. (The test asserts against the vyre-core public boundary,

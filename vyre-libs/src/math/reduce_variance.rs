@@ -62,7 +62,7 @@ fn reduce_variance_tiled_program(input: &str, output: &str, n: u32, bessel: bool
     let mut body = vec![
         Node::let_bind("local", Expr::LocalId { axis: 0 }),
         Node::if_then(
-            Expr::eq(Expr::WorkgroupId { axis: 0 }, Expr::u32(0)),
+            Expr::is_first_workgroup(),
             vec![
                 Node::let_bind("n_i", Expr::u32(0)),
                 Node::let_bind("M1_i", Expr::f32(0.0)),
@@ -122,7 +122,7 @@ fn reduce_variance_tiled_program(input: &str, output: &str, n: u32, bessel: bool
     ];
 
     // Workgroup-local tree reduction for Welford triples.
-    let wg0_guard = Expr::eq(Expr::WorkgroupId { axis: 0 }, Expr::u32(0));
+    let wg0_guard = Expr::is_first_workgroup();
     let mut stride = tile.next_power_of_two() / 2;
     while stride > 0 {
         body.push(Node::if_then(
@@ -230,7 +230,7 @@ fn reduce_variance_tiled_program(input: &str, output: &str, n: u32, bessel: bool
 
     body.push(Node::if_then(
         Expr::and(
-            Expr::eq(Expr::WorkgroupId { axis: 0 }, Expr::u32(0)),
+            Expr::is_first_workgroup(),
             Expr::eq(local.clone(), Expr::u32(0)),
         ),
         vec![Node::Store {

@@ -299,14 +299,14 @@ proptest! {
 /// assignment of `1.0f32` would then trigger a false V045 ("U32 expected, got F32").
 ///
 /// After the fix the binding is recorded as `ty_known = false`, and V045 is
-/// skipped — the program must validate without V045.
+/// skipped (the program must validate without V045).
 #[test]
 fn call_result_binding_unknown_type_does_not_produce_false_v045() {
     let program = Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::F32).with_count(1)],
         [1, 1, 1],
         vec![
-            // let x = some_call() — type is unknown because no lookup is registered.
+            // let x = some_call() (type is unknown because no lookup is registered).
             Node::Let {
                 name: "x".into(),
                 value: Expr::Call {
@@ -314,7 +314,7 @@ fn call_result_binding_unknown_type_does_not_produce_false_v045() {
                     args: vec![],
                 },
             },
-            // assign x = 1.0f32 — valid if x is F32, but previously caused a false
+            // assign x = 1.0f32, valid if x is F32, but previously caused a false
             // V045 because x was recorded as U32 (the fabricated sentinel).
             Node::Assign {
                 name: "x".into(),
@@ -348,7 +348,7 @@ fn call_result_binding_unknown_type_does_not_produce_false_v045() {
 }
 
 // ------------------------------------------------------------------
-// `fma_f32_violations` — the focused subset emit backends run before
+// `fma_f32_violations`: the focused subset emit backends run before
 // lowering. Pins the `V028` filter so a message change cannot silently
 // disable the integer-Fma rejection (which would re-open the Law-10
 // silent `a*b+c` miscompile), and proves the filter excludes unrelated
@@ -435,7 +435,7 @@ fn fma_f32_violations_ignores_unrelated_validation_errors() {
 // ------------------------------------------------------------------
 // Unpack UnOp recognition. `Unpack4/8 Low/High` previously fell through
 // `validate_unop_operand`'s `_` catch-all and were rejected as "not
-// recognized" — even though that message lists them as valid and every
+// recognized", even though that message lists them as valid and every
 // backend lowers them. Validate must recognize them and check the
 // integer-word operand contract instead.
 // ------------------------------------------------------------------
@@ -503,7 +503,7 @@ fn validate_rejects_non_integer_unpack_operand_on_type_not_existence() {
 // versa) is a bit-exact reinterpret. The naga emitter already coerces the store
 // value to the element type (coerce_value_to_type -> As{Sint/Uint}), PTX stores
 // are typeless `st.global.b32`, and the reference oracle stores the value's
-// bytes — so every lower layer is byte-correct. The validator was the lone
+// bytes, so every lower layer is byte-correct. The validator was the lone
 // over-strict layer: it rejected `store(i32_buffer, rem(i32, i32))` (a valid,
 // common signed-remainder store) with V045. These pin the coercion.
 // ------------------------------------------------------------------
@@ -564,7 +564,7 @@ fn store_signed_div_into_u32_buffer_validates() {
 fn store_float_into_int_buffer_still_rejected() {
     // The coercion is ONLY same-width INTEGER reinterpret. A float value into an
     // i32 buffer is a real type error (different bit semantics, needs an explicit
-    // cast) and must STILL be rejected — proving the coercion did not over-broaden.
+    // cast) and must STILL be rejected (proving the coercion did not over-broaden).
     let program = Program::wrapped(
         vec![
             BufferDecl::output("out", 0, DataType::I32).with_count(4),
@@ -589,7 +589,7 @@ fn store_float_into_int_buffer_still_rejected() {
 #[test]
 fn assign_signed_remainder_to_i32_buffer_validates() {
     // The buffer-ASSIGN path (visit_assign) must apply the same same-width int
-    // reinterpret coercion as Node::Store — otherwise `buf = rem(i32, i32)` is
+    // reinterpret coercion as Node::Store, otherwise `buf = rem(i32, i32)` is
     // rejected while the equivalent store is allowed (an inconsistency between
     // two writes of the same logical value).
     let program = Program::wrapped(

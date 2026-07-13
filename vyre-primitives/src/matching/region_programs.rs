@@ -8,6 +8,12 @@ pub const DEDUP_REGIONS_FLAG_OP_ID: &str = "vyre-primitives::matching::region::d
 /// Stable op id for full cluster metadata over sorted region triples.
 pub const DEDUP_REGIONS_CLUSTER_OP_ID: &str =
     "vyre-primitives::matching::region::dedup_regions_cluster";
+/// Stable op id for per-pattern survivor-flag capping over region triples.
+pub const CAP_REGIONS_PER_PATTERN_OP_ID: &str =
+    "vyre-primitives::matching::region::cap_regions_per_pattern";
+/// Stable op id for per-region first-occurrence compaction over region triples.
+pub const COMPACT_FIRST_PER_REGION_PATTERN_OP_ID: &str =
+    "vyre-primitives::matching::region::compact_first_per_region_pattern";
 /// Region-dedup lane packing for scanner match buffers.
 pub const REGION_DEDUP_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
@@ -334,6 +340,163 @@ pub fn region_sort_program(
         REGION_DEDUP_WORKGROUP_SIZE,
         vec![Node::Region {
             generator: Ident::from("vyre-primitives::matching::region::region_sort"),
+            source_region: None,
+            body: Arc::new(body),
+        }],
+    )
+}
+
+/// GPU per-pattern survivor-flag cap over region triples.
+///
+/// Emits `survivors[i] = 1` for the first `k` matches of each pattern id in
+/// array order, `0` for every later match of that pid. When the input is sorted
+/// by `(pid, start, end)` (the order [`region_sort_program`] produces), "first
+/// `k` in array order" is "the `k` earliest-start matches per pattern", so a
+/// consumer that stream-compacts on these flags keeps at most `k` matches per
+/// detector and reads back the rest as nothing, the per-pattern-cap that every
+/// consumer otherwise applies on host AFTER a full readback.
+///
+/// Each invocation `i` counts how many earlier slots `j < i` carry the same pid
+/// (its rank within the pid group) and survives iff that rank is `< k`. This is
+/// the same per-invocation rank-count shape as [`dedup_regions_flag_program`],
+/// so it composes into the same sort → flag → prefix-scan → compact pipeline.
+///
+/// `k == 0` caps every pattern to nothing (all flags `0`); `count == 0` yields an
+/// empty program. `starts`/`ends` are not read, the cap keys only on pid, so
+/// only the `pids` column and the `survivors` output are bound.
+///
+/// Use [`region_dedup_dispatch_grid`] for explicit launches.
+#[must_use]
+pub fn cap_regions_per_pattern_flag_program(
+    pids: &str,
+    survivors: &str,
+    k: u32,
+    count: u32,
+) -> Program {
+    let t = Expr::InvocationId { axis: 0 };
+    let body = vec![Node::if_then(
+        Expr::lt(t.clone(), Expr::u32(count)),
+        vec![
+            Node::let_bind("pid_i", Expr::load(pids, t.clone())),
+            Node::let_bind("rank", Expr::u32(0)),
+            Node::loop_for(
+                "j",
+                Expr::u32(0),
+                t.clone(),
+                vec![
+                    Node::let_bind("pid_j", Expr::load(pids, Expr::var("j"))),
+                    Node::if_then(
+                        Expr::eq(Expr::var("pid_j"), Expr::var("pid_i")),
+                        vec![Node::assign(
+                            "rank",
+                            Expr::add(Expr::var("rank"), Expr::u32(1)),
+                        )],
+                    ),
+                ],
+            ),
+            Node::let_bind(
+                "survivor",
+                Expr::select(
+                    Expr::lt(Expr::var("rank"), Expr::u32(k)),
+                    Expr::u32(1),
+                    Expr::u32(0),
+                ),
+            ),
+            Node::store(survivors, t.clone(), Expr::var("survivor")),
+        ],
+    )];
+
+    Program::wrapped(
+        vec![
+            BufferDecl::storage(pids, 0, BufferAccess::ReadOnly, DataType::U32).with_count(count),
+            BufferDecl::storage(survivors, 1, BufferAccess::WriteOnly, DataType::U32)
+                .with_count(count),
+        ],
+        REGION_DEDUP_WORKGROUP_SIZE,
+        vec![Node::Region {
+            generator: Ident::from(CAP_REGIONS_PER_PATTERN_OP_ID),
+            source_region: None,
+            body: Arc::new(body),
+        }],
+    )
+}
+
+/// GPU per-region first-occurrence compaction over region-attributed triples.
+///
+/// The presence-by-region program answers "does pattern `p` occur anywhere in
+/// region `r`" as a bitmap. This kernel is its POSITIONED companion: given match
+/// triples each tagged with a `region` id and a `pid`, it emits
+/// `survivors[i] = 1` for the FIRST slot of each `(region, pid)` pair in array
+/// order and `0` for every later match of that same pair. Stream-compacting on
+/// these flags therefore keeps exactly one positioned representative per
+/// `(region, pid)`: the position that turns each presence bit into a concrete
+/// match offset, with no host-side per-region group-by after readback.
+///
+/// Each invocation `i` scans earlier slots `j < i` and marks itself a duplicate
+/// iff any `j` carries the same `region` AND the same `pid`; the survivor flag is
+/// the negation. This is the same per-invocation scan shape as
+/// [`cap_regions_per_pattern_flag_program`] and [`dedup_regions_flag_program`],
+/// so it composes into the identical sort → flag → prefix-scan → compact
+/// pipeline, but keys on the TWO-column `(region, pid)` pair rather than a single
+/// column and uses first-occurrence rather than rank/overlap. `count == 0` yields
+/// an empty program. `starts`/`ends` are not read, the compaction keys only on
+/// `(region, pid)`: so only the `regions` and `pids` columns and the `survivors`
+/// output are bound.
+///
+/// Use [`region_dedup_dispatch_grid`] for explicit launches.
+#[must_use]
+pub fn compact_first_per_region_pattern_flag_program(
+    regions: &str,
+    pids: &str,
+    survivors: &str,
+    count: u32,
+) -> Program {
+    let t = Expr::InvocationId { axis: 0 };
+    let body = vec![Node::if_then(
+        Expr::lt(t.clone(), Expr::u32(count)),
+        vec![
+            Node::let_bind("region_i", Expr::load(regions, t.clone())),
+            Node::let_bind("pid_i", Expr::load(pids, t.clone())),
+            Node::let_bind("dup", Expr::u32(0)),
+            Node::loop_for(
+                "j",
+                Expr::u32(0),
+                t.clone(),
+                vec![
+                    Node::let_bind("region_j", Expr::load(regions, Expr::var("j"))),
+                    Node::let_bind("pid_j", Expr::load(pids, Expr::var("j"))),
+                    Node::if_then(
+                        Expr::and(
+                            Expr::eq(Expr::var("region_j"), Expr::var("region_i")),
+                            Expr::eq(Expr::var("pid_j"), Expr::var("pid_i")),
+                        ),
+                        vec![Node::assign("dup", Expr::u32(1))],
+                    ),
+                ],
+            ),
+            Node::let_bind(
+                "survivor",
+                Expr::select(
+                    Expr::eq(Expr::var("dup"), Expr::u32(0)),
+                    Expr::u32(1),
+                    Expr::u32(0),
+                ),
+            ),
+            Node::store(survivors, t.clone(), Expr::var("survivor")),
+        ],
+    )];
+
+    Program::wrapped(
+        vec![
+            BufferDecl::storage(regions, 0, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(count),
+            BufferDecl::storage(pids, 1, BufferAccess::ReadOnly, DataType::U32).with_count(count),
+            BufferDecl::storage(survivors, 2, BufferAccess::WriteOnly, DataType::U32)
+                .with_count(count),
+        ],
+        REGION_DEDUP_WORKGROUP_SIZE,
+        vec![Node::Region {
+            generator: Ident::from(COMPACT_FIRST_PER_REGION_PATTERN_OP_ID),
             source_region: None,
             body: Arc::new(body),
         }],

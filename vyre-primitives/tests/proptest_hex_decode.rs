@@ -1,5 +1,7 @@
 //! Property and adversarial tests for the primitive-owned hex decode oracle.
-#![cfg(feature = "decode")]
+// The oracle `hex_decode_reference_packed` is gated on `cpu-parity` (unreachable from
+// an integration test under `decode` alone); declare the true dependency.
+#![cfg(all(feature = "decode", feature = "cpu-parity"))]
 
 use proptest::prelude::*;
 use vyre_primitives::decode::hex::{

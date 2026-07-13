@@ -3373,7 +3373,7 @@ checksum = "051eb1abcf10076295e815102942cc58f9d5e3b4560e46e53c21e8ff6f3af7b1"
 
 [[package]]
 name = "vyre"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "blake3",
  "proptest",
@@ -3383,11 +3383,12 @@ dependencies = [
  "vyre-driver-wgpu",
  "vyre-foundation",
  "vyre-lower",
+ "vyre-test-support",
 ]
 
 [[package]]
 name = "vyre-aot"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "blake3",
  "brotli",
@@ -3401,11 +3402,12 @@ dependencies = [
  "vyre-foundation",
  "vyre-primitives",
  "vyre-spec",
+ "vyre-test-support",
 ]
 
 [[package]]
 name = "vyre-bench"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -3452,12 +3454,13 @@ dependencies = [
  "vyre-reference",
  "vyre-runtime",
  "vyre-spec",
+ "vyre-test-support",
  "wide",
 ]
 
 [[package]]
 name = "vyre-conform-enforce"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "inventory",
  "toml",
@@ -3474,14 +3477,14 @@ dependencies = [
 
 [[package]]
 name = "vyre-conform-generate"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "vyre-conform-spec",
 ]
 
 [[package]]
 name = "vyre-conform-runner"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "blake3",
  "ed25519-dalek",
@@ -3509,7 +3512,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-conform-spec"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "blake3",
  "vyre",
@@ -3517,7 +3520,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-debug"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "assert_cmd",
  "bincode",
@@ -3533,11 +3536,12 @@ dependencies = [
  "vyre-libs",
  "vyre-lower",
  "vyre-primitives",
+ "vyre-test-support",
 ]
 
 [[package]]
 name = "vyre-driver"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "arc-swap",
  "blake3",
@@ -3561,11 +3565,12 @@ dependencies = [
  "vyre-reference",
  "vyre-self-substrate",
  "vyre-spec",
+ "vyre-test-support",
 ]
 
 [[package]]
 name = "vyre-driver-cuda"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "blake3",
  "bytemuck",
@@ -3590,11 +3595,12 @@ dependencies = [
  "vyre-reference",
  "vyre-self-substrate",
  "vyre-spec",
+ "vyre-test-support",
 ]
 
 [[package]]
 name = "vyre-driver-metal"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "inventory",
  "metal",
@@ -3609,7 +3615,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-driver-reference"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "inventory",
  "vyre-driver",
@@ -3619,7 +3625,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-driver-spirv"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "ash",
  "inventory",
@@ -3636,7 +3642,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-driver-wgpu"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "arc-swap",
  "bincode",
@@ -3682,12 +3688,13 @@ dependencies = [
  "vyre-self-substrate",
  "vyre-spec",
  "vyre-test-harness",
+ "vyre-test-support",
  "wgpu",
 ]
 
 [[package]]
 name = "vyre-emit-metal"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "bincode",
  "blake3",
@@ -3703,7 +3710,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-emit-naga"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "blake3",
  "inventory",
@@ -3719,11 +3726,12 @@ dependencies = [
  "vyre-libs",
  "vyre-lower",
  "vyre-spec",
+ "vyre-test-support",
 ]
 
 [[package]]
 name = "vyre-emit-ptx"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "cudarc",
  "proptest",
@@ -3734,11 +3742,12 @@ dependencies = [
  "vyre-emit-naga",
  "vyre-foundation",
  "vyre-lower",
+ "vyre-test-support",
 ]
 
 [[package]]
 name = "vyre-emit-spirv"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "naga",
  "proptest",
@@ -3749,11 +3758,12 @@ dependencies = [
  "vyre-foundation",
  "vyre-lower",
  "vyre-primitives",
+ "vyre-test-support",
 ]
 
 [[package]]
 name = "vyre-foundation"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "arrayvec",
  "blake3",
@@ -3781,11 +3791,12 @@ dependencies = [
  "vyre-macros",
  "vyre-reference",
  "vyre-spec",
+ "vyre-test-support",
 ]
 
 [[package]]
 name = "vyre-frontend-c"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "blake3",
  "bytemuck",
@@ -3810,11 +3821,12 @@ dependencies = [
  "vyre-reference",
  "vyre-runtime",
  "vyre-self-substrate",
+ "vyre-test-support",
 ]
 
 [[package]]
 name = "vyre-frontend-rust"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "proptest",
  "rustc_lexer",
@@ -3836,7 +3848,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-grammar-gen"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "blake3",
  "clap",
@@ -3849,7 +3861,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-harness"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "inventory",
  "proptest",
@@ -3861,7 +3873,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-intrinsics"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "criterion",
  "inventory",
@@ -3876,11 +3888,12 @@ dependencies = [
  "vyre-primitives",
  "vyre-reference",
  "vyre-spec",
+ "vyre-test-support",
 ]
 
 [[package]]
 name = "vyre-libs"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "blake3",
  "bytemuck",
@@ -3916,11 +3929,12 @@ dependencies = [
  "vyre-reference",
  "vyre-self-substrate",
  "vyre-spec",
+ "vyre-test-support",
 ]
 
 [[package]]
 name = "vyre-lints"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "anyhow",
  "clap",
@@ -3931,12 +3945,13 @@ dependencies = [
  "toml",
  "vyre",
  "vyre-foundation",
+ "vyre-test-support",
  "walkdir",
 ]
 
 [[package]]
 name = "vyre-lower"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "im",
  "rustc-hash 2.1.2",
@@ -3946,22 +3961,24 @@ dependencies = [
  "thiserror 2.0.18",
  "toml",
  "vyre-foundation",
+ "vyre-test-support",
 ]
 
 [[package]]
 name = "vyre-macros"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "inventory",
  "proc-macro2",
  "quote",
  "syn 2.0.117",
  "trybuild",
+ "vyre-test-support",
 ]
 
 [[package]]
 name = "vyre-primitives"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "bytemuck",
  "criterion",
@@ -3972,11 +3989,12 @@ dependencies = [
  "vyre-foundation",
  "vyre-reference",
  "vyre-spec",
+ "vyre-test-support",
 ]
 
 [[package]]
 name = "vyre-reference"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "blake3",
  "bytemuck",
@@ -3994,11 +4012,12 @@ dependencies = [
  "vyre-foundation",
  "vyre-primitives",
  "vyre-spec",
+ "vyre-test-support",
 ]
 
 [[package]]
 name = "vyre-runtime"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "arc-swap",
  "blake3",
@@ -4017,22 +4036,24 @@ dependencies = [
  "vyre-driver",
  "vyre-foundation",
  "vyre-self-substrate",
+ "vyre-test-support",
 ]
 
 [[package]]
 name = "vyre-self-substrate"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "rustc-hash 2.1.2",
  "tracing",
  "vyre-foundation",
  "vyre-primitives",
  "vyre-reference",
+ "vyre-test-support",
 ]
 
 [[package]]
 name = "vyre-spec"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "proptest",
  "serde",
@@ -4040,11 +4061,12 @@ dependencies = [
  "smallvec",
  "vyre-foundation",
  "vyre-primitives",
+ "vyre-test-support",
 ]
 
 [[package]]
 name = "vyre-test-harness"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "vyre-driver",
  "vyre-foundation",
@@ -4053,6 +4075,10 @@ dependencies = [
  "vyre-reference",
  "vyre-self-substrate",
 ]
+
+[[package]]
+name = "vyre-test-support"
+version = "0.6.5"
 
 [[package]]
 name = "wait-timeout"

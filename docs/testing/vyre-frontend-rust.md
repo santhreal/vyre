@@ -1,4 +1,4 @@
-# Testing program — vyre-frontend-rust
+# Testing program, vyre-frontend-rust
 
 | Kind | Location |
 |------|----------|

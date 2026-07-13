@@ -739,7 +739,11 @@ mod tests {
         let entry = vec![
             Node::let_bind("t", Expr::u32(5)),
             Node::store("a", Expr::u32(0), Expr::var("t")),
-            Node::if_then_else(Expr::bool(true), vec![Node::assign("t", Expr::u32(99))], vec![]),
+            Node::if_then_else(
+                Expr::bool(true),
+                vec![Node::assign("t", Expr::u32(99))],
+                vec![],
+            ),
             Node::let_bind("x", Expr::load("a", Expr::u32(0))),
         ];
         let result = StoreToLoadForward::transform(program(entry));

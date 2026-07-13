@@ -42,8 +42,19 @@ pub fn find_root_body(
     node_count: u32,
 ) -> Vec<Node> {
     vec![
+        // Loop invariant: `root` is the current node and `scratch` is `parent[root]`, so the
+        // guard `root != scratch` == "root is not yet its own parent (not a root)". `scratch`
+        // MUST be seeded with `parent[id]`, NOT `id`: seeding it with `id` makes the guard
+        // false on iteration 0 (root == scratch == id) and, since nothing else mutates them,
+        // the loop is a permanent no-op that returns `id` unwalked. That silently made every
+        // multi-hop union operate on raw endpoints instead of roots (no connectivity closure);
+        // the 1-hop registration fixture could not catch it because there the endpoint IS the
+        // root and the fixture only checks the CAS-written parent array, never `find()`.
         Node::let_bind(root_var, Expr::var(id_var)),
-        Node::let_bind(scratch_parent_var, Expr::var(id_var)),
+        Node::let_bind(
+            scratch_parent_var,
+            Expr::atomic_or(parent, Expr::var(id_var), Expr::u32(0)),
+        ),
         Node::loop_for(
             "uf_find_iter",
             Expr::u32(0),
@@ -96,9 +107,26 @@ pub fn find_root_body(
 /// Build one deterministic lock-free union pass for edge `edge_index_var`.
 ///
 /// `edge_a[edge_index]` and `edge_b[edge_index]` are merged into the shared
-/// `parent` array using ordered root selection and compare-exchange. The retry
-/// loop is bounded by `node_count`; if another lane wins the race, this lane
-/// reloads the observed parent and tries again.
+/// `parent` array using ordered root selection (the lower-index root always
+/// wins) and compare-exchange.
+///
+/// The retry loop is the canonical lock-free union: every iteration RE-FINDS
+/// both roots from the *original* endpoints, then points the higher-index root
+/// at the lower via a single `CAS(parent[high], high, low)`. Re-finding both
+/// each pass, rather than caching one root and patching it after a lost CAS 
+/// is what makes it converge: a lost CAS (another lane moved `parent[high]`)
+/// simply retries against freshly observed roots, and because ordered selection
+/// only ever lowers a root, the pair reaches its shared minimum within
+/// `node_count` iterations. Once the roots coincide the `ne` guard turns every
+/// remaining iteration into a no-op, so running the full bound is harmless.
+///
+/// The previous formulation cached `uf_root_a`/`uf_root_b` before the loop and,
+/// on a *successful* CAS, updated only `uf_root_b`. When `uf_root_a` was the
+/// higher root that left the loop condition permanently true (spinning to the
+/// bound) and, worse, dropped merges under the interpreter's lane ordering, the
+/// `union_find_program` connectivity defect. All working vars here are bound
+/// INSIDE the loop body, shadowing nothing in the enclosing scope (V008-clean;
+/// two sequential `find_root_body` calls are already proven shadow-free).
 #[must_use]
 pub fn union_roots_body(
     parent: &str,
@@ -118,68 +146,60 @@ pub fn union_roots_body(
             vec![Node::trap(Expr::var(edge_index_var), "union-find-edge-oob")],
         ),
     ];
-    body.extend(find_root_body(
-        parent,
-        "uf_a",
-        "uf_root_a",
-        "uf_parent_a",
-        node_count,
-    ));
-    body.extend(find_root_body(
-        parent,
-        "uf_b",
-        "uf_root_b",
-        "uf_parent_b",
-        node_count,
-    ));
     body.push(Node::loop_for(
         "uf_union_iter",
         Expr::u32(0),
         Expr::u32(node_count.max(1)),
-        vec![Node::if_then(
-            Expr::ne(Expr::var("uf_root_a"), Expr::var("uf_root_b")),
-            vec![
-                Node::let_bind(
-                    "uf_low",
-                    Expr::select(
-                        Expr::lt(Expr::var("uf_root_a"), Expr::var("uf_root_b")),
-                        Expr::var("uf_root_a"),
-                        Expr::var("uf_root_b"),
+        {
+            // Re-find BOTH roots from the immutable endpoints every iteration. These
+            // let-binds live only inside the loop body (no enclosing binding of the same
+            // name), so re-binding them per iteration is not a shadow, the same way
+            // `find_root_body`'s own inner-loop `uf_grandparent`/`uf_path_old` re-bind.
+            let mut iter_body =
+                find_root_body(parent, "uf_a", "uf_root_a", "uf_parent_a", node_count);
+            iter_body.extend(find_root_body(
+                parent,
+                "uf_b",
+                "uf_root_b",
+                "uf_parent_b",
+                node_count,
+            ));
+            iter_body.push(Node::if_then(
+                Expr::ne(Expr::var("uf_root_a"), Expr::var("uf_root_b")),
+                vec![
+                    Node::let_bind(
+                        "uf_low",
+                        Expr::select(
+                            Expr::lt(Expr::var("uf_root_a"), Expr::var("uf_root_b")),
+                            Expr::var("uf_root_a"),
+                            Expr::var("uf_root_b"),
+                        ),
                     ),
-                ),
-                Node::let_bind(
-                    "uf_high",
-                    Expr::select(
-                        Expr::lt(Expr::var("uf_root_a"), Expr::var("uf_root_b")),
-                        Expr::var("uf_root_b"),
-                        Expr::var("uf_root_a"),
+                    Node::let_bind(
+                        "uf_high",
+                        Expr::select(
+                            Expr::lt(Expr::var("uf_root_a"), Expr::var("uf_root_b")),
+                            Expr::var("uf_root_b"),
+                            Expr::var("uf_root_a"),
+                        ),
                     ),
-                ),
-                Node::let_bind(
-                    "uf_observed",
-                    Expr::atomic_compare_exchange(
-                        parent,
-                        Expr::var("uf_high"),
-                        Expr::var("uf_high"),
-                        Expr::var("uf_low"),
-                    ),
-                ),
-                Node::if_then_else(
-                    Expr::eq(Expr::var("uf_observed"), Expr::var("uf_high")),
-                    vec![Node::assign("uf_root_b", Expr::var("uf_low"))],
-                    vec![
-                        Node::assign("uf_b", Expr::var("uf_observed")),
-                        Node::Block(find_root_body(
+                    // Point the higher-index root at the lower. The result is bound but
+                    // intentionally unread (like `find_root_body`'s `uf_path_old`): on
+                    // success `parent[high]=low`; on a lost CAS the next iteration re-finds
+                    // fresh roots and retries. Binding it keeps the atomic as a statement.
+                    Node::let_bind(
+                        "uf_observed",
+                        Expr::atomic_compare_exchange(
                             parent,
-                            "uf_b",
-                            "uf_root_b",
-                            "uf_parent_b",
-                            node_count,
-                        )),
-                    ],
-                ),
-            ],
-        )],
+                            Expr::var("uf_high"),
+                            Expr::var("uf_high"),
+                            Expr::var("uf_low"),
+                        ),
+                    ),
+                ],
+            ));
+            iter_body
+        },
     ));
     body
 }
@@ -302,6 +322,32 @@ pub fn validate_union_find_inputs(
         node_words: parent_init.len(),
         edge_storage_words: edge_a.len().max(1),
     })
+}
+
+#[cfg(feature = "inventory-registry")]
+inventory::submit! {
+    crate::harness::OpEntry::new(
+        OP_ID,
+        || union_find_program("parent", "edge_a", "edge_b", 4, 2),
+        Some(|| {
+            // 4 singleton nodes seeded with the identity parent [0,1,2,3]; two DISJOINT
+            // union edges 0–1 and 2–3. Ordered root selection keeps the smaller root, so
+            // parent[1]→0 and parent[3]→2. The two edges touch disjoint parent slots (1 and
+            // 3), so the pass is race-clean under lane reversal while still exercising the
+            // full find-root path walk + the compare-exchange union scatter.
+            let to_bytes = |w: &[u32]| crate::wire::pack_u32_slice(w);
+            vec![vec![
+                to_bytes(&[0, 1, 2, 3]), // parent seed (identity: each node its own root)
+                to_bytes(&[0, 2]),       // edge_a
+                to_bytes(&[1, 3]),       // edge_b
+            ]]
+        }),
+        Some(|| {
+            let to_bytes = |w: &[u32]| crate::wire::pack_u32_slice(w);
+            // {0,1} merges under root 0, {2,3} under root 2.
+            vec![vec![to_bytes(&[0, 0, 2, 2])]]
+        }),
+    )
 }
 
 #[cfg(test)]

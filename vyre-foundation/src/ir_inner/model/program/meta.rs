@@ -843,7 +843,9 @@ impl Program {
             Expr::SubgroupShuffle { value, lane } => Self::expr_intensity(value)
                 .max(Self::expr_intensity(lane))
                 .max(OpIntensity::Heavy),
-            Expr::SubgroupReduce { value, .. } => Self::expr_intensity(value).max(OpIntensity::Heavy),
+            Expr::SubgroupReduce { value, .. } => {
+                Self::expr_intensity(value).max(OpIntensity::Heavy)
+            }
             _ => OpIntensity::Free,
         }
     }

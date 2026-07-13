@@ -228,12 +228,12 @@ pub fn wgpu_scan_batch_segmentation_evidence(
     // Zero is a legitimate digest when the scanned corpus fires zero rules (the
     // hash of the empty match set).  Reject only when BOTH digests are zero AND
     // chunk_count > 0 AND we cannot distinguish "not yet computed" from a genuine
-    // zero — the caller is responsible for computing both digests before
+    // zero, the caller is responsible for computing both digests before
     // submitting evidence.  The real guard is the equality check below: if
     // expected != actual the caller's oracle disagreed with WGPU regardless of
     // whether the value is zero.  The only residual sentinel case we reject is
     // when EXACTLY ONE digest is zero and the other is non-zero, which would pass
-    // the equality check below only if the other were also zero — impossible.
+    // the equality check below only if the other were also zero (impossible).
     // We therefore drop the unconditional zero-rejection and keep only the
     // equality / parity check.
     if request.expected_match_digest != request.actual_match_digest {
@@ -531,7 +531,7 @@ where
     match value.try_into() {
         Ok(v) => v,
         Err(error) => {
-            // Fail closed: a constant that cannot fit u32 is a shader miscompile —
+            // Fail closed: a constant that cannot fit u32 is a shader miscompile 
             // u32::MAX embedded as a WGSL literal would corrupt ABI offsets in the
             // generated GPU program. Surface the label and value loudly (Law 10).
             panic!(
@@ -549,7 +549,7 @@ pub struct BatchDispatchReport {
     pub hit_count: u32,
     /// Matches the device produced BEYOND `hit_capacity` and therefore DROPPED
     /// from the hit ring (raw atomic head minus capacity). `> 0` means this
-    /// dispatch's hit set is INCOMPLETE — a recall-critical overflow the caller
+    /// dispatch's hit set is INCOMPLETE, a recall-critical overflow the caller
     /// MUST surface and recover (re-scan with a larger ring or on the host),
     /// never treat as a complete result. Zero on a healthy dispatch.
     pub dropped_hits: u32,
@@ -574,7 +574,7 @@ pub struct BatchDispatchSummary {
     pub hit_count: u32,
     /// Matches the device produced BEYOND `hit_capacity` and therefore DROPPED
     /// from the hit ring (raw atomic head minus capacity). `> 0` means this
-    /// dispatch's hit set is INCOMPLETE — a recall-critical overflow the caller
+    /// dispatch's hit set is INCOMPLETE, a recall-critical overflow the caller
     /// MUST surface and recover, never treat as a complete result. Zero on a
     /// healthy dispatch.
     pub dropped_hits: u32,
@@ -699,7 +699,7 @@ impl BatchDispatcher {
     /// CORRECTNESS requirement, not a performance default: the batch kernel's
     /// per-work-item scan (`dfa_byte_scanner`) loops `scan_start..emit_end`, so
     /// lanes in one subgroup execute DIFFERENT iteration counts (segments/files
-    /// differ in length) and exit the loop at different points — divergent control
+    /// differ in length) and exit the loop at different points, divergent control
     /// flow.
     /// The hierarchical-subgroup writer aggregates hits with `subgroupBallot`/
     /// `subgroupAdd`/`subgroupShuffle` and elects a leader lane; under divergence
@@ -776,7 +776,7 @@ impl BatchDispatcher {
                         "BatchHitWriter::HierarchicalSubgroup is unsound for the batched megakernel: \
                          its per-work-item DFA scan loops scan_start..emit_end, so subgroup lanes diverge \
                          as shorter segments/files finish, and subgroup hit-aggregation requires uniform \
-                         control flow — under divergence the leader lane exits before broadcasting \
+                         control flow, under divergence the leader lane exits before broadcasting \
                          its reserved ring slot and hits are silently dropped (detector-firing recall \
                          loss). Fix: use BatchHitWriter::Scalar (the default) or BatchHitWriter::Auto."
                             .to_string(),
@@ -920,7 +920,7 @@ impl BatchDispatcher {
         // Input order MUST match the non-Shared storage buffer DECLARATION order
         // in `batch_program_buffers` (offsets, metadata, class_maps, haystack,
         // rule_meta, transitions, accept, segments), not literal binding numbers
-        // — the persistent pipeline binds inputs positionally in that order.
+        //: the persistent pipeline binds inputs positionally in that order.
         // `segments` is declared last so it is the final positional input.
         let inputs = [
             batch.offsets(),
@@ -962,7 +962,7 @@ impl BatchDispatcher {
             )));
         }
         // The kernel `atomicAdd(HIT_HEAD, 1)`s for EVERY match it finds, then
-        // writes only when `slot < hit_capacity` — so the raw head is the true
+        // writes only when `slot < hit_capacity`: so the raw head is the true
         // number of matches the device produced, which can exceed the ring. We
         // can only read back `hit_capacity` slots, but the overflow is a
         // recall-critical signal: clamping it away silently would hide dropped
@@ -986,7 +986,7 @@ impl BatchDispatcher {
         // `atomicAdd(HEAD, 1)` until it claims past the end of the queue, so after
         // a COMPLETE drain `HEAD == queue_len + resident_lanes >= queue_len` (one
         // past-the-end claim per lane). The only way `HEAD < queue_len` can be
-        // observed is an INCOMPLETE drain — the dispatch was cut short (e.g. the
+        // observed is an INCOMPLETE drain, the dispatch was cut short (e.g. the
         // dispatch timeout fired) before the queue was exhausted, leaving the
         // indices `[HEAD, queue_len)` unscanned and their matches missing from the
         // ring with `dropped_hits == 0`: an INVISIBLE recall loss. (HEAD, not
@@ -1263,7 +1263,7 @@ fn occupancy_proxy_bps(items_processed: u32, worker_groups: u32, workgroup_size_
     let lanes = u64::from(worker_groups.max(1))
         .checked_mul(u64::from(workgroup_size_x.max(1)))
         .unwrap_or(u64::MAX);
-    crate::numeric::ratio_basis_points_u64_wide(
+    crate::numeric::WGPU_NUMERIC.ratio_basis_points_u64_wide(
         u64::from(items_processed),
         lanes.max(1),
         0,
@@ -1344,11 +1344,11 @@ fn build_batch_program(
     // It replaces a fixed `claim_budget = ceil(QUEUE_LEN / total_workers)` loop
     // that assumed exactly `total_workers` lanes each ran their full budget. When
     // fewer lanes were actually resident than that budget assumed, the queue was
-    // never fully claimed — `found < expected` with `dropped_hits == 0`: a SILENT
+    // never fully claimed: `found < expected` with `dropped_hits == 0`: a SILENT
     // recall loss (Law 10). The drain removes the dependency on the resident-lane
     // count entirely. Overhead is one extra past-the-end `atomicAdd` per resident
     // lane (the claim that observes `>= QUEUE_LEN` and returns), NOT per
-    // work-item — a rounding error, not a 1/queue_len-scale pessimization.
+    // work-item (a rounding error, not a 1/queue_len-scale pessimization).
     //
     // `worker_groups` now sizes only the dispatch grid (more resident lanes =
     // more parallelism); kernel correctness no longer depends on it.
@@ -1407,7 +1407,7 @@ fn batch_program_buffers(hit_capacity: u32) -> Vec<BufferDecl> {
         // Flat segment table (`segment_count * SEGMENT_WORDS` u32s). Declared
         // LAST among the read-only inputs so it occupies the final positional
         // input slot (the persistent pipeline binds non-output buffers to
-        // `inputs[]` in declaration order — see `dispatch_persistent_borrowed`).
+        // `inputs[]` in declaration order (see `dispatch_persistent_borrowed`)).
         // The kernel reads row `seg_idx = claim / rule_count` to derive the
         // window; the host sizes the queue from the same table so a claim never
         // indexes past it.
@@ -1425,7 +1425,7 @@ fn batch_program_buffers(hit_capacity: u32) -> Vec<BufferDecl> {
 // dimension). Each accepting state emits the SET of pattern ids that match
 // there via the `output_offsets`/`output_records` flat arrays, so a single
 // transition read per byte covers every pattern. The window decode, warm-up
-// prefix, and emit-guard are byte-for-byte the per-rule path's — the SAME
+// prefix, and emit-guard are byte-for-byte the per-rule path's, the SAME
 // `plan_segments`/`segment_table` geometry and the SAME
 // `byte_pos >= emit_start` ownership rule the `segmentation.rs`
 // `combined_segmented_scan` CPU oracle proves equal to a linear
@@ -1450,7 +1450,7 @@ fn combined_batch_program_buffers(hit_capacity: u32) -> Vec<BufferDecl> {
         //   output_records: output_records_len         (flat pattern_id payload)
         //   class_maps:     256                        (byte -> class column id)
         // The kernel folds each byte through `class_maps` then indexes the
-        // compressed `state * num_classes + class` row — LOSSLESS (every byte in
+        // compressed `state * num_classes + class` row. LOSSLESS (every byte in
         // a class shares its dense column), shrinking the transition table from
         // `state_count * 256` to `state_count * num_classes`.
         BufferDecl::storage("transitions", 3, BufferAccess::ReadOnly, DataType::U32),
@@ -1467,12 +1467,12 @@ fn combined_batch_program_buffers(hit_capacity: u32) -> Vec<BufferDecl> {
 
 /// Width of each combined-AC transition target in the device transition table.
 ///
-/// `Bits32` is the shipping default — one `u32` per target, indexed
+/// `Bits32` is the shipping default, one `u32` per target, indexed
 /// `transitions[state * num_classes + class]`. `Bits16` packs two targets per
 /// `u32` word (low half = even flat index, high half = odd; host packer
 /// [`vyre_runtime::megakernel::rule_catalog::try_pack_u16_transitions_into`]),
-/// halving the transition table and bytes-per-transaction — the
-/// keyhog-scale L1 working-set lever (`docs/GPU_OOM_SEGMENTATION.md`) — at the
+/// halving the transition table and bytes-per-transaction, the
+/// keyhog-scale L1 working-set lever (`docs/GPU_OOM_SEGMENTATION.md`), at the
 /// cost of an unpack shift/mask in the hot loop. Sound ONLY when every target
 /// fits `u16` (`state_count <= 65536`); the host packer fails closed otherwise.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1533,7 +1533,7 @@ pub(crate) fn build_combined_batch_program(
 /// Decode one combined-AC claim into its file window and scan it.
 ///
 /// `queue_len = segment_count`, so the claim IS the segment index directly (no
-/// `/ rule_count` — there is no rule dimension). The segment row layout
+/// `/ rule_count`: there is no rule dimension). The segment row layout
 /// `[file_idx, scan_start, emit_start, emit_end]` and the absolute-bounds
 /// arithmetic are identical to [`execute_batch_claim_body`].
 fn execute_combined_claim_body(num_classes: u32, transition_width: TransitionWidth) -> Vec<Node> {
@@ -1641,7 +1641,7 @@ fn combined_dfa_byte_scanner(num_classes: u32, transition_width: TransitionWidth
         // Byte-class compressed combined transition (lossless): fold the byte
         // through the 256-entry class map, then index the compressed
         // `state * num_classes + class` row. `num_classes` is baked as a literal
-        // — the automaton fixes it, so the pipeline is compiled once per resident
+        //: the automaton fixes it, so the pipeline is compiled once per resident
         // catalog. Firings are byte-for-byte identical to the dense
         // `state * 256 + byte` table.
         Node::let_bind("byte_class", Expr::load("class_maps", Expr::var("byte"))),
@@ -1701,7 +1701,7 @@ fn combined_dfa_byte_scanner(num_classes: u32, transition_width: TransitionWidth
 ///
 /// `Bits32` loads `transitions[state * num_classes + class]` directly. `Bits16`
 /// computes that same flat index, loads the packed word at `idx / 2`, and
-/// extracts the `u16` half selected by `idx & 1` — the EXACT mirror of
+/// extracts the `u16` half selected by `idx & 1`: the EXACT mirror of
 /// [`vyre_runtime::megakernel::rule_catalog::unpack_u16_transition`], so a
 /// u16-packed table reproduces the u32 firings byte-for-byte (proven on the GPU
 /// by the differential conservation test, which runs both widths).
@@ -1870,10 +1870,10 @@ fn dfa_byte_scanner(hit_writer: BatchHitWriter) -> Vec<Node> {
     vec![
         Node::let_bind("state", Expr::u32(0)),
         // Scan the window `[scan_start, emit_end)` from state 0. The
-        // `[scan_start, emit_start)` prefix is DFA warm-up — it advances the
+        // `[scan_start, emit_start)` prefix is DFA warm-up, it advances the
         // state but emits nothing (the emit guard below). For the dense default
         // `scan_start == emit_start == file_start`, so the loop is the whole file
-        // with no warm-up — identical to the pre-segmentation scan.
+        // with no warm-up (identical to the pre-segmentation scan).
         Node::loop_for(
             "byte_pos",
             Expr::var("scan_start"),
@@ -1959,7 +1959,7 @@ pub struct CombinedDispatchSummary {
     pub hit_count: u32,
     /// Matches produced BEYOND `hit_capacity` and therefore DROPPED from the
     /// ring (raw atomic head minus capacity). `> 0` means the hit set is
-    /// INCOMPLETE — a recall-critical overflow the caller must recover, never
+    /// INCOMPLETE, a recall-critical overflow the caller must recover, never
     /// treat as complete (Law 10). Zero on a healthy dispatch.
     pub dropped_hits: u32,
     /// Segments the device finished (`DONE_COUNT`).
@@ -2075,7 +2075,7 @@ impl CombinedDispatcher {
         )?;
         // Fail-closed drain guard (Law 10): HEAD < queue_len ⇒ the dispatch was
         // cut short, leaving segments `[HEAD, queue_len)` unscanned with their
-        // matches missing and `dropped_hits == 0` — an INVISIBLE recall loss.
+        // matches missing and `dropped_hits == 0`: an INVISIBLE recall loss.
         let claims_attempted = read_u32_word(
             &self.queue_state_bytes,
             "queue-state",
@@ -2125,9 +2125,9 @@ impl CombinedDispatcher {
     }
 
     /// Measure-based `seg_len` selection for THIS device. Re-tiles `batch` at
-    /// each candidate window width — keeping the caller's proven
+    /// each candidate window width, keeping the caller's proven
     /// `overlap = max_pattern_len`, so correctness is GEOMETRY-INVARIANT and only
-    /// throughput changes — times a warm best-of-`reps` dispatch, and returns the
+    /// throughput changes, times a warm best-of-`reps` dispatch, and returns the
     /// FASTEST geometry whose dispatch was COMPLETE (clean drain, `dropped_hits
     /// == 0`). No per-call oracle is needed: every candidate shares the caller's
     /// sound overlap, so all COMPLETE dispatches yield the identical hit set and
@@ -2137,7 +2137,7 @@ impl CombinedDispatcher {
     ///
     /// This is the autoroute-honest way to hold the GPU win across devices: the
     /// per-device optimum (~128 on an RTX 5090, coarser on a low-core laptop) is
-    /// MEASURED here, not assumed — and every candidate's measurement is returned
+    /// MEASURED here, not assumed, and every candidate's measurement is returned
     /// so the decision inputs are visible. On success `batch` is left re-tiled at
     /// the winning geometry, ready to dispatch.
     ///
@@ -2165,7 +2165,7 @@ impl CombinedDispatcher {
         for &seg_len in candidates {
             batch.set_segmentation(seg_len)?;
             // Warm once: compile + first-touch out of the timing. A warm-up that
-            // under-claims is fine — the timed loop below records it as incomplete.
+            // under-claims is fine (the timed loop below records it as incomplete).
             let _ = self.dispatch_into(batch, &mut scratch);
             let mut best_wall = Duration::MAX;
             let mut dropped_hits = 0u32;
@@ -2215,8 +2215,8 @@ impl CombinedDispatcher {
 }
 
 /// A vetted default `seg_len` candidate set for [`CombinedDispatcher::calibrate_seg_len`],
-/// spanning the saturation curve from coarse (fewer segments — best on low-core
-/// devices) to fine (more parallel windows — best on high-core devices), so
+/// spanning the saturation curve from coarse (fewer segments, best on low-core
+/// devices) to fine (more parallel windows, best on high-core devices), so
 /// calibration adapts to the host instead of assuming one optimum. Operators may
 /// pass their own set. Deliberately excludes `u32::MAX` (whole-file): that is a
 /// correctness floor, never a throughput candidate (see `CombinedBatch::upload`).
@@ -2236,7 +2236,7 @@ pub struct SegLenMeasurement {
     /// Hits the GPU emitted beyond `hit_capacity` (ring overflow); non-zero marks
     /// the measurement INCOMPLETE.
     pub dropped_hits: u32,
-    /// True iff every timed rep drained cleanly with no dropped hits — the only
+    /// True iff every timed rep drained cleanly with no dropped hits, the only
     /// state in which `wall_time` represents a full, conserving scan.
     pub complete: bool,
 }
@@ -2253,7 +2253,7 @@ pub struct SegLenCalibration {
 }
 
 /// Pick the COMPLETE geometry with the smallest wall time, breaking ties toward
-/// the COARSER (larger) `seg_len` — fewer segments means less queue-drain and
+/// the COARSER (larger) `seg_len`: fewer segments means less queue-drain and
 /// warm-up overhead at equal measured speed. Fails closed when no candidate is
 /// complete: returns an error rather than an unsound or incomplete geometry.
 fn select_fastest_complete(measurements: &[SegLenMeasurement]) -> Result<u32, PipelineError> {
@@ -2454,7 +2454,7 @@ mod tests {
         }
     }
 
-    /// The calibrator picks the fastest COMPLETE geometry — and must NOT pick a
+    /// The calibrator picks the fastest COMPLETE geometry, and must NOT pick a
     /// faster-but-incomplete one. A geometry that drained faster only because it
     /// dropped hits (ring overflow) is a false speedup; selecting it would ship a
     /// silently-truncated scan (Law 10). Here seg_len=64 is the fastest wall time
@@ -2509,7 +2509,7 @@ mod tests {
 
     /// The shipped default candidate set must be non-empty, strictly descending
     /// (coarse→fine, the order calibration walks the saturation curve), and must
-    /// exclude the whole-file `u32::MAX` correctness floor — it is never a
+    /// exclude the whole-file `u32::MAX` correctness floor, it is never a
     /// throughput candidate.
     #[test]
     fn default_seg_len_candidates_are_descending_and_exclude_whole_file() {
@@ -2538,7 +2538,7 @@ mod tests {
     /// → Naga validation → WGSL writer). Naga's validator rejects malformed
     /// control flow, type errors, or invalid buffer access, so a successful
     /// lower is a genuine proof the multi-emit nested loops + combined
-    /// transition read are valid GPU code — not a shape check. We additionally
+    /// transition read are valid GPU code, not a shape check. We additionally
     /// assert every combined-automaton buffer and the multi-emit payload buffer
     /// survive into the emitted WGSL (Naga names globals after the BufferDecl),
     /// so the kernel actually reads the combined tables rather than lowering to
@@ -2609,12 +2609,12 @@ mod tests {
         );
     }
 
-    /// Cross-OS shader VALIDITY for the combined segmented megakernel — the
+    /// Cross-OS shader VALIDITY for the combined segmented megakernel, the
     /// program that wins 8.81× vs Hyperscan and runs live on Vulkan (Linux) and
     /// DX12 (Windows). Those runs implicitly prove SPIR-V and HLSL validity, but
     /// macOS/Metal is hardware-blocked, leaving its shader validity unproven.
     /// `vyre-emit-metal` lowers the descriptor through `naga::back::msl`, whose
-    /// writer runs `naga::valid::Validator` first — a successful emit is therefore
+    /// writer runs `naga::valid::Validator` first, a successful emit is therefore
     /// a genuine proof the megakernel is valid Metal Shading Language, verifiable
     /// WITHOUT an Apple GPU (the throughput-win on Metal stays separately
     /// hardware-blocked). SPIR-V is emitted explicitly too rather than relying on
@@ -2672,7 +2672,7 @@ mod tests {
             assert!(
                 msl.len() > 500,
                 "MSL ({width:?}) for the multi-emit combined kernel is implausibly small \
-                 ({} bytes) — that is a stripped no-op, not the real automaton scan",
+                 ({} bytes), that is a stripped no-op, not the real automaton scan",
                 msl.len()
             );
 
@@ -2700,7 +2700,7 @@ mod tests {
         assert_eq!(split_hit_overflow(254, 1_000), (254, 0));
         // Exactly full: readable == capacity, nothing dropped.
         assert_eq!(split_hit_overflow(1_000, 1_000), (1_000, 0));
-        // Overflow: readable clamps to capacity, the rest are reported dropped —
+        // Overflow: readable clamps to capacity, the rest are reported dropped 
         // the recall-critical signal the old `.min()` clamp threw away.
         assert_eq!(split_hit_overflow(1_001, 1_000), (1_000, 1));
         assert_eq!(split_hit_overflow(1_500_000, 1_000_000), (1_000_000, 500_000));
@@ -2724,7 +2724,7 @@ mod tests {
 
     /// Behavioral replacement for the former source-shape test.  Verifies that
     /// when `worker_groups=0` (the sentinel meaning "fill from launch policy"),
-    /// `launch_recommendation` returns a non-zero `worker_groups` value — i.e.,
+    /// `launch_recommendation` returns a non-zero `worker_groups` value, i.e.,
     /// the policy consumes the `0` sentinel and fills in a real value.
     /// `BatchDispatcher::new` then stores that value back into `config.worker_groups`.
     #[test]
@@ -2744,7 +2744,7 @@ mod tests {
             "launch policy must fill worker_groups > 0 when config.worker_groups == 0, got {}",
             rec.worker_groups
         );
-        // hit_capacity is not zero in the default — but verify the recommendation
+        // hit_capacity is not zero in the default, but verify the recommendation
         // still provides a non-zero hit_capacity.
         assert!(
             rec.hit_capacity > 0,
@@ -2773,7 +2773,7 @@ mod tests {
 
     /// Behavioral replacement for the former source-shape test.  Verifies that
     /// the pipeline cache capacity constant is exactly 32 (the agreed bound) and
-    /// that `BatchPipelineShape` has the three program-shaping fields — not
+    /// that `BatchPipelineShape` has the three program-shaping fields, not
     /// merely that the strings exist in source.  This test does not require a
     /// live GPU.
     #[test]
@@ -2790,7 +2790,7 @@ mod tests {
         // A refactor that drops or renames any of these fields breaks this
         // struct literal, surfacing a compile error rather than a silent test
         // pass.  The source-shape strings we replaced were the only guard for
-        // this — now the Rust type system is.
+        // this (now the Rust type system is).
         let _shape = BatchPipelineShape {
             workgroup_size_x: 64,
             worker_groups: 8,
@@ -2852,7 +2852,7 @@ mod tests {
             "BatchDispatchConfig default timeout must be 30 s; callers that rely on the budget \
              must be able to predict the default"
         );
-        // A zero timeout is a valid sentinel (fail immediately) — constructible.
+        // A zero timeout is a valid sentinel (fail immediately) (constructible).
         let zero_timeout_config = BatchDispatchConfig {
             timeout: Duration::ZERO,
             ..BatchDispatchConfig::default()
@@ -2894,7 +2894,7 @@ mod tests {
 
     /// Law 10 (no silent fallback) on the megakernel hit-decode path: a hit-ring
     /// readback that exposes FEWER words than `hit_count` demands must FAIL CLOSED
-    /// with a loud, actionable error — never silently decode the few hits it can
+    /// with a loud, actionable error, never silently decode the few hits it can
     /// reach, which would drop the rest and lose recall invisibly. `hit_count = 2`
     /// needs 8 words (2 hits × 4 u32 each); supplying only 4 words (one hit's
     /// worth) must be rejected, not decoded as a single hit.
@@ -2931,7 +2931,7 @@ mod tests {
     /// A hit-ring readback whose byte length is not a whole number of u32 words is
     /// corrupt and must fail closed (the decode reinterprets bytes as packed u32
     /// records, so a ragged tail would mis-align every record). 6 bytes is 1.5
-    /// words — never a valid readback.
+    /// words (never a valid readback).
     #[test]
     fn hit_readback_misaligned_byte_length_fails_closed() {
         let bytes = [0u8; 6];
@@ -2950,7 +2950,7 @@ mod tests {
 
     /// The under-provisioned guard is `word_count < needed_words` (strict), so an
     /// OVER-provisioned ring (more words than `hit_count` demands) decodes exactly
-    /// `hit_count` hits and ignores the trailing slack — the GPU sizes the ring for
+    /// `hit_count` hits and ignores the trailing slack, the GPU sizes the ring for
     /// `hit_capacity`, which is an upper bound, not the realized hit count.
     #[test]
     fn hit_readback_over_provisioned_ring_decodes_exactly_hit_count() {
@@ -3109,7 +3109,7 @@ mod scan_batch_segmentation_tests {
     /// `match_digest=0` would never satisfy the completeness check.
     #[test]
     fn evidence_accepts_zero_digest_for_empty_match_corpus() {
-        // Both digests are 0 — both digests agree — valid evidence for a clean scan.
+        // Both digests are 0 (both digests agree (valid evidence for a clean scan)).
         let evidence =
             wgpu_scan_batch_segmentation_evidence(WgpuScanBatchSegmentationRequest::new(
                 4, 4, 0, 1, 4, 1, 0, 0,
@@ -3163,7 +3163,7 @@ mod abi_conversion_contracts {
         let file_meta_words_val = dispatcher_abi_u32(FILE_METADATA_WORDS, "file metadata word count");
         let rule_meta_words_val = dispatcher_abi_u32(RULE_META_WORDS, "rule metadata word count");
 
-        // Assert concrete values — the ABI is contractual; changing these
+        // Assert concrete values, the ABI is contractual; changing these
         // constants without updating GPU code is a silent correctness bug.
         assert_eq!(queue_state_words_val, 6, "QUEUE_STATE_WORDS ABI must be 6");
         assert_eq!(segment_words_val, 4, "SEGMENT_WORDS ABI must be 4");

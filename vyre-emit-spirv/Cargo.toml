@@ -1,6 +1,6 @@
 [package]
 name = "vyre-emit-spirv"
-version = "0.6.4"
+version = "0.6.5"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "SPIR-V binary emitter for vyre KernelDescriptor. Routes through naga::Module → naga::back::spv to share substrate-neutral lowering with vyre-emit-naga."
@@ -26,7 +26,7 @@ vyre-lower = { workspace = true }
 # `hash` is required transitively: `vyre_primitives::matching::nfa_to_dfa` imports
 # `crate::hash::fnv1a` UNCONDITIONALLY, but the PUBLISHED vyre-primitives 0.6.3
 # `matching` feature does not self-enable `hash` (a feature-completeness bug fixed
-# locally for 0.6.4). Until that ships, consumers enabling `matching` against the
+# locally for 0.6.5). Until that ships, consumers enabling `matching` against the
 # published 0.6.3 must also enable `hash` or the isolated build fails (E0433).
 vyre-primitives = { workspace = true, features = ["matching", "hash"] }
 naga = { workspace = true }
@@ -35,6 +35,7 @@ thiserror = { workspace = true }
 vyre-foundation.workspace = true
 
 [dev-dependencies]
+vyre-test-support.workspace = true
 # integration tests/benches assert against these crates' public APIs
-vyre-emit-ptx = { workspace = true }
+vyre-emit-ptx = { path = "../vyre-emit-ptx" }
 proptest.workspace = true

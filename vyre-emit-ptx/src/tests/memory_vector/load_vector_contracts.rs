@@ -72,8 +72,8 @@ fn emit_fuses_four_adjacent_load_constant_ops_to_ptx_vector_load() {
     // Reproduces the post-`const_buffer_promote` shape: that rewrite turns a
     // read-only-global buffer's `LoadGlobal` ops into `LoadConstant` and flips
     // the binding to `MemoryClass::Constant` BEFORE PTX emission. This backend
-    // has no `.const` state-space path — `load_space_for` maps Constant to the
-    // plain `"global"` space — so the four consecutive `LoadConstant` ops MUST
+    // has no `.const` state-space path: `load_space_for` maps Constant to the
+    // plain `"global"` space, so the four consecutive `LoadConstant` ops MUST
     // still fuse to one `ld.global.v4.u32`. Before the fix, the emit-side
     // `is_vector_load_op` excluded `LoadConstant`, silently emitting 4× scalar
     // `ld.global.u32` (a 4× memory-transaction Law-7 pessimization on exactly
@@ -304,7 +304,7 @@ fn vector_fusion_alignment_fallback_emits_diagnostic_comment() {
 }
 
 /// Constant-memory `LoadConstant` ops must NEVER emit the `.nc` (non-coherent
-/// read-only cache) suffix — that bypass is semantically distinct from the
+/// read-only cache) suffix, that bypass is semantically distinct from the
 /// constant path. But the `.nc` decision is made by `load_space_for`, NOT by
 /// vector fusion: `analyze_texture_promote` only flags `MemoryClass::Global` +
 /// `ReadOnly` slots, so a `Constant` binding is never a read-only-cache slot and
@@ -314,7 +314,7 @@ fn vector_fusion_alignment_fallback_emits_diagnostic_comment() {
 /// Vectorization is orthogonal to `.nc`: a provably-aligned unit-stride chain of
 /// `LoadConstant` ops MUST fuse to a single plain `ld.global.v4.u32`, exactly as
 /// the equivalent `LoadGlobal` chain would (same global address space, same
-/// coherence — just one 16-byte transaction instead of four 4-byte ones). The
+/// coherence, just one 16-byte transaction instead of four 4-byte ones). The
 /// old contract over-broadly forbade ALL constant-load fusion to dodge `.nc`,
 /// which threw away the 4× memory-transaction win on precisely the read-only
 /// buffers `const_buffer_promote` produces (it rewrites read-only-global

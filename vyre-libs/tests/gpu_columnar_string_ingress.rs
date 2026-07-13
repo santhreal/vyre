@@ -32,7 +32,8 @@ fn gpu_columnar_string_ingress_records_types_boundaries_and_zero_copy() {
         );
     }
     assert_eq!(
-        ABI.matches("evidence_path = \"vyre-libs/tests/gpu_columnar_string_ingress.rs\"").count(),
+        ABI.matches("evidence_path = \"vyre-libs/tests/gpu_columnar_string_ingress.rs\"")
+            .count(),
         ABI.matches("[[buffer]]").count(),
         "Fix: every GPU columnar string ingress row must point at this proof gate"
     );

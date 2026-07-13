@@ -103,11 +103,11 @@ pub fn compile(patterns: &[&str]) -> NfaPlan {
         Ok(plan) => plan,
         Err(error) => {
             // Returning a 1-state entry-only plan would build a scanner with no
-            // accept states — it silently matches NOTHING, reporting every
+            // accept states, it silently matches NOTHING, reporting every
             // input as clean. That is a total recall-loss silent fallback
             // (Law 10). Fail closed. Callers that must recover use try_compile.
             panic!(
-                "vyre-libs NFA compile failed: {error} — \
+                "vyre-libs NFA compile failed: {error}: \
                  returning an empty entry-only plan would build a scanner that silently matches nothing; \
                  use try_compile and reduce the pattern set below the state cap."
             )
@@ -179,7 +179,7 @@ pub fn try_compile(patterns: &[&str]) -> Result<NfaPlan, NfaCompileError> {
 
 /// The degenerate entry-only plan. Used only by tests to pin the empty-pattern
 /// contract; production `compile` no longer falls back to this on error (it
-/// fails loud — see the panic arm above), so this is `#[cfg(test)]` to keep it
+/// fails loud, see the panic arm above), so this is `#[cfg(test)]` to keep it
 /// from being mistaken for a usable silent-fallback target.
 #[cfg(test)]
 fn empty_plan() -> NfaPlan {
@@ -226,13 +226,13 @@ mod tests {
         // No LAZY panics: `.unwrap()`/`.expect()` give the operator no fix hint.
         assert!(
             !production.contains(".expect(") && !production.contains(".unwrap("),
-            "Fix: NFA compile wrapper must not use bare .unwrap()/.expect() — use an explicit panic!() with a fix hint."
+            "Fix: NFA compile wrapper must not use bare .unwrap()/.expect() (use an explicit panic!() with a fix hint)."
         );
         // No SILENT fallback: the old `eprintln! + empty_plan()` arm swallowed
         // the error and returned a scanner that matches nothing (Law 10).
         assert!(
             !production.contains("eprintln!(\"vyre-libs NFA compile failed"),
-            "Fix: NFA compile must not log-and-return an empty plan on error — fail loud via panic!() so callers use try_compile."
+            "Fix: NFA compile must not log-and-return an empty plan on error (fail loud via panic!() so callers use try_compile)."
         );
         // Fail-loud is present.
         assert!(

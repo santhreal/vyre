@@ -19,5 +19,7 @@ fn c_preprocess_certificates_gate_gpu_eligibility() {
     }
 
     assert!(CERTIFICATES.contains("blocked_by_unknown_condition"));
-    assert!(CERTIFICATES.contains("GPU tokenization cannot claim eligibility without a matching certificate digest"));
+    assert!(CERTIFICATES.contains(
+        "GPU tokenization cannot claim eligibility without a matching certificate digest"
+    ));
 }

@@ -106,7 +106,7 @@ fn live_backend_reports_subgroup_and_indirect_support_truthfully() {
     );
     assert!(
         BackendValidationCapabilities::supports_cast_target(&backend, &DataType::I64),
-        "Fix: wgpu must advertise I64 cast support — it shares U64's vec2<u32> backing and \
+        "Fix: wgpu must advertise I64 cast support, it shares U64's vec2<u32> backing and \
          sign-extends the high word on the live GPU (proven by widening_cast_64_parity)."
     );
     assert!(

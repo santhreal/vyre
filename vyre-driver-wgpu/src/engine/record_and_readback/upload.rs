@@ -1,4 +1,4 @@
-use crate::numeric::usize_to_u64;
+use crate::numeric::WGPU_NUMERIC;
 use vyre_driver::BackendError;
 
 pub(super) fn pool_backend_error(error: impl std::fmt::Display) -> BackendError {
@@ -22,8 +22,8 @@ pub(super) fn write_padded_input(
 
     if size > zero_start {
         Ok(Some((
-            usize_to_u64(zero_start, "padded input zero-fill start")?,
-            usize_to_u64(size - zero_start, "padded input zero-fill length")?,
+            WGPU_NUMERIC.usize_to_u64(zero_start, "padded input zero-fill start")?,
+            WGPU_NUMERIC.usize_to_u64(size - zero_start, "padded input zero-fill length")?,
         )))
     } else {
         Ok(None)

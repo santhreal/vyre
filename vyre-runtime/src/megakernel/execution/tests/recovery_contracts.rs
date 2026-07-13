@@ -72,7 +72,7 @@ impl CompiledPipeline for RotatingIdPipeline {
 /// Regression: `pipeline_id` was a plain `String` field set at construction.
 /// `recover_after_device_loss` installed a new compiled pipeline via
 /// `ArcSwap::store` but never updated `pipeline_id`, so `pipeline_id()` returned
-/// the pre-recovery ID even after recovery — a stale identity string.
+/// the pre-recovery ID even after recovery (a stale identity string).
 ///
 /// After the fix, `pipeline_id` is `ArcSwap<String>` and
 /// `recover_after_device_loss` atomically stores the rebuilt pipeline's id.

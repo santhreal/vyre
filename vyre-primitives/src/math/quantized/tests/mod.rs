@@ -14,15 +14,15 @@ fn pack_i4_matrix_rows(rows: &[Vec<i32>]) -> Vec<u32> {
     out
 }
 
-#[path = "pack_unpack_contracts.rs"]
-mod pack_unpack_contracts;
-#[path = "dot_contracts.rs"]
-mod dot_contracts;
-#[path = "matvec_contracts.rs"]
-mod matvec_contracts;
 #[path = "batched_matmul_contracts.rs"]
 mod batched_matmul_contracts;
+#[path = "dot_contracts.rs"]
+mod dot_contracts;
 #[path = "layout_contracts.rs"]
 mod layout_contracts;
+#[path = "matvec_contracts.rs"]
+mod matvec_contracts;
+#[path = "pack_unpack_contracts.rs"]
+mod pack_unpack_contracts;
 #[path = "zero_shape_contracts.rs"]
 mod zero_shape_contracts;

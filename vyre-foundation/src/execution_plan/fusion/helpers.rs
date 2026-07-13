@@ -67,7 +67,7 @@ mod tests {
     /// An `AsyncStore` reads `source` and writes `destination` (vyre-reference
     /// `eval_async_store` reads source then writes destination). The fusion
     /// cross-arm RAW/WAR barrier pass keys off `collect_buffer_targets`, so
-    /// both must be recorded — otherwise a later arm reads a buffer an earlier
+    /// both must be recorded, otherwise a later arm reads a buffer an earlier
     /// arm async-wrote with no barrier between them (a stale-read miscompile).
     #[test]
     fn collect_buffer_targets_records_async_store_source_read_and_destination_write() {

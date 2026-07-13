@@ -7,6 +7,7 @@
 
 use rustc_hash::FxHashMap;
 
+use super::child_body_operands;
 use crate::{KernelBody, KernelOpKind};
 
 pub(crate) fn count_global_loads_by_slot<F>(
@@ -30,19 +31,6 @@ pub(crate) fn count_global_loads_by_slot<F>(
             }
         }
     }
-}
-
-fn child_body_operands<'a>(
-    kind: &KernelOpKind,
-    operands: &'a [u32],
-) -> impl Iterator<Item = u32> + 'a {
-    let start = match kind {
-        KernelOpKind::StructuredIfThen | KernelOpKind::StructuredIfThenElse => 1,
-        KernelOpKind::StructuredForLoop { .. } => 2,
-        KernelOpKind::StructuredBlock | KernelOpKind::Region { .. } => 0,
-        _ => operands.len(),
-    };
-    operands.iter().skip(start).copied()
 }
 
 #[cfg(test)]

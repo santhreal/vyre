@@ -57,7 +57,7 @@ pub fn validate(program: &Program) -> Vec<ValidationError> {
 /// This is the focused subset that emit backends must run before lowering.
 /// An `Fma` node with non-f32 operands is unique among IR-validity hazards in
 /// that it BOTH silently miscompiles (integer operands lower to `a*b+c`, not
-/// fused-multiply-add) AND emits successfully — no downstream stage rejects it.
+/// fused-multiply-add) AND emits successfully (no downstream stage rejects it).
 /// Every other validation rule corresponds to a program that either emits
 /// correctly or fails with a dedicated, more-specific downstream diagnostic, so
 /// emit boundaries must not run full [`validate`] (it would preempt those

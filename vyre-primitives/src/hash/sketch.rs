@@ -161,12 +161,24 @@ pub fn count_sketch_update(table: &str, hashes: &str, signs: &str, d: u32, w: u3
         vec![
             Node::let_bind("col", Expr::load(hashes, t.clone())),
             Node::let_bind("sgn", Expr::load(signs, t.clone())),
-            Node::let_bind("row_base", Expr::mul(t.clone(), Expr::u32(w))),
-            Node::let_bind("addr", Expr::add(Expr::var("row_base"), Expr::var("col"))),
-            Node::store(
-                table,
-                Expr::var("addr"),
-                Expr::add(Expr::load(table, Expr::var("addr")), Expr::var("sgn")),
+            // Skip an out-of-range hash column, matching the CPU reference
+            // `count_sketch_update_cpu` (`if col >= w { continue }`). `col` is
+            // unvalidated producer input; without this gate the GPU writes to
+            // `addr = t*w + col`, which for `col >= w` corrupts a DIFFERENT row's
+            // cell (a silent parity divergence, the CPU skips) or, past the last
+            // row, OOB-writes beyond the d*w table (memory corruption on CUDA).
+            // Transparent to valid columns (`col < w`).
+            Node::if_then(
+                Expr::lt(Expr::var("col"), Expr::u32(w)),
+                vec![
+                    Node::let_bind("row_base", Expr::mul(t.clone(), Expr::u32(w))),
+                    Node::let_bind("addr", Expr::add(Expr::var("row_base"), Expr::var("col"))),
+                    Node::store(
+                        table,
+                        Expr::var("addr"),
+                        Expr::add(Expr::load(table, Expr::var("addr")), Expr::var("sgn")),
+                    ),
+                ],
             ),
         ],
     )];
@@ -239,6 +251,10 @@ pub fn count_sketch_query_cpu_into(
     w: u32,
     estimates: &mut Vec<i32>,
 ) -> i32 {
+    // Infallible best-effort variant: returns 0 (never panics) on malformed input
+    // by contract, see `cpu_helpers_reject_malformed_inputs_without_panicking`. This
+    // is NOT a Law-10 silent fallback: the error-aware `try_count_sketch_query_cpu_into`
+    // fallible variant is provided for callers that must distinguish 0 from an error.
     try_count_sketch_query_cpu_into(table, hashes, signs, d, w, estimates).unwrap_or(0)
 }
 
@@ -273,16 +289,12 @@ pub fn try_count_sketch_query_cpu_into(
             return Err(CountSketchError::HashOutOfRange { row, col, w });
         }
     }
-    if d_len > estimates.capacity() {
-        estimates
-            .try_reserve_exact(d_len - estimates.capacity())
-            .map_err(|source| CountSketchError::Allocation {
-                requested: d_len,
-                source: source.to_string(),
-            })?;
-    }
-
-    estimates.clear();
+    crate::hostbuf::reserve_exact_cleared(estimates, d_len).map_err(|source| {
+        CountSketchError::Allocation {
+            requested: d_len,
+            source: source.to_string(),
+        }
+    })?;
     for r in 0..d_len {
         let col = usize::try_from(hashes[r]).map_err(|_| CountSketchError::HashOutOfRange {
             row: r,
@@ -439,5 +451,81 @@ mod tests {
     fn zero_w_traps() {
         let p = count_sketch_update("t", "h", "s", 5, 0);
         assert!(p.stats().trap());
+    }
+
+    #[test]
+    fn ir_update_matches_cpu_and_skips_out_of_range_column() {
+        use vyre_reference::value::Value;
+        // The GPU IR had NO col<w check while the CPU reference SKIPS out-of-range
+        // columns (`if col >= w { continue }`). This is a GPU/CPU parity regression
+        // LOCK: rows 1 and 2 carry columns col==w and col>w (out of range) that the
+        // CPU skips; the pre-fix GPU wrote to addr = r*w + col (col>=w), corrupting a
+        // different row's cell (row1 → table[8]) or OOB-writing past the d*w table
+        // (row2 → dropped by the reference), DIVERGING from the CPU. Only row 0's
+        // in-range column (col 2, +1) may touch the table.
+        let d = 3u32;
+        let w = 4u32;
+        let hashes = [2u32, w, w + 5]; // row0 valid(2), row1 col==w, row2 col>w
+        let signs_i32 = [1i32, 1, 1];
+        let signs_u32: Vec<u32> = signs_i32.iter().map(|&s| s as u32).collect();
+
+        let mut cpu_table = vec![0u32; (d * w) as usize];
+        count_sketch_update_cpu(&mut cpu_table, &hashes, &signs_i32, d, w);
+
+        let program = count_sketch_update("table", "hashes", "signs", d, w);
+        let outputs = vyre_reference::reference_eval(
+            &program,
+            &[
+                Value::from(crate::wire::pack_u32_slice(&vec![0u32; (d * w) as usize])),
+                Value::from(crate::wire::pack_u32_slice(&hashes)),
+                Value::from(crate::wire::pack_u32_slice(&signs_u32)),
+            ],
+        )
+        .expect("Fix: count_sketch_update must reference-evaluate");
+        let table_idx = vyre_reference::output_index(&program, "table")
+            .expect("Fix: count_sketch_update `table` must be a reference output");
+        let gpu_table = crate::wire::decode_u32_le_bytes_all(&outputs[table_idx].to_bytes());
+
+        // GPU must match the CPU exactly (both skip the two out-of-range columns).
+        assert_eq!(
+            gpu_table, cpu_table,
+            "Fix: GPU count_sketch_update must match the CPU reference, skipping col>=w"
+        );
+        // Concretely: only the in-range (row 0, col 2) cell is incremented.
+        let mut expected = vec![0u32; (d * w) as usize];
+        expected[2] = 1;
+        assert_eq!(
+            gpu_table, expected,
+            "Fix: only the in-range (row0,col2) cell may be touched; col>=w must be skipped, not written elsewhere"
+        );
+    }
+
+    #[test]
+    fn out_of_range_column_records_zero_interpreter_oob_accesses() {
+        use vyre_reference::value::Value;
+        // A col far past `w` makes addr = t*w + col overshoot the d*w table. The
+        // col<w gate must skip the read-modify-write with control flow, so
+        // reference_eval reports ZERO OOB accesses. The pre-fix ungated scatter to
+        // addr would OOB read+write past the table (memory corruption on CUDA) →
+        // nonzero. This proves the gate never leans on the interpreter's masking.
+        let d = 3u32;
+        let w = 4u32;
+        let hashes = [2u32, w + 5, w + 9]; // row0 valid; rows 1,2 far out of range
+        let signs = [1u32, 1, 1];
+        let program = count_sketch_update("table", "hashes", "signs", d, w);
+        let (_outputs, report) = vyre_reference::reference_eval_oob_report(
+            &program,
+            &[
+                Value::from(crate::wire::pack_u32_slice(&vec![0u32; (d * w) as usize])),
+                Value::from(crate::wire::pack_u32_slice(&hashes)),
+                Value::from(crate::wire::pack_u32_slice(&signs)),
+            ],
+        )
+        .expect("Fix: count_sketch_update must reference-evaluate");
+        assert_eq!(
+            report.total(),
+            0,
+            "Fix: the col<w gate must skip the scatter with control flow, never relying on interpreter OOB masking"
+        );
     }
 }

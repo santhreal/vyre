@@ -155,11 +155,16 @@ pub fn region_loop_skeleton_fixed_via_into(
         ))
     })?;
     let grid = Some([ceil_div_u32(cells_u32, 256), 1, 1]);
+    // Real-backend dispatch-input contract (vyre-driver `role_for_buffer`): one input per
+    // INPUT-CONSUMING buffer in buffer order: `dist_matrix` RO (0), `epsilon` RO (1), `edge_mask`
+    // plain-ReadWrite (2). The plain-RW output needs a zero-filled input slot for its initial contents
+    // (the per-lane kernel writes every cell); omitting it fails the backend's strict input-count check.
     let outputs = dispatcher.dispatch(
         &program,
         &[
             u32_slice_to_le_bytes(dist_matrix_fixed),
             epsilon_fixed.to_le_bytes().to_vec(),
+            vec![0u8; cells * std::mem::size_of::<u32>()],
         ],
         grid,
     )?;
@@ -402,7 +407,8 @@ mod fixed_via_tests {
             grid_override: Option<[u32; 3]>,
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
             assert_eq!(grid_override, Some([1, 1, 1]));
-            assert_eq!(inputs.len(), 2);
+            // Real-backend contract: dist_matrix RO, epsilon RO, edge_mask plain-RW (zero slot) = 3.
+            assert_eq!(inputs.len(), 3);
             let dist = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
             let epsilon = crate::hardware::dispatch_buffers::read_u32s(&inputs[1])[0];
             let n = integer_sqrt(dist.len());

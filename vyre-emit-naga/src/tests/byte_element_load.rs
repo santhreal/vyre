@@ -280,7 +280,7 @@ fn u32_store_global_unchanged_by_byte_rmw_path() {
 
 /// A `Cast` whose target is `Bytes` is INVALID per the foundation cast table
 /// (`validate::cast::cast_is_valid` rejects every cast to/from `Bytes`), but the
-/// descriptor emitter does not re-run that table — so before this guard the
+/// descriptor emitter does not re-run that table, so before this guard the
 /// scalar-cast emit path silently mapped `Bytes → u32` (`scalar_cast_target` and
 /// `type_for_data_type` both grouped `Bytes` with `U8/U16/U32`), reinterpreting
 /// a packed-byte target as a 32-bit word (Law 10). `Bytes` is a buffer-element
@@ -330,7 +330,7 @@ fn cast_to_bytes_fails_closed_instead_of_silent_u32_reinterpret() {
     let desc = cast_to_bytes_desc();
     let err = emit(&desc).expect_err(
         "Cast-to-Bytes must fail closed: `Bytes` is a packed-byte element, not a \
-         castable scalar — silently emitting a u32 `As` conversion is a Law-10 \
+         castable scalar, silently emitting a u32 `As` conversion is a Law-10 \
          byte-as-word reinterpret",
     );
     let msg = err.to_string();
@@ -372,11 +372,11 @@ fn u32_load_global_unchanged_by_byte_extract_path() {
 }
 
 /// The byte-extract load/store chains are emitted for REAL byte-addressed
-/// buffer scans, yet the shape tests above never ran naga's validator — a
+/// buffer scans, yet the shape tests above never ran naga's validator, a
 /// latent-invalidity blind spot. The I8 LOAD in particular sign-extends with an
 /// arithmetic `>> 24` on an i32 value: before the shift-amount fix (commit
 /// 1a8682c399), `unify_binary_operand_types` coerced that u32 shift amount to
-/// i32, emitting `ShiftRight(i32, i32)` which naga REJECTS — so the I8
+/// i32, emitting `ShiftRight(i32, i32)` which naga REJECTS, so the I8
 /// byte-extract emitted invalid WGSL that no test caught. This pins that every
 /// byte-extract geometry passes naga's real `Validator`, not just an `is_ok`.
 #[test]

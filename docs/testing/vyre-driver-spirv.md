@@ -1,4 +1,4 @@
-# Testing program — vyre-driver-spirv
+# Testing program, vyre-driver-spirv
 
 | Kind | Location |
 |------|----------|

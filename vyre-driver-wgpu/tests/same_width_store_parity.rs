@@ -3,7 +3,7 @@
 //! A value whose static type is a 32-bit integer can be stored into a buffer
 //! whose element is the OTHER 32-bit-integer signedness (U32<->I32): the
 //! validator now permits it (`same_width_int_reinterpret`) and the naga emitter
-//! coerces the store value to the element type via `As{Sint/Uint, 4}` — a
+//! coerces the store value to the element type via `As{Sint/Uint, 4}`: a
 //! bit-exact reinterpret. This test stores a value of the "wrong" signedness into
 //! a buffer and reads back the raw word, proving the coercion preserves every bit
 //! on real hardware.
@@ -19,7 +19,7 @@ use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver_wgpu::WgpuBackend;
 
-/// `out[i] = a[i] - b[i]` where a/b are I32 and out is U32 — an I32-typed value
+/// `out[i] = a[i] - b[i]` where a/b are I32 and out is U32, an I32-typed value
 /// (Sub goes through Frame::Bin, preserving the I32 operand type) stored into a
 /// U32 buffer. Subtraction is two's-complement so the bits are signedness-
 /// independent; the store coercion (I32 -> As{Uint,4} -> array<u32>) must keep
@@ -44,7 +44,7 @@ fn sub_i32_into_u32_program(n: u32) -> Program {
     )
 }
 
-/// `out[i] = a[i] & b[i]` where a/b are U32 and out is I32 — a U32-typed value
+/// `out[i] = a[i] & b[i]` where a/b are U32 and out is I32, a U32-typed value
 /// (BitAnd defaults to U32) stored into an I32 buffer. The store coercion
 /// (U32 -> As{Sint,4} -> array<i32>) must keep every bit.
 fn and_u32_into_i32_program(n: u32) -> Program {

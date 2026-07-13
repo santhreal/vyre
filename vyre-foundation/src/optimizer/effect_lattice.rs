@@ -321,9 +321,7 @@ pub fn node_effect_level(node: &Node) -> EffectLevel {
         // The loop bounds are evaluated expressions too: `loop i in 0..n[0]`
         // reads memory to compute the trip count. Join `from`/`to` effects with
         // the body's; the old `Loop | Block` shared arm dropped the bounds.
-        Node::Loop {
-            from, to, body, ..
-        } => lattice_join(
+        Node::Loop { from, to, body, .. } => lattice_join(
             lattice_join(expr_effect_level(from), expr_effect_level(to)),
             join_arms(body.iter()),
         ),
@@ -342,7 +340,7 @@ pub fn node_effect_level(node: &Node) -> EffectLevel {
         // UNKNOWABLE, so they take the lattice top (`Diverging`): composing
         // memory ops across them must REFUSE rather than silently treat them as
         // `Pure` (the join identity), which would let a fusion pass reorder or
-        // fuse an effectful escape hatch as if it were a no-op — the exact
+        // fuse an effectful escape hatch as if it were a no-op, the exact
         // silent miscompile this lattice exists to refuse. `Pure` here would also
         // make a `Block`/`Region`/`Loop` whose only child is one of these
         // summarise to `Pure`, hiding the effect from `program_effect_level`.

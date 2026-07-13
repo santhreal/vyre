@@ -17,6 +17,12 @@ counter_source = "nsight-compute-or-unavailable-reason"
 required_counters = ["memory_bytes", "branch_divergence_proxy", "occupancy_proxy", "candidate_count"]
 unavailable_reason_required = true
 evidence_path = "vyre-bench/tests/scan_counter_evidence_registry.rs"
+# The precise Nsight-Compute counters are admin-only on the release host
+# (RmProfilingAdminOnly=1), so a non-root run captures the runtime-telemetry
+# proxies below instead (an honest, stated counter source, not a fabricated one).
+unavailable_reason = "nsight-compute counters (dram__bytes, sm__throughput, elapsed_cycles) require GPU perf-counter admin access (RmProfilingAdminOnly=1)"
+runtime_proxy_source = "vyre-driver-cuda CudaTelemetrySnapshot: memory_bytes=host_to_device_bytes+device_to_host_bytes; occupancy_proxy=mean_occupancy_bps(); branch_divergence_proxy=logical_thread_waste_bps; candidate_count=scan match count"
+runtime_proxy_test = "vyre-bench/tests/scan_counter_proxy_capture_cuda.rs"
 
 [[backend]]
 backend_id = "metal"

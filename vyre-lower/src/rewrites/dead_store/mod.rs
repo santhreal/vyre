@@ -216,7 +216,7 @@ fn invalidated_store_scope(
         // function-local loop-carrier slots (a distinct address space that
         // cannot alias a tracked buffer store), read-only `LoadConstant`, and
         // the metadata-only `BufferLength`. `StoreGlobal`/`StoreShared` reach
-        // this arm only for exhaustiveness — a store is keyed by `store_key`,
+        // this arm only for exhaustiveness, a store is keyed by `store_key`,
         // never classified as a reader here. EXHAUSTIVE ON PURPOSE (no `_`
         // wildcard): a future `KernelOpKind` that reads memory must be
         // classified by hand rather than silently defaulting to `None` and
@@ -435,7 +435,7 @@ mod tests {
         // may read must NOT be eliminated by a later same-address store. Before
         // the exhaustive-match fix, `IndirectDispatch` fell into the optimistic
         // `_ => Invalidation::None` wildcard and the first store was wrongly
-        // elided — a miscompile. Mirrors `intervening_load_keeps_first_store_alive`.
+        // elided (a miscompile. Mirrors `intervening_load_keeps_first_store_alive`).
         let mut binding = out_binding();
         binding.visibility = BindingVisibility::ReadWrite;
         let desc = KernelDescriptor {

@@ -1,7 +1,6 @@
 //! Regex logical pattern planner test suite.
 
-const PLANNER: &str =
-    include_str!("../../docs/optimization/REGEX_LOGICAL_PATTERN_PLANNER.toml");
+const PLANNER: &str = include_str!("../../docs/optimization/REGEX_LOGICAL_PATTERN_PLANNER.toml");
 
 const REQUIRED_OPERATORS: &[&str] = &["and", "or", "not", "ordered_dependency"];
 const REQUIRED_ROUTES: &[&str] = &[

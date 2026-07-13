@@ -100,15 +100,17 @@ proptest! {
     }
 
     #[test]
-    fn anchor_always_rejected(suffix in arb_literal()) {
+    // Contract update 2026-07-03: a leading `^` is a SUPPORTED edge anchor (it
+    // lowers to the start-anchor accept flag), not a rejected lookaround. Since
+    // `arb_literal` yields a pure literal suffix (no `$`), the pattern compiles
+    // with the start flag set and the end flag clear.
+    fn edge_anchor_prefix_compiles_with_start_flag(suffix in arb_literal()) {
         let pat = format!("^{suffix}");
-        match compile_regex_set(&[pat.as_str()]) {
-            Err(RegexCompileError::Unsupported { .. }) => {}
-            other => prop_assert!(
-                false,
-                "expected Unsupported(anchor); got {other:?} for pat={pat:?}"
-            ),
-        }
+        let result = compile_regex_set(&[pat.as_str()]);
+        prop_assert!(result.is_ok(), "^{suffix} must compile as an edge anchor; got {result:?}");
+        let compiled = result.unwrap();
+        prop_assert_eq!(compiled.plan.accept_start_anchored, vec![true]);
+        prop_assert_eq!(compiled.plan.accept_end_anchored, vec![false]);
     }
 
     #[test]

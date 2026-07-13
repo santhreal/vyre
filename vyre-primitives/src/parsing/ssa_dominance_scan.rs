@@ -64,20 +64,42 @@ pub fn ssa_dominance_scan(
                                     "phi_idx",
                                     Expr::atomic_add(out_phi_count, Expr::u32(0), Expr::u32(4)),
                                 ),
-                                Node::store(
-                                    out_phi_nodes,
-                                    Expr::var("phi_idx"),
-                                    Expr::var("var_id"),
-                                ),
-                                Node::store(
-                                    out_phi_nodes,
-                                    Expr::add(Expr::var("phi_idx"), Expr::u32(1)),
-                                    Expr::load(ast_rights, t.clone()),
-                                ),
-                                Node::store(
-                                    out_phi_nodes,
-                                    Expr::add(Expr::var("phi_idx"), Expr::u32(2)),
-                                    Expr::load(ast_rights, Expr::var("lookahead")),
+                                // Gate the 3 phi-record stores against the output capacity.
+                                // `phi_idx` is a SHARED running allocation offset (atomic_add of
+                                // 4 per match across ALL lanes); if total matches exceed
+                                // phi_words/4 the later offsets run past `out_phi_nodes`. The
+                                // reference silently DROPS OOB stores, masking the hazard, but a
+                                // real GPU (CUDA does no bounds-checking) corrupts memory. We
+                                // skip the store when full while STILL counting via the atomic
+                                // above, the canonical GPU append-buffer overflow protocol:
+                                // `out_phi_count` keeps rising past capacity so the caller
+                                // detects the overflow (count > phi_words) and re-runs with a
+                                // larger buffer. NOT a silent fallback (Law 10), the overflow
+                                // is loud in the returned count; only the illegal write is
+                                // removed. Depth 6 == MAX_DEPTH (the last available level, which
+                                // is why the match condition above is merged into one `and`).
+                                Node::if_then(
+                                    Expr::lt(
+                                        Expr::add(Expr::var("phi_idx"), Expr::u32(2)),
+                                        Expr::buf_len(out_phi_nodes),
+                                    ),
+                                    vec![
+                                        Node::store(
+                                            out_phi_nodes,
+                                            Expr::var("phi_idx"),
+                                            Expr::var("var_id"),
+                                        ),
+                                        Node::store(
+                                            out_phi_nodes,
+                                            Expr::add(Expr::var("phi_idx"), Expr::u32(1)),
+                                            Expr::load(ast_rights, t.clone()),
+                                        ),
+                                        Node::store(
+                                            out_phi_nodes,
+                                            Expr::add(Expr::var("phi_idx"), Expr::u32(2)),
+                                            Expr::load(ast_rights, Expr::var("lookahead")),
+                                        ),
+                                    ],
                                 ),
                                 Node::assign("active", Expr::bool(false)),
                             ],
@@ -93,21 +115,29 @@ pub fn ssa_dominance_scan(
 #[must_use]
 pub fn ssa_dominance_scan_program(num_nodes: u32, phi_words: u32) -> Program {
     let t = Expr::InvocationId { axis: 0 };
+    // Control-flow nest the lane guard: `t < num_nodes` must gate the `ast_opcodes[t]`
+    // load via an `if_then`, NOT an `Expr::and`: a data-flow AND evaluates both
+    // operands, so `load(ast_opcodes, t)` would execute for over-fired lanes
+    // (t >= num_nodes; GPU dispatch rounds up to full workgroups), reading OOB (UB on
+    // CUDA; silently zero-filled on the reference). Nesting keeps the load inside the
+    // in-range branch. This guard is the outermost of the nest that bottoms out at the
+    // phi-capacity gate (depth 6 == MAX_DEPTH); the match condition below is merged into
+    // one `and` so that gate fits within the depth budget.
     let body = vec![Node::if_then(
-        Expr::and(
-            Expr::lt(t.clone(), Expr::u32(num_nodes)),
+        Expr::lt(t.clone(), Expr::u32(num_nodes)),
+        vec![Node::if_then(
             Expr::eq(Expr::load("ast_opcodes", t.clone()), Expr::u32(AST_ASSIGN)),
-        ),
-        ssa_dominance_scan(
-            "ast_opcodes",
-            "ast_rights",
-            "ast_vals",
-            "block_headers",
-            Expr::u32(num_nodes),
-            "out_phi_nodes",
-            "out_phi_count",
-            t,
-        ),
+            ssa_dominance_scan(
+                "ast_opcodes",
+                "ast_rights",
+                "ast_vals",
+                "block_headers",
+                Expr::u32(num_nodes),
+                "out_phi_nodes",
+                "out_phi_count",
+                t,
+            ),
+        )],
     )];
     Program::wrapped(
         vec![

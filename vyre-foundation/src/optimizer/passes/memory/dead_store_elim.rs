@@ -150,7 +150,7 @@ fn drop_dead_stores(body: Vec<Node>, changed: &mut bool) -> Vec<Node> {
                     // a read-modify-write). Only a write that does NOT read the
                     // buffer makes the earlier store dead. (Without this the
                     // first arm matched on `(buffer,index)` alone and dropped a
-                    // store its overwriter still read — a dead-store miscompile.)
+                    // store its overwriter still read, a dead-store miscompile.)
                     && !expr_touches_buffer(second_idx_expr, first_buf)
                     && !expr_touches_buffer(second_value, first_buf) =>
                 {
@@ -199,7 +199,7 @@ fn node_observes_buffer(node: &Node, buffer: &Ident) -> bool {
             // store that addresses or sources from `buffer` still observes the
             // pre-store value, so an earlier store to it cannot be dropped.
             // (Previously a same-buffer store short-circuited to `false`,
-            // skipping these subexpression reads — a dead-store miscompile.)
+            // skipping these subexpression reads, a dead-store miscompile.)
             expr_touches_buffer(index, buffer) || expr_touches_buffer(value, buffer)
         }
         Node::Let { value, .. } | Node::Assign { value, .. } => expr_touches_buffer(value, buffer),
@@ -495,7 +495,7 @@ mod tests {
     fn keeps_first_store_when_later_same_buffer_store_index_reads_it() {
         // Store(buf,0,1); Store(buf, Load(buf,0), 2); Store(buf,0,3)
         // The middle store writes to the SAME buffer, but its INDEX reads
-        // buf[0] — the first store's value — to compute where it writes.
+        // buf[0] (the first store's value (to compute where it writes)).
         // Dropping the first store would change that index: a miscompile.
         let entry = vec![
             Node::store("buf", Expr::u32(0), Expr::u32(1)),

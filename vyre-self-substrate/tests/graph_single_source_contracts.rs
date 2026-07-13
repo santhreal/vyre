@@ -279,23 +279,19 @@ fn read(path: &Path) -> String {
 fn read_wrapper_with_child_tests(path: &Path) -> String {
     let mut source = read(path);
     if let (Some(parent), Some(stem)) = (path.parent(), path.file_stem()) {
+        // A wrapper is either a flat `foo.rs` (whose child module tree lives under `foo/`) or a
+        // `foo/mod.rs` (whose tree is its own directory `foo/`). Either way, scan the whole
+        // module subtree RECURSIVELY: after the migration to dedicated regression files the
+        // delegation anchors and primitive-equivalence closure-bar tests moved into a `tests/`
+        // subdirectory, so a single-level read would miss them and falsely report the wrapper as
+        // forking primitive logic. This reader must see every `.rs` the wrapper owns.
         let child_dir = if path.file_name().is_some_and(|name| name == "mod.rs") {
             parent.to_path_buf()
         } else {
             parent.join(stem)
         };
         if child_dir.is_dir() {
-            let mut children = fs::read_dir(&child_dir)
-                .unwrap_or_else(|err| panic!("{} must be readable: {err}", child_dir.display()))
-                .map(|entry| {
-                    entry
-                        .unwrap_or_else(|err| {
-                            panic!("{} entry must be readable: {err}", child_dir.display())
-                        })
-                        .path()
-                })
-                .filter(|child| child.extension().is_some_and(|ext| ext == "rs"))
-                .collect::<Vec<_>>();
+            let mut children = collect_rs_files_recursive(&child_dir);
             children.sort();
             for child in children {
                 source.push('\n');
@@ -304,4 +300,22 @@ fn read_wrapper_with_child_tests(path: &Path) -> String {
         }
     }
     source
+}
+
+/// Every `.rs` file under `dir`, at any depth. Sorted by the caller for determinism.
+fn collect_rs_files_recursive(dir: &Path) -> Vec<PathBuf> {
+    let mut files = Vec::new();
+    let entries =
+        fs::read_dir(dir).unwrap_or_else(|err| panic!("{} must be readable: {err}", dir.display()));
+    for entry in entries {
+        let path = entry
+            .unwrap_or_else(|err| panic!("{} entry must be readable: {err}", dir.display()))
+            .path();
+        if path.is_dir() {
+            files.extend(collect_rs_files_recursive(&path));
+        } else if path.extension().is_some_and(|ext| ext == "rs") {
+            files.push(path);
+        }
+    }
+    files
 }

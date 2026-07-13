@@ -10,6 +10,8 @@ pub(crate) mod expr_cast;
 pub(crate) mod hashmap;
 pub mod node;
 pub(crate) mod node_tree;
+/// Thread-local arithmetic-IR-op counting for roofline / complexity analysis.
+pub mod op_count;
 pub mod sequential;
 pub(crate) mod typed_ops;
 
@@ -52,6 +54,12 @@ pub(crate) fn program_for_interpreter(program: &Program) -> Result<Cow<'_, Progr
     }
 }
 
+/// The interpreter's output ABI, single-homed: [`is_reference_output`] is the exact
+/// predicate `reference_eval` uses to collect the buffers it returns, and
+/// [`output_index`] locates a named output by that predicate. Re-exported so test
+/// harnesses never hand-roll (and drift from) the selection.
+pub use hashmap::{is_reference_output, output_index};
+
 /// Execute a vyre IR program on the pure Rust reference interpreter.
 ///
 /// The current public [`Program`] model is statement-oriented, so this stable
@@ -61,10 +69,118 @@ pub fn reference_eval(program: &Program, inputs: &[Value]) -> Result<Vec<Value>,
     run_arena_reference(program, inputs)
 }
 
+/// [`reference_eval`] plus an [`OobReport`](crate::oob::OobReport) of every
+/// out-of-bounds access the interpreter silently absorbed during the run.
+///
+/// The interpreter DEFINES OOB loads as zero-fill and OOB stores as a no-op so
+/// its output stays deterministic, but that silent absorption is exactly what
+/// masks a GPU/CPU parity hazard: an IR program with an ungated data-derived index
+/// "works" here yet a real GPU (CUDA does no bounds-checking) reads garbage or
+/// corrupts memory. Use this to assert a program NEVER relies on that masking: a
+/// correctly bounds-gated program handles an out-of-contract index with explicit
+/// control flow, so it records `OobReport::total() == 0` even on hostile input. A
+/// nonzero total means the IR indexed past a buffer end and needs an explicit gate
+/// (the class of fix applied to ziftsieve/base64/sketch/simplicial).
+///
+/// The tally is per-thread and reset at the start of this call, so it measures
+/// exactly this run.
+///
+/// # Errors
+/// Same as [`reference_eval`].
+pub fn reference_eval_oob_report(
+    program: &Program,
+    inputs: &[Value],
+) -> Result<(Vec<Value>, crate::oob::OobReport), vyre::Error> {
+    crate::oob::reset_oob_report();
+    let outputs = reference_eval(program, inputs)?;
+    Ok((outputs, crate::oob::oob_report()))
+}
+
+/// [`reference_eval_with_dispatch`] plus an [`OobReport`](crate::oob::OobReport).
+///
+/// The grid floor lets a caller deliberately OVER-FIRE the dispatch (more lanes
+/// than the buffer-inferred grid) to probe whether a primitive's per-lane guard
+/// actually protects the extra lanes. A guard written as `Expr::and(t < n, load(buf,
+/// t))` does NOT, the data-flow AND evaluates the load for `t >= n`, an OOB read
+/// (the ssa_dominance_scan bug). Running a valid fixture at an inflated grid and
+/// asserting `OobReport::total() == 0` catches that whole class registry-wide.
+///
+/// # Errors
+/// Same as [`reference_eval_with_dispatch`].
+pub fn reference_eval_with_dispatch_oob_report(
+    program: &Program,
+    inputs: &[Value],
+    min_dispatch_elements: u32,
+) -> Result<(Vec<Value>, crate::oob::OobReport), vyre::Error> {
+    crate::oob::reset_oob_report();
+    let outputs = reference_eval_with_dispatch(program, inputs, min_dispatch_elements)?;
+    Ok((outputs, crate::oob::oob_report()))
+}
+
+/// [`reference_eval`] with an explicit grid floor.
+///
+/// The reference interpreter infers its dispatch grid from buffer SHAPES, which
+/// cannot express the per-invocation count of a byte-scan program (the haystack
+/// is packed 4 bytes/u32 and the scan length is a runtime value). Pass the true
+/// grid, e.g. `haystack_len` for a one-lane-per-byte scan, so the interpreter
+/// covers exactly what the real dispatch config would; otherwise high positions
+/// are silently skipped (the CPU-ref oracle under-fires while the GPU is correct).
+/// `min_dispatch_elements` is a FLOOR: the interpreter still runs at least the
+/// buffer-inferred grid, so passing `0` is identical to [`reference_eval`].
+///
+/// # Errors
+/// Same as [`reference_eval`].
+pub fn reference_eval_with_dispatch(
+    program: &Program,
+    inputs: &[Value],
+    min_dispatch_elements: u32,
+) -> Result<Vec<Value>, vyre::Error> {
+    run_arena_reference_with_dispatch(program, inputs, min_dispatch_elements)
+}
+
 /// Execute using the statement-IR reference evaluator.
 pub fn run_arena_reference(program: &Program, inputs: &[Value]) -> Result<Vec<Value>, vyre::Error> {
+    run_arena_reference_with_dispatch(program, inputs, 0)
+}
+
+/// [`run_arena_reference`] with an explicit grid floor (see
+/// [`reference_eval_with_dispatch`]).
+///
+/// # Errors
+/// Same as [`run_arena_reference`].
+pub fn run_arena_reference_with_dispatch(
+    program: &Program,
+    inputs: &[Value],
+    min_dispatch_elements: u32,
+) -> Result<Vec<Value>, vyre::Error> {
     let program = program_for_interpreter(program)?;
-    hashmap::run_hashmap_reference(&program, inputs)
+    hashmap::run_hashmap_reference(
+        &program,
+        inputs,
+        min_dispatch_elements,
+        hashmap::LaneOrder::Forward,
+    )
+}
+
+/// Execute a program with the workgroup/invocation STEP ORDER reversed.
+///
+/// The result is identical to [`reference_eval`] for any RACE-FREE program (every
+/// output slot is written by exactly one lane, or shared slots are touched only by
+/// commutative atomics). It DIFFERS only when a non-atomic cross-lane write-write
+/// race exists, two lanes plain-`store` the same slot, because the GPU leaves the
+/// winner driver-defined while the single-threaded reference otherwise resolves it
+/// deterministically (last stepped lane wins). Comparing this against
+/// [`reference_eval`] therefore surfaces a hidden race the same way a real GPU would
+/// nondeterministically diverge.
+///
+/// # Errors
+/// Same as [`reference_eval`].
+pub fn reference_eval_lane_reversed(
+    program: &Program,
+    inputs: &[Value],
+) -> Result<Vec<Value>, vyre::Error> {
+    let program = program_for_interpreter(program)?;
+    hashmap::run_hashmap_reference(&program, inputs, 0, hashmap::LaneOrder::Reversed)
 }
 
 /// Differential oracle retained for tests during the generic interpreter transition.
@@ -196,6 +312,92 @@ mod tests {
         let flag = outputs[0].to_bytes();
 
         assert_eq!(u32::from_le_bytes([flag[0], flag[1], flag[2], flag[3]]), 1);
+    }
+
+    /// A byte-scan program whose haystack is PACKED (4 bytes/u32) has fewer buffer
+    /// elements than the invocations it needs, one per byte. Buffer-shape grid
+    /// inference therefore UNDER-covers it, silently skipping high positions. This
+    /// is exactly the region-presence CPU-ref under-fire that the GPU did not have.
+    /// `reference_eval_with_dispatch` lets the caller pass the true byte grid so
+    /// the interpreter covers what the real dispatch would, no silent
+    /// under-coverage (Law 10). This locks both halves: the default under-covers,
+    /// the floor covers.
+    #[test]
+    fn dispatch_floor_covers_packed_byte_scan_that_buffer_inference_under_covers() {
+        // 1024 packed words == 4096 bytes; the marker is at byte 4095 (word 1023),
+        // reachable only if the grid runs 4096 invocations, not the 1024 the
+        // packed buffer's element count implies.
+        const PACKED_WORDS: u32 = 1024;
+        const BYTE_LEN: u32 = PACKED_WORDS * 4; // 4096
+        const MARKER_POS: u32 = BYTE_LEN - 1; // 4095
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::storage("packed", 0, BufferAccess::ReadOnly, DataType::U32)
+                    .with_count(PACKED_WORDS),
+                BufferDecl::storage("byte_len", 1, BufferAccess::ReadOnly, DataType::U32)
+                    .with_count(1),
+                BufferDecl::storage("flag", 2, BufferAccess::ReadWrite, DataType::U32)
+                    .with_count(1),
+            ],
+            [256, 1, 1],
+            vec![
+                Node::let_bind("i", Expr::InvocationId { axis: 0 }),
+                Node::if_then(
+                    Expr::lt(Expr::var("i"), Expr::load("byte_len", Expr::u32(0))),
+                    vec![Node::if_then(
+                        Expr::eq(Expr::var("i"), Expr::u32(MARKER_POS)),
+                        vec![
+                            // Read the packed word for this byte so `packed` is a
+                            // genuine input (its 1024 elements are what buffer-shape
+                            // inference would cap the grid at).
+                            Node::let_bind(
+                                "word",
+                                Expr::load("packed", Expr::div(Expr::var("i"), Expr::u32(4))),
+                            ),
+                            Node::if_then(
+                                Expr::eq(Expr::var("word"), Expr::u32(0)),
+                                vec![Node::let_bind(
+                                    "flag_old",
+                                    Expr::atomic_or("flag", Expr::u32(0), Expr::u32(1)),
+                                )],
+                            ),
+                        ],
+                    )],
+                ),
+            ],
+        );
+        let read_flag = |outputs: &[Value]| {
+            let bytes = outputs[0].to_bytes();
+            u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]])
+        };
+        let make_inputs = || {
+            vec![
+                Value::from(vec![0u8; PACKED_WORDS as usize * 4]),
+                Value::from(BYTE_LEN.to_le_bytes().to_vec()),
+                Value::from(vec![0u8; 4]),
+            ]
+        };
+
+        // Default grid: buffer-shape inference caps at the packed buffer's 1024
+        // elements, so byte 4095 is never visited, the flag stays clear. This is
+        // the SILENT under-coverage the region-presence gate hit.
+        let under = reference_eval(&program, &make_inputs())
+            .expect("Fix: interpreter runs the packed byte-scan");
+        assert_eq!(
+            read_flag(&under),
+            0,
+            "buffer-shape grid inference must under-cover this packed byte-scan (documents the hole)"
+        );
+
+        // Floor = true byte length: the interpreter now covers byte 4095 and the
+        // marker is found (parity with what the real dispatch config produces).
+        let covered = reference_eval_with_dispatch(&program, &make_inputs(), BYTE_LEN)
+            .expect("Fix: interpreter runs the packed byte-scan with an explicit grid floor");
+        assert_eq!(
+            read_flag(&covered),
+            1,
+            "an explicit grid floor of haystack_len must cover every byte position"
+        );
     }
 
     #[test]

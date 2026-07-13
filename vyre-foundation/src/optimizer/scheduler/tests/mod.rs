@@ -386,7 +386,6 @@ impl ProgramPass for BatchingPass {
     }
 }
 
-
 struct SchedulerGateContract {
     build_breaking_pass: fn(PassMetadata) -> ProgramPassKind,
     build_preserving_pass: fn(PassMetadata) -> ProgramPassKind,

@@ -1,5 +1,5 @@
 //! Div/mod-by-zero and oversized-shift parity against the reference oracle on
-//! the live GPU — the "undefined on hardware, TOTAL on the oracle" class (Law 10).
+//! the live GPU (the "undefined on hardware, TOTAL on the oracle" class (Law 10)).
 //!
 //! Three operations have hardware-undefined behavior that the vyre-reference
 //! oracle nonetheless defines with a single total contract, so the wgpu backend
@@ -15,12 +15,12 @@
 //!
 //! op_dispatch forces the div/mod sentinels with a `Select(divisor == 0, ...)`.
 //! That Select-forced value is a COMPUTED lowering exactly like the naga
-//! signed-`Modulo` bug — a source read ("we emit a Select to u32::MAX") is NOT
+//! signed-`Modulo` bug, a source read ("we emit a Select to u32::MAX") is NOT
 //! proof the 5090 returns `u32::MAX`. These tests dispatch all three on real
 //! hardware and assert byte-for-byte against the oracle contract.
 //!
-//! (Signed `i32 / 0` and `i32::MIN / -1` are rejected upstream as undefined —
-//! `div_i32`/`rem_i32` return an error — so they are not emittable and not
+//! (Signed `i32 / 0` and `i32::MIN / -1` are rejected upstream as undefined 
+//! `div_i32`/`rem_i32` return an error, so they are not emittable and not
 //! tested here; only the unsigned, total cases reach the GPU.)
 
 mod common;
@@ -128,7 +128,7 @@ fn u32_mod_by_zero_yields_zero_on_gpu() {
     );
 }
 
-/// (value, shift-amount) — the amounts >= 32 exercise the `& 31` masking that a
+/// (value, shift-amount), the amounts >= 32 exercise the `& 31` masking that a
 /// non-masking lowering would get wrong (e.g. `1 << 32` would be 0, not 1).
 fn shift_cases() -> Vec<(u32, u32)> {
     vec![

@@ -256,11 +256,11 @@ fn decode_load_miss_uses_slot_index_correctly() {
 
 /// try_read_epoch must return a structured Err on a truncated control buffer;
 /// the infallible read_epoch must NOT simply return 0 without any diagnostic
-/// (before the fix it did — the pump would stall indefinitely on malformed DMA
+/// (before the fix it did, the pump would stall indefinitely on malformed DMA
 /// readbacks with no signal).
 #[test]
 fn read_epoch_on_truncated_control_returns_err_not_zero() {
-    // 4 bytes is too short to contain the epoch word — not a valid control buffer.
+    // 4 bytes is too short to contain the epoch word (not a valid control buffer).
     let short = [0u8; 4];
     let err = try_read_epoch(&short)
         .expect_err("Fix: try_read_epoch must return Err on a 4-byte truncated buffer");
@@ -272,12 +272,12 @@ fn read_epoch_on_truncated_control_returns_err_not_zero() {
         "Fix: error must describe the control-buffer defect, got: {msg}"
     );
     // read_epoch returns the same 0 it always did, but the infallible path
-    // now emits tracing::error! — we cannot assert the log in a unit test,
+    // now emits tracing::error!, we cannot assert the log in a unit test,
     // but we CAN assert that the strict counterpart disagrees.
     let silent = read_epoch(&short);
     assert_eq!(
         silent, 0,
-        "read_epoch on truncated buffer must return the sentinel 0 (loud, not silent — see tracing::error! emitted above)"
+        "read_epoch on truncated buffer must return the sentinel 0 (loud, not silent, see tracing::error! emitted above)"
     );
 }
 
@@ -298,7 +298,7 @@ fn read_done_count_on_truncated_control_returns_err_not_zero() {
 }
 
 /// try_read_observable on a truncated buffer must Err; read_observable must not
-/// silently return 0 — observable index 0 at truncated size cannot be valid.
+/// silently return 0 (observable index 0 at truncated size cannot be valid).
 #[test]
 fn read_observable_on_truncated_control_returns_err_not_zero() {
     let short = [0u8; 4];

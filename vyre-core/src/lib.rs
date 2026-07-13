@@ -463,7 +463,7 @@ mod optimize_cache {
     /// singleton; any test that asserts on `len()`/`len_device()` or relies on
     /// `clear()` must hold this guard so a concurrent test in another module
     /// cannot insert/evict between the clear and the assertion. A per-module
-    /// mutex is insufficient — two modules with separate mutexes still race on
+    /// mutex is insufficient, two modules with separate mutexes still race on
     /// the one shared cache (observed: device len 5≠1, 248≠256).
     #[cfg(test)]
     pub(super) fn test_serial() -> std::sync::MutexGuard<'static, ()> {
@@ -483,7 +483,7 @@ mod optimize_tests {
 
     /// Serialise cache tests against the process-global singleton. Delegates to
     /// the ONE shared guard in `optimize_cache` so this module mutually excludes
-    /// with `optimize_cache_runtime_tests` too — a per-module mutex would let
+    /// with `optimize_cache_runtime_tests` too, a per-module mutex would let
     /// the other module's eviction-fill race this module's count assertions.
     fn serial() -> MutexGuard<'static, ()> {
         optimize_cache::test_serial()
@@ -498,7 +498,7 @@ mod optimize_tests {
     }
 
     /// Return true iff the program's entry contains a Store of exactly u32
-    /// literal `expected_value` into the "out" buffer — recursing through
+    /// literal `expected_value` into the "out" buffer, recursing through
     /// `Region` wrappers. `Program::wrapped` nests the body inside a
     /// `vyre.program.root` Region, so the Store is never a top-level entry
     /// node; a non-recursive scan false-negatives on every correctly
@@ -530,7 +530,7 @@ mod optimize_tests {
         let p1 = sample_program();
         let p2 = sample_program();
         let first = optimize(p1).expect("Fix: optimize must succeed on sample_program");
-        // sample_program stores LitU32(42) — after optimization the store must
+        // sample_program stores LitU32(42), after optimization the store must
         // still be present with the correct value, not just be non-empty.
         assert!(
             entry_stores_literal(&first, 42),
@@ -580,7 +580,7 @@ mod optimize_tests {
         optimize_cache::clear();
 
         // Build OPTIMIZE_CACHE_CAPACITY + 1 distinct programs by varying the
-        // stored literal — each gets a unique fingerprint. Capture the key of
+        // stored literal, each gets a unique fingerprint. Capture the key of
         // the first-inserted program to verify FIFO eviction.
         let first_key = {
             let p0 = program_with_literal(0);
@@ -635,7 +635,7 @@ mod optimize_tests {
     }
 
     fn program_with_buffer_and_workgroup_1_1_1() -> Program {
-        // A 1D kernel with a large buffer — Autotune will upscale the
+        // A 1D kernel with a large buffer. Autotune will upscale the
         // workgroup to max_invocations_per_workgroup for this shape.
         Program::wrapped(
             vec![BufferDecl::output("out", 0, DataType::U32).with_count(4096)],
@@ -676,7 +676,7 @@ mod optimize_tests {
         // device_optimize_key: two profiles that differ only in
         // ideal_workgroup_tile must produce different cache keys and different
         // optimized programs. Before the fix, both calls returned the first
-        // profile's optimized IR — silently wrong workgroup size.
+        // profile's optimized IR (silently wrong workgroup size).
         let _g = serial();
         optimize_cache::clear();
 

@@ -5,16 +5,8 @@
 
 use vyre_foundation::ir::DataType;
 use vyre_primitives::hash::{crc32::*, fnv1a::*};
+use vyre_primitives::wire::decode_u32_le_bytes_all as unpack_u32s;
 use vyre_reference::value::Value;
-
-fn unpack_u32s(bytes: &[u8]) -> Vec<u32> {
-    bytes
-        .chunks_exact(4)
-        .map(|chunk| {
-            u32::from_le_bytes(chunk.try_into().expect("Fix: u32 chunk conversion failed"))
-        })
-        .collect()
-}
 
 fn eval_fnv1a32_u8(bytes: &[u8]) -> u32 {
     let program = fnv1a32_program_u8("input", "out", bytes.len() as u32);

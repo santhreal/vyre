@@ -214,7 +214,7 @@ impl DfaBuilder {
             .build_many(&regexes)
             .map_err(|e| {
                 format!(
-                    "Fix: DFA build failed — regex pattern set did not compile: {e:?}. \
+                    "Fix: DFA build failed, regex pattern set did not compile: {e:?}. \
                      The GPU would receive a zero-recall table that rejects all input."
                 )
             })?;
@@ -395,7 +395,7 @@ mod tests {
             err.contains("exceeds u16::MAX") || err.contains("overflow"),
             "Fix: error must name the overflow, got: {err}"
         );
-        // The transition must not have been written — state (0,0) must still be Error.
+        // The transition must not have been written (state (0,0) must still be Error).
         let table = b.build().expect("empty patterns must succeed");
         assert_eq!(
             table.transition(0, 0).action,

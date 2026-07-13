@@ -1,4 +1,4 @@
-//! FNV-1a 64-bit hash parity on the LIVE GPU — proves the prescribed
+//! FNV-1a 64-bit hash parity on the LIVE GPU, proves the prescribed
 //! "express 64-bit as a u32 pair with explicit carry" pattern works on hardware.
 //!
 //! vyre deliberately rejects native 64-bit integer ARITHMETIC at the typecheck
@@ -9,7 +9,7 @@
 //! multiply-by-FNV-prime from 16-bit partial products with an explicit carry into
 //! the high word. So this is BOTH a real shipped workload (oracle-only before
 //! this test, like BLAKE3/FNV-32 were) AND the empirical proof that the
-//! architecture's recommended 64-bit-on-32-bit-lanes idiom is GPU-correct — if
+//! architecture's recommended 64-bit-on-32-bit-lanes idiom is GPU-correct, if
 //! the carry propagation miscompiled, every GPU FNV-64 hash would be silently
 //! wrong with no test to catch it.
 //!
@@ -54,7 +54,7 @@ fn check(backend: &WgpuBackend, bytes: &[u8], label: &str) {
     let expected = fnv1a64(bytes);
     assert_eq!(
         gpu, expected,
-        "GPU FNV-1a64 of {label} diverged from the Rust reference — the explicit \
+        "GPU FNV-1a64 of {label} diverged from the Rust reference, the explicit \
          u32-pair carry / 64-bit multiply emulation miscompiles on hardware.\n  \
          gpu      = {gpu:#018x}\n  expected = {expected:#018x}"
     );
@@ -78,7 +78,7 @@ fn fnv1a64_varied_inputs_match_reference_on_gpu() {
     check(&backend, b"a", "\"a\"");
     check(&backend, b"hello, world", "\"hello, world\"");
     check(&backend, b"\x00\xff\x80\x7f\x01", "boundary bytes");
-    // A 64-byte block exercises the carry path across many iterations — the most
+    // A 64-byte block exercises the carry path across many iterations, the most
     // likely place a high-word carry bug would surface.
     let long: [u8; 64] = std::array::from_fn(|i| (i as u8).wrapping_mul(31).wrapping_add(7));
     check(&backend, &long, "a 64-byte block");

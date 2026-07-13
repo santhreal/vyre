@@ -62,8 +62,8 @@ impl BatchRuleProgram {
 /// num_classes + class_maps[class_map_base + byte]]`: each rule carries a
 /// 256-entry byte→class map (into the shared `class_maps` buffer) and a
 /// compressed `state_count * num_classes` transition block, instead of a dense
-/// `state_count * 256` block. The compression is LOSSLESS — bytes share a class
-/// only when their transition column is identical across every state — so GPU
+/// `state_count * 256` block. The compression is LOSSLESS, bytes share a class
+/// only when their transition column is identical across every state, so GPU
 /// firings are byte-for-byte identical to the dense table.
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, bytemuck::Pod, bytemuck::Zeroable)]
@@ -338,7 +338,7 @@ pub fn pack_rule_catalog_into(
             // Build the LOSSLESS byte→class map for this DFA into reusable
             // scratch, then emit the compressed `state * num_classes + class`
             // transition block. `num_classes <= 256`, with equality only when
-            // every byte transitions differently in some state — the common
+            // every byte transitions differently in some state, the common
             // secret-detector DFAs collapse to a handful of classes.
             let num_classes = build_byte_class_map_for_table(
                 &rule.transitions,
@@ -461,7 +461,7 @@ pub fn pack_rule_catalog_into(
 /// byte 0's class and deterministic. The returned width `num_classes` is `<=
 /// 256`; for the secret-detector DFAs (long fixed prefixes + a few char
 /// classes) it collapses to a handful, shrinking the per-state transition row
-/// from 256 words to `num_classes` words — a lossless ~16x reduction on the
+/// from 256 words to `num_classes` words, a lossless ~16x reduction on the
 /// ~987 MB catalog without changing a single firing.
 ///
 /// `out` is cleared/reused so the hot resident-refresh path allocates nothing.
@@ -546,13 +546,13 @@ pub fn compress_dense_transitions_into(
 /// Pack a byte-class-compressed `state_count * num_classes` transition table
 /// (from [`compress_dense_transitions_into`]) into u16 targets stored two per
 /// u32 word: the LOW half holds the even flat index, the HIGH half the odd
-/// index. Halves the device transition footprint and bytes-per-transaction —
+/// index. Halves the device transition footprint and bytes-per-transaction 
 /// the lever the keyhog-scale L1 working-set analysis identified as the one that
 /// directly narrows each transition read (`docs/GPU_OOM_SEGMENTATION.md`; row
 /// deduplication was measured and refuted there).
 ///
 /// FAIL CLOSED (Law 10): every transition target is a state index, so it must
-/// fit `u16`. If ANY target exceeds `u16::MAX` this REFUSES the pack — a silent
+/// fit `u16`. If ANY target exceeds `u16::MAX` this REFUSES the pack, a silent
 /// `& 0xFFFF` truncation would repoint a next-state at the wrong state, an
 /// invisible recall loss. Callers gate on `state_count <= 65536`; this is the
 /// enforcing check, not an assumption. `out` is cleared/reused so the hot
@@ -720,7 +720,7 @@ mod tests {
     use super::*;
 
     /// Resolve the next state the COMPRESSED packed catalog yields for
-    /// `(rule, state, byte)` — mirrors the GPU kernel's index math exactly so
+    /// `(rule, state, byte)`: mirrors the GPU kernel's index math exactly so
     /// the parity tests can prove byte-for-byte equivalence to the dense table.
     fn packed_next_state(packed: &PackedRuleCatalog, meta_index: usize, state: u32, byte: u8) -> u32 {
         let meta = packed.rule_meta[meta_index];
@@ -775,7 +775,7 @@ mod tests {
         try_pack_u16_transitions_into(&compressed, &mut packed).expect("all targets fit u16");
         // Two u16 per u32 word, rounding up for the odd tail.
         assert_eq!(packed.len(), compressed.len().div_ceil(2));
-        // Every flat index unpacks to EXACTLY the original target — proving the
+        // Every flat index unpacks to EXACTLY the original target, proving the
         // pack→kernel-unpack round-trip changes no transition (Law 6).
         for (idx, &original) in compressed.iter().enumerate() {
             assert_eq!(
@@ -789,7 +789,7 @@ mod tests {
     #[test]
     fn u16_pack_fails_closed_on_target_exceeding_u16() {
         // 70000 > u16::MAX: packing MUST refuse, never silently `& 0xFFFF` it to a
-        // wrong next-state (Law 10 — that truncation is an invisible recall loss).
+        // wrong next-state (Law 10 (that truncation is an invisible recall loss)).
         let compressed: Vec<u32> = vec![0, 1, 70_000, 3];
         let mut out = Vec::new();
         let err = try_pack_u16_transitions_into(&compressed, &mut out)
@@ -802,7 +802,7 @@ mod tests {
     }
 
     /// Regression for P2 decoration test: the structural shared-storage checks
-    /// above were not sufficient — a refactor could share the WRONG compressed
+    /// above were not sufficient, a refactor could share the WRONG compressed
     /// block and still pass the field-equality assertion. This test packs TWO
     /// identical copies of the non-trivial 3-class DFA from
     /// `byte_class_compression_is_lossless` and then calls `packed_next_state`
@@ -810,7 +810,7 @@ mod tests {
     /// the same value AND that value matches the dense source table.
     #[test]
     fn duplicate_dfas_shared_storage_both_rules_fire_correctly() {
-        // 3-state, 3-class DFA — same fixture as byte_class_compression_is_lossless.
+        // 3-state, 3-class DFA (same fixture as byte_class_compression_is_lossless).
         let states = 3usize;
         let mut dense = vec![0u32; states * 256];
         dense[0 * 256 + 0x41] = 1; // state 0: 'A' -> 1
@@ -831,7 +831,7 @@ mod tests {
             "Fix: duplicate DFAs must share accept storage");
 
         // Critical: verify BOTH meta indices yield the correct DFA output for
-        // every (state, byte) — structural field sharing is necessary but not
+        // every (state, byte), structural field sharing is necessary but not
         // sufficient; the shared block must actually encode the right DFA.
         for state in 0..states as u32 {
             for byte in 0u16..256 {
@@ -876,7 +876,7 @@ mod tests {
 
     /// The compressed catalog yields byte-for-byte identical next-states to the
     /// dense `state * 256 + byte` table for EVERY (state, byte) of a non-trivial
-    /// multi-class DFA — the lossless parity contract the GPU kernel depends on.
+    /// multi-class DFA (the lossless parity contract the GPU kernel depends on).
     #[test]
     fn byte_class_compression_is_lossless() {
         // 3-state DFA. byte 0x41 ('A') advances 0->1->2->2; byte 0x42 ('B')
@@ -923,7 +923,7 @@ mod tests {
     fn full_alphabet_dfa_keeps_all_classes_and_is_lossless() {
         // 2-state DFA where state 0 sends byte b -> (b as state is impossible
         // with 2 states), so instead: state 0 sends EVERY byte to a distinct
-        // value by using state 1 vs 0 based on parity — that only yields 2
+        // value by using state 1 vs 0 based on parity, that only yields 2
         // classes. To force 256 classes we need 256 distinct columns, which
         // needs >=256 states. Use a 256-state identity: state s, byte b -> b.
         let states = 256usize;
@@ -997,7 +997,7 @@ mod tests {
         assert_eq!(packed.rule_meta[1].class_map_base, 0);
         assert_eq!(packed.rule_meta[1].num_classes, 1);
         // Inert row 0: a single self-loop word and an all-zero 256-entry class
-        // map — the rejected slot reads a well-formed no-match DFA.
+        // map (the rejected slot reads a well-formed no-match DFA).
         assert_eq!(packed.transitions[0], 0);
         assert_eq!(packed.accept[0], 0);
         assert_eq!(
@@ -1005,7 +1005,7 @@ mod tests {
             &vec![0; ALPHABET_SIZE as usize]
         );
         // Regression for P2 decoration test: a single-byte spot check is not
-        // sufficient — a corrupt inert row could have non-zero entries at other
+        // sufficient, a corrupt inert row could have non-zero entries at other
         // bytes or at the accept table while still passing b'X'. This loop
         // proves the inert slot self-loops to state 0 on EVERY byte value and
         // that the accept entry for the inert slot is zero (can never match).
@@ -1021,7 +1021,7 @@ mod tests {
         assert_eq!(
             packed.accept[packed.rule_meta[1].accept_base as usize],
             0,
-            "Fix: inert slot accept entry at state 0 must be 0 — the inert DFA must never produce a match"
+            "Fix: inert slot accept entry at state 0 must be 0, the inert DFA must never produce a match"
         );
     }
 }

@@ -11,13 +11,13 @@
 //! upload path (`GpuBufferHandle::upload`) uses `write_padded_into_mapped`
 //! instead: the caller creates the destination buffer directly with
 //! `mapped_at_creation: true` (no extra `MAP_WRITE`/`COPY_SRC` usage and no
-//! separate staging buffer — `mapped_at_creation` is legal for any usage),
+//! separate staging buffer: `mapped_at_creation` is legal for any usage),
 //! obtains the mapped range, calls this function to fill it, then `unmap`s.
 //! That is a single host memcpy into HOST_VISIBLE / BAR memory, bypassing
 //! wgpu's internal per-write `StagingBelt` allocation entirely and writing at
 //! DRAM / PCIe-BAR speed instead of the ~90 MB/s staged path.
 
-use crate::numeric::usize_to_u64;
+use crate::numeric::WGPU_NUMERIC;
 use vyre_driver::BackendError;
 
 /// Write the aligned byte prefix and one padded 4-byte tail, returning the
@@ -40,7 +40,7 @@ pub(crate) fn write_padded_prefix(
 
     let mut tail = [0u8; 4];
     tail[..tail_len].copy_from_slice(&bytes[aligned_len..]);
-    queue.write_buffer(buffer, usize_to_u64(aligned_len, tail_offset_label)?, &tail);
+    queue.write_buffer(buffer, WGPU_NUMERIC.usize_to_u64(aligned_len, tail_offset_label)?, &tail);
     Ok(aligned_len + 4)
 }
 
@@ -76,7 +76,7 @@ fn write_zero_fill(
         let chunk = (allocation_len - offset).min(SCRATCH_ZEROS.len());
         queue.write_buffer(
             buffer,
-            usize_to_u64(offset, "GPU zero-fill offset")?,
+            WGPU_NUMERIC.usize_to_u64(offset, "GPU zero-fill offset")?,
             &SCRATCH_ZEROS[..chunk],
         );
         offset += chunk;
@@ -88,7 +88,7 @@ fn write_zero_fill(
 ///
 /// `mapped` must be the full allocation slice obtained from
 /// `buffer.slice(..).get_mapped_range_mut()` on a buffer created with
-/// `mapped_at_creation: true` (any usage flags — initial mapping does not
+/// `mapped_at_creation: true` (any usage flags, initial mapping does not
 /// require `MAP_WRITE`). Its length must be `>= bytes.len()` and must equal
 /// the allocation size passed to `create_buffer`.
 ///

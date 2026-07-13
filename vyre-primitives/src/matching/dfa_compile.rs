@@ -248,6 +248,19 @@ impl CompiledDfa {
                 reason: "transitions length != state_count * 256",
             });
         }
+        // Every transition is consumed as the next state index
+        // (`transitions[state * 256 + byte]`), so a target >= state_count would
+        // index out of bounds on the following step. A corrupt/stale cache blob
+        // must fail closed here rather than OOB-panic (or read a garbage state)
+        // mid-scan (the same invariant the length checks enforce for the tables).
+        if transitions
+            .iter()
+            .any(|&target| target as usize >= state_count as usize)
+        {
+            return Err(DfaWireError::ShapeMismatch {
+                reason: "transition target out of range for state_count",
+            });
+        }
         if accept.len() != state_count as usize {
             return Err(DfaWireError::ShapeMismatch {
                 reason: "accept length != state_count",
@@ -294,7 +307,7 @@ impl CompiledDfa {
         // inconsistent (the classic symptom of a corrupted cache whose length scalar was
         // zeroed). Reject it: max_pattern_len bounds the per-position replay / segmentation
         // warm-up window (see the field doc), so handing back an under-sized 0 would
-        // silently drop every match that straddles a segment boundary — an invisible
+        // silently drop every match that straddles a segment boundary, an invisible
         // recall loss. This is the precise form of the former guard, which was over-broad
         // (it also rejected the genuine empty-pattern round-trip, accept only at the root).
         if max_pattern_len == 0 && accept.iter().skip(1).any(|&state| state != 0) {
@@ -344,7 +357,7 @@ pub const DEFAULT_DFA_BUDGET_BYTES: usize = 16 * 1024 * 1024;
 ///
 /// Panics when the transition table would exceed the default budget. Returning
 /// an empty DFA in that case would silently drop EVERY match (the empty
-/// automaton rejects all input) — an invisible recall loss in any scanner built
+/// automaton rejects all input), an invisible recall loss in any scanner built
 /// on it. The pattern set is operator-supplied (a rule catalog, never attacker
 /// haystack), so an oversized set is a configuration error that must fail
 /// closed and loud. Callers that need to handle oversized sets programmatically
@@ -376,8 +389,56 @@ pub fn dfa_compile_with_budget(
     patterns: &[&[u8]],
     budget_bytes: usize,
 ) -> Result<CompiledDfa, DfaCompileError> {
+    dfa_compile_with_budget_ci(patterns, budget_bytes, false)
+}
+
+/// ASCII-CASE-INSENSITIVE counterpart of [`dfa_compile`]: `A`/`a` … `Z`/`z` are
+/// matched interchangeably. The case fold is baked into the TRANSITION TABLE, not
+/// the haystack, patterns are canonicalized to lowercase at trie construction,
+/// and the flattened transition for a raw byte `b` resolves through
+/// `fold(b)`, so `transitions[state][b'A'] == transitions[state][b'a']`. A scanner
+/// therefore matches mixed-case input with ZERO per-byte folding work and no
+/// second resident haystack copy (it kills the consumer-side `to_ascii_lowercase`
+/// pass entirely). Non-ASCII and non-letter bytes are unchanged.
+///
+/// NOTE for downstream matchers: a case-insensitive DFA also needs its candidate
+/// PREFILTER masks (end-byte / suffix2 / suffix3) folded to admit both cases of
+/// each pattern byte, the masks are checked against the RAW haystack byte, which
+/// this DFA does not fold. Build those masks with the case-insensitive variant.
+///
+/// # Panics
+/// See [`dfa_compile`].
+#[must_use]
+pub fn dfa_compile_case_insensitive(patterns: &[&[u8]]) -> CompiledDfa {
+    match dfa_compile_case_insensitive_with_budget(patterns, DEFAULT_DFA_BUDGET_BYTES) {
+        Ok(dfa) => dfa,
+        Err(error) => panic!(
+            "dfa_compile_case_insensitive: compiling {} pattern(s) exceeded the default {DEFAULT_DFA_BUDGET_BYTES}-byte DFA budget ({error}). \
+             Returning the empty rejecting automaton would silently drop every match; \
+             use dfa_compile_case_insensitive_with_budget and shard oversized pattern sets to handle this as a structured error.",
+            patterns.len()
+        ),
+    }
+}
+
+/// ASCII-case-insensitive counterpart of [`dfa_compile_with_budget`].
+///
+/// # Errors
+/// See [`dfa_compile_with_budget`].
+pub fn dfa_compile_case_insensitive_with_budget(
+    patterns: &[&[u8]],
+    budget_bytes: usize,
+) -> Result<CompiledDfa, DfaCompileError> {
+    dfa_compile_with_budget_ci(patterns, budget_bytes, true)
+}
+
+fn dfa_compile_with_budget_ci(
+    patterns: &[&[u8]],
+    budget_bytes: usize,
+    case_insensitive: bool,
+) -> Result<CompiledDfa, DfaCompileError> {
     let state_cap = budget_bytes / (256 * core::mem::size_of::<u32>());
-    let inner = dfa_compile_inner_capped(patterns, state_cap)?;
+    let inner = dfa_compile_inner_capped(patterns, state_cap, case_insensitive)?;
     let requested_bytes = (inner.state_count as usize)
         .saturating_mul(256)
         .saturating_mul(core::mem::size_of::<u32>());
@@ -391,9 +452,23 @@ pub fn dfa_compile_with_budget(
     Ok(inner)
 }
 
+/// Canonicalize an ASCII byte for a case-insensitive DFA: `A`..=`Z` map to their
+/// lowercase; every other byte (including non-ASCII) is unchanged. Identity when
+/// `case_insensitive` is false. One owner for the fold so the insert path and the
+/// transition-flatten path cannot disagree on the byte class.
+#[inline]
+fn fold_ascii_byte(b: usize, case_insensitive: bool) -> usize {
+    if case_insensitive && (0x41..=0x5A).contains(&b) {
+        b | 0x20
+    } else {
+        b
+    }
+}
+
 fn dfa_compile_inner_capped(
     patterns: &[&[u8]],
     state_cap: usize,
+    case_insensitive: bool,
 ) -> Result<CompiledDfa, DfaCompileError> {
     const NO_TRANSITION: u32 = u32::MAX;
 
@@ -420,7 +495,10 @@ fn dfa_compile_inner_capped(
     for (pattern_idx, pat) in patterns.iter().enumerate() {
         let mut cur = 0usize;
         for &b in *pat {
-            let b = b as usize;
+            // Case-insensitive: fold pattern bytes to lowercase so the trie is
+            // built over the canonical alphabet; uppercase input is redirected
+            // onto the same path in the transition-flatten step below.
+            let b = fold_ascii_byte(b as usize, case_insensitive);
             let next = trie[cur][b];
             if next != NO_TRANSITION {
                 cur = next as usize;
@@ -441,7 +519,7 @@ fn dfa_compile_inner_capped(
         // a given trie node, encoded as pid+1. Using the first-inserted pattern preserves
         // the stable, predictable semantics documented at CompiledDfa.accept: the
         // lowest pattern id is canonical. If we overwrote on each iteration, the last
-        // pattern would win — silently misreporting earlier patterns on the fast path
+        // pattern would win, silently misreporting earlier patterns on the fast path
         // (output_records is unaffected and always carries all pids).
         if accept[cur] == 0 {
             accept[cur] = (pattern_idx as u32)
@@ -549,9 +627,15 @@ fn dfa_compile_inner_capped(
     for state in 0..state_count {
         accept_out[state] = accept[state];
         for b in 0..256usize {
+            // Resolve the goto for the FOLDED byte class and store it under the
+            // raw byte column `b`, so a case-insensitive DFA answers `b'A'` with
+            // the same next state as `b'a'` (identity when case-sensitive). The
+            // trie only carries folded edges, so the fail-chain walk uses the
+            // folded index throughout.
+            let fb = fold_ascii_byte(b, case_insensitive);
             let mut s = state;
             loop {
-                let child = trie[s][b];
+                let child = trie[s][fb];
                 if child != NO_TRANSITION {
                     transitions[state * 256 + b] = child;
                     break;
@@ -611,11 +695,10 @@ mod tests {
             s = dfa.transitions[s * 256 + b as usize] as usize;
         }
         // Pattern 0 encodes as accept = pid+1 = 0+1 = 1. Asserting == 1 catches both
-        // "no match" (accept=0) and wrong pid (accept != 1) — including the pid+1 wrap
+        // "no match" (accept=0) and wrong pid (accept != 1), including the pid+1 wrap
         // bug where pid=u32::MAX would encode as 0 and silence the match.
         assert_eq!(
-            dfa.accept[s],
-            1,
+            dfa.accept[s], 1,
             "after 'xxabc' the DFA must be in a state that accepts pattern 0 (encoded as 1); \
              got accept[{s}] = {}",
             dfa.accept[s]
@@ -632,10 +715,98 @@ mod tests {
         // Negative: after trailing 'x' the DFA must have left the accept state.
         let s_after_x = dfa.transitions[s * 256 + b'x' as usize] as usize;
         assert_eq!(
-            dfa.accept[s_after_x],
-            0,
+            dfa.accept[s_after_x], 0,
             "after trailing 'x' the DFA must not accept; pattern 'abc' ends before it"
         );
+    }
+
+    /// Walk `dfa` over `haystack` and return every `(pattern_id, end_pos)` match,
+    /// the plain-Rust oracle used to prove case-insensitive folding.
+    fn scan_ends(dfa: &CompiledDfa, haystack: &[u8]) -> std::collections::BTreeSet<(u32, u32)> {
+        let mut state = 0usize;
+        let mut out = std::collections::BTreeSet::new();
+        for (pos, &b) in haystack.iter().enumerate() {
+            state = dfa.transitions[state * 256 + b as usize] as usize;
+            let begin = dfa.output_offsets[state] as usize;
+            let end = dfa.output_offsets[state + 1] as usize;
+            for &pid in &dfa.output_records[begin..end] {
+                out.insert((pid, pos as u32));
+            }
+        }
+        out
+    }
+
+    #[test]
+    fn case_insensitive_matches_every_case_variant() {
+        let dfa = dfa_compile_case_insensitive(&[b"key"]);
+        // Every case variant of "key" ends at position 2 in its 3-byte window.
+        for variant in [b"KEY", b"Key", b"kEy", b"keY", b"kEY", b"key"] {
+            let hits = scan_ends(&dfa, variant);
+            assert!(
+                hits.contains(&(0, 2)),
+                "case-insensitive DFA must match {:?} as pattern 0 ending at 2, got {hits:?}",
+                std::str::from_utf8(variant).unwrap()
+            );
+        }
+        // A genuinely different string must NOT match.
+        assert!(
+            scan_ends(&dfa, b"kez").is_empty(),
+            "case-insensitive folding must not match a non-variant string"
+        );
+    }
+
+    #[test]
+    fn case_insensitive_is_identical_to_host_folded_case_sensitive() {
+        // The correctness contract the plan names: a case-insensitive scan of the
+        // RAW mixed-case haystack must equal a case-SENSITIVE scan of the
+        // host-lowercased haystack with lowercased patterns. Randomized differential.
+        let alphabet = b"aAbBkK_9/";
+        let mut seed = 0x9E37_79B1u64;
+        let mut next = || {
+            seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1);
+            (seed >> 33) as u32
+        };
+        for _ in 0..500 {
+            // 1..=4 patterns, each 1..=5 bytes over the mixed-case alphabet.
+            let pat_count = 1 + (next() % 4) as usize;
+            let patterns_owned: Vec<Vec<u8>> = (0..pat_count)
+                .map(|_| {
+                    let len = 1 + (next() % 5) as usize;
+                    (0..len)
+                        .map(|_| alphabet[(next() as usize) % alphabet.len()])
+                        .collect()
+                })
+                .collect();
+            let patterns: Vec<&[u8]> = patterns_owned.iter().map(Vec::as_slice).collect();
+
+            let hay_len = 4 + (next() % 40) as usize;
+            let haystack: Vec<u8> = (0..hay_len)
+                .map(|_| alphabet[(next() as usize) % alphabet.len()])
+                .collect();
+
+            // Case-insensitive DFA over the raw haystack.
+            let ci = dfa_compile_case_insensitive(&patterns);
+            let ci_hits = scan_ends(&ci, &haystack);
+
+            // Host-folded reference: lowercase patterns + lowercase haystack,
+            // case-SENSITIVE DFA. This is exactly the pass W2-1 replaces.
+            let lowered_pat: Vec<Vec<u8>> = patterns_owned
+                .iter()
+                .map(|p| p.iter().map(|b| b.to_ascii_lowercase()).collect())
+                .collect();
+            let lowered_refs: Vec<&[u8]> = lowered_pat.iter().map(Vec::as_slice).collect();
+            let lowered_hay: Vec<u8> = haystack.iter().map(|b| b.to_ascii_lowercase()).collect();
+            let reference = dfa_compile(&lowered_refs);
+            let ref_hits = scan_ends(&reference, &lowered_hay);
+
+            assert_eq!(
+                ci_hits, ref_hits,
+                "case-insensitive DFA over raw haystack must equal host-folded case-sensitive scan\n\
+                 patterns={patterns_owned:?}\n\
+                 haystack={:?}",
+                String::from_utf8_lossy(&haystack)
+            );
+        }
     }
 
     #[test]
@@ -743,17 +914,18 @@ mod tests {
         let dfa = dfa_compile(&[b"".as_slice()]);
         // The root state must accept (empty string matches everywhere).
         assert_eq!(
-            dfa.accept[0],
-            1,
+            dfa.accept[0], 1,
             "dfa_compile(&[b\"\"]) root state must accept pattern 0 (accept=1)"
         );
         assert_eq!(
             dfa.max_pattern_len, 0,
             "empty pattern must produce max_pattern_len=0"
         );
-        let bytes = dfa.to_bytes().expect("Fix: serialization must succeed for empty-pattern DFA");
-        let dfa2 =
-            CompiledDfa::from_bytes(&bytes).expect("Fix: round-trip must succeed for empty-pattern DFA");
+        let bytes = dfa
+            .to_bytes()
+            .expect("Fix: serialization must succeed for empty-pattern DFA");
+        let dfa2 = CompiledDfa::from_bytes(&bytes)
+            .expect("Fix: round-trip must succeed for empty-pattern DFA");
         assert_eq!(
             dfa2.accept[0], 1,
             "deserialized DFA must preserve accept[0]=1 for empty-pattern compile"
@@ -769,7 +941,7 @@ mod tests {
         // dfa_compile(&[b"AKIA"]) produces a non-root accept state (the state reached
         // after consuming A-K-I-A) and max_pattern_len == 4. A blob that claims
         // max_pattern_len == 0 while still carrying that deeper accept is internally
-        // inconsistent — the canonical symptom of a corrupted cache whose length scalar
+        // inconsistent, the canonical symptom of a corrupted cache whose length scalar
         // was zeroed. Decoding it would yield a DFA whose under-sized replay/segmentation
         // window silently drops cross-boundary matches, so from_bytes must fail closed.
         let mut dfa = dfa_compile(&[b"AKIA".as_slice()]);
@@ -795,6 +967,40 @@ mod tests {
                 }
             ),
             "expected ShapeMismatch with the non-root-accept reason, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn from_bytes_rejects_out_of_range_transition_target() {
+        // Every transition value is consumed as the next state index
+        // (`transitions[state * 256 + byte]`), so a target >= state_count would
+        // OOB-index on the following step. A corrupt/stale cache blob must fail
+        // closed at decode, not panic (or read a garbage state) mid-scan.
+        let mut dfa = dfa_compile(&[b"abc".as_slice()]);
+        assert!(
+            dfa.state_count >= 2,
+            "precondition: fixture must have real states"
+        );
+        assert!(
+            dfa.transitions
+                .iter()
+                .all(|&t| (t as usize) < dfa.state_count as usize),
+            "precondition: an honest compile keeps every transition target in range"
+        );
+        // state_count itself is the first out-of-range state id (valid ids are 0..state_count).
+        // Forge only this one target; every length/offset table stays consistent, so the
+        // rejection is attributable solely to the new bounds check.
+        dfa.transitions[0] = dfa.state_count;
+        let bytes = dfa.to_bytes().expect("encode forged DFA wire blob");
+        let err = CompiledDfa::from_bytes(&bytes).unwrap_err();
+        assert!(
+            matches!(
+                err,
+                DfaWireError::ShapeMismatch {
+                    reason: "transition target out of range for state_count"
+                }
+            ),
+            "expected the transition-target range violation, got {err:?}"
         );
     }
 

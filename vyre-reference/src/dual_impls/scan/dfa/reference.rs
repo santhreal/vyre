@@ -48,8 +48,8 @@ impl common::ReferenceEvaluator for PatternMatchDfa {
 mod tests {
     use super::*;
     use crate::dual_impls::common::ReferenceEvaluator;
-    use vyre_primitives::matching::dfa_compile;
     use crate::workgroup::Memory;
+    use vyre_primitives::matching::dfa_compile;
 
     /// Verifies that the reference evaluator correctly decodes a V2 wire blob
     /// and finds the pattern at the expected offset. Before the fix the parser
@@ -64,7 +64,7 @@ mod tests {
             .expect("Fix: dfa_compile must produce a serializable DFA");
 
         let primitive = PatternMatchDfa { dfa: wire_bytes };
-        // Haystack: "xxabcxx" — pattern starts at byte 2, ends (accepting) at byte 4.
+        // Haystack: "xxabcxx" (pattern starts at byte 2, ends (accepting) at byte 4).
         let haystack = Memory::from_bytes(b"xxabcxx".to_vec());
         let result = primitive
             .evaluate(&[haystack])

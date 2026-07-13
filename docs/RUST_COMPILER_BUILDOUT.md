@@ -11,7 +11,7 @@ path). The Rust path mirrors the C separation of concerns.
   corpus, built by composing **weir** dataflow analyses.
   **Status (2026-05-30):** the borrow checker is implemented and rustc-gated via
   a dedicated `crate::borrowck` NLL engine (see P2). The "composing weir" form of
-  the mission is not yet met — tracked as an open refactor, not a behaviour gap.
+  the mission is not yet met (tracked as an open refactor, not a behaviour gap).
 - **Trajectory:** grow incrementally into a whole Rust compiler. Each grammar
   widening ships with its own `rustc` differential gate. No widening without a
   gate.
@@ -107,19 +107,19 @@ binary**, with file/line/value assertions, never `assert!(is_ok)`.
 - [ ] Clear 145 orphan `__law7_split` dirs; simplify the 3 scanners that special-case them. Verify: `find ... -name __law7_split | wc -l` == 0; gates still green.
 - [ ] Build-C-compiler policy decided (distcc installed here, or `CC=gcc` pinned in a documented dev override).
 
-### P1 - Frontend semantics for the nano-subset  (DONE — verified 2026-05-30)
+### P1 - Frontend semantics for the nano-subset  (DONE, verified 2026-05-30)
 - [x] `sema::resolve`: real scope graph + name resolution; rustc differential gate.
 - [x] `sema::typeck`: real type environment for `i32`/`bool`/refs; rustc differential gate.
 - [x] `lower`: nano-subset AST -> `Program`; reference-oracle semantic gate.
 - Done-when: `compile_unit` with semantics enabled succeeds on the corpus and matches rustc accept/reject; no honest-Err left on the wired path.
 - Verify: `cargo test -p vyre-frontend-rust --test rustc_differential` and `cargo test -p vyre-libs --features rust-parser --test rust_lower_exec_oracle` (lower+run vs AST interp + live rustc).
 
-### P2 - Borrow checker (release headline)  (IMPLEMENTED + gated — see note)
+### P2 - Borrow checker (release headline)  (IMPLEMENTED + gated, see note)
 - [x] `sema::cfg`: nano-subset AST -> CFG (basic blocks, edges, def/use sites).
 - [x] Borrow/ownership conflict + escape + mutability checks (E0499/E0502/E0597/E0596) with NLL loan-liveness.
 - [x] `tests/rust_sema_borrow_oracle.rs` + `rustc_nll_facts.rs`: rustc differential on the borrow corpus.
 - **Note (coherence):** the shipped conflict checker uses a dedicated CFG + NLL loan-liveness engine in `crate::borrowck`, NOT (yet) a composition of weir `live`/`must_init`/`def_use` as this plan's W2/P2 originally specified. The accept/reject behaviour is gated against rustc; the weir-composition refactor (to satisfy invariant 2's "composes weir; does not reimplement dataflow") remains open. Track as a P3 follow-up, not a correctness gap.
-- Done-when (original): borrow checker accepts/rejects exactly as rustc on the corpus — MET; weir-composition invariant — OPEN.
+- Done-when (original): borrow checker accepts/rejects exactly as rustc on the corpus. MET; weir-composition invariant. OPEN.
 
 ### P3 - weir depth + perf
 - [ ] Fix IFDS single-lane GPU grid + serial scans (PERF-003/4/5); parity preserved.
@@ -157,5 +157,5 @@ test-generation workers.
 - GPU runtime proof for weir/borrow perf needs the RTX 5090 desktop (santhserver
   has the 3080 Ti but no CUDA toolkit); CPU correctness is fully verifiable here.
 - Borrow-checker scope creep: hold the nano-subset line; widen only via P4 tasks.
-- "Green gate" theater: the prior legendary gate ran on uncommitted WIP with a
+- "Green gate" theater: the prior depth gate ran on uncommitted WIP with a
   static assertion estimate. This plan requires executed tests, not estimates.

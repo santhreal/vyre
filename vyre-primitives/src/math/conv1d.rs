@@ -325,4 +325,78 @@ mod tests {
         assert_eq!(out, vec![458_752]);
         assert_eq!(out.capacity(), capacity);
     }
+
+    /// Run `conv1d_program` through the reference interpreter and return the
+    /// `output` buffer (the only ReadWrite buffer, so it lands at `outputs[0]`).
+    fn run_conv1d_ir(
+        count: u32,
+        radius: u32,
+        stride: u32,
+        input: &[u32],
+        weights: &[u32],
+    ) -> Vec<u32> {
+        use vyre_reference::value::Value;
+        let pack = |w: &[u32]| Value::from(crate::wire::pack_u32_slice(w));
+        let outputs = vyre_reference::reference_eval(
+            &conv1d_program(count, radius),
+            &[
+                pack(input),
+                pack(&vec![0u32; count as usize]),
+                pack(weights),
+                pack(&pack_params(count, stride, radius)),
+            ],
+        )
+        .expect("conv1d program must execute in the reference interpreter");
+        outputs[0]
+            .to_bytes()
+            .chunks_exact(4)
+            .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
+            .collect()
+    }
+
+    /// The IR (`conv1d_program`) and `cpu_conv1d` both exist but no test proved
+    /// they AGREE - every other test exercises only the CPU ref. This runs the
+    /// real IR through reference_eval and requires bit-exact equality with
+    /// `cpu_conv1d`, then pins the known inventory accumulators so the assertion
+    /// is non-vacuous.
+    #[test]
+    fn conv1d_program_ir_matches_cpu_reference_averaging() {
+        let input = vec![100u32, 200, 300, 400, 500, 600, 700, 800];
+        let weights = vec![16384u32, 32768, 16384]; // [0.25, 0.5, 0.25] in 16.16
+        let got = run_conv1d_ir(input.len() as u32, 1, 1, &input, &weights);
+        assert_eq!(
+            got,
+            cpu_conv1d(&input, &weights, 1),
+            "conv1d IR diverged from cpu_conv1d"
+        );
+        assert_eq!(
+            got,
+            vec![
+                8_192_000, 13_107_200, 19_660_800, 26_214_400, 32_768_000, 39_321_600, 45_875_200,
+                50_790_400,
+            ],
+            "conv1d IR must match the known inventory fixed-point accumulators"
+        );
+    }
+
+    /// count > 256 spans more than one workgroup of the `[256,1,1]` dispatch, so
+    /// this exercises the GLOBAL `gid_x` element indexing + clamped boundary
+    /// across the workgroup seam with a 5-tap (radius 2) kernel.
+    #[test]
+    fn conv1d_program_ir_matches_cpu_reference_across_workgroup_seam() {
+        let count = 300u32;
+        let input: Vec<u32> = (0..count).map(|i| (i % 97) + 1).collect();
+        let weights = vec![8192u32, 12288, 24576, 12288, 8192]; // symmetric 5-tap
+        let got = run_conv1d_ir(count, 2, 1, &input, &weights);
+        assert_eq!(
+            got.len(),
+            count as usize,
+            "conv1d must emit one output per element"
+        );
+        assert_eq!(
+            got,
+            cpu_conv1d(&input, &weights, 1),
+            "conv1d IR diverged from cpu_conv1d at count>256 (workgroup-seam gid indexing)"
+        );
+    }
 }

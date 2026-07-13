@@ -3,22 +3,22 @@
 //! Composed entirely from `vyre-libs` LEGO blocks.
 
 use crate::scan::classic_ac::{
-    build_ac_bounded_count_suffix3_prefilter_program,
-    classic_ac_candidate_suffix3_bloom_words, presence_bitmap_words, presence_by_region_words,
+    ascii_case_variants, build_ac_bounded_count_suffix3_prefilter_program,
+    classic_ac_candidate_suffix3_bloom_words_ci, presence_bitmap_words, presence_by_region_words,
     try_build_ac_bounded_ranges_suffix3_prefilter_program_ext,
     try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program,
     try_build_ac_bounded_ranges_suffix3_presence_by_region_program,
     try_build_ac_bounded_ranges_suffix3_presence_program, CLASSIC_AC_SUFFIX2_MASK_WORDS,
 };
-use crate::scan::dfa::{dfa_compile, CompiledDfa};
+use crate::scan::dfa::{dfa_compile, dfa_compile_case_insensitive, CompiledDfa};
 use crate::scan::dispatch_io::ScanDispatchScratch;
 use std::borrow::Cow;
 use std::collections::TryReserveError;
 use vyre::backend::PendingDispatch;
-use vyre::ir::{Expr, Node, Program};
+use vyre::ir::Program;
 use vyre::{DispatchConfig, VyreBackend};
+use vyre_driver::Resource;
 pub use vyre_foundation::match_result::Match;
-use vyre_primitives::hash::fnv1a::{fnv1a64_initial_state, fnv1a64_update_byte};
 use vyre_primitives::matching::DfaWireError;
 
 const LITERAL_SET_DEFAULT_MAX_MATCHES: u32 = 10_000;
@@ -139,6 +139,13 @@ pub struct GpuLiteralSet {
     pub pattern_lengths: Vec<u32>,
     /// The pre-built vyre Program.
     pub program: Program,
+    /// ASCII case-insensitive matching. When set, the `dfa` transition table is
+    /// folded (`b'A'` behaves like `b'a'`) and the candidate prefilter masks are
+    /// built to admit BOTH cases of each pattern byte. It is a compile-time
+    /// property that must survive wire round-trips (the masks are rebuilt lazily
+    /// from the raw `pattern_bytes`, which are identical for a case-sensitive and
+    /// a case-insensitive set (so the flag, not the bytes, distinguishes them)).
+    pub case_insensitive: bool,
 }
 
 /// Reusable hot-loop state for [`GpuLiteralSet`] scans.
@@ -263,7 +270,7 @@ pub const LITERAL_SET_PRESENCE_BY_REGION_OUTPUT_RESOURCE_INDEX: usize = 6;
 /// Owns the exact byte buffers consumed by the region-presence program. A
 /// resident runtime uploads the immutable DFA / suffix-prefilter tables ONCE,
 /// resets [`LITERAL_SET_PRESENCE_BY_REGION_OUTPUT_RESOURCE_INDEX`], dispatches,
-/// and reads back the per-region presence bitmap — re-uploading only the haystack
+/// and reads back the per-region presence bitmap, re-uploading only the haystack
 /// across the files of a corpus. A direct caller can dispatch `inputs` through a
 /// borrowed-input backend and decode binding 0 via [`Self::decode_presence`].
 #[derive(Clone, Debug)]
@@ -335,8 +342,8 @@ struct PresenceImmutableTableBytes {
 /// program, produced by [`GpuLiteralSet::resident_presence_tables`] and consumed
 /// by [`ResidentPresencePipeline`](crate::scan::resident_presence::ResidentPresencePipeline).
 ///
-/// Every field here is a function of the compiled matcher alone — none depends on
-/// the haystack or region layout — so a resident session uploads them once and
+/// Every field here is a function of the compiled matcher alone, none depends on
+/// the haystack or region layout, so a resident session uploads them once and
 /// re-dispatches across a whole corpus.
 pub(crate) struct ResidentPresenceTables {
     /// Region-presence program sized for up to `max_regions` coalesced files.
@@ -388,10 +395,10 @@ struct LiteralSetPrefilterTables {
 /// once and then referenced (in binding order) by a GPU dispatch's `borrowed_inputs`
 /// array.
 ///
-/// Four scan entry points — [`GpuLiteralSet::scan_presence`],
+/// Four scan entry points: [`GpuLiteralSet::scan_presence`],
 /// [`GpuLiteralSet::scan_presence_by_region_with_scratch`],
 /// [`GpuLiteralSet::scan_presence_and_positions_by_region`] (via its scratch entry),
-/// and `scan_into_with_program` — declared the IDENTICAL seven-view block inline.
+/// and `scan_into_with_program`: declared the IDENTICAL seven-view block inline.
 /// This is the single source of that byte prep so the view set cannot drift between
 /// the four kernels (a divergence would silently miswire one dispatch's bindings).
 /// On little-endian hosts every view is a zero-copy borrow
@@ -429,6 +436,707 @@ impl<'a> DfaPrefilterByteViews<'a> {
             candidate_suffix2_mask: u32_words_as_le_bytes(&prefilter.candidate_suffix2_mask),
             candidate_suffix3_bloom: u32_words_as_le_bytes(&prefilter.candidate_suffix3_bloom),
         }
+    }
+}
+
+/// Result of [`GpuLiteralSet::scan_all_timed`]: the backend-owned timing plus a
+/// flag stating WHICH dispatch that timing describes.
+///
+/// `scan_all` auto-resizes (up to two dispatches). `resized == false` means a
+/// single dispatch produced the returned matches and `timed` is that dispatch's
+/// timing; `resized == true` means the first pass saturated and `timed` is the
+/// resize RE-dispatch's timing (the one whose output was decoded). The flag makes
+/// the attribution explicit rather than silently reporting one launch's time as
+/// though no resize occurred (Law 10).
+#[derive(Debug)]
+pub struct ScanAllTimed {
+    /// Timing of the dispatch whose output produced the returned matches.
+    pub timed: vyre_driver::TimedDispatchResult,
+    /// `true` iff an auto-resize occurred and `timed` is the resize re-dispatch.
+    pub resized: bool,
+}
+
+/// Resident literal-set POSITION session: uploads the immutable DFA + suffix
+/// prefilter tables into backend resources ONCE, then re-dispatches the
+/// `(pattern_id, start, end)` match scan across a corpus re-uploading only the
+/// per-file haystack (and resetting the 4-byte match counter), the position-scan
+/// sibling of [`ResidentPresencePipeline`], eliminating the multi-MiB per-scan
+/// table re-upload the borrowed [`GpuLiteralSet::scan_into`] path repeats on every
+/// file.
+///
+/// Construct with [`GpuLiteralSet::prepare_resident_scan`]. All eleven bindings are
+/// resident (the CUDA resident dispatch rejects a borrowed-resource mix), including
+/// the `matches` output resource, the resident dispatch resolves it as an output
+/// and reads it back. The `matches` buffer is fixed-size (`max_matches` triples);
+/// a scan that overflows fails CLOSED (never a silent truncated decode, Law 10).
+pub struct ResidentLiteralScan {
+    /// Match program sized for `max_matches` triples.
+    program: Program,
+    /// Resident haystack buffer, sized to `haystack_capacity` padded bytes.
+    haystack: Resource,
+    /// Resident DFA transition table (immutable, uploaded once).
+    transitions: Resource,
+    /// Resident DFA output-offset table (immutable, uploaded once).
+    output_offsets: Resource,
+    /// Resident DFA output-record table (immutable, uploaded once).
+    output_records: Resource,
+    /// Resident per-pattern length table (immutable, uploaded once).
+    pattern_lengths: Resource,
+    /// Resident haystack-length control buffer (1 u32; re-uploaded per scan).
+    haystack_len_buf: Resource,
+    /// Resident atomic match counter (1 u32; reset to 0 per scan).
+    match_count_buf: Resource,
+    /// Resident suffix prefilter end mask (immutable, uploaded once).
+    candidate_end_mask: Resource,
+    /// Resident suffix prefilter 2-gram mask (immutable, uploaded once).
+    candidate_suffix2_mask: Resource,
+    /// Resident suffix prefilter 3-gram bloom (immutable, uploaded once).
+    candidate_suffix3_bloom: Resource,
+    /// Resident match-output buffer (`max_matches × 3` u32; the read-back triples).
+    matches_buf: Resource,
+    /// Padded byte capacity of the resident haystack buffer.
+    haystack_capacity: usize,
+    /// Match cap this session's `matches` buffer was sized for.
+    max_matches: u32,
+    /// Program workgroup X extent, for the per-scan byte-scan dispatch geometry.
+    workgroup_x: u32,
+}
+
+// SAFETY mirror of the `ResidentPresencePipeline` contract: `Resource` handles are
+// plain ids and `Program` is `Send + Sync`.
+const _: () = {
+    const fn assert_send_sync<T: Send + Sync>() {}
+    let _ = assert_send_sync::<ResidentLiteralScan>;
+};
+
+/// Allocate a resident buffer sized to `bytes` and upload them once. The
+/// position-session analogue of `resident_presence`'s `allocate_and_upload`.
+fn allocate_and_upload_resident(
+    backend: &dyn VyreBackend,
+    bytes: &[u8],
+) -> Result<Resource, vyre::BackendError> {
+    let resource = backend.allocate_resident(bytes.len())?;
+    backend.upload_resident(&resource, bytes)?;
+    Ok(resource)
+}
+
+impl GpuLiteralSet {
+    /// Prepare a RESIDENT position-scan session: upload the immutable DFA +
+    /// suffix-prefilter tables into backend resources ONCE, sized for a haystack up
+    /// to `haystack_capacity_bytes` and a fixed `max_matches` triple cap. Each
+    /// [`ResidentLiteralScan::scan_into`] then re-uploads only the haystack and
+    /// resets the 4-byte counter, the position-scan sibling of
+    /// [`Self::prepare_resident_presence`].
+    ///
+    /// The `matches` output is resident and fixed-size; a batch with more than
+    /// `max_matches` matches fails CLOSED at scan time (never a silent partial).
+    /// Callers that must not fail on overflow use the borrowed auto-resizing
+    /// [`Self::scan_all`] instead.
+    ///
+    /// # Errors
+    /// Returns [`vyre::BackendError`] if the backend cannot allocate/upload resident
+    /// resources, or if the program/table sizing overflows the GPU ABI.
+    pub fn prepare_resident_scan(
+        &self,
+        backend: &dyn VyreBackend,
+        haystack_capacity_bytes: usize,
+        max_matches: u32,
+    ) -> Result<ResidentLiteralScan, vyre::BackendError> {
+        use crate::scan::dispatch_io;
+
+        let program = self.program_for_match_capacity(max_matches)?.into_owned();
+        let prefilter_tables = self.build_prefilter_tables()?;
+        let tables = self.presence_immutable_table_bytes(&prefilter_tables)?;
+        let (_declared_words, matches_output_bytes) = literal_set_match_output_layout(max_matches)?;
+
+        let haystack_capacity = dispatch_io::haystack_padded_u32_byte_len(haystack_capacity_bytes)?;
+        let haystack = backend.allocate_resident(haystack_capacity)?;
+
+        // The seven immutable tables: allocate + upload ONCE.
+        let transitions = allocate_and_upload_resident(backend, &tables.transitions)?;
+        let output_offsets = allocate_and_upload_resident(backend, &tables.output_offsets)?;
+        let output_records = allocate_and_upload_resident(backend, &tables.output_records)?;
+        let pattern_lengths = allocate_and_upload_resident(backend, &tables.pattern_lengths)?;
+        let candidate_end_mask = allocate_and_upload_resident(backend, &tables.candidate_end_mask)?;
+        let candidate_suffix2_mask =
+            allocate_and_upload_resident(backend, &tables.candidate_suffix2_mask)?;
+        let candidate_suffix3_bloom =
+            allocate_and_upload_resident(backend, &tables.candidate_suffix3_bloom)?;
+
+        // Per-scan control + output buffers (all resident (no borrowed mix)).
+        let haystack_len_buf = backend.allocate_resident(U32_BYTES)?;
+        let match_count_buf = backend.allocate_resident(U32_BYTES)?;
+        let matches_buf = backend.allocate_resident(matches_output_bytes)?;
+
+        Ok(ResidentLiteralScan {
+            workgroup_x: program.workgroup_size[0],
+            program,
+            haystack,
+            transitions,
+            output_offsets,
+            output_records,
+            pattern_lengths,
+            haystack_len_buf,
+            match_count_buf,
+            candidate_end_mask,
+            candidate_suffix2_mask,
+            candidate_suffix3_bloom,
+            matches_buf,
+            haystack_capacity,
+            max_matches,
+        })
+    }
+}
+
+impl ResidentLiteralScan {
+    /// Scan `haystack` against the resident session, decoding the `(pattern_id,
+    /// start, end)` triples into caller-owned `matches` (cleared first). IDENTICAL
+    /// output to [`GpuLiteralSet::scan_into`] with the same `max_matches`. `scratch`
+    /// reuses the packed-haystack staging across scans.
+    ///
+    /// # Errors
+    /// Returns [`vyre::BackendError`] on dispatch/readback failure, if `haystack`
+    /// exceeds the resident capacity, or if the match count exceeds `max_matches`
+    /// (fail closed (never a silent truncated decode)).
+    pub fn scan_into(
+        &self,
+        backend: &dyn VyreBackend,
+        haystack: &[u8],
+        matches: &mut Vec<Match>,
+        scratch: &mut Vec<u8>,
+    ) -> Result<(), vyre::BackendError> {
+        self.scan_into_timed(backend, haystack, matches, scratch)
+            .map(|_timed| ())
+    }
+
+    /// [`Self::scan_into`] returning the backend-owned dispatch timing
+    /// ([`vyre_driver::TimedDispatchResult`]) so a consumer can attribute the
+    /// resident scan's GPU-kernel time separately from host staging/readback 
+    /// matching [`ResidentPresencePipeline::scan_into_timed`].
+    ///
+    /// # Errors
+    /// See [`Self::scan_into`].
+    pub fn scan_into_timed(
+        &self,
+        backend: &dyn VyreBackend,
+        haystack: &[u8],
+        matches: &mut Vec<Match>,
+        scratch: &mut Vec<u8>,
+    ) -> Result<vyre_driver::TimedDispatchResult, vyre::BackendError> {
+        use crate::scan::dispatch_io;
+
+        matches.clear();
+        let haystack_len = dispatch_io::scan_guard(
+            haystack,
+            "ResidentLiteralScan::scan",
+            dispatch_io::DEFAULT_MAX_SCAN_BYTES,
+        )?;
+
+        // Stage the haystack into the resident buffer (real bytes only; the kernel
+        // bounds its cursor with haystack_len so the stale tail is never read).
+        dispatch_io::pack_haystack_u32_into(haystack, scratch)?;
+        if scratch.len() > self.haystack_capacity {
+            return Err(vyre::BackendError::new(format!(
+                "ResidentLiteralScan haystack is {} packed byte(s) but the resident buffer holds {}. Fix: raise haystack_capacity_bytes in prepare_resident_scan or shard the haystack.",
+                scratch.len(),
+                self.haystack_capacity
+            )));
+        }
+        backend.upload_resident_at(&self.haystack, 0, scratch)?;
+
+        // Reset only the atomic match counter (binding 6). Triples are written from
+        // slot 0 upward and only `count` are read back, so stale triples beyond the
+        // new count are never observed (a 4-byte reset, not a full buffer clear).
+        backend.upload_resident_at(&self.match_count_buf, 0, &0u32.to_le_bytes())?;
+        backend.upload_resident_at(&self.haystack_len_buf, 0, &haystack_len.to_le_bytes())?;
+
+        // Bind in program (BufferDecl) order, every binding resident. This is the
+        // literal MATCH program's 11-binding order (0..=10); binding 6 (match_count,
+        // read_write) and binding 10 (matches, output) are the two read-back buffers.
+        let resources = [
+            self.haystack.clone(),                // 0: haystack (Packed U32)
+            self.transitions.clone(),             // 1: transitions
+            self.output_offsets.clone(),          // 2: output_offsets
+            self.output_records.clone(),          // 3: output_records
+            self.pattern_lengths.clone(),         // 4: pattern_lengths
+            self.haystack_len_buf.clone(),        // 5: haystack_len
+            self.match_count_buf.clone(),         // 6: match_count (read_write)
+            self.candidate_end_mask.clone(),      // 7: candidate_end_mask
+            self.candidate_suffix2_mask.clone(),  // 8: candidate_suffix2_mask
+            self.candidate_suffix3_bloom.clone(), // 9: candidate_suffix3_bloom
+            self.matches_buf.clone(),             // 10: matches (output)
+        ];
+
+        let config = dispatch_io::byte_scan_dispatch_config(haystack_len, self.workgroup_x);
+        let timed = backend.dispatch_resident_timed(&self.program, &resources, &config)?;
+
+        // Output ordering = read_write then output by binding: match_count(6) ->
+        // outputs[0], matches(10) -> outputs[1], the exact shape the borrowed match
+        // dispatch produces, so the ONE-PLACE sync decoder applies unchanged. The
+        // capped decoder fails closed if the device count exceeds max_matches.
+        decode_literal_set_outputs_into(&timed.outputs, self.max_matches, matches)?;
+        Ok(timed)
+    }
+
+    /// The match cap this session's resident `matches` buffer was sized for.
+    #[must_use]
+    pub fn max_matches(&self) -> u32 {
+        self.max_matches
+    }
+
+    /// Padded byte capacity of the resident haystack buffer.
+    #[must_use]
+    pub fn haystack_capacity(&self) -> usize {
+        self.haystack_capacity
+    }
+
+    /// Free every resident resource this session allocated. Attempts all frees and
+    /// returns the first error; the session is consumed.
+    ///
+    /// # Errors
+    /// Returns the first [`vyre::BackendError`] from freeing a resource.
+    pub fn free(self, backend: &dyn VyreBackend) -> Result<(), vyre::BackendError> {
+        let mut first_err = None;
+        for resource in [
+            self.haystack,
+            self.transitions,
+            self.output_offsets,
+            self.output_records,
+            self.pattern_lengths,
+            self.haystack_len_buf,
+            self.match_count_buf,
+            self.candidate_end_mask,
+            self.candidate_suffix2_mask,
+            self.candidate_suffix3_bloom,
+            self.matches_buf,
+        ] {
+            if let Err(error) = backend.free_resident(resource) {
+                first_err.get_or_insert(error);
+            }
+        }
+        first_err.map_or(Ok(()), Err)
+    }
+}
+
+/// A RESIDENT session for the FUSED per-region presence + positions scan
+/// ([`GpuLiteralSet::scan_presence_and_positions_by_region`]).
+///
+/// Construct with [`GpuLiteralSet::prepare_resident_fused_scan`]. It is the
+/// fusion of [`ResidentPresencePipeline`] (the per-region presence bitmap +
+/// region controls) and [`ResidentLiteralScan`] (the positioned match output):
+/// one all-resident dispatch of the fused program produces BOTH the per-region
+/// presence bitmap AND the `(pattern_id, start, end)` triples, uploading the
+/// immutable DFA + suffix-prefilter tables ONCE and re-staging only the haystack,
+/// the region controls, and two zeroed accumulators (presence prefix + match
+/// counter) per scan.
+///
+/// All 14 bindings (0..=13) are resident, including the two read-write
+/// accumulators (presence at 6, match_count at 12) and the `matches` output at
+/// 13, the CUDA resident dispatch rejects a borrowed mix. The `matches` buffer
+/// is fixed-size (`max_matches` triples); a scan that overflows fails CLOSED
+/// (never a silent truncated decode, Law 10).
+pub struct ResidentFusedRegionScan {
+    /// Fused program sized for `max_regions` files and `max_matches` triples.
+    program: Program,
+    haystack: Resource,
+    transitions: Resource,
+    output_offsets: Resource,
+    output_records: Resource,
+    pattern_lengths: Resource,
+    haystack_len_buf: Resource,
+    /// Resident per-region presence buffer (read-write; used prefix reset per scan).
+    presence: Resource,
+    candidate_end_mask: Resource,
+    candidate_suffix2_mask: Resource,
+    candidate_suffix3_bloom: Resource,
+    /// Resident region-start offsets (sized for `max_regions`; padded per scan).
+    region_starts_buf: Resource,
+    /// Resident shard base offset control (1 u32; re-uploaded per scan).
+    region_base_buf: Resource,
+    /// Resident atomic match counter (1 u32; reset to 0 per scan).
+    match_count_buf: Resource,
+    /// Resident match-output buffer (`max_matches × 3` u32; the read-back triples).
+    matches_buf: Resource,
+    /// Padded byte capacity of the resident haystack buffer.
+    haystack_capacity: usize,
+    /// Largest coalesced-file count the presence/region buffers were sized for.
+    max_regions: u32,
+    /// Presence bitmap `u32` words per region.
+    presence_words: u32,
+    /// Match cap this session's `matches` buffer was sized for.
+    max_matches: u32,
+    /// Program workgroup X extent, for the per-scan byte-scan dispatch geometry.
+    workgroup_x: u32,
+}
+
+// SAFETY mirror of the sibling resident pipelines: `Resource` handles are plain
+// ids and `Program` is `Send + Sync`.
+const _: () = {
+    const fn assert_send_sync<T: Send + Sync>() {}
+    let _ = assert_send_sync::<ResidentFusedRegionScan>;
+};
+
+impl GpuLiteralSet {
+    /// Prepare a RESIDENT session for the FUSED per-region presence + positions
+    /// scan: upload the immutable DFA + suffix-prefilter tables ONCE, sized for a
+    /// haystack up to `haystack_capacity_bytes`, up to `max_regions` coalesced
+    /// files, and a fixed `max_matches` triple cap. Each
+    /// [`ResidentFusedRegionScan::scan_into`] then re-uploads only the haystack,
+    /// the region controls, and the two zeroed accumulators, the fused sibling of
+    /// [`Self::prepare_resident_presence`] and [`Self::prepare_resident_scan`].
+    ///
+    /// The `matches` output is resident and fixed-size; a batch with more than
+    /// `max_matches` matches fails CLOSED at scan time (never a silent partial).
+    ///
+    /// # Errors
+    /// Returns [`vyre::BackendError`] if `max_regions` is zero, if the backend
+    /// cannot allocate/upload resident resources, or if the program/table sizing
+    /// overflows the GPU ABI.
+    pub fn prepare_resident_fused_scan(
+        &self,
+        backend: &dyn VyreBackend,
+        haystack_capacity_bytes: usize,
+        max_regions: u32,
+        max_matches: u32,
+    ) -> Result<ResidentFusedRegionScan, vyre::BackendError> {
+        use crate::scan::dispatch_io;
+
+        let pattern_count = u32::try_from(self.pattern_lengths.len()).map_err(|_| {
+            vyre::BackendError::new(
+                "literal_set fused resident scan: pattern count exceeds u32 GPU ABI".to_string(),
+            )
+        })?;
+        if max_regions == 0 {
+            return Err(vyre::BackendError::new(
+                "literal_set resident fused scan: max_regions must be >= 1 (it sizes the resident presence buffer and the kernel's region binary-search width). Fix: pass the largest coalesced-batch file count the session will scan.".to_string(),
+            ));
+        }
+        let program = try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program(
+            &self.dfa,
+            pattern_count,
+            max_regions,
+            max_matches,
+        )
+        .map_err(vyre::BackendError::new)?;
+        let prefilter_tables = self.build_prefilter_tables()?;
+        let tables = self.presence_immutable_table_bytes(&prefilter_tables)?;
+        let presence_words = presence_bitmap_words(pattern_count);
+        let (_declared_words, matches_output_bytes) = literal_set_match_output_layout(max_matches)?;
+
+        let haystack_capacity = dispatch_io::haystack_padded_u32_byte_len(haystack_capacity_bytes)?;
+        let haystack = backend.allocate_resident(haystack_capacity)?;
+
+        // The seven immutable tables: allocate + upload ONCE.
+        let transitions = allocate_and_upload_resident(backend, &tables.transitions)?;
+        let output_offsets = allocate_and_upload_resident(backend, &tables.output_offsets)?;
+        let output_records = allocate_and_upload_resident(backend, &tables.output_records)?;
+        let pattern_lengths = allocate_and_upload_resident(backend, &tables.pattern_lengths)?;
+        let candidate_end_mask = allocate_and_upload_resident(backend, &tables.candidate_end_mask)?;
+        let candidate_suffix2_mask =
+            allocate_and_upload_resident(backend, &tables.candidate_suffix2_mask)?;
+        let candidate_suffix3_bloom =
+            allocate_and_upload_resident(backend, &tables.candidate_suffix3_bloom)?;
+
+        // Read-write presence buffer sized for the full max_regions capacity.
+        let presence_capacity_words = (max_regions as usize)
+            .checked_mul(presence_words as usize)
+            .ok_or_else(|| {
+                vyre::BackendError::new(format!(
+                    "resident fused scan capacity {max_regions} regions × {presence_words} words/region overflows host usize. Fix: lower max_regions or shard the pattern set."
+                ))
+            })?;
+        let presence_capacity_bytes =
+            presence_capacity_words.checked_mul(U32_BYTES).ok_or_else(|| {
+                vyre::BackendError::new(
+                    "resident fused scan presence-buffer byte capacity overflows host usize. Fix: lower max_regions or shard the pattern set.".to_string(),
+                )
+            })?;
+        let presence = backend.allocate_resident(presence_capacity_bytes)?;
+
+        // Per-scan control + output buffers (all resident (no borrowed mix)).
+        let haystack_len_buf = backend.allocate_resident(U32_BYTES)?;
+        let region_starts_capacity_bytes =
+            (max_regions as usize).checked_mul(U32_BYTES).ok_or_else(|| {
+                vyre::BackendError::new(
+                    "resident fused scan region-starts byte capacity overflows host usize. Fix: lower max_regions.".to_string(),
+                )
+            })?;
+        let region_starts_buf = backend.allocate_resident(region_starts_capacity_bytes)?;
+        let region_base_buf = backend.allocate_resident(U32_BYTES)?;
+        let match_count_buf = backend.allocate_resident(U32_BYTES)?;
+        let matches_buf = backend.allocate_resident(matches_output_bytes)?;
+
+        Ok(ResidentFusedRegionScan {
+            workgroup_x: program.workgroup_size[0],
+            program,
+            haystack,
+            transitions,
+            output_offsets,
+            output_records,
+            pattern_lengths,
+            haystack_len_buf,
+            presence,
+            candidate_end_mask,
+            candidate_suffix2_mask,
+            candidate_suffix3_bloom,
+            region_starts_buf,
+            region_base_buf,
+            match_count_buf,
+            matches_buf,
+            haystack_capacity,
+            max_regions,
+            presence_words,
+            max_matches,
+        })
+    }
+}
+
+impl ResidentFusedRegionScan {
+    /// Scan a coalesced batch (`region_starts` ascending, beginning at 0) against
+    /// the resident session, decoding the per-region presence bitmap into `out`
+    /// and the `(pattern_id, start, end)` triples into `matches`: IDENTICAL output
+    /// to [`GpuLiteralSet::scan_presence_and_positions_by_region`] with the same
+    /// `max_matches`. `scratch` reuses the packed-haystack / reset staging across
+    /// scans.
+    ///
+    /// # Errors
+    /// Returns [`vyre::BackendError`] on dispatch/readback failure, if
+    /// `region_starts` is empty / does not begin at 0, if `region_count` exceeds
+    /// `max_regions`, if `haystack` exceeds the resident capacity, or if the match
+    /// count exceeds `max_matches` (fail closed (never a silent truncated decode)).
+    #[allow(clippy::too_many_arguments)]
+    pub fn scan_into(
+        &self,
+        backend: &dyn VyreBackend,
+        haystack: &[u8],
+        region_starts: &[u32],
+        region_base: u32,
+        out: &mut Vec<u32>,
+        matches: &mut Vec<Match>,
+        scratch: &mut Vec<u8>,
+    ) -> Result<(), vyre::BackendError> {
+        self.scan_into_timed(
+            backend,
+            haystack,
+            region_starts,
+            region_base,
+            out,
+            matches,
+            scratch,
+        )
+        .map(|_timed| ())
+    }
+
+    /// [`Self::scan_into`] returning the backend-owned dispatch timing
+    /// ([`vyre_driver::TimedDispatchResult`]) so a consumer can attribute the fused
+    /// resident scan's GPU-kernel time separately from host staging/readback.
+    ///
+    /// # Errors
+    /// See [`Self::scan_into`].
+    #[allow(clippy::too_many_arguments)]
+    pub fn scan_into_timed(
+        &self,
+        backend: &dyn VyreBackend,
+        haystack: &[u8],
+        region_starts: &[u32],
+        region_base: u32,
+        out: &mut Vec<u32>,
+        matches: &mut Vec<Match>,
+        scratch: &mut Vec<u8>,
+    ) -> Result<vyre_driver::TimedDispatchResult, vyre::BackendError> {
+        use crate::scan::dispatch_io;
+
+        out.clear();
+        matches.clear();
+
+        let region_count = u32::try_from(region_starts.len()).map_err(|_| {
+            vyre::BackendError::new(
+                "resident fused scan: region count exceeds u32 GPU ABI".to_string(),
+            )
+        })?;
+        if region_count == 0 {
+            return Err(vyre::BackendError::new(
+                "resident fused scan: region_starts must be non-empty. Fix: pass one start offset per coalesced file, beginning with 0.".to_string(),
+            ));
+        }
+        if region_starts[0] != 0 {
+            return Err(vyre::BackendError::new(
+                "resident fused scan: region_starts[0] must be 0 (the kernel binary-search lower bound). Fix: the first coalesced file must start at offset 0.".to_string(),
+            ));
+        }
+        if region_count > self.max_regions {
+            return Err(vyre::BackendError::new(format!(
+                "resident fused scan batch has {region_count} regions but the session was prepared for at most {}. Fix: raise max_regions in prepare_resident_fused_scan, or dispatch this batch through the per-batch-sized borrowed GpuLiteralSet::scan_presence_and_positions_by_region.",
+                self.max_regions
+            )));
+        }
+
+        let haystack_len = dispatch_io::scan_guard(
+            haystack,
+            "ResidentFusedRegionScan::scan",
+            dispatch_io::DEFAULT_MAX_SCAN_BYTES,
+        )?;
+
+        // (1) Stage the haystack (real bytes only; the kernel bounds its cursor
+        // with haystack_len so the stale tail is never read).
+        dispatch_io::pack_haystack_u32_into(haystack, scratch)?;
+        if scratch.len() > self.haystack_capacity {
+            return Err(vyre::BackendError::new(format!(
+                "ResidentFusedRegionScan haystack is {} packed byte(s) but the resident buffer holds {}. Fix: raise haystack_capacity_bytes in prepare_resident_fused_scan or shard the haystack.",
+                scratch.len(),
+                self.haystack_capacity
+            )));
+        }
+        backend.upload_resident_at(&self.haystack, 0, scratch)?;
+
+        // (2) Zero the USED prefix of the resident presence buffer (binding 6 is
+        // OR-accumulated, so it must arrive zeroed). Rows beyond region_count are
+        // never written and never read. `scratch` reuse is safe (synchronous
+        // upload copy).
+        let used_words = (region_count as usize)
+            .checked_mul(self.presence_words as usize)
+            .ok_or_else(|| {
+                vyre::BackendError::new(
+                    "resident fused scan used-word count overflows host usize. Fix: lower the region count or shard the pattern set.".to_string(),
+                )
+            })?;
+        let reset_bytes = used_words.checked_mul(U32_BYTES).ok_or_else(|| {
+            vyre::BackendError::new(
+                "resident fused scan presence-reset byte count overflows host usize. Fix: lower the region count or shard the pattern set.".to_string(),
+            )
+        })?;
+        scratch.clear();
+        scratch.resize(reset_bytes, 0);
+        backend.upload_resident_at(&self.presence, 0, scratch)?;
+
+        // (3) Per-scan control buffers (all resident). haystack_len, region_base,
+        // and the 4-byte match_count reset are each one u32.
+        backend.upload_resident_at(&self.haystack_len_buf, 0, &haystack_len.to_le_bytes())?;
+        backend.upload_resident_at(&self.region_base_buf, 0, &region_base.to_le_bytes())?;
+        backend.upload_resident_at(&self.match_count_buf, 0, &0u32.to_le_bytes())?;
+
+        // region_starts padded to the fixed max_regions width with u32::MAX (a
+        // sentinel strictly greater than any candidate position, so the region
+        // binary search never maps a hit to a padding row). `scratch` reuse safe.
+        scratch.clear();
+        let region_starts_words = self.max_regions as usize;
+        scratch.reserve(region_starts_words.saturating_mul(U32_BYTES));
+        for &start in region_starts {
+            scratch.extend_from_slice(&start.to_le_bytes());
+        }
+        for _ in (region_count as usize)..region_starts_words {
+            scratch.extend_from_slice(&u32::MAX.to_le_bytes());
+        }
+        backend.upload_resident_at(&self.region_starts_buf, 0, scratch)?;
+
+        // (4) Bind in program (BufferDecl) order, every binding resident. This is
+        // the fused program's 14-binding order (0..=13); the read-back buffers are
+        // presence(6, read_write), match_count(12, read_write) and matches(13,
+        // output).
+        let resources = [
+            self.haystack.clone(),                // 0: haystack (Packed U32)
+            self.transitions.clone(),             // 1: transitions
+            self.output_offsets.clone(),          // 2: output_offsets
+            self.output_records.clone(),          // 3: output_records
+            self.pattern_lengths.clone(),         // 4: pattern_lengths
+            self.haystack_len_buf.clone(),        // 5: haystack_len
+            self.presence.clone(),                // 6: presence (read_write)
+            self.candidate_end_mask.clone(),      // 7: candidate_end_mask
+            self.candidate_suffix2_mask.clone(),  // 8: candidate_suffix2_mask
+            self.candidate_suffix3_bloom.clone(), // 9: candidate_suffix3_bloom
+            self.region_starts_buf.clone(),       // 10: region_starts (padded)
+            self.region_base_buf.clone(),         // 11: region_base
+            self.match_count_buf.clone(),         // 12: match_count (read_write)
+            self.matches_buf.clone(),             // 13: matches (output)
+        ];
+
+        let config = dispatch_io::byte_scan_dispatch_config(haystack_len, self.workgroup_x);
+        let timed = backend.dispatch_resident_timed(&self.program, &resources, &config)?;
+
+        // Output ordering = read_write then output by binding: presence(6) ->
+        // outputs[0], match_count(12) -> outputs[1], matches(13) -> outputs[2] 
+        // the exact shape the borrowed fused dispatch produces.
+        let presence_bytes = dispatch_io::try_output_bytes(
+            &timed.outputs,
+            0,
+            "ResidentFusedRegionScan presence buffer",
+        )?;
+        decode_presence_words_into(presence_bytes, used_words, out);
+        if out.len() != used_words {
+            let returned = out.len();
+            out.clear();
+            return Err(vyre::BackendError::new(format!(
+                "ResidentFusedRegionScan presence readback returned {returned} u32 word(s) but the {region_count}-region scan needs {used_words}. Fix: ensure the backend reads back the full binding-6 presence resource."
+            )));
+        }
+
+        let count_bytes = dispatch_io::try_output_bytes(
+            &timed.outputs,
+            1,
+            "ResidentFusedRegionScan match count",
+        )?;
+        let count =
+            dispatch_io::try_read_u32_prefix(count_bytes, "ResidentFusedRegionScan match count")?;
+        let matches_bytes =
+            dispatch_io::try_output_bytes(&timed.outputs, 2, "ResidentFusedRegionScan matches")?;
+        // Capped decode: fail closed if the device count exceeds max_matches (the
+        // fixed resident matches buffer cannot hold a truncated decode. Law 10).
+        dispatch_io::try_unpack_match_triples_capped_into(
+            matches_bytes,
+            count,
+            self.max_matches,
+            "ResidentFusedRegionScan matches",
+            matches,
+        )?;
+        Ok(timed)
+    }
+
+    /// Largest coalesced-file count this session's presence buffer was sized for.
+    #[must_use]
+    pub fn max_regions(&self) -> u32 {
+        self.max_regions
+    }
+
+    /// The match cap this session's resident `matches` buffer was sized for.
+    #[must_use]
+    pub fn max_matches(&self) -> u32 {
+        self.max_matches
+    }
+
+    /// Padded byte capacity of the resident haystack buffer.
+    #[must_use]
+    pub fn haystack_capacity(&self) -> usize {
+        self.haystack_capacity
+    }
+
+    /// Free every resident resource this session allocated. Attempts all frees and
+    /// returns the first error; the session is consumed.
+    ///
+    /// # Errors
+    /// Returns the first [`vyre::BackendError`] from freeing a resource.
+    pub fn free(self, backend: &dyn VyreBackend) -> Result<(), vyre::BackendError> {
+        let mut first_err = None;
+        for resource in [
+            self.haystack,
+            self.transitions,
+            self.output_offsets,
+            self.output_records,
+            self.pattern_lengths,
+            self.haystack_len_buf,
+            self.presence,
+            self.candidate_end_mask,
+            self.candidate_suffix2_mask,
+            self.candidate_suffix3_bloom,
+            self.region_starts_buf,
+            self.region_base_buf,
+            self.match_count_buf,
+            self.matches_buf,
+        ] {
+            if let Err(error) = backend.free_resident(resource) {
+                first_err.get_or_insert(error);
+            }
+        }
+        first_err.map_or(Ok(()), Err)
     }
 }
 
@@ -478,6 +1186,168 @@ impl PendingPresenceByRegion {
     }
 }
 
+/// In-flight handle for [`GpuLiteralSet::scan_presence_async`].
+///
+/// The global-presence sibling of [`PendingPresenceByRegion`]: returned the
+/// moment the GPU dispatch is submitted so the caller can overlap host-side work
+/// with the device scan, then decode the whole-haystack presence bitmap with
+/// [`Self::await_words`]. The owned dispatch inputs are retained (never read
+/// again on the host) so their backing memory stays valid for the whole dispatch
+/// on backends whose async upload reads host memory after submit returns.
+pub struct PendingPresence {
+    pending: Box<dyn PendingDispatch>,
+    presence_words: usize,
+    // Owned dispatch inputs kept alive until `await_words`; see the field note on
+    // [`PendingPresenceByRegion`].
+    _inputs: Vec<Vec<u8>>,
+}
+
+impl PendingPresence {
+    /// Non-blocking readiness probe. `true` means [`Self::await_words`] will not
+    /// block the caller thread. See [`vyre::backend::PendingDispatch::is_ready`].
+    #[must_use]
+    pub fn is_ready(&self) -> bool {
+        self.pending.is_ready()
+    }
+
+    /// Block until the GPU scan completes and decode the global presence bitmap:
+    /// `presence_bitmap_words(pattern_count)` packed `u32` words, IDENTICAL to
+    /// [`GpuLiteralSet::scan_presence`]'s return (bit `p` is set iff pattern `p`'s
+    /// literal occurs anywhere in the haystack). Calling this when
+    /// [`Self::is_ready`] is `true` does not block.
+    ///
+    /// # Errors
+    /// Returns [`vyre::BackendError`] on dispatch/readback failure.
+    pub fn await_words(self) -> Result<Vec<u32>, vyre::BackendError> {
+        let outputs = self.pending.await_result()?;
+        let presence_bytes =
+            crate::scan::dispatch_io::try_output_bytes(&outputs, 0, "literal_set presence async")?;
+        Ok(decode_presence_words(presence_bytes, self.presence_words))
+    }
+}
+
+/// In-flight handle for [`GpuLiteralSet::scan_into_async`].
+///
+/// The position-scan sibling of [`PendingPresence`]: returned the moment the GPU
+/// match dispatch is submitted so the caller can overlap host-side work with the
+/// device scan, then decode the `(pattern_id, start, end)` match triples with
+/// [`Self::await_into`] / [`Self::await_matches`]. The retained prepared payload
+/// both backs the async upload's owned inputs (kept valid for the whole dispatch)
+/// and carries the `max_matches` cap the decode clamps to, the same fail-closed
+/// truncation contract as the synchronous [`GpuLiteralSet::scan_into`].
+pub struct PendingMatches {
+    pending: Box<dyn PendingDispatch>,
+    // Retained so (a) the owned input buffers backing the async upload stay valid
+    // for the whole dispatch and (b) `decode_outputs_into` has the max_matches cap.
+    prepared: LiteralSetPreparedScan,
+}
+
+impl PendingMatches {
+    /// Non-blocking readiness probe. `true` means [`Self::await_into`] will not
+    /// block the caller thread. See [`vyre::backend::PendingDispatch::is_ready`].
+    #[must_use]
+    pub fn is_ready(&self) -> bool {
+        self.pending.is_ready()
+    }
+
+    /// Block until the GPU scan completes and decode the match triples into
+    /// caller-owned `matches` (cleared first), IDENTICAL to
+    /// [`GpuLiteralSet::scan_into`]'s output. Fails closed if the device match
+    /// count exceeds the prepared `max_matches` (never a silent truncated decode,
+    /// Law 10). Calling this when [`Self::is_ready`] is `true` does not block.
+    ///
+    /// # Errors
+    /// Returns [`vyre::BackendError`] on dispatch/readback failure or match-count
+    /// overflow.
+    pub fn await_into(self, matches: &mut Vec<Match>) -> Result<(), vyre::BackendError> {
+        matches.clear();
+        let outputs = self.pending.await_result()?;
+        self.prepared.decode_outputs_into(&outputs, matches)
+    }
+
+    /// [`Self::await_into`] returning a freshly allocated match vector.
+    ///
+    /// # Errors
+    /// See [`Self::await_into`].
+    pub fn await_matches(self) -> Result<Vec<Match>, vyre::BackendError> {
+        let mut matches = Vec::new();
+        self.await_into(&mut matches)?;
+        Ok(matches)
+    }
+}
+
+/// In-flight handle for [`GpuLiteralSet::scan_presence_and_positions_by_region_async`].
+///
+/// The fused-scan sibling of [`PendingPresenceByRegion`] and [`PendingMatches`]:
+/// one submitted dispatch yields BOTH the per-region presence bitmap (returned by
+/// [`Self::await_into`]) AND the `(pattern_id, start, end)` match triples (decoded
+/// into the caller's buffer). The owned inputs are retained so the async upload's
+/// backing memory stays valid, and `max_matches` is carried so the decode keeps
+/// the same fail-closed overflow contract as the synchronous fused scan.
+pub struct PendingFusedRegion {
+    pending: Box<dyn PendingDispatch>,
+    total_words: usize,
+    max_matches: u32,
+    // Owned dispatch inputs kept alive until the await; see the field note on
+    // [`PendingPresenceByRegion`].
+    _inputs: Vec<Vec<u8>>,
+}
+
+impl PendingFusedRegion {
+    /// Non-blocking readiness probe. See
+    /// [`vyre::backend::PendingDispatch::is_ready`].
+    #[must_use]
+    pub fn is_ready(&self) -> bool {
+        self.pending.is_ready()
+    }
+
+    /// Block until the GPU scan completes, decode the `(pattern_id, start, end)`
+    /// triples into caller-owned `matches` (cleared first), and RETURN the
+    /// per-region presence bitmap, both IDENTICAL to
+    /// [`GpuLiteralSet::scan_presence_and_positions_by_region`]'s outputs. Fails
+    /// closed if the device match count exceeds the prepared `max_matches` (never a
+    /// silent truncated decode, Law 10). Calling this when [`Self::is_ready`] is
+    /// `true` does not block.
+    ///
+    /// # Errors
+    /// Returns [`vyre::BackendError`] on dispatch/readback failure or match-count
+    /// overflow.
+    pub fn await_into(self, matches: &mut Vec<Match>) -> Result<Vec<u32>, vyre::BackendError> {
+        use crate::scan::dispatch_io;
+        matches.clear();
+        let outputs = self.pending.await_result()?;
+        // presence(6)->outputs[0], match_count(12)->outputs[1], matches(13)->outputs[2].
+        let presence_bytes = dispatch_io::try_output_bytes(
+            &outputs,
+            0,
+            "literal_set presence_and_positions_by_region async presence",
+        )?;
+        let presence = decode_presence_words(presence_bytes, self.total_words);
+        let count_bytes = dispatch_io::try_output_bytes(
+            &outputs,
+            1,
+            "literal_set presence_and_positions_by_region async match count",
+        )?;
+        let count = dispatch_io::try_read_u32_prefix(
+            count_bytes,
+            "literal_set presence_and_positions_by_region async match count",
+        )?;
+        let matches_bytes = dispatch_io::try_output_bytes(
+            &outputs,
+            2,
+            "literal_set presence_and_positions_by_region async matches",
+        )?;
+        dispatch_io::try_unpack_match_triples_capped_into(
+            matches_bytes,
+            count,
+            self.max_matches,
+            "literal_set presence_and_positions_by_region async matches",
+            matches,
+        )?;
+        Ok(presence)
+    }
+}
+
 impl GpuLiteralSet {
     /// Compile a set of literal patterns into a GPU-ready matcher.
     ///
@@ -485,15 +1355,32 @@ impl GpuLiteralSet {
     ///
     /// Aborts when staging allocation fails or a pattern count/length cannot be
     /// represented by the GPU ABI. Returning an empty matcher would silently
-    /// match NOTHING — reporting every input as clean (Law 10). Fail closed
+    /// match NOTHING, reporting every input as clean (Law 10). Fail closed
     /// instead; callers that must recover use [`Self::try_compile`].
     #[must_use]
     pub fn compile(patterns: &[&[u8]]) -> Self {
-        match Self::try_compile(patterns) {
+        Self::compile_folded(patterns, false)
+    }
+
+    /// ASCII-CASE-INSENSITIVE counterpart of [`Self::compile`]: `A`/`a` … `Z`/`z`
+    /// match interchangeably. The fold is baked into the DFA transition table and
+    /// the candidate prefilter masks at compile time, so the scan matches
+    /// mixed-case input with ZERO per-byte host folding and no second resident
+    /// haystack copy (it replaces the consumer's `to_ascii_lowercase` pass).
+    ///
+    /// # Panics
+    /// See [`Self::compile`].
+    #[must_use]
+    pub fn compile_case_insensitive(patterns: &[&[u8]]) -> Self {
+        Self::compile_folded(patterns, true)
+    }
+
+    fn compile_folded(patterns: &[&[u8]], case_insensitive: bool) -> Self {
+        match Self::try_compile_folded(patterns, case_insensitive) {
             Ok(compiled) => compiled,
             Err(error) => {
                 panic!(
-                    "vyre-libs GpuLiteralSet::compile failed: {error} — \
+                    "vyre-libs GpuLiteralSet::compile failed: {error}. \
                      returning an empty matcher would silently match nothing and report every input as clean; \
                      use try_compile and reduce the pattern set below the GPU ABI limits."
                 )
@@ -509,7 +1396,28 @@ impl GpuLiteralSet {
     /// Returns [`LiteralSetCompileError`] when staging allocation fails or a
     /// pattern count/length cannot be represented by the GPU ABI.
     pub fn try_compile(patterns: &[&[u8]]) -> Result<Self, LiteralSetCompileError> {
-        let dfa = dfa_compile(patterns);
+        Self::try_compile_folded(patterns, false)
+    }
+
+    /// ASCII-case-insensitive counterpart of [`Self::try_compile`].
+    ///
+    /// # Errors
+    /// See [`Self::try_compile`].
+    pub fn try_compile_case_insensitive(
+        patterns: &[&[u8]],
+    ) -> Result<Self, LiteralSetCompileError> {
+        Self::try_compile_folded(patterns, true)
+    }
+
+    fn try_compile_folded(
+        patterns: &[&[u8]],
+        case_insensitive: bool,
+    ) -> Result<Self, LiteralSetCompileError> {
+        let dfa = if case_insensitive {
+            dfa_compile_case_insensitive(patterns)
+        } else {
+            dfa_compile(patterns)
+        };
         let declared_pattern_count = u32::try_from(patterns.len()).map_err(|_| {
             LiteralSetCompileError::PatternCountOverflow {
                 count: patterns.len(),
@@ -560,6 +1468,7 @@ impl GpuLiteralSet {
             pattern_offsets,
             pattern_lengths,
             program,
+            case_insensitive,
         })
     }
 
@@ -617,6 +1526,270 @@ impl GpuLiteralSet {
     ) -> Result<(), vyre::BackendError> {
         let mut scratch = ScanDispatchScratch::default();
         self.scan_into_with_scratch(backend, haystack, max_matches, matches, &mut scratch)
+    }
+
+    /// TIMED counterpart of [`Self::scan_into`]: decodes the `(pattern_id, start,
+    /// end)` triples into `matches` exactly as [`Self::scan_into`] AND returns
+    /// backend-owned timing ([`vyre_driver::TimedDispatchResult`]), so a consumer
+    /// or benchmark can attribute the position scan's cost between the GPU kernel
+    /// (`device_ns`) and host staging/readback (`wall_ns - device_ns`), the
+    /// "attribution everywhere" contract on the position path, matching the
+    /// resident `scan_into_timed`.
+    ///
+    /// The decoded matches are identical to [`Self::scan_into`]'s (same program,
+    /// same inputs, only `dispatch_borrowed_timed` vs `dispatch_borrowed`
+    /// differs). This reuses the one owned-buffer prepare path
+    /// ([`Self::prepare_scan_dispatch`]); the untimed hot path
+    /// ([`Self::scan_into_with_scratch`]) is untouched and pays no timing cost.
+    /// Like [`Self::scan`] (and unlike [`Self::scan_all`]) this fails closed if a
+    /// chunk exceeds `max_matches` rather than auto-resizing.
+    ///
+    /// # Errors
+    /// See [`Self::scan_into`]. On a backend whose `dispatch_borrowed_timed` only
+    /// records host wall time, the result's `device_ns` is `None` (loud absence,
+    /// not a fabricated zero).
+    pub fn scan_into_timed<B: VyreBackend + ?Sized>(
+        &self,
+        backend: &B,
+        haystack: &[u8],
+        max_matches: u32,
+        matches: &mut Vec<Match>,
+    ) -> Result<vyre_driver::TimedDispatchResult, vyre::BackendError> {
+        matches.clear();
+        let prepared = self.prepare_scan_dispatch(haystack, max_matches)?;
+        let borrowed: smallvec::SmallVec<[&[u8]; 8]> =
+            prepared.inputs.iter().map(Vec::as_slice).collect();
+        let timed = backend.dispatch_borrowed_timed(
+            &prepared.program,
+            &borrowed,
+            &prepared.dispatch_config,
+        )?;
+        prepared.decode_outputs_into(&timed.outputs, matches)?;
+        Ok(timed)
+    }
+
+    /// ASYNC counterpart of [`Self::scan_into`]: submit the GPU match dispatch and
+    /// return a [`PendingMatches`] handle IMMEDIATELY, so the caller can OVERLAP
+    /// host-side work with the in-flight GPU scan, then decode the `(pattern_id,
+    /// start, end)` triples via [`PendingMatches::await_into`].
+    ///
+    /// This is the position-scan sibling of [`Self::scan_presence_async`]. On a
+    /// backend that genuinely pipelines host/device work (wgpu, cuda) the GPU scan
+    /// executes while the caller does host work; on the synchronous default in
+    /// [`VyreBackend::dispatch_async`] the handle is trivially ready and this is
+    /// equivalent (same triples, no overlap, no silent change of result).
+    ///
+    /// Reuses the one owned-buffer prepare path ([`Self::prepare_scan_dispatch`]),
+    /// whose owned inputs the [`PendingMatches`] handle RETAINS until the decode,
+    /// keeping the device-side upload's backing memory valid for the whole
+    /// dispatch. Like [`Self::scan_into`] (and unlike [`Self::scan_all`]) it fails
+    /// closed if a chunk exceeds `max_matches` rather than auto-resizing.
+    ///
+    /// # Errors
+    /// See [`Self::scan_into`]. Errors that surface only during GPU execution come
+    /// back from [`PendingMatches::await_into`], not here.
+    pub fn scan_into_async<B: VyreBackend + ?Sized>(
+        &self,
+        backend: &B,
+        haystack: &[u8],
+        max_matches: u32,
+    ) -> Result<PendingMatches, vyre::BackendError> {
+        let prepared = self.prepare_scan_dispatch(haystack, max_matches)?;
+        let pending = backend.dispatch_async(
+            &prepared.program,
+            &prepared.inputs,
+            &prepared.dispatch_config,
+        )?;
+        Ok(PendingMatches { pending, prepared })
+    }
+
+    /// GPU scan dispatch that returns EVERY match with no fixed cap and no
+    /// consumer-side paging: it auto-resizes the match buffer to the exact device
+    /// count and NEVER silently truncates.
+    ///
+    /// The fixed-cap [`Self::scan`] fails closed when a chunk has more matches
+    /// than `max_matches`, forcing every consumer to implement a paging retry
+    /// loop (e.g. keyhog's `split_positioned_window`). This method makes that
+    /// loop dead code: it dispatches once at an initial capacity; the match
+    /// kernel's atomic counter reports the TRUE total even past the cap, so on
+    /// saturation it resizes the output to exactly that count and re-dispatches
+    /// ONCE. Common case (matches fit the initial capacity) is a single
+    /// dispatch; a saturated chunk costs exactly two. The result is complete or
+    /// it is a structured error (never a silent partial (Law 10)).
+    ///
+    /// Memory scales with the true match count, by contract. Callers that must
+    /// bound host memory instead of recall use the capped [`Self::scan`].
+    ///
+    /// ## Why there is no `scan_all_async`
+    /// This method is intentionally SYNC-ONLY. Its completeness guarantee is a
+    /// count-then-maybe-resize protocol (dispatch → read the true count → resize
+    /// and re-dispatch on saturation), and the second dispatch's size is not known
+    /// until the first completes, so a fire-and-forget async handle cannot be
+    /// well-typed without threading the engine + backend back through the await
+    /// (a worse API than the two clean primitives that already compose to the same
+    /// effect). An async caller that wants host/device overlap composes the
+    /// existing primitives: submit [`Self::scan_into_async`] at a fixed cap (full
+    /// overlap, common case), and on its fail-closed overflow error fall back to a
+    /// synchronous `scan_all` for the rare saturated chunk, or use the resident
+    /// [`Self::prepare_resident_scan`] path for a hot corpus loop.
+    ///
+    /// # Errors
+    /// Returns [`vyre::BackendError`] if dispatch or readback fails, or if the
+    /// true match count exceeds the u32 GPU match-output ABI (fail closed with
+    /// the exact count and the fix, never a truncated decode).
+    pub fn scan_all<B: VyreBackend + ?Sized>(
+        &self,
+        backend: &B,
+        haystack: &[u8],
+    ) -> Result<Vec<Match>, vyre::BackendError> {
+        let mut matches = Vec::new();
+        self.scan_all_into(backend, haystack, &mut matches)?;
+        Ok(matches)
+    }
+
+    /// [`Self::scan_all`] decoding into caller-owned match scratch.
+    ///
+    /// # Errors
+    /// See [`Self::scan_all`].
+    pub fn scan_all_into<B: VyreBackend + ?Sized>(
+        &self,
+        backend: &B,
+        haystack: &[u8],
+        matches: &mut Vec<Match>,
+    ) -> Result<(), vyre::BackendError> {
+        let mut scratch = ScanDispatchScratch::default();
+        self.scan_all_into_with_scratch(backend, haystack, matches, &mut scratch)
+    }
+
+    /// [`Self::scan_all`] reusing caller-owned byte staging across dispatches.
+    ///
+    /// The haystack is packed and the prefilter tables are built ONCE; only the
+    /// output-buffer capacity changes on an auto-resize retry, so the resize
+    /// re-dispatches without re-packing the corpus.
+    ///
+    /// # Errors
+    /// See [`Self::scan_all`].
+    pub fn scan_all_into_with_scratch<B: VyreBackend + ?Sized>(
+        &self,
+        backend: &B,
+        haystack: &[u8],
+        matches: &mut Vec<Match>,
+        scratch: &mut ScanDispatchScratch,
+    ) -> Result<(), vyre::BackendError> {
+        use crate::scan::dispatch_io;
+
+        matches.clear();
+        let haystack_len =
+            dispatch_io::scan_guard(haystack, "literal_set", dispatch_io::DEFAULT_MAX_SCAN_BYTES)?;
+        dispatch_io::pack_haystack_u32_into(haystack, &mut scratch.haystack_bytes)?;
+        let haystack_bytes = scratch.haystack_bytes.as_slice();
+        let prefilter_tables = self.build_prefilter_tables()?;
+        let views = DfaPrefilterByteViews::new(&self.dfa, &self.pattern_lengths, &prefilter_tables);
+
+        // Start at the default capacity; the atomic counter reports the true
+        // total even when the output saturates, so one resize to that exact
+        // count captures everything. Bounded to two dispatches, the recount is
+        // exact and deterministic, so a third would indicate a nondeterministic
+        // backend and is rejected loudly rather than looped forever.
+        let mut capacity = LITERAL_SET_DEFAULT_MAX_MATCHES;
+        for attempt in 0..2 {
+            let program = self.program_for_match_capacity(capacity)?;
+            let outputs = self.dispatch_literal_scan_outputs(
+                backend,
+                haystack_bytes,
+                haystack_len,
+                &views,
+                program.as_ref(),
+            )?;
+            let count = decode_literal_set_count_outputs(&outputs)?;
+            if count <= capacity {
+                // count <= capacity: every triple was written; decode exactly.
+                return decode_literal_set_outputs_into(&outputs, capacity, matches);
+            }
+            if attempt == 1 {
+                return Err(vyre::BackendError::new(format!(
+                    "literal_set scan_all recount instability: resized to exact device count {capacity} yet the re-dispatch reported {count}. Fix: this indicates a nondeterministic backend match counter; the scan cannot be completed without silent truncation."
+                )));
+            }
+            // Saturation: `count` is the exact true total. Resize to it and
+            // re-dispatch once. `program_for_match_capacity` fails closed if
+            // `count` overflows the u32 match-output ABI (its own structured
+            // error) (one place for that bound).
+            capacity = count;
+        }
+        // Unreachable: the loop returns on both branches within two attempts.
+        Err(vyre::BackendError::new(
+            "literal_set scan_all exhausted its bounded auto-resize attempts without a decode. Fix: report this as a vyre bug, the count/capacity invariant was violated.",
+        ))
+    }
+
+    /// TIMED counterpart of [`Self::scan_all`]: the complete-or-error auto-resize
+    /// scan, returning backend-owned timing
+    /// ([`vyre_driver::TimedDispatchResult`]) alongside the full match set.
+    ///
+    /// ## Which dispatch the timing attributes
+    /// `scan_all` may dispatch TWICE, a first pass at the default capacity, then,
+    /// if the output saturated, a second pass resized to the exact device count.
+    /// The returned timing is the timing of the dispatch that PRODUCED THE RETURNED
+    /// MATCHES: the single pass when the first fit, or the resize re-dispatch when
+    /// a resize happened (`resized` in the result tells the caller which). This is
+    /// the honest choice, the timing describes the decode the caller receives, not
+    /// a hidden earlier pass, and it is loudly reported rather than silently summed
+    /// (Law 10: a summed wall-time would misattribute two GPU launches as one).
+    ///
+    /// The returned matches are byte-for-byte identical to [`Self::scan_all`]'s
+    /// (same programs, same inputs; only `dispatch_borrowed_timed` vs
+    /// `dispatch_borrowed` differs). The untimed hot path is untouched.
+    ///
+    /// # Errors
+    /// See [`Self::scan_all`]. On a backend whose `dispatch_borrowed_timed` only
+    /// records host wall time, `device_ns` is `None` (loud absence, not a
+    /// fabricated zero).
+    pub fn scan_all_timed<B: VyreBackend + ?Sized>(
+        &self,
+        backend: &B,
+        haystack: &[u8],
+        matches: &mut Vec<Match>,
+    ) -> Result<ScanAllTimed, vyre::BackendError> {
+        use crate::scan::dispatch_io;
+
+        matches.clear();
+        let haystack_len =
+            dispatch_io::scan_guard(haystack, "literal_set", dispatch_io::DEFAULT_MAX_SCAN_BYTES)?;
+        let mut haystack_bytes = Vec::new();
+        dispatch_io::pack_haystack_u32_into(haystack, &mut haystack_bytes)?;
+        let prefilter_tables = self.build_prefilter_tables()?;
+        let views = DfaPrefilterByteViews::new(&self.dfa, &self.pattern_lengths, &prefilter_tables);
+
+        let mut capacity = LITERAL_SET_DEFAULT_MAX_MATCHES;
+        for attempt in 0..2 {
+            let program = self.program_for_match_capacity(capacity)?;
+            let timed = self.dispatch_literal_scan_outputs_timed(
+                backend,
+                &haystack_bytes,
+                haystack_len,
+                &views,
+                program.as_ref(),
+            )?;
+            let count = decode_literal_set_count_outputs(&timed.outputs)?;
+            if count <= capacity {
+                // count <= capacity: every triple was written; decode exactly.
+                decode_literal_set_outputs_into(&timed.outputs, capacity, matches)?;
+                return Ok(ScanAllTimed {
+                    timed,
+                    resized: attempt == 1,
+                });
+            }
+            if attempt == 1 {
+                return Err(vyre::BackendError::new(format!(
+                    "literal_set scan_all_timed recount instability: resized to exact device count {capacity} yet the re-dispatch reported {count}. Fix: this indicates a nondeterministic backend match counter; the scan cannot be completed without silent truncation."
+                )));
+            }
+            capacity = count;
+        }
+        Err(vyre::BackendError::new(
+            "literal_set scan_all_timed exhausted its bounded auto-resize attempts without a decode. Fix: report this as a vyre bug, the count/capacity invariant was violated.",
+        ))
     }
 
     /// GPU count-only dispatch.
@@ -813,7 +1986,7 @@ impl GpuLiteralSet {
     }
 
     /// GPU PRESENCE scan: return a per-pattern presence bitmap as packed `u32`
-    /// words (bit `p` — word `p >> 5`, bit `p & 31` — set iff pattern `p`'s literal
+    /// words (bit `p`: word `p >> 5`, bit `p & 31`: set iff pattern `p`'s literal
     /// occurs in `haystack`). This is the compact-output counterpart of
     /// [`Self::scan`] for prefilter consumers that need only WHICH patterns fired,
     /// not where. The kernel performs one idempotent `atomic_or` per hit into a
@@ -874,7 +2047,7 @@ impl GpuLiteralSet {
         let haystack_len_bytes = dispatch_io::u32_words_as_le_bytes(&haystack_len_word);
         // Presence buffer (binding 6) is read-write: uploaded zeroed, dispatched,
         // and read back. It is the entire output.
-        let presence_zeroed = vec![0u8; presence_words.saturating_mul(4)];
+        let presence_zeroed = zeroed_presence_bytes(presence_words)?;
 
         let config =
             dispatch_io::byte_scan_dispatch_config(haystack_len, program.workgroup_size[0]);
@@ -952,27 +2125,11 @@ impl GpuLiteralSet {
     ) -> Result<Vec<u32>, vyre::BackendError> {
         use crate::scan::dispatch_io;
 
-        let pattern_count = u32::try_from(self.pattern_lengths.len()).map_err(|_| {
-            vyre::BackendError::new(
-                "literal_set region-presence: pattern count exceeds u32 GPU ABI".to_string(),
-            )
-        })?;
-        let region_count = u32::try_from(region_starts.len()).map_err(|_| {
-            vyre::BackendError::new(
-                "literal_set region-presence: region count exceeds u32 GPU ABI".to_string(),
-            )
-        })?;
-        if region_count == 0 {
-            return Err(vyre::BackendError::new(
-                "literal_set region-presence: region_starts must be non-empty. Fix: pass one start offset per coalesced file, beginning with 0.".to_string(),
-            ));
-        }
-        if region_starts[0] != 0 {
-            return Err(vyre::BackendError::new(
-                "literal_set region-presence: region_starts[0] must be 0 (the kernel binary-search lower bound). Fix: the first coalesced file must start at offset 0.".to_string(),
-            ));
-        }
-        let presence_words = presence_bitmap_words(pattern_count) as usize;
+        let (pattern_count, region_count) = validate_region_starts(
+            region_starts,
+            &self.pattern_lengths,
+            "literal_set region-presence",
+        )?;
         let total_words = presence_by_region_words(pattern_count, region_count) as usize;
         let program = try_build_ac_bounded_ranges_suffix3_presence_by_region_program(
             &self.dfa,
@@ -996,7 +2153,7 @@ impl GpuLiteralSet {
         let region_base_bytes = region_base.to_le_bytes();
         // Per-region presence buffer (binding 6) is read-write: uploaded zeroed,
         // dispatched, read back. It is the entire output.
-        let presence_zeroed = vec![0u8; total_words.saturating_mul(4)];
+        let presence_zeroed = zeroed_presence_bytes(total_words)?;
 
         let config =
             dispatch_io::byte_scan_dispatch_config(haystack_len, program.workgroup_size[0]);
@@ -1022,6 +2179,49 @@ impl GpuLiteralSet {
         Ok(decode_presence_words(presence_bytes, total_words))
     }
 
+    /// TIMED counterpart of [`Self::scan_presence_by_region`]: runs the same
+    /// region-presence dispatch but returns backend-owned timing
+    /// ([`vyre_driver::TimedDispatchResult`]) alongside the decoded per-region
+    /// presence bitmap, so a consumer or benchmark can attribute the per-scan cost
+    /// between the GPU kernel (`device_ns`) and host-side staging/readback
+    /// (`wall_ns - device_ns`), the "attribution everywhere" contract, on the
+    /// hot literal region-presence path rather than only the resident path.
+    ///
+    /// The returned bitmap is byte-for-byte identical to
+    /// [`Self::scan_presence_by_region`]'s (same program, same inputs); only the
+    /// dispatch call differs (`dispatch_borrowed_timed` vs `dispatch_borrowed`).
+    /// The returned result's `outputs` are the same raw presence bytes already
+    /// decoded into the returned bitmap (mirrors the resident `scan_into_timed`
+    /// contract). This reuses the one owned-buffer prepare path
+    /// ([`Self::build_presence_by_region_dispatch`]); the untimed hot path is
+    /// untouched and pays no timing cost.
+    ///
+    /// # Errors
+    /// See [`Self::scan_presence_by_region`]. On a backend whose
+    /// `dispatch_borrowed_timed` only records host wall time, `device_ns` is
+    /// `None` (loud absence, not a fabricated zero).
+    pub fn scan_presence_by_region_timed<B: VyreBackend + ?Sized>(
+        &self,
+        backend: &B,
+        haystack: &[u8],
+        region_starts: &[u32],
+        region_base: u32,
+    ) -> Result<(Vec<u32>, vyre_driver::TimedDispatchResult), vyre::BackendError> {
+        use crate::scan::dispatch_io;
+
+        let (program, inputs, config, total_words, _haystack_len) =
+            self.build_presence_by_region_dispatch(haystack, region_starts, region_base)?;
+        let borrowed: smallvec::SmallVec<[&[u8]; 12]> = inputs.iter().map(Vec::as_slice).collect();
+        let timed = backend.dispatch_borrowed_timed(&program, &borrowed, &config)?;
+        let presence_bytes = dispatch_io::try_output_bytes(
+            &timed.outputs,
+            0,
+            "literal_set presence_by_region timed",
+        )?;
+        let presence = decode_presence_words(presence_bytes, total_words);
+        Ok((presence, timed))
+    }
+
     /// ASYNC counterpart of [`Self::scan_presence_by_region_with_scratch`]: submit
     /// the GPU region-presence dispatch and return a [`PendingPresenceByRegion`]
     /// handle IMMEDIATELY, so the caller can OVERLAP host-side work (e.g. a downstream
@@ -1032,13 +2232,13 @@ impl GpuLiteralSet {
     /// On a backend that genuinely pipelines host/device work (wgpu, cuda) the GPU
     /// scan executes while the caller does host work; on a backend that cannot
     /// (the synchronous default in [`VyreBackend::dispatch_async`]) the handle is
-    /// trivially ready and this is equivalent — same bitmap, no overlap, no silent
+    /// trivially ready and this is equivalent, same bitmap, no overlap, no silent
     /// change of result. See [`vyre::backend::PendingDispatch`].
     ///
     /// Unlike the synchronous entry there is NO `scratch` parameter: the async
     /// dispatch ABI is `&[Vec<u8>]`, so inputs are built into OWNED buffers that
     /// the returned handle RETAINS until `await_words`. This keeps the device-side
-    /// upload's backing memory valid for the whole dispatch — required on backends
+    /// upload's backing memory valid for the whole dispatch, required on backends
     /// (e.g. the CUDA stream h2d copy) whose async upload reads host memory after
     /// this call returns.
     ///
@@ -1076,13 +2276,13 @@ impl GpuLiteralSet {
     /// Inputs are OWNED (the async ABI is `&[Vec<u8>]`, and a resident runtime
     /// uploads them once), built through the fallible `copy_u32_words_as_le_bytes`
     /// so an allocation failure fails CLOSED (`BackendError`) instead of aborting
-    /// on OOM — the same contract as [`Self::prepare_scan_dispatch`].
+    /// on OOM (the same contract as [`Self::prepare_scan_dispatch`]).
     ///
     /// # Errors
     /// See [`Self::scan_presence_by_region`].
     /// Encode the seven corpus-invariant region-presence tables into owned
     /// little-endian byte buffers through the fail-closed `copy_u32_words_as_le_bytes`.
-    /// The single source of truth for which tables are immutable across a corpus —
+    /// The single source of truth for which tables are immutable across a corpus 
     /// reused by the borrowed/async/prepared builder and the resident pipeline so
     /// every path encodes byte-identical tables.
     fn presence_immutable_table_bytes(
@@ -1118,6 +2318,66 @@ impl GpuLiteralSet {
         })
     }
 
+    /// SINGLE owner of the presence-dispatch common staging: bindings 0..=9, which
+    /// are BYTE-IDENTICAL across the global, by-region, and fused presence programs
+    /// (haystack, the 7 immutable DFA/suffix-prefilter tables via
+    /// [`Self::presence_immutable_table_bytes`], `haystack_len`, and the zeroed
+    /// binding-6 presence read-write output). Each caller passes the presence
+    /// buffer's `total_words` (global vs by-region sizing) and the FULL binding
+    /// count (10 / 12 / 13) so the returned `inputs` vec is reserved once for the
+    /// whole payload, then appends only its extra tail bindings (region_starts,
+    /// region_base, match_count). Returns `(haystack_len, inputs)`.
+    ///
+    /// This is the ONE PLACE for the 0..=9 order: reordering here miswires all
+    /// three presence programs at once, and a per-path copy would drift silently.
+    /// Owned + fail-closed (`copy_u32_words_as_le_bytes` / `try_reserve`), so an
+    /// allocation failure returns `BackendError` rather than aborting on OOM.
+    ///
+    /// # Errors
+    /// Scan-boundary validation, host staging allocation, or table encoding.
+    fn build_presence_common_inputs(
+        &self,
+        haystack: &[u8],
+        guard_ctx: &'static str,
+        total_words: usize,
+        total_binding_count: usize,
+    ) -> Result<(u32, Vec<Vec<u8>>), vyre::BackendError> {
+        use crate::scan::dispatch_io;
+
+        let prefilter_tables = self.build_prefilter_tables()?;
+        let haystack_len =
+            dispatch_io::scan_guard(haystack, guard_ctx, dispatch_io::DEFAULT_MAX_SCAN_BYTES)?;
+        let mut haystack_packed = Vec::new();
+        dispatch_io::pack_haystack_u32_into(haystack, &mut haystack_packed)?;
+        let haystack_len_word = [haystack_len];
+        // Presence buffer (binding 6) is read-write: uploaded zeroed, dispatched,
+        // read back. It is the entire (per-region or global) output.
+        let presence_zeroed = zeroed_presence_bytes(total_words)?;
+
+        let mut inputs: Vec<Vec<u8>> = Vec::new();
+        vyre_foundation::allocation::try_reserve_vec_to_capacity(&mut inputs, total_binding_count)
+            .map_err(|source| {
+                vyre::BackendError::new(format!(
+                    "literal_set presence ({guard_ctx}) could not reserve {total_binding_count} input buffer slot(s): {source}. Fix: shard the literal set or haystack before dispatch."
+                ))
+            })?;
+        let tables = self.presence_immutable_table_bytes(&prefilter_tables)?;
+        inputs.push(haystack_packed); // 0: haystack (Packed U32)
+        inputs.push(tables.transitions); // 1
+        inputs.push(tables.output_offsets); // 2
+        inputs.push(tables.output_records); // 3
+        inputs.push(tables.pattern_lengths); // 4
+        inputs.push(copy_u32_words_as_le_bytes(
+            &haystack_len_word,
+            "haystack length",
+        )?); // 5
+        inputs.push(presence_zeroed); // 6: presence (read_write) = the output
+        inputs.push(tables.candidate_end_mask); // 7
+        inputs.push(tables.candidate_suffix2_mask); // 8
+        inputs.push(tables.candidate_suffix3_bloom); // 9
+        Ok((haystack_len, inputs))
+    }
+
     fn build_presence_by_region_dispatch(
         &self,
         haystack: &[u8],
@@ -1126,26 +2386,11 @@ impl GpuLiteralSet {
     ) -> Result<(Program, Vec<Vec<u8>>, DispatchConfig, usize, u32), vyre::BackendError> {
         use crate::scan::dispatch_io;
 
-        let pattern_count = u32::try_from(self.pattern_lengths.len()).map_err(|_| {
-            vyre::BackendError::new(
-                "literal_set region-presence: pattern count exceeds u32 GPU ABI".to_string(),
-            )
-        })?;
-        let region_count = u32::try_from(region_starts.len()).map_err(|_| {
-            vyre::BackendError::new(
-                "literal_set region-presence: region count exceeds u32 GPU ABI".to_string(),
-            )
-        })?;
-        if region_count == 0 {
-            return Err(vyre::BackendError::new(
-                "literal_set region-presence: region_starts must be non-empty. Fix: pass one start offset per coalesced file, beginning with 0.".to_string(),
-            ));
-        }
-        if region_starts[0] != 0 {
-            return Err(vyre::BackendError::new(
-                "literal_set region-presence: region_starts[0] must be 0 (the kernel binary-search lower bound). Fix: the first coalesced file must start at offset 0.".to_string(),
-            ));
-        }
+        let (pattern_count, region_count) = validate_region_starts(
+            region_starts,
+            &self.pattern_lengths,
+            "literal_set region-presence",
+        )?;
         let total_words = presence_by_region_words(pattern_count, region_count) as usize;
         let program = try_build_ac_bounded_ranges_suffix3_presence_by_region_program(
             &self.dfa,
@@ -1153,49 +2398,136 @@ impl GpuLiteralSet {
             region_count,
         )
         .map_err(vyre::BackendError::new)?;
-        let prefilter_tables = self.build_prefilter_tables()?;
 
-        let haystack_len = dispatch_io::scan_guard(
+        // Bindings 0..=9 (the ONE-PLACE common staging), reserved for all 12.
+        const PRESENCE_BY_REGION_INPUT_COUNT: usize = 12;
+        let (haystack_len, mut inputs) = self.build_presence_common_inputs(
             haystack,
             "literal_set_presence_by_region",
-            dispatch_io::DEFAULT_MAX_SCAN_BYTES,
-        )?;
-        let mut haystack_packed = Vec::new();
-        dispatch_io::pack_haystack_u32_into(haystack, &mut haystack_packed)?;
-        let haystack_len_word = [haystack_len];
-        let region_base_bytes = region_base.to_le_bytes();
-        // Per-region presence buffer (binding 6) is read-write: uploaded zeroed,
-        // dispatched, read back. It is the entire output.
-        let presence_zeroed = vec![0u8; total_words.saturating_mul(4)];
-
-        const PRESENCE_BY_REGION_INPUT_COUNT: usize = 12;
-        let mut inputs: Vec<Vec<u8>> = Vec::new();
-        vyre_foundation::allocation::try_reserve_vec_to_capacity(
-            &mut inputs,
+            total_words,
             PRESENCE_BY_REGION_INPUT_COUNT,
-        )
-        .map_err(|source| {
-            vyre::BackendError::new(format!(
-                "literal_set region-presence could not reserve {PRESENCE_BY_REGION_INPUT_COUNT} input buffer slot(s): {source}. Fix: shard the literal set or haystack before dispatch."
-            ))
-        })?;
-        let tables = self.presence_immutable_table_bytes(&prefilter_tables)?;
-        inputs.push(haystack_packed); // 0: haystack (Packed U32)
-        inputs.push(tables.transitions); // 1
-        inputs.push(tables.output_offsets); // 2
-        inputs.push(tables.output_records); // 3
-        inputs.push(tables.pattern_lengths); // 4
-        inputs.push(copy_u32_words_as_le_bytes(&haystack_len_word, "haystack length")?); // 5
-        inputs.push(presence_zeroed); // 6: per-region presence (read_write)
-        inputs.push(tables.candidate_end_mask); // 7
-        inputs.push(tables.candidate_suffix2_mask); // 8
-        inputs.push(tables.candidate_suffix3_bloom); // 9
+        )?;
+        // Tail bindings unique to the by-region program.
         inputs.push(copy_u32_words_as_le_bytes(region_starts, "region starts")?); // 10
-        inputs.push(region_base_bytes.to_vec()); // 11: region_base (4 bytes)
+        inputs.push(region_base.to_le_bytes().to_vec()); // 11: region_base (4 bytes)
 
         let config =
             dispatch_io::byte_scan_dispatch_config(haystack_len, program.workgroup_size[0]);
         Ok((program, inputs, config, total_words, haystack_len))
+    }
+
+    /// Build the OWNED GLOBAL-presence dispatch payload (the 10 input buffers in
+    /// binding order, binding 6 = the zeroed presence read-write resource = the
+    /// whole output; the presence-bitmap `u32` word count) shared by
+    /// [`Self::scan_presence_timed`]. This is the global-presence sibling of
+    /// [`Self::build_presence_by_region_dispatch`] and reuses the same
+    /// [`Self::presence_immutable_table_bytes`] table encoder, so every presence
+    /// path encodes byte-identical immutable tables.
+    ///
+    /// Inputs are OWNED and built through the fail-closed
+    /// `copy_u32_words_as_le_bytes`, so an allocation failure fails CLOSED
+    /// (`BackendError`) rather than aborting on OOM. The untimed hot path
+    /// ([`Self::scan_presence_with_scratch`]) keeps its zero-copy borrowed-views
+    /// staging and is untouched.
+    ///
+    /// # Errors
+    /// See [`Self::scan_presence`].
+    fn build_presence_dispatch(
+        &self,
+        haystack: &[u8],
+    ) -> Result<(Program, Vec<Vec<u8>>, DispatchConfig, usize), vyre::BackendError> {
+        use crate::scan::dispatch_io;
+
+        let pattern_count = u32::try_from(self.pattern_lengths.len()).map_err(|_| {
+            vyre::BackendError::new(
+                "literal_set presence: pattern count exceeds u32 GPU ABI".to_string(),
+            )
+        })?;
+        let presence_words = presence_bitmap_words(pattern_count) as usize;
+        let program =
+            try_build_ac_bounded_ranges_suffix3_presence_program(&self.dfa, pattern_count)
+                .map_err(vyre::BackendError::new)?;
+
+        // The global-presence program is EXACTLY the 0..=9 common staging, no tail
+        // bindings (so it reserves and fills all 10 through the shared owner).
+        const PRESENCE_INPUT_COUNT: usize = 10;
+        let (haystack_len, inputs) = self.build_presence_common_inputs(
+            haystack,
+            "literal_set_presence",
+            presence_words,
+            PRESENCE_INPUT_COUNT,
+        )?;
+
+        let config =
+            dispatch_io::byte_scan_dispatch_config(haystack_len, program.workgroup_size[0]);
+        Ok((program, inputs, config, presence_words))
+    }
+
+    /// TIMED counterpart of [`Self::scan_presence`]: runs the same global-presence
+    /// dispatch but returns backend-owned timing
+    /// ([`vyre_driver::TimedDispatchResult`]) alongside the decoded presence
+    /// bitmap, so a consumer or benchmark can split the per-scan cost between the
+    /// GPU kernel (`device_ns`) and host-side staging/readback, the "attribution
+    /// everywhere" contract on the global-presence path.
+    ///
+    /// The returned bitmap is byte-for-byte identical to [`Self::scan_presence`]'s
+    /// (same program, same inputs); only the dispatch call differs
+    /// (`dispatch_borrowed_timed` vs `dispatch_borrowed`). This reuses the one
+    /// owned-buffer prepare path ([`Self::build_presence_dispatch`]); the untimed
+    /// hot path is untouched and pays no timing cost.
+    ///
+    /// # Errors
+    /// See [`Self::scan_presence`]. On a backend whose `dispatch_borrowed_timed`
+    /// only records host wall time, `device_ns` is `None` (loud absence, not a
+    /// fabricated zero).
+    pub fn scan_presence_timed<B: VyreBackend + ?Sized>(
+        &self,
+        backend: &B,
+        haystack: &[u8],
+    ) -> Result<(Vec<u32>, vyre_driver::TimedDispatchResult), vyre::BackendError> {
+        use crate::scan::dispatch_io;
+
+        let (program, inputs, config, presence_words) = self.build_presence_dispatch(haystack)?;
+        let borrowed: smallvec::SmallVec<[&[u8]; 10]> = inputs.iter().map(Vec::as_slice).collect();
+        let timed = backend.dispatch_borrowed_timed(&program, &borrowed, &config)?;
+        let presence_bytes =
+            dispatch_io::try_output_bytes(&timed.outputs, 0, "literal_set presence timed")?;
+        let presence = decode_presence_words(presence_bytes, presence_words);
+        Ok((presence, timed))
+    }
+
+    /// ASYNC counterpart of [`Self::scan_presence`]: submit the global-presence
+    /// GPU dispatch and return a [`PendingPresence`] handle IMMEDIATELY, so the
+    /// caller can OVERLAP host-side work with the in-flight GPU scan, then decode
+    /// the presence bitmap via [`PendingPresence::await_words`].
+    ///
+    /// This is the global-presence sibling of
+    /// [`Self::scan_presence_by_region_async`]. On a backend that genuinely
+    /// pipelines host/device work (wgpu, cuda) the GPU scan executes while the
+    /// caller does host work; on the synchronous default in
+    /// [`VyreBackend::dispatch_async`] the handle is trivially ready and this is
+    /// equivalent (same bitmap, no overlap, no silent change of result).
+    ///
+    /// Inputs are built into OWNED buffers (through the shared
+    /// [`Self::build_presence_dispatch`]) that the handle RETAINS until
+    /// `await_words`, keeping the device-side upload's backing memory valid for the
+    /// whole dispatch.
+    ///
+    /// # Errors
+    /// See [`Self::scan_presence`]. Errors that surface only during GPU execution
+    /// come back from [`PendingPresence::await_words`], not here.
+    pub fn scan_presence_async<B: VyreBackend + ?Sized>(
+        &self,
+        backend: &B,
+        haystack: &[u8],
+    ) -> Result<PendingPresence, vyre::BackendError> {
+        let (program, inputs, config, presence_words) = self.build_presence_dispatch(haystack)?;
+        let pending = backend.dispatch_async(&program, &inputs, &config)?;
+        Ok(PendingPresence {
+            pending,
+            presence_words,
+            _inputs: inputs,
+        })
     }
 
     /// Prepare a backend-neutral RESIDENT region-presence dispatch payload: the
@@ -1249,8 +2581,8 @@ impl GpuLiteralSet {
         })
     }
 
-    /// Extract the IMMUTABLE region-presence tables — everything that does NOT
-    /// change across the files of a corpus — plus a `max_regions`-sized program,
+    /// Extract the IMMUTABLE region-presence tables, everything that does NOT
+    /// change across the files of a corpus, plus a `max_regions`-sized program,
     /// for [`ResidentPresencePipeline`](crate::scan::resident_presence::ResidentPresencePipeline)
     /// to upload into backend-resident resources ONCE.
     ///
@@ -1349,9 +2681,9 @@ impl GpuLiteralSet {
     /// [`Self::scan_presence_by_region`]) AND the `(pattern_id, start, end)` match
     /// triples (decoded into `matches`, identical to [`Self::scan_into`]).
     ///
-    /// This collapses the two-pass pattern a coalesced consumer uses today — a
+    /// This collapses the two-pass pattern a coalesced consumer uses today, a
     /// presence-by-region scan to learn WHICH patterns fired per file, then a
-    /// SEPARATE position scan over the same haystack to learn WHERE — into a single
+    /// SEPARATE position scan over the same haystack to learn WHERE, into a single
     /// suffix3-gated walk. Both outputs are recall-identical to the separate scans by
     /// construction: the same candidate gate, DFA replay, and `output_records`
     /// iteration drive both, so the presence bits equal
@@ -1391,37 +2723,19 @@ impl GpuLiteralSet {
         use crate::scan::dispatch_io;
 
         matches.clear();
-        let pattern_count = u32::try_from(self.pattern_lengths.len()).map_err(|_| {
-            vyre::BackendError::new(
-                "literal_set region-presence+positions: pattern count exceeds u32 GPU ABI"
-                    .to_string(),
-            )
-        })?;
-        let region_count = u32::try_from(region_starts.len()).map_err(|_| {
-            vyre::BackendError::new(
-                "literal_set region-presence+positions: region count exceeds u32 GPU ABI"
-                    .to_string(),
-            )
-        })?;
-        if region_count == 0 {
-            return Err(vyre::BackendError::new(
-                "literal_set region-presence+positions: region_starts must be non-empty. Fix: pass one start offset per coalesced file, beginning with 0.".to_string(),
-            ));
-        }
-        if region_starts[0] != 0 {
-            return Err(vyre::BackendError::new(
-                "literal_set region-presence+positions: region_starts[0] must be 0 (the kernel binary-search lower bound). Fix: the first coalesced file must start at offset 0.".to_string(),
-            ));
-        }
+        let (pattern_count, region_count) = validate_region_starts(
+            region_starts,
+            &self.pattern_lengths,
+            "literal_set region-presence+positions",
+        )?;
         let total_words = presence_by_region_words(pattern_count, region_count) as usize;
-        let program =
-            try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program(
-                &self.dfa,
-                pattern_count,
-                region_count,
-                max_matches,
-            )
-            .map_err(vyre::BackendError::new)?;
+        let program = try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program(
+            &self.dfa,
+            pattern_count,
+            region_count,
+            max_matches,
+        )
+        .map_err(vyre::BackendError::new)?;
         let prefilter_tables = self.build_prefilter_tables()?;
 
         let haystack_len = dispatch_io::scan_guard(
@@ -1438,7 +2752,7 @@ impl GpuLiteralSet {
         let region_base_bytes = region_base.to_le_bytes();
         // Both read-write buffers are uploaded zeroed; the matches output (binding
         // 13) is a pure `BufferDecl::output` the backend allocates from the program.
-        let presence_zeroed = vec![0u8; total_words.saturating_mul(4)];
+        let presence_zeroed = zeroed_presence_bytes(total_words)?;
         let match_count_bytes = [0u8; 4];
 
         let config =
@@ -1502,6 +2816,184 @@ impl GpuLiteralSet {
         Ok(presence_words)
     }
 
+    /// Build the OWNED fused presence+positions-by-region dispatch payload (the 13
+    /// input buffers in binding order; binding 6 = zeroed per-region presence
+    /// read-write, binding 12 = zeroed match_count read-write; binding 13 = the
+    /// backend-allocated matches output; the presence-bitmap `u32` word count)
+    /// shared by [`Self::scan_presence_and_positions_by_region_timed`]. Reuses the
+    /// same [`Self::presence_immutable_table_bytes`] encoder as every other
+    /// presence path, so the immutable tables are byte-identical.
+    ///
+    /// Inputs are OWNED and built through the fail-closed
+    /// `copy_u32_words_as_le_bytes`, so an allocation failure fails CLOSED
+    /// (`BackendError`) rather than aborting on OOM. The untimed hot path
+    /// ([`Self::scan_presence_and_positions_by_region_with_scratch`]) keeps its
+    /// zero-copy borrowed-views staging and is untouched.
+    ///
+    /// # Errors
+    /// See [`Self::scan_presence_and_positions_by_region`].
+    fn build_presence_and_positions_by_region_dispatch(
+        &self,
+        haystack: &[u8],
+        region_starts: &[u32],
+        region_base: u32,
+        max_matches: u32,
+    ) -> Result<(Program, Vec<Vec<u8>>, DispatchConfig, usize), vyre::BackendError> {
+        use crate::scan::dispatch_io;
+
+        let (pattern_count, region_count) = validate_region_starts(
+            region_starts,
+            &self.pattern_lengths,
+            "literal_set region-presence+positions",
+        )?;
+        let total_words = presence_by_region_words(pattern_count, region_count) as usize;
+        let program = try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program(
+            &self.dfa,
+            pattern_count,
+            region_count,
+            max_matches,
+        )
+        .map_err(vyre::BackendError::new)?;
+
+        // Bindings 0..=9 (the ONE-PLACE common staging), reserved for all 13. The
+        // matches output (binding 13) is a backend-allocated `BufferDecl::output`,
+        // not an input, so only bindings 10..=12 are appended here.
+        const PRESENCE_AND_POSITIONS_INPUT_COUNT: usize = 13;
+        let (haystack_len, mut inputs) = self.build_presence_common_inputs(
+            haystack,
+            "literal_set_presence_and_positions_by_region",
+            total_words,
+            PRESENCE_AND_POSITIONS_INPUT_COUNT,
+        )?;
+        // Tail bindings unique to the fused program.
+        inputs.push(copy_u32_words_as_le_bytes(region_starts, "region starts")?); // 10
+        inputs.push(region_base.to_le_bytes().to_vec()); // 11: region_base (shard offset)
+        inputs.push(vec![0u8; 4]); // 12: match_count (read_write, zeroed)
+
+        let config =
+            dispatch_io::byte_scan_dispatch_config(haystack_len, program.workgroup_size[0]);
+        Ok((program, inputs, config, total_words))
+    }
+
+    /// TIMED counterpart of [`Self::scan_presence_and_positions_by_region`]: runs
+    /// the same fused ONE-dispatch scan but returns backend-owned timing
+    /// ([`vyre_driver::TimedDispatchResult`]) alongside BOTH decoded outputs, the
+    /// per-region presence bitmap (return value's `.0`) and the `(pid, start, end)`
+    /// match triples (decoded into `matches`). This is the "attribution
+    /// everywhere" contract on the fused path, so a benchmark can attribute the
+    /// (documented ~20x-heavier) fused kernel's cost between device and staging.
+    ///
+    /// Both outputs are byte-for-byte identical to the untimed
+    /// [`Self::scan_presence_and_positions_by_region`] (same program, same inputs;
+    /// only `dispatch_borrowed_timed` vs `dispatch_borrowed` differs). Reuses the
+    /// one owned-buffer prepare path
+    /// ([`Self::build_presence_and_positions_by_region_dispatch`]); the untimed hot
+    /// path is untouched and pays no timing cost. The same overflow contract holds:
+    /// a match count over `max_matches` fails closed (Law 10), never a silent
+    /// truncated decode.
+    ///
+    /// # Errors
+    /// See [`Self::scan_presence_and_positions_by_region`]. On a backend whose
+    /// `dispatch_borrowed_timed` only records host wall time, `device_ns` is `None`
+    /// (loud absence, not a fabricated zero).
+    pub fn scan_presence_and_positions_by_region_timed<B: VyreBackend + ?Sized>(
+        &self,
+        backend: &B,
+        haystack: &[u8],
+        region_starts: &[u32],
+        region_base: u32,
+        max_matches: u32,
+        matches: &mut Vec<Match>,
+    ) -> Result<(Vec<u32>, vyre_driver::TimedDispatchResult), vyre::BackendError> {
+        use crate::scan::dispatch_io;
+
+        matches.clear();
+        let (program, inputs, config, total_words) = self
+            .build_presence_and_positions_by_region_dispatch(
+                haystack,
+                region_starts,
+                region_base,
+                max_matches,
+            )?;
+        let borrowed: smallvec::SmallVec<[&[u8]; 13]> = inputs.iter().map(Vec::as_slice).collect();
+        let timed = backend.dispatch_borrowed_timed(&program, &borrowed, &config)?;
+
+        // Output ordering = read_write + output buffers by binding:
+        // presence(6) -> outputs[0], match_count(12) -> outputs[1], matches(13) -> outputs[2].
+        let presence_bytes = dispatch_io::try_output_bytes(
+            &timed.outputs,
+            0,
+            "literal_set presence_and_positions_by_region timed presence",
+        )?;
+        let presence = decode_presence_words(presence_bytes, total_words);
+
+        let count_bytes = dispatch_io::try_output_bytes(
+            &timed.outputs,
+            1,
+            "literal_set presence_and_positions_by_region timed match count",
+        )?;
+        let count = dispatch_io::try_read_u32_prefix(
+            count_bytes,
+            "literal_set presence_and_positions_by_region timed match count",
+        )?;
+        let matches_bytes = dispatch_io::try_output_bytes(
+            &timed.outputs,
+            2,
+            "literal_set presence_and_positions_by_region timed matches",
+        )?;
+        dispatch_io::try_unpack_match_triples_capped_into(
+            matches_bytes,
+            count,
+            max_matches,
+            "literal_set presence_and_positions_by_region timed matches",
+            matches,
+        )?;
+
+        Ok((presence, timed))
+    }
+
+    /// ASYNC counterpart of [`Self::scan_presence_and_positions_by_region`]: submit
+    /// the fused ONE-dispatch scan and return a [`PendingFusedRegion`] handle
+    /// IMMEDIATELY, so the caller can OVERLAP host-side work with the in-flight GPU
+    /// scan, then decode BOTH outputs (the per-region presence bitmap and the
+    /// `(pid, start, end)` triples) via [`PendingFusedRegion::await_into`].
+    ///
+    /// On a backend that genuinely pipelines host/device work (wgpu, cuda) the GPU
+    /// scan executes while the caller does host work; on the synchronous default in
+    /// [`VyreBackend::dispatch_async`] the handle is trivially ready, same outputs,
+    /// no overlap, no silent change of result. Reuses the one owned-buffer prepare
+    /// path ([`Self::build_presence_and_positions_by_region_dispatch`]); the
+    /// [`PendingFusedRegion`] retains the owned inputs until the decode. The same
+    /// fail-closed overflow contract holds (count over `max_matches` errors at the
+    /// await, never a silent truncated decode).
+    ///
+    /// # Errors
+    /// See [`Self::scan_presence_and_positions_by_region`]. Errors that surface only
+    /// during GPU execution come back from [`PendingFusedRegion::await_into`].
+    pub fn scan_presence_and_positions_by_region_async<B: VyreBackend + ?Sized>(
+        &self,
+        backend: &B,
+        haystack: &[u8],
+        region_starts: &[u32],
+        region_base: u32,
+        max_matches: u32,
+    ) -> Result<PendingFusedRegion, vyre::BackendError> {
+        let (program, inputs, config, total_words) = self
+            .build_presence_and_positions_by_region_dispatch(
+                haystack,
+                region_starts,
+                region_base,
+                max_matches,
+            )?;
+        let pending = backend.dispatch_async(&program, &inputs, &config)?;
+        Ok(PendingFusedRegion {
+            pending,
+            total_words,
+            max_matches,
+            _inputs: inputs,
+        })
+    }
+
     fn scan_into_with_program<B: VyreBackend + ?Sized>(
         &self,
         backend: &B,
@@ -1517,51 +3009,117 @@ impl GpuLiteralSet {
         matches.clear();
         let haystack_len =
             dispatch_io::scan_guard(haystack, "literal_set", dispatch_io::DEFAULT_MAX_SCAN_BYTES)?;
-
-        // Buffer order matches the BufferDecl declaration in
-        // `try_build_literal_set_program`; reordering here would silently
-        // miswire the GPU program.
         dispatch_io::pack_haystack_u32_into(haystack, &mut scratch.haystack_bytes)?;
         let haystack_bytes = scratch.haystack_bytes.as_slice();
         let views = DfaPrefilterByteViews::new(&self.dfa, &self.pattern_lengths, prefilter_tables);
+
+        let outputs = self.dispatch_literal_scan_outputs(
+            backend,
+            haystack_bytes,
+            haystack_len,
+            &views,
+            dispatch_program,
+        )?;
+
+        decode_literal_set_outputs_into(&outputs, max_matches, matches)?;
+        Ok(())
+    }
+
+    /// Dispatch the suffix3-prefiltered bounded-DFA MATCH program and return the
+    /// raw `[count, matches]` output buffers. The SINGLE owner of the 10-input
+    /// binding order (buffer order matches the `BufferDecl` declaration in
+    /// `try_build_literal_set_program`; reordering here silently miswires the GPU
+    /// program), shared by the fixed-cap [`Self::scan_into_with_program`] and the
+    /// auto-resizing [`Self::scan_all_into_with_scratch`] so the two paths cannot
+    /// drift in their input wiring.
+    fn dispatch_literal_scan_outputs<B: VyreBackend + ?Sized>(
+        &self,
+        backend: &B,
+        haystack_bytes: &[u8],
+        haystack_len: u32,
+        views: &DfaPrefilterByteViews<'_>,
+        dispatch_program: &Program,
+    ) -> Result<Vec<Vec<u8>>, vyre::BackendError> {
+        use crate::scan::dispatch_io;
+
         let haystack_len_word = [haystack_len];
         let haystack_len_bytes = dispatch_io::u32_words_as_le_bytes(&haystack_len_word);
+        // Fresh zeroed atomic match counter every dispatch: on an auto-resize
+        // retry the recount must start from zero, not accumulate.
         let match_count_bytes = [0u8; 4];
 
         let config = dispatch_io::byte_scan_dispatch_config(
             haystack_len,
             dispatch_program.workgroup_size[0],
         );
-        let borrowed_inputs: smallvec::SmallVec<[&[u8]; 10]> = [
-            // 0: haystack (Packed U32)
+        let borrowed_inputs = Self::literal_scan_borrowed_inputs(
             haystack_bytes,
-            // 1: transitions
-            views.transitions.as_ref(),
-            // 2: output_offsets
-            views.output_offsets.as_ref(),
-            // 3: output_records
-            views.output_records.as_ref(),
-            // 4: pattern_lengths
-            views.pattern_lengths.as_ref(),
-            // 5: haystack_len
             haystack_len_bytes.as_ref(),
-            // 6: match_count atomic counter
             match_count_bytes.as_slice(),
-            // 7: candidate_end_mask
-            views.candidate_end_mask.as_ref(),
-            // 8: candidate_suffix2_mask
-            views.candidate_suffix2_mask.as_ref(),
-            // 9: candidate_suffix3_bloom
-            views.candidate_suffix3_bloom.as_ref(),
-            // 10: matches is a pure `BufferDecl::output`; the backend
-            // allocates it from the Program declaration.
+            views,
+        );
+        backend.dispatch_borrowed(dispatch_program, &borrowed_inputs, &config)
+    }
+
+    /// TIMED sibling of [`Self::dispatch_literal_scan_outputs`]: identical staging
+    /// and binding order (through the shared [`Self::literal_scan_borrowed_inputs`]
+    /// owner), but calls `dispatch_borrowed_timed` so the raw `[count, matches]`
+    /// outputs arrive inside a [`vyre_driver::TimedDispatchResult`]. The untimed
+    /// path is byte-identical and pays no timing cost.
+    fn dispatch_literal_scan_outputs_timed<B: VyreBackend + ?Sized>(
+        &self,
+        backend: &B,
+        haystack_bytes: &[u8],
+        haystack_len: u32,
+        views: &DfaPrefilterByteViews<'_>,
+        dispatch_program: &Program,
+    ) -> Result<vyre_driver::TimedDispatchResult, vyre::BackendError> {
+        use crate::scan::dispatch_io;
+
+        let haystack_len_word = [haystack_len];
+        let haystack_len_bytes = dispatch_io::u32_words_as_le_bytes(&haystack_len_word);
+        let match_count_bytes = [0u8; 4];
+        let config = dispatch_io::byte_scan_dispatch_config(
+            haystack_len,
+            dispatch_program.workgroup_size[0],
+        );
+        let borrowed_inputs = Self::literal_scan_borrowed_inputs(
+            haystack_bytes,
+            haystack_len_bytes.as_ref(),
+            match_count_bytes.as_slice(),
+            views,
+        );
+        backend.dispatch_borrowed_timed(dispatch_program, &borrowed_inputs, &config)
+    }
+
+    /// SINGLE owner of the 10-input binding order for the literal MATCH program
+    /// (buffer order matches the `BufferDecl` declaration in
+    /// `try_build_literal_set_program`; reordering here silently miswires the GPU
+    /// program). Shared by the untimed [`Self::dispatch_literal_scan_outputs`] and
+    /// the timed [`Self::dispatch_literal_scan_outputs_timed`] so the two dispatch
+    /// paths cannot drift in their input wiring. Binding 10 (`matches`) is a pure
+    /// `BufferDecl::output` the backend allocates from the Program, so it is not an
+    /// input here.
+    fn literal_scan_borrowed_inputs<'a>(
+        haystack_bytes: &'a [u8],
+        haystack_len_bytes: &'a [u8],
+        match_count_bytes: &'a [u8],
+        views: &'a DfaPrefilterByteViews<'a>,
+    ) -> smallvec::SmallVec<[&'a [u8]; 10]> {
+        [
+            haystack_bytes,                         // 0: haystack (Packed U32)
+            views.transitions.as_ref(),             // 1: transitions
+            views.output_offsets.as_ref(),          // 2: output_offsets
+            views.output_records.as_ref(),          // 3: output_records
+            views.pattern_lengths.as_ref(),         // 4: pattern_lengths
+            haystack_len_bytes,                     // 5: haystack_len
+            match_count_bytes,                      // 6: match_count atomic counter
+            views.candidate_end_mask.as_ref(),      // 7: candidate_end_mask
+            views.candidate_suffix2_mask.as_ref(),  // 8: candidate_suffix2_mask
+            views.candidate_suffix3_bloom.as_ref(), // 9: candidate_suffix3_bloom
         ]
         .into_iter()
-        .collect();
-        let outputs = backend.dispatch_borrowed(&dispatch_program, &borrowed_inputs, &config)?;
-
-        decode_literal_set_outputs_into(&outputs, max_matches, matches)?;
-        Ok(())
+        .collect()
     }
 
     fn count_with_program<B: VyreBackend + ?Sized>(
@@ -1832,11 +3390,17 @@ impl GpuLiteralSet {
             .iter()
             .map(Vec::as_slice)
             .collect::<Vec<_>>();
+        // Case-insensitive matching folds the DFA transition table, but the
+        // suffix prefilter is checked against the RAW haystack byte, which the
+        // kernel does not fold, so the masks must admit BOTH cases of each
+        // pattern byte or an uppercase candidate would be rejected before the
+        // DFA replay (a silent under-fire). One flag drives all three tables.
+        let ci = self.case_insensitive;
         Ok(LiteralSetPrefilterTables {
             pattern_fingerprint,
-            candidate_end_mask: literal_set_candidate_end_byte_mask_words(&pattern_refs),
-            candidate_suffix2_mask: literal_set_candidate_suffix2_mask_words(&pattern_refs),
-            candidate_suffix3_bloom: classic_ac_candidate_suffix3_bloom_words(&pattern_refs),
+            candidate_end_mask: literal_set_candidate_end_byte_mask_words(&pattern_refs, ci),
+            candidate_suffix2_mask: literal_set_candidate_suffix2_mask_words(&pattern_refs, ci),
+            candidate_suffix3_bloom: classic_ac_candidate_suffix3_bloom_words_ci(&pattern_refs, ci),
         })
     }
 
@@ -1911,19 +3475,17 @@ impl GpuLiteralSet {
     }
 
     fn pattern_fingerprint(&self) -> u64 {
-        let mut hash = fnv1a64_initial_state();
-        for words in [
+        // Same owner as `GpuLiteralSet::cache_key` (engine.rs) over the same
+        // slices, one hash impl, no drift. The case-insensitive flag is folded
+        // in because a ci and a non-ci matcher share identical pattern bytes but
+        // build DIFFERENT prefilter masks; without it their cached tables collide.
+        let case_word = [u32::from(self.case_insensitive)];
+        crate::scan::engine::fnv1a64_word_slices([
             self.pattern_offsets.as_slice(),
             self.pattern_lengths.as_slice(),
             self.pattern_bytes.as_slice(),
-        ] {
-            for &word in words {
-                for byte in word.to_le_bytes() {
-                    hash = fnv1a64_update_byte(hash, byte);
-                }
-            }
-        }
-        hash
+            &case_word,
+        ])
     }
 
     fn program_for_match_capacity_cached<'a>(
@@ -2061,6 +3623,13 @@ impl GpuLiteralSet {
             .map_err(LiteralSetWireError::WireFraming)?;
         w.write_words(&self.pattern_bytes)
             .map_err(LiteralSetWireError::WireFraming)?;
+        // v4: the case-insensitive flag. The DFA transitions and pattern bytes
+        // are identical for a case-sensitive vs case-insensitive set over the
+        // same folded-lowercase patterns, so this flag, not the bytes, is what
+        // makes `from_bytes` rebuild the FOLDED prefilter masks. Omitting it would
+        // silently rebuild case-sensitive masks and under-fire on uppercase input.
+        w.write_words(&[u32::from(self.case_insensitive)])
+            .map_err(LiteralSetWireError::WireFraming)?;
         Ok(w.into_bytes())
     }
 
@@ -2086,6 +3655,14 @@ impl GpuLiteralSet {
         let pattern_offsets = r.read_words().map_err(LiteralSetWireError::WireFraming)?;
         let pattern_lengths = r.read_words().map_err(LiteralSetWireError::WireFraming)?;
         let pattern_bytes = r.read_words().map_err(LiteralSetWireError::WireFraming)?;
+        // The case-insensitive flag is a v4+ trailing section. Legacy blobs
+        // (v1/v2/v3) predate it and were always case-sensitive → default false.
+        let case_insensitive = if wire_version == LITERAL_SET_WIRE_VERSION {
+            let flag = r.read_words().map_err(LiteralSetWireError::WireFraming)?;
+            flag.first().copied().unwrap_or(0) != 0
+        } else {
+            false
+        };
         let pattern_count =
             u32::try_from(pattern_lengths.len()).map_err(|source| {
                 LiteralSetWireError::InvalidProgram(format!(
@@ -2093,6 +3670,19 @@ impl GpuLiteralSet {
                     pattern_lengths.len()
                 ))
             })?;
+        // Cross-section invariant: the DFA output table (decoded independently
+        // of the pattern arrays) emits pattern ids that index `pattern_lengths`
+        // in `reference_scan` and GPU post-process. A stale/crafted blob whose
+        // DFA references an id >= pattern_lengths.len() must fail closed here,
+        // not OOB-panic the pub reference oracle.
+        if let Some(&max_id) = dfa.output_records.iter().max() {
+            if max_id as usize >= pattern_lengths.len() {
+                return Err(LiteralSetWireError::InvalidProgram(format!(
+                    "literal_set decoded DFA emits pattern id {max_id} but only {} pattern length(s) were decoded. Fix: the cache is stale/corrupt; recompile the literal set.",
+                    pattern_lengths.len()
+                )));
+            }
+        }
         let program = try_build_literal_set_program(&dfa, pattern_count).map_err(|message| {
             LiteralSetWireError::InvalidProgram(format!(
                 "literal_set decoded DFA cannot rebuild current dispatch Program: {message}"
@@ -2105,6 +3695,7 @@ impl GpuLiteralSet {
             pattern_offsets,
             pattern_lengths,
             program,
+            case_insensitive,
         })
     }
 }
@@ -2124,7 +3715,8 @@ fn literal_set_wire_reader(
         Err(vyre_foundation::serial::envelope::EnvelopeError::VersionMismatch {
             found:
                 legacy_version @ (LITERAL_SET_LEGACY_LITERAL_COMPARE_WIRE_VERSION
-                | LITERAL_SET_LEGACY_BOUNDED_DFA_WIRE_VERSION),
+                | LITERAL_SET_LEGACY_BOUNDED_DFA_WIRE_VERSION
+                | LITERAL_SET_LEGACY_CASE_SENSITIVE_WIRE_VERSION),
             ..
         }) => vyre_foundation::serial::envelope::WireReader::new(
             bytes,
@@ -2136,21 +3728,29 @@ fn literal_set_wire_reader(
     }
 }
 
-fn literal_set_candidate_end_byte_mask_words(patterns: &[&[u8]]) -> [u32; 8] {
+fn literal_set_candidate_end_byte_mask_words(
+    patterns: &[&[u8]],
+    case_insensitive: bool,
+) -> [u32; 8] {
     let mut mask = [0_u32; 8];
     for pattern in patterns
         .iter()
         .copied()
         .filter(|pattern| !pattern.is_empty())
     {
-        let byte = usize::from(pattern[pattern.len() - 1]);
-        mask[byte / 32] |= 1_u32 << (byte % 32);
+        // The raw end byte may be either case under case-insensitive matching.
+        let (variants, n) = ascii_case_variants(pattern[pattern.len() - 1], case_insensitive);
+        for &byte in &variants[..n] {
+            let byte = usize::from(byte);
+            mask[byte / 32] |= 1_u32 << (byte % 32);
+        }
     }
     mask
 }
 
 fn literal_set_candidate_suffix2_mask_words(
     patterns: &[&[u8]],
+    case_insensitive: bool,
 ) -> [u32; CLASSIC_AC_SUFFIX2_MASK_WORDS] {
     let mut mask = [0_u32; CLASSIC_AC_SUFFIX2_MASK_WORDS];
     for pattern in patterns
@@ -2160,17 +3760,28 @@ fn literal_set_candidate_suffix2_mask_words(
     {
         match pattern.len() {
             1 => {
-                let current = usize::from(pattern[0]);
-                for previous in 0..=u8::MAX {
-                    set_suffix2_candidate_bit(&mut mask, usize::from(previous), current);
+                // Length-1: any previous byte, the single byte in either case.
+                let (cv, cn) = ascii_case_variants(pattern[0], case_insensitive);
+                for &current in &cv[..cn] {
+                    let current = usize::from(current);
+                    for previous in 0..=u8::MAX {
+                        set_suffix2_candidate_bit(&mut mask, usize::from(previous), current);
+                    }
                 }
             }
             len => {
-                set_suffix2_candidate_bit(
-                    &mut mask,
-                    usize::from(pattern[len - 2]),
-                    usize::from(pattern[len - 1]),
-                );
+                // Every case combination of the raw 2-byte suffix.
+                let (pv, pn) = ascii_case_variants(pattern[len - 2], case_insensitive);
+                let (cv, cn) = ascii_case_variants(pattern[len - 1], case_insensitive);
+                for &previous in &pv[..pn] {
+                    for &current in &cv[..cn] {
+                        set_suffix2_candidate_bit(
+                            &mut mask,
+                            usize::from(previous),
+                            usize::from(current),
+                        );
+                    }
+                }
             }
         }
     }
@@ -2198,6 +3809,57 @@ fn reserve_vec<T>(
             message: source.to_string(),
         },
     )
+}
+
+/// Validate the region-presence precondition shared by every region-presence
+/// entry point (sync, async-build, and positions). `ctx` is the error-message
+/// prefix that names the calling surface; the checks and their wording are
+/// otherwise identical, so they live here in ONE place. Returns
+/// `(pattern_count, region_count)` as the GPU-ABI `u32`s the callers need.
+fn validate_region_starts(
+    region_starts: &[u32],
+    pattern_lengths: &[u32],
+    ctx: &str,
+) -> Result<(u32, u32), vyre::BackendError> {
+    let pattern_count = u32::try_from(pattern_lengths.len()).map_err(|_| {
+        vyre::BackendError::new(format!("{ctx}: pattern count exceeds u32 GPU ABI"))
+    })?;
+    let region_count = u32::try_from(region_starts.len())
+        .map_err(|_| vyre::BackendError::new(format!("{ctx}: region count exceeds u32 GPU ABI")))?;
+    if region_count == 0 {
+        return Err(vyre::BackendError::new(format!(
+            "{ctx}: region_starts must be non-empty. Fix: pass one start offset per coalesced file, beginning with 0."
+        )));
+    }
+    if region_starts[0] != 0 {
+        return Err(vyre::BackendError::new(format!(
+            "{ctx}: region_starts[0] must be 0 (the kernel binary-search lower bound). Fix: the first coalesced file must start at offset 0."
+        )));
+    }
+    Ok((pattern_count, region_count))
+}
+
+/// Allocate the zeroed binding-6 presence output buffer (`words * 4` bytes)
+/// through the fail-closed `try_reserve` path, matching the owned/prepared
+/// contract (an OOM here returns `BackendError`, never aborts the process).
+/// The single owner for every presence-buffer allocation.
+fn zeroed_presence_bytes(words: usize) -> Result<Vec<u8>, vyre::BackendError> {
+    let byte_len = words.checked_mul(U32_BYTES).ok_or_else(|| {
+        vyre::BackendError::new(
+            "literal_set region-presence output byte length overflowed host usize. Fix: shard the literal set or corpus before dispatch."
+                .to_string(),
+        )
+    })?;
+    let mut bytes = Vec::new();
+    vyre_foundation::allocation::try_reserve_vec_to_capacity(&mut bytes, byte_len).map_err(
+        |source| {
+            vyre::BackendError::new(format!(
+                "literal_set region-presence could not reserve {byte_len} byte(s) for the presence output: {source}. Fix: shard the literal set or corpus before dispatch."
+            ))
+        },
+    )?;
+    bytes.resize(byte_len, 0);
+    Ok(bytes)
 }
 
 fn copy_u32_words_as_le_bytes(
@@ -2229,7 +3891,7 @@ fn copy_u32_words_as_le_bytes(
 
 /// Decode the first `total_words` little-endian `u32` words of a presence readback
 /// into `out` (cleared first). The single decoder for EVERY region-presence wire
-/// result — sync, async, prepared, fused, and resident — so the bit layout has one
+/// result, sync, async, prepared, fused, and resident, so the bit layout has one
 /// source. Trailing bytes beyond `total_words` are ignored: a resident readback may
 /// return the full buffer capacity, of which only the used prefix is meaningful.
 pub(crate) fn decode_presence_words_into(
@@ -2311,6 +3973,71 @@ fn literal_set_match_output_layout(max_matches: u32) -> Result<(u32, usize), vyr
 #[cfg(test)]
 mod compile_tests {
     use super::*;
+
+    /// ONE-PLACE lock: the candidate-end-byte and candidate-suffix2 masks have
+    /// TWO independent derivations, the pattern-derived builders here
+    /// (`literal_set_candidate_*`, used by the presence/prefilter path) and the
+    /// DFA-derived builders (`classic_ac_candidate_*`, used by the count path).
+    /// They must produce byte-identical masks for the same literal set (both
+    /// answer "which 1-/2-byte suffixes can complete a match"); if they ever
+    /// diverge, one path's prefilter under- or over-fires relative to the other.
+    /// This differential locks them so a future edit to either cannot drift
+    /// silently. (The case-insensitive folding of the pattern-derived builder is
+    /// covered separately by `literal_set_case_insensitive.rs`; here we compare
+    /// the case-SENSITIVE forms against the DFA the same patterns compile to.)
+    #[test]
+    fn candidate_masks_pattern_derived_equals_dfa_derived() {
+        use crate::scan::classic_ac::{
+            classic_ac_candidate_end_byte_mask_words, classic_ac_candidate_suffix2_mask_words,
+        };
+
+        // Deterministic LCG; small byte alphabet so patterns share suffixes and
+        // the DFA develops real failure links (the interesting case).
+        let mut state = 0x9E37_79B9_7F4A_7C15_u64;
+        let mut next = || {
+            state = state
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            (state >> 33) as u32
+        };
+        const ALPHABET: &[u8] = b"abcx_9";
+
+        for case in 0..600 {
+            let pattern_count = 1 + (next() % 8) as usize;
+            let owned: Vec<Vec<u8>> = (0..pattern_count)
+                .map(|_| {
+                    // Include length-1 patterns (the "any previous byte" suffix2 branch).
+                    let len = 1 + (next() % 5) as usize;
+                    (0..len)
+                        .map(|_| ALPHABET[(next() as usize) % ALPHABET.len()])
+                        .collect()
+                })
+                .collect();
+            let patterns: Vec<&[u8]> = owned.iter().map(Vec::as_slice).collect();
+            let dfa = dfa_compile(&patterns);
+
+            assert_eq!(
+                literal_set_candidate_end_byte_mask_words(&patterns, false),
+                classic_ac_candidate_end_byte_mask_words(&dfa),
+                "case {case}: end-byte mask must agree between pattern- and DFA-derived builders\n\
+                 patterns={:?}",
+                owned
+                    .iter()
+                    .map(|p| String::from_utf8_lossy(p).into_owned())
+                    .collect::<Vec<_>>(),
+            );
+            assert_eq!(
+                literal_set_candidate_suffix2_mask_words(&patterns, false),
+                classic_ac_candidate_suffix2_mask_words(&dfa),
+                "case {case}: suffix2 mask must agree between pattern- and DFA-derived builders\n\
+                 patterns={:?}",
+                owned
+                    .iter()
+                    .map(|p| String::from_utf8_lossy(p).into_owned())
+                    .collect::<Vec<_>>(),
+            );
+        }
+    }
 
     #[derive(Clone)]
     struct LiteralReadbackBackend {
@@ -2604,8 +4331,8 @@ mod compile_tests {
     #[test]
     fn literal_prefilter_masks_are_derived_from_literal_suffixes() {
         let patterns: [&[u8]; 3] = [b"a", b"bc", b"token"];
-        let end_mask = literal_set_candidate_end_byte_mask_words(&patterns);
-        let suffix2_mask = literal_set_candidate_suffix2_mask_words(&patterns);
+        let end_mask = literal_set_candidate_end_byte_mask_words(&patterns, false);
+        let suffix2_mask = literal_set_candidate_suffix2_mask_words(&patterns, false);
 
         let end_contains = |byte: u8| {
             let byte = usize::from(byte);
@@ -2932,7 +4659,7 @@ mod compile_tests {
         // No LAZY panics (no fix hint); explicit panic!() fail-loud is allowed.
         assert!(
             !production.contains(".expect(") && !production.contains(".unwrap("),
-            "Fix: literal_set production wrappers must not use bare .unwrap()/.expect() — use an explicit panic!() with a fix hint."
+            "Fix: literal_set production wrappers must not use bare .unwrap()/.expect() (use an explicit panic!() with a fix hint)."
         );
         // Law 10 regression guard: GpuLiteralSet::compile must not swallow a
         // compile error into an empty matcher (which silently matches nothing,
@@ -2942,7 +4669,7 @@ mod compile_tests {
         assert!(
             !production.contains("eprintln!(\"vyre-libs GpuLiteralSet::compile failed")
                 && !production.contains("empty_after_compile_failure"),
-            "Fix: GpuLiteralSet::compile must not log-and-return an empty matcher on error — fail loud via panic!() so callers use try_compile."
+            "Fix: GpuLiteralSet::compile must not log-and-return an empty matcher on error (fail loud via panic!() so callers use try_compile)."
         );
         assert!(
             production.contains("panic!("),
@@ -3121,8 +4848,7 @@ mod compile_tests {
         let prefilter = engine
             .build_prefilter_tables()
             .expect("Fix: small literal-set prefilter tables should build");
-        let total_presence_words =
-            presence_by_region_words(pattern_count, region_count) as usize;
+        let total_presence_words = presence_by_region_words(pattern_count, region_count) as usize;
 
         // Inputs in binding order (read-write buffers passed zeroed; the matches
         // output at binding 13 is backend-allocated and not passed).
@@ -3173,8 +4899,9 @@ mod compile_tests {
             max_matches,
         )
         .expect("Fix: fused presence+positions program should build for a 3-pattern set");
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
-            .expect("Fix: fused presence+positions program should evaluate in the reference backend");
+        let outputs = vyre_reference::reference_eval(&program, &inputs).expect(
+            "Fix: fused presence+positions program should evaluate in the reference backend",
+        );
 
         // outputs[0] = presence (read_write binding 6), [1] = match_count (12),
         // [2] = matches (13).
@@ -3223,7 +4950,11 @@ mod compile_tests {
         );
         // Concrete cross-check of the derived expectation: region 0 = {abc(id0)},
         // region 1 = {xyz(id1), BEGIN(id2)}.
-        assert_eq!(presence[0], 1 << 0, "region 0 presence must be exactly {{abc}}");
+        assert_eq!(
+            presence[0],
+            1 << 0,
+            "region 0 presence must be exactly {{abc}}"
+        );
         assert_eq!(
             presence[1],
             (1 << 1) | (1 << 2),
@@ -3244,7 +4975,7 @@ mod compile_tests {
         // four DFA tables have mutually DISTINCT byte lengths, which is what lets the
         // observed per-binding length vector detect a swap among bindings 1..=4.
         // `"bc"` is a suffix of `"abc"`, so the `abc` accepting state emits TWO pattern
-        // ids — that pushes `output_records` (binding 3) past the pattern count, so it
+        // ids, that pushes `output_records` (binding 3) past the pattern count, so it
         // differs in length from `pattern_lengths` (binding 4) and a 3<->4 swap is
         // observable (with no suffix sharing both would be `pattern_count` long).
         let patterns: [&[u8]; 3] = [b"abc", b"bc", b"xyz"];
@@ -3279,7 +5010,7 @@ mod compile_tests {
 
         // `RecordingCountBackend` echoes outputs[0] (the presence buffer) and records
         // every borrowed input's byte length in binding order, with no required output
-        // buffer — `RecordingLiteralBackend` insists on a `matches` buffer the
+        // buffer: `RecordingLiteralBackend` insists on a `matches` buffer the
         // presence-only program does not declare.
         let backend = RecordingCountBackend::new(vec![vec![0u8; total_words * 4]]);
         let presence = engine
@@ -3301,7 +5032,7 @@ mod compile_tests {
             engine.dfa.output_offsets.len() * 4,
             engine.dfa.output_records.len() * 4,
             engine.pattern_lengths.len() * 4,
-            4, // haystack_len: one u32 word
+            4,               // haystack_len: one u32 word
             total_words * 4, // per-region presence buffer (uploaded zeroed)
             prefilter.candidate_end_mask.len() * 4,
             prefilter.candidate_suffix2_mask.len() * 4,
@@ -3340,7 +5071,7 @@ mod compile_tests {
         // Law 10 boundary: a zero-capacity position buffer that the kernel still
         // counts a match into must FAIL CLOSED, not silently return empty.
         // `scan_into` exposes only `matches`, so returning empty here would hide a
-        // real match with no signal — exactly the silent false negative the capped
+        // real match with no signal, exactly the silent false negative the capped
         // decode forbids. A caller wanting presence/count without positions uses
         // `scan_presence_by_region`; a 0-cap positions scan that finds a match has
         // dropped it, so surface that.
@@ -3461,10 +5192,737 @@ mod compile_tests {
         assert!(msg.contains("overflows the GPU match-output word count"));
         assert!(backend.observed_matches_layouts().is_empty());
     }
+
+    #[test]
+    fn validate_region_starts_accepts_valid_and_returns_counts() {
+        let lengths = [4u32, 4, 4];
+        let (pattern_count, region_count) =
+            validate_region_starts(&[0, 10, 20], &lengths, "ctx").expect("valid region starts");
+        assert_eq!(pattern_count, 3);
+        assert_eq!(region_count, 3);
+    }
+
+    #[test]
+    fn validate_region_starts_rejects_empty_and_nonzero_first() {
+        let lengths = [4u32];
+        let empty = validate_region_starts(&[], &lengths, "literal_set region-presence")
+            .expect_err("empty region_starts must be rejected");
+        assert!(
+            empty
+                .to_string()
+                .contains("region_starts must be non-empty"),
+            "got: {empty}"
+        );
+
+        let nonzero = validate_region_starts(&[5, 10], &lengths, "literal_set region-presence")
+            .expect_err("region_starts[0] != 0 must be rejected");
+        assert!(
+            nonzero.to_string().contains("region_starts[0] must be 0"),
+            "got: {nonzero}"
+        );
+    }
+
+    #[test]
+    fn zeroed_presence_bytes_is_word_sized_and_zero() {
+        let buf = zeroed_presence_bytes(5).expect("small presence buffer must allocate");
+        assert_eq!(buf.len(), 5 * U32_BYTES);
+        assert!(buf.iter().all(|&b| b == 0));
+        assert_eq!(zeroed_presence_bytes(0).expect("zero words").len(), 0);
+    }
+
+    #[test]
+    fn pattern_fingerprint_shares_one_owner_with_cache_key() {
+        // Dedup lock: `pattern_fingerprint` and `GpuLiteralSet::cache_key` must
+        // hash the SAME three slices through the SAME `fnv1a64_word_slices`
+        // owner, so the identity hash cannot drift between the two call sites.
+        use crate::scan::engine::MatchScan;
+        let engine = GpuLiteralSet::compile(&[b"AKIA".as_slice(), b"ghp_".as_slice()]);
+        let fp = engine.pattern_fingerprint();
+        assert_eq!(format!("lit-{fp:016x}"), MatchScan::cache_key(&engine));
+    }
+}
+
+/// W3-1 resident POSITION-scan plumbing: `prepare_resident_scan` uploads the
+/// immutable DFA + suffix-prefilter tables ONCE, and each
+/// [`ResidentLiteralScan::scan_into`] re-uploads only the haystack + resets the
+/// 4-byte counter, then decodes the backend's `[count, triples]` readback.
+///
+/// A `MockResidentMatchBackend` records resident traffic and returns a CANNED
+/// two-output buffer, so the host orchestration (seven-table-upload-once,
+/// per-scan haystack stage + counter reset, eleven-binding all-resident dispatch,
+/// capped decode) is validated WITHOUT a GPU. Real resident-vs-borrowed match
+/// parity is asserted in the integration suite where a live wgpu backend exists.
+#[cfg(test)]
+mod resident_match_tests {
+    use super::*;
+    use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+    use std::sync::Mutex;
+    use vyre::DispatchConfig as Config;
+    use vyre_driver::TimedDispatchResult;
+
+    // pattern_id order matches the compile order: key=0 .. api=7.
+    const LITERALS: &[&[u8]] = &[
+        b"key",
+        b"token",
+        b"secret",
+        b"AKIA",
+        b"ghp_",
+        b"sk_live_",
+        b"password",
+        b"api",
+    ];
+
+    // The literal MATCH program binds 11 buffers: inputs 0..=9 (haystack,
+    // transitions, output_offsets, output_records, pattern_lengths, haystack_len,
+    // match_count[6 read_write], candidate_end_mask, candidate_suffix2_mask,
+    // candidate_suffix3_bloom) + the matches OUTPUT at 10. A resident dispatch
+    // resolves match_count(6) -> outputs[0] and matches(10) -> outputs[1].
+    const LITERAL_MATCH_BINDINGS: usize = 11;
+
+    /// Build the backend's canned two-output readback: outputs[0] = the atomic
+    /// match count (u32 LE prefix), outputs[1] = `(pattern_id, start, end)` triples
+    /// (three u32 LE words each), the exact shape the borrowed match dispatch
+    /// produces, so the ONE-PLACE `decode_literal_set_outputs_into` decodes it
+    /// unchanged.
+    fn canned_match_outputs(count: u32, triples: &[(u32, u32, u32)]) -> Vec<Vec<u8>> {
+        let mut count_buf = Vec::new();
+        count_buf.extend_from_slice(&count.to_le_bytes());
+        let mut triples_buf = Vec::new();
+        for &(pid, start, end) in triples {
+            triples_buf.extend_from_slice(&pid.to_le_bytes());
+            triples_buf.extend_from_slice(&start.to_le_bytes());
+            triples_buf.extend_from_slice(&end.to_le_bytes());
+        }
+        vec![count_buf, triples_buf]
+    }
+
+    struct MockResidentMatchBackend {
+        next_id: AtomicU64,
+        /// (handle_id, byte_len) for every allocate_resident call, in order.
+        allocations: Mutex<Vec<(u64, usize)>>,
+        /// Full (immutable-table) uploads seen.
+        full_uploads: AtomicUsize,
+        /// Ranged (per-scan staging) uploads seen.
+        ranged_uploads: AtomicUsize,
+        /// Byte lengths of every ranged upload, in order.
+        ranged_upload_lens: Mutex<Vec<usize>>,
+        /// Canned `[count, triples]` readback returned by the resident dispatch.
+        outputs: Vec<Vec<u8>>,
+    }
+
+    impl MockResidentMatchBackend {
+        fn new(outputs: Vec<Vec<u8>>) -> Self {
+            Self {
+                next_id: AtomicU64::new(1),
+                allocations: Mutex::new(Vec::new()),
+                full_uploads: AtomicUsize::new(0),
+                ranged_uploads: AtomicUsize::new(0),
+                ranged_upload_lens: Mutex::new(Vec::new()),
+                outputs,
+            }
+        }
+    }
+
+    impl vyre::backend::private::Sealed for MockResidentMatchBackend {}
+
+    impl VyreBackend for MockResidentMatchBackend {
+        fn id(&self) -> &'static str {
+            "mock-resident-match"
+        }
+
+        fn dispatch(
+            &self,
+            _program: &Program,
+            _inputs: &[Vec<u8>],
+            _config: &Config,
+        ) -> Result<Vec<Vec<u8>>, vyre::BackendError> {
+            unreachable!("resident path does not use borrowed dispatch")
+        }
+
+        fn allocate_resident(&self, byte_len: usize) -> Result<Resource, vyre::BackendError> {
+            let handle = self.next_id.fetch_add(1, Ordering::Relaxed);
+            self.allocations
+                .lock()
+                .expect("mock allocations mutex")
+                .push((handle, byte_len));
+            Ok(Resource::Resident(handle))
+        }
+
+        fn upload_resident(
+            &self,
+            _resource: &Resource,
+            _bytes: &[u8],
+        ) -> Result<(), vyre::BackendError> {
+            self.full_uploads.fetch_add(1, Ordering::Relaxed);
+            Ok(())
+        }
+
+        fn upload_resident_at(
+            &self,
+            _resource: &Resource,
+            _dst_offset_bytes: usize,
+            bytes: &[u8],
+        ) -> Result<(), vyre::BackendError> {
+            self.ranged_uploads.fetch_add(1, Ordering::Relaxed);
+            self.ranged_upload_lens
+                .lock()
+                .expect("mock ranged-upload mutex")
+                .push(bytes.len());
+            Ok(())
+        }
+
+        fn free_resident(&self, _resource: Resource) -> Result<(), vyre::BackendError> {
+            Ok(())
+        }
+
+        fn dispatch_resident_timed(
+            &self,
+            _program: &Program,
+            resources: &[Resource],
+            config: &Config,
+        ) -> Result<TimedDispatchResult, vyre::BackendError> {
+            // Contract the consumer relies on: eleven resident bindings, every one
+            // resident (the CUDA resident dispatch rejects a borrowed mix, even for
+            // the tiny control buffers), and a byte-scan grid override.
+            assert_eq!(
+                resources.len(),
+                LITERAL_MATCH_BINDINGS,
+                "the literal MATCH program binds eleven buffers"
+            );
+            for (idx, resource) in resources.iter().enumerate() {
+                assert!(
+                    matches!(resource, Resource::Resident(_)),
+                    "binding {idx} must be resident (no borrowed mix in a resident dispatch)"
+                );
+            }
+            assert!(
+                config.grid_override.is_some(),
+                "resident position scan must supply a byte-scan grid override"
+            );
+            Ok(TimedDispatchResult {
+                outputs: self.outputs.clone(),
+                wall_ns: 0,
+                device_ns: None,
+                enqueue_ns: None,
+                wait_ns: None,
+            })
+        }
+    }
+
+    #[test]
+    fn prepare_uploads_tables_once_then_scans_stage_only_haystack_and_counter() {
+        let matcher = GpuLiteralSet::compile(LITERALS);
+        // Canned readback: two matches already in sorted (pattern_id, start, end)
+        // order, the decoder sorts, so planting them sorted keeps the assertion
+        // exact. max_matches = 4 so the fixed matches buffer holds 4 triples.
+        let backend =
+            MockResidentMatchBackend::new(canned_match_outputs(2, &[(0, 1, 2), (1, 3, 4)]));
+        let max_matches = 4u32;
+
+        let session = matcher
+            .prepare_resident_scan(&backend, 4096, max_matches)
+            .expect("mock backend supports resident allocation");
+
+        // Eleven resident allocations: haystack + 7 immutable tables +
+        // haystack_len + match_count + matches, in prepare order.
+        {
+            let allocs = backend.allocations.lock().unwrap();
+            assert_eq!(
+                allocs.len(),
+                LITERAL_MATCH_BINDINGS,
+                "haystack + 7 tables + haystack_len + match_count + matches"
+            );
+            // [8] haystack_len and [9] match_count are single u32 control buffers;
+            // [10] matches is sized for max_matches triples (3 u32 each).
+            assert_eq!(allocs[8].1, U32_BYTES, "haystack_len control is one u32");
+            assert_eq!(allocs[9].1, U32_BYTES, "match_count control is one u32");
+            assert_eq!(
+                allocs[10].1,
+                max_matches as usize * MATCH_TRIPLE_WORDS as usize * U32_BYTES,
+                "matches buffer holds max_matches triples"
+            );
+        }
+        // The seven immutable tables upload exactly once at prepare; no ranged
+        // (per-scan) staging has happened yet.
+        assert_eq!(
+            backend.full_uploads.load(Ordering::Relaxed),
+            7,
+            "seven immutable tables uploaded once each at prepare"
+        );
+        assert_eq!(backend.ranged_uploads.load(Ordering::Relaxed), 0);
+
+        // Three scans; each re-stages only [haystack, match_count reset,
+        // haystack_len] (the immutable tables never move again).
+        let haystack = b"key__api__token";
+        let mut matches: Vec<Match> = Vec::new();
+        let mut scratch: Vec<u8> = Vec::new();
+        for _ in 0..3 {
+            session
+                .scan_into(&backend, haystack, &mut matches, &mut scratch)
+                .expect("resident position scan decodes the canned readback");
+            // Decode parity: the canned two matches surface, sorted, every scan.
+            assert_eq!(
+                matches,
+                vec![Match::new(0, 1, 2), Match::new(1, 3, 4)],
+                "the canned [count=2, triples] readback decodes to exactly two matches"
+            );
+        }
+
+        assert_eq!(
+            backend.full_uploads.load(Ordering::Relaxed),
+            7,
+            "immutable tables are NEVER re-uploaded mid-loop"
+        );
+        assert_eq!(
+            backend.ranged_uploads.load(Ordering::Relaxed),
+            9,
+            "3 scans × 3 ranged uploads (haystack, match_count reset, haystack_len)"
+        );
+        // Per-scan upload order is [haystack, match_count reset, haystack_len].
+        // The reset (2nd) and haystack_len (3rd) are each a single u32.
+        let lens = backend.ranged_upload_lens.lock().unwrap();
+        let nth_of_each_scan = |offset: usize| -> Vec<usize> {
+            lens.iter().skip(offset).step_by(3).copied().collect()
+        };
+        assert_eq!(
+            nth_of_each_scan(1),
+            vec![U32_BYTES, U32_BYTES, U32_BYTES],
+            "the match_count reset stages exactly one zeroed u32 per scan"
+        );
+        assert_eq!(
+            nth_of_each_scan(2),
+            vec![U32_BYTES, U32_BYTES, U32_BYTES],
+            "haystack_len control is one u32 per scan"
+        );
+    }
+
+    #[test]
+    fn scan_clears_stale_matches_before_decode() {
+        let matcher = GpuLiteralSet::compile(LITERALS);
+        let backend = MockResidentMatchBackend::new(canned_match_outputs(1, &[(7, 0, 3)]));
+        let session = matcher
+            .prepare_resident_scan(&backend, 256, 8)
+            .expect("prepare resident session");
+
+        // Pre-seed stale matches; the scan must clear them, not accumulate.
+        let mut matches: Vec<Match> = vec![Match::new(99, 1, 2); 5];
+        let mut scratch: Vec<u8> = Vec::new();
+        session
+            .scan_into(&backend, b"api", &mut matches, &mut scratch)
+            .expect("resident scan");
+        assert_eq!(
+            matches,
+            vec![Match::new(7, 0, 3)],
+            "stale pre-seeded matches must be replaced by the single canned match"
+        );
+    }
+
+    #[test]
+    fn scan_fails_closed_when_device_count_exceeds_max_matches() {
+        let matcher = GpuLiteralSet::compile(LITERALS);
+        // Counter claims 5 matches but the session's matches buffer holds only 2:
+        // the atomic overcounts past the fixed cap, so decoding the truncated
+        // prefix would silently drop matches (Law 10). It must fail CLOSED.
+        let backend =
+            MockResidentMatchBackend::new(canned_match_outputs(5, &[(0, 1, 2), (1, 3, 4)]));
+        let session = matcher
+            .prepare_resident_scan(&backend, 256, 2)
+            .expect("prepare with a 2-match cap");
+
+        let mut matches: Vec<Match> = Vec::new();
+        let mut scratch: Vec<u8> = Vec::new();
+        let err = session
+            .scan_into(&backend, b"key api", &mut matches, &mut scratch)
+            .expect_err("count 5 over a cap of 2 must fail closed, not truncate");
+        assert!(
+            err.to_string().contains("exceeds the output-buffer cap"),
+            "the overflow error must name the cap breach: {err}"
+        );
+        assert!(
+            matches.is_empty(),
+            "a failed-closed decode must expose no partial match set"
+        );
+        // The dispatch DID run (staging happened) before the decode rejected it.
+        assert_eq!(
+            backend.ranged_uploads.load(Ordering::Relaxed),
+            3,
+            "the scan staged its three per-scan uploads before the capped decode fired"
+        );
+    }
+
+    #[test]
+    fn scan_rejects_haystack_larger_than_resident_capacity() {
+        let matcher = GpuLiteralSet::compile(LITERALS);
+        let backend = MockResidentMatchBackend::new(canned_match_outputs(0, &[]));
+        let session = matcher
+            .prepare_resident_scan(&backend, 8, 4)
+            .expect("prepare with an 8-byte haystack capacity");
+
+        let mut matches: Vec<Match> = vec![Match::new(3, 3, 3)];
+        let mut scratch: Vec<u8> = Vec::new();
+        let err = session
+            .scan_into(&backend, &[b'a'; 64], &mut matches, &mut scratch)
+            .expect_err("a 64-byte haystack must not fit an 8-byte resident buffer");
+        assert!(
+            err.to_string().contains("resident buffer holds"),
+            "the capacity error must name the resident-buffer limit: {err}"
+        );
+        // The over-capacity batch must never stage a resident upload nor dispatch.
+        assert_eq!(
+            backend.ranged_uploads.load(Ordering::Relaxed),
+            0,
+            "a rejected over-capacity batch must not stage any resident upload"
+        );
+    }
+
+    #[test]
+    fn free_releases_every_resident_resource() {
+        let matcher = GpuLiteralSet::compile(LITERALS);
+        let backend = MockResidentMatchBackend::new(canned_match_outputs(0, &[]));
+        let session = matcher
+            .prepare_resident_scan(&backend, 256, 4)
+            .expect("prepare resident session");
+        // `free` consumes the session and must succeed against a backend that
+        // accepts every free (the mock's free_resident is infallible).
+        session
+            .free(&backend)
+            .expect("every resident resource frees");
+    }
+}
+
+/// W3-1 resident FUSED presence+positions plumbing: `prepare_resident_fused_scan`
+/// uploads the immutable tables ONCE, and each `ResidentFusedRegionScan::scan_into`
+/// re-stages only the haystack, the region controls, and the two zeroed
+/// accumulators (presence prefix + match counter), then decodes the backend's
+/// `[presence, count, triples]` readback. A `MockResidentFusedBackend` records
+/// resident traffic and returns a CANNED three-output buffer, so the host
+/// orchestration (seven-table-upload-once, per-scan staging + double reset,
+/// fourteen-binding all-resident dispatch, presence + capped-match decode) is
+/// validated WITHOUT a GPU.
+#[cfg(test)]
+mod resident_fused_tests {
+    use super::*;
+    use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+    use std::sync::Mutex;
+    use vyre::DispatchConfig as Config;
+    use vyre_driver::TimedDispatchResult;
+
+    const LITERALS: &[&[u8]] = &[
+        b"key",
+        b"token",
+        b"secret",
+        b"AKIA",
+        b"ghp_",
+        b"sk_live_",
+        b"password",
+        b"api",
+    ];
+
+    // The fused program binds 14 buffers (0..=13): the presence common inputs
+    // 0..=9 (presence read-write at 6), region_starts (10), region_base (11),
+    // match_count read-write (12), and the matches OUTPUT at 13. A resident
+    // dispatch resolves presence(6) -> outputs[0], match_count(12) -> outputs[1],
+    // matches(13) -> outputs[2].
+    const FUSED_BINDINGS: usize = 14;
+
+    /// Build the canned `[presence, count, triples]` readback.
+    fn canned_fused_outputs(
+        presence_words: &[u32],
+        count: u32,
+        triples: &[(u32, u32, u32)],
+    ) -> Vec<Vec<u8>> {
+        let mut presence = Vec::new();
+        for &w in presence_words {
+            presence.extend_from_slice(&w.to_le_bytes());
+        }
+        let mut count_buf = Vec::new();
+        count_buf.extend_from_slice(&count.to_le_bytes());
+        let mut triples_buf = Vec::new();
+        for &(pid, start, end) in triples {
+            triples_buf.extend_from_slice(&pid.to_le_bytes());
+            triples_buf.extend_from_slice(&start.to_le_bytes());
+            triples_buf.extend_from_slice(&end.to_le_bytes());
+        }
+        vec![presence, count_buf, triples_buf]
+    }
+
+    struct MockResidentFusedBackend {
+        next_id: AtomicU64,
+        allocations: Mutex<Vec<(u64, usize)>>,
+        full_uploads: AtomicUsize,
+        ranged_uploads: AtomicUsize,
+        outputs: Vec<Vec<u8>>,
+    }
+
+    impl MockResidentFusedBackend {
+        fn new(outputs: Vec<Vec<u8>>) -> Self {
+            Self {
+                next_id: AtomicU64::new(1),
+                allocations: Mutex::new(Vec::new()),
+                full_uploads: AtomicUsize::new(0),
+                ranged_uploads: AtomicUsize::new(0),
+                outputs,
+            }
+        }
+    }
+
+    impl vyre::backend::private::Sealed for MockResidentFusedBackend {}
+
+    impl VyreBackend for MockResidentFusedBackend {
+        fn id(&self) -> &'static str {
+            "mock-resident-fused"
+        }
+
+        fn dispatch(
+            &self,
+            _program: &Program,
+            _inputs: &[Vec<u8>],
+            _config: &Config,
+        ) -> Result<Vec<Vec<u8>>, vyre::BackendError> {
+            unreachable!("resident path does not use borrowed dispatch")
+        }
+
+        fn allocate_resident(&self, byte_len: usize) -> Result<Resource, vyre::BackendError> {
+            let handle = self.next_id.fetch_add(1, Ordering::Relaxed);
+            self.allocations
+                .lock()
+                .expect("mock allocations mutex")
+                .push((handle, byte_len));
+            Ok(Resource::Resident(handle))
+        }
+
+        fn upload_resident(
+            &self,
+            _resource: &Resource,
+            _bytes: &[u8],
+        ) -> Result<(), vyre::BackendError> {
+            self.full_uploads.fetch_add(1, Ordering::Relaxed);
+            Ok(())
+        }
+
+        fn upload_resident_at(
+            &self,
+            _resource: &Resource,
+            _dst_offset_bytes: usize,
+            _bytes: &[u8],
+        ) -> Result<(), vyre::BackendError> {
+            self.ranged_uploads.fetch_add(1, Ordering::Relaxed);
+            Ok(())
+        }
+
+        fn free_resident(&self, _resource: Resource) -> Result<(), vyre::BackendError> {
+            Ok(())
+        }
+
+        fn dispatch_resident_timed(
+            &self,
+            _program: &Program,
+            resources: &[Resource],
+            config: &Config,
+        ) -> Result<TimedDispatchResult, vyre::BackendError> {
+            assert_eq!(
+                resources.len(),
+                FUSED_BINDINGS,
+                "the fused program binds fourteen buffers"
+            );
+            for (idx, resource) in resources.iter().enumerate() {
+                assert!(
+                    matches!(resource, Resource::Resident(_)),
+                    "binding {idx} must be resident (no borrowed mix in a resident dispatch)"
+                );
+            }
+            assert!(
+                config.grid_override.is_some(),
+                "resident fused scan must supply a byte-scan grid override"
+            );
+            Ok(TimedDispatchResult {
+                outputs: self.outputs.clone(),
+                wall_ns: 0,
+                device_ns: None,
+                enqueue_ns: None,
+                wait_ns: None,
+            })
+        }
+    }
+
+    #[test]
+    fn prepare_uploads_tables_once_then_scans_stage_haystack_controls_and_two_resets() {
+        let matcher = GpuLiteralSet::compile(LITERALS);
+        let max_regions = 4u32;
+        let max_matches = 4u32;
+        // 8 patterns -> 1 presence word/region. A 3-region batch -> 3 used words.
+        // Plant [row0,row1,row2] + a stale 4th the 3-region decode must ignore.
+        let row0 = (1 << 0) | (1 << 3); // {key, AKIA}
+        let row1 = 1 << 4; // {ghp_}
+        let row2 = 0u32; // {}
+        let stale = 0xDEAD_BEEFu32;
+        let backend = MockResidentFusedBackend::new(canned_fused_outputs(
+            &[row0, row1, row2, stale],
+            2,
+            &[(0, 1, 2), (1, 3, 4)],
+        ));
+
+        let session = matcher
+            .prepare_resident_fused_scan(&backend, 4096, max_regions, max_matches)
+            .expect("mock backend supports resident allocation");
+        assert_eq!(session.max_regions(), max_regions);
+        assert_eq!(session.max_matches(), max_matches);
+
+        // Fourteen resident allocations: haystack + 7 tables + presence +
+        // haystack_len + region_starts + region_base + match_count + matches.
+        {
+            let allocs = backend.allocations.lock().unwrap();
+            assert_eq!(
+                allocs.len(),
+                FUSED_BINDINGS,
+                "haystack + 7 tables + presence + haystack_len + region_starts + region_base + match_count + matches"
+            );
+            // [8] presence = max_regions × 1 word × 4; [9] haystack_len u32;
+            // [10] region_starts = max_regions × 4; [11] region_base u32;
+            // [12] match_count u32; [13] matches = max_matches × 3 × 4.
+            assert_eq!(
+                allocs[8].1,
+                max_regions as usize * U32_BYTES,
+                "presence sized for max_regions"
+            );
+            assert_eq!(allocs[9].1, U32_BYTES, "haystack_len control is one u32");
+            assert_eq!(
+                allocs[10].1,
+                max_regions as usize * U32_BYTES,
+                "region_starts sized for max_regions"
+            );
+            assert_eq!(allocs[11].1, U32_BYTES, "region_base control is one u32");
+            assert_eq!(allocs[12].1, U32_BYTES, "match_count control is one u32");
+            assert_eq!(
+                allocs[13].1,
+                max_matches as usize * MATCH_TRIPLE_WORDS as usize * U32_BYTES,
+                "matches buffer holds max_matches triples"
+            );
+        }
+        // Seven immutable tables uploaded once at prepare; no ranged staging yet.
+        assert_eq!(backend.full_uploads.load(Ordering::Relaxed), 7);
+        assert_eq!(backend.ranged_uploads.load(Ordering::Relaxed), 0);
+
+        // Three scans of a 3-region batch. Each re-stages exactly SIX ranged
+        // uploads: haystack, presence reset, haystack_len, region_base,
+        // match_count reset, region_starts.
+        let haystack = b"key\nghp_\nzzz\n";
+        let region_starts = [0u32, 4, 9];
+        let mut out: Vec<u32> = Vec::new();
+        let mut matches: Vec<Match> = Vec::new();
+        let mut scratch: Vec<u8> = Vec::new();
+        for _ in 0..3 {
+            session
+                .scan_into(
+                    &backend,
+                    haystack,
+                    &region_starts,
+                    0,
+                    &mut out,
+                    &mut matches,
+                    &mut scratch,
+                )
+                .expect("resident fused scan decodes canned presence + matches");
+            assert_eq!(
+                out,
+                vec![row0, row1, row2],
+                "3 regions × 1 word, stale tail ignored"
+            );
+            assert_eq!(
+                matches,
+                vec![Match::new(0, 1, 2), Match::new(1, 3, 4)],
+                "the canned [count=2, triples] readback decodes to exactly two matches"
+            );
+        }
+
+        assert_eq!(
+            backend.full_uploads.load(Ordering::Relaxed),
+            7,
+            "immutable tables are NEVER re-uploaded mid-loop"
+        );
+        assert_eq!(
+            backend.ranged_uploads.load(Ordering::Relaxed),
+            18,
+            "3 scans × 6 ranged uploads (haystack, presence reset, haystack_len, region_base, match_count reset, region_starts)"
+        );
+    }
+
+    #[test]
+    fn scan_fails_closed_when_device_count_exceeds_max_matches() {
+        let matcher = GpuLiteralSet::compile(LITERALS);
+        // Counter claims 5 but the matches buffer holds only 2 -> fail closed.
+        let backend = MockResidentFusedBackend::new(canned_fused_outputs(
+            &[0u32],
+            5,
+            &[(0, 1, 2), (1, 3, 4)],
+        ));
+        let session = matcher
+            .prepare_resident_fused_scan(&backend, 256, 1, 2)
+            .expect("prepare with a 2-match cap");
+        let mut out: Vec<u32> = Vec::new();
+        let mut matches: Vec<Match> = Vec::new();
+        let mut scratch: Vec<u8> = Vec::new();
+        let err = session
+            .scan_into(
+                &backend,
+                b"key",
+                &[0u32],
+                0,
+                &mut out,
+                &mut matches,
+                &mut scratch,
+            )
+            .expect_err("count 5 over a cap of 2 must fail closed, not truncate");
+        assert!(
+            err.to_string().contains("exceeds the output-buffer cap"),
+            "the overflow error must name the cap breach: {err}"
+        );
+        assert!(
+            matches.is_empty(),
+            "a failed-closed decode exposes no partial matches"
+        );
+    }
+
+    #[test]
+    fn scan_rejects_region_count_over_the_cap() {
+        let matcher = GpuLiteralSet::compile(LITERALS);
+        let backend = MockResidentFusedBackend::new(canned_fused_outputs(&[0u32], 0, &[]));
+        let session = matcher
+            .prepare_resident_fused_scan(&backend, 256, 2, 4)
+            .expect("prepare with a 2-region cap");
+        let mut out: Vec<u32> = Vec::new();
+        let mut matches: Vec<Match> = Vec::new();
+        let mut scratch: Vec<u8> = Vec::new();
+        let err = session
+            .scan_into(
+                &backend,
+                b"a\nb\nc\n",
+                &[0u32, 2, 4],
+                0,
+                &mut out,
+                &mut matches,
+                &mut scratch,
+            )
+            .expect_err("3 regions over a cap of 2 must error, not truncate");
+        assert!(
+            err.to_string()
+                .contains("session was prepared for at most 2"),
+            "cap error must name the limit: {err}"
+        );
+        assert_eq!(
+            backend.ranged_uploads.load(Ordering::Relaxed),
+            0,
+            "a rejected over-cap batch must not stage any resident upload"
+        );
+    }
 }
 
 const LITERAL_SET_WIRE_MAGIC: &[u8; 4] = b"VLIT";
-const LITERAL_SET_WIRE_VERSION: u32 = 3;
+// v4 appended the case-insensitive flag section. v3 blobs remain readable as a
+// legacy format (they predate the flag and were always case-sensitive), so
+// existing on-disk caches load without a forced recompile.
+pub(crate) const LITERAL_SET_WIRE_VERSION: u32 = 4;
+const LITERAL_SET_LEGACY_CASE_SENSITIVE_WIRE_VERSION: u32 = 3;
 const LITERAL_SET_LEGACY_BOUNDED_DFA_WIRE_VERSION: u32 = 2;
 const LITERAL_SET_LEGACY_LITERAL_COMPARE_WIRE_VERSION: u32 = 1;
 
@@ -3511,51 +5969,4 @@ fn try_build_literal_set_program(dfa: &CompiledDfa, pattern_count: u32) -> Resul
         LITERAL_SET_DEFAULT_MAX_MATCHES,
         false,
     )
-}
-
-/// Innovation I.18: JIT DFA Lowering.
-///
-/// Converts a static transition table into a nested \`If\` cascade.
-/// For small pattern sets, this eliminates the VRAM bandwidth bottleneck
-/// by keeping the state machine in the GPU instruction cache.
-pub fn dfa_to_jit_ir(dfa: &CompiledDfa, state_var: &str, byte_expr: Expr) -> Node {
-    build_state_cascade(dfa, 0, state_var, byte_expr)
-}
-
-fn build_state_cascade(dfa: &CompiledDfa, state: u32, state_var: &str, byte_expr: Expr) -> Node {
-    // Basic implementation: if state == S { if byte == B1 { state = T1 } ... }
-    // V7-PERF-024: Binary-search tree emission for instructions.
-    // Naive linear if/else is O(N); a binary tree is O(log N).
-
-    let mut arms = Vec::new();
-    for byte in 0..=255 {
-        let next_state = dfa.transitions[(state as usize) * 256 + byte];
-        if next_state != 0 {
-            arms.push((byte as u32, next_state));
-        }
-    }
-
-    if arms.is_empty() {
-        return Node::Assign {
-            name: state_var.into(),
-            value: Expr::u32(0),
-        };
-    }
-
-    // Build a nested If cascade for the transitions from this state
-    let mut node = Node::Assign {
-        name: state_var.into(),
-        value: Expr::u32(0),
-    };
-    for (byte, next) in arms.into_iter().rev() {
-        node = Node::If {
-            cond: Expr::eq(byte_expr.clone(), Expr::u32(byte)),
-            then: vec![Node::Assign {
-                name: state_var.into(),
-                value: Expr::u32(next),
-            }],
-            otherwise: vec![node],
-        };
-    }
-    node
 }

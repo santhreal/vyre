@@ -110,7 +110,7 @@ fn reasonable_nesting_still_evaluates() {
 // --- Property: the #if evaluator is total over all inputs ---
 // Robustness invariant (mirrors vyre-frontend-rust/tests/proptest_robustness.rs
 // for the C side): for ANY byte sequence, the conditional-expression evaluator
-// must return a `Result` (Ok or Err) without panicking — no unwrap blow-up, no
+// must return a `Result` (Ok or Err) without panicking, no unwrap blow-up, no
 // arithmetic overflow panic, no slice index out of bounds, no stack overflow.
 // The depth guard (MAX_PP_EXPR_DEPTH) bounds recursion so the only remaining
 // failure modes are catchable panics, which proptest's harness surfaces and

@@ -72,8 +72,8 @@ fn fits_workgroup_budget(buf: &BufferDecl) -> bool {
 /// and [`candidate_handoffs`] so all three agree exactly on what is a handoff.
 ///
 /// A buffer is a promotable handoff when it is `ReadWrite` (written then read),
-/// statically sized (`count > 0` — workgroup allocations must be compile-time
-/// sized), not externally observed (`!pipeline_live_out` — workgroup buffers do
+/// statically sized (`count > 0`: workgroup allocations must be compile-time
+/// sized), not externally observed (`!pipeline_live_out`: workgroup buffers do
 /// not survive past dispatch end), fits the workgroup byte budget, AND is not
 /// referenced by a cross-workgroup op (see [`cross_workgroup_buffers`]).
 fn is_promotable_handoff(buf: &BufferDecl, cross_workgroup: &FxHashSet<Ident>) -> bool {
@@ -91,7 +91,7 @@ fn is_promotable_handoff(buf: &BufferDecl, cross_workgroup: &FxHashSet<Ident>) -
 /// private, so promoting such a buffer would give each workgroup its own copy
 /// and silently destroy the cross-workgroup dataflow (the reduction/gather/
 /// broadcast would see only one workgroup's data). `decode_scan_fuse` must
-/// therefore never promote a buffer that any collective touches — its decl
+/// therefore never promote a buffer that any collective touches, its decl
 /// alone (ReadWrite + sized + not live-out) cannot reveal this; only the body
 /// can. (The promotion precondition already excludes externally-observed
 /// buffers; a collective is an in-program cross-workgroup observation the
@@ -102,8 +102,7 @@ fn cross_workgroup_buffers(nodes: &[Node], out: &mut FxHashSet<Ident>) {
             Node::AllReduce { buffer, .. } | Node::Broadcast { buffer, .. } => {
                 out.insert(buffer.clone());
             }
-            Node::AllGather { input, output, .. }
-            | Node::ReduceScatter { input, output, .. } => {
+            Node::AllGather { input, output, .. } | Node::ReduceScatter { input, output, .. } => {
                 out.insert(input.clone());
                 out.insert(output.clone());
             }
@@ -295,7 +294,9 @@ mod tests {
         // give each workgroup its own copy and silently destroy the reduction.
         // The decl-only filter promoted it; the body must veto the promotion.
         let p = Program::wrapped(
-            vec![BufferDecl::storage("b", 0, BufferAccess::ReadWrite, DataType::U32).with_count(16)],
+            vec![
+                BufferDecl::storage("b", 0, BufferAccess::ReadWrite, DataType::U32).with_count(16),
+            ],
             [64, 1, 1],
             vec![Node::AllReduce {
                 buffer: "b".into(),

@@ -3,8 +3,8 @@
 //! The naga signed-`Modulo`-emits-unsigned bug (fixed in the emitter) was a
 //! silent miscompile the existing GPU sweeps missed because they under-cover
 //! NEGATIVE i32 operands. This locks the rest of the signedness-sensitive integer
-//! ops — `min`/`max` (signed SMin/SMax) and the ordered comparisons (signed
-//! SLessThan etc.) — against the same class of regression. All are dispatched on
+//! ops: `min`/`max` (signed SMin/SMax) and the ordered comparisons (signed
+//! SLessThan etc.), against the same class of regression. All are dispatched on
 //! the 5090 with negative operands and asserted byte-for-byte against Rust.
 //!
 //! (Division and modulo have their own guard in `signed_modulo_parity`.)

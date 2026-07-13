@@ -4,7 +4,7 @@ use super::*;
 use naga::{Expression, Literal};
 
 /// BinOp::WrappingSub of two u32 literals must fold to wrapping_sub, not
-/// saturating_sub. 0u32 WrappingSub 1u32 must produce 0xFFFF_FFFFu32 — the
+/// saturating_sub. 0u32 WrappingSub 1u32 must produce 0xFFFF_FFFFu32, the
 /// two's-complement wrap-around that the GPU would compute at runtime. The
 /// previous saturating_sub produced Literal::U32(0), which is a silently
 /// wrong constant (any downstream op using it would compute with the wrong
@@ -29,7 +29,7 @@ fn fold_literal_wrapping_sub_u32_underflow_wraps() {
                     operands: vec![1],
                     result: Some(1),
                 },
-                // result 2: 0u32 WrappingSub 1u32 — must fold to 0xFFFF_FFFF,
+                // result 2: 0u32 WrappingSub 1u32, must fold to 0xFFFF_FFFF,
                 // NOT 0 (saturating). Operands are [left_result_id,
                 // right_result_id].
                 KernelOp {
@@ -56,7 +56,7 @@ fn fold_literal_wrapping_sub_u32_underflow_wraps() {
     assert!(
         has_wrapping_result,
         "fold_literal_binop WrappingSub(0u32, 1u32) must produce Literal::U32(0xFFFF_FFFF); \
-         got saturating result (Literal::U32(0)) instead — GPU u32 subtraction wraps, not saturates"
+         got saturating result (Literal::U32(0)) instead. GPU u32 subtraction wraps, not saturates"
     );
 }
 
@@ -125,7 +125,7 @@ fn fold_literal_plain_sub_u32_underflow_wraps() {
 /// and whose accept/reject arms are both `vyre.literal.u64` values. The
 /// Select result type is therefore `u64_ty`. With the old code the coerce
 /// calls on lines 477-478 would fall to `return value` and leave the arms
-/// typed as u64 (which is fine here — the test proves the emit succeeds);
+/// typed as u64 (which is fine here, the test proves the emit succeeds);
 /// the real regression is when one arm is a non-u64 expression. We test the
 /// emit succeeds end-to-end AND that `Literal::U64` values appear, proving
 /// the wide-literal path ran and the coerce didn't panic or bail out.
@@ -138,10 +138,10 @@ fn select_with_u64_arms_emits_without_coerce_passthrough_panic() {
     //   result 3: LocalInvocationId (thread id)
     //   result 4: BinOp::Eq on result 3 and result 2 → Bool
     //   result 5: Select(condition=result4, accept=result0, reject=result1)
-    //             — forces coerce_value_to_type(u64_expr, u64_ty) on both arms
+    //: forces coerce_value_to_type(u64_expr, u64_ty) on both arms
     //             (after the fix, u64_ty maps to ScalarKind::Uint; before the
     //             fix it fell to `return value` which is harmless for matching
-    //             kinds but would panic for mismatched kinds — testing this
+    //             kinds but would panic for mismatched kinds, testing this
     //             shape proves the dispatch path is reachable without panicking)
     let desc = KernelDescriptor {
         id: "select_u64_arms".into(),
@@ -206,7 +206,7 @@ fn select_with_u64_arms_emits_without_coerce_passthrough_panic() {
         .expect("Select with u64-typed arms must emit without error; \
                  coerce_value_to_type must recognise u64_ty as ScalarKind::Uint");
 
-    // Verify both wide literals appear in the expression arena — proves the
+    // Verify both wide literals appear in the expression arena, proves the
     // u64 emit path ran end-to-end and was not short-circuited.
     let entry = &module.entry_points[0];
     let has_u64_100 = entry

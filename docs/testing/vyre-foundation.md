@@ -1,4 +1,4 @@
-# Testing program — vyre-foundation
+# Testing program, vyre-foundation
 
 | Kind | Location |
 |------|----------|

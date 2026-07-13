@@ -319,7 +319,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "betti_persistence CPU reference failed")]
     fn compatibility_wrapper_fails_loud_on_invalid_mask() {
-        // An invalid mask must fail LOUD, not silently return (0,0,0) — a
+        // An invalid mask must fail LOUD, not silently return (0,0,0), a
         // GPU-vs-CPU parity assertion would accept (0,0,0)==(0,0,0) as a match
         // and hide the divergence (Law 10 / Law 6).
         let _ = betti_persistence_cpu(&[0, 1, 0], 2);

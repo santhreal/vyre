@@ -265,7 +265,7 @@ pub fn build_c11_lexer_dfa() -> DfaTable {
     add_c11_patterns(&mut b);
     b.build().expect(
         "Fix: C11 lexer DFA build failed. A pattern in C11_PATTERNS is invalid. \
-         All patterns are compile-time constants — fix the broken pattern.",
+         All patterns are compile-time constants, fix the broken pattern.",
     )
 }
 
@@ -285,6 +285,6 @@ pub fn build_c11_lexer_dfa_for_host() -> DfaTable {
     add_c11_patterns(&mut b);
     b.build_with_match_kind(MatchKind::LeftmostFirst).expect(
         "Fix: C11 host DFA build failed. A pattern in C11_PATTERNS is invalid. \
-         All patterns are compile-time constants — fix the broken pattern.",
+         All patterns are compile-time constants, fix the broken pattern.",
     )
 }

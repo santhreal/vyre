@@ -34,7 +34,7 @@ impl Token {
 /// Convert a scanned token byte length to the `u16` span field, failing closed
 /// (returning the start offset as the error) if it exceeds `u16::MAX`. Without
 /// this, a token of 65536+ bytes would wrap to a small `len` and make
-/// `Token::text()` read a truncated, wrong span — a silent miscompile reachable
+/// `Token::text()` read a truncated, wrong span, a silent miscompile reachable
 /// from a single oversized identifier or integer literal.
 fn token_len(start: usize, end: usize) -> Result<u16, usize> {
     u16::try_from(end - start).map_err(|_| start)

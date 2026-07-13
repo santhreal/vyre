@@ -1,7 +1,6 @@
 //! Output encoding unicode policies test suite.
 
-const CONTROLS: &str =
-    include_str!("../../docs/optimization/CONTROL_CHARACTER_OUTPUT_POLICY.toml");
+const CONTROLS: &str = include_str!("../../docs/optimization/CONTROL_CHARACTER_OUTPUT_POLICY.toml");
 const ENCODING: &str =
     include_str!("../../docs/optimization/STRUCTURED_OUTPUT_ENCODING_POLICY.toml");
 const UNICODE: &str =
@@ -47,7 +46,8 @@ fn structured_output_encoding_policy_records_json_sarif_problem_encoding_contrac
 }
 
 #[test]
-fn unicode_identifier_spoofing_policy_records_normalization_confusable_mixed_script_and_bidi_rules() {
+fn unicode_identifier_spoofing_policy_records_normalization_confusable_mixed_script_and_bidi_rules()
+{
     for required in [
         "identifier_class",
         "allowed_profile",

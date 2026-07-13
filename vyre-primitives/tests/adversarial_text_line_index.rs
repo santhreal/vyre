@@ -1,22 +1,15 @@
 //! Adversarial oracle tests for `text::line_index`.
 
-use vyre_foundation::ir::{BufferAccess, DataType, Program};
+use vyre_foundation::ir::{DataType, Program};
 use vyre_primitives::text::line_index::{line_index, line_index_u8, reference_line_index};
+use vyre_primitives::wire::decode_u32_le_bytes_all as unpack_u32s;
 use vyre_reference::value::Value;
 
+// Locate outputs via the interpreter's OWN selection predicate
+// (`vyre_reference::{output_index, is_reference_output}`) so these helpers can never
+// drift from `reference_eval`'s real returned-output ABI.
 fn output_index(program: &Program, name: &str) -> usize {
-    program
-        .buffers()
-        .iter()
-        .filter(|buffer| {
-            buffer.is_output()
-                || buffer.is_pipeline_live_out()
-                || matches!(
-                    buffer.access(),
-                    BufferAccess::ReadWrite | BufferAccess::WriteOnly
-                )
-        })
-        .position(|buffer| buffer.name() == name)
+    vyre_reference::output_index(program, name)
         .expect("Fix: line_index final output buffer must be declared")
 }
 
@@ -24,24 +17,8 @@ fn output_names(program: &Program) -> Vec<&str> {
     program
         .buffers()
         .iter()
-        .filter(|buffer| {
-            buffer.is_output()
-                || buffer.is_pipeline_live_out()
-                || matches!(
-                    buffer.access(),
-                    BufferAccess::ReadWrite | BufferAccess::WriteOnly
-                )
-        })
+        .filter(|buffer| vyre_reference::is_reference_output(buffer))
         .map(|buffer| buffer.name())
-        .collect()
-}
-
-fn unpack_u32s(bytes: &[u8]) -> Vec<u32> {
-    bytes
-        .chunks_exact(4)
-        .map(|chunk| {
-            u32::from_le_bytes(chunk.try_into().expect("Fix: u32 chunk conversion failed"))
-        })
         .collect()
 }
 

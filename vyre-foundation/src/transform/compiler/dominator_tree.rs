@@ -481,7 +481,7 @@ mod ir_program_tests {
         // idom[0] = 0 (entry; self-dominates), idom[1] = 1 (malformed self-loop)
         // order[0] = 0 (lower rank), order[1] = 1 (higher rank)
         // intersect(1, 0) sees order[1]=1 > order[0]=0, tries to advance left:
-        //   idom[1] = 1 — left would not change, must error.
+        //   idom[1] = 1 (left would not change, must error).
         let idom = vec![0u32, 1u32];
         let order = vec![0u32, 1u32];
         let result = intersect(1, 0, &idom, &order);

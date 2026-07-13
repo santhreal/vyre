@@ -127,7 +127,7 @@ fn cuda_bitset_test_bit_parity() {
     let buf = vec![0b1010u32];
     let bit_idx = 1u32;
     let expected = test_bit_cpu(&buf, bit_idx);
-    let program = bitset_test_bit("buf", bit_idx, "out");
+    let program = bitset_test_bit("buf", bit_idx, "out", buf.len() as u32);
     let inputs = vec![u32_bytes(&buf), vec![0u8; 4]];
     let outputs = dispatch_grid(&program, &inputs, 1);
     assert_eq!(bytes_u32(&outputs[0])[0], expected);

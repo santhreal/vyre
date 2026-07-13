@@ -298,7 +298,7 @@ pub fn try_encode_empty_debug_log_into(
 ///
 /// On a malformed or truncated control buffer this returns `0` **and emits a
 /// `tracing::error!`** so the stall is operator-visible. Prefer
-/// [`try_read_done_count`] in new code — a silent `0` is indistinguishable from
+/// [`try_read_done_count`] in new code, a silent `0` is indistinguishable from
 /// the initial kernel state and can cause the host pump to stall indefinitely.
 #[must_use]
 pub fn read_done_count(control_bytes: &[u8]) -> u32 {
@@ -308,7 +308,7 @@ pub fn read_done_count(control_bytes: &[u8]) -> u32 {
             tracing::error!(
                 error = %e,
                 buf_len = control_bytes.len(),
-                "read_done_count: malformed control buffer — returning 0 instead of real count. Fix: ensure the DMA readback covers the full control buffer produced by the matching encoder."
+                "read_done_count: malformed control buffer, returning 0 instead of real count. Fix: ensure the DMA readback covers the full control buffer produced by the matching encoder."
             );
             0
         }
@@ -319,7 +319,7 @@ pub fn read_done_count(control_bytes: &[u8]) -> u32 {
 ///
 /// On a malformed or truncated control buffer this returns `0` **and emits a
 /// `tracing::error!`** so the stall is operator-visible. Prefer
-/// [`try_read_epoch`] in new code — a silent `0` lets the host pump conclude no
+/// [`try_read_epoch`] in new code, a silent `0` lets the host pump conclude no
 /// batch has completed, stalling dispatch indefinitely.
 #[must_use]
 pub fn read_epoch(control_bytes: &[u8]) -> u32 {
@@ -329,7 +329,7 @@ pub fn read_epoch(control_bytes: &[u8]) -> u32 {
             tracing::error!(
                 error = %e,
                 buf_len = control_bytes.len(),
-                "read_epoch: malformed control buffer — returning 0 instead of real epoch. Fix: ensure the DMA readback covers the full control buffer produced by the matching encoder."
+                "read_epoch: malformed control buffer, returning 0 instead of real epoch. Fix: ensure the DMA readback covers the full control buffer produced by the matching encoder."
             );
             0
         }
@@ -368,7 +368,7 @@ pub fn try_read_epoch(control_bytes: &[u8]) -> Result<u32, ProtocolError> {
 ///
 /// On a malformed or truncated control buffer this returns `0` **and emits a
 /// `tracing::error!`** so the miss is operator-visible. Prefer
-/// [`try_read_observable`] in new code — a silent `0` is indistinguishable from
+/// [`try_read_observable`] in new code, a silent `0` is indistinguishable from
 /// an observable slot that was never written.
 #[must_use]
 pub fn read_observable(control_bytes: &[u8], index: u32) -> u32 {
@@ -379,7 +379,7 @@ pub fn read_observable(control_bytes: &[u8], index: u32) -> u32 {
                 error = %e,
                 buf_len = control_bytes.len(),
                 index,
-                "read_observable: malformed control buffer — returning 0 instead of real observable. Fix: ensure the DMA readback covers the full control buffer produced by the matching encoder."
+                "read_observable: malformed control buffer, returning 0 instead of real observable. Fix: ensure the DMA readback covers the full control buffer produced by the matching encoder."
             );
             0
         }
@@ -437,7 +437,7 @@ pub fn read_metrics_into(control_bytes: &[u8], out: &mut Vec<(u32, u32)>) {
         tracing::error!(
             error = %e,
             nonzero_count = nonzero,
-            "read_metrics_into: allocation failed — returning empty metrics. Fix: reduce metrics fanout or decode into a pre-allocated scratch vector."
+            "read_metrics_into: allocation failed (returning empty metrics. Fix: reduce metrics fanout or decode into a pre-allocated scratch vector)."
         );
         return;
     }

@@ -156,7 +156,15 @@ pub(super) fn declaration_kind_at(vast_nodes: &[u32], node_idx: usize, haystack:
     if declarator_follower && prev_kind == TOK_IDENTIFIER {
         if let Some(prev_name) = identifier_lexeme(vast_nodes, node_idx - 1, haystack) {
             if visible_declaration_kind(vast_nodes, node_idx - 1, haystack, prev_name) == 1 {
-                return 2;
+                // The previous token is a visible typedef-name used as this
+                // declarator's type (`A x;`). That makes `x` a declarator, but it is
+                // a TYPEDEF declarator when the prefix also carries a `typedef`
+                // keyword (`typedef A B;` chains a new typedef off typedef-name A),
+                // not an ordinary one. Honoring `has_typedef` here instead of
+                // unconditionally returning ORDINARY matches the GPU-IR builder
+                // `c11_annotate_typedef_names` and C semantics (BACKLOG.md
+                // ORACLE-chained-typedef-bug).
+                return if has_typedef { 1 } else { 2 };
             }
         }
     }

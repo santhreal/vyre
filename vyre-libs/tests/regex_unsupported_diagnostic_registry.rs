@@ -1,10 +1,13 @@
 //! Regex unsupported diagnostic registry test suite.
 
-const REGISTRY: &str =
-    include_str!("../../docs/optimization/REGEX_UNSUPPORTED_DIAGNOSTICS.toml");
+const REGISTRY: &str = include_str!("../../docs/optimization/REGEX_UNSUPPORTED_DIAGNOSTICS.toml");
 
 const REQUIRED_DIAGNOSTICS: &[(&str, &str, bool)] = &[
-    ("backreference", "VYRE_SCAN_UNSUPPORTED_BACKREFERENCE", false),
+    (
+        "backreference",
+        "VYRE_SCAN_UNSUPPORTED_BACKREFERENCE",
+        false,
+    ),
     (
         "lookaround",
         "VYRE_SCAN_APPROXIMATED_LOOKAROUND_REQUIRES_VERIFIER",
@@ -86,6 +89,69 @@ fn regex_unsupported_diagnostic_registry_records_operator_fields() {
             .count(),
         row_count,
         "Fix: every unsupported regex diagnostic row must point at this proof gate"
+    );
+}
+
+/// Behavioral evidence (the registry rows point their `evidence_path` here): the
+/// real public compile path must emit each registry construct's diagnostic code
+/// from a representative pattern, the four W2-3 constructs the frontend now
+/// distinctly detects (backreference, huge alternation, nested repeats as compile
+/// errors; capture extraction as a non-error verifier signal), plus the two
+/// pre-existing ones (lookaround, unicode class).
+#[cfg(feature = "matching-regex")]
+#[test]
+fn frontend_emits_registry_diagnostic_codes_from_real_patterns() {
+    use vyre_libs::scan::{compile_regex_set, RegexConstruct};
+
+    // Compile-error constructs -> RegexCompileError::diagnostic_code().
+    let cases: &[(&str, &str)] = &[
+        (r"(a)\1", "VYRE_SCAN_UNSUPPORTED_BACKREFERENCE"),
+        (
+            r"a\bc",
+            "VYRE_SCAN_APPROXIMATED_LOOKAROUND_REQUIRES_VERIFIER",
+        ),
+        (
+            "[\u{0100}-\u{0200}]",
+            "VYRE_SCAN_UNSUPPORTED_UNICODE_MODE_GPU",
+        ),
+        (
+            r"(?:a{40}){40}",
+            "VYRE_SCAN_UNSUPPORTED_NESTED_REPEAT_BUDGET",
+        ),
+    ];
+    for (pattern, code) in cases {
+        let err = compile_regex_set(&[pattern]).expect_err("construct must be rejected");
+        assert_eq!(
+            err.diagnostic_code(),
+            Some(*code),
+            "pattern {pattern:?} must emit {code}; got error {err}"
+        );
+    }
+
+    // A huge alternation built from the exported code's own construct (so the
+    // arm count is derived, not a magic literal).
+    let huge: String = (0..2100)
+        .map(|i| format!("v{i}"))
+        .collect::<Vec<_>>()
+        .join("|");
+    let alt_err = compile_regex_set(&[huge.as_str()]).expect_err("huge alternation rejected");
+    assert_eq!(
+        alt_err.diagnostic_code(),
+        Some("VYRE_SCAN_UNSUPPORTED_HUGE_ALTERNATION_BUDGET"),
+    );
+
+    // Capture extraction is a NON-error verifier signal on a successful compile.
+    let captured = compile_regex_set(&[r"(abc)d"]).expect("captures compile for whole-match");
+    assert_eq!(
+        captured.capture_extraction_diagnostic_code(),
+        Some("VYRE_SCAN_CAPTURE_EXTRACTION_REQUIRES_VERIFIER"),
+        "a captured pattern must surface the capture-verifier code without erroring"
+    );
+
+    // The exported ONE-PLACE map agrees with the registry codes.
+    assert_eq!(
+        vyre_libs::scan::regex_construct_diagnostic_code(RegexConstruct::HugeAlternation),
+        "VYRE_SCAN_UNSUPPORTED_HUGE_ALTERNATION_BUDGET"
     );
 }
 

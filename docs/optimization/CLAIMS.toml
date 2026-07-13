@@ -4004,3 +4004,749 @@ proof = [
   "CARGO_BUILD_JOBS=1 cargo test -q -p vyre-emit-ptx vec_load --lib -> 9 passed.",
   "CARGO_BUILD_JOBS=1 cargo test -q -p vyre-emit-ptx vec_store --lib -> 6 passed.",
 ]
+
+[[claim]]
+owner = "main"
+date = "2026-07-02"
+status = "done"
+lanes = ["scan_static", "scan_automata"]
+scope = [
+  "Master plan W1-1: settle the region-presence under-fire suspicion at the vyre source with an INDEPENDENT differential oracle, on both the CPU-reference and real-GPU backends, and land a permanent conformance class (consumer-shaped, per W6-1).",
+]
+proof_required = [
+  "A ground-truth oracle independent of the region-presence PROGRAM (no suffix3 cascade, no candidate masks, no region binary search, no packed-byte extraction) must reproduce the exact per-region presence bitmap the program emits, so a shared under-fire cannot hide (the existing fused-vs-separate reference test is vyre-vs-vyre and cannot).",
+  "The region-presence path must match the oracle word-for-word across randomized volume AND the named W1-1 edge classes (region-boundary straddle at every offset, match at region start/end, NUL separator adjacency, dense saturation, non-ASCII adjacency, single-byte i==0/i==1 cascade boundaries).",
+  "The proof must cover keyhog's real shape (W6-1): multi-word presence rows (>32/>64 patterns), many small regions (stressing ceil_log2), and full byte-range patterns, not just the tiny edge cases.",
+  "The same oracle must gate the REAL consumer dispatch path (GpuLiteralSet::scan_presence_by_region) on a real GPU, since a wgpu-only divergence cannot surface on the reference backend.",
+]
+proof = [
+  "vyre-libs/tests/presence_oracle/mod.rs: shared independent DFA-walk oracle (oracle_presence) + edge_cases() + scale_cases(), the single spec both backends are checked against.",
+  "vyre-libs/tests/literal_set_presence_by_region_ground_truth.rs (CPU reference backend): high-volume (2000 cases) + edge classes + keyhog-shaped scale classes.",
+  "vyre-libs/tests/literal_set_presence_by_region_gpu_ground_truth.rs (real wgpu RTX 5090): edge classes + scale classes + 300 random cases; skips cleanly with no GPU.",
+  "Result: zero under-fire and zero over-fire on BOTH backends across the whole tested distribution. The region-attribution off-by-one, byte-class-edge, and prefilter-cascade suspects are all refuted at the vyre source; the region binary search converges in exactly ceil_log2(region_count) iterations (proven) and the suffix2/suffix3 masks admit every short pattern (len-1 all-256 prefix in suffix2, len<=2 all-256 prefix in suffix3 bloom).",
+  "CARGO_BUILD_JOBS=24 cargo test -p vyre-libs --release --test literal_set_presence_by_region_ground_truth -> 3 passed.",
+  "CARGO_BUILD_JOBS=24 cargo test -p vyre-libs --release --test literal_set_presence_by_region_gpu_ground_truth -> 1 passed (on device, 8.49s/3.65s runs).",
+]
+notes = [
+  "Honest scope (no 'clean'): this proves parity across the tested distribution and makes it a permanent regression gate, not that the path is unconditionally bug-free. The suspected under-fire is NOT reproduced in vyre; if a consumer reproduces it at a shape outside this coverage, extend scale_cases()/edge_cases(), the oracle is the single spec. The sync AND resident paths share one table builder (build_prefilter_tables) and one program builder, so both are covered by construction.",
+]
+
+[[claim]]
+owner = "main"
+date = "2026-07-02"
+status = "done"
+lanes = ["scan_static"]
+scope = [
+  "Master plan W1-2: device-side count-then-collect so match collection never silently truncates and consumers stop paging around the fixed cap.",
+]
+proof_required = [
+  "A scan entry point must return EVERY match with no fixed cap, auto-resizing to the exact device count.",
+  "Common (unsaturated) case must be a single dispatch; a saturated chunk at most two; never a silent partial.",
+  "The dispatch input wiring must have one owner shared by the capped and auto-resizing paths so they cannot drift.",
+]
+proof = [
+  "`GpuLiteralSet::scan_all` / `scan_all_into` / `scan_all_into_with_scratch`: dispatch at the default capacity; the match kernel's atomic counter reports the TRUE total even past the cap, so on saturation the output resizes to exactly that count and re-dispatches once. Complete set or a structured BackendError (ABI overflow / recount instability), never a partial.",
+  "`dispatch_literal_scan_outputs` extracted as the single owner of the 10-input binding order, shared by `scan_into_with_program` (fixed cap) and the auto-resizing path.",
+  "`vyre-libs/tests/literal_set_scan_all.rs` (CpuRefBackend): 25_000 dense single-byte matches auto-resize past the 10_000 cap to a complete set; 15_999 dense multi-pattern; common single-dispatch; empty/clean; and the fixed-cap `scan` asserted to fail closed on the same over-cap input. 4 tests pass.",
+]
+
+[[claim]]
+owner = "main"
+date = "2026-07-02"
+status = "done"
+lanes = ["scan_static"]
+scope = [
+  "Master plan W1-3: prove the GpuLiteralSet cached-artifact wire format is versioned and fails closed on version/magic drift.",
+]
+proof_required = [
+  "A round-trip must reconstruct a byte-real matcher (proven by identical scan output).",
+  "A future/unknown version, a corrupt magic, and a truncated blob must each fail closed; the version-mismatch error must NAME the offending version.",
+]
+proof = [
+  "Envelope was already implemented (`to_bytes`/`from_bytes` frame `magic[4] || le_u32(version) || sections` via `vyre_foundation::serial::envelope`); the gap was the missing cross-version test.",
+  "`vyre-libs/tests/literal_set_wire_versioning.rs`: round-trip reconstructs an identical-scanning matcher; a bumped future version fails closed with the version named; version 0, corrupt magic, truncated and empty blobs all fail closed. 5 tests pass.",
+]
+notes = [
+  "The W2-1 change bumped the wire version 3->4 (case-insensitive flag section); v3 remains readable as a legacy format so existing caches load without a forced recompile.",
+]
+
+[[claim]]
+owner = "main"
+date = "2026-07-02"
+status = "done"
+lanes = ["scan_static", "scan_automata"]
+scope = [
+  "Master plan W2-1: in-kernel ASCII case-insensitive matching, fold the transition byte classes and the candidate prefilter masks, not the haystack, so a scan matches mixed-case input with no consumer-side host-fold pass and no second resident haystack copy.",
+]
+proof_required = [
+  "The case fold must be baked into the DFA transition table (transitions[s][A] == transitions[s][a]), built at construction, with zero per-byte kernel folding.",
+  "The candidate prefilter masks (end-byte / suffix2 / suffix3 bloom) must admit BOTH cases of each pattern byte, since the prefilter reads the RAW haystack byte the DFA fold does not touch, else uppercase candidates under-fire.",
+  "A case-insensitive scan of the raw haystack must EQUAL a host-folded case-sensitive scan (the pass this replaces), on the CPU reference backend AND a real GPU.",
+  "The case-insensitive flag must survive a wire round-trip (masks are rebuilt lazily from raw pattern bytes, identical for ci and non-ci) and must distinguish cache keys.",
+]
+proof = [
+  "vyre-primitives `dfa_compile_case_insensitive` / `_with_budget`: fold at trie insert + resolve the flattened transition for raw byte b via fold(b). One `fold_ascii_byte` owner. 500-case host-fold parity differential in dfa_compile tests.",
+  "vyre-libs mask folding: `ascii_case_variants` (one owner) drives case expansion in `literal_set_candidate_end_byte_mask_words`, `literal_set_candidate_suffix2_mask_words`, and `classic_ac_candidate_suffix3_bloom_words_ci`.",
+  "`GpuLiteralSet::compile_case_insensitive` / `try_compile_case_insensitive` + a `case_insensitive` field, wire-persisted (LITERAL_SET_WIRE_VERSION 3->4; v3 readable as legacy, ci=false), folded into `pattern_fingerprint` and `cache_key`.",
+  "`vyre-libs/tests/literal_set_case_insensitive.rs`: 1500 CPU + 200 real-GPU (RTX 5090) host-fold parity cases (triple-set equality), case-variant/non-letter-exact, and a wire round-trip preserving ci. 4 tests.",
+  "cargo test -p vyre-libs --release --lib -> 531 passed; --test literal_set_case_insensitive -> 4 passed (GPU on device, 50s); --test literal_set_wire_versioning -> 5 passed after the version bump.",
+]
+notes = [
+  "Two ONE-PLACE smells surfaced and are logged in vyre repo-root BACKLOG.md: (1) duplicate end/suffix2 mask builders (pattern-derived in literal_set.rs vs DFA-derived in count_program.rs); (2) LITERAL_SET_WIRE_VERSION duplicated as MatchEngineCache::WIRE_VERSION in engine.rs (both bumped to 4 here).",
+]
+
+[[claim]]
+owner = "main"
+date = "2026-07-02"
+status = "done"
+lanes = ["scan_automata"]
+scope = [
+  "Master plan W2-3 (diagnostics sub-item, PARTIAL): expose the canonical REGEX_UNSUPPORTED_DIAGNOSTICS.toml diagnostic code on the regex compile/pipeline error types so a consumer routes verifier-vs-reject on a stable code instead of free-text `feature` strings.",
+]
+proof_required = [
+  "The REAL compile path (compile_regex_set / build_regex_dfa_pipeline) must emit the exact registry code for each construct the frontend distinctly identifies.",
+  "No codes may be invented: errors with no registry construct (Parse, state-budget overflow, ABI sizing) must return None.",
+  "The pipeline-level error must forward the same code as the low-level compile error (one owner for the mapping).",
+]
+proof = [
+  "RegexCompileError::diagnostic_code() -> Option<&'static str>: non-edge lookaround -> VYRE_SCAN_APPROXIMATED_LOOKAROUND_REQUIRES_VERIFIER; over-cap Unicode class -> VYRE_SCAN_UNSUPPORTED_UNICODE_MODE_GPU; else None. Matches this crate's own construction-site `feature` constants (not upstream parser text).",
+  "RegexDfaError::diagnostic_code() forwards Self::Compile(inner).diagnostic_code(); Lower/Size -> None.",
+  "scan::regex_compile::tests::regex_compile_diagnostic_codes: `a\\bc` -> lookaround code; `[U+0100-U+0200]` (257 cp) -> unicode-gpu code; `^abc$` compiles Ok; `(` (parse error) -> None.",
+  "scan::regex_dfa::tests::pipeline_error_forwards_diagnostic_code: pipeline lookaround error forwards the code; 1-state-cap overflow -> None.",
+  "cargo test -p vyre-libs --features matching-regex --lib diagnostic_code -> 2 passed.",
+]
+notes = [
+  "PARTIAL by design: only the two constructs the GPU-NFA frontend can distinctly identify today are mapped. The other four registry constructs (backreference, capture_extraction, huge_alternation, nested_repeats) still surface as Parse/TooManyStates and need distinct frontend detection before they can be routed on their own code, tracked as the remaining W2-3 diagnostics work.",
+]
+
+[[claim]]
+owner = "main"
+date = "2026-07-02"
+status = "done"
+lanes = ["scan_automata"]
+scope = [
+  "Master plan W2-3 (state-cap sub-item, host sharding): build_regex_dfa_shards / _unanchored eliminate the single-DFA state cap as a hard limit on how many patterns a consumer can admit in one scan phase, by splitting a pattern set into shards each of whose subset-constructed DFA fits max_dfa_states.",
+]
+proof_required = [
+  "NFA-state accounting alone (plan_shards) cannot guarantee a fitting DFA, subset construction can explode past the NFA state count, so the builder must COMPILE and bisect on capacity overflow, guaranteeing every emitted shard is a proven-fitting DFA.",
+  "Sharding must be lossless and correctly attributed: the union of shard hits, rewritten from shard-local to global pattern ids, must equal an independent oracle over the whole set.",
+  "A single pattern that cannot fit the cap on its own must surface its error, never be silently dropped (Law 10).",
+  "Capacity errors (Lower/Size/TooManyStates) split; per-pattern errors (Parse/Unsupported) are returned immediately (splitting cannot fix bad syntax).",
+]
+proof = [
+  "regex_dfa.rs: RegexDfaShard { pipeline, global_pattern_ids }, build_regex_dfa_shards (anchored) + build_regex_dfa_shards_unanchored (find-anywhere) over one build_regex_dfa_shards_with core; compile_or_split recursively bisects on regex_dfa_error_is_capacity; lone-pattern overflow returns the error.",
+  "scan::regex_dfa::tests::dfa_shards_cover_overflowing_set_losslessly_with_global_pids: a 6-literal set that overflows an 18-state cap splits into >=2 shards, each with state_count<=cap, partitioning the global pids; the global-remapped union of an output_records-based unanchored walk equals a naive-substring oracle over an embedding haystack (multiplicity included).",
+  "scan::regex_dfa::tests::dfa_shards_surface_error_for_unshardable_single_pattern: a lone pattern under a 1-state cap errors.",
+  "scan/mod.rs API_INDEX + pub use updated (build_regex_dfa_shards, build_regex_dfa_shards_unanchored, RegexDfaShard); api_index integrity test covers them.",
+  "cargo test -p vyre-libs --features matching-regex --lib scan::regex_dfa::tests::dfa_shards -> 2 passed.",
+]
+notes = [
+  "Host-side shard CONSTRUCTION (the cap elimination) is done; shard RESIDENCY policy (resident-on-device, VRAM-tiered budgets) rides on the W3-1 resident-everything substrate and is deferred to it.",
+]
+
+[[claim]]
+owner = "main"
+date = "2026-07-02"
+status = "done"
+lanes = ["scan_static"]
+scope = [
+  "Master plan W2-5 (per-pattern cap sub-item): device-side per-pattern match cap so a consumer keeps at most k matches per pattern id and reads back the rest as nothing, instead of applying the cap on host after a full readback. (Sort + dedup of match triples already ship as the region family: region_sort_program, dedup_regions_flag/cluster_program.)",
+]
+proof_required = [
+  "The cap must run on device (a Program), keying on pid, emitting a survivor flag per slot, composable into the existing sort->flag->prefix-scan->compact region pipeline.",
+  "On (pid,start,end)-sorted input, survivors must be the k earliest-start matches per pattern; survivor count per pid must equal min(group_size, k).",
+  "The ACTUAL kernel IR (not just a host mirror) must match an independent oracle.",
+]
+proof = [
+  "region_programs.rs: cap_regions_per_pattern_flag_program(pids, survivors, k, count) + CAP_REGIONS_PER_PATTERN_OP_ID, per-invocation rank-within-pid count, survivor = rank<k; same shape as dedup_regions_flag_program.",
+  "region.rs: cap_regions_per_pattern_survivors_cpu(pids, k), running-count reference/oracle (cpu-parity gated).",
+  "region_tests.rs: cap_kernel_matches_cpu_oracle_over_random_pid_streams EXECUTES the IR on vyre-reference reference_eval over 400 random pid streams (incl empty + k==0) and asserts survivor-flag equality with the oracle AND min(group,k) per pid; cap_kernel_edge_k_zero_and_k_above_group; cap_regions_per_pattern_flag_program_emits_expected_buffers (pids ReadOnly / survivors WriteOnly).",
+  "cargo test -p vyre-primitives --lib matching::region_tests::cap -> 3 passed.",
+]
+notes = [
+  "Readback reduction is the direct arithmetic consequence: survivors <= k*|distinct pids|. Remaining W2-5 sub-item: per-region compaction (compact within a region id).",
+]
+
+[[claim]]
+owner = "main"
+date = "2026-07-02"
+status = "done"
+lanes = ["scan_static"]
+scope = [
+  "Master plan W2-5 (operator path): prove the device post-processing chain cap -> exclusive prefix-scan -> stream-compact composes end-to-end into the readback-reducing pipeline consumers otherwise re-implement on host.",
+]
+proof_required = [
+  "Every stage runs on device (the reference interpreter), not a host mirror; the compacted output must equal a host reference (first-k-per-pattern), with the correct live_count.",
+  "The pid and start columns must compact consistently through the SHARED flags/offsets (a match's fields stay together).",
+]
+proof = [
+  "region_tests.rs::cap_pipeline_compacts_first_k_per_pattern_on_device: cap_regions_per_pattern_flag_program -> prefix_scan(ScanKind::ExclusiveSum) -> stream_compact (twice, pids + starts) via vyre-reference reference_eval; asserts out_pids == first-k-per-pid, out_starts aligned, live == 5 for a 7-triple/k=2 input.",
+  "run_u32_program helper chains programs by feeding each stage's writable outputs forward.",
+  "cargo test -p vyre-primitives --lib matching::region_tests::cap_pipeline -> 1 passed.",
+]
+notes = [
+  "Confirms the region post-processing family (sort/dedup/cap + prefix_scan + stream_compact) is a COMPOSABLE device pipeline; the exclusive-scan the compactor needs already exists (math::prefix_scan ScanKind::ExclusiveSum), so no impedance gap. Large-buffer (>1024) exclusive scan across multiple workgroups remains inclusive-only (multi_block_prefix_scan), a follow-on if consumers need >1024 matches per compaction batch.",
+]
+
+[[claim]]
+owner = "main"
+date = "2026-07-02"
+status = "done"
+lanes = ["scan_static"]
+scope = [
+  "Exclusive multi-block prefix scan (compaction pipeline at scale): multi_block_prefix_scan_sum_exclusive_u32 gives math::stream_compact its required exclusive offsets on-device for arbitrary n, closing the >1024-live-candidate gap where only the single-block math::prefix_scan(ExclusiveSum) existed and consumers had to convert inclusive->exclusive on host.",
+]
+proof_required = [
+  "Correctness by construction: exclusive[i] == inclusive[i] - input[i], reusing ONE inclusive scan implementation (no second scan).",
+  "The novel IR (the element-difference pass) must execute and match the exclusive CPU reference; the reused inclusive chain keeps its own coverage.",
+  "No production raw-panic path (Law 10), the module's production_wrappers gate must still pass with the new code.",
+]
+proof = [
+  "reduce/multi_block_prefix_scan.rs: multi_block_prefix_scan_sum_exclusive_u32 = fuse(inclusive scan into scratch, try_exclusive_difference_pass) + demote_intermediate_outputs; OP_ID_EXCLUSIVE_SUM; cpu_ref_exclusive / try_cpu_ref_exclusive_into (push-before-accumulate).",
+  "exclusive_difference_pass_executes_and_subtracts_input: reference_eval runs the flat difference Region and matches cpu_ref_exclusive; exclusive_equals_inclusive_minus_input: identity over 500 random cases; exclusive_scan_empty_and_oversized (n=0 empty, n=u32::MAX executable trap); exclusive_scan_small_and_large_n_declare_in_and_out (single-block + 2*BLOCK_LANES GridSync path both fuse, no trap).",
+  "cargo test -p vyre-primitives --lib reduce::multi_block_prefix_scan -> 16 passed (incl production_wrappers_have_no_raw_panic_path over the new code).",
+]
+notes = [
+  "Large-n (>BLOCK_LANES) GridSync composition is covered structurally + by CPU ref, matching the inclusive multi-block scan's in-crate standard; full GPU execution parity for both rides on the driver parity harness. path-is-the-interface: reachable at vyre_primitives::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_exclusive_u32.",
+]
+
+[[claim]]
+owner = "main"
+date = "2026-07-03"
+status = "done"
+lanes = ["scan_automata"]
+scope = [
+  "Master plan W2-3 (capture-group routing layer): CaptureMode enum + CaptureModeContract wire REGEX_CAPTURE_MODE_CONTRACTS.toml to code so a consumer routes a capture request (GPU accelerator vs scalar verifier) on a typed value instead of parsing the TOML.",
+]
+proof_required = [
+  "One code-side owner (contract_row) for each mode's mode_id/output_shape/accelerator_eligible/verifier_required/null_policy.",
+  "Exactly the three whole-match modes (noncapture/count/span) are accelerator-eligible; the three group-extraction modes (named/repeated/group_extraction) are verifier-bound.",
+  "Code and TOML must be locked field-for-field so they cannot drift, and the enum must cover every declared mode (no omission, no extra).",
+]
+proof = [
+  "regex_compile.rs: CaptureMode (6 variants) + CaptureModeContract; CaptureMode::ALL, contract_row(), accelerator_eligible(), verifier_required(), from_mode_id(); re-exported vyre_libs::scan::{CaptureMode, CaptureModeContract} + API_INDEX entries (matching-regex).",
+  "scan::regex_compile::tests::capture_mode_routing_splits_accelerator_from_verifier (accel == !verifier for all; accel set == {NonCapture,Count,Span}); capture_mode_id_round_trips_and_is_unique (6 unique ids, from_mode_id round-trip, unknown -> None).",
+  "tests/regex_capture_mode_contracts.rs::capture_mode_enum_matches_the_toml_contract_row_for_row: locks every row's mode_id/output_shape/null_policy to the TOML text AND the routing bits to that mode's own [[mode]] block, and asserts CaptureMode::ALL.len() == TOML [[mode]] count.",
+  "cargo test -p vyre-libs --features matching-regex: --lib capture_mode -> 2 passed; --test regex_capture_mode_contracts -> 4 passed.",
+]
+notes = [
+  "PARTIAL: routing layer only. The verifier-bound extraction kernels (named/repeated/group-extraction value production) remain, they need the scalar verifier that owns capture-stack semantics the byte-DFA lacks. Mirrors the W2-3 diagnostics split: wire the contract first, then the heavy machinery.",
+]
+
+[[claim]]
+owner = "main"
+date = "2026-07-03"
+status = "in_progress"
+lanes = ["scan_static"]
+scope = [
+  "Master plan W3-3 (attribution): add a TimedDispatchResult twin to the hot literal region-presence scan (scan_presence_by_region_timed), previously timed only on the resident + borrowed paths.",
+]
+proof_required = [
+  "The timed path must not change the presence result by a single bit vs the untimed scan_presence_by_region (same program, same inputs).",
+  "The untimed hot path must pay NO timing cost (it keeps calling dispatch_borrowed, not dispatch_borrowed_timed).",
+  "Timing must be honest: device_ns is None (loud absence) on a backend without a device timer, never a fabricated 0.",
+  "ONE PLACE: reuse the existing owned-buffer prepare helper, not a second copy of the ~40-line staging body.",
+]
+proof = [
+  "literal_set.rs: scan_presence_by_region_timed reuses build_presence_by_region_dispatch (the owned-buffer prepare path) and calls backend.dispatch_borrowed_timed; returns (Vec<u32>, vyre_driver::TimedDispatchResult) with outputs = raw presence bytes (resident-consistent). The scratch hot path (scan_presence_by_region_with_scratch -> dispatch_borrowed) is untouched.",
+  "tests/literal_set_presence_by_region_timed.rs: timed_presence_equals_untimed_and_reports_timing (bitmap == untimed, non-vacuous, outputs carried, device_ns None on CpuRefBackend) + timed_scan_is_stable_across_repeated_calls.",
+  "cargo test -p vyre-libs --test literal_set_presence_by_region_timed -> 2 passed.",
+]
+notes = [
+  "IN PROGRESS: this is one path. scan_into / scan_all / scan_presence / the fused presence+positions path each still need a timed twin for the 'every dispatch path' contract. dispatch_borrowed_timed already exists on the VyreBackend trait (default = wall time; driver crates override with device_ns), so the remaining twins are the same reuse-the-prepare-helper pattern.",
+]
+
+[[claim]]
+owner = "main"
+date = "2026-07-03"
+status = "in_progress"
+lanes = ["scan_static"]
+scope = [
+  "Master plan W3-3 (attribution, cont.): scan_into_timed adds the TimedDispatchResult twin to the position-scan path (the (pid,start,end) triple decode), matching the resident scan_into_timed shape.",
+]
+proof = [
+  "literal_set.rs: scan_into_timed reuses prepare_scan_dispatch + LiteralSetPreparedScan::decode_outputs_into, calls dispatch_borrowed_timed; returns TimedDispatchResult with matches decoded into the caller buffer; hot scan_into_with_scratch untouched.",
+  "tests/literal_set_scan_into_timed.rs: timed_scan_into_equals_untimed_and_reports_timing (matches == untimed, non-vacuous, device_ns None on CpuRefBackend) + timed_scan_into_clears_stale_matches (buffer cleared, no cross-call accumulation).",
+  "cargo test -p vyre-libs --test literal_set_scan_into_timed -> 2 passed.",
+]
+notes = [
+  "W3-3 now covers region-presence + position paths. Remaining: scan_all / scan_presence / fused presence+positions timed twins.",
+]
+
+[[claim]]
+owner = "main"
+date = "2026-07-03"
+status = "done"
+lanes = ["scan_static", "scan_automata"]
+scope = [
+  "Deduplication lock: the candidate-end-byte and candidate-suffix2 masks have two independent derivations (pattern-derived literal_set_candidate_* on the presence/prefilter path, DFA-derived classic_ac_candidate_* on the count path). Prove they are byte-identical and lock them against silent drift.",
+]
+proof_required = [
+  "The two derivations must produce identical masks for the same literal set (both answer 'which 1-/2-byte suffixes can complete a match'); a divergence means one path's prefilter under/over-fires vs the other.",
+  "The lock must exercise the subtle cases: shared suffixes (real failure links) and length-1 patterns (the pattern-derived 'any previous byte' suffix2 branch).",
+]
+proof = [
+  "scan::literal_set::compile_tests::candidate_masks_pattern_derived_equals_dfa_derived: over 600 random pattern sets (small alphabet abcx_9, lengths 1..5, 1..8 patterns) compiles the DFA and asserts literal_set_candidate_end_byte_mask_words(p,false)==classic_ac_candidate_end_byte_mask_words(&dfa) AND the suffix2 pair; case-sensitive form (ci folding covered by literal_set_case_insensitive.rs).",
+  "cargo test -p vyre-libs --lib candidate_masks_pattern_derived_equals_dfa_derived -> 1 passed. No divergence found.",
+]
+notes = [
+  "NOT collapsed to one owner: the two builders take different inputs (raw patterns vs CompiledDfa) and serve different hot paths, so a same-output lock is the correct ONE-PLACE guard rather than forcing one to call the other. Backlog #1 -> done.",
+]
+
+[[claim]]
+owner = "main"
+date = "2026-07-03"
+status = "done"
+lanes = ["scan_static", "reference"]
+scope = [
+  "Master plan W6-1 (magnitude conformance) + a reference-oracle Law-10 fix it uncovered: (a) add keyhog-magnitude region-shape conformance classes (many-patterns 2000, many-tiny-regions 4000, few-huge-regions 3x16 KiB) to the presence ground-truth scale set; (b) fix a silent grid under-coverage in the vyre-reference interpreter that made those large-haystack CPU-ref classes falsely under-fire.",
+]
+proof_required = [
+  "The region-presence kernel must be proven correct at magnitude extremes on the REAL device, not just CPU-ref.",
+  "A CPU-ref test oracle must never SILENTLY under-cover a byte-scan (Law 10): if the true byte grid exceeds the interpreter's buffer-inferred grid, the interpreter must be given the true grid, not skip high positions.",
+  "The reference API change must be additive: existing reference_eval callers keep identical behavior (grid floor 0).",
+]
+proof = [
+  "presence_oracle/mod.rs scale_cases: 7 classes incl many-tiny-regions (4000 regions) and few-huge-regions (3x16 KiB). literal_set_presence_by_region_ground_truth (CPU-ref) region_presence_scale_classes -> ok in 319 s. GPU twin literal_set_presence_by_region_gpu_ground_truth (RTX 5090) -> 1 passed / 289 s: SAME oracle, SAME fixtures, real wgpu path keyhog dispatches -> kernel correct at these magnitudes.",
+  "ROOT CAUSE: hashmap/mod.rs dispatch_elements sized from max(max_output_elements, node_count, max_input_elements) -- the largest BUFFER element count -- not haystack_len; a byte-scan packs 4 bytes/u32 so grid under-covers when byte_count > max buffer elements, silently skipping high candidate positions (under-fire on CPU-ref only).",
+  "FIX: run_hashmap_reference gained a min_dispatch_elements floor; reference_eval_with_dispatch / run_arena_reference_with_dispatch thread it; run_arena_reference calls _with_dispatch(..,0) so reference_eval is byte-identical. program_presence passes haystack.len() as the floor.",
+  "vyre-reference/execution::tests::dispatch_floor_covers_packed_byte_scan_that_buffer_inference_under_covers: 1024 packed words = 4096 bytes, marker at byte 4095 -> default under-covers flag=0, floor=4096 covers flag=1.",
+  "cargo test -p vyre-reference --lib -> 82 passed (signature change broke nothing).",
+]
+notes = [
+  "This is a test-ORACLE fix, not a kernel fix: every large-haystack CPU-ref byte-scan test was silently under-covered and could pass while missing a real kernel under-fire. The kernel needed no change (GPU gate proves it). W6-1 conformance now runs on both CPU-ref (grid-correct) and the real GPU. Backlog hashmap/mod.rs:163 -> done.",
+]
+
+[[claim]]
+owner = "main"
+date = "2026-07-03"
+status = "done"
+lanes = ["scan_static"]
+scope = [
+  "Master plan W2-5 (device-side post-processing, per-region compaction): add compact_first_per_region_pattern_flag_program -- the positioned companion to the presence-by-region bitmap. It compacts match triples so exactly one positioned representative survives per (region, pid) pair, replacing a host-side per-region group-by after readback.",
+]
+proof_required = [
+  "The kernel must key on the TWO-column (region, pid) pair and keep the FIRST occurrence in array order (distinct from the cap's single-column rank<k and the dedup's overlap/touch cluster) -- proven against an independent oracle, not a host mirror of the same code.",
+  "It must compose into the SAME sort -> flag -> exclusive-prefix-scan -> stream-compact pipeline as the cap/dedup flag kernels, proven end to end on device, not just per unit.",
+  "ONE PLACE: it is a genuinely new predicate (first-occurrence over a 2-key), not a copy of the cap loop; the CPU oracle is a separate HashSet pass.",
+]
+proof = [
+  "region_programs.rs: compact_first_per_region_pattern_flag_program -- per-invocation scan of j<i, marks dup iff region_j==region_i AND pid_j==pid_i, survivor = negation. Binds regions(ReadOnly), pids(ReadOnly), survivors(WriteOnly); COMPACT_FIRST_PER_REGION_PATTERN_OP_ID. starts/ends not read (keys only on the pair).",
+  "region.rs: compact_first_per_region_pattern_survivors_cpu -- independent HashSet first-occurrence oracle (cpu-parity gated).",
+  "region_tests.rs: compact_first_per_region_pattern_flag_program_emits_expected_buffers (buffer shape) + compact_kernel_matches_cpu_oracle_over_random_region_pid_streams (400 random (region,pid) streams incl empty-buffer; ACTUAL kernel IR on vyre-reference interpreter == HashSet oracle AND each distinct pair keeps exactly one) + compact_kernel_edge_first_occurrence_only (same pid in different regions is NOT a dup) + compact_pipeline_first_per_region_pattern_on_device (flag -> prefix_scan(ExclusiveSum) -> stream_compact on the interpreter; compacted starts == first-per-pair positions, live count == distinct-pair count).",
+  "cargo test -p vyre-primitives --lib matching::region_tests::compact -> passed.",
+]
+notes = [
+  "Completes the W2-5 device-side post-processing set: sort (pre-existing), dedup (pre-existing), per-pattern cap (prior claim), and now per-region compaction. GPU parity for the composed pipeline rides the same driver harness as the cap pipeline (same reference-interpreter coverage standard).",
+]
+
+[[claim]]
+owner = "main"
+date = "2026-07-03"
+status = "in_progress"
+lanes = ["scan_static"]
+scope = [
+  "Master plan W3-3 (attribution, cont.): scan_presence_timed adds the TimedDispatchResult twin to the GLOBAL-presence path (whole-haystack presence bitmap), via a new owned build_presence_dispatch helper -- the global-presence sibling of build_presence_by_region_dispatch.",
+]
+proof_required = [
+  "The timed bitmap must equal the untimed scan_presence bit-for-bit (same program, same inputs; only dispatch_borrowed_timed vs dispatch_borrowed differs).",
+  "ONE PLACE: build_presence_dispatch must reuse the shared presence_immutable_table_bytes encoder (not a second copy of the 7 immutable-table encodings), and the untimed scan_presence_with_scratch zero-copy borrowed-views hot path must be untouched (no timing cost).",
+  "Honest timing: device_ns is None on a backend without a device timer, never a fabricated 0.",
+]
+proof = [
+  "literal_set.rs: build_presence_dispatch builds the 10 owned input buffers (binding 6 = zeroed presence read-write = the whole output) through fail-closed copy_u32_words_as_le_bytes + presence_immutable_table_bytes; scan_presence_timed borrows them into dispatch_borrowed_timed and returns (Vec<u32>, TimedDispatchResult). scan_presence_with_scratch (borrowed views -> dispatch_borrowed) untouched.",
+  "tests/literal_set_presence_timed.rs: timed_presence_equals_untimed_and_reports_timing (bitmap == untimed, non-vacuous some-set/some-clear fixture, outputs carried, device_ns None on CpuRefBackend) + timed_scan_is_stable_across_repeated_calls.",
+  "cargo test -p vyre-libs --test literal_set_presence_timed -> 2 passed.",
+]
+notes = [
+  "W3-3 now covers region-presence + position + global-presence paths. Remaining: scan_all + the fused presence+positions timed twin. dispatch_borrowed_timed is a VyreBackend trait default (wall only; driver crates override device_ns), so the remaining twins are the same reuse-the-owned-prepare-helper pattern.",
+]
+
+[[claim]]
+owner = "main"
+date = "2026-07-03"
+status = "in_progress"
+lanes = ["scan_static"]
+scope = [
+  "Master plan W3-3 (attribution, cont.): scan_presence_and_positions_by_region_timed adds the TimedDispatchResult twin to the FUSED one-dispatch path (presence bitmap + (pid,start,end) triples together), via a new owned build_presence_and_positions_by_region_dispatch helper.",
+]
+proof_required = [
+  "BOTH fused outputs (presence bitmap AND match triples) must equal the untimed scan_presence_and_positions_by_region bit-for-bit (same program, same inputs; only dispatch_borrowed_timed vs dispatch_borrowed differs).",
+  "The fail-closed overflow contract must hold on the timed path too: a match count over max_matches errors (Law 10), never a silent truncated decode.",
+  "ONE PLACE: the owned build helper reuses presence_immutable_table_bytes (the shared 7-table encoder) rather than a second copy; the untimed borrowed-views hot path is untouched.",
+  "Honest timing: device_ns None on a backend without a device timer.",
+]
+proof = [
+  "literal_set.rs: build_presence_and_positions_by_region_dispatch builds the 13 owned input buffers (binding 6 presence read-write, binding 12 match_count read-write; binding 13 backend-allocated matches output) via presence_immutable_table_bytes + fail-closed copy_u32_words_as_le_bytes. scan_presence_and_positions_by_region_timed borrows them into dispatch_borrowed_timed, decodes presence(outputs[0]) + count(outputs[1]) + matches(outputs[2]) with the same try_unpack_match_triples_capped_into overflow guard, returns (Vec<u32>, TimedDispatchResult) with matches in the caller buffer. Untimed scan_presence_and_positions_by_region_with_scratch untouched.",
+  "tests/literal_set_presence_and_positions_by_region_timed.rs: timed_fused_equals_untimed_and_reports_timing (presence == untimed, matches == untimed, non-vacuous two-region fixture with a repeated match, >=3 output buffers carried, device_ns None on CpuRefBackend) + timed_fused_clears_stale_matches_and_is_stable (pre-seeded pid=99 stale entries cleared, both outputs deterministic across repeats).",
+  "cargo test -p vyre-libs --test literal_set_presence_and_positions_by_region_timed -> 2 passed.",
+]
+notes = [
+  "W3-3 now covers region-presence + position + global-presence + FUSED paths. Remaining: scan_all timed twin -- deferred pending a decision on which of its (up to 2) auto-resize dispatches the reported timing attributes (the final decode dispatch is the natural choice; documenting that is the open design point, not a coding blocker).",
+]
+
+[[claim]]
+owner = "main"
+date = "2026-07-03"
+status = "done"
+lanes = ["scan_static"]
+scope = [
+  "Master plan W3-3 (attribution) COMPLETE: scan_all_timed adds the final TimedDispatchResult twin -- to the auto-resize complete-match path. With it, all five literal dispatch paths (region-presence, position/scan_into, global-presence, fused, complete-match/scan_all) have timed twins.",
+]
+proof_required = [
+  "scan_all may dispatch twice (default capacity, then resize to exact device count); the timed twin must report the timing of the dispatch that PRODUCED the returned matches and LOUDLY flag whether a resize happened -- never silently sum two launches (Law 10).",
+  "The returned matches must equal untimed scan_all bit-for-bit.",
+  "ONE PLACE: the 10-input match binding order must have a single owner shared by the untimed and timed dispatch paths (no second copy that could drift).",
+]
+proof = [
+  "literal_set.rs: literal_scan_borrowed_inputs is the SINGLE owner of the 10-input match binding order; dispatch_literal_scan_outputs (untimed) and new dispatch_literal_scan_outputs_timed (dispatch_borrowed_timed) both call it. scan_all_timed runs the same bounded 2-attempt resize loop with timed dispatches and returns ScanAllTimed { timed, resized }; resized == (attempt == 1). Same recount-instability + exhaustion fail-closed errors as scan_all.",
+  "New pub struct ScanAllTimed exported + added to API_INDEX (api_index tests: 5 passed, incl sorted-within-bucket + covers-every-export).",
+  "tests/literal_set_scan_all_timed.rs: timed_scan_all_equals_untimed_and_reports_timing (matches == untimed, non-vacuous, resized == false for a default-fit fixture, >=2 output buffers, device_ns None) + timed_scan_all_clears_stale_matches (pre-seeded pid=42 cleared, exactly 2 needle matches, deterministic across repeats) + timed_scan_all_reports_resize_and_stays_exact (25_000 'a' matches > 10_000 initial cap forces the 2-dispatch auto-resize: resized == true, all 25_000 matches returned == untimed, device_ns None -- covers the resize RE-dispatch branch, not just the single-dispatch fit).",
+  "cargo test -p vyre-libs --test literal_set_scan_all_timed --test api_index -> 7 passed.",
+]
+notes = [
+  "W3-3 checkbox flipped [~] -> [x]. dispatch_borrowed_timed is a VyreBackend trait default (wall only; driver crates override device_ns), so on the real wgpu/cuda drivers these twins carry device_ns; on CpuRefBackend device_ns is a loud None. The scan_all twin's resized flag is the honest attribution for the 2-dispatch case -- documented, not summed.",
+]
+
+[[claim]]
+owner = "main"
+date = "2026-07-03"
+status = "in_progress"
+lanes = ["scan_static"]
+scope = [
+  "Master plan W3-2 (async execution model): scan_presence_async adds the PendingDispatch async twin to the global-presence path -- the global-presence sibling of the pre-existing scan_presence_by_region_async.",
+]
+proof_required = [
+  "The async bitmap must equal the sync scan_presence word-for-word on BOTH the real GPU (wgpu) and the CPU reference backend.",
+  "On a non-pipelining backend (CpuRefBackend), the handle must be trivially ready and the degraded synchronous path must not change the bitmap by a single bit (Law 10).",
+  "ONE PLACE: the async submit must reuse the shared owned build_presence_dispatch helper, not a second staging copy; owned inputs retained until await keeps the device upload backing memory valid.",
+]
+proof = [
+  "literal_set.rs: new pub struct PendingPresence { pending, presence_words, _inputs } with is_ready + await_words (decodes outputs[0] presence bytes). scan_presence_async reuses build_presence_dispatch (the same owned helper the timed twin uses), calls backend.dispatch_async, retains _inputs. Exported + added to API_INDEX (before PendingPresenceByRegion).",
+  "tests/literal_set_presence_async.rs: async_global_presence_matches_sync_on_gpu (RTX 5090 wgpu, RAN not skipped: async == sync word-for-word, non-vacuous) + async_global_presence_equals_sync_on_cpu_reference (is_ready() deterministically true, async == sync, non-vacuous).",
+  "cargo test -p vyre-libs --test literal_set_presence_async --test api_index -> 7 passed (2 async incl real GPU + 5 api_index).",
+]
+notes = [
+  "W3-2 remains in_progress: scan_into (positions), fused, and scan_all still need async twins. scan_presence_by_region_async pre-existed; this adds the global-presence sibling using the same retain-owned-inputs pattern. The overlap-factor measurement on a two-batch pipeline is the separate evidence bullet still open.",
+]
+
+[[claim]]
+owner = "main"
+date = "2026-07-03"
+status = "in_progress"
+lanes = ["scan_static"]
+scope = [
+  "Master plan W3-2 (async execution model, cont.): scan_into_async adds the PendingDispatch async twin to the POSITION path -- returning a PendingMatches handle whose await_into/await_matches decode the (pid,start,end) triples.",
+]
+proof_required = [
+  "The async triples must equal the sync scan_into triples exactly on BOTH the real GPU (wgpu) and the CPU reference backend.",
+  "await_into must clear the caller buffer first (no stale accumulation) and keep scan_into's fail-closed truncation contract (count > max_matches errors, never a silent partial).",
+  "ONE PLACE: the async submit reuses the existing owned prepare_scan_dispatch payload (LiteralSetPreparedScan), not a second staging copy; the retained payload backs the async upload inputs and carries the max_matches cap.",
+]
+proof = [
+  "literal_set.rs: new pub struct PendingMatches { pending, prepared: LiteralSetPreparedScan } with is_ready + await_into (clears matches, decodes via prepared.decode_outputs_into) + await_matches. scan_into_async reuses prepare_scan_dispatch, calls backend.dispatch_async, retains prepared. Exported + added to API_INDEX (before PendingPresence).",
+  "tests/literal_set_scan_into_async.rs: async_scan_into_matches_sync_on_gpu (RTX 5090 wgpu, RAN not skipped: async == sync triples, non-vacuous) + async_scan_into_equals_sync_on_cpu_reference (is_ready true, await_into clears pre-seeded pid=123 stale entries, async == sync, non-vacuous).",
+  "cargo test -p vyre-libs --test literal_set_scan_into_async --test api_index -> 7 passed (2 async incl real GPU + 5 api_index).",
+]
+notes = [
+  "W3-2 now covers global-presence + position async twins (the two most consumer-relevant). Remaining: fused + scan_all async twins, plus the overlap-factor two-batch measurement. Note: vyre-libs --all-features build fails on a PRE-EXISTING, documented gate -- the `security` feature references the unvendored external_dataflow_engine crate (see security/mod.rs); default-features (the real gate) is clean.",
+]
+
+[[claim]]
+owner = "main"
+date = "2026-07-03"
+status = "done"
+lanes = ["scan_static"]
+scope = [
+  "ONE PLACE (elegance law): the three owned presence-dispatch build helpers (global build_presence_dispatch, by-region build_presence_by_region_dispatch, fused build_presence_and_positions_by_region_dispatch) each repeated the IDENTICAL bindings 0..=9 staging (scan_guard, pack haystack, build_prefilter_tables, presence_immutable_table_bytes, reserve, push haystack + 7 immutable tables + haystack_len + zeroed presence). Unify that prefix into a single owner.",
+]
+proof_required = [
+  "The 0..=9 binding order must have ONE definitional home; a reorder must miswire all three programs at one edit site, not silently drift a copy.",
+  "The refactor must be byte-identical: every presence output (global, by-region, fused) unchanged.",
+  "Fail-closed staging (try_reserve / copy_u32_words_as_le_bytes) preserved; the reserve must size for the FULL binding count (10/12/13) so appending tail bindings does not realloc.",
+]
+proof = [
+  "literal_set.rs: new build_presence_common_inputs(haystack, guard_ctx, total_words, total_binding_count) -> (haystack_len, inputs) is the sole owner of bindings 0..=9. build_presence_dispatch fills exactly those 10; build_presence_by_region_dispatch appends region_starts(10)+region_base(11); build_presence_and_positions_by_region_dispatch appends region_starts(10)+region_base(11)+match_count(12). Three ~30-line staging copies collapsed to one + short tails.",
+  "Byte-identical proof: the existing timed twins (presence_timed, presence_by_region_timed, presence_and_positions_by_region_timed) assert the OWNED-build path == the untimed borrowed-scratch path, and presence_async asserts async(owned) == sync; all still pass -> the owned helpers still produce byte-identical inputs. cargo test across the 4 presence test targets -> 8 passed (incl real RTX 5090 GPU).",
+]
+notes = [
+  "Complements the earlier literal_scan_borrowed_inputs unification (the 10-input MATCH binding order). The presence common staging and the match staging are separate owners because they bind different resources; each is now single-owned. presence_immutable_table_bytes was already the shared table encoder; this pulls the surrounding scan_guard/pack/reserve/push into the same ONE-PLACE discipline.",
+]
+
+[[claim]]
+owner = "main"
+date = "2026-07-03"
+status = "in_progress"
+lanes = ["scan_static"]
+scope = [
+  "Master plan W3-2 (async execution model, cont.): scan_presence_and_positions_by_region_async adds the PendingDispatch async twin to the FUSED path -- one submitted dispatch, both outputs (presence bitmap + (pid,start,end) triples) decoded at await via PendingFusedRegion. Completes async coverage for every single-dispatch entry point.",
+]
+proof_required = [
+  "Both async outputs (presence AND triples) must equal the sync scan_presence_and_positions_by_region bit-for-bit on BOTH the real GPU and CPU reference backend.",
+  "await_into must clear the caller buffer and keep the fused fail-closed overflow contract (count > max_matches errors, never a silent partial).",
+  "ONE PLACE: reuse the owned build_presence_and_positions_by_region_dispatch helper; retain owned inputs until await.",
+]
+proof = [
+  "literal_set.rs: new pub struct PendingFusedRegion { pending, total_words, max_matches, _inputs } with is_ready + await_into (clears matches, returns presence bitmap, decodes outputs[0]=presence / outputs[1]=count / outputs[2]=matches with try_unpack_match_triples_capped_into). scan_presence_and_positions_by_region_async reuses the owned build helper + backend.dispatch_async. Exported + API_INDEX (before PendingMatches).",
+  "tests/literal_set_presence_and_positions_by_region_async.rs: async_fused_matches_sync_on_gpu (RTX 5090 wgpu, RAN: async presence == sync AND async matches == sync, non-vacuous) + async_fused_equals_sync_on_cpu_reference (is_ready true, await_into clears pre-seeded pid=77, both outputs == sync).",
+  "cargo test -p vyre-libs --test literal_set_presence_and_positions_by_region_async --test api_index -> 7 passed (2 async incl real GPU + 5 api_index).",
+]
+notes = [
+  "W3-2 async twins now cover EVERY single-dispatch entry point: region-presence (pre-existing), global-presence, position, fused. scan_all is DEFERRED with reason -- its complete-match path is a 2-dispatch auto-resize loop (submit -> read count -> maybe resize+resubmit), so a one-shot fire-and-forget handle is ill-defined; a correct async form needs a count-then-resize protocol tied to the resident/async substrate (W3-1/W3-2 residency half). The overlap-factor two-batch measurement remains the open evidence bullet.",
+]
+
+[[claim]]
+owner = "main"
+date = "2026-07-03"
+status = "done"
+lanes = ["release"]
+scope = [
+  "Master plan W6-2 (semver/MSRV, changelog-per-API discipline): document every additive scan API this workstream added in CHANGELOG.md [Unreleased], so a consumer floating a minor version sees the new surface -- the notification-per-new-scan-API the item requires.",
+]
+proof_required = [
+  "Every new public scan API added this batch must have a changelog entry naming it and what it does.",
+  "The additions must be verified purely additive (no removed/changed public API) so the release is a minor bump the consumer can float to.",
+  "Every API name cited in the changelog must resolve to a real symbol (no phantom entries).",
+]
+proof = [
+  "CHANGELOG.md [Unreleased] gains four grouped sections: attribution twins (scan_presence_by_region_timed, scan_into_timed, scan_presence_timed, scan_presence_and_positions_by_region_timed, scan_all_timed), async twins (scan_presence_async, scan_into_async, scan_presence_and_positions_by_region_async + types ScanAllTimed/PendingPresence/PendingMatches/PendingFusedRegion), the compact_first_per_region_pattern_flag_program device primitive, and reference_eval_with_dispatch.",
+  "Symbol-existence check: all 8 methods (grep pub fn), all 4 structs (grep pub struct), reference_eval_with_dispatch (exported in vyre-reference lib.rs), and compact_first_per_region_pattern_flag_program + COMPACT_FIRST_PER_REGION_PATTERN_OP_ID all resolve -> no phantom entries.",
+  "Additive-only: every entry is an Added row; no public API was removed or changed (the api_index gate + snapshot tests passed unchanged across the batch), so cargo-semver-checks classifies the next release MINOR.",
+]
+notes = [
+  "The semver/MSRV INFRA (PUBLIC_API_SEMVER_MSRV_POLICY.toml, .github/workflows/semver-checks.yml, rust-version = 1.85) pre-existed; this closes the per-API changelog-notification half. The remaining W6-2 action is the version bump + release, an intentional human-driven step, not a code gap.",
+]
+
+[[claim]]
+owner = "main"
+date = "2026-07-03"
+status = "done"
+lanes = ["scan_static", "conformance"]
+scope = [
+  "Master plan W6-1 (consumer conformance, cont.): add the FULL literal-set magnitude (~6,000 patterns) to the real-GPU region-presence ground-truth gate -- the scale the CPU-reference interpreter cannot reach but the consumer runs.",
+]
+proof_required = [
+  "The 6k-pattern class must run on the REAL GPU (the path a consumer dispatches), not be silently skipped, and must be proven against the independent DFA oracle.",
+  "It must NOT run on the CPU-ref gate (the reference interpreter re-walks the IR per position, so 6k patterns is minutes/case there) -- the class lives in a GPU-only helper.",
+  "Synthetic only (no keyhog data), per the vyre-only directive.",
+]
+proof = [
+  "presence_oracle::gpu_only_large_scale_cases -> one class: ~6000 distinct small-alphabet patterns (random_literals_scaled 5800..6000, 9-char alphabet, len<=6), 24 KiB dense haystack, ~1000 regions (ceil_log2(1000)=10 binary-search depth, ~188 presence u32 words/region). Wired into literal_set_presence_by_region_gpu_ground_truth ONLY (not the CPU-ref gate).",
+  "cargo test -p vyre-libs --test literal_set_presence_by_region_gpu_ground_truth --release -> 1 passed (finished 1.74s; NO 'no wgpu backend' skip line, so the RTX 5090 ran the full edge + scale + 6k + random suite; the independent AC-walk oracle -- dfa_scan, pattern-count-independent -- confirmed no under/over-fire at 6k magnitude).",
+  "Cleaned the pre-existing shared-oracle unreachable_pub warnings: extended presence_oracle's module allow to `#![allow(dead_code, unreachable_pub)]` (the pub-on-shared-helper is intentional cross-gate sharing).",
+]
+notes = [
+  "Remaining W6-1 is the exact keyhog under-fire PAIRS (specific chunk/detector strings) as replay fixtures -- those require keyhog's own corpus and are out of scope per the vyre-only directive. The magnitude/shape half (region extremes + full pattern count) is now proven on device.",
+]
+
+[[claim]]
+owner = "main"
+date = "2026-07-03"
+status = "done"
+lanes = ["scan_static"]
+scope = [
+  "Master plan W3-2 (async, evidence): prove the async scan path supports a TWO-BATCH PIPELINE -- two dispatches in flight at once, each decoding to the correct result -- the property the 'overlap on a two-batch pipeline' evidence bullet names.",
+]
+proof_required = [
+  "Two async scans must be submittable before either is awaited (both in flight), and each handle must decode to ITS OWN batch's result -- a cross-handle in-flight buffer mixup must be detectable (distinct batches, distinct expected bitmaps).",
+  "Order-independence: awaiting in reverse submit order must still yield correct results (a later-submitted scan's retained buffers stay valid).",
+  "Must hold on BOTH wgpu (concurrent) and CpuRefBackend (serialized) -- the degraded synchronous path must not corrupt or swap batch outputs (Law 10).",
+]
+proof = [
+  "tests/literal_set_async_two_batch_pipeline.rs: check_two_batch_presence (batch A fires alpha+tango, batch B fires kilo only -> assert_ne on the two sync bitmaps guards detectability; both submitted before either await; each async == its sync twin), check_two_batch_presence_reverse_await (await B then A), check_mixed_pipeline (a presence-async + a scan_into-async in flight together, each == its sync twin, positions non-vacuous). Run on both two_batch_pipeline_on_gpu (RTX 5090) and two_batch_pipeline_on_cpu_reference.",
+  "cargo test -p vyre-libs --test literal_set_async_two_batch_pipeline -> 2 passed (GPU ran, not skipped).",
+]
+notes = [
+  "Asserts pipeline CORRECTNESS (the load-bearing property: no cross-handle corruption, order-independent decode) rather than a brittle wall-clock overlap ratio. A quantitative overlap-factor microbenchmark remains a vyre-bench case (the harness-integrated measurement, out of scope for a unit gate).",
+]
+
+[[claim]]
+owner = "main"
+date = "2026-07-03"
+status = "done"
+lanes = ["scan_static"]
+scope = [
+  "Master plan W3-1 (resident-everything, POSITION path): a `prepare_resident_*` twin for the positioned literal scan. Upload the immutable DFA + suffix-prefilter tables ONCE; re-dispatch `scan_into` across a corpus transferring only the haystack + a 4-byte match-counter reset, eliminating the per-scan multi-MiB table re-upload the borrowed `scan_into` repeats on every file.",
+]
+proof_required = [
+  "The resident `(pattern_id,start,end)` triples must be byte-identical to the borrowed `scan_into` with the same `max_matches`, across repeated re-dispatches through one session (table residency changes no match -- Law 10).",
+  "The seven immutable tables upload exactly once at prepare; each scan re-stages only [haystack, match_count reset, haystack_len]. Every one of the 11 bindings (incl. the `matches` output at binding 10) is resident -- no borrowed mix (the CUDA resident dispatch rejects one).",
+  "Fail CLOSED, never silent: a device match count over `max_matches` must error (the fixed resident matches buffer cannot hold a truncated decode); an over-capacity haystack must error before any resident upload.",
+  "Must beat the borrowed path end-to-end on a real GPU corpus (the table-residency win the optimization exists for).",
+]
+proof = [
+  "literal_set.rs resident_match_tests (in-crate MockResidentMatchBackend, plumbing): prepare performs 11 resident allocations (haystack + 7 tables + haystack_len + match_count + matches, sized max_matches*3*4); 7 full uploads at prepare + 0 ranged; each scan does exactly 3 ranged uploads [haystack, u32 reset, u32 haystack_len]; the dispatch asserts all 11 bindings Resident + a byte-scan grid override; the canned [count=2, triples] readback decodes to the exact two sorted matches; a canned count=5 over a cap of 2 fails closed ('exceeds the output-buffer cap', matches empty); a 64-byte haystack over an 8-byte capacity errors ('resident buffer holds') with 0 ranged uploads; free() releases all 11. -> 5 passed.",
+  "tests/literal_set_resident_scan.rs (REAL RTX 5090, wgpu): resident_position_scan_matches_borrowed_on_gpu -- resident triples == borrowed scan_into across 4 repeated re-dispatches of a planted multi-match corpus; resident_position_scan_serves_smaller_haystacks_under_the_capacity_on_gpu -- a short haystack on a full-corpus session still matches borrowed. -> 2 passed, 0 skip.",
+  "resident_position_throughput_beats_borrowed_across_a_corpus_gpu (--ignored perf): 400 detectors, 192 scans -> borrowed 61.8ms vs resident 33.6ms = 1.84x faster; correctness gate (resident==borrowed every batch) runs before timing. -> 1 passed.",
+]
+notes = [
+  "Option (a) confirmed by tracing vyre-driver-wgpu resolve_persistent_resources_impl: a resident dispatch routes each `info.is_output` binding to outputs and reads it back, so the `matches` BufferDecl::output binds a resident resource with NO kernel change. Decode reuses the ONE-PLACE `decode_literal_set_outputs_into` (same fail-closed contract as borrowed scan_into). REMAINING under W3-1: DFA-admission + the W2-2 fused-program resident twins.",
+]
+
+[[claim]]
+owner = "main"
+date = "2026-07-03"
+status = "done"
+lanes = ["scan_static"]
+scope = [
+  "Master plan W2-3 (regex diagnostics): give the four REGEX_UNSUPPORTED_DIAGNOSTICS.toml constructs that previously collapsed into generic Parse/TooManyStates (backreference, capture_extraction, huge_alternation, nested_repeats) a DISTINCT registry diagnostic code, via principled frontend detection (no parse-message string heuristics).",
+]
+proof_required = [
+  "Backreference must be classified from a STRUCTURED source scan (escaping-aware: \\\\1 is not a backref, \\0 is not), run only on parse failure, NOT by string-matching parser error text.",
+  "Huge alternation and nested bounded repeats must emit their own Unsupported feature BEFORE lowering collapses them into TooManyStates.",
+  "Reclassification must be SOUND: no pattern that compiled before may now error (both budgets = STATE_CAP, which every tripping pattern already exceeded).",
+  "Capture groups must NOT become a compile error (whole-match still accelerates); their presence is surfaced as a non-error verifier signal.",
+  "ONE PLACE: every code string has a single owner; the error->code and the capture->code paths route through the same map.",
+]
+proof = [
+  "regex_compile.rs: new RegexConstruct enum + regex_construct_diagnostic_code (sole owner of the 6 code strings); FEATURE_* shared constants used at both the Unsupported construction sites and regex_feature_construct; diagnostic_code delegates through them. Detection: pattern_uses_backreference (escaping-aware structured scan, parse-failure path only) + scan_constructs (one HIR walk: alts.len()>MAX_ALTERNATION_ARMS=STATE_CAP -> huge_alternation; nested bounded-repeat unroll product>NESTED_REPEAT_UNROLL_BUDGET=STATE_CAP -> nested_repeats; capture presence recorded). CompiledRegexSet.captures_present + capture_extraction_diagnostic_code() for the non-error capture signal.",
+  "cargo test -p vyre-libs --features matching-regex --lib regex_compile:: -> 20 passed (regex_compile_diagnostic_codes now asserts all 4 new codes; backreference_detector_is_escaping_aware unit-tests \\1/\\k<>/(?P=) true and \\\\1/\\0/\\d+ false; captures_compile_and_surface_the_verifier_diagnostic; budget_reclassification_does_not_regress_compiling_patterns).",
+  "cargo test -p vyre-libs --features matching-regex --test regex_unsupported_diagnostic_registry -> 4 passed (new frontend_emits_registry_diagnostic_codes_from_real_patterns drives compile_regex_set through the real public path for backreference/lookaround/unicode/nested/huge + the capture non-error signal, matching the registry codes the evidence_path points at).",
+]
+notes = [
+  "capture_extraction is intentionally NOT a compile error -- making it one would regress whole-match acceleration (the plan/BACKLOG caveat). Nested-repeat detection keys on inner>1 (a bounded repeat nested in a bounded repeat), so a FLAT a{5000} still falls to the existing TooManyStates guard, unchanged.",
+]
+
+[[claim]]
+owner = "main"
+date = "2026-07-03"
+status = "done"
+lanes = ["scan_static"]
+scope = [
+  "Master plan W7-1 + W3-2 (benchmark realism / async overlap): a REAL integrated vyre-bench BenchCase (not a feature-shaped shell) that QUANTIFIES the async literal-set position scan's overlap factor -- the measurement the async correctness gate (literal_set_async_two_batch_pipeline) lacked.",
+]
+proof_required = [
+  "Must implement the full BenchCase trait (id/metadata/suites/requirements/bytes_touched/prepare/run/verify) and register via inventory so the runner discovers it.",
+  "Must run a two-batch pipeline BOTH sequentially and overlapped (submit A -> submit B -> await A -> await B) over a consumer-shaped corpus and report the overlap factor + the sequential kernel-vs-host-staging split.",
+  "Correctness HARD gate: overlapped matches must equal sequential matches for both batches (Law 10 -- overlap changes no bit), provable without a GPU.",
+  "Must NOT trip the release-target coverage contract (scoped to Gpu/Deep/Honest, not Release).",
+]
+proof = [
+  "vyre-bench/src/cases/literal_set_async_overlap.rs: LiteralSetAsyncOverlap (id scan.literal_set.async_overlap.2batch), suites [Gpu, Deep, Honest]. run_two_batch_overlap factored out so the pipeline is CpuRefBackend-testable. run() sets outputs=overlapped, baseline_outputs=sequential -> verify_exact_outputs proves equality; metrics carry async_overlap_factor_x1000, sequential/async wall_ns, and the sequential device_ns + host_staging_ns split. prepare() guards distinct batches (reference_a != reference_b).",
+  "cargo test -p vyre-bench --lib literal_set_async_overlap -> 4 passed (overlap_factor_scales_and_guards_zero; irregular_batches_of_different_sizes_are_distinct; encode_batch_outputs_carries_count_then_triples; overlapped_matches_equal_sequential_on_cpu_reference -- the pipeline property on CpuRefBackend, no GPU).",
+]
+notes = [
+  "Found while writing the CpuRef test: scan_into via CpuRefBackend under-covers the tail of a haystack larger than the program's max buffer element count (a 64 KiB batch dropped matches past ~offset 41185; GPU correct). This is the CpuRefBackend backend-dispatch analogue of the reference-oracle under-coverage the grid-aware reference_eval_with_dispatch closed -- logged as an open BACKLOG finding (CpuRefBackend::dispatch should route through reference_eval_with_dispatch). It does NOT affect the overlap==sequential property (both paths under-cover identically), so the pipeline test asserts that property + non-vacuous, not scan_into-vs-reference_scan equality.",
+]
+
+[[claim]]
+owner = "main"
+date = "2026-07-03"
+status = "done"
+lanes = ["scan_static"]
+scope = [
+  "Master plan W3-1 (resident-everything, FUSED path): a `prepare_resident_*` twin for the fused per-region presence+positions scan. Upload the immutable tables ONCE; re-dispatch across a corpus transferring only the haystack, region controls, and two zeroed accumulators (presence prefix + match counter), eliminating the per-scan table re-upload of the borrowed scan_presence_and_positions_by_region.",
+]
+proof_required = [
+  "Both outputs -- the per-region presence bitmap AND the (pid,start,end) triples -- must be byte-identical to the borrowed fused scan across repeated re-dispatches (table residency changes no bit -- Law 10).",
+  "Seven immutable tables upload once at prepare; each scan re-stages only [haystack, presence reset, haystack_len, region_base, match_count reset, region_starts]. Every one of the 14 bindings (incl. presence[6] rw, match_count[12] rw, matches[13] output) is resident -- no borrowed mix.",
+  "Fail CLOSED: a match count over max_matches errors (fixed resident matches buffer); a region count over max_regions or an over-capacity haystack errors before dispatch; a short presence readback errors (no silent truncated bitmap).",
+]
+proof = [
+  "literal_set.rs resident_fused_tests (MockResidentFusedBackend, plumbing): prepare performs 14 resident allocations (haystack + 7 tables + presence[max_regions] + haystack_len + region_starts[max_regions] + region_base + match_count + matches[max_matches*3]); 7 full uploads + 0 ranged at prepare; each scan does exactly 6 ranged uploads; the dispatch asserts all 14 bindings Resident + a byte-scan grid override; the canned [presence, count=2, triples] readback decodes to [row0,row1,row2] + two matches (stale presence tail ignored); count=5 over cap 2 fails closed ('exceeds the output-buffer cap', matches empty); 3 regions over cap 2 errors with 0 ranged uploads. -> 3 passed.",
+  "tests/literal_set_resident_fused.rs (REAL RTX 5090, wgpu): resident_fused_presence_and_positions_match_borrowed_on_gpu -- resident presence AND matches == borrowed scan_presence_and_positions_by_region across 4 repeated re-dispatches of a planted 3-region corpus, planted-bits verified; resident_fused_serves_smaller_batches_under_the_cap_on_gpu -- a 1-region sub-batch on a full-corpus session matches borrowed for both outputs.",
+]
+notes = [
+  "Combines ResidentPresencePipeline (presence bitmap + region_starts padding + presence reset) and ResidentLiteralScan (match_count reset + matches output + capped decode) into one 14-binding resident dispatch. Reuses presence_immutable_table_bytes, presence_bitmap_words, decode_presence_words_into, literal_set_match_output_layout, try_unpack_match_triples_capped_into (ONE PLACE). Completes the W3-1 resident twins for the positioned scan family (position + fused); DFA-admission resident twin remains.",
+]
+
+[[claim]]
+owner = "main"
+date = "2026-07-03"
+status = "done"
+lanes = ["scan_static"]
+scope = [
+  "Master plan W7-1 (consumer-shaped benches): add the COLD-START and DECODE-HEAVY re-dispatch shapes to vyre-bench. Cold-start = the first-touch cost a one-shot consumer pays (matcher build + first upload + first dispatch) vs warm steady state. Decode-heavy = the decode-bound regime on a dense-match corpus scanned through a resident session (tables uploaded once; every dispatch dominated by match write-out/readback/host decode).",
+]
+proof_required = [
+  "Both are real integrated BenchCases (trait + inventory registration), suites [Gpu, Deep, Honest] (NOT Release, so they sidestep the release-target coverage contract).",
+  "Correctness is a HARD gate, not a side metric: the GPU scan output must be byte-identical to the independent CPU reference_scan (Law 10), via verify_exact_outputs (outputs = GPU scan, baseline = reference_scan).",
+  "Core logic factored out (run_cold_then_warm / run_decode_heavy) so the correctness property is provable on CpuRefBackend with no GPU.",
+]
+proof = [
+  "vyre-bench/src/cases/literal_set_cold_start.rs: LiteralSetColdStart (id scan.literal_set.cold_start). run() times compile + first scan separately (cold_wall = compile_ns + first_scan_ns) then a 32-iter warm loop; asserts warm==cold (CorrectnessViolation if not); outputs=cold, baseline=reference_scan; metrics carry cold_start_overhead_x1000, compile_ns, first_scan_ns, warm_per_iter_ns, and the first_touch_host_ns split.",
+  "vyre-bench/src/cases/literal_set_decode_heavy.rs: LiteralSetDecodeHeavy (id scan.literal_set.decode_heavy). build_dense_match_haystack tiles the shortest pattern every 128 B (~32k matches over 4 MiB); run_decode_heavy uses prepare_resident_scan (tables once) then a 32-iter scan_into_timed loop; prepare() guards the fixture is actually dense (>= corpus/(period*2) matches); outputs=resident, baseline=reference_scan; metrics carry per_iter_ns, readback_bytes, and the device_ns vs host_decode_ns split.",
+  "cargo test -p vyre-bench -> the two new lib test modules pass (cold: overhead_scales_and_guards_zero, encode_matches_carries_count_then_triples, cold_equals_warm_on_cpu_reference; decode: dense_haystack_is_actually_dense, encode_matches_carries_count_then_triples, resident_dense_scan_matches_reference_on_cpu_reference) + all 5 registry meta-gates (suite_completeness, benchmark_target_contracts, release_matrix_contracts, benchmark_methodology_contracts, benchmark_hygiene) still green.",
+]
+notes = [
+  "Reuses the proven LiteralSetAsyncOverlap pattern (build_irregular_haystack, encode_match_triples, PATTERNS from scan_ac_irregular). REMAINING under W7-1: the paged >4 GiB corpus shape, gated on the W2-4 streaming/paging substrate (not yet built).",
+]
+
+[[claim]]
+owner = "main"
+date = "2026-07-03"
+status = "done"
+lanes = ["scan_static"]
+scope = [
+  "Master plan W7-2 (head-to-head vs CPU state of the art): a standing vyre-GPU-vs-aho-corasick bench on a consumer shape, end-to-end with staging included. The claim vyre must sustain is not 'fast kernel' but 'beats the best CPU path end-to-end'; this bench measures it and makes any gap visible per release.",
+]
+proof_required = [
+  "Same patterns + same corpus through vyre's RESIDENT GPU scan (tables once; per-dispatch haystack stage + match readback = real staging-included cost) and the aho-corasick crate built with the SAME all-overlapping semantics vyre emits.",
+  "Correctness is a HARD gate: the GPU match set must be byte-identical to the aho-corasick match set (a fast wrong answer fails the case). Performance is REPORTED, NOT gated (no false 'GPU wins' assertion -- the plan states CPU can win today).",
+  "The CPU baseline must be a PROVEN-correct oracle: aho-corasick MatchKind::Standard overlapping == the engine's reference_scan set exactly (else the head-to-head compares against a mis-built baseline).",
+]
+proof = [
+  "vyre-bench/src/cases/literal_set_vs_cpu.rs: LiteralSetVsCpu (id scan.literal_set.vs_cpu_aho_corasick), suites [Gpu, Deep, Honest]. build_aho_corasick uses MatchKind::Standard (all-overlapping = reference_scan semantics via AC output chaining), patterns inserted in PATTERNS order so pattern index == vyre pattern_id. run_vs_cpu runs vyre resident scan_into_timed x16 + aho find_overlapping_iter collect x16; run() sets outputs=vyre, baseline=aho -> verify_exact_outputs HARD-gates vyre==aho; metrics carry vs_cpu_speedup_x1000 (>1000 GPU wins, REPORTED) + vyre device_ns vs staging_ns split. prepare() pre-checks aho_corasick_matches == reference_scan and fails EnvironmentInvalid on mismatch.",
+  "cargo test -p vyre-bench -> literal_set_vs_cpu lib tests pass (speedup_scales_and_guards_zero; encode_matches_carries_count_then_triples; aho_corasick_baseline_equals_reference_scan -- the CPU baseline == reference_scan set on a 64 KiB corpus, no GPU) + all registry meta-gates green.",
+]
+notes = [
+  "aho-corasick is already a vyre-bench dep (=1.1.4 in [workspace.dependencies]); no manifest change. REMAINING under W7-2: the Hyperscan lane (hyperscan FFI dep + build) and wiring results into FRONTIER_LEADERBOARD_BASELINES.toml. This is the plan's stated 'standing proof the whole plan is judged by' (sequencing note W7-2).",
+]
+
+[[claim]]
+owner = "main"
+date = "2026-07-03"
+status = "done"
+lanes = ["scan_static"]
+scope = [
+  "Master plan W8 (developer experience) cluster: W8-1 fast-path docs, W8-3 runnable consumer example, W8-2 diagnostics quality lock for the regex compile refusals.",
+]
+proof_required = [
+  "W8-1: a guide routing consumers through the resident/async/fused/count-then-collect fast path, with signatures copied verbatim from the current public surface (no drift).",
+  "W8-3: a RUNNABLE example that scans a corpus of files with regions + resident tables (not a string-literal demo), proven by compiling AND a dogfood run on real GPU with correct output.",
+  "W8-2: every regex capability refusal names its owner + fix path, LOCKED so a new variant cannot ship un-audited.",
+]
+proof = [
+  "docs/scanning-a-corpus-the-right-way.md (listed in docs/INDEX.md): decision table + five-step fast path; every GpuLiteralSet signature verified against vyre-libs/src/scan/literal_set.rs.",
+  "vyre-libs/examples/scan_corpus_fast_path.rs: coalesces files -> haystack + region_starts, compiles once, prepare_resident_fused_scan -> scan_into_timed producing BOTH per-region presence AND positioned matches, prints presence-per-region + matches + wall/device/staging split; no-GPU falls back LOUDLY to portable scan_all on CpuRefBackend (stated, not silent). Dogfood run on RTX 5090: 4-file/204-byte corpus -> correct per-region presence (r0 token+secret, r1 AKIA+password, r2 BEGIN RSA+secret, r3 none) + 6 correct positioned matches, device kernel 8448 ns.",
+  "vyre-libs/src/scan/regex_compile.rs every_compile_error_variant_names_its_owner_and_fix_path: asserts all 7 RegexCompileError variants' Display carry the `regex_compile:` owner prefix + a `Fix:` clause, guarded by a no-wildcard exhaustive match (in-crate exhaustive match over the #[non_exhaustive] enum) so a new variant fails to compile until listed + given a fix path. cargo test -p vyre-libs --features matching-regex regex_compile::tests -> 21 passed.",
+]
+notes = [
+  "DX workstream (lowest plan priority) but fully verified. Remaining W8-2: literal-set BackendError string refusals carry Fix: but aren't enum-locked. Companion pieces: W3-1 resident twins, W3-2 async twins, W1-2 count-then-collect (all documented by the W8-1 guide + exercised by the W8-3 example).",
+]
+
+[[claim]]
+owner = "main"
+date = "2026-07-03"
+status = "done"
+lanes = ["scan_static"]
+scope = [
+  "Master plan W2-4 (streaming corpus ingestion, region-API half): scan a corpus larger than one resident window as a sequence of resident-window dispatches with STABLE GLOBAL region ids and u64 global positions, identical to a single-shot scan of the concatenated corpus, with host RSS bounded by one window not the corpus.",
+]
+proof_required = [
+  "Correctness = a paged scan is byte-identical to a single-shot fused scan of the concatenated corpus: same per-region presence (global numbering) AND same positioned matches (globalized). No boundary miss, no overlap over-fire, no double count (Law 10).",
+  "Corpus unbounded by the per-window u32 haystack ABI: windows split at file boundaries under a byte budget; global positions are u64.",
+  "The host-side planner is a pure function proven independently (coverage, no gap/overlap, monotone offsets, stable global ids, fail-closed on unscannable file).",
+]
+proof = [
+  "vyre-libs/src/scan/paged_corpus.rs: scan_paged_fused(matcher, backend, files, window_budget_bytes, max_matches) -> PagedScanResult { presence, region_count, presence_words, matches: Vec<GlobalMatch{pattern_id,region_id,start:u64,end:u64}> }. HOST-paging model: each window an independent region_base=0 local fused scan (NOT the kernel's u32 byte-shard region_base, which caps at 4 GiB); host globalization carries L-1 overlap bytes (boundary match found in the window its start falls in), attributes overlap to a discardable dummy region (no presence over-fire), drops overlap-starting matches (no double count). plan_corpus_windows splits files at file boundaries under the budget with global_region_base = file index and byte_offset = u64.",
+  "cargo test -p vyre-libs --lib paged_corpus -> 12 passed: 10 host planner tests (empty, zero-budget fail-closed, all-in-one, budget-boundary split with stable global ids, exact fit, oversized-file own-window + progress, tiny-file coalescing, window-relative local starts, >u32-file fail-closed, W8-2 error-message audit) + paged_fused_scan_equals_single_shot_on_gpu (REAL RTX 5090): a 4-file corpus with a `secret` literal STRADDLING a window boundary yields byte-identical per-region presence AND globalized matches vs matcher.scan_presence_and_positions_by_region over the concatenated corpus.",
+  "scan_paged_fused_async: the ASYNC twin pipelines the windows (k+1 staging overlaps k device execution, PAGED_PIPELINE_DEPTH=2 in flight) via the borrowed scan_presence_and_positions_by_region_async (PendingFusedRegion), sharing the exact stage_window/globalize_window/finish_result helpers (ONE PLACE) with the sync driver. async_paged_fused_scan_equals_sync_on_gpu proves it is bit-for-bit identical to the sync driver on the RTX 5090. Dogfood-run scan.literal_set.paged_corpus on GPU: pass, 1.4x async-over-sync speedup at 8 MiB (16 windows). All public items registered in scan::API_INDEX + re-exported; clean lib build.",
+  "scan_paths_paged: the DISK-backed driver takes file PATHS, stats sizes, plans windows, and reads only ONE window's files into memory at a time (host RSS bounded by the window, not the corpus) via fill_window_from_paths (reads own files + only the needed L-1 overlap prefix of the next file), sharing window_region_starts + globalize_window + finish_result (ONE PLACE) with the in-memory driver. scan_paths_paged_equals_in_memory_on_gpu proves disk == in-memory on the RTX 5090; fill_window_from_paths_reads_own_bytes_plus_overlap_prefix proves the disk read + overlap prefix with no GPU.",
+  "scan_sharded_fused (W3-5 multi-GPU): distributes a corpus's byte-range window shards round-robin across a device SET (backends: &[&dyn VyreBackend], window k -> backends[k%n]), each backend holding its own resident fused session (concurrent across peer GPUs on a real multi-GPU host). REUSES scan_paged_fused's partition/halo(L-1 overlap)/aggregation(globalize + stable-sort) helpers (ONE PLACE), so the sharded result is byte-identical to a single-shot scan for ANY device-set size, the MULTI_GPU_SHARDING_AGGREGATION_PLAN.toml parity_policy. Fails closed on empty backend set (Law 10); one ordered free pass. Proven on RTX 5090: 1-device and 3-device (same GPU repeated) sets both == single-device paged scan, boundary-spanning match survives sharding. Single-device host runs shards sequentially (only cross-device parallelism awaits a 2nd GPU).",
+  "scan_pattern_sharded (W3-5 pattern-database-replicated-shards): stripes the RULE database (not the haystack) across a device set, each PatternShard is a sub-matcher over a disjoint rule subset + a local->global pattern-id map, scanned on backends[shard%n], matches remapped to global ids and merged into canonical (pattern_id,start,end) order. Literal matching is per-rule independent so the striped union == the full un-sharded matcher's match set (replicated/striped parity_policy). Fails closed on empty backend set AND malformed shard map (local id with no global mapping errors, never drops/mis-attributes a finding, Law 10). Proven on RTX 5090: 2-shard stripe over 1- and 2-device sets == full-database scan; malformed map errors. Complements the byte-range haystack sharding (scan_sharded_fused family).",
+  "scan_sharded_fused_timed (W3-5 load_balance_policy feedback): per-shard-timed twin of scan_sharded_fused, identical result plus ShardedScanTiming{shards: Vec<ShardTiming{shard, windows, bytes_scanned, wall_ns, device_ns}>}, the per-shard-active-ns signal the rebalancer uses (skew under equal round-robin -> reweight next batch via scan_sharded_fused_weighted). scan_sharded_core accumulates per-shard timing via scan_into_timed and returns (result, timing); untimed + weighted wrappers drop it (ONE PLACE, no duplicated loop). Honest device_ns (Some only if every window on the shard timed; idle shard Some(0); never fabricated 0). Proven on RTX 5090: per-shard window/byte sums == totals (3 windows -> shard0=2 shard1=1), each active shard reports real wall + non-zero device time, timed==untimed. The static-weight partition + this timing feedback close the measure->reweight loop (single-device-verified; true cross-device parallelism awaits a 2nd GPU).",
+  "scan_sharded_fused_weighted (W3-5 load_balance_policy): throughput-weighted twin of scan_sharded_fused, cumulative byte-work per device tracks weights[i] via a deterministic greedy least-loaded-by-weight assignment (shard_assignment, shared ONE PLACE with round-robin; zero weight treated as 1, never starved / div0). Fails closed on weights/backends length mismatch. Aggregation is order-independent so the weighted result is byte-identical to round-robin and single-shot for ANY weights, only work distribution changes, never the answer (parity_policy). Proven: pure host unit test (3:1 weight -> 3 of 4 equal windows to shard 0, zero-weight still served) + RTX 5090 parity (weighted 3:1 over 2-device set == single-device scan).",
+  "scan_paged_fused_timed: the timed twin of scan_paged_fused, extends W3-3 'attribution everywhere' onto the W2-4 paging path. Returns (PagedScanResult, PagedScanTiming) where the result is byte-identical to the untimed driver (proven timed_paged_fused_scan_equals_untimed_and_reports_timing_on_gpu) and PagedScanTiming is an HONEST per-window aggregate: windows (count), bytes_scanned (own bytes, overlap excluded, a valid throughput denominator), wall_ns (summed host time), device_ns (summed kernel time, Some ONLY when every window reported a device timer, else a loud None, never a fabricated 0, Law 10). Differs from the untimed driver in exactly one call (scan_into_timed vs scan_into) and reuses the shared stage_window/globalize_window/finish_result helpers (ONE PLACE). Empty corpus times as {windows:0, Some(0)} (timed_paged_fused_scan_empty_corpus_reports_zero_timing).",
+  "device_pool_hit_rate (vyre-driver-cuda, W3-4): the transient DeviceAllocationPool now counts hits (served from the free-list) vs misses (fell through to cuMemAlloc_v2) at its source (ONE PLACE, only the pool can tell them apart) and surfaces device_pool_hits/device_pool_misses + a zero-safe u128-exact device_pool_hit_rate_bps() + 3 Prometheus series on CudaTelemetrySnapshot, overlaid at the backend telemetry_snapshot() boundary and reset per epoch. Proven on RTX 5090: a 32-dispatch identical-shape re-dispatch loop measures hits=64 misses=0 hit_rate=10000bps (the pool serves every buffer from cache in steady state), with bps asserted == hits*10000/(hits+misses). This is W3-4's pool-hit-rate evidence deliverable.",
+  "graph_frontier_device_shards (vyre-primitives, W3-5c): vyre_primitives::graph::csr_frontier_shard is the graph-frontier-device-shards decomposition. A forward csr_frontier_step expands ONLY set vertices, so the active frontier partitions across device shards by vertex ownership (partition_frontier_by_vertex: disjoint, complete, contiguous vertex ranges) and per-shard frontier_out bitsets OR-merge (merge_frontier_out: the cross-shard visited/frontier merge, peer-transfer reduce on multi-GPU, host OR here). frontier_step_sharded runs one sharded level via a per-shard expand closure (each shard on its own device), fails closed on zero shards / mis-sized frontier / wrong-sized shard output (Law 10). Per-vertex expansions are independent + the partition is disjoint+complete, so the merged result == a single-device expansion EXACTLY. PROVEN three ways: a hand oracle ({0,1,4}->{1,2,5,6} over a graph with cross-shard edges 1->6, 4->5), a pure-Rust oracle across 1–5 shards, AND the REAL csr_frontier_step GPU program via the reference interpreter across 1–4 shards == single-device run (exact against the ACTUAL expansion semantics). Device sharding changes no reachability bit; per-device concurrent dispatch reuses the proven scan_sharded_core std::thread::scope pattern. Remaining (2nd-GPU-gated): wall-clock multi-GPU speedup + the on-device peer-transfer OR-merge, decomposition + exactness are backend-agnostic and proven on one backend.",
+  "roofline_operating_point_ir_ops (vyre-reference + vyre-bench, W3-6): the scan's roofline OPERATING POINT is now complete non-root via interpreter op-counting. NEW vyre_reference::count_ops instruments the reference interpreter's arithmetic arms (BinOp/UnOp/Fma) to count executed IR ops; the interpreter runs the SAME IR with the SAME data-dependent control flow as the GPU, so its count for a (program, inputs) pair == the GPU's dynamic IR-op count for those inputs (vyre-IR granularity, coarser than SASS, labeled as such, no overclaiming). count_ops is opt-in (no-op thread-local read outside a scope), so no interpreter-driven test regresses (vyre-reference + vyre-primitives 1786 green). scan_roofline_operating_point_cuda measures the literal scan's intensity via count_ops on CpuRef + achieved bandwidth on the RTX 5090: intensity=13.77 IR-ops/byte < ridge=29.23 ops/byte => memory-bound side confirmed, achieved compute ~3.2 T-IR-ops/s under the 52-TOPS ceiling. Full roofline now = both ceilings + ridge + BOTH measured axes + bound verdict, all honest without root. Optional refinement (root ncu sm__inst_executed) would only sharpen IR-op granularity to SASS; not a gap.",
+  "roofline_compute_ceiling_and_model (vyre-driver-cuda + vyre-bench, W3-6): the roofline's COMPUTE ceiling is now honestly derivable from device caps without Nsight. CudaDeviceCaps::peak_compute_ops_per_sec() = SM_count × 4 warp-schedulers × warp_size × core_clock (a NEW core_clock_rate_khz attr via CU_DEVICE_ATTRIBUTE_CLOCK_RATE joins the memory clock). The 4-schedulers-per-SM factor is a UNIVERSAL published NVIDIA constant (Volta→Blackwell each SM = 4 processing sub-partitions issuing one warp-wide instruction/cycle), NOT a fabricated per-generation cores-per-SM table, an honest analytical ceiling with no invented device numbers. With both ceilings the roofline has a ridge point (ops/byte where memory-bound flips to compute-bound). scan_roofline_model_cuda assembles the full model on the RTX 5090: peak_memory=1792 GB/s + peak_compute=52 TOPS + ridge=29227 ops/KiB + the scan's MEASURED memory-axis point (achieved=218 GB/s, util=12%) -> bound=memory-side/launch-latency-bound (not compute-bound). Pure unit test locks the formula (170×4×32×2.41GHz, ≈52 TOPS asserted in 40–80 TOPS Blackwell range). Only the scan's achieved COMPUTE operating point (executed op-count -> arithmetic_intensity, ROOFLINE_COUNTER_EVIDENCE.toml operation_count/arithmetic_intensity) still needs Nsight sm__inst_executed (admin-only, RmProfilingAdminOnly=1); both ceilings + ridge + the measured memory-axis point + the bound verdict are complete without root.",
+  "parallel_sharded_dispatch (vyre-libs + vyre-driver-cuda, W3-5): scan_sharded_core now runs each device shard on its OWN OS thread via std::thread::scope, each shard prepares its own resident session and dispatches its assigned windows CONCURRENTLY with the other devices (was a sequential shard loop), the W3-5 'true cross-device PARALLEL dispatch (spawn per-device threads)' deliverable. Aggregation is deterministic despite the nondeterministic interleave: threads globalize into owned per-window blocks tagged with the global window index; the parent re-sorts by window index and concatenates presence in window order (byte-identical presence layout) while matches are finish_result-sorted canonically (order-free). Fails closed on a shard-thread panic (no partial cross-device result, Law 10); each thread frees its own session before surfacing errors (ONE free path per thread); scope joins all threads so none leaks on the error path. Thread-safety by the trait contract (VyreBackend: Send+Sync, GpuLiteralSet auto Send+Sync); the CUDA resident launch path dispatch_resident_via_borrowed_into now warmup()s to bind the context on the CALLING thread (it was the lone resident entry missing the bind its batch/async/sequence siblings had, a latent foreign-thread CUDA_ERROR_INVALID_CONTEXT). Sequential paged driver + parallel sharded core share globalization via extracted window_presence_words + map_window_matches (ONE PLACE). PROVEN RTX 5090 (parallel_sharded_dispatch_across_four_concurrent_handles_equals_single_shot_on_gpu): a 32-file >=8-window corpus over a 4-handle set (4 concurrent threads/sessions) == single-device paged scan, per-shard timing shows work spread across all 4 shards (each windows>0; per-shard window+byte sums reconstruct the corpus); existing 1-/3-device+weighted parity tests now run through the parallel path. Multi-GPU wall-clock SPEEDUP + peer-transfer aggregation remains gated on a 2nd physical GPU, the parallel dispatch + aggregation is proven correct on one device.",
+  "stream_ordered_pool (vyre-driver-cuda, W3-4): CudaStreamOrderedPool is the stream-ordered device allocator half of W3-4, alongside the now-instrumented synchronous DeviceAllocationPool. It binds the device's DEFAULT CUDA memory pool via cuDeviceGetDefaultMemPool (no private pool to create/destroy, no Drop hazard) and drives it with cuMemAllocFromPoolAsync/cuMemFreeAsync, alloc and free take a caller stream so they ride the same stream as the dispatch that consumes the memory, and the driver reuses a freed block for the next same-stream allocation with NO host round-trip (unlike the host-ordered free-list pool). Construction sets RELEASE_THRESHOLD=u64::MAX so freed physical memory stays RESERVED for reuse (default 0 releases on every sync, defeating a re-dispatch loop); reserved_bytes()/used_bytes() read RESERVED_MEM_CURRENT/USED_MEM_CURRENT and trim(min_keep) returns the reservation to the OS. Proven on RTX 5090 (stream_ordered_pool_serves_usable_memory_and_reuses_reserved_blocks_on_gpu): (a) memset(0xABCD1234)->DtoH readback confirms usable device memory; (b) free-then-realloc same size leaves reserved_bytes EXACTLY unchanged (block reused, not re-faulted); (c) trim(0) strictly drops the reservation. Hot-path integration (threading a stream through DeviceAllocationPool::acquire) is the tracked follow-up; this lands+proves the allocator primitive.",
+  "per_kernel_occupancy_evidence (vyre-driver-cuda, W3-6): every CUDA launch records driver-measured achieved occupancy (cuOccupancyMaxActiveBlocksPerMultiprocessor, queried once per (function, threads_per_block) and cached, never per-launch FFI, Law 7) via a shared occupancy_estimate_from_blocks helper EXTRACTED from the theoretical estimate_occupancy so both report the same fraction of max_warps_per_sm (ONE PLACE; also gives estimate_occupancy a real caller, closing a Law-11 gap). Surfaced as launch_occupancy_bps_sum/occupancy_measured_launches/occupancy_unmeasured_launches + mean_occupancy_bps() + 4 Prometheus series; unmeasurable launches counted UNMEASURED loudly (Law 10), recording never fails a launch. The single occupancy FFI is behind one query_active_blocks_per_sm_raw helper shared with the cooperative validator. Proven on RTX 5090: a 16-launch loop reports measured=16 unmeasured=0 mean=10000bps, mean==sum/measured. Occupancy is one roofline axis; arithmetic-intensity/bandwidth remains (W3-6 roofline).",
+  "scan_paths_paged_prefetched: the async I/O pipeline (FILE_INGRESS_ASYNC_IO_PIPELINE), a std::thread reader prefetches window k+1's files from disk (fill_window_from_paths) and sends (index, haystack, gathered) over a sync_channel(PAGED_PREFETCH_DEPTH=1) while the main thread scans window k on the GPU, so disk I/O overlaps device compute with host RSS bounded to <=2 windows. Reader errors surface as a backend error; the receiver-drop + join guarantees no detached thread. scan_paths_paged_prefetched_equals_sync_on_gpu proves prefetched == synchronous disk scan bit-for-bit on the RTX 5090. Remaining W2-4: only CUDA-specific pinned/page-locked host staging rings + GPU-direct storage, a driver-level upload optimization atop this portable prefetch. All paged public items (scan_paged_fused/_async, scan_paths_paged/_prefetched, PagedScanResult, GlobalMatch) registered in scan::API_INDEX + re-exported.",
+]
+notes = [
+  "Reuses the W3-1 prepare_resident_fused_scan resident twin as the per-window engine. GpuLiteralSet.pattern_lengths (public) gives the overlap length + pattern count. REMAINING W2-4: the pinned-staging-ring / async-file-ingress ingestion half (CORPUS_PAGING_PLANNER.toml etc.), this driver takes &[&[u8]] already in memory. Error messages are W8-2-compliant (owner prefix + Fix:, exhaustive-match-locked).",
+]

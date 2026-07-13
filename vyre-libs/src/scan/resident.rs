@@ -5,8 +5,8 @@
 //! [`RulePipeline::scan`](super::mega_scan::RulePipeline::scan) issues every
 //! dispatch through `dispatch_borrowed`, which re-creates GPU buffers and
 //! **re-uploads the lane-major NFA transition table on every call**. That table
-//! is `num_states × 256 × LANES_PER_SUBGROUP` u32s — tens of MiB for a large
-//! detector set — and it is *immutable* across scans of the same pipeline. A
+//! is `num_states × 256 × LANES_PER_SUBGROUP` u32s, tens of MiB for a large
+//! detector set, and it is *immutable* across scans of the same pipeline. A
 //! consumer that scans many buffers (a directory walk coalesced into batches)
 //! pays that multi-MiB host→device transfer once per batch even though only the
 //! haystack and the hit buffer actually change.
@@ -17,14 +17,14 @@
 //! only the haystack (a ranged upload into the resident haystack buffer), a
 //! 4-byte hit-counter reset, and the two 4-byte control values (haystack length
 //! and the per-workgroup scan bound), dispatches against the resident tables, and
-//! decodes the hit buffer — the per-scan transfer drops from `O(tables + haystack)`
+//! decodes the hit buffer, the per-scan transfer drops from `O(tables + haystack)`
 //! to `O(haystack)`. This is the regex-path counterpart of
 //! [`GpuLiteralSet::prepare_scan_dispatch`](super::literal_set::GpuLiteralSet::prepare_scan_dispatch).
 //!
 //! The match wire format is byte-identical to [`RulePipeline::scan`] (slot 0 =
 //! atomic counter, then `(pattern_id, start, end)` triples), so a consumer can
 //! swap the borrowed path for a resident session without changing any
-//! post-processing — proven by the host-orchestration unit test below and the
+//! post-processing, proven by the host-orchestration unit test below and the
 //! CUDA backend parity test
 //! (`vyre-driver-cuda/tests/resident_rule_pipeline_cuda_parity.rs`).
 //!
@@ -34,7 +34,7 @@
 //! the [`VyreBackend`] contract (`allocate_resident`, `upload_resident*`,
 //! `dispatch_resident_timed`). The wgpu and CUDA backends do; the CPU reference
 //! does not. [`RulePipeline::prepare_resident`] returns the backend's
-//! `UnsupportedFeature` error **loudly** — the caller must handle it explicitly
+//! `UnsupportedFeature` error **loudly**: the caller must handle it explicitly
 //! (fail closed, or a loud/recorded fallback), never degrade silently.
 
 use vyre::{BackendError, DispatchConfig, VyreBackend};
@@ -100,7 +100,7 @@ impl RulePipeline {
     ///
     /// Returns [`BackendError`] when the backend does not support resident
     /// resources, or when allocation / upload of the resident tables fails. The
-    /// caller must handle this loudly (fail closed or a recorded fallback) —
+    /// caller must handle this loudly (fail closed or a recorded fallback) 
     /// never degrade silently.
     pub fn prepare_resident(
         &self,
@@ -118,7 +118,7 @@ impl RulePipeline {
         // oversized/undersized buffer. Without this guard an undersized
         // `haystack_capacity_bytes` PASSES on wgpu (the dev backend) and fails only
         // at dispatch on CUDA (a downstream consumer's backend) with a confusing late
-        // `InvalidProgram` — a dev-passes / prod-fails backend divergence. Surface
+        // `InvalidProgram`: a dev-passes / prod-fails backend divergence. Surface
         // it here, portably, at prepare time. Reuses `BufferDecl::static_byte_len`,
         // the exact source CUDA checks against, so a runtime-sized input
         // (`count == 0` → `Ok(None)`) correctly imposes no requirement.
@@ -149,7 +149,7 @@ impl RulePipeline {
         // The two 1-u32 control buffers (haystack_len, max_scan_bytes) are ALSO
         // resident. The CUDA backend's resident dispatch rejects any borrowed
         // resource (it resolves every binding to a resident handle), so a resident
-        // dispatch must be ALL-resident — a borrowed-control mix works on wgpu but
+        // dispatch must be ALL-resident, a borrowed-control mix works on wgpu but
         // fails closed on CUDA. They are allocated once here and re-uploaded per scan.
         let control_byte_len = std::mem::size_of::<u32>();
         let haystack_len_buf = backend.allocate_resident(control_byte_len)?;
@@ -229,7 +229,7 @@ impl ResidentRulePipeline {
 
         // Reset only the atomic hit counter (slot 0). Triples are written from
         // slot 0 upward and only `count` of them are read back, so stale triples
-        // beyond the new count are never observed — a 4-byte reset, not a full
+        // beyond the new count are never observed, a 4-byte reset, not a full
         // hit-buffer clear.
         backend.upload_resident_at(&self.hits, 0, &0u32.to_le_bytes())?;
 
@@ -244,7 +244,7 @@ impl ResidentRulePipeline {
 
         // Buffer binding order MUST match `nfa::nfa_scan`'s BufferDecl order:
         // input(0), nfa_transition(1), nfa_epsilon(2), hits(3),
-        // nfa_haystack_len(4), nfa_max_scan_bytes(5) — every binding resident.
+        // nfa_haystack_len(4), nfa_max_scan_bytes(5) (every binding resident).
         let resources = [
             self.haystack.clone(),
             self.transition.clone(),
@@ -258,11 +258,14 @@ impl ResidentRulePipeline {
         // Candidate-start parallelism: one workgroup per haystack byte, matching
         // `dispatch_io::candidate_start_dispatch_config`.
         config.grid_override = Some([haystack_len.max(1), 1, 1]);
+        // True byte coverage for a shape-inferring backend (CpuRefBackend), so it
+        // dispatches the whole haystack instead of under-covering the tail (Law 10).
+        config.dispatch_elements = Some(haystack_len);
 
         let timed = backend.dispatch_resident_timed(&self.program, &resources, &config)?;
 
         // The hit buffer is the program's only ReadWrite storage, returned at
-        // output index 0 — identical decode to `RulePipeline::scan`.
+        // output index 0 (identical decode to `RulePipeline::scan`).
         let hit_bytes =
             dispatch_io::try_output_bytes(&timed.outputs, 0, "ResidentRulePipeline hit buffer")?;
         let count = dispatch_io::try_read_u32_prefix(hit_bytes, "ResidentRulePipeline hit buffer")?;
@@ -410,7 +413,7 @@ mod tests {
         ) -> Result<TimedDispatchResult, BackendError> {
             // Contract checks the consumer relies on:
             assert_eq!(resources.len(), 6, "nfa_scan binds six buffers");
-            // EVERY binding must be resident — the CUDA resident dispatch rejects a
+            // EVERY binding must be resident, the CUDA resident dispatch rejects a
             // borrowed-resource mix, so no binding (not even the two 1-u32 control
             // buffers) may be Borrowed.
             for (idx, resource) in resources.iter().enumerate() {
@@ -473,7 +476,7 @@ mod tests {
         // path's `Match` decode.
         assert_eq!(matches, vec![Match::new(0, 1, 3), Match::new(1, 5, 7)]);
         // No further full uploads after prepare; each scan does exactly four ranged
-        // uploads (haystack stage + counter reset + haystack_len + max_scan_bytes) —
+        // uploads (haystack stage + counter reset + haystack_len + max_scan_bytes) 
         // the immutable tables never move again.
         assert_eq!(
             backend.full_uploads.load(Ordering::Relaxed),
@@ -490,7 +493,7 @@ mod tests {
     #[test]
     fn scan_rejects_truncating_hit_count_instead_of_dropping_matches() {
         let pipeline = super::super::mega_scan::build(&["ab"], "input", "hits", 64);
-        // Canned counter says 9 hits but the session was sized for 4 — decoding
+        // Canned counter says 9 hits but the session was sized for 4, decoding
         // would silently drop 5. The guard must error so the caller degrades.
         let mut canned = 9u32.to_le_bytes().to_vec();
         canned.extend(std::iter::repeat(0u8).take(4 * 12)); // only 4 triples present
@@ -546,7 +549,7 @@ mod tests {
         let backend = MockResidentBackend::new(hit_buffer_with(&[]));
 
         // Under-capacity (16 < 64): must fail closed at prepare time, naming the
-        // declared bytes, the input_len, the requested capacity, and the fix — and
+        // declared bytes, the input_len, the requested capacity, and the fix, and
         // it must NOT have allocated anything (the guard precedes allocation).
         let err = pipeline
             .prepare_resident(&backend, 16, 8)
@@ -575,7 +578,7 @@ mod tests {
             "the boundary-equal prepare allocates all six resident buffers"
         );
 
-        // Over-capacity (128 > 64): allowed — the CUDA contract is `>= decl`, not
+        // Over-capacity (128 > 64): allowed, the CUDA contract is `>= decl`, not
         // exact equality, so a larger resident haystack buffer is valid.
         pipeline
             .prepare_resident(&backend, 128, 8)

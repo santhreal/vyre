@@ -2,7 +2,7 @@
 //! live GPU.
 //!
 //! naga has no native instruction for these ops; op_dispatch synthesizes each
-//! from a multi-step expression — the exact class of computed lowering the naga
+//! from a multi-step expression, the exact class of computed lowering the naga
 //! signed-`Modulo` bug proved can be silently wrong on real silicon:
 //!   * `mulhi`         -> 16-bit decomposition (al*bl + cross terms + ah*bh)
 //!   * `abs_diff`      -> `select(a < b, b - a, a - b)`

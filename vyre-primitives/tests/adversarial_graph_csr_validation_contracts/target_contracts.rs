@@ -107,4 +107,3 @@ fn csr_cpu_ref_oob_target_with_multiword_bitset() {
         "node 39 is in second word, bit 7; node 40 must be dropped"
     );
 }
-

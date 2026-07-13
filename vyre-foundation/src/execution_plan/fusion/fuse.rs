@@ -5,9 +5,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::execution_plan::SchedulingPolicy;
 use crate::ir::{BufferAccess, BufferDecl, Ident, Node, Program};
 
-use super::alpha_rename::{
-    multiply_declared_names, push_alpha_renamed_arm_entry_node, ArmRenamer,
-};
+use super::alpha_rename::{multiply_declared_names, push_alpha_renamed_arm_entry_node, ArmRenamer};
 use super::collectors::collect_buffer_targets;
 use super::divergence::{
     has_divergent_invocation_gated_store, has_launch_geometry_dependent_write,
@@ -71,7 +69,7 @@ pub(crate) enum ArmNamespace {
     /// (`let __cmp_N = load(__quant_flag_…)`) and consumed in another arm
     /// (`Var(__cmp_N)`) must keep ONE consistent name and live in ONE shared
     /// scope, or the consumer references an undeclared variable. Shared arms
-    /// are therefore spliced flat — no per-arm rename, no per-arm `Block` —
+    /// are therefore spliced flat, no per-arm rename, no per-arm `Block` 
     /// preserving decl→use linkage across the merge boundary.
     Shared,
 }
@@ -83,7 +81,7 @@ pub(crate) enum ArmNamespace {
 /// insertion as [`fuse_programs`]; the only difference is that arm-local
 /// names and scopes are **shared**, not isolated (see [`ArmNamespace`]).
 /// This is the correct primitive for shared-scope composition where the merged
-/// arms must reference each other's local names — alpha-renaming would desync a
+/// arms must reference each other's local names, alpha-renaming would desync a
 /// flag/readback from its in-program consumer.
 ///
 /// # Errors
@@ -137,8 +135,8 @@ fn fuse_programs_multi_with(
 
     // Shared-namespace merge prefixes ONLY names declared in ≥2 arms (genuine
     // collisions, e.g. a primitive's internal `acc`). A name declared in
-    // exactly one arm — including a value produced in one arm and consumed in
-    // another (`let __cmp_N = …` / `Var(__cmp_N)`) — is globally unique and
+    // exactly one arm, including a value produced in one arm and consumed in
+    // another (`let __cmp_N = …` / `Var(__cmp_N)`), is globally unique and
     // stays unrenamed so the decl→use link survives. Isolated fusion renames
     // every name (the set is unused for that mode).
     let multiply_declared: FxHashSet<Ident> = match namespace {

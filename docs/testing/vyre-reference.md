@@ -1,4 +1,4 @@
-# Testing program — vyre-reference
+# Testing program, vyre-reference
 
 | Kind | Location |
 |------|----------|

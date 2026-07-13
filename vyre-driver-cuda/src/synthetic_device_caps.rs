@@ -34,6 +34,7 @@ pub fn blackwell_sm120_caps(total_memory: u64) -> CudaDeviceCaps {
         multi_processor_count: 170,
         l2_cache_bytes: 96 * 1024 * 1024,
         memory_clock_rate_khz: 14_000_000,
+        core_clock_rate_khz: 2_410_000,
         global_memory_bus_width_bits: 512,
         max_registers_per_block: 65_536,
         max_registers_per_sm: 65_536,
@@ -63,6 +64,25 @@ mod tests {
         assert_eq!(caps.l2_cache_bytes, 96 * 1024 * 1024);
         assert!(caps.cooperative_launch);
         assert!(caps.concurrent_kernels);
+    }
+
+    #[test]
+    fn blackwell_profile_peak_compute_matches_scheduler_issue_model() {
+        let caps = blackwell_sm120_caps_default();
+        // SM_count × 4 warp schedulers × warp_size × core_clock_hz.
+        let expected = 170u64 * 4 * 32 * 2_410_000 * 1_000;
+        assert_eq!(
+            caps.peak_compute_ops_per_sec(),
+            expected,
+            "peak compute must follow the universal 4-scheduler issue model exactly"
+        );
+        // Sanity: a Blackwell RTX 5090's peak int32 throughput is tens of TOPS
+        // (≈52 TOPS here), consistent with its ~105 TFLOP32 FMA figure.
+        let tops = caps.peak_compute_ops_per_sec() as f64 / 1e12;
+        assert!(
+            (40.0..80.0).contains(&tops),
+            "peak int throughput {tops:.1} TOPS is outside the sane Blackwell range"
+        );
     }
 
     #[test]

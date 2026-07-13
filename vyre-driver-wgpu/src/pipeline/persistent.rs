@@ -8,7 +8,7 @@ use super::binding::{
     clear_outputs_for_bound, consumes_host_input, usage_for_binding, validate_handle,
 };
 use crate::buffer::{BindGroupCacheStats, GpuBufferHandle};
-use crate::numeric::usize_to_u64;
+use crate::numeric::WGPU_NUMERIC;
 use crate::pipeline::{element_size_bytes, BufferBindingInfo, WgpuPipeline};
 
 /// One persistent dispatch record for batched queue submission.
@@ -294,7 +294,7 @@ impl WgpuPipeline {
                     ))
                 })?;
                 let output_bytes_u64 =
-                    usize_to_u64(output_bytes, "persistent output allocation bytes")?;
+                    WGPU_NUMERIC.usize_to_u64(output_bytes, "persistent output allocation bytes")?;
                 let handle = self
                     .persistent_pool
                     .acquire(output_bytes_u64, usage_for_binding(info)?)?;
@@ -328,7 +328,7 @@ impl WgpuPipeline {
                     info.binding, info.name
                 ))
             })?;
-            let padded_size = usize_to_u64(
+            let padded_size = WGPU_NUMERIC.usize_to_u64(
                 binding_padded_size(info, Some(data))?,
                 "persistent input bytes",
             )?;
@@ -577,11 +577,11 @@ pub(crate) fn binding_padded_size(
 }
 
 fn padded_wgpu_u64(size: u64, label: &'static str) -> Result<u64, BackendError> {
-    crate::numeric::align_up_u64(size, 4, label)
+    crate::numeric::WGPU_NUMERIC.align_up_u64(size, 4, 4, label)
 }
 
 fn padded_wgpu_usize(size: usize, label: &'static str) -> Result<usize, BackendError> {
-    crate::numeric::align_up_usize(size, 4, label)
+    crate::numeric::WGPU_NUMERIC.align_up_usize(size, 4, 4, label)
 }
 
 fn validate_consumed_counts(

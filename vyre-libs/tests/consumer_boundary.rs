@@ -14,7 +14,7 @@ fn forbidden_consumer_names() -> [&'static str; 4] {
 
 /// The `security/` + `dataflow/` layer is the Weir/Vyre shared-fact BRIDGE: it
 /// interoperates with Weir (and the surge compiler `surgec`) as a *peer* through
-/// an explicit shared-fact schema contract — `SharedFactHeader` carries a
+/// an explicit shared-fact schema contract. `SharedFactHeader` carries a
 /// producer id, `pub mod weir_ifds` is a feature-gated integration, and the
 /// `weir_*` public fields name the partner's schema fields. Naming the partner
 /// there is architectural fact, not a downstream-consumer leak. The one-way

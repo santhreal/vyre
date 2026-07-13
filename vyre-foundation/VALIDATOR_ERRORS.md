@@ -77,9 +77,9 @@ let good_ir = ...;
 
 ## V047  -  subgroup bitwise reduction `...` rejects f32 operands
 
-**Description**: a bitwise subgroup reduction (`And`/`Or`/`Xor`) was applied to an `f32` operand. Bitwise reductions are undefined over floats — both the PTX emitter and the reference oracle fail closed on an `f32` operand (`SubgroupReduceOp::combine_f32` returns `None` for bitwise ops), so the type boundary rejects it uniformly instead of letting the failure surface late on only some backends.
+**Description**: a bitwise subgroup reduction (`And`/`Or`/`Xor`) was applied to an `f32` operand. Bitwise reductions are undefined over floats, both the PTX emitter and the reference oracle fail closed on an `f32` operand (`SubgroupReduceOp::combine_f32` returns `None` for bitwise ops), so the type boundary rejects it uniformly instead of letting the failure surface late on only some backends.
 
-**Common Cause**: a `SubgroupReduce` node uses a bitwise op (`And`/`Or`/`Xor`) whose value expression has type `f32` — e.g. reducing a float lane value with `Xor` where an integer reduction was intended.
+**Common Cause**: a `SubgroupReduce` node uses a bitwise op (`And`/`Or`/`Xor`) whose value expression has type `f32` (e.g. reducing a float lane value with `Xor` where an integer reduction was intended).
 
 **Recommended Fix**: use an integer operand (`u32`/`i32`) for `And`/`Or`/`Xor`, or use a float-defined reduction (`Add`/`Mul`/`Min`/`Max`) when the operand really is `f32`.
 

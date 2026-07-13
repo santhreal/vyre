@@ -1,5 +1,5 @@
 //! Div/mod-by-zero and oversized-shift parity against the reference oracle on the
-//! live CUDA device — the "undefined on hardware, TOTAL on the oracle" class
+//! live CUDA device, the "undefined on hardware, TOTAL on the oracle" class
 //! (Law 10), the PTX/CUDA twin of the wgpu `div_zero_shift_mask_parity` gate.
 //!
 //! The oracle defines three hardware-undefined ops with a single total contract:
@@ -13,7 +13,7 @@
 //! The generated scalar matrix already exercises the zero divisor (`lane % 13 ==
 //! 0 => 0`), but it PRE-MASKS shift amounts (`RhsKind::Shift => value & 31`), so
 //! it NEVER sends `s >= 32` and the PTX `and.b32 ...,31` mask is unverified on
-//! hardware — exactly the source-read-vs-silicon gap the naga signed-`Modulo`
+//! hardware, exactly the source-read-vs-silicon gap the naga signed-`Modulo`
 //! miscompile punished. These tests dispatch all three with oversized amounts and
 //! literal-pinned zero-divisor sentinels, byte-for-byte against the oracle.
 //!
@@ -137,7 +137,7 @@ fn u32_mod_by_zero_yields_zero_on_cuda() {
     );
 }
 
-/// (value, shift-amount) — the amounts >= 32 exercise the `& 31` masking that a
+/// (value, shift-amount), the amounts >= 32 exercise the `& 31` masking that a
 /// non-masking lowering would get wrong (e.g. `1 << 32` would be 0, not 1).
 fn shift_cases() -> Vec<(u32, u32)> {
     vec![

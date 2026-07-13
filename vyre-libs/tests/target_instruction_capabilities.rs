@@ -1,6 +1,7 @@
 //! Target instruction capabilities test suite.
 
-const CAPABILITIES: &str = include_str!("../../docs/optimization/TARGET_INSTRUCTION_CAPABILITIES.toml");
+const CAPABILITIES: &str =
+    include_str!("../../docs/optimization/TARGET_INSTRUCTION_CAPABILITIES.toml");
 
 #[test]
 fn target_instruction_capabilities_gate_emitter_instruction_selection() {

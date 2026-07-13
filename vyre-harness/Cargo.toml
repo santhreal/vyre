@@ -1,6 +1,6 @@
 [package]
 name = "vyre-harness"
-version = "0.6.4"
+version = "0.6.5"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -37,6 +37,6 @@ inventory.workspace = true
 # unresolved under --all-features. `graph` gates `vyre_primitives::graph::sheaf`
 # for the direct sheaf import; self-substrate's cpu-parity also propagates to
 # vyre-primitives/cpu-parity (belt-and-suspenders, matching its own dev-dep).
-vyre-primitives = { workspace = true, features = ["graph", "cpu-parity"] }
-vyre-self-substrate = { workspace = true, features = ["cpu-parity"] }
+vyre-primitives = { path = "../vyre-primitives", features = ["graph", "cpu-parity"], default-features = false }
+vyre-self-substrate = { path = "../vyre-self-substrate", features = ["cpu-parity"] }
 proptest.workspace = true

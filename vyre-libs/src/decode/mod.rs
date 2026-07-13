@@ -28,4 +28,4 @@ pub use inflate::{
 };
 pub use ziftsieve::ziftsieve_gpu;
 #[cfg(any(test, feature = "cpu-parity"))]
-pub use ziftsieve::ziftsieve_reference_extract_literals;
+pub use ziftsieve::{ziftsieve_reference_extract_literals, ZiftsieveExtract};

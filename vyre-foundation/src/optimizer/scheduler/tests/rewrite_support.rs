@@ -31,7 +31,10 @@ pub(super) fn rewrite_first_store_value(nodes: &mut [Node]) -> bool {
     false
 }
 
-pub(super) fn rewrite_matching_stores(program: Program, batch: Option<&RewriteBatch>) -> PassResult {
+pub(super) fn rewrite_matching_stores(
+    program: Program,
+    batch: Option<&RewriteBatch>,
+) -> PassResult {
     let mut entry = Clone::clone(&program).into_entry_vec();
     let mut changed = false;
     match batch {

@@ -66,7 +66,7 @@ fn rms_norm_tiled_program(input: &str, output: &str, n: u32, eps: f32) -> Progra
     ));
     body.push(Node::if_then(
         Expr::and(
-            Expr::eq(Expr::WorkgroupId { axis: 0 }, Expr::u32(0)),
+            Expr::is_first_workgroup(),
             Expr::eq(local.clone(), Expr::u32(0)),
         ),
         vec![Node::Store {

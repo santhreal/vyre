@@ -441,7 +441,12 @@ mod tests {
         // dropped entirely). A regression that coalesces to Relaxed or removes
         // both barriers would have passed the old `changed == true` check.
         assert_eq!(
-            result.program.entry().iter().map(count_barriers).sum::<usize>(),
+            result
+                .program
+                .entry()
+                .iter()
+                .map(count_barriers)
+                .sum::<usize>(),
             1,
             "two SeqCst barriers in if-then must coalesce to exactly one"
         );

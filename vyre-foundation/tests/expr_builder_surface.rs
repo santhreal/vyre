@@ -54,10 +54,16 @@ fn negate_produces_unop_negate() {
 #[test]
 fn saturating_sub_emits_saturating_sub_opcode() {
     // saturating_sub emits the dedicated BinOp::SaturatingSub opcode (wire tag
-    // 0x17), not a `left - max(right, 0)` lowering to BinOp::Sub — so the wire
+    // 0x17), not a `left - max(right, 0)` lowering to BinOp::Sub, so the wire
     // fingerprint and the saturating evaluation semantics stay exact.
     let e = Expr::saturating_sub(Expr::u32(5), Expr::u32(10));
-    assert!(matches!(e, Expr::BinOp { op: BinOp::SaturatingSub, .. }));
+    assert!(matches!(
+        e,
+        Expr::BinOp {
+            op: BinOp::SaturatingSub,
+            ..
+        }
+    ));
 }
 
 #[test]
@@ -334,4 +340,36 @@ fn wrapping_sub_method_produces_binop() {
             ..
         }
     ));
+}
+
+// ------------------------------------------------------------------
+// Invocation-id predicates
+// ------------------------------------------------------------------
+
+#[test]
+fn is_first_workgroup_produces_workgroup_id_x_eq_zero() {
+    // The canonical "first parallel region only" guard must be exactly
+    // `workgroup_id.x == 0`. Single-workgroup kernels (scalar reductions,
+    // workgroup-local tree reductions) gate their body on this, so its shape
+    // is load-bearing: a wrong axis or a non-zero constant would let extra
+    // workgroups run and double-count. Locking the shape keeps every call
+    // site that swapped its inline `eq(WorkgroupId{axis:0}, 0)` for this
+    // builder byte-identical on the wire.
+    match Expr::is_first_workgroup() {
+        Expr::BinOp {
+            op: BinOp::Eq,
+            left,
+            right,
+        } => {
+            assert!(
+                matches!(*left, Expr::WorkgroupId { axis: 0 }),
+                "lhs must be workgroup_id.x, got {left:?}"
+            );
+            assert!(
+                matches!(*right, Expr::LitU32(0)),
+                "rhs must be literal 0, got {right:?}"
+            );
+        }
+        other => panic!("is_first_workgroup must be a BinOp::Eq, got {other:?}"),
+    }
 }

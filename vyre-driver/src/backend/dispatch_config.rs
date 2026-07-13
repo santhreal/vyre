@@ -54,6 +54,23 @@ pub struct DispatchConfig {
     /// required for megakernels where the work queue length is managed through
     /// storage buffers rather than the primary output slot.
     pub grid_override: Option<[u32; 3]>,
+    /// True per-invocation element/byte coverage count for an element-grid
+    /// dispatch (e.g. a one-lane-per-byte scan: `Some(haystack_len)`).
+    ///
+    /// This exists SEPARATELY from [`grid_override`](Self::grid_override) because
+    /// that field is OVERLOADED: for an element-grid dispatch it is the workgroup
+    /// count derived from the input size, but for a MEGAKERNEL it is a work-queue
+    /// length managed through storage buffers, the two cannot be told apart from
+    /// the `[u32; 3]` alone. Backends that infer their dispatch coverage from
+    /// buffer SHAPES rather than from a real GPU grid (the CPU reference
+    /// interpreter, [`CpuRefBackend`](../../../vyre_driver_reference/index.html))
+    /// cannot see the runtime scan length, so a byte-scan program would be
+    /// under-dispatched to `haystack_len / 4` invocations and SILENTLY skip high
+    /// positions (a Law-10 recall regression). An element-grid caller sets this to
+    /// the true coverage so such a backend dispatches exactly what the GPU would;
+    /// `None` (the default, and every megakernel) means "infer from buffer shapes"
+    ///: so a megakernel is never over-run by a byte count that is not its grid.
+    pub dispatch_elements: Option<u32>,
     /// Maximum back-to-back dispatch iterations the backend should run on
     /// the same persistent input/output handles before reading back the
     /// final outputs.
@@ -91,6 +108,7 @@ impl DispatchConfig {
             max_output_bytes: None,
             workgroup_override: None,
             grid_override: None,
+            dispatch_elements: None,
             fixpoint_iterations: None,
             speculation: None,
             persistent_thread: None,

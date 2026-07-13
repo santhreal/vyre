@@ -159,7 +159,7 @@ fn fold_i32_binary(op: BinOp, a: i32, b: i32) -> Option<Expr> {
         // vyre-reference div_i32 / rem_i32: "undefined backend semantics"), and
         // the Naga emitter lowers signed division to a raw SDiv with no
         // divisor-zero guard (the Select(divisor==0 ? max : x/y) guard is
-        // emitted only for UNSIGNED operands — unsigned div-by-zero is the one
+        // emitted only for UNSIGNED operands, unsigned div-by-zero is the one
         // defined case, u32::MAX, handled in fold_u32_binary). Folding `x / 0`
         // to 0 would make the optimized program produce a value the unoptimized
         // program never produces. Decline instead, mirroring the f32 div-by-zero

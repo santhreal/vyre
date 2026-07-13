@@ -167,7 +167,7 @@ fn layer_norm_tiled_program(
     ));
     body.push(Node::if_then(
         Expr::and(
-            Expr::eq(Expr::WorkgroupId { axis: 0 }, Expr::u32(0)),
+            Expr::is_first_workgroup(),
             Expr::eq(local.clone(), Expr::u32(0)),
         ),
         vec![
@@ -210,7 +210,7 @@ fn layer_norm_tiled_program(
     body.extend(vec![
         Node::barrier(),
         Node::if_then(
-            Expr::eq(Expr::WorkgroupId { axis: 0 }, Expr::u32(0)),
+            Expr::is_first_workgroup(),
             vec![
                 Node::let_bind("mean", Expr::load("ln_stats", Expr::u32(0))),
                 Node::let_bind("scale", Expr::load("ln_stats", Expr::u32(1))),

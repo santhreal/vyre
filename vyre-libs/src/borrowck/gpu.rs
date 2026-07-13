@@ -214,8 +214,7 @@ fn batch_shard(
                     false,
                     "BorrowFacts invariant violation: loan_issued_at[{a}]={} >= point_count={} \
                      in function {fi}; loan silently dropped from GPU issue seeds",
-                    f.loan_issued_at[a],
-                    f.point_count,
+                    f.loan_issued_at[a], f.point_count,
                 );
                 continue;
             }

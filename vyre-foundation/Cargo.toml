@@ -1,6 +1,6 @@
 [package]
 name = "vyre-foundation"
-version = "0.6.4"
+version = "0.6.5"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -49,15 +49,16 @@ workspace = true
 
 [dev-dependencies]
 # integration tests/benches assert against these crates' public APIs
-vyre-lower = { workspace = true }
-vyre-reference = { workspace = true }
+vyre-lower = { path = "../vyre-lower" }
+vyre-reference = { path = "../vyre-reference" }
 # Integration tests under tests/ use the `vyre` umbrella facade (vyre::ir::*)
 # as the public boundary they assert against. `vyre` (the vyre-core package)
-# depends on vyre-foundation, so this is a dev-dependency CYCLE — which cargo
+# depends on vyre-foundation, so this is a dev-dependency CYCLE, which cargo
 # permits because dev-deps are excluded from the normal build graph.
-vyre = { workspace = true }
+vyre = { path = "../vyre-core", default-features = false }
 proptest.workspace = true
 criterion.workspace = true
+vyre-test-support.workspace = true
 
 [[test]]
 name = "sweep_validation_rejection_oracle_matrix"

@@ -184,7 +184,7 @@ pub(crate) fn validate_expr(
             validate_expr(value, buffers, scope, options, report, depth_level + 1);
             validate_subgroup_expr_support(&mut report.errors, options);
             // V047: bitwise subgroup reductions (And/Or/Xor) are undefined over
-            // floats — both the PTX emitter and the reference oracle already fail
+            // floats, both the PTX emitter and the reference oracle already fail
             // closed on an f32 operand (`SubgroupReduceOp::combine_f32` returns
             // None for bitwise ops). Reject it here at the type boundary so the
             // failure is uniform across every backend instead of surfacing late
@@ -667,7 +667,7 @@ mod tests {
 
     #[test]
     fn subgroup_bitwise_reduction_accepts_integer_operand() {
-        // The positive twin: u32 is a valid operand for And/Or/Xor — no V047.
+        // The positive twin: u32 is a valid operand for And/Or/Xor (no V047).
         let backend = SubgroupBackend {
             supports_subgroup_ops: true,
         };
@@ -686,7 +686,7 @@ mod tests {
 
     #[test]
     fn subgroup_arithmetic_reduction_accepts_f32_operand() {
-        // f32 is rejected ONLY for bitwise ops — Add/Mul/Min/Max over f32 are
+        // f32 is rejected ONLY for bitwise ops. Add/Mul/Min/Max over f32 are
         // legitimate (the whole point of generalizing workgroup_max_f32 to a
         // subgroup reduction), so V047 must not fire for them.
         let backend = SubgroupBackend {
@@ -755,14 +755,14 @@ mod tests {
         // ValidationOptions::default() has neither a supplied lookup nor a global
         // registry entry, so no lookup is resolvable.
         let report = validate_subgroup_expr(
-            Expr::call("no_such_op_ever_registered", vec![Expr::u32(1), Expr::bool(true)]),
+            Expr::call(
+                "no_such_op_ever_registered",
+                vec![Expr::u32(1), Expr::bool(true)],
+            ),
             ValidationOptions::default(),
         );
         assert!(
-            report
-                .errors
-                .iter()
-                .any(|e| e.message().contains("V016")),
+            report.errors.iter().any(|e| e.message().contains("V016")),
             "call with no lookup must be rejected with V016, got: {:?}",
             report.errors
         );

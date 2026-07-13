@@ -48,7 +48,7 @@
 
 use crate::dispatch_buffers::{
     ceil_div_u32, checked_product_count, decode_u32_output_exact, ensure_input_slots,
-    write_u32_slice_le_bytes,
+    write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
 use vyre_primitives::graph::string_diagram::monoidal_compose;
@@ -214,12 +214,23 @@ pub fn compose_ir_arrows_fixed_via_with_scratch_into(
     }
 
     let program = monoidal_compose("f", "g", "out", a, b, c);
-    ensure_input_slots(&mut scratch.dispatch_inputs, 2);
+    // Three input-consuming buffers: f ReadOnly(0), g ReadOnly(1), and `out` plain-ReadWrite(2)
+    // (InputOutput, the backend does NOT allocate it, so the caller must pass a zero-filled slot in
+    // buffer order or the real backend's strict input-count check fails).
+    let out_bytes = out_cells
+        .checked_mul(std::mem::size_of::<u32>())
+        .ok_or_else(|| {
+            DispatchError::BadInputs(format!(
+            "Fix: compose_ir_arrows_fixed_via output byte count overflows usize for a={a}, c={c}."
+        ))
+        })?;
+    ensure_input_slots(&mut scratch.dispatch_inputs, 3);
     write_u32_slice_le_bytes(&mut scratch.dispatch_inputs[0], f_fixed);
     write_u32_slice_le_bytes(&mut scratch.dispatch_inputs[1], g_fixed);
+    write_zero_bytes(&mut scratch.dispatch_inputs[2], out_bytes);
     let outputs = dispatcher.dispatch(
         &program,
-        &scratch.dispatch_inputs[..2],
+        &scratch.dispatch_inputs[..3],
         Some([ceil_div_u32(out_cells_u32, 256), 1, 1]),
     )?;
     if outputs.is_empty() {
@@ -387,7 +398,9 @@ mod tests {
             grid_override: Option<[u32; 3]>,
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
             assert_eq!(grid_override, Some([1, 1, 1]));
-            assert_eq!(inputs.len(), 2);
+            // Three input-consuming buffers: f RO(0), g RO(1), and the plain-ReadWrite `out`(2) whose
+            // zero-init contents the caller supplies (backend does not allocate it).
+            assert_eq!(inputs.len(), 3);
             let f = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
             let g = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
             assert_eq!(f.len(), 4);

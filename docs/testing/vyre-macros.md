@@ -1,4 +1,4 @@
-# Testing program — vyre-macros
+# Testing program, vyre-macros
 
 | Kind | Location |
 |------|----------|

@@ -1,4 +1,4 @@
-# Testing program — vyre-primitives
+# Testing program, vyre-primitives
 
 | Kind | Location |
 |------|----------|

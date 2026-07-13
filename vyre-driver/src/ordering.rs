@@ -105,7 +105,7 @@ pub enum DensePermutationDefect {
 }
 
 /// Classify whether `sorted_indices` is a dense permutation of `0..expected_len`
-/// — each value in `0..expected_len` present exactly once.
+///: each value in `0..expected_len` present exactly once.
 ///
 /// Callers MUST pass indices already sorted ascending (e.g. via
 /// [`sort_unstable_if_needed`]); the classification is defined on sorted slot

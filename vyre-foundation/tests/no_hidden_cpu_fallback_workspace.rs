@@ -46,7 +46,7 @@ const ALLOWED_FILES: &[&str] = &[
     "vyre-self-substrate/src/lib.rs",
     // Capability contract: advertises the regex-accelerator class (incl. the
     // software class) and keeps unsupported devices fail-closed, making the
-    // software path VISIBLE to benchmark evidence — the opposite of a hidden
+    // software path VISIBLE to benchmark evidence, the opposite of a hidden
     // fallback. Verified: no silent runtime degradation, only a surfaced
     // capability record.
     "vyre-driver/src/backend/regex_accelerator.rs",

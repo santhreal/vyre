@@ -1,6 +1,6 @@
 //! Resident upload helpers for WGPU backend resources.
 
-use crate::numeric::usize_to_u64;
+use crate::numeric::WGPU_NUMERIC;
 use crate::WgpuBackend;
 
 /// Upload one full resident buffer with zero padding to its allocation size.
@@ -35,7 +35,7 @@ pub(crate) fn upload_resident_many(
                 "WGPU resident batch upload received stale handle {id}. Fix: keep every resource allocated until all resident uploads finish."
             ))
         })?;
-        let byte_len = usize_to_u64(bytes.len(), "resident batch upload bytes")?;
+        let byte_len = WGPU_NUMERIC.usize_to_u64(bytes.len(), "resident batch upload bytes")?;
         if byte_len > handle.allocation_len() {
             return Err(vyre_driver::BackendError::new(format!(
                 "WGPU resident batch upload received {} bytes for allocation {} on handle {id}. Fix: resize the resident buffer or upload a bounded prefix.",
@@ -91,8 +91,8 @@ pub(crate) fn upload_resident_at_many(
                 "WGPU resident ranged batch upload received stale handle {id}. Fix: keep every resource allocated until all resident uploads finish."
             ))
         })?;
-        let dst_offset = usize_to_u64(dst_offset_bytes, "resident ranged upload offset")?;
-        let byte_len = usize_to_u64(bytes.len(), "resident ranged upload bytes")?;
+        let dst_offset = WGPU_NUMERIC.usize_to_u64(dst_offset_bytes, "resident ranged upload offset")?;
+        let byte_len = WGPU_NUMERIC.usize_to_u64(bytes.len(), "resident ranged upload bytes")?;
         let end = dst_offset.checked_add(byte_len).ok_or_else(|| {
             vyre_driver::BackendError::new(format!(
                 "WGPU resident ranged batch upload overflows u64 at offset {dst_offset_bytes} len {} for handle {id}. Fix: split the upload before calling upload_resident_at_many.",

@@ -41,6 +41,7 @@
 //! check is bounded by the candidate macro-name length. One compiled
 //! program handles every macro-table size and identifier length.
 
+use super::gpu_directive_parse_shared::MAX_DIRECTIVE_WS_PREFIX as MAX_WS_PREFIX;
 use super::gpu_source_bytes::{
     safe_load_source_layout_byte_expr, source_buffer_element, source_byte_len_expr,
     SourceByteLayout,
@@ -65,11 +66,6 @@ pub const BINDING_MACRO_NAMES_PACKED: u32 = 4;
 pub const BINDING_MACRO_OFFSETS: u32 = 5;
 /// Canonical binding index for the output `directive_values` buffer.
 pub const BINDING_DIRECTIVE_VALUES: u32 = 6;
-
-/// Maximum horizontal-WS run before `#`, between `#` and the
-/// keyword, between the keyword and the identifier. Cap at 4  -  real
-/// rows have 0–1.
-const MAX_WS_PREFIX: u32 = 4;
 
 /// Build the ifdef/ifndef-evaluator `Program`.
 ///

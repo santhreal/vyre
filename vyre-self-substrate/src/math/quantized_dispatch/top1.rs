@@ -62,7 +62,7 @@ pub fn i4x8_batched_matmul_top1_f32_scaled_via_with_scratch_into(
     scores_out: &mut Vec<f32>,
     indices_out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    let shape = validate_batched_packed_matmul_shape(
+    validate_batched_packed_matmul_shape(
         "i4x8_batched_matmul_top1_f32_scaled_via",
         weights_packed,
         activation_batches_packed,
@@ -89,28 +89,38 @@ pub fn i4x8_batched_matmul_top1_f32_scaled_via_with_scratch_into(
             cols,
         )
     });
-    ensure_input_slots(inputs, 6);
+    // Four input-consuming buffers: weights/activations/row_scales/batch_scales ReadOnly(0-3).
+    // `scores` is `BufferDecl::output`(4), backend-allocated, consumes NO dispatch input. It is a
+    // SINGLE `batch*2` f32 buffer SPLIT into two halves: `out[b]=best_score_b` for the first `batch`
+    // words, then `out[batch+b]=cast(f32, best_index_b)` for the next `batch` (see
+    // quantized/programs.rs (the kernel stores scores and indices into one `out` buffer)).
+    ensure_input_slots(inputs, 4);
     write_u32_slice_le_bytes(&mut inputs[0], weights_packed);
     write_u32_slice_le_bytes(&mut inputs[1], activation_batches_packed);
     write_f32_slice_le_bytes(&mut inputs[2], row_scales);
     write_f32_slice_le_bytes(&mut inputs[3], batch_scales);
-    write_zero_bytes(&mut inputs[4], shape.top1_output_bytes);
-    write_zero_bytes(&mut inputs[5], shape.top1_output_bytes);
 
     let outputs =
-        dispatcher.dispatch(program, &inputs[..6], Some([ceil_div_u32(batch, 64), 1, 1]))?;
-    let (scores_bytes, indices_bytes) =
-        expect_two_outputs("i4x8_batched_matmul_top1_f32_scaled_via", &outputs)?;
+        dispatcher.dispatch(program, &inputs[..4], Some([ceil_div_u32(batch, 64), 1, 1]))?;
+    // The kernel writes ONE `batch*2` f32 buffer: scores in `[0, batch)`, indices-as-f32 in
+    // `[batch, 2*batch)`. Split it into the public `(scores, indices)` contract.
+    let packed = expect_one_output("i4x8_batched_matmul_top1_f32_scaled_via", &outputs)?;
+    let mut values = Vec::new();
     decode_f32_output_exact(
-        scores_bytes,
-        batch as usize,
-        "i4x8_batched_matmul_top1_f32_scaled_via scores",
-        scores_out,
+        packed,
+        batch as usize * 2,
+        "i4x8_batched_matmul_top1_f32_scaled_via",
+        &mut values,
     )?;
-    decode_u32_output_exact(
-        indices_bytes,
-        batch as usize,
-        "i4x8_batched_matmul_top1_f32_scaled_via indices",
-        indices_out,
-    )
+    let batch = batch as usize;
+    scores_out.clear();
+    indices_out.clear();
+    scores_out.reserve(batch);
+    indices_out.reserve(batch);
+    for b in 0..batch {
+        scores_out.push(values[b]);
+        // The kernel stored `cast(f32, best_index)`; recover the integer index from that exact f32.
+        indices_out.push(values[batch + b] as u32);
+    }
+    Ok(())
 }

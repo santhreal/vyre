@@ -80,8 +80,7 @@ mod tests {
                 .expect("Fix: scalar output must be 4 bytes"),
         );
         assert_eq!(
-            val,
-            1u32,
+            val, 1u32,
             "Fix: empty Mul reduction identity must be 1, got {val}"
         );
     }
@@ -120,8 +119,7 @@ mod tests {
                 .expect("Fix: scalar output must be 4 bytes"),
         );
         assert_eq!(
-            val,
-            0u32,
+            val, 0u32,
             "Fix: empty Add reduction identity must be 0, got {val}"
         );
     }

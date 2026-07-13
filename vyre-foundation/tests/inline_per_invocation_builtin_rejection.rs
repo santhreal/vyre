@@ -3,7 +3,7 @@
 //! SubgroupLocalId / SubgroupSize rather than silently replacing them with 0.
 //!
 //! Before the fix:  every per-invocation built-in inside a callee body was
-//!                  replaced with `Expr::u32(0)` and the call returned Ok — a
+//!                  replaced with `Expr::u32(0)` and the call returned Ok, a
 //!                  silent miscompile for every invocation other than lane 0.
 //!
 //! After the fix:   `inline_calls_with_resolver` returns
@@ -49,7 +49,7 @@ fn caller_for(op_id: &str) -> Program {
 /// Non-capturing resolver mapping each test's op_id to a callee that references
 /// the per-invocation built-in under test. `inline_calls_with_resolver` takes an
 /// `OpResolver = fn(&str) -> Option<Program>` (a fn pointer), so the resolver
-/// must NOT capture — it builds each callee from scratch instead.
+/// must NOT capture (it builds each callee from scratch instead).
 fn builtin_resolver(id: &str) -> Option<Program> {
     let built_in = match id {
         "uses_gid" => Expr::InvocationId { axis: 0 },
@@ -101,7 +101,7 @@ fn assert_lowering_error_names_fix(result: Result<Program, Error>, builtin_name:
         }
         Ok(_) => panic!(
             "Fix: inlining a callee that uses {builtin_name} must return Err(Lowering), \
-             not Ok — the silent replacement of per-invocation built-ins with 0 \
+             not Ok, the silent replacement of per-invocation built-ins with 0 \
              was a miscompile."
         ),
         Err(other) => panic!(
@@ -147,11 +147,11 @@ fn inline_rejects_callee_with_subgroup_size() {
 }
 
 /// Callee with InvocationId nested inside a BinOp (not as a bare Store index)
-/// must also be rejected — verifies the recursive expr() traversal in primitive.rs.
+/// must also be rejected (verifies the recursive expr() traversal in primitive.rs).
 #[test]
 fn inline_rejects_callee_with_invocation_id_in_binop() {
     // builtin_resolver maps "uses_gid_in_binop" to a callee whose store index is
-    // `InvocationId.y + 1` — exercises the recursive expr() BinOp traversal.
+    // `InvocationId.y + 1`: exercises the recursive expr() BinOp traversal.
     let caller = caller_for("uses_gid_in_binop");
     let result = inline_calls_with_resolver(&caller, builtin_resolver);
     assert_lowering_error_names_fix(result, "InvocationId (inside BinOp)");

@@ -109,6 +109,35 @@ pub fn cpu_interval_merge(
     (mins, maxs)
 }
 
+#[cfg(feature = "inventory-registry")]
+inventory::submit! {
+    crate::harness::OpEntry::new(
+        OP_ID,
+        || interval_merge_program("amin", "amax", "bmin", "bmax", "omin", "omax", 3),
+        Some(|| {
+            // Three lanes, elementwise [min, max] merge of interval pair A vs B. Each lane
+            // writes its OWN disjoint output slots (omin[lane], omax[lane]) with plain
+            // stores, so the pass is race-clean and over-fire-safe by construction. The two
+            // ReadWrite outputs are also inputs (seeded, then overwritten), so the fixture
+            // provides a seed for each.
+            let to_bytes = |w: &[u32]| crate::wire::pack_u32_slice(w);
+            vec![vec![
+                to_bytes(&[10, 0, 7]),  // amin
+                to_bytes(&[20, 3, 9]),  // amax
+                to_bytes(&[4, 2, 8]),   // bmin
+                to_bytes(&[18, 5, 12]), // bmax
+                to_bytes(&[0, 0, 0]),   // omin seed (overwritten)
+                to_bytes(&[0, 0, 0]),   // omax seed (overwritten)
+            ]]
+        }),
+        Some(|| {
+            let to_bytes = |w: &[u32]| crate::wire::pack_u32_slice(w);
+            // omin = min(a,b) per lane; omax = max(a,b) per lane.
+            vec![vec![to_bytes(&[4, 0, 7]), to_bytes(&[20, 5, 12])]]
+        }),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

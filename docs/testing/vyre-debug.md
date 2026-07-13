@@ -1,4 +1,4 @@
-# Testing program — vyre-debug
+# Testing program, vyre-debug
 
 | Kind | Location |
 |------|----------|

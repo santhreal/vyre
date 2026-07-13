@@ -238,7 +238,7 @@ where
     let idx = Expr::var("idx");
     let acc = Expr::var(acc_name);
     let child_body = vec![Node::if_then(
-        Expr::eq(Expr::WorkgroupId { axis: 0 }, Expr::u32(0)),
+        Expr::is_first_workgroup(),
         vec![
             Node::let_bind(acc_name, initial),
             strided_loop(
@@ -276,7 +276,7 @@ where
     let local = Expr::var("local");
     let idx = Expr::var("idx");
     let child_body = vec![Node::if_then(
-        Expr::eq(Expr::WorkgroupId { axis: 0 }, Expr::u32(0)),
+        Expr::is_first_workgroup(),
         vec![
             Node::let_bind(first_name, first_initial),
             Node::let_bind(second_name, second_initial),
@@ -325,10 +325,7 @@ where
     child_region(
         parent_op_id,
         STRIDED_WRITEBACK_OP_ID,
-        vec![Node::if_then(
-            Expr::eq(Expr::WorkgroupId { axis: 0 }, Expr::u32(0)),
-            guarded,
-        )],
+        vec![Node::if_then(Expr::is_first_workgroup(), guarded)],
     )
 }
 

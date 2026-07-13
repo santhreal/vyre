@@ -119,7 +119,7 @@ pub fn replace_output_buffers_preserving_slots_with_memory_stats(
 }
 
 fn reserve_output_slots_for_replacement(outputs: &mut OutputBuffers, total_slots: usize) {
-    let _ = crate::allocation::try_reserve_vec_to_capacity(outputs, total_slots);
+    outputs.reserve(total_slots.saturating_sub(outputs.len()));
 }
 
 fn add_bytes(current: usize, incoming: usize, _label: &str) -> usize {

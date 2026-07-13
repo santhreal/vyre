@@ -34,7 +34,7 @@ fn c11_compiled() -> &'static Compiled {
             let regex = Regex::new(&anchored).unwrap_or_else(|e| {
                 panic!(
                     "Fix: C11 lexer pattern for token kind {kind} failed to compile: {e}. \
-                     C11_PATTERNS is a compile-time constant — fix the broken pattern. \
+                     C11_PATTERNS is a compile-time constant, fix the broken pattern. \
                      Silently dropping it would cause that token kind to be unrecognised, \
                      producing invisible recall loss."
                 )

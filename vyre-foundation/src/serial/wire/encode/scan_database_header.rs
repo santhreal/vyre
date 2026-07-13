@@ -260,9 +260,7 @@ impl ScanDatabaseHeader {
 ///
 /// Returns [`WireEncodeErr`] when string or vector lengths exceed the bounded
 /// wire representation.
-pub fn encode_scan_database_header(
-    header: &ScanDatabaseHeader,
-) -> Result<Vec<u8>, WireEncodeErr> {
+pub fn encode_scan_database_header(header: &ScanDatabaseHeader) -> Result<Vec<u8>, WireEncodeErr> {
     let mut out = Vec::with_capacity(96 + header.table_sections.len() * 25);
     put_scan_database_header(&mut out, header)?;
     Ok(out)
@@ -341,10 +339,8 @@ pub fn decode_scan_database_header(bytes: &[u8]) -> Result<ScanDatabaseHeader, S
     let compiler_version = reader.string()?;
     let mode = ScanDatabaseMode::from_tag(reader.u8()?)?;
 
-    let section_count = reader.bounded_len(
-        MAX_SCAN_DATABASE_SECTIONS,
-        "scan database section count",
-    )?;
+    let section_count =
+        reader.bounded_len(MAX_SCAN_DATABASE_SECTIONS, "scan database section count")?;
     let mut table_sections = Vec::with_capacity(section_count);
     for _ in 0..section_count {
         table_sections.push(ScanDatabaseSectionHeader {

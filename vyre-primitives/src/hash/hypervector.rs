@@ -226,13 +226,9 @@ pub fn xor_bind_cpu_into(a: &[u32], b: &[u32], out: &mut Vec<u32>) {
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn try_xor_bind_cpu_into(a: &[u32], b: &[u32], out: &mut Vec<u32>) -> Result<(), String> {
     let dim_words = a.len().min(b.len());
-    if dim_words > out.capacity() {
-        out.try_reserve_exact(dim_words - out.capacity())
-            .map_err(|err| {
-                format!("hypervector XOR bind could not reserve {dim_words} output words: {err}")
-            })?;
-    }
-    out.clear();
+    crate::hostbuf::reserve_exact_cleared(out, dim_words).map_err(|err| {
+        format!("hypervector XOR bind could not reserve {dim_words} output words: {err}")
+    })?;
     out.extend(a.iter().zip(b.iter()).take(dim_words).map(|(&x, &y)| x ^ y));
     Ok(())
 }
@@ -275,15 +271,9 @@ pub fn try_majority_bundle_cpu_into(hvs: &[Vec<u32>], out: &mut Vec<u32>) -> Res
     let k = hvs.len();
     let threshold = k / 2;
 
-    if dim_words > out.capacity() {
-        out.try_reserve_exact(dim_words - out.capacity())
-            .map_err(|err| {
-                format!(
-                    "hypervector majority bundle could not reserve {dim_words} output words: {err}"
-                )
-            })?;
-    }
-    out.clear();
+    crate::hostbuf::reserve_exact_cleared(out, dim_words).map_err(|err| {
+        format!("hypervector majority bundle could not reserve {dim_words} output words: {err}")
+    })?;
     out.resize(dim_words, 0);
     for w in 0..dim_words {
         for bit in 0..32 {
@@ -521,12 +511,12 @@ mod tests {
         // blessed Law-10 fix for an infallible parity wrapper.
         assert!(
             !production.contains(".expect(") && !production.contains(".unwrap("),
-            "Fix: hypervector production wrappers must not use bare .unwrap()/.expect() — use an explicit panic!() with the error."
+            "Fix: hypervector production wrappers must not use bare .unwrap()/.expect() (use an explicit panic!() with the error)."
         );
         // No SILENT fallback: returning empty on failure masks a parity divergence (Law 10/6).
         assert!(
             !production.contains(concat!("eprintln", "!(\"vyre-primitives hypervector")),
-            "Fix: hypervector CPU oracle must not log-and-return empty on error — fail loud via panic!() so callers use the try_ variant."
+            "Fix: hypervector CPU oracle must not log-and-return empty on error (fail loud via panic!() so callers use the try_ variant)."
         );
         assert!(
             production.contains("panic!("),

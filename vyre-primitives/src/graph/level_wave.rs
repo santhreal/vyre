@@ -69,13 +69,19 @@ fn depth_wave_body(
     lane_count: u32,
 ) -> Vec<Node> {
     let lane = Expr::InvocationId { axis: 0 };
-    let depth_for_lane = Expr::load(depth_buf, lane.clone());
+    // The range check MUST control-flow-nest the depth load, not `Expr::and` it:
+    // `and(lane < lane_count, load(depth_buf, lane) == depth)` evaluates BOTH operands
+    // (the IR has no short-circuit), so `load(depth_buf, lane)` reads `depth_buf` for the
+    // whole-workgroup lanes a real GPU fires past `lane_count`: an OOB read the reference
+    // silently masks but hardware faults on (the ssa_dominance_scan gather-class bug,
+    // BACKLOG BUG-level-wave-depth-guard-eager-oob-load). Nesting means the load only runs
+    // when `lane < lane_count`.
     vec![Node::if_then(
-        Expr::and(
-            Expr::lt(lane, Expr::u32(lane_count)),
-            Expr::eq(depth_for_lane, depth),
-        ),
-        step_body,
+        Expr::lt(lane.clone(), Expr::u32(lane_count)),
+        vec![Node::if_then(
+            Expr::eq(Expr::load(depth_buf, lane), depth),
+            step_body,
+        )],
     )]
 }
 
@@ -100,6 +106,26 @@ fn depth_wave_body(
 pub fn level_wave_program(
     step_body: Vec<Node>,
     depth_buf: &str,
+    max_depth: u32,
+    lane_count: u32,
+) -> Program {
+    level_wave_program_with_buffers(step_body, depth_buf, Vec::new(), max_depth, lane_count)
+}
+
+/// Like [`level_wave_program`], but declares `extra_buffers` after the depth
+/// buffer so the `step_body` can read/write the caller's own storage.
+///
+/// `depth_buf` is bound at index 0; every entry in `extra_buffers` MUST carry
+/// a distinct binding index `>= 1` (the caller owns the binding layout its
+/// `step_body` references). This is the composition point used by
+/// depth-ordered evaluators (e.g. `sum_product_evaluate_leveled`) that need
+/// their own inputs/outputs visible inside the per-lane wave body while still
+/// getting the ONE-PLACE depth-wave harness + inter-wave barriers.
+#[must_use]
+pub fn level_wave_program_with_buffers(
+    step_body: Vec<Node>,
+    depth_buf: &str,
+    extra_buffers: Vec<BufferDecl>,
     max_depth: u32,
     lane_count: u32,
 ) -> Program {
@@ -139,11 +165,15 @@ pub fn level_wave_program(
         waves
     };
 
-    Program::wrapped(
+    let mut buffers =
         vec![
             BufferDecl::storage(depth_buf, 0, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(lane_count),
-        ],
+        ];
+    buffers.extend(extra_buffers);
+
+    Program::wrapped(
+        buffers,
         LEVEL_WAVE_WORKGROUP_SIZE,
         vec![Node::Region {
             generator: Ident::from(OP_ID),
@@ -245,6 +275,34 @@ mod tests {
             "depth buffer must be declared"
         );
         assert!(!contains_grid_sync(entry_region_body(&program)));
+    }
+
+    #[test]
+    fn program_with_buffers_declares_depth_then_caller_buffers() {
+        let step = vec![Node::store("out", Expr::u32(0), Expr::u32(1))];
+        let extra = vec![
+            BufferDecl::storage("kinds", 1, BufferAccess::ReadOnly, DataType::U32).with_count(4),
+            BufferDecl::storage("out", 2, BufferAccess::ReadWrite, DataType::U32).with_count(4),
+        ];
+        let program = level_wave_program_with_buffers(step, "depths", extra, 8, 4);
+        let names: Vec<&str> = program.buffers.iter().map(|b| b.name()).collect();
+        assert_eq!(
+            names,
+            vec!["depths", "kinds", "out"],
+            "depth buffer is bound first (index 0), then the caller's extra buffers in order"
+        );
+        // The empty-extra delegation path (`level_wave_program`) must declare only the depth buffer.
+        let plain = level_wave_program(
+            vec![Node::store("out", Expr::u32(0), Expr::u32(1))],
+            "depths",
+            8,
+            4,
+        );
+        assert_eq!(
+            plain.buffers.len(),
+            1,
+            "plain level-wave declares only depths"
+        );
     }
 
     #[test]

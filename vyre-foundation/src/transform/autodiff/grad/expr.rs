@@ -153,7 +153,9 @@ pub(super) fn emit_adjoint_expr(
                     .into(),
             });
         }
-        Expr::SubgroupBallot { .. } | Expr::SubgroupShuffle { .. } | Expr::SubgroupReduce { .. } => {
+        Expr::SubgroupBallot { .. }
+        | Expr::SubgroupShuffle { .. }
+        | Expr::SubgroupReduce { .. } => {
             return Err(AutodiffError::NotDifferentiable {
                 op: format!("{expr:?}").chars().take(40).collect(),
                 fix: "subgroup ops are not differentiable in the general case".into(),

@@ -216,7 +216,7 @@ mod tests {
         // Loan 0 is used at point 1.
         // Because point 1 is reachable from point 0 via the edge and loan 0's
         // use at point 1 is reachable from its issue at point 0, loan 0 is live
-        // at loan 1's issue point — conflict.
+        // at loan 1's issue point (conflict).
         let facts = BorrowFacts {
             point_count: 2,
             cfg_edges: vec![(0, 1)],
@@ -227,7 +227,11 @@ mod tests {
             loan_used_at: vec![(0, 1)],
         };
         let conflicts = analyze(&facts);
-        assert_eq!(conflicts.len(), 1, "expected one conflict, got {conflicts:?}");
+        assert_eq!(
+            conflicts.len(),
+            1,
+            "expected one conflict, got {conflicts:?}"
+        );
         let c = conflicts[0];
         assert_eq!(c.first, 0, "first loan must be 0 (earlier issue)");
         assert_eq!(c.second, 1, "second loan must be 1");
@@ -276,7 +280,7 @@ mod tests {
         let facts = BorrowFacts {
             point_count: 2,
             cfg_edges: vec![],
-            loan_place: vec![0, 0],       // loan_count() = 2
+            loan_place: vec![0, 0],         // loan_count() = 2
             loan_kind: vec![LoanKind::Mut], // length 1: shorter than loan_count
             loan_issued_at: vec![0, 1],
             loan_offset: vec![0, 1],

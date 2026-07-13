@@ -8,7 +8,7 @@
 //! transition / output-offset / output-record tables, the per-pattern length
 //! table, and the three suffix-prefilter masks (end mask, 2-gram mask, 3-gram
 //! bloom). For a large detector set the DFA transition table alone is
-//! `state_count × 256` u32s — multiple MiB — and it is *identical* across every
+//! `state_count × 256` u32s, multiple MiB, and it is *identical* across every
 //! file of a corpus. A consumer that scans many coalesced batches (a downstream
 //! consumer's phase-1 layout) pays that multi-MiB host→device transfer once per batch even
 //! though only the haystack and the per-region presence output actually change.
@@ -19,7 +19,7 @@
 //! per-file haystack (a ranged upload into the resident haystack buffer), the small
 //! per-scan control values (haystack length, region starts, region base), and
 //! zeroes the used prefix of the resident presence buffer, dispatches against the
-//! resident tables, and reads back the per-region presence bitmap — the per-scan
+//! resident tables, and reads back the per-region presence bitmap, the per-scan
 //! transfer drops from `O(tables + haystack)` to `O(haystack + region rows)`.
 //! This is the region-presence counterpart of
 //! [`RulePipeline::prepare_resident`](super::mega_scan::RulePipeline::prepare_resident)
@@ -31,7 +31,7 @@
 //! [`GpuLiteralSet::scan_presence_by_region`]'s return (bit `p` of region `r`'s
 //! row is set iff pattern `p`'s literal occurs in region `r`), so a consumer can
 //! swap the borrowed path for a resident session without changing any
-//! post-processing — proven by the GPU parity test in the integration suite and
+//! post-processing, proven by the GPU parity test in the integration suite and
 //! the host-orchestration unit test below.
 //!
 //! # The `max_regions` cap
@@ -43,7 +43,7 @@
 //! session serves any batch with `region_count <= max_regions`. A batch that
 //! exceeds the cap is rejected **loudly** (it would index past the resident
 //! presence buffer); the caller re-dispatches it through the per-batch-sized
-//! borrowed [`GpuLiteralSet::scan_presence_by_region`] — never a silent truncation.
+//! borrowed [`GpuLiteralSet::scan_presence_by_region`] (never a silent truncation).
 //!
 //! # Backend support
 //!
@@ -51,7 +51,7 @@
 //! [`VyreBackend`] contract (`allocate_resident`, `upload_resident*`,
 //! `dispatch_resident_timed`). The wgpu and CUDA backends do; the CPU reference
 //! does not. [`GpuLiteralSet::prepare_resident_presence`] surfaces the backend's
-//! `UnsupportedFeature` error **loudly** — the caller must handle it explicitly
+//! `UnsupportedFeature` error **loudly**: the caller must handle it explicitly
 //! (fail closed, or a loud/recorded fallback), never degrade silently.
 
 use vyre::{BackendError, VyreBackend};
@@ -71,9 +71,9 @@ const PRESENCE_BY_REGION_BINDINGS: usize = 12;
 /// backend-resident resources, ready for repeated low-overhead scans.
 ///
 /// Construct with [`GpuLiteralSet::prepare_resident_presence`]. The session owns
-/// twelve resident resources — haystack, the seven immutable tables, the read-write
+/// twelve resident resources, haystack, the seven immutable tables, the read-write
 /// presence buffer, and the three per-scan control buffers (haystack_len,
-/// region_starts, region_base) — so the dispatch is ALL-resident (the CUDA backend's
+/// region_starts, region_base), so the dispatch is ALL-resident (the CUDA backend's
 /// resident dispatch rejects a borrowed-resource mix). Call [`free`](Self::free) to
 /// release them, or drop the session and let the backend reclaim them when its
 /// device context is torn down.
@@ -107,7 +107,7 @@ pub struct ResidentPresencePipeline {
     haystack_len_buf: Resource,
     /// Resident region-starts control buffer (sized for `max_regions`; re-uploaded
     /// per scan, padded with a `u32::MAX` sentinel so `buf_len` stays fixed and no
-    /// hit maps to a padding region — see [`ResidentPresencePipeline::scan_into`]).
+    /// hit maps to a padding region (see [`ResidentPresencePipeline::scan_into`])).
     region_starts_buf: Resource,
     /// Resident shard-base control buffer (1 u32; re-uploaded per scan).
     region_base_buf: Resource,
@@ -146,7 +146,7 @@ impl GpuLiteralSet {
     /// Returns [`BackendError`] when the backend does not support resident
     /// resources, when `max_regions` is zero, or when allocation / upload of the
     /// resident tables fails. The caller must handle this loudly (fail closed or a
-    /// recorded fallback) — never degrade silently.
+    /// recorded fallback) (never degrade silently).
     pub fn prepare_resident_presence(
         &self,
         backend: &dyn VyreBackend,
@@ -164,8 +164,7 @@ impl GpuLiteralSet {
         let output_records = allocate_and_upload(backend, &tables.output_records)?;
         let pattern_lengths = allocate_and_upload(backend, &tables.pattern_lengths)?;
         let candidate_end_mask = allocate_and_upload(backend, &tables.candidate_end_mask)?;
-        let candidate_suffix2_mask =
-            allocate_and_upload(backend, &tables.candidate_suffix2_mask)?;
+        let candidate_suffix2_mask = allocate_and_upload(backend, &tables.candidate_suffix2_mask)?;
         let candidate_suffix3_bloom =
             allocate_and_upload(backend, &tables.candidate_suffix3_bloom)?;
 
@@ -190,7 +189,7 @@ impl GpuLiteralSet {
 
         // The three per-scan control buffers are ALSO resident. The CUDA backend's
         // resident dispatch rejects any borrowed resource (it resolves every binding
-        // to a resident handle), so a resident dispatch must be ALL-resident — a
+        // to a resident handle), so a resident dispatch must be ALL-resident, a
         // borrowed-control mix works on wgpu but fails closed on CUDA, a downstream
         // consumer's backend. haystack_len and region_base are one u32 each; region_starts is
         // sized for the full max_regions cap and padded per scan so its `buf_len`
@@ -337,7 +336,7 @@ impl ResidentPresencePipeline {
         // OR-accumulated by the kernel, so it must arrive zeroed). Rows beyond
         // region_count are never written (the kernel bounds the region index by
         // buf_len(region_starts)) and never read, so only the used prefix needs
-        // clearing — the resident analogue of `ResidentRulePipeline`'s 4-byte
+        // clearing, the resident analogue of `ResidentRulePipeline`'s 4-byte
         // counter reset. Reusing `scratch` is safe: `upload_resident_at` copies the
         // source synchronously (wgpu `Queue::write_buffer` into the staging belt,
         // CUDA H2D memcpy), so the buffer is free to repurpose the instant the
@@ -367,12 +366,12 @@ impl ResidentPresencePipeline {
         backend.upload_resident_at(&self.region_base_buf, 0, &region_base.to_le_bytes())?;
 
         // region_starts is a FIXED `max_regions`-sized resident buffer so its
-        // `buf_len` — the kernel's live region count — does not change with the
+        // `buf_len`: the kernel's live region count, does not change with the
         // batch. The real starts fill [0, region_count); the tail
         // [region_count, max_regions) is padded with `u32::MAX`, a sentinel strictly
         // greater than any candidate position (positions are bounded by the scan
         // size << u32::MAX), so the region binary search never maps a hit to a
-        // padding row. Those rows stay untouched and are never decoded — the result
+        // padding row. Those rows stay untouched and are never decoded, the result
         // for the real regions is identical to a `region_count`-length region_starts.
         // Reusing `scratch` is safe (synchronous upload copy, as above).
         scratch.clear();
@@ -386,7 +385,7 @@ impl ResidentPresencePipeline {
         }
         backend.upload_resident_at(&self.region_starts_buf, 0, scratch)?;
 
-        // (4) Bind in program order — every binding resident (the CUDA all-resident
+        // (4) Bind in program order, every binding resident (the CUDA all-resident
         // requirement; wgpu accepts resident bindings identically).
         let resources = [
             self.haystack.clone(),                // 0: haystack
@@ -408,7 +407,7 @@ impl ResidentPresencePipeline {
         let timed = backend.dispatch_resident_timed(&self.program, &resources, &config)?;
 
         // The presence buffer is the program's only ReadWrite storage, returned at
-        // output index 0 — identical decode to `scan_presence_by_region`.
+        // output index 0 (identical decode to `scan_presence_by_region`).
         let presence_bytes = dispatch_io::try_output_bytes(
             &timed.outputs,
             0,
@@ -419,7 +418,7 @@ impl ResidentPresencePipeline {
         decode_presence_words_into(presence_bytes, used_words, out);
         // Fail CLOSED on a short readback: a presence resource that returns fewer
         // than the used words would otherwise hand back a silently truncated bitmap
-        // (some regions reported clean that were never scanned — Law 10).
+        // (some regions reported clean that were never scanned. Law 10).
         if out.len() != used_words {
             let returned = out.len();
             out.clear();
@@ -498,7 +497,14 @@ mod tests {
 
     // pattern_id order matches the integration corpus: key=0 .. api=7.
     const LITERALS: &[&[u8]] = &[
-        b"key", b"token", b"secret", b"AKIA", b"ghp_", b"sk_live_", b"password", b"api",
+        b"key",
+        b"token",
+        b"secret",
+        b"AKIA",
+        b"ghp_",
+        b"sk_live_",
+        b"password",
+        b"api",
     ];
 
     /// Mock backend that records resident traffic and returns a canned presence
@@ -594,7 +600,7 @@ mod tests {
                 PRESENCE_BY_REGION_BINDINGS,
                 "region-presence binds twelve buffers"
             );
-            // EVERY binding must be resident — the CUDA resident dispatch rejects a
+            // EVERY binding must be resident, the CUDA resident dispatch rejects a
             // borrowed-resource mix, so no binding (not even the tiny per-scan
             // control buffers) may be Borrowed.
             for idx in 0..PRESENCE_BY_REGION_BINDINGS {
@@ -619,7 +625,9 @@ mod tests {
 
     /// Decode one single-word region row into the set of pattern ids whose bit is set.
     fn present_ids(word: u32, pattern_count: u32) -> BTreeSet<u32> {
-        (0..pattern_count).filter(|&p| (word >> p) & 1 == 1).collect()
+        (0..pattern_count)
+            .filter(|&p| (word >> p) & 1 == 1)
+            .collect()
     }
 
     #[test]
@@ -648,11 +656,23 @@ mod tests {
         // the three per-scan control buffers (haystack_len, region_starts, region_base).
         {
             let allocs = backend.allocations.lock().unwrap();
-            assert_eq!(allocs.len(), 12, "haystack + 7 tables + presence + 3 controls");
+            assert_eq!(
+                allocs.len(),
+                12,
+                "haystack + 7 tables + presence + 3 controls"
+            );
             // presence (idx 8) = max_regions × words × 4 = 4 × 1 × 4 = 16 bytes.
-            assert_eq!(allocs[8].1, 4 * 1 * U32_BYTES, "presence sized for max_regions");
+            assert_eq!(
+                allocs[8].1,
+                4 * 1 * U32_BYTES,
+                "presence sized for max_regions"
+            );
             assert_eq!(allocs[9].1, U32_BYTES, "haystack_len control is one u32");
-            assert_eq!(allocs[10].1, 4 * U32_BYTES, "region_starts sized for max_regions");
+            assert_eq!(
+                allocs[10].1,
+                4 * U32_BYTES,
+                "region_starts sized for max_regions"
+            );
             assert_eq!(allocs[11].1, U32_BYTES, "region_base control is one u32");
         }
         // The seven immutable tables are uploaded exactly once, at prepare time; the
@@ -671,20 +691,37 @@ mod tests {
         let mut scratch = Vec::new();
         for _ in 0..3 {
             session
-                .scan_into(&backend, haystack, &region_starts, 0, &mut out, &mut scratch)
+                .scan_into(
+                    &backend,
+                    haystack,
+                    &region_starts,
+                    0,
+                    &mut out,
+                    &mut scratch,
+                )
                 .expect("resident region-presence scan decodes canned bitmap");
         }
 
         // Decode parity: the canned planted prefix surfaces; the stale 4th word is
         // never observed by the 3-region decode.
-        assert_eq!(out, vec![row0, row1, row2], "3 regions × 1 word, stale tail ignored");
-        assert_eq!(present_ids(out[0], pattern_count), BTreeSet::from([0, 1, 2, 3, 7]));
-        assert_eq!(present_ids(out[1], pattern_count), BTreeSet::from([4, 5, 6]));
+        assert_eq!(
+            out,
+            vec![row0, row1, row2],
+            "3 regions × 1 word, stale tail ignored"
+        );
+        assert_eq!(
+            present_ids(out[0], pattern_count),
+            BTreeSet::from([0, 1, 2, 3, 7])
+        );
+        assert_eq!(
+            present_ids(out[1], pattern_count),
+            BTreeSet::from([4, 5, 6])
+        );
         assert_eq!(present_ids(out[2], pattern_count), BTreeSet::new());
 
         // No further full uploads after prepare; each scan does exactly FIVE ranged
         // uploads (haystack stage, presence reset, haystack_len, region_base,
-        // region_starts) — the immutable tables never move again.
+        // region_starts) (the immutable tables never move again).
         assert_eq!(
             backend.full_uploads.load(Ordering::Relaxed),
             7,
@@ -739,10 +776,19 @@ mod tests {
         let mut out = vec![999];
         let mut scratch = Vec::new();
         let err = session
-            .scan_into(&backend, haystack, &region_starts, 0, &mut out, &mut scratch)
+            .scan_into(
+                &backend,
+                haystack,
+                &region_starts,
+                0,
+                &mut out,
+                &mut scratch,
+            )
             .expect_err("a batch over the resident region cap must error, not truncate");
         assert!(
-            err.to_string().contains("session was prepared for at most 2") && out.is_empty(),
+            err.to_string()
+                .contains("session was prepared for at most 2")
+                && out.is_empty(),
             "cap error must name the limit and expose no partial bitmap: {err}"
         );
         // The over-cap batch must never reach the device.
@@ -765,7 +811,14 @@ mod tests {
         let mut scratch = Vec::new();
         let region_starts = [0u32];
         let err = session
-            .scan_into(&backend, &[b'a'; 64], &region_starts, 0, &mut out, &mut scratch)
+            .scan_into(
+                &backend,
+                &[b'a'; 64],
+                &region_starts,
+                0,
+                &mut out,
+                &mut scratch,
+            )
             .expect_err("64-byte haystack must not fit an 8-byte resident buffer");
         assert!(
             err.to_string().contains("resident buffer holds") && out.is_empty(),

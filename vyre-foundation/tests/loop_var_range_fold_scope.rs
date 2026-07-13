@@ -57,7 +57,10 @@ fn range_fold_does_not_dissolve_arm_scope_into_loop_body() {
     );
 
     let result = LoopVarRangeFoldPass::transform(program);
-    assert!(result.changed, "i < 8 is always true for i in [0,8) and must fold");
+    assert!(
+        result.changed,
+        "i < 8 is always true for i in [0,8) and must fold"
+    );
 
     let after = vyre_reference::reference_eval(&result.program, &inputs).expect(
         "folding the always-true If must keep the arm's `let x` scoped -- splicing \

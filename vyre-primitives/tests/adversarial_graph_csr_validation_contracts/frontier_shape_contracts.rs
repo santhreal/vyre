@@ -107,4 +107,3 @@ fn program_graph_shape_read_only_buffers_zero_edge_placeholder() {
     assert_eq!(bufs[2].count(), 1);
     assert_eq!(bufs[3].count(), 1);
 }
-

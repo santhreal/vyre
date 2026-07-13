@@ -7,8 +7,8 @@
 //! the descriptor-level trap machinery is in place. A raw async/resume node
 //! reaching this entry therefore means a required earlier pass was skipped.
 //!
-//! Failing closed here (Law 10) is correct: silently lowering — or, worse,
-//! treating `Resume` as a no-op — would drop the node's semantics invisibly.
+//! Failing closed here (Law 10) is correct: silently lowering, or, worse,
+//! treating `Resume` as a no-op (would drop the node's semantics invisibly).
 //! The descriptor-level emitter (`crate::emit`) still lowers `AsyncLoad` /
 //! `AsyncStore` directly for callers that built a `KernelDescriptor` after
 //! resolving their program (see `descriptor_control` tests), so this guard
@@ -23,7 +23,7 @@ use vyre_foundation::visit::{visit_node_preorder, NodeVisitor};
 
 /// Breaks the preorder walk with the offending node's kind token the moment an
 /// `Async*` / `Resume` node is reached. Every other variant continues; in
-/// particular `Trap` is NOT rejected — it lowers to a backend sidecar.
+/// particular `Trap` is NOT rejected (it lowers to a backend sidecar).
 struct AsyncResumeRejector;
 
 impl NodeVisitor for AsyncResumeRejector {
@@ -134,7 +134,7 @@ impl NodeVisitor for AsyncResumeRejector {
 }
 
 /// Returns `Err(kind)` naming the first `Async*` / `Resume` node anywhere in
-/// `program` (including nested `If`/`Loop`/`Block`/`Region` bodies — the
+/// `program` (including nested `If`/`Loop`/`Block`/`Region` bodies, the
 /// preorder walk recurses), or `Ok(())` when the program contains none.
 pub(super) fn reject_async_resume(program: &Program) -> Result<(), &'static str> {
     let mut rejector = AsyncResumeRejector;

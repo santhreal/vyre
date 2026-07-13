@@ -131,7 +131,7 @@ pub fn try_jacobi_smooth_step(
             // rescale on 32-bit target lanes.
             Node::let_bind(
                 "delta",
-                Expr::div(
+                crate::fixed_sdiv_by_positive_expr(
                     crate::fixed_mul_16_16_expr(
                         Expr::load(omega_scaled, Expr::u32(0)),
                         Expr::var("res"),
@@ -164,6 +164,111 @@ pub fn try_jacobi_smooth_step(
             body: Arc::new(body),
         }],
     ))
+}
+
+/// Emit ONE weighted-Jacobi smoothing step as a SERIAL loop over all `n` rows,
+/// for callers that run the whole kernel on a single lane (e.g. [`crate::math::amg_v_cycle`],
+/// which composes several smoothing steps under one `InvocationId == 0` guard).
+///
+/// The per-cell arithmetic is byte-identical to [`jacobi_smooth_step`]'s per-lane body
+/// (`x_out[i] = x_in[i] + omega·(b[i] - Σ_j A[i,j]·x_in[j]) / diag`); the ONLY difference is that
+/// the row index is a loop counter instead of `InvocationId`, so one invocation updates every row.
+/// The per-lane [`jacobi_smooth_step`] builder is correct when dispatched with ≥`n` invocations;
+/// inlining it into a kernel dispatched with fewer lanes silently under-covers the rows, which is
+/// why single-lane composers must use this serial form. `tag` uniquifies the emitted binding names
+/// so several serial steps can be spliced into one region body without shadowing.
+#[must_use]
+pub fn jacobi_smooth_step_serial_body(
+    a_matrix: &str,
+    b: &str,
+    x_in: &str,
+    omega_scaled: &str,
+    x_out: &str,
+    n: u32,
+    tag: &str,
+) -> Vec<Node> {
+    let i = format!("jac_i_{tag}");
+    let res = format!("jac_res_{tag}");
+    let row_base = format!("jac_row_base_{tag}");
+    let jj = format!("jac_j_{tag}");
+    let diag = format!("jac_diag_{tag}");
+    let diag_safe = format!("jac_diag_safe_{tag}");
+    let diag_units = format!("jac_diag_units_{tag}");
+    let delta = format!("jac_delta_{tag}");
+    vec![Node::loop_for(
+        i.as_str(),
+        Expr::u32(0),
+        Expr::u32(n),
+        vec![
+            // residual = b[i] - Σ_j A[i,j] · x_in[j]
+            Node::let_bind(res.as_str(), Expr::load(b, Expr::var(i.as_str()))),
+            Node::let_bind(
+                row_base.as_str(),
+                Expr::mul(Expr::var(i.as_str()), Expr::u32(n)),
+            ),
+            Node::loop_for(
+                jj.as_str(),
+                Expr::u32(0),
+                Expr::u32(n),
+                vec![Node::assign(
+                    res.as_str(),
+                    Expr::sub(
+                        Expr::var(res.as_str()),
+                        crate::fixed_mul_16_16_expr(
+                            Expr::load(
+                                a_matrix,
+                                Expr::add(Expr::var(row_base.as_str()), Expr::var(jj.as_str())),
+                            ),
+                            Expr::load(x_in, Expr::var(jj.as_str())),
+                        ),
+                    ),
+                )],
+            ),
+            // diag = A[i, i]; safe = max(diag, 1); units = max(diag>>16, 1)
+            Node::let_bind(
+                diag.as_str(),
+                Expr::load(
+                    a_matrix,
+                    Expr::add(Expr::var(row_base.as_str()), Expr::var(i.as_str())),
+                ),
+            ),
+            Node::let_bind(
+                diag_safe.as_str(),
+                Expr::select(
+                    Expr::eq(Expr::var(diag.as_str()), Expr::u32(0)),
+                    Expr::u32(1),
+                    Expr::var(diag.as_str()),
+                ),
+            ),
+            Node::let_bind(
+                diag_units.as_str(),
+                Expr::select(
+                    Expr::lt(Expr::var(diag_safe.as_str()), Expr::u32(1 << 16)),
+                    Expr::u32(1),
+                    Expr::shr(Expr::var(diag_safe.as_str()), Expr::u32(16)),
+                ),
+            ),
+            // delta = (omega · res) / diag_units (16.16 throughout).
+            Node::let_bind(
+                delta.as_str(),
+                crate::fixed_sdiv_by_positive_expr(
+                    crate::fixed_mul_16_16_expr(
+                        Expr::load(omega_scaled, Expr::u32(0)),
+                        Expr::var(res.as_str()),
+                    ),
+                    Expr::var(diag_units.as_str()),
+                ),
+            ),
+            Node::store(
+                x_out,
+                Expr::var(i.as_str()),
+                Expr::add(
+                    Expr::load(x_in, Expr::var(i.as_str())),
+                    Expr::var(delta.as_str()),
+                ),
+            ),
+        ],
+    )]
 }
 
 fn checked_jacobi_cells(n: u32) -> Result<u32, String> {

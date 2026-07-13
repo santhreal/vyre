@@ -1,6 +1,6 @@
 [package]
 name = "vyre-libs"
-version = "0.6.4"
+version = "0.6.5"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -88,7 +88,7 @@ security = []
 # Enables the `security::weir_ifds` module + its tests. OFF by default and not
 # enabled anywhere in this workspace: weir_ifds `use`s the external
 # `external_dataflow_engine` crate, which is not vendored here. Turning this on
-# without that crate present is a compile error by design — restore the
+# without that crate present is a compile error by design, restore the
 # integration (add the crate to deps) before enabling.
 weir_ifds_external_engine = []
 "self-substrate" = []
@@ -119,26 +119,27 @@ bytemuck.workspace = true
 # Parity tests import the vyre-primitives CPU reference oracles, which are gated
 # behind `cpu-parity`. Enabling it here (dev-dep only) turns it on for vyre-libs'
 # own test/bench builds without leaking the oracles into production (resolver 2).
-vyre-primitives = { workspace = true, features = ["cpu-parity"] }
-vyre-emit-naga = { workspace = true }
-vyre-intrinsics = { workspace = true }
-vyre-driver-reference = { workspace = true }
+vyre-primitives = { path = "../vyre-primitives", features = ["cpu-parity"], default-features = false }
+vyre-emit-naga = { path = "../vyre-emit-naga" }
+vyre-intrinsics = { path = "../vyre-intrinsics" }
+vyre-driver-reference = { path = "../vyre-driver-reference" }
 # integration tests/benches assert against these crates' public APIs
-vyre-driver-wgpu = { workspace = true }
-vyre-lower = { workspace = true }
-vyre-emit-ptx = { workspace = true }
-vyre-driver = { workspace = true }
-vyre-reference = { workspace = true }
+vyre-driver-wgpu = { path = "../vyre-driver-wgpu" }
+vyre-lower = { path = "../vyre-lower" }
+vyre-emit-ptx = { path = "../vyre-emit-ptx" }
+vyre-driver = { path = "../vyre-driver" }
+vyre-reference = { path = "../vyre-reference" }
 proptest.workspace = true
 tempfile.workspace = true
 criterion.workspace = true
 naga.workspace = true
-# PATH-ONLY (package = vyre-grammar-gen): see vyre-driver-wgpu — vyre-grammar-gen is
+# PATH-ONLY (package = vyre-grammar-gen): see vyre-driver-wgpu, vyre-grammar-gen is
 # not in the 0.6.3 train (crates.io has only 0.6.2), so a `^0.6.3` workspace req is
 # unsatisfiable at publish. cargo strips path-only dev-deps; local builds use the path.
 c-grammar-gen = { package = "vyre-grammar-gen", path = "../vyre-grammar-gen" }
 tree-sitter = { workspace = true }
 tree-sitter-go = { workspace = true }
+vyre-test-support.workspace = true
 
 
 [package.metadata.docs.rs]

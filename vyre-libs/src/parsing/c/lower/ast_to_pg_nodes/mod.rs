@@ -38,8 +38,6 @@ use vyre::ir::Expr;
 #[cfg(any(test, feature = "cpu-parity"))]
 use vyre_primitives::predicate::node_kind;
 
-/// Number of `u32` words in one packed VAST node.
-const VAST_NODE_STRIDE_U32: u32 = 10;
 /// Number of `u32` words in one packed `PgNode`.
 const PG_NODE_STRIDE_U32: u32 = 6;
 /// Number of `u32` words in one semantic PG node witness row.
@@ -162,10 +160,10 @@ pub const C_AST_PG_EDGE_SWITCH_DEFAULT: u32 = 7;
 /// `case` label points to the first node of its value expression.
 pub const C_AST_PG_EDGE_CASE_VALUE: u32 = 8;
 
-const IDX_KIND: usize = 0;
-const IDX_PARENT: usize = 1;
-const IDX_FIRST_CHILD: usize = 2;
-const IDX_NEXT_SIBLING: usize = 3;
+// Row-layout column indices + node stride share one owner with `semantic_edges::model`.
+pub(crate) use crate::parsing::c::lower::semantic_edges::model::{
+    IDX_FIRST_CHILD, IDX_KIND, IDX_NEXT_SIBLING, IDX_PARENT, VAST_NODE_STRIDE_U32,
+};
 const IDX_SRC_BYTE_OFF: usize = 5;
 const IDX_SRC_BYTE_LEN: usize = 6;
 const IDX_ATTR_OFF: usize = 7;

@@ -94,19 +94,65 @@ pub fn dp_clip_per_sample(
     let n = Expr::load(norms, i_expr);
     let c = Expr::load(clip_norm, Expr::u32(0));
 
-    // safe_norm = max(n, 1)  -  avoid divide-by-zero.
+    // safe_norm = max(n, 1) (raw), avoid a 1/0 reciprocal; a norm this tiny is < C so the factor
+    // clamps to 1.0 regardless.
     let safe_norm = Expr::select(Expr::eq(n.clone(), Expr::u32(0)), Expr::u32(1), n.clone());
 
-    // scale = min(C, n)  → fixed-point
-    let scale = Expr::min(c, n);
+    // clipped[t] = g · min(1, C/‖g‖). We need `C/n` as a 16.16 value, but the naive
+    // `(C·2^16)/n` overflows u32 (the low-32 product wraps), the historical bug that silently corrupted
+    // realistic-magnitude and NEGATIVE gradients. Instead compute the 16.16 reciprocal `1/n` by
+    // Newton-Raphson (`r ← r·(2 − n·r)`, all products via the SIGNED `fixed_mul_16_16_expr` so no
+    // intermediate overflows), seeded from the exponent via `clz`: for `n_raw ≈ 2^p`, `1/n` in 16.16 is
+    // `2^32/n_raw ≈ 2^(clz(n_raw)+1)`, which is EXACT for powers of two and within 2× otherwise, so five
+    // Newton steps reach full 16.16 precision. Then `factor = min(1.0, C·(1/n))` (clamped, so the
+    // no-clip case `n ≤ C` and any tiny-`n` reciprocal blow-up both collapse to 1.0), and the final
+    // `g·factor` uses the signed multiply so a negative gradient keeps its sign.
+    const FIXED_ONE_U32: u32 = 1 << 16;
+    const FIXED_TWO_U32: u32 = 2 << 16;
+    let fixed_mul = crate::fixed_mul_16_16_expr;
 
-    // clipped[t] = g * scale / safe_norm
-    let value = Expr::div(Expr::mul(g, scale), safe_norm);
+    let mut inner = vec![
+        Node::let_bind("dp_n", safe_norm),
+        Node::let_bind("dp_c", c),
+        Node::let_bind("dp_g", g),
+        // Seed shift = min(clz(n) + 1, 31) (the clamp keeps `1 << shift` from overflowing for n_raw == 1).
+        Node::let_bind(
+            "dp_shift",
+            Expr::min(
+                Expr::add(Expr::clz(Expr::var("dp_n")), Expr::u32(1)),
+                Expr::u32(31),
+            ),
+        ),
+        Node::let_bind("dp_r", Expr::shl(Expr::u32(1), Expr::var("dp_shift"))),
+    ];
+    // Five Newton-Raphson reciprocal refinements: r ← r · (2 − n·r).
+    for _ in 0..5 {
+        inner.push(Node::assign(
+            "dp_r",
+            fixed_mul(
+                Expr::var("dp_r"),
+                Expr::sub(
+                    Expr::u32(FIXED_TWO_U32),
+                    fixed_mul(Expr::var("dp_n"), Expr::var("dp_r")),
+                ),
+            ),
+        ));
+    }
+    // factor = min(1.0, C · (1/n)); clipped = g · factor (signed multiply preserves the gradient sign).
+    inner.push(Node::let_bind(
+        "dp_factor",
+        Expr::min(
+            Expr::u32(FIXED_ONE_U32),
+            fixed_mul(Expr::var("dp_c"), Expr::var("dp_r")),
+        ),
+    ));
+    inner.push(Node::store(
+        clipped,
+        t.clone(),
+        fixed_mul(Expr::var("dp_g"), Expr::var("dp_factor")),
+    ));
 
-    let body = vec![Node::if_then(
-        Expr::lt(t.clone(), Expr::u32(cells)),
-        vec![Node::store(clipped, t, value)],
-    )];
+    let body = vec![Node::if_then(Expr::lt(t.clone(), Expr::u32(cells)), inner)];
 
     Program::wrapped(
         vec![

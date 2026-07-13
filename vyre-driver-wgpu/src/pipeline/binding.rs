@@ -3,7 +3,7 @@
 use vyre_driver::BackendError;
 
 use crate::buffer::GpuBufferHandle;
-use crate::numeric::usize_to_u64;
+use crate::numeric::WGPU_NUMERIC;
 use crate::pipeline::{element_size_bytes, BufferBindingInfo, OutputBindingLayout};
 
 /// Return true when a binding consumes one caller-provided borrowed input slot.
@@ -87,7 +87,7 @@ pub(crate) fn validate_handle(
                     info.name
                 ))
             })?;
-        let required_bytes_u64 = usize_to_u64(required_bytes, "required binding bytes")?;
+        let required_bytes_u64 = WGPU_NUMERIC.usize_to_u64(required_bytes, "required binding bytes")?;
         if handle.allocation_len() < required_bytes_u64 {
             return Err(BackendError::new(format!(
                 "{mode} handle for binding {} (`{}`) has {} bytes but requires {required_bytes}. Fix: allocate a larger GPU buffer.",
@@ -121,7 +121,7 @@ where
                 output.name
             ))
         })?;
-        let clear_size_u64 = usize_to_u64(clear_size, "output clear bytes")?;
+        let clear_size_u64 = WGPU_NUMERIC.usize_to_u64(clear_size, "output clear bytes")?;
         if handle.allocation_len() < clear_size_u64 {
             return Err(BackendError::new(format!(
                 "{mode} output buffer `{}` has {} bytes but dispatch requires {clear_size}. Fix: allocate the output handle with at least the compiled output size.",

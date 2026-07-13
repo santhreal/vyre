@@ -36,10 +36,7 @@ impl WorkgroupReductionScope {
     fn lane_guard(self, lane_expr: Expr) -> Expr {
         match self {
             Self::EveryWorkgroup => lane_expr,
-            Self::FirstWorkgroup => Expr::and(
-                Expr::eq(Expr::WorkgroupId { axis: 0 }, Expr::u32(0)),
-                lane_expr,
-            ),
+            Self::FirstWorkgroup => Expr::and(Expr::is_first_workgroup(), lane_expr),
         }
     }
 }
@@ -242,7 +239,7 @@ where
     let mut body = vec![
         Node::let_bind("local", Expr::LocalId { axis: 0 }),
         Node::if_then(
-            Expr::eq(Expr::WorkgroupId { axis: 0 }, Expr::u32(0)),
+            Expr::is_first_workgroup(),
             vec![
                 Node::let_bind("acc", init),
                 Node::loop_for(
@@ -273,10 +270,7 @@ where
     ];
     body.extend(reduce(tile, scratch));
     body.push(Node::if_then(
-        Expr::and(
-            Expr::eq(Expr::WorkgroupId { axis: 0 }, Expr::u32(0)),
-            Expr::eq(local, Expr::u32(0)),
-        ),
+        Expr::and(Expr::is_first_workgroup(), Expr::eq(local, Expr::u32(0))),
         vec![Node::store(
             out,
             Expr::u32(0),

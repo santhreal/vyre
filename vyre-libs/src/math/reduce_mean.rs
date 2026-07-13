@@ -2,6 +2,7 @@
 //!
 //! Category-A composition with a workgroup-tiled sum reduction.
 
+use crate::builder::strided_accumulate_child;
 use crate::region::wrap_anonymous;
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
@@ -51,36 +52,19 @@ fn reduce_mean_tiled_program(input: &str, output: &str, n: u32) -> Program {
     let tile = REDUCE_MEAN_TILE;
     let chunks = n.div_ceil(tile);
     let local = Expr::var("local");
-    let idx = Expr::var("idx");
+    // Per-lane strided sum into `mean_scratch[local]` via the shared accumulator
+    // child (same skeleton as dot/rms_norm/softmax); the workgroup tree reduces it below.
     let mut body = vec![
         Node::let_bind("local", Expr::LocalId { axis: 0 }),
-        Node::if_then(
-            Expr::eq(Expr::WorkgroupId { axis: 0 }, Expr::u32(0)),
-            vec![
-                Node::let_bind("local_sum", Expr::f32(0.0)),
-                Node::loop_for(
-                    "chunk",
-                    Expr::u32(0),
-                    Expr::u32(chunks),
-                    vec![
-                        Node::let_bind(
-                            "idx",
-                            Expr::add(
-                                Expr::mul(Expr::var("chunk"), Expr::u32(tile)),
-                                local.clone(),
-                            ),
-                        ),
-                        Node::if_then(
-                            Expr::lt(idx.clone(), Expr::u32(n)),
-                            vec![Node::assign(
-                                "local_sum",
-                                Expr::add(Expr::var("local_sum"), Expr::load(input, idx.clone())),
-                            )],
-                        ),
-                    ],
-                ),
-                Node::store("mean_scratch", local.clone(), Expr::var("local_sum")),
-            ],
+        strided_accumulate_child(
+            OP_ID,
+            tile,
+            chunks,
+            n,
+            "local_sum",
+            Expr::f32(0.0),
+            "mean_scratch",
+            |idx, acc| Expr::add(acc, Expr::load(input, idx)),
         ),
         Node::barrier(),
     ];
@@ -91,10 +75,7 @@ fn reduce_mean_tiled_program(input: &str, output: &str, n: u32) -> Program {
         WorkgroupReductionScope::FirstWorkgroup,
     ));
     body.push(Node::if_then(
-        Expr::and(
-            Expr::eq(Expr::WorkgroupId { axis: 0 }, Expr::u32(0)),
-            Expr::eq(local, Expr::u32(0)),
-        ),
+        Expr::and(Expr::is_first_workgroup(), Expr::eq(local, Expr::u32(0))),
         vec![Node::Store {
             buffer: output.into(),
             index: Expr::u32(0),

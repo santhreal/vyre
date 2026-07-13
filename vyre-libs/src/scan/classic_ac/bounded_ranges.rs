@@ -1,7 +1,9 @@
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::region::wrap_anonymous;
-use crate::scan::builders::{append_match, append_match_subgroup, load_packed_byte};
+use crate::scan::builders::{append_match, append_match_subgroup};
+
+use super::bounded_walk_prologue_nodes;
 use crate::scan::dfa::CompiledDfa;
 
 #[cfg(any(test, feature = "cpu-parity"))]
@@ -174,41 +176,13 @@ fn bounded_ranges_scan_nodes(
     max_pattern_len: u32,
     use_subgroup_coalesce: bool,
 ) -> Vec<Node> {
-    let max_pattern_len = max_pattern_len.max(1);
-    let i = Expr::var("i");
-    let end = Expr::add(i.clone(), Expr::u32(1));
-    let scan_start = Expr::select(
-        Expr::lt(i.clone(), Expr::u32(max_pattern_len - 1)),
-        Expr::u32(0),
-        Expr::sub(end.clone(), Expr::u32(max_pattern_len)),
-    );
-    let (load_step_byte, step_byte) = load_packed_byte(haystack, Expr::var("step"));
-
-    vec![
-        Node::let_bind("state", Expr::u32(0)),
-        Node::let_bind("scan_start", scan_start),
-        Node::let_bind("scan_end", end),
-        Node::loop_for(
-            "step",
-            Expr::var("scan_start"),
-            Expr::var("scan_end"),
-            vec![
-                load_step_byte,
-                Node::assign(
-                    "state",
-                    Expr::load(
-                        transitions,
-                        Expr::add(Expr::mul(Expr::var("state"), Expr::u32(256)), step_byte),
-                    ),
-                ),
-            ],
-        ),
-        Node::let_bind("out_begin", Expr::load(output_offsets, Expr::var("state"))),
-        Node::let_bind(
-            "out_end",
-            Expr::load(output_offsets, Expr::add(Expr::var("state"), Expr::u32(1))),
-        ),
-        Node::loop_for("out_idx", Expr::var("out_begin"), Expr::var("out_end"), {
+    let mut nodes =
+        bounded_walk_prologue_nodes(haystack, transitions, output_offsets, max_pattern_len);
+    nodes.push(Node::loop_for(
+        "out_idx",
+        Expr::var("out_begin"),
+        Expr::var("out_end"),
+        {
             let mut body = vec![
                 Node::let_bind(
                     "pattern_id",
@@ -246,21 +220,22 @@ fn bounded_ranges_scan_nodes(
                 ));
             }
             body
-        }),
-    ]
+        },
+    ));
+    nodes
 }
 
 /// Emit the bounded-window DFA replay for a single candidate position, writing a
 /// per-pattern PRESENCE bit instead of an `(id,start,end)` match triple.
 ///
 /// Innovation: match-DENSE literal sets (a source-code prefilter fires ~1 hit per
-/// 30 bytes) make the triple-append path output-bound — every hit takes an atomic
+/// 30 bytes) make the triple-append path output-bound, every hit takes an atomic
 /// counter increment + three global stores, and the host reads back tens of
 /// thousands of triples. Measured on a 5090 that collapses a 676 MB/s scan kernel
 /// to 4.5 MB/s. But a prefilter consumer (e.g. a downstream scanner's `collect_triggered_patterns`)
 /// only needs to know WHICH patterns fired, not where. Setting a presence bit is
 /// IDEMPOTENT, so concurrent lanes hitting the same pattern need no counter and no
-/// per-hit serialization — just an `atomic_or` into a ~`ceil(patterns/32)`-word
+/// per-hit serialization, just an `atomic_or` into a ~`ceil(patterns/32)`-word
 /// bitmap that is the entire readback. This keeps the kernel near the scan ceiling
 /// on dense inputs. `pattern_lengths` / `match_start` are unused (no positions).
 fn bounded_ranges_presence_nodes(
@@ -271,64 +246,35 @@ fn bounded_ranges_presence_nodes(
     presence: &str,
     max_pattern_len: u32,
 ) -> Vec<Node> {
-    let max_pattern_len = max_pattern_len.max(1);
-    let i = Expr::var("i");
-    let end = Expr::add(i.clone(), Expr::u32(1));
-    let scan_start = Expr::select(
-        Expr::lt(i.clone(), Expr::u32(max_pattern_len - 1)),
-        Expr::u32(0),
-        Expr::sub(end.clone(), Expr::u32(max_pattern_len)),
-    );
-    let (load_step_byte, step_byte) = load_packed_byte(haystack, Expr::var("step"));
-
-    vec![
-        Node::let_bind("state", Expr::u32(0)),
-        Node::let_bind("scan_start", scan_start),
-        Node::let_bind("scan_end", end),
-        Node::loop_for(
-            "step",
-            Expr::var("scan_start"),
-            Expr::var("scan_end"),
-            vec![
-                load_step_byte,
-                Node::assign(
-                    "state",
-                    Expr::load(
-                        transitions,
-                        Expr::add(Expr::mul(Expr::var("state"), Expr::u32(256)), step_byte),
+    let mut nodes =
+        bounded_walk_prologue_nodes(haystack, transitions, output_offsets, max_pattern_len);
+    nodes.push(Node::loop_for(
+        "out_idx",
+        Expr::var("out_begin"),
+        Expr::var("out_end"),
+        vec![
+            Node::let_bind(
+                "pattern_id",
+                Expr::load(output_records, Expr::var("out_idx")),
+            ),
+            // presence[pattern_id >> 5] |= 1u32 << (pattern_id & 31).
+            // Bind the (discarded) previous value so the atomic RMW is emitted
+            // as a side-effecting statement (same idiom as `append_match`'s
+            // `_vyre_match_slot`).
+            Node::let_bind(
+                "_vyre_presence_prev",
+                Expr::atomic_or(
+                    presence,
+                    Expr::shr(Expr::var("pattern_id"), Expr::u32(5)),
+                    Expr::shl(
+                        Expr::u32(1),
+                        Expr::bitand(Expr::var("pattern_id"), Expr::u32(31)),
                     ),
                 ),
-            ],
-        ),
-        Node::let_bind("out_begin", Expr::load(output_offsets, Expr::var("state"))),
-        Node::let_bind(
-            "out_end",
-            Expr::load(output_offsets, Expr::add(Expr::var("state"), Expr::u32(1))),
-        ),
-        Node::loop_for("out_idx", Expr::var("out_begin"), Expr::var("out_end"), {
-            vec![
-                Node::let_bind(
-                    "pattern_id",
-                    Expr::load(output_records, Expr::var("out_idx")),
-                ),
-                // presence[pattern_id >> 5] |= 1u32 << (pattern_id & 31).
-                // Bind the (discarded) previous value so the atomic RMW is emitted
-                // as a side-effecting statement (same idiom as `append_match`'s
-                // `_vyre_match_slot`).
-                Node::let_bind(
-                    "_vyre_presence_prev",
-                    Expr::atomic_or(
-                        presence,
-                        Expr::shr(Expr::var("pattern_id"), Expr::u32(5)),
-                        Expr::shl(
-                            Expr::u32(1),
-                            Expr::bitand(Expr::var("pattern_id"), Expr::u32(31)),
-                        ),
-                    ),
-                ),
-            ]
-        }),
-    ]
+            ),
+        ],
+    ));
+    nodes
 }
 
 /// Region-attributed counterpart of [`bounded_ranges_presence_nodes`]: write the
@@ -337,7 +283,7 @@ fn bounded_ranges_presence_nodes(
 /// Innovation: a coalesced-batch consumer packs N independent
 /// files into one haystack and needs to know which patterns fired *in each file*,
 /// not just somewhere in the batch. The triple-append path gives exact spans the
-/// consumer then reduces to a per-file trigger set on the host — paying the dense
+/// consumer then reduces to a per-file trigger set on the host, paying the dense
 /// per-hit atomic-counter serialization + large triple readback measured to
 /// collapse a 554 MB/s scan to 4.4 MB/s. This builder keeps the idempotent
 /// `atomic_or` (no counter, stays near the scan ceiling) but indexes it by region:
@@ -345,7 +291,7 @@ fn bounded_ranges_presence_nodes(
 /// search over `region_starts` (ascending file start offsets in the coalesced
 /// buffer; `region_starts[0]` MUST be 0), then the bit lands in
 /// `presence[region * presence_words + (pattern_id >> 5)]`. The readback is the
-/// `region_count × presence_words` bitmap the consumer wanted directly — no host
+/// `region_count × presence_words` bitmap the consumer wanted directly, no host
 /// reduction, no span materialization.
 ///
 /// `log2_max_regions` fixed binary-search iterations bound the region lookup
@@ -367,16 +313,6 @@ fn bounded_ranges_presence_by_region_nodes(
     presence_words: u32,
     log2_max_regions: u32,
 ) -> Vec<Node> {
-    let max_pattern_len = max_pattern_len.max(1);
-    let i = Expr::var("i");
-    let end = Expr::add(i.clone(), Expr::u32(1));
-    let scan_start = Expr::select(
-        Expr::lt(i.clone(), Expr::u32(max_pattern_len - 1)),
-        Expr::u32(0),
-        Expr::sub(end.clone(), Expr::u32(max_pattern_len)),
-    );
-    let (load_step_byte, step_byte) = load_packed_byte(haystack, Expr::var("step"));
-
     // Region lookup + presence writes, run ONLY when this candidate has matches
     // (`out_begin < out_end`). `region = largest r with region_starts[r] <= pos`
     // where `pos = i + region_base` is the GLOBAL byte position: a sharded
@@ -384,7 +320,7 @@ fn bounded_ranges_presence_by_region_nodes(
     // whole batch's `region_starts` by adding the shard's base offset (0 for the
     // single-dispatch path). The binary search is fixed-iteration; `select`
     // evaluates both arms, so the `rs_mid - 1` arm can underflow to u32::MAX on
-    // the rejected branch — it is discarded (rs_mid == 0 only when rs_lo == rs_hi
+    // the rejected branch, it is discarded (rs_mid == 0 only when rs_lo == rs_hi
     // == 0, where region_starts[0] == 0 <= pos forces the `cond` arm), harmless.
     let mut region_and_emit =
         region_search_prologue_nodes(region_starts, region_base, presence_words, log2_max_regions);
@@ -415,35 +351,13 @@ fn bounded_ranges_presence_by_region_nodes(
         ],
     ));
 
-    vec![
-        Node::let_bind("state", Expr::u32(0)),
-        Node::let_bind("scan_start", scan_start),
-        Node::let_bind("scan_end", end),
-        Node::loop_for(
-            "step",
-            Expr::var("scan_start"),
-            Expr::var("scan_end"),
-            vec![
-                load_step_byte,
-                Node::assign(
-                    "state",
-                    Expr::load(
-                        transitions,
-                        Expr::add(Expr::mul(Expr::var("state"), Expr::u32(256)), step_byte),
-                    ),
-                ),
-            ],
-        ),
-        Node::let_bind("out_begin", Expr::load(output_offsets, Expr::var("state"))),
-        Node::let_bind(
-            "out_end",
-            Expr::load(output_offsets, Expr::add(Expr::var("state"), Expr::u32(1))),
-        ),
-        Node::if_then(
-            Expr::lt(Expr::var("out_begin"), Expr::var("out_end")),
-            region_and_emit,
-        ),
-    ]
+    let mut nodes =
+        bounded_walk_prologue_nodes(haystack, transitions, output_offsets, max_pattern_len);
+    nodes.push(Node::if_then(
+        Expr::lt(Expr::var("out_begin"), Expr::var("out_end")),
+        region_and_emit,
+    ));
+    nodes
 }
 
 /// The region binary-search PROLOGUE shared verbatim by the presence-only
@@ -529,13 +443,13 @@ fn region_search_prologue_nodes(
 ///
 /// Innovation: a coalesced-batch consumer (a GPU phase-1 scanner) needs the per-file
 /// trigger SET *and* the anchor/keyword match POSITIONS. Today it pays TWO full GPU
-/// scans of the same haystack — `scan_presence_by_region` (bitmap) then a second
-/// `scan_into` (triples) — because the presence bitmap carries no positions. Both
+/// scans of the same haystack: `scan_presence_by_region` (bitmap) then a second
+/// `scan_into` (triples), because the presence bitmap carries no positions. Both
 /// scans run the IDENTICAL suffix3 candidate gate + bounded DFA replay over the same
 /// `output_records`; only the per-record EMISSION differs. Fusing them runs the
 /// expensive walk ONCE and drives both outputs from the single `output_records`
 /// loop, halving the consumer's phase-1 work. Recall-identical to the two separate
-/// scans by construction: same candidate set, same walk, same iteration order — the
+/// scans by construction: same candidate set, same walk, same iteration order, the
 /// presence bits equal `scan_presence_by_region`'s and the triples equal
 /// `scan_into`'s, just produced together.
 #[allow(clippy::too_many_arguments)]
@@ -554,16 +468,6 @@ fn bounded_ranges_presence_and_positions_by_region_nodes(
     presence_words: u32,
     log2_max_regions: u32,
 ) -> Vec<Node> {
-    let max_pattern_len = max_pattern_len.max(1);
-    let i = Expr::var("i");
-    let end = Expr::add(i.clone(), Expr::u32(1));
-    let scan_start = Expr::select(
-        Expr::lt(i.clone(), Expr::u32(max_pattern_len - 1)),
-        Expr::u32(0),
-        Expr::sub(end.clone(), Expr::u32(max_pattern_len)),
-    );
-    let (load_step_byte, step_byte) = load_packed_byte(haystack, Expr::var("step"));
-
     // Region binary search (identical to the presence-only builder), then ONE
     // `output_records` loop that emits the region presence bit AND the match triple
     // per accepted pattern. `pos = i + region_base` is the GLOBAL byte position so a
@@ -622,35 +526,13 @@ fn bounded_ranges_presence_and_positions_by_region_nodes(
         ],
     ));
 
-    vec![
-        Node::let_bind("state", Expr::u32(0)),
-        Node::let_bind("scan_start", scan_start),
-        Node::let_bind("scan_end", end),
-        Node::loop_for(
-            "step",
-            Expr::var("scan_start"),
-            Expr::var("scan_end"),
-            vec![
-                load_step_byte,
-                Node::assign(
-                    "state",
-                    Expr::load(
-                        transitions,
-                        Expr::add(Expr::mul(Expr::var("state"), Expr::u32(256)), step_byte),
-                    ),
-                ),
-            ],
-        ),
-        Node::let_bind("out_begin", Expr::load(output_offsets, Expr::var("state"))),
-        Node::let_bind(
-            "out_end",
-            Expr::load(output_offsets, Expr::add(Expr::var("state"), Expr::u32(1))),
-        ),
-        Node::if_then(
-            Expr::lt(Expr::var("out_begin"), Expr::var("out_end")),
-            region_and_emit,
-        ),
-    ]
+    let mut nodes =
+        bounded_walk_prologue_nodes(haystack, transitions, output_offsets, max_pattern_len);
+    nodes.push(Node::if_then(
+        Expr::lt(Expr::var("out_begin"), Expr::var("out_end")),
+        region_and_emit,
+    ));
+    nodes
 }
 
 /// Build the dispatch Program for a bounded-ranges AC scan over an
@@ -688,12 +570,12 @@ pub fn build_ac_bounded_ranges_program_ext(
         Ok(program) => program,
         Err(error) => {
             // Returning an empty-rejecting program would silently drop every
-            // match without the caller knowing — a total recall-loss silent
+            // match without the caller knowing, a total recall-loss silent
             // fallback. Fail closed instead. Callers that need graceful
             // overflow handling must call try_build_ac_bounded_ranges_program_ext
             // directly and shard oversized DFAs across multiple programs.
             panic!(
-                "AC bounded-ranges program build failed: {error} — \
+                "AC bounded-ranges program build failed: {error}. \
                  returning an empty rejecting automaton would silently drop every match; \
                  use try_build_ac_bounded_ranges_program_ext and shard oversized DFAs."
             )
@@ -751,25 +633,6 @@ pub fn try_build_ac_bounded_ranges_program_ext(
     ))
 }
 
-fn empty_ac_bounded_ranges_program(max_matches: u32, use_subgroup_coalesce: bool) -> Program {
-    classic_ac_bounded_ranges_program_ext(
-        "haystack",
-        "transitions",
-        "output_offsets",
-        "output_records",
-        "pattern_lengths",
-        "haystack_len",
-        "match_count",
-        "matches",
-        1,
-        0,
-        0,
-        max_matches,
-        0,
-        use_subgroup_coalesce,
-    )
-}
-
 /// CPU reference for [`classic_ac_bounded_ranges_program`]. Returns
 /// `(pattern_id, start, end)` triples reconstructed from
 /// `output_records` plus the pattern length table.
@@ -807,29 +670,32 @@ mod tests {
     use super::*;
     use crate::scan::classic_ac::classic_ac_compile;
 
-    /// Regression guard: build_ac_bounded_ranges_program_ext must never
-    /// silently return an empty-rejecting program when the DFA is oversized.
-    /// Before this fix the error arm called eprintln! and returned
-    /// empty_ac_bounded_ranges_program, causing zero matches without any
-    /// signal to the caller.
+    /// Behavioral regression guard: the infallible builder must wire the REAL DFA
+    /// metadata (delegating to the `try_` variant's Ok program), never the deleted
+    /// degenerate empty-rejecting fallback (state_count=1, output_records_len=0) that
+    /// silently dropped every match.
     #[test]
-    fn infallible_ac_program_builder_panics_not_falls_back() {
-        let src = std::fs::read_to_string(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/src/scan/classic_ac/bounded_ranges.rs"
-        ))
-        .expect("Fix: bounded_ranges source must be readable for regression guard");
-        let production = src
-            .split("\n#[cfg(test)]")
-            .next()
-            .expect("Fix: bounded_ranges source must have a test section");
-        // The old silent-fallback arm used eprintln! to swallow the error before
-        // returning an empty-rejecting program. Check the eprintln! is gone.
+    fn infallible_builder_uses_real_dfa_not_empty_fallback() {
+        let ac = classic_ac_compile(&[b"abc", b"de", b"abcd"]);
+        let via_infallible = build_ac_bounded_ranges_program_ext(&ac.dfa, 3, 128, false);
+        let via_try = try_build_ac_bounded_ranges_program_ext(&ac.dfa, 3, 128, false)
+            .expect("valid DFA must build");
+        // Binding 3 is output_records: the empty fallback carried 0 here.
+        let records = via_infallible.buffers()[3].count;
+        assert_eq!(records as usize, ac.dfa.output_records.len());
         assert!(
-            !production.contains("eprintln!(\"vyre-libs AC bounded-ranges program build failed"),
-            "build_ac_bounded_ranges_program_ext must not silently log and return an empty \
-             program on error — use panic!() so callers are forced to use \
-             try_build_ac_bounded_ranges_program_ext."
+            records > 0,
+            "infallible builder must not emit the empty-records fallback program"
+        );
+        // Binding 1 is the real transition table, not the 1-state stub.
+        assert_eq!(
+            via_infallible.buffers()[1].count,
+            ac.dfa.state_count.saturating_mul(256)
+        );
+        assert_eq!(via_infallible.buffers().len(), via_try.buffers().len());
+        assert_eq!(
+            via_infallible.buffers()[3].count,
+            via_try.buffers()[3].count
         );
     }
 
@@ -857,7 +723,7 @@ mod tests {
     /// the DFA output_records contain a pid beyond pattern_lengths.len().
     /// Before the fix, pattern_lengths.get(pid).copied().unwrap_or(0) would
     /// silently treat the OOB pid as pat_len=0, producing a zero-length match
-    /// at the right position — masking the root cause of the mismatch and
+    /// at the right position, masking the root cause of the mismatch and
     /// making parity tests impossible to detect the bug.
     #[test]
     #[should_panic]
@@ -870,7 +736,7 @@ mod tests {
         let transitions: Vec<u32> = {
             let mut t = vec![0u32; 2 * 256]; // 2 states
             t[0 * 256 + b'A' as usize] = 1; // state 0 --'A'--> state 1
-            // state 1 loops to 0 on all other bytes (default 0)
+                                            // state 1 loops to 0 on all other bytes (default 0)
             t
         };
         let accept = vec![0u32, 6u32]; // state 1: accept=6 (pid=5, encoded as 5+1)
@@ -886,7 +752,7 @@ mod tests {
             output_records,
         };
         let ac = crate::scan::classic_ac::ClassicAcAutomaton { dfa };
-        // pattern_lengths only has 3 entries (pids 0..2) — pid=5 is OOB.
+        // pattern_lengths only has 3 entries (pids 0..2) (pid=5 is OOB).
         // This must panic, not silently produce a zero-length match.
         let _result = classic_ac_bounded_ranges_scan(&ac, &[1u32, 2u32, 3u32], b"A");
     }

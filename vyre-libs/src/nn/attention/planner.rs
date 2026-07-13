@@ -125,7 +125,10 @@ pub fn plan_flash_attention_scalar(
         bench_metrics: FlashAttentionBenchMetrics {
             output_tolerance_abs: FLASH_ATTENTION_OUTPUT_TOLERANCE_ABS,
             memory_traffic,
-            occupancy_proxy_bps: occupancy_proxy_bps(head_dim.max(1), SCALAR_ONLINE_WORKGROUP_LANES),
+            occupancy_proxy_bps: occupancy_proxy_bps(
+                head_dim.max(1),
+                SCALAR_ONLINE_WORKGROUP_LANES,
+            ),
             non_matmul_flops: scalar_non_matmul_flops(seq_len, head_dim),
         },
     })
@@ -232,7 +235,9 @@ fn validate_attention_dims(context: &str, seq_len: u32, head_dim: u32) -> Result
         return Err(format!("{context} seq_len=0 is invalid: empty sequence"));
     }
     if head_dim == 0 {
-        return Err(format!("{context} head_dim=0 is invalid: empty head dimension"));
+        return Err(format!(
+            "{context} head_dim=0 is invalid: empty head dimension"
+        ));
     }
     checked_mul(seq_len, head_dim, context)
 }
@@ -366,9 +371,7 @@ mod tests {
         assert!(tiled.bench_metrics.memory_traffic.shared_memory_bytes > 0);
         assert!(tiled.bench_metrics.occupancy_proxy_bps > 0);
         assert!(tiled.bench_metrics.non_matmul_flops > 0);
-        assert!(
-            tiled.bench_metrics.non_matmul_flops < scalar.bench_metrics.non_matmul_flops
-        );
+        assert!(tiled.bench_metrics.non_matmul_flops < scalar.bench_metrics.non_matmul_flops);
     }
 
     #[test]
@@ -378,24 +381,20 @@ mod tests {
             super::super::flash_attention::flash_attention("q", "k", "v", "out", 9, 7)
                 .expect("flash_attention build");
         assert_eq!(scalar_program.workgroup_size()[0], scalar.workgroup_lanes);
-        assert!(
-            scalar_program
-                .buffers()
-                .iter()
-                .any(|buffer| buffer.name() == "flash_o"
-                    && buffer.count() == scalar.o_acc_scratch_elements)
-        );
+        assert!(scalar_program
+            .buffers()
+            .iter()
+            .any(|buffer| buffer.name() == "flash_o"
+                && buffer.count() == scalar.o_acc_scratch_elements));
 
         let tiled = plan_flash_attention_tiled(8, 16, 4).expect("tiled plan");
         let tiled_program =
             super::super::flash_attention_2::flash_attention_2("q", "k", "v", "out", 8, 16, 4);
         assert_eq!(tiled_program.workgroup_size()[0], tiled.workgroup_lanes);
-        assert!(
-            tiled_program
-                .buffers()
-                .iter()
-                .any(|buffer| buffer.name() == "score_tile"
-                    && buffer.count() == tiled.score_scratch_elements)
-        );
+        assert!(tiled_program
+            .buffers()
+            .iter()
+            .any(|buffer| buffer.name() == "score_tile"
+                && buffer.count() == tiled.score_scratch_elements));
     }
 }

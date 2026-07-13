@@ -1,6 +1,6 @@
 [package]
 name = "vyre-bench"
-version = "0.6.4"
+version = "0.6.5"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -61,10 +61,11 @@ vyre-driver-cuda = { workspace = true }
 default = []
 
 [dev-dependencies]
+vyre-test-support.workspace = true
 criterion = { workspace = true }
 proptest = { workspace = true }
-vyre-emit-naga = { workspace = true }
-vyre-emit-spirv = { workspace = true }
+vyre-emit-naga = { path = "../vyre-emit-naga" }
+vyre-emit-spirv = { path = "../vyre-emit-spirv" }
 
 [[bench]]
 name = "release"

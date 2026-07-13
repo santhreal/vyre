@@ -280,7 +280,7 @@ pub(crate) fn validate_unop_operand(
             | crate::ir_inner::model::types::UnOp::Unpack8Low
             | crate::ir_inner::model::types::UnOp::Unpack8High => {
                 // VAL-004: nibble/byte unpack ops extract a masked, shifted lane
-                // from a 32-bit integer word — emit lowers them to
+                // from a 32-bit integer word, emit lowers them to
                 // `(v >> shift) & mask` and the reference interpreter mirrors it,
                 // so operand and result are 32-bit integers. These previously
                 // fell through to the `_` catch-all and were rejected as "not

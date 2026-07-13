@@ -19,7 +19,7 @@ pub fn c11_statement_bounds(
         // The statement output buffers are sized at build time from this count
         // (`tok_count.saturating_mul(2)` below). Silently defaulting a
         // runtime-dynamic count to 1 would mis-size those buffers and drop
-        // statements with no signal — fail fast instead.
+        // statements with no signal (fail fast instead).
         other => panic!(
             "c11_statement_bounds requires a literal token-window count for build-time output \
              buffer sizing, got a non-literal expression {other:?}. Fix: pass Expr::u32(N)."

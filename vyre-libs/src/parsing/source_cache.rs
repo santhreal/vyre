@@ -242,7 +242,7 @@ impl<T> ParsedSourceLru<T> {
         // mid-mutation of the LRU maps (entries/recency/coldest can be left
         // inconsistent), so handing that half-updated state back as if nothing
         // happened would silently corrupt every subsequent get/insert. Propagate
-        // the panic loudly — same poison policy as the readiness mutex below.
+        // the panic loudly (same poison policy as the readiness mutex below).
         // (The in-flight-parse state lock is a SEPARATE, deliberate protocol:
         // a panicking parse is an expected, flagged condition there.)
         self.inner

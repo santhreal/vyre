@@ -137,13 +137,10 @@ pub fn sinkhorn_clustering_program(m: u32, n: u32, d: u32, iters: u32, eps: f32)
                             // K_ij = exp(-cost_ij / eps)
                             Node::let_bind(
                                 "k_ij",
-                                Expr::call(
-                                    "exp",
-                                    vec![Expr::div(
-                                        Expr::negate(Expr::var("cost_ij")),
-                                        Expr::f32(eps),
-                                    )],
-                                ),
+                                Expr::exp(Expr::div(
+                                    Expr::negate(Expr::var("cost_ij")),
+                                    Expr::f32(eps),
+                                )),
                             ),
                             Node::assign(
                                 "kv_sum",
@@ -217,13 +214,10 @@ pub fn sinkhorn_clustering_program(m: u32, n: u32, d: u32, iters: u32, eps: f32)
                             ),
                             Node::let_bind(
                                 "k_ij_rev",
-                                Expr::call(
-                                    "exp",
-                                    vec![Expr::div(
-                                        Expr::negate(Expr::var("cost_ij_rev")),
-                                        Expr::f32(eps),
-                                    )],
-                                ),
+                                Expr::exp(Expr::div(
+                                    Expr::negate(Expr::var("cost_ij_rev")),
+                                    Expr::f32(eps),
+                                )),
                             ),
                             Node::assign(
                                 "ku_sum",
@@ -303,13 +297,10 @@ pub fn sinkhorn_clustering_program(m: u32, n: u32, d: u32, iters: u32, eps: f32)
                     ),
                     Node::let_bind(
                         "k_ij_final",
-                        Expr::call(
-                            "exp",
-                            vec![Expr::div(
-                                Expr::negate(Expr::var("cost_ij_final")),
-                                Expr::f32(eps),
-                            )],
-                        ),
+                        Expr::exp(Expr::div(
+                            Expr::negate(Expr::var("cost_ij_final")),
+                            Expr::f32(eps),
+                        )),
                     ),
                     Node::let_bind(
                         "val",
@@ -487,26 +478,33 @@ pub fn sinkhorn_clustering_via_with_scratch_into(
     }
 
     let program = sinkhorn_clustering_program(m, n, d, iters, eps);
-    ensure_input_slots(&mut scratch.inputs, 7);
+    // Real-backend dispatch-input contract (vyre-driver `role_for_buffer`): one input per
+    // INPUT-CONSUMING buffer in buffer order, the four read-only inputs `region_features` (0),
+    // `cluster_centroids` (1), `region_weights` (2), `cluster_capacities` (3), then the two plain-RW
+    // dual-scaling scratch buffers `u` (4), `v` (5, zero-init). `out_assignments` (binding 6) is a
+    // `BufferDecl::output`: the backend ALLOCATES it and it consumes NO input, so passing a seventh
+    // slot for it over-feeds and would fail the backend's strict `validate_input_lengths`
+    // ("expected 6, received 7"). Six inputs only.
+    ensure_input_slots(&mut scratch.inputs, 6);
     write_f32_slice_le_bytes(&mut scratch.inputs[0], region_features);
     write_f32_slice_le_bytes(&mut scratch.inputs[1], cluster_centroids);
     write_f32_slice_le_bytes(&mut scratch.inputs[2], region_weights);
     write_f32_slice_le_bytes(&mut scratch.inputs[3], cluster_capacities);
     write_zero_bytes(&mut scratch.inputs[4], byte_count(m as usize, "u")?);
     write_zero_bytes(&mut scratch.inputs[5], byte_count(n as usize, "v")?);
-    write_zero_bytes(
-        &mut scratch.inputs[6],
-        byte_count(m as usize, "out_assignments")?,
-    );
-    let outputs = dispatcher.dispatch(&program, &scratch.inputs, Some([1, 1, 1]))?;
-    if outputs.len() != 1 {
+    let outputs = dispatcher.dispatch(&program, &scratch.inputs[..6], Some([1, 1, 1]))?;
+    // Real-backend output contract: the backend returns every WRITABLE buffer in binding order 
+    // the two plain-RW dual-scaling buffers `u` (4) and `v` (5, both role InputOutput → outputs 0,1)
+    // then the `out_assignments` output (6 → output 2). The assignment vector is therefore the THIRD
+    // output, not the first (the old program-ignoring mock faked a single-output return, hiding this).
+    if outputs.len() != 3 {
         return Err(DispatchError::BackendError(format!(
-            "Fix: sinkhorn_clustering_via expected exactly one out_assignments output, got {}.",
+            "Fix: sinkhorn_clustering_via expected 3 writable outputs (u, v, out_assignments), got {}.",
             outputs.len()
         )));
     }
     decode_u32_output_exact(
-        &outputs[0],
+        &outputs[2],
         m as usize,
         "sinkhorn_clustering_via out_assignments",
         assignments_out,
@@ -693,9 +691,11 @@ mod tests {
             grid_override: Option<[u32; 3]>,
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
             assert_eq!(grid_override, Some([1, 1, 1]));
-            if inputs.len() != 7 {
+            // Real-backend contract: 4 RO inputs + u/v plain-RW = 6 input-consuming buffers;
+            // out_assignments is a backend-allocated `BufferDecl::output`, not an input.
+            if inputs.len() != 6 {
                 return Err(DispatchError::BadInputs(format!(
-                    "Fix: sinkhorn test dispatcher expected 7 inputs, got {}.",
+                    "Fix: sinkhorn test dispatcher expected 6 inputs, got {}.",
                     inputs.len()
                 )));
             }
@@ -808,8 +808,13 @@ mod tests {
 
     #[test]
     fn via_decodes_exact_assignments_into_reused_buffer() {
+        // Real-backend output shape: [u, v, out_assignments] (the decoder reads the THIRD buffer).
         let dispatcher = SinkhornDispatcher {
-            outputs: vec![crate::dispatch_buffers::u32_slice_to_le_bytes(&[0, 1])],
+            outputs: vec![
+                crate::dispatch_buffers::u32_slice_to_le_bytes(&[0, 0]),
+                crate::dispatch_buffers::u32_slice_to_le_bytes(&[0, 0]),
+                crate::dispatch_buffers::u32_slice_to_le_bytes(&[0, 1]),
+            ],
         };
         let mut out = Vec::with_capacity(4);
         let ptr = out.as_ptr();
@@ -833,8 +838,13 @@ mod tests {
 
     #[test]
     fn via_with_scratch_reuses_dispatch_and_assignment_storage() {
+        // Real-backend output shape: [u, v, out_assignments] (the decoder reads the THIRD buffer).
         let dispatcher = SinkhornDispatcher {
-            outputs: vec![crate::dispatch_buffers::u32_slice_to_le_bytes(&[0, 1])],
+            outputs: vec![
+                crate::dispatch_buffers::u32_slice_to_le_bytes(&[0, 0]),
+                crate::dispatch_buffers::u32_slice_to_le_bytes(&[0, 0]),
+                crate::dispatch_buffers::u32_slice_to_le_bytes(&[0, 1]),
+            ],
         };
         let mut scratch = SinkhornDispatchGpuScratch::default();
         let mut out = Vec::with_capacity(2);
@@ -884,10 +894,13 @@ mod tests {
 
     #[test]
     fn via_rejects_extra_outputs() {
+        // A backend returning more than the 3 writable buffers (u, v, out_assignments) is malformed.
         let dispatcher = SinkhornDispatcher {
             outputs: vec![
                 crate::dispatch_buffers::u32_slice_to_le_bytes(&[0]),
+                crate::dispatch_buffers::u32_slice_to_le_bytes(&[0]),
                 crate::dispatch_buffers::u32_slice_to_le_bytes(&[1]),
+                crate::dispatch_buffers::u32_slice_to_le_bytes(&[9]),
             ],
         };
         let err =
@@ -901,8 +914,13 @@ mod tests {
 
     #[test]
     fn via_rejects_trailing_assignment_bytes() {
+        // Correct 3-output shape but the out_assignments buffer (index 2) has a trailing byte.
         let dispatcher = SinkhornDispatcher {
-            outputs: vec![vec![0, 0, 0, 0, 1]],
+            outputs: vec![
+                crate::dispatch_buffers::u32_slice_to_le_bytes(&[0]),
+                crate::dispatch_buffers::u32_slice_to_le_bytes(&[0]),
+                vec![0, 0, 0, 0, 1],
+            ],
         };
         let err =
             sinkhorn_clustering_via(&dispatcher, &[0.0], &[0.0], &[1.0], &[1.0], 1, 1, 1, 5, 1.0)

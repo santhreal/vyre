@@ -3,7 +3,7 @@
 ## The gap (real-path, multi-axis)
 `vyre-foundation/src/lower/subgroup_lowering.rs:179-188` explicitly REFUSES to lower
 `workgroup_max_*` reductions to subgroup ops ("for simplicity ... we just keep the
-original body — the task focuses on sum reductions"). So `workgroup_max_f32`
+original body, the task focuses on sum reductions"). So `workgroup_max_f32`
 (a SHIPPED primitive, `vyre-primitives/src/reduce/workgroup_tree.rs:108`, dispatched
 via `vyre-self-substrate/.../dispatch_workgroup_max_f32`) runs as the slow
 shared-memory tree even on subgroup-capable hardware, while sum reductions get the
@@ -14,7 +14,7 @@ driver taxonomy (`vyre-driver/src/subgroup.rs::SubgroupOp`) and wgpu capability
 diagnostics (`vyre-driver-wgpu/tests/wgpu_subgroup_*`) already promise
 `subgroup_min`/`subgroup_max`, but the IR/emit cannot produce them.
 
-Axes: CAPABILITY (IR can't express max/min), PERF (Law 7 — max stays on slow tree),
+Axes: CAPABILITY (IR can't express max/min), PERF (Law 7, max stays on slow tree),
 COHERENCE (driver promises ops the IR lacks), WIRING (the lowering's max branch is a
 dead `None`).
 
@@ -39,7 +39,7 @@ Mirror the existing `Atomic { op: AtomicOp }` shape exactly.
 - **metal**: `simd_sum / simd_product / simd_min / simd_max / simd_and / simd_or / simd_xor`.
 - **ptx/cuda**: integer ops via `redux.sync.{add,min,max,and,or,xor}.{u32,s32}` (sm_80+);
   float + mul via the shuffle-butterfly tree with the op swapped in the combine step.
-  Any (op,dtype) a target cannot lower must FAIL CLOSED LOUDLY (EmitError) — never
+  Any (op,dtype) a target cannot lower must FAIL CLOSED LOUDLY (EmitError), never
   silent (Law 10).
 - **reference oracle** (`eval_subgroup_add` → `eval_subgroup_reduce(op)`): fold the
   lane snapshots with the op; neutral = 0(Add)/1(Mul)/+inf(Min)/-inf(Max)/!0(And)/0(Or/Xor).
@@ -93,13 +93,13 @@ through b32 around the shuffle; the integer path shuffles the accumulator direct
 and combines with `mul.lo.{u32,s32}`). Verified end-to-end on a real RTX 5090
 (sm_120): `vyre-driver-cuda/tests/subgroup_reduce_gpu_parity.rs` runs
 `subgroup_reduce` over a 32-lane warp and asserts every lane holds the full
-reduction — f32 add (528) / f32 max (12.5) / u32 add (528) / u32 mul (2310) /
+reduction: f32 add (528) / f32 max (12.5) / u32 add (528) / u32 mul (2310) /
 u32 max (63), all passing. (`in` is declared read-only so the dispatch returns
 only `out` as `outputs[0]`; a read-write input is also returned, ahead of `out`,
 which once made these tests read back the unchanged input.)
 
 f32-bitwise (And/Or/Xor) is rejected at THREE layers now, not just emit: the
-foundation validator fails closed at the type boundary (`V047`, expr_rules.rs —
+foundation validator fails closed at the type boundary (`V047`, expr_rules.rs 
 `op.is_bitwise() && operand:f32`), the PTX emitter fails closed at emit, and the
 reference oracle returns None for the f32 combine. Positive twins keep the gate
 honest: integer And/Or/Xor and f32 Add/Mul/Min/Max all validate clean. This makes

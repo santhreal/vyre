@@ -8,7 +8,7 @@ use smallvec::SmallVec;
 use vyre_driver::BackendError;
 use vyre_lower::TRAP_SIDECAR_WORDS;
 
-use crate::numeric::usize_to_u64;
+use crate::numeric::WGPU_NUMERIC;
 use crate::pipeline::binding::{usage_for_binding, validate_handle};
 use crate::pipeline::{BufferBindingInfo, WgpuPipeline};
 
@@ -119,7 +119,7 @@ impl WgpuPipeline {
             }
             vyre_driver::Resource::Borrowed(bytes) => {
                 let byte_len = self.persistent_resource_byte_len(info, Some(bytes.as_slice()))?;
-                let byte_len_u64 = usize_to_u64(byte_len, "persistent resource bytes")?;
+                let byte_len_u64 = WGPU_NUMERIC.usize_to_u64(byte_len, "persistent resource bytes")?;
                 let handle = self
                     .persistent_pool
                     .acquire(byte_len_u64, usage_for_binding(info)?)?;

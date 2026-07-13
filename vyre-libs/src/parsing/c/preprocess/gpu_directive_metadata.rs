@@ -59,6 +59,7 @@
 //! to `0` and conditionally overwritten by exactly the matching
 //! keyword arm (matches are mutually exclusive by length+content).
 
+use super::gpu_directive_parse_shared::MAX_DIRECTIVE_WS_PREFIX as MAX_WS_PREFIX;
 use crate::parsing::c::lex::tokens::{
     TOK_PP_DEFINE, TOK_PP_ELIF, TOK_PP_ELSE, TOK_PP_ENDIF, TOK_PP_ERROR, TOK_PP_IDENT, TOK_PP_IF,
     TOK_PP_IFDEF, TOK_PP_IFNDEF, TOK_PP_INCLUDE, TOK_PP_INCLUDE_NEXT, TOK_PP_LINE, TOK_PP_NULL,
@@ -88,12 +89,6 @@ pub const BINDING_DIRECTIVE_VALUES: u32 = 5;
 /// bytes). The kernel only inspects the first this many bytes after `#`
 /// when classifying.
 pub const MAX_KEYWORD_LEN: u32 = 12;
-
-/// Maximum horizontal-whitespace runs the kernel tolerates before `#`
-/// and between `#` and the keyword. Practical real-world usage is 0–1
-/// in each position; we cap at 4 each which is more than enough and
-/// keeps the unrolled hash/keyword scan a fixed depth.
-const MAX_WS_PREFIX: u32 = 4;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum SourceLayout {

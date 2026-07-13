@@ -58,7 +58,7 @@ fn lit_int(expr: &Expr) -> Option<()> {
 /// Used to guard reflexive *idempotent* folding (`x & x → x`,
 /// `min(x, x) → x`) so we never elide a Load whose ordering matters.
 /// Those folds return the operand itself, so they are sound for every
-/// type — including a float `x` that is `NaN`, where `min(NaN, NaN)`
+/// type, including a float `x` that is `NaN`, where `min(NaN, NaN)`
 /// is `NaN` and the rule yields `x` unchanged.
 pub(super) fn is_simple_pure(expr: &Expr) -> bool {
     matches!(
@@ -81,7 +81,7 @@ pub(super) fn is_simple_pure(expr: &Expr) -> bool {
 ///
 /// This is strictly stronger than [`is_simple_pure`]. Comparison folds
 /// collapse the operand to a constant `bool`, so they are only valid
-/// when reflexivity actually holds — which fails for IEEE-754 `NaN`:
+/// when reflexivity actually holds, which fails for IEEE-754 `NaN`:
 /// `NaN == NaN` is `false` and `NaN != NaN` is `true`, and both the
 /// reference oracle (`vyre-reference::binop_f32`) and the SPIR-V
 /// emitter (`OpFOrdEqual`) honor that. `x != x` is the canonical
@@ -90,7 +90,7 @@ pub(super) fn is_simple_pure(expr: &Expr) -> bool {
 ///
 /// `Var` is therefore EXCLUDED: const_fold is type-blind, so a bare
 /// `Var` may bind a float that is `NaN` at runtime. `LitF32` is excluded
-/// too — two float literals are folded by the typed literal evaluator,
+/// too, two float literals are folded by the typed literal evaluator,
 /// which computes `NaN == NaN → false` correctly; this structural rule
 /// must not shortcut it. (A `LitF32(NaN)` would also fail the
 /// `left == right` precondition under the IR's native-`f32` equality,
@@ -530,7 +530,7 @@ pub(super) fn simplify_binop(op: crate::ir::BinOp, left: &Expr, right: &Expr) ->
             }
             // x / x is NOT folded to 1: it is unsound when x can be 0.
             // The reference oracle defines unsigned `0 / 0` as `u32::MAX`
-            // (`div_u32`) — not 1 — and the SPIR-V emitter's guarded
+            // (`div_u32`), not 1, and the SPIR-V emitter's guarded
             // `div_u32` Select agrees, so folding to 1 diverges from BOTH
             // for u32 x=0; signed `0 / 0` errors in the oracle
             // (`div_i32`). const_fold is type- and value-blind here, so it
@@ -618,7 +618,7 @@ pub(super) fn simplify_binop(op: crate::ir::BinOp, left: &Expr, right: &Expr) ->
         //      both honor this), so folding type-blind would miscompile
         //      the canonical hand-rolled NaN check.
         // `is_reflexive_cmp_safe` admits only integer/bool literals and
-        // the u32 builtins — it EXCLUDES `Var` (unknown type, may be a
+        // the u32 builtins, it EXCLUDES `Var` (unknown type, may be a
         // float NaN) and `LitF32`. See its doc for how a provably-integer
         // `Var` could be recovered via the type-fact substrate.
         BinOp::Eq if left == right && is_reflexive_cmp_safe(left) => Some(Expr::bool(true)),
@@ -637,7 +637,7 @@ pub(super) fn simplify_binop(op: crate::ir::BinOp, left: &Expr, right: &Expr) ->
         // Unsigned `0 % 0` is defined as 0 by the oracle (`rem_u32`) and
         // would agree, BUT signed `0 % 0` *errors* in the oracle
         // (`rem_i32`), so a type-blind fold to 0 fabricates a value where
-        // the i32 program is undefined — the same divergence the i32
+        // the i32 program is undefined, the same divergence the i32
         // literal div/mod fix declines. const_fold cannot prove x is
         // unsigned or non-zero here, so it declines. Literal `k % k`
         // still folds via the typed literal evaluator.

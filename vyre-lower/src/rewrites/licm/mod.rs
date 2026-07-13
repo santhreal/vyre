@@ -509,7 +509,7 @@ fn load_is_loop_invariant_memory(
 /// loop (no memory write, no sync/control/dispatch effect, not a loop-varying
 /// value). EXHAUSTIVE ON PURPOSE (no `_` wildcard): a future `KernelOpKind`
 /// with a side effect must be classified here rather than silently defaulting
-/// to "pure" and being hoisted out of the loop — a miscompile.
+/// to "pure" and being hoisted out of the loop (a miscompile).
 fn is_pure(kind: &KernelOpKind) -> bool {
     match kind {
         // Pure value / builtin / arithmetic ops: no memory or control effect.
@@ -843,7 +843,7 @@ mod tests {
                             operands: vec![0],
                             result: Some(10),
                         },
-                        // Convergent SubgroupReduce(value = r10) — must NOT hoist.
+                        // Convergent SubgroupReduce(value = r10) (must NOT hoist).
                         KernelOp {
                             kind: KernelOpKind::SubgroupReduce {
                                 op: crate::SubgroupReduceOp::Add,
@@ -866,7 +866,7 @@ mod tests {
                 .ops
                 .iter()
                 .any(|o| matches!(o.kind, KernelOpKind::SubgroupReduce { .. })),
-            "convergent SubgroupReduce was hoisted out of the loop — a \
+            "convergent SubgroupReduce was hoisted out of the loop, a \
              miscompile: hoisting a subgroup collective changes the lane \
              participation context. It must stay inside the loop."
         );
@@ -1209,7 +1209,7 @@ mod tests {
         //
         // Layout:
         //   parent has two child bodies (indices 0 and 1).
-        //   child_bodies[0] = a body containing a sentinel literal  — must NOT be touched.
+        //   child_bodies[0] = a body containing a sentinel literal (must NOT be touched).
         //   child_bodies[1] = the actual if-then body.
         //   StructuredIfThen: operands = [cond=r0, then_body_idx=1].
         //   cond r0 has result-id 0, which is also a valid child-body index (0).
@@ -1223,7 +1223,7 @@ mod tests {
             dispatch: Dispatch::new(64, 1, 1),
             body: KernelBody {
                 ops: vec![
-                    // r0 = Lit(true) — condition; its result-id=0 also == child_bodies[0] index.
+                    // r0 = Lit(true) (condition; its result-id=0 also == child_bodies[0] index).
                     KernelOp {
                         kind: KernelOpKind::Literal,
                         operands: vec![0],

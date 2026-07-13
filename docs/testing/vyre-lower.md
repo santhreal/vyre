@@ -1,4 +1,4 @@
-# Testing program — vyre-lower
+# Testing program, vyre-lower
 
 | Kind | Location |
 |------|----------|

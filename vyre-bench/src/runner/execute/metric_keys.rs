@@ -423,7 +423,7 @@ pub(super) fn custom_metric_key(prefix: &'static str, name: &str) -> Option<&'st
         // (entries/hits/misses over the unique kernel set). Without these keys the
         // case's values are silently dropped by `collect_custom_metrics`, and the
         // driver's backend_metric_snapshot (0 for a codegen-only case that never
-        // dispatches a module) is the only value left via `or_insert_with` — which
+        // dispatches a module) is the only value left via `or_insert_with`: which
         // zeroed `cuda_ptx_source_cache_entries` in the release artifact and failed
         // the PTX pattern evidence gate. Registering them keeps the corpus values.
         ("", "cuda_ptx_source_cache_entries") => Some("cuda_ptx_source_cache_entries"),
@@ -473,7 +473,7 @@ pub(super) fn custom_metric_key(prefix: &'static str, name: &str) -> Option<&'st
         ("", "rust_frontend_gpu_lexer_batch_token_stride") => {
             Some("rust_frontend_gpu_lexer_batch_token_stride")
         }
-        // SyntheticCountWorkload metric_name values (families.rs) — absent entries cause
+        // SyntheticCountWorkload metric_name values (families.rs), absent entries cause
         // collect_custom_metrics to silently discard the record-count each iteration.
         ("", "condition_records") => Some("condition_records"),
         ("", "quantified_records") => Some("quantified_records"),

@@ -54,6 +54,7 @@ pub use typedef_ann::{
     c11_annotate_typedef_names_precomputed_scope_packed_haystack, c11_link_vast_typedef_symbols,
     c11_precompute_vast_decl_contexts, c11_precompute_vast_decl_prefix_starts,
     c11_precompute_vast_scopes, c11_precompute_vast_scopes_uses_global_stack,
+    c11_precompute_vast_visible_type, c11_precompute_vast_visible_type_packed_haystack,
     c11_prehash_vast_identifiers, c11_prehash_vast_identifiers_packed_haystack,
 };
 
@@ -119,6 +120,8 @@ const PRECOMPUTE_VAST_DECL_CONTEXTS_OP_ID: &str =
     "vyre-libs::parsing::c11_precompute_vast_decl_contexts";
 const PRECOMPUTE_VAST_DECL_PREFIX_STARTS_OP_ID: &str =
     "vyre-libs::parsing::c11_precompute_vast_decl_prefix_starts";
+const PRECOMPUTE_VAST_VISIBLE_TYPE_OP_ID: &str =
+    "vyre-libs::parsing::c11_precompute_vast_visible_type";
 const CLASSIFY_VAST_OP_ID: &str = "vyre-libs::parsing::c11_classify_vast_node_kinds";
 const ANNOTATE_TYPEDEF_OP_ID: &str = "vyre-libs::parsing::c11_annotate_typedef_names";
 const EXPR_SHAPE_OP_ID: &str = "vyre-libs::parsing::c11_build_expression_shape_nodes";

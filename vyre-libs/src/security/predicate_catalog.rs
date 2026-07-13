@@ -67,17 +67,23 @@ static SECURITY_PREDICATE_ROWS: OnceLock<Result<Vec<SecurityPredicateRow>, Strin
 
 /// Parse and return all bundled security predicate rows.
 pub fn try_security_predicate_rows() -> Result<&'static [SecurityPredicateRow], &'static str> {
-    match SECURITY_PREDICATE_ROWS.get_or_init(|| parse_security_predicates(SECURITY_PREDICATES_TOML))
+    match SECURITY_PREDICATE_ROWS
+        .get_or_init(|| parse_security_predicates(SECURITY_PREDICATES_TOML))
     {
         Ok(rows) => Ok(rows.as_slice()),
         Err(error) => Err(error.as_str()),
     }
 }
 
-/// Return parsed security predicate rows, or an empty slice if bundled data is invalid.
+/// Return parsed security predicate rows.
+///
+/// Fails closed: the Tier-B data is compile-embedded and must always parse, so a
+/// parse failure is a broken ship, not a runtime condition, panicking here keeps
+/// a data regression loud instead of silently wiping the security predicate set.
+/// Use [`try_security_predicate_rows`] where recoverable diagnostics are needed.
 #[must_use]
 pub fn security_predicate_rows() -> &'static [SecurityPredicateRow] {
-    try_security_predicate_rows().unwrap_or(&[])
+    try_security_predicate_rows().expect("bundled security predicate Tier-B TOML must parse")
 }
 
 /// Find one security predicate row by stable op id.
@@ -103,9 +109,11 @@ pub(crate) fn packed_witness_inputs(op_id: &str) -> Vec<Vec<Vec<u8>>> {
 
 pub(crate) fn packed_witness_expected(op_id: &str) -> Vec<Vec<Vec<u8>>> {
     security_predicate_row_by_op_id(op_id)
-        .map(|row| vec![vec![vyre_primitives::wire::pack_u32_slice(
-            &row.witness_expected,
-        )]])
+        .map(|row| {
+            vec![vec![vyre_primitives::wire::pack_u32_slice(
+                &row.witness_expected,
+            )]]
+        })
         .unwrap_or_default()
 }
 
@@ -167,7 +175,10 @@ fn parse_security_predicates(source: &str) -> Result<Vec<SecurityPredicateRow>, 
         }
     }
     if raw_rows.is_empty() {
-        return Err("Fix: security predicate Tier-B TOML must declare at least one [[predicate]] row.".to_string());
+        return Err(
+            "Fix: security predicate Tier-B TOML must declare at least one [[predicate]] row."
+                .to_string(),
+        );
     }
 
     let mut seen_ids = BTreeSet::new();
@@ -388,8 +399,9 @@ mod tests {
             super::super::xss_escape::OP_ID,
         ];
         for op_id in expected {
-            let row = security_predicate_row_by_op_id(op_id)
-                .unwrap_or_else(|| panic!("Fix: missing Tier-B security predicate row for {op_id}"));
+            let row = security_predicate_row_by_op_id(op_id).unwrap_or_else(|| {
+                panic!("Fix: missing Tier-B security predicate row for {op_id}")
+            });
             assert_eq!(row.op_id, op_id);
             assert_eq!(row.function, row.module);
         }

@@ -280,7 +280,7 @@ pub fn mask_test_bit_via(
     if (bit_idx / 32) as usize >= input.len() {
         return Ok(false);
     }
-    let program = bitset_test_bit("input", bit_idx, "out");
+    let program = bitset_test_bit("input", bit_idx, "out", input.len() as u32);
     let mut scratch = BitsetMaskAlgebraGpuScratch::default();
     ensure_input_slots(&mut scratch.inputs, 2);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], input);

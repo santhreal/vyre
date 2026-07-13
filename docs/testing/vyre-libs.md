@@ -1,4 +1,4 @@
-# Testing program — vyre-libs
+# Testing program, vyre-libs
 
 | Kind | Location |
 |------|----------|

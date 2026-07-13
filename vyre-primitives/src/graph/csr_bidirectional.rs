@@ -638,15 +638,9 @@ mod dispatch_plan_tests {
         let kinds: Vec<u32> = vec![1u32; 256];
         let frontier = vec![0u32; crate::bitset::bitset_words(257) as usize];
 
-        let plan_large = plan_csr_bidirectional_step(
-            257,
-            &offsets,
-            &targets,
-            &kinds,
-            &frontier,
-            u32::MAX,
-        )
-        .expect("Fix: valid 257-node bidirectional CSR step should produce dispatch plan");
+        let plan_large =
+            plan_csr_bidirectional_step(257, &offsets, &targets, &kinds, &frontier, u32::MAX)
+                .expect("Fix: valid 257-node bidirectional CSR step should produce dispatch plan");
         assert_eq!(
             plan_large.grid,
             [2, 1, 1],

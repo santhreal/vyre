@@ -60,10 +60,9 @@ pub fn try_ast_walk_plan(
 #[must_use]
 pub fn ast_walk_preorder(nodes: &str, out: &str, node_count: u32, out_cap: u32) -> Program {
     // Fail fast: an invalid launch shape must NOT silently degrade to an inert
-    // empty kernel that walks nothing — that is a silent recall loss with no
+    // empty kernel that walks nothing, that is a silent recall loss with no
     // signal. Callers needing structured handling use `try_ast_walk_preorder`.
-    try_ast_walk_preorder(nodes, out, node_count, out_cap)
-        .unwrap_or_else(|error| panic!("{error}"))
+    try_ast_walk_preorder(nodes, out, node_count, out_cap).unwrap_or_else(|error| panic!("{error}"))
 }
 
 /// Emit preorder node indices for a VAST first-child / next-sibling tree with

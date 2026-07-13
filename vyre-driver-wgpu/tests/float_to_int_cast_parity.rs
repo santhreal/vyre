@@ -14,7 +14,7 @@
 //! min, max, or NaN by hardware). The output is an integer, so the differential
 //! harness's ULP tolerance cannot mask a divergence. A legal kernel that casts a
 //! possibly-NaN float (e.g. `(0.0/0.0) as u32`) can therefore silently disagree
-//! with the oracle on the GPU — the div-by-zero / shift-mask silent-divergence
+//! with the oracle on the GPU, the div-by-zero / shift-mask silent-divergence
 //! class (Law 10).
 //!
 //! This test dispatches the cast on the live GPU and asserts byte-for-byte
@@ -118,7 +118,7 @@ fn f32_to_u32_cast_saturates_like_reference_including_nan() {
 #[test]
 fn computed_f32_overflow_casts_saturate_like_reference() {
     // The saturating guard must fire for a COMPUTED float source (an arithmetic
-    // result), not only a buffer load — the emitter detects the float source via
+    // result), not only a buffer load, the emitter detects the float source via
     // both the bound type handle AND the scalar-kind resolver, so a computed
     // float can't silently skip the guard back onto the diverging bare `As`.
     // fma(1e20, 1e20, 0) overflows: +inf in f32 on the GPU, 1e40 in the f64

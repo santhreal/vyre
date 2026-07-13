@@ -171,13 +171,9 @@ pub fn cpu_ref_into(input: &[u32], num_bins: u32, out: &mut Vec<u32>) {
 pub fn try_cpu_ref_into(input: &[u32], num_bins: u32, out: &mut Vec<u32>) -> Result<(), String> {
     let num_bins = usize::try_from(num_bins)
         .map_err(|_| format!("histogram bin count {num_bins} does not fit host usize"))?;
-    if num_bins > out.capacity() {
-        out.try_reserve_exact(num_bins - out.capacity())
-            .map_err(|err| {
-                format!("histogram CPU reference could not reserve {num_bins} bins: {err}")
-            })?;
-    }
-    out.clear();
+    crate::hostbuf::reserve_exact_cleared(out, num_bins).map_err(|err| {
+        format!("histogram CPU reference could not reserve {num_bins} bins: {err}")
+    })?;
     out.resize(num_bins, 0);
     for &bin in input {
         if let Ok(bin) = usize::try_from(bin) {

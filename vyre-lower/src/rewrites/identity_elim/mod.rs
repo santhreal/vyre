@@ -141,7 +141,7 @@ fn identity_elim_body(mut body: KernelBody) -> KernelBody {
                 // provably 0: `0.0 * inf = 0.0 * NaN = NaN`, so the result is
                 // NaN, not `c`. This matches the foundation `simplify_fma` guard
                 // ("Do not apply when the other multiplier is non-literal: 0 *
-                // NaN and 0 * inf must stay NaN") — one auditable contract for
+                // NaN and 0 * inf must stay NaN"), one auditable contract for
                 // the Program and lowered-descriptor rewrites. (Lit(1) cases
                 // would simplify to Add(other_factor, c) but require synthesizing
                 // a new op; that's outside identity_elim's id-substitution model.)
@@ -390,7 +390,7 @@ mod tests {
         assert_eq!(
             store.operands,
             vec![0, 0, 3],
-            "Fma(0.0, inf, c) was folded to its addend c — a miscompile: \
+            "Fma(0.0, inf, c) was folded to its addend c, a miscompile: \
              0.0 * inf = NaN, so the result is NaN, not c"
         );
     }

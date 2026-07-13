@@ -14,6 +14,7 @@
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::region::wrap_anonymous;
+use crate::scan::builders::load_packed_byte;
 use crate::scan::dfa::{dfa_compile, CompiledDfa};
 
 #[path = "classic_ac/bounded_ranges.rs"]
@@ -21,6 +22,10 @@ mod bounded_ranges;
 
 #[path = "classic_ac/count_program.rs"]
 mod count_program;
+
+#[cfg(test)]
+#[path = "classic_ac/test_helpers.rs"]
+mod test_helpers;
 
 #[cfg(any(test, feature = "cpu-parity"))]
 pub use bounded_ranges::classic_ac_bounded_ranges_scan;
@@ -45,6 +50,7 @@ pub use bounded_ranges::{
     try_build_ac_bounded_ranges_suffix3_presence_program,
 };
 
+pub(crate) use count_program::ascii_case_variants;
 pub use count_program::{
     build_ac_bounded_count_prefilter_program, build_ac_bounded_count_program,
     build_ac_bounded_count_suffix2_prefilter_program,
@@ -52,9 +58,56 @@ pub use count_program::{
     classic_ac_bounded_count_program, classic_ac_bounded_count_suffix2_prefilter_program,
     classic_ac_bounded_count_suffix3_prefilter_program, classic_ac_candidate_end_byte_mask_words,
     classic_ac_candidate_suffix2_mask_words, classic_ac_candidate_suffix3_bloom_words,
-    classic_ac_suffix3_bloom_contains, CLASSIC_AC_SUFFIX2_MASK_WORDS,
-    CLASSIC_AC_SUFFIX3_BLOOM_WORDS,
+    classic_ac_candidate_suffix3_bloom_words_ci, classic_ac_suffix3_bloom_contains,
+    CLASSIC_AC_SUFFIX2_MASK_WORDS, CLASSIC_AC_SUFFIX3_BLOOM_WORDS,
 };
+
+/// Shared bounded-window DFA-walk prologue for the scan/count/presence builders:
+/// binds `state`/`scan_start`/`scan_end`, replays the suffix window from state 0,
+/// and binds `out_begin`/`out_end`. Callers append their per-record emit loop. ONE
+/// owner so the five builders cannot drift.
+pub(in crate::scan::classic_ac) fn bounded_walk_prologue_nodes(
+    haystack: &str,
+    transitions: &str,
+    output_offsets: &str,
+    max_pattern_len: u32,
+) -> Vec<Node> {
+    let max_pattern_len = max_pattern_len.max(1);
+    let i = Expr::var("i");
+    let end = Expr::add(i.clone(), Expr::u32(1));
+    let scan_start = Expr::select(
+        Expr::lt(i, Expr::u32(max_pattern_len - 1)),
+        Expr::u32(0),
+        Expr::sub(end.clone(), Expr::u32(max_pattern_len)),
+    );
+    let (load_step_byte, step_byte) = load_packed_byte(haystack, Expr::var("step"));
+
+    vec![
+        Node::let_bind("state", Expr::u32(0)),
+        Node::let_bind("scan_start", scan_start),
+        Node::let_bind("scan_end", end),
+        Node::loop_for(
+            "step",
+            Expr::var("scan_start"),
+            Expr::var("scan_end"),
+            vec![
+                load_step_byte,
+                Node::assign(
+                    "state",
+                    Expr::load(
+                        transitions,
+                        Expr::add(Expr::mul(Expr::var("state"), Expr::u32(256)), step_byte),
+                    ),
+                ),
+            ],
+        ),
+        Node::let_bind("out_begin", Expr::load(output_offsets, Expr::var("state"))),
+        Node::let_bind(
+            "out_end",
+            Expr::load(output_offsets, Expr::add(Expr::var("state"), Expr::u32(1))),
+        ),
+    ]
+}
 
 /// A classic AC automaton with precomputed flat output links.
 ///
@@ -432,7 +485,7 @@ mod tests {
 
     #[test]
     fn bounded_ranges_builder_exposes_checked_metadata_variant() {
-        // Inspect only the production section — everything before the file's own
+        // Inspect only the production section, everything before the file's own
         // `#[cfg(test)]` block. That test module legitimately uses .expect()/
         // .unwrap(), which must not trip the "builder must not panic" guard below
         // (the guard concerns the production builder, not its tests).

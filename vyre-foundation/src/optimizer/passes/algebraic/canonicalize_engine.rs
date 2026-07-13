@@ -164,7 +164,7 @@ fn canonicalize_expr(expr: Expr) -> Expr {
             }
             // NOTE: reflexive comparison (`x == x`, `x != x`) is NOT folded
             // here. canonicalize is type-blind and the fold is unsound for
-            // float NaN — see the module-level doc. Operand-order
+            // float NaN, see the module-level doc. Operand-order
             // canonicalization (above) is the only rewrite Eq/Ne gets; that
             // is sound for every type because `a == b` ≡ `b == a`.
             Expr::BinOp {
@@ -217,7 +217,7 @@ fn canonicalize_expr(expr: Expr) -> Expr {
         // Compound operand-bearing exprs must canonicalize their children too,
         // or a commutative BinOp nested inside them (e.g. `subgroup_add(1 + a)`,
         // `f(1 + a)`) stays un-normalized and two semantically-equal Programs
-        // produce different wire bytes — fragmenting the content-addressed
+        // produce different wire bytes, fragmenting the content-addressed
         // pipeline cache the canonical form is the foundation for. Fields that
         // are not operands (`Call.op_id`, `SubgroupReduce.op`) are preserved.
         Expr::Call { op_id, args } => Expr::Call {

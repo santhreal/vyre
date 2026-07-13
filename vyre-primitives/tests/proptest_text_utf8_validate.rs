@@ -7,6 +7,7 @@ use vyre_primitives::text::utf8_validate::{
     reference_utf8_validate, utf8_validate_u8, UTF8_ASCII, UTF8_CONT, UTF8_INVALID, UTF8_LEAD_2,
     UTF8_LEAD_3, UTF8_LEAD_4,
 };
+use vyre_primitives::wire::decode_u32_le_bytes_all as unpack_u32s;
 use vyre_reference::value::Value;
 
 fn weighted_utf8_byte() -> impl Strategy<Value = u8> {
@@ -121,15 +122,6 @@ fn generated_utf8_case(case: u32) -> Vec<u8> {
         }
     }
     source
-}
-
-fn unpack_u32s(bytes: &[u8]) -> Vec<u32> {
-    bytes
-        .chunks_exact(4)
-        .map(|chunk| {
-            u32::from_le_bytes(chunk.try_into().expect("Fix: u32 chunk conversion failed"))
-        })
-        .collect()
 }
 
 fn run_packed_u8_program(source: &[u8]) -> Vec<u32> {

@@ -142,7 +142,7 @@ fn try_extract_tail(then: &[Node], otherwise: &[Node]) -> Option<(Vec<Node>, Vec
 
     // The tail is sunk PAST the If. A variable bound inside an arm (by a
     // `let` or loop var, before the tail) is out of scope once the tail is
-    // hoisted out — sinking a read of it produces scope-invalid IR (the
+    // hoisted out, sinking a read of it produces scope-invalid IR (the
     // reference interpreter and IR validator reject "reference to
     // undeclared variable"). Refuse when the tail reads any name bound in
     // either arm body. Names the tail reads that are NOT bound in an arm
@@ -158,7 +158,6 @@ fn try_extract_tail(then: &[Node], otherwise: &[Node]) -> Option<(Vec<Node>, Vec
     let tail = then_tail.clone();
     Some((new_then, new_otherwise, tail))
 }
-
 
 /// True iff `node` reads (via an `Expr::Var`) any name in `names`. `node` is
 /// an observably-free tail (a pure `Let`, or a `Block` of such), so only the
@@ -498,7 +497,7 @@ mod tests {
     }
 
     /// Negative (scope): a tail `let y = t + 1` where `t` is bound INSIDE the
-    /// arm must NOT be hoisted — sinking it past the If would read `t` out of
+    /// arm must NOT be hoisted, sinking it past the If would read `t` out of
     /// scope, producing scope-invalid IR (the reference interpreter rejects
     /// "reference to undeclared variable `t`"). The oracle-differential proof
     /// lives in `tests/tail_duplication_scope.rs`.
@@ -519,7 +518,7 @@ mod tests {
     }
 
     /// Positive (scope): a tail reading a variable bound in an ENCLOSING
-    /// scope (still in scope after the If) hoists normally — the guard is
+    /// scope (still in scope after the If) hoists normally, the guard is
     /// precise, not a blanket disable of every Var-reading tail.
     #[test]
     fn hoists_tail_reading_enclosing_binding() {

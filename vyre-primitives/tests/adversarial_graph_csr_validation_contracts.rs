@@ -89,19 +89,19 @@ fn csr_cpu_ref(
 // Zero-edge sentinel contract
 // ---------------------------------------------------------------------------
 
-#[path = "adversarial_graph_csr_validation_contracts/zero_edge_contracts.rs"]
-mod zero_edge_contracts;
-#[path = "adversarial_graph_csr_validation_contracts/length_contracts.rs"]
-mod length_contracts;
-#[path = "adversarial_graph_csr_validation_contracts/offset_contracts.rs"]
-mod offset_contracts;
-#[path = "adversarial_graph_csr_validation_contracts/target_contracts.rs"]
-mod target_contracts;
-#[path = "adversarial_graph_csr_validation_contracts/mask_contracts.rs"]
-mod mask_contracts;
-#[path = "adversarial_graph_csr_validation_contracts/multiword_contracts.rs"]
-mod multiword_contracts;
 #[path = "adversarial_graph_csr_validation_contracts/edge_count_contracts.rs"]
 mod edge_count_contracts;
 #[path = "adversarial_graph_csr_validation_contracts/frontier_shape_contracts.rs"]
 mod frontier_shape_contracts;
+#[path = "adversarial_graph_csr_validation_contracts/length_contracts.rs"]
+mod length_contracts;
+#[path = "adversarial_graph_csr_validation_contracts/mask_contracts.rs"]
+mod mask_contracts;
+#[path = "adversarial_graph_csr_validation_contracts/multiword_contracts.rs"]
+mod multiword_contracts;
+#[path = "adversarial_graph_csr_validation_contracts/offset_contracts.rs"]
+mod offset_contracts;
+#[path = "adversarial_graph_csr_validation_contracts/target_contracts.rs"]
+mod target_contracts;
+#[path = "adversarial_graph_csr_validation_contracts/zero_edge_contracts.rs"]
+mod zero_edge_contracts;

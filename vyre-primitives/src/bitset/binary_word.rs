@@ -188,14 +188,9 @@ macro_rules! define_bitwise_binary_op {
         ) -> Result<(), String> {
             let combine = $combine;
             let len = lhs.len().min(rhs.len());
-            out.clear();
-            if len > out.capacity() {
-                out.try_reserve(len - out.capacity()).map_err(|err| {
-                    format!(
-                        "bitwise binary CPU reference could not reserve {len} output words: {err}"
-                    )
-                })?;
-            }
+            crate::hostbuf::reserve_exact_cleared(out, len).map_err(|err| {
+                format!("bitwise binary CPU reference could not reserve {len} output words: {err}")
+            })?;
             out.extend(lhs.iter().zip(rhs.iter()).map(|(a, b)| combine(*a, *b)));
             Ok(())
         }

@@ -115,6 +115,35 @@ pub fn estimate_occupancy(
         return OccupancyEstimate::ZERO;
     }
 
+    occupancy_estimate_from_blocks(caps, workgroup_size, blocks_per_sm)
+}
+
+/// Finish an occupancy estimate from an already-computed `blocks_per_sm`: the
+/// warp-fraction tail shared by the theoretical [`estimate_occupancy`] (which
+/// derives `blocks_per_sm` from register/shared/thread limits) and the
+/// driver-measured launch path (which gets `blocks_per_sm` from
+/// `cuOccupancyMaxActiveBlocksPerMultiprocessor`). Keeping this in ONE PLACE means
+/// both occupancy numbers are the same fraction of `max_warps_per_sm`, expressed
+/// in basis points, so they are directly comparable. Returns
+/// [`OccupancyEstimate::ZERO`] when the device reports no warp size or the warp
+/// math overflows.
+#[must_use]
+pub(crate) fn occupancy_estimate_from_blocks(
+    caps: &CudaDeviceCaps,
+    workgroup_size: u32,
+    blocks_per_sm: u32,
+) -> OccupancyEstimate {
+    let warp = match caps.warp_size_u32() {
+        Some(w) if w > 0 => w,
+        _ => return OccupancyEstimate::ZERO,
+    };
+    if blocks_per_sm == 0 || workgroup_size == 0 {
+        return OccupancyEstimate::ZERO;
+    }
+    let max_threads_sm = caps.max_threads_per_sm_u32();
+    if max_threads_sm == 0 {
+        return OccupancyEstimate::ZERO;
+    }
     let warps_per_block = workgroup_size.div_ceil(warp);
     let Some(warps_per_sm) = blocks_per_sm.checked_mul(warps_per_block) else {
         return OccupancyEstimate::ZERO;

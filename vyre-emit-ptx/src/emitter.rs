@@ -178,7 +178,7 @@ impl BodyCtx<'_> {
     ///
     /// The kernel is launched cooperatively (every CTA co-resident), so the
     /// `i`-th grid barrier releases once the module-scope counter
-    /// `_vyre_grid_barrier` reaches `(i+1) * gridSize` — i.e. every CTA has
+    /// `_vyre_grid_barrier` reaches `(i+1) * gridSize`: i.e. every CTA has
     /// arrived at barrier `i`. The counter only grows within a launch, so the
     /// strictly increasing per-barrier release targets are race-robust: a CTA
     /// that races ahead only pushes the counter higher, never below an earlier
@@ -192,7 +192,7 @@ impl BodyCtx<'_> {
     /// releases the CTA once the leader observes the target, and a trailing
     /// `membar.gl` acquires the other CTAs' published writes. This is the
     /// standard sense-free grid barrier and is correct only when every CTA
-    /// executes the same barrier sequence — guaranteed here because GridSync
+    /// executes the same barrier sequence, guaranteed here because GridSync
     /// barriers are top-level (never under divergent control flow) and the
     /// full-workgroup entry keeps every lane live through the barrier.
     fn emit_grid_sync_barrier(&mut self) -> Result<(), EmitError> {
@@ -641,7 +641,7 @@ impl BodyCtx<'_> {
             // Shuffle and Broadcast both lower to `shfl.sync.idx.b32` reading
             // `value` from the lane named by `lane`. They differ only in operand
             // uniformity (broadcast's lane is uniform across the wave), which is
-            // the caller's contract, not the instruction's — so the PTX is
+            // the caller's contract, not the instruction's, so the PTX is
             // identical.
             SubgroupShuffle | SubgroupBroadcast => {
                 let value_id = *op.operands.first().ok_or_else(|| {

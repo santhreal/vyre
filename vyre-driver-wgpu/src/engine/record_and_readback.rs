@@ -2,7 +2,7 @@
 
 use crate::buffer::BindGroupCache;
 use crate::buffer::{BufferPool, GpuBufferHandle};
-use crate::numeric::usize_to_u64;
+use crate::numeric::WGPU_NUMERIC;
 use crate::pipeline::binding::consumes_host_input;
 use crate::pipeline::element_size_bytes;
 use crate::pipeline::{BufferBindingInfo, OutputBindingLayout};
@@ -247,7 +247,7 @@ fn record_dispatch_unsubmitted_impl(
                 | wgpu::BufferUsages::COPY_SRC
                 | wgpu::BufferUsages::COPY_DST
                 | wgpu::BufferUsages::INDIRECT;
-            let output_bytes_u64 = usize_to_u64(output_bytes, "output allocation bytes")?;
+            let output_bytes_u64 = WGPU_NUMERIC.usize_to_u64(output_bytes, "output allocation bytes")?;
             let b = pool
                 .acquire(output_bytes_u64, usage)
                 .map_err(pool_backend_error)?;
@@ -332,7 +332,7 @@ fn record_dispatch_unsubmitted_impl(
                 }
             };
 
-            let size_u64 = usize_to_u64(size, "input allocation bytes")?;
+            let size_u64 = WGPU_NUMERIC.usize_to_u64(size, "input allocation bytes")?;
             let b = pool.acquire(size_u64, usage).map_err(pool_backend_error)?;
             if let Some(c) = contents {
                 if let Some((offset, len)) = write_padded_input(queue, b.buffer(), c, size)? {
@@ -498,7 +498,7 @@ fn record_dispatch_unsubmitted_impl(
 }
 
 fn padded_wgpu_usize(size: usize, label: &'static str) -> Result<usize, BackendError> {
-    crate::numeric::align_up_usize(size, 4, label)
+    crate::numeric::WGPU_NUMERIC.align_up_usize(size, 4, 4, label)
 }
 
 /// Record compute work, submit it, and return trimmed readback bytes.

@@ -73,7 +73,7 @@ fn assert_vast_rows_present(vast_nodes: &[u32], node_count: usize) {
     assert!(
         vast_nodes.len() >= required,
         "truncated VAST: {} row word(s) for {node_count} node(s); need {required} \
-         (node_count * {VAST_NODE_STRIDE_U32}). Fix: pass the full VAST node-row buffer — \
+         (node_count * {VAST_NODE_STRIDE_U32}). Fix: pass the full VAST node-row buffer. \
          resolving semantic edges over a truncated buffer would silently drop edges.",
         vast_nodes.len()
     );

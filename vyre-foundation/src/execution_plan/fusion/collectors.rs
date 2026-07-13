@@ -74,7 +74,7 @@ pub(super) fn collect_buffer_targets(
         // `eval_async_store` both read_bytes(source) then write destination).
         // Dropping them hid a cross-arm RAW/WAR hazard from the barrier-
         // insertion pass, letting a later arm read a buffer an earlier arm
-        // async-wrote before the write was made visible — the stale-read
+        // async-wrote before the write was made visible, the stale-read
         // miscompile this collector exists to prevent. offset/size may Load.
         Node::AsyncLoad {
             source,
@@ -167,7 +167,9 @@ fn collect_buffer_targets_from_expr(
             collect_buffer_targets_from_expr(value, loads, atomics);
             collect_buffer_targets_from_expr(lane, loads, atomics);
         }
-        Expr::SubgroupReduce { value, .. } => collect_buffer_targets_from_expr(value, loads, atomics),
+        Expr::SubgroupReduce { value, .. } => {
+            collect_buffer_targets_from_expr(value, loads, atomics)
+        }
         _ => {}
     }
 }

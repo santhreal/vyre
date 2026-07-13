@@ -6,7 +6,7 @@ use vyre_driver::resident_transfer_fusion::{
 };
 
 use crate::buffer::GpuBufferHandle;
-use crate::numeric::usize_to_u64;
+use crate::numeric::WGPU_NUMERIC;
 use crate::WgpuBackend;
 
 /// Download a complete backend-resident WGPU buffer into a new host buffer.
@@ -95,8 +95,8 @@ pub(crate) fn download_resident_range_into(
             "WGPU resident ranged download received stale handle {id}. Fix: keep the resource allocated until all resident readbacks finish."
         ))
     })?;
-    let byte_offset = usize_to_u64(byte_offset, "resident ranged download offset")?;
-    let byte_len = usize_to_u64(byte_len, "resident ranged download length")?;
+    let byte_offset = WGPU_NUMERIC.usize_to_u64(byte_offset, "resident ranged download offset")?;
+    let byte_len = WGPU_NUMERIC.usize_to_u64(byte_len, "resident ranged download length")?;
     validate_resident_readback_range(
         *id,
         handle.allocation_len(),
@@ -156,8 +156,8 @@ pub(crate) fn download_resident_ranges_into(
                 "WGPU resident ranged batch download received stale handle {id}. Fix: keep every resource allocated until all resident readbacks finish."
             ))
         })?;
-        let byte_offset_u64 = usize_to_u64(byte_offset, "resident ranged batch download offset")?;
-        let byte_len_u64 = usize_to_u64(byte_len, "resident ranged batch download length")?;
+        let byte_offset_u64 = WGPU_NUMERIC.usize_to_u64(byte_offset, "resident ranged batch download offset")?;
+        let byte_len_u64 = WGPU_NUMERIC.usize_to_u64(byte_len, "resident ranged batch download length")?;
         validate_resident_readback_range(
             *id,
             handle.allocation_len(),
@@ -198,7 +198,7 @@ pub(crate) fn download_resident_ranges_into(
                 ))
             })?;
         let handle = &handles[handle_index].1;
-        let byte_len = usize_to_u64(copy.byte_len, "resident fused ranged batch download length")?;
+        let byte_len = WGPU_NUMERIC.usize_to_u64(copy.byte_len, "resident fused ranged batch download length")?;
         let mut fused_output = Vec::new();
         handle.readback_range_until(
             &device_queue.0,

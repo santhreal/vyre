@@ -565,7 +565,7 @@ impl CudaBackend {
         // On the success path the closure synchronized the stream before
         // returning, so both timing events are recorded and complete; read the
         // device interval and record it. A timing-read failure is logged and
-        // dropped — observability never converts a successful scan into an error.
+        // dropped (observability never converts a successful scan into an error).
         if result.is_ok() {
             if let Some((start_event, end_event)) = timing_events.as_ref() {
                 let timing = crate::numeric::CUDA_NUMERIC

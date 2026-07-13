@@ -50,7 +50,7 @@ fn chained_shl_overflow_produces_zero_not_clamped_shift() {
         value,
         Expr::LitU32(0),
         "Fix: (x << 16) << 16 must fuse to LitU32(0) (all bits shifted out), \
-         got {value:?} which would be x << 31 — a miscompile"
+         got {value:?} which would be x << 31, a miscompile"
     );
 }
 
@@ -81,7 +81,7 @@ fn chained_shl_by_one_and_31_produces_zero() {
     );
 }
 
-/// (x << 15) << 16 = total 31 — exactly in range; must NOT produce 0.
+/// (x << 15) << 16 = total 31 (exactly in range; must NOT produce 0).
 #[test]
 fn chained_shl_exactly_31_stays_as_shift() {
     let inner = Expr::BinOp {
@@ -114,9 +114,9 @@ fn chained_shl_exactly_31_stays_as_shift() {
                 "Fix: (x << 15) << 16 must fuse to x << 31, right operand was {right:?}"
             );
         }
-        other => panic!(
-            "Fix: (x << 15) << 16 must remain a Shl BinOp fused to << 31, got {other:?}"
-        ),
+        other => {
+            panic!("Fix: (x << 15) << 16 must remain a Shl BinOp fused to << 31, got {other:?}")
+        }
     }
 }
 

@@ -6,7 +6,7 @@
 //! SOURCE's signedness: a signed (`i32`) source SIGN-extends (high =
 //! `0xFFFF_FFFF` when the value is negative, matching `i32 as i64`), an unsigned
 //! (`u32`) source ZERO-extends. The emitter synthesizes the signed high word
-//! componentwise as `(low >> 31) * 0xFFFF_FFFF` — a logical `ShiftRight` on a
+//! componentwise as `(low >> 31) * 0xFFFF_FFFF`: a logical `ShiftRight` on a
 //! `u32` then a multiply. That is exactly the class of computed-value lowering
 //! the naga signed-`Modulo` bug proved can be silently wrong on real hardware
 //! (a source-read alone is NOT proof): if naga ever lowered that `ShiftRight` as
@@ -17,7 +17,7 @@
 //! These tests dispatch the cast on the 5090, read back BOTH 32-bit words of the
 //! resulting 64-bit value, and assert the full `u64` byte-for-byte against Rust.
 //! The inventory carried 64-bit sign-extension as unit/source-proven with a
-//! live-GPU check as the "remaining gold standard" — this is that check.
+//! live-GPU check as the "remaining gold standard" (this is that check).
 
 mod common;
 use common::u32_bytes;
@@ -26,7 +26,7 @@ use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver_wgpu::WgpuBackend;
 
-/// `out[i] = cast(target64, load(src, i))` — `src` is a 32-bit buffer (signed or
+/// `out[i] = cast(target64, load(src, i))`: `src` is a 32-bit buffer (signed or
 /// unsigned per `src_ty`), `out` is the 64-bit `target64` buffer (`array<vec2<u32>>`).
 fn widen_program(src_ty: DataType, target64: DataType, n: u32) -> Program {
     let mut body = Vec::new();
@@ -136,7 +136,7 @@ fn i32_to_u64_sign_extends_high_word_on_gpu() {
 #[test]
 fn u32_to_u64_zero_extends_high_word_on_gpu() {
     // The twin: an UNSIGNED source ZERO-extends. 0xFFFF_FFFF as u64 must be
-    // 0x0000_0000_FFFF_FFFF, NOT sign-extended — proves the signedness gate keys
+    // 0x0000_0000_FFFF_FFFF, NOT sign-extended, proves the signedness gate keys
     // on the SOURCE, not the value's top bit.
     let backend =
         WgpuBackend::acquire().expect("Fix: 64-bit widening parity requires a live GPU backend.");

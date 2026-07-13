@@ -56,7 +56,9 @@ fn regex_prefilter_planner_registry_records_comparators_and_rejections() {
         "Fix: regex prefilter planner must have one row per required route"
     );
     assert_eq!(
-        REGISTRY.matches("evidence_path = \"vyre-libs/tests/regex_prefilter_planner_registry.rs\"").count(),
+        REGISTRY
+            .matches("evidence_path = \"vyre-libs/tests/regex_prefilter_planner_registry.rs\"")
+            .count(),
         route_rows + REGISTRY.matches("[[rejection]]").count(),
         "Fix: every prefilter route and rejection row must point at this proof gate"
     );

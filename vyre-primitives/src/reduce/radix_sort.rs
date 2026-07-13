@@ -145,34 +145,24 @@ pub fn try_cpu_ref_into(
     scratch: &mut Vec<u32>,
 ) -> Result<(), String> {
     let bits = bits.min(32);
-    if input.len() > out.capacity() {
-        out.try_reserve_exact(input.len() - out.capacity())
-            .map_err(|err| {
-                format!(
-                    "radix_sort CPU reference could not reserve {} output keys: {err}",
-                    input.len()
-                )
-            })?;
-    }
-    if input.len() > scratch.capacity() {
-        scratch
-            .try_reserve_exact(input.len() - scratch.capacity())
-            .map_err(|err| {
-                format!(
-                    "radix_sort CPU reference could not reserve {} scratch keys: {err}",
-                    input.len()
-                )
-            })?;
-    }
-
-    out.clear();
+    crate::hostbuf::reserve_exact_cleared(out, input.len()).map_err(|err| {
+        format!(
+            "radix_sort CPU reference could not reserve {} output keys: {err}",
+            input.len()
+        )
+    })?;
     out.extend_from_slice(input);
     if out.is_empty() || bits == 0 {
         scratch.clear();
         return Ok(());
     }
 
-    scratch.clear();
+    crate::hostbuf::reserve_exact_cleared(scratch, out.len()).map_err(|err| {
+        format!(
+            "radix_sort CPU reference could not reserve {} scratch keys: {err}",
+            input.len()
+        )
+    })?;
     scratch.resize(out.len(), 0);
     let passes = ((bits + 7) / 8).min(4) as usize;
     let mut sorted_in_scratch = false;

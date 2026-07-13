@@ -69,6 +69,30 @@ fn classify_typedef_vast_with_scratch(
     log: &mut impl FnMut(&str),
     scratch: &mut TypedefClassifyScratch,
 ) -> Result<Vec<u8>, String> {
+    // The precomputed-context annotator (non-global typedef path) reads a per-node
+    // visible-typedef-name table. Precompute it ONCE here, after the decl-context
+    // table has settled, so both the fused and unfused annotation dispatches can
+    // feed it. The global-typedef fast path and the no-typedef path use annotators
+    // that don't consume it, so skip the dispatch there.
+    let global_typedef_count = global_typedef_hash_count(global_typedef_hashes)?;
+    let visible_type_blob = if has_typedef_keyword && global_typedef_count == 0 {
+        Some(super::visible_type::precompute_visible_type(
+            backend,
+            path,
+            scoped_vast_blob,
+            decl_context_blob,
+            haystack,
+            haystack_len,
+            vast_count,
+            packed_haystack,
+            cfg,
+            log,
+        )?)
+    } else {
+        None
+    };
+    let visible_type = visible_type_blob.as_deref();
+
     if has_typedef_keyword && light_runtime_fusion_enabled(readback_terminal_outputs, vast_count) {
         return classify_typedef_vast_fused_or_unfused(
             backend,
@@ -80,6 +104,7 @@ fn classify_typedef_vast_with_scratch(
             vast_count,
             packed_haystack,
             global_typedef_hashes,
+            visible_type,
             cfg,
             log,
             scratch,
@@ -96,6 +121,7 @@ fn classify_typedef_vast_with_scratch(
         packed_haystack,
         has_typedef_keyword,
         global_typedef_hashes,
+        visible_type,
         cfg,
         log,
         scratch,
@@ -113,6 +139,7 @@ fn classify_typedef_vast_unfused(
     packed_haystack: bool,
     has_typedef_keyword: bool,
     global_typedef_hashes: Option<&[u8]>,
+    visible_type: Option<&[u8]>,
     cfg: &mut DispatchConfig,
     log: &mut impl FnMut(&str),
     scratch: &mut TypedefClassifyScratch,
@@ -142,12 +169,24 @@ fn classify_typedef_vast_unfused(
                 global_typedef_count as u64,
             ],
         );
-        let annotate_normal_inputs = [scoped_vast_blob, haystack, decl_context_blob];
+        let annotate_normal_inputs;
         let annotate_global_inputs;
         let annotate_inputs: &[&[u8]] = if let Some(global_typedef_hashes) = global_typedef_hashes {
             annotate_global_inputs = [scoped_vast_blob, global_typedef_hashes];
             &annotate_global_inputs
         } else {
+            // Non-global precomputed-context path: bind the per-node visible-type
+            // table at binding 3 (order must match the annotate program's buffer
+            // decls: vast_nodes(0), haystack(1), decl_contexts(2), visible_type(3)).
+            let visible_type_blob = visible_type.ok_or_else(|| {
+                "c11_annotate_typedef_names: the precomputed-context path requires a visible_type table but none was provided. Fix: precompute_visible_type must run before the non-global annotate dispatch.".to_string()
+            })?;
+            annotate_normal_inputs = [
+                scoped_vast_blob,
+                haystack,
+                decl_context_blob,
+                visible_type_blob,
+            ];
             &annotate_normal_inputs
         };
         scratch.annotate_outputs.clear();
@@ -220,6 +259,7 @@ fn classify_typedef_vast_fused_or_unfused(
     vast_count: u32,
     packed_haystack: bool,
     global_typedef_hashes: Option<&[u8]>,
+    visible_type: Option<&[u8]>,
     cfg: &mut DispatchConfig,
     log: &mut impl FnMut(&str),
     scratch: &mut TypedefClassifyScratch,
@@ -247,13 +287,25 @@ fn classify_typedef_vast_fused_or_unfused(
                 "vyre-frontend-c vast-typedefs+classify {}",
                 path.display()
             ));
-            let fusion_normal_inputs = [scoped_vast_blob, haystack, decl_context_blob];
+            let fusion_normal_inputs;
             let fusion_global_inputs;
             let fusion_inputs: &[&[u8]] = if let Some(global_typedef_hashes) = global_typedef_hashes
             {
                 fusion_global_inputs = [scoped_vast_blob, global_typedef_hashes, decl_context_blob];
                 &fusion_global_inputs
             } else {
+                // Fused non-global path: the annotate arm's buffers appear first in
+                // fusion order (vast_nodes, haystack, decl_contexts, visible_type),
+                // then classify shares decl_contexts by name.
+                let visible_type_blob = visible_type.ok_or_else(|| {
+                    "fused VAST typedef/classify: the precomputed-context path requires a visible_type table but none was provided. Fix: precompute_visible_type must run before the fused annotate+classify dispatch.".to_string()
+                })?;
+                fusion_normal_inputs = [
+                    scoped_vast_blob,
+                    haystack,
+                    decl_context_blob,
+                    visible_type_blob,
+                ];
                 &fusion_normal_inputs
             };
             scratch.fused_outputs.clear();
@@ -293,6 +345,7 @@ fn classify_typedef_vast_fused_or_unfused(
                         packed_haystack,
                         true,
                         global_typedef_hashes,
+                        visible_type,
                         cfg,
                         log,
                         scratch,
@@ -316,6 +369,7 @@ fn classify_typedef_vast_fused_or_unfused(
                 packed_haystack,
                 true,
                 global_typedef_hashes,
+                visible_type,
                 cfg,
                 log,
                 scratch,
@@ -339,10 +393,13 @@ fn annotation_program(
             "annotated_vast",
         )
     } else if packed_haystack {
+        // Binding order: vast_nodes(0), haystack(1), decl_contexts(2),
+        // visible_type(3), then the two length scalars, then the output.
         c11_annotate_typedef_names_precomputed_context_packed_haystack(
             "vast_nodes",
             "haystack",
             "decl_contexts",
+            "visible_type",
             Expr::u32(haystack_len.max(1)),
             Expr::u32(vast_count.max(1)),
             "annotated_vast",
@@ -352,6 +409,7 @@ fn annotation_program(
             "vast_nodes",
             "haystack",
             "decl_contexts",
+            "visible_type",
             Expr::u32(haystack_len.max(1)),
             Expr::u32(vast_count.max(1)),
             "annotated_vast",

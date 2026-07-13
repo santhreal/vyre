@@ -31,7 +31,11 @@ fn grad_fails_closed_on_forward_local_used_nonlinearly() {
         [1, 1, 1],
         vec![
             Node::let_bind("a", Expr::load("x", Expr::u32(0))),
-            Node::store("out", Expr::u32(0), Expr::mul(Expr::var("a"), Expr::var("a"))),
+            Node::store(
+                "out",
+                Expr::u32(0),
+                Expr::mul(Expr::var("a"), Expr::var("a")),
+            ),
         ],
     );
 
@@ -73,10 +77,10 @@ fn grad_buffer_load_square_oracle_confirms_two_x() {
     // grad buffers are cleared by the backward itself so their inputs are
     // placeholders; out is unused by the square's backward.
     let inputs = [
-        Value::from(3.0f32.to_le_bytes().to_vec()),  // x
-        Value::from(0.0f32.to_le_bytes().to_vec()),  // out (unused)
-        Value::from(0.0f32.to_le_bytes().to_vec()),  // grad_out (cleared+seeded)
-        Value::from(0.0f32.to_le_bytes().to_vec()),  // grad_x (cleared)
+        Value::from(3.0f32.to_le_bytes().to_vec()), // x
+        Value::from(0.0f32.to_le_bytes().to_vec()), // out (unused)
+        Value::from(0.0f32.to_le_bytes().to_vec()), // grad_out (cleared+seeded)
+        Value::from(0.0f32.to_le_bytes().to_vec()), // grad_x (cleared)
     ];
     let results = vyre_reference::reference_eval(&backward, &inputs)
         .expect("buffer-load square backward must validate and run");
@@ -107,7 +111,11 @@ fn grad_still_supports_linearly_used_local() {
                 "xw",
                 Expr::mul(Expr::load("x", i.clone()), Expr::load("w", i.clone())),
             ),
-            Node::store("out", i.clone(), Expr::add(Expr::var("xw"), Expr::load("x", i))),
+            Node::store(
+                "out",
+                i.clone(),
+                Expr::add(Expr::var("xw"), Expr::load("x", i)),
+            ),
         ],
     );
 

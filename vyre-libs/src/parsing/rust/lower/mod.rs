@@ -289,7 +289,7 @@ impl LowerCtx<'_> {
     /// range exceeding `i32::MAX` stays exact and a negative `lo` does not wrap
     /// to ~4.29e9 iterations; the signed `hi > lo` guard (comparisons never
     /// overflow) zeroes the empty/negative-length case, matching Rust. This is
-    /// the single source of the counted-loop bound invariant — both `while` and
+    /// the single source of the counted-loop bound invariant, both `while` and
     /// `for` lowering call it, so the correctness fix lives in exactly one place.
     fn counted_loop_trip(lo: &IrExpr, hi: &IrExpr) -> IrExpr {
         let span_u32 = IrExpr::sub(
@@ -376,7 +376,7 @@ impl LowerCtx<'_> {
         // The induction variable `i` is reconstructed as `i0 + lv`, where `lv`
         // is a fresh 0-based u32 loop counter and `i0` is the (possibly negative)
         // signed initial value held in `v{b_i}`. Reading `i` back as i32 keeps
-        // body arithmetic well-typed and stays correct even when `i0 < 0` — a
+        // body arithmetic well-typed and stays correct even when `i0 < 0`: a
         // plain `cast(u32, i0)` loop bound would wrap a negative start to ~4.29e9
         // and iterate billions of times instead of matching Rust.
         inner.insert(
@@ -390,7 +390,7 @@ impl LowerCtx<'_> {
         // The IR loop is a half-open `[0, trip)` u32 range. Computing the trip
         // count in *signed* space and clamping to zero before the u32 cast makes
         // a zero- or negative-length range run the body zero times, exactly like
-        // Rust (`while i < n` with `i >= n` never enters) — instead of wrapping a
+        // Rust (`while i < n` with `i >= n` never enters), instead of wrapping a
         // negative `n - i0` into billions of iterations (a DoS + miscompile).
         let from_i32 = IrExpr::var(format!("v{b_i}"));
         let to_i32 = self.lower_value(bound, subst)?;
@@ -518,7 +518,7 @@ impl LowerCtx<'_> {
             // Rust unary `-x` on i32 is wrapping negation. The IR's total
             // `Negate` is illegal on i32 (the i32::MIN overflow case), so lower
             // to `0 - x`, which is value-identical for all in-range x and
-            // wrapping-correct at i32::MIN — matching Rust release semantics.
+            // wrapping-correct at i32::MIN (matching Rust release semantics).
             Expr::Neg(inner) => Ok(IrExpr::sub(IrExpr::i32(0), self.lower_value(inner, subst)?)),
             Expr::Block(_) | Expr::If { .. } => Err(RustLowerError::Unsupported(
                 "block/if used as a value".to_string(),

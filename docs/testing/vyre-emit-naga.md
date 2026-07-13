@@ -1,4 +1,4 @@
-# Testing program — vyre-emit-naga
+# Testing program, vyre-emit-naga
 
 | Kind | Location |
 |------|----------|

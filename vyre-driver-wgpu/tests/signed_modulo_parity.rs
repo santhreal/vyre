@@ -1,7 +1,7 @@
 //! Signed integer modulo parity against Rust `%` on the live GPU.
 //!
 //! naga's `BinaryOperator::Modulo` lowers to an UNSIGNED remainder on the SPIR-V
-//! backend even for signed operands — a vendored-naga bug: on the 5090,
+//! backend even for signed operands, a vendored-naga bug: on the 5090,
 //! `rem(i32, i32)` of (-7, 3) returned 0 (== unsigned `0xFFFF_FFF9 % 3`) instead
 //! of the signed -1, while `div(i32, i32)` of (-7, 3) correctly returned -2. The
 //! emitter now synthesizes signed remainder from the truncating-division identity
@@ -23,7 +23,7 @@ fn pairs() -> Vec<(i32, i32)> {
     vec![(-7, 3), (7, 3), (-8, 3), (100, 7), (-100, 7), (-1, 2), (5, -3), (-2147483648, 3)]
 }
 
-/// `out[i] = a[i] % b[i]` — all I32 buffers; the rem is i32 % i32 (signed).
+/// `out[i] = a[i] % b[i]`: all I32 buffers; the rem is i32 % i32 (signed).
 fn rem_program(n: u32) -> Program {
     let mut body = Vec::new();
     for i in 0..n {
@@ -44,7 +44,7 @@ fn rem_program(n: u32) -> Program {
     )
 }
 
-/// `out[i] = a[i] / b[i]` — all I32 (the signed-Div twin, must stay correct).
+/// `out[i] = a[i] / b[i]`: all I32 (the signed-Div twin, must stay correct).
 fn div_program(n: u32) -> Program {
     let mut body = Vec::new();
     for i in 0..n {

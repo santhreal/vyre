@@ -272,7 +272,7 @@ metadata gap.
 """
 resolution = """
 Fixed 2026-04-20. The Cat-A output builders now declare `.with_count` on their
-output decls — broadcast (with_count(n)), relu (with_count(n.max(1))),
+output decls, broadcast (with_count(n)), relu (with_count(n.max(1))),
 substring_search (with_count(output_count)), aho_corasick
 (BufferDecl::output(matches, ...).with_count(haystack_len)), etc. The wgpu backend
 sizes output readback as count*element_size, so non-empty results come back.
@@ -363,8 +363,8 @@ Fixed (was a stale-open ledger entry). The three proptests are live (not
 feature="nn-norm"))]`) and green: softmax/layer_norm/attention
 *_special_values_match_harness, 128 cases each over NaN / NaN-payload /
 ±Inf / ±0 / subnormal / arbitrary-bits f32. harness_path_outputs exercises the
-exact path the finding flagged — build -> validate -> to_wire -> from_wire ->
-optimize -> optimize-again (idempotence asserted) -> execute — and asserts its
+exact path the finding flagged, build -> validate -> to_wire -> from_wire ->
+optimize -> optimize-again (idempotence asserted) -> execute, and asserts its
 output bytes equal direct reference execution.
 
 Mechanism: the reference interpreter canonicalizes f32 deterministically on every
@@ -408,7 +408,7 @@ provided byte length against its declared count*stride and fails closed:
 "buffer `{name}` has {n} bytes but requires at least {required} bytes ({count}
 elements of {ty}). Fix: provide a larger input buffer." blake3_compress declares
 cv_in with count 8 (32 bytes) and msg with count 16 (64 bytes), so a 7-word
-cv_in (28 bytes) and a 15-word msg (60 bytes) both error before execution — no
+cv_in (28 bytes) and a 15-word msg (60 bytes) both error before execution, no
 silent nonsensical digest. The per-load OOB zero-fill rule in oob.rs is a
 separate, deliberate cross-backend-parity behavior and is unchanged; this fix is
 at the input-setup boundary, not the load path. The two regression tests are
@@ -478,7 +478,7 @@ Compare the naga-emitted WGSL against a known-good matmul
 resolution = """
 Resolved: the universal GPU differential on a live RTX 5090
 (diff_universal_registry, 102s, 1 passed / 0 failed 2026-06-22) checks
-vyre-libs::math::matmul and it is no longer in the failure list — matmul (integer
+vyre-libs::math::matmul and it is no longer in the failure list, matmul (integer
 u32, tolerance is the elementary budget, effectively exact) now matches the CPU
 reference for every row, so the stale-per-iteration-accumulator divergence is
 gone. The original named test diff_math_matmul_small was consolidated into
@@ -589,7 +589,7 @@ fix_plan = """
 """
 resolution = """
 Resolved as within the accepted FP contract (NOT by achieving bit-for-bit
-identity — that criterion was superseded). The project's parity policy
+identity: that criterion was superseded). The project's parity policy
 (vyre-harness/src/fp_contract.rs) deliberately allows GPU transcendentals a
 bounded ULP window: BACKEND_TRANSCENDENTAL_ULP_BUDGET = 128 ULP for any program
 containing Exp/Log/etc., because "GPU backends may use native approximate
@@ -882,8 +882,8 @@ validation). The three named adversarial tests pass; the ledger entry was simply
 stale (never flipped to fixed).
 
 (2) Hardened the cycle check against deep input. The cycle DFS was RECURSIVE
-(one frame per node along a path), so a deep or adversarial linear graph — e.g.
-a 200k-statement chain round-tripped through to_graph — would overflow the call
+(one frame per node along a path), so a deep or adversarial linear graph (e.g).
+a 200k-statement chain round-tripped through to_graph, would overflow the call
 stack and PANIC, contradicting the finding's "reject without panicking at
 internet scale" intent. Rewrote it as an explicit-stack (iterative) three-color
 DFS in vyre-foundation/src/analysis/graph_view.rs with identical cycle semantics
@@ -896,7 +896,7 @@ chain still yields Err(Cycle), no panic).
 
 Verified: adversarial_graph_canonical_laws 16/0 (incl. both deep tests),
 graph_invariants 9/0, organization_contracts 16/0. from_graph has no production
-(src/) callers — it is an analysis/round-trip public API — so this was a
+(src/) callers, it is an analysis/round-trip public API, so this was a
 latent panic vector for external consumers, now closed.
 """
 
@@ -951,7 +951,7 @@ vyre-driver-wgpu/tests/determinism_contract.rs is now a LIVE proptest (no
 #[ignore]): 32 generated Programs, each dispatched twice through the real wgpu
 backend, asserting byte-identical output (prop_assert_eq). It passes on a live
 RTX 5090 (1/0, 0 ignored, 2026-06-22), so two dispatches of byte-identical
-Programs no longer diverge — the BGL-handle keying is stable across fresh and warm
+Programs no longer diverge, the BGL-handle keying is stable across fresh and warm
 pipeline-cache states. (The finding's module path `gap_determinism_contract` was
 renamed to `determinism_contract`; test field updated.)
 """
@@ -987,7 +987,7 @@ LIVE, non-ignored proptest with the same semantics (`cond != 0 ? value : 0`):
 `prop_select_matches_conditional` in
 vyre-reference/tests/__split/expr_adversarial_proptest_part2_chunk4.rs:57 (256
 cases, real-value `prop_assert_eq!(result, expected)`). Verified: the whole
-expr_adversarial_proptest suite runs 102 tests with 0 ignored — there is no
+expr_adversarial_proptest suite runs 102 tests with 0 ignored, there is no
 remaining undocumented `#[ignore]` in vyre-reference, and select evaluation is
 still adversarially covered. No `prop_call_primitive_select` symbol exists in the
 tree.
@@ -1131,13 +1131,13 @@ interpreter honors the Region scope, so the op executes correctly there
 (convolution.rs unit + adversarial tests all pass). But the GPU lowering
 path runs `vyre_foundation::optimizer::pre_lowering::optimize`
 (region_inline), which UNWRAPS the `Node::Region` wrappers into the parent
-region WITHOUT alpha-renaming the inlined Let bindings — so the three FFTs'
+region WITHOUT alpha-renaming the inlined Let bindings, so the three FFTs'
 `u_re_s1_b0_k0` (etc.) collapse into colliding siblings and V032 fires at
 naga validation. Any op composed by inlining the same sub-op more than once
 into one region hits this; FFT-convolve is just the first reproducer.
 """
 fix_plan = """
-CORRECT FIX (Law 4 — fix the architecture): make region_inline scope-safe.
+CORRECT FIX (Law 4 (fix the architecture): make region_inline scope-safe).
 When `pre_lowering`/region_inline unwraps a `Node::Region` whose Let
 bindings would collide with names already live in the destination region,
 alpha-rename the inlined region's bindings (and every Expr::var reference
@@ -1148,7 +1148,7 @@ vyre-foundation/src/optimizer/pre_lowering/ (+ a rename-on-inline helper).
 LOCAL WORKAROUND (rejected here as a silent mask, Law 10): prefixing
 fft_radix2 bindings with a per-invocation tag (e.g. the sanitized output
 buffer name) would unblock FFT-convolve but leave every other twice-inlined
-composition silently exposed — do not ship the workaround without the
+composition silently exposed, do not ship the workaround without the
 general fix.
 VERIFY: re-run `cargo test -p vyre-driver-wgpu --test cat_a_gpu_differential
 --features math-linalg,math-scan diff_universal_registry` on a GPU host;
@@ -1157,15 +1157,15 @@ convolution.rs reference tests must stay green (no numeric regression).
 """
 resolution = """
 Fixed in region_inline_engine (vyre-foundation/src/optimizer/passes/cleanup/
-region_inline_engine.rs), the scope-safe class fix the fix_plan asked for —
+region_inline_engine.rs), the scope-safe class fix the fix_plan asked for 
 realized by collision-aware Block-wrapping rather than alpha-renaming. When the
 flatten branch inlines a Region, it checks whether any top-level `Let` in the
 (fully-flattened) body shares its name with a top-level `Let` already emitted into
 the destination (`inlined_top_level_let_collides`). ONLY on an actual collision is
 the inlined body wrapped in a `Node::Block` (a lexical scope V032 honors), keeping
 those binds in a distinct scope; with no collision the body splices flat exactly as
-before. So in fft_convolve the first FFT stage splices flat and the second/third —
-which re-bind `u_re_s1_b0_k0` etc. — are Block-scoped, eliminating the duplicate
+before. So in fft_convolve the first FFT stage splices flat and the second/third 
+which re-bind `u_re_s1_b0_k0` etc., are Block-scoped, eliminating the duplicate
 siblings while leaving every non-colliding program byte-for-byte unchanged. This
 preserves the Region-as-scope contract, fixes the whole class (any sub-op inlined
 more than once into one region), avoids the rejected per-invocation-prefix
@@ -1173,7 +1173,7 @@ workaround, and avoids rewriting every `Expr::var` reference that alpha-renaming
 entails.
 
 An earlier iteration Block-wrapped EVERY let-declaring region unconditionally; that
-was over-broad — it re-wrapped single-region const_fold/cse unit-test programs
+was over-broad, it re-wrapped single-region const_fold/cse unit-test programs
 (`[Region[Let x]]` -> `[Block[Let x]]`), breaking 8 vyre-foundation unit tests via
 `test_util::region_body` extraction. The collision-aware predicate fixes those by
 construction (no collision -> splice flat), so the over-broad change was not
@@ -1204,7 +1204,7 @@ blocker = """
 consumer_boundary.rs asserts vyre-libs/src/**/*.rs contains none of the
 forbidden consumer names {weir, surgec, gosan, keyhog}. The MATCHING/scan layer
 violations (keyhog, in doc comments of resident_presence.rs, resident.rs,
-bounded_ranges.rs, literal_set.rs, regex_dfa.rs) were genericized 2026-06-22 — a
+bounded_ranges.rs, literal_set.rs, regex_dfa.rs) were genericized 2026-06-22, a
 reusable matching library should not name a specific consumer; that part now
 satisfies the contract.
 
@@ -1224,7 +1224,7 @@ architecture genuinely conflict here.
 """
 fix_plan = """
 DESIGN DECISION (not a mechanical fix):
-(a) PREFERRED — scope the consumer_boundary contract to the layers where it is
+(a) PREFERRED, scope the consumer_boundary contract to the layers where it is
     a true one-way boundary (scan/ matching, math/, nn/, the reusable primitive
     layers) and EXEMPT the security/dataflow bridge layer, which interoperates
     with Weir by explicit schema contract. Encode the exemption as an allowlist
@@ -1232,7 +1232,7 @@ DESIGN DECISION (not a mechanical fix):
     bridge layer is exempt, OR move the Weir-named fact-schema types behind a
     neutral `bridge`/`partner` naming with Weir as one configured producer-id
     string value rather than a compile-time symbol.
-(b) ALTERNATIVE — rename every weir_* public field/symbol to a neutral
+(b) ALTERNATIVE, rename every weir_* public field/symbol to a neutral
     `partner_*`/`bridge_*` scheme and carry "weir" only as a runtime producer-id
     string. This is a large breaking API change across security/dataflow and
     must be done with the downstream Weir bridge's buy-in.
@@ -1243,7 +1243,7 @@ resolution = """
 Implemented option (a), the PREFERRED resolution. consumer_boundary.rs now scopes
 the no-downstream-consumer contract: the `security/` + `dataflow/` directories are
 the Weir/Vyre shared-fact BRIDGE (they interoperate with Weir, and the surge
-compiler `surgec`, as PEERS via an explicit shared-fact schema — SharedFactHeader
+compiler `surgec`, as PEERS via an explicit shared-fact schema. SharedFactHeader
 producer ids, `pub mod weir_ifds`, the `weir_*` schema fields), so naming those
 partners there is architectural fact, not a downstream-consumer leak. The test
 exempts ONLY the partner names {weir, surgec} when the file lives under a
@@ -1291,13 +1291,13 @@ sum-scan op, so they should resolve to that op's id, not a neutral prefix.
   (`inventory-registry`) `inventory::submit!` registering OP_ID_INCLUSIVE_SUM
   (`vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum`) as a
   harness op (build = small n=64 guarded single-block program, no GridSync;
-  fixtures None — no vyre-primitives differential walks them today). Renamed the
+  fixtures None, no vyre-primitives differential walks them today). Renamed the
   three Region generators from `...multi_block_prefix_scan::{guarded_single_block,
   pass_a,pass_c}` to `...multi_block_prefix_scan_inclusive_sum::<subpass>` so they
   resolve via region_chain_invariant rule (b) `<registered_op_id>::<subpass>`.
 - vyre-self-substrate/src/data/reduce_dispatch_pipeline.rs: updated the two
   provenance-contract assertions (prefix_pipeline_exposes_fused_and_resident_passes)
-  in lockstep with the rename — pass_a/pass_c now assert the `_inclusive_sum::` form.
+  in lockstep with the rename (pass_a/pass_c now assert the `_inclusive_sum::` form).
 Verified: region_chain_invariant -> 1 passed/0 failed; vyre-primitives integration
 -> 1 passed (new id accepted by the id-set/fnv1a checks); reduce_dispatch_pipeline
 -> 5 passed (renamed assertions green).
@@ -1319,7 +1319,7 @@ Programs: after the FIRST optimize the final write-back stays a single-iteration
 `Loop { var __sjw_chunk, from 0, to 1, body: [... If cell<4 ...] }`; the SECOND
 optimize promotes that trip-count-1 Loop into a `Block([If cell<4 ...])` (a
 loop-unroll/promote that only fires on the already-once-optimized form). So the
-loop-promotion pass is not run to fixpoint within a single optimize() call — the
+loop-promotion pass is not run to fixpoint within a single optimize() call, the
 optimizer needs two passes to stabilize this program. Off the keyhog matching
 lane (scallop/datalog join), but a real optimizer-contract violation: idempotence
 is a stated harness invariant.
@@ -1339,13 +1339,13 @@ resolution = """
 Root cause (verified by dumping both optimize passes' IR): the write-back
 `__sjw_chunk` loop has a BUILD-TIME constant trip count of 1
 (`cell_chunks = ceil_div(cells, lanes).max(1) = 1`), so it is `from 0, to 1` from
-the start — the bound is never "folded late". `loop_unroll` runs only in
+the start, the bound is never "folded late". `loop_unroll` runs only in
 pre_lowering phase 2 (PassPhase::Loop ∈ PHASE2_SELECTION, ∉ PHASE4_SELECTION).
 On the first optimize(), phase 2 sees the *pre-cleanup* loop body whose
 `unroll_body_cost` exceeds MAX_UNROLLED_BODY_COST (64), so `unroll_values`
 returned None and the trip-1 Loop was left intact. Phase 3 CSE/DCE (which run
 AFTER phase 2) then shrank the body below the cap, so the SECOND optimize()'s
-phase 2 unrolled it to a Block — hence optimize(optimize(p)) != optimize(p).
+phase 2 unrolled it to a Block (hence optimize(optimize(p)) != optimize(p)).
 
 Fix (vyre-foundation/src/optimizer/passes/loops/loop_unroll.rs, `unroll_values`):
 a trip-count-1 loop inlines its body EXACTLY once, so there is no duplication and
@@ -1357,7 +1357,7 @@ the trip-1 Loop on the FIRST pass, making optimize() idempotent for this shape.
 
 Verified: loop_unroll unit tests 7/0 (keeps_small_trip_loop_when_body_cost_would_bloat_ir
 [trip 4], keeps_loop_with_barrier [trip 2, uncostable], keeps_large_loop_bounded
-[trip 17] all still pass — cap unchanged for trip>1); optimizer_idempotence_proptest
+[trip 17] all still pass, cap unchanged for trip>1); optimizer_idempotence_proptest
 3/0; new focused regression loop_unroll_trip1_idempotence 1/0 (asserts the assign-free
 trip-1 loop is promoted on pass 1 AND the assign-bearing transfer loop is left as a
 Loop); universal_cat_a_harness 1/0 (every Cat-A op idempotent + oracle pass, no

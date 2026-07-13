@@ -24,9 +24,9 @@ use super::BodyBuilder;
 use crate::EmitError;
 
 /// Backend-owned WGSL identifier for the trap sidecar global. The WGSL name is
-/// internal to the shader — the host binds the sidecar by descriptor slot name
+/// internal to the shader, the host binds the sidecar by descriptor slot name
 /// (`vyre_lower::TRAP_SIDECAR_NAME` = `__vyre_descriptor_trap_sidecar`) plus the
-/// numeric `@group/@binding`, never by the WGSL identifier — so the wgpu Naga
+/// numeric `@group/@binding`, never by the WGSL identifier, so the wgpu Naga
 /// backend names its own sidecar global. `trap_nodes_lower_to_backend_sidecar`
 /// pins this contract.
 const WGSL_TRAP_SIDECAR_GLOBAL: &str = "vyre_wgpu_trap_sidecar";

@@ -116,18 +116,17 @@ fn reporter_record(
             finding_id: finding.bundle.finding_id.clone(),
         });
     }
-    let primary = finding
-        .bundle
-        .proof_path
-        .first()
-        .ok_or_else(|| SecurityReporterError::MissingProofPath {
+    let primary = finding.bundle.proof_path.first().ok_or_else(|| {
+        SecurityReporterError::MissingProofPath {
             finding_id: finding.bundle.finding_id.clone(),
-        })?;
-    let path = file_paths
-        .get(&primary.span.file_id)
-        .ok_or(SecurityReporterError::MissingSourceFile {
-            file_id: primary.span.file_id,
-        })?;
+        }
+    })?;
+    let path =
+        file_paths
+            .get(&primary.span.file_id)
+            .ok_or(SecurityReporterError::MissingSourceFile {
+                file_id: primary.span.file_id,
+            })?;
     if primary.span.start_line == 0 || primary.span.start_column == 0 {
         return Err(SecurityReporterError::MissingLineColumn {
             finding_id: finding.bundle.finding_id.clone(),
@@ -324,10 +323,34 @@ mod tests {
     #[test]
     fn reporter_output_bytes_are_stable_and_sorted_across_planner_paths() {
         let findings = vec![
-            finding("f.regex", "SEC-REGEX", SecurityReporterPlannerPath::Regex, 9, 4),
-            finding("f.literal", "SEC-LITERAL", SecurityReporterPlannerPath::Literal, 2, 7),
-            finding("f.graph", "SEC-GRAPH", SecurityReporterPlannerPath::Graph, 9, 1),
-            finding("f.vector", "SEC-VECTOR", SecurityReporterPlannerPath::Vector, 4, 3),
+            finding(
+                "f.regex",
+                "SEC-REGEX",
+                SecurityReporterPlannerPath::Regex,
+                9,
+                4,
+            ),
+            finding(
+                "f.literal",
+                "SEC-LITERAL",
+                SecurityReporterPlannerPath::Literal,
+                2,
+                7,
+            ),
+            finding(
+                "f.graph",
+                "SEC-GRAPH",
+                SecurityReporterPlannerPath::Graph,
+                9,
+                1,
+            ),
+            finding(
+                "f.vector",
+                "SEC-VECTOR",
+                SecurityReporterPlannerPath::Vector,
+                4,
+                3,
+            ),
         ];
         let output = render_security_reporter_output(
             &findings,
@@ -341,8 +364,7 @@ mod tests {
         assert_eq!(output.exit_code, 1);
         let cli = String::from_utf8(output.cli).expect("Fix: CLI bytes must be UTF-8.");
         assert!(
-            cli.find("src/app.rs:2:7: SEC-LITERAL")
-                < cli.find("src/app.rs:4:3: SEC-VECTOR"),
+            cli.find("src/app.rs:2:7: SEC-LITERAL") < cli.find("src/app.rs:4:3: SEC-VECTOR"),
             "Fix: CLI output must be sorted by file, line, column, rule, finding id; cli={cli}"
         );
         assert!(
@@ -379,7 +401,10 @@ mod tests {
         )
         .expect_err("Fix: reporter must reject source spans without one-based line/column.");
 
-        assert!(matches!(error, SecurityReporterError::MissingLineColumn { .. }));
+        assert!(matches!(
+            error,
+            SecurityReporterError::MissingLineColumn { .. }
+        ));
     }
 
     fn finding(

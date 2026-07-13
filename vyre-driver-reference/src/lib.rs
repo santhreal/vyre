@@ -34,10 +34,25 @@ impl VyreBackend for CpuRefBackend {
         &self,
         program: &Program,
         inputs: &[Vec<u8>],
-        _config: &DispatchConfig,
+        config: &DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, BackendError> {
         let values = reference_values(program, inputs)?;
-        vyre_reference::reference_eval(program, &values)
+        // The interpreter infers its grid from buffer SHAPES, which cannot express
+        // the per-invocation count of a byte-scan program (the haystack is packed
+        // 4 bytes/u32 and the scan length is a runtime value). When the caller
+        // declares the true element-grid coverage via `dispatch_elements`, pass it
+        // as the interpreter's dispatch floor so high positions are covered exactly
+        // as the real GPU dispatch would, otherwise the tail is silently skipped
+        // (the Law-10 under-coverage this backend used to exhibit). `None` (every
+        // megakernel, whose `grid_override` is a work-queue length, not an element
+        // count) keeps buffer-shape inference so its grid is never over-run.
+        let result = match config.dispatch_elements {
+            Some(elements) => {
+                vyre_reference::reference_eval_with_dispatch(program, &values, elements)
+            }
+            None => vyre_reference::reference_eval(program, &values),
+        };
+        result
             .map(|outputs| outputs.iter().map(Value::to_bytes).collect())
             .map_err(|error| {
                 BackendError::new(format!(
@@ -60,16 +75,14 @@ impl VyreBackend for CpuRefBackend {
 }
 
 fn reference_values(program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Value>, BackendError> {
-    let backend_allocated_output = |buffer: &BufferDecl| {
-        buffer.is_output()
-            || buffer.access() == BufferAccess::WriteOnly
-            || (buffer.is_pipeline_live_out() && buffer.access() == BufferAccess::ReadWrite)
-    };
+    // `is_backend_allocated_output` is the SINGLE cross-backend contract in
+    // vyre-foundation, shared verbatim with the reference interpreter, do NOT re-inline
+    // it here (drift would make this backend disagree with the interpreter on outputs).
     let logical_input_count = program
         .buffers()
         .iter()
         .filter(|buffer| {
-            buffer.access() != BufferAccess::Workgroup && !backend_allocated_output(buffer)
+            buffer.access() != BufferAccess::Workgroup && !buffer.is_backend_allocated_output()
         })
         .count();
     let legacy_input_count = program
@@ -85,7 +98,7 @@ fn reference_values(program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Value>,
         if buffer.access() == BufferAccess::Workgroup {
             continue;
         }
-        let bytes = if backend_allocated_output(buffer) {
+        let bytes = if buffer.is_backend_allocated_output() {
             if legacy_input_mode {
                 let _legacy_initializer = inputs.get(next_input).ok_or_else(|| {
                     BackendError::new(format!(

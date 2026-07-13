@@ -212,7 +212,7 @@ impl BodyCtx<'_> {
             }
             BinOp::SaturatingMul if ty == PtxType::U32 || ty == PtxType::Bool => {
                 // Full 64-bit product via the native widening multiply, clamped to
-                // u32::MAX when it overflows 32 bits — i.e. when the product's high
+                // u32::MAX when it overflows 32 bits, i.e. when the product's high
                 // word is non-zero. Byte-for-byte `u32::saturating_mul` and the
                 // oracle's `select(b != 0 && a > MAX/b, MAX, a*b)` contract, without
                 // an emulated division.
@@ -647,7 +647,7 @@ impl BodyCtx<'_> {
         }
         // Narrowing to a sub-word integer (u8/u16/i8/i16). `from_dtype` collapses
         // these to U32/I32, so the `src.0 == dst_ty` identity check below would
-        // treat `u32 -> u8` as a no-op and KEEP the high bits — a silent
+        // treat `u32 -> u8` as a no-op and KEEP the high bits, a silent
         // non-narrowing that diverges from Rust `as`, the V035 contract, and the
         // reference oracle. PTX has no sub-word register, but it has the canonical
         // narrowing converts: `cvt.u32.u8` zero-extends the low byte (== `& 0xFF`)
@@ -743,7 +743,7 @@ impl BodyCtx<'_> {
                 // Narrowing to a signed 32-bit value: keep the low 32 bits; the
                 // bit pattern of the low word IS the i32 (matches naga's low-word
                 // bitcast and the reference's low-word narrowing). NEVER fail
-                // closed here — wgpu/naga supports u64->i32, so CUDA must too.
+                // closed here (wgpu/naga supports u64->i32, so CUDA must too).
                 let _ = writeln!(self.text, "    cvt.u32.u64    {dst}, {src};");
             }
             (PtxType::U64, PtxType::Bool) => {
@@ -849,7 +849,7 @@ impl BodyCtx<'_> {
     /// XOR (butterfly) all-reduce shared by the f32 and integer-product paths.
     ///
     /// Every lane exchanges with `lane ^ offset` and applies `combine`, so after
-    /// log2(width) steps EVERY lane holds the full reduction — matching the
+    /// log2(width) steps EVERY lane holds the full reduction, matching the
     /// all-lane-broadcast contract of WGSL `subgroupAdd` / `redux.sync` / the
     /// reference oracle. (A `shfl.down` tree feeds only lane 0, which violates
     /// that contract for lanes 1..; this is verified all-lane on a live sm_120

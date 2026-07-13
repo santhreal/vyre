@@ -268,8 +268,8 @@ impl ReadbackRing {
     ///
     /// VYRE-WGPU-002: earlier code conflated `SLOT_READY` / `SLOT_ERROR` with a
     /// single misleading wrap-overflow message. We now name each
-    /// state — but we DO NOT silently recycle an uncollected `SLOT_READY` slot.
-    /// Recycling would unmap and discard a completed-but-uncollected readback —
+    /// state (but we DO NOT silently recycle an uncollected `SLOT_READY` slot).
+    /// Recycling would unmap and discard a completed-but-uncollected readback 
     /// a silent recall loss (Law 10). The caller MUST collect every readback
     /// before the ring wraps back to its slot; if it has not, we fail closed so
     /// the data loss is impossible to miss.
@@ -288,13 +288,13 @@ impl ReadbackRing {
         match state {
             SLOT_FREE => Ok(()),
             SLOT_READY => Err(BackendError::new(format!(
-                "readback ring slot {idx} holds an uncollected completed readback (SLOT_READY). Fix: collect every ReadbackTicket via collect_slot_into before the ring wraps back to this slot — recycling it would silently drop the prior result (a recall loss)."
+                "readback ring slot {idx} holds an uncollected completed readback (SLOT_READY). Fix: collect every ReadbackTicket via collect_slot_into before the ring wraps back to this slot (recycling it would silently drop the prior result (a recall loss))."
             ))),
             SLOT_ERROR => Err(BackendError::new(format!(
                 "readback ring slot {idx} is in SLOT_ERROR (prior map_async failed) and was not collected before reuse. Fix: collect error slots via collect_slot_into before submitting new readbacks to the same slot."
             ))),
             SLOT_PENDING => Err(BackendError::new(format!(
-                "readback ring slot {idx} is still SLOT_PENDING after a device poll — the prior readback has not completed. Fix: increase ring depth (more slots) or collect outstanding readbacks before submitting more."
+                "readback ring slot {idx} is still SLOT_PENDING after a device poll, the prior readback has not completed. Fix: increase ring depth (more slots) or collect outstanding readbacks before submitting more."
             ))),
             other => Err(BackendError::new(format!(
                 "readback ring slot {idx} has unexpected state {other}. Fix: do not modify readback ring slot state outside the ring API."
@@ -479,7 +479,7 @@ impl ReadbackRing {
     /// `0` to read from the start of the buffer. This mirrors the `src_offset`
     /// parameter accepted by `record_copy`; callers that need a sub-range of
     /// the source buffer must supply a non-zero offset here rather than
-    /// wrapping a slice — the wgpu copy API requires aligned buffer offsets.
+    /// wrapping a slice (the wgpu copy API requires aligned buffer offsets).
     ///
     /// # Errors
     /// Returns [\`BackendError\`] if encoder or queue submission fails.
@@ -695,7 +695,7 @@ fn ring_capacity_class(byte_len: u64) -> Result<u64, BackendError> {
 
 #[inline]
 fn aligned_copy_len(byte_len: u64) -> Result<u64, BackendError> {
-    crate::numeric::align_up_u64(byte_len, 0, "readback byte length")
+    crate::numeric::WGPU_NUMERIC.align_up_u64(byte_len, 4, 0, "readback byte length")
 }
 
 fn readback_ring_slots_from_env() -> usize {
@@ -786,7 +786,7 @@ mod tests {
     }
 
     /// VYRE-WGPU-002: the pre-use slot check must distinguish SLOT_READY and
-    /// SLOT_ERROR from a ring overflow with state-specific diagnostics — and it
+    /// SLOT_ERROR from a ring overflow with state-specific diagnostics, and it
     /// must FAIL CLOSED on an uncollected SLOT_READY slot rather than silently
     /// recycle it. Silently recycling unmaps and discards a completed-but-
     /// uncollected readback, which is a silent recall loss (Law 10).
@@ -836,7 +836,7 @@ mod tests {
         );
         assert!(
             !production.contains("was SLOT_READY"),
-            "Fix: the silent recycle-on-reuse path (tracing::warn \"was SLOT_READY\" then unmap + store(SLOT_FREE)) is a Law-10 recall loss and must be removed — fail closed instead"
+            "Fix: the silent recycle-on-reuse path (tracing::warn \"was SLOT_READY\" then unmap + store(SLOT_FREE)) is a Law-10 recall loss and must be removed, fail closed instead"
         );
         // The slot reuse check must not silently reset a non-FREE slot back to
         // FREE; the only SLOT_FREE store is the post-submit transition. Count
@@ -859,7 +859,7 @@ mod tests {
     /// hardcoded to 0, making sub-range reads silently return wrong data.
     ///
     /// This test verifies both the signature change and that the offset is
-    /// forwarded to the wgpu copy call — not discarded — without a live GPU.
+    /// forwarded to the wgpu copy call (not discarded (without a live GPU)).
     #[test]
     fn submit_readback_has_src_offset_parameter_matching_record_copy() {
         let src = include_str!("readback_ring.rs");

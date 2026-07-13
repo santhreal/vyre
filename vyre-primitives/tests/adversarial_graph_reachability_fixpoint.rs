@@ -30,13 +30,13 @@ fn hs(items: &[u32]) -> HashSet<u32> {
     items.iter().copied().collect()
 }
 
-#[path = "adversarial_graph_reachability_fixpoint/reachable_contracts.rs"]
-mod reachable_contracts;
-#[path = "adversarial_graph_reachability_fixpoint/toposort_contracts.rs"]
-mod toposort_contracts;
-#[path = "adversarial_graph_reachability_fixpoint/scc_path_tensor_contracts.rs"]
-mod scc_path_tensor_contracts;
 #[path = "adversarial_graph_reachability_fixpoint/csr_dominator_contracts.rs"]
 mod csr_dominator_contracts;
 #[path = "adversarial_graph_reachability_fixpoint/fixpoint_contracts.rs"]
 mod fixpoint_contracts;
+#[path = "adversarial_graph_reachability_fixpoint/reachable_contracts.rs"]
+mod reachable_contracts;
+#[path = "adversarial_graph_reachability_fixpoint/scc_path_tensor_contracts.rs"]
+mod scc_path_tensor_contracts;
+#[path = "adversarial_graph_reachability_fixpoint/toposort_contracts.rs"]
+mod toposort_contracts;

@@ -1,4 +1,4 @@
-//! FNV-1a 32-bit hash parity on the LIVE GPU — a real shipped vyre-primitives
+//! FNV-1a 32-bit hash parity on the LIVE GPU, a real shipped vyre-primitives
 //! workload whose GPU program is a LOOP with carried hash state.
 //!
 //! `vyre-primitives` tests `fnv1a32_program*` only through `reference_eval` (the
@@ -7,7 +7,7 @@
 //! single `Node::Loop` that walks `input[0..n]` carrying the 32-bit hash across
 //! iterations (`h = (h ^ (byte & 0xFF)) * FNV_PRIME`, a wrapping u32 multiply).
 //! So this exercises loop-carried state + per-iteration `Mul`/`BitXor`/`BitAnd`
-//! on real silicon end-to-end — none of which the unrolled BLAKE3 path covers.
+//! on real silicon end-to-end (none of which the unrolled BLAKE3 path covers).
 //! If the loop carrier or the wrapping multiply miscompiled on the GPU, every
 //! GPU FNV hash would be silently wrong and no test would catch it.
 //!
@@ -54,7 +54,7 @@ fn check(backend: &WgpuBackend, bytes: &[u8], label: &str) {
     let expected = fnv1a32(bytes);
     assert_eq!(
         gpu, expected,
-        "GPU FNV-1a32 of {label} diverged from the Rust reference — the loop carrier \
+        "GPU FNV-1a32 of {label} diverged from the Rust reference, the loop carrier \
          or wrapping multiply miscompiles on hardware.\n  gpu      = {gpu:#010x}\n  \
          expected = {expected:#010x}"
     );

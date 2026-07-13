@@ -52,7 +52,7 @@ pub fn emit_module_with_features(
     // miscompiles AND emits successfully: an `Fma` node with non-f32 operands
     // lowers to integer `a*b+c`, not fused-multiply-add (a Law-10 silent
     // miscompile). `lower_for_emit` runs dead-code elimination, so an unused
-    // such node is stripped before any descriptor-level check could see it —
+    // such node is stripped before any descriptor-level check could see it 
     // the original Program node tree is the only stage that observes it. We
     // deliberately do NOT run full `vyre_foundation::validate` here: every
     // other validation rule corresponds to a program that either emits
@@ -70,7 +70,7 @@ pub fn emit_module_with_features(
     }
     // Reject unresolved async/resume nodes at this Program-compatibility entry.
     // It does not run the async-resolution pass, and lowering them silently (or
-    // treating `Resume` as a no-op) would drop their semantics — see
+    // treating `Resume` as a no-op) would drop their semantics, see
     // `async_resume_guard` for why the descriptor emitter still lowers them.
     if let Err(kind) = super::async_resume_guard::reject_async_resume(program) {
         return Err(LoweringError::invalid(format!(
@@ -79,8 +79,8 @@ pub fn emit_module_with_features(
     }
     // Workgroup (shared) buffers lower to a fixed-size `var<workgroup>` array,
     // so they need a positive static element count. A zero-count one is pruned
-    // when unused (silently vanishing) or would emit a zero-length array — both
-    // wrong — so reject it at the boundary before lowering can drop it.
+    // when unused (silently vanishing) or would emit a zero-length array, both
+    // wrong (so reject it at the boundary before lowering can drop it).
     for buffer in program.buffers() {
         if buffer.access == BufferAccess::Workgroup && buffer.count == 0 {
             return Err(LoweringError::invalid(format!(

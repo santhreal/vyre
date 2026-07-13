@@ -18,8 +18,7 @@ use crate::{
     dataflow::{DynamicPrimitiveSoundness, Soundness},
     security::facts::{
         AnalysisFact, AnalysisFactError, AnalysisFactTable, AnalysisSourceSpan, FactId, FactKind,
-        FindingProofBundle,
-        SourceToSinkFindingRequest,
+        FindingProofBundle, SourceToSinkFindingRequest,
     },
 };
 
@@ -137,8 +136,12 @@ impl WeirIfdsSecurityDispatch {
     ///
     /// Returns [`WeirIfdsSecurityRouteError`] if Weir rejects the shape.
     pub fn step_program(&self) -> Result<Program, WeirIfdsSecurityRouteError> {
-        ifds_gpu_step(self.shape, &self.buffers.frontier_in, &self.buffers.frontier_out)
-            .map_err(|reason| WeirIfdsSecurityRouteError::BuildProgram { reason })
+        ifds_gpu_step(
+            self.shape,
+            &self.buffers.frontier_in,
+            &self.buffers.frontier_out,
+        )
+        .map_err(|reason| WeirIfdsSecurityRouteError::BuildProgram { reason })
     }
 }
 
@@ -165,7 +168,9 @@ pub enum WeirIfdsSecurityRouteError {
         buffer: String,
     },
     /// A source or sink fact id was not present in the table.
-    #[error("missing {role} fact {fact_id:?}. Fix: route only fact-backed source-to-sink queries.")]
+    #[error(
+        "missing {role} fact {fact_id:?}. Fix: route only fact-backed source-to-sink queries."
+    )]
     MissingRoleFact {
         /// Source or sink role.
         role: &'static str,
@@ -334,12 +339,11 @@ pub fn security_witness_path_from_weir(
     let sink_span = proof_role_span(finding, "sink")?;
     let mut statements = Vec::with_capacity(extracted_path.statements.len());
     for (index, statement) in extracted_path.statements.iter().enumerate() {
-        let file_bytes =
-            source_files
-                .get(&statement.file)
-                .ok_or_else(|| SecurityWitnessPathError::MissingSourceBytes {
-                    file: statement.file.clone(),
-                })?;
+        let file_bytes = source_files.get(&statement.file).ok_or_else(|| {
+            SecurityWitnessPathError::MissingSourceBytes {
+                file: statement.file.clone(),
+            }
+        })?;
         let start = statement.byte_start as usize;
         let end = statement.byte_end as usize;
         if end < start || end > file_bytes.len() {
@@ -357,7 +361,9 @@ pub fn security_witness_path_from_weir(
             node_id: statement.node_id,
             byte_start: statement.byte_start,
             byte_end: statement.byte_end,
-            incoming_edge_kind: index.checked_sub(1).map(|edge_index| edge_kinds[edge_index]),
+            incoming_edge_kind: index
+                .checked_sub(1)
+                .map(|edge_index| edge_kinds[edge_index]),
             source_bytes: file_bytes[start..end].to_vec(),
         });
     }

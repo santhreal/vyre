@@ -209,6 +209,8 @@ fn i4x8_batched_matmul_top1_f32_scaled_via_rejects_malformed_backend_outputs() {
     let activations = pack_i4_rows(&[&[7, 5, 3, 1, -1, -3, -5, -7], &[-8, -6, -4, -2, 0, 2, 4, 6]]);
     let row_scales = [0.5];
     let batch_scales = [0.25, 0.375];
+    // The kernel produces ONE interleaved output buffer of `batch*2` f32 (score, index-as-f32 per
+    // batch). For batch=2 that is 4 f32 = 16 bytes.
     let no_outputs = MalformedDotDispatcher { outputs: vec![] };
     let err = i4x8_batched_matmul_top1_f32_scaled_via(
         &no_outputs,
@@ -221,13 +223,29 @@ fn i4x8_batched_matmul_top1_f32_scaled_via_rejects_malformed_backend_outputs() {
         8,
     )
     .expect_err("missing outputs must fail");
-    assert!(err.to_string().contains("exactly two output buffers"));
+    assert!(err.to_string().contains("exactly one output buffer"));
 
-    let one_output = MalformedDotDispatcher {
+    let two_outputs = MalformedDotDispatcher {
+        outputs: vec![vec![0; 16], vec![0; 16]],
+    };
+    let err = i4x8_batched_matmul_top1_f32_scaled_via(
+        &two_outputs,
+        &weights,
+        &activations,
+        &row_scales,
+        &batch_scales,
+        2,
+        1,
+        8,
+    )
+    .expect_err("two separate output buffers must fail (kernel returns one interleaved buffer)");
+    assert!(err.to_string().contains("exactly one output buffer"));
+
+    let short_output = MalformedDotDispatcher {
         outputs: vec![vec![0; 8]],
     };
     let err = i4x8_batched_matmul_top1_f32_scaled_via(
-        &one_output,
+        &short_output,
         &weights,
         &activations,
         &row_scales,
@@ -236,22 +254,6 @@ fn i4x8_batched_matmul_top1_f32_scaled_via_rejects_malformed_backend_outputs() {
         1,
         8,
     )
-    .expect_err("one output must fail");
-    assert!(err.to_string().contains("exactly two output buffers"));
-
-    let trailing_index_output = MalformedDotDispatcher {
-        outputs: vec![vec![0; 8], vec![0; 12]],
-    };
-    let err = i4x8_batched_matmul_top1_f32_scaled_via(
-        &trailing_index_output,
-        &weights,
-        &activations,
-        &row_scales,
-        &batch_scales,
-        2,
-        1,
-        8,
-    )
-    .expect_err("trailing index output bytes must fail");
-    assert!(err.to_string().contains("expected 8 output bytes"));
+    .expect_err("short interleaved output bytes must fail");
+    assert!(err.to_string().contains("expected 16 output bytes"));
 }

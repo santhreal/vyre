@@ -1,6 +1,6 @@
 [package]
 name = "vyre-lints"
-version = "0.6.4"
+version = "0.6.5"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Lego-block enforcement lints for vyre. Forbids raw IR construction in dialect crates."
@@ -29,7 +29,8 @@ anyhow = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
+vyre-test-support.workspace = true
 # integration tests/benches assert against these crates' public APIs
-vyre = { workspace = true }
-vyre-foundation = { workspace = true }
+vyre = { path = "../vyre-core", default-features = false }
+vyre-foundation = { path = "../vyre-foundation" }
 tempfile = { workspace = true }

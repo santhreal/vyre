@@ -2,9 +2,19 @@ use super::{debug, read_required_word, read_word_from_optional_words, validate_w
 use super::{DebugRecord, ProtocolError};
 
 /// Decode PRINTF records out of the debug-log buffer.
+///
+/// # Panics
+///
+/// Panics when the buffer fails to decode. Swallowing the error into an empty
+/// `Vec` silently drops the PRINTF records the kernel emitted, the operator
+/// sees "no debug output" instead of the decode error (Law 10). Fail loud;
+/// callers that need the error use [`try_read_debug_log`].
 #[must_use]
 pub fn read_debug_log(debug_bytes: &[u8]) -> Vec<DebugRecord> {
-    try_read_debug_log(debug_bytes).unwrap_or_default()
+    match try_read_debug_log(debug_bytes) {
+        Ok(records) => records,
+        Err(error) => panic!("vyre-runtime debug-log decode failed: {error}"),
+    }
 }
 
 /// Decode PRINTF records into caller-owned storage.
@@ -12,7 +22,7 @@ pub fn read_debug_log(debug_bytes: &[u8]) -> Vec<DebugRecord> {
 /// Clears `out`, then reuses its allocation.
 pub fn read_debug_log_into(debug_bytes: &[u8], out: &mut Vec<DebugRecord>) {
     // Clearing to empty on a decode failure silently drops the PRINTF records
-    // the kernel emitted — the operator sees "no debug output" instead of the
+    // the kernel emitted, the operator sees "no debug output" instead of the
     // decode error (Law 10). Fail loud; callers use try_read_debug_log_into.
     if let Err(error) = try_read_debug_log_into(debug_bytes, out) {
         panic!("vyre-runtime debug-log decode failed: {error}");

@@ -32,7 +32,7 @@ impl BodyCtx<'_> {
             // comment so the operator can detect and diagnose scalar fallback by
             // grepping the emitted PTX for `vector-fusion-skipped`. We only emit
             // when the NEXT op is also a LoadGlobal at the same slot, meaning
-            // at least two adjacent loads were present — this suppresses noise
+            // at least two adjacent loads were present, this suppresses noise
             // for isolated loads that were never eligible for fusion.
             if vec_chain.is_none() {
                 if let Some(slot) = body.ops[idx].operands.first().copied() {

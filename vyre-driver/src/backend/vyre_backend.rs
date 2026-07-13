@@ -783,7 +783,7 @@ pub trait VyreBackend: private::Sealed + Send + Sync {
     ///
     /// Default: `Ok(false)` (no native cooperative launch). Backends that lower
     /// grid sync override this with the real residency check. Returns `Ok(false)`
-    /// — not an error — when the program carries no grid-sync barrier, since
+    ///: not an error, when the program carries no grid-sync barrier, since
     /// there is then nothing to launch cooperatively.
     ///
     /// # Errors

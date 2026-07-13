@@ -103,4 +103,3 @@ fn validate_high_node_count_zero_edges() {
     assert_eq!(bufs[3].count(), 1); // placeholder
     assert_eq!(bufs[4].count(), 1_000_000);
 }
-

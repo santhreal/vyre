@@ -12,7 +12,9 @@ use vyre_primitives::decode::ziftsieve::ziftsieve_literal_copy_with_op_id;
 // feature, never as a production decode surface (matches the vyre-primitives
 // gating of the underlying helper).
 #[cfg(any(test, feature = "cpu-parity"))]
-pub use vyre_primitives::decode::ziftsieve::ziftsieve_reference_extract_literals;
+pub use vyre_primitives::decode::ziftsieve::{
+    ziftsieve_reference_extract_literals, ZiftsieveExtract,
+};
 
 use crate::decode::buffers::{scoped_decode_input_buffer, scoped_decode_output_buffer};
 #[cfg(test)]
@@ -114,6 +116,7 @@ mod tests {
     #[test]
     fn wrapper_reexports_primitive_reference() {
         let result = ziftsieve_reference_extract_literals(&[0x10, b'A'], 1024).unwrap();
-        assert_eq!(result, b"A");
+        assert_eq!(result.literals, b"A");
+        assert!(!result.truncated());
     }
 }

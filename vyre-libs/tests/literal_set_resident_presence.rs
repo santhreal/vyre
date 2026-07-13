@@ -7,7 +7,7 @@
 //! across a corpus transferring only the per-file haystack and a presence-prefix
 //! reset. This test pins, on REAL GPU hardware (wgpu, the RTX 5090 here), that the
 //! resident bitmap is byte-identical to the borrowed `scan_presence_by_region`
-//! across repeated scans AND carries the exact planted per-region hit sets —
+//! across repeated scans AND carries the exact planted per-region hit sets 
 //! the resident table-residency optimization must not change a single result bit
 //! (Law 10). Skips cleanly with no GPU.
 //!
@@ -45,7 +45,11 @@ fn resident_region_presence_matches_borrowed_and_planted_hits_on_gpu() {
     // Prepare a resident session sized for this corpus (a couple regions of head
     // room proves the dynamic-region-count path: max_regions > region_count).
     let session = matcher
-        .prepare_resident_presence(backend.as_ref(), haystack.len() + 64, region_count as u32 + 2)
+        .prepare_resident_presence(
+            backend.as_ref(),
+            haystack.len() + 64,
+            region_count as u32 + 2,
+        )
         .expect("prepare resident region-presence session");
     assert_eq!(session.max_regions(), region_count as u32 + 2);
     assert_eq!(session.presence_words(), words as u32);
@@ -87,7 +91,7 @@ fn resident_region_presence_matches_borrowed_and_planted_hits_on_gpu() {
 #[test]
 fn resident_region_presence_serves_smaller_batches_under_the_cap_on_gpu() {
     // One resident session sized for the full corpus must also correctly scan a
-    // SMALLER batch (fewer regions than max_regions) — proving the kernel reads the
+    // SMALLER batch (fewer regions than max_regions), proving the kernel reads the
     // live region count from buf_len(region_starts), not the compiled cap.
     let backend = match WgpuBackend::shared() {
         Ok(b) => b,
@@ -102,7 +106,11 @@ fn resident_region_presence_serves_smaller_batches_under_the_cap_on_gpu() {
     let (haystack, region_starts) = planted_corpus();
 
     let session = matcher
-        .prepare_resident_presence(backend.as_ref(), haystack.len() + 64, region_starts.len() as u32)
+        .prepare_resident_presence(
+            backend.as_ref(),
+            haystack.len() + 64,
+            region_starts.len() as u32,
+        )
         .expect("prepare resident region-presence session");
 
     // A two-region sub-batch: just the first file (regions {0} start, terminated by
@@ -134,7 +142,8 @@ fn resident_region_presence_serves_smaller_batches_under_the_cap_on_gpu() {
     );
     assert_eq!(out.len(), words, "single region -> exactly `words` u32s");
     // Region 0 of the planted corpus carries {key,token,secret,AKIA,api} = {0,1,2,3,7}.
-    let present: std::collections::BTreeSet<u32> = presence_corpus::present_ids(&out, pattern_count);
+    let present: std::collections::BTreeSet<u32> =
+        presence_corpus::present_ids(&out, pattern_count);
     assert_eq!(
         present,
         std::collections::BTreeSet::from([0, 1, 2, 3, 7]),

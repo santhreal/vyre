@@ -358,7 +358,7 @@ fn signed_division_errors_are_structured_at_program_boundary() {
 /// foundation typechecker but evaluates to a SIGNED `Value::I32`; storing it into
 /// an I32 output buffer and reading back must yield the signed remainder bits.
 /// This is the end-to-end semantics the same-width store coercion now permits
-/// (`store(i32_buffer, rem(i32, i32))` — previously rejected V045). The oracle
+/// (`store(i32_buffer, rem(i32, i32))`: previously rejected V045). The oracle
 /// stores the value's raw little-endian bytes, so the bit pattern round-trips
 /// regardless of the U32-vs-I32 type label.
 #[test]

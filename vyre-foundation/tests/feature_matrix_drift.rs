@@ -113,9 +113,9 @@ fn feature_matrix_drift_is_baselined() {
                         for line in content.lines() {
                             // A feature gate appears as `feature = "NAME"` inside a
                             // `cfg(...)`. The old `cfg(feature = "..."` match only
-                            // caught the BARE form and missed every compound cfg —
+                            // caught the BARE form and missed every compound cfg 
                             // `cfg(any(test, feature = "x"))`, `cfg(all(...))`,
-                            // `cfg(not(...))` — falsely reporting such features as
+                            // `cfg(not(...))`: falsely reporting such features as
                             // unused. Scan every `feature = "NAME"` on any cfg line.
                             if !line.contains("cfg") {
                                 continue;

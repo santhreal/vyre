@@ -49,7 +49,7 @@ pub(crate) fn reserve_vec_capacity_or_panic<T>(
     context: &'static str,
 ) {
     // The name promises a panic on failure; the old body did `let _ = …`,
-    // silently swallowing the reservation error (and discarding `context`) —
+    // silently swallowing the reservation error (and discarding `context`) 
     // a name/behavior incoherence and a silent fallback (Law 10). Honor the
     // contract: fail loud with context.
     if let Err(message) = try_reserve_vec_capacity(buffer, capacity) {

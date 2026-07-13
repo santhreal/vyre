@@ -35,6 +35,8 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 pub const OP_ID: &str = "vyre-primitives::graph::do_intervention_delete_incoming";
 /// Rule 2 op id.
 pub const RULE2_OP_ID: &str = "vyre-primitives::graph::do_rule2_reverse_incoming";
+/// Rule 3 op id.
+pub const RULE3_OP_ID: &str = "vyre-primitives::graph::do_rule3_subgraph";
 
 /// Emit a Program that zeros all incoming edges to nodes marked
 /// "intervened" in `intervention_mask`. The result is the post-do
@@ -430,6 +432,144 @@ fn checked_square_cells(n: u32, op_id: &'static str) -> Result<u32, String> {
             "{op_id} n={n} overflows adjacency cell count. Fix: shard the causal graph before GPU dispatch."
         )
     })
+}
+
+/// Emit a Program for do-calculus **Rule 3 subgraph extraction**: the GPU/IR
+/// counterpart of [`do_rule3_subgraph_cpu`]. Restricts the `n × n` adjacency
+/// matrix to the nodes whose `keep_mask` bit is set, laying the result out as a
+/// dense `k × k` block (`k = popcount(keep_mask)`), and emits the
+/// kept-index → original-index map plus the scalar `k`.
+///
+/// Inputs:
+/// - `adjacency`: row-major `n × n` u32 buffer.
+/// - `keep_mask`: `n` u32 lanes, non-zero if the node is retained.
+///
+/// Outputs:
+/// - `reduced`: `n × n` u32 buffer; the first `k × k` cells (row-major, **stride
+///   `k`**) hold the extracted subgraph, the remainder is left untouched.
+/// - `kept`: `n` u32 buffer; the first `k` cells hold the retained original
+///   indices in ascending order.
+/// - `kept_len`: single u32 = `k`.
+///
+/// Unlike the two per-cell-map do-calculus surgeries (intervention / rule 2),
+/// Rule 3 has a **data-dependent output size** (`k × k`, stride `k ≠ n`) and so
+/// requires a compaction (prefix scan of the kept indices) followed by a gather.
+/// The compaction/gather is done by a **single serialized lane** (`InvocationId
+/// == 0`), which makes the kept order deterministic (ascending original index,
+/// byte-identical to the CPU oracle) rather than the nondeterministic
+/// atomic-append order a parallel compaction would produce.
+#[must_use]
+pub fn do_rule3_subgraph(
+    adjacency: &str,
+    keep_mask: &str,
+    reduced: &str,
+    kept: &str,
+    kept_len: &str,
+    n: u32,
+) -> Program {
+    match try_do_rule3_subgraph(adjacency, keep_mask, reduced, kept, kept_len, n) {
+        Ok(program) => program,
+        Err(error) => crate::invalid_output_program(RULE3_OP_ID, reduced, DataType::U32, error),
+    }
+}
+
+/// Emit a Rule-3 subgraph-extraction Program with checked adjacency shape.
+pub fn try_do_rule3_subgraph(
+    adjacency: &str,
+    keep_mask: &str,
+    reduced: &str,
+    kept: &str,
+    kept_len: &str,
+    n: u32,
+) -> Result<Program, String> {
+    if n == 0 {
+        return Err(format!("Fix: do_rule3_subgraph requires n > 0, got {n}."));
+    }
+    let cells = checked_square_cells(n, RULE3_OP_ID)?;
+
+    let lane0 = Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0));
+
+    // Pass 1, compaction: walk nodes in ascending order, appending each kept
+    // original index to `kept[k]` and counting `k`. Deterministic order.
+    let scan = vec![
+        Node::let_bind("r3_k", Expr::u32(0)),
+        Node::loop_for(
+            "r3_i",
+            Expr::u32(0),
+            Expr::u32(n),
+            vec![Node::if_then(
+                Expr::ne(Expr::load(keep_mask, Expr::var("r3_i")), Expr::u32(0)),
+                vec![
+                    Node::store(kept, Expr::var("r3_k"), Expr::var("r3_i")),
+                    Node::assign("r3_k", Expr::add(Expr::var("r3_k"), Expr::u32(1))),
+                ],
+            )],
+        ),
+        Node::store(kept_len, Expr::u32(0), Expr::var("r3_k")),
+    ];
+
+    // Pass 2, gather: for each (new_i, new_j) in the k × k block, copy
+    // adjacency[kept[new_i] * n + kept[new_j]] into reduced[new_i * k + new_j].
+    // Constant `0..n` loop bounds guarded by `< k` (portable, no dynamic loop
+    // trip count); the write stride uses the runtime `r3_k`.
+    let gather = vec![Node::loop_for(
+        "r3_ni",
+        Expr::u32(0),
+        Expr::u32(n),
+        vec![Node::if_then(
+            Expr::lt(Expr::var("r3_ni"), Expr::var("r3_k")),
+            vec![
+                Node::let_bind("r3_old_i", Expr::load(kept, Expr::var("r3_ni"))),
+                Node::loop_for(
+                    "r3_nj",
+                    Expr::u32(0),
+                    Expr::u32(n),
+                    vec![Node::if_then(
+                        Expr::lt(Expr::var("r3_nj"), Expr::var("r3_k")),
+                        vec![
+                            Node::let_bind("r3_old_j", Expr::load(kept, Expr::var("r3_nj"))),
+                            Node::store(
+                                reduced,
+                                Expr::add(
+                                    Expr::mul(Expr::var("r3_ni"), Expr::var("r3_k")),
+                                    Expr::var("r3_nj"),
+                                ),
+                                Expr::load(
+                                    adjacency,
+                                    Expr::add(
+                                        Expr::mul(Expr::var("r3_old_i"), Expr::u32(n)),
+                                        Expr::var("r3_old_j"),
+                                    ),
+                                ),
+                            ),
+                        ],
+                    )],
+                ),
+            ],
+        )],
+    )];
+
+    let mut serial_body = scan;
+    serial_body.extend(gather);
+    let body = vec![Node::if_then(lane0, serial_body)];
+
+    Ok(Program::wrapped(
+        vec![
+            BufferDecl::storage(adjacency, 0, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(cells),
+            BufferDecl::storage(keep_mask, 1, BufferAccess::ReadOnly, DataType::U32).with_count(n),
+            BufferDecl::storage(reduced, 2, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(cells),
+            BufferDecl::storage(kept, 3, BufferAccess::ReadWrite, DataType::U32).with_count(n),
+            BufferDecl::storage(kept_len, 4, BufferAccess::ReadWrite, DataType::U32).with_count(1),
+        ],
+        [1, 1, 1],
+        vec![Node::Region {
+            generator: Ident::from(RULE3_OP_ID),
+            source_region: None,
+            body: Arc::new(body),
+        }],
+    ))
 }
 
 /// Rule 2 CPU reference.

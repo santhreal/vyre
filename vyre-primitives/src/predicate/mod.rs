@@ -122,7 +122,7 @@ pub mod edge_kind {
     /// `dominator_tree` shim traverses `DOMINANCE | BLOCK_MEMBER`, so a
     /// backward step from a call node reaches its block entry, walks the
     /// idom chain, then descends into each dominating block's contained
-    /// nodes — yielding correct block-level dominance for arbitrary
+    /// nodes, yielding correct block-level dominance for arbitrary
     /// operands. Deliberately NOT in the CONTROL|DOMINANCE mask the CPU
     /// dominator bitmap (`sanitized_by`) uses, so that subsystem is
     /// unaffected.

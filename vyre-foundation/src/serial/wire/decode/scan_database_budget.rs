@@ -332,10 +332,12 @@ pub fn validate_scan_database_decode_budget(
         });
     }
     if evidence.verifier_fragment_bytes > evidence.max_verifier_fragment_bytes {
-        return Err(ScanDatabaseDecodeBudgetError::VerifierFragmentBytesExceeded {
-            actual: evidence.verifier_fragment_bytes,
-            max: evidence.max_verifier_fragment_bytes,
-        });
+        return Err(
+            ScanDatabaseDecodeBudgetError::VerifierFragmentBytesExceeded {
+                actual: evidence.verifier_fragment_bytes,
+                max: evidence.max_verifier_fragment_bytes,
+            },
+        );
     }
 
     Ok(evidence)
@@ -452,8 +454,8 @@ const fn section_kind_index(kind: ScanDatabaseSectionKind) -> usize {
 mod tests {
     use super::*;
     use crate::serial::wire::encode::{
-        ScanDatabaseCompatibilityRecord, ScanDatabaseMode,
-        ScanDatabaseReaderCompatibility, ScanDatabaseSectionHeader, UnsupportedScanFeature,
+        ScanDatabaseCompatibilityRecord, ScanDatabaseMode, ScanDatabaseReaderCompatibility,
+        ScanDatabaseSectionHeader, UnsupportedScanFeature,
     };
 
     fn header() -> ScanDatabaseHeader {

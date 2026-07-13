@@ -217,7 +217,7 @@ mod tests {
         // An OpaqueNode is a backend-defined escape hatch with no addressable
         // slot operand: it may write ANY global buffer, including this
         // read-only-DECLARED candidate. The pass cannot prove the slot stays
-        // read-only, so it must fail closed and NOT promote it to Constant —
+        // read-only, so it must fail closed and NOT promote it to Constant 
         // promoting would let a backend serve stale constant-cached data after
         // the opaque op writes the buffer.
         let input = kernel(

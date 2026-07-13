@@ -3,8 +3,7 @@
 const UNSAFE_BLOCKS: &str =
     include_str!("../../docs/optimization/UNSAFE_BLOCK_SAFETY_CONTRACTS.toml");
 const FFI: &str = include_str!("../../docs/optimization/FFI_ABI_BOUNDARY_CONTRACTS.toml");
-const LAYOUT: &str =
-    include_str!("../../docs/optimization/MEMORY_LAYOUT_ALIASING_ALIGNMENT.toml");
+const LAYOUT: &str = include_str!("../../docs/optimization/MEMORY_LAYOUT_ALIASING_ALIGNMENT.toml");
 
 #[test]
 fn unsafe_block_safety_contracts_record_capability_invariants_wrappers_and_diagnostics() {

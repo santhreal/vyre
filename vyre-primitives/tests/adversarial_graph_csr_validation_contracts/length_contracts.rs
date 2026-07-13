@@ -146,4 +146,3 @@ fn csr_cpu_ref_rejects_short_edge_kind_mask_vs_offsets() {
     // edge_offsets says 2 edges, but edge_kind_mask only has 1
     let _ = csr_cpu_ref(2, &[0, 1, 2], &[0, 0], &[0], &[0b0001], 0xFFFF_FFFF);
 }
-

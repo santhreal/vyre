@@ -120,4 +120,3 @@ fn generated_scaled_dot_matches_i32_dot_scale_product() {
         );
     }
 }
-

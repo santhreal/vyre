@@ -851,7 +851,7 @@ fn index_of_buffer(program: &Program, name: &str) -> Option<usize> {
 
 /// Project a full convergence/fixpoint state vector down to just the
 /// program's declared output buffers (`ReadWrite`/`WriteOnly`), in
-/// `output_buffer_indices` order — the exact shape
+/// `output_buffer_indices` order, the exact shape
 /// [`compare_output_buffers`] requires (it asserts the comparison vectors
 /// have one entry per declared output).
 ///
@@ -998,7 +998,7 @@ mod convergence_tests {
     /// declared outputs. Before the projection fix the lens fed the
     /// 7-buffer state straight into the comparator, which rejected it with
     /// "program declares 1 output buffer(s), compared 7 result buffer(s)"
-    /// even when CPU and GPU agreed byte-for-byte — a false parity
+    /// even when CPU and GPU agreed byte-for-byte, a false parity
     /// failure. These two assertions pin both halves: the raw full state
     /// is rejected, the projected state is accepted.
     fn flows_to_shaped_program() -> Program {
@@ -1081,7 +1081,7 @@ mod convergence_tests {
     #[test]
     fn project_output_buffers_errs_loudly_on_missing_output_slot() {
         let program = flows_to_shaped_program();
-        // State truncated before the RW output index (6) — a malformed
+        // State truncated before the RW output index (6), a malformed
         // fixture. Projection must surface this, never silently drop it.
         let short_state: Vec<Vec<u8>> = vec![vec![0u8; 16]; 3];
         let err = project_output_buffers(&program, &short_state)

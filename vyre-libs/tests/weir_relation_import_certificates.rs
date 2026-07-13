@@ -1,6 +1,7 @@
 //! Weir relation import certificates test suite.
 
-const CERTIFICATES: &str = include_str!("../../docs/optimization/WEIR_RELATION_IMPORT_CERTIFICATES.toml");
+const CERTIFICATES: &str =
+    include_str!("../../docs/optimization/WEIR_RELATION_IMPORT_CERTIFICATES.toml");
 
 #[test]
 fn weir_relation_import_certificates_preserve_witness_boundaries() {

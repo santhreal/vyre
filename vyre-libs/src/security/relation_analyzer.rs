@@ -486,8 +486,7 @@ mod tests {
             fact(3, FactKind::Dataflow, 10, Some(20)),
         ]);
 
-        let report =
-            run_generated_security_relation_analyzer(&table, spec(), stats(3, 1)).unwrap();
+        let report = run_generated_security_relation_analyzer(&table, spec(), stats(3, 1)).unwrap();
 
         assert_eq!(
             report.evidence.schema_version,
@@ -517,8 +516,7 @@ mod tests {
             fact(4, FactKind::Sanitizer, 10, Some(20)),
         ]);
 
-        let report =
-            run_generated_security_relation_analyzer(&table, spec(), stats(4, 0)).unwrap();
+        let report = run_generated_security_relation_analyzer(&table, spec(), stats(4, 0)).unwrap();
 
         assert!(report.findings.is_empty());
         assert_eq!(report.evidence.sanitizer_tuple_count, 1);

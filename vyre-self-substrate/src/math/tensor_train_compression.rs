@@ -16,7 +16,7 @@
 //!   per query vs O(n) for raw tensor traversal.
 
 use crate::dispatch_buffers::{
-    decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
+    decode_f32_output_exact, ensure_input_slots, write_f32_slice_le_bytes, write_zero_bytes,
 };
 use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
 use vyre_primitives::math::tensor_train_decompose::tensor_train_decompose_step;
@@ -36,57 +36,57 @@ pub struct CompressedCostTensor {
     pub ranks: Vec<u32>,
 }
 
-/// Fixed-point compressed cost tensor produced by the dispatchable TT step primitive.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CompressedFixedCostTensor {
-    /// Primitive-native fixed-point TT cores in dispatch-graph mode order.
-    pub cores: Vec<Vec<u32>>,
+/// f32 compressed cost tensor produced by the dispatchable TT-SVD step primitive.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CompressedF32CostTensor {
+    /// f32 TT cores in dispatch-graph mode order.
+    pub cores: Vec<Vec<f32>>,
     /// Per-mode dimensions.
     pub dims: Vec<u32>,
     /// TT-ranks.
     pub ranks: Vec<u32>,
 }
 
-/// Caller-owned GPU dispatch scratch for fixed-point tensor-train compression.
+/// Caller-owned GPU dispatch scratch for f32 tensor-train compression.
 #[derive(Debug, Default)]
 pub struct TensorTrainCompressionGpuScratch {
-    current: Vec<u32>,
-    remainder: Vec<u32>,
+    current: Vec<f32>,
+    remainder: Vec<f32>,
     inputs: Vec<Vec<u8>>,
 }
 
-/// Compress a primitive-native fixed-point cost tensor through dispatchable TT steps.
+/// Compress an f32 cost tensor through dispatchable TT-SVD steps.
 ///
-/// This path chains [`tensor_train_decompose_step`] once per non-final mode and stores the final
-/// remainder as the last core. It is the GPU-dispatchable production path for fixed-point cost
-/// tables; [`compress_cost_tensor`] remains the f64 reference TT-SVD API.
-pub fn compress_cost_tensor_fixed_via(
+/// This path chains [`tensor_train_decompose_step`] (a real per-mode truncated SVD in f32) once per
+/// non-final mode and stores the final remainder as the last core. It is the GPU-dispatchable
+/// production path; [`reference_compress_cost_tensor`] remains the f64 CPU reference TT-SVD.
+pub fn compress_cost_tensor_f32_via(
     dispatcher: &dyn OptimizerDispatcher,
-    tensor_fixed: &[u32],
+    tensor_f32: &[f32],
     dims: &[u32],
     target_ranks: &[u32],
-) -> Result<CompressedFixedCostTensor, DispatchError> {
+) -> Result<CompressedF32CostTensor, DispatchError> {
     let mut cores = Vec::with_capacity(dims.len());
-    compress_cost_tensor_fixed_via_into(dispatcher, tensor_fixed, dims, target_ranks, &mut cores)?;
-    Ok(CompressedFixedCostTensor {
+    compress_cost_tensor_f32_via_into(dispatcher, tensor_f32, dims, target_ranks, &mut cores)?;
+    Ok(CompressedF32CostTensor {
         cores,
         dims: dims.to_vec(),
         ranks: target_ranks.to_vec(),
     })
 }
 
-/// Compress a fixed-point cost tensor through dispatchable TT steps into caller-owned core storage.
-pub fn compress_cost_tensor_fixed_via_into(
+/// Compress an f32 cost tensor through dispatchable TT-SVD steps into caller-owned core storage.
+pub fn compress_cost_tensor_f32_via_into(
     dispatcher: &dyn OptimizerDispatcher,
-    tensor_fixed: &[u32],
+    tensor_f32: &[f32],
     dims: &[u32],
     target_ranks: &[u32],
-    cores_out: &mut Vec<Vec<u32>>,
+    cores_out: &mut Vec<Vec<f32>>,
 ) -> Result<(), DispatchError> {
     let mut scratch = TensorTrainCompressionGpuScratch::default();
-    compress_cost_tensor_fixed_via_with_scratch_into(
+    compress_cost_tensor_f32_via_with_scratch_into(
         dispatcher,
-        tensor_fixed,
+        tensor_f32,
         dims,
         target_ranks,
         &mut scratch,
@@ -94,20 +94,20 @@ pub fn compress_cost_tensor_fixed_via_into(
     )
 }
 
-/// Compress a fixed-point cost tensor through dispatchable TT steps into
+/// Compress an f32 cost tensor through dispatchable TT-SVD steps into
 /// caller-owned dispatch scratch and core storage.
-pub fn compress_cost_tensor_fixed_via_with_scratch_into(
+pub fn compress_cost_tensor_f32_via_with_scratch_into(
     dispatcher: &dyn OptimizerDispatcher,
-    tensor_fixed: &[u32],
+    tensor_f32: &[f32],
     dims: &[u32],
     target_ranks: &[u32],
     scratch: &mut TensorTrainCompressionGpuScratch,
-    cores_out: &mut Vec<Vec<u32>>,
+    cores_out: &mut Vec<Vec<f32>>,
 ) -> Result<(), DispatchError> {
     use crate::observability::{bump, tensor_train_compression_calls};
     bump(&tensor_train_compression_calls);
 
-    validate_tt_shape(tensor_fixed, dims, target_ranks)?;
+    validate_tt_shape(tensor_f32, dims, target_ranks)?;
     if dims.is_empty() {
         cores_out.truncate(0);
         return Ok(());
@@ -115,13 +115,13 @@ pub fn compress_cost_tensor_fixed_via_with_scratch_into(
     if dims.len() == 1 {
         ensure_core_slot(cores_out, 0);
         cores_out[0].clear();
-        cores_out[0].extend_from_slice(tensor_fixed);
+        cores_out[0].extend_from_slice(tensor_f32);
         cores_out.truncate(1);
         return Ok(());
     }
 
     scratch.current.clear();
-    scratch.current.extend_from_slice(tensor_fixed);
+    scratch.current.extend_from_slice(tensor_f32);
     let mut r_prev = target_ranks[0];
     for mode in 0..(dims.len() - 1) {
         let nk = dims[mode];
@@ -130,13 +130,13 @@ pub fn compress_cost_tensor_fixed_via_with_scratch_into(
         let input_rows_usize = input_rows as usize;
         if input_rows_usize == 0 || scratch.current.len() % input_rows_usize != 0 {
             return Err(DispatchError::BadInputs(format!(
-                "Fix: compress_cost_tensor_fixed_via mode {mode} expected current.len() divisible by r_prev*nk={input_rows}, got {}.",
+                "Fix: compress_cost_tensor_f32_via mode {mode} expected current.len() divisible by r_prev*nk={input_rows}, got {}.",
                 scratch.current.len()
             )));
         }
         let rem = u32::try_from(scratch.current.len() / input_rows_usize).map_err(|_| {
             DispatchError::BadInputs(format!(
-                "Fix: compress_cost_tensor_fixed_via mode {mode} remainder column count exceeds u32."
+                "Fix: compress_cost_tensor_f32_via mode {mode} remainder column count exceeds u32."
             ))
         })?;
         let core_words = checked_product3_usize(r_prev, nk, r_next, "core")?;
@@ -150,28 +150,45 @@ pub fn compress_cost_tensor_fixed_via_with_scratch_into(
             rem,
             r_next,
         );
-        ensure_input_slots(&mut scratch.inputs, 3);
-        write_u32_slice_le_bytes(&mut scratch.inputs[0], &scratch.current);
-        write_zero_bytes(&mut scratch.inputs[1], byte_count(core_words, "core")?);
-        write_zero_bytes(&mut scratch.inputs[2], byte_count(rem_words, "remainder")?);
-        let outputs = dispatcher.dispatch(&program, &scratch.inputs, Some([1, 1, 1]))?;
-        if outputs.len() != 2 {
+        // Real-backend dispatch-input contract (vyre-driver `role_for_buffer`): one input per
+        // INPUT-CONSUMING buffer in buffer order. The step declares six such buffers. `input_matrix`
+        // RO (0) then the plain-ReadWrite `u_out` (1, m*r_next), `rem_out` (2, r_next*rem), and the
+        // internal `tt_ata`/`tt_evec` Gram+eigenvector (3,4, rem*rem each) and `tt_eval` (5, rem)
+        // scratch. Every plain-RW buffer needs a zero-filled input slot for its initial contents (the
+        // lane-0-serial kernel writes them all); passing only `input_matrix` would fail the backend's
+        // strict `validate_input_lengths` count check.
+        let rem_usize = rem as usize;
+        let gram_words = checked_mul_usize(rem, rem, "gram")?;
+        let f32_bytes = std::mem::size_of::<f32>();
+        let bytes = |words: usize| words * f32_bytes;
+        ensure_input_slots(&mut scratch.inputs, 6);
+        write_f32_slice_le_bytes(&mut scratch.inputs[0], &scratch.current);
+        write_zero_bytes(&mut scratch.inputs[1], bytes(core_words));
+        write_zero_bytes(&mut scratch.inputs[2], bytes(rem_words));
+        write_zero_bytes(&mut scratch.inputs[3], bytes(gram_words));
+        write_zero_bytes(&mut scratch.inputs[4], bytes(gram_words));
+        write_zero_bytes(&mut scratch.inputs[5], bytes(rem_usize));
+        let outputs = dispatcher.dispatch(&program, &scratch.inputs[..6], Some([1, 1, 1]))?;
+        // The kernel's writable buffers in binding order are u_out (core), rem_out (S·Vᵀ), then the
+        // internal scratch; a faithful backend returns at least the first two, which are what we
+        // decode. Trailing scratch outputs are ignored.
+        if outputs.len() < 2 {
             return Err(DispatchError::BackendError(format!(
-                "Fix: compress_cost_tensor_fixed_via expected exactly two outputs (u_out, rem_out), got {}.",
+                "Fix: compress_cost_tensor_f32_via expected at least the u_out + rem_out outputs, got {}.",
                 outputs.len()
             )));
         }
         ensure_core_slot(cores_out, mode);
-        decode_u32_output_exact(
+        decode_f32_output_exact(
             &outputs[0],
             core_words,
-            "compress_cost_tensor_fixed_via u_out",
+            "compress_cost_tensor_f32_via u_out",
             &mut cores_out[mode],
         )?;
-        decode_u32_output_exact(
+        decode_f32_output_exact(
             &outputs[1],
             rem_words,
-            "compress_cost_tensor_fixed_via rem_out",
+            "compress_cost_tensor_f32_via rem_out",
             &mut scratch.remainder,
         )?;
         std::mem::swap(&mut scratch.current, &mut scratch.remainder);
@@ -182,48 +199,48 @@ pub fn compress_cost_tensor_fixed_via_with_scratch_into(
     cores_out[last].clear();
     cores_out[last].extend_from_slice(&scratch.current);
     cores_out.truncate(dims.len());
-    if scratch.current.capacity() < tensor_fixed.len() {
+    if scratch.current.capacity() < tensor_f32.len() {
         scratch
             .current
-            .try_reserve_exact(tensor_fixed.len() - scratch.current.capacity())
+            .try_reserve_exact(tensor_f32.len() - scratch.current.capacity())
             .map_err(|error| {
                 DispatchError::BackendError(format!(
-                    "Fix: compress_cost_tensor_fixed_via could not retain current scratch capacity for {} word(s): {error}.",
-                    tensor_fixed.len()
+                    "Fix: compress_cost_tensor_f32_via could not retain current scratch capacity for {} word(s): {error}.",
+                    tensor_f32.len()
                 ))
             })?;
     }
     Ok(())
 }
 
-fn ensure_core_slot(cores: &mut Vec<Vec<u32>>, slot: usize) {
+fn ensure_core_slot(cores: &mut Vec<Vec<f32>>, slot: usize) {
     while cores.len() <= slot {
         cores.push(Vec::new());
     }
 }
 
-fn validate_tt_shape(tensor: &[u32], dims: &[u32], ranks: &[u32]) -> Result<(), DispatchError> {
+fn validate_tt_shape(tensor: &[f32], dims: &[u32], ranks: &[u32]) -> Result<(), DispatchError> {
     if dims.iter().any(|&dim| dim == 0) {
         return Err(DispatchError::BadInputs(
-            "Fix: compress_cost_tensor_fixed_via requires all dims > 0.".to_string(),
+            "Fix: compress_cost_tensor_f32_via requires all dims > 0.".to_string(),
         ));
     }
     if ranks.len() != dims.len() + 1 {
         return Err(DispatchError::BadInputs(format!(
-            "Fix: compress_cost_tensor_fixed_via expected ranks.len() == dims.len()+1 == {}, got {}.",
+            "Fix: compress_cost_tensor_f32_via expected ranks.len() == dims.len()+1 == {}, got {}.",
             dims.len() + 1,
             ranks.len()
         )));
     }
     if ranks.first().copied().unwrap_or(0) != 1 || ranks.last().copied().unwrap_or(0) != 1 {
         return Err(DispatchError::BadInputs(
-            "Fix: compress_cost_tensor_fixed_via requires boundary ranks ranks[0] == ranks[d] == 1."
+            "Fix: compress_cost_tensor_f32_via requires boundary ranks ranks[0] == ranks[d] == 1."
                 .to_string(),
         ));
     }
     if ranks.iter().any(|&rank| rank == 0) {
         return Err(DispatchError::BadInputs(
-            "Fix: compress_cost_tensor_fixed_via requires all ranks > 0.".to_string(),
+            "Fix: compress_cost_tensor_f32_via requires all ranks > 0.".to_string(),
         ));
     }
     let expected = dims
@@ -231,12 +248,12 @@ fn validate_tt_shape(tensor: &[u32], dims: &[u32], ranks: &[u32]) -> Result<(), 
         .try_fold(1usize, |acc, &dim| acc.checked_mul(dim as usize))
         .ok_or_else(|| {
             DispatchError::BadInputs(
-                "Fix: compress_cost_tensor_fixed_via dims product overflows usize.".to_string(),
+                "Fix: compress_cost_tensor_f32_via dims product overflows usize.".to_string(),
             )
         })?;
     if tensor.len() != expected {
         return Err(DispatchError::BadInputs(format!(
-            "Fix: compress_cost_tensor_fixed_via expected tensor_fixed.len() == dims product == {expected}, got {}.",
+            "Fix: compress_cost_tensor_f32_via expected tensor_f32.len() == dims product == {expected}, got {}.",
             tensor.len()
         )));
     }
@@ -251,7 +268,7 @@ fn checked_mul_u32(
 ) -> Result<u32, DispatchError> {
     left.checked_mul(right).ok_or_else(|| {
         DispatchError::BadInputs(format!(
-            "Fix: compress_cost_tensor_fixed_via {left_name}*{right_name} overflows u32: {left}*{right}."
+            "Fix: compress_cost_tensor_f32_via {left_name}*{right_name} overflows u32: {left}*{right}."
         ))
     })
 }
@@ -261,7 +278,7 @@ fn checked_mul_usize(left: u32, right: u32, context: &str) -> Result<usize, Disp
         .map(|value| value as usize)
         .map_err(|_| {
             DispatchError::BadInputs(format!(
-                "Fix: compress_cost_tensor_fixed_via {context} word count overflows usize."
+                "Fix: compress_cost_tensor_f32_via {context} word count overflows usize."
             ))
         })
 }
@@ -272,17 +289,9 @@ fn checked_product3_usize(a: u32, b: u32, c: u32, context: &str) -> Result<usize
         .map(|value| value as usize)
         .map_err(|_| {
             DispatchError::BadInputs(format!(
-                "Fix: compress_cost_tensor_fixed_via {context} word count overflows usize."
+                "Fix: compress_cost_tensor_f32_via {context} word count overflows usize."
             ))
         })
-}
-
-fn byte_count(words: usize, context: &str) -> Result<usize, DispatchError> {
-    words.checked_mul(std::mem::size_of::<u32>()).ok_or_else(|| {
-        DispatchError::BadInputs(format!(
-            "Fix: compress_cost_tensor_fixed_via {context} byte count overflows usize for {words} words."
-        ))
-    })
 }
 
 /// Approximate the original cost tensor's compression ratio:
@@ -313,30 +322,9 @@ pub fn tt_storage_size(compressed: &CompressedCostTensor) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dispatch_buffers::u32_slice_to_le_bytes;
-    use vyre_foundation::ir::Program;
-
-    struct TtDecomposeDispatcher {
-        outputs: Vec<Vec<u8>>,
-    }
-
-    impl OptimizerDispatcher for TtDecomposeDispatcher {
-        fn dispatch(
-            &self,
-            _program: &Program,
-            inputs: &[Vec<u8>],
-            grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            assert_eq!(grid_override, Some([1, 1, 1]));
-            if inputs.len() != 3 {
-                return Err(DispatchError::BadInputs(format!(
-                    "Fix: TT test dispatcher expected 3 inputs, got {}.",
-                    inputs.len()
-                )));
-            }
-            Ok(self.outputs.clone())
-        }
-    }
+    // The dispatchable f32 TT-SVD path is validated end-to-end (through a real reference-eval
+    // dispatch, reconstructing the tensor) in
+    // `tests/tensor_train_compress_via_reference_parity.rs`: not by a mock dispatcher here.
 
     #[test]
     fn compresses_3_mode_tensor() {
@@ -392,101 +380,6 @@ mod tests {
     }
 
     #[test]
-    fn fixed_via_emits_step_core_and_final_remainder() {
-        let dispatcher = TtDecomposeDispatcher {
-            outputs: vec![
-                u32_slice_to_le_bytes(&[10, 20]),
-                u32_slice_to_le_bytes(&[30, 40]),
-            ],
-        };
-        let compressed =
-            compress_cost_tensor_fixed_via(&dispatcher, &[1, 2, 3, 4], &[2, 2], &[1, 1, 1])
-                .expect("Fix: dispatch succeeds");
-        assert_eq!(compressed.cores, vec![vec![10, 20], vec![30, 40]]);
-        assert_eq!(compressed.dims, vec![2, 2]);
-        assert_eq!(compressed.ranks, vec![1, 1, 1]);
-    }
-
-    #[test]
-    fn fixed_via_with_scratch_reuses_dispatch_remainder_and_core_storage() {
-        let dispatcher = TtDecomposeDispatcher {
-            outputs: vec![
-                u32_slice_to_le_bytes(&[10, 20]),
-                u32_slice_to_le_bytes(&[30, 40]),
-            ],
-        };
-        let mut scratch = TensorTrainCompressionGpuScratch::default();
-        let mut cores = vec![Vec::with_capacity(2), Vec::with_capacity(2)];
-
-        compress_cost_tensor_fixed_via_with_scratch_into(
-            &dispatcher,
-            &[1, 2, 3, 4],
-            &[2, 2],
-            &[1, 1, 1],
-            &mut scratch,
-            &mut cores,
-        )
-        .expect("Fix: dispatch succeeds");
-
-        let input_capacities = scratch.inputs.iter().map(Vec::capacity).collect::<Vec<_>>();
-        let current_capacity = scratch.current.capacity();
-        let remainder_capacity = scratch.remainder.capacity();
-        let core_capacities = cores.iter().map(Vec::capacity).collect::<Vec<_>>();
-
-        compress_cost_tensor_fixed_via_with_scratch_into(
-            &dispatcher,
-            &[1, 2, 3, 4],
-            &[2, 2],
-            &[1, 1, 1],
-            &mut scratch,
-            &mut cores,
-        )
-        .expect("Fix: dispatch succeeds");
-
-        assert_eq!(
-            scratch.inputs.iter().map(Vec::capacity).collect::<Vec<_>>(),
-            input_capacities
-        );
-        assert_eq!(scratch.current.capacity(), current_capacity);
-        assert_eq!(scratch.remainder.capacity(), remainder_capacity);
-        assert_eq!(
-            cores.iter().map(Vec::capacity).collect::<Vec<_>>(),
-            core_capacities
-        );
-        assert_eq!(cores, vec![vec![10, 20], vec![30, 40]]);
-    }
-
-    #[test]
-    fn fixed_via_rejects_extra_outputs() {
-        let dispatcher = TtDecomposeDispatcher {
-            outputs: vec![
-                u32_slice_to_le_bytes(&[10, 20]),
-                u32_slice_to_le_bytes(&[30, 40]),
-                u32_slice_to_le_bytes(&[50]),
-            ],
-        };
-        let err = compress_cost_tensor_fixed_via(&dispatcher, &[1, 2, 3, 4], &[2, 2], &[1, 1, 1])
-            .expect_err("extra outputs must be rejected");
-        assert!(
-            matches!(err, DispatchError::BackendError(_)),
-            "unexpected error: {err:?}"
-        );
-    }
-
-    #[test]
-    fn fixed_via_rejects_trailing_remainder_bytes() {
-        let dispatcher = TtDecomposeDispatcher {
-            outputs: vec![u32_slice_to_le_bytes(&[10, 20]), vec![30, 0, 0, 0, 99]],
-        };
-        let err = compress_cost_tensor_fixed_via(&dispatcher, &[1, 2, 3, 4], &[2, 2], &[1, 1, 1])
-            .expect_err("trailing bytes must be rejected");
-        assert!(
-            matches!(err, DispatchError::BackendError(_)),
-            "unexpected error: {err:?}"
-        );
-    }
-
-    #[test]
     fn empty_dims_handled() {
         let compressed = CompressedCostTensor {
             cores: Vec::new(),
@@ -500,8 +393,8 @@ mod tests {
 
 /// Parity-only f64 TT-SVD CPU oracle for compressing a flat cost tensor.
 ///
-/// Production fixed-point callers must use [`compress_cost_tensor_fixed_via`] or
-/// [`compress_cost_tensor_fixed_via_with_scratch_into`], which dispatch
+/// Production callers must use [`compress_cost_tensor_f32_via`] or
+/// [`compress_cost_tensor_f32_via_with_scratch_into`], which dispatch
 /// [`tensor_train_decompose_step`] through the selected backend.
 ///
 /// # Panics

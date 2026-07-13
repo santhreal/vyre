@@ -370,10 +370,7 @@ mod tests {
                 DataType::U32,
             )],
             [1, 1, 1],
-            vec![IrNode::let_bind(
-                "s",
-                IrExpr::subgroup_add(IrExpr::u32(1)),
-            )],
+            vec![IrNode::let_bind("s", IrExpr::subgroup_add(IrExpr::u32(1)))],
         );
         let caps = scan(&program);
         assert!(caps.subgroup_ops);

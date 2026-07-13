@@ -63,8 +63,7 @@ pub(super) fn build_matmul_tiled_program(
     let selected_kernel = select_matmul_kernel(&dtype, matrix_shape, tile);
     let mma_gate = gate_mma_path(selected_kernel, mma_capabilities);
     let (a_tile_count, b_tile_count, padded_out_count, dispatch_wg, kernel_body) =
-        if mma_gate.selected_path == MatmulKernelPath::TensorCoreF16M16N8K16
-        {
+        if mma_gate.selected_path == MatmulKernelPath::TensorCoreF16M16N8K16 {
             let mma_wg = [32, 1, 1];
             let mma_out_rows = 16u32;
             let mma_out_cols = 8u32;

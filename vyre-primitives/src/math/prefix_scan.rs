@@ -156,9 +156,7 @@ pub fn prefix_scan_with_op_id(
         )],
     ));
 
-    let output_bytes = usize::try_from(n)
-        .unwrap_or(usize::MAX)
-        .saturating_mul(4);
+    let output_bytes = usize::try_from(n).unwrap_or(usize::MAX).saturating_mul(4);
     let buffers = vec![
         BufferDecl::storage(in_buf, 0, BufferAccess::ReadOnly, DataType::U32).with_count(n),
         BufferDecl::output(out_buf, 1, DataType::U32)

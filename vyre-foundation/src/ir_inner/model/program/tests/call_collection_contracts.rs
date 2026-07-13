@@ -57,4 +57,3 @@ fn fingerprint_matches_across_clone_when_canonical_wire_encode_rejects_workgroup
     let clone = program.clone();
     assert_eq!(program.fingerprint(), clone.fingerprint());
 }
-

@@ -5,8 +5,6 @@ use vyre_primitives::math::quantized::i4_packed_words;
 pub(super) struct PackedI4BatchedMatmulShape {
     pub(super) total_outputs_u32: u32,
     pub(super) output_words: usize,
-    pub(super) output_bytes: usize,
-    pub(super) top1_output_bytes: usize,
 }
 
 pub(super) fn validate_batched_packed_matmul_shape(
@@ -70,26 +68,10 @@ pub(super) fn validate_batched_packed_matmul_shape(
             "Fix: {context} output word count overflows usize for batch={batch} rows={rows}."
         ))
     })?;
-    let output_bytes = output_words
-        .checked_mul(std::mem::size_of::<f32>())
-        .ok_or_else(|| {
-            DispatchError::BadInputs(format!(
-                "Fix: {context} output byte count overflows usize for batch={batch} rows={rows}."
-            ))
-        })?;
-    let top1_output_bytes = (batch as usize)
-        .checked_mul(std::mem::size_of::<f32>())
-        .ok_or_else(|| {
-            DispatchError::BadInputs(format!(
-                "Fix: {context} top-1 output byte count overflows usize for batch={batch}."
-            ))
-        })?;
 
     Ok(PackedI4BatchedMatmulShape {
         total_outputs_u32,
         output_words,
-        output_bytes,
-        top1_output_bytes,
     })
 }
 
@@ -104,17 +86,4 @@ pub(super) fn expect_one_output<'a>(
         )));
     }
     Ok(&outputs[0])
-}
-
-pub(super) fn expect_two_outputs<'a>(
-    context: &str,
-    outputs: &'a [Vec<u8>],
-) -> Result<(&'a [u8], &'a [u8]), DispatchError> {
-    if outputs.len() != 2 {
-        return Err(DispatchError::BackendError(format!(
-            "Fix: {context} expected exactly two output buffers, got {}.",
-            outputs.len()
-        )));
-    }
-    Ok((&outputs[0], &outputs[1]))
 }

@@ -55,12 +55,9 @@ pub fn cpu_ref_into(a: &[u32], b: &[u32], out: &mut Vec<u32>) {
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn try_cpu_ref_into(a: &[u32], b: &[u32], out: &mut Vec<u32>) -> Result<(), String> {
     let len = a.len().min(b.len());
-    out.clear();
-    if len > out.capacity() {
-        out.try_reserve(len - out.capacity()).map_err(|err| {
-            format!("stochastic bitstream CPU reference could not reserve {len} words: {err}")
-        })?;
-    }
+    crate::hostbuf::reserve_exact_cleared(out, len).map_err(|err| {
+        format!("stochastic bitstream CPU reference could not reserve {len} words: {err}")
+    })?;
     out.extend(a.iter().zip(b.iter()).map(|(left, right)| left & right));
     Ok(())
 }
@@ -72,7 +69,7 @@ pub fn encode_bitstream(p: f64, len_bits: usize, seed: u32) -> Vec<u32> {
     match try_encode_bitstream_into(p, len_bits, seed, &mut out) {
         Ok(()) => out,
         // Returning an empty bitstream on failure silently corrupts the encoded
-        // probability (downstream stochastic math reads zeros) — a silent
+        // probability (downstream stochastic math reads zeros), a silent
         // fallback (Law 10). Fail loud; callers use try_encode_bitstream_into.
         Err(error) => panic!("vyre-primitives stochastic bitstream encode failed: {error}"),
     }
@@ -93,12 +90,9 @@ pub fn try_encode_bitstream_into(
     out: &mut Vec<u32>,
 ) -> Result<(), String> {
     let n_words = (len_bits + 31) / 32;
-    out.clear();
-    if n_words > out.capacity() {
-        out.try_reserve(n_words - out.capacity()).map_err(|err| {
-            format!("stochastic bitstream encoder could not reserve {n_words} words: {err}")
-        })?;
-    }
+    crate::hostbuf::reserve_exact_cleared(out, n_words).map_err(|err| {
+        format!("stochastic bitstream encoder could not reserve {n_words} words: {err}")
+    })?;
     out.resize(n_words, 0);
     let mut state = seed.max(1);
     let threshold = (p.clamp(0.0, 1.0) * (u32::MAX as f64)) as u32;

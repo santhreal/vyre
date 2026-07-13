@@ -216,7 +216,7 @@ fn max_self_is_self() {
 #[test]
 fn div_self_var_does_not_fold() {
     // x / x must NOT fold to 1: unsigned `0 / 0` is u32::MAX in the
-    // oracle (div_u32) and the guarded SPIR-V emitter — not 1 — and
+    // oracle (div_u32) and the guarded SPIR-V emitter, not 1, and
     // signed `0 / 0` errors (div_i32). const_fold cannot prove x != 0
     // or that x is unsigned, so folding to 1 is a miscompile for x=0.
     let x = Expr::var("x");

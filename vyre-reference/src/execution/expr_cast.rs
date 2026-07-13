@@ -34,7 +34,7 @@ pub(crate) fn cast_value(target: &DataType, value: &Value) -> Result<Value, vyre
     //
     // The fixed-width BYTE-REINTERPRET targets (Vec2U32, Vec4U32, Bytes) are NOT
     // rejected here: `cast_value` is a source-type-agnostic byte primitive for
-    // them — a scalar cast to a vector packs the scalar's canonical bytes and
+    // them, a scalar cast to a vector packs the scalar's canonical bytes and
     // zero-fills/truncates to the lane width, identically for u32/i32/bool/f32
     // sources (proven by `vector_cast_generated_matrix`'s 32768 cases and the
     // `cast_to_vec*` unit tests). validate still gates f32->vector out at the
@@ -82,7 +82,7 @@ pub(crate) fn cast_value(target: &DataType, value: &Value) -> Result<Value, vyre
         // the backends (PTX `cvt.s64.s32`, naga sign-replicate) and Rust `as`:
         // a signed `i32` SIGN-extends (`-1i32 -> 0xFFFF_FFFF_FFFF_FFFF`), an
         // unsigned/bool source zero-extends. `try_as_u64`'s `u64::try_from`
-        // would instead REJECT negative `i32` — diverging from every backend —
+        // would instead REJECT negative `i32`: diverging from every backend 
         // so the signed case is handled explicitly here before delegating the
         // rest. Adding `I64` here also removes it from the `_ => to_bytes()`
         // catch-all, which silently produced a 4-byte payload with no extension.
@@ -120,7 +120,7 @@ pub(crate) fn cast_value(target: &DataType, value: &Value) -> Result<Value, vyre
         // == -56 and `-1i32 as u8` == 255. Before this arm existed these targets
         // fell through to the `_ => to_bytes()` catch-all, which returned the
         // source's full-width raw bytes (a `Value::Bytes`, neither a scalar nor
-        // narrowed) — diverging from every backend AND from the V035 contract.
+        // narrowed) (diverging from every backend AND from the V035 contract).
         // The float source is already rejected above (a float has no defined
         // conversion to a narrow int), so `source_low_word` only sees integers.
         DataType::U8 => narrow_low_word(target, value).map(|bits| Value::U32(bits & 0xFF)),
@@ -213,7 +213,7 @@ mod tests {
     /// reference matches the backends (PTX `cvt.s64.s32`, naga sign-replicate)
     /// and Rust `i32 as i64`. Before the fix `try_as_u64`'s `u64::try_from`
     /// REJECTED negatives, so a negative `i32 -> u64` cast errored in the oracle
-    /// while every backend produced a value — a silent divergence. And `I64`
+    /// while every backend produced a value, a silent divergence. And `I64`
     /// had no arm at all (fell to the `to_bytes()` catch-all, 4 bytes, no
     /// extension).
     #[test]
@@ -259,11 +259,11 @@ mod tests {
     }
 
     /// A float source has no defined ARITHMETIC conversion to a narrow int
-    /// (U8/U16/I8/I16) or a 64-bit int (U64/I64) — the validator rejects these
+    /// (U8/U16/I8/I16) or a 64-bit int (U64/I64), the validator rejects these
     /// and the naga/PTX emitters fail closed, so the reference SPEC must too
     /// (rather than returning the float's raw bytes via the narrow/widen arms or
     /// the catch-all). The fixed-width byte-reinterpret targets (Vec2U32/Vec4U32/
-    /// Bytes) are intentionally NOT in this list — see
+    /// Bytes) are intentionally NOT in this list, see
     /// `cast_f32_to_fixed_width_vector_byte_packs` and `vector_cast_generated_matrix`.
     #[test]
     fn cast_f32_to_undefined_target_fails_closed() {
@@ -433,8 +433,8 @@ mod tests {
     #[test]
     fn cast_to_narrow_int_from_undefined_source_fails_closed() {
         // Float -> U8 is rejected by the upstream float guard.
-        let err = cast_value(&DataType::U8, &Value::Float(3.5))
-            .expect_err("f32 -> u8 must fail closed");
+        let err =
+            cast_value(&DataType::U8, &Value::Float(3.5)).expect_err("f32 -> u8 must fail closed");
         assert!(
             format!("{err:?}").contains("no defined conversion"),
             "f32 -> u8 must use the float-cast message, got: {err:?}"
@@ -452,7 +452,7 @@ mod tests {
     /// so subnormals and NaN payloads round-trip identically to from_element_bytes.
     ///
     /// Before the fix, 0x0000_0001 (positive subnormal) yielded Value::Float(1.4e-45);
-    /// after the fix it yields Value::Float(0.0) — matching from_element_bytes.
+    /// after the fix it yields Value::Float(0.0) (matching from_element_bytes).
     #[test]
     fn spec_output_value_canonicalizes_f32_subnormal_to_zero() {
         // Positive subnormal: smallest positive subnormal f32 = 0x0000_0001.
@@ -463,7 +463,7 @@ mod tests {
             result,
             Value::Float(0.0_f64),
             "Fix: spec_output_value must canonicalize positive subnormal f32 to +0.0, \
-             identical to from_element_bytes — before VRH-002 fix this returned 1.4e-45"
+             identical to from_element_bytes, before VRH-002 fix this returned 1.4e-45"
         );
     }
 
@@ -493,14 +493,14 @@ mod tests {
             result,
             Value::Float(f64::from(expected_bits)),
             "Fix: spec_output_value must canonicalize NaN f32 payloads to 0x7FC0_0000, \
-             identical to from_element_bytes — before VRH-002 fix this returned the raw NaN payload"
+             identical to from_element_bytes, before VRH-002 fix this returned the raw NaN payload"
         );
     }
 
     /// VRH-002: normal f32 values pass through unchanged.
     #[test]
     fn spec_output_value_normal_f32_passes_through_unchanged() {
-        // 1.5f32 = 0x3FC0_0000 — a normal value, not subnormal or NaN.
+        // 1.5f32 = 0x3FC0_0000 (a normal value, not subnormal or NaN).
         let normal_bytes = 0x3FC0_0000_u32.to_le_bytes();
         let result = spec_output_value(DataType::F32, &normal_bytes);
         assert_eq!(

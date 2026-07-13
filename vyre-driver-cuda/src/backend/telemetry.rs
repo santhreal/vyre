@@ -72,9 +72,53 @@ pub struct CudaTelemetrySnapshot {
     pub logical_thread_waste_bps: u32,
     /// Unclamped logical element density per scheduled CUDA thread slot in basis points.
     pub logical_elements_per_thread_slot_bps: u64,
+    /// Transient device-allocation-pool acquisitions served from the free-list
+    /// (no `cuMemAlloc`) this telemetry epoch (the numerator of the pool hit rate).
+    pub device_pool_hits: u64,
+    /// Transient device-allocation-pool acquisitions that fell through to a real
+    /// `cuMemAlloc_v2` this telemetry epoch (an empty bucket).
+    pub device_pool_misses: u64,
+    /// Sum of per-launch achieved-occupancy basis points over launches whose
+    /// occupancy was measured this epoch (the numerator of the mean occupancy).
+    pub launch_occupancy_bps_sum: u64,
+    /// Kernel launches whose achieved occupancy was measured (driver occupancy
+    /// query succeeded) this epoch (the denominator of the mean occupancy).
+    pub occupancy_measured_launches: u64,
+    /// Kernel launches whose occupancy could NOT be measured this epoch (bad
+    /// geometry or a driver occupancy-query failure). Surfaced loudly so a zero
+    /// mean is never confused with unmeasured launches (Law 10 (no silent gap)).
+    pub occupancy_unmeasured_launches: u64,
 }
 
 impl CudaTelemetrySnapshot {
+    /// Mean achieved kernel occupancy in basis points over the launches that were
+    /// measured this epoch (`launch_occupancy_bps_sum / occupancy_measured_launches`),
+    /// or `0` when no launch was measured. Read alongside
+    /// `occupancy_unmeasured_launches`: a high unmeasured count means the mean
+    /// covers only part of the workload. This is the W3-6 per-kernel occupancy
+    /// evidence, aggregated for the snapshot.
+    #[must_use]
+    pub fn mean_occupancy_bps(&self) -> u32 {
+        if self.occupancy_measured_launches == 0 {
+            return 0;
+        }
+        (self.launch_occupancy_bps_sum / self.occupancy_measured_launches) as u32
+    }
+    /// Transient device-allocation-pool hit rate in basis points
+    /// (`hits * 10000 / (hits + misses)`), or `0` when there were no acquisitions.
+    /// This is the pool-hit-rate evidence W3-4 asks for, computed from the two raw
+    /// counters so a consumer can also see the acquisition volume behind the ratio.
+    #[must_use]
+    pub fn device_pool_hit_rate_bps(&self) -> u32 {
+        let total = self.device_pool_hits + self.device_pool_misses;
+        if total == 0 {
+            return 0;
+        }
+        // hits <= total <= u64::MAX, and hits*10000 fits in u128; the ratio is
+        // <= 10000 so the u32 cast is exact.
+        ((u128::from(self.device_pool_hits) * 10_000) / u128::from(total)) as u32
+    }
+
     /// Render CUDA runtime counters as Prometheus exposition text.
     #[must_use]
     pub fn to_prometheus_text(self) -> String {
@@ -110,7 +154,14 @@ impl CudaTelemetrySnapshot {
                 "vyre_cuda_wasted_thread_slots_total {}\n",
                 "vyre_cuda_logical_thread_utilization_bps {}\n",
                 "vyre_cuda_logical_thread_waste_bps {}\n",
-                "vyre_cuda_logical_elements_per_thread_slot_bps {}\n"
+                "vyre_cuda_logical_elements_per_thread_slot_bps {}\n",
+                "vyre_cuda_device_pool_hits_total {}\n",
+                "vyre_cuda_device_pool_misses_total {}\n",
+                "vyre_cuda_device_pool_hit_rate_bps {}\n",
+                "vyre_cuda_launch_occupancy_bps_sum {}\n",
+                "vyre_cuda_occupancy_measured_launches_total {}\n",
+                "vyre_cuda_occupancy_unmeasured_launches_total {}\n",
+                "vyre_cuda_mean_occupancy_bps {}\n"
             ),
             self.host_to_device_bytes,
             self.device_to_host_bytes,
@@ -142,7 +193,14 @@ impl CudaTelemetrySnapshot {
             self.wasted_thread_slots,
             self.logical_thread_utilization_bps,
             self.logical_thread_waste_bps,
-            self.logical_elements_per_thread_slot_bps
+            self.logical_elements_per_thread_slot_bps,
+            self.device_pool_hits,
+            self.device_pool_misses,
+            self.device_pool_hit_rate_bps(),
+            self.launch_occupancy_bps_sum,
+            self.occupancy_measured_launches,
+            self.occupancy_unmeasured_launches,
+            self.mean_occupancy_bps()
         )
     }
 }
@@ -177,6 +235,9 @@ pub(crate) struct CudaTelemetry {
     telemetry_counter_overflows: AtomicU64,
     resident_borrowed_fallback_dispatches: AtomicU64,
     launched_elements: AtomicU64,
+    launch_occupancy_bps_sum: AtomicU64,
+    occupancy_measured_launches: AtomicU64,
+    occupancy_unmeasured_launches: AtomicU64,
 }
 
 impl CudaTelemetry {
@@ -240,6 +301,16 @@ impl CudaTelemetry {
                 launched_elements,
                 scheduled_thread_slots,
             ),
+            // The device-pool hit/miss counters live on the pool (their only
+            // source of truth); the backend's `telemetry_snapshot` overlays them.
+            // A bare `CudaTelemetry::snapshot` (pool-agnostic) reports zero.
+            device_pool_hits: 0,
+            device_pool_misses: 0,
+            launch_occupancy_bps_sum: self.launch_occupancy_bps_sum.load(Ordering::Relaxed),
+            occupancy_measured_launches: self.occupancy_measured_launches.load(Ordering::Relaxed),
+            occupancy_unmeasured_launches: self
+                .occupancy_unmeasured_launches
+                .load(Ordering::Relaxed),
         }
     }
 
@@ -279,6 +350,37 @@ impl CudaTelemetry {
         self.resident_borrowed_fallback_dispatches
             .store(0, Ordering::Relaxed);
         self.launched_elements.store(0, Ordering::Relaxed);
+        self.launch_occupancy_bps_sum.store(0, Ordering::Relaxed);
+        self.occupancy_measured_launches.store(0, Ordering::Relaxed);
+        self.occupancy_unmeasured_launches
+            .store(0, Ordering::Relaxed);
+    }
+
+    /// Record one launch whose achieved occupancy was measured (`occupancy_bps`
+    /// in basis points, 0..=10000): adds to the running sum and increments the
+    /// measured-launch count so the snapshot can report the mean.
+    pub(crate) fn record_launch_occupancy_bps(&self, occupancy_bps: u64) {
+        self.add(
+            "launch_occupancy_bps_sum",
+            &self.launch_occupancy_bps_sum,
+            occupancy_bps,
+        );
+        self.add(
+            "occupancy_measured_launches",
+            &self.occupancy_measured_launches,
+            1,
+        );
+    }
+
+    /// Record one launch whose occupancy could NOT be measured (bad geometry or a
+    /// driver occupancy-query failure), surfaced so a partial mean is never
+    /// mistaken for full coverage (Law 10 (no silent measurement gap)).
+    pub(crate) fn record_launch_occupancy_unmeasured(&self) {
+        self.add(
+            "occupancy_unmeasured_launches",
+            &self.occupancy_unmeasured_launches,
+            1,
+        );
     }
 
     pub(crate) fn record_resident_borrowed_fallback_dispatch(&self) {
@@ -491,7 +593,95 @@ fn elements_per_slot_bps(elements: u64, scheduled: u64) -> u64 {
 
 #[cfg(test)]
 mod tests {
-    use super::CudaTelemetry;
+    use super::{CudaTelemetry, CudaTelemetrySnapshot};
+
+    #[test]
+    fn device_pool_hit_rate_bps_is_exact_and_zero_safe() {
+        // No acquisitions -> 0, never a divide-by-zero.
+        let empty = CudaTelemetrySnapshot {
+            device_pool_hits: 0,
+            device_pool_misses: 0,
+            ..CudaTelemetrySnapshot::default()
+        };
+        assert_eq!(empty.device_pool_hit_rate_bps(), 0);
+
+        // 3 hits / 1 miss over 4 acquisitions -> 7500 bps.
+        let mixed = CudaTelemetrySnapshot {
+            device_pool_hits: 3,
+            device_pool_misses: 1,
+            ..CudaTelemetrySnapshot::default()
+        };
+        assert_eq!(mixed.device_pool_hit_rate_bps(), 7_500);
+
+        // All hits -> full 10000 bps; the Prometheus text carries every field.
+        let all_hits = CudaTelemetrySnapshot {
+            device_pool_hits: 9,
+            device_pool_misses: 0,
+            ..CudaTelemetrySnapshot::default()
+        };
+        assert_eq!(all_hits.device_pool_hit_rate_bps(), 10_000);
+        let text = all_hits.to_prometheus_text();
+        assert!(text.contains("vyre_cuda_device_pool_hits_total 9"));
+        assert!(text.contains("vyre_cuda_device_pool_misses_total 0"));
+        assert!(text.contains("vyre_cuda_device_pool_hit_rate_bps 10000"));
+
+        // Large counts stay exact through the u128 intermediate (no overflow, no
+        // rounding past the true ratio).
+        let large = CudaTelemetrySnapshot {
+            device_pool_hits: u64::MAX / 2,
+            device_pool_misses: u64::MAX / 2,
+            ..CudaTelemetrySnapshot::default()
+        };
+        assert_eq!(large.device_pool_hit_rate_bps(), 5_000);
+    }
+
+    #[test]
+    fn mean_occupancy_bps_is_exact_and_zero_safe_and_counts_unmeasured() {
+        // No measured launch -> mean 0, never a divide-by-zero.
+        let none = CudaTelemetrySnapshot {
+            launch_occupancy_bps_sum: 0,
+            occupancy_measured_launches: 0,
+            occupancy_unmeasured_launches: 5,
+            ..CudaTelemetrySnapshot::default()
+        };
+        assert_eq!(none.mean_occupancy_bps(), 0);
+        // The unmeasured count is preserved so a zero mean is not mistaken for
+        // "measured 0% occupancy".
+        assert_eq!(none.occupancy_unmeasured_launches, 5);
+
+        // 6000 + 8000 over 2 measured launches -> mean 7000.
+        let measured = CudaTelemetrySnapshot {
+            launch_occupancy_bps_sum: 14_000,
+            occupancy_measured_launches: 2,
+            occupancy_unmeasured_launches: 0,
+            ..CudaTelemetrySnapshot::default()
+        };
+        assert_eq!(measured.mean_occupancy_bps(), 7_000);
+        let text = measured.to_prometheus_text();
+        assert!(text.contains("vyre_cuda_mean_occupancy_bps 7000"));
+        assert!(text.contains("vyre_cuda_occupancy_measured_launches_total 2"));
+        assert!(text.contains("vyre_cuda_occupancy_unmeasured_launches_total 0"));
+    }
+
+    #[test]
+    fn record_launch_occupancy_accumulates_mean_and_resets() {
+        let telemetry = CudaTelemetry::default();
+        telemetry.record_launch_occupancy_bps(4_000);
+        telemetry.record_launch_occupancy_bps(6_000);
+        telemetry.record_launch_occupancy_unmeasured();
+        let snapshot = telemetry.snapshot();
+        assert_eq!(snapshot.occupancy_measured_launches, 2);
+        assert_eq!(snapshot.occupancy_unmeasured_launches, 1);
+        assert_eq!(snapshot.launch_occupancy_bps_sum, 10_000);
+        assert_eq!(snapshot.mean_occupancy_bps(), 5_000);
+
+        telemetry.reset();
+        let cleared = telemetry.snapshot();
+        assert_eq!(cleared.occupancy_measured_launches, 0);
+        assert_eq!(cleared.occupancy_unmeasured_launches, 0);
+        assert_eq!(cleared.launch_occupancy_bps_sum, 0);
+        assert_eq!(cleared.mean_occupancy_bps(), 0);
+    }
 
     #[test]
     fn snapshot_accumulates_and_resets_counters() {

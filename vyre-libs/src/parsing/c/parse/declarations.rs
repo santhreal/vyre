@@ -389,12 +389,8 @@ mod tests {
     /// produce buffers sized exactly to that count (not 1).
     #[test]
     fn literal_num_tokens_builds_with_correct_buffer_size() {
-        let program = opt_propagate_type_specifiers(
-            "tok_types",
-            "tok_depths",
-            "node_out",
-            Expr::u32(128),
-        );
+        let program =
+            opt_propagate_type_specifiers("tok_types", "tok_depths", "node_out", Expr::u32(128));
         let buffers = program.buffers();
         let tok_types_count = buffers
             .iter()

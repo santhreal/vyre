@@ -1451,7 +1451,7 @@ mod value_differential {
     //! Bootstrap-validated scalar SSA value differential for the arithmetic
     //! literal-chain combine rewrites. The per-rewrite contract tests assert op
     //! SHAPE (combined literal, operand ids); this asserts the COMPUTED u32
-    //! value of `(gid ∘ a) ∘ b` is preserved for every input — the SSA analog
+    //! value of `(gid ∘ a) ∘ b` is preserved for every input, the SSA analog
     //! of the foundation value-differential suites. It catches a wrong
     //! reassociation or an unguarded combined-literal overflow that a shape
     //! check cannot see.
@@ -1460,8 +1460,8 @@ mod value_differential {
     //! the descriptor before and after each rewrite across adversarial
     //! `GlobalInvocationId` seeds. The interpreter is validated against
     //! hand-computed values first (`evaluator_is_validated_on_known_values`), so
-    //! a divergence is the rewrite's fault, not the harness's. It panics — never
-    //! silently guesses — on any op or literal outside the validated scalar
+    //! a divergence is the rewrite's fault, not the harness's. It panics, never
+    //! silently guesses, on any op or literal outside the validated scalar
     //! subset, so an unexpected lowering shape fails loudly instead of producing
     //! a false "values match".
 
@@ -1473,7 +1473,7 @@ mod value_differential {
     use vyre_foundation::ir::BinOp;
 
     /// vyre u32 BinOp semantics (wrapping add/sub/mul, floor div/rem, shift
-    /// amount masked mod 32) — the subset the arithmetic chains use. Matches the
+    /// amount masked mod 32), the subset the arithmetic chains use. Matches the
     /// reference oracle's integer contract.
     fn apply_u32(op: BinOp, l: u32, r: u32) -> u32 {
         match op {

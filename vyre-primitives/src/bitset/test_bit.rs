@@ -9,22 +9,35 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-primitives::bitset::test_bit";
 
-/// Build a Program: `out_scalar[0] = (buf[bit_idx/32] >> (bit_idx%32)) & 1`.
+/// Build a Program: `out_scalar[0] = (buf[bit_idx/32] >> (bit_idx%32)) & 1`,
+/// or `0` when `bit_idx/32 >= words` (out of range), matching [`cpu_ref`].
+///
+/// `words` is the length of `buf` in u32 words; it bounds the load so an
+/// out-of-range `bit_idx` cannot read past the buffer on the GPU.
 #[must_use]
-pub fn bitset_test_bit(buf: &str, bit_idx: u32, out_scalar: &str) -> Program {
+pub fn bitset_test_bit(buf: &str, bit_idx: u32, out_scalar: &str, words: u32) -> Program {
+    // AUDIT_2026-07-10: gate the `buf[bit_idx/32]` load on an in-bounds check,
+    // mirroring the sibling `bitset_contains` fix (F-BSC-01). The load used to be
+    // unconditional, so an out-of-range `bit_idx` (word >= words) was an OOB GPU
+    // read (UB / page fault on CUDA) while `cpu_ref` safely returned 0, a CPU/GPU
+    // parity divergence and a GPU safety hole. Out-of-range now stores 0.
     let word = bit_idx / 32;
     let bit = bit_idx % 32;
-    let body = vec![Node::store(
-        out_scalar,
-        Expr::u32(0),
-        Expr::bitand(
-            Expr::shr(Expr::load(buf, Expr::u32(word)), Expr::u32(bit)),
-            Expr::u32(1),
-        ),
+    let body = vec![Node::if_then_else(
+        Expr::lt(Expr::u32(word), Expr::u32(words)),
+        vec![Node::store(
+            out_scalar,
+            Expr::u32(0),
+            Expr::bitand(
+                Expr::shr(Expr::load(buf, Expr::u32(word)), Expr::u32(bit)),
+                Expr::u32(1),
+            ),
+        )],
+        vec![Node::store(out_scalar, Expr::u32(0), Expr::u32(0))],
     )];
     Program::wrapped(
         vec![
-            BufferDecl::storage(buf, 0, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage(buf, 0, BufferAccess::ReadOnly, DataType::U32).with_count(words),
             BufferDecl::storage(out_scalar, 1, BufferAccess::ReadWrite, DataType::U32)
                 .with_count(1),
         ],
@@ -54,7 +67,7 @@ pub fn cpu_ref(buf: &[u32], bit_idx: u32) -> u32 {
 inventory::submit! {
     crate::harness::OpEntry::new(
         OP_ID,
-        || bitset_test_bit("buf", 0, "out"),
+        || bitset_test_bit("buf", 0, "out", 1),
         Some(|| {
             let to_bytes = |w: &[u32]| crate::wire::pack_u32_slice(w);
             vec![vec![

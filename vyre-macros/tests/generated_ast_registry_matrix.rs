@@ -173,7 +173,7 @@ fn generated_ast_registry_matrix_pins_op_ids_and_partial_eq() {
 #[test]
 fn generated_ast_registry_decoders_cover_every_variant_by_index() {
     // After the hash-collision fix, each variant's decoder opcode discriminant
-    // is its DECLARATION INDEX (0..N), guaranteed unique — NOT the old
+    // is its DECLARATION INDEX (0..N), guaranteed unique. NOT the old
     // collision-prone ASCII byte-sum. So the cascade must carry exactly the
     // contiguous index set `0..variant_count`, one per variant, no gaps or dups.
     // GeneratedExpr: Const, Unary, Pair, Binary, Select (5 variants).

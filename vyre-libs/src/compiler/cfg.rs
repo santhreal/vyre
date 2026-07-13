@@ -96,7 +96,7 @@ pub fn c11_build_cfg_and_gotos(
         //
         // Lookup uses first-match semantics: the first slot whose key
         // equals `target_hash` wins.  Two invariants that allow early exit:
-        //   (a) `found == 1` after the first match — skip all further slots.
+        //   (a) `found == 1` after the first match (skip all further slots).
         //   (b) `k == EMPTY_SLOT` means no further entries exist in a
         //       linear-probe table, so the target is absent.
         // Both guards are implemented under `Expr::eq(found, 0)` because
@@ -124,16 +124,13 @@ pub fn c11_build_cfg_and_gotos(
                                     "k",
                                     Expr::load("goto_labels_keys", Expr::var("lk_slot")),
                                 ),
-                                // Stop on the first key match — first-writer-wins.
+                                // Stop on the first key match (first-writer-wins).
                                 Node::if_then(
                                     Expr::eq(Expr::var("k"), Expr::var("target_hash")),
                                     vec![
                                         Node::assign(
                                             "resolved",
-                                            Expr::load(
-                                                "goto_labels_vals",
-                                                Expr::var("lk_slot"),
-                                            ),
+                                            Expr::load("goto_labels_vals", Expr::var("lk_slot")),
                                         ),
                                         Node::assign("found", Expr::u32(1)),
                                     ],

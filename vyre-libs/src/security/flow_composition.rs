@@ -8,9 +8,9 @@ use vyre_primitives::bitset::and_not::bitset_and_not;
 #[cfg(test)]
 use vyre_primitives::bitset::and_not::cpu_ref as bitset_and_not_cpu_ref;
 use vyre_primitives::bitset::any::bitset_any;
-use vyre_primitives::graph::csr_forward_traverse::{bitset_words, csr_forward_traverse};
 #[cfg(test)]
 use vyre_primitives::graph::csr_forward_traverse::cpu_ref as csr_forward_cpu_ref;
+use vyre_primitives::graph::csr_forward_traverse::{bitset_words, csr_forward_traverse};
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 
 use crate::region::{reparent_program_children, wrap_anonymous};
@@ -218,7 +218,10 @@ pub(crate) fn security_flow_program(options: SecurityFlowOptions<'_>) -> Program
     crate::security::assert_security_inputs(
         options.op_id,
         options.shape.node_count,
-        &[("source_buf", options.source_buf), ("reach_buf", options.reach_buf)],
+        &[
+            ("source_buf", options.source_buf),
+            ("reach_buf", options.reach_buf),
+        ],
     );
     let words = bitset_words(options.shape.node_count);
     let mut parts = Vec::new();

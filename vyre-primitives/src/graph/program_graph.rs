@@ -103,7 +103,7 @@ impl ProgramGraphShape {
     #[must_use]
     pub fn read_only_buffers(&self) -> Vec<BufferDecl> {
         // Fail fast: an overflowing graph shape must NOT silently degrade to an
-        // empty buffer set (`unwrap_or_default`) — that would hand the GPU
+        // empty buffer set (`unwrap_or_default`), that would hand the GPU
         // dispatch a degenerate, mis-sized ABI with no signal. Callers needing
         // to handle oversized graphs use `try_read_only_buffers`.
         self.try_read_only_buffers()
@@ -265,7 +265,7 @@ pub fn validate_program_graph(
     // `max(edge_count, 1)`. A zero-edge graph still carries a single placeholder
     // entry because `read_only_buffers_with_counts` emits `count = edge_count.max(1)`
     // (GPU minimum buffer size), and validation runs on those padded buffers. This
-    // padding tolerance is the INTENTIONAL contract — the zero_edge/mask/length
+    // padding tolerance is the INTENTIONAL contract, the zero_edge/mask/length
     // adversarial conformance tests assert exactly len == max(edge_count, 1) and
     // reject an empty slice for a zero-edge graph. (A cycle-3 swarm agent briefly
     // changed this to `== edge_count` citing the module-doc wording; that inverted
@@ -453,9 +453,13 @@ mod tests {
             &[0],
             &[0, 0],
         );
-        assert_eq!(ok, Ok(()), "zero-edge graph must validate with a length-1 placeholder");
+        assert_eq!(
+            ok,
+            Ok(()),
+            "zero-edge graph must validate with a length-1 placeholder"
+        );
 
-        // Empty edge slices are rejected — they violate the max(1) GPU-buffer shape.
+        // Empty edge slices are rejected (they violate the max(1) GPU-buffer shape).
         let err = validate_program_graph(
             ProgramGraphShape::new(2, 0),
             &[0, 0],

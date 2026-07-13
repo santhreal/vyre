@@ -33,7 +33,7 @@ const FILE_LEN: usize = 8 * 1024 * 1024; // 8 MiB
 const N_PATTERNS: u32 = 64;
 const PLANTS_PER_BYTE: usize = 32;
 const FILLER: u8 = 0x00;
-/// Catalog bytes 0x80..0xC0 — disjoint from the 0x00 filler, so the ONLY
+/// Catalog bytes 0x80..0xC0, disjoint from the 0x00 filler, so the ONLY
 /// matches are the deliberately planted ones.
 fn catalog_bytes() -> Vec<u8> {
     (0..N_PATTERNS).map(|i| 0x80u8 + i as u8).collect()
@@ -131,7 +131,7 @@ fn combined_beats_per_rule_on_a_many_pattern_catalog() {
     let seg_lens = [1024u32, 512, 256];
 
     eprintln!(
-        "8 MiB / {N_PATTERNS} single-byte patterns — combined-AC vs per-rule ({} oracle matches):",
+        "8 MiB / {N_PATTERNS} single-byte patterns, combined-AC vs per-rule ({} oracle matches):",
         oracle.len()
     );
 
@@ -253,6 +253,6 @@ fn combined_beats_per_rule_on_a_many_pattern_catalog() {
     assert!(
         combined_best > per_rule_best,
         "combined ({combined_best:.3} GB/s) must beat per-rule ({per_rule_best:.3} GB/s) on a \
-         {N_PATTERNS}-pattern catalog — the rule_count multiplier should make per-rule slower"
+         {N_PATTERNS}-pattern catalog, the rule_count multiplier should make per-rule slower"
     );
 }

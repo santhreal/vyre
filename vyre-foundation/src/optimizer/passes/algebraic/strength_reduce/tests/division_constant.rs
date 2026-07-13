@@ -4,7 +4,7 @@
 //! `modulo_constant.rs` proves `x % d` exact, which exercises the GM
 //! division only TRANSITIVELY via `x - (x / d) * d`. This file proves the
 //! division ITSELF, byte-for-byte against the real `/` operator, directly
-//! and over a wide random input space — most importantly across the
+//! and over a wide random input space, most importantly across the
 //! `needs_fixup` divisors whose `(t + ((n - t) >> 1)) >> (s - 1)` sequence
 //! is the subtle one (an off-by-one there is invisible to shape tests but
 //! caught by a differential).
@@ -18,7 +18,7 @@ fn div_expr(divisor: u32) -> Expr {
     Expr::div(Expr::var("x"), Expr::u32(divisor))
 }
 
-/// True if `expr` contains an `Add` node — the structural marker of the GM
+/// True if `expr` contains an `Add` node, the structural marker of the GM
 /// `needs_fixup` sequence (`t + ((n - t) >> 1)`). The non-fixup form is a
 /// plain `Shr(MulHigh(..), s)` with no addition, so this distinguishes the
 /// two emission paths.
@@ -54,8 +54,8 @@ fn div_by_constant_is_exact_over_fuzz_and_boundaries() {
     // including the divisor-boundary values where floor(x/d) ticks over and
     // the top of the u32 range (where the fixup add can overflow if wrong).
     for &d in &DIVISORS {
-        let reduced =
-            reduce_expr(&div_expr(d)).unwrap_or_else(|| panic!("Fix: x / {d} must strength-reduce"));
+        let reduced = reduce_expr(&div_expr(d))
+            .unwrap_or_else(|| panic!("Fix: x / {d} must strength-reduce"));
         for &x in &FUZZ_INPUTS {
             assert_eq!(eval_u32(&reduced, x), x / d, "x={x} d={d}");
         }

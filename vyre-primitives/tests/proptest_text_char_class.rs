@@ -7,24 +7,8 @@ use vyre_foundation::ir::DataType;
 use vyre_primitives::text::char_class::{
     build_char_class_table, char_class_u8, reference_char_class,
 };
+use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack_u32s, pack_u32_slice as pack_u32s};
 use vyre_reference::value::Value;
-
-fn pack_u32s(words: &[u32]) -> Vec<u8> {
-    let mut bytes = Vec::with_capacity(words.len() * 4);
-    for &word in words {
-        bytes.extend_from_slice(&word.to_le_bytes());
-    }
-    bytes
-}
-
-fn unpack_u32s(bytes: &[u8]) -> Vec<u32> {
-    bytes
-        .chunks_exact(4)
-        .map(|chunk| {
-            u32::from_le_bytes(chunk.try_into().expect("Fix: u32 chunk conversion failed"))
-        })
-        .collect()
-}
 
 fn run_packed_u8_program(source: &[u8], table: &[u32; 256]) -> Vec<u32> {
     let program = char_class_u8("source", "classified", source.len() as u32);

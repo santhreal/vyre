@@ -19,6 +19,7 @@
 
 use super::plan::{PromotionCandidate, PromotionPlan};
 use super::DEFAULT_SHARED_BUDGET_BYTES;
+use crate::analyses::child_body_operands;
 use crate::{KernelBody, KernelDescriptor, KernelOpKind};
 use rustc_hash::FxHashMap;
 use vyre_foundation::ir::DataType;
@@ -82,19 +83,6 @@ fn count_loads_in_body(body: &KernelBody, counts: &mut FxHashMap<u32, u32>) {
             }
         }
     }
-}
-
-fn child_body_operands<'a>(
-    kind: &KernelOpKind,
-    operands: &'a [u32],
-) -> impl Iterator<Item = u32> + 'a {
-    let start = match kind {
-        KernelOpKind::StructuredIfThen | KernelOpKind::StructuredIfThenElse => 1,
-        KernelOpKind::StructuredForLoop { .. } => 2,
-        KernelOpKind::StructuredBlock | KernelOpKind::Region { .. } => 0,
-        _ => operands.len(),
-    };
-    operands.iter().skip(start).copied()
 }
 
 fn bytes_per_element(t: &DataType) -> u32 {

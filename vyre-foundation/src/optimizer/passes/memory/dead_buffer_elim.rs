@@ -111,9 +111,9 @@ fn live_buffers(program: &Program) -> LiveBufferSet<'_> {
 /// `buffer_reads`/`buffer_writes` capture the complete reference surface.
 fn referenced_buffers(staged: &Program) -> FxHashSet<Ident> {
     let substrate = FactSubstrate::derive_use_only(staged);
-    let use_facts = substrate.use_facts().unwrap_or_else(|| {
-        unreachable!("derive_use_only contract: use_facts is always populated")
-    });
+    let use_facts = substrate
+        .use_facts()
+        .unwrap_or_else(|| unreachable!("derive_use_only contract: use_facts is always populated"));
     use_facts
         .buffer_reads
         .keys()

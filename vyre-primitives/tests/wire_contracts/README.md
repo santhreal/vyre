@@ -1,4 +1,4 @@
-# Wire primitive — 10-tier contract directory
+# Wire primitive: 10-tier contract directory
 
 Per the per-rule directory contract: every shipped primitive (here, the
 `vyre_primitives::wire` family) has every tier covered by a real test
@@ -17,5 +17,5 @@ that locks the truth of a specific claim. This directory is the index.
 | 9. Scale                 | open   | `tests/wire_contracts/scale.rs` (TODO: 1B-byte buffer roundtrip)     |
 | 10. End-to-end CLI       | open   | drives the vyre binary once one ships                                |
 
-The two "open" tiers stay open and unfinished — they are real work the
+The two "open" tiers stay open and unfinished, they are real work the
 codebase owes against the wire claim, not deferred work.

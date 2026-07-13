@@ -6,6 +6,7 @@ use proptest::prelude::*;
 use vyre_foundation::ir::{BufferAccess, DataType, Expr, Node, Program};
 use vyre_primitives::reduce::multi_block_prefix_scan::BLOCK_LANES;
 use vyre_primitives::text::line_index::{line_index, line_index_u8, reference_line_index};
+use vyre_primitives::wire::decode_u32_le_bytes_all as unpack_u32s;
 use vyre_reference::value::Value;
 
 fn independent_prefix_flag_line_index(source: &[u8]) -> Vec<u32> {
@@ -140,45 +141,21 @@ fn expr_is_invocation_zero(expr: &Expr) -> bool {
     }
 }
 
+// Locate outputs via the interpreter's OWN selection predicate
+// (`vyre_reference::{output_index, is_reference_output}`) so these helpers can never
+// drift from `reference_eval`'s real returned-output ABI.
 fn output_buffer_names(program: &Program) -> Vec<&str> {
     program
         .buffers()
         .iter()
-        .filter(|buffer| {
-            buffer.is_output()
-                || buffer.is_pipeline_live_out()
-                || matches!(
-                    buffer.access(),
-                    BufferAccess::ReadWrite | BufferAccess::WriteOnly
-                )
-        })
+        .filter(|buffer| vyre_reference::is_reference_output(buffer))
         .map(|buffer| buffer.name())
         .collect()
 }
 
 fn output_index(program: &Program, name: &str) -> usize {
-    program
-        .buffers()
-        .iter()
-        .filter(|buffer| {
-            buffer.is_output()
-                || buffer.is_pipeline_live_out()
-                || matches!(
-                    buffer.access(),
-                    BufferAccess::ReadWrite | BufferAccess::WriteOnly
-                )
-        })
-        .position(|buffer| buffer.name() == name)
+    vyre_reference::output_index(program, name)
         .expect("Fix: line_index output buffer must be declared")
-}
-
-fn unpack_u32s(bytes: &[u8]) -> Vec<u32> {
-    bytes
-        .chunks_exact(4)
-        .map(|chunk| {
-            u32::from_le_bytes(chunk.try_into().expect("Fix: u32 chunk conversion failed"))
-        })
-        .collect()
 }
 
 fn run_packed_u8_program(source: &[u8]) -> Vec<u32> {
@@ -321,6 +298,76 @@ proptest! {
                 .filter(|buffer| buffer.is_output())
                 .count(),
             1
+        );
+    }
+}
+
+/// A byte source spanning several Pass-A blocks, with line breaks scattered across
+/// every block so the line-number prefix must carry from one block into the next.
+/// `\n` at every 37th byte and `\r` at every 53rd guarantee breaks inside each block
+/// AND straddling the block boundaries; the remaining bytes are printable filler.
+fn multi_block_source(n: usize) -> Vec<u8> {
+    (0..n)
+        .map(|i| {
+            if i % 37 == 0 {
+                b'\n'
+            } else if i % 53 == 0 {
+                b'\r'
+            } else {
+                b'a' + (i % 26) as u8
+            }
+        })
+        .collect()
+}
+
+/// Drive `line_index_u8` through `reference_eval` for sources LONGER than one Pass-A
+/// block, so the fused flag-pass → multi-block-prefix-scan (Pass-A → GridSync → Pass-B
+/// → Pass-C) program actually runs its cross-block carry. Every element is checked
+/// against the independent prefix-flag oracle, so a dropped or double-counted block
+/// carry surfaces as a concrete index mismatch.
+///
+/// This is the coverage the single-block `packed_u8_program_matches_independent_prefix_flags`
+/// proptest cannot reach: it caps `source` at 0..=256 < BLOCK_LANES precisely because,
+/// before the interpreter honored `MemoryOrdering::GridSync`, Pass-B raced Pass-A and
+/// the multi-block result was wrong. With GridSync honored, `line_index` over a large
+/// file must match byte-for-byte.
+#[test]
+fn packed_u8_reference_matches_oracle_across_block_boundaries() {
+    let block = BLOCK_LANES as usize;
+    for &n in &[block + 1, block + 500, block * 2, block * 3 + 7] {
+        let source = multi_block_source(n);
+        let gpu = run_packed_u8_program(&source);
+        let oracle = independent_prefix_flag_line_index(&source);
+
+        assert_eq!(
+            gpu.len(),
+            source.len(),
+            "line_index length mismatch at n={n}"
+        );
+        if let Some(i) = (0..gpu.len()).find(|&i| gpu[i] != oracle[i]) {
+            let blk = i / block;
+            panic!(
+                "line_index_u8 diverges from the prefix-flag oracle at n={n}: first mismatch \
+                 at byte {i} (block {blk}, lane {} of {} blocks): gpu={} oracle={}; a mismatch \
+                 here means the fused multi-block scan dropped the cross-block line-number carry",
+                i % block,
+                n.div_ceil(block),
+                gpu[i],
+                oracle[i],
+            );
+        }
+
+        // Explicit carry lock at the first Pass-A block boundary: the line number of
+        // the byte just past BLOCK_LANES must equal the total number of line breaks in
+        // the whole preceding block. If Pass-C failed to add block 0's total, this is
+        // exactly where it breaks.
+        let breaks_in_block_0 = independent_line_start_flags(&source)[..=block]
+            .iter()
+            .filter(|&&flag| flag == 1)
+            .count() as u32;
+        assert_eq!(
+            gpu[block], breaks_in_block_0,
+            "line_index carry wrong at block boundary byte {block} for n={n}"
         );
     }
 }

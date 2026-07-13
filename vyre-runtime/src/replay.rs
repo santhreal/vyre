@@ -470,7 +470,7 @@ impl RingLog {
                 // In a ring that has not yet wrapped, zero-magic slots at the scan
                 // frontier are expected and skipped. However, if the ring HAS
                 // wrapped, a zero-magic slot is a corruption gap (sector fault,
-                // partial crash, or explicit zeroing of a live record) — the log
+                // partial crash, or explicit zeroing of a live record), the log
                 // has no wrapped-flag field to distinguish these cases.
                 //
                 // Emit a warning so post-wrap corruption is operator-visible
@@ -483,7 +483,7 @@ impl RingLog {
                     log_capacity = self.capacity,
                     step,
                     "replay_records: zero-magic record at slot_index {slot_index} (step {step}). \
-                     If the log has wrapped this is a corruption gap — the replay will be shorter than expected. \
+                     If the log has wrapped this is a corruption gap, the replay will be shorter than expected. \
                      Fix: ensure the replay-log file is not subject to external zeroing or partial-write truncation."
                 );
                 continue;
@@ -807,7 +807,7 @@ mod tests {
 
     /// Regression test for the P1 zero-magic skip behavior.
     ///
-    /// Before the fix the skip was completely silent — an operator observing a
+    /// Before the fix the skip was completely silent, an operator observing a
     /// replay shorter than expected had no signal that a zero-magic record had
     /// been encountered. After the fix the skip emits `tracing::warn!`. We
     /// cannot assert tracing output in a unit test, but we CAN assert the
@@ -832,7 +832,7 @@ mod tests {
         log.sync().unwrap();
 
         // Verify a clean replay first: cursor = 3, scan starts at slot 3 (empty),
-        // then wraps to 0, 1, 2 — so we get exactly 3 records.
+        // then wraps to 0, 1, 2 (so we get exactly 3 records).
         {
             let records = log
                 .replay_all()
@@ -857,7 +857,7 @@ mod tests {
         let mut log2 = RingLog::open(&path, 4)
             .expect("Fix: reopen after zeroing must succeed");
 
-        // Replay must not return Err — the zero-magic skip is graceful.
+        // Replay must not return Err (the zero-magic skip is graceful).
         let records = log2
             .replay_all()
             .expect("Fix: replay with a zeroed slot must not error");

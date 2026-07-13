@@ -223,4 +223,3 @@ fn i4x8_batched_matmul_f32_scaled_via_rejects_malformed_backend_outputs() {
     .expect_err("trailing output bytes must fail");
     assert!(err.to_string().contains("expected 8 output bytes"));
 }
-

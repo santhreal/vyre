@@ -119,7 +119,7 @@ fn u64_binop_desc(binop: BinOp) -> KernelDescriptor {
 fn u64_carry_sensitive_binops_fail_closed_not_silently_componentwise() {
     // A vec2<u32>-backed 64-bit value has NO carry between its low and high
     // word, so a componentwise vec2 Add/Sub/Mul/Shift/Compare is silently WRONG
-    // arithmetic — and crucially it would VALIDATE through naga (vec2 ops are
+    // arithmetic, and crucially it would VALIDATE through naga (vec2 ops are
     // legal WGSL), so only an explicit fail-closed gate catches the bug. Pin
     // that the gate fires with its real diagnostic for every carry-sensitive op.
     for binop in [
@@ -146,7 +146,7 @@ fn u64_carry_sensitive_binops_fail_closed_not_silently_componentwise() {
 fn u64_bitwise_binops_emit_valid_componentwise_wgsl() {
     use naga::valid::{Capabilities, ValidationFlags, Validator};
     // BitAnd/BitOr/BitXor carry NO information between words, so componentwise
-    // vec2<u32> is the correct lowering — these must emit and validate, and the
+    // vec2<u32> is the correct lowering, these must emit and validate, and the
     // stored result keeps the vec2<u32> 64-bit backing.
     let mut validator = Validator::new(ValidationFlags::all(), Capabilities::all());
     for binop in [BinOp::BitAnd, BinOp::BitOr, BinOp::BitXor] {
@@ -156,7 +156,7 @@ fn u64_bitwise_binops_emit_valid_componentwise_wgsl() {
             .validate(&module)
             .unwrap_or_else(|e| panic!("{binop:?} on u64: INVALID WGSL: {e:?}"));
         // Validation passing already proves type-correctness; additionally pin
-        // that the 64-bit value was NOT collapsed to one word — the out buffer
+        // that the 64-bit value was NOT collapsed to one word, the out buffer
         // must remain array<vec2<u32>> and a Binary of this operator must exist.
         let out_is_vec2 = module.global_variables.iter().any(|(_, g)| {
             if let naga::TypeInner::Array { base, .. } = module.types[g.ty].inner {
@@ -362,7 +362,7 @@ fn signed_modulo_emits_division_identity_not_modulo_and_validates() {
 }
 
 /// The negative twin: a SIGNED Div still emits a single naga `Divide` (which is
-/// signedness-correct) — the signed-mod workaround must not perturb Div.
+/// signedness-correct) (the signed-mod workaround must not perturb Div).
 #[test]
 fn signed_division_still_emits_single_divide() {
     use naga::valid::{Capabilities, ValidationFlags, Validator};
@@ -441,7 +441,7 @@ fn u64_narrow_cast_desc(target: DataType, out_elem: DataType) -> KernelDescripto
 fn u64_to_u32_narrowing_cast_extracts_low_word_and_validates() {
     use naga::valid::{Capabilities, ValidationFlags, Validator};
     // Regression: a plain `As` on the vec2<u32> backing produced InvalidStoreTypes
-    // (invalid WGSL). The fix takes the low word (lane 0) — truncation matching
+    // (invalid WGSL). The fix takes the low word (lane 0), truncation matching
     // PTX cvt.u32.u64 and the reference's low-word narrowing.
     let module = emit(&u64_narrow_cast_desc(DataType::U32, DataType::U32))
         .expect("u64->u32 cast must emit");
@@ -648,7 +648,7 @@ fn f32_to_u32_i32_bool_casts_still_emit() {
 fn u64_to_f32_cast_reconstructs_full_value_and_validates() {
     use naga::valid::{Capabilities, ValidationFlags, Validator};
     // u64->f32 must use BOTH words (low | high<<32) then convert, not just the
-    // low word — so a ShiftLeft (the high<<32) and a float As must be present.
+    // low word (so a ShiftLeft (the high<<32) and a float As must be present).
     let module = emit(&u64_narrow_cast_desc(DataType::F32, DataType::F32))
         .expect("u64->f32 cast must emit");
     Validator::new(ValidationFlags::all(), Capabilities::all())
@@ -709,7 +709,7 @@ fn u64_to_bool_cast_uses_both_words_and_validates() {
 /// A narrowing integer cast (u32 -> u8/u16) must TRUNCATE the high bits to the
 /// target width, not keep the full 32-bit word. WGSL has no u8/u16 scalar, so
 /// `scalar_cast_target` backs them with a `Uint` (u32) register and the bare
-/// `As` is a no-op for a u32 source — the emitter must mask `& 0xFF` / `& 0xFFFF`
+/// `As` is a no-op for a u32 source, the emitter must mask `& 0xFF` / `& 0xFFFF`
 /// so the result matches Rust `as u8/u16`, the V035 contract, and the reference
 /// oracle. Stores the narrowed value into a U32 out buffer so the truncation is
 /// visible as a full word (not masked again by a byte-element store).
@@ -1102,7 +1102,7 @@ fn variable_shift_amount_is_masked_to_bit_width() {
 #[test]
 fn constant_in_range_shift_amount_skips_the_mask() {
     // A known in-range constant shift amount (`x >> 16`) must NOT grow an `& 31`
-    // mask — it would fold to itself, so the hot path stays a bare shift.
+    // mask (it would fold to itself, so the hot path stays a bare shift).
     let module = emit(&u32_const_shift_desc(BinOp::Shr, 16)).expect("const shift emits");
     let entry = module.entry_points.first().expect("entry point");
     let arena = &entry.function.expressions;
@@ -1437,7 +1437,7 @@ fn signed_i32_arithmetic_shift_right_emits_valid_wgsl() {
     // `i32 >> n` is an ARITHMETIC shift (sign-preserving). validate's IR allows
     // it. naga makes `>>` arithmetic when the LEFT operand is Sint, but WGSL
     // requires the shift AMOUNT (right operand) to be u32. The probe: emit a
-    // real signed shift and run naga's validator — if the emitter coerced the
+    // real signed shift and run naga's validator, if the emitter coerced the
     // shift amount to i32 (to match the signed left), the module is invalid WGSL.
     let desc = KernelDescriptor {
         id: "signed_shr".into(),
@@ -1501,7 +1501,7 @@ fn signed_i32_arithmetic_shift_right_emits_valid_wgsl() {
         .validate(&module)
         .expect("signed arithmetic shift-right must produce valid WGSL (shift amount stays u32)");
 
-    // Pin the semantics, not just validity: the shift must be ARITHMETIC — its
+    // Pin the semantics, not just validity: the shift must be ARITHMETIC, its
     // value operand stays Sint (that is what makes naga emit a sign-preserving
     // `>>`) while the amount is Uint (u32).
     let entry = module.entry_points.first().expect("entry point");
@@ -1612,7 +1612,7 @@ fn cast_u32_to_i64_zero_extends_high_word() {
 fn cast_i32_to_vec2_zero_fills_lane_one() {
     // `Vec2U32` is a STRUCTURAL 2-word vector, not a 64-bit integer: lane 1 is
     // always zero-filled (matching the reference `widen_to_words`/`cast_to_vec2`
-    // zero-pad), never sign-extended — even from a signed source.
+    // zero-pad), never sign-extended (even from a signed source).
     let module = emit(&cast_widen_desc(LiteralValue::I32(-1), DataType::Vec2U32))
         .expect("i32 -> vec2<u32> cast must emit");
     let high = high_word_of_only_vec2_compose(&module);
@@ -1833,7 +1833,7 @@ fn atomic_result_can_feed_later_descriptor_ops() {
 /// the fix it emits as Literal::U64(0x10000000000) with type u64_ty.
 #[test]
 fn opaque_u64_literal_above_u32_max_emits_as_u64() {
-    let value: u64 = 1u64 << 40; // 0x10000000000 — above u32::MAX
+    let value: u64 = 1u64 << 40; // 0x10000000000, above u32::MAX
     let desc = KernelDescriptor {
         id: "opaque-u64-wide".into(),
         bindings: BindingLayout { slots: vec![] },

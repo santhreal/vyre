@@ -5,14 +5,14 @@
 //! 8/16-bit scalar register, so `scalar_cast_target` backs U8/U16 with a u32 and
 //! I8/I16 with an i32; the bare `As` that produces that register is a no-op for a
 //! same-width source. Before the narrowing fix, `300u32 as u8` therefore STAYED
-//! 300 on the GPU instead of truncating to 44 — a silent divergence from Rust
+//! 300 on the GPU instead of truncating to 44, a silent divergence from Rust
 //! `as`, the V035 contract, and the reference oracle (the div-by-zero /
 //! shift-mask silent-divergence class, Law 10).
 //!
 //! This test dispatches the narrowing on the live GPU and asserts the truncated
 //! value byte-for-byte. To isolate the CAST's narrowing from the byte-element
 //! STORE (which masks to a byte regardless), it widens the narrowed value back
-//! out — `cast(WIDE, cast(NARROW, x))` — and stores into a 32-bit buffer, so the
+//! out: `cast(WIDE, cast(NARROW, x))`: and stores into a 32-bit buffer, so the
 //! word read back reflects exactly what the narrowing cast produced.
 
 mod common;

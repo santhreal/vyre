@@ -115,7 +115,15 @@ impl AdapterCriteria {
 pub fn enumerate_adapters() -> Vec<wgpu::AdapterInfo> {
     match try_enumerate_adapters() {
         Ok(adapters) => adapters,
-        Err(_) => Vec::new(),
+        Err(error) => {
+            // Law 10: a probe failure is NOT "no GPUs present". Surface it
+            // loudly so callers do not read an empty vec as a device-free host.
+            tracing::error!(
+                %error,
+                "adapter enumeration probe failed; reporting zero adapters is a probe error, not an absence of GPUs"
+            );
+            Vec::new()
+        }
     }
 }
 

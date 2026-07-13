@@ -1,6 +1,6 @@
 use super::pool_backend_error;
 use crate::buffer::{BufferPool, GpuBufferHandle};
-use crate::numeric::rounded_f64_to_u64;
+use crate::numeric::WGPU_NUMERIC;
 use crossbeam_channel::Receiver;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -176,7 +176,7 @@ pub(crate) fn collect_timestamp_profile(
     buf.unmap();
 
     let ns = |delta: u64| -> Result<u64, BackendError> {
-        rounded_f64_to_u64(
+        WGPU_NUMERIC.rounded_f64_to_u64(
             (delta as f64) * f64::from(profile.timestamp_period_ns),
             "GPU timestamp delta nanoseconds",
         )

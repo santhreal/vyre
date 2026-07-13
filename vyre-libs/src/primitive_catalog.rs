@@ -24,15 +24,14 @@ pub(crate) struct ResearchPrimitivePromotion {
     pub(crate) boundary: PrimitivePromotionBoundary,
 }
 
-pub(crate) const RESEARCH_PRIMITIVE_PROMOTIONS: &[ResearchPrimitivePromotion] = &[
-    ResearchPrimitivePromotion {
+pub(crate) const RESEARCH_PRIMITIVE_PROMOTIONS: &[ResearchPrimitivePromotion] =
+    &[ResearchPrimitivePromotion {
         primitive_id: "vyre-primitives::math::hensel_lift_step",
         boundary: PrimitivePromotionBoundary::ProofGates(&[
             "inventory_expected_output",
             "padic_cpu_quadratic_root_converges",
         ]),
-    },
-];
+    }];
 
 pub(crate) fn validate_research_primitive_promotions(
     promotions: &[ResearchPrimitivePromotion],

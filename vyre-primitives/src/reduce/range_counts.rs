@@ -75,7 +75,14 @@ pub fn range_counts_u32(histogram: &str, out: &str, start: u32, end: u32) -> Pro
 pub fn cpu_ref(histogram: &[u32], start: u32, end: u32) -> u32 {
     let start = start as usize;
     let end = (end as usize).min(histogram.len());
-    histogram[start.min(end)..end].iter().copied().sum()
+    // WRAPPING accumulation to match the GPU IR (`range_counts_u32_body`), whose `Expr::add` on u32
+    // is two's-complement wraparound on hardware and in the reference interpreter. `.sum()` here would
+    // instead debug-PANIC on overflow (and silently wrap only in release), diverging from the GPU on
+    // high-count histograms. `wrapping_add` makes the u32 contract explicit and GPU-faithful.
+    histogram[start.min(end)..end]
+        .iter()
+        .copied()
+        .fold(0u32, u32::wrapping_add)
 }
 
 #[cfg(feature = "inventory-registry")]

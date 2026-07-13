@@ -17,7 +17,9 @@ fn is_trip1(from: &Expr, to: &Expr) -> bool {
 fn body_has_assign(nodes: &[Node]) -> bool {
     nodes.iter().any(|node| match node {
         Node::Assign { .. } => true,
-        Node::If { then, otherwise, .. } => body_has_assign(then) || body_has_assign(otherwise),
+        Node::If {
+            then, otherwise, ..
+        } => body_has_assign(then) || body_has_assign(otherwise),
         Node::Loop { body, .. } | Node::Block(body) => body_has_assign(body),
         Node::Region { body, .. } => body_has_assign(body),
         _ => false,
@@ -38,7 +40,9 @@ fn count_trip1_loops(nodes: &[Node], free: &mut u32, with_assign: &mut u32) {
                 }
                 count_trip1_loops(body, free, with_assign);
             }
-            Node::If { then, otherwise, .. } => {
+            Node::If {
+                then, otherwise, ..
+            } => {
                 count_trip1_loops(then, free, with_assign);
                 count_trip1_loops(otherwise, free, with_assign);
             }

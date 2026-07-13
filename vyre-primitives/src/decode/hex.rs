@@ -56,7 +56,8 @@ pub const fn hex_decoded_capacity(input_len: u32) -> u32 {
 }
 
 fn nibble_expr(byte: Expr, table: &str) -> Expr {
-    Expr::load(table, Expr::bitand(byte, Expr::u32(0xFF)))
+    // Canonical masked 256-table lookup (ONE-PLACE: crate::ir_safe).
+    crate::ir_safe::byte_table_lookup(table, byte)
 }
 
 /// Decode one hex byte pair into a single u32 byte value.

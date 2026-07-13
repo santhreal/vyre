@@ -218,8 +218,14 @@ fn validate_vector_graph_inputs(
             query.len()
         ));
     }
-    if vectors.iter().chain(query.iter()).any(|value| !value.is_finite()) {
-        return Err("Fix: vector graph fusion requires finite vector and query values.".to_string());
+    if vectors
+        .iter()
+        .chain(query.iter())
+        .any(|value| !value.is_finite())
+    {
+        return Err(
+            "Fix: vector graph fusion requires finite vector and query values.".to_string(),
+        );
     }
     if dataset_id.trim().is_empty() {
         return Err("Fix: vector graph fusion dataset_id cannot be blank.".to_string());
@@ -241,14 +247,24 @@ fn build_knn_csr(vectors: &[f32], dimension: usize, neighbor_k: usize) -> (Vec<u
     for src in 0..node_count {
         let mut candidates = (0..node_count)
             .filter(|dst| *dst != src)
-            .map(|dst| (squared_l2(row(vectors, dimension, src), row(vectors, dimension, dst)), dst))
+            .map(|dst| {
+                (
+                    squared_l2(row(vectors, dimension, src), row(vectors, dimension, dst)),
+                    dst,
+                )
+            })
             .collect::<Vec<_>>();
         candidates.sort_by(|left, right| {
             left.0
                 .total_cmp(&right.0)
                 .then_with(|| left.1.cmp(&right.1))
         });
-        targets.extend(candidates.into_iter().take(neighbor_k).map(|(_, dst)| dst as u32));
+        targets.extend(
+            candidates
+                .into_iter()
+                .take(neighbor_k)
+                .map(|(_, dst)| dst as u32),
+        );
         offsets.push(targets.len() as u32);
     }
     (offsets, targets)

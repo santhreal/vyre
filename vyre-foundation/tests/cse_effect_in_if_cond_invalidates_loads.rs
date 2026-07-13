@@ -103,8 +103,9 @@ fn program_with_barrier() -> Program {
 fn subgroup_hidden_atomic_after_load_is_rejected_without_a_barrier() {
     let program = program_without_barrier();
 
-    let err = vyre_reference::reference_eval(&program, &inputs())
-        .expect_err("a non-atomic load + subgroup-hidden atomic on the same buffer must be rejected");
+    let err = vyre_reference::reference_eval(&program, &inputs()).expect_err(
+        "a non-atomic load + subgroup-hidden atomic on the same buffer must be rejected",
+    );
     let message = format!("{err:?}");
     assert!(
         message.contains("fusion hazard on buffer `ctr`"),

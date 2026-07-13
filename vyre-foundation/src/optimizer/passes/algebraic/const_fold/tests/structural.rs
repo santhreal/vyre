@@ -180,7 +180,7 @@ fn trig_division_peephole() {
 fn div_self_does_not_fold_for_nonliteral_operands() {
     // `x / x` must NOT fold to 1: const_fold is type/value-blind, and
     // `0 / 0` is `u32::MAX` for unsigned (oracle div_u32) or undefined
-    // for signed (oracle div_i32) — never 1. Folding to 1 would
+    // for signed (oracle div_i32), never 1. Folding to 1 would
     // miscompile the x=0 case.
     let x = Expr::var("x");
     assert_eq!(

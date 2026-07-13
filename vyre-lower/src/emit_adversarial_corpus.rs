@@ -557,7 +557,7 @@ fn reject_grid_sync_barrier() -> EmitAdversarialCase {
 /// word is `Sint`, but bit/shift arithmetic against `u32` literals (and the
 /// final store into a `u32` buffer) requires operand-kind reconciliation. WGSL
 /// rejects `BitAnd(i32, u32)` and a shift whose amount is not `u32`; PTX must
-/// pick the signed vs unsigned form. Every backend must reconcile the kinds —
+/// pick the signed vs unsigned form. Every backend must reconcile the kinds 
 /// validating emitters (naga) catch any regression at the matrix gate.
 fn signed_buffer_arithmetic() -> EmitAdversarialCase {
     EmitAdversarialCase {

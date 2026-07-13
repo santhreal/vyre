@@ -1,6 +1,6 @@
 [package]
 name = "vyre-driver-wgpu"
-version = "0.6.4"
+version = "0.6.5"
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
@@ -61,7 +61,8 @@ libm.workspace = true
 bincode = { workspace = true }
 
 [dev-dependencies]
-vyre-harness = { workspace = true }
+vyre-test-support.workspace = true
+vyre-harness = { path = "../vyre-harness" }
 criterion.workspace = true
 stats_alloc.workspace = true
 tokio.workspace = true
@@ -69,11 +70,11 @@ tempfile.workspace = true
 proptest.workspace = true
 vyre-libs = { version = "0.6.1", path = "../vyre-libs", features = ["matching", "parsing", "c-parser", "nn-attention", "cpu-parity", "crypto-blake3"] }
 # The integration tests under tests/ exercise the public `vyre` umbrella facade
-# (vyre::ir, vyre::{DispatchConfig, VyreBackend, validate, ...}) — the ergonomic
+# (vyre::ir, vyre::{DispatchConfig, VyreBackend, validate, ...}), the ergonomic
 # surface a real consumer uses. The 0.6.2 refactor dropped this dev-dep, which
 # silently RED-ed ~90 test files (use of unlinked crate `vyre`). `default-features
 # = false` keeps the `wgpu` feature OFF, so vyre does NOT pull vyre-driver-wgpu back
-# in — no dependency cycle.
+# in: no dependency cycle.
 # PATH-ONLY (no version): vyre (vyre-core) is published AFTER this crate in the 0.6.3
 # train, so a versioned/workspace dev-dep would be unsatisfiable at publish time.
 # cargo strips path-only dev-deps from the published manifest; the local test build
@@ -81,7 +82,7 @@ vyre-libs = { version = "0.6.1", path = "../vyre-libs", features = ["matching", 
 vyre = { path = "../vyre-core", default-features = false }
 # A handful of tests reach `vyre_primitives::wire::pack_u32_iter` directly (the
 # facade doesn't re-export the wire POD helpers). Also dropped in the 0.6.2 refactor.
-vyre-primitives = { workspace = true }
+vyre-primitives = { path = "../vyre-primitives", default-features = false }
 # Cross-OS shader-VALIDITY coverage for the combined segmented megakernel: the
 # winning Vulkan/DX12 runs implicitly prove SPIR-V/HLSL validity, but macOS/Metal
 # is hardware-blocked, so the megakernel descriptor is lowered to MSL here (naga's
@@ -92,7 +93,7 @@ vyre-primitives = { workspace = true }
 vyre-emit-metal = { path = "../vyre-emit-metal" }
 vyre-emit-spirv = { path = "../vyre-emit-spirv" }
 # A CPU-reference parity test (`c_ast_expression_support`) compares against vyre-reference.
-vyre-reference = { workspace = true }
+vyre-reference = { path = "../vyre-reference" }
 # `lens_gpu_parity` (and other GPU parity tests) use the shared conform harness.
 # PATH-ONLY: vyre-test-harness is publish=false (never on crates.io), so a versioned
 # dev-dep is unsatisfiable at publish. cargo strips path-only dev-deps on publish.
@@ -101,7 +102,7 @@ tracing-subscriber.workspace = true
 libc.workspace = true
 # PATH-ONLY (package = vyre-grammar-gen): vyre-grammar-gen is NOT in the 0.6.3
 # publish train (it is only ever a dev-dep here + in vyre-libs, and a normal dep of
-# the publish=false vyre-frontend-c), so crates.io has only 0.6.2 — a `^0.6.3`
+# the publish=false vyre-frontend-c), so crates.io has only 0.6.2, a `^0.6.3`
 # workspace req is unsatisfiable at publish. cargo strips path-only dev-deps from
 # the published manifest; local test builds still link it via the path.
 c-grammar-gen = { package = "vyre-grammar-gen", path = "../vyre-grammar-gen" }

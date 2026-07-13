@@ -1,4 +1,4 @@
-# Testing program — vyre-runtime
+# Testing program, vyre-runtime
 
 | Kind | Location |
 |------|----------|

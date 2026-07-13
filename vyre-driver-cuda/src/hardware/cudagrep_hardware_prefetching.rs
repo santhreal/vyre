@@ -3,7 +3,7 @@
 //! When traversing 1GB payload arrays inside `cudagrep` mappings linearly natively,
 //! memory loads stall the CPU for 100-300 clock cycles each time they miss the Cache natively.
 //!
-//! Legendary software engineers structure explicit `__builtin_prefetch` instructions 
+//! Oneshot software engineers structure explicit `__builtin_prefetch` instructions 
 //! exactly 12 to 20 Cache-Lines natively *ahead* of the CPU evaluation pointer iteratively.
 //! The Memory Controller fetches the data into L1 Cache completely asynchronously natively
 //! perfectly hiding the 300-cycle latency penalty continuously executing.

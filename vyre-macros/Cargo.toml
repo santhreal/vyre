@@ -1,6 +1,6 @@
 [package]
 name = "vyre-macros"
-version = "0.6.4"
+version = "0.6.5"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -26,6 +26,7 @@ quote.workspace = true
 syn.workspace = true
 
 [dev-dependencies]
+vyre-test-support.workspace = true
 inventory.workspace = true
 trybuild = { workspace = true }
 

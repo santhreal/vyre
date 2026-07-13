@@ -12,7 +12,9 @@ use vyre_libs::parsing::c::parse::vast::{
     c11_annotate_typedef_names, c11_annotate_typedef_names_packed_haystack,
     c11_prehash_vast_identifiers, c11_prehash_vast_identifiers_packed_haystack,
 };
-use vyre_libs::parsing::c::sema::registry::{c_sema_scope, c_sema_scope_packed_haystack};
+use vyre_libs::parsing::c::sema::registry::{
+    c_sema_scope, c_sema_scope_packed_haystack, c_sema_scope_symbols_packed_haystack,
+};
 use vyre_reference::value::Value;
 
 const VAST_NODE_STRIDE_U32: usize = 10;
@@ -95,6 +97,83 @@ fn sema_scope_packed_haystack_matches_expanded_identifier_interning() {
         packed[1 * 4 + 3],
         0,
         "identifier interning should hash the identifier source bytes"
+    );
+}
+
+#[test]
+fn sema_scope_symbols_only_zeroes_non_identifier_rows_else_matches_full() {
+    // `c_sema_scope_symbols_packed_haystack` is the symbols-only variant of the
+    // (covered) `c_sema_scope_packed_haystack`: per its doc it emits the SAME
+    // scope/declaration/intern record for IDENTIFIER rows but ZEROES the whole 4-word
+    // record for non-identifier rows (punctuation/keywords), so object consumers keep
+    // stable row indexing without paying scope walks for non-symbols. This pins that
+    // contract against the full variant (real output bytes, not `!is_empty`), draining
+    // the orphan symbols-only builder (registry-coverage closure gate).
+    const STRIDE: usize = 4; // out_scope_tree words per token
+    let source = b"int alpha;";
+    let tok_types = [TOK_INT, TOK_IDENTIFIER, TOK_SEMICOLON];
+    let tok_starts = [0u32, 4, 9];
+    let tok_lens = [3u32, 5, 1];
+    let out_init = vec![0u8; tok_types.len() * STRIDE * 4];
+
+    let full = eval_words(
+        &c_sema_scope_packed_haystack(
+            "tok_types",
+            "tok_starts",
+            "tok_lens",
+            "haystack",
+            Expr::u32(source.len() as u32),
+            Expr::u32(tok_types.len() as u32),
+            "out_scope_tree",
+        ),
+        vec![
+            bytes(&tok_types),
+            bytes(&tok_starts),
+            bytes(&tok_lens),
+            packed_haystack(source),
+            out_init.clone(),
+        ],
+    );
+    let symbols = eval_words(
+        &c_sema_scope_symbols_packed_haystack(
+            "tok_types",
+            "tok_starts",
+            "tok_lens",
+            "haystack",
+            Expr::u32(source.len() as u32),
+            Expr::u32(tok_types.len() as u32),
+            "out_scope_tree",
+        ),
+        vec![
+            bytes(&tok_types),
+            bytes(&tok_starts),
+            bytes(&tok_lens),
+            packed_haystack(source),
+            out_init,
+        ],
+    );
+
+    for (row, &kind) in tok_types.iter().enumerate() {
+        let rec = &symbols[row * STRIDE..row * STRIDE + STRIDE];
+        if kind == TOK_IDENTIFIER {
+            assert_eq!(
+                rec,
+                &full[row * STRIDE..row * STRIDE + STRIDE],
+                "identifier row {row} must carry the same record as the full variant"
+            );
+        } else {
+            assert_eq!(
+                rec,
+                &[0, 0, 0, 0],
+                "non-identifier row {row} (kind {kind}) must be zeroed in symbols-only mode"
+            );
+        }
+    }
+    // The identifier row must actually intern something (else the test is vacuous).
+    assert_ne!(
+        symbols[1 * STRIDE + 3],
+        0,
+        "the identifier row must carry a nonzero intern hash"
     );
 }
 

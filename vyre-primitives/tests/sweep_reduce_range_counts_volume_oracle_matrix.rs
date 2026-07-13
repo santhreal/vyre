@@ -1,5 +1,5 @@
 //! Volume oracle matrix - independent reference vs production cpu_ref.
-//! Legendary testing.volume - do NOT weaken to shape-only asserts.
+//! Volume testing.volume - do NOT weaken to shape-only asserts.
 #![forbid(unsafe_code)]
 #![cfg(all(feature = "reduce", feature = "cpu-parity"))]
 
@@ -24,7 +24,13 @@ fn oracle(histogram: &[u32], start: u32, end: u32) -> u32 {
     if start >= end {
         0
     } else {
-        histogram[start..end].iter().sum()
+        // WRAPPING sum, the GPU IR (and `range_counts::cpu_ref`) accumulate u32 with two's-complement
+        // wraparound, so this independent oracle must too; `.iter().sum()` would debug-panic on the
+        // full-range `lcg_u32` inputs this volume sweep deliberately feeds.
+        histogram[start..end]
+            .iter()
+            .copied()
+            .fold(0u32, u32::wrapping_add)
     }
 }
 

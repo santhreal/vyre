@@ -244,7 +244,9 @@ fn count_stores(nodes: &[Node]) -> usize {
         .iter()
         .map(|node| match node {
             Node::Store { .. } => 1,
-            Node::If { then, otherwise, .. } => count_stores(then) + count_stores(otherwise),
+            Node::If {
+                then, otherwise, ..
+            } => count_stores(then) + count_stores(otherwise),
             Node::Loop { body, .. } | Node::Block(body) => count_stores(body),
             Node::Region { body, .. } => count_stores(body),
             _ => 0,
@@ -264,7 +266,10 @@ fn deep_linear_chain_lowers_without_stack_overflow() {
         .collect::<Vec<_>>();
     let graph = to_graph(&raw_program_with_body(body));
     // to_graph emits a 0->1->2->... ordering chain DEPTH nodes deep.
-    assert!(graph.nodes.len() >= DEPTH, "expected a chain of >= DEPTH nodes");
+    assert!(
+        graph.nodes.len() >= DEPTH,
+        "expected a chain of >= DEPTH nodes"
+    );
 
     let lowered = from_graph(graph).expect("a deep acyclic chain is well-formed and must lower");
     // from_graph wraps the lowered statements in one root Region, so assert the

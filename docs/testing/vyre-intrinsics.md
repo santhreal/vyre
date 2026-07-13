@@ -1,4 +1,4 @@
-# Testing program — vyre-intrinsics
+# Testing program, vyre-intrinsics
 
 | Kind | Location |
 |------|----------|

@@ -172,7 +172,7 @@ pub fn blake3_round_program(state: &str, message: &str, out: &str) -> Program {
 
 fn rotate_right(x: Expr, n: u32) -> Expr {
     // Delegate to the public first-class builder (single construction path for
-    // BinOp::RotateRight) instead of hand-assembling the node — they share one
+    // BinOp::RotateRight) instead of hand-assembling the node, they share one
     // canonical fingerprint, proven by the operators.rs builder tests.
     Expr::rotate_right(x, Expr::u32(n))
 }
@@ -317,6 +317,68 @@ mod tests {
         assert!(
             nonzero_count >= 4,
             "expected at least 4 nonzero words after one round, got {nonzero_count}"
+        );
+    }
+
+    /// Run a state[16] + message program through the reference interpreter and
+    /// return the 16-word `out` buffer. The G/round programs are single-workgroup
+    /// `[1,1,1]` with `state`(RO,0), `message`(RO,1), `out`(RW,2), so `out` is the
+    /// only writable buffer and lands at `outputs[0]`.
+    fn run_state16_ir(program: &Program, state: &[u32; 16], message: &[u32]) -> [u32; 16] {
+        use vyre_reference::value::Value;
+        let pack = |w: &[u32]| Value::from(crate::wire::pack_u32_slice(w));
+        let outputs = vyre_reference::reference_eval(
+            program,
+            &[pack(state), pack(message), pack(&[0u32; 16])],
+        )
+        .expect("blake3 program must execute in the reference interpreter");
+        let words: Vec<u32> = outputs[0]
+            .to_bytes()
+            .chunks_exact(4)
+            .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
+            .collect();
+        words.try_into().expect("blake3 out must be 16 words")
+    }
+
+    /// The IR `G` quartet (`blake3_g_program`) and its CPU twin (`cpu_blake3_g`)
+    /// both exist, but nothing proved they AGREE: the other tests only exercise
+    /// the CPU ref. This runs the real IR through `reference_eval` and requires
+    /// bit-exact equality with the CPU `G` on the same (state, message) - a
+    /// wrong rotation constant, add/xor order, or word index in the IR breaks it.
+    #[test]
+    fn blake3_g_program_ir_matches_cpu_reference() {
+        let state: [u32; 16] =
+            std::array::from_fn(|i| (i as u32).wrapping_mul(0x9E37_79B1).wrapping_add(1));
+        let message = [0xDEAD_BEEFu32, 0x0BAD_F00D];
+        let got = run_state16_ir(
+            &blake3_g_program("state", "message", "out"),
+            &state,
+            &message,
+        );
+        let mut expected = state;
+        cpu_blake3_g(&mut expected, 0, 4, 8, 12, message[0], message[1]);
+        assert_ne!(expected, state, "test input too trivial: G did not mix");
+        assert_eq!(got, expected, "blake3 G IR diverged from cpu_blake3_g");
+    }
+
+    /// Same parity check for a full permutation round: the IR `blake3_round_program`
+    /// (round 0, `MSG_SCHEDULE[0]`) must equal `cpu_blake3_round` on the same input.
+    #[test]
+    fn blake3_round_program_ir_matches_cpu_reference() {
+        let state: [u32; 16] = std::array::from_fn(|i| (i as u32).wrapping_add(0x1000_0000));
+        let message: [u32; 16] =
+            std::array::from_fn(|i| (i as u32).wrapping_mul(0x0100_0193).wrapping_add(7));
+        let got = run_state16_ir(
+            &blake3_round_program("state", "message", "out"),
+            &state,
+            &message,
+        );
+        let mut expected = state;
+        cpu_blake3_round(&mut expected, &message, &MSG_SCHEDULE[0]);
+        assert_ne!(expected, state, "test input too trivial: round did not mix");
+        assert_eq!(
+            got, expected,
+            "blake3 round IR diverged from cpu_blake3_round"
         );
     }
 }

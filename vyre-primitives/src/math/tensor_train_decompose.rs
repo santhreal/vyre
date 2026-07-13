@@ -11,6 +11,13 @@ use std::sync::Arc;
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
+use crate::math::symmetric_eigen_jacobi::jacobi_eigen_body;
+
+/// `row * cols + col` flat index for a row-major matrix.
+fn tt_idx(row: Expr, cols: u32, col: Expr) -> Expr {
+    Expr::add(Expr::mul(row, Expr::u32(cols)), col)
+}
+
 /// Op id.
 pub const OP_ID: &str = "vyre-primitives::math::tensor_train_decompose";
 
@@ -38,7 +45,7 @@ pub fn tensor_train_decompose_step(
         return crate::invalid_output_program(
             OP_ID,
             u_out,
-            DataType::U32,
+            DataType::F32,
             "Fix: tensor_train_decompose_step r_prev * nk must fit in u32.".to_owned(),
         );
     };
@@ -46,7 +53,7 @@ pub fn tensor_train_decompose_step(
         return crate::invalid_output_program(
             OP_ID,
             u_out,
-            DataType::U32,
+            DataType::F32,
             "Fix: tensor_train_decompose_step input count must fit in u32.".to_owned(),
         );
     };
@@ -54,7 +61,7 @@ pub fn tensor_train_decompose_step(
         return crate::invalid_output_program(
             OP_ID,
             u_out,
-            DataType::U32,
+            DataType::F32,
             "Fix: tensor_train_decompose_step core count must fit in u32.".to_owned(),
         );
     };
@@ -62,15 +69,23 @@ pub fn tensor_train_decompose_step(
         return crate::invalid_output_program(
             OP_ID,
             u_out,
-            DataType::U32,
+            DataType::F32,
             "Fix: tensor_train_decompose_step remainder count must fit in u32.".to_owned(),
+        );
+    };
+    let Some(gram_count) = rem.checked_mul(rem) else {
+        return crate::invalid_output_program(
+            OP_ID,
+            u_out,
+            DataType::F32,
+            "Fix: tensor_train_decompose_step Gram matrix count must fit in u32.".to_owned(),
         );
     };
     if r_prev == 0 || nk == 0 || rem == 0 || r_next == 0 {
         return crate::invalid_output_program(
             OP_ID,
             u_out,
-            DataType::U32,
+            DataType::F32,
             "Fix: tensor_train_decompose_step dimensions and ranks must be non-zero.".to_owned(),
         );
     }
@@ -78,78 +93,194 @@ pub fn tensor_train_decompose_step(
         return crate::invalid_output_program(
             OP_ID,
             u_out,
-            DataType::U32,
+            DataType::F32,
             "Fix: tensor_train_decompose_step requires r_next <= rem for emitted rank columns."
                 .to_owned(),
         );
     }
 
-    let nodes = vec![
-        Node::loop_for(
-            "i",
+    // Real per-mode TT-SVD (Oseledets 2011) of the `m x n` unfolding `M` (m = r_prev*nk rows,
+    // n = rem columns), in f32, run serially on lane 0. Mirrors the CPU reference
+    // `truncated_svd_into`: (1) Gram matrix G = MᵀM (n x n, symmetric PSD); (2) eigendecompose G via
+    // the shared Jacobi body → eigenvalues + eigenvectors V; (3) take the r_next largest eigenpairs:
+    // σ = √max(λ,0); core column U[:,k] = M·V[:,k]/σ; remainder row = σ·V[:,k]ᵀ carried to the next
+    // mode. `tt_ata`/`tt_evec`/`tt_eval` are internal f32 scratch (Gram, eigenvectors, eigenvalues);
+    // after selecting an eigenpair its eigenvalue is marked used (−inf) so the next rank picks the
+    // next-largest (a serial argmax in place of a sort primitive).
+    let m = input_rows;
+    let n = rem;
+    let neg_big = Expr::f32(-1.0e30);
+    let mut body: Vec<Node> = Vec::new();
+
+    // 1. Gram matrix G[ca,cb] = Σ_row M[row,ca]·M[row,cb].
+    body.push(Node::loop_for(
+        "tt_ca",
+        Expr::u32(0),
+        Expr::u32(n),
+        vec![Node::loop_for(
+            "tt_cb",
             Expr::u32(0),
-            Expr::u32(input_rows),
-            vec![Node::loop_for(
-                "j",
-                Expr::u32(0),
-                Expr::u32(rem),
-                vec![
-                    Node::let_bind(
-                        "val",
-                        Expr::load(
-                            input_matrix,
-                            Expr::add(Expr::mul(Expr::var("i"), Expr::u32(rem)), Expr::var("j")),
+            Expr::u32(n),
+            vec![
+                Node::let_bind("tt_gacc", Expr::f32(0.0)),
+                Node::loop_for(
+                    "tt_grow",
+                    Expr::u32(0),
+                    Expr::u32(m),
+                    vec![Node::assign(
+                        "tt_gacc",
+                        Expr::add(
+                            Expr::var("tt_gacc"),
+                            Expr::mul(
+                                Expr::load(
+                                    input_matrix,
+                                    tt_idx(Expr::var("tt_grow"), n, Expr::var("tt_ca")),
+                                ),
+                                Expr::load(
+                                    input_matrix,
+                                    tt_idx(Expr::var("tt_grow"), n, Expr::var("tt_cb")),
+                                ),
+                            ),
                         ),
+                    )],
+                ),
+                Node::store(
+                    "tt_ata",
+                    tt_idx(Expr::var("tt_ca"), n, Expr::var("tt_cb")),
+                    Expr::var("tt_gacc"),
+                ),
+            ],
+        )],
+    ));
+
+    // 2. Eigendecompose the Gram matrix (ONE-PLACE: shared Jacobi body).
+    body.extend(jacobi_eigen_body("tt_ata", "tt_evec", "tt_eval", n));
+
+    // 3. Truncated SVD: r_next largest eigenpairs → core U and remainder S·Vᵀ.
+    body.push(Node::loop_for(
+        "tt_rank",
+        Expr::u32(0),
+        Expr::u32(r_next),
+        vec![
+            // argmax over remaining eigenvalues.
+            Node::let_bind("tt_best", neg_big.clone()),
+            Node::let_bind("tt_eidx", Expr::u32(0)),
+            Node::loop_for(
+                "tt_e",
+                Expr::u32(0),
+                Expr::u32(n),
+                vec![
+                    Node::let_bind("tt_ev", Expr::load("tt_eval", Expr::var("tt_e"))),
+                    Node::let_bind("tt_gt", Expr::gt(Expr::var("tt_ev"), Expr::var("tt_best"))),
+                    Node::assign(
+                        "tt_eidx",
+                        Expr::select(Expr::var("tt_gt"), Expr::var("tt_e"), Expr::var("tt_eidx")),
                     ),
-                    Node::if_then(
-                        Expr::lt(Expr::var("j"), Expr::u32(r_next)),
-                        vec![Node::store(
-                            u_out,
-                            Expr::add(Expr::mul(Expr::var("i"), Expr::u32(r_next)), Expr::var("j")),
-                            Expr::var("val"),
-                        )],
+                    Node::assign(
+                        "tt_best",
+                        Expr::select(Expr::var("tt_gt"), Expr::var("tt_ev"), Expr::var("tt_best")),
                     ),
                 ],
-            )],
-        ),
-        Node::loop_for(
-            "rank",
-            Expr::u32(0),
-            Expr::u32(r_next),
-            vec![Node::loop_for(
-                "col",
+            ),
+            // σ = √max(λ, 0).
+            Node::let_bind(
+                "tt_sigma",
+                Expr::sqrt(Expr::max(Expr::var("tt_best"), Expr::f32(0.0))),
+            ),
+            // Store the eigenvector as the remainder row rem_out[rank, :] = V[:, eidx].
+            Node::loop_for(
+                "tt_vc",
                 Expr::u32(0),
-                Expr::u32(rem),
+                Expr::u32(n),
                 vec![Node::store(
                     rem_out,
-                    Expr::add(
-                        Expr::mul(Expr::var("rank"), Expr::u32(rem)),
-                        Expr::var("col"),
-                    ),
-                    Expr::select(
-                        Expr::eq(Expr::var("rank"), Expr::var("col")),
-                        Expr::u32(1u32 << 16),
-                        Expr::u32(0),
+                    tt_idx(Expr::var("tt_rank"), n, Expr::var("tt_vc")),
+                    Expr::load(
+                        "tt_evec",
+                        tt_idx(Expr::var("tt_vc"), n, Expr::var("tt_eidx")),
                     ),
                 )],
-            )],
-        ),
-    ];
+            ),
+            // Core column: U[row, rank] = (Σ_c M[row,c]·V[c,eidx]) / σ  (0 when σ ≈ 0).
+            Node::loop_for(
+                "tt_ur",
+                Expr::u32(0),
+                Expr::u32(m),
+                vec![
+                    Node::let_bind("tt_dot", Expr::f32(0.0)),
+                    Node::loop_for(
+                        "tt_uk",
+                        Expr::u32(0),
+                        Expr::u32(n),
+                        vec![Node::assign(
+                            "tt_dot",
+                            Expr::add(
+                                Expr::var("tt_dot"),
+                                Expr::mul(
+                                    Expr::load(
+                                        input_matrix,
+                                        tt_idx(Expr::var("tt_ur"), n, Expr::var("tt_uk")),
+                                    ),
+                                    Expr::load(
+                                        rem_out,
+                                        tt_idx(Expr::var("tt_rank"), n, Expr::var("tt_uk")),
+                                    ),
+                                ),
+                            ),
+                        )],
+                    ),
+                    Node::store(
+                        u_out,
+                        tt_idx(Expr::var("tt_ur"), r_next, Expr::var("tt_rank")),
+                        Expr::select(
+                            Expr::gt(Expr::var("tt_sigma"), Expr::f32(1.0e-6)),
+                            Expr::div(Expr::var("tt_dot"), Expr::var("tt_sigma")),
+                            Expr::f32(0.0),
+                        ),
+                    ),
+                ],
+            ),
+            // Scale the stored eigenvector row by σ so rem_out[rank, :] = σ·V[:, eidx]ᵀ = (S·Vᵀ) row.
+            Node::loop_for(
+                "tt_sc",
+                Expr::u32(0),
+                Expr::u32(n),
+                vec![Node::store(
+                    rem_out,
+                    tt_idx(Expr::var("tt_rank"), n, Expr::var("tt_sc")),
+                    Expr::mul(
+                        Expr::load(rem_out, tt_idx(Expr::var("tt_rank"), n, Expr::var("tt_sc"))),
+                        Expr::var("tt_sigma"),
+                    ),
+                )],
+            ),
+            // Mark this eigenvalue used so the next rank picks the next-largest.
+            Node::store("tt_eval", Expr::var("tt_eidx"), neg_big.clone()),
+        ],
+    ));
 
     Program::wrapped(
         vec![
-            BufferDecl::storage(input_matrix, 0, BufferAccess::ReadOnly, DataType::U32)
+            BufferDecl::storage(input_matrix, 0, BufferAccess::ReadOnly, DataType::F32)
                 .with_count(input_count),
-            BufferDecl::storage(u_out, 1, BufferAccess::ReadWrite, DataType::U32)
+            BufferDecl::storage(u_out, 1, BufferAccess::ReadWrite, DataType::F32)
                 .with_count(u_count),
-            BufferDecl::storage(rem_out, 2, BufferAccess::ReadWrite, DataType::U32)
+            BufferDecl::storage(rem_out, 2, BufferAccess::ReadWrite, DataType::F32)
                 .with_count(rem_count),
+            BufferDecl::storage("tt_ata", 3, BufferAccess::ReadWrite, DataType::F32)
+                .with_count(gram_count),
+            BufferDecl::storage("tt_evec", 4, BufferAccess::ReadWrite, DataType::F32)
+                .with_count(gram_count),
+            BufferDecl::storage("tt_eval", 5, BufferAccess::ReadWrite, DataType::F32).with_count(n),
         ],
         [1, 1, 1],
         vec![Node::Region {
             generator: Ident::from(OP_ID),
             source_region: None,
-            body: Arc::new(nodes),
+            body: Arc::new(vec![Node::if_then(
+                Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+                body,
+            )]),
         }],
     )
 }
@@ -471,22 +602,26 @@ fn symmetric_eigen_jacobi_into(
 inventory::submit! {
     crate::harness::OpEntry::new(
         OP_ID,
+        // m = r_prev*nk = 2 rows, n = rem = 4 columns, r_next = 1 (rank-1 truncation).
         || tensor_train_decompose_step("in", "u", "rem", 1, 2, 4, 1),
         Some(|| {
-            let to_bytes = |words: &[u32]| crate::wire::pack_u32_slice(words);
+            let to_bytes = |vals: &[f32]| crate::wire::pack_f32_slice(vals);
+            // One f32 input per buffer in binding order: input_matrix (2x4), then the writable
+            // core/remainder/scratch buffers zero-initialized (backend zero-allocation).
             vec![vec![
-                to_bytes(&[1, 2, 3, 4, 5, 6, 7, 8]), // in
-                to_bytes(&[0; 2]),                   // u
-                to_bytes(&[0; 4]),                   // rem
+                to_bytes(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]), // input_matrix (2x4)
+                to_bytes(&[0.0; 2]),                                 // u_out (2x1)
+                to_bytes(&[0.0; 4]),                                 // rem_out (1x4)
+                to_bytes(&[0.0; 16]),                                // tt_ata (4x4)
+                to_bytes(&[0.0; 16]),                                // tt_evec (4x4)
+                to_bytes(&[0.0; 4]),                                 // tt_eval (4)
             ]]
         }),
-        Some(|| {
-            let to_bytes = |words: &[u32]| crate::wire::pack_u32_slice(words);
-            vec![vec![
-                to_bytes(&[1, 5]),           // u
-                to_bytes(&[1u32 << 16, 0, 0, 0]), // rem
-            ]]
-        }),
+        // No exact expected-output fixture: the truncated SVD is basis-dependent (eigenvector sign /
+        // ordering of degenerate spectra), so value correctness is asserted by the reconstruction
+        // parity test `tensor_train_decompose_step_parity.rs`, not by an exact byte fixture. The
+        // registry still exercises the op for IR validity + out-of-bounds safety.
+        None,
     )
 }
 
@@ -670,7 +805,15 @@ mod tests {
 
     #[test]
     fn program_buffer_layout() {
+        use vyre_foundation::ir::{BufferAccess, DataType};
         let p = tensor_train_decompose_step("in", "u", "rem", 1, 2, 4, 1);
-        assert_eq!(p.buffers.len(), 3);
+        // input_matrix (RO) + u_out/rem_out (RW outputs) + tt_ata/tt_evec/tt_eval (RW f32 scratch
+        // for the Gram matrix, eigenvectors, eigenvalues) = 6 buffers, all f32.
+        assert_eq!(p.buffers.len(), 6);
+        assert!(p.buffers.iter().all(|b| b.element() == DataType::F32));
+        assert_eq!(p.buffers[0].access(), BufferAccess::ReadOnly);
+        assert!(p.buffers[1..]
+            .iter()
+            .all(|b| b.access() == BufferAccess::ReadWrite));
     }
 }

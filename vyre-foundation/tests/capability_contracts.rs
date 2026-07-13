@@ -18,10 +18,7 @@ fn missing_subgroup_ops_is_reported() {
             DataType::U32,
         )],
         [1, 1, 1],
-        vec![Node::let_bind(
-            "s",
-            Expr::subgroup_add(Expr::u32(1)),
-        )],
+        vec![Node::let_bind("s", Expr::subgroup_add(Expr::u32(1)))],
     );
     let required = scan(&program);
     assert!(required.subgroup_ops, "subgroup_add must set subgroup_ops");

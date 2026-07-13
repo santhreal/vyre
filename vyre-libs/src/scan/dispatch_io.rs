@@ -58,7 +58,7 @@ pub struct ScanDispatchScratch {
 /// # Panics
 ///
 /// Aborts when padded length arithmetic or allocation fails. Returning an empty
-/// packed buffer would make the GPU scan an EMPTY haystack — silently finding
+/// packed buffer would make the GPU scan an EMPTY haystack, silently finding
 /// nothing and reporting the real input as clean (Law 10). Fail closed instead;
 /// callers that must recover use [`try_pack_haystack_u32`].
 #[must_use]
@@ -67,7 +67,7 @@ pub fn pack_haystack_u32(haystack: &[u8]) -> Vec<u8> {
         Ok(packed) => packed,
         Err(error) => {
             panic!(
-                "vyre-libs scan dispatch pack_haystack_u32 failed: {error} — \
+                "vyre-libs scan dispatch pack_haystack_u32 failed: {error}. \
                  returning an empty packed buffer would make the GPU scan an empty haystack and silently report the input as clean; \
                  use try_pack_haystack_u32 and split the haystack before dispatch."
             )
@@ -110,7 +110,7 @@ pub fn pack_haystack_u32_into(haystack: &[u8], packed: &mut Vec<u8>) -> Result<(
 }
 
 /// Byte length of `byte_len` haystack bytes packed and zero-padded to the next
-/// `u32` word boundary — the exact size a resident haystack buffer must be
+/// `u32` word boundary, the exact size a resident haystack buffer must be
 /// allocated at so [`pack_haystack_u32_into`] output uploads in place.
 pub fn haystack_padded_u32_byte_len(byte_len: usize) -> Result<usize, BackendError> {
     byte_len
@@ -248,6 +248,10 @@ pub fn byte_scan_dispatch_config(haystack_len: u32, workgroup_x: u32) -> Dispatc
     let mut config = DispatchConfig::default();
     let workgroups = haystack_len.div_ceil(workgroup_x.max(1)).max(1);
     config.grid_override = Some([workgroups, 1, 1]);
+    // The element-grid covers `haystack_len` bytes (one lane per byte). Record the
+    // true coverage so a shape-inferring backend (CpuRefBackend) dispatches the
+    // whole haystack instead of silently under-covering the tail (Law 10).
+    config.dispatch_elements = Some(haystack_len);
     config
 }
 
@@ -259,6 +263,8 @@ pub fn byte_scan_dispatch_config(haystack_len: u32, workgroup_x: u32) -> Dispatc
 pub fn candidate_start_dispatch_config(haystack_len: u32) -> DispatchConfig {
     let mut config = DispatchConfig::default();
     config.grid_override = Some([haystack_len.max(1), 1, 1]);
+    // One workgroup per candidate byte: the coverage is `haystack_len` bytes.
+    config.dispatch_elements = Some(haystack_len);
     config
 }
 
@@ -317,10 +323,10 @@ pub fn unpack_match_triples(
         Ok(results) => results,
         Err(error) => {
             // Returning an empty match set would silently drop every match the
-            // GPU actually found — a recall-loss silent fallback (Law 10). Fail
+            // GPU actually found, a recall-loss silent fallback (Law 10). Fail
             // closed; callers that must recover use try_unpack_match_triples.
             panic!(
-                "vyre-libs scan dispatch unpack_match_triples failed: {error} — \
+                "vyre-libs scan dispatch unpack_match_triples failed: {error}. \
                  returning an empty match set would silently drop matches the GPU found; \
                  use try_unpack_match_triples and reduce the match count or reserve more storage."
             )
@@ -356,11 +362,11 @@ pub fn unpack_match_triples_into(
     results: &mut Vec<vyre_foundation::match_result::Match>,
 ) {
     if let Err(error) = try_unpack_match_triples_into(triples_bytes, count, results) {
-        // Clearing `results` would silently drop every match the GPU found — a
+        // Clearing `results` would silently drop every match the GPU found, a
         // recall-loss silent fallback (Law 10). Fail closed; callers that must
         // recover use try_unpack_match_triples_into.
         panic!(
-            "vyre-libs scan dispatch unpack_match_triples_into failed: {error} — \
+            "vyre-libs scan dispatch unpack_match_triples_into failed: {error}. \
              clearing the result buffer would silently drop matches the GPU found; \
              use try_unpack_match_triples_into and reduce the match count or reserve more storage."
         )
@@ -420,7 +426,7 @@ pub fn try_unpack_match_triples_into(
 /// `count` MUST already be proven `<= max_matches` (the fixed output-buffer
 /// capacity). Do NOT pass `count.min(max_matches)` here to clamp an
 /// over-capacity kernel counter: that hands back a truncated set the caller
-/// cannot distinguish from a complete one — a SILENT dropped-match false
+/// cannot distinguish from a complete one, a SILENT dropped-match false
 /// negative (Law 10). Route every fixed-capacity GPU match readback through
 /// [`try_unpack_match_triples_capped_into`], which fails closed on overflow and
 /// only then calls this.
@@ -451,11 +457,11 @@ pub fn try_unpack_match_triples_exact_prefix_into(
 /// exceeds the output-buffer cap.
 ///
 /// The GPU match counter is an atomic incremented for EVERY match the kernel
-/// finds — including matches at slots past `cap` it could not write (the emit
+/// finds, including matches at slots past `cap` it could not write (the emit
 /// is guarded by `slot < cap`, the counter is not). So `count > cap` is the
 /// exact, host-detectable signal that `count - cap` matches were dropped.
 /// Decoding the `min(count, cap)` prefix instead would return a truncated set
-/// indistinguishable from a complete scan: a SILENT false negative — the worst
+/// indistinguishable from a complete scan: a SILENT false negative, the worst
 /// failure mode for a scanner (Law 10). This surfaces the overflow as an error
 /// naming the shortfall and the fix; on success `count` is proven `<= cap` and
 /// decoded exactly via [`try_unpack_match_triples_exact_prefix_into`].
@@ -526,7 +532,7 @@ mod tests {
         let swallow_marker = concat!("eprintln", "!(\"vyre-libs scan dispatch ");
         assert!(
             !src.contains(swallow_marker),
-            "Fix: a dispatch wrapper reintroduced an eprintln!-then-return-empty silent fallback (Law 10) — fail loud via panic!() so callers use the try_ variants."
+            "Fix: a dispatch wrapper reintroduced an eprintln!-then-return-empty silent fallback (Law 10) (fail loud via panic!() so callers use the try_ variants)."
         );
     }
 
@@ -544,8 +550,9 @@ mod tests {
             triples.extend_from_slice(&(i + 2).to_le_bytes()); // end
         }
         let mut results = vec![vyre_foundation::match_result::Match::new(7, 7, 7)];
-        let err = try_unpack_match_triples_capped_into(&triples, 9, 4, "unit cap test", &mut results)
-            .expect_err("count 9 over cap 4 must fail closed, not truncate");
+        let err =
+            try_unpack_match_triples_capped_into(&triples, 9, 4, "unit cap test", &mut results)
+                .expect_err("count 9 over cap 4 must fail closed, not truncate");
         let msg = err.to_string();
         assert!(
             msg.contains("unit cap test")
@@ -696,6 +703,27 @@ mod tests {
     fn dispatch_config_divceils() {
         let cfg = byte_scan_dispatch_config(129, 64);
         assert_eq!(cfg.grid_override, Some([3, 1, 1]));
+    }
+
+    #[test]
+    fn byte_scan_config_carries_true_element_coverage() {
+        // The grid_override is a WORKGROUP count (haystack_len / workgroup), which a
+        // shape-inferring backend cannot turn back into the byte coverage. The
+        // separate dispatch_elements field carries the true haystack byte count so
+        // CpuRefBackend covers the whole scan and does not silently drop the tail
+        // (Law 10). candidate-start's coverage is likewise the full haystack length.
+        assert_eq!(
+            byte_scan_dispatch_config(129, 64).dispatch_elements,
+            Some(129)
+        );
+        assert_eq!(byte_scan_dispatch_config(0, 64).dispatch_elements, Some(0));
+        assert_eq!(
+            candidate_start_dispatch_config(65_536).dispatch_elements,
+            Some(65_536)
+        );
+        // A bare/megakernel config leaves it None so its work-queue grid_override is
+        // never misread as an element count and over-run.
+        assert_eq!(DispatchConfig::default().dispatch_elements, None);
     }
 
     #[test]

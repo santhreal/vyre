@@ -143,8 +143,7 @@ pub(crate) fn plan_matmul_kernel(
         );
     }
 
-    let ragged_tiles =
-        shape.m % 16 != 0 || shape.n % 8 != 0 || shape.k % required_k_tile != 0;
+    let ragged_tiles = shape.m % 16 != 0 || shape.n % 8 != 0 || shape.k % required_k_tile != 0;
     if ragged_tiles && !capabilities.ragged_tensor_tiles {
         return cooperative_plan(
             Some(candidate_path),
@@ -249,17 +248,14 @@ mod tests {
 
     #[test]
     fn planner_selects_exact_dtype_tile_paths_with_capabilities() {
-        let shape = MatrixShape { m: 32, k: 16, n: 16 };
+        let shape = MatrixShape {
+            m: 32,
+            k: 16,
+            n: 16,
+        };
         let caps = MatmulKernelCapabilities::all_tensor_core_modes();
 
-        let f16 = plan_matmul_kernel(
-            &DataType::F16,
-            shape,
-            16,
-            1,
-            F32MatmulMode::StrictF32,
-            caps,
-        );
+        let f16 = plan_matmul_kernel(&DataType::F16, shape, 16, 1, F32MatmulMode::StrictF32, caps);
         assert_eq!(f16.selected_path, MatmulKernelPath::TensorCoreF16M16N8K16);
         assert_eq!(f16.tile_shape, Some(TensorCoreTileShape::M16N8K16));
         assert_eq!(f16.fallback_reason, None);
@@ -278,7 +274,11 @@ mod tests {
 
         let tf32 = plan_matmul_kernel(
             &DataType::F32,
-            MatrixShape { m: 32, k: 16, n: 16 },
+            MatrixShape {
+                m: 32,
+                k: 16,
+                n: 16,
+            },
             4,
             1,
             F32MatmulMode::Tf32TensorCore,
@@ -288,14 +288,8 @@ mod tests {
         assert_eq!(tf32.tile_shape, Some(TensorCoreTileShape::M16N8K4));
         assert_eq!(tf32.fallback_reason, None);
 
-        let strict_f32 = plan_matmul_kernel(
-            &DataType::F32,
-            shape,
-            16,
-            1,
-            F32MatmulMode::StrictF32,
-            caps,
-        );
+        let strict_f32 =
+            plan_matmul_kernel(&DataType::F32, shape, 16, 1, F32MatmulMode::StrictF32, caps);
         assert_eq!(strict_f32.selected_path, MatmulKernelPath::Cooperative);
         assert_eq!(
             strict_f32.fallback_reason,
@@ -305,7 +299,11 @@ mod tests {
 
     #[test]
     fn planner_records_split_k_and_ragged_fallbacks_exactly() {
-        let shape = MatrixShape { m: 32, k: 16, n: 16 };
+        let shape = MatrixShape {
+            m: 32,
+            k: 16,
+            n: 16,
+        };
         let current = MatmulKernelCapabilities::current_codegen();
 
         let unsupported_split_k = plan_matmul_kernel(
@@ -316,7 +314,10 @@ mod tests {
             F32MatmulMode::StrictF32,
             current,
         );
-        assert_eq!(unsupported_split_k.selected_path, MatmulKernelPath::Cooperative);
+        assert_eq!(
+            unsupported_split_k.selected_path,
+            MatmulKernelPath::Cooperative
+        );
         assert_eq!(
             unsupported_split_k.candidate_path,
             Some(MatmulKernelPath::TensorCoreF16M16N8K16)
@@ -335,7 +336,10 @@ mod tests {
             F32MatmulMode::StrictF32,
             MatmulKernelCapabilities::all_tensor_core_modes(),
         );
-        assert_eq!(split_k.selected_path, MatmulKernelPath::TensorCoreF16M16N8K16);
+        assert_eq!(
+            split_k.selected_path,
+            MatmulKernelPath::TensorCoreF16M16N8K16
+        );
         assert_eq!(split_k.split_k_slices, 4);
         assert_eq!(split_k.fallback_reason, None);
 
@@ -373,16 +377,14 @@ mod tests {
     #[test]
     fn planner_records_tile_and_dtype_fallbacks_exactly() {
         let caps = MatmulKernelCapabilities::all_tensor_core_modes();
-        let shape = MatrixShape { m: 32, k: 16, n: 16 };
+        let shape = MatrixShape {
+            m: 32,
+            k: 16,
+            n: 16,
+        };
 
-        let wrong_tile = plan_matmul_kernel(
-            &DataType::F16,
-            shape,
-            8,
-            1,
-            F32MatmulMode::StrictF32,
-            caps,
-        );
+        let wrong_tile =
+            plan_matmul_kernel(&DataType::F16, shape, 8, 1, F32MatmulMode::StrictF32, caps);
         assert_eq!(wrong_tile.selected_path, MatmulKernelPath::Cooperative);
         assert_eq!(
             wrong_tile.fallback_reason,
@@ -392,15 +394,12 @@ mod tests {
             })
         );
 
-        let unsupported_dtype = plan_matmul_kernel(
-            &DataType::I32,
-            shape,
-            16,
-            1,
-            F32MatmulMode::StrictF32,
-            caps,
+        let unsupported_dtype =
+            plan_matmul_kernel(&DataType::I32, shape, 16, 1, F32MatmulMode::StrictF32, caps);
+        assert_eq!(
+            unsupported_dtype.selected_path,
+            MatmulKernelPath::Cooperative
         );
-        assert_eq!(unsupported_dtype.selected_path, MatmulKernelPath::Cooperative);
         assert_eq!(
             unsupported_dtype.fallback_reason,
             Some(MatmulFallbackReason::UnsupportedDtype)

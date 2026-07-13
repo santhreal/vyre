@@ -86,16 +86,17 @@ pub fn i4x8_batched_matmul_f32_scaled_via_with_scratch_into(
             cols,
         )
     });
-    ensure_input_slots(inputs, 5);
+    // Four input-consuming buffers: weights/activation/row_scales/batch_scales ReadOnly(0-3). `out`
+    // is `BufferDecl::output`(4) (backend-allocated, consumes NO dispatch input).
+    ensure_input_slots(inputs, 4);
     write_u32_slice_le_bytes(&mut inputs[0], weights_packed);
     write_u32_slice_le_bytes(&mut inputs[1], activation_batches_packed);
     write_f32_slice_le_bytes(&mut inputs[2], row_scales);
     write_f32_slice_le_bytes(&mut inputs[3], batch_scales);
-    write_zero_bytes(&mut inputs[4], shape.output_bytes);
 
     let outputs = dispatcher.dispatch(
         program,
-        &inputs[..5],
+        &inputs[..4],
         Some([ceil_div_u32(shape.total_outputs_u32, 64), 1, 1]),
     )?;
     decode_f32_output_exact(

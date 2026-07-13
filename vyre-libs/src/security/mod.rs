@@ -333,24 +333,12 @@ pub use flows_to_with_sanitizer::flows_to_with_sanitizer;
 // Gated off with `weir_ifds` above (incomplete integration; missing the
 // `external_dataflow_engine` crate). Restore to `#[cfg(feature = "security")]`
 // once that crate is wired into the workspace.
-#[cfg(feature = "weir_ifds_external_engine")]
-pub use weir_ifds::{
-    route_security_taint_through_weir_ifds, security_witness_path_from_weir,
-    SecurityFindingWitnessPath, SecurityWitnessPathError, SecurityWitnessStatement,
-    WeirIfdsSecurityBuffers, WeirIfdsSecurityDispatch, WeirIfdsSecurityRouteError,
-    WEIR_IFDS_SECURITY_BACKEND_ID,
-};
 pub use format_string_check::format_string_check;
 pub use integer_overflow_arith::integer_overflow_arith;
 pub use label_by_family::label_by_family;
 pub use lock_dominates::lock_dominates;
 pub use path_canonical::path_canonical;
 pub use path_reconstruct::path_reconstruct;
-pub use reporter::{
-    render_security_reporter_output, SecurityReporterError, SecurityReporterFinding,
-    SecurityReporterOutputBytes, SecurityReporterPlannerPath, SecurityReporterSourceFile,
-    SECURITY_REPORTER_SCHEMA_VERSION,
-};
 pub use predicate_catalog::{
     security_predicate_row_by_op_id, security_predicate_rows, try_security_predicate_rows,
     SecurityPredicateOperation, SecurityPredicateRow,
@@ -362,6 +350,11 @@ pub use relation_analyzer::{
     SecurityRelationAnalyzerError, SecurityRelationQueryFamily,
     SECURITY_RELATION_ANALYZER_SCHEMA_VERSION,
 };
+pub use reporter::{
+    render_security_reporter_output, SecurityReporterError, SecurityReporterFinding,
+    SecurityReporterOutputBytes, SecurityReporterPlannerPath, SecurityReporterSourceFile,
+    SECURITY_REPORTER_SCHEMA_VERSION,
+};
 pub use sanitized_by::sanitized_by;
 pub use sanitizer_dominates::sanitizer_dominates;
 pub use sink_intersection::sink_intersection;
@@ -370,6 +363,13 @@ pub use taint_flow::taint_flow;
 pub use taint_kill::taint_kill;
 pub use taint_pollution::taint_pollution;
 pub use unchecked_return::unchecked_return;
+#[cfg(feature = "weir_ifds_external_engine")]
+pub use weir_ifds::{
+    route_security_taint_through_weir_ifds, security_witness_path_from_weir,
+    SecurityFindingWitnessPath, SecurityWitnessPathError, SecurityWitnessStatement,
+    WeirIfdsSecurityBuffers, WeirIfdsSecurityDispatch, WeirIfdsSecurityRouteError,
+    WEIR_IFDS_SECURITY_BACKEND_ID,
+};
 pub use xss_escape::xss_escape;
 
 /// Validate that a security composition's input shape + buffer names

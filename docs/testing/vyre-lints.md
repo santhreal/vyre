@@ -1,4 +1,4 @@
-# Testing program — vyre-lints
+# Testing program, vyre-lints
 
 | Kind | Location |
 |------|----------|

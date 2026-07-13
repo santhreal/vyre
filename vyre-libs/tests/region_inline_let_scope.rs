@@ -40,7 +40,7 @@ fn fft_convolve_optimizes_without_duplicate_sibling_let() {
          sibling let bindings (V032). Validation errors: {messages:?}"
     );
     // The op is well-formed structurally, so the optimized program must validate
-    // cleanly — assert the full contract, not just the absence of V032.
+    // cleanly (assert the full contract, not just the absence of V032).
     assert!(
         errors.is_empty(),
         "optimized fft_convolve_circular_complex must validate cleanly, got: {messages:?}"

@@ -80,14 +80,6 @@ pub fn i4x8_matvec_f32_scaled_via_with_scratch_into(
             row_scales.len()
         )));
     }
-    let out_bytes = (rows as usize)
-        .checked_mul(std::mem::size_of::<f32>())
-        .ok_or_else(|| {
-            DispatchError::BadInputs(format!(
-                "Fix: i4x8_matvec_f32_scaled_via output byte count overflows usize for rows={rows}."
-            ))
-        })?;
-
     let QuantizedMatvecGpuScratch {
         inputs,
         program_cache,
@@ -95,13 +87,14 @@ pub fn i4x8_matvec_f32_scaled_via_with_scratch_into(
     let program = program_cache.get_or_insert_with((rows, cols), || {
         i4x8_matvec_f32_scaled("weights", "x", "row_scales", "out", rows, cols)
     });
-    ensure_input_slots(inputs, 4);
+    // Three input-consuming buffers: weights/x/row_scales ReadOnly(0-2). `out` is
+    // `BufferDecl::output`(3) (backend-allocated, consumes NO dispatch input).
+    ensure_input_slots(inputs, 3);
     write_u32_slice_le_bytes(&mut inputs[0], weights_packed);
     write_f32_slice_le_bytes(&mut inputs[1], x);
     write_f32_slice_le_bytes(&mut inputs[2], row_scales);
-    write_zero_bytes(&mut inputs[3], out_bytes);
 
-    let outputs = dispatcher.dispatch(program, &inputs[..4], Some([rows, 1, 1]))?;
+    let outputs = dispatcher.dispatch(program, &inputs[..3], Some([rows, 1, 1]))?;
     if outputs.len() != 1 {
         return Err(DispatchError::BackendError(format!(
             "Fix: i4x8_matvec_f32_scaled_via expected exactly one output buffer, got {}.",

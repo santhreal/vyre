@@ -98,7 +98,9 @@ fn expr_contains_atomic(expr: &Expr) -> bool {
                 || expr_contains_atomic(true_val)
                 || expr_contains_atomic(false_val)
         }
-        Expr::Cast { value, .. } | Expr::SubgroupReduce { value, .. } => expr_contains_atomic(value),
+        Expr::Cast { value, .. } | Expr::SubgroupReduce { value, .. } => {
+            expr_contains_atomic(value)
+        }
         Expr::Fma { a, b, c } => {
             expr_contains_atomic(a) || expr_contains_atomic(b) || expr_contains_atomic(c)
         }
@@ -249,7 +251,8 @@ fn hoist_condition_atomics(
             value: Box::new(hoist_condition_atomics(*value, state, hoists)),
             lane: Box::new(hoist_condition_atomics(*lane, state, hoists)),
         },
-        Expr::SubgroupReduce { op, value } => Expr::SubgroupReduce { op,
+        Expr::SubgroupReduce { op, value } => Expr::SubgroupReduce {
+            op,
             value: Box::new(hoist_condition_atomics(*value, state, hoists)),
         },
         other => other,

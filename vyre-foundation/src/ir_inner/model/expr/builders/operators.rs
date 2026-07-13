@@ -99,6 +99,28 @@ impl Expr {
         sin => UnOp::Sin;
         /// Cosine.
         cos => UnOp::Cos;
+        /// Tangent.
+        tan => UnOp::Tan;
+        /// Arcsine.
+        asin => UnOp::Asin;
+        /// Arccosine.
+        acos => UnOp::Acos;
+        /// Arctangent.
+        atan => UnOp::Atan;
+        /// Hyperbolic sine.
+        sinh => UnOp::Sinh;
+        /// Hyperbolic cosine.
+        cosh => UnOp::Cosh;
+        /// Hyperbolic tangent.
+        tanh => UnOp::Tanh;
+        /// Natural exponential `e^x`.
+        exp => UnOp::Exp;
+        /// Base-2 exponential `2^x`.
+        exp2 => UnOp::Exp2;
+        /// Natural logarithm `ln(x)`.
+        log => UnOp::Log;
+        /// Base-2 logarithm `log2(x)`.
+        log2 => UnOp::Log2;
         /// Absolute value.
         abs => UnOp::Abs;
         /// Square root.
@@ -143,7 +165,7 @@ impl Expr {
     /// overflow instead of wrapping.
     ///
     /// Emits `BinOp::SaturatingAdd` (wire tag `0x16`) directly so the builder
-    /// form and the direct-opcode form share one canonical fingerprint — the
+    /// form and the direct-opcode form share one canonical fingerprint, the
     /// same first-class-opcode contract as [`Expr::saturating_sub`]. The WGSL
     /// lowering (overflow-detect `select`) is the backend's concern.
     #[must_use]
@@ -186,7 +208,7 @@ mod tests {
     /// `Expr::saturating_sub` must emit `BinOp::SaturatingSub` (wire tag 0x17)
     /// so that the builder form and the direct-opcode form produce identical
     /// canonical fingerprints. Before the fix the builder emitted
-    /// `BinOp::Sub(a, BinOp::Min(a, b))` — a two-node tree that serialises to
+    /// `BinOp::Sub(a, BinOp::Min(a, b))`: a two-node tree that serialises to
     /// a completely different byte sequence, causing cache misses and preventing
     /// optimizer identity rules from firing.
     #[test]
@@ -242,7 +264,7 @@ mod tests {
 
     /// Each newly added first-class binop builder must emit its exact opcode so
     /// the builder form and the direct `Expr::BinOp` form share one canonical
-    /// fingerprint — the same contract `saturating_sub` already holds. A builder
+    /// fingerprint, the same contract `saturating_sub` already holds. A builder
     /// that lowered to a multi-node idiom (e.g. rotate as shift-or) would
     /// serialise differently and silently break opcode-keyed optimizer rules.
     #[test]
@@ -261,6 +283,45 @@ mod tests {
                 op,
                 left: Box::new(a),
                 right: Box::new(b),
+            };
+            assert_eq!(
+                fingerprint_of(via_builder),
+                fingerprint_of(via_opcode),
+                "Expr builder for {op:?} must emit that exact opcode so fingerprints agree"
+            );
+        }
+    }
+
+    /// Every transcendental unary builder must emit its exact `UnOp` opcode. These builders back the
+    /// first-class transcendental ops (`Exp`/`Log`/`Tan`/…) which already exist in the enum, typecheck,
+    /// reference interpreter, and backend lowering, the builders were previously MISSING, forcing
+    /// kernel authors to the broken `Expr::call("exp", …)` dialect-string workaround (which references
+    /// an unregistered op and fails IR validation; that was a real shipped-but-broken Sinkhorn kernel
+    /// bug). This locks each builder to its opcode so a kernel that needs a transcendental always gets
+    /// the validated native op.
+    #[test]
+    fn transcendental_unary_builders_emit_their_opcode() {
+        let cases: [(fn(Expr) -> Expr, UnOp); 13] = [
+            (Expr::sin, UnOp::Sin),
+            (Expr::cos, UnOp::Cos),
+            (Expr::tan, UnOp::Tan),
+            (Expr::asin, UnOp::Asin),
+            (Expr::acos, UnOp::Acos),
+            (Expr::atan, UnOp::Atan),
+            (Expr::sinh, UnOp::Sinh),
+            (Expr::cosh, UnOp::Cosh),
+            (Expr::tanh, UnOp::Tanh),
+            (Expr::exp, UnOp::Exp),
+            (Expr::exp2, UnOp::Exp2),
+            (Expr::log, UnOp::Log),
+            (Expr::log2, UnOp::Log2),
+        ];
+        for (builder, op) in cases {
+            let x = Expr::var("x");
+            let via_builder = builder(x.clone());
+            let via_opcode = Expr::UnOp {
+                op: op.clone(),
+                operand: Box::new(x),
             };
             assert_eq!(
                 fingerprint_of(via_builder),

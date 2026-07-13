@@ -18,14 +18,12 @@ pub fn expr_has_effect(expr: &Expr) -> bool {
         // invalidate observed state. If an operand performs a write
         // (`Atomic`/`Call`, or a `Load` over an effectful index) and this
         // returned `false`, a value cached before the op would be wrongly
-        // reused after it — e.g. the stream-compaction idiom
+        // reused after it, e.g. the stream-compaction idiom
         // `SubgroupReduce(Add, Atomic(FetchAdd, ctr, 1))` mutates `ctr` but a
         // prior `Load(ctr)` would survive as a stale CSE alias. Recurse,
         // mirroring the `Load`/`UnOp` handling above.
         Expr::SubgroupBallot { cond } => expr_has_effect(cond),
-        Expr::SubgroupShuffle { value, lane } => {
-            expr_has_effect(value) || expr_has_effect(lane)
-        }
+        Expr::SubgroupShuffle { value, lane } => expr_has_effect(value) || expr_has_effect(lane),
         Expr::SubgroupReduce { value, .. } => expr_has_effect(value),
         Expr::BinOp { left, right, .. } => expr_has_effect(left) || expr_has_effect(right),
         Expr::Fma { a, b, c } => expr_has_effect(a) || expr_has_effect(b) || expr_has_effect(c),

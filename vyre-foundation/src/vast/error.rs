@@ -74,7 +74,9 @@ pub enum VastError {
         file_size: u32,
     },
     /// Node attribute span points outside `attr_blob`.
-    #[error("bad VAST attr span: node {node} off {off} len {len} exceeds attr blob {attr_blob_len}")]
+    #[error(
+        "bad VAST attr span: node {node} off {off} len {len} exceeds attr blob {attr_blob_len}"
+    )]
     BadAttrSpan {
         /// Node index.
         node: u32,

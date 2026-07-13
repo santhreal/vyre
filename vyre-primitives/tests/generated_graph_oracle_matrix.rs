@@ -4,6 +4,7 @@
 //! production CPU oracles against independent deterministic models across
 //! thousands of CSR, path-reconstruction, and motif shapes.
 
+use vyre_primitives::graph::csr_backward_or_changed;
 use vyre_primitives::graph::csr_forward_or_changed;
 use vyre_primitives::graph::motif::{self, MotifEdge};
 use vyre_primitives::graph::path_reconstruct;
@@ -205,6 +206,104 @@ fn generated_csr_and_persistent_bfs_oracles_cover_4096_shapes() {
             node_count, &offsets, &targets, &masks, &frontier, allow_mask, max_iters,
         );
         assert_eq!(actual_bfs, expected_bfs, "case={case} persistent_bfs");
+    }
+}
+
+/// Independent model of the reverse-or-changed FIXED POINT: the set of nodes that can
+/// reach an initial-frontier node along kind-passing edges. Built as an explicit reverse
+/// adjacency list + an iterative worklist BFS, a wholly different structure from the
+/// production `cpu_ref_closure` (which iterates a per-source bitset pass to convergence),
+/// so agreement is a real cross-check, not a restatement. Seed bits (including padding
+/// bits above `node_count`) are monotonically retained to match the in-place accumulator.
+fn expected_backward_closure(
+    node_count: u32,
+    offsets: &[u32],
+    targets: &[u32],
+    masks: &[u32],
+    frontier: &[u32],
+    allow_mask: u32,
+) -> Vec<u32> {
+    let n = node_count as usize;
+    let mut reverse: Vec<Vec<u32>> = vec![Vec::new(); n];
+    for src in 0..node_count {
+        let start = offsets[src as usize] as usize;
+        let end = offsets[src as usize + 1] as usize;
+        for edge in start..end {
+            if masks[edge] & allow_mask == 0 {
+                continue;
+            }
+            let dst = targets[edge];
+            if dst < node_count {
+                // src → dst forward ⇒ dst can be reached-from src ⇒ reverse edge dst → src.
+                reverse[dst as usize].push(src);
+            }
+        }
+    }
+    let mut visited = vec![false; n];
+    let mut stack = Vec::new();
+    for node in 0..node_count {
+        if bit_is_set(frontier, node) {
+            visited[node as usize] = true;
+            stack.push(node);
+        }
+    }
+    while let Some(node) = stack.pop() {
+        for &pred in &reverse[node as usize] {
+            if !visited[pred as usize] {
+                visited[pred as usize] = true;
+                stack.push(pred);
+            }
+        }
+    }
+    let words = bitset_words(node_count);
+    let mut out = frontier.to_vec();
+    out.resize(words, 0);
+    for node in 0..node_count {
+        if visited[node as usize] {
+            out[(node / 32) as usize] |= 1u32 << (node % 32);
+        }
+    }
+    out
+}
+
+#[test]
+fn generated_csr_backward_or_changed_oracles_cover_4096_shapes() {
+    for case in 0..4096u64 {
+        let (node_count, offsets, targets, masks, frontier, allow_mask) =
+            generated_csr(0x8ACC_1234_D00D_0007 ^ case.wrapping_mul(0x9E37_79B9));
+        let max_iters = node_count.saturating_add(2);
+
+        // 1. The production reverse-or-changed fixed point == the independent reverse-BFS
+        //    closure. This is the op's real contract: a single node-parallel pass reads the
+        //    live accumulator and is order-dependent for multi-hop chains, but the CONVERGED
+        //    set is unique regardless of pass order.
+        let (closure, _changed) = csr_backward_or_changed::cpu_ref_closure(
+            node_count, &offsets, &targets, &masks, &frontier, allow_mask, max_iters,
+        );
+        let expected = expected_backward_closure(
+            node_count, &offsets, &targets, &masks, &frontier, allow_mask,
+        );
+        assert_eq!(closure, expected, "case={case} backward closure");
+
+        // 2. Idempotent at the fixed point: one more snapshot pass sets no new bit.
+        let (again, second_changed) = csr_backward_or_changed::cpu_ref(
+            node_count, &offsets, &targets, &masks, &closure, allow_mask,
+        );
+        assert_eq!(again, closure, "case={case} backward idempotent");
+        assert_eq!(
+            second_changed, 0,
+            "case={case} backward fixpoint changed flag"
+        );
+
+        // 3. Monotone: every initial-frontier node survives to the closure.
+        for node in 0..node_count {
+            if bit_is_set(&frontier, node) {
+                assert!(
+                    bit_is_set(&closure, node),
+                    "case={case} backward closure dropped seed node {node}"
+                );
+            }
+        }
     }
 }
 

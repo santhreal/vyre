@@ -11,7 +11,85 @@ use vyre::ir::DataType as IrDataType;
 use crate::value::Value;
 use vyre::ir::DataType;
 
+use std::cell::Cell;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
+
+/// Count of out-of-bounds accesses the interpreter silently absorbed during one
+/// tracked run (see [`crate::reference_eval_oob_report`]).
+///
+/// The reference interpreter DEFINES OOB loads as zero-fill and OOB stores as a
+/// no-op (see the module docstring) so its output stays deterministic. That
+/// silent absorption is exactly what MASKS a GPU/CPU parity hazard: an IR program
+/// with an ungated data-derived index "works" here but a real GPU (CUDA does no
+/// bounds-checking) reads garbage / corrupts memory. This report surfaces the
+/// masking so a test can assert a program NEVER relies on it, a correctly-gated
+/// program handles an out-of-contract index with explicit control flow and thus
+/// records ZERO OOB accesses even on hostile input.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct OobReport {
+    /// Scalar/`Bytes` loads whose index fell outside the buffer (zero-filled).
+    pub oob_loads: u64,
+    /// Stores whose index fell outside the buffer (dropped).
+    pub oob_stores: u64,
+    /// Atomic loads/stores whose index fell outside the buffer.
+    pub oob_atomics: u64,
+}
+
+impl OobReport {
+    /// Total OOB accesses of every kind. Zero means the run never indexed past a
+    /// buffer end (the invariant a bounds-gated program upholds).
+    #[must_use]
+    pub fn total(&self) -> u64 {
+        self.oob_loads
+            .saturating_add(self.oob_stores)
+            .saturating_add(self.oob_atomics)
+    }
+}
+
+thread_local! {
+    /// Per-thread OOB tally. The interpreter runs single-threaded per call, so a
+    /// thread-local cleanly brackets one run without global cross-run contention.
+    static OOB_COUNTS: Cell<OobReport> = const { Cell::new(OobReport {
+        oob_loads: 0,
+        oob_stores: 0,
+        oob_atomics: 0,
+    }) };
+}
+
+fn record_oob_load() {
+    OOB_COUNTS.with(|c| {
+        let mut r = c.get();
+        r.oob_loads = r.oob_loads.saturating_add(1);
+        c.set(r);
+    });
+}
+
+fn record_oob_store() {
+    OOB_COUNTS.with(|c| {
+        let mut r = c.get();
+        r.oob_stores = r.oob_stores.saturating_add(1);
+        c.set(r);
+    });
+}
+
+fn record_oob_atomic() {
+    OOB_COUNTS.with(|c| {
+        let mut r = c.get();
+        r.oob_atomics = r.oob_atomics.saturating_add(1);
+        c.set(r);
+    });
+}
+
+/// Reset this thread's OOB tally to zero. Call before a tracked run.
+pub fn reset_oob_report() {
+    OOB_COUNTS.with(|c| c.set(OobReport::default()));
+}
+
+/// Read this thread's accumulated OOB tally (does not reset).
+#[must_use]
+pub fn oob_report() -> OobReport {
+    OOB_COUNTS.with(Cell::get)
+}
 
 /// Typed bytes backing one declared IR buffer.
 ///
@@ -39,7 +117,7 @@ impl Buffer {
     /// A poisoned lock means a writer panicked mid-store, leaving the bytes
     /// inconsistent. Silently recovering with `into_inner()` would let the CPU
     /// reference oracle emit corrupt golden values that the conform gate then
-    /// trusts as truth — a silent correctness fallback (Law 10). Surface it.
+    /// trusts as truth (a silent correctness fallback (Law 10). Surface it).
     fn read_bytes(&self) -> RwLockReadGuard<'_, Vec<u8>> {
         self.bytes
             .read()
@@ -128,14 +206,17 @@ pub(crate) fn load(buffer: &Buffer, index: u32) -> Value {
     if matches!(buffer.element, IrDataType::Bytes) {
         let offset = index as usize;
         if offset > bytes_guard.len() {
+            record_oob_load();
             return Value::from(Vec::new());
         }
         return Value::from(&bytes_guard[offset..]);
     }
     let Some(offset) = byte_offset(index, stride) else {
+        record_oob_load();
         return Value::try_zero_for(ty).unwrap_or_else(|| Value::from(Vec::new()));
     };
     if stride == 0 || offset + stride > bytes_guard.len() {
+        record_oob_load();
         return Value::try_zero_for(ty).unwrap_or_else(|| Value::from(Vec::new()));
     }
     read_element(ty.clone(), &bytes_guard[offset..offset + stride])
@@ -148,6 +229,7 @@ pub(crate) fn store(buffer: &mut Buffer, index: u32, value: &Value) {
     if matches!(buffer.element, IrDataType::Bytes) {
         let offset = index as usize;
         if offset >= bytes_guard.len() {
+            record_oob_store();
             return;
         }
         let bytes = value.to_bytes();
@@ -157,9 +239,11 @@ pub(crate) fn store(buffer: &mut Buffer, index: u32, value: &Value) {
         return;
     }
     let Some(offset) = byte_offset(index, stride) else {
+        record_oob_store();
         return;
     };
     if stride == 0 || offset + stride > bytes_guard.len() {
+        record_oob_store();
         return;
     }
     write_element(
@@ -172,8 +256,12 @@ pub(crate) fn store(buffer: &mut Buffer, index: u32, value: &Value) {
 pub(crate) fn atomic_load(buffer: &Buffer, index: u32) -> Option<u32> {
     let bytes_guard = buffer.read_bytes();
     let stride = buffer.element.min_bytes().max(4);
-    let offset = byte_offset(index, stride)?;
+    let Some(offset) = byte_offset(index, stride) else {
+        record_oob_atomic();
+        return None;
+    };
     if offset + 4 > bytes_guard.len() {
+        record_oob_atomic();
         None
     } else {
         Some(read_u32(&bytes_guard[offset..offset + 4]))
@@ -184,10 +272,13 @@ pub(crate) fn atomic_store(buffer: &mut Buffer, index: u32, value: u32) {
     let mut bytes_guard = buffer.write_bytes();
     let stride = buffer.element.min_bytes().max(4);
     let Some(offset) = byte_offset(index, stride) else {
+        record_oob_atomic();
         return;
     };
     if offset + 4 <= bytes_guard.len() {
         write_u32(&mut bytes_guard[offset..offset + 4], value);
+    } else {
+        record_oob_atomic();
     }
 }
 
@@ -300,11 +391,45 @@ mod tests {
     }
 
     #[test]
+    fn oob_accesses_are_counted_and_in_bounds_are_not() {
+        // The OOB tally must count exactly the accesses the interpreter silently
+        // absorbs (zero-fill loads / dropped stores), and nothing in-bounds, this
+        // is the signal that reveals an ungated data-derived index.
+        reset_oob_report();
+        let buf = Buffer::new(vec![0u8; 8], DataType::U32); // 2 elements
+        let _ = load(&buf, 0);
+        let _ = load(&buf, 1);
+        assert_eq!(oob_report().total(), 0, "in-bounds loads must not count");
+
+        let _ = load(&buf, 2); // element 2 of 2 → OOB
+        let _ = load(&buf, 99); // far OOB
+        let after_loads = oob_report();
+        assert_eq!(after_loads.oob_loads, 2, "two OOB loads counted");
+        assert_eq!(after_loads.oob_stores, 0);
+
+        let mut wbuf = Buffer::new(vec![0u8; 8], DataType::U32);
+        store(&mut wbuf, 1, &Value::U32(7)); // in bounds
+        store(&mut wbuf, 5, &Value::U32(9)); // OOB → dropped
+        let after_store = oob_report();
+        assert_eq!(
+            after_store.oob_stores, 1,
+            "one OOB store counted, in-bounds not"
+        );
+
+        let mut abuf = Buffer::new(vec![0u8; 8], DataType::U32);
+        atomic_store(&mut abuf, 7, 3); // OOB atomic
+        assert_eq!(oob_report().oob_atomics, 1, "OOB atomic store counted");
+
+        reset_oob_report();
+        assert_eq!(oob_report().total(), 0, "reset clears the tally");
+    }
+
+    #[test]
     fn poisoned_reference_buffer_lock_is_not_silently_recovered() {
         // A writer that panics mid-store poisons the lock. The reference oracle
         // must fail closed on a subsequent access rather than handing back the
         // half-mutated bytes (which would silently produce a corrupt golden
-        // value the conform gate then trusts) — Law 10.
+        // value the conform gate then trusts). Law 10.
         let buffer = Buffer::new(vec![0u8; 8], DataType::U32);
         let poisoner = buffer.clone();
         let _ = std::thread::spawn(move || {

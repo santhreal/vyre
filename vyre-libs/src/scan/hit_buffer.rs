@@ -129,15 +129,16 @@ pub fn emit_hit_with_layout(
     )
 }
 
-/// Clamp the live prefix of `out_hits` to `min(cursor, max_capacity)` and
-/// return the resulting hit count via [`HIT_BUFFER_LIVE_LENGTH`].
+/// Compute the live hit count as `min(cursor, max_capacity, buffer_cap)` over the
+/// read-only `out_hits` and report it via [`HIT_BUFFER_LIVE_LENGTH`]. `out_hits`
+/// is not modified.
 #[must_use]
 pub fn compact_hits(out_hits: &str, out_cursor: &str, max_capacity: u32) -> Program {
     compact_hits_with_layout(out_hits, out_cursor, max_capacity, max_capacity)
 }
 
-/// Clamp the live prefix of `out_hits` to `min(cursor, max_capacity)` using an
-/// explicit backing-hit-buffer size.
+/// Compute and report the live hit count via [`HIT_BUFFER_LIVE_LENGTH`] using an
+/// explicit backing-hit-buffer size; the read-only `out_hits` is not modified.
 #[must_use]
 pub fn compact_hits_with_layout(
     out_hits: &str,

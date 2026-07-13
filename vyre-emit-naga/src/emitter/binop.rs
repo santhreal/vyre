@@ -94,7 +94,7 @@ impl<'a> BodyBuilder<'a> {
             // via the slot's recorded element type. This is what lets a value
             // loaded from a SIGNED (i32) buffer resolve to `Sint`, so
             // `unify_binary_operand_types` can match `i32_load & u32_literal`
-            // instead of emitting `And(i32, u32)` — invalid WGSL naga rejects.
+            // instead of emitting `And(i32, u32)`: invalid WGSL naga rejects.
             // (The `globals` map is slot -> global handle; reverse it.)
             Expression::GlobalVariable(handle) => self
                 .globals
@@ -156,8 +156,8 @@ impl<'a> BodyBuilder<'a> {
         } else {
             // A non-scalar target (atomic<T>, vector, pointer, …) has no scalar
             // kind to coerce toward, so the value is emitted unchanged. This is
-            // the correct identity — e.g. an atomic result feeding a later
-            // descriptor op (atomic_result_can_feed_later_descriptor_ops) — NOT a
+            // the correct identity, e.g. an atomic result feeding a later
+            // descriptor op (atomic_result_can_feed_later_descriptor_ops). NOT a
             // silent miscompile: scalar coercion simply does not apply to these
             // handles. The bool/u32/u64/i32/i64/f32/f64 arms above cover every
             // scalar kind vyre coerces between.

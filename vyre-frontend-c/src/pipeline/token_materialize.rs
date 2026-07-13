@@ -200,7 +200,7 @@ mod tests {
         assert_eq!(lens, vec![3, 2]);
     }
 
-    // Canonical LE-pack — no hand-rolled reimplementation (the production path in
+    // Canonical LE-pack, no hand-rolled reimplementation (the production path in
     // `api/lex_index.rs` aliases the same wire helper). wire's bytemuck fast-path
     // also beats the old `flat_map(to_le_bytes)` on little-endian hosts.
     use vyre_primitives::wire::pack_u32_slice as pack_words;

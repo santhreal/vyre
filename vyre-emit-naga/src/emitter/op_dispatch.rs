@@ -256,7 +256,7 @@ impl BodyBuilder<'_> {
             // emit_trap), and a `Return` terminates the block. naga rejects any
             // statement after a `Return` in the same block
             // (`InstructionsAfterReturn`), so stop emitting this block's
-            // remaining ops — they are unreachable by the trap/return semantics.
+            // remaining ops (they are unreachable by the trap/return semantics).
             if matches!(op.kind, KernelOpKind::Trap { .. } | KernelOpKind::Return) {
                 break;
             }
@@ -522,11 +522,11 @@ impl BodyBuilder<'_> {
                     // WGSL/naga reject unary minus on an UNSIGNED operand
                     // (`InvalidUnaryOperandType(Negate)`), but vyre's typecheck
                     // legalises integer `Negate` exactly for `u32` (the total,
-                    // wrapping case — raw i32 negate is rejected upstream for its
+                    // wrapping case, raw i32 negate is rejected upstream for its
                     // i32::MIN overflow), and the reference oracle defines it as
                     // `0u32.wrapping_sub(v)`. Emitting `Unary(Negate, u32)` made
                     // every u32 negate validate + run correctly on the CPU oracle
-                    // yet HARD-FAIL at GPU dispatch — a front-end-accepts /
+                    // yet HARD-FAIL at GPU dispatch, a front-end-accepts /
                     // backend-can't-emit coherence gap (Law 10). naga's `Subtract`
                     // on a Uint wraps in two's complement, so synthesize the
                     // unsigned negate as `0u - v`, matching the oracle exactly.
@@ -662,7 +662,7 @@ impl BodyBuilder<'_> {
                                 convert: Some(width),
                             });
                             // A 64-bit source narrowing to u8/u16/i8/i16 keeps
-                            // only the low word's low bits — truncate the `As`
+                            // only the low word's low bits, truncate the `As`
                             // result to the narrow target width (matches the
                             // oracle's `u64 as u8` low-byte semantics).
                             let value = self.apply_narrow_mask(value, target);
@@ -688,7 +688,7 @@ impl BodyBuilder<'_> {
                 // table (`validate::cast::cast_is_valid`) rejects f32 -> {U8, U16,
                 // I8, I16, U64, I64, Vec2U32, Vec4U32} for exactly this reason. But
                 // the Program-compat `emit_module` path does NOT run full
-                // validation, so such a cast can reach here — and the paths below
+                // validation, so such a cast can reach here, and the paths below
                 // would SILENTLY miscompile it: the U64/I64/Vec2U32 wide path
                 // reinterprets the float through a u32 coerce (dropping the high
                 // word), and a narrow int target (U8/U16/I8/I16, all backed by a
@@ -721,16 +721,16 @@ impl BodyBuilder<'_> {
                     // vec2<u32> (low word `.x`, high word `.y`). The low word is
                     // always the source's 32-bit pattern. The HIGH word depends
                     // on what the cast means:
-                    //   * `Vec2U32` is a STRUCTURAL 2-word vector — lane 1 is
+                    //   * `Vec2U32` is a STRUCTURAL 2-word vector, lane 1 is
                     //     zero-filled (matches the reference `widen_to_words` /
                     //     `cast_to_vec2` zero-pad), never sign-extended.
-                    //   * `U64`/`I64` are 64-bit INTEGERS — the high word must
+                    //   * `U64`/`I64` are 64-bit INTEGERS, the high word must
                     //     extend per the SOURCE's signedness. A signed (i32)
                     //     source SIGN-extends so a negative value carries its
                     //     full two's-complement high word (matching the PTX
                     //     `cvt.s64.s32` path and Rust `i32 as i64`); an unsigned
                     //     source zero-extends. Zeroing the high word
-                    //     unconditionally — as this did before — silently turned
+                    //     unconditionally, as this did before, silently turned
                     //     every negative `i32 -> i64/u64` into a large positive
                     //     value (Law 10 miscompile). This stays componentwise
                     //     (the high word is derived from the low word's sign bit,
@@ -747,7 +747,7 @@ impl BodyBuilder<'_> {
                         // sign_bit = low >> 31 (logical shift on a u32 → 0 or 1);
                         // high = sign_bit * 0xFFFF_FFFF → 0x0000_0000 when the
                         // sign bit is clear, 0xFFFF_FFFF when set. No branch, no
-                        // carry — a pure componentwise sign replicate.
+                        // carry (a pure componentwise sign replicate).
                         let thirty_one =
                             self.append_expr(Expression::Literal(naga::Literal::U32(31)));
                         let sign_bit = self.append_expr(Expression::Binary {
@@ -804,7 +804,7 @@ impl BodyBuilder<'_> {
                     // FALSE for NaN. We must NOT use `x != x` here: naga lowers a
                     // float `!=` to the ORDERED `FOrdNotEqual`, and
                     // `FOrdNotEqual(NaN, NaN)` is FALSE (ordered comparisons are
-                    // false whenever an operand is NaN) — the canonical `x != x`
+                    // false whenever an operand is NaN), the canonical `x != x`
                     // NaN idiom is silently dead in naga. `Equal` lowers to
                     // `FOrdEqual`, and `FOrdEqual(NaN, NaN)` is likewise FALSE, so
                     // `x == x` is the portable not-NaN predicate.
@@ -922,7 +922,7 @@ impl BodyBuilder<'_> {
             OpDispatchRoute::AsyncStore => self.emit_async_store(op),
             // AsyncWait is a documented no-op in the Naga backend. The Naga
             // backend lowers AsyncLoad and AsyncStore as fully synchronous
-            // counted copy loops — the copy completes before the next op
+            // counted copy loops, the copy completes before the next op
             // executes. There is no deferred or out-of-order DMA in this path,
             // so no fence or barrier is needed: the copy is already done.
             // Backends that use real hardware async DMA (e.g. PTX cp.async)
@@ -977,7 +977,7 @@ impl BodyBuilder<'_> {
             // the workgroup size in the @workgroup_size attribute at
             // compile time. Writing a dispatch-count buffer at runtime
             // (the IndirectDispatch semantic) is not a shader-internal
-            // operation in the WGSL/Naga model — it must be done by the
+            // operation in the WGSL/Naga model, it must be done by the
             // host before launching the next dispatch. Fix: perform the
             // indirect count buffer write on the host side (or via a
             // separate count-kernel dispatch) rather than embedding it in
@@ -1031,14 +1031,14 @@ impl BodyBuilder<'_> {
     ///
     /// WGSL has no native 8/16-bit integer scalar, so `scalar_cast_target` backs
     /// U8/U16 with a `Uint` (u32) and I8/I16 with a `Sint` (i32) register. The
-    /// bare `As` that produces that register does NOT discard the high bits — a
-    /// u32 source to a U8 target stays the full word — so a narrowing cast would
+    /// bare `As` that produces that register does NOT discard the high bits, a
+    /// u32 source to a U8 target stays the full word, so a narrowing cast would
     /// silently keep the high bits, diverging from the V035 contract ("narrowing
     /// cast may truncate high bits"), Rust `as u8/u16/i8/i16`, and the reference
     /// oracle (`cast_value`). This applies the missing truncation:
     ///   * U8/U16: bitwise-AND with the low-`width` mask (`& 0xFF` / `& 0xFFFF`).
     ///   * I8/I16: truncate then SIGN-extend from the new top bit via
-    ///     `(x << shift) >> shift` with an arithmetic (Sint) right shift — the
+    ///     `(x << shift) >> shift` with an arithmetic (Sint) right shift, the
     ///     same idiom `emit_byte_element_load` uses for an I8 buffer byte, so e.g.
     ///     `200 as i8 == -56`, `-1 as i8 == -1`. The signed `>>` lowers to a naga
     ///     arithmetic shift (the shift-emit fix keeps the Sint value's signedness
@@ -1242,7 +1242,7 @@ impl BodyBuilder<'_> {
         // 64-bit gate: U64/I64 are backed by vec2<u32> (the vec2_u32_ty handle).
         // Componentwise bitwise AND/OR/XOR on the pair are mathematically
         // correct, but add/sub/mul/compare/shift need carry/borrow propagation
-        // between the low and high words — a componentwise vec2 op would be
+        // between the low and high words, a componentwise vec2 op would be
         // SILENTLY WRONG arithmetic. Fail closed (Law 10) rather than emit it.
         let lhs_is_u64 = self
             .value_type_operand(op, 0)
@@ -1383,10 +1383,10 @@ impl BodyBuilder<'_> {
         // Backend contract: the shift amount is taken modulo the bit width (32).
         // The reference oracle masks (`right & 31`) and PTX masks
         // (`and.b32 …,31`), but a bare naga ShiftLeft/ShiftRight leaves an
-        // amount >= 32 undefined per the SPIR-V/WGSL shift rules — a silent
+        // amount >= 32 undefined per the SPIR-V/WGSL shift rules, a silent
         // CPU/GPU divergence (Law 10). Mask here so the wgpu/spirv/metal path
         // matches PTX and the oracle. A known in-range constant amount (the
-        // `x >> 16` hot path) is left untouched — it would fold to itself — so
+        // `x >> 16` hot path) is left untouched, it would fold to itself, so
         // the mask only costs an `& 31` on genuinely variable shift counts.
         // (u64 shifts never reach here: the 64-bit gate fails them closed.)
         if is_shift {
@@ -1405,7 +1405,7 @@ impl BodyBuilder<'_> {
             }
         }
         // naga's `BinaryOperator::Modulo` lowers to an UNSIGNED remainder on the
-        // SPIR-V backend even for SIGNED operands — a vendored-naga bug verified
+        // SPIR-V backend even for SIGNED operands, a vendored-naga bug verified
         // on the 5090: `rem(i32, i32)` of (-7, 3) returned 0 (== unsigned
         // 0xFFFF_FFF9 % 3), not the signed -1, while `div(i32, i32)` of (-7, 3)
         // correctly returned -2 (naga's `Divide` DOES pick SDiv). naga's signed
@@ -1461,7 +1461,7 @@ impl BodyBuilder<'_> {
         // tests, so a bare Naga `Divide` makes the wgpu backend silently
         // disagree with its own oracle. Force the oracle contract here so every
         // backend is uniform and the CPU oracle stays sound (Law 10). Only the
-        // unsigned divisor is guarded — signed div-by-zero / INT_MIN÷-1 are
+        // unsigned divisor is guarded, signed div-by-zero / INT_MIN÷-1 are
         // rejected upstream as undefined backend semantics.
         let value = if matches!(binop, BinOp::Div | BinOp::Mod)
             && matches!(right_kind, Some(naga::ScalarKind::Uint))
@@ -1850,7 +1850,7 @@ impl BodyBuilder<'_> {
         // buffer is backed by `array<i32>` (scalar_type maps I8 -> i32_ty), so
         // the loaded word is Sint; masking it with the u32 `0xff`/shift literals
         // would emit `And(i32, u32)` / `ShiftRight(i32, u32)` which naga rejects
-        // (InvalidBinaryOperandTypes) — the I8 byte-extract emitted invalid WGSL.
+        // (InvalidBinaryOperandTypes) (the I8 byte-extract emitted invalid WGSL).
         // Reinterpret the word's bits to u32 so the whole extraction is u32; the
         // I8 case re-signs only at the final `(byte << 24) as i32 >> 24` step.
         // `U8` is already `array<u32>`, so its word needs no reinterpret.

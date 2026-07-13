@@ -9,9 +9,12 @@ use crate::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
-use vyre_primitives::graph::sum_product_circuit::sum_product_evaluate;
+use vyre_primitives::graph::level_wave::level_wave_dispatch_grid;
 #[cfg(test)]
 use vyre_primitives::graph::sum_product_circuit::sum_product_evaluate_cpu;
+use vyre_primitives::graph::sum_product_circuit::{
+    sum_product_depths, sum_product_evaluate_leveled,
+};
 #[cfg(test)]
 use vyre_primitives::math::conformal::conformal_threshold_cpu;
 use vyre_primitives::math::conformal::{conformal_threshold, try_conformal_rank};
@@ -150,15 +153,33 @@ pub fn predict_runtime_fixed_via_with_scratch(
                 "Fix: predict_runtime_fixed_via node output byte count overflows usize for n_nodes={n_nodes}."
             ))
         })?;
-    ensure_input_slots(&mut scratch.inputs, 7);
-    write_u32_slice_le_bytes(&mut scratch.inputs[0], feature_circuit_kinds);
-    write_u32_slice_le_bytes(&mut scratch.inputs[1], feature_circuit_offsets);
-    write_u32_slice_le_bytes(&mut scratch.inputs[2], feature_circuit_counts);
-    write_u32_slice_le_bytes(&mut scratch.inputs[3], feature_circuit_children);
-    write_u32_slice_le_bytes(&mut scratch.inputs[4], feature_circuit_weights_fixed);
-    write_u32_slice_le_bytes(&mut scratch.inputs[5], feature_values_fixed);
-    write_zero_bytes(&mut scratch.inputs[6], node_bytes);
-    let circuit = sum_product_evaluate(
+    // Depth-ordered evaluation: assign each node its topological depth so the circuit
+    // runs through the leveled depth-wave harness. The single-pass `sum_product_evaluate`
+    // has NO barrier between topo levels, so a node reading ANOTHER internal node's `out`
+    // races it and silently yields a wrong prediction on GPU for any depth>1 feature
+    // circuit (BUG-sum-product-multilevel-dag-no-topo-barrier). The leveled form commits
+    // each level behind a barrier before the next reads it, so prediction is correct at
+    // any circuit depth.
+    let (depths, max_depth) = sum_product_depths(
+        feature_circuit_offsets,
+        feature_circuit_counts,
+        feature_circuit_children,
+        n_nodes,
+    )
+    .map_err(DispatchError::BadInputs)?;
+    // Binding order (see `sum_product_evaluate_leveled`): depths(0), kinds(1),
+    // child_offsets(2), child_counts(3), children(4), weights(5), leaf_values(6), out(7).
+    ensure_input_slots(&mut scratch.inputs, 8);
+    write_u32_slice_le_bytes(&mut scratch.inputs[0], &depths);
+    write_u32_slice_le_bytes(&mut scratch.inputs[1], feature_circuit_kinds);
+    write_u32_slice_le_bytes(&mut scratch.inputs[2], feature_circuit_offsets);
+    write_u32_slice_le_bytes(&mut scratch.inputs[3], feature_circuit_counts);
+    write_u32_slice_le_bytes(&mut scratch.inputs[4], feature_circuit_children);
+    write_u32_slice_le_bytes(&mut scratch.inputs[5], feature_circuit_weights_fixed);
+    write_u32_slice_le_bytes(&mut scratch.inputs[6], feature_values_fixed);
+    write_zero_bytes(&mut scratch.inputs[7], node_bytes);
+    let circuit = sum_product_evaluate_leveled(
+        "depths",
         "kinds",
         "child_offsets",
         "child_counts",
@@ -168,8 +189,13 @@ pub fn predict_runtime_fixed_via_with_scratch(
         "out",
         n_nodes,
         n_edges,
+        max_depth,
     );
-    let circuit_outputs = dispatcher.dispatch(&circuit, &scratch.inputs, Some([1, 1, 1]))?;
+    let circuit_outputs = dispatcher.dispatch(
+        &circuit,
+        &scratch.inputs[..8],
+        Some(level_wave_dispatch_grid(n_nodes)),
+    )?;
     let circuit_output = circuit_outputs.first().ok_or_else(|| {
         DispatchError::BackendError(format!(
             "Fix: predict_runtime_fixed_via expected one sum-product output, got {}.",
@@ -404,38 +430,51 @@ mod tests {
             _grid_override: Option<[u32; 3]>,
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
             match inputs.len() {
-                7 => dispatch_sum_product(inputs),
+                8 => dispatch_sum_product(inputs),
                 2 => dispatch_conformal(inputs),
                 other => Err(DispatchError::BadInputs(format!(
-                    "Fix: cost-model test dispatcher expected 7 or 2 buffers, got {other}."
+                    "Fix: cost-model test dispatcher expected 8 or 2 buffers, got {other}."
                 ))),
             }
         }
     }
 
+    /// Mock of the LEVELED sum-product dispatch. Binding layout (see
+    /// `sum_product_evaluate_leveled`): depths(0), kinds(1), child_offsets(2),
+    /// child_counts(3), children(4), weights(5), leaf_values(6), out(7). Evaluates
+    /// wave-by-wave in DEPTH order (not node-index order) so it faithfully models the
+    /// depth-wave harness, a node is computed only after every lower-depth node has
+    /// committed, exactly the barrier semantics the real leveled program provides.
     fn dispatch_sum_product(inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, DispatchError> {
-        let kinds = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
-        let offsets = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
-        let counts = crate::hardware::dispatch_buffers::read_u32s(&inputs[2]);
-        let children = crate::hardware::dispatch_buffers::read_u32s(&inputs[3]);
-        let weights = crate::hardware::dispatch_buffers::read_u32s(&inputs[4]);
-        let values = crate::hardware::dispatch_buffers::read_u32s(&inputs[5]);
+        let depths = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
+        let kinds = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
+        let offsets = crate::hardware::dispatch_buffers::read_u32s(&inputs[2]);
+        let counts = crate::hardware::dispatch_buffers::read_u32s(&inputs[3]);
+        let children = crate::hardware::dispatch_buffers::read_u32s(&inputs[4]);
+        let weights = crate::hardware::dispatch_buffers::read_u32s(&inputs[5]);
+        let values = crate::hardware::dispatch_buffers::read_u32s(&inputs[6]);
         let mut out = values.clone();
-        for node in 0..kinds.len() {
-            if kinds[node] == KIND_SUM {
-                let mut acc = 0_u32;
-                for edge in offsets[node] as usize..(offsets[node] + counts[node]) as usize {
-                    let child = children[edge] as usize;
-                    acc += ((out[child] as u64 * weights[edge] as u64) >> 16) as u32;
+        let max_depth = depths.iter().copied().max().unwrap_or(0);
+        for wave in 0..=max_depth {
+            for node in 0..kinds.len() {
+                if depths[node] != wave {
+                    continue;
                 }
-                out[node] = acc;
-            } else if kinds[node] == KIND_PRODUCT {
-                let mut acc = 1_u32 << 16;
-                for edge in offsets[node] as usize..(offsets[node] + counts[node]) as usize {
-                    let child = children[edge] as usize;
-                    acc = ((acc as u64 * out[child] as u64) >> 16) as u32;
+                if kinds[node] == KIND_SUM {
+                    let mut acc = 0_u32;
+                    for edge in offsets[node] as usize..(offsets[node] + counts[node]) as usize {
+                        let child = children[edge] as usize;
+                        acc += ((out[child] as u64 * weights[edge] as u64) >> 16) as u32;
+                    }
+                    out[node] = acc;
+                } else if kinds[node] == KIND_PRODUCT {
+                    let mut acc = 1_u32 << 16;
+                    for edge in offsets[node] as usize..(offsets[node] + counts[node]) as usize {
+                        let child = children[edge] as usize;
+                        acc = ((acc as u64 * out[child] as u64) >> 16) as u32;
+                    }
+                    out[node] = acc;
                 }
-                out[node] = acc;
             }
         }
         Ok(vec![u32_slice_to_le_bytes(&out)])

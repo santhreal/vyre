@@ -78,7 +78,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       # The PTX/CUDA backend lowers casts and synthetic binops DIFFERENTLY from
       # naga (native cvt/mul.hi/shf vs vec2/select synthesis), so the wgpu parity
-      # gates above transfer nothing — the CUDA route needs its own live-GPU
+      # gates above transfer nothing, the CUDA route needs its own live-GPU
       # differential. These per-test matrices were developer-run only (named in no
       # workflow); this job gates them on the real device.
       - name: generated IR-semantics differential matrices vs reference on real CUDA

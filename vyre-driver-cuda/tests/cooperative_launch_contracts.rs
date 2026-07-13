@@ -291,7 +291,7 @@ fn native_cooperative_grid_sync_matches_host_split_cross_block() {
         return;
     }
 
-    // 8 blocks of 256 threads — comfortably inside cooperative residency.
+    // 8 blocks of 256 threads (comfortably inside cooperative residency).
     let n: u32 = 2048;
     let program = cross_block_grid_sync_program(n);
     let input: Vec<u32> = (0..n).collect();

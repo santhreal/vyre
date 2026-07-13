@@ -168,7 +168,7 @@ impl BodyCtx<'_> {
                 // PTX cvt.rn.f32.u64 converts the full 64-bit value to F32
                 // with round-to-nearest. The previous two-step path
                 // (cvt.u32.u64 + cvt.rn.f32.u32) silently discarded the high
-                // 32 bits before conversion — a silent truncation of any value
+                // 32 bits before conversion, a silent truncation of any value
                 // > 0xFFFFFFFF.
                 let _ = writeln!(self.text, "    cvt.rn.f32.u64    {out}, {value_reg};");
                 out
@@ -448,7 +448,7 @@ impl BodyCtx<'_> {
                 let _ = writeln!(
                     self.text,
                     "    // BUG: slot={binding_slot} byte offset overflows u32; \
-                     preload_bindings should have rejected this slot — killing thread"
+                     preload_bindings should have rejected this slot, killing thread"
                 );
                 let _ = writeln!(self.text, "    trap;");
             }

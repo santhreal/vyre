@@ -26,7 +26,7 @@ pub(crate) fn assert_byte_lru_core_rejects_and_accounts() {
     // Insert overflow is detected with `checked_add` (saturating to usize::MAX
     // forces eviction); the per-entry decrement on remove uses `saturating_sub`
     // so an impossible-by-construction underflow cannot panic. Both are the
-    // correct, consistent accounting idioms — assert the decrement by its real
+    // correct, consistent accounting idioms, assert the decrement by its real
     // form so this contract does not regress to a stale string on idiom changes.
     assert!(
         byte_lru_cache.contains("entry_bytes > self.max_bytes")

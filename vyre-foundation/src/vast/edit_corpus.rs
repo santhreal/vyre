@@ -319,11 +319,12 @@ pub fn vast_edit_corpus_evidence(
         context: "full reparse",
         reason: error.to_string(),
     })?;
-    let updated_header =
-        VastHeader::decode(case.updated_vast).map_err(|error| VastEditCorpusError::InvalidVast {
+    let updated_header = VastHeader::decode(case.updated_vast).map_err(|error| {
+        VastEditCorpusError::InvalidVast {
             context: "updated header",
             reason: error.to_string(),
-        })?;
+        }
+    })?;
     if case.reused_node_count > updated_header.node_count {
         return Err(VastEditCorpusError::ReusedNodeCountTooLarge {
             reused_node_count: case.reused_node_count,
@@ -364,10 +365,7 @@ pub fn vast_edit_digest(bytes: &[u8]) -> VastEditDigest {
     *blake3::hash(bytes).as_bytes()
 }
 
-fn validate_edit_script(
-    before: &[u8],
-    edits: &[VastEdit<'_>],
-) -> Result<(), VastEditCorpusError> {
+fn validate_edit_script(before: &[u8], edits: &[VastEdit<'_>]) -> Result<(), VastEditCorpusError> {
     apply_vast_edit_script(before, edits).map(|_| ())
 }
 

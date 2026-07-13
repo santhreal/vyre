@@ -1,15 +1,15 @@
 //! 64-bit widening-cast (`i32`/`u32` -> `i64`/`u64`) parity against Rust `as` on
-//! the live CUDA device — the PTX/CUDA twin of the wgpu
+//! the live CUDA device, the PTX/CUDA twin of the wgpu
 //! `widening_cast_64_parity` gate.
 //!
 //! The wgpu/naga path lowers `U64`/`I64` as `vec2<u32>` and synthesizes the high
 //! word from the SOURCE's signedness; that path is GPU-locked. The PTX backend
 //! takes a DIFFERENT route: it keeps the 64-bit value in a native 64-bit register
-//! and emits the hardware widening convert — `cvt.s64.s32` for a signed source
+//! and emits the hardware widening convert: `cvt.s64.s32` for a signed source
 //! (sign-extend, `emit_cast` scalar.rs `(I32,U64)` arm) and `cvt.u64.u32` for an
 //! unsigned source (zero-extend, the `(U32,U64)` arm); `I64` reaches these via
 //! `from_dtype(I64) -> U64`. That PTX route's correctness was concluded ONLY by a
-//! SOURCE READ — exactly the class the naga signed-`Modulo` miscompile proved can
+//! SOURCE READ, exactly the class the naga signed-`Modulo` miscompile proved can
 //! be silently wrong on real silicon (a source read is NOT proof). No CUDA test
 //! had ever dispatched a 64-bit-output buffer, so a wrong `cvt`, a mis-sized
 //! 8-byte element store, or a high-word leak would be invisible.
@@ -37,7 +37,7 @@ fn u32_bytes(words: &[u32]) -> Vec<u8> {
     bytes
 }
 
-/// `out[i] = cast(target64, load(src, i))` — `src` is a 32-bit buffer (signed or
+/// `out[i] = cast(target64, load(src, i))`: `src` is a 32-bit buffer (signed or
 /// unsigned per `src_ty`), `out` is the 64-bit `target64` buffer (8 bytes/elem).
 /// One thread ([1,1,1]) writes every element, mirroring the wgpu gate so the
 /// only moving part is the backend.
@@ -160,7 +160,7 @@ fn i32_to_u64_sign_extends_high_word_on_cuda() {
 #[test]
 fn u32_to_u64_zero_extends_high_word_on_cuda() {
     // The twin: an UNSIGNED source ZERO-extends. 0xFFFF_FFFF as u64 must be
-    // 0x0000_0000_FFFF_FFFF, NOT sign-extended — proves the signedness gate keys
+    // 0x0000_0000_FFFF_FFFF, NOT sign-extended, proves the signedness gate keys
     // on the SOURCE, not the value's top bit.
     let backend = live_backend();
     let words: Vec<u32> = vec![0xFFFF_FFFF, 0x8000_0000, 7, 0, 1, 0x7FFF_FFFF, 0xDEAD_BEEF];
@@ -180,7 +180,7 @@ fn u32_to_u64_zero_extends_high_word_on_cuda() {
 
 #[test]
 fn u32_to_i64_zero_extends_into_signed_target_on_cuda() {
-    // An UNSIGNED source widened into a SIGNED 64-bit target ZERO-extends —
+    // An UNSIGNED source widened into a SIGNED 64-bit target ZERO-extends 
     // `0xFFFF_FFFFu32 as i64 == 0x0000_0000_FFFF_FFFF` (4294967295), not -1. The
     // PTX route reaches I64 via `from_dtype(I64) -> U64`, so this must select the
     // `cvt.u64.u32` zero-extend arm off the SOURCE, not the I64 target name.

@@ -3,20 +3,21 @@
 #![cfg(all(feature = "graph", feature = "cpu-parity"))]
 
 use proptest::prelude::*;
+use vyre_foundation::ir::Program;
 use vyre_primitives::graph::csr_frontier_queue::{
     frontier_to_queue_cpu, frontier_words_to_queue_clear_out_parallel,
 };
+use vyre_primitives::wire::decode_u32_le_bytes_all as unpack_words;
+use vyre_primitives::wire::pack_u32_slice as pack_words;
 use vyre_reference::value::Value;
 
-fn pack_words(words: &[u32]) -> Vec<u8> {
-    words.iter().flat_map(|word| word.to_le_bytes()).collect()
-}
-
-fn unpack_words(bytes: &[u8]) -> Vec<u32> {
-    bytes
-        .chunks_exact(4)
-        .map(|chunk| u32::from_le_bytes(chunk.try_into().expect("u32 chunk")))
-        .collect()
+/// Read a returned output buffer BY NAME (queue/queue_len/frontier_out) instead of by
+/// fixed position, so a buffer reorder or a future fused intermediate can't silently
+/// shift these multi-output reads (the drift class the multi-block harness hit).
+fn out_words(program: &Program, outputs: &[Value], name: &str) -> Vec<u32> {
+    let index = vyre_reference::output_index(program, name)
+        .unwrap_or_else(|| panic!("Fix: frontier queue program must declare output `{name}`"));
+    unpack_words(&outputs[index].to_bytes())
 }
 
 fn mix32(mut value: u32) -> u32 {
@@ -78,15 +79,18 @@ fn word_parallel_frontier_queue_clear_out_matches_queue_and_zeros_output() {
     )
     .expect("word-level clear-out frontier queue materializer should reference-evaluate");
 
-    let mut queue = unpack_words(&outputs[0].to_bytes());
+    let mut queue = out_words(&program, &outputs, "queue");
     queue.truncate(expected_queue.len());
     queue.sort_unstable();
     let mut expected_sorted = expected_queue;
     expected_sorted.sort_unstable();
 
-    assert_eq!(unpack_words(&outputs[1].to_bytes()), vec![expected_seen]);
+    assert_eq!(
+        out_words(&program, &outputs, "queue_len"),
+        vec![expected_seen]
+    );
     assert_eq!(queue, expected_sorted);
-    assert_eq!(unpack_words(&outputs[2].to_bytes()), vec![0, 0, 0]);
+    assert_eq!(out_words(&program, &outputs, "frontier_out"), vec![0, 0, 0]);
 }
 
 proptest! {
@@ -128,7 +132,7 @@ proptest! {
         )
         .expect("generated clear-out frontier queue materializer should reference-evaluate");
 
-        let queue_words = unpack_words(&outputs[0].to_bytes());
+        let queue_words = out_words(&program, &outputs, "queue");
         let written = expected_seen.min(queue_capacity) as usize;
         let mut actual_queue = queue_words.into_iter().take(written).collect::<Vec<_>>();
         let mut unique_actual = actual_queue.clone();
@@ -137,7 +141,7 @@ proptest! {
         let mut sorted_active = all_active.clone();
         sorted_active.sort_unstable();
 
-        prop_assert_eq!(unpack_words(&outputs[1].to_bytes()), vec![expected_seen]);
+        prop_assert_eq!(out_words(&program, &outputs, "queue_len"), vec![expected_seen]);
         prop_assert_eq!(unique_actual.len(), actual_queue.len());
         for node in &actual_queue {
             prop_assert!(
@@ -150,7 +154,7 @@ proptest! {
             prop_assert_eq!(actual_queue, sorted_active);
         }
         prop_assert_eq!(
-            unpack_words(&outputs[2].to_bytes()),
+            out_words(&program, &outputs, "frontier_out"),
             vec![0; frontier_words]
         );
     }

@@ -162,10 +162,14 @@ fn mod_mul_expr(left: Expr, right: Expr) -> Expr {
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn ntt_forward_cpu(a: &mut [u32]) {
     let n = a.len() as u32;
-    if !n.is_power_of_two() || n > MAX_LEN {
-        a.fill(0);
-        return;
-    }
+    // Fail LOUD on an invalid length instead of silently zero-filling. The GPU
+    // butterfly path traps on a non-power-of-two / oversized length (see the
+    // `non_power_of_two_traps` test); a silent `a.fill(0)` on the CPU reference
+    // diverges from that and masks caller misuse as valid all-zero output (Law 10).
+    assert!(
+        n.is_power_of_two() && n <= MAX_LEN,
+        "ntt_forward_cpu requires a power-of-two length <= MAX_LEN={MAX_LEN}; got {n}"
+    );
 
     // Bit-reversal permutation
     bit_reverse(a);
@@ -195,10 +199,12 @@ pub fn ntt_forward_cpu(a: &mut [u32]) {
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn ntt_inverse_cpu(a: &mut [u32]) {
     let n = a.len() as u32;
-    if !n.is_power_of_two() || n > MAX_LEN {
-        a.fill(0);
-        return;
-    }
+    // Fail LOUD on an invalid length (see `ntt_forward_cpu`): the GPU path traps,
+    // so the CPU reference must not silently zero-fill and mask the misuse (Law 10).
+    assert!(
+        n.is_power_of_two() && n <= MAX_LEN,
+        "ntt_inverse_cpu requires a power-of-two length <= MAX_LEN={MAX_LEN}; got {n}"
+    );
 
     bit_reverse(a);
 

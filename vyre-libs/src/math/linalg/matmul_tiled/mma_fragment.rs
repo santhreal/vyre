@@ -359,10 +359,7 @@ mod tests {
             MmaCapabilityRecord::ptx_sm80(),
         );
 
-        assert_eq!(
-            gate.selected_path,
-            MatmulKernelPath::TensorCoreF16M16N8K16
-        );
+        assert_eq!(gate.selected_path, MatmulKernelPath::TensorCoreF16M16N8K16);
         assert_eq!(
             gate.instruction_class,
             Some(MmaInstructionClass::PtxMmaSyncAlignedM16N8K16F16)
@@ -373,10 +370,7 @@ mod tests {
     #[test]
     fn mma_capability_gate_falls_back_on_unsupported_backends() {
         for capabilities in [MmaCapabilityRecord::metal(), MmaCapabilityRecord::wgpu()] {
-            let gate = gate_mma_path(
-                MatmulKernelPath::TensorCoreF16M16N8K16,
-                capabilities,
-            );
+            let gate = gate_mma_path(MatmulKernelPath::TensorCoreF16M16N8K16, capabilities);
 
             assert_eq!(gate.selected_path, MatmulKernelPath::Cooperative);
             assert_eq!(gate.instruction_class, None);

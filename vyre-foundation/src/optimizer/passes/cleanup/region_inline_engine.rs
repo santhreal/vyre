@@ -60,7 +60,7 @@ pub fn run_with_threshold(program: Program, threshold: usize) -> Program {
 /// the Region wrapper. But a Region exists precisely to SCOPE its `Let`
 /// bindings, and the same sub-op composed more than once into one parent emits
 /// the SAME binding names each time (e.g. three FFT stages each binding
-/// `u_re_s1_b0_k0` — FINDING-GPU-11). Splicing those flat collides the names as
+/// `u_re_s1_b0_k0`: FINDING-GPU-11). Splicing those flat collides the names as
 /// duplicate siblings (V032); wrapping only some of them re-collides as a
 /// wrapped sibling shadowing a flat one (V008). So this runs in two passes:
 ///
@@ -71,7 +71,7 @@ pub fn run_with_threshold(program: Program, threshold: usize) -> Program {
 ///    whose name occurs more than once at this level is wrapped in a
 ///    `Node::Block` (a lexical scope the validator honors) so EVERY colliding
 ///    sibling lands in its own scope. Regions whose names are all unique at this
-///    level splice flat — the common case, including the lone root Region every
+///    level splice flat, the common case, including the lone root Region every
 ///    `Program::wrapped` builds, so non-colliding programs are byte-unchanged.
 fn inline_nodes_into(nodes: Vec<Node>, threshold: usize, out: &mut Vec<Node>) {
     let mut staged: Vec<Staged> = Vec::with_capacity(nodes.len());
@@ -148,13 +148,13 @@ fn inline_nodes_into(nodes: Vec<Node>, threshold: usize, out: &mut Vec<Node>) {
     // Count every binding (each `Let` name and loop variable) at this
     // sibling level, recursively. A flattened Region's top-level `let x`
     // leaks into the parent scope; if `x` is ALSO bound anywhere else at
-    // this level — another top-level let, OR a binding NESTED inside a
-    // sibling's If/Loop/Block — the leaked binding overlaps that other
+    // this level, another top-level let, OR a binding NESTED inside a
+    // sibling's If/Loop/Block, the leaked binding overlaps that other
     // binder and collides ("V008: duplicate local binding `x`"). The IR
     // disallows shadowing, so each name binds at most once per live scope:
     // a level-wide count >= 2 means two distinct binders that the original
     // Region scope kept apart. (The earlier tally counted only TOP-LEVEL
-    // sibling lets, so it missed nested binders — see
+    // sibling lets, so it missed nested binders, see
     // tests/region_inline_scope.rs for the oracle-differential proof.)
     let mut bound_counts: FxHashMap<Ident, usize> = FxHashMap::default();
     for item in &staged {
@@ -305,9 +305,9 @@ mod tests {
     fn colliding_sibling_lets_are_each_block_scoped() {
         // Two sibling regions that each bind the SAME name (the FFT-stage
         // pattern behind FINDING-GPU-11). Splicing either flat would expose
-        // `u_re_s1_b0_k0` at the parent scope, so the other sibling — whether
+        // `u_re_s1_b0_k0` at the parent scope, so the other sibling, whether
         // spliced (V032 duplicate sibling) or wrapped (V008 shadow of the flat
-        // one) — would fail validation. The collision is detected level-wide,
+        // one), would fail validation. The collision is detected level-wide,
         // so BOTH siblings are wrapped in their own Block: two co-equal scopes,
         // neither shadowing the other, the shared name absent from top level.
         let mk = |gen: &str| Node::Region {
@@ -326,7 +326,7 @@ mod tests {
         let entry = run(prog).into_entry_vec();
 
         // No surviving Region wrappers, and the shared name is NEVER a
-        // top-level sibling — it lives only inside the per-sibling Blocks.
+        // top-level sibling (it lives only inside the per-sibling Blocks).
         assert!(
             !entry.iter().any(|n| matches!(n, Node::Region { .. })),
             "both small regions must inline, got {entry:?}"
@@ -436,8 +436,7 @@ mod tests {
         );
         // `x` must NEVER appear as a bare top-level Let -- that is the leak.
         assert!(
-            !out
-                .iter()
+            !out.iter()
                 .any(|n| matches!(n, Node::Let { name, .. } if name == "x")),
             "no bare top-level `let x` may leak into the parent scope, got {out:?}"
         );

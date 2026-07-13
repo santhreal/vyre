@@ -33,8 +33,8 @@ pub(super) enum RenameScope<'a> {
     /// Shared-namespace merge: rename ONLY names that are declared in ≥2 arms
     /// of the batch (a genuine collision, e.g. a primitive's internal `acc`
     /// reused verbatim in two primitives). A name declared in exactly one arm
-    /// — including a quantifier flag readback `let __cmp_N = …` consumed by a
-    /// different arm — is globally unique and must keep ONE name so the
+    ///: including a quantifier flag readback `let __cmp_N = …` consumed by a
+    /// different arm, is globally unique and must keep ONE name so the
     /// decl→use link survives. Declaration multiplicity is STABLE across the
     /// pairwise merge chain (a name declared once stays declared once), unlike
     /// a free-variable test, which mislabels `__cmp_N` as arm-local at an
@@ -77,7 +77,7 @@ impl<'a> ArmRenamer<'a> {
     /// declared inside a region is restored away when that region exits
     /// (`validate.rs` `PopScope` → `restore_scope`). If each arm kept its own
     /// root-region wrapper, a value declared in one arm (`let __cmp_N = …`)
-    /// could not reach its consumer (`Var(__cmp_N)`) in another arm — the
+    /// could not reach its consumer (`Var(__cmp_N)`) in another arm, the
     /// `csrf_missing_token` "undeclared variable" miscompile. Unwrapping the
     /// synthetic wrapper is exact: it is the inverse of `wrap_entry`'s auto-
     /// wrap, carries no provenance, and lands the arm body in the shared scope.
@@ -112,7 +112,7 @@ impl<'a> ArmRenamer<'a> {
 
     /// Rename one identifier unless the policy leaves it alone or it is already
     /// arm-qualified (idempotent: re-prefixing a temp from a prior fusion level
-    /// would desync it from its matching decl/use — the historical
+    /// would desync it from its matching decl/use, the historical
     /// `__vyre_fuse_a1___vyre_fuse_a0___cmp_5` miscompile).
     fn ident(&self, name: &Ident) -> Ident {
         let rename = match self.scope {
@@ -122,7 +122,11 @@ impl<'a> ArmRenamer<'a> {
         if !rename || name.as_str().starts_with(FUSION_ARM_PREFIX) {
             return name.clone();
         }
-        Ident::from(format!("{FUSION_ARM_PREFIX}{}_{}", self.arm_idx, name.as_str()))
+        Ident::from(format!(
+            "{FUSION_ARM_PREFIX}{}_{}",
+            self.arm_idx,
+            name.as_str()
+        ))
     }
 
     fn nodes(&self, nodes: &[Node]) -> Vec<Node> {
@@ -324,7 +328,8 @@ impl<'a> ArmRenamer<'a> {
                 value: Box::new(self.expr(value)),
                 lane: Box::new(self.expr(lane)),
             },
-            Expr::SubgroupReduce { op, value } => Expr::SubgroupReduce { op: *op,
+            Expr::SubgroupReduce { op, value } => Expr::SubgroupReduce {
+                op: *op,
                 value: Box::new(self.expr(value)),
             },
             Expr::LitU32(_)
@@ -351,7 +356,7 @@ pub(super) fn push_alpha_renamed_arm_entry_node(out: &mut Vec<Node>, node: &Node
 /// more** arms of the batch. Only these collide once the arms are spliced into
 /// one shared scope, so only these are alpha-renamed by [`ArmRenamer::shared`].
 ///
-/// A name declared in exactly one arm is globally unique — including a value
+/// A name declared in exactly one arm is globally unique, including a value
 /// produced in one arm and consumed in another (`let __cmp_N = …` / `Var`),
 /// which must keep one name. Declaration multiplicity is the stable invariant
 /// across the pairwise merge chain: a name declared once stays declared once,
@@ -456,7 +461,7 @@ mod tests {
         // The csrf invariant: a value declared in exactly one arm and consumed
         // in another must keep ONE name. Such a name is NOT in the
         // multiply-declared set, so it is never prefixed regardless of arm
-        // index — the consumer's `Var` matches the producer's `Let`.
+        // index (the consumer's `Var` matches the producer's `Let`).
         let multiply_declared = names([]); // `__cmp_5` declared in only one arm
         let producer = ArmRenamer::shared(1, &multiply_declared).ident(&Ident::from("__cmp_5"));
         let consumer = ArmRenamer::shared(0, &multiply_declared).ident(&Ident::from("__cmp_5"));

@@ -117,7 +117,7 @@ pub const MAX_SCAN_BYTES_BUF: &str = "nfa_max_scan_bytes";
 /// `subgroup_shuffle` still requires a compile-time peer lane, so the caller keeps
 /// `k` unrolled; only the inner bit index `bit` is made dynamic. The emitted block is
 /// O(1) in `num_states`, so the whole scan shader is O(LANES) rather than
-/// O(num_states) — the size the descriptor optimizer (`vyre-lower`) and naga emitter
+/// O(num_states), the size the descriptor optimizer (`vyre-lower`) and naga emitter
 /// scale on. A 771-state bare-`xor` NFA previously unrolled into thousands of nodes
 /// and made `verify_then_optimize` run for minutes; this keeps it flat.
 ///
@@ -145,7 +145,7 @@ fn push_lane_major_gather(
     ));
     let base = k * 32;
     if base >= num_states {
-        // This peer lane owns no live states — nothing to gather. Matches the
+        // This peer lane owns no live states, nothing to gather. Matches the
         // compile-time `if src_state >= num_states { continue }` in the old unroll.
         return;
     }
@@ -164,10 +164,7 @@ fn push_lane_major_gather(
         ),
         Expr::u32(0),
     );
-    let assign = Node::assign(
-        accum,
-        Expr::bitor(Expr::var(accum), Expr::load(table, idx)),
-    );
+    let assign = Node::assign(accum, Expr::bitor(Expr::var(accum), Expr::load(table, idx)));
     out.push(Node::loop_for(
         &bit_var,
         Expr::u32(0),

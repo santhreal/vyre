@@ -130,15 +130,10 @@ pub fn pack_dispatch_table_into(
         }
     }
     let len = packed_dispatch_table_len(entries.len());
-    if len > out.capacity() {
-        out.try_reserve_exact(len - out.capacity())
-            .map_err(|source| PackError::Allocation {
-                requested: len,
-                source: source.to_string(),
-            })?;
-    }
-
-    out.clear();
+    crate::hostbuf::reserve_exact_cleared(out, len).map_err(|source| PackError::Allocation {
+        requested: len,
+        source: source.to_string(),
+    })?;
     out.extend(entries.iter().map(|entry| {
         let mut packed: u32 = entry.handler_offset & 0x00FF_FFFF;
         packed |= (u32::from(entry.handler_arity) & 0xF) << 24;

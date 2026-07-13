@@ -104,7 +104,7 @@ fn cast_u64_to_u32_truncates_low_word() {
 }
 
 /// U64 → I32 narrows to the low 32 bits via `cvt.u32.u64` (the low word's bit
-/// pattern IS the i32). wgpu/naga supports this, so CUDA must too — never fail
+/// pattern IS the i32). wgpu/naga supports this, so CUDA must too, never fail
 /// closed.
 #[test]
 fn cast_u64_to_i32_narrows_low_word() {
@@ -146,7 +146,7 @@ fn cast_u64_to_i32_narrows_low_word() {
 }
 
 /// U64 → Bool tests the FULL 64 bits (`setp.ne.u64 …, 0`), matching the
-/// reference `value != 0` — never just the low word.
+/// reference `value != 0`: never just the low word.
 #[test]
 fn cast_u64_to_bool_tests_full_width() {
     let kernel = KernelDescriptor {
@@ -498,7 +498,7 @@ fn f32_to_wide_int_cast_fails_closed() {
 }
 
 /// The positive twin: the float targets the validator permits (u32/i32 saturating,
-/// bool truthy, f32 identity) must keep emitting — the fail-closed guard must not
+/// bool truthy, f32 identity) must keep emitting, the fail-closed guard must not
 /// over-reach.
 #[test]
 fn f32_to_permitted_targets_still_emit() {

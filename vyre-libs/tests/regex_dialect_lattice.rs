@@ -1,7 +1,6 @@
 //! Regex dialect lattice test suite.
 
-const DIALECT_LATTICE: &str =
-    include_str!("../../docs/optimization/REGEX_DIALECT_LATTICE.toml");
+const DIALECT_LATTICE: &str = include_str!("../../docs/optimization/REGEX_DIALECT_LATTICE.toml");
 const SCAN_CONFORMANCE_MATRIX: &str =
     include_str!("../../docs/optimization/SCAN_CONFORMANCE_MATRIX.toml");
 
@@ -34,10 +33,7 @@ const REQUIRED_CONSTRUCTS: &[(&str, &str)] = &[
         "VYRE_SCAN_APPROXIMATED_LOOKAROUND_REQUIRES_VERIFIER",
     ),
     ("backreference", "VYRE_SCAN_UNSUPPORTED_BACKREFERENCE"),
-    (
-        "unicode_classes",
-        "VYRE_SCAN_UNSUPPORTED_UNICODE_MODE_GPU",
-    ),
+    ("unicode_classes", "VYRE_SCAN_UNSUPPORTED_UNICODE_MODE_GPU"),
     ("streaming_chunks", "VYRE_SCAN_OK_STREAMING_STATE"),
 ];
 

@@ -91,4 +91,3 @@ fn validate_rejects_wrong_edge_kind_mask_len_for_zero_edges() {
         GraphValidationError::EdgeKindMaskLen { got: 0, .. }
     ));
 }
-

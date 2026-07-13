@@ -136,7 +136,7 @@ impl TunerProgramKey {
         let digest = hasher.finalize();
         let mut key = String::with_capacity(67);
         key.push_str("v1-");
-        push_hex(digest.as_bytes(), &mut key);
+        crate::pipeline::hashing::push_lower_hex(digest.as_bytes(), &mut key);
         Self(key)
     }
 
@@ -144,14 +144,6 @@ impl TunerProgramKey {
     #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
-    }
-}
-
-fn push_hex(bytes: &[u8], out: &mut String) {
-    const HEX: &[u8; 16] = b"0123456789abcdef";
-    for &byte in bytes {
-        out.push(HEX[(byte >> 4) as usize] as char);
-        out.push(HEX[(byte & 0x0f) as usize] as char);
     }
 }
 

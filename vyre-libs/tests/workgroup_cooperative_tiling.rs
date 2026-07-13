@@ -11,7 +11,9 @@ use vyre::ir::Node;
 fn has_barrier(nodes: &[Node]) -> bool {
     nodes.iter().any(|node| match node {
         Node::Barrier { .. } => true,
-        Node::If { then, otherwise, .. } => has_barrier(then) || has_barrier(otherwise),
+        Node::If {
+            then, otherwise, ..
+        } => has_barrier(then) || has_barrier(otherwise),
         Node::Loop { body, .. } | Node::Block(body) => has_barrier(body),
         Node::Region { body, .. } => has_barrier(body),
         _ => false,
@@ -42,7 +44,11 @@ fn layer_norm_runs_cooperatively_tiled_not_scalar() {
         wg[0] > 1,
         "layer_norm must dispatch a cooperative tile (workgroup_size_x > 1), got {wg:?}"
     );
-    assert_eq!(wg, [256, 1, 1], "layer_norm should tile at LAYER_NORM_TILE lanes");
+    assert_eq!(
+        wg,
+        [256, 1, 1],
+        "layer_norm should tile at LAYER_NORM_TILE lanes"
+    );
     assert!(
         has_barrier(program.entry()),
         "a cooperative layer_norm must use a workgroup barrier to synchronize its reduction"

@@ -141,11 +141,11 @@ mod tests {
 
         assert!(
             !production.contains(".expect(") && !production.contains(".unwrap("),
-            "Fix: bitset_not CPU parity wrappers must not use bare .unwrap()/.expect() — use an explicit panic!() with the error."
+            "Fix: bitset_not CPU parity wrappers must not use bare .unwrap()/.expect() (use an explicit panic!() with the error)."
         );
         assert!(
             !production.contains(concat!("eprintln", "!(\"vyre-primitives bitset_not")),
-            "Fix: bitset_not CPU oracle must not log-and-return empty on error (silently masks a parity divergence, Law 10) — fail loud via panic!() so callers use try_cpu_ref_into."
+            "Fix: bitset_not CPU oracle must not log-and-return empty on error (silently masks a parity divergence, Law 10) (fail loud via panic!() so callers use try_cpu_ref_into)."
         );
         assert!(
             production.contains("panic!("),

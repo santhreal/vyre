@@ -171,11 +171,11 @@ pub fn build_anchor_dfa_plan(
             });
         }
         let mut bytes = Vec::new();
-        bytes
-            .try_reserve(anchor.bytes.len())
-            .map_err(|source| AnchorDfaPlanError::ReserveFailed {
+        bytes.try_reserve(anchor.bytes.len()).map_err(|source| {
+            AnchorDfaPlanError::ReserveFailed {
                 message: source.to_string(),
-            })?;
+            }
+        })?;
         bytes.extend_from_slice(anchor.bytes);
         owned.push(AnchorDfaLiteral {
             pattern_id: anchor.pattern_id,
@@ -183,13 +183,13 @@ pub fn build_anchor_dfa_plan(
         });
     }
     pattern_slices.extend(owned.iter().map(|anchor| anchor.bytes.as_slice()));
-    let state_budget = usize::try_from(dfa_state_budget)
-        .map_err(|_| AnchorDfaPlanError::DfaBudgetOverflow)?;
+    let state_budget =
+        usize::try_from(dfa_state_budget).map_err(|_| AnchorDfaPlanError::DfaBudgetOverflow)?;
     let dfa_budget_bytes = state_budget
         .checked_mul(1024)
         .ok_or(AnchorDfaPlanError::DfaBudgetOverflow)?;
-    let dfa =
-        dfa_compile_with_budget(&pattern_slices, dfa_budget_bytes).map_err(AnchorDfaPlanError::DfaCompile)?;
+    let dfa = dfa_compile_with_budget(&pattern_slices, dfa_budget_bytes)
+        .map_err(AnchorDfaPlanError::DfaCompile)?;
     Ok(AnchorDfaPlan {
         schema_version: ANCHOR_DFA_PLAN_SCHEMA_VERSION,
         anchors: owned,
@@ -231,12 +231,9 @@ mod tests {
 
     #[test]
     fn anchor_dfa_plan_rejects_empty_anchor_with_fix() {
-        let error = build_anchor_dfa_plan(
-            &[AnchorDfaCandidate::new(3, b"")],
-            64,
-            "regex-verifier:v1",
-        )
-        .expect_err("Fix: empty anchors must reject before DFA compilation");
+        let error =
+            build_anchor_dfa_plan(&[AnchorDfaCandidate::new(3, b"")], 64, "regex-verifier:v1")
+                .expect_err("Fix: empty anchors must reject before DFA compilation");
 
         assert!(matches!(
             error,

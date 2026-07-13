@@ -1,6 +1,6 @@
 [package]
 name = "vyre-frontend-c"
-version = "0.6.4"
+version = "0.6.5"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -40,8 +40,9 @@ smallvec = { workspace = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]
-vyre-driver-cuda = { workspace = true }
-vyre-driver-wgpu = { workspace = true, features = ["c-parser"] }
+vyre-test-support.workspace = true
+vyre-driver-cuda = { path = "../vyre-driver-cuda" }
+vyre-driver-wgpu = { path = "../vyre-driver-wgpu", features = ["c-parser"] }
 vyre-debug.workspace = true
 vyre-lower.workspace = true
 vyre-reference.workspace = true

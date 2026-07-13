@@ -5,8 +5,8 @@ use vyre::ir::{DataType, Program};
 use crate::builder::{check_tensors, BuildOptions};
 use crate::tensor_ref::{TensorRef, TensorRefError};
 
-use super::program::{build_matmul_tiled_program, MatmulTiledProgramSpec};
 use super::mma_fragment::MmaCapabilityRecord;
+use super::program::{build_matmul_tiled_program, MatmulTiledProgramSpec};
 use super::shape::MatrixShape;
 use super::tensor_core_policy::{
     plan_matmul_kernel, F32MatmulMode, MatmulKernelCapabilities, MatmulKernelPath,

@@ -7,6 +7,7 @@ use vyre_foundation::ir::DataType;
 use vyre_primitives::parsing::line_splice_classify::{
     line_splice_classify, line_splice_classify_u8,
 };
+use vyre_primitives::wire::decode_u32_le_bytes_all as unpack_mask;
 use vyre_reference::value::Value;
 
 fn reference_line_splice_classify(source: &[u8]) -> Vec<u32> {
@@ -24,13 +25,6 @@ fn reference_line_splice_classify(source: &[u8]) -> Vec<u32> {
         out.push(u32::from(!(case1 || case2 || case3 || case4 || case5)));
     }
     out
-}
-
-fn unpack_mask(bytes: &[u8]) -> Vec<u32> {
-    bytes
-        .chunks_exact(4)
-        .map(|chunk| u32::from_le_bytes(chunk.try_into().expect("u32 chunk")))
-        .collect()
 }
 
 fn run_program(source: &[u8]) -> Vec<u32> {
@@ -169,4 +163,34 @@ fn u8_program_declares_runtime_sized_source_buffer() {
     assert_eq!(mask.name(), "kept_mask_out");
     assert_eq!(mask.element(), DataType::U32);
     assert_eq!(mask.count(), 64);
+}
+
+#[test]
+fn u8_edge_neighbor_reads_are_oob_clean_not_interpreter_masked() {
+    // The ±2 neighbor guards are `Expr::select` (both arms evaluated), so the U8
+    // source load runs even for edge lanes whose address underflowed (i-2 at i=0)
+    // or overflowed (i+2 at the last byte). `crate::ir_safe::clamped_load_to` must
+    // keep every such load in bounds itself. NOT rely on the reference interpreter's
+    // silent zero-fill (which a real GPU, CUDA doing no bounds-checking, would not do).
+    // A 3-byte splice at both ends maximizes edge-lane neighbor pressure. Assert the
+    // interpreter absorbed ZERO OOB accesses: if the clamp regressed to a raw load,
+    // report.total() would be > 0 here and this would fail.
+    let src = b"\\\nx\\\n"; // splices touching both buffer ends
+    let program = line_splice_classify_u8(src.len() as u32);
+    let zero_mask = vec![0u8; src.len() * 4];
+    let (_outputs, report) = vyre_reference::reference_eval_oob_report(
+        &program,
+        &[Value::from(src.to_vec()), Value::from(zero_mask)],
+    )
+    .expect("raw-u8 line_splice_classify reference evaluation must succeed");
+    assert_eq!(
+        report.total(),
+        0,
+        "Fix: U8 edge neighbor reads must be clamped in-bounds by ir_safe::clamped_load_to, \
+         not left to the interpreter's silent OOB masking (got {} load(s), {} store(s))",
+        report.oob_loads,
+        report.oob_stores
+    );
+    // And the output is still correct at the edges (both splices fully dropped).
+    assert_eq!(run_program_u8(src), vec![0, 0, 1, 0, 0]);
 }

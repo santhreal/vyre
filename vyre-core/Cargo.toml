@@ -1,6 +1,6 @@
 [package]
 name = "vyre"
-version = "0.6.4"
+version = "0.6.5"
 edition.workspace = true
 rust-version.workspace = true
 description = "GPU compute intermediate representation with a standard operation library"
@@ -22,6 +22,7 @@ vyre-driver-wgpu = { workspace = true, optional = true }
 blake3.workspace = true
 
 [dev-dependencies]
+vyre-test-support.workspace = true
 proptest.workspace = true
 toml.workspace = true
 

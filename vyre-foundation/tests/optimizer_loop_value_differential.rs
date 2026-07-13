@@ -1,9 +1,9 @@
 //! Oracle-differential hunt over LOOP value-transforms (directive PRIMARY lane).
 //!
-//! The reference interpreter is the GOLD oracle: every loop transform — whether
+//! The reference interpreter is the GOLD oracle: every loop transform, whether
 //! run inside the full `optimize::optimize` pipeline (Release profile schedules
 //! `loop_strip_mine`, `loop_unroll`, `loop_licm`, `loop_software_pipeline`, …)
-//! or invoked directly — must preserve the byte-exact result of every loop
+//! or invoked directly, must preserve the byte-exact result of every loop
 //! program for every input. This hunts the classic loop-miscompile shapes:
 //! off-by-one bounds, dropped/duplicated iterations, loop-variable leakage into
 //! prologue/epilogue, hoisting a non-invariant subexpression, and reordering a
@@ -150,7 +150,7 @@ fn loop_programs() -> Vec<(&'static str, Program)> {
 
     // { out[i] = in[i] << 1; out[i+N] = in[i] >> 1 }   (two independent stores
     // into the two halves of one output buffer; fission target. vyre IR permits
-    // at most one output buffer — V022 — so disjoint sinks are index-disjoint
+    // at most one output buffer. V022, so disjoint sinks are index-disjoint
     // regions of a single buffer, which is the real fission shape anyway.)
     let fission = Program::wrapped(
         vec![
@@ -255,7 +255,7 @@ fn full_optimize_preserves_every_loop_program_value() {
 
 #[test]
 fn each_loop_pass_preserves_every_loop_program_value() {
-    // (label, transform) — every loop pass applied to every program must
+    // (label, transform), every loop pass applied to every program must
     // preserve the oracle result, whether or not it fires on that shape.
     type Pass = fn(Program) -> vyre_foundation::optimizer::PassResult;
     let passes: [(&str, Pass); 6] = [

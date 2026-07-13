@@ -27,7 +27,7 @@ use vyre_driver_wgpu::WgpuBackend;
 use vyre_runtime::megakernel::BatchRuleProgram;
 
 /// Sentinel byte that appears ONLY in long files, at an offset past every short
-/// file's length — so its match is reachable only after the short lanes in a
+/// file's length, so its match is reachable only after the short lanes in a
 /// subgroup have already exited their loop.
 const MARKER: u8 = b'@';
 
@@ -52,7 +52,7 @@ fn default_dispatcher_keeps_recall_under_file_length_divergence() {
     // Interleave many SHORT files (no marker, ~24 scan iterations) with LONG
     // files whose ONLY marker sits at offset 300 (reached only after ~300
     // iterations). Within any subgroup mixing the two, the short lanes exit long
-    // before the long lanes find their marker — the exact divergence that the old
+    // before the long lanes find their marker, the exact divergence that the old
     // hierarchical hit writer mishandled.
     const FILES: usize = 1024;
     const SHORT_LEN: usize = 24;

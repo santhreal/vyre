@@ -165,7 +165,7 @@ fn resident_batch_scratch_clear_retains_nested_allocations_but_hides_logical_bat
 /// callers see the error. This test verifies:
 /// 1. A valid call returns `Ok(scratch)` with the correct preallocated shape.
 /// 2. The preallocated scratch has exactly `batch_count` rows each with
-///    `output_slots_per_batch` output slots — NOT an empty default.
+///    `output_slots_per_batch` output slots. NOT an empty default.
 /// 3. `resource_capacity()` and `batch_capacity()` reflect the reservation,
 ///    not zero (the shape an empty default would have had).
 #[test]

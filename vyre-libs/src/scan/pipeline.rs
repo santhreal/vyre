@@ -69,7 +69,7 @@ impl<E: MatchScan> Pipeline<E> {
     ///
     /// Unlike [`Self::reference_scan_processed`], a CPU-stepper failure (a
     /// haystack exceeding the `u32` match ABI) propagates as a [`BackendError`]
-    /// instead of aborting — and instead of being swallowed into an empty
+    /// instead of aborting, and instead of being swallowed into an empty
     /// match set, which would be a silent recall lie (Law 10). This mirrors the
     /// [`Self::scan_processed`] GPU contract: every full-pipeline entry point
     /// reports failure through the same error type so a consumer recovers

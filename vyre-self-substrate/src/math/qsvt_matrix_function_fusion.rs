@@ -50,7 +50,7 @@
 
 use crate::dispatch_buffers::{
     ceil_div_u32, checked_square_cells, decode_u32_output_exact, ensure_input_slots,
-    write_u32_slice_le_bytes,
+    write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::hardware::scratch::reserve_vec_capacity_or_panic;
 use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
@@ -273,13 +273,21 @@ pub fn transport_residual_fixed_via_with_scratch_into(
         n,
         chebyshev_order,
     );
-    ensure_input_slots(&mut scratch.inputs, 3);
+    // Real-backend dispatch-input contract: one input per INPUT-CONSUMING buffer in buffer order 
+    // the 3 RO inputs + `chebyshev_filter`'s plain-ReadWrite `output` (3, n words) and `scratch`
+    // (4, 2n double-words), each needing a zero-filled slot the kernel writes. Passing only the 3 RO
+    // buffers fails the backend's strict `validate_input_lengths` count.
+    let out_bytes = (n as usize) * std::mem::size_of::<u32>();
+    let scratch_bytes = 2 * out_bytes;
+    ensure_input_slots(&mut scratch.inputs, 5);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], dispatch_cost_scaled_fixed);
     write_u32_slice_le_bytes(&mut scratch.inputs[1], weights_fixed);
     write_u32_slice_le_bytes(&mut scratch.inputs[2], coeffs_fixed);
+    write_zero_bytes(&mut scratch.inputs[3], out_bytes);
+    write_zero_bytes(&mut scratch.inputs[4], scratch_bytes);
     let outputs = dispatcher.dispatch(
         &program,
-        &scratch.inputs[..3],
+        &scratch.inputs[..5],
         Some([ceil_div_u32(n, 256), 1, 1]),
     )?;
     let output = outputs.first().ok_or_else(|| {
@@ -327,7 +335,8 @@ mod tests {
             grid_override: Option<[u32; 3]>,
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
             assert_eq!(grid_override, Some([1, 1, 1]));
-            assert_eq!(inputs.len(), 3);
+            // chebyshev_filter: 3 RO (cost/weights/coeffs) + plain-RW output(3)+scratch(4) = 5.
+            assert_eq!(inputs.len(), 5);
             let matrix = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
             let weights = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
             let coeffs = crate::hardware::dispatch_buffers::read_u32s(&inputs[2]);

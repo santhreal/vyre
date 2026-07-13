@@ -4,7 +4,8 @@ use crate::serial::wire::tags::{
     atomic_op_from_tag, bin_op_from_tag, data_type_from_tag, un_op_from_tag,
 };
 use crate::serial::wire::{
-    Expr, Node, Reader, MAX_ARGS, MAX_DECODE_DEPTH, MAX_MESH_AXES, MAX_NODES, MAX_TENSOR_RANK,
+    Expr, Node, Reader, MAX_ARGS, MAX_DECODE_DEPTH, MAX_MESH_AXES, MAX_NODES,
+    MAX_OPAQUE_PAYLOAD_LEN, MAX_TENSOR_RANK,
 };
 
 impl Reader<'_> {
@@ -29,7 +30,8 @@ impl Reader<'_> {
     #[inline]
     pub(crate) fn nodes(&mut self) -> Result<Vec<Node>, String> {
         let count = self.bounded_len(MAX_NODES, "node count")?;
-        let mut nodes = Vec::with_capacity(count);
+        let mut nodes = Vec::new();
+        self.reserve_wire_vec(&mut nodes, count, "node count")?;
         for _ in 0..count {
             nodes.push(self.node()?);
         }
@@ -51,10 +53,21 @@ impl Reader<'_> {
     /// * `6` – `Block` (nested node list)
     /// * `7` – `Barrier`
     /// * `8` – `IndirectDispatch` (count buffer name string, count offset `u64`)
-    /// * `9` – `AsyncLoad` (tag string)
+    /// * `9` – `AsyncLoad` (source string, destination string, offset
+    ///   expression, size expression, tag string)
     /// * `10` – `AsyncWait` (tag string)
+    /// * `11` – `Region` (generator string, `source_region` presence byte +
+    ///   optional generator-ref string, body node list)
+    /// * `12` – `AsyncStore` (source string, destination string, offset
+    ///   expression, size expression, tag string)
     /// * `13` – `Trap` (address expression, tag string)
     /// * `14` – `Resume` (tag string)
+    /// * `15` – `AllReduce` (buffer string, collective-op tag, group `u32`)
+    /// * `16` – `AllGather` (input string, output string, group `u32`)
+    /// * `17` – `ReduceScatter` (input string, output string, collective-op
+    ///   tag, group `u32`)
+    /// * `18` – `Broadcast` (buffer string, root `u32`, group `u32`)
+    /// * `0x80` – `Opaque` (extension kind string, bounded payload)
     /// * any other tag – rejected as unknown.
     ///
     /// # Recursion guard (L.1.35)
@@ -184,7 +197,8 @@ impl Reader<'_> {
             }
             0x80 => {
                 let kind = self.string()?;
-                let payload_len = self.bounded_len(MAX_ARGS * 1024, "opaque node payload")?;
+                let payload_len =
+                    self.bounded_len(MAX_OPAQUE_PAYLOAD_LEN, "opaque node payload")?;
                 let payload = self.bytes(payload_len)?;
                 crate::extension::decode_opaque_node(&kind, &payload)
             }
@@ -217,6 +231,12 @@ impl Reader<'_> {
     ///   expected-expr flag, value expr)
     /// * `15` – `LitF32` (`f32` reinterpreted from `u32` bits)
     /// * `16` – `Fma` (a expr, b expr, c expr)
+    /// * `17` – `SubgroupReduce` (reduce-op tag, value expr)
+    /// * `18` – `SubgroupShuffle` (value expr, lane expr)
+    /// * `19` – `SubgroupBallot` (cond expr)
+    /// * `20` – `SubgroupLocalId`
+    /// * `21` – `SubgroupSize`
+    /// * `0x80` – `Opaque` (extension kind string, bounded payload)
     /// * any other tag – rejected as unknown.
     ///
     /// # Recursion guard (L.1.35)
@@ -253,8 +273,17 @@ impl Reader<'_> {
     ///
     /// # Wire-format tag semantics
     ///
-    /// * `12` – dynamic-length `Array` type: a little-endian `u32` element size
-    ///   follows, which must fit in `usize` on the target platform.
+    /// * `0x08` – dynamic-length `Array` type: a little-endian `u32` element
+    ///   size follows, which must fit in `usize` on the target platform.
+    /// * `0x13` – `Handle` (`u32` type id).
+    /// * `0x14` – `Vec` (nested element `DataType`, `u8` lane count).
+    /// * `0x15` – `TensorShaped` (nested element `DataType`, rank-bounded
+    ///   `u32` shape dimensions).
+    /// * `0x16`/`0x17` – `SparseCsr`/`SparseCoo` (nested element `DataType`).
+    /// * `0x18` – `SparseBsr` (nested element `DataType`, `u32` block rows/cols).
+    /// * `0x1E` – `DeviceMesh` (axis-count-bounded `u32` axes).
+    /// * `0x1F` – `Quantized` (nested storage `DataType`, scale, zero-point).
+    /// * `0x80` – `Opaque` (`u32` extension id).
     /// * any other value – forwarded to `data_type_from_tag`, which maps
     ///   fixed scalar tags (`u8`/`i8`/`u32`/etc.) to their `DataType`
     ///   variants. Unknown scalar tags are rejected there.
@@ -264,6 +293,9 @@ impl Reader<'_> {
     /// * `element_size` > `usize::MAX` on the current target → rejected with a
     ///   `Fix:` error advising decode on a supported target or rejection of the
     ///   blob.
+    /// * Nested `DataType` recursion (Vec/Sparse*/Quantized) counts against the
+    ///   shared [`MAX_DECODE_DEPTH`] budget via [`Reader::data_type`], rejecting
+    ///   deeply nested hostile chains before stack overflow.
     ///
     /// # Return semantics
     ///
@@ -272,6 +304,22 @@ impl Reader<'_> {
     ///   scalar tag).
     #[inline]
     pub(crate) fn data_type(&mut self) -> Result<DataType, String> {
+        // Recursion guard (L.1.35): `DataType` nests through Box (Vec/Sparse*/
+        // Quantized) and is reachable from `Expr::Cast` on the untrusted
+        // `from_wire()` path. Share the same depth counter/budget as node()/
+        // expr() so a hostile chain of nested type tags cannot stack-overflow.
+        if self.depth >= MAX_DECODE_DEPTH {
+            return Err(format!(
+                "Fix: IR wire format exceeds maximum decode depth {MAX_DECODE_DEPTH}; flatten deeply nested DataType trees or reject this untrusted blob."
+            ));
+        }
+        self.depth += 1;
+        let result = self.data_type_inner();
+        self.depth -= 1;
+        result
+    }
+
+    fn data_type_inner(&mut self) -> Result<DataType, String> {
         let tag = self.u8()?;
         if tag == 0x08 {
             let element_size = usize::try_from(self.u32()?).map_err(|err| {
@@ -471,7 +519,8 @@ impl Reader<'_> {
             11 => {
                 let op_id = self.string()?.into();
                 let count = self.bounded_len(MAX_ARGS, "call argument count")?;
-                let mut args = Vec::with_capacity(count);
+                let mut args = Vec::new();
+                self.reserve_wire_vec(&mut args, count, "call argument count")?;
                 for _ in 0..count {
                     args.push(self.expr()?);
                 }
@@ -528,7 +577,8 @@ impl Reader<'_> {
             21 => Ok(Expr::SubgroupSize),
             0x80 => {
                 let kind = self.string()?;
-                let payload_len = self.bounded_len(MAX_ARGS * 1024, "opaque expression payload")?;
+                let payload_len =
+                    self.bounded_len(MAX_OPAQUE_PAYLOAD_LEN, "opaque expression payload")?;
                 let payload = self.bytes(payload_len)?;
                 crate::extension::decode_opaque_expr(&kind, &payload)
             }

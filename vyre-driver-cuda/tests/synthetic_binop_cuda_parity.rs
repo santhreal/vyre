@@ -1,12 +1,12 @@
 //! Parity for the u32 mulhi / abs_diff / saturating / rotate binops against
-//! Rust/oracle on the live CUDA device — the PTX/CUDA twin of the wgpu
+//! Rust/oracle on the live CUDA device, the PTX/CUDA twin of the wgpu
 //! `synthetic_binop_parity` gate.
 //!
 //! These ops are the class the naga signed-`Modulo` miscompile proved can be
 //! silently wrong on real silicon, and the PTX backend lowers them DIFFERENTLY
 //! from naga's multi-step `vec2`/`select` synthesis (PTX has native `mul.hi.u32`,
 //! `vabsdiff`, funnel-shift `shf`, and `*.sat` forms), so naga's GPU-locked
-//! result transfers NOTHING — the PTX route needs its own live-GPU proof. No
+//! result transfers NOTHING, the PTX route needs its own live-GPU proof. No
 //! CUDA test exercised mulhi / abs_diff / saturating_{add,sub,mul} /
 //! rotate_{left,right} directly with overflow/edge operands; a wrong native
 //! instruction, an unmasked rotate amount, or a missing saturate clamp would be

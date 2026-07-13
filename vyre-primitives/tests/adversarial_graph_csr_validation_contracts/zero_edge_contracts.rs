@@ -45,4 +45,3 @@ fn csr_cpu_ref_nonzero_nodes_zero_edges() {
     );
     assert_eq!(out, vec![0], "zero edges → empty output frontier");
 }
-

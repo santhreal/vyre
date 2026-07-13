@@ -11,9 +11,7 @@ fn buffers_equal_ignoring_declaration_order_handles_permuted_buffers() {
         BufferDecl::output("out", 0, DataType::U32).with_count(1),
     ];
     assert_ne!(buffers_a.as_slice(), buffers_b.as_slice());
-    assert!(super::super::meta::buffers_equal_ignoring_declaration_order(
-        &buffers_a, &buffers_b
-    ));
+    assert!(super::super::meta::buffers_equal_ignoring_declaration_order(&buffers_a, &buffers_b));
 }
 
 #[test]

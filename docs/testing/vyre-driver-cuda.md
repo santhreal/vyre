@@ -1,4 +1,4 @@
-# Testing program — vyre-driver-cuda
+# Testing program, vyre-driver-cuda
 
 | Kind | Location |
 |------|----------|

@@ -70,4 +70,3 @@ fn csr_cpu_ref_rejects_non_monotonic_edge_start_gt_end() {
         0xFFFF_FFFF,
     );
 }
-

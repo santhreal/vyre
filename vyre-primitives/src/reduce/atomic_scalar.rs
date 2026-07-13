@@ -1,3 +1,25 @@
+//! Single-workgroup atomic scalar reductions.
+//!
+//! Every reduction here (`Sum`, `Min`, `Max`, `CountNonZero`, `PopcountSum`, `AnyNonZero`,
+//! `AllNonZero`) folds a u32 `ValueSet` into ONE output slot via a grid-stride loop and a single
+//! atomic accumulator. The kernel is single-workgroup by construction: the `lane == 0` identity
+//! init and the WORKGROUP-scoped `SeqCst` barrier only synchronize within one workgroup, so exactly
+//! one workgroup (a `[1, 1, 1]` dispatch of `WORKGROUP_SIZE` lanes) is meant to run it.
+//!
+//! To stay correct even when a caller (or a shape-inferred grid) fires extra workgroups, the whole
+//! accumulate loop is gated on `WorkgroupId == 0` (the canonical "first workgroup" predicate, shared
+//! with `reduce::workgroup_tree`'s `FirstWorkgroup` scope). Extra workgroups then no-op instead of
+//! double-counting the non-idempotent sums. See `atomic_grid_stride_u32`.
+//!
+//! Performance: this path serializes every element through one global atomic on a single output
+//! slot, so at large input sizes the accumulator contention dominates. It is NOT subgroup-lowered
+//! (the subgroup-first pass only rewrites `workgroup_sum_`/`workgroup_max_`/`workgroup_min_`
+//! generators). For large reductions prefer `reduce::workgroup_tree` (its standalone
+//! `workgroup_sum_u32`/`workgroup_max_u32`/... builders), which reduce per-lane partials in
+//! workgroup memory and lower to native `subgroup_add`/`subgroup_reduce` on capable backends. Use
+//! this atomic path for small `ValueSet`s or where a single-atomic kernel is simpler than staging
+//! scratch.
+
 use std::sync::Arc;
 
 use vyre_foundation::ir::model::expr::Ident;
@@ -313,26 +335,42 @@ where
         Node::Barrier {
             ordering: vyre_foundation::MemoryOrdering::SeqCst,
         },
-        Node::loop_for(
-            "chunk",
-            Expr::u32(0),
-            chunk_count,
-            vec![
-                Node::let_bind(
-                    "i",
-                    Expr::add(
-                        Expr::mul(Expr::var("chunk"), Expr::u32(WORKGROUP_SIZE)),
-                        lane.clone(),
+        // Gate the ENTIRE grid-stride loop on `WorkgroupId == 0`, the canonical "first workgroup"
+        // predicate this codebase already uses for single-workgroup reductions (see
+        // `reduce::workgroup_tree::WorkgroupReductionScope::FirstWorkgroup` and the subgroup lowering
+        // pass). The predicate is loop-invariant, so it gates the loop once rather than being
+        // re-tested every chunk. This makes the reduction correct under ANY dispatch grid: only the
+        // first workgroup accumulates and any extra workgroups skip the whole loop as a no-op. Absent
+        // it, a caller (or the reference interpreter's buffer-shape grid inference) that fires
+        // `ceil(count/256)` workgroups for `count > 256` would have every extra workgroup re-run the
+        // grid-stride and DOUBLE-COUNT the non-idempotent Sum/PopcountSum/CountNonZero; idempotent
+        // Max/Min/Or/And silently absorb it. The kernel is single-workgroup by construction (the
+        // `lane == 0` identity init + the WORKGROUP-scoped `SeqCst` barrier), and this fails extra
+        // workgroups closed. The `lane == 0` init and the barrier stay unconditional so the barrier
+        // is reached uniformly by every lane in every workgroup.
+        Node::if_then(
+            Expr::is_first_workgroup(),
+            vec![Node::loop_for(
+                "chunk",
+                Expr::u32(0),
+                chunk_count,
+                vec![
+                    Node::let_bind(
+                        "i",
+                        Expr::add(
+                            Expr::mul(Expr::var("chunk"), Expr::u32(WORKGROUP_SIZE)),
+                            lane.clone(),
+                        ),
                     ),
-                ),
-                Node::if_then(
-                    Expr::lt(Expr::var("i"), Expr::u32(count)),
-                    vec![Node::let_bind(
-                        "_acc_prev",
-                        atomic(out, value(input, Expr::var("i"))),
-                    )],
-                ),
-            ],
+                    Node::if_then(
+                        Expr::lt(Expr::var("i"), Expr::u32(count)),
+                        vec![Node::let_bind(
+                            "_acc_prev",
+                            atomic(out, value(input, Expr::var("i"))),
+                        )],
+                    ),
+                ],
+            )],
         ),
     ];
 

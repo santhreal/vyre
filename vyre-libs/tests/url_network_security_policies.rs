@@ -1,9 +1,7 @@
 //! Url network security policies test suite.
 
-const URL_POLICY: &str =
-    include_str!("../../docs/optimization/URL_CANONICALIZATION_POLICY.toml");
-const SSRF_GUARDS: &str =
-    include_str!("../../docs/optimization/SSRF_DNS_REBINDING_GUARDS.toml");
+const URL_POLICY: &str = include_str!("../../docs/optimization/URL_CANONICALIZATION_POLICY.toml");
+const SSRF_GUARDS: &str = include_str!("../../docs/optimization/SSRF_DNS_REBINDING_GUARDS.toml");
 
 #[test]
 fn url_canonicalization_policy_records_parser_normalization_host_scheme_port_and_origin_rules() {

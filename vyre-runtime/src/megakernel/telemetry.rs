@@ -4,7 +4,9 @@
 //! `read_done_count`, `read_epoch`, and `read_metrics`. This module adds a
 //! single structured snapshot surface useful for wrappers like VyreOffload.
 
-use super::protocol::{control, slot, ARG0_WORD, OPCODE_WORD, STATUS_WORD, TENANT_WORD};
+use super::protocol::{
+    control, read_word, slot, ARG0_WORD, OPCODE_WORD, STATUS_WORD, TENANT_WORD,
+};
 use super::scaling::{
     MegakernelLaunchPolicy, MegakernelLaunchRecommendation, MegakernelLaunchRequest,
     PriorityRequeueAccounting,
@@ -28,13 +30,6 @@ pub use types::{
 };
 
 const SLOT_WORDS_USIZE: usize = 16;
-
-fn read_word(buf: &[u8], word_idx: usize) -> Option<u32> {
-    let off = word_idx.checked_mul(4)?;
-    let end = off.checked_add(4)?;
-    let bytes = buf.get(off..end)?;
-    Some(u32::from_le_bytes(bytes.try_into().ok()?))
-}
 
 fn try_read_slot_chunk_word(slot_bytes: &[u8], word_idx: u32) -> Result<u32, PipelineError> {
     let word_idx = telemetry_u32_to_usize(word_idx, "slot word index")?;

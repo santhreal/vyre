@@ -1,7 +1,7 @@
 //! Real-GPU proof for the literal-set PRESENCE-bitmap output mode.
 //!
 //! 1. CORRECTNESS (the soundness gate): the GPU presence bitmap must mark EXACTLY
-//!    the set of pattern ids the CPU reference scan reports — no missed pattern
+//!    the set of pattern ids the CPU reference scan reports, no missed pattern
 //!    (recall) and no fabricated pattern (precision). Runs on whatever the wgpu
 //!    backend resolves to (the RTX 5090 here); skips cleanly if no GPU.
 //! 2. THROUGHPUT: on a match-DENSE haystack (the keyhog phase-1 regime, ~1 hit per
@@ -160,6 +160,6 @@ fn presence_bitmap_matches_reference_pattern_set_and_is_faster_dense() {
     // the triple-append path. (Correctness is asserted above; this pins the win.)
     assert!(
         presence_mbps > scan_mbps,
-        "presence ({presence_mbps:.1} MB/s) was not faster than triple scan ({scan_mbps:.1} MB/s) on a dense haystack — the output-mode lever regressed"
+        "presence ({presence_mbps:.1} MB/s) was not faster than triple scan ({scan_mbps:.1} MB/s) on a dense haystack, the output-mode lever regressed"
     );
 }

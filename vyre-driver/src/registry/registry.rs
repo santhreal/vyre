@@ -243,7 +243,7 @@ impl DialectRegistry {
         });
 
         // Returning an empty op list on verify failure silently hides a
-        // corrupt/duplicate extern registry — every downstream op lookup then
+        // corrupt/duplicate extern registry, every downstream op lookup then
         // fails as "unknown op" with no hint of the real cause (Law 10). A
         // registry that cannot verify is a startup-integrity bug; fail loud.
         if let Err(errors) = vyre_foundation::extern_registry::verify() {

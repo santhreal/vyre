@@ -14,7 +14,7 @@
 //! 3. **Large-file advisory**: a staged `*.rs` file over the
 //!    `LARGE_FILE_ADVISORY_LINES` line guideline is *flagged for review*,
 //!    not failed. Crossing 500 lines is a prompt to ask whether the file
-//!    has grown a second responsibility worth splitting — it is a
+//!    has grown a second responsibility worth splitting, it is a
 //!    guideline, not a law. The hard size cap (a genuine god-file ceiling
 //!    with a ratcheted per-file exception list) lives in
 //!    `scripts/check_max_file_size.sh`, not here.

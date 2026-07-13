@@ -344,10 +344,7 @@ fn single_subgroup_reduce_body(
     match scope {
         ReductionScope::EveryWorkgroup => vec![store_node, Node::barrier()],
         ReductionScope::FirstWorkgroup => vec![
-            Node::if_then(
-                Expr::eq(Expr::WorkgroupId { axis: 0 }, Expr::u32(0)),
-                vec![store_node],
-            ),
+            Node::if_then(Expr::is_first_workgroup(), vec![store_node]),
             Node::barrier(),
         ],
     }
@@ -404,15 +401,9 @@ fn two_level_subgroup_reduce_body(
             nodes
         }
         ReductionScope::FirstWorkgroup => vec![
-            Node::if_then(
-                Expr::eq(Expr::WorkgroupId { axis: 0 }, Expr::u32(0)),
-                first_level,
-            ),
+            Node::if_then(Expr::is_first_workgroup(), first_level),
             Node::barrier(),
-            Node::if_then(
-                Expr::eq(Expr::WorkgroupId { axis: 0 }, Expr::u32(0)),
-                second_level,
-            ),
+            Node::if_then(Expr::is_first_workgroup(), second_level),
             Node::barrier(),
         ],
     }
@@ -568,7 +559,9 @@ mod tests {
             | Expr::UnOp { operand: index, .. }
             | Expr::Cast { value: index, .. }
             | Expr::SubgroupBallot { cond: index }
-            | Expr::SubgroupReduce { value: index, .. } => expr_contains_select_false(index, predicate),
+            | Expr::SubgroupReduce { value: index, .. } => {
+                expr_contains_select_false(index, predicate)
+            }
             Expr::BinOp { left, right, .. }
             | Expr::SubgroupShuffle {
                 value: left,
@@ -606,7 +599,7 @@ mod tests {
             vec![
                 Node::if_then(
                     Expr::and(
-                        Expr::eq(Expr::WorkgroupId { axis: 0 }, Expr::u32(0)),
+                        Expr::is_first_workgroup(),
                         Expr::lt(Expr::var("local"), Expr::u32(2)),
                     ),
                     vec![Node::Store {
@@ -621,7 +614,7 @@ mod tests {
                 Node::barrier(),
                 Node::if_then(
                     Expr::and(
-                        Expr::eq(Expr::WorkgroupId { axis: 0 }, Expr::u32(0)),
+                        Expr::is_first_workgroup(),
                         Expr::lt(Expr::var("local"), Expr::u32(1)),
                     ),
                     vec![Node::Store {
@@ -730,7 +723,8 @@ mod tests {
     fn lowers_every_workgroup_max_to_subgroup_reduce_max() {
         // workgroup_max_f32 must now lower to the native subgroup Max reduction
         // instead of being kept as the slow shared-memory tree.
-        let Node::Region { body, .. } = workgroup_sum_region("scratch", ReductionScope::EveryWorkgroup)
+        let Node::Region { body, .. } =
+            workgroup_sum_region("scratch", ReductionScope::EveryWorkgroup)
         else {
             panic!("workgroup_sum_region must build a Region");
         };
@@ -778,7 +772,8 @@ mod tests {
         // The u32 twin: workgroup_max_u32 must ALSO lower to subgroup_reduce(Max).
         // The lowering recognizes the `workgroup_max_` prefix with a u32 value
         // type, so the new primitive gets the fast warp-reduction path for free.
-        let Node::Region { body, .. } = workgroup_sum_region("scratch", ReductionScope::EveryWorkgroup)
+        let Node::Region { body, .. } =
+            workgroup_sum_region("scratch", ReductionScope::EveryWorkgroup)
         else {
             panic!("workgroup_sum_region must build a Region");
         };
@@ -816,10 +811,11 @@ mod tests {
 
     #[test]
     fn lowers_workgroup_min_f32_to_subgroup_reduce_min() {
-        // workgroup_min_f32 must lower to subgroup_reduce(Min) — the warp-reduce
+        // workgroup_min_f32 must lower to subgroup_reduce(Min), the warp-reduce
         // fast path. A missing Min prefix arm would leave the slow shared-memory
-        // tree in place (correct, but pessimal — Law 7).
-        let Node::Region { body, .. } = workgroup_sum_region("scratch", ReductionScope::EveryWorkgroup)
+        // tree in place (correct, but pessimal. Law 7).
+        let Node::Region { body, .. } =
+            workgroup_sum_region("scratch", ReductionScope::EveryWorkgroup)
         else {
             panic!("workgroup_sum_region must build a Region");
         };
@@ -855,9 +851,10 @@ mod tests {
 
     #[test]
     fn lowers_workgroup_min_u32_to_subgroup_reduce_min() {
-        // The u32 twin of the Min lowering — exercises the unsigned value-type
+        // The u32 twin of the Min lowering, exercises the unsigned value-type
         // branch of workgroup_min_value_type.
-        let Node::Region { body, .. } = workgroup_sum_region("scratch", ReductionScope::EveryWorkgroup)
+        let Node::Region { body, .. } =
+            workgroup_sum_region("scratch", ReductionScope::EveryWorkgroup)
         else {
             panic!("workgroup_sum_region must build a Region");
         };
@@ -894,9 +891,10 @@ mod tests {
     #[test]
     fn lowers_two_level_workgroup_max_uses_neg_inf_neutral() {
         // The two-level max reduction must fill out-of-range lanes with the
-        // max identity (-inf), not 0 — a 0 fill would clobber all-negative
+        // max identity (-inf), not 0, a 0 fill would clobber all-negative
         // inputs. This is the op-aware neutral.
-        let Node::Region { body, .. } = workgroup_sum_region("scratch", ReductionScope::EveryWorkgroup)
+        let Node::Region { body, .. } =
+            workgroup_sum_region("scratch", ReductionScope::EveryWorkgroup)
         else {
             panic!("workgroup_sum_region must build a Region");
         };
@@ -916,7 +914,8 @@ mod tests {
             panic!("expected Region");
         };
         assert!(
-            node_contains_subgroup_reduce_max(&body[0]) && node_contains_subgroup_reduce_max(&body[3]),
+            node_contains_subgroup_reduce_max(&body[0])
+                && node_contains_subgroup_reduce_max(&body[3]),
             "both levels of the 256-lane max reduction must use subgroup_reduce(Max): {body:?}"
         );
         assert!(
@@ -967,9 +966,9 @@ mod tests {
         }
         fn node_has(node: &Node) -> bool {
             match node {
-                Node::Let { value, .. } | Node::Assign { value, .. } | Node::Store { value, .. } => {
-                    expr_has(value)
-                }
+                Node::Let { value, .. }
+                | Node::Assign { value, .. }
+                | Node::Store { value, .. } => expr_has(value),
                 Node::If { then, .. } => then.iter().any(node_has),
                 _ => false,
             }

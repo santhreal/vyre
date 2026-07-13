@@ -8,7 +8,7 @@
 //! reversed-index expression into the adjoint body).
 //!
 //! Completeness is load-bearing: a missed `Expr`/`Node` variant would silently
-//! leave a stale `var` reference behind — a wrong loop tiling or a wrong
+//! leave a stale `var` reference behind, a wrong loop tiling or a wrong
 //! reversed gradient. Every variant that holds a nested `Expr` is handled
 //! explicitly; the catch-all only covers leaf variants that provably carry no
 //! variable reference.

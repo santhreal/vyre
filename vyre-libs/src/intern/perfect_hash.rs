@@ -350,9 +350,13 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "CHD perfect-hash construction failed")]
-    fn infallible_builder_panics_on_duplicates() {
-        let _ = build_chd([("dup", 1_u32), ("dup", 2_u32)]);
+    fn infallible_builder_returns_empty_on_duplicates() {
+        // `build_chd` folds construction errors into an empty table; the
+        // fallible `try_build_chd` surfaces them (see `duplicate_keys_rejected`).
+        let ph = build_chd([("dup", 1_u32), ("dup", 2_u32)]);
+        assert_eq!(ph.len(), 0);
+        assert!(ph.is_empty());
+        assert_eq!(ph.lookup("dup"), None);
     }
 
     #[test]

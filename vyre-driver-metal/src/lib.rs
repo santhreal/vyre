@@ -2062,7 +2062,7 @@ mod tests {
             .compile_native(&program, &DispatchConfig::default())
             .expect("Fix: Metal compile_native must succeed for a valid program.");
 
-        // A real CompiledPipeline must not be None — Metal always returns Some(arc).
+        // A real CompiledPipeline must not be None. Metal always returns Some(arc).
         let pipeline = compiled.expect(
             "Fix: Metal compile_native must return Some(CompiledPipeline), not Ok(None)."
         );
@@ -2152,7 +2152,7 @@ mod tests {
              got: {snapshot:?}"
         );
 
-        // Verify the count is 0 (no resident buffers allocated yet) — a
+        // Verify the count is 0 (no resident buffers allocated yet), a
         // concrete value assertion, not just shape.
         let count_entry = snapshot
             .iter()

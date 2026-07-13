@@ -111,4 +111,3 @@ fn unpack_i4x8_via_rejects_shape_errors_before_dispatch() {
     let err = unpack_i4x8_via(&QuantizedDispatcher, &[0], 0).expect_err("zero lanes must fail");
     assert!(err.to_string().contains("lane_count > 0"));
 }
-

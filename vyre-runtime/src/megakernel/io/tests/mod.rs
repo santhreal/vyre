@@ -426,7 +426,7 @@ fn submit_dma_read_rejects_non_empty_slot() {
     );
 }
 
-/// Regression: `queue_word_index` silently returned 0 on 32-bit overflow — corrupting
+/// Regression: `queue_word_index` silently returned 0 on 32-bit overflow, corrupting
 /// slot 0's OP_TYPE word. The infallible wrapper is removed; `try_queue_word_index`
 /// must return `Err(PipelineError::Backend(...))` on overflow rather than 0.
 ///
@@ -437,7 +437,7 @@ fn submit_dma_read_rejects_non_empty_slot() {
 /// On 64-bit hosts the u32 multiply cannot overflow (max is 4294967295 * 8 = 34G
 /// which fits). The canonical overflow is tested on 32-bit; on 64-bit we verify that
 /// `try_queue_word_index` surfaces the error when the *word* itself overflows usize
-/// (using u32::MAX as the word argument — this overflows usize on 32-bit).
+/// (using u32::MAX as the word argument (this overflows usize on 32-bit)).
 #[cfg(target_pointer_width = "32")]
 #[test]
 fn queue_word_index_overflow_returns_structured_error_not_zero_32bit() {
@@ -462,14 +462,14 @@ fn queue_word_index_overflow_returns_structured_error_not_zero_32bit() {
 /// as slot_idx fits in u32 only on 64-bit (where the value is too large for u32).
 /// We use a direct arithmetic overflow via `usize::MAX` in `base.checked_mul`:
 /// pass a slot_idx whose base word product wraps. On 64-bit this requires a very
-/// large slot_idx — we force it by passing u32::MAX for both slot_idx AND word so
+/// large slot_idx, we force it by passing u32::MAX for both slot_idx AND word so
 /// that `base + word` overflows.
 #[test]
 fn queue_word_index_with_max_word_returns_structured_error() {
     // u32::MAX as the word argument: on 32-bit, usize::try_from(u32::MAX) fails if
     // usize is 16-bit, succeeds on 32-bit but the add overflows.
     // On 64-bit: slot=0, word=u32::MAX=4294967295 which fits usize, and 0*8+4294967295
-    // = 4294967295 — this succeeds (Ok). That's fine: the important invariant is that
+    // = 4294967295, this succeeds (Ok). That's fine: the important invariant is that
     // when slot_idx * IO_SLOT_WORDS + word truly overflows, Err is returned not 0.
     //
     // For the cross-platform invariant we test the checked overflow path directly:
@@ -480,7 +480,7 @@ fn queue_word_index_with_max_word_returns_structured_error() {
         // overflow_slot * IO_SLOT_WORDS wraps.
         let result = try_queue_word_index(slot_as_u32, 0);
         // It must either succeed (if usize is wide enough that the value fits)
-        // or return a structured error — never silently return 0.
+        // or return a structured error (never silently return 0).
         if let Err(ref err) = result {
             match err {
                 PipelineError::Backend(msg) => {
@@ -492,7 +492,7 @@ fn queue_word_index_with_max_word_returns_structured_error() {
                 other => panic!("expected PipelineError::Backend for index overflow, got {other:?}"),
             }
         }
-        // If it succeeded, the platform can represent the value — that's also correct.
+        // If it succeeded, the platform can represent the value (that's also correct).
     }
     // If overflow_slot doesn't fit in u32 the test is vacuously satisfied: the
     // caller cannot construct such a slot_idx, so the overflow path is unreachable.
@@ -515,7 +515,7 @@ fn publish_slot_failure_does_not_silently_corrupt_queue_storage() {
     queue.publish_slot(0, 1, 512, 7).unwrap();
     let before: Vec<u8> = queue.as_bytes().to_vec();
 
-    // Attempt to publish into a slot beyond the queue's capacity — this must
+    // Attempt to publish into a slot beyond the queue's capacity, this must
     // return QueueFull from the bounds guard without touching any queue storage.
     let err = queue
         .publish_slot(IO_SLOT_COUNT, 99, 4096, 42)
@@ -526,7 +526,7 @@ fn publish_slot_failure_does_not_silently_corrupt_queue_storage() {
     );
 
     // The entire queue buffer must be byte-for-byte identical to before the
-    // failed call — no word was written to any slot, including slot 0.
+    // failed call (no word was written to any slot, including slot 0).
     let after: Vec<u8> = queue.as_bytes().to_vec();
     assert_eq!(
         before, after,

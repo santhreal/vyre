@@ -37,16 +37,12 @@ impl OptimizerDispatcher for QuantizedDotDispatcher {
         grid_override: Option<[u32; 3]>,
     ) -> Result<Vec<Vec<u8>>, DispatchError> {
         assert_eq!(grid_override, Some([1, 1, 1]));
-        assert_eq!(inputs.len(), 5);
+        // Four input-consuming buffers (lhs/rhs/lhs_scale/rhs_scale RO); `out` is backend-allocated.
+        assert_eq!(inputs.len(), 4);
         let lhs = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
         let rhs = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
         let lhs_scale = crate::hardware::dispatch_buffers::read_f32s(&inputs[2])[0];
         let rhs_scale = crate::hardware::dispatch_buffers::read_f32s(&inputs[3])[0];
-        let lane_count = (inputs[4].len() / std::mem::size_of::<f32>()) as u32;
-        assert_eq!(
-            lane_count, 1,
-            "Fix: dot output slot must reserve exactly one f32 word."
-        );
         let logical_lane_count = (lhs.len() as u32 - 1) * 8
             + if lhs.last().copied().unwrap_or(0) == 0 {
                 8
@@ -83,18 +79,14 @@ impl OptimizerDispatcher for QuantizedMatvecDispatcher {
         inputs: &[Vec<u8>],
         grid_override: Option<[u32; 3]>,
     ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        assert_eq!(inputs.len(), 4);
+        // Three input-consuming buffers (weights/x/row_scales RO); `out` is backend-allocated.
+        assert_eq!(inputs.len(), 3);
         let weights = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
         let x = crate::hardware::dispatch_buffers::read_f32s(&inputs[1]);
         let row_scales = crate::hardware::dispatch_buffers::read_f32s(&inputs[2]);
         let rows = row_scales.len() as u32;
         let cols = x.len() as u32;
         assert_eq!(grid_override, Some([rows, 1, 1]));
-        assert_eq!(
-            inputs[3].len(),
-            row_scales.len() * std::mem::size_of::<f32>(),
-            "Fix: matvec output slot must reserve exactly one f32 per row."
-        );
         let out = i4x8_matvec_f32_scaled_cpu(&weights, &x, &row_scales, rows, cols);
         Ok(vec![vyre_primitives::wire::pack_f32_slice(&out)])
     }
@@ -109,7 +101,8 @@ impl OptimizerDispatcher for QuantizedBatchedMatvecDispatcher {
         inputs: &[Vec<u8>],
         grid_override: Option<[u32; 3]>,
     ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        assert_eq!(inputs.len(), 4);
+        // Three input-consuming buffers (weights/x_batches/row_scales RO); `out` is backend-allocated.
+        assert_eq!(inputs.len(), 3);
         let weights = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
         let x_batches = crate::hardware::dispatch_buffers::read_f32s(&inputs[1]);
         let row_scales = crate::hardware::dispatch_buffers::read_f32s(&inputs[2]);
@@ -122,11 +115,6 @@ impl OptimizerDispatcher for QuantizedBatchedMatvecDispatcher {
             .expect("Fix: fake batched matvec dispatcher requires nonzero batch")
             as u32;
         assert_eq!(rows as usize, row_scales.len());
-        assert_eq!(
-            inputs[3].len(),
-            batch as usize * rows as usize * std::mem::size_of::<f32>(),
-            "Fix: batched matvec output slot must reserve exactly one f32 per batch row."
-        );
         let out = i4x8_batched_matvec_f32_scaled_cpu(
             &weights,
             &x_batches,
@@ -148,7 +136,9 @@ impl OptimizerDispatcher for QuantizedBatchedMatmulDispatcher {
         inputs: &[Vec<u8>],
         grid_override: Option<[u32; 3]>,
     ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        assert_eq!(inputs.len(), 5);
+        // Four input-consuming buffers (weights/activations/row_scales/batch_scales RO); `out` is
+        // backend-allocated.
+        assert_eq!(inputs.len(), 4);
         let weights = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
         let activations = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
         let row_scales = crate::hardware::dispatch_buffers::read_f32s(&inputs[2]);
@@ -161,11 +151,6 @@ impl OptimizerDispatcher for QuantizedBatchedMatmulDispatcher {
             );
         };
         assert_eq!(grid_x, ceil_div_u32(batch * rows, 64));
-        assert_eq!(
-            inputs[4].len(),
-            batch as usize * rows as usize * std::mem::size_of::<f32>(),
-            "Fix: batched matmul output slot must reserve exactly one f32 per batch row."
-        );
         let words_per_activation = activations.len() / batch as usize;
         let cols = (words_per_activation as u32) * 8;
         let out = i4x8_batched_matmul_f32_scaled_cpu(
@@ -190,7 +175,9 @@ impl OptimizerDispatcher for QuantizedBatchedMatmulTop1Dispatcher {
         inputs: &[Vec<u8>],
         grid_override: Option<[u32; 3]>,
     ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        assert_eq!(inputs.len(), 6);
+        // Four input-consuming buffers (weights/activations/row_scales/batch_scales RO); the single
+        // `out` buffer is backend-allocated.
+        assert_eq!(inputs.len(), 4);
         let weights = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
         let activations = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
         let row_scales = crate::hardware::dispatch_buffers::read_f32s(&inputs[2]);
@@ -198,16 +185,6 @@ impl OptimizerDispatcher for QuantizedBatchedMatmulTop1Dispatcher {
         let rows = row_scales.len() as u32;
         let batch = batch_scales.len() as u32;
         assert_eq!(grid_override, Some([ceil_div_u32(batch, 64), 1, 1]));
-        assert_eq!(
-            inputs[4].len(),
-            batch as usize * std::mem::size_of::<f32>(),
-            "Fix: top-1 score output slot must reserve exactly one f32 per batch."
-        );
-        assert_eq!(
-            inputs[5].len(),
-            batch as usize * std::mem::size_of::<u32>(),
-            "Fix: top-1 index output slot must reserve exactly one u32 per batch."
-        );
         let words_per_activation = activations.len() / batch as usize;
         let cols = (words_per_activation as u32) * 8;
         let (scores, indices) = i4x8_batched_matmul_top1_f32_scaled_cpu(
@@ -219,10 +196,13 @@ impl OptimizerDispatcher for QuantizedBatchedMatmulTop1Dispatcher {
             rows,
             cols,
         );
-        Ok(vec![
-            vyre_primitives::wire::pack_f32_slice(&scores),
-            vyre_primitives::wire::pack_u32_slice(&indices),
-        ])
+        // Model the real backend: ONE `batch*2` f32 output buffer, scores in the first `batch`
+        // words then indices-as-f32 in the next `batch`: exactly what the
+        // `i4x8_batched_matmul_top1_f32_scaled` kernel writes into `out`.
+        let mut packed = Vec::with_capacity(batch as usize * 2);
+        packed.extend_from_slice(&scores);
+        packed.extend(indices.iter().map(|&i| i as f32));
+        Ok(vec![vyre_primitives::wire::pack_f32_slice(&packed)])
     }
 }
 
@@ -233,4 +213,3 @@ fn pack_i4_rows(rows: &[&[i32]]) -> Vec<u32> {
     }
     packed
 }
-

@@ -114,7 +114,7 @@ pub fn dense_matvec_byte_lut_into(
     lut: &mut Vec<u32>,
 ) {
     // Clearing the LUT to empty on failure silently produces an all-zero
-    // boolean-matvec (every product reads zero) — a silent fallback (Law 10).
+    // boolean-matvec (every product reads zero) (a silent fallback (Law 10)).
     // Fail loud; callers use try_dense_matvec_byte_lut_into.
     if let Err(error) = try_dense_matvec_byte_lut_into(columns, tile_count, dst_words, lut) {
         panic!("vyre-primitives dense boolean-matvec LUT build failed: {error}");
@@ -139,15 +139,9 @@ pub fn try_dense_matvec_byte_lut_into(
     let tile_count = usize_from_u32(tile_count, "tile_count");
     let dst_words = usize_from_u32(dst_words, "dst_words");
     let lut_words = try_checked_dense_lut_words_usize(tile_count, dst_words)?;
-    if lut_words > lut.capacity() {
-        lut.try_reserve_exact(lut_words - lut.capacity())
-            .map_err(|err| {
-                format!(
-                "dense Four-Russians LUT builder could not reserve {lut_words} output words: {err}"
-            )
-            })?;
-    }
-    lut.clear();
+    crate::hostbuf::reserve_exact_cleared(lut, lut_words).map_err(|err| {
+        format!("dense Four-Russians LUT builder could not reserve {lut_words} output words: {err}")
+    })?;
     lut.resize(lut_words, 0);
 
     for tile in 0..tile_count {
@@ -380,15 +374,12 @@ pub fn try_cpu_ref_into(
             lut.len()
         ));
     }
-    out.clear();
-    if lhs.len() > out.capacity() {
-        out.try_reserve(lhs.len() - out.capacity()).map_err(|err| {
-            format!(
-                "four_russians_apply_byte_lut CPU oracle could not reserve {} output words: {err}",
-                lhs.len()
-            )
-        })?;
-    }
+    crate::hostbuf::reserve_exact_cleared(out, lhs.len()).map_err(|err| {
+        format!(
+            "four_russians_apply_byte_lut CPU oracle could not reserve {} output words: {err}",
+            lhs.len()
+        )
+    })?;
     out.extend(lhs.iter().zip(rhs.iter()).map(|(left, right)| {
         let mut word = 0u32;
         for lane in 0..4 {
@@ -462,14 +453,11 @@ pub fn try_dense_matvec_cpu_ref_into(
 
     let tile_count = usize_from_u32(tile_count, "tile_count");
     let dst_words = usize_from_u32(dst_words, "dst_words");
-    out.clear();
-    if dst_words > out.capacity() {
-        out.try_reserve(dst_words - out.capacity()).map_err(|err| {
-            format!(
-                "dense Four-Russians matvec CPU oracle could not reserve {dst_words} output words: {err}"
-            )
-        })?;
-    }
+    crate::hostbuf::reserve_exact_cleared(out, dst_words).map_err(|err| {
+        format!(
+            "dense Four-Russians matvec CPU oracle could not reserve {dst_words} output words: {err}"
+        )
+    })?;
     out.resize(dst_words, 0);
 
     for tile in 0..tile_count {

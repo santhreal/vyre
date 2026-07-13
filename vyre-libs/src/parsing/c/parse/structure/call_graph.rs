@@ -159,7 +159,7 @@ mod tests {
         expected = "c11_build_call_graph requires a literal num_tokens for buffer sizing"
     )]
     fn non_literal_num_tokens_panics_at_build_time() {
-        // InvocationId is a non-literal expression — must trip the guard.
+        // InvocationId is a non-literal expression (must trip the guard).
         let non_literal = Expr::InvocationId { axis: 0 };
         let _ = c11_build_call_graph(
             "calls",

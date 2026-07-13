@@ -121,76 +121,117 @@ fn assert_unsupported_error(
     }
 }
 
+// NOTE (contract update 2026-07-03): edge anchors `^ $ \A \z` are SUPPORTED
+// (they lower to accept-flag metadata via `build_pattern_hir`, independently
+// locked by `regex_compile::tests::text_anchors_compile_to_accept_flags`), and
+// the state cap rose from 64 to `STATE_CAP` (= 1024), so moderate repetitions
+// compile. Only NON-edge lookaround (`\b` / `\B`) is `Unsupported`, and its
+// feature string is now `"non-edge lookaround assertion"`. These tests were
+// rewritten from a stale contract (all-anchors/small-repetition rejection) to
+// the current, deliberately-tested behavior.
+
+/// A leading `^` is an edge anchor: the pattern compiles and sets the
+/// start-anchor accept flag (it is not a rejected lookaround).
 #[test]
-fn unsupported_anchor_start_caret() {
-    assert_unsupported_error(compile_regex_set(&["^foo"]).map(|_| ()), 0, "anchors");
+fn anchor_start_caret_compiles_with_start_flag() {
+    let compiled = compile_regex_set(&["^foo"]).expect("^ is a supported edge anchor");
+    assert_eq!(compiled.plan.accept_start_anchored, vec![true]);
+    assert_eq!(compiled.plan.accept_end_anchored, vec![false]);
 }
 
+/// A trailing `$` is an edge anchor: it compiles and sets the end-anchor flag.
 #[test]
-fn unsupported_anchor_end_dollar() {
-    assert_unsupported_error(compile_regex_set(&["foo$"]).map(|_| ()), 0, "anchors");
+fn anchor_end_dollar_compiles_with_end_flag() {
+    let compiled = compile_regex_set(&["foo$"]).expect("$ is a supported edge anchor");
+    assert_eq!(compiled.plan.accept_start_anchored, vec![false]);
+    assert_eq!(compiled.plan.accept_end_anchored, vec![true]);
 }
 
+/// A word boundary `\b` is a NON-edge lookaround assertion: unsupported, and it
+/// maps to the lookaround diagnostic (not a generic "anchors" rejection).
 #[test]
-fn unsupported_word_boundary() {
-    assert_unsupported_error(compile_regex_set(&["\\bword"]).map(|_| ()), 0, "anchors");
-}
-
-#[test]
-fn unsupported_negated_word_boundary() {
-    assert_unsupported_error(compile_regex_set(&["\\Bword"]).map(|_| ()), 0, "anchors");
-}
-
-#[test]
-fn unsupported_anchor_start_alt() {
-    assert_unsupported_error(compile_regex_set(&["\\Afoo"]).map(|_| ()), 0, "anchors");
-}
-
-#[test]
-fn unsupported_anchor_end_alt() {
-    assert_unsupported_error(compile_regex_set(&["\\z"]).map(|_| ()), 0, "anchors");
-}
-
-#[test]
-fn unsupported_repetition_upper_bound_too_large() {
-    assert_unsupported_error(
-        compile_regex_set(&["a{0,128}"]).map(|_| ()),
-        0,
-        "repetition",
+fn word_boundary_is_unsupported_lookaround() {
+    let err = compile_regex_set(&["\\bword"]).expect_err("\\b is unsupported");
+    let as_result: Result<(), RegexCompileError> = Err(err.clone());
+    assert_unsupported_error(as_result, 0, "lookaround");
+    assert_eq!(
+        err.diagnostic_code(),
+        Some("VYRE_SCAN_APPROXIMATED_LOOKAROUND_REQUIRES_VERIFIER"),
     );
 }
 
+/// A negated word boundary `\B` is likewise an unsupported non-edge lookaround.
 #[test]
-fn unsupported_repetition_min_bound_too_large() {
-    assert_unsupported_error(compile_regex_set(&["a{65,}"]).map(|_| ()), 0, "repetition");
+fn negated_word_boundary_is_unsupported_lookaround() {
+    assert_unsupported_error(compile_regex_set(&["\\Bword"]).map(|_| ()), 0, "lookaround");
 }
 
+/// `\A` (start-of-text) lowers to the same supported edge anchor as `^`.
 #[test]
-fn unsupported_repetition_exact_too_large() {
-    assert_unsupported_error(compile_regex_set(&["a{65}"]).map(|_| ()), 0, "repetition");
+fn text_start_alt_backslash_a_compiles_with_start_flag() {
+    let compiled = compile_regex_set(&["\\Afoo"]).expect("\\A is a supported edge anchor");
+    assert_eq!(compiled.plan.accept_start_anchored, vec![true]);
+    assert_eq!(compiled.plan.accept_end_anchored, vec![false]);
 }
 
+/// `\z` (end-of-text) lowers to the same supported edge anchor as `$`.
 #[test]
-fn unsupported_at_index_1_anchor() {
-    assert_unsupported_error(
-        compile_regex_set(&["abc", "^def"]).map(|_| ()),
-        1,
-        "anchors",
+fn text_end_alt_backslash_z_compiles_with_end_flag() {
+    let compiled = compile_regex_set(&["foo\\z"]).expect("\\z is a supported edge anchor");
+    assert_eq!(compiled.plan.accept_start_anchored, vec![false]);
+    assert_eq!(compiled.plan.accept_end_anchored, vec![true]);
+}
+
+/// Moderate bounded repetitions are well under `STATE_CAP` (1024) and compile.
+/// (Under the old 64-state cap these were rejected; the cap has since risen, as
+/// locked by `bounded_repetition_above_old_cap_compiles_under_state_cap`.)
+#[test]
+fn moderate_repetitions_under_state_cap_compile() {
+    for pattern in ["a{0,128}", "a{65,}", "a{65}"] {
+        let compiled = compile_regex_set(&[pattern])
+            .unwrap_or_else(|e| panic!("{pattern} is under the state cap and must compile: {e}"));
+        assert!(
+            (compiled.plan.num_states as usize) <= STATE_CAP,
+            "{pattern} must fit the state cap"
+        );
+    }
+}
+
+/// A repetition large enough to blow the state cap reports `TooManyStates`: a
+/// state-budget failure, not a syntax-unsupported rejection.
+#[test]
+fn repetition_over_state_cap_reports_too_many_states() {
+    // A literal body repeated past the cap: `a{2000}` needs ~2000 states.
+    match compile_regex_set(&["a{2000}"]) {
+        Err(RegexCompileError::TooManyStates { cap, .. }) => assert_eq!(cap, STATE_CAP),
+        other => panic!("expected TooManyStates for an over-cap repetition, got {other:?}"),
+    }
+}
+
+/// A supported edge anchor at pattern index 1 compiles and sets only that
+/// pattern's start-anchor flag.
+#[test]
+fn edge_anchor_at_index_1_compiles_with_per_pattern_flag() {
+    let compiled = compile_regex_set(&["abc", "^def"]).expect("edge anchor at index 1 compiles");
+    assert_eq!(compiled.plan.accept_start_anchored, vec![false, true]);
+    assert_eq!(compiled.plan.accept_end_anchored, vec![false, false]);
+}
+
+/// A moderate repetition at index 1 also compiles.
+#[test]
+fn moderate_repetition_at_index_1_compiles() {
+    assert!(
+        compile_regex_set(&["abc", "x{0,128}"]).is_ok(),
+        "a 128-bounded repetition at index 1 is under the state cap"
     );
 }
 
+/// A lone `^` is a supported edge anchor: it compiles and sets the start flag.
 #[test]
-fn unsupported_at_index_1_repetition() {
-    assert_unsupported_error(
-        compile_regex_set(&["abc", "x{0,128}"]).map(|_| ()),
-        1,
-        "repetition",
-    );
-}
-
-#[test]
-fn unsupported_lone_anchor_caret() {
-    assert_unsupported_error(compile_regex_set(&["^"]).map(|_| ()), 0, "anchors");
+fn lone_anchor_caret_compiles_with_start_flag() {
+    let compiled = compile_regex_set(&["^"]).expect("lone ^ is a supported edge anchor");
+    assert_eq!(compiled.plan.accept_start_anchored, vec![true]);
+    assert_eq!(compiled.plan.accept_end_anchored, vec![false]);
 }
 
 // ---------------------------------------------------------------------------

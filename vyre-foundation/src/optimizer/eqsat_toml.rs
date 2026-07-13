@@ -164,9 +164,8 @@ fn read_eqsat_toml_bounded(path: &Path) -> std::io::Result<String> {
     loop {
         let read = std::io::Read::read(&mut reader, &mut chunk)?;
         if read == 0 {
-            return String::from_utf8(bytes).map_err(|error| {
-                std::io::Error::new(std::io::ErrorKind::InvalidData, error)
-            });
+            return String::from_utf8(bytes)
+                .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidData, error));
         }
         let read = read as u64;
         total = total.saturating_add(read);

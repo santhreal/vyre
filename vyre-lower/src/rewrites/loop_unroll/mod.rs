@@ -49,7 +49,7 @@ fn unroll_body(body: &KernelBody) -> KernelBody {
     // all levels. A shallow scan (only body.ops + one level of
     // child.ops) misses result-ids in grandchildren and deeper, so the
     // first renumber_body call could assign a new id that collides with
-    // an id already present in a grandchild — silently producing
+    // an id already present in a grandchild, silently producing
     // duplicate result-ids in the unrolled output.
     let mut next_id: u32 = max_result_id_in_subtree(body).map(|m| m + 1).unwrap_or(0);
 
@@ -665,7 +665,7 @@ mod tests {
         // grandchild) contains r100. The shallow scan only saw the loop
         // body's direct ops (max=10), missing r100. On the first unroll
         // renumber_body assigned new ids starting at 11, eventually
-        // assigning 100 to something — colliding with the grandchild's r100.
+        // assigning 100 to something (colliding with the grandchild's r100).
         //
         // The fixed scan uses max_result_id_in_subtree which walks all
         // descendants, so next_id starts above 100 and no collision occurs.

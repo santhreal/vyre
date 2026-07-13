@@ -1,0 +1,17 @@
+[package]
+name = "vyre-test-support"
+version = "0.6.5"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Shared test-only harness helpers for the vyre workspace: the ONE canonical registry/coverage CLOSURE gate (source-enumerates `pub fn -> Program` builders and asserts each is registered, tested, or explicitly waived). Dev-dependency only; never a runtime dependency."
+readme = "README.md"
+keywords = ["vyre", "testing", "harness", "coverage", "registry"]
+categories = ["development-tools::testing"]
+publish = false
+
+[lints]
+workspace = true

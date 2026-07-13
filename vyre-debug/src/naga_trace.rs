@@ -49,7 +49,7 @@ pub fn failure_trace_wgsl(
 /// Load a bind-result log file produced by vyre-emit-naga.
 ///
 /// Returns `Err` on any I/O or parse failure so the caller can surface the
-/// problem. Never silently returns a partial or empty result — the complete
+/// problem. Never silently returns a partial or empty result, the complete
 /// log is required for accurate trace data.
 pub fn load_bind_result_log(
     path: &str,

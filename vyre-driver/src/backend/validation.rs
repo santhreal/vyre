@@ -42,7 +42,7 @@ pub fn default_supported_ops() -> &'static std::collections::HashSet<OpId> {
     static OPS: std::sync::OnceLock<std::collections::HashSet<OpId>> = std::sync::OnceLock::new();
     OPS.get_or_init(|| {
         let mut ops = std::collections::HashSet::new();
-        let _ = ops.try_reserve(CORE_SUPPORTED_OP_IDS.len());
+        ops.reserve(CORE_SUPPORTED_OP_IDS.len());
         ops.extend(CORE_SUPPORTED_OP_IDS.iter().copied().map(Arc::<str>::from));
         ops
     })
@@ -59,7 +59,7 @@ pub fn default_supported_ops_with_trap() -> &'static std::collections::HashSet<O
         let base = default_supported_ops();
         let reserve = base.len().saturating_add(1);
         let mut ops = std::collections::HashSet::new();
-        let _ = ops.try_reserve(reserve);
+        ops.reserve(reserve);
         ops.extend(base.iter().cloned());
         ops.insert(Arc::<str>::from("vyre.node.trap"));
         ops

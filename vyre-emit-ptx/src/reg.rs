@@ -49,7 +49,7 @@ impl PtxType {
             DataType::I8 | DataType::I16 | DataType::I32 => Ok(Self::I32),
             DataType::F16 | DataType::BF16 | DataType::F32 => Ok(Self::F32),
             // PTX 64-bit registers (`%rd`, `.u64`) are typeless bit containers
-            // — signedness is per-instruction, not per-register — so both U64
+            //: signedness is per-instruction, not per-register, so both U64
             // and I64 map here. `validate::cast::cast_is_valid` allows
             // `i32 -> i64`, and `emit_cast`'s `(I32, U64) => cvt.s64.s32`
             // sign-extend / `(U32, U64) => cvt.u64.u32` zero-extend arms then

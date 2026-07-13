@@ -1,4 +1,4 @@
-# Testing program — vyre-self-substrate
+# Testing program, vyre-self-substrate
 
 | Kind | Location |
 |------|----------|

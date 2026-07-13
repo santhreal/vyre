@@ -277,25 +277,29 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::dataflow::{PrecisionContract, Soundness};
     use crate::security::facts::{
         finding_from_sanitized_source_to_sink_query, AnalysisFact, AnalysisFactTable,
         AnalysisSourceSpan, FactId, FactKind, SourceToSinkFindingRequest,
     };
     use crate::security::flow_composition::linear_dataflow;
-    use crate::dataflow::{PrecisionContract, Soundness};
 
     #[test]
     fn sanitizer_flow_contract_labels_one_step_and_weir_fixpoint_distinctly() {
         let one_step = sanitized_flow_soundness_contract(SanitizedFlowExecutionMode::OneStep);
-        let fixpoint = sanitized_flow_soundness_contract(
-            SanitizedFlowExecutionMode::FixpointConverged { iterations: 4 },
-        );
+        let fixpoint =
+            sanitized_flow_soundness_contract(SanitizedFlowExecutionMode::FixpointConverged {
+                iterations: 4,
+            });
 
         assert_eq!(one_step.mode.label(), "one_step");
         assert_eq!(one_step.op_id, OP_ID);
         assert_eq!(one_step.soundness, Soundness::MayOver);
         assert!(one_step.sanitizer_filter);
-        assert_eq!(one_step.weir_fact_kind, crate::dataflow::SharedFactKind::Taint);
+        assert_eq!(
+            one_step.weir_fact_kind,
+            crate::dataflow::SharedFactKind::Taint
+        );
         assert_eq!(one_step.weir_role, "weir.flow.one_step.sanitizer_gated");
 
         assert_eq!(fixpoint.mode.label(), "fixpoint_converged");
@@ -324,10 +328,11 @@ mod tests {
 
     #[test]
     fn final_sanitizer_flow_finding_evidence_requires_exact_fixpoint_tag() {
-        let evidence = sanitized_flow_final_finding_soundness(
-            SanitizedFlowExecutionMode::FixpointConverged { iterations: 4 },
-        )
-        .expect("Fix: converged sanitizer flow should emit final finding evidence");
+        let evidence =
+            sanitized_flow_final_finding_soundness(SanitizedFlowExecutionMode::FixpointConverged {
+                iterations: 4,
+            })
+            .expect("Fix: converged sanitizer flow should emit final finding evidence");
 
         assert_eq!(evidence.op_id, FIXPOINT_OP_ID);
         assert_eq!(evidence.soundness, Soundness::Exact);
@@ -418,7 +423,10 @@ mod tests {
         .expect("Fix: positive sanitized source-to-sink query should emit finding");
 
         assert_eq!(bundle.query_id, OP_ID);
-        assert_eq!(bundle.precision_contract, PrecisionContract::ZeroFalsePositive);
+        assert_eq!(
+            bundle.precision_contract,
+            PrecisionContract::ZeroFalsePositive
+        );
         assert_eq!(bundle.soundness, Soundness::MayOver);
         assert_eq!(bundle.primitive_soundness.len(), 1);
         assert_eq!(bundle.primitive_soundness[0].op_id, OP_ID);

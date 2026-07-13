@@ -8,9 +8,8 @@ use super::layout::{
     CSR_FORWARD_OR_CHANGED_CHANGED_BUFFER, CSR_FORWARD_OR_CHANGED_FRONTIER_BUFFER,
     CSR_FORWARD_OR_CHANGED_PARALLEL_WORKGROUP_SIZE, OP_ID,
 };
-use crate::graph::program_graph::{
-    ProgramGraphShape, NAME_EDGE_KIND_MASK, NAME_EDGE_OFFSETS, NAME_EDGE_TARGETS,
-};
+use crate::graph::edge_scan::csr_edge_expand_nodes;
+use crate::graph::program_graph::ProgramGraphShape;
 
 /// Parallel in-place expansion program for production fixed-point drivers.
 ///
@@ -158,14 +157,6 @@ fn csr_forward_or_changed_parallel_body_prefixed_impl(
     let bit_mask = local("bit_mask");
     let src_word = local("src_word");
     let src_active = local("src_active");
-    let edge_start = local("edge_start");
-    let edge_end = local("edge_end");
-    let edge_iter = local("e");
-    let kind_mask = local("kind_mask");
-    let dst = local("dst");
-    let dst_word_idx = local("dst_word_idx");
-    let dst_bit = local("dst_bit");
-    let old = local("old");
     let changed_old = local("changed_old");
     let extra_changed_old = local("extra_changed_old");
 
@@ -187,74 +178,23 @@ fn csr_forward_or_changed_parallel_body_prefixed_impl(
         nodes
     };
 
+    // The neighbor expansion is the ONE canonical CSR edge-scan (identity frontier
+    // index, a single bitset, and `mark_changed` on each newly-set bit). This is
+    // the EDGE-WALK-ONLY level: the source-activity read is done by THIS function
+    // (inline in the non-snapshot path, or snapshotted before a barrier), so it wraps
+    // `csr_edge_expand_nodes` rather than the full `csr_edge_scan_nodes`. Byte-identical
+    // to the previous hand-written `edge_scan` closure. `mark_changed` is borrowed so
+    // both call sites can reuse it.
     let edge_scan = || {
-        vec![
-            Node::let_bind(
-                edge_start.as_str(),
-                Expr::load(NAME_EDGE_OFFSETS, src.clone()),
-            ),
-            Node::let_bind(
-                edge_end.as_str(),
-                Expr::load(NAME_EDGE_OFFSETS, Expr::add(src.clone(), Expr::u32(1))),
-            ),
-            Node::loop_for(
-                edge_iter.as_str(),
-                Expr::var(edge_start.as_str()),
-                Expr::var(edge_end.as_str()),
-                vec![
-                    Node::let_bind(
-                        kind_mask.as_str(),
-                        Expr::load(NAME_EDGE_KIND_MASK, Expr::var(edge_iter.as_str())),
-                    ),
-                    Node::if_then(
-                        Expr::ne(
-                            Expr::bitand(Expr::var(kind_mask.as_str()), Expr::u32(edge_kind_mask)),
-                            Expr::u32(0),
-                        ),
-                        vec![
-                            Node::let_bind(
-                                dst.as_str(),
-                                Expr::load(NAME_EDGE_TARGETS, Expr::var(edge_iter.as_str())),
-                            ),
-                            Node::if_then(
-                                Expr::lt(Expr::var(dst.as_str()), Expr::u32(shape.node_count)),
-                                vec![
-                                    Node::let_bind(
-                                        dst_word_idx.as_str(),
-                                        Expr::shr(Expr::var(dst.as_str()), Expr::u32(5)),
-                                    ),
-                                    Node::let_bind(
-                                        dst_bit.as_str(),
-                                        Expr::shl(
-                                            Expr::u32(1),
-                                            Expr::bitand(Expr::var(dst.as_str()), Expr::u32(31)),
-                                        ),
-                                    ),
-                                    Node::let_bind(
-                                        old.as_str(),
-                                        Expr::atomic_or(
-                                            frontier_out,
-                                            Expr::var(dst_word_idx.as_str()),
-                                            Expr::var(dst_bit.as_str()),
-                                        ),
-                                    ),
-                                    Node::if_then(
-                                        Expr::eq(
-                                            Expr::bitand(
-                                                Expr::var(old.as_str()),
-                                                Expr::var(dst_bit.as_str()),
-                                            ),
-                                            Expr::u32(0),
-                                        ),
-                                        mark_changed(),
-                                    ),
-                                ],
-                            ),
-                        ],
-                    ),
-                ],
-            ),
-        ]
+        csr_edge_expand_nodes(
+            shape,
+            frontier_out,
+            src.clone(),
+            |word| word,
+            &mark_changed,
+            edge_kind_mask,
+            local_prefix,
+        )
     };
 
     if let Some(ordering) = snapshot_barrier {

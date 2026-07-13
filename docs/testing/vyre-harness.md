@@ -1,4 +1,4 @@
-# Testing program — vyre-harness
+# Testing program, vyre-harness
 
 | Kind | Location |
 |------|----------|

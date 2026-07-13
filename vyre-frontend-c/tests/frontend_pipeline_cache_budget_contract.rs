@@ -19,7 +19,7 @@ fn compiled_pipeline_caches_are_entry_and_byte_bounded() {
     // a raw `+`/`+=` that could wrap and defeat the budget. The implementation
     // uses `saturating_add`: on the (physically unreachable, ~2^64-byte) overflow
     // it pins to usize::MAX, which immediately trips the `self.bytes > max_bytes`
-    // eviction loop above — a complete bound, equivalent in safety to a checked
+    // eviction loop above, a complete bound, equivalent in safety to a checked
     // add with an explicit reject branch.
     assert!(cache_utils.contains("saturating_add(entry_bytes)"));
 

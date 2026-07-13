@@ -188,12 +188,12 @@ pub fn build_ac_bounded_ranges_prefilter_program_ext(
         Ok(program) => program,
         Err(error) => {
             // Returning an empty-mask prefilter program would silently suppress
-            // every candidate position — a total recall-loss silent fallback.
+            // every candidate position (a total recall-loss silent fallback).
             // Fail closed instead. Callers that need graceful overflow handling
             // must call try_build_ac_bounded_ranges_prefilter_program_ext
             // directly and shard oversized DFAs across multiple programs.
             panic!(
-                "AC bounded-ranges prefilter program build failed: {error} — \
+                "AC bounded-ranges prefilter program build failed: {error}. \
                  returning an empty-mask program would silently suppress every match; \
                  use try_build_ac_bounded_ranges_prefilter_program_ext and shard oversized DFAs."
             )
@@ -255,34 +255,12 @@ pub fn try_build_ac_bounded_ranges_prefilter_program_ext(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::scan::classic_ac::test_helpers::{decode_match_triples, pattern_lengths};
     use crate::scan::classic_ac::{
         classic_ac_bounded_ranges_scan, classic_ac_candidate_end_byte_mask_words,
         classic_ac_compile,
     };
     use crate::scan::{pack_haystack_u32, pack_u32_slice};
-
-    fn decode_u32(bytes: &[u8]) -> Vec<u32> {
-        bytes
-            .chunks_exact(4)
-            .map(|chunk| u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
-            .collect()
-    }
-
-    fn pattern_lengths(patterns: &[&[u8]]) -> Vec<u32> {
-        patterns
-            .iter()
-            .map(|pattern| pattern.len() as u32)
-            .collect()
-    }
-
-    fn decode_match_triples(outputs: &[vyre_reference::value::Value]) -> Vec<(u32, u32, u32)> {
-        let count = decode_u32(&outputs[0].to_bytes())[0] as usize;
-        let words = decode_u32(&outputs[1].to_bytes());
-        words[..count.saturating_mul(3)]
-            .chunks_exact(3)
-            .map(|chunk| (chunk[0], chunk[1], chunk[2]))
-            .collect()
-    }
 
     #[test]
     fn bounded_ranges_prefilter_reference_eval_matches_cpu_oracle() {
@@ -319,29 +297,30 @@ mod tests {
         assert_eq!(actual, expected);
     }
 
-    /// Regression guard: build_ac_bounded_ranges_prefilter_program_ext must
-    /// never silently return an empty-mask program when the DFA is oversized.
-    /// Before this fix the error arm called eprintln! and fell back to the
-    /// classic_ac_bounded_ranges_prefilter_program_ext with state_count=1 and
-    /// output_records_len=0, causing every candidate position to be suppressed
-    /// with no signal to the caller.
+    /// Behavioral regression guard: the infallible prefilter builder must wire the
+    /// REAL DFA (delegating to the `try_` Ok program), never a degenerate empty-mask
+    /// program (state_count=1, output_records_len=0) that suppresses every candidate.
     #[test]
-    fn infallible_prefilter_builder_panics_not_falls_back() {
-        let src = std::fs::read_to_string(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/src/scan/classic_ac/bounded_ranges/prefilter.rs"
-        ))
-        .expect("Fix: prefilter source must be readable for regression guard");
-        let production = src
-            .split("\n#[cfg(test)]")
-            .next()
-            .expect("Fix: prefilter source must have a test section");
-        // The old silent-fallback arm called classic_ac_bounded_ranges_prefilter_program_ext
-        // directly inside the Err branch. Check it is absent from the production path.
+    fn infallible_prefilter_uses_real_dfa_not_empty_fallback() {
+        let ac = classic_ac_compile(&[b"abc", b"de", b"abcd"]);
+        let via_infallible = build_ac_bounded_ranges_prefilter_program_ext(&ac.dfa, 3, 128, false);
+        let via_try = try_build_ac_bounded_ranges_prefilter_program_ext(&ac.dfa, 3, 128, false)
+            .expect("valid DFA must build");
+        // Binding 3 is output_records: the empty fallback carried 0 here.
+        let records = via_infallible.buffers()[3].count;
+        assert_eq!(records as usize, ac.dfa.output_records.len());
         assert!(
-            !production.contains("eprintln!(\"vyre-libs AC bounded-ranges prefilter"),
-            "build_ac_bounded_ranges_prefilter_program_ext must not silently log and \
-             return an empty-mask program on error — use panic!() instead."
+            records > 0,
+            "infallible prefilter builder must not emit the empty-mask fallback program"
+        );
+        assert_eq!(
+            via_infallible.buffers()[1].count,
+            ac.dfa.state_count.saturating_mul(256)
+        );
+        assert_eq!(via_infallible.buffers().len(), via_try.buffers().len());
+        assert_eq!(
+            via_infallible.buffers()[3].count,
+            via_try.buffers()[3].count
         );
     }
 

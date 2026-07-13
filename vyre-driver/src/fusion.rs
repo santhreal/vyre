@@ -230,7 +230,7 @@ mod tests {
         let mut up = dispatch("overinvoke-a", &["in"], &["stage"]);
         up.workgroup_size = [32, 4, 1]; // 128 invocations > cap 64
         let mut down = dispatch("overinvoke-b", &["stage"], &["out"]);
-        down.workgroup_size = up.workgroup_size; // sizes are equal — not a mismatch
+        down.workgroup_size = up.workgroup_size; // sizes are equal, not a mismatch
 
         let decision = FusionPass::decide(&up, &down, caps, &[]);
 
@@ -257,7 +257,7 @@ mod tests {
 
     #[test]
     fn workgroup_size_mismatch_variant_is_only_returned_when_sizes_actually_differ() {
-        // Mismatch case — must still work correctly.
+        // Mismatch case (must still work correctly).
         let mut up = dispatch("mismatch-a", &["in"], &["mid"]);
         up.workgroup_size = [32, 1, 1];
         let mut down = dispatch("mismatch-b", &["mid"], &["out"]);

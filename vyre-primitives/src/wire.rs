@@ -174,7 +174,7 @@ pub fn pack_u32_slice(words: &[u32]) -> Vec<u8> {
 /// so the wire format is identical across hosts.
 pub fn pack_u32_slice_into(words: &[u32], out: &mut Vec<u8>) {
     if let Err(error) = try_pack_u32_slice_into(words, out) {
-        // Returning empty bytes would upload an EMPTY input buffer to the GPU —
+        // Returning empty bytes would upload an EMPTY input buffer to the GPU 
         // the kernel then scans nothing and silently reports a clean result
         // (Law 10). Fail loud; callers use try_pack_u32_slice_into.
         panic!("vyre-primitives u32 wire pack failed: {error}");
@@ -250,7 +250,7 @@ pub fn pack_bytes_as_u32_slice(bytes: &[u8]) -> Vec<u8> {
     let mut out = Vec::new();
     match try_pack_bytes_as_u32_slice_into(bytes, &mut out) {
         Ok(()) => out,
-        // Empty bytes would upload an empty GPU input buffer — silent scan-nothing
+        // Empty bytes would upload an empty GPU input buffer, silent scan-nothing
         // (Law 10). Fail loud; callers use try_pack_bytes_as_u32_slice_into.
         Err(error) => panic!("vyre-primitives byte-lane wire pack failed: {error}"),
     }
@@ -328,7 +328,7 @@ pub fn pack_f32_slice(values: &[f32]) -> Vec<u8> {
 /// `cast_slice` copy on LE hosts, scalar fallback on BE hosts.
 pub fn pack_f32_slice_into(values: &[f32], out: &mut Vec<u8>) {
     if let Err(error) = try_pack_f32_slice_into(values, out) {
-        // Empty bytes would upload an empty GPU input buffer — silent
+        // Empty bytes would upload an empty GPU input buffer, silent
         // scan-nothing (Law 10). Fail loud; callers use try_pack_f32_slice_into.
         panic!("vyre-primitives f32 wire pack failed: {error}");
     }
@@ -731,7 +731,7 @@ pub fn read_u32_le_word(bytes: &[u8], word_index: usize, label: &str) -> Result<
     Ok(u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
 }
 
-/// Read one little-endian `u32` at a BYTE offset into `bytes` — the byte-addressed
+/// Read one little-endian `u32` at a BYTE offset into `bytes`: the byte-addressed
 /// companion to [`read_u32_le_word`] (which is word-indexed). Use this when the
 /// caller already holds a byte offset rather than a word index; both share the
 /// same checked bounds and actionable diagnostics, so the workspace's byte-offset
@@ -772,7 +772,10 @@ mod tests {
         );
         // Truncation fails closed (bytes 5..9 but only 8 present), never a silent read.
         let err = read_u32_le_at(&bytes, 5, "t").unwrap_err();
-        assert!(err.contains("truncated"), "expected truncation error, got: {err}");
+        assert!(
+            err.contains("truncated"),
+            "expected truncation error, got: {err}"
+        );
     }
 
     #[test]

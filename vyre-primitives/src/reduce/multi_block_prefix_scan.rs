@@ -41,6 +41,11 @@ use vyre_foundation::MemoryOrdering;
 pub const OP_ID_INCLUSIVE_SUM: &str =
     "vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum";
 
+/// Canonical op id for the exclusive-sum element-difference pass that turns the
+/// inclusive multi-block scan into an exclusive one.
+pub const OP_ID_EXCLUSIVE_SUM: &str =
+    "vyre-primitives::reduce::multi_block_prefix_scan_exclusive_sum";
+
 /// Lanes per Pass-A block. 1024 is the universal max-workgroup-size on every
 /// GPU vyre targets.
 pub const BLOCK_LANES: u32 = 1024;
@@ -94,7 +99,7 @@ pub fn multi_block_prefix_scan_sum_u32(input: &str, output: &str, n: u32) -> Pro
 // single-block path (no GridSync), so the entry constructs cleanly without a
 // host-split. Fixtures are `None`: no vyre-primitives differential walks these
 // fixtures today (universal_harness/cpu_witnesses iterate vyre-libs entries),
-// so a witness here would assert nothing — registration is provenance-only.
+// so a witness here would assert nothing (registration is provenance-only).
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
     crate::harness::OpEntry::new(
@@ -119,6 +124,96 @@ fn try_multi_block_prefix_scan_sum_u32(
     }
 
     try_multi_block_prefix_scan_chain(input, output, n)
+}
+
+/// Build an **exclusive** parallel prefix-sum Program over arbitrary `n`:
+/// `output[i] = sum(input[0..i])`, `output[0] = 0`.
+///
+/// This is the offset buffer `math::stream_compact` requires, the single-block
+/// `math::prefix_scan(ScanKind::ExclusiveSum)` already serves `n ≤ 1024`, but a
+/// compaction batch with more than 1024 live candidates had no on-device
+/// exclusive scan and had to convert an inclusive scan to exclusive on host.
+///
+/// Built as `exclusive[i] = inclusive[i] - input[i]`: the tested inclusive
+/// multi-block chain writes an intermediate, then a fused element-difference
+/// pass subtracts the input. Reusing the inclusive chain keeps ONE scan
+/// implementation; the subtract never underflows because an inclusive prefix
+/// sum always includes `input[i]`.
+///
+/// `n == 0` returns an empty Program.
+#[must_use]
+pub fn multi_block_prefix_scan_sum_exclusive_u32(input: &str, output: &str, n: u32) -> Program {
+    match try_multi_block_prefix_scan_sum_exclusive_u32(input, output, n) {
+        Ok(program) => program,
+        Err(error) => {
+            crate::invalid_output_program(OP_ID_EXCLUSIVE_SUM, output, DataType::U32, error)
+        }
+    }
+}
+
+fn try_multi_block_prefix_scan_sum_exclusive_u32(
+    input: &str,
+    output: &str,
+    n: u32,
+) -> Result<Program, String> {
+    if n == 0 {
+        return Ok(Program::empty());
+    }
+    // Intermediate inclusive scan, named off `output` so concurrent exclusive
+    // scans on different outputs never alias.
+    let inclusive = format!("__{output}_mbps_inclusive");
+    let scan = try_multi_block_prefix_scan_sum_u32(input, &inclusive, n)?;
+    let subtract = try_exclusive_difference_pass(&inclusive, input, output, n)?;
+
+    // Fuse failure on two disjoint-buffer passes is a substrate bug and must not
+    // be represented as an empty program (empty is valid elsewhere and would
+    // hide a scan hole (same rule as the inclusive 3-pass chain)).
+    vyre_foundation::execution_plan::fusion::fuse_programs(&[scan, subtract])
+        .map(|program| demote_intermediate_outputs(program, output))
+        .map_err(|error| {
+            format!(
+                "vyre multi_block_prefix_scan exclusive fusion failed for n={n}: {error}. Fix: repair program fusion for the inclusive-scan + element-difference passes; do not substitute an empty Program."
+            )
+        })
+}
+
+/// Element-difference pass: `output[i] = inclusive[i] - input[i]` for `i < n`.
+/// A flat one-lane-per-element Region (no GridSync), so it composes after the
+/// inclusive scan and executes on the reference interpreter for `n ≤ BLOCK_LANES`.
+fn try_exclusive_difference_pass(
+    inclusive: &str,
+    input: &str,
+    output: &str,
+    n: u32,
+) -> Result<Program, String> {
+    // Guard the n*4 byte range the same way the scan passes do before sizing buffers.
+    output_byte_range(n, "exclusive difference pass")?;
+    let t = Expr::InvocationId { axis: 0 };
+    let body = vec![Node::if_then(
+        Expr::lt(t.clone(), Expr::u32(n)),
+        vec![Node::store(
+            output,
+            t.clone(),
+            Expr::sub(
+                Expr::load(inclusive, t.clone()),
+                Expr::load(input, t.clone()),
+            ),
+        )],
+    )];
+
+    Ok(Program::wrapped(
+        vec![
+            BufferDecl::storage(inclusive, 0, BufferAccess::ReadOnly, DataType::U32).with_count(n),
+            BufferDecl::storage(input, 1, BufferAccess::ReadOnly, DataType::U32).with_count(n),
+            BufferDecl::output(output, 2, DataType::U32).with_count(n),
+        ],
+        [BLOCK_LANES, 1, 1],
+        vec![Node::Region {
+            generator: Ident::from(OP_ID_EXCLUSIVE_SUM),
+            source_region: None,
+            body: Arc::new(body),
+        }],
+    ))
 }
 
 fn try_multi_block_prefix_scan_chain(input: &str, output: &str, n: u32) -> Result<Program, String> {
@@ -581,6 +676,45 @@ pub fn try_cpu_ref_into(input: &[u32], out: &mut Vec<u32>) -> Result<(), String>
     Ok(())
 }
 
+/// CPU reference: **exclusive** prefix sum (`out[0] = 0`, `out[i] = sum(in[0..i])`).
+/// The oracle for [`multi_block_prefix_scan_sum_exclusive_u32`]. Fails loud on a
+/// reservation failure rather than returning a short vec that would let a parity
+/// assertion pass on `empty == empty` (Law 10 / Law 6).
+#[must_use]
+#[cfg(any(test, feature = "cpu-parity"))]
+pub fn cpu_ref_exclusive(input: &[u32]) -> Vec<u32> {
+    let mut out = Vec::new();
+    match try_cpu_ref_exclusive_into(input, &mut out) {
+        Ok(()) => out,
+        Err(error) => {
+            panic!(
+                "vyre-primitives multi-block prefix-scan exclusive CPU reference failed: {error}"
+            )
+        }
+    }
+}
+
+/// Fallible exclusive CPU reference writing into caller-owned output storage.
+#[cfg(any(test, feature = "cpu-parity"))]
+pub fn try_cpu_ref_exclusive_into(input: &[u32], out: &mut Vec<u32>) -> Result<(), String> {
+    if input.len() > out.capacity() {
+        out.try_reserve_exact(input.len() - out.capacity())
+            .map_err(|err| {
+                format!(
+                    "multi-block prefix-scan exclusive CPU reference could not reserve {} output words: {err}",
+                    input.len()
+                )
+            })?;
+    }
+    out.clear();
+    let mut acc: u32 = 0;
+    for &x in input {
+        out.push(acc);
+        acc = acc.wrapping_add(x);
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -590,6 +724,194 @@ mod tests {
         assert_eq!(cpu_ref(&[1, 2, 3, 4]), vec![1, 3, 6, 10]);
         assert_eq!(cpu_ref(&[]), Vec::<u32>::new());
         assert_eq!(cpu_ref(&[7]), vec![7]);
+    }
+
+    #[test]
+    fn cpu_ref_exclusive_matches_definition() {
+        assert_eq!(cpu_ref_exclusive(&[1, 2, 3, 4]), vec![0, 1, 3, 6]);
+        assert_eq!(cpu_ref_exclusive(&[]), Vec::<u32>::new());
+        assert_eq!(cpu_ref_exclusive(&[7]), vec![0]);
+    }
+
+    /// The identity the exclusive builder is constructed from:
+    /// `exclusive[i] == inclusive[i] - input[i]` for every element.
+    #[test]
+    fn exclusive_equals_inclusive_minus_input() {
+        let mut state = 0x1234_5678_u32;
+        for _ in 0..500 {
+            state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+            let n = (state % 40) as usize;
+            let input: Vec<u32> = (0..n)
+                .map(|i| (state.rotate_left(i as u32 % 31) % 1000))
+                .collect();
+            let inclusive = cpu_ref(&input);
+            let exclusive = cpu_ref_exclusive(&input);
+            for i in 0..n {
+                assert_eq!(
+                    exclusive[i],
+                    inclusive[i] - input[i],
+                    "exclusive[{i}] must equal inclusive[{i}] - input[{i}] for input {input:?}"
+                );
+            }
+        }
+    }
+
+    /// Execute the NOVEL element-difference pass (a flat, GridSync-free Region) on
+    /// the reference interpreter: `output[i] = inclusive[i] - input[i]`. This is
+    /// the only part of the exclusive scan that is new IR; the inclusive chain it
+    /// composes with is separately tested (and its GPU parity lives in the driver
+    /// harness, same as the inclusive multi-block scan).
+    #[test]
+    fn exclusive_difference_pass_executes_and_subtracts_input() {
+        use std::sync::Arc;
+        use vyre_reference::reference_eval;
+        use vyre_reference::value::Value;
+
+        let input = [3u32, 1, 4, 1, 5, 9, 2, 6];
+        let inclusive = cpu_ref(&input); // [3,4,8,9,14,23,25,31]
+        let n = input.len() as u32;
+        let program = try_exclusive_difference_pass("inclusive", "input", "output", n)
+            .expect("difference pass builds");
+        let to_value = |data: &[u32]| Value::Bytes(Arc::from(crate::wire::pack_u32_slice(data)));
+        let inputs = vec![
+            to_value(&inclusive),
+            to_value(&input),
+            to_value(&vec![0u32; input.len()]),
+        ];
+        let results = reference_eval(&program, &inputs).expect("interpreter runs difference pass");
+        let out: Vec<u32> = results[0]
+            .to_bytes()
+            .chunks_exact(4)
+            .map(|c| u32::from_le_bytes(c.try_into().unwrap()))
+            .collect();
+        assert_eq!(
+            out,
+            cpu_ref_exclusive(&input),
+            "difference pass must yield the exclusive scan"
+        );
+    }
+
+    /// Feed one Value per non-workgroup buffer in binding order (real input for
+    /// the `input`-named buffer, a zero slot for every fused scratch/output),
+    /// run through the reference interpreter, and return the `output` buffer.
+    /// The multi-block chain fuses in intermediate buffers (`__output_mbps_*`),
+    /// so the naive `[input, output]` feed is insufficient; this locates
+    /// `output` among the returned ReadWrite buffers instead of assuming index 0.
+    fn run_full_scan(program: &vyre_foundation::ir::Program, input: &[u32]) -> Vec<u32> {
+        use vyre_foundation::ir::BufferAccess;
+        use vyre_reference::value::Value;
+        let mut inputs = Vec::new();
+        let mut output_idx = None;
+        let mut writable_seen = 0usize;
+        for buf in program.buffers() {
+            if buf.access() == BufferAccess::Workgroup {
+                continue;
+            }
+            let bytes = if buf.name() == "input" {
+                crate::wire::pack_u32_slice(input)
+            } else {
+                vec![0u8; (buf.count() as usize).saturating_mul(4)]
+            };
+            inputs.push(Value::from(bytes));
+            if buf.access() == BufferAccess::ReadWrite {
+                if buf.name() == "output" {
+                    output_idx = Some(writable_seen);
+                }
+                writable_seen += 1;
+            }
+        }
+        let outputs = vyre_reference::reference_eval(program, &inputs)
+            .expect("multi-block scan must execute");
+        let idx = output_idx.expect("output buffer must be a writable result");
+        outputs[idx]
+            .to_bytes()
+            .chunks_exact(4)
+            .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
+            .collect()
+    }
+
+    #[test]
+    fn inclusive_multi_block_chain_matches_oracle_at_large_n() {
+        // n > BLOCK_LANES routes through the fused three-pass GridSync chain, a
+        // different algorithm than the single-block scan. The other large-n
+        // tests (`large_n_emits_three_pass_chain`,
+        // `recursion_handles_million_elements`) assert only STRUCTURE; this
+        // checks the VALUES through reference_eval across exact and off block
+        // boundaries so a broken cross-block carry cannot pass as green.
+        for n in [
+            BLOCK_LANES + 1,
+            BLOCK_LANES + 512,
+            2 * BLOCK_LANES,
+            3 * BLOCK_LANES + 7,
+        ] {
+            // max element 251, so at these sizes the running sum stays well
+            // under u32::MAX: this isolates carry correctness from wrap.
+            let input: Vec<u32> = (0..n).map(|i| (i % 251) + 1).collect();
+            let program = multi_block_prefix_scan_sum_u32("input", "output", n);
+            let actual = run_full_scan(&program, &input);
+            assert_eq!(
+                actual,
+                cpu_ref(&input),
+                "n={n}: inclusive multi-block chain diverged from the scan oracle"
+            );
+        }
+    }
+
+    #[test]
+    fn exclusive_multi_block_chain_matches_oracle_at_large_n() {
+        // The exclusive chain (inclusive chain + element-difference pass) had NO
+        // full-chain value coverage at large n: `exclusive_difference_pass_executes`
+        // only runs the single difference pass at n=8. This exercises the whole
+        // fused exclusive scan through reference_eval past the block boundary.
+        for n in [BLOCK_LANES + 1, 2 * BLOCK_LANES, 3 * BLOCK_LANES + 7] {
+            let input: Vec<u32> = (0..n).map(|i| (i % 251) + 1).collect();
+            let program = multi_block_prefix_scan_sum_exclusive_u32("input", "output", n);
+            let actual = run_full_scan(&program, &input);
+            assert_eq!(
+                actual,
+                cpu_ref_exclusive(&input),
+                "n={n}: exclusive multi-block chain diverged from the exclusive scan oracle"
+            );
+        }
+    }
+
+    #[test]
+    fn exclusive_scan_empty_and_oversized() {
+        // n == 0 -> empty program (no work, no trap).
+        let empty = multi_block_prefix_scan_sum_exclusive_u32("in", "out", 0);
+        assert!(
+            !program_contains_trap(&empty),
+            "n=0 must be an empty, non-trap program"
+        );
+        // Oversized -> executable trap carrying the sizing error, not a panic.
+        let oversized = multi_block_prefix_scan_sum_exclusive_u32("in", "out", u32::MAX);
+        assert_eq!(oversized.buffers()[0].name(), "out");
+        assert!(
+            program_contains_trap(&oversized),
+            "oversized exclusive scan must encode an executable trap"
+        );
+    }
+
+    #[test]
+    fn exclusive_scan_small_and_large_n_declare_in_and_out() {
+        // Small (single-block inclusive path) and large (3-pass GridSync path)
+        // both fuse into a program that reads `in` and writes `out`.
+        for &n in &[1u32, 64, 1024, 2 * BLOCK_LANES] {
+            let program = multi_block_prefix_scan_sum_exclusive_u32("in", "out", n);
+            let names: Vec<&str> = program.buffers().iter().map(BufferDecl::name).collect();
+            assert!(
+                !program_contains_trap(&program),
+                "n={n} valid exclusive scan must not trap"
+            );
+            assert!(
+                names.contains(&"in"),
+                "n={n} must declare input `in`, got {names:?}"
+            );
+            assert!(
+                names.contains(&"out"),
+                "n={n} must declare output `out`, got {names:?}"
+            );
+        }
     }
 
     #[test]
@@ -644,12 +966,12 @@ mod tests {
         // blessed Law-10 fix for an infallible parity wrapper.
         assert!(
             !production.contains(".expect(") && !production.contains(".unwrap("),
-            "Fix: multi-block prefix-scan wrappers must not use bare .unwrap()/.expect() — use an explicit panic!() with the error."
+            "Fix: multi-block prefix-scan wrappers must not use bare .unwrap()/.expect() (use an explicit panic!() with the error)."
         );
         // No SILENT fallback: returning empty on failure masks a parity divergence (Law 10/6).
         assert!(
             !production.contains(concat!("eprintln", "!(\"vyre-primitives multi-block prefix-scan")),
-            "Fix: multi-block prefix-scan CPU oracle must not log-and-return empty on error — fail loud via panic!() so callers use the try_ variant."
+            "Fix: multi-block prefix-scan CPU oracle must not log-and-return empty on error (fail loud via panic!() so callers use the try_ variant)."
         );
         assert!(
             production.contains("panic!("),

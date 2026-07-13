@@ -2,10 +2,10 @@ pub const ASYNC_COMPUTE: Self = Self(1 << 4);
 pub const BASIS_POINTS_DENOMINATOR: u32 = 10_000;
 pub const BF16: Self = Self(1 << 2);
 pub const BINDLESS_RESOURCE_COUNT_THRESHOLD: u32 = 24;
-pub const BUILTIN_BLACKWELL_120: &'static str =
+pub const BUILTIN_BLACKWELL_120: &'static str = include_str!("../devices/blackwell_120.toml");
 pub const CODE_PARSE: DiagnosticCode = DiagnosticCode(std::borrow::Cow::Borrowed("E-TOML-PARSE"));
-pub const COLD_PATH_COST_SCALE: f32 = 1.5;
 pub const COLD_PATH_COST_SCALE_BPS: u32 = 15_000;
+pub const COLD_PATH_COST_SCALE: f32 = 1.5;
 pub const COUNTER_TAIL_BYTES: usize = 8;
 pub const CURRENT_PIPELINE_CACHE_KEY_VERSION: u32 = 1;
 pub const DECAY_HALF_LIFE_S: f64 = 300.0;
@@ -17,45 +17,32 @@ pub const DEFAULT_VALIDATION_HASH_ENTRIES: usize = 8192;
 pub const DEFAULT_VALIDATION_VSA_ENTRIES: usize = 2048;
 pub const DEFAULT_VALIDATION_VSA_SHARDS: usize = 64;
 pub const DEVICE_BUFFER_FEATURE: &str = "DeviceBuffer";
+pub const ENVIRONMENT_FINGERPRINT_VERSION: &str = "vyre-evidence-environment-v1";
 pub const F16: Self = Self(1 << 1);
-pub const HOT_PATH_COST_SCALE: f32 = 0.5;
-pub const HOT_PATH_COST_SCALE_BPS: u32 = 5_000;
-pub const INDIRECT_DISPATCH: Self = Self(1 << 6);
-pub const INDIRECT_DISPATCH_OP_ID: &str = OP_ID;
-pub const MAX_DISK_PIPELINE_BLOB_BYTES: u64 = 64 * 1024 * 1024;
-pub const MAX_HISTORY: usize = 16;
-pub const MIN_ADOPT_SAVINGS_BPS: u64 = 1500;
-pub const MIN_DISPATCHES_FOR_VERDICT: u32 = 8;
-pub const PERSISTENT_THREAD: Self = Self(1 << 8);
-pub const PUSH_CONSTANTS: Self = Self(1 << 5);
-pub const Q16_ONE: u32 = 1 << 16;
-pub const SCHEMA: u32 = 1;
-pub const SPECULATIVE: Self = Self(1 << 7);
-pub const SUBGROUP_OPS: Self = Self(1 << 0);
-pub const TENSOR_CORES: Self = Self(1 << 3);
-pub const TENSOR_CORE_COST_SCALE: f32 = 0.25;
-pub const TENSOR_CORE_COST_SCALE_BPS: u32 = 2_500;
-pub const TRACE_JIT_HOT_SHAPE_THRESHOLD: u32 = 8;
-pub const TRACE_JIT_MIN_CONFIDENCE_BPS: u32 = 6_000; // 60%
-pub const WORKGROUP_CANDIDATES: &[u32] = &[32, 64, 128, 256, 512, 1024];
 pub const fn adapter_caps(self) -> AdapterCaps {
 pub const fn all() -> &'static [SubgroupOp] {
+pub const fn as_str(self) -> &'static str {
 pub const fn backend(self) -> &'static str {
 pub const fn bits(self) -> u32 {
+pub const fn classify(evidence: PipelineCacheMissEvidence) -> Self {
+pub const fn classify_scan_graph_capture_edit(
 pub const fn cold_upload(upload_bytes: u64) -> Self {
 pub const fn conservative(backend: &'static str) -> Self {
 pub const fn contains(self, other: Self) -> bool {
 pub const fn default_workgroup_size() -> [u32; 3] {
 pub const fn disabled() -> Self {
 pub const fn empty() -> Self {
+pub const fn evidence(self, transfer_bytes: u64) -> RegexAcceleratorEvidence {
 pub const fn first_registrant(&self) -> &'static str {
 pub const fn from_counters(
 pub const fn from_feature_range(
 pub const fn high_end() -> Self {
+pub const fn is_complete(self) -> bool {
 pub const fn is_empty(self) -> bool {
 pub const fn is_usable(self) -> bool {
 pub const fn label(self) -> &'static str {
 pub const fn large_inline_default() -> Self {
+pub const fn metric_suffix(self) -> &'static str {
 pub const fn mode(&self) -> Mode {
 pub const fn native(subgroup_size: u32) -> Self {
 pub const fn new(
@@ -74,12 +61,40 @@ pub const fn second_registrant(&self) -> &'static str {
 pub const fn small_inline_default() -> Self {
 pub const fn stable_id(self) -> u32 {
 pub const fn strategy_capabilities(self) -> validate::BackendCapabilities {
+pub const fn supported(
 pub const fn union(self, other: Self) -> Self {
+pub const fn unsupported(
 pub const fn uses_law_proof(self) -> bool {
 pub const fn validation_capabilities(self) -> validate::BackendCapabilities {
 pub const fn warm_reuse(avoided_upload_bytes: u64) -> Self {
 pub const fn with_autotune_record(mut self, record: &'a AutotuneRecord) -> Self {
 pub const fn with_trace_jit(mut self, counters: TraceJitInputs) -> Self {
+pub const HOT_PATH_COST_SCALE_BPS: u32 = 5_000;
+pub const HOT_PATH_COST_SCALE: f32 = 0.5;
+pub const INDIRECT_DISPATCH_OP_ID: &str = OP_ID;
+pub const INDIRECT_DISPATCH: Self = Self(1 << 6);
+pub const MAX_DISK_PIPELINE_BLOB_BYTES: u64 = 64 * 1024 * 1024;
+pub const MAX_HISTORY: usize = 16;
+pub const MIN_ADOPT_SAVINGS_BPS: u64 = 1500;
+pub const MIN_DISPATCHES_FOR_VERDICT: u32 = 8;
+pub const NORMALIZED_PROGRAM_DIGEST_VERSION: &str = "vyre-pipeline-cache-norm-v2";
+pub const PERSISTENT_THREAD: Self = Self(1 << 8);
+pub const PUSH_CONSTANTS: Self = Self(1 << 5);
+pub const Q16_ONE: u32 = 1 << 16;
+pub const REGEX_ACCELERATOR_EVIDENCE_SCHEMA_VERSION: u32 = 1;
+pub const SCAN_GRAPH_CAPTURE_EDIT_SCHEMA_VERSION: u32 = 1;
+pub const SCHEMA: u32 = 1;
+pub const SOURCE_FINGERPRINT_VERSION: &str = "vyre-source-fingerprint-v1";
+pub const SOURCE_TREE_FINGERPRINT_VERSION: &str = "source-tree-v1";
+pub const SPECULATIVE: Self = Self(1 << 7);
+pub const SUBGROUP_OPS: Self = Self(1 << 0);
+pub const TENSOR_CORE_COST_SCALE_BPS: u32 = 2_500;
+pub const TENSOR_CORE_COST_SCALE: f32 = 0.25;
+pub const TENSOR_CORES: Self = Self(1 << 3);
+pub const TRACE_JIT_HOT_SHAPE_THRESHOLD: u32 = 8;
+pub const TRACE_JIT_MIN_CONFIDENCE_BPS: u32 = 6_000; // 60%
+pub const WORKGROUP_CANDIDATES: &[u32] = &[32, 64, 128, 256, 512, 1024];
+pub const WORKLOAD_FINGERPRINT_VERSION: &str = "vyre-dispatch-workload-v1";
 pub enum ArmConflict {
 pub enum ArmIndependenceVerdict {
 pub enum AttrValue {
@@ -96,7 +111,9 @@ pub enum ConvergenceReadbackPolicy {
 pub enum CopyOverlapDecision {
 pub enum CrossPipelineConflict {
 pub enum CrossPipelineFusionDecision {
+pub enum DensePermutationDefect {
 pub enum DeviceConvergencePlanError {
+pub enum DeviceTimingQuality {
 pub enum DeviceWorkQueueDrainStrategy {
 pub enum DeviceWorkQueueError {
 pub enum DiagnosticAggregationError {
@@ -104,6 +121,8 @@ pub enum DispatchExecutionMode {
 pub enum EnforceVerdict {
 pub enum ErrorCode {
 pub enum FusionDecision {
+pub enum GraphCaptureEditAction {
+pub enum GraphCaptureEditStability {
 pub enum LaunchFusionError {
 pub enum LoweredExpr {
 pub enum MegakernelBarrierPlanError {
@@ -118,24 +137,29 @@ pub enum NaturalGradientTuningError {
 pub enum ParamInliningDecision {
 pub enum PersistentKernelDecision {
 pub enum PersistentThreadMode {
+pub enum PipelineCacheMissReason {
 pub enum PrecisionLoweringPlan {
+pub enum RegexAcceleratorClass {
+pub enum RegexAcceleratorMatchSchema {
+pub enum RegexAcceleratorStreamMode {
 pub enum ResidentGraphReuseTelemetryError {
 pub enum ResidentUploadBytes<'a> {
 pub enum Resource {
 pub enum ResultCompactionError {
+pub enum ScanGraphCaptureEditKind {
 pub enum Severity {
 pub enum SortBackend {
-pub enum SpecValue {
 pub enum SpeculationMode {
 pub enum SpeculationVerdict {
 pub enum SpeculativeVariantKind {
+pub enum SpecValue {
 pub enum SubgroupOp {
 pub enum Target {
 pub enum TraceJitDecision {
 pub enum WorkQueueHostSync {
-pub fn acquire(&self) -> Result<Box<dyn VyreBackend>, BackendError> {
 pub fn acquire(id: &str) -> Result<Box<dyn VyreBackend>, BackendError> {
 pub fn acquire_preferred_dispatch_backend() -> Result<Box<dyn VyreBackend>, BackendError> {
+pub fn acquire(&self) -> Result<Box<dyn VyreBackend>, BackendError> {
 pub fn add_bytes(self, total: &mut u64, bytes: usize, label: &str) -> Result<(), BackendError> {
 pub fn add_copy_count(self, total: &mut usize, label: &str) -> Result<(), BackendError> {
 pub fn add_copy_slots(
@@ -153,16 +177,16 @@ pub fn apply_generation_to_profile(
 pub fn apply_to_profile(&self, mut profile: DeviceProfile) -> DeviceProfile {
 pub fn as_mut_slice(&mut self) -> &mut [u8] {
 pub fn as_pipeline_f64(&self) -> f64 {
+pub fn assert_exhaustive_byte_identity(
 pub fn as_slice(&self) -> &[u8] {
 pub fn as_str(&self) -> &str {
-pub fn assert_exhaustive_byte_identity(
 pub fn atomic_max_u64(counter: &AtomicU64, value: u64, order: Ordering) -> u64 {
 pub fn attempted_tiles(&self) -> u64 {
 pub fn auto_grid(
 pub fn backend_dispatches(id: &str) -> bool {
 pub fn backend_precedence(id: &str) -> u32 {
-pub fn best_of<T: BackendTimer>(
 pub fn best_of_natural_gradient<T: BackendTimer>(
+pub fn best_of<T: BackendTimer>(
 pub fn binding_plans_share_layout(a: &BindingPlan, b: &BindingPlan) -> bool {
 pub fn borrowed_input_batch_shapes_match(batches: &[&[&[u8]]]) -> bool {
 pub fn borrowed_input_shapes_match(left: &[&[u8]], right: &[&[u8]]) -> bool {
@@ -173,9 +197,13 @@ pub fn bytes_to_u64(self, bytes: usize, label: &str) -> Result<u64, BackendError
 pub fn cache_hash(&self) -> u64 {
 pub fn cache_key(self, program_digest: [u8; 32]) -> [u8; 32] {
 pub fn cache_path_for_adapter(adapter_fp: &str) -> PathBuf {
+pub fn candidates_for(&self, max_invocations: u32) -> Vec<u32> {
 pub fn can_dispatch_concurrently(
 pub fn can_overlap_copy_with_kernel(
-pub fn candidates_for(&self, max_invocations: u32) -> Vec<u32> {
+pub fn capture_at(workspace_root: &Path) -> Self {
+pub fn capture_current() -> Self {
+pub fn capture_git_info_at(workspace_root: &Path) -> BTreeMap<String, String> {
+pub fn capture_git_info() -> BTreeMap<String, String> {
 pub fn cases(&self) -> &[ConformanceCase] {
 pub fn certify_op(
 pub fn certify_op_borrowed(
@@ -222,6 +250,8 @@ pub fn checked_sub_usize_lazy<E>(
 pub fn checked_usize_byte_range_end_lazy<E>(
 pub fn checked_usize_to_u64_lazy<E>(value: usize, error: impl FnOnce() -> E) -> Result<u64, E> {
 pub fn claim(&self) -> Option<PersistentWorkItem> {
+pub fn classify_dense_permutation(
+pub fn classify_identities<'a>(
 pub fn clear(&mut self) {
 pub fn clear(&self) -> Result<(), BackendError> {
 pub fn clear_vec_slots<T>(slots: &mut [Vec<T>]) {
@@ -238,11 +268,11 @@ pub fn compile_with_telemetry(
 pub fn compose_basis_points_u32(left: u32, right: u32, label: &str, backend: &str) -> u32 {
 pub fn compose_basis_points_u32(self, left: u32, right: u32, label: &str) -> u32 {
 pub fn conservative_total_ns(&self) -> u128 {
-pub fn contains(&self, fingerprint: &ShapeFingerprint) -> bool {
-pub fn contains(&self, slot: &u32) -> bool {
 pub fn contains_grid_sync(program: &Program) -> bool {
 pub fn contains_hash(&self, hash: &blake3::Hash) -> bool {
 pub fn contains_op(&self, op_id: &str) -> bool {
+pub fn contains(&self, fingerprint: &ShapeFingerprint) -> bool {
+pub fn contains(&self, slot: &u32) -> bool {
 pub fn core_supported_ops() -> &'static HashSet<OpId> {
 pub fn decide(
 pub fn decide_bindless(inputs: BindlessInputs) -> BindlessDecision {
@@ -260,22 +290,22 @@ pub fn default_supported_ops_with_trap() -> &'static std::collections::HashSet<O
 pub fn default_threshold() -> Self {
 pub fn default_validator() -> bool {
 pub fn dependency_capacity(&self) -> usize {
-pub fn deprecation(&self, op_id: &str) -> Option<&'static Deprecation> {
 pub fn deprecation_diagnostic(dep: &Deprecation) -> Diagnostic {
+pub fn deprecation(&self, op_id: &str) -> Option<&'static Deprecation> {
 pub fn device_aware_cost<L, B, H>(
 pub fn diagnostic_compression_ratio_bps(
 pub fn diagnostics(&self) -> &[Diagnostic] {
-pub fn dialect(&self, id: &str) -> Option<&DialectManifest> {
 pub fn dialect_and_language_supported_ops() -> &'static HashSet<OpId> {
 pub fn dialect_only_supported_ops() -> &'static HashSet<OpId> {
+pub fn dialect(&self, id: &str) -> Option<&DialectManifest> {
 pub fn dispatch_configs_share_launch_shape(
 pub fn dispatch_element_count(bindings: &[Binding]) -> u32 {
 pub fn dispatch_element_count_for_program(program: &Program, bindings: &[Binding]) -> u32 {
-pub fn dispatch_param_words(bindings: &[Binding], element_count: u32) -> Vec<u32> {
-pub fn dispatch_param_words_into(bindings: &[Binding], element_count: u32, words: &mut Vec<u32>) {
+pub fn dispatch_param_words_into(
 pub fn dispatch_policy_cache_digest(config: &DispatchConfig) -> [u8; 32] {
 pub fn dispatch_policy_cache_string(config: &DispatchConfig) -> String {
 pub fn dispatch_prefilter_confirm<B, F>(
+pub fn dispatch_resident_grid_sync_fixpoint_into(
 pub fn dispatch_resident_with_grid_sync_split_timed(
 pub fn dispatch_with_grid_sync_split(
 pub fn dispatch_with_grid_sync_split_into(
@@ -313,36 +343,43 @@ pub fn finite_f64_to_u32_trunc(value: f64, label: &str, backend: &str) -> u32 {
 pub fn finite_f64_unit_basis_points_trunc(
 pub fn flush(&self) -> std::io::Result<()> {
 pub fn forget(&mut self, key: &AutotuneKey) -> bool {
-pub fn from_backend(backend: &dyn VyreBackend) -> Self {
+pub fn for_inputs(
+pub fn for_program(
 pub fn from_backend(backend: &dyn crate::backend::VyreBackend) -> Self {
+pub fn from_backend(backend: &dyn VyreBackend) -> Self {
 pub fn from_bindings(
 pub fn from_borrowed_inputs(program: &Program, inputs: &[&[u8]]) -> Result<Self, BackendError> {
 pub fn from_bytes(backend_id: &'static str, bytes: Vec<u8>) -> Box<dyn DeviceBuffer> {
 pub fn from_counts(committed: u32, rolled: u32) -> Self {
 pub fn from_entries(
 pub fn from_env() -> Self {
+pub fn from_identities<'a>(
 pub fn from_input_lengths(
+pub fn from_parts(
 pub fn from_parts(vendor: u32, device: u32, revision: &str, revision_extra: &str) -> Self {
+pub fn from_pipeline_manifest(manifest: &PipelineReproManifest) -> Self {
 pub fn from_plan(plan: &BindingPlan) -> Self {
 pub fn from_program(program: &Program, inputs: &[Vec<u8>]) -> Result<Self, BackendError> {
 pub fn from_program(program: &Program, shape: StaticProgramShape) -> Self {
+pub fn from_timed_dispatch(result: &TimedDispatchResult) -> Self {
 pub fn from_toml_str(source: &str) -> Result<Self, String> {
 pub fn fuse_resident_transfer_intervals(
 pub fn fuse_resident_upload_copies<'a>(
-pub fn get(&self, id: &str) -> Option<&DeviceSignature> {
-pub fn get(&self, key: &AutotuneKey) -> Option<&AutotuneRecord> {
-pub fn get(&self, key: &str) -> Option<&AttrValue> {
-pub fn get(&self, program_fp: &str) -> Option<[u32; 3]> {
 pub fn get_key(&self, key: &TunerProgramKey) -> Option<[u32; 3]> {
 pub fn get_lowering(&self, id: InternedOpId, target: Target) -> Option<ReferenceKind> {
 pub fn get_or_validate(
 pub fn get_or_validate_backend<B>(
-pub fn global() -> &'static MigrationRegistry {
+pub fn get(&self, id: &str) -> Option<&DeviceSignature> {
+pub fn get(&self, key: &AutotuneKey) -> Option<&AutotuneRecord> {
+pub fn get(&self, key: &str) -> Option<&AttrValue> {
+pub fn get(&self, program_fp: &str) -> Option<[u32; 3]> {
 pub fn global() -> Guard<Arc<Self>> {
-pub fn group_index_capacity(&self) -> usize {
+pub fn global() -> &'static MigrationRegistry {
 pub fn grouped_query_capacity(&self) -> usize {
-pub fn head(&self) -> u32 {
+pub fn group_index_capacity(&self) -> usize {
+pub fn has_timing(&self) -> bool {
 pub fn head_counter(&self) -> u64 {
+pub fn head(&self) -> u32 {
 pub fn heat(&self, current_time_s: f64) -> f64 {
 pub fn hex_encode(bytes: &[u8]) -> String {
 pub fn hex_short(bytes: &[u8; 32]) -> String {
@@ -351,9 +388,9 @@ pub fn identity_fisher_q16(candidate_count: usize) -> Vec<u32> {
 pub fn identity_fisher_q16_into(candidate_count: usize, out: &mut Vec<u32>) {
 pub fn impacted_entries(
 pub fn impacted_entries_into(
-pub fn in_flight(&self) -> u32 {
 pub fn infer_dispatch_grid(
 pub fn infer_dispatch_grid_for_count(
+pub fn in_flight(&self) -> u32 {
 pub fn inputs(&self) -> &[Vec<u8>] {
 pub fn insert(&mut self, key: impl Into<String>, value: AttrValue) -> Option<AttrValue> {
 pub fn insert(&mut self, name: impl Into<String>, value: SpecValue) {
@@ -365,21 +402,22 @@ pub fn intersects(&self, other: &Self) -> bool {
 pub fn into_message(self) -> String {
 pub fn invalidate_impacted(
 pub fn is_aligned(&self) -> bool {
+pub fn is_complete(self) -> bool {
 pub fn is_dirty(&self) -> bool {
 pub fn is_done(&self, slot_idx: u32) -> Result<bool, String> {
 pub fn is_empty(&self) -> bool {
 pub fn is_inline(&self) -> bool {
+pub fn iter_is_monotonic_by_key<I, K, F>(items: I, mut key: F) -> bool
 pub fn iter(&self) -> impl Iterator<Item = &'static OpDef> + '_ {
 pub fn iter(&self) -> impl Iterator<Item = (&str, &AttrValue)> {
 pub fn iter(&self) -> impl Iterator<Item = (&str, &SpecValue)> {
-pub fn iter_is_monotonic_by_key<I, K, F>(items: I, mut key: F) -> bool
 pub fn label(&self) -> &str {
 pub fn latest(&self) -> Option<&ShapeFingerprint> {
 pub fn len(&self) -> usize {
-pub fn load(path: &Path) -> Result<Self, String> {
-pub fn load(path: &Path) -> std::io::Result<Self> {
 pub fn load_dir(dir: impl AsRef<Path>) -> Result<Self, String> {
 pub fn load_file(&mut self, path: &Path) {
+pub fn load(path: &Path) -> Result<Self, String> {
+pub fn load(path: &Path) -> std::io::Result<Self> {
 pub fn lookup(&self, id: InternedOpId) -> Option<&'static OpDef> {
 pub fn lookup(&self, op_id: &str, from: Semver) -> Option<&'static Migration> {
 pub fn manifests(&self) -> Vec<&DialectManifest> {
@@ -391,34 +429,35 @@ pub fn message(&self) -> String {
 pub fn mul_usize_capacity(
 pub fn natural_gradient_step(
 pub fn new(
-pub fn new() -> Self {
 pub fn new(adapter_fp: &str, mode: Mode) -> Self {
 pub fn new(cases: Vec<ConformanceCase>) -> Self {
+pub fn new(command: impl Into<String>, capsule_digest: Option<String>) -> Self {
 pub fn new(first: A, second: B) -> Self {
+pub fn new<F>(run: F) -> Self
 pub fn new(label: impl Into<String>, inputs: Vec<Vec<u8>>) -> Self {
 pub fn new(max_hash_entries: usize, max_vsa_entries: usize, vsa_shards: usize) -> Self {
 pub fn new(message: impl Into<String>) -> Self {
 pub fn new(mut slots: Vec<BackendLayoutSlot>) -> Self {
 pub fn new(program: &Program, workgroup_count: Option<[u32; 3]>, output_bytes: u64) -> Self {
 pub fn new(ring_size: u32) -> Self {
+pub fn new() -> Self {
 pub fn new(spec: &SpecCacheKey, adapter_id: impl Into<String>) -> Self {
 pub fn new(threshold_pct: u32) -> Self {
-pub fn new<F>(run: F) -> Self
 pub fn node_op_id(node: &Node) -> &'static str {
 pub fn normalized_program_cache_digest(program: &Program) -> [u8; 32] {
 pub fn note(code: &'static str, message: impl Into<Cow<'static, str>>) -> Self {
 pub fn observe(&mut self, cache_hit: Option<bool>) {
-pub fn observe(values: &[u32]) -> Self {
 pub fn observe_sort_u32(
-pub fn op(op_id: impl Into<Cow<'static, str>>) -> Self {
+pub fn observe(values: &[u32]) -> Self {
 pub fn open(root: impl Into<std::path::PathBuf>) -> std::io::Result<Self> {
+pub fn op(op_id: impl Into<Cow<'static, str>>) -> Self {
 pub fn ops_in(&self, dialect: &str) -> &[OpManifest] {
 pub fn ordered_index_capacity(&self) -> usize {
-pub fn ordered_indices(&self) -> &[usize] {
 pub fn ordered_indices_mut(&mut self) -> &mut Vec<usize> {
+pub fn ordered_indices(&self) -> &[usize] {
 pub fn output_binding_layout(output: &BufferDecl) -> Result<OutputBindingLayout, BackendError> {
-pub fn output_binding_layouts(program: &Program) -> Result<Vec<OutputBindingLayout>, BackendError> {
 pub fn output_binding_layouts_into(
+pub fn output_binding_layouts(program: &Program) -> Result<Vec<OutputBindingLayout>, BackendError> {
 pub fn output_layout_from_program(program: &Program) -> Result<OutputLayout, BackendError> {
 pub fn parse_counter_tail(output_bytes: &[u8]) -> Option<SpeculationReport> {
 pub fn path_for(
@@ -435,6 +474,7 @@ pub fn plan_device_work_queue(
 pub fn plan_device_work_queue_backpressure(
 pub fn plan_device_work_queue_with_expansion(
 pub fn plan_graph_capture_bindings(
+pub fn plan_host_grid_sync_segment_programs(
 pub fn plan_launch_fusion(
 pub fn plan_launch_fusion_with_scratch(
 pub fn plan_megakernel_barriers(
@@ -456,8 +496,9 @@ pub fn primary_execution_mode(&self) -> DispatchExecutionMode {
 pub fn program_hash(program: &Program) -> blake3::Hash {
 pub fn program_vsa_fingerprint(program: &Program) -> Vec<u32> {
 pub fn program_vsa_fingerprint_words(program: &Program) -> [u32; 8] {
-pub fn push(&mut self, case: ConformanceCase) {
 pub fn push_index(&mut self, index: usize) {
+pub fn push_lower_hex(bytes: &[u8], out: &mut String) {
+pub fn push(&mut self, case: ConformanceCase) {
 pub fn push_resident_upload_copy<'a>(
 pub fn put(&mut self, key: AutotuneKey, record: AutotuneRecord) {
 pub fn ratio_basis_points_u64(
@@ -465,31 +506,31 @@ pub fn ratio_basis_points_u64_wide(
 pub fn ratio_parts_per_million_u64(
 pub fn read(
 pub fn rebasing_atomic_next_u64(
-pub fn record(&mut self, fingerprint: ShapeFingerprint) {
-pub fn record(&self, report: SpeculationReport) {
 pub fn record_cold_upload(
 pub fn record_cold_uploads(
 pub fn record_decision(&mut self, program_fp: impl Into<String>, size: [u32; 3]) {
 pub fn record_dispatch_io(inputs: &[&[u8]], outputs: &[Vec<u8>]) {
-pub fn record_eviction(dropped_fraction: f64) {
 pub fn record_eviction_counts(dropped_entries: usize, total_entries: usize) {
+pub fn record_eviction(dropped_fraction: f64) {
 pub fn record_grid_sync_split(segment_count: usize) {
 pub fn record_key_decision(&mut self, key: TunerProgramKey, size: [u32; 3]) {
 pub fn record_launch_measurement(
+pub fn record(&mut self, fingerprint: ShapeFingerprint) {
 pub fn record_output_replacement_stats(stats: crate::backend::OutputReplacementStats) {
 pub fn record_output_slot_byte_stats(stats: crate::backend::OutputSlotByteStats) {
 pub fn record_output_slot_stats(stats: crate::backend::OutputSlotStats) {
+pub fn record(&self, report: SpeculationReport) {
 pub fn record_speculative_variant_race(
 pub fn record_substrate_audit_event(event: SubstrateAuditEvent) {
 pub fn record_warm_reuse(
 pub fn record_warm_reuses(
-pub fn reduction_offsets(subgroup_size: u32) -> Vec<u32> {
 pub fn reduction_offsets_into(subgroup_size: u32, offsets: &mut Vec<u32>) {
+pub fn reduction_offsets(subgroup_size: u32) -> Vec<u32> {
 pub fn registered_aot_emitters() -> Vec<&'static AotEmitter> {
 pub fn registered_aot_launcher_emitters() -> Vec<&'static AotLauncherEmitter> {
-pub fn registered_backends() -> &'static [&'static BackendRegistration] {
-pub fn registered_backends_by_precedence() -> Vec<&'static BackendRegistration> {
 pub fn registered_backends_by_precedence_slice() -> &'static [&'static BackendRegistration] {
+pub fn registered_backends_by_precedence() -> Vec<&'static BackendRegistration> {
+pub fn registered_backends() -> &'static [&'static BackendRegistration] {
 pub fn remember_hash(&self, hash: blake3::Hash) {
 pub fn remember_success(&self, hash: blake3::Hash, vsa: &[u32]) -> Result<(), BackendError> {
 pub fn remove(&mut self, key: &str) -> Option<AttrValue> {
@@ -500,6 +541,9 @@ pub fn repair_atomic_sub_usize_with_order(
 pub fn replace_output_buffers_preserving_slots(
 pub fn replace_output_buffers_preserving_slots_with_memory_stats(
 pub fn replace_output_buffers_preserving_slots_with_stats(
+pub fn require_supported(self) -> Result<Self, BackendError> {
+pub fn reserved_typed_vec<T, E>(
+pub fn reserved_vec<T>(
 pub fn reserve_hash_map_to_capacity<K, V, S>(
 pub fn reserve_hash_set_to_capacity<T, S>(
 pub fn reserve_smallvec_additional<A>(
@@ -511,17 +555,15 @@ pub fn reserve_typed_vec_to_capacity<T, E>(
 pub fn reserve_vec_additional<T>(
 pub fn reserve_vec_exact_for_len<T>(
 pub fn reserve_vec_to_capacity<T>(
-pub fn reserved_typed_vec<T, E>(
-pub fn reserved_vec<T>(
 pub fn resident_graph_capacity(&self) -> usize {
 pub fn resize_vec_slots<T>(
 pub fn resize_vec_with<T, F>(
-pub fn resolve(&self, program_fp: &str) -> [u32; 3] {
 pub fn resolve_fixpoint_iterations(
 pub fn resolve_fixpoint_iterations_usize(
 pub fn resolve_key(&self, key: &TunerProgramKey) -> [u32; 3] {
 pub fn resolve_launch_workgroup(
 pub fn resolve_launch_workgroup_for_mode(
+pub fn resolve(&self, program_fp: &str) -> [u32; 3] {
 pub fn retained_query_bucket_capacity(&self) -> usize {
 pub fn ring_size(&self) -> u32 {
 pub fn root(&self) -> &std::path::Path {
@@ -529,8 +571,8 @@ pub fn rounded_f64_to_u64(self, value: f64, label: &str) -> Result<u64, BackendE
 pub fn rounded_f64_to_u64(value: f64, label: &str, backend: &str) -> Result<u64, BackendError> {
 pub fn run(&self, program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, BackendError> {
 pub fn samples(&self) -> u32 {
-pub fn save(&self, path: &Path) -> Result<(), String> {
 pub fn save_if_dirty(&mut self, path: &Path) -> std::io::Result<bool> {
+pub fn save(&self, path: &Path) -> Result<(), String> {
 pub fn scale_u64_by_basis_points_floor_min(
 pub fn scale_u64_by_basis_points_round_clamped(
 pub fn scan_dir(&mut self, dir: &Path) {
@@ -545,25 +587,28 @@ pub fn select_retention_set(gains: &mut [u32], n: u32, k: u32) -> Vec<u32> {
 pub fn select_retention_set_into(gains: &mut [u32], n: u32, k: u32, picked: &mut Vec<u32>) {
 pub fn select_sort_backend(distribution: Distribution) -> SortBackend {
 pub fn select_strategy<'a>(
-pub fn set(&mut self, program_fp: impl Into<String>, size: [u32; 3]) {
 pub fn set_key(&mut self, key: TunerProgramKey, size: [u32; 3]) {
 pub fn set_label(&mut self, label: impl Into<String>) {
+pub fn set(&mut self, program_fp: impl Into<String>, size: [u32; 3]) {
 pub fn should_speculate(&self) -> bool {
 pub fn signatures(&self) -> &[DeviceSignature] {
-pub fn snapshot(&self, alarm_threshold_bps: u32) -> PipelineCacheAuditReport {
-pub fn snapshot() -> Self {
 pub fn snapshot_dispatch_telemetry() -> DispatchTelemetry {
+pub fn snapshot() -> Self {
+pub fn snapshot(&self, alarm_threshold_bps: u32) -> PipelineCacheAuditReport {
 pub fn sort_by_key_if_needed<T, K, F>(items: &mut [T], mut key: F)
 pub fn sort_indices_unstable_by_key_if_needed<Key, F>(&mut self, mut key: F)
 pub fn sort_unstable_by_key_if_needed<T, K, F>(items: &mut [T], mut key: F)
 pub fn sort_unstable_if_needed<T>(items: &mut [T])
+pub fn source_fingerprint(git: &BTreeMap<String, String>) -> String {
+pub fn source_tree_fingerprint_at(workspace_root: &Path) -> String {
+pub fn source_tree_fingerprint() -> String {
 pub fn speculative_total_ns(&self) -> u128 {
 pub fn split_on_grid_sync(program: &Program) -> Vec<Program> {
 pub fn stable_explanation(&self) -> String {
 pub fn suggest(
 pub fn suggest_resize(&self, feedback: &TunerFeedback) -> Option<u32> {
-pub fn tail(&self) -> u32 {
 pub fn tail_counter(&self) -> u64 {
+pub fn tail(&self) -> u32 {
 pub fn threshold_ppm(&self) -> u64 {
 pub fn to_audit_log(&self) -> String {
 pub fn to_json(&self) -> Result<String, serde_json::Error> {
@@ -574,12 +619,13 @@ pub fn try_coerce_to_pow2_with_tail_mask(
 pub fn try_dispatch_param_words(
 pub fn try_dispatch_param_words_into(
 pub fn try_entries_to_evict(
+pub fn try_from_program(
 pub fn try_global() -> Result<Guard<Arc<Self>>, String> {
 pub fn try_in_flight(&self) -> Result<u32, String> {
 pub fn try_new(ring_size: u32) -> Result<Self, String> {
 pub fn try_normalized_program_cache_digest(program: &Program) -> Result<[u8; 32], String> {
-pub fn try_reduction_offsets(subgroup_size: u32) -> Result<Vec<u32>, String> {
 pub fn try_reduction_offsets_into(
+pub fn try_reduction_offsets(subgroup_size: u32) -> Result<Vec<u32>, String> {
 pub fn try_reserve_candidates(
 pub fn try_reserve_hash_map_to_capacity<K, V, S>(
 pub fn try_reserve_hash_set_to_capacity<T, S>(
@@ -589,6 +635,7 @@ pub fn try_reserve_vec_to_capacity<T>(
 pub fn try_reserve_with<E>(
 pub fn try_select_retention_set(
 pub fn try_select_retention_set_into(
+pub fn try_snapshot() -> Result<Self, crate::backend::BackendError> {
 pub fn try_split_on_grid_sync(program: &Program) -> Result<Vec<Program>, BackendError> {
 pub fn try_with_capacity(
 pub fn try_with_capacity(candidate_count: usize) -> Result<Self, BenchmarkPassSelectionError> {
@@ -602,27 +649,31 @@ pub fn unsupported_extension(
 pub fn update_dispatch_policy_cache_hash(hasher: &mut blake3::Hasher, config: &DispatchConfig) {
 pub fn usize_to_u64(self, value: usize, label: &str) -> Result<u64, BackendError> {
 pub fn usize_to_u64(value: usize, label: &str, backend: &str) -> Result<u64, BackendError> {
-pub fn validate(&self) -> Result<(), String> {
 pub fn validate_borrowed_inputs(&self, inputs: &[&[u8]]) -> Result<(), BackendError> {
 pub fn validate_buffer_ownership<'a>(
 pub fn validate_input_byte_lengths(&self, input_lengths: &[usize]) -> Result<(), BackendError> {
 pub fn validate_inputs(&self, inputs: &[Vec<u8>]) -> Result<(), BackendError> {
 pub fn validate_launch_geometry(
 pub fn validate_no_duplicates<'a>(
-pub fn validate_program(program: &Program, backend: &dyn Backend) -> Result<(), ValidationError> {
 pub fn validate_program_contract(
 pub fn validate_program_for_backend(
+pub fn validate_program(program: &Program, backend: &dyn Backend) -> Result<(), ValidationError> {
+pub fn validate(&self) -> Result<(), BackendError> {
+pub fn validate(&self) -> Result<(), String> {
 pub fn versioned_specialization_artifact_key(
 pub fn vsa_specialization_key(program: &Program, spec_hash: u64) -> u128 {
 pub fn warning(code: &'static str, message: impl Into<Cow<'static, str>>) -> Self {
 pub fn wave_capacity(&self) -> usize {
 pub fn weighted_u64_by_basis_points_u128(value: u64, basis_points: u32) -> u128 {
 pub fn winner(&self) -> SpeculativeVariantKind {
+pub fn with_artifact(mut self, artifact: EvidenceArtifact) -> Self {
 pub fn with_attr(mut self, name: impl Into<Cow<'static, str>>) -> Self {
 pub fn with_doc_url(mut self, url: impl Into<Cow<'static, str>>) -> Self {
 pub fn with_fix(mut self, fix: impl Into<Cow<'static, str>>) -> Self {
 pub fn with_location(mut self, loc: OpLocation) -> Self {
 pub fn with_operand(mut self, idx: u32) -> Self {
+pub fn with_replay(mut self, replay: ReplayEvidence) -> Self {
+pub fn with_timed_dispatch(mut self, result: &TimedDispatchResult) -> Self {
 pub fn workspace_dialect_fixture_path() -> PathBuf {
 pub fn worthwhile(&self, threshold_pct: u32) -> bool {
 pub fn write(
@@ -654,6 +705,7 @@ pub mod dialect;
 pub mod dispatch_policy;
 pub mod dispatch_shape;
 pub mod enforce;
+pub mod evidence;
 pub mod extraction_cost;
 pub mod fixpoint_iterations;
 pub mod fusion;
@@ -766,10 +818,14 @@ pub struct DispatchPolicyInputs {
 pub struct DispatchPolicyVerdict {
 pub struct DispatchShape {
 pub struct DispatchTelemetry {
+pub struct DispatchTimingEvidence {
 pub struct Distribution {
 pub struct DivergenceEvent {
 pub struct DriverObservability {
 pub struct DuplicateOpIdError {
+pub struct EvidenceArtifact {
+pub struct EvidenceBundle {
+pub struct EvidenceDigestLedger {
 pub struct ExtractionDevice<'a> {
 pub struct FusedResidentTransfers {
 pub struct FusionCaps {
@@ -777,13 +833,13 @@ pub struct FusionPass;
 pub struct GraphCaptureBindingPlan {
 pub struct HostShimBuffer {
 pub struct IndirectDispatch {
+pub struct LauncherDependency {
 pub struct LaunchFusionGroup {
 pub struct LaunchFusionPlan {
 pub struct LaunchFusionScratch {
 pub struct LaunchFusionStage {
 pub struct LaunchGeometryLimits {
 pub struct LaunchPlan {
-pub struct LauncherDependency {
 pub struct MegakernelBarrierGroup {
 pub struct MegakernelBarrierPlan {
 pub struct MegakernelBarrierScratch {
@@ -821,7 +877,9 @@ pub struct PersistentWorkItem {
 pub struct PgoTable {
 pub struct PipelineCacheAudit {
 pub struct PipelineCacheAuditReport {
+pub struct PipelineCacheIdentity {
 pub struct PipelineCacheKey {
+pub struct PipelineCacheMissEvidence {
 pub struct PipelineCacheSnapshot {
 pub struct PipelineDeviceFingerprint {
 pub struct PipelineFeatureFlags(pub u32);
@@ -830,10 +888,14 @@ pub struct PipelineReproManifest {
 pub struct ProgramValidationCaps {
 pub struct QueueFull;
 pub struct ReferenceExecutor {
+pub struct RegexAcceleratorCapability {
+pub struct RegexAcceleratorEvidence {
+pub struct ReplayEvidence {
 pub struct ReservationPolicy {
 pub struct ResidentDispatchStep<'a> {
 pub struct ResidentGraphReuseTelemetry {
 pub struct ResidentReadRange<'a> {
+pub struct ResidentSequenceTiming {
 pub struct ResidentTransferInterval {
 pub struct ResidentTransferView {
 pub struct ResidentUploadCopy<'a> {
@@ -844,9 +906,12 @@ pub struct ReusableIndexScratch<K, S = RandomState> {
 pub struct RingAtomics {
 pub struct RouteDecision {
 pub struct RoutingTable {
+pub struct ScanGraphCaptureEdit {
+pub struct ScanGraphCaptureEditClassification {
 pub struct Semver {
 pub struct ShapeHistory {
 pub struct SkippedBenchmarkPass {
+pub struct SourceProvenance {
 pub struct SpecCacheKey {
 pub struct SpecMap {
 pub struct SpeculationObservation {
@@ -871,8 +936,8 @@ pub struct TunerProgramKey(String);
 pub struct TuningMeasurement {
 pub struct ValidationCache {
 pub trait ArithmeticOverflow: Sized {
-pub trait Backend: Send + Sync {
 pub trait BackendObservabilityProvider {
+pub trait Backend: Send + Sync {
 pub trait BackendTimer {
 pub trait CompiledPipeline: private::Sealed + Send + Sync {
 pub trait DeviceBuffer: std::any::Any + Send + Sync + std::fmt::Debug {
@@ -888,8 +953,8 @@ pub trait TypedDispatchExt: VyreBackend {
 pub trait VyreBackend: private::Sealed + Send + Sync {
 pub type AotTargetId = &'static str;
 pub type ExactInputKey = [u8; 32];
-pub type Memory = Vec<u8>;
 pub type MemoryRef<'a> = &'a [u8];
+pub type Memory = Vec<u8>;
 pub type OutputBuffers = Vec<Vec<u8>>;
 pub type ShapeFingerprint = [u32; 8];
 pub type StagingReservationFailureAdapter<E> = fn(&'static str, usize, String) -> E;

@@ -866,12 +866,12 @@ mod non_panicking_wrapper_tests {
         // blessed Law-10 fix for an infallible parity wrapper.
         assert!(
             !production.contains(".expect(") && !production.contains(".unwrap("),
-            "Fix: RLE production wrappers must not use bare .unwrap()/.expect() — use an explicit panic!() with the error."
+            "Fix: RLE production wrappers must not use bare .unwrap()/.expect() (use an explicit panic!() with the error)."
         );
         // No SILENT fallback: returning empty on failure masks a parity divergence (Law 10/6).
         assert!(
             !production.contains(concat!("eprintln", "!(\"vyre-primitives RLE")),
-            "Fix: RLE CPU oracle must not log-and-return empty on error — fail loud via panic!() so callers use the try_ variant."
+            "Fix: RLE CPU oracle must not log-and-return empty on error (fail loud via panic!() so callers use the try_ variant)."
         );
         assert!(
             production.contains("panic!("),

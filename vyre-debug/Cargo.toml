@@ -1,6 +1,6 @@
 [package]
 name = "vyre-debug"
-version = "0.6.4"
+version = "0.6.5"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Debugging CLI and inspection helpers for Vyre programs, lowering, and emitted shaders."
@@ -31,6 +31,7 @@ vyre-primitives.workspace = true
 bincode = { workspace = true }
 
 [dev-dependencies]
+vyre-test-support.workspace = true
 assert_cmd = { workspace = true }
 predicates = { workspace = true }
 tempfile = { workspace = true }

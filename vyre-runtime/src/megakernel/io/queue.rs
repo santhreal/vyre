@@ -193,7 +193,7 @@ impl MegakernelIoQueue {
         if queue_slot >= self.slot_count {
             return false;
         }
-        // INVARIANT: same as completion — slot_idx * IO_SLOT_WORDS + word fits usize
+        // INVARIANT: same as completion, slot_idx * IO_SLOT_WORDS + word fits usize
         // after the queue_slot < slot_count guard above.
         let status = self
             .read_word(queue_slot, io_word::STATUS)

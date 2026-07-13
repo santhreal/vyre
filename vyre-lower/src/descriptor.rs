@@ -874,7 +874,7 @@ pub enum KernelOpKind {
     SubgroupShuffle,
     /// Operands: [value_op_id, lane_op_id]. Broadcasts `value` from the lane
     /// named by `lane` (uniform) to every lane; result has the value's dtype.
-    /// Distinct from `SubgroupShuffle` (per-lane source) — broadcast requires a
+    /// Distinct from `SubgroupShuffle` (per-lane source), broadcast requires a
     /// uniform source lane and emits `subgroupBroadcast`.
     SubgroupBroadcast,
     /// Operand 0 = value_op_id. Reduces across the subgroup with `op`;
@@ -1229,7 +1229,7 @@ impl KernelDescriptor {
     ///
     /// "Side effect" here means observable-or-cross-thread: `AsyncLoad` writes
     /// shared memory other threads read, `AsyncWait`/`Barrier` are sync points,
-    /// and `IndirectDispatch` reconfigures the grid — all are unsafe to drop
+    /// and `IndirectDispatch` reconfigures the grid, all are unsafe to drop
     /// even though none produces a global-buffer write.
     #[must_use]
     pub fn has_side_effects(&self) -> bool {
@@ -1794,7 +1794,7 @@ mod desc_helper_tests {
     fn has_side_effects_true_for_async_and_indirect_dispatch_ops() {
         // Regression: AsyncLoad writes shared memory other threads read,
         // AsyncWait is a sync point, and IndirectDispatch reconfigures the grid
-        // — all cross-thread/dispatch effects (like the already-listed Barrier /
+        //: all cross-thread/dispatch effects (like the already-listed Barrier /
         // AsyncStore), so a descriptor containing one is NOT droppable. They
         // were omitted from the side-effecting set before the exhaustive-match
         // change, which would have let a "drop pure descriptor" caller drop one.

@@ -126,7 +126,7 @@ pub fn schedule_via_homotopy_into(
     dt: f64,
     out: &mut Vec<f64>,
 ) {
-    // Clearing to empty on failure silently yields an empty schedule — the
+    // Clearing to empty on failure silently yields an empty schedule, the
     // megakernel then runs no scheduled work with no signal (Law 10). Fail
     // loud; callers use try_schedule_via_homotopy_into.
     if let Err(error) = try_schedule_via_homotopy_into(costs, n, n_steps, dt, out) {

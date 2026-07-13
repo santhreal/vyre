@@ -101,4 +101,3 @@ fn unpack_program_layout_matches_packed_shape() {
 fn unpack_zero_lanes_traps() {
     assert!(unpack_i4x8("packed", "lanes", 0).stats().trap());
 }
-

@@ -31,7 +31,10 @@ pub fn classic_ac_bounded_count_suffix2_prefilter_program(
 ) -> Program {
     let i = Expr::var("i");
     let candidate_byte = load_packed_byte_expr(haystack, i.clone());
-    let previous_byte = load_packed_byte_expr(haystack, Expr::sub(i.clone(), Expr::u32(1)));
+    // saturating_sub matches the suffix3 count/ranges builders. Reached only in the
+    // `i != 0` branch, so numerically identical to sub on every dispatched lane.
+    let previous_byte =
+        load_packed_byte_expr(haystack, Expr::saturating_sub(i.clone(), Expr::u32(1)));
     let suffix2_index = Expr::bitor(
         Expr::shl(Expr::var("previous_byte"), Expr::u32(8)),
         Expr::var("candidate_byte"),
@@ -191,10 +194,12 @@ pub fn build_ac_bounded_count_suffix2_prefilter_program(dfa: &CompiledDfa) -> Pr
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::scan::classic_ac::test_helpers::with_reference_dispatch_lanes;
     use crate::scan::classic_ac::{
         classic_ac_candidate_end_byte_mask_words, classic_ac_compile, classic_ac_scan_counts,
     };
     use crate::scan::{pack_haystack_u32, pack_u32_slice};
+    use crate::test_support::byte_pack::bytes_to_u32 as decode_u32;
 
     fn suffix2_candidate(
         previous: u8,
@@ -203,29 +208,6 @@ mod tests {
     ) -> bool {
         let suffix = ((previous as usize) << 8) | current as usize;
         (mask[suffix / 32] & (1_u32 << (suffix % 32))) != 0
-    }
-
-    fn decode_u32(bytes: &[u8]) -> Vec<u32> {
-        bytes
-            .chunks_exact(4)
-            .map(|chunk| u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
-            .collect()
-    }
-
-    fn with_reference_dispatch_lanes(program: Program, lanes: u32) -> Program {
-        let buffers = program
-            .buffers()
-            .iter()
-            .cloned()
-            .map(|buffer| {
-                if buffer.name() == "match_count" {
-                    buffer.with_count(lanes.max(1)).with_output_byte_range(0..4)
-                } else {
-                    buffer
-                }
-            })
-            .collect();
-        program.with_rewritten_buffers(buffers)
     }
 
     #[test]

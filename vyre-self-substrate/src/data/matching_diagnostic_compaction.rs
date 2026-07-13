@@ -12,8 +12,7 @@ use crate::dispatch_buffers::{
 use crate::hardware::scratch::reserve_vec_capacity;
 use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
 use vyre_primitives::matching::bracket_match::{
-    bracket_match, bracket_match_dispatch_grid, pack_u32, CLOSE_BRACE, MATCH_NONE, OPEN_BRACE,
-    OTHER,
+    bracket_match, bracket_match_dispatch_grid, pack_u32, CLOSE_BRACE, OPEN_BRACE, OTHER,
 };
 use vyre_primitives::matching::region::{
     dedup_regions_flag_program, region_dedup_dispatch_grid, region_sort_program, RegionTriple,
@@ -40,7 +39,6 @@ pub struct MatchingDiagnosticCompactionGpuScratch {
     decoded_starts: Vec<u32>,
     decoded_ends: Vec<u32>,
     decoded_regions: Vec<RegionTriple>,
-    match_pairs_seed: Vec<u32>,
 }
 
 /// Compile diagnostic patterns to a DFA using the default primitive budget.
@@ -170,21 +168,24 @@ pub fn bracket_pairs_via_with_scratch_into(
         ))
     })?;
     let program = bracket_match("kinds", "stack", "match_pairs", n, max_depth);
-    ensure_input_slots(&mut scratch.inputs, 3);
+    // Input-consuming buffers ONLY: `kinds` ReadOnly(0) + `stack` plain-ReadWrite(1). `match_pairs`
+    // is `BufferDecl::output`(2), backend-allocated, so it consumes NO dispatch input (the kernel
+    // initializes every entry to MATCH_NONE itself). Passing a seed slot for it would over-feed the
+    // real backend's strict input count (`inputs.len() == input_indices.len()`).
+    ensure_input_slots(&mut scratch.inputs, 2);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], kinds);
     write_zero_bytes(
         &mut scratch.inputs[1],
         max_depth_usize * std::mem::size_of::<u32>(),
     );
-    scratch.match_pairs_seed.clear();
-    scratch.match_pairs_seed.resize(kinds.len(), MATCH_NONE);
-    write_u32_slice_le_bytes(&mut scratch.inputs[2], &scratch.match_pairs_seed);
     let outputs = dispatcher.dispatch(
         &program,
-        &scratch.inputs,
+        &scratch.inputs[..2],
         Some(bracket_match_dispatch_grid(n, max_depth)),
     )?;
-    decode_first_output(&outputs, kinds.len(), "bracket_pairs_via", out)
+    // Writable buffers are returned in binding order `[stack(1), match_pairs(2)]`, so the match-pairs
+    // result is outputs[1]. NOT outputs[0], which is the `stack` scratch.
+    decode_output_at(&outputs, 1, kinds.len(), "bracket_pairs_via", out)
 }
 
 /// Sort diagnostic region triples by `(pid, start, end)` through the primitive.
@@ -301,17 +302,16 @@ pub fn dedup_region_survivor_flags_via_with_scratch_into(
         &mut scratch.ends,
     )?;
     let program = dedup_regions_flag_program("pids", "starts", "ends", "survivors", count);
-    ensure_input_slots(&mut scratch.inputs, 4);
+    // Input-consuming buffers ONLY: pids/starts/ends ReadOnly(0-2). `survivors` is
+    // `BufferAccess::WriteOnly`(3), backend-allocated, consumes NO dispatch input; passing a zero
+    // slot for it would over-feed the real backend's strict input count.
+    ensure_input_slots(&mut scratch.inputs, 3);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], &scratch.pids);
     write_u32_slice_le_bytes(&mut scratch.inputs[1], &scratch.starts);
     write_u32_slice_le_bytes(&mut scratch.inputs[2], &scratch.ends);
-    write_zero_bytes(
-        &mut scratch.inputs[3],
-        sorted_regions.len() * std::mem::size_of::<u32>(),
-    );
     let outputs = dispatcher.dispatch(
         &program,
-        &scratch.inputs,
+        &scratch.inputs[..3],
         Some(region_dedup_dispatch_grid(count)),
     )?;
     decode_first_output(
@@ -440,12 +440,30 @@ fn decode_first_output(
     context: &'static str,
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    if outputs.is_empty() {
-        return Err(DispatchError::BackendError(format!(
-            "Fix: {context} expected at least one output buffer, got 0."
-        )));
-    }
-    decode_u32_output_exact(&outputs[0], words, context, out)
+    decode_output_at(outputs, 0, words, context, out)
+}
+
+/// Decode the writable buffer at `index` in the backend's canonical (binding-order) output list.
+///
+/// The real backend returns EVERY writable buffer (plain-ReadWrite/InputOutput + WriteOnly + output)
+/// in binding order, so a consumer whose intended result is NOT the first writable buffer must decode
+/// the correct index (e.g. `bracket_match` binds `stack` ReadWrite(1) before `match_pairs` output(2),
+/// so the pairs are `outputs[1]`).
+fn decode_output_at(
+    outputs: &[Vec<u8>],
+    index: usize,
+    words: usize,
+    context: &'static str,
+    out: &mut Vec<u32>,
+) -> Result<(), DispatchError> {
+    let buffer = outputs.get(index).ok_or_else(|| {
+        DispatchError::BackendError(format!(
+            "Fix: {context} expected at least {} output buffer(s), got {}.",
+            index + 1,
+            outputs.len()
+        ))
+    })?;
+    decode_u32_output_exact(buffer, words, context, out)
 }
 
 #[cfg(test)]
@@ -473,6 +491,13 @@ mod tests {
                 .expect("Fix: matching primitive should expose a region generator");
             match op_id {
                 vyre_primitives::matching::bracket_match::OP_ID => {
+                    // Two input-consuming buffers: kinds ReadOnly(0), stack plain-ReadWrite(1).
+                    // `match_pairs` output(2) is backend-allocated (no input slot).
+                    assert_eq!(
+                        inputs.len(),
+                        2,
+                        "Fix: bracket_pairs_via must pass exactly the two input-consuming buffers (kinds, stack); match_pairs is backend-allocated."
+                    );
                     let kinds = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
                     let depth_words = inputs[1].len() / std::mem::size_of::<u32>();
                     assert_eq!(
@@ -480,12 +505,22 @@ mod tests {
                         Some(bracket_match_dispatch_grid(kinds.len() as u32, depth_words as u32)),
                         "Fix: bracket_pairs_via must dispatch the primitive with enough workgroups for its selected bracket matcher."
                     );
-                    Ok(vec![u32_slice_to_le_bytes(&primitive_bracket_match(
-                        &kinds,
-                        depth_words as u32,
-                    ))])
+                    // Model the real backend: return ALL writable buffers in binding order 
+                    // [stack(1, InputOutput), match_pairs(2, output)]. The consumer must decode the
+                    // pairs from outputs[1], not outputs[0] (the stack scratch).
+                    Ok(vec![
+                        inputs[1].clone(),
+                        u32_slice_to_le_bytes(&primitive_bracket_match(&kinds, depth_words as u32)),
+                    ])
                 }
                 "vyre-primitives::matching::region::region_sort" => {
+                    // Six input-consuming buffers: pids/starts/ends ReadOnly(0-2) + the three
+                    // plain-ReadWrite outputs pids_out/starts_out/ends_out(3-5, zero-filled).
+                    assert_eq!(
+                        inputs.len(),
+                        6,
+                        "Fix: sort_regions_via must pass all six input-consuming buffers (3 RO + 3 plain-RW outputs)."
+                    );
                     let regions = join_regions(
                         &crate::hardware::dispatch_buffers::read_u32s(&inputs[0]),
                         &crate::hardware::dispatch_buffers::read_u32s(&inputs[1]),
@@ -505,6 +540,13 @@ mod tests {
                     ])
                 }
                 "vyre-primitives::matching::region::dedup_regions_flag" => {
+                    // Three input-consuming buffers: pids/starts/ends ReadOnly(0-2). `survivors` is
+                    // WriteOnly(3) (backend-allocated, no input slot).
+                    assert_eq!(
+                        inputs.len(),
+                        3,
+                        "Fix: dedup_region_survivor_flags_via must pass exactly the three RO buffers; survivors is backend-allocated."
+                    );
                     let regions = join_regions(
                         &crate::hardware::dispatch_buffers::read_u32s(&inputs[0]),
                         &crate::hardware::dispatch_buffers::read_u32s(&inputs[1]),

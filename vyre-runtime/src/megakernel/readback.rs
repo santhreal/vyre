@@ -212,6 +212,8 @@ mod tests {
     #[test]
     fn drain_outputs_into_retains_reusable_output_slots() {
         let mut outputs = valid_outputs(4);
+        let [control_len, ring_len, debug_len, io_len] =
+            [outputs[0].len(), outputs[1].len(), outputs[2].len(), outputs[3].len()];
         let mut readback = MegakernelReadback::default();
 
         MegakernelReadback::drain_outputs_into(&mut outputs, 4, &mut readback)
@@ -219,10 +221,18 @@ mod tests {
 
         assert_eq!(outputs.len(), 4);
         assert!(outputs.iter().all(Vec::is_empty));
-        assert!(!readback.control_bytes.is_empty());
-        assert!(!readback.ring_bytes.is_empty());
-        assert!(!readback.debug_log_bytes.is_empty());
-        assert!(!readback.io_queue_bytes.is_empty());
+        // Exact per-slot byte lengths: a decode that swapped or mis-sized a
+        // slot would keep the vecs non-empty but land the wrong bytes here.
+        assert_eq!(readback.control_bytes.len(), control_len);
+        assert_eq!(readback.ring_bytes.len(), ring_len);
+        assert_eq!(readback.debug_log_bytes.len(), debug_len);
+        assert_eq!(readback.io_queue_bytes.len(), io_len);
+        // And the exact bytes the encoders produced, in the right slots.
+        let expected = valid_outputs(4);
+        assert_eq!(readback.control_bytes, expected[0]);
+        assert_eq!(readback.ring_bytes, expected[1]);
+        assert_eq!(readback.debug_log_bytes, expected[2]);
+        assert_eq!(readback.io_queue_bytes, expected[3]);
     }
 
     #[test]
@@ -273,6 +283,6 @@ mod tests {
         // so a readback with those exact buffer sizes would return Err rather
         // than usize::MAX. We cannot construct such a readback in this test
         // (cannot allocate 9 EiB), but the impl path is the same checked_add
-        // that we just validated produces None above — proving the contract.
+        // that we just validated produces None above (proving the contract).
     }
 }

@@ -259,7 +259,10 @@ mod tests {
         assert_eq!(header.input_len, 4);
         assert_eq!(header.compacted_len, 3);
         assert_eq!(header.duplicate_count, 1);
-        assert_eq!(header.spill_decision, StateIndexSpillDecision::SpillRequired);
+        assert_eq!(
+            header.spill_decision,
+            StateIndexSpillDecision::SpillRequired
+        );
         assert!(header.is_complete());
     }
 

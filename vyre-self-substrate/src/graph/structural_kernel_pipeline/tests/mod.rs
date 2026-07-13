@@ -111,6 +111,12 @@ fn program_builders_emit_expected_structural_primitives() {
         "vyre-primitives::graph::do_rule2_reverse_incoming"
     );
     assert_eq!(
+        program_generator(&dispatch_do_rule3_subgraph(
+            "a", "m", "reduced", "kept", "kept_len", 2
+        )),
+        "vyre-primitives::graph::do_rule3_subgraph"
+    );
+    assert_eq!(
         program_generator(&dispatch_tensor_scc_fixpoint(
             "rows", "seed", "group", "out", 4, 8
         )),

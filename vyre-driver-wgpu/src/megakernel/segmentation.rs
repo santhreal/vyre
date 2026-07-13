@@ -3,7 +3,7 @@
 //! Today a work-item is `(file_idx, rule_idx)` and each lane scans the WHOLE
 //! file for one rule (`dispatcher.rs`: `file_idx = claim / rule_count`). For one
 //! large file that leaves occupancy bounded by `rule_count`, with every busy lane
-//! walking all N bytes sequentially — the reason the GPU loses to Hyperscan on a
+//! walking all N bytes sequentially, the reason the GPU loses to Hyperscan on a
 //! single 8 MiB scan. Splitting each file into many overlapping windows turns the
 //! work-item into `(segment_idx, rule_idx)`, so a single file saturates the whole
 //! device (see `docs/GPU_OOM_SEGMENTATION.md`).
@@ -15,12 +15,12 @@
 //! pattern), independent of the state the scan started in. So a window that
 //! begins scanning `overlap` bytes BEFORE the region it owns reaches the exact
 //! state a full-file scan would have at `emit_start`. Each window therefore:
-//!   * scans `[scan_start, emit_end)` from state 0 — the `[scan_start, emit_start)`
+//!   * scans `[scan_start, emit_end)` from state 0, the `[scan_start, emit_start)`
 //!     prefix is warm-up only, it emits nothing; and
 //!   * emits only matches whose END offset lies in `[emit_start, emit_end)`.
 //!
-//! The emit ranges tile `[0, file_len)` exactly — contiguous, gap-free, and
-//! disjoint — so every match is produced by exactly one window: no double count,
+//! The emit ranges tile `[0, file_len)` exactly, contiguous, gap-free, and
+//! disjoint, so every match is produced by exactly one window: no double count,
 //! no miss. `plan_segments` is the host-side planner; the kernel reads the
 //! resulting table to derive `(file_idx, scan_start, emit_start, emit_end)` from
 //! a claim, and guards emission with `end >= emit_start && end < emit_end`.
@@ -62,7 +62,7 @@ impl Segment {
 
     /// The device-ABI words for this segment, in the exact order the kernel
     /// decodes them from `segments[seg_idx * SEGMENT_WORDS ..]`:
-    /// `[file_idx, scan_start, emit_start, emit_end]` (offsets file-relative —
+    /// `[file_idx, scan_start, emit_start, emit_end]` (offsets file-relative 
     /// the kernel adds `file_offsets[file_idx]` to reach the packed haystack).
     #[must_use]
     pub const fn abi_words(&self) -> [u32; SEGMENT_WORDS] {
@@ -76,7 +76,7 @@ impl Segment {
 }
 
 /// Build the flat device segment table (`segment_count * SEGMENT_WORDS` u32s) for
-/// a batch of files at the given window geometry — the buffer the segmented
+/// a batch of files at the given window geometry, the buffer the segmented
 /// megakernel binds and decodes a claim's `(file_idx, scan_start, emit_start,
 /// emit_end)` from. Row order matches [`plan_segments`], so `seg_idx` indexes it
 /// directly. See [`plan_segments`] for the soundness of the tiling.
@@ -130,7 +130,7 @@ pub fn plan_segments(file_lens: &[u32], seg_len: u32, overlap: u32) -> Vec<Segme
 }
 
 /// Number of windows `plan_segments` will produce for `file_lens` at `seg_len`,
-/// without allocating the table — for sizing the device work queue
+/// without allocating the table, for sizing the device work queue
 /// (`queue_len = segment_count * rule_count`).
 ///
 /// # Panics
@@ -162,10 +162,10 @@ const PRODUCT_PAIR_BUDGET: usize = 1_000_000;
 /// Outcome of the [`dfa_sync_class`] synchronization-distance analysis. The three
 /// arms are operationally distinct for the caller's diagnostics: only
 /// [`SyncClass::Bounded`] is GPU-segmentable, but a [`SyncClass::UnboundedCycle`]
-/// (the DFA genuinely never re-synchronizes — e.g. a `.*` body that must remember
+/// (the DFA genuinely never re-synchronizes, e.g. a `.*` body that must remember
 /// unbounded context) can NEVER move to GPU, whereas a [`SyncClass::BudgetExceeded`]
 /// (the analysis hit [`PRODUCT_PAIR_BUDGET`] before proving bounded/unbounded)
-/// MIGHT segment with a larger budget — the catalog builder logs the split so the
+/// MIGHT segment with a larger budget, the catalog builder logs the split so the
 /// over-rejection from budget vs. true unbounded memory is never conflated.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SyncClass {
@@ -186,7 +186,7 @@ pub enum SyncClass {
 
 impl SyncClass {
     /// The synchronization distance when proven bounded, else `None` (the legacy
-    /// [`dfa_sync_distance`] contract — `UnboundedCycle` and `BudgetExceeded` both
+    /// [`dfa_sync_distance`] contract: `UnboundedCycle` and `BudgetExceeded` both
     /// collapse to "not provably segmentable").
     #[must_use]
     pub const fn bounded(self) -> Option<u32> {
@@ -198,12 +198,12 @@ impl SyncClass {
 }
 
 /// SOUNDNESS GATE for tuned segmentation: the DFA's finite-memory /
-/// **synchronization distance** — the smallest `O` such that for every state
+/// **synchronization distance**: the smallest `O` such that for every state
 /// reachable from the start and every string `w` with `|w| >= O`, `δ*(0, w) ==
 /// δ*(q, w)`. After `O` common bytes the state no longer depends on where the
 /// scan started, so a window that warms up over `overlap >= O` bytes
 /// reconstructs the exact full-scan state at `emit_start`. Returns `None` when
-/// the distance is UNBOUNDED (infinite memory) — the rule cannot be segmented
+/// the distance is UNBOUNDED (infinite memory), the rule cannot be segmented
 /// and must be scanned whole-file (one segment), fail-safe and logged.
 ///
 /// Why not "longest start→accept path": an unanchored search DFA self-loops at
@@ -229,7 +229,7 @@ impl SyncClass {
 /// [`BatchRuleProgram`] tables.
 /// Thin wrapper over [`dfa_sync_class`] returning just the bounded distance
 /// (`None` for `UnboundedCycle` or `BudgetExceeded`). Callers that need to tell
-/// "genuinely unbounded" from "budget-capped" — e.g. for diagnostics — call
+/// "genuinely unbounded" from "budget-capped", e.g. for diagnostics, call
 /// [`dfa_sync_class`] directly.
 #[must_use]
 pub fn dfa_sync_distance(transitions: &[u32], state_count: u32) -> Option<u32> {
@@ -250,7 +250,7 @@ pub fn dfa_sync_class(transitions: &[u32], state_count: u32) -> SyncClass {
     let n = state_count as usize;
     if n <= 1 {
         // 0 states: nothing to scan. 1 state: every byte self-loops, so all
-        // start states already coincide — synchronization distance 0.
+        // start states already coincide (synchronization distance 0).
         return SyncClass::Bounded(0);
     }
     assert!(
@@ -315,7 +315,7 @@ pub fn dfa_sync_class(transitions: &[u32], state_count: u32) -> SyncClass {
         // Conservative cost ceiling: the product automaton has up to `n^2 / 2`
         // off-diagonal pairs, so a large DFA could explode the BFS. A rule whose
         // reachable product exceeds the budget is treated as NOT provably
-        // bounded (return `None`) — the caller scans it whole-file. This can only
+        // bounded (return `None`), the caller scans it whole-file. This can only
         // FORGO a segmentation opportunity, never produce an unsound one, so it
         // is a safe (recall-preserving) ceiling, not a silent correctness
         // fallback. Typical secret DFAs are far below it and analyze exactly.
@@ -329,7 +329,7 @@ pub fn dfa_sync_class(transitions: &[u32], state_count: u32) -> SyncClass {
             let na = delta(a, byte);
             let nb = delta(b, byte);
             if na == nb {
-                continue; // diagonal exit — the runs have synchronized
+                continue; // diagonal exit, the runs have synchronized
             }
             let succ = intern(key(na, nb), &mut index, &mut off_succ, &mut frontier);
             off_succ[id].push(succ);
@@ -396,7 +396,7 @@ pub fn dfa_sync_class(transitions: &[u32], state_count: u32) -> SyncClass {
 
 /// The minimum warm-up `overlap` that keeps intra-file segmentation EXACT for an
 /// entire rule catalog: the maximum [`dfa_sync_distance`] over every rule.
-/// Returns `None` when ANY rule has infinite memory (an unbounded-gap pattern) —
+/// Returns `None` when ANY rule has infinite memory (an unbounded-gap pattern) 
 /// the catalog cannot be soundly segmented at a shorter window than the whole
 /// file, so the caller MUST fall back to one segment per file (and should log
 /// which rule forced it; that is a recall-preserving slow path, not a silent
@@ -430,7 +430,7 @@ mod tests {
     // match END offset. The whole GPU-OOM segmentation rests on ONE claim: scanning
     // each window from state 0 over `[scan_start, emit_end)` and emitting only
     // matches whose END is in `[emit_start, emit_end)` yields the EXACT same
-    // (pattern, end) set as one dense full-buffer scan — provided the warm-up
+    // (pattern, end) set as one dense full-buffer scan, provided the warm-up
     // `overlap` is at least the longest pattern. This models that DFA with a
     // multi-pattern Aho-Corasick over short byte literals and proves the claim on
     // real automata (not just the offset tiling), so the WGSL kernel can mirror it.
@@ -524,7 +524,7 @@ mod tests {
         hits
     }
 
-    /// Segmented scan: exactly what the GPU kernel will do — each window scans
+    /// Segmented scan: exactly what the GPU kernel will do, each window scans
     /// `[scan_start, emit_end)` from state 0 and emits only matches whose END is
     /// in `[emit_start, emit_end)`.
     fn segmented_scan(
@@ -600,7 +600,7 @@ mod tests {
     fn sync_distance_unbounded_gap_pattern_is_none() {
         // "a.*b": state 0 (no 'a' yet), 1 (seen 'a', waiting 'b'), 2 (matched).
         // The pair {0,1} self-loops on any byte that is neither 'a' nor 'b'
-        // (0→0, 1→1) — an off-diagonal cycle — so the 'a' and 'b' can be
+        // (0→0, 1→1), an off-diagonal cycle, so the 'a' and 'b' can be
         // arbitrarily far apart and the rule has infinite memory.
         let mut t = vec![0u32; 3 * 256];
         for b in 0..256usize {
@@ -615,8 +615,8 @@ mod tests {
 
     #[test]
     fn sync_distance_parity_dfa_is_none() {
-        // Even/odd count of 'a': {even,odd} maps to {odd,even} on 'a' — an
-        // off-diagonal 2-cycle — so the start state is never forgotten.
+        // Even/odd count of 'a': {even,odd} maps to {odd,even} on 'a', an
+        // off-diagonal 2-cycle (so the start state is never forgotten).
         let mut t = vec![0u32; 2 * 256];
         for b in 0..256usize {
             t[0 * 256 + b] = 0;
@@ -633,7 +633,7 @@ mod tests {
         // unbounded DFA classifies as `UnboundedCycle` (NEVER segmentable,
         // regardless of budget), while a bounded literal classifies as
         // `Bounded(d)` with the exact distance. `BudgetExceeded` is the third,
-        // distinct arm (a larger budget might still prove it bounded) — the
+        // distinct arm (a larger budget might still prove it bounded), the
         // builder logs all three separately so budget-capping is never conflated
         // with true infinite memory.
 
@@ -704,7 +704,7 @@ mod tests {
 
     proptest! {
         /// THE soundness link: for a random multi-pattern AC DFA, the computed
-        /// synchronization distance `O` is a SUFFICIENT warm-up — a segmented
+        /// synchronization distance `O` is a SUFFICIENT warm-up, a segmented
         /// scan with `overlap = O` produces the EXACT dense match set for ANY
         /// segment width. This is what licenses tuning `seg_len` below the file
         /// length: `dfa_sync_distance` tells the host the minimum overlap that
@@ -910,7 +910,7 @@ mod tests {
         }
 
         /// The flat table is exactly the planned segments' ABI words concatenated,
-        /// and every emit_start/emit_end pair stays within its file length — the
+        /// and every emit_start/emit_end pair stays within its file length, the
         /// device decode can never read past the packed haystack for that file.
         #[test]
         fn segment_table_rows_are_in_bounds(
@@ -933,8 +933,8 @@ mod tests {
 
     proptest! {
         /// THE soundness oracle: per file, the windows' emit ranges tile
-        /// `[0, file_len)` exactly — start at 0, end at len, contiguous, gap-free,
-        /// disjoint — and each window's scan range is its emit range widened by
+        /// `[0, file_len)` exactly, start at 0, end at len, contiguous, gap-free,
+        /// disjoint, and each window's scan range is its emit range widened by
         /// exactly `min(overlap, emit_start)` of warm-up. A regression here breaks
         /// recall (a gap drops matches) or precision (an overlap double-counts).
         #[test]
@@ -1015,7 +1015,7 @@ mod tests {
     // literal-rich catalog (docs/GPU_OOM_SEGMENTATION.md END-TO-END finding).
 
     /// Combined-AC segmented scan over the production `CompiledDfa`. `end` is the
-    /// 0-based byte index where the match ends — the SAME convention as
+    /// 0-based byte index where the match ends, the SAME convention as
     /// [`classic_ac_scan`] (NOT the `i+1` convention of the model `segmented_scan`
     /// above), so the two are directly comparable.
     fn combined_segmented_scan(
@@ -1048,7 +1048,7 @@ mod tests {
 
     #[test]
     fn combined_segmented_equals_linear_on_overlapping_patterns() {
-        // he/she/his/hers on "ushers" — the canonical multi-emit case (one accept
+        // he/she/his/hers on "ushers", the canonical multi-emit case (one accept
         // state emits both "he" and "she" via failure links). A combined segmented
         // scan with overlap >= max_pattern_len must reproduce the full linear set.
         let ac = classic_ac_compile(&[b"he", b"she", b"his", b"hers"]);

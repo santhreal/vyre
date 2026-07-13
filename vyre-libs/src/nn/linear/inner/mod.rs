@@ -19,9 +19,9 @@ pub use batch_matmul::batch_matmul;
 pub use builder::{linear, Linear};
 #[cfg(feature = "nn-linear-4bit")]
 pub use linear_4bit::{
-    linear_4bit, linear_4bit_affine_grouped, linear_4bit_affine_grouped_typed,
-    linear_4bit_affine_grouped_planner_evidence, QuantizedLinear4BitPlannerEvidence,
-    QuantizedLinear4BitSpec, LINEAR_4BIT_AFFINE_GROUPED_OUTPUT_DRIFT_ABS_TOLERANCE,
+    linear_4bit, linear_4bit_affine_grouped, linear_4bit_affine_grouped_planner_evidence,
+    linear_4bit_affine_grouped_typed, QuantizedLinear4BitPlannerEvidence, QuantizedLinear4BitSpec,
+    LINEAR_4BIT_AFFINE_GROUPED_OUTPUT_DRIFT_ABS_TOLERANCE,
 };
 pub use relu::linear_relu;
 pub use rms_norm::{rms_norm_linear, try_rms_norm_linear};

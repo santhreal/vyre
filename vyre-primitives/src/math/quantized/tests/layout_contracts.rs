@@ -106,4 +106,3 @@ fn batched_matmul_top1_program_layout_matches_packed_activation_shape() {
     assert_eq!(program.buffers[4].name(), "out");
     assert_eq!(program.buffers[4].count(), 8);
 }
-

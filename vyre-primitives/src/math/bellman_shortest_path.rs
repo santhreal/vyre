@@ -53,24 +53,39 @@ pub fn bellman_shortest_path(
             Node::let_bind("u", Expr::load(src, t.clone())),
             Node::let_bind("v", Expr::load(dst, t.clone())),
             Node::let_bind("w", Expr::load(weight, t.clone())),
-            Node::let_bind("du", Expr::load(dist, Expr::var("u"))),
+            // `u`/`v` are DATA (edge endpoints loaded from src/dst); nothing validates
+            // them `< n_nodes`. The CPU reference SKIPS any edge with an out-of-range
+            // endpoint (`if u >= n || v >= n { continue }`), so the GPU MUST gate the
+            // dist[u] load AND the next_dist[v] atomic-min on the same bound, otherwise
+            // it OOB-loads dist[u] (UB / garbage `du` that can spuriously relax) and
+            // OOB atomic-WRITES next_dist[v] (memory corruption on real hardware),
+            // diverging from the CPU ref on any malformed edge (gather / test_bit class).
             Node::if_then(
-                Expr::ne(Expr::var("du"), Expr::u32(u32::MAX)),
+                Expr::and(
+                    Expr::lt(Expr::var("u"), Expr::u32(n_nodes)),
+                    Expr::lt(Expr::var("v"), Expr::u32(n_nodes)),
+                ),
                 vec![
-                    Node::let_bind(
-                        "alt",
-                        Expr::select(
-                            Expr::gt(
-                                Expr::var("w"),
-                                Expr::sub(Expr::u32(u32::MAX), Expr::var("du")),
+                    Node::let_bind("du", Expr::load(dist, Expr::var("u"))),
+                    Node::if_then(
+                        Expr::ne(Expr::var("du"), Expr::u32(u32::MAX)),
+                        vec![
+                            Node::let_bind(
+                                "alt",
+                                Expr::select(
+                                    Expr::gt(
+                                        Expr::var("w"),
+                                        Expr::sub(Expr::u32(u32::MAX), Expr::var("du")),
+                                    ),
+                                    Expr::u32(u32::MAX),
+                                    Expr::add(Expr::var("du"), Expr::var("w")),
+                                ),
                             ),
-                            Expr::u32(u32::MAX),
-                            Expr::add(Expr::var("du"), Expr::var("w")),
-                        ),
-                    ),
-                    Node::let_bind(
-                        "_relax",
-                        Expr::atomic_min(next_dist, Expr::var("v"), Expr::var("alt")),
+                            Node::let_bind(
+                                "_relax",
+                                Expr::atomic_min(next_dist, Expr::var("v"), Expr::var("alt")),
+                            ),
+                        ],
                     ),
                 ],
             ),

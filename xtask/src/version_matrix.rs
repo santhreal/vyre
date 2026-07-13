@@ -546,9 +546,14 @@ fn collect_one_dependency_hints(
             return;
         }
     };
+    // Only NORMAL dependencies constrain release-version coherence. `dev-` and
+    // `build-dependencies` are non-public and non-transitive to consumers, and
+    // internal ones are deliberately pinned to an already-published version to
+    // break the publish cycle (a crate that is published BEFORE its dev-dep
+    // cannot require the not-yet-published release version). Requiring those to
+    // equal the release version is a false positive that would break the very
+    // publish order package-readiness validates, so they are excluded here.
     collect_dependency_table(path, "dependencies", &value, hints);
-    collect_dependency_table(path, "dev-dependencies", &value, hints);
-    collect_dependency_table(path, "build-dependencies", &value, hints);
     if let Some(workspace) = value.get("workspace") {
         collect_dependency_table(path, "dependencies", workspace, hints);
     }

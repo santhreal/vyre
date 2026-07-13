@@ -81,6 +81,49 @@ jobs:
         shell: bash
         run: ./cargo_full test -p vyre-conform-runner --test dispatch_grid_contracts
 
+      - name: registry parity gates (OOB + grid-invariance + race-freedom)
+        shell: bash
+        # Four orthogonal GPU/CPU parity nets over every registered Tier-2.5 primitive,
+        # run on its own valid fixtures: (1) OOB-clean at the default grid; (2) OOB-clean
+        # when the dispatch is over-fired by one workgroup (whole-workgroup GPU dispatch
+        # runs lanes past the logical count); (3) OUTPUT-invariant under that over-fire
+        # (an over-fired lane must not change any output via a wrong-but-in-bounds write);
+        # (4) RACE-FREE under lane-step-order reversal (a non-atomic cross-lane same-slot
+        # store is GPU-nondeterministic but the single-threaded reference hides it). The
+        # reference interpreter silently zero-fills/drops OOB accesses and resolves races
+        # deterministically, so a real GPU (CUDA does no bounds-checking) would fault,
+        # corrupt memory, or diverge where these pass (the gates surface that masking).
+        # Requires the inventory-registry + all domain (all-lego) features to register
+        # every op. Includes positive/negative controls proving the race detector fires.
+        run: ./cargo_full test -p vyre-primitives --features inventory-registry,all-lego --test registry_oob_clean -- --nocapture
+
+      - name: graph + math IR parity + oracle suite (feature-gated)
+        shell: bash
+        # These graph tests are `#![cfg(feature = "graph"/"bitset"/"cpu-parity")]`-gated.
+        # vyre-primitives is `default = []`, so ci.yml's default-feature `cargo test
+        # --workspace` compiles them to NOTHING, they never run there. Wire them here with
+        # the domain features so they cannot rot: the CSR edge-scan ONE-PLACE lock, the
+        # reverse-or-changed IR-fixpoint parity vs cpu_ref_closure, the graph-builder
+        # IR-validity gate (unregistered CPU-oracle-only builders, the union_find
+        # shadow-bug class), and the generated graph oracle / fixpoint / persistent-BFS
+        # volume matrices.
+        run: >-
+          ./cargo_full test -p vyre-primitives
+          --features all-lego,cpu-parity,inventory-registry
+          --test generated_graph_oracle_matrix
+          --test graph_fixpoint_adversarial_generated
+          --test sweep_graph_persistent_bfs_volume_oracle_matrix
+          --test csr_backward_or_changed_ir_fixpoint
+          --test graph_builders_emit_valid_ir
+          --test csr_edge_scan_one_place
+          --test union_find_connectivity_parity
+          --test toposort_program_value_parity
+          --test tensor_scc_value_parity
+          --test matroid_intersection_full_value_parity
+          --test sheaf_laplacian_eigenvalue_dispatch_parity
+          --test jacobi_serial_body_matches_per_lane
+          --test do_calculus_rule2_value_parity
+
       - name: conformance matrix evidence
         shell: bash
         run: ./cargo_full run --bin xtask -- conformance-matrix --output release/evidence/conformance/conformance-matrix.json

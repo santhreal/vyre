@@ -197,6 +197,34 @@ pub fn classic_ac_bounded_count_suffix3_prefilter_program(
 /// Derive the hashed three-byte suffix mask consumed by the suffix3 prefilter.
 #[must_use]
 pub fn classic_ac_candidate_suffix3_bloom_words(patterns: &[&[u8]]) -> Vec<u32> {
+    classic_ac_candidate_suffix3_bloom_words_ci(patterns, false)
+}
+
+/// The RAW haystack bytes a case-`ci` scan must treat as equal to `byte`:
+/// `([byte, _], 1)` normally, or `([lower, upper], 2)` for an ASCII letter under
+/// case-insensitive matching. Returned as a fixed array + count so callers can
+/// iterate the cartesian product with plain nested loops (no closures capturing
+/// the mutable mask). The ONE owner of the case fold shared by the end / suffix2
+/// / suffix3 mask builders.
+#[must_use]
+pub(crate) fn ascii_case_variants(byte: u8, case_insensitive: bool) -> ([u8; 2], usize) {
+    if case_insensitive && byte.is_ascii_alphabetic() {
+        ([byte.to_ascii_lowercase(), byte.to_ascii_uppercase()], 2)
+    } else {
+        ([byte, 0], 1)
+    }
+}
+
+/// ASCII-case-aware variant of [`classic_ac_candidate_suffix3_bloom_words`]: when
+/// `case_insensitive`, every ASCII-letter byte of the 3-byte suffix is expanded
+/// to BOTH cases (a `2^k`-way cartesian product for `k` letters among the three),
+/// so a raw uppercase candidate triple passes the bloom. The prefilter reads the
+/// unfolded haystack, so the mask (not the haystack (must carry both cases)).
+#[must_use]
+pub fn classic_ac_candidate_suffix3_bloom_words_ci(
+    patterns: &[&[u8]],
+    case_insensitive: bool,
+) -> Vec<u32> {
     let mut mask = vec![0_u32; CLASSIC_AC_SUFFIX3_BLOOM_WORDS];
     for pattern in patterns
         .iter()
@@ -205,24 +233,37 @@ pub fn classic_ac_candidate_suffix3_bloom_words(patterns: &[&[u8]]) -> Vec<u32> 
     {
         match pattern.len() {
             1 => {
+                let (cv, cn) = ascii_case_variants(pattern[0], case_insensitive);
                 for previous2 in 0..=u8::MAX {
                     for previous in 0..=u8::MAX {
-                        set_suffix3_bloom_bit(&mut mask, previous2, previous, pattern[0]);
+                        for &c in &cv[..cn] {
+                            set_suffix3_bloom_bit(&mut mask, previous2, previous, c);
+                        }
                     }
                 }
             }
             2 => {
+                let (bv, bn) = ascii_case_variants(pattern[0], case_insensitive);
+                let (cv, cn) = ascii_case_variants(pattern[1], case_insensitive);
                 for previous2 in 0..=u8::MAX {
-                    set_suffix3_bloom_bit(&mut mask, previous2, pattern[0], pattern[1]);
+                    for &b in &bv[..bn] {
+                        for &c in &cv[..cn] {
+                            set_suffix3_bloom_bit(&mut mask, previous2, b, c);
+                        }
+                    }
                 }
             }
             len => {
-                set_suffix3_bloom_bit(
-                    &mut mask,
-                    pattern[len - 3],
-                    pattern[len - 2],
-                    pattern[len - 1],
-                );
+                let (av, an) = ascii_case_variants(pattern[len - 3], case_insensitive);
+                let (bv, bn) = ascii_case_variants(pattern[len - 2], case_insensitive);
+                let (cv, cn) = ascii_case_variants(pattern[len - 1], case_insensitive);
+                for &a in &av[..an] {
+                    for &b in &bv[..bn] {
+                        for &c in &cv[..cn] {
+                            set_suffix3_bloom_bit(&mut mask, a, b, c);
+                        }
+                    }
+                }
             }
         }
     }
@@ -289,34 +330,13 @@ pub(in crate::scan::classic_ac) fn suffix3_bloom_bit_index_expr(suffix: Expr) ->
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::scan::classic_ac::test_helpers::with_reference_dispatch_lanes;
     use crate::scan::classic_ac::{
         classic_ac_candidate_end_byte_mask_words, classic_ac_candidate_suffix2_mask_words,
         classic_ac_compile, classic_ac_scan_counts,
     };
     use crate::scan::{pack_haystack_u32, pack_u32_slice};
-
-    fn decode_u32(bytes: &[u8]) -> Vec<u32> {
-        bytes
-            .chunks_exact(4)
-            .map(|chunk| u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
-            .collect()
-    }
-
-    fn with_reference_dispatch_lanes(program: Program, lanes: u32) -> Program {
-        let buffers = program
-            .buffers()
-            .iter()
-            .cloned()
-            .map(|buffer| {
-                if buffer.name() == "match_count" {
-                    buffer.with_count(lanes.max(1)).with_output_byte_range(0..4)
-                } else {
-                    buffer
-                }
-            })
-            .collect();
-        program.with_rewritten_buffers(buffers)
-    }
+    use crate::test_support::byte_pack::bytes_to_u32 as decode_u32;
 
     #[test]
     fn suffix3_bloom_marks_inserted_short_and_long_pattern_suffixes() {

@@ -480,7 +480,7 @@ impl NaturalLaunchCacheKey {
         let digest = hasher.finalize();
         let mut key = String::with_capacity(74);
         key.push_str("launch-v1-");
-        push_hex(digest.as_bytes(), &mut key);
+        crate::pipeline::hashing::push_lower_hex(digest.as_bytes(), &mut key);
         key
     }
 }
@@ -590,20 +590,12 @@ fn natural_launch_persistent_adapter_key(limits: LaunchGeometryLimits) -> String
     let digest = hasher.finalize();
     let mut key = String::with_capacity(92);
     key.push_str("natural-launch-feedback-v1-");
-    push_hex(digest.as_bytes(), &mut key);
+    crate::pipeline::hashing::push_lower_hex(digest.as_bytes(), &mut key);
     key
 }
 
 fn valid_persisted_launch_selection(selected: [u32; 3], limits: LaunchGeometryLimits) -> bool {
     selected[1] == 1 && selected[2] == 1 && candidate_x_fits_limits(selected[0], limits)
-}
-
-fn push_hex(bytes: &[u8], out: &mut String) {
-    const HEX: &[u8; 16] = b"0123456789abcdef";
-    for &byte in bytes {
-        out.push(HEX[(byte >> 4) as usize] as char);
-        out.push(HEX[(byte & 0x0f) as usize] as char);
-    }
 }
 
 fn is_natural_gradient_launch_tunable(
@@ -1010,7 +1002,7 @@ mod tests {
             .expect("Fix: production section must precede test section");
         assert!(
             !production.contains(".lock()\n        .ok()") && !production.contains(".lock().ok()"),
-            "Fix: natural_launch_cache functions must not use .lock().ok() — that silently swallows mutex poison"
+            "Fix: natural_launch_cache functions must not use .lock().ok(), that silently swallows mutex poison"
         );
     }
 
@@ -1041,7 +1033,7 @@ mod tests {
         let key = NaturalLaunchCacheKey::new(&program, [32, 1, 1], 4096, limits);
         natural_launch_cache_remove(key);
 
-        // First measurement accepted — starts from empty, correct.
+        // First measurement accepted (starts from empty, correct).
         assert!(
             record_launch_measurement_for_mode_with_store(
                 &program,
@@ -1056,7 +1048,7 @@ mod tests {
             "Fix: first measurement must be accepted into the cache"
         );
 
-        // Read back the selection — must be [256, 1, 1] (only candidate with real timing).
+        // Read back the selection (must be [256, 1, 1] (only candidate with real timing)).
         let after_first = natural_launch_cache_get(key);
         assert!(
             after_first.is_some(),
@@ -1064,7 +1056,7 @@ mod tests {
         );
 
         // Second measurement with a *faster* timing for a different candidate.
-        // The history from the first must be preserved — not replaced by an empty map.
+        // The history from the first must be preserved (not replaced by an empty map).
         assert!(
             record_launch_measurement_for_mode_with_store(
                 &program,
@@ -1083,7 +1075,7 @@ mod tests {
             .expect("Fix: cache must hold measurements after two records");
         assert!(
             measurements.len() >= 2,
-            "Fix: measurement history must accumulate across calls — got {} entries, expected >= 2",
+            "Fix: measurement history must accumulate across calls, got {} entries, expected >= 2",
             measurements.len()
         );
         assert_eq!(

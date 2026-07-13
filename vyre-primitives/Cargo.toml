@@ -1,6 +1,6 @@
 [package]
 name = "vyre-primitives"
-version = "0.6.4"
+version = "0.6.5"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -39,7 +39,7 @@ vyre-foundation = ["dep:vyre-foundation"]
 text = ["vyre-foundation", "reduce"]
 # `hash`: `matching/nfa_to_dfa.rs` imports `crate::hash::fnv1a` UNCONDITIONALLY, so
 # the `matching` domain does not compile standalone without it. Previously omitted
-# (the bug was masked in-workspace by feature unification — another member always
+# (the bug was masked in-workspace by feature unification, another member always
 # enabled `hash`); a consumer enabling ONLY `matching` against the published crate
 # fails with E0433. Self-enable it so `matching` is a complete, standalone feature.
 matching = ["vyre-foundation", "hash"]
@@ -112,6 +112,7 @@ vyre-driver-cuda = { version = "0.6.1", path = "../vyre-driver-cuda" }
 vyre-reference = { version = "0.6.1", path = "../vyre-reference" }
 proptest.workspace = true
 criterion.workspace = true
+vyre-test-support.workspace = true
 
 [package.metadata.docs.rs]
 all-features = true
@@ -238,6 +239,11 @@ required-features = ["graph"]
 [[test]]
 name = "proptest_csr_frontier_queue"
 path = "tests/proptest_csr_frontier_queue.rs"
+required-features = ["graph", "cpu-parity"]
+
+[[test]]
+name = "proptest_csr_frontier_shard"
+path = "tests/proptest_csr_frontier_shard.rs"
 required-features = ["graph", "cpu-parity"]
 
 [[test]]

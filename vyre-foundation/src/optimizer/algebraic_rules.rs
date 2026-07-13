@@ -125,7 +125,7 @@ impl ScalarLiteral {
     /// floats exclude NaN and ±inf; Bool is not numeric.
     ///
     /// Used by the `fma(0, x, c) → c` absorber, which is only sound when the
-    /// non-zero factor cannot be inf/NaN — `0.0 * inf = 0.0 * NaN = NaN`, not 0,
+    /// non-zero factor cannot be inf/NaN: `0.0 * inf = 0.0 * NaN = NaN`, not 0,
     /// so the addend `c` is not the result when the other factor is non-finite.
     #[must_use]
     pub fn is_finite_numeric(self) -> bool {

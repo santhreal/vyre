@@ -26,7 +26,19 @@ pub fn tensor_scc_fixpoint(
     let row_count = row_count.max(1);
     let iteration_limit = iteration_limit.max(1);
     let body = vec![
-        Node::let_bind("active", Expr::load(seed_mask, Expr::u32(0))),
+        // Mask the seed to the group BEFORE expansion: this is a group-LOCAL closure, so a
+        // seed node outside `group_mask` is not part of it and must not seed reachability
+        // through its row. `cpu_ref` masks the seed first (`seed_mask & group_mask`); seeding
+        // `active` unmasked let out-of-group seed bits (wrongly) follow their rows into the
+        // group, diverging from the reference. With this mask, `active ⊆ group` holds for the
+        // whole loop (every contribution is `& group_mask`), so the final out-mask is exact.
+        Node::let_bind(
+            "active",
+            Expr::bitand(
+                Expr::load(seed_mask, Expr::u32(0)),
+                Expr::load(group_mask, Expr::u32(0)),
+            ),
+        ),
         Node::loop_for(
             "iter",
             Expr::u32(0),

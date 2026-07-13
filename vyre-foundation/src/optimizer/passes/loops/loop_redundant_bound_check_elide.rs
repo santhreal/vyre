@@ -166,7 +166,7 @@ fn elide_in_node_with_ctx(node: Node, loop_ctx: Option<(&str, u32)>, changed: &m
             // The loop establishes a fresh ctx; only fires when `to` is a
             // literal (the conservative analysis we documented above) AND the
             // body never rebinds the loop var. If a `Let`/`Assign` shadows the
-            // induction variable (e.g. `let i = load(idx, i)` — a gathered
+            // induction variable (e.g. `let i = load(idx, i)`: a gathered
             // index), a later `if i < to` is a *real* bounds check, not a
             // redundant one; eliding it would drop the guard and admit an
             // out-of-range access. strip_mine / unroll gate the same way.

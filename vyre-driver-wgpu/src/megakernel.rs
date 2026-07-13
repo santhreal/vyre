@@ -1,6 +1,6 @@
 //! WGPU-owned megakernel dispatch wrapper.
 
-use crate::numeric::usize_to_u64;
+use crate::numeric::WGPU_NUMERIC;
 use smallvec::SmallVec;
 use std::cell::RefCell;
 use std::sync::Arc;
@@ -445,13 +445,13 @@ impl<'a> WgpuMegakernelDispatcher<'a> {
             queue_publish_ns,
             backend_dispatch_ns: nanos_u64(wall_time.as_nanos())?,
             lineage_ns,
-            deduped_items: usize_to_u64(
+            deduped_items: WGPU_NUMERIC.usize_to_u64(
                 redundancy.total_redundant_ops,
                 "megakernel redundant operation count",
             )?,
-            published_items: usize_to_u64(item_count, "megakernel published item count")?,
+            published_items: WGPU_NUMERIC.usize_to_u64(item_count, "megakernel published item count")?,
             lineage_items: if track_lineage {
-                usize_to_u64(item_count, "megakernel lineage item count")?
+                WGPU_NUMERIC.usize_to_u64(item_count, "megakernel lineage item count")?
             } else {
                 0
             },
@@ -699,7 +699,7 @@ fn megakernel_report_telemetry(
         sync_points: 1,
         occupancy_proxy_bps: occupancy_proxy_bps(item_count, worker_groups, workgroup_size_x)?,
         frontier_density_bps: density_bps(
-            usize_to_u64(item_count, "megakernel frontier item count")?,
+            WGPU_NUMERIC.usize_to_u64(item_count, "megakernel frontier item count")?,
             u64::from(slot_count.max(1)),
         ),
         readback_buffers: u32::try_from(outputs.len()).map_err(|source| {
@@ -773,13 +773,13 @@ fn occupancy_proxy_bps(
             )
         })?;
     Ok(density_bps(
-        usize_to_u64(item_count, "megakernel occupancy item count")?,
+        WGPU_NUMERIC.usize_to_u64(item_count, "megakernel occupancy item count")?,
         lanes,
     ))
 }
 
 fn density_bps(numerator: u64, denominator: u64) -> u16 {
-    crate::numeric::ratio_basis_points_u64_wide(
+    crate::numeric::WGPU_NUMERIC.ratio_basis_points_u64_wide(
         numerator,
         denominator.max(1),
         0,

@@ -530,6 +530,23 @@ impl BufferDecl {
         self.pipeline_live_out
     }
 
+    /// True when a backend ALLOCATES this buffer's storage (an output it writes) rather
+    /// than reading it from the dispatch inputs: an `is_output` buffer, any `WriteOnly`
+    /// buffer, or a `pipeline_live_out` `ReadWrite` intermediate.
+    ///
+    /// This is the SINGLE cross-backend definition of "backend-allocated output": the
+    /// reference interpreter, the CpuRef backend, and the device drivers MUST all agree
+    /// on which buffers they allocate-and-write vs. read from inputs, so each calls this
+    /// method instead of re-deriving the predicate. Drift here would make the interpreter
+    /// and a backend disagree on a program's outputs (a silent readback bug).
+    #[must_use]
+    #[inline]
+    pub fn is_backend_allocated_output(&self) -> bool {
+        self.is_output()
+            || matches!(self.access, BufferAccess::WriteOnly)
+            || (self.is_pipeline_live_out() && matches!(self.access, BufferAccess::ReadWrite))
+    }
+
     /// Byte range the consumer needs from this output buffer, if declared.
     #[must_use]
     #[inline]

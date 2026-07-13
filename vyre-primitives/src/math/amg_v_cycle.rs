@@ -1,7 +1,9 @@
 //! Algebraic Multigrid (AMG) V-cycle primitive (#P-PRIM-3).
 //!
-//! Composes `jacobi_smooth_step` with restriction and prolongation to
-//! solve linear systems $Ax = b$ across multiple scales.
+//! Composes the Jacobi smoother (`jacobi_smooth_step_serial_body`) with restriction and
+//! prolongation to solve linear systems $Ax = b$ across multiple scales. The whole V-cycle is a
+//! single-threaded serial algorithm run under one `InvocationId == 0` lane guard (see the region
+//! body), so it inlines the SERIAL smoother form, not the per-lane `jacobi_smooth_step` builder.
 //!
 //! Sequence (2-level):
 //! 1. Pre-smooth: $x = \text{smooth}(A, b, x, \omega)$
@@ -10,13 +12,12 @@
 //! 4. Prolong: $x = x + P x_c$
 //! 5. Post-smooth: $x = \text{smooth}(A, b, x, \omega)$
 
-use crate::math::multigrid::jacobi_smooth_step;
 #[cfg(any(test, feature = "cpu-parity"))]
 use crate::math::multigrid::jacobi_smooth_step_cpu_into;
+use crate::math::multigrid::jacobi_smooth_step_serial_body;
 use std::sync::Arc;
 use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::MemoryOrdering;
 
 /// Op id.
 pub const OP_ID: &str = "vyre-primitives::math::amg_v_cycle";
@@ -92,10 +93,16 @@ pub fn amg_v_cycle(
 
     let mut nodes = Vec::new();
 
-    // 1. Pre-smooth
-    let pre_smooth = jacobi_smooth_step(a, b, x, omega, scratch_fine, n_fine);
-    nodes.extend(pre_smooth.entry().to_vec());
-    nodes.push(Node::barrier_with_ordering(MemoryOrdering::GridSync));
+    // 1. Pre-smooth (serial: the whole V-cycle runs on one lane, see the region-body guard)
+    nodes.extend(jacobi_smooth_step_serial_body(
+        a,
+        b,
+        x,
+        omega,
+        scratch_fine,
+        n_fine,
+        "pre",
+    ));
     // Copy scratch_fine back to x
     nodes.push(Node::loop_for(
         "__i",
@@ -107,7 +114,6 @@ pub fn amg_v_cycle(
             Expr::load(scratch_fine, Expr::var("__i")),
         )],
     ));
-    nodes.push(Node::barrier_with_ordering(MemoryOrdering::GridSync));
 
     // 2. Restrict: r = b - Ax; b_c = R r
     nodes.push(Node::loop_for(
@@ -144,7 +150,6 @@ pub fn amg_v_cycle(
             ),
         ],
     ));
-    nodes.push(Node::barrier_with_ordering(MemoryOrdering::GridSync));
 
     // b_c = R * r
     nodes.push(Node::loop_for(
@@ -177,22 +182,19 @@ pub fn amg_v_cycle(
             Node::store(scratch_coarse_b, Expr::var("ic"), Expr::var("bc_i")),
         ],
     ));
-    nodes.push(Node::barrier_with_ordering(MemoryOrdering::GridSync));
 
     // 3. Coarse solve
     nodes.push(Node::store(scratch_coarse_x, Expr::u32(0), Expr::u32(0)));
-    nodes.push(Node::barrier_with_ordering(MemoryOrdering::GridSync));
-    for _ in 0..4 {
-        let coarse_smooth = jacobi_smooth_step(
+    for k in 0..4 {
+        nodes.extend(jacobi_smooth_step_serial_body(
             a_c,
             scratch_coarse_b,
             scratch_coarse_x,
             omega,
             "temp_coarse",
             n_coarse,
-        );
-        nodes.extend(coarse_smooth.entry().to_vec());
-        nodes.push(Node::barrier_with_ordering(MemoryOrdering::GridSync));
+            &format!("coarse{k}"),
+        ));
         nodes.push(Node::loop_for(
             "__k",
             Expr::u32(0),
@@ -203,7 +205,6 @@ pub fn amg_v_cycle(
                 Expr::load("temp_coarse", Expr::var("__k")),
             )],
         ));
-        nodes.push(Node::barrier_with_ordering(MemoryOrdering::GridSync));
     }
 
     // 4. Prolong: x = x + P * x_c
@@ -241,12 +242,17 @@ pub fn amg_v_cycle(
             ),
         ],
     ));
-    nodes.push(Node::barrier_with_ordering(MemoryOrdering::GridSync));
 
-    // 5. Post-smooth
-    let post_smooth = jacobi_smooth_step(a, b, x, omega, scratch_fine, n_fine);
-    nodes.extend(post_smooth.entry().to_vec());
-    nodes.push(Node::barrier_with_ordering(MemoryOrdering::GridSync));
+    // 5. Post-smooth (serial, single lane)
+    nodes.extend(jacobi_smooth_step_serial_body(
+        a,
+        b,
+        x,
+        omega,
+        scratch_fine,
+        n_fine,
+        "post",
+    ));
     nodes.push(Node::loop_for(
         "__m",
         Expr::u32(0),
@@ -288,7 +294,20 @@ pub fn amg_v_cycle(
                 source_region: Some(GeneratorRef {
                     name: OP_ID.to_string(),
                 }),
-                body: Arc::new(nodes),
+                // The V-cycle is a SINGLE-THREADED serial algorithm: its smoothing steps are
+                // inlined as serial loops (see jacobi_smooth_step_serial_body) and its
+                // restriction/prolongation phases are serial loop-nests. The reference/GPU infers
+                // the dispatch grid from buffer shapes and the production consumer dispatches
+                // ceil(n/256) workgroups of size 1, far fewer lanes than there are rows, so a
+                // per-lane body would under-cover the vector. Guard the whole body to
+                // `InvocationId == 0` so the one dispatched lane runs the entire serial V-cycle at
+                // any grid (the canonical GPU serial-region idiom, cf. matroid, sheaf,
+                // path_reconstruct). No GridSync barriers are needed (or safe) under this guard:
+                // a single lane sees its own writes sequentially.
+                body: Arc::new(vec![Node::if_then(
+                    Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+                    nodes,
+                )]),
             }]),
         }],
     )

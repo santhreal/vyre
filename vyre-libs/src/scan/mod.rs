@@ -60,8 +60,29 @@ pub const API_INDEX: &[(&str, ApiKind, Option<&str>)] = &[
     ("LiteralSetPreparedScan", ApiKind::Struct, None),
     ("LiteralSetScanScratch", ApiKind::Struct, None),
     ("LiteralSetWireError", ApiKind::Enum, None),
+    ("PendingFusedRegion", ApiKind::Struct, None),
+    ("PendingMatches", ApiKind::Struct, None),
+    ("PendingPresence", ApiKind::Struct, None),
     ("PendingPresenceByRegion", ApiKind::Struct, None),
+    ("ScanAllTimed", ApiKind::Struct, None),
+    ("ResidentLiteralScan", ApiKind::Struct, None),
+    ("ResidentFusedRegionScan", ApiKind::Struct, None),
     ("ResidentPresencePipeline", ApiKind::Struct, None),
+    ("scan_paged_fused", ApiKind::Function, None),
+    ("scan_paged_fused_timed", ApiKind::Function, None),
+    ("scan_paged_fused_async", ApiKind::Function, None),
+    ("scan_sharded_fused", ApiKind::Function, None),
+    ("scan_sharded_fused_weighted", ApiKind::Function, None),
+    ("scan_sharded_fused_timed", ApiKind::Function, None),
+    ("scan_pattern_sharded", ApiKind::Function, None),
+    ("PatternShard", ApiKind::Struct, None),
+    ("ShardTiming", ApiKind::Struct, None),
+    ("ShardedScanTiming", ApiKind::Struct, None),
+    ("scan_paths_paged", ApiKind::Function, None),
+    ("scan_paths_paged_prefetched", ApiKind::Function, None),
+    ("PagedScanResult", ApiKind::Struct, None),
+    ("PagedScanTiming", ApiKind::Struct, None),
+    ("GlobalMatch", ApiKind::Struct, None),
     ("LITERAL_SET_COUNT_RESOURCE_INDEX", ApiKind::Const, None),
     (
         "LITERAL_SET_PRESENCE_BY_REGION_OUTPUT_RESOURCE_INDEX",
@@ -120,7 +141,11 @@ pub const API_INDEX: &[(&str, ApiKind, Option<&str>)] = &[
     ),
     ("PipelineWireError", ApiKind::Enum, Some("matching-nfa")),
     ("RulePipeline", ApiKind::Struct, Some("matching-nfa")),
-    ("ResidentRulePipeline", ApiKind::Struct, Some("matching-nfa")),
+    (
+        "ResidentRulePipeline",
+        ApiKind::Struct,
+        Some("matching-nfa"),
+    ),
     // matching-regex.
     (
         "build_rule_pipeline_from_regex",
@@ -134,6 +159,18 @@ pub const API_INDEX: &[(&str, ApiKind, Option<&str>)] = &[
     ),
     ("CompiledRegexSet", ApiKind::Struct, Some("matching-regex")),
     ("RegexCompileError", ApiKind::Enum, Some("matching-regex")),
+    ("RegexConstruct", ApiKind::Enum, Some("matching-regex")),
+    (
+        "regex_construct_diagnostic_code",
+        ApiKind::Function,
+        Some("matching-regex"),
+    ),
+    ("CaptureMode", ApiKind::Enum, Some("matching-regex")),
+    (
+        "CaptureModeContract",
+        ApiKind::Struct,
+        Some("matching-regex"),
+    ),
     // regex-set → dense DFA → existing AC kernel composition.
     // Gated on both matching-regex (for compile_regex_set) and
     // matching-dfa (for build_ac_bounded_ranges_program). The single
@@ -149,8 +186,86 @@ pub const API_INDEX: &[(&str, ApiKind, Option<&str>)] = &[
         ApiKind::Function,
         Some("matching-regex"),
     ),
+    (
+        "build_regex_dfa_shards",
+        ApiKind::Function,
+        Some("matching-regex"),
+    ),
+    (
+        "build_regex_dfa_shards_unanchored",
+        ApiKind::Function,
+        Some("matching-regex"),
+    ),
     ("RegexDfaPipeline", ApiKind::Struct, Some("matching-regex")),
+    ("RegexDfaShard", ApiKind::Struct, Some("matching-regex")),
     ("RegexDfaError", ApiKind::Enum, Some("matching-regex")),
+    (
+        "AnchoredWindowValidator",
+        ApiKind::Struct,
+        Some("matching-regex"),
+    ),
+    (
+        "anchored_window_extract_program",
+        ApiKind::Function,
+        Some("matching-regex"),
+    ),
+    (
+        "ANCHORED_WINDOW_MATCH_COUNT_BINDING",
+        ApiKind::Const,
+        Some("matching-regex"),
+    ),
+    (
+        "ANCHORED_WINDOW_MATCHES_BINDING",
+        ApiKind::Const,
+        Some("matching-regex"),
+    ),
+    (
+        "regex_admission_by_region_program",
+        ApiKind::Function,
+        Some("matching-regex"),
+    ),
+    (
+        "regex_admission_by_region_reference",
+        ApiKind::Function,
+        Some("matching-regex"),
+    ),
+    (
+        "regex_admission_presence_words",
+        ApiKind::Function,
+        Some("matching-regex"),
+    ),
+    ("region_of", ApiKind::Function, Some("matching-regex")),
+    (
+        "fused_region_evidence_program",
+        ApiKind::Function,
+        Some("matching-regex"),
+    ),
+    (
+        "fused_region_evidence_reference",
+        ApiKind::Function,
+        Some("matching-regex"),
+    ),
+    (
+        "FusedRegionEvidence",
+        ApiKind::Struct,
+        Some("matching-regex"),
+    ),
+    (
+        "FUSED_EVIDENCE_PRESENCE_BINDING",
+        ApiKind::Const,
+        Some("matching-regex"),
+    ),
+    (
+        "FUSED_EVIDENCE_MATCHES_BINDING",
+        ApiKind::Const,
+        Some("matching-regex"),
+    ),
+    (
+        "RegionEvidencePipeline",
+        ApiKind::Struct,
+        Some("matching-regex"),
+    ),
+    ("RegionEvidenceError", ApiKind::Enum, Some("matching-regex")),
 ];
 
 /// Item-kind tag for entries in `API_INDEX`. Coarse on purpose  -
@@ -220,6 +335,13 @@ pub mod nfa;
 
 pub mod literal_set;
 
+/// W2-4 paged-corpus scanning: scan a corpus larger than one resident window as a
+/// sequence of resident-window dispatches with stable global region ids and u64
+/// global positions, identical to a single-shot scan of the concatenated corpus.
+/// Public entry [`paged_corpus::scan_paged_fused`]; the window planner is a private
+/// helper.
+pub mod paged_corpus;
+
 /// Match post-processing: dedup, entropy, and confidence in one reference pass.
 pub mod post_process;
 
@@ -237,13 +359,14 @@ pub mod test_fixtures;
 #[cfg(feature = "matching-dfa")]
 pub mod direct_gpu;
 
-/// Mega-scan integrator (G-stack). Fuses the G1-G10 innovations
-/// into one `RulePipeline` object: G1 NFA prefilter + G2 rule
-/// fusion + G5 decode-scan workgroup handoff + G6 speculative
-/// commit + G7 persistent-engine work items + G8 content-hash
-/// cache key + G4 adaptive CSR/dense graph traversal + G9 CHD
-/// perfect hash + G10 differential scan file selection. One
-/// object program-analysis consumer dispatches.
+/// Mega-scan integrator (G-stack). The single authoritative entry
+/// point that produces one `RulePipeline` object program-analysis
+/// consumers dispatch. Currently only G1 (subgroup-cooperative NFA
+/// scan) is wired end-to-end; G2-G10 (rule fusion, decode-scan
+/// handoff, speculative commit, persistent-engine work items,
+/// content-hash cache key, adaptive CSR/dense traversal, CHD perfect
+/// hash, differential scan file selection) are planned composition
+/// hooks that land here as they are implemented.
 #[cfg(feature = "matching-nfa")]
 pub mod mega_scan;
 
@@ -280,6 +403,38 @@ pub mod regex_compile;
 #[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
 pub mod regex_dfa;
 
+/// Anchored-window regex extraction (plan W2-3, line 179): validate candidate
+/// origins from the positions pass against an anchored [`regex_dfa`] DFA,
+/// turning literal-prefilter *admission* into full-match *extraction*
+/// (confirm + locate). CPU primitive + parity oracle for the GPU kernel.
+#[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
+pub mod regex_anchored_window;
+
+/// Regex-DFA per-region admission (plan W2-2, line 153's third evidence family):
+/// a per-region presence bitmap of which regex patterns start a match in each
+/// region, the regex counterpart of literal presence-by-region. Shipped as a
+/// SEPARATE occupancy-cheap pass because the "single fused launch" is
+/// measured-refuted (see the module docs / BACKLOG).
+#[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
+pub mod regex_region_admission;
+
+/// Fused single-launch phase-1 evidence (plan W2-2, line 153): ONE dispatch, ONE
+/// anchored DFA walk per byte, producing all three families keyhog otherwise
+/// assembles from three dispatches, per-region presence, position triples for a
+/// designated subset, and per-region admission bits. A correctness-equivalent
+/// primitive; the fast path stays the separate specialized passes because kernel
+/// fusion is measured-refuted on this substrate (see the module docs / BACKLOG).
+#[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
+pub mod fused_region_evidence;
+
+/// Region-evidence pipeline (plan W2-2, line 158): the successor to the vestigial
+/// [`mega_scan::RulePipeline`]. One type, one call, returning the full phase-1
+/// evidence bundle (presence + positions + admission), a fast two-dispatch path
+/// ([`region_evidence_pipeline::RegionEvidencePipeline::scan`]) and the
+/// single-launch capability ([`region_evidence_pipeline::RegionEvidencePipeline::scan_fused`]).
+#[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
+pub mod region_evidence_pipeline;
+
 #[cfg(feature = "matching-dfa")]
 pub use dfa::{
     aho_corasick, dfa_compile, dfa_compile_with_budget, CompiledDfa, DfaCompileError,
@@ -287,6 +442,12 @@ pub use dfa::{
 };
 #[cfg(feature = "matching-dfa")]
 pub use direct_gpu::DirectGpuScanner;
+#[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
+pub use fused_region_evidence::{
+    fused_region_evidence_program, fused_region_evidence_reference, FusedRegionEvidence,
+    FUSED_EVIDENCE_ADMISSION_BINDING, FUSED_EVIDENCE_MATCHES_BINDING,
+    FUSED_EVIDENCE_MATCH_COUNT_BINDING, FUSED_EVIDENCE_PRESENCE_BINDING,
+};
 pub use hit_buffer::{
     compact_hits, compact_hits_with_layout, emit_hit, emit_hit_then_compact,
     emit_hit_then_compact_with_layout, emit_hit_with_layout, HIT_BUFFER_LIVE_LENGTH,
@@ -295,14 +456,21 @@ pub use hit_buffer::{
 pub use literal_set::{
     GpuLiteralSet, LiteralSetPreparedCount, LiteralSetPreparedPresenceByRegion,
     LiteralSetPreparedScan, LiteralSetScanScratch, LiteralSetWireError, Match as LiteralMatch,
-    PendingPresenceByRegion, LITERAL_SET_COUNT_RESET_RESOURCE_INDICES,
-    LITERAL_SET_COUNT_RESOURCE_INDEX, LITERAL_SET_COUNT_SCAN_RESOURCE_INDICES,
-    LITERAL_SET_MATCHES_RESOURCE_INDEX, LITERAL_SET_MATCH_COUNT_RESOURCE_INDEX,
-    LITERAL_SET_PRESENCE_BY_REGION_OUTPUT_RESOURCE_INDEX, LITERAL_SET_RESET_RESOURCE_INDICES,
-    LITERAL_SET_SCAN_RESOURCE_INDICES,
+    PendingFusedRegion, PendingMatches, PendingPresence, PendingPresenceByRegion,
+    ResidentFusedRegionScan, ResidentLiteralScan, ScanAllTimed,
+    LITERAL_SET_COUNT_RESET_RESOURCE_INDICES, LITERAL_SET_COUNT_RESOURCE_INDEX,
+    LITERAL_SET_COUNT_SCAN_RESOURCE_INDICES, LITERAL_SET_MATCHES_RESOURCE_INDEX,
+    LITERAL_SET_MATCH_COUNT_RESOURCE_INDEX, LITERAL_SET_PRESENCE_BY_REGION_OUTPUT_RESOURCE_INDEX,
+    LITERAL_SET_RESET_RESOURCE_INDICES, LITERAL_SET_SCAN_RESOURCE_INDICES,
 };
 #[cfg(feature = "matching-nfa")]
 pub use mega_scan::{build as build_rule_pipeline, PipelineWireError, RulePipeline};
+pub use paged_corpus::{
+    scan_paged_fused, scan_paged_fused_async, scan_paged_fused_timed, scan_paths_paged,
+    scan_paths_paged_prefetched, scan_pattern_sharded, scan_sharded_fused,
+    scan_sharded_fused_timed, scan_sharded_fused_weighted, GlobalMatch, PagedScanResult,
+    PagedScanTiming, PatternShard, ShardTiming, ShardedScanTiming,
+};
 pub use pipeline::{Pipeline, PostProcessFn};
 #[cfg(any(test, feature = "cpu-parity"))]
 pub use post_process::{
@@ -310,14 +478,28 @@ pub use post_process::{
     try_reference_post_process_into,
 };
 pub use post_process::{PostProcessError, PostProcessedMatch};
+#[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
+pub use regex_anchored_window::{
+    anchored_window_extract_program, AnchoredWindowValidator, ANCHORED_WINDOW_MATCHES_BINDING,
+    ANCHORED_WINDOW_MATCH_COUNT_BINDING,
+};
 #[cfg(feature = "matching-regex")]
 pub use regex_compile::{
-    build_rule_pipeline_from_regex, compile_regex_set, CompiledRegexSet, RegexCompileError,
+    build_rule_pipeline_from_regex, compile_regex_set, regex_construct_diagnostic_code,
+    CaptureMode, CaptureModeContract, CompiledRegexSet, RegexCompileError, RegexConstruct,
 };
 #[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
 pub use regex_dfa::{
-    build_regex_dfa_pipeline, build_regex_dfa_unanchored, RegexDfaError, RegexDfaPipeline,
+    build_regex_dfa_pipeline, build_regex_dfa_shards, build_regex_dfa_shards_unanchored,
+    build_regex_dfa_unanchored, RegexDfaError, RegexDfaPipeline, RegexDfaShard,
 };
+#[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
+pub use regex_region_admission::{
+    regex_admission_by_region_program, regex_admission_by_region_reference,
+    regex_admission_presence_words, region_of,
+};
+#[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
+pub use region_evidence_pipeline::{RegionEvidenceError, RegionEvidencePipeline};
 #[cfg(feature = "matching-nfa")]
 pub use resident::ResidentRulePipeline;
 pub use resident_presence::ResidentPresencePipeline;

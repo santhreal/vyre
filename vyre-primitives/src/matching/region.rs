@@ -39,9 +39,10 @@
 use std::cmp::Ordering;
 
 pub use super::region_programs::{
+    cap_regions_per_pattern_flag_program, compact_first_per_region_pattern_flag_program,
     dedup_regions_cluster_program, dedup_regions_flag_program, region_dedup_dispatch_grid,
-    region_sort_program, DEDUP_REGIONS_CLUSTER_OP_ID, DEDUP_REGIONS_FLAG_OP_ID,
-    REGION_DEDUP_WORKGROUP_SIZE,
+    region_sort_program, CAP_REGIONS_PER_PATTERN_OP_ID, COMPACT_FIRST_PER_REGION_PATTERN_OP_ID,
+    DEDUP_REGIONS_CLUSTER_OP_ID, DEDUP_REGIONS_FLAG_OP_ID, REGION_DEDUP_WORKGROUP_SIZE,
 };
 
 /// One match as exposed by `vyre_foundation::match_result::Match`  -
@@ -144,4 +145,53 @@ pub fn dedup_regions_inplace(input: &mut Vec<RegionTriple>) {
         }
     }
     input.truncate(write);
+}
+
+/// Reference CPU companion to [`cap_regions_per_pattern_flag_program`].
+///
+/// Returns one survivor flag per input slot (`1` = keep, `0` = drop): the first
+/// `k` matches of each pattern id **in array order** survive, the rest are
+/// dropped. This is the exact contract the GPU flag kernel encodes, a single
+/// running-count pass, the independent oracle the parity test checks the kernel
+/// against. Keys only on `pid`; on `(pid, start, end)`-sorted input the survivors
+/// are the `k` earliest-start matches per pattern.
+#[cfg(any(test, feature = "cpu-parity"))]
+#[must_use]
+pub fn cap_regions_per_pattern_survivors_cpu(pids: &[u32], k: u32) -> Vec<u32> {
+    use std::collections::HashMap;
+    let mut seen: HashMap<u32, u32> = HashMap::new();
+    pids.iter()
+        .map(|&pid| {
+            let count = seen.entry(pid).or_insert(0);
+            let survivor = u32::from(*count < k);
+            *count += 1;
+            survivor
+        })
+        .collect()
+}
+
+/// Reference CPU companion to [`compact_first_per_region_pattern_flag_program`].
+///
+/// Returns one survivor flag per input slot (`1` = keep, `0` = drop): the first
+/// occurrence of each `(region, pid)` pair **in array order** survives, every
+/// later occurrence of that pair is dropped. This is the exact contract the GPU
+/// flag kernel encodes, a single first-occurrence pass over a `HashSet` of seen
+/// pairs (the independent oracle the parity test checks the kernel against).
+/// Stream-compacting on these flags leaves exactly one positioned representative
+/// per `(region, pid)`, the positioned form of the presence-by-region bitmap.
+#[cfg(any(test, feature = "cpu-parity"))]
+#[must_use]
+pub fn compact_first_per_region_pattern_survivors_cpu(regions: &[u32], pids: &[u32]) -> Vec<u32> {
+    use std::collections::HashSet;
+    assert_eq!(
+        regions.len(),
+        pids.len(),
+        "regions and pids columns must be parallel"
+    );
+    let mut seen: HashSet<(u32, u32)> = HashSet::new();
+    regions
+        .iter()
+        .zip(pids.iter())
+        .map(|(&region, &pid)| u32::from(seen.insert((region, pid))))
+        .collect()
 }

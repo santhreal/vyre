@@ -87,7 +87,7 @@ impl BodyBuilder<'_> {
                 // the value `e1` (whose signedness selects arithmetic vs logical
                 // shift) and REQUIRES the amount `e2` to be u32. The symmetric
                 // `lk != rk` unification below would coerce the amount to the
-                // value's type, emitting e.g. `ShiftRight(i32, i32)` — which naga
+                // value's type, emitting e.g. `ShiftRight(i32, i32)`: which naga
                 // rejects (InvalidBinaryOperandTypes), so signed arithmetic
                 // shifts (and signed-value rotates, whose synthetic lowering
                 // reuses this path) could not be emitted at all. Coerce ONLY the

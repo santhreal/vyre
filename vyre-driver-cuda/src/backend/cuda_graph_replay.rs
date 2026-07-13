@@ -1176,7 +1176,7 @@ mod source_contract_tests {
             .split("pub(crate) fn dispatch_via_cuda_graph_timed_with_input_state_into(")
             .nth(1)
             .expect("Fix: timed inner replay function must exist in cuda_graph_replay.rs");
-        // The function ends at Ok(Some(device_ns)) — extract that slice.
+        // The function ends at Ok(Some(device_ns)) (extract that slice).
         let timed_inner_body = timed_inner
             .split("Ok(Some(device_ns))")
             .next()

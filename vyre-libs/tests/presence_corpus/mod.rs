@@ -5,14 +5,21 @@
 //! out exactly as keyhog's phase-1 coalesced batch: ascending `region_starts`
 //! beginning at 0, each file terminated by a separator byte (newline) that is in
 //! NO literal so no match spans a region boundary. Every presence test asserts
-//! the decoded bitmap reproduces these exact per-region bit SETS — real values,
+//! the decoded bitmap reproduces these exact per-region bit SETS, real values,
 //! never "non-empty".
 
 use std::collections::BTreeSet;
 
 /// pattern_id order: key=0 token=1 secret=2 AKIA=3 ghp_=4 sk_live_=5 password=6 api=7
 pub(crate) const LITERALS: &[&[u8]] = &[
-    b"key", b"token", b"secret", b"AKIA", b"ghp_", b"sk_live_", b"password", b"api",
+    b"key",
+    b"token",
+    b"secret",
+    b"AKIA",
+    b"ghp_",
+    b"sk_live_",
+    b"password",
+    b"api",
 ];
 
 /// A "file" carrying a known subset of literal hits, terminated by a separator
@@ -28,7 +35,7 @@ fn file_with(hits: &str) -> Vec<u8> {
 pub(crate) fn planted_corpus() -> (Vec<u8>, Vec<u32>) {
     let files = [
         file_with("api key here AKIA token secret"), // {api,key,AKIA,token,secret} = {7,0,3,1,2}
-        file_with("ghp_abc sk_live_xyz password"),    // {ghp_,sk_live_,password} = {4,5,6}
+        file_with("ghp_abc sk_live_xyz password"),   // {ghp_,sk_live_,password} = {4,5,6}
         file_with("plain prose with no anchors here"), // {} (no literal occurs)
     ];
     let mut haystack = Vec::new();

@@ -604,12 +604,8 @@ mod research_trace_contract_tests {
             PassResearchTraceError::MissingResearchBasisKey
         );
         assert_eq!(
-            PassResearchTrace::try_new(
-                "research/mlir-pass-replay",
-                "",
-                "artifact/optimizer-proof"
-            )
-            .unwrap_err(),
+            PassResearchTrace::try_new("research/mlir-pass-replay", "", "artifact/optimizer-proof")
+                .unwrap_err(),
             PassResearchTraceError::MissingBaselineId
         );
         assert_eq!(

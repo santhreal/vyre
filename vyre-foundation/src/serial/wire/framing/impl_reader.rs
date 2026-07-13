@@ -105,4 +105,27 @@ impl<'a> Reader<'a> {
     pub(crate) fn bytes(&mut self, len: usize) -> Result<Vec<u8>, String> {
         Ok(self.take(len)?.to_vec())
     }
+
+    /// Fallibly reserve capacity for a `count`-element wire vector, capping the
+    /// pre-reservation at the reader's remaining bytes.
+    ///
+    /// Every wire element (node/expr/arg) encodes to at least one byte, so a
+    /// truncated blob declaring a huge `count` can never actually deliver that
+    /// many elements. Capping at `remaining` turns an attacker-controlled
+    /// infallible `Vec::with_capacity(1_000_000)` (which aborts on OOM) into a
+    /// fallible reservation bounded by what the payload can hold. Shares the
+    /// canonical fallible-reservation primitive in `crate::allocation`.
+    #[inline]
+    pub(crate) fn reserve_wire_vec<T>(
+        &self,
+        vec: &mut Vec<T>,
+        count: usize,
+        label: &str,
+    ) -> Result<(), String> {
+        let remaining = self.bytes.len().saturating_sub(self.pos);
+        let capped = count.min(remaining);
+        crate::allocation::try_reserve_vec_to_capacity(vec, capped).map_err(|error| {
+            format!("Fix: {label} reservation for {capped} entries failed: {error}; reject this untrusted wire payload.")
+        })
+    }
 }

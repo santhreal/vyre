@@ -1,10 +1,10 @@
 //! High-volume DIFFERENTIAL soundness gate for the FUSED region-presence +
-//! match-positions program, evaluated on the CPU REFERENCE backend (no GPU — runs
+//! match-positions program, evaluated on the CPU REFERENCE backend (no GPU, runs
 //! everywhere).
 //!
 //! The fold's correctness claim is "recall-identical by construction": one
 //! suffix3-gated walk that emits BOTH the per-region presence bitmap AND the match
-//! triples must produce EXACTLY what the two separate programs produce —
+//! triples must produce EXACTLY what the two separate programs produce 
 //! `scan_presence_by_region` for the bitmap and the suffix3 prefilter (positions)
 //! program for the triples. This test proves that empirically across thousands of
 //! random (literal set, multi-region haystack) cases: for each case it
@@ -71,7 +71,7 @@ fn random_haystack(rng: &mut Lcg) -> Vec<u8> {
 
 /// 1..=4 ascending region starts, always beginning at 0 (the kernel binary-search
 /// lower bound). Both the fused and the separate presence-by-region programs use
-/// END-position attribution, so the differential holds for ANY ascending split —
+/// END-position attribution, so the differential holds for ANY ascending split 
 /// no separator bytes needed to make the two AGREE with each other.
 fn random_region_starts(rng: &mut Lcg, haystack_len: usize) -> Vec<u32> {
     let region_count = 1 + rng.below(4); // 1..=4 regions
@@ -148,13 +148,12 @@ fn fused_presence_and_positions_equals_separate_scans_high_volume() {
         let val = vyre_reference::value::Value::from;
 
         // --- Separate presence-by-region program (bindings 0-11) ---
-        let sep_presence_program =
-            try_build_ac_bounded_ranges_suffix3_presence_by_region_program(
-                &ac.dfa,
-                pattern_count,
-                region_count,
-            )
-            .expect("separate presence-by-region program builds");
+        let sep_presence_program = try_build_ac_bounded_ranges_suffix3_presence_by_region_program(
+            &ac.dfa,
+            pattern_count,
+            region_count,
+        )
+        .expect("separate presence-by-region program builds");
         let sep_presence_inputs = vec![
             val(haystack_packed.clone()),
             val(transitions.clone()),
@@ -169,8 +168,9 @@ fn fused_presence_and_positions_equals_separate_scans_high_volume() {
             val(region_starts_packed.clone()),
             val(zero.clone()),
         ];
-        let sep_presence_out = vyre_reference::reference_eval(&sep_presence_program, &sep_presence_inputs)
-            .expect("separate presence-by-region program evaluates");
+        let sep_presence_out =
+            vyre_reference::reference_eval(&sep_presence_program, &sep_presence_inputs)
+                .expect("separate presence-by-region program evaluates");
         let sep_presence = decode_u32(&sep_presence_out[0].to_bytes());
 
         // --- Separate positions (suffix3 prefilter) program (bindings 0-10) ---
@@ -260,11 +260,10 @@ fn fused_presence_and_positions_equals_separate_scans_high_volume() {
         // Independent linear-AC oracle cross-check: the fused triple SET (pid,end)
         // must equal the bounded-ranges AC oracle's, so the differential isn't two
         // programs sharing the same bug.
-        let oracle: BTreeSet<(u32, u32)> =
-            classic_ac_bounded_ranges_scan(&ac, &lengths, &haystack)
-                .into_iter()
-                .map(|(pid, _start, end)| (pid, end))
-                .collect();
+        let oracle: BTreeSet<(u32, u32)> = classic_ac_bounded_ranges_scan(&ac, &lengths, &haystack)
+            .into_iter()
+            .map(|(pid, _start, end)| (pid, end))
+            .collect();
         let fused_pid_end: BTreeSet<(u32, u32)> =
             fused_triples.iter().map(|&(pid, _s, e)| (pid, e)).collect();
         assert_eq!(

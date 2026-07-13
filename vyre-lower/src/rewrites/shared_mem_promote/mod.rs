@@ -86,7 +86,7 @@ fn rewrite_body(
     // flow). The promotion inserts a per-workgroup cooperative async tile-copy
     // plus a workgroup `Barrier`; those may only appear in uniform flow. Inside
     // a conditional `if`/loop body the barrier is reached by only the subset of
-    // lanes that took the branch — illegal non-uniform control flow that
+    // lanes that took the branch, illegal non-uniform control flow that
     // deadlocks/UBs on every GPU backend (WGSL/CUDA/SPIR-V).
     uniform: bool,
 ) -> bool {
@@ -369,7 +369,7 @@ mod tests {
     /// load(g, gid); }`) must NOT be promoted. Promotion inserts a per-workgroup
     /// cooperative async copy + a workgroup `Barrier`; a workgroup barrier in
     /// non-uniform control flow is illegal in every GPU model (WGSL/CUDA/SPIR-V)
-    /// and deadlocks/UBs — only lanes that enter the `if` would reach the
+    /// and deadlocks/UBs, only lanes that enter the `if` would reach the
     /// barrier. The promotion must be confined to workgroup-uniform bodies.
     #[test]
     fn does_not_insert_cooperative_ops_into_conditionally_executed_body() {

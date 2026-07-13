@@ -63,20 +63,42 @@ inventory::submit! {
 mod tests {
     use super::*;
     use crate::test_support::byte_pack::{bytes_to_u32 as decode_u32_words, u32_bytes};
-    use vyre::ir::{Expr, Node};
+    use vyre::ir::{BufferAccess, Expr, Node};
     use vyre_reference::value::Value;
 
+    /// Run `scan_prefix_sum` through the reference interpreter and return the
+    /// `output` buffer. `reference_eval` takes one Value per non-workgroup buffer
+    /// in binding order (outputs seeded with a zero slot) and returns the
+    /// ReadWrite buffers in binding order. The large multi-block path fuses in
+    /// scratch buffers (`partials`, `block_totals`, ...), so this feeds a zero
+    /// slot for each and locates `output` among the returned writable buffers
+    /// rather than hard-coding index 0.
     fn run_scan(n: u32, input: &[u32]) -> Vec<u32> {
         let program = scan_prefix_sum("input", "output", n);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[
-                Value::from(u32_bytes(input)),
-                Value::from(vec![0u8; (n as usize).saturating_mul(4)]),
-            ],
-        )
-        .expect("Fix: prefix sum must execute");
-        decode_u32_words(&outputs[0].to_bytes())
+        let mut inputs = Vec::new();
+        let mut output_result_index = None;
+        let mut writable_seen = 0usize;
+        for buf in program.buffers() {
+            if buf.access() == BufferAccess::Workgroup {
+                continue;
+            }
+            let bytes = if buf.name() == "input" {
+                u32_bytes(input)
+            } else {
+                vec![0u8; (buf.count() as usize).saturating_mul(4)]
+            };
+            inputs.push(Value::from(bytes));
+            if buf.access() == BufferAccess::ReadWrite {
+                if buf.name() == "output" {
+                    output_result_index = Some(writable_seen);
+                }
+                writable_seen += 1;
+            }
+        }
+        let outputs = vyre_reference::reference_eval(&program, &inputs)
+            .expect("Fix: prefix sum must execute");
+        let idx = output_result_index.expect("output buffer must be present and writable");
+        decode_u32_words(&outputs[idx].to_bytes())
     }
 
     #[test]
@@ -167,6 +189,60 @@ mod tests {
         assert_eq!(actual[0], u32::MAX);
         assert_eq!(actual[1], 0u32, "u32::MAX + 1 must wrap to 0");
         assert_eq!(actual[2], 1u32, "0 + 1 must be 1");
+    }
+
+    /// Inclusive scan with `wrapping_add`, the documented overflow semantics.
+    fn wrapping_scan_oracle(input: &[u32]) -> Vec<u32> {
+        input
+            .iter()
+            .scan(0u32, |acc, &x| {
+                *acc = acc.wrapping_add(x);
+                Some(*acc)
+            })
+            .collect()
+    }
+
+    #[test]
+    fn prefix_sum_large_path_matches_scan_oracle_across_block_boundaries() {
+        // The n>1024 route goes through `multi_block_prefix_scan_sum_u32`, a
+        // DIFFERENT algorithm than the compact one-block scan. The other
+        // large-path tests assert only STRUCTURE (shape, no serial loop, no
+        // invocation-zero gate); none check the VALUE. A broken cross-block
+        // carry (dropped/duplicated block prefix, off-by-one block seam) would
+        // pass all of them. This runs the real IR through `reference_eval` and
+        // compares to the wrapping-scan oracle across exact block boundaries
+        // (multiples of 1024) and off-boundaries.
+        for n in [1025u32, 1536, 2048, 3072, 4096, 4097] {
+            // Non-constant pattern so a mis-combined block carry changes the
+            // result (a constant input hides carry bugs behind a uniform sum).
+            let input: Vec<u32> = (0..n).map(|i| (i % 251) + 1).collect();
+            let actual = run_scan(n, &input);
+            let expected = wrapping_scan_oracle(&input);
+            assert_eq!(
+                actual.len(),
+                n as usize,
+                "n={n}: large scan must emit n outputs"
+            );
+            assert_eq!(
+                actual, expected,
+                "n={n}: large multi-block prefix sum diverged from the wrapping-scan oracle"
+            );
+        }
+    }
+
+    #[test]
+    fn prefix_sum_large_path_wraps_across_block_seams() {
+        // Overflow must wrap modulo 2^32 even when the running sum overflows
+        // partway through the multi-block combine, not just within one block.
+        let n = 2048u32;
+        let mut input = vec![1u32; n as usize];
+        input[900] = u32::MAX; // forces a wrap inside the first block's carry-out
+        let actual = run_scan(n, &input);
+        let expected = wrapping_scan_oracle(&input);
+        assert_eq!(
+            actual, expected,
+            "large-path prefix sum must wrap modulo 2^32 across block boundaries"
+        );
     }
 
     fn assert_top_region_generator(program: &Program, expected: &str) {

@@ -35,7 +35,7 @@ pub fn dialect_and_language_supported_ops() -> &'static HashSet<OpId> {
             .unwrap_or_else(|| registrations.size_hint().0);
         let reserve = language_ops.len().saturating_add(inventory_bound);
         let mut set = HashSet::new();
-        let _ = set.try_reserve(reserve);
+        set.reserve(reserve);
         set.extend(language_ops.iter().cloned());
         for reg in registrations {
             let def = (reg.op)();
@@ -65,7 +65,7 @@ pub fn dialect_only_supported_ops() -> &'static HashSet<OpId> {
             .1
             .unwrap_or_else(|| registrations.size_hint().0);
         let mut set = HashSet::new();
-        let _ = set.try_reserve(reserve);
+        set.reserve(reserve);
         for reg in registrations {
             let def = (reg.op)();
             set.insert(Arc::<str>::from(def.id));

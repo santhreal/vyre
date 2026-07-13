@@ -339,7 +339,7 @@ fn shared_merge_keeps_cross_arm_value_linked_and_valid() {
     );
 
     // Contrast: isolated fusion alpha-renames the arms apart, so the consumer's
-    // `Var(__cmp_5)` becomes `__vyre_fuse_a1_…` with no surviving decl — the
+    // `Var(__cmp_5)` becomes `__vyre_fuse_a1_…` with no surviving decl, the
     // exact miscompile shared merge exists to avoid. This pins WHY the shared
     // path is required for intra-rule composition.
     let isolated = fuse_programs(&[producer, consumer]).expect("isolated fusion composes");

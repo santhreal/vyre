@@ -11,17 +11,17 @@
 //!     typecheck legalises integer `Negate` only for `u32` (and `f32`); RAW
 //!     `i32` negate is REJECTED upstream precisely because of the `i32::MIN`
 //!     overflow case (it routes users to `0 - x` / cast-to-u32). So the integer
-//!     negate that reaches the GPU is the wrapping unsigned one — and WGSL has no
+//!     negate that reaches the GPU is the wrapping unsigned one, and WGSL has no
 //!     native unary minus on `u32`, so this also proves the emitter lowers it
 //!     correctly (not a naga-rejected `-(u32)`).
 //!   * `bitnot(u32)` = `!v`.
 //!   * `popcount(u32)` = `v.count_ones()`.
-//!   * `clz(u32)` = `v.leading_zeros()`  — edge `clz(0) == 32`.
-//!   * `ctz(u32)` = `v.trailing_zeros()` — edge `ctz(0) == 32`.
+//!   * `clz(u32)` = `v.leading_zeros()`: edge `clz(0) == 32`.
+//!   * `ctz(u32)` = `v.trailing_zeros()`: edge `ctz(0) == 32`.
 //!   * `reverse_bits(u32)` = `v.reverse_bits()`.
 //!
 //! (Integer `abs`/`sign` are intentionally absent: the oracle's integer unary
-//! dispatch errors on them — they are float-only ops by contract.)
+//! dispatch errors on them, they are float-only ops by contract.)
 
 mod common;
 use common::u32_bytes;

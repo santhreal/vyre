@@ -13,9 +13,16 @@
 //! - **Product**: `out = Π_c child_out[c]` over its child set.
 //!
 //! Forward evaluation is one bottom-up pass  -  exactly what
-//! [`level_wave_program`](crate::graph::level_wave) was built for. This
-//! file ships the per-node evaluator that fits the level-wave
-//! workload contract.
+//! [`level_wave_program`](crate::graph::level_wave) was built for.
+//!
+//! Two entry points share the per-node body (`sum_product_pass_body`):
+//! - `sum_product_evaluate`  -  a SINGLE-PASS fast path, correct only for
+//!   DEPTH-1 circuits (every internal node reads leaves). A deeper circuit
+//!   races across topo levels (an internal node reads another internal node's
+//!   `out` before it commits).
+//! - `sum_product_evaluate_leveled`  -  drives the SAME body through the
+//!   depth-wave harness with a per-level barrier, so it is correct at ANY
+//!   depth. Prefer it whenever a circuit has an internal node feeding another.
 //!
 //! # Why this primitive is dual-use
 //!
@@ -42,6 +49,9 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 
 /// Op id.
 pub const OP_ID: &str = "vyre-primitives::graph::sum_product_evaluate";
+
+/// Op id for the depth-leveled evaluator ([`sum_product_evaluate_leveled`]).
+pub const OP_ID_LEVELED: &str = "vyre-primitives::graph::sum_product_evaluate_leveled";
 
 /// Node-kind tag: leaf node (carries an evidence/marginal value).
 pub const KIND_LEAF: u32 = 0;
@@ -125,80 +135,15 @@ pub fn try_sum_product_evaluate(
     let t = Expr::InvocationId { axis: 0 };
     let body = vec![Node::if_then(
         Expr::lt(t.clone(), Expr::u32(n_nodes)),
-        vec![
-            Node::let_bind("kind", Expr::load(kinds, t.clone())),
-            Node::let_bind("co", Expr::load(child_offsets, t.clone())),
-            Node::let_bind("cc", Expr::load(child_counts, t.clone())),
-            // Leaf: out = leaf_values[t]
-            Node::if_then(
-                Expr::eq(Expr::var("kind"), Expr::u32(KIND_LEAF)),
-                vec![Node::store(
-                    out,
-                    t.clone(),
-                    Expr::load(leaf_values, t.clone()),
-                )],
-            ),
-            // Sum: out = Σ fixed_mul_16_16(children[child_idx], weight).
-            Node::if_then(
-                Expr::eq(Expr::var("kind"), Expr::u32(KIND_SUM)),
-                vec![
-                    Node::let_bind("acc_sum", Expr::u32(0)),
-                    Node::loop_for(
-                        "k",
-                        Expr::u32(0),
-                        Expr::var("cc"),
-                        vec![
-                            Node::let_bind(
-                                "child_node",
-                                Expr::load(children, Expr::add(Expr::var("co"), Expr::var("k"))),
-                            ),
-                            Node::let_bind(
-                                "w",
-                                Expr::load(weights, Expr::add(Expr::var("co"), Expr::var("k"))),
-                            ),
-                            Node::assign(
-                                "acc_sum",
-                                Expr::add(
-                                    Expr::var("acc_sum"),
-                                    crate::fixed_mul_16_16_expr(
-                                        Expr::load(out, Expr::var("child_node")),
-                                        Expr::var("w"),
-                                    ),
-                                ),
-                            ),
-                        ],
-                    ),
-                    Node::store(out, t.clone(), Expr::var("acc_sum")),
-                ],
-            ),
-            // Product: out = Π children, keeping each fixed-point multiply widened
-            // before the 16-bit rescale.
-            Node::if_then(
-                Expr::eq(Expr::var("kind"), Expr::u32(KIND_PRODUCT)),
-                vec![
-                    Node::let_bind("acc_prod", Expr::u32(1 << 16)), // 1.0 in 16.16
-                    Node::loop_for(
-                        "kk",
-                        Expr::u32(0),
-                        Expr::var("cc"),
-                        vec![
-                            Node::let_bind(
-                                "cn",
-                                Expr::load(children, Expr::add(Expr::var("co"), Expr::var("kk"))),
-                            ),
-                            Node::assign(
-                                "acc_prod",
-                                crate::fixed_mul_16_16_expr(
-                                    Expr::var("acc_prod"),
-                                    Expr::load(out, Expr::var("cn")),
-                                ),
-                            ),
-                        ],
-                    ),
-                    Node::store(out, t.clone(), Expr::var("acc_prod")),
-                ],
-            ),
-        ],
+        sum_product_pass_body(
+            kinds,
+            child_offsets,
+            child_counts,
+            children,
+            weights,
+            leaf_values,
+            out,
+        ),
     )];
 
     Ok(Program::wrapped(
@@ -224,6 +169,303 @@ pub fn try_sum_product_evaluate(
             body: Arc::new(body),
         }],
     ))
+}
+
+/// The per-node evaluation body, shared by the single-pass
+/// [`sum_product_evaluate`] and the depth-leveled
+/// [`sum_product_evaluate_leveled`]. The lane index (`InvocationId`) is the
+/// node index; the caller/harness gates the node-in-range (and, for the
+/// leveled form, the depth-in-wave) predicate before running this body.
+fn sum_product_pass_body(
+    kinds: &str,
+    child_offsets: &str,
+    child_counts: &str,
+    children: &str,
+    weights: &str,
+    leaf_values: &str,
+    out: &str,
+) -> Vec<Node> {
+    let t = Expr::InvocationId { axis: 0 };
+    vec![
+        Node::let_bind("kind", Expr::load(kinds, t.clone())),
+        Node::let_bind("co", Expr::load(child_offsets, t.clone())),
+        Node::let_bind("cc", Expr::load(child_counts, t.clone())),
+        // Leaf: out = leaf_values[t]
+        Node::if_then(
+            Expr::eq(Expr::var("kind"), Expr::u32(KIND_LEAF)),
+            vec![Node::store(
+                out,
+                t.clone(),
+                Expr::load(leaf_values, t.clone()),
+            )],
+        ),
+        // Sum: out = Σ fixed_mul_16_16(children[child_idx], weight).
+        Node::if_then(
+            Expr::eq(Expr::var("kind"), Expr::u32(KIND_SUM)),
+            vec![
+                Node::let_bind("acc_sum", Expr::u32(0)),
+                Node::loop_for(
+                    "k",
+                    Expr::u32(0),
+                    Expr::var("cc"),
+                    vec![
+                        Node::let_bind(
+                            "child_node",
+                            Expr::load(children, Expr::add(Expr::var("co"), Expr::var("k"))),
+                        ),
+                        Node::let_bind(
+                            "w",
+                            Expr::load(weights, Expr::add(Expr::var("co"), Expr::var("k"))),
+                        ),
+                        Node::assign(
+                            "acc_sum",
+                            Expr::add(
+                                Expr::var("acc_sum"),
+                                crate::fixed_mul_16_16_expr(
+                                    Expr::load(out, Expr::var("child_node")),
+                                    Expr::var("w"),
+                                ),
+                            ),
+                        ),
+                    ],
+                ),
+                Node::store(out, t.clone(), Expr::var("acc_sum")),
+            ],
+        ),
+        // Product: out = Π children, keeping each fixed-point multiply widened
+        // before the 16-bit rescale.
+        Node::if_then(
+            Expr::eq(Expr::var("kind"), Expr::u32(KIND_PRODUCT)),
+            vec![
+                Node::let_bind("acc_prod", Expr::u32(1 << 16)), // 1.0 in 16.16
+                Node::loop_for(
+                    "kk",
+                    Expr::u32(0),
+                    Expr::var("cc"),
+                    vec![
+                        Node::let_bind(
+                            "cn",
+                            Expr::load(children, Expr::add(Expr::var("co"), Expr::var("kk"))),
+                        ),
+                        Node::assign(
+                            "acc_prod",
+                            crate::fixed_mul_16_16_expr(
+                                Expr::var("acc_prod"),
+                                Expr::load(out, Expr::var("cn")),
+                            ),
+                        ),
+                    ],
+                ),
+                Node::store(out, t.clone(), Expr::var("acc_prod")),
+            ],
+        ),
+    ]
+}
+
+/// Depth-ordered sum-product evaluation that is correct at ANY DAG depth.
+///
+/// The single-pass [`sum_product_evaluate`] has no barrier between topological
+/// levels, so an internal node that reads ANOTHER internal node's `out` races
+/// it (correct only for depth-1 circuits, see BACKLOG
+/// `BUG-sum-product-multilevel-dag-no-topo-barrier`). This variant drives the
+/// SAME per-node body through the shared depth-wave harness
+/// [`crate::graph::level_wave::level_wave_program_with_buffers`]: at wave
+/// `d = 0..max_depth`, every node whose `depths[node] == d` evaluates, and a
+/// `GridSync`/`SeqCst` barrier between waves makes level-`d` writes globally
+/// visible before level-`d+1` reads them. So a depth-`d` node always reads its
+/// children's committed values.
+///
+/// `depths` is the per-node topological depth (leaves = 0, an internal node =
+/// `1 + max(child depth)`); `max_depth` is one past the deepest node.
+#[must_use]
+#[allow(clippy::too_many_arguments)]
+pub fn sum_product_evaluate_leveled(
+    depths: &str,
+    kinds: &str,
+    child_offsets: &str,
+    child_counts: &str,
+    children: &str,
+    weights: &str,
+    leaf_values: &str,
+    out: &str,
+    n_nodes: u32,
+    n_edges: u32,
+    max_depth: u32,
+) -> Program {
+    match try_sum_product_evaluate_leveled(
+        depths,
+        kinds,
+        child_offsets,
+        child_counts,
+        children,
+        weights,
+        leaf_values,
+        out,
+        n_nodes,
+        n_edges,
+        max_depth,
+    ) {
+        Ok(program) => program,
+        Err(error) => crate::invalid_output_program(OP_ID, out, DataType::U32, error),
+    }
+}
+
+/// Fallible builder for [`sum_product_evaluate_leveled`].
+#[allow(clippy::too_many_arguments)]
+pub fn try_sum_product_evaluate_leveled(
+    depths: &str,
+    kinds: &str,
+    child_offsets: &str,
+    child_counts: &str,
+    children: &str,
+    weights: &str,
+    leaf_values: &str,
+    out: &str,
+    n_nodes: u32,
+    n_edges: u32,
+    max_depth: u32,
+) -> Result<Program, String> {
+    if n_nodes == 0 {
+        return Err(format!(
+            "Fix: sum_product_evaluate_leveled requires n_nodes > 0, got {n_nodes}."
+        ));
+    }
+    if max_depth == 0 {
+        return Err(format!(
+            "Fix: sum_product_evaluate_leveled requires max_depth > 0, got {max_depth}."
+        ));
+    }
+    let edge_buffer_count = n_edges.max(1);
+
+    // The depth-wave harness (binding 0 = `depths`) gates `lane < n_nodes` AND
+    // `depths[lane] == current_wave`, so the per-node body needs no in-range /
+    // depth re-check. The circuit's own buffers are declared at bindings 1..=7.
+    let step_body = sum_product_pass_body(
+        kinds,
+        child_offsets,
+        child_counts,
+        children,
+        weights,
+        leaf_values,
+        out,
+    );
+    let extra_buffers = vec![
+        BufferDecl::storage(kinds, 1, BufferAccess::ReadOnly, DataType::U32).with_count(n_nodes),
+        BufferDecl::storage(child_offsets, 2, BufferAccess::ReadOnly, DataType::U32)
+            .with_count(n_nodes),
+        BufferDecl::storage(child_counts, 3, BufferAccess::ReadOnly, DataType::U32)
+            .with_count(n_nodes),
+        BufferDecl::storage(children, 4, BufferAccess::ReadOnly, DataType::U32)
+            .with_count(edge_buffer_count),
+        BufferDecl::storage(weights, 5, BufferAccess::ReadOnly, DataType::U32)
+            .with_count(edge_buffer_count),
+        BufferDecl::storage(leaf_values, 6, BufferAccess::ReadOnly, DataType::U32)
+            .with_count(n_nodes),
+        BufferDecl::storage(out, 7, BufferAccess::ReadWrite, DataType::U32).with_count(n_nodes),
+    ];
+
+    Ok(crate::graph::level_wave::level_wave_program_with_buffers(
+        step_body,
+        depths,
+        extra_buffers,
+        max_depth,
+        n_nodes,
+    ))
+}
+
+/// Host-side topological depth assignment for driving [`sum_product_evaluate_leveled`].
+///
+/// Returns `(depths, max_depth)` where `depths[i] == 0` for a childless node (a
+/// leaf) and `1 + max(depths[child])` for an internal node, and `max_depth ==
+/// max(depths) + 1`, the wave count [`crate::graph::level_wave`] must run so that
+/// the deepest node fires (waves `0..max_depth`). A leaf-only circuit yields
+/// all-zero depths and `max_depth == 1`.
+///
+/// The assignment guarantees `depths[parent] > depths[child]` for every edge, so
+/// the depth-wave harness commits every child's `out` (at an earlier wave, behind a
+/// barrier) before its parent reads it, the property that makes the leveled
+/// evaluator correct at ANY depth.
+///
+/// Computed purely from `child_offsets`/`child_counts`/`children` (node kind is not
+/// needed: an internal node always has `child_count >= 1`, a leaf has `0`). The
+/// child indices are validated up front; a monotone relaxation reaches the fixed
+/// point in at most `n_nodes` passes for a DAG, so failure to converge means the
+/// child graph contains a cycle (not a valid sum-product circuit).
+///
+/// # Errors
+///
+/// Returns `Err` if a buffer is shorter than `n_nodes`, a child range overflows or
+/// exceeds `children.len()`, a child index is `>= n_nodes`, or the child graph has
+/// a cycle.
+pub fn sum_product_depths(
+    child_offsets: &[u32],
+    child_counts: &[u32],
+    children: &[u32],
+    n_nodes: u32,
+) -> Result<(Vec<u32>, u32), String> {
+    let n = n_nodes as usize;
+    if child_offsets.len() < n || child_counts.len() < n {
+        return Err(format!(
+            "Fix: sum_product_depths needs child_offsets/child_counts of length >= n_nodes={n_nodes}, got offsets={} counts={}.",
+            child_offsets.len(),
+            child_counts.len()
+        ));
+    }
+    // Validate every child range + index up front so the relaxation below can index
+    // `children`/`depths` without bounds risk.
+    for i in 0..n {
+        let co = child_offsets[i] as usize;
+        let cc = child_counts[i] as usize;
+        let end = co.checked_add(cc).ok_or_else(|| {
+            format!("Fix: sum_product_depths child range overflows usize at node {i}.")
+        })?;
+        if end > children.len() {
+            return Err(format!(
+                "Fix: sum_product_depths node {i} child range {co}..{end} exceeds children len {}.",
+                children.len()
+            ));
+        }
+        for &c in &children[co..end] {
+            if c as usize >= n {
+                return Err(format!(
+                    "Fix: sum_product_depths node {i} references child {c} outside n_nodes={n_nodes}."
+                ));
+            }
+        }
+    }
+    let mut depths = vec![0u32; n];
+    // Monotone relaxation `depth[i] = 1 + max(depth[child])`. Each pass propagates
+    // correct depth one level further, so a DAG (longest path < n_nodes edges)
+    // reaches a fixed point in at most `n_nodes` passes; the extra pass confirms no
+    // change. If the (n_nodes+1)-th pass still changes something, the child graph
+    // has a cycle.
+    for _pass in 0..=n {
+        let mut changed = false;
+        for i in 0..n {
+            let cc = child_counts[i] as usize;
+            if cc == 0 {
+                continue; // leaf / childless → depth 0
+            }
+            let co = child_offsets[i] as usize;
+            let mut max_child = 0u32;
+            for &c in &children[co..co + cc] {
+                max_child = max_child.max(depths[c as usize]);
+            }
+            let candidate = max_child + 1;
+            if candidate > depths[i] {
+                depths[i] = candidate;
+                changed = true;
+            }
+        }
+        if !changed {
+            let max_depth = depths.iter().copied().max().unwrap_or(0) + 1;
+            return Ok((depths, max_depth));
+        }
+    }
+    Err(
+        "Fix: sum_product_depths did not converge in n_nodes passes (the circuit child graph has a cycle (a sum-product circuit must be a DAG))."
+            .to_string(),
+    )
 }
 
 /// CPU reference: f64 evaluation of a sum-product circuit.
@@ -513,6 +755,57 @@ inventory::submit! {
         }),
         Some(|| {
             vec![vec![crate::wire::pack_u32_slice(&[4u32 << 16])]]
+        }),
+    )
+}
+
+// Cross-backend parity fixture for the DEPTH-LEVELED evaluator. The single-pass
+// `sum_product_evaluate` above is registered; the leveled variant is now a production
+// path (vyre-self-substrate's cost model dispatches it), so it must be walked by the
+// conformance matrix too. A genuine DEPTH-2 circuit (a PRODUCT reading an internal SUM)
+// exercises the barrier the single-pass form lacks:
+//   n0=LEAF 2.0, n1=LEAF 3.0        (depth 0)
+//   n2=SUM(n0,n1) unit weights = 5.0 (depth 1)
+//   n3=PRODUCT(n2,n0) = 5.0*2.0 = 10.0 (depth 2, the root/point estimate)
+// depths=[0,0,1,2], max_depth=3. Binding order: depths, kinds, child_offsets,
+// child_counts, children, weights, leaf_values, out (seeded zero). reference_eval
+// returns the sole RW buffer `out` = [2.0, 3.0, 5.0, 10.0] in 16.16.
+#[cfg(feature = "inventory-registry")]
+inventory::submit! {
+    crate::harness::OpEntry::new(
+        OP_ID_LEVELED,
+        || sum_product_evaluate_leveled(
+            "depths",
+            "kinds",
+            "child_offsets",
+            "child_counts",
+            "children",
+            "weights",
+            "leaf_values",
+            "out",
+            4,
+            4,
+            3,
+        ),
+        Some(|| {
+            vec![vec![
+                crate::wire::pack_u32_slice(&[0, 0, 1, 2]),                 // depths
+                crate::wire::pack_u32_slice(&[KIND_LEAF, KIND_LEAF, KIND_SUM, KIND_PRODUCT]),
+                crate::wire::pack_u32_slice(&[0, 0, 0, 2]),                 // child_offsets
+                crate::wire::pack_u32_slice(&[0, 0, 2, 2]),                 // child_counts
+                crate::wire::pack_u32_slice(&[0, 1, 2, 0]),                 // children
+                crate::wire::pack_u32_slice(&[1u32 << 16, 1u32 << 16, 0, 0]), // weights (1.0,1.0)
+                crate::wire::pack_u32_slice(&[2u32 << 16, 3u32 << 16, 0, 0]), // leaf_values (2.0,3.0)
+                crate::wire::pack_u32_slice(&[0, 0, 0, 0]),                 // out (seed)
+            ]]
+        }),
+        Some(|| {
+            vec![vec![crate::wire::pack_u32_slice(&[
+                2u32 << 16, // n0 = 2.0
+                3u32 << 16, // n1 = 3.0
+                5u32 << 16, // n2 = SUM = 5.0
+                10u32 << 16, // n3 = PRODUCT(5.0, 2.0) = 10.0
+            ])]]
         }),
     )
 }
@@ -821,6 +1114,90 @@ mod tests {
             };
         }
         out
+    }
+
+    #[test]
+    fn depths_all_zero_for_leaf_only_circuit() {
+        // Three leaves (child_count 0) → all depth 0, one wave.
+        let (depths, max_depth) =
+            sum_product_depths(&[0, 0, 0], &[0, 0, 0], &[], 3).expect("leaf-only circuit is valid");
+        assert_eq!(depths, vec![0, 0, 0]);
+        assert_eq!(max_depth, 1, "one wave (0) fires all leaves");
+    }
+
+    #[test]
+    fn depths_assign_topological_levels() {
+        // 4 leaves → 2 products (depth 1) → 1 sum-of-products root (depth 2).
+        // kinds: 0..3 leaves, 4=PROD(0,1), 5=PROD(2,3), 6=SUM(4,5).
+        let child_offsets = vec![0, 0, 0, 0, 0, 2, 4];
+        let child_counts = vec![0, 0, 0, 0, 2, 2, 2];
+        let children = vec![0, 1, 2, 3, 4, 5];
+        let (depths, max_depth) = sum_product_depths(&child_offsets, &child_counts, &children, 7)
+            .expect("valid 3-level DAG");
+        assert_eq!(depths, vec![0, 0, 0, 0, 1, 1, 2]);
+        assert_eq!(max_depth, 3, "deepest node is level 2 → 3 waves");
+        // Every edge strictly increases depth (the level-wave correctness precondition).
+        for (parent, (&co, &cc)) in child_offsets.iter().zip(&child_counts).enumerate() {
+            for &c in &children[co as usize..(co + cc) as usize] {
+                assert!(
+                    depths[parent] > depths[c as usize],
+                    "parent {parent} (d={}) must be deeper than child {c} (d={})",
+                    depths[parent],
+                    depths[c as usize]
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn depths_handle_non_index_ordered_nodes() {
+        // Root at index 0 reads internal node 1, which reads leaf 2, nodes are NOT
+        // in topological index order, so a single forward index pass would be wrong.
+        // 0=SUM(1), 1=PRODUCT(2), 2=LEAF.
+        let child_offsets = vec![0, 1, 0];
+        let child_counts = vec![1, 1, 0];
+        let children = vec![1, 2];
+        let (depths, max_depth) =
+            sum_product_depths(&child_offsets, &child_counts, &children, 3).expect("valid DAG");
+        assert_eq!(
+            depths,
+            vec![2, 1, 0],
+            "depth follows the DAG, not node index"
+        );
+        assert_eq!(max_depth, 3);
+    }
+
+    #[test]
+    fn depths_reject_out_of_range_child() {
+        let err = sum_product_depths(&[0, 0], &[0, 1], &[5], 2)
+            .expect_err("child index 5 >= n_nodes=2 must be rejected");
+        assert!(err.contains("outside n_nodes"), "{err}");
+    }
+
+    #[test]
+    fn depths_reject_cycle() {
+        // 0 → 1 → 0 is a cycle; relaxation never converges.
+        let err = sum_product_depths(&[0, 1], &[1, 1], &[1, 0], 2)
+            .expect_err("a cyclic child graph is not a valid sum-product circuit");
+        assert!(err.contains("cycle"), "{err}");
+    }
+
+    #[test]
+    fn depths_diamond_dag_takes_max_over_shared_child() {
+        // A diamond: one leaf feeds two depth-1 nodes, whose shared parent is depth 2.
+        //   0=LEAF, 1=SUM(0), 2=SUM(0), 3=PRODUCT(1,2).
+        // child_offsets/counts: 1@0..1=[0], 2@1..2=[0], 3@2..4=[1,2].
+        let child_offsets = vec![0, 0, 1, 2];
+        let child_counts = vec![0, 1, 1, 2];
+        let children = vec![0, 0, 1, 2];
+        let (depths, max_depth) = sum_product_depths(&child_offsets, &child_counts, &children, 4)
+            .expect("valid diamond DAG");
+        assert_eq!(
+            depths,
+            vec![0, 1, 1, 2],
+            "the two depth-1 nodes share leaf 0; their common parent is 1+max(1,1)=2"
+        );
+        assert_eq!(max_depth, 3);
     }
 
     #[test]

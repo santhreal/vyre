@@ -148,7 +148,7 @@ pub struct ParseError {
 
 /// Maximum recursive-descent nesting depth. Hostile input (e.g. thousands of
 /// nested parens or `* ! &mut` chains) would otherwise recurse until the native
-/// stack overflows — an uncatchable process abort and a clean algorithmic-DoS
+/// stack overflows, an uncatchable process abort and a clean algorithmic-DoS
 /// vector for the frontend. We fail closed with a typed `ParseError` well below
 /// any stack limit; real programs never approach this depth.
 const MAX_PARSE_DEPTH: usize = 256;
@@ -292,7 +292,7 @@ impl<'a> Parser<'a> {
         // `parse_block` call (the cond's `parse_expr` has already decremented),
         // so without guarding here, `while c { while c { ... } }` recurses
         // unbounded and overflows the native stack. Guard at the block so every
-        // nesting construct — present and future — fails closed.
+        // nesting construct (present and future (fails closed)).
         self.depth += 1;
         let r = if self.depth > MAX_PARSE_DEPTH {
             Err(ParseError {

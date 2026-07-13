@@ -1,5 +1,5 @@
-use super::*;
 use super::generated_contracts::generated_i4_values;
+use super::*;
 
 #[test]
 fn i4x8_dot_f32_scaled_via_dispatches_signed_boundary_accumulators() {
@@ -149,4 +149,3 @@ fn i4x8_dot_f32_scaled_via_rejects_malformed_backend_outputs() {
         .expect_err("short output must fail");
     assert!(err.to_string().contains("expected 4 output bytes"));
 }
-

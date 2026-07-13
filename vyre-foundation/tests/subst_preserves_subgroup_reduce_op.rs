@@ -26,7 +26,9 @@ fn collect_subgroup_reduce_ops(nodes: &[Node]) -> Vec<SubgroupReduceOp> {
                 walk_expr(left, out);
                 walk_expr(right, out);
             }
-            Expr::UnOp { operand, .. } | Expr::Cast { value: operand, .. } => walk_expr(operand, out),
+            Expr::UnOp { operand, .. } | Expr::Cast { value: operand, .. } => {
+                walk_expr(operand, out)
+            }
             Expr::Fma { a, b, c } => {
                 walk_expr(a, out);
                 walk_expr(b, out);

@@ -19,6 +19,7 @@
 //! Rewrite consumers change `binding.memory_class` to `Constant` and
 //! let each emitter map the descriptor class to its native artifact.
 
+use super::child_body_operands;
 use crate::{
     BindingSlot, BindingVisibility, KernelBody, KernelDescriptor, KernelOpKind, MemoryClass,
 };
@@ -133,19 +134,6 @@ fn count_loads(
             }
         }
     }
-}
-
-fn child_body_operands<'a>(
-    kind: &KernelOpKind,
-    operands: &'a [u32],
-) -> impl Iterator<Item = u32> + 'a {
-    let start = match kind {
-        KernelOpKind::StructuredIfThen | KernelOpKind::StructuredIfThenElse => 1,
-        KernelOpKind::StructuredForLoop { .. } => 2,
-        KernelOpKind::StructuredBlock | KernelOpKind::Region { .. } => 0,
-        _ => operands.len(),
-    };
-    operands.iter().skip(start).copied()
 }
 
 #[cfg(test)]

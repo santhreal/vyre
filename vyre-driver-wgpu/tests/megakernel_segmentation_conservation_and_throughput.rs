@@ -3,24 +3,24 @@
 //! Consolidates three throwaway diagnostics (8 MiB throughput, whole-file cutoff,
 //! seg-size × worker-group sweep) into ONE regression. Two contracts, both hard:
 //!
-//!   1. CONSERVATION (Law 10 — no silent drop). For every dispatch geometry,
+//!   1. CONSERVATION (Law 10, no silent drop). For every dispatch geometry,
 //!      segmentation must find EXACTLY the planted markers with `dropped_hits==0`.
 //!      A geometry that returns `found < expected` with `dropped_hits==0` is a
-//!      SILENT recall loss — bytes scanned, matches vanished, no signal.
+//!      SILENT recall loss (bytes scanned, matches vanished, no signal).
 //!   2. THROUGHPUT. The fastest conserving geometry must beat Hyperscan's
 //!      ~1.5 GB/s warm device throughput on a single 8 MiB file (the whole point
 //!      of intra-file segmentation: saturate the GPU from one input).
 //!
-//! HISTORY (now GREEN — this was the proof obligation for the drain fix):
+//! HISTORY (now GREEN, this was the proof obligation for the drain fix):
 //! the original kernel used a FIXED `claim_budget = ceil(queue_len / total_workers)`
 //! loop that assumed every requested lane ran and completed its budget. When fewer
-//! lanes were resident than `total_workers`, the queue was never fully claimed —
+//! lanes were resident than `total_workers`, the queue was never fully claimed 
 //! work-items left UNCLAIMED with `found < expected`, `dropped_hits == 0`: a SILENT
 //! recall loss (measured: seg_len=1024, worker_groups=1024 → 64/128 markers). The
 //! fix DRAINS the queue: `build_batch_program` now emits `Node::forever([ claim =
 //! atomicAdd(HEAD,1); if claim >= QUEUE_LEN { Return }; execute(claim) ])`, so every
 //! resident lane keeps claiming until the queue is exhausted regardless of how many
-//! lanes are resident. No new IR was needed — `forever` + `Return` already express a
+//! lanes are resident. No new IR was needed: `forever` + `Return` already express a
 //! bounded persistent drain (overhead is one past-the-end claim per lane). Every
 //! geometry now conserves all markers AND beats Hyperscan (best ~15× on a 5090).
 //!
@@ -155,7 +155,7 @@ fn segmentation_conserves_every_match_and_beats_hyperscan() {
         .map(|i| byte_finder_rule(i, MARKER.wrapping_add(i as u8)))
         .collect();
 
-    // seg_len × worker_groups matrix — includes the measured under-claim geometry
+    // seg_len × worker_groups matrix, includes the measured under-claim geometry
     // (1024, 1024) and known-good ones, so the conservation contract is checked
     // across the regime, not at one lucky point.
     let geometries = [
@@ -168,7 +168,7 @@ fn segmentation_conserves_every_match_and_beats_hyperscan() {
     ];
 
     eprintln!(
-        "8 MiB / {N_RULES} rules — segmentation conservation + throughput (expect {expected} markers, 0 dropped, Hyperscan {HS_FLOOR_GBPS} GB/s):"
+        "8 MiB / {N_RULES} rules, segmentation conservation + throughput (expect {expected} markers, 0 dropped, Hyperscan {HS_FLOOR_GBPS} GB/s):"
     );
     eprintln!(
         "  {:>8}  {:>8}  {:>7}  {:>8}  {:>8}  {:>6}  {:>9}",
@@ -199,7 +199,7 @@ fn segmentation_conserves_every_match_and_beats_hyperscan() {
         results.push(r);
     }
 
-    // Contract 1 — NO SILENT DROP (Law 10). Every geometry must EITHER conserve
+    // Contract 1: NO SILENT DROP (Law 10). Every geometry must EITHER conserve
     // all matches OR fail closed loudly (under_claimed). The only violation is an
     // `Ok` dispatch that returned a partial hit set with no loud signal.
     let violations: Vec<String> = results
@@ -208,13 +208,13 @@ fn segmentation_conserves_every_match_and_beats_hyperscan() {
         .map(|r| {
             format!(
                 "seg_len={} wgroups={}: dispatch returned Ok with found {}/{} dropped={} \
-                 (SILENT partial — neither complete nor a loud under-claim error)",
+                 (SILENT partial, neither complete nor a loud under-claim error)",
                 r.seg_len, r.worker_groups, r.found, expected, r.dropped
             )
         })
         .collect();
 
-    // Contract 2 — THROUGHPUT. Fastest CONSERVING geometry must beat Hyperscan.
+    // Contract 2: THROUGHPUT. Fastest CONSERVING geometry must beat Hyperscan.
     let best_ok_gbps = results
         .iter()
         .filter(|r| r.found == expected && r.dropped == 0)
@@ -227,7 +227,7 @@ fn segmentation_conserves_every_match_and_beats_hyperscan() {
 
     assert!(
         violations.is_empty(),
-        "SILENT RECALL LOSS — a dispatch returned Ok with a partial hit set instead of \
+        "SILENT RECALL LOSS, a dispatch returned Ok with a partial hit set instead of \
          conserving all matches or failing closed:\n  {}",
         violations.join("\n  ")
     );

@@ -2,7 +2,7 @@ use super::binding_lookup::BindingLookup;
 use super::readback::{SubmittedMap, SubmittedReadback};
 use super::{pool_backend_error, GpuBuffers, RecordAndReadback};
 use crate::allocation::reserve_smallvec_to_capacity;
-use crate::numeric::usize_to_u64;
+use crate::numeric::WGPU_NUMERIC;
 use smallvec::SmallVec;
 use std::sync::Arc;
 use vyre_driver::BackendError;
@@ -68,9 +68,9 @@ pub(super) fn record_readback_copies(
             Ok(ring)
         };
         for (output_idx, output) in request.output_bindings.iter().enumerate() {
-            let readback_size = usize_to_u64(output.layout.copy_size, "output readback copy size")?;
+            let readback_size = WGPU_NUMERIC.usize_to_u64(output.layout.copy_size, "output readback copy size")?;
             let readback_offset =
-                usize_to_u64(output.layout.copy_offset, "output readback copy offset")?;
+                WGPU_NUMERIC.usize_to_u64(output.layout.copy_offset, "output readback copy offset")?;
             let output_buffer = gpu_idx_by_binding
                 .get(output.binding)
                 .and_then(|idx| gpu_buffers.get(idx))
@@ -108,9 +108,9 @@ pub(super) fn record_readback_copies(
         }
     } else {
         for (output_idx, output) in request.output_bindings.iter().enumerate() {
-            let readback_size = usize_to_u64(output.layout.copy_size, "output readback copy size")?;
+            let readback_size = WGPU_NUMERIC.usize_to_u64(output.layout.copy_size, "output readback copy size")?;
             let readback_offset =
-                usize_to_u64(output.layout.copy_offset, "output readback copy offset")?;
+                WGPU_NUMERIC.usize_to_u64(output.layout.copy_offset, "output readback copy offset")?;
             let output_buffer = gpu_idx_by_binding
                 .get(output.binding)
                 .and_then(|idx| gpu_buffers.get(idx))

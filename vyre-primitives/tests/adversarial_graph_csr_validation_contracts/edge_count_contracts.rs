@@ -118,4 +118,3 @@ fn csr_cpu_ref_offsets_last_greater_than_provided_targets_fails_loudly() {
         0xFFFF_FFFF,
     );
 }
-

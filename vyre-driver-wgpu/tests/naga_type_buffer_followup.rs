@@ -6,7 +6,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, MemoryKind, 
 
 const TEST_WORKGROUP_SIZE: [u32; 3] = [1, 1, 1];
 
-/// Emit `program` to a naga module and assert it passes naga's full validator —
+/// Emit `program` to a naga module and assert it passes naga's full validator 
 /// the same validation the wgpu backend runs before dispatch.
 fn emit_validated_module(program: &Program) -> naga::Module {
     let module = emit_module(program, &DispatchConfig::default(), TEST_WORKGROUP_SIZE)
@@ -38,7 +38,7 @@ fn emit_wgsl(program: &Program) -> String {
 /// `i32`, whose `i32::MIN` overflow is rejected upstream) and the reference
 /// oracle computes `0u32.wrapping_sub(v)`, but naga REJECTS unary minus on an
 /// unsigned operand (`InvalidUnaryOperandType`). Before the emitter synthesized
-/// `0u - v`, this exact module FAILED naga validation — so a u32 negate the
+/// `0u - v`, this exact module FAILED naga validation, so a u32 negate the
 /// front-end + CPU oracle accepted could not be dispatched on the GPU (Law 10).
 /// This is the CPU-side deterministic guard for that fix (the live-GPU twin is
 /// `unary_int_parity::negate_u32_wraps_two_complement_on_gpu`).

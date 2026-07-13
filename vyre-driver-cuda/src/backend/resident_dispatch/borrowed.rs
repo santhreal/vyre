@@ -84,6 +84,14 @@ impl CudaBackend {
         config: &DispatchConfig,
         outputs: &mut Vec<Vec<u8>>,
     ) -> Result<(), BackendError> {
+        // Bind this device's CUDA context to the CALLING thread before any launch.
+        // The backend is `Send + Sync` and W3-5 cross-device parallel dispatch drives
+        // one resident scan per device from its own thread, so the context must be
+        // made current here (idempotent when already current), matching the batch,
+        // async, and fused-sequence resident entry points (ONE PLACE pattern). Without
+        // this, a resident scan issued from a thread other than the acquiring one
+        // faults with CUDA_ERROR_INVALID_CONTEXT.
+        self.warmup()?;
         self.telemetry.record_resident_borrowed_fallback_dispatch();
         let plan = BindingPlan::build(program)?;
         let required_handles = plan

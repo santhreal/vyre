@@ -1,8 +1,8 @@
 //! CUDA backend parity for the `vyre_libs` resident region-presence pipeline.
 //!
 //! The pipeline's GPU parity is otherwise proven on wgpu (RTX 5090) in
-//! `vyre-libs/tests/literal_set_resident_presence.rs`, but keyhog — the primary
-//! consumer — drives the **CUDA** backend. The resident pipeline reaches the
+//! `vyre-libs/tests/literal_set_resident_presence.rs`, but keyhog, the primary
+//! consumer, drives the **CUDA** backend. The resident pipeline reaches the
 //! backend only through the `VyreBackend` trait's resident half
 //! (`allocate_resident`, `upload_resident`, the ranged `upload_resident_at` used
 //! to stage the haystack and zero the presence prefix, and
@@ -108,7 +108,7 @@ fn resident_region_presence_matches_borrowed_and_planted_hits_on_cuda() {
         .expect("prepare resident region-presence session on CUDA");
 
     // Re-dispatch several times: the immutable tables stay resident (uploaded once),
-    // and every CUDA scan must reproduce the borrowed bitmap word-for-word — proving
+    // and every CUDA scan must reproduce the borrowed bitmap word-for-word, proving
     // the trait's resident half (incl. the ranged upload_resident_at) is wired on
     // CUDA, not just wgpu.
     let mut out = Vec::new();

@@ -35,8 +35,11 @@
 //! The deletion patterns straddle word boundaries (`\` in word k, `\n` in
 //! word k+1). Word-at-a-time classification would need a 2-word sliding
 //! window with explicit cross-lane shuffles. Per-byte threads with
-//! ±2-byte neighbor reads keep the kernel readable and let the bounds-
-//! check clamp in the PTX backend handle the buffer edge for free.
+//! ±2-byte neighbor reads keep the kernel readable; the buffer edge is
+//! handled by clamping the load index to the buffer length IN THE IR (the
+//! `Expr::select` neighbor guards evaluate both arms, so the load must be
+//! made in-bounds explicitly, not left to a backend's OOB clamp. CUDA does
+//! not clamp).
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -109,6 +112,14 @@ fn line_splice_classify_with_source_type(byte_count: u32, source_type: DataType)
     // constants type-cleanly.
     let load_byte = |addr: Expr| -> Expr {
         if source_type == DataType::U8 {
+            // Clamp the source-byte index against `min(buf_len, byte_count)` via the
+            // shared ONE-PLACE helper `crate::ir_safe::clamped_load_to`. The ±N
+            // neighbor guards are `Expr::select` (both arms evaluated), so this load
+            // still runs for edge lanes whose `addr` underflowed/overflowed; the clamp
+            // keeps it in bounds on EVERY backend (Law 10; CUDA does not clamp OOB
+            // reads). The outer `in_bounds` select restores the 0 sentinel for the
+            // out-of-range case, so semantics are unchanged, only the illegal access
+            // is removed.
             let buf_len = Expr::buf_len("bytes_in");
             let logical_len = Expr::u32(byte_count);
             let bound = Expr::select(
@@ -117,20 +128,30 @@ fn line_splice_classify_with_source_type(byte_count: u32, source_type: DataType)
                 logical_len,
             );
             let in_bounds = Expr::lt(addr.clone(), bound.clone());
-            let safe_addr = Expr::select(
-                in_bounds.clone(),
-                addr,
-                Expr::saturating_sub(bound, Expr::u32(1)),
-            );
             let byte = Expr::bitand(
-                Expr::cast(DataType::U32, Expr::load("bytes_in", safe_addr)),
+                Expr::cast(
+                    DataType::U32,
+                    crate::ir_safe::clamped_load_to("bytes_in", addr, bound),
+                ),
                 Expr::u32(0xFF),
             );
             Expr::select(in_bounds, byte, Expr::u32(0))
         } else {
             let word_idx = Expr::div(addr.clone(), Expr::u32(4));
             let byte_in_word = Expr::rem(addr, Expr::u32(4));
-            let word = Expr::cast(DataType::U32, Expr::load("bytes_in", word_idx));
+            // Clamp the word index to the buffer length before loading (canonical
+            // ONE-PLACE helper crate::ir_safe::clamped_load). The ±N neighbor guards
+            // are `Expr::select`, which evaluates BOTH arms, so this load still runs
+            // for edge lanes whose `addr` underflowed (i-2 at i=0) or overflowed
+            // (i+1 at the last byte → word past the end). The clamp keeps the load in
+            // bounds on EVERY backend instead of relying on the PTX backend's OOB
+            // clamp (Law 10; CUDA does not clamp); the value is discarded by the
+            // outer `load(off)` select when the address was out of range, so
+            // semantics are unchanged (only the illegal access is removed).
+            let word = Expr::cast(
+                DataType::U32,
+                crate::ir_safe::clamped_load("bytes_in", word_idx),
+            );
             let shift = Expr::mul(byte_in_word, Expr::u32(8));
             Expr::bitand(Expr::shr(word, shift), Expr::u32(0xFF))
         }
@@ -288,16 +309,12 @@ pub fn try_reference_line_splice_classify_into(
     source: &[u8],
     out: &mut Vec<u32>,
 ) -> Result<(), String> {
-    if source.len() > out.capacity() {
-        out.try_reserve_exact(source.len() - out.capacity())
-            .map_err(|err| {
-                format!(
-                    "line-splice classifier reference could not reserve {} output words: {err}",
-                    source.len()
-                )
-            })?;
-    }
-    out.clear();
+    crate::hostbuf::reserve_exact_cleared(out, source.len()).map_err(|err| {
+        format!(
+            "line-splice classifier reference could not reserve {} output words: {err}",
+            source.len()
+        )
+    })?;
     for i in 0..source.len() {
         let b_m2 = i.checked_sub(2).map(|j| source[j]).unwrap_or(0);
         let b_m1 = i.checked_sub(1).map(|j| source[j]).unwrap_or(0);

@@ -303,8 +303,11 @@ fn apply_pipeline(plan: &PipelinePlan) -> Vec<Node> {
     // so substitute the loop var with the concrete last-iteration index. The
     // steady-state store keeps `Var(loop_var)` (still in scope inside the loop).
     // Reuses the canonical induction-var substitution rather than a local copy.
-    let epilogue =
-        crate::transform::subst::substitute_node(&epilogue, &plan.loop_var, &Expr::u32(plan.hi - 1));
+    let epilogue = crate::transform::subst::substitute_node(
+        &epilogue,
+        &plan.loop_var,
+        &Expr::u32(plan.hi - 1),
+    );
     vec![prologue, steady, epilogue]
 }
 

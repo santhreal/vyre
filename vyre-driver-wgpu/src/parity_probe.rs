@@ -5,7 +5,7 @@
 //! only with the `parity-testing` feature and are not part of the production
 //! dispatch path.
 
-use crate::numeric::usize_to_u64;
+use crate::numeric::WGPU_NUMERIC;
 use crate::staging_reserve::reserve_backend_vec;
 use crate::WgpuBackend;
 use crossbeam_channel::RecvTimeoutError;
@@ -150,8 +150,8 @@ fn dispatch_probe_wgsl(
     output_words: u32,
 ) -> Result<Vec<u8>, vyre_driver::BackendError> {
     let (device, queue) = &**device_queue;
-    let input_size = usize_to_u64(input.len().max(F32_BYTES), "parity probe input size")?;
-    let output_size_u64 = usize_to_u64(output_size.max(F32_BYTES), "parity probe output size")?;
+    let input_size = WGPU_NUMERIC.usize_to_u64(input.len().max(F32_BYTES), "parity probe input size")?;
+    let output_size_u64 = WGPU_NUMERIC.usize_to_u64(output_size.max(F32_BYTES), "parity probe output size")?;
     let input_buffer = device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("vyre parity probe input"),
         size: input_size,
@@ -179,7 +179,7 @@ fn dispatch_probe_wgsl(
     let params = [input_len, output_words, 0_u32, 0_u32];
     let params_buffer = device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("vyre parity probe params"),
-        size: usize_to_u64(
+        size: WGPU_NUMERIC.usize_to_u64(
             params.len()
                 .checked_mul(std::mem::size_of::<u32>())
                 .ok_or_else(|| {

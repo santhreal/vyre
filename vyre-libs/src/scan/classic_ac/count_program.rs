@@ -1,7 +1,9 @@
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::region::wrap_anonymous;
-use crate::scan::builders::{load_packed_byte, load_packed_byte_expr};
+use crate::scan::builders::load_packed_byte_expr;
+
+use super::bounded_walk_prologue_nodes;
 use crate::scan::dfa::CompiledDfa;
 
 #[path = "count_program/suffix2.rs"]
@@ -15,10 +17,12 @@ pub use suffix2::{
     classic_ac_bounded_count_suffix2_prefilter_program, classic_ac_candidate_suffix2_mask_words,
     CLASSIC_AC_SUFFIX2_MASK_WORDS,
 };
+pub(crate) use suffix3::ascii_case_variants;
 pub use suffix3::{
     build_ac_bounded_count_suffix3_prefilter_program,
     classic_ac_bounded_count_suffix3_prefilter_program, classic_ac_candidate_suffix3_bloom_words,
-    classic_ac_suffix3_bloom_contains, CLASSIC_AC_SUFFIX3_BLOOM_WORDS,
+    classic_ac_candidate_suffix3_bloom_words_ci, classic_ac_suffix3_bloom_contains,
+    CLASSIC_AC_SUFFIX3_BLOOM_WORDS,
 };
 
 pub(in crate::scan::classic_ac) use suffix3::suffix3_bloom_bit_index_expr;
@@ -30,52 +34,20 @@ fn count_scan_nodes(
     match_count: &str,
     max_pattern_len: u32,
 ) -> Vec<Node> {
-    let max_pattern_len = max_pattern_len.max(1);
-    let i = Expr::var("i");
-    let end = Expr::add(i.clone(), Expr::u32(1));
-    let scan_start = Expr::select(
-        Expr::lt(i, Expr::u32(max_pattern_len - 1)),
-        Expr::u32(0),
-        Expr::sub(end.clone(), Expr::u32(max_pattern_len)),
-    );
-    let (load_step_byte, step_byte) = load_packed_byte(haystack, Expr::var("step"));
-
-    vec![
-        Node::let_bind("state", Expr::u32(0)),
-        Node::let_bind("scan_start", scan_start),
-        Node::let_bind("scan_end", end),
-        Node::loop_for(
-            "step",
-            Expr::var("scan_start"),
-            Expr::var("scan_end"),
-            vec![
-                load_step_byte,
-                Node::assign(
-                    "state",
-                    Expr::load(
-                        transitions,
-                        Expr::add(Expr::mul(Expr::var("state"), Expr::u32(256)), step_byte),
-                    ),
-                ),
-            ],
-        ),
-        Node::let_bind("out_begin", Expr::load(output_offsets, Expr::var("state"))),
-        Node::let_bind(
-            "out_end",
-            Expr::load(output_offsets, Expr::add(Expr::var("state"), Expr::u32(1))),
-        ),
-        Node::let_bind(
-            "out_count",
-            Expr::sub(Expr::var("out_end"), Expr::var("out_begin")),
-        ),
-        Node::if_then(
-            Expr::ne(Expr::var("out_count"), Expr::u32(0)),
-            vec![Node::let_bind(
-                "_count_old",
-                Expr::atomic_add(match_count, Expr::u32(0), Expr::var("out_count")),
-            )],
-        ),
-    ]
+    let mut nodes =
+        bounded_walk_prologue_nodes(haystack, transitions, output_offsets, max_pattern_len);
+    nodes.push(Node::let_bind(
+        "out_count",
+        Expr::sub(Expr::var("out_end"), Expr::var("out_begin")),
+    ));
+    nodes.push(Node::if_then(
+        Expr::ne(Expr::var("out_count"), Expr::u32(0)),
+        vec![Node::let_bind(
+            "_count_old",
+            Expr::atomic_add(match_count, Expr::u32(0), Expr::var("out_count")),
+        )],
+    ));
+    nodes
 }
 
 /// Build a bounded-window AC program that returns only the total match count.
@@ -262,31 +234,11 @@ pub fn build_ac_bounded_count_prefilter_program(dfa: &CompiledDfa) -> Program {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scan::classic_ac::{classic_ac_compile, classic_ac_scan_counts};
+    use crate::scan::classic_ac::classic_ac_compile;
+    use crate::scan::classic_ac::classic_ac_scan_counts;
+    use crate::scan::classic_ac::test_helpers::with_reference_dispatch_lanes;
     use crate::scan::{pack_haystack_u32, pack_u32_slice};
-
-    fn decode_u32(bytes: &[u8]) -> Vec<u32> {
-        bytes
-            .chunks_exact(4)
-            .map(|chunk| u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
-            .collect()
-    }
-
-    fn with_reference_dispatch_lanes(program: Program, lanes: u32) -> Program {
-        let buffers = program
-            .buffers()
-            .iter()
-            .cloned()
-            .map(|buffer| {
-                if buffer.name() == "match_count" {
-                    buffer.with_count(lanes.max(1)).with_output_byte_range(0..4)
-                } else {
-                    buffer
-                }
-            })
-            .collect();
-        program.with_rewritten_buffers(buffers)
-    }
+    use crate::test_support::byte_pack::bytes_to_u32 as decode_u32;
 
     #[test]
     fn bounded_count_program_reference_eval_matches_cpu_count() {

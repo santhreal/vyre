@@ -1,4 +1,4 @@
-//! Adler-32 checksum parity on the LIVE GPU — a real shipped workload whose GPU
+//! Adler-32 checksum parity on the LIVE GPU, a real shipped workload whose GPU
 //! program carries TWO accumulators and a u32 MOD 65521 inside the loop.
 //!
 //! `adler32_program` was tested only at the source/oracle level, never
@@ -7,7 +7,7 @@
 //! a DUAL state (`a` init 1, `b` init 0), each byte doing `a = (a + byte) %
 //! 65521; b = (b + a) % 65521`, finalized as `(b << 16) | a`. So it exercises a
 //! loop-carried PAIR plus a u32 modulo-by-a-non-power-of-2-constant on real
-//! silicon — the modulo complements `div_zero_shift_mask_parity` (which only
+//! silicon, the modulo complements `div_zero_shift_mask_parity` (which only
 //! covered the mod-by-zero edge) with mod-by-constant in a real workload loop.
 //!
 //! Dispatched on the 5090 and asserted byte-for-byte against the `adler32` Rust
@@ -50,7 +50,7 @@ fn check(backend: &WgpuBackend, bytes: &[u8], label: &str) {
     let expected = adler32(bytes);
     assert_eq!(
         gpu, expected,
-        "GPU Adler-32 of {label} diverged from the Rust reference — the dual-accumulator \
+        "GPU Adler-32 of {label} diverged from the Rust reference, the dual-accumulator \
          carry or the u32 mod-65521 miscompiles on hardware.\n  \
          gpu      = {gpu:#010x}\n  expected = {expected:#010x}"
     );
@@ -69,7 +69,7 @@ fn adler32_varied_inputs_match_reference_on_gpu() {
     let backend = WgpuBackend::acquire().expect("Fix: Adler-32 GPU parity requires a live GPU.");
     check(&backend, b"a", "\"a\"");
     check(&backend, b"hello, world", "\"hello, world\"");
-    // 0xFF bytes drive `a` and `b` up fastest — stresses the mod-65521 path.
+    // 0xFF bytes drive `a` and `b` up fastest (stresses the mod-65521 path).
     check(&backend, &[0xFFu8; 40], "forty 0xFF bytes");
     // 64-byte block: many iterations accumulating into both lanes before the mod.
     let long: [u8; 64] = std::array::from_fn(|i| (i as u8).wrapping_mul(31).wrapping_add(7));

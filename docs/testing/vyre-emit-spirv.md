@@ -1,4 +1,4 @@
-# Testing program — vyre-emit-spirv
+# Testing program, vyre-emit-spirv
 
 | Kind | Location |
 |------|----------|

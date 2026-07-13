@@ -1,7 +1,9 @@
 //! Volume oracle matrix - independent reference vs production cpu_ref.
-//! Legendary testing.volume - do NOT weaken to shape-only asserts.
+//! Volume testing.volume - do NOT weaken to shape-only asserts.
 #![forbid(unsafe_code)]
-#![cfg(feature = "decode")]
+// `hex_decode_reference_packed` is gated on `cpu-parity` (unreachable from an
+// integration test under `decode` alone); declare the true dependency.
+#![cfg(all(feature = "decode", feature = "cpu-parity"))]
 
 use vyre_primitives::decode::hex::hex_decode_reference_packed;
 

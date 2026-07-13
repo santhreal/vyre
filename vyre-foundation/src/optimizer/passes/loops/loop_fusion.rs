@@ -356,7 +356,7 @@ fn collect_buffers_in_expr(expr: &Expr, out: &mut FxHashSet<Ident>) {
 }
 
 /// True iff `nodes` contains an operation whose memory effect cannot be
-/// summarised by [`collect_touched_buffers`] — an opaque extension node or
+/// summarised by [`collect_touched_buffers`], an opaque extension node or
 /// expression, or a trap/resume host handler.
 ///
 /// `collect_touched_buffers` reports `Node::Opaque`/`Expr::Opaque` as touching
@@ -371,7 +371,7 @@ fn collect_buffers_in_expr(expr: &Expr, out: &mut FxHashSet<Ident>) {
 ///
 /// Async / collective / indirect-dispatch nodes are intentionally NOT included:
 /// their buffer operands ARE captured by `collect_touched_buffers`, so the
-/// disjointness test already covers them — refusing them here would needlessly
+/// disjointness test already covers them, refusing them here would needlessly
 /// forbid legal fusions of loops whose async/collective ops touch disjoint
 /// buffers.
 fn has_unsummarisable_effect(nodes: &[Node]) -> bool {
@@ -396,9 +396,7 @@ fn node_has_unsummarisable_effect(node: &Node) -> bool {
                 || has_unsummarisable_effect(then)
                 || has_unsummarisable_effect(otherwise)
         }
-        Node::Loop {
-            from, to, body, ..
-        } => {
+        Node::Loop { from, to, body, .. } => {
             expr_contains_opaque(from)
                 || expr_contains_opaque(to)
                 || has_unsummarisable_effect(body)
@@ -776,7 +774,8 @@ fn rename_var_in_expr(expr: Expr, from: &Ident, to: &Ident) -> Expr {
             value: Box::new(rename_var_in_expr(*value, from, to)),
             lane: Box::new(rename_var_in_expr(*lane, from, to)),
         },
-        Expr::SubgroupReduce { op, value } => Expr::SubgroupReduce { op,
+        Expr::SubgroupReduce { op, value } => Expr::SubgroupReduce {
+            op,
             value: Box::new(rename_var_in_expr(*value, from, to)),
         },
         Expr::SubgroupBallot { cond } => Expr::SubgroupBallot {

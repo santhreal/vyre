@@ -6,16 +6,16 @@
 //! loop body is read by the other (the interleaving would reorder the
 //! dependency). It gathers each body's variable reads with
 //! `collect_vars_in_expr`, whose `Expr::Atomic { index, value, .. }` arm walked
-//! only `index` and `value` — it DROPPED the compare-exchange `expected`
+//! only `index` and `value`: it DROPPED the compare-exchange `expected`
 //! operand. So a CAS whose `expected` reads the cross-loop scalar `s` was
 //! invisible to the dependency check, and the loops fused.
 //!
 //! Concretely, with `s` mutated by loop A and `buf = [0, 10]`:
 //!   * Unfused: loop A runs to completion (`s == 1`), then loop B's CAS reads
-//!     `s == 1` at every iteration — `buf[0]==0 != 1` and `buf[1]==10 != 1`,
+//!     `s == 1` at every iteration: `buf[0]==0 != 1` and `buf[1]==10 != 1`,
 //!     both compares fail, `buf` stays `[0, 10]`.
 //!   * Fused: each iteration sets `s = i` then runs the CAS, so iteration 0 sees
-//!     `s == 0`, `buf[0]==0 == 0` SUCCEEDS and writes 77 — `buf` becomes
+//!     `s == 0`, `buf[0]==0 == 0` SUCCEEDS and writes 77: `buf` becomes
 //!     `[77, 10]`.
 //! The reference oracle returns `buf`, so the divergence is observable. The fix
 //! walks `expected` in `collect_vars_in_expr`, so the scalar dependency is seen
@@ -72,11 +72,14 @@ fn program() -> Program {
 #[test]
 fn loop_fusion_declines_when_atomic_expected_reads_a_cross_loop_scalar() {
     let program = program();
-    // buf = [0, 10] — chosen so the CAS outcome depends on WHEN `s` is read:
+    // buf = [0, 10], chosen so the CAS outcome depends on WHEN `s` is read:
     // s==0 (per-iteration, fused) makes buf[0]'s compare succeed; s==1 (final,
     // unfused) makes every compare fail.
     let inputs = [Value::from(
-        [0u32, 10].iter().flat_map(|x| x.to_le_bytes()).collect::<Vec<u8>>(),
+        [0u32, 10]
+            .iter()
+            .flat_map(|x| x.to_le_bytes())
+            .collect::<Vec<u8>>(),
     )];
 
     let base = vyre_reference::reference_eval(&program, &inputs)

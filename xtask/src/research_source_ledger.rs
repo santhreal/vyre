@@ -438,7 +438,7 @@ fn validate_competitor_issue_ledger_rows(ledger: &CompetitorIssueLedger) -> Resu
 /// `w3c-recommendation`, `oasis-standard`, `nist-final-publication`, …) and ~17
 /// `artifact_state` values (`living-specification`, `working-draft`,
 /// `candidate-recommendation`, …). A closed `match` arm silently drifts from that
-/// data and rejects valid rows — the exact failure that aborted the CUDA frontier
+/// data and rejects valid rows, the exact failure that aborted the CUDA frontier
 /// leaderboard load. These fields are therefore validated structurally: non-empty,
 /// lowercase ASCII kebab-case (letters, digits, single internal hyphens), bounded
 /// to 64 bytes. Typo/intent defense is the `digest_material` integrity guard, which

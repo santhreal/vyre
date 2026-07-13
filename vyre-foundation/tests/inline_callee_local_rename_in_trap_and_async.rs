@@ -5,7 +5,7 @@
 //! Before the fix: `expand_callee` rewrote callee-local names (`let x` ->
 //!                 `_vyre_inlN_x`) in normal positions, but cloned `Node::Trap`
 //!                 verbatim and rebuilt AsyncLoad/AsyncStore with
-//!                 `(**offset).clone()` / `(**size).clone()` — so a callee-local
+//!                 `(**offset).clone()` / `(**size).clone()`: so a callee-local
 //!                 referenced in a trap address or an async offset/size kept its
 //!                 ORIGINAL name and dangled against the renamed declaration
 //!                 (`_vyre_inlN_x`), producing a reference to an undeclared
@@ -103,7 +103,9 @@ fn find_trap_address_var(nodes: &[Node]) -> Option<String> {
             Node::If {
                 then, otherwise, ..
             } => {
-                if let Some(found) = find_trap_address_var(then).or_else(|| find_trap_address_var(otherwise)) {
+                if let Some(found) =
+                    find_trap_address_var(then).or_else(|| find_trap_address_var(otherwise))
+                {
                     return Some(found);
                 }
             }
@@ -138,7 +140,7 @@ fn inliner_renames_callee_local_in_trap_address() {
     // `_vyre_inl0_off`). The trap address must reference that SAME renamed
     // name, i.e. a name that is actually declared in the inlined body. The
     // pre-fix inliner left the address as the bare `off`, which no longer
-    // exists once `let off` became `_vyre_inl0_off` — a dangling reference.
+    // exists once `let off` became `_vyre_inl0_off`: a dangling reference.
     assert_ne!(
         addr_var, "off",
         "the callee-local trap address must be alpha-renamed, not left bare as `off`"

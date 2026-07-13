@@ -138,4 +138,3 @@ fn generated_batched_matvec_matches_repeated_matvec_across_pack_boundaries() {
         }
     }
 }
-

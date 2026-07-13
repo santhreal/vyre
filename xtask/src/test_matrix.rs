@@ -323,7 +323,7 @@ const RELEASE_SURFACES: &[(&str, &[&str])] = &[
 // A test file crossing this line count is a genuine god-file (the same
 // `TEST_MAX_LINES` ceiling `scripts/check_max_file_size.sh` enforces). The
 // 500-line figure is a split-by-responsibility *guideline* surfaced as a
-// non-blocking advisory by `xtask lego-audit`, not a release gate — so this
+// non-blocking advisory by `xtask lego-audit`, not a release gate, so this
 // closure only blocks on real god-files, not on cohesive corpora that
 // legitimately run long.
 const OVERSIZED_TEST_THRESHOLD_LINES: usize = 8000;

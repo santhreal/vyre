@@ -150,9 +150,7 @@ impl SharedFactHeader {
         let object_token = self
             .object
             .map_or_else(|| "-".to_string(), |v| v.to_string());
-        let aux_token = self
-            .aux
-            .map_or_else(|| "-".to_string(), |v| v.to_string());
+        let aux_token = self.aux.map_or_else(|| "-".to_string(), |v| v.to_string());
         format!(
             "schema=v{};producer={};kind={};fact_id={};subject={};object={};aux={};file={};start={};end={};soundness={:?}",
             self.schema_version,
@@ -176,8 +174,9 @@ mod tests {
 
     #[test]
     fn c_security_source_fact_header_is_exact() {
-        let header = SharedFactHeader::new("c-c11", SharedFactKind::Source, 1, 42, Soundness::Exact)
-            .with_span(7, 100, 120);
+        let header =
+            SharedFactHeader::new("c-c11", SharedFactKind::Source, 1, 42, Soundness::Exact)
+                .with_span(7, 100, 120);
 
         // object and aux are absent (None): wire token is "-", not "0".
         // "0" is a valid Polonius id (first interned origin/loan) and must not
@@ -211,8 +210,13 @@ mod tests {
     /// `object=-` and `object=0` respectively.
     #[test]
     fn wire_header_distinguishes_absent_object_from_zero_object() {
-        let no_object =
-            SharedFactHeader::new("rustc-nll", SharedFactKind::BorrowLoan, 1, 5, Soundness::Exact);
+        let no_object = SharedFactHeader::new(
+            "rustc-nll",
+            SharedFactKind::BorrowLoan,
+            1,
+            5,
+            Soundness::Exact,
+        );
         let object_zero = no_object.clone().with_object(0);
 
         // Semantic difference must be preserved on the wire.
@@ -236,8 +240,13 @@ mod tests {
     /// Same injectivity requirement for the aux field.
     #[test]
     fn wire_header_distinguishes_absent_aux_from_zero_aux() {
-        let no_aux =
-            SharedFactHeader::new("rustc-nll", SharedFactKind::BorrowLoan, 2, 7, Soundness::Exact);
+        let no_aux = SharedFactHeader::new(
+            "rustc-nll",
+            SharedFactKind::BorrowLoan,
+            2,
+            7,
+            Soundness::Exact,
+        );
         let aux_zero = no_aux.clone().with_aux(0);
 
         assert_ne!(
@@ -259,9 +268,10 @@ mod tests {
 
     #[test]
     fn weir_witness_fact_header_is_exact() {
-        let header = SharedFactHeader::new("weir", SharedFactKind::Witness, 13, 21, Soundness::Exact)
-            .with_object(34)
-            .with_aux(55);
+        let header =
+            SharedFactHeader::new("weir", SharedFactKind::Witness, 13, 21, Soundness::Exact)
+                .with_object(34)
+                .with_aux(55);
 
         assert_eq!(
             header.wire_header(),

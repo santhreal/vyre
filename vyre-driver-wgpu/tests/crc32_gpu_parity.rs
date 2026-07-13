@@ -1,10 +1,10 @@
-//! CRC-32 (IEEE/zlib) parity on the LIVE GPU — a real shipped workload whose GPU
+//! CRC-32 (IEEE/zlib) parity on the LIVE GPU, a real shipped workload whose GPU
 //! program is a NESTED loop with a per-bit conditional polynomial xor.
 //!
 //! `crc32_program` is tested elsewhere only at the source/oracle level, never
 //! dispatched to a backend (the same oracle-only gap BLAKE3/FNV had). Its GPU
 //! shape is the richest of the hash family so far: the CPU reference is
-//! table-driven, but the GPU IR computes CRC bit-by-bit — an OUTER loop over the
+//! table-driven, but the GPU IR computes CRC bit-by-bit, an OUTER loop over the
 //! input bytes and an INNER 8-iteration loop that conditionally xors the
 //! reflected polynomial (0xEDB88320) based on the low bit. So this exercises a
 //! nested `Node::Loop` + data-dependent conditional + shift/xor mix on real
@@ -51,7 +51,7 @@ fn check(backend: &WgpuBackend, bytes: &[u8], label: &str) {
     let expected = crc32(bytes);
     assert_eq!(
         gpu, expected,
-        "GPU CRC-32 of {label} diverged from the Rust reference — the nested loop or \
+        "GPU CRC-32 of {label} diverged from the Rust reference, the nested loop or \
          per-bit conditional polynomial xor miscompiles on hardware.\n  \
          gpu      = {gpu:#010x}\n  expected = {expected:#010x}"
     );
@@ -74,7 +74,7 @@ fn crc32_varied_inputs_match_reference_on_gpu() {
     // 64-byte block: many outer iterations, each driving the full 8-bit inner loop.
     let long: [u8; 64] = std::array::from_fn(|i| (i as u8).wrapping_mul(31).wrapping_add(7));
     check(&backend, &long, "a 64-byte block");
-    // The classic "123456789" CRC-32 check value (0xCBF43926) — a well-known KAT.
+    // The classic "123456789" CRC-32 check value (0xCBF43926) (a well-known KAT).
     assert_eq!(crc32(b"123456789"), 0xCBF4_3926, "CRC-32 reference drifted for the check string");
     check(&backend, b"123456789", "the CRC-32 check string");
 }

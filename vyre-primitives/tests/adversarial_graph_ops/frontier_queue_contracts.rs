@@ -1,15 +1,6 @@
 use super::*;
-
-fn pack_words(words: &[u32]) -> Vec<u8> {
-    words.iter().flat_map(|word| word.to_le_bytes()).collect()
-}
-
-fn unpack_words(bytes: &[u8]) -> Vec<u32> {
-    bytes
-        .chunks_exact(4)
-        .map(|chunk| u32::from_le_bytes(chunk.try_into().expect("u32 chunk")))
-        .collect()
-}
+use vyre_primitives::wire::decode_u32_le_bytes_all as unpack_words;
+use vyre_primitives::wire::pack_u32_slice as pack_words;
 
 fn prefix_frontier_queue_reference(
     frontier: &[u32],

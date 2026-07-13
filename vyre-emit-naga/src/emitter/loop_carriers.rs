@@ -185,7 +185,7 @@ impl BodyBuilder<'_> {
         // reuse below depends on it). Constrain to types naga accepts as a
         // `LocalVariable`: canonical scalars AND the `vec2<u32>`/`vec3<u32>`
         // backings (U64/I64 lower to vec2<u32>, so a block-scoped 64-bit value
-        // needs a vec2 local — not a u32 default, which would make the coerced
+        // needs a vec2 local, not a u32 default, which would make the coerced
         // Store fail `InvalidStoreTypes`). The naïve
         // `value_types.get(&id).unwrap_or(u32_ty)` fallback also returned
         // atomic / array / struct handles, which naga rejects with

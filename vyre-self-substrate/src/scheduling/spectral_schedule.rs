@@ -9,7 +9,7 @@
 
 use crate::dispatch_buffers::{
     ceil_div_u32, checked_square_cells, decode_u32_output_exact, ensure_input_slots,
-    write_u32_slice_le_bytes,
+    write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
 #[cfg(test)]
@@ -168,13 +168,21 @@ pub fn fusion_scores_fixed_via_with_scratch_into(
         n,
         k_steps,
     );
-    ensure_input_slots(&mut scratch.inputs, 3);
+    // Real-backend dispatch-input contract: one input per INPUT-CONSUMING buffer in buffer order 
+    // `laplacian`/`signal`/`coeffs` RO (0-2) + the plain-ReadWrite `output` (3, n words) and `scratch`
+    // (4, 2n double-words). The two RW buffers need zero-filled input slots (the kernel writes them);
+    // passing only the 3 RO buffers fails the backend's strict `validate_input_lengths` count.
+    let out_bytes = (n as usize) * std::mem::size_of::<u32>();
+    let scratch_bytes = 2 * out_bytes;
+    ensure_input_slots(&mut scratch.inputs, 5);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], laplacian_fixed);
     write_u32_slice_le_bytes(&mut scratch.inputs[1], signal_fixed);
     write_u32_slice_le_bytes(&mut scratch.inputs[2], coeffs_fixed);
+    write_zero_bytes(&mut scratch.inputs[3], out_bytes);
+    write_zero_bytes(&mut scratch.inputs[4], scratch_bytes);
     let outputs = dispatcher.dispatch(
         &program,
-        &scratch.inputs[..3],
+        &scratch.inputs[..5],
         Some([ceil_div_u32(n, 256), 1, 1]),
     )?;
     if outputs.is_empty() {
@@ -268,12 +276,20 @@ pub fn shape_spectrum_fixed_via_with_scratch_into(
     let program = mp_edge_clip("eigenvalues", "mp_edge", "out", n);
     scratch.mp_edge.clear();
     scratch.mp_edge.push(mp_edge_fixed);
-    ensure_input_slots(&mut scratch.inputs, 2);
+    // Real-backend input contract: `eigenvalues` RO (0) + `mp_edge` scalar RO (1) + the plain-RW
+    // `out` (2, n words, zero-filled, the elementwise-min kernel writes it). mp_edge_clip delegates
+    // to u32_vector_scalar_map_program whose `out` is plain ReadWrite, so a third zero slot is
+    // required; passing 2 fails the backend's strict count.
+    ensure_input_slots(&mut scratch.inputs, 3);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], eigenvalues_fixed);
     write_u32_slice_le_bytes(&mut scratch.inputs[1], &scratch.mp_edge);
+    write_zero_bytes(
+        &mut scratch.inputs[2],
+        (n as usize) * std::mem::size_of::<u32>(),
+    );
     let outputs = dispatcher.dispatch(
         &program,
-        &scratch.inputs[..2],
+        &scratch.inputs[..3],
         Some([ceil_div_u32(n, 256), 1, 1]),
     )?;
     if outputs.is_empty() {
@@ -344,14 +360,16 @@ mod tests {
             grid_override: Option<[u32; 3]>,
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
             match inputs.len() {
-                2 => {
+                // mp_edge_clip: eigenvalues RO(0) + mp_edge scalar RO(1) + plain-RW out(2).
+                3 => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
                     let eigenvalues = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
                     let edge = crate::hardware::dispatch_buffers::read_u32s(&inputs[1])[0];
                     let clipped: Vec<u32> = eigenvalues.into_iter().map(|v| v.min(edge)).collect();
                     Ok(vec![u32_slice_to_le_bytes(&clipped)])
                 }
-                3 => {
+                // chebyshev_filter: 3 RO (laplacian/signal/coeffs) + plain-RW output(3)+scratch(4).
+                5 => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
                     let laplacian = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
                     let signal = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);

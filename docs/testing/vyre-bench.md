@@ -1,4 +1,4 @@
-# Testing program — vyre-bench
+# Testing program, vyre-bench
 
 | Kind | Location |
 |------|----------|

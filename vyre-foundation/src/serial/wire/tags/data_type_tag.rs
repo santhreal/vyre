@@ -111,7 +111,7 @@ pub(crate) fn put_data_type(out: &mut Vec<u8>, value: &DataType) -> Result<(), W
             put_data_type(out, element)?;
             // Encoder/decoder limit symmetry: the decoder rejects ranks above
             // MAX_TENSOR_RANK, so refuse to emit an over-limit (undecodable) blob
-            // here instead — fail loudly at encode with the actual rank and the
+            // here instead, fail loudly at encode with the actual rank and the
             // limit named (cf. MAX_OPAQUE_PAYLOAD_LEN's encoder/decoder pairing).
             if shape.len() > MAX_TENSOR_RANK {
                 return Err(WireEncodeErr::fmt_usize2(
@@ -406,7 +406,7 @@ mod tests {
     }
 
     /// A tensor declaring a rank above `MAX_TENSOR_RANK` must be rejected at the
-    /// I10 `bounded_len` gate (O(1), naming the field) — never by attempting to
+    /// I10 `bounded_len` gate (O(1), naming the field), never by attempting to
     /// read the dimensions. Crafted by encoding a rank-0 tensor (whose final 4
     /// bytes are the rank u32) and overwriting the rank with the limit + 1.
     #[test]

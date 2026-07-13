@@ -1,6 +1,6 @@
 [package]
 name = "vyre-aot"
-version = "0.6.4"
+version = "0.6.5"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -34,4 +34,5 @@ default = []
 ptx = []
 
 [dev-dependencies]
+vyre-test-support.workspace = true
 tempfile.workspace = true

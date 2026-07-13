@@ -79,14 +79,14 @@ pub use depth::{
 pub(crate) use err::err;
 pub use options::{BackendCapabilities, BackendValidationCapabilities, ValidationOptions};
 pub use report::{ValidationReport, ValidationWarning};
+/// Re-export of the focused `Fma` f32-operand check emit backends run
+/// before lowering (see [`validate::fma_f32_violations`]).
+pub use validate::fma_f32_violations;
 /// Re-export of the top-level validation function.
 ///
 /// This is the stable entry point called by frontends before handing a
 /// `Program` to a backend.
 pub use validate::validate;
-/// Re-export of the focused `Fma` f32-operand check emit backends run
-/// before lowering (see [`validate::fma_f32_violations`]).
-pub use validate::fma_f32_violations;
 pub use validate::validate_with_options;
 /// Re-export of the detailed validation error type.
 ///

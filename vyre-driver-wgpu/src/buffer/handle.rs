@@ -172,14 +172,14 @@ impl GpuBufferHandle {
         // Fast path: create the buffer already mapped and memcpy host bytes
         // DIRECTLY into its host-visible / BAR backing store, then unmap. This
         // is ONE host copy with no wgpu-internal staging buffer and no GPU copy
-        // command — the slow `queue.write_buffer` path routes every large upload
+        // command, the slow `queue.write_buffer` path routes every large upload
         // through wgpu's `StagingBelt`, which on Vulkan allocates + maps a fresh
         // staging buffer per write (the ~90 MB/s catalog-upload bottleneck on
         // the ~1 GB megakernel DFA catalog). `mapped_at_creation` works for ANY
         // usage flags (it does not require MAP_WRITE) and is correct for ALL
         // sizes, so it replaces the staged path unconditionally for non-empty
         // uploads. Zero-length buffers cannot be mapped at creation, so they
-        // take the (no-op) `write_padded` path below — `aligned_len(0) == 0`,
+        // take the (no-op) `write_padded` path below: `aligned_len(0) == 0`,
         // and wgpu rejects a 0-byte `mapped_at_creation` buffer.
         if allocation_len > 0 {
             let buffer = device.create_buffer(&wgpu::BufferDescriptor {
@@ -623,11 +623,11 @@ pub(crate) fn aligned_len(len: usize) -> Result<u64, BackendError> {
 }
 
 fn aligned_len_u64(len: u64, label: &'static str) -> Result<u64, BackendError> {
-    crate::numeric::align_up_u64(len, 4, label)
+    crate::numeric::WGPU_NUMERIC.align_up_u64(len, 4, 4, label)
 }
 
 fn aligned_len_usize(len: usize, label: &'static str) -> Result<usize, BackendError> {
-    crate::numeric::align_up_usize(len, 4, label)
+    crate::numeric::WGPU_NUMERIC.align_up_usize(len, 4, 4, label)
 }
 
 pub(crate) fn write_padded(
@@ -1048,7 +1048,7 @@ mod tests {
     }
 
     /// `write_padded_into_mapped` (the fast-path filler) must copy the logical
-    /// bytes and zero the alignment tail deterministically — proved without a
+    /// bytes and zero the alignment tail deterministically, proved without a
     /// GPU so the contract holds on every host.
     #[test]
     fn write_padded_into_mapped_zeroes_the_tail() {

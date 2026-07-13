@@ -1,5 +1,5 @@
 //! High-volume soundness gate for the literal-set PRESENCE-bitmap program,
-//! evaluated on the CPU REFERENCE backend (no GPU required — runs everywhere).
+//! evaluated on the CPU REFERENCE backend (no GPU required (runs everywhere)).
 //!
 //! For thousands of (literal set, haystack) cases the presence bitmap produced by
 //! the suffix3-prefiltered presence program must mark EXACTLY the set of pattern

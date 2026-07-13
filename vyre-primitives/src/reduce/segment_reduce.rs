@@ -110,14 +110,6 @@ pub fn try_cpu_ref_into(
     let num_segments = segment_offsets.len().checked_sub(1).ok_or_else(|| {
         "segment_reduce_sum CPU oracle received empty segment_offsets. Fix: pass at least one CSR-style offset.".to_string()
     })?;
-    if num_segments > out.capacity() {
-        out.try_reserve_exact(num_segments - out.capacity())
-            .map_err(|err| {
-                format!(
-                    "segment_reduce_sum CPU oracle could not reserve {num_segments} output segments: {err}"
-                )
-            })?;
-    }
     for seg in 0..num_segments {
         let start = usize::try_from(segment_offsets[seg]).map_err(|_| {
             format!("segment_reduce_sum CPU oracle segment {seg} start does not fit host usize.")
@@ -133,7 +125,11 @@ pub fn try_cpu_ref_into(
         }
     }
 
-    out.clear();
+    crate::hostbuf::reserve_exact_cleared(out, num_segments).map_err(|err| {
+        format!(
+            "segment_reduce_sum CPU oracle could not reserve {num_segments} output segments: {err}"
+        )
+    })?;
     for seg in 0..num_segments {
         let start = usize::try_from(segment_offsets[seg]).map_err(|_| {
             format!("segment_reduce_sum CPU oracle segment {seg} start does not fit host usize.")
@@ -253,12 +249,12 @@ mod tests {
         // blessed Law-10 fix for an infallible parity wrapper.
         assert!(
             !production.contains(".expect(") && !production.contains(".unwrap("),
-            "Fix: segment_reduce_sum production wrappers must not use bare .unwrap()/.expect() — use an explicit panic!() with the error."
+            "Fix: segment_reduce_sum production wrappers must not use bare .unwrap()/.expect() (use an explicit panic!() with the error)."
         );
         // No SILENT fallback: returning empty on failure masks a parity divergence (Law 10/6).
         assert!(
             !production.contains(concat!("eprintln", "!(\"vyre-primitives segment_reduce_sum")),
-            "Fix: segment_reduce_sum CPU oracle must not log-and-return empty on error — fail loud via panic!() so callers use the try_ variant."
+            "Fix: segment_reduce_sum CPU oracle must not log-and-return empty on error (fail loud via panic!() so callers use the try_ variant)."
         );
         assert!(
             production.contains("panic!("),

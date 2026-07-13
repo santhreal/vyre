@@ -256,7 +256,7 @@ fn subgroup_binops_are_lowered_as_subgroup_statements() {
 
 /// Each subgroup BinOp must lower to its OWN distinct WGSL intrinsic, not a
 /// catch-all. In particular `WaveBroadcast` must emit `subgroupBroadcast` (gather
-/// from a uniform lane), NOT `subgroupShuffle` — collapsing broadcast into
+/// from a uniform lane), NOT `subgroupShuffle`: collapsing broadcast into
 /// shuffle would be a silent semantic substitution (broadcast requires a uniform
 /// source lane; shuffle allows per-lane).
 #[test]

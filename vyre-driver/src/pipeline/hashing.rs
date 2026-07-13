@@ -115,13 +115,19 @@ pub fn dispatch_policy_cache_string(config: &DispatchConfig) -> String {
 /// Hex-encode bytes using lowercase ASCII.
 #[must_use]
 pub fn hex_encode(bytes: &[u8]) -> String {
-    const HEX: &[u8; 16] = b"0123456789abcdef";
     let mut out = String::with_capacity(bytes.len() * 2);
+    push_lower_hex(bytes, &mut out);
+    out
+}
+
+/// Append the lowercase-hex encoding of `bytes` to `out`. Single owner of the
+/// lowercase-hex nibble loop for the whole driver.
+pub fn push_lower_hex(bytes: &[u8], out: &mut String) {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
     for &byte in bytes {
         out.push(HEX[(byte >> 4) as usize] as char);
         out.push(HEX[(byte & 0x0f) as usize] as char);
     }
-    out
 }
 
 /// Hex-encode the first eight bytes of a 32-byte digest for compact ids.
@@ -175,8 +181,28 @@ impl PipelineDeviceFingerprint {
 
 #[cfg(test)]
 mod tests {
-    use super::{dispatch_policy_cache_digest, update_dispatch_policy_cache_hash};
+    use super::{
+        dispatch_policy_cache_digest, hex_encode, push_decimal_u32, push_lower_hex,
+        update_dispatch_policy_cache_hash,
+    };
     use crate::backend::DispatchConfig;
+
+    #[test]
+    fn hex_encode_and_push_lower_hex_agree_on_known_bytes() {
+        assert_eq!(hex_encode(&[0x00, 0xff, 0x1a, 0x0f]), "00ff1a0f");
+        let mut out = String::from("k=");
+        push_lower_hex(&[0xde, 0xad, 0xbe, 0xef], &mut out);
+        assert_eq!(out, "k=deadbeef");
+    }
+
+    #[test]
+    fn push_decimal_u32_renders_boundaries() {
+        let mut out = String::new();
+        push_decimal_u32(&mut out, 0);
+        push_decimal_u32(&mut out, 42);
+        push_decimal_u32(&mut out, u32::MAX);
+        assert_eq!(out, "0424294967295");
+    }
 
     #[test]
     fn dispatch_policy_cache_digest_matches_shared_hasher_for_generated_configs() {
@@ -247,5 +273,7 @@ pub(super) fn push_decimal_u32(out: &mut String, value: u32) {
         buf[i] = b'0' + (n % 10) as u8;
         n /= 10;
     }
-    out.push_str(std::str::from_utf8(&buf[i..]).unwrap_or("0"));
+    for &digit in &buf[i..] {
+        out.push(digit as char);
+    }
 }

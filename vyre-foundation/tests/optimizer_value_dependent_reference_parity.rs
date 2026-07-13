@@ -5,7 +5,7 @@
 //!
 //! Why this exists beyond `optimizer_idempotence_proptest`: that harness's
 //! reference-parity check feeds programs whose only runtime value is `gid_x`,
-//! and it runs `reference_eval(.., &[Value::U32(0)])` on a single invocation —
+//! and it runs `reference_eval(.., &[Value::U32(0)])` on a single invocation 
 //! so `gid_x` is pinned to `0`. A rewrite that is value-correct at `0` but wrong
 //! for other inputs slips through. That is exactly how the `(x << 16) << 16`
 //! shift-fusion miscompile evaded it: at `x == 0` the buggy `x << 31` and the
@@ -34,7 +34,7 @@ fn load_in() -> Expr {
     Expr::load("in", Expr::u32(0))
 }
 
-/// Non-zero literal divisor — drives the `Div`/`Mod` strength reductions
+/// Non-zero literal divisor, drives the `Div`/`Mod` strength reductions
 /// (power-of-two → `Shr`/`BitAnd`, other → Granlund-Montgomery / `x-(x/d)*d`)
 /// while never tripping the oracle's defined-but-divergent zero-divisor path.
 fn nonzero_div_lit() -> impl Strategy<Value = Expr> {
@@ -63,7 +63,7 @@ fn leaf() -> impl Strategy<Value = Expr> {
 
 /// Bounded pure-`u32` expression over `load_in()` and constants, covering every
 /// reference-supported integer `BinOp` (`MulHigh`, `Mod`, `AbsDiff`, `Min`,
-/// `Max`, and the rotates included — none of which the existing differential
+/// `Max`, and the rotates included, none of which the existing differential
 /// grammar exercises).
 fn expr_strategy() -> impl Strategy<Value = Expr> {
     leaf().prop_recursive(5, 64, 4, |inner| {
@@ -100,16 +100,12 @@ fn program_for(expr: Expr) -> Program {
             BufferDecl::storage("in", 1, BufferAccess::ReadOnly, DataType::U32).with_count(1),
         ],
         [1, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::u32(0),
-            Expr::add(load_in(), expr),
-        )],
+        vec![Node::store("out", Expr::u32(0), Expr::add(load_in(), expr))],
     )
 }
 
 /// Adversarial input values: odd/even, the two 16-bit halves, the sign bit,
-/// `i32::MAX` pattern, all-ones, and the two alternating-bit patterns — the
+/// `i32::MAX` pattern, all-ones, and the two alternating-bit patterns, the
 /// classes that distinguish shift/rotate/mask/division rewrites from a value
 /// that happens to agree at `0`.
 const PROBES: &[u32] = &[

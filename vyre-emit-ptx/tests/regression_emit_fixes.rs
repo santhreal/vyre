@@ -91,7 +91,7 @@ fn shr_on_i32_emits_s32_suffix_not_u32() {
     assert!(
         ptx.contains("shr.s32"),
         "Shr on I32 operands must emit `shr.s32` (arithmetic shift); \
-         found `shr.u32` instead — that is a logical shift which gives wrong results \
+         found `shr.u32` instead, that is a logical shift which gives wrong results \
          for negative values. PTX emitted:\n{ptx}"
     );
     // Guard against regression: u32-suffixed shr must NOT appear for this I32
@@ -103,7 +103,7 @@ fn shr_on_i32_emits_s32_suffix_not_u32() {
     );
 }
 
-/// Complementary guard: `Shr` on U32 must still emit `shr.u32` — the fix
+/// Complementary guard: `Shr` on U32 must still emit `shr.u32`: the fix
 /// must not accidentally break unsigned shifts.
 #[test]
 fn shr_on_u32_still_emits_u32_suffix() {
@@ -159,7 +159,7 @@ fn shr_on_u32_still_emits_u32_suffix() {
 }
 
 /// VYRE-PTX-002: the overflow guard in `ensure_buffer_length_reg` must emit
-/// `trap;` — not a plausible-address load — when the slot byte offset would
+/// `trap;`: not a plausible-address load, when the slot byte offset would
 /// overflow u32.  We can only exercise the overflow branch by triggering
 /// `ensure_buffer_length_reg` with a slot that was registered during
 /// `preload_bindings` (the normal path), so this test instead validates that
@@ -270,7 +270,7 @@ fn f16_store_of_u64_value_uses_direct_cvt_rn_f32_u64() {
                     operands: vec![0],
                     result: Some(2),
                 },
-                // Store the U64 value to an F16 binding — exercises
+                // Store the U64 value to an F16 binding, exercises
                 // ensure_f32_store_operand(U64) inside emit_store_value.
                 KernelOp {
                     kind: KernelOpKind::StoreGlobal,

@@ -16,7 +16,10 @@ fn diagnostic_privacy_fuzzing_keeps_fix_text_without_secrets() {
         "remediation_visibility",
         "VYRE_DIAGNOSTIC_SECRET_REDACTED",
     ] {
-        assert!(PRIVACY.contains(required), "privacy fuzzing must include {required}");
+        assert!(
+            PRIVACY.contains(required),
+            "privacy fuzzing must include {required}"
+        );
     }
 }
 
@@ -33,7 +36,10 @@ fn workspace_path_certificates_classify_public_and_private_boundaries() {
         "public-vyre-artifact",
         "private-santh-evidence",
     ] {
-        assert!(PATHS.contains(required), "workspace path certificate must include {required}");
+        assert!(
+            PATHS.contains(required),
+            "workspace path certificate must include {required}"
+        );
     }
 }
 
@@ -49,6 +55,9 @@ fn corpus_ingress_guards_refuse_bombs_and_traversal() {
         "VYRE_CORPUS_EXPANSION_REFUSED",
         "VYRE_CORPUS_PATH_TRAVERSAL_REFUSED",
     ] {
-        assert!(CORPUS.contains(required), "corpus ingress guard must include {required}");
+        assert!(
+            CORPUS.contains(required),
+            "corpus ingress guard must include {required}"
+        );
     }
 }

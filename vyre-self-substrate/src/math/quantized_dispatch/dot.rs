@@ -72,14 +72,15 @@ pub fn i4x8_dot_f32_scaled_via_with_scratch_into(
     let program = program_cache.get_or_insert_with(lane_count, || {
         i4x8_dot_f32_scaled("lhs", "rhs", "lhs_scale", "rhs_scale", "out", lane_count)
     });
-    ensure_input_slots(inputs, 5);
+    // Four input-consuming buffers: lhs/rhs/lhs_scale/rhs_scale ReadOnly(0-3). `out` is
+    // `BufferDecl::output`(4) (backend-allocated, so it consumes NO dispatch input).
+    ensure_input_slots(inputs, 4);
     write_u32_slice_le_bytes(&mut inputs[0], lhs_packed);
     write_u32_slice_le_bytes(&mut inputs[1], rhs_packed);
     write_f32_slice_le_bytes(&mut inputs[2], &[lhs_scale]);
     write_f32_slice_le_bytes(&mut inputs[3], &[rhs_scale]);
-    write_zero_bytes(&mut inputs[4], std::mem::size_of::<f32>());
 
-    let outputs = dispatcher.dispatch(program, &inputs[..5], Some([1, 1, 1]))?;
+    let outputs = dispatcher.dispatch(program, &inputs[..4], Some([1, 1, 1]))?;
     if outputs.len() != 1 {
         return Err(DispatchError::BackendError(format!(
             "Fix: i4x8_dot_f32_scaled_via expected exactly one output buffer, got {}.",

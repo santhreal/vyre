@@ -561,7 +561,7 @@ pub(crate) fn restore_scope(scope: &mut FxHashMap<Ident, Binding>, mut scope_log
 ///
 /// A buffer element's signedness is observed only on LOAD (sign- vs zero-extend
 /// on use); a STORE writes the raw little-endian word, so storing a U32-typed
-/// value into an I32 buffer (or the 64-bit pair) is a bit-exact reinterpret —
+/// value into an I32 buffer (or the 64-bit pair) is a bit-exact reinterpret 
 /// exactly `i32_slot = u32_val as i32` in Rust. This is load-bearing because the
 /// typechecker types Mod/bitwise/shift results as U32 regardless of operand
 /// signedness (Add/Sub/Mul/Div preserve the operand type via Frame::Bin), so a
@@ -585,17 +585,17 @@ pub(crate) fn same_width_int_reinterpret(value: &DataType, element: &DataType) -
 
 /// The single source of truth for whether a value of type `value` may be written
 /// into a buffer whose element type is `element` (by `Node::Store` OR by an
-/// assignment to a buffer binding — both write the same raw word, so they MUST
+/// assignment to a buffer binding, both write the same raw word, so they MUST
 /// agree; they previously diverged, with the assign path silently accepting
 /// `Bool <-> U32` that `Node::Store` rejected).
 ///
 /// Permitted beyond an exact match, all bit-preserving or backend-coerced writes:
-///   * `U32 <-> Bytes` — a packed-byte buffer round-trip.
-///   * `U32 <-> Bool` — a comparison/flag (0/1) stored into a u32 buffer (the
+///   * `U32 <-> Bytes`: a packed-byte buffer round-trip.
+///   * `U32 <-> Bool`: a comparison/flag (0/1) stored into a u32 buffer (the
 ///     emitter coerces Bool via `x != 0` / `select(1u, 0u)`); the `U32 -> Bool`
 ///     direction is inert because a `bool` storage-buffer element is not
 ///     host-shareable in WGSL, but it is kept for symmetry with the assign path.
-///   * `F32 -> F32` — identity (named explicitly so the `Bytes`/vector arms above
+///   * `F32 -> F32`: identity (named explicitly so the `Bytes`/vector arms above
 ///     cannot be reached for a float).
 ///   * same-width signed/unsigned integer reinterpret (`U32<->I32`, `U64<->I64`).
 /// A float-to-int, int-to-float, or differing-width write is NOT permitted (it

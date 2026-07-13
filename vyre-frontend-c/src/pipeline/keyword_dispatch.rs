@@ -204,7 +204,7 @@ mod tests {
         assert!(error.contains("too short"));
     }
 
-    // Canonical LE-pack — no hand-rolled reimplementation (matches the production
+    // Canonical LE-pack, no hand-rolled reimplementation (matches the production
     // path's `vyre_primitives::wire` alias and uses wire's bytemuck fast-path).
     use vyre_primitives::wire::pack_u32_slice as pack_words;
 }

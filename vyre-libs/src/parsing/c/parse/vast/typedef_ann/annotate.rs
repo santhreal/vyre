@@ -16,6 +16,7 @@ pub fn c11_annotate_typedef_names(
         false,
         false,
         None,
+        None,
     )
 }
 
@@ -34,6 +35,7 @@ pub fn c11_annotate_typedef_names_packed_haystack(
         out_annotated_vast_nodes,
         true,
         false,
+        None,
         None,
     )
 }
@@ -54,6 +56,7 @@ pub fn c11_annotate_typedef_names_precomputed_scope(
         false,
         true,
         None,
+        None,
     )
 }
 
@@ -73,6 +76,7 @@ pub fn c11_annotate_typedef_names_precomputed_scope_packed_haystack(
         true,
         true,
         None,
+        None,
     )
 }
 
@@ -80,6 +84,7 @@ pub fn c11_annotate_typedef_names_precomputed_context(
     vast_nodes: &str,
     haystack: &str,
     decl_contexts: &str,
+    visible_type: &str,
     haystack_len: Expr,
     num_nodes: Expr,
     out_annotated_vast_nodes: &str,
@@ -93,6 +98,7 @@ pub fn c11_annotate_typedef_names_precomputed_context(
         false,
         true,
         Some(decl_contexts),
+        Some(visible_type),
     )
 }
 
@@ -100,6 +106,7 @@ pub fn c11_annotate_typedef_names_precomputed_context_packed_haystack(
     vast_nodes: &str,
     haystack: &str,
     decl_contexts: &str,
+    visible_type: &str,
     haystack_len: Expr,
     num_nodes: Expr,
     out_annotated_vast_nodes: &str,
@@ -113,9 +120,11 @@ pub fn c11_annotate_typedef_names_precomputed_context_packed_haystack(
         true,
         true,
         Some(decl_contexts),
+        Some(visible_type),
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn c11_annotate_typedef_names_impl(
     vast_nodes: &str,
     haystack: &str,
@@ -125,6 +134,7 @@ pub(super) fn c11_annotate_typedef_names_impl(
     packed_haystack: bool,
     precomputed_scope: bool,
     decl_contexts: Option<&str>,
+    visible_type: Option<&str>,
 ) -> Program {
     let t = Expr::InvocationId { axis: 0 };
     let base = Expr::mul(t.clone(), Expr::u32(VAST_NODE_STRIDE_U32));
@@ -313,9 +323,12 @@ pub(super) fn c11_annotate_typedef_names_impl(
     // scan produces a per-row result via the carrier; gating it here
     // diverged from the CPU contract on every tag spot.
     if let Some(decl_contexts) = decl_contexts {
+        let visible_type = visible_type
+            .expect("precomputed-context annotation requires the visible-type side table");
         identifier_annotation.extend(emit_typedef_visibility_scan_precomputed_context(
             vast_nodes,
             decl_contexts,
+            visible_type,
             t.clone(),
         ));
     } else {
@@ -364,9 +377,15 @@ pub(super) fn c11_annotate_typedef_names_impl(
         ),
     ]);
     let mut declaration_annotation = if let Some(decl_contexts) = decl_contexts {
+        // The precomputed-context path is only correct when it is paired with the
+        // per-node visible-type table (`c11_precompute_vast_visible_type`); the two
+        // public wrappers require both, so this unwrap is an internal invariant.
+        let visible_type = visible_type
+            .expect("precomputed-context annotation requires the visible-type side table");
         let mut nodes = emit_precomputed_declaration_kind_for_index(
             vast_nodes,
             decl_contexts,
+            visible_type,
             t.clone(),
             "current_decl_result_kind",
             "current_decl_precomputed",
@@ -478,11 +497,17 @@ pub(super) fn c11_annotate_typedef_names_impl(
             .with_count(haystack_word_count(&haystack_len, packed_haystack)),
     ];
     let out_binding = if let Some(decl_contexts) = decl_contexts {
+        let visible_type = visible_type
+            .expect("precomputed-context annotation requires the visible-type side table");
         buffers.push(
             BufferDecl::storage(decl_contexts, 2, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(n.saturating_mul(VAST_DECL_CONTEXT_STRIDE_U32)),
         );
-        3
+        buffers.push(
+            BufferDecl::storage(visible_type, 3, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(n),
+        );
+        4
     } else {
         2
     };

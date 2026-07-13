@@ -10,7 +10,7 @@ use vyre::ir::{Expr, Node};
 
 mod gpu_helpers;
 mod gpu_resolution;
-mod model;
+pub(crate) mod model;
 #[cfg(any(test, feature = "cpu-parity"))]
 mod reference;
 #[cfg(test)]

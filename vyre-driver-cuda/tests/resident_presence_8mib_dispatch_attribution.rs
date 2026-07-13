@@ -2,14 +2,14 @@
 //!
 //! keyhog's `gpu_vs_hs_8mib` bench measures GPU region-presence at 20.55 ms vs
 //! Hyperscan 18.52 ms (1.11x SLOWER) on the sparse 8 MiB corpus; the gap is
-//! exactly the phase-1 difference (GPU dispatch ~5 ms vs HS phase-1 ~3.5 ms — the
+//! exactly the phase-1 difference (GPU dispatch ~5 ms vs HS phase-1 ~3.5 ms, the
 //! shared 15 ms phase-2 cancels). To know whether a VYRE change can close that
 //! 1.5 ms phase-1 gap, the 5 ms dispatch must be attributed: how much is the GPU
 //! KERNEL (`device_ns`, irreducible without a kernel rewrite) vs host-side
 //! staging/upload/readback (cuttable with resident tables + overlap)?
 //!
 //! This drives the REAL region-presence path on the CUDA backend at 8 MiB and
-//! prints, for both the borrowed path (keyhog's — re-uploads the immutable tables
+//! prints, for both the borrowed path (keyhog's, re-uploads the immutable tables
 //! every scan) and the resident path (tables uploaded once):
 //!   - total per-scan host wall (the whole `scan_*` call),
 //!   - the dispatch wall (`TimedDispatchResult::wall_ns`),
@@ -17,7 +17,7 @@
 //!     reports it).
 //! The borrowed−resident delta is the per-scan table re-upload keyhog pays; the
 //! resident `device_ns` is the kernel floor the phase-1 lever cannot beat without
-//! a kernel rewrite. This is a DIAGNOSIS harness, not a parity gate — it asserts
+//! a kernel rewrite. This is a DIAGNOSIS harness, not a parity gate, it asserts
 //! the scan is real (planted hit present, sane hit count) so the numbers aren't
 //! measuring an empty/degenerate scan, then prints the attribution.
 //!
@@ -34,8 +34,8 @@ const HAYSTACK_BYTES: usize = 8 * 1024 * 1024;
 const ITERS: usize = 20;
 
 /// ~900 distinct, varied-prefix literals so the compiled DFA is comparable in
-/// scale to keyhog's ~895-detector catalog (the transition table size — and thus
-/// the borrowed re-upload cost — tracks the state count). Each literal is a
+/// scale to keyhog's ~895-detector catalog (the transition table size, and thus
+/// the borrowed re-upload cost, tracks the state count). Each literal is a
 /// base-26 encoding of its index across the first 4 bytes plus a fixed-ish tail,
 /// giving broad prefix fan-out rather than one shared stem.
 fn synth_literals() -> Vec<Vec<u8>> {

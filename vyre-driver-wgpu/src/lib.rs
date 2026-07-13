@@ -173,7 +173,7 @@ impl BackendValidationCapabilities for WgpuBackend {
                 // cast path, which treat `U64 | I64` identically and sign-extend
                 // the high word for a signed source). Omitting it here falsely
                 // rejected `i32 -> i64` casts the emitter and hardware handle
-                // correctly — a capability/coherence gap, NOT a real limit
+                // correctly, a capability/coherence gap, NOT a real limit
                 // (verified on the live 5090 by `widening_cast_64_parity`).
                 | DataType::I64
                 | DataType::F32

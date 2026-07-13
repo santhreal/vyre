@@ -71,7 +71,7 @@ where
     // classifier is defined on sorted slot order. Collect into the fallibly
     // reserved staging buffer, then delegate the dense-permutation invariant to
     // the single backend-neutral owner and format the resident-specific message
-    // from the classified defect — one algorithm, no per-subsystem fork.
+    // from the classified defect (one algorithm, no per-subsystem fork).
     let iter = indices.into_iter();
     let mut sorted = SmallVec::<[usize; 8]>::new();
     reserve_smallvec(

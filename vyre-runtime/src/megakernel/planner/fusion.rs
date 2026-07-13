@@ -365,7 +365,7 @@ pub fn select_fused_subset_into(
     // Silently preparing a 0-size scratch (= select no fusion) on malformed
     // planner input degrades to the slower unfused path with no signal to the
     // operator (Law 10 / Law 7). The checked selector only errs on malformed
-    // input — a bug — so fail loud; callers use select_fused_subset_checked_into.
+    // input (a bug (so fail loud; callers use select_fused_subset_checked_into)).
     if let Err(error) = select_fused_subset_checked_into(costs, n, exchange_adj, scratch) {
         panic!("vyre-runtime fusion subset selection failed on malformed planner input: {error}");
     }

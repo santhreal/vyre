@@ -150,13 +150,9 @@ pub fn try_sparse_fft_bin_hash_cpu_into(
     }
     let b_len = usize::try_from(b)
         .map_err(|_| format!("sparse FFT bin count {b} does not fit host usize."))?;
-    if b_len > bins.capacity() {
-        bins.try_reserve_exact(b_len - bins.capacity())
-            .map_err(|err| {
-                format!("sparse FFT bin-hash CPU reference could not reserve {b_len} bins: {err}")
-            })?;
-    }
-    bins.clear();
+    crate::hostbuf::reserve_exact_cleared(bins, b_len).map_err(|err| {
+        format!("sparse FFT bin-hash CPU reference could not reserve {b_len} bins: {err}")
+    })?;
     bins.resize(b_len, 0);
     for (f, &v) in signal.iter().enumerate() {
         let f = u32::try_from(f)
@@ -233,21 +229,9 @@ pub fn try_voting_recovery_cpu_into(
             ));
         }
     }
-    if n_len > votes.capacity() {
-        votes
-            .try_reserve_exact(n_len - votes.capacity())
-            .map_err(|err| {
-                format!("sparse FFT voting recovery could not reserve {n_len} vote slots: {err}")
-            })?;
-    }
-    if n_len > out.capacity() {
-        out.try_reserve_exact(n_len - out.capacity())
-            .map_err(|err| {
-                format!("sparse FFT voting recovery could not reserve {n_len} output slots: {err}")
-            })?;
-    }
-
-    votes.clear();
+    crate::hostbuf::reserve_exact_cleared(votes, n_len).map_err(|err| {
+        format!("sparse FFT voting recovery could not reserve {n_len} vote slots: {err}")
+    })?;
     votes.resize(n_len, 0);
     for (a, c, bins) in binnings {
         for (f, vote) in votes.iter_mut().enumerate() {
@@ -261,7 +245,9 @@ pub fn try_voting_recovery_cpu_into(
             }
         }
     }
-    out.clear();
+    crate::hostbuf::reserve_exact_cleared(out, n_len).map_err(|err| {
+        format!("sparse FFT voting recovery could not reserve {n_len} output slots: {err}")
+    })?;
     for (f, &vote) in votes.iter().enumerate() {
         if vote >= threshold {
             let f = u32::try_from(f)

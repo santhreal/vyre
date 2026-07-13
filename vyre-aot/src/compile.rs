@@ -277,7 +277,7 @@ mod tests {
     fn convert_access_workgroup_maps_to_read_write_explicitly_not_via_wildcard() {
         // BufferAccess::Workgroup is workgroup-local shared memory, legitimately
         // ReadWrite. The old code reached this correct result only via the
-        // silent wildcard fallback — which also maps future unknown variants
+        // silent wildcard fallback, which also maps future unknown variants
         // silently. This test pins the explicit mapping.
         use vyre_foundation::ir::BufferAccess;
         let result = convert_access("scratch", BufferAccess::Workgroup)

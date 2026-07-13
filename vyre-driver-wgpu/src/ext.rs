@@ -210,13 +210,13 @@ fn dispatch_wgsl_pipeline_cache_key(wgsl: &str, entry_point: &str) -> Result<[u8
     let mut hasher = blake3::Hasher::new();
     hasher.update(b"vyre-wgpu.dispatch_wgsl.pipeline.v1");
     hasher.update(
-        &crate::numeric::usize_to_u64(entry_point.len(), "dispatch_wgsl entry point length")
+        &crate::numeric::WGPU_NUMERIC.usize_to_u64(entry_point.len(), "dispatch_wgsl entry point length")
             .map_err(|error| error.into_message())?
             .to_le_bytes(),
     );
     hasher.update(entry_point.as_bytes());
     hasher.update(
-        &crate::numeric::usize_to_u64(wgsl.len(), "dispatch_wgsl WGSL length")
+        &crate::numeric::WGPU_NUMERIC.usize_to_u64(wgsl.len(), "dispatch_wgsl WGSL length")
             .map_err(|error| error.into_message())?
             .to_le_bytes(),
     );

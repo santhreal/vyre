@@ -21,7 +21,15 @@ pub fn byte_histogram_256_body(input: &str, histogram: &str, count: u32) -> Vec<
 
     vec![
         Node::let_bind("lane", Expr::InvocationId { axis: 0 }),
-        Node::store(histogram, Expr::var("lane"), Expr::u32(0)),
+        // Gate the per-lane zero-fill against the bin count. The intended dispatch is
+        // one 256-lane workgroup (lane 0..255 = the 256 bins), but whole-workgroup GPU
+        // dispatch rounds up, so a >256-lane dispatch would otherwise OOB-write the
+        // histogram (memory corruption on CUDA). Transparent for the intended dispatch;
+        // caught by the grid-overfire registry gate.
+        Node::if_then(
+            Expr::lt(Expr::var("lane"), Expr::buf_len(histogram)),
+            vec![Node::store(histogram, Expr::var("lane"), Expr::u32(0))],
+        ),
         Node::Barrier {
             ordering: vyre_foundation::MemoryOrdering::SeqCst,
         },
@@ -205,5 +213,40 @@ mod tests {
         assert_eq!(histogram.element(), DataType::U32);
         assert_eq!(histogram.count(), 256);
         assert_eq!(program.workgroup_size(), [256, 1, 1]);
+    }
+
+    #[test]
+    fn masks_high_bit_source_and_records_no_interpreter_oob() {
+        use vyre_reference::value::Value;
+        // A U32 source element > 255 must fold into the 256-bin histogram via the
+        // `& 0xFF` bin mask, never atomic-add past the last bin. Assert ZERO
+        // interpreter OOB accesses (the mask keeps the atomic in bounds, not the
+        // interpreter's silent drop) and that the low byte's bin is incremented.
+        // Removing the mask would OOB the atomic scatter (memory corruption on CUDA)
+        // and this test would see report.total() > 0.
+        let program = byte_histogram_256("bytes", "histogram", 1);
+        let (outputs, report) = vyre_reference::reference_eval_oob_report(
+            &program,
+            &[
+                Value::from(crate::wire::pack_u32_slice(&[0x0141])), // > 255, low byte 0x41
+                Value::from(vec![0u8; 256 * 4]),
+            ],
+        )
+        .expect("Fix: byte_histogram_256 must reference-evaluate a high-bit source element");
+        assert_eq!(
+            report.total(),
+            0,
+            "Fix: masked bin index must stay in bounds without relying on interpreter OOB masking"
+        );
+        let histogram = crate::wire::decode_u32_le_bytes_all(&outputs[0].to_bytes());
+        assert_eq!(
+            histogram[0x41], 1,
+            "Fix: 0x0141 must count into bin 0x41 via the `& 0xFF` mask"
+        );
+        assert_eq!(
+            histogram.iter().sum::<u32>(),
+            1,
+            "exactly one byte counted, no stray OOB write elsewhere"
+        );
     }
 }

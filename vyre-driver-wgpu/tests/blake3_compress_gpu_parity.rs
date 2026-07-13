@@ -2,17 +2,17 @@
 //! the LIVE GPU.
 //!
 //! `blake3_kat.rs` proves `vyre-libs::hash::blake3_compress` bit-matches the
-//! official `blake3` crate — but ONLY through `reference_eval` (the CPU oracle).
+//! official `blake3` crate (but ONLY through `reference_eval` (the CPU oracle)).
 //! The program emits 224 `RotateRight` IR nodes, and naga has no native rotate:
 //! op_dispatch lowers `RotateRight` as the SYNTHETIC
-//! `(x << (s & 31)) | (x >> ((32 - (s & 31)) & 31))` — exactly the computed,
+//! `(x << (s & 31)) | (x >> ((32 - (s & 31)) & 31))`: exactly the computed,
 //! multi-step lowering the naga signed-`Modulo` bug proved can be silently wrong
 //! on real silicon (a source read is not proof). If the GPU rotate diverged,
 //! every BLAKE3 hash computed on the GPU would be silently wrong and NO test
 //! would catch it, because the KAT never dispatches to a backend.
 //!
 //! This runs the real shipped BLAKE3 single-block compression on the 5090 and
-//! asserts the 8-word chaining output bit-matches `blake3::hash` — a real-
+//! asserts the 8-word chaining output bit-matches `blake3::hash`: a real-
 //! workload end-to-end check, the strongest possible verification of the
 //! rotate/xor/add lowering chain under load.
 
@@ -55,7 +55,7 @@ fn block_words_from_bytes(bytes: &[u8]) -> [u32; 16] {
 
 /// Reference: first 32 bytes (8 words) of `blake3::hash(input)`. For a single
 /// chunk (<= 64 bytes, root flags, counter 0) this is exactly the compression
-/// function's chaining output — the same identity `blake3_kat.rs` relies on.
+/// function's chaining output (the same identity `blake3_kat.rs` relies on).
 fn reference_hash_words(input: &[u8]) -> [u32; 8] {
     let hash = ::blake3::hash(input);
     let bytes = hash.as_bytes();
@@ -79,7 +79,7 @@ fn gpu_compress(backend: &WgpuBackend, input: &[u8]) -> [u32; 8] {
 
     // Buffers in binding order: 0=cv_in(RO), 1=msg(RO), 2=params(RO),
     // 3=cv_out(ReadWrite/output). The readback returns the output buffer(s),
-    // so outputs[0] is cv_out — the same shape `reference_eval` returns.
+    // so outputs[0] is cv_out (the same shape `reference_eval` returns).
     let outputs = backend
         .dispatch_borrowed(
             &program,
@@ -116,7 +116,7 @@ fn run_case(input: &[u8], label: &str) {
     assert_ne!(expected, [0u32; 8], "blake3 reference produced all zeros");
     assert_eq!(
         gpu, expected,
-        "GPU BLAKE3 compression of {label} diverged from the `blake3` crate — the \
+        "GPU BLAKE3 compression of {label} diverged from the `blake3` crate, the \
          synthetic RotateRight lowering miscompiles on hardware.\n  \
          gpu      = {gpu:08x?}\n  expected = {expected:08x?}"
     );

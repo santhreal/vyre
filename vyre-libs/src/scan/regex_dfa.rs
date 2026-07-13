@@ -97,6 +97,21 @@ impl fmt::Display for RegexDfaError {
     }
 }
 
+impl RegexDfaError {
+    /// The canonical `REGEX_UNSUPPORTED_DIAGNOSTICS.toml` diagnostic code for
+    /// this pipeline error, forwarded from the inner [`RegexCompileError`] when
+    /// the failure is an unsupported construct, else `None`. Lets a consumer of
+    /// the higher-level pipeline builder route on the same registry code as the
+    /// low-level `compile_regex_set` path (one owner for the mapping).
+    #[must_use]
+    pub fn diagnostic_code(&self) -> Option<&'static str> {
+        match self {
+            Self::Compile(error) => error.diagnostic_code(),
+            Self::Lower(_) | Self::Size { .. } => None,
+        }
+    }
+}
+
 impl Error for RegexDfaError {}
 
 impl From<RegexCompileError> for RegexDfaError {
@@ -164,7 +179,7 @@ pub fn build_regex_dfa_pipeline_ext(
 ///
 /// [`build_regex_dfa_pipeline`] compiles an *anchored* DFA: it only matches a
 /// pattern starting at the scan origin (a secret at byte 9 of a file is missed).
-/// This variant adds the implicit `.*` prefix at the **NFA-table level** — it
+/// This variant adds the implicit `.*` prefix at the **NFA-table level**: it
 /// self-loops the NFA start state on every byte so the automaton stays live at
 /// every position (Aho-Corasick semantics), then runs the same subset
 /// construction. Match offsets are reported at the match END, exactly as the
@@ -190,8 +205,141 @@ pub fn build_regex_dfa_unanchored(
     finish_regex_dfa_pipeline(regex_set, patterns, max_matches, max_dfa_states, true)
 }
 
+/// One shard of a state-cap-sharded regex DFA set: a self-contained,
+/// independently dispatchable [`RegexDfaPipeline`] plus the map from its
+/// local pattern ids back to the caller's global pattern indices.
+///
+/// A shard's DFA reports matches with LOCAL pattern ids `0..global_pattern_ids.len()`;
+/// the consumer rewrites each hit's pid to `global_pattern_ids[local_pid]` before
+/// merging shard results, so the union is expressed in the caller's original
+/// pattern numbering.
+#[derive(Debug, Clone)]
+pub struct RegexDfaShard {
+    /// Dispatchable pipeline for this shard's pattern subset.
+    pub pipeline: RegexDfaPipeline,
+    /// `global_pattern_ids[local_pid]` = index of this shard's pattern in the
+    /// original `patterns` slice passed to the shard builder.
+    pub global_pattern_ids: Vec<u32>,
+}
+
+/// True when `error` is a *capacity* failure that splitting the pattern group
+/// can resolve (the DFA/table was too big), as opposed to a *per-pattern*
+/// failure (bad syntax, unsupported construct) that no amount of sharding fixes.
+fn regex_dfa_error_is_capacity(error: &RegexDfaError) -> bool {
+    match error {
+        // Subset construction blew its state budget, or the metadata exceeded
+        // the GPU program's ABI/staging budget: fewer patterns per shard fixes both.
+        RegexDfaError::Lower(_) | RegexDfaError::Size { .. } => true,
+        // The NFA itself needed more states than the per-pipeline cap.
+        RegexDfaError::Compile(RegexCompileError::TooManyStates { .. }) => true,
+        // Parse / Unsupported / ABI-count overflow are per-pattern: return them.
+        RegexDfaError::Compile(_) => false,
+    }
+}
+
+/// Recursively compile `indexed` into fitting shards, bisecting on any capacity
+/// overflow. Each emitted shard is a proven-fitting DFA (its build returned Ok).
+fn compile_or_split(
+    indexed: &[(u32, &str)],
+    max_matches: u32,
+    max_dfa_states: usize,
+    compile: fn(&[&str], u32, usize) -> Result<RegexDfaPipeline, RegexDfaError>,
+    out: &mut Vec<RegexDfaShard>,
+) -> Result<(), RegexDfaError> {
+    if indexed.is_empty() {
+        return Ok(());
+    }
+    let pats: Vec<&str> = indexed.iter().map(|(_, p)| *p).collect();
+    match compile(&pats, max_matches, max_dfa_states) {
+        Ok(pipeline) => {
+            out.push(RegexDfaShard {
+                pipeline,
+                global_pattern_ids: indexed.iter().map(|(g, _)| *g).collect(),
+            });
+            Ok(())
+        }
+        // A single pattern that still overflows cannot be split further: surface
+        // its error so the caller raises the cap or drops that pattern, never a
+        // silent omission (Law 10).
+        Err(error) if indexed.len() > 1 && regex_dfa_error_is_capacity(&error) => {
+            let mid = indexed.len() / 2;
+            compile_or_split(&indexed[..mid], max_matches, max_dfa_states, compile, out)?;
+            compile_or_split(&indexed[mid..], max_matches, max_dfa_states, compile, out)
+        }
+        Err(error) => Err(error),
+    }
+}
+
+/// Compile a pattern set into one-or-more [`RegexDfaShard`]s, each of whose DFA
+/// fits within `max_dfa_states`: eliminating the single-DFA state cap as a hard
+/// limit on how many patterns a consumer can admit in one scan phase.
+///
+/// Why not just size-account the NFA (`plan_shards`)? Subset construction can
+/// explode the DFA far past the NFA state count, so NFA accounting cannot
+/// *guarantee* a fitting DFA. This builder instead COMPILES each candidate group
+/// and, on a capacity overflow, bisects and recompiles, so every emitted shard is
+/// a proven-fitting DFA. A single pattern that cannot fit on its own surfaces its
+/// compile error rather than being silently dropped.
+///
+/// The default builds **anchored** shards (mirrors [`build_regex_dfa_pipeline`]);
+/// use [`build_regex_dfa_shards_unanchored`] for the find-anywhere consumer path.
+///
+/// # Errors
+/// The first per-pattern compile error (bad syntax / unsupported construct), or a
+/// capacity error for a lone pattern that cannot fit `max_dfa_states`.
+pub fn build_regex_dfa_shards(
+    patterns: &[&str],
+    max_matches: u32,
+    max_dfa_states: usize,
+) -> Result<Vec<RegexDfaShard>, RegexDfaError> {
+    build_regex_dfa_shards_with(
+        patterns,
+        max_matches,
+        max_dfa_states,
+        build_regex_dfa_pipeline,
+    )
+}
+
+/// Unanchored (find-anywhere) counterpart of [`build_regex_dfa_shards`], shards
+/// the `.*`-prefixed DFA the megakernel batch path uses.
+///
+/// # Errors
+/// See [`build_regex_dfa_shards`].
+pub fn build_regex_dfa_shards_unanchored(
+    patterns: &[&str],
+    max_matches: u32,
+    max_dfa_states: usize,
+) -> Result<Vec<RegexDfaShard>, RegexDfaError> {
+    build_regex_dfa_shards_with(
+        patterns,
+        max_matches,
+        max_dfa_states,
+        build_regex_dfa_unanchored,
+    )
+}
+
+fn build_regex_dfa_shards_with(
+    patterns: &[&str],
+    max_matches: u32,
+    max_dfa_states: usize,
+    compile: fn(&[&str], u32, usize) -> Result<RegexDfaPipeline, RegexDfaError>,
+) -> Result<Vec<RegexDfaShard>, RegexDfaError> {
+    let mut indexed: Vec<(u32, &str)> = Vec::with_capacity(patterns.len());
+    for (index, pattern) in patterns.iter().enumerate() {
+        let global = u32::try_from(index).map_err(|_| {
+            RegexDfaError::Compile(RegexCompileError::PatternCountOverflow {
+                count: patterns.len(),
+            })
+        })?;
+        indexed.push((global, *pattern));
+    }
+    let mut shards = Vec::new();
+    compile_or_split(&indexed, max_matches, max_dfa_states, compile, &mut shards)?;
+    Ok(shards)
+}
+
 /// Add an implicit `.*` prefix to a subgroup-NFA transition table: self-loop the
-/// start state (state 0 — lane 0, bit 0) on every byte so it remains active at
+/// start state (state 0, lane 0, bit 0) on every byte so it remains active at
 /// each input position. This is the standard unanchored/Aho-Corasick transform,
 /// applied to the lane-major `[num_states × 256 × LANES]` table where entry
 /// `trans[src*256*LANES + byte*LANES + lane]` holds the destination-state bits
@@ -199,7 +347,7 @@ pub fn build_regex_dfa_unanchored(
 /// Returns `Err(RegexDfaError::Size)` when `transition_table.len()` is not
 /// divisible by `num_states * 256`, which would produce a silently-anchored DFA
 /// (the self-loop cannot be applied, so the caller's `build_regex_dfa_unanchored`
-/// would succeed but return an anchored DFA — every match at offset > 0 dropped).
+/// would succeed but return an anchored DFA (every match at offset > 0 dropped)).
 fn add_implicit_dotstar_prefix(
     transition_table: &mut [u32],
     num_states: usize,
@@ -213,7 +361,7 @@ fn add_implicit_dotstar_prefix(
     if denom == 0 || transition_table.len() % denom != 0 {
         // A malformed table means the self-loop cannot be applied. Returning
         // Ok(()) here would leave the table anchored, causing build_regex_dfa_unanchored
-        // to return an anchored DFA — silently dropping every match at offset > 0.
+        // to return an anchored DFA (silently dropping every match at offset > 0).
         return Err(RegexDfaError::Size {
             message: format!(
                 "add_implicit_dotstar_prefix: transition_table length {} is not divisible \
@@ -329,7 +477,7 @@ fn reserve_regex_vec<T>(
 mod tests {
     use super::*;
 
-    /// Single-pass DFA replay from the start state — the exact semantics the
+    /// Single-pass DFA replay from the start state, the exact semantics the
     /// megakernel batch dispatcher uses (one pass per file, no per-position
     /// restart). Returns the end offsets where the DFA accepts.
     fn single_pass_accept_ends(dfa: &CompiledDfa, haystack: &[u8]) -> Vec<usize> {
@@ -340,6 +488,38 @@ mod tests {
             if dfa.accept[state as usize] != 0 {
                 ends.push(i + 1);
             }
+        }
+        ends
+    }
+
+    /// Leftmost-longest ("maximal munch") accept ends over the unanchored dense
+    /// DFA. A token that accepts at several consecutive lengths, a variable
+    /// `{n,m}` / `+` / `*` body, collapses to the SINGLE longest end (the end of
+    /// its accepting run) instead of one hit per admissible length. Emits end `p`
+    /// iff the DFA accepts at `p` and does NOT accept at `p + 1` (the match cannot
+    /// be extended), which for a `<prefix><class>{n,m}` token terminated by a
+    /// non-class byte is exactly its maximal end. Fixed-length patterns (one
+    /// accept length per occurrence) yield the same result as
+    /// [`single_pass_accept_ends`]. This is the semantics a scanner wants: one
+    /// finding covering the whole token, not `m - n + 1` overlapping partials.
+    fn single_pass_leftmost_longest_ends(dfa: &CompiledDfa, haystack: &[u8]) -> Vec<usize> {
+        let mut state = 0u32;
+        let mut ends = Vec::new();
+        let mut prev_end = 0usize;
+        let mut prev_accept = false;
+        for (i, &b) in haystack.iter().enumerate() {
+            state = dfa.transitions[state as usize * 256 + b as usize];
+            let accept = dfa.accept[state as usize] != 0;
+            if prev_accept && !accept {
+                // The accepting run ended: `prev_end` was its maximal end.
+                ends.push(prev_end);
+            }
+            prev_end = i + 1;
+            prev_accept = accept;
+        }
+        if prev_accept {
+            // The accepting run reaches end-of-input.
+            ends.push(prev_end);
         }
         ends
     }
@@ -377,7 +557,7 @@ mod tests {
     }
 
     /// Regression: a downstream GPU parity gate missed a real `ghp_` token whose
-    /// 36-char body contains g/h/p (the prefix chars) — a prefix/body overlap
+    /// 36-char body contains g/h/p (the prefix chars), a prefix/body overlap
     /// under the `.*` self-loop. This CPU single-pass DFA check isolates whether
     /// the miss is in THIS primitive's construction or downstream on the GPU.
     #[test]
@@ -432,22 +612,26 @@ mod tests {
             let dfa = build_regex_dfa_unanchored(&[pat], 1024, 16384)
                 .unwrap_or_else(|e| panic!("pattern {pat:?} must compile: {e:?}"))
                 .dfa;
-            let ends = single_pass_accept_ends(&dfa, hay);
+            // Leftmost-longest ("maximal munch") extraction: each case holds ONE
+            // complete token, so the scanner-correct result is its single maximal
+            // end. The raw all-ends walk (`single_pass_accept_ends`) is only
+            // single-valued for FIXED-length patterns, a variable `{10,48}` body
+            // genuinely accepts at every admissible length (26 ends for the `xox`
+            // cases), so asserting a single end there requires the leftmost-longest
+            // walk, which collapses the run to its longest end. Asserting the exact
+            // set (not containment) catches both a missed hit and a spurious/
+            // duplicated earlier hit from body overlap under the dotstar self-loop.
+            let ends = single_pass_leftmost_longest_ends(&dfa, hay);
             let expected_end = if hay.ends_with(b"\"") {
                 hay.len() - 1
             } else {
                 hay.len()
             };
-            // Each test case contains exactly one complete token with no sub-sequence
-            // that itself fully matches the pattern. Asserting the exact set rather than
-            // just containment catches both false negatives (missing the real hit) and
-            // false positives (spurious earlier hits from body overlap under the dotstar
-            // self-loop that would cause double-counting or wrong extraction).
             assert_eq!(
                 ends,
                 vec![expected_end],
-                "dense CompiledDfa for {pat:?} must report exactly one end offset \
-                 ({expected_end}) in {:?} (single-pass); got {ends:?}. state_count={}",
+                "dense CompiledDfa for {pat:?} must report exactly one leftmost-longest \
+                 end offset ({expected_end}) in {:?}; got {ends:?}. state_count={}",
                 String::from_utf8_lossy(hay),
                 dfa.state_count,
             );
@@ -582,7 +766,7 @@ mod tests {
     #[test]
     fn regex_dfa_size_error_has_actionable_message() {
         // Construct a Size error directly (the behavioral path that exercises the
-        // variant formatting — pattern-count overflow requires > u32::MAX allocations
+        // variant formatting, pattern-count overflow requires > u32::MAX allocations
         // which is not feasible in a unit test, but we can verify the error is
         // coherent and carries the expected guidance text).
         let err = RegexDfaError::Size {
@@ -622,6 +806,147 @@ mod tests {
             accepted,
             "unanchored DFA must match 'abc' after non-matching prefix 'xx' in a single pass; \
              if this fails the add_implicit_dotstar_prefix self-loop was not applied"
+        );
+    }
+
+    /// Pid-aware single-pass replay: at each accepting state, emit EVERY pattern
+    /// id in `output_records` (not just the single `accept` id), exactly as the
+    /// real dispatch does (so overlapping patterns at one position all surface).
+    fn walk_unanchored_local_hits(dfa: &CompiledDfa, hay: &[u8]) -> Vec<(u32, usize)> {
+        let mut state = 0u32;
+        let mut hits = Vec::new();
+        for (i, &b) in hay.iter().enumerate() {
+            state = dfa.transitions[state as usize * 256 + b as usize];
+            let s = state as usize;
+            let lo = dfa.output_offsets[s] as usize;
+            let hi = dfa.output_offsets[s + 1] as usize;
+            for &pid in &dfa.output_records[lo..hi] {
+                hits.push((pid, i + 1));
+            }
+        }
+        hits
+    }
+
+    /// State-cap elimination: a pattern set that OVERFLOWS a small single-DFA cap
+    /// must still scan losslessly once split into shards, and the union of shard
+    /// hits, rewritten to global pattern ids, must equal an independent
+    /// naive-substring oracle over the same haystack. Proves both the fitting
+    /// guarantee and that pid remapping loses/duplicates nothing (Law 10).
+    #[test]
+    fn dfa_shards_cover_overflowing_set_losslessly_with_global_pids() {
+        let patterns = ["alpha", "bravo", "charlie", "delta", "epsilon", "gamma"];
+        let refs: Vec<&str> = patterns.to_vec();
+        // A cap that fits a couple of these literals' unanchored DFA but not all
+        // six at once (forces multiple shards).
+        let cap = 18usize;
+
+        // Precondition: the whole set genuinely overflows the small cap.
+        assert!(
+            build_regex_dfa_unanchored(&refs, 4096, cap).is_err(),
+            "precondition: the whole 6-pattern set must overflow a {cap}-state cap"
+        );
+
+        let shards = build_regex_dfa_shards_unanchored(&refs, 4096, cap)
+            .expect("sharding must fit every pattern within the cap");
+        assert!(
+            shards.len() >= 2,
+            "an overflowing set must split into >=2 shards"
+        );
+
+        // Every global pid 0..6 is covered exactly once across shards, and each
+        // shard's DFA actually fits the cap (the fitting guarantee).
+        let mut covered: Vec<u32> = shards
+            .iter()
+            .flat_map(|s| s.global_pattern_ids.iter().copied())
+            .collect();
+        covered.sort_unstable();
+        assert_eq!(
+            covered,
+            (0..patterns.len() as u32).collect::<Vec<_>>(),
+            "shards must partition the global pattern ids with no gap or overlap"
+        );
+        for shard in &shards {
+            assert!(
+                shard.pipeline.dfa.state_count as usize <= cap,
+                "every emitted shard must fit the {cap}-state cap; got {}",
+                shard.pipeline.dfa.state_count
+            );
+            assert_eq!(
+                shard.global_pattern_ids.len(),
+                shard.pipeline.pattern_lengths.len(),
+                "one global id per shard-local pattern"
+            );
+        }
+
+        // Differential over a haystack that embeds several patterns at offsets.
+        let hay = b"__alpha xx charlie--epsilon..bravo gamma zz delta__epsilonalpha";
+        // Independent oracle: every occurrence of each pattern -> (global_pid, end).
+        let mut oracle: Vec<(u32, usize)> = Vec::new();
+        for (gid, pat) in patterns.iter().enumerate() {
+            let pb = pat.as_bytes();
+            if pb.len() <= hay.len() {
+                for start in 0..=hay.len() - pb.len() {
+                    if &hay[start..start + pb.len()] == pb {
+                        oracle.push((gid as u32, start + pb.len()));
+                    }
+                }
+            }
+        }
+        oracle.sort_unstable();
+
+        // Sharded union: walk each shard, rewrite local pid -> global pid.
+        let mut got: Vec<(u32, usize)> = Vec::new();
+        for shard in &shards {
+            for (local_pid, end) in walk_unanchored_local_hits(&shard.pipeline.dfa, hay) {
+                let global = shard.global_pattern_ids[local_pid as usize];
+                got.push((global, end));
+            }
+        }
+        got.sort_unstable();
+
+        assert_eq!(
+            got, oracle,
+            "sharded scan (global-remapped) must equal the naive-substring oracle; \
+             a mismatch means the cap-sharding dropped, duplicated, or mis-attributed a match"
+        );
+        // Sanity: the oracle actually found the embedded patterns (guards a vacuous pass).
+        assert!(
+            oracle.len() >= patterns.len(),
+            "oracle must contain at least one hit per pattern for a meaningful differential"
+        );
+    }
+
+    /// A single pattern that cannot fit the cap on its own must SURFACE its
+    /// capacity error, never be silently omitted from the shard set (Law 10).
+    #[test]
+    fn dfa_shards_surface_error_for_unshardable_single_pattern() {
+        // One pattern whose own DFA needs more than a 1-state cap.
+        let result = build_regex_dfa_shards_unanchored(&["abcdef"], 4096, 1);
+        assert!(
+            result.is_err(),
+            "a lone pattern that overflows the cap must error, not drop silently"
+        );
+    }
+
+    /// The pipeline builder must forward the inner compile error's registry
+    /// diagnostic code, so a consumer routing on `build_regex_dfa_pipeline`'s
+    /// error gets the same code as the low-level `compile_regex_set` path.
+    #[test]
+    fn pipeline_error_forwards_diagnostic_code() {
+        let err = build_regex_dfa_pipeline(&[r"a\bc"], 1024, 1024)
+            .expect_err("a non-edge lookaround pattern must not compile");
+        assert_eq!(
+            err.diagnostic_code(),
+            Some("VYRE_SCAN_APPROXIMATED_LOOKAROUND_REQUIRES_VERIFIER"),
+            "pipeline error must forward the inner lookaround diagnostic code; error was: {err}"
+        );
+        // A sizing/lowering failure is not a registry construct -> no code.
+        let size_err =
+            build_regex_dfa_pipeline(&["abc"], 1024, 1).expect_err("a 1-state cap must overflow");
+        assert_eq!(
+            size_err.diagnostic_code(),
+            None,
+            "a state-budget overflow is not a registry unsupported-construct"
         );
     }
 }

@@ -1,4 +1,4 @@
-# Testing program — vyre-frontend-c
+# Testing program, vyre-frontend-c
 
 | Kind | Location |
 |------|----------|

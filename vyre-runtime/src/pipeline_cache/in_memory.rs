@@ -33,7 +33,7 @@ impl InMemoryPipelineCache {
     fn lock_shard(shard: &Mutex<InMemoryCacheShard>) -> MutexGuard<'_, InMemoryCacheShard> {
         // Fail closed on poison. `PoisonError::into_inner` would silently hand
         // back a guard over shard state left half-mutated by a panicking writer
-        // — every subsequent cache read/write would then trust corrupt data with
+        //: every subsequent cache read/write would then trust corrupt data with
         // no signal. A poisoned pipeline-cache shard is unrecoverable; surface it
         // loudly instead of laundering it.
         shard

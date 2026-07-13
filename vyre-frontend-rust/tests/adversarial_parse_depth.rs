@@ -16,7 +16,7 @@ use vyre_libs::parsing::rust::lex::lexer::core::lex;
 use vyre_libs::parsing::rust::parse::parse;
 
 /// Lex then parse; return whether parsing returned (Ok or Err) without crashing.
-/// The value asserted is that we get a `Result` back at all — reaching the
+/// The value asserted is that we get a `Result` back at all, reaching the
 /// assertion proves no stack overflow occurred.
 fn parses_without_crashing(src: &str) -> Result<(), ()> {
     let bytes = src.as_bytes();
@@ -48,7 +48,7 @@ fn deeply_nested_parens_fail_closed() {
 
 #[test]
 fn deeply_nested_unary_not_fails_closed() {
-    // `!!!!...true` — right-recursive parse_unary chain.
+    // `!!!!...true`: right-recursive parse_unary chain.
     let mut src = String::from("fn f() -> bool { return ");
     src.push_str(&"!".repeat(20_000));
     src.push_str("true; }");
@@ -62,7 +62,7 @@ fn deeply_nested_unary_not_fails_closed() {
 
 #[test]
 fn deeply_nested_deref_fails_closed() {
-    // `****...x` — right-recursive parse_unary via STAR.
+    // `****...x`: right-recursive parse_unary via STAR.
     let mut src = String::from("fn f(x: i32) -> i32 { return ");
     src.push_str(&"*".repeat(20_000));
     src.push_str("x; }");
@@ -76,10 +76,10 @@ fn deeply_nested_deref_fails_closed() {
 
 #[test]
 fn deeply_nested_borrow_expr_fails_closed() {
-    // `&mut &mut ... x` — AMP_MUT tokens never pair (unlike `&`, which the
+    // `&mut &mut ... x`: AMP_MUT tokens never pair (unlike `&`, which the
     // lexer greedily folds into `&&`), so this genuinely drives parse_unary's
     // borrow recursion deep. A plain `&` run would lex to `&&` and error
-    // immediately without recursing, testing nothing — hence `&mut`.
+    // immediately without recursing, testing nothing (hence `&mut`).
     let mut src = String::from("fn f(x: i32) -> i32 { return ");
     src.push_str(&"&mut ".repeat(20_000));
     src.push_str("x; }");
@@ -93,7 +93,7 @@ fn deeply_nested_borrow_expr_fails_closed() {
 
 #[test]
 fn deeply_nested_while_blocks_fail_closed() {
-    // `while true { while true { ... {} ... } }` — the while body is parsed by a
+    // `while true { while true { ... {} ... } }`: the while body is parsed by a
     // direct parse_block call, a recursion cycle (parse_block -> parse_stmt ->
     // while-arm -> parse_block) that bypasses the expression/unary/type guards.
     // The block-level guard must catch it; otherwise this overflows the stack.
@@ -112,7 +112,7 @@ fn deeply_nested_while_blocks_fail_closed() {
 
 #[test]
 fn deeply_nested_if_blocks_fail_closed() {
-    // `if true { if true { ... {} ... } }` as statements — another block-nesting
+    // `if true { if true { ... {} ... } }` as statements, another block-nesting
     // cycle through parse_block; must also fail closed.
     let n = 20_000;
     let mut src = String::from("fn f() { ");
@@ -129,7 +129,7 @@ fn deeply_nested_if_blocks_fail_closed() {
 
 #[test]
 fn deeply_nested_ref_type_fails_closed() {
-    // `&mut &mut ... i32` — right-recursive parse_type chain in a let binding.
+    // `&mut &mut ... i32`: right-recursive parse_type chain in a let binding.
     let mut src = String::from("fn f() { let x: ");
     src.push_str(&"&mut ".repeat(20_000));
     src.push_str("i32 = 0; }");

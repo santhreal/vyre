@@ -144,7 +144,7 @@ fn lock_module_cache() -> MutexGuard<'static, ModuleCache> {
 /// pattern (`to_bits()`). Using `format!("{desc:?}")` here would collapse
 /// all NaN variants to the same Debug string "NaN", causing two descriptors
 /// with distinct NaN bit patterns to produce the same cache key but compare
-/// unequal — either a spurious miss (NaN != NaN via PartialEq) or a spurious
+/// unequal, either a spurious miss (NaN != NaN via PartialEq) or a spurious
 /// hit (NaN1 and NaN2 with identical bit patterns via some future
 /// bit-exact PartialEq). The Hash impl is the correct oracle.
 struct Blake3StdHasher(blake3::Hasher);
@@ -218,7 +218,7 @@ pub fn emit_optimized_with_stats(
     // in debug and release, before any pass runs.
     vyre_lower::verify::verify(desc).map_err(|errors| {
         EmitError::InvalidDescriptor(format!(
-            "invalid descriptor: input failed verification before optimization — {} error(s). \
+            "invalid descriptor: input failed verification before optimization. {} error(s). \
              Fix: see vyre_lower::verify for the invariants the descriptor violated. \
              First error: {:?}",
             errors.len(),
@@ -229,11 +229,11 @@ pub fn emit_optimized_with_stats(
     // Unconditionally verify the rewrite pipeline output. A `debug_assert!`
     // here silently skips this gate in release builds, where a buggy rewrite
     // could produce an invalid descriptor that proceeds to Naga emission and
-    // yields a SPIR-V binary with different semantics from the original — a
+    // yields a SPIR-V binary with different semantics from the original, a
     // silently-wrong result. Fail closed with a structured error instead.
     vyre_lower::verify::verify(&optimized).map_err(|errors| {
         EmitError::InvalidDescriptor(format!(
-            "rewrite pipeline produced an invalid descriptor — {} error(s). \
+            "rewrite pipeline produced an invalid descriptor: {} error(s). \
              Fix: see vyre_lower::verify for the invariants the rewrite violated. \
              First error: {:?}",
             errors.len(),

@@ -89,7 +89,8 @@ pub mod token_fact_graph_cuda_adapter;
 pub mod warp_word_automata;
 
 pub use backend::{
-    CudaBackend, CudaPtxSourceCacheSnapshot, CudaResidentBuffer, CudaTelemetrySnapshot,
+    CudaBackend, CudaPtxSourceCacheSnapshot, CudaResidentBuffer, CudaStreamOrderedPool,
+    CudaTelemetrySnapshot,
 };
 pub use benchmark_pass_selection::{
     select_cuda_benchmark_passes, select_cuda_benchmark_passes_with_scratch,

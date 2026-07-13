@@ -91,13 +91,39 @@ pub fn simplicial_triangle_message(
     };
 
     let value = Expr::add(
-        Expr::sub(load_edge_feat(e_jk), load_edge_feat(e_ik)),
-        load_edge_feat(e_ij),
+        Expr::sub(
+            load_edge_feat(Expr::var("e_jk")),
+            load_edge_feat(Expr::var("e_ik")),
+        ),
+        load_edge_feat(Expr::var("e_ij")),
+    );
+
+    // Skip a triangle that references an out-of-range edge, matching the CPU
+    // reference `simplicial_triangle_message_cpu` (`if e_* >= n_edges { continue }`,
+    // leaving that triangle's message at zero). `triangle_edges` is unvalidated
+    // input; without this gate the GPU gathers edge_features[e*d+dim] OOB (UB on
+    // CUDA) and writes a garbage message, diverging from the CPU which leaves it 0.
+    // Bind each edge index once (avoids re-loading it three times) and only store
+    // when all three are in range. Transparent to well-formed meshes.
+    let edges_in_range = Expr::and(
+        Expr::lt(Expr::var("e_jk"), Expr::u32(n_edges)),
+        Expr::and(
+            Expr::lt(Expr::var("e_ik"), Expr::u32(n_edges)),
+            Expr::lt(Expr::var("e_ij"), Expr::u32(n_edges)),
+        ),
     );
 
     let body = vec![Node::if_then(
         Expr::lt(t.clone(), Expr::u32(cells)),
-        vec![Node::store(triangle_messages, t, value)],
+        vec![
+            Node::let_bind("e_jk", e_jk),
+            Node::let_bind("e_ik", e_ik),
+            Node::let_bind("e_ij", e_ij),
+            Node::if_then(
+                edges_in_range,
+                vec![Node::store(triangle_messages, t, value)],
+            ),
+        ],
     )];
 
     Program::wrapped(
@@ -240,5 +266,49 @@ mod tests {
     fn zero_edges_traps() {
         let p = simplicial_triangle_message("e", "te", "tm", 0, 1, 1);
         assert!(p.stats().trap());
+    }
+
+    #[test]
+    fn ir_message_skips_malformed_triangle_matching_cpu_zero() {
+        use vyre_reference::value::Value;
+        // The GPU IR had NO `e < n_edges` check while the CPU reference skips
+        // triangles that reference an out-of-range edge (leaving the message 0,
+        // locked by `cpu_malformed_triangle_inputs_leave_zero_messages`). This is a
+        // GPU/CPU parity regression LOCK.
+        let n_edges = 3u32;
+        let n_triangles = 2u32;
+        let d = 1u32;
+        // OVER-LENGTH edge_features: a 4th element (999) past the declared
+        // n_edges*d = 3, so the pre-fix OOB gather reads a NONZERO value the
+        // interpreter would store. A zero-init buffer alone cannot distinguish the
+        // fix because an OOB read zero-fills to 0 (→ value 0 → stored 0 either way).
+        let edge_features = [10u32, 20, 30, 999];
+        // tri 0 valid (edges 0,1,2); tri 1 malformed (e_jk = 3 == n_edges, OOR).
+        let triangle_edges = [0u32, 1, 2, 3, 0, 0];
+
+        let program = simplicial_triangle_message("e", "te", "tm", n_edges, n_triangles, d);
+        let outputs = vyre_reference::reference_eval(
+            &program,
+            &[
+                Value::from(crate::wire::pack_u32_slice(&edge_features)),
+                Value::from(crate::wire::pack_u32_slice(&triangle_edges)),
+                Value::from(crate::wire::pack_u32_slice(&vec![
+                    0u32;
+                    (n_triangles * d) as usize
+                ])),
+            ],
+        )
+        .expect("Fix: simplicial_triangle_message must reference-evaluate");
+        let tm_idx = vyre_reference::output_index(&program, "tm")
+            .expect("Fix: triangle_messages must be a reference output");
+        let messages = crate::wire::decode_u32_le_bytes_all(&outputs[tm_idx].to_bytes());
+
+        // tri 0 (valid): 10 - 20 + 30 = 20 (u32 wrapping). tri 1 (malformed): must be
+        // 0 (skipped like the CPU), NOT the 999 the pre-fix OOB read would store.
+        assert_eq!(
+            messages,
+            vec![20u32, 0u32],
+            "Fix: a malformed triangle (edge index >= n_edges) must be skipped (message 0) like the CPU reference, not OOB-gathered into a garbage message"
+        );
     }
 }

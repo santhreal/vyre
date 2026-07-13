@@ -355,7 +355,8 @@ fn substitute_var_in_expr(expr: Expr, from: &Ident, to: &Ident, offset: &Expr) -
             value: Box::new(substitute_var_in_expr(*value, from, to, offset)),
             lane: Box::new(substitute_var_in_expr(*lane, from, to, offset)),
         },
-        Expr::SubgroupReduce { op, value } => Expr::SubgroupReduce { op,
+        Expr::SubgroupReduce { op, value } => Expr::SubgroupReduce {
+            op,
             value: Box::new(substitute_var_in_expr(*value, from, to, offset)),
         },
     }

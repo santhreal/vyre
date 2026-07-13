@@ -1,5 +1,5 @@
 //! Volume oracle matrix - independent reference vs production cpu_ref.
-//! Legendary testing.volume - do NOT weaken to shape-only asserts.
+//! Volume testing.volume - do NOT weaken to shape-only asserts.
 #![forbid(unsafe_code)]
 #![cfg(feature = "hash")]
 

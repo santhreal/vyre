@@ -1208,8 +1208,7 @@ mod tests {
         // correct pattern id is stored. A pid transposition or the pid+1 wrap
         // bug (finding #3: pid=u32::MAX→0) would pass != 0 but fail == 1.
         assert_eq!(
-            dfa.accept[s_abc as usize],
-            1,
+            dfa.accept[s_abc as usize], 1,
             "DFA state after 'abc' must accept pattern 0 encoded as pid+1=1; \
              got {} (0=no match, n=pattern n-1 accepted)",
             dfa.accept[s_abc as usize]

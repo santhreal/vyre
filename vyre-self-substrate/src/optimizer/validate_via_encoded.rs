@@ -41,7 +41,7 @@ use super::expr_arena::{encode_expr_arena, ExprArenaEncoding};
 /// encoded arena to reject obviously-oversized programs without a CPU walk.
 /// It is intentionally MORE PERMISSIVE than foundation's strict V033 ceiling
 /// (`DEFAULT_MAX_EXPR_DEPTH = 128`) so the cheap path never *falsely* rejects
-/// — anything between 128 and this bound is caught by the strict CPU
+///: anything between 128 and this bound is caught by the strict CPU
 /// validator in `vyre_foundation::validate`. The CAS-loop reduction below
 /// relies on depths being bounded by this value.
 pub const DEFAULT_MAX_EXPR_DEPTH: u32 = 1024;

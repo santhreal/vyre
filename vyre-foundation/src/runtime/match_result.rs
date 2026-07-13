@@ -109,6 +109,14 @@ impl Match {
     /// ```
     #[must_use]
     pub const fn new(pattern_id: u32, start: u32, end: u32) -> Self {
+        // Same half-open `[start, end)` invariant as the sibling `ByteRange`,
+        // so the zero-cost `From<Match> for ByteRange` bridge cannot panic on a
+        // value `Match` itself permitted. Reversed ranges fail loudly at
+        // construction, not later at conversion.
+        assert!(
+            end >= start,
+            "Match::new requires end >= start. Fix: pass half-open byte ranges as [start, end)."
+        );
         Self {
             pattern_id,
             start,
@@ -185,5 +193,21 @@ mod tests {
     #[should_panic(expected = "ByteRange::new requires end >= start")]
     fn byte_range_rejects_reversed_ranges() {
         let _ = ByteRange::new(1, 10, 9);
+    }
+
+    #[test]
+    #[should_panic(expected = "Match::new requires end >= start")]
+    fn match_rejects_reversed_ranges_at_construction() {
+        let _ = Match::new(1, 10, 9);
+    }
+
+    #[test]
+    fn match_to_byte_range_bridge_preserves_fields() {
+        let matched = Match::new(9, 4, 17);
+        let range: ByteRange = matched.into();
+        assert_eq!(range.tag, 9);
+        assert_eq!(range.start, 4);
+        assert_eq!(range.end, 17);
+        assert_eq!(range.len(), 13);
     }
 }

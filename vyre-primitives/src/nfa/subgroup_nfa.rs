@@ -122,8 +122,13 @@ pub fn nfa_step(
     // target-text lowering. Inner bit loop is also unrolled so each byte
     // step is a predictable straight-line block of ops.
     for k in 0..LANES_PER_SUBGROUP as u32 {
+        // Each unrolled shuffle gets a UNIQUE peer name: 32 sibling `let peer`
+        // bindings in one region are a V032 duplicate-sibling IR-contract
+        // violation (the same rule loop_fusion respects), matching the
+        // `edge_found_{idx}` unique-name convention motif.rs already uses.
+        let peer = format!("peer_{k}");
         body.push(Node::let_bind(
-            "peer",
+            &peer,
             Expr::subgroup_shuffle(Expr::var("cur"), Expr::u32(k)),
         ));
         for i in 0..32_u32 {
@@ -135,7 +140,7 @@ pub fn nfa_step(
             let src_row = src_state * 256 * LANES_PER_SUBGROUP as u32;
             body.push(Node::if_then(
                 Expr::ne(
-                    Expr::bitand(Expr::shr(Expr::var("peer"), Expr::u32(i)), Expr::u32(1)),
+                    Expr::bitand(Expr::shr(Expr::var(&peer), Expr::u32(i)), Expr::u32(1)),
                     Expr::u32(0),
                 ),
                 vec![Node::assign(
@@ -167,8 +172,12 @@ pub fn nfa_step(
     // optimizer can unroll when N is small (common for real NFAs).
     let mut eps_body: Vec<Node> = Vec::new();
     for k in 0..LANES_PER_SUBGROUP as u32 {
+        // Unique per-peer name in its OWN namespace: `peer_{k}` alone would be a
+        // V032 duplicate sibling within eps_body AND (since eps_body nests inside
+        // the eps loop) a V008 shadow of the transition phase's outer `peer_{k}`.
+        let peer = format!("eps_peer_{k}");
         eps_body.push(Node::let_bind(
-            "peer",
+            &peer,
             Expr::subgroup_shuffle(Expr::var("acc"), Expr::u32(k)),
         ));
         for i in 0..32_u32 {
@@ -178,7 +187,7 @@ pub fn nfa_step(
             }
             eps_body.push(Node::if_then(
                 Expr::ne(
-                    Expr::bitand(Expr::shr(Expr::var("peer"), Expr::u32(i)), Expr::u32(1)),
+                    Expr::bitand(Expr::shr(Expr::var(&peer), Expr::u32(i)), Expr::u32(1)),
                     Expr::u32(0),
                 ),
                 vec![Node::assign(

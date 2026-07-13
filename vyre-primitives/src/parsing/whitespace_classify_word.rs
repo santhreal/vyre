@@ -255,16 +255,12 @@ pub fn try_reference_whitespace_classify_word_into(
     words_in: &[u32],
     out: &mut Vec<u32>,
 ) -> Result<(), String> {
-    if words_in.len() > out.capacity() {
-        out.try_reserve_exact(words_in.len() - out.capacity())
-            .map_err(|err| {
-                format!(
-                    "whitespace word-classifier reference could not reserve {} output words: {err}",
-                    words_in.len()
-                )
-            })?;
-    }
-    out.clear();
+    crate::hostbuf::reserve_exact_cleared(out, words_in.len()).map_err(|err| {
+        format!(
+            "whitespace word-classifier reference could not reserve {} output words: {err}",
+            words_in.len()
+        )
+    })?;
     for word in words_in {
         let bytes = [
             (*word & 0xFF) as u8,

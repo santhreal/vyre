@@ -42,7 +42,9 @@ fn loop_strip_mine_generated_var_does_not_shadow_outer_binding() {
     assert_eq!(
         original,
         vec![Value::from(
-            (0..16).flat_map(|_| 1u32.to_le_bytes()).collect::<Vec<u8>>()
+            (0..16)
+                .flat_map(|_| 1u32.to_le_bytes())
+                .collect::<Vec<u8>>()
         )],
         "out == [1; 16]"
     );

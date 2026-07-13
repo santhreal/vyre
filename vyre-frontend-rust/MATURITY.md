@@ -46,14 +46,14 @@ It does not own the Vyre platform release proof.
 
 | Gate | Evidence | Status |
 |---|---|---|
-| Lexer correctness | `tests/lexer_oracle.rs` — substrate lexer vs `rustc_lexer`, byte-level content agreement over a nano-subset corpus. | **Present** |
-| Parser + verdict parity | `tests/rustc_differential.rs` — full pipeline (lex+parse+resolve+typeck+mutability+escape+conflicts) accept/reject verdict vs live `rustc --crate-type lib --edition 2021 --cap-lints allow`, over curated ACCEPT/REJECT, operator (`OPS_ACCEPT`/`OPS_REJECT`), and integer-literal (`LITERAL_CORPUS`) corpora. | **Present** |
+| Lexer correctness | `tests/lexer_oracle.rs`: substrate lexer vs `rustc_lexer`, byte-level content agreement over a nano-subset corpus. | **Present** |
+| Parser + verdict parity | `tests/rustc_differential.rs`: full pipeline (lex+parse+resolve+typeck+mutability+escape+conflicts) accept/reject verdict vs live `rustc --crate-type lib --edition 2021 --cap-lints allow`, over curated ACCEPT/REJECT, operator (`OPS_ACCEPT`/`OPS_REJECT`), and integer-literal (`LITERAL_CORPUS`) corpora. | **Present** |
 | Semantic analysis (resolve + type inference) | `vyre-libs/tests/rust_sema_borrow_oracle.rs` + the differential above; `sema` is ~1k LOC implemented (NOT pending). | **Present** |
 | Borrow check (NLL) | `vyre-libs/tests/rust_sema_borrow_oracle.rs` proves E0596/E0597/E0499/E0502 via CFG NLL dataflow match rustc accept/reject over generated straight-line, branch, reborrow, and coercion programs plus a curated corpus. `tests/{conflict,borrow,escape,differential_fuzz}.rs` exercise the same through the driver; `differential_fuzz.rs` is a 1024-case proptest vs live rustc. | **Present** |
 | Lowering (→ Vyre IR) | `vyre-libs/tests/rust_lower_exec_oracle.rs` lowers the AST to a Vyre `Program`, runs it on the reference interpreter, and checks against two independent oracles incl. counted `while` loops and half-open `for start..end` range loops (u32 IR loop bounds with signed i32 source semantics). | **Present** |
-| Reliability (hostile input) | `tests/adversarial_parse_depth.rs` — pathologically nested input (parens, `! * &mut`, nested `while`/`if` blocks, `&mut` type chains) fails closed with a typed `ParseError` instead of overflowing the native stack and aborting the process. `tests/proptest_robustness.rs` — 4096-case fuzz: pipeline never panics on arbitrary bytes/token soup. | **Present** |
+| Reliability (hostile input) | `tests/adversarial_parse_depth.rs`: pathologically nested input (parens, `! * &mut`, nested `while`/`if` blocks, `&mut` type chains) fails closed with a typed `ParseError` instead of overflowing the native stack and aborting the process. `tests/proptest_robustness.rs`. 4096-case fuzz: pipeline never panics on arbitrary bytes/token soup. | **Present** |
 | GPU lexing | `tests/gpu_lex.rs` must prove the GPU lexer path matches the CPU oracle byte-for-byte. GPU dispatch is unwired. | **Pending (roadmap)** |
-| No silent fallback | The unwired GPU-lex stage fails loudly and actionably; locked by `tests/smoke.rs::compile_pipeline_rejects_unwired_gpu_lex_without_silent_cpu_path`. (sema and lowering are wired — only GPU lex is gated here.) | **Present** |
+| No silent fallback | The unwired GPU-lex stage fails loudly and actionably; locked by `tests/smoke.rs::compile_pipeline_rejects_unwired_gpu_lex_without_silent_cpu_path`. (sema and lowering are wired, only GPU lex is gated here.) | **Present** |
 
 ## Promotion / production criteria
 

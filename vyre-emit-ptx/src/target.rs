@@ -56,7 +56,7 @@ pub struct PtxEmitOptions {
     /// barrier (a monotonic-counter spin on a module-scope counter) instead of
     /// rejecting them. The emitted barrier is correct ONLY under a cooperative
     /// launch (every CTA co-resident); a non-cooperative launch deadlocks. The
-    /// consumer MUST guarantee a cooperative launch before enabling this — the
+    /// consumer MUST guarantee a cooperative launch before enabling this, the
     /// CUDA backend does, by forcing `cuLaunchCooperativeKernel` for any
     /// grid-sync program and zeroing the counter per launch. Default `false`:
     /// the emitter rejects GridSync (fail-safe) so a backend that cannot

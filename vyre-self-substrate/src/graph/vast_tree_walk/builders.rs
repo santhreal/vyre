@@ -84,7 +84,7 @@ pub fn build_trusted_preorder_walk(
     use crate::observability::{bump, vast_tree_walk_calls};
     bump(&vast_tree_walk_calls);
     // Trusted = caller promised the shape was prevalidated. If that promise is
-    // broken, fail fast naming the violated contract — never silently emit an
+    // broken, fail fast naming the violated contract, never silently emit an
     // inert empty kernel that walks nothing. Boundary callers use
     // `build_checked_preorder_walk`.
     try_ast_walk_preorder(nodes, out, node_count, traversal_capacity).unwrap_or_else(|error| {

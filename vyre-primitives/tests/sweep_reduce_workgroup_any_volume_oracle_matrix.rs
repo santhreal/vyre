@@ -1,5 +1,5 @@
 //! Volume oracle matrix - independent reference vs production cpu_ref.
-//! Legendary testing.volume - do NOT weaken to shape-only asserts.
+//! Volume testing.volume - do NOT weaken to shape-only asserts.
 #![forbid(unsafe_code)]
 #![cfg(all(feature = "reduce", feature = "cpu-parity"))]
 
@@ -18,8 +18,21 @@ fn lcg_u32(seed: u32, len: usize) -> Vec<u32> {
         .collect()
 }
 
+/// Independent oracle for `workgroup_any_u32`, whose GPU IR reduces with `Expr::bitor`, i.e. the
+/// result is the BITWISE OR of all values (`[0,0,7,0] -> 7`, per the op's inventory sample), NOT a
+/// boolean 0/1. Computed here the structurally-different "per-bit any" way, bit `k` is set iff ANY
+/// value has bit `k` set, which is exactly what OR-reduce means and what the op's name denotes
+/// (per-bit any), giving a genuine cross-check of `workgroup_any::cpu_ref`'s `fold(|)` rather than a
+/// copy of it.
 fn oracle(values: &[u32]) -> u32 {
-    u32::from(values.iter().any(|&v| v != 0))
+    (0..u32::BITS).fold(0u32, |acc, bit| {
+        let mask = 1u32 << bit;
+        if values.iter().any(|&v| v & mask != 0) {
+            acc | mask
+        } else {
+            acc
+        }
+    })
 }
 
 const CASES: usize = 16384;

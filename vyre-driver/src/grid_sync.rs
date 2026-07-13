@@ -37,8 +37,8 @@
 //! [`dispatch_with_grid_sync_split_into`] round-trips every live buffer
 //! host↔device between each segment and on every fixpoint pass. For a fused
 //! multi-rule program whose shared output accumulator is hundreds of MiB and
-//! which splits into hundreds of segments, that transfer — not launch
-//! latency — dominates wall time. [`dispatch_resident_grid_sync_fixpoint_into`]
+//! which splits into hundreds of segments, that transfer, not launch
+//! latency, dominates wall time. [`dispatch_resident_grid_sync_fixpoint_into`]
 //! is the device-resident counterpart: it uploads inputs into backend-resident
 //! resources once, keeps them bound across every segment and fixpoint pass (so
 //! the accumulator threads in place on-device, since resident dispatch never
@@ -602,7 +602,7 @@ fn wrap_split_segment(program: &Program, wrappers: &[EntryWrapper], entry: Vec<N
 /// Diagnostics: the host-split segment **programs** (post buffer-rewrite) that
 /// the host-split dispatch path (`dispatch_with_grid_sync_split*`) validates and
 /// launches when the backend lacks native grid-sync. Exposed so tooling and
-/// tests can inspect or validate each segment without a live backend — the
+/// tests can inspect or validate each segment without a live backend, the
 /// raw [`try_split_on_grid_sync`] output omits the per-segment buffer
 /// access/role rewrite, so it is not what the backend actually sees.
 ///
@@ -649,7 +649,7 @@ fn plan_host_grid_sync_segments(
 /// multi-rule `results_packed`, where every rule's result-store lands in a
 /// different grid-sync segment). A LATER writer must therefore read+merge the
 /// value forwarded from earlier segments via `current_inputs`, never overwrite
-/// it with a fresh WriteOnly buffer — which would silently zero every earlier
+/// it with a fresh WriteOnly buffer, which would silently zero every earlier
 /// segment's slots (recall=0 for every rule whose store is not in the final
 /// segment). `rewrite_segment_buffers_for_host_split` uses this map to keep an
 /// already-produced output buffer as a `ReadWrite` accumulator in later
@@ -739,7 +739,7 @@ fn rewrite_segment_buffers_for_host_split(
         // accumulator across the split: this segment must read the value
         // forwarded via `current_inputs` and merge its own slots, never
         // overwrite it with a fresh WriteOnly buffer (which zeroes the earlier
-        // segments' slots — the silent recall=0 mode for any fused rule whose
+        // segments' slots, the silent recall=0 mode for any fused rule whose
         // result-store does not land in the final segment).
         let is_source_output = buffer.is_output() || buffer.is_pipeline_live_out();
         let earlier_segment_wrote_output = is_source_output
@@ -1186,7 +1186,7 @@ pub fn dispatch_with_grid_sync_split_into(
     // Honor the program's fixpoint contract across the split. The
     // non-split dispatch path (`dispatch_borrowed`) re-runs the WHOLE
     // program `fixpoint_iterations` times with persistent ReadWrite
-    // buffers, so a program authored as a fixpoint closure converges —
+    // buffers, so a program authored as a fixpoint closure converges 
     // a multi-hop reachability/dataflow closure is exactly this shape: a
     // `seed (acc |= source) → hop (acc' = step(acc)) → merge (acc |= acc')`
     // body whose accumulator grows by ONE dataflow hop per whole-program
@@ -1196,14 +1196,14 @@ pub fn dispatch_with_grid_sync_split_into(
     // the segment sequence advances the accumulator by exactly one hop.
     // Re-running an individual SEGMENT N times (the previous behavior:
     // `config` with its fixpoint count reached each segment) does NOT
-    // converge — re-launching the isolated `hop` segment recomputes the
+    // converge, re-launching the isolated `hop` segment recomputes the
     // same frontier from an unchanged `acc`. The whole SEQUENCE must be
     // looped instead, with each segment run once per pass. Net device work
     // is identical (sequence_len × iterations launches either way); only
     // the nesting order changes, which is what makes the closure converge.
     // A flow that needs k hops through k-1 intermediate variables (the
     // dominant launch-rule shape: `q = src; sink(q)`) silently returned an
-    // empty frontier under the old single-pass split — recall=0.
+    // empty frontier under the old single-pass split (recall=0).
     let iterations = crate::fixpoint_iterations::resolve_fixpoint_iterations(
         config,
         "grid-sync split",
@@ -1215,7 +1215,7 @@ pub fn dispatch_with_grid_sync_split_into(
     // depth, one hop per whole-sequence pass). The segment sequence is a
     // deterministic function of its live buffers, so once a full pass leaves
     // every evolving (Owned) accumulator unchanged the closure has reached a
-    // fixpoint — every remaining pass would re-dispatch the entire segment
+    // fixpoint, every remaining pass would re-dispatch the entire segment
     // sequence (hundreds of launches on a large fused program) for zero new
     // dataflow. Stop as soon as two consecutive passes produce the same state.
     let mut prev_fingerprint: Option<u64> = None;
@@ -1248,13 +1248,13 @@ pub fn dispatch_with_grid_sync_split_into(
 /// The host-split path round-trips every live buffer host↔device between each
 /// split segment AND on every fixpoint pass. A fused multi-rule
 /// `results_packed` accumulator is hundreds of MiB, so a program that splits
-/// into hundreds of segments moves tens of GiB across PCIe per dispatch — that
+/// into hundreds of segments moves tens of GiB across PCIe per dispatch, that
 /// transfer, not launch latency, is the host-split wall.
 ///
 /// This variant uploads the program's inputs into backend-resident resources
-/// ONCE, keeps them bound across every segment and every fixpoint pass — so a
+/// ONCE, keeps them bound across every segment and every fixpoint pass, so a
 /// multi-rule accumulator threads IN PLACE on device storage with no host copy
-/// and no clobber — and reads back only the final output ranges a single time.
+/// and no clobber (and reads back only the final output ranges a single time).
 /// Net host↔device traffic drops from `O(segments × passes × live_bytes)` to
 /// `O(inputs + outputs)`.
 ///
@@ -1322,7 +1322,7 @@ pub fn dispatch_resident_grid_sync_fixpoint_into(
 /// call: the binding-ordered slice every segment dispatches against, plus a
 /// name → (handle, byte-len) map for output readback.
 struct ResidentProgramResources {
-    /// One resource per non-shared binding, in [`BindingPlan`] order — the
+    /// One resource per non-shared binding, in [`BindingPlan`] order, the
     /// slice the backend's resident dispatch binds positionally.
     ordered: Vec<Resource>,
     /// Buffer-name → (resident handle clone, byte length) for output readback
@@ -1358,7 +1358,7 @@ fn allocate_resident_program_resources(
         // unused standard scanner buffers (counts/offsets/lengths/metadata) as
         // zero-length `&[]`; resident allocation rejects 0 bytes, so allocate
         // one element (element-aligned, so the backend's element-size
-        // validation holds) for those — the kernel never reads a 0/1-element
+        // validation holds) for those, the kernel never reads a 0/1-element
         // unused buffer, so the placeholder is bound but inert (proven equal to
         // the host path by the resident/host differential gate).
         let byte_len = resident_binding_byte_len(binding, inputs)?;
@@ -2410,7 +2410,7 @@ mod tests {
         // result-store lands in its own segment) must ACCUMULATE across the host
         // split. The first writer establishes it (WriteOnly); every LATER writer
         // must read the forwarded value and merge its own slots (ReadWrite)
-        // instead of overwriting it with a fresh write-only buffer — which would
+        // instead of overwriting it with a fresh write-only buffer, which would
         // silently zero the earlier segments' slots (recall=0 for every rule
         // whose store is not in the final segment).
         let out = BufferDecl::output("out", 0, DataType::U32).with_count(4);
@@ -2468,7 +2468,7 @@ mod tests {
     /// Emulates a backend that lacks native grid-sync: for the single output
     /// buffer `out`, it starts from the forwarded prior value (when the segment
     /// consumes it) or zeros, then applies that segment's literal `Store out[i]
-    /// = v` writes — exactly the per-slot store shape a fused multi-rule program
+    /// = v` writes, exactly the per-slot store shape a fused multi-rule program
     /// produces. Proves end-to-end that earlier segments' slots survive.
     struct SlotStoringBackend {
         calls: AtomicUsize,
@@ -2619,7 +2619,7 @@ mod tests {
 
     /// Copies its input to its output and bumps byte 0 toward a saturation cap.
     /// Once the cap is reached the output equals the input, so a full pass over
-    /// the split leaves the carried accumulator unchanged — a fixpoint.
+    /// the split leaves the carried accumulator unchanged (a fixpoint).
     struct SaturatingBackend {
         calls: AtomicUsize,
         cap: u8,
@@ -2711,7 +2711,7 @@ mod tests {
     fn split_non_converging_accumulator_runs_full_iteration_budget() {
         // The dual of the early-exit test: an accumulator that changes every
         // pass (never reaches a fixpoint within budget) must run all
-        // iterations — early-exit must not fire on a still-advancing closure.
+        // iterations (early-exit must not fire on a still-advancing closure).
         let program = Program::wrapped(
             vec![buffer()],
             [1, 1, 1],

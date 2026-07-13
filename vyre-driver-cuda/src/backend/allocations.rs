@@ -1,7 +1,7 @@
 use std::ffi::c_void;
 use std::hash::BuildHasherDefault;
 use std::sync::{
-    atomic::{AtomicUsize, Ordering},
+    atomic::{AtomicU64, AtomicUsize, Ordering},
     Arc,
 };
 
@@ -859,6 +859,14 @@ pub(crate) struct DeviceAllocationPool {
     cached_bytes: AtomicUsize,
     allocated_bytes: AtomicUsize,
     max_cached_bytes: usize,
+    /// Acquisitions served from the free-list (no `cuMemAlloc`): the pool's whole
+    /// point. `hits` and `misses` together are the pool-hit-rate evidence W3-4
+    /// requires, only the pool can distinguish the two (the caller cannot), so the
+    /// counters live here at their source (ONE PLACE) and are read at the telemetry
+    /// boundary. Saturating so a runaway loop can never panic the allocator.
+    hits: AtomicU64,
+    /// Acquisitions that fell through to a real `cuMemAlloc_v2` (an empty bucket).
+    misses: AtomicU64,
 }
 
 impl DeviceAllocationPool {
@@ -868,17 +876,21 @@ impl DeviceAllocationPool {
             cached_bytes: AtomicUsize::new(0),
             allocated_bytes: AtomicUsize::new(0),
             max_cached_bytes,
+            hits: AtomicU64::new(0),
+            misses: AtomicU64::new(0),
         }
     }
 
     pub(crate) fn acquire(&self, byte_len: usize) -> Result<DeviceAllocation, BackendError> {
         let bucket = allocation_bucket(byte_len, "CUDA device allocation")?;
         if let Some(ptr) = self.take_cached(bucket)? {
+            self.hits.fetch_add(1, Ordering::Relaxed);
             return Ok(DeviceAllocation {
                 ptr,
                 byte_len: bucket,
             });
         }
+        self.misses.fetch_add(1, Ordering::Relaxed);
         self.free.entry(bucket).or_insert_with(|| {
             ArrayQueue::new(allocation_bucket_cache_slots(bucket, self.max_cached_bytes))
         });
@@ -903,6 +915,24 @@ impl DeviceAllocationPool {
 
     pub(crate) fn allocated_bytes(&self) -> Result<usize, BackendError> {
         Ok(self.allocated_bytes.load(Ordering::Acquire))
+    }
+
+    /// Acquisitions served from the free-list since the last hit-counter reset.
+    pub(crate) fn hits(&self) -> u64 {
+        self.hits.load(Ordering::Relaxed)
+    }
+
+    /// Acquisitions that fell through to a real `cuMemAlloc_v2` since the last reset.
+    pub(crate) fn misses(&self) -> u64 {
+        self.misses.load(Ordering::Relaxed)
+    }
+
+    /// Reset the hit/miss counters (NOT the cached buffers) so pool-hit-rate is
+    /// measured over the same epoch as the rest of the telemetry snapshot. Called
+    /// from the backend's `reset_telemetry`, alongside `CudaTelemetry::reset`.
+    pub(crate) fn reset_hit_counters(&self) {
+        self.hits.store(0, Ordering::Relaxed);
+        self.misses.store(0, Ordering::Relaxed);
     }
 
     pub(crate) fn clear(&self) -> Result<(), BackendError> {

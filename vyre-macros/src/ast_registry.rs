@@ -427,7 +427,7 @@ mod tests {
     #[test]
     fn decoder_arms_then_branch_does_not_contain_barrier_stub() {
         // Before the fix, the `then` branch of each decoder If-node was
-        // `Node::barrier()` — a no-op that silently accepted every opcode
+        // `Node::barrier()`: a no-op that silently accepted every opcode
         // instead of failing loudly (ast-registry-decoder-hash-collision-stub,
         // Law 2 stub).
         //

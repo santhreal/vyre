@@ -19,7 +19,8 @@ use vyre_libs::parsing::c::parse::vast::{
     c11_build_vast_nodes, c11_build_vast_nodes_uses_global_last_child,
     c11_classify_annotated_vast_node_kinds_precomputed_context, c11_precompute_vast_decl_contexts,
     c11_precompute_vast_decl_prefix_starts, c11_precompute_vast_scopes,
-    c11_precompute_vast_scopes_uses_global_stack, c11_prehash_vast_identifiers,
+    c11_precompute_vast_scopes_uses_global_stack, c11_precompute_vast_visible_type,
+    c11_precompute_vast_visible_type_packed_haystack, c11_prehash_vast_identifiers,
     c11_prehash_vast_identifiers_packed_haystack, C_EXPR_SHAPE_STRIDE_U32,
 };
 
@@ -38,6 +39,7 @@ mod result;
 mod scopes;
 mod typedef_classify;
 mod typedef_hashes;
+mod visible_type;
 
 use decl_context::precompute_decl_contexts;
 use dump::dump_typed_vast_as_json;

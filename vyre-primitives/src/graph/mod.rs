@@ -34,6 +34,11 @@ pub(crate) fn checked_csr_offset_count(node_count: u32, op_name: &str) -> Result
 pub mod csr_forward_or_changed;
 /// One BFS frontier step over ProgramGraph CSR.
 pub mod csr_forward_traverse;
+/// The ONE canonical CSR neighbor-expansion edge-scan, shared by every
+/// `csr_forward_or_changed` variant and the persistent-BFS batch step. Lives at
+/// `graph/` level because it is the common parent of both consumer subsystems;
+/// burying it inside one of them would force the other to reach across a sibling.
+pub(crate) mod edge_scan;
 /// One persistent-BFS workgroup step with coalesced change detection.
 pub mod persistent_bfs_step;
 
@@ -49,6 +54,10 @@ pub mod csr_frontier_degree_sum;
 /// Device-side active-frontier queue materialization and queue-driven CSR
 /// expansion for sparse dataflow waves.
 pub mod csr_frontier_queue;
+/// Device-sharded forward frontier expansion: partition the active frontier across
+/// device shards by vertex ownership and OR-merge the per-shard outputs (W3-5
+/// graph-frontier-device-shards), exactly reproducing a single-device expansion.
+pub mod csr_frontier_shard;
 mod csr_frontier_step;
 /// Queue-to-queue sparse CSR delta expansion for GPU-resident fixpoint waves.
 pub mod csr_queue_delta;

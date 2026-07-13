@@ -2,6 +2,8 @@
 
 use std::sync::{Arc, Mutex};
 
+use dashmap::DashMap;
+
 use cudarc::driver::CudaContext;
 use smallvec::SmallVec;
 use vyre_driver::binding::{BindingPlan, BindingRole};
@@ -79,6 +81,11 @@ pub struct CudaBackend {
     pub(crate) graph_capture_lock: Arc<Mutex<()>>,
     pub(crate) async_upload_stream: Arc<Mutex<Option<crate::stream::CudaStream>>>,
     pub(crate) telemetry: Arc<CudaTelemetry>,
+    /// Cache of driver-measured active-blocks-per-SM keyed by
+    /// `(CUfunction as usize, threads_per_block)`: occupancy is constant per
+    /// kernel shape, so this makes the per-launch occupancy-evidence query a map
+    /// lookup after the first launch instead of repeated FFI (Law 7).
+    pub(crate) occupancy_blocks_cache: Arc<DashMap<(usize, u32), u32>>,
     pub(crate) ctx: Arc<CudaContext>,
 }
 
@@ -104,6 +111,7 @@ impl CudaBackend {
         let device = CudaDeviceHandle::acquire_ordinal(ordinal)?;
         let caps = device.caps;
         let ptx_target_sm = select_loadable_ptx_target_sm(caps.ptx_target_sm())?;
+        let ctx = device.ctx;
         Ok(Self {
             caps,
             ptx_target_sm,
@@ -119,7 +127,8 @@ impl CudaBackend {
             graph_capture_lock: Arc::new(Mutex::new(())),
             async_upload_stream: Arc::new(Mutex::new(None)),
             telemetry: Arc::new(CudaTelemetry::default()),
-            ctx: device.ctx,
+            occupancy_blocks_cache: Arc::new(DashMap::new()),
+            ctx,
         })
     }
 
@@ -161,7 +170,7 @@ impl CudaBackend {
     /// reaches host dispatch has been lowered to PTX with native in-kernel grid
     /// barriers (the resident-fixpoint and host-split paths split the barriers
     /// out before lowering, so they never arrive here). Such a kernel MUST be
-    /// launched cooperatively — every CTA co-resident — or the in-kernel grid
+    /// launched cooperatively, every CTA co-resident, or the in-kernel grid
     /// barrier deadlocks. Force cooperative and fail closed when the device
     /// cannot run cooperative launch, rather than silently launching a kernel
     /// that would hang.
@@ -421,14 +430,25 @@ impl CudaBackend {
     }
 
     /// Runtime CUDA telemetry counters for launches, copies, readbacks, and syncs.
+    ///
+    /// The transient device-allocation-pool hit/miss counters are overlaid here
+    /// from the pool itself (their source of truth). `CudaTelemetry` does not hold
+    /// the pool, so a bare `CudaTelemetry::snapshot` reports them as zero and this
+    /// boundary fills in the real values (ONE PLACE for the count, read once here).
     #[must_use]
     pub fn telemetry_snapshot(&self) -> CudaTelemetrySnapshot {
-        self.telemetry.snapshot()
+        let mut snapshot = self.telemetry.snapshot();
+        snapshot.device_pool_hits = self.transient_pool.hits();
+        snapshot.device_pool_misses = self.transient_pool.misses();
+        snapshot
     }
 
     /// Reset runtime CUDA telemetry counters without clearing caches or resident buffers.
     pub fn reset_telemetry(&self) {
         self.telemetry.reset();
+        // Reset the pool hit/miss counters into the same epoch so the hit rate
+        // reflects the window measured after the reset, not lifetime-of-process.
+        self.transient_pool.reset_hit_counters();
     }
 
     /// Bytes of transient CUDA device memory retained for dispatch reuse.

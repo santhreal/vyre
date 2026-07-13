@@ -186,7 +186,7 @@ fn softmax_tiled_program(
     ));
     body.push(Node::if_then(
         Expr::and(
-            Expr::eq(Expr::WorkgroupId { axis: 0 }, Expr::u32(0)),
+            Expr::is_first_workgroup(),
             Expr::eq(Expr::var("local"), Expr::u32(0)),
         ),
         vec![Node::Store {

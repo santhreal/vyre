@@ -165,15 +165,14 @@ mod tests {
     fn preorder_program_validates() {
         // 3-node spine: 0 → 1 → 2 (each node's first_child = next node).
         let (_full, region) = pack_spine_fixture(3);
-        let expected_order =
-            vyre_foundation::vast::walk_preorder_indices(&region, 3, 16).unwrap();
+        let expected_order = vyre_foundation::vast::walk_preorder_indices(&region, 3, 16).unwrap();
         // Spine preorder is always the identity permutation.
         assert_eq!(
             expected_order,
             vec![0u32, 1, 2],
             "spine preorder must be identity [0, 1, 2]"
         );
-        // IR shape is also valid — kept as a supporting check.
+        // IR shape is also valid (kept as a supporting check).
         let p = ast_walk_preorder("nodes", "out", 4, 8);
         assert!(
             vyre::validate(&p).is_empty(),

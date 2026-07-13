@@ -70,9 +70,22 @@ fn persistent_bfs_single_workgroup(
     };
 
     let mut entry: Vec<Node> = vec![
-        // Seed frontier_out from frontier_in.
+        // Seed frontier_out from frontier_in. Gate on the GLOBAL leader `gid_x()==0`,
+        // NOT the per-workgroup leader `local_x()==0`: this is a single-workgroup
+        // kernel (node_count <= workgroup size; >256 goes to the grid-sync variant),
+        // so its intended dispatch is exactly one workgroup. If a caller over-dispatches
+        // it, or a driver rounds up to more than one workgroup, every EXTRA
+        // workgroup's `local_x()==0` leader would otherwise RE-SEED `frontier_out` back
+        // to `frontier_in`, clobbering the first workgroup's already-expanded frontier
+        // (the interpreter runs workgroups in order, so the last re-seed wins → the
+        // output collapses to the unexpanded seed). Guarding on `gid_x()==0` makes only
+        // the first workgroup seed; extra workgroups are inert (their unrolled steps are
+        // already no-ops because `wg_active` is only set to 1 under `gid_x()==0`), so the
+        // result is invariant to over-fire (whole-workgroup GPU dispatch never corrupts
+        // it). Transparent for the intended single-workgroup dispatch, where
+        // `gid_x()==0` and `local_x()==0` are the same lane.
         Node::if_then(
-            Expr::eq(Expr::local_x(), Expr::u32(0)),
+            Expr::eq(t.clone(), Expr::u32(0)),
             vec![Node::loop_for(
                 "seed_word_idx",
                 Expr::u32(0),
@@ -467,90 +480,31 @@ fn persistent_bfs_batch_parallel_step_body(
     let bit_mask = local("bit_mask");
     let src_word = local("src_word");
     let src_active = local("src_active");
-    let edge_start = local("edge_start");
-    let edge_end = local("edge_end");
-    let edge_iter = local("edge");
-    let kind_mask = local("kind_mask");
-    let dst = local("dst");
-    let dst_word_idx = local("dst_word_idx");
-    let dst_bit = local("dst_bit");
-    let old = local("old");
     let changed_old = local("changed_old");
 
+    // Neighbor expansion is the ONE canonical CSR edge-scan. This batch step differs
+    // from a single-bitset caller on exactly two axes, both supplied here: the frontier
+    // word index is offset by this query's `base` (a flat per-query bitset region), and a
+    // newly-set bit ORs this query's `changed[q]` slot. The source-activity bit is read
+    // and snapshotted before the barrier BELOW (the one-hop-per-iteration guarantee), so
+    // this uses the edge-walk-only `csr_edge_expand_nodes`. Output-identical to the former
+    // hand-written closure (the `base +` moved from the atomic-OR index onto the word-index
+    // bind (same storage slot); locked by the graph oracle/fixpoint matrices).
     let edge_scan = || {
-        vec![
-            Node::let_bind(
-                edge_start.as_str(),
-                Expr::load("pg_edge_offsets", src.clone()),
-            ),
-            Node::let_bind(
-                edge_end.as_str(),
-                Expr::load("pg_edge_offsets", Expr::add(src.clone(), Expr::u32(1))),
-            ),
-            Node::loop_for(
-                edge_iter.as_str(),
-                Expr::var(edge_start.as_str()),
-                Expr::var(edge_end.as_str()),
-                vec![
-                    Node::let_bind(
-                        kind_mask.as_str(),
-                        Expr::load("pg_edge_kind_mask", Expr::var(edge_iter.as_str())),
-                    ),
-                    Node::if_then(
-                        Expr::ne(
-                            Expr::bitand(Expr::var(kind_mask.as_str()), Expr::u32(edge_kind_mask)),
-                            Expr::u32(0),
-                        ),
-                        vec![
-                            Node::let_bind(
-                                dst.as_str(),
-                                Expr::load("pg_edge_targets", Expr::var(edge_iter.as_str())),
-                            ),
-                            Node::if_then(
-                                Expr::lt(Expr::var(dst.as_str()), Expr::u32(shape.node_count)),
-                                vec![
-                                    Node::let_bind(
-                                        dst_word_idx.as_str(),
-                                        Expr::shr(Expr::var(dst.as_str()), Expr::u32(5)),
-                                    ),
-                                    Node::let_bind(
-                                        dst_bit.as_str(),
-                                        Expr::shl(
-                                            Expr::u32(1),
-                                            Expr::bitand(Expr::var(dst.as_str()), Expr::u32(31)),
-                                        ),
-                                    ),
-                                    Node::let_bind(
-                                        old.as_str(),
-                                        Expr::atomic_or(
-                                            frontier_out,
-                                            Expr::add(
-                                                base.clone(),
-                                                Expr::var(dst_word_idx.as_str()),
-                                            ),
-                                            Expr::var(dst_bit.as_str()),
-                                        ),
-                                    ),
-                                    Node::if_then(
-                                        Expr::eq(
-                                            Expr::bitand(
-                                                Expr::var(old.as_str()),
-                                                Expr::var(dst_bit.as_str()),
-                                            ),
-                                            Expr::u32(0),
-                                        ),
-                                        vec![Node::let_bind(
-                                            changed_old.as_str(),
-                                            Expr::atomic_or(changed, q.clone(), Expr::u32(1)),
-                                        )],
-                                    ),
-                                ],
-                            ),
-                        ],
-                    ),
-                ],
-            ),
-        ]
+        crate::graph::edge_scan::csr_edge_expand_nodes(
+            shape,
+            frontier_out,
+            src.clone(),
+            |word| Expr::add(base.clone(), word),
+            || {
+                vec![Node::let_bind(
+                    changed_old.as_str(),
+                    Expr::atomic_or(changed, q.clone(), Expr::u32(1)),
+                )]
+            },
+            edge_kind_mask,
+            local_prefix,
+        )
     };
 
     let mut body = vec![

@@ -151,17 +151,39 @@ fn run_phase4(input: Program) -> Result<Program, OptimizerError> {
     }
 }
 
-/// Phase 5: stabilization sweep. Phase 4 can expose cheap aliases or foldable
-/// leaf substitutions after its last CSE/DCE opportunity; finish with the same
-/// ABI-preserving cleanup family (twice) so `optimize(optimize(p)) == optimize(p)`
-/// for backend-visible IR.
+/// Upper bound on stabilization-sweep iterations. A correct pass set converges in
+/// a handful of rounds (each round strictly simplifies: rematerialize a cheap Let,
+/// fold, then DCE/CSE what that exposed); the cap only bounds a hypothetical
+/// oscillating rewrite so we log rather than loop forever.
+const STABILIZE_FIXPOINT_CAP: usize = 16;
+
+/// Phase 5: stabilization sweep to a FIXPOINT. Phase 4 can expose cheap aliases or
+/// foldable leaf substitutions after its last CSE/DCE opportunity, and eliminating
+/// those can expose STILL MORE (a multi-use Let becomes single-use after DCE, then
+/// rematerializes, then DCE removes it). A FIXED number of cleanup rounds therefore
+/// under-converges on large programs, the typedef-visibility scan's `*_scan_limit`
+/// lets survive two rounds but not three, which breaks `optimize(optimize(p)) ==
+/// optimize(p)`. Loop the same ABI-preserving cleanup family until the program stops
+/// changing, so idempotence holds BY CONSTRUCTION for any program size rather than
+/// for whatever round-count the last regression happened to need.
 fn stabilize(phase4: Program) -> Program {
-    let rematerialized = RematerializeCheapLetPass::transform(phase4).program;
-    let folded = ConstFold::transform(canonicalize_engine::run(rematerialized)).program;
-    let cleaned = canonicalize_engine::run(region_inline_engine::run(dce(cse(folded))));
-    let refolded = ConstFold::transform(cleaned).program;
-    let stabilized = canonicalize_engine::run(region_inline_engine::run(dce(cse(refolded))));
-    stabilized.reconcile_runnable_top_level()
+    let mut current = phase4;
+    for _ in 0..STABILIZE_FIXPOINT_CAP {
+        let rematerialized = RematerializeCheapLetPass::transform(current.clone()).program;
+        let folded = ConstFold::transform(canonicalize_engine::run(rematerialized)).program;
+        let cleaned = canonicalize_engine::run(region_inline_engine::run(dce(cse(folded))));
+        let next = cleaned.reconcile_runnable_top_level();
+        if next == current {
+            return next;
+        }
+        current = next;
+    }
+    tracing::error!(
+        cap = STABILIZE_FIXPOINT_CAP,
+        "pre-lowering stabilize did not reach a fixpoint. Fix: inspect the cleanup \
+         family for an oscillating rewrite (rematerialize/const-fold/dce/cse/canonicalize)."
+    );
+    current
 }
 
 /// Run the unified pre-lowering optimization pipeline.
@@ -189,7 +211,7 @@ pub fn optimize(program: Program) -> Program {
     // The `.clone()` retains a fallback copy because `PassScheduler::run` consumes
     // its input and does not return it on error. This is a deliberate cost: it
     // runs at pipeline-BUILD time (once per program), which `ResidentPresencePipeline`
-    // amortizes over millions of scans — it is NOT on the per-scan hot path. The
+    // amortizes over millions of scans, it is NOT on the per-scan hot path. The
     // error branch itself is unreachable in a correct build (pass metadata is
     // validated by `pass_order::tests::live_registered_order_validates`), so on the
     // taken path the clone is pure insurance against a build-level optimizer bug.

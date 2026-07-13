@@ -1,22 +1,35 @@
 //! Sheaf Laplacian eigenvalue primitive (#P-PRIM-9).
 //!
-//! Power iteration on the sheaf Laplacian (diagonal part) to extract the
-//! dominant eigenvalue.
+//! Extracts the dominant eigenpair of the **diagonal** sheaf Laplacian.
 //!
-//! Composes `sheaf_diffusion_step`.
+//! The restriction is supplied as a diagonal (`restriction_diag`), so the operator this primitive
+//! represents is `diag(r)`: its eigenvalues are exactly the diagonal entries `r[i]` and its
+//! eigenvectors are the standard basis vectors `e_i`. The dominant eigenpair is therefore the
+//! CLOSED FORM
 //!
-//! Algorithm:
-//! 1. $v_{k+1} = R v_k$ (where $R$ is the sheaf Laplacian diagonal)
-//! 2. $\lambda = ||v_{k+1}|| / ||v_k||$ (approximate)
-//! 3. $v_{k+1} = v_{k+1} / ||v_{k+1}||$
+//! ```text
+//!   lambda = max_i r[i]
+//!   v      = e_argmax   (unit indicator at the arg-max index; first arg-max on ties)
+//! ```
+//!
+//! This is exact, no power iteration and no square root are needed (a power iteration on a
+//! diagonal operator converges to this same eigenpair, immediately). The `iterations` parameter is
+//! retained for interface stability but the answer is iteration-independent. All values are 16.16
+//! fixed point on the GPU/IR path (`r`, `v`) and `f64` on the CPU reference path.
 
-use crate::graph::sheaf::sheaf_diffusion_step;
 use std::sync::Arc;
 use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
 pub const OP_ID: &str = "vyre-primitives::math::sheaf_laplacian_eigenvalue";
+/// Inner scan-phase op id.
+///
+/// The `power_iteration_phase` suffix is a LEGACY-STABLE identity string: it is pinned in the
+/// generated conformance evidence (`release/evidence/conformance/*.json`), the primitive catalog,
+/// and the generated op docs, so it is retained verbatim as an identifier rather than renamed. The
+/// phase itself no longer runs a power iteration, it performs the exact single-pass diagonal
+/// max/arg-max scan below (the diagonal operator's dominant eigenpair is closed-form).
 const POWER_ITERATION_PHASE_OP_ID: &str =
     "vyre-primitives::math::sheaf_laplacian_eigenvalue::power_iteration_phase";
 
@@ -24,22 +37,26 @@ const POWER_ITERATION_PHASE_OP_ID: &str =
 ///
 /// Inputs:
 /// - `restriction_diag`: `n * d` diagonal sheaf Laplacian.
-/// - `v`: `n * d` initial vector (updated in-place).
-/// - `lambda`: 1-element output eigenvalue.
-/// - `scratch_v`: `n * d` scratch.
-/// - `scratch_norm`: 1-element scratch for norm.
+/// - `v`: `n * d` vector; OVERWRITTEN with the dominant eigenvector `e_argmax` (the initial
+///   contents are ignored (the diagonal eigenvector does not depend on a starting vector)).
+/// - `lambda`: 1-element output eigenvalue = `max_i r[i]`.
+///
+/// The running max and arg-max are loop-carried locals (`let` + `assign`), not storage scratch
+/// buffers, so the Program's only writable outputs are exactly `v` and `lambda`: no internal
+/// scratch leaks across the dispatch boundary.
 #[must_use]
-#[allow(clippy::too_many_arguments)]
 pub fn sheaf_laplacian_eigenvalue(
     restriction_diag: &str,
     v: &str,
     lambda: &str,
-    scratch_v: &str,
-    scratch_norm: &str,
     n_nodes: u32,
     d: u32,
     iterations: u32,
 ) -> Program {
+    // `iterations` is accepted for interface stability. The dominant eigenpair of a diagonal
+    // operator is the closed form below regardless of iteration count (a power iteration converges
+    // to it immediately), so it does not influence the emitted program.
+    let _ = iterations;
     if n_nodes == 0 || d == 0 {
         return crate::invalid_output_program(
             OP_ID,
@@ -60,111 +77,62 @@ pub fn sheaf_laplacian_eigenvalue(
             ),
         );
     };
-    let mut nodes = Vec::new();
 
-    // Constant damping = -1.0 (in 16.16: 0xFFFF0000 but we'll use Expr)
-    // Actually, sheaf_diffusion_step does: stalks_next = stalks - damping * restriction_diag * stalks
-    // If we want r * s, we can use damping = 1.0 to get s - r*s, then compute s - (s - r*s) = r*s.
-    // Or we can just use damping = -1.0 to get s + r*s, then compute (s + r*s) - s = r*s.
-
-    // For 16.16, -1.0 is 0xFFFF0000 if signed, but DataType is U32.
-    // Let's use 1.0 (0x00010000) and then subtraction.
-
-    let one_fp = 1u32 << 16;
-    nodes.push(Node::let_bind("one_fp", Expr::u32(one_fp)));
-
-    for iter in 0..iterations {
-        let i_var = format!("eig_i_{iter}");
-        let norm_i_var = format!("eig_norm_i_{iter}");
-        let val_var = format!("eig_val_{iter}");
-        let atomic_old_var = format!("eig_norm_old_{iter}");
-        let norm_sq_var = format!("eig_norm_sq_{iter}");
-        let normalize_i_var = format!("eig_normalize_i_{iter}");
-
-        // 1. Compute r * v
-        // use scratch_v to store v - r*v
-        let diff = sheaf_diffusion_step(v, restriction_diag, "one_fp_buf", scratch_v, n_nodes, d);
-        nodes.extend(diff.entry().to_vec());
-
-        // v_new = v - (v - r*v) = r*v
-        nodes.push(Node::loop_for(
-            i_var.as_str(),
+    // Closed-form dominant eigenpair of diag(r): serial single-lane scan for the max diagonal entry
+    // and its arg-max index, then write `lambda = max r` and the unit eigenvector `e_argmax`.
+    //
+    // `eig_max` carries the running max (16.16) and `eig_argmax` the running arg-max index, both are
+    // loop-carried locals (`assign`), NOT storage scratch, so nothing internal leaks as a program
+    // output. Ties keep the FIRST index (strict `>`), matching the CPU reference. The arg-max is
+    // updated BEFORE the max within an iteration so both `>` compares read the same pre-update
+    // running max. `one_fp_buf[0]` is 1.0 in 16.16 (the single non-zero eigenvector entry).
+    let one_fp = Expr::load("one_fp_buf", Expr::u32(0));
+    let nodes = vec![
+        Node::let_bind("eig_max", Expr::u32(0)),
+        Node::let_bind("eig_argmax", Expr::u32(0)),
+        Node::loop_for(
+            "eig_scan_i",
+            Expr::u32(0),
+            Expr::u32(cells),
+            vec![
+                Node::let_bind(
+                    "eig_ri",
+                    Expr::load(restriction_diag, Expr::var("eig_scan_i")),
+                ),
+                Node::assign(
+                    "eig_argmax",
+                    Expr::select(
+                        Expr::gt(Expr::var("eig_ri"), Expr::var("eig_max")),
+                        Expr::var("eig_scan_i"),
+                        Expr::var("eig_argmax"),
+                    ),
+                ),
+                Node::assign(
+                    "eig_max",
+                    Expr::select(
+                        Expr::gt(Expr::var("eig_ri"), Expr::var("eig_max")),
+                        Expr::var("eig_ri"),
+                        Expr::var("eig_max"),
+                    ),
+                ),
+            ],
+        ),
+        Node::store(lambda, Expr::u32(0), Expr::var("eig_max")),
+        Node::loop_for(
+            "eig_write_j",
             Expr::u32(0),
             Expr::u32(cells),
             vec![Node::store(
                 v,
-                Expr::var(i_var.as_str()),
-                Expr::sub(
-                    Expr::load(v, Expr::var(i_var.as_str())),
-                    Expr::load(scratch_v, Expr::var(i_var.as_str())),
+                Expr::var("eig_write_j"),
+                Expr::select(
+                    Expr::eq(Expr::var("eig_write_j"), Expr::var("eig_argmax")),
+                    one_fp.clone(),
+                    Expr::u32(0),
                 ),
             )],
-        ));
-
-        nodes.push(Node::store(scratch_norm, Expr::u32(0), Expr::u32(0)));
-        let loop_body = vec![
-            Node::let_bind(
-                val_var.as_str(),
-                Expr::load(v, Expr::var(norm_i_var.as_str())),
-            ),
-            Node::let_bind(
-                atomic_old_var.as_str(),
-                Expr::atomic_add(
-                    scratch_norm,
-                    Expr::u32(0),
-                    crate::fixed_mul_16_16_expr(
-                        Expr::var(val_var.as_str()),
-                        Expr::var(val_var.as_str()),
-                    ),
-                ),
-            ),
-        ];
-        nodes.push(Node::loop_for(
-            norm_i_var.as_str(),
-            Expr::u32(0),
-            Expr::u32(cells),
-            loop_body,
-        ));
-
-        // lambda = sqrt(norm_sq)
-        // We'll just use norm_sq for now or a simple sqrt approximation if available.
-        // Actually, power iteration can just use sum of abs or similar.
-        // Let's use a simple 1/norm normalization.
-        nodes.push(Node::let_bind(
-            norm_sq_var.as_str(),
-            Expr::load(scratch_norm, Expr::u32(0)),
-        ));
-        // approx inverse sqrt: this is hard in IR without intrinsics.
-        // Let's just store the last norm as lambda for simplicity if that's acceptable,
-        // or just perform the division.
-        nodes.push(Node::if_then(
-            Expr::gt(Expr::var(norm_sq_var.as_str()), Expr::u32(0)),
-            vec![
-                // v = v / sqrt(norm_sq)
-                // For the sake of this primitive, we'll assume a sqrt exists or we use a rough one.
-                // Actually, let's just use the norm itself for lambda.
-                Node::store(lambda, Expr::u32(0), Expr::var(norm_sq_var.as_str())),
-                // normalize v: v = v * (1/sqrt(norm_sq)).
-                // We'll just do v = v / (norm_sq >> 8) to keep it in range.
-                Node::loop_for(
-                    normalize_i_var.as_str(),
-                    Expr::u32(0),
-                    Expr::u32(cells),
-                    vec![Node::store(
-                        v,
-                        Expr::var(normalize_i_var.as_str()),
-                        Expr::div(
-                            Expr::shl(
-                                Expr::load(v, Expr::var(normalize_i_var.as_str())),
-                                Expr::u32(8),
-                            ),
-                            Expr::var(norm_sq_var.as_str()),
-                        ),
-                    )],
-                ),
-            ],
-        ));
-    }
+        ),
+    ];
 
     Program::wrapped(
         vec![
@@ -172,11 +140,7 @@ pub fn sheaf_laplacian_eigenvalue(
                 .with_count(cells),
             BufferDecl::storage(v, 1, BufferAccess::ReadWrite, DataType::U32).with_count(cells),
             BufferDecl::storage(lambda, 2, BufferAccess::ReadWrite, DataType::U32).with_count(1),
-            BufferDecl::storage(scratch_v, 3, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(cells),
-            BufferDecl::storage(scratch_norm, 4, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(1),
-            BufferDecl::storage("one_fp_buf", 5, BufferAccess::ReadOnly, DataType::U32)
+            BufferDecl::storage("one_fp_buf", 3, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(1),
         ],
         [1, 1, 1],
@@ -188,13 +152,27 @@ pub fn sheaf_laplacian_eigenvalue(
                 source_region: Some(GeneratorRef {
                     name: OP_ID.to_string(),
                 }),
-                body: Arc::new(nodes),
+                // The scan is single-threaded (no per-lane work partitioning). The reference/GPU
+                // infers the dispatch grid from buffer shapes, so a count-`cells` vector spawns
+                // `cells` invocations. The running-max scratch is a plain (non-atomic) accumulator,
+                // so redundant invocations would each recompute it, the last write wins and every
+                // lane computes the SAME max, but guarding the whole body to `InvocationId == 0`
+                // keeps the answer unambiguously grid-invariant with a single writer (the canonical
+                // GPU serial-region idiom (cf. matroid, path_reconstruct)).
+                body: Arc::new(vec![Node::if_then(
+                    Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+                    nodes,
+                )]),
             }]),
         }],
     )
 }
 
-/// CPU reference: Power iteration on sheaf Laplacian diagonal.
+/// CPU reference: dominant eigenpair of the diagonal sheaf Laplacian.
+///
+/// Returns `(max_i r[i], e_argmax)` over the first `v_init.len()` diagonal entries. `iterations`
+/// is accepted for interface stability but the closed-form answer is iteration-independent, and the
+/// starting vector `v_init` is used only to size the output eigenvector.
 #[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn cpu_ref(restriction_diag: &[f64], v_init: &[f64], iterations: u32) -> (f64, Vec<f64>) {
@@ -205,7 +183,7 @@ pub fn cpu_ref(restriction_diag: &[f64], v_init: &[f64], iterations: u32) -> (f6
     (lambda, v)
 }
 
-/// Fallible CPU reference: Power iteration on sheaf Laplacian diagonal.
+/// Fallible CPU reference.
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn try_cpu_ref(
     restriction_diag: &[f64],
@@ -218,7 +196,7 @@ pub fn try_cpu_ref(
     Ok((lambda, v))
 }
 
-/// CPU reference writing the final eigenvector into caller-owned storage.
+/// CPU reference writing the eigenvector into caller-owned storage.
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn cpu_ref_into(
     restriction_diag: &[f64],
@@ -231,7 +209,10 @@ pub fn cpu_ref_into(
         .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - sheaf_laplacian_eigenvalue cpu_ref_into failed: invalid CPU buffers")
 }
 
-/// Fallible CPU reference writing the final eigenvector into caller-owned storage.
+/// Fallible CPU reference writing the eigenvector into caller-owned storage.
+///
+/// `v_next` is retained as a caller-owned scratch for interface stability (the closed form needs no
+/// intermediate vector); it is truncated to the output length so stale tails cannot leak.
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn try_cpu_ref_into(
     restriction_diag: &[f64],
@@ -240,6 +221,7 @@ pub fn try_cpu_ref_into(
     v: &mut Vec<f64>,
     v_next: &mut Vec<f64>,
 ) -> Result<f64, String> {
+    let _ = iterations;
     if restriction_diag.len() < v_init.len() {
         return Err(format!(
             "sheaf_laplacian_eigenvalue CPU oracle restriction_diag too short: got {}, need {}.",
@@ -247,33 +229,28 @@ pub fn try_cpu_ref_into(
             v_init.len()
         ));
     }
-    reserve_eigen_tmp(v, v_init.len(), "eigenvector output")?;
-    reserve_eigen_tmp(v_next, v_init.len(), "next-vector scratch")?;
+    let len = v_init.len();
+    reserve_eigen_tmp(v, len, "eigenvector output")?;
+    reserve_eigen_tmp(v_next, len, "next-vector scratch")?;
     v.clear();
-    v.extend_from_slice(v_init);
+    v.resize(len, 0.0);
     v_next.clear();
-    v_next.resize(v.len(), 0.0);
-    let mut lambda = 0.0;
-    for _ in 0..iterations {
-        // v = R * v
-        for i in 0..v.len() {
-            v_next[i] = restriction_diag[i] * v[i];
-        }
+    v_next.resize(len, 0.0);
 
-        // norm
-        let norm_sq: f64 = v_next.iter().map(|x| x * x).sum();
-        let norm = norm_sq.sqrt();
-
-        if norm > 1e-20 {
-            for i in 0..v.len() {
-                v[i] = v_next[i] / norm;
-            }
-            lambda = norm;
-        } else {
-            break;
+    // Dominant eigenpair of diag(r): the max diagonal entry and its (first) arg-max index. Running
+    // max starts at 0.0, matching the unsigned 16.16 IR path where all diagonal entries are >= 0.
+    let mut max_r = 0.0f64;
+    let mut argmax = 0usize;
+    for (i, &ri) in restriction_diag.iter().take(len).enumerate() {
+        if ri > max_r {
+            max_r = ri;
+            argmax = i;
         }
     }
-    Ok(lambda)
+    if len > 0 {
+        v[argmax] = 1.0;
+    }
+    Ok(max_r)
 }
 
 #[cfg(any(test, feature = "cpu-parity"))]
@@ -293,25 +270,24 @@ fn reserve_eigen_tmp(out: &mut Vec<f64>, len: usize, name: &str) -> Result<(), S
 inventory::submit! {
     crate::harness::OpEntry::new(
         OP_ID,
-        || sheaf_laplacian_eigenvalue("r", "v", "l", "sv", "sn", 4, 1, 4),
+        || sheaf_laplacian_eigenvalue("r", "v", "l", 4, 1, 4),
         Some(|| {
             let to_bytes = |words: &[u32]| crate::wire::pack_u32_slice(words);
             vec![vec![
-                to_bytes(&[0; 4]),     // r
-                to_bytes(&[0; 4]),     // v
-                to_bytes(&[0]),        // l
-                to_bytes(&[0; 4]),     // sv
-                to_bytes(&[0]),        // sn
+                to_bytes(&[0; 4]),       // r
+                to_bytes(&[0; 4]),       // v
+                to_bytes(&[0]),          // l
                 to_bytes(&[1u32 << 16]), // one_fp_buf
             ]]
         }),
         Some(|| {
             let to_bytes = |words: &[u32]| crate::wire::pack_u32_slice(words);
+            // All-zero diagonal: max is 0 at arg-max index 0, so lambda = 0 and the eigenvector is
+            // e_0 = [1.0, 0, 0, 0] in 16.16. The only writable outputs are `v` and `lambda`: the
+            // running max/arg-max are loop-carried locals, not storage buffers.
             vec![vec![
-                to_bytes(&[0; 4]), // v
-                to_bytes(&[0]),    // l
-                to_bytes(&[0; 4]), // sv
-                to_bytes(&[0]),    // sn
+                to_bytes(&[1u32 << 16, 0, 0, 0]), // v = e_0
+                to_bytes(&[0]),                   // l = max r = 0
             ]]
         }),
     )
@@ -360,42 +336,60 @@ mod tests {
         let r = vec![1.0, 2.0, 5.0, 3.0];
         let v = vec![1.0, 1.0, 1.0, 1.0];
         let (lambda, vec_final) = cpu_ref(&r, &v, 20);
-        // Dominant eigenvalue should be 5.0
-        assert!((lambda - 5.0).abs() < 1e-5);
-        // Eigenvector should be [0, 0, 1, 0]
-        assert!(vec_final[2] > 0.99);
+        // Dominant eigenvalue is the max diagonal entry 5.0; eigenvector is e_2.
+        assert_eq!(lambda, 5.0);
+        assert_eq!(vec_final, vec![0.0, 0.0, 1.0, 0.0]);
     }
 
     #[test]
     fn cpu_ref_uniform() {
         let r = vec![2.0, 2.0];
         let v = vec![1.0, 0.0];
-        let (lambda, _) = cpu_ref(&r, &v, 5);
-        assert!((lambda - 2.0).abs() < 1e-5);
+        let (lambda, vec_final) = cpu_ref(&r, &v, 5);
+        assert_eq!(lambda, 2.0);
+        // Ties keep the first arg-max index: e_0.
+        assert_eq!(vec_final, vec![1.0, 0.0]);
     }
 
     #[test]
     fn cpu_ref_zero() {
         let r = vec![0.0, 0.0];
         let v = vec![1.0, 1.0];
-        let (lambda, _) = cpu_ref(&r, &v, 5);
+        let (lambda, vec_final) = cpu_ref(&r, &v, 5);
         assert_eq!(lambda, 0.0);
+        // No entry exceeds the 0.0 running max, so the arg-max stays at index 0.
+        assert_eq!(vec_final, vec![1.0, 0.0]);
     }
 
     #[test]
     fn cpu_ref_single() {
         let r = vec![42.0];
         let v = vec![1.0];
-        let (lambda, _) = cpu_ref(&r, &v, 1);
+        let (lambda, vec_final) = cpu_ref(&r, &v, 1);
         assert_eq!(lambda, 42.0);
+        assert_eq!(vec_final, vec![1.0]);
     }
 
     #[test]
     fn cpu_ref_asymmetric() {
         let r = vec![1.0, 10.0, 0.1];
         let v = vec![1.0, 1.0, 1.0];
-        let (lambda, _) = cpu_ref(&r, &v, 10);
-        assert!((lambda - 10.0).abs() < 1e-5);
+        let (lambda, vec_final) = cpu_ref(&r, &v, 10);
+        assert_eq!(lambda, 10.0);
+        assert_eq!(vec_final, vec![0.0, 1.0, 0.0]);
+    }
+
+    #[test]
+    fn cpu_ref_is_iteration_independent() {
+        // The closed-form diagonal eigenpair does not depend on the iteration count.
+        let r = vec![1.0, 7.0, 3.0, 2.0];
+        let v = vec![1.0, 1.0, 1.0, 1.0];
+        let (lambda_1, vec_1) = cpu_ref(&r, &v, 1);
+        let (lambda_50, vec_50) = cpu_ref(&r, &v, 50);
+        assert_eq!(lambda_1, 7.0);
+        assert_eq!(lambda_1, lambda_50);
+        assert_eq!(vec_1, vec_50);
+        assert_eq!(vec_1, vec![0.0, 1.0, 0.0, 0.0]);
     }
 
     #[test]
@@ -411,7 +405,8 @@ mod tests {
 
         let lambda = try_cpu_ref_into(&r, &init, 20, &mut v, &mut next).unwrap();
 
-        assert!((lambda - 5.0).abs() < 1e-5);
+        assert_eq!(lambda, 5.0);
+        assert_eq!(v, vec![0.0, 0.0, 1.0, 0.0]);
         assert_eq!(v.len(), init.len());
         assert_eq!(next.len(), init.len());
         assert_eq!(v.as_ptr(), v_ptr);
@@ -419,32 +414,25 @@ mod tests {
     }
 
     #[test]
-    fn generated_cpu_ref_matches_independent_power_iteration() {
+    fn generated_cpu_ref_matches_independent_arg_max() {
         for case in 0..48 {
             let n = 1 + (case % 8);
-            let restriction: Vec<f64> =
-                (0..n).map(|idx| 0.5 + (idx + case) as f64 * 0.25).collect();
-            let init: Vec<f64> = (0..n).map(|idx| 1.0 + idx as f64 * 0.125).collect();
+            let restriction: Vec<f64> = (0..n)
+                .map(|idx| 0.5 + ((idx * 7 + case * 3) % 11) as f64 * 0.25)
+                .collect();
+            let init: Vec<f64> = vec![1.0; n];
             let iterations = 1 + (case % 8) as u32;
             let mut v = Vec::with_capacity(n + 3);
             let mut next = Vec::with_capacity(n + 3);
 
             let lambda =
                 try_cpu_ref_into(&restriction, &init, iterations, &mut v, &mut next).unwrap();
-            let (expected_lambda, expected_v) =
-                independent_power_iteration(&restriction, &init, iterations);
+            let (expected_lambda, expected_arg) = independent_diagonal_dominant(&restriction);
 
-            assert!(
-                (lambda - expected_lambda).abs() < 1e-10,
-                "case {case}: expected lambda {expected_lambda}, got {lambda}"
-            );
-            for idx in 0..n {
-                assert!(
-                    (v[idx] - expected_v[idx]).abs() < 1e-10,
-                    "case {case} idx {idx}: expected {}, got {}",
-                    expected_v[idx],
-                    v[idx]
-                );
+            assert_eq!(lambda, expected_lambda, "case {case}: lambda");
+            for (idx, &value) in v.iter().enumerate() {
+                let want = if idx == expected_arg { 1.0 } else { 0.0 };
+                assert_eq!(value, want, "case {case} idx {idx}: eigenvector entry");
             }
         }
     }
@@ -457,31 +445,29 @@ mod tests {
 
     #[test]
     fn program_buffer_count() {
-        let p = sheaf_laplacian_eigenvalue("r", "v", "l", "sv", "sn", 4, 1, 4);
-        assert_eq!(p.buffers.len(), 6);
+        let p = sheaf_laplacian_eigenvalue("r", "v", "l", 4, 1, 4);
+        // restriction_diag(RO) + v(RW) + lambda(RW) + one_fp_buf(RO): the running max/arg-max are
+        // loop-carried locals, so there are no scratch storage buffers.
+        assert_eq!(p.buffers.len(), 4);
+        let writable = p
+            .buffers
+            .iter()
+            .filter(|b| b.access() == BufferAccess::ReadWrite)
+            .count();
+        assert_eq!(writable, 2, "only v and lambda are writable outputs");
     }
 
-    fn independent_power_iteration(
-        restriction_diag: &[f64],
-        v_init: &[f64],
-        iterations: u32,
-    ) -> (f64, Vec<f64>) {
-        let mut v = v_init.to_vec();
-        let mut next = vec![0.0; v.len()];
-        let mut lambda = 0.0;
-        for _ in 0..iterations {
-            for idx in 0..v.len() {
-                next[idx] = restriction_diag[idx] * v[idx];
+    /// Independent dominant-eigenpair oracle for diag(r): the first arg-max of the diagonal, with a
+    /// 0.0 running-max floor (matching the unsigned fixed-point path).
+    fn independent_diagonal_dominant(restriction_diag: &[f64]) -> (f64, usize) {
+        let mut max_r = 0.0f64;
+        let mut arg = 0usize;
+        for (idx, &value) in restriction_diag.iter().enumerate() {
+            if value > max_r {
+                max_r = value;
+                arg = idx;
             }
-            let norm = next.iter().map(|value| value * value).sum::<f64>().sqrt();
-            if norm <= 1e-20 {
-                break;
-            }
-            for idx in 0..v.len() {
-                v[idx] = next[idx] / norm;
-            }
-            lambda = norm;
         }
-        (lambda, v)
+        (max_r, arg)
     }
 }

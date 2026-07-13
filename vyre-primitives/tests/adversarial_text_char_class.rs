@@ -2,24 +2,39 @@
 
 use vyre_foundation::ir::DataType;
 use vyre_primitives::text::char_class::{char_class, char_class_u8, reference_char_class};
+use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack_u32s, pack_u32_slice as pack_u32s};
 use vyre_reference::value::Value;
 
-fn pack_u32s(words: &[u32]) -> Vec<u8> {
-    let mut bytes = Vec::with_capacity(words.len() * 4);
-    for &word in words {
-        bytes.extend_from_slice(&word.to_le_bytes());
-    }
-    bytes
-}
-
-fn unpack_u32s(bytes: &[u8]) -> Vec<u32> {
-    let mut words = Vec::with_capacity(bytes.len() / 4);
-    for chunk in bytes.chunks_exact(4) {
-        words.push(u32::from_le_bytes(
-            chunk.try_into().expect("Fix: u32 chunk conversion failed"),
-        ));
-    }
-    words
+#[test]
+fn char_class_masks_high_bit_source_and_records_no_interpreter_oob() {
+    // The compat char_class path reads a U32 source; an element > 255 must be
+    // masked (& 0xFF) into the 256-entry table, never read past it. Assert the
+    // interpreter records ZERO OOB accesses, proving the mask (not the interpreter's
+    // silent zero-fill) keeps the index in bounds, and that the element classifies
+    // as its low byte. Removing the `& 0xFF` would OOB-read the table (UB on CUDA)
+    // and this test would see report.total() > 0.
+    let mut table = [0u32; 256];
+    table[0x41] = 0xABCD; // low byte of 0x0141 is 0x41
+    let program = char_class("source", "classified", 1);
+    let (outputs, report) = vyre_reference::reference_eval_oob_report(
+        &program,
+        &[
+            Value::from(pack_u32s(&[0x0141])), // > 255
+            Value::from(pack_u32s(&table)),
+            Value::from(vec![0u8; 4]),
+        ],
+    )
+    .expect("Fix: char_class must reference-evaluate a high-bit source element");
+    assert_eq!(
+        report.total(),
+        0,
+        "Fix: masked table index must stay in bounds without relying on interpreter OOB masking"
+    );
+    let out = unpack_u32s(&outputs[0].to_bytes());
+    assert_eq!(
+        out[0], 0xABCD,
+        "Fix: 0x0141 must classify as its low byte 0x41 via the `& 0xFF` mask"
+    );
 }
 
 fn run_program(source: &[u8], table: &[u32; 256]) -> Vec<u32> {

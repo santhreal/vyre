@@ -118,6 +118,7 @@ Status values:
 | `current` | 2026-05-26 | 2026-05-26 | [docs/RUNTIME_PIPELINE.md](RUNTIME_PIPELINE.md) |
 | `current` | 2026-06-03 | 2026-06-03 | [docs/RUST_COMPILER_BUILDOUT.md](RUST_COMPILER_BUILDOUT.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/santh-standard.md](santh-standard.md) |
+| `current` | 2026-07-03 | 2026-07-03 | [docs/scanning-a-corpus-the-right-way.md](scanning-a-corpus-the-right-way.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/semver-policy.md](semver-policy.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/stability.md](stability.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/SUBSTRATE_RFCS.md](SUBSTRATE_RFCS.md) |
@@ -196,6 +197,11 @@ Status values:
 | `archived` | 2026-05-26 | 2026-05-26 | [docs/legacy/CC_OWNED_BACKLOG_2026-05-01.md](legacy/CC_OWNED_BACKLOG_2026-05-01.md) |
 | `archived` | 2026-05-26 | 2026-05-26 | [docs/legacy/PERF_ROADMAP_2026-05-01.md](legacy/PERF_ROADMAP_2026-05-01.md) |
 | `archived` | 2026-05-26 | 2026-05-26 | [docs/legacy/SEPARATION_AUDIT_2026-05-01.md](legacy/SEPARATION_AUDIT_2026-05-01.md) |
+| `current` | 2026-07-12 | 2026-07-12 | [docs/GPU_OOM_SEGMENTATION.md](GPU_OOM_SEGMENTATION.md) |
+| `current` | 2026-07-12 | 2026-07-12 | [docs/metal_driver_and_vyre_innovation_plan.md](metal_driver_and_vyre_innovation_plan.md) |
+| `current` | 2026-07-12 | 2026-07-12 | [docs/SUBGROUP_REDUCE_GENERALIZATION.md](SUBGROUP_REDUCE_GENERALIZATION.md) |
+| `current` | 2026-07-12 | 2026-07-12 | [docs/optimization/ALL_AXES_ACCELERATION_PLAN.md](optimization/ALL_AXES_ACCELERATION_PLAN.md) |
+| `current` | 2026-07-12 | 2026-07-12 | [docs/optimization/XTASK_COMMAND_MATRIX.md](optimization/XTASK_COMMAND_MATRIX.md) |
 
 ## Non-public internals
 

@@ -5,11 +5,11 @@
 //! loop, and accumulates directly. This eliminates the 8× memory expansion
 //! of a separate unpack dispatch.
 
-use crate::region::wrap_anonymous;
 use crate::math::linalg::{
     plan_matmul_kernel, F32MatmulMode, MatmulFallbackReason, MatmulKernelCapabilities,
     MatmulKernelPath, MatmulKernelPlan, MatrixShape,
 };
+use crate::region::wrap_anonymous;
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_spec::{QuantizationScale, QuantizationZeroPoint};
 
@@ -162,8 +162,7 @@ fn quantized_linear_4bit_planner_evidence(
     }
     if group_size == 0 {
         return Err(
-            "Fix: linear_4bit_affine_grouped planner evidence requires group_size > 0."
-                .to_string(),
+            "Fix: linear_4bit_affine_grouped planner evidence requires group_size > 0.".to_string(),
         );
     }
     if in_dim % 8 != 0 {
@@ -173,8 +172,7 @@ fn quantized_linear_4bit_planner_evidence(
     }
 
     let packed_words = (in_dim / 8).checked_mul(out_dim).ok_or_else(|| {
-        "Fix: linear_4bit_affine_grouped planner evidence packed weights overflow u32."
-            .to_string()
+        "Fix: linear_4bit_affine_grouped planner evidence packed weights overflow u32.".to_string()
     })?;
     let group_count = in_dim.div_ceil(group_size);
     let sidecar_values = group_count.checked_mul(out_dim).ok_or_else(|| {
@@ -932,11 +930,10 @@ mod tests {
             "expected fused affine dequantized dot product 150.0, got {}",
             out_vals[0]
         );
-        let evidence =
-            linear_4bit_affine_grouped_planner_evidence(&QuantizedLinear4BitSpec::affine_grouped(
-                8, 2, 4,
-            ))
-            .expect("Fix: planner evidence fixture must build");
+        let evidence = linear_4bit_affine_grouped_planner_evidence(
+            &QuantizedLinear4BitSpec::affine_grouped(8, 2, 4),
+        )
+        .expect("Fix: planner evidence fixture must build");
         assert!(
             (out_vals[0] - 150.0).abs() <= evidence.output_drift_abs_tolerance,
             "Fix: runtime output drift must stay within planner evidence tolerance."
@@ -1030,7 +1027,10 @@ mod tests {
         assert_eq!(evidence.group_count, 4);
         assert_eq!(evidence.packed_weight_bytes, 524_288);
         assert_eq!(evidence.dequantized_weight_bytes, 4_194_304);
-        assert_eq!(evidence.dequant_bytes_elided, evidence.dequantized_weight_bytes);
+        assert_eq!(
+            evidence.dequant_bytes_elided,
+            evidence.dequantized_weight_bytes
+        );
         assert_eq!(evidence.sidecar_bytes, 131_072);
         assert_eq!(evidence.bias_bytes, 16_384);
         assert_eq!(evidence.output_bytes, 16_384);

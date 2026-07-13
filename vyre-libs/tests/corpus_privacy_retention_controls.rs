@@ -1,9 +1,7 @@
 //! Corpus privacy retention controls test suite.
 
-const PRIVACY: &str =
-    include_str!("../../docs/optimization/CORPUS_PRIVACY_CLASSIFICATION.toml");
-const RETENTION: &str =
-    include_str!("../../docs/optimization/DATA_RETENTION_MEDIA_CONTROLS.toml");
+const PRIVACY: &str = include_str!("../../docs/optimization/CORPUS_PRIVACY_CLASSIFICATION.toml");
+const RETENTION: &str = include_str!("../../docs/optimization/DATA_RETENTION_MEDIA_CONTROLS.toml");
 
 #[test]
 fn corpus_privacy_classification_records_risk_allowed_use_redaction_and_publication_gates() {

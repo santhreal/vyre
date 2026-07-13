@@ -68,7 +68,12 @@ fn backend_dispatches_result(id: &str) -> Result<bool, BackendError> {
 /// Return `true` when the named backend submitted `dispatches: true`.
 #[must_use]
 pub fn backend_dispatches(id: &str) -> bool {
-    backend_dispatches_result(id).unwrap_or(false)
+    backend_dispatches_result(id).unwrap_or_else(|error| {
+        tracing::error!(
+            "backend registry dispatch-capability query failed for `{id}`, treating as non-dispatching: {error}"
+        );
+        false
+    })
 }
 
 fn backend_precedence_result(id: &str) -> Result<u32, BackendError> {
@@ -106,7 +111,12 @@ fn backend_precedence_result(id: &str) -> Result<u32, BackendError> {
 /// backends that did not submit a `BackendPrecedence` entry.
 #[must_use]
 pub fn backend_precedence(id: &str) -> u32 {
-    backend_precedence_result(id).unwrap_or(u32::MAX)
+    backend_precedence_result(id).unwrap_or_else(|error| {
+        tracing::error!(
+            "backend registry precedence query failed for `{id}`, treating as lowest precedence: {error}"
+        );
+        u32::MAX
+    })
 }
 
 fn registered_backends_by_precedence_slice_result(
@@ -158,7 +168,12 @@ fn registered_backends_by_precedence_slice_result(
 /// Return every registered backend sorted by precedence (low rank first).
 #[must_use]
 pub fn registered_backends_by_precedence_slice() -> &'static [&'static BackendRegistration] {
-    registered_backends_by_precedence_slice_result().unwrap_or(&[])
+    registered_backends_by_precedence_slice_result().unwrap_or_else(|error| {
+        tracing::error!(
+            "backend registry precedence enumeration failed, treating as no linked backends: {error}"
+        );
+        &[]
+    })
 }
 
 /// Return every registered backend sorted by precedence (low rank first).
@@ -425,6 +440,13 @@ mod tests {
             Ok(registration) => assert!(registration.is_none()),
             Err(error) => panic!("registry id query failed: {error}"),
         }
+    }
+
+    #[test]
+    fn public_wrappers_return_absent_defaults_for_missing_backend() {
+        let missing_id = "__vyre_missing_backend__";
+        assert!(!backend_dispatches(missing_id));
+        assert_eq!(backend_precedence(missing_id), u32::MAX);
     }
 
     #[test]

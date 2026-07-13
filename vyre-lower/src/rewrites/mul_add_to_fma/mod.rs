@@ -40,14 +40,12 @@ fn mul_add_to_fma_body(mut body: KernelBody) -> KernelBody {
     // Two-pass: decide promotions, then apply.
     let mut promotions: Vec<(usize, u32, u32, u32)> = Vec::new(); // (add_idx, a_id, b_id, c_id)
     for (idx, op) in body.ops.iter().enumerate() {
-        let bin = match &op.kind {
-            KernelOpKind::BinOpKind(BinOp::Add) => BinOp::Add,
-            _ => continue,
-        };
+        if !matches!(op.kind, KernelOpKind::BinOpKind(BinOp::Add)) {
+            continue;
+        }
         if op.operands.len() != 2 {
             continue;
         }
-        let _ = bin;
         let lhs = op.operands[0];
         let rhs = op.operands[1];
 

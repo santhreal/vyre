@@ -177,14 +177,12 @@ pub fn try_decode_standard_packed_reference_into(
     let decoded_words = blocks
         .checked_mul(3)
         .ok_or(Base64DecodeReferenceError::CapacityOverflow { blocks })?;
-    if decoded_words > out.capacity() {
-        out.try_reserve_exact(decoded_words - out.capacity())
-            .map_err(|source| Base64DecodeReferenceError::Allocation {
-                requested: decoded_words,
-                source: source.to_string(),
-            })?;
-    }
-    out.clear();
+    crate::hostbuf::reserve_exact_cleared(out, decoded_words).map_err(|source| {
+        Base64DecodeReferenceError::Allocation {
+            requested: decoded_words,
+            source: source.to_string(),
+        }
+    })?;
     out.resize(decoded_words, 0);
     for block in 0..blocks {
         let base = block * 4;
@@ -224,7 +222,16 @@ fn clamp_lookup(name: &str, table: &str) -> Vec<Node> {
     let raw = format!("{name}_raw");
     let value = format!("{name}_v");
     vec![
-        Node::let_bind(raw.as_str(), Expr::load(table, Expr::var(name))),
+        // Masked 256-table lookup via the canonical ONE-PLACE helper: a >255 input
+        // element (the input buffer is U32 and unvalidated) folds to `c & 0xFF`
+        // instead of reading past the 256-entry decode table (a raw OOB read is UB
+        // on CUDA). Transparent for valid bytes; an out-of-range value lands on a
+        // non-base64 slot (INVALID → clamped to 0 below). Using the shared helper
+        // is what keeps this mask from being forgotten again.
+        Node::let_bind(
+            raw.as_str(),
+            crate::ir_safe::byte_table_lookup(table, Expr::var(name)),
+        ),
         Node::let_bind(
             value.as_str(),
             Expr::select(
@@ -579,12 +586,12 @@ mod tests {
         // blessed Law-10 fix for an infallible parity wrapper.
         assert!(
             !production.contains(".expect(") && !production.contains(".unwrap("),
-            "Fix: base64 production wrappers must not use bare .unwrap()/.expect() — use an explicit panic!() with the error."
+            "Fix: base64 production wrappers must not use bare .unwrap()/.expect() (use an explicit panic!() with the error)."
         );
         // No SILENT fallback: returning empty on failure masks a parity divergence (Law 10/6).
         assert!(
             !production.contains(concat!("eprintln", "!(\"vyre-primitives base64")),
-            "Fix: base64 CPU oracle must not log-and-return empty on error — fail loud via panic!() so callers use the try_ variant."
+            "Fix: base64 CPU oracle must not log-and-return empty on error (fail loud via panic!() so callers use the try_ variant)."
         );
         assert!(
             production.contains("panic!("),
@@ -648,5 +655,51 @@ mod tests {
         assert_eq!(cpu_base64_decode(b"Zm9vYg=="), b"foob");
         assert_eq!(cpu_base64_decode(b"Zm9vYmE="), b"fooba");
         assert_eq!(cpu_base64_decode(b"Zm9vYmFy"), b"foobar");
+    }
+
+    #[test]
+    fn table_index_is_masked_so_high_bit_input_cannot_read_out_of_bounds() {
+        use vyre_reference::value::Value;
+        // "TWFu" decodes to "Man". The U32 input buffer can carry a >255 element
+        // (it is unvalidated); here the first char is `0x100 | 'T'`. The `& 0xFF`
+        // index mask must fold it back to 'T' so the decode is IDENTICAL to the
+        // clean input, and must never read past the 256-entry decode table (a raw
+        // OOB read is UB on CUDA). This is a regression LOCK: the OLD unmasked
+        // `load(table, c)` OOB-indexes the table (zero-filled to 0 by the reference
+        // interpreter), decoding a wrong first byte instead of 'M'.
+        let input_len = 4u32;
+        let dirty = [
+            0x0100u32 | u32::from(b'T'),
+            u32::from(b'W'),
+            u32::from(b'F'),
+            u32::from(b'u'),
+        ];
+        let program = base64_decode("input", "table", "output", "decoded_len", input_len);
+        let inputs = vec![
+            Value::from(crate::wire::pack_u32_slice(&dirty)),
+            Value::from(crate::wire::pack_u32_slice(standard_decode_table_ref())),
+            Value::from(vec![0u8; decoded_capacity(input_len) as usize * 4]),
+            Value::from(crate::wire::pack_u32_slice(&[0])),
+        ];
+        let outputs = vyre_reference::reference_eval(&program, &inputs)
+            .expect("Fix: base64 decode with a >255 input element must not fault the interpreter");
+        // Two outputs (output + decoded_len): locate each by name via the
+        // interpreter's own output ABI, never by fixed position.
+        let out_idx = vyre_reference::output_index(&program, "output")
+            .expect("Fix: base64 output buffer must be a reference output");
+        let len_idx = vyre_reference::output_index(&program, "decoded_len")
+            .expect("Fix: base64 decoded_len buffer must be a reference output");
+        let words = crate::wire::decode_u32_le_bytes_all(&outputs[out_idx].to_bytes());
+        let decoded_len =
+            crate::wire::decode_u32_le_bytes_all(&outputs[len_idx].to_bytes())[0] as usize;
+        let bytes: Vec<u8> = words
+            .into_iter()
+            .take(decoded_len)
+            .map(|word| (word & 0xFF) as u8)
+            .collect();
+        assert_eq!(
+            bytes, b"Man",
+            "Fix: masked table index must decode the high-bit-dirty input identically to the clean 'TWFu'"
+        );
     }
 }

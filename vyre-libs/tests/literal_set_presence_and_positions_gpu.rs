@@ -2,14 +2,14 @@
 //! METHOD (`GpuLiteralSet::scan_presence_and_positions_by_region`).
 //!
 //! The CPU `reference_eval` gates prove the fused PROGRAM's semantics, but they
-//! bypass the scan method's dispatch plumbing — the borrowed-input binding order and
+//! bypass the scan method's dispatch plumbing, the borrowed-input binding order and
 //! the `outputs[0]=presence / [1]=count / [2]=matches` decode. This test exercises
 //! that plumbing on the real wgpu backend (the RTX 5090 here) and asserts the one
 //! fused dispatch reproduces BOTH separate scans:
 //!   - its per-region presence bitmap == `scan_presence_by_region`'s, word-for-word,
 //!   - its match triple set == `scan`'s (and the CPU `reference_scan` oracle's).
 //! It also reports the one-dispatch-vs-two timing. MEASURED RESULT (RTX 5090, wgpu,
-//! release): the fused one-pass is ~20x SLOWER than the two passes, not faster — a
+//! release): the fused one-pass is ~20x SLOWER than the two passes, not faster, a
 //! refuted hypothesis. The hypothesis was that saving one haystack walk would win;
 //! instead the fused kernel is ~3x larger (the suffix3 prefilter inlines the replay
 //! 3x and the fused replay is big) and the occupancy loss dwarfs the saved walk. So
@@ -28,11 +28,18 @@ use vyre_driver_wgpu::WgpuBackend;
 use vyre_libs::scan::GpuLiteralSet;
 
 const LITERALS: &[&[u8]] = &[
-    b"key", b"token", b"secret", b"AKIA", b"ghp_", b"sk_live_", b"password", b"api",
+    b"key",
+    b"token",
+    b"secret",
+    b"AKIA",
+    b"ghp_",
+    b"sk_live_",
+    b"password",
+    b"api",
 ];
 
 /// A "file" carrying a known subset of literal hits, terminated by a separator byte
-/// (newline) that is in NO literal, so no match spans the region boundary — exactly
+/// (newline) that is in NO literal, so no match spans the region boundary, exactly
 /// keyhog's coalesced-batch layout.
 fn file_with(hits: &str) -> Vec<u8> {
     let mut v = hits.as_bytes().to_vec();
@@ -140,11 +147,11 @@ fn fused_scan_method_matches_separate_scans_on_gpu() {
 
     // ---- Timing: one fused dispatch vs the two it replaces ----
     // CRITICAL WORKLOAD CAVEAT: the fold's win is doing ONE haystack walk instead of
-    // two, which dominates only on SPARSE match density — keyhog's coalesced GPU
+    // two, which dominates only on SPARSE match density, keyhog's coalesced GPU
     // phase-1 regime (an 8 MiB scan fires ~10^2-10^3 anchors, not 10^5). On DENSE
     // data (a hit every few bytes) the per-hit triple append dominates and fusing it
     // into the presence kernel is SLOWER than two specialized passes (measured ~2x
-    // slower at ~350k hits) — there the two-pass presence(atomic_or) + positions
+    // slower at ~350k hits), there the two-pass presence(atomic_or) + positions
     // stays better. So this benchmarks the SPARSE regime the fold targets; a density
     // gate belongs in the consumer, not here. Kept under the wgpu workgroup cap
     // (bytes/128 < 65535 ~= 8.39 MB).
@@ -203,7 +210,9 @@ fn fused_scan_method_matches_separate_scans_on_gpu() {
     let presence_ms = t.elapsed().as_secs_f64() * 1000.0;
 
     let t = std::time::Instant::now();
-    let _ = matcher.scan(backend.as_ref(), &big, big_max).expect("triple big scan");
+    let _ = matcher
+        .scan(backend.as_ref(), &big, big_max)
+        .expect("triple big scan");
     let positions_ms = t.elapsed().as_secs_f64() * 1000.0;
 
     let two_pass_ms = presence_ms + positions_ms;
@@ -230,7 +239,7 @@ fn fused_scan_method_matches_separate_scans_on_gpu() {
     // collapse drags the WHOLE scan (even the per-byte walk that rarely hits a
     // candidate). Saving one haystack walk does not pay for the occupancy loss.
     //
-    // So this is NOT asserted as a perf win — the fold, as a naive kernel fusion, is
+    // So this is NOT asserted as a perf win, the fold, as a naive kernel fusion, is
     // refuted on wgpu. It remains a CORRECTNESS-equivalent primitive (the assertions
     // above are the real gate); making it a perf win would need the prefilter body to
     // call the replay as a function instead of inlining it 3x (or a CUDA-backend

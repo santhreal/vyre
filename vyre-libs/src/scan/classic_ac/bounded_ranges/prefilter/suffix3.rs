@@ -8,9 +8,8 @@ use super::super::super::count_program::{
     suffix3_bloom_bit_index_expr, CLASSIC_AC_SUFFIX2_MASK_WORDS, CLASSIC_AC_SUFFIX3_BLOOM_WORDS,
 };
 use super::super::{
-    bounded_ranges_presence_and_positions_by_region_nodes,
-    bounded_ranges_presence_by_region_nodes, bounded_ranges_presence_nodes,
-    bounded_ranges_scan_nodes,
+    bounded_ranges_presence_and_positions_by_region_nodes, bounded_ranges_presence_by_region_nodes,
+    bounded_ranges_presence_nodes, bounded_ranges_scan_nodes,
 };
 
 /// The suffix2/suffix3 candidate-gating body shared by the match-emitting scan
@@ -287,7 +286,7 @@ pub fn presence_bitmap_words(pattern_count: u32) -> u32 {
 /// `atomic_or`. The inputs at bindings 0-5 and 7-9 (haystack, DFA tables, prefilter
 /// masks) are byte-identical to the scan program, so a resident integration can
 /// share the uploaded static tables. There is NO match-triple output and the entire
-/// readback is the small bitmap — removing the dense-workload output bottleneck.
+/// readback is the small bitmap (removing the dense-workload output bottleneck).
 #[must_use]
 #[allow(clippy::too_many_arguments)]
 pub fn classic_ac_bounded_ranges_suffix3_presence_program_ext(
@@ -419,7 +418,7 @@ pub fn presence_by_region_words(pattern_count: u32, max_regions: u32) -> u32 {
 /// ([`classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_ext`],
 /// which appends its match-counter binding 12 + triple-output binding 13). One
 /// source of truth keeps the shared static-table / region-attribution ABI identical
-/// across both builders — a binding added or resized here reaches both at once.
+/// across both builders (a binding added or resized here reaches both at once).
 #[allow(clippy::too_many_arguments)]
 fn presence_by_region_base_buffer_decls(
     haystack: &str,
@@ -453,10 +452,20 @@ fn presence_by_region_base_buffer_decls(
         BufferDecl::read_write(presence, 6, DataType::U32).with_count(total_presence_words),
         BufferDecl::storage(candidate_end_mask, 7, BufferAccess::ReadOnly, DataType::U32)
             .with_count(8),
-        BufferDecl::storage(candidate_suffix2_mask, 8, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(CLASSIC_AC_SUFFIX2_MASK_WORDS as u32),
-        BufferDecl::storage(candidate_suffix3_bloom, 9, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(CLASSIC_AC_SUFFIX3_BLOOM_WORDS as u32),
+        BufferDecl::storage(
+            candidate_suffix2_mask,
+            8,
+            BufferAccess::ReadOnly,
+            DataType::U32,
+        )
+        .with_count(CLASSIC_AC_SUFFIX2_MASK_WORDS as u32),
+        BufferDecl::storage(
+            candidate_suffix3_bloom,
+            9,
+            BufferAccess::ReadOnly,
+            DataType::U32,
+        )
+        .with_count(CLASSIC_AC_SUFFIX3_BLOOM_WORDS as u32),
         // Region start offsets (ascending, region_starts[0] == 0). Dynamic length:
         // the kernel reads region_count via buf_len(region_starts).
         BufferDecl::storage(region_starts, 10, BufferAccess::ReadOnly, DataType::U32),
@@ -598,7 +607,7 @@ pub fn try_build_ac_bounded_ranges_suffix3_presence_by_region_program(
 /// `region_base` inputs); bindings 12-13 add the match counter + triple output. A
 /// consumer that today dispatches the presence-by-region scan AND a separate
 /// position scan over the same haystack collapses both into ONE dispatch with this
-/// program — the expensive candidate gate + DFA replay runs once. The two outputs
+/// program, the expensive candidate gate + DFA replay runs once. The two outputs
 /// are recall-identical to the separate scans by construction (same candidate set,
 /// same `output_records` iteration).
 #[must_use]
@@ -759,12 +768,12 @@ pub fn build_ac_bounded_ranges_suffix3_prefilter_program_ext(
         Ok(program) => program,
         Err(error) => {
             // Returning an empty-rejecting program would silently drop every
-            // match without the caller knowing — a total recall-loss silent
+            // match without the caller knowing, a total recall-loss silent
             // fallback (Law 10). Fail closed instead. Callers that need graceful
             // overflow handling call try_build_ac_bounded_ranges_suffix3_prefilter_program_ext
             // directly and shard oversized DFAs across multiple programs.
             panic!(
-                "vyre-libs AC bounded-ranges suffix3 prefilter program build failed: {error} — \
+                "AC bounded-ranges suffix3 prefilter program build failed: {error}. \
                  returning an empty rejecting automaton would silently drop every match; \
                  use try_build_ac_bounded_ranges_suffix3_prefilter_program_ext and shard oversized DFAs."
             )
@@ -828,6 +837,7 @@ pub fn try_build_ac_bounded_ranges_suffix3_prefilter_program_ext(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::scan::classic_ac::test_helpers::{decode_match_triples, pattern_lengths};
     use crate::scan::classic_ac::{
         classic_ac_bounded_ranges_scan, classic_ac_candidate_end_byte_mask_words,
         classic_ac_candidate_suffix2_mask_words, classic_ac_candidate_suffix3_bloom_words,
@@ -835,50 +845,34 @@ mod tests {
     };
     use crate::scan::{pack_haystack_u32, pack_u32_slice};
 
+    /// Behavioral Law-10 regression guard: the infallible suffix3 prefilter builder
+    /// must wire the REAL DFA (delegating to the `try_` Ok program), never a
+    /// degenerate empty rejecting program (state_count=1, output_records_len=0) that
+    /// silently drops every match.
     #[test]
-    fn suffix3_prefilter_builder_fails_loud_not_silent_fallback() {
-        // Law 10 regression guard: the infallible suffix3 prefilter program
-        // builder must not swallow a build error into an empty rejecting
-        // program (which silently drops every match). The old arm logged the
-        // failure and returned a degenerate empty program via a dedicated
-        // helper; assert that fallback helper is gone and an explicit panic!()
-        // fail-loud arm is present. (The "build failed" message string itself
-        // now lives in the panic! arm, so it cannot be used as the signal.)
-        let production = include_str!("suffix3.rs")
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: suffix3.rs must contain a production section");
+    fn infallible_suffix3_prefilter_uses_real_dfa_not_empty_fallback() {
+        let ac = classic_ac_compile(&[b"abc", b"de", b"abcd"]);
+        let via_infallible =
+            build_ac_bounded_ranges_suffix3_prefilter_program_ext(&ac.dfa, 3, 128, false);
+        let via_try =
+            try_build_ac_bounded_ranges_suffix3_prefilter_program_ext(&ac.dfa, 3, 128, false)
+                .expect("valid DFA must build");
+        // Binding 3 is output_records: the empty fallback carried 0 here.
+        let records = via_infallible.buffers()[3].count;
+        assert_eq!(records as usize, ac.dfa.output_records.len());
         assert!(
-            !production.contains(concat!("empty_ac_bounded_ranges", "_suffix3_prefilter_program")),
-            "Fix: suffix3 prefilter builder must not fall back to an empty rejecting program on error — fail loud via panic!() so callers use the try_ variant."
+            records > 0,
+            "infallible suffix3 prefilter builder must not emit the empty rejecting program"
         );
-        assert!(
-            production.contains("panic!("),
-            "Fix: suffix3 prefilter builder must panic!() on an unrepresentable DFA, never return an empty rejecting program."
+        assert_eq!(
+            via_infallible.buffers()[1].count,
+            ac.dfa.state_count.saturating_mul(256)
         );
-    }
-
-    fn decode_u32(bytes: &[u8]) -> Vec<u32> {
-        bytes
-            .chunks_exact(4)
-            .map(|chunk| u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
-            .collect()
-    }
-
-    fn pattern_lengths(patterns: &[&[u8]]) -> Vec<u32> {
-        patterns
-            .iter()
-            .map(|pattern| pattern.len() as u32)
-            .collect()
-    }
-
-    fn decode_match_triples(outputs: &[vyre_reference::value::Value]) -> Vec<(u32, u32, u32)> {
-        let count = decode_u32(&outputs[0].to_bytes())[0] as usize;
-        let words = decode_u32(&outputs[1].to_bytes());
-        words[..count.saturating_mul(3)]
-            .chunks_exact(3)
-            .map(|chunk| (chunk[0], chunk[1], chunk[2]))
-            .collect()
+        assert_eq!(via_infallible.buffers().len(), via_try.buffers().len());
+        assert_eq!(
+            via_infallible.buffers()[3].count,
+            via_try.buffers()[3].count
+        );
     }
 
     #[test]

@@ -1574,7 +1574,7 @@ mod module_lifecycle_tests {
     /// 1 GiB temp file in a unit test would be prohibitively slow and disk-
     /// intensive.  The source-text canary is the correct mechanism here:
     /// `saturating_add` at `u64::MAX` would freeze `total`, disabling the
-    /// cap check — any future edit that reintroduces it is caught immediately
+    /// cap check, any future edit that reintroduces it is caught immediately
     /// by this test failing, while the existing
     /// `module_cache_eviction_buffers_fit_soft_cap_inline` test reinforces
     /// the wider module-level contract.
@@ -1597,7 +1597,7 @@ mod module_lifecycle_tests {
         // correct. Only an actual `.saturating_add(` call is a regression.
         assert!(
             !fn_body.contains("saturating_add("),
-            "Fix: PTX disk-cache size accumulator must use checked_add, not saturating_add — \
+            "Fix: PTX disk-cache size accumulator must use checked_add, not saturating_add. \
              every other counter in this module uses the checked pinning contract. \
              saturating_add freezes at u64::MAX, bypassing the safety-cap check."
         );

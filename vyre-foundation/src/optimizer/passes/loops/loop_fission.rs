@@ -178,7 +178,7 @@ fn has_barrier_like(nodes: &[Node]) -> bool {
 /// buffer, but [`collect_buffers_in_expr`] cannot see through it and summarises
 /// it as touching NO buffers. Fission relies on a complete touched-buffer set to
 /// prove the two halves disjoint, so a hidden opaque buffer access would let it
-/// reorder that access past a sibling touching the same buffer — a
+/// reorder that access past a sibling touching the same buffer, a
 /// cross-iteration dependency break. Node-level opaque/async/trap ops are
 /// already refused by [`has_barrier_like`]; this closes the expression-level
 /// hole (an `Expr::Opaque` embedded in a `Let`/`Store`/`If`-cond/`Loop` bound).
@@ -200,9 +200,9 @@ fn node_has_opaque_expr(node: &Node) -> bool {
             then,
             otherwise,
         } => expr_contains_opaque(cond) || has_opaque_expr(then) || has_opaque_expr(otherwise),
-        Node::Loop {
-            from, to, body, ..
-        } => expr_contains_opaque(from) || expr_contains_opaque(to) || has_opaque_expr(body),
+        Node::Loop { from, to, body, .. } => {
+            expr_contains_opaque(from) || expr_contains_opaque(to) || has_opaque_expr(body)
+        }
         Node::Block(body) => has_opaque_expr(body),
         Node::Region { body, .. } => has_opaque_expr(body),
         Node::Trap { address, .. } => expr_contains_opaque(address),
@@ -652,7 +652,8 @@ fn rename_var_in_expr(expr: Expr, from: &Ident, to: &Ident) -> Expr {
             value: Box::new(rename_var_in_expr(*value, from, to)),
             lane: Box::new(rename_var_in_expr(*lane, from, to)),
         },
-        Expr::SubgroupReduce { op, value } => Expr::SubgroupReduce { op,
+        Expr::SubgroupReduce { op, value } => Expr::SubgroupReduce {
+            op,
             value: Box::new(rename_var_in_expr(*value, from, to)),
         },
         other => other,
@@ -780,7 +781,7 @@ mod tests {
     /// touched-buffer disjointness check cannot see them. `collect_buffers_in_expr`
     /// summarises `Expr::Opaque` as touching no buffers, so a naive split would
     /// declare the halves disjoint and reorder the opaque's hidden buffer
-    /// accesses past a sibling store — breaking a possible cross-iteration
+    /// accesses past a sibling store, breaking a possible cross-iteration
     /// dependency. Fission must refuse, like it does for Node-level opaque ops.
     #[test]
     fn keeps_when_body_contains_opaque_expr() {
@@ -873,7 +874,7 @@ mod tests {
     /// synchronizes a CommGroup across threads. Fission's intra-thread
     /// buffer-disjointness check cannot prove that reordering the collective
     /// into a separate loop preserves cross-thread semantics, so it must block
-    /// the split — exactly as a Barrier does, and as loop_unroll /
+    /// the split, exactly as a Barrier does, and as loop_unroll /
     /// loop_strip_mine already do. (Before the fix, the disjoint `a`/`b`
     /// buffers let fission split this loop, reordering the collective.)
     #[test]

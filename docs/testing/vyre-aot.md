@@ -1,4 +1,4 @@
-# Testing program — vyre-aot
+# Testing program, vyre-aot
 
 | Kind | Location |
 |------|----------|

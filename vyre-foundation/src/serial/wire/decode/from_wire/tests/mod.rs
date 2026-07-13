@@ -1,5 +1,53 @@
 use super::{reserve_decoded_vec_capacity, LebReader};
-use crate::serial::wire::{Reader, MAX_OPAQUE_PAYLOAD_LEN};
+use crate::serial::wire::{Reader, MAX_DECODE_DEPTH, MAX_OPAQUE_PAYLOAD_LEN};
+
+#[test]
+fn data_type_depth_guard_rejects_nested_vec_chain() {
+    // A chain of `0x14` (DataType::Vec) tags recurses through Box<DataType>.
+    // Without a depth guard this drives unbounded native recursion; the guard
+    // must reject before the stack overflows.
+    let bytes = vec![0x14_u8; MAX_DECODE_DEPTH as usize + 4];
+    let mut reader = Reader {
+        bytes: &bytes,
+        pos: 0,
+        depth: 0,
+    };
+    let err = reader
+        .data_type()
+        .expect_err("Fix: nested DataType::Vec chain must hit the decode depth guard");
+    assert!(
+        err.contains("maximum decode depth"),
+        "depth-guard error must be actionable: {err}"
+    );
+    assert!(
+        reader.pos <= MAX_DECODE_DEPTH as usize,
+        "guard must fire before consuming the whole chain: pos={}",
+        reader.pos
+    );
+}
+
+#[test]
+fn reserve_wire_vec_caps_pre_reservation_at_remaining_bytes() {
+    // A truncated blob declaring a 1M count cannot deliver 1M single-byte
+    // elements; the reservation must cap at the remaining bytes rather than
+    // eagerly allocating 1M entries.
+    let bytes = [0_u8; 8];
+    let reader = Reader {
+        bytes: &bytes,
+        pos: 0,
+        depth: 0,
+    };
+    let mut v: Vec<u32> = Vec::new();
+    reader
+        .reserve_wire_vec(&mut v, 1_000_000, "node count")
+        .expect("Fix: capped reservation for a truncated blob must succeed");
+    assert!(v.is_empty());
+    assert!(
+        v.capacity() <= bytes.len(),
+        "reservation must be capped at remaining bytes, got capacity {}",
+        v.capacity()
+    );
+}
 
 #[test]
 fn wire_decode_reservation_reports_capacity_overflow() {

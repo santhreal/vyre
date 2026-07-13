@@ -13,12 +13,12 @@ use crate::dataflow_fixpoint::reachability_closure_via_into;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
 use crate::dispatch_buffers::{
     ceil_div_u32, checked_square_cells, decode_u32_output_exact, ensure_input_slots,
-    write_u32_slice_le_bytes,
+    write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
 use vyre_foundation::ir::Program;
 use vyre_primitives::graph::do_calculus::{
-    do_intervention_delete_incoming, do_rule2_reverse_incoming,
+    do_intervention_delete_incoming, do_rule2_reverse_incoming, do_rule3_subgraph,
 };
 #[cfg(any(test, feature = "cpu-parity"))]
 use vyre_primitives::graph::do_calculus::{
@@ -388,12 +388,25 @@ where
     }
 
     let program = build_program("adj", mask_buffer, "out", n);
-    ensure_input_slots(inputs, 2);
+    // Real-backend dispatch-input contract (vyre-driver `role_for_buffer`): one input per
+    // INPUT-CONSUMING buffer in buffer order: `adj` RO (0), `mask` RO (1), `out` plain-ReadWrite (2,
+    // InputOutput). `out` is a plain-RW output, so the backend requires a zero-filled input slot for
+    // its initial contents (the per-lane kernel overwrites every cell). Passing only the two RO
+    // buffers would fail the backend's strict `validate_input_lengths` count.
+    let out_bytes = cells
+        .checked_mul(std::mem::size_of::<u32>())
+        .ok_or_else(|| {
+            DispatchError::BadInputs(format!(
+                "Fix: {op_name} out byte size overflows usize for {cells} cells."
+            ))
+        })?;
+    ensure_input_slots(inputs, 3);
     write_u32_slice_le_bytes(&mut inputs[0], adj);
     write_u32_slice_le_bytes(&mut inputs[1], mask);
+    write_zero_bytes(&mut inputs[2], out_bytes);
     let outputs = dispatcher.dispatch(
         &program,
-        &inputs[..2],
+        &inputs[..3],
         Some([ceil_div_u32(cells_u32, 256), 1, 1]),
     )?;
     if outputs.is_empty() {
@@ -403,6 +416,159 @@ where
         )));
     }
     decode_u32_output_exact(&outputs[0], cells, op_name, out)
+}
+
+/// Primitive-native dispatcher path for Pearl Rule 3 graph surgery:
+/// **subgraph extraction**. Restricts `adj` to the nodes whose `keep_mask` bit
+/// is set, returning the dense `k × k` `reduced` block (row-major, stride `k`)
+/// and the `kept` original-index map, where `k = popcount(keep_mask)`.
+///
+/// This is the GPU/IR counterpart of the Rule-3 subgraph-extraction oracle and
+/// the missing third member of the do-calculus surgery family (the two per-cell
+/// maps: [`intervention_delete_incoming_via`] / [`rule2_reverse_incoming_via`]
+///: have long had a `_via` form; Rule 3, a compaction + gather with
+/// data-dependent output size, did not until now). The underlying kernel
+/// serializes the compaction on a single lane so the kept order is deterministic
+/// (ascending original index), byte-identical to the host oracle.
+///
+/// # Errors
+///
+/// Returns [`DispatchError`] when shapes are invalid, `n * n` overflows the lane
+/// limit, or the backend returns fewer than three output buffers or an
+/// impossible `kept_len`.
+pub fn rule3_subgraph_via(
+    dispatcher: &dyn OptimizerDispatcher,
+    adj: &[u32],
+    keep_mask: &[u32],
+    n: u32,
+) -> Result<(Vec<u32>, Vec<u32>), DispatchError> {
+    let mut reduced = Vec::new();
+    let mut kept = Vec::new();
+    let mut inputs = Vec::new();
+    rule3_subgraph_via_into_with_inputs(
+        dispatcher,
+        adj,
+        keep_mask,
+        n,
+        &mut inputs,
+        &mut reduced,
+        &mut kept,
+    )?;
+    Ok((reduced, kept))
+}
+
+/// Dispatcher-backed Rule 3 subgraph extraction into caller-owned storage.
+///
+/// # Errors
+///
+/// Returns [`DispatchError`] when validation or backend execution fails.
+pub fn rule3_subgraph_via_into(
+    dispatcher: &dyn OptimizerDispatcher,
+    adj: &[u32],
+    keep_mask: &[u32],
+    n: u32,
+    reduced: &mut Vec<u32>,
+    kept: &mut Vec<u32>,
+) -> Result<(), DispatchError> {
+    let mut inputs = Vec::new();
+    rule3_subgraph_via_into_with_inputs(dispatcher, adj, keep_mask, n, &mut inputs, reduced, kept)
+}
+
+fn rule3_subgraph_via_into_with_inputs(
+    dispatcher: &dyn OptimizerDispatcher,
+    adj: &[u32],
+    keep_mask: &[u32],
+    n: u32,
+    inputs: &mut Vec<Vec<u8>>,
+    reduced: &mut Vec<u32>,
+    kept: &mut Vec<u32>,
+) -> Result<(), DispatchError> {
+    use crate::observability::{bump, do_calculus_change_impact_calls};
+    bump(&do_calculus_change_impact_calls);
+
+    let cells = checked_square_cells(n, "rule3_subgraph_via")?;
+    if adj.len() != cells {
+        return Err(DispatchError::BadInputs(format!(
+            "Fix: rule3_subgraph_via requires adj.len() == n*n, got len={}, n={n}, n*n={cells}.",
+            adj.len()
+        )));
+    }
+    if keep_mask.len() != n as usize {
+        return Err(DispatchError::BadInputs(format!(
+            "Fix: rule3_subgraph_via requires keep_mask.len() == n, got len={}, n={n}.",
+            keep_mask.len()
+        )));
+    }
+
+    let program = do_rule3_subgraph("adj", "keep_mask", "reduced", "kept", "kept_len", n);
+    // Real-backend dispatch-input contract (vyre-driver `role_for_buffer`): one input per
+    // INPUT-CONSUMING buffer in buffer order: `adj` RO (0), `keep_mask` RO (1), then the three
+    // plain-ReadWrite outputs `reduced` (2, n*n), `kept` (3, n), `kept_len` (4, 1). Each plain-RW
+    // output needs a zero-filled input slot for its initial contents (the lane-0-serial kernel writes
+    // them); omitting them would fail the backend's strict `validate_input_lengths` count.
+    let reduced_bytes = cells
+        .checked_mul(std::mem::size_of::<u32>())
+        .ok_or_else(|| {
+            DispatchError::BadInputs(format!(
+                "Fix: rule3_subgraph_via reduced byte size overflows usize for {cells} cells."
+            ))
+        })?;
+    let kept_bytes = (n as usize) * std::mem::size_of::<u32>();
+    ensure_input_slots(inputs, 5);
+    write_u32_slice_le_bytes(&mut inputs[0], adj);
+    write_u32_slice_le_bytes(&mut inputs[1], keep_mask);
+    write_zero_bytes(&mut inputs[2], reduced_bytes);
+    write_zero_bytes(&mut inputs[3], kept_bytes);
+    write_zero_bytes(&mut inputs[4], std::mem::size_of::<u32>());
+    // The kernel is lane-0-serial, so a single workgroup covers it.
+    let outputs = dispatcher.dispatch(&program, &inputs[..5], Some([1, 1, 1]))?;
+    if outputs.len() < 3 {
+        return Err(DispatchError::BackendError(format!(
+            "Fix: rule3_subgraph_via expected 3 output buffers (reduced, kept, kept_len), got {}.",
+            outputs.len()
+        )));
+    }
+
+    // Canonical output order = writable buffers in binding order: reduced, kept, kept_len.
+    let mut kept_len_words = Vec::new();
+    decode_u32_output_exact(
+        &outputs[2],
+        1,
+        "rule3_subgraph_via kept_len",
+        &mut kept_len_words,
+    )?;
+    let k = kept_len_words[0] as usize;
+    if k > n as usize {
+        return Err(DispatchError::BackendError(format!(
+            "Fix: rule3_subgraph_via backend returned kept_len k={k} exceeding n={n} (impossible retained-count)."
+        )));
+    }
+    let k_cells = k.checked_mul(k).ok_or_else(|| {
+        DispatchError::BackendError(format!(
+            "Fix: rule3_subgraph_via reduced k*k overflows usize for k={k}."
+        ))
+    })?;
+
+    let mut reduced_full = Vec::new();
+    decode_u32_output_exact(
+        &outputs[0],
+        cells,
+        "rule3_subgraph_via reduced",
+        &mut reduced_full,
+    )?;
+    let mut kept_full = Vec::new();
+    decode_u32_output_exact(
+        &outputs[1],
+        n as usize,
+        "rule3_subgraph_via kept",
+        &mut kept_full,
+    )?;
+
+    reduced.clear();
+    reduced.extend_from_slice(&reduced_full[..k_cells]);
+    kept.clear();
+    kept.extend_from_slice(&kept_full[..k]);
+    Ok(())
 }
 
 /// Compute the impacted subgraph: the adjacency restricted to the
@@ -884,6 +1050,10 @@ mod tests {
             ),
             (
                 "pub fn rule2_reverse_incoming_via",
+                "/// Primitive-native dispatcher path for Pearl Rule 3 graph surgery",
+            ),
+            (
+                "pub fn rule3_subgraph_via",
                 "/// Compute the impacted subgraph:",
             ),
             (
@@ -919,7 +1089,8 @@ mod tests {
             grid_override: Option<[u32; 3]>,
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
             assert_eq!(grid_override, Some([1, 1, 1]));
-            assert_eq!(inputs.len(), 2);
+            // Real-backend contract: adj RO, mask RO, out plain-RW (zero-init slot) = 3 inputs.
+            assert_eq!(inputs.len(), 3);
             let adj = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
             let mask = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
             let n = mask.len();
@@ -960,7 +1131,8 @@ mod tests {
             grid_override: Option<[u32; 3]>,
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
             assert_eq!(grid_override, Some([1, 1, 1]));
-            assert_eq!(inputs.len(), 2);
+            // Real-backend contract: adj RO, mask RO, out plain-RW (zero-init slot) = 3 inputs.
+            assert_eq!(inputs.len(), 3);
             let adj = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
             let mask = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
             let n = mask.len();

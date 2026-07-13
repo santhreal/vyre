@@ -5,9 +5,9 @@
 //! `optimizer_value_dependent_reference_parity` covers single-store scalar
 //! expressions; `optimizer_idempotence_proptest` covers multi-statement Let
 //! chains but pins every runtime value to `gid_x == 0`. Neither drives the
-//! cross-statement dataflow passes — which forward a stored value to a later
+//! cross-statement dataflow passes, which forward a stored value to a later
 //! load, dedup a repeated subexpression, drop an overwritten store, or hoist a
-//! branch-invariant value — at a VARYING runtime input. Those passes are
+//! branch-invariant value, at a VARYING runtime input. Those passes are
 //! exactly where a value bug is most damaging (they move/erase computation), and
 //! the store-to-load-forward reassignment guard in particular is only meaningful
 //! when the forwarded value actually depends on the input. This loads a runtime
@@ -67,9 +67,19 @@ fn out_in_scratch(body: Vec<Node>) -> Program {
 fn single_input_programs() -> Vec<(&'static str, Program)> {
     // CSE: let a = in*3+7; let b = in*3+7; out[0] = a + b   (== 2*(in*3+7))
     let cse = out_in(vec![
-        Node::let_bind("a", Expr::add(Expr::mul(in_i(), Expr::u32(3)), Expr::u32(7))),
-        Node::let_bind("b", Expr::add(Expr::mul(in_i(), Expr::u32(3)), Expr::u32(7))),
-        Node::store("out", Expr::u32(0), Expr::add(Expr::var("a"), Expr::var("b"))),
+        Node::let_bind(
+            "a",
+            Expr::add(Expr::mul(in_i(), Expr::u32(3)), Expr::u32(7)),
+        ),
+        Node::let_bind(
+            "b",
+            Expr::add(Expr::mul(in_i(), Expr::u32(3)), Expr::u32(7)),
+        ),
+        Node::store(
+            "out",
+            Expr::u32(0),
+            Expr::add(Expr::var("a"), Expr::var("b")),
+        ),
     ]);
 
     // Copy-prop: let a = in; let b = a; let c = b; out[0] = c << 2
@@ -104,16 +114,32 @@ fn single_input_programs() -> Vec<(&'static str, Program)> {
     // every input regardless of which arm the condition selects.
     let branch_hoist = out_in(vec![Node::if_then_else(
         Expr::bitand(in_i(), Expr::u32(1)),
-        vec![Node::store("out", Expr::u32(0), Expr::add(in_i(), Expr::u32(5)))],
-        vec![Node::store("out", Expr::u32(0), Expr::add(in_i(), Expr::u32(5)))],
+        vec![Node::store(
+            "out",
+            Expr::u32(0),
+            Expr::add(in_i(), Expr::u32(5)),
+        )],
+        vec![Node::store(
+            "out",
+            Expr::u32(0),
+            Expr::add(in_i(), Expr::u32(5)),
+        )],
     )]);
 
     // Branch with input-dependent arms (not hoistable to one value, but
     // branch-collapse / value-hoist must preserve per-input semantics).
     let branch_distinct = out_in(vec![Node::if_then_else(
         Expr::bitand(in_i(), Expr::u32(1)),
-        vec![Node::store("out", Expr::u32(0), Expr::mul(in_i(), Expr::u32(2)))],
-        vec![Node::store("out", Expr::u32(0), Expr::add(in_i(), Expr::u32(100)))],
+        vec![Node::store(
+            "out",
+            Expr::u32(0),
+            Expr::mul(in_i(), Expr::u32(2)),
+        )],
+        vec![Node::store(
+            "out",
+            Expr::u32(0),
+            Expr::add(in_i(), Expr::u32(100)),
+        )],
     )]);
 
     vec![
@@ -139,7 +165,7 @@ fn scratch_programs() -> Vec<(&'static str, Program)> {
 
     // Reassignment guard (dynamic): t = in; store(scratch, t); t := in ^ ~0;
     // x = load(scratch); out = x. The load observes the STORED `in`, so out
-    // must equal `in` — NOT the reassigned `t` (in ^ 0xFFFFFFFF). Forwarding `t`
+    // must equal `in`: NOT the reassigned `t` (in ^ 0xFFFFFFFF). Forwarding `t`
     // would write the reassigned value: a miscompile for any input with set
     // low bits.
     let forward_reassign_guard = out_in_scratch(vec![

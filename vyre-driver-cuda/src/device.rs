@@ -28,6 +28,13 @@ mod context_init_error_tests {
     }
 }
 
+/// Warp schedulers (processing sub-partitions) per streaming multiprocessor. Every
+/// NVIDIA SM from Volta (2017) through Blackwell is partitioned into exactly four
+/// sub-partitions, each with one warp scheduler issuing up to one warp-wide
+/// instruction per cycle. A universal published architectural constant, used for the
+/// analytical compute roofline ceiling, NOT a per-generation cores-per-SM table.
+pub(crate) const WARP_SCHEDULERS_PER_SM: u32 = 4;
+
 /// Queried physical limits and capabilities of a CUDA GPU.
 #[derive(Debug, Clone)]
 pub struct CudaDeviceCaps {
@@ -65,6 +72,10 @@ pub struct CudaDeviceCaps {
     pub l2_cache_bytes: i32,
     /// Memory clock rate in kHz, as reported by the CUDA driver.
     pub memory_clock_rate_khz: i32,
+    /// Core (SM) clock rate in kHz, as reported by the CUDA driver. The compute
+    /// side of the roofline: with the universal 4-warp-scheduler-per-SM issue
+    /// width this bounds peak instruction/integer-op throughput.
+    pub core_clock_rate_khz: i32,
     /// Global memory bus width in bits.
     pub global_memory_bus_width_bits: i32,
     /// Maximum 32-bit registers usable by a single thread block. Required
@@ -294,6 +305,10 @@ impl CudaDeviceCaps {
             "memory_clock_rate_khz",
             CUdevice_attribute::CU_DEVICE_ATTRIBUTE_MEMORY_CLOCK_RATE,
         )?;
+        let core_clock_rate_khz = attr(
+            "core_clock_rate_khz",
+            CUdevice_attribute::CU_DEVICE_ATTRIBUTE_CLOCK_RATE,
+        )?;
         let global_memory_bus_width_bits = attr(
             "global_memory_bus_width_bits",
             CUdevice_attribute::CU_DEVICE_ATTRIBUTE_GLOBAL_MEMORY_BUS_WIDTH,
@@ -337,6 +352,7 @@ impl CudaDeviceCaps {
             multi_processor_count,
             l2_cache_bytes,
             memory_clock_rate_khz,
+            core_clock_rate_khz,
             global_memory_bus_width_bits,
             max_registers_per_block,
             max_registers_per_sm,
@@ -379,6 +395,7 @@ impl CudaDeviceCaps {
             ("multi_processor_count", self.multi_processor_count),
             ("l2_cache_bytes", self.l2_cache_bytes),
             ("memory_clock_rate_khz", self.memory_clock_rate_khz),
+            ("core_clock_rate_khz", self.core_clock_rate_khz),
             (
                 "global_memory_bus_width_bits",
                 self.global_memory_bus_width_bits,
@@ -478,6 +495,35 @@ impl CudaDeviceCaps {
             );
             u32::MAX
         })
+    }
+
+    /// Core (SM) clock rate in kHz as an unsigned planning value.
+    #[must_use]
+    pub fn core_clock_rate_khz_u32(&self) -> u32 {
+        self.required_u32_capability("core_clock_rate_khz", self.core_clock_rate_khz)
+    }
+
+    /// Approximate peak integer/instruction throughput in operations per second 
+    /// the COMPUTE ceiling of the roofline (the memory ceiling is
+    /// [`memory_bandwidth_gbps`](Self::memory_bandwidth_gbps)).
+    ///
+    /// `SM_count × WARP_SCHEDULERS_PER_SM × warp_size × core_clock`. Every NVIDIA SM
+    /// since Volta is partitioned into exactly four processing sub-partitions, each
+    /// with one warp scheduler that issues up to one warp-wide instruction per cycle;
+    /// a warp is `warp_size` (32) lanes wide. So each SM retires up to
+    /// `4 × warp_size` scalar ops per cycle at peak. This is a published, universal
+    /// architectural constant, not a per-generation cores-per-SM table, so it is an
+    /// honest analytical ceiling with no fabricated device-specific numbers.
+    ///
+    /// This is the theoretical *peak*; the achieved compute point on the roofline
+    /// (how close a real kernel gets) needs per-kernel instruction counters
+    /// (Nsight-Compute `sm__inst_executed`), which are admin-only on some hosts.
+    #[must_use]
+    pub fn peak_compute_ops_per_sec(&self) -> u64 {
+        let sm_count = u64::from(self.multi_processor_count_u32());
+        let warp_size = u64::from(self.warp_size_u32().unwrap_or(0));
+        let core_clock_hz = u64::from(self.core_clock_rate_khz_u32()) * 1_000;
+        sm_count * u64::from(WARP_SCHEDULERS_PER_SM) * warp_size * core_clock_hz
     }
 
     /// NVIDIA CUDA architectural register ceiling per thread.

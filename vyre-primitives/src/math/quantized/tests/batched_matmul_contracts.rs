@@ -241,4 +241,3 @@ fn generated_batched_matmul_top1_matches_full_matmul_across_pack_boundaries() {
         }
     }
 }
-

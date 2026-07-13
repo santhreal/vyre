@@ -342,6 +342,19 @@ impl Expr {
         Self::WorkgroupId { axis: 2 }
     }
 
+    /// Predicate `workgroup_id.x == 0`: the canonical "first parallel region only" guard.
+    ///
+    /// Single-workgroup kernels (scalar reductions, workgroup-local tree reductions, and any
+    /// kernel meant to run in exactly one parallel region) gate their body on this so a dispatch
+    /// of more than one workgroup leaves the extra regions as no-ops instead of double-counting or
+    /// racing on the shared output. Prefer this over re-spelling `eq(WorkgroupId{axis:0}, 0)`
+    /// inline so the "first workgroup" contract has one owner.
+    #[must_use]
+    #[inline]
+    pub fn is_first_workgroup() -> Self {
+        Self::eq(Self::WorkgroupId { axis: 0 }, Self::u32(0))
+    }
+
     /// `local_invocation_id.x`
     #[must_use]
     #[inline]

@@ -32,6 +32,60 @@ pub mod weir_alias;
 pub mod weir_reaching_def;
 pub mod workgroup_uniform;
 
+use crate::KernelOpKind;
+
+/// Child-body indices referenced by a structured control-flow op's operands.
+///
+/// ONE owner for the per-op-kind child-body start-offset table; every
+/// placement analysis imports this instead of re-deriving the skip offsets.
+pub(crate) fn child_body_operands<'a>(
+    kind: &KernelOpKind,
+    operands: &'a [u32],
+) -> impl Iterator<Item = u32> + 'a {
+    let start = match kind {
+        KernelOpKind::StructuredIfThen | KernelOpKind::StructuredIfThenElse => 1,
+        KernelOpKind::StructuredForLoop { .. } => 2,
+        KernelOpKind::StructuredBlock | KernelOpKind::Region { .. } => 0,
+        _ => operands.len(),
+    };
+    operands.iter().skip(start).copied()
+}
+
+#[cfg(test)]
+mod dedup_guard {
+    use std::path::{Path, PathBuf};
+
+    // Fails if a second `child_body_operands` copy reappears anywhere under
+    // src/analyses/ (the table must live only in this module).
+    #[test]
+    fn child_body_operands_has_single_owner() {
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/analyses");
+        let mut hits = Vec::new();
+        visit(&dir, &mut hits);
+        hits.sort();
+        assert_eq!(
+            hits,
+            vec![dir.join("mod.rs")],
+            "Fix: child_body_operands must have exactly ONE owner (analyses/mod.rs); a copy reappeared: {hits:?}"
+        );
+    }
+
+    fn visit(dir: &Path, hits: &mut Vec<PathBuf>) {
+        for entry in std::fs::read_dir(dir).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                visit(&path, hits);
+            } else if path.extension().is_some_and(|e| e == "rs")
+                && std::fs::read_to_string(&path)
+                    .unwrap()
+                    .contains("fn child_body_operands")
+            {
+                hits.push(path);
+            }
+        }
+    }
+}
+
 // Re-exports for the common case: a one-call combined audit.
 pub use access_kind::AccessKind;
 pub use bank_conflict::{analyze as analyze_bank_conflict, BankConflictReport};

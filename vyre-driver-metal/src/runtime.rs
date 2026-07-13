@@ -788,7 +788,7 @@ impl VyreBackend for MetalBackend {
         // Metal's SIMD-group width is pipeline-state-dependent, not device-level.
         // We probe it from `ComputePipelineState::threadExecutionWidth` on the
         // first successful `compile_pipeline` call and cache the result here.
-        // `0` means "not yet probed" — return `None` so callers can handle
+        // `0` means "not yet probed", return `None` so callers can handle
         // the unknown case rather than receiving a potentially-wrong constant.
         // In practice the first dispatch fills the cache so `subgroup_size()`
         // always returns `Some` after the first kernel is compiled on this backend.
@@ -1958,7 +1958,9 @@ fn plan_buffers(
                 copy_to_shared_buffer(&buffer, bytes)?;
                 (buffer, metal_physical_buffer_len(byte_len), bytes.len())
             }
-            BindingRole::Shared | BindingRole::Persistent => unreachable!(),
+            BindingRole::Shared | BindingRole::Persistent => {
+                unreachable!("BindingRole {:?} is filtered above the plan match", binding.role)
+            }
         };
         buffers.push(PlannedBuffer {
             binding: binding.binding,
@@ -2089,7 +2091,9 @@ fn plan_resident_buffers(
                     host_to_device_bytes,
                 )
             }
-            BindingRole::Shared | BindingRole::Persistent => unreachable!(),
+            BindingRole::Shared | BindingRole::Persistent => {
+                unreachable!("BindingRole {:?} is filtered above the plan match", binding.role)
+            }
         };
         buffers.push(PlannedBuffer {
             binding: binding.binding,

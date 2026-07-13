@@ -93,7 +93,7 @@ pub fn emit_optimized_with_stats(
     // input is rejected identically in debug and release, before any pass runs.
     vyre_lower::verify::verify(desc).map_err(|errors| {
         EmitError::NagaEmit(vyre_emit_naga::EmitError::InvalidDescriptor(format!(
-            "invalid descriptor: input failed verification before optimization — {} error(s). \
+            "invalid descriptor: input failed verification before optimization. {} error(s). \
              Fix: see vyre_lower::verify for the invariants the descriptor violated. \
              First error: {:?}",
             errors.len(),
@@ -104,11 +104,11 @@ pub fn emit_optimized_with_stats(
     // Unconditionally verify the rewrite pipeline output. A `debug_assert!`
     // here silently skips this gate in release builds, where a buggy rewrite
     // could produce an invalid descriptor that proceeds to SPIR-V emission and
-    // yields a binary with semantics different from the original — a
+    // yields a binary with semantics different from the original, a
     // silently-wrong result with no diagnostics. Fail closed instead.
     vyre_lower::verify::verify(&optimized).map_err(|errors| {
         EmitError::NagaEmit(vyre_emit_naga::EmitError::InvalidDescriptor(format!(
-            "rewrite pipeline produced an invalid descriptor — {} error(s). \
+            "rewrite pipeline produced an invalid descriptor: {} error(s). \
              Fix: see vyre_lower::verify for the invariants the rewrite violated. \
              First error: {:?}",
             errors.len(),

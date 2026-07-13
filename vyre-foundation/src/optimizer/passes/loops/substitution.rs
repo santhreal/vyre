@@ -16,7 +16,7 @@ use crate::ir::{Expr, Ident, Node};
 /// reorder memory across iterations ([`super::loop_fission`] splitting one loop
 /// into two, [`super::loop_fusion`] interleaving two into one) prove safety by
 /// collecting the buffers a body touches and requiring the two halves to be
-/// disjoint — but a buffer access hidden inside an opaque expression is
+/// disjoint, but a buffer access hidden inside an opaque expression is
 /// invisible to that collector, so it would be silently dropped from the
 /// touched set and the disjointness proof would be unsound. Both passes call
 /// this to fail closed: any opaque expression in the body keeps it whole. The
@@ -75,7 +75,7 @@ pub(super) fn expr_contains_opaque(expr: &Expr) -> bool {
     }
 }
 
-/// True iff any node in `nodes` rebinds `var` — a `Let` or `Assign` whose
+/// True iff any node in `nodes` rebinds `var`: a `Let` or `Assign` whose
 /// name equals `var`. This is the precondition guard for every loop pass that
 /// reasons about the induction variable: if the body rewrites `var`, then a
 /// later `Var(var)` no longer denotes the loop's `[from, to)` induction value,

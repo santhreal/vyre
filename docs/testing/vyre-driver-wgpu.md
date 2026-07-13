@@ -1,4 +1,4 @@
-# Testing program — vyre-driver-wgpu
+# Testing program, vyre-driver-wgpu
 
 | Kind | Location |
 |------|----------|

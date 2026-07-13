@@ -567,11 +567,11 @@ pub fn finding_from_sanitized_source_to_sink_query(
     if request.query_hit == 0 {
         return Ok(None);
     }
-    let primitive_soundness = vec![DynamicPrimitiveSoundness::new(
-        request.query_id.clone(),
-        Soundness::MayOver,
-    )
-    .with_sanitizer_filter()];
+    let primitive_soundness =
+        vec![
+            DynamicPrimitiveSoundness::new(request.query_id.clone(), Soundness::MayOver)
+                .with_sanitizer_filter(),
+        ];
     let soundness = validate_dynamic_pipeline(request.precision_contract, &primitive_soundness)
         .map_err(|violation| AnalysisFactError::FindingSoundnessViolation {
             finding_id: request.finding_id.clone(),
@@ -973,10 +973,7 @@ mod tests {
             evidence_digest: "evidence:abc123".to_string(),
             precision_contract: PrecisionContract::ZeroFalsePositive,
             soundness: Soundness::Exact,
-            primitive_soundness: vec![DynamicPrimitiveSoundness::new(
-                "manual",
-                Soundness::Exact,
-            )],
+            primitive_soundness: vec![DynamicPrimitiveSoundness::new("manual", Soundness::Exact)],
             fact_ids: Vec::new(),
             proof_path: vec![FindingProofStep::new(FactId(1), span(1), "source")],
             confidence_bps: 5000,

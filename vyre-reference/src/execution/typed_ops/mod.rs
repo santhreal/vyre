@@ -94,13 +94,13 @@ fn u64_shared_binop(op: &BinOp, left: u64, right: u64) -> Option<Value> {
 pub(super) fn eval_unop(op: &UnOp, operand: Value) -> Result<Value, vyre::Error> {
     // Bit-unpack ops extract a nibble/byte from a 32-bit integer's bit pattern
     // into a u32 (doc: "Unpack lower/upper N-bits of a u8/u32 into a u32"). They
-    // are SHARED across operand type — handled here before per-type dispatch,
+    // are SHARED across operand type, handled here before per-type dispatch,
     // mirroring the Min/Max/AbsDiff shared-binop path. They match the emit
     // lowering (`vyre-emit-naga` op_lookup `unpack_shift_mask`: `(v >> shift) &
     // mask`) and foundation `ir_eval`. The reference previously REJECTED them
     // (the integer-unop macro's `_ => Err` arm), so an Unpack-bearing program
     // could not be evaluated by the oracle even though every backend + ir_eval
-    // lower it — a coherence gap (the oracle must be at least as complete as the
+    // lower it, a coherence gap (the oracle must be at least as complete as the
     // layers it certifies). The trailing `& mask` makes the shift's signedness
     // irrelevant, so U32 and I32 operands extract identical bits.
     if let Some((shift, mask)) = unpack_shift_mask(op) {
@@ -731,8 +731,14 @@ mod tests {
     #[test]
     fn unpack_on_signed_operand_extracts_identical_bits() {
         let i = Value::I32(0x89AB_CDEFu32 as i32); // a negative i32
-        assert_eq!(eval_unop(&UnOp::Unpack8High, i.clone()).unwrap(), Value::U32(0x89));
-        assert_eq!(eval_unop(&UnOp::Unpack4High, i.clone()).unwrap(), Value::U32(0x0E));
+        assert_eq!(
+            eval_unop(&UnOp::Unpack8High, i.clone()).unwrap(),
+            Value::U32(0x89)
+        );
+        assert_eq!(
+            eval_unop(&UnOp::Unpack4High, i.clone()).unwrap(),
+            Value::U32(0x0E)
+        );
         assert_eq!(eval_unop(&UnOp::Unpack8Low, i).unwrap(), Value::U32(0xEF));
     }
 

@@ -211,7 +211,7 @@ fn egraph_structural_equivalence_kernel_rejects_forced_ordering_bucket() {
 /// `run_egraph_structural_equivalence_kernel_inner` returned `Ok` with
 /// `overflowed_output_capacity: true` and a partial `unique` set, and the
 /// only production caller (`backend_canonicalization.rs`) never checked the
-/// flag — corrupting the canonicalization round silently.
+/// flag (corrupting the canonicalization round silently).
 ///
 /// This test uses the same 4-row + forced-ordering artifact shape as
 /// `egraph_structural_equivalence_kernel_rejects_forced_ordering_bucket`
@@ -262,7 +262,7 @@ fn egraph_structural_equivalence_kernel_fails_closed_on_output_overflow() {
             // 0 capacity: any equivalence pair makes device_reported_count > 0 = planned_capacity.
             max_equivalences: 0,
             // Keep the output buffers large enough that the kernel can write at least one
-            // pair without a bounds error — we want to test the counter check, not I/O size.
+            // pair without a bounds error (we want to test the counter check, not I/O size).
             output_pair_words: correct_artifact.output.output_pair_words,
             output_pair_bytes: correct_artifact.output.output_pair_bytes,
             output_counter_words: correct_artifact.output.output_counter_words,

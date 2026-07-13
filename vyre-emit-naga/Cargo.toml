@@ -1,6 +1,6 @@
 [package]
 name = "vyre-emit-naga"
-version = "0.6.4"
+version = "0.6.5"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Naga IR emitter for vyre KernelDescriptor. Produces wgpu-compatible compute shaders."
@@ -30,6 +30,7 @@ blake3 = { workspace = true }
 tracing = { workspace = true }
 
 [dev-dependencies]
+vyre-test-support.workspace = true
 # integration tests/benches assert against these crates' public APIs.
 # `c-parser` is required by carrier_scope_regression::dump_c11_lexer_naga, which
 # builds the real `vyre_libs::parsing::c::lex::lexer::c11_lexer` megakernel and
@@ -37,5 +38,5 @@ tracing = { workspace = true }
 # loop-carrier scope handling on a real-world program. `parsing::c` is gated
 # behind `c-parser` (vyre-libs/Cargo.toml), so without this the test binary
 # fails to compile (E0433: no `c` in `parsing`).
-vyre-libs = { workspace = true, features = ["c-parser"] }
+vyre-libs = { path = "../vyre-libs", features = ["c-parser"] }
 proptest.workspace = true

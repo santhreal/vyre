@@ -47,7 +47,7 @@
 pub fn grunwald_letnikov_kernel(alpha: f64, n: u32) -> Vec<f64> {
     let mut out = Vec::new();
     // Returning an empty/partial kernel on failure silently corrupts every
-    // downstream convolution (it reads zeros) — a silent fallback (Law 10).
+    // downstream convolution (it reads zeros) (a silent fallback (Law 10)).
     // Fail loud; callers use try_grunwald_letnikov_kernel_into.
     if let Err(error) = try_grunwald_letnikov_kernel_into(alpha, n, &mut out) {
         panic!("vyre-primitives Grünwald-Letnikov kernel generation failed: {error}");
@@ -96,7 +96,7 @@ pub fn try_grunwald_letnikov_kernel_into(
 pub fn kernel_to_fixed_16_16(kernel: &[f64], step: f64, alpha: f64) -> Vec<u32> {
     let mut out = Vec::new();
     // Returning an empty/partial fixed-point kernel on failure silently
-    // corrupts the conv1d input — a silent fallback (Law 10). Fail loud;
+    // corrupts the conv1d input, a silent fallback (Law 10). Fail loud;
     // callers use try_kernel_to_fixed_16_16_into.
     if let Err(error) = try_kernel_to_fixed_16_16_into(kernel, step, alpha, &mut out) {
         panic!("vyre-primitives 16.16 fixed-point kernel conversion failed: {error}");

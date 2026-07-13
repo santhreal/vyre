@@ -162,10 +162,7 @@ fn dot_tiled_body(lhs: &str, rhs: &str, out: &str, n: u32, tile: u32) -> Vec<Nod
         WorkgroupReductionScope::FirstWorkgroup,
     ));
     body.push(Node::if_then(
-        Expr::and(
-            Expr::eq(Expr::WorkgroupId { axis: 0 }, Expr::u32(0)),
-            Expr::eq(local, Expr::u32(0)),
-        ),
+        Expr::and(Expr::is_first_workgroup(), Expr::eq(local, Expr::u32(0))),
         vec![Node::Store {
             buffer: out.into(),
             index: Expr::u32(0),

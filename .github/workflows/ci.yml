@@ -53,6 +53,60 @@ jobs:
         # fails the main PR check, not only the slower --all-features coverage job.
         run: ./cargo_full test -p vyre-driver-wgpu --features megakernel-batch --lib -- segment
 
+      - name: self-substrate CPU-parity oracle tests (cpu-parity)
+        shell: bash
+        # vyre-self-substrate is `default = []`, so the `--workspace` default-feature
+        # run above compiles NONE of its `cpu-parity`-gated tests, the CSR/graph CPU
+        # oracle matrices AND the `_via` end-to-end reference-parity suites (which run
+        # each production dispatch form through a reference-eval dispatcher against its
+        # CPU oracle: do-calculus surgery, functor_apply, hypervector xor-bind, and the
+        # Mori-Zwanzig fixed-point projection). Wire the specific integration binaries so
+        # a substrate parity regression fails the main PR check, not only the slower
+        # --all-features job. (Scoped to `--test` targets rather than `-p` so this step
+        # is not coupled to unrelated `--lib` release-evidence state.)
+        run: >-
+          ./cargo_full test -p vyre-self-substrate --features cpu-parity
+          --test sweep_graph_cpu_oracle_matrix
+          --test do_calculus_surgery_via_reference_parity
+          --test functor_apply_via_reference_parity
+          --test vsa_fingerprint_via_reference_parity
+          --test mz_project_via_reference_parity
+          --test sheaf_spectrum_via_reference_parity
+          --test vietoris_rips_via_reference_parity
+          --test natural_gradient_via_reference_parity
+          --test tensor_train_compress_via_reference_parity
+          --test kfac_via_reference_parity
+          --test sinkhorn_via_reference_parity
+          --test matching_diagnostic_via_reference_parity
+          --test quantized_via_reference_parity
+          --test tensor_train_chain_fusion_via_reference_parity
+          --test sheaf_heterophilic_via_reference_parity
+          --test string_diagram_via_reference_parity
+          --test planar_rewrite_via_reference_parity
+          --test multigrid_matroid_via_reference_parity
+          --test semiring_gemm_via_reference_parity
+          --test bellman_shortest_path_via_reference_parity
+          --test reduction_metrics_via_reference_parity
+          --test bitset_mask_algebra_via_reference_parity
+          --test bitset_summary_via_reference_parity
+          --test scallop_provenance_via_reference_parity
+          --test softmax_pick_config_via_reference_parity
+          --test fmm_polyhedral_via_reference_parity
+          --test natural_config_gradient_via_reference_parity
+          --test cost_model_predict_runtime_via_reference_parity
+          --test union_find_alias_via_reference_parity
+          --test matroid_exact_subset_via_reference_parity
+          --test submodular_retention_via_reference_parity
+          --test fmm_compress_pairwise_via_reference_parity
+          --test fusion_scores_via_reference_parity
+          --test shape_spectrum_via_reference_parity
+          --test smooth_latency_trace_via_reference_parity
+          --test predict_impact_via_reference_parity
+          --test transport_residual_via_reference_parity
+          --test reconstruct_path_via_reference_parity
+          --test match_motif_via_reference_parity
+          --test smooth_matroid_flow_via_reference_parity
+
       - name: cargo_full doc
         shell: bash
         run: ./cargo_full doc --workspace

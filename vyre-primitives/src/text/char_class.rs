@@ -145,13 +145,6 @@ pub fn build_char_class_table() -> [u32; 256] {
 }
 
 fn char_class_body(source: &str, classified: &str, n: u32) -> Vec<Node> {
-    let load_byte = |index: Expr| {
-        Expr::bitand(
-            Expr::cast(DataType::U32, Expr::load(source, index)),
-            Expr::u32(0xFF),
-        )
-    };
-
     vec![Node::Region {
         generator: vyre_foundation::ir::model::expr::Ident::from(CHAR_CLASS_OP_ID),
         source_region: None,
@@ -162,7 +155,10 @@ fn char_class_body(source: &str, classified: &str, n: u32) -> Vec<Node> {
                 vec![Node::store(
                     classified,
                     Expr::var("idx"),
-                    Expr::load("table", load_byte(Expr::var("idx"))),
+                    // Canonical masked source-byte → 256-table lookup (ONE-PLACE:
+                    // crate::ir_safe), widens the source byte to u32 and masks the
+                    // table index with `& 0xFF` so a >255 element can't read past it.
+                    crate::ir_safe::source_byte_table_lookup("table", source, Expr::var("idx")),
                 )],
             ),
         ]),

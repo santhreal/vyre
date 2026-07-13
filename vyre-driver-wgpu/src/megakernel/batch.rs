@@ -46,7 +46,7 @@ pub mod queue_state_word {
     /// Rule fanout used to derive `(seg_idx, rule_idx)` from a claim id.
     /// `seg_idx = claim / rule_count` indexes the `segments` table, whose row
     /// `[file_idx, scan_start, emit_start, emit_end]` (file-relative) fully
-    /// describes the window — no segmentation control words live here, the
+    /// describes the window, no segmentation control words live here, the
     /// device decode reads the table directly (see `dispatcher.rs`).
     pub const RULE_COUNT: usize = 5;
 }
@@ -516,7 +516,7 @@ impl FileBatch {
 /// header, sparse hit ring) verbatim; only the automaton buffers and the work
 /// dimension differ.
 ///
-/// LAYERING: this type takes the automaton as RAW flattened `u32` arrays — it
+/// LAYERING: this type takes the automaton as RAW flattened `u32` arrays, it
 /// holds NO pattern / Aho-Corasick knowledge. Building the automaton from
 /// patterns (`vyre_libs::scan::classic_ac::classic_ac_compile`) lives in the
 /// caller, because `vyre-libs` sits ABOVE this crate in the dependency graph.
@@ -577,11 +577,11 @@ impl CombinedBatch {
     /// longest pattern in the automaton (the warm-up overlap). `seg_len` is the
     /// per-segment owned width.
     ///
-    /// # Throughput — `seg_len` is the device-saturation lever, choose it
+    /// # Throughput: `seg_len` is the device-saturation lever, choose it
     ///
     /// `seg_len = u32::MAX` is one segment per file: a single serial DFA walk
     /// with NO intra-file parallelism. It is correctness-equivalent to the
-    /// pre-segmentation path but leaves the device almost entirely idle —
+    /// pre-segmentation path but leaves the device almost entirely idle 
     /// ~0.01x Hyperscan on an 8 MiB input on the reference RTX 5090. It is a
     /// correctness floor, never a performance default; passing it (or any
     /// coarse `seg_len`) silently lands the caller on the slow path.
@@ -591,7 +591,7 @@ impl CombinedBatch {
     /// until the fixed `overlap = max_pattern_len` warm-up per window starts to
     /// dominate, then turns over. On the reference RTX 5090 the 8 MiB optimum is
     /// `seg_len ~= 128` (~15.6x Hyperscan for a 32-literal catalog, ~8.5x at
-    /// 2048 literals), turning over by 64 — see the `megakernel_combined_scan`
+    /// 2048 literals), turning over by 64, see the `megakernel_combined_scan`
     /// geometry sweep, which pins the conservation + throughput contract across
     /// `u32::MAX..=64`. The exact optimum shifts with device core count and
     /// catalog, so tune per host; but ANY fine window beats whole-file by orders
@@ -632,7 +632,7 @@ impl CombinedBatch {
     /// Like [`CombinedBatch::upload`] but choosing the device transition-table
     /// packing. `TransitionWidth::Bits16` halves the table and bytes-per-
     /// transaction (the keyhog-scale L1 lever) and FAILS CLOSED if any target
-    /// exceeds `u16::MAX` — never silently truncates a next-state (Law 10).
+    /// exceeds `u16::MAX`: never silently truncates a next-state (Law 10).
     ///
     /// # Errors
     ///
@@ -696,7 +696,7 @@ impl CombinedBatch {
             &mut compressed_transitions,
         );
         // Bits16 packs two targets per word (halving bytes/transaction) and FAILS
-        // CLOSED on any target > u16::MAX — never silently truncates (Law 10). The
+        // CLOSED on any target > u16::MAX, never silently truncates (Law 10). The
         // kernel built by the dispatcher unpacks to match `transition_width`.
         let transition_table = match transition_width {
             TransitionWidth::Bits32 => compressed_transitions,
@@ -1310,7 +1310,7 @@ fn initial_queue_state(
 /// Default (non-tuned) window geometry: `seg_len = u32::MAX` and `overlap = 0`,
 /// which yields exactly ONE segment per file. The resulting `segments` table is
 /// `[file_idx, 0, 0, file_len]` per file, so the device decode scans each file
-/// whole from state 0 with no warm-up — byte-for-byte the pre-segmentation
+/// whole from state 0 with no warm-up, byte-for-byte the pre-segmentation
 /// behavior. Tuning `seg_len` below the file length saturates the device, but is
 /// only sound once `overlap >= the catalog's longest match span`; that geometry
 /// is chosen by the caller, never defaulted here.
@@ -1551,7 +1551,7 @@ mod tests {
         // GPU PARITY: tiling a file into overlapping windows (`set_segmentation`)
         // must produce the EXACT same hit set as the whole-file scan. Uses an
         // accept-every rule (one state, accept[0]=1) so every byte offset is a
-        // hit — the hit set is the offset tiling itself, so any double-count,
+        // hit, the hit set is the offset tiling itself, so any double-count,
         // gap, or warm-up leak shows up directly. overlap=8 exercises the
         // emit-guard: warm-up bytes (`byte_pos < emit_start`) must advance state
         // but NEVER emit. dfa_sync_distance of a 1-state DFA is 0, so overlap=8 is

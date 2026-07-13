@@ -208,8 +208,8 @@ impl RulePipeline {
         let hit_bytes = dispatch_io::try_output_bytes(&outputs, 0, "RulePipeline hit buffer")?;
         let count = dispatch_io::try_read_u32_prefix(hit_bytes, "RulePipeline hit buffer")?;
         // Triples start at byte 4 (after the atomic counter). The counter is an
-        // atomic incremented for every match found — including matches past slot
-        // `max_matches` the kernel could not write — so a count over the cap means
+        // atomic incremented for every match found, including matches past slot
+        // `max_matches` the kernel could not write, so a count over the cap means
         // matches were dropped. Fail closed rather than silently decode the
         // truncated prefix (Law 10).
         dispatch_io::try_unpack_match_triples_capped_into(
@@ -236,7 +236,7 @@ impl RulePipeline {
     /// path uses (a haystack longer than `u32::MAX` bytes). This is a LOUD
     /// failure on purpose: an empty `Vec<Match>` is indistinguishable from "no
     /// secrets here", so swallowing a scan failure into `[]` would be a silent
-    /// recall lie — a >4 GiB haystack would be reported clean (Law 10).
+    /// recall lie (a >4 GiB haystack would be reported clean (Law 10)).
     /// Callers that must handle an over-`u32` haystack without unwinding use
     /// the fallible [`Self::try_reference_scan`] instead.
     #[must_use]
@@ -245,11 +245,11 @@ impl RulePipeline {
             Ok(matches) => matches,
             Err(error) => {
                 // Returning an empty match set would be indistinguishable from
-                // "no secrets here" — a total recall-loss silent fallback
+                // "no secrets here", a total recall-loss silent fallback
                 // (Law 10). Fail closed instead. Callers that must handle a
                 // >u32 haystack without unwinding call try_reference_scan.
                 panic!(
-                    "vyre-libs RulePipeline::reference_scan cannot honor the u32 match ABI for this haystack: {error} — \
+                    "vyre-libs RulePipeline::reference_scan cannot honor the u32 match ABI for this haystack: {error}. \
                      returning an empty match set would silently report the input as clean; \
                      use try_reference_scan and split the haystack below u32::MAX bytes."
                 )
@@ -299,7 +299,11 @@ impl RulePipeline {
             // ε-edges (and `*`/`?`/alternation add more). Close ε from the seed before the
             // first byte, mirroring the GPU program's initial ε loop; without this the walk
             // never leaves the entry state and reports zero matches for any ε-bearing NFA.
-            close_epsilon(&mut state, &self.epsilon_table, self.plan.num_states as usize);
+            close_epsilon(
+                &mut state,
+                &self.epsilon_table,
+                self.plan.num_states as usize,
+            );
             for (cursor, &byte) in haystack.iter().enumerate().skip(start) {
                 next.fill(0);
                 for (lane, &peer) in state.iter().enumerate() {
@@ -319,7 +323,11 @@ impl RulePipeline {
                 }
                 std::mem::swap(&mut state, &mut next);
                 // ε-close the post-transition state set (same fixpoint the GPU eps loop runs).
-                close_epsilon(&mut state, &self.epsilon_table, self.plan.num_states as usize);
+                close_epsilon(
+                    &mut state,
+                    &self.epsilon_table,
+                    self.plan.num_states as usize,
+                );
                 for (&accept_state, &(pattern_id, _pattern_len)) in self
                     .plan
                     .accept_state_ids
@@ -349,8 +357,8 @@ impl RulePipeline {
 /// (`epsilon_table[src * LANES + dst_lane]` holds the destination bits `dst_lane` owns,
 /// reachable from `src`), mirroring the byte `transition_table` minus the 256-byte axis.
 ///
-/// No-op when there are no ε-edges (empty or all-zero table), so literal NFAs — whose
-/// matches never depend on ε — are unaffected. Bounded to `num_states` iterations: each
+/// No-op when there are no ε-edges (empty or all-zero table), so literal NFAs, whose
+/// matches never depend on ε, are unaffected. Bounded to `num_states` iterations: each
 /// pass advances the ε-frontier by one hop and OR is monotone, so the closure is complete.
 fn close_epsilon(state: &mut [u32; NFA_LANES], epsilon_table: &[u32], num_states: usize) {
     if epsilon_table.is_empty() || num_states == 0 {
@@ -425,6 +433,7 @@ pub(crate) fn hit_buffer_byte_len(max_matches: u32) -> Result<usize, vyre::Backe
     })
 }
 
+#[cfg(test)]
 fn zeroed_hit_buffer(max_matches: u32) -> Result<Vec<u8>, vyre::BackendError> {
     let byte_len = hit_buffer_byte_len(max_matches)?;
     let mut bytes = Vec::new();
@@ -638,6 +647,35 @@ impl RulePipeline {
 
         let transition_table = r.read_words().map_err(PipelineWireError::WireFraming)?;
         let epsilon_table = r.read_words().map_err(PipelineWireError::WireFraming)?;
+
+        // Cross-check the section shapes against the decoded `num_states` header
+        // before any scan indexes them; a stale/crafted blob whose tables are
+        // shorter than `num_states` implies must fail closed here, not OOB-panic
+        // later in `try_reference_scan_into`/`close_epsilon`.
+        let states = num_states as usize;
+        let expected_trans = states
+            .checked_mul(256)
+            .and_then(|v| v.checked_mul(NFA_LANES))
+            .ok_or(PipelineWireError::ShapeMismatch {
+                reason: "num_states overflows transition-table length",
+            })?;
+        if transition_table.len() != expected_trans {
+            return Err(PipelineWireError::ShapeMismatch {
+                reason: "transition_table length disagrees with num_states",
+            });
+        }
+        let expected_eps =
+            states
+                .checked_mul(NFA_LANES)
+                .ok_or(PipelineWireError::ShapeMismatch {
+                    reason: "num_states overflows epsilon-table length",
+                })?;
+        if epsilon_table.len() != expected_eps {
+            return Err(PipelineWireError::ShapeMismatch {
+                reason: "epsilon_table length disagrees with num_states",
+            });
+        }
+
         let accept_flat = r.read_words().map_err(PipelineWireError::WireFraming)?;
         let accept_state_ids = r.read_words().map_err(PipelineWireError::WireFraming)?;
         let anchor_flags = r.read_words().map_err(PipelineWireError::WireFraming)?;
@@ -657,6 +695,17 @@ impl RulePipeline {
         if anchor_flags.len() != accept_states.len() {
             return Err(PipelineWireError::ShapeMismatch {
                 reason: "accept anchor flag length disagrees with accept_states length",
+            });
+        }
+        // Fail closed on a stale/crafted blob whose accept ids fall outside the
+        // decoded state space. The reference scan guards each accept with
+        // `lane < state.len()`, so an out-of-range id would be SILENTLY DROPPED
+        // (a recall hole on a stale cache) instead of surfaced as corruption 
+        // exactly the Law-10 silent degrade the length checks above prevent for
+        // the tables, now closed for the accept-id values too.
+        if accept_state_ids.iter().any(|&id| id as usize >= states) {
+            return Err(PipelineWireError::ShapeMismatch {
+                reason: "accept_state_id out of range for num_states",
             });
         }
         let accept_start_anchored = anchor_flags.iter().map(|flags| flags & 1 != 0).collect();
@@ -733,7 +782,7 @@ mod tests {
         // Law 10 regression at the RulePipeline decode call site: the kernel's
         // atomic counter reports 9 hits into a buffer sized for the cap of 4
         // triples. The capped decode must error (naming the overflow and the 5
-        // dropped matches) instead of silently returning the truncated 4 — a
+        // dropped matches) instead of silently returning the truncated 4, a
         // false negative the caller could not detect.
         let pipe = build(&["ab"], "input", "hits", 16);
         let triples: Vec<u8> = (0..4u32)
@@ -796,6 +845,93 @@ mod tests {
     }
 
     #[test]
+    fn rule_pipeline_wire_roundtrips_and_scans_identically() {
+        let pipe = build(&["ab", "bc"], "input", "hits", 16);
+        let bytes = pipe.to_bytes().expect("valid pipeline must serialize");
+        let decoded = RulePipeline::from_bytes(&bytes).expect("roundtrip must decode");
+        assert_eq!(decoded.plan.num_states, pipe.plan.num_states);
+        assert_eq!(decoded.transition_table, pipe.transition_table);
+        assert_eq!(decoded.epsilon_table, pipe.epsilon_table);
+        assert_eq!(
+            decoded.reference_scan(b"zabc"),
+            vec![Match::new(0, 1, 3), Match::new(1, 2, 4)]
+        );
+    }
+
+    #[test]
+    fn rule_pipeline_from_bytes_rejects_num_states_larger_than_tables() {
+        // A crafted-but-envelope-valid blob whose num_states header claims more
+        // states than the transition/epsilon tables actually contain must fail
+        // closed at decode (ShapeMismatch), NOT be accepted and OOB-panic later
+        // in try_reference_scan_into's `transition_table[base + dst_lane]`.
+        let mut pipe = build(&["ab"], "input", "hits", 16);
+        let honest_states = pipe.plan.num_states;
+        pipe.plan.num_states = honest_states + 1; // header now overstates the tables
+        let bytes = pipe.to_bytes().expect("serialize with tampered header");
+
+        let err = RulePipeline::from_bytes(&bytes)
+            .expect_err("num_states overstating the tables must be rejected");
+        assert!(
+            matches!(
+                err,
+                PipelineWireError::ShapeMismatch {
+                    reason: "transition_table length disagrees with num_states"
+                }
+            ),
+            "must name the transition-table shape mismatch, got: {err}"
+        );
+    }
+
+    #[test]
+    fn from_bytes_rejects_out_of_range_accept_state_id() {
+        // Law 10 at decode: a stale/crafted blob whose accept id points past the
+        // decoded state space must fail closed here. The reference scan's
+        // `lane < state.len()` guard would otherwise SILENTLY DROP that accept 
+        // an invisible recall hole on a stale cache, not a loud corruption error.
+        let mut pipe = build(&["ab", "bc"], "input", "hits", 16);
+        let honest = pipe.plan.num_states;
+        assert!(
+            !pipe.plan.accept_state_ids.is_empty(),
+            "fixture must have accepts"
+        );
+        // `num_states` itself is the first out-of-range id (valid ids are 0..num_states).
+        pipe.plan.accept_state_ids[0] = honest;
+        let bytes = pipe
+            .to_bytes()
+            .expect("serialize with tampered accept id (to_bytes does not validate consistency)");
+
+        let err = RulePipeline::from_bytes(&bytes)
+            .expect_err("an accept_state_id >= num_states must be rejected, not silently dropped");
+        assert!(
+            matches!(
+                err,
+                PipelineWireError::ShapeMismatch {
+                    reason: "accept_state_id out of range for num_states"
+                }
+            ),
+            "must name the accept-id range violation, got: {err}"
+        );
+    }
+
+    #[test]
+    fn from_bytes_accepts_in_range_accept_state_ids() {
+        // Positive twin: an untampered pipeline whose accept ids are all in range
+        // roundtrips cleanly, proving the new guard rejects only real corruption.
+        let pipe = build(&["ab", "bc"], "input", "hits", 16);
+        let states = pipe.plan.num_states as usize;
+        assert!(
+            pipe.plan
+                .accept_state_ids
+                .iter()
+                .all(|&id| (id as usize) < states),
+            "honest fixture accept ids must all be < num_states"
+        );
+        let bytes = pipe.to_bytes().expect("valid pipeline must serialize");
+        let decoded = RulePipeline::from_bytes(&bytes).expect("in-range accept ids must decode");
+        assert_eq!(decoded.plan.accept_state_ids, pipe.plan.accept_state_ids);
+    }
+
+    #[test]
     fn rule_pipeline_reference_scan_into_matches_owned_scan_and_reuses_scratch() {
         let pipe = build(&["ab", "bc"], "input", "hits", 16);
         let owned = pipe.reference_scan(b"zabc");
@@ -816,7 +952,7 @@ mod tests {
         // `dyn MatchScan` fallible method must all yield the SAME real matches.
         // This pins that the trait override forwards to the real fallible
         // stepper (not the panicking default) and that the infallible wrapper
-        // returns the fallible result verbatim — asserted on concrete triples,
+        // returns the fallible result verbatim, asserted on concrete triples,
         // never `is_empty`.
         use crate::scan::engine::MatchScan;
 
@@ -847,7 +983,7 @@ mod tests {
     fn rule_pipeline_reference_scan_fails_loud_not_empty_on_oversized_haystack() {
         // Law 10: a >u32 haystack must NOT be swallowed into an empty match set
         // (which reads as "clean"); it must surface loudly. The infallible
-        // wrapper aborts; the fallible variant returns Err — neither returns an
+        // wrapper aborts; the fallible variant returns Err, neither returns an
         // empty Vec.
         //
         // The guard rejects on length BEFORE the scan loop reads a single byte,
@@ -874,8 +1010,9 @@ mod tests {
         }));
         std::panic::set_hook(prior_hook);
 
-        let panic_payload = outcome
-            .expect_err("Fix: reference_scan must panic on an over-u32 haystack, never return empty");
+        let panic_payload = outcome.expect_err(
+            "Fix: reference_scan must panic on an over-u32 haystack, never return empty",
+        );
         let panic_msg = panic_payload
             .downcast_ref::<String>()
             .map(String::as_str)

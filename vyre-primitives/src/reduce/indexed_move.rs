@@ -54,12 +54,31 @@ pub(crate) fn indexed_move_program(
     }
 
     let t = Expr::InvocationId { axis: 0 };
-    let body = vec![
-        Node::let_bind("idx", Expr::load(indices, t.clone())),
-        Node::if_then(
+    // Out-of-range index handling must MATCH the CPU reference explicitly, not rely
+    // on an implicit "output buffer is zero-initialized" runtime contract (that is
+    // the bitset_test_bit divergence class, a skipped lane silently reads dst's
+    // prior contents when dst is reused).
+    let guarded = match kind {
+        // Gather emits exactly one output per lane; the CPU ref writes 0 for an
+        // out-of-range index (`src.get(idx).unwrap_or(0)`), so the GPU must too.
+        // Without the else branch, an out-of-range lane is left UNWRITTEN and its
+        // value depends on dst's prior contents (a GPU/CPU parity divergence).
+        IndexedMoveKind::Gather => Node::if_then_else(
+            Expr::lt(Expr::var("idx"), Expr::u32(count)),
+            vec![kind.store_node(src, dst, t.clone())],
+            vec![Node::store(dst, t.clone(), Expr::u32(0))],
+        ),
+        // Scatter writes dst[idx] = src[lane]; an out-of-range idx has no valid
+        // destination slot, so it is correctly SKIPPED, matching the CPU ref,
+        // which `continue`s past `dst_index >= dst.len()` (no default write).
+        IndexedMoveKind::Scatter => Node::if_then(
             Expr::lt(Expr::var("idx"), Expr::u32(count)),
             vec![kind.store_node(src, dst, t.clone())],
         ),
+    };
+    let body = vec![
+        Node::let_bind("idx", Expr::load(indices, t.clone())),
+        guarded,
     ];
 
     Program::wrapped(
@@ -109,16 +128,12 @@ pub(crate) fn try_indexed_move_cpu_ref_into(
 ) -> Result<(), String> {
     match kind {
         IndexedMoveKind::Gather => {
-            if indices.len() > dst.capacity() {
-                dst.try_reserve_exact(indices.len() - dst.capacity())
-                    .map_err(|err| {
-                        format!(
-                            "gather CPU reference could not reserve {} output words: {err}",
-                            indices.len()
-                        )
-                    })?;
-            }
-            dst.clear();
+            crate::hostbuf::reserve_exact_cleared(dst, indices.len()).map_err(|err| {
+                format!(
+                    "gather CPU reference could not reserve {} output words: {err}",
+                    indices.len()
+                )
+            })?;
             for &idx in indices {
                 let value = usize::try_from(idx)
                     .ok()
@@ -129,15 +144,9 @@ pub(crate) fn try_indexed_move_cpu_ref_into(
             }
         }
         IndexedMoveKind::Scatter => {
-            if dst_len > dst.capacity() {
-                dst.try_reserve_exact(dst_len - dst.capacity())
-                    .map_err(|err| {
-                        format!(
-                            "scatter CPU reference could not reserve {dst_len} output words: {err}"
-                        )
-                    })?;
-            }
-            dst.clear();
+            crate::hostbuf::reserve_exact_cleared(dst, dst_len).map_err(|err| {
+                format!("scatter CPU reference could not reserve {dst_len} output words: {err}")
+            })?;
             dst.resize(dst_len, 0);
             for (src_index, &dst_index) in indices.iter().enumerate() {
                 if let Ok(dst_index) = usize::try_from(dst_index) {

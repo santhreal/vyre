@@ -56,6 +56,9 @@
 //! See `docs/primitives-tier.md` and `docs/lego-block-rule.md` for
 //! the tier rule, admission criteria, and Gate 1 enforcement.
 
+mod hostbuf;
+#[cfg(feature = "vyre-foundation")]
+pub mod ir_safe;
 mod markers;
 pub mod wire;
 #[cfg(feature = "vyre-foundation")]
@@ -98,12 +101,55 @@ pub(crate) fn invalid_output_program(
 /// losing the high half of the product to 32-bit overflow.
 #[cfg(any(feature = "graph", feature = "math", feature = "geom", feature = "opt"))]
 pub(crate) fn fixed_mul_16_16_expr(left: Expr, right: Expr) -> Expr {
+    // 16.16 fixed-point is a SIGNED number format: operands are two's-complement i32 in a u32, so a
+    // negative value is stored wrapped (`-v` → `2^32 - |v|·2^16`). Extracting the 16.16 product as
+    // `(low >> 16) | (high << 16)` requires the SIGNED 64-bit high word. `Expr::mulhi` is UNSIGNED, so
+    // reconstruct the signed high word with the standard correction:
+    //   signed_high = unsigned_high − (left < 0 ? right : 0) − (right < 0 ? left : 0)
+    // (A wrong all-unsigned `mulhi` treats a negative operand as ~2^32 and produces a garbage giant
+    // product, the exact silent-corruption bug that made the fixed-point AMG V-cycle diverge from its
+    // f64 reference the moment a residual `b − A·x` went negative. See BACKLOG
+    // `LIMITATION-amg-fixed-path-unsigned-mul-negatives`.) For NON-NEGATIVE operands (|v| < 2^31, i.e.
+    // every legitimate 16.16 magnitude) both corrections are zero, so this is bit-identical to the old
+    // unsigned form (a strict correctness superset that leaves the non-negative kernels unchanged).
     let low = Expr::mul(left.clone(), right.clone());
-    let high = Expr::mulhi(left, right);
+    let unsigned_high = Expr::mulhi(left.clone(), right.clone());
+    // `0 - (x >> 31)` is an all-ones mask when `x`'s sign bit is set, else zero (logical u32 shift).
+    let left_sign_mask = Expr::sub(Expr::u32(0), Expr::shr(left.clone(), Expr::u32(31)));
+    let right_sign_mask = Expr::sub(Expr::u32(0), Expr::shr(right.clone(), Expr::u32(31)));
+    let correction_left = Expr::bitand(left_sign_mask, right);
+    let correction_right = Expr::bitand(right_sign_mask, left);
+    let signed_high = Expr::sub(Expr::sub(unsigned_high, correction_left), correction_right);
     Expr::bitor(
         Expr::shr(low, Expr::u32(16)),
-        Expr::shl(high, Expr::u32(16)),
+        Expr::shl(signed_high, Expr::u32(16)),
     )
+}
+
+/// SIGNED integer division of a two's-complement `numerator` by a KNOWN-POSITIVE `denominator`
+/// (truncating toward zero), for use in fixed-point kernels whose numerator may be negative.
+///
+/// `Expr::div` is UNSIGNED, so dividing a wrapped-negative 16.16 numerator (e.g. a Jacobi residual
+/// `b − A·x` that went negative) by a small positive integer yields garbage, the second half of the
+/// silent-corruption bug behind `LIMITATION-amg-fixed-path-unsigned-mul-negatives` (the first half being
+/// [`fixed_mul_16_16_expr`]). This computes `sign·(|numerator| / denominator)` via the branchless
+/// mask-abs idiom: `mask = numerator >> 31` broadcast to all-ones on a negative value, `abs = (n ^ m) − m`,
+/// `q = abs / d` (now a genuine unsigned divide of a non-negative magnitude), then reapply the sign
+/// `(q ^ m) − m`. For a NON-NEGATIVE numerator `mask == 0`, so this reduces to plain `Expr::div`, a
+/// strict correctness superset that leaves non-negative kernels unchanged. The denominator MUST be
+/// positive (all callers pass `diag_units ≥ 1`); a negative denominator is not handled.
+#[cfg(any(feature = "graph", feature = "math", feature = "geom", feature = "opt"))]
+pub(crate) fn fixed_sdiv_by_positive_expr(numerator: Expr, denominator: Expr) -> Expr {
+    // `numerator >> 31` is 0 or 1 (logical u32 shift); `0 - that` broadcasts to the all-ones sign mask.
+    let sign_mask = Expr::sub(Expr::u32(0), Expr::shr(numerator.clone(), Expr::u32(31)));
+    // abs(numerator) = (numerator ^ sign_mask) - sign_mask (two's-complement branchless absolute value).
+    let magnitude = Expr::sub(
+        Expr::bitxor(numerator, sign_mask.clone()),
+        sign_mask.clone(),
+    );
+    let quotient = Expr::div(magnitude, denominator);
+    // Reapply the original sign: (quotient ^ sign_mask) - sign_mask.
+    Expr::sub(Expr::bitxor(quotient, sign_mask.clone()), sign_mask)
 }
 
 #[cfg(any(feature = "graph", feature = "math"))]
@@ -306,8 +352,8 @@ pub mod prelude {
         pack_bytes_as_u32_slice_min_words, pack_f32_slice, pack_f32_slice_into,
         pack_f32_slice_into_uninit, pack_i32_slice, pack_i32_slice_into, pack_u16_slice,
         pack_u16_slice_into, pack_u32_slice, pack_u32_slice_into, pack_u32_slice_into_uninit,
-        pack_u32_slice_min_words_into, pack_u64_slice, pack_u64_slice_into, unpack_f32_slice,
-        unpack_f32_slice_into, unpack_u32_slice_into, read_f32_le_word, read_u32_le_word,
+        pack_u32_slice_min_words_into, pack_u64_slice, pack_u64_slice_into, read_f32_le_word,
+        read_u32_le_word, unpack_f32_slice, unpack_f32_slice_into, unpack_u32_slice_into,
     };
 }
 

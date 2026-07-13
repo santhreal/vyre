@@ -3,7 +3,7 @@
 use super::binding::usage_for_binding;
 use crate::allocation::{reserve_smallvec_to_capacity, reserve_vec_to_capacity};
 use crate::buffer::{GpuBufferHandle, StagingBufferPool};
-use crate::numeric::usize_to_u64;
+use crate::numeric::WGPU_NUMERIC;
 use crate::pipeline::{DispatchItem, OutputLayout, WgpuPipeline};
 use smallvec::SmallVec;
 use std::sync::mpsc::Receiver;
@@ -166,7 +166,7 @@ impl WgpuPipeline {
             },
         )?;
 
-        let readback_size = usize_to_u64(self.output.copy_size, "compound readback bytes")?;
+        let readback_size = WGPU_NUMERIC.usize_to_u64(self.output.copy_size, "compound readback bytes")?;
         let readback_usage = wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ;
         let readback_buffer = self
             .staging_pool
@@ -177,7 +177,7 @@ impl WgpuPipeline {
             .ok_or_else(|| BackendError::new("no output"))?;
         encoder.copy_buffer_to_buffer(
             output.buffer(),
-            usize_to_u64(self.output.copy_offset, "compound output copy offset")?,
+            WGPU_NUMERIC.usize_to_u64(self.output.copy_offset, "compound output copy offset")?,
             &readback_buffer,
             0,
             readback_size,
@@ -233,7 +233,7 @@ impl WgpuPipeline {
                 ))
             })?;
             outputs.push(self.persistent_pool.acquire(
-                usize_to_u64(output_bytes, "compound output allocation bytes")?,
+                WGPU_NUMERIC.usize_to_u64(output_bytes, "compound output allocation bytes")?,
                 usage_for_binding(info)?,
             )?);
         }

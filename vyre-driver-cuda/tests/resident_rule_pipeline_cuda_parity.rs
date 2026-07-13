@@ -6,7 +6,7 @@
 //! resident dispatch rejects any borrowed resource (it resolves every binding to a
 //! resident handle), so a resident dispatch must be ALL-resident. The pipeline used
 //! to bind its two 1-u32 control buffers (haystack_len, max_scan_bytes) as borrowed,
-//! which works on wgpu but fails closed on CUDA — meaning the all-resident fix needs
+//! which works on wgpu but fails closed on CUDA, meaning the all-resident fix needs
 //! a CUDA proof, not just a wgpu/mock one. This test drives the real pipeline on
 //! CudaBackend and asserts the resident match set is byte-identical to the borrowed
 //! `RulePipeline::scan` across repeated re-dispatches.
@@ -41,7 +41,7 @@ fn resident_rule_pipeline_matches_borrowed_on_cuda() {
     // "ab"@[2,4), "cd"@[6,8), "xyz"@[8,11), "ab"@[11,13). The NFA program declares a
     // STATIC input buffer of `input_len` bytes (the CUDA backend enforces it, unlike
     // wgpu), so the haystack length, `build`'s input_len, and `prepare_resident`'s
-    // capacity must all agree — 16 here (a multiple of 4 so the packed length equals
+    // capacity must all agree: 16 here (a multiple of 4 so the packed length equals
     // the raw length). The trailing "www" adds no match.
     const HAYSTACK_LEN: u32 = 16;
     let pipeline = build_rule_pipeline(&["ab", "cd", "xyz"], "input", "hits", HAYSTACK_LEN);
@@ -79,7 +79,7 @@ fn resident_rule_pipeline_matches_borrowed_on_cuda() {
         .expect("prepare resident RulePipeline session on CUDA");
 
     // Re-dispatch several times: the NFA tables stay resident (uploaded once), and
-    // every CUDA scan must reproduce the borrowed match set — proving the trait's
+    // every CUDA scan must reproduce the borrowed match set, proving the trait's
     // resident half (incl. the now-resident control buffers) is wired on CUDA.
     let mut matches = Vec::new();
     let mut scratch = Vec::new();

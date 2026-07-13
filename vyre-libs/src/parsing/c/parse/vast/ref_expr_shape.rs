@@ -580,3 +580,57 @@ inventory::submit! {
         Some(expression_shape_witness_expected),
     )
 }
+
+// `typedef int foo; foo bar;`: foo declared as a typedef, then reused as the type
+// of bar. Exercises the typedef-visibility resolution (the pass' whole reason to
+// exist) so the conformance sweep pins the GPU annotator against the CPU oracle.
+// `c_annotate_typedef_oracle_parity.rs` proves this witness holds under reference_eval.
+const ANNOTATE_WITNESS_SOURCE: &[u8] = b"typedef int foo; foo bar;";
+
+fn annotate_witness_tokens() -> ([u32; 7], [u32; 7], [u32; 7]) {
+    let tok_types = [
+        TOK_TYPEDEF,
+        TOK_INT,
+        TOK_IDENTIFIER,
+        TOK_SEMICOLON,
+        TOK_IDENTIFIER,
+        TOK_IDENTIFIER,
+        TOK_SEMICOLON,
+    ];
+    let tok_starts = [0u32, 8, 12, 15, 17, 21, 24];
+    let tok_lens = [7u32, 3, 3, 1, 3, 3, 1];
+    (tok_types, tok_starts, tok_lens)
+}
+
+fn annotate_witness_inputs() -> Vec<Vec<Vec<u8>>> {
+    let (tok_types, tok_starts, tok_lens) = annotate_witness_tokens();
+    let raw_vast = reference_c11_build_vast_nodes(&tok_types, &tok_starts, &tok_lens);
+    // The base annotator reads an UNPACKED haystack: one source byte per u32 word.
+    let expanded: Vec<u32> = ANNOTATE_WITNESS_SOURCE.iter().map(|b| u32::from(*b)).collect();
+    let out_init = vec![0u8; raw_vast.len()];
+    vec![vec![raw_vast, u32_words_to_bytes(&expanded), out_init]]
+}
+
+fn annotate_witness_expected() -> Vec<Vec<Vec<u8>>> {
+    let (tok_types, tok_starts, tok_lens) = annotate_witness_tokens();
+    let raw_vast = reference_c11_build_vast_nodes(&tok_types, &tok_starts, &tok_lens);
+    vec![vec![reference_c11_annotate_typedef_names(
+        &raw_vast,
+        ANNOTATE_WITNESS_SOURCE,
+    )]]
+}
+
+inventory::submit! {
+    OpEntry::new(
+        ANNOTATE_TYPEDEF_OP_ID,
+        || c11_annotate_typedef_names(
+            "vast_nodes",
+            "haystack",
+            Expr::u32(ANNOTATE_WITNESS_SOURCE.len() as u32),
+            Expr::u32(7),
+            "out_annotated",
+        ),
+        Some(annotate_witness_inputs),
+        Some(annotate_witness_expected),
+    )
+}
