@@ -60,7 +60,7 @@ assert_eq!(sig.output, DataType::U32);
 ## See also
 
 - `vyre` (the compiler): https://crates.io/crates/vyre
-- Book: the vyre book at https://github.com/santhsecurity/vyre
+- Book: the vyre book at https://github.com/santhreal/vyre
 
 ## License
 

@@ -1,5 +1,9 @@
 # vyre
 
+[![Crates.io](https://img.shields.io/crates/v/vyre)](https://crates.io/crates/vyre)
+[![Docs.rs](https://docs.rs/vyre/badge.svg)](https://docs.rs/vyre)
+[![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE-MIT)
+
 Part of [Santh](https://santh.dev) - open source Rust security and infrastructure tooling. Follow [@SanthProject](https://x.com/SanthProject) on X.
 
 Vyre is a Rust GPU compute stack for workloads that usually get pulled back to
@@ -585,7 +589,7 @@ it truer.
 - [Vision](VISION.md): the missing abstraction stack, After Effects architecture, network effects
 - [Thesis](docs/THESIS.md): technical axioms and where vyre beats existing options
 - [crates.io/crates/vyre](https://crates.io/crates/vyre)
-- [github.com/santhsecurity/vyre](https://github.com/santhsecurity/vyre)
+- [github.com/santhreal/vyre](https://github.com/santhreal/vyre)
 - [License: MIT](LICENSE-MIT) / [Apache-2.0](LICENSE-APACHE)
 
 Parity is required before release.

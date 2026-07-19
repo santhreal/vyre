@@ -5,7 +5,7 @@ Community Category-A op dialect for
 
 Generated from the `vyre-libs-template` scaffold. Ships a skeleton
 `example_op` demonstrating the 5-step Cat-A authoring recipe (see
-[AUTHORING.md](https://github.com/santhsecurity/vyre/blob/main/vyre-libs/AUTHORING.md)).
+[AUTHORING.md](https://github.com/santhreal/vyre/blob/main/vyre-libs/AUTHORING.md)).
 
 ## Quickstart
 
