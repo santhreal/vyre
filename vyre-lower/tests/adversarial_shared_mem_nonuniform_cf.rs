@@ -214,3 +214,116 @@ fn still_promotes_uniform_root_when_sibling_child_is_nonuniform() {
         "non-uniform sibling child must not gain {child_illegal:?}"
     );
 }
+
+#[test]
+fn still_promotes_inside_structured_block_child() {
+    // StructuredBlock is unconditional grouping: child stays uniform and must promote.
+    let input = KernelDescriptor {
+        id: "block".into(),
+        bindings: BindingLayout {
+            slots: vec![binding(0, DataType::U32, BindingVisibility::ReadOnly)],
+        },
+        dispatch: Dispatch::new(32, 1, 1),
+        body: KernelBody {
+            ops: vec![op(KernelOpKind::StructuredBlock, vec![0], None)],
+            child_bodies: vec![KernelBody {
+                ops: repeated_loads(0, 1, 2),
+                child_bodies: vec![],
+                literals: vec![],
+            }],
+            literals: vec![],
+        },
+    };
+    let output = shared_mem_promote(&input);
+    let child = &output.body.child_bodies[0];
+    assert!(
+        child
+            .ops
+            .iter()
+            .any(|op| matches!(op.kind, KernelOpKind::AsyncLoad { .. })),
+        "StructuredBlock child is uniform and must still promote; ops={:?}",
+        child.ops.iter().map(|o| &o.kind).collect::<Vec<_>>()
+    );
+    assert!(
+        child
+            .ops
+            .iter()
+            .any(|op| matches!(op.kind, KernelOpKind::Barrier { .. })),
+        "uniform StructuredBlock promotion still inserts a barrier"
+    );
+}
+
+#[test]
+fn still_promotes_inside_region_child() {
+    use std::sync::Arc;
+    let input = KernelDescriptor {
+        id: "region".into(),
+        bindings: BindingLayout {
+            slots: vec![binding(0, DataType::U32, BindingVisibility::ReadOnly)],
+        },
+        dispatch: Dispatch::new(32, 1, 1),
+        body: KernelBody {
+            ops: vec![KernelOp {
+                kind: KernelOpKind::Region {
+                    generator: Arc::from("test"),
+                },
+                operands: vec![0],
+                result: None,
+            }],
+            child_bodies: vec![KernelBody {
+                ops: repeated_loads(0, 1, 2),
+                child_bodies: vec![],
+                literals: vec![],
+            }],
+            literals: vec![],
+        },
+    };
+    let output = shared_mem_promote(&input);
+    let child = &output.body.child_bodies[0];
+    assert!(
+        child
+            .ops
+            .iter()
+            .any(|op| matches!(op.kind, KernelOpKind::AsyncLoad { .. })),
+        "Region child is uniform and must still promote"
+    );
+}
+
+#[test]
+fn no_cooperative_ops_in_structured_block_under_if() {
+    // if (c) { StructuredBlock { load; load } } — the block does not restore uniformity.
+    let input = KernelDescriptor {
+        id: "block_under_if".into(),
+        bindings: BindingLayout {
+            slots: vec![binding(0, DataType::U32, BindingVisibility::ReadOnly)],
+        },
+        dispatch: Dispatch::new(32, 1, 1),
+        body: KernelBody {
+            ops: vec![
+                op(KernelOpKind::Literal, vec![0], Some(0)),
+                op(KernelOpKind::StructuredIfThen, vec![0, 0], None),
+            ],
+            child_bodies: vec![KernelBody {
+                ops: vec![op(KernelOpKind::StructuredBlock, vec![0], None)],
+                child_bodies: vec![KernelBody {
+                    ops: repeated_loads(1, 2, 3),
+                    child_bodies: vec![],
+                    literals: vec![],
+                }],
+                literals: vec![],
+            }],
+            literals: vec![LiteralValue::U32(1)],
+        },
+    };
+    let output = shared_mem_promote(&input);
+    let if_body = &output.body.child_bodies[0];
+    assert!(cooperative_ops(if_body).is_empty());
+    assert!(
+        !if_body.child_bodies.is_empty(),
+        "nested StructuredBlock must remain"
+    );
+    assert!(
+        cooperative_ops(&if_body.child_bodies[0]).is_empty(),
+        "StructuredBlock under If is still non-uniform — no barriers"
+    );
+}

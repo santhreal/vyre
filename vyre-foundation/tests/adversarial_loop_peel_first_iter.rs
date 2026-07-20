@@ -174,3 +174,134 @@ fn peel_remainder_keeps_from_one_after_multi_rest() {
         ]
     );
 }
+
+#[test]
+fn peel_accepts_swapped_eq_operands() {
+    // Eq(LitU32(0), Var(i)) must peel the same as Eq(Var(i), LitU32(0)).
+    let guard = Node::If {
+        cond: Expr::eq(Expr::u32(0), Expr::var("i")),
+        then: vec![Node::store("buf", Expr::var("i"), Expr::u32(99))],
+        otherwise: vec![],
+    };
+    let rest = Node::store("buf", Expr::var("i"), Expr::u32(7));
+    let result = LoopPeelPass::transform(program_with_entry(vec![Node::Loop {
+        var: Ident::from("i"),
+        from: Expr::u32(0),
+        to: Expr::u32(5),
+        body: vec![guard, rest],
+    }]));
+    assert!(result.changed);
+    assert_eq!(
+        store_pairs(entry_body(&result.program)),
+        vec![
+            (Expr::u32(0), Expr::u32(99)),
+            (Expr::u32(0), Expr::u32(7)),
+            (Expr::var("i"), Expr::u32(7)),
+        ]
+    );
+}
+
+#[test]
+fn peel_skips_when_otherwise_arm_is_nonempty() {
+    let guard = Node::If {
+        cond: Expr::eq(Expr::var("i"), Expr::u32(0)),
+        then: vec![Node::store("buf", Expr::var("i"), Expr::u32(1))],
+        otherwise: vec![Node::store("buf", Expr::var("i"), Expr::u32(2))],
+    };
+    let result = LoopPeelPass::transform(program_with_entry(vec![Node::Loop {
+        var: Ident::from("i"),
+        from: Expr::u32(0),
+        to: Expr::u32(4),
+        body: vec![guard, Node::store("buf", Expr::var("i"), Expr::u32(3))],
+    }]));
+    assert!(!result.changed, "nonempty else-arm is not the peel pattern");
+}
+
+#[test]
+fn peel_skips_when_rest_rebinds_induction() {
+    let result = LoopPeelPass::transform(peel_then_plus_rest(vec![
+        Node::let_bind("i", Expr::u32(0)),
+        Node::store("buf", Expr::var("i"), Expr::u32(7)),
+    ]));
+    assert!(
+        !result.changed,
+        "rest that rebinds the loop var must refuse peel (substitution would corrupt)"
+    );
+}
+
+#[test]
+fn peel_skips_trip_count_one() {
+    let guard = Node::If {
+        cond: Expr::eq(Expr::var("i"), Expr::u32(0)),
+        then: vec![Node::store("buf", Expr::var("i"), Expr::u32(1))],
+        otherwise: vec![],
+    };
+    let result = LoopPeelPass::transform(program_with_entry(vec![Node::Loop {
+        var: Ident::from("i"),
+        from: Expr::u32(0),
+        to: Expr::u32(1),
+        body: vec![guard],
+    }]));
+    assert!(!result.changed, "N<=1 has no remainder to peel into");
+}
+
+#[test]
+fn peel_skips_guard_on_nonzero_literal() {
+    let guard = Node::If {
+        cond: Expr::eq(Expr::var("i"), Expr::u32(1)),
+        then: vec![Node::store("buf", Expr::var("i"), Expr::u32(1))],
+        otherwise: vec![],
+    };
+    let result = LoopPeelPass::transform(program_with_entry(vec![Node::Loop {
+        var: Ident::from("i"),
+        from: Expr::u32(0),
+        to: Expr::u32(4),
+        body: vec![guard, Node::store("buf", Expr::var("i"), Expr::u32(2))],
+    }]));
+    assert!(!result.changed, "first-iter guard must be Eq(i, 0), not Eq(i, 1)");
+}
+
+#[test]
+fn peel_preserves_reference_eval_on_buffer_stores() {
+    use vyre_foundation::ir::{BufferDecl, DataType};
+    use vyre_reference::value::Value;
+
+    // out[i] = 10 on first iter via guard, out[i] = 1 on every iter via rest.
+    // For N=3 expected: out = [10, 1, 1] wait — both then and rest store on i=0,
+    // so out[0] ends as rest's value 1, then iters 1,2 store 1. So [1,1,1].
+    // Stronger observable: then stores 99 at i, rest stores 7 at i.
+    // Final: out[0]=7 (rest overwrites then), out[1]=7, out[2]=7.
+    let program = Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::U32).with_count(3)],
+        [1, 1, 1],
+        vec![Node::Loop {
+            var: Ident::from("i"),
+            from: Expr::u32(0),
+            to: Expr::u32(3),
+            body: vec![
+                Node::If {
+                    cond: Expr::eq(Expr::var("i"), Expr::u32(0)),
+                    then: vec![Node::store("out", Expr::var("i"), Expr::u32(99))],
+                    otherwise: vec![],
+                },
+                Node::store("out", Expr::var("i"), Expr::u32(7)),
+            ],
+        }],
+    );
+    let inputs: [Value; 0] = [];
+    let before = vyre_reference::reference_eval(&program, &inputs)
+        .expect("original peel fixture must evaluate");
+    let peeled = LoopPeelPass::transform(program);
+    assert!(peeled.changed);
+    let after = vyre_reference::reference_eval(&peeled.program, &inputs)
+        .expect("peeled program must evaluate");
+    assert_eq!(
+        before, after,
+        "peel must be observationally identical under reference_eval"
+    );
+    assert_eq!(
+        before,
+        vec![Value::from(7u32.to_le_bytes().to_vec().repeat(3))],
+        "sanity: final buffer is three 7s (rest overwrites then on i=0)"
+    );
+}

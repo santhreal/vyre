@@ -213,3 +213,72 @@ fn nested_same_name_loop_blocks_range_fold_on_outer() {
         "nested same-name loop must keep outer range fold conservative"
     );
 }
+
+#[test]
+fn elide_keeps_guard_when_rebind_is_nested_inside_if() {
+    // Let-rebind sits inside an unconditional-looking If(true) before the guard.
+    // The helper must descend through If — a top-level-only scan would miss it.
+    let program = program_with_entry(vec![Node::Loop {
+        var: Ident::from("i"),
+        from: Expr::u32(0),
+        to: Expr::u32(4),
+        body: vec![
+            Node::If {
+                cond: Expr::bool(true),
+                then: vec![Node::let_bind("i", Expr::load("buf", Expr::var("i")))],
+                otherwise: vec![],
+            },
+            Node::if_then(
+                Expr::lt(Expr::var("i"), Expr::u32(4)),
+                vec![Node::store("buf", Expr::var("i"), Expr::u32(7))],
+            ),
+        ],
+    }]);
+    let result = LoopRedundantBoundCheckElidePass::transform(program);
+    assert!(
+        !result.changed,
+        "rebind inside If must still poison induction-based elision"
+    );
+    assert_eq!(count_ifs(entry_body(&result.program)), 2);
+}
+
+#[test]
+fn elide_still_fires_when_unrelated_name_is_bound() {
+    // `let j = ...` must not block eliding a true redundant `if i < 4`.
+    let program = program_with_entry(vec![Node::Loop {
+        var: Ident::from("i"),
+        from: Expr::u32(0),
+        to: Expr::u32(4),
+        body: vec![
+            Node::let_bind("j", Expr::load("buf", Expr::var("i"))),
+            Node::if_then(
+                Expr::lt(Expr::var("i"), Expr::u32(4)),
+                vec![Node::store("buf", Expr::var("i"), Expr::u32(7))],
+            ),
+        ],
+    }]);
+    let result = LoopRedundantBoundCheckElidePass::transform(program);
+    assert!(
+        result.changed,
+        "binding an unrelated name must not disable redundant-guard elision"
+    );
+    assert_eq!(count_ifs(entry_body(&result.program)), 0);
+}
+
+#[test]
+fn strip_mine_still_fires_when_unrelated_name_is_bound() {
+    let program = program_with_entry(vec![Node::Loop {
+        var: Ident::from("i"),
+        from: Expr::u32(0),
+        to: Expr::u32(32),
+        body: vec![
+            Node::let_bind("j", Expr::u32(0)),
+            Node::store("buf", Expr::var("i"), Expr::u32(1)),
+        ],
+    }]);
+    let result = LoopStripMine::transform(program);
+    assert!(
+        result.changed,
+        "unrelated let must not look like an induction rebind to strip-mine"
+    );
+}

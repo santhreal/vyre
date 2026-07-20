@@ -130,3 +130,67 @@ pub(super) fn body_rebinds_var(body: &[Node], var: &Ident) -> bool {
         _ => false,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{body_rebinds_var, body_writes_loop_var};
+    use crate::ir::{Expr, Ident, Node};
+
+    #[test]
+    fn writes_detects_let_and_assign_but_ignores_unrelated_names() {
+        let i = Ident::from("i");
+        assert!(body_writes_loop_var(
+            &[Node::let_bind("i", Expr::u32(1))],
+            &i
+        ));
+        assert!(body_writes_loop_var(
+            &[Node::assign("i", Expr::u32(1))],
+            &i
+        ));
+        assert!(!body_writes_loop_var(
+            &[Node::let_bind("j", Expr::u32(1))],
+            &i
+        ));
+    }
+
+    #[test]
+    fn writes_skips_nested_same_name_loop_but_rebinds_counts_it() {
+        let i = Ident::from("i");
+        let nested = Node::Loop {
+            var: Ident::from("i"),
+            from: Expr::u32(0),
+            to: Expr::u32(2),
+            body: vec![Node::assign("i", Expr::u32(9))],
+        };
+        // Inner Loop(i) scopes its own binding: outer induction is intact.
+        assert!(!body_writes_loop_var(&[nested.clone()], &i));
+        // Range-fold / lower-bound must still decline: name is reintroduced.
+        assert!(body_rebinds_var(&[nested], &i));
+    }
+
+    #[test]
+    fn both_helpers_descend_through_if_and_block() {
+        let i = Ident::from("i");
+        let body = vec![Node::If {
+            cond: Expr::bool(true),
+            then: vec![Node::Block(vec![Node::let_bind("i", Expr::u32(0))])],
+            otherwise: vec![],
+        }];
+        assert!(body_writes_loop_var(&body, &i));
+        assert!(body_rebinds_var(&body, &i));
+    }
+
+    #[test]
+    fn writes_sees_assign_inside_differently_named_inner_loop() {
+        let i = Ident::from("i");
+        // Inner loop uses `j`, but body assigns outer `i` — that is a real write.
+        let nested = Node::Loop {
+            var: Ident::from("j"),
+            from: Expr::u32(0),
+            to: Expr::u32(2),
+            body: vec![Node::assign("i", Expr::var("j"))],
+        };
+        assert!(body_writes_loop_var(&[nested.clone()], &i));
+        assert!(body_rebinds_var(&[nested], &i));
+    }
+}
