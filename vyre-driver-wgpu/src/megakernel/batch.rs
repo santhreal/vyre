@@ -631,7 +631,7 @@ impl CombinedBatch {
 
     /// Like [`CombinedBatch::upload`] but choosing the device transition-table
     /// packing. `TransitionWidth::Bits16` halves the table and bytes-per-
-    /// transaction (the keyhog-scale L1 lever) and FAILS CLOSED if any target
+    /// transaction (the large-catalog-scale L1 lever) and FAILS CLOSED if any target
     /// exceeds `u16::MAX`: never silently truncates a next-state (Law 10).
     ///
     /// # Errors
@@ -874,6 +874,11 @@ impl CombinedBatch {
 /// Reject a structurally inconsistent combined automaton at the boundary rather
 /// than uploading tables the kernel would index out of range (Law 10: fail
 /// closed, never silently scan a malformed automaton).
+///
+/// # Panics
+/// Panics when `output_offsets` is empty. The caller rejects an empty offsets table
+/// before reaching the terminator check, so an empty slice here means the two checks
+/// were reordered.
 fn validate_combined_automaton(
     transitions: &[u32],
     output_offsets: &[u32],

@@ -1,6 +1,6 @@
 # Documentation Index
 
-Last verified: 2026-05-26
+Last verified: 2026-07-25
 
 This file is generated from the current `docs/` tree and is the routing table for contributors. Consumer-specific names inside archived documents are historical context only; current implementation guidance must come from rows marked `current` or `generated`.
 
@@ -53,10 +53,8 @@ Status values:
 | `current` | 2026-05-26 | 2026-05-26 | [docs/dialect-cookbook.md](dialect-cookbook.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/DOCUMENTATION_COVERAGE.md](DOCUMENTATION_COVERAGE.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/DOCUMENTATION_GOVERNANCE.md](DOCUMENTATION_GOVERNANCE.md) |
-| `current` | 2026-05-26 | 2026-05-26 | [docs/DRIVER_UNIFICATION_AUDIT.md](DRIVER_UNIFICATION_AUDIT.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/error-codes.md](error-codes.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/ERROR_SURFACE.md](ERROR_SURFACE.md) |
-| `current` | 2026-05-26 | 2026-05-26 | [docs/EXECUTION_STATUS.md](EXECUTION_STATUS.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/faq.md](faq.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/frozen-traits/AlgebraicLaw.md](frozen-traits/AlgebraicLaw.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/frozen-traits/EnforceGate.md](frozen-traits/EnforceGate.md) |
@@ -84,9 +82,7 @@ Status values:
 | `current` | 2026-05-26 | 2026-05-26 | [docs/op-naming.md](op-naming.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/ops-catalog.md](ops-catalog.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/OPS.md](OPS.md) |
-| `current` | 2026-05-26 | 2026-05-26 | [docs/optimization/AGENT_CONTRACT.md](optimization/AGENT_CONTRACT.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/optimization/README.md](optimization/README.md) |
-| `current` | 2026-05-26 | 2026-05-26 | [docs/optimization/ROADMAP.md](optimization/ROADMAP.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/optimization/START_HERE.md](optimization/START_HERE.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/optimization/TAXONOMY.md](optimization/TAXONOMY.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/OPTIMIZATION_ARCHITECTURE.md](OPTIMIZATION_ARCHITECTURE.md) |
@@ -94,7 +90,6 @@ Status values:
 | `current` | 2026-05-26 | 2026-05-26 | [docs/PARADIGM_SHIFT_TRAJECTORY.md](PARADIGM_SHIFT_TRAJECTORY.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/parity/three_substrate.md](parity/three_substrate.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/parsing-and-frontends.md](parsing-and-frontends.md) |
-| `current` | 2026-05-26 | 2026-05-26 | [docs/PARSING_EXECUTION_PLAN.md](PARSING_EXECUTION_PLAN.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/PER_OP_SURFACE.md](PER_OP_SURFACE.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/PERF.md](PERF.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/PREDICATE_EXPR_DUALITY.md](PREDICATE_EXPR_DUALITY.md) |
@@ -106,6 +101,7 @@ Status values:
 | `current` | 2026-05-26 | 2026-05-26 | [docs/region-chain.md](region-chain.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/RELEASE.md](RELEASE.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/release/v0.4.2.md](release/v0.4.2.md) |
+| `current` | 2026-07-25 | 2026-07-25 | [docs/release/v0.7.0.md](release/v0.7.0.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/RELEASE_1_0_GATE.md](RELEASE_1_0_GATE.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/RELEASE_ENGINEERING.md](RELEASE_ENGINEERING.md) |
@@ -114,7 +110,6 @@ Status values:
 | `current` | 2026-05-26 | 2026-05-26 | [docs/rfcs/0003-datatype-quantized.md](rfcs/0003-datatype-quantized.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/rfcs/0004-collective-ops.md](rfcs/0004-collective-ops.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/rfcs/0005-persistent-megakernel.md](rfcs/0005-persistent-megakernel.md) |
-| `current` | 2026-05-26 | 2026-05-26 | [docs/ROADMAP.md](ROADMAP.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/RUNTIME_PIPELINE.md](RUNTIME_PIPELINE.md) |
 | `current` | 2026-06-03 | 2026-06-03 | [docs/RUST_COMPILER_BUILDOUT.md](RUST_COMPILER_BUILDOUT.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/santh-standard.md](santh-standard.md) |
@@ -168,39 +163,20 @@ Status values:
 | `current` | 2026-05-26 | 2026-05-26 | [docs/wire-format.md](wire-format.md) |
 | `generated` | 2026-05-26 | 2026-05-26 | [docs/generated/OP_INVENTORY.md](generated/OP_INVENTORY.md) |
 | `generated` | 2026-05-26 | 2026-05-26 | [docs/generated/README.md](generated/README.md) |
-| `superseded` | 2026-05-26 | 2026-05-26 | [docs/optimization/GEMINI_HANDOFF_2026-05-02.md](optimization/GEMINI_HANDOFF_2026-05-02.md) |
-| `superseded` | 2026-05-26 | 2026-05-26 | [docs/optimization/GEMINI_HANDOFF_2026-05-02_BATCH2.md](optimization/GEMINI_HANDOFF_2026-05-02_BATCH2.md) |
 | `superseded` | 2026-05-26 | 2026-05-26 | [docs/optimization/LEGACY_DOCS.md](optimization/LEGACY_DOCS.md) |
 | `superseded` | 2026-05-26 | 2026-05-26 | [docs/release/v0.4.1.md](release/v0.4.1.md) |
-| `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/COMPILER_E2E_PLAN.md](archive/COMPILER_E2E_PLAN.md) |
-| `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/COMPILER_PRODUCT_BOUNDARY_PLAN.md](archive/COMPILER_PRODUCT_BOUNDARY_PLAN.md) |
-| `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/CRATE_EXTRACTION_PLAN.md](archive/CRATE_EXTRACTION_PLAN.md) |
-| `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/CUDA_BACKEND_EXECUTION_PLAN.md](archive/CUDA_BACKEND_EXECUTION_PLAN.md) |
 | `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/HEURISTIC_TO_MATH_TRACKER.md](archive/HEURISTIC_TO_MATH_TRACKER.md) |
 | `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/INNOVATION_SWEEP.md](archive/INNOVATION_SWEEP.md) |
 | `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/JULES_PRIMITIVE_MANIFEST.md](archive/JULES_PRIMITIVE_MANIFEST.md) |
 | `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/MICRO_FLAW_LOG.md](archive/MICRO_FLAW_LOG.md) |
 | `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/MIGRATION_0.6_TO_0.7.md](archive/MIGRATION_0.6_TO_0.7.md) |
 | `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/NAGA_CRITICAL_HOLES.md](archive/NAGA_CRITICAL_HOLES.md) |
-| `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/NAGA_LOWERING_AUDIT.md](archive/NAGA_LOWERING_AUDIT.md) |
-| `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/NAGA_LOWERING_STATUS.md](archive/NAGA_LOWERING_STATUS.md) |
-| `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/OP_MASTER_PLAN_BUILDING_BLOCKS_AND_QA.md](archive/OP_MASTER_PLAN_BUILDING_BLOCKS_AND_QA.md) |
-| `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/POST_LANDING_STATUS.md](archive/POST_LANDING_STATUS.md) |
 | `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/ROADMAP_APPEND_ONLY_2026-05-22.md](archive/ROADMAP_APPEND_ONLY_2026-05-22.md) |
 | `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/UX_SWEEP.md](archive/UX_SWEEP.md) |
-| `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/V7_AGENT_A_PLAN.md](archive/V7_AGENT_A_PLAN.md) |
-| `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/V7_RELEASE_PLAN.md](archive/V7_RELEASE_PLAN.md) |
 | `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/vision-2026-04-27-essay.md](archive/vision-2026-04-27-essay.md) |
-| `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/VYRE_CODEBASE_AUDIT.md](archive/VYRE_CODEBASE_AUDIT.md) |
-| `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/VYRE_RELEASE_COMPLETION_PLAN.md](archive/VYRE_RELEASE_COMPLETION_PLAN.md) |
-| `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/VYRE_WEIR_RELEASE_RELEASE_PLAN_2026-05-05.md](archive/VYRE_WEIR_RELEASE_RELEASE_PLAN_2026-05-05.md) |
-| `archived` | 2026-05-26 | 2026-05-26 | [docs/legacy/CC_OWNED_BACKLOG_2026-05-01.md](legacy/CC_OWNED_BACKLOG_2026-05-01.md) |
 | `archived` | 2026-05-26 | 2026-05-26 | [docs/legacy/PERF_ROADMAP_2026-05-01.md](legacy/PERF_ROADMAP_2026-05-01.md) |
-| `archived` | 2026-05-26 | 2026-05-26 | [docs/legacy/SEPARATION_AUDIT_2026-05-01.md](legacy/SEPARATION_AUDIT_2026-05-01.md) |
 | `current` | 2026-07-12 | 2026-07-12 | [docs/GPU_OOM_SEGMENTATION.md](GPU_OOM_SEGMENTATION.md) |
-| `current` | 2026-07-12 | 2026-07-12 | [docs/metal_driver_and_vyre_innovation_plan.md](metal_driver_and_vyre_innovation_plan.md) |
 | `current` | 2026-07-12 | 2026-07-12 | [docs/SUBGROUP_REDUCE_GENERALIZATION.md](SUBGROUP_REDUCE_GENERALIZATION.md) |
-| `current` | 2026-07-12 | 2026-07-12 | [docs/optimization/ALL_AXES_ACCELERATION_PLAN.md](optimization/ALL_AXES_ACCELERATION_PLAN.md) |
 | `current` | 2026-07-12 | 2026-07-12 | [docs/optimization/XTASK_COMMAND_MATRIX.md](optimization/XTASK_COMMAND_MATRIX.md) |
 
 ## Non-public internals

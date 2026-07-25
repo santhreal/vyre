@@ -547,7 +547,7 @@ pub fn compress_dense_transitions_into(
 /// (from [`compress_dense_transitions_into`]) into u16 targets stored two per
 /// u32 word: the LOW half holds the even flat index, the HIGH half the odd
 /// index. Halves the device transition footprint and bytes-per-transaction 
-/// the lever the keyhog-scale L1 working-set analysis identified as the one that
+/// the lever the large-catalog-scale L1 working-set analysis identified as the one that
 /// directly narrows each transition read (`docs/GPU_OOM_SEGMENTATION.md`; row
 /// deduplication was measured and refuted there).
 ///

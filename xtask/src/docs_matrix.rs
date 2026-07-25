@@ -125,9 +125,13 @@ struct BehaviorContract {
 }
 
 const REQUIRED_DOCS: &[RequiredDoc] = &[
+    // The release contract is a TRACKED doc in this repository. This entry pointed at
+    // `<santh>/docs/vyre-weir-release-plan.md`, a private coordination plan in the outer
+    // monorepo that was consolidated away on 2026-07-13, so `release-plan` reported as
+    // missing on every clone. The monorepo is a backup mirror, never release authority.
     RequiredDoc {
-        id: "release-plan",
-        relative: "../../../../docs/vyre-weir-release-plan.md",
+        id: "release-contract",
+        relative: "docs/RELEASE.md",
         topics: &[
             "vyre",
             "weir",
@@ -331,9 +335,13 @@ const BEHAVIOR_CONTRACTS: &[BehaviorContract] = &[
             "source-count provenance",
         ],
     },
+    // The artifact schema is a user-visible contract, so it is documented in the tracked
+    // optimization README. It pointed at `AGENT_CONTRACT.md`, an agent-coordination file
+    // that is private operator state (and documented none of these fields), so the
+    // contract could not be satisfied by a clone.
     BehaviorContract {
         id: "research-audit-schema",
-        relative: "docs/optimization/AGENT_CONTRACT.md",
+        relative: "docs/optimization/README.md",
         evidence_artifact: "release/evidence/optimization/research-audit.json",
         required_tokens: &[
             "research-audit",
@@ -927,7 +935,7 @@ const DOC_PROOFS: &[(&str, &str, &[&str])] = &[
         "release-notes-version-story.md",
         "Release Notes Version Story Evidence",
         &[
-            "release-plan",
+            "release-contract",
             "vyre-release",
             "vyre-release-engineering",
             "vyre-release-checklist",
@@ -936,47 +944,47 @@ const DOC_PROOFS: &[(&str, &str, &[&str])] = &[
     (
         "cuda-release-path.md",
         "CUDA Release Path Documentation Evidence",
-        &["release-plan", "vyre-bench"],
+        &["release-contract", "vyre-bench"],
     ),
     (
         "wgpu-fallback-proof.md",
         "WGPU Fallback Documentation Evidence",
-        &["wgpu-fallback-proof", "release-plan", "vyre-bench"],
+        &["wgpu-fallback-proof", "release-contract", "vyre-bench"],
     ),
     (
         "megakernel-default-proof.md",
         "Megakernel Default Documentation Evidence",
-        &["release-plan", "vyre-optimization"],
+        &["release-contract", "vyre-optimization"],
     ),
     (
         "optimization-proof.md",
         "Optimization Documentation Evidence",
-        &["vyre-optimization", "release-plan"],
+        &["vyre-optimization", "release-contract"],
     ),
     (
         "egraph-saturation.md",
         "E-Graph Saturation Documentation Evidence",
-        &["vyre-optimization", "release-plan"],
+        &["vyre-optimization", "release-contract"],
     ),
     (
         "c-parser-linux-proof.md",
         "C Parser Linux Corpus Documentation Evidence",
-        &["vyre-frontend-c", "vyrec-readme", "release-plan"],
+        &["vyre-frontend-c", "vyrec-readme", "release-contract"],
     ),
     (
         "distributed-parser-coherence.md",
         "Distributed Parser Coherence Documentation Evidence",
-        &["vyre-frontend-c", "vyrec-readme", "release-plan"],
+        &["vyre-frontend-c", "vyrec-readme", "release-contract"],
     ),
     (
         "weir-integration.md",
         "Weir Integration Documentation Evidence",
-        &["weir-readme", "weir-vision", "release-plan"],
+        &["weir-readme", "weir-vision", "release-contract"],
     ),
     (
         "test-architecture.md",
         "Test Architecture Documentation Evidence",
-        &["vyre-testing", "release-plan"],
+        &["vyre-testing", "release-contract"],
     ),
     (
         "vyre-readme-proof.md",
@@ -1001,13 +1009,13 @@ const DOC_PROOFS: &[(&str, &str, &[&str])] = &[
     (
         "conformance-doc-proof.md",
         "Conformance Documentation Evidence",
-        &["vyre-conformance", "release-plan"],
+        &["vyre-conformance", "release-contract"],
     ),
     (
         "release-notes.md",
         "Release Notes Documentation Evidence",
         &[
-            "release-plan",
+            "release-contract",
             "vyre-release",
             "vyre-release-engineering",
             "vyre-release-checklist",
@@ -1016,17 +1024,17 @@ const DOC_PROOFS: &[(&str, &str, &[&str])] = &[
     (
         "crate-metadata-proof.md",
         "Crate Metadata Documentation Evidence",
-        &["vyre-readme", "release-plan"],
+        &["vyre-readme", "release-contract"],
     ),
     (
         "release-hygiene-proof.md",
         "Release Hygiene Documentation Evidence",
-        &["release-plan", "vyre-testing"],
+        &["release-contract", "vyre-testing"],
     ),
     (
         "cpu-only-100x-proof.md",
         "CPU-Only 100x Proof Documentation Evidence",
-        &["release-plan", "vyre-bench"],
+        &["release-contract", "vyre-bench"],
     ),
 ];
 

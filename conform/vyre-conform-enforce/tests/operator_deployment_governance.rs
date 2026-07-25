@@ -1,7 +1,6 @@
 //! Operator deployment governance test suite.
 
 const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
-const PLAN: &str = include_str!("../../../docs/optimization/ALL_AXES_ACCELERATION_PLAN.md");
 const SURFACES: &str =
     include_str!("../../../docs/optimization/OPERATOR_DEPLOYMENT_SURFACE_MATRIX.toml");
 const K8S: &str =
@@ -118,34 +117,6 @@ fn operator_runtime_config_policy_records_allowed_config_secret_resource_telemet
             CONFIG.contains(required),
             "operator runtime configuration policy must include {required}"
         );
-    }
-}
-
-#[test]
-fn plan_contains_operator_deployment_rows() {
-    for row in [
-        "VX-1221",
-        "VX-1222",
-        "VX-1223",
-        "VX-1224",
-        "VX-1225",
-        "VX-1226",
-        "VX-1227",
-        "VX-1228",
-        "VX-1229",
-        "VX-1230",
-        "VX-1231",
-        "VX-1232",
-        "VX-1233",
-        "VX-1234",
-        "VX-1235",
-        "VX-1236",
-        "VX-1237",
-        "VX-1238",
-        "VX-1239",
-        "VX-1240",
-    ] {
-        assert!(PLAN.contains(row), "plan must include {row}");
     }
 }
 

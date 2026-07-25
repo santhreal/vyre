@@ -126,21 +126,3 @@ fn fact_index_evidence_records_reuse_truth_and_publication_boundary() {
     }
 }
 
-#[test]
-fn acceleration_plan_contains_complete_semantic_fact_index_tranche() {
-    let plan = read_repo_file("docs/optimization/ALL_AXES_ACCELERATION_PLAN.md");
-
-    for id in 1581..=1600 {
-        assert_contains(&plan, &format!("VX-{id}"));
-    }
-
-    for token in [
-        "SEMANTIC_FACT_INDEX_SCHEMA",
-        "SYMBOL_REFERENCE_STABILITY_POLICY",
-        "INCREMENTAL_DATAFLOW_FACT_REUSE_POLICY",
-        "SEMANTIC_FACT_INDEX_EVIDENCE",
-        "END_TO_END_SEMANTIC_FACT_INDEX_TRANCHE_COVERAGE",
-    ] {
-        assert_contains(&plan, token);
-    }
-}

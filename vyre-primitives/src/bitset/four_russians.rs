@@ -107,6 +107,9 @@ pub fn dense_matvec_byte_lut(columns: &[u32], tile_count: u32, dst_words: u32) -
 }
 
 /// Build a dense boolean-matvec byte-tile LUT into caller-owned storage.
+///
+/// # Panics
+/// Panics on an invalid tile shape. Callers that must recover use the checked twin.
 pub fn dense_matvec_byte_lut_into(
     columns: &[u32],
     tile_count: u32,

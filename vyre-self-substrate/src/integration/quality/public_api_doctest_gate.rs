@@ -187,6 +187,14 @@ fn is_internal_symbol(symbol: &str) -> bool {
         || lower.contains("pipeline::")
 }
 
+/// The quoted crate version, as it appears in the README contract artifact.
+///
+/// `CARGO_PKG_VERSION` is the workspace version, so this tracks the release train without a
+/// second copy of the version living in this gate.
+fn version_token() -> String {
+    format!("\"{}\"", env!("CARGO_PKG_VERSION"))
+}
+
 /// Validate committed public README/docs evidence.
 pub fn validate_public_api_docs_artifacts(
     vyre_readme_contracts: &str,
@@ -199,7 +207,10 @@ pub fn validate_public_api_docs_artifacts(
         ("Vyre README exists", "\"exists\": true"),
         ("Vyre no missing tokens", "\"missing_tokens\": []"),
         ("Vyre zero blockers", "\"blockers\": []"),
-        ("Vyre version token", "\"0.6.3\""),
+        // Derived from the crate version, which is the workspace version and therefore the
+        // release train's vyre version. The literal was pinned at 0.6.3 and would have had
+        // to be edited by hand on every release.
+        ("Vyre version token", version_token().as_str()),
         ("Vyre crate token", "\"vyre\""),
         ("CUDA token", "\"cuda\""),
         ("WGPU token", "\"wgpu\""),
@@ -407,7 +418,7 @@ mod tests {
           "exists": true,
           "missing_tokens": [],
           "blockers": [],
-          "required_tokens": ["0.6.3", "vyre", "cuda", "wgpu", "vyre::program", "cargo add vyre", "release/evidence"],
+          "required_tokens": ["0.7.0", "vyre", "cuda", "wgpu", "vyre::program", "cargo add vyre", "release/evidence"],
           "example_count": 0
         }"#;
 

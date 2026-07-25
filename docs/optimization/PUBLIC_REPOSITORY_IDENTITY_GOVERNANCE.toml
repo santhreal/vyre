@@ -19,9 +19,9 @@ required_fields = [
 
 [[repository]]
 repository_id = "vyre-public"
-canonical_public_repository = "santhsecurity/vyre"
-private_repository_policy = "Santh-worktree-and-santhsecurity/Santh-are-private-and-not-public-sync-targets"
-backup_repository_policy = "outer-santhsecurity/Santh-is-backup-only-not-release-or-sync-authority"
+canonical_public_repository = "santhreal/vyre"
+private_repository_policy = "Santh-worktree-and-santhreal/Santh-are-private-and-not-public-sync-targets"
+backup_repository_policy = "outer-santhreal/Santh-is-backup-only-not-release-or-sync-authority"
 visibility_policy = "public-release-artifacts-and-docs-point-to-vyre-public-repository-only"
 topic_policy = "topics-describe-public-vyre-capabilities-without-private-worktree-names"
 readme_link_policy = "readme-links-resolve-to-public-vyre-docs-crates-and-release-artifacts"

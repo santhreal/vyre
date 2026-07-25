@@ -53,8 +53,8 @@ fn persistent_bfs_resident_single_uses_primitive_frontier_contract() {
         "persistent BFS resident single wrapper must delegate frontier planning to vyre-primitives"
     );
     assert!(
-        single_section.contains("resident_dispatch_two_u32_outputs_into"),
-        "persistent BFS resident single wrapper must use the shared resident readback dispatch bridge"
+        single_section.contains("resident_dispatch_three_u32_outputs_into"),
+        "persistent BFS resident single wrapper must use the shared three-output (frontier/changed/converged) resident readback dispatch bridge"
     );
     assert!(
         !single_section.contains("frontier_in.len() != graph.words")
@@ -95,7 +95,7 @@ fn persistent_bfs_dispatch_paths_use_primitive_layout_contract() {
         .split("pub fn bfs_expand_resident_graph_batch_with_scratch_into")
         .nth(1)
         .expect("resident persistent BFS batch wrapper must exist")
-        .split("fn ensure_resident_frontier_handles")
+        .split("fn ensure_resident_query_handles")
         .next()
         .expect("resident persistent BFS batch wrapper must precede handle helpers");
 
@@ -135,9 +135,9 @@ fn persistent_bfs_dispatch_paths_use_primitive_layout_contract() {
     );
 
     assert!(
-        batch_section.contains("resident_dispatch_two_u32_outputs_into") &&
+        batch_section.contains("resident_dispatch_three_u32_outputs_into") &&
         !batch_section.contains("u32::try_from(graph.words)"),
-        "resident persistent BFS batch wrapper must reuse primitive-narrowed frontier word count and shared resident readback dispatch"
+        "resident persistent BFS batch wrapper must reuse primitive-narrowed frontier word count and shared resident readback dispatch, reading frontier_out + per-query changed + per-query converged"
     );
 }
 

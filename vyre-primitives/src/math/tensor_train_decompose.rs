@@ -602,26 +602,52 @@ fn symmetric_eigen_jacobi_into(
 inventory::submit! {
     crate::harness::OpEntry::new(
         OP_ID,
-        // m = r_prev*nk = 2 rows, n = rem = 4 columns, r_next = 1 (rank-1 truncation).
-        || tensor_train_decompose_step("in", "u", "rem", 1, 2, 4, 1),
+        // m = r_prev*nk = 4 rows, n = rem = 2 columns, r_next = 1 (rank-1 truncation).
+        //
+        // The unfolding is TALL on purpose. A wide one (m < n) makes the Gram matrix
+        // rank-deficient, its null space is a degenerate eigen-subspace, and any
+        // eigenvector basis for it is equally correct. That leaves the eigenvector
+        // buffer with no single right answer and no oracle can pin it. With m >= n and
+        // distinct eigenvalues every output is determined, up to the sign convention
+        // `jacobi_eigen_body` now fixes.
+        || tensor_train_decompose_step("in", "u", "rem", 2, 2, 2, 1),
         Some(|| {
             let to_bytes = |vals: &[f32]| crate::wire::pack_f32_slice(vals);
-            // One f32 input per buffer in binding order: input_matrix (2x4), then the writable
+            // One f32 input per buffer in binding order: input_matrix (4x2), then the writable
             // core/remainder/scratch buffers zero-initialized (backend zero-allocation).
             vec![vec![
-                to_bytes(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]), // input_matrix (2x4)
-                to_bytes(&[0.0; 2]),                                 // u_out (2x1)
-                to_bytes(&[0.0; 4]),                                 // rem_out (1x4)
-                to_bytes(&[0.0; 16]),                                // tt_ata (4x4)
-                to_bytes(&[0.0; 16]),                                // tt_evec (4x4)
-                to_bytes(&[0.0; 4]),                                 // tt_eval (4)
+                to_bytes(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]), // input_matrix (4x2)
+                to_bytes(&[0.0; 4]),                                 // u_out (4x1)
+                to_bytes(&[0.0; 2]),                                 // rem_out (1x2)
+                to_bytes(&[0.0; 4]),                                 // tt_ata (2x2)
+                to_bytes(&[0.0; 4]),                                 // tt_evec (2x2)
+                to_bytes(&[0.0; 2]),                                 // tt_eval (2)
             ]]
         }),
-        // No exact expected-output fixture: the truncated SVD is basis-dependent (eigenvector sign /
-        // ordering of degenerate spectra), so value correctness is asserted by the reconstruction
-        // parity test `tensor_train_decompose_step_parity.rs`, not by an exact byte fixture. The
-        // registry still exercises the op for IR validity + out-of-bounds safety.
-        None,
+        // Exact oracle for the rank-1 truncation of M = [[1,2],[3,4],[5,6],[7,8]].
+        //
+        // Derived analytically, not captured from a run. G = MtM = [[84,100],[100,120]],
+        // whose eigenvalues are (204 +- sqrt(41296))/2, so lambda1 = 203.6071 and
+        // lambda2 = 0.39291. sigma1 = sqrt(lambda1) = 14.2691. The dominant eigenvector
+        // solves (84 - lambda1)x + 100y = 0, giving v1 = (0.64142, 0.76719) once
+        // normalized and sign-canonicalized. From those: rem = sigma1 * v1t, and
+        // u = M*v1/sigma1.
+        //
+        // The op used to ship no oracle at all, on the reasoning that a truncated SVD is
+        // basis-dependent. Two of the three ambiguities are removed rather than tolerated:
+        // the sign by `jacobi_eigen_body`'s canonicalization, the degenerate subspace by
+        // the tall unfolding above. Ordering is not an ambiguity here because the two
+        // eigenvalues differ by three orders of magnitude.
+        Some(|| {
+            let to_bytes = |vals: &[f32]| crate::wire::pack_f32_slice(vals);
+            vec![vec![
+                to_bytes(&[0.15248324, 0.3499184, 0.5473535, 0.7447886]), // u_out = M*v1/sigma1
+                to_bytes(&[9.152527, 10.947071]),                        // rem_out = sigma1*v1t
+                to_bytes(&[0.39291155, 0.0, 0.0, 203.6071]),             // tt_ata diagonalized
+                to_bytes(&[0.7671874, 0.64142305, -0.64142305, 0.7671874]), // tt_evec columns
+                to_bytes(&[0.39291155, -1.0e30]),                        // tt_eval, top marked used
+            ]]
+        }),
     )
 }
 

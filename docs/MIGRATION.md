@@ -126,8 +126,9 @@ fails the build.
 
 A migration is complete when:
 - The legacy surface has been deleted from the public API.
-- Every consumer (vyre-libs, consumer, pyrograph, warpscan, dataflow consumer) builds
-  cleanly without referencing the legacy surface.
+- Every consumer builds cleanly without referencing the legacy surface: the
+  in-tree crates plus each downstream integration (dataflow analysis, static
+  analysis, scanning, and graph tooling).
 - The gate that blocked the legacy pattern has been retained as a
   permanent invariant (not deleted).
 - The entry above moves to a "Completed migrations" section with the

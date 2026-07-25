@@ -5,6 +5,8 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
 
+use vyre_test_support::consumer_boundary::FORBIDDEN_CONSUMER_NAMES;
+
 const PLATFORM_CRATES: &[&str] = &[
     "vyre-core",
     "vyre-spec",
@@ -34,14 +36,6 @@ const SELF_SUBSTRATE_PLATFORM_DIRS: &[&str] = &[
     "telemetry",
 ];
 
-fn forbidden_consumer_names() -> [&'static str; 4] {
-    [
-        concat!("we", "ir"),
-        concat!("sur", "gec"),
-        concat!("gos", "san"),
-        concat!("key", "hog"),
-    ]
-}
 
 #[test]
 fn platform_crate_docs_and_comments_do_not_name_consumers() {
@@ -130,7 +124,7 @@ fn platform_crate_source_does_not_name_consumers() {
     let workspace = manifest
         .parent()
         .expect("vyre-self-substrate should live directly under the workspace root");
-    let forbidden = forbidden_consumer_names();
+    let forbidden = FORBIDDEN_CONSUMER_NAMES;
     let mut source_files = Vec::new();
 
     for crate_name in PLATFORM_CRATES {

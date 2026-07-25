@@ -92,24 +92,46 @@ pub fn multi_block_prefix_scan_sum_u32(input: &str, output: &str, n: u32) -> Pro
     }
 }
 
-// Provenance registration so the op id is known to `harness::all_entries()`.
+// Registration so the op id is known to `harness::all_entries()`.
 // region_chain_invariant resolves the three sub-region generators below
 // (`<OP_ID_INCLUSIVE_SUM>::{guarded_single_block,pass_a,pass_c}`) against this
 // registered id. `n = 64 (<= BLOCK_LANES)` keeps the build on the guarded
 // single-block path (no GridSync), so the entry constructs cleanly without a
-// host-split. Fixtures are `None`: no vyre-primitives differential walks these
-// fixtures today (universal_harness/cpu_witnesses iterate vyre-libs entries),
-// so a witness here would assert nothing (registration is provenance-only).
+// host-split.
+//
+// The fixtures used to be `None`, on the reasoning that nothing walked
+// vyre-primitives fixtures. The cross-backend parity matrix does, and a
+// registered op with no inputs is zero execution coverage: the op was counted as
+// registered while no backend ever ran it. The fixture below is an ordinary
+// inclusive scan whose expected values are closed-form, so it checks real
+// arithmetic rather than merely running.
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
     crate::harness::OpEntry::new(
         OP_ID_INCLUSIVE_SUM,
         || multi_block_prefix_scan_sum_u32("input", "output", 64),
-        None,
-        None,
+        Some(|| {
+            let to_bytes = crate::wire::pack_u32_slice;
+            let input: Vec<u32> = (1..=SCAN_FIXTURE_LEN).collect();
+            vec![vec![to_bytes(&input), to_bytes(&vec![0u32; SCAN_FIXTURE_LEN as usize])]]
+        }),
+        Some(|| {
+            let to_bytes = crate::wire::pack_u32_slice;
+            // Inclusive scan of 1..=n is the triangular number sequence:
+            // output[i] = (i + 1)(i + 2) / 2.
+            let expected: Vec<u32> = (1..=SCAN_FIXTURE_LEN).map(|i| i * (i + 1) / 2).collect();
+            vec![vec![to_bytes(&expected)]]
+        }),
     )
     .with_category("reduce")
 }
+
+/// Element count of the registered inclusive-scan fixture.
+///
+/// At or below [`BLOCK_LANES`] so the build stays on the guarded single-block
+/// path, which is the shape the sub-region generators resolve against.
+#[cfg(feature = "inventory-registry")]
+const SCAN_FIXTURE_LEN: u32 = 64;
 
 fn try_multi_block_prefix_scan_sum_u32(
     input: &str,

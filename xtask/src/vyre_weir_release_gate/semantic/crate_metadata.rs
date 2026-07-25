@@ -340,7 +340,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
         "vyre-driver-wgpu",
         "vyre",
         "vyre-harness",
-        "weir",
+        crate::release_train::weir_package_name(),
         "vyre-libs",
     ] {
         if !publish_order

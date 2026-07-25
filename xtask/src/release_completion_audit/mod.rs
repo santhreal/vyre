@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
 struct EvidenceManifest {
-    plan_path: String,
+    release_contract_path: String,
     requirements: Vec<Requirement>,
 }
 
@@ -26,9 +26,9 @@ struct Requirement {
 struct CompletionAudit {
     schema_version: u32,
     objective: &'static str,
-    success_criteria: Vec<&'static str>,
+    success_criteria: Vec<String>,
     prompt_to_artifact_checklist: Vec<ChecklistItem>,
-    plan_path: String,
+    release_contract_path: String,
     total_requirements: usize,
     closed_requirements: usize,
     blocked_or_open_requirements: usize,
@@ -234,26 +234,31 @@ pub(crate) fn run(args: &[String]) {
     let closed_requirements = audits.iter().filter(|audit| audit.complete).count();
     let audit = CompletionAudit {
         schema_version: 1,
-        objective: "Make Vyre 0.6.3 and Weir 0.1.0 release-ready end to end",
+        objective: "Make the declared Vyre and Weir release train ready end to end",
         success_criteria: vec![
-            "1. CUDA-first execution path is documented, benchmarked, and selected as the fast release substrate.",
-            "2. WGPU fallback is functional, tested, benchmarked, and never hides a CUDA or CPU downgrade.",
-            "3. Megakernel is the default high-throughput runtime path where legal, including paired speculation evidence.",
-            "4. Non-megakernel dispatch is retained only with measured or architectural justification.",
-            "5. Optimization infrastructure proves at least 4096 concrete rewrite/pass opportunities across families.",
-            "6. Optimization passes have correctness tests and before/after benchmark evidence.",
-            "7. Weir alias, reaching-def, points-to, callgraph, slicing, summary, loop, and fixpoint facts integrate into Vyre optimization.",
-            "8. The distributed C parser parses a full selected Linux subsystem corpus with AST/semantic contract evidence.",
-            "9. At least 12 proof workload families compare CUDA against serious CPU baselines with reproducible artifacts; the current matrix carries 13 required rows.",
-            "10. At least ten formerly CPU-only workload families prove 100x+ wins or block release.",
-            "11. Conformance gates block release for every claimed op/backend path with zero blocked_release OP_MATRIX rows.",
-            "12. Test organization is modular, including distributed parser CLI evidence for tools/vyrec.",
-            "13. Documentation is coherent and every release claim links to concrete evidence.",
-            "14. Crate metadata, feature surfaces, readmes, examples, license, and version policy are consistent for Vyre 0.6.3 / Weir 0.1.0.",
-            "15. Final hygiene review finds no unbounded caches, hidden fallbacks, placeholders, library panics, unactionable errors, or undocumented public API.",
+            "1. CUDA-first execution path is documented, benchmarked, and selected as the fast release substrate.".to_string(),
+            "2. WGPU fallback is functional, tested, benchmarked, and never hides a CUDA or CPU downgrade.".to_string(),
+            "3. Megakernel is the default high-throughput runtime path where legal, including paired speculation evidence.".to_string(),
+            "4. Non-megakernel dispatch is retained only with measured or architectural justification.".to_string(),
+            "5. Optimization infrastructure proves at least 4096 concrete rewrite/pass opportunities across families.".to_string(),
+            "6. Optimization passes have correctness tests and before/after benchmark evidence.".to_string(),
+            "7. Weir alias, reaching-def, points-to, callgraph, slicing, summary, loop, and fixpoint facts integrate into Vyre optimization.".to_string(),
+            "8. The distributed C parser parses a full selected Linux subsystem corpus with AST/semantic contract evidence.".to_string(),
+            "9. At least 12 proof workload families compare CUDA against serious CPU baselines with reproducible artifacts; the current matrix carries 13 required rows.".to_string(),
+            "10. At least ten formerly CPU-only workload families prove 100x+ wins or block release.".to_string(),
+            "11. Conformance gates block release for every claimed op/backend path with zero blocked_release OP_MATRIX rows.".to_string(),
+            "12. Test organization is modular, including distributed parser CLI evidence for tools/vyrec.".to_string(),
+            "13. Documentation is coherent and every release claim links to concrete evidence.".to_string(),
+            // Derived from the release train: this line named 0.6.3 while the train moved on.
+            format!(
+                "14. Crate metadata, feature surfaces, readmes, examples, license, and version policy are consistent for Vyre {} / Weir {}.",
+                crate::release_train::vyre_version(),
+                crate::release_train::weir_version()
+            ),
+            "15. Final hygiene review finds no unbounded caches, hidden fallbacks, placeholders, library panics, unactionable errors, or undocumented public API.".to_string(),
         ],
         prompt_to_artifact_checklist: checklist,
-        plan_path: manifest.plan_path,
+        release_contract_path: manifest.release_contract_path,
         total_requirements: audits.len(),
         closed_requirements,
         blocked_or_open_requirements: audits.len().saturating_sub(closed_requirements),

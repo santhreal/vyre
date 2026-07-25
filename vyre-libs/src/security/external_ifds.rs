@@ -1,15 +1,15 @@
-//! Bridge from Vyre security facts into Weir IFDS dispatch.
+//! Bridge from Vyre security facts into external IFDS dispatch.
 //!
-//! Security owns source/sink/sanitizer facts. Weir owns IFDS exploded-graph
+//! Security owns source/sink/sanitizer facts. The external engine owns IFDS exploded-graph
 //! execution and witness extraction. This module is the narrow seam between
-//! them: it validates that fact and graph buffers exist, builds a Weir IFDS
+//! them: it validates that fact and graph buffers exist, builds an external IFDS
 //! dispatch request, and returns [`external_dataflow_engine::reachability_witness::PathSeed`]
 //! values for proof-path materialization.
 
 use std::collections::BTreeMap;
 
 use external_dataflow_engine::{
-    ifds_gpu::{ifds_gpu_step, IfdsShape, OP_ID as WEIR_IFDS_GPU_OP_ID},
+    ifds_gpu::{ifds_gpu_step, IfdsShape, OP_ID as EXTERNAL_IFDS_GPU_OP_ID},
     reachability_witness::{ExtractedPath, PathSeed},
 };
 use vyre_foundation::ir::Program;
@@ -22,12 +22,12 @@ use crate::{
     },
 };
 
-/// Backend id used when Vyre security routes taint through Weir IFDS.
-pub const WEIR_IFDS_SECURITY_BACKEND_ID: &str = "weir-ifds-gpu";
+/// Backend id used when Vyre security routes taint through external IFDS.
+pub const EXTERNAL_IFDS_SECURITY_BACKEND_ID: &str = "external-ifds-gpu";
 
-/// Buffer names required to route a security taint query through Weir IFDS.
+/// Buffer names required to route a security taint query through external IFDS.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct WeirIfdsSecurityBuffers {
+pub struct ExternalIfdsSecurityBuffers {
     /// ProgramGraph CSR edge-offset buffer.
     pub pg_edge_offsets: String,
     /// ProgramGraph CSR edge-target buffer.
@@ -50,7 +50,7 @@ pub struct WeirIfdsSecurityBuffers {
     pub frontier_out: String,
 }
 
-impl WeirIfdsSecurityBuffers {
+impl ExternalIfdsSecurityBuffers {
     /// Build a buffer-name bundle.
     #[allow(clippy::too_many_arguments)]
     #[must_use]
@@ -80,7 +80,7 @@ impl WeirIfdsSecurityBuffers {
         }
     }
 
-    fn validate(&self) -> Result<(), WeirIfdsSecurityRouteError> {
+    fn validate(&self) -> Result<(), ExternalIfdsSecurityRouteError> {
         for (field, value) in [
             ("pg_edge_offsets", &self.pg_edge_offsets),
             ("pg_edge_targets", &self.pg_edge_targets),
@@ -94,11 +94,11 @@ impl WeirIfdsSecurityBuffers {
             ("frontier_out", &self.frontier_out),
         ] {
             if value.trim().is_empty() {
-                return Err(WeirIfdsSecurityRouteError::MissingBuffer { field });
+                return Err(ExternalIfdsSecurityRouteError::MissingBuffer { field });
             }
         }
         if self.frontier_in == self.frontier_out {
-            return Err(WeirIfdsSecurityRouteError::AliasedFrontierBuffers {
+            return Err(ExternalIfdsSecurityRouteError::AliasedFrontierBuffers {
                 buffer: self.frontier_in.clone(),
             });
         }
@@ -106,48 +106,48 @@ impl WeirIfdsSecurityBuffers {
     }
 }
 
-/// Weir IFDS dispatch selected for a Vyre security source-to-sink query.
+/// External IFDS dispatch selected for a Vyre security source-to-sink query.
 #[derive(Clone, Debug, PartialEq)]
-pub struct WeirIfdsSecurityDispatch {
+pub struct ExternalIfdsSecurityDispatch {
     /// Query id; currently [`external_dataflow_engine::ifds_gpu::OP_ID`].
     pub query_id: String,
     /// Backend id for finding evidence.
     pub backend_id: String,
-    /// Weir exploded-supergraph shape.
+    /// external exploded-supergraph shape.
     pub shape: IfdsShape,
     /// Checked exploded-node count.
     pub node_count: u32,
     /// Buffer names used by the dispatch route.
-    pub buffers: WeirIfdsSecurityBuffers,
+    pub buffers: ExternalIfdsSecurityBuffers,
     /// Source fact used as the IFDS seed source.
     pub source_fact_id: FactId,
     /// Sink fact used as the IFDS seed target.
     pub sink_fact_id: FactId,
-    /// Witness seeds returned to Weir reachability-witness extraction.
+    /// Witness seeds returned to external reachability-witness extraction.
     pub witness_seeds: Vec<PathSeed>,
     /// Soundness evidence for final finding bundles.
     pub primitive_soundness: Vec<DynamicPrimitiveSoundness>,
 }
 
-impl WeirIfdsSecurityDispatch {
-    /// Build the Weir IFDS GPU step Program for this dispatch route.
+impl ExternalIfdsSecurityDispatch {
+    /// Build the external IFDS GPU step Program for this dispatch route.
     ///
     /// # Errors
     ///
-    /// Returns [`WeirIfdsSecurityRouteError`] if Weir rejects the shape.
-    pub fn step_program(&self) -> Result<Program, WeirIfdsSecurityRouteError> {
+    /// Returns [`ExternalIfdsSecurityRouteError`] if the external engine rejects the shape.
+    pub fn step_program(&self) -> Result<Program, ExternalIfdsSecurityRouteError> {
         ifds_gpu_step(
             self.shape,
             &self.buffers.frontier_in,
             &self.buffers.frontier_out,
         )
-        .map_err(|reason| WeirIfdsSecurityRouteError::BuildProgram { reason })
+        .map_err(|reason| ExternalIfdsSecurityRouteError::BuildProgram { reason })
     }
 }
 
-/// Routing failure while adapting security facts to Weir IFDS.
+/// Routing failure while adapting security facts to external IFDS.
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
-pub enum WeirIfdsSecurityRouteError {
+pub enum ExternalIfdsSecurityRouteError {
     /// Security fact table validation failed before routing.
     #[error(transparent)]
     InvalidFacts {
@@ -156,7 +156,7 @@ pub enum WeirIfdsSecurityRouteError {
         source: AnalysisFactError,
     },
     /// A required graph or fact buffer name was empty.
-    #[error("missing Weir IFDS buffer `{field}`. Fix: provide graph and fact buffers before routing through IFDS.")]
+    #[error("missing external IFDS buffer `{field}`. Fix: provide graph and fact buffers before routing through IFDS.")]
     MissingBuffer {
         /// Missing buffer field.
         field: &'static str,
@@ -187,8 +187,8 @@ pub enum WeirIfdsSecurityRouteError {
         /// Actual fact kind.
         actual: FactKind,
     },
-    /// Source or sink subject did not fit Weir witness node ids.
-    #[error("{role} fact subject {subject} does not fit a u32 Weir node id. Fix: remap corpus node ids before IFDS routing.")]
+    /// Source or sink subject did not fit external witness node ids.
+    #[error("{role} fact subject {subject} does not fit a u32 external node id. Fix: remap corpus node ids before IFDS routing.")]
     NodeIdOverflow {
         /// Source or sink role.
         role: &'static str,
@@ -202,19 +202,19 @@ pub enum WeirIfdsSecurityRouteError {
         role: &'static str,
         /// Source or sink node id.
         node_id: u32,
-        /// Checked Weir node count.
+        /// Checked external node count.
         node_count: u32,
     },
-    /// Weir rejected the IFDS shape.
+    /// The external engine rejected the IFDS shape.
     #[error("{reason}")]
     InvalidShape {
-        /// Weir shape-validation failure.
+        /// external shape-validation failure.
         reason: String,
     },
-    /// Weir rejected Program construction.
+    /// The external engine rejected Program construction.
     #[error("{reason}")]
     BuildProgram {
-        /// Weir Program-construction failure.
+        /// external Program-construction failure.
         reason: String,
     },
 }
@@ -240,7 +240,7 @@ pub struct SecurityWitnessStatement {
     pub source_bytes: Vec<u8>,
 }
 
-/// Security finding witness path built from a Weir extracted path.
+/// Security finding witness path built from an external extracted path.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SecurityFindingWitnessPath {
     /// Finding id this witness explains.
@@ -263,14 +263,14 @@ pub struct SecurityFindingWitnessPath {
     pub statements: Vec<SecurityWitnessStatement>,
 }
 
-/// Failure while attaching a Weir witness path to a security finding.
+/// Failure while attaching an external witness path to a security finding.
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum SecurityWitnessPathError {
     /// Rule id was blank.
-    #[error("rule_id is blank. Fix: attach stable rule ids to Weir witness paths.")]
+    #[error("rule_id is blank. Fix: attach stable rule ids to external witness paths.")]
     EmptyRuleId,
-    /// Weir extracted an empty path.
-    #[error("Weir witness path is empty. Fix: only attach successful non-empty extracted paths.")]
+    /// The external engine extracted an empty path.
+    #[error("External witness path is empty. Fix: only attach successful non-empty extracted paths.")]
     EmptyExtractedPath,
     /// Edge-kind count did not match path hops.
     #[error("edge kind count {edge_kinds} does not match path hop count {hops}. Fix: provide one edge kind per witness transition.")]
@@ -289,7 +289,7 @@ pub enum SecurityWitnessPathError {
         role: &'static str,
     },
     /// Source bytes for a witness statement file were unavailable.
-    #[error("source bytes for `{file}` are missing. Fix: pass source bytes for every file referenced by the Weir path.")]
+    #[error("source bytes for `{file}` are missing. Fix: pass source bytes for every file referenced by the external path.")]
     MissingSourceBytes {
         /// Missing file path.
         file: String,
@@ -308,13 +308,13 @@ pub enum SecurityWitnessPathError {
     },
 }
 
-/// Attach a Weir extracted path to a Vyre security finding.
+/// Attach an external extracted path to a Vyre security finding.
 ///
 /// # Errors
 ///
 /// Returns [`SecurityWitnessPathError`] when the rule id, finding proof roles,
 /// edge-kind list, or source-byte slices are invalid.
-pub fn security_witness_path_from_weir(
+pub fn security_witness_path_from_external_path(
     finding: &FindingProofBundle,
     rule_id: impl Into<String>,
     extracted_path: &ExtractedPath,
@@ -380,27 +380,27 @@ pub fn security_witness_path_from_weir(
     })
 }
 
-/// Route a fact-backed security source-to-sink query through Weir IFDS.
+/// Route a fact-backed security source-to-sink query through external IFDS.
 ///
 /// This does not execute the GPU dispatch. It validates the route, records the
-/// exact Weir primitive evidence, and produces witness seeds for the Weir
+/// exact external primitive evidence, and produces witness seeds for the external
 /// reachability-witness layer to materialize path statements.
 ///
 /// # Errors
 ///
-/// Returns [`WeirIfdsSecurityRouteError`] when facts, buffers, or shape are not
+/// Returns [`ExternalIfdsSecurityRouteError`] when facts, buffers, or shape are not
 /// valid for IFDS routing.
-pub fn route_security_taint_through_weir_ifds(
+pub fn route_security_taint_through_external_ifds(
     table: &AnalysisFactTable,
     request: &SourceToSinkFindingRequest,
     shape: IfdsShape,
-    buffers: WeirIfdsSecurityBuffers,
-) -> Result<WeirIfdsSecurityDispatch, WeirIfdsSecurityRouteError> {
+    buffers: ExternalIfdsSecurityBuffers,
+) -> Result<ExternalIfdsSecurityDispatch, ExternalIfdsSecurityRouteError> {
     table.validate()?;
     buffers.validate()?;
     let node_count = shape
         .node_count()
-        .map_err(|reason| WeirIfdsSecurityRouteError::InvalidShape { reason })?;
+        .map_err(|reason| ExternalIfdsSecurityRouteError::InvalidShape { reason })?;
     let source = require_role_fact(table, request.source_fact_id, "source", FactKind::Source)?;
     let sink = require_role_fact(table, request.sink_fact_id, "sink", FactKind::Sink)?;
     let source_node = fact_node_id(source, "source", node_count)?;
@@ -412,9 +412,9 @@ pub fn route_security_taint_through_weir_ifds(
         sink_node,
     };
 
-    Ok(WeirIfdsSecurityDispatch {
-        query_id: WEIR_IFDS_GPU_OP_ID.to_string(),
-        backend_id: WEIR_IFDS_SECURITY_BACKEND_ID.to_string(),
+    Ok(ExternalIfdsSecurityDispatch {
+        query_id: EXTERNAL_IFDS_GPU_OP_ID.to_string(),
+        backend_id: EXTERNAL_IFDS_SECURITY_BACKEND_ID.to_string(),
         shape,
         node_count,
         buffers,
@@ -422,7 +422,7 @@ pub fn route_security_taint_through_weir_ifds(
         sink_fact_id: sink.id,
         witness_seeds: vec![witness_seed],
         primitive_soundness: vec![DynamicPrimitiveSoundness::new(
-            WEIR_IFDS_GPU_OP_ID,
+            EXTERNAL_IFDS_GPU_OP_ID,
             Soundness::Exact,
         )],
     })
@@ -433,12 +433,12 @@ fn require_role_fact<'a>(
     fact_id: FactId,
     role: &'static str,
     expected: FactKind,
-) -> Result<&'a AnalysisFact, WeirIfdsSecurityRouteError> {
+) -> Result<&'a AnalysisFact, ExternalIfdsSecurityRouteError> {
     let fact = table
         .get(fact_id)
-        .ok_or(WeirIfdsSecurityRouteError::MissingRoleFact { role, fact_id })?;
+        .ok_or(ExternalIfdsSecurityRouteError::MissingRoleFact { role, fact_id })?;
     if fact.kind != expected {
-        return Err(WeirIfdsSecurityRouteError::InvalidRoleFactKind {
+        return Err(ExternalIfdsSecurityRouteError::InvalidRoleFactKind {
             role,
             fact_id,
             actual: fact.kind,
@@ -451,14 +451,14 @@ fn fact_node_id(
     fact: &AnalysisFact,
     role: &'static str,
     node_count: u32,
-) -> Result<u32, WeirIfdsSecurityRouteError> {
+) -> Result<u32, ExternalIfdsSecurityRouteError> {
     let node_id =
-        u32::try_from(fact.subject).map_err(|_| WeirIfdsSecurityRouteError::NodeIdOverflow {
+        u32::try_from(fact.subject).map_err(|_| ExternalIfdsSecurityRouteError::NodeIdOverflow {
             role,
             subject: fact.subject,
         })?;
     if node_id >= node_count {
-        return Err(WeirIfdsSecurityRouteError::NodeOutOfDomain {
+        return Err(ExternalIfdsSecurityRouteError::NodeOutOfDomain {
             role,
             node_id,
             node_count,

@@ -13,8 +13,9 @@
 //! `O(max_iters)` to `O(actual_diameter)`. For chains
 //! (`diameter == n`) it matches the original.
 //!
-//! Buffer + binding layout matches `persistent_bfs` exactly so the
-//! handles can be allocated and dispatched the same way.
+//! Buffer + binding layout matches `persistent_bfs` exactly, including
+//! the `converged` word, so the handles can be allocated and dispatched
+//! the same way and the outputs line up index-for-index.
 
 use std::sync::Arc;
 
@@ -22,7 +23,7 @@ use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_primitives::bitset::bitset_words;
 use vyre_primitives::graph::persistent_bfs::{
-    BINDING_CHANGED, BINDING_FRONTIER_IN, BINDING_FRONTIER_OUT,
+    BINDING_CHANGED, BINDING_CONVERGED, BINDING_FRONTIER_IN, BINDING_FRONTIER_OUT,
 };
 use vyre_primitives::graph::program_graph::{
     ProgramGraphShape, NAME_EDGE_KIND_MASK, NAME_EDGE_OFFSETS, NAME_EDGE_TARGETS,
@@ -184,20 +185,24 @@ pub fn build_persistent_bfs_program(
 
 /// Build a DCE-tailored persistent BFS Program with early-exit.
 ///
-/// Identical RO buffer layout to `persistent_bfs` (frontier_in,
-/// frontier_out, changed, plus the program-graph CSR buffers from
-/// `shape.read_only_buffers()`). The kernel:
+/// Identical buffer layout to `persistent_bfs` (frontier_in,
+/// frontier_out, changed, converged, plus the program-graph CSR buffers
+/// from `shape.read_only_buffers()`). The kernel:
 ///
-///  1. Seeds `frontier_out` from `frontier_in`.
+///  1. Seeds `frontier_out` from `frontier_in` and clears `converged`.
 ///  2. Runs up to `max_iters` BFS steps. Each step:
 ///     a. Lane 0 zeros `changed[0]`.
 ///     b. Workgroup barrier.
 ///     c. CSR forward step; if any node grew its frontier bit, it
 ///     does `atomic_or(changed, 0, 1)`.
 ///     d. Workgroup barrier.
-///     e. If `changed[0] == 0`, return (no progress this iter ⇒
-///     fixpoint reached; subsequent iters are no-ops).
-///  3. Final state lives in `frontier_out`.
+///     e. If `changed[0] == 0`, set `converged[0] = 1` and return (no
+///     progress this iter ⇒ fixpoint reached; subsequent iters are
+///     no-ops).
+///  3. Final state lives in `frontier_out`. `converged[0]` is 1 when the
+///     loop exited early on a fixpoint and 0 when it burned every
+///     iteration while still growing, which means `frontier_out` is a
+///     partial closure and must not be trusted as a reachability set.
 #[must_use]
 pub fn build_dce_bfs_program(shape: ProgramGraphShape, max_iters: u32) -> Program {
     build_persistent_bfs_program_inner(shape, max_iters, u32::MAX)
@@ -276,10 +281,21 @@ fn build_persistent_bfs_program_internal(
         ));
     }
     iter_body.push(Node::barrier());
-    // Early-exit on per-iter fixpoint.
+    // Early-exit on per-iter fixpoint. Reaching this branch IS convergence: the
+    // step added nothing, and growth is monotone, so every later step would add
+    // nothing too. Record it before returning so the host can tell a real
+    // fixpoint apart from a loop that burned its whole `max_iters` budget while
+    // still growing. Without this the two are indistinguishable and a caller
+    // silently reasons over a partial closure (Law 10).
     iter_body.push(Node::if_then(
         Expr::eq(Expr::load("changed", Expr::u32(0)), Expr::u32(0)),
-        vec![Node::Return],
+        vec![
+            Node::if_then(
+                Expr::eq(t.clone(), Expr::u32(0)),
+                vec![Node::store("converged", Expr::u32(0), Expr::u32(1))],
+            ),
+            Node::Return,
+        ],
     ));
 
     let entry: Vec<Node> = vec![
@@ -291,6 +307,12 @@ fn build_persistent_bfs_program_internal(
                 t.clone(),
                 Expr::load("frontier_in", t.clone()),
             )],
+        ),
+        // `converged` starts at 0 so a kernel that runs every iteration without
+        // reaching a fixpoint leaves it 0. Only the early-exit branch sets it.
+        Node::if_then(
+            Expr::eq(t.clone(), Expr::u32(0)),
+            vec![Node::store("converged", Expr::u32(0), Expr::u32(0))],
         ),
         Node::barrier(),
         // Persistent loop with early-exit.
@@ -324,6 +346,15 @@ fn build_persistent_bfs_program_internal(
             DataType::U32,
         )
         .with_count(if sticky_changed { 2 } else { 1 }),
+    );
+    buffers.push(
+        BufferDecl::storage(
+            "converged",
+            BINDING_CONVERGED,
+            BufferAccess::ReadWrite,
+            DataType::U32,
+        )
+        .with_count(1),
     );
     buffers.push(BufferDecl::workgroup("wg_scratch", 256, DataType::U32));
 

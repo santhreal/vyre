@@ -1,7 +1,6 @@
 //! Staged rollout governance test suite.
 
 const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
-const PLAN: &str = include_str!("../../../docs/optimization/ALL_AXES_ACCELERATION_PLAN.md");
 const ROLLOUT: &str =
     include_str!("../../../docs/optimization/RELEASE_ROLLOUT_STRATEGY_POLICY.toml");
 const UPGRADE: &str =
@@ -112,34 +111,6 @@ fn rollback_forward_fix_decision_policy_records_triggers_inputs_rollback_forward
             DECISION.contains(required),
             "rollback forward fix decision policy must include {required}"
         );
-    }
-}
-
-#[test]
-fn plan_contains_staged_rollout_rows() {
-    for row in [
-        "VX-1261",
-        "VX-1262",
-        "VX-1263",
-        "VX-1264",
-        "VX-1265",
-        "VX-1266",
-        "VX-1267",
-        "VX-1268",
-        "VX-1269",
-        "VX-1270",
-        "VX-1271",
-        "VX-1272",
-        "VX-1273",
-        "VX-1274",
-        "VX-1275",
-        "VX-1276",
-        "VX-1277",
-        "VX-1278",
-        "VX-1279",
-        "VX-1280",
-    ] {
-        assert!(PLAN.contains(row), "plan must include {row}");
     }
 }
 

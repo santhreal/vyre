@@ -201,10 +201,7 @@ pub fn validate_deep_review_hygiene_artifacts(
         ("Vyrec root coverage", "/tools/vyrec"),
         ("CUDA driver surface", "\"cuda_driver_crate\": true"),
         ("WGPU driver surface", "\"wgpu_driver_crate\": true"),
-        (
-            "dataflow crate surface",
-            concat!("\"", "we", "ir_crate\": true"),
-        ),
+        ("dataflow crate surface", "\"dataflow_crate\": true"),
         ("Vyrec tool surface", "\"vyrec_tool\": true"),
         ("release scripts surface", "\"release_scripts\": true"),
         ("GitHub workflow surface", "\"github_workflows\": true"),
@@ -414,23 +411,12 @@ mod tests {
 
     #[test]
     fn deep_review_rejects_hygiene_artifact_with_blockers() {
-        let hygiene_matrix = r#"{
-          "schema_version": 1,
-          "blockers": ["cpu-demotion"],
-          "findings": [],
-          "scanned_files": 3000,
-          "scanned_roots": ["/matching/vyre", "/libs/dataflow/weir", "/tools/vyrec", "/libs/surge/surgec", "/libs/performance/matching/vyre/vyre-grammar-gen"],
-          "release_surface_coverage": {
-            "cuda_driver_crate": true,
-            "wgpu_driver_crate": true,
-            "release_scripts": true,
-            "github_workflows": true,
-            "branch_protection_controls": true,
-            "hidden_fallback_patterns": ["cpu_demotion", "gpu_unavailable_skip"],
-            "resource_bound_patterns": [],
-            "release_tooling_patterns": ["raw_workspace_cargo", "heredoc"]
-          }
-        }"#;
+        // Fixture data (with the real scanned-root paths) lives in a sibling
+        // JSON so this substrate source stays free of downstream names. The
+        // fixture carries every release-surface flag except the dataflow-crate
+        // one, so the first failing evidence check is the dataflow crate surface.
+        let hygiene_matrix =
+            include_str!("fixtures/hygiene-matrix-missing-dataflow-crate.json");
         let proof = "# Release hygiene proof no-stubs-scan.json no-hidden-fallback-scan.json resource-bound-scan.json error-surface-scan.json cargo-wrapper-scan.json audit-location-scan.json public-doc-scan.json test-hygiene-scan.json branch-protection controls";
         let scan = r#"{"schema_version":1,"scan":"audit-location","findings":[],"blockers":[]}"#;
         let docs = r#"{"schema_version":1,"scan":"public-docs","findings":[],"blockers":[]}"#;
@@ -438,10 +424,10 @@ mod tests {
         assert_eq!(
             validate_deep_review_hygiene_artifacts(hygiene_matrix, proof, scan, docs)
                 .expect_err("hygiene blockers should fail"),
-            // The fixture carries the dataflow workspace root (/libs/dataflow/weir)
-            // but omits the `weir_crate` surface flag, so the first failing check
-            // is the crate-surface evidence the migration added after this test
-            // was first written.
+            // The fixture carries the dataflow workspace root but omits the
+            // `dataflow_crate` surface flag, so the first failing check is the
+            // crate-surface evidence the migration added after this test was
+            // first written.
             DeepReviewGateError::ArtifactMissingEvidence {
                 evidence: "dataflow crate surface",
             }

@@ -10,6 +10,10 @@ use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 /// punctuation, array/function suffixes, and aggregate specifier bodies such as
 /// `struct s { ... } x`, but stops at statement/directive boundaries so a stale
 /// declaration cannot leak into later code.
+///
+/// # Panics
+/// Panics when `num_tokens` is not a literal expression. The output buffer is sized at
+/// build time, so a non-literal count cannot be honored; pass `Expr::u32(N)`.
 #[must_use]
 pub fn opt_propagate_type_specifiers(
     tok_types: &str,

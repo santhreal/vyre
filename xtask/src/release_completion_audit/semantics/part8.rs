@@ -69,7 +69,8 @@ fn inspect_metadata_matrix_semantics(
     }
     if !packages.iter().any(|package| {
         package.get("name").and_then(serde_json::Value::as_str) == Some("vyre-frontend-c")
-            && package.get("version").and_then(serde_json::Value::as_str) == Some("0.6.3")
+            && package.get("version").and_then(serde_json::Value::as_str)
+                == Some(crate::release_train::vyre_frontend_c_version())
             && package.get("readme").and_then(serde_json::Value::as_str) == Some("README.md")
             && package
                 .get("release_kind")
@@ -81,7 +82,8 @@ fn inspect_metadata_matrix_semantics(
                 == Some("c-frontend")
     }) {
         blockers.push(format!(
-            "{evidence}: missing vyre-frontend-c 0.6.3 c-frontend non-publishable release-surface metadata with README.md"
+            "{evidence}: missing vyre-frontend-c {} c-frontend non-publishable release-surface metadata with README.md",
+            crate::release_train::vyre_frontend_c_version()
         ));
     }
     for (package_name, backend_surface) in [
@@ -90,7 +92,8 @@ fn inspect_metadata_matrix_semantics(
     ] {
         if !packages.iter().any(|package| {
             package.get("name").and_then(serde_json::Value::as_str) == Some(package_name)
-                && package.get("version").and_then(serde_json::Value::as_str) == Some("0.6.3")
+                && package.get("version").and_then(serde_json::Value::as_str)
+                    == Some(crate::release_train::vyre_version())
                 && package.get("readme").and_then(serde_json::Value::as_str) == Some("README.md")
                 && package
                     .get("release_kind")
@@ -102,7 +105,8 @@ fn inspect_metadata_matrix_semantics(
                     == Some(backend_surface)
         }) {
             blockers.push(format!(
-                "{evidence}: missing {package_name} 0.6.3 publishable {backend_surface} release-surface metadata with README.md"
+                "{evidence}: missing {package_name} {} publishable {backend_surface} release-surface metadata with README.md",
+                crate::release_train::vyre_version()
             ));
         }
     }
@@ -209,7 +213,7 @@ fn inspect_package_readiness_semantics(
         "vyre-driver-wgpu",
         "vyre",
         "vyre-harness",
-        "weir",
+        crate::release_train::weir_package_name(),
         "vyre-libs",
     ] {
         if !publish_order
@@ -251,7 +255,9 @@ fn inspect_package_readiness_semantics(
         .and_then(serde_json::Value::as_array)
         .cloned()
         .unwrap_or_default();
-    for required in ["vyre-macros@0.6.3", "vyre-spec@0.6.3", "vyre-lints@0.6.3"] {
+    // The train lists which packages must have passed `cargo package --verify`; this was a
+    // second, 0.6.3-pinned copy of that list.
+    for required in crate::release_train::package_verify_passed() {
         if !verify_passed
             .iter()
             .any(|entry| entry.as_str() == Some(required))

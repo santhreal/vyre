@@ -25,7 +25,7 @@ owner_authority = "OWNERSHIP.toml"
 codeowners_policy = "public-vyre-CODEOWNERS-on-base-branch-routes-review-to-visible-write-permission-owners"
 security_manager_policy = "security-sensitive-items-route-to-PRIVATE_VULNERABILITY_RESPONSE_RUNBOOK.toml"
 fallback_policy = "unowned-public-surface-blocks-release-health-closure-until-owner-lane-is-declared"
-boundary_policy = "santhsecurity/vyre-public-only-Santh-and-santhsecurity/Santh-are-not-routing-authorities"
+boundary_policy = "santhreal/vyre-public-only-Santh-and-santhreal/Santh-are-not-routing-authorities"
 diagnostic = "VYRE_PUBLIC_ISSUE_OWNER_ROUTE_REQUIRED"
 
 [[escalation]]

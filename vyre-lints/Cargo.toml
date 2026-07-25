@@ -1,11 +1,11 @@
 [package]
 name = "vyre-lints"
-version = "0.6.5"
+version = "0.7.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Lego-block enforcement lints for vyre. Forbids raw IR construction in dialect crates."
-repository = "https://github.com/santhsecurity/vyre"
-homepage = "https://github.com/santhsecurity/vyre"
+repository = "https://github.com/santhreal/vyre"
+homepage = "https://github.com/santhreal/vyre"
 documentation = "https://docs.rs/vyre-lints"
 readme = "README.md"
 categories = ["development-tools", "compilers"]

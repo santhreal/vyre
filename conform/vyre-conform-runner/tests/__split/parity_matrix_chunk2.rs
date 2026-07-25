@@ -1,3 +1,30 @@
+/// Op id of the callee the expr-variant bundle calls.
+///
+/// `Expr::Call` is a real IR variant, so the coverage bundle has to carry one,
+/// and the target has to be a registered op. Validation resolves every call
+/// through the dialect lookup and rejects an unresolvable one with V016 before
+/// the reference interpreter ever runs, which is what a placeholder id like
+/// `unknown.op` used to hit. Registering a real zero-argument callee keeps the
+/// Call variant covered and keeps the bundle dispatchable.
+const SYNTHETIC_CALLEE_OP_ID: &str = "conform.synthetic_callee";
+
+inventory::submit! {
+    vyre_driver::registry::dialect::OpDefRegistration::new(|| vyre_driver::registry::OpDef {
+        id: SYNTHETIC_CALLEE_OP_ID,
+        dialect: "conform",
+        category: vyre_driver::registry::Category::Intrinsic,
+        signature: vyre_driver::registry::Signature {
+            inputs: &[],
+            outputs: &[],
+            attrs: &[],
+            bytes_extraction: false,
+        },
+        lowerings: vyre_foundation::dialect_lookup::LoweringTable::empty(),
+        laws: &[],
+        compose: None,
+    })
+}
+
 fn synthetic_entries() -> Vec<UnifiedEntry> {
     vec![UnifiedEntry {
         id: "vyre-conform::synthetic::expr_variant_contract_bundle",
@@ -20,7 +47,7 @@ fn synthetic_expr_variant_contract_program() -> Program {
                     Node::let_bind(
                         "call",
                         Expr::Call {
-                            op_id: "unknown.op".into(),
+                            op_id: SYNTHETIC_CALLEE_OP_ID.into(),
                             args: vec![],
                         },
                     ),

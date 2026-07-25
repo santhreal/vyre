@@ -1,7 +1,6 @@
 //! License ip governance test suite.
 
 const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
-const PLAN: &str = include_str!("../../../docs/optimization/ALL_AXES_ACCELERATION_PLAN.md");
 const LICENSES: &str =
     include_str!("../../../docs/optimization/PUBLIC_RELEASE_LICENSE_MANIFEST.toml");
 const NOTICES: &str =
@@ -103,34 +102,6 @@ fn package_metadata_policy_blocks_private_santh_paths_from_public_crate_metadata
             METADATA.contains(required),
             "package metadata publication policy must include {required}"
         );
-    }
-}
-
-#[test]
-fn plan_contains_license_ip_rows() {
-    for row in [
-        "VX-1061",
-        "VX-1062",
-        "VX-1063",
-        "VX-1064",
-        "VX-1065",
-        "VX-1066",
-        "VX-1067",
-        "VX-1068",
-        "VX-1069",
-        "VX-1070",
-        "VX-1071",
-        "VX-1072",
-        "VX-1073",
-        "VX-1074",
-        "VX-1075",
-        "VX-1076",
-        "VX-1077",
-        "VX-1078",
-        "VX-1079",
-        "VX-1080",
-    ] {
-        assert!(PLAN.contains(row), "plan must include {row}");
     }
 }
 

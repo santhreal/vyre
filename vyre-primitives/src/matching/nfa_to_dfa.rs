@@ -149,6 +149,11 @@ pub struct NfaTables<'tables> {
 /// * [`NfaToDfaError::ShapeMismatch`] if input table lengths disagree
 ///   with `num_states`.
 /// * [`NfaToDfaError::StateExplosion`] when the cap is exceeded.
+///
+/// # Panics
+/// Panics when the output record count overflows `u32`. The GPU kernel indexes those
+/// records with u32 offsets, so a wrapped length would yield corrupt pattern ids;
+/// shard the pattern set instead.
 pub fn nfa_to_dfa(
     tables: &NfaTables<'_>,
     max_dfa_states: usize,

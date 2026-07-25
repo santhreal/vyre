@@ -1,26 +1,26 @@
 {
   "schema_version": 1,
-  "component_id": "dataflow-consumer",
+  "component_id": "weir",
   "role": "Dataflow facts consumed by parser/compiler optimization and downstream analysis",
-  "root": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer",
+  "root": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir",
   "required_files": [
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/Cargo.toml",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/Cargo.toml",
       "exists": true,
       "read_error": null,
-      "source_bytes": 1672
+      "source_bytes": 7305
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/src/lib.rs",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/lib.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 4508
+      "source_bytes": 25804
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/README.md",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/README.md",
       "exists": true,
       "read_error": null,
-      "source_bytes": 6822
+      "source_bytes": 12408
     }
   ],
   "required_terms": [
@@ -52,23 +52,23 @@
   "required_evidence_trees": [
     {
       "tree": "tests",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests",
       "exists": true,
-      "source_bytes": 145592,
+      "source_bytes": 620835,
       "unreadable_file_count": 0
     },
     {
       "tree": "benches",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/benches",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/benches",
       "exists": true,
-      "source_bytes": 176,
+      "source_bytes": 54607,
       "unreadable_file_count": 0
     },
     {
       "tree": "fuzz",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/fuzz",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz",
       "exists": true,
-      "source_bytes": 248,
+      "source_bytes": 34770,
       "unreadable_file_count": 0
     }
   ],

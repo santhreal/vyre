@@ -1,4 +1,4 @@
-//! Shared fact-schema contract tests for security, borrowck, and Weir headers.
+//! Shared fact-schema contract tests for security, borrowck, and external headers.
 
 use vyre_libs::dataflow::{SharedFactHeader, SharedFactKind, Soundness};
 
@@ -40,13 +40,13 @@ fn rust_borrow_facts_map_placeholder_subset_to_exact_shared_header() {
 }
 
 #[test]
-fn weir_witness_header_is_exact_shared_schema() {
-    let header = SharedFactHeader::new("weir", SharedFactKind::Witness, 13, 21, Soundness::Exact)
+fn external_witness_header_is_exact_shared_schema() {
+    let header = SharedFactHeader::new("external-dataflow", SharedFactKind::Witness, 13, 21, Soundness::Exact)
         .with_object(34)
         .with_aux(55);
 
     assert_eq!(
         header.wire_header(),
-        "schema=v1;producer=weir;kind=witness;fact_id=13;subject=21;object=34;aux=55;file=0;start=0;end=0;soundness=Exact"
+        "schema=v1;producer=external-dataflow;kind=witness;fact_id=13;subject=21;object=34;aux=55;file=0;start=0;end=0;soundness=Exact"
     );
 }

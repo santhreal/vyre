@@ -43,6 +43,11 @@ pub(crate) fn reserve_vec_capacity<T>(
     })
 }
 
+/// Reserve scratch capacity for `capacity` items, failing closed when the allocation is refused.
+///
+/// # Panics
+/// Panics when the reservation fails. Continuing with a short buffer would let a pass
+/// write past the scratch it believes it owns.
 pub(crate) fn reserve_vec_capacity_or_panic<T>(
     buffer: &mut Vec<T>,
     capacity: usize,

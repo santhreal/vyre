@@ -39,5 +39,5 @@ promotion_gate_policy = "consumer-install-compatibility-package-metadata-license
 abort_gate_policy = "package-yank-risk-private-path-exposure-doc-build-failure-license-blocker-or-consumer-install-break-stops-promotion"
 observation_policy = "record-crate-version-docs-url-package-checksum-install-command-output-class-and-public-issue-intake-route"
 owner_route = "PUBLIC_ISSUE_SUPPORT_INTAKE_POLICY.toml"
-publication_boundary = "public-package-metadata-points-only-to-santhsecurity-vyre-and-excludes-Santh-backup-or-local-paths"
+publication_boundary = "public-package-metadata-points-only-to-santhreal-vyre-and-excludes-Santh-backup-or-local-paths"
 diagnostic = "VYRE_PUBLIC_PACKAGE_ROLLOUT_STRATEGY_REQUIRED"

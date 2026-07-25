@@ -15,11 +15,13 @@ pub use suffix3::{
     classic_ac_bounded_ranges_suffix3_prefilter_program,
     classic_ac_bounded_ranges_suffix3_prefilter_program_ext,
     classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_ext,
+    classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered_ext,
     classic_ac_bounded_ranges_suffix3_presence_by_region_program_ext,
     classic_ac_bounded_ranges_suffix3_presence_program_ext, presence_bitmap_words,
     presence_by_region_words, try_build_ac_bounded_ranges_suffix3_prefilter_program,
     try_build_ac_bounded_ranges_suffix3_prefilter_program_ext,
     try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program,
+    try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered,
     try_build_ac_bounded_ranges_suffix3_presence_by_region_program,
     try_build_ac_bounded_ranges_suffix3_presence_program,
 };
@@ -172,6 +174,11 @@ pub fn build_ac_bounded_ranges_prefilter_program(
 
 /// Variant of [`build_ac_bounded_ranges_prefilter_program`] that exposes the
 /// match-append coalescing selector.
+///
+/// # Panics
+/// Panics when the prefilter program exceeds the GPU ABI limits. An empty mask would
+/// silently suppress every match, so callers that must recover use
+/// [`try_build_ac_bounded_ranges_prefilter_program_ext`].
 #[must_use]
 pub fn build_ac_bounded_ranges_prefilter_program_ext(
     dfa: &CompiledDfa,

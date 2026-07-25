@@ -122,7 +122,7 @@ pub use cmp_self_false::cmp_self_false;
 pub use const_buffer_promote::const_buffer_promote;
 pub use dead_store::{
     dead_store, dead_store_with_alias_facts, dead_store_with_dataflow_analysis_facts,
-    dead_store_with_dataflow_facts, dead_store_with_weir_alias_facts,
+    dead_store_with_dataflow_facts, dead_store_with_external_alias_facts,
 };
 pub use descriptor_const_fold::descriptor_const_fold;
 pub use descriptor_cse::descriptor_cse;
@@ -135,20 +135,20 @@ pub use emit_order::emit_order;
 pub use identity_elim::identity_elim;
 pub use licm::{
     licm, licm_with_alias_facts, licm_with_dataflow_analysis_facts, licm_with_dataflow_facts,
-    licm_with_weir_alias_facts,
+    licm_with_external_alias_facts,
 };
 pub use load_forwarding::{
     load_forwarding, load_forwarding_with_alias_facts,
     load_forwarding_with_dataflow_analysis_facts, load_forwarding_with_dataflow_facts,
-    load_forwarding_with_weir_alias_facts,
+    load_forwarding_with_external_alias_facts,
 };
 pub use loop_fission::{
     loop_fission, loop_fission_with_alias_facts, loop_fission_with_dataflow_analysis_facts,
-    loop_fission_with_dataflow_facts, loop_fission_with_weir_alias_facts,
+    loop_fission_with_dataflow_facts, loop_fission_with_external_alias_facts,
 };
 pub use loop_fusion::{
     loop_fusion, loop_fusion_with_alias_facts, loop_fusion_with_dataflow_analysis_facts,
-    loop_fusion_with_dataflow_facts, loop_fusion_with_weir_alias_facts,
+    loop_fusion_with_dataflow_facts, loop_fusion_with_external_alias_facts,
 };
 pub use loop_unroll::loop_unroll;
 pub use loop_zero_iter::loop_zero_iter;
@@ -542,12 +542,12 @@ pub fn run_all_with_dataflow_facts(
     run_all_with_dataflow_stats(desc, alias_facts, reaching_defs).0
 }
 
-/// Apply the canonical fixed-point rewrite pipeline with Weir dataflow-analysis facts.
+/// Apply the canonical fixed-point rewrite pipeline with external dataflow-analysis facts.
 #[must_use]
 pub fn run_all_with_dataflow_analysis_facts(
     desc: &crate::KernelDescriptor,
-    alias_facts: &crate::analyses::weir_alias::AliasFactSet,
-    reaching_defs: &crate::analyses::weir_reaching_def::ReachingDefFactSet,
+    alias_facts: &crate::analyses::alias_import::AliasFactSet,
+    reaching_defs: &crate::analyses::reaching_def_import::ReachingDefFactSet,
 ) -> crate::KernelDescriptor {
     run_all_with_dataflow_facts(desc, alias_facts, reaching_defs)
 }

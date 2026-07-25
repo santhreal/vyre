@@ -79,7 +79,11 @@ impl OptimizerDispatcher for ResidentPersistentBfsDispatcher {
     ) -> Result<(), DispatchError> {
         assert_eq!(uploads.len(), 1);
         assert_eq!(steps.len(), 1);
-        assert_eq!(read_ranges.len(), 2);
+        assert!(
+            read_ranges.len() == 2 || read_ranges.len() == 3,
+            "resident BFS reads two ranges for a batch query and three (with converged) for a single query, got {}",
+            read_ranges.len()
+        );
         self.query_upload_batch_sizes
             .borrow_mut()
             .push(uploads.len());
@@ -91,6 +95,10 @@ impl OptimizerDispatcher for ResidentPersistentBfsDispatcher {
         let changed_words = read_ranges[1].byte_len / std::mem::size_of::<u32>();
         outputs.push(u32_slice_to_le_bytes(&vec![0b1111; frontier_words]));
         outputs.push(u32_slice_to_le_bytes(&vec![1; changed_words]));
+        if read_ranges.len() == 3 {
+            let converged_words = read_ranges[2].byte_len / std::mem::size_of::<u32>();
+            outputs.push(u32_slice_to_le_bytes(&vec![1; converged_words]));
+        }
         Ok(())
     }
 
@@ -120,7 +128,7 @@ fn resident_graph_uploads_topology_once_and_reuses_frontier_handles() {
     let mut scratch = PersistentBfsResidentScratch::default();
     let mut frontier = Vec::with_capacity(4);
     let frontier_ptr = frontier.as_ptr();
-    let changed = bfs_expand_resident_graph_with_scratch_into(
+    let (changed, converged) = bfs_expand_resident_graph_with_scratch_into(
         &dispatcher,
         &graph,
         &[0b0001],
@@ -131,11 +139,12 @@ fn resident_graph_uploads_topology_once_and_reuses_frontier_handles() {
     )
     .expect("Fix: first resident query");
     assert_eq!(changed, 1);
+    assert_eq!(converged, 1);
     assert_eq!(frontier, vec![0b1111]);
     assert_eq!(frontier.as_ptr(), frontier_ptr);
-    assert_eq!(dispatcher.alloc_sizes.borrow().len(), 7);
+    assert_eq!(dispatcher.alloc_sizes.borrow().len(), 8);
 
-    let changed = bfs_expand_resident_graph_with_scratch_into(
+    let (changed, converged) = bfs_expand_resident_graph_with_scratch_into(
         &dispatcher,
         &graph,
         &[0b0011],
@@ -146,7 +155,8 @@ fn resident_graph_uploads_topology_once_and_reuses_frontier_handles() {
     )
     .expect("Fix: second resident query");
     assert_eq!(changed, 1);
-    assert_eq!(dispatcher.alloc_sizes.borrow().len(), 7);
+    assert_eq!(converged, 1);
+    assert_eq!(dispatcher.alloc_sizes.borrow().len(), 8);
     assert_eq!(
         dispatcher.query_upload_batch_sizes.borrow().as_slice(),
         &[1, 1]
@@ -165,14 +175,14 @@ fn resident_graph_uploads_topology_once_and_reuses_frontier_handles() {
     assert_eq!(&step_handles[0][0..5], &graph_handles);
     assert_eq!(&step_handles[1][0..5], &graph_handles);
     assert_eq!(
-        &step_handles[0][5..8],
-        &step_handles[1][5..8],
-        "frontier/change resident buffers must be reused across queries"
+        &step_handles[0][5..9],
+        &step_handles[1][5..9],
+        "frontier/change/converged resident buffers must be reused across queries"
     );
 
     scratch.free(&dispatcher).expect("Fix: scratch free");
     graph.free(&dispatcher).expect("Fix: graph free");
-    assert_eq!(dispatcher.freed.borrow().len(), 7);
+    assert_eq!(dispatcher.freed.borrow().len(), 8);
 }
 
 #[test]
@@ -186,7 +196,7 @@ fn resident_single_zero_iters_returns_seed_without_query_allocation_or_dispatch(
     let mut frontier = Vec::with_capacity(4);
     let ptr = frontier.as_ptr();
 
-    let changed = bfs_expand_resident_graph_with_scratch_into(
+    let (changed, converged) = bfs_expand_resident_graph_with_scratch_into(
         &dispatcher,
         &graph,
         &[0b0101],
@@ -198,6 +208,10 @@ fn resident_single_zero_iters_returns_seed_without_query_allocation_or_dispatch(
     .expect("Fix: zero-iteration resident BFS should validate and return seed frontier");
 
     assert_eq!(changed, 0);
+    assert_eq!(
+        converged, 0,
+        "a zero-iteration resident query runs no confirming step, so it is not proven converged"
+    );
     assert_eq!(frontier, vec![0b0101]);
     assert_eq!(frontier.as_ptr(), ptr);
     assert_eq!(dispatcher.alloc_sizes.borrow().len(), topology_allocs);
@@ -232,12 +246,12 @@ fn generated_resident_bfs_free_releases_each_handle_once_in_first_seen_order() {
 
         dispatcher.freed.borrow_mut().clear();
         let mut scratch = PersistentBfsResidentScratch {
-            frontier_handles: Some([base + 4, base + 4, base + 5]),
-            frontier_bytes: 4,
-            changed_bytes: 4,
+            frontier_handles: Some(vec![base + 4, base + 4, base + 5]),
+            handle_byte_lengths: vec![4, 4, 4],
             frontier_in_bytes: Vec::new(),
             readbacks: Vec::new(),
             changed: Vec::new(),
+            converged: Vec::new(),
             plan_cache: PersistentBfsPlanCache::default(),
         };
         scratch.free(&dispatcher).expect("Fix: scratch free dedup");
@@ -251,7 +265,7 @@ fn resident_query_handle_allocation_rolls_back_partial_allocations() {
     dispatcher.fail_alloc_attempt.set(Some(3));
     let mut scratch = PersistentBfsResidentScratch::default();
 
-    let err = ensure_resident_query_handles(&dispatcher, &mut scratch, 64, 4)
+    let err = ensure_resident_query_handles(&dispatcher, &mut scratch, &[64, 64, 4])
         .expect_err("third resident scratch allocation failure must fail the whole acquisition");
 
     assert!(
@@ -268,8 +282,10 @@ fn resident_query_handle_allocation_rolls_back_partial_allocations() {
         scratch.frontier_handles.is_none(),
         "Fix: failed scratch acquisition must not publish partial resident handles."
     );
-    assert_eq!(scratch.frontier_bytes, 0);
-    assert_eq!(scratch.changed_bytes, 0);
+    assert!(
+        scratch.handle_byte_lengths.is_empty(),
+        "Fix: failed scratch acquisition must not publish a partial handle byte-length signature."
+    );
 }
 
 #[test]
@@ -285,6 +301,8 @@ fn resident_graph_batch_reuses_topology_and_frontier_handles() {
     let frontiers_ptr = frontiers.as_ptr();
     let mut changed = Vec::with_capacity(4);
     let changed_ptr = changed.as_ptr();
+    let mut converged = Vec::with_capacity(4);
+    let converged_ptr = converged.as_ptr();
     bfs_expand_resident_graph_batch_with_scratch_into(
         &dispatcher,
         &graph,
@@ -295,13 +313,18 @@ fn resident_graph_batch_reuses_topology_and_frontier_handles() {
         &mut scratch,
         &mut frontiers,
         &mut changed,
+        &mut converged,
     )
     .expect("Fix: resident batch query");
 
     assert_eq!(frontiers, vec![0b1111, 0b1111, 0b1111]);
     assert_eq!(changed, vec![1, 1, 1]);
+    // Every query reaches the 4-node linear-graph fixpoint within the 4-iteration
+    // budget, so every per-query converged flag is 1.
+    assert_eq!(converged, vec![1, 1, 1]);
     assert_eq!(frontiers.as_ptr(), frontiers_ptr);
     assert_eq!(changed.as_ptr(), changed_ptr);
+    assert_eq!(converged.as_ptr(), converged_ptr);
     assert_eq!(
         dispatcher.topology_upload_batch_sizes.borrow().as_slice(),
         &[4]
@@ -310,7 +333,9 @@ fn resident_graph_batch_reuses_topology_and_frontier_handles() {
         dispatcher.query_upload_batch_sizes.borrow().as_slice(),
         &[1]
     );
-    assert_eq!(dispatcher.alloc_sizes.borrow().len(), 7);
+    // Four graph-topology buffers plus the four fixed query buffers
+    // (frontier_in, frontier_out, changed, converged).
+    assert_eq!(dispatcher.alloc_sizes.borrow().len(), 8);
     assert_eq!(
         scratch.plan_cache_snapshot(),
         PersistentBfsPlanCacheSnapshot {
@@ -339,6 +364,8 @@ fn resident_batch_zero_iters_returns_seed_and_zero_changed_without_query_allocat
     let frontiers_ptr = frontiers.as_ptr();
     let mut changed = Vec::with_capacity(4);
     let changed_ptr = changed.as_ptr();
+    let mut converged = Vec::with_capacity(4);
+    let converged_ptr = converged.as_ptr();
 
     bfs_expand_resident_graph_batch_with_scratch_into(
         &dispatcher,
@@ -350,13 +377,18 @@ fn resident_batch_zero_iters_returns_seed_and_zero_changed_without_query_allocat
         &mut scratch,
         &mut frontiers,
         &mut changed,
+        &mut converged,
     )
     .expect("Fix: zero-iteration resident batch should validate and return seed frontiers");
 
     assert_eq!(frontiers, vec![0b0001, 0b0011, 0b0101]);
     assert_eq!(changed, vec![0, 0, 0]);
+    // A zero-iteration run over a non-empty graph confirms no fixpoint: every
+    // per-query converged flag is 0 (mirrors the single-query zero path).
+    assert_eq!(converged, vec![0, 0, 0]);
     assert_eq!(frontiers.as_ptr(), frontiers_ptr);
     assert_eq!(changed.as_ptr(), changed_ptr);
+    assert_eq!(converged.as_ptr(), converged_ptr);
     assert_eq!(dispatcher.alloc_sizes.borrow().len(), topology_allocs);
     assert!(dispatcher.query_upload_batch_sizes.borrow().is_empty());
     assert!(dispatcher.step_handle_sets.borrow().is_empty());

@@ -11,7 +11,7 @@ Use it as a practical example of a full workload flowing through:
 - CUDA-backed and WGPU-backed runners
 - Conformance evidence and regression reporting
 
-Repo: https://github.com/santhsecurity/keyhog
+Repo: https://github.com/santhreal/keyhog
 
 Use this path if you want a real end-to-end reference for:
 

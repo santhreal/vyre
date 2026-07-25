@@ -83,22 +83,17 @@ pub(crate) fn upload_resident_dispatch_inputs<D: OptimizerDispatcher + ?Sized, c
     upload_resident_payloads(dispatcher, payloads)
 }
 
-/// Run one resident dispatch step, read exactly two ranges, and decode u32 outputs.
+/// Run one resident dispatch step, read exactly three ranges, and decode u32 outputs.
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn resident_dispatch_two_u32_outputs_into<D: OptimizerDispatcher + ?Sized>(
+pub(crate) fn resident_dispatch_three_u32_outputs_into<D: OptimizerDispatcher + ?Sized>(
     dispatcher: &D,
     uploads: &[(u64, &[u8])],
     program: &Program,
     handle_ids: &[u64],
     grid_override: Option<[u32; 3]>,
-    read_ranges: [ResidentReadRange; 2],
+    read_ranges: [ResidentReadRange; 3],
     readbacks: &mut Vec<Vec<u8>>,
-    first_expected_words: usize,
-    first_context: &str,
-    first_out: &mut Vec<u32>,
-    second_expected_words: usize,
-    second_context: &str,
-    second_out: &mut Vec<u32>,
+    outs: [(usize, &str, &mut Vec<u32>); 3],
 ) -> Result<(), DispatchError> {
     let steps = [ResidentDispatchStep {
         program,
@@ -111,24 +106,17 @@ pub(crate) fn resident_dispatch_two_u32_outputs_into<D: OptimizerDispatcher + ?S
         &read_ranges,
         readbacks,
     )?;
-    if readbacks.len() != 2 {
+    if readbacks.len() != 3 {
+        let (_, first_context, _) = &outs[0];
         return Err(DispatchError::BackendError(format!(
-            "Fix: {first_context} expected exactly two resident readbacks, got {}.",
+            "Fix: {first_context} expected exactly three resident readbacks, got {}.",
             readbacks.len()
         )));
     }
-    decode_u32_output_exact(
-        &readbacks[0],
-        first_expected_words,
-        first_context,
-        first_out,
-    )?;
-    decode_u32_output_exact(
-        &readbacks[1],
-        second_expected_words,
-        second_context,
-        second_out,
-    )
+    for (index, (expected_words, context, out)) in outs.into_iter().enumerate() {
+        decode_u32_output_exact(&readbacks[index], expected_words, context, out)?;
+    }
+    Ok(())
 }
 
 /// Run a resident dispatch sequence, read exactly one range, and decode a u32 output.

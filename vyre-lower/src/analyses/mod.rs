@@ -28,8 +28,8 @@ pub mod shared_mem_promote;
 pub mod texture_promote;
 pub mod value_range;
 pub mod vec_pack;
-pub mod weir_alias;
-pub mod weir_reaching_def;
+pub mod alias_import;
+pub mod reaching_def_import;
 pub mod workgroup_uniform;
 
 use crate::KernelOpKind;

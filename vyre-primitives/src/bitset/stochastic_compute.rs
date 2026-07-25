@@ -63,6 +63,10 @@ pub fn try_cpu_ref_into(a: &[u32], b: &[u32], out: &mut Vec<u32>) -> Result<(), 
 }
 
 /// CPU helper: encode `p ∈ [0, 1]` as bitstream of length `len_bits`.
+///
+/// # Panics
+/// Panics when `p` is outside `[0, 1]` or `len_bits` is unrepresentable. Callers that
+/// must recover use the `try_` twin.
 #[must_use]
 pub fn encode_bitstream(p: f64, len_bits: usize, seed: u32) -> Vec<u32> {
     let mut out = Vec::new();
@@ -76,6 +80,10 @@ pub fn encode_bitstream(p: f64, len_bits: usize, seed: u32) -> Vec<u32> {
 }
 
 /// CPU helper: encode into a caller-owned bitstream buffer.
+///
+/// # Panics
+/// Panics when `p` is outside `[0, 1]` or `len_bits` is unrepresentable; see
+/// [`encode_bitstream`].
 pub fn encode_bitstream_into(p: f64, len_bits: usize, seed: u32, out: &mut Vec<u32>) {
     if let Err(error) = try_encode_bitstream_into(p, len_bits, seed, out) {
         panic!("vyre-primitives stochastic bitstream encode_into failed: {error}");

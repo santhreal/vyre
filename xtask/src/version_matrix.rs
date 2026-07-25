@@ -229,7 +229,7 @@ pub(crate) fn run(args: &[String]) {
             finding.path, finding.line, finding.text
         ));
     }
-    let release_note_token_findings = scan_release_note_tokens(&vyre_root, &santh_root);
+    let release_note_token_findings = scan_release_note_tokens(&vyre_root);
     for finding in &release_note_token_findings {
         blockers.push(format!(
             "{} is missing release-note version token `{}`",
@@ -366,12 +366,27 @@ fn scan_bare_release_tags(
     (findings, blockers)
 }
 
-fn scan_release_note_tokens(vyre_root: &Path, santh_root: &Path) -> Vec<ReleaseNoteTokenFinding> {
+/// Release notes for the version currently declared in the release train.
+///
+/// Derived from the train rather than hardcoded, so cutting a release adds
+/// `docs/release/v<version>.md` and the gate follows automatically instead of needing an
+/// edit here. This replaced a required document at `<santh>/docs/vyre-weir-release-plan.md`,
+/// which was consolidated away on 2026-07-13 and left the gate permanently unsatisfiable.
+/// Release notes belong to the vyre repository in any case: the outer monorepo is a backup
+/// mirror, never release authority.
+fn current_release_notes_path(vyre_root: &Path) -> PathBuf {
+    vyre_root.join(format!(
+        "docs/release/v{}.md",
+        release_train::vyre_version()
+    ))
+}
+
+fn scan_release_note_tokens(vyre_root: &Path) -> Vec<ReleaseNoteTokenFinding> {
     let mut findings = Vec::new();
     for path in [
         vyre_root.join("release/evidence/docs/release-notes.md"),
         vyre_root.join("release/evidence/docs/release-notes-version-story.md"),
-        santh_root.join("docs/vyre-weir-release-plan.md"),
+        current_release_notes_path(vyre_root),
     ] {
         let text = match read_text_bounded(&path) {
             Ok(text) => text,
@@ -400,12 +415,11 @@ fn release_doc_paths(vyre_root: &Path, santh_root: &Path) -> Vec<PathBuf> {
         vyre_root.join("docs/RELEASE.md"),
         vyre_root.join("docs/RELEASE_ENGINEERING.md"),
         vyre_root.join("docs/RELEASE_CHECKLIST.md"),
-        vyre_root.join("docs/release/v0.4.2.md"),
+        current_release_notes_path(vyre_root),
         vyre_root.join("README.md"),
         vyre_root.join("vyre-frontend-c/README.md"),
         vyre_root.join("release/evidence/docs/release-notes.md"),
         vyre_root.join("release/evidence/docs/release-notes-version-story.md"),
-        santh_root.join("docs/vyre-weir-release-plan.md"),
         santh_root.join("libs/dataflow/weir/README.md"),
         santh_root.join("tools/vyrec/README.md"),
     ]

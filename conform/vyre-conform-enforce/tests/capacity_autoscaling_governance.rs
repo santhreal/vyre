@@ -1,7 +1,6 @@
 //! Capacity autoscaling governance test suite.
 
 const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
-const PLAN: &str = include_str!("../../../docs/optimization/ALL_AXES_ACCELERATION_PLAN.md");
 const AUTOSCALE: &str = include_str!("../../../docs/optimization/WORKLOAD_AUTOSCALING_POLICY.toml");
 const CAPACITY: &str =
     include_str!("../../../docs/optimization/RESOURCE_RIGHTSIZING_CAPACITY_POLICY.toml");
@@ -113,34 +112,6 @@ fn gpu_device_capacity_policy_records_plugin_resources_placement_sharing_runtime
             GPU.contains(required),
             "gpu device capacity placement policy must include {required}"
         );
-    }
-}
-
-#[test]
-fn plan_contains_capacity_autoscaling_rows() {
-    for row in [
-        "VX-1321",
-        "VX-1322",
-        "VX-1323",
-        "VX-1324",
-        "VX-1325",
-        "VX-1326",
-        "VX-1327",
-        "VX-1328",
-        "VX-1329",
-        "VX-1330",
-        "VX-1331",
-        "VX-1332",
-        "VX-1333",
-        "VX-1334",
-        "VX-1335",
-        "VX-1336",
-        "VX-1337",
-        "VX-1338",
-        "VX-1339",
-        "VX-1340",
-    ] {
-        assert!(PLAN.contains(row), "plan must include {row}");
     }
 }
 

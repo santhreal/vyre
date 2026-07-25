@@ -465,6 +465,11 @@ fn fold_ascii_byte(b: usize, case_insensitive: bool) -> usize {
     }
 }
 
+/// Compile a DFA with an explicit state cap.
+///
+/// # Panics
+/// Panics when `pattern_idx` exceeds `u32::MAX - 1`, which the `pid + 1` wire encoding
+/// cannot represent. The caller bounds the pattern count first.
 fn dfa_compile_inner_capped(
     patterns: &[&[u8]],
     state_cap: usize,

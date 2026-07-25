@@ -69,33 +69,39 @@ pub(crate) fn run(args: &[String]) {
         failures.push("release.weir is empty".to_string());
     }
 
-    let plan_path = resolve_manifest_path(&base_dir, &manifest.plan_path);
-    if !plan_path.is_file() {
+    // The release contract is a TRACKED doc in this repository. This check previously
+    // required `<santh>/docs/vyre-weir-release-plan.md`, a private coordination plan in the
+    // outer monorepo that was consolidated away on 2026-07-13, so the gate could not be
+    // satisfied by any file a clone actually carries. The monorepo is a backup mirror, never
+    // release authority, and the phrases below are contract statements the runbook makes,
+    // not plan-scope prose.
+    let release_contract_path = resolve_manifest_path(&base_dir, &manifest.release_contract_path);
+    if !release_contract_path.is_file() {
         failures.push(format!(
-            "plan_path `{}` does not resolve to a file",
-            plan_path.display()
+            "release_contract_path `{}` does not resolve to a file",
+            release_contract_path.display()
         ));
     } else {
-        match read_text_bounded(&plan_path) {
-            Ok(plan) => {
+        match read_text_bounded(&release_contract_path) {
+            Ok(contract) => {
                 for phrase in [
-                    "thousands of concrete",
-                    "At least ten",
                     "CUDA-first",
-                    "Linux subsystem corpus",
                     "Completion audit checklist",
+                    "Tags are product-scoped",
+                    "Yank, never unpublish",
+                    "release/release-train.toml",
                 ] {
-                    if !plan.contains(phrase) {
+                    if !contract.contains(phrase) {
                         failures.push(format!(
-                            "plan `{}` is missing required release phrase `{phrase}`",
-                            plan_path.display()
+                            "release contract `{}` is missing required phrase `{phrase}`",
+                            release_contract_path.display()
                         ));
                     }
                 }
             }
             Err(error) => failures.push(format!(
-                "plan `{}` could not be read: {error}",
-                plan_path.display()
+                "release contract `{}` could not be read: {error}",
+                release_contract_path.display()
             )),
         }
     }

@@ -265,7 +265,7 @@ fn inspect_hygiene_matrix_semantics(
         "libs/performance/matching/vyre",
         "libs/dataflow/weir",
         "tools/vyrec",
-        "libs/surge/surgec",
+        crate::release_train::compiler_consumer_relative_path(),
         "libs/performance/matching/vyre/vyre-grammar-gen",
     ] {
         if !roots.iter().any(|root| {
@@ -292,7 +292,7 @@ fn inspect_hygiene_release_surface_coverage(
         "vyre_workspace",
         "cuda_driver_crate",
         "wgpu_driver_crate",
-        "weir_crate",
+        "dataflow_crate",
         "vyrec_tool",
         "surgec_tool",
         "surgec_grammar_gen",

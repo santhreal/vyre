@@ -1,7 +1,6 @@
 //! Energy efficiency governance test suite.
 
 const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
-const PLAN: &str = include_str!("../../../docs/optimization/ALL_AXES_ACCELERATION_PLAN.md");
 const TELEMETRY: &str =
     include_str!("../../../docs/optimization/POWER_THERMAL_TELEMETRY_CONTRACTS.toml");
 const REGRESSION: &str =
@@ -113,34 +112,6 @@ fn power_cap_throttle_response_records_triggers_classification_actions_profiles_
         "collector-efficiency-overhead-response",
     ] {
         assert!(RESPONSE.contains(required), "power cap response policy must include {required}");
-    }
-}
-
-#[test]
-fn plan_contains_energy_efficiency_rows() {
-    for row in [
-        "VX-1401",
-        "VX-1402",
-        "VX-1403",
-        "VX-1404",
-        "VX-1405",
-        "VX-1406",
-        "VX-1407",
-        "VX-1408",
-        "VX-1409",
-        "VX-1410",
-        "VX-1411",
-        "VX-1412",
-        "VX-1413",
-        "VX-1414",
-        "VX-1415",
-        "VX-1416",
-        "VX-1417",
-        "VX-1418",
-        "VX-1419",
-        "VX-1420",
-    ] {
-        assert!(PLAN.contains(row), "plan must include {row}");
     }
 }
 

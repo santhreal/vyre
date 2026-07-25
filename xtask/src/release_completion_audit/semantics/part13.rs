@@ -931,19 +931,21 @@ fn inspect_version_matrix_semantics(
     if value
         .get("requested_vyre_release")
         .and_then(serde_json::Value::as_str)
-        != Some("0.6.3")
+        != Some(crate::release_train::vyre_version())
     {
         blockers.push(format!(
-            "{evidence}: requested_vyre_release must be `0.6.3`"
+            "{evidence}: requested_vyre_release must be `{}`",
+            crate::release_train::vyre_version()
         ));
     }
     if value
         .get("requested_weir_release")
         .and_then(serde_json::Value::as_str)
-        != Some("0.1.0")
+        != Some(crate::release_train::weir_version())
     {
         blockers.push(format!(
-            "{evidence}: requested_weir_release must be `0.1.0`"
+            "{evidence}: requested_weir_release must be `{}`",
+            crate::release_train::weir_version()
         ));
     }
     if value
@@ -978,17 +980,13 @@ fn inspect_version_matrix_semantics(
         .and_then(serde_json::Value::as_array)
         .cloned()
         .unwrap_or_default();
-    for required_package in [
-        "vyre@0.6.3",
-        "vyre-driver-cuda@0.6.3",
-        "vyre-driver-wgpu@0.6.3",
-        "weir@0.1.0",
-        "vyrec@0.1.0",
-        "vyre-frontend-c@0.6.3",
-    ] {
+    // Derived from the release train; see the same fix in
+    // `vyre_weir_release_gate::semantic::version_story`.
+    for (package, version, _group) in crate::release_train::required_release_packages() {
+        let required_package = format!("{package}@{version}");
         if !required_release_packages
             .iter()
-            .any(|package| package.as_str() == Some(required_package))
+            .any(|package| package.as_str() == Some(required_package.as_str()))
         {
             blockers.push(format!(
                 "{evidence}: required_release_packages must include `{required_package}`"
@@ -1002,35 +1000,18 @@ fn inspect_version_matrix_semantics(
         blockers.push(format!("{evidence}: missing tag_story"));
         return;
     };
-    for (field, expected) in [
-        ("vyre_rc_tag", "vyre-v0.6.3-rc.1"),
-        ("weir_rc_tag", "weir-v0.1.0-rc.1"),
-        (
-            "combined_release_train_rc_tag",
-            "vyre-0.6.3-weir-0.1.0-rc.1",
-        ),
-        ("vyre_tag", "vyre-v0.6.3"),
-        ("weir_tag", "weir-v0.1.0"),
-        ("combined_release_train_tag", "vyre-0.6.3-weir-0.1.0"),
-    ] {
+    // Derived from the release train. The pasted tag names were pinned to 0.6.3, so every
+    // one of them became a permanent blocker the moment the train moved.
+    for (field, expected) in crate::release_train::tag_story_fields() {
         if tag_story.get(field).and_then(serde_json::Value::as_str) != Some(expected) {
             blockers.push(format!(
                 "{evidence}: tag_story.{field} must be `{expected}`"
             ));
         }
     }
-    for required in [
-        "vyre 0.6.3",
-        "weir 0.1.0",
-        "vyre-driver-cuda@0.6.3",
-        "vyre-driver-wgpu@0.6.3",
-        "vyre-v0.6.3-rc.1",
-        "weir-v0.1.0-rc.1",
-        "vyre-0.6.3-weir-0.1.0-rc.1",
-        "vyre-v0.6.3",
-        "weir-v0.1.0",
-        "vyre-0.6.3-weir-0.1.0",
-    ] {
+    // The train declares which tokens the release notes must carry; this list was a second,
+    // 0.6.3-pinned copy of it.
+    for required in crate::release_train::required_release_note_tokens() {
         let present = tag_story
             .get("required_in_release_notes")
             .and_then(serde_json::Value::as_array)

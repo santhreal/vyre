@@ -3,7 +3,7 @@
 // Enforces AGENTS.md real-tests rule: a test must assert specific expected
 // values, not merely check that something parsed, succeeded, or is non-empty.
 //
-// Walks every `#[test]` / `#[tokio::test]` in vyre-* + libs/surge/surgec +
+// Walks every `#[test]` / `#[tokio::test]` in vyre-* + surge/surgec +
 // libs/surge.  Flags as SHAPE any test whose `assert*!` calls are exclusively:
 //   - `assert!(result.is_ok())`
 //   - `assert!(result.is_err())`
@@ -136,9 +136,14 @@ pub(crate) fn run(args: &[String]) {
     }
 
     // Additional out-of-workspace crates (optional - skip quietly if absent).
+    //
+    // These paths must stay in sync with `release_train::compiler_consumer_relative_path`,
+    // which is the single owner. This file cannot call it: `src/bin/lint_shape_tests.rs`
+    // pulls this module in with `include!`, so any `crate::` path fails to resolve in that
+    // binary's crate root.
     for (path, name) in [
-        (repo_root.join("libs/surge/surgec"), "surgec"),
-        (repo_root.join("libs/surge"), "surge"),
+        (repo_root.join("surge/surgec"), "surgec"),
+        (repo_root.join("surge"), "surge"),
     ] {
         if path.exists() {
             walk_dir(&path, name, &mut findings, &mut scan_errors);

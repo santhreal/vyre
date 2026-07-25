@@ -3,7 +3,7 @@
 //! The source of truth is `vyre-libs/rules/security_predicates.toml`.
 //! Public security primitives keep their stable Rust functions, while release
 //! gates and inventory witness registration consume these rows for op id,
-//! inputs, soundness, witness fixtures, and Weir mapping metadata.
+//! inputs, soundness, witness fixtures, and external-engine mapping metadata.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::OnceLock;
@@ -52,8 +52,8 @@ pub struct SecurityPredicateRow {
     pub soundness: String,
     /// Stable fixture id for the row's CPU witness vectors.
     pub witness_fixture: String,
-    /// Weir/dataflow concept this predicate maps onto.
-    pub weir_mapping: String,
+    /// external/dataflow concept this predicate maps onto.
+    pub external_mapping: String,
     /// Left-hand witness input words.
     pub witness_lhs: Vec<u32>,
     /// Right-hand witness input words.
@@ -81,6 +81,11 @@ pub fn try_security_predicate_rows() -> Result<&'static [SecurityPredicateRow], 
 /// parse failure is a broken ship, not a runtime condition, panicking here keeps
 /// a data regression loud instead of silently wiping the security predicate set.
 /// Use [`try_security_predicate_rows`] where recoverable diagnostics are needed.
+///
+/// # Panics
+/// Panics when the bundled Tier-B predicate TOML does not parse. It is compiled in, so
+/// a parse failure is a broken build; use [`try_security_predicate_rows`] for
+/// recoverable diagnostics.
 #[must_use]
 pub fn security_predicate_rows() -> &'static [SecurityPredicateRow] {
     try_security_predicate_rows().expect("bundled security predicate Tier-B TOML must parse")
@@ -196,7 +201,7 @@ fn parse_security_predicates(source: &str) -> Result<Vec<SecurityPredicateRow>, 
             output: required_string(&raw, "output", row_no)?,
             soundness: required_string(&raw, "soundness", row_no)?,
             witness_fixture: required_string(&raw, "witness_fixture", row_no)?,
-            weir_mapping: required_string(&raw, "weir_mapping", row_no)?,
+            external_mapping: required_string(&raw, "external_mapping", row_no)?,
             witness_lhs: required_u32_array(&raw, "witness_lhs", row_no)?,
             witness_rhs: required_u32_array(&raw, "witness_rhs", row_no)?,
             witness_expected: required_u32_array(&raw, "witness_expected", row_no)?,
@@ -247,9 +252,9 @@ fn validate_row(row: &SecurityPredicateRow, row_no: usize) -> Result<(), String>
             row.id
         ));
     }
-    if row.witness_fixture.trim().is_empty() || row.weir_mapping.trim().is_empty() {
+    if row.witness_fixture.trim().is_empty() || row.external_mapping.trim().is_empty() {
         return Err(format!(
-            "Fix: security predicate row {row_no} `{}` must declare witness_fixture and weir_mapping.",
+            "Fix: security predicate row {row_no} `{}` must declare witness_fixture and external_mapping.",
             row.id
         ));
     }
@@ -378,7 +383,7 @@ mod tests {
             assert_eq!(row.inputs.len(), 2);
             assert!(row.op_id.starts_with("vyre-libs::security::"));
             assert!(!row.witness_fixture.trim().is_empty());
-            assert!(!row.weir_mapping.trim().is_empty());
+            assert!(!row.external_mapping.trim().is_empty());
             assert_eq!(row.witness_lhs.len(), row.witness_rhs.len());
             assert_eq!(row.witness_lhs.len(), row.witness_expected.len());
         }

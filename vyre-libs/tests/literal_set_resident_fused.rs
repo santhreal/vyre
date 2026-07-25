@@ -187,3 +187,45 @@ fn resident_fused_serves_smaller_batches_under_the_cap_on_gpu() {
 
     session.free(backend.as_ref()).expect("free session");
 }
+
+#[test]
+fn resident_fused_position_boundary_keeps_full_presence_without_dense_leading_triples() {
+    let backend = match WgpuBackend::shared() {
+        Ok(backend) => backend,
+        Err(error) => {
+            eprintln!("no wgpu backend ({error}); skipping positioned-boundary GPU test");
+            return;
+        }
+    };
+    let matcher = GpuLiteralSet::compile(&[b"a".as_slice(), b"aa".as_slice(), b"z".as_slice()]);
+    let haystack = vec![b'a'; 1 << 16];
+    let session = matcher
+        .prepare_resident_fused_scan_positioned_from(
+            backend.as_ref(),
+            haystack.len(),
+            1,
+            1 << 16,
+            1,
+        )
+        .expect("prepare filtered resident fused session");
+
+    let mut presence = Vec::new();
+    let mut matches = Vec::new();
+    let mut scratch = Vec::new();
+    session
+        .scan_into(
+            backend.as_ref(),
+            &haystack,
+            &[0],
+            0,
+            &mut presence,
+            &mut matches,
+            &mut scratch,
+        )
+        .expect("leading admission matches must not overflow positioned output");
+
+    assert_eq!(presence, vec![0b011]);
+    assert_eq!(matches.len(), haystack.len() - 1);
+    assert!(matches.iter().all(|matched| matched.pattern_id == 1));
+    session.free(backend.as_ref()).expect("free session");
+}

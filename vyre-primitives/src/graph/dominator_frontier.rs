@@ -391,6 +391,10 @@ pub fn plan_dominator_frontier_dispatch(
 /// `dom_offsets`/`dom_targets` encode dominance closure by dominator.
 /// `pred_offsets`/`pred_targets` encode CFG predecessors by candidate
 /// node.
+///
+/// # Panics
+/// Panics on an invalid CSR launch shape. Callers that must recover use the checked
+/// twin below.
 #[must_use]
 pub fn dominator_frontier(
     node_count: u32,

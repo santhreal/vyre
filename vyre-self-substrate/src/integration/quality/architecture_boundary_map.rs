@@ -157,6 +157,25 @@ pub fn validate_architecture_boundary_map(
     })
 }
 
+/// Read a top-level JSON string field out of an evidence artifact.
+///
+/// The evidence artifacts are generated with one field per line, so a needle scan
+/// is enough and this crate does not take a JSON dependency to read one id. It
+/// exists so the dataflow component id has a single source, the artifact itself,
+/// instead of a literal pasted into this validator that goes stale the next time
+/// the component is renamed.
+fn artifact_string_field(artifact: &str, field: &str) -> Option<String> {
+    let key = format!("\"{field}\": \"");
+    let start = artifact.find(&key)? + key.len();
+    let rest = &artifact[start..];
+    let end = rest.find('"')?;
+    let value = &rest[..end];
+    if value.is_empty() {
+        return None;
+    }
+    Some(value.to_owned())
+}
+
 /// Validate committed architecture-boundary evidence across parser, dataflow, CUDA, and tests.
 pub fn validate_committed_architecture_boundary_artifacts(
     distributed_parser_map: &str,
@@ -170,6 +189,20 @@ pub fn validate_committed_architecture_boundary_artifacts(
     modularization_map: &str,
     distributed_parser_doc: &str,
 ) -> Result<ArchitectureBoundaryArtifactProof, ArchitectureBoundaryMapError> {
+    // The dataflow component id comes from the contract artifact rather than a
+    // literal here. Pasting it produced a fossil: the id stayed `dataflow-consumer`
+    // in this validator after the component was renamed, so the boundary proof was
+    // asserted against a component root that no longer existed on disk. Deriving it
+    // also proves the parser map and the contract artifact agree on the id, which a
+    // pasted literal cannot.
+    let dataflow_component_id = artifact_string_field(contracts, "component_id").ok_or(
+        ArchitectureBoundaryMapError::ArtifactMissingEvidence {
+            evidence: "dataflow contract component id",
+        },
+    )?;
+    let dataflow_map_owner_needle = format!("\"id\": \"{dataflow_component_id}\"");
+    let dataflow_topology_needle = format!("\"surface\": \"{dataflow_component_id}\"");
+
     for (artifact, evidence, needle) in [
         (
             distributed_parser_map,
@@ -190,7 +223,7 @@ pub fn validate_committed_architecture_boundary_artifacts(
         (
             distributed_parser_map,
             "Dataflow analysis dataflow parser owner",
-            "\"id\": \"dataflow-consumer\"",
+            dataflow_map_owner_needle.as_str(),
         ),
         (
             distributed_parser_map,
@@ -381,7 +414,7 @@ pub fn validate_committed_architecture_boundary_artifacts(
         (
             modularization_map,
             "dataflow contributor topology",
-            concat!("\"surface\": \"", "we", "ir", "\""),
+            dataflow_topology_needle.as_str(),
         ),
         (
             modularization_map,
@@ -549,16 +582,16 @@ mod tests {
         assert_eq!(
             validate_committed_architecture_boundary_artifacts(
                 include_str!(
-                    "../../../../release/evidence/parser/distributed-parser-boundary-map.json"
+                    "../../../../release/evidence/parser/distributed-parser-map.json"
                 ),
                 include_str!("../../../../release/evidence/parser/vyre-frontend-c-contracts.json"),
                 include_str!("../../../../release/evidence/parser/vyrec-cli-contracts.json"),
                 include_str!(
-                    "../../../../release/evidence/parser/dataflow-consumer-contracts.json"
+                    "../../../../release/evidence/parser/external-dataflow-contracts.json"
                 ),
-                include_str!("../../../../release/evidence/parser/surgec-contracts.json"),
+                include_str!("../../../../release/evidence/parser/compiler-consumer-contracts.json"),
                 include_str!(
-                    "../../../../release/evidence/parser/surgec-grammar-gen-contracts.json"
+                    "../../../../release/evidence/parser/compiler-consumer-grammar-gen-contracts.json"
                 ),
                 &backend_matrix,
                 include_str!("../../../../release/evidence/dataflow/analysis-api-matrix.json"),
@@ -581,16 +614,16 @@ mod tests {
         assert_eq!(
             validate_committed_architecture_boundary_artifacts(
                 include_str!(
-                    "../../../../release/evidence/parser/distributed-parser-boundary-map.json"
+                    "../../../../release/evidence/parser/distributed-parser-map.json"
                 ),
                 include_str!("../../../../release/evidence/parser/vyre-frontend-c-contracts.json"),
                 include_str!("../../../../release/evidence/parser/vyrec-cli-contracts.json"),
                 include_str!(
-                    "../../../../release/evidence/parser/dataflow-consumer-contracts.json"
+                    "../../../../release/evidence/parser/external-dataflow-contracts.json"
                 ),
-                include_str!("../../../../release/evidence/parser/surgec-contracts.json"),
+                include_str!("../../../../release/evidence/parser/compiler-consumer-contracts.json"),
                 include_str!(
-                    "../../../../release/evidence/parser/surgec-grammar-gen-contracts.json"
+                    "../../../../release/evidence/parser/compiler-consumer-grammar-gen-contracts.json"
                 ),
                 include_str!("../../../../release/evidence/backends/backend-matrix.json"),
                 &analysis,
@@ -639,17 +672,149 @@ mod tests {
     ) -> Result<ArchitectureBoundaryArtifactProof, ArchitectureBoundaryMapError> {
         validate_committed_architecture_boundary_artifacts(
             include_str!(
-                "../../../../release/evidence/parser/distributed-parser-boundary-map.json"
+                "../../../../release/evidence/parser/distributed-parser-map.json"
             ),
             include_str!("../../../../release/evidence/parser/vyre-frontend-c-contracts.json"),
             include_str!("../../../../release/evidence/parser/vyrec-cli-contracts.json"),
-            include_str!("../../../../release/evidence/parser/dataflow-consumer-contracts.json"),
-            include_str!("../../../../release/evidence/parser/surgec-contracts.json"),
-            include_str!("../../../../release/evidence/parser/surgec-grammar-gen-contracts.json"),
+            include_str!("../../../../release/evidence/parser/external-dataflow-contracts.json"),
+            include_str!("../../../../release/evidence/parser/compiler-consumer-contracts.json"),
+            include_str!("../../../../release/evidence/parser/compiler-consumer-grammar-gen-contracts.json"),
             include_str!("../../../../release/evidence/backends/backend-matrix.json"),
             include_str!("../../../../release/evidence/dataflow/analysis-api-matrix.json"),
             include_str!("../../../../release/evidence/tests/modularization-map.json"),
             include_str!("../../../../release/evidence/docs/distributed-parser-coherence.md"),
         )
+    }
+
+    /// The dataflow component id must be read out of the contract artifact, because
+    /// a literal pasted into the validator went stale when the component was
+    /// renamed and left the boundary proof asserting a root that no longer existed.
+    ///
+    /// The expected value is deliberately not spelled here. This crate is a
+    /// platform crate and may not name a downstream product, and hardcoding the
+    /// id would reintroduce exactly the stale literal the derivation removed.
+    #[test]
+    fn dataflow_component_id_is_read_from_the_committed_contract_artifact() {
+        let contracts =
+            include_str!("../../../../release/evidence/parser/external-dataflow-contracts.json");
+        let id = artifact_string_field(contracts, "component_id")
+            .expect("the committed dataflow contract artifact must name its component id");
+        assert!(
+            !id.trim().is_empty() && !id.contains('"'),
+            "component id {id:?} is not a usable identifier"
+        );
+        assert!(
+            contracts.contains("\"root\": \""),
+            "the contract artifact must also record the component root"
+        );
+    }
+
+    /// The parser map, the contract artifact, and the contributor topology map must
+    /// agree on one dataflow component id. Three artifacts naming it independently
+    /// is how the fossil `dataflow-consumer` id survived the rename in two of them.
+    #[test]
+    fn parser_map_and_topology_map_agree_with_the_dataflow_contract_component_id() {
+        let contracts =
+            include_str!("../../../../release/evidence/parser/external-dataflow-contracts.json");
+        let id = artifact_string_field(contracts, "component_id")
+            .expect("dataflow contract artifact must name its component id");
+        let parser_map =
+            include_str!("../../../../release/evidence/parser/distributed-parser-map.json");
+        let topology = include_str!("../../../../release/evidence/tests/modularization-map.json");
+        assert!(
+            parser_map.contains(&format!("\"id\": \"{id}\"")),
+            "distributed-parser-map.json must own the dataflow component under id `{id}`"
+        );
+        assert!(
+            topology.contains(&format!("\"surface\": \"{id}\"")),
+            "modularization-map.json must own the dataflow surface under id `{id}`"
+        );
+    }
+
+    /// A contract artifact with no component id must fail the boundary proof rather
+    /// than skip the dataflow ownership checks, which is what an `unwrap_or_default`
+    /// on the derived needle would have done (a Law-10 silent skip).
+    #[test]
+    fn boundary_artifacts_reject_a_contract_artifact_with_no_component_id() {
+        let contracts = include_str!("../../../../release/evidence/parser/external-dataflow-contracts.json")
+            .replace("\"component_id\"", "\"component_id_removed\"");
+
+        assert_eq!(
+            validate_committed_architecture_boundary_artifacts(
+                include_str!(
+                    "../../../../release/evidence/parser/distributed-parser-map.json"
+                ),
+                include_str!("../../../../release/evidence/parser/vyre-frontend-c-contracts.json"),
+                include_str!("../../../../release/evidence/parser/vyrec-cli-contracts.json"),
+                &contracts,
+                include_str!("../../../../release/evidence/parser/compiler-consumer-contracts.json"),
+                include_str!(
+                    "../../../../release/evidence/parser/compiler-consumer-grammar-gen-contracts.json"
+                ),
+                include_str!("../../../../release/evidence/backends/backend-matrix.json"),
+                include_str!("../../../../release/evidence/dataflow/analysis-api-matrix.json"),
+                include_str!("../../../../release/evidence/tests/modularization-map.json"),
+                include_str!("../../../../release/evidence/docs/distributed-parser-coherence.md"),
+            )
+            .expect_err("boundary proof must not accept a contract artifact with no component id"),
+            ArchitectureBoundaryMapError::ArtifactMissingEvidence {
+                evidence: "dataflow contract component id",
+            }
+        );
+    }
+
+    /// A renamed dataflow component must fail the boundary proof when only one of
+    /// the three artifacts is regenerated. The derived needle is what makes this
+    /// detectable: with a pasted literal, a half-finished rename passed.
+    #[test]
+    fn boundary_artifacts_reject_a_dataflow_rename_the_parser_map_has_not_adopted() {
+        let original =
+            include_str!("../../../../release/evidence/parser/external-dataflow-contracts.json");
+        let id = artifact_string_field(original, "component_id")
+            .expect("dataflow contract artifact must name its component id");
+        let contracts = original.replacen(
+            &format!("\"component_id\": \"{id}\""),
+            "\"component_id\": \"renamed-dataflow\"",
+            1,
+        );
+
+        assert_eq!(
+            validate_committed_architecture_boundary_artifacts(
+                include_str!(
+                    "../../../../release/evidence/parser/distributed-parser-map.json"
+                ),
+                include_str!("../../../../release/evidence/parser/vyre-frontend-c-contracts.json"),
+                include_str!("../../../../release/evidence/parser/vyrec-cli-contracts.json"),
+                &contracts,
+                include_str!("../../../../release/evidence/parser/compiler-consumer-contracts.json"),
+                include_str!(
+                    "../../../../release/evidence/parser/compiler-consumer-grammar-gen-contracts.json"
+                ),
+                include_str!("../../../../release/evidence/backends/backend-matrix.json"),
+                include_str!("../../../../release/evidence/dataflow/analysis-api-matrix.json"),
+                include_str!("../../../../release/evidence/tests/modularization-map.json"),
+                include_str!("../../../../release/evidence/docs/distributed-parser-coherence.md"),
+            )
+            .expect_err("boundary proof must not accept a half-adopted dataflow rename"),
+            ArchitectureBoundaryMapError::ArtifactMissingEvidence {
+                evidence: "Dataflow analysis dataflow parser owner",
+            }
+        );
+    }
+
+    /// `artifact_string_field` must reject an empty value rather than return
+    /// `Some("")`, which would build the needle `"id": ""` and match nothing while
+    /// reporting a confusing missing-owner error instead of a missing-id one.
+    #[test]
+    fn artifact_string_field_rejects_an_empty_value() {
+        assert_eq!(artifact_string_field("{\"component_id\": \"\"}", "component_id"), None);
+        assert_eq!(
+            artifact_string_field("{\"component_id\": \"a-component\"}", "component_id").as_deref(),
+            Some("a-component")
+        );
+        assert_eq!(
+            artifact_string_field("{\"other\": \"a-component\"}", "component_id"),
+            None
+        );
     }
 }

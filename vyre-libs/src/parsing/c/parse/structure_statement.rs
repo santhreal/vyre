@@ -5,6 +5,10 @@ use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::memory_model::MemoryOrdering;
 
 /// Compact C11 statement spans for AST construction.
+///
+/// # Panics
+/// Panics when the token-window count is not a literal expression. The output buffer
+/// is sized at build time; pass `Expr::u32(N)`.
 #[must_use]
 pub fn c11_statement_bounds(
     tok_types: &str,

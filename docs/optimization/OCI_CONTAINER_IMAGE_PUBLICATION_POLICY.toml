@@ -21,15 +21,15 @@ required_fields = [
 
 [[image]]
 image_id = "vyre-cli-oci-image"
-registry_policy = "published-to-ghcr.io-santhsecurity-vyre-linked-to-public-repository"
+registry_policy = "published-to-ghcr.io-santhreal-vyre-linked-to-public-repository"
 manifest_policy = "OCI-image-manifest-records-config-layers-and-content-digests"
 platform_index_policy = "linux-amd64-linux-arm64-platform-index-required-before-multiarch-claim"
 layer_policy = "minimal-runtime-layers-no-build-cache-secrets-private-paths-or-credential-files"
-annotation_policy = "org.opencontainers.image.source-points-to-public-santhsecurity-vyre"
+annotation_policy = "org.opencontainers.image.source-points-to-public-santhreal-vyre"
 tag_policy = "version-tag-and-digest-recorded-latest-tag-not-used-for-reproducibility-claims"
 digest_pull_policy = "consumer-docs-prefer-ghcr-image-by-sha256-digest-for-reproducible-use"
 sbom_attestation_policy = "image-SBOM-and-SLSA-provenance-linked-to-release-artifact-integrity-index"
-private_boundary_policy = "Santh-and-santhsecurity-Santh-private-or-backup-roots-excluded-from-layers-labels-history"
+private_boundary_policy = "Santh-and-santhreal-Santh-private-or-backup-roots-excluded-from-layers-labels-history"
 diagnostic = "VYRE_OCI_IMAGE_PUBLICATION_REQUIRED"
 
 [[image]]

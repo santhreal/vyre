@@ -203,7 +203,7 @@ fn contains_private_santh_path(lower: &str) -> bool {
         || lower.contains("\\santh\\")
         || lower.contains("santhdata/santh")
         || lower.contains("santhdata\\santh")
-        || lower.contains("santhsecurity/santh")
+        || lower.contains("santhreal/santh")
 }
 
 fn contains_credential_marker(lower: &str) -> bool {
@@ -227,7 +227,7 @@ fn contains_credential_marker(lower: &str) -> bool {
 fn github_repo_refs(lower: &str) -> Vec<String> {
     let mut refs = Vec::new();
     let mut remaining = lower;
-    while let Some(offset) = remaining.find("santhsecurity/") {
+    while let Some(offset) = remaining.find("santhreal/") {
         let after = &remaining[offset..];
         let token = after
             .split(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' || ch == '/'))
@@ -250,7 +250,7 @@ mod tests {
     fn public_artifact_boundary_rejects_plural_private_and_credentials() {
         let blockers = public_artifact_boundary_blockers(
             "release/evidence/final/public-launch-state.json",
-            br#"{"repositories_public":["santhsecurity/vyre"],"public_repository":"santhsecurity/Santh","path":"/media/mukund-thiru/SanthData/Santh/private.json","command":"gh repo edit Santh --visibility public","env":"VYRE_RELEASE_REPOS=santhsecurity/vyre","provenance":"token=abc"}"#,
+            br#"{"repositories_public":["santhreal/vyre"],"public_repository":"santhreal/Santh","path":"/media/mukund-thiru/SanthData/Santh/private.json","command":"gh repo edit Santh --visibility public","env":"VYRE_RELEASE_REPOS=santhreal/vyre","provenance":"token=abc"}"#,
         );
         assert!(blockers
             .iter()

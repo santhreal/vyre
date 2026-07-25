@@ -32,19 +32,27 @@ mod registry;
 mod tests;
 
 #[cfg(any(test, feature = "cpu-parity"))]
-pub use cpu_ref::{cpu_ref, try_cpu_ref, try_cpu_ref_into};
+pub use cpu_ref::{
+    cpu_ref, try_cpu_ref, try_cpu_ref_converged, try_cpu_ref_density, try_cpu_ref_into,
+    PersistentBfsConvergence,
+};
 pub use hash::{persistent_bfs_layout_hash, persistent_bfs_program_layout_hash};
 pub use layout::{
     persistent_bfs_batch_dispatch_grid, persistent_bfs_single_dispatch_grid,
     PersistentBfsPlanCacheKey, PersistentBfsStaticInputKey, BATCH_OP_ID, BINDING_CHANGED,
-    BINDING_FRONTIER_IN, BINDING_FRONTIER_OUT, OP_ID, PERSISTENT_BFS_WORKGROUP_SIZE,
+    BINDING_CONVERGED, BINDING_DENSITY_ACTIVE, BINDING_FRONTIER_IN, BINDING_FRONTIER_OUT,
+    DENSITY_ACTIVE_BUFFER, OP_ID, PERSISTENT_BFS_WORKGROUP_SIZE,
 };
 pub use plan::{
     copy_persistent_bfs_batch_seed_and_clear_changed_into, copy_persistent_bfs_seed_frontier_into,
     plan_persistent_bfs_dispatch, plan_persistent_bfs_resident_batch_dispatch,
     plan_persistent_bfs_resident_dispatch, validate_persistent_bfs_changed_flag,
+    validate_persistent_bfs_converged_flag,
 };
-pub use program::{bitset_words, persistent_bfs, persistent_bfs_batch, try_persistent_bfs_batch};
+pub use program::{
+    bitset_words, persistent_bfs, persistent_bfs_batch, persistent_bfs_batch_with_density,
+    persistent_bfs_with_density, try_persistent_bfs_batch, try_persistent_bfs_batch_with_density,
+};
 pub use validate::{
     validate_persistent_bfs_batch_frontiers, validate_persistent_bfs_frontier,
     validate_persistent_bfs_graph_layout, validate_persistent_bfs_inputs,

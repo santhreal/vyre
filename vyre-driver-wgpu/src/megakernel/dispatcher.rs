@@ -504,6 +504,12 @@ fn batch_fixed_resident_overhead_bytes() -> u64 {
         ))
 }
 
+/// Widen a megakernel ABI constant to `u64`, failing closed on an out-of-range value.
+///
+/// # Panics
+/// Panics when `value` does not fit `u64`. These are ABI constants baked into the
+/// dispatcher, so an out-of-range value is a build-time mistake; silently clamping it
+/// would hand the kernel a wrong buffer size.
 fn dispatcher_usize_to_u64<T>(value: T, label: &'static str) -> u64
 where
     T: TryInto<u64> + Copy + std::fmt::Display,
@@ -523,6 +529,11 @@ where
     }
 }
 
+/// Narrow a megakernel ABI constant to `u32`, failing closed on an out-of-range value.
+///
+/// # Panics
+/// Panics when `value` does not fit `u32`. See [`dispatcher_usize_to_u64`]: a clamped
+/// ABI constant would silently mis-size a dispatch.
 fn dispatcher_abi_u32<T>(value: T, label: &'static str) -> u32
 where
     T: TryInto<u32> + Copy + std::fmt::Display,
@@ -705,7 +716,7 @@ impl BatchDispatcher {
     /// `subgroupAdd`/`subgroupShuffle` and elects a leader lane; under divergence
     /// the elected leader can already have exited, so its reserved ring slot is
     /// never broadcast and hits found by still-running lanes are dropped. That
-    /// surfaced as a real, data-dependent recall loss in the keyhog GPU≡CPU
+    /// surfaced as a real, data-dependent recall loss in the downstream GPU≡CPU
     /// parity gate (6 of 46 detector firings silently missed, every miss a match
     /// found after its subgroup's leader lane finished a shorter file). The
     /// scalar writer does one independent `atomicAdd` per hit and is correct
@@ -761,7 +772,7 @@ impl BatchDispatcher {
         // `hierarchical_atomics` module contract); under this divergence it
         // strands the elected leader's reserved ring slot once that lane exits,
         // silently dropping hits found by still-running lanes (a real recall loss
-        // in the keyhog GPU≡CPU parity gate). So the hierarchical writer is never
+        // in the downstream GPU≡CPU parity gate). So the hierarchical writer is never
         // sound for this dispatcher: `Auto` (which would resolve to Hierarchical
         // on a subgroup backend) DOWNGRADES to the correct scalar writer, and an
         // EXPLICIT hierarchical request is a caller error that fails loudly rather
@@ -1472,7 +1483,7 @@ fn combined_batch_program_buffers(hit_capacity: u32) -> Vec<BufferDecl> {
 /// `u32` word (low half = even flat index, high half = odd; host packer
 /// [`vyre_runtime::megakernel::rule_catalog::try_pack_u16_transitions_into`]),
 /// halving the transition table and bytes-per-transaction, the
-/// keyhog-scale L1 working-set lever (`docs/GPU_OOM_SEGMENTATION.md`), at the
+/// large-catalog-scale L1 working-set lever (`docs/GPU_OOM_SEGMENTATION.md`), at the
 /// cost of an unpack shift/mask in the hot loop. Sound ONLY when every target
 /// fits `u16` (`state_count <= 65536`); the host packer fails closed otherwise.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

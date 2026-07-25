@@ -97,6 +97,11 @@ impl std::error::Error for NfaCompileError {}
 /// Compile patterns into an [`NfaPlan`]. Literal-only: each pattern
 /// contributes `len(p)` states; all patterns share state 0 (entry),
 /// so total state count is `1 + sum(len(p))`.
+///
+/// # Panics
+/// Panics when the pattern set exceeds the NFA state cap. An entry-only plan would
+/// build a scanner that matches nothing, so callers that must recover use
+/// [`try_compile`].
 #[must_use]
 pub fn compile(patterns: &[&str]) -> NfaPlan {
     match try_compile(patterns) {

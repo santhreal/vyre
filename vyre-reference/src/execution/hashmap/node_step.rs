@@ -480,6 +480,12 @@ fn eval_byte_count(
     })
 }
 
+/// Read `byte_count` bytes from a reference buffer at `start`, zero-padding a short tail.
+///
+/// # Panics
+/// Panics when the buffer's byte lock is poisoned. A poisoned lock means a writer
+/// panicked mid-store, and reading past it would let the CPU oracle emit corrupt
+/// golden values the conform gate then trusts.
 fn read_bytes(
     memory: &HashmapMemory,
     source: &str,
@@ -503,6 +509,10 @@ fn ensure_buffer_exists(memory: &HashmapMemory, name: &str) -> Result<(), Error>
     super::super::memory::resolve_buffer(memory, name).map(|_| ())
 }
 
+/// Apply a queued async transfer to a reference buffer.
+///
+/// # Panics
+/// Panics when the buffer's byte lock is poisoned; see the reading counterpart.
 fn apply_async_transfer(
     transfer: HashmapAsyncTransfer,
     memory: &mut HashmapMemory,

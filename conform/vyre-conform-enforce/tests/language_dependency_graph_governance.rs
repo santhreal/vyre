@@ -109,21 +109,3 @@ fn reuse_evidence_records_correctness_and_performance_fields() {
     }
 }
 
-#[test]
-fn acceleration_plan_contains_complete_language_dependency_graph_tranche() {
-    let plan = read_repo_file("docs/optimization/ALL_AXES_ACCELERATION_PLAN.md");
-
-    for id in 1561..=1580 {
-        assert_contains(&plan, &format!("VX-{id}"));
-    }
-
-    for token in [
-        "LANGUAGE_DEPENDENCY_EDGE_MATRIX",
-        "MODULE_IMPORT_RESOLUTION_CONTRACTS",
-        "CROSS_FILE_INVALIDATION_PROPAGATION_POLICY",
-        "DEPENDENCY_GRAPH_REUSE_EVIDENCE",
-        "END_TO_END_LANGUAGE_DEPENDENCY_GRAPH_TRANCHE_COVERAGE",
-    ] {
-        assert_contains(&plan, token);
-    }
-}

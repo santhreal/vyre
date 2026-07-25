@@ -1,4 +1,4 @@
-# Release Engineering  -  Vyre 0.4.1 + The dataflow consumer 0.0.1
+# Release engineering
 
 Closes #34 (A.10 release engineering). Complements `docs/GATE_CLOSURE.md`
 (the per-release gate protocol) with the day-to-day shape of
@@ -6,12 +6,12 @@ shipping a version.
 
 ## Version discipline
 
-- publishable Vyre crates move in **lock-step** for this release train.
-  The selected Vyre package version is `0.4.1`; the selected The dataflow consumer package
-  version is `0.0.1`. `version-matrix` is the evidence gate for drift.
+- publishable Vyre crates move in **lock-step** for a release train. The selected
+  Vyre and Weir package versions come from `release/release-train.toml`, which is
+  the single source of truth; `version-matrix` is the evidence gate for drift.
 - `consumer` versions independently but **declares a tested Vyre
   minor** in its Cargo.toml. consumer integration is represented in parser
-  coherence evidence; it is not the release tag owner for Vyre `0.4.1`.
+  coherence evidence; it is not the release tag owner for Vyre.
 - Tier-3 dialect splits (`vyre-libs-nn`, `vyre-libs-crypto`, …)
   move on the vyre minor line.
 - Tier-4 external packs (`vyre-libs-extern`, community authored)
@@ -22,10 +22,10 @@ shipping a version.
 
 Each release pushes crates in dep-order so mid-publish breakage does not leave
 downstream consumers linking a wedge-version. The canonical order is maintained
-in `docs/RELEASE.md` and must be checked with:
+by the readiness report and must be checked with:
 
 ```sh
-cargo_full run --bin xtask -- release-order
+cargo_full run --bin xtask -- package-readiness
 ```
 
 Publishing uses `cargo_full publish --dry-run --locked -p <crate>` and then
@@ -34,9 +34,11 @@ release evidence gate is closed.
 
 ## Tag format
 
-- Vyre tag: `vyre-v0.4.1`.
-- The dataflow consumer tag: `dataflow consumer-v0.0.1`.
-- Combined train tag: `vyre-0.4.1-dataflow consumer-0.0.1`.
+- Vyre tag: `vyre-v<vyre version>`.
+- Weir tag: `weir-v<weir version>`.
+- Combined train tag: `vyre-<vyre version>-weir-<weir version>`.
+- Every tag name is declared in `release/release-train.toml`; take them from there
+  rather than typing them, and cut the release-candidate tags before the final tags.
 - Release artifacts live under `release/evidence/` and include conformance,
   backend, benchmark, parser, optimization, metadata, docs, hygiene, and final
   completion-audit JSON.
@@ -88,7 +90,7 @@ top-level hardware provenance before benchmark freshness is accepted.
 
 1. `cargo_full run --bin xtask -- release-evidence`  -  structural evidence batch.
 2. `cargo_full run --bin xtask -- release-completion-audit --output release/evidence/final/completion-audit.json`  -  prompt-to-artifact audit.
-3. `cargo_full run --bin xtask -- vyre-dataflow consumer-release-gate`  -  final hard gate.
+3. `cargo_full run --bin xtask -- vyre-release-gate`  -  final hard gate.
 4. `cargo_full test --workspace --release --all-features`  -  full workspace tests.
 5. `cargo_full run -p vyre-bench --release -- run --backend cuda --suite release --measured-samples 30 --warmup-samples 3 --enforce-budgets`  -  CUDA release path.
 6. `cargo_full run -p vyre-bench --release -- run --backend wgpu --suite release --measured-samples 30 --warmup-samples 3 --enforce-budgets`  -  WGPU fallback path.
@@ -100,7 +102,7 @@ top-level hardware provenance before benchmark freshness is accepted.
 
 ## Post-release
 
-- The `vyre-v0.4.1` and `dataflow consumer-v0.0.1` tags stay published even if a patch ships shortly
+- Published tags stay published even if a patch ships shortly
   after. No retroactive rewriting of history.
 - If a security finding appears post-release, the patch cadence is
   48 h from triage to crates.io push, with a CHANGELOG `Security`
@@ -109,7 +111,7 @@ top-level hardware provenance before benchmark freshness is accepted.
 ## Open items
 
 - Release cannot close until `release/evidence/final/completion-audit.json`
-  has zero blockers and `vyre-dataflow consumer-release-gate` accepts every manifest
+  has zero blockers and `vyre-release-gate` accepts every manifest
   requirement.
 - A verified downstream artifact must cite the exact evidence files it relied
   on, not only a green CI run.

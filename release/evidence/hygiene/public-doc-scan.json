@@ -100,7 +100,7 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-debug/src/naga_trace.rs",
-      "line": 6,
+      "line": 18,
       "pattern": "undocumented_public_api",
       "text": "pub struct FailureTrace {"
     },
@@ -181,6 +181,12 @@
       "line": 34,
       "pattern": "undocumented_public_api",
       "text": "pub struct CompoundFusedFilter;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/literal_set_async_overlap.rs",
+      "line": 41,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct LiteralSetAsyncOverlap;"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/optimizer_impact.rs",
@@ -357,6 +363,18 @@
       "text": "pub struct MegakernelLatency;"
     },
     {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/literal_set_paged_corpus.rs",
+      "line": 37,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct LiteralSetPagedCorpus;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/literal_set_cold_start.rs",
+      "line": 38,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct LiteralSetColdStart;"
+    },
+    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/c_parser.rs",
       "line": 51,
       "pattern": "undocumented_public_api",
@@ -375,6 +393,12 @@
       "text": "pub struct CParserSemaLinuxDriverCorpus100Pipeline;"
     },
     {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/literal_set_decode_heavy.rs",
+      "line": 41,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct LiteralSetDecodeHeavy;"
+    },
+    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/regex_bt.rs",
       "line": 32,
       "pattern": "undocumented_public_api",
@@ -385,6 +409,12 @@
       "line": 62,
       "pattern": "undocumented_public_api",
       "text": "pub struct QuantizedLinear4BitAffineGrouped;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/literal_set_vs_cpu.rs",
+      "line": 43,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct LiteralSetVsCpu;"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/adversarial.rs",
@@ -735,20 +765,8 @@
       "text": "pub enum IoUringError {"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/scheduler/mod.rs",
-      "line": 94,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct PassResearchTrace {"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/scheduler/mod.rs",
-      "line": 143,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum PassResearchTraceError {"
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/loops/loop_licm.rs",
-      "line": 64,
+      "line": 72,
       "pattern": "undocumented_public_api",
       "text": "pub struct LoopLicm;"
     },
@@ -766,13 +784,13 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/loops/loop_var_range_fold.rs",
-      "line": 63,
+      "line": 69,
       "pattern": "undocumented_public_api",
       "text": "pub struct LoopVarRangeFoldPass;"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/loops/loop_redundant_bound_check_elide.rs",
-      "line": 60,
+      "line": 61,
       "pattern": "undocumented_public_api",
       "text": "pub struct LoopRedundantBoundCheckElidePass;"
     },
@@ -790,13 +808,13 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/loops/loop_peel.rs",
-      "line": 35,
+      "line": 42,
       "pattern": "undocumented_public_api",
       "text": "pub struct LoopPeelPass;"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/loops/loop_lower_bound_normalize.rs",
-      "line": 67,
+      "line": 68,
       "pattern": "undocumented_public_api",
       "text": "pub struct LoopLowerBoundNormalize;"
     },
@@ -856,7 +874,7 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/cleanup/tail_duplication.rs",
-      "line": 37,
+      "line": 40,
       "pattern": "undocumented_public_api",
       "text": "pub struct TailDuplicationPass;"
     },
@@ -886,7 +904,7 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/algebraic/atomic_minimize.rs",
-      "line": 32,
+      "line": 36,
       "pattern": "undocumented_public_api",
       "text": "pub struct AtomicMinimizePass;"
     },
@@ -898,25 +916,25 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/memory/read_only_load_hoist.rs",
-      "line": 70,
+      "line": 71,
       "pattern": "undocumented_public_api",
       "text": "pub struct ReadOnlyLoadHoistPass;"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/memory/store_to_load_forward.rs",
-      "line": 58,
+      "line": 65,
       "pattern": "undocumented_public_api",
       "text": "pub struct StoreToLoadForward;"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/memory/decode_scan_fuse.rs",
-      "line": 78,
+      "line": 129,
       "pattern": "undocumented_public_api",
       "text": "pub struct DecodeScanFuse;"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/memory/dead_store_elim.rs",
-      "line": 64,
+      "line": 67,
       "pattern": "undocumented_public_api",
       "text": "pub struct DeadStoreElim;"
     },
@@ -1270,7 +1288,7 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/const_buffer_promote/mod.rs",
-      "line": 40,
+      "line": 41,
       "pattern": "undocumented_public_api",
       "text": "pub struct ConstBufferPlan {"
     },
@@ -1459,31 +1477,278 @@
       "line": 16,
       "pattern": "undocumented_public_api",
       "text": "pub struct CsrFactory;"
-    }
-  ],
-  "release_blocking_findings": [
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/scheduler/mod.rs",
-      "line": 94,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "foundation_optimizer",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": true,
-      "release_blocker": true
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/scheduler/mod.rs",
-      "line": 143,
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/corpus/manifest.rs",
+      "line": 16,
       "pattern": "undocumented_public_api",
-      "owner_lane": "foundation_optimizer",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": true,
-      "release_blocker": true
+      "text": "pub struct CorpusMeta {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/corpus/manifest.rs",
+      "line": 25,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct FetchEntry {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/corpus/manifest.rs",
+      "line": 37,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ExpectedFinding {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/corpus/manifest.rs",
+      "line": 46,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum Split {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/corpus/manifest.rs",
+      "line": 64,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct Sample {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/corpus/manifest.rs",
+      "line": 79,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct Manifest {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/corpus/manifest.rs",
+      "line": 88,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ManifestDoc {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/uninit_pointer_decl.rs",
+      "line": 15,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct UninitPointerDeclPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/vyre_nn_classify.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct VyreNnClassifyPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/function_tagged.rs",
+      "line": 10,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct FunctionTaggedPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/out_buffer_of.rs",
+      "line": 24,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct OutBufferOfPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/flows_to_cross_lang.rs",
+      "line": 10,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct FlowsToCrossLangPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/control_dependence.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ControlDependencePredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/must_init.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct MustInitPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/uses_of.rs",
+      "line": 10,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct UsesOfPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/vyre_security_path_canonical.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct VyreSecurityPathCanonicalPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/type_confusion_memcpy.rs",
+      "line": 15,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct TypeConfusionMemcpyPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/vyre_security_sql_param_bound.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct VyreSecuritySqlParamBoundPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/offset_use_after_realloc.rs",
+      "line": 16,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct OffsetUseAfterReallocPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/vyre_dataflow_range_check.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct VyreDataflowRangeCheckPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/pointer_arith.rs",
+      "line": 15,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct PointerArithPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/unsanitized_call_arg.rs",
+      "line": 35,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct UnsanitizedCallArgPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/may_alias.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct MayAliasPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/bears_sanitizer_tag.rs",
+      "line": 28,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BearsSanitizerTagPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/bit_width.rs",
+      "line": 10,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BitWidthPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/value_set.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ValueSetPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/range_check.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct RangeCheckPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/reaching_def.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ReachingDefPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/vyre_security_xss_escape.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct VyreSecurityXssEscapePredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/encoding_family_of.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct EncodingFamilyOfPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/realloc_call.rs",
+      "line": 15,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ReallocCallPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/bears_bounded_check_tag.rs",
+      "line": 23,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BearsBoundedCheckTagPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/target_type.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct TargetTypePredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/null_assign.rs",
+      "line": 15,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct NullAssignPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/off_by_one_loop_write.rs",
+      "line": 25,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct OffByOneLoopWritePredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/escapes.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct EscapesPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/source_type.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct SourceTypePredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/bears_receive_tag.rs",
+      "line": 31,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BearsReceiveTagPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/recursive_call.rs",
+      "line": 19,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct RecursiveCallPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/live_at.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct LiveAtPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/scc_query.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct SccQueryPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/post_dominates_query.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct PostDominatesQueryPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/may_alias_threads.rs",
+      "line": 27,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct MayAliasThreadsPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/type_of.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct TypeOfPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/sign_changing_cast.rs",
+      "line": 15,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct SignChangingCastPredicate;"
     }
   ],
-  "blockers": [
-    "2 release-blocking `public-docs` finding(s) remain"
-  ]
+  "release_blocking_findings": [],
+  "blockers": []
 }

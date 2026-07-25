@@ -17,9 +17,9 @@ impl OptimizerDispatcher for PersistentBfsDispatcher {
         grid_override: Option<[u32; 3]>,
     ) -> Result<Vec<Vec<u8>>, DispatchError> {
         assert_eq!(grid_override, Some([1, 1, 1]));
-        if inputs.len() != 8 {
+        if inputs.len() != 9 {
             return Err(DispatchError::BadInputs(format!(
-                "Fix: persistent BFS test dispatcher expected 8 inputs, got {}.",
+                "Fix: persistent BFS test dispatcher expected 9 inputs, got {}.",
                 inputs.len()
             )));
         }
@@ -40,9 +40,9 @@ impl OptimizerDispatcher for RecordingPersistentBfsDispatcher {
         grid_override: Option<[u32; 3]>,
     ) -> Result<Vec<Vec<u8>>, DispatchError> {
         assert_eq!(grid_override, Some([1, 1, 1]));
-        if inputs.len() != 8 {
+        if inputs.len() != 9 {
             return Err(DispatchError::BadInputs(format!(
-                "Fix: persistent BFS recording dispatcher expected 8 inputs, got {}.",
+                "Fix: persistent BFS recording dispatcher expected 9 inputs, got {}.",
                 inputs.len()
             )));
         }
@@ -65,9 +65,9 @@ impl OptimizerDispatcher for LargeScratchPersistentBfsDispatcher {
         grid_override: Option<[u32; 3]>,
     ) -> Result<Vec<Vec<u8>>, DispatchError> {
         assert_eq!(grid_override, Some([3, 1, 1]));
-        if inputs.len() != 8 {
+        if inputs.len() != 9 {
             return Err(DispatchError::BadInputs(format!(
-                "Fix: large persistent BFS test dispatcher expected 8 inputs, got {}.",
+                "Fix: large persistent BFS test dispatcher expected 9 inputs, got {}.",
                 inputs.len()
             )));
         }
@@ -87,12 +87,13 @@ fn via_into_decodes_exact_outputs_into_reused_frontier() {
         outputs: vec![
             u32_slice_to_le_bytes(&[0b1111]),
             u32_slice_to_le_bytes(&[1]),
+            u32_slice_to_le_bytes(&[1]),
         ],
     };
     let (off, tgt, msk) = linear_graph();
     let mut frontier = Vec::with_capacity(4);
     let ptr = frontier.as_ptr();
-    let changed = bfs_expand_via_into(
+    let (changed, converged) = bfs_expand_via_into(
         &dispatcher,
         4,
         &off,
@@ -106,6 +107,7 @@ fn via_into_decodes_exact_outputs_into_reused_frontier() {
     .expect("Fix: dispatch succeeds");
     assert_eq!(frontier, vec![0b1111]);
     assert_eq!(changed, 1);
+    assert_eq!(converged, 1);
     assert_eq!(frontier.as_ptr(), ptr);
 }
 
@@ -115,6 +117,7 @@ fn via_into_rejects_non_boolean_changed_flag_readback() {
         outputs: vec![
             u32_slice_to_le_bytes(&[0b1111]),
             u32_slice_to_le_bytes(&[7]),
+            u32_slice_to_le_bytes(&[1]),
         ],
     };
     let (off, tgt, msk) = linear_graph();
@@ -147,6 +150,41 @@ fn via_into_rejects_non_boolean_changed_flag_readback() {
 }
 
 #[test]
+fn via_into_rejects_non_boolean_converged_flag_readback() {
+    let dispatcher = PersistentBfsDispatcher {
+        outputs: vec![
+            u32_slice_to_le_bytes(&[0b1111]),
+            u32_slice_to_le_bytes(&[1]),
+            u32_slice_to_le_bytes(&[7]),
+        ],
+    };
+    let (off, tgt, msk) = linear_graph();
+    let mut frontier = Vec::new();
+
+    let err = bfs_expand_via_into(
+        &dispatcher,
+        4,
+        &off,
+        &tgt,
+        &msk,
+        &[0b0001],
+        0xFFFF_FFFF,
+        4,
+        &mut frontier,
+    )
+    .expect_err("Fix: persistent BFS wrapper must reject a non-boolean converged-flag readback");
+
+    assert!(
+        matches!(err, DispatchError::BackendError(_)),
+        "unexpected error variant: {err:?}"
+    );
+    assert!(
+        err.to_string().contains("converged"),
+        "the diagnostic must name the converged signal, got: {err}"
+    );
+}
+
+#[test]
 fn via_large_graph_allocates_changed_active_scratch_without_extra_outputs() {
     let node_count = 513u32;
     let words = ((node_count + 31) / 32) as usize;
@@ -154,13 +192,14 @@ fn via_large_graph_allocates_changed_active_scratch_without_extra_outputs() {
         outputs: vec![
             u32_slice_to_le_bytes(&vec![0u32; words]),
             u32_slice_to_le_bytes(&[0, 0, 0]),
+            u32_slice_to_le_bytes(&[1]),
         ],
     };
     let edge_offsets = vec![0u32; node_count as usize + 1];
     let frontier_in = vec![0u32; words];
     let mut frontier = Vec::new();
 
-    let changed = bfs_expand_via_into(
+    let (changed, converged) = bfs_expand_via_into(
         &dispatcher,
         node_count,
         &edge_offsets,
@@ -174,6 +213,7 @@ fn via_large_graph_allocates_changed_active_scratch_without_extra_outputs() {
     .expect("Fix: large persistent BFS dispatch should allocate internal active scratch.");
 
     assert_eq!(changed, 0);
+    assert_eq!(converged, 1);
     assert_eq!(frontier, vec![0u32; words]);
 }
 
@@ -183,13 +223,14 @@ fn via_with_scratch_reuses_dispatch_storage() {
         outputs: vec![
             u32_slice_to_le_bytes(&[0b1111]),
             u32_slice_to_le_bytes(&[1]),
+            u32_slice_to_le_bytes(&[1]),
         ],
     };
     let (off, tgt, msk) = linear_graph();
     let mut scratch = PersistentBfsGpuScratch::default();
     let mut frontier = Vec::with_capacity(1);
 
-    let changed = bfs_expand_via_with_scratch_into(
+    let (changed, converged) = bfs_expand_via_with_scratch_into(
         &dispatcher,
         4,
         &off,
@@ -203,11 +244,12 @@ fn via_with_scratch_reuses_dispatch_storage() {
     )
     .expect("Fix: dispatch succeeds");
     assert_eq!(changed, 1);
+    assert_eq!(converged, 1);
     assert_eq!(frontier, vec![0b1111]);
     let input_capacities = scratch.inputs.iter().map(Vec::capacity).collect::<Vec<_>>();
     let frontier_capacity = frontier.capacity();
 
-    let changed = bfs_expand_via_with_scratch_into(
+    let (changed, converged) = bfs_expand_via_with_scratch_into(
         &dispatcher,
         4,
         &off,
@@ -221,6 +263,7 @@ fn via_with_scratch_reuses_dispatch_storage() {
     )
     .expect("Fix: dispatch succeeds");
     assert_eq!(changed, 1);
+    assert_eq!(converged, 1);
     assert_eq!(
         scratch.inputs.iter().map(Vec::capacity).collect::<Vec<_>>(),
         input_capacities
@@ -233,6 +276,7 @@ fn via_refreshes_static_graph_inputs_for_same_shape_content_change() {
     let dispatcher = RecordingPersistentBfsDispatcher {
         outputs: vec![
             u32_slice_to_le_bytes(&[0b1111]),
+            u32_slice_to_le_bytes(&[1]),
             u32_slice_to_le_bytes(&[1]),
         ],
         edge_targets: RefCell::new(Vec::new()),
@@ -300,7 +344,7 @@ fn via_zero_iters_validates_and_returns_seed_without_dispatch_or_cache() {
     let mut scratch = PersistentBfsGpuScratch::default();
     let mut frontier = Vec::with_capacity(8);
     let ptr = frontier.as_ptr();
-    let changed = bfs_expand_via_with_scratch_into(
+    let (changed, converged) = bfs_expand_via_with_scratch_into(
         &NoDispatch,
         4,
         &off,
@@ -315,6 +359,10 @@ fn via_zero_iters_validates_and_returns_seed_without_dispatch_or_cache() {
     .expect("Fix: zero-iteration persistent BFS should validate and return seed frontier");
 
     assert_eq!(changed, 0);
+    assert_eq!(
+        converged, 0,
+        "a zero-iteration expansion runs no confirming step, so it is not proven converged"
+    );
     assert_eq!(frontier, vec![0b0011]);
     assert_eq!(frontier.as_ptr(), ptr);
     assert!(scratch.inputs.is_empty());
@@ -326,6 +374,7 @@ fn via_rejects_extra_outputs() {
     let dispatcher = PersistentBfsDispatcher {
         outputs: vec![
             u32_slice_to_le_bytes(&[0b1111]),
+            u32_slice_to_le_bytes(&[1]),
             u32_slice_to_le_bytes(&[1]),
             u32_slice_to_le_bytes(&[99]),
         ],
@@ -342,7 +391,11 @@ fn via_rejects_extra_outputs() {
 #[test]
 fn via_rejects_trailing_changed_bytes() {
     let dispatcher = PersistentBfsDispatcher {
-        outputs: vec![u32_slice_to_le_bytes(&[0b1111]), vec![1, 0, 0, 0, 2]],
+        outputs: vec![
+            u32_slice_to_le_bytes(&[0b1111]),
+            vec![1, 0, 0, 0, 2],
+            u32_slice_to_le_bytes(&[0]),
+        ],
     };
     let (off, tgt, msk) = linear_graph();
     let err = bfs_expand_via(&dispatcher, 4, &off, &tgt, &msk, &[0b0001], 0xFFFF_FFFF, 4)

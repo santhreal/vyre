@@ -1,8 +1,9 @@
-//! Weir alias-fact import boundary for descriptor rewrites.
+//! Alias-fact import boundary for descriptor rewrites.
 //!
 //! Vyre's rewrite legality checks consume substrate-neutral alias facts.
-//! This module gives Weir integrations an explicit API surface while
-//! preserving the canonical fact representation used by the existing passes.
+//! This module gives external dataflow integrations an explicit API surface
+//! while preserving the canonical fact representation used by the existing
+//! passes.
 
 pub use crate::analyses::alias_facts::{AliasFactSet, NoAliasFact};
 
@@ -11,7 +12,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn weir_alias_api_preserves_bidirectional_no_alias_facts() {
+    fn alias_import_api_preserves_bidirectional_no_alias_facts() {
         let mut facts = AliasFactSet::default();
         facts.insert_no_alias(NoAliasFact {
             left_binding: 0,

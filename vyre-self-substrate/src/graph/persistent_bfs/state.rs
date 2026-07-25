@@ -11,6 +11,7 @@ use vyre_primitives::graph::persistent_bfs::{
 pub struct PersistentBfsGpuScratch {
     pub(super) inputs: Vec<Vec<u8>>,
     pub(super) changed: Vec<u32>,
+    pub(super) converged: Vec<u32>,
     pub(super) static_input_key: Option<PersistentBfsStaticInputKey>,
     pub(super) plan_cache: PersistentBfsPlanCache,
 }
@@ -71,12 +72,12 @@ impl ResidentBfsGraph {
 /// Caller-owned resident scratch for repeated BFS queries over a resident graph.
 #[derive(Debug, Default)]
 pub struct PersistentBfsResidentScratch {
-    pub(super) frontier_handles: Option<[u64; 3]>,
-    pub(super) frontier_bytes: usize,
-    pub(super) changed_bytes: usize,
+    pub(super) frontier_handles: Option<Vec<u64>>,
+    pub(super) handle_byte_lengths: Vec<usize>,
     pub(super) frontier_in_bytes: Vec<u8>,
     pub(super) readbacks: Vec<Vec<u8>>,
     pub(super) changed: Vec<u32>,
+    pub(super) converged: Vec<u32>,
     pub(super) plan_cache: PersistentBfsPlanCache,
 }
 
@@ -101,8 +102,7 @@ impl PersistentBfsResidentScratch {
         let Some(handles) = self.frontier_handles.take() else {
             return Ok(());
         };
-        self.frontier_bytes = 0;
-        self.changed_bytes = 0;
+        self.handle_byte_lengths.clear();
         free_unique_resident_handles(dispatcher, &handles, "resident BFS scratch")
     }
 }

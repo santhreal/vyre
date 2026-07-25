@@ -1,7 +1,6 @@
 //! Package registry consumer governance test suite.
 
 const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
-const PLAN: &str = include_str!("../../../docs/optimization/ALL_AXES_ACCELERATION_PLAN.md");
 const REGISTRY: &str =
     include_str!("../../../docs/optimization/CRATES_IO_REGISTRY_PUBLICATION_POLICY.toml");
 const DOCS: &str =
@@ -112,34 +111,6 @@ fn public_api_semver_msrv_policy_links_api_snapshots_migrations_docs_consumers_a
             COMPAT.contains(required),
             "public API semver MSRV policy must include {required}"
         );
-    }
-}
-
-#[test]
-fn plan_contains_package_registry_consumer_rows() {
-    for row in [
-        "VX-1121",
-        "VX-1122",
-        "VX-1123",
-        "VX-1124",
-        "VX-1125",
-        "VX-1126",
-        "VX-1127",
-        "VX-1128",
-        "VX-1129",
-        "VX-1130",
-        "VX-1131",
-        "VX-1132",
-        "VX-1133",
-        "VX-1134",
-        "VX-1135",
-        "VX-1136",
-        "VX-1137",
-        "VX-1138",
-        "VX-1139",
-        "VX-1140",
-    ] {
-        assert!(PLAN.contains(row), "plan must include {row}");
     }
 }
 

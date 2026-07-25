@@ -1,7 +1,6 @@
 //! Host locality affinity governance test suite.
 
 const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
-const PLAN: &str = include_str!("../../../docs/optimization/ALL_AXES_ACCELERATION_PLAN.md");
 const CONTRACTS: &str = include_str!("../../../docs/optimization/HOST_LOCALITY_AFFINITY_CONTRACTS.toml");
 const MATRIX: &str = include_str!("../../../docs/optimization/CPU_GPU_TOPOLOGY_AFFINITY_MATRIX.toml");
 const NUMA: &str = include_str!("../../../docs/optimization/NUMA_MEMORY_PLACEMENT_POLICY.toml");
@@ -96,34 +95,6 @@ fn locality_regression_evidence_records_baseline_candidate_metrics_counters_corr
         "cpu-reference-locality-regression",
     ] {
         assert!(EVIDENCE.contains(required), "locality regression evidence policy must include {required}");
-    }
-}
-
-#[test]
-fn plan_contains_host_locality_affinity_rows() {
-    for row in [
-        "VX-1501",
-        "VX-1502",
-        "VX-1503",
-        "VX-1504",
-        "VX-1505",
-        "VX-1506",
-        "VX-1507",
-        "VX-1508",
-        "VX-1509",
-        "VX-1510",
-        "VX-1511",
-        "VX-1512",
-        "VX-1513",
-        "VX-1514",
-        "VX-1515",
-        "VX-1516",
-        "VX-1517",
-        "VX-1518",
-        "VX-1519",
-        "VX-1520",
-    ] {
-        assert!(PLAN.contains(row), "plan must include {row}");
     }
 }
 

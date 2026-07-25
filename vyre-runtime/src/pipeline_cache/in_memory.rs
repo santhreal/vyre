@@ -30,6 +30,12 @@ impl InMemoryPipelineCache {
         usize::from(fp.0[0]) % Self::SHARD_COUNT
     }
 
+    /// Lock one cache shard, failing closed on a poisoned lock.
+    ///
+    /// # Panics
+    /// Panics when the shard lock is poisoned. A poisoned lock means a panic left the
+    /// shard inconsistent, and serving from it could return a pipeline built for another
+    /// program.
     fn lock_shard(shard: &Mutex<InMemoryCacheShard>) -> MutexGuard<'_, InMemoryCacheShard> {
         // Fail closed on poison. `PoisonError::into_inner` would silently hand
         // back a guard over shard state left half-mutated by a panicking writer

@@ -68,8 +68,8 @@ edition = "2021"
 rust-version = "1.85"
 license = "MIT OR Apache-2.0"
 authors = ["Santh Project <contact@santh.dev>"]
-repository = "https://github.com/santhsecurity/vyre"
-homepage = "https://github.com/santhsecurity/vyre"
+repository = "https://github.com/santhreal/vyre"
+homepage = "https://santh.dev"
 
 [workspace.lints.clippy]
 cast_lossless = "allow"
@@ -184,94 +184,94 @@ private_intra_doc_links = "warn"
 # version (the `version` is required so a published crate can resolve its
 # workspace siblings from crates.io after publication).
 [workspace.dependencies]
-vyre = { version = "0.6.5", path = "vyre-core", default-features = false }
-vyre-foundation = { version = "0.6.5", path = "vyre-foundation" }
-vyre-driver = { version = "0.6.5", path = "vyre-driver" }
-vyre-driver-metal = { version = "0.6.5", path = "vyre-driver-metal" }
-vyre-driver-wgpu = { version = "0.6.5", path = "vyre-driver-wgpu" }
-vyre-driver-cuda = { version = "0.6.5", path = "vyre-driver-cuda" }
-vyre-driver-reference = { version = "0.6.5", path = "vyre-driver-reference" }
-vyre-driver-spirv = { version = "0.6.5", path = "vyre-driver-spirv" }
-vyre-reference = { version = "0.6.5", path = "vyre-reference" }
-vyre-spec = { version = "0.6.5", path = "vyre-spec" }
-vyre-macros = { version = "0.6.5", path = "vyre-macros" }
-vyre-primitives = { version = "0.6.5", path = "vyre-primitives", default-features = false }
+vyre = { version = "0.7.0", path = "vyre-core", default-features = false }
+vyre-foundation = { version = "0.7.0", path = "vyre-foundation" }
+vyre-driver = { version = "0.7.0", path = "vyre-driver" }
+vyre-driver-metal = { version = "0.7.0", path = "vyre-driver-metal" }
+vyre-driver-wgpu = { version = "0.7.0", path = "vyre-driver-wgpu" }
+vyre-driver-cuda = { version = "0.7.0", path = "vyre-driver-cuda" }
+vyre-driver-reference = { version = "0.7.0", path = "vyre-driver-reference" }
+vyre-driver-spirv = { version = "0.7.0", path = "vyre-driver-spirv" }
+vyre-reference = { version = "0.7.0", path = "vyre-reference" }
+vyre-spec = { version = "0.7.0", path = "vyre-spec" }
+vyre-macros = { version = "0.7.0", path = "vyre-macros" }
+vyre-primitives = { version = "0.7.0", path = "vyre-primitives", default-features = false }
 # Dev-only shared harness (publish = false). PATH-ONLY (no version): cargo strips
 # path-only dev-deps at publish, so this never joins/blocks the publish train.
 vyre-test-support = { path = "vyre-test-support" }
-vyre-runtime = { version = "0.6.5", path = "vyre-runtime" }
-vyre-libs = { version = "0.6.5", path = "vyre-libs" }
-vyre-self-substrate = { version = "0.6.5", path = "vyre-self-substrate" }
-vyre-intrinsics = { version = "0.6.5", path = "vyre-intrinsics" }
-vyre-aot = { version = "0.6.5", path = "vyre-aot" }
-vyre-bench = { version = "0.6.5", path = "vyre-bench" }
-vyre-test-harness = { version = "0.6.5", path = "conform/vyre-test-harness" }
-vyre-harness = { version = "0.6.5", path = "vyre-harness" }
-vyre-lower = { version = "0.6.5", path = "vyre-lower" }
-vyre-emit-naga = { version = "0.6.5", path = "vyre-emit-naga" }
-vyre-emit-ptx = { version = "0.6.5", path = "vyre-emit-ptx" }
-vyre-emit-spirv = { version = "0.6.5", path = "vyre-emit-spirv" }
-vyre-emit-metal = { version = "0.6.5", path = "vyre-emit-metal" }
-vyre-frontend-c = { version = "0.6.5", path = "vyre-frontend-c" }
-vyre-frontend-rust = { version = "0.6.5", path = "vyre-frontend-rust" }
-vyre-lints = { version = "0.6.5", path = "vyre-lints" }
-vyre-debug = { version = "0.6.5", path = "vyre-debug" }
+vyre-runtime = { version = "0.7.0", path = "vyre-runtime" }
+vyre-libs = { version = "0.7.0", path = "vyre-libs" }
+vyre-self-substrate = { version = "0.7.0", path = "vyre-self-substrate" }
+vyre-intrinsics = { version = "0.7.0", path = "vyre-intrinsics" }
+vyre-aot = { version = "0.7.0", path = "vyre-aot" }
+vyre-bench = { version = "0.7.0", path = "vyre-bench" }
+vyre-test-harness = { version = "0.7.0", path = "conform/vyre-test-harness" }
+vyre-harness = { version = "0.7.0", path = "vyre-harness" }
+vyre-lower = { version = "0.7.0", path = "vyre-lower" }
+vyre-emit-naga = { version = "0.7.0", path = "vyre-emit-naga" }
+vyre-emit-ptx = { version = "0.7.0", path = "vyre-emit-ptx" }
+vyre-emit-spirv = { version = "0.7.0", path = "vyre-emit-spirv" }
+vyre-emit-metal = { version = "0.7.0", path = "vyre-emit-metal" }
+vyre-frontend-c = { version = "0.7.0", path = "vyre-frontend-c" }
+vyre-frontend-rust = { version = "0.7.0", path = "vyre-frontend-rust" }
+vyre-lints = { version = "0.7.0", path = "vyre-lints" }
+vyre-debug = { version = "0.7.0", path = "vyre-debug" }
 vyre-conform-spec = { path = "conform/vyre-conform-spec" }
 vyre-conform-generate = { path = "conform/vyre-conform-generate" }
 vyre-conform-enforce = { path = "conform/vyre-conform-enforce" }
-c-grammar-gen = { package = "vyre-grammar-gen", version = "0.6.5", path = "vyre-grammar-gen" }
+c-grammar-gen = { package = "vyre-grammar-gen", version = "0.7.0", path = "vyre-grammar-gen" }
 
 # Shared third-party pins; every member agrees on versions.
-serde = { version = "=1.0.228", features = ["derive", "rc"] }
+serde = { version = "=1.0.229", features = ["derive", "rc"] }
 serde_json = "1"
-thiserror = "=2.0.18"
+thiserror = "=2.0.19"
 tracing = "=0.1.44"
 tempfile = "=3.27.0"
 proptest = "=1.11.0"
-rand = { version = "=0.10.1", features = ["std", "std_rng"] }
+rand = { version = "=0.10.2", features = ["std", "std_rng"] }
 rand_core = { version = "=0.6.4", features = ["getrandom"] }
 pollster = "=0.4.0"
-tokio = { version = "=1.52.3", features = ["rt", "fs", "time"] }
+tokio = { version = "=1.53.1", features = ["rt", "fs", "time"] }
 wgpu = { version = "=25.0.2", features = ["wgsl", "naga-ir"] }
 metal = "=0.31.0"
-bytemuck = { version = "=1.25.0", features = ["derive"] }
+bytemuck = { version = "=1.25.2", features = ["derive"] }
 naga = { version = ">=25.0.0, <26.0.0", features = ["wgsl-in", "wgsl-out", "spv-out", "msl-out"] }
 object = { version = "=0.39.1", default-features = false }
 ash = "=0.38.0"
-proc-macro2 = { version = "=1.0.106", features = ["span-locations"] }
+proc-macro2 = { version = "=1.0.107", features = ["span-locations"] }
 syn = { version = "=2.0.117", features = ["full", "visit", "visit-mut"] }
 walkdir = "=2.5.0"
-toml = "=1.1.2"
+toml = "=1.1.3"
 aho-corasick = "=1.1.4"
-faer = { version = "=0.24.0", default-features = false, features = ["std", "rayon"] }
-memchr = "=2.8.0"
-regex-syntax = "=0.8.10"
+faer = { version = "=0.24.4", default-features = false, features = ["std", "rayon"] }
+memchr = "=2.8.3"
+regex-syntax = "=0.8.11"
 blake3 = "=1.8.5"
 sha2 = "=0.11.0"
 percent-encoding = "=2.3.2"
 ed25519-dalek = { version = "=2.2.0", default-features = false, features = ["std"] }
-rustc-hash = "=2.1.2"
+rustc-hash = "=2.1.3"
 im = "=15.1.0"
 rayon = "=1.12.0"
 wide = "=0.7.33"
 hex = "=0.4.3"
-clap = { version = "=4.6.1", features = ["derive"] }
+clap = { version = "=4.6.4", features = ["derive"] }
 fs2 = "=0.4.3"
 stats_alloc = "=0.1.10"
 loom = "=0.7.2"
-regex = "=1.12.3"
-regex-automata = "=0.4.14"
+regex = "=1.13.1"
+regex-automata = "=0.4.16"
 hashbrown = "=0.17.1"
 pcre2 = "=0.2.11"
-openssl = "=0.10.80"
+openssl = "=0.10.81"
 fnv = "=1.0.7"
 rustc_lexer = "=0.1.0"
 criterion = { version = "=0.8.2", features = ["html_reports"] }
 bumpalo = "=3.20.3"
 inventory = "=0.3.24"
-quote = "=1.0.45"
+quote = "=1.0.47"
 smallvec = { version = "^1.15.1", features = ["serde"] }
-crossbeam-channel = "=0.5.15"
+crossbeam-channel = "=0.5.16"
 libm = "=0.2.16"
 dashmap = "=6.2.1"
 tracing-subscriber = "=0.3.23"

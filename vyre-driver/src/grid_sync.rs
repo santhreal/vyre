@@ -1124,13 +1124,16 @@ fn sum_optional_timing(
 ///
 /// # Errors
 /// Propagates any `BackendError` raised by a segment dispatch.
-pub fn dispatch_with_grid_sync_split_into(
-    backend: &dyn VyreBackend,
+fn dispatch_grid_sync_split_generic<D>(
     program: &Program,
     inputs: &[&[u8]],
     config: &DispatchConfig,
     outputs: &mut OutputBuffers,
-) -> Result<(), BackendError> {
+    mut dispatch_segment: D,
+) -> Result<(), BackendError>
+where
+    D: FnMut(&Program, &[&[u8]], &DispatchConfig, &mut OutputBuffers) -> Result<(), BackendError>,
+{
     // These are the explicit non-native grid-sync routes (host split /
     // resident fixpoint). They split unconditionally when the program carries a
     // grid-sync barrier: native cooperative launch has a residency ceiling, so
@@ -1138,7 +1141,7 @@ pub fn dispatch_with_grid_sync_split_into(
     // The orchestrator (or the registry's `should_split_grid_sync`) decides
     // native-vs-split per program; once here, always split.
     if !contains_grid_sync(program) {
-        return backend.dispatch_borrowed_into(program, inputs, config, outputs);
+        return dispatch_segment(program, inputs, config, outputs);
     }
     let segments = plan_host_grid_sync_segments(program)?;
     if segments.is_empty() {
@@ -1222,14 +1225,13 @@ pub fn dispatch_with_grid_sync_split_into(
     for _ in 0..iterations {
         for (segment_idx, segment) in segments.iter().enumerate() {
             let borrowed = borrowed_grid_sync_inputs_by_name(segment, &current_inputs)?;
-            backend
-                .dispatch_borrowed_into(
-                    &segment.program,
-                    borrowed.as_slice(),
-                    &segment_config,
-                    &mut segment_outputs,
-                )
-                .map_err(|error| grid_sync_segment_error(error, segment_idx, segments.len()))?;
+            dispatch_segment(
+                &segment.program,
+                borrowed.as_slice(),
+                &segment_config,
+                &mut segment_outputs,
+            )
+            .map_err(|error| grid_sync_segment_error(error, segment_idx, segments.len()))?;
             drop(borrowed);
             refresh_named_outputs(segment, &mut segment_outputs, &mut current_inputs)?;
         }
@@ -1241,6 +1243,85 @@ pub fn dispatch_with_grid_sync_split_into(
     }
     collect_final_named_outputs(&final_output_names, &mut current_inputs, outputs)?;
     Ok(())
+}
+
+/// Split a grid-sync program at its barriers and dispatch every segment through
+/// `backend`, looping the segment sequence to a fixpoint.
+///
+/// This is the `&dyn VyreBackend` entry; the split, refresh, and adaptive
+/// convergence logic lives in [`dispatch_grid_sync_split_generic`], shared with
+/// the closure entry [`dispatch_with_grid_sync_split_via_into`].
+///
+/// # Errors
+/// Propagates any [`BackendError`] from splitting or a segment dispatch,
+/// prefixed with the segment index.
+pub fn dispatch_with_grid_sync_split_into(
+    backend: &dyn VyreBackend,
+    program: &Program,
+    inputs: &[&[u8]],
+    config: &DispatchConfig,
+    outputs: &mut OutputBuffers,
+) -> Result<(), BackendError> {
+    dispatch_grid_sync_split_generic(program, inputs, config, outputs, |p, i, c, o| {
+        backend.dispatch_borrowed_into(p, i, c, o)
+    })
+}
+
+/// Closure-driven counterpart of [`dispatch_with_grid_sync_split_into`] for
+/// callers that hold an opaque single-launch dispatch closure instead of a
+/// `&dyn VyreBackend`.
+///
+/// This is the entry a host-loop fixpoint solver (an IFDS or dataflow solve)
+/// uses to move its convergence loop onto the device without taking a backend
+/// handle: it plugs any backend (CPU reference, CUDA, wgpu) as a
+/// `Fn(&Program, &[&[u8]], Option<[u32; 3]>, &mut Vec<Vec<u8>>) -> Result<(),
+/// String>` closure. The closure receives each segment's program, its rotated
+/// inputs, the whole-grid workgroup count (`config.grid_override`), and a
+/// per-segment output slot to fill in the segment program's output order. The
+/// split, refresh, and convergence logic is the SAME code as the backend entry
+/// (both call [`dispatch_grid_sync_split_generic`]), so the two paths converge
+/// to identical output.
+///
+/// # Errors
+/// Propagates any error the closure returns (wrapped through
+/// [`BackendError::new`]) and any structural split error, prefixed with the
+/// segment index.
+pub fn dispatch_with_grid_sync_split_via_into<F>(
+    program: &Program,
+    inputs: &[&[u8]],
+    config: &DispatchConfig,
+    dispatch: &F,
+    outputs: &mut OutputBuffers,
+) -> Result<(), BackendError>
+where
+    F: Fn(&Program, &[&[u8]], Option<[u32; 3]>, &mut Vec<Vec<u8>>) -> Result<(), String>,
+{
+    dispatch_grid_sync_split_generic(program, inputs, config, outputs, |p, i, c, o| {
+        dispatch(p, i, c.grid_override, o).map_err(BackendError::new)
+    })
+}
+
+/// Allocating wrapper over [`dispatch_with_grid_sync_split_via_into`].
+///
+/// # Errors
+/// Propagates any error from [`dispatch_with_grid_sync_split_via_into`].
+pub fn dispatch_with_grid_sync_split_via<F>(
+    program: &Program,
+    inputs: &[&[u8]],
+    config: &DispatchConfig,
+    dispatch: &F,
+) -> Result<Vec<Vec<u8>>, BackendError>
+where
+    F: Fn(&Program, &[&[u8]], Option<[u32; 3]>, &mut Vec<Vec<u8>>) -> Result<(), String>,
+{
+    let mut outputs = Vec::new();
+    reserve_grid_sync_vec(
+        &mut outputs,
+        program.output_buffer_indices().len().max(1),
+        "grid-sync via final outputs",
+    )?;
+    dispatch_with_grid_sync_split_via_into(program, inputs, config, dispatch, &mut outputs)?;
+    Ok(outputs)
 }
 
 /// Device-resident counterpart of [`dispatch_with_grid_sync_split_into`].
@@ -2202,6 +2283,78 @@ mod tests {
             vec![vec![6, 0, 0, 0]],
             "accumulator must advance one hop per fixpoint pass (2 segments × 3 passes)"
         );
+    }
+
+    #[test]
+    fn split_via_closure_entry_matches_backend_entry_on_the_same_grid_sync_program() {
+        // The `&dyn VyreBackend` entry and the closure entry both delegate to
+        // `dispatch_grid_sync_split_generic`, so on the same grid-sync program,
+        // config, and inputs they must drive the same segment dispatches and
+        // produce byte-identical output. This is the ONE-PLACE contract that
+        // lets a host-loop dataflow solver route its fixpoint through the closure
+        // entry with no separate split implementation.
+        let program = Program::wrapped(
+            vec![buffer()],
+            [1, 1, 1],
+            vec![
+                region("a", vec![Node::Return]),
+                Node::barrier_with_ordering(MemoryOrdering::GridSync),
+                region("b", vec![Node::Return]),
+            ],
+        );
+        let config = DispatchConfig {
+            fixpoint_iterations: Some(3),
+            ..DispatchConfig::default()
+        };
+        let inputs: [&[u8]; 1] = [[0u8, 0, 0, 0].as_slice()];
+
+        let backend = IncrementingBackend {
+            calls: AtomicUsize::new(0),
+        };
+        let mut backend_outputs = vec![Vec::new()];
+        dispatch_with_grid_sync_split_into(
+            &backend,
+            &program,
+            &inputs,
+            &config,
+            &mut backend_outputs,
+        )
+        .expect("backend split dispatch");
+
+        // The closure delegates to an identical backend through the opaque
+        // single-launch closure shape a host-loop solver supplies (grid override
+        // only, per-segment fixpoint fixed at 1 by the shared core).
+        let closure_backend = IncrementingBackend {
+            calls: AtomicUsize::new(0),
+        };
+        let dispatch = |program: &Program,
+                        inputs: &[&[u8]],
+                        grid: Option<[u32; 3]>,
+                        outputs: &mut Vec<Vec<u8>>|
+         -> Result<(), String> {
+            let segment_config = DispatchConfig {
+                grid_override: grid,
+                fixpoint_iterations: Some(1),
+                ..DispatchConfig::default()
+            };
+            closure_backend
+                .dispatch_borrowed_into(program, inputs, &segment_config, outputs)
+                .map_err(|error| error.to_string())
+        };
+        let via_outputs =
+            dispatch_with_grid_sync_split_via(&program, &inputs, &config, &dispatch)
+                .expect("closure split dispatch");
+
+        assert_eq!(
+            via_outputs, backend_outputs,
+            "closure and backend split entries must produce identical output"
+        );
+        assert_eq!(
+            closure_backend.calls.load(Ordering::SeqCst),
+            backend.calls.load(Ordering::SeqCst),
+            "both entries must drive the same number of segment dispatches (3 passes x 2 segments)"
+        );
+        assert_eq!(via_outputs, vec![vec![6u8, 0, 0, 0]]);
     }
 
     struct OwnedFinalReserveBackend {

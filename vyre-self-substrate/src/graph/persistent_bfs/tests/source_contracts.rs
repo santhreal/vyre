@@ -36,7 +36,8 @@ fn bfs_expand_via_scratch_caches_static_graph_inputs() {
     assert!(
         dispatch_source.contains("(5, DispatchInput::u32_slice(frontier_in))")
             && dispatch_source.contains("DispatchInput::zero_u32_words(words, \"bfs_expand_via frontier_out\")")
-            && dispatch_source.contains("DispatchInput::zero_u32_words(changed_words, \"bfs_expand_via changed\")"),
-        "Fix: repeated persistent BFS dispatches must rewrite only frontier, output, and changed slots."
+            && dispatch_source.contains("DispatchInput::zero_u32_words(changed_words, \"bfs_expand_via changed\")")
+            && dispatch_source.contains("DispatchInput::zero_u32_words(1, \"bfs_expand_via converged\")"),
+        "Fix: repeated persistent BFS dispatches must rewrite only frontier, output, changed, and converged slots."
     );
 }

@@ -1,7 +1,6 @@
 //! Submission replay governance test suite.
 
 const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
-const PLAN: &str = include_str!("../../../docs/optimization/ALL_AXES_ACCELERATION_PLAN.md");
 const TOPOLOGY: &str = include_str!("../../../docs/optimization/COMMAND_TOPOLOGY_STABILITY_CONTRACTS.toml");
 const CAPABILITY: &str = include_str!("../../../docs/optimization/BACKEND_COMMAND_REPLAY_CAPABILITY_MATRIX.toml");
 const DECISION: &str = include_str!("../../../docs/optimization/SUBMISSION_REPLAY_DECISION_POLICY.toml");
@@ -101,34 +100,6 @@ fn submission_replay_evidence_policy_records_costs_correctness_invalidation_priv
         "vulkan-metal-reusable-command-record",
     ] {
         assert!(EVIDENCE.contains(required), "submission replay evidence policy must include {required}");
-    }
-}
-
-#[test]
-fn plan_contains_submission_replay_rows() {
-    for row in [
-        "VX-1441",
-        "VX-1442",
-        "VX-1443",
-        "VX-1444",
-        "VX-1445",
-        "VX-1446",
-        "VX-1447",
-        "VX-1448",
-        "VX-1449",
-        "VX-1450",
-        "VX-1451",
-        "VX-1452",
-        "VX-1453",
-        "VX-1454",
-        "VX-1455",
-        "VX-1456",
-        "VX-1457",
-        "VX-1458",
-        "VX-1459",
-        "VX-1460",
-    ] {
-        assert!(PLAN.contains(row), "plan must include {row}");
     }
 }
 

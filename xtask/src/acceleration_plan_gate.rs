@@ -15,7 +15,6 @@ use serde::Serialize;
 
 use crate::hash::sha256_hex;
 use crate::innovation_falsification::missing_frontier_falsification_fields;
-use crate::markdown_table::markdown_cells;
 use crate::research_basis::external_research_basis_entries;
 use crate::research_key::{backtick_research_keys, is_research_key};
 use crate::research_plan_coverage::{
@@ -1076,11 +1075,7 @@ fn looks_like_local_path(token: &str) -> bool {
 }
 
 fn vx_number(id: &str) -> Option<u32> {
-    let digits = id.strip_prefix("VX-")?;
-    if digits.len() != 3 || !digits.bytes().all(|byte| byte.is_ascii_digit()) {
-        return None;
-    }
-    digits.parse::<u32>().ok()
+    crate::vx_plan_table::vx_row_number(id)
 }
 
 fn axis_shape_is_valid(axis: &str) -> bool {
@@ -1646,7 +1641,7 @@ mod tests {
         );
         let report = validate_plan_text(&text);
         assert_eq!(report.failures, Vec::<String>::new());
-        assert_eq!(report.row_count, VX_PLAN_MIN_ROWS);
+        assert_eq!(report.row_count, fixture_plan_row_count());
     }
 
     #[test]
@@ -1709,9 +1704,9 @@ mod tests {
             progress.freshness_fingerprint,
             plan_progress_freshness_fingerprint(&progress.source_fingerprint)
         );
-        assert_eq!(progress.row_count, VX_PLAN_MIN_ROWS);
-        assert_eq!(progress.research_grounded_row_count, VX_PLAN_MIN_ROWS);
-        assert_eq!(progress.dedup_seam_count, VX_PLAN_MIN_ROWS);
+        assert_eq!(progress.row_count, fixture_plan_row_count());
+        assert_eq!(progress.research_grounded_row_count, fixture_plan_row_count());
+        assert_eq!(progress.dedup_seam_count, fixture_plan_row_count());
         assert_eq!(
             progress.duplicate_dedup_seam_count,
             progress.duplicate_dedup_seams.len()
@@ -1735,17 +1730,20 @@ mod tests {
                 .values()
                 .copied()
                 .sum::<usize>(),
-            VX_PLAN_MIN_ROWS
+            fixture_plan_row_count()
         );
         assert_eq!(
             progress.research_key_counts.get("MLIR_PASS"),
-            Some(&VX_PLAN_MIN_ROWS)
+            Some(&fixture_plan_row_count())
         );
         assert_eq!(progress.rows[0].id, "VX-001");
-        assert_eq!(progress.rows[0].axis, "coordination");
+        assert_eq!(progress.rows[0].axis, REQUIRED_AXES[0]);
+        // The fixture's local evidence is "`Cargo.toml` is rooted local evidence", so the
+        // extracted path is `Cargo.toml`. Expecting the plan document here asserted against
+        // an evidence string the fixture never produced.
         assert_eq!(
             progress.rows[0].evidence_paths,
-            vec![DEFAULT_PLAN.to_string()]
+            vec!["Cargo.toml".to_string()]
         );
         assert_eq!(
             progress.rows[0].research_keys,
@@ -1941,10 +1939,23 @@ mod tests {
             "Fix: enforce grounded rows.",
             "Gate test rejects malformed rows.",
         );
+        // The fixture assigns axes by `REQUIRED_AXES` order, so the first row's axis is
+        // whatever that list starts with. Hardcoding `coordination` here meant the
+        // substitution silently matched nothing once the list was reordered, and the test
+        // passed a plan with no unknown key at all while claiming to reject one.
+        let axis = REQUIRED_AXES[0];
         let text = plan.replacen(
-            "| VX-001 | coordination | `Cargo.toml` is rooted local evidence | `MLIR_PASS` |",
-            "| VX-001 | coordination | `Cargo.toml` is rooted local evidence | `UNKNOWN_KEY` |",
+            &format!(
+                "| VX-001 | {axis} | `Cargo.toml` is rooted local evidence | `MLIR_PASS` |"
+            ),
+            &format!(
+                "| VX-001 | {axis} | `Cargo.toml` is rooted local evidence | `UNKNOWN_KEY` |"
+            ),
             1,
+        );
+        assert!(
+            text.contains("UNKNOWN_KEY"),
+            "Fix: the unknown-research-key substitution must actually edit the fixture."
         );
         let report = validate_plan_text(&text);
         assert!(report
@@ -2058,13 +2069,35 @@ proof_required = ["Run one test."]
 | ID | Axis | Local evidence | Research basis | Work | Proof gate | Dedup seam |\n\
 | --- | --- | --- | --- | --- | --- | --- |\n",
         );
-        for id in 1..=VX_PLAN_MIN_ROWS {
+        for id in 1..=fixture_plan_row_count() {
             let axis = REQUIRED_AXES[(id - 1) % REQUIRED_AXES.len()];
             text.push_str(&format!(
                 "| VX-{id:03} | {axis} | {evidence} | `MLIR_PASS` | {work} | {proof} | `Cargo.toml` owns synthetic test seam VX-{id:03}. |\n"
             ));
         }
         text
+    }
+
+    /// How many rows the synthetic plan fixture must carry.
+    ///
+    /// The fixture is validated against the REAL research source ledger, and the gate
+    /// reports every ledger-cited VX row that the plan does not define. Hardcoding
+    /// [`VX_PLAN_MIN_ROWS`] here meant that every ledger row added above that number broke
+    /// four suites with "links unknown VX row", which is a fixture that fell behind the
+    /// data rather than a gate finding. Derive the count from the ledger so the fixture
+    /// always covers what the ledger cites.
+    fn fixture_plan_row_count() -> usize {
+        let mut failures = Vec::new();
+        let highest_cited = parse_research_source_ledger(Some(&default_vyre_root()), &mut failures)
+            .as_ref()
+            .and_then(|ledger| {
+                unknown_research_source_vx_rows(ledger, &BTreeSet::new())
+                    .iter()
+                    .filter_map(|finding| crate::vx_plan_table::vx_row_number(&finding.vx_row))
+                    .max()
+            })
+            .unwrap_or(0) as usize;
+        VX_PLAN_MIN_ROWS.max(highest_cited)
     }
 
     fn fixture_research_entries() -> BTreeMap<String, String> {

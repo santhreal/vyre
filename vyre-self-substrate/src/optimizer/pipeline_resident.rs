@@ -28,6 +28,7 @@
 
 use vyre_foundation::ir::Program;
 use vyre_primitives::bitset::bitset_words;
+use vyre_primitives::graph::persistent_bfs::validate_persistent_bfs_converged_flag;
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 
 use crate::dispatch_buffers::{decode_u32_output_exact, u32_slice_to_le_bytes};
@@ -512,6 +513,7 @@ fn run_dce_resident(
     let seed_bytes = u32_slice_to_le_bytes(&seed);
     let frontier_out_bytes = vec![0u8; words.max(1) * 4];
     let changed_bytes = [0u8; 4];
+    let converged_bytes = [0u8; 4];
     let dce_static_payloads: [&[u8]; 6] = [
         &nodes_bytes,
         &edge_offsets_bytes,
@@ -532,7 +534,8 @@ fn run_dce_resident(
             "Fix: DCE resident static upload surfaced a non-dispatch pipeline error.".to_string(),
         ),
     })?;
-    let dce_mutable_payloads: [&[u8]; 2] = [&frontier_out_bytes, &changed_bytes];
+    let dce_mutable_payloads: [&[u8]; 3] =
+        [&frontier_out_bytes, &changed_bytes, &converged_bytes];
     let dce_mutable_handles = alloc_many_d(dispatcher, &dce_mutable_payloads)?;
     let nodes_h = dce_static.handles[0];
     let edge_offsets_h = dce_static.handles[1];
@@ -542,6 +545,7 @@ fn run_dce_resident(
     let frontier_in_h = dce_static.handles[5];
     let frontier_out_h = dce_mutable_handles[0];
     let changed_h = dce_mutable_handles[1];
+    let converged_h = dce_mutable_handles[2];
 
     let shape = ProgramGraphShape::new(encoded.node_count, encoded.edge_count);
     // Optimizer-tailored DCE BFS: same buffer/binding layout as
@@ -552,8 +556,8 @@ fn run_dce_resident(
     let analysis = build_dce_bfs_program(shape, n.max(1));
 
     // Same handle order as `persistent_bfs`: 4 ReadOnly PG buffers,
-    // frontier_in (RO), frontier_out (RW), changed (RW). `wg_scratch`
-    // is workgroup-only and not handed in.
+    // frontier_in (RO), frontier_out (RW), changed (RW), converged (RW).
+    // `wg_scratch` is workgroup-only and not handed in.
     //
     // Grid: single workgroup. The csr-forward primitive serialises
     // the per-source loop on `local_x() == 0` so multiple workgroups
@@ -573,6 +577,7 @@ fn run_dce_resident(
         frontier_in_h,
         frontier_out_h,
         changed_h,
+        converged_h,
     ];
     let dce_steps = [ResidentDispatchStep {
         program: &analysis,
@@ -582,24 +587,48 @@ fn run_dce_resident(
     let dce_fills = [
         (frontier_out_h, frontier_out_bytes.len(), 0),
         (changed_h, changed_bytes.len(), 0),
+        (converged_h, converged_bytes.len(), 0),
     ];
+    let mut converged = Vec::with_capacity(1);
     let mut byte_readbacks = Vec::with_capacity(1);
     let dce_result = upload_resident_sequence_read_u32_many_exact(
         dispatcher,
         &dce_fills,
         &[],
         &dce_steps,
-        &[(frontier_out_h, words, "pipeline_resident DCE frontier_out")],
-        &mut [&mut frontier_out],
+        &[
+            (frontier_out_h, words, "pipeline_resident DCE frontier_out"),
+            (converged_h, 1, "pipeline_resident DCE converged"),
+        ],
+        &mut [&mut frontier_out, &mut converged],
         &mut byte_readbacks,
     );
 
-    for h in [frontier_out_h, changed_h] {
+    for h in [frontier_out_h, changed_h, converged_h] {
         let _ = dispatcher.free_resident(h);
     }
     let dce_release = dispatcher.release_resident_static_uploads(dce_static);
     dce_result?;
     dce_release?;
+
+    // Same contract as the non-resident path: `max_iters` is the node count, which
+    // bounds the graph diameter, so the liveness closure must reach a fixpoint. A
+    // truncated closure under-approximates liveness, and applying it as a live mask
+    // DELETES LIVE CODE. Refuse rather than miscompile (Law 10). The resident path
+    // reads the same `converged` word the direct path does, so neither can silently
+    // skip the check the other performs.
+    let converged_flag = converged.first().copied().unwrap_or_default();
+    validate_persistent_bfs_converged_flag(converged_flag)
+        .map_err(|reason| DispatchError::BackendError(format!("Fix: pipeline_resident DCE {reason}")))?;
+    if converged_flag != 1 {
+        return Err(DispatchError::BackendError(format!(
+            "Fix: pipeline_resident DCE liveness closure did not converge within its {} \
+             iteration budget for a {}-node graph; the reachability set is truncated and \
+             applying it as a live mask would delete live code.",
+            n.max(1),
+            n
+        )));
+    }
 
     Ok(apply_live_bitset_mask(&program, &encoded, &frontier_out))
 }

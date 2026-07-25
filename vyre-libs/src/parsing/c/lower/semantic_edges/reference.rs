@@ -66,6 +66,11 @@ pub(crate) fn resolved_semantic_edges(
 /// so resolving edges over a truncated buffer would SILENTLY emit `NONE` edges
 /// (dropped control-flow/semantic edges) with no signal. Prevalidate the buffer
 /// shape once at the entry so every downstream field read is in bounds.
+///
+/// # Panics
+/// Panics when `node_count` multiplied by the row stride overflows `usize`, or when
+/// the buffer is shorter than that. Both mean a truncated VAST, which would silently
+/// resolve to `NONE` edges.
 fn assert_vast_rows_present(vast_nodes: &[u32], node_count: usize) {
     let required = node_count
         .checked_mul(VAST_NODE_STRIDE_U32 as usize)

@@ -18,7 +18,7 @@ pub(crate) use inputs::{
     U32SliceFingerprint,
 };
 pub(crate) use resident::{
-    alloc_resident_buffers, resident_dispatch_two_u32_outputs_into,
+    alloc_resident_buffers, resident_dispatch_three_u32_outputs_into,
     resident_sequence_single_u32_output_into, upload_resident_dispatch_inputs,
 };
 pub(crate) use u32_outputs::{

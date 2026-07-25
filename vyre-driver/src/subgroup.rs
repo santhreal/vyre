@@ -102,6 +102,11 @@ pub fn try_reduction_offsets(subgroup_size: u32) -> Result<Vec<u32>, String> {
 }
 
 /// Write canonical reduction offsets into caller-owned storage.
+///
+/// # Panics
+/// Panics when `subgroup_size` is not a supported width. Clearing `offsets` instead
+/// would produce a degenerate reduction that reads nothing, so callers that must
+/// recover use [`try_reduction_offsets_into`].
 pub fn reduction_offsets_into(subgroup_size: u32, offsets: &mut Vec<u32>) {
     // Clearing to empty on failure silently produces a degenerate reduction
     // (no offsets -> the subgroup reduction reads nothing), a silent fallback

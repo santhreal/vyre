@@ -1,6 +1,6 @@
-//! Weir reaching-definition import boundary for descriptor rewrites.
+//! Reaching-definition import boundary for descriptor rewrites.
 //!
-//! Weir-derived dataflow facts enter lowered descriptor optimization through
+//! External dataflow facts enter lowered descriptor optimization through
 //! the same reaching-definition representation used by the rewrite pipeline.
 
 pub use crate::analyses::reaching_def_facts::{
@@ -14,7 +14,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn weir_reaching_def_api_resolves_copy_alias_chains() {
+    fn reaching_def_import_resolves_copy_alias_chains() {
         let aliases = FxHashMap::from_iter([(20, 10), (30, 20)]);
 
         assert_eq!(resolve_copy_alias(30, &aliases), 10);

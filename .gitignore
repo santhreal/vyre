@@ -64,13 +64,28 @@ __pycache__/
 /rules/
 /.rules/
 
-# Root operational planning/status files are private operator state, not public prod repo source.
+# Operational planning, status, audit, and agent-handoff files are private
+# operator state, not public prod repo source. The root-only patterns below came
+# first; the `**/` patterns extend the same policy to every depth, because these
+# files kept getting staged out of subdirectories (docs/archive/, docs/legacy/,
+# audits/, docs/optimization/, per-crate .audits/) and would otherwise land in
+# public history. Public-facing docs use descriptive names and live outside these
+# patterns; if a doc is meant for users, it must not be named *PLAN*/*STATUS*/
+# *AUDIT*/AGENT_*.
 /STATUS.md
 /ROADMAP.md
 /UPGRADE_PLAN.md
 /*STATUS*.md
 /*ROADMAP*.md
 /*PLAN*.md
+**/*PLAN*.md
+**/*STATUS*.md
+**/*ROADMAP*.md
+**/*AUDIT*.md
+**/*BACKLOG*.md
+**/AGENT_*.md
+**/GEMINI_HANDOFF_*.md
+**/.audits/
 
 # Local generated adversarial registry closure scratch. Real adversarial tests
 # should be committed under crate-owned test names with specific assertions.
@@ -78,3 +93,6 @@ __pycache__/
 
 # Private operator all-axes acceleration plan; do not publish to public Vyre repo.
 /docs/optimization/ALL_AXES_ACCELERATION_PLAN.md
+
+# Unified backlog (STANDARD.md)
+/BACKLOG.md

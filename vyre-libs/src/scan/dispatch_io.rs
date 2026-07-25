@@ -314,6 +314,11 @@ pub fn try_output_bytes<'a>(
 /// triple are ignored. Using a `usize` lane index keeps `i * 12` inside
 /// buffer-derived bounds and avoids `(i as usize) * 12` wrapping on 32-bit
 /// targets when `count` is large but the buffer is short.
+///
+/// # Panics
+/// Panics when the triple buffer cannot be decoded under the u32 match ABI. Returning
+/// an empty match set would silently drop matches the GPU found, so callers that must
+/// recover use [`try_unpack_match_triples`].
 #[must_use]
 pub fn unpack_match_triples(
     triples_bytes: &[u8],
@@ -356,6 +361,11 @@ pub fn try_unpack_match_triples(
 /// complete triples are read, truncated tail bytes are ignored, and the
 /// final output is sorted by [`vyre_foundation::match_result::Match`]'s
 /// ordering.
+///
+/// # Panics
+/// Panics when the triple buffer cannot be decoded under the u32 match ABI; see
+/// [`unpack_match_triples`]. Callers that must recover use
+/// [`try_unpack_match_triples_into`].
 pub fn unpack_match_triples_into(
     triples_bytes: &[u8],
     count: u32,

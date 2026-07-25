@@ -158,8 +158,9 @@ fn zero_max_iters_is_noop() {
 fn program_builds_and_validates() {
     let program = persistent_bfs(ProgramGraphShape::new(8, 8), "fin", "fout", 0xFF, 4);
     assert_eq!(program.workgroup_size, [256, 1, 1]);
-    // 5 canonical PG buffers + frontier_in + frontier_out + changed + wg_scratch + wg_active
-    assert_eq!(program.buffers().len(), 10);
+    // 5 canonical PG buffers + frontier_in + frontier_out + changed + converged
+    // + wg_scratch + wg_active
+    assert_eq!(program.buffers().len(), 11);
 }
 
 #[test]
@@ -200,6 +201,7 @@ fn batch_program_carries_per_query_convergence_flag() {
         "fin",
         "fout",
         "changed",
+        "converged",
         4,
         0xFF,
         8,
@@ -208,6 +210,10 @@ fn batch_program_carries_per_query_convergence_flag() {
     assert!(
         debug.contains("batch_loop_changed_old"),
         "persistent_bfs_batch must keep per-query changed flags wired to device-side atomic updates"
+    );
+    assert!(
+        debug.contains("batch_loop_converged_old"),
+        "persistent_bfs_batch must wire a per-query converged flag via a device-side atomic update, separate from the sticky changed flag"
     );
     assert!(
         !contains_loop_named(program.entry(), "batch_src"),
@@ -222,6 +228,7 @@ fn large_batch_program_uses_grid_sync_parallel_steps() {
         "fin",
         "fout",
         "changed",
+        "converged",
         3,
         0xFF,
         2,
@@ -230,8 +237,8 @@ fn large_batch_program_uses_grid_sync_parallel_steps() {
     assert_eq!(program.workgroup_size, PERSISTENT_BFS_WORKGROUP_SIZE);
     assert_eq!(
         count_grid_sync(program.entry()),
-        4,
-        "Fix: two large batch iterations require one seed fence, one snapshot fence per parallel expansion, and one inter-iteration fence."
+        5,
+        "Fix: two large batch iterations require one seed fence, one snapshot fence per parallel expansion, one inter-iteration fence, and one trailing fence so every workgroup's last-step converged writes are visible before the per-query converged flag is published."
     );
     assert!(
         !contains_loop_named(program.entry(), "batch_src"),
@@ -264,6 +271,7 @@ fn checked_batch_builder_rejects_flat_frontier_overflow() {
         "fin",
         "fout",
         "changed",
+        "converged",
         33,
         0xFF,
         1,
@@ -284,6 +292,7 @@ fn legacy_batch_builder_fails_fast_on_flat_frontier_overflow() {
             "fin",
             "fout",
             "changed",
+            "converged",
             33,
             0xFF,
             1,

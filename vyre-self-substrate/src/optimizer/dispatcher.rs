@@ -16,7 +16,32 @@
 //! before any GPU backend is wired. The CPU oracle is gated to tests
 //! only  -  it is never on a production code path.
 
-use vyre_foundation::ir::Program;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, Program};
+
+/// The buffers an [`OptimizerDispatcher`] returns, in declared order.
+///
+/// The trait contract is "the declared outputs in the same canonical order", which
+/// means every writable storage buffer. Workgroup scratch is never a dispatch
+/// output, so it is excluded.
+///
+/// This is the single owner of that rule. A dispatcher that hardcodes its own
+/// output list instead of deriving it from the program silently disagrees with the
+/// program the moment a buffer is added or removed. That is exactly how a
+/// three-output oracle came to be paired with a two-output DCE program: the oracle
+/// asserted a layout the program no longer had, and nothing compared the two.
+#[must_use]
+pub fn declared_dispatch_outputs(program: &Program) -> Vec<&BufferDecl> {
+    program
+        .buffers()
+        .iter()
+        .filter(|decl| {
+            matches!(
+                decl.access(),
+                BufferAccess::ReadWrite | BufferAccess::WriteOnly
+            )
+        })
+        .collect()
+}
 
 /// One resident-buffer kernel launch in an ordered optimizer sequence.
 pub struct ResidentDispatchStep<'a> {
@@ -766,7 +791,8 @@ pub mod oracle {
         //   5 frontier_in (RO)
         //   6 frontier_out (RW)
         //   7 changed (RW)
-        //   8 wg_scratch (workgroup)   -  not an input
+        //   8 converged (RW)
+        //   9 wg_scratch (workgroup)   -  not an input
         if inputs.len() < 6 {
             return Err(DispatchError::BadInputs(format!(
                 "Fix: persistent_bfs oracle expects ≥ 6 input buffers, got {}",
@@ -791,27 +817,145 @@ pub mod oracle {
         // when callers want closure.
         let max_iters = node_count.max(1);
 
-        let _ = program; // reserved for future cross-checks
         let allow_mask = u32::MAX;
         let edge_count = declared_edge_count(&edge_offsets)?;
         let edge_targets = trim_padded_edge_buffer("edge_targets", &edge_targets_raw, edge_count)?;
         let edge_kind_mask =
             trim_padded_edge_buffer("edge_kind_mask", &edge_kind_mask_raw, edge_count)?;
 
-        let (frontier_out, changed) = vyre_primitives::graph::persistent_bfs::cpu_ref(
-            node_count,
-            &edge_offsets,
-            edge_targets,
-            edge_kind_mask,
-            &frontier_in,
-            allow_mask,
-            max_iters,
-        );
+        let (frontier_out, convergence) =
+            vyre_primitives::graph::persistent_bfs::try_cpu_ref_converged(
+                node_count,
+                &edge_offsets,
+                edge_targets,
+                edge_kind_mask,
+                &frontier_in,
+                allow_mask,
+                max_iters,
+            )
+            .map_err(DispatchError::BadInputs)?;
 
-        // Outputs in declared order: frontier_out first, then changed.
-        let frontier_bytes = u32_buffer_to_bytes(&frontier_out);
-        let changed_bytes = u32_buffer_to_bytes(&[changed]);
-        Ok(vec![frontier_bytes, changed_bytes])
+        // Emit one buffer per DECLARED writable output, in declared order, rather
+        // than a hardcoded list. The oracle stands in for a device backend, so it
+        // must return exactly the layout the program declares; a pasted list goes
+        // stale the moment a buffer is added and then reports a shape the program
+        // does not have. The converged word matches the device readback
+        // bit-for-bit (proven in vyre-primitives converged_device_parity), so the
+        // oracle is a faithful stand-in for the real GPU signal.
+        let declared = super::declared_dispatch_outputs(program);
+        let mut outputs = Vec::with_capacity(declared.len());
+        for decl in declared {
+            let words = match decl.name() {
+                "frontier_out" => frontier_out.clone(),
+                "changed" => changed_words_for(decl.count(), &convergence)?,
+                "converged" => vec![u32::from(convergence.converged)],
+                other => {
+                    return Err(DispatchError::Rejected(format!(concat!(
+                        "Fix: persistent_bfs oracle has no value for declared output ",
+                        "buffer `{other}`. Teach the oracle to produce it or stop ",
+                        "declaring it; returning a short output list would silently ",
+                        "shift every later output index."
+                    ), other = other)))
+                }
+            };
+            outputs.push(u32_buffer_to_bytes(&words));
+        }
+        Ok(outputs)
+    }
+
+    /// Reconstruct the `changed` buffer the kernel would leave behind, sized to the
+    /// program's declared element count.
+    ///
+    /// The two BFS variants give slot 0 different meanings, and the declared count is
+    /// what distinguishes them, so deriving from it keeps the oracle honest for both:
+    ///
+    /// - count 1 (the DCE variant): slot 0 is the LAST iteration's progress, because
+    ///   the kernel zeroes it every iteration to drive its early exit. On a real
+    ///   fixpoint that leaves 0; on an exhausted budget the final iteration grew, so
+    ///   it leaves 1.
+    /// - count 2 (the sticky variant): slot 0 is that same per-iteration flag and
+    ///   slot 1 is the sticky OR across all iterations, which is what `cpu_ref`
+    ///   reports as `changed`.
+    ///
+    /// # Errors
+    /// Rejects any other declared count rather than guessing, since a wrong guess
+    /// here is a silently misread flag rather than a visible failure.
+    fn changed_words_for(
+        count: u32,
+        convergence: &vyre_primitives::graph::persistent_bfs::PersistentBfsConvergence,
+    ) -> Result<Vec<u32>, DispatchError> {
+        let per_iteration = u32::from(!convergence.converged);
+        match count {
+            1 => Ok(vec![per_iteration]),
+            2 => Ok(vec![per_iteration, convergence.changed]),
+            other => Err(DispatchError::Rejected(format!(concat!(
+                "Fix: persistent_bfs oracle understands a `changed` buffer of 1 ",
+                "element (per-iteration) or 2 (per-iteration plus sticky), not ",
+                "{other}. Declare one of those or teach the oracle what the extra ",
+                "slots mean."
+            ), other = other))),
+        }
+    }
+
+    #[cfg(test)]
+    mod changed_words_tests {
+        use super::changed_words_for;
+        use vyre_primitives::graph::persistent_bfs::PersistentBfsConvergence;
+
+        fn convergence(changed: u32, converged: bool) -> PersistentBfsConvergence {
+            PersistentBfsConvergence {
+                changed,
+                converged,
+                stop_iter: 0,
+            }
+        }
+
+        /// The DCE variant declares one `changed` word holding the LAST iteration's
+        /// progress, because the kernel zeroes it every iteration to drive the early
+        /// exit. Reaching a fixpoint means that final compare saw zero, even when
+        /// earlier iterations did grow the frontier.
+        #[test]
+        fn a_single_changed_word_reports_the_last_iterations_progress() {
+            assert_eq!(
+                changed_words_for(1, &convergence(1, true)).expect("count 1 is supported"),
+                vec![0],
+                "a converged run exits on a zero compare, so the per-iteration flag is 0"
+            );
+            assert_eq!(
+                changed_words_for(1, &convergence(1, false)).expect("count 1 is supported"),
+                vec![1],
+                "an exhausted budget means the final iteration still grew the frontier"
+            );
+        }
+
+        /// The sticky variant declares two words: the same per-iteration flag, then the
+        /// OR across every iteration. Collapsing them would make a converged run look
+        /// like it never grew at all.
+        #[test]
+        fn two_changed_words_keep_the_per_iteration_and_sticky_flags_distinct() {
+            assert_eq!(
+                changed_words_for(2, &convergence(1, true)).expect("count 2 is supported"),
+                vec![0, 1],
+                "slot 0 is the final compare, slot 1 latched because earlier steps grew"
+            );
+            assert_eq!(
+                changed_words_for(2, &convergence(0, true)).expect("count 2 is supported"),
+                vec![0, 0],
+                "a traversal that never grew converges immediately with nothing latched"
+            );
+        }
+
+        /// An unrecognized count is refused rather than guessed. Guessing would hand a
+        /// consumer a flag read from the wrong slot, which looks like valid data.
+        #[test]
+        fn an_unrecognized_changed_count_is_refused() {
+            let err = changed_words_for(3, &convergence(1, true))
+                .expect_err("an unknown changed layout must not be guessed");
+            assert!(
+                format!("{err}").contains("not 3"),
+                "the refusal must name the count it saw, got: {err}"
+            );
+        }
     }
 
     fn exploded_ifds_csr_oracle(
@@ -1301,5 +1445,52 @@ mod tests {
             8,
             "Fix: generated ranged readback matrix must issue one full read per unique handle."
         );
+    }
+
+    /// The dispatch ABI returns writable storage buffers in declared order. Workgroup
+    /// scratch is not a dispatch output, and admitting it would shift every consumer's
+    /// output index by one without any visible error.
+    #[test]
+    fn declared_dispatch_outputs_are_the_writable_storage_buffers_in_order() {
+        use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType};
+
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::storage("ro_in", 0, BufferAccess::ReadOnly, DataType::U32),
+                BufferDecl::storage("frontier_out", 1, BufferAccess::ReadWrite, DataType::U32)
+                    .with_count(4),
+                BufferDecl::workgroup("wg_scratch", 256, DataType::U32),
+                BufferDecl::storage("changed", 2, BufferAccess::ReadWrite, DataType::U32)
+                    .with_count(1),
+                BufferDecl::storage("sink", 3, BufferAccess::WriteOnly, DataType::U32)
+                    .with_count(1),
+            ],
+            [1, 1, 1],
+            Vec::new(),
+        );
+
+        let names: Vec<&str> = declared_dispatch_outputs(&program)
+            .iter()
+            .map(|decl| decl.name())
+            .collect();
+        assert_eq!(names, vec!["frontier_out", "changed", "sink"]);
+    }
+
+    /// A program that declares no writable buffer has no dispatch outputs. Returning a
+    /// non-empty list there would be the oracle inventing a layout, which is the defect
+    /// this derivation exists to prevent.
+    #[test]
+    fn declared_dispatch_outputs_is_empty_when_nothing_is_writable() {
+        use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType};
+
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::storage("ro_in", 0, BufferAccess::ReadOnly, DataType::U32),
+                BufferDecl::workgroup("wg_scratch", 64, DataType::U32),
+            ],
+            [1, 1, 1],
+            Vec::new(),
+        );
+        assert!(declared_dispatch_outputs(&program).is_empty());
     }
 }

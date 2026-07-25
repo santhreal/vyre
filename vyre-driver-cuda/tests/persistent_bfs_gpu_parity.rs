@@ -13,8 +13,8 @@ use common::{with_live_backend, CudaOptimizerDispatcher};
 use vyre_driver_cuda::CudaOptimizerDispatcher as CudaResidentOptimizerDispatcher;
 use vyre_self_substrate::persistent_bfs::{
     bfs_expand as reference_bfs_expand, bfs_expand_resident_graph_batch_with_scratch_into,
-    bfs_expand_resident_graph_with_scratch_into, bfs_expand_via, upload_resident_bfs_graph,
-    PersistentBfsPlanCacheSnapshot, PersistentBfsResidentScratch,
+    bfs_expand_resident_graph_with_scratch_into, bfs_expand_via, try_bfs_expand_converged,
+    upload_resident_bfs_graph, PersistentBfsPlanCacheSnapshot, PersistentBfsResidentScratch,
 };
 
 fn linear_chain(n: u32) -> (u32, Vec<u32>, Vec<u32>, Vec<u32>) {
@@ -41,18 +41,24 @@ fn cuda_bfs_expand_via_matches_reference_chain() {
         let dispatcher = CudaOptimizerDispatcher { backend };
         let (n, off, tgt, msk) = linear_chain(8);
         let seed = vec![0b0000_0001u32]; // node 0 only
-        let (gpu_out, gpu_changed) =
+        let (gpu_out, gpu_changed, gpu_converged) =
             bfs_expand_via(&dispatcher, n, &off, &tgt, &msk, &seed, 0xFFFF_FFFF, n)
                 .expect("GPU bfs_expand_via dispatch");
-        let (reference_out, reference_changed) =
-            reference_bfs_expand(n, &off, &tgt, &msk, &seed, 0xFFFF_FFFF, n);
+        let (reference_out, reference) =
+            try_bfs_expand_converged(n, &off, &tgt, &msk, &seed, 0xFFFF_FFFF, n)
+                .expect("reference persistent BFS convergence");
         assert_eq!(
             gpu_out, reference_out,
             "frontier_out diverged on chain n={n}; gpu={gpu_out:?} reference={reference_out:?}"
         );
         assert_eq!(
-            gpu_changed, reference_changed,
+            gpu_changed, reference.changed,
             "changed-flag diverged on chain n={n}"
+        );
+        assert_eq!(
+            gpu_converged,
+            u32::from(reference.converged),
+            "converged word diverged on chain n={n}"
         );
     });
 }
@@ -71,19 +77,19 @@ fn cuda_bfs_expand_via_respects_allow_mask() {
         let seed = vec![0b0001u32];
 
         // allow_mask = 1 -> only k=1 edges followed: 0->1, 1->3. Reach {0,1,3}.
-        let (gpu_out, _) =
+        let (gpu_out, _, _) =
             bfs_expand_via(&dispatcher, n, &off, &tgt, &msk, &seed, 0b0001, n).expect("dispatch");
         let (reference_out, _) = reference_bfs_expand(n, &off, &tgt, &msk, &seed, 0b0001, n);
         assert_eq!(gpu_out, reference_out, "allow_mask=1 divergence");
 
         // allow_mask = 2 -> only k=2 edges: 0->2. Reach {0,2}.
-        let (gpu_out, _) =
+        let (gpu_out, _, _) =
             bfs_expand_via(&dispatcher, n, &off, &tgt, &msk, &seed, 0b0010, n).expect("dispatch");
         let (reference_out, _) = reference_bfs_expand(n, &off, &tgt, &msk, &seed, 0b0010, n);
         assert_eq!(gpu_out, reference_out, "allow_mask=2 divergence");
 
         // allow_mask = 3 -> both kinds: 0->1, 0->2, 1->3. Reach {0,1,2,3}.
-        let (gpu_out, _) =
+        let (gpu_out, _, _) =
             bfs_expand_via(&dispatcher, n, &off, &tgt, &msk, &seed, 0b0011, n).expect("dispatch");
         let (reference_out, _) = reference_bfs_expand(n, &off, &tgt, &msk, &seed, 0b0011, n);
         assert_eq!(gpu_out, reference_out, "allow_mask=3 divergence");
@@ -99,13 +105,19 @@ fn cuda_bfs_expand_via_saturated_seed_reports_no_change() {
             let (n, off, tgt, msk) = linear_chain(4);
             // Seed = full chain already.
             let seed = vec![0b1111u32];
-            let (_gpu_out, gpu_changed) =
+            let (_gpu_out, gpu_changed, gpu_converged) =
                 bfs_expand_via(&dispatcher, n, &off, &tgt, &msk, &seed, 0xFFFF_FFFF, n)
                     .expect("dispatch");
-            let (_reference_out, reference_changed) =
-                reference_bfs_expand(n, &off, &tgt, &msk, &seed, 0xFFFF_FFFF, n);
-            assert_eq!(gpu_changed, reference_changed);
+            let (_reference_out, reference) =
+                try_bfs_expand_converged(n, &off, &tgt, &msk, &seed, 0xFFFF_FFFF, n)
+                    .expect("reference persistent BFS convergence");
+            assert_eq!(gpu_changed, reference.changed);
             assert_eq!(gpu_changed, 0);
+            assert_eq!(gpu_converged, u32::from(reference.converged));
+            assert_eq!(
+                gpu_converged, 1,
+                "a saturated seed is an immediate fixpoint and must report converged=1"
+            );
         },
     );
 }
@@ -125,7 +137,7 @@ fn cuda_resident_bfs_graph_matches_reference_across_repeated_queries() {
 
             for seed in [0b0000_0001u32, 0b0000_0011u32] {
                 let seed_words = [seed];
-                let changed = bfs_expand_resident_graph_with_scratch_into(
+                let (changed, converged) = bfs_expand_resident_graph_with_scratch_into(
                     &dispatcher,
                     &graph,
                     &seed_words,
@@ -135,10 +147,12 @@ fn cuda_resident_bfs_graph_matches_reference_across_repeated_queries() {
                     &mut frontier,
                 )
                 .expect("resident graph BFS query");
-                let (reference_out, reference_changed) =
-                    reference_bfs_expand(n, &off, &tgt, &msk, &seed_words, 0xFFFF_FFFF, n);
+                let (reference_out, reference) =
+                    try_bfs_expand_converged(n, &off, &tgt, &msk, &seed_words, 0xFFFF_FFFF, n)
+                        .expect("reference persistent BFS convergence");
                 assert_eq!(frontier, reference_out);
-                assert_eq!(changed, reference_changed);
+                assert_eq!(changed, reference.changed);
+                assert_eq!(converged, u32::from(reference.converged));
                 assert_eq!(
                     frontier.as_ptr(),
                     frontier_ptr,
@@ -175,6 +189,8 @@ fn cuda_resident_bfs_graph_batch_matches_reference() {
             let frontier_ptr = frontier_outputs.as_ptr();
             let mut changed_outputs = Vec::with_capacity(3);
             let changed_ptr = changed_outputs.as_ptr();
+            let mut converged_outputs = Vec::with_capacity(3);
+            let converged_ptr = converged_outputs.as_ptr();
             let seeds = [0b0000_0001u32, 0b0000_0011u32, 0b0000_1111u32];
 
             bfs_expand_resident_graph_batch_with_scratch_into(
@@ -187,6 +203,7 @@ fn cuda_resident_bfs_graph_batch_matches_reference() {
                 &mut scratch,
                 &mut frontier_outputs,
                 &mut changed_outputs,
+                &mut converged_outputs,
             )
             .expect("resident graph batch BFS query");
 
@@ -201,8 +218,12 @@ fn cuda_resident_bfs_graph_batch_matches_reference() {
 
             assert_eq!(frontier_outputs, expected_frontiers);
             assert_eq!(changed_outputs, expected_changed);
+            // max_iters == n bounds the n-node chain diameter, so every query
+            // reaches a fixpoint within budget: converged is 1 for all queries.
+            assert_eq!(converged_outputs, vec![1u32; seeds.len()]);
             assert_eq!(frontier_outputs.as_ptr(), frontier_ptr);
             assert_eq!(changed_outputs.as_ptr(), changed_ptr);
+            assert_eq!(converged_outputs.as_ptr(), converged_ptr);
 
             scratch.free(&dispatcher).expect("resident scratch free");
             graph.free(&dispatcher).expect("resident graph free");

@@ -26,9 +26,39 @@
 //! `--features` the runner selects. See `BACKLOG.md` WIRING-tautology-closure-25crates.
 #![forbid(unsafe_code)]
 
+pub mod consumer_boundary;
+pub mod monorepo;
+
 use std::collections::BTreeSet;
 use std::fs;
+use std::io::Read;
 use std::path::{Path, PathBuf};
+
+/// Per-file read cap for the source enumeration.
+///
+/// The enumerator reads every `.rs` file under `src/` and `tests/` as text. An
+/// unbounded `read_to_string` would let one pathological generated file exhaust
+/// memory during a test run, so each file is capped and an over-cap file is a
+/// loud failure rather than a silent truncation (a truncated file would drop
+/// builders from the enumeration and quietly weaken the closure gate).
+const MAX_SOURCE_FILE_BYTES: u64 = 4_194_304;
+
+/// Read one source file as text, bounded by [`MAX_SOURCE_FILE_BYTES`].
+fn read_source_file_bounded(path: &Path) -> std::io::Result<String> {
+    let mut text = String::new();
+    fs::File::open(path)?
+        .take(MAX_SOURCE_FILE_BYTES + 1)
+        .read_to_string(&mut text)?;
+    if text.len() as u64 > MAX_SOURCE_FILE_BYTES {
+        return Err(std::io::Error::other(format!(
+            "{} exceeds the {MAX_SOURCE_FILE_BYTES} byte source read cap; truncating it \
+             would silently drop builders from the closure enumeration. Fix: split the \
+             file or raise MAX_SOURCE_FILE_BYTES deliberately.",
+            path.display()
+        )));
+    }
+    Ok(text)
+}
 
 /// Assert the registry-closure contract for the crate rooted at `manifest_dir`.
 ///
@@ -69,7 +99,7 @@ pub fn assert_registry_closure(manifest_dir: &str, waiver: &[&str], floor: usize
     let mut builders: BTreeSet<String> = BTreeSet::new();
     let mut corpus = String::new();
     for path in &src_files {
-        let text = fs::read_to_string(path)
+        let text = read_source_file_bounded(path)
             .unwrap_or_else(|e| panic!("{crate_name} source file {path:?} must be readable: {e}"));
         for name in program_builders_in(&text) {
             builders.insert(name);
@@ -92,7 +122,7 @@ pub fn assert_registry_closure(manifest_dir: &str, waiver: &[&str], floor: usize
             continue;
         }
         corpus.push_str(
-            &fs::read_to_string(path)
+            &read_source_file_bounded(path)
                 .unwrap_or_else(|e| panic!("{crate_name} test file {path:?} must be readable: {e}")),
         );
         corpus.push('\n');
@@ -150,6 +180,12 @@ pub fn assert_registry_closure(manifest_dir: &str, waiver: &[&str], floor: usize
     );
 }
 
+/// Collect every `.rs` file under `dir` into `out`.
+///
+/// # Panics
+/// Panics when a directory entry is unreadable. The closure gate enumerates source
+/// text, so skipping an unreadable file would quietly shrink the builder set and
+/// weaken the gate.
 fn collect_rust_files(dir: &Path, out: &mut Vec<PathBuf>) {
     let Ok(entries) = fs::read_dir(dir) else {
         return;

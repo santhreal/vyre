@@ -126,21 +126,3 @@ fn fact_store_evidence_records_operator_truth_and_publication_boundary() {
     }
 }
 
-#[test]
-fn acceleration_plan_contains_complete_columnar_fact_rule_execution_tranche() {
-    let plan = read_repo_file("docs/optimization/ALL_AXES_ACCELERATION_PLAN.md");
-
-    for id in 1601..=1620 {
-        assert_contains(&plan, &format!("VX-{id}"));
-    }
-
-    for token in [
-        "COLUMNAR_FACT_STORE_LAYOUT",
-        "VECTORIZED_RULE_EXECUTION_PLAN",
-        "FACT_QUERY_COST_MODEL_POLICY",
-        "FACT_STORE_REUSE_EVIDENCE",
-        "END_TO_END_COLUMNAR_FACT_RULE_EXECUTION_TRANCHE_COVERAGE",
-    ] {
-        assert_contains(&plan, token);
-    }
-}

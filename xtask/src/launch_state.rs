@@ -227,95 +227,91 @@ fn default_output() -> PathBuf {
 mod tests {
     use super::completion_marker_complete;
 
+    /// Build a completed launch marker for whatever release train is declared.
+    ///
+    /// The fixture is derived rather than pasted so cutting a release never leaves this
+    /// suite asserting against a version that no longer ships. It previously hardcoded
+    /// 0.6.3 and started failing the moment the train moved to 0.6.6.
+    fn completed_marker_json(vyre: &str, weir: &str) -> String {
+        let tags = crate::release_train::tag_creation_order()
+            .iter()
+            .skip(3)
+            .map(|tag| format!("      \"{tag}\""))
+            .collect::<Vec<_>>()
+            .join(",\n");
+        format!(
+            r#"{{
+  "schema_version": 1,
+  "release_train": {{
+    "vyre": "{vyre}",
+    "weir": "{weir}"
+  }},
+  "git": {{
+    "branch": "main",
+    "tags": [
+{tags}
+    ]
+  }},
+  "public_repository": "santhreal/vyre",
+  "external_actions": [
+    {{
+      "action": "cargo_full publish approved crates in dependency order",
+      "status": "complete"
+    }},
+    {{
+      "action": "verify vyre repository is public",
+      "status": "complete"
+    }},
+    {{
+      "action": "git push release branch and tags",
+      "status": "complete"
+    }}
+  ],
+  "completion_status": "complete"
+}}"#
+        )
+    }
+
+    /// A marker matching the declared release train, with every external action complete,
+    /// is what `final-launch` writes and `launch-state` must accept.
     #[test]
-    fn completion_marker_accepts_061_release_train_with_required_actions() {
+    fn completion_marker_accepts_the_declared_release_train_with_required_actions() {
         let dir = tempfile::tempdir().expect("Fix: create launch-state test directory.");
         let marker = dir.path().join("public-launch-completion.json");
         std::fs::write(
             &marker,
-            r#"{
-  "schema_version": 1,
-  "release_train": {
-    "vyre": "0.6.3",
-    "weir": "0.1.0"
-  },
-  "git": {
-    "branch": "main",
-    "tags": [
-      "vyre-v0.6.3",
-      "weir-v0.1.0",
-      "vyre-0.6.3-weir-0.1.0"
-    ]
-  },
-  "public_repository": "santhsecurity/vyre",
-  "external_actions": [
-    {
-      "action": "cargo_full publish approved crates in dependency order",
-      "status": "complete"
-    },
-    {
-      "action": "verify vyre repository is public",
-      "status": "complete"
-    },
-    {
-      "action": "git push release branch and tags",
-      "status": "complete"
-    }
-  ],
-  "completion_status": "complete"
-}"#,
+            completed_marker_json(
+                crate::release_train::vyre_version(),
+                crate::release_train::weir_version(),
+            ),
         )
         .expect("Fix: write launch completion marker fixture.");
 
         assert!(
             completion_marker_complete(&marker),
-            "Fix: launch-state must accept the completed 0.6.3/0.1.0 marker that final-launch writes."
+            "Fix: launch-state must accept the completed {}/{} marker that final-launch writes.",
+            crate::release_train::vyre_version(),
+            crate::release_train::weir_version()
         );
     }
 
+    /// Launch evidence from an earlier release train must not satisfy the current one.
+    ///
+    /// Accepting a stale marker would let a release claim its public-launch actions were
+    /// done when they were done for a previous version.
     #[test]
-    fn completion_marker_rejects_stale_042_release_train() {
+    fn completion_marker_rejects_a_previous_release_train() {
         let dir = tempfile::tempdir().expect("Fix: create launch-state test directory.");
         let marker = dir.path().join("public-launch-completion.json");
         std::fs::write(
             &marker,
-            r#"{
-  "schema_version": 1,
-  "release_train": {
-    "vyre": "0.4.2",
-    "weir": "0.1.0"
-  },
-  "git": {
-    "branch": "main",
-    "tags": [
-      "vyre-v0.4.2",
-      "weir-v0.1.0",
-      "vyre-0.4.2-weir-0.1.0"
-    ]
-  },
-  "public_repository": "santhsecurity/vyre",
-  "external_actions": [
-    {
-      "action": "cargo_full publish approved crates in dependency order",
-      "status": "complete"
-    },
-    {
-      "action": "verify vyre repository is public",
-      "status": "complete"
-    },
-    {
-      "action": "git push release branch and tags",
-      "status": "complete"
-    }
-  ],
-  "completion_status": "complete"
-}"#,
+            completed_marker_json("0.4.2", crate::release_train::weir_version()),
         )
         .expect("Fix: write stale launch completion marker fixture.");
 
         assert!(
             !completion_marker_complete(&marker),
-            "Fix: launch-state must reject stale 0.4.2 launch evidence for the 0.6.3 release train."
+            "Fix: launch-state must reject launch evidence from a previous release train."
         );
     }
 
@@ -339,7 +335,7 @@ mod tests {
       "vyre-0.6.3-weir-0.1.0"
     ]
   },
-  "repositories_public": ["santhsecurity/vyre"],
+  "repositories_public": ["santhreal/vyre"],
   "external_actions": [
     {
       "action": "cargo_full publish approved crates in dependency order",

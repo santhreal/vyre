@@ -1103,6 +1103,10 @@ const PAGED_PIPELINE_DEPTH: usize = 2;
 ///
 /// # Errors
 /// Same as [`scan_paged_fused`].
+///
+/// # Panics
+/// Panics if the in-flight queue is empty at the point the pipeline depth was just
+/// reached, which the preceding length check rules out.
 pub fn scan_paged_fused_async(
     matcher: &GpuLiteralSet,
     backend: &dyn VyreBackend,
@@ -1194,8 +1198,38 @@ fn fill_window_from_paths(
     haystack: &mut Vec<u8>,
 ) -> std::io::Result<usize> {
     haystack.clear();
+    // Bounded by the window plan, never by the file. An unbounded `read_to_end` here
+    // would break the window's memory bound and, worse, silently mis-globalize every
+    // later match: region offsets were computed from the sizes seen at planning time, so
+    // a file that grew or shrank since then shifts them. Read exactly the planned bytes
+    // and fail closed on any mismatch.
+    let mut remaining = window.byte_len;
     for path in &paths[window.file_range.clone()] {
-        std::fs::File::open(path)?.read_to_end(haystack)?;
+        let before = haystack.len();
+        std::fs::File::open(path)?
+            .take(remaining as u64 + 1)
+            .read_to_end(haystack)?;
+        let read = haystack.len() - before;
+        if read > remaining {
+            return Err(std::io::Error::other(format!(
+                "paged corpus file {} grew past its planned window size while the scan was \
+                 running; every later region offset would be wrong. Fix: rescan a stable \
+                 corpus, or copy the tree before scanning.",
+                path.display()
+            )));
+        }
+        remaining -= read;
+    }
+    if remaining != 0 {
+        return Err(std::io::Error::other(format!(
+            "paged corpus window [{}, {}) read {} bytes but was planned for {}; a file \
+             shrank while the scan was running and every later region offset would be \
+             wrong. Fix: rescan a stable corpus, or copy the tree before scanning.",
+            window.file_range.start,
+            window.file_range.end,
+            window.byte_len - remaining,
+            window.byte_len
+        )));
     }
     let mut gathered = 0usize;
     for path in &paths[window.file_range.end..] {

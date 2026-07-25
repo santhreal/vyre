@@ -37,6 +37,11 @@ pub(super) fn tokenize_preproc_expr(
     tokenize_preproc_expr_inner(expr, macros, 0, &[])
 }
 
+/// Tokenize a preprocessor conditional expression.
+///
+/// # Panics
+/// Panics on a malformed `defined` operator (no identifier, or a missing `)`). The
+/// host reference preprocessor is a parity oracle for well-formed input.
 pub(super) fn tokenize_preproc_expr_inner(
     expr: &str,
     macros: &HashMap<String, MacroDef>,
@@ -347,6 +352,11 @@ pub(super) fn parse_expr_macro_args(src: &str, open_idx: usize) -> Option<(Vec<S
     None
 }
 
+/// Substitute macro arguments into a function-like macro body.
+///
+/// # Panics
+/// Panics on an argument-count mismatch between `params` and `args`. Expanding with
+/// the wrong arity would silently produce a different token stream than the GPU path.
 pub(super) fn substitute_expr_macro_params(
     macro_name: &str,
     replacement: &str,

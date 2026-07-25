@@ -158,3 +158,43 @@ Concrete evidence anchors:
 - `release/evidence/benchmarks/cuda-release-suite.json`
 - `release/evidence/benchmarks/wgpu-fallback-suite.json`
 - `release/evidence/benchmarks/bench-release-axes.json`
+
+## The frontier leaderboard artifact
+
+`release-benchmarks` writes `release/evidence/benchmarks/frontier-leaderboard.json`
+alongside the suite artifacts. It is the head-to-head table: for every frontier
+baseline the release claims to beat, one row carrying vyre's measurement and the
+comparator's.
+
+```bash
+./cargo_full run --bin xtask -- release-benchmarks --backend cuda
+```
+
+The baselines it must cover come from `docs/optimization/FRONTIER_LEADERBOARD_BASELINES.toml`,
+so adding a competitor is a data edit, not a code edit.
+
+Each row in `rows` carries:
+
+- `baseline_id`, `research_key`, and `baseline` - which comparator the row is against
+  and the research source that establishes it as a real baseline.
+- `workload_family` and `metric_family` - what was measured. The metric family is
+  derived from the workload family, so a row cannot claim a metric the workload does
+  not produce.
+- `cpu_digest` and `gpu_digest` - the comparator parity check. Both arms must digest
+  to the same value, which is what makes the comparison a comparison rather than two
+  unrelated runs.
+- `throughput_gb_s_x1000_p50`, `latency_wall_ns_p50`, `memory_total_mib_p50`, and
+  `transfer_bytes_p50` - the p50 measurements, integer-scaled so the artifact has no
+  floating-point drift.
+- `selected_plan_reason` and `rejected_plan_reasons` - which execution plan ran and
+  why the others did not.
+- `blockers` - why this row does not count as evidence, when it does not.
+
+At the top level, `missing_baselines` lists required baselines with no row, and
+`blockers` is the release-blocking total. An empty `blockers` array is the only
+passing state; `release-benchmarks` exits non-zero otherwise, and exits 2 when a
+baseline manifest cannot be read.
+
+`source_tree_fingerprint` keys the artifact to the workspace source it measured, so
+any source change after the run invalidates it and the gate says so. Run the
+benchmarks last.

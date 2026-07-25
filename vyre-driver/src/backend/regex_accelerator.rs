@@ -2,8 +2,8 @@
 //!
 //! Hardware regex engines are useful only when the backend exposes an explicit
 //! capability record. This module keeps unsupported devices fail-closed and
-//! makes software fallback, stream mode, match schema, parity, and transfer
-//! accounting visible to benchmark evidence.
+//! makes the software reference path, stream mode, match schema, parity, and
+//! transfer accounting visible to benchmark evidence.
 
 use super::BackendError;
 

@@ -14,7 +14,7 @@ pub use vyre_foundation::soundness::{
     Soundness, SoundnessTagged, SoundnessViolation,
 };
 
-/// Shared fact-schema version for security, borrowck, and Weir/Vyre bridges.
+/// Shared fact-schema version for security, borrowck, and external/Vyre bridges.
 pub const SHARED_FACT_SCHEMA_VERSION: u16 = 1;
 
 /// Cross-engine fact families accepted by the shared dataflow schema.
@@ -69,7 +69,7 @@ impl SharedFactKind {
 pub struct SharedFactHeader {
     /// Schema version, currently [`SHARED_FACT_SCHEMA_VERSION`].
     pub schema_version: u16,
-    /// Producer id such as `c-c11`, `rustc-nll`, or `weir`.
+    /// Producer id such as `c-c11`, `rustc-nll`, or `external-dataflow`.
     pub producer: String,
     /// Shared fact family.
     pub kind: SharedFactKind,
@@ -267,15 +267,15 @@ mod tests {
     }
 
     #[test]
-    fn weir_witness_fact_header_is_exact() {
+    fn external_witness_fact_header_is_exact() {
         let header =
-            SharedFactHeader::new("weir", SharedFactKind::Witness, 13, 21, Soundness::Exact)
+            SharedFactHeader::new("external-dataflow", SharedFactKind::Witness, 13, 21, Soundness::Exact)
                 .with_object(34)
                 .with_aux(55);
 
         assert_eq!(
             header.wire_header(),
-            "schema=v1;producer=weir;kind=witness;fact_id=13;subject=21;object=34;aux=55;file=0;start=0;end=0;soundness=Exact"
+            "schema=v1;producer=external-dataflow;kind=witness;fact_id=13;subject=21;object=34;aux=55;file=0;start=0;end=0;soundness=Exact"
         );
     }
 }

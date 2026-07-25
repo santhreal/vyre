@@ -9,6 +9,10 @@ use crate::graph::program_graph::ProgramGraphShape;
 /// `frontier_out` is laid out as `query_count` consecutive bitsets, each
 /// containing `bitset_words(shape.node_count)` u32 words. `changed` contains
 /// one u32 flag per query.
+///
+/// # Panics
+/// Panics on an invalid launch shape or frontier sizing. Callers that must recover use
+/// the checked twin below.
 #[must_use]
 pub fn csr_forward_or_changed_parallel_batch(
     shape: ProgramGraphShape,

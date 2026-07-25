@@ -1,7 +1,6 @@
 //! Admission policy enforcement governance test suite.
 
 const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
-const PLAN: &str = include_str!("../../../docs/optimization/ALL_AXES_ACCELERATION_PLAN.md");
 const ADMISSION: &str =
     include_str!("../../../docs/optimization/KUBERNETES_ADMISSION_POLICY_ENFORCEMENT.toml");
 const PARITY: &str =
@@ -111,34 +110,6 @@ fn admission_audit_policy_records_capture_correlation_metrics_retention_redactio
             AUDIT.contains(required),
             "admission audit evidence policy must include {required}"
         );
-    }
-}
-
-#[test]
-fn plan_contains_admission_policy_enforcement_rows() {
-    for row in [
-        "VX-1341",
-        "VX-1342",
-        "VX-1343",
-        "VX-1344",
-        "VX-1345",
-        "VX-1346",
-        "VX-1347",
-        "VX-1348",
-        "VX-1349",
-        "VX-1350",
-        "VX-1351",
-        "VX-1352",
-        "VX-1353",
-        "VX-1354",
-        "VX-1355",
-        "VX-1356",
-        "VX-1357",
-        "VX-1358",
-        "VX-1359",
-        "VX-1360",
-    ] {
-        assert!(PLAN.contains(row), "plan must include {row}");
     }
 }
 

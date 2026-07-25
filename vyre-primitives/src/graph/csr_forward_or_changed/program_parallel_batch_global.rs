@@ -38,6 +38,10 @@ pub fn csr_forward_or_changed_parallel_batch_global(
 /// `changed[0]`. Resident fixed-point drivers can allocate one changed word
 /// per iteration and avoid a host-to-device reset upload before every
 /// dispatch. The slot must be inside `changed_slots`.
+///
+/// # Panics
+/// Panics when `changed_slot` is outside `changed_slots`, or on an invalid launch
+/// shape. Callers that must recover use the checked twin below.
 #[must_use]
 pub fn csr_forward_or_changed_parallel_batch_global_slot(
     shape: ProgramGraphShape,

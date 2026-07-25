@@ -8,11 +8,6 @@ use serde::Serialize;
 
 use crate::hash::sha256_hex;
 
-pub(crate) use crate::artifact_paths::{
-    LEGO_AUDIT_DUPLICATES_ARTIFACT, REGISTERED_OP_DUPLICATES_ARTIFACT,
-    SOURCE_SIMILAR_DUPLICATES_ARTIFACT,
-};
-
 pub(crate) const DUPLICATE_FAMILY_SCHEMA_VERSION: u32 = 2;
 
 #[derive(Debug, Clone, PartialEq, Serialize)]

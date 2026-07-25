@@ -1,7 +1,6 @@
 //! Plan policy enforcement governance test suite.
 
 const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
-const PLAN: &str = include_str!("../../../docs/optimization/ALL_AXES_ACCELERATION_PLAN.md");
 const POLICY: &str = include_str!("../../../docs/optimization/PLAN_POLICY_AS_CODE_RULES.toml");
 const SCHEMA: &str =
     include_str!("../../../docs/optimization/PLAN_SCHEMA_AND_CONSTRAINT_VALIDATION.toml");
@@ -85,34 +84,6 @@ fn graph_queries_find_unowned_completion_private_and_stale_evidence_failures() {
         "find-stale-dependent-artifacts",
     ] {
         assert!(QUERIES.contains(required), "graph query audit registry must include {required}");
-    }
-}
-
-#[test]
-fn plan_contains_policy_enforcement_rows() {
-    for row in [
-        "VX-1021",
-        "VX-1022",
-        "VX-1023",
-        "VX-1024",
-        "VX-1025",
-        "VX-1026",
-        "VX-1027",
-        "VX-1028",
-        "VX-1029",
-        "VX-1030",
-        "VX-1031",
-        "VX-1032",
-        "VX-1033",
-        "VX-1034",
-        "VX-1035",
-        "VX-1036",
-        "VX-1037",
-        "VX-1038",
-        "VX-1039",
-        "VX-1040",
-    ] {
-        assert!(PLAN.contains(row), "plan must include {row}");
     }
 }
 

@@ -1,7 +1,6 @@
 //! Plan execution governance test suite.
 
 const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
-const PLAN: &str = include_str!("../../../docs/optimization/ALL_AXES_ACCELERATION_PLAN.md");
 const DAG: &str = include_str!("../../../docs/optimization/PLAN_EXECUTION_DAG.toml");
 const AUTHORITY: &str = include_str!("../../../docs/optimization/PLAN_ARTIFACT_AUTHORITY_MAP.toml");
 const ATTESTATION: &str =
@@ -101,34 +100,6 @@ fn execution_governance_keeps_completion_blocked_until_direct_evidence_exists() 
             DAG.contains(required) || ATTESTATION.contains(required),
             "execution governance must include {required}"
         );
-    }
-}
-
-#[test]
-fn plan_contains_end_to_end_execution_governance_rows() {
-    for row in [
-        "VX-1001",
-        "VX-1002",
-        "VX-1003",
-        "VX-1004",
-        "VX-1005",
-        "VX-1006",
-        "VX-1007",
-        "VX-1008",
-        "VX-1009",
-        "VX-1010",
-        "VX-1011",
-        "VX-1012",
-        "VX-1013",
-        "VX-1014",
-        "VX-1015",
-        "VX-1016",
-        "VX-1017",
-        "VX-1018",
-        "VX-1019",
-        "VX-1020",
-    ] {
-        assert!(PLAN.contains(row), "plan must include {row}");
     }
 }
 

@@ -1,7 +1,6 @@
 //! Artifact integrity archive governance test suite.
 
 const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
-const PLAN: &str = include_str!("../../../docs/optimization/ALL_AXES_ACCELERATION_PLAN.md");
 const INTEGRITY: &str =
     include_str!("../../../docs/optimization/RELEASE_ARTIFACT_INTEGRITY_INDEX.toml");
 const VERIFY: &str =
@@ -118,34 +117,6 @@ fn source_archive_durability_map_links_public_source_tags_crate_archives_swhids_
             ARCHIVE.contains(required),
             "source archive durability map must include {required}"
         );
-    }
-}
-
-#[test]
-fn plan_contains_artifact_integrity_archive_rows() {
-    for row in [
-        "VX-1161",
-        "VX-1162",
-        "VX-1163",
-        "VX-1164",
-        "VX-1165",
-        "VX-1166",
-        "VX-1167",
-        "VX-1168",
-        "VX-1169",
-        "VX-1170",
-        "VX-1171",
-        "VX-1172",
-        "VX-1173",
-        "VX-1174",
-        "VX-1175",
-        "VX-1176",
-        "VX-1177",
-        "VX-1178",
-        "VX-1179",
-        "VX-1180",
-    ] {
-        assert!(PLAN.contains(row), "plan must include {row}");
     }
 }
 

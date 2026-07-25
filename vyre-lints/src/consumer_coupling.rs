@@ -23,6 +23,41 @@ const EXEMPT_PATH_FRAGMENTS: &[&str] = &[
     "/target/",
 ];
 
+/// Release-coordination runbooks name the products in the combined release train on
+/// purpose. The tags, publish order, and per-product versions an operator types are
+/// literal facts (`vyre-0.4.1-weir-0.0.1` is a git tag, not a description), so a
+/// capability paraphrase makes the instructions unfollowable. A blanket text
+/// substitution over these files previously produced invalid identifiers with spaces
+/// in them, including `git tag vyre-0.4.1-dataflow consumer-0.0.1` and the xtask
+/// subcommand `vyre-dataflow consumer-release-gate`.
+///
+/// The exemption is deliberately narrow: release runbooks only. Architecture docs,
+/// API docs, guides, and every Rust source file stay under the guard, because those
+/// describe the platform's own surface, where naming a consumer is real coupling.
+/// `CHANGELOG.md` is on this list for the same reason: a rename entry has to print the
+/// identifier that was removed. A migration table reading `weir_alias` to
+/// `alias_import` is the whole value of the entry, and paraphrasing the left column
+/// leaves a consumer with no way to find the symbol it must edit. The changelog
+/// records what the API used to be called, which is history rather than coupling.
+/// The exemption list, as shipped.
+///
+/// It lives in a data file rather than in this array so that
+/// `scripts/check_platform_consumer_docs.sh` can read the same list. The two
+/// guards previously carried separate copies and disagreed: `docs/RELEASE.md`
+/// was exempt here and scanned there, so the same line passed one gate and
+/// failed the other.
+const RELEASE_COORDINATION_DOCS_FILE: &str = include_str!("../rules/release_coordination_docs.txt");
+
+/// Parses [`RELEASE_COORDINATION_DOCS_FILE`] into its path entries.
+///
+/// One path per line; `#` comments and blank lines are ignored.
+fn release_coordination_docs() -> impl Iterator<Item = &'static str> {
+    RELEASE_COORDINATION_DOCS_FILE
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+}
+
 pub fn scan_tree(root: &Path) -> Result<Vec<Violation>> {
     let mut all = Vec::new();
     for entry in walkdir::WalkDir::new(root)
@@ -60,9 +95,31 @@ fn is_scanned_extension(path: &Path) -> bool {
 
 fn is_exempt_path(workspace_rel: &str) -> bool {
     let wrapped = format!("/{workspace_rel}");
-    EXEMPT_PATH_FRAGMENTS
+    if EXEMPT_PATH_FRAGMENTS
         .iter()
         .any(|fragment| wrapped.contains(fragment))
+    {
+        return true;
+    }
+    is_release_coordination_doc(workspace_rel)
+}
+
+/// Whether this path is a release runbook, matched on the workspace-relative suffix so
+/// the check works the same for an absolute scan root and a temp-dir fixture.
+///
+/// A directory entry only exempts Markdown inside it. Without that, a `.rs` file placed
+/// under `docs/release/` would inherit the runbook exemption, and no exemption is ever
+/// meant to cover Rust source: a runbook naming a downstream product is a literal
+/// operator instruction, while source naming one is the coupling this lint exists for.
+fn is_release_coordination_doc(workspace_rel: &str) -> bool {
+    let normalized = workspace_rel.replace('\\', "/");
+    release_coordination_docs().any(|entry| {
+        if let Some(dir) = entry.strip_suffix('/') {
+            normalized.contains(&format!("{dir}/")) && normalized.ends_with(".md")
+        } else {
+            normalized == entry || normalized.ends_with(&format!("/{entry}"))
+        }
+    })
 }
 
 fn scan_file(path: &Path, workspace_rel: &str) -> Result<Vec<Violation>> {
@@ -241,5 +298,42 @@ mod tests {
             Some((23, "surgec"))
         );
         assert_eq!(find_consumer_name_in_path("docs/weird.md"), None);
+    }
+
+    /// The changelog must be able to print a removed identifier in a rename migration
+    /// table, because paraphrasing the old name leaves a consumer unable to find the
+    /// symbol it has to edit.
+    #[test]
+    fn changelog_is_a_release_coordination_doc() {
+        assert!(is_release_coordination_doc("CHANGELOG.md"));
+        assert!(is_release_coordination_doc(
+            "libs/performance/matching/vyre/CHANGELOG.md"
+        ));
+    }
+
+    /// The exemption is a whole-filename match, not a prefix or a substring. A doc that
+    /// merely mentions the changelog in its name stays under the guard, so the
+    /// exemption cannot be widened by naming a file after an exempt one.
+    #[test]
+    fn changelog_exemption_does_not_leak_to_neighbouring_documents() {
+        assert!(!is_release_coordination_doc("docs/CHANGELOG_NOTES.md"));
+        assert!(!is_release_coordination_doc("docs/OLD-CHANGELOG.md"));
+        assert!(!is_release_coordination_doc("changelog.md"));
+    }
+
+    /// No exemption ever covers Rust source. A release runbook naming a downstream
+    /// product is a literal operator instruction; a `.rs` file naming one is coupling.
+    #[test]
+    fn release_coordination_exemption_never_covers_rust_source() {
+        for path in [
+            "docs/release/v0.7.0.rs",
+            "xtask/src/release.rs",
+            "vyre-lints/src/consumer_coupling.rs",
+        ] {
+            assert!(
+                !is_release_coordination_doc(path),
+                "{path} must stay under the consumer-coupling guard"
+            );
+        }
     }
 }

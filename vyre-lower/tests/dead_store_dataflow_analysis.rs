@@ -1,7 +1,7 @@
 //! Test: dead store dataflow-analysis integration.
 use vyre_foundation::ir::DataType;
 use vyre_lower::{
-    analyses::{weir_alias::AliasFactSet, weir_reaching_def::ReachingDefFactSet},
+    analyses::{alias_import::AliasFactSet, reaching_def_import::ReachingDefFactSet},
     rewrites::{run_all, run_all_with_dataflow_analysis_facts},
     BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
     KernelOp, KernelOpKind, LiteralValue, MemoryClass,

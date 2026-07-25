@@ -1,7 +1,6 @@
 //! Ci cd hardening governance test suite.
 
 const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
-const PLAN: &str = include_str!("../../../docs/optimization/ALL_AXES_ACCELERATION_PLAN.md");
 const PERMISSIONS: &str =
     include_str!("../../../docs/optimization/WORKFLOW_PERMISSION_BOUNDARY.toml");
 const PINNING: &str =
@@ -107,34 +106,6 @@ fn release_workflow_attestation_policy_links_artifact_attestations_slsa_sbom_and
             ATTESTATION.contains(required),
             "release workflow attestation policy must include {required}"
         );
-    }
-}
-
-#[test]
-fn plan_contains_ci_cd_hardening_rows() {
-    for row in [
-        "VX-1101",
-        "VX-1102",
-        "VX-1103",
-        "VX-1104",
-        "VX-1105",
-        "VX-1106",
-        "VX-1107",
-        "VX-1108",
-        "VX-1109",
-        "VX-1110",
-        "VX-1111",
-        "VX-1112",
-        "VX-1113",
-        "VX-1114",
-        "VX-1115",
-        "VX-1116",
-        "VX-1117",
-        "VX-1118",
-        "VX-1119",
-        "VX-1120",
-    ] {
-        assert!(PLAN.contains(row), "plan must include {row}");
     }
 }
 

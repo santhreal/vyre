@@ -2,7 +2,282 @@
 
 All notable changes to vyre are documented here. Follows Keep a Changelog.
 
-## [Unreleased]
+## [0.7.0]  -  2026-07-25
+
+One release. The work that had been staged as 0.6.6 is folded in here: it could not
+ship as a patch, because making its release gate pass required canonicalizing
+eigenvector sign in the shared Jacobi body, and that changes the observable output of
+a published op.
+
+The only source edit an upgrade requires is the dataflow-import rename. See the
+migration table under "Removed".
+
+### Added: device convergence flags for persistent BFS (`vyre-primitives`, `vyre-self-substrate`)
+
+A persistent-BFS closure that exhausts its `max_iters` budget while still growing
+produces an under-approximated frontier. Until now the device path returned that
+partial frontier with no way to tell it apart from a real fixpoint, so a caller
+silently reasoned over a truncated reachability set.
+
+- Every persistent-BFS program now writes a `converged` output: one u32 word for
+  the single-query programs, a per-query u32 array for the batch programs. It is
+  `1` when a step added nothing before the budget was exhausted, and `0` when the
+  loop ran all `max_iters` steps while still growing, or when `max_iters == 0`.
+  `BINDING_CONVERGED` names the binding.
+- `validate_persistent_bfs_converged_flag` rejects any other value, and
+  `cpu_ref::PersistentBfsConvergence` plus `try_cpu_ref_converged` give the CPU
+  reference the same signal so device and reference results are comparable
+  flag-for-flag.
+- `vyre-libs` borrow checking now uses it: `enforce_borrow_closures_converged`
+  fails the dispatch with a `Fix:` message when any forward loan-issue or
+  backward loan-use closure did not converge, because borrow-checking a truncated
+  loan reachability set silently drops conflicts.
+- The optimizer's dispatched DCE uses it too. `build_dce_bfs_program` declares the
+  `converged` word its module doc already promised was part of the layout, sets it
+  on the early-exit fixpoint branch, and leaves it zero when the loop burns its
+  whole budget while still growing. `gpu_dce` now reads it and fails closed:
+  liveness is a reachability closure, so DCE over a truncated one deletes live
+  code. The failure is a miscompile, not a missed optimization, which is why this
+  path refuses rather than degrades.
+
+### Added: per-iteration frontier density telemetry (`vyre-primitives`)
+
+- `persistent_bfs_with_density`, `persistent_bfs_batch_with_density`, and
+  `try_persistent_bfs_batch_with_density` build programs that declare one extra
+  u32 output, `density_active` (`BINDING_DENSITY_ACTIVE`,
+  `DENSITY_ACTIVE_BUFFER`), holding the frontier popcount after each traversal
+  step. The batch layout is `q * max_iters + i`. A host reconstructs every
+  per-iteration density aggregate from this array plus the seed popcount instead
+  of a per-step device round-trip.
+- The density write is a recompute-and-store, not an accumulating atomic, so it
+  lands the same value when the grid-sync split re-executes a segment to a
+  fixpoint. An atomic would double-count there.
+- The base `persistent_bfs` and `try_persistent_bfs_batch` programs are
+  byte-for-byte unchanged, so callers that do not want telemetry pay nothing.
+- `try_cpu_ref_density` is the CPU reference counterpart. New device-parity
+  suites cover both the converged flag and the density array.
+
+### Added: closure-driven grid-sync splitting (`vyre-driver`)
+
+- `dispatch_with_grid_sync_split_via_into` and its allocating wrapper
+  `dispatch_with_grid_sync_split_via` take an opaque single-launch dispatch
+  closure instead of a `&dyn VyreBackend`. A host-loop fixpoint solver can move
+  its convergence loop onto the device without holding a backend handle, plugging
+  in the CPU reference, CUDA, or wgpu as a closure.
+- The split, input-refresh, and adaptive-convergence logic moved into a shared
+  `dispatch_grid_sync_split_generic`, so the backend entry and the closure entry
+  run the same code and converge to identical output. Neither path has its own
+  copy of the loop.
+
+### Added: `DispatchConfig::dispatch_grid` (`vyre-driver`, `vyre-reference`)
+
+- The CPU reference interpreter inferred its coverage from buffer shapes,
+  distributing the dispatch only across workgroup axes larger than one. A program
+  fanning a `[256, 1, 1]` workgroup across `grid.y`, which is how batched
+  persistent BFS runs one query per block, collapsed to `grid.y == 1` and
+  computed only the first query with no diagnostic.
+- `dispatch_grid: Option<[u32; 3]>` states the real per-axis workgroup grid. When
+  set it overrides shape inference entirely, so the interpreter covers every
+  workgroup the GPU would. `None` keeps the previous inference. It takes
+  precedence over `dispatch_elements`, which is a 1-D floor.
+
+### Changed: selective fused positioned evidence (`vyre-libs`)
+
+- Add `GpuLiteralSet::prepare_resident_fused_scan_positioned_from`, which keeps
+  per-region presence complete for every literal while emitting match triples
+  only for an appended positioned-evidence segment. Dense admission-only rows
+  no longer consume atomic counter capacity or readback bandwidth.
+- The bounded-range suffix3 prefilter gains the same shape:
+  `classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered_ext`
+  and `try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered`
+  keep presence complete for every pattern while filtering only the atomic triple
+  append to IDs at or above a supplied boundary.
+
+### Fixed: paged corpus windows read exactly their planned byte length (`vyre-libs`)
+
+- `fill_window_from_paths` appended each file in the window whole. A file that
+  grew between planning and reading overran its window, so the haystack no longer
+  matched the offsets the plan had computed and reported matches at wrong
+  positions. It now reads at most the remaining window budget per file and errors
+  with the path and both byte counts if a file overruns or the window comes up
+  short.
+
+### Removed: product-specific names in the dataflow-import API (`vyre-lower`, `vyre-libs`)
+
+vyre's dataflow-import surface named a specific downstream consumer. The API is
+generic: it imports alias and reaching-definition facts from any external
+dataflow engine. The names now say that, which also stops the published API from
+coupling vyre to one sibling product.
+
+| Before | After |
+| --- | --- |
+| `analyses::weir_alias` | `analyses::alias_import` |
+| `analyses::weir_reaching_def` | `analyses::reaching_def_import` |
+| `dead_store_with_weir_alias_facts` | `dead_store_with_external_alias_facts` |
+| `licm_with_weir_alias_facts` | `licm_with_external_alias_facts` |
+| `load_forwarding_with_weir_alias_facts` | `load_forwarding_with_external_alias_facts` |
+| `loop_fission_with_weir_alias_facts` | `loop_fission_with_external_alias_facts` |
+| `loop_fusion_with_weir_alias_facts` | `loop_fusion_with_external_alias_facts` |
+| `security::weir_ifds` | `security::external_ifds` |
+| `route_security_taint_through_weir_ifds` | `route_security_taint_through_external_ifds` |
+| `security_witness_path_from_weir` | `security_witness_path_from_external_path` |
+| `WeirIfdsSecurity{Buffers,Dispatch,RouteError}` | `ExternalIfdsSecurity{Buffers,Dispatch,RouteError}` |
+| `WEIR_IFDS_SECURITY_BACKEND_ID` | `EXTERNAL_IFDS_SECURITY_BACKEND_ID` |
+| feature `weir_ifds_external_engine` | feature `external_ifds_engine` |
+
+- The shared fact schema's producer id changes from `weir` to
+  `external-dataflow`. A serialized fact header carries the producer id, so a
+  consumer matching on the old string must update. The schema version itself is
+  unchanged.
+- `rules/security_predicates.toml` renames the `weir_mapping` key to
+  `external_mapping` across all ten predicates. This is a Tier-B data file, so a
+  user who copied it to extend the catalog updates the key name.
+- The rename is mechanical. There are no behavior or signature changes beyond the
+  names in this table.
+
+
+### Changed: eigenvectors come back with a canonical sign (`vyre-primitives`)
+
+An eigenvector is only defined up to sign, so the Jacobi rotation accumulation was free
+to return `v` or `-v` and both were correct. That made every consumer of
+`jacobi_eigen_body` unpinnable: a backend that rounded one rotation differently landed
+on the opposite sign, and anything dividing by the vector flipped with it.
+
+- `jacobi_eigen_body` now canonicalizes each eigenvector column so its first component
+  larger than `EIGENVECTOR_SIGN_EPSILON` in magnitude is positive. `symmetric_eigen_jacobi`
+  and `tensor_train_decompose` inherit it.
+- If you consumed raw eigenvector columns and applied your own sign convention, remove it.
+  If you compared columns against stored values, half of them may now differ by a sign.
+  Eigenvalues, the eigen-decomposition itself, and anything invariant to sign (a
+  reconstruction, a projection) are unchanged.
+
+### Fixed: registered ops that no backend actually executed (`vyre-primitives`)
+
+Two ops were registered with no fixtures, so they counted as covered while nothing ever
+checked a value.
+
+- `tensor_train_decompose` shipped without an oracle on the grounds that a truncated SVD
+  is basis-dependent. Two of the three ambiguities are removed rather than tolerated: sign
+  by the canonicalization above, and the degenerate eigen-subspace by moving the fixture
+  from a wide 2x4 unfolding to a tall 4x2 one. A wide unfolding makes the Gram matrix
+  rank-deficient, and a degenerate null space has no single correct eigenbasis. The oracle
+  is derived analytically from the closed-form decomposition.
+- `multi_block_prefix_scan_inclusive_sum` had `test_inputs: None`. It now runs a
+  64-element inclusive scan against the closed-form triangular-number expectation.
+
+### Fixed: the cross-backend parity matrix never resolved calls (`vyre-conform-runner`)
+
+The parity harness did not install the process-wide dialect lookup, so validation rejected
+any op carrying an `Expr::Call` with V016 before it reached a backend. This was not
+specific to the coverage bundle that surfaced it; it applied to every op with a call. The
+harness now installs the registry first, and the expr-variant bundle calls a registered
+callee instead of a placeholder id.
+
+### Fixed: `docs/INDEX.md` listed documents that are not published
+
+The index gate enumerated `docs/` from the filesystem, so every gitignored operator
+document failed it, and the index in turn pointed at 22 documents that `.gitignore`
+excludes and a published crate therefore does not contain. The gate now enumerates tracked
+files, and the private rows are gone.
+
+### Fixed: two guards disagreed about release runbooks
+
+`vyre-lints` and `scripts/check_platform_consumer_docs.sh` both enforce the
+downstream-consumer naming boundary and each carried its own exemption list, so
+`docs/RELEASE.md` was exempt in one and scanned by the other. The list now lives in
+`vyre-lints/rules/release_coordination_docs.txt` and both read it.
+
+### Fixed: the workspace now builds from a clean clone (`vyre-conform-enforce`)
+
+- 31 governance test suites embedded `docs/optimization/ALL_AXES_ACCELERATION_PLAN.md`
+  with `include_str!`. That file is private operator state that `.gitignore` excludes
+  from the public repository, so `cargo test` failed to compile on every fresh clone
+  with `couldn't read ...: No such file or directory`. Nothing caught it because the
+  file is always present in a maintainer's checkout.
+- The removed assertions only checked that the private document contained literal row-ID
+  strings such as `VX-1081`. Every requirement they were meant to prove is still asserted
+  directly against the committed `docs/optimization/*.toml` artifacts, which carry the
+  same row ranges, so coverage is unchanged.
+- `tests/clean_checkout_build_governance.rs` now fails if any Rust source embeds a path
+  that git does not track, if the private acceleration plan is embedded again, or if a
+  tracked file matches a `.gitignore` rule. The scanner skips `include_str!` occurrences
+  inside string literals and comments, so the lint that greps for the macro name and the
+  raw-string test fixtures that contain sample source are not reported as violations.
+
+### Fixed: release gate resolved three identifiers incorrectly (`xtask`)
+
+- The publish train named the dataflow product's package `weir`. The publishable package
+  is `weirflow`; `weir` is only its library target name, and the bare `weir` name on
+  crates.io belongs to an unrelated crate. `package-readiness` reported a blocker that no
+  version bump could clear. `release_train::weir_package_name` is now the single owner and
+  the three sites that hardcoded the name read from it.
+- Every gate resolved the security compiler consumer at `libs/surge/surgec`, but it lives
+  at `surge/surgec`. Eight sites carried the wrong prefix, so gates reported the tree as
+  absent: `distributed-parser-coherence` alone raised 51 blockers claiming `src/lib.rs`
+  does not exist for a crate with 229 test files, 5 benches, and 2 fuzz targets on disk.
+  `release_train::compiler_consumer_relative_path` is now the single owner.
+- `vyre-grammar-gen` had fallen out of the publish train after 0.6.2 and went stale on
+  crates.io while every sibling advanced to 0.6.5, which is why in-workspace consumers had
+  to pin it path-only. It is back in the train and publishes first, having no internal
+  dependencies.
+- `package-readiness` now reports zero blockers.
+
+### Fixed: release runbooks contained unrunnable instructions (`docs`)
+
+- A rename sweep had replaced the product name with a two-word phrase inside identifiers,
+  producing `git tag vyre-0.4.1-dataflow consumer-0.0.1`, the xtask subcommand
+  `vyre-dataflow consumer-release-gate`, the path `release/vyre-dataflow consumer-evidence.toml`,
+  and the sentence `The The dataflow consumer repository`. Tags, subcommand names, and
+  paths are literal strings an operator types, so they are restored across `RELEASE.md`,
+  `RELEASE_CHECKLIST.md`, `RELEASE_ENGINEERING.md`, `PUBLISH_GATE.md`, and the v0.4.1 and
+  v0.4.2 release notes.
+- The consumer-coupling lint gained a narrow exemption for release runbooks, which name the
+  products in the combined release train on purpose. Architecture docs, guides, and all
+  Rust source stay under the guard. Three tests pin the exemption, prove it does not leak
+  to neighbouring documents, and prove it never covers Rust source.
+- The same sweep had neutralized the negative fixture in the coupling lint's own test, so
+  the fixture no longer contained the string the lint must flag and the test failed while
+  the lint was correct. Restored, with a comment recording why the fixture keeps the name.
+
+### Fixed: stale dependency pins (`vyre-spec`, `vyre-primitives`, `vyre-intrinsics`, `vyre-driver-wgpu`)
+
+- Eight internal dev-dependencies pinned `version = "0.6.1"` alongside their path, three
+  releases behind the workspace. They are now path-only, matching the documented pattern:
+  cargo strips path-only dev-dependencies at publish, so they cannot demand a stale
+  crates.io version or block the publish train again.
+- `examples/libs-template` pinned `vyre`, `vyre-foundation`, `vyre-spec`, and
+  `vyre-reference` at `0.4.2` while pinning `vyre-libs` at `0.6.5`. The template is what a
+  consumer copies, so it resolved a two-minor-old API. All pins now track the release.
+
+### Changed: third-party dependency pins refreshed (`Cargo.toml`)
+
+- Every third-party dependency is exact-pinned with `=`, so `cargo update` cannot move
+  them and freshness is a deliberate edit. Seventeen pins advance to the current patch or
+  minor release: `serde` 1.0.229, `thiserror` 2.0.19, `rand` 0.10.2, `tokio` 1.53.1,
+  `bytemuck` 1.25.2, `proc-macro2` 1.0.107, `toml` 1.1.3, `faer` 0.24.4, `memchr` 2.8.3,
+  `regex-syntax` 0.8.11, `rustc-hash` 2.1.3, `clap` 4.6.4, `regex` 1.13.1,
+  `regex-automata` 0.4.16, `quote` 1.0.47, `crossbeam-channel` 0.5.16, `openssl` 0.10.81.
+- `wgpu`/`naga`, `syn`, and `wide` stay on their current majors. Each of those bumps
+  changes APIs vyre calls directly, so they are code changes rather than pin edits and do
+  not ride a release-engineering release.
+
+### Changed: repository identity moved to `santhreal` (`docs`, `.github`, crate metadata)
+
+- `repository` and `homepage` metadata, `CODEOWNERS`, issue-template links, `CITATION.cff`,
+  and the governance evidence now name `santhreal/vyre`. The workspace `homepage` points at
+  `https://santh.dev`.
+- README carries crates.io, docs.rs, and license badges.
+
+### Added: adversarial coverage for loop peeling and induction rebinding (`vyre-lower`)
+
+- Second-pass edge cases for loop peeling, induction-variable rebinding helpers, and
+  shared-memory uniformity, including the control-flow shapes where a rebind must not fire.
+
+### Fixed: private operator state is no longer stageable (`.gitignore`)
+
+- Planning, status, audit, and agent-handoff documents were being staged out of
+  subdirectories that the root-only ignore patterns did not cover, including a 625KB
+  backlog and a 909KB operator plan. The patterns now apply at every depth.
 
 ## [0.6.5]  -  2026-07-13
 

@@ -31,6 +31,13 @@ fn idx(row: Expr, n: u32, col: Expr) -> Expr {
     Expr::add(Expr::mul(row, Expr::u32(n)), col)
 }
 
+/// Magnitude below which an eigenvector component cannot decide the column sign.
+///
+/// A rotated component that should be exactly zero comes back as a value on the
+/// order of 1e-7 with an arbitrary sign, so letting it pick the sign would make
+/// the canonicalization itself non-deterministic.
+pub const EIGENVECTOR_SIGN_EPSILON: f32 = 1.0e-6;
+
 /// Number of Jacobi sweeps, matching the CPU reference `(16 * n² ).max(32)`.
 #[must_use]
 pub fn jacobi_sweeps(n: u32) -> u32 {
@@ -41,6 +48,11 @@ pub fn jacobi_sweeps(n: u32) -> u32 {
 /// symmetric matrix buffer (mutated in place to near-diagonal form; its diagonal becomes the
 /// eigenvalues), `eigenvectors` receives the accumulated rotation matrix `V` (columns = eigenvectors),
 /// `eigenvalues` receives `diag(A)` after convergence. All three are `n x n` / `n` f32 buffers.
+///
+/// Eigenvector columns come back sign-canonicalized: the first component larger than
+/// [`EIGENVECTOR_SIGN_EPSILON`] in magnitude is positive. An eigenvector is only defined up
+/// to sign, so without that the same input can produce `v` or `-v` depending on rounding,
+/// and no consumer of this body can be pinned by an exact fixture.
 ///
 /// Reused by [`symmetric_eigen_jacobi`] and (later) the tensor-train SVD step so the rotation policy
 /// lives in ONE place.
@@ -298,6 +310,78 @@ pub fn jacobi_eigen_body(a: &str, eigenvectors: &str, eigenvalues: &str, n: u32)
                         ],
                     ),
                 ],
+            ),
+        ],
+    ));
+
+    // Canonical eigenvector sign: the first significant component of each column
+    // is positive.
+    //
+    // An eigenvector is only defined up to sign, so the rotation accumulation is
+    // free to return either `v` or `-v` and both are correct. That makes the raw
+    // output unusable as an exact oracle: a consumer that divides by it (the
+    // tensor-train core column) flips with it, and a backend that rounds one
+    // rotation differently can land on the opposite sign. Fixing the sign here
+    // costs one pass and makes every consumer's output reproducible.
+    nodes.push(Node::loop_for(
+        "jac_sk",
+        Expr::u32(0),
+        Expr::u32(n),
+        vec![
+            Node::let_bind("jac_sign", Expr::f32(1.0)),
+            Node::let_bind("jac_sign_found", Expr::u32(0)),
+            Node::loop_for(
+                "jac_si",
+                Expr::u32(0),
+                Expr::u32(n),
+                vec![
+                    Node::let_bind(
+                        "jac_sv",
+                        Expr::load(eigenvectors, idx(Expr::var("jac_si"), n, Expr::var("jac_sk"))),
+                    ),
+                    // A component at or below the threshold is numerical noise and
+                    // must not decide the sign of the whole column.
+                    Node::let_bind(
+                        "jac_first",
+                        Expr::and(
+                            Expr::gt(Expr::abs(Expr::var("jac_sv")), Expr::f32(EIGENVECTOR_SIGN_EPSILON)),
+                            Expr::eq(Expr::var("jac_sign_found"), Expr::u32(0)),
+                        ),
+                    ),
+                    Node::assign(
+                        "jac_sign",
+                        Expr::select(
+                            Expr::var("jac_first"),
+                            Expr::select(
+                                Expr::lt(Expr::var("jac_sv"), Expr::f32(0.0)),
+                                Expr::f32(-1.0),
+                                Expr::f32(1.0),
+                            ),
+                            Expr::var("jac_sign"),
+                        ),
+                    ),
+                    Node::assign(
+                        "jac_sign_found",
+                        Expr::select(
+                            Expr::var("jac_first"),
+                            Expr::u32(1),
+                            Expr::var("jac_sign_found"),
+                        ),
+                    ),
+                ],
+            ),
+            Node::loop_for(
+                "jac_sj",
+                Expr::u32(0),
+                Expr::u32(n),
+                vec![Node::store(
+                    eigenvectors,
+                    idx(Expr::var("jac_sj"), n, Expr::var("jac_sk")),
+                    Expr::mul(
+                        Expr::load(eigenvectors, idx(Expr::var("jac_sj"), n, Expr::var("jac_sk"))),
+                        Expr::var("jac_sign"),
+                    ),
+                )],
             ),
         ],
     ));

@@ -2,13 +2,13 @@
 use vyre_foundation::ir::DataType;
 use vyre_lower::{
     analyses::{
-        weir_alias::{AliasFactSet, NoAliasFact},
-        weir_reaching_def::ReachingDefFactSet,
+        alias_import::{AliasFactSet, NoAliasFact},
+        reaching_def_import::ReachingDefFactSet,
     },
     rewrites::{
-        licm_with_dataflow_analysis_facts, licm_with_weir_alias_facts,
-        loop_fission_with_dataflow_analysis_facts, loop_fission_with_weir_alias_facts,
-        loop_fusion_with_dataflow_analysis_facts, loop_fusion_with_weir_alias_facts,
+        licm_with_dataflow_analysis_facts, licm_with_external_alias_facts,
+        loop_fission_with_dataflow_analysis_facts, loop_fission_with_external_alias_facts,
+        loop_fusion_with_dataflow_analysis_facts, loop_fusion_with_external_alias_facts,
     },
     BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
     KernelOp, KernelOpKind, LiteralValue, MemoryClass,
@@ -125,7 +125,7 @@ fn reaching_defs_unlock_alias_proven_loop_fusion() {
     let (aliases, reaching) = alias_and_reaching();
 
     assert_eq!(
-        loop_count(&loop_fusion_with_weir_alias_facts(&desc, &aliases)),
+        loop_count(&loop_fusion_with_external_alias_facts(&desc, &aliases)),
         2
     );
     assert_eq!(
@@ -182,7 +182,7 @@ fn reaching_defs_unlock_alias_proven_loop_fission() {
     let (aliases, reaching) = alias_and_reaching();
 
     assert_eq!(
-        loop_count(&loop_fission_with_weir_alias_facts(&desc, &aliases)),
+        loop_count(&loop_fission_with_external_alias_facts(&desc, &aliases)),
         1
     );
     assert_eq!(
@@ -255,7 +255,7 @@ fn reaching_defs_unlock_alias_proven_licm_load_hoist() {
     reaching.set_reaching_defs(40, vec![12]);
 
     assert_eq!(
-        top_level_load_count(&licm_with_weir_alias_facts(&desc, &aliases)),
+        top_level_load_count(&licm_with_external_alias_facts(&desc, &aliases)),
         0
     );
     assert_eq!(

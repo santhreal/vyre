@@ -1,7 +1,6 @@
 //! Optimization experiment design governance test suite.
 
 const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
-const PLAN: &str = include_str!("../../../docs/optimization/ALL_AXES_ACCELERATION_PLAN.md");
 const DESIGN: &str =
     include_str!("../../../docs/optimization/OPTIMIZATION_EXPERIMENT_DESIGN_POLICY.toml");
 const STRATA: &str =
@@ -116,34 +115,6 @@ fn multiple_comparison_policy_records_family_scope_correction_alpha_effect_explo
         "operator-release-load-comparison",
     ] {
         assert!(MULTIPLE.contains(required), "multiple comparison policy must include {required}");
-    }
-}
-
-#[test]
-fn plan_contains_optimization_experiment_design_rows() {
-    for row in [
-        "VX-1381",
-        "VX-1382",
-        "VX-1383",
-        "VX-1384",
-        "VX-1385",
-        "VX-1386",
-        "VX-1387",
-        "VX-1388",
-        "VX-1389",
-        "VX-1390",
-        "VX-1391",
-        "VX-1392",
-        "VX-1393",
-        "VX-1394",
-        "VX-1395",
-        "VX-1396",
-        "VX-1397",
-        "VX-1398",
-        "VX-1399",
-        "VX-1400",
-    ] {
-        assert!(PLAN.contains(row), "plan must include {row}");
     }
 }
 

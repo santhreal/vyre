@@ -36,10 +36,10 @@ vyre 1.0 is not yet shipped. 0.4 is alpha. The 7 frozen contracts and 24 `Algebr
 vyre has no runtime trait-object dispatch anywhere. Every extension is compile-time monomorphized. Zero-cost abstractions. Python-level extensibility with Rust-level performance.
 
 ## Who funds this?
-Santh Project. See the about page at santhsecurity.org.
+Santh Project. See the about page at santhreal.org.
 
 ## Where do I ask a question?
-GitHub Discussions at github.com/santhsecurity/vyre/discussions.
+GitHub Discussions at github.com/santhreal/vyre/discussions.
 
 ## Where do I file a bug?
 GitHub Issues. See `.github/ISSUE_TEMPLATE/` for structured templates.

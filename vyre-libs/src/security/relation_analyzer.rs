@@ -3,7 +3,7 @@
 //! This module keeps relation-query evidence at the security boundary while
 //! reusing the canonical [`super::facts`] fact and finding proof schema. It is
 //! intentionally host-side metadata/oracle code: GPU execution still belongs to
-//! the existing graph/dataflow primitives and Weir flow boundary.
+//! the existing graph/dataflow primitives and external flow boundary.
 
 use std::error::Error;
 use std::fmt::{Display, Formatter};
@@ -50,7 +50,7 @@ pub struct GeneratedSecurityRelationAnalyzerSpec<'a> {
     pub evidence_digest: &'a str,
     /// Consumer precision contract for finding proof bundles.
     pub precision_contract: PrecisionContract,
-    /// Baseline id, such as `weir-ifds` or `vyre-security-current`.
+    /// Baseline id, such as `external-ifds` or `vyre-security-current`.
     pub baseline_id: &'a str,
 }
 
@@ -63,12 +63,12 @@ pub struct GeneratedSecurityRelationAnalyzerRunStats {
     pub run_time_ns: u64,
     /// Resident or host memory bytes consumed by relation execution.
     pub memory_bytes: u64,
-    /// Weir comparator tuple count.
-    pub weir_tuple_count: u32,
+    /// external comparator tuple count.
+    pub external_tuple_count: u32,
     /// Current Vyre comparator tuple count.
     pub vyre_tuple_count: u32,
-    /// Weir comparator finding count.
-    pub weir_finding_count: u32,
+    /// external comparator finding count.
+    pub external_finding_count: u32,
     /// Current Vyre comparator finding count.
     pub vyre_finding_count: u32,
 }
@@ -98,12 +98,12 @@ pub struct GeneratedSecurityRelationAnalyzerEvidence {
     pub generated_tuple_count: u32,
     /// Findings emitted by the generated analyzer.
     pub generated_finding_count: u32,
-    /// Weir comparator tuple count.
-    pub weir_tuple_count: u32,
+    /// external comparator tuple count.
+    pub external_tuple_count: u32,
     /// Current Vyre comparator tuple count.
     pub vyre_tuple_count: u32,
-    /// Weir comparator finding count.
-    pub weir_finding_count: u32,
+    /// external comparator finding count.
+    pub external_finding_count: u32,
     /// Current Vyre comparator finding count.
     pub vyre_finding_count: u32,
     /// Generated analyzer compile time.
@@ -219,7 +219,7 @@ pub fn run_generated_security_relation_analyzer(
         spec.baseline_id,
         "tuple_count",
         generated_tuple_count,
-        stats.weir_tuple_count,
+        stats.external_tuple_count,
     )?;
     compare_baseline(
         spec.baseline_id,
@@ -231,7 +231,7 @@ pub fn run_generated_security_relation_analyzer(
         spec.baseline_id,
         "finding_count",
         generated_finding_count,
-        stats.weir_finding_count,
+        stats.external_finding_count,
     )?;
     compare_baseline(
         spec.baseline_id,
@@ -254,9 +254,9 @@ pub fn run_generated_security_relation_analyzer(
                 .unwrap_or(u32::MAX),
             generated_tuple_count,
             generated_finding_count,
-            weir_tuple_count: stats.weir_tuple_count,
+            external_tuple_count: stats.external_tuple_count,
             vyre_tuple_count: stats.vyre_tuple_count,
-            weir_finding_count: stats.weir_finding_count,
+            external_finding_count: stats.external_finding_count,
             vyre_finding_count: stats.vyre_finding_count,
             compile_time_ns: stats.compile_time_ns,
             run_time_ns: stats.run_time_ns,
@@ -462,7 +462,7 @@ mod tests {
             backend_id: "generated-relation-oracle",
             evidence_digest: "relation-evidence-digest",
             precision_contract: PrecisionContract::ZeroFalsePositive,
-            baseline_id: "weir-ifds+vyre-current",
+            baseline_id: "external-ifds+vyre-current",
         }
     }
 
@@ -471,9 +471,9 @@ mod tests {
             compile_time_ns: 11,
             run_time_ns: 17,
             memory_bytes: 128,
-            weir_tuple_count: tuple_count,
+            external_tuple_count: tuple_count,
             vyre_tuple_count: tuple_count,
-            weir_finding_count: finding_count,
+            external_finding_count: finding_count,
             vyre_finding_count: finding_count,
         }
     }

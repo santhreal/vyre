@@ -134,15 +134,15 @@ pub struct StaticAnalysisFixpointComparison {
     pub max_iterations: u32,
     /// Vyre dense semiring-GEMM closure report.
     pub vyre_semiring: FixpointEngineReport,
-    /// Weir-compatible CSR frontier closure report.
-    pub weir_frontier: FixpointEngineReport,
+    /// external-engine CSR frontier closure report.
+    pub external_frontier: FixpointEngineReport,
     /// GraphBLAS-style sparse boolean frontier closure report.
     pub graphblas_sparse: FixpointEngineReport,
     /// Whether all three closures are byte-identical.
     pub exact_reachability_sets: bool,
 }
 
-/// Compare Vyre semiring, Weir-style frontier, and GraphBLAS-style sparse
+/// Compare Vyre semiring, external-style frontier, and GraphBLAS-style sparse
 /// reachability closures on one static-analysis adjacency matrix.
 ///
 /// # Errors
@@ -170,15 +170,15 @@ pub fn compare_static_analysis_reachability_fixpoints(
     let normalized = normalize_bool_matrix(adj);
     let csr = dense_bool_to_csr(&normalized, n_us);
     let vyre_semiring = vyre_semiring_reachability_report(&normalized, n, max_iters)?;
-    let weir_frontier = weir_frontier_reachability_report(&csr, n_us, max_iters)?;
+    let external_frontier = external_frontier_reachability_report(&csr, n_us, max_iters)?;
     let graphblas_sparse = graphblas_sparse_reachability_report(&csr, n_us, max_iters)?;
-    let exact_reachability_sets = vyre_semiring.reachability == weir_frontier.reachability
+    let exact_reachability_sets = vyre_semiring.reachability == external_frontier.reachability
         && vyre_semiring.reachability == graphblas_sparse.reachability;
     Ok(StaticAnalysisFixpointComparison {
         node_count: n,
         max_iterations: max_iters,
         vyre_semiring,
-        weir_frontier,
+        external_frontier,
         graphblas_sparse,
         exact_reachability_sets,
     })
@@ -476,7 +476,7 @@ fn vyre_semiring_reachability_report(
     })
 }
 
-fn weir_frontier_reachability_report(
+fn external_frontier_reachability_report(
     csr: &[Vec<usize>],
     n_us: usize,
     max_iters: u32,
@@ -519,7 +519,7 @@ fn weir_frontier_reachability_report(
     let active_time_ns = started.elapsed().as_nanos().max(1);
     Ok(FixpointEngineReport {
         telemetry: FixpointEngineTelemetry {
-            engine_id: "weir.csr.frontier",
+            engine_id: "external.csr.frontier",
             iterations: max_layers,
             bytes_touched: edge_visits
                 .saturating_add(frontier_visits)
@@ -1374,7 +1374,7 @@ mod tests {
     use vyre_foundation::ir::Program;
 
     #[test]
-    fn static_analysis_fixpoint_comparison_matches_vyre_weir_and_graphblas_closures() {
+    fn static_analysis_fixpoint_comparison_matches_vyre_external_and_graphblas_closures() {
         let adj = vec![
             0, 1, 0, 0, 0, //
             0, 0, 1, 1, 0, //
@@ -1395,20 +1395,20 @@ mod tests {
 
         assert!(report.exact_reachability_sets);
         assert_eq!(report.vyre_semiring.reachability, expected);
-        assert_eq!(report.weir_frontier.reachability, expected);
+        assert_eq!(report.external_frontier.reachability, expected);
         assert_eq!(report.graphblas_sparse.reachability, expected);
         assert_eq!(
             report.vyre_semiring.telemetry.engine_id,
             "vyre.semiring.bool_or.dense"
         );
-        assert_eq!(report.weir_frontier.telemetry.engine_id, "weir.csr.frontier");
+        assert_eq!(report.external_frontier.telemetry.engine_id, "external.csr.frontier");
         assert_eq!(
             report.graphblas_sparse.telemetry.engine_id,
             "graphblas.sparse.bool_mxm"
         );
         for telemetry in [
             &report.vyre_semiring.telemetry,
-            &report.weir_frontier.telemetry,
+            &report.external_frontier.telemetry,
             &report.graphblas_sparse.telemetry,
         ] {
             assert!(telemetry.iterations > 0);

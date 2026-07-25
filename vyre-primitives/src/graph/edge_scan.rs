@@ -65,6 +65,56 @@ pub(in crate::graph) fn csr_edge_expand_nodes(
     let dst_bit = name("dst_bit");
     let old = name("old");
 
+    // Callers that track a changed flag (the in-place accumulating paths) pass a
+    // non-empty `on_new_bit`; the two-buffer forward step (frontier_in -> frontier_out)
+    // discovers no new-bit work and passes an empty body. When empty, skip the
+    // `old`-load + 0->1 flip guard entirely and emit a bare `atomic_or` so the
+    // forward step keeps its minimal set-only IR (no unused binding, no empty guard).
+    let flip_body = on_new_bit();
+    let set_dst_bit = if flip_body.is_empty() {
+        vec![Node::let_bind(
+            name("_prev").as_str(),
+            Expr::atomic_or(
+                frontier_out,
+                Expr::var(dst_word_idx.as_str()),
+                Expr::var(dst_bit.as_str()),
+            ),
+        )]
+    } else {
+        vec![
+            Node::let_bind(
+                old.as_str(),
+                Expr::atomic_or(
+                    frontier_out,
+                    Expr::var(dst_word_idx.as_str()),
+                    Expr::var(dst_bit.as_str()),
+                ),
+            ),
+            Node::if_then(
+                Expr::eq(
+                    Expr::bitand(Expr::var(old.as_str()), Expr::var(dst_bit.as_str())),
+                    Expr::u32(0),
+                ),
+                flip_body,
+            ),
+        ]
+    };
+
+    let mut on_bounded = vec![
+        Node::let_bind(
+            dst_word_idx.as_str(),
+            frontier_index(Expr::shr(Expr::var(dst.as_str()), Expr::u32(5))),
+        ),
+        Node::let_bind(
+            dst_bit.as_str(),
+            Expr::shl(
+                Expr::u32(1),
+                Expr::bitand(Expr::var(dst.as_str()), Expr::u32(31)),
+            ),
+        ),
+    ];
+    on_bounded.extend(set_dst_bit);
+
     vec![
         Node::let_bind(
             edge_start.as_str(),
@@ -95,40 +145,7 @@ pub(in crate::graph) fn csr_edge_expand_nodes(
                         ),
                         Node::if_then(
                             Expr::lt(Expr::var(dst.as_str()), Expr::u32(shape.node_count)),
-                            vec![
-                                Node::let_bind(
-                                    dst_word_idx.as_str(),
-                                    frontier_index(Expr::shr(
-                                        Expr::var(dst.as_str()),
-                                        Expr::u32(5),
-                                    )),
-                                ),
-                                Node::let_bind(
-                                    dst_bit.as_str(),
-                                    Expr::shl(
-                                        Expr::u32(1),
-                                        Expr::bitand(Expr::var(dst.as_str()), Expr::u32(31)),
-                                    ),
-                                ),
-                                Node::let_bind(
-                                    old.as_str(),
-                                    Expr::atomic_or(
-                                        frontier_out,
-                                        Expr::var(dst_word_idx.as_str()),
-                                        Expr::var(dst_bit.as_str()),
-                                    ),
-                                ),
-                                Node::if_then(
-                                    Expr::eq(
-                                        Expr::bitand(
-                                            Expr::var(old.as_str()),
-                                            Expr::var(dst_bit.as_str()),
-                                        ),
-                                        Expr::u32(0),
-                                    ),
-                                    on_new_bit(),
-                                ),
-                            ],
+                            on_bounded,
                         ),
                     ],
                 ),

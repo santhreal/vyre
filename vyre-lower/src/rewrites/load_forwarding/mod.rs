@@ -50,9 +50,9 @@ pub fn load_forwarding_with_alias_facts(
 }
 
 #[must_use]
-pub fn load_forwarding_with_weir_alias_facts(
+pub fn load_forwarding_with_external_alias_facts(
     desc: &KernelDescriptor,
-    alias_facts: &crate::analyses::weir_alias::AliasFactSet,
+    alias_facts: &crate::analyses::alias_import::AliasFactSet,
 ) -> KernelDescriptor {
     load_forwarding_with_alias_facts(desc, alias_facts)
 }
@@ -69,8 +69,8 @@ pub fn load_forwarding_with_dataflow_facts(
 #[must_use]
 pub fn load_forwarding_with_dataflow_analysis_facts(
     desc: &KernelDescriptor,
-    alias_facts: &crate::analyses::weir_alias::AliasFactSet,
-    reaching_defs: &crate::analyses::weir_reaching_def::ReachingDefFactSet,
+    alias_facts: &crate::analyses::alias_import::AliasFactSet,
+    reaching_defs: &crate::analyses::reaching_def_import::ReachingDefFactSet,
 ) -> KernelDescriptor {
     load_forwarding_with_dataflow_facts(desc, alias_facts, reaching_defs)
 }
@@ -1380,9 +1380,9 @@ mod tests {
                 literals: vec![LiteralValue::U32(7)],
             },
         };
-        let mut reaching = crate::analyses::weir_reaching_def::ReachingDefFactSet::default();
+        let mut reaching = crate::analyses::reaching_def_import::ReachingDefFactSet::default();
         reaching.set_reaching_defs(2, vec![0]);
-        let aliases = crate::analyses::weir_alias::AliasFactSet::default();
+        let aliases = crate::analyses::alias_import::AliasFactSet::default();
         let out = load_forwarding_with_dataflow_analysis_facts(&desc, &aliases, &reaching);
         assert_eq!(out.body.ops[5].operands, vec![0, 0, 1]);
     }

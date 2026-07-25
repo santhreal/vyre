@@ -46,11 +46,16 @@ impl VyreBackend for CpuRefBackend {
         // (the Law-10 under-coverage this backend used to exhibit). `None` (every
         // megakernel, whose `grid_override` is a work-queue length, not an element
         // count) keeps buffer-shape inference so its grid is never over-run.
-        let result = match config.dispatch_elements {
-            Some(elements) => {
+        // An explicit dispatch grid fully specifies the workgroup coverage (its
+        // N-D shape, e.g. one query per `grid.y` block for batched persistent-BFS),
+        // so it wins over the 1-D `dispatch_elements` floor; the shape-inference
+        // path only applies when neither is set. See `DispatchConfig::dispatch_grid`.
+        let result = match (config.dispatch_grid, config.dispatch_elements) {
+            (Some(grid), _) => vyre_reference::reference_eval_with_grid(program, &values, grid),
+            (None, Some(elements)) => {
                 vyre_reference::reference_eval_with_dispatch(program, &values, elements)
             }
-            None => vyre_reference::reference_eval(program, &values),
+            (None, None) => vyre_reference::reference_eval(program, &values),
         };
         result
             .map(|outputs| outputs.iter().map(Value::to_bytes).collect())

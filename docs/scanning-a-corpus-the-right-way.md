@@ -20,6 +20,7 @@ matches on the host.**
 | One corpus, scanned once, exits | `scan_all` | Count-then-collect: complete match set, no cap tuning, common case is one dispatch |
 | A hot loop re-scanning batch after batch | `prepare_resident_scan` → `ResidentLiteralScan::scan_into` | The DFA + prefilter tables upload **once**; each scan re-stages only the haystack |
 | Per-region presence **and** positions in one launch | `prepare_resident_fused_scan` → `ResidentFusedRegionScan::scan_into` | One 14-binding dispatch produces both outputs; tables still upload once |
+| Full per-region presence with positions for only an appended evidence segment | `prepare_resident_fused_scan_positioned_from` → `ResidentFusedRegionScan::scan_into` | Leading admission rows set presence bits but never consume triple capacity or readback bandwidth |
 | Two or more batches you can pipeline | `scan_into_async` → `PendingMatches::await_into` | Batch _n+1_'s upload overlaps batch _n_'s device execution |
 | You need the kernel-vs-staging split | any `*_timed` twin → `TimedDispatchResult` | `wall_ns` / `device_ns` / `enqueue_ns` / `wait_ns`, cheap enough to leave on |
 

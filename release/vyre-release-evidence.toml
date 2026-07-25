@@ -1,8 +1,8 @@
 schema_version = 1
-plan_path = "../../../../../docs/vyre-weir-release-plan.md"
+release_contract_path = "../docs/RELEASE.md"
 
 [release]
-vyre = "0.6.1"
+vyre = "0.7.0"
 weir = "0.1.0"
 
 [[requirements]]
@@ -194,9 +194,9 @@ evidence = [
   "evidence/parser/distributed-parser-map.json",
   "evidence/parser/vyre-frontend-c-contracts.json",
   "evidence/parser/vyrec-cli-contracts.json",
-  "evidence/parser/weir-contracts.json",
-  "evidence/parser/surgec-contracts.json",
-  "evidence/parser/surgec-grammar-gen-contracts.json",
+  "evidence/parser/external-dataflow-contracts.json",
+  "evidence/parser/compiler-consumer-contracts.json",
+  "evidence/parser/compiler-consumer-grammar-gen-contracts.json",
   "evidence/docs/distributed-parser-coherence.md",
   "evidence/docs/parser-doc-proof.md",
   "evidence/tests/corpus-suite.json",

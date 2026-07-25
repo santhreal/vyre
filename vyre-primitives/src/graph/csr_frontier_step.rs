@@ -129,20 +129,23 @@ fn forward_body(
     allow_mask: u32,
     t: Expr,
 ) -> Vec<Node> {
+    // If `src` is active in frontier_in, walk its CSR edge row via the ONE
+    // canonical edge-scan (crate::graph::edge_scan) and set each allowed `dst`
+    // in frontier_out. Two-buffer forward step: source read from frontier_in
+    // (via active_frontier_source_lane), no changed-flag work, so the walk gets an
+    // empty on_new_bit and an identity frontier index.
     vec![active_frontier_source_lane(
         node_count,
         frontier_in,
         t,
-        edge_scan_body(
+        crate::graph::edge_scan::csr_edge_expand_nodes(
+            ProgramGraphShape::new(node_count, 0),
+            frontier_out,
+            Expr::var("src"),
+            |word| word,
+            Vec::new,
             allow_mask,
-            vec![Node::let_bind(
-                "dst",
-                Expr::load(NAME_EDGE_TARGETS, Expr::var("e")),
-            )],
-            vec![Node::if_then(
-                Expr::lt(Expr::var("dst"), Expr::u32(node_count)),
-                mark_node_bit(frontier_out, "dst", "dst_word_idx", "dst_bit"),
-            )],
+            "",
         ),
     )]
 }

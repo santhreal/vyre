@@ -1,8 +1,8 @@
 //! Region-evidence pipeline, plan W2-2, line 158: the successor to the (now
 //! vestigial) `mega_scan::RulePipeline`.
 //!
-//! `RulePipeline` was the NFA-subgroup integrator, but its real consumer
-//! (keyhog) collapsed `--backend mega-scan` onto region-presence and never used
+//! `RulePipeline` was the NFA-subgroup integrator, but the coalesced-batch consumer
+//! collapsed the mega-scan backend onto region-presence and never used
 //! the full multimatch path. This is what that consumer actually needs: ONE type,
 //! ONE call, returning the complete **phase-1 evidence bundle**: the three
 //! families a coalesced-batch scanner assembles per region:

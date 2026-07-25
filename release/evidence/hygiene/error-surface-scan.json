@@ -3,46 +3,310 @@
   "scan": "error-surface",
   "findings": [
     {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-grammar-gen/src/lex_c11_max_munch.rs",
+      "line": 40,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-grammar-gen/src/c11_lexer.rs",
+      "line": 266,
+      "pattern": "documented_panic_contract",
+      "text": "b.build().expect("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-grammar-gen/src/c11_lexer.rs",
+      "line": 286,
+      "pattern": "documented_panic_contract",
+      "text": "b.build_with_match_kind(MatchKind::LeftmostFirst).expect("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/tu_host/preprocess/reference.rs",
+      "line": 71,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"#elif without matching #if\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/tu_host/preprocess/reference.rs",
+      "line": 74,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"#elif after #else\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/tu_host/preprocess/reference.rs",
+      "line": 85,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"#else without matching #if\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/tu_host/preprocess/reference.rs",
+      "line": 88,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"duplicate preprocessor #else\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/tu_host/preprocess/reference.rs",
+      "line": 98,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"#endif without matching #if\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/tu_host/preprocess/reference.rs",
+      "line": 104,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"active preprocessor #error encountered:{rest}\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/tu_host/preprocess/reference.rs",
+      "line": 119,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"unterminated conditional: {} unclosed #if/#ifdef/#ifndef block(s)\", conditionals.len());"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/tu_host/preprocess/expr/parser.rs",
+      "line": 166,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"exceeding the i128 evaluator width: left shift by {rhs}\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/tu_host/preprocess/expr/parser.rs",
+      "line": 176,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"exceeding the i128 evaluator width: right shift by {rhs}\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/tu_host/preprocess/expr/tokenize.rs",
+      "line": 91,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"malformed preprocessor defined operator: expected identifier\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/tu_host/preprocess/expr/tokenize.rs",
+      "line": 103,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"malformed preprocessor defined operator: missing `)`\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/tu_host/preprocess/expr/tokenize.rs",
+      "line": 369,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/tu_host/preprocess/expr/tokenize.rs",
+      "line": 376,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/tu_host/preprocess/expr/literals.rs",
+      "line": 40,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"empty character literal ''\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/subgroup.rs",
+      "line": 115,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"vyre-driver reduction offsets generation failed: {error}\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/registry/registry.rs",
+      "line": 256,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"vyre-driver extern registry failed verification: {errors:?}\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/scan/mega_scan.rs",
+      "line": 251,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/scan/classic_ac/bounded_ranges.rs",
+      "line": 593,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/scan/classic_ac/bounded_ranges/prefilter/suffix3.rs",
+      "line": 858,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/scan/classic_ac/bounded_ranges/prefilter.rs",
+      "line": 202,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/scan/literal_set.rs",
+      "line": 1421,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/scan/dispatch_io.rs",
+      "line": 69,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/scan/dispatch_io.rs",
+      "line": 333,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/scan/dispatch_io.rs",
+      "line": 378,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/scan/nfa/plan.rs",
+      "line": 114,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/scan/nfa/tables.rs",
+      "line": 29,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/scan/nfa/tables.rs",
+      "line": 100,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/scan/nfa/tables.rs",
+      "line": 154,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/scan/paged_corpus.rs",
+      "line": 1160,
+      "pattern": "documented_panic_contract",
+      "text": "let (staging, pending) = inflight.pop_front().expect(\"depth reached\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/security/predicate_catalog.rs",
+      "line": 91,
+      "pattern": "documented_panic_contract",
+      "text": "try_security_predicate_rows().expect(\"bundled security predicate Tier-B TOML must parse\")"
+    },
+    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/source_cache.rs",
-      "line": 250,
-      "pattern": "expect_call",
+      "line": 255,
+      "pattern": "documented_panic_contract",
       "text": ".expect(\"parsed-source LRU cache lock was poisoned\")"
     },
     {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/parse/declarations.rs",
+      "line": 160,
+      "pattern": "documented_panic_contract",
+      "text": "other => panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/parse/structure/call_graph.rs",
+      "line": 105,
+      "pattern": "documented_panic_contract",
+      "text": "other => panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/parse/structure/call_graph.rs",
+      "line": 112,
+      "pattern": "documented_panic_contract",
+      "text": "other => panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/parse/structure/call_graph.rs",
+      "line": 119,
+      "pattern": "documented_panic_contract",
+      "text": "other => panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/parse/vast/typedef_ann/annotate.rs",
+      "line": 333,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"precomputed-context annotation requires the visible-type side table\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/parse/vast/typedef_ann/annotate.rs",
+      "line": 390,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"precomputed-context annotation requires the visible-type side table\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/parse/vast/typedef_ann/annotate.rs",
+      "line": 507,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"precomputed-context annotation requires the visible-type side table\");"
+    },
+    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/parse/structure_statement.rs",
-      "line": 23,
-      "pattern": "panic_macro",
+      "line": 27,
+      "pattern": "documented_panic_contract",
       "text": "other => panic!("
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/sema/lazy_scope.rs",
-      "line": 198,
-      "pattern": "panic_macro",
+      "line": 204,
+      "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|_| panic!(\"lazy scope table read lock was poisoned\"))"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/sema/lazy_scope.rs",
-      "line": 204,
-      "pattern": "panic_macro",
+      "line": 214,
+      "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|_| panic!(\"lazy scope table write lock was poisoned\"))"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/lower/semantic_edges/reference.rs",
-      "line": 72,
-      "pattern": "expect_call",
+      "line": 77,
+      "pattern": "documented_panic_contract",
       "text": ".expect(\"truncated VAST: node_count * row stride overflowed usize\");"
     },
     {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/literal_set_decode_heavy.rs",
+      "line": 78,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"PATTERNS is non-empty\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/scheduling/megakernel_schedule.rs",
+      "line": 136,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"vyre-self-substrate homotopy schedule generation failed: {error}\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/hardware/scratch.rs",
+      "line": 61,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"{context} could not reserve scratch capacity for {capacity} item(s): {message}\");"
+    },
+    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/vast_tree_walk/builders.rs",
-      "line": 91,
-      "pattern": "panic_macro",
+      "line": 96,
+      "pattern": "documented_panic_contract",
       "text": "panic!(\"trusted VAST preorder walk shape was not prevalidated: {error}\")"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/vast_tree_walk/builders.rs",
-      "line": 113,
-      "pattern": "panic_macro",
+      "line": 123,
+      "pattern": "documented_panic_contract",
       "text": "panic!(\"trusted VAST postorder walk shape was not prevalidated: {error}\")"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/analysis/graph_view.rs",
+      "line": 314,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"stack is non-empty inside `while let Some(..) = stack.last()`\")"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/fuzz/fuzz_targets/program_wire.rs",
@@ -57,94 +321,310 @@
       "text": ".expect(\"Fix: reparsing canonical to_wire bytes must succeed; restore this invariant before continuing.\");"
     },
     {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-test-support/src/lib.rs",
+      "line": 100,
+      "pattern": "documented_panic_contract",
+      "text": ".unwrap_or_else(|e| panic!(\"{crate_name} source file {path:?} must be readable: {e}\"));"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-test-support/src/lib.rs",
+      "line": 123,
+      "pattern": "documented_panic_contract",
+      "text": ".unwrap_or_else(|e| panic!(\"{crate_name} test file {path:?} must be readable: {e}\")),"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-test-support/src/lib.rs",
+      "line": 191,
+      "pattern": "documented_panic_contract",
+      "text": "let path = entry.expect(\"source entry must be readable\").path();"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/megakernel/batch.rs",
+      "line": 914,
+      "pattern": "documented_panic_contract",
+      "text": "let last_offset = *output_offsets.last().expect(\"non-empty: checked above\") as usize;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/megakernel/dispatcher.rs",
+      "line": 525,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/megakernel/dispatcher.rs",
+      "line": 548,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/src/oob.rs",
-      "line": 46,
-      "pattern": "panic_macro",
+      "line": 127,
+      "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|_| panic!(\"reference Buffer byte lock was poisoned\"))"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/src/oob.rs",
-      "line": 54,
-      "pattern": "panic_macro",
+      "line": 138,
+      "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|_| panic!(\"reference Buffer byte lock was poisoned\"))"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/src/oob.rs",
-      "line": 107,
-      "pattern": "panic_macro",
+      "line": 195,
+      "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|_| panic!(\"reference Buffer byte lock was poisoned\"))"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/src/oob.rs",
-      "line": 112,
-      "pattern": "panic_macro",
+      "line": 200,
+      "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|_| panic!(\"reference Buffer byte lock was poisoned\"))"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/src/execution/hashmap/node_step.rs",
+      "line": 499,
+      "pattern": "documented_panic_contract",
+      "text": ".unwrap_or_else(|_| panic!(\"reference Buffer byte lock was poisoned\"));"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/src/execution/hashmap/node_step.rs",
+      "line": 530,
+      "pattern": "documented_panic_contract",
+      "text": ".unwrap_or_else(|_| panic!(\"reference Buffer byte lock was poisoned\"));"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/vast_tree_walk.rs",
-      "line": 66,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
+      "line": 69,
+      "pattern": "documented_panic_contract",
+      "text": "try_ast_walk_preorder(nodes, out, node_count, out_cap).unwrap_or_else(|error| panic!(\"{error}\"))"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/vast_tree_walk.rs",
-      "line": 87,
-      "pattern": "panic_macro",
+      "line": 94,
+      "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/dominator_frontier.rs",
-      "line": 406,
-      "pattern": "panic_macro",
+      "line": 410,
+      "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/persistent_bfs/program.rs",
-      "line": 330,
-      "pattern": "panic_macro",
+      "line": 591,
+      "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
     },
     {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/persistent_bfs/program.rs",
+      "line": 663,
+      "pattern": "documented_panic_contract",
+      "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/exploded/canonicalize.rs",
+      "line": 33,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"vyre-primitives CSR row canonicalization failed: {error}\");"
+    },
+    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/csr_forward_or_changed/program_parallel_batch_global.rs",
-      "line": 67,
-      "pattern": "panic_macro",
+      "line": 68,
+      "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/csr_forward_or_changed/program_parallel_batch.rs",
-      "line": 37,
-      "pattern": "panic_macro",
+      "line": 34,
+      "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/program_graph.rs",
-      "line": 110,
-      "pattern": "panic_macro",
+      "line": 114,
+      "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/csr_bidirectional.rs",
-      "line": 965,
-      "pattern": "panic_macro",
+      "line": 1014,
+      "pattern": "documented_panic_contract",
       "text": "try_merge_frontier_or_changed(current, next).unwrap_or_else(|error| panic!(\"{error}\"))"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/matching/dfa_compile.rs",
-      "line": 346,
-      "pattern": "panic_macro",
+      "line": 370,
+      "pattern": "documented_panic_contract",
       "text": "Err(error) => panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/matching/dfa_compile.rs",
+      "line": 415,
+      "pattern": "documented_panic_contract",
+      "text": "Err(error) => panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/matching/dfa_compile.rs",
+      "line": 532,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"pattern_idx must be <= u32::MAX - 1 to fit the pid+1 encoding\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/matching/nfa_to_dfa.rs",
+      "line": 326,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/fractional.rs",
+      "line": 57,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"vyre-primitives Grünwald-Letnikov kernel generation failed: {error}\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/fractional.rs",
+      "line": 69,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"vyre-primitives Grünwald-Letnikov kernel generation failed: {error}\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/fractional.rs",
+      "line": 114,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"vyre-primitives 16.16 fixed-point kernel conversion failed: {error}\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/fractional.rs",
+      "line": 126,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"vyre-primitives 16.16 fixed-point kernel conversion failed: {error}\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/bitset/stochastic_compute.rs",
+      "line": 78,
+      "pattern": "documented_panic_contract",
+      "text": "Err(error) => panic!(\"vyre-primitives stochastic bitstream encode failed: {error}\"),"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/bitset/stochastic_compute.rs",
+      "line": 89,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"vyre-primitives stochastic bitstream encode_into failed: {error}\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/bitset/four_russians.rs",
+      "line": 123,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"vyre-primitives dense boolean-matvec LUT build failed: {error}\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/wire.rs",
+      "line": 184,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"vyre-primitives u32 wire pack failed: {error}\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/wire.rs",
+      "line": 262,
+      "pattern": "documented_panic_contract",
+      "text": "Err(error) => panic!(\"vyre-primitives byte-lane wire pack failed: {error}\"),"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/wire.rs",
+      "line": 272,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"vyre-primitives byte-lane wire pack failed: {error}\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/wire.rs",
+      "line": 346,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"vyre-primitives f32 wire pack failed: {error}\");"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-intrinsics/src/category_check.rs",
       "line": 23,
-      "pattern": "panic_macro",
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-intrinsics/src/hardware/subgroup_shuffle/subgroup_shuffle.rs",
+      "line": 55,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/protocol/codec/debug_log.rs",
+      "line": 16,
+      "pattern": "documented_panic_contract",
+      "text": "Err(error) => panic!(\"vyre-runtime debug-log decode failed: {error}\"),"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/protocol/codec/debug_log.rs",
+      "line": 32,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"vyre-runtime debug-log decode failed: {error}\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/io/queue.rs",
+      "line": 176,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"IO queue word index overflow is impossible after slot bounds check; Fix: ensure slot_count <= IO_SLOT_COUNT before calling completion\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/io/queue.rs",
+      "line": 184,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"IO queue word index overflow is impossible after slot bounds check; Fix: ensure slot_count <= IO_SLOT_COUNT before calling completion\"),"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/io/queue.rs",
+      "line": 187,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"IO queue word index overflow is impossible after slot bounds check; Fix: ensure slot_count <= IO_SLOT_COUNT before calling completion\"),"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/io/queue.rs",
+      "line": 190,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"IO queue word index overflow is impossible after slot bounds check; Fix: ensure slot_count <= IO_SLOT_COUNT before calling completion\"),"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/io/queue.rs",
+      "line": 208,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"IO queue word index overflow is impossible after slot bounds check; Fix: ensure slot_count <= IO_SLOT_COUNT before calling is_recycled\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/descriptor.rs",
+      "line": 283,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/planner/fusion.rs",
+      "line": 373,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"vyre-runtime fusion subset selection failed on malformed planner input: {error}\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/planner/fusion.rs",
+      "line": 449,
+      "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/pipeline_cache/in_memory.rs",
-      "line": 41,
-      "pattern": "panic_macro",
+      "line": 47,
+      "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|_| panic!(\"pipeline cache shard lock was poisoned\"))"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/scheduler.rs",
+      "line": 97,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"vyre-runtime work-unit partition failed: {error}\");"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/ifds/cpu_oracle.rs",
@@ -286,31 +766,37 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/ifds_cpu_oracle.rs",
-      "line": 109,
-      "pattern": "expect_call",
-      "text": ".expect(\"weir IFDS dense BFS oracle received an empty CSR row_ptr. Fix: pass a CSR table with node_count + 1 row offsets.\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/ifds_cpu_oracle.rs",
-      "line": 114,
-      "pattern": "panic_macro",
-      "text": "panic!(\"IFDS CPU oracle BFS queue reservation failed: {error}\")"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/ifds_cpu_oracle.rs",
-      "line": 119,
-      "pattern": "panic_macro",
-      "text": "panic!(\"IFDS CPU oracle BFS result reservation failed: {error}\")"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/ifds_cpu_oracle.rs",
-      "line": 136,
+      "line": 111,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/ifds_cpu_oracle.rs",
-      "line": 156,
+      "line": 127,
+      "pattern": "expect_call",
+      "text": ".expect(\"weir IFDS dense BFS oracle received an empty CSR row_ptr. Fix: pass a CSR table with node_count + 1 row offsets.\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/ifds_cpu_oracle.rs",
+      "line": 132,
+      "pattern": "panic_macro",
+      "text": "panic!(\"IFDS CPU oracle BFS queue reservation failed: {error}\")"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/ifds_cpu_oracle.rs",
+      "line": 137,
+      "pattern": "panic_macro",
+      "text": "panic!(\"IFDS CPU oracle BFS result reservation failed: {error}\")"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/ifds_cpu_oracle.rs",
+      "line": 154,
+      "pattern": "panic_macro",
+      "text": "panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/ifds_cpu_oracle.rs",
+      "line": 174,
       "pattern": "panic_macro",
       "text": "panic!("
     },
@@ -469,231 +955,50 @@
       "line": 132,
       "pattern": "unwrap_call",
       "text": "path.statements.last().unwrap().node_id,"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/unsanitized_call_arg.rs",
+      "line": 210,
+      "pattern": "documented_panic_contract",
+      "text": "Err(error) => panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/lower/program_merge.rs",
+      "line": 59,
+      "pattern": "documented_panic_contract",
+      "text": "Err(error) => panic!(\"isolated merge (diagnostic) failed: {error}\"),"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/lower/program_merge.rs",
+      "line": 64,
+      "pattern": "documented_panic_contract",
+      "text": "Err(error) => panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/fuzz/fuzz_targets/scan_bytes.rs",
+      "line": 89,
+      "pattern": "panic_macro",
+      "text": "panic!(\"error missing Fix: directive: {msg}\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-grammar-gen/src/lex_c11_max_munch.rs",
+      "line": 40,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-grammar-gen/src/c11_lexer.rs",
+      "line": 266,
+      "pattern": "documented_panic_contract",
+      "text": "b.build().expect("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-grammar-gen/src/c11_lexer.rs",
+      "line": 286,
+      "pattern": "documented_panic_contract",
+      "text": "b.build_with_match_kind(MatchKind::LeftmostFirst).expect("
     }
   ],
-  "release_blocking_findings": [
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/source_cache.rs",
-      "line": 250,
-      "pattern": "expect_call",
-      "owner_lane": "frontend_parsing",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/parse/structure_statement.rs",
-      "line": 23,
-      "pattern": "panic_macro",
-      "owner_lane": "frontend_parsing",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/sema/lazy_scope.rs",
-      "line": 198,
-      "pattern": "panic_macro",
-      "owner_lane": "frontend_parsing",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/sema/lazy_scope.rs",
-      "line": 204,
-      "pattern": "panic_macro",
-      "owner_lane": "frontend_parsing",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/lower/semantic_edges/reference.rs",
-      "line": 72,
-      "pattern": "expect_call",
-      "owner_lane": "frontend_parsing",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/vast_tree_walk/builders.rs",
-      "line": 91,
-      "pattern": "panic_macro",
-      "owner_lane": "security_dataflow",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/vast_tree_walk/builders.rs",
-      "line": 113,
-      "pattern": "panic_macro",
-      "owner_lane": "security_dataflow",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/src/oob.rs",
-      "line": 46,
-      "pattern": "panic_macro",
-      "owner_lane": "driver_shared",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/src/oob.rs",
-      "line": 54,
-      "pattern": "panic_macro",
-      "owner_lane": "driver_shared",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/src/oob.rs",
-      "line": 107,
-      "pattern": "panic_macro",
-      "owner_lane": "driver_shared",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/src/oob.rs",
-      "line": 112,
-      "pattern": "panic_macro",
-      "owner_lane": "driver_shared",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/vast_tree_walk.rs",
-      "line": 66,
-      "pattern": "panic_macro",
-      "owner_lane": "security_dataflow",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/vast_tree_walk.rs",
-      "line": 87,
-      "pattern": "panic_macro",
-      "owner_lane": "security_dataflow",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/dominator_frontier.rs",
-      "line": 406,
-      "pattern": "panic_macro",
-      "owner_lane": "security_dataflow",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/persistent_bfs/program.rs",
-      "line": 330,
-      "pattern": "panic_macro",
-      "owner_lane": "security_dataflow",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/csr_forward_or_changed/program_parallel_batch_global.rs",
-      "line": 67,
-      "pattern": "panic_macro",
-      "owner_lane": "security_dataflow",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/csr_forward_or_changed/program_parallel_batch.rs",
-      "line": 37,
-      "pattern": "panic_macro",
-      "owner_lane": "security_dataflow",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/program_graph.rs",
-      "line": 110,
-      "pattern": "panic_macro",
-      "owner_lane": "security_dataflow",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/csr_bidirectional.rs",
-      "line": 965,
-      "pattern": "panic_macro",
-      "owner_lane": "security_dataflow",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/matching/dfa_compile.rs",
-      "line": 346,
-      "pattern": "panic_macro",
-      "owner_lane": "scan_static",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-intrinsics/src/category_check.rs",
-      "line": 23,
-      "pattern": "panic_macro",
-      "owner_lane": "driver_shared",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/pipeline_cache/in_memory.rs",
-      "line": 41,
-      "pattern": "panic_macro",
-      "owner_lane": "runtime_megakernel",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    }
-  ],
-  "blockers": [
-    "22 release-blocking `error-surface` finding(s) remain"
-  ]
+  "release_blocking_findings": [],
+  "blockers": []
 }

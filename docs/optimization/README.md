@@ -149,3 +149,37 @@ Required structural checks:
 
 When these checks are not yet automated, the patch must include the grep/script
 used as proof and a follow-up enforcement issue in this directory.
+
+## The research-audit artifact
+
+`research-audit` writes `release/evidence/optimization/research-audit.json`. Run it
+with
+
+```bash
+./cargo_full run --bin xtask -- research-audit \
+    --output release/evidence/optimization/research-audit.json
+```
+
+The artifact is a single JSON object. Its schema is versioned by `schema_version`,
+and a reader that does not recognize that number must stop rather than guess at the
+field meanings. The fields you will use most:
+
+- `schema_version` - integer schema version of this artifact.
+- `generator_command` - the exact command that produced the file, so a stale artifact
+  can be regenerated without guesswork.
+- `plan_row_count` and `minimum_plan_row_count` - rows found, and the floor the gate
+  requires.
+- `source_ledger_findings` - one entry per problem found in
+  `RESEARCH_SOURCE_LEDGER.toml`, each naming the ledger key and what is wrong with it.
+- `competitor_issue_findings`, `research_plan_coverage_findings`,
+  `rules_as_data_findings` - the same finding shape for the other Tier-B manifests.
+- `blockers` - the release-blocking subset. An empty array is the only passing state;
+  the command exits non-zero when it is non-empty.
+- `source_digest` - a digest of every source file the audit read. It changes whenever
+  an input changes, so a downstream gate can tell a fresh artifact from one generated
+  against different inputs.
+
+Exit codes: `0` when `blockers` is empty, `1` when it is not, and `2` when an input
+manifest cannot be read or parsed. The command never writes a partial artifact: a
+read or parse failure exits before the file is opened, so an existing artifact is
+never silently replaced by a truncated one.

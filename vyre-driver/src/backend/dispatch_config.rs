@@ -71,6 +71,24 @@ pub struct DispatchConfig {
     /// `None` (the default, and every megakernel) means "infer from buffer shapes"
     ///: so a megakernel is never over-run by a byte count that is not its grid.
     pub dispatch_elements: Option<u32>,
+    /// True per-workgroup-axis dispatch grid `[x, y, z]` for a multi-dimensional
+    /// element dispatch.
+    ///
+    /// This is the N-dimensional counterpart of
+    /// [`dispatch_elements`](Self::dispatch_elements) (a 1-D floor). A backend that
+    /// infers its coverage from buffer SHAPES rather than a real GPU grid (the CPU
+    /// reference interpreter,
+    /// [`CpuRefBackend`](../../../vyre_driver_reference/index.html)) distributes the
+    /// dispatch only across workgroup axes whose size is greater than one, so a
+    /// program that fans a `[256, 1, 1]` workgroup across `grid.y` (batched
+    /// persistent-BFS runs one query per `grid.y` block) would collapse to
+    /// `grid.y == 1` and SILENTLY compute only the first query (a Law-10
+    /// under-coverage). A caller that knows the real grid, e.g.
+    /// `persistent_bfs_batch_dispatch_grid(node_count, query_count)`, sets it here so
+    /// the interpreter covers every workgroup the GPU would. `None` (the default)
+    /// keeps buffer-shape inference. When both this and `dispatch_elements` are set,
+    /// this wins because it fully specifies the grid.
+    pub dispatch_grid: Option<[u32; 3]>,
     /// Maximum back-to-back dispatch iterations the backend should run on
     /// the same persistent input/output handles before reading back the
     /// final outputs.
@@ -109,6 +127,7 @@ impl DispatchConfig {
             workgroup_override: None,
             grid_override: None,
             dispatch_elements: None,
+            dispatch_grid: None,
             fixpoint_iterations: None,
             speculation: None,
             persistent_thread: None,

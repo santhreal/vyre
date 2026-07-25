@@ -18,7 +18,18 @@ missing="$(mktemp)"
 stale="$(mktemp)"
 trap 'rm -f "$actual" "$indexed" "$missing" "$stale"' EXIT
 
-find docs -type f -name '*.md' ! -path "$INDEX" | sort > "$actual"
+# Tracked files only. docs/INDEX.md maps the PUBLIC documentation set, and an
+# untracked working document (a local plan, a scratch note) is not part of it.
+# Enumerating the filesystem made every uncommitted file under docs/ fail the
+# gate, which is noise rather than a finding. Outside a git checkout, such as a
+# packaged crate, fall back to the filesystem and say so, because there the
+# tracked set is not knowable and scanning everything is the honest answer.
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  git ls-files 'docs/*.md' 'docs/**/*.md' | grep -v "^${INDEX}$" | sort > "$actual"
+else
+  printf 'docs index contract: not a git checkout, enumerating docs/ from the filesystem.\n'
+  find docs -type f -name '*.md' ! -path "$INDEX" | sort > "$actual"
+fi
 grep -Eo '\((docs/)?[^)]*\.md\)' "$INDEX" \
   | tr -d '()' \
   | awk '{ if ($0 ~ /^docs\//) print $0; else print "docs/" $0 }' \

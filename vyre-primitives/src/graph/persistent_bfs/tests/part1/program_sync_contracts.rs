@@ -17,8 +17,8 @@ fn large_persistent_bfs_program_uses_grid_sync_parallel_steps() {
     );
     assert_eq!(
         count_grid_sync(program.entry()),
-        6,
-        "Fix: three large persistent-BFS iterations require one seed fence, one snapshot fence per parallel expansion, and one inter-iteration fence between expansion passes."
+        7,
+        "Fix: three large persistent-BFS iterations require one seed fence, one snapshot fence per parallel expansion, one inter-iteration fence between expansion passes, and one trailing fence that publishes the converged readback."
     );
     let changed = program
         .buffers()

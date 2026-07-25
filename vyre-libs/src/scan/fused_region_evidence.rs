@@ -1,7 +1,7 @@
 //! Fused single-launch phase-1 evidence (plan W2-2, line 153).
 //!
 //! ONE dispatch, ONE DFA walk per haystack byte, THREE evidence families a
-//! coalesced-batch consumer (keyhog) otherwise assembles from three separate
+//! coalesced-batch consumer otherwise assembles from three separate
 //! dispatches:
 //!
 //! 1. **Per-region presence**: a bitmap `presence[region][pid]` = "pattern `pid`

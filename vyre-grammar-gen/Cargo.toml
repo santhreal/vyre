@@ -1,6 +1,6 @@
 [package]
 name = "vyre-grammar-gen"
-version = "0.6.5"
+version = "0.7.0"
 edition.workspace = true
 rust-version.workspace = true
 license = "MIT OR Apache-2.0"
@@ -15,7 +15,7 @@ categories = ["compilers", "parsing"]
 [dependencies]
 serde.workspace = true
 serde_json.workspace = true
-clap = { version = "=4.6.1", features = ["derive"] }
+clap = { version = "=4.6.4", features = ["derive"] }
 blake3.workspace = true
 regex.workspace = true
 regex-automata.workspace = true

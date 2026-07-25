@@ -3,12 +3,12 @@
 vyre is a research-stage alpha. These are the channels, in order of speed.
 
 ## I have a specific bug or repro
-→ File a GitHub issue using the bug template: github.com/santhsecurity/vyre/issues/new/choose
+→ File a GitHub issue using the bug template: github.com/santhreal/vyre/issues/new/choose
 
 Include: vyre version, backend, minimal reproduction, expected vs actual output, conformance output if relevant.
 
 ## I want to discuss an idea or design decision
-→ GitHub Discussions: github.com/santhsecurity/vyre/discussions
+→ GitHub Discussions: github.com/santhreal/vyre/discussions
 
 Good for: architectural questions, feature ideas, comparison with other compiler frameworks.
 

@@ -43,6 +43,10 @@
 /// approximation of the first derivative; `alpha = 2.0` recovers the
 /// standard backward-difference of the second derivative; non-integer
 /// values give the genuine fractional kernel.
+///
+/// # Panics
+/// Panics when `alpha` is not finite or `n` is zero. Callers that must recover use the
+/// `try_` twin.
 #[must_use]
 pub fn grunwald_letnikov_kernel(alpha: f64, n: u32) -> Vec<f64> {
     let mut out = Vec::new();
@@ -56,6 +60,10 @@ pub fn grunwald_letnikov_kernel(alpha: f64, n: u32) -> Vec<f64> {
 }
 
 /// Generate the Grünwald-Letnikov kernel into caller-owned storage.
+///
+/// # Panics
+/// Panics when `alpha` is not finite or `n` is zero; see
+/// [`grunwald_letnikov_kernel`].
 pub fn grunwald_letnikov_kernel_into(alpha: f64, n: u32, out: &mut Vec<f64>) {
     if let Err(error) = try_grunwald_letnikov_kernel_into(alpha, n, out) {
         panic!("vyre-primitives Grünwald-Letnikov kernel generation failed: {error}");
@@ -92,6 +100,10 @@ pub fn try_grunwald_letnikov_kernel_into(
 
 /// Convert a Grünwald-Letnikov kernel into the 16.16 fixed-point
 /// representation that [`crate::math::conv1d`] consumes.
+///
+/// # Panics
+/// Panics when a kernel weight is not representable in 16.16 fixed point. Saturating
+/// silently would change the convolution the GPU then runs.
 #[must_use]
 pub fn kernel_to_fixed_16_16(kernel: &[f64], step: f64, alpha: f64) -> Vec<u32> {
     let mut out = Vec::new();
@@ -105,6 +117,10 @@ pub fn kernel_to_fixed_16_16(kernel: &[f64], step: f64, alpha: f64) -> Vec<u32> 
 }
 
 /// Convert a Grünwald-Letnikov kernel into 16.16 fixed point in caller-owned storage.
+///
+/// # Panics
+/// Panics when a kernel weight is not representable in 16.16 fixed point; see
+/// [`kernel_to_fixed_16_16`].
 pub fn kernel_to_fixed_16_16_into(kernel: &[f64], step: f64, alpha: f64, out: &mut Vec<u32>) {
     if let Err(error) = try_kernel_to_fixed_16_16_into(kernel, step, alpha, out) {
         panic!("vyre-primitives 16.16 fixed-point kernel conversion failed: {error}");

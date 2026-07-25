@@ -1,6 +1,6 @@
 [package]
 name = "vyre-intrinsics"
-version = "0.6.5"
+version = "0.7.0"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -32,7 +32,7 @@ inventory.workspace = true
 
 [dev-dependencies]
 criterion.workspace = true
-vyre-reference = { version = "0.6.1", path = "../vyre-reference" }
+vyre-reference = { path = "../vyre-reference" }
 vyre-test-support.workspace = true
 
 [features]

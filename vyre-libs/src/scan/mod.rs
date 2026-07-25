@@ -419,7 +419,7 @@ pub mod regex_anchored_window;
 pub mod regex_region_admission;
 
 /// Fused single-launch phase-1 evidence (plan W2-2, line 153): ONE dispatch, ONE
-/// anchored DFA walk per byte, producing all three families keyhog otherwise
+/// anchored DFA walk per byte, producing all three families a coalesced-batch consumer otherwise
 /// assembles from three dispatches, per-region presence, position triples for a
 /// designated subset, and per-region admission bits. A correctness-equivalent
 /// primitive; the fast path stays the separate specialized passes because kernel

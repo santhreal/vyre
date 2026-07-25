@@ -5,11 +5,16 @@
 //! planning paths: that would leave the CLI compiling while silently disabling
 //! the optimizations the release depends on.
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
+
+use vyre_test_support::monorepo::{santh_root, skip_without_santh_root, vyre_workspace_root};
 
 #[test]
 fn vyrec_links_gpu_backends_for_frontend_dispatch() {
-    let root = santh_root();
+    let Some(root) = santh_root() else {
+        skip_without_santh_root("vyrec GPU backend linkage");
+        return;
+    };
     let cargo_toml = read(root.join("tools/vyrec/Cargo.toml"));
     assert!(
         cargo_toml.contains("vyre-driver-cuda"),
@@ -35,11 +40,9 @@ fn vyrec_links_gpu_backends_for_frontend_dispatch() {
 
 #[test]
 fn frontend_c_backend_acquisition_fails_loudly_without_cpu_fallback() {
-    let root = santh_root();
+    let root = vyre_workspace_root();
     let backend_acquire = read(
-        root.join(
-            "libs/performance/matching/vyre/vyre-frontend-c/src/pipeline/backend_select/backend_acquire.rs",
-        ),
+        root.join("vyre-frontend-c/src/pipeline/backend_select/backend_acquire.rs"),
     );
     assert!(
         backend_acquire.contains("CUDA-first acquisition failed")
@@ -56,9 +59,9 @@ fn frontend_c_backend_acquisition_fails_loudly_without_cpu_fallback() {
 
 #[test]
 fn frontend_c_sparse_lexer_keeps_fused_megakernel_path() {
-    let root = santh_root();
+    let root = vyre_workspace_root();
     let sparse_lexer = read(root.join(
-        "libs/performance/matching/vyre/vyre-frontend-c/src/pipeline/sparse_lexer_megakernel.rs",
+        "vyre-frontend-c/src/pipeline/sparse_lexer_megakernel.rs",
     ));
     assert!(
         sparse_lexer.contains("fuse_programs(&[sparse, scan, compact])"),
@@ -75,10 +78,3 @@ fn read(path: impl AsRef<Path>) -> String {
     })
 }
 
-fn santh_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .ancestors()
-        .nth(5)
-        .expect("vyre-core must live under Santh/libs/performance/matching/vyre/vyre-core")
-        .to_path_buf()
-}

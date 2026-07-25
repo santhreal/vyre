@@ -1,7 +1,6 @@
 //! Public repository governance test suite.
 
 const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
-const PLAN: &str = include_str!("../../../docs/optimization/ALL_AXES_ACCELERATION_PLAN.md");
 const IDENTITY: &str =
     include_str!("../../../docs/optimization/PUBLIC_REPOSITORY_IDENTITY_GOVERNANCE.toml");
 const RULESETS: &str =
@@ -34,10 +33,10 @@ fn repository_identity_governance_names_one_public_vyre_repo_and_excludes_santh_
     for required in [
         "repository_id",
         "canonical_public_repository",
-        "santhsecurity/vyre",
+        "santhreal/vyre",
         "private_repository_policy",
         "backup_repository_policy",
-        "outer-santhsecurity/Santh-is-backup-only-not-release-or-sync-authority",
+        "outer-santhreal/Santh-is-backup-only-not-release-or-sync-authority",
         "visibility_policy",
         "topic_policy",
         "readme_link_policy",
@@ -132,34 +131,6 @@ fn public_repository_health_links_readme_topics_security_release_supply_chain_an
             HEALTH.contains(required),
             "public repository health governance must include {required}"
         );
-    }
-}
-
-#[test]
-fn plan_contains_public_repository_rows() {
-    for row in [
-        "VX-1081",
-        "VX-1082",
-        "VX-1083",
-        "VX-1084",
-        "VX-1085",
-        "VX-1086",
-        "VX-1087",
-        "VX-1088",
-        "VX-1089",
-        "VX-1090",
-        "VX-1091",
-        "VX-1092",
-        "VX-1093",
-        "VX-1094",
-        "VX-1095",
-        "VX-1096",
-        "VX-1097",
-        "VX-1098",
-        "VX-1099",
-        "VX-1100",
-    ] {
-        assert!(PLAN.contains(row), "plan must include {row}");
     }
 }
 

@@ -211,7 +211,7 @@ pub fn validate_committed_release_scope_artifacts(
         (
             parser_doc_proof,
             "distributed parser artifacts",
-            "release/evidence/parser/distributed-parser-boundary-map.json",
+            "release/evidence/parser/distributed-parser-map.json",
         ),
         (
             c_parser_linux_proof,

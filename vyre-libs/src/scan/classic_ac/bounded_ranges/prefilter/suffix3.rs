@@ -634,6 +634,59 @@ pub fn classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_progra
     max_regions: u32,
     max_matches: u32,
 ) -> Program {
+    classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered_ext(
+        haystack,
+        transitions,
+        output_offsets,
+        output_records,
+        pattern_lengths,
+        haystack_len,
+        presence,
+        candidate_end_mask,
+        candidate_suffix2_mask,
+        candidate_suffix3_bloom,
+        region_starts,
+        region_base,
+        match_count,
+        matches,
+        state_count,
+        output_records_len,
+        pattern_count,
+        max_pattern_len,
+        max_regions,
+        max_matches,
+        0,
+    )
+}
+
+/// Fused region presence with positioned output restricted to pattern IDs at
+/// or above `first_positioned_pattern_id`. Presence remains complete for every
+/// pattern; only the atomic triple append is filtered.
+#[must_use]
+#[allow(clippy::too_many_arguments)]
+pub fn classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered_ext(
+    haystack: &str,
+    transitions: &str,
+    output_offsets: &str,
+    output_records: &str,
+    pattern_lengths: &str,
+    haystack_len: &str,
+    presence: &str,
+    candidate_end_mask: &str,
+    candidate_suffix2_mask: &str,
+    candidate_suffix3_bloom: &str,
+    region_starts: &str,
+    region_base: &str,
+    match_count: &str,
+    matches: &str,
+    state_count: u32,
+    output_records_len: u32,
+    pattern_count: u32,
+    max_pattern_len: u32,
+    max_regions: u32,
+    max_matches: u32,
+    first_positioned_pattern_id: u32,
+) -> Program {
     let presence_words = presence_bitmap_words(pattern_count);
     let total_presence_words = presence_by_region_words(pattern_count, max_regions);
     let replay_nodes = bounded_ranges_presence_and_positions_by_region_nodes(
@@ -650,6 +703,7 @@ pub fn classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_progra
         max_pattern_len,
         presence_words,
         ceil_log2(max_regions),
+        first_positioned_pattern_id,
     );
     let body = suffix3_prefilter_body(
         haystack,
@@ -708,6 +762,29 @@ pub fn try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_prog
     max_regions: u32,
     max_matches: u32,
 ) -> Result<Program, String> {
+    try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered(
+        dfa,
+        pattern_count,
+        max_regions,
+        max_matches,
+        0,
+    )
+}
+
+/// Build a fused program whose presence bitmap covers all patterns while match
+/// triples are emitted only for IDs at or above the supplied boundary.
+pub fn try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered(
+    dfa: &CompiledDfa,
+    pattern_count: u32,
+    max_regions: u32,
+    max_matches: u32,
+    first_positioned_pattern_id: u32,
+) -> Result<Program, String> {
+    if first_positioned_pattern_id > pattern_count {
+        return Err(format!(
+            "AC bounded-ranges fused positioned pattern boundary {first_positioned_pattern_id} exceeds pattern count {pattern_count}. Fix: pass a boundary in 0..={pattern_count}."
+        ));
+    }
     let output_records_len = u32::try_from(dfa.output_records.len()).map_err(|source| {
         format!(
             "AC bounded-ranges suffix3 region-presence+positions DFA output record count {} exceeds u32 GPU buffer metadata: {source}. Fix: shard the pattern set or lower the DFA budget before dispatch.",
@@ -715,7 +792,7 @@ pub fn try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_prog
         )
     })?;
     Ok(
-        classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_ext(
+        classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered_ext(
             "haystack",
             "transitions",
             "output_offsets",
@@ -736,6 +813,7 @@ pub fn try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_prog
             dfa.max_pattern_len,
             max_regions,
             max_matches,
+            first_positioned_pattern_id,
         ),
     )
 }
@@ -752,6 +830,11 @@ pub fn build_ac_bounded_ranges_suffix3_prefilter_program(
 
 /// Variant of [`build_ac_bounded_ranges_suffix3_prefilter_program`] that
 /// exposes the match-append coalescing selector.
+///
+/// # Panics
+/// Panics when the suffix3 prefilter exceeds the GPU ABI limits. An empty rejecting
+/// automaton would silently drop every match, so callers that must recover use
+/// [`try_build_ac_bounded_ranges_suffix3_prefilter_program_ext`].
 #[must_use]
 pub fn build_ac_bounded_ranges_suffix3_prefilter_program_ext(
     dfa: &CompiledDfa,

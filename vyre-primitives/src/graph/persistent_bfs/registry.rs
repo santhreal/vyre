@@ -18,14 +18,18 @@ inventory::submit! {
                 to_bytes(&[0b0001]),              // frontier_in = {0}
                 to_bytes(&[0]),                   // frontier_out
                 to_bytes(&[0]),                   // changed
+                to_bytes(&[0]),                   // converged
             ]]
         }),
         Some(|| {
             let to_bytes = |w: &[u32]| crate::wire::pack_u32_slice(w);
-            // After 4 iterations the graph 0→1,0→2,1→3,2→3 is fully closed.
+            // After 4 iterations the graph 0→1,0→2,1→3,2→3 is fully closed. The
+            // fixpoint is reached at step 2 (no new nodes), one step inside the
+            // max_iters=4 budget, so the converged readback is 1.
             vec![vec![
                 to_bytes(&[0b1111]),              // frontier_out = {0,1,2,3}
                 to_bytes(&[1]),                   // changed
+                to_bytes(&[1]),                   // converged
             ]]
         }),
     )

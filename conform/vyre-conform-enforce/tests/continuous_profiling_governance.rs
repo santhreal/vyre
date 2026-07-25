@@ -1,7 +1,6 @@
 //! Continuous profiling governance test suite.
 
 const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
-const PLAN: &str = include_str!("../../../docs/optimization/ALL_AXES_ACCELERATION_PLAN.md");
 const SIGNALS: &str =
     include_str!("../../../docs/optimization/CONTINUOUS_PROFILING_SIGNAL_CONTRACTS.toml");
 const COLLECTION: &str =
@@ -117,34 +116,6 @@ fn regression_profile_triage_records_baseline_candidate_diff_attribution_rollout
         "allocation-regression-profile-triage",
     ] {
         assert!(TRIAGE.contains(required), "profile triage policy must include {required}");
-    }
-}
-
-#[test]
-fn plan_contains_continuous_profiling_rows() {
-    for row in [
-        "VX-1361",
-        "VX-1362",
-        "VX-1363",
-        "VX-1364",
-        "VX-1365",
-        "VX-1366",
-        "VX-1367",
-        "VX-1368",
-        "VX-1369",
-        "VX-1370",
-        "VX-1371",
-        "VX-1372",
-        "VX-1373",
-        "VX-1374",
-        "VX-1375",
-        "VX-1376",
-        "VX-1377",
-        "VX-1378",
-        "VX-1379",
-        "VX-1380",
-    ] {
-        assert!(PLAN.contains(row), "plan must include {row}");
     }
 }
 

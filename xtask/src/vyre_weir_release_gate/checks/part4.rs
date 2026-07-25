@@ -159,10 +159,10 @@ pub(crate) const REQUIRED_BENCHMARKED_OPTIMIZATION_FAMILIES: &[&str] = &[
     "A14-shared-mem-promote-fixture",
     "A15-bank-conflict-fixture",
     "A16-vec-pack-fixture",
-    "weir-dataflow-dse",
-    "weir-dataflow-loop-fusion",
-    "weir-dataflow-loop-fission",
-    "weir-dataflow-licm",
+    "external-dataflow-dse",
+    "external-dataflow-loop-fusion",
+    "external-dataflow-loop-fission",
+    "external-dataflow-licm",
 ];
 pub(crate) fn check_before_after_benchmark_report(
     requirement: &Requirement,

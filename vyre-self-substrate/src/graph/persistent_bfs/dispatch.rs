@@ -5,10 +5,16 @@ use crate::graph::dispatch_bridge::{refresh_keyed_dispatch_inputs, DispatchInput
 use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
 use vyre_primitives::graph::persistent_bfs::{
     plan_persistent_bfs_dispatch, validate_persistent_bfs_changed_flag,
+    validate_persistent_bfs_converged_flag,
 };
 
-/// Dispatcher-backed persistent BFS expansion. Returns the saturated frontier
-/// and sticky changed-flag.
+/// Dispatcher-backed persistent BFS expansion. Returns the saturated frontier,
+/// the sticky changed-flag, and the device converged word.
+///
+/// The converged word is `1` when the fixpoint was reached within `max_iters`
+/// and `0` when the budget was exhausted while the frontier was still growing.
+/// A caller that requires an exact closure rejects a `0` converged result
+/// instead of silently trusting an under-approximated frontier.
 ///
 /// # Errors
 ///
@@ -24,9 +30,9 @@ pub fn bfs_expand_via(
     frontier_in: &[u32],
     allow_mask: u32,
     max_iters: u32,
-) -> Result<(Vec<u32>, u32), DispatchError> {
+) -> Result<(Vec<u32>, u32, u32), DispatchError> {
     let mut frontier = Vec::new();
-    let changed = bfs_expand_via_into(
+    let (changed, converged) = bfs_expand_via_into(
         dispatcher,
         node_count,
         edge_offsets,
@@ -37,7 +43,7 @@ pub fn bfs_expand_via(
         max_iters,
         &mut frontier,
     )?;
-    Ok((frontier, changed))
+    Ok((frontier, changed, converged))
 }
 
 /// Dispatcher-backed persistent BFS expansion into caller-owned frontier storage.
@@ -52,7 +58,7 @@ pub fn bfs_expand_via_into(
     allow_mask: u32,
     max_iters: u32,
     frontier_out: &mut Vec<u32>,
-) -> Result<u32, DispatchError> {
+) -> Result<(u32, u32), DispatchError> {
     let mut scratch = PersistentBfsGpuScratch::default();
     bfs_expand_via_with_scratch_into(
         dispatcher,
@@ -81,7 +87,7 @@ pub fn bfs_expand_via_with_scratch_into(
     max_iters: u32,
     scratch: &mut PersistentBfsGpuScratch,
     frontier_out: &mut Vec<u32>,
-) -> Result<u32, DispatchError> {
+) -> Result<(u32, u32), DispatchError> {
     let plan = plan_persistent_bfs_dispatch(
         node_count,
         edge_offsets,
@@ -96,7 +102,8 @@ pub fn bfs_expand_via_with_scratch_into(
     let words = plan.frontier_words();
     if layout.node_count == 0 {
         frontier_out.clear();
-        return Ok(0);
+        // An empty graph is a trivial fixpoint: there is nothing to expand.
+        return Ok((0, 1));
     }
     if max_iters == 0 {
         copy_frontier_seed_into(
@@ -104,7 +111,8 @@ pub fn bfs_expand_via_with_scratch_into(
             frontier_in,
             "bfs_expand_via zero-iteration frontier_out",
         )?;
-        return Ok(0);
+        // No confirming step ran, so the seed is not proven converged.
+        return Ok((0, 0));
     }
     let key = plan.program_cache_key(dispatcher.device_feature_cache_key());
     let program = scratch
@@ -137,6 +145,7 @@ pub fn bfs_expand_via_with_scratch_into(
             DispatchInput::u32_slice(frontier_in),
             DispatchInput::zero_u32_words(words, "bfs_expand_via frontier_out"),
             DispatchInput::zero_u32_words(changed_words, "bfs_expand_via changed"),
+            DispatchInput::zero_u32_words(1, "bfs_expand_via converged"),
         ],
         &[
             (5, DispatchInput::u32_slice(frontier_in)),
@@ -148,12 +157,16 @@ pub fn bfs_expand_via_with_scratch_into(
                 7,
                 DispatchInput::zero_u32_words(changed_words, "bfs_expand_via changed"),
             ),
+            (
+                8,
+                DispatchInput::zero_u32_words(1, "bfs_expand_via converged"),
+            ),
         ],
     )?;
     let outputs = dispatcher.dispatch(&program, &scratch.inputs, Some(plan.dispatch_grid()))?;
-    if outputs.len() != 2 {
+    if outputs.len() != 3 {
         return Err(DispatchError::BackendError(format!(
-            "Fix: bfs_expand_via frontier_out expected exactly two u32 output buffers, got {}.",
+            "Fix: bfs_expand_via expected exactly three u32 output buffers (frontier_out, changed, converged), got {}.",
             outputs.len()
         )));
     }
@@ -169,7 +182,15 @@ pub fn bfs_expand_via_with_scratch_into(
         "bfs_expand_via changed",
         &mut scratch.changed,
     )?;
+    decode_u32_output_exact(
+        &outputs[2],
+        1,
+        "bfs_expand_via converged",
+        &mut scratch.converged,
+    )?;
     let changed = scratch.changed[0];
     validate_persistent_bfs_changed_flag(changed).map_err(DispatchError::BackendError)?;
-    Ok(changed)
+    let converged = scratch.converged[0];
+    validate_persistent_bfs_converged_flag(converged).map_err(DispatchError::BackendError)?;
+    Ok((changed, converged))
 }

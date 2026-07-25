@@ -148,6 +148,7 @@ fn persistent_bfs_batch_emits_valid_ir() {
         "frontier_in",
         "frontier_out",
         "changed",
+        "converged",
         1,           // query_count
         0xFFFF_FFFF, // edge_kind_mask
         2,           // max_iters

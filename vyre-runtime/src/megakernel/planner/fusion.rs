@@ -349,6 +349,9 @@ pub fn select_fused_subset(costs: &[f64], n: u32, exchange_adj: &[u32]) -> Vec<u
 }
 
 /// Compute the optimal fusion subset into reusable scratch buffers.
+///
+/// # Panics
+/// Panics on malformed planner input. Callers that must recover use the `try_` twin.
 pub fn select_fused_subset_into(
     costs: &[f64],
     n: u32,
@@ -423,6 +426,9 @@ pub fn select_fused_subset_compact(costs_q16: &[u16], n: u32, exchange_adj: &[u3
 }
 
 /// Compact-cost selector using caller-owned scratch buffers.
+///
+/// # Panics
+/// Panics on malformed planner input. Callers that must recover use the `try_` twin.
 pub fn select_fused_subset_compact_into(
     costs_q16: &[u16],
     n: u32,

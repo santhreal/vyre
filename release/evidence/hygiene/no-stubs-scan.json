@@ -4,7 +4,7 @@
   "findings": [
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/grid_sync.rs",
-      "line": 1362,
+      "line": 1443,
       "pattern": "placeholder_text",
       "text": "// unused buffer, so the placeholder is bound but inert (proven equal to"
     },
@@ -75,10 +75,370 @@
       "text": "b\"TODO:\","
     },
     {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/backend/stream_ordered_pool.rs",
+      "line": 21,
+      "pattern": "TODO",
+      "text": "//! rather than a pending TODO: on the warm steady state the"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/validate/binding.rs",
+      "line": 42,
+      "pattern": "placeholder_text",
+      "text": "/// `false` this field is `DataType::U32` as a placeholder; callers"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/validate/binding.rs",
+      "line": 48,
+      "pattern": "placeholder_text",
+      "text": "/// placeholder; V045 assignment-type checking must be skipped."
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-test-support/src/lib.rs",
+      "line": 9,
+      "pattern": "stub_text",
+      "text": "//! own ~230-line copy of the enumerator (and 22 crates shipped a *tautology stub* whose doc"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-macros/src/ast_registry.rs",
+      "line": 279,
+      "pattern": "stub_text",
+      "text": "// Trap instead of a no-op barrier stub: executing this branch"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/program_graph.rs",
+      "line": 269,
+      "pattern": "placeholder_text",
+      "text": "// `max(edge_count, 1)`. A zero-edge graph still carries a single placeholder"
+    },
+    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/analysis_family.rs",
       "line": 127,
       "pattern": "placeholder_text",
       "text": "// This is a placeholder; real implementations will hard-code the"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/stack_overflow_strcpy/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/stack_overflow_strcpy/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/oob_write_unbounded_index/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/oob_write_unbounded_index/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/pointer_arith_oob_write/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/pointer_arith_oob_write/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/uninit_pointer_deref/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/uninit_pointer_deref/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/heap_overflow_memcpy_tainted_size/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/heap_overflow_memcpy_tainted_size/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/type_confusion_downcast/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/type_confusion_downcast/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/sign_change_to_size_arg/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/sign_change_to_size_arg/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/tainted_size_recv_overflow/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/tainted_size_recv_overflow/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/stack_overflow_gets/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/stack_overflow_gets/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/format_string_user_controlled/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/format_string_user_controlled/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/null_pointer_deref_from_input/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/null_pointer_deref_from_input/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/narrowing_cast_to_size_arg/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/narrowing_cast_to_size_arg/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/stack_overflow_memcpy_tainted_size/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/stack_overflow_memcpy_tainted_size/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/use_after_free_double_drop/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/use_after_free_double_drop/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/stack_overflow_sprintf_unbounded/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/stack_overflow_sprintf_unbounded/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/realloc_shrink_use_after_offset/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/realloc_shrink_use_after_offset/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/oob_read_unbounded_index/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/oob_read_unbounded_index/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/recv_into_stack_buf_unbounded/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/recv_into_stack_buf_unbounded/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/heap_overflow_off_by_one_loop/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/heap_overflow_off_by_one_loop/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/heap_overflow_alloc_arith_wraps/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/rules/launch/remote_overflow/shapes/heap_overflow_alloc_arith_wraps/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/ir/node_kinds.rs",
+      "line": 326,
+      "pattern": "placeholder_text",
+      "text": "/// NN benign-code placeholder (always unset today)."
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/vyre_nn_classify.rs",
+      "line": 1,
+      "pattern": "placeholder_text",
+      "text": "//! `vyre.nn.classify.v1(model, $expr)`: NN code-eval gate (model placeholder)."
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/vyre_nn_classify.rs",
+      "line": 22,
+      "pattern": "placeholder_text",
+      "text": "Placeholder (MayUnder): empty until a trained model lands.\""
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/predicates/v3_routed_predicates.rs",
+      "line": 185,
+      "pattern": "stub_text",
+      "text": "// Stub predicates  -  not yet fully implemented, registered so rules compile"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/scan/collector/io.rs",
+      "line": 98,
+      "pattern": "placeholder_text",
+      "text": "/// Empty offset map placeholder. Used as the default"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/scan/findings/proof_assembly.rs",
+      "line": 35,
+      "pattern": "stub_text",
+      "text": "//! lower class. No stub, no theater: the absence of data is the"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/main.rs",
+      "line": 412,
+      "pattern": "stub_text",
+      "text": "/// .vyre on-disk bundle format). This stub returns an error directing"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/lower/predicates/launch_predicates.rs",
+      "line": 419,
+      "pattern": "stub_text",
+      "text": "// Stub: these cast kinds are not yet tagged in pg_node_tags_high."
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/lower/mod.rs",
+      "line": 105,
+      "pattern": "stub_text",
+      "text": "// calling itself) and emit a safe stub instead of infinitely expanding."
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/lower/call.rs",
+      "line": 496,
+      "pattern": "stub_text",
+      "text": "// Stub predicates  -  registered to allow rule compilation."
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/lower/call.rs",
+      "line": 527,
+      "pattern": "stub_text",
+      "text": "// Stub: near($a, $b, radius) returns empty bitset."
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/lower/call.rs",
+      "line": 835,
+      "pattern": "stub_text",
+      "text": "// would otherwise infinitely expand. Emit a safe empty-bitset stub."
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/lower/literal.rs",
+      "line": 284,
+      "pattern": "stub_text",
+      "text": "// Stub: len($x) returns 0 in scalar context so that"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/src/lower/literal.rs",
+      "line": 293,
+      "pattern": "stub_text",
+      "text": "// Stub: numeric_literal($x) returns u32::MAX in scalar context"
     }
   ],
   "release_blocking_findings": [],

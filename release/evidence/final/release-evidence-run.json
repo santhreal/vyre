@@ -995,9 +995,9 @@
         "release/evidence/parser/distributed-parser-map.json",
         "release/evidence/parser/vyre-frontend-c-contracts.json",
         "release/evidence/parser/vyrec-cli-contracts.json",
-        "release/evidence/parser/weir-contracts.json",
-        "release/evidence/parser/surgec-contracts.json",
-        "release/evidence/parser/surgec-grammar-gen-contracts.json"
+        "release/evidence/parser/external-dataflow-contracts.json",
+        "release/evidence/parser/compiler-consumer-contracts.json",
+        "release/evidence/parser/compiler-consumer-grammar-gen-contracts.json"
       ],
       "status": "success",
       "exit_code": 0,
@@ -1039,7 +1039,7 @@
           "blockers": []
         },
         {
-          "path": "release/evidence/parser/weir-contracts.json",
+          "path": "release/evidence/parser/external-dataflow-contracts.json",
           "exists": true,
           "bytes": 1890,
           "read_error": null,
@@ -1051,7 +1051,7 @@
           "blockers": []
         },
         {
-          "path": "release/evidence/parser/surgec-contracts.json",
+          "path": "release/evidence/parser/compiler-consumer-contracts.json",
           "exists": true,
           "bytes": 1815,
           "read_error": null,
@@ -1063,7 +1063,7 @@
           "blockers": []
         },
         {
-          "path": "release/evidence/parser/surgec-grammar-gen-contracts.json",
+          "path": "release/evidence/parser/compiler-consumer-grammar-gen-contracts.json",
           "exists": true,
           "bytes": 1903,
           "read_error": null,
@@ -1683,7 +1683,7 @@
         "blockers": []
       },
       {
-        "path": "release/evidence/parser/surgec-contracts.json",
+        "path": "release/evidence/parser/compiler-consumer-contracts.json",
         "owner_lane": "frontend_parsing",
         "generator_command": "xtask parser-coherence",
         "bytes": 1815,
@@ -1693,7 +1693,7 @@
         "blockers": []
       },
       {
-        "path": "release/evidence/parser/surgec-grammar-gen-contracts.json",
+        "path": "release/evidence/parser/compiler-consumer-grammar-gen-contracts.json",
         "owner_lane": "frontend_parsing",
         "generator_command": "xtask parser-coherence",
         "bytes": 1903,
@@ -1723,7 +1723,7 @@
         "blockers": []
       },
       {
-        "path": "release/evidence/parser/weir-contracts.json",
+        "path": "release/evidence/parser/external-dataflow-contracts.json",
         "owner_lane": "frontend_parsing",
         "generator_command": "xtask parser-coherence",
         "bytes": 1890,

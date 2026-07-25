@@ -66,6 +66,10 @@ struct DecodeHeavyMeasurement {
 /// tiled every `period` bytes, so the scan finds a match roughly every `period`
 /// bytes. Returns the corpus and the planted count (the true match total is the
 /// reference scan, which also picks up incidental background hits).
+///
+/// # Panics
+/// Panics when `PATTERNS` is empty. The pattern set is a compile-time constant, so an
+/// empty set means the benchmark case lost its patterns rather than a runtime condition.
 fn build_dense_match_haystack(len: usize, period: usize) -> (Vec<u8>, u32) {
     let (mut haystack, _) = build_irregular_haystack(len);
     let shortest = PATTERNS

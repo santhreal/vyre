@@ -89,19 +89,19 @@ pub fn validate_optimization_release_evidence(
         ("vector-layout family", "\"family\": \"vector-layout\""),
         (
             "Dataflow analysis DSE family",
-            "\"family\": \"weir-dataflow-dse\"",
+            "\"family\": \"external-dataflow-dse\"",
         ),
         (
             "Dataflow analysis loop fusion family",
-            "\"family\": \"weir-dataflow-loop-fusion\"",
+            "\"family\": \"external-dataflow-loop-fusion\"",
         ),
         (
             "Dataflow analysis loop fission family",
-            "\"family\": \"weir-dataflow-loop-fission\"",
+            "\"family\": \"external-dataflow-loop-fission\"",
         ),
         (
             "Dataflow analysis LICM family",
-            "\"family\": \"weir-dataflow-licm\"",
+            "\"family\": \"external-dataflow-licm\"",
         ),
     ] {
         artifact_contains(family_manifest, evidence, needle)?;

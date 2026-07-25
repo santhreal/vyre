@@ -7802,7 +7802,10 @@ bench_targets = []
 family = "vyre-primitives::graph::sum_product_evaluate"
 tier = "primitive"
 owners = ["vyre-primitives/src/graph"]
-ops = ["vyre-primitives::graph::sum_product_evaluate"]
+ops = [
+  "vyre-primitives::graph::sum_product_evaluate",
+  "vyre-primitives::graph::sum_product_evaluate_leveled",
+]
 registry_sources = ["vyre-primitives::harness"]
 reference = "supported"
 foundation_ir = "supported"

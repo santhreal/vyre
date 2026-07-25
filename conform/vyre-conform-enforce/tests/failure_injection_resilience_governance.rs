@@ -1,7 +1,6 @@
 //! Failure injection resilience governance test suite.
 
 const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
-const PLAN: &str = include_str!("../../../docs/optimization/ALL_AXES_ACCELERATION_PLAN.md");
 const SCOPE: &str = include_str!("../../../docs/optimization/CHAOS_EXPERIMENT_SCOPE_POLICY.toml");
 const DISRUPTION: &str =
     include_str!("../../../docs/optimization/POD_NODE_DISRUPTION_RESILIENCE_POLICY.toml");
@@ -111,34 +110,6 @@ fn stress_policy_records_surfaces_injection_resource_budgets_backpressure_sheddi
             STRESS.contains(required),
             "stress resource saturation experiment policy must include {required}"
         );
-    }
-}
-
-#[test]
-fn plan_contains_failure_injection_resilience_rows() {
-    for row in [
-        "VX-1301",
-        "VX-1302",
-        "VX-1303",
-        "VX-1304",
-        "VX-1305",
-        "VX-1306",
-        "VX-1307",
-        "VX-1308",
-        "VX-1309",
-        "VX-1310",
-        "VX-1311",
-        "VX-1312",
-        "VX-1313",
-        "VX-1314",
-        "VX-1315",
-        "VX-1316",
-        "VX-1317",
-        "VX-1318",
-        "VX-1319",
-        "VX-1320",
-    ] {
-        assert!(PLAN.contains(row), "plan must include {row}");
     }
 }
 

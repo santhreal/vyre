@@ -20,6 +20,10 @@ pub fn read_debug_log(debug_bytes: &[u8]) -> Vec<DebugRecord> {
 /// Decode PRINTF records into caller-owned storage.
 ///
 /// Clears `out`, then reuses its allocation.
+///
+/// # Panics
+/// Panics when the debug-log byte stream is malformed. A partially decoded log would
+/// silently drop the records that explain a kernel failure.
 pub fn read_debug_log_into(debug_bytes: &[u8], out: &mut Vec<DebugRecord>) {
     // Clearing to empty on a decode failure silently drops the PRINTF records
     // the kernel emitted, the operator sees "no debug output" instead of the

@@ -190,16 +190,16 @@ pub(crate) mod flow_composition;
 pub mod flows_to;
 pub mod flows_to_to_sink;
 pub mod flows_to_with_sanitizer;
-// `weir_ifds` is an INCOMPLETE integration: it `use`s a crate
+// `external_ifds` is an INCOMPLETE integration: it `use`s a crate
 // `external_dataflow_engine` that is wired into no Cargo.toml and exists nowhere
 // on the tree, so it does not compile under `--features security` and broke every
-// downstream consumer (e.g. surgec) the moment a cache invalidation forced a
-// vyre-libs rebuild. Gated behind the non-existent feature `weir_ifds_external_engine`
+// downstream consumer the moment a cache invalidation forced a
+// vyre-libs rebuild. Gated behind the non-existent feature `external_ifds_engine`
 // so the workspace builds again WITHOUT deleting the WIP. To finish the
 // integration: add the `external_dataflow_engine` crate to the workspace + this
 // crate's deps, then restore these guards to `#[cfg(feature = "security")]`.
-#[cfg(feature = "weir_ifds_external_engine")]
-pub mod weir_ifds;
+#[cfg(feature = "external_ifds_engine")]
+pub mod external_ifds;
 define_bitset_and_not_security_op!(
     format_string_check,
     format_string_check,
@@ -330,7 +330,7 @@ pub use facts::{
 pub use flows_to::flows_to;
 pub use flows_to_to_sink::flows_to_to_sink;
 pub use flows_to_with_sanitizer::flows_to_with_sanitizer;
-// Gated off with `weir_ifds` above (incomplete integration; missing the
+// Gated off with `external_ifds` above (incomplete integration; missing the
 // `external_dataflow_engine` crate). Restore to `#[cfg(feature = "security")]`
 // once that crate is wired into the workspace.
 pub use format_string_check::format_string_check;
@@ -363,12 +363,12 @@ pub use taint_flow::taint_flow;
 pub use taint_kill::taint_kill;
 pub use taint_pollution::taint_pollution;
 pub use unchecked_return::unchecked_return;
-#[cfg(feature = "weir_ifds_external_engine")]
-pub use weir_ifds::{
-    route_security_taint_through_weir_ifds, security_witness_path_from_weir,
+#[cfg(feature = "external_ifds_engine")]
+pub use external_ifds::{
+    route_security_taint_through_external_ifds, security_witness_path_from_external_path,
+    ExternalIfdsSecurityBuffers, ExternalIfdsSecurityDispatch, ExternalIfdsSecurityRouteError,
     SecurityFindingWitnessPath, SecurityWitnessPathError, SecurityWitnessStatement,
-    WeirIfdsSecurityBuffers, WeirIfdsSecurityDispatch, WeirIfdsSecurityRouteError,
-    WEIR_IFDS_SECURITY_BACKEND_ID,
+    EXTERNAL_IFDS_SECURITY_BACKEND_ID,
 };
 pub use xss_escape::xss_escape;
 

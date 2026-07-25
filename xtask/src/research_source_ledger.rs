@@ -266,12 +266,7 @@ fn validate_research_source_ledger_rows(ledger: &ResearchSourceLedger) -> Result
                     "{RESEARCH_SOURCE_LEDGER_PATH} source[{index}] key `{key}` has an empty vx_rows entry"
                 ));
             }
-            let Some(digits) = vx_row.strip_prefix("VX-") else {
-                return Err(format!(
-                    "{RESEARCH_SOURCE_LEDGER_PATH} source[{index}] key `{key}` vx_rows entry `{vx_row}` must use VX-###"
-                ));
-            };
-            if digits.len() != 3 || !digits.bytes().all(|byte| byte.is_ascii_digit()) {
+            if !crate::vx_plan_table::is_vx_row_id(vx_row) {
                 return Err(format!(
                     "{RESEARCH_SOURCE_LEDGER_PATH} source[{index}] key `{key}` vx_rows entry `{vx_row}` must use VX-###"
                 ));
@@ -523,12 +518,7 @@ fn validate_vx_row_id(
             "{path} issue[{index}] id `{owner}` has an empty vx_rows entry"
         ));
     }
-    let Some(digits) = vx_row.strip_prefix("VX-") else {
-        return Err(format!(
-            "{path} issue[{index}] id `{owner}` vx_rows entry `{vx_row}` must use VX-###"
-        ));
-    };
-    if digits.len() != 3 || !digits.bytes().all(|byte| byte.is_ascii_digit()) {
+    if !crate::vx_plan_table::is_vx_row_id(vx_row) {
         return Err(format!(
             "{path} issue[{index}] id `{owner}` vx_rows entry `{vx_row}` must use VX-###"
         ));

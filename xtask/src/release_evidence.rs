@@ -27,8 +27,7 @@ use expected_artifacts::{
     build_expected_artifact_registry, write_expected_artifact_registry,
     ReleaseExpectedArtifactCommand, ReleaseExpectedArtifactRegistry,
     COMMAND_MODE_EXTERNAL_ARTIFACTS_ONLY, COMMAND_MODE_SPAWNED, EXPECTED_ARTIFACT_REGISTRY,
-    RELEASE_EVIDENCE_EXPECTED_ARTIFACTS, RELEASE_EVIDENCE_GENERATOR_COMMAND,
-    RELEASE_EVIDENCE_RUN_ARTIFACT,
+    RELEASE_EVIDENCE_GENERATOR_COMMAND, RELEASE_EVIDENCE_RUN_ARTIFACT,
 };
 use evidence_index::{build_evidence_index, ReleaseEvidenceIndex};
 pub(crate) use expected_artifacts::expected_artifacts_for_command;
@@ -404,7 +403,7 @@ mod tests {
         std::fs::create_dir_all(artifact.parent().unwrap()).unwrap();
         std::fs::write(
             &artifact,
-            br#"{"blockers":[],"repositories_public":["santhsecurity/vyre"],"public_repository":"santhsecurity/Santh","path":"/media/mukund-thiru/SanthData/Santh/private.json","command":"gh repo edit Santh --visibility public","env":"VYRE_RELEASE_REPOS=santhsecurity/vyre","provenance":"token=abc"}"#,
+            br#"{"blockers":[],"repositories_public":["santhreal/vyre"],"public_repository":"santhreal/Santh","path":"/media/mukund-thiru/SanthData/Santh/private.json","command":"gh repo edit Santh --visibility public","env":"VYRE_RELEASE_REPOS=santhreal/vyre","provenance":"token=abc"}"#,
         )
         .unwrap();
 

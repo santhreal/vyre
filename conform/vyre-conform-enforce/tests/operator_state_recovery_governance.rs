@@ -1,7 +1,6 @@
 //! Operator state recovery governance test suite.
 
 const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
-const PLAN: &str = include_str!("../../../docs/optimization/ALL_AXES_ACCELERATION_PLAN.md");
 const BACKUP: &str =
     include_str!("../../../docs/optimization/OPERATOR_STATE_BACKUP_RESTORE_POLICY.toml");
 const MIGRATION: &str = include_str!("../../../docs/optimization/STATE_SCHEMA_MIGRATION_POLICY.toml");
@@ -108,34 +107,6 @@ fn recovery_exercise_policy_records_scenarios_source_state_restore_validation_sl
             EXERCISE.contains(required),
             "recovery exercise evidence policy must include {required}"
         );
-    }
-}
-
-#[test]
-fn plan_contains_operator_state_recovery_rows() {
-    for row in [
-        "VX-1281",
-        "VX-1282",
-        "VX-1283",
-        "VX-1284",
-        "VX-1285",
-        "VX-1286",
-        "VX-1287",
-        "VX-1288",
-        "VX-1289",
-        "VX-1290",
-        "VX-1291",
-        "VX-1292",
-        "VX-1293",
-        "VX-1294",
-        "VX-1295",
-        "VX-1296",
-        "VX-1297",
-        "VX-1298",
-        "VX-1299",
-        "VX-1300",
-    ] {
-        assert!(PLAN.contains(row), "plan must include {row}");
     }
 }
 

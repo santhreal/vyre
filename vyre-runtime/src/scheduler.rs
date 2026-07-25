@@ -85,6 +85,10 @@ impl WorkStealingScheduler {
     /// assigned round-robin to backends. A caller-side dispatch loop
     /// uses [`Self::claim_next_unit`] to let worker threads atomically
     /// claim units so fast backends steal more work.
+    ///
+    /// # Panics
+    /// Panics when `total_len` cannot be partitioned into work units. Callers that must
+    /// recover use the `try_` twin.
     pub fn partition_into(&self, total_len: usize, out: &mut Vec<Shard>) {
         // Clearing to empty on failure leaves NO work units, the dispatch loop
         // then claims nothing and the scan silently processes nothing (Law 10

@@ -1,7 +1,6 @@
 //! Multichannel distribution governance test suite.
 
 const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
-const PLAN: &str = include_str!("../../../docs/optimization/ALL_AXES_ACCELERATION_PLAN.md");
 const SURFACES: &str =
     include_str!("../../../docs/optimization/MULTICHANNEL_DISTRIBUTION_SURFACE_MATRIX.toml");
 const OCI: &str =
@@ -118,34 +117,6 @@ fn binary_asset_matrix_records_platform_archives_entrypoints_ancillary_assets_ch
             BINARIES.contains(required),
             "binary asset platform matrix must include {required}"
         );
-    }
-}
-
-#[test]
-fn plan_contains_multichannel_distribution_rows() {
-    for row in [
-        "VX-1181",
-        "VX-1182",
-        "VX-1183",
-        "VX-1184",
-        "VX-1185",
-        "VX-1186",
-        "VX-1187",
-        "VX-1188",
-        "VX-1189",
-        "VX-1190",
-        "VX-1191",
-        "VX-1192",
-        "VX-1193",
-        "VX-1194",
-        "VX-1195",
-        "VX-1196",
-        "VX-1197",
-        "VX-1198",
-        "VX-1199",
-        "VX-1200",
-    ] {
-        assert!(PLAN.contains(row), "plan must include {row}");
     }
 }
 

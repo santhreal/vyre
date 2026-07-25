@@ -48,8 +48,8 @@ pub const DEFAULT_MAX_EXPR_DEPTH: u32 = 1024;
 /// Max accepted statement-node count. Derived from the foundation ceiling so
 /// the two CANNOT diverge: for node count the encoded validator and the CPU
 /// validator must agree exactly, or a fused bundle between the two ceilings
-/// passes one and is rejected by the other (the V019 regression that broke
-/// `surgec scan --class <megakernel-bundle>`). Single source of truth lives
+/// passes one and is rejected by the other (the V019 regression that broke a
+/// downstream megakernel-bundle scan). Single source of truth lives
 /// in `vyre_foundation::validate::depth`.
 pub const DEFAULT_MAX_NODE_COUNT: u32 =
     vyre_foundation::validate::depth::DEFAULT_MAX_NODE_COUNT as u32;

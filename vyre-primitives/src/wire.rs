@@ -172,6 +172,10 @@ pub fn pack_u32_slice(words: &[u32]) -> Vec<u8> {
 /// target) this reduces to one `extend_from_slice` over a `bytemuck::cast_slice`
 /// - no per-word copies. On big-endian hosts it falls back to the scalar loop
 /// so the wire format is identical across hosts.
+///
+/// # Panics
+/// Panics when the packed length overflows the wire ABI. A truncated buffer would be
+/// uploaded as if complete.
 pub fn pack_u32_slice_into(words: &[u32], out: &mut Vec<u8>) {
     if let Err(error) = try_pack_u32_slice_into(words, out) {
         // Returning empty bytes would upload an EMPTY input buffer to the GPU 
@@ -245,6 +249,9 @@ pub fn pack_u32_slice_min_words_into(
 }
 
 /// Pack raw bytes into per-lane `u32` storage (low 8 bits per word).
+///
+/// # Panics
+/// Panics when the packed length overflows the wire ABI; see [`pack_u32_slice_into`].
 #[must_use]
 pub fn pack_bytes_as_u32_slice(bytes: &[u8]) -> Vec<u8> {
     let mut out = Vec::new();
@@ -257,6 +264,9 @@ pub fn pack_bytes_as_u32_slice(bytes: &[u8]) -> Vec<u8> {
 }
 
 /// Pack raw bytes into per-lane `u32` storage using caller-owned byte storage.
+///
+/// # Panics
+/// Panics when the packed length overflows the wire ABI; see [`pack_u32_slice_into`].
 pub fn pack_bytes_as_u32_slice_into(bytes: &[u8], out: &mut Vec<u8>) {
     if let Err(error) = try_pack_bytes_as_u32_slice_into(bytes, out) {
         panic!("vyre-primitives byte-lane wire pack failed: {error}");
@@ -326,6 +336,9 @@ pub fn pack_f32_slice(values: &[f32]) -> Vec<u8> {
 ///
 /// Same endian-aware shape as [`pack_u32_slice_into`] - one `bytemuck`
 /// `cast_slice` copy on LE hosts, scalar fallback on BE hosts.
+///
+/// # Panics
+/// Panics when the packed length overflows the wire ABI; see [`pack_u32_slice_into`].
 pub fn pack_f32_slice_into(values: &[f32], out: &mut Vec<u8>) {
     if let Err(error) = try_pack_f32_slice_into(values, out) {
         // Empty bytes would upload an empty GPU input buffer, silent

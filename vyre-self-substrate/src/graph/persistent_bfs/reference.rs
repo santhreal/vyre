@@ -1,4 +1,6 @@
-use vyre_primitives::graph::persistent_bfs::try_cpu_ref as try_reference_persistent_bfs;
+use vyre_primitives::graph::persistent_bfs::{
+    try_cpu_ref as try_reference_persistent_bfs, try_cpu_ref_converged, PersistentBfsConvergence,
+};
 
 /// Run up to `max_iters` BFS steps starting from `frontier_in`,
 /// returning the saturated frontier and a sticky changed-flag (1 if
@@ -42,6 +44,39 @@ pub fn try_bfs_expand(
     use crate::observability::{bump, graph_dispatch_calls};
     bump(&graph_dispatch_calls);
     try_reference_persistent_bfs(
+        node_count,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        frontier_in,
+        allow_mask,
+        max_iters,
+    )
+}
+
+/// Persistent-BFS reference that also reports the convergence outcome: the
+/// saturated frontier plus [`PersistentBfsConvergence`] (sticky changed flag,
+/// whether the fixpoint was reached within `max_iters`, and the stop step).
+/// Use this to check a device converged word against the CPU oracle. Bumps the
+/// dataflow-fixpoint substrate counter.
+///
+/// # Errors
+///
+/// Rejects malformed CSR/frontier shapes, propagating the primitive diagnostic.
+#[cfg(any(test, feature = "cpu-parity"))]
+#[allow(clippy::too_many_arguments)]
+pub fn try_bfs_expand_converged(
+    node_count: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+    frontier_in: &[u32],
+    allow_mask: u32,
+    max_iters: u32,
+) -> Result<(Vec<u32>, PersistentBfsConvergence), String> {
+    use crate::observability::{bump, graph_dispatch_calls};
+    bump(&graph_dispatch_calls);
+    try_cpu_ref_converged(
         node_count,
         edge_offsets,
         edge_targets,

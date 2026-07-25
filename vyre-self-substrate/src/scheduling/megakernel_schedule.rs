@@ -119,6 +119,9 @@ pub fn schedule_via_homotopy(costs: &[f64], n: u32, n_steps: u32, dt: f64) -> Ve
 }
 
 /// Solve a small fusion ILP by homotopy continuation into caller-owned storage.
+///
+/// # Panics
+/// Panics on malformed schedule input. Callers that must recover use the `try_` twin.
 pub fn schedule_via_homotopy_into(
     costs: &[f64],
     n: u32,

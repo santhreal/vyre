@@ -2,6 +2,11 @@ use super::*;
 
 /// Tier 3 Composed Call Graph Extraction
 /// Adheres purely to LEGO block constraints: No inner N^2 linear loops.
+///
+/// # Panics
+/// Panics when `num_calls`, `num_functions`, or `num_tokens` is not a literal
+/// expression. Output buffers are sized at build time, so a non-literal count cannot
+/// be honored; pass `Expr::u32(N)`.
 #[must_use]
 #[allow(clippy::too_many_arguments)]
 pub fn c11_build_call_graph(

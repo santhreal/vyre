@@ -23,6 +23,12 @@ pub(super) fn parse_preproc_integer_literal(raw: &str) -> i128 {
     i128::from_str_radix(digits, radix).unwrap_or(0)
 }
 
+/// Parse a C character literal starting at `start`, returning its value and end offset.
+///
+/// # Panics
+/// Panics on an empty character literal (`''`). The host reference preprocessor is a
+/// parity oracle for well-formed input; a malformed literal must fail loudly rather
+/// than yield a value the GPU path would then be compared against.
 pub(super) fn parse_preproc_char_literal(src: &str, start: usize) -> (i128, usize) {
     let bytes = src.as_bytes();
     let mut i = start + 1;

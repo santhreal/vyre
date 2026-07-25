@@ -20,14 +20,14 @@ required_fields = [
 
 [[archive]]
 archive_id = "public-vyre-source-tag"
-source_surface = "santhsecurity/vyre-git-tag"
+source_surface = "santhreal/vyre-git-tag"
 persistent_identifier = "public-repository-url-tag-commit-and-optional-SWHID"
 source_tag_policy = "protected-public-release-tag-matches-provenance-source-tag"
 package_archive_policy = "crate-package-archive-links-to-public-source-tag-and-package-contents"
 swhid_policy = "Software-Heritage-identifier-recorded-when-public-source-archive-is-captured"
 crate_checksum_policy = "registry-index-sha256-checksum-links-package-version-to-archive-record"
 retention_policy = "public-source-archive-retained-with-release-metadata-bundle"
-private_boundary_policy = "Santh-and-santhsecurity-Santh-private-or-backup-roots-excluded"
+private_boundary_policy = "Santh-and-santhreal-Santh-private-or-backup-roots-excluded"
 diagnostic = "VYRE_PUBLIC_SOURCE_ARCHIVE_DURABLE"
 
 [[archive]]

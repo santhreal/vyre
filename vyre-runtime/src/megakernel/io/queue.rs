@@ -158,6 +158,10 @@ impl MegakernelIoQueue {
     }
 
     /// Read the queue slot back as a completion record.
+    ///
+    /// # Panics
+    /// Panics when a queue word index overflows, which the slot bounds check above already
+    /// rules out. Keep `slot_count <= IO_SLOT_COUNT`.
     #[must_use]
     pub fn completion(&self, queue_slot: u32) -> Option<IoCompletion> {
         if queue_slot >= self.slot_count {
@@ -188,6 +192,10 @@ impl MegakernelIoQueue {
     }
 
     /// Return true when the GPU has recycled the slot to `EMPTY`.
+    ///
+    /// # Panics
+    /// Panics when a queue word index overflows, which the slot bounds check above already
+    /// rules out. Keep `slot_count <= IO_SLOT_COUNT`.
     #[must_use]
     pub fn is_recycled(&self, queue_slot: u32) -> bool {
         if queue_slot >= self.slot_count {

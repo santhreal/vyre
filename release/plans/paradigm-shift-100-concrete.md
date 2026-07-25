@@ -40,7 +40,7 @@ Release definition: this plan is complete only when the code, tests, benchmarks,
 29. Add a production benchmark proving the megakernel path is 100x to 1000x faster than naive host-orchestrated evaluation at the right scale.
 30. Remove or quarantine every benchmark that accidentally measures setup, parsing, or allocation instead of steady-state kernel performance.
 
-## C. dataflow consumer dataflow completion and performance
+## C. Dataflow-engine completion and performance
 
 31. Convert all dataflow consumer analyses to caller-owned output scratch APIs with compatibility wrappers only where public API stability requires them.
 32. Make reaching definitions reuse fixed-point iteration buffers across invocations.
@@ -120,4 +120,4 @@ Release definition: this plan is complete only when the code, tests, benchmarks,
 97. Run deep personal review of every public crate file touched by the release and fix every finding before publishing.
 98. Run the full GPU validation and benchmark suite on local RTX 5090 and record exact hardware, driver, and command outputs in release artifacts.
 99. Publish only after the release checklist is green: cargo_full checks/tests, GPU tests, fuzz/gap findings triaged, benchmarks, docs, crate metadata, and public API review.
-100. Final launch step: cargo_full publish the approved crates, verify `santhsecurity/vyre` is public without changing `Santh`, and git push the release branch and tags.
+100. Final launch step: cargo_full publish the approved crates, verify `santhreal/vyre` is public without changing `Santh`, and git push the release branch and tags.

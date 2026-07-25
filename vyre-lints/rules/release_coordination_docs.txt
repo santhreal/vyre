@@ -1,0 +1,25 @@
+# Documents exempt from the downstream-consumer naming boundary.
+#
+# Vyre is a substrate: its docs describe the platform's own surface, so naming a
+# specific downstream product in them is real coupling and the guards reject it.
+# Release runbooks are the one exception. The release train ships vyre together
+# with a partner product under joint tags, so a runbook has to name the other
+# repository to be followable, and the changelog has to print the identifiers a
+# rename removed or a migration table is useless.
+#
+# Two guards enforce the boundary and both read this file, so the policy has one
+# definition: `vyre-lints` (consumer_coupling.rs, which packages this file with the crate) for the whole tree, and
+# `scripts/check_platform_consumer_docs.sh` for the curated platform doc set.
+# They disagreed while each carried its own list, which is how docs/RELEASE.md
+# passed one and failed the other.
+#
+# One workspace-relative path per line. A trailing slash exempts Markdown files
+# anywhere under that directory and nothing else: a `.rs` file under an exempt
+# directory stays under the guard, because source naming a product is coupling
+# even when a runbook beside it is only an instruction.
+docs/RELEASE.md
+docs/RELEASE_CHECKLIST.md
+docs/RELEASE_ENGINEERING.md
+docs/PUBLISH_GATE.md
+docs/release/
+CHANGELOG.md

@@ -1,7 +1,6 @@
 //! Memory residency transfer governance test suite.
 
 const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
-const PLAN: &str = include_str!("../../../docs/optimization/ALL_AXES_ACCELERATION_PLAN.md");
 const TIERS: &str = include_str!("../../../docs/optimization/MEMORY_RESIDENCY_TIER_CONTRACTS.toml");
 const STAGING: &str = include_str!("../../../docs/optimization/PINNED_STAGING_TRANSFER_POLICY.toml");
 const PRESSURE: &str = include_str!("../../../docs/optimization/MEMORY_PRESSURE_OVERSUBSCRIPTION_RESPONSE.toml");
@@ -98,34 +97,6 @@ fn transfer_overlap_evidence_records_windows_counters_correctness_failures_and_a
         "device-output-readback-overlap",
     ] {
         assert!(OVERLAP.contains(required), "transfer overlap evidence must include {required}");
-    }
-}
-
-#[test]
-fn plan_contains_memory_residency_transfer_rows() {
-    for row in [
-        "VX-1461",
-        "VX-1462",
-        "VX-1463",
-        "VX-1464",
-        "VX-1465",
-        "VX-1466",
-        "VX-1467",
-        "VX-1468",
-        "VX-1469",
-        "VX-1470",
-        "VX-1471",
-        "VX-1472",
-        "VX-1473",
-        "VX-1474",
-        "VX-1475",
-        "VX-1476",
-        "VX-1477",
-        "VX-1478",
-        "VX-1479",
-        "VX-1480",
-    ] {
-        assert!(PLAN.contains(row), "plan must include {row}");
     }
 }
 

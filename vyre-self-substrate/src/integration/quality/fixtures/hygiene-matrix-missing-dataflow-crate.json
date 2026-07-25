@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "blockers": ["cpu-demotion"],
+  "findings": [],
+  "scanned_files": 3000,
+  "scanned_roots": ["/matching/vyre", "/libs/dataflow/weir", "/tools/vyrec", "/libs/surge/surgec", "/libs/performance/matching/vyre/vyre-grammar-gen"],
+  "release_surface_coverage": {
+    "cuda_driver_crate": true,
+    "wgpu_driver_crate": true,
+    "release_scripts": true,
+    "github_workflows": true,
+    "branch_protection_controls": true,
+    "hidden_fallback_patterns": ["cpu_demotion", "gpu_unavailable_skip"],
+    "resource_bound_patterns": [],
+    "release_tooling_patterns": ["raw_workspace_cargo", "heredoc"]
+  }
+}

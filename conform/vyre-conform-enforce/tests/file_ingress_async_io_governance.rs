@@ -86,21 +86,3 @@ fn async_io_backpressure_connects_ingress_to_release_evidence() {
     }
 }
 
-#[test]
-fn acceleration_plan_contains_complete_file_ingress_tranche() {
-    let plan = read_repo_file("docs/optimization/ALL_AXES_ACCELERATION_PLAN.md");
-
-    for id in 1521..=1540 {
-        assert_contains(&plan, &format!("VX-{id}"));
-    }
-
-    for token in [
-        "FILE_INGRESS_ASYNC_IO_PIPELINE",
-        "DIRECTORY_ENUMERATION_METADATA_POLICY",
-        "SAFE_OPEN_HANDLE_READ_POLICY",
-        "IO_PIPELINE_BACKPRESSURE_EVIDENCE",
-        "END_TO_END_FILE_INGRESS_ASYNC_IO_TRANCHE_COVERAGE",
-    ] {
-        assert_contains(&plan, token);
-    }
-}

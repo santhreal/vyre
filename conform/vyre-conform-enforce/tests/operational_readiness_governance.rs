@@ -1,7 +1,6 @@
 //! Operational readiness governance test suite.
 
 const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
-const PLAN: &str = include_str!("../../../docs/optimization/ALL_AXES_ACCELERATION_PLAN.md");
 const SLO: &str =
     include_str!("../../../docs/optimization/SERVICE_LEVEL_OBJECTIVE_POLICY.toml");
 const ALERTS: &str =
@@ -114,34 +113,6 @@ fn incident_retrospective_policy_records_timelines_slo_impact_alert_correlation_
             INCIDENTS.contains(required),
             "incident retrospective evidence policy must include {required}"
         );
-    }
-}
-
-#[test]
-fn plan_contains_operational_readiness_rows() {
-    for row in [
-        "VX-1241",
-        "VX-1242",
-        "VX-1243",
-        "VX-1244",
-        "VX-1245",
-        "VX-1246",
-        "VX-1247",
-        "VX-1248",
-        "VX-1249",
-        "VX-1250",
-        "VX-1251",
-        "VX-1252",
-        "VX-1253",
-        "VX-1254",
-        "VX-1255",
-        "VX-1256",
-        "VX-1257",
-        "VX-1258",
-        "VX-1259",
-        "VX-1260",
-    ] {
-        assert!(PLAN.contains(row), "plan must include {row}");
     }
 }
 

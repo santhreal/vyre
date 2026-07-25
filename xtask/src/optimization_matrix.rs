@@ -149,12 +149,12 @@ const REQUIRED_ANALYSES: &[(&str, &str, &str)] = &[
     ),
     (
         "weir-alias",
-        "src/analyses/weir_alias/mod.rs",
+        "src/analyses/alias_import/mod.rs",
         "Weir alias/points-to facts",
     ),
     (
         "weir-reaching-def",
-        "src/analyses/weir_reaching_def/mod.rs",
+        "src/analyses/reaching_def_import/mod.rs",
         "Weir reaching-def facts",
     ),
 ];
@@ -190,7 +190,7 @@ const REQUIRED_INTEGRATION_MARKERS: &[(&str, &str, &str, &str)] = &[
     (
         "alias-aware-dse-entrypoint",
         "src/rewrites/dead_store/mod.rs",
-        "dead_store_with_weir_alias_facts",
+        "dead_store_with_external_alias_facts",
         "DSE consumes Weir alias facts",
     ),
     (
@@ -202,7 +202,7 @@ const REQUIRED_INTEGRATION_MARKERS: &[(&str, &str, &str, &str)] = &[
     (
         "alias-aware-stlf-entrypoint",
         "src/rewrites/load_forwarding/mod.rs",
-        "load_forwarding_with_weir_alias_facts",
+        "load_forwarding_with_external_alias_facts",
         "Store/load forwarding consumes Weir alias facts",
     ),
     (
@@ -220,7 +220,7 @@ const REQUIRED_INTEGRATION_MARKERS: &[(&str, &str, &str, &str)] = &[
     (
         "alias-aware-licm-entrypoint",
         "src/rewrites/licm/mod.rs",
-        "licm_with_weir_alias_facts",
+        "licm_with_external_alias_facts",
         "LICM consumes Weir alias facts",
     ),
     (
@@ -232,7 +232,7 @@ const REQUIRED_INTEGRATION_MARKERS: &[(&str, &str, &str, &str)] = &[
     (
         "alias-aware-loop-fusion-entrypoint",
         "src/rewrites/loop_fusion/mod.rs",
-        "loop_fusion_with_weir_alias_facts",
+        "loop_fusion_with_external_alias_facts",
         "Loop fusion consumes Weir alias facts",
     ),
     (
@@ -244,7 +244,7 @@ const REQUIRED_INTEGRATION_MARKERS: &[(&str, &str, &str, &str)] = &[
     (
         "alias-aware-loop-fission-entrypoint",
         "src/rewrites/loop_fission/mod.rs",
-        "loop_fission_with_weir_alias_facts",
+        "loop_fission_with_external_alias_facts",
         "Loop fission consumes Weir alias facts",
     ),
     (
@@ -255,19 +255,19 @@ const REQUIRED_INTEGRATION_MARKERS: &[(&str, &str, &str, &str)] = &[
     ),
     (
         "weir-alias-analysis-api",
-        "src/analyses/weir_alias/mod.rs",
+        "src/analyses/alias_import/mod.rs",
         "AliasFactSet",
         "Vyre-lower imports Weir alias facts through an explicit API",
     ),
     (
         "weir-reaching-def-analysis-api",
-        "src/analyses/weir_reaching_def/mod.rs",
+        "src/analyses/reaching_def_import/mod.rs",
         "import_descriptor_reaching_defs",
         "Vyre-lower imports Weir reaching-def facts through an explicit API",
     ),
     (
         "weir-copy-chain-reaching-def-import",
-        "src/analyses/weir_reaching_def/mod.rs",
+        "src/analyses/reaching_def_import/mod.rs",
         "resolve_copy_alias",
         "Weir reaching-def import canonicalizes descriptor Copy chains before rewrite legality checks",
     ),

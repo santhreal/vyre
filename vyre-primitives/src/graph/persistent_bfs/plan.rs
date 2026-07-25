@@ -175,9 +175,23 @@ where
 ///
 /// Returns an actionable diagnostic when the scalar flag is not boolean.
 pub fn validate_persistent_bfs_changed_flag(changed: u32) -> Result<(), String> {
-    if changed > 1 {
+    validate_persistent_bfs_boolean_flag("changed", changed)
+}
+
+/// Validate a persistent-BFS converged flag read back from a backend.
+///
+/// # Errors
+///
+/// Returns an actionable diagnostic when the scalar flag is not boolean.
+pub fn validate_persistent_bfs_converged_flag(converged: u32) -> Result<(), String> {
+    validate_persistent_bfs_boolean_flag("converged", converged)
+}
+
+/// Shared boolean-readback guard for the persistent-BFS scalar signals.
+fn validate_persistent_bfs_boolean_flag(flag: &str, value: u32) -> Result<(), String> {
+    if value > 1 {
         return Err(format!(
-            "Fix: persistent BFS changed flag readback must be 0 or 1, got {changed}. Treat this as malformed GPU readback or a backend bug."
+            "Fix: persistent BFS {flag} flag readback must be 0 or 1, got {value}. Treat this as malformed GPU readback or a backend bug."
         ));
     }
     Ok(())

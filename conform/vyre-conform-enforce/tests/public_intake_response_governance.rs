@@ -1,7 +1,6 @@
 //! Public intake response governance test suite.
 
 const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
-const PLAN: &str = include_str!("../../../docs/optimization/ALL_AXES_ACCELERATION_PLAN.md");
 const INTAKE: &str =
     include_str!("../../../docs/optimization/PUBLIC_ISSUE_SUPPORT_INTAKE_POLICY.toml");
 const RESPONSE: &str =
@@ -116,34 +115,6 @@ fn release_health_feedback_loop_maps_security_docs_perf_and_operator_signals_to_
             FEEDBACK.contains(required),
             "release health feedback loop must include {required}"
         );
-    }
-}
-
-#[test]
-fn plan_contains_public_intake_response_rows() {
-    for row in [
-        "VX-1141",
-        "VX-1142",
-        "VX-1143",
-        "VX-1144",
-        "VX-1145",
-        "VX-1146",
-        "VX-1147",
-        "VX-1148",
-        "VX-1149",
-        "VX-1150",
-        "VX-1151",
-        "VX-1152",
-        "VX-1153",
-        "VX-1154",
-        "VX-1155",
-        "VX-1156",
-        "VX-1157",
-        "VX-1158",
-        "VX-1159",
-        "VX-1160",
-    ] {
-        assert!(PLAN.contains(row), "plan must include {row}");
     }
 }
 

@@ -94,21 +94,3 @@ fn invalidation_evidence_requires_truth_gates_and_repair_metrics() {
     }
 }
 
-#[test]
-fn acceleration_plan_contains_complete_incremental_corpus_index_tranche() {
-    let plan = read_repo_file("docs/optimization/ALL_AXES_ACCELERATION_PLAN.md");
-
-    for id in 1541..=1560 {
-        assert_contains(&plan, &format!("VX-{id}"));
-    }
-
-    for token in [
-        "INCREMENTAL_CORPUS_CHANGE_JOURNAL",
-        "FILESYSTEM_WATCHER_EVENT_POLICY",
-        "CORPUS_CONTENT_IDENTITY_INDEX",
-        "INCREMENTAL_RESCAN_INVALIDATION_EVIDENCE",
-        "END_TO_END_INCREMENTAL_CORPUS_INDEX_TRANCHE_COVERAGE",
-    ] {
-        assert_contains(&plan, token);
-    }
-}

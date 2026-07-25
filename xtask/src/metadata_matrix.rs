@@ -80,7 +80,7 @@ fn required_release_surfaces() -> Vec<RequiredReleaseSurface> {
         release_surface: "wgpu-backend",
     },
     RequiredReleaseSurface {
-        name: "weir",
+        name: release_train::weir_package_name(),
         expected_version: release_train::weir_version(),
         release_kind: Some("publishable-crate"),
         release_surface: "dataflow-analysis",
@@ -664,11 +664,17 @@ fn release_group(path: &Path, release_kind: &str) -> &'static str {
 }
 
 fn release_surface(name: &str, release_group: &str, release_kind: &str) -> &'static str {
+    // Not a match arm: the dataflow product's package name has one owner and a `const fn`
+    // cannot appear in a pattern. This arm previously read `"weir"`, so the real package
+    // (`weirflow`) fell through to `weir-crate` and the required `dataflow-analysis`
+    // surface was reported permanently missing.
+    if name == release_train::weir_package_name() {
+        return "dataflow-analysis";
+    }
     match name {
         "vyre" => "vyre-engine",
         "vyre-driver-cuda" => "cuda-backend",
         "vyre-driver-wgpu" => "wgpu-backend",
-        "weir" => "dataflow-analysis",
         "vyrec" => "parser-cli",
         "vyre-frontend-c" => "c-frontend",
         _ if release_kind == "internal-tooling" => "internal-tooling",

@@ -159,6 +159,35 @@ pub fn run_arena_reference_with_dispatch(
         inputs,
         min_dispatch_elements,
         hashmap::LaneOrder::Forward,
+        None,
+    )
+}
+
+/// [`reference_eval`] with an explicit workgroup grid `[x, y, z]`.
+///
+/// Buffer-shape inference distributes the dispatch only across workgroup axes
+/// whose size is greater than one, so a program that fans a `[256, 1, 1]`
+/// workgroup across `grid.y` (batched persistent-BFS runs one query per
+/// `grid.y` block) would collapse to `grid.y == 1` and silently compute only the
+/// first query. A caller that knows the real dispatch grid, e.g.
+/// `persistent_bfs_batch_dispatch_grid(node_count, query_count)`, passes it here
+/// so the interpreter covers every workgroup the GPU would, per axis. This is the
+/// N-dimensional counterpart of [`reference_eval_with_dispatch`]'s 1-D floor.
+///
+/// # Errors
+/// Same as [`reference_eval`].
+pub fn reference_eval_with_grid(
+    program: &Program,
+    inputs: &[Value],
+    grid: [u32; 3],
+) -> Result<Vec<Value>, vyre::Error> {
+    let program = program_for_interpreter(program)?;
+    hashmap::run_hashmap_reference(
+        &program,
+        inputs,
+        0,
+        hashmap::LaneOrder::Forward,
+        Some(grid),
     )
 }
 
@@ -180,7 +209,7 @@ pub fn reference_eval_lane_reversed(
     inputs: &[Value],
 ) -> Result<Vec<Value>, vyre::Error> {
     let program = program_for_interpreter(program)?;
-    hashmap::run_hashmap_reference(&program, inputs, 0, hashmap::LaneOrder::Reversed)
+    hashmap::run_hashmap_reference(&program, inputs, 0, hashmap::LaneOrder::Reversed, None)
 }
 
 /// Differential oracle retained for tests during the generic interpreter transition.

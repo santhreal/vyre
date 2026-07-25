@@ -35,8 +35,8 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
         "vyre-frontend-c",
         "vyrec",
         "weir",
-        "surgec",
-        "surgec-grammar-gen",
+        "compiler-consumer",
+        "compiler-consumer-grammar-gen",
     ] {
         if !component_ids.iter().any(|component| {
             component.get("id").and_then(serde_json::Value::as_str) == Some(required)
@@ -93,9 +93,9 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
     for suffix in [
         "vyre-frontend-c-contracts.json",
         "vyrec-cli-contracts.json",
-        "weir-contracts.json",
-        "surgec-contracts.json",
-        "surgec-grammar-gen-contracts.json",
+        "external-dataflow-contracts.json",
+        "compiler-consumer-contracts.json",
+        "compiler-consumer-grammar-gen-contracts.json",
     ] {
         check_json_evidence_has_no_blockers(requirement, base_dir, suffix, failures);
         check_parser_contract_evidence(requirement, base_dir, suffix, failures);

@@ -110,9 +110,9 @@ pub(crate) fn expected_artifacts_for_command(command: &str) -> &'static [&'stati
             "release/evidence/parser/distributed-parser-map.json",
             "release/evidence/parser/vyre-frontend-c-contracts.json",
             "release/evidence/parser/vyrec-cli-contracts.json",
-            "release/evidence/parser/weir-contracts.json",
-            "release/evidence/parser/surgec-contracts.json",
-            "release/evidence/parser/surgec-grammar-gen-contracts.json",
+            "release/evidence/parser/external-dataflow-contracts.json",
+            "release/evidence/parser/compiler-consumer-contracts.json",
+            "release/evidence/parser/compiler-consumer-grammar-gen-contracts.json",
         ],
         "weir-matrix" => &[
             "release/evidence/weir/weir-analysis-api-matrix.json",

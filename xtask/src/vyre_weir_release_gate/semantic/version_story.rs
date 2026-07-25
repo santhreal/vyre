@@ -53,10 +53,10 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
         .and_then(serde_json::Value::as_array)
         .is_none_or(|findings| !findings.is_empty())
     {
-        failures.push(
-            "requirement `version-story` release docs must not contain bare v0.6.3 tag commands"
-                .to_string(),
-        );
+        failures.push(format!(
+            "requirement `version-story` release docs must not contain bare v{} tag commands",
+            release_train::vyre_version()
+        ));
     }
     if matrix
         .get("release_note_token_findings")
@@ -83,17 +83,14 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
         .and_then(serde_json::Value::as_array)
         .cloned()
         .unwrap_or_default();
-    for required_package in [
-        "vyre@0.6.3",
-        "vyre-driver-cuda@0.6.3",
-        "vyre-driver-wgpu@0.6.3",
-        "weir@0.1.0",
-        "vyrec@0.1.0",
-        "vyre-frontend-c@0.6.3",
-    ] {
+    // Derived from the release train, not pasted. The pasted list was still pinned to
+    // 0.6.3 and named the dataflow product `weir` rather than its package name
+    // (`weirflow`), so five of its six entries could never match a current version matrix.
+    for (package, version, _group) in release_train::required_release_packages() {
+        let required_package = format!("{package}@{version}");
         if !required_release_packages
             .iter()
-            .any(|package| package.as_str() == Some(required_package))
+            .any(|package| package.as_str() == Some(required_package.as_str()))
         {
             failures.push(format!(
                 "requirement `version-story` required_release_packages must include `{required_package}`"

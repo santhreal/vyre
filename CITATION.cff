@@ -5,11 +5,11 @@ abstract: 'vyre is a retargetable intermediate representation for GPU compute, c
 authors:
   - family-names: 'Project'
     given-names: 'Santh'
-version: '0.4.0'
-date-released: '2026-04-17'
+version: '0.7.0'
+date-released: '2026-07-25'
 license: 'MIT OR Apache-2.0'
-repository-code: 'https://github.com/santhsecurity/vyre'
-url: 'https://github.com/santhsecurity/vyre'
+repository-code: 'https://github.com/santhreal/vyre'
+url: 'https://github.com/santhreal/vyre'
 keywords:
   - 'gpu-compute'
   - 'intermediate-representation'

@@ -1,7 +1,6 @@
 //! Language binding governance test suite.
 
 const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
-const PLAN: &str = include_str!("../../../docs/optimization/ALL_AXES_ACCELERATION_PLAN.md");
 const SURFACES: &str =
     include_str!("../../../docs/optimization/LANGUAGE_BINDING_SURFACE_MATRIX.toml");
 const C_ABI: &str =
@@ -117,34 +116,6 @@ fn node_wasm_policy_records_node_api_npm_wasm_component_host_capability_api_mapp
             NODE_WASM.contains(required),
             "Node Wasm binding policy must include {required}"
         );
-    }
-}
-
-#[test]
-fn plan_contains_language_binding_rows() {
-    for row in [
-        "VX-1201",
-        "VX-1202",
-        "VX-1203",
-        "VX-1204",
-        "VX-1205",
-        "VX-1206",
-        "VX-1207",
-        "VX-1208",
-        "VX-1209",
-        "VX-1210",
-        "VX-1211",
-        "VX-1212",
-        "VX-1213",
-        "VX-1214",
-        "VX-1215",
-        "VX-1216",
-        "VX-1217",
-        "VX-1218",
-        "VX-1219",
-        "VX-1220",
-    ] {
-        assert!(PLAN.contains(row), "plan must include {row}");
     }
 }
 

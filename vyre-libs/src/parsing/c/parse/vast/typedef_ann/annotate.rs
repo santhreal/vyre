@@ -124,6 +124,12 @@ pub fn c11_annotate_typedef_names_precomputed_context_packed_haystack(
     )
 }
 
+/// Annotate typedef names over a VAST, emitting the visibility and declaration-kind passes.
+///
+/// # Panics
+/// Panics when precomputed-context annotation is requested without the visible-type
+/// side table. The two arrive together from the caller, so a missing table means the
+/// wiring is wrong rather than the input.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn c11_annotate_typedef_names_impl(
     vast_nodes: &str,

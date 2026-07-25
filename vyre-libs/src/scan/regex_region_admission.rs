@@ -17,7 +17,7 @@
 //! # Admission semantics
 //!
 //! For a coalesced batch (files separated by a byte in no pattern, so no match
-//! spans a region boundary, keyhog's layout), "pattern `p` is admitted in
+//! spans a region boundary, the coalesced-batch layout), "pattern `p` is admitted in
 //! region `r`" == "`p` has a match STARTING at some byte of `r`". Each invocation
 //! `i` (a haystack byte) replays the ANCHORED regex DFA forward from `i`
 //! (identical walk to [`crate::scan::regex_anchored_window`]); every pattern the

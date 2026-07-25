@@ -7,7 +7,7 @@ Evidence sources:
 Required generated evidence:
 
 - `release/evidence/parser/c-parser-linux-subsystem.json`
-- `release/evidence/parser/distributed-parser-boundary-map.json`
+- `release/evidence/parser/distributed-parser-map.json`
 - `release/evidence/parser/vyre-frontend-c-contracts.json`
 
 Release contract:

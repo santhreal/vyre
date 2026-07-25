@@ -6,6 +6,8 @@
 
 use std::path::{Path, PathBuf};
 
+use vyre_test_support::monorepo::{dataflow_root, santh_root, skip_without_santh_root};
+
 const VYRE_WORKSPACE_CRATES: &[&str] = &[
     "vyre-core",
     "vyre-foundation",
@@ -21,8 +23,12 @@ const VYRE_WORKSPACE_CRATES: &[&str] = &[
     "vyre-aot",
 ];
 
+/// Scan roots outside the vyre workspace, relative to the monorepo root.
+///
+/// These are only reachable from a monorepo checkout. A standalone clone of
+/// vyre skips them loudly rather than failing on a missing path.
 const REQUIRED_ADJACENT_SOURCE_ROOTS: &[(&str, &str)] =
-    &[("compiler-cli", "../../../../tools/vyrec/src")];
+    &[("compiler-cli", "tools/vyrec/src")];
 
 const FORBIDDEN_CPU_CALLS: &[&str] = &[
     "cpu_ref(",
@@ -149,8 +155,14 @@ fn source_roots(workspace_root: &Path) -> Vec<(String, PathBuf)> {
             roots.push(((*crate_name).to_owned(), src));
         }
     }
+
+    let Some(santh_root) = santh_root() else {
+        skip_without_santh_root("adjacent GPU-boundary scan roots");
+        return roots;
+    };
+
     for (label, relative_src) in REQUIRED_ADJACENT_SOURCE_ROOTS {
-        let src = workspace_root.join(relative_src);
+        let src = santh_root.join(relative_src);
         assert!(
             src.is_dir(),
             "required adjacent GPU-boundary scan root `{label}` is missing at {}",
@@ -158,17 +170,16 @@ fn source_roots(workspace_root: &Path) -> Vec<(String, PathBuf)> {
         );
         roots.push(((*label).to_owned(), src));
     }
-    roots.extend(adjacent_dataflow_source_roots(workspace_root));
+    roots.extend(adjacent_dataflow_source_roots());
     roots
 }
 
-fn adjacent_dataflow_source_roots(workspace_root: &Path) -> Vec<(String, PathBuf)> {
-    let dataflow_root = workspace_root.join("../../../dataflow");
-    assert!(
-        dataflow_root.is_dir(),
-        "required adjacent dataflow source root is missing at {}",
-        dataflow_root.display()
-    );
+fn adjacent_dataflow_source_roots() -> Vec<(String, PathBuf)> {
+    let dataflow_root = dataflow_root().unwrap_or_else(|| {
+        panic!(
+            "required adjacent dataflow source root is missing under the resolved monorepo root"
+        )
+    });
 
     let mut roots = Vec::new();
     let entries = std::fs::read_dir(&dataflow_root).unwrap_or_else(|error| {
@@ -285,10 +296,7 @@ fn collect_rust_files(dir: &Path, out: &mut Vec<PathBuf>) {
 }
 
 fn workspace_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("vyre-core must live under the Vyre workspace root")
-        .to_path_buf()
+    vyre_test_support::monorepo::vyre_workspace_root()
 }
 
 fn relative_path(root: &Path, path: &Path) -> String {

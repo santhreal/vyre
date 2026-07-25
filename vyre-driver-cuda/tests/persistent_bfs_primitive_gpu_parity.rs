@@ -9,7 +9,7 @@ use vyre::DispatchConfig;
 use vyre_foundation::ir::BufferAccess;
 use vyre_primitives::graph::persistent_bfs::{
     cpu_ref, persistent_bfs, persistent_bfs_batch, persistent_bfs_batch_dispatch_grid,
-    persistent_bfs_single_dispatch_grid,
+    persistent_bfs_single_dispatch_grid, try_cpu_ref_converged,
 };
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 
@@ -76,7 +76,7 @@ fn run_batch(
     query_count: u32,
     allow_mask: u32,
     max_iters: u32,
-) -> (Vec<u32>, Vec<u32>) {
+) -> (Vec<u32>, Vec<u32>, Vec<u32>) {
     let words = ((node_count + 31) / 32).max(1);
     let total_words = words as usize * query_count.max(1) as usize;
     let pg_nodes = vec![0u32; node_count as usize];
@@ -86,6 +86,7 @@ fn run_batch(
         "frontier_in",
         "frontier_out",
         "changed",
+        "converged",
         query_count,
         allow_mask,
         max_iters,
@@ -98,6 +99,7 @@ fn run_batch(
         u32_bytes(&pg_node_tags),
         u32_bytes(frontiers),
         vec![0u8; total_words * 4],
+        vec![0u8; query_count.max(1) as usize * 4],
         vec![0u8; query_count.max(1) as usize * 4],
     ];
     let mut config = DispatchConfig::default();
@@ -113,7 +115,9 @@ fn run_batch(
     frontier_out.truncate(total_words);
     let mut changed = bytes_u32(&outputs[1]);
     changed.truncate(query_count as usize);
-    (frontier_out, changed)
+    let mut converged = bytes_u32(&outputs[2]);
+    converged.truncate(query_count as usize);
+    (frontier_out, changed, converged)
 }
 
 fn cpu_ref_batch(
@@ -125,14 +129,15 @@ fn cpu_ref_batch(
     query_count: u32,
     allow_mask: u32,
     max_iters: u32,
-) -> (Vec<u32>, Vec<u32>) {
+) -> (Vec<u32>, Vec<u32>, Vec<u32>) {
     let words = ((node_count + 31) / 32).max(1) as usize;
     let mut frontier_out = Vec::with_capacity(words * query_count as usize);
     let mut changed_out = Vec::with_capacity(query_count as usize);
+    let mut converged_out = Vec::with_capacity(query_count as usize);
     for query in 0..query_count as usize {
         let start = query * words;
         let end = start + words;
-        let (frontier, changed) = cpu_ref(
+        let (frontier, outcome) = try_cpu_ref_converged(
             node_count,
             edge_offsets,
             edge_targets,
@@ -140,11 +145,13 @@ fn cpu_ref_batch(
             &frontiers[start..end],
             allow_mask,
             max_iters,
-        );
+        )
+        .expect("Fix: CPU persistent BFS batch oracle must accept the query shape");
         frontier_out.extend_from_slice(&frontier);
-        changed_out.push(changed);
+        changed_out.push(outcome.changed);
+        converged_out.push(u32::from(outcome.converged));
     }
-    (frontier_out, changed_out)
+    (frontier_out, changed_out, converged_out)
 }
 
 #[test]

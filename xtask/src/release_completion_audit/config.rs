@@ -65,7 +65,8 @@ pub(crate) fn release_checklist() -> Vec<ChecklistItem> {
     vec![
         ChecklistItem {
             requirement_id: "version-story",
-            explicit_requirement: "Vyre manifests, dependency hints, lockfile path packages, docs, release notes, packaging, and product-scoped tags use the selected Vyre 0.6.3 / Weir 0.1.0 version story.",
+            // Version comes from the release train, not from this sentence.
+            explicit_requirement: "Vyre manifests, dependency hints, lockfile path packages, docs, release notes, packaging, and product-scoped tags use the version story the release train declares.",
             required_artifacts_or_commands: vec![
                 "cargo_full run --bin xtask -- version-matrix --output release/evidence/version/version-matrix.json",
                 "release/evidence/version/version-matrix.json",
@@ -223,9 +224,9 @@ pub(crate) fn release_checklist() -> Vec<ChecklistItem> {
                 "release/evidence/parser/distributed-parser-map.json",
                 "release/evidence/parser/vyre-frontend-c-contracts.json",
                 "release/evidence/parser/vyrec-cli-contracts.json",
-                "release/evidence/parser/weir-contracts.json",
-                "release/evidence/parser/surgec-contracts.json",
-                "release/evidence/parser/surgec-grammar-gen-contracts.json",
+                "release/evidence/parser/external-dataflow-contracts.json",
+                "release/evidence/parser/compiler-consumer-contracts.json",
+                "release/evidence/parser/compiler-consumer-grammar-gen-contracts.json",
                 "release/evidence/docs/distributed-parser-coherence.md",
             ],
         },

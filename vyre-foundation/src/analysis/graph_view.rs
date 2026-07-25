@@ -247,6 +247,10 @@ impl NodeGraph {
     /// a non-existent node id, `GraphValidateError::Cycle` if the graph
     /// contains a directed cycle, or `GraphValidateError::OrphanPhi` if
     /// a Phi node has no predecessors.
+    ///
+    /// # Panics
+    /// Panics if the traversal stack empties inside the `while let Some(..)` loop that owns
+    /// it, which the loop condition already rules out.
     pub fn try_into_program(self) -> Result<Program, GraphValidateError> {
         let node_count = u32::try_from(self.nodes.len()).unwrap_or(u32::MAX);
 

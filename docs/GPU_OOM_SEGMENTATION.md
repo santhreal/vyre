@@ -361,7 +361,7 @@ vs. the actual committed-artifact key/value), NOT a test weakening:
   … the weir dataflow additions) at HEAD; validator pinned a stale `13`. Synced
   needle + returned literal + assert to `16` (16 ≥ 13 = stronger contract).
 - **optimization `dataflow-*` families**, the dataflow families were namespaced
-  under the weir crate split: `dataflow-dse` → `weir-dataflow-dse` (and `-licm`,
+  under the weir crate split: `dataflow-dse` → `external-dataflow-dse` (and `-licm`,
   `-loop-fusion`, `-loop-fission`) in `optimization-family-manifest.json`. Synced
   the four validator needles to the weir- prefix.
 - **optimization corpus dataflow keys**, corpus emits `dataflow_analysis_cases` /

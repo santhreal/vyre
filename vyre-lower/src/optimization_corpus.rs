@@ -159,11 +159,11 @@ pub fn validate_release_corpus(cases: &[OptimizationCorpusCase]) -> Optimization
                         case.id
                     ));
                 }
-                if is_weir_dataflow_family(&case.family) {
+                if is_external_dataflow_family(&case.family) {
                     dataflow_analysis_cases += 1;
                     let alias_facts = release_alias_facts();
                     let reaching_defs = release_reaching_defs(&case.family);
-                    let (optimized, dataflow_stats) = if case.family == "weir-dataflow-loop-fission"
+                    let (optimized, dataflow_stats) = if case.family == "external-dataflow-loop-fission"
                     {
                         (
                             crate::rewrites::loop_fission_with_dataflow_facts(
@@ -257,23 +257,23 @@ fn top_level_load_count(body: &KernelBody) -> usize {
 
 fn dataflow_case_fired(family: &str, before: &KernelDescriptor, after: &KernelDescriptor) -> bool {
     match family {
-        "weir-dataflow-dse" => store_count(&after.body) < store_count(&before.body),
-        "weir-dataflow-loop-fusion" => loop_count(&after.body) < loop_count(&before.body),
-        "weir-dataflow-loop-fission" => loop_count(&after.body) > loop_count(&before.body),
-        "weir-dataflow-licm" => {
+        "external-dataflow-dse" => store_count(&after.body) < store_count(&before.body),
+        "external-dataflow-loop-fusion" => loop_count(&after.body) < loop_count(&before.body),
+        "external-dataflow-loop-fission" => loop_count(&after.body) > loop_count(&before.body),
+        "external-dataflow-licm" => {
             top_level_load_count(&after.body) > top_level_load_count(&before.body)
         }
         _ => after != before,
     }
 }
 
-fn is_weir_dataflow_family(family: &str) -> bool {
+fn is_external_dataflow_family(family: &str) -> bool {
     matches!(
         family,
-        "weir-dataflow-dse"
-            | "weir-dataflow-loop-fusion"
-            | "weir-dataflow-loop-fission"
-            | "weir-dataflow-licm"
+        "external-dataflow-dse"
+            | "external-dataflow-loop-fusion"
+            | "external-dataflow-loop-fission"
+            | "external-dataflow-licm"
     )
 }
 
@@ -296,7 +296,7 @@ fn release_alias_facts() -> crate::analyses::alias_facts::AliasFactSet {
 
 fn release_reaching_defs(family: &str) -> crate::analyses::reaching_def_facts::ReachingDefFactSet {
     let mut facts = crate::analyses::reaching_def_facts::ReachingDefFactSet::default();
-    if family == "weir-dataflow-dse" {
+    if family == "external-dataflow-dse" {
         facts.set_reaching_defs(20, vec![10]);
     } else {
         facts.set_reaching_defs(20, vec![11]);
@@ -454,7 +454,7 @@ fn push_memory_cases(seed: u32, cases: &mut Vec<OptimizationCorpusCase>) {
 }
 
 fn dataflow_dse_case(seed: u32) -> OptimizationCorpusCase {
-    let family = "weir-dataflow-dse";
+    let family = "external-dataflow-dse";
     let mut desc = literal_descriptor(family, "equivalent_dynamic_index", seed);
     desc.bindings.slots = vec![buffer_slot(
         0,
@@ -534,7 +534,7 @@ fn push_control_cases(seed: u32, cases: &mut Vec<OptimizationCorpusCase>) {
 }
 
 fn dataflow_loop_fusion_case(seed: u32) -> OptimizationCorpusCase {
-    let family = "weir-dataflow-loop-fusion";
+    let family = "external-dataflow-loop-fusion";
     let mut desc = loop_descriptor_with_parent_values(family, "equivalent_alias_indices", seed);
     desc.body.ops.push(structured_loop(0));
     desc.body.ops.push(structured_loop(1));
@@ -558,7 +558,7 @@ fn dataflow_loop_fusion_case(seed: u32) -> OptimizationCorpusCase {
 }
 
 fn dataflow_loop_fission_case(seed: u32) -> OptimizationCorpusCase {
-    let family = "weir-dataflow-loop-fission";
+    let family = "external-dataflow-loop-fission";
     let mut desc = loop_descriptor_with_parent_values(family, "equivalent_alias_indices", seed);
     desc.body.ops.push(structured_loop(0));
     desc.body.child_bodies = vec![KernelBody {
@@ -574,7 +574,7 @@ fn dataflow_loop_fission_case(seed: u32) -> OptimizationCorpusCase {
 }
 
 fn dataflow_licm_case(seed: u32) -> OptimizationCorpusCase {
-    let family = "weir-dataflow-licm";
+    let family = "external-dataflow-licm";
     let mut desc = loop_descriptor_with_parent_values(family, "equivalent_alias_indices", seed);
     let index_literal = desc.body.literals.len() as u32;
     desc.body

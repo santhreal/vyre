@@ -226,8 +226,8 @@ whatever the catalog and `vyre-libs` register  -  not a second shadow IR.
   Preprocessor is a Turing-complete macro interpreter on tiny
   inputs; GPU is wrong hardware.
 - **General-purpose language runtimes** on the GPU (e.g. bytecode
-  interpreters, goroutine schedulers)  -  out of scope; vyre models
-  *specific* static or data-parallel passes as IR, not full VMs.
+  interpreters, goroutine schedulers). Vyre models *specific* static or
+  data-parallel passes as IR, not full VMs.
 - **Round-trip from `PackedAst` back to source text.** The buffer
   carries byte spans pointing at the source, so diagnostic tools
   reopen the source file and slice  -  they do not reconstruct from

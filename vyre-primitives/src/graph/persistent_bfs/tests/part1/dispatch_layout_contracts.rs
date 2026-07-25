@@ -167,7 +167,7 @@ fn dispatch_plans_pin_grid_cache_shape_and_program_builders() {
     assert_eq!(batch.dispatch_grid(), [1, 2, 1]);
     assert_eq!(
         batch
-            .program("frontier_in", "frontier_out", "changed")
+            .program("frontier_in", "frontier_out", "changed", "converged")
             .workgroup_size,
         PERSISTENT_BFS_WORKGROUP_SIZE
     );

@@ -22,7 +22,7 @@ See also: [CONTRIBUTING.md](CONTRIBUTING.md), [STABILITY.md](STABILITY.md), [ARC
 - CODEOWNERS enforces this via required review on maintainer-only paths.
 - Contributors are expected to follow the first-contribution guide in CONTRIBUTING.md and to treat every audit finding as critical.
 
-### Core maintainers (@santhsecurity/core-maintainers)
+### Core maintainers (@santhreal/core-maintainers)
 
 - Review PRs to maintainer-only paths.
 - Approve trait signature changes (require major version bump).

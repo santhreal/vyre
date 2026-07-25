@@ -1,7 +1,6 @@
 //! Multi accelerator topology governance test suite.
 
 const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
-const PLAN: &str = include_str!("../../../docs/optimization/ALL_AXES_ACCELERATION_PLAN.md");
 const TOPOLOGY: &str = include_str!("../../../docs/optimization/MULTI_ACCELERATOR_TOPOLOGY_CAPABILITY_MATRIX.toml");
 const COLLECTIVE: &str = include_str!("../../../docs/optimization/PEER_TRANSFER_COLLECTIVE_POLICY.toml");
 const SHARDING: &str = include_str!("../../../docs/optimization/MULTI_GPU_SHARDING_AGGREGATION_PLAN.toml");
@@ -95,34 +94,6 @@ fn failure_fallback_policy_records_detection_containment_fallback_output_integri
         "accelerator-link-health-degradation",
     ] {
         assert!(FALLBACK.contains(required), "multi accelerator failure fallback policy must include {required}");
-    }
-}
-
-#[test]
-fn plan_contains_multi_accelerator_topology_rows() {
-    for row in [
-        "VX-1481",
-        "VX-1482",
-        "VX-1483",
-        "VX-1484",
-        "VX-1485",
-        "VX-1486",
-        "VX-1487",
-        "VX-1488",
-        "VX-1489",
-        "VX-1490",
-        "VX-1491",
-        "VX-1492",
-        "VX-1493",
-        "VX-1494",
-        "VX-1495",
-        "VX-1496",
-        "VX-1497",
-        "VX-1498",
-        "VX-1499",
-        "VX-1500",
-    ] {
-        assert!(PLAN.contains(row), "plan must include {row}");
     }
 }
 

@@ -479,6 +479,10 @@ fn parity_reference_runner_uses_planned_zeroed_read_write_inputs() {
 // out the parity gate.
 #[test]
 fn parity_matrix_across_all_registered_ops() {
+    // Installs the process-wide dialect lookup. Validation resolves every
+    // `Expr::Call` through it, so without this any op carrying a call is
+    // rejected with V016 before it reaches a backend.
+    let _registry = vyre_driver::registry::DialectRegistry::global();
     let mut summary = Summary::default();
     let runners = backend_runners(&mut summary);
     let entries = unified_entries();

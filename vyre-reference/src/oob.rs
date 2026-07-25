@@ -81,13 +81,13 @@ fn record_oob_atomic() {
 }
 
 /// Reset this thread's OOB tally to zero. Call before a tracked run.
-pub fn reset_oob_report() {
+pub(crate) fn reset_oob_report() {
     OOB_COUNTS.with(|c| c.set(OobReport::default()));
 }
 
 /// Read this thread's accumulated OOB tally (does not reset).
 #[must_use]
-pub fn oob_report() -> OobReport {
+pub(crate) fn oob_report() -> OobReport {
     OOB_COUNTS.with(Cell::get)
 }
 
@@ -118,6 +118,9 @@ impl Buffer {
     /// inconsistent. Silently recovering with `into_inner()` would let the CPU
     /// reference oracle emit corrupt golden values that the conform gate then
     /// trusts as truth (a silent correctness fallback (Law 10). Surface it).
+    ///
+    /// # Panics
+    /// Panics when the lock is poisoned.
     fn read_bytes(&self) -> RwLockReadGuard<'_, Vec<u8>> {
         self.bytes
             .read()
@@ -126,6 +129,9 @@ impl Buffer {
 
     /// Acquire the byte buffer for writing, failing closed on poison (see
     /// [`Buffer::read_bytes`]).
+    ///
+    /// # Panics
+    /// Panics when the lock is poisoned.
     fn write_bytes(&self) -> RwLockWriteGuard<'_, Vec<u8>> {
         self.bytes
             .write()
@@ -176,6 +182,10 @@ impl Buffer {
         self.write_bytes().fill(0);
     }
 
+    /// Consume the buffer and return its bytes.
+    ///
+    /// # Panics
+    /// Panics when the byte lock is poisoned; see [`Buffer::read_bytes`].
     pub(crate) fn into_bytes(self) -> Vec<u8> {
         // Same poison policy as the guard helpers: a poisoned lock is a corrupt
         // reference buffer, never silently laundered.

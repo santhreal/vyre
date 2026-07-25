@@ -51,19 +51,19 @@
       "cases": 1024
     },
     {
-      "family": "weir-dataflow-dse",
+      "family": "external-dataflow-dse",
       "cases": 256
     },
     {
-      "family": "weir-dataflow-licm",
+      "family": "external-dataflow-licm",
       "cases": 256
     },
     {
-      "family": "weir-dataflow-loop-fission",
+      "family": "external-dataflow-loop-fission",
       "cases": 256
     },
     {
-      "family": "weir-dataflow-loop-fusion",
+      "family": "external-dataflow-loop-fusion",
       "cases": 256
     }
   ],

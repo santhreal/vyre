@@ -20,6 +20,7 @@ pub use prefilter::{
     classic_ac_bounded_ranges_suffix3_prefilter_program,
     classic_ac_bounded_ranges_suffix3_prefilter_program_ext,
     classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_ext,
+    classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered_ext,
     classic_ac_bounded_ranges_suffix3_presence_by_region_program_ext,
     classic_ac_bounded_ranges_suffix3_presence_program_ext, presence_bitmap_words,
     presence_by_region_words, try_build_ac_bounded_ranges_prefilter_program,
@@ -27,6 +28,7 @@ pub use prefilter::{
     try_build_ac_bounded_ranges_suffix3_prefilter_program,
     try_build_ac_bounded_ranges_suffix3_prefilter_program_ext,
     try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program,
+    try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered,
     try_build_ac_bounded_ranges_suffix3_presence_by_region_program,
     try_build_ac_bounded_ranges_suffix3_presence_program,
 };
@@ -467,6 +469,7 @@ fn bounded_ranges_presence_and_positions_by_region_nodes(
     max_pattern_len: u32,
     presence_words: u32,
     log2_max_regions: u32,
+    first_positioned_pattern_id: u32,
 ) -> Vec<Node> {
     // Region binary search (identical to the presence-only builder), then ONE
     // `output_records` loop that emits the region presence bit AND the match triple
@@ -484,18 +487,6 @@ fn bounded_ranges_presence_and_positions_by_region_nodes(
             Node::let_bind(
                 "pattern_id",
                 Expr::load(output_records, Expr::var("out_idx")),
-            ),
-            Node::let_bind(
-                "pat_len",
-                Expr::load(pattern_lengths, Expr::var("pattern_id")),
-            ),
-            Node::let_bind(
-                "match_start",
-                Expr::select(
-                    Expr::lt(Expr::var("scan_end"), Expr::var("pat_len")),
-                    Expr::u32(0),
-                    Expr::sub(Expr::var("scan_end"), Expr::var("pat_len")),
-                ),
             ),
             // presence[rs_base + (pattern_id >> 5)] |= 1u32 << (pattern_id & 31).
             Node::let_bind(
@@ -516,12 +507,32 @@ fn bounded_ranges_presence_and_positions_by_region_nodes(
             // the match-emitting scan). No subgroup coalesce: the CUDA backend
             // can't lower subgroup ops and the dense-hit benefit is the presence
             // bitmap's job, not this fused path's.
-            append_match(
-                matches,
-                match_count,
-                Expr::var("pattern_id"),
-                Expr::var("match_start"),
-                Expr::var("scan_end"),
+            Node::if_then(
+                Expr::ge(
+                    Expr::var("pattern_id"),
+                    Expr::u32(first_positioned_pattern_id),
+                ),
+                vec![
+                    Node::let_bind(
+                        "pat_len",
+                        Expr::load(pattern_lengths, Expr::var("pattern_id")),
+                    ),
+                    Node::let_bind(
+                        "match_start",
+                        Expr::select(
+                            Expr::lt(Expr::var("scan_end"), Expr::var("pat_len")),
+                            Expr::u32(0),
+                            Expr::sub(Expr::var("scan_end"), Expr::var("pat_len")),
+                        ),
+                    ),
+                    append_match(
+                        matches,
+                        match_count,
+                        Expr::var("pattern_id"),
+                        Expr::var("match_start"),
+                        Expr::var("scan_end"),
+                    ),
+                ],
             ),
         ],
     ));
@@ -554,6 +565,11 @@ pub fn build_ac_bounded_ranges_program(
 /// is going to be dispatched on a backend that cannot lower
 /// `subgroup_ballot` + `subgroup_shuffle` yet (currently
 /// `vyre-driver-cuda`).
+///
+/// # Panics
+/// Panics when the automaton exceeds the GPU ABI limits. Returning an empty rejecting
+/// automaton would silently drop every match, so callers that must recover use
+/// [`try_build_ac_bounded_ranges_program_ext`] and shard the DFA.
 #[must_use]
 pub fn build_ac_bounded_ranges_program_ext(
     dfa: &CompiledDfa,

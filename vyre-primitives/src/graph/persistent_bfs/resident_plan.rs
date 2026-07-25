@@ -186,12 +186,19 @@ impl PersistentBfsResidentBatchDispatchPlan {
 
     /// Build the canonical primitive batch program for this resident plan.
     #[must_use]
-    pub fn program(&self, frontier_in: &str, frontier_out: &str, changed: &str) -> Program {
+    pub fn program(
+        &self,
+        frontier_in: &str,
+        frontier_out: &str,
+        changed: &str,
+        converged: &str,
+    ) -> Program {
         persistent_bfs_batch(
             self.program_shape(),
             frontier_in,
             frontier_out,
             changed,
+            converged,
             self.batch_layout.query_count,
             self.allow_mask,
             self.max_iters,

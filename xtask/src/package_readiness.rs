@@ -52,9 +52,9 @@ struct ReleaseSurface {
 
 #[derive(Debug, Serialize)]
 struct ObservedPackageFailure {
-    package: &'static str,
+    package: String,
     command: &'static str,
-    reason: &'static str,
+    reason: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -76,6 +76,15 @@ struct VersionedLocalDependency {
 
 fn publish_order() -> Vec<PublishStep> {
     vec![
+    // First: no internal vyre dependencies, only third-party ones. It was dropped from
+    // the train after 0.6.2 and went stale on crates.io while every sibling advanced,
+    // which is why in-workspace consumers had to pin it path-only. A crate that is
+    // already public stays current with the train.
+    step(
+        "vyre-grammar-gen",
+        release_train::vyre_version(),
+        "vyre-grammar-gen/Cargo.toml",
+    ),
     step("vyre-macros", release_train::vyre_version(), "vyre-macros/Cargo.toml"),
     step("vyre-spec", release_train::vyre_version(), "vyre-spec/Cargo.toml"),
     step("vyre-lints", release_train::vyre_version(), "vyre-lints/Cargo.toml"),
@@ -104,7 +113,13 @@ fn publish_order() -> Vec<PublishStep> {
     ),
     step("vyre", release_train::vyre_version(), "vyre-core/Cargo.toml"),
     step("vyre-harness", release_train::vyre_version(), "vyre-harness/Cargo.toml"),
-    step("weir", release_train::weir_version(), "../../../dataflow/weir/Cargo.toml"),
+    // The product and its tags are named `weir`; the publishable package is `weirflow`.
+    // See `release_train::weir_package_name` for why, and keep that the single owner.
+    step(
+        release_train::weir_package_name(),
+        release_train::weir_version(),
+        "../../../dataflow/weir/Cargo.toml",
+    ),
     step("vyre-intrinsics", release_train::vyre_version(), "vyre-intrinsics/Cargo.toml"),
     step("vyre-libs", release_train::vyre_version(), "vyre-libs/Cargo.toml"),
     step("vyre-debug", release_train::vyre_version(), "vyre-debug/Cargo.toml"),
@@ -217,15 +232,28 @@ pub(crate) fn run(args: &[String]) {
         ],
         package_verify_passed: release_train::package_verify_passed(),
         observed_package_failures: vec![
+            // The versions come from the release train: these two failures are inherent to
+            // the publish order (a crate cannot be packaged before its dependency is
+            // indexed), so they recur at every version and must not be pinned to one.
             ObservedPackageFailure {
-                package: "vyre-lower@0.6.3",
+                package: format!("vyre-lower@{}", release_train::vyre_version()),
                 command: "cargo_full package --allow-dirty --manifest-path vyre-lower/Cargo.toml",
-                reason: "crates.io does not yet contain vyre-foundation@0.6.3",
+                reason: format!(
+                    "crates.io does not yet contain vyre-foundation@{}",
+                    release_train::vyre_version()
+                ),
             },
             ObservedPackageFailure {
-                package: "weir@0.1.0",
+                package: format!(
+                    "{}@{}",
+                    release_train::weir_package_name(),
+                    release_train::weir_version()
+                ),
                 command: "cargo_full package --allow-dirty --manifest-path libs/dataflow/weir/Cargo.toml",
-                reason: "crates.io does not yet contain vyre@0.6.3",
+                reason: format!(
+                    "crates.io does not yet contain vyre@{}",
+                    release_train::vyre_version()
+                ),
             },
         ],
         missing_metadata_packages,

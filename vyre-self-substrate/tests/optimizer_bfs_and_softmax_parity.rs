@@ -38,8 +38,9 @@ const EDGE_KIND: u32 = 1;
 ///
 /// Buffer/binding order (see `build_persistent_bfs_program_internal`): the five read-only
 /// ProgramGraph buffers [nodes, edge_offsets, edge_targets, edge_kind_mask, node_tags], then
-/// `frontier_in` (ReadOnly), then the two writable outputs `frontier_out` and `changed`.
-fn run_line_bfs(program: &Program, changed_words: usize) -> (u32, Vec<u32>) {
+/// `frontier_in` (ReadOnly), then the three writable outputs `frontier_out`, `changed`, and
+/// `converged`.
+fn run_line_bfs(program: &Program, changed_words: usize) -> (u32, Vec<u32>, u32) {
     let pg_nodes = [0u32, 0, 0];
     // CSR row offsets: node0 owns edge [0,1); node1 owns [1,2); node2 owns [2,2).
     let pg_edge_offsets = [0u32, 1, 2, 2];
@@ -49,6 +50,7 @@ fn run_line_bfs(program: &Program, changed_words: usize) -> (u32, Vec<u32>) {
     let fin = [0b001u32]; // seed {0}
     let fout = [0u32]; // BFS seeds frontier_out from frontier_in in the entry
     let changed = vec![0u32; changed_words];
+    let converged = [0u32];
 
     let outputs = vyre_reference::reference_eval(
         program,
@@ -61,13 +63,15 @@ fn run_line_bfs(program: &Program, changed_words: usize) -> (u32, Vec<u32>) {
             Value::from(pack(&fin)),
             Value::from(pack(&fout)),
             Value::from(pack(&changed)),
+            Value::from(pack(&converged)),
         ],
     )
     .expect("BFS program must execute under reference_eval");
 
     let frontier = unpack(&outputs[0].to_bytes())[0];
     let changed_out = unpack(&outputs[1].to_bytes());
-    (frontier, changed_out)
+    let converged_out = unpack(&outputs[2].to_bytes())[0];
+    (frontier, changed_out, converged_out)
 }
 
 #[test]
@@ -75,19 +79,43 @@ fn dce_bfs_reaches_the_full_line_graph() {
     // build_dce_bfs_program uses allow_mask = u32::MAX (every edge kind allowed) and a
     // non-sticky `changed` (count 1). Two hops from {0} must reach {0,1,2}.
     let program = build_dce_bfs_program(ProgramGraphShape::new(3, 2), 8);
-    let (frontier, changed) = run_line_bfs(&program, 1);
+    let (frontier, changed, converged) = run_line_bfs(&program, 1);
     assert_eq!(
         frontier, 0b111,
         "DCE BFS from {{0}} over 0->1->2 must reach {{0,1,2}} (0b111), got {frontier:#05b}"
     );
     assert_eq!(changed.len(), 1, "non-sticky DCE `changed` buffer is a single word");
+    assert_eq!(
+        converged, 1,
+        "a 3-node line graph closes in 2 hops with an 8-iteration budget, so the kernel must \
+         take the early-exit branch and report a real fixpoint"
+    );
+}
+
+/// A budget too small to close the graph must report `converged == 0` while still
+/// returning the partial frontier it did reach. This is the signal every consumer
+/// keys off: without it a truncated closure is indistinguishable from a fixpoint,
+/// and DCE would delete code that is reachable but not yet discovered.
+#[test]
+fn dce_bfs_reports_a_truncated_closure_when_the_iteration_budget_runs_out() {
+    let program = build_dce_bfs_program(ProgramGraphShape::new(3, 2), 1);
+    let (frontier, _changed, converged) = run_line_bfs(&program, 1);
+    assert_eq!(
+        frontier, 0b011,
+        "one iteration from {{0}} over 0->1->2 reaches only {{0,1}}, got {frontier:#05b}"
+    );
+    assert_eq!(
+        converged, 0,
+        "the loop used its whole 1-iteration budget while still growing, so this is a partial \
+         closure and must not be reported as converged"
+    );
 }
 
 #[test]
 fn persistent_bfs_honors_allow_mask_and_latches_sticky_changed() {
     // Matching allow_mask -> full reach; sticky `changed` slot 1 latches 1.
     let reachable = build_persistent_bfs_program(ProgramGraphShape::new(3, 2), 8, EDGE_KIND);
-    let (reached, changed) = run_line_bfs(&reachable, 2);
+    let (reached, changed, converged) = run_line_bfs(&reachable, 2);
     assert_eq!(
         reached, 0b111,
         "persistent BFS with allow_mask matching the edge kind must reach {{0,1,2}}"
@@ -96,16 +124,26 @@ fn persistent_bfs_honors_allow_mask_and_latches_sticky_changed() {
         changed[1], 1,
         "sticky changed (slot 1) must latch 1 once any node is newly added across iterations"
     );
+    assert_eq!(
+        converged, 1,
+        "the traversal closes well inside its 8-iteration budget, so the sticky variant must \
+         report a fixpoint too"
+    );
 
     // An allow_mask DISJOINT from the edge kind blocks every traversal: the frontier stays {0}.
     // This proves `allow_mask` is threaded into the emitted IR, not silently ignored.
     let blocked = build_persistent_bfs_program(ProgramGraphShape::new(3, 2), 8, EDGE_KIND << 1);
-    let (blocked_frontier, _c) = run_line_bfs(&blocked, 2);
+    let (blocked_frontier, _c, blocked_converged) = run_line_bfs(&blocked, 2);
     assert_eq!(
         blocked_frontier, 0b001,
         "an allow_mask ({}) disjoint from the edge kind ({EDGE_KIND}) must block traversal, \
          leaving only the seed {{0}}",
         EDGE_KIND << 1
+    );
+    assert_eq!(
+        blocked_converged, 1,
+        "a blocked traversal reaches its fixpoint immediately (nothing can grow), so it is \
+         converged rather than truncated"
     );
 }
 

@@ -148,6 +148,12 @@ pub(super) fn parse_expr_rel(tokens: &[ExprTok], idx: &mut usize, active: bool) 
     }
 }
 
+/// Parse a shift expression at the current token index.
+///
+/// # Panics
+/// Panics on a shift distance wider than the `i128` evaluator. The host reference
+/// preprocessor is a parity oracle, so an out-of-range shift must fail loudly rather
+/// than produce a value the GPU path is compared against.
 pub(super) fn parse_expr_shift(tokens: &[ExprTok], idx: &mut usize, active: bool) -> i128 {
     let mut lhs = parse_expr_add(tokens, idx, active);
     loop {

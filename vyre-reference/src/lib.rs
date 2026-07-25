@@ -63,8 +63,8 @@ pub use execution::{is_reference_output, output_index};
 /// Execute a vyre Program on the pure Rust reference interpreter.
 pub use execution::{
     reference_eval, reference_eval_lane_reversed, reference_eval_oob_report,
-    reference_eval_with_dispatch, reference_eval_with_dispatch_oob_report, run_arena_reference,
-    run_arena_reference_with_dispatch, run_storage_graph,
+    reference_eval_with_dispatch, reference_eval_with_dispatch_oob_report, reference_eval_with_grid,
+    run_arena_reference, run_arena_reference_with_dispatch, run_storage_graph,
 };
 
 /// Resolve an operation ID to its two independently-written references.

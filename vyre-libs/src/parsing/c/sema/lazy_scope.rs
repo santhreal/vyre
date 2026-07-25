@@ -188,6 +188,12 @@ impl LazyScopeTable {
         ScopeFrameId(0)
     }
 
+    /// Borrow the lazy scope table for reading, failing closed on a poisoned lock.
+    ///
+    /// # Panics
+    /// Panics when the lock is poisoned. A poisoned lock means a writer panicked mid-update
+    /// and left the scope table inconsistent; recovering the guard would let name
+    /// resolution silently read half-written scopes.
     fn read_inner(&self) -> RwLockReadGuard<'_, LazyInner> {
         // Fail closed on poison: `into_inner` would silently expose a scope
         // table left half-mutated by a panicking writer, so subsequent name
@@ -198,6 +204,10 @@ impl LazyScopeTable {
             .unwrap_or_else(|_| panic!("lazy scope table read lock was poisoned"))
     }
 
+    /// Borrow the lazy scope table for writing, failing closed on a poisoned lock.
+    ///
+    /// # Panics
+    /// Panics when the lock is poisoned; see the reading counterpart.
     fn write_inner(&self) -> RwLockWriteGuard<'_, LazyInner> {
         self.inner
             .write()

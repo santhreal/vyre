@@ -3,7 +3,7 @@ name = "vyre-fuzz"
 version = "0.0.0"
 publish = false
 edition = "2021"
-repository = "https://github.com/santhsecurity/vyre"
+repository = "https://github.com/santhreal/vyre"
 
 [package.metadata]
 cargo-fuzz = true

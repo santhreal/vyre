@@ -37,6 +37,12 @@ pub fn subgroup_shuffle(values: &str, lanes: &str, out: &str, n: u32) -> Program
     )
 }
 
+/// CPU reference for the subgroup shuffle intrinsic.
+///
+/// # Panics
+/// Panics when a lane index resolves outside `values`. The oracle cannot produce a
+/// meaningful reference value for an out-of-range shuffle, and returning a filler
+/// byte would make the GPU comparison pass on invalid input.
 fn cpu_ref(values: &[u32], lanes: &[u32]) -> Vec<u8> {
     const SUBGROUP_WIDTH: usize = 32;
     let n = values.len().min(lanes.len());

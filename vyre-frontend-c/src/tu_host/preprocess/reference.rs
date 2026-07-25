@@ -1,6 +1,12 @@
 use super::*;
 /// Expand preprocessor macros with the host reference implementation used by
 /// parity tests and oracle comparisons.
+///
+/// # Panics
+/// Panics on malformed conditional directives: `#elif`/`#else`/`#endif` with no open
+/// `#if`, a duplicate `#else`, an unterminated conditional, or an active `#error`.
+/// This is the parity oracle the GPU preprocessor is compared against, so bad input
+/// must fail loudly instead of yielding a token stream that would be trusted as truth.
 pub fn reference_expand_preprocessor_macros(source: &str) -> String {
     let mut macros = HashMap::<String, MacroDef>::new();
     let mut conditionals = Vec::<ConditionalFrame>::new();

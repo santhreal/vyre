@@ -60,18 +60,20 @@ pub const C11_AST_MAX_TOK_SCAN: u32 = 65536;
 mod tests {
     const SOURCE: &str = include_str!("stages.rs");
 
+    /// The downstream products come from the one workspace-wide list. Only the
+    /// two names specific to this surface are added here: the C pipeline
+    /// describes generic frontend embedders, so it must not name the compiler
+    /// CLI or the frontend crate that happens to be its first embedder either.
     #[test]
     fn c_pipeline_stage_surface_is_consumer_neutral() {
-        for forbidden in [
-            concat!("vy", "rec"),
-            concat!("we", "ir"),
-            concat!("sur", "gec"),
-            concat!("gos", "san"),
-            concat!("key", "hog"),
-            concat!("vyre-frontend", "-c"),
-        ] {
+        let local = [concat!("vy", "rec"), concat!("vyre-frontend", "-c")];
+        for forbidden in
+            vyre_test_support::consumer_boundary::FORBIDDEN_CONSUMER_NAMES
+                .iter()
+                .chain(local.iter())
+        {
             assert!(
-                !SOURCE.to_ascii_lowercase().contains(forbidden),
+                !SOURCE.to_ascii_lowercase().contains(*forbidden),
                 "C pipeline stages must describe generic frontend embedders, not consumer names"
             );
         }

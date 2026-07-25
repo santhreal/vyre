@@ -46,6 +46,28 @@ PLATFORM_MARKDOWN_FILES=(
   "docs/consumer-integration.md"
 )
 
+# Release runbooks and the changelog are exempt: the release train ships vyre
+# together with a partner product under joint tags, so those documents have to
+# name the other repository to be followable. The list lives in one data file
+# that vyre-lints reads too, because the two guards used to carry separate
+# copies and disagreed about docs/RELEASE.md.
+RELEASE_COORDINATION_DOCS_FILE="vyre-lints/rules/release_coordination_docs.txt"
+
+is_release_coordination_doc() {
+  local candidate="$1" entry
+  while IFS= read -r entry; do
+    entry="${entry%%#*}"
+    entry="${entry//[[:space:]]/}"
+    [[ -z "$entry" ]] && continue
+    if [[ "$entry" == */ ]]; then
+      [[ "$candidate" == *"$entry"* && "$candidate" == *.md ]] && return 0
+    else
+      [[ "$candidate" == "$entry" || "$candidate" == */"$entry" ]] && return 0
+    fi
+  done < "$RELEASE_COORDINATION_DOCS_FILE"
+  return 1
+}
+
 PLATFORM_TEXT_FILES=(
   "docs/optimization/OP_MATRIX.toml"
 )
@@ -106,6 +128,7 @@ for crate in "${PLATFORM_CRATES[@]}"; do
 done
 
 for doc in "${PLATFORM_MARKDOWN_FILES[@]}"; do
+  is_release_coordination_doc "$doc" && continue
   [[ -f "$doc" ]] && scan_markdown "$doc"
 done
 

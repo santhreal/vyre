@@ -142,6 +142,25 @@ pub fn analyze_crate_batched_with_shard_cap(
     Ok(results)
 }
 
+/// Fail loud if any per-query loan closure did not reach a fixpoint within the
+/// iteration budget. The budget is sized to the largest function's point count
+/// (>= its CFG diameter), so a non-converged query is a truncated reachability
+/// set that would silently under-report loan conflicts; borrow-checking against
+/// it is unsound (Law 10).
+fn enforce_borrow_closures_converged(
+    converged: &[u32],
+    direction: &str,
+) -> Result<(), DispatchError> {
+    if let Some(query) = converged.iter().position(|&flag| flag != 1) {
+        return Err(DispatchError::BackendError(format!(
+            "Fix: {direction} closure for loan query {query} did not converge within the \
+             point-count iteration budget; the loan reachability set is truncated and \
+             borrow-checking it would silently drop conflicts."
+        )));
+    }
+    Ok(())
+}
+
 /// One shard: union every function's CFG into a disconnected graph and run all
 /// loans through two dispatches. Caller bounds the shard size; this is where the
 /// device work happens.
@@ -247,6 +266,7 @@ fn batch_shard(
     let mut scratch = PersistentBfsResidentScratch::default();
     let mut forward = Vec::new();
     let mut forward_changed = Vec::new();
+    let mut forward_converged = Vec::new();
     bfs_expand_resident_graph_batch_with_scratch_into(
         dispatcher,
         &fwd_graph,
@@ -257,9 +277,16 @@ fn batch_shard(
         &mut scratch,
         &mut forward,
         &mut forward_changed,
+        &mut forward_converged,
     )?;
+    // max_iters == max function point_count >= CFG diameter, so every loan-issue
+    // closure must reach a fixpoint within budget. A non-converged query is a
+    // partial (unsound) reachability set that would silently drop loan conflicts;
+    // fail loud instead (Law 10) rather than borrow-check against a truncated closure.
+    enforce_borrow_closures_converged(&forward_converged, "forward loan-issue")?;
     let mut backward = Vec::new();
     let mut backward_changed = Vec::new();
+    let mut backward_converged = Vec::new();
     bfs_expand_resident_graph_batch_with_scratch_into(
         dispatcher,
         &rev_graph,
@@ -270,7 +297,9 @@ fn batch_shard(
         &mut scratch,
         &mut backward,
         &mut backward_changed,
+        &mut backward_converged,
     )?;
+    enforce_borrow_closures_converged(&backward_converged, "backward loan-use")?;
 
     // Pair within each function (cross-function loans are never compared).
     let mut per_function = Vec::with_capacity(functions.len());

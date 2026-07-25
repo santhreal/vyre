@@ -124,17 +124,21 @@ const COMPONENTS: &[(&str, &str, &str, &[&str], &[&str], &[&str], &[&str])] = &[
         &["parser", "dataflow", "alias", "reaching", "callgraph"],
         REQUIRED_PARSER_TEST_CATEGORIES,
     ),
+    // Component ids are neutral capability names; the `path` stays the real checkout
+    // location, which release-hygiene separately requires in its scanned roots. The
+    // contract artifact filename derives from the id, so renaming the id here is what
+    // keeps `compiler-consumer-contracts.json` matching every expected-artifact list.
     (
-        "surgec",
+        "compiler-consumer",
         "Security compiler consumer integration surface",
-        "libs/surge/surgec",
+        crate::release_train::compiler_consumer_relative_path(),
         &["Cargo.toml", "src/lib.rs", "README.md"],
         &["surge", "compile"],
         &["consumer", "surge", "parser", "condition"],
         REQUIRED_PARSER_TEST_CATEGORIES,
     ),
     (
-        "surgec-grammar-gen",
+        "compiler-consumer-grammar-gen",
         "Shared grammar generation substrate",
         "libs/performance/matching/vyre/vyre-grammar-gen",
         &["Cargo.toml", "src/lib.rs", "README.md"],
@@ -143,6 +147,16 @@ const COMPONENTS: &[(&str, &str, &str, &[&str], &[&str], &[&str], &[&str])] = &[
         REQUIRED_PARSER_TEST_CATEGORIES,
     ),
 ];
+
+/// Ids of every parser-ownership component, in declaration order.
+///
+/// The single owner of the component-id list. `release_completion_audit` kept its own copy
+/// that still named the compiler consumer `surgec` and `surgec-grammar-gen`, so once the ids
+/// became neutral capability names the audit reported two components as permanently missing
+/// from a matrix that in fact contained both.
+pub(crate) fn component_ids() -> Vec<&'static str> {
+    COMPONENTS.iter().map(|component| component.0).collect()
+}
 
 const REQUIRED_PARSER_TEST_CATEGORIES: &[&str] = &[
     "unit",
@@ -506,9 +520,34 @@ fn append_component_test_text(root: &Path, output: &mut String) -> usize {
     unreadable
 }
 
+/// Lowercase the ownership text with lint configuration removed.
+///
+/// A lint that DENIES `todo!()` is the opposite of an unresolved ownership marker, so it
+/// must not read as one. This handled the attribute spelling (`clippy::todo`) but not the
+/// manifest spelling: `todo = "deny"` under `[lints.clippy]` in `tools/vyrec/Cargo.toml`
+/// made the `vyrec` parser component permanently report an unresolved `todo` marker.
+/// Dropping whole lint-level lines covers both spellings and any future lint named after a
+/// marker word.
 fn normalized_ownership_text(text: &str) -> String {
     text.to_ascii_lowercase()
+        .lines()
+        .filter(|line| !is_lint_level_line(line))
+        .collect::<Vec<_>>()
+        .join("\n")
         .replace("clippy::todo", "clippy-lint")
+}
+
+/// True when `line` sets a lint level, in either the manifest or attribute spelling.
+fn is_lint_level_line(line: &str) -> bool {
+    const LINT_LEVELS: &[&str] = &["deny", "forbid", "warn", "allow"];
+    let trimmed = line.trim();
+    if let Some((_name, value)) = trimmed.split_once('=') {
+        let value = value.trim().trim_end_matches(',').trim_matches('"');
+        if LINT_LEVELS.contains(&value) {
+            return true;
+        }
+    }
+    trimmed.starts_with("#![") || trimmed.starts_with("#[")
 }
 
 fn tree_source_bytes(root: &Path) -> (usize, usize) {
@@ -595,4 +634,61 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
         ));
     }
     Ok(text)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A lint that denies `todo!()` must not read as an unresolved ownership marker.
+    ///
+    /// `tools/vyrec/Cargo.toml` sets `todo = "deny"` under `[lints.clippy]`, the strongest
+    /// possible statement that todos are banned. The scan matched the word anyway, so the
+    /// `vyrec` parser component reported a permanent unresolved-ownership blocker that no
+    /// amount of real work could clear.
+    #[test]
+    fn manifest_lint_levels_are_not_unresolved_ownership_markers() {
+        let manifest = "[lints.clippy]\ntodo = \"deny\"\nunimplemented = \"deny\"\n";
+        let normalized = normalized_ownership_text(manifest);
+
+        for marker in UNRESOLVED_OWNERSHIP_MARKERS {
+            assert!(
+                !normalized.contains(marker),
+                "Fix: a `[lints.clippy]` level must not count as unresolved ownership marker `{marker}`; normalized={normalized:?}"
+            );
+        }
+    }
+
+    /// The attribute spelling of the same lint is also not a marker.
+    #[test]
+    fn attribute_lint_levels_are_not_unresolved_ownership_markers() {
+        let source = "#![deny(clippy::todo)]\n#[allow(clippy::fixme)]\nfn main() {}\n";
+        let normalized = normalized_ownership_text(source);
+
+        for marker in UNRESOLVED_OWNERSHIP_MARKERS {
+            assert!(
+                !normalized.contains(marker),
+                "Fix: a lint attribute must not count as unresolved ownership marker `{marker}`; normalized={normalized:?}"
+            );
+        }
+    }
+
+    /// A real unresolved marker in prose is still reported.
+    ///
+    /// The filter above must narrow the scan to lint configuration only. If it swallowed
+    /// prose too, a component could ship with `Owner: TBD` in its README and pass.
+    #[test]
+    fn prose_ownership_markers_are_still_reported() {
+        let readme = "# vyrec\n\nOwner: TBD\n\nTODO: wire the parser.\n";
+        let normalized = normalized_ownership_text(readme);
+
+        assert!(
+            normalized.contains("owner: tbd"),
+            "Fix: an unresolved owner in prose must still be reported; normalized={normalized:?}"
+        );
+        assert!(
+            normalized.contains("todo"),
+            "Fix: a TODO in prose must still be reported; normalized={normalized:?}"
+        );
+    }
 }

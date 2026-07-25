@@ -60,9 +60,9 @@ pub fn licm_with_alias_facts(
 }
 
 #[must_use]
-pub fn licm_with_weir_alias_facts(
+pub fn licm_with_external_alias_facts(
     desc: &KernelDescriptor,
-    alias_facts: &crate::analyses::weir_alias::AliasFactSet,
+    alias_facts: &crate::analyses::alias_import::AliasFactSet,
 ) -> KernelDescriptor {
     licm_with_alias_facts(desc, alias_facts)
 }
@@ -79,8 +79,8 @@ pub fn licm_with_dataflow_facts(
 #[must_use]
 pub fn licm_with_dataflow_analysis_facts(
     desc: &KernelDescriptor,
-    alias_facts: &crate::analyses::weir_alias::AliasFactSet,
-    reaching_defs: &crate::analyses::weir_reaching_def::ReachingDefFactSet,
+    alias_facts: &crate::analyses::alias_import::AliasFactSet,
+    reaching_defs: &crate::analyses::reaching_def_import::ReachingDefFactSet,
 ) -> KernelDescriptor {
     licm_with_dataflow_facts(desc, alias_facts, reaching_defs)
 }

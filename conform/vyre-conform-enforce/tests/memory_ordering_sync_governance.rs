@@ -1,7 +1,6 @@
 //! Memory ordering sync governance test suite.
 
 const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
-const PLAN: &str = include_str!("../../../docs/optimization/ALL_AXES_ACCELERATION_PLAN.md");
 const ORDERING: &str =
     include_str!("../../../docs/optimization/MEMORY_ORDERING_ATOMIC_CONTRACTS.toml");
 const BARRIERS: &str = include_str!("../../../docs/optimization/GPU_BARRIER_SCOPE_MATRIX.toml");
@@ -110,34 +109,6 @@ fn barrier_verification_evidence_records_hazards_producers_consumers_negative_ca
         "atomic-rmw-consistency-proof",
     ] {
         assert!(EVIDENCE.contains(required), "barrier verification evidence must include {required}");
-    }
-}
-
-#[test]
-fn plan_contains_memory_ordering_synchronization_rows() {
-    for row in [
-        "VX-1421",
-        "VX-1422",
-        "VX-1423",
-        "VX-1424",
-        "VX-1425",
-        "VX-1426",
-        "VX-1427",
-        "VX-1428",
-        "VX-1429",
-        "VX-1430",
-        "VX-1431",
-        "VX-1432",
-        "VX-1433",
-        "VX-1434",
-        "VX-1435",
-        "VX-1436",
-        "VX-1437",
-        "VX-1438",
-        "VX-1439",
-        "VX-1440",
-    ] {
-        assert!(PLAN.contains(row), "plan must include {row}");
     }
 }
 

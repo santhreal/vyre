@@ -11,6 +11,31 @@ pub const BINDING_FRONTIER_IN: u32 = BINDING_PRIMITIVE_START;
 pub const BINDING_FRONTIER_OUT: u32 = BINDING_PRIMITIVE_START + 1;
 /// Canonical binding index for the global changed flag.
 pub const BINDING_CHANGED: u32 = BINDING_PRIMITIVE_START + 2;
+/// Canonical binding index for the converged flag.
+///
+/// `1` if the frontier reached a fixpoint (a step added nothing) before the
+/// `max_iters` budget was exhausted, `0` if the loop ran all `max_iters` steps
+/// while still growing (an under-approximated closure) or `max_iters == 0`.
+/// This is the device readback that lets a host caller reject a partial closure
+/// loudly instead of silently trusting a frontier the kernel never drove to a
+/// fixpoint. Mirrors [`super::cpu_ref::PersistentBfsConvergence::converged`].
+pub const BINDING_CONVERGED: u32 = BINDING_PRIMITIVE_START + 3;
+/// Canonical binding index for the optional per-iteration frontier-density array.
+///
+/// Present only in the density-instrumented program variants
+/// ([`super::program::persistent_bfs_with_density`] and
+/// [`super::program::try_persistent_bfs_batch_with_density`]). It is a
+/// `max_iters`-length (single) or `query_count * max_iters` (batch) u32 array
+/// where entry `i` holds the popcount of the frontier after traversal step `i`
+/// (per query for the batch variant). Because reachability growth is monotone, a
+/// host caller reconstructs every `FrontierDensityTelemetry` aggregate (active
+/// total, per-step delta, peak, last) from this array plus the seed popcount,
+/// with no per-iteration device readback loop. The base
+/// [`super::program::persistent_bfs`] programs omit this buffer entirely, so
+/// their ABI is unchanged.
+pub const BINDING_DENSITY_ACTIVE: u32 = BINDING_PRIMITIVE_START + 4;
+/// Canonical name for the per-iteration frontier-density array output buffer.
+pub const DENSITY_ACTIVE_BUFFER: &str = "density_active";
 /// Canonical workgroup size for persistent BFS programs.
 pub const PERSISTENT_BFS_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 /// One-block dispatch grid used by the compact single-workgroup BFS path.

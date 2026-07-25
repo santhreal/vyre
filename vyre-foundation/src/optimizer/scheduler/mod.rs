@@ -90,11 +90,21 @@ pub struct PassScheduler {
 
 pub(crate) const PASS_RESEARCH_TRACE_SCHEMA_VERSION: u32 = 1;
 
+/// Research and proof provenance attached to one optimizer pass run.
+///
+/// Every pass that claims a speedup carries the key of the research basis it
+/// implements, the baseline it is measured against, and the proof artifact that
+/// records the measurement. Keeping the three together means a pass cannot claim
+/// an improvement that no artifact backs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct PassResearchTrace {
+    /// Schema version of this trace, checked by [`PassResearchTrace::is_complete`].
     pub schema_version: u32,
+    /// Key of the research result the pass implements.
     pub research_basis_key: &'static str,
+    /// Identifier of the baseline the pass is measured against.
     pub baseline_id: &'static str,
+    /// Identifier of the release evidence artifact holding the measurement.
     pub proof_artifact_id: &'static str,
 }
 
@@ -130,6 +140,10 @@ impl PassResearchTrace {
         })
     }
 
+    /// True when the schema version matches and no identifier is blank.
+    ///
+    /// A trace built by [`PassResearchTrace::try_new`] is always complete; this
+    /// check exists for traces that arrive from serialized evidence.
     #[must_use]
     pub fn is_complete(&self) -> bool {
         self.schema_version == PASS_RESEARCH_TRACE_SCHEMA_VERSION
@@ -139,10 +153,14 @@ impl PassResearchTrace {
     }
 }
 
+/// Why a [`PassResearchTrace`] could not be built.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PassResearchTraceError {
+    /// The research basis key was empty or whitespace.
     MissingResearchBasisKey,
+    /// The baseline identifier was empty or whitespace.
     MissingBaselineId,
+    /// The proof artifact identifier was empty or whitespace.
     MissingProofArtifactId,
 }
 

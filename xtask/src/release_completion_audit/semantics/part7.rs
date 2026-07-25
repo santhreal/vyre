@@ -278,17 +278,9 @@ fn inspect_release_tag_plan_semantics(
     value: &serde_json::Value,
     blockers: &mut Vec<String>,
 ) {
-    for (field, expected) in [
-        ("vyre_rc_tag", "vyre-v0.6.3-rc.1"),
-        ("weir_rc_tag", "weir-v0.1.0-rc.1"),
-        (
-            "combined_release_train_rc_tag",
-            "vyre-0.6.3-weir-0.1.0-rc.1",
-        ),
-        ("vyre_tag", "vyre-v0.6.3"),
-        ("weir_tag", "weir-v0.1.0"),
-        ("combined_release_train_tag", "vyre-0.6.3-weir-0.1.0"),
-    ] {
+    // Derived from the release train. The pasted tag names were pinned to 0.6.3, so every
+    // one of them became a permanent blocker the moment the train moved.
+    for (field, expected) in crate::release_train::tag_story_fields() {
         if value.get(field).and_then(serde_json::Value::as_str) != Some(expected) {
             blockers.push(format!("{evidence}: {field} must be `{expected}`"));
         }
@@ -298,14 +290,7 @@ fn inspect_release_tag_plan_semantics(
         .and_then(serde_json::Value::as_array)
         .cloned()
         .unwrap_or_default();
-    for required in [
-        "vyre-v0.6.3-rc.1",
-        "weir-v0.1.0-rc.1",
-        "vyre-0.6.3-weir-0.1.0-rc.1",
-        "vyre-v0.6.3",
-        "weir-v0.1.0",
-        "vyre-0.6.3-weir-0.1.0",
-    ] {
+    for required in crate::release_train::tag_creation_order() {
         if !order.iter().any(|entry| entry.as_str() == Some(required)) {
             blockers.push(format!(
                 "{evidence}: tag_creation_order is missing `{required}`"
@@ -316,11 +301,7 @@ fn inspect_release_tag_plan_semantics(
         .iter()
         .filter_map(serde_json::Value::as_str)
         .collect::<Vec<_>>();
-    for (rc, final_tag) in [
-        ("vyre-v0.6.3-rc.1", "vyre-v0.6.3"),
-        ("weir-v0.1.0-rc.1", "weir-v0.1.0"),
-        ("vyre-0.6.3-weir-0.1.0-rc.1", "vyre-0.6.3-weir-0.1.0"),
-    ] {
+    for (rc, final_tag) in crate::release_train::rc_to_final_tags() {
         let rc_index = ordered_tags.iter().position(|tag| *tag == rc);
         let final_index = ordered_tags.iter().position(|tag| *tag == final_tag);
         if !matches!((rc_index, final_index), (Some(left), Some(right)) if left < right) {

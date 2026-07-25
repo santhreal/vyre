@@ -57,6 +57,10 @@ pub fn try_ast_walk_plan(
 }
 
 /// Emit preorder node indices for a VAST first-child / next-sibling tree.
+///
+/// # Panics
+/// Panics on an invalid `node_count` or output capacity. Callers that must recover use
+/// [`try_ast_walk_preorder`].
 #[must_use]
 pub fn ast_walk_preorder(nodes: &str, out: &str, node_count: u32, out_cap: u32) -> Program {
     // Fail fast: an invalid launch shape must NOT silently degrade to an inert
@@ -77,6 +81,10 @@ pub fn try_ast_walk_preorder(
 }
 
 /// Emit postorder node indices for a VAST first-child / next-sibling tree.
+///
+/// # Panics
+/// Panics on an invalid `node_count` or output capacity. Callers that must recover use
+/// [`try_ast_walk_postorder`].
 #[must_use]
 pub fn ast_walk_postorder(nodes: &str, out: &str, node_count: u32, out_cap: u32) -> Program {
     // Fail fast on an invalid launch shape rather than silently degrading to an

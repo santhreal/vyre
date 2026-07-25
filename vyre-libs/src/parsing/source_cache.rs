@@ -236,6 +236,11 @@ impl<T> ParsedSourceLru<T> {
         self.len() == 0
     }
 
+    /// Lock the LRU inner state, failing closed on a poisoned lock.
+    ///
+    /// # Panics
+    /// Panics when the lock is poisoned. A poisoned lock means a panic left the LRU links
+    /// inconsistent, and continuing would serve entries the cache no longer owns.
     fn lock_inner(&self) -> MutexGuard<'_, LruInner<T>> {
         // Fail closed on a poisoned lock instead of silently recovering with
         // `into_inner()` (Law 10). A poison here means another thread panicked

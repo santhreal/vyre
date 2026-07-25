@@ -7,6 +7,7 @@ use crate::scan::classic_ac::{
     classic_ac_candidate_suffix3_bloom_words_ci, presence_bitmap_words, presence_by_region_words,
     try_build_ac_bounded_ranges_suffix3_prefilter_program_ext,
     try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program,
+    try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered,
     try_build_ac_bounded_ranges_suffix3_presence_by_region_program,
     try_build_ac_bounded_ranges_suffix3_presence_program, CLASSIC_AC_SUFFIX2_MASK_WORDS,
 };
@@ -611,7 +612,7 @@ impl ResidentLiteralScan {
 
     /// [`Self::scan_into`] returning the backend-owned dispatch timing
     /// ([`vyre_driver::TimedDispatchResult`]) so a consumer can attribute the
-    /// resident scan's GPU-kernel time separately from host staging/readback 
+    /// resident scan's GPU-kernel time separately from host staging/readback
     /// matching [`ResidentPresencePipeline::scan_into_timed`].
     ///
     /// # Errors
@@ -799,6 +800,36 @@ impl GpuLiteralSet {
         max_regions: u32,
         max_matches: u32,
     ) -> Result<ResidentFusedRegionScan, vyre::BackendError> {
+        self.prepare_resident_fused_scan_positioned_from(
+            backend,
+            haystack_capacity_bytes,
+            max_regions,
+            max_matches,
+            0,
+        )
+    }
+
+    /// Prepare the fused resident scan while emitting match triples only for
+    /// pattern IDs at or above `first_positioned_pattern_id`. The per-region
+    /// presence bitmap remains complete for the entire literal set.
+    ///
+    /// This is the compact-output path for consumers that use leading literal
+    /// rows only as admission bits and append a smaller positioned-evidence
+    /// segment. Filtering occurs before the atomic match counter, so dense
+    /// admission rows consume no triple capacity or readback bandwidth.
+    ///
+    /// # Errors
+    /// Returns [`vyre::BackendError`] under the same conditions as
+    /// [`Self::prepare_resident_fused_scan`], or when the positioned boundary
+    /// exceeds the compiled pattern count.
+    pub fn prepare_resident_fused_scan_positioned_from(
+        &self,
+        backend: &dyn VyreBackend,
+        haystack_capacity_bytes: usize,
+        max_regions: u32,
+        max_matches: u32,
+        first_positioned_pattern_id: u32,
+    ) -> Result<ResidentFusedRegionScan, vyre::BackendError> {
         use crate::scan::dispatch_io;
 
         let pattern_count = u32::try_from(self.pattern_lengths.len()).map_err(|_| {
@@ -811,13 +842,15 @@ impl GpuLiteralSet {
                 "literal_set resident fused scan: max_regions must be >= 1 (it sizes the resident presence buffer and the kernel's region binary-search width). Fix: pass the largest coalesced-batch file count the session will scan.".to_string(),
             ));
         }
-        let program = try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program(
-            &self.dfa,
-            pattern_count,
-            max_regions,
-            max_matches,
-        )
-        .map_err(vyre::BackendError::new)?;
+        let program =
+            try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered(
+                &self.dfa,
+                pattern_count,
+                max_regions,
+                max_matches,
+                first_positioned_pattern_id,
+            )
+            .map_err(vyre::BackendError::new)?;
         let prefilter_tables = self.build_prefilter_tables()?;
         let tables = self.presence_immutable_table_bytes(&prefilter_tables)?;
         let presence_words = presence_bitmap_words(pattern_count);
@@ -1054,7 +1087,7 @@ impl ResidentFusedRegionScan {
         let timed = backend.dispatch_resident_timed(&self.program, &resources, &config)?;
 
         // Output ordering = read_write then output by binding: presence(6) ->
-        // outputs[0], match_count(12) -> outputs[1], matches(13) -> outputs[2] 
+        // outputs[0], match_count(12) -> outputs[1], matches(13) -> outputs[2]
         // the exact shape the borrowed fused dispatch produces.
         let presence_bytes = dispatch_io::try_output_bytes(
             &timed.outputs,
@@ -1375,6 +1408,12 @@ impl GpuLiteralSet {
         Self::compile_folded(patterns, true)
     }
 
+    /// Compile a folded literal set, failing closed when the set exceeds the GPU ABI.
+    ///
+    /// # Panics
+    /// Panics when compilation fails. An empty matcher would match nothing and report
+    /// every input as clean, so callers that must recover use `try_compile` and reduce the
+    /// pattern set.
     fn compile_folded(patterns: &[&[u8]], case_insensitive: bool) -> Self {
         match Self::try_compile_folded(patterns, case_insensitive) {
             Ok(compiled) => compiled,
@@ -1609,7 +1648,7 @@ impl GpuLiteralSet {
     ///
     /// The fixed-cap [`Self::scan`] fails closed when a chunk has more matches
     /// than `max_matches`, forcing every consumer to implement a paging retry
-    /// loop (e.g. keyhog's `split_positioned_window`). This method makes that
+    /// loop. This method makes that
     /// loop dead code: it dispatches once at an initial capacity; the match
     /// kernel's atomic counter reports the TRUE total even past the cap, so on
     /// saturation it resizes the output to exactly that count and re-dispatches
@@ -2282,7 +2321,7 @@ impl GpuLiteralSet {
     /// See [`Self::scan_presence_by_region`].
     /// Encode the seven corpus-invariant region-presence tables into owned
     /// little-endian byte buffers through the fail-closed `copy_u32_words_as_le_bytes`.
-    /// The single source of truth for which tables are immutable across a corpus 
+    /// The single source of truth for which tables are immutable across a corpus
     /// reused by the borrowed/async/prepared builder and the resident pipeline so
     /// every path encodes byte-identical tables.
     fn presence_immutable_table_bytes(

@@ -50,6 +50,29 @@ pub(crate) fn weir_version() -> &'static str {
     data().versions.weir.as_str()
 }
 
+/// Checkout path of the security compiler consumer, relative to the Santh root.
+///
+/// The product lives at `surge/surgec`, not `libs/surge/surgec`. Eight xtask sites
+/// hardcoded the extra `libs/` prefix, so every gate that resolved the path reported the
+/// tree as absent. `distributed-parser-coherence` alone raised 51 blockers claiming
+/// `src/lib.rs does not exist` and `evidence tree tests does not exist` for a crate that
+/// has 229 test files, 5 benches, and 2 fuzz targets on disk. Keep this the single owner
+/// and do not re-inline the literal.
+pub(crate) const fn compiler_consumer_relative_path() -> &'static str {
+    "surge/surgec"
+}
+
+/// The crates.io package name of the dataflow-analysis product in the release train.
+///
+/// The product, its repository, and its release tags are all named `weir`, but the
+/// publishable package is `weirflow`: `weir` is only the lib target name, and the bare
+/// `weir` name on crates.io belongs to an unrelated crate. Two xtask modules previously
+/// hardcoded `"weir"` as the package name, which made `package-readiness` report a
+/// permanent blocker that no version bump could clear. This is the single owner.
+pub(crate) const fn weir_package_name() -> &'static str {
+    "weirflow"
+}
+
 pub(crate) fn vyrec_version() -> &'static str {
     data().versions.vyrec.as_str()
 }
@@ -149,7 +172,7 @@ pub(crate) fn required_release_packages() -> [(&'static str, &'static str, &'sta
         ("vyre", vyre_version(), "vyre"),
         ("vyre-driver-cuda", vyre_version(), "vyre"),
         ("vyre-driver-wgpu", vyre_version(), "vyre"),
-        ("weir", weir_version(), "weir"),
+        (weir_package_name(), weir_version(), "weir"),
         ("vyrec", vyrec_version(), "vyre"),
         ("vyre-frontend-c", vyre_frontend_c_version(), "vyre"),
     ]

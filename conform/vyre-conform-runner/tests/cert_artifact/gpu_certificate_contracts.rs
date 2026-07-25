@@ -20,14 +20,21 @@ fn prove_emits_signed_certificate_on_gpu_build() {
     if let Some(backend) = selected_backend.as_deref() {
         command.args(["--backend", backend]);
     }
-    let status = command
+    // `output()` rather than `status()`: this shells out to a second cargo
+    // invocation, so a failure here can be a build error, a missing backend, or a
+    // prove-time error, and discarding the child's streams left the assertion
+    // saying only "must succeed" with nothing to act on.
+    let result = command
         .arg("--out")
         .arg(out.path())
-        .status()
+        .output()
         .expect("Fix: cargo must be available in PATH");
     assert!(
-        status.success(),
-        "TEST-034: `cargo run -p vyre-conform-runner --features gpu -- prove --out <path>` must succeed on a live GPU"
+        result.status.success(),
+        "TEST-034: `cargo run -p vyre-conform-runner --features gpu -- prove --out <path>` must \
+         succeed on a live GPU.\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&result.stdout),
+        String::from_utf8_lossy(&result.stderr)
     );
 
     let cert =
@@ -171,7 +178,7 @@ fn prove_emits_signed_certificate_on_gpu_build() {
 fn prove_emits_signed_cuda_release_certificate_on_gpu_build() {
     let out = tempfile::NamedTempFile::new().expect("tempfile");
     let selected_backend = selected_backend_override().unwrap_or_else(|| "cuda".to_string());
-    let status = Command::new("cargo")
+    let result = Command::new("cargo")
         .env("VYRE_CONFORM_PROOF_WORKERS", "16")
         .args([
             "run",
@@ -189,11 +196,14 @@ fn prove_emits_signed_cuda_release_certificate_on_gpu_build() {
             "--out",
         ])
         .arg(out.path())
-        .status()
+        .output()
         .expect("Fix: cargo must be available in PATH");
     assert!(
-        status.success(),
-        "Fix: selected GPU release backend `{selected_backend}` must produce a signed certificate on a live GPU."
+        result.status.success(),
+        "Fix: selected GPU release backend `{selected_backend}` must produce a signed certificate \
+         on a live GPU.\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&result.stdout),
+        String::from_utf8_lossy(&result.stderr)
     );
 
     let cert =

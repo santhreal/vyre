@@ -59,10 +59,10 @@ fn inspect_optimization_family_manifest_semantics(
         "A14-shared-mem-promote-fixture",
         "A15-bank-conflict-fixture",
         "A16-vec-pack-fixture",
-        "weir-dataflow-dse",
-        "weir-dataflow-loop-fusion",
-        "weir-dataflow-loop-fission",
-        "weir-dataflow-licm",
+        "external-dataflow-dse",
+        "external-dataflow-loop-fusion",
+        "external-dataflow-loop-fission",
+        "external-dataflow-licm",
     ] {
         let required_cases = families
             .iter()

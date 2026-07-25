@@ -420,9 +420,9 @@ fn is_parser_contract_evidence(evidence: &str) -> bool {
     [
         "vyre-frontend-c-contracts.json",
         "vyrec-cli-contracts.json",
-        "weir-contracts.json",
-        "surgec-contracts.json",
-        "surgec-grammar-gen-contracts.json",
+        "external-dataflow-contracts.json",
+        "compiler-consumer-contracts.json",
+        "compiler-consumer-grammar-gen-contracts.json",
     ]
     .iter()
     .any(|suffix| evidence.ends_with(suffix))
@@ -440,13 +440,9 @@ fn inspect_distributed_parser_map_semantics(
         blockers.push(format!("{evidence}: missing components array"));
         return;
     };
-    for required in [
-        "vyre-frontend-c",
-        "vyrec",
-        "weir",
-        "surgec",
-        "surgec-grammar-gen",
-    ] {
+    // Component ids have one owner in `parser_coherence`; this was a second copy that still
+    // used the old product-specific names.
+    for required in crate::parser_coherence::component_ids() {
         if !components.iter().any(|component| {
             component.get("id").and_then(serde_json::Value::as_str) == Some(required)
                 && component.get("exists").and_then(serde_json::Value::as_bool) == Some(true)

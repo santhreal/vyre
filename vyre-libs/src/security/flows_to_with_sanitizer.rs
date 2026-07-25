@@ -40,7 +40,7 @@ pub const FIXPOINT_OP_ID: &str = "vyre-libs::security::flows_to_with_sanitizer::
 /// Execution mode for sanitizer-gated source-to-sink flow.
 ///
 /// `OneStep` is the single Region emitted by [`flows_to_with_sanitizer`].
-/// It is an intermediate Weir taint state, not a final vulnerability proof.
+/// It is an intermediate external taint state, not a final vulnerability proof.
 /// `FixpointConverged` is the contract a driver emits after repeatedly
 /// applying the same sanitizer-gated step until a no-change check succeeds.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -65,10 +65,10 @@ pub struct SanitizedFlowSoundnessContract {
     pub soundness: crate::dataflow::Soundness,
     /// Whether the result is bounded by an explicit sanitizer mask.
     pub sanitizer_filter: bool,
-    /// Shared fact kind Weir should use when writing this result.
-    pub weir_fact_kind: crate::dataflow::SharedFactKind,
-    /// Stable Weir role string for blackboard/fact consumers.
-    pub weir_role: &'static str,
+    /// Shared fact kind the external engine should use when writing this result.
+    pub external_fact_kind: crate::dataflow::SharedFactKind,
+    /// Stable external role string for blackboard/fact consumers.
+    pub external_role: &'static str,
 }
 
 /// Rejection for attempts to use an intermediate sanitizer-flow step as a
@@ -90,7 +90,7 @@ impl SanitizedFlowExecutionMode {
         matches!(self, Self::FixpointConverged { .. })
     }
 
-    /// Stable label for logs, Weir roles, and tests.
+    /// Stable label for logs, external roles, and tests.
     #[must_use]
     pub const fn label(self) -> &'static str {
         match self {
@@ -124,16 +124,16 @@ pub const fn sanitized_flow_soundness_contract(
             op_id: OP_ID,
             soundness: crate::dataflow::Soundness::MayOver,
             sanitizer_filter: true,
-            weir_fact_kind: crate::dataflow::SharedFactKind::Taint,
-            weir_role: "weir.flow.one_step.sanitizer_gated",
+            external_fact_kind: crate::dataflow::SharedFactKind::Taint,
+            external_role: "external.flow.one_step.sanitizer_gated",
         },
         SanitizedFlowExecutionMode::FixpointConverged { .. } => SanitizedFlowSoundnessContract {
             mode,
             op_id: FIXPOINT_OP_ID,
             soundness: crate::dataflow::Soundness::Exact,
             sanitizer_filter: false,
-            weir_fact_kind: crate::dataflow::SharedFactKind::Witness,
-            weir_role: "weir.flow.fixpoint_converged.sanitizer_gated",
+            external_fact_kind: crate::dataflow::SharedFactKind::Witness,
+            external_role: "external.flow.fixpoint_converged.sanitizer_gated",
         },
     }
 }
@@ -141,7 +141,7 @@ pub const fn sanitized_flow_soundness_contract(
 /// Return final-proof sanitizer-flow evidence, rejecting one-step results.
 ///
 /// Finding builders should use this helper when they need proof-grade evidence
-/// rather than intermediate Weir taint state.
+/// rather than intermediate external taint state.
 ///
 /// # Errors
 ///
@@ -285,7 +285,7 @@ mod tests {
     use crate::security::flow_composition::linear_dataflow;
 
     #[test]
-    fn sanitizer_flow_contract_labels_one_step_and_weir_fixpoint_distinctly() {
+    fn sanitizer_flow_contract_labels_one_step_and_external_fixpoint_distinctly() {
         let one_step = sanitized_flow_soundness_contract(SanitizedFlowExecutionMode::OneStep);
         let fixpoint =
             sanitized_flow_soundness_contract(SanitizedFlowExecutionMode::FixpointConverged {
@@ -297,22 +297,22 @@ mod tests {
         assert_eq!(one_step.soundness, Soundness::MayOver);
         assert!(one_step.sanitizer_filter);
         assert_eq!(
-            one_step.weir_fact_kind,
+            one_step.external_fact_kind,
             crate::dataflow::SharedFactKind::Taint
         );
-        assert_eq!(one_step.weir_role, "weir.flow.one_step.sanitizer_gated");
+        assert_eq!(one_step.external_role, "external.flow.one_step.sanitizer_gated");
 
         assert_eq!(fixpoint.mode.label(), "fixpoint_converged");
         assert_eq!(fixpoint.op_id, FIXPOINT_OP_ID);
         assert_eq!(fixpoint.soundness, Soundness::Exact);
         assert!(!fixpoint.sanitizer_filter);
         assert_eq!(
-            fixpoint.weir_fact_kind,
+            fixpoint.external_fact_kind,
             crate::dataflow::SharedFactKind::Witness
         );
         assert_eq!(
-            fixpoint.weir_role,
-            "weir.flow.fixpoint_converged.sanitizer_gated"
+            fixpoint.external_role,
+            "external.flow.fixpoint_converged.sanitizer_gated"
         );
     }
 

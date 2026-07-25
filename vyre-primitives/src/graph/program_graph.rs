@@ -100,6 +100,10 @@ impl ProgramGraphShape {
     /// Emit the five canonical [`BufferDecl`] entries for a primitive
     /// that consumes a read-only ProgramGraph. Primitives add their
     /// own RW output buffers starting at [`BINDING_PRIMITIVE_START`].
+    ///
+    /// # Panics
+    /// Panics when the graph shape cannot be expressed as buffer declarations. Callers
+    /// that must recover use the checked twin below.
     #[must_use]
     pub fn read_only_buffers(&self) -> Vec<BufferDecl> {
         // Fail fast: an overflowing graph shape must NOT silently degrade to an

@@ -21,6 +21,11 @@ struct Compiled {
 
 static C11_COMPILED: OnceLock<Compiled> = OnceLock::new();
 
+/// Compiled C11 patterns for the host max-munch lexer, built once.
+///
+/// # Panics
+/// Panics when a pattern in [`crate::C11_PATTERNS`] does not compile. Dropping the
+/// pattern instead would leave its token kind permanently unrecognized.
 // INTENTIONAL: C11_PATTERNS is a compile-time constant. Any pattern that fails
 // to compile is a programmer error; we must abort loudly rather than silently
 // drop the failed pattern and produce invisible token-kind recall loss.

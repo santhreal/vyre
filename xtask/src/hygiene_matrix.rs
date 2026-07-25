@@ -29,7 +29,7 @@ struct ReleaseSurfaceCoverage {
     vyre_workspace: bool,
     cuda_driver_crate: bool,
     wgpu_driver_crate: bool,
-    weir_crate: bool,
+    dataflow_crate: bool,
     vyrec_tool: bool,
     surgec_tool: bool,
     surgec_grammar_gen: bool,
@@ -240,7 +240,7 @@ pub(crate) fn run(args: &[String]) {
     let roots = [vyre_root, santh_root.join("libs/dataflow/weir")];
     let optional_roots = [
         santh_root.join("tools/vyrec"),
-        santh_root.join("libs/surge/surgec"),
+        santh_root.join(crate::release_train::compiler_consumer_relative_path()),
         santh_root.join("libs/performance/matching/vyre/vyre-grammar-gen"),
     ];
     let mut scanned_roots = roots
@@ -272,7 +272,7 @@ pub(crate) fn run(args: &[String]) {
         roots[0].clone(),
         santh_root.join("libs/dataflow/weir"),
         santh_root.join("tools/vyrec"),
-        santh_root.join("libs/surge/surgec"),
+        santh_root.join(crate::release_train::compiler_consumer_relative_path()),
         santh_root.join("libs/performance/matching/vyre/vyre-grammar-gen"),
     ] {
         scan_audit_report_locations(&root, &mut scanned_files, &mut findings);
@@ -452,7 +452,7 @@ fn hygiene_owner_lane_for_path(path: &str) -> &'static str {
         return "flow_weir";
     }
     if normalized.contains("/tools/vyrec/")
-        || normalized.contains("/libs/surge/surgec/")
+        || normalized.contains(&format!("/{}/", crate::release_train::compiler_consumer_relative_path()))
         || normalized.contains("/libs/performance/matching/vyre/vyre-grammar-gen/")
         || normalized.contains("/vyre-frontend-c/")
         || normalized.contains("/vyre-frontend-rust/")
@@ -687,9 +687,9 @@ fn release_surface_coverage(vyre_root: &Path, santh_root: &Path) -> ReleaseSurfa
         vyre_workspace: vyre_root.join("vyre-core").is_dir(),
         cuda_driver_crate: vyre_root.join("vyre-driver-cuda/src/lib.rs").is_file(),
         wgpu_driver_crate: vyre_root.join("vyre-driver-wgpu/src/lib.rs").is_file(),
-        weir_crate: santh_root.join("libs/dataflow/weir/src/lib.rs").is_file(),
+        dataflow_crate: santh_root.join("libs/dataflow/weir/src/lib.rs").is_file(),
         vyrec_tool: santh_root.join("tools/vyrec/src").is_dir(),
-        surgec_tool: santh_root.join("libs/surge/surgec/src").is_dir(),
+        surgec_tool: santh_root.join(crate::release_train::compiler_consumer_relative_path()).join("src").is_dir(),
         surgec_grammar_gen: santh_root
             .join("libs/performance/matching/vyre/vyre-grammar-gen/src")
             .is_dir(),
@@ -1129,7 +1129,12 @@ const HYGIENE_SCANS: &[(&str, &str, &[&str])] = &[
     (
         "error-surface-scan.json",
         "error-surface",
-        &["panic_macro", "unwrap_call", "expect_call"],
+        &[
+            "panic_macro",
+            "unwrap_call",
+            "expect_call",
+            "documented_panic_contract",
+        ],
     ),
     (
         "cargo-wrapper-scan.json",
@@ -1444,6 +1449,16 @@ fn scan_audit_report_locations(
         {
             continue;
         }
+        // Reports are prose. A `PLAN_*.toml` under `docs/optimization/` is a Tier-B data
+        // manifest that release gates read by name, so it belongs next to the other
+        // optimization manifests, not under `.audits/`. Matching on the name alone flagged
+        // all seven of them as stray reports.
+        if !matches!(
+            path.extension().and_then(|extension| extension.to_str()),
+            Some("md") | Some("txt")
+        ) {
+            continue;
+        }
         *scanned_files += 1;
         let normalized = path.to_string_lossy();
         if !normalized.contains("/.audits/") && !normalized.contains("/audits/") {
@@ -1581,6 +1596,13 @@ fn scan_file(path: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneF
         }
         for &(name, pattern) in BLOCKED_PATTERNS {
             if line_contains_blocked_pattern(path, name, pattern, line, &lower) {
+                let name = if matches!(name, "panic_macro" | "unwrap_call" | "expect_call")
+                    && has_documented_panic_contract(&text, line_index)
+                {
+                    "documented_panic_contract"
+                } else {
+                    name
+                };
                 findings.push(HygieneFinding {
                     path: path.display().to_string(),
                     line: line_index + 1,
@@ -1627,12 +1649,25 @@ fn scan_file(path: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneF
     }
 }
 
+/// True when a `#[cfg(...)]` attribute gates the item to test builds only.
+///
+/// Any predicate mentioning the `test` cfg compiles only in a test build, so the item
+/// behind it is test code no matter how the predicate is spelled. The previous version
+/// listed four exact spellings and missed `#[cfg(all(test, feature = "..."))]`, which is
+/// how the regex scan suites gate themselves: four `mod tests` blocks were scanned as
+/// production source and their test helpers reported as release blockers. `not(test)` is
+/// the opposite gate and stays in scope.
 fn is_non_release_cfg_attr(trimmed: &str) -> bool {
-    trimmed == "#[cfg(test)]"
-        || trimmed.contains("cfg(any(test, feature = \"cpu-parity\"))")
-        || trimmed.contains("cfg(any(feature = \"cpu-parity\", test))")
-        || trimmed.contains("cfg(any(test, feature = \"legacy-infallible\"))")
-        || trimmed.contains("cfg(any(feature = \"legacy-infallible\", test))")
+    if !trimmed.starts_with("#[cfg(") || trimmed.contains("not(test)") {
+        return false;
+    }
+    let predicate = trimmed
+        .trim_start_matches("#[cfg(")
+        .trim_end_matches(")]")
+        .trim_end_matches(')');
+    predicate
+        .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
+        .any(|token| token == "test")
 }
 
 fn line_contains_read_call(line: &str) -> bool {
@@ -1657,6 +1692,78 @@ fn line_contains_unbounded_read(path: &Path, line: &str) -> bool {
         return false;
     }
     line_contains_read_call(trimmed)
+}
+
+/// True when the panicking call at `line_index` sits in a function whose docs declare a
+/// `# Panics` section.
+///
+/// A panic in production code is acceptable only when failing closed IS the contract and
+/// the contract is written down. Vyre's panicking functions are infallible wrappers over
+/// `try_*` twins, because the quiet alternative (return an empty match set, an empty
+/// table, no offsets) reports a dirty input as clean and is a total recall-loss silent
+/// fallback (Law 10). Rust already has one place to record that: the `# Panics` doc
+/// section, which `clippy::missing_panics_doc` enforces the same way. The gate reads the
+/// docs instead of keeping a second allowlist file that would drift out of date, and an
+/// undocumented panic stays a release blocker.
+fn has_documented_panic_contract(text: &str, line_index: usize) -> bool {
+    let lines = text.lines().collect::<Vec<_>>();
+    let Some(site) = lines.get(line_index) else {
+        return false;
+    };
+    let site_indent = site.len() - site.trim_start().len();
+    let mut cursor = line_index;
+    while cursor > 0 {
+        cursor -= 1;
+        let line = lines[cursor];
+        let trimmed = line.trim_start();
+        // Only an enclosing item counts: a signature at or past the call's own indent
+        // belongs to a sibling, not to the function the call sits in.
+        if line.len() - trimmed.len() >= site_indent || !is_fn_signature_line(trimmed) {
+            continue;
+        }
+        let mut doc = cursor;
+        while doc > 0 {
+            doc -= 1;
+            let previous = lines[doc].trim();
+            if previous.starts_with("///") || previous.starts_with("//!") {
+                if previous.contains("# Panics") {
+                    return true;
+                }
+                continue;
+            }
+            // Attributes and plain `//` notes sit between a doc block and its signature
+            // (`// INTENTIONAL: ...` above `#[allow(clippy::expect_used)]` is the house
+            // style for a deliberate panic), so walking up must step over them or the doc
+            // block is never reached.
+            if previous.is_empty() || previous.starts_with("#[") || previous.starts_with("//") {
+                continue;
+            }
+            break;
+        }
+        return false;
+    }
+    false
+}
+
+/// True when `trimmed` opens a function signature, whatever the leading keywords.
+fn is_fn_signature_line(trimmed: &str) -> bool {
+    let mut rest = trimmed;
+    loop {
+        if rest.starts_with("fn ") {
+            return true;
+        }
+        let Some((head, tail)) = rest.split_once(' ') else {
+            return false;
+        };
+        let is_signature_keyword = head.starts_with("pub")
+            || head.starts_with("extern")
+            || head.starts_with('"')
+            || matches!(head, "const" | "async" | "unsafe" | "default");
+        if !is_signature_keyword {
+            return false;
+        }
+        rest = tail.trim_start();
+    }
 }
 
 fn is_undocumented_public_api(text: &str, line_index: usize) -> bool {
@@ -2161,7 +2268,7 @@ mod tests {
 
     #[test]
     fn hidden_fallback_scan_still_flags_positive_product_fallback() {
-        let source = Path::new("libs/surge/surgec/src/scan/pipeline/parse_driver.rs");
+        let source = Path::new("surge/surgec/src/scan/pipeline/parse_driver.rs");
 
         assert!(
             line_contains_blocked_pattern(
@@ -2177,7 +2284,7 @@ mod tests {
 
     #[test]
     fn cfg_not_gpu_attr_is_not_a_hidden_fallback_by_itself() {
-        let source = Path::new("libs/surge/surgec/src/cmd_scan.rs");
+        let source = Path::new("surge/surgec/src/cmd_scan.rs");
 
         assert!(
             !line_contains_blocked_pattern(
@@ -2340,6 +2447,198 @@ mod tests {
         assert!(
             findings.is_empty(),
             "Fix: Vyre release hygiene must require the tool-owned bounded cargo wrapper without forcing a Santh backup-root file into the standalone tool repo; findings={findings:?}"
+        );
+    }
+
+    /// A production `panic!` whose enclosing function documents `# Panics` is a declared
+    /// contract, not release debt.
+    ///
+    /// Vyre ships infallible wrappers over `try_*` twins because the quiet alternative
+    /// (an empty match set, an empty table) reports a dirty input as clean (Law 10). The
+    /// gate reads Rust's own `# Panics` section so there is no second allowlist to rot.
+    #[test]
+    fn documented_panic_contract_is_recognized() {
+        let source = "\
+/// Pack a haystack.
+///
+/// # Panics
+/// Panics when the haystack exceeds the u32 ABI.
+pub fn pack(haystack: &[u8]) -> Vec<u8> {
+    panic!(\"nope\")
+}
+";
+        let panic_line = source
+            .lines()
+            .position(|line| line.contains("panic!("))
+            .expect("Fix: keep the panic site in the documented-contract fixture.");
+
+        assert!(
+            has_documented_panic_contract(source, panic_line),
+            "Fix: a panic inside a function documenting `# Panics` must not be a release blocker."
+        );
+    }
+
+    /// An undocumented production panic stays a release blocker.
+    ///
+    /// This is the whole point of reading the docs: if the contract is not written down,
+    /// a caller cannot know the call can abort, and the panic is debt.
+    #[test]
+    fn undocumented_panic_is_not_a_contract() {
+        let source = "\
+/// Pack a haystack.
+pub fn pack(haystack: &[u8]) -> Vec<u8> {
+    panic!(\"nope\")
+}
+";
+        let panic_line = source
+            .lines()
+            .position(|line| line.contains("panic!("))
+            .expect("Fix: keep the panic site in the undocumented fixture.");
+
+        assert!(
+            !has_documented_panic_contract(source, panic_line),
+            "Fix: an undocumented panic must remain a release blocker."
+        );
+    }
+
+    /// Attributes and plain `//` notes between the doc block and the signature must not
+    /// hide the contract.
+    ///
+    /// `// INTENTIONAL: ...` above `#[allow(clippy::expect_used)]` is the house style for
+    /// a deliberate panic; a walk that stopped at the first non-doc line reported both
+    /// `vyre-grammar-gen` DFA builders as blockers even though each documents `# Panics`.
+    #[test]
+    fn documented_contract_survives_attributes_and_plain_comments() {
+        let source = "\
+/// Build the lexer DFA.
+///
+/// # Panics
+/// Panics when a compile-time pattern is invalid.
+// INTENTIONAL: the pattern table is a constant; a failure is a broken build.
+#[must_use]
+#[allow(clippy::expect_used)]
+pub fn build() -> Dfa {
+    inner().expect(\"constant patterns must compile\")
+}
+";
+        let site = source
+            .lines()
+            .position(|line| line.contains(".expect("))
+            .expect("Fix: keep the expect site in the attribute fixture.");
+
+        assert!(
+            has_documented_panic_contract(source, site),
+            "Fix: attributes and plain comments between docs and signature must not hide a `# Panics` contract."
+        );
+    }
+
+    /// A `# Panics` section on a neighbouring function must not exempt an undocumented one.
+    ///
+    /// The walk back looks for the ENCLOSING signature. If it drifted past the function
+    /// it started in, one documented panic anywhere in a file would silence the rest.
+    #[test]
+    fn documented_contract_does_not_leak_to_the_next_function() {
+        let source = "\
+/// Documented.
+///
+/// # Panics
+/// Panics on bad input.
+pub fn documented() {
+    unreachable!()
+}
+
+pub fn undocumented() {
+    panic!(\"nope\")
+}
+";
+        let site = source
+            .lines()
+            .position(|line| line.contains("panic!("))
+            .expect("Fix: keep the panic site in the leak fixture.");
+
+        assert!(
+            !has_documented_panic_contract(source, site),
+            "Fix: a `# Panics` section on an earlier function must not exempt a later one."
+        );
+    }
+
+    /// Every spelling of a test cfg gates the item out of the production scan.
+    ///
+    /// The scan used to list four exact predicate spellings, so
+    /// `#[cfg(all(test, feature = \"...\"))]` (how the regex scan suites gate themselves)
+    /// was treated as production source and four `mod tests` blocks had their helpers
+    /// reported as release blockers.
+    #[test]
+    fn every_test_cfg_spelling_is_non_release() {
+        for attribute in [
+            "#[cfg(test)]",
+            "#[cfg(any(test, feature = \"cpu-parity\"))]",
+            "#[cfg(all(test, feature = \"matching-regex\", feature = \"matching-dfa\"))]",
+            "#[cfg(all(feature = \"matching-regex\", test))]",
+        ] {
+            assert!(
+                is_non_release_cfg_attr(attribute),
+                "Fix: `{attribute}` gates the item to test builds and must be excluded from the production hygiene scan."
+            );
+        }
+    }
+
+    /// `not(test)` and feature-only gates stay in the production scan.
+    ///
+    /// `#[cfg(not(test))]` is the OPPOSITE gate: that code ships. Treating it as test-only
+    /// would blind the scan to exactly the production paths it exists to check.
+    #[test]
+    fn production_cfg_attributes_stay_in_scope() {
+        for attribute in [
+            "#[cfg(not(test))]",
+            "#[cfg(feature = \"cuda\")]",
+            "#[cfg(target_os = \"linux\")]",
+            "#[derive(Debug)]",
+        ] {
+            assert!(
+                !is_non_release_cfg_attr(attribute),
+                "Fix: `{attribute}` does not gate the item to test builds and must stay in the production hygiene scan."
+            );
+        }
+    }
+
+    /// Audit-location enforcement covers prose reports, not Tier-B data manifests.
+    ///
+    /// `docs/optimization/PLAN_*.toml` are data manifests that release gates read by name,
+    /// so they belong beside the other optimization manifests. Matching on the file name
+    /// alone reported all seven as stray reports that had to move under `.audits/`.
+    #[test]
+    fn audit_location_scan_separates_reports_from_data_manifests() {
+        let workspace = tempfile::TempDir::new()
+            .expect("Fix: create temp workspace for the audit-location hygiene test.");
+        let root = workspace.path();
+        fs::create_dir_all(root.join("docs/optimization"))
+            .expect("Fix: create temp docs tree for the audit-location hygiene test.");
+        fs::create_dir_all(root.join("audits"))
+            .expect("Fix: create temp audits tree for the audit-location hygiene test.");
+        fs::write(root.join("docs/optimization/PLAN_EXECUTION_DAG.toml"), b"schema = 1\n")
+            .expect("Fix: write temp plan manifest for the audit-location hygiene test.");
+        fs::write(root.join("docs/AUDIT_SCAN_RECALL.md"), b"# report\n")
+            .expect("Fix: write temp stray report for the audit-location hygiene test.");
+        fs::write(root.join("audits/FINDINGS_2026_07.md"), b"# report\n")
+            .expect("Fix: write temp filed report for the audit-location hygiene test.");
+
+        let mut scanned = 0usize;
+        let mut findings = Vec::new();
+        scan_audit_report_locations(root, &mut scanned, &mut findings);
+
+        let flagged = findings
+            .iter()
+            .map(|finding| finding.path.clone())
+            .collect::<Vec<_>>();
+        assert_eq!(
+            flagged.len(),
+            1,
+            "Fix: exactly the stray prose report belongs in the findings; got {flagged:?}"
+        );
+        assert!(
+            flagged[0].ends_with("docs/AUDIT_SCAN_RECALL.md"),
+            "Fix: the stray prose report outside `audits/` is the finding; got {flagged:?}"
         );
     }
 }

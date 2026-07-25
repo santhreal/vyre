@@ -74,6 +74,11 @@ pub fn build_checked_postorder_walk(
 /// for internal pass pipelines that have already validated the same
 /// `node_count` and output capacity while building the surrounding compiler
 /// workspace.
+///
+/// # Panics
+/// Panics when the VAST shape was not in fact prevalidated. Use
+/// [`build_checked_preorder_walk`] at any boundary where the shape is not already
+/// known good.
 #[must_use]
 pub fn build_trusted_preorder_walk(
     nodes: &str,
@@ -98,6 +103,11 @@ pub fn build_trusted_preorder_walk(
 /// for internal pass pipelines that have already validated the same
 /// `node_count` and output capacity while building the surrounding compiler
 /// workspace.
+///
+/// # Panics
+/// Panics when the VAST shape was not in fact prevalidated. Use
+/// [`build_checked_postorder_walk`] at any boundary where the shape is not already
+/// known good.
 #[must_use]
 pub fn build_trusted_postorder_walk(
     nodes: &str,

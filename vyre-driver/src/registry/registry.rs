@@ -227,6 +227,12 @@ impl DialectRegistry {
         Self::from_validated_defs(defs)
     }
 
+    /// Extern operation definitions for the driver registry.
+    ///
+    /// # Panics
+    /// Panics when the extern definitions fail registry verification. The definitions are
+    /// compiled in, so a verification failure is a broken build, and registering a
+    /// malformed op would let the driver dispatch it.
     fn extern_defs() -> Vec<OpDef> {
         let dialect_count = inventory::iter::<ExternDialect>().count();
         let mut dialects = Vec::new();

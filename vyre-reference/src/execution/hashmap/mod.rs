@@ -148,6 +148,7 @@ pub(crate) fn run_hashmap_reference(
     inputs: &[Value],
     min_dispatch_elements: u32,
     lane_order: LaneOrder,
+    explicit_grid: Option<[u32; 3]>,
 ) -> Result<Vec<Value>, Error> {
     #[cfg(feature = "subgroup-ops")]
     let validation_report = vyre::validate::validate::validate_with_options(
@@ -292,22 +293,35 @@ pub(crate) fn run_hashmap_reference(
         // under-coverage (Law 10).
         .max(min_dispatch_elements);
     let total_wg = dispatch_elements.div_ceil(invocations_per_workgroup).max(1);
-    let active: Vec<usize> = [sx, sy, sz]
-        .iter()
-        .enumerate()
-        .filter(|(_, size)| **size > 1)
-        .map(|(i, _)| i)
-        .collect();
-    let n = active.len().max(1);
-    let mut counts = [1u32, 1, 1];
-    if active.is_empty() {
-        counts[0] = total_wg;
+    // An explicit workgroup grid overrides shape inference entirely. Buffer-shape
+    // inference distributes `total_wg` only across axes whose workgroup size is >1
+    // (the powf split below), so a program dispatched over an inactive axis (a
+    // `[256, 1, 1]` workgroup fanned across `grid.y` = query, as batched
+    // persistent-BFS does) would collapse to `grid.y == 1` and SILENTLY compute
+    // only the first slice (a Law-10 under-coverage). A caller that knows the real
+    // dispatch grid passes it here so the interpreter covers exactly what the GPU
+    // would, per-workgroup-axis. `None` keeps the inference path unchanged.
+    let counts = if let Some([gx, gy, gz]) = explicit_grid {
+        [gx.max(1), gy.max(1), gz.max(1)]
     } else {
-        let base = (total_wg as f64).powf(1.0 / n as f64).ceil() as u32;
-        for &axis in &active {
-            counts[axis] = base.max(1);
+        let active: Vec<usize> = [sx, sy, sz]
+            .iter()
+            .enumerate()
+            .filter(|(_, size)| **size > 1)
+            .map(|(i, _)| i)
+            .collect();
+        let n = active.len().max(1);
+        let mut counts = [1u32, 1, 1];
+        if active.is_empty() {
+            counts[0] = total_wg;
+        } else {
+            let base = (total_wg as f64).powf(1.0 / n as f64).ceil() as u32;
+            for &axis in &active {
+                counts[axis] = base.max(1);
+            }
         }
-    }
+        counts
+    };
     let [workgroup_count_x, workgroup_count_y, workgroup_count_z] = counts;
     let entry = program.entry();
     #[cfg(feature = "subgroup-ops")]
