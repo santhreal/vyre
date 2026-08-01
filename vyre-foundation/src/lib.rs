@@ -120,7 +120,10 @@ pub mod ir {
     pub use crate::optimizer::passes::fusion_cse::{cse, dce};
     pub use crate::optimizer::pre_lowering::optimize;
     pub use crate::serial::text;
-    pub use crate::transform::inline::{inline_calls, inline_calls_with_resolver, OpResolver};
+    pub use crate::transform::inline::{
+        inline_calls, inline_calls_with_mode, inline_calls_with_resolver, inline_composite_calls,
+        OpResolver, UnresolvedCalls,
+    };
     pub use crate::validate::depth::{
         LimitState, DEFAULT_MAX_CALL_DEPTH, DEFAULT_MAX_NESTING_DEPTH, DEFAULT_MAX_NODE_COUNT,
     };

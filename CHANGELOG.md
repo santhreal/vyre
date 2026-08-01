@@ -12,6 +12,125 @@ a published op.
 The only source edit an upgrade requires is the dataflow-import rename. See the
 migration table under "Removed".
 
+### Fixed: three rewrite passes reused result ids across bodies (`vyre-lower`)
+
+Result ids are unique across a whole `KernelDescriptor`, not per body: the PTX
+emitter keeps one flat result-id to register map for the entire kernel, so an id
+two bodies both define resolves to whichever producer the emitter walked last.
+Three passes broke that.
+
+- `branch_collapse` inlined a collapsed `StructuredIfThen` body into its parent
+  but left the child body populated. Child indices are positional, so the slot
+  cannot be removed without reindexing its siblings; it is now emptied instead.
+- `egraph_saturation` and `shared_mem_promote` recursed over the body tree and
+  rebuilt their result allocator at every level, so a nested body seeded its
+  high-water mark from its own subtree. Both now thread one allocator from the
+  descriptor root, the same shape the 0.7.0 `loop_unroll` fix uses.
+
+The debug-only post-pass verify surfaced this on the int4 CUDA parity suites. It
+stayed hidden because three descriptor builders, including the soundness fuzzer,
+assigned ids per body and so failed `verify` before any rewrite ran.
+
+### Fixed: GPU dead-code elimination supplied one input buffer too few (`vyre-self-substrate`)
+
+The persistent-BFS analysis program `gpu_dce` dispatches gained a `converged`
+output in this release. A ReadWrite buffer binds as InputOutput, so it consumes
+an input slot as well as an output slot, and the direct path kept filling eight
+slots for a program declaring nine. Every dispatch failed with "expected 9 input
+buffer(s) from Program declarations but received 8". The resident path already
+passed all nine. A new suite runs the pass against a recording dispatcher, so a
+future slot-count drift fails without a GPU.
+
+### Removed: the `strict-fp` feature (`vyre-harness`, `vyre-test-harness`)
+
+`strict-fp` claimed to forbid multiply-add contraction and demand bit-identical
+f32 results. It forbade nothing: no emitter read it, and its only effect was to
+force `f32_ulp_tolerance` to 0 for backend-vs-reference comparisons. Since
+contraction is a documented backend right, and both cuda and wgpu fold `a*b+c`
+into one FMA, that made `cargo test --workspace --all-features` unable to pass:
+`newton_schulz_poly5_f32` drifted 4 ULP, `newton_schulz_5step` 2 and `ema_apply`
+1, with the two backends agreeing bit-for-bit with each other and differing only
+from the CPU reference.
+
+If you enabled `strict-fp`, drop it from your feature list. The elementary and
+transcendental ULP budgets are unchanged and still apply. Bounding contraction
+is an emitter job; a tolerance constant cannot do it.
+
+### Security: two advisories cleared in the dependency graph
+
+- `crossbeam-epoch` moves 0.9.18 to 0.9.20, clearing RUSTSEC-2026-0204: the `fmt::Pointer`
+  impl for `Atomic` and `Shared` dereferenced the underlying pointer, so formatting a null
+  pointer was an invalid dereference.
+- `anyhow` moves 1.0.102 to 1.0.104, clearing RUSTSEC-2026-0190: adding context with
+  `Error::context` and then calling `Error::downcast_mut` on the result violated borrow
+  rules and was undefined behaviour.
+
+`cargo deny check` is now green on advisories, bans, licenses, and sources.
+
+### Added: a composite op can take a whole buffer (`vyre-foundation`)
+
+An op could only receive scalars, so a phase that indexes a table could not be
+split into its own composition. The only way to name a buffer at a call site was
+`Expr::Var`, which the validator reads as a scope-bound variable, so every such
+program was rejected with "reference to undeclared variable". The
+composition-discipline gate therefore told over-budget ops to split into
+compositions while the pipeline refused to compile the result.
+
+- `Expr::BufferRef { buffer }` names a buffer. It is not a value: it has no type,
+  and the validator rejects it (V051) anywhere except a call argument. Build one
+  with `Expr::buffer_ref("table")`.
+- An op signature declares such a parameter as `buffer<u32>`. The validator checks
+  that the argument is a buffer reference (V053), that the buffer is declared
+  (V052), and that its element type matches (V054).
+- Inlining a call with a buffer argument RETARGETS the callee's loads, atomics, and
+  `BufLen` at the caller's buffer, keeping the callee's index expressions. A scalar
+  argument still substitutes its value, so `BufLen` of a scalar parameter stays 1
+  and `BufLen` of a buffer parameter is now the caller buffer's real length.
+- Wire format rev 5 adds expression tag 22 for it. The decoder still reads rev 4,
+  since rev 5 only appends a tag. See `docs/wire-format.md`.
+  `framing::wire_format_version_is_supported` is now the single owner of the accepted
+  range: three decode paths had each spelled the comparison for themselves, and one was
+  missed when the range widened.
+- `V047` and `V051` through `V054` are cataloged in `docs/error-codes.md`. Call-signature
+  validation moved to its own `validate::call_rules` module.
+
+### Fixed: the reference interpreter computed nothing for a composite op (`vyre-reference`)
+
+`Expr::Call` was always dispatched to the op's registered CPU function. A composite
+op is defined by its IR body and registers no CPU function, so it landed on the
+non-executable sentinel in `LoweringTable::empty()`, which clears the output buffer
+and returns. The interpreter reported success and produced zeros.
+
+- The interpreter now inlines every composite body before execution, through the
+  single `program_for_interpreter` funnel, so only intrinsics reach the CPU dispatch.
+  `vyre_foundation::ir::inline_composite_calls` is the new entry point;
+  `UnresolvedCalls` selects whether an unresolvable call is an error or is left in
+  place.
+- Reaching the sentinel is now a hard error naming the op, instead of a silent
+  empty result.
+- Inlining returns a call-free program untouched instead of rebuilding its node tree,
+  so running this on every reference execution costs nothing when there is no call.
+
+### Changed: typedef annotation is three ops instead of one monolith (`vyre-libs`)
+
+`vyre-libs::parsing::c11_annotate_typedef_names` carried every phase inline: 613
+statement nodes against a 200 budget, control-flow depth 20 against 6, and 37 loops
+against 8. The composition-discipline gate has no exemption list, so the op was red,
+and it could not be split because a callee could not take a buffer.
+
+- The three per-row phases are now registered ops of their own, each answering one
+  question about one row: `c11_typedef_scope_open_for_row`,
+  `c11_typedef_visible_name_for_row{,_packed_haystack}`, and
+  `c11_typedef_decl_kind_for_row{,_packed_haystack}`. They take the node table and
+  haystack as buffer references and the row index as a scalar.
+- The calls inline before lowering, so the emitted kernel is unchanged and the C
+  parser's oracle parity is unaffected.
+- `emit_typedef_visibility_scan` and `emit_current_declaration_annotation`, the two
+  wrappers the annotator no longer uses, are removed.
+- `vyre_libs::dialect_init::ensure_ops_resolvable` installs the driver registry as the
+  process op lookup. A builder that emits a call now calls it, so the program it returns
+  still inlines and validates for a caller who never touches `vyre-driver` directly.
+
 ### Added: device convergence flags for persistent BFS (`vyre-primitives`, `vyre-self-substrate`)
 
 A persistent-BFS closure that exhausts its `max_iters` budget while still growing
@@ -123,7 +242,7 @@ coupling vyre to one sibling product.
 | `security_witness_path_from_weir` | `security_witness_path_from_external_path` |
 | `WeirIfdsSecurity{Buffers,Dispatch,RouteError}` | `ExternalIfdsSecurity{Buffers,Dispatch,RouteError}` |
 | `WEIR_IFDS_SECURITY_BACKEND_ID` | `EXTERNAL_IFDS_SECURITY_BACKEND_ID` |
-| feature `weir_ifds_external_engine` | feature `external_ifds_engine` |
+| `cfg(feature = "weir_ifds_external_engine")` guard | `cfg(feature = "external_ifds_engine")` guard |
 
 - The shared fact schema's producer id changes from `weir` to
   `external-dataflow`. A serialized fact header carries the producer id, so a
@@ -135,6 +254,42 @@ coupling vyre to one sibling product.
 - The rename is mechanical. There are no behavior or signature changes beyond the
   names in this table.
 
+
+### Fixed: unrolled loops reused result ids and the CUDA backend miscompiled the address (`vyre-lower`)
+
+A store indexed by the invocation id came out of the CUDA path as a store at a
+constant offset, so every lane wrote the same element and element 0 was never
+written. `sinkhorn_iterate` and both of its catalog wrappers returned zeros on
+CUDA while the reference and wgpu agreed.
+
+- `loop_unroll` reseeded its free-id counter from the subtree it was currently
+  visiting, at every level of the recursion. Ids inside a child body are small, so
+  unrolling a short loop nested under a long one minted ids that were fresh within
+  that subtree and already owned by a sibling or an ancestor. It now threads one
+  descriptor-wide counter through the whole recursion.
+- The PTX emitter keys its literal map on the raw result id across the whole
+  kernel, so a store index produced by `GlobalInvocationId` in one body resolved to
+  a sibling body's `Literal(1)` and the address folded to a constant. The
+  descriptor was well formed by every check that existed; only the ids were
+  ambiguous.
+- `verify` gained invariant 6, `ResultIdReusedAcrossBodies`. It previously
+  collected produced ids fresh per body, so it caught only duplicates sitting side
+  by side in one op list and cross-body reuse verified clean.
+
+### Fixed: a split op could not be lowered (`vyre-foundation`, `vyre-lower`)
+
+The canonical pre-emit pipeline inlines through `inline_calls`, whose default
+resolver returned `None` for every op id, so any program containing an `Expr::Call`
+failed with `InlineUnknownOp` before a backend saw it. Only `vyre-aot` passed a real
+resolver. The composition-discipline gate meanwhile instructs an over-budget op to
+split into sub-ops connected via `Expr::Call`, so the prescribed remedy produced code
+the pipeline refused to compile. The default resolver now asks the installed dialect
+lookup, the same dependency-inversion boundary the reference interpreter uses. An op
+resolves when it is registered and carries a composition body; intrinsics and
+unregistered ids still do not.
+
+This unblocks half of the composition-discipline split. A callee still takes only
+scalar arguments, so a phase that indexes a table cannot yet be factored out.
 
 ### Changed: eigenvectors come back with a canonical sign (`vyre-primitives`)
 

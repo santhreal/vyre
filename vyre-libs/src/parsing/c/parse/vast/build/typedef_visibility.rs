@@ -310,34 +310,3 @@ pub(crate) fn emit_visible_typedef_name_for_index(
     ));
     nodes
 }
-
-pub(crate) fn emit_typedef_visibility_scan(
-    vast_nodes: &str,
-    haystack: &str,
-    decl_contexts: Option<&str>,
-    haystack_len: &Expr,
-    _num_nodes: &Expr,
-    t: Expr,
-    packed_haystack: bool,
-) -> Vec<Node> {
-    let mut nodes = Vec::new();
-    nodes.extend(emit_visible_typedef_name_for_index(
-        vast_nodes,
-        haystack,
-        decl_contexts,
-        haystack_len,
-        t,
-        "current_visible_typedef_name",
-        "current_visible_typedef",
-        packed_haystack,
-    ));
-    nodes.push(Node::assign(
-        "last_decl_kind",
-        Expr::select(
-            Expr::eq(Expr::var("current_visible_typedef_name"), Expr::u32(1)),
-            Expr::u32(1),
-            Expr::u32(0),
-        ),
-    ));
-    nodes
-}

@@ -1,0 +1,153 @@
+//! Validation of `Expr::Call` against the registered op signature.
+//!
+//! A call is the one place the IR reaches outside the program for meaning: the
+//! argument list only makes sense against the signature the dialect registered
+//! for that op id. These rules resolve the op, check the arity, and check each
+//! argument, including the `buffer<T>` parameters that take a whole buffer
+//! rather than a value.
+
+use crate::dialect_lookup::{dialect_lookup, OpDef};
+use crate::ir_inner::model::expr::Expr;
+use crate::ir_inner::model::program::BufferDecl;
+use crate::ir_inner::model::types::DataType;
+use crate::validate::typecheck::expr_type;
+use crate::validate::{err, Binding, ValidationError, ValidationOptions};
+use rustc_hash::FxHashMap;
+
+pub(crate) fn validate_call(
+    op_id: &str,
+    args: &[Expr],
+    buffers: &FxHashMap<&str, &BufferDecl>,
+    scope: &FxHashMap<crate::ir::Ident, Binding>,
+    options: ValidationOptions<'_>,
+    errors: &mut Vec<ValidationError>,
+) {
+    let lookup = if let Some(lookup) = options.dialect_lookup {
+        lookup
+    } else if let Some(lookup) = dialect_lookup() {
+        lookup
+    } else {
+        errors.push(err(format!(
+            "V016: call references op `{op_id}` but no dialect lookup is registered for this \
+             validation pass. Fix: supply a lookup via \
+             `ValidationOptions::with_dialect_lookup(...)` or inline all calls before validation."
+        )));
+        return;
+    };
+    let interned = lookup.intern_op(op_id);
+    let Some(def) = lookup.lookup(interned) else {
+        errors.push(err(format!(
+            "V016: call references unknown op `{op_id}`. Fix: register the dialect that owns `{op_id}` before validation, or inline/remove this call."
+        )));
+        return;
+    };
+    validate_call_signature(op_id, def, args, buffers, scope, errors);
+}
+
+fn validate_call_signature(
+    op_id: &str,
+    def: &OpDef,
+    args: &[Expr],
+    buffers: &FxHashMap<&str, &BufferDecl>,
+    scope: &FxHashMap<crate::ir::Ident, Binding>,
+    errors: &mut Vec<ValidationError>,
+) {
+    let expected = def.signature.inputs.len();
+    if args.len() != expected {
+        errors.push(err(format!(
+            "V020: call `{op_id}` has {} arguments but signature expects {expected}. Fix: pass exactly {expected} arguments in the order declared by the op signature.",
+            args.len()
+        )));
+        return;
+    }
+
+    for (index, (arg, param)) in args.iter().zip(def.signature.inputs.iter()).enumerate() {
+        if let Some(element) = buffer_element_spelling(param.ty) {
+            validate_buffer_argument(op_id, index, param.name, element, arg, buffers, errors);
+            continue;
+        }
+        let Some(expected_ty) = data_type_from_signature_spelling(param.ty) else {
+            errors.push(err(format!(
+                "V021: call `{op_id}` signature input `{}` uses unknown type spelling `{}`. Fix: register a foundation-known scalar/vector type spelling for this parameter or validate it in the dialect layer.",
+                param.name,
+                param.ty
+            )));
+            continue;
+        };
+        let Some(actual_ty) = expr_type(arg, buffers, scope) else {
+            continue;
+        };
+        if actual_ty != expected_ty {
+            errors.push(err(format!(
+                "V022: call `{op_id}` argument {index} (`{}`) has type `{actual_ty}` but signature expects `{expected_ty}`. Fix: cast or rewrite the argument to match the registered op signature.",
+                param.name
+            )));
+        }
+    }
+}
+
+/// Return the element type spelling of a buffer parameter.
+///
+/// A parameter written `buffer<u32>` takes a whole buffer rather than a
+/// value: the caller passes [`Expr::BufferRef`] and the inliner rebinds the
+/// callee's own buffer onto it. Every other spelling names a value type.
+#[inline]
+fn buffer_element_spelling(spelling: &str) -> Option<&str> {
+    spelling.strip_prefix("buffer<")?.strip_suffix('>')
+}
+
+/// Check one `buffer<T>` argument: it must be a reference to a declared
+/// buffer whose element type is `T`.
+fn validate_buffer_argument(
+    op_id: &str,
+    index: usize,
+    param_name: &str,
+    element: &str,
+    arg: &Expr,
+    buffers: &FxHashMap<&str, &BufferDecl>,
+    errors: &mut Vec<ValidationError>,
+) {
+    let Some(expected) = data_type_from_signature_spelling(element) else {
+        errors.push(err(format!(
+            "V021: call `{op_id}` signature input `{param_name}` uses unknown buffer element spelling `{element}`. Fix: use a foundation-known scalar/vector type spelling inside `buffer<...>`."
+        )));
+        return;
+    };
+    let Expr::BufferRef { buffer } = arg else {
+        errors.push(err(format!(
+            "V053: call `{op_id}` argument {index} (`{param_name}`) is declared `buffer<{element}>` but a value was passed. Fix: pass `Expr::BufferRef {{ buffer }}` naming the buffer this op should read."
+        )));
+        return;
+    };
+    let Some(decl) = buffers.get(buffer.as_str()) else {
+        errors.push(err(format!(
+            "V052: call to `{op_id}` passes a reference to unknown buffer `{buffer}`. Fix: declare it in Program::buffers."
+        )));
+        return;
+    };
+    let actual = decl.element();
+    if actual != expected {
+        errors.push(err(format!(
+            "V054: call `{op_id}` argument {index} (`{param_name}`) references buffer `{buffer}` with element type `{actual}` but the signature declares `buffer<{expected}>`. Fix: pass a buffer whose element type matches, or change the op signature."
+        )));
+    }
+}
+
+fn data_type_from_signature_spelling(spelling: &str) -> Option<DataType> {
+    match spelling {
+        "u8" | "U8" => Some(DataType::U8),
+        "u16" | "U16" => Some(DataType::U16),
+        "u32" | "U32" => Some(DataType::U32),
+        "u64" | "U64" => Some(DataType::U64),
+        "i8" | "I8" => Some(DataType::I8),
+        "i16" | "I16" => Some(DataType::I16),
+        "i32" | "I32" => Some(DataType::I32),
+        "i64" | "I64" => Some(DataType::I64),
+        "f32" | "F32" => Some(DataType::F32),
+        "bool" | "Bool" => Some(DataType::Bool),
+        "bytes" | "Bytes" => Some(DataType::Bytes),
+        "vec2<u32>" | "Vec2U32" => Some(DataType::Vec2U32),
+        "vec4<u32>" | "Vec4U32" => Some(DataType::Vec4U32),
+        _ => None,
+    }
+}

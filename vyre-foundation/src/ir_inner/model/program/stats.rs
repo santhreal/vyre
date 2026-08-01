@@ -487,6 +487,7 @@ fn walk_expr(
         | Expr::LitF32(_)
         | Expr::LitBool(_)
         | Expr::Var(_)
+        | Expr::BufferRef { .. }
         | Expr::BufLen { .. }
         | Expr::InvocationId { .. }
         | Expr::WorkgroupId { .. }

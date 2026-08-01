@@ -334,6 +334,10 @@ pub(crate) fn expr_type(
                 | Expr::SubgroupLocalId
                 | Expr::SubgroupSize
                 | Expr::Atomic { .. } => values.push(Some(DataType::U32)),
+                // A buffer reference names a buffer rather than producing a
+                // value, so it has no type. Reporting one would let it pass
+                // an operand typecheck it must never pass.
+                Expr::BufferRef { .. } => values.push(None),
                 Expr::LitI32(_) => values.push(Some(DataType::I32)),
                 Expr::LitF32(_) => values.push(Some(DataType::F32)),
                 Expr::LitBool(_) => values.push(Some(DataType::Bool)),

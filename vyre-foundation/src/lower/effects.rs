@@ -188,6 +188,7 @@ fn walk_expr(expr: &Expr, effects: &mut ProgramEffects) {
         | Expr::LocalId { .. }
         | Expr::SubgroupLocalId
         | Expr::SubgroupSize
+        | Expr::BufferRef { .. }
         | Expr::BufLen { .. }
         | Expr::Opaque(_) => {}
         Expr::Load { index, .. } => walk_expr(index, effects),

@@ -17,6 +17,7 @@ mod decl_contexts;
 mod global_fast;
 mod precomputed_visible_type;
 mod prehash;
+mod row_phases;
 mod scopes;
 mod symbol_links;
 

@@ -323,6 +323,7 @@ fn push_expr_children<'a>(expr: &'a Expr, stack: &mut SmallVec<[&'a Expr; 16]>) 
         | Expr::LitF32(_)
         | Expr::LitBool(_)
         | Expr::Var(_)
+        | Expr::BufferRef { .. }
         | Expr::BufLen { .. }
         | Expr::InvocationId { .. }
         | Expr::WorkgroupId { .. }

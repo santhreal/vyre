@@ -37,7 +37,9 @@ pub const BINDING_B_IN: u32 = 1;
 pub const BINDING_BYTES_IN: u32 = 0;
 pub const BINDING_CARRY_PARTIAL_OUT: u32 = 3;
 pub const BINDING_CHANGED: u32 = BINDING_PRIMITIVE_START + 2;
+pub const BINDING_CONVERGED: u32 = BINDING_PRIMITIVE_START + 3;
 pub const BINDING_DEGREE_SUM_OUT: u32 = BINDING_PRIMITIVE_START + 1;
+pub const BINDING_DENSITY_ACTIVE: u32 = BINDING_PRIMITIVE_START + 4;
 pub const BINDING_EDGE_KIND_MASK: u32 = 3;
 pub const BINDING_EDGE_OFFSETS: u32 = 1;
 pub const BINDING_EDGE_TARGETS: u32 = 2;
@@ -149,6 +151,7 @@ pub const DEDUP_REGIONS_FLAG_OP_ID: &str = "vyre-primitives::matching::region::d
 pub const DEFAULT_DFA_BUDGET_BYTES: usize = 16 * 1024 * 1024;
 pub const DENSE_MATVEC_OP_ID: &str = "vyre-primitives::bitset::four_russians_dense_matvec_byte_lut";
 pub const DENSE_THRESHOLD_PCT: u32 = 25;
+pub const DENSITY_ACTIVE_BUFFER: &str = "density_active";
 pub const DIVISOR_FLOOR: u32 = 1;
 pub const DOMINANCE: u32 = 1 << 4;
 pub const DOMINATOR_FRONTIER_DOM_OFFSETS_BUFFER: u32 = 0;
@@ -159,6 +162,7 @@ pub const DOMINATOR_FRONTIER_PRED_TARGETS_BUFFER: u32 = 3;
 pub const DOMINATOR_FRONTIER_SEED_BUFFER: u32 = 4;
 pub const DOMINATOR_FRONTIER_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 pub const DYNAMIC_HUFFMAN_REJECT: &str = "Fix: vyre-primitives::decode::inflate_stored accepts raw DEFLATE stored blocks only; route BTYPE=2 input to a dynamic-Huffman decoder.";
+pub const EIGENVECTOR_SIGN_EPSILON: f32 = 1.0e-6;
 pub const EMPTY_KEY: u32 = u32::MAX;
 pub const ENC_ASCII: u32 = 0;
 pub const ENC_BINARY: u32 = 255;
@@ -1238,6 +1242,7 @@ pub fn pass_c_broadcast_offsets(
 pub fn path_reconstruct(
 pub fn persistent_bfs(
 pub fn persistent_bfs_batch(
+pub fn persistent_bfs_batch_with_density(
 pub fn persistent_bfs_layout_hash(
 pub fn persistent_bfs_program_layout_hash(
 pub fn persistent_bfs_step(
@@ -1246,6 +1251,7 @@ pub fn persistent_bfs_step_body_prefixed(
 pub fn persistent_bfs_step_child(
 pub fn persistent_bfs_step_child_prefixed(
 pub fn persistent_bfs_step_child_prefixed_with_active(
+pub fn persistent_bfs_with_density(
 pub fn persistent_fixpoint(
 pub fn plan_adaptive_frontier_work(
 pub fn plan_adaptive_resident_auto_step(
@@ -1273,8 +1279,8 @@ pub fn prefix_scan_large(in_buf: &str, out_buf: &str, n: u32) -> Program {
 pub fn prefix_scan_large_with_op_id(
 pub fn prefix_scan_with_op_id(
 pub fn prepare(
+pub fn program(
 pub fn program_cache_key(&self, device_features: u64) -> PersistentBfsPlanCacheKey {
-pub fn program(&self, frontier_in: &str, frontier_out: &str, changed: &str) -> Program {
 pub fn program(&self, frontier_in: &str, frontier_out: &str) -> Program {
 pub fn program(&self) -> Program {
 pub fn program(&self) -> Result<Program, String> {
@@ -1441,6 +1447,8 @@ pub fn try_cpu_ref_batched_with_scratch(
 pub fn try_cpu_ref_closure(
 pub fn try_cpu_ref_closure_into(
 pub fn try_cpu_ref_closure_into_with_step_hook<F>(
+pub fn try_cpu_ref_converged(
+pub fn try_cpu_ref_density(
 pub fn try_cpu_ref_exclusive_into(input: &[u32], out: &mut Vec<u32>) -> Result<(), String> {
 pub fn try_cpu_ref(input: &[u32], kind: ScanKind) -> Result<Vec<u32>, String> {
 pub fn try_cpu_ref_into(
@@ -1526,6 +1534,7 @@ pub fn try_pack_i4x8_cpu_into(values: &[i32], out: &mut Vec<u32>) -> Result<(), 
 pub fn try_pack_rle_segments_into(
 pub fn try_pack_u32_slice_into(words: &[u32], out: &mut Vec<u8>) -> Result<(), String> {
 pub fn try_persistent_bfs_batch(
+pub fn try_persistent_bfs_batch_with_density(
 pub fn try_qsvt_apply_cpu(
 pub fn try_qsvt_apply_cpu_into(
 pub fn try_qsvt_block_encode(
@@ -1614,6 +1623,7 @@ pub fn validate_motif_witness(layout: MotifLayout, witness: &[u32]) -> Result<()
 pub fn validate_path_reconstruct_readback(
 pub fn validate_persistent_bfs_batch_frontiers(
 pub fn validate_persistent_bfs_changed_flag(changed: u32) -> Result<(), String> {
+pub fn validate_persistent_bfs_converged_flag(converged: u32) -> Result<(), String> {
 pub fn validate_persistent_bfs_frontier(
 pub fn validate_persistent_bfs_graph_layout(
 pub fn validate_persistent_bfs_inputs(
@@ -1948,6 +1958,7 @@ pub struct PathReconstructStaticInputKey {
 pub struct PatternMatchDfa {
 pub struct PatternMatchLiteral {
 pub struct PersistentBfsBatchLayout {
+pub struct PersistentBfsConvergence {
 pub struct PersistentBfsDispatchPlan {
 pub struct PersistentBfsFrontierLayout {
 pub struct PersistentBfsLayout {

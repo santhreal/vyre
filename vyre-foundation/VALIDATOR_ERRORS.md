@@ -694,3 +694,84 @@ let bad_ir = ...;
 // (cast the value to `{declared}` or introduce a new binding with the intended type.)
 let good_ir = ...;
 ```
+
+## V051  -  buffer reference used where a value is expected
+
+**Description**: an `Expr::BufferRef` appeared somewhere other than a call argument. A buffer reference names a buffer; it is not a value and has no type.
+
+**Common Cause**: a buffer reference was stored, bound with `Node::let_bind`, or used as an operand of an arithmetic or comparison expression.
+
+**Recommended Fix**: pass the reference directly as the argument of a composite op that declares a `buffer<T>` parameter, or read an element out of the buffer with `Expr::load`.
+
+### Example
+
+```rust
+// Bad input
+// (Causes V051)
+let bad_ir = Node::let_bind("b", Expr::buffer_ref("table"));
+
+// Corrected input
+// (read an element instead of naming the buffer)
+let good_ir = Node::let_bind("b", Expr::load("table", Expr::u32(0)));
+```
+
+## V052  -  call passes a reference to an undeclared buffer
+
+**Description**: a call argument is `Expr::BufferRef { buffer }` naming a buffer that the program does not declare.
+
+**Common Cause**: the buffer name is misspelled, or the buffer was never added to `Program::buffers`.
+
+**Recommended Fix**: declare the buffer in `Program::buffers` before passing a reference to it.
+
+### Example
+
+```rust
+// Bad input
+// (Causes V052)
+let bad_ir = Expr::call("op", vec![Expr::buffer_ref("tabel")]);
+
+// Corrected input
+// (name a declared buffer)
+let good_ir = Expr::call("op", vec![Expr::buffer_ref("table")]);
+```
+
+## V053  -  value passed for a `buffer<T>` parameter
+
+**Description**: an op signature declares a parameter as `buffer<T>` and the call passed a value expression instead of a buffer reference.
+
+**Common Cause**: the argument was written as a scalar or a load rather than as the buffer itself.
+
+**Recommended Fix**: pass `Expr::buffer_ref(name)` naming the buffer the op should read.
+
+### Example
+
+```rust
+// Bad input
+// (Causes V053)
+let bad_ir = Expr::call("op", vec![Expr::u32(0)]);
+
+// Corrected input
+// (pass the buffer the op reads)
+let good_ir = Expr::call("op", vec![Expr::buffer_ref("table")]);
+```
+
+## V054  -  referenced buffer's element type does not match the signature
+
+**Description**: the call passes a buffer reference whose declared element type differs from the `buffer<T>` element type in the op signature.
+
+**Common Cause**: an `f32` buffer was passed to an op that reads `buffer<u32>`, or the signature was changed without updating callers.
+
+**Recommended Fix**: pass a buffer whose element type matches `buffer<T>`, or change the op signature to the type the caller has.
+
+### Example
+
+```rust
+// Bad input
+// (Causes V054)
+// `values` is declared with DataType::F32, the signature reads buffer<u32>
+let bad_ir = Expr::call("op", vec![Expr::buffer_ref("values")]);
+
+// Corrected input
+// (pass the u32 buffer the signature declares)
+let good_ir = Expr::call("op", vec![Expr::buffer_ref("indices")]);
+```

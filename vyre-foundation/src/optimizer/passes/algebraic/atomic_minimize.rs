@@ -795,6 +795,7 @@ fn push_expr_children<'a>(stack: &mut SmallVec<[&'a Expr; 32]>, expr: &'a Expr) 
         | Expr::LitF32(_)
         | Expr::LitBool(_)
         | Expr::Var(_)
+        | Expr::BufferRef { .. }
         | Expr::BufLen { .. }
         | Expr::InvocationId { .. }
         | Expr::WorkgroupId { .. }

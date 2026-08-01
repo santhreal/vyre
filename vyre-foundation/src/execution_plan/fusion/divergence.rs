@@ -200,6 +200,7 @@ fn cond_depends_on_invocation_id(expr: &Expr) -> bool {
         | Expr::LitF32(_)
         | Expr::LitBool(_)
         | Expr::Var(_)
+        | Expr::BufferRef { .. }
         | Expr::BufLen { .. }
         | Expr::Opaque(_) => false,
     }
@@ -260,6 +261,7 @@ fn expr_depends_on_launch_geometry(expr: &Expr, launch_vars: &FxHashSet<Ident>) 
         | Expr::LitI32(_)
         | Expr::LitF32(_)
         | Expr::LitBool(_)
+        | Expr::BufferRef { .. }
         | Expr::BufLen { .. }
         | Expr::Opaque(_) => false,
     }
@@ -303,6 +305,7 @@ pub(super) fn expr_writes_atomic(expr: &Expr) -> bool {
         | Expr::LocalId { .. }
         | Expr::SubgroupLocalId
         | Expr::SubgroupSize
+        | Expr::BufferRef { .. }
         | Expr::BufLen { .. }
         | Expr::Opaque(_) => false,
     }

@@ -23,11 +23,32 @@ pub const MAX_UNROLL_COUNT: u32 = 4;
 #[must_use]
 pub fn loop_unroll(desc: &KernelDescriptor) -> KernelDescriptor {
     let mut out = desc.clone();
-    out.body = unroll_body(&out.body);
+    // One id counter for the whole descriptor, seeded past every result
+    // id in the entire tree. See `unroll_body` for why a per-body seed is
+    // not enough.
+    let mut next_id: u32 = max_result_id_in_subtree(&out.body)
+        .map(|max| max + 1)
+        .unwrap_or(0);
+    out.body = unroll_body(&out.body, &mut next_id);
     out
 }
 
-fn unroll_body(body: &KernelBody) -> KernelBody {
+/// Unroll every eligible loop in `body` and, recursively, in its child
+/// bodies.
+///
+/// `next_id` is the descriptor-wide free-id counter. It is threaded
+/// through the whole recursion rather than reseeded per body because
+/// result ids must be unique across the ENTIRE descriptor, not merely
+/// within one body. A child body may reference ids defined in an
+/// enclosing body, and the PTX emitter keeps a single flat
+/// result-id → register map for the whole kernel. Seeding from
+/// `max_result_id_in_subtree(body)` at each recursion level mints ids
+/// that are fresh within that subtree but collide with ids already used
+/// by a sibling or an ancestor. The emitter then resolves an operand to
+/// whichever producer it saw last: a `GlobalInvocationId` store index
+/// that collided with a sibling body's `Literal(1)` was emitted as the
+/// constant address `[%rd4+4]`, so every thread wrote to element 1.
+fn unroll_body(body: &KernelBody, next_id: &mut u32) -> KernelBody {
     // Map result-id → constant U32 value (for ops whose op is Literal(U32)).
     let lit_u32: FxHashMap<u32, u32> = body
         .ops
@@ -42,16 +63,6 @@ fn unroll_body(body: &KernelBody) -> KernelBody {
             _ => None,
         })
         .collect();
-
-    // Compute the next free result-id (highest + 1) by walking the
-    // ENTIRE subtree rooted at this body. This must match the depth of
-    // collect_result_renames, which recurses into all child_bodies at
-    // all levels. A shallow scan (only body.ops + one level of
-    // child.ops) misses result-ids in grandchildren and deeper, so the
-    // first renumber_body call could assign a new id that collides with
-    // an id already present in a grandchild, silently producing
-    // duplicate result-ids in the unrolled output.
-    let mut next_id: u32 = max_result_id_in_subtree(body).map(|m| m + 1).unwrap_or(0);
 
     let mut new_ops: Vec<KernelOp> = Vec::with_capacity(body.ops.len());
     let mut new_children = body.child_bodies.clone();
@@ -119,8 +130,8 @@ fn unroll_body(body: &KernelBody) -> KernelBody {
                 // pool slot share a parent pool slot (de-duplicated).
                 for iter in 0..count {
                     let iter_value = lo.wrapping_add(iter);
-                    let (renumbered, new_next) = renumber_body(&child, next_id);
-                    next_id = new_next;
+                    let (renumbered, new_next) = renumber_body(&child, *next_id);
+                    *next_id = new_next;
                     let child_offset = new_children.len() as u32;
                     new_children.extend(renumbered.child_bodies);
                     let mut pool_map: FxHashMap<u32, u32> = FxHashMap::default();
@@ -179,7 +190,7 @@ fn unroll_body(body: &KernelBody) -> KernelBody {
     // Recursively unroll child bodies that weren't already inlined.
     let mut final_children: Vec<KernelBody> = Vec::with_capacity(new_children.len());
     for c in new_children.drain(..) {
-        final_children.push(unroll_body(&c));
+        final_children.push(unroll_body(&c, next_id));
     }
 
     KernelBody {

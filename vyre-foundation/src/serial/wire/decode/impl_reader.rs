@@ -575,6 +575,9 @@ impl Reader<'_> {
             }),
             20 => Ok(Expr::SubgroupLocalId),
             21 => Ok(Expr::SubgroupSize),
+            22 => Ok(Expr::BufferRef {
+                buffer: self.string()?.into(),
+            }),
             0x80 => {
                 let kind = self.string()?;
                 let payload_len =

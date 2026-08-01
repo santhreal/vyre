@@ -64,7 +64,7 @@ document as a substitute for those generated artifacts.
 
 Each crate carries its release group's version from `release/release-train.toml`.
 This table records which group a crate belongs to, never a version number: a pasted
-version here would go stale on the next release and disagree with the manifests.
+version here goes stale as soon as the train moves and then disagrees with the manifests.
 
 ## How to publish a crate
 

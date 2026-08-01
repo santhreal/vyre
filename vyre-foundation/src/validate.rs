@@ -50,6 +50,7 @@ pub mod validation_error;
 mod atomic_rules;
 mod barrier;
 mod bytes_rejection;
+mod call_rules;
 mod cast;
 mod expr_rules;
 mod fusion_safety;

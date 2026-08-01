@@ -218,6 +218,13 @@ pub(crate) fn collect_expr_accesses(expr: &Expr, accesses: &mut NodeAccesses) {
             Expr::BufLen { buffer } => {
                 accesses.read_buffers.insert(buffer.clone());
             }
+            // A callee parameter is a read-only or uniform buffer by
+            // declaration, so passing a buffer is a read. Recording it as an
+            // atomic access instead would report a phantom hazard against
+            // every ordinary read of the same buffer in the caller.
+            Expr::BufferRef { buffer } => {
+                accesses.read_buffers.insert(buffer.clone());
+            }
             Expr::Atomic {
                 buffer,
                 index,

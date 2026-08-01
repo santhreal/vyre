@@ -167,6 +167,19 @@ erasing_op = "allow"
 identity_op = "allow"
 
 [workspace.lints.rust]
+# `external_ifds_engine` and `external-baselines` gate two bridges to the
+# external dataflow engine: `vyre-libs/src/security/external_ifds.rs` and
+# `vyre-bench/src/cases/dataflow_baseline.rs`. Neither can be a Cargo feature
+# here. The engine crate depends on the vyre platform, and `xtask
+# platform-boundary` forbids the platform from depending back on a consumer, so
+# declaring these as features would only make `--all-features` fail to compile.
+# They are declared to the compiler instead, so the guards name a cfg it knows
+# about and no build warns. Moving the two bridges to the consumer side is
+# BACKLOG R47.
+unexpected_cfgs = { level = "warn", check-cfg = [
+  'cfg(feature, values("external_ifds_engine"))',
+  'cfg(feature, values("external-baselines"))',
+] }
 unsafe_code = "deny"
 missing_docs = "deny"
 unreachable_pub = "warn"
@@ -289,7 +302,7 @@ lasso = { version = "=0.7.3", features = ["multi-threaded"] }
 itoa = "=1.0.18"
 ryu = "=1.0.23"
 arrayvec = "=0.7.6"
-anyhow = "=1.0.102"
+anyhow = "=1.0.104"
 tree-sitter = "=0.26.9"
 tree-sitter-c = "=0.24.2"
 tree-sitter-go = "=0.25.0"

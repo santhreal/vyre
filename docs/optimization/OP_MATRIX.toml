@@ -5834,6 +5834,21 @@ tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/t
 bench_targets = []
 
 [[op]]
+family = "vyre-libs::parsing::c11_annotate_typedef_names"
+tier = "libs"
+owners = ["vyre-libs/src/parsing"]
+ops = ["vyre-libs::parsing::c11_annotate_typedef_names"]
+registry_sources = ["vyre-harness"]
+reference = "supported"
+foundation_ir = "supported"
+cuda = "supported"
+wgpu = "supported"
+spirv = "experimental"
+release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+bench_targets = []
+
+[[op]]
 family = "vyre-libs::parsing::c11_build_call_graph"
 tier = "libs"
 owners = ["vyre-libs/src/parsing"]
@@ -6011,6 +6026,86 @@ wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+bench_targets = []
+
+[[op]]
+family = "vyre-libs::parsing::c11_typedef_decl_kind_for_row"
+tier = "libs"
+owners = ["vyre-libs/src/parsing"]
+ops = ["vyre-libs::parsing::c11_typedef_decl_kind_for_row"]
+registry_sources = ["vyre-driver::registry"]
+inlined_callee = true
+reference = "supported"
+foundation_ir = "supported"
+cuda = "supported"
+wgpu = "supported"
+spirv = "experimental"
+release_blocking_notes = "Per-row typedef phase registered directly through vyre-driver::registry as a Composite op; the caller inlines it before lowering, so Tier 3 ids must stay in the vyre-libs namespace."
+tests = ["vyre-libs/tests/c_annotate_typedef_oracle_parity.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+bench_targets = []
+
+[[op]]
+family = "vyre-libs::parsing::c11_typedef_decl_kind_for_row_packed_haystack"
+tier = "libs"
+owners = ["vyre-libs/src/parsing"]
+ops = ["vyre-libs::parsing::c11_typedef_decl_kind_for_row_packed_haystack"]
+registry_sources = ["vyre-driver::registry"]
+inlined_callee = true
+reference = "supported"
+foundation_ir = "supported"
+cuda = "supported"
+wgpu = "supported"
+spirv = "experimental"
+release_blocking_notes = "Per-row typedef phase registered directly through vyre-driver::registry as a Composite op; the caller inlines it before lowering, so Tier 3 ids must stay in the vyre-libs namespace."
+tests = ["vyre-libs/tests/c_annotate_typedef_oracle_parity.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+bench_targets = []
+
+[[op]]
+family = "vyre-libs::parsing::c11_typedef_scope_open_for_row"
+tier = "libs"
+owners = ["vyre-libs/src/parsing"]
+ops = ["vyre-libs::parsing::c11_typedef_scope_open_for_row"]
+registry_sources = ["vyre-driver::registry"]
+inlined_callee = true
+reference = "supported"
+foundation_ir = "supported"
+cuda = "supported"
+wgpu = "supported"
+spirv = "experimental"
+release_blocking_notes = "Per-row typedef phase registered directly through vyre-driver::registry as a Composite op; the caller inlines it before lowering, so Tier 3 ids must stay in the vyre-libs namespace."
+tests = ["vyre-libs/tests/c_annotate_typedef_oracle_parity.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+bench_targets = []
+
+[[op]]
+family = "vyre-libs::parsing::c11_typedef_visible_name_for_row"
+tier = "libs"
+owners = ["vyre-libs/src/parsing"]
+ops = ["vyre-libs::parsing::c11_typedef_visible_name_for_row"]
+registry_sources = ["vyre-driver::registry"]
+inlined_callee = true
+reference = "supported"
+foundation_ir = "supported"
+cuda = "supported"
+wgpu = "supported"
+spirv = "experimental"
+release_blocking_notes = "Per-row typedef phase registered directly through vyre-driver::registry as a Composite op; the caller inlines it before lowering, so Tier 3 ids must stay in the vyre-libs namespace."
+tests = ["vyre-libs/tests/c_annotate_typedef_oracle_parity.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+bench_targets = []
+
+[[op]]
+family = "vyre-libs::parsing::c11_typedef_visible_name_for_row_packed_haystack"
+tier = "libs"
+owners = ["vyre-libs/src/parsing"]
+ops = ["vyre-libs::parsing::c11_typedef_visible_name_for_row_packed_haystack"]
+registry_sources = ["vyre-driver::registry"]
+inlined_callee = true
+reference = "supported"
+foundation_ir = "supported"
+cuda = "supported"
+wgpu = "supported"
+spirv = "experimental"
+release_blocking_notes = "Per-row typedef phase registered directly through vyre-driver::registry as a Composite op; the caller inlines it before lowering, so Tier 3 ids must stay in the vyre-libs namespace."
+tests = ["vyre-libs/tests/c_annotate_typedef_oracle_parity.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -7574,6 +7669,21 @@ tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/t
 bench_targets = []
 
 [[op]]
+family = "vyre-primitives::graph::csr_backward_or_changed"
+tier = "primitive"
+owners = ["vyre-primitives/src/graph"]
+ops = ["vyre-primitives::graph::csr_backward_or_changed"]
+registry_sources = ["vyre-primitives::harness"]
+reference = "supported"
+foundation_ir = "supported"
+cuda = "supported"
+wgpu = "supported"
+spirv = "experimental"
+release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+bench_targets = []
+
+[[op]]
 family = "vyre-primitives::graph::csr_backward_traverse"
 tier = "primitive"
 owners = ["vyre-primitives/src/graph"]
@@ -7821,6 +7931,21 @@ family = "vyre-primitives::graph::tensor_flow_forward"
 tier = "primitive"
 owners = ["vyre-primitives/src/graph"]
 ops = ["vyre-primitives::graph::tensor_flow_forward"]
+registry_sources = ["vyre-primitives::harness"]
+reference = "supported"
+foundation_ir = "supported"
+cuda = "supported"
+wgpu = "supported"
+spirv = "experimental"
+release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+bench_targets = []
+
+[[op]]
+family = "vyre-primitives::graph::union_find"
+tier = "primitive"
+owners = ["vyre-primitives/src/graph"]
+ops = ["vyre-primitives::graph::union_find"]
 registry_sources = ["vyre-primitives::harness"]
 reference = "supported"
 foundation_ir = "supported"
@@ -8196,6 +8321,21 @@ family = "vyre-primitives::math::iht_threshold"
 tier = "primitive"
 owners = ["vyre-primitives/src/math"]
 ops = ["vyre-primitives::math::iht_threshold"]
+registry_sources = ["vyre-primitives::harness"]
+reference = "supported"
+foundation_ir = "supported"
+cuda = "supported"
+wgpu = "supported"
+spirv = "experimental"
+release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+bench_targets = []
+
+[[op]]
+family = "vyre-primitives::math::interval_merge"
+tier = "primitive"
+owners = ["vyre-primitives/src/math"]
+ops = ["vyre-primitives::math::interval_merge"]
 registry_sources = ["vyre-primitives::harness"]
 reference = "supported"
 foundation_ir = "supported"
@@ -8991,6 +9131,21 @@ family = "vyre-primitives::reduce::min"
 tier = "primitive"
 owners = ["vyre-primitives/src/reduce"]
 ops = ["vyre-primitives::reduce::min"]
+registry_sources = ["vyre-primitives::harness"]
+reference = "supported"
+foundation_ir = "supported"
+cuda = "supported"
+wgpu = "supported"
+spirv = "experimental"
+release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+bench_targets = []
+
+[[op]]
+family = "vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum"
+tier = "primitive"
+owners = ["vyre-primitives/src/reduce"]
+ops = ["vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum"]
 registry_sources = ["vyre-primitives::harness"]
 reference = "supported"
 foundation_ir = "supported"

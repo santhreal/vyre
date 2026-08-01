@@ -1,14 +1,20 @@
 use super::expand::CalleeExpander;
 use super::{
     input_arg_map, input_buffers, output_buffer, zero_value, Error, Expr, HashMap, Ident,
-    InlineCtx, Node, OpResolver, Program, Result,
+    InlineCtx, Node, OpResolver, Program, Result, UnresolvedCalls,
 };
 
 impl InlineCtx {
     #[inline]
     pub(crate) fn new(resolver: OpResolver) -> Self {
+        Self::new_with_mode(resolver, UnresolvedCalls::Reject)
+    }
+
+    #[inline]
+    pub(crate) fn new_with_mode(resolver: OpResolver, unresolved: UnresolvedCalls) -> Self {
         Self {
             resolver,
+            unresolved,
             stack: Vec::new(),
             next_call_id: 0,
         }
@@ -150,6 +156,7 @@ impl InlineCtx {
             | Expr::LitF32(_)
             | Expr::LitBool(_)
             | Expr::Var(_)
+            | Expr::BufferRef { .. }
             | Expr::BufLen { .. }
             | Expr::InvocationId { .. }
             | Expr::WorkgroupId { .. }
@@ -288,9 +295,26 @@ impl InlineCtx {
             inlined_args.push(arg);
         }
 
-        let callee = (self.resolver)(op_id).ok_or_else(|| Error::InlineUnknownOp {
-            op_id: op_id.to_string(),
-        })?;
+        let callee = match (self.resolver)(op_id) {
+            Some(callee) => callee,
+            // An op with no composition body is an intrinsic. Under `Keep`
+            // the caller executes it directly, so hand the call back with
+            // its arguments already inlined.
+            None if self.unresolved == UnresolvedCalls::Keep => {
+                return Ok((
+                    prefix,
+                    Expr::Call {
+                        op_id: op_id.into(),
+                        args: inlined_args,
+                    },
+                ));
+            }
+            None => {
+                return Err(Error::InlineUnknownOp {
+                    op_id: op_id.to_string(),
+                })
+            }
+        };
         self.stack.push(op_id.to_string());
         let result = self.expand_callee(op_id, &callee, inlined_args);
         self.stack.pop();

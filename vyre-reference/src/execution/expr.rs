@@ -169,6 +169,16 @@ pub(crate) fn eval_frame_oracle(
                     )?;
                     values.push(val);
                 }
+                // A buffer reference names a buffer instead of producing a
+                // value. It is legal only as a call argument, where inlining
+                // rebinds the callee's parameter onto it and the node
+                // disappears. Seeing one here means the call was never
+                // inlined.
+                Expr::BufferRef { buffer } => {
+                    return Err(Error::interp(format!(
+                        "reference interpreter cannot evaluate a reference to buffer `{buffer}` as a value: it is legal only as an argument to a composite op. Fix: inline composite calls before evaluation, or read an element with `Expr::Load`."
+                    )));
+                }
                 Expr::Opaque(extension) => {
                     return Err(Error::interp(format!(
                         "reference interpreter does not support opaque expression extension `{}`/`{}`. Fix: provide a reference evaluator for this ExprNode or lower it to core Expr variants before evaluation.",

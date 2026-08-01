@@ -300,6 +300,26 @@ impl Expr {
         }
     }
 
+    /// Name a whole buffer as an argument to a composite op.
+    ///
+    /// This is not a value: it has no type and only call-argument position
+    /// accepts it. Inlining rebinds the callee's matching parameter onto
+    /// this buffer, so a callee that reads `table[i]` ends up reading the
+    /// caller's buffer at the same index. To read one element instead, use
+    /// [`Expr::load`].
+    ///
+    /// ```
+    /// use vyre::ir::Expr;
+    /// let _ = Expr::call("dialect::lookup", vec![Expr::buffer_ref("table"), Expr::u32(3)]);
+    /// ```
+    #[must_use]
+    #[inline]
+    pub fn buffer_ref(buffer: impl Into<Ident>) -> Self {
+        Self::BufferRef {
+            buffer: buffer.into(),
+        }
+    }
+
     /// `global_invocation_id.x`
     #[must_use]
     #[inline]

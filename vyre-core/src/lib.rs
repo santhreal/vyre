@@ -235,7 +235,8 @@ pub use vyre_foundation::ByteRange;
 ///
 /// ```no_run
 /// use vyre::{optimize, Program};
-/// fn run(program: Program) -> Program {
+/// use vyre_foundation::optimizer::OptimizerError;
+/// fn run(program: Program) -> Result<Program, OptimizerError> {
 ///     optimize(program)
 /// }
 /// ```

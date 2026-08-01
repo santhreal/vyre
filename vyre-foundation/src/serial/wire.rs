@@ -172,7 +172,7 @@ impl Program {
             && &bytes[..framing::MAGIC.len()] == framing::MAGIC
         {
             let version = u16::from_le_bytes([bytes[4], bytes[5]]);
-            if version != framing::WIRE_FORMAT_VERSION {
+            if !framing::wire_format_version_is_supported(version) {
                 return Err(crate::error::Error::VersionMismatch {
                     expected: u32::from(framing::WIRE_FORMAT_VERSION),
                     found: u32::from(version),

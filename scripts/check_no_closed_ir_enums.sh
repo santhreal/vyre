@@ -43,6 +43,7 @@ ALLOWED_ENUMS=(
   "CacheLocality"    # Streaming / Temporal / Random  -  cache-usage hint value lattice
   "DispatchGroup"    # bounded dispatch-parallelism lattice
   "SortBackend"      # configuration enum, small fixed set
+  "UnresolvedCalls"  # Reject / Keep  -  inliner policy for an unresolvable call, not an IR node
   "Category"         # Category A / B / C operation classification, fixed by spec
   "Arity"            # Unary / Binary / Ternary  -  op arity, structural not extensible
   "CombineOp"        # Add / Mul / Min / Max / ...  -  reduction operator, value lattice

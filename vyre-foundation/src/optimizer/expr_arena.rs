@@ -104,6 +104,10 @@ pub enum FlatExpr {
         buffer: Ident,
         index: ExprId,
     },
+    /// Buffer named as a call argument. See `Expr::BufferRef`.
+    BufferRef {
+        buffer: Ident,
+    },
     BufLen {
         buffer: Ident,
     },
@@ -254,6 +258,7 @@ impl ExprArena {
                 buffer,
                 index: Box::new(self.rebuild(index)),
             },
+            FlatExpr::BufferRef { buffer } => Expr::BufferRef { buffer },
             FlatExpr::BufLen { buffer } => Expr::BufLen { buffer },
             FlatExpr::InvocationId { axis } => Expr::InvocationId { axis },
             FlatExpr::WorkgroupId { axis } => Expr::WorkgroupId { axis },
@@ -355,6 +360,9 @@ impl ExprArena {
             Expr::Load { buffer, index } => FlatExpr::Load {
                 buffer: buffer.clone(),
                 index: self.intern(index),
+            },
+            Expr::BufferRef { buffer } => FlatExpr::BufferRef {
+                buffer: buffer.clone(),
             },
             Expr::BufLen { buffer } => FlatExpr::BufLen {
                 buffer: buffer.clone(),

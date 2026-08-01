@@ -93,6 +93,7 @@ impl TypeFactCtx {
                 self.buffer_types.get(buffer).cloned()
             }
             Expr::LitU32(_)
+            | Expr::BufferRef { .. }
             | Expr::BufLen { .. }
             | Expr::InvocationId { .. }
             | Expr::WorkgroupId { .. }

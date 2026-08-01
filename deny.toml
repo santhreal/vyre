@@ -12,7 +12,19 @@ all-features = true
 db-path = "~/.cargo/advisory-db"
 db-urls = ["https://github.com/RustSec/advisory-db"]
 yanked = "deny"
-ignore = []
+ignore = [
+    # Unmaintained, not vulnerable, and not ours to fix. Both are transitive
+    # and neither has an upstream successor we can pull without waiting on the
+    # crates that depend on them.
+    #
+    # bincode 2.0.1: the team ceased development permanently and considers the
+    # crate complete, so there is no later version to move to.
+    { id = "RUSTSEC-2025-0141", reason = "bincode is unmaintained by its authors' decision, reached transitively; no fixed version exists." },
+    # paste 1.0.15: archived by its author. `pastey` is a drop-in fork, but the
+    # dependency is transitive, so the switch belongs to the crates that pull
+    # it rather than to this workspace.
+    { id = "RUSTSEC-2024-0436", reason = "paste is archived upstream, reached transitively; the replacement is the dependents' to make." },
+]
 
 [licenses]
 allow = [
@@ -28,6 +40,10 @@ allow = [
     "CC0-1.0",
     "MPL-2.0",
     "0BSD",
+    # webpki-roots ships the Mozilla CA root store, which is data rather than
+    # code, under the Community Data License Agreement. Permissive terms, no
+    # copyleft reach into anything that links it.
+    "CDLA-Permissive-2.0",
 ]
 confidence-threshold = 0.93
 exceptions = []
@@ -35,13 +51,23 @@ exceptions = []
 [bans]
 multiple-versions = "warn"
 wildcards = "deny"
+# An unpublished helper crate is depended on by path with no version, which
+# reads as a wildcard. That is correct for `vyre-test-support`: it is not
+# published, so there is no registry version to pin. Wildcards on registry
+# dependencies stay denied.
+allow-wildcard-paths = true
 highlight = "all"
 workspace-default-features = "allow"
 external-default-features = "allow"
 allow = []
 deny = [
-    { crate = "openssl", reason = "Fix: use rustls instead  -  avoid linking system openssl." },
-    { crate = "openssl-sys", reason = "Fix: use rustls  -  no C dependency bleed." },
+    # The ban is about TLS: nothing we ship may link system openssl. It is not
+    # about cryptography as a subject. `vyre-bench` uses openssl's AES-CTR as
+    # the CPU reference the GPU crypto benchmark is measured against, which is
+    # the point of the comparison and never reaches a published crate, so it is
+    # listed as an allowed wrapper rather than the ban being weakened.
+    { crate = "openssl", wrappers = ["vyre-bench"], reason = "Fix: use rustls instead  -  avoid linking system openssl. Benchmark baselines are the sole exception." },
+    { crate = "openssl-sys", wrappers = ["openssl"], reason = "Fix: use rustls  -  no C dependency bleed." },
 ]
 
 skip = []

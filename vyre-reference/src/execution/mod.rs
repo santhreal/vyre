@@ -45,13 +45,21 @@ pub(crate) fn program_for_interpreter(program: &Program) -> Result<Cow<'_, Progr
     } else {
         Cow::Borrowed(program)
     };
-    match vyre_foundation::transform::collectives::lower_single_rank_collectives(
+    let collectives_lowered = match vyre_foundation::transform::collectives::lower_single_rank_collectives(
         normalized.as_ref(),
     ) {
-        Ok(Some(lowered)) => Ok(Cow::Owned(lowered)),
-        Ok(None) => Ok(normalized),
-        Err(error) => Err(vyre::Error::interp(error.to_string())),
-    }
+        Ok(Some(lowered)) => Cow::Owned(lowered),
+        Ok(None) => normalized,
+        Err(error) => return Err(vyre::Error::interp(error.to_string())),
+    };
+    // A composite op IS its IR body, so run the body. Only intrinsics reach
+    // `eval_call`, and those are the only ops that register a CPU function.
+    // Skipping this made every composite call fall through to the empty
+    // lowering table's placeholder, which cleared the output buffer instead
+    // of computing anything.
+    let inlined = vyre_foundation::ir::inline_composite_calls(collectives_lowered.as_ref())
+        .map_err(|error| vyre::Error::interp(error.to_string()))?;
+    Ok(Cow::Owned(inlined))
 }
 
 /// The interpreter's output ABI, single-homed: [`is_reference_output`] is the exact

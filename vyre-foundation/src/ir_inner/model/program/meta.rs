@@ -220,6 +220,10 @@ impl ExprVisitor for FallbackWireHasher<'_> {
                 h.update(b"e:BufLen\0");
                 h.update(buffer.as_bytes());
             }
+            Expr::BufferRef { buffer } => {
+                h.update(b"e:BufferRef\0");
+                h.update(buffer.as_bytes());
+            }
             Expr::InvocationId { axis } => {
                 h.update(b"e:InvocationId\0");
                 h.update(&[*axis]);

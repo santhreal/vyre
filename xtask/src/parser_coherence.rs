@@ -116,7 +116,7 @@ const COMPONENTS: &[(&str, &str, &str, &[&str], &[&str], &[&str], &[&str])] = &[
         REQUIRED_PARSER_TEST_CATEGORIES,
     ),
     (
-        "weir",
+        "external-dataflow",
         "Dataflow facts consumed by parser/compiler optimization and downstream analysis",
         "libs/dataflow/weir",
         &["Cargo.toml", "src/lib.rs", "README.md"],
@@ -491,11 +491,39 @@ fn write_sibling_contracts(output: &Path, matrix: &ParserCoherence) {
     }
 }
 
-fn component_contract_artifact(component_id: &str) -> String {
+/// File name of the per-component contract artifact for `component_id`.
+///
+/// The single owner of the id-to-file-name mapping. The release gate used to
+/// re-derive the component id from the file name by stripping `-contracts.json`
+/// and special-casing `vyrec`, which is the same rule written twice: when the
+/// dataflow component id and its artifact name diverged, the gate reported
+/// `component_id `weir`, expected `external-dataflow`` for an artifact the
+/// generator had produced correctly.
+pub(crate) fn component_contract_artifact(component_id: &str) -> String {
     match component_id {
         "vyrec" => "vyrec-cli-contracts.json".to_string(),
         other => format!("{other}-contracts.json"),
     }
+}
+
+/// Component id that owns the contract artifact named `artifact`.
+///
+/// Inverse of [`component_contract_artifact`], resolved against the component
+/// table rather than by string surgery, so a component whose artifact name is
+/// not simply `<id>-contracts.json` still resolves.
+pub(crate) fn component_id_for_contract_artifact(artifact: &str) -> Option<&'static str> {
+    component_ids()
+        .into_iter()
+        .find(|id| component_contract_artifact(id) == artifact)
+}
+
+/// Contract artifact file names for every parser-ownership component, in
+/// declaration order.
+pub(crate) fn component_contract_artifacts() -> Vec<String> {
+    component_ids()
+        .into_iter()
+        .map(component_contract_artifact)
+        .collect()
 }
 
 fn write_json(path: &Path, value: &impl Serialize) {
@@ -689,6 +717,61 @@ mod tests {
         assert!(
             normalized.contains("todo"),
             "Fix: a TODO in prose must still be reported; normalized={normalized:?}"
+        );
+    }
+
+    /// Every component's contract artifact resolves back to that component.
+    ///
+    /// The release gate looks a component up by artifact file name. Before the
+    /// mapping had one owner it stripped `-contracts.json` instead, so the
+    /// dataflow component, whose artifact is `external-dataflow-contracts.json`,
+    /// resolved to a component id that did not exist and the gate reported a
+    /// permanent `expected` mismatch on an artifact that was in fact correct.
+    #[test]
+    fn every_component_contract_artifact_round_trips_to_its_component_id() {
+        for id in component_ids() {
+            let artifact = component_contract_artifact(id);
+            assert_eq!(
+                component_id_for_contract_artifact(&artifact),
+                Some(id),
+                "Fix: artifact `{artifact}` must resolve back to component `{id}`."
+            );
+        }
+    }
+
+    /// An artifact no component owns resolves to nothing rather than to a
+    /// plausible-looking id derived from its name.
+    #[test]
+    fn an_unowned_contract_artifact_resolves_to_no_component() {
+        assert_eq!(
+            component_id_for_contract_artifact("weir-contracts.json"),
+            None,
+            "Fix: `weir-contracts.json` is the pre-0.7.0 name of the dataflow \
+             component's artifact and no component owns it now."
+        );
+        assert_eq!(component_id_for_contract_artifact("contracts.json"), None);
+    }
+
+    /// The component ids are neutral capability names, not sibling crate names.
+    ///
+    /// The artifact file name derives from the id, and every expected-artifact
+    /// list in the release gates names `external-dataflow-contracts.json`. An id
+    /// carrying a crate name would silently rename the artifact and break those
+    /// lists.
+    #[test]
+    fn component_ids_are_neutral_capability_names() {
+        for id in component_ids() {
+            for crate_name in ["weir", "surgec", "gossan", "keyhog"] {
+                assert_ne!(
+                    id, crate_name,
+                    "Fix: component id `{id}` must be a neutral capability name."
+                );
+            }
+        }
+        assert!(
+            component_contract_artifacts()
+                .contains(&"external-dataflow-contracts.json".to_string()),
+            "Fix: the dataflow component must own `external-dataflow-contracts.json`."
         );
     }
 }

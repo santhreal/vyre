@@ -843,6 +843,13 @@ fn walk_expr(expr: &Expr, owning_node: NodeIndex, facts: &mut ProgramFacts) {
                 .buffer_refs
                 .push((owning_node, buffer.duplicate_handle(), BufferRefKind::Read));
         }
+        // A callee parameter is a read-only or uniform buffer by
+        // declaration, so passing a buffer to a callee is a read of it.
+        Expr::BufferRef { buffer } => {
+            facts
+                .buffer_refs
+                .push((owning_node, buffer.duplicate_handle(), BufferRefKind::Read));
+        }
         Expr::Atomic {
             op,
             buffer,

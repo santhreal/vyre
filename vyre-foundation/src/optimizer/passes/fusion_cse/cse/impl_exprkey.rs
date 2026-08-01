@@ -23,6 +23,7 @@ impl CseCtx {
             Expr::LitBool(value) => ExprKey::LitBool(*value),
             Expr::Var(name) => ExprKey::Var(name.clone()),
             Expr::Load { buffer, index } => ExprKey::Load(buffer.clone(), self.intern_expr(index)),
+            Expr::BufferRef { buffer } => ExprKey::BufferRef(buffer.clone()),
             Expr::BufLen { buffer } => ExprKey::BufLen(buffer.clone()),
             Expr::InvocationId { axis } => ExprKey::InvocationId(*axis),
             Expr::WorkgroupId { axis } => ExprKey::WorkgroupId(*axis),

@@ -38,6 +38,7 @@ pub(crate) fn is_uniform(expr: &Expr, scope: &FxHashMap<crate::ir::Ident, Bindin
             | Expr::LitI32(_)
             | Expr::LitF32(_)
             | Expr::LitBool(_)
+            | Expr::BufferRef { .. }
             | Expr::BufLen { .. }
             | Expr::WorkgroupId { .. } => {}
             Expr::Var(name) if scope.get(name.as_str()).is_some_and(|b| b.uniform) => {}

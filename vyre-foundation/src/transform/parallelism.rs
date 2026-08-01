@@ -161,6 +161,12 @@ fn collect_expr_reads(expr: &Expr, access: &mut AccessSet) {
             Expr::BufLen { buffer } => {
                 access.reads.insert(buffer.clone());
             }
+            // A buffer argument binds a callee parameter, and a callee
+            // parameter is a read-only or uniform buffer by declaration, so
+            // the callee can only read through it.
+            Expr::BufferRef { buffer } => {
+                access.reads.insert(buffer.clone());
+            }
             Expr::BinOp { left, right, .. } => {
                 stack.push(left);
                 stack.push(right);

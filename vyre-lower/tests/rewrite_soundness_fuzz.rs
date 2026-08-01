@@ -63,12 +63,22 @@ const BIN_OPS: &[BinOp] = &[
 
 const SMALL_LITS: &[u32] = &[0, 1, 2, 3, 4, 7, 8, 16, 99, 0xFF];
 
-/// Build a small self-contained KernelBody for use as an If/ForLoop
-/// body. Generates 1–3 ops in its own id space (each body is isolated
-/// per vyre's structured IR).
-fn gen_tiny_body(rng: &mut Rng, parent_lits: &[LiteralValue], n_bindings: usize) -> KernelBody {
+/// Build a small KernelBody for use as an If/ForLoop body, drawing result
+/// ids from the caller's counter.
+///
+/// Result ids are unique across the WHOLE descriptor, not per body: the PTX
+/// emitter keeps one flat result-id to register map for the entire kernel, so
+/// an id a child body reuses resolves to whichever producer the emitter walked
+/// last. This generator used to restart at 0 in every child body, which made
+/// every descriptor carrying an If or ForLoop fail `verify` before a single
+/// rewrite ran.
+fn gen_tiny_body(
+    rng: &mut Rng,
+    parent_lits: &[LiteralValue],
+    n_bindings: usize,
+    next_id: &mut u32,
+) -> KernelBody {
     let mut ops = Vec::new();
-    let mut next_id: u32 = 0;
     let mut produced: Vec<u32> = Vec::new();
     // Reuse parent literal pool to keep the test simple.
     let lits = parent_lits.to_vec();
@@ -78,10 +88,10 @@ fn gen_tiny_body(rng: &mut Rng, parent_lits: &[LiteralValue], n_bindings: usize)
     ops.push(KernelOp {
         kind: KernelOpKind::Literal,
         operands: vec![pool_idx],
-        result: Some(next_id),
+        result: Some(*next_id),
     });
-    produced.push(next_id);
-    next_id += 1;
+    produced.push(*next_id);
+    *next_id += 1;
 
     let extra = rng.range(3); // 0..=2 more
     for _ in 0..extra {
@@ -92,10 +102,10 @@ fn gen_tiny_body(rng: &mut Rng, parent_lits: &[LiteralValue], n_bindings: usize)
                 ops.push(KernelOp {
                     kind: KernelOpKind::Literal,
                     operands: vec![pool_idx],
-                    result: Some(next_id),
+                    result: Some(*next_id),
                 });
-                produced.push(next_id);
-                next_id += 1;
+                produced.push(*next_id);
+                *next_id += 1;
             }
             1 if produced.len() >= 2 => {
                 // Need a "value" to store. Use a literal we just made.
@@ -113,10 +123,10 @@ fn gen_tiny_body(rng: &mut Rng, parent_lits: &[LiteralValue], n_bindings: usize)
                 ops.push(KernelOp {
                     kind: KernelOpKind::Literal,
                     operands: vec![pool_idx],
-                    result: Some(next_id),
+                    result: Some(*next_id),
                 });
-                produced.push(next_id);
-                next_id += 1;
+                produced.push(*next_id);
+                *next_id += 1;
             }
         }
     }
@@ -214,7 +224,12 @@ fn gen_descriptor(seed: u64) -> KernelDescriptor {
                 // StructuredIfThen with a tiny synthesized child body.
                 let cond = produced[(rng.next() as usize) % produced.len()];
                 let body_idx = child_bodies.len() as u32;
-                child_bodies.push(gen_tiny_body(&mut rng, &literals, bindings.len()));
+                child_bodies.push(gen_tiny_body(
+                    &mut rng,
+                    &literals,
+                    bindings.len(),
+                    &mut next_id,
+                ));
                 ops.push(KernelOp {
                     kind: KernelOpKind::StructuredIfThen,
                     operands: vec![cond, body_idx],
@@ -228,7 +243,12 @@ fn gen_descriptor(seed: u64) -> KernelDescriptor {
                     let lo = produced[(rng.next() as usize) % produced.len()];
                     let hi = produced[(rng.next() as usize) % produced.len()];
                     let body_idx = child_bodies.len() as u32;
-                    child_bodies.push(gen_tiny_body(&mut rng, &literals, bindings.len()));
+                    child_bodies.push(gen_tiny_body(
+                    &mut rng,
+                    &literals,
+                    bindings.len(),
+                    &mut next_id,
+                ));
                     ops.push(KernelOp {
                         kind: KernelOpKind::StructuredForLoop {
                             loop_var: std::sync::Arc::from("i"),
@@ -424,11 +444,13 @@ fn loop_unroll_does_not_underflow_when_hi_less_than_lo() {
                     result: None,
                 },
             ],
+            // Result id 2: the root body owns 0 and 1, and result ids are unique
+            // across the whole descriptor rather than per body.
             child_bodies: vec![KernelBody {
                 ops: vec![KernelOp {
                     kind: KernelOpKind::Literal,
                     operands: vec![0],
-                    result: Some(0),
+                    result: Some(2),
                 }],
                 child_bodies: vec![],
                 literals: vec![LiteralValue::U32(7)],

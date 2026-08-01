@@ -417,15 +417,11 @@ fn read_sibling_json(
 }
 
 fn is_parser_contract_evidence(evidence: &str) -> bool {
-    [
-        "vyre-frontend-c-contracts.json",
-        "vyrec-cli-contracts.json",
-        "external-dataflow-contracts.json",
-        "compiler-consumer-contracts.json",
-        "compiler-consumer-grammar-gen-contracts.json",
-    ]
-    .iter()
-    .any(|suffix| evidence.ends_with(suffix))
+    // The artifact names have one owner in `parser_coherence`; this was a second
+    // copy of the list.
+    crate::parser_coherence::component_contract_artifacts()
+        .iter()
+        .any(|suffix| evidence.ends_with(suffix.as_str()))
 }
 
 fn inspect_distributed_parser_map_semantics(

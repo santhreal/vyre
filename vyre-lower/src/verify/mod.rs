@@ -13,6 +13,10 @@
 //!    range of the body's `child_bodies` vector.
 //! 5. Every `KernelOpKind::Literal` op must have at least one operand
 //!    (the pool index).
+//! 6. Result ids are unique across the whole descriptor, not only
+//!    within a body. Backends key their register maps on the raw id, so
+//!    reuse between two bodies makes an operand resolve to the wrong
+//!    producer.
 //!
 //! Bodies recurse with lexical scope and loop-carried visibility.
 //! `vyre-lower` allocates result ids globally for the descriptor:
@@ -60,6 +64,20 @@ pub enum VerifyErrorKind {
         operand_pos: usize,
         body_idx: u32,
         child_count: usize,
+    },
+    /// Two ops in DIFFERENT bodies of the same descriptor assign the
+    /// same result id. `vyre-lower` allocates result ids globally, and
+    /// backends rely on that: the PTX emitter keeps one flat
+    /// result-id → register map for the whole kernel, so a reused id
+    /// silently resolves to whichever producer the emitter walked last.
+    /// A `GlobalInvocationId` store index that collided with a sibling
+    /// body's `Literal(1)` was emitted as the constant address
+    /// `[%rd4+4]`, making every thread write element 1.
+    ResultIdReusedAcrossBodies {
+        result: u32,
+        /// Body path of the first op that assigned this id. The error's
+        /// own `body_path`/`op_index` locate the second one.
+        first_body_path: Vec<usize>,
     },
     LiteralOpMissingPoolOperand,
     OperandCountTooShort {
@@ -147,11 +165,59 @@ pub fn verify(desc: &KernelDescriptor) -> VerifyResult {
         &FxHashSet::default(),
         &mut errors,
     );
+    verify_result_ids_unique_descriptor_wide(&desc.body, &mut errors);
     if errors.is_empty() {
         Ok(())
     } else {
         Err(errors)
     }
+}
+
+/// Check invariant 6: result ids are unique across the WHOLE descriptor,
+/// not merely within one body.
+///
+/// `verify_body` collects `produced` fresh per body, so it only ever sees
+/// duplicates that sit side by side in one op list. Sibling and
+/// ancestor/descendant reuse slipped through, which is exactly what
+/// `loop_unroll` used to emit when it reseeded its free-id counter at
+/// every recursion level.
+fn verify_result_ids_unique_descriptor_wide(body: &KernelBody, errors: &mut Vec<VerifyError>) {
+    use rustc_hash::FxHashMap;
+
+    let mut owners: FxHashMap<u32, Vec<usize>> = FxHashMap::default();
+    fn walk(
+        body: &KernelBody,
+        path: &mut Vec<usize>,
+        owners: &mut FxHashMap<u32, Vec<usize>>,
+        errors: &mut Vec<VerifyError>,
+    ) {
+        for (op_index, op) in body.ops.iter().enumerate() {
+            for result in op.result_ids() {
+                match owners.get(&result) {
+                    // A duplicate inside one body is already reported as
+                    // `DuplicateResultId`; do not double-report it here.
+                    Some(first) if first == path => {}
+                    Some(first) => errors.push(VerifyError {
+                        body_path: path.clone(),
+                        op_index,
+                        kind: VerifyErrorKind::ResultIdReusedAcrossBodies {
+                            result,
+                            first_body_path: first.clone(),
+                        },
+                    }),
+                    None => {
+                        owners.insert(result, path.clone());
+                    }
+                }
+            }
+        }
+        for (child_index, child) in body.child_bodies.iter().enumerate() {
+            path.push(child_index);
+            walk(child, path, owners, errors);
+            path.pop();
+        }
+    }
+    walk(body, &mut Vec::new(), &mut owners, errors);
 }
 
 fn verify_body(

@@ -365,117 +365,12 @@ fn parse_release_backend_row(row: &str) -> Option<(&str, &str, &str)> {
     Some((op, backend, status))
 }
 
-struct OpMatrixCatalog {
-    required_ops: BTreeSet<String>,
-    release_backend_rows: Vec<String>,
-    missing_release_backend_rows: Vec<String>,
-    blocked_release_rows: Vec<String>,
-    errors: Vec<String>,
-}
-
-fn read_conformance_required_op_matrix(vyre_root: &Path) -> OpMatrixCatalog {
-    let matrix_path = vyre_root.join("docs/optimization/OP_MATRIX.toml");
-    let text = match read_text_bounded(&matrix_path) {
-        Ok(text) => text,
-        Err(error) => {
-            return OpMatrixCatalog {
-                required_ops: BTreeSet::new(),
-                release_backend_rows: Vec::new(),
-                missing_release_backend_rows: Vec::new(),
-                blocked_release_rows: Vec::new(),
-                errors: vec![format!(
-                    "could not read OP_MATRIX at {}: {error}",
-                    matrix_path.display()
-                )],
-            };
-        }
-    };
-    let value = match toml::from_str::<toml::Value>(&text) {
-        Ok(value) => value,
-        Err(error) => {
-            return OpMatrixCatalog {
-                required_ops: BTreeSet::new(),
-                release_backend_rows: Vec::new(),
-                missing_release_backend_rows: Vec::new(),
-                blocked_release_rows: Vec::new(),
-                errors: vec![format!(
-                    "could not parse OP_MATRIX at {}: {error}",
-                    matrix_path.display()
-                )],
-            };
-        }
-    };
-    let rows = match value.get("op").and_then(toml::Value::as_array) {
-        Some(rows) => rows,
-        None => {
-            return OpMatrixCatalog {
-                required_ops: BTreeSet::new(),
-                release_backend_rows: Vec::new(),
-                missing_release_backend_rows: Vec::new(),
-                blocked_release_rows: Vec::new(),
-                errors: vec![format!(
-                    "OP_MATRIX at {} has no [[op]] array",
-                    matrix_path.display()
-                )],
-            };
-        }
-    };
-    if rows.is_empty() {
-        return OpMatrixCatalog {
-            required_ops: BTreeSet::new(),
-            release_backend_rows: Vec::new(),
-            missing_release_backend_rows: Vec::new(),
-            blocked_release_rows: Vec::new(),
-            errors: vec![format!(
-                "OP_MATRIX at {} has zero op rows",
-                matrix_path.display()
-            )],
-        };
-    }
-    let mut required_ops = BTreeSet::new();
-    let mut release_backend_rows = Vec::new();
-    let mut missing_release_backend_rows = Vec::new();
-    let mut blocked_release_rows = Vec::new();
-    for row in rows {
-        let tier = row.get("tier").and_then(toml::Value::as_str).unwrap_or("");
-        if tier == "foundation_ir" {
-            continue;
-        }
-        let family = row
-            .get("family")
-            .and_then(toml::Value::as_str)
-            .unwrap_or("<unknown>");
-        for backend in ["reference", "cuda", "wgpu"] {
-            if row.get(backend).and_then(toml::Value::as_str) == Some("blocked_release") {
-                blocked_release_rows.push(format!("{family}:{backend}"));
-            }
-        }
-        let Some(row_ops) = row.get("ops").and_then(toml::Value::as_array) else {
-            continue;
-        };
-        for op in row_ops {
-            if let Some(op) = op.as_str() {
-                required_ops.insert(op.to_string());
-                for backend in ["reference", "cuda", "wgpu"] {
-                    match row.get(backend).and_then(toml::Value::as_str) {
-                        Some("blocked_release") => {}
-                        Some(status) if !status.trim().is_empty() => {
-                            release_backend_rows.push(format!("{op}:{backend}:{status}"));
-                        }
-                        _ => missing_release_backend_rows.push(format!("{op}:{backend}")),
-                    }
-                }
-            }
-        }
-    }
-    OpMatrixCatalog {
-        required_ops,
-        release_backend_rows,
-        missing_release_backend_rows,
-        blocked_release_rows,
-        errors: Vec::new(),
-    }
-}
+// `OpMatrixCatalog` and its reader live in `conformance_matrix`. This module
+// used to carry a second copy that drifted: the catalog gained an
+// `inlined_callee` opt-out there and kept requiring those ops here, so the
+// release conformance run reported five missing ids the matrix no longer
+// asked for. One owner, one reader.
+use crate::conformance_matrix::read_conformance_required_op_matrix;
 
 struct ParsedPairs {
     pairs: Vec<PairResult>,

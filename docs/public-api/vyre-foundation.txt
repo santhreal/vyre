@@ -118,6 +118,7 @@ pub const MAX_SCAN_DATABASE_UNSUPPORTED_FEATURES: usize = 4_096;
 pub const MAX_STRING_LEN: usize = 1 << 20;
 pub const MAX_TENSOR_RANK: usize = 4_096;
 pub const MAX_TEXT_WIRE_BYTES: usize = 64 * 1024 * 1024;
+pub const MIN_SUPPORTED_WIRE_FORMAT_VERSION: u16 = 4;
 pub const NODE_KIND_ALL_GATHER: u32 = 1 << 16;
 pub const NODE_KIND_ALL_REDUCE: u32 = 1 << 15;
 pub const NODE_KIND_ASSIGN: u32 = 1 << 1;
@@ -166,7 +167,7 @@ pub const VAST_MAGIC: [u8; 4] = *b"VAST";
 pub const VAST_VERSION: u16 = 0;
 pub const VISIT_STACK_EMPTY: u32 = u32::MAX;
 pub const WIRE_BYTES_PER_LINE: usize = 32;
-pub const WIRE_FORMAT_VERSION: u16 = 4;
+pub const WIRE_FORMAT_VERSION: u16 = 5;
 pub const WORKGROUP_SIZE: [u32; 3] = [64, 1, 1];
 pub enum AccuracyStrategy {
 pub enum AtomicOrdering {
@@ -243,6 +244,7 @@ pub enum SyncScope {
 pub enum TextParseError {
 pub enum TranscendentalOp {
 pub enum TypedArenaError {
+pub enum UnresolvedCalls {
 pub enum Value {
 pub enum VastEditCorpusError {
 pub enum VastError {
@@ -314,6 +316,7 @@ pub fn bridge_equivalence_batch_with_report<L, F, S, C>(
 pub fn broadcast(&self) -> usize {
 pub fn buffer_count(&self) -> usize {
 pub fn buffer_escapes(&self, name: &str) -> bool {
+pub fn buffer_ref(buffer: impl Into<Ident>) -> Self {
 pub fn buffer_refs_of(&self, name: &str) -> &[(NodeIndex, BufferRefKind)] {
 pub fn buffer_refs(&self) -> &[(NodeIndex, Ident, BufferRefKind)] {
 pub fn buffer(&self, name: &str) -> Option<&BufferDecl> {
@@ -385,7 +388,7 @@ pub fn decode_scan_database_header(bytes: &[u8]) -> Result<ScanDatabaseHeader, S
 pub fn decode_scan_database_header_with_compatibility(
 pub fn dedup_ratio(&self) -> f64 {
 pub fn default_planar_rewrite_batch_threshold() -> usize {
-pub fn default_resolver(_op_id: &str) -> Option<Program> {
+pub fn default_resolver(op_id: &str) -> Option<Program> {
 pub fn derive_cached(program: &Program) -> Self {
 pub fn derive_into_cache(program: &Program, cache: &mut crate::optimizer::AnalysisCache) {
 pub fn derive_pass_order(
@@ -545,7 +548,9 @@ pub fn indices(&self) -> &[u32] {
 pub fn indirect_dispatch(count_buffer: impl Into<Ident>, count_offset: u64) -> Self {
 pub fn indirect_dispatch(&self) -> bool {
 pub fn inline_calls(program: &Program) -> Result<Program> {
+pub fn inline_calls_with_mode(
 pub fn inline_calls_with_resolver(program: &Program, resolver: OpResolver) -> Result<Program> {
+pub fn inline_composite_calls(program: &Program) -> Result<Program> {
 pub fn input_ids(&self) -> Vec<NodeId> {
 pub fn insert(&mut self, key: K, value: V) -> Option<V> {
 pub fn insert<T: std::any::Any + Send + Sync>(&mut self, key: &'static str, value: T) {
@@ -1011,6 +1016,7 @@ pub fn walk_nodes_mut(program: &mut Program, mut f: impl FnMut(&mut Node)) {
 pub fn walk_nodes(program: &Program, mut f: impl FnMut(&Node)) {
 pub fn walk_postorder_indices(
 pub fn walk_preorder_indices(
+pub fn wire_format_version_is_supported(version: u16) -> bool {
 pub fn with_arena(
 pub fn with_backend_capabilities(mut self, backend_capabilities: BackendCapabilities) -> Self {
 pub fn with_backend(mut self, backend: &'a dyn BackendValidationCapabilities) -> Self {

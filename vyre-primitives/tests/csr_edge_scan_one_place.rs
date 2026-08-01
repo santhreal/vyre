@@ -128,6 +128,15 @@ A re-inlined hand-written walk would silently reintroduce the duplication"
     }
 }
 
+/// Collect the IR-builder sources under `dir`, skipping `tests` subtrees.
+///
+/// The invariant is about who BUILDS the edge walk in IR. A test that dispatches
+/// one of these programs has to fill its input buffers by name, so it spells
+/// `"pg_edge_targets"` as a map key: `persistent_bfs/tests/part1/`'s converged
+/// and density parity harnesses both do. That is packing a buffer, not walking
+/// edges, and treating it as a sixth copy of the walk reports a duplication that
+/// does not exist. Scanning `src` non-test files keeps the signature unforgeable
+/// for the code the lock is about.
 fn collect_rust_files(dir: &Path, out: &mut Vec<PathBuf>) {
     let Ok(entries) = fs::read_dir(dir) else {
         return;
@@ -135,6 +144,9 @@ fn collect_rust_files(dir: &Path, out: &mut Vec<PathBuf>) {
     for entry in entries.flatten() {
         let path = entry.path();
         if path.is_dir() {
+            if path.file_name().is_some_and(|name| name == "tests") {
+                continue;
+            }
             collect_rust_files(&path, out);
         } else if path.extension().and_then(|e| e.to_str()) == Some("rs") {
             out.push(path);

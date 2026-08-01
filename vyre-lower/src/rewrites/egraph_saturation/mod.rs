@@ -125,7 +125,14 @@ struct AlgebraicSaturation {
 fn saturate_local_algebra(desc: &KernelDescriptor) -> AlgebraicSaturation {
     let mut descriptor = desc.clone();
     let mut stats = AlgebraicStats::default();
-    descriptor.body = saturate_body(descriptor.body, &mut stats);
+    // One allocator for the whole body tree, not one per body. Result ids are
+    // unique across the entire descriptor, not per body: a nested body that
+    // minted ids from a high-water mark computed over its own subtree reused an
+    // id the parent body had already defined, which `verify` reports as
+    // `ResultIdReusedAcrossBodies` and the emitter turns into a miscompiled
+    // address.
+    let mut allocator = ResultAllocator::for_body_tree(&descriptor.body);
+    descriptor.body = saturate_body(descriptor.body, &mut allocator, &mut stats);
     AlgebraicSaturation {
         descriptor,
         equality_classes: stats.equality_classes,
@@ -139,15 +146,18 @@ struct AlgebraicStats {
     applied_rewrites: usize,
 }
 
-fn saturate_body(mut body: KernelBody, stats: &mut AlgebraicStats) -> KernelBody {
+fn saturate_body(
+    mut body: KernelBody,
+    allocator: &mut ResultAllocator,
+    stats: &mut AlgebraicStats,
+) -> KernelBody {
     body.child_bodies = body
         .child_bodies
         .into_iter()
-        .map(|child| saturate_body(child, stats))
+        .map(|child| saturate_body(child, allocator, stats))
         .collect();
 
     let index = BodyIndex::new(&body);
-    let mut allocator = ResultAllocator::for_body_tree(&body);
     let mut new_ops = Vec::with_capacity(body.ops.len());
     for current_op in &body.ops {
         let mut op = current_op.clone();

@@ -1,4 +1,7 @@
-use super::{MAGIC, WIRE_FORMAT_VERSION};
+use super::{
+    wire_format_version_is_supported, MAGIC, MIN_SUPPORTED_WIRE_FORMAT_VERSION,
+    WIRE_FORMAT_VERSION,
+};
 use crate::serial::wire::{Reader, MAX_STRING_LEN};
 
 impl<'a> Reader<'a> {
@@ -23,9 +26,9 @@ impl<'a> Reader<'a> {
             );
         }
         let version = u16::from_le_bytes([self.bytes[self.pos], self.bytes[self.pos + 1]]);
-        if version != WIRE_FORMAT_VERSION {
+        if !wire_format_version_is_supported(version) {
             return Err(format!(
-                "IR wire-format version {version} is not supported by this decoder (expects {WIRE_FORMAT_VERSION}). Fix: upgrade the consumer or re-serialize with a compatible Program::to_wire()."
+                "IR wire-format version {version} is not supported by this decoder (reads {MIN_SUPPORTED_WIRE_FORMAT_VERSION} through {WIRE_FORMAT_VERSION}). Fix: upgrade the consumer or re-serialize with a compatible Program::to_wire()."
             ));
         }
         self.pos += 2;

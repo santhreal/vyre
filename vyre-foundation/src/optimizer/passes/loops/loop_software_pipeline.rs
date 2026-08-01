@@ -332,6 +332,7 @@ fn expr_visit_check(expr: &Expr, name: &Ident, reads_name: &mut bool) -> bool {
         | Expr::LitI32(_)
         | Expr::LitF32(_)
         | Expr::LitBool(_)
+        | Expr::BufferRef { .. }
         | Expr::BufLen { .. }
         | Expr::InvocationId { .. }
         | Expr::WorkgroupId { .. }

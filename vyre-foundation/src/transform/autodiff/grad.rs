@@ -215,6 +215,7 @@ fn first_dangling_forward_local(body: &[Node], local_targets: &[Ident]) -> Optio
             | Expr::LitI32(_)
             | Expr::LitF32(_)
             | Expr::LitBool(_)
+            | Expr::BufferRef { .. }
             | Expr::BufLen { .. }
             | Expr::InvocationId { .. }
             | Expr::WorkgroupId { .. }
@@ -446,6 +447,7 @@ impl AdjointEnv {
     fn expr_type(&self, expr: &Expr) -> Option<DataType> {
         match expr {
             Expr::LitU32(_)
+            | Expr::BufferRef { .. }
             | Expr::BufLen { .. }
             | Expr::InvocationId { .. }
             | Expr::WorkgroupId { .. }

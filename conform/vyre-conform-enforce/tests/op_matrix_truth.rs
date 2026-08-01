@@ -117,6 +117,10 @@ fn op_matrix_covers_every_registered_op_once() {
     }
 
     let mut registered_ids = BTreeMap::<String, BTreeSet<&'static str>>::new();
+    // Collect every unmatrixed op instead of panicking on the first. Panicking on the
+    // first turned a batch of new registrations into one round trip per op.
+    let mut unmatrixed: Vec<String> = Vec::new();
+    let mut wrong_sources: Vec<String> = Vec::new();
     for op in &registered {
         let sources_for_id = registered_ids.entry(op.id.clone()).or_default();
         assert!(
@@ -135,9 +139,10 @@ fn op_matrix_covers_every_registered_op_once() {
             );
         }
 
-        let row_index = op_to_row
-            .get(&op.id)
-            .unwrap_or_else(|| panic!("Fix: OP_MATRIX.toml is missing registered op `{}`.", op.id));
+        let Some(row_index) = op_to_row.get(&op.id) else {
+            unmatrixed.push(op.id.clone());
+            continue;
+        };
         let row = &rows[*row_index];
         assert_eq!(
             required_str(row, "tier"),
@@ -148,12 +153,10 @@ fn op_matrix_covers_every_registered_op_once() {
         let sources = op_to_sources
             .get(&op.id)
             .expect("Fix: matrix source map must exist for every row op.");
-        assert!(
-            sources.iter().any(|source| source == op.source),
-            "Fix: OP_MATRIX row for `{}` must include registry source `{}`.",
-            op.id,
-            op.source
-        );
+        if !sources.iter().any(|source| source == op.source) {
+            wrong_sources.push(format!("{} needs registry source `{}`", op.id, op.source));
+            continue;
+        }
         if sources_for_id.len() > 1 {
             assert!(
                 row.get("duplicate_ok").and_then(Value::as_bool) == Some(true),
@@ -162,6 +165,23 @@ fn op_matrix_covers_every_registered_op_once() {
             );
         }
     }
+
+    unmatrixed.sort();
+    unmatrixed.dedup();
+    wrong_sources.sort();
+    wrong_sources.dedup();
+    assert!(
+        wrong_sources.is_empty(),
+        "Fix: {} OP_MATRIX row(s) declare the wrong registry_sources:\n  {}",
+        wrong_sources.len(),
+        wrong_sources.join("\n  ")
+    );
+    assert!(
+        unmatrixed.is_empty(),
+        "Fix: OP_MATRIX.toml is missing {} registered op(s):\n  {}",
+        unmatrixed.len(),
+        unmatrixed.join("\n  ")
+    );
 
     assert!(
         !registered_ids.is_empty(),
@@ -489,6 +509,52 @@ fn allowed_duplicate_sources(id: &str, sources: &BTreeSet<&'static str>) -> bool
         && sources.contains("vyre-harness")
         && sources.contains("vyre-driver::registry")
         && id.starts_with("vyre-libs::math::atomic::")
+}
+
+/// An `inlined_callee` row opts out of per-backend release conformance, so the
+/// claim has to be true rather than convenient.
+///
+/// A Composite callee exists only to be inlined at its call sites, which is why
+/// executing it as a program of its own would exercise a shape the release never
+/// runs. Two things make that safe to assume, and this test pins both: the op
+/// registers through the dialect registry alone, so nothing has handed it a
+/// dispatch witness that would then go unrun, and it declares a test path, so a
+/// reader can find the caller-level suite that does cover its body.
+#[test]
+fn op_matrix_inlined_callee_rows_register_through_the_dialect_registry_alone() {
+    let root = workspace_root();
+    let matrix = read_toml(&root.join("docs/optimization/OP_MATRIX.toml"));
+    let rows = matrix
+        .get("op")
+        .and_then(Value::as_array)
+        .expect("Fix: OP_MATRIX.toml must contain [[op]] rows.");
+
+    let mut checked = 0usize;
+    for row in rows {
+        if !row
+            .get("inlined_callee")
+            .and_then(Value::as_bool)
+            .unwrap_or(false)
+        {
+            continue;
+        }
+        checked += 1;
+        let family = required_str(row, "family");
+        let sources = required_array(row, "registry_sources");
+        assert_eq!(
+            sources,
+            vec!["vyre-driver::registry"],
+            "Fix: OP_MATRIX row `{family}` claims inlined_callee but registers through {sources:?}.              An op with a harness witness is dispatched on its own and must not opt out of              release conformance."
+        );
+        assert!(
+            !required_array(row, "tests").is_empty(),
+            "Fix: OP_MATRIX row `{family}` claims inlined_callee and must name the caller-level              suite that covers its body."
+        );
+    }
+    assert!(
+        checked > 0,
+        "Fix: this gate must see at least one inlined_callee row; if the last one was removed,          remove the `inlined_callee` handling in xtask conformance_matrix too."
+    );
 }
 
 // ── Task 9 / ROADMAP K8: tests_non_empty coverage scan gate ────────

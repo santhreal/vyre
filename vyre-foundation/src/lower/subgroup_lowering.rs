@@ -1154,6 +1154,7 @@ mod tests {
             | Expr::LitF32(_)
             | Expr::LitBool(_)
             | Expr::Var(_)
+            | Expr::BufferRef { .. }
             | Expr::InvocationId { .. }
             | Expr::WorkgroupId { .. }
             | Expr::LocalId { .. }

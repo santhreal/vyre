@@ -79,6 +79,7 @@ pub(super) fn emit_adjoint_expr(
         | Expr::LocalId { .. }
         | Expr::SubgroupLocalId
         | Expr::SubgroupSize
+        | Expr::BufferRef { .. }
         | Expr::BufLen { .. } => {}
         // BinOp: apply chain rule.
         Expr::BinOp { op, left, right } => {

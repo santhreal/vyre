@@ -147,121 +147,128 @@ pub(crate) fn check_release_surface_coverage(
         }
     }
 }
+
+/// Artifacts every release-evidence generator command must produce.
+///
+/// Module level so `parser_coherence`'s component contract artifacts can be
+/// checked against the `parser-coherence` row: the component id owns the
+/// artifact file name, so renaming an id silently invalidates this list.
+const REQUIRED_GENERATORS: &[(&str, &[&str])] = &[
+    (
+        "version-matrix",
+        &["version-matrix.json", "release-tag-plan.json"],
+    ),
+    ("backend-matrix", &["backend-matrix.json"]),
+    ("conformance-matrix", &["conformance-matrix.json"]),
+    ("release-workload-matrix", &["release-workload-matrix.json"]),
+    (
+        "hygiene-matrix",
+        &[
+            "hygiene-matrix.json",
+            "no-stubs-scan.json",
+            "no-hidden-fallback-scan.json",
+            "resource-bound-scan.json",
+            "error-surface-scan.json",
+            "cargo-wrapper-scan.json",
+            "audit-location-scan.json",
+            "public-doc-scan.json",
+            "test-hygiene-scan.json",
+        ],
+    ),
+    (
+        "test-matrix",
+        &[
+            "test-matrix.json",
+            "modularization-map.json",
+            "oversized-test-closure.json",
+            "release-surface-suite-coverage.json",
+            "unit-suite.json",
+            "adversarial-suite.json",
+            "property-suite.json",
+            "conformance-suite.json",
+            "corpus-suite.json",
+            "benchmark-suite.json",
+            "gap-suite.json",
+            "fuzz-suite.json",
+        ],
+    ),
+    (
+        "docs-matrix",
+        &[
+            "docs-matrix.json",
+            "vyre-readme-contracts.json",
+            "release-notes-version-story.md",
+            "cuda-release-path.md",
+            "wgpu-fallback-proof.md",
+            "megakernel-default-proof.md",
+            "optimization-proof.md",
+            "egraph-saturation.md",
+            "c-parser-linux-proof.md",
+            "distributed-parser-coherence.md",
+            "weir-integration.md",
+            "test-architecture.md",
+            "vyre-readme-proof.md",
+            "weir-readme-proof.md",
+            "parser-doc-proof.md",
+            "benchmark-doc-proof.md",
+            "conformance-doc-proof.md",
+            "release-notes.md",
+            "crate-metadata-proof.md",
+            "release-hygiene-proof.md",
+            "cpu-only-100x-proof.md",
+        ],
+    ),
+    ("metadata-matrix", &["metadata-matrix.json"]),
+    ("feature-matrix", &["feature-matrix.json"]),
+    (
+        "optimization-corpus",
+        &[
+            "optimization-corpus.json",
+            "optimization-corpus-contracts.json",
+            "optimization-family-manifest.json",
+            "optimization-analysis-fixtures.json",
+            "optimization-case-manifest.json",
+        ],
+    ),
+    (
+        "optimization-matrix",
+        &[
+            "optimization-integration-matrix.json",
+            "alias-aware-dse.json",
+            "alias-aware-stlf.json",
+            "alias-aware-licm.json",
+            "alias-aware-fusion-fission.json",
+            "weir-facts-pass-firing.json",
+            "egraph-saturation-matrix.json",
+            "egraph-semantic-contracts.json",
+        ],
+    ),
+    (
+        "parser-coherence",
+        &[
+            "distributed-parser-map.json",
+            "vyre-frontend-c-contracts.json",
+            "vyrec-cli-contracts.json",
+            "external-dataflow-contracts.json",
+            "compiler-consumer-contracts.json",
+            "compiler-consumer-grammar-gen-contracts.json",
+        ],
+    ),
+    (
+        "weir-matrix",
+        &[
+            "weir-analysis-api-matrix.json",
+            "weir-vyre-integration-tests.json",
+            "weir-readme-contracts.json",
+        ],
+    ),
+];
+
 pub(crate) fn check_release_evidence_run(
     requirement: &Requirement,
     run: &serde_json::Value,
     failures: &mut Vec<String>,
 ) {
-    const REQUIRED_GENERATORS: &[(&str, &[&str])] = &[
-        (
-            "version-matrix",
-            &["version-matrix.json", "release-tag-plan.json"],
-        ),
-        ("backend-matrix", &["backend-matrix.json"]),
-        ("conformance-matrix", &["conformance-matrix.json"]),
-        ("release-workload-matrix", &["release-workload-matrix.json"]),
-        (
-            "hygiene-matrix",
-            &[
-                "hygiene-matrix.json",
-                "no-stubs-scan.json",
-                "no-hidden-fallback-scan.json",
-                "resource-bound-scan.json",
-                "error-surface-scan.json",
-                "cargo-wrapper-scan.json",
-                "audit-location-scan.json",
-                "public-doc-scan.json",
-                "test-hygiene-scan.json",
-            ],
-        ),
-        (
-            "test-matrix",
-            &[
-                "test-matrix.json",
-                "modularization-map.json",
-                "oversized-test-closure.json",
-                "release-surface-suite-coverage.json",
-                "unit-suite.json",
-                "adversarial-suite.json",
-                "property-suite.json",
-                "conformance-suite.json",
-                "corpus-suite.json",
-                "benchmark-suite.json",
-                "gap-suite.json",
-                "fuzz-suite.json",
-            ],
-        ),
-        (
-            "docs-matrix",
-            &[
-                "docs-matrix.json",
-                "vyre-readme-contracts.json",
-                "release-notes-version-story.md",
-                "cuda-release-path.md",
-                "wgpu-fallback-proof.md",
-                "megakernel-default-proof.md",
-                "optimization-proof.md",
-                "egraph-saturation.md",
-                "c-parser-linux-proof.md",
-                "distributed-parser-coherence.md",
-                "weir-integration.md",
-                "test-architecture.md",
-                "vyre-readme-proof.md",
-                "weir-readme-proof.md",
-                "parser-doc-proof.md",
-                "benchmark-doc-proof.md",
-                "conformance-doc-proof.md",
-                "release-notes.md",
-                "crate-metadata-proof.md",
-                "release-hygiene-proof.md",
-                "cpu-only-100x-proof.md",
-            ],
-        ),
-        ("metadata-matrix", &["metadata-matrix.json"]),
-        ("feature-matrix", &["feature-matrix.json"]),
-        (
-            "optimization-corpus",
-            &[
-                "optimization-corpus.json",
-                "optimization-corpus-contracts.json",
-                "optimization-family-manifest.json",
-                "optimization-analysis-fixtures.json",
-                "optimization-case-manifest.json",
-            ],
-        ),
-        (
-            "optimization-matrix",
-            &[
-                "optimization-integration-matrix.json",
-                "alias-aware-dse.json",
-                "alias-aware-stlf.json",
-                "alias-aware-licm.json",
-                "alias-aware-fusion-fission.json",
-                "weir-facts-pass-firing.json",
-                "egraph-saturation-matrix.json",
-                "egraph-semantic-contracts.json",
-            ],
-        ),
-        (
-            "parser-coherence",
-            &[
-                "distributed-parser-map.json",
-                "vyre-frontend-c-contracts.json",
-                "vyrec-cli-contracts.json",
-                "external-dataflow-contracts.json",
-                "compiler-consumer-contracts.json",
-                "compiler-consumer-grammar-gen-contracts.json",
-            ],
-        ),
-        (
-            "weir-matrix",
-            &[
-                "weir-analysis-api-matrix.json",
-                "weir-vyre-integration-tests.json",
-                "weir-readme-contracts.json",
-            ],
-        ),
-    ];
 
     let total = run
         .get("total_commands")
@@ -387,6 +394,36 @@ pub(crate) fn check_release_evidence_run(
                         .unwrap_or_else(|| "<missing>".to_string())
                 ));
             }
+        }
+    }
+}
+
+
+#[cfg(test)]
+mod release_evidence_generator_tests {
+    use super::REQUIRED_GENERATORS;
+
+    /// Every parser-coherence component contract artifact is expected by the
+    /// release-evidence run.
+    ///
+    /// The artifact file name derives from the component id, which lives in
+    /// `parser_coherence`. This list is written out by hand, so a renamed id
+    /// would leave the gate expecting an artifact nothing generates while the
+    /// real one went unchecked.
+    #[test]
+    fn the_parser_coherence_row_expects_every_component_contract_artifact() {
+        let expected = REQUIRED_GENERATORS
+            .iter()
+            .find(|(command, _)| *command == "parser-coherence")
+            .map(|(_, artifacts)| *artifacts)
+            .expect("Fix: the release-evidence run must require the `parser-coherence` command.");
+
+        for artifact in crate::parser_coherence::component_contract_artifacts() {
+            assert!(
+                expected.contains(&artifact.as_str()),
+                "Fix: `parser-coherence` must expect `{artifact}`; the component id that owns it \
+                 was renamed without updating REQUIRED_GENERATORS."
+            );
         }
     }
 }

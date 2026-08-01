@@ -60,9 +60,15 @@ message are prefixed `Fix:` per the frozen contract.
 | `V044` | Program validation error 044 | See diagnostic output. |
 | `V045` | Program validation error 045 | See diagnostic output. |
 | `V046` | Distributed collective node validation failure | Validate with backend collective support, use matching collective buffer element types, declare every referenced buffer, and keep collective buffers in device/global storage. |
+| `V047` | Bitwise subgroup reduction given an f32 operand | Use an integer operand for `And`/`Or`/`Xor`, or use `Add`/`Mul`/`Min`/`Max` for a float reduction. |
+| `V051` | Buffer reference used where a value is expected | A buffer reference is legal only as a call argument. Pass it directly to a composite op, or read an element with `Expr::Load`. |
+| `V052` | Call passes a reference to an undeclared buffer | Declare the buffer in `Program::buffers`. |
+| `V053` | Value passed for a `buffer<T>` parameter | Pass `Expr::buffer_ref(name)` naming the buffer the op should read. |
+| `V054` | Referenced buffer's element type does not match the signature | Pass a buffer whose element type matches `buffer<T>`, or change the op signature. |
 
-Codes `V024`, `V026`, `V037`-`V040`, and any codes `>V046` are reserved
-slots. Allocate through this registry before emitting a new diagnostic.
+Codes `V024`, `V026`, `V037`-`V040`, `V048`-`V050`, and any codes `>V054`
+are reserved slots. Allocate through this registry before emitting a new
+diagnostic.
 
 ## E-*  -  General errors
 

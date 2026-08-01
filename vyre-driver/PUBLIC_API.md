@@ -1154,6 +1154,8 @@ impl<T> typenum::type_operators::Same for vyre_driver::BackendRegistration
 pub type vyre_driver::BackendRegistration::Output = T
 #[non_exhaustive] pub struct vyre_driver::backend::DispatchConfig
 pub vyre_driver::backend::DispatchConfig::cooperative: bool
+pub vyre_driver::backend::DispatchConfig::dispatch_elements: core::option::Option<u32>
+pub vyre_driver::backend::DispatchConfig::dispatch_grid: core::option::Option<[u32; 3]>
 pub vyre_driver::backend::DispatchConfig::fixpoint_iterations: core::option::Option<u32>
 pub vyre_driver::backend::DispatchConfig::grid_override: core::option::Option<[u32; 3]>
 pub vyre_driver::backend::DispatchConfig::label: core::option::Option<alloc::string::String>
@@ -5587,6 +5589,8 @@ pub fn vyre_driver::grid_sync::dispatch_resident_with_grid_sync_split_timed(back
 pub fn vyre_driver::grid_sync::dispatch_with_grid_sync_split(backend: &dyn vyre_driver::VyreBackend, program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::BackendError>
 pub fn vyre_driver::grid_sync::dispatch_with_grid_sync_split_into(backend: &dyn vyre_driver::VyreBackend, program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig, outputs: &mut vyre_driver::OutputBuffers) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::grid_sync::dispatch_with_grid_sync_split_timed(backend: &dyn vyre_driver::VyreBackend, program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig) -> core::result::Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError>
+pub fn vyre_driver::grid_sync::dispatch_with_grid_sync_split_via<F>(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig, dispatch: &F) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::BackendError> where F: core::ops::function::Fn(&vyre_foundation::ir_inner::model::program::core::Program, &[&[u8]], core::option::Option<[u32; 3]>, &mut alloc::vec::Vec<alloc::vec::Vec<u8>>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_driver::grid_sync::dispatch_with_grid_sync_split_via_into<F>(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig, dispatch: &F, outputs: &mut vyre_driver::OutputBuffers) -> core::result::Result<(), vyre_driver::BackendError> where F: core::ops::function::Fn(&vyre_foundation::ir_inner::model::program::core::Program, &[&[u8]], core::option::Option<[u32; 3]>, &mut alloc::vec::Vec<alloc::vec::Vec<u8>>) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_driver::grid_sync::plan_host_grid_sync_segment_programs(program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<alloc::vec::Vec<vyre_foundation::ir_inner::model::program::core::Program>, vyre_driver::BackendError>
 pub fn vyre_driver::grid_sync::split_on_grid_sync(program: &vyre_foundation::ir_inner::model::program::core::Program) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::program::core::Program>
 pub fn vyre_driver::grid_sync::try_split_on_grid_sync(program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<alloc::vec::Vec<vyre_foundation::ir_inner::model::program::core::Program>, vyre_driver::BackendError>
@@ -8220,6 +8224,7 @@ pub fn vyre_driver::pipeline::hashing::dispatch_policy_cache_string(config: &vyr
 pub fn vyre_driver::pipeline::hashing::hex_encode(bytes: &[u8]) -> alloc::string::String
 pub fn vyre_driver::pipeline::hashing::hex_short(bytes: &[u8; 32]) -> alloc::string::String
 pub fn vyre_driver::pipeline::hashing::normalized_program_cache_digest(program: &vyre_foundation::ir_inner::model::program::core::Program) -> [u8; 32]
+pub fn vyre_driver::pipeline::hashing::push_lower_hex(bytes: &[u8], out: &mut alloc::string::String)
 pub fn vyre_driver::pipeline::hashing::try_normalized_program_cache_digest(program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<[u8; 32], alloc::string::String>
 pub fn vyre_driver::pipeline::hashing::update_dispatch_policy_cache_hash(hasher: &mut blake3::Hasher, config: &vyre_driver::DispatchConfig)
 pub enum vyre_driver::pipeline::PipelineCacheMissReason
@@ -8917,6 +8922,7 @@ pub fn vyre_driver::pipeline::pipeline_cache_limits_from_env() -> (u32, usize)
 pub fn vyre_driver::pipeline::prewarm(backend: alloc::sync::Arc<dyn vyre_driver::VyreBackend>, program: &vyre_foundation::ir_inner::model::program::core::Program, config: &vyre_driver::DispatchConfig) -> core::result::Result<vyre_driver::pipeline::PipelinePrewarmReport, vyre_driver::BackendError>
 pub fn vyre_driver::pipeline::prewarm_owned(backend: alloc::sync::Arc<dyn vyre_driver::VyreBackend>, program: vyre_foundation::ir_inner::model::program::core::Program, config: &vyre_driver::DispatchConfig) -> core::result::Result<vyre_driver::pipeline::PipelinePrewarmReport, vyre_driver::BackendError>
 pub fn vyre_driver::pipeline::prewarm_shared(backend: alloc::sync::Arc<dyn vyre_driver::VyreBackend>, program: alloc::sync::Arc<vyre_foundation::ir_inner::model::program::core::Program>, config: &vyre_driver::DispatchConfig) -> core::result::Result<vyre_driver::pipeline::PipelinePrewarmReport, vyre_driver::BackendError>
+pub fn vyre_driver::pipeline::push_lower_hex(bytes: &[u8], out: &mut alloc::string::String)
 pub fn vyre_driver::pipeline::try_normalized_program_cache_digest(program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<[u8; 32], alloc::string::String>
 pub fn vyre_driver::pipeline::update_dispatch_policy_cache_hash(hasher: &mut blake3::Hasher, config: &vyre_driver::DispatchConfig)
 pub mod vyre_driver::pipeline_fusion
@@ -15989,6 +15995,8 @@ impl<T> typenum::type_operators::Same for vyre_driver::pipeline::cache::DiskPipe
 pub type vyre_driver::pipeline::cache::DiskPipelineCache::Output = T
 #[non_exhaustive] pub struct vyre_driver::DispatchConfig
 pub vyre_driver::DispatchConfig::cooperative: bool
+pub vyre_driver::DispatchConfig::dispatch_elements: core::option::Option<u32>
+pub vyre_driver::DispatchConfig::dispatch_grid: core::option::Option<[u32; 3]>
 pub vyre_driver::DispatchConfig::fixpoint_iterations: core::option::Option<u32>
 pub vyre_driver::DispatchConfig::grid_override: core::option::Option<[u32; 3]>
 pub vyre_driver::DispatchConfig::label: core::option::Option<alloc::string::String>

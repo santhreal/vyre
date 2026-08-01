@@ -102,6 +102,11 @@ pub fn put_expr(out: &mut Vec<u8>, expr: &Expr) -> Result<(), WireEncodeErr> {
                     put_u8(out, 5);
                     put_string(out, buffer)?;
                 }
+                // Tag 22, added in wire format rev 5.
+                Expr::BufferRef { buffer } => {
+                    put_u8(out, 22);
+                    put_string(out, buffer)?;
+                }
                 Expr::InvocationId { axis } => {
                     put_u8(out, 6);
                     put_u8(out, *axis);

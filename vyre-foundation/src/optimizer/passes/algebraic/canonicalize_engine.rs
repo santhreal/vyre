@@ -287,6 +287,7 @@ fn expr_sort_key(expr: &Expr) -> u64 {
         Expr::LitI32(v) => u64::from(u32::from_ne_bytes(v.to_ne_bytes())),
         Expr::LitF32(v) => u64::from(v.to_bits()),
         Expr::LitBool(v) => u64::from(*v),
+        Expr::BufferRef { buffer } => buffer.cached_hash(),
         // VYRE_IR_HOTSPOTS LOW: `Ident` carries a precomputed hash
         // (see ident.rs::cached_hash). Using it here replaces the
         // per-comparison FNV walk with a single u64 field read, so

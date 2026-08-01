@@ -309,6 +309,7 @@ fn collect_names_in_expr(expr: &Expr, out: &mut Vec<Ident>) {
         | Expr::LitI32(_)
         | Expr::LitF32(_)
         | Expr::LitBool(_)
+        | Expr::BufferRef { .. }
         | Expr::BufLen { .. }
         | Expr::InvocationId { .. }
         | Expr::WorkgroupId { .. }

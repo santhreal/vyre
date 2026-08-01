@@ -142,6 +142,10 @@ pub(super) fn c11_annotate_typedef_names_impl(
     decl_contexts: Option<&str>,
     visible_type: Option<&str>,
 ) -> Program {
+    // The phases below are separate registered ops, reached through
+    // `Expr::Call`, so the returned program only inlines and validates once
+    // this crate's dialect is the process lookup.
+    crate::dialect_init::ensure_ops_resolvable();
     let t = Expr::InvocationId { axis: 0 };
     let base = Expr::mul(t.clone(), Expr::u32(VAST_NODE_STRIDE_U32));
 
@@ -226,47 +230,12 @@ pub(super) fn c11_annotate_typedef_names_impl(
     // to live) leaves scope_open at its initial SENTINEL on every non-identifier
     // row, diverging from the CPU oracle on every brace, paren, semicolon, etc.
     if !precomputed_scope {
-        loop_body.push(Node::loop_for(
-            "scope_scan",
-            Expr::u32(0),
-            t.clone(),
-            vec![
-                Node::let_bind(
-                    "scope_rev",
-                    Expr::sub(Expr::sub(t.clone(), Expr::u32(1)), Expr::var("scope_scan")),
-                ),
-                Node::let_bind(
-                    "scope_kind",
-                    Expr::load(
-                        vast_nodes,
-                        Expr::mul(Expr::var("scope_rev"), Expr::u32(VAST_NODE_STRIDE_U32)),
-                    ),
-                ),
-                Node::if_then(
-                    Expr::and(
-                        Expr::eq(Expr::var("scope_open"), Expr::u32(SENTINEL)),
-                        Expr::eq(Expr::var("scope_kind"), Expr::u32(TOK_RBRACE)),
-                    ),
-                    vec![Node::assign(
-                        "scope_depth",
-                        Expr::add(Expr::var("scope_depth"), Expr::u32(1)),
-                    )],
-                ),
-                Node::if_then(
-                    Expr::eq(Expr::var("scope_open"), Expr::u32(SENTINEL)),
-                    vec![Node::if_then(
-                        Expr::eq(Expr::var("scope_kind"), Expr::u32(TOK_LBRACE)),
-                        vec![Node::if_then_else(
-                            Expr::eq(Expr::var("scope_depth"), Expr::u32(0)),
-                            vec![Node::assign("scope_open", Expr::var("scope_rev"))],
-                            vec![Node::assign(
-                                "scope_depth",
-                                Expr::sub(Expr::var("scope_depth"), Expr::u32(1)),
-                            )],
-                        )],
-                    )],
-                ),
-            ],
+        loop_body.push(Node::assign(
+            "scope_open",
+            Expr::call(
+                row_phases::SCOPE_OPEN_FOR_ROW_OP_ID,
+                vec![Expr::buffer_ref(vast_nodes), t.clone()],
+            ),
         ));
     }
     let mut identifier_annotation: Vec<Node> = Vec::new();
@@ -338,14 +307,30 @@ pub(super) fn c11_annotate_typedef_names_impl(
             t.clone(),
         ));
     } else {
-        identifier_annotation.extend(emit_typedef_visibility_scan(
-            vast_nodes,
-            haystack,
-            decl_contexts,
-            &haystack_len,
-            &num_nodes,
-            t.clone(),
-            packed_haystack,
+        identifier_annotation.push(Node::let_bind(
+            "current_visible_typedef_name",
+            Expr::call(
+                if packed_haystack {
+                    row_phases::VISIBLE_NAME_FOR_ROW_PACKED_OP_ID
+                } else {
+                    row_phases::VISIBLE_NAME_FOR_ROW_OP_ID
+                },
+                vec![
+                    Expr::buffer_ref(vast_nodes),
+                    Expr::buffer_ref(haystack),
+                    t.clone(),
+                    haystack_len.clone(),
+                    num_nodes.clone(),
+                ],
+            ),
+        ));
+        identifier_annotation.push(Node::assign(
+            "last_decl_kind",
+            Expr::select(
+                Expr::eq(Expr::var("current_visible_typedef_name"), Expr::u32(1)),
+                Expr::u32(1),
+                Expr::u32(0),
+            ),
         ));
     }
     identifier_annotation.extend([
@@ -410,15 +395,37 @@ pub(super) fn c11_annotate_typedef_names_impl(
         ));
         nodes
     } else {
-        emit_current_declaration_annotation(
-            vast_nodes,
-            haystack,
-            &haystack_len,
-            t.clone(),
-            &num_nodes,
-            packed_haystack,
-            decl_contexts,
-        )
+        vec![
+            Node::let_bind(
+                "current_decl_result_kind",
+                Expr::call(
+                    if packed_haystack {
+                        row_phases::DECL_KIND_FOR_ROW_PACKED_OP_ID
+                    } else {
+                        row_phases::DECL_KIND_FOR_ROW_OP_ID
+                    },
+                    vec![
+                        Expr::buffer_ref(vast_nodes),
+                        Expr::buffer_ref(haystack),
+                        t.clone(),
+                        haystack_len.clone(),
+                        num_nodes.clone(),
+                    ],
+                ),
+            ),
+            Node::assign(
+                "current_decl_flags",
+                Expr::select(
+                    Expr::eq(Expr::var("current_decl_result_kind"), Expr::u32(1)),
+                    Expr::u32(C_TYPEDEF_FLAG_TYPEDEF_DECLARATOR),
+                    Expr::select(
+                        Expr::eq(Expr::var("current_decl_result_kind"), Expr::u32(2)),
+                        Expr::u32(C_TYPEDEF_FLAG_ORDINARY_DECLARATOR),
+                        Expr::u32(0),
+                    ),
+                ),
+            ),
+        ]
     };
 
     declaration_annotation.extend([

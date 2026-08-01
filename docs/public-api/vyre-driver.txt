@@ -310,6 +310,8 @@ pub fn dispatch_resident_with_grid_sync_split_timed(
 pub fn dispatch_with_grid_sync_split(
 pub fn dispatch_with_grid_sync_split_into(
 pub fn dispatch_with_grid_sync_split_timed(
+pub fn dispatch_with_grid_sync_split_via<F>(
+pub fn dispatch_with_grid_sync_split_via_into<F>(
 pub fn distribution(&self, call_site: &str) -> Option<Distribution> {
 pub fn domain_separated_exact_input_key(
 pub fn elapsed_nanos_u64(

@@ -509,11 +509,15 @@ fn dataflow_dse_case(seed: u32) -> OptimizationCorpusCase {
 fn push_control_cases(seed: u32, cases: &mut Vec<OptimizationCorpusCase>) {
     let mut desc = literal_descriptor("control", "branch_collapse", seed);
     desc.body.literals = vec![LiteralValue::Bool(seed & 1 == 0)];
+    // Result id 1, not 0: `literal_descriptor` already assigns 0 in the root
+    // body, and result ids are unique across the whole descriptor rather than
+    // per body. Reusing 0 here made every one of these 256 cases fail `verify`
+    // before a rewrite ran.
     desc.body.child_bodies.push(KernelBody {
         ops: vec![KernelOp {
             kind: KernelOpKind::Literal,
             operands: vec![0],
-            result: Some(0),
+            result: Some(1),
         }],
         child_bodies: vec![],
         literals: vec![LiteralValue::U32(seed)],

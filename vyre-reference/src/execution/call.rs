@@ -73,6 +73,14 @@ pub(crate) fn invoke_cpu_ref(
     input: &[u8],
     output: &mut Vec<u8>,
 ) -> Result<(), Error> {
+    // The sentinel is not an implementation: it clears the output buffer and
+    // returns. Calling it would report success while computing nothing, so
+    // every op that still carries it fails closed here instead.
+    if vyre::cpu_op::is_cpu_reference_sentinel(cpu_ref) {
+        return Err(Error::interp(format!(
+            "op `{op_id}` has no CPU reference implementation: its lowering table still holds the non-executable sentinel. Fix: register a real `cpu_ref` for this intrinsic, or give the op a composition body so the interpreter can inline and execute it."
+        )));
+    }
     let original_len = output.len();
     std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| cpu_ref(input, output))).map_err(
         |payload| {

@@ -225,6 +225,7 @@ pub(crate) fn rewrite_expr<'a>(
                     | Expr::LitF32(_)
                     | Expr::LitBool(_)
                     | Expr::Var(_)
+                    | Expr::BufferRef { .. }
                     | Expr::BufLen { .. }
                     | Expr::InvocationId { .. }
                     | Expr::WorkgroupId { .. }
@@ -286,6 +287,7 @@ pub(crate) fn rewrite_expr<'a>(
                     | Expr::LitF32(_)
                     | Expr::LitBool(_)
                     | Expr::Var(_)
+                    | Expr::BufferRef { .. }
                     | Expr::BufLen { .. }
                     | Expr::InvocationId { .. }
                     | Expr::WorkgroupId { .. }

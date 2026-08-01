@@ -187,6 +187,12 @@ fn record_expr_uses_and_buffer_deps_into(
                 *facts.buffer_reads.entry(buffer.clone()).or_insert(0) += 1;
                 deps.insert(buffer.clone());
             }
+            // Naming a buffer as a call argument makes the caller depend on
+            // it, but reads nothing by itself: the callee's own loads are
+            // what get counted once the call is inlined.
+            Expr::BufferRef { buffer } => {
+                deps.insert(buffer.clone());
+            }
             Expr::Atomic { buffer, index, .. } => {
                 *facts.buffer_reads.entry(buffer.clone()).or_insert(0) += 1;
                 *facts.buffer_writes.entry(buffer.clone()).or_insert(0) += 1;
@@ -290,6 +296,7 @@ fn push_expr_children<'a>(expr: &'a Expr, stack: &mut SmallVec<[&'a Expr; 16]>) 
         | Expr::LitF32(_)
         | Expr::LitBool(_)
         | Expr::Var(_)
+        | Expr::BufferRef { .. }
         | Expr::BufLen { .. }
         | Expr::InvocationId { .. }
         | Expr::WorkgroupId { .. }

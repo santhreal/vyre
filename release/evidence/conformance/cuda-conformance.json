@@ -3,13 +3,13 @@
   "backend_id": "cuda",
   "command": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/cargo_full run -p vyre-conform-runner --release --features gpu --bin vyre-conform-runner -- dispatch --backend cuda --ops all",
   "stdout_diagnostics": [],
-  "total_pairs": 632,
-  "distinct_op_count": 632,
-  "catalog_required_op_count": 612,
-  "catalog_covered_op_count": 612,
+  "total_pairs": 613,
+  "distinct_op_count": 613,
+  "catalog_required_op_count": 618,
+  "catalog_covered_op_count": 618,
   "missing_catalog_ops": [],
-  "release_backend_row_count": 1836,
-  "non_runtime_supported_release_backend_row_count": 1821,
+  "release_backend_row_count": 1854,
+  "non_runtime_supported_release_backend_row_count": 1839,
   "runtime_dialect_contract_row_count": 15,
   "runtime_dialect_contract_ops": [
     "core.indirect_dispatch",
@@ -1156,6 +1156,9 @@
     "vyre-libs::parsing::bracket_match:reference:supported",
     "vyre-libs::parsing::bracket_match:cuda:supported",
     "vyre-libs::parsing::bracket_match:wgpu:supported",
+    "vyre-libs::parsing::c11_annotate_typedef_names:reference:supported",
+    "vyre-libs::parsing::c11_annotate_typedef_names:cuda:supported",
+    "vyre-libs::parsing::c11_annotate_typedef_names:wgpu:supported",
     "vyre-libs::parsing::c11_build_call_graph:reference:supported",
     "vyre-libs::parsing::c11_build_call_graph:cuda:supported",
     "vyre-libs::parsing::c11_build_call_graph:wgpu:supported",
@@ -1504,6 +1507,9 @@
     "vyre-primitives::geom::tfn_scalar_mix:reference:supported",
     "vyre-primitives::geom::tfn_scalar_mix:cuda:supported",
     "vyre-primitives::geom::tfn_scalar_mix:wgpu:supported",
+    "vyre-primitives::graph::csr_backward_or_changed:reference:supported",
+    "vyre-primitives::graph::csr_backward_or_changed:cuda:supported",
+    "vyre-primitives::graph::csr_backward_or_changed:wgpu:supported",
     "vyre-primitives::graph::csr_backward_traverse:reference:supported",
     "vyre-primitives::graph::csr_backward_traverse:cuda:supported",
     "vyre-primitives::graph::csr_backward_traverse:wgpu:supported",
@@ -1552,9 +1558,15 @@
     "vyre-primitives::graph::sum_product_evaluate:reference:supported",
     "vyre-primitives::graph::sum_product_evaluate:cuda:supported",
     "vyre-primitives::graph::sum_product_evaluate:wgpu:supported",
+    "vyre-primitives::graph::sum_product_evaluate_leveled:reference:supported",
+    "vyre-primitives::graph::sum_product_evaluate_leveled:cuda:supported",
+    "vyre-primitives::graph::sum_product_evaluate_leveled:wgpu:supported",
     "vyre-primitives::graph::tensor_flow_forward:reference:supported",
     "vyre-primitives::graph::tensor_flow_forward:cuda:supported",
     "vyre-primitives::graph::tensor_flow_forward:wgpu:supported",
+    "vyre-primitives::graph::union_find:reference:supported",
+    "vyre-primitives::graph::union_find:cuda:supported",
+    "vyre-primitives::graph::union_find:wgpu:supported",
     "vyre-primitives::graph::vast_walk_postorder:reference:supported",
     "vyre-primitives::graph::vast_walk_postorder:cuda:supported",
     "vyre-primitives::graph::vast_walk_postorder:wgpu:supported",
@@ -1630,6 +1642,9 @@
     "vyre-primitives::math::iht_threshold:reference:supported",
     "vyre-primitives::math::iht_threshold:cuda:supported",
     "vyre-primitives::math::iht_threshold:wgpu:supported",
+    "vyre-primitives::math::interval_merge:reference:supported",
+    "vyre-primitives::math::interval_merge:cuda:supported",
+    "vyre-primitives::math::interval_merge:wgpu:supported",
     "vyre-primitives::math::mori_zwanzig_project_step:reference:supported",
     "vyre-primitives::math::mori_zwanzig_project_step:cuda:supported",
     "vyre-primitives::math::mori_zwanzig_project_step:wgpu:supported",
@@ -1789,6 +1804,9 @@
     "vyre-primitives::reduce::min:reference:supported",
     "vyre-primitives::reduce::min:cuda:supported",
     "vyre-primitives::reduce::min:wgpu:supported",
+    "vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum:reference:supported",
+    "vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum:cuda:supported",
+    "vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum:wgpu:supported",
     "vyre-primitives::reduce::radix_sort:reference:supported",
     "vyre-primitives::reduce::radix_sort:cuda:supported",
     "vyre-primitives::reduce::radix_sort:wgpu:supported",
@@ -1860,11 +1878,11 @@
   "op_matrix_blocked_release_count": 0,
   "op_matrix_blocked_release_rows": [],
   "op_matrix_errors": [],
-  "passed_pairs": 632,
+  "passed_pairs": 613,
   "failed_pairs": 0,
   "duplicate_op_ids": [],
   "diff_schema_version": 1,
-  "diff_summary_count": 632,
+  "diff_summary_count": 613,
   "diff_summary_errors": [],
   "diff_summaries": [
     {
@@ -5658,6 +5676,16 @@
       "source": "input=derived_pair_envelope;output=derived_pair_envelope"
     },
     {
+      "op_id": "vyre-libs::parsing::c11_annotate_typedef_names",
+      "backend_id": "cuda",
+      "input_digest": "vyre-conform-input-envelope-v1:daeb42a9001cd0216277893d5266ba6c7d6da24dfd8cf9e4cd095f8ae9b75c69",
+      "output_digest": "vyre-conform-output-envelope-v1:4b9239775913443dc57f7c5d358be742b8e6521db6b4b64549b9b96b9f61edd2",
+      "timing_class": "not_reported",
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
+    },
+    {
       "op_id": "vyre-libs::parsing::c11_build_call_graph",
       "backend_id": "cuda",
       "input_digest": "vyre-conform-input-envelope-v1:2b85dec08fef068328062b5a0b70af235a6aa38c43a3c8aeb4ff961a9bbff3a4",
@@ -6818,6 +6846,16 @@
       "source": "input=derived_pair_envelope;output=derived_pair_envelope"
     },
     {
+      "op_id": "vyre-primitives::graph::csr_backward_or_changed",
+      "backend_id": "cuda",
+      "input_digest": "vyre-conform-input-envelope-v1:47b3d41509a285316d131f7d4b31a70240e00574dee1240ad61bf70cecefb449",
+      "output_digest": "vyre-conform-output-envelope-v1:7e101b7babe82f4e75aa6c16c34f65bc84fd65dea8e8a1624cc6588f12acbf0e",
+      "timing_class": "not_reported",
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
+    },
+    {
       "op_id": "vyre-primitives::graph::csr_backward_traverse",
       "backend_id": "cuda",
       "input_digest": "vyre-conform-input-envelope-v1:5eb01db8d954b15b8f361e6e82ce3c9e630286fa6b64a0a49fa11a343a90fe2f",
@@ -6978,10 +7016,30 @@
       "source": "input=derived_pair_envelope;output=derived_pair_envelope"
     },
     {
+      "op_id": "vyre-primitives::graph::sum_product_evaluate_leveled",
+      "backend_id": "cuda",
+      "input_digest": "vyre-conform-input-envelope-v1:e8e9bbfbaeb49a21016dc82140dcac34ca6de931ca49b4601557594d2c541285",
+      "output_digest": "vyre-conform-output-envelope-v1:0dfc5e78377dce0110220cd175e2f5995faf5d82b1a19c00e1e2d18f68a88389",
+      "timing_class": "not_reported",
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
+    },
+    {
       "op_id": "vyre-primitives::graph::tensor_flow_forward",
       "backend_id": "cuda",
       "input_digest": "vyre-conform-input-envelope-v1:866e12427a6500474db3f7b71e32d9f0148ce6d82e536fe50e95b1e9fe259718",
       "output_digest": "vyre-conform-output-envelope-v1:0147ba3dba4c8b83a8827e85890b0668d7f530aa44c01f0dc0b0091d7b5fe950",
+      "timing_class": "not_reported",
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
+    },
+    {
+      "op_id": "vyre-primitives::graph::union_find",
+      "backend_id": "cuda",
+      "input_digest": "vyre-conform-input-envelope-v1:727217a97689d163afc9f8e397d53eeee10e8a070e588f3ca52b3caa3fc4b507",
+      "output_digest": "vyre-conform-output-envelope-v1:cb39423d1ec52f40205e4d4827cd1541f443a16e56b6f8472b80799824f39810",
       "timing_class": "not_reported",
       "failure_class": "passed",
       "passed": true,
@@ -7232,6 +7290,16 @@
       "backend_id": "cuda",
       "input_digest": "vyre-conform-input-envelope-v1:bda5c1a33fd86395b11e49a77537e1843d960038f802830fb72844129b050403",
       "output_digest": "vyre-conform-output-envelope-v1:836aef3cb22a7467d6dfe420fafa3edf7f6e6ee68808e4b3583d8fa2e3187bf8",
+      "timing_class": "not_reported",
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
+    },
+    {
+      "op_id": "vyre-primitives::math::interval_merge",
+      "backend_id": "cuda",
+      "input_digest": "vyre-conform-input-envelope-v1:90de56b8431f42b98533b0d5b09cba00ab742e9ebd9cecadc216bea17145b7b6",
+      "output_digest": "vyre-conform-output-envelope-v1:c2df2ba3396fae6b7690d44e666df9d55b7b2a0a49b365f6249db62c75ee7e72",
       "timing_class": "not_reported",
       "failure_class": "passed",
       "passed": true,
@@ -7768,6 +7836,16 @@
       "source": "input=derived_pair_envelope;output=derived_pair_envelope"
     },
     {
+      "op_id": "vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum",
+      "backend_id": "cuda",
+      "input_digest": "vyre-conform-input-envelope-v1:ac5bb792e040cbf29aae1215ed91e39c2294094b15d2aaa8ebe3ae1ca382f742",
+      "output_digest": "vyre-conform-output-envelope-v1:10de2802e8fb547befa9b924a955bf6d8a05c5f8d40d509a5969288165f6b121",
+      "timing_class": "not_reported",
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
+    },
+    {
       "op_id": "vyre-primitives::reduce::radix_sort",
       "backend_id": "cuda",
       "input_digest": "vyre-conform-input-envelope-v1:1452b4e4eaba4f64019c6bb52cbb8d5ad766cac75fd733847abe8790e250314e",
@@ -7932,256 +8010,6 @@
       "backend_id": "cuda",
       "input_digest": "vyre-conform-input-envelope-v1:edcd4ff37da553689104f1fac201b53df57214031c0f7eb74be5dec749cb2dc4",
       "output_digest": "vyre-conform-output-envelope-v1:595ed23b4b027f483e8b8a39672aea9691fb9fad25ade9f6d83a80b6f4ed6899",
-      "timing_class": "not_reported",
-      "failure_class": "passed",
-      "passed": true,
-      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
-    },
-    {
-      "op_id": "weir::callgraph",
-      "backend_id": "cuda",
-      "input_digest": "vyre-conform-input-envelope-v1:1c4b78044a21b97a554ae87190863c8ff385077f9c3b14f2d9ad3a00fb0cd5a0",
-      "output_digest": "vyre-conform-output-envelope-v1:786940bdcfca7cc48042d473958e1d7a760d69c11386506af1017364abda998a",
-      "timing_class": "not_reported",
-      "failure_class": "passed",
-      "passed": true,
-      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
-    },
-    {
-      "op_id": "weir::control_dependence",
-      "backend_id": "cuda",
-      "input_digest": "vyre-conform-input-envelope-v1:68a7288c1fb443d5c7509f0fd91827b8f8cefe915c46507a569e02f036f48ccf",
-      "output_digest": "vyre-conform-output-envelope-v1:a40b946f8482e7494577d3f473d070991d5edd47bddc2f19d5b5bf3e33266415",
-      "timing_class": "not_reported",
-      "failure_class": "passed",
-      "passed": true,
-      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
-    },
-    {
-      "op_id": "weir::cross_language",
-      "backend_id": "cuda",
-      "input_digest": "vyre-conform-input-envelope-v1:b3b82395b9a183e786a43bc2311a9d7e9f30754e1ee2545ad9dc2673c116adea",
-      "output_digest": "vyre-conform-output-envelope-v1:8e2599fbf140b53a88bc136d3b19c4fb4dfe2c683c7d4a06ddfae1d7651b3c81",
-      "timing_class": "not_reported",
-      "failure_class": "passed",
-      "passed": true,
-      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
-    },
-    {
-      "op_id": "weir::def_use",
-      "backend_id": "cuda",
-      "input_digest": "vyre-conform-input-envelope-v1:474cfd87f7d37a6b031e42603e18d7cbc3f5cdc206e8c120345095c9335761b4",
-      "output_digest": "vyre-conform-output-envelope-v1:7813e561b26a78c6024e776973291b20e37844f7970a41950b7eaada5ff0ddd8",
-      "timing_class": "not_reported",
-      "failure_class": "passed",
-      "passed": true,
-      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
-    },
-    {
-      "op_id": "weir::dominators",
-      "backend_id": "cuda",
-      "input_digest": "vyre-conform-input-envelope-v1:cb90f8067d8fb2c992118f3b25ef83bf1694819313e4c021e2b9839cb658a93b",
-      "output_digest": "vyre-conform-output-envelope-v1:0e94bd58e7a00d337e27573fd8cd7589f68a15163591bbf259db1c88557f91cc",
-      "timing_class": "not_reported",
-      "failure_class": "passed",
-      "passed": true,
-      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
-    },
-    {
-      "op_id": "weir::escape",
-      "backend_id": "cuda",
-      "input_digest": "vyre-conform-input-envelope-v1:aff66804b54e92d2e5a42cdf21ef294bd2752998892ee5373702ceb9c7f75ad8",
-      "output_digest": "vyre-conform-output-envelope-v1:0f81a7fd47a5292ee2ee75019cfd76efe65319ea0fcf75ae4e9aa0cc7a4abd5f",
-      "timing_class": "not_reported",
-      "failure_class": "passed",
-      "passed": true,
-      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
-    },
-    {
-      "op_id": "weir::escapes",
-      "backend_id": "cuda",
-      "input_digest": "vyre-conform-input-envelope-v1:f3d0f863affcf66f14faf6c4761e9da6ead2fe7aa74cdfd7123eb2712c71fd47",
-      "output_digest": "vyre-conform-output-envelope-v1:49cdf91259db0eb0da9f4b6225eba3e9ed8553733a8fd1101c1409f896e5a61a",
-      "timing_class": "not_reported",
-      "failure_class": "passed",
-      "passed": true,
-      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
-    },
-    {
-      "op_id": "weir::ifds",
-      "backend_id": "cuda",
-      "input_digest": "vyre-conform-input-envelope-v1:7139712510d1ab91bf2a7a0cd5def5ddd3a85de0ecfeddf69767aabb0f41e5ae",
-      "output_digest": "vyre-conform-output-envelope-v1:d218b65d17cc617406c36b470893f27ebf282f46121b2e5f5b607672d78b6d0d",
-      "timing_class": "not_reported",
-      "failure_class": "passed",
-      "passed": true,
-      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
-    },
-    {
-      "op_id": "weir::live",
-      "backend_id": "cuda",
-      "input_digest": "vyre-conform-input-envelope-v1:3a29f5848fc42a96044b8d30a26f6190ba1bc57cca08be535c827144cdc8472a",
-      "output_digest": "vyre-conform-output-envelope-v1:9d32643fb8088998b2836ccb5e913e60568c662cff35832edf8f2890a6d6e9e0",
-      "timing_class": "not_reported",
-      "failure_class": "passed",
-      "passed": true,
-      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
-    },
-    {
-      "op_id": "weir::live_at",
-      "backend_id": "cuda",
-      "input_digest": "vyre-conform-input-envelope-v1:da789b7a73ffa9b52ada7dc43f6ef916cb49b9934fd18e0b25c78975a046e1a6",
-      "output_digest": "vyre-conform-output-envelope-v1:0314fc325e21ba982a7640c3563a2683b517fb425fd6d686673371b84892516a",
-      "timing_class": "not_reported",
-      "failure_class": "passed",
-      "passed": true,
-      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
-    },
-    {
-      "op_id": "weir::loop_sum",
-      "backend_id": "cuda",
-      "input_digest": "vyre-conform-input-envelope-v1:085bce00357fa2d4be1a1793f2230f0716a8805f0df4f9f0d9fd63cb6feddb79",
-      "output_digest": "vyre-conform-output-envelope-v1:f2ac85b32b30f6a02a7d4195d1c865ccb8e0c053ddb8d65bc51e1212b0685321",
-      "timing_class": "not_reported",
-      "failure_class": "passed",
-      "passed": true,
-      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
-    },
-    {
-      "op_id": "weir::may_alias",
-      "backend_id": "cuda",
-      "input_digest": "vyre-conform-input-envelope-v1:94be27105cb99df1515045722706c57280d9d47888be8acca10a43936016b1c0",
-      "output_digest": "vyre-conform-output-envelope-v1:361cf9d27e1cf6e7d7d66adbdcdd13bdb0453ceaf4b2b12355dc5f61c1db479c",
-      "timing_class": "not_reported",
-      "failure_class": "passed",
-      "passed": true,
-      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
-    },
-    {
-      "op_id": "weir::must_init",
-      "backend_id": "cuda",
-      "input_digest": "vyre-conform-input-envelope-v1:277561e37a8b009beacbb370bd0ed639cbc8831d70d451955a132751d62f9eea",
-      "output_digest": "vyre-conform-output-envelope-v1:9ad3b9ba1f7bdb3b6bbb8bf99ae6727a7fae00b299d9e8068145433de4a76e34",
-      "timing_class": "not_reported",
-      "failure_class": "passed",
-      "passed": true,
-      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
-    },
-    {
-      "op_id": "weir::points_to",
-      "backend_id": "cuda",
-      "input_digest": "vyre-conform-input-envelope-v1:840c3b057299268c9a9ae7999246217c2c67f2cda673b9951fac143ec9c963c8",
-      "output_digest": "vyre-conform-output-envelope-v1:e62001b18e032551c261eee2acdf816cdd51967ba1c2c1733bb7491e7a55c480",
-      "timing_class": "not_reported",
-      "failure_class": "passed",
-      "passed": true,
-      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
-    },
-    {
-      "op_id": "weir::post_dominates",
-      "backend_id": "cuda",
-      "input_digest": "vyre-conform-input-envelope-v1:b0f45315039267871c3c485289f53c1b02b3adecae8533484392908d6e669b34",
-      "output_digest": "vyre-conform-output-envelope-v1:1aaea61f7cea1b518db7fc3fe95969fc88bd5d639c824cd2aaff7b01d81c5167",
-      "timing_class": "not_reported",
-      "failure_class": "passed",
-      "passed": true,
-      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
-    },
-    {
-      "op_id": "weir::range",
-      "backend_id": "cuda",
-      "input_digest": "vyre-conform-input-envelope-v1:6bf4a99c202454043162261c5c3fa97b9325f159c0516eab39aa35f32ffe7cc2",
-      "output_digest": "vyre-conform-output-envelope-v1:00b49596031844146f502e360fb8b784738d91a7d7e13ceb359cbb583d1ab7ec",
-      "timing_class": "not_reported",
-      "failure_class": "passed",
-      "passed": true,
-      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
-    },
-    {
-      "op_id": "weir::range_check",
-      "backend_id": "cuda",
-      "input_digest": "vyre-conform-input-envelope-v1:2da2cd87326dcc27e79b7c8d3c062eb974b6654c1b6a595e374a6ac6fddf6866",
-      "output_digest": "vyre-conform-output-envelope-v1:0dfa5c1aac075fe1b91d83c210d81be4f0ecacf1a04164c8b63e801087715efd",
-      "timing_class": "not_reported",
-      "failure_class": "passed",
-      "passed": true,
-      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
-    },
-    {
-      "op_id": "weir::reaching",
-      "backend_id": "cuda",
-      "input_digest": "vyre-conform-input-envelope-v1:1c5113532e2dd6bad51e85e9f761b539676292e17e3cb25040d03ac58ad0212b",
-      "output_digest": "vyre-conform-output-envelope-v1:3c92ddb2ce3d256174c0b1182e10a27c61b24025da16d5cc8f28fdefc6a42a90",
-      "timing_class": "not_reported",
-      "failure_class": "passed",
-      "passed": true,
-      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
-    },
-    {
-      "op_id": "weir::reaching_def",
-      "backend_id": "cuda",
-      "input_digest": "vyre-conform-input-envelope-v1:becb35515ca4e600d1c320dd011a4ed492173161759a50f58e6ff5530f3cec65",
-      "output_digest": "vyre-conform-output-envelope-v1:e60624ad1f0b4adcdce0853fa6ff368cf2fed01211adfbe829124201b907b839",
-      "timing_class": "not_reported",
-      "failure_class": "passed",
-      "passed": true,
-      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
-    },
-    {
-      "op_id": "weir::reaching_def_summary",
-      "backend_id": "cuda",
-      "input_digest": "vyre-conform-input-envelope-v1:68b640b826a5937a16fd6f19b03c187b2d07e470c229d4cdcb94495991c1fe89",
-      "output_digest": "vyre-conform-output-envelope-v1:871b10d924f1a375c5a866c73a12d9c7720e9729a74417f9aae167d239d7c341",
-      "timing_class": "not_reported",
-      "failure_class": "passed",
-      "passed": true,
-      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
-    },
-    {
-      "op_id": "weir::scc_query",
-      "backend_id": "cuda",
-      "input_digest": "vyre-conform-input-envelope-v1:5f3415a1bc710579f6beee5e1ea587114a634d6c9dc059cc472235c0f1f898a6",
-      "output_digest": "vyre-conform-output-envelope-v1:01528b6dd5a5760f5c2e9f1e33a7c49a22aff60bf76357ba1bf2f36a821709ac",
-      "timing_class": "not_reported",
-      "failure_class": "passed",
-      "passed": true,
-      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
-    },
-    {
-      "op_id": "weir::slice",
-      "backend_id": "cuda",
-      "input_digest": "vyre-conform-input-envelope-v1:7bf7ea18d6301603a9ff9d00fec57d4a9469bf5baa664de506b3f20c5f165917",
-      "output_digest": "vyre-conform-output-envelope-v1:6291b627503bb92b961a050c0a3547fee5193943e5dafc75ad53091fecb104b9",
-      "timing_class": "not_reported",
-      "failure_class": "passed",
-      "passed": true,
-      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
-    },
-    {
-      "op_id": "weir::ssa",
-      "backend_id": "cuda",
-      "input_digest": "vyre-conform-input-envelope-v1:7db6d0435f694439e8ba5e7bb86b845b0d2fe92a68fb853b98903b46dea461a2",
-      "output_digest": "vyre-conform-output-envelope-v1:2ad4af3600d8c54fa72db0c46f75696bc5f3489dc7553329df06a97fb08e02f3",
-      "timing_class": "not_reported",
-      "failure_class": "passed",
-      "passed": true,
-      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
-    },
-    {
-      "op_id": "weir::summary",
-      "backend_id": "cuda",
-      "input_digest": "vyre-conform-input-envelope-v1:5f2a7c37e76fea4203891ab1a4e1ce6b68118af56f373bd40243dceac646ef81",
-      "output_digest": "vyre-conform-output-envelope-v1:165df7384aa44277c8f5f25bd70b7cb9ecfe41d1cbc50c7e5e18665067f56a3a",
-      "timing_class": "not_reported",
-      "failure_class": "passed",
-      "passed": true,
-      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
-    },
-    {
-      "op_id": "weir::value_set",
-      "backend_id": "cuda",
-      "input_digest": "vyre-conform-input-envelope-v1:0fc3a4191dda69e1d187d43701100bf7268977faa8de88a48fbe8a535293fe6d",
-      "output_digest": "vyre-conform-output-envelope-v1:688456aac193d6d2c7ba19b802f2915a59b014fd511fae1c6c3020464fac9988",
       "timing_class": "not_reported",
       "failure_class": "passed",
       "passed": true,
@@ -10464,6 +10292,12 @@
       "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
     },
     {
+      "op_id": "vyre-libs::parsing::c11_annotate_typedef_names",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
       "op_id": "vyre-libs::parsing::c11_build_call_graph",
       "backend_id": "cuda",
       "passed": true,
@@ -11160,6 +10994,12 @@
       "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
     },
     {
+      "op_id": "vyre-primitives::graph::csr_backward_or_changed",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
       "op_id": "vyre-primitives::graph::csr_backward_traverse",
       "backend_id": "cuda",
       "passed": true,
@@ -11256,7 +11096,19 @@
       "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
     },
     {
+      "op_id": "vyre-primitives::graph::sum_product_evaluate_leveled",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
       "op_id": "vyre-primitives::graph::tensor_flow_forward",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::graph::union_find",
       "backend_id": "cuda",
       "passed": true,
       "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
@@ -11407,6 +11259,12 @@
     },
     {
       "op_id": "vyre-primitives::math::iht_threshold",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::math::interval_merge",
       "backend_id": "cuda",
       "passed": true,
       "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
@@ -11730,6 +11588,12 @@
       "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
     },
     {
+      "op_id": "vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
       "op_id": "vyre-primitives::reduce::radix_sort",
       "backend_id": "cuda",
       "passed": true,
@@ -11827,156 +11691,6 @@
     },
     {
       "op_id": "vyre-primitives::visual::packed_rgba_map",
-      "backend_id": "cuda",
-      "passed": true,
-      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
-    },
-    {
-      "op_id": "weir::callgraph",
-      "backend_id": "cuda",
-      "passed": true,
-      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
-    },
-    {
-      "op_id": "weir::control_dependence",
-      "backend_id": "cuda",
-      "passed": true,
-      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
-    },
-    {
-      "op_id": "weir::cross_language",
-      "backend_id": "cuda",
-      "passed": true,
-      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
-    },
-    {
-      "op_id": "weir::def_use",
-      "backend_id": "cuda",
-      "passed": true,
-      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
-    },
-    {
-      "op_id": "weir::dominators",
-      "backend_id": "cuda",
-      "passed": true,
-      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
-    },
-    {
-      "op_id": "weir::escape",
-      "backend_id": "cuda",
-      "passed": true,
-      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
-    },
-    {
-      "op_id": "weir::escapes",
-      "backend_id": "cuda",
-      "passed": true,
-      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
-    },
-    {
-      "op_id": "weir::ifds",
-      "backend_id": "cuda",
-      "passed": true,
-      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
-    },
-    {
-      "op_id": "weir::live",
-      "backend_id": "cuda",
-      "passed": true,
-      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
-    },
-    {
-      "op_id": "weir::live_at",
-      "backend_id": "cuda",
-      "passed": true,
-      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
-    },
-    {
-      "op_id": "weir::loop_sum",
-      "backend_id": "cuda",
-      "passed": true,
-      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
-    },
-    {
-      "op_id": "weir::may_alias",
-      "backend_id": "cuda",
-      "passed": true,
-      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
-    },
-    {
-      "op_id": "weir::must_init",
-      "backend_id": "cuda",
-      "passed": true,
-      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
-    },
-    {
-      "op_id": "weir::points_to",
-      "backend_id": "cuda",
-      "passed": true,
-      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
-    },
-    {
-      "op_id": "weir::post_dominates",
-      "backend_id": "cuda",
-      "passed": true,
-      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
-    },
-    {
-      "op_id": "weir::range",
-      "backend_id": "cuda",
-      "passed": true,
-      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
-    },
-    {
-      "op_id": "weir::range_check",
-      "backend_id": "cuda",
-      "passed": true,
-      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
-    },
-    {
-      "op_id": "weir::reaching",
-      "backend_id": "cuda",
-      "passed": true,
-      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
-    },
-    {
-      "op_id": "weir::reaching_def",
-      "backend_id": "cuda",
-      "passed": true,
-      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
-    },
-    {
-      "op_id": "weir::reaching_def_summary",
-      "backend_id": "cuda",
-      "passed": true,
-      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
-    },
-    {
-      "op_id": "weir::scc_query",
-      "backend_id": "cuda",
-      "passed": true,
-      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
-    },
-    {
-      "op_id": "weir::slice",
-      "backend_id": "cuda",
-      "passed": true,
-      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
-    },
-    {
-      "op_id": "weir::ssa",
-      "backend_id": "cuda",
-      "passed": true,
-      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
-    },
-    {
-      "op_id": "weir::summary",
-      "backend_id": "cuda",
-      "passed": true,
-      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
-    },
-    {
-      "op_id": "weir::value_set",
       "backend_id": "cuda",
       "passed": true,
       "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"

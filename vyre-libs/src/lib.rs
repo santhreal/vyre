@@ -295,6 +295,8 @@ pub use signatures::{
 /// `pub(crate)` because the registry is an internal pre-sweep tool  -
 /// downstream dialects do not submit through this path.
 pub(crate) mod test_migration;
+/// Making this crate's ops resolvable in the current process.
+pub mod dialect_init;
 /// Test support components for vyre-libs.
 pub mod test_support;
 

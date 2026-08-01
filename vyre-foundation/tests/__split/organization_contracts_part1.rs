@@ -337,6 +337,9 @@ fn no_root_stray_plan_docs() {
         // but CI never sees. Baselining them here keeps the local test
         // green without weakening the contract  -  the .gitignore is
         // the authoritative gate for production tracking.
+        // The one project ledger. Gitignored, one per repository, and the
+        // single place open work is recorded, so it is not a stray plan doc.
+        "BACKLOG.md",
         "SEPARATION_AUDIT_2026-05-01.md",
         "CLEANUP_PLAN_2026-05-01.md",
         "CC_OWNED_BACKLOG_2026-05-01.md",

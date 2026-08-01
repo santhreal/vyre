@@ -266,6 +266,9 @@ fn expr_touches_buffer(expr: &Expr, buffer: &Ident) -> bool {
             index,
         } => other == buffer || expr_touches_buffer(index, buffer),
         Expr::BufLen { buffer: other } => other == buffer,
+        // A callee handed this buffer may read or write it, so passing
+        // it counts as touching it.
+        Expr::BufferRef { buffer: other } => other == buffer,
         Expr::Atomic {
             buffer: other,
             index,

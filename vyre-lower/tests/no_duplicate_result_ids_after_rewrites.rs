@@ -191,6 +191,174 @@ fn nested_loop_hoist_produces_no_duplicate_result_ids() {
     assert_no_duplicates(&out.body, "post-rewrites");
 }
 
+/// Shape that used to make `loop_unroll` mint colliding ids.
+///
+/// The top-level body holds a loop too long to unroll (0..100 against
+/// `MAX_UNROLL_COUNT` of 4), so `loop_unroll` leaves it alone and
+/// recurses into its child body. That child holds a SHORT inner loop
+/// (0..2) that does get unrolled. The ids inside the child are small
+/// (3..5) while the top-level body already uses 6 and 7, so a free-id
+/// counter reseeded from the child's own subtree hands the unrolled
+/// copies ids 6 and 7 and stamps them on top of the enclosing body's
+/// `GlobalInvocationId` and store value.
+fn short_loop_nested_under_long_loop_descriptor() -> KernelDescriptor {
+    let bindings = vec![BindingSlot {
+        slot: 0,
+        element_type: DataType::U32,
+        element_count: Some(64),
+        memory_class: MemoryClass::Global,
+        visibility: BindingVisibility::ReadWrite,
+        name: "out".into(),
+    }];
+
+    // Unrolled twice, so the two copies want two fresh ids.
+    let unrollable_inner_body = KernelBody {
+        ops: vec![
+            KernelOp {
+                kind: KernelOpKind::LoopIndex {
+                    loop_var: "inner".into(),
+                },
+                operands: vec![],
+                result: Some(5),
+            },
+            KernelOp {
+                kind: KernelOpKind::StoreGlobal,
+                operands: vec![0, 5, 5],
+                result: None,
+            },
+        ],
+        child_bodies: vec![],
+        literals: vec![],
+    };
+    let long_loop_body = KernelBody {
+        ops: vec![
+            KernelOp {
+                kind: KernelOpKind::Literal,
+                operands: vec![0],
+                result: Some(3),
+            },
+            KernelOp {
+                kind: KernelOpKind::Literal,
+                operands: vec![1],
+                result: Some(4),
+            },
+            KernelOp {
+                kind: KernelOpKind::StructuredForLoop {
+                    loop_var: "inner".into(),
+                },
+                operands: vec![3, 4, 0],
+                result: None,
+            },
+        ],
+        child_bodies: vec![unrollable_inner_body],
+        literals: vec![LiteralValue::U32(0), LiteralValue::U32(2)],
+    };
+    KernelDescriptor {
+        id: "short_loop_under_long_loop".into(),
+        bindings: BindingLayout { slots: bindings },
+        dispatch: Dispatch::new(64, 1, 1),
+        body: KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(0),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![1],
+                    result: Some(1),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![2],
+                    result: Some(2),
+                },
+                KernelOp {
+                    kind: KernelOpKind::GlobalInvocationId,
+                    operands: vec![0],
+                    result: Some(6),
+                },
+                KernelOp {
+                    kind: KernelOpKind::StructuredForLoop {
+                        loop_var: "outer".into(),
+                    },
+                    operands: vec![0, 2, 0],
+                    result: None,
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![1],
+                    result: Some(7),
+                },
+                KernelOp {
+                    kind: KernelOpKind::StoreGlobal,
+                    operands: vec![0, 6, 7],
+                    result: None,
+                },
+            ],
+            child_bodies: vec![long_loop_body],
+            literals: vec![
+                LiteralValue::U32(0),
+                LiteralValue::U32(2),
+                LiteralValue::U32(100),
+            ],
+        },
+    }
+}
+
+#[test]
+fn short_loop_under_long_loop_input_is_well_formed() {
+    let desc = short_loop_nested_under_long_loop_descriptor();
+    assert_no_duplicates(&desc.body, "input descriptor");
+    assert_eq!(vyre_lower::verify::verify(&desc), Ok(()));
+}
+
+/// `loop_unroll` in isolation must not reuse an id the enclosing body
+/// already owns. Before the fix this produced `%6` and `%7` twice: once
+/// in the top-level body and once inside each unrolled copy.
+#[test]
+fn loop_unroll_does_not_reuse_enclosing_body_ids() {
+    let desc = short_loop_nested_under_long_loop_descriptor();
+    let unrolled = vyre_lower::rewrites::loop_unroll(&desc);
+    assert_no_duplicates(&unrolled.body, "post loop_unroll");
+    assert_eq!(vyre_lower::verify::verify(&unrolled), Ok(()));
+}
+
+/// The unrolled copies must be genuinely new ids, not a renumbering that
+/// merely happens to avoid the two the test fixture checks. Every id the
+/// unrolled body introduces sits strictly above the input's maximum.
+#[test]
+fn loop_unroll_allocates_ids_above_the_whole_descriptor_maximum() {
+    let desc = short_loop_nested_under_long_loop_descriptor();
+    let input_ids = count_result_ids(&desc.body);
+    let input_max = *input_ids.keys().max().expect("fixture produces results");
+    assert_eq!(input_max, 7, "fixture's highest input id");
+
+    let unrolled = vyre_lower::rewrites::loop_unroll(&desc);
+    let output_ids = count_result_ids(&unrolled.body);
+    let introduced: Vec<u32> = output_ids
+        .keys()
+        .copied()
+        .filter(|id| !input_ids.contains_key(id))
+        .collect();
+    assert_eq!(
+        introduced,
+        vec![8, 9],
+        "two unrolled iterations, each taking the next descriptor-wide free id"
+    );
+}
+
+/// End to end through the full rewrite pipeline, which is what the
+/// backends actually run.
+#[test]
+fn short_loop_under_long_loop_survives_the_full_pipeline() {
+    let desc = short_loop_nested_under_long_loop_descriptor();
+    let (out, _stats) = run_all_with_stats(&desc);
+    assert_no_duplicates(&out.body, "post-rewrites");
+    assert_eq!(vyre_lower::verify::verify(&out), Ok(()));
+}
+
 #[test]
 fn idempotent_rewrites_preserve_unique_ids() {
     // Run the rewrite suite TWICE  -  id allocation must remain stable

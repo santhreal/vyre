@@ -56,11 +56,11 @@ struct ConformanceMatrix {
     non_runtime_supported_release_backend_row_count: usize,
     runtime_dialect_contract_row_count: usize,
     runtime_dialect_contract_ops: Vec<&'static str>,
-    release_backend_rows: Vec<String>,
+    pub(crate) release_backend_rows: Vec<String>,
     release_backend_case_rows: Vec<ReleaseBackendCaseRow>,
     required_case_classes: Vec<&'static str>,
     case_class_blocker_count: usize,
-    missing_release_backend_rows: Vec<String>,
+    pub(crate) missing_release_backend_rows: Vec<String>,
     op_matrix_blocked_release_count: usize,
     op_matrix_blocked_release_rows: Vec<String>,
     op_matrix_errors: Vec<String>,
@@ -516,25 +516,25 @@ fn parse_release_backend_row(row: &str) -> Option<(&str, &str, &str)> {
     Some((op, backend, status))
 }
 
-struct OpMatrixCatalog {
-    required_ops: BTreeSet<String>,
-    release_backend_rows: Vec<String>,
-    release_backend_specs: Vec<OpMatrixReleaseBackendSpec>,
-    missing_release_backend_rows: Vec<String>,
-    blocked_release_rows: Vec<String>,
-    errors: Vec<String>,
+pub(crate) struct OpMatrixCatalog {
+    pub(crate) required_ops: BTreeSet<String>,
+    pub(crate) release_backend_rows: Vec<String>,
+    pub(crate) release_backend_specs: Vec<OpMatrixReleaseBackendSpec>,
+    pub(crate) missing_release_backend_rows: Vec<String>,
+    pub(crate) blocked_release_rows: Vec<String>,
+    pub(crate) errors: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct OpMatrixReleaseBackendSpec {
-    op_id: String,
-    backend: String,
-    status: String,
-    test_paths: Vec<String>,
-    test_case_classes: BTreeSet<&'static str>,
+pub(crate) struct OpMatrixReleaseBackendSpec {
+    pub(crate) op_id: String,
+    pub(crate) backend: String,
+    pub(crate) status: String,
+    pub(crate) test_paths: Vec<String>,
+    pub(crate) test_case_classes: BTreeSet<&'static str>,
 }
 
-fn read_conformance_required_op_matrix(vyre_root: &Path) -> OpMatrixCatalog {
+pub(crate) fn read_conformance_required_op_matrix(vyre_root: &Path) -> OpMatrixCatalog {
     let matrix_path = vyre_root.join("docs/optimization/OP_MATRIX.toml");
     let text = match read_text_bounded(&matrix_path) {
         Ok(text) => text,
@@ -605,6 +605,21 @@ fn read_conformance_required_op_matrix(vyre_root: &Path) -> OpMatrixCatalog {
     for row in rows {
         let tier = row.get("tier").and_then(toml::Value::as_str).unwrap_or("");
         if tier == "foundation_ir" {
+            continue;
+        }
+        // A Composite callee that exists only to be inlined is never dispatched
+        // as a program of its own, so a per-backend conformance pair for it
+        // would execute a shape the release never runs. Its coverage is the
+        // caller's: the calls inline before lowering, so the caller's
+        // conformance pair exercises the callee's body on every backend. The
+        // row still has to declare owners, tests and backend statuses like any
+        // other, and `op_matrix_truth` checks that an inlined callee registers
+        // through the dialect registry alone.
+        if row
+            .get("inlined_callee")
+            .and_then(toml::Value::as_bool)
+            .unwrap_or(false)
+        {
             continue;
         }
         let family = row

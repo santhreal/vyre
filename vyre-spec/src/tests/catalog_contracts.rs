@@ -100,6 +100,7 @@ fn expr_variant_catalog_is_complete_and_unique() {
         "LitF32",
         "LitBool",
         "Var",
+        "BufferRef",
         "Load",
         "BufLen",
         "InvocationId",

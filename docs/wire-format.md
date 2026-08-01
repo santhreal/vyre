@@ -162,6 +162,19 @@ decoders that link the extension crate decode it to its native form.
 
 Extension IDs in the range `[0x0000_0000, 0x7FFF_FFFF]` are reserved for vendor-assigned core extensions. `[0x8000_0000, 0xFFFF_FFFF]` is community-assigned (registered at `https://vyre.dev/registry/extensions/` when that exists).
 
+## Accepted versions
+
+The encoder writes `WIRE_FORMAT_VERSION`, currently 5. The decoder reads
+every version from `MIN_SUPPORTED_WIRE_FORMAT_VERSION` (4) through the
+current one, because rev 5 only appends a tag: nothing a rev-4 encoder
+could emit changed meaning. Both constants live in
+`serial::wire::framing`.
+
+Rev 5 adds one expression tag, decimal 22, `BufferRef`, carrying a single
+`Ident` naming a buffer. It appears only as an argument to a composite op,
+where inlining rebinds the callee's matching parameter onto that buffer.
+A rev-4 decoder rejects it as an unknown tag rather than misreading it.
+
 ## Versioning policy
 
 - Patch version bumps (`0.4.1 → 0.4.2`): no wire change.

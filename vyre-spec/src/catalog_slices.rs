@@ -4,6 +4,7 @@ const EXPR_VARIANTS: &[&str] = &[
     "LitF32",
     "LitBool",
     "Var",
+    "BufferRef",
     "Load",
     "BufLen",
     "InvocationId",

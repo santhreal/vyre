@@ -22,14 +22,22 @@ pub const BACKEND_TRANSCENDENTAL_ULP_BUDGET: u32 = 128;
 /// operations. The budget is program-level, not an op-id whitelist.
 pub const BACKEND_ELEMENTARY_F32_ULP_BUDGET: u32 = 4;
 
-/// Return the allowed f32 ULP tolerance for parity checks under the active FP
-/// policy.
+/// Return the allowed f32 ULP tolerance for backend-vs-reference parity checks.
+///
+/// Every caller compares a hardware backend against the CPU reference, so the
+/// window can never be zero: contraction is a backend right, stated at the top
+/// of this module, and cuda and wgpu both fold `a*b+c` into one FMA. A
+/// `strict-fp` feature used to force 0 here. It forbade nothing, because no
+/// emitter consulted it; its only effect was to fail every elementary f32 op
+/// that contracts, so `cargo test --workspace --all-features`, which the release
+/// procedure requires, could not pass. `newton_schulz_poly5_f32` drifted 4 ULP,
+/// `newton_schulz_5step` 2 and `ema_apply` 1, with cuda and wgpu agreeing
+/// bit-for-bit with each other. Bounding contraction has to happen in the
+/// emitters before a tolerance can claim to.
 #[must_use]
 pub fn f32_ulp_tolerance(program: &Program) -> u32 {
     if program_has_transcendental(program) {
         BACKEND_TRANSCENDENTAL_ULP_BUDGET
-    } else if cfg!(feature = "strict-fp") {
-        0
     } else {
         BACKEND_ELEMENTARY_F32_ULP_BUDGET
     }
@@ -152,18 +160,14 @@ mod tests {
             )],
         );
 
-        // An elementary a*b+c program gets the program-level f32 policy budget:
-        // the FMA-contraction window (4 ULP) under the default lax policy, but
-        // EXACTLY 0 under `strict-fp`, which forbids contraction and demands
-        // bit-identical IEEE results (f32_ulp_tolerance's strict-fp arm). The
-        // assertion must track the active policy or it is wrong under
-        // --all-features (which enables strict-fp).
-        let expected = if cfg!(feature = "strict-fp") {
-            0
-        } else {
+        // An elementary a*b+c program gets the FMA-contraction window under
+        // every feature combination. The window used to collapse to 0 under a
+        // `strict-fp` feature that no emitter honoured, which made this the one
+        // assertion that had to branch on features to stay true.
+        assert_eq!(
+            f32_ulp_tolerance(&program),
             BACKEND_ELEMENTARY_F32_ULP_BUDGET
-        };
-        assert_eq!(f32_ulp_tolerance(&program), expected);
+        );
     }
 
     #[test]

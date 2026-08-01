@@ -240,6 +240,7 @@ fn is_pure_bool_expr(expr: &Expr) -> bool {
         // BufLen returns the bound buffer's length  -  a dispatch-time
         // constant, no observable side effect; conjoining `i < buf_len`
         // with a sibling predicate is safe.
+        | Expr::BufferRef { .. }
         | Expr::BufLen { .. } => true,
         // Fma is fused-multiply-add  -  pure arithmetic when its operands
         // are pure. Reject when any operand is impure.

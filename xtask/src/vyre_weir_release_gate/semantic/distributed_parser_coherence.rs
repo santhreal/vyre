@@ -31,13 +31,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
         .and_then(serde_json::Value::as_array)
         .cloned()
         .unwrap_or_default();
-    for required in [
-        "vyre-frontend-c",
-        "vyrec",
-        "weir",
-        "compiler-consumer",
-        "compiler-consumer-grammar-gen",
-    ] {
+    for required in crate::parser_coherence::component_ids() {
         if !component_ids.iter().any(|component| {
             component.get("id").and_then(serde_json::Value::as_str) == Some(required)
                 && component.get("exists").and_then(serde_json::Value::as_bool) == Some(true)
@@ -90,14 +84,8 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
             "requirement `distributed-parser-coherence` matrix still reports {blockers} blocker(s)"
         ));
     }
-    for suffix in [
-        "vyre-frontend-c-contracts.json",
-        "vyrec-cli-contracts.json",
-        "external-dataflow-contracts.json",
-        "compiler-consumer-contracts.json",
-        "compiler-consumer-grammar-gen-contracts.json",
-    ] {
-        check_json_evidence_has_no_blockers(requirement, base_dir, suffix, failures);
-        check_parser_contract_evidence(requirement, base_dir, suffix, failures);
+    for suffix in crate::parser_coherence::component_contract_artifacts() {
+        check_json_evidence_has_no_blockers(requirement, base_dir, &suffix, failures);
+        check_parser_contract_evidence(requirement, base_dir, &suffix, failures);
     }
 }

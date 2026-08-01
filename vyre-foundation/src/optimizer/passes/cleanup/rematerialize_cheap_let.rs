@@ -262,6 +262,7 @@ fn substitute_var_in_expr(expr: &mut Expr, name: &str, value: &Expr) {
         | Expr::LitI32(_)
         | Expr::LitF32(_)
         | Expr::LitBool(_)
+        | Expr::BufferRef { .. }
         | Expr::BufLen { .. }
         | Expr::InvocationId { .. }
         | Expr::WorkgroupId { .. }
@@ -326,6 +327,7 @@ fn is_cheap_leaf(expr: &Expr) -> bool {
             | Expr::LitF32(_)
             | Expr::LitBool(_)
             | Expr::Var(_)
+            | Expr::BufferRef { .. }
             | Expr::BufLen { .. }
             | Expr::InvocationId { .. }
             | Expr::WorkgroupId { .. }

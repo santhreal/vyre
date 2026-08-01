@@ -194,8 +194,13 @@ pub mod flows_to_with_sanitizer;
 // `external_dataflow_engine` that is wired into no Cargo.toml and exists nowhere
 // on the tree, so it does not compile under `--features security` and broke every
 // downstream consumer the moment a cache invalidation forced a
-// vyre-libs rebuild. Gated behind the non-existent feature `external_ifds_engine`
-// so the workspace builds again WITHOUT deleting the WIP. To finish the
+// vyre-libs rebuild. Gated behind `cfg(feature = "external_ifds_engine")`, which
+// is deliberately NOT a Cargo feature: the engine crate depends on the vyre
+// platform, and `xtask platform-boundary` forbids the platform from depending
+// back on a consumer, so this bridge cannot compile here at all. The cfg is
+// declared to the compiler in the workspace lint table so no build warns, and
+// nothing can turn it on. The bridge belongs on the consumer side, which is
+// BACKLOG R47. Gating it keeps the workspace building WITHOUT deleting the WIP. To finish the
 // integration: add the `external_dataflow_engine` crate to the workspace + this
 // crate's deps, then restore these guards to `#[cfg(feature = "security")]`.
 #[cfg(feature = "external_ifds_engine")]

@@ -21,7 +21,6 @@ path = "src/lib.rs"
 
 [features]
 default = []
-strict-fp = []
 
 [dependencies]
 vyre.workspace = true

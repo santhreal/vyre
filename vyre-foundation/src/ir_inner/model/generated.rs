@@ -39,6 +39,7 @@ vyre_macros::vyre_ast_registry! {
         LitF32(f32),
         LitBool(bool),
         Var(Ident),
+        BufferRef { buffer: Ident },
         Load { buffer: Ident, index: Box<Expr> },
         BufLen { buffer: Ident },
         InvocationId { axis: u8 },

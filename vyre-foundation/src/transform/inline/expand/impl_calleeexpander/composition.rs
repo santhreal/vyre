@@ -174,6 +174,7 @@ impl CalleeExpander<'_> {
             | Expr::LitI32(_)
             | Expr::LitF32(_)
             | Expr::LitBool(_)
+            | Expr::BufferRef { .. }
             | Expr::BufLen { .. }
             | Expr::SubgroupBallot { .. }
             | Expr::SubgroupShuffle { .. }

@@ -1,10 +1,10 @@
-use crate::dialect_lookup::{dialect_lookup, OpDef};
 use crate::ir_inner::model::expr::Expr;
 use crate::ir_inner::model::program::BufferDecl;
 use crate::ir_inner::model::types::DataType;
 use crate::validate::atomic_rules;
+use crate::validate::call_rules::validate_call;
 use crate::validate::bytes_rejection;
-use crate::validate::cast::{cast_is_narrowing, cast_is_valid};
+use crate::validate::cast::{cast_is_narrowing, cast_is_valid, cast_target_set};
 use crate::validate::depth;
 use crate::validate::report::warn;
 use crate::validate::typecheck::{self, expr_type};
@@ -32,6 +32,17 @@ pub(crate) fn validate_expr(
                     "reference to undeclared variable `{name}`. Fix: add `let {name} = ...;` before this use."
                 )));
             }
+        }
+        // A buffer reference names a buffer instead of producing a value, so
+        // it has no type and nothing downstream can consume it. It is legal
+        // only as a call argument, where the inliner rebinds the callee's
+        // parameter onto this buffer. The `Expr::Call` arm below validates
+        // arguments in that position; reaching it here means it appeared
+        // somewhere that expects a value.
+        Expr::BufferRef { buffer } => {
+            report.errors.push(err(format!(
+                "V051: buffer reference `{buffer}` is not a value and is legal only as a call argument. Fix: pass it directly as an argument to a composite op, or use `Expr::Load {{ buffer: {buffer}, index }}` to read an element."
+            )));
         }
         Expr::Load { buffer, index } => {
             bytes_rejection::check_load(buffer, buffers, &mut report.errors);
@@ -69,6 +80,13 @@ pub(crate) fn validate_expr(
         }
         Expr::Call { op_id, args } => {
             for arg in args {
+                // Argument position is the one place a buffer reference is
+                // legal, so skip the value rules that reject it. The
+                // signature check below (`validate_buffer_argument`) owns
+                // every rule about which buffer is acceptable here.
+                if matches!(arg, Expr::BufferRef { .. }) {
+                    continue;
+                }
                 validate_expr(arg, buffers, scope, options, report, depth_level + 1);
             }
             validate_call(
@@ -206,40 +224,6 @@ pub(crate) fn validate_expr(
     }
 }
 
-#[inline]
-fn cast_target_set(source: &DataType) -> String {
-    let mut legal_targets = Vec::new();
-    let candidate_targets = [
-        source.clone(),
-        DataType::U8,
-        DataType::U16,
-        DataType::U32,
-        DataType::U64,
-        DataType::I8,
-        DataType::I16,
-        DataType::I32,
-        DataType::I64,
-        DataType::Bool,
-        DataType::Bytes,
-        DataType::Vec2U32,
-        DataType::Vec4U32,
-        DataType::F32,
-    ];
-
-    for target in candidate_targets {
-        if cast_is_valid(source, &target) && !legal_targets.contains(&target) {
-            legal_targets.push(target);
-        }
-    }
-
-    let formatted = legal_targets
-        .into_iter()
-        .map(|target| format!("`{target}`"))
-        .collect::<Vec<_>>()
-        .join(", ");
-
-    format!("[{formatted}]")
-}
 
 #[inline]
 fn validate_subgroup_expr_support(
@@ -250,93 +234,6 @@ fn validate_subgroup_expr_support(
         errors.push(err(
             "V041: subgroup expressions require backend subgroup-ops support. Fix: Validate with ValidationOptions::with_backend(backend) where backend.supports_subgroup_ops() == true.".to_string(),
         ));
-    }
-}
-
-fn validate_call(
-    op_id: &str,
-    args: &[Expr],
-    buffers: &FxHashMap<&str, &BufferDecl>,
-    scope: &FxHashMap<crate::ir::Ident, Binding>,
-    options: ValidationOptions<'_>,
-    errors: &mut Vec<ValidationError>,
-) {
-    let lookup = if let Some(lookup) = options.dialect_lookup {
-        lookup
-    } else if let Some(lookup) = dialect_lookup() {
-        lookup
-    } else {
-        errors.push(err(format!(
-            "V016: call references op `{op_id}` but no dialect lookup is registered for this \
-             validation pass. Fix: supply a lookup via \
-             `ValidationOptions::with_dialect_lookup(...)` or inline all calls before validation."
-        )));
-        return;
-    };
-    let interned = lookup.intern_op(op_id);
-    let Some(def) = lookup.lookup(interned) else {
-        errors.push(err(format!(
-            "V016: call references unknown op `{op_id}`. Fix: register the dialect that owns `{op_id}` before validation, or inline/remove this call."
-        )));
-        return;
-    };
-    validate_call_signature(op_id, def, args, buffers, scope, errors);
-}
-
-fn validate_call_signature(
-    op_id: &str,
-    def: &OpDef,
-    args: &[Expr],
-    buffers: &FxHashMap<&str, &BufferDecl>,
-    scope: &FxHashMap<crate::ir::Ident, Binding>,
-    errors: &mut Vec<ValidationError>,
-) {
-    let expected = def.signature.inputs.len();
-    if args.len() != expected {
-        errors.push(err(format!(
-            "V020: call `{op_id}` has {} arguments but signature expects {expected}. Fix: pass exactly {expected} arguments in the order declared by the op signature.",
-            args.len()
-        )));
-        return;
-    }
-
-    for (index, (arg, param)) in args.iter().zip(def.signature.inputs.iter()).enumerate() {
-        let Some(expected_ty) = data_type_from_signature_spelling(param.ty) else {
-            errors.push(err(format!(
-                "V021: call `{op_id}` signature input `{}` uses unknown type spelling `{}`. Fix: register a foundation-known scalar/vector type spelling for this parameter or validate it in the dialect layer.",
-                param.name,
-                param.ty
-            )));
-            continue;
-        };
-        let Some(actual_ty) = expr_type(arg, buffers, scope) else {
-            continue;
-        };
-        if actual_ty != expected_ty {
-            errors.push(err(format!(
-                "V022: call `{op_id}` argument {index} (`{}`) has type `{actual_ty}` but signature expects `{expected_ty}`. Fix: cast or rewrite the argument to match the registered op signature.",
-                param.name
-            )));
-        }
-    }
-}
-
-fn data_type_from_signature_spelling(spelling: &str) -> Option<DataType> {
-    match spelling {
-        "u8" | "U8" => Some(DataType::U8),
-        "u16" | "U16" => Some(DataType::U16),
-        "u32" | "U32" => Some(DataType::U32),
-        "u64" | "U64" => Some(DataType::U64),
-        "i8" | "I8" => Some(DataType::I8),
-        "i16" | "I16" => Some(DataType::I16),
-        "i32" | "I32" => Some(DataType::I32),
-        "i64" | "I64" => Some(DataType::I64),
-        "f32" | "F32" => Some(DataType::F32),
-        "bool" | "Bool" => Some(DataType::Bool),
-        "bytes" | "Bytes" => Some(DataType::Bytes),
-        "vec2<u32>" | "Vec2U32" => Some(DataType::Vec2U32),
-        "vec4<u32>" | "Vec4U32" => Some(DataType::Vec4U32),
-        _ => None,
     }
 }
 
@@ -509,6 +406,7 @@ mod tests {
                 | Expr::LitF32(_)
                 | Expr::LitBool(_)
                 | Expr::Var(_)
+                | Expr::BufferRef { .. }
                 | Expr::Load { .. }
                 | Expr::BufLen { .. }
                 | Expr::InvocationId { .. }
@@ -536,6 +434,7 @@ mod tests {
             Expr::LitF32(1.0),
             Expr::LitBool(true),
             Expr::Var(Ident::from("x")),
+            Expr::buffer_ref("buf"),
             Expr::Load {
                 buffer: Ident::from("buf"),
                 index: Box::new(Expr::LitU32(0)),

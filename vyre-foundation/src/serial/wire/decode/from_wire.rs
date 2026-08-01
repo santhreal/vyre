@@ -93,9 +93,10 @@ pub fn from_wire(bytes: &[u8]) -> Result<Program, String> {
         ));
     }
     let version = u16::from_le_bytes([bytes[4], bytes[5]]);
-    if version != WIRE_FORMAT_VERSION {
+    if !crate::serial::wire::framing::wire_format_version_is_supported(version) {
         return Err(format!(
-            "UnknownSchemaVersion: found {version}, supported {WIRE_FORMAT_VERSION}. Fix: upgrade the consumer or re-serialize with this Vyre version."
+            "UnknownSchemaVersion: found {version}, supported {} through {WIRE_FORMAT_VERSION}. Fix: upgrade the consumer or re-serialize with this Vyre version.",
+            crate::serial::wire::framing::MIN_SUPPORTED_WIRE_FORMAT_VERSION
         ));
     }
     let flags = u16::from_le_bytes([bytes[6], bytes[7]]);

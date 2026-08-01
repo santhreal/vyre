@@ -288,6 +288,7 @@ fn substitute_var_in_expr(expr: Expr, from: &Ident, to: &Ident, offset: &Expr) -
         | Expr::LitI32(_)
         | Expr::LitF32(_)
         | Expr::LitBool(_)
+        | Expr::BufferRef { .. }
         | Expr::BufLen { .. }
         | Expr::InvocationId { .. }
         | Expr::WorkgroupId { .. }

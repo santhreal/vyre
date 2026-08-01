@@ -116,10 +116,17 @@ pub(crate) fn check_parser_contract_evidence(
     let Some(report) = first_json_evidence(requirement, base_dir, suffix, failures) else {
         return;
     };
-    let expected_component = if suffix == "vyrec-cli-contracts.json" {
-        "vyrec"
-    } else {
-        suffix.strip_suffix("-contracts.json").unwrap_or(suffix)
+    // `parser_coherence` owns the component-id-to-artifact mapping. This check
+    // used to re-derive the id from the file name, which is the same rule
+    // written twice and drifted the moment an artifact name stopped being
+    // `<id>-contracts.json`.
+    let Some(expected_component) = crate::parser_coherence::component_id_for_contract_artifact(suffix)
+    else {
+        failures.push(format!(
+            "requirement `{}` parser contract `{suffix}` is not owned by any parser-coherence component",
+            requirement.id
+        ));
+        return;
     };
     let component_id = report
         .get("component_id")

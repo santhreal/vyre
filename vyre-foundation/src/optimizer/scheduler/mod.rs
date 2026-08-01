@@ -478,6 +478,7 @@ fn estimate_expr_allocations(expr: &Expr, estimate: &mut IrAllocationEstimate) {
         | Expr::LitF32(_)
         | Expr::LitBool(_)
         | Expr::Var(_)
+        | Expr::BufferRef { .. }
         | Expr::BufLen { .. }
         | Expr::InvocationId { .. }
         | Expr::WorkgroupId { .. }

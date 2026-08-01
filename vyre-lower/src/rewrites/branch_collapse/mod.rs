@@ -90,7 +90,11 @@ fn collapse_body(mut body: KernelBody) -> KernelBody {
                         if cond_lit {
                             if let Some(child) = original_children.get(body_id as usize) {
                                 if can_collapse_safely(child, &parent_produced_ids) {
-                                    inline_child_body(child, &mut new_ops, &mut new_children);
+                                    inline_child_body(
+                                        body_id as usize,
+                                        &mut new_ops,
+                                        &mut new_children,
+                                    );
                                     continue;
                                 }
                                 // Fall through  -  leave the IfThen
@@ -103,6 +107,7 @@ fn collapse_body(mut body: KernelBody) -> KernelBody {
                             // in the parent body.
                             if let Some(child) = original_children.get(body_id as usize) {
                                 if dropping_body_is_safe(child, &parent_referenced_ids) {
+                                    empty_child_body(&mut new_children, body_id as usize);
                                     continue;
                                 }
                             } else {
@@ -128,7 +133,12 @@ fn collapse_body(mut body: KernelBody) -> KernelBody {
                                     .map(|d| dropping_body_is_safe(d, &parent_referenced_ids))
                                     .unwrap_or(true)
                             {
-                                inline_child_body(pick, &mut new_ops, &mut new_children);
+                                inline_child_body(
+                                    pick_id as usize,
+                                    &mut new_ops,
+                                    &mut new_children,
+                                );
+                                empty_child_body(&mut new_children, drop_id as usize);
                                 continue;
                             }
                         }
@@ -163,8 +173,19 @@ fn collapse_body(mut body: KernelBody) -> KernelBody {
     body
 }
 
-fn inline_child_body(child: &KernelBody, ops: &mut Vec<KernelOp>, children: &mut Vec<KernelBody>) {
-    let inlined = collapse_body(child.clone());
+/// Inline `children[slot]` into `ops` and empty the slot it came from.
+///
+/// Emptying is the point: child indices are positional, so the collapsed body
+/// cannot be removed from the vector without reindexing every other reference
+/// to it. Leaving it populated left an orphan body that still defined every
+/// result id the inlined copy now defines in the parent, which `verify` reports
+/// as `ResultIdReusedAcrossBodies` and the PTX emitter resolves to whichever
+/// producer it walked last.
+fn inline_child_body(slot: usize, ops: &mut Vec<KernelOp>, children: &mut Vec<KernelBody>) {
+    let Some(child) = children.get(slot).cloned() else {
+        return;
+    };
+    let inlined = collapse_body(child);
     let child_base = children.len() as u32;
     children.extend(inlined.child_bodies);
     ops.extend(
@@ -173,6 +194,19 @@ fn inline_child_body(child: &KernelBody, ops: &mut Vec<KernelOp>, children: &mut
             .into_iter()
             .map(|op| rebase_child_body_refs(op, child_base)),
     );
+    empty_child_body(children, slot);
+}
+
+/// Empty a child body that no op references any more.
+///
+/// Same reason as above: the slot has to stay so sibling indices keep pointing
+/// at the right bodies, but it must stop defining result ids.
+fn empty_child_body(children: &mut [KernelBody], slot: usize) {
+    if let Some(body) = children.get_mut(slot) {
+        body.ops.clear();
+        body.child_bodies.clear();
+        body.literals.clear();
+    }
 }
 
 /// Conservative pre-collapse safety check used by the IfThen and

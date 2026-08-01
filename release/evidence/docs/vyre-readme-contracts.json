@@ -5,7 +5,7 @@
   "read_error": null,
   "source_bytes": 33730,
   "required_tokens": [
-    "0.6.6",
+    "0.7.0",
     "vyre",
     "gpu",
     "cuda",

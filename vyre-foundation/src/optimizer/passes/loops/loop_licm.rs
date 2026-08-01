@@ -333,6 +333,7 @@ fn expr_references_any_except(expr: &Expr, mutated: &FxHashSet<Ident>, ignore: &
         | Expr::LitI32(_)
         | Expr::LitF32(_)
         | Expr::LitBool(_)
+        | Expr::BufferRef { .. }
         | Expr::BufLen { .. }
         | Expr::InvocationId { .. }
         | Expr::WorkgroupId { .. }
@@ -389,6 +390,7 @@ fn expr_references_any(expr: &Expr, mutated: &FxHashSet<Ident>) -> bool {
         | Expr::LitI32(_)
         | Expr::LitF32(_)
         | Expr::LitBool(_)
+        | Expr::BufferRef { .. }
         | Expr::BufLen { .. }
         | Expr::InvocationId { .. }
         | Expr::WorkgroupId { .. }
@@ -437,6 +439,7 @@ fn expr_is_observably_free(expr: &Expr) -> bool {
         // state must stay inside the loop where its execution count
         // is known.
         Expr::Load { .. }
+        | Expr::BufferRef { .. }
         | Expr::BufLen { .. }
         | Expr::Atomic { .. }
         | Expr::Call { .. }

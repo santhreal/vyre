@@ -8,11 +8,27 @@ impl CalleeExpander<'_> {
         match expr {
             Expr::Var(name) => Ok((Vec::new(), Expr::var(self.rename_use(name)))),
             Expr::Load { buffer, index } => self.load(buffer, index),
+            Expr::BufferRef { buffer } => Ok((
+                Vec::new(),
+                Expr::BufferRef {
+                    buffer: self.rebound_buffer(buffer).unwrap_or_else(|| buffer.clone()),
+                },
+            )),
             Expr::BufLen { buffer } if self.output_name == *buffer => {
                 Ok((Vec::new(), Expr::u32(1)))
             }
+            // A buffer-reference argument keeps a real buffer behind the
+            // callee's parameter, so its length is the caller buffer's
+            // length. Only a scalar argument collapses the parameter to a
+            // single value, and only then is the length 1.
             Expr::BufLen { buffer } if self.input_args.contains_key(buffer) => {
-                Ok((Vec::new(), Expr::u32(1)))
+                Ok((
+                    Vec::new(),
+                    match self.rebound_buffer(buffer) {
+                        Some(caller) => Expr::BufLen { buffer: caller },
+                        None => Expr::u32(1),
+                    },
+                ))
             }
             Expr::Call { .. } => {
                 let renamed = self.rename_expr_vars(expr)?;
@@ -75,8 +91,33 @@ impl CalleeExpander<'_> {
         }
     }
 
+    /// Return the caller buffer a callee parameter was bound to, if the call
+    /// site passed a buffer reference rather than a scalar.
+    ///
+    /// A scalar argument replaces every read of the parameter with the value
+    /// itself. A [`Expr::BufferRef`] argument instead retargets the access at
+    /// the caller's buffer and keeps the index, which is what lets a callee
+    /// index a table it does not own.
+    #[inline]
+    pub(crate) fn rebound_buffer(&self, param: &Ident) -> Option<Ident> {
+        match self.input_args.get(param) {
+            Some(Expr::BufferRef { buffer }) => Some(buffer.clone()),
+            _ => None,
+        }
+    }
+
     #[inline]
     pub(crate) fn load(&mut self, buffer: &Ident, index: &Expr) -> Result<(Vec<Node>, Expr)> {
+        if let Some(caller) = self.rebound_buffer(buffer) {
+            let (prefix, index) = self.expr(index)?;
+            return Ok((
+                prefix,
+                Expr::Load {
+                    buffer: caller,
+                    index: Box::new(index),
+                },
+            ));
+        }
         if let Some(arg) = self.input_args.get(buffer) {
             return Ok((Vec::new(), arg.clone()));
         }
@@ -186,7 +227,7 @@ impl CalleeExpander<'_> {
             prefix,
             Expr::Atomic {
                 op,
-                buffer: buffer.into(),
+                buffer: self.rebound_buffer(buffer).unwrap_or_else(|| buffer.into()),
                 index: Box::new(index),
                 expected,
                 value: Box::new(value),

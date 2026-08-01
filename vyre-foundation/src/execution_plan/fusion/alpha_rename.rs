@@ -275,6 +275,11 @@ impl<'a> ArmRenamer<'a> {
             Expr::BufLen { buffer } => Expr::BufLen {
                 buffer: buffer.clone(),
             },
+            // Buffer names live in the program's buffer table, not the
+            // local variable scope alpha-renaming rewrites.
+            Expr::BufferRef { buffer } => Expr::BufferRef {
+                buffer: buffer.clone(),
+            },
             Expr::BinOp { op, left, right } => Expr::BinOp {
                 op: *op,
                 left: Box::new(self.expr(left)),

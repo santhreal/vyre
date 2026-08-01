@@ -79,40 +79,46 @@ fn deterministic_signing_key() -> SigningKey {
 /// Ed25519 verifying key (hex) for the deterministic signing key.
 const VERIFYING_KEY_HEX: &str = "7d6cdd2bb962491984ea484fe095a24719aac478eae2cf943af71c9941f99d83";
 
+// Pinned bundle hashes and signatures below moved in 0.7.0 and the wire lengths
+// did not. `WIRE_FORMAT_VERSION` went 4 to 5 for the `Expr::BufferRef` tag, and
+// that version is a fixed-width header field, so every serialized program's
+// bytes changed in place. The lengths staying identical is the check that the
+// change was the header field and not a body-layout change.
+
 // --- trivial const ---
 const TRIVIAL_CONST_BUNDLE_BLAKE3: &str =
-    "c1f2ccf5754f0e561c767f6d6e2a847947d70e4bd0593b617d53f5aee5cc0428";
+    "6e5706282fc848f2c113988b3c19d0895f1261acb0746fe82ca9580fed097f52";
 const TRIVIAL_CONST_WIRE_LEN: usize = 194;
 const TRIVIAL_CONST_SIG_HEX: &str =
-    "e4caafc46aaf1f9d023158a38667c99d451f57b03d3696e687588ae0992e49742acbf4711853271770bed37a2affa68a978a816b9873aa849c5e8a54c6e51105";
+    "fed1660c51b6a83e660b8e0f460cc63d9a3ebdfc98863a15f81ce2273ec644bff405153c9cb362ae0538e190226fed0cb2758fb4af6554b2b6b0d7df58d3b70a";
 
 // --- 1-op add ---
 const ONE_OP_ADD_BUNDLE_BLAKE3: &str =
-    "9e8a8762168ae22123d41cb22f7268dbe565fa416e4408f0be78c840531e04cc";
+    "6a262a2d08e4d96cab82ee7b74c999a8332522ab86e7eb12223baf5c717a7741";
 const ONE_OP_ADD_WIRE_LEN: usize = 201;
 const ONE_OP_ADD_SIG_HEX: &str =
-    "8f4a16dac97de14e98d821b9b7582a19c0e61087e85dd9bee4cfec7ea3cbae61ff118e91062e06294293378f3b2808f766174a1540651fde6c3fdcf4aa17f20e";
+    "a159f418c4a61bf2978eadc576d9784fc8f9d499877770e404ad3148583e4757592eac91dd5e50ea077b6efdb1e8746c483ba3ab03ec31e25de180e22b52740d";
 
 // --- loop-add ---
 const LOOP_ADD_BUNDLE_BLAKE3: &str =
-    "c0939ac097203b376d7466ea6bae4fa6b76ee82020562ade8bd8af4a10e05a3f";
+    "16c8865a770d9087fe16581c46bdda1a205a519095342b017dd6205c32d26b58";
 const LOOP_ADD_WIRE_LEN: usize = 254;
 const LOOP_ADD_SIG_HEX: &str =
-    "1b75c86b57aa4ab8dac5036fb05f83a123a98d649d1ee416185c3a82d92c1041c21afb4a2766a32302beba896e2668f60f56ebb8e961cb107ae327a857af9f0d";
+    "ef8c673bcbf2af99d8d560140225e018847b407d744a6b4c70d6c5826070fe57aa646c29329dbad79881b64bee4f24202d68f1d43f069a8017539a086cf81d0b";
 
 // --- composed nested ---
 const COMPOSED_NESTED_BUNDLE_BLAKE3: &str =
-    "de6cc803a8ac5d35caa993c92d87d1c5bdcaf365e5d52281d41bc3f21e699f5f";
+    "bf285b0187bd169feff9a1ac71e320a7e4cca65e1fbb7a58ca89480420984274";
 const COMPOSED_NESTED_WIRE_LEN: usize = 197;
 const COMPOSED_NESTED_SIG_HEX: &str =
-    "445fd4a1ee36e67b6b45f6c289e16b0d38ba7c6bfb4e2716ad6811fcdad1396d25b9fc7675e218bb3b1789be13bee83573888beb4e22d2517fdb6ad6572d650e";
+    "d573f23d3c74cdebcc0e1eb996962191b6c576b0d1f76bca11487ff72de15dfbf47bce087078a9f72f4569e8f05ad7668a9390a23879513b29aac2dd2e3e1d0c";
 
 // --- region-chain with intrinsic + dialect op ---
 const REGION_CHAIN_BUNDLE_BLAKE3: &str =
-    "ae744c66b22dcb9c2142b22bd9c26fcfdca9b61abe3c841e05c52ea16baa952b";
+    "6dba5e0db7baa0d8c512c401f63b5536d844d0757510531b5e214660a09575d0";
 const REGION_CHAIN_WIRE_LEN: usize = 321;
 const REGION_CHAIN_SIG_HEX: &str =
-    "1683c0447941c5d4a71cbeafcbe77f9e810e3e37415b1b041944c3ccfdf2d4b7f0801f4cf29b7f83438921127321ae598f0c4493b9ece6c51931537a30225808";
+    "85ed83cb200ad77f1e088801b0e3e21d41c08030f10772fa3e4fe46f20da4bbf74f6662757a87b8725fe4f61fba35520889f0073c539df783f17f789148aa602";
 
 // ---------------------------------------------------------------------------
 // Sign a bundle cert with the deterministic key.
@@ -306,6 +312,12 @@ fn cert_regression_pin_all_five_bundles() {
 
     let key = deterministic_signing_key();
 
+    // Drifts are collected rather than asserted one at a time. A wire-format or
+    // pipeline change moves every bundle's hash, length and signature at once,
+    // and failing on the first case hid the other four: updating the pins then
+    // took five full runs instead of one.
+    let mut drifts: Vec<String> = Vec::new();
+
     #[allow(clippy::type_complexity)]
     let cases: Vec<(
         &str,
@@ -361,20 +373,20 @@ fn cert_regression_pin_all_five_bundles() {
         let computed_hash = blake3::hash(&wire_bytes).to_hex().to_string();
         let computed_len = wire_bytes.len();
 
-        assert_eq!(
-            computed_hash, pinned_hash,
-            "{name}: bundle_blake3 drift. \
-             actual={computed_hash} expected={pinned_hash}. \
-             Fix: update the pinned constant to {computed_hash} \
-             if the pipeline change was intentional."
-        );
-        assert_eq!(
-            computed_len, pinned_len,
-            "{name}: wire length drift. \
-             actual={computed_len} expected={pinned_len}. \
-             Fix: update the pinned constant to {computed_len} \
-             if the wire format change was intentional."
-        );
+        if computed_hash != pinned_hash {
+            drifts.push(format!(
+                "{name}: bundle_blake3 drift. actual={computed_hash} expected={pinned_hash}. \
+                 Fix: update the pinned constant to {computed_hash} if the pipeline change was \
+                 intentional."
+            ));
+        }
+        if computed_len != pinned_len {
+            drifts.push(format!(
+                "{name}: wire length drift. actual={computed_len} expected={pinned_len}. \
+                 Fix: update the pinned constant to {computed_len} if the wire format change was \
+                 intentional."
+            ));
+        }
 
         // 2. Issue cert from the same bundle.
         let mut cert = issue_bundle_cert(&program, &corpus, "2026-04-23T20:00:00Z", "TBD", "TBD")
@@ -396,14 +408,13 @@ fn cert_regression_pin_all_five_bundles() {
              Fix: update VERIFYING_KEY_HEX if the signing key changed.",
             cert.pubkey
         );
-        assert_eq!(
-            cert.signature_ed25519, pinned_sig,
-            "{name}: signature drift. \
-             actual={} expected={pinned_sig}. \
-             Fix: update the pinned signature constant to {} \
-             if the signable body changed intentionally.",
-            cert.signature_ed25519, cert.signature_ed25519
-        );
+        if cert.signature_ed25519 != pinned_sig {
+            drifts.push(format!(
+                "{name}: signature drift. actual={} expected={pinned_sig}. Fix: update the pinned \
+                 signature constant to {} if the signable body changed intentionally.",
+                cert.signature_ed25519, cert.signature_ed25519
+            ));
+        }
 
         // 4. Cryptographic signature must verify against the pinned pubkey.
         verify_cert_signature_hex(&cert, VERIFYING_KEY_HEX)
@@ -413,6 +424,13 @@ fn cert_regression_pin_all_five_bundles() {
         verify_bundle_against_reference(&cert, &program, &corpus)
             .unwrap_or_else(|e| panic!("{name}: reference re-verify failed: {e}"));
     }
+
+    assert!(
+        drifts.is_empty(),
+        "Fix: {} pinned certificate value(s) drifted:\n{}",
+        drifts.len(),
+        drifts.join("\n")
+    );
 }
 
 // ---------------------------------------------------------------------------

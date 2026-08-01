@@ -97,7 +97,12 @@ fn compute_live_mask_with_scratch_into(
     let root = ROOT_GRAPH_ID as usize;
     scratch.seed[root / 32] |= 1u32 << (root % 32);
 
-    ensure_input_slots(&mut scratch.inputs, 8);
+    // Nine slots, not eight: the six read-only graph buffers plus the three
+    // ReadWrite ones. A ReadWrite buffer binds as InputOutput, so `frontier_out`,
+    // `changed` and `converged` each consume an input slot as well as an output
+    // slot. `converged` is the slot 0.7.0 added, and dispatch rejects a short
+    // input list rather than binding a stale buffer.
+    ensure_input_slots(&mut scratch.inputs, 9);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], &encoded.nodes);
     write_u32_slice_le_bytes(&mut scratch.inputs[1], &encoded.edge_offsets);
     write_padded_one_u32_bytes(&mut scratch.inputs[2], &encoded.edge_targets);
@@ -109,6 +114,7 @@ fn compute_live_mask_with_scratch_into(
         words.max(1) * std::mem::size_of::<u32>(),
     );
     write_zero_bytes(&mut scratch.inputs[7], std::mem::size_of::<u32>());
+    write_zero_bytes(&mut scratch.inputs[8], std::mem::size_of::<u32>());
 
     let outputs = dispatcher.dispatch(&analysis, &scratch.inputs, None)?;
     if outputs.len() != 3 {

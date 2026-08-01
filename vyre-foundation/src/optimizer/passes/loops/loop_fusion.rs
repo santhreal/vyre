@@ -285,7 +285,7 @@ fn collect_buffers_in_expr(expr: &Expr, out: &mut FxHashSet<Ident>) {
             out.insert(buffer.clone());
             collect_buffers_in_expr(index, out);
         }
-        Expr::BufLen { buffer } => {
+        Expr::BufLen { buffer } | Expr::BufferRef { buffer } => {
             out.insert(buffer.clone());
         }
         Expr::Atomic {
@@ -630,6 +630,7 @@ fn collect_vars_in_expr(expr: &Expr, out: &mut FxHashSet<Ident>) {
         | Expr::LitI32(_)
         | Expr::LitF32(_)
         | Expr::LitBool(_)
+        | Expr::BufferRef { .. }
         | Expr::BufLen { .. }
         | Expr::InvocationId { .. }
         | Expr::WorkgroupId { .. }

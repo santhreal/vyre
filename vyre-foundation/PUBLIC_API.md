@@ -5046,6 +5046,8 @@ pub vyre_foundation::ir::model::expr::Expr::BinOp::op: vyre_spec::bin_op::BinOp
 pub vyre_foundation::ir::model::expr::Expr::BinOp::right: alloc::boxed::Box<vyre_foundation::ir::Expr>
 pub vyre_foundation::ir::model::expr::Expr::BufLen
 pub vyre_foundation::ir::model::expr::Expr::BufLen::buffer: vyre_foundation::ir::Ident
+pub vyre_foundation::ir::model::expr::Expr::BufferRef
+pub vyre_foundation::ir::model::expr::Expr::BufferRef::buffer: vyre_foundation::ir::Ident
 pub vyre_foundation::ir::model::expr::Expr::Call
 pub vyre_foundation::ir::model::expr::Expr::Call::args: alloc::vec::Vec<vyre_foundation::ir::Expr>
 pub vyre_foundation::ir::model::expr::Expr::Call::op_id: vyre_foundation::ir::Ident
@@ -5091,8 +5093,11 @@ pub vyre_foundation::ir::model::expr::Expr::WorkgroupId::axis: u8
 impl vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::abs(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::abs_diff(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::acos(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::add(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::and(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::asin(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::atan(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::bitand(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::bitnot(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::bitor(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
@@ -5100,9 +5105,12 @@ pub fn vyre_foundation::ir::Expr::bitxor(left: vyre_foundation::ir::Expr, right:
 pub fn vyre_foundation::ir::Expr::ceil(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::clz(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::cos(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::cosh(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::ctz(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::div(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::eq(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::exp(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::exp2(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::floor(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::ge(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::gt(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
@@ -5111,6 +5119,8 @@ pub fn vyre_foundation::ir::Expr::is_finite(operand: vyre_foundation::ir::Expr) 
 pub fn vyre_foundation::ir::Expr::is_inf(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::is_nan(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::le(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::log(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::log2(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::lt(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::max(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::min(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
@@ -5134,8 +5144,11 @@ pub fn vyre_foundation::ir::Expr::shl(left: vyre_foundation::ir::Expr, right: vy
 pub fn vyre_foundation::ir::Expr::shr(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::sign(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::sin(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::sinh(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::sqrt(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::sub(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::tan(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::tanh(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::trunc(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::wrapping_add(self, other: impl core::convert::Into<vyre_foundation::ir::Expr>) -> Self
 pub fn vyre_foundation::ir::Expr::wrapping_sub(self, other: impl core::convert::Into<vyre_foundation::ir::Expr>) -> Self
@@ -5153,6 +5166,7 @@ pub fn vyre_foundation::ir::Expr::atomic_xor(buffer: &str, index: vyre_foundatio
 impl vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::bool(value: bool) -> Self
 pub fn vyre_foundation::ir::Expr::buf_len(buffer: impl core::convert::Into<vyre_foundation::ir::Ident>) -> Self
+pub fn vyre_foundation::ir::Expr::buffer_ref(buffer: impl core::convert::Into<vyre_foundation::ir::Ident>) -> Self
 pub fn vyre_foundation::ir::Expr::call(op_id: impl core::convert::Into<vyre_foundation::ir::Ident>, args: alloc::vec::Vec<Self>) -> Self
 pub fn vyre_foundation::ir::Expr::cast(target: vyre_spec::data_type::DataType, value: Self) -> Self
 pub fn vyre_foundation::ir::Expr::f32(value: f32) -> Self
@@ -5164,6 +5178,7 @@ pub fn vyre_foundation::ir::Expr::i32(value: i32) -> Self
 pub fn vyre_foundation::ir::Expr::invocation_local_x() -> Self
 pub fn vyre_foundation::ir::Expr::invocation_local_y() -> Self
 pub fn vyre_foundation::ir::Expr::invocation_local_z() -> Self
+pub fn vyre_foundation::ir::Expr::is_first_workgroup() -> Self
 pub fn vyre_foundation::ir::Expr::load(buffer: impl core::convert::Into<vyre_foundation::ir::Ident>, index: Self) -> Self
 pub fn vyre_foundation::ir::Expr::local_x() -> Self
 pub fn vyre_foundation::ir::Expr::local_y() -> Self
@@ -5394,6 +5409,8 @@ pub vyre_foundation::ir::model::generated::Expr::BinOp::op: vyre_spec::bin_op::B
 pub vyre_foundation::ir::model::generated::Expr::BinOp::right: alloc::boxed::Box<vyre_foundation::ir::Expr>
 pub vyre_foundation::ir::model::generated::Expr::BufLen
 pub vyre_foundation::ir::model::generated::Expr::BufLen::buffer: vyre_foundation::ir::Ident
+pub vyre_foundation::ir::model::generated::Expr::BufferRef
+pub vyre_foundation::ir::model::generated::Expr::BufferRef::buffer: vyre_foundation::ir::Ident
 pub vyre_foundation::ir::model::generated::Expr::Call
 pub vyre_foundation::ir::model::generated::Expr::Call::args: alloc::vec::Vec<vyre_foundation::ir::Expr>
 pub vyre_foundation::ir::model::generated::Expr::Call::op_id: vyre_foundation::ir::Ident
@@ -5439,8 +5456,11 @@ pub vyre_foundation::ir::model::generated::Expr::WorkgroupId::axis: u8
 impl vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::abs(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::abs_diff(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::acos(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::add(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::and(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::asin(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::atan(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::bitand(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::bitnot(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::bitor(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
@@ -5448,9 +5468,12 @@ pub fn vyre_foundation::ir::Expr::bitxor(left: vyre_foundation::ir::Expr, right:
 pub fn vyre_foundation::ir::Expr::ceil(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::clz(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::cos(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::cosh(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::ctz(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::div(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::eq(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::exp(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::exp2(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::floor(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::ge(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::gt(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
@@ -5459,6 +5482,8 @@ pub fn vyre_foundation::ir::Expr::is_finite(operand: vyre_foundation::ir::Expr) 
 pub fn vyre_foundation::ir::Expr::is_inf(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::is_nan(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::le(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::log(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::log2(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::lt(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::max(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::min(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
@@ -5482,8 +5507,11 @@ pub fn vyre_foundation::ir::Expr::shl(left: vyre_foundation::ir::Expr, right: vy
 pub fn vyre_foundation::ir::Expr::shr(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::sign(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::sin(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::sinh(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::sqrt(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::sub(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::tan(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::tanh(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::trunc(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::wrapping_add(self, other: impl core::convert::Into<vyre_foundation::ir::Expr>) -> Self
 pub fn vyre_foundation::ir::Expr::wrapping_sub(self, other: impl core::convert::Into<vyre_foundation::ir::Expr>) -> Self
@@ -5501,6 +5529,7 @@ pub fn vyre_foundation::ir::Expr::atomic_xor(buffer: &str, index: vyre_foundatio
 impl vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::bool(value: bool) -> Self
 pub fn vyre_foundation::ir::Expr::buf_len(buffer: impl core::convert::Into<vyre_foundation::ir::Ident>) -> Self
+pub fn vyre_foundation::ir::Expr::buffer_ref(buffer: impl core::convert::Into<vyre_foundation::ir::Ident>) -> Self
 pub fn vyre_foundation::ir::Expr::call(op_id: impl core::convert::Into<vyre_foundation::ir::Ident>, args: alloc::vec::Vec<Self>) -> Self
 pub fn vyre_foundation::ir::Expr::cast(target: vyre_spec::data_type::DataType, value: Self) -> Self
 pub fn vyre_foundation::ir::Expr::f32(value: f32) -> Self
@@ -5512,6 +5541,7 @@ pub fn vyre_foundation::ir::Expr::i32(value: i32) -> Self
 pub fn vyre_foundation::ir::Expr::invocation_local_x() -> Self
 pub fn vyre_foundation::ir::Expr::invocation_local_y() -> Self
 pub fn vyre_foundation::ir::Expr::invocation_local_z() -> Self
+pub fn vyre_foundation::ir::Expr::is_first_workgroup() -> Self
 pub fn vyre_foundation::ir::Expr::load(buffer: impl core::convert::Into<vyre_foundation::ir::Ident>, index: Self) -> Self
 pub fn vyre_foundation::ir::Expr::local_x() -> Self
 pub fn vyre_foundation::ir::Expr::local_y() -> Self
@@ -6576,6 +6606,7 @@ pub fn vyre_foundation::ir::BufferDecl::binding(&self) -> u32
 pub fn vyre_foundation::ir::BufferDecl::count(&self) -> u32
 pub fn vyre_foundation::ir::BufferDecl::element(&self) -> vyre_spec::data_type::DataType
 pub fn vyre_foundation::ir::BufferDecl::hints(&self) -> vyre_foundation::ir::MemoryHints
+pub fn vyre_foundation::ir::BufferDecl::is_backend_allocated_output(&self) -> bool
 pub fn vyre_foundation::ir::BufferDecl::is_output(&self) -> bool
 pub fn vyre_foundation::ir::BufferDecl::is_pipeline_live_out(&self) -> bool
 pub fn vyre_foundation::ir::BufferDecl::kind(&self) -> vyre_foundation::ir::MemoryKind
@@ -7141,6 +7172,8 @@ pub vyre_foundation::ir::Expr::BinOp::op: vyre_spec::bin_op::BinOp
 pub vyre_foundation::ir::Expr::BinOp::right: alloc::boxed::Box<vyre_foundation::ir::Expr>
 pub vyre_foundation::ir::Expr::BufLen
 pub vyre_foundation::ir::Expr::BufLen::buffer: vyre_foundation::ir::Ident
+pub vyre_foundation::ir::Expr::BufferRef
+pub vyre_foundation::ir::Expr::BufferRef::buffer: vyre_foundation::ir::Ident
 pub vyre_foundation::ir::Expr::Call
 pub vyre_foundation::ir::Expr::Call::args: alloc::vec::Vec<vyre_foundation::ir::Expr>
 pub vyre_foundation::ir::Expr::Call::op_id: vyre_foundation::ir::Ident
@@ -7186,8 +7219,11 @@ pub vyre_foundation::ir::Expr::WorkgroupId::axis: u8
 impl vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::abs(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::abs_diff(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::acos(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::add(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::and(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::asin(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::atan(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::bitand(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::bitnot(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::bitor(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
@@ -7195,9 +7231,12 @@ pub fn vyre_foundation::ir::Expr::bitxor(left: vyre_foundation::ir::Expr, right:
 pub fn vyre_foundation::ir::Expr::ceil(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::clz(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::cos(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::cosh(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::ctz(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::div(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::eq(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::exp(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::exp2(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::floor(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::ge(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::gt(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
@@ -7206,6 +7245,8 @@ pub fn vyre_foundation::ir::Expr::is_finite(operand: vyre_foundation::ir::Expr) 
 pub fn vyre_foundation::ir::Expr::is_inf(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::is_nan(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::le(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::log(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::log2(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::lt(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::max(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::min(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
@@ -7229,8 +7270,11 @@ pub fn vyre_foundation::ir::Expr::shl(left: vyre_foundation::ir::Expr, right: vy
 pub fn vyre_foundation::ir::Expr::shr(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::sign(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::sin(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::sinh(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::sqrt(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::sub(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::tan(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
+pub fn vyre_foundation::ir::Expr::tanh(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::trunc(operand: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::wrapping_add(self, other: impl core::convert::Into<vyre_foundation::ir::Expr>) -> Self
 pub fn vyre_foundation::ir::Expr::wrapping_sub(self, other: impl core::convert::Into<vyre_foundation::ir::Expr>) -> Self
@@ -7248,6 +7292,7 @@ pub fn vyre_foundation::ir::Expr::atomic_xor(buffer: &str, index: vyre_foundatio
 impl vyre_foundation::ir::Expr
 pub fn vyre_foundation::ir::Expr::bool(value: bool) -> Self
 pub fn vyre_foundation::ir::Expr::buf_len(buffer: impl core::convert::Into<vyre_foundation::ir::Ident>) -> Self
+pub fn vyre_foundation::ir::Expr::buffer_ref(buffer: impl core::convert::Into<vyre_foundation::ir::Ident>) -> Self
 pub fn vyre_foundation::ir::Expr::call(op_id: impl core::convert::Into<vyre_foundation::ir::Ident>, args: alloc::vec::Vec<Self>) -> Self
 pub fn vyre_foundation::ir::Expr::cast(target: vyre_spec::data_type::DataType, value: Self) -> Self
 pub fn vyre_foundation::ir::Expr::f32(value: f32) -> Self
@@ -7259,6 +7304,7 @@ pub fn vyre_foundation::ir::Expr::i32(value: i32) -> Self
 pub fn vyre_foundation::ir::Expr::invocation_local_x() -> Self
 pub fn vyre_foundation::ir::Expr::invocation_local_y() -> Self
 pub fn vyre_foundation::ir::Expr::invocation_local_z() -> Self
+pub fn vyre_foundation::ir::Expr::is_first_workgroup() -> Self
 pub fn vyre_foundation::ir::Expr::load(buffer: impl core::convert::Into<vyre_foundation::ir::Ident>, index: Self) -> Self
 pub fn vyre_foundation::ir::Expr::local_x() -> Self
 pub fn vyre_foundation::ir::Expr::local_y() -> Self
@@ -7764,6 +7810,55 @@ impl<T> tracing::instrument::Instrument for vyre_foundation::ir::ShapePredicate
 impl<T> tracing::instrument::WithSubscriber for vyre_foundation::ir::ShapePredicate
 impl<T> typenum::type_operators::Same for vyre_foundation::ir::ShapePredicate
 pub type vyre_foundation::ir::ShapePredicate::Output = T
+pub enum vyre_foundation::ir::UnresolvedCalls
+pub vyre_foundation::ir::UnresolvedCalls::Keep
+pub vyre_foundation::ir::UnresolvedCalls::Reject
+impl core::clone::Clone for vyre_foundation::transform::inline::UnresolvedCalls
+pub fn vyre_foundation::transform::inline::UnresolvedCalls::clone(&self) -> vyre_foundation::transform::inline::UnresolvedCalls
+impl core::cmp::Eq for vyre_foundation::transform::inline::UnresolvedCalls
+impl core::cmp::PartialEq for vyre_foundation::transform::inline::UnresolvedCalls
+pub fn vyre_foundation::transform::inline::UnresolvedCalls::eq(&self, other: &vyre_foundation::transform::inline::UnresolvedCalls) -> bool
+impl core::fmt::Debug for vyre_foundation::transform::inline::UnresolvedCalls
+pub fn vyre_foundation::transform::inline::UnresolvedCalls::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for vyre_foundation::transform::inline::UnresolvedCalls
+impl core::marker::StructuralPartialEq for vyre_foundation::transform::inline::UnresolvedCalls
+impl core::marker::Freeze for vyre_foundation::transform::inline::UnresolvedCalls
+impl core::marker::Send for vyre_foundation::transform::inline::UnresolvedCalls
+impl core::marker::Sync for vyre_foundation::transform::inline::UnresolvedCalls
+impl core::marker::Unpin for vyre_foundation::transform::inline::UnresolvedCalls
+impl core::marker::UnsafeUnpin for vyre_foundation::transform::inline::UnresolvedCalls
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::transform::inline::UnresolvedCalls
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::transform::inline::UnresolvedCalls
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::transform::inline::UnresolvedCalls where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::transform::inline::UnresolvedCalls::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::transform::inline::UnresolvedCalls where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::transform::inline::UnresolvedCalls::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::transform::inline::UnresolvedCalls where U: core::convert::From<T>
+pub fn vyre_foundation::transform::inline::UnresolvedCalls::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::transform::inline::UnresolvedCalls where U: core::convert::Into<T>
+pub type vyre_foundation::transform::inline::UnresolvedCalls::Error = core::convert::Infallible
+pub fn vyre_foundation::transform::inline::UnresolvedCalls::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::transform::inline::UnresolvedCalls where U: core::convert::TryFrom<T>
+pub type vyre_foundation::transform::inline::UnresolvedCalls::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::transform::inline::UnresolvedCalls::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::transform::inline::UnresolvedCalls where T: core::clone::Clone
+pub type vyre_foundation::transform::inline::UnresolvedCalls::Owned = T
+pub fn vyre_foundation::transform::inline::UnresolvedCalls::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::transform::inline::UnresolvedCalls::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::transform::inline::UnresolvedCalls where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::transform::inline::UnresolvedCalls::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::transform::inline::UnresolvedCalls where T: ?core::marker::Sized
+pub fn vyre_foundation::transform::inline::UnresolvedCalls::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::transform::inline::UnresolvedCalls where T: ?core::marker::Sized
+pub fn vyre_foundation::transform::inline::UnresolvedCalls::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::transform::inline::UnresolvedCalls where T: core::clone::Clone
+pub unsafe fn vyre_foundation::transform::inline::UnresolvedCalls::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::transform::inline::UnresolvedCalls
+pub fn vyre_foundation::transform::inline::UnresolvedCalls::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_foundation::transform::inline::UnresolvedCalls
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::transform::inline::UnresolvedCalls
+impl<T> typenum::type_operators::Same for vyre_foundation::transform::inline::UnresolvedCalls
+pub type vyre_foundation::transform::inline::UnresolvedCalls::Output = T
 #[non_exhaustive] pub enum vyre_foundation::ir::Value
 pub vyre_foundation::ir::Value::Bool(bool)
 pub vyre_foundation::ir::Value::F32(f32)
@@ -7866,6 +7961,7 @@ pub fn vyre_foundation::ir::BufferDecl::binding(&self) -> u32
 pub fn vyre_foundation::ir::BufferDecl::count(&self) -> u32
 pub fn vyre_foundation::ir::BufferDecl::element(&self) -> vyre_spec::data_type::DataType
 pub fn vyre_foundation::ir::BufferDecl::hints(&self) -> vyre_foundation::ir::MemoryHints
+pub fn vyre_foundation::ir::BufferDecl::is_backend_allocated_output(&self) -> bool
 pub fn vyre_foundation::ir::BufferDecl::is_output(&self) -> bool
 pub fn vyre_foundation::ir::BufferDecl::is_pipeline_live_out(&self) -> bool
 pub fn vyre_foundation::ir::BufferDecl::kind(&self) -> vyre_foundation::ir::MemoryKind
@@ -8731,7 +8827,9 @@ pub fn vyre_foundation::ir::NodeExtension::stable_fingerprint(&self) -> [u8; 32]
 pub fn vyre_foundation::ir::NodeExtension::validate_extension(&self) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_foundation::ir::NodeExtension::wire_payload(&self) -> alloc::vec::Vec<u8>
 pub fn vyre_foundation::ir::inline_calls(program: &vyre_foundation::ir::Program) -> vyre_foundation::error::Result<vyre_foundation::ir::Program>
+pub fn vyre_foundation::ir::inline_calls_with_mode(program: &vyre_foundation::ir::Program, resolver: vyre_foundation::transform::inline::OpResolver, unresolved: vyre_foundation::transform::inline::UnresolvedCalls) -> vyre_foundation::error::Result<vyre_foundation::ir::Program>
 pub fn vyre_foundation::ir::inline_calls_with_resolver(program: &vyre_foundation::ir::Program, resolver: vyre_foundation::transform::inline::OpResolver) -> vyre_foundation::error::Result<vyre_foundation::ir::Program>
+pub fn vyre_foundation::ir::inline_composite_calls(program: &vyre_foundation::ir::Program) -> vyre_foundation::error::Result<vyre_foundation::ir::Program>
 pub fn vyre_foundation::ir::optimize(program: vyre_foundation::ir::Program) -> vyre_foundation::ir::Program
 pub fn vyre_foundation::ir::validate(program: &vyre_foundation::ir::Program) -> alloc::vec::Vec<vyre_foundation::validate::validation_error::ValidationError>
 pub type vyre_foundation::ir::OpId = alloc::sync::Arc<str>
@@ -11727,6 +11825,8 @@ pub vyre_foundation::optimizer::expr_arena::FlatExpr::BinOp::op: vyre_spec::bin_
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::BinOp::right: vyre_foundation::optimizer::expr_arena::ExprId
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::BufLen
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::BufLen::buffer: vyre_foundation::ir::Ident
+pub vyre_foundation::optimizer::expr_arena::FlatExpr::BufferRef
+pub vyre_foundation::optimizer::expr_arena::FlatExpr::BufferRef::buffer: vyre_foundation::ir::Ident
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::Call
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::Call::args: alloc::vec::Vec<vyre_foundation::optimizer::expr_arena::ExprId>
 pub vyre_foundation::optimizer::expr_arena::FlatExpr::Call::op_id: vyre_foundation::ir::Ident
@@ -23604,7 +23704,9 @@ pub fn vyre_foundation::serial::wire::encode::to_wire_with_buffer_order_into(pro
 pub mod vyre_foundation::serial::wire::framing
 pub mod vyre_foundation::serial::wire::framing::magic
 pub const vyre_foundation::serial::wire::framing::magic::MAGIC: &[u8; 4]
+pub const vyre_foundation::serial::wire::framing::magic::MIN_SUPPORTED_WIRE_FORMAT_VERSION: u16
 pub const vyre_foundation::serial::wire::framing::magic::WIRE_FORMAT_VERSION: u16
+pub fn vyre_foundation::serial::wire::framing::magic::wire_format_version_is_supported(version: u16) -> bool
 pub mod vyre_foundation::serial::wire::framing::put_len_u32
 pub fn vyre_foundation::serial::wire::framing::put_len_u32::put_len_u32(out: &mut alloc::vec::Vec<u8>, value: usize, label: &str) -> core::result::Result<(), vyre_foundation::serial::wire::encode::error::WireEncodeErr>
 pub mod vyre_foundation::serial::wire::framing::put_string
@@ -23614,11 +23716,13 @@ pub fn vyre_foundation::serial::wire::framing::put_u32::put_u32(out: &mut alloc:
 pub mod vyre_foundation::serial::wire::framing::put_u8
 pub fn vyre_foundation::serial::wire::framing::put_u8::put_u8(out: &mut alloc::vec::Vec<u8>, value: u8)
 pub const vyre_foundation::serial::wire::framing::MAGIC: &[u8; 4]
+pub const vyre_foundation::serial::wire::framing::MIN_SUPPORTED_WIRE_FORMAT_VERSION: u16
 pub const vyre_foundation::serial::wire::framing::WIRE_FORMAT_VERSION: u16
 pub fn vyre_foundation::serial::wire::framing::put_len_u32(out: &mut alloc::vec::Vec<u8>, value: usize, label: &str) -> core::result::Result<(), vyre_foundation::serial::wire::encode::error::WireEncodeErr>
 pub fn vyre_foundation::serial::wire::framing::put_string(out: &mut alloc::vec::Vec<u8>, value: &str) -> core::result::Result<(), vyre_foundation::serial::wire::encode::error::WireEncodeErr>
 pub fn vyre_foundation::serial::wire::framing::put_u32(out: &mut alloc::vec::Vec<u8>, value: u32)
 pub fn vyre_foundation::serial::wire::framing::put_u8(out: &mut alloc::vec::Vec<u8>, value: u8)
+pub fn vyre_foundation::serial::wire::framing::wire_format_version_is_supported(version: u16) -> bool
 pub mod vyre_foundation::serial::wire::tags
 pub mod vyre_foundation::serial::wire::tags::access_from_tag
 pub mod vyre_foundation::serial::wire::tags::access_tag
@@ -25501,6 +25605,55 @@ pub fn vyre_foundation::transform::compiler::visitor_walk::source() -> core::opt
 pub fn vyre_foundation::transform::compiler::visitor_walk::validate_tree(node_count: usize, offsets: &[u32], children: &[u32]) -> core::result::Result<(), vyre_foundation::transform::compiler::visitor_walk::VisitorWalkError>
 pub fn vyre_foundation::transform::compiler::visitor_walk::visit_step_program(child_offsets: &str, children: &str, stack: &str, post_order: &str, post_count: &str) -> vyre_foundation::ir::Program
 pub mod vyre_foundation::transform::inline
+pub enum vyre_foundation::transform::inline::UnresolvedCalls
+pub vyre_foundation::transform::inline::UnresolvedCalls::Keep
+pub vyre_foundation::transform::inline::UnresolvedCalls::Reject
+impl core::clone::Clone for vyre_foundation::transform::inline::UnresolvedCalls
+pub fn vyre_foundation::transform::inline::UnresolvedCalls::clone(&self) -> vyre_foundation::transform::inline::UnresolvedCalls
+impl core::cmp::Eq for vyre_foundation::transform::inline::UnresolvedCalls
+impl core::cmp::PartialEq for vyre_foundation::transform::inline::UnresolvedCalls
+pub fn vyre_foundation::transform::inline::UnresolvedCalls::eq(&self, other: &vyre_foundation::transform::inline::UnresolvedCalls) -> bool
+impl core::fmt::Debug for vyre_foundation::transform::inline::UnresolvedCalls
+pub fn vyre_foundation::transform::inline::UnresolvedCalls::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for vyre_foundation::transform::inline::UnresolvedCalls
+impl core::marker::StructuralPartialEq for vyre_foundation::transform::inline::UnresolvedCalls
+impl core::marker::Freeze for vyre_foundation::transform::inline::UnresolvedCalls
+impl core::marker::Send for vyre_foundation::transform::inline::UnresolvedCalls
+impl core::marker::Sync for vyre_foundation::transform::inline::UnresolvedCalls
+impl core::marker::Unpin for vyre_foundation::transform::inline::UnresolvedCalls
+impl core::marker::UnsafeUnpin for vyre_foundation::transform::inline::UnresolvedCalls
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::transform::inline::UnresolvedCalls
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::transform::inline::UnresolvedCalls
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::transform::inline::UnresolvedCalls where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::transform::inline::UnresolvedCalls::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::transform::inline::UnresolvedCalls where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::transform::inline::UnresolvedCalls::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::transform::inline::UnresolvedCalls where U: core::convert::From<T>
+pub fn vyre_foundation::transform::inline::UnresolvedCalls::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::transform::inline::UnresolvedCalls where U: core::convert::Into<T>
+pub type vyre_foundation::transform::inline::UnresolvedCalls::Error = core::convert::Infallible
+pub fn vyre_foundation::transform::inline::UnresolvedCalls::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::transform::inline::UnresolvedCalls where U: core::convert::TryFrom<T>
+pub type vyre_foundation::transform::inline::UnresolvedCalls::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::transform::inline::UnresolvedCalls::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::transform::inline::UnresolvedCalls where T: core::clone::Clone
+pub type vyre_foundation::transform::inline::UnresolvedCalls::Owned = T
+pub fn vyre_foundation::transform::inline::UnresolvedCalls::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::transform::inline::UnresolvedCalls::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::transform::inline::UnresolvedCalls where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::transform::inline::UnresolvedCalls::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::transform::inline::UnresolvedCalls where T: ?core::marker::Sized
+pub fn vyre_foundation::transform::inline::UnresolvedCalls::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::transform::inline::UnresolvedCalls where T: ?core::marker::Sized
+pub fn vyre_foundation::transform::inline::UnresolvedCalls::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::transform::inline::UnresolvedCalls where T: core::clone::Clone
+pub unsafe fn vyre_foundation::transform::inline::UnresolvedCalls::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::transform::inline::UnresolvedCalls
+pub fn vyre_foundation::transform::inline::UnresolvedCalls::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_foundation::transform::inline::UnresolvedCalls
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::transform::inline::UnresolvedCalls
+impl<T> typenum::type_operators::Same for vyre_foundation::transform::inline::UnresolvedCalls
+pub type vyre_foundation::transform::inline::UnresolvedCalls::Output = T
 pub struct vyre_foundation::transform::inline::InlineCtx
 impl core::marker::Freeze for vyre_foundation::transform::inline::InlineCtx
 impl core::marker::Send for vyre_foundation::transform::inline::InlineCtx
@@ -25529,9 +25682,11 @@ impl<T> tracing::instrument::Instrument for vyre_foundation::transform::inline::
 impl<T> tracing::instrument::WithSubscriber for vyre_foundation::transform::inline::InlineCtx
 impl<T> typenum::type_operators::Same for vyre_foundation::transform::inline::InlineCtx
 pub type vyre_foundation::transform::inline::InlineCtx::Output = T
-pub fn vyre_foundation::transform::inline::default_resolver(_op_id: &str) -> core::option::Option<vyre_foundation::ir::Program>
+pub fn vyre_foundation::transform::inline::default_resolver(op_id: &str) -> core::option::Option<vyre_foundation::ir::Program>
 pub fn vyre_foundation::transform::inline::inline_calls(program: &vyre_foundation::ir::Program) -> vyre_foundation::error::Result<vyre_foundation::ir::Program>
+pub fn vyre_foundation::transform::inline::inline_calls_with_mode(program: &vyre_foundation::ir::Program, resolver: vyre_foundation::transform::inline::OpResolver, unresolved: vyre_foundation::transform::inline::UnresolvedCalls) -> vyre_foundation::error::Result<vyre_foundation::ir::Program>
 pub fn vyre_foundation::transform::inline::inline_calls_with_resolver(program: &vyre_foundation::ir::Program, resolver: vyre_foundation::transform::inline::OpResolver) -> vyre_foundation::error::Result<vyre_foundation::ir::Program>
+pub fn vyre_foundation::transform::inline::inline_composite_calls(program: &vyre_foundation::ir::Program) -> vyre_foundation::error::Result<vyre_foundation::ir::Program>
 pub fn vyre_foundation::transform::inline::output_buffer<'a>(op_id: &str, program: &'a vyre_foundation::ir::Program) -> vyre_foundation::error::Result<&'a vyre_foundation::ir::BufferDecl>
 pub fn vyre_foundation::transform::inline::zero_value(ty: &vyre_spec::data_type::DataType) -> vyre_foundation::ir::Expr
 pub type vyre_foundation::transform::inline::OpResolver = fn(&str) -> core::option::Option<vyre_foundation::ir::Program>
@@ -26827,6 +26982,7 @@ pub type vyre_foundation::visit::expr::ExprVisitor::Break
 pub fn vyre_foundation::visit::expr::ExprVisitor::visit_atomic(&mut self, _expr: &vyre_foundation::ir::Expr, _op: &vyre_spec::atomic_op::AtomicOp, _buffer: &vyre_foundation::ir::Ident, _index: &vyre_foundation::ir::Expr, _expected: core::option::Option<&vyre_foundation::ir::Expr>, _value: &vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::expr::ExprVisitor::visit_bin_op(&mut self, _expr: &vyre_foundation::ir::Expr, _op: &vyre_spec::bin_op::BinOp, _left: &vyre_foundation::ir::Expr, _right: &vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::expr::ExprVisitor::visit_buf_len(&mut self, _expr: &vyre_foundation::ir::Expr, _buffer: &vyre_foundation::ir::Ident) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_foundation::visit::expr::ExprVisitor::visit_buffer_ref(&mut self, _expr: &vyre_foundation::ir::Expr, _buffer: &vyre_foundation::ir::Ident) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::expr::ExprVisitor::visit_call(&mut self, _expr: &vyre_foundation::ir::Expr, _op_id: &str, _args: &[vyre_foundation::ir::Expr]) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::expr::ExprVisitor::visit_cast(&mut self, _expr: &vyre_foundation::ir::Expr, _target: &vyre_spec::data_type::DataType, _value: &vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::expr::ExprVisitor::visit_fma(&mut self, _expr: &vyre_foundation::ir::Expr, _a: &vyre_foundation::ir::Expr, _b: &vyre_foundation::ir::Expr, _c: &vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<Self::Break>
@@ -26944,6 +27100,7 @@ pub type vyre_foundation::visit::ExprVisitor::Break
 pub fn vyre_foundation::visit::ExprVisitor::visit_atomic(&mut self, _expr: &vyre_foundation::ir::Expr, _op: &vyre_spec::atomic_op::AtomicOp, _buffer: &vyre_foundation::ir::Ident, _index: &vyre_foundation::ir::Expr, _expected: core::option::Option<&vyre_foundation::ir::Expr>, _value: &vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::ExprVisitor::visit_bin_op(&mut self, _expr: &vyre_foundation::ir::Expr, _op: &vyre_spec::bin_op::BinOp, _left: &vyre_foundation::ir::Expr, _right: &vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::ExprVisitor::visit_buf_len(&mut self, _expr: &vyre_foundation::ir::Expr, _buffer: &vyre_foundation::ir::Ident) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_foundation::visit::ExprVisitor::visit_buffer_ref(&mut self, _expr: &vyre_foundation::ir::Expr, _buffer: &vyre_foundation::ir::Ident) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::ExprVisitor::visit_call(&mut self, _expr: &vyre_foundation::ir::Expr, _op_id: &str, _args: &[vyre_foundation::ir::Expr]) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::ExprVisitor::visit_cast(&mut self, _expr: &vyre_foundation::ir::Expr, _target: &vyre_spec::data_type::DataType, _value: &vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::ExprVisitor::visit_fma(&mut self, _expr: &vyre_foundation::ir::Expr, _a: &vyre_foundation::ir::Expr, _b: &vyre_foundation::ir::Expr, _c: &vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<Self::Break>

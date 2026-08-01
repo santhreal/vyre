@@ -68,15 +68,12 @@ fn reference_transcendental_budget_matches_documented_audit_anchor() {
 #[test]
 fn elementary_f32_program_uses_elementary_backend_budget() {
     let program = minimal_elementary_f32_copy_program();
-    let expected = if cfg!(feature = "strict-fp") {
-        0
-    } else {
-        BACKEND_ELEMENTARY_F32_ULP_BUDGET
-    };
     assert_eq!(
         f32_ulp_tolerance(&program),
-        expected,
-        "non-transcendental F32 programs follow elementary budget unless strict-fp forces byte identity"
+        BACKEND_ELEMENTARY_F32_ULP_BUDGET,
+        "non-transcendental F32 programs follow the elementary contraction budget under every \
+         feature combination: a backend may fold a*b+c into one FMA, so no feature can bind the \
+         backend-vs-reference window to zero without an emitter that forbids contraction"
     );
 }
 

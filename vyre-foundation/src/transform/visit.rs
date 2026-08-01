@@ -175,6 +175,7 @@ fn drain_expr_stack<'a>(
             | Expr::LitF32(_)
             | Expr::LitBool(_)
             | Expr::Var(_)
+            | Expr::BufferRef { .. }
             | Expr::BufLen { .. }
             | Expr::InvocationId { .. }
             | Expr::WorkgroupId { .. }
@@ -475,7 +476,10 @@ mod tests {
     fn referenced_buffers_legacy(program: &Program) -> HashSet<Ident> {
         let mut names = HashSet::new();
         walk_exprs(program, |expr| match expr {
-            Expr::Load { buffer, .. } | Expr::BufLen { buffer } | Expr::Atomic { buffer, .. } => {
+            Expr::Load { buffer, .. }
+            | Expr::BufLen { buffer }
+            | Expr::BufferRef { buffer }
+            | Expr::Atomic { buffer, .. } => {
                 names.insert(buffer.clone());
             }
             _ => {}

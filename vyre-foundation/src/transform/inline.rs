@@ -15,6 +15,23 @@ use rustc_hash::FxHashMap as HashMap;
 /// Resolve an operation id to the canonical IR program for that operation.
 pub type OpResolver = fn(&str) -> Option<Program>;
 
+/// What the inliner does with a call the resolver cannot expand.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum UnresolvedCalls {
+    /// Fail with [`Error::InlineUnknownOp`].
+    ///
+    /// Backends cannot emit a call, so every path that feeds a backend
+    /// demands that all calls disappear.
+    Reject,
+    /// Leave the call node in place.
+    ///
+    /// The reference interpreter needs only composite ops expanded: an
+    /// intrinsic has no composition body to inline and is executed through
+    /// its registered CPU function instead. Rejecting those would make the
+    /// interpreter refuse every program that uses one.
+    Keep,
+}
+
 /// Inline all `Expr::Call` nodes in a program using the built-in operation set.
 ///
 /// # Errors
@@ -44,31 +61,92 @@ pub fn inline_calls(program: &Program) -> Result<Program> {
 #[inline]
 #[must_use]
 pub fn inline_calls_with_resolver(program: &Program, resolver: OpResolver) -> Result<Program> {
-    let mut ctx = InlineCtx::new(resolver);
+    inline_calls_with_mode(program, resolver, UnresolvedCalls::Reject)
+}
+
+/// Expand every composition body registered in the process dialect and leave
+/// intrinsic calls in place.
+///
+/// This is the form the reference interpreter runs before execution. A
+/// composite op is defined by its IR body, so executing one means executing
+/// that body; without this pass the interpreter reaches for a CPU function
+/// the op never registered and silently produces an empty result.
+///
+/// # Errors
+///
+/// Returns [`Error::InlineCycle`] when recursive composition is detected, and
+/// the structural inline errors when a resolved body is not inlineable.
+#[inline]
+#[must_use]
+pub fn inline_composite_calls(program: &Program) -> Result<Program> {
+    inline_calls_with_mode(program, default_resolver, UnresolvedCalls::Keep)
+}
+
+/// Inline with an explicit resolver and unresolved-call policy.
+///
+/// # Errors
+///
+/// As [`inline_calls_with_resolver`], except that
+/// [`UnresolvedCalls::Keep`] suppresses [`Error::InlineUnknownOp`].
+#[inline]
+#[must_use]
+pub fn inline_calls_with_mode(
+    program: &Program,
+    resolver: OpResolver,
+    unresolved: UnresolvedCalls,
+) -> Result<Program> {
+    // Rebuilding the node tree costs a full traversal plus a fresh allocation
+    // of every node. Most programs contain no call at all, and since the
+    // reference interpreter now runs this on every execution, paying that on
+    // a call-free program would be a per-run tax for nothing. A `Program`
+    // clone is an Arc bump.
+    if !contains_call(program) {
+        return Ok(program.clone());
+    }
+    let mut ctx = InlineCtx::new_with_mode(resolver, unresolved);
     let entry = ctx.inline_nodes(program.entry())?;
     // Reuse the buffer Arc + buffer_index from the source program instead
     // of re-cloning + re-interning via Program::wrapped.
     Ok(program.with_rewritten_wrapped_entry(entry))
 }
 
-/// Resolve inline calls against the foundation-level empty registry.
+/// Resolve inline calls against the process-wide dialect lookup.
 ///
-/// Foundation does not host a dialect registry; the driver layer plugs its
-/// `vyre_driver::registry::DialectRegistry` into call sites via
-/// [`inline_calls_with_resolver`]. The default resolver therefore returns
-/// `None` so that a direct call to [`inline_calls`] inside tests or
-/// foundation-only consumers fails with [`Error::InlineUnknownOp`] on any
-/// `Expr::Call`.
+/// Foundation does not host a dialect registry, so it asks through the
+/// `DialectLookup` dependency-inversion boundary that the driver layer
+/// installs. An op resolves when it is registered AND carries a
+/// composition body; intrinsics have no body to inline and stay
+/// unresolved, as does any op id when no provider is installed. Callers
+/// that need a different registry pass their own resolver to
+/// [`inline_calls_with_resolver`].
+///
+/// This is what lets a registered op call another registered op and still
+/// reach a backend. While this returned `None` unconditionally, the
+/// canonical pre-emit pipeline resolved nothing at all, so every
+/// `Expr::Call` outside `vyre-aot` failed with [`Error::InlineUnknownOp`].
 #[inline]
 #[must_use]
-pub fn default_resolver(_op_id: &str) -> Option<Program> {
-    None
+pub fn default_resolver(op_id: &str) -> Option<Program> {
+    let lookup = crate::dispatch::dialect_lookup::dialect_lookup()?;
+    lookup.lookup(lookup.intern_op(op_id))?.program()
+}
+
+/// Whether the program contains any `Expr::Call` at all.
+#[inline]
+fn contains_call(program: &Program) -> bool {
+    let mut found = false;
+    crate::transform::visit::walk_exprs(program, |expr| {
+        found |= matches!(expr, Expr::Call { .. });
+    });
+    found
 }
 
 /// Mutable state for one inline expansion pass.
 pub struct InlineCtx {
     /// Operation resolver used for `Expr::Call` targets.
     resolver: OpResolver,
+    /// What to do with a call the resolver cannot expand.
+    unresolved: UnresolvedCalls,
     /// Active expansion stack used to reject recursive composition.
     stack: Vec<String>,
     /// Monotonic suffix for generated temporary names.
@@ -216,9 +294,18 @@ mod tests {
     #[test]
     fn test_inline_unknown_op() {
         let caller = make_caller();
-        // default_resolver always returns None
+        // `make_caller` calls a test-only op id that no dialect registers,
+        // so the default resolver cannot find it whether or not a provider
+        // is installed in this process.
         let err = inline_calls(&caller).unwrap_err();
         assert!(matches!(err, Error::InlineUnknownOp { .. }));
+    }
+
+    /// With no dialect provider installed, the default resolver has nothing
+    /// to ask and must say so rather than panicking or blocking.
+    #[test]
+    fn default_resolver_without_a_provider_resolves_nothing() {
+        assert!(default_resolver("vyre-libs::definitely::not::registered").is_none());
     }
 
     #[test]

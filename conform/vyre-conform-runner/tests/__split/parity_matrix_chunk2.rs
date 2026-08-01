@@ -175,6 +175,9 @@ fn collect_expr_variants(expr: &vyre::ir::Expr, variants: &mut BTreeSet<&'static
         Expr::Var(_) => {
             variants.insert("Var");
         }
+        Expr::BufferRef { .. } => {
+            variants.insert("BufferRef");
+        }
         Expr::Load { index, .. } => {
             variants.insert("Load");
             collect_expr_variants(index, variants);

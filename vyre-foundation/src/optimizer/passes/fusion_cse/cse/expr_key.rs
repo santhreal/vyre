@@ -14,6 +14,7 @@ pub(crate) enum ExprKey {
     LitBool(bool),
     Var(Ident),
     Load(Ident, ExprId),
+    BufferRef(Ident),
     BufLen(Ident),
     InvocationId(u8),
     WorkgroupId(u8),

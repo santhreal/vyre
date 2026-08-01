@@ -886,6 +886,14 @@ impl LowerCtx {
                 });
                 Ok(result)
             }
+            // A buffer reference is consumed by inlining, which rebinds the
+            // callee's parameter onto this buffer. Reaching lowering means
+            // the call around it was never inlined, so say that rather than
+            // ask for a descriptor mapping that must never exist: naming a
+            // buffer is not an operation a kernel can perform.
+            Expr::BufferRef { buffer } => Err(LowerError::UnsupportedConstruct(format!(
+                "reference to buffer `{buffer}` reached lowering. It is only legal as an argument to a composite op, where inlining consumes it. Fix: route this program through `prepare_program_for_emit` so calls are inlined, and check that the op it is passed to is registered with a composition body."
+            ))),
             other => Err(LowerError::UnsupportedConstruct(format!(
                 "expression `{other:?}` has no KernelDescriptor lowering. Fix: add a descriptor op mapping."
             ))),

@@ -54,6 +54,10 @@ pub trait ExprVisitor {
     fn visit_buf_len(&mut self, _expr: &Expr, _buffer: &Ident) -> ControlFlow<Self::Break> {
         ControlFlow::Continue(())
     }
+    /// A whole buffer named as a call argument.
+    fn visit_buffer_ref(&mut self, _expr: &Expr, _buffer: &Ident) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
     /// Invocation id axis (`gid.{x,y,z}`).
     fn visit_invocation_id(&mut self, _expr: &Expr, _axis: u32) -> ControlFlow<Self::Break> {
         ControlFlow::Continue(())
@@ -233,6 +237,7 @@ pub fn walk_expr_children_default<V: ExprVisitor>(
         | Expr::LitF32(_)
         | Expr::LitBool(_)
         | Expr::Var(_)
+        | Expr::BufferRef { .. }
         | Expr::BufLen { .. }
         | Expr::InvocationId { .. }
         | Expr::WorkgroupId { .. }
@@ -307,6 +312,7 @@ fn push_expr_children_reverse<'a>(stack: &mut SmallVec<[&'a Expr; 32]>, expr: &'
         | Expr::LitF32(_)
         | Expr::LitBool(_)
         | Expr::Var(_)
+        | Expr::BufferRef { .. }
         | Expr::BufLen { .. }
         | Expr::InvocationId { .. }
         | Expr::WorkgroupId { .. }
@@ -371,6 +377,7 @@ fn push_expr_child_tasks_reverse<'a>(
         | Expr::LitF32(_)
         | Expr::LitBool(_)
         | Expr::Var(_)
+        | Expr::BufferRef { .. }
         | Expr::BufLen { .. }
         | Expr::InvocationId { .. }
         | Expr::WorkgroupId { .. }
@@ -439,6 +446,7 @@ fn dispatch_expr<V: ExprVisitor>(visitor: &mut V, expr: &Expr) -> ControlFlow<V:
         Expr::Var(name) => visitor.visit_var(expr, name),
         Expr::Load { buffer, index } => visitor.visit_load(expr, buffer, index),
         Expr::BufLen { buffer } => visitor.visit_buf_len(expr, buffer),
+        Expr::BufferRef { buffer } => visitor.visit_buffer_ref(expr, buffer),
         Expr::InvocationId { axis } => visitor.visit_invocation_id(expr, (*axis).into()),
         Expr::WorkgroupId { axis } => visitor.visit_workgroup_id(expr, (*axis).into()),
         Expr::LocalId { axis } => visitor.visit_local_id(expr, (*axis).into()),

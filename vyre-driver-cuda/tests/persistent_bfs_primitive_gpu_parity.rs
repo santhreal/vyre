@@ -8,8 +8,9 @@ use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::DispatchConfig;
 use vyre_foundation::ir::BufferAccess;
 use vyre_primitives::graph::persistent_bfs::{
-    cpu_ref, persistent_bfs, persistent_bfs_batch, persistent_bfs_batch_dispatch_grid,
+    persistent_bfs, persistent_bfs_batch, persistent_bfs_batch_dispatch_grid,
     persistent_bfs_single_dispatch_grid, try_cpu_ref_converged,
+    validate_persistent_bfs_converged_flag,
 };
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 
@@ -22,7 +23,7 @@ fn run(
     frontier: &[u32],
     allow_mask: u32,
     max_iters: u32,
-) -> (Vec<u32>, u32) {
+) -> (Vec<u32>, u32, u32) {
     let words = ((node_count + 31) / 32).max(1);
     let pg_nodes = vec![0u32; node_count as usize];
     let pg_node_tags = vec![0u32; node_count as usize];
@@ -46,7 +47,7 @@ fn run(
                 "pg_edge_kind_mask" => u32_bytes(edge_kind_mask),
                 "pg_node_tags" => u32_bytes(&pg_node_tags),
                 "frontier_in" => u32_bytes(frontier),
-                "frontier_out" | "changed" => vec![0u8; declared_words * 4],
+                "frontier_out" | "changed" | "converged" => vec![0u8; declared_words * 4],
                 other => panic!("Unexpected buffer in persistent_bfs program: {other}"),
             }
         })
@@ -63,7 +64,40 @@ fn run(
     let mut frontier_out = bytes_u32(&outputs[0]);
     frontier_out.truncate(words as usize);
     let changed = bytes_u32(&outputs[1])[0];
-    (frontier_out, changed)
+    let converged = bytes_u32(&outputs[2])[0];
+    validate_persistent_bfs_converged_flag(converged)
+        .expect("Fix: CUDA persistent BFS must write 0 or 1 to the converged output");
+    (frontier_out, changed, converged)
+}
+
+/// CPU oracle for the single-query persistent-BFS program.
+///
+/// The program writes three outputs since 0.7.0: the accumulated frontier, the
+/// sticky `changed` flag, and `converged`. This test used to compare only the
+/// first two, so a device that reported a fixpoint it never reached, or one
+/// that never wrote the flag at all, would still pass. Comparing the flag
+/// against the CPU source of truth is what makes an under-approximated closure
+/// a test failure instead of a silently truncated answer.
+fn cpu_ref_single(
+    node_count: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+    frontier_in: &[u32],
+    allow_mask: u32,
+    max_iters: u32,
+) -> (Vec<u32>, u32, u32) {
+    let (frontier, outcome) = try_cpu_ref_converged(
+        node_count,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        frontier_in,
+        allow_mask,
+        max_iters,
+    )
+    .expect("Fix: CPU persistent BFS oracle must accept the single-query shape");
+    (frontier, outcome.changed, u32::from(outcome.converged))
 }
 
 fn run_batch(
@@ -161,7 +195,7 @@ fn cuda_persistent_bfs_chain_converges_changed_set() {
     let edge_targets = vec![1u32, 2, 3];
     let edge_kind_mask = vec![1u32; 3];
     let frontier = vec![0b0001u32];
-    let cpu = cpu_ref(
+    let cpu = cpu_ref_single(
         n,
         &edge_offsets,
         &edge_targets,
@@ -183,6 +217,10 @@ fn cuda_persistent_bfs_chain_converges_changed_set() {
     assert_eq!(gpu, cpu);
     assert_eq!(gpu.0, vec![0b1111u32]);
     assert_eq!(gpu.1, 1);
+    assert_eq!(
+        gpu.2, 1,
+        "Fix: a 4-node chain closes inside an 8-iteration budget, so the device must report a fixpoint."
+    );
 }
 
 #[test]
@@ -192,7 +230,7 @@ fn cuda_persistent_bfs_diamond_converges() {
     let edge_targets = vec![1u32, 2, 3, 3];
     let edge_kind_mask = vec![1u32; 4];
     let frontier = vec![0b0001u32];
-    let cpu = cpu_ref(
+    let cpu = cpu_ref_single(
         n,
         &edge_offsets,
         &edge_targets,
@@ -224,7 +262,7 @@ fn cuda_persistent_bfs_isolated_seed_unchanged() {
     let padded_edge_targets = vec![0u32; 1];
     let padded_edge_kind_mask = vec![0u32; 1];
     let frontier = vec![0b001u32];
-    let cpu = cpu_ref(
+    let cpu = cpu_ref_single(
         n,
         &edge_offsets,
         &edge_targets,
@@ -246,6 +284,10 @@ fn cuda_persistent_bfs_isolated_seed_unchanged() {
     assert_eq!(gpu, cpu);
     assert_eq!(gpu.0, vec![0b001u32]);
     assert_eq!(gpu.1, 0);
+    assert_eq!(
+        gpu.2, 1,
+        "Fix: an isolated seed reaches its fixpoint on the first step, so converged must be 1."
+    );
 }
 
 #[test]
@@ -260,7 +302,7 @@ fn cuda_persistent_bfs_large_no_edges_converges_without_changed() {
     let mut frontier = vec![0u32; words];
     frontier[8] = 1;
 
-    let cpu = cpu_ref(
+    let cpu = cpu_ref_single(
         n,
         &edge_offsets,
         &edge_targets,
@@ -304,7 +346,7 @@ fn cuda_persistent_bfs_large_graph_crosses_workgroup_boundary() {
     let mut frontier = vec![0u32; ((n + 31) / 32) as usize];
     frontier[8] = 1;
 
-    let cpu = cpu_ref(
+    let cpu = cpu_ref_single(
         n,
         &edge_offsets,
         &edge_targets,
@@ -347,7 +389,7 @@ fn cuda_persistent_bfs_large_chain_honors_one_step_cap() {
     let mut frontier = vec![0u32; ((n + 31) / 32) as usize];
     frontier[0] = 1;
 
-    let cpu = cpu_ref(
+    let cpu = cpu_ref_single(
         n,
         &edge_offsets,
         &edge_targets,
@@ -374,6 +416,11 @@ fn cuda_persistent_bfs_large_chain_honors_one_step_cap() {
         "Fix: one persistent-BFS iteration must not cascade past node 1 on a long chain."
     );
     assert_eq!(gpu.1, 1);
+    assert_eq!(
+        gpu.2, 0,
+        "Fix: a 513-node chain capped at one iteration is still growing, so the frontier is an \
+         under-approximation and converged must be 0."
+    );
 }
 
 #[test]

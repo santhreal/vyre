@@ -47,12 +47,17 @@ pub fn shared_mem_promote(desc: &KernelDescriptor) -> KernelDescriptor {
         .unwrap_or(crate::lower::WORKGROUP_SLOT_BASE)
         .max(crate::lower::WORKGROUP_SLOT_BASE);
     let mut shared_slots = Vec::new();
+    // One allocator for the whole body tree. Result ids are unique across the
+    // descriptor, not per body, so a nested body seeded from its own subtree
+    // would mint ids the parent body already defines.
+    let mut allocator = ResultAllocator::for_body_tree(&out.body);
     let changed = rewrite_body(
         &mut out.body,
         &out.bindings.slots,
         desc.dispatch.workgroup_size[0].max(1),
         &mut next_slot,
         &mut shared_slots,
+        &mut allocator,
         // The kernel entry body is reached by every workgroup lane: uniform.
         true,
     );
@@ -82,6 +87,7 @@ fn rewrite_body(
     workgroup_x: u32,
     next_slot: &mut u32,
     shared_slots: &mut Vec<BindingSlot>,
+    allocator: &mut ResultAllocator,
     // True iff this body is reached by EVERY workgroup lane (uniform control
     // flow). The promotion inserts a per-workgroup cooperative async tile-copy
     // plus a workgroup `Barrier`; those may only appear in uniform flow. Inside
@@ -96,7 +102,6 @@ fn rewrite_body(
         let mut prefix = Vec::new();
         let mut waits = Vec::new();
         let mut replacements = BTreeMap::<usize, (u32, u32)>::new();
-        let mut allocator = ResultAllocator::for_body_tree(body);
         let mut first_replaced_op = usize::MAX;
 
     for candidate in candidates {
@@ -230,6 +235,7 @@ fn rewrite_body(
             workgroup_x,
             next_slot,
             shared_slots,
+            allocator,
             child_uniform[child_index],
         );
     }

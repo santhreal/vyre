@@ -1098,21 +1098,23 @@ mod tests {
                         result: None,
                     },
                 ],
+                // Ids 3 and 4: the root body already owns 0, 1 and 2, and result
+                // ids are unique across the whole descriptor rather than per body.
                 child_bodies: vec![KernelBody {
                     ops: vec![
                         KernelOp {
                             kind: KernelOpKind::Literal,
                             operands: vec![0],
-                            result: Some(0),
+                            result: Some(3),
                         },
                         KernelOp {
                             kind: KernelOpKind::Literal,
                             operands: vec![1],
-                            result: Some(1),
+                            result: Some(4),
                         },
                         KernelOp {
                             kind: KernelOpKind::StoreGlobal,
-                            operands: vec![0, 0, 1],
+                            operands: vec![0, 3, 4],
                             result: None,
                         },
                     ],
