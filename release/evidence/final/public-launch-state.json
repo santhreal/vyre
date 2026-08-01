@@ -2,6 +2,7 @@
   "schema_version": 1,
   "objective": "complete release/plans/paradigm-shift-100-concrete.md",
   "current_state": "prepublish_release_ready",
+  "public_repository": "santhreal/vyre",
   "prepublish_gates": {
     "version_matrix": "pass",
     "metadata_matrix": "pass",
@@ -17,9 +18,9 @@
       "evidence": "scripts/final-launch.sh + scripts/publish-release.sh + release/evidence/package/publish-readiness.json"
     },
     {
-      "action": "make repositories public",
+      "action": "verify vyre repository is public",
       "status": "blocked_pending_user_approval",
-      "evidence": "scripts/final-launch.sh"
+      "evidence": "scripts/final-launch.sh + gh repo view santhreal/vyre --json visibility"
     },
     {
       "action": "git push release branch and tags",
@@ -29,7 +30,7 @@
   ],
   "blockers": [
     "cargo_full publish is not approved or completed",
-    "repository public launch is not approved or completed",
+    "vyre repository public verification is not completed",
     "git push release branch and tags is not approved or completed"
   ],
   "completion_status": "not_complete_until_external_actions_are_approved_and_done"

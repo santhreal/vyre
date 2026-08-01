@@ -1,14 +1,15 @@
 {
   "schema_version": 1,
   "suite": "fuzz",
-  "file_count": 68,
-  "vyre_file_count": 52,
+  "file_count": 72,
+  "vyre_file_count": 56,
   "dataflow_consumer_file_count": 15,
   "vyrec_file_count": 1,
   "files": [
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/maturity_gate.rs",
+      "path": "vyre-frontend-c/tests/maturity_gate.rs",
       "layers": [
+        "adversarial",
         "benchmark",
         "conformance",
         "corpus",
@@ -26,6 +27,7 @@
       "god_test_candidate": false,
       "recommended_split": [],
       "case_roles": [
+        "adversarial",
         "benchmark",
         "boundary",
         "conformance",
@@ -60,10 +62,12 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/math/fft/fft4.rs",
+      "path": "vyre-libs/src/math/fft/fft4.rs",
       "layers": [
+        "adversarial",
         "benchmark",
         "fuzz",
+        "gap",
         "unit"
       ],
       "lines": 316,
@@ -76,6 +80,7 @@
       "god_test_candidate": false,
       "recommended_split": [],
       "case_roles": [
+        "adversarial",
         "benchmark",
         "boundary",
         "fuzz",
@@ -103,10 +108,12 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/math/fft/fft_radix2.rs",
+      "path": "vyre-libs/src/math/fft/fft_radix2.rs",
       "layers": [
+        "adversarial",
         "benchmark",
         "fuzz",
+        "gap",
         "unit"
       ],
       "lines": 363,
@@ -119,6 +126,7 @@
       "god_test_candidate": false,
       "recommended_split": [],
       "case_roles": [
+        "adversarial",
         "benchmark",
         "boundary",
         "fuzz",
@@ -152,10 +160,12 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/math/conv/conv2d.rs",
+      "path": "vyre-libs/src/math/conv/conv2d.rs",
       "layers": [
+        "adversarial",
         "benchmark",
         "fuzz",
+        "gap",
         "unit"
       ],
       "lines": 326,
@@ -168,6 +178,7 @@
       "god_test_candidate": false,
       "recommended_split": [],
       "case_roles": [
+        "adversarial",
         "benchmark",
         "boundary",
         "fuzz",
@@ -199,10 +210,12 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/math/weighted_sum.rs",
+      "path": "vyre-libs/src/math/weighted_sum.rs",
       "layers": [
+        "adversarial",
         "benchmark",
         "fuzz",
+        "gap",
         "unit"
       ],
       "lines": 247,
@@ -215,6 +228,7 @@
       "god_test_candidate": false,
       "recommended_split": [],
       "case_roles": [
+        "adversarial",
         "benchmark",
         "boundary",
         "fuzz",
@@ -244,7 +258,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/math/linalg/matmul_strassen.rs",
+      "path": "vyre-libs/src/math/linalg/matmul_strassen.rs",
       "layers": [
         "benchmark",
         "conformance",
@@ -294,7 +308,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/math/algebra.rs",
+      "path": "vyre-libs/src/math/algebra.rs",
       "layers": [
         "benchmark",
         "corpus",
@@ -346,7 +360,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/tests/fuzz_target_inventory.rs",
+      "path": "vyre-libs/tests/fuzz_target_inventory.rs",
       "layers": [
         "benchmark",
         "corpus",
@@ -391,7 +405,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/tests/wire_format_fuzz.rs",
+      "path": "vyre-libs/tests/wire_format_fuzz.rs",
       "layers": [
         "benchmark",
         "fuzz",
@@ -439,7 +453,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/tests/rustc_nll_facts.rs",
+      "path": "vyre-libs/tests/rustc_nll_facts.rs",
       "layers": [
         "benchmark",
         "corpus",
@@ -489,7 +503,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/tests/security_privacy_path_corpus_guards.rs",
+      "path": "vyre-libs/tests/security_privacy_path_corpus_guards.rs",
       "layers": [
         "benchmark",
         "corpus",
@@ -497,7 +511,7 @@
         "integration",
         "unit"
       ],
-      "lines": 54,
+      "lines": 63,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
       "line_threshold_exceeded": false,
@@ -532,7 +546,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/optimizer/contracts/optimization_registry.rs",
+      "path": "vyre-self-substrate/src/optimizer/contracts/optimization_registry.rs",
       "layers": [
         "benchmark",
         "fuzz",
@@ -593,11 +607,13 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/integration/coverage/test_taxonomy_coverage.rs",
+      "path": "vyre-self-substrate/src/integration/coverage/test_taxonomy_coverage.rs",
       "layers": [
         "adversarial",
         "benchmark",
         "fuzz",
+        "gap",
+        "property",
         "unit"
       ],
       "lines": 481,
@@ -615,7 +631,8 @@
         "boundary",
         "fuzz",
         "negative",
-        "positive"
+        "positive",
+        "property"
       ],
       "op_families": [
         "driver_runtime",
@@ -647,29 +664,34 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/integration/coverage/analysis_coverage.rs",
+      "path": "vyre-self-substrate/src/integration/coverage/analysis_coverage.rs",
       "layers": [
+        "adversarial",
         "benchmark",
         "conformance",
         "fuzz",
+        "gap",
+        "property",
         "unit"
       ],
-      "lines": 530,
+      "lines": 582,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 9,
+      "assertion_count": 11,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [],
       "case_roles": [
+        "adversarial",
         "benchmark",
         "boundary",
         "conformance",
         "fuzz",
         "negative",
-        "positive"
+        "positive",
+        "property"
       ],
       "op_families": [
         "driver_runtime",
@@ -706,18 +728,19 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/integration/quality/architecture_boundary_map.rs",
+      "path": "vyre-self-substrate/src/integration/quality/architecture_boundary_map.rs",
       "layers": [
         "benchmark",
         "fuzz",
+        "gap",
         "unit"
       ],
-      "lines": 655,
+      "lines": 776,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 9,
+      "assertion_count": 18,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [],
@@ -732,7 +755,9 @@
         "driver_runtime",
         "flow",
         "lower_emit",
-        "parser_frontend"
+        "nn_math",
+        "parser_frontend",
+        "scan_static"
       ],
       "backend_families": [
         "cuda_ptx",
@@ -744,6 +769,7 @@
         "cache",
         "capability",
         "serde",
+        "soundness",
         "validation"
       ],
       "error_path_families": [
@@ -766,13 +792,15 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/integration/quality/paradigm_shift_plan_audit.rs",
+      "path": "vyre-self-substrate/src/integration/quality/paradigm_shift_plan_audit.rs",
       "layers": [
         "adversarial",
         "benchmark",
         "conformance",
         "corpus",
         "fuzz",
+        "gap",
+        "property",
         "unit"
       ],
       "lines": 437,
@@ -792,7 +820,8 @@
         "e2e",
         "fuzz",
         "negative",
-        "positive"
+        "positive",
+        "property"
       ],
       "op_families": [
         "driver_runtime",
@@ -839,7 +868,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-rust/tests/diff_support/mod.rs",
+      "path": "vyre-frontend-rust/tests/diff_support/mod.rs",
       "layers": [
         "benchmark",
         "corpus",
@@ -885,7 +914,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-rust/tests/differential_fuzz.rs",
+      "path": "vyre-frontend-rust/tests/differential_fuzz.rs",
       "layers": [
         "benchmark",
         "fuzz",
@@ -932,8 +961,9 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/algebraic/strength_reduce/tests/shift_add_horner.rs",
+      "path": "vyre-foundation/src/optimizer/passes/algebraic/strength_reduce/tests/shift_add_horner.rs",
       "layers": [
+        "adversarial",
         "benchmark",
         "fuzz",
         "integration",
@@ -949,6 +979,7 @@
       "god_test_candidate": false,
       "recommended_split": [],
       "case_roles": [
+        "adversarial",
         "benchmark",
         "boundary",
         "fuzz",
@@ -982,8 +1013,56 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/algebraic/strength_reduce/tests/modulo_constant.rs",
+      "path": "vyre-foundation/src/optimizer/passes/algebraic/strength_reduce/tests/division_constant.rs",
       "layers": [
+        "benchmark",
+        "fuzz",
+        "integration",
+        "property",
+        "unit"
+      ],
+      "lines": 91,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
+      "has_test_entrypoint": true,
+      "assertion_count": 6,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "optimizer"
+      ],
+      "backend_families": [
+        "direct"
+      ],
+      "feature_families": [
+        "soundness"
+      ],
+      "error_path_families": [
+        "overflow",
+        "panic_path"
+      ],
+      "corpus_families": [
+        "differential",
+        "fuzz"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
+    },
+    {
+      "path": "vyre-foundation/src/optimizer/passes/algebraic/strength_reduce/tests/modulo_constant.rs",
+      "layers": [
+        "adversarial",
         "benchmark",
         "fuzz",
         "integration",
@@ -999,6 +1078,7 @@
       "god_test_candidate": false,
       "recommended_split": [],
       "case_roles": [
+        "adversarial",
         "benchmark",
         "boundary",
         "fuzz",
@@ -1029,7 +1109,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/fuzz/fuzz_targets/decoder.rs",
+      "path": "vyre-foundation/fuzz/fuzz_targets/decoder.rs",
       "layers": [
         "benchmark",
         "fuzz",
@@ -1068,7 +1148,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/fuzz/fuzz_targets/registry_toml.rs",
+      "path": "vyre-foundation/fuzz/fuzz_targets/registry_toml.rs",
       "layers": [
         "benchmark",
         "fuzz",
@@ -1111,7 +1191,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/fuzz/fuzz_targets/program_wire.rs",
+      "path": "vyre-foundation/fuzz/fuzz_targets/program_wire.rs",
       "layers": [
         "benchmark",
         "fuzz",
@@ -1152,7 +1232,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/tests/program_wire_property_contracts.rs",
+      "path": "vyre-foundation/tests/program_wire_property_contracts.rs",
       "layers": [
         "adversarial",
         "benchmark",
@@ -1201,7 +1281,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/tests/wire_generated_hostile_inputs.rs",
+      "path": "vyre-foundation/tests/wire_generated_hostile_inputs.rs",
       "layers": [
         "adversarial",
         "benchmark",
@@ -1249,7 +1329,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/tests/wire_decode_oom_guard.rs",
+      "path": "vyre-foundation/tests/wire_decode_oom_guard.rs",
       "layers": [
         "adversarial",
         "benchmark",
@@ -1297,7 +1377,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/tests/wire_fuzz_infra_contracts.rs",
+      "path": "vyre-foundation/tests/wire_fuzz_infra_contracts.rs",
       "layers": [
         "benchmark",
         "corpus",
@@ -1345,7 +1425,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/differential_fuzz.rs",
+      "path": "vyre-driver-wgpu/tests/differential_fuzz.rs",
       "layers": [
         "benchmark",
         "corpus",
@@ -1395,7 +1475,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-spirv/tests/cross_emitter_parity.rs",
+      "path": "vyre-emit-spirv/tests/cross_emitter_parity.rs",
       "layers": [
         "benchmark",
         "conformance",
@@ -1451,7 +1531,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/fuzz/fuzz_targets/dispatch.rs",
+      "path": "fuzz/fuzz_targets/dispatch.rs",
       "layers": [
         "benchmark",
         "fuzz",
@@ -1500,7 +1580,59 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/xtask/src/test_matrix.rs",
+      "path": "xtask/src/version_matrix.rs",
+      "layers": [
+        "benchmark",
+        "conformance",
+        "fuzz",
+        "gap",
+        "unit"
+      ],
+      "lines": 850,
+      "dedicated_test_file": false,
+      "inline_test_module_file": true,
+      "line_threshold_exceeded": false,
+      "has_test_entrypoint": true,
+      "assertion_count": 3,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "fuzz",
+        "negative",
+        "positive"
+      ],
+      "op_families": [
+        "flow",
+        "nn_math",
+        "parser_frontend",
+        "scan_static"
+      ],
+      "backend_families": [
+        "direct"
+      ],
+      "feature_families": [
+        "serde",
+        "validation"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "malformed_input",
+        "missing_input"
+      ],
+      "corpus_families": [
+        "fuzz",
+        "release"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
+    },
+    {
+      "path": "xtask/src/test_matrix.rs",
       "layers": [
         "adversarial",
         "benchmark",
@@ -1511,12 +1643,12 @@
         "property",
         "unit"
       ],
-      "lines": 2074,
+      "lines": 2117,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 19,
+      "assertion_count": 25,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [],
@@ -1595,13 +1727,13 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/xtask/src/lint_shape_tests.rs",
+      "path": "xtask/src/lint_shape_tests.rs",
       "layers": [
         "benchmark",
         "fuzz",
         "unit"
       ],
-      "lines": 408,
+      "lines": 398,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
       "line_threshold_exceeded": false,
@@ -1631,7 +1763,6 @@
       "error_path_families": [
         "empty_zero",
         "malformed_input",
-        "missing_input",
         "panic_path"
       ],
       "corpus_families": [
@@ -1643,14 +1774,14 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/xtask/src/vyre_weir_release_gate/checks/part5.rs",
+      "path": "xtask/src/vyre_weir_release_gate/checks/part5.rs",
       "layers": [
         "benchmark",
         "conformance",
         "fuzz",
         "unit"
       ],
-      "lines": 648,
+      "lines": 646,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -1696,7 +1827,74 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/xtask/src/heuristic_audit.rs",
+      "path": "xtask/src/vyre_weir_release_gate/checks/part1.rs",
+      "layers": [
+        "adversarial",
+        "benchmark",
+        "conformance",
+        "corpus",
+        "fuzz",
+        "gap",
+        "property",
+        "unit"
+      ],
+      "lines": 360,
+      "dedicated_test_file": false,
+      "inline_test_module_file": true,
+      "line_threshold_exceeded": false,
+      "has_test_entrypoint": true,
+      "assertion_count": 1,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": [],
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "flow",
+        "parser_frontend",
+        "scan_static"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "cuda_ptx",
+        "wgpu"
+      ],
+      "feature_families": [
+        "capability",
+        "serde",
+        "soundness",
+        "validation"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "malformed_input",
+        "missing_input",
+        "resource_budget"
+      ],
+      "corpus_families": [
+        "fixture",
+        "fuzz",
+        "generated",
+        "linux",
+        "release"
+      ],
+      "weir_flow_families": [
+        "fixed_point",
+        "liveness",
+        "slice"
+      ]
+    },
+    {
+      "path": "xtask/src/heuristic_audit.rs",
       "layers": [
         "benchmark",
         "fuzz",
@@ -1750,7 +1948,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/xtask/src/research_audit/source_ledger.rs",
+      "path": "xtask/src/research_audit/source_ledger.rs",
       "layers": [
         "benchmark",
         "conformance",
@@ -1758,7 +1956,7 @@
         "fuzz",
         "unit"
       ],
-      "lines": 396,
+      "lines": 374,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -1800,16 +1998,18 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/xtask/src/release_evidence/expected_artifacts.rs",
+      "path": "xtask/src/release_evidence/expected_artifacts.rs",
       "layers": [
         "adversarial",
         "benchmark",
         "conformance",
         "corpus",
         "fuzz",
+        "gap",
+        "property",
         "unit"
       ],
-      "lines": 842,
+      "lines": 832,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -1825,10 +2025,12 @@
         "conformance",
         "fuzz",
         "negative",
-        "positive"
+        "positive",
+        "property"
       ],
       "op_families": [
         "driver_runtime",
+        "flow",
         "nn_math",
         "parser_frontend",
         "scan_static"
@@ -1862,20 +2064,21 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/xtask/src/hygiene_matrix.rs",
+      "path": "xtask/src/hygiene_matrix.rs",
       "layers": [
         "benchmark",
         "conformance",
         "corpus",
         "fuzz",
+        "gap",
         "unit"
       ],
-      "lines": 2345,
+      "lines": 2618,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 28,
+      "assertion_count": 40,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [],
@@ -1926,6 +2129,7 @@
         "fixture",
         "fuzz",
         "generated",
+        "linux",
         "release"
       ],
       "weir_flow_families": [
@@ -1936,16 +2140,18 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/xtask/src/weir_matrix.rs",
+      "path": "xtask/src/weir_matrix.rs",
       "layers": [
+        "adversarial",
         "benchmark",
         "conformance",
         "corpus",
         "fuzz",
+        "gap",
         "property",
         "unit"
       ],
-      "lines": 2134,
+      "lines": 2112,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -1955,6 +2161,7 @@
       "god_test_candidate": false,
       "recommended_split": [],
       "case_roles": [
+        "adversarial",
         "benchmark",
         "boundary",
         "conformance",
@@ -2013,13 +2220,79 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/xtask/src/release_completion_audit/semantics/part13.rs",
+      "path": "xtask/src/parser_coherence.rs",
+      "layers": [
+        "adversarial",
+        "benchmark",
+        "conformance",
+        "corpus",
+        "fuzz",
+        "gap",
+        "property",
+        "unit"
+      ],
+      "lines": 823,
+      "dedicated_test_file": false,
+      "inline_test_module_file": true,
+      "line_threshold_exceeded": false,
+      "has_test_entrypoint": true,
+      "assertion_count": 15,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": [],
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "conformance",
+        "fuzz",
+        "negative",
+        "positive",
+        "property"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "flow",
+        "lower_emit",
+        "nn_math",
+        "parser_frontend",
+        "scan_static"
+      ],
+      "backend_families": [
+        "cuda_ptx",
+        "direct"
+      ],
+      "feature_families": [
+        "capability",
+        "serde"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "malformed_input",
+        "missing_input",
+        "unsupported_capability"
+      ],
+      "corpus_families": [
+        "fixture",
+        "fuzz",
+        "generated",
+        "linux",
+        "release"
+      ],
+      "weir_flow_families": [
+        "liveness",
+        "reaching"
+      ]
+    },
+    {
+      "path": "xtask/src/release_completion_audit/semantics/part13.rs",
       "layers": [
         "benchmark",
         "fuzz",
+        "gap",
         "unit"
       ],
-      "lines": 1088,
+      "lines": 1051,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -2040,6 +2313,7 @@
         "driver_runtime",
         "flow",
         "lower_emit",
+        "nn_math",
         "optimizer",
         "parser_frontend"
       ],
@@ -2069,15 +2343,18 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/xtask/src/release_completion_audit/semantics/part6.rs",
+      "path": "xtask/src/release_completion_audit/semantics/part6.rs",
       "layers": [
+        "adversarial",
         "benchmark",
         "conformance",
         "corpus",
         "fuzz",
+        "gap",
+        "property",
         "unit"
       ],
-      "lines": 566,
+      "lines": 547,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -2087,12 +2364,14 @@
       "god_test_candidate": false,
       "recommended_split": [],
       "case_roles": [
+        "adversarial",
         "benchmark",
         "boundary",
         "conformance",
         "fuzz",
         "negative",
-        "positive"
+        "positive",
+        "property"
       ],
       "op_families": [
         "flow",
@@ -2122,14 +2401,17 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/xtask/src/release_completion_audit/semantics/part2.rs",
+      "path": "xtask/src/release_completion_audit/semantics/part2.rs",
       "layers": [
+        "adversarial",
         "benchmark",
         "conformance",
         "fuzz",
+        "gap",
+        "property",
         "unit"
       ],
-      "lines": 406,
+      "lines": 397,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -2139,12 +2421,14 @@
       "god_test_candidate": false,
       "recommended_split": [],
       "case_roles": [
+        "adversarial",
         "benchmark",
         "boundary",
         "conformance",
         "fuzz",
         "negative",
-        "positive"
+        "positive",
+        "property"
       ],
       "op_families": [
         "driver_runtime",
@@ -2177,15 +2461,16 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/xtask/src/conformance_matrix.rs",
+      "path": "xtask/src/conformance_matrix.rs",
       "layers": [
         "adversarial",
         "benchmark",
         "conformance",
         "fuzz",
+        "gap",
         "unit"
       ],
-      "lines": 1634,
+      "lines": 1577,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -2248,7 +2533,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/csr_bidirectional.rs",
+      "path": "vyre-primitives/src/graph/csr_bidirectional.rs",
       "layers": [
         "adversarial",
         "benchmark",
@@ -2256,12 +2541,12 @@
         "fuzz",
         "unit"
       ],
-      "lines": 1220,
+      "lines": 1251,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 72,
+      "assertion_count": 74,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [],
@@ -2312,7 +2597,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/decode/base64.rs",
+      "path": "vyre-primitives/src/decode/base64.rs",
       "layers": [
         "adversarial",
         "benchmark",
@@ -2320,12 +2605,12 @@
         "fuzz",
         "unit"
       ],
-      "lines": 626,
+      "lines": 705,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 36,
+      "assertion_count": 32,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [],
@@ -2343,7 +2628,8 @@
         "nn_math"
       ],
       "backend_families": [
-        "cpu_oracle"
+        "cpu_oracle",
+        "cuda_ptx"
       ],
       "feature_families": [
         "allocation_scratch",
@@ -2368,19 +2654,19 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/loop_unroll/mod.rs",
+      "path": "vyre-lower/src/rewrites/loop_unroll/mod.rs",
       "layers": [
         "adversarial",
         "benchmark",
         "fuzz",
         "unit"
       ],
-      "lines": 648,
+      "lines": 720,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 17,
+      "assertion_count": 18,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [],
@@ -2401,6 +2687,8 @@
       ],
       "backend_families": [
         "cpu_oracle",
+        "cuda_ptx",
+        "direct",
         "naga"
       ],
       "feature_families": [
@@ -2409,6 +2697,7 @@
       "error_path_families": [
         "empty_zero",
         "malformed_input",
+        "missing_input",
         "overflow",
         "resource_budget"
       ],
@@ -2422,23 +2711,25 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/mod.rs",
+      "path": "vyre-lower/src/rewrites/mod.rs",
       "layers": [
+        "adversarial",
         "benchmark",
         "corpus",
         "fuzz",
         "unit"
       ],
-      "lines": 1447,
+      "lines": 1652,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 35,
+      "assertion_count": 40,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [],
       "case_roles": [
+        "adversarial",
         "benchmark",
         "boundary",
         "fuzz",
@@ -2461,13 +2752,18 @@
       "feature_families": [
         "allocation_scratch",
         "serde",
-        "soundness"
+        "soundness",
+        "validation"
       ],
       "error_path_families": [
         "empty_zero",
-        "malformed_input"
+        "malformed_input",
+        "overflow",
+        "panic_path"
       ],
       "corpus_families": [
+        "differential",
+        "fixture",
         "fuzz",
         "r2",
         "release"
@@ -2479,13 +2775,13 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/verify/mod.rs",
+      "path": "vyre-lower/src/verify/mod.rs",
       "layers": [
         "benchmark",
         "fuzz",
         "unit"
       ],
-      "lines": 1028,
+      "lines": 1103,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -2510,6 +2806,7 @@
       ],
       "backend_families": [
         "cpu_oracle",
+        "cuda_ptx",
         "direct",
         "wgpu"
       ],
@@ -2518,6 +2815,7 @@
         "graph_capture",
         "serde",
         "simd",
+        "soundness",
         "validation"
       ],
       "error_path_families": [
@@ -2534,14 +2832,15 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/lib.rs",
+      "path": "vyre-lower/src/lib.rs",
       "layers": [
+        "adversarial",
         "benchmark",
         "corpus",
         "fuzz",
         "unit"
       ],
-      "lines": 513,
+      "lines": 509,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -2551,6 +2850,7 @@
       "god_test_candidate": false,
       "recommended_split": [],
       "case_roles": [
+        "adversarial",
         "benchmark",
         "boundary",
         "fuzz",
@@ -2583,15 +2883,16 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/tests/rewrite_soundness_fuzz.rs",
+      "path": "vyre-lower/tests/rewrite_soundness_fuzz.rs",
       "layers": [
         "benchmark",
         "corpus",
         "fuzz",
         "integration",
+        "property",
         "unit"
       ],
-      "lines": 475,
+      "lines": 497,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
       "line_threshold_exceeded": false,
@@ -2605,7 +2906,8 @@
         "boundary",
         "fuzz",
         "negative",
-        "positive"
+        "positive",
+        "property"
       ],
       "op_families": [
         "driver_runtime",
@@ -2614,7 +2916,7 @@
         "scan_static"
       ],
       "backend_families": [
-        "backend_agnostic"
+        "cuda_ptx"
       ],
       "feature_families": [
         "soundness"
@@ -2636,7 +2938,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-core/tests/wire_malformed_adversarial.rs",
+      "path": "vyre-core/tests/wire_malformed_adversarial.rs",
       "layers": [
         "adversarial",
         "benchmark",
@@ -2685,16 +2987,17 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-runner/tests/release_gate_contracts/ci_script_contracts.rs",
+      "path": "conform/vyre-conform-runner/tests/release_gate_contracts/ci_script_contracts.rs",
       "layers": [
         "adversarial",
         "benchmark",
         "conformance",
         "fuzz",
+        "gap",
         "integration",
         "unit"
       ],
-      "lines": 226,
+      "lines": 225,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
       "line_threshold_exceeded": false,
@@ -2751,7 +3054,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-enforce/tests/adversarial_validation_governance.rs",
+      "path": "conform/vyre-conform-enforce/tests/adversarial_validation_governance.rs",
       "layers": [
         "adversarial",
         "benchmark",
@@ -2761,7 +3064,7 @@
         "integration",
         "unit"
       ],
-      "lines": 62,
+      "lines": 65,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
       "line_threshold_exceeded": false,
@@ -2800,7 +3103,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/dispatch_decode/schema.rs",
+      "path": "../../../../libs/dataflow/weir/src/dispatch_decode/schema.rs",
       "layers": [
         "adversarial",
         "fuzz",
@@ -2848,7 +3151,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/fuzz_targets/csr_normalize.rs",
+      "path": "../../../../libs/dataflow/weir/fuzz/fuzz_targets/csr_normalize.rs",
       "layers": [
         "fuzz",
         "unit"
@@ -2887,7 +3190,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/fuzz_targets/dispatch_decode_pack.rs",
+      "path": "../../../../libs/dataflow/weir/fuzz/fuzz_targets/dispatch_decode_pack.rs",
       "layers": [
         "fuzz",
         "unit"
@@ -2926,7 +3229,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/fuzz_targets/dispatch_decode_unpack.rs",
+      "path": "../../../../libs/dataflow/weir/fuzz/fuzz_targets/dispatch_decode_unpack.rs",
       "layers": [
         "fuzz",
         "unit"
@@ -2966,7 +3269,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/fuzz_targets/resident_resource_lifecycle.rs",
+      "path": "../../../../libs/dataflow/weir/fuzz/fuzz_targets/resident_resource_lifecycle.rs",
       "layers": [
         "fuzz",
         "unit"
@@ -3009,7 +3312,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/fuzz_targets/reachability_witness_extract.rs",
+      "path": "../../../../libs/dataflow/weir/fuzz/fuzz_targets/reachability_witness_extract.rs",
       "layers": [
         "fuzz",
         "unit"
@@ -3049,7 +3352,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/fuzz_targets/ifds_shape_validate.rs",
+      "path": "../../../../libs/dataflow/weir/fuzz/fuzz_targets/ifds_shape_validate.rs",
       "layers": [
         "fuzz",
         "unit"
@@ -3090,7 +3393,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/fuzz_targets/csr_validate.rs",
+      "path": "../../../../libs/dataflow/weir/fuzz/fuzz_targets/csr_validate.rs",
       "layers": [
         "fuzz",
         "unit"
@@ -3129,7 +3432,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/fuzz_targets/fixed_point_converge.rs",
+      "path": "../../../../libs/dataflow/weir/fuzz/fuzz_targets/fixed_point_converge.rs",
       "layers": [
         "fuzz",
         "unit"
@@ -3171,7 +3474,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/fuzz_targets/cross_analysis_compose.rs",
+      "path": "../../../../libs/dataflow/weir/fuzz/fuzz_targets/cross_analysis_compose.rs",
       "layers": [
         "adversarial",
         "fuzz",
@@ -3217,7 +3520,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_parity_may_alias.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_parity_may_alias.rs",
       "layers": [
         "conformance",
         "fuzz",
@@ -3265,7 +3568,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_reaching_construction.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_reaching_construction.rs",
       "layers": [
         "conformance",
         "fuzz",
@@ -3315,7 +3618,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_parity_exact_primitives.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_parity_exact_primitives.rs",
       "layers": [
         "conformance",
         "fuzz",
@@ -3366,8 +3669,9 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_fuzz_bitset_oracles.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_fuzz_bitset_oracles.rs",
       "layers": [
+        "adversarial",
         "fuzz",
         "integration",
         "property",
@@ -3383,6 +3687,7 @@
       "god_test_candidate": false,
       "recommended_split": [],
       "case_roles": [
+        "adversarial",
         "boundary",
         "fuzz",
         "positive",
@@ -3408,7 +3713,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_parity_dominators.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_parity_dominators.rs",
       "layers": [
         "conformance",
         "fuzz",
@@ -3459,7 +3764,7 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/tests/fuzz_cli_contracts.rs",
+      "path": "../../../../tools/vyrec/tests/fuzz_cli_contracts.rs",
       "layers": [
         "adversarial",
         "fuzz",

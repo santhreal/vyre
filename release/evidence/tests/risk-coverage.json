@@ -16,8 +16,8 @@
       "surface": "vyre",
       "dimension": "backend",
       "family_count": 9,
-      "file_count": 4810,
-      "assertion_count": 67793,
+      "file_count": 5445,
+      "assertion_count": 79048,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -47,8 +47,8 @@
       "surface": "vyre",
       "dimension": "corpus",
       "family_count": 10,
-      "file_count": 3940,
-      "assertion_count": 53227,
+      "file_count": 4414,
+      "assertion_count": 60337,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -78,8 +78,8 @@
       "surface": "vyre",
       "dimension": "error_path",
       "family_count": 9,
-      "file_count": 5946,
-      "assertion_count": 94917,
+      "file_count": 6675,
+      "assertion_count": 109538,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -109,8 +109,8 @@
       "surface": "vyre",
       "dimension": "feature",
       "family_count": 9,
-      "file_count": 5187,
-      "assertion_count": 81953,
+      "file_count": 5978,
+      "assertion_count": 95300,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -140,8 +140,8 @@
       "surface": "vyre",
       "dimension": "op",
       "family_count": 8,
-      "file_count": 7523,
-      "assertion_count": 111904,
+      "file_count": 8526,
+      "assertion_count": 129187,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -171,8 +171,8 @@
       "surface": "vyre",
       "dimension": "weir_flow",
       "family_count": 11,
-      "file_count": 3722,
-      "assertion_count": 52328,
+      "file_count": 4220,
+      "assertion_count": 60506,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -388,8 +388,8 @@
       "surface": "weir",
       "dimension": "backend",
       "family_count": 6,
-      "file_count": 496,
-      "assertion_count": 5104,
+      "file_count": 484,
+      "assertion_count": 4957,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -420,8 +420,8 @@
       "surface": "weir",
       "dimension": "corpus",
       "family_count": 8,
-      "file_count": 396,
-      "assertion_count": 3968,
+      "file_count": 385,
+      "assertion_count": 3797,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -452,8 +452,8 @@
       "surface": "weir",
       "dimension": "error_path",
       "family_count": 9,
-      "file_count": 606,
-      "assertion_count": 7374,
+      "file_count": 591,
+      "assertion_count": 7171,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -484,8 +484,8 @@
       "surface": "weir",
       "dimension": "feature",
       "family_count": 9,
-      "file_count": 566,
-      "assertion_count": 6813,
+      "file_count": 558,
+      "assertion_count": 6764,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -516,8 +516,8 @@
       "surface": "weir",
       "dimension": "op",
       "family_count": 7,
-      "file_count": 764,
-      "assertion_count": 8694,
+      "file_count": 751,
+      "assertion_count": 8485,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -548,8 +548,8 @@
       "surface": "weir",
       "dimension": "weir_flow",
       "family_count": 11,
-      "file_count": 824,
-      "assertion_count": 9209,
+      "file_count": 802,
+      "assertion_count": 8893,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -580,9 +580,9 @@
   "surface_coverages": [
     {
       "surface": "vyre",
-      "file_count": 3021,
-      "assertion_count": 37359,
-      "entrypoint_count": 3021,
+      "file_count": 3323,
+      "assertion_count": 41515,
+      "entrypoint_count": 3323,
       "layers": [
         "adversarial",
         "benchmark",
@@ -633,9 +633,9 @@
     },
     {
       "surface": "weir",
-      "file_count": 359,
-      "assertion_count": 3684,
-      "entrypoint_count": 337,
+      "file_count": 347,
+      "assertion_count": 3512,
+      "entrypoint_count": 327,
       "layers": [
         "adversarial",
         "benchmark",
@@ -745,8 +745,8 @@
       "dimension": "backend",
       "family": "backend_agnostic",
       "risk_weight": 3,
-      "file_count": 670,
-      "assertion_count": 5873,
+      "file_count": 677,
+      "assertion_count": 5812,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -776,8 +776,8 @@
       "dimension": "backend",
       "family": "cpu_oracle",
       "risk_weight": 3,
-      "file_count": 1778,
-      "assertion_count": 25293,
+      "file_count": 2055,
+      "assertion_count": 29043,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -807,8 +807,8 @@
       "dimension": "backend",
       "family": "cuda_ptx",
       "risk_weight": 5,
-      "file_count": 555,
-      "assertion_count": 8425,
+      "file_count": 644,
+      "assertion_count": 10100,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -838,8 +838,8 @@
       "dimension": "backend",
       "family": "direct",
       "risk_weight": 3,
-      "file_count": 673,
-      "assertion_count": 11215,
+      "file_count": 791,
+      "assertion_count": 13735,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -869,8 +869,8 @@
       "dimension": "backend",
       "family": "metal",
       "risk_weight": 5,
-      "file_count": 47,
-      "assertion_count": 826,
+      "file_count": 51,
+      "assertion_count": 1003,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -900,8 +900,8 @@
       "dimension": "backend",
       "family": "naga",
       "risk_weight": 3,
-      "file_count": 92,
-      "assertion_count": 1207,
+      "file_count": 119,
+      "assertion_count": 1837,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -931,8 +931,8 @@
       "dimension": "backend",
       "family": "resident",
       "risk_weight": 5,
-      "file_count": 381,
-      "assertion_count": 7397,
+      "file_count": 423,
+      "assertion_count": 8397,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -962,8 +962,8 @@
       "dimension": "backend",
       "family": "spirv",
       "risk_weight": 3,
-      "file_count": 43,
-      "assertion_count": 621,
+      "file_count": 45,
+      "assertion_count": 779,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -993,8 +993,8 @@
       "dimension": "backend",
       "family": "wgpu",
       "risk_weight": 5,
-      "file_count": 571,
-      "assertion_count": 6936,
+      "file_count": 640,
+      "assertion_count": 8342,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -1025,7 +1025,7 @@
       "family": "csmith",
       "risk_weight": 3,
       "file_count": 2,
-      "assertion_count": 23,
+      "assertion_count": 29,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -1055,8 +1055,8 @@
       "dimension": "corpus",
       "family": "differential",
       "risk_weight": 5,
-      "file_count": 778,
-      "assertion_count": 10975,
+      "file_count": 1014,
+      "assertion_count": 13676,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -1086,8 +1086,8 @@
       "dimension": "corpus",
       "family": "fixture",
       "risk_weight": 3,
-      "file_count": 481,
-      "assertion_count": 7023,
+      "file_count": 565,
+      "assertion_count": 8323,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -1117,8 +1117,8 @@
       "dimension": "corpus",
       "family": "fuzz",
       "risk_weight": 5,
-      "file_count": 52,
-      "assertion_count": 647,
+      "file_count": 56,
+      "assertion_count": 705,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -1148,8 +1148,8 @@
       "dimension": "corpus",
       "family": "generated",
       "risk_weight": 3,
-      "file_count": 689,
-      "assertion_count": 11465,
+      "file_count": 763,
+      "assertion_count": 12750,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -1179,8 +1179,8 @@
       "dimension": "corpus",
       "family": "golden",
       "risk_weight": 3,
-      "file_count": 14,
-      "assertion_count": 180,
+      "file_count": 15,
+      "assertion_count": 200,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -1210,8 +1210,8 @@
       "dimension": "corpus",
       "family": "linux",
       "risk_weight": 3,
-      "file_count": 125,
-      "assertion_count": 1444,
+      "file_count": 132,
+      "assertion_count": 1618,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -1241,8 +1241,8 @@
       "dimension": "corpus",
       "family": "r2",
       "risk_weight": 3,
-      "file_count": 45,
-      "assertion_count": 549,
+      "file_count": 48,
+      "assertion_count": 607,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -1272,8 +1272,8 @@
       "dimension": "corpus",
       "family": "release",
       "risk_weight": 5,
-      "file_count": 438,
-      "assertion_count": 7244,
+      "file_count": 492,
+      "assertion_count": 8244,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -1303,8 +1303,8 @@
       "dimension": "corpus",
       "family": "unit_fixture",
       "risk_weight": 3,
-      "file_count": 1316,
-      "assertion_count": 13677,
+      "file_count": 1327,
+      "assertion_count": 14185,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -1335,8 +1335,8 @@
       "dimension": "error_path",
       "family": "empty_zero",
       "risk_weight": 3,
-      "file_count": 1776,
-      "assertion_count": 28800,
+      "file_count": 2013,
+      "assertion_count": 32563,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -1366,8 +1366,8 @@
       "dimension": "error_path",
       "family": "malformed_input",
       "risk_weight": 5,
-      "file_count": 753,
-      "assertion_count": 14070,
+      "file_count": 861,
+      "assertion_count": 16443,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -1397,8 +1397,8 @@
       "dimension": "error_path",
       "family": "missing_input",
       "risk_weight": 3,
-      "file_count": 555,
-      "assertion_count": 8875,
+      "file_count": 646,
+      "assertion_count": 10838,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -1428,8 +1428,8 @@
       "dimension": "error_path",
       "family": "nominal",
       "risk_weight": 3,
-      "file_count": 688,
-      "assertion_count": 3648,
+      "file_count": 720,
+      "assertion_count": 3752,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -1459,8 +1459,8 @@
       "dimension": "error_path",
       "family": "overflow",
       "risk_weight": 5,
-      "file_count": 472,
-      "assertion_count": 9727,
+      "file_count": 526,
+      "assertion_count": 11004,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -1490,8 +1490,8 @@
       "dimension": "error_path",
       "family": "panic_path",
       "risk_weight": 3,
-      "file_count": 835,
-      "assertion_count": 14183,
+      "file_count": 951,
+      "assertion_count": 16596,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -1521,8 +1521,8 @@
       "dimension": "error_path",
       "family": "resource_budget",
       "risk_weight": 3,
-      "file_count": 526,
-      "assertion_count": 9895,
+      "file_count": 601,
+      "assertion_count": 11898,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -1552,8 +1552,8 @@
       "dimension": "error_path",
       "family": "timeout",
       "risk_weight": 3,
-      "file_count": 52,
-      "assertion_count": 854,
+      "file_count": 55,
+      "assertion_count": 1000,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -1583,8 +1583,8 @@
       "dimension": "error_path",
       "family": "unsupported_capability",
       "risk_weight": 5,
-      "file_count": 289,
-      "assertion_count": 4865,
+      "file_count": 302,
+      "assertion_count": 5444,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -1614,8 +1614,8 @@
       "dimension": "feature",
       "family": "allocation_scratch",
       "risk_weight": 3,
-      "file_count": 710,
-      "assertion_count": 13597,
+      "file_count": 810,
+      "assertion_count": 15462,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -1645,8 +1645,8 @@
       "dimension": "feature",
       "family": "cache",
       "risk_weight": 3,
-      "file_count": 443,
-      "assertion_count": 7934,
+      "file_count": 479,
+      "assertion_count": 8887,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -1676,8 +1676,8 @@
       "dimension": "feature",
       "family": "capability",
       "risk_weight": 5,
-      "file_count": 893,
-      "assertion_count": 13188,
+      "file_count": 1061,
+      "assertion_count": 15310,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -1707,8 +1707,8 @@
       "dimension": "feature",
       "family": "core_feature",
       "risk_weight": 3,
-      "file_count": 926,
-      "assertion_count": 7779,
+      "file_count": 909,
+      "assertion_count": 7592,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -1738,8 +1738,8 @@
       "dimension": "feature",
       "family": "graph_capture",
       "risk_weight": 3,
-      "file_count": 157,
-      "assertion_count": 2857,
+      "file_count": 197,
+      "assertion_count": 3769,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -1769,8 +1769,8 @@
       "dimension": "feature",
       "family": "serde",
       "risk_weight": 3,
-      "file_count": 214,
-      "assertion_count": 3567,
+      "file_count": 225,
+      "assertion_count": 3766,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -1800,8 +1800,8 @@
       "dimension": "feature",
       "family": "simd",
       "risk_weight": 3,
-      "file_count": 292,
-      "assertion_count": 6010,
+      "file_count": 337,
+      "assertion_count": 7046,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -1831,8 +1831,8 @@
       "dimension": "feature",
       "family": "soundness",
       "risk_weight": 5,
-      "file_count": 829,
-      "assertion_count": 15069,
+      "file_count": 1139,
+      "assertion_count": 19289,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -1862,8 +1862,8 @@
       "dimension": "feature",
       "family": "validation",
       "risk_weight": 5,
-      "file_count": 723,
-      "assertion_count": 11952,
+      "file_count": 821,
+      "assertion_count": 14179,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -1893,8 +1893,8 @@
       "dimension": "op",
       "family": "driver_runtime",
       "risk_weight": 3,
-      "file_count": 1752,
-      "assertion_count": 25545,
+      "file_count": 1962,
+      "assertion_count": 28706,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -1924,8 +1924,8 @@
       "dimension": "op",
       "family": "flow",
       "risk_weight": 5,
-      "file_count": 296,
-      "assertion_count": 5000,
+      "file_count": 350,
+      "assertion_count": 5783,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -1955,8 +1955,8 @@
       "dimension": "op",
       "family": "lower_emit",
       "risk_weight": 3,
-      "file_count": 1128,
-      "assertion_count": 17792,
+      "file_count": 1301,
+      "assertion_count": 21116,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -1986,8 +1986,8 @@
       "dimension": "op",
       "family": "nn_math",
       "risk_weight": 5,
-      "file_count": 1278,
-      "assertion_count": 20896,
+      "file_count": 1507,
+      "assertion_count": 24842,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -2017,8 +2017,8 @@
       "dimension": "op",
       "family": "optimizer",
       "risk_weight": 3,
-      "file_count": 961,
-      "assertion_count": 15267,
+      "file_count": 1102,
+      "assertion_count": 17712,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -2048,8 +2048,8 @@
       "dimension": "op",
       "family": "parser_frontend",
       "risk_weight": 5,
-      "file_count": 849,
-      "assertion_count": 12203,
+      "file_count": 905,
+      "assertion_count": 13201,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -2079,8 +2079,8 @@
       "dimension": "op",
       "family": "scan_static",
       "risk_weight": 5,
-      "file_count": 826,
-      "assertion_count": 12585,
+      "file_count": 983,
+      "assertion_count": 15303,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -2110,8 +2110,8 @@
       "dimension": "op",
       "family": "uncategorized_op",
       "risk_weight": 1,
-      "file_count": 433,
-      "assertion_count": 2616,
+      "file_count": 416,
+      "assertion_count": 2524,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -2142,7 +2142,7 @@
       "family": "cross_language",
       "risk_weight": 5,
       "file_count": 3,
-      "assertion_count": 42,
+      "assertion_count": 53,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -2173,7 +2173,7 @@
       "family": "dispatch_decode",
       "risk_weight": 5,
       "file_count": 5,
-      "assertion_count": 117,
+      "assertion_count": 136,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -2203,8 +2203,8 @@
       "dimension": "weir_flow",
       "family": "fixed_point",
       "risk_weight": 5,
-      "file_count": 207,
-      "assertion_count": 4235,
+      "file_count": 252,
+      "assertion_count": 4979,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -2234,8 +2234,8 @@
       "dimension": "weir_flow",
       "family": "ifds",
       "risk_weight": 5,
-      "file_count": 52,
-      "assertion_count": 1154,
+      "file_count": 54,
+      "assertion_count": 1300,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -2265,8 +2265,8 @@
       "dimension": "weir_flow",
       "family": "liveness",
       "risk_weight": 5,
-      "file_count": 563,
-      "assertion_count": 8138,
+      "file_count": 692,
+      "assertion_count": 10291,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -2296,8 +2296,8 @@
       "dimension": "weir_flow",
       "family": "non_weir",
       "risk_weight": 3,
-      "file_count": 1491,
-      "assertion_count": 14086,
+      "file_count": 1549,
+      "assertion_count": 14684,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -2328,7 +2328,7 @@
       "family": "points_to",
       "risk_weight": 5,
       "file_count": 15,
-      "assertion_count": 348,
+      "assertion_count": 393,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -2358,8 +2358,8 @@
       "dimension": "weir_flow",
       "family": "reaching",
       "risk_weight": 5,
-      "file_count": 63,
-      "assertion_count": 955,
+      "file_count": 78,
+      "assertion_count": 1397,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -2389,8 +2389,8 @@
       "dimension": "weir_flow",
       "family": "resident_flow",
       "risk_weight": 5,
-      "file_count": 381,
-      "assertion_count": 7397,
+      "file_count": 423,
+      "assertion_count": 8397,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -2420,8 +2420,8 @@
       "dimension": "weir_flow",
       "family": "slice",
       "risk_weight": 5,
-      "file_count": 853,
-      "assertion_count": 14787,
+      "file_count": 1043,
+      "assertion_count": 17471,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -2451,8 +2451,8 @@
       "dimension": "weir_flow",
       "family": "witness",
       "risk_weight": 5,
-      "file_count": 89,
-      "assertion_count": 1069,
+      "file_count": 106,
+      "assertion_count": 1405,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -3249,8 +3249,8 @@
       "dimension": "backend",
       "family": "backend_agnostic",
       "risk_weight": 3,
-      "file_count": 95,
-      "assertion_count": 998,
+      "file_count": 88,
+      "assertion_count": 814,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -3282,8 +3282,8 @@
       "dimension": "backend",
       "family": "cpu_oracle",
       "risk_weight": 3,
-      "file_count": 180,
-      "assertion_count": 1754,
+      "file_count": 182,
+      "assertion_count": 1872,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -3313,8 +3313,8 @@
       "dimension": "backend",
       "family": "cuda_ptx",
       "risk_weight": 5,
-      "file_count": 40,
-      "assertion_count": 356,
+      "file_count": 36,
+      "assertion_count": 316,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -3345,8 +3345,8 @@
       "dimension": "backend",
       "family": "direct",
       "risk_weight": 3,
-      "file_count": 45,
-      "assertion_count": 503,
+      "file_count": 46,
+      "assertion_count": 513,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -3377,8 +3377,8 @@
       "dimension": "backend",
       "family": "resident",
       "risk_weight": 5,
-      "file_count": 135,
-      "assertion_count": 1493,
+      "file_count": 131,
+      "assertion_count": 1442,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -3386,7 +3386,8 @@
         "conformance",
         "fuzz",
         "negative",
-        "positive"
+        "positive",
+        "property"
       ],
       "required_case_roles": [
         "positive",
@@ -3400,7 +3401,6 @@
         "e2e"
       ],
       "missing_case_roles": [
-        "property",
         "e2e"
       ]
     },
@@ -3441,8 +3441,8 @@
       "dimension": "corpus",
       "family": "differential",
       "risk_weight": 5,
-      "file_count": 88,
-      "assertion_count": 758,
+      "file_count": 89,
+      "assertion_count": 769,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -3539,6 +3539,7 @@
       "file_count": 27,
       "assertion_count": 278,
       "case_roles": [
+        "benchmark",
         "boundary",
         "conformance",
         "e2e",
@@ -3559,8 +3560,7 @@
         "e2e"
       ],
       "missing_case_roles": [
-        "adversarial",
-        "benchmark"
+        "adversarial"
       ]
     },
     {
@@ -3601,7 +3601,7 @@
       "family": "r2",
       "risk_weight": 3,
       "file_count": 10,
-      "assertion_count": 126,
+      "assertion_count": 130,
       "case_roles": [
         "adversarial",
         "boundary",
@@ -3632,8 +3632,8 @@
       "dimension": "corpus",
       "family": "release",
       "risk_weight": 5,
-      "file_count": 27,
-      "assertion_count": 359,
+      "file_count": 26,
+      "assertion_count": 340,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -3664,12 +3664,13 @@
       "dimension": "corpus",
       "family": "unit_fixture",
       "risk_weight": 3,
-      "file_count": 196,
-      "assertion_count": 2013,
+      "file_count": 185,
+      "assertion_count": 1846,
       "case_roles": [
         "adversarial",
         "benchmark",
         "boundary",
+        "conformance",
         "negative",
         "positive",
         "property",
@@ -3688,7 +3689,6 @@
       ],
       "missing_case_roles": [
         "fuzz",
-        "conformance",
         "e2e"
       ]
     },
@@ -3697,8 +3697,8 @@
       "dimension": "error_path",
       "family": "empty_zero",
       "risk_weight": 3,
-      "file_count": 200,
-      "assertion_count": 2648,
+      "file_count": 193,
+      "assertion_count": 2527,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -3729,9 +3729,10 @@
       "family": "malformed_input",
       "risk_weight": 5,
       "file_count": 46,
-      "assertion_count": 666,
+      "assertion_count": 662,
       "case_roles": [
         "adversarial",
+        "benchmark",
         "boundary",
         "conformance",
         "fuzz",
@@ -3751,7 +3752,6 @@
         "e2e"
       ],
       "missing_case_roles": [
-        "benchmark",
         "e2e"
       ]
     },
@@ -3760,8 +3760,8 @@
       "dimension": "error_path",
       "family": "missing_input",
       "risk_weight": 3,
-      "file_count": 36,
-      "assertion_count": 397,
+      "file_count": 37,
+      "assertion_count": 401,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -3791,8 +3791,8 @@
       "dimension": "error_path",
       "family": "nominal",
       "risk_weight": 3,
-      "file_count": 78,
-      "assertion_count": 513,
+      "file_count": 74,
+      "assertion_count": 477,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -3825,9 +3825,10 @@
       "family": "overflow",
       "risk_weight": 5,
       "file_count": 49,
-      "assertion_count": 729,
+      "assertion_count": 762,
       "case_roles": [
         "adversarial",
+        "benchmark",
         "boundary",
         "conformance",
         "fuzz",
@@ -3847,7 +3848,6 @@
         "e2e"
       ],
       "missing_case_roles": [
-        "benchmark",
         "e2e"
       ]
     },
@@ -3856,8 +3856,8 @@
       "dimension": "error_path",
       "family": "panic_path",
       "risk_weight": 3,
-      "file_count": 101,
-      "assertion_count": 1166,
+      "file_count": 98,
+      "assertion_count": 1081,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -3887,8 +3887,8 @@
       "dimension": "error_path",
       "family": "resource_budget",
       "risk_weight": 3,
-      "file_count": 87,
-      "assertion_count": 1135,
+      "file_count": 85,
+      "assertion_count": 1137,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -3952,7 +3952,7 @@
       "family": "unsupported_capability",
       "risk_weight": 5,
       "file_count": 7,
-      "assertion_count": 110,
+      "assertion_count": 114,
       "case_roles": [
         "adversarial",
         "boundary",
@@ -3983,8 +3983,8 @@
       "dimension": "feature",
       "family": "allocation_scratch",
       "risk_weight": 3,
-      "file_count": 161,
-      "assertion_count": 2029,
+      "file_count": 154,
+      "assertion_count": 1906,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -4015,7 +4015,7 @@
       "family": "cache",
       "risk_weight": 3,
       "file_count": 53,
-      "assertion_count": 894,
+      "assertion_count": 911,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -4047,7 +4047,7 @@
       "family": "capability",
       "risk_weight": 5,
       "file_count": 62,
-      "assertion_count": 782,
+      "assertion_count": 802,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -4078,8 +4078,8 @@
       "dimension": "feature",
       "family": "core_feature",
       "risk_weight": 3,
-      "file_count": 80,
-      "assertion_count": 363,
+      "file_count": 73,
+      "assertion_count": 286,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -4112,7 +4112,7 @@
       "family": "graph_capture",
       "risk_weight": 3,
       "file_count": 6,
-      "assertion_count": 56,
+      "assertion_count": 57,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -4144,7 +4144,7 @@
       "family": "serde",
       "risk_weight": 3,
       "file_count": 9,
-      "assertion_count": 200,
+      "assertion_count": 201,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -4206,8 +4206,8 @@
       "dimension": "feature",
       "family": "soundness",
       "risk_weight": 5,
-      "file_count": 123,
-      "assertion_count": 1579,
+      "file_count": 126,
+      "assertion_count": 1640,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -4237,8 +4237,8 @@
       "dimension": "feature",
       "family": "validation",
       "risk_weight": 5,
-      "file_count": 48,
-      "assertion_count": 614,
+      "file_count": 51,
+      "assertion_count": 665,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -4269,8 +4269,8 @@
       "dimension": "op",
       "family": "driver_runtime",
       "risk_weight": 3,
-      "file_count": 228,
-      "assertion_count": 2576,
+      "file_count": 220,
+      "assertion_count": 2441,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -4300,8 +4300,8 @@
       "dimension": "op",
       "family": "flow",
       "risk_weight": 5,
-      "file_count": 359,
-      "assertion_count": 3684,
+      "file_count": 347,
+      "assertion_count": 3512,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -4332,8 +4332,8 @@
       "dimension": "op",
       "family": "lower_emit",
       "risk_weight": 3,
-      "file_count": 41,
-      "assertion_count": 585,
+      "file_count": 39,
+      "assertion_count": 572,
       "case_roles": [
         "adversarial",
         "boundary",
@@ -4364,7 +4364,7 @@
       "dimension": "op",
       "family": "nn_math",
       "risk_weight": 5,
-      "file_count": 71,
+      "file_count": 72,
       "assertion_count": 914,
       "case_roles": [
         "adversarial",
@@ -4396,8 +4396,8 @@
       "dimension": "op",
       "family": "optimizer",
       "risk_weight": 3,
-      "file_count": 40,
-      "assertion_count": 543,
+      "file_count": 48,
+      "assertion_count": 637,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -4429,7 +4429,7 @@
       "family": "parser_frontend",
       "risk_weight": 5,
       "file_count": 13,
-      "assertion_count": 261,
+      "assertion_count": 278,
       "case_roles": [
         "adversarial",
         "boundary",
@@ -4524,8 +4524,8 @@
       "dimension": "weir_flow",
       "family": "dispatch_decode",
       "risk_weight": 5,
-      "file_count": 47,
-      "assertion_count": 375,
+      "file_count": 46,
+      "assertion_count": 376,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -4557,7 +4557,7 @@
       "family": "fixed_point",
       "risk_weight": 5,
       "file_count": 109,
-      "assertion_count": 1385,
+      "assertion_count": 1367,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -4589,8 +4589,8 @@
       "dimension": "weir_flow",
       "family": "ifds",
       "risk_weight": 5,
-      "file_count": 141,
-      "assertion_count": 1444,
+      "file_count": 129,
+      "assertion_count": 1244,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -4621,8 +4621,8 @@
       "dimension": "weir_flow",
       "family": "liveness",
       "risk_weight": 5,
-      "file_count": 83,
-      "assertion_count": 916,
+      "file_count": 84,
+      "assertion_count": 975,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -4653,7 +4653,7 @@
       "family": "points_to",
       "risk_weight": 5,
       "file_count": 39,
-      "assertion_count": 437,
+      "assertion_count": 439,
       "case_roles": [
         "adversarial",
         "boundary",
@@ -4685,7 +4685,7 @@
       "family": "reaching",
       "risk_weight": 5,
       "file_count": 81,
-      "assertion_count": 893,
+      "assertion_count": 910,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -4715,8 +4715,8 @@
       "dimension": "weir_flow",
       "family": "resident_flow",
       "risk_weight": 5,
-      "file_count": 135,
-      "assertion_count": 1493,
+      "file_count": 131,
+      "assertion_count": 1442,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -4724,7 +4724,8 @@
         "conformance",
         "fuzz",
         "negative",
-        "positive"
+        "positive",
+        "property"
       ],
       "required_case_roles": [
         "positive",
@@ -4738,7 +4739,6 @@
         "e2e"
       ],
       "missing_case_roles": [
-        "property",
         "e2e"
       ]
     },
@@ -4747,8 +4747,8 @@
       "dimension": "weir_flow",
       "family": "slice",
       "risk_weight": 5,
-      "file_count": 118,
-      "assertion_count": 1610,
+      "file_count": 113,
+      "assertion_count": 1511,
       "case_roles": [
         "adversarial",
         "benchmark",
@@ -4778,8 +4778,8 @@
       "dimension": "weir_flow",
       "family": "weir_uncategorized",
       "risk_weight": 5,
-      "file_count": 44,
-      "assertion_count": 344,
+      "file_count": 43,
+      "assertion_count": 317,
       "case_roles": [
         "adversarial",
         "benchmark",

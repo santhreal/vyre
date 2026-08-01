@@ -1,0 +1,792 @@
+{
+  "schema_version": 2,
+  "generator_command": "xtask lego-audit --report-only --duplicate-report-json release/evidence/dedup/lego-audit-duplicates.json",
+  "detector_family": "registered-op-lego-audit",
+  "family_count": 28,
+  "families": [
+    {
+      "family_id": "duplicate-family:v1:15cf477ccbf6ac4af9e9396ec2f89d63bbde7d0d364b94d0a4a8ddb3eb480a63",
+      "detector": "lego-audit:operand-shape",
+      "severity": "similar",
+      "score": 0.6341035244701951,
+      "left": {
+        "id": "vyre-primitives::predicate::node_kind_eq",
+        "owner_lane": "security_dataflow",
+        "fingerprint": "registered-op-ir-fingerprint:v1:64ab5b40d7067848e52e83144126260cbeb071f60a05e3dcc60ebaf00d947f28",
+        "tokens": 6,
+        "bytes": 47
+      },
+      "right": {
+        "id": "vyre-primitives::parsing::ssa_dominance_scan",
+        "owner_lane": "parser_frontend",
+        "fingerprint": "registered-op-ir-fingerprint:v1:fa5f235d5e9f0ad4d5eee7af733f5f3ae486889c75c640dede65960cb136133e",
+        "tokens": 20,
+        "bytes": 146
+      },
+      "import_owner": "security_dataflow",
+      "import_target": "vyre-primitives::predicate::node_kind_eq",
+      "evidence": {
+        "similarity_metric": "lego-ir-structural-similarity",
+        "left_metric": "tier=T2_5:own_nodes=6:composed_nodes=0:fingerprint_bytes=47",
+        "right_metric": "tier=T2_5:own_nodes=20:composed_nodes=0:fingerprint_bytes=146",
+        "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
+      }
+    },
+    {
+      "family_id": "duplicate-family:v1:192e513c96c17c7771bc458c91c6a34501ff017d00ef307c7036b7e994963843",
+      "detector": "lego-audit:operand-shape",
+      "severity": "similar",
+      "score": 0.5600194454572346,
+      "left": {
+        "id": "vyre-libs::nn::skip_gate",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:a39ce3d054896f55d298d0e60fabfdad2fe062786bd05747cacc2f9de213d565",
+        "tokens": 4,
+        "bytes": 109
+      },
+      "right": {
+        "id": "vyre-libs::optim::muoneq_r",
+        "owner_lane": "security_dataflow",
+        "fingerprint": "registered-op-ir-fingerprint:v1:fadb670174f0813d1e89810c647f4703065957dd82f69a6072b32d640e5248dd",
+        "tokens": 5,
+        "bytes": 240
+      },
+      "import_owner": "sparse_math_ai",
+      "import_target": "vyre-libs::nn::skip_gate",
+      "evidence": {
+        "similarity_metric": "lego-ir-structural-similarity",
+        "left_metric": "tier=T3:own_nodes=4:composed_nodes=0:fingerprint_bytes=109",
+        "right_metric": "tier=T3:own_nodes=5:composed_nodes=0:fingerprint_bytes=240",
+        "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
+      }
+    },
+    {
+      "family_id": "duplicate-family:v1:2408ddb062431b992e28673ad9226c58f41c33774ab1092c4eff2d7def99e826",
+      "detector": "lego-audit:operand-shape",
+      "severity": "similar",
+      "score": 0.5525370074364455,
+      "left": {
+        "id": "vyre-libs::parsing::ast_binding_strength",
+        "owner_lane": "parser_frontend",
+        "fingerprint": "registered-op-ir-fingerprint:v1:3d9b0be62ebedeea8b4614a11428e82fc91241d2a7dbbf5a43d40957cc80e129",
+        "tokens": 13,
+        "bytes": 86
+      },
+      "right": {
+        "id": "vyre-primitives::bitset::four_russians_apply_byte_lut",
+        "owner_lane": "graph_flow_compiler",
+        "fingerprint": "registered-op-ir-fingerprint:v1:295f5fcb102cad8ca0290405eeb4a7bb7c44d240efdd15a1f2235a6626c87407",
+        "tokens": 13,
+        "bytes": 82
+      },
+      "import_owner": "graph_flow_compiler",
+      "import_target": "vyre-primitives::bitset::four_russians_apply_byte_lut",
+      "evidence": {
+        "similarity_metric": "lego-ir-structural-similarity",
+        "left_metric": "tier=T3:own_nodes=13:composed_nodes=0:fingerprint_bytes=86",
+        "right_metric": "tier=T2_5:own_nodes=13:composed_nodes=0:fingerprint_bytes=82",
+        "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
+      }
+    },
+    {
+      "family_id": "duplicate-family:v1:3d3effa3c90a9d2753d59c94131b57bbcc3bbb515639c8ba2bfa4be99fd50de3",
+      "detector": "lego-audit:operand-shape",
+      "severity": "very_similar",
+      "score": 0.8621054497285195,
+      "left": {
+        "id": "vyre-libs::nn::qk_gain_backward",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:ed5bfb2f1b4f40a397d088867511562094d544bc1abf3d8fa7535158ab19544c",
+        "tokens": 4,
+        "bytes": 26
+      },
+      "right": {
+        "id": "vyre-libs::math::square",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:2c045aef7091c29ed7cf0601b097e0c7a9742294f72ce726a34497fbeb774ad2",
+        "tokens": 4,
+        "bytes": 22
+      },
+      "import_owner": "sparse_math_ai",
+      "import_target": "vyre-libs::nn::qk_gain_backward",
+      "evidence": {
+        "similarity_metric": "lego-ir-structural-similarity",
+        "left_metric": "tier=T3:own_nodes=4:composed_nodes=0:fingerprint_bytes=26",
+        "right_metric": "tier=T3:own_nodes=4:composed_nodes=0:fingerprint_bytes=22",
+        "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
+      }
+    },
+    {
+      "family_id": "duplicate-family:v1:3f5e448f8d0b1b0ed6a218e11db762f85a686b1b8b01b0c3dbda664c727ed406",
+      "detector": "lego-audit:operand-shape",
+      "severity": "duplicate",
+      "score": 1.0,
+      "left": {
+        "id": "vyre-libs::nn::layerwise_ln_scale",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:2c045aef7091c29ed7cf0601b097e0c7a9742294f72ce726a34497fbeb774ad2",
+        "tokens": 4,
+        "bytes": 22
+      },
+      "right": {
+        "id": "vyre-libs::math::square",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:2c045aef7091c29ed7cf0601b097e0c7a9742294f72ce726a34497fbeb774ad2",
+        "tokens": 4,
+        "bytes": 22
+      },
+      "import_owner": "sparse_math_ai",
+      "import_target": "vyre-libs::nn::layerwise_ln_scale",
+      "evidence": {
+        "similarity_metric": "lego-ir-structural-similarity",
+        "left_metric": "tier=T3:own_nodes=4:composed_nodes=0:fingerprint_bytes=22",
+        "right_metric": "tier=T3:own_nodes=4:composed_nodes=0:fingerprint_bytes=22",
+        "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
+      }
+    },
+    {
+      "family_id": "duplicate-family:v1:420d8d5d024d8f987f6bfd86983114571344d7fbade42113d334a02676e8687c",
+      "detector": "lego-audit:operand-shape",
+      "severity": "similar",
+      "score": 0.5812098319910954,
+      "left": {
+        "id": "vyre-primitives::parsing::planar_rewrite_schedule",
+        "owner_lane": "parser_frontend",
+        "fingerprint": "registered-op-ir-fingerprint:v1:7cd1fe66438ecd9067853923be65ecde1064d1f8ca38ab22f162850ab3188cca",
+        "tokens": 15,
+        "bytes": 119
+      },
+      "right": {
+        "id": "vyre-primitives::math::tensor_train_decompose",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:d27e7453f18fb6e1136a8ab5a7632d2be07795cdcb68da6983c7a594628baec8",
+        "tokens": 79,
+        "bytes": 760
+      },
+      "import_owner": "parser_frontend",
+      "import_target": "vyre-primitives::parsing::planar_rewrite_schedule",
+      "evidence": {
+        "similarity_metric": "lego-ir-structural-similarity",
+        "left_metric": "tier=T2_5:own_nodes=15:composed_nodes=0:fingerprint_bytes=119",
+        "right_metric": "tier=T2_5:own_nodes=79:composed_nodes=0:fingerprint_bytes=760",
+        "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
+      }
+    },
+    {
+      "family_id": "duplicate-family:v1:4b58b193a0ee429e4ddbc80bf07c94e60a4c82cfaf29e5acea7c7eb880efce70",
+      "detector": "lego-audit:operand-shape",
+      "severity": "similar",
+      "score": 0.5898469827737092,
+      "left": {
+        "id": "vyre-libs::nn::skip_gate_backward",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:027a427ad59433e88b0d268116d110fae2242ca5e1aea352d80e61af22dc6278",
+        "tokens": 4,
+        "bytes": 62
+      },
+      "right": {
+        "id": "vyre-libs::math::square",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:2c045aef7091c29ed7cf0601b097e0c7a9742294f72ce726a34497fbeb774ad2",
+        "tokens": 4,
+        "bytes": 22
+      },
+      "import_owner": "sparse_math_ai",
+      "import_target": "vyre-libs::nn::skip_gate_backward",
+      "evidence": {
+        "similarity_metric": "lego-ir-structural-similarity",
+        "left_metric": "tier=T3:own_nodes=4:composed_nodes=0:fingerprint_bytes=62",
+        "right_metric": "tier=T3:own_nodes=4:composed_nodes=0:fingerprint_bytes=22",
+        "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
+      }
+    },
+    {
+      "family_id": "duplicate-family:v1:4d2e0590c45593470438cfe78298dec889224221130dfc064d312d69a9a0bc40",
+      "detector": "lego-audit:operand-shape",
+      "severity": "very_similar",
+      "score": 0.9426412141125696,
+      "left": {
+        "id": "vyre-primitives::bitset::subset_of",
+        "owner_lane": "graph_flow_compiler",
+        "fingerprint": "registered-op-ir-fingerprint:v1:0943dfb96e1fa8849afa97eb954457681eca31d1024f7d5d3b29ce1b881fe26b",
+        "tokens": 8,
+        "bytes": 75
+      },
+      "right": {
+        "id": "vyre-primitives::reduce::all",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:0c13ea01335d2154ef3c7af7310f1da4d7eddb967ef409da78e9dba2143bdb5f",
+        "tokens": 9,
+        "bytes": 79
+      },
+      "import_owner": "graph_flow_compiler",
+      "import_target": "vyre-primitives::bitset::subset_of",
+      "evidence": {
+        "similarity_metric": "lego-ir-structural-similarity",
+        "left_metric": "tier=T2_5:own_nodes=8:composed_nodes=0:fingerprint_bytes=75",
+        "right_metric": "tier=T2_5:own_nodes=9:composed_nodes=0:fingerprint_bytes=79",
+        "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
+      }
+    },
+    {
+      "family_id": "duplicate-family:v1:4ec9487e5e26a0fbc33c94e7125cf00d5ba2df4b7213db65151fa60280825ea1",
+      "detector": "lego-audit:operand-shape",
+      "severity": "similar",
+      "score": 0.5600194454572346,
+      "left": {
+        "id": "vyre-libs::nn::skip_gate",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:a39ce3d054896f55d298d0e60fabfdad2fe062786bd05747cacc2f9de213d565",
+        "tokens": 4,
+        "bytes": 109
+      },
+      "right": {
+        "id": "vyre-libs::optim::muon_update",
+        "owner_lane": "security_dataflow",
+        "fingerprint": "registered-op-ir-fingerprint:v1:fadb670174f0813d1e89810c647f4703065957dd82f69a6072b32d640e5248dd",
+        "tokens": 5,
+        "bytes": 240
+      },
+      "import_owner": "sparse_math_ai",
+      "import_target": "vyre-libs::nn::skip_gate",
+      "evidence": {
+        "similarity_metric": "lego-ir-structural-similarity",
+        "left_metric": "tier=T3:own_nodes=4:composed_nodes=0:fingerprint_bytes=109",
+        "right_metric": "tier=T3:own_nodes=5:composed_nodes=0:fingerprint_bytes=240",
+        "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
+      }
+    },
+    {
+      "family_id": "duplicate-family:v1:6524d9c926263c0ca98d028c0dee7994a952bdd25f52a5501f619fcdae646898",
+      "detector": "lego-audit:operand-shape",
+      "severity": "similar",
+      "score": 0.8581136291365754,
+      "left": {
+        "id": "vyre-libs::math::avg_floor",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:fbd2cfa024cd8c526888abbd65d1d4797ca645d0de60d808f9a10992c83ebdb8",
+        "tokens": 4,
+        "bytes": 34
+      },
+      "right": {
+        "id": "vyre-libs::nn::parallel_residual_block",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:2c7b6d5c78dc1d4e47e74a7e4ed12878f2494b1610230b5e85de52a651428a0c",
+        "tokens": 4,
+        "bytes": 26
+      },
+      "import_owner": "sparse_math_ai",
+      "import_target": "vyre-libs::math::avg_floor",
+      "evidence": {
+        "similarity_metric": "lego-ir-structural-similarity",
+        "left_metric": "tier=T3:own_nodes=4:composed_nodes=0:fingerprint_bytes=34",
+        "right_metric": "tier=T3:own_nodes=4:composed_nodes=0:fingerprint_bytes=26",
+        "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
+      }
+    },
+    {
+      "family_id": "duplicate-family:v1:65ff3d130192320b4dcbf91a7136714305b012f09cfa1f5e1913eed7c853a509",
+      "detector": "lego-audit:operand-shape",
+      "severity": "similar",
+      "score": 0.7811334658849433,
+      "left": {
+        "id": "vyre-libs::math::square",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:2c045aef7091c29ed7cf0601b097e0c7a9742294f72ce726a34497fbeb774ad2",
+        "tokens": 4,
+        "bytes": 22
+      },
+      "right": {
+        "id": "vyre-libs::nn::leaky_relu_sq_backward",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:a7857c2da801125db1b50f4ecd7b365d16aed1149f70a11336841f4261047f8a",
+        "tokens": 4,
+        "bytes": 34
+      },
+      "import_owner": "sparse_math_ai",
+      "import_target": "vyre-libs::math::square",
+      "evidence": {
+        "similarity_metric": "lego-ir-structural-similarity",
+        "left_metric": "tier=T3:own_nodes=4:composed_nodes=0:fingerprint_bytes=22",
+        "right_metric": "tier=T3:own_nodes=4:composed_nodes=0:fingerprint_bytes=34",
+        "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
+      }
+    },
+    {
+      "family_id": "duplicate-family:v1:67d62c52bc23c7ee748585f86921d348a7a094ab4538a20cbfe852e2d32e783d",
+      "detector": "lego-audit:operand-shape",
+      "severity": "similar",
+      "score": 0.819688599970537,
+      "left": {
+        "id": "vyre-primitives::graph::functor_apply",
+        "owner_lane": "graph_flow_compiler",
+        "fingerprint": "registered-op-ir-fingerprint:v1:39c893b7cc7f9db95bcbb3610c5a9c05b1281e8d25a7990d0567e5d7f7f52c85",
+        "tokens": 7,
+        "bytes": 39
+      },
+      "right": {
+        "id": "vyre-primitives::reduce::histogram",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:7b48cb9bdeff45a89590e1e635bda12c6c47e4788abe48d0355332118ee7723b",
+        "tokens": 6,
+        "bytes": 41
+      },
+      "import_owner": "graph_flow_compiler",
+      "import_target": "vyre-primitives::graph::functor_apply",
+      "evidence": {
+        "similarity_metric": "lego-ir-structural-similarity",
+        "left_metric": "tier=T2_5:own_nodes=7:composed_nodes=0:fingerprint_bytes=39",
+        "right_metric": "tier=T2_5:own_nodes=6:composed_nodes=0:fingerprint_bytes=41",
+        "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
+      }
+    },
+    {
+      "family_id": "duplicate-family:v1:75aa14148de9785b20ebda794fe3a8d2939ec6261e1ef1fd89d6a016bc4dc7a5",
+      "detector": "lego-audit:operand-shape",
+      "severity": "very_similar",
+      "score": 0.9340518348510853,
+      "left": {
+        "id": "vyre-libs::nn::ln_scale_backward",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:69bb4b1b6948775ec1d4652ac6f92f0dcdec3b02f3e20aab56e021d58c6dd410",
+        "tokens": 5,
+        "bytes": 30
+      },
+      "right": {
+        "id": "vyre-libs::math::square",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:2c045aef7091c29ed7cf0601b097e0c7a9742294f72ce726a34497fbeb774ad2",
+        "tokens": 4,
+        "bytes": 22
+      },
+      "import_owner": "sparse_math_ai",
+      "import_target": "vyre-libs::nn::ln_scale_backward",
+      "evidence": {
+        "similarity_metric": "lego-ir-structural-similarity",
+        "left_metric": "tier=T3:own_nodes=5:composed_nodes=0:fingerprint_bytes=30",
+        "right_metric": "tier=T3:own_nodes=4:composed_nodes=0:fingerprint_bytes=22",
+        "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
+      }
+    },
+    {
+      "family_id": "duplicate-family:v1:83a74cba31e5c6e5e771c1b5adad8dc112ce7e9e818e49003b8cca63c6d855aa",
+      "detector": "lego-audit:operand-shape",
+      "severity": "similar",
+      "score": 0.5931651665245089,
+      "left": {
+        "id": "vyre-primitives::graph::csr_backward_traverse",
+        "owner_lane": "graph_flow_compiler",
+        "fingerprint": "registered-op-ir-fingerprint:v1:523a7de3f9b94bc95f34995034fb450d32031c18e9f9c2faa5a65a56c8d05b61",
+        "tokens": 20,
+        "bytes": 133
+      },
+      "right": {
+        "id": "vyre-primitives::math::quantized::i4x8_matvec_f32_scaled",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:220e38a09a450cb479520df3e583e842e9fb38bba80a0c657598cca4d7fd88c3",
+        "tokens": 14,
+        "bytes": 106
+      },
+      "import_owner": "graph_flow_compiler",
+      "import_target": "vyre-primitives::graph::csr_backward_traverse",
+      "evidence": {
+        "similarity_metric": "lego-ir-structural-similarity",
+        "left_metric": "tier=T2_5:own_nodes=20:composed_nodes=0:fingerprint_bytes=133",
+        "right_metric": "tier=T2_5:own_nodes=14:composed_nodes=0:fingerprint_bytes=106",
+        "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
+      }
+    },
+    {
+      "family_id": "duplicate-family:v1:877ac61ceb017977e67befd5a963c6393431d1c8be70193e446cad3a742b6211",
+      "detector": "lego-audit:operand-shape",
+      "severity": "very_similar",
+      "score": 0.9436061934342022,
+      "left": {
+        "id": "vyre-primitives::bitset::equal",
+        "owner_lane": "graph_flow_compiler",
+        "fingerprint": "registered-op-ir-fingerprint:v1:0e6191b7214d5bd6ac3e4650401b04cdf2bc8521b08d6d38b1422e1b04dc237b",
+        "tokens": 8,
+        "bytes": 69
+      },
+      "right": {
+        "id": "vyre-primitives::reduce::all",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:0c13ea01335d2154ef3c7af7310f1da4d7eddb967ef409da78e9dba2143bdb5f",
+        "tokens": 9,
+        "bytes": 79
+      },
+      "import_owner": "graph_flow_compiler",
+      "import_target": "vyre-primitives::bitset::equal",
+      "evidence": {
+        "similarity_metric": "lego-ir-structural-similarity",
+        "left_metric": "tier=T2_5:own_nodes=8:composed_nodes=0:fingerprint_bytes=69",
+        "right_metric": "tier=T2_5:own_nodes=9:composed_nodes=0:fingerprint_bytes=79",
+        "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
+      }
+    },
+    {
+      "family_id": "duplicate-family:v1:9a8e78cbf4252a9509cc0bdd86c343e6e8e76b8463fd7b2c1773e07fd2606df9",
+      "detector": "lego-audit:operand-shape",
+      "severity": "very_similar",
+      "score": 0.88,
+      "left": {
+        "id": "vyre-libs::math::algebra::meet",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:29194441b86a728fc98bbf479e6a90bab1e18c1489f9602c9420e2cd5694c0a1",
+        "tokens": 4,
+        "bytes": 22
+      },
+      "right": {
+        "id": "vyre-libs::quant::int8_pack",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:6f82a807c6b6e290eb47612dc69d53ee66fd15dc2eb4535c7503d88cbf735a7a",
+        "tokens": 4,
+        "bytes": 22
+      },
+      "import_owner": "sparse_math_ai",
+      "import_target": "vyre-libs::math::algebra::meet",
+      "evidence": {
+        "similarity_metric": "lego-ir-structural-similarity",
+        "left_metric": "tier=T3:own_nodes=4:composed_nodes=0:fingerprint_bytes=22",
+        "right_metric": "tier=T3:own_nodes=4:composed_nodes=0:fingerprint_bytes=22",
+        "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
+      }
+    },
+    {
+      "family_id": "duplicate-family:v1:9ca93c6106653049cf9f9ebf273c549b0cdc11cfdf6ba0ad14b0ba8b2e8a9f41",
+      "detector": "lego-audit:operand-shape",
+      "severity": "similar",
+      "score": 0.6341035244701951,
+      "left": {
+        "id": "vyre-primitives::predicate::literal_of",
+        "owner_lane": "security_dataflow",
+        "fingerprint": "registered-op-ir-fingerprint:v1:64ab5b40d7067848e52e83144126260cbeb071f60a05e3dcc60ebaf00d947f28",
+        "tokens": 6,
+        "bytes": 47
+      },
+      "right": {
+        "id": "vyre-primitives::parsing::ssa_dominance_scan",
+        "owner_lane": "parser_frontend",
+        "fingerprint": "registered-op-ir-fingerprint:v1:fa5f235d5e9f0ad4d5eee7af733f5f3ae486889c75c640dede65960cb136133e",
+        "tokens": 20,
+        "bytes": 146
+      },
+      "import_owner": "security_dataflow",
+      "import_target": "vyre-primitives::predicate::literal_of",
+      "evidence": {
+        "similarity_metric": "lego-ir-structural-similarity",
+        "left_metric": "tier=T2_5:own_nodes=6:composed_nodes=0:fingerprint_bytes=47",
+        "right_metric": "tier=T2_5:own_nodes=20:composed_nodes=0:fingerprint_bytes=146",
+        "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
+      }
+    },
+    {
+      "family_id": "duplicate-family:v1:9e53c48d060e81f79429696b9d8dcc1706c88dd313ffb4c5b8e8b20cb4911348",
+      "detector": "lego-audit:operand-shape",
+      "severity": "similar",
+      "score": 0.7392967317463898,
+      "left": {
+        "id": "vyre-primitives::graph::path_reconstruct",
+        "owner_lane": "graph_flow_compiler",
+        "fingerprint": "registered-op-ir-fingerprint:v1:a0cc9f5bd6886c85d1e7f6b8b6828104e2f213d833862b45284af5a49cc168a4",
+        "tokens": 16,
+        "bytes": 83
+      },
+      "right": {
+        "id": "vyre-primitives::text::encoding_classify",
+        "owner_lane": "scan_automata",
+        "fingerprint": "registered-op-ir-fingerprint:v1:e3f32cf3868ea3d1679edef0ded9605476823f5df180e5e66dea2c5e1f26a1a5",
+        "tokens": 35,
+        "bytes": 132
+      },
+      "import_owner": "graph_flow_compiler",
+      "import_target": "vyre-primitives::graph::path_reconstruct",
+      "evidence": {
+        "similarity_metric": "lego-ir-structural-similarity",
+        "left_metric": "tier=T2_5:own_nodes=16:composed_nodes=0:fingerprint_bytes=83",
+        "right_metric": "tier=T2_5:own_nodes=20:composed_nodes=15:fingerprint_bytes=132",
+        "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
+      }
+    },
+    {
+      "family_id": "duplicate-family:v1:bb8c3720c1b4efcdf52530a74933c512308e0144c88b8a3804ff61184d0078e6",
+      "detector": "lego-audit:operand-shape",
+      "severity": "similar",
+      "score": 0.5953635174981126,
+      "left": {
+        "id": "vyre-primitives::predicate::arg_of",
+        "owner_lane": "security_dataflow",
+        "fingerprint": "registered-op-ir-fingerprint:v1:244e20431f59bae2fb510c5afd32d28e193d05a207c5abc17bb6692daebd06e7",
+        "tokens": 20,
+        "bytes": 133
+      },
+      "right": {
+        "id": "vyre-primitives::math::quantized::i4x8_matvec_f32_scaled",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:220e38a09a450cb479520df3e583e842e9fb38bba80a0c657598cca4d7fd88c3",
+        "tokens": 14,
+        "bytes": 106
+      },
+      "import_owner": "security_dataflow",
+      "import_target": "vyre-primitives::predicate::arg_of",
+      "evidence": {
+        "similarity_metric": "lego-ir-structural-similarity",
+        "left_metric": "tier=T2_5:own_nodes=20:composed_nodes=0:fingerprint_bytes=133",
+        "right_metric": "tier=T2_5:own_nodes=14:composed_nodes=0:fingerprint_bytes=106",
+        "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
+      }
+    },
+    {
+      "family_id": "duplicate-family:v1:be322b2935816ce3c079a1e2dcdd7454aa073df3be5a1928be098243574ac792",
+      "detector": "lego-audit:operand-shape",
+      "severity": "similar",
+      "score": 0.5953635174981126,
+      "left": {
+        "id": "vyre-primitives::predicate::size_argument_of",
+        "owner_lane": "security_dataflow",
+        "fingerprint": "registered-op-ir-fingerprint:v1:244e20431f59bae2fb510c5afd32d28e193d05a207c5abc17bb6692daebd06e7",
+        "tokens": 20,
+        "bytes": 133
+      },
+      "right": {
+        "id": "vyre-primitives::math::quantized::i4x8_matvec_f32_scaled",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:220e38a09a450cb479520df3e583e842e9fb38bba80a0c657598cca4d7fd88c3",
+        "tokens": 14,
+        "bytes": 106
+      },
+      "import_owner": "security_dataflow",
+      "import_target": "vyre-primitives::predicate::size_argument_of",
+      "evidence": {
+        "similarity_metric": "lego-ir-structural-similarity",
+        "left_metric": "tier=T2_5:own_nodes=20:composed_nodes=0:fingerprint_bytes=133",
+        "right_metric": "tier=T2_5:own_nodes=14:composed_nodes=0:fingerprint_bytes=106",
+        "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
+      }
+    },
+    {
+      "family_id": "duplicate-family:v1:cce3bb14e764e55e80f077029e7a72711d123a7b6edd9d0e6a89648a9eba458f",
+      "detector": "lego-audit:operand-shape",
+      "severity": "similar",
+      "score": 0.7291932212633356,
+      "left": {
+        "id": "vyre-primitives::math::bigint_add_carry",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:c331fec3a683863836103fbfdd6f8982f1a29921951ad808f65711623e5e944a",
+        "tokens": 10,
+        "bytes": 43
+      },
+      "right": {
+        "id": "vyre-primitives::decode::ziftsieve_literal_copy",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:56f6616df0b4700e6ce0eff439ca37814d73f0d6ba658bb2219085b7072bea22",
+        "tokens": 10,
+        "bytes": 61
+      },
+      "import_owner": "sparse_math_ai",
+      "import_target": "vyre-primitives::math::bigint_add_carry",
+      "evidence": {
+        "similarity_metric": "lego-ir-structural-similarity",
+        "left_metric": "tier=T2_5:own_nodes=10:composed_nodes=0:fingerprint_bytes=43",
+        "right_metric": "tier=T2_5:own_nodes=10:composed_nodes=0:fingerprint_bytes=61",
+        "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
+      }
+    },
+    {
+      "family_id": "duplicate-family:v1:d22d2cbd1a0a646d4f17d59a37511c69b45b79568ca0cea581f8fae0574d1ef7",
+      "detector": "lego-audit:operand-shape",
+      "severity": "similar",
+      "score": 0.5756847180814118,
+      "left": {
+        "id": "vyre-libs::optim::adamw_step",
+        "owner_lane": "security_dataflow",
+        "fingerprint": "registered-op-ir-fingerprint:v1:53c1f230b803307e82ce3ea16c37c27aaff365b8530767a12537e84f8ff2b5a4",
+        "tokens": 6,
+        "bytes": 457
+      },
+      "right": {
+        "id": "vyre-libs::nn::skip_gate",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:a39ce3d054896f55d298d0e60fabfdad2fe062786bd05747cacc2f9de213d565",
+        "tokens": 4,
+        "bytes": 109
+      },
+      "import_owner": "security_dataflow",
+      "import_target": "vyre-libs::optim::adamw_step",
+      "evidence": {
+        "similarity_metric": "lego-ir-structural-similarity",
+        "left_metric": "tier=T3:own_nodes=6:composed_nodes=0:fingerprint_bytes=457",
+        "right_metric": "tier=T3:own_nodes=4:composed_nodes=0:fingerprint_bytes=109",
+        "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
+      }
+    },
+    {
+      "family_id": "duplicate-family:v1:dd22cdac0206f6f5a5e904fdfca2104d92a369cac8a810bd165bb49d471d5323",
+      "detector": "lego-audit:operand-shape",
+      "severity": "similar",
+      "score": 0.6076909908301541,
+      "left": {
+        "id": "vyre-libs::optim::ema_apply",
+        "owner_lane": "security_dataflow",
+        "fingerprint": "registered-op-ir-fingerprint:v1:4b272283876a15ed2c4f895ef8dc4caa439a0a8d4d9920f7ff89e07202d51c3e",
+        "tokens": 4,
+        "bytes": 53
+      },
+      "right": {
+        "id": "vyre-libs::nn::skip_gate",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:a39ce3d054896f55d298d0e60fabfdad2fe062786bd05747cacc2f9de213d565",
+        "tokens": 4,
+        "bytes": 109
+      },
+      "import_owner": "security_dataflow",
+      "import_target": "vyre-libs::optim::ema_apply",
+      "evidence": {
+        "similarity_metric": "lego-ir-structural-similarity",
+        "left_metric": "tier=T3:own_nodes=4:composed_nodes=0:fingerprint_bytes=53",
+        "right_metric": "tier=T3:own_nodes=4:composed_nodes=0:fingerprint_bytes=109",
+        "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
+      }
+    },
+    {
+      "family_id": "duplicate-family:v1:ddeb0eb189065578a89433b997fca8592d5f2c6f4a256bf4e3a924dcb4f8afd5",
+      "detector": "lego-audit:operand-shape",
+      "severity": "very_similar",
+      "score": 0.8621054497285195,
+      "left": {
+        "id": "vyre-libs::nn::qk_gain",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:ed5bfb2f1b4f40a397d088867511562094d544bc1abf3d8fa7535158ab19544c",
+        "tokens": 4,
+        "bytes": 26
+      },
+      "right": {
+        "id": "vyre-libs::math::square",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:2c045aef7091c29ed7cf0601b097e0c7a9742294f72ce726a34497fbeb774ad2",
+        "tokens": 4,
+        "bytes": 22
+      },
+      "import_owner": "sparse_math_ai",
+      "import_target": "vyre-libs::nn::qk_gain",
+      "evidence": {
+        "similarity_metric": "lego-ir-structural-similarity",
+        "left_metric": "tier=T3:own_nodes=4:composed_nodes=0:fingerprint_bytes=26",
+        "right_metric": "tier=T3:own_nodes=4:composed_nodes=0:fingerprint_bytes=22",
+        "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
+      }
+    },
+    {
+      "family_id": "duplicate-family:v1:df3bbd27f1c707f383ff37241601f4be2680a8a1bee59dff670e7ea2bb9a4da9",
+      "detector": "lego-audit:operand-shape",
+      "severity": "similar",
+      "score": 0.6346933509410455,
+      "left": {
+        "id": "vyre-libs::math::fft::fft4_complex",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:301f1a2a632ac4778a6b7d481c0ebdbc4c1bfce808d328e0900a4c24c0c6ba46",
+        "tokens": 17,
+        "bytes": 138
+      },
+      "right": {
+        "id": "vyre-primitives::hash::blake3_g",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:5ba71032668c366d33bd8925e825ebe63b86ffde6504896e8d7cef128855ac59",
+        "tokens": 44,
+        "bytes": 202
+      },
+      "import_owner": "sparse_math_ai",
+      "import_target": "vyre-primitives::hash::blake3_g",
+      "evidence": {
+        "similarity_metric": "lego-ir-structural-similarity",
+        "left_metric": "tier=T3:own_nodes=17:composed_nodes=0:fingerprint_bytes=138",
+        "right_metric": "tier=T2_5:own_nodes=44:composed_nodes=0:fingerprint_bytes=202",
+        "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
+      }
+    },
+    {
+      "family_id": "duplicate-family:v1:eec84e9d7548d138fac0f05108b11011ce9240c5c5637435a208249a7c7a39a6",
+      "detector": "lego-audit:operand-shape",
+      "severity": "similar",
+      "score": 0.7598685854978938,
+      "left": {
+        "id": "vyre-libs::nn::layer_norm",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:af9ab7eb15e589ede9904cf68409de6fab9716b57a19166c5538ec504e706aa2",
+        "tokens": 46,
+        "bytes": 133
+      },
+      "right": {
+        "id": "vyre-libs::math::reduce_mean",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:c0cbf7be71c14e46327bf2bc5b2c400049df463008b6b4a75fa8fcfe781cc79d",
+        "tokens": 46,
+        "bytes": 45
+      },
+      "import_owner": "sparse_math_ai",
+      "import_target": "vyre-libs::nn::layer_norm",
+      "evidence": {
+        "similarity_metric": "lego-ir-structural-similarity",
+        "left_metric": "tier=T3:own_nodes=20:composed_nodes=26:fingerprint_bytes=133",
+        "right_metric": "tier=T3:own_nodes=7:composed_nodes=39:fingerprint_bytes=45",
+        "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
+      }
+    },
+    {
+      "family_id": "duplicate-family:v1:fb46a51a50c8a7746f0888e87de71eb75caa64de2b9485137efb9cf1090b80f4",
+      "detector": "lego-audit:operand-shape",
+      "severity": "very_similar",
+      "score": 0.9001837297150916,
+      "left": {
+        "id": "vyre-libs::nn::rms_norm",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:bd522e771b52fbd1f92fdf2df89d1deaf843bc64759377a7f20f82b2edc572ce",
+        "tokens": 30,
+        "bytes": 58
+      },
+      "right": {
+        "id": "vyre-libs::math::reduce_mean",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:c0cbf7be71c14e46327bf2bc5b2c400049df463008b6b4a75fa8fcfe781cc79d",
+        "tokens": 46,
+        "bytes": 45
+      },
+      "import_owner": "sparse_math_ai",
+      "import_target": "vyre-libs::nn::rms_norm",
+      "evidence": {
+        "similarity_metric": "lego-ir-structural-similarity",
+        "left_metric": "tier=T3:own_nodes=9:composed_nodes=21:fingerprint_bytes=58",
+        "right_metric": "tier=T3:own_nodes=7:composed_nodes=39:fingerprint_bytes=45",
+        "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
+      }
+    },
+    {
+      "family_id": "duplicate-family:v1:fe3b1505da1ad460762d1144b7a840a7bd577e40c3b477be9ffa8d5e3e99fe6b",
+      "detector": "lego-audit:operand-shape",
+      "severity": "similar",
+      "score": 0.5599085621924587,
+      "left": {
+        "id": "vyre-primitives::reduce::segment_reduce_sum",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:e59e7e5bf285fc3a45ad3be81dbe2955cf818ad2a97c624ed4401b199b61f01f",
+        "tokens": 8,
+        "bytes": 42
+      },
+      "right": {
+        "id": "vyre-primitives::graph::csr_backward_or_changed",
+        "owner_lane": "graph_flow_compiler",
+        "fingerprint": "registered-op-ir-fingerprint:v1:a7699cd982b6efd1400ddbf4dd2403cfcc7efcec794e932fba91eb8f03a0d8bc",
+        "tokens": 21,
+        "bytes": 154
+      },
+      "import_owner": "sparse_math_ai",
+      "import_target": "vyre-primitives::reduce::segment_reduce_sum",
+      "evidence": {
+        "similarity_metric": "lego-ir-structural-similarity",
+        "left_metric": "tier=T2_5:own_nodes=8:composed_nodes=0:fingerprint_bytes=42",
+        "right_metric": "tier=T2_5:own_nodes=21:composed_nodes=0:fingerprint_bytes=154",
+        "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
+      }
+    }
+  ]
+}

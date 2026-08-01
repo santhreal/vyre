@@ -1,0 +1,7 @@
+{
+  "schema_version": 2,
+  "generator_command": "xtask source-similar --duplicate-report-json release/evidence/dedup/source-similar-duplicates.json",
+  "detector_family": "rust-source-token-shingles",
+  "family_count": 0,
+  "families": []
+}

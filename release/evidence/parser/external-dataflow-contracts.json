@@ -1,26 +1,26 @@
 {
   "schema_version": 1,
-  "component_id": "weir",
+  "component_id": "external-dataflow",
   "role": "Dataflow facts consumed by parser/compiler optimization and downstream analysis",
-  "root": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir",
+  "root": "../../../../libs/dataflow/weir",
   "required_files": [
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/Cargo.toml",
+      "path": "../../../../libs/dataflow/weir/Cargo.toml",
       "exists": true,
       "read_error": null,
-      "source_bytes": 7305
+      "source_bytes": 7544
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/lib.rs",
+      "path": "../../../../libs/dataflow/weir/src/lib.rs",
       "exists": true,
       "read_error": null,
       "source_bytes": 25804
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/README.md",
+      "path": "../../../../libs/dataflow/weir/README.md",
       "exists": true,
       "read_error": null,
-      "source_bytes": 12408
+      "source_bytes": 12418
     }
   ],
   "required_terms": [
@@ -52,21 +52,21 @@
   "required_evidence_trees": [
     {
       "tree": "tests",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests",
+      "path": "../../../../libs/dataflow/weir/tests",
       "exists": true,
       "source_bytes": 620835,
       "unreadable_file_count": 0
     },
     {
       "tree": "benches",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/benches",
+      "path": "../../../../libs/dataflow/weir/benches",
       "exists": true,
-      "source_bytes": 54607,
+      "source_bytes": 54751,
       "unreadable_file_count": 0
     },
     {
       "tree": "fuzz",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz",
+      "path": "../../../../libs/dataflow/weir/fuzz",
       "exists": true,
       "source_bytes": 34770,
       "unreadable_file_count": 0

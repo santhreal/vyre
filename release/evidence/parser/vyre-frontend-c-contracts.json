@@ -2,22 +2,22 @@
   "schema_version": 1,
   "component_id": "vyre-frontend-c",
   "role": "Core GPU-first C frontend pipeline, parser contracts, object container, C fixture tests",
-  "root": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c",
+  "root": "vyre-frontend-c",
   "required_files": [
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/Cargo.toml",
+      "path": "vyre-frontend-c/Cargo.toml",
       "exists": true,
       "read_error": null,
       "source_bytes": 2840
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/lib.rs",
+      "path": "vyre-frontend-c/src/lib.rs",
       "exists": true,
       "read_error": null,
       "source_bytes": 4182
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/README.md",
+      "path": "vyre-frontend-c/README.md",
       "exists": true,
       "read_error": null,
       "source_bytes": 6136
@@ -54,21 +54,21 @@
   "required_evidence_trees": [
     {
       "tree": "tests",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests",
+      "path": "vyre-frontend-c/tests",
       "exists": true,
-      "source_bytes": 1169220,
+      "source_bytes": 1176030,
       "unreadable_file_count": 0
     },
     {
       "tree": "benches",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/benches",
+      "path": "vyre-frontend-c/benches",
       "exists": true,
       "source_bytes": 12059,
       "unreadable_file_count": 0
     },
     {
       "tree": "fuzz",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/fuzz",
+      "path": "vyre-frontend-c/fuzz",
       "exists": true,
       "source_bytes": 275,
       "unreadable_file_count": 0

@@ -1,0 +1,261 @@
+{
+  "schema_version": 2,
+  "command_count": 18,
+  "artifact_count": 85,
+  "commands": [
+    {
+      "generator_command": "xtask docs-matrix",
+      "command_mode": "spawned",
+      "required": true,
+      "expected_artifacts": [
+        "release/evidence/docs/docs-matrix.json",
+        "release/evidence/docs/vyre-readme-contracts.json",
+        "release/evidence/docs/release-notes-version-story.md",
+        "release/evidence/docs/cuda-release-path.md",
+        "release/evidence/docs/wgpu-fallback-proof.md",
+        "release/evidence/docs/megakernel-default-proof.md",
+        "release/evidence/docs/optimization-proof.md",
+        "release/evidence/docs/egraph-saturation.md",
+        "release/evidence/docs/c-parser-linux-proof.md",
+        "release/evidence/docs/distributed-parser-coherence.md",
+        "release/evidence/docs/weir-integration.md",
+        "release/evidence/docs/test-architecture.md",
+        "release/evidence/docs/vyre-readme-proof.md",
+        "release/evidence/docs/weir-readme-proof.md",
+        "release/evidence/docs/parser-doc-proof.md",
+        "release/evidence/docs/benchmark-doc-proof.md",
+        "release/evidence/docs/conformance-doc-proof.md",
+        "release/evidence/docs/release-notes.md",
+        "release/evidence/docs/crate-metadata-proof.md",
+        "release/evidence/docs/release-hygiene-proof.md",
+        "release/evidence/docs/cpu-only-100x-proof.md"
+      ],
+      "artifact_contracts": []
+    },
+    {
+      "generator_command": "xtask version-matrix",
+      "command_mode": "spawned",
+      "required": true,
+      "expected_artifacts": [
+        "release/evidence/version/version-matrix.json",
+        "release/evidence/version/release-tag-plan.json"
+      ],
+      "artifact_contracts": []
+    },
+    {
+      "generator_command": "xtask backend-matrix",
+      "command_mode": "spawned",
+      "required": true,
+      "expected_artifacts": [
+        "release/evidence/backends/backend-matrix.json"
+      ],
+      "artifact_contracts": []
+    },
+    {
+      "generator_command": "xtask conformance-matrix",
+      "command_mode": "spawned",
+      "required": true,
+      "expected_artifacts": [
+        "release/evidence/conformance/conformance-matrix.json"
+      ],
+      "artifact_contracts": []
+    },
+    {
+      "generator_command": "xtask release-workload-matrix --enforce",
+      "command_mode": "spawned",
+      "required": true,
+      "expected_artifacts": [
+        "release/evidence/benchmarks/release-workload-matrix.json"
+      ],
+      "artifact_contracts": []
+    },
+    {
+      "generator_command": "xtask release-benchmarks --backend cuda",
+      "command_mode": "external-artifacts-only",
+      "required": true,
+      "expected_artifacts": [
+        "release/evidence/benchmarks/cuda-release-suite.json",
+        "release/evidence/benchmarks/bench-release-axes.json",
+        "release/evidence/benchmarks/cpu-only-100x-proof.json",
+        "release/evidence/benchmarks/frontier-leaderboard.json",
+        "release/evidence/optimization/pass-family-benchmark-manifest.json"
+      ],
+      "artifact_contracts": [
+        {
+          "artifact": "release/evidence/benchmarks/frontier-leaderboard.json",
+          "generator_command": "xtask release-benchmarks --backend cuda",
+          "command_mode": "external-artifacts-only",
+          "command_required": true,
+          "schema_version": 1,
+          "semantic_validator": "release_benchmarks::validate_frontier_leaderboard_artifact_bytes",
+          "required_fields": [
+            "schema_version",
+            "selected_backend",
+            "source_suite",
+            "source_fingerprint",
+            "source_tree_fingerprint",
+            "source_artifact_count",
+            "source_artifacts",
+            "required_baseline_count",
+            "covered_baseline_count",
+            "missing_baselines",
+            "row_count",
+            "baselines",
+            "rows",
+            "blockers"
+          ]
+        }
+      ]
+    },
+    {
+      "generator_command": "xtask hygiene-matrix",
+      "command_mode": "spawned",
+      "required": true,
+      "expected_artifacts": [
+        "release/evidence/hygiene/hygiene-matrix.json",
+        "release/evidence/hygiene/implementation-intake.json",
+        "release/evidence/hygiene/threshold-policy.json",
+        "release/evidence/hygiene/no-stubs-scan.json",
+        "release/evidence/hygiene/no-hidden-fallback-scan.json",
+        "release/evidence/hygiene/resource-bound-scan.json",
+        "release/evidence/hygiene/error-surface-scan.json",
+        "release/evidence/hygiene/cargo-wrapper-scan.json",
+        "release/evidence/hygiene/audit-location-scan.json",
+        "release/evidence/hygiene/public-doc-scan.json",
+        "release/evidence/hygiene/test-hygiene-scan.json"
+      ],
+      "artifact_contracts": []
+    },
+    {
+      "generator_command": "xtask test-matrix",
+      "command_mode": "spawned",
+      "required": true,
+      "expected_artifacts": [
+        "release/evidence/tests/test-matrix.json",
+        "release/evidence/tests/modularization-map.json",
+        "release/evidence/tests/oversized-test-closure.json",
+        "release/evidence/tests/modularity-findings.json",
+        "release/evidence/tests/risk-coverage.json",
+        "release/evidence/tests/release-surface-suite-coverage.json",
+        "release/evidence/tests/unit-suite.json",
+        "release/evidence/tests/adversarial-suite.json",
+        "release/evidence/tests/property-suite.json",
+        "release/evidence/tests/conformance-suite.json",
+        "release/evidence/tests/corpus-suite.json",
+        "release/evidence/tests/benchmark-suite.json",
+        "release/evidence/tests/gap-suite.json",
+        "release/evidence/tests/fuzz-suite.json"
+      ],
+      "artifact_contracts": []
+    },
+    {
+      "generator_command": "xtask metadata-matrix",
+      "command_mode": "spawned",
+      "required": true,
+      "expected_artifacts": [
+        "release/evidence/metadata/metadata-matrix.json"
+      ],
+      "artifact_contracts": []
+    },
+    {
+      "generator_command": "xtask feature-matrix",
+      "command_mode": "spawned",
+      "required": true,
+      "expected_artifacts": [
+        "release/evidence/metadata/feature-matrix.json"
+      ],
+      "artifact_contracts": []
+    },
+    {
+      "generator_command": "xtask optimization-corpus",
+      "command_mode": "spawned",
+      "required": true,
+      "expected_artifacts": [
+        "release/evidence/optimization/optimization-corpus.json",
+        "release/evidence/optimization/optimization-corpus-contracts.json",
+        "release/evidence/optimization/optimization-family-manifest.json",
+        "release/evidence/optimization/optimization-analysis-fixtures.json",
+        "release/evidence/optimization/optimization-case-manifest.json"
+      ],
+      "artifact_contracts": []
+    },
+    {
+      "generator_command": "xtask optimization-matrix",
+      "command_mode": "spawned",
+      "required": true,
+      "expected_artifacts": [
+        "release/evidence/optimization/optimization-integration-matrix.json",
+        "release/evidence/optimization/alias-aware-dse.json",
+        "release/evidence/optimization/alias-aware-stlf.json",
+        "release/evidence/optimization/alias-aware-licm.json",
+        "release/evidence/optimization/alias-aware-fusion-fission.json",
+        "release/evidence/optimization/weir-facts-pass-firing.json",
+        "release/evidence/optimization/egraph-saturation-matrix.json",
+        "release/evidence/optimization/egraph-semantic-contracts.json"
+      ],
+      "artifact_contracts": []
+    },
+    {
+      "generator_command": "xtask parser-coherence",
+      "command_mode": "spawned",
+      "required": true,
+      "expected_artifacts": [
+        "release/evidence/parser/distributed-parser-map.json",
+        "release/evidence/parser/vyre-frontend-c-contracts.json",
+        "release/evidence/parser/vyrec-cli-contracts.json",
+        "release/evidence/parser/external-dataflow-contracts.json",
+        "release/evidence/parser/compiler-consumer-grammar-gen-contracts.json"
+      ],
+      "artifact_contracts": []
+    },
+    {
+      "generator_command": "xtask weir-matrix",
+      "command_mode": "spawned",
+      "required": true,
+      "expected_artifacts": [
+        "release/evidence/weir/weir-analysis-api-matrix.json",
+        "release/evidence/weir/weir-vyre-integration-tests.json",
+        "release/evidence/weir/weir-readme-contracts.json",
+        "release/evidence/weir/weir-flow-release-contracts.json"
+      ],
+      "artifact_contracts": []
+    },
+    {
+      "generator_command": "xtask source-similar --duplicate-report-json release/evidence/dedup/source-similar-duplicates.json",
+      "command_mode": "spawned",
+      "required": true,
+      "expected_artifacts": [
+        "release/evidence/dedup/source-similar-duplicates.json"
+      ],
+      "artifact_contracts": []
+    },
+    {
+      "generator_command": "xtask whats-similar --all --duplicate-report-json release/evidence/dedup/registered-op-duplicates.json",
+      "command_mode": "spawned",
+      "required": true,
+      "expected_artifacts": [
+        "release/evidence/dedup/registered-op-duplicates.json"
+      ],
+      "artifact_contracts": []
+    },
+    {
+      "generator_command": "xtask lego-audit --report-only --duplicate-report-json release/evidence/dedup/lego-audit-duplicates.json",
+      "command_mode": "spawned",
+      "required": true,
+      "expected_artifacts": [
+        "release/evidence/dedup/lego-audit-duplicates.json"
+      ],
+      "artifact_contracts": []
+    },
+    {
+      "generator_command": "xtask release-evidence",
+      "command_mode": "spawned",
+      "required": true,
+      "expected_artifacts": [
+        "release/evidence/final/release-evidence-run.json",
+        "release/evidence/final/expected-artifacts.json"
+      ],
+      "artifact_contracts": []
+    }
+  ]
+}

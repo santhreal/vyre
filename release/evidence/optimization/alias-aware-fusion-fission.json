@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "id": "alias-aware-fusion-fission",
-  "source_matrix": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/release/evidence/optimization/optimization-integration-matrix.json",
+  "source_matrix": "release/evidence/optimization/optimization-integration-matrix.json",
   "markers": [
     {
       "id": "alias-aware-loop-fusion-entrypoint",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/loop_fusion/mod.rs",
-      "marker": "loop_fusion_with_weir_alias_facts",
+      "path": "vyre-lower/src/rewrites/loop_fusion/mod.rs",
+      "marker": "loop_fusion_with_external_alias_facts",
       "exists": true,
       "read_error": null,
       "marker_present": true,
@@ -16,7 +16,7 @@
     },
     {
       "id": "reaching-def-loop-fusion-entrypoint",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/loop_fusion/mod.rs",
+      "path": "vyre-lower/src/rewrites/loop_fusion/mod.rs",
       "marker": "loop_fusion_with_dataflow_analysis_facts",
       "exists": true,
       "read_error": null,
@@ -27,8 +27,8 @@
     },
     {
       "id": "alias-aware-loop-fission-entrypoint",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/loop_fission/mod.rs",
-      "marker": "loop_fission_with_weir_alias_facts",
+      "path": "vyre-lower/src/rewrites/loop_fission/mod.rs",
+      "marker": "loop_fission_with_external_alias_facts",
       "exists": true,
       "read_error": null,
       "marker_present": true,
@@ -38,7 +38,7 @@
     },
     {
       "id": "reaching-def-loop-fission-entrypoint",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/loop_fission/mod.rs",
+      "path": "vyre-lower/src/rewrites/loop_fission/mod.rs",
       "marker": "loop_fission_with_dataflow_analysis_facts",
       "exists": true,
       "read_error": null,
@@ -49,7 +49,7 @@
     },
     {
       "id": "weir-alias-analysis-api",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/weir_alias/mod.rs",
+      "path": "vyre-lower/src/analyses/alias_import/mod.rs",
       "marker": "AliasFactSet",
       "exists": true,
       "read_error": null,
@@ -60,7 +60,7 @@
     },
     {
       "id": "weir-reaching-def-analysis-api",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/weir_reaching_def/mod.rs",
+      "path": "vyre-lower/src/analyses/reaching_def_import/mod.rs",
       "marker": "import_descriptor_reaching_defs",
       "exists": true,
       "read_error": null,
@@ -71,7 +71,7 @@
     },
     {
       "id": "dataflow-analysis-loop-fusion-firing-test",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/tests/dataflow_analysis_loop_rewrites.rs",
+      "path": "vyre-lower/tests/dataflow_analysis_loop_rewrites.rs",
       "marker": "reaching_defs_unlock_alias_proven_loop_fusion",
       "exists": true,
       "read_error": null,
@@ -82,7 +82,7 @@
     },
     {
       "id": "dataflow-analysis-loop-fission-firing-test",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/tests/dataflow_analysis_loop_rewrites.rs",
+      "path": "vyre-lower/tests/dataflow_analysis_loop_rewrites.rs",
       "marker": "reaching_defs_unlock_alias_proven_loop_fission",
       "exists": true,
       "read_error": null,

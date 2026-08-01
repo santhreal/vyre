@@ -4,14 +4,16 @@
   "docs": [
     {
       "id": "release-contract",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/docs/RELEASE.md",
+      "path": "docs/RELEASE.md",
       "exists": true,
       "read_error": null,
       "contains_release_evidence_rule": true,
       "evidence_artifact_refs": [
-        "release/evidence/"
+        "release/evidence/",
+        "release/evidence/final/completion-audit.json",
+        "release/evidence/final/public-launch-state.json"
       ],
-      "evidence_artifact_ref_count": 1,
+      "evidence_artifact_ref_count": 3,
       "missing_evidence_artifact_refs": [],
       "required_topics": [
         "vyre",
@@ -26,7 +28,7 @@
     },
     {
       "id": "vyre-readme",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/README.md",
+      "path": "README.md",
       "exists": true,
       "read_error": null,
       "contains_release_evidence_rule": true,
@@ -38,7 +40,7 @@
       "required_topics": [
         "vyre",
         "gpu",
-        "bytecode",
+        "wire",
         "condition",
         "cuda",
         "wgpu",
@@ -52,14 +54,16 @@
     },
     {
       "id": "vyre-release",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/docs/RELEASE.md",
+      "path": "docs/RELEASE.md",
       "exists": true,
       "read_error": null,
       "contains_release_evidence_rule": true,
       "evidence_artifact_refs": [
-        "release/evidence/"
+        "release/evidence/",
+        "release/evidence/final/completion-audit.json",
+        "release/evidence/final/public-launch-state.json"
       ],
-      "evidence_artifact_ref_count": 1,
+      "evidence_artifact_ref_count": 3,
       "missing_evidence_artifact_refs": [],
       "required_topics": [
         "release",
@@ -72,7 +76,7 @@
     },
     {
       "id": "vyre-release-engineering",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/docs/RELEASE_ENGINEERING.md",
+      "path": "docs/RELEASE_ENGINEERING.md",
       "exists": true,
       "read_error": null,
       "contains_release_evidence_rule": true,
@@ -85,14 +89,13 @@
         "release/evidence/docs/docs-matrix.json",
         "release/evidence/final/completion-audit.json",
         "release/evidence/final/expected-artifacts.json",
+        "release/evidence/final/public-launch-state.json",
         "release/evidence/final/release-evidence-run.json",
         "release/evidence/metadata/metadata-matrix.json",
         "release/evidence/tests/release-surface-suite-coverage.json"
       ],
-      "evidence_artifact_ref_count": 11,
-      "missing_evidence_artifact_refs": [
-        "release/evidence/final/expected-artifacts.json"
-      ],
+      "evidence_artifact_ref_count": 12,
+      "missing_evidence_artifact_refs": [],
       "required_topics": [
         "release",
         "evidence",
@@ -104,15 +107,16 @@
     },
     {
       "id": "vyre-release-checklist",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/docs/RELEASE_CHECKLIST.md",
+      "path": "docs/RELEASE_CHECKLIST.md",
       "exists": true,
       "read_error": null,
       "contains_release_evidence_rule": true,
       "evidence_artifact_refs": [
         "release/evidence/",
-        "release/evidence/final/completion-audit.json"
+        "release/evidence/final/completion-audit.json",
+        "release/evidence/final/public-launch-state.json"
       ],
-      "evidence_artifact_ref_count": 2,
+      "evidence_artifact_ref_count": 3,
       "missing_evidence_artifact_refs": [],
       "required_topics": [
         "release",
@@ -125,7 +129,7 @@
     },
     {
       "id": "vyre-publish-gate",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/docs/PUBLISH_GATE.md",
+      "path": "docs/PUBLISH_GATE.md",
       "exists": true,
       "read_error": null,
       "contains_release_evidence_rule": true,
@@ -146,7 +150,7 @@
     },
     {
       "id": "vyre-testing",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/docs/TESTING_PROGRAM.md",
+      "path": "docs/TESTING_PROGRAM.md",
       "exists": true,
       "read_error": null,
       "contains_release_evidence_rule": true,
@@ -170,21 +174,14 @@
     },
     {
       "id": "vyre-optimization",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/docs/optimization/AGENT_CONTRACT.md",
+      "path": "docs/optimization/README.md",
       "exists": true,
       "read_error": null,
       "contains_release_evidence_rule": true,
       "evidence_artifact_refs": [
-        "release/evidence/backends/backend-matrix.json",
-        "release/evidence/benchmarks/release-workload-matrix.json",
-        "release/evidence/conformance/conformance-matrix.json",
-        "release/evidence/final/completion-audit.json",
-        "release/evidence/metadata/feature-matrix.json",
-        "release/evidence/metadata/metadata-matrix.json",
-        "release/evidence/tests/test-matrix.json",
-        "release/evidence/version/version-matrix.json"
+        "release/evidence/optimization/research-audit.json"
       ],
-      "evidence_artifact_ref_count": 8,
+      "evidence_artifact_ref_count": 1,
       "missing_evidence_artifact_refs": [],
       "required_topics": [
         "optimization",
@@ -197,7 +194,7 @@
     },
     {
       "id": "vyre-conformance",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/README.md",
+      "path": "conform/README.md",
       "exists": true,
       "read_error": null,
       "contains_release_evidence_rule": true,
@@ -221,7 +218,7 @@
     },
     {
       "id": "vyre-bench",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/README.md",
+      "path": "vyre-bench/README.md",
       "exists": true,
       "read_error": null,
       "contains_release_evidence_rule": true,
@@ -234,9 +231,7 @@
         "release/evidence/benchmarks/wgpu-fallback-suite.json"
       ],
       "evidence_artifact_ref_count": 6,
-      "missing_evidence_artifact_refs": [
-        "release/evidence/benchmarks/frontier-leaderboard.json"
-      ],
+      "missing_evidence_artifact_refs": [],
       "required_topics": [
         "benchmark",
         "cuda",
@@ -248,7 +243,7 @@
     },
     {
       "id": "vyre-frontend-c",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/README.md",
+      "path": "vyre-frontend-c/README.md",
       "exists": true,
       "read_error": null,
       "contains_release_evidence_rule": true,
@@ -271,7 +266,7 @@
     },
     {
       "id": "parsing-frontends",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/docs/parsing-and-frontends.md",
+      "path": "docs/parsing-and-frontends.md",
       "exists": true,
       "read_error": null,
       "contains_release_evidence_rule": true,
@@ -294,7 +289,7 @@
     },
     {
       "id": "vyrec-readme",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/../../../../tools/vyrec/README.md",
+      "path": "../../../../tools/vyrec/README.md",
       "exists": true,
       "read_error": null,
       "contains_release_evidence_rule": true,
@@ -317,7 +312,7 @@
     },
     {
       "id": "weir-readme",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/../../../../libs/dataflow/weir/README.md",
+      "path": "../../../../libs/dataflow/weir/README.md",
       "exists": true,
       "read_error": null,
       "contains_release_evidence_rule": true,
@@ -361,7 +356,7 @@
     },
     {
       "id": "weir-vision",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/../../../../libs/dataflow/weir/VISION.md",
+      "path": "../../../../libs/dataflow/weir/VISION.md",
       "exists": true,
       "read_error": null,
       "contains_release_evidence_rule": true,
@@ -385,7 +380,7 @@
     },
     {
       "id": "wgpu-fallback-proof",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/release/evidence/docs/wgpu-fallback-proof.md",
+      "path": "release/evidence/docs/wgpu-fallback-proof.md",
       "exists": true,
       "read_error": null,
       "contains_release_evidence_rule": true,
@@ -412,34 +407,6 @@
   "stale_generated_artifact_findings": [],
   "parallel_active_plan_findings": [],
   "behavior_coherence_findings": [],
-  "scan_positioning_findings": [
-    {
-      "row_index": 1,
-      "engine": "Hyperscan",
-      "issue": "benchmark_artifact `release/evidence/benchmarks/frontier-leaderboard.json` does not exist. Fix: point at a concrete release/evidence benchmark artifact or use a semantic exclusion/unsupported reason."
-    },
-    {
-      "row_index": 2,
-      "engine": "Vectorscan",
-      "issue": "benchmark_artifact `release/evidence/benchmarks/frontier-leaderboard.json` does not exist. Fix: point at a concrete release/evidence benchmark artifact or use a semantic exclusion/unsupported reason."
-    },
-    {
-      "row_index": 4,
-      "engine": "Aho-Corasick",
-      "issue": "benchmark_artifact `release/evidence/benchmarks/frontier-leaderboard.json` does not exist. Fix: point at a concrete release/evidence benchmark artifact or use a semantic exclusion/unsupported reason."
-    },
-    {
-      "row_index": 5,
-      "engine": "memchr",
-      "issue": "benchmark_artifact `release/evidence/benchmarks/frontier-leaderboard.json` does not exist. Fix: point at a concrete release/evidence benchmark artifact or use a semantic exclusion/unsupported reason."
-    }
-  ],
-  "blockers": [
-    "required documentation `vyre-release-engineering` references 1 missing release evidence artifact(s)",
-    "required documentation `vyre-bench` references 1 missing release evidence artifact(s)",
-    "scan positioning matrix row Some(1) for `Hyperscan` is invalid: benchmark_artifact `release/evidence/benchmarks/frontier-leaderboard.json` does not exist. Fix: point at a concrete release/evidence benchmark artifact or use a semantic exclusion/unsupported reason.",
-    "scan positioning matrix row Some(2) for `Vectorscan` is invalid: benchmark_artifact `release/evidence/benchmarks/frontier-leaderboard.json` does not exist. Fix: point at a concrete release/evidence benchmark artifact or use a semantic exclusion/unsupported reason.",
-    "scan positioning matrix row Some(4) for `Aho-Corasick` is invalid: benchmark_artifact `release/evidence/benchmarks/frontier-leaderboard.json` does not exist. Fix: point at a concrete release/evidence benchmark artifact or use a semantic exclusion/unsupported reason.",
-    "scan positioning matrix row Some(5) for `memchr` is invalid: benchmark_artifact `release/evidence/benchmarks/frontier-leaderboard.json` does not exist. Fix: point at a concrete release/evidence benchmark artifact or use a semantic exclusion/unsupported reason."
-  ]
+  "scan_positioning_findings": [],
+  "blockers": []
 }

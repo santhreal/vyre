@@ -48,18 +48,6 @@
       "cases": 1792
     },
     {
-      "family": "memory-layout",
-      "cases": 2560
-    },
-    {
-      "family": "predicate",
-      "cases": 1792
-    },
-    {
-      "family": "vector-layout",
-      "cases": 1024
-    },
-    {
       "family": "external-dataflow-dse",
       "cases": 256
     },
@@ -74,6 +62,18 @@
     {
       "family": "external-dataflow-loop-fusion",
       "cases": 256
+    },
+    {
+      "family": "memory-layout",
+      "cases": 2560
+    },
+    {
+      "family": "predicate",
+      "cases": 1792
+    },
+    {
+      "family": "vector-layout",
+      "cases": 1024
     }
   ],
   "blockers": []

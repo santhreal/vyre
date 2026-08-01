@@ -2,22 +2,22 @@
   "schema_version": 1,
   "component_id": "compiler-consumer-grammar-gen",
   "role": "Shared grammar generation substrate",
-  "root": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-grammar-gen",
+  "root": "vyre-grammar-gen",
   "required_files": [
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-grammar-gen/Cargo.toml",
+      "path": "vyre-grammar-gen/Cargo.toml",
       "exists": true,
       "read_error": null,
       "source_bytes": 1235
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-grammar-gen/src/lib.rs",
+      "path": "vyre-grammar-gen/src/lib.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 2856
+      "source_bytes": 2926
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-grammar-gen/README.md",
+      "path": "vyre-grammar-gen/README.md",
       "exists": true,
       "read_error": null,
       "source_bytes": 4808
@@ -50,21 +50,21 @@
   "required_evidence_trees": [
     {
       "tree": "tests",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-grammar-gen/tests",
+      "path": "vyre-grammar-gen/tests",
       "exists": true,
-      "source_bytes": 67606,
+      "source_bytes": 68012,
       "unreadable_file_count": 0
     },
     {
       "tree": "benches",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-grammar-gen/benches",
+      "path": "vyre-grammar-gen/benches",
       "exists": true,
       "source_bytes": 243,
       "unreadable_file_count": 0
     },
     {
       "tree": "fuzz",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-grammar-gen/fuzz",
+      "path": "vyre-grammar-gen/fuzz",
       "exists": true,
       "source_bytes": 258,
       "unreadable_file_count": 0
