@@ -262,16 +262,15 @@ fn inspect_hygiene_matrix_semantics(
         return;
     };
     for required_root in [
-        "libs/performance/matching/vyre",
-        "libs/dataflow/weir",
-        "tools/vyrec",
-        crate::release_train::compiler_consumer_relative_path(),
-        "libs/performance/matching/vyre/vyre-grammar-gen",
+        ".",
+        "../../../../libs/dataflow/weir",
+        "../../../../tools/vyrec",
+        "vyre-grammar-gen",
     ] {
-        if !roots.iter().any(|root| {
-            root.as_str()
-                .is_some_and(|root| root.contains(required_root))
-        }) {
+        if !roots
+            .iter()
+            .any(|root| root.as_str() == Some(required_root))
+        {
             blockers.push(format!(
                 "{evidence}: scanned_roots is missing `{required_root}`"
             ));
@@ -284,77 +283,9 @@ fn inspect_hygiene_release_surface_coverage(
     value: &serde_json::Value,
     blockers: &mut Vec<String>,
 ) {
-    let Some(coverage) = value.get("release_surface_coverage") else {
-        blockers.push(format!("{evidence}: missing release_surface_coverage"));
-        return;
-    };
-    for field in [
-        "vyre_workspace",
-        "cuda_driver_crate",
-        "wgpu_driver_crate",
-        "dataflow_crate",
-        "vyrec_tool",
-        "surgec_tool",
-        "surgec_grammar_gen",
-        "release_scripts",
-        "github_workflows",
-        "branch_protection_controls",
-    ] {
-        if coverage.get(field).and_then(serde_json::Value::as_bool) != Some(true) {
-            blockers.push(format!(
-                "{evidence}: release_surface_coverage.{field} must be true"
-            ));
-        }
-    }
-    for (field, required) in [
-        (
-            "resource_bound_patterns",
-            &[
-                "std_thread_sleep",
-                "thread_sleep",
-                "tokio_sleep",
-                "unbounded_read",
-            ][..],
-        ),
-        (
-            "hidden_fallback_patterns",
-            &[
-                "silent_gpu_skip",
-                "silent_gpu_skipped",
-                "gpu_unavailable_skip",
-                "cfg_not_gpu",
-                "cpu_fallback",
-                "software_fallback",
-                "fallback_dispatch",
-                "falling_back_to_cpu",
-                "fallback_to_cpu",
-                "synthetic_gpu_timing",
-                "fake_gpu_timing_formula",
-            ][..],
-        ),
-        (
-            "release_tooling_patterns",
-            &[
-                "raw_workspace_cargo",
-                "invalid_cargo_full_xtask",
-                "heredoc",
-                "missing_cargo_wrapper",
-            ][..],
-        ),
-    ] {
-        let values = coverage.get(field).and_then(serde_json::Value::as_array);
-        for required_value in required {
-            if !values.is_some_and(|values| {
-                values
-                    .iter()
-                    .any(|value| value.as_str() == Some(*required_value))
-            }) {
-                blockers.push(format!(
-                    "{evidence}: release_surface_coverage.{field} is missing `{required_value}`"
-                ));
-            }
-        }
-    }
+    crate::benchmark_evidence_semantics::inspect_hygiene_release_surface_coverage(
+        evidence, value, blockers,
+    );
 }
 
 fn inspect_optimization_analysis_fixture_semantics(
@@ -362,138 +293,11 @@ fn inspect_optimization_analysis_fixture_semantics(
     value: &serde_json::Value,
     blockers: &mut Vec<String>,
 ) {
-    let missing_required = value
-        .get("missing_required_families")
-        .and_then(serde_json::Value::as_array)
-        .map_or(usize::MAX, Vec::len);
-    if missing_required != 0 {
-        blockers.push(format!(
-            "{evidence}: missing_required_families has {missing_required} entrie(s), expected zero"
-        ));
-    }
-    let total_fixture_cases = value
-        .get("total_fixture_cases")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(0);
-    let total_triggered_cases = value
-        .get("total_triggered_cases")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(0);
-    if total_fixture_cases < 512 || total_triggered_cases != total_fixture_cases {
-        blockers.push(format!(
-            "{evidence}: total_fixture_cases={total_fixture_cases}, total_triggered_cases={total_triggered_cases}; needs 512 fully-triggered A13-A16 cases"
-        ));
-    }
-    let Some(families) = value.get("families").and_then(serde_json::Value::as_array) else {
-        blockers.push(format!("{evidence}: missing families array"));
-        return;
-    };
-    inspect_duplicate_analysis_fixture_family_rows(evidence, value, blockers);
-    for required in [
-        "A13-coalesce-fixture",
-        "A14-shared-mem-promote-fixture",
-        "A15-bank-conflict-fixture",
-        "A16-vec-pack-fixture",
-    ] {
-        let Some(family) = families.iter().find(|family| {
-            family.get("family").and_then(serde_json::Value::as_str) == Some(required)
-        }) else {
-            blockers.push(format!(
-                "{evidence}: missing analysis fixture family `{required}`"
-            ));
-            continue;
-        };
-        let cases = family
-            .get("cases")
-            .and_then(serde_json::Value::as_u64)
-            .unwrap_or(0);
-        let triggered = family
-            .get("triggered_cases")
-            .and_then(serde_json::Value::as_u64)
-            .unwrap_or(0);
-        let analysis_sites = family
-            .get("analysis_sites")
-            .and_then(serde_json::Value::as_u64)
-            .unwrap_or(0);
-        if cases < 128 || triggered != cases || analysis_sites < cases {
-            blockers.push(format!(
-                "{evidence}: analysis fixture `{required}` has cases={cases}, triggered_cases={triggered}, analysis_sites={analysis_sites}; needs at least 128 cases, every case triggered, and at least one analysis site per case"
-            ));
-        }
-        match required {
-            "A13-coalesce-fixture" => {
-                for field in [
-                    "coalesced_unit_stride_sites",
-                    "strided_sites",
-                    "broadcast_sites",
-                ] {
-                    if family
-                        .get(field)
-                        .and_then(serde_json::Value::as_u64)
-                        .unwrap_or(0)
-                        == 0
-                    {
-                        blockers.push(format!("{evidence}: A13 fixture has zero `{field}`"));
-                    }
-                }
-            }
-            "A14-shared-mem-promote-fixture" => {
-                for field in ["shared_mem_candidates", "shared_mem_tile_bytes"] {
-                    if family
-                        .get(field)
-                        .and_then(serde_json::Value::as_u64)
-                        .unwrap_or(0)
-                        == 0
-                    {
-                        blockers.push(format!("{evidence}: A14 fixture has zero `{field}`"));
-                    }
-                }
-            }
-            "A15-bank-conflict-fixture" => {
-                for field in ["bank_conflict_sites", "bank_conflict_critical_sites"] {
-                    if family
-                        .get(field)
-                        .and_then(serde_json::Value::as_u64)
-                        .unwrap_or(0)
-                        == 0
-                    {
-                        blockers.push(format!("{evidence}: A15 fixture has zero `{field}`"));
-                    }
-                }
-            }
-            "A16-vec-pack-fixture" => {
-                for field in ["vec_pack_chains", "vec_pack_ops_eliminated"] {
-                    if family
-                        .get(field)
-                        .and_then(serde_json::Value::as_u64)
-                        .unwrap_or(0)
-                        == 0
-                    {
-                        blockers.push(format!("{evidence}: A16 fixture has zero `{field}`"));
-                    }
-                }
-            }
-            _ => {}
-        }
-    }
+    crate::benchmark_evidence_semantics::inspect_optimization_analysis_fixture(
+        evidence, value, blockers,
+    );
 }
 
-fn inspect_duplicate_analysis_fixture_family_rows(
-    evidence: &str,
-    value: &serde_json::Value,
-    blockers: &mut Vec<String>,
-) {
-    let duplicates =
-        crate::benchmark_evidence_semantics::duplicate_nonblank_object_array_field_values(
-            value, "families", "family",
-        );
-    if !duplicates.is_empty() {
-        let duplicates = duplicates.into_iter().collect::<Vec<_>>().join(", ");
-        blockers.push(format!(
-            "{evidence}: duplicate analysis fixture family rows: {duplicates}"
-        ));
-    }
-}
 
 #[cfg(test)]
 mod part5_tests {

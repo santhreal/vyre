@@ -132,88 +132,92 @@ fn preorder_body(nodes: &str, out: &str, node_count: u32, out_cap: u32, stride: 
     vec![
         Node::let_bind("oi", Expr::u32(0)),
         Node::let_bind("n", Expr::u32(0)),
+        Node::let_bind("active", Expr::bool(true)),
         Node::loop_for(
             "step",
             Expr::u32(0),
             Expr::u32(node_count),
-            vec![
-                Node::if_then(
-                    Expr::eq(Expr::u32(node_count), Expr::u32(0)),
-                    vec![Node::return_()],
+            vec![Node::if_then(
+                Expr::and(
+                    Expr::var("active"),
+                    Expr::and(
+                        Expr::lt(Expr::var("oi"), Expr::u32(out_cap)),
+                        valid_node(Expr::var("n")),
+                    ),
                 ),
-                Node::if_then(
-                    Expr::ge(Expr::var("oi"), Expr::u32(out_cap)),
-                    vec![Node::return_()],
-                ),
-                Node::if_then(
-                    Expr::ge(Expr::var("n"), Expr::u32(node_count)),
-                    vec![Node::return_()],
-                ),
-                Node::let_bind("base", Expr::mul(Expr::var("n"), Expr::u32(stride))),
-                Node::let_bind(
-                    "fc",
-                    Expr::load(nodes, Expr::add(Expr::var("base"), Expr::u32(2))),
-                ),
-                Node::store(out, Expr::var("oi"), Expr::var("n")),
-                Node::assign("oi", Expr::add(Expr::var("oi"), Expr::u32(1))),
-                Node::if_then(
-                    valid_node(Expr::var("fc")),
-                    vec![Node::assign("n", Expr::var("fc"))],
-                ),
-                Node::if_then(
-                    Expr::not(valid_node(Expr::var("fc"))),
-                    vec![
-                        Node::let_bind("next", Expr::u32(SENTINEL)),
-                        Node::let_bind("walk", Expr::var("n")),
-                        Node::loop_for(
-                            "climb",
-                            Expr::u32(0),
-                            Expr::u32(node_count),
-                            vec![Node::if_then(
-                                Expr::and(
-                                    Expr::eq(Expr::var("next"), Expr::u32(SENTINEL)),
-                                    valid_node(Expr::var("walk")),
-                                ),
-                                vec![
-                                    Node::let_bind(
-                                        "walk_base",
-                                        Expr::mul(Expr::var("walk"), Expr::u32(stride)),
+                vec![
+                    Node::let_bind("base", Expr::mul(Expr::var("n"), Expr::u32(stride))),
+                    Node::let_bind(
+                        "fc",
+                        Expr::load(nodes, Expr::add(Expr::var("base"), Expr::u32(2))),
+                    ),
+                    Node::store(out, Expr::var("oi"), Expr::var("n")),
+                    Node::assign("oi", Expr::add(Expr::var("oi"), Expr::u32(1))),
+                    Node::if_then(
+                        valid_node(Expr::var("fc")),
+                        vec![Node::assign("n", Expr::var("fc"))],
+                    ),
+                    Node::if_then(
+                        Expr::not(valid_node(Expr::var("fc"))),
+                        vec![
+                            Node::let_bind("next", Expr::u32(SENTINEL)),
+                            Node::let_bind("walk", Expr::var("n")),
+                            Node::loop_for(
+                                "climb",
+                                Expr::u32(0),
+                                Expr::u32(node_count),
+                                vec![Node::if_then(
+                                    Expr::and(
+                                        Expr::eq(Expr::var("next"), Expr::u32(SENTINEL)),
+                                        valid_node(Expr::var("walk")),
                                     ),
-                                    Node::let_bind(
-                                        "sib",
-                                        Expr::load(
-                                            nodes,
-                                            Expr::add(Expr::var("walk_base"), Expr::u32(3)),
+                                    vec![
+                                        Node::let_bind(
+                                            "walk_base",
+                                            Expr::mul(Expr::var("walk"), Expr::u32(stride)),
                                         ),
-                                    ),
-                                    Node::if_then(
-                                        valid_node(Expr::var("sib")),
-                                        vec![Node::assign("next", Expr::var("sib"))],
-                                    ),
-                                    Node::if_then(
-                                        Expr::not(valid_node(Expr::var("sib"))),
-                                        vec![
-                                            Node::let_bind(
-                                                "parent",
-                                                Expr::load(
-                                                    nodes,
-                                                    Expr::add(Expr::var("walk_base"), Expr::u32(1)),
-                                                ),
+                                        Node::let_bind(
+                                            "sib",
+                                            Expr::load(
+                                                nodes,
+                                                Expr::add(Expr::var("walk_base"), Expr::u32(3)),
                                             ),
-                                            Node::assign("walk", Expr::var("parent")),
-                                        ],
-                                    ),
-                                ],
-                            )],
-                        ),
-                        Node::if_then(
-                            Expr::eq(Expr::var("next"), Expr::u32(SENTINEL)),
-                            vec![Node::return_()],
-                        ),
-                        Node::assign("n", Expr::var("next")),
-                    ],
-                ),
-            ],
+                                        ),
+                                        Node::if_then(
+                                            valid_node(Expr::var("sib")),
+                                            vec![Node::assign("next", Expr::var("sib"))],
+                                        ),
+                                        Node::if_then(
+                                            Expr::not(valid_node(Expr::var("sib"))),
+                                            vec![
+                                                Node::let_bind(
+                                                    "parent",
+                                                    Expr::load(
+                                                        nodes,
+                                                        Expr::add(
+                                                            Expr::var("walk_base"),
+                                                            Expr::u32(1),
+                                                        ),
+                                                    ),
+                                                ),
+                                                Node::assign("walk", Expr::var("parent")),
+                                            ],
+                                        ),
+                                    ],
+                                )],
+                            ),
+                            Node::if_then(
+                                Expr::eq(Expr::var("next"), Expr::u32(SENTINEL)),
+                                vec![Node::assign("active", Expr::bool(false))],
+                            ),
+                            Node::if_then(
+                                valid_node(Expr::var("next")),
+                                vec![Node::assign("n", Expr::var("next"))],
+                            ),
+                        ],
+                    ),
+                ],
+            )],
         ),
     ]
 }
@@ -222,59 +226,68 @@ fn postorder_body(nodes: &str, out: &str, node_count: u32, out_cap: u32, stride:
     let valid_node = |expr: Expr| valid_node_expr(expr, node_count);
 
     vec![
-        Node::if_then(
-            Expr::eq(Expr::u32(node_count), Expr::u32(0)),
-            vec![Node::return_()],
-        ),
         Node::let_bind("oi", Expr::u32(0)),
         Node::let_bind("n", Expr::u32(0)),
+        Node::let_bind("active", Expr::bool(true)),
         descend_to_leftmost_leaf_node(nodes, node_count, stride),
         Node::loop_for(
             "emit",
             Expr::u32(0),
             Expr::u32(node_count),
-            vec![
-                Node::if_then(
-                    Expr::ge(Expr::var("oi"), Expr::u32(out_cap)),
-                    vec![Node::return_()],
+            vec![Node::if_then(
+                Expr::and(
+                    Expr::var("active"),
+                    Expr::and(
+                        Expr::lt(Expr::var("oi"), Expr::u32(out_cap)),
+                        valid_node(Expr::var("n")),
+                    ),
                 ),
-                Node::if_then(
-                    Expr::ge(Expr::var("n"), Expr::u32(node_count)),
-                    vec![Node::return_()],
-                ),
-                Node::store(out, Expr::var("oi"), Expr::var("n")),
-                Node::assign("oi", Expr::add(Expr::var("oi"), Expr::u32(1))),
-                Node::if_then(
-                    Expr::eq(Expr::var("n"), Expr::u32(0)),
-                    vec![Node::return_()],
-                ),
-                Node::let_bind("base", Expr::mul(Expr::var("n"), Expr::u32(stride))),
-                Node::let_bind(
-                    "sib",
-                    Expr::load(nodes, Expr::add(Expr::var("base"), Expr::u32(3))),
-                ),
-                Node::if_then(
-                    valid_node(Expr::var("sib")),
-                    vec![
-                        Node::assign("n", Expr::var("sib")),
-                        descend_to_leftmost_leaf_node(nodes, node_count, stride),
-                    ],
-                ),
-                Node::if_then(
-                    Expr::not(valid_node(Expr::var("sib"))),
-                    vec![
-                        Node::let_bind(
-                            "parent",
-                            Expr::load(nodes, Expr::add(Expr::var("base"), Expr::u32(1))),
-                        ),
-                        Node::if_then(
-                            Expr::not(valid_node(Expr::var("parent"))),
-                            vec![Node::return_()],
-                        ),
-                        Node::assign("n", Expr::var("parent")),
-                    ],
-                ),
-            ],
+                vec![
+                    Node::store(out, Expr::var("oi"), Expr::var("n")),
+                    Node::assign("oi", Expr::add(Expr::var("oi"), Expr::u32(1))),
+                    Node::if_then(
+                        Expr::eq(Expr::var("n"), Expr::u32(0)),
+                        vec![Node::assign("active", Expr::bool(false))],
+                    ),
+                    Node::if_then(
+                        Expr::ne(Expr::var("n"), Expr::u32(0)),
+                        vec![
+                            Node::let_bind("base", Expr::mul(Expr::var("n"), Expr::u32(stride))),
+                            Node::let_bind(
+                                "sib",
+                                Expr::load(nodes, Expr::add(Expr::var("base"), Expr::u32(3))),
+                            ),
+                            Node::if_then(
+                                valid_node(Expr::var("sib")),
+                                vec![
+                                    Node::assign("n", Expr::var("sib")),
+                                    descend_to_leftmost_leaf_node(nodes, node_count, stride),
+                                ],
+                            ),
+                            Node::if_then(
+                                Expr::not(valid_node(Expr::var("sib"))),
+                                vec![
+                                    Node::let_bind(
+                                        "parent",
+                                        Expr::load(
+                                            nodes,
+                                            Expr::add(Expr::var("base"), Expr::u32(1)),
+                                        ),
+                                    ),
+                                    Node::if_then(
+                                        valid_node(Expr::var("parent")),
+                                        vec![Node::assign("n", Expr::var("parent"))],
+                                    ),
+                                    Node::if_then(
+                                        Expr::not(valid_node(Expr::var("parent"))),
+                                        vec![Node::assign("active", Expr::bool(false))],
+                                    ),
+                                ],
+                            ),
+                        ],
+                    ),
+                ],
+            )],
         ),
     ]
 }

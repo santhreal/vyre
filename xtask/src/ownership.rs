@@ -107,7 +107,8 @@ pub(crate) fn owner_lane_for_file<'a>(
             };
             match best {
                 Some((best_score, best_lane))
-                    if score < best_score || (score == best_score && lane.lane.as_str() >= best_lane) => {}
+                    if score < best_score
+                        || (score == best_score && lane.lane.as_str() >= best_lane) => {}
                 _ => best = Some((score, lane.lane.as_str())),
             }
         }
@@ -277,6 +278,9 @@ write = ["docs/optimization/OP_MATRIX.toml"]
             op_matrix.support_reason.as_deref(),
             Some("Op coverage files support coordination evidence.")
         );
-        assert_eq!(op_matrix.write_patterns, ["docs/optimization/OP_MATRIX.toml"]);
+        assert_eq!(
+            op_matrix.write_patterns,
+            ["docs/optimization/OP_MATRIX.toml"]
+        );
     }
 }

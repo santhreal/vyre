@@ -6,7 +6,7 @@ use super::block_programs::{
 use super::compact::{compact_comment_filtered_bytes, CommentCompactScratch};
 use super::full_comment::gpu_filter_full_comment_state;
 use super::host::read_output_u32;
-use super::scratch::write_zero_bytes;
+use super::scratch::prepare_filter_scratch;
 use super::FilteredBytes;
 use crate::parsing::c::preprocess::gpu_pipeline::GpuDispatcher;
 
@@ -21,21 +21,6 @@ pub(super) struct SimpleBlockScratch {
     compact: CommentCompactScratch,
 }
 
-impl SimpleBlockScratch {
-    fn prepare(&mut self, n_bucket: u32, byte_buf_pad: usize) -> Result<(), String> {
-        let word_bytes = (n_bucket as usize).checked_mul(4).ok_or_else(|| {
-            "simple block comments scratch byte size overflowed usize. Fix: reduce batch size."
-                .to_string()
-        })?;
-        write_zero_bytes(
-            &mut self.zero_words,
-            word_bytes,
-            "simple block comments zero words",
-        )?;
-        self.compact.prepare(byte_buf_pad)
-    }
-}
-
 pub(super) fn gpu_filter_simple_block_comments(
     dispatcher: &dyn GpuDispatcher,
     raw: &[u8],
@@ -48,7 +33,14 @@ pub(super) fn gpu_filter_simple_block_comments(
     full_scratch: &mut super::full_comment::FullCommentScratch,
     scan_scratch: &mut PrefixScanScratch,
 ) -> Result<FilteredBytes, String> {
-    scratch.prepare(n_bucket, byte_buf_pad)?;
+    prepare_filter_scratch(
+        &mut scratch.zero_words,
+        &mut scratch.compact,
+        n_bucket,
+        byte_buf_pad,
+        "simple block comments",
+        "simple block comments zero words",
+    )?;
     let marks_prog = simple_block_comment_marks_program(n_bucket);
     dispatcher
         .dispatch_borrowed_into(

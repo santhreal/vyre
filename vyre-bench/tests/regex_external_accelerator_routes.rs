@@ -1,7 +1,6 @@
 //! Regex external accelerator routes test suite.
 
-const ROUTES: &str =
-    include_str!("../../docs/optimization/REGEX_EXTERNAL_ACCELERATOR_ROUTES.toml");
+const ROUTES: &str = include_str!("../../docs/optimization/REGEX_EXTERNAL_ACCELERATOR_ROUTES.toml");
 
 #[test]
 fn regex_external_accelerator_routes_cover_dpu_and_fpga() {

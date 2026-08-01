@@ -35,10 +35,15 @@ fn gpu_emits_minimal_elf64_relocatable_container() {
         .dispatch_borrowed(&program, &inputs, &Default::default())
         .expect("GPU ELF object writer dispatch must succeed");
 
+    // One output. `opt_lower_elf` declares two buffers, the read-only encoded
+    // words and the read-write object buffer, and writes the whole container
+    // into that single object buffer. This asserted 2 ("object and scratch")
+    // against a shape that has no scratch buffer, so it failed on the count
+    // before it could check a single ELF field.
     assert_eq!(
         outputs.len(),
-        2,
-        "object writer must expose object and scratch outputs"
+        1,
+        "the object writer emits one buffer: the ELF container itself"
     );
     let object = bytes_to_words(&outputs[0]);
 

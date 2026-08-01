@@ -18,7 +18,7 @@ pub const BINDING_CHANGED: u32 = BINDING_PRIMITIVE_START + 2;
 /// while still growing (an under-approximated closure) or `max_iters == 0`.
 /// This is the device readback that lets a host caller reject a partial closure
 /// loudly instead of silently trusting a frontier the kernel never drove to a
-/// fixpoint. Mirrors [`super::cpu_ref::PersistentBfsConvergence::converged`].
+/// fixpoint. Mirrors `PersistentBfsConvergence::converged` (requires the `cpu-parity` feature).
 pub const BINDING_CONVERGED: u32 = BINDING_PRIMITIVE_START + 3;
 /// Canonical binding index for the optional per-iteration frontier-density array.
 ///
@@ -118,8 +118,8 @@ pub enum PersistentBfsPlanCacheKind {
 pub struct PersistentBfsPlanCacheKey {
     /// Stable discriminator for the cached program layout.
     ///
-    /// Content-addressed graph staging should use [`persistent_bfs_layout_hash`].
-    /// Program caches should prefer [`persistent_bfs_program_layout_hash`] so
+    /// Content-addressed graph staging should use [`crate::graph::persistent_bfs::persistent_bfs_layout_hash`].
+    /// Program caches should prefer [`crate::graph::persistent_bfs::persistent_bfs_program_layout_hash`] so
     /// same-shape CSR contents reuse the same compiled persistent-BFS program.
     pub layout_hash: u64,
     /// Number of graph nodes in the primitive program shape.
@@ -147,7 +147,7 @@ pub struct PersistentBfsPlanCacheKey {
 /// and shape that decide when static CSR/device inputs must be refreshed.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct PersistentBfsStaticInputKey {
-    /// Stable graph-content hash from [`persistent_bfs_layout_hash`].
+    /// Stable graph-content hash from [`crate::graph::persistent_bfs::persistent_bfs_layout_hash`].
     pub layout_hash: u64,
     /// Number of graph nodes.
     pub node_count: u32,

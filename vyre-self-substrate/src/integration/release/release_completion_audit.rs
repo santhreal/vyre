@@ -73,7 +73,7 @@ impl std::error::Error for ReleaseCompletionAuditError {}
 pub fn validate_release_completion_audit(
     audit: &str,
 ) -> Result<ReleaseCompletionAuditProof, ReleaseCompletionAuditError> {
-    for (evidence, needle) in [
+    let required_evidence = [
         ("schema version", "\"schema_version\": 1"),
         (
             "active objective",
@@ -133,8 +133,9 @@ pub fn validate_release_completion_audit(
         ),
         ("tag push receipt", "\"tag_push_receipt\""),
         ("executed launch receipt status", "\"status\": \"executed\""),
-    ] {
-        audit_contains(audit, evidence, needle)?;
+    ];
+    if let Some(evidence) = super::super::first_missing_text_evidence(audit, &required_evidence) {
+        return Err(ReleaseCompletionAuditError::MissingEvidence { evidence });
     }
 
     let total_requirements = number_field(audit, "total_requirements")?;
@@ -158,18 +159,6 @@ pub fn validate_release_completion_audit(
         total_requirements,
         checklist_count,
     })
-}
-
-fn audit_contains(
-    audit: &str,
-    evidence: &'static str,
-    needle: &str,
-) -> Result<(), ReleaseCompletionAuditError> {
-    if audit.contains(needle) {
-        Ok(())
-    } else {
-        Err(ReleaseCompletionAuditError::MissingEvidence { evidence })
-    }
 }
 
 fn require_at_least(

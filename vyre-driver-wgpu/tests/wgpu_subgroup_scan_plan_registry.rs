@@ -42,7 +42,9 @@ fn wgpu_subgroup_scan_plan_registry_requires_parity_and_diagnostics() {
     }
     assert_eq!(
         PLANS
-            .matches("evidence_path = \"vyre-driver-wgpu/tests/wgpu_subgroup_scan_plan_registry.rs\"")
+            .matches(
+                "evidence_path = \"vyre-driver-wgpu/tests/wgpu_subgroup_scan_plan_registry.rs\""
+            )
             .count(),
         PLANS.matches("[[route]]").count() + PLANS.matches("[[diagnostic]]").count(),
         "Fix: every WGPU subgroup registry row must point at this proof gate"

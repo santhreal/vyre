@@ -285,9 +285,7 @@ fn op_matrix_scan_construct_tiers_have_proof_and_diagnostics() {
                 .get(backend)
                 .and_then(Value::as_str)
                 .unwrap_or_else(|| {
-                    panic!(
-                        "Fix: OP_MATRIX scan construct `{id}` must route backend `{backend}`."
-                    )
+                    panic!("Fix: OP_MATRIX scan construct `{id}` must route backend `{backend}`.")
                 });
             assert!(
                 route_values.contains(route),

@@ -118,20 +118,55 @@ fn batch_dispatch_timeout_can_be_overridden() {
     assert_eq!(config.timeout, Duration::from_secs(5));
 }
 
+/// The persistent-dispatch wait spins and parks; it never sleeps a fixed slice.
+///
+/// A fixed `thread::sleep(1ms)` in this loop costs up to a millisecond of
+/// latency on every dispatch that completes promptly, which on a batch of
+/// short megakernels is most of the wall clock. The loop must instead pause
+/// briefly on the CPU and then park with a bound derived from the remaining
+/// timeout budget.
+///
+/// This is checked as source text on both files because the property is about
+/// what the wait loop is ALLOWED to call, and a behavioural test cannot prove
+/// the absence of a sleep. It previously read only `dispatcher.rs` and looked
+/// for `park_timeout` and `spin_loop` there, so when the backoff was correctly
+/// extracted into `wait_backoff::AdaptiveWaitBackoff` the identifiers left the
+/// file and the contract failed on a refactor that improved the code. It now
+/// follows the wait to its owner: the dispatcher must delegate to the backoff
+/// type, and the backoff type must be the thing that spins and parks. Neither
+/// file may contain a fixed sleep.
 #[test]
 fn persistent_dispatch_wait_does_not_use_fixed_millisecond_sleep() {
-    let src = std::fs::read_to_string(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/src/megakernel/dispatcher.rs"
-    ))
-    .expect("dispatcher source must be readable for wait-loop contract test");
+    let read = |relative: &str| {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(relative);
+        std::fs::read_to_string(&path)
+            .unwrap_or_else(|error| panic!("{relative} must be readable: {error}"))
+    };
+
+    let dispatcher = read("src/megakernel/dispatcher.rs");
+    let backoff = read("src/wait_backoff.rs");
+
+    for (name, src) in [
+        ("dispatcher.rs", &dispatcher),
+        ("wait_backoff.rs", &backoff),
+    ] {
+        assert!(
+            !src.contains("std::thread::sleep") && !src.contains("thread::sleep("),
+            "{name}: the persistent dispatch wait path must not sleep a fixed slice"
+        );
+        assert!(
+            !src.contains("Duration::from_millis(1)"),
+            "{name}: a hardcoded 1ms wait is the exact regression this guards"
+        );
+    }
+
     assert!(
-        !src.contains("std::thread::sleep") && !src.contains("Duration::from_millis(1)"),
-        "persistent dispatch wait must use adaptive bounded waiting, not a fixed 1ms sleep"
+        dispatcher.contains("AdaptiveWaitBackoff"),
+        "the dispatcher must wait through the shared adaptive backoff, not hand-roll one"
     );
     assert!(
-        src.contains("park_timeout") && src.contains("spin_loop"),
-        "persistent dispatch wait must combine short CPU pauses with bounded parking"
+        backoff.contains("spin_loop") && backoff.contains("park_timeout"),
+        "AdaptiveWaitBackoff must combine short CPU pauses with bounded parking"
     );
 }
 

@@ -16,7 +16,10 @@ fn read_repo_file(relative: &str) -> String {
 }
 
 fn assert_contains(haystack: &str, needle: &str) {
-    assert!(haystack.contains(needle), "missing required governance token: {needle}");
+    assert!(
+        haystack.contains(needle),
+        "missing required governance token: {needle}"
+    );
 }
 
 #[test]
@@ -85,4 +88,3 @@ fn async_io_backpressure_connects_ingress_to_release_evidence() {
         assert_contains(&evidence, token);
     }
 }
-

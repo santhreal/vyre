@@ -194,5 +194,3 @@ fn emit_fuses_vector_store_across_folded_literal_index_gaps() {
         "Fix: folded-index vector store fusion must not leave scalar stores behind.\n{s}"
     );
 }
-
-

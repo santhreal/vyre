@@ -415,7 +415,35 @@ pub(crate) fn gen_for_program(seed: u64) -> (String, usize) {
     )
 }
 
-pub(crate) fn rustc_run(src: &str, inputs: &[i32]) -> Option<i32> {
+/// Is a `rustc` we can shell out to available at all?
+///
+/// The only legitimate reason for the rustc oracle to produce no answer. It is
+/// checked once so the per-seed path can treat every other failure as a defect.
+pub(crate) fn rustc_available() -> bool {
+    std::process::Command::new("rustc")
+        .arg("--version")
+        .output()
+        .is_ok_and(|out| out.status.success())
+}
+
+/// Compile `src` with a generated `main`, run it, and return what it printed.
+///
+/// This used to return `Option<i32>` and answer `None` for every failure:
+/// rustc missing, rustc rejecting the source, the binary crashing, stdout not
+/// parsing. The callers counted the `Some`s and asserted the count was high
+/// enough, so a generator that emitted code rustc will not accept read exactly
+/// like a toolchain that was not installed. That is what hid it: the for-range
+/// oracle silently checked ZERO of its 80 seeds and the suite still reported
+/// the shape of a passing differential test until the count assertion tripped.
+///
+/// Every failure below now panics with the compiler's own diagnostics. Call
+/// [`rustc_available`] first if the toolchain may be absent.
+///
+/// # Panics
+///
+/// If rustc rejects the program, if the binary exits non-zero, or if its
+/// stdout is not a single `i32`.
+pub(crate) fn rustc_run(src: &str, inputs: &[i32]) -> i32 {
     use std::sync::atomic::{AtomicU32, Ordering};
     static N: AtomicU32 = AtomicU32::new(0);
     let n = N.fetch_add(1, Ordering::Relaxed);
@@ -427,8 +455,9 @@ pub(crate) fn rustc_run(src: &str, inputs: &[i32]) -> Option<i32> {
         .collect::<Vec<_>>()
         .join(", ");
     let main = format!("\nfn main() {{ println!(\"{{}}\", f({args})); }}\n");
+    let program = format!("{src}{main}");
     let rs = dir.join("m.rs");
-    std::fs::write(&rs, format!("{src}{main}")).expect("write");
+    std::fs::write(&rs, &program).expect("write");
     let exe = dir.join("m");
     let build = std::process::Command::new("rustc")
         .args(["--edition", "2021", "-O", "--cap-lints", "allow", "-o"])
@@ -436,20 +465,28 @@ pub(crate) fn rustc_run(src: &str, inputs: &[i32]) -> Option<i32> {
         .arg(&rs)
         .output()
         .expect("rustc on PATH");
-    let result = if build.status.success() {
-        std::process::Command::new(&exe)
-            .output()
-            .ok()
-            .filter(|o| o.status.success())
-            .and_then(|o| {
-                String::from_utf8_lossy(&o.stdout)
-                    .trim()
-                    .parse::<i32>()
-                    .ok()
-            })
-    } else {
-        None
-    };
+    assert!(
+        build.status.success(),
+        "rustc rejected the generated program. The generator must only emit \
+         code the real compiler accepts, otherwise the differential oracle \
+         compares nothing.\n--- source ---\n{program}\n--- rustc stderr ---\n{}",
+        String::from_utf8_lossy(&build.stderr)
+    );
+    let run = std::process::Command::new(&exe)
+        .output()
+        .expect("the compiled oracle binary must be runnable");
+    assert!(
+        run.status.success(),
+        "the compiled oracle binary exited {:?}. Generated programs are meant \
+         to be overflow-free and division-free, so a non-zero exit is a \
+         generator bug.\n--- source ---\n{program}\n--- stderr ---\n{}",
+        run.status.code(),
+        String::from_utf8_lossy(&run.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&run.stdout).trim().to_string();
+    let value = stdout.parse::<i32>().unwrap_or_else(|error| {
+        panic!("the oracle binary printed {stdout:?}, which is not an i32 ({error})")
+    });
     let _ = std::fs::remove_dir_all(&dir);
-    result
+    value
 }

@@ -23,9 +23,6 @@ P-RELEASE-1. Every box must tick before the 1.0 tag.
   green so CUDA/SPIR-V floors and nightly gates cannot regress to unchecked.
 - [ ] `cargo run -p vyre-conform-runner --features cuda -- dispatch --backend cuda --ops all`
   emits CUDA dispatch certificates against `vyre-reference`.
-- [ ] `cargo test -p vyre-conform-runner` green on the photonic
-  contract-check adapter (CI-gated; hardware-absent runs the
-  contract target).
 - [ ] Per-shape sweep `bash libs/tools/consumer/scripts/per_shape_sweep.sh`
   reports precision = 1.0 on every shipped shape.
 

@@ -503,7 +503,7 @@ fn parse_args(args: &[String]) -> Result<Config, String> {
             }
             "--help" | "-h" => {
                 return Err(
-                    "USAGE:\n  cargo_full run --bin xtask -- c-parser-clang-oracle --corpus DIR --vyre-report release/evidence/parser/c-parser-linux-subsystem.json [--output PATH] [-I DIR] [-D NAME[=VALUE]] [--clang clang] [--limit N]"
+                    "USAGE:\n  cargo xtask c-parser-clang-oracle --corpus DIR --vyre-report release/evidence/parser/c-parser-linux-subsystem.json [--output PATH] [-I DIR] [-D NAME[=VALUE]] [--clang clang] [--limit N]"
                         .to_string(),
                 );
             }

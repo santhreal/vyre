@@ -1,13 +1,8 @@
 //! Shared bitwise dual-reference machinery.
 
-/// Direct u32 binary reference over the first two little-endian words.
-#[must_use]
-pub(crate) fn binary_direct(input: &[u8], op: impl FnOnce(u32, u32) -> u32) -> Vec<u8> {
-    let Some((left, right)) = read_two_words(input) else {
-        return zero_word();
-    };
-    op(left, right).to_le_bytes().to_vec()
-}
+use crate::dual_impls::common::read_two_words;
+
+pub(crate) use crate::dual_impls::common::binary_direct;
 
 /// Bit-by-bit binary reference over the first two little-endian words.
 #[must_use]
@@ -111,15 +106,6 @@ pub(crate) fn clz_bits(input: &[u8]) -> Vec<u8> {
 
 fn read_one_word(input: &[u8]) -> Option<u32> {
     (input.len() >= 4).then(|| u32::from_le_bytes([input[0], input[1], input[2], input[3]]))
-}
-
-fn read_two_words(input: &[u8]) -> Option<(u32, u32)> {
-    (input.len() >= 8).then(|| {
-        (
-            u32::from_le_bytes([input[0], input[1], input[2], input[3]]),
-            u32::from_le_bytes([input[4], input[5], input[6], input[7]]),
-        )
-    })
 }
 
 fn bit_at(input: &[u8], bit_index: usize) -> bool {

@@ -84,17 +84,7 @@ impl Reader<'_> {
     ///   failure (unknown tag, depth exceeded, truncation, etc.).
     #[inline]
     pub(crate) fn node(&mut self) -> Result<Node, String> {
-        // Recursion guard: every `node()` enter increments depth, every
-        // exit decrements. Nested decode stops at `MAX_DECODE_DEPTH`.
-        if self.depth >= MAX_DECODE_DEPTH {
-            return Err(format!(
-                "Fix: IR wire format exceeds maximum decode depth {MAX_DECODE_DEPTH}; flatten deeply nested Block/If/Loop structures or reject this untrusted blob."
-            ));
-        }
-        self.depth += 1;
-        let result = self.node_inner();
-        self.depth -= 1;
-        result
+        self.with_decode_depth("Block/If/Loop structures", Self::node_inner)
     }
 
     fn node_inner(&mut self) -> Result<Node, String> {
@@ -254,19 +244,7 @@ impl Reader<'_> {
     ///   exceeded, truncation, invalid UTF-8, etc.).
     #[inline]
     pub(crate) fn expr(&mut self) -> Result<Expr, String> {
-        // Recursion guard for arbitrarily nested Expr trees (BinOp, UnOp,
-        // Select, Cast, Call arg lists, etc). Shares the same depth
-        // counter and budget as `node()` so a hostile blob can't evade
-        // the limit by alternating statement and expression levels.
-        if self.depth >= MAX_DECODE_DEPTH {
-            return Err(format!(
-                "Fix: IR wire format exceeds maximum decode depth {MAX_DECODE_DEPTH}; flatten deeply nested Expr trees or reject this untrusted blob."
-            ));
-        }
-        self.depth += 1;
-        let result = self.expr_inner();
-        self.depth -= 1;
-        result
+        self.with_decode_depth("Expr trees", Self::expr_inner)
     }
 
     /// Decode a `DataType` from the wire format.
@@ -304,17 +282,21 @@ impl Reader<'_> {
     ///   scalar tag).
     #[inline]
     pub(crate) fn data_type(&mut self) -> Result<DataType, String> {
-        // Recursion guard (L.1.35): `DataType` nests through Box (Vec/Sparse*/
-        // Quantized) and is reachable from `Expr::Cast` on the untrusted
-        // `from_wire()` path. Share the same depth counter/budget as node()/
-        // expr() so a hostile chain of nested type tags cannot stack-overflow.
+        self.with_decode_depth("DataType trees", Self::data_type_inner)
+    }
+
+    fn with_decode_depth<T>(
+        &mut self,
+        nested_kind: &str,
+        decode: fn(&mut Self) -> Result<T, String>,
+    ) -> Result<T, String> {
         if self.depth >= MAX_DECODE_DEPTH {
             return Err(format!(
-                "Fix: IR wire format exceeds maximum decode depth {MAX_DECODE_DEPTH}; flatten deeply nested DataType trees or reject this untrusted blob."
+                "Fix: IR wire format exceeds maximum decode depth {MAX_DECODE_DEPTH}; flatten deeply nested {nested_kind} or reject this untrusted blob."
             ));
         }
         self.depth += 1;
-        let result = self.data_type_inner();
+        let result = decode(self);
         self.depth -= 1;
         result
     }

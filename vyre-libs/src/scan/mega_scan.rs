@@ -700,7 +700,7 @@ impl RulePipeline {
         // Fail closed on a stale/crafted blob whose accept ids fall outside the
         // decoded state space. The reference scan guards each accept with
         // `lane < state.len()`, so an out-of-range id would be SILENTLY DROPPED
-        // (a recall hole on a stale cache) instead of surfaced as corruption 
+        // (a recall hole on a stale cache) instead of surfaced as corruption
         // exactly the Law-10 silent degrade the length checks above prevent for
         // the tables, now closed for the accept-id values too.
         if accept_state_ids.iter().any(|&id| id as usize >= states) {
@@ -886,7 +886,7 @@ mod tests {
     fn from_bytes_rejects_out_of_range_accept_state_id() {
         // Law 10 at decode: a stale/crafted blob whose accept id points past the
         // decoded state space must fail closed here. The reference scan's
-        // `lane < state.len()` guard would otherwise SILENTLY DROP that accept 
+        // `lane < state.len()` guard would otherwise SILENTLY DROP that accept
         // an invisible recall hole on a stale cache, not a loud corruption error.
         let mut pipe = build(&["ab", "bc"], "input", "hits", 16);
         let honest = pipe.plan.num_states;

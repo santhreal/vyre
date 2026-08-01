@@ -94,4 +94,3 @@ pub(crate) fn generated_f32_classification_values() -> Vec<f32> {
         .map(|lane| f32::from_bits(BITS[lane % BITS.len()]))
         .collect()
 }
-

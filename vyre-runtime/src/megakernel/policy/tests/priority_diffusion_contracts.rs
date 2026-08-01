@@ -18,10 +18,7 @@ fn priority_accounting_reports_structured_drain_before_overflow() {
     assert_eq!(recommendation.aged_promotions, 3);
     assert_eq!(recommendation.max_priority_age, 64);
     assert_eq!(recommendation.requeue_counter_headroom, 8);
-    assert_eq!(
-        recommendation.aged_promotion_counter_headroom,
-        u64::MAX - 3
-    );
+    assert_eq!(recommendation.aged_promotion_counter_headroom, u64::MAX - 3);
     assert_eq!(recommendation.fix, PRIORITY_COUNTER_DRAIN_FIX);
 }
 

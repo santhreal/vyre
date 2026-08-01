@@ -152,4 +152,3 @@ fn cuda_resident_adaptive_auto_selects_sparse_dense_for_dense_frontier() {
 // ---------------------------------------------------------------------
 // VAST preorder walk
 // ---------------------------------------------------------------------
-

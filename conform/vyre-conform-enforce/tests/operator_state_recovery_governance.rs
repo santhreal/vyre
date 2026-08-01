@@ -3,11 +3,15 @@
 const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
 const BACKUP: &str =
     include_str!("../../../docs/optimization/OPERATOR_STATE_BACKUP_RESTORE_POLICY.toml");
-const MIGRATION: &str = include_str!("../../../docs/optimization/STATE_SCHEMA_MIGRATION_POLICY.toml");
-const CACHE: &str = include_str!("../../../docs/optimization/CACHE_REBUILD_INVALIDATION_POLICY.toml");
-const EXERCISE: &str = include_str!("../../../docs/optimization/RECOVERY_EXERCISE_EVIDENCE_POLICY.toml");
-const COVERAGE: &str =
-    include_str!("../../../docs/optimization/END_TO_END_OPERATOR_STATE_RECOVERY_TRANCHE_COVERAGE.toml");
+const MIGRATION: &str =
+    include_str!("../../../docs/optimization/STATE_SCHEMA_MIGRATION_POLICY.toml");
+const CACHE: &str =
+    include_str!("../../../docs/optimization/CACHE_REBUILD_INVALIDATION_POLICY.toml");
+const EXERCISE: &str =
+    include_str!("../../../docs/optimization/RECOVERY_EXERCISE_EVIDENCE_POLICY.toml");
+const COVERAGE: &str = include_str!(
+    "../../../docs/optimization/END_TO_END_OPERATOR_STATE_RECOVERY_TRANCHE_COVERAGE.toml"
+);
 
 #[test]
 fn operator_state_recovery_sources_are_registered() {
@@ -18,12 +22,16 @@ fn operator_state_recovery_sources_are_registered() {
         "VELERO_RESTORE_REFERENCE",
         "NIST_SP_800_34",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 
 #[test]
-fn backup_restore_policy_records_scope_schedule_snapshot_integrity_restore_existing_resource_privacy_and_diagnostics() {
+fn backup_restore_policy_records_scope_schedule_snapshot_integrity_restore_existing_resource_privacy_and_diagnostics(
+) {
     for required in [
         "backup_id",
         "state_surface",
@@ -45,7 +53,8 @@ fn backup_restore_policy_records_scope_schedule_snapshot_integrity_restore_exist
 }
 
 #[test]
-fn state_schema_migration_policy_records_versions_compatibility_direction_idempotence_preflight_restore_evidence_and_diagnostics() {
+fn state_schema_migration_policy_records_versions_compatibility_direction_idempotence_preflight_restore_evidence_and_diagnostics(
+) {
     for required in [
         "migration_id",
         "state_surface",
@@ -67,7 +76,8 @@ fn state_schema_migration_policy_records_versions_compatibility_direction_idempo
 }
 
 #[test]
-fn cache_rebuild_policy_records_key_material_invalidation_rebuild_stale_read_artifact_identity_privacy_and_gate_effects() {
+fn cache_rebuild_policy_records_key_material_invalidation_rebuild_stale_read_artifact_identity_privacy_and_gate_effects(
+) {
     for required in [
         "cache_id",
         "cache_surface",
@@ -89,7 +99,8 @@ fn cache_rebuild_policy_records_key_material_invalidation_rebuild_stale_read_art
 }
 
 #[test]
-fn recovery_exercise_policy_records_scenarios_source_state_restore_validation_slo_rollback_evidence_and_publication_boundary() {
+fn recovery_exercise_policy_records_scenarios_source_state_restore_validation_slo_rollback_evidence_and_publication_boundary(
+) {
     for required in [
         "exercise_id",
         "scenario_policy",
@@ -111,7 +122,8 @@ fn recovery_exercise_policy_records_scenarios_source_state_restore_validation_sl
 }
 
 #[test]
-fn operator_state_recovery_coverage_reuses_config_artifact_readiness_rollout_release_health_publication_and_dedup_authorities() {
+fn operator_state_recovery_coverage_reuses_config_artifact_readiness_rollout_release_health_publication_and_dedup_authorities(
+) {
     for required in [
         "VX-1281..VX-1300",
         "operator_state_backup_restore_policy",

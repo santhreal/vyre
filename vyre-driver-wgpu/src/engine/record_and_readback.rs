@@ -60,7 +60,11 @@ pub(crate) struct RecordAndReadback<'a> {
     /// Caller-provided bytes for each non-shared, non-output buffer in declaration order.
     pub inputs: &'a [&'a [u8]],
     /// Per-output copy and trimming layouts.
-    pub output_bindings: &'a Arc<[OutputBindingLayout]>,
+    ///
+    /// Owned rather than borrowed because a runtime-sized writable binding is
+    /// re-laid-out per dispatch from the caller's bytes; see
+    /// [`resolve_runtime_sized_outputs`].
+    pub output_bindings: Arc<[OutputBindingLayout]>,
     /// Trap tag table for backend-owned trap sidecar decoding.
     pub trap_tags: &'a [TrapTag],
     /// Workgroup count for direct dispatch.
@@ -73,6 +77,13 @@ pub(crate) struct RecordAndReadback<'a> {
     pub iterations: u32,
     /// Enable opt-in GPU timestamp query profiling for this dispatch.
     pub timestamp_profile: bool,
+    /// Workgroup shape the grid may be re-inferred from, when it was inferred.
+    ///
+    /// `Some(shape)` means `workgroup_count` was derived from the compile-time
+    /// output word count, so it must be recomputed once a runtime-sized output
+    /// resolves to its real length. `None` means the caller pinned the launch
+    /// through `DispatchConfig::grid_override` and it is dispatched as asked.
+    pub inferred_grid_shape: Option<[u32; 3]>,
 }
 
 impl<'a> RecordAndReadback<'a> {
@@ -94,13 +105,17 @@ impl<'a> RecordAndReadback<'a> {
             bind_group_cache: Some(pipeline.bind_group_cache.as_ref()),
             buffer_bindings: &pipeline.buffer_bindings,
             inputs,
-            output_bindings: &pipeline.output_bindings,
+            output_bindings: Arc::clone(&pipeline.output_bindings),
             trap_tags: &pipeline.trap_tags,
             workgroup_count,
             indirect: pipeline.indirect.as_ref(),
             labels,
             iterations: config.fixpoint_iterations.unwrap_or(1).max(1),
             timestamp_profile,
+            inferred_grid_shape: config
+                .grid_override
+                .is_none()
+                .then_some(pipeline.workgroup_shape),
         }
     }
 }
@@ -139,7 +154,7 @@ pub(crate) fn record_dispatch_unsubmitted(
 }
 
 fn record_dispatch_unsubmitted_impl(
-    request: RecordAndReadback<'_>,
+    mut request: RecordAndReadback<'_>,
     scratch: &mut super::dispatch_scratch::DispatchScratch,
 ) -> Result<RecordedDispatch, BackendError> {
     let (device, queue) = &**request.device_queue;
@@ -184,6 +199,59 @@ fn record_dispatch_unsubmitted_impl(
                 "record-and-readback consumed input index overflowed usize. Fix: split the dispatch input list before recording.",
             )
         })?;
+    }
+
+    // Runtime-sized writable bindings are sized from the bytes the caller
+    // supplied on THIS dispatch. The pipeline's cached layouts cannot carry that
+    // number: they are derived once per program, at compile time, where the input
+    // lengths do not exist yet, so a countless declaration was laid out as zero
+    // elements. Resolving it here is what makes such a buffer read back the same
+    // bytes the CPU reference and CUDA return, instead of an empty buffer under
+    // an `Ok`, and it is what stops the upload from overrunning a 4-byte
+    // allocation and aborting the host process inside `Queue::write_buffer`.
+    if request
+        .buffer_bindings
+        .iter()
+        .any(|info| info.is_output && info.count == 0 && !info.internal_trap)
+    {
+        request.output_bindings = resolve_runtime_sized_outputs(
+            &request.output_bindings,
+            request.buffer_bindings,
+            request.inputs,
+            input_idx_by_binding,
+        )?;
+        // The launch grid was inferred from that same compile-time count, so it
+        // is wrong for the same reason the layout was: a countless output
+        // reports zero words, which rounds up to exactly one workgroup no
+        // matter how many elements the caller supplied. Left alone, the
+        // dispatch covers one workgroup of a buffer that now reads back at its
+        // full resolved length, so every element past that first workgroup
+        // comes home as a zero under an `Ok`, which is the same silent
+        // wrong-answer the zero-length readback was. Re-infer from the resolved
+        // word count, and only when this dispatch inferred its grid: a caller
+        // who pinned `grid_override` asked for that exact launch and keeps it.
+        if let Some(workgroup_shape) = request.inferred_grid_shape {
+            let resolved_words = request
+                .output_bindings
+                .iter()
+                .max_by_key(|output| output.word_count)
+                .map(|largest| {
+                    u32::try_from(largest.word_count).map_err(|error| {
+                        BackendError::new(format!(
+                            "resolved output word count {} for `{}` does not fit u32: {error}. Fix: declare the buffer with a smaller .with_count(n), or shard the dispatch.",
+                            largest.word_count, largest.name
+                        ))
+                    })
+                })
+                .transpose()?;
+            if let Some(words) = resolved_words {
+                request.workgroup_count =
+                    vyre_driver::program_walks::infer_dispatch_grid_for_count(
+                        words,
+                        workgroup_shape,
+                    )?;
+            }
+        }
     }
 
     // Create a GPU buffer for every binding that needs one.
@@ -247,7 +315,8 @@ fn record_dispatch_unsubmitted_impl(
                 | wgpu::BufferUsages::COPY_SRC
                 | wgpu::BufferUsages::COPY_DST
                 | wgpu::BufferUsages::INDIRECT;
-            let output_bytes_u64 = WGPU_NUMERIC.usize_to_u64(output_bytes, "output allocation bytes")?;
+            let output_bytes_u64 =
+                WGPU_NUMERIC.usize_to_u64(output_bytes, "output allocation bytes")?;
             let b = pool
                 .acquire(output_bytes_u64, usage)
                 .map_err(pool_backend_error)?;
@@ -491,10 +560,82 @@ fn record_dispatch_unsubmitted_impl(
         _bind_groups: bind_groups,
         readback_buffers,
         output_count,
-        output_bindings: Arc::clone(request.output_bindings),
+        output_bindings: Arc::clone(&request.output_bindings),
         trap_tags: Arc::from(request.trap_tags),
         timestamp_recorder,
     })
+}
+
+/// Re-lay-out every runtime-sized writable binding from the bytes supplied now.
+///
+/// A writable buffer declared without `.with_count(n)` has `count == 0`, which
+/// the IR defines as runtime-sized: its element count is whatever the caller
+/// passed for it. `vyre_driver::dynamic_element_count_from_bytes` is the one rule
+/// for deriving that count, and the CPU reference and CUDA already size such a
+/// buffer through it, so applying it here is what puts WGPU on the same answer.
+///
+/// Bindings with a static count are copied through untouched, so a counted
+/// declaration keeps the layout the pipeline compiled for it.
+///
+/// # Errors
+///
+/// Returns when a runtime-sized writable binding has no host input to take its
+/// size from. That is the request the backend genuinely cannot honor, and it is
+/// refused here by name rather than answered with a zero-length buffer.
+fn resolve_runtime_sized_outputs(
+    output_bindings: &Arc<[OutputBindingLayout]>,
+    buffer_bindings: &[BufferBindingInfo],
+    inputs: &[&[u8]],
+    input_idx_by_binding: &binding_lookup::BindingLookup,
+) -> Result<Arc<[OutputBindingLayout]>, BackendError> {
+    let mut resolved = Vec::new();
+    vyre_driver::allocation::try_reserve_vec_to_capacity(&mut resolved, output_bindings.len())
+        .map_err(|error| {
+            BackendError::new(format!(
+                "runtime-sized output resolution could not reserve {} layout slot(s): {error}. Fix: reduce the program's writable binding fanout.",
+                output_bindings.len()
+            ))
+        })?;
+    for layout in output_bindings.iter() {
+        let Some(info) = buffer_bindings
+            .iter()
+            .find(|info| info.binding == layout.binding)
+        else {
+            resolved.push(layout.clone());
+            continue;
+        };
+        if info.count != 0 || info.internal_trap {
+            resolved.push(layout.clone());
+            continue;
+        }
+        let bytes = input_idx_by_binding
+            .get(info.binding)
+            .and_then(|index| inputs.get(index).copied())
+            .ok_or_else(|| {
+                BackendError::new(format!(
+                    "writable buffer `{}` (binding {}) is runtime-sized, declared without .with_count(n), but this dispatch supplied no input bytes for it, so its readback size is unknown. Fix: declare it with .with_count(n), or pass one input slice for it in BufferDecl order.",
+                    info.name, info.binding
+                ))
+            })?;
+        let count = vyre_driver::dynamic_element_count_from_bytes(&info.element, bytes.len())
+            .ok_or_else(|| {
+                BackendError::new(format!(
+                    "writable buffer `{}` (binding {}) is runtime-sized and was supplied {} byte(s), which do not resolve to a whole element count for `{}`. Fix: declare it with .with_count(n), or supply a whole number of elements.",
+                    info.name,
+                    info.binding,
+                    bytes.len(),
+                    info.element
+                ))
+            })?;
+        resolved.push(vyre_driver::output_binding_layout_parts(
+            info.binding,
+            &info.name,
+            &info.element,
+            count,
+            None,
+        )?);
+    }
+    Ok(Arc::from(resolved))
 }
 
 fn padded_wgpu_usize(size: usize, label: &'static str) -> Result<usize, BackendError> {

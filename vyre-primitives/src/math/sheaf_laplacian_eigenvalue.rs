@@ -253,18 +253,11 @@ pub fn try_cpu_ref_into(
     Ok(max_r)
 }
 
-#[cfg(any(test, feature = "cpu-parity"))]
-fn reserve_eigen_tmp(out: &mut Vec<f64>, len: usize, name: &str) -> Result<(), String> {
-    if len > out.capacity() {
-        crate::graph::scratch::reserve_graph_items(
-            out,
-            len - out.len(),
-            "sheaf Laplacian eigenvalue CPU oracle",
-            name,
-        )?;
-    }
-    Ok(())
-}
+crate::graph::scratch::define_reserve_graph_capacity!(
+    reserve_eigen_tmp,
+    f64,
+    "sheaf Laplacian eigenvalue CPU oracle"
+);
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {

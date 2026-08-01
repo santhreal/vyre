@@ -67,9 +67,9 @@ enum EmitFormat {
 
 fn lexer_dfa_table(smoke: bool) -> Result<DfaTable, Box<dyn std::error::Error>> {
     if smoke {
-        Ok(DfaBuilder::new(4, 32).build().map_err(|e| {
-            format!("Fix: smoke DFA build failed: {e}")
-        })?)
+        Ok(DfaBuilder::new(4, 32)
+            .build()
+            .map_err(|e| format!("Fix: smoke DFA build failed: {e}"))?)
     } else {
         Ok(build_c11_lexer_dfa())
     }

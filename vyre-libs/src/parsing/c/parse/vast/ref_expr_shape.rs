@@ -606,7 +606,10 @@ fn annotate_witness_inputs() -> Vec<Vec<Vec<u8>>> {
     let (tok_types, tok_starts, tok_lens) = annotate_witness_tokens();
     let raw_vast = reference_c11_build_vast_nodes(&tok_types, &tok_starts, &tok_lens);
     // The base annotator reads an UNPACKED haystack: one source byte per u32 word.
-    let expanded: Vec<u32> = ANNOTATE_WITNESS_SOURCE.iter().map(|b| u32::from(*b)).collect();
+    let expanded: Vec<u32> = ANNOTATE_WITNESS_SOURCE
+        .iter()
+        .map(|b| u32::from(*b))
+        .collect();
     let out_init = vec![0u8; raw_vast.len()];
     vec![vec![raw_vast, u32_words_to_bytes(&expanded), out_init]]
 }

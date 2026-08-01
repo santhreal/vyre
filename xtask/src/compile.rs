@@ -1,4 +1,4 @@
-//! `cargo_full run --bin xtask -- compile`  -  multi-target emitter harness.
+//! `cargo xtask compile`  -  multi-target emitter harness.
 //!
 //! P7.4 contract: one IR → backend artifacts + a
 //! byte-proof-equivalence certificate. The WGSL path is wired through
@@ -8,7 +8,7 @@
 //! Usage:
 //!
 //! ```sh
-//! cargo_full run --bin xtask -- compile <program.vir> \
+//! cargo xtask compile <program.vir> \
 //!     [--to wgsl] [--to spirv] [--to secondary_text] [--to native_module] [--to hlsl] \
 //!     [--output-dir <dir>]
 //! ```

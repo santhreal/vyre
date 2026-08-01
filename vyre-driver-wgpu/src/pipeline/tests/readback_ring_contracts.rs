@@ -56,7 +56,7 @@ fn direct_record_and_readback_reuses_bind_groups() {
                 bind_group_cache: Some(pipeline.bind_group_cache.as_ref()),
                 buffer_bindings: &pipeline.buffer_bindings,
                 inputs: &empty_inputs,
-                output_bindings: &pipeline.output_bindings,
+                output_bindings: Arc::clone(&pipeline.output_bindings),
                 trap_tags: &pipeline.trap_tags,
                 workgroup_count: [1, 1, 1],
                 indirect: pipeline.indirect.as_ref(),
@@ -67,6 +67,7 @@ fn direct_record_and_readback_reuses_bind_groups() {
                 },
                 iterations: 1,
                 timestamp_profile: false,
+                inferred_grid_shape: None,
             },
         )
         .expect(
@@ -153,7 +154,7 @@ fn direct_record_and_readback_trap_uses_readback_rings_only() {
             bind_group_cache: Some(pipeline.bind_group_cache.as_ref()),
             buffer_bindings: &pipeline.buffer_bindings,
             inputs: &empty_inputs,
-            output_bindings: &pipeline.output_bindings,
+            output_bindings: Arc::clone(&pipeline.output_bindings),
             trap_tags: &pipeline.trap_tags,
             workgroup_count: [1, 1, 1],
             indirect: pipeline.indirect.as_ref(),
@@ -164,6 +165,7 @@ fn direct_record_and_readback_trap_uses_readback_rings_only() {
             },
             iterations: 1,
             timestamp_profile: false,
+            inferred_grid_shape: None,
         },
     )
     .expect_err(
@@ -241,7 +243,7 @@ fn direct_record_and_readback_trap_without_readback_rings_allocates_full_sidecar
             bind_group_cache: Some(pipeline.bind_group_cache.as_ref()),
             buffer_bindings: &pipeline.buffer_bindings,
             inputs: &empty_inputs,
-            output_bindings: &pipeline.output_bindings,
+            output_bindings: Arc::clone(&pipeline.output_bindings),
             trap_tags: &pipeline.trap_tags,
             workgroup_count: [1, 1, 1],
             indirect: pipeline.indirect.as_ref(),
@@ -252,6 +254,7 @@ fn direct_record_and_readback_trap_without_readback_rings_allocates_full_sidecar
             },
             iterations: 1,
             timestamp_profile: false,
+            inferred_grid_shape: None,
         },
     )
     .expect_err(
@@ -273,4 +276,3 @@ fn direct_record_and_readback_trap_without_readback_rings_allocates_full_sidecar
         "Fix: non-ring trap path must allocate exactly the full-sidecar pooled readback buffer plus trap sidecar allocation (before={before_allocations}, after={after_allocations})."
     );
 }
-

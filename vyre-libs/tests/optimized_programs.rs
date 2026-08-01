@@ -21,27 +21,67 @@ fn linear_tiled_uses_tiled_matmul_kernel_shape() {
     assert_region_generator(&program, "vyre-libs::nn::linear_tiled");
 }
 
+/// The default attention kernel maps one WORKGROUP, not one invocation, to a
+/// query row.
+///
+/// Two earlier shapes are ruled out here, and the test has been wrong about
+/// which one is current before, so both are asserted explicitly:
+///
+///   - the original kernel bound one invocation per OUTPUT ELEMENT (`idx`),
+///     which serializes the dot product across `d` and leaves the lanes idle;
+///   - the intermediate kernel bound one invocation per query row (`i`), which
+///     is what this test used to assert. It was replaced because a whole row
+///     still runs on a single lane.
+///
+/// The current kernel is workgroup-cooperative: `group` selects a row-block,
+/// `lane` is the invocation within it, and `row` is derived from `group`. That
+/// is why there is no top-level `InvocationId` binding at all, and asserting
+/// for one made this test fail against a kernel that is strictly better than
+/// the one it was written for.
 #[cfg(feature = "nn-attention")]
 #[test]
-fn attention_default_is_query_row_parallel() {
-    let program = vyre_libs::nn::attention("q", "k", "v", "out", 8, 4);
+fn attention_default_maps_one_workgroup_to_a_query_row() {
+    // s = 16 clears the `s <= 8 && d <= 16` direct-unroll threshold, which
+    // builds a fully unrolled straight-line program with a [1, 1, 1] workgroup
+    // and no lane structure at all.
+    let program = vyre_libs::nn::attention("q", "k", "v", "out", 16, 4);
 
     assert_eq!(program.workgroup_size(), [256, 1, 1]);
     let body = root_region_body(&program);
+
+    // The kernel body sits inside `if WorkgroupId.x < total_groups { ... }`,
+    // the guard that retires workgroups past the last row-block, so the
+    // bindings are one level down rather than at the top of the region.
     assert!(
-        body.iter().any(|node| matches!(
-            node,
-            Node::Let {
-                name,
-                value: Expr::InvocationId { axis: 0 },
-            } if name.as_str() == "i"
-        )),
-        "Fix: attention must bind one invocation to one query row."
+        matches!(body, [Node::If { .. }]),
+        "Fix: attention must guard its whole body on the workgroup bound, got {body:?}"
+    );
+
+    let binding = |name: &str| -> Option<&Expr> { find_let(body, name) };
+
+    assert!(
+        matches!(binding("group"), Some(Expr::WorkgroupId { axis: 0 })),
+        "Fix: attention must bind `group` to the x workgroup id, got {:?}",
+        binding("group")
+    );
+    assert!(
+        matches!(binding("lane"), Some(Expr::LocalId { axis: 0 })),
+        "Fix: attention must bind `lane` to the x local id, got {:?}",
+        binding("lane")
+    );
+    assert!(
+        binding("row").is_some(),
+        "Fix: attention must derive a query row from the workgroup id"
     );
     assert_eq!(
         count_invocation_id_lets(body, "idx"),
         0,
         "Fix: attention must not use the old one-invocation-per-output-element idx kernel."
+    );
+    assert_eq!(
+        count_invocation_id_lets(body, "i"),
+        0,
+        "Fix: attention must not fall back to the one-invocation-per-row kernel."
     );
 }
 
@@ -90,6 +130,30 @@ fn root_region_body(program: &vyre::ir::Program) -> &[Node] {
         Node::Region { body, .. } => body.as_ref(),
         other => panic!("Fix: expected optimized root Region, got {other:?}"),
     }
+}
+
+/// Find the first `Let` binding of `name` anywhere in a node tree.
+///
+/// Bindings are not always at the top of a region: the tiled kernels wrap
+/// their whole body in a workgroup-bounds guard, so a flat search over the
+/// region body finds nothing and makes a correct kernel look broken.
+#[cfg(feature = "nn-attention")]
+fn find_let<'a>(nodes: &'a [Node], name: &str) -> Option<&'a Expr> {
+    for node in nodes {
+        let found = match node {
+            Node::Let { name: bound, value } if bound.as_str() == name => return Some(value),
+            Node::If {
+                then, otherwise, ..
+            } => find_let(then, name).or_else(|| find_let(otherwise, name)),
+            Node::Loop { body, .. } | Node::Block(body) => find_let(body, name),
+            Node::Region { body, .. } => find_let(body.as_slice(), name),
+            _ => None,
+        };
+        if found.is_some() {
+            return found;
+        }
+    }
+    None
 }
 
 #[cfg(feature = "nn-attention")]

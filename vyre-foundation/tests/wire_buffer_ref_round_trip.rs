@@ -11,10 +11,10 @@
 //! stored program and conformance certificate for no benefit. Anything older
 //! predates the metadata layout and must still be refused.
 
-use vyre_foundation::serial::wire::framing::{
-    MIN_SUPPORTED_WIRE_FORMAT_VERSION, WIRE_FORMAT_VERSION,
-};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::serial::wire::framing::{
+    wire_format_version_is_supported, MIN_SUPPORTED_WIRE_FORMAT_VERSION, WIRE_FORMAT_VERSION,
+};
 
 /// A program whose call passes a buffer by reference alongside a scalar.
 fn program_with_a_buffer_reference() -> Program {
@@ -136,12 +136,8 @@ fn a_buffer_reference_survives_a_round_trip_with_its_name() {
 /// the two occupy adjacent positions in the same argument list.
 #[test]
 fn the_scalar_argument_beside_it_round_trips_too() {
-    let decoded = Program::from_wire(
-        &program_with_a_buffer_reference()
-            .to_wire()
-            .expect("encode"),
-    )
-    .expect("decode");
+    let decoded = Program::from_wire(&program_with_a_buffer_reference().to_wire().expect("encode"))
+        .expect("decode");
     let dump = format!("{:?}", decoded.entry());
     assert!(
         dump.contains("LitU32(3)"),
@@ -149,8 +145,17 @@ fn the_scalar_argument_beside_it_round_trips_too() {
     );
 }
 
-/// The encoder must stamp rev 5. A program containing tag 22 labelled rev 4
-/// would be read by a rev-4 decoder as an unknown tag at best.
+/// The encoder must stamp the CURRENT revision, and the constant must be the
+/// revision this file's expectations were written against.
+///
+/// Why this exists: a body carrying a rev-N layout but labelled rev N-1 would be
+/// read by the older decoder as an unknown tag at best, and as a plausible wrong
+/// buffer table at worst. Pinning the constant means a version bump cannot land
+/// without somebody revisiting what the new revision did to the layout, which is
+/// exactly the review step rev 6 needed.
+///
+/// What breaks if this regresses: if the stamp and the constant drift apart,
+/// stored programs carry a version that does not describe their own body.
 #[test]
 fn the_encoder_stamps_the_current_schema_version() {
     let bytes = program_with_a_buffer_reference().to_wire().expect("encode");
@@ -159,20 +164,55 @@ fn the_encoder_stamps_the_current_schema_version() {
         WIRE_FORMAT_VERSION,
         "encoded programs must carry the current schema version"
     );
-    assert_eq!(WIRE_FORMAT_VERSION, 5, "rev 5 introduced the BufferRef tag");
+    assert_eq!(
+        WIRE_FORMAT_VERSION, 6,
+        "Fix: rev 6 added linear_type, bytes_extraction and shape_predicate INSIDE each buffer \
+         record. If the version moved again, decide what the new revision does to that layout \
+         before touching this number, because the relabel test below depends on it."
+    );
 }
 
-/// Rev 5 only appends a tag, so rev-4 bytes still mean what they meant.
-/// Rejecting them would invalidate stored programs for no gain.
+/// A REV-6 BODY RELABELLED AS REV 4 MUST BE REJECTED. This test CHANGED MEANING
+/// at rev 6 rather than merely changing a number, so read the reason before
+/// touching it.
+///
+/// Why this exists: through rev 5 every revision only APPENDED a tag, so
+/// relabelling a fresh encode as rev 4 produced bytes a rev-4 decoder would read
+/// identically, and this test asserted the relabel DECODED. Rev 6 broke that
+/// premise: it adds bytes INSIDE each buffer record, so a relabelled body no
+/// longer means what its version claims. A decoder that accepted it would be
+/// performing the three new reads UNGATED, and then a genuine rev-4 or rev-5 blob
+/// would decode into a plausible WRONG buffer table instead of failing. The
+/// rejection is therefore the proof that the new reads are gated on the declared
+/// version, which is the only thing standing between an older stored program and
+/// a silently wrong buffer table.
+///
+/// BOUNDARY, stated because this is easy to misread as a compatibility test:
+/// what is asserted here is the version RANGE and the GATE MECHANISM. Genuine
+/// rev-4 bytes DO still decode, precisely because the reads are gated, but this
+/// test cannot mint genuine rev-4 bytes. The encoder only emits the current
+/// revision, and hand-synthesizing a legacy body means duplicating its node
+/// framing inside this file, where a mis-synthesized blob fails for the wrong
+/// reason and proves nothing.
+///
+/// What breaks if this regresses: if the relabel starts decoding, the version
+/// gate has been dropped and every stored pre-rev-6 program misparses into a
+/// wrong buffer table without an error.
 #[test]
-fn a_rev_four_program_still_decodes() {
-    let original = rev_four_shaped_program();
-    let bytes = with_version(original.to_wire().expect("encode"), 4);
-    let decoded = Program::from_wire(&bytes)
-        .unwrap_or_else(|error| panic!("rev 4 must remain readable: {error}"));
+fn a_rev_four_relabelled_body_is_rejected_and_the_floor_stays_four() {
+    let bytes = with_version(rev_four_shaped_program().to_wire().expect("encode"), 4);
     assert!(
-        original.structural_eq(&decoded),
-        "a rev-4 program must decode to the same program"
+        Program::from_wire(&bytes).is_err(),
+        "Fix: a rev-6 body relabelled rev 4 decoded successfully, so the three buffer reads added \
+         at rev 6 are NOT gated on the declared version. An ungated read consumes bytes belonging \
+         to the next buffer, so a genuine rev-4 blob would decode into a plausible wrong buffer \
+         table instead of failing."
+    );
+    assert!(
+        wire_format_version_is_supported(4),
+        "Fix: rev 4 must stay INSIDE the accepted range. Refusing it at the version check would \
+         invalidate stored programs, which is a different and worse failure than refusing a \
+         relabelled body."
     );
 }
 

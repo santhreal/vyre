@@ -12,8 +12,8 @@ the defense rests on.
   uploads a `vyre::Program`. Attacker can construct arbitrary valid
   (validator-passing) IR.
 - **Malformed-wire submitter.** Attacker sends arbitrary bytes
-  claiming to be VIR0. Decoder must not panic, must not loop, must
-  return a structured error with bounded work.
+  claiming to be a vyre wire envelope (`VYRE` magic). Decoder must not
+  panic, must not loop, must return a structured error with bounded work.
 - **Resource-exhaustion attacker.** Submits IR intended to consume
   maximum GPU memory, time, or pipeline-cache slots.
 - **Cross-tenant attacker.** In a multi-tenant deploy, attacks via

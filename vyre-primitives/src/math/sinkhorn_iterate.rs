@@ -1,13 +1,14 @@
 //! Full iterative Sinkhorn balance.
 //!
 //! Alternates row-normalize and column-normalize until converged.
-//! Composes `sinkhorn_scale` + `semiring_gemm` + `persistent_fixpoint`.
+//! Composes `sinkhorn_scale` + `semiring_gemm` + a persistent fixpoint
+//! harness.
 
-use std::sync::Arc;
-
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
 
+use crate::fixpoint::persistent_fixpoint::{
+    persistent_fixpoint, persistent_fixpoint_grid, PERSISTENT_FIXPOINT_WORKGROUP_SIZE,
+};
 use crate::math::semiring_gemm::{semiring_gemm, Semiring};
 use crate::math::sinkhorn::sinkhorn_scale;
 
@@ -28,7 +29,35 @@ pub const OP_ID: &str = "vyre-primitives::math::sinkhorn_iterate";
 /// - `v`: `n` elements, current state for v.
 /// - `kv`: `m` elements scratch.
 /// - `ktu`: `n` elements scratch.
-/// - `changed`: 1 element convergence flag.
+/// - `changed`: convergence flag. One element on the single-workgroup form,
+///   `max_iterations` elements on the grid form; see below.
+///
+/// # Convergence-flag form
+///
+/// The launch spans `m * n` lanes, not `m`:
+/// `dispatch_element_count_for_program`
+/// (`vyre-driver/src/program_walks/dispatch_params.rs:19`) sizes an
+/// atomic-carrying program's launch from its WIDEST declared buffer, this
+/// program carries the harness's `atomic_or`, and the widest buffers are the
+/// `m * n` kernel matrices `k` and `k_t`. So the cell count, not the scaling
+/// vector length, selects the harness:
+///
+/// - `m * n <= PERSISTENT_FIXPOINT_WORKGROUP_SIZE[0]`: one workgroup covers
+///   the launch, so [`persistent_fixpoint`] runs with its single shared
+///   `changed[0]` word. That word is cleared by a plain store fenced only by
+///   a workgroup-scope barrier; with one group the fence is incidentally
+///   grid-wide, so the clear cannot race the `atomic_or` that sets the flag.
+/// - `m * n` above that width: [`persistent_fixpoint_grid`], which never
+///   clears the flag, gives each iteration its own `changed` word, and
+///   separates waves with `MemoryOrdering::GridSync`. The single-word form is
+///   limited to one workgroup precisely because its clear and its set are
+///   unordered across groups: group 0's clear can erase another group's set,
+///   that group then reads 0 and returns early with an unbalanced scaling
+///   vector, and the flag the host reads afterwards reports a convergence no
+///   group agreed to.
+///
+/// A `17 x 17` problem is already 289 cells, so this threshold is crossed at
+/// modest sizes with both extents far under one workgroup width.
 #[must_use]
 #[allow(clippy::too_many_arguments)]
 pub fn sinkhorn_iterate(
@@ -71,69 +100,154 @@ pub fn sinkhorn_iterate(
         );
     };
 
-    let mut transfer_body = Vec::new();
+    let transfer_body = sinkhorn_transfer_body(k, k_t, a, b, u_next, v, kv, ktu, m, n);
 
+    // `m` alone does NOT decide the harness: see the form note above. `k` and
+    // `k_t` are `m * n` long, which dominates `m` and `n` for any non-zero
+    // extents, so the launch spans `matrix_cells` lanes and a modest matrix
+    // makes the dispatch multi-workgroup while both extents still fit one group.
+    let needs_grid_sync = matrix_cells > PERSISTENT_FIXPOINT_WORKGROUP_SIZE[0];
+
+    let inner = if needs_grid_sync {
+        persistent_fixpoint_grid(transfer_body, u_curr, u_next, changed, m, max_iterations)
+    } else {
+        persistent_fixpoint(transfer_body, u_curr, u_next, changed, m, max_iterations)
+    };
+
+    // Mirrors the count the chosen harness declares for `changed`: one
+    // never-cleared word per iteration for the grid form, which indexes
+    // `changed[iteration]`, and one shared word for the single-workgroup form.
+    let changed_words = if needs_grid_sync {
+        max_iterations.max(1)
+    } else {
+        1
+    };
+
+    sinkhorn_wrap(
+        &inner,
+        k,
+        k_t,
+        a,
+        b,
+        u_curr,
+        u_next,
+        v,
+        kv,
+        ktu,
+        changed,
+        m,
+        n,
+        matrix_cells,
+        changed_words,
+    )
+}
+
+/// One full Sinkhorn sweep: `Kv`, then `u`, then `Ktu`, then `v`.
+///
+/// Every composed pass is PARTITIONED by global invocation id, not chunked: the
+/// gemms gate on `t < out_cells` (`m` for `Kv`, `n` for `Ktu`) and the scales on
+/// `t < count`, and each lane sums over the shared dimension internally. So the
+/// widest lane gate here is `max(m, n)`, which is what decides whether groups
+/// above 0 own any state. It is NOT `m * n`: nothing walks the kernel matrices
+/// one cell per lane, so a launch made multi-workgroup only by the size of `k`
+/// and `k_t` leaves every gate inside group 0.
+#[allow(clippy::too_many_arguments)]
+fn sinkhorn_transfer_body(
+    k: &str,
+    k_t: &str,
+    a: &str,
+    b: &str,
+    u_next: &str,
+    v: &str,
+    kv: &str,
+    ktu: &str,
+    m: u32,
+    n: u32,
+) -> Vec<Node> {
     let extract_body = |p: Program| -> Vec<Node> {
         let mut body = Vec::new();
-        for n in p.entry() {
+        for node in p.entry() {
             if let Node::Region {
                 body: region_body, ..
-            } = n
+            } = node
             {
                 body.extend(region_body.iter().cloned());
             }
         }
         body
     };
+    let seq_cst = || Node::Barrier {
+        ordering: vyre_foundation::MemoryOrdering::SeqCst,
+    };
+
+    let mut transfer_body = Vec::new();
 
     // 1. Kv = K * v (m x n * n x 1 -> m x 1)
-    let p1 = semiring_gemm(k, v, kv, m, 1, n, Semiring::Real);
-    transfer_body.extend(extract_body(p1));
-    transfer_body.push(Node::Barrier {
-        ordering: vyre_foundation::MemoryOrdering::SeqCst,
-    });
+    transfer_body.extend(extract_body(semiring_gemm(
+        k,
+        v,
+        kv,
+        m,
+        1,
+        n,
+        Semiring::Real,
+    )));
+    transfer_body.push(seq_cst());
 
     // 2. u_next = a ./ Kv
-    let p2 = sinkhorn_scale(a, kv, u_next, m);
-    transfer_body.extend(extract_body(p2));
-    transfer_body.push(Node::Barrier {
-        ordering: vyre_foundation::MemoryOrdering::SeqCst,
-    });
+    transfer_body.extend(extract_body(sinkhorn_scale(a, kv, u_next, m)));
+    transfer_body.push(seq_cst());
 
     // 3. Ktu = K_T * u_next (n x m * m x 1 -> n x 1)
-    let p3 = semiring_gemm(k_t, u_next, ktu, n, 1, m, Semiring::Real);
-    transfer_body.extend(extract_body(p3));
-    transfer_body.push(Node::Barrier {
-        ordering: vyre_foundation::MemoryOrdering::SeqCst,
-    });
+    transfer_body.extend(extract_body(semiring_gemm(
+        k_t,
+        u_next,
+        ktu,
+        n,
+        1,
+        m,
+        Semiring::Real,
+    )));
+    transfer_body.push(seq_cst());
 
     // 4. v = b ./ Ktu
-    let p4 = sinkhorn_scale(b, ktu, v, n);
-    transfer_body.extend(extract_body(p4));
-    transfer_body.push(Node::Barrier {
-        ordering: vyre_foundation::MemoryOrdering::SeqCst,
-    });
+    transfer_body.extend(extract_body(sinkhorn_scale(b, ktu, v, n)));
+    transfer_body.push(seq_cst());
 
-    let inner = crate::fixpoint::persistent_fixpoint::persistent_fixpoint(
-        transfer_body,
-        u_curr,
-        u_next,
-        changed,
-        m,
-        max_iterations,
-    );
+    transfer_body
+}
 
-    let entry: Vec<Node> = vec![Node::Region {
-        generator: Ident::from(OP_ID),
-        source_region: None,
-        body: Arc::new(inner.entry().to_vec()),
-    }];
-
-    Program::wrapped(
+/// Wrap a convergence harness in the Sinkhorn Region and buffer declarations.
+///
+/// Single owner of those ten declarations, so the two routed forms and the
+/// single-word form the divergence test builds cannot drift apart in binding
+/// order, counts, or access modes.
+#[allow(clippy::too_many_arguments)]
+fn sinkhorn_wrap(
+    inner: &Program,
+    k: &str,
+    k_t: &str,
+    a: &str,
+    b: &str,
+    u_curr: &str,
+    u_next: &str,
+    v: &str,
+    kv: &str,
+    ktu: &str,
+    changed: &str,
+    m: u32,
+    n: u32,
+    matrix_cells: u32,
+    changed_words: u32,
+) -> Program {
+    super::wrap_fixpoint_program(
+        OP_ID,
+        inner,
         vec![
             BufferDecl::storage(u_curr, 0, BufferAccess::ReadWrite, DataType::U32).with_count(m),
             BufferDecl::storage(u_next, 1, BufferAccess::ReadWrite, DataType::U32).with_count(m),
-            BufferDecl::storage(changed, 2, BufferAccess::ReadWrite, DataType::U32).with_count(1),
+            BufferDecl::storage(changed, 2, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(changed_words),
             BufferDecl::storage(k, 3, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(matrix_cells),
             BufferDecl::storage(k_t, 4, BufferAccess::ReadOnly, DataType::U32)
@@ -144,8 +258,54 @@ pub fn sinkhorn_iterate(
             BufferDecl::storage(kv, 8, BufferAccess::ReadWrite, DataType::U32).with_count(m),
             BufferDecl::storage(ktu, 9, BufferAccess::ReadWrite, DataType::U32).with_count(n),
         ],
-        [256, 1, 1],
-        entry,
+    )
+}
+
+/// The pre-routing program: the Sinkhorn transfer body on the single-word
+/// convergence harness at ANY size, which is exactly what [`sinkhorn_iterate`]
+/// emitted before the dispatch-span routing landed.
+///
+/// Exists only so the divergence test can OBSERVE what the racing shared flag
+/// produces above one workgroup. Production code must never take this path above
+/// one workgroup width.
+#[cfg(test)]
+#[allow(clippy::too_many_arguments)]
+fn sinkhorn_single_word_harness(
+    k: &str,
+    k_t: &str,
+    a: &str,
+    b: &str,
+    u_curr: &str,
+    u_next: &str,
+    v: &str,
+    kv: &str,
+    ktu: &str,
+    changed: &str,
+    m: u32,
+    n: u32,
+    max_iterations: u32,
+) -> Program {
+    let matrix_cells = m
+        .checked_mul(n)
+        .expect("Fix: the divergence fixture must use non-overflowing extents.");
+    let transfer_body = sinkhorn_transfer_body(k, k_t, a, b, u_next, v, kv, ktu, m, n);
+    let inner = persistent_fixpoint(transfer_body, u_curr, u_next, changed, m, max_iterations);
+    sinkhorn_wrap(
+        &inner,
+        k,
+        k_t,
+        a,
+        b,
+        u_curr,
+        u_next,
+        v,
+        kv,
+        ktu,
+        changed,
+        m,
+        n,
+        matrix_cells,
+        1,
     )
 }
 
@@ -350,18 +510,11 @@ fn require_fixed_len(name: &str, got: usize, need: usize) -> Result<(), String> 
     }
 }
 
-#[cfg(any(test, feature = "cpu-parity"))]
-fn reserve_u32_vec(out: &mut Vec<u32>, len: usize, name: &str) -> Result<(), String> {
-    if len > out.capacity() {
-        crate::graph::scratch::reserve_graph_items(
-            out,
-            len - out.len(),
-            "Sinkhorn iterate CPU oracle",
-            name,
-        )?;
-    }
-    Ok(())
-}
+crate::graph::scratch::define_reserve_graph_capacity!(
+    reserve_u32_vec,
+    u32,
+    "Sinkhorn iterate CPU oracle"
+);
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
@@ -575,17 +728,43 @@ pub fn try_sinkhorn_iterate_f64_into(
     Ok(max_iterations)
 }
 
+crate::graph::scratch::define_reserve_graph_capacity!(
+    reserve_f64_vec,
+    f64,
+    "Sinkhorn iterate f64 CPU oracle"
+);
+
 #[cfg(any(test, feature = "cpu-parity"))]
-fn reserve_f64_vec(out: &mut Vec<f64>, len: usize, name: &str) -> Result<(), String> {
-    if len > out.capacity() {
-        crate::graph::scratch::reserve_graph_items(
-            out,
-            len - out.len(),
-            "Sinkhorn iterate f64 CPU oracle",
-            name,
-        )?;
+fn max_residual(target: &[f64], sum_at: impl Fn(usize) -> f64) -> f64 {
+    target
+        .iter()
+        .enumerate()
+        .map(|(index, expected)| (sum_at(index) - expected).abs())
+        .fold(0.0_f64, f64::max)
+}
+
+#[cfg(any(test, feature = "cpu-parity"))]
+#[derive(Clone, Copy)]
+enum ResidualAxis {
+    Row,
+    Column,
+}
+
+#[cfg(any(test, feature = "cpu-parity"))]
+fn sinkhorn_residual(k: &[f64], u: &[f64], v: &[f64], target: &[f64], axis: ResidualAxis) -> f64 {
+    let m = u.len();
+    let n = v.len();
+    assert_eq!(k.len(), m * n);
+    match axis {
+        ResidualAxis::Row => {
+            assert_eq!(target.len(), m);
+            max_residual(target, |i| (0..n).map(|j| u[i] * k[i * n + j] * v[j]).sum())
+        }
+        ResidualAxis::Column => {
+            assert_eq!(target.len(), n);
+            max_residual(target, |j| (0..m).map(|i| u[i] * k[i * n + j] * v[j]).sum())
+        }
     }
-    Ok(())
 }
 
 /// Compute the row-sum residual `||row_sum(diag(u) · k · diag(v)) - a||_∞`.
@@ -593,44 +772,14 @@ fn reserve_f64_vec(out: &mut Vec<f64>, len: usize, name: &str) -> Result<(), Str
 #[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn sinkhorn_row_residual(k: &[f64], u: &[f64], v: &[f64], a: &[f64]) -> f64 {
-    let m = a.len();
-    let n = v.len();
-    assert_eq!(u.len(), m);
-    assert_eq!(k.len(), m * n);
-    let mut max_resid = 0.0_f64;
-    for i in 0..m {
-        let mut row = 0.0_f64;
-        for j in 0..n {
-            row += u[i] * k[i * n + j] * v[j];
-        }
-        let delta = (row - a[i]).abs();
-        if delta > max_resid {
-            max_resid = delta;
-        }
-    }
-    max_resid
+    sinkhorn_residual(k, u, v, a, ResidualAxis::Row)
 }
 
 /// Compute the column-sum residual `||col_sum(diag(u) · k · diag(v)) - b||_∞`.
 #[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn sinkhorn_col_residual(k: &[f64], u: &[f64], v: &[f64], b: &[f64]) -> f64 {
-    let m = u.len();
-    let n = b.len();
-    assert_eq!(v.len(), n);
-    assert_eq!(k.len(), m * n);
-    let mut max_resid = 0.0_f64;
-    for j in 0..n {
-        let mut col = 0.0_f64;
-        for i in 0..m {
-            col += u[i] * k[i * n + j] * v[j];
-        }
-        let delta = (col - b[j]).abs();
-        if delta > max_resid {
-            max_resid = delta;
-        }
-    }
-    max_resid
+    sinkhorn_residual(k, u, v, b, ResidualAxis::Column)
 }
 
 #[cfg(test)]

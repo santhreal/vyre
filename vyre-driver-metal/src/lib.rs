@@ -2055,17 +2055,15 @@ mod tests {
             vec![Node::store("out", Expr::u32(0), Expr::u32(0xDEAD_BEEFu32))],
         );
 
-        let backend = acquire().expect(
-            "Fix: Apple Metal builds must acquire the system default MTLDevice.",
-        );
+        let backend =
+            acquire().expect("Fix: Apple Metal builds must acquire the system default MTLDevice.");
         let compiled = backend
             .compile_native(&program, &DispatchConfig::default())
             .expect("Fix: Metal compile_native must succeed for a valid program.");
 
         // A real CompiledPipeline must not be None. Metal always returns Some(arc).
-        let pipeline = compiled.expect(
-            "Fix: Metal compile_native must return Some(CompiledPipeline), not Ok(None)."
-        );
+        let pipeline = compiled
+            .expect("Fix: Metal compile_native must return Some(CompiledPipeline), not Ok(None).");
 
         // Executing the compiled pipeline must produce the expected constant output.
         let outputs = pipeline
@@ -2101,9 +2099,8 @@ mod tests {
         use std::sync::Arc;
         use vyre_driver::VyreBackend;
 
-        let backend = acquire().expect(
-            "Fix: Apple Metal builds must acquire the system default MTLDevice.",
-        );
+        let backend =
+            acquire().expect("Fix: Apple Metal builds must acquire the system default MTLDevice.");
 
         // Poison the resident_buffers mutex by spawning a thread that locks it
         // and then panics. After the thread exits, the mutex is in a poisoned
@@ -2128,9 +2125,7 @@ mod tests {
         let has_count = snapshot
             .iter()
             .any(|(k, _)| *k == "metal_resident_buffer_count");
-        let has_bytes = snapshot
-            .iter()
-            .any(|(k, _)| *k == "metal_resident_bytes");
+        let has_bytes = snapshot.iter().any(|(k, _)| *k == "metal_resident_bytes");
         assert!(
             has_count,
             "Fix: healthy backend snapshot must contain `metal_resident_buffer_count`; \

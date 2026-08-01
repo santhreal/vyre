@@ -224,4 +224,3 @@ fn cuda_adaptive_sparse_dense_dense_branch_covers_node_past_first_workgroup() {
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, pack_nodes(&[512], node_count));
 }
-

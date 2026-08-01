@@ -2,8 +2,8 @@ use crate::ir_inner::model::expr::Expr;
 use crate::ir_inner::model::program::BufferDecl;
 use crate::ir_inner::model::types::DataType;
 use crate::validate::atomic_rules;
-use crate::validate::call_rules::validate_call;
 use crate::validate::bytes_rejection;
+use crate::validate::call_rules::validate_call;
 use crate::validate::cast::{cast_is_narrowing, cast_is_valid, cast_target_set};
 use crate::validate::depth;
 use crate::validate::report::warn;
@@ -223,7 +223,6 @@ pub(crate) fn validate_expr(
         }
     }
 }
-
 
 #[inline]
 fn validate_subgroup_expr_support(

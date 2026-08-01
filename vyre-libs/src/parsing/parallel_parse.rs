@@ -183,6 +183,20 @@ mod tests {
 
     /// With many distinct sources, parsing must overlap across rayon
     /// workers instead of degenerating into serial execution.
+    ///
+    /// Overlap is DETECTED, not hoped for. This used to spin 50,000 trivial
+    /// iterations and assert that two workers happened to be inside the
+    /// closure at the same instant. In a release build that loop optimizes to
+    /// almost nothing (the `black_box` is outside it), so on a busy machine
+    /// the closures finished before a second worker ever entered and the test
+    /// failed for reasons that had nothing to do with the code under test.
+    ///
+    /// Instead each closure now announces itself and waits, up to a generous
+    /// deadline, for a second worker to arrive. If the pool really is
+    /// parallel, the first two closures rendezvous and the assertion holds
+    /// every time. If rayon runs them serially the wait simply expires, which
+    /// is a bounded delay rather than a deadlock, and the assertion then
+    /// reports the real serialization.
     #[test]
     fn parallel_parse_overlaps_workers() {
         let cache: ParsedSourceLru<usize> = ParsedSourceLru::with_capacity(32);
@@ -207,11 +221,28 @@ mod tests {
                     Err(next) => observed = next,
                 }
             }
-            let mut acc = 0usize;
-            for i in 0..50_000usize {
-                acc = acc.wrapping_add(i ^ src.len());
+            // Hold the closure open until a second worker joins, or the
+            // deadline expires. The deadline is what keeps a single-threaded
+            // pool from hanging here.
+            let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+            while active.load(Ordering::SeqCst) < 2 && std::time::Instant::now() < deadline {
+                std::thread::yield_now();
             }
-            std::hint::black_box(acc);
+            // Re-read after the rendezvous: the peak may have been reached by
+            // the other worker while this one was waiting.
+            let peak = active.load(Ordering::SeqCst);
+            let mut observed = max_active.load(Ordering::SeqCst);
+            while peak > observed {
+                match max_active.compare_exchange(
+                    observed,
+                    peak,
+                    Ordering::SeqCst,
+                    Ordering::SeqCst,
+                ) {
+                    Ok(_) => break,
+                    Err(next) => observed = next,
+                }
+            }
             active.fetch_sub(1, Ordering::SeqCst);
             src.len()
         });

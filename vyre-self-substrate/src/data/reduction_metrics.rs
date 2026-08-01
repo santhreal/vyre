@@ -6,9 +6,9 @@
 //! summaries through `vyre-primitives::reduce` programs instead of open-coding
 //! host loops in each pass.
 
+use super::decode_first_output;
 use crate::dispatch_buffers::{
-    ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
-    write_zero_bytes,
+    ceil_div_u32, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
 use vyre_primitives::reduce::{
@@ -375,20 +375,6 @@ fn decode_scalar(outputs: &[Vec<u8>], context: &'static str) -> Result<u32, Disp
     let mut out = Vec::new();
     decode_first_output(outputs, 1, context, &mut out)?;
     Ok(out[0])
-}
-
-fn decode_first_output(
-    outputs: &[Vec<u8>],
-    words: usize,
-    context: &'static str,
-    out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
-    if outputs.is_empty() {
-        return Err(DispatchError::BackendError(format!(
-            "Fix: {context} expected at least one output buffer, got 0."
-        )));
-    }
-    decode_u32_output_exact(&outputs[0], words, context, out)
 }
 
 #[cfg(test)]

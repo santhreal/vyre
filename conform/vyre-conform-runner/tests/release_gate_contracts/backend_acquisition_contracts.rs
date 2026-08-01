@@ -51,7 +51,6 @@ fn release_conformance_static_sizing_uses_packed_buffer_lengths() {
     for path in [
         "conform/vyre-conform-runner/src/witness_plan.rs",
         "conform/vyre-conform-runner/tests/__split/parity_matrix_chunk1.rs",
-        "vyre-libs/src/primitive_catalog.rs",
     ] {
         let source = repo_file(path);
         assert!(
@@ -86,4 +85,3 @@ fn release_conformance_static_sizing_uses_packed_buffer_lengths() {
         );
     }
 }
-

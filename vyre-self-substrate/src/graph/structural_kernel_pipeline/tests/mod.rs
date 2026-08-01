@@ -50,7 +50,14 @@ fn program_builders_emit_expected_structural_primitives() {
     );
     assert_eq!(
         program_generator(&dispatch_persistent_bfs_batch(
-            shape, "fin", "fout", "changed", "converged", 2, 1, 2
+            shape,
+            "fin",
+            "fout",
+            "changed",
+            "converged",
+            2,
+            1,
+            2
         )),
         "vyre-primitives::graph::persistent_bfs_batch"
     );

@@ -143,4 +143,3 @@ fn merge_rejects_tampered_certificate_shard() {
         "Fix: merge must not emit an aggregate from a tampered shard."
     );
 }
-

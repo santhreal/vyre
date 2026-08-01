@@ -1,3 +1,4 @@
+use super::super::trim_ascii;
 use super::*;
 
 pub(crate) fn parse_param_names(args: &[u8]) -> SmallVec<[&[u8]; 8]> {
@@ -13,18 +14,6 @@ pub(crate) fn parse_param_names(args: &[u8]) -> SmallVec<[&[u8]; 8]> {
             }
         })
         .collect()
-}
-
-pub(crate) fn trim_ascii(bytes: &[u8]) -> &[u8] {
-    let mut start = 0_usize;
-    let mut end = bytes.len();
-    while start < end && bytes[start].is_ascii_whitespace() {
-        start += 1;
-    }
-    while end > start && bytes[end - 1].is_ascii_whitespace() {
-        end -= 1;
-    }
-    &bytes[start..end]
 }
 
 pub(crate) fn param_argument_span(

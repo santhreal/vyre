@@ -210,4 +210,3 @@ fn egraph_signature_refresh_exposes_post_rewrite_structural_duplicates() {
         .free_resident(resident.handle())
         .expect("Fix: CUDA e-graph resident image free failed.");
 }
-

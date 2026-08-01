@@ -16,7 +16,10 @@ fn read_repo_file(relative: &str) -> String {
 }
 
 fn assert_contains(haystack: &str, needle: &str) {
-    assert!(haystack.contains(needle), "missing required governance token: {needle}");
+    assert!(
+        haystack.contains(needle),
+        "missing required governance token: {needle}"
+    );
 }
 
 #[test]
@@ -70,14 +73,22 @@ fn edge_matrix_covers_c_cpp_python_and_rust() {
 fn resolution_contracts_cover_uncertain_dependency_states() {
     let contracts = read_repo_file("docs/optimization/MODULE_IMPORT_RESOLUTION_CONTRACTS.toml");
 
-    for token in ["resolved", "unresolved", "ambiguous", "dynamic", "cycle", "operator_fix"] {
+    for token in [
+        "resolved",
+        "unresolved",
+        "ambiguous",
+        "dynamic",
+        "cycle",
+        "operator_fix",
+    ] {
         assert_contains(&contracts, token);
     }
 }
 
 #[test]
 fn propagation_policy_requires_cross_file_truth() {
-    let policy = read_repo_file("docs/optimization/CROSS_FILE_INVALIDATION_PROPAGATION_POLICY.toml");
+    let policy =
+        read_repo_file("docs/optimization/CROSS_FILE_INVALIDATION_PROPAGATION_POLICY.toml");
 
     for token in [
         "changed_file",
@@ -108,4 +119,3 @@ fn reuse_evidence_records_correctness_and_performance_fields() {
         assert_contains(&evidence, token);
     }
 }
-

@@ -131,6 +131,25 @@ pub fn is_reference_output(decl: &vyre::ir::BufferDecl) -> bool {
     decl.is_backend_allocated_output() || decl.access() == BufferAccess::ReadWrite
 }
 
+/// Does the caller have to supply a `Value` for this buffer?
+///
+/// The other half of the interpreter's ABI, and the source of truth for it:
+/// `reference_eval` consumes exactly one `Value` per matching decl, in
+/// `Program::buffers` order. A workgroup buffer is allocated per dispatch and a
+/// backend-allocated output is zero-filled, so neither is supplied.
+///
+/// Callers that build an input vector MUST use this rather than re-deriving the
+/// selection. The obvious hand-rolled form, `!decl.is_output()`, is not the same
+/// predicate: `is_backend_allocated_output` is the cross-backend contract, and
+/// the two disagree on a decl that is marked as an output without being
+/// backend-allocated. A copy that drifts shifts every later input by one, which
+/// surfaces as a missing value for whichever buffer the offset ran past rather
+/// than as anything pointing at the copy.
+#[must_use]
+pub fn is_reference_input(decl: &vyre::ir::BufferDecl) -> bool {
+    decl.access() != BufferAccess::Workgroup && !decl.is_backend_allocated_output()
+}
+
 /// Position of the buffer `name` within `reference_eval`'s returned outputs, the
 /// buffers matching [`is_reference_output`], in `Program::buffers` order, or `None`
 /// when the program declares no such returned output under that name.
@@ -187,9 +206,7 @@ pub(crate) fn run_hashmap_reference(
     let logical_input_count = program
         .buffers()
         .iter()
-        .filter(|decl| {
-            decl.access() != BufferAccess::Workgroup && !decl.is_backend_allocated_output()
-        })
+        .filter(|decl| is_reference_input(decl))
         .count();
     let legacy_input_count = program
         .buffers()
@@ -213,19 +230,16 @@ pub(crate) fn run_hashmap_reference(
             program_graph_node_count = Some(decl.count());
         }
         let required_bytes = declared_min_byte_len(decl)?;
-        let backend_allocated = decl.is_backend_allocated_output();
-        let bytes = if backend_allocated {
-            if legacy_input_mode {
-                let _legacy_output_initializer = inputs.get(input_index).ok_or_else(|| {
-                    Error::interp(format!(
-                        "missing legacy output initializer for buffer `{}`. Fix: pass one Value for each non-workgroup buffer or migrate to logical inputs only.",
-                        decl.name()
-                    ))
-                })?;
-                input_index += 1;
-            }
-            vec![0u8; required_bytes]
-        } else {
+        // The oracle must refuse exactly what the device backends refuse. A
+        // backend-allocated output with no static count has no size source on any
+        // path: answering it with an empty buffer here certified programs that
+        // CUDA and WGPU both reject, which is a certification hole rather than a
+        // cosmetic inconsistency.
+        decl.require_static_readback_size()
+            .map_err(|message| Error::interp(message))?;
+        // One predicate, read here and exported for callers building the input
+        // vector, so the two cannot drift apart.
+        let bytes = if is_reference_input(decl) {
             let value = inputs.get(input_index).ok_or_else(|| {
                 Error::interp(format!(
                     "missing input for buffer `{}`. Fix: pass one Value for each non-output, non-workgroup buffer in Program::buffers order.",
@@ -234,17 +248,38 @@ pub(crate) fn run_hashmap_reference(
             })?;
             input_index += 1;
             value.to_bytes()
+        } else {
+            if legacy_input_mode {
+                let legacy_output_initializer = inputs.get(input_index).ok_or_else(|| {
+                    Error::interp(format!(
+                        "missing legacy output initializer for buffer `{}`. Fix: pass one Value for each non-workgroup buffer or migrate to logical inputs only.",
+                        decl.name()
+                    ))
+                })?;
+                // Backend-allocated outputs are zero-filled, so this Value's
+                // CONTENTS are unused, but its SIZE is still part of the
+                // caller's contract and must be checked. Discarding it whole
+                // meant an undersized output buffer produced a full-size
+                // result with no diagnostic: the caller believed a 12-byte
+                // output had been written when the interpreter had quietly
+                // substituted its own 16-byte buffer (a Law 10 fail-open).
+                //
+                // The requirement is the LOGICAL output size, not the declared
+                // storage size. A buffer declared with an output byte range is
+                // padded on purpose (a tiled kernel rounds its storage up to a
+                // whole tile, and `relu(n = 0)` declares one element so the
+                // decl stays well-formed), and the caller is expected to size
+                // the placeholder to the range it will actually read back.
+                check_min_byte_len(
+                    decl,
+                    legacy_output_initializer.to_bytes().len(),
+                    logical_output_byte_len(decl, required_bytes),
+                )?;
+                input_index += 1;
+            }
+            vec![0u8; required_bytes]
         };
-        if bytes.len() < required_bytes {
-            return Err(Error::interp(format!(
-                "buffer `{}` has {} bytes but requires at least {} bytes ({} elements of {}). Fix: provide a larger input buffer.",
-                decl.name(),
-                bytes.len(),
-                required_bytes,
-                decl.count(),
-                decl.element()
-            )));
-        }
+        check_min_byte_len(decl, bytes.len(), required_bytes)?;
         let elements = element_count(decl, bytes.len())?;
         if is_reference_output(decl) {
             max_output_elements = max_output_elements.max(elements);
@@ -386,12 +421,46 @@ pub(crate) fn run_hashmap_reference(
     output_decls . into_iter () . map (| decl | { storage . remove (decl . name ()) . map (| buffer | output_value (buffer , & decl)) . ok_or_else (| | { let name = decl . name () ; Error :: interp (format ! ("missing output buffer `{name}` after dispatch. Fix: keep buffer declarations unique.")) }) }) . collect ()
 }
 
+/// Bytes of an output buffer a caller actually reads back.
+///
+/// Equals the declared byte length for an ordinary output. For an output whose
+/// declaration carries an explicit byte range, the padding beyond that range
+/// belongs to the kernel's tiling, never to the caller, so the range length is
+/// what a caller-supplied placeholder has to cover.
+fn logical_output_byte_len(decl: &vyre::ir::BufferDecl, declared_bytes: usize) -> usize {
+    decl.output_byte_range()
+        .map_or(declared_bytes, |range| range.len())
+}
+
+/// Reject a caller-supplied buffer that is smaller than its declaration.
+///
+/// Single owner of the undersize diagnostic so the legacy output-initializer
+/// path and the ordinary input path cannot drift into reporting the same
+/// contract violation two different ways, or one of them not reporting it.
+fn check_min_byte_len(
+    decl: &vyre::ir::BufferDecl,
+    supplied_bytes: usize,
+    required_bytes: usize,
+) -> Result<(), Error> {
+    if supplied_bytes < required_bytes {
+        return Err(Error::interp(format!(
+            "buffer `{}` has {} bytes but requires at least {} bytes ({} elements of {}). Fix: provide a larger input buffer.",
+            decl.name(),
+            supplied_bytes,
+            required_bytes,
+            decl.count(),
+            decl.element()
+        )));
+    }
+    Ok(())
+}
+
 fn declared_min_byte_len(decl: &vyre::ir::BufferDecl) -> Result<usize, Error> {
     match decl.static_byte_len() {
         Ok(Some(byte_len)) => Ok(byte_len),
         Ok(None) if decl.count() == 0 => Ok(0),
         Ok(None) => Err(Error::interp(format!(
-            "buffer `{}` has unsized element type {}. Fix: provide a fixed-width buffer element type before invoking the reference interpreter.",
+            "reference input buffer `{}` has unsized element type {}. Fix: use a fixed-width buffer element type.",
             decl.name(),
             decl.element()
         ))),

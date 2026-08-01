@@ -40,7 +40,9 @@ fn i32_binop_descriptor(op: BinOp) -> KernelDescriptor {
                 },
                 // result 1: cast to I32 so the BinOp operands are I32
                 KernelOp {
-                    kind: KernelOpKind::Cast { target: DataType::I32 },
+                    kind: KernelOpKind::Cast {
+                        target: DataType::I32,
+                    },
                     operands: vec![0],
                     result: Some(1),
                 },
@@ -214,8 +216,8 @@ fn ensure_buffer_length_reg_emits_correct_offset_for_slot_1() {
             literals: vec![LiteralValue::U32(0)],
         },
     };
-    let ptx = vyre_emit_ptx::emit_optimized(&desc)
-        .expect("two-slot descriptor must emit without error");
+    let ptx =
+        vyre_emit_ptx::emit_optimized(&desc).expect("two-slot descriptor must emit without error");
 
     // slot 0: byte_offset = 0*4+4 = 4  → `[%rd0 + 4]`
     // slot 1: byte_offset = 1*4+4 = 8  → `[%rd0 + 8]`
@@ -260,7 +262,9 @@ fn f16_store_of_u64_value_uses_direct_cvt_rn_f32_u64() {
                 },
                 // result 1: cast U32 → U64  (produces a U64 register)
                 KernelOp {
-                    kind: KernelOpKind::Cast { target: DataType::U64 },
+                    kind: KernelOpKind::Cast {
+                        target: DataType::U64,
+                    },
                     operands: vec![0],
                     result: Some(1),
                 },

@@ -19,8 +19,9 @@
 mod c_ast_gpu_parity_support;
 
 use c_ast_gpu_parity_support::{
-    build_fixture, row_indices, run_gpu_semantic_pg_lower as run_gpu_semantic_lower, word_at,
-    Fixture, FixtureToken, VAST_STRIDE_U32,
+    assert_semantic_node, build_fixture, row_indices,
+    run_gpu_semantic_pg_lower as run_gpu_semantic_lower, word_at, Fixture, FixtureToken,
+    VAST_STRIDE_U32,
 };
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::lower::ast_to_pg_nodes::C_AST_PG_ROLE_AGGREGATE_DECL;
@@ -71,16 +72,6 @@ fn semantic_edge_word(edges: &[u8], node_idx: usize, edge_slot: usize, field: us
 
 fn vast_word(rows: &[u8], idx: usize, field: usize) -> u32 {
     word_at(rows, idx * VAST_STRIDE_U32 + field)
-}
-
-fn assert_semantic_node(nodes: &[u8], idx: usize, kind: u32, category: u32, role: u32) {
-    assert_eq!(semantic_node_word(nodes, idx, 0), kind, "kind[{idx}]");
-    assert_eq!(
-        semantic_node_word(nodes, idx, 6),
-        category,
-        "category[{idx}]"
-    );
-    assert_eq!(semantic_node_word(nodes, idx, 7), role, "role[{idx}]");
 }
 
 fn assert_parent_edge(edges: &[u8], node_idx: usize, parent_idx: u32, role: u32, category: u32) {

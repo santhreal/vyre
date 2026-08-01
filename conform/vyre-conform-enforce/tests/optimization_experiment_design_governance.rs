@@ -25,7 +25,10 @@ fn optimization_experiment_design_sources_are_registered() {
         "CRITERION_ANALYSIS_PROCESS",
         "GOOGLE_BENCHMARK_COMPARE_TOOLS",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 
@@ -49,12 +52,16 @@ fn experiment_design_policy_records_hypotheses_factors_blocks_controls_and_run_m
         "gpu-kernel-tuning-factorial-experiment",
         "allocation-cache-policy-ablation-experiment",
     ] {
-        assert!(DESIGN.contains(required), "experiment design policy must include {required}");
+        assert!(
+            DESIGN.contains(required),
+            "experiment design policy must include {required}"
+        );
     }
 }
 
 #[test]
-fn stratification_matrix_records_block_workload_hardware_capacity_replication_and_generalization_policy() {
+fn stratification_matrix_records_block_workload_hardware_capacity_replication_and_generalization_policy(
+) {
     for required in [
         "stratum_id",
         "stratification_surface",
@@ -70,12 +77,16 @@ fn stratification_matrix_records_block_workload_hardware_capacity_replication_an
         "gpu-backend-workload-blocks",
         "operator-load-release-blocks",
     ] {
-        assert!(STRATA.contains(required), "stratification matrix must include {required}");
+        assert!(
+            STRATA.contains(required),
+            "stratification matrix must include {required}"
+        );
     }
 }
 
 #[test]
-fn ablation_policy_records_baseline_candidate_counterfactual_controls_interactions_evidence_and_decisions() {
+fn ablation_policy_records_baseline_candidate_counterfactual_controls_interactions_evidence_and_decisions(
+) {
     for required in [
         "ablation_id",
         "target_change",
@@ -92,12 +103,16 @@ fn ablation_policy_records_baseline_candidate_counterfactual_controls_interactio
         "gpu-fusion-pass-ablation",
         "cache-invalidation-policy-ablation",
     ] {
-        assert!(ABLATION.contains(required), "ablation policy must include {required}");
+        assert!(
+            ABLATION.contains(required),
+            "ablation policy must include {required}"
+        );
     }
 }
 
 #[test]
-fn multiple_comparison_policy_records_family_scope_correction_alpha_effect_exploratory_winner_and_rollback_fields() {
+fn multiple_comparison_policy_records_family_scope_correction_alpha_effect_exploratory_winner_and_rollback_fields(
+) {
     for required in [
         "comparison_family_id",
         "family_scope_policy",
@@ -114,12 +129,16 @@ fn multiple_comparison_policy_records_family_scope_correction_alpha_effect_explo
         "gpu-tuning-factor-family-comparison",
         "operator-release-load-comparison",
     ] {
-        assert!(MULTIPLE.contains(required), "multiple comparison policy must include {required}");
+        assert!(
+            MULTIPLE.contains(required),
+            "multiple comparison policy must include {required}"
+        );
     }
 }
 
 #[test]
-fn experiment_design_coverage_reuses_benchmark_statistics_profiling_capacity_rollout_and_publication_authorities() {
+fn experiment_design_coverage_reuses_benchmark_statistics_profiling_capacity_rollout_and_publication_authorities(
+) {
     for required in [
         "VX-1381..VX-1400",
         "optimization_experiment_design_policy",
@@ -136,6 +155,9 @@ fn experiment_design_coverage_reuses_benchmark_statistics_profiling_capacity_rol
         "dedup_seam",
         "proof_gate",
     ] {
-        assert!(COVERAGE.contains(required), "experiment design coverage must include {required}");
+        assert!(
+            COVERAGE.contains(required),
+            "experiment design coverage must include {required}"
+        );
     }
 }

@@ -4,7 +4,8 @@ const RACE_POLICY: &str =
     include_str!("../../docs/optimization/ATOMIC_FILE_OPERATION_RACE_POLICY.toml");
 
 #[test]
-fn atomic_file_operation_policy_records_open_check_use_temp_rename_permission_and_race_diagnostics() {
+fn atomic_file_operation_policy_records_open_check_use_temp_rename_permission_and_race_diagnostics()
+{
     for required in [
         "operation_id",
         "target_class",

@@ -21,7 +21,7 @@
 //! Inputs:
 //!   - `bytes_in`  -  compatibility [`gpu_comment_strip_mask`] expects
 //!     packed little-endian `DataType::U32` words, four source bytes per
-//!     word. [`gpu_comment_strip_mask_u8`] expects one `DataType::U8`
+//!     word. [`gpu_comment_strip_mask_u8`](crate::parsing::c::preprocess::gpu_comment_strip_mask::gpu_comment_strip_mask_u8) expects one `DataType::U8`
 //!     element per source byte.
 //!
 //! Outputs:

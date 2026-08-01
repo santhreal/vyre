@@ -388,12 +388,17 @@ mod tests {
         let ts: proc_macro2::TokenStream = {
             let mut outputs: Vec<proc_macro2::TokenStream> = Vec::new();
             for ast_enum in &manifest.enums {
-                let decoder_arms: Vec<_> = ast_enum.variants.iter().enumerate().map(|(idx, v)| {
-                    let opcode_val = idx as u32;
-                    let trap_tag = format!("unimplemented_opcode_{idx}");
-                    let _variant_name = v.ident.to_string();
-                    quote! { #opcode_val => #trap_tag }
-                }).collect();
+                let decoder_arms: Vec<_> = ast_enum
+                    .variants
+                    .iter()
+                    .enumerate()
+                    .map(|(idx, v)| {
+                        let opcode_val = idx as u32;
+                        let trap_tag = format!("unimplemented_opcode_{idx}");
+                        let _variant_name = v.ident.to_string();
+                        quote! { #opcode_val => #trap_tag }
+                    })
+                    .collect();
                 outputs.push(quote! { #(#decoder_arms),* });
             }
             quote! { #(#outputs)* }
@@ -441,19 +446,24 @@ mod tests {
         // Reconstruct the decoder arm token stream for the first variant.
         let ts = {
             let ast_enum = &manifest.enums[0];
-            let decoder_arms: Vec<_> = ast_enum.variants.iter().enumerate().map(|(idx, v)| {
-                let opcode_val = idx as u32;
-                let trap_tag = format!("unimplemented_opcode_{idx}");
-                let _variant_name = v.ident.to_string();
-                quote! {
-                    then: vec![
-                        crate::ir_inner::model::node::Node::trap(
-                            crate::ir_inner::model::expr::Expr::u32(#opcode_val),
-                            #trap_tag,
-                        )
-                    ]
-                }
-            }).collect();
+            let decoder_arms: Vec<_> = ast_enum
+                .variants
+                .iter()
+                .enumerate()
+                .map(|(idx, v)| {
+                    let opcode_val = idx as u32;
+                    let trap_tag = format!("unimplemented_opcode_{idx}");
+                    let _variant_name = v.ident.to_string();
+                    quote! {
+                        then: vec![
+                            crate::ir_inner::model::node::Node::trap(
+                                crate::ir_inner::model::expr::Expr::u32(#opcode_val),
+                                #trap_tag,
+                            )
+                        ]
+                    }
+                })
+                .collect();
             quote! { #(#decoder_arms)* }
         };
 

@@ -281,9 +281,8 @@ enum SyntheticPattern {
 mod release_workload_families;
 use release_workload_families::{
     release_macro_workloads, release_macro_workloads_for_family, ALIAS_REACHING_DEF,
-    C_AST_TRAVERSAL, CONDITION_EVAL_BATCH, EGRAPH_SATURATION, ENTROPY_WINDOW, IFDS_WITNESS,
-    MEGAKERNEL_QUEUE,
-    OFFSET_COUNT_AGGREGATION, QUANTIFIED_LOOPS, STRING_BITMAP_SCATTER,
+    CONDITION_EVAL_BATCH, C_AST_TRAVERSAL, EGRAPH_SATURATION, ENTROPY_WINDOW, IFDS_WITNESS,
+    MEGAKERNEL_QUEUE, OFFSET_COUNT_AGGREGATION, QUANTIFIED_LOOPS, STRING_BITMAP_SCATTER,
 };
 
 const RELEASE_SUITES: &[crate::api::suite::SuiteKind] = &[
@@ -417,14 +416,19 @@ fn sparse_output_compaction_count_program() -> Program {
     )
 }
 
-fn sparse_compaction_flag(index: u32) -> u32 {
+fn mixed_release_index(index: u32, rounds: u32) -> u32 {
     let mut hash = index ^ 0x9E37_79B9;
-    for lane in 0..18 {
+    for lane in 0..rounds {
         hash = hash
             .rotate_left(5)
             .wrapping_mul(0x85EB_CA6B)
             .wrapping_add(0xC2B2_AE35 ^ lane);
     }
+    hash
+}
+
+fn sparse_compaction_flag(index: u32) -> u32 {
+    let hash = mixed_release_index(index, 18);
     u32::from(index % 97 == 0 || index % 4099 == 17 || hash == 0)
 }
 
@@ -1362,72 +1366,15 @@ fn synthetic_count_program(pattern: SyntheticPattern, records: u32) -> Program {
 }
 
 fn condition_eval_program(records: u32) -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::output("out_count", 0, DataType::U32).with_count(1),
-            BufferDecl::storage("match_mask", 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(records),
-            BufferDecl::storage("rule_mask", 2, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(records),
-            BufferDecl::storage("metadata_mask", 3, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(records),
-        ],
-        [256, 1, 1],
-        vec![
-            Node::let_bind("idx", Expr::gid_x()),
-            Node::if_then(
-                Expr::lt(Expr::var("idx"), Expr::u32(records)),
-                vec![
-                    Node::let_bind("match_word", load_u32("match_mask")),
-                    Node::let_bind("rule_word", load_u32("rule_mask")),
-                    Node::let_bind("metadata_word", load_u32("metadata_mask")),
-                    Node::let_bind("condition_hits", Expr::u32(0)),
-                    Node::loop_for(
-                        "condition_lane",
-                        Expr::u32(0),
-                        Expr::u32(CONDITION_LANES),
-                        vec![Node::if_then(
-                            Expr::and(
-                                Expr::ne(
-                                    Expr::bitand(
-                                        Expr::var("match_word"),
-                                        Expr::shl(Expr::u32(1), Expr::var("condition_lane")),
-                                    ),
-                                    Expr::u32(0),
-                                ),
-                                Expr::and(
-                                    Expr::ne(
-                                        Expr::bitand(
-                                            Expr::var("rule_word"),
-                                            Expr::shl(Expr::u32(1), Expr::var("condition_lane")),
-                                        ),
-                                        Expr::u32(0),
-                                    ),
-                                    Expr::ne(
-                                        Expr::bitand(
-                                            Expr::var("metadata_word"),
-                                            Expr::shl(Expr::u32(1), Expr::var("condition_lane")),
-                                        ),
-                                        Expr::u32(0),
-                                    ),
-                                ),
-                            ),
-                            vec![Node::assign(
-                                "condition_hits",
-                                Expr::add(Expr::var("condition_hits"), Expr::u32(1)),
-                            )],
-                        )],
-                    ),
-                    Node::if_then(
-                        Expr::ge(Expr::var("condition_hits"), Expr::u32(CONDITION_THRESHOLD)),
-                        vec![Node::let_bind(
-                            "_slot",
-                            Expr::atomic_add("out_count", Expr::u32(0), Expr::u32(1)),
-                        )],
-                    ),
-                ],
-            ),
-        ],
+    triple_mask_threshold_count_program(
+        records,
+        ["match_mask", "rule_mask", "metadata_mask"],
+        ["match_word", "rule_word", "metadata_word"],
+        "condition_hits",
+        "condition_lane",
+        TripleMaskPredicate::AllSet,
+        CONDITION_LANES,
+        CONDITION_THRESHOLD,
     )
 }
 
@@ -1493,15 +1440,48 @@ fn string_bitmap_scatter_program(records: u32) -> Program {
     )
 }
 
-fn offset_count_aggregation_program(records: u32) -> Program {
+#[derive(Clone, Copy)]
+enum TripleMaskPredicate {
+    AllSet,
+    FirstAndEither,
+    FirstTwoSetThirdClear,
+}
+
+#[allow(clippy::too_many_arguments)]
+fn triple_mask_threshold_count_program(
+    records: u32,
+    buffers: [&'static str; 3],
+    words: [&'static str; 3],
+    hits: &'static str,
+    lane: &'static str,
+    predicate: TripleMaskPredicate,
+    lanes: u32,
+    threshold: u32,
+) -> Program {
+    let bit_is_set = |word: &'static str| {
+        Expr::ne(
+            Expr::bitand(Expr::var(word), Expr::shl(Expr::u32(1), Expr::var(lane))),
+            Expr::u32(0),
+        )
+    };
+    let first = bit_is_set(words[0]);
+    let second = bit_is_set(words[1]);
+    let third = bit_is_set(words[2]);
+    let condition = match predicate {
+        TripleMaskPredicate::AllSet => Expr::and(first, Expr::and(second, third)),
+        TripleMaskPredicate::FirstAndEither => Expr::and(first, Expr::or(second, third)),
+        TripleMaskPredicate::FirstTwoSetThirdClear => {
+            Expr::and(first, Expr::and(second, Expr::eq(third, Expr::bool(false))))
+        }
+    };
     Program::wrapped(
         vec![
             BufferDecl::output("out_count", 0, DataType::U32).with_count(1),
-            BufferDecl::storage("offset_mask", 1, BufferAccess::ReadOnly, DataType::U32)
+            BufferDecl::storage(buffers[0], 1, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(records),
-            BufferDecl::storage("length_mask", 2, BufferAccess::ReadOnly, DataType::U32)
+            BufferDecl::storage(buffers[1], 2, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(records),
-            BufferDecl::storage("count_mask", 3, BufferAccess::ReadOnly, DataType::U32)
+            BufferDecl::storage(buffers[2], 3, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(records),
         ],
         [256, 1, 1],
@@ -1510,51 +1490,21 @@ fn offset_count_aggregation_program(records: u32) -> Program {
             Node::if_then(
                 Expr::lt(Expr::var("idx"), Expr::u32(records)),
                 vec![
-                    Node::let_bind("offset_word", load_u32("offset_mask")),
-                    Node::let_bind("length_word", load_u32("length_mask")),
-                    Node::let_bind("count_word", load_u32("count_mask")),
-                    Node::let_bind("aggregation_hits", Expr::u32(0)),
+                    Node::let_bind(words[0], load_u32(buffers[0])),
+                    Node::let_bind(words[1], load_u32(buffers[1])),
+                    Node::let_bind(words[2], load_u32(buffers[2])),
+                    Node::let_bind(hits, Expr::u32(0)),
                     Node::loop_for(
-                        "aggregation_lane",
+                        lane,
                         Expr::u32(0),
-                        Expr::u32(AGGREGATION_LANES),
+                        Expr::u32(lanes),
                         vec![Node::if_then(
-                            Expr::and(
-                                Expr::ne(
-                                    Expr::bitand(
-                                        Expr::var("offset_word"),
-                                        Expr::shl(Expr::u32(1), Expr::var("aggregation_lane")),
-                                    ),
-                                    Expr::u32(0),
-                                ),
-                                Expr::and(
-                                    Expr::ne(
-                                        Expr::bitand(
-                                            Expr::var("length_word"),
-                                            Expr::shl(Expr::u32(1), Expr::var("aggregation_lane")),
-                                        ),
-                                        Expr::u32(0),
-                                    ),
-                                    Expr::ne(
-                                        Expr::bitand(
-                                            Expr::var("count_word"),
-                                            Expr::shl(Expr::u32(1), Expr::var("aggregation_lane")),
-                                        ),
-                                        Expr::u32(0),
-                                    ),
-                                ),
-                            ),
-                            vec![Node::assign(
-                                "aggregation_hits",
-                                Expr::add(Expr::var("aggregation_hits"), Expr::u32(1)),
-                            )],
+                            condition,
+                            vec![Node::assign(hits, Expr::add(Expr::var(hits), Expr::u32(1)))],
                         )],
                     ),
                     Node::if_then(
-                        Expr::ge(
-                            Expr::var("aggregation_hits"),
-                            Expr::u32(AGGREGATION_THRESHOLD),
-                        ),
+                        Expr::ge(Expr::var(hits), Expr::u32(threshold)),
                         vec![Node::let_bind(
                             "_slot",
                             Expr::atomic_add("out_count", Expr::u32(0), Expr::u32(1)),
@@ -1566,73 +1516,29 @@ fn offset_count_aggregation_program(records: u32) -> Program {
     )
 }
 
+fn offset_count_aggregation_program(records: u32) -> Program {
+    triple_mask_threshold_count_program(
+        records,
+        ["offset_mask", "length_mask", "count_mask"],
+        ["offset_word", "length_word", "count_word"],
+        "aggregation_hits",
+        "aggregation_lane",
+        TripleMaskPredicate::AllSet,
+        AGGREGATION_LANES,
+        AGGREGATION_THRESHOLD,
+    )
+}
+
 fn entropy_window_program(records: u32) -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::output("out_count", 0, DataType::U32).with_count(1),
-            BufferDecl::storage("byte_class_mask", 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(records),
-            BufferDecl::storage("transition_mask", 2, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(records),
-            BufferDecl::storage("rarity_mask", 3, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(records),
-        ],
-        [256, 1, 1],
-        vec![
-            Node::let_bind("idx", Expr::gid_x()),
-            Node::if_then(
-                Expr::lt(Expr::var("idx"), Expr::u32(records)),
-                vec![
-                    Node::let_bind("byte_class_word", load_u32("byte_class_mask")),
-                    Node::let_bind("transition_word", load_u32("transition_mask")),
-                    Node::let_bind("rarity_word", load_u32("rarity_mask")),
-                    Node::let_bind("entropy_score", Expr::u32(0)),
-                    Node::loop_for(
-                        "entropy_lane",
-                        Expr::u32(0),
-                        Expr::u32(ENTROPY_LANES),
-                        vec![Node::if_then(
-                            Expr::and(
-                                Expr::ne(
-                                    Expr::bitand(
-                                        Expr::var("byte_class_word"),
-                                        Expr::shl(Expr::u32(1), Expr::var("entropy_lane")),
-                                    ),
-                                    Expr::u32(0),
-                                ),
-                                Expr::or(
-                                    Expr::ne(
-                                        Expr::bitand(
-                                            Expr::var("transition_word"),
-                                            Expr::shl(Expr::u32(1), Expr::var("entropy_lane")),
-                                        ),
-                                        Expr::u32(0),
-                                    ),
-                                    Expr::ne(
-                                        Expr::bitand(
-                                            Expr::var("rarity_word"),
-                                            Expr::shl(Expr::u32(1), Expr::var("entropy_lane")),
-                                        ),
-                                        Expr::u32(0),
-                                    ),
-                                ),
-                            ),
-                            vec![Node::assign(
-                                "entropy_score",
-                                Expr::add(Expr::var("entropy_score"), Expr::u32(1)),
-                            )],
-                        )],
-                    ),
-                    Node::if_then(
-                        Expr::ge(Expr::var("entropy_score"), Expr::u32(ENTROPY_THRESHOLD)),
-                        vec![Node::let_bind(
-                            "_slot",
-                            Expr::atomic_add("out_count", Expr::u32(0), Expr::u32(1)),
-                        )],
-                    ),
-                ],
-            ),
-        ],
+    triple_mask_threshold_count_program(
+        records,
+        ["byte_class_mask", "transition_mask", "rarity_mask"],
+        ["byte_class_word", "transition_word", "rarity_word"],
+        "entropy_score",
+        "entropy_lane",
+        TripleMaskPredicate::FirstAndEither,
+        ENTROPY_LANES,
+        ENTROPY_THRESHOLD,
     )
 }
 
@@ -1722,355 +1628,67 @@ fn quantified_condition_loops_program(records: u32) -> Program {
 }
 
 fn alias_reaching_def_program(records: u32) -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::output("out_count", 0, DataType::U32).with_count(1),
-            BufferDecl::storage("def_mask", 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(records),
-            BufferDecl::storage("use_mask", 2, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(records),
-            BufferDecl::storage("kill_mask", 3, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(records),
-        ],
-        [256, 1, 1],
-        vec![
-            Node::let_bind("idx", Expr::gid_x()),
-            Node::if_then(
-                Expr::lt(Expr::var("idx"), Expr::u32(records)),
-                vec![
-                    Node::let_bind("def_word", load_u32("def_mask")),
-                    Node::let_bind("use_word", load_u32("use_mask")),
-                    Node::let_bind("kill_word", load_u32("kill_mask")),
-                    Node::let_bind("reaching_aliases", Expr::u32(0)),
-                    Node::loop_for(
-                        "alias_lane",
-                        Expr::u32(0),
-                        Expr::u32(ALIAS_LANES),
-                        vec![Node::if_then(
-                            Expr::and(
-                                Expr::ne(
-                                    Expr::bitand(
-                                        Expr::var("def_word"),
-                                        Expr::shl(Expr::u32(1), Expr::var("alias_lane")),
-                                    ),
-                                    Expr::u32(0),
-                                ),
-                                Expr::and(
-                                    Expr::ne(
-                                        Expr::bitand(
-                                            Expr::var("use_word"),
-                                            Expr::shl(Expr::u32(1), Expr::var("alias_lane")),
-                                        ),
-                                        Expr::u32(0),
-                                    ),
-                                    Expr::eq(
-                                        Expr::bitand(
-                                            Expr::var("kill_word"),
-                                            Expr::shl(Expr::u32(1), Expr::var("alias_lane")),
-                                        ),
-                                        Expr::u32(0),
-                                    ),
-                                ),
-                            ),
-                            vec![Node::assign(
-                                "reaching_aliases",
-                                Expr::add(Expr::var("reaching_aliases"), Expr::u32(1)),
-                            )],
-                        )],
-                    ),
-                    Node::if_then(
-                        Expr::ge(Expr::var("reaching_aliases"), Expr::u32(ALIAS_THRESHOLD)),
-                        vec![Node::let_bind(
-                            "_slot",
-                            Expr::atomic_add("out_count", Expr::u32(0), Expr::u32(1)),
-                        )],
-                    ),
-                ],
-            ),
-        ],
+    triple_mask_threshold_count_program(
+        records,
+        ["def_mask", "use_mask", "kill_mask"],
+        ["def_word", "use_word", "kill_word"],
+        "reaching_aliases",
+        "alias_lane",
+        TripleMaskPredicate::FirstTwoSetThirdClear,
+        ALIAS_LANES,
+        ALIAS_THRESHOLD,
     )
 }
 
 fn ifds_witness_program(records: u32) -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::output("out_count", 0, DataType::U32).with_count(1),
-            BufferDecl::storage("frontier_mask", 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(records),
-            BufferDecl::storage("transfer_mask", 2, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(records),
-            BufferDecl::storage("witness_mask", 3, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(records),
-        ],
-        [256, 1, 1],
-        vec![
-            Node::let_bind("idx", Expr::gid_x()),
-            Node::if_then(
-                Expr::lt(Expr::var("idx"), Expr::u32(records)),
-                vec![
-                    Node::let_bind("frontier_word", load_u32("frontier_mask")),
-                    Node::let_bind("transfer_word", load_u32("transfer_mask")),
-                    Node::let_bind("witness_word", load_u32("witness_mask")),
-                    Node::let_bind("witness_hits", Expr::u32(0)),
-                    Node::loop_for(
-                        "ifds_lane",
-                        Expr::u32(0),
-                        Expr::u32(IFDS_LANES),
-                        vec![Node::if_then(
-                            Expr::and(
-                                Expr::ne(
-                                    Expr::bitand(
-                                        Expr::var("frontier_word"),
-                                        Expr::shl(Expr::u32(1), Expr::var("ifds_lane")),
-                                    ),
-                                    Expr::u32(0),
-                                ),
-                                Expr::and(
-                                    Expr::ne(
-                                        Expr::bitand(
-                                            Expr::var("transfer_word"),
-                                            Expr::shl(Expr::u32(1), Expr::var("ifds_lane")),
-                                        ),
-                                        Expr::u32(0),
-                                    ),
-                                    Expr::ne(
-                                        Expr::bitand(
-                                            Expr::var("witness_word"),
-                                            Expr::shl(Expr::u32(1), Expr::var("ifds_lane")),
-                                        ),
-                                        Expr::u32(0),
-                                    ),
-                                ),
-                            ),
-                            vec![Node::assign(
-                                "witness_hits",
-                                Expr::add(Expr::var("witness_hits"), Expr::u32(1)),
-                            )],
-                        )],
-                    ),
-                    Node::if_then(
-                        Expr::ge(Expr::var("witness_hits"), Expr::u32(IFDS_THRESHOLD)),
-                        vec![Node::let_bind(
-                            "_slot",
-                            Expr::atomic_add("out_count", Expr::u32(0), Expr::u32(1)),
-                        )],
-                    ),
-                ],
-            ),
-        ],
+    triple_mask_threshold_count_program(
+        records,
+        ["frontier_mask", "transfer_mask", "witness_mask"],
+        ["frontier_word", "transfer_word", "witness_word"],
+        "witness_hits",
+        "ifds_lane",
+        TripleMaskPredicate::AllSet,
+        IFDS_LANES,
+        IFDS_THRESHOLD,
     )
 }
 
 fn c_ast_traversal_program(records: u32) -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::output("out_count", 0, DataType::U32).with_count(1),
-            BufferDecl::storage("node_kind_mask", 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(records),
-            BufferDecl::storage("depth_mask", 2, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(records),
-            BufferDecl::storage("motif_mask", 3, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(records),
-        ],
-        [256, 1, 1],
-        vec![
-            Node::let_bind("idx", Expr::gid_x()),
-            Node::if_then(
-                Expr::lt(Expr::var("idx"), Expr::u32(records)),
-                vec![
-                    Node::let_bind("node_kind_word", load_u32("node_kind_mask")),
-                    Node::let_bind("depth_word", load_u32("depth_mask")),
-                    Node::let_bind("motif_word", load_u32("motif_mask")),
-                    Node::let_bind("ast_hits", Expr::u32(0)),
-                    Node::loop_for(
-                        "ast_lane",
-                        Expr::u32(0),
-                        Expr::u32(C_AST_LANES),
-                        vec![Node::if_then(
-                            Expr::and(
-                                Expr::ne(
-                                    Expr::bitand(
-                                        Expr::var("node_kind_word"),
-                                        Expr::shl(Expr::u32(1), Expr::var("ast_lane")),
-                                    ),
-                                    Expr::u32(0),
-                                ),
-                                Expr::and(
-                                    Expr::ne(
-                                        Expr::bitand(
-                                            Expr::var("depth_word"),
-                                            Expr::shl(Expr::u32(1), Expr::var("ast_lane")),
-                                        ),
-                                        Expr::u32(0),
-                                    ),
-                                    Expr::ne(
-                                        Expr::bitand(
-                                            Expr::var("motif_word"),
-                                            Expr::shl(Expr::u32(1), Expr::var("ast_lane")),
-                                        ),
-                                        Expr::u32(0),
-                                    ),
-                                ),
-                            ),
-                            vec![Node::assign(
-                                "ast_hits",
-                                Expr::add(Expr::var("ast_hits"), Expr::u32(1)),
-                            )],
-                        )],
-                    ),
-                    Node::if_then(
-                        Expr::ge(Expr::var("ast_hits"), Expr::u32(C_AST_THRESHOLD)),
-                        vec![Node::let_bind(
-                            "_slot",
-                            Expr::atomic_add("out_count", Expr::u32(0), Expr::u32(1)),
-                        )],
-                    ),
-                ],
-            ),
-        ],
+    triple_mask_threshold_count_program(
+        records,
+        ["node_kind_mask", "depth_mask", "motif_mask"],
+        ["node_kind_word", "depth_word", "motif_word"],
+        "ast_hits",
+        "ast_lane",
+        TripleMaskPredicate::AllSet,
+        C_AST_LANES,
+        C_AST_THRESHOLD,
     )
 }
 
 fn megakernel_queue_program(records: u32) -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::output("out_count", 0, DataType::U32).with_count(1),
-            BufferDecl::storage("queue_mask", 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(records),
-            BufferDecl::storage("predicate_mask", 2, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(records),
-            BufferDecl::storage("dispatch_mask", 3, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(records),
-        ],
-        [256, 1, 1],
-        vec![
-            Node::let_bind("idx", Expr::gid_x()),
-            Node::if_then(
-                Expr::lt(Expr::var("idx"), Expr::u32(records)),
-                vec![
-                    Node::let_bind("queue_word", load_u32("queue_mask")),
-                    Node::let_bind("predicate_word", load_u32("predicate_mask")),
-                    Node::let_bind("dispatch_word", load_u32("dispatch_mask")),
-                    Node::let_bind("queued_hits", Expr::u32(0)),
-                    Node::loop_for(
-                        "queue_lane",
-                        Expr::u32(0),
-                        Expr::u32(MEGAKERNEL_QUEUE_LANES),
-                        vec![Node::if_then(
-                            Expr::and(
-                                Expr::ne(
-                                    Expr::bitand(
-                                        Expr::var("queue_word"),
-                                        Expr::shl(Expr::u32(1), Expr::var("queue_lane")),
-                                    ),
-                                    Expr::u32(0),
-                                ),
-                                Expr::and(
-                                    Expr::ne(
-                                        Expr::bitand(
-                                            Expr::var("predicate_word"),
-                                            Expr::shl(Expr::u32(1), Expr::var("queue_lane")),
-                                        ),
-                                        Expr::u32(0),
-                                    ),
-                                    Expr::ne(
-                                        Expr::bitand(
-                                            Expr::var("dispatch_word"),
-                                            Expr::shl(Expr::u32(1), Expr::var("queue_lane")),
-                                        ),
-                                        Expr::u32(0),
-                                    ),
-                                ),
-                            ),
-                            vec![Node::assign(
-                                "queued_hits",
-                                Expr::add(Expr::var("queued_hits"), Expr::u32(1)),
-                            )],
-                        )],
-                    ),
-                    Node::if_then(
-                        Expr::ge(
-                            Expr::var("queued_hits"),
-                            Expr::u32(MEGAKERNEL_QUEUE_THRESHOLD),
-                        ),
-                        vec![Node::let_bind(
-                            "_slot",
-                            Expr::atomic_add("out_count", Expr::u32(0), Expr::u32(1)),
-                        )],
-                    ),
-                ],
-            ),
-        ],
+    triple_mask_threshold_count_program(
+        records,
+        ["queue_mask", "predicate_mask", "dispatch_mask"],
+        ["queue_word", "predicate_word", "dispatch_word"],
+        "queued_hits",
+        "queue_lane",
+        TripleMaskPredicate::AllSet,
+        MEGAKERNEL_QUEUE_LANES,
+        MEGAKERNEL_QUEUE_THRESHOLD,
     )
 }
 
 fn egraph_saturation_program(records: u32) -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::output("out_count", 0, DataType::U32).with_count(1),
-            BufferDecl::storage("opcode_mask", 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(records),
-            BufferDecl::storage("lhs_class_mask", 2, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(records),
-            BufferDecl::storage("rhs_class_mask", 3, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(records),
-        ],
-        [256, 1, 1],
-        vec![
-            Node::let_bind("idx", Expr::gid_x()),
-            Node::if_then(
-                Expr::lt(Expr::var("idx"), Expr::u32(records)),
-                vec![
-                    Node::let_bind("opcode_word", load_u32("opcode_mask")),
-                    Node::let_bind("lhs_word", load_u32("lhs_class_mask")),
-                    Node::let_bind("rhs_word", load_u32("rhs_class_mask")),
-                    Node::let_bind("rewrite_hits", Expr::u32(0)),
-                    Node::loop_for(
-                        "rewrite_lane",
-                        Expr::u32(0),
-                        Expr::u32(EGRAPH_LANES),
-                        vec![Node::if_then(
-                            Expr::and(
-                                Expr::ne(
-                                    Expr::bitand(
-                                        Expr::var("opcode_word"),
-                                        Expr::shl(Expr::u32(1), Expr::var("rewrite_lane")),
-                                    ),
-                                    Expr::u32(0),
-                                ),
-                                Expr::and(
-                                    Expr::ne(
-                                        Expr::bitand(
-                                            Expr::var("lhs_word"),
-                                            Expr::shl(Expr::u32(1), Expr::var("rewrite_lane")),
-                                        ),
-                                        Expr::u32(0),
-                                    ),
-                                    Expr::ne(
-                                        Expr::bitand(
-                                            Expr::var("rhs_word"),
-                                            Expr::shl(Expr::u32(1), Expr::var("rewrite_lane")),
-                                        ),
-                                        Expr::u32(0),
-                                    ),
-                                ),
-                            ),
-                            vec![Node::assign(
-                                "rewrite_hits",
-                                Expr::add(Expr::var("rewrite_hits"), Expr::u32(1)),
-                            )],
-                        )],
-                    ),
-                    Node::if_then(
-                        Expr::ge(Expr::var("rewrite_hits"), Expr::u32(EGRAPH_THRESHOLD)),
-                        vec![Node::let_bind(
-                            "_slot",
-                            Expr::atomic_add("out_count", Expr::u32(0), Expr::u32(1)),
-                        )],
-                    ),
-                ],
-            ),
-        ],
+    triple_mask_threshold_count_program(
+        records,
+        ["opcode_mask", "lhs_class_mask", "rhs_class_mask"],
+        ["opcode_word", "lhs_word", "rhs_word"],
+        "rewrite_hits",
+        "rewrite_lane",
+        TripleMaskPredicate::AllSet,
+        EGRAPH_LANES,
+        EGRAPH_THRESHOLD,
     )
 }
 
@@ -2244,13 +1862,7 @@ fn synthetic_row(pattern: SyntheticPattern, index: u32) -> Vec<u32> {
 }
 
 fn string_bitmap_pattern_word(index: u32) -> u32 {
-    let mut hash = index ^ 0x9E37_79B9;
-    for lane in 0..24 {
-        hash = hash
-            .rotate_left(5)
-            .wrapping_mul(0x85EB_CA6B)
-            .wrapping_add(0xC2B2_AE35 ^ lane);
-    }
+    let hash = mixed_release_index(index, 24);
     u32::from(index % 29 == 0 || index % 211 == 3 || hash == 0)
 }
 

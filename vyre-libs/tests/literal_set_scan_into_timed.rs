@@ -4,7 +4,7 @@
 //! Contract: the decoded `(pattern_id, start, end)` triples are identical to the
 //! untimed `scan_into` (same program, same inputs, only `dispatch_borrowed_timed`
 //! vs `dispatch_borrowed` differs), and the returned `TimedDispatchResult` carries
-//! honest timing (`device_ns` is `None`: a loud absence, not a fabricated zero 
+//! honest timing (`device_ns` is `None`: a loud absence, not a fabricated zero
 //! on the CPU reference backend that has no device timer).
 
 use vyre_driver_reference::CpuRefBackend;

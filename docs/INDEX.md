@@ -1,8 +1,29 @@
 # Documentation Index
 
-Last verified: 2026-07-25
+Last verified: 2026-07-30
 
-This file is generated from the current `docs/` tree and is the routing table for contributors. Consumer-specific names inside archived documents are historical context only; current implementation guidance must come from rows marked `current` or `generated`.
+This file is the routing table for the public documentation set. It is
+maintained by hand, not generated. `scripts/check_docs_index.sh` reads the
+filesystem, not git's index: it fails when a document that exists under `docs/`
+and is not gitignored has no row here, when a row points at a file that does not
+exist on disk, and when a row points at a gitignored file that no reader outside
+the authoring working copy can open. Add a row whenever you add a public
+document, and drop the row when the document is deleted. A document that exists
+but has not been committed yet is still a real document, so index it. Working
+notes matching the ignored `*PLAN*`, `*STATUS*`, `*ROADMAP*`, `*AUDIT*`,
+`*BACKLOG*` and `AGENT_*` name patterns are not public documentation and must
+not be listed.
+
+Twenty six rows were removed on 2026-07-30: twenty five pointed at gitignored
+working notes, one at a deleted file. If one of those documents is later made
+public, restore its row. Do NOT broaden the ignore pattern to re-admit it, and
+do NOT loosen this contract to a warning. The failure mode being guarded against
+is a routing table that lists documents only the author can open, which reads as
+complete and is not, and the way that happens is someone relaxing the rule to
+clear a red gate instead of deciding whether the document belongs in public.
+
+Consumer names inside archived documents are historical context only. Take
+current implementation guidance from rows marked `current` or `generated`.
 
 Status values:
 
@@ -32,8 +53,6 @@ Status values:
 | `current` | 2026-05-26 | 2026-05-26 | [docs/catalog/security.md](catalog/security.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/catalog/text.md](catalog/text.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/catalog/vfs.md](catalog/vfs.md) |
-| `current` | 2026-06-03 | 2026-06-03 | [docs/catalog/anonymous.md](catalog/anonymous.md) |
-| `current` | 2026-06-03 | 2026-06-03 | [docs/catalog/catalog.md](catalog/catalog.md) |
 | `current` | 2026-06-03 | 2026-06-03 | [docs/catalog/decode.md](catalog/decode.md) |
 | `current` | 2026-06-03 | 2026-06-03 | [docs/catalog/geom.md](catalog/geom.md) |
 | `current` | 2026-06-03 | 2026-06-03 | [docs/catalog/opt.md](catalog/opt.md) |
@@ -42,8 +61,6 @@ Status values:
 | `current` | 2026-06-03 | 2026-06-03 | [docs/catalog/scan.md](catalog/scan.md) |
 | `current` | 2026-06-03 | 2026-06-03 | [docs/catalog/substrate.md](catalog/substrate.md) |
 | `current` | 2026-06-03 | 2026-06-03 | [docs/catalog/visual.md](catalog/visual.md) |
-| `current` | 2026-05-26 | 2026-05-26 | [docs/catalogs/coverage-matrix.md](catalogs/coverage-matrix.md) |
-| `current` | 2026-05-26 | 2026-05-26 | [docs/catalogs/op-id-catalog.md](catalogs/op-id-catalog.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/code-style.md](code-style.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/consumer-integration.md](consumer-integration.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/CONVENTIONS.md](CONVENTIONS.md) |
@@ -98,6 +115,7 @@ Status values:
 | `current` | 2026-05-26 | 2026-05-26 | [docs/PUBLISH_GATE.md](PUBLISH_GATE.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/README.md](README.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/RECURSION_THESIS.md](RECURSION_THESIS.md) |
+| `current` | 2026-07-29 | 2026-07-29 | [docs/reference-interpreter-witness-limits.md](reference-interpreter-witness-limits.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/region-chain.md](region-chain.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/RELEASE.md](RELEASE.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/release/v0.4.2.md](release/v0.4.2.md) |
@@ -175,10 +193,12 @@ Status values:
 | `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/UX_SWEEP.md](archive/UX_SWEEP.md) |
 | `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/vision-2026-04-27-essay.md](archive/vision-2026-04-27-essay.md) |
 | `archived` | 2026-05-26 | 2026-05-26 | [docs/legacy/PERF_ROADMAP_2026-05-01.md](legacy/PERF_ROADMAP_2026-05-01.md) |
+| `current` | 2026-07-29 | 2026-07-29 | [docs/archive/README.md](archive/README.md) |
+| `current` | 2026-07-29 | 2026-07-29 | [docs/legacy/README.md](legacy/README.md) |
 | `current` | 2026-07-12 | 2026-07-12 | [docs/GPU_OOM_SEGMENTATION.md](GPU_OOM_SEGMENTATION.md) |
 | `current` | 2026-07-12 | 2026-07-12 | [docs/SUBGROUP_REDUCE_GENERALIZATION.md](SUBGROUP_REDUCE_GENERALIZATION.md) |
 | `current` | 2026-07-12 | 2026-07-12 | [docs/optimization/XTASK_COMMAND_MATRIX.md](optimization/XTASK_COMMAND_MATRIX.md) |
 
 ## Non-public internals
 
-`.internals/` contains working memory, historical coordination, benchmark notes, and skill material. It is not public-facing documentation. Active internal plans live under `.internals/plans/`; archived material under `.internals/archive/` and `.internals/archived-plans/` is historical only.
+`.internals/` is maintainer working material and is excluded from the repository, so it does not ship and is not linked from any published document. Nothing in the table above depends on it. Its layout is whatever the maintainer is holding locally rather than a documented structure, so this file names no subdirectories: an earlier revision claimed active plans under `.internals/plans/` and archives under `.internals/archive/` and `.internals/archived-plans/`, and none of those three paths exist on disk. Naming a private path is a claim that rots unobserved, because no gate can check a path that is excluded by design.

@@ -1,10 +1,10 @@
 use vyre_foundation::ir::Program;
 
-use super::hash::csr_forward_or_changed_padded_slice_fingerprint;
 use super::layout::{
     CsrForwardOrChangedLayout, CsrForwardOrChangedProgramKey, CsrForwardOrChangedStaticInputKey,
 };
 use super::program_dispatch::build_csr_forward_or_changed_dispatch_program;
+use crate::graph::padded_u32_slice_fingerprint;
 
 /// Lightweight primitive-owned dispatch plan without an allocated [`Program`].
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -160,15 +160,12 @@ impl CsrForwardOrChangedLaunchPlan {
             edge_offset_words: layout.edge_offset_words,
             edge_storage_words: layout.edge_storage_words,
             changed_words: self.changed_words(),
-            edge_offsets_hash: csr_forward_or_changed_padded_slice_fingerprint(
-                edge_offsets,
-                layout.edge_offset_words,
-            ),
-            edge_targets_hash: csr_forward_or_changed_padded_slice_fingerprint(
+            edge_offsets_hash: padded_u32_slice_fingerprint(edge_offsets, layout.edge_offset_words),
+            edge_targets_hash: padded_u32_slice_fingerprint(
                 edge_targets,
                 layout.edge_storage_words,
             ),
-            edge_kind_mask_hash: csr_forward_or_changed_padded_slice_fingerprint(
+            edge_kind_mask_hash: padded_u32_slice_fingerprint(
                 edge_kind_mask,
                 layout.edge_storage_words,
             ),

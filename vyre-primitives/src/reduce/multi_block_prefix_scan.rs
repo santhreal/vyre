@@ -191,7 +191,7 @@ fn try_multi_block_prefix_scan_sum_exclusive_u32(
     // be represented as an empty program (empty is valid elsewhere and would
     // hide a scan hole (same rule as the inclusive 3-pass chain)).
     vyre_foundation::execution_plan::fusion::fuse_programs(&[scan, subtract])
-        .map(|program| demote_intermediate_outputs(program, output))
+        .map(|program| crate::demote_intermediate_outputs(program, output))
         .map_err(|error| {
             format!(
                 "vyre multi_block_prefix_scan exclusive fusion failed for n={n}: {error}. Fix: repair program fusion for the inclusive-scan + element-difference passes; do not substitute an empty Program."
@@ -263,7 +263,7 @@ fn try_multi_block_prefix_scan_chain(input: &str, output: &str, n: u32) -> Resul
     // not be represented as an empty program: empty programs are valid
     // elsewhere, so using one here would hide a GPU prefix-scan migration hole.
     vyre_foundation::execution_plan::fusion::fuse_programs(&[pass_a, pass_b, pass_c])
-        .map(|program| demote_intermediate_outputs(program, output))
+        .map(|program| crate::demote_intermediate_outputs(program, output))
         .map_err(|error| {
             format!(
                 "vyre multi_block_prefix_scan fusion failed for n={n}, num_blocks={num_blocks}: {error}. Fix: repair grid-sync fusion for the three-pass GPU scan; do not substitute an empty Program."
@@ -366,22 +366,6 @@ fn try_guarded_single_block_scan(input: &str, output: &str, n: u32) -> Result<Pr
             body: Arc::new(body),
         }],
     ))
-}
-
-fn demote_intermediate_outputs(program: Program, final_output: &str) -> Program {
-    let buffers = program
-        .buffers()
-        .iter()
-        .map(|buffer| {
-            let mut buffer = buffer.clone();
-            if buffer.name() != final_output && buffer.is_output() {
-                buffer.is_output = false;
-                buffer.pipeline_live_out = true;
-            }
-            buffer
-        })
-        .collect();
-    program.with_rewritten_buffers(buffers)
 }
 
 /// Pass A  -  per-block local inclusive Hillis-Steele scan.

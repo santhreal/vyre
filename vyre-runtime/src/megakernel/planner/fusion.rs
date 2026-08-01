@@ -374,33 +374,34 @@ pub fn select_fused_subset_into(
     }
 }
 
-/// Checked selector variant that reports malformed planner input.
-pub fn select_fused_subset_checked_into(
-    costs: &[f64],
+fn select_fused_subset_checked_by(
+    cost_len: usize,
     n: u32,
     exchange_adj: &[u32],
     scratch: &mut FusionSelectionScratch,
+    compare_costs: impl Fn(usize, usize) -> std::cmp::Ordering,
 ) -> Result<(), FusionSelectionError> {
-    let (n_usize, _cells) = validate_selector_shape(costs.len(), n, exchange_adj.len())?;
+    let (n_usize, _cells) = validate_selector_shape(cost_len, n, exchange_adj.len())?;
     if n_usize > MAX_DENSE_FUSION_ITEMS {
         scratch.prepare(n_usize);
         scratch.result.fill(1);
         return Ok(());
     }
     scratch.prepare(n_usize);
-    if exchange_adj.iter().all(|&edge| edge == 0) {
-        scratch.result.fill(1);
-        return Ok(());
-    }
-    if !compute_conflict_degrees_with_conflict(exchange_adj, n_usize, &mut scratch.conflict_degrees)
+    if exchange_adj.iter().all(|&edge| edge == 0)
+        || !compute_conflict_degrees_with_conflict(
+            exchange_adj,
+            n_usize,
+            &mut scratch.conflict_degrees,
+        )
     {
         scratch.result.fill(1);
         return Ok(());
     }
+    let conflict_degrees = &scratch.conflict_degrees;
     scratch.order.sort_unstable_by(|&a, &b| {
-        costs[a]
-            .total_cmp(&costs[b])
-            .then_with(|| scratch.conflict_degrees[a].cmp(&scratch.conflict_degrees[b]))
+        compare_costs(a, b)
+            .then_with(|| conflict_degrees[a].cmp(&conflict_degrees[b]))
             .then_with(|| a.cmp(&b))
     });
     select_ordered_maximal(
@@ -411,6 +412,18 @@ pub fn select_fused_subset_checked_into(
         &mut scratch.result,
     );
     Ok(())
+}
+
+/// Checked selector variant that reports malformed planner input.
+pub fn select_fused_subset_checked_into(
+    costs: &[f64],
+    n: u32,
+    exchange_adj: &[u32],
+    scratch: &mut FusionSelectionScratch,
+) -> Result<(), FusionSelectionError> {
+    select_fused_subset_checked_by(costs.len(), n, exchange_adj, scratch, |a, b| {
+        costs[a].total_cmp(&costs[b])
+    })
 }
 
 /// Compact-cost selector for hot runtime dispatchers.
@@ -444,7 +457,8 @@ pub fn select_fused_subset_compact_into(
     }
     // Same Law 10 / Law 7 fail-loud as the dense variant: a silent no-fusion
     // fallback on malformed input hides a planner bug and degrades speed.
-    if let Err(error) = select_fused_subset_compact_checked_into(costs_q16, n, exchange_adj, scratch)
+    if let Err(error) =
+        select_fused_subset_compact_checked_into(costs_q16, n, exchange_adj, scratch)
     {
         panic!(
             "vyre-runtime compact fusion subset selection failed on malformed planner input: {error}"
@@ -459,36 +473,9 @@ pub fn select_fused_subset_compact_checked_into(
     exchange_adj: &[u32],
     scratch: &mut FusionSelectionScratch,
 ) -> Result<(), FusionSelectionError> {
-    let (n_usize, _cells) = validate_selector_shape(costs_q16.len(), n, exchange_adj.len())?;
-    if n_usize > MAX_DENSE_FUSION_ITEMS {
-        scratch.prepare(n_usize);
-        scratch.result.fill(1);
-        return Ok(());
-    }
-    scratch.prepare(n_usize);
-    if exchange_adj.iter().all(|&edge| edge == 0) {
-        scratch.result.fill(1);
-        return Ok(());
-    }
-    if !compute_conflict_degrees_with_conflict(exchange_adj, n_usize, &mut scratch.conflict_degrees)
-    {
-        scratch.result.fill(1);
-        return Ok(());
-    }
-    scratch.order.sort_unstable_by(|&a, &b| {
-        costs_q16[a]
-            .cmp(&costs_q16[b])
-            .then_with(|| scratch.conflict_degrees[a].cmp(&scratch.conflict_degrees[b]))
-            .then_with(|| a.cmp(&b))
-    });
-    select_ordered_maximal(
-        exchange_adj,
-        n_usize,
-        &scratch.order,
-        &mut scratch.selected,
-        &mut scratch.result,
-    );
-    Ok(())
+    select_fused_subset_checked_by(costs_q16.len(), n, exchange_adj, scratch, |a, b| {
+        costs_q16[a].cmp(&costs_q16[b])
+    })
 }
 
 /// Compute a cost-ordered maximal fusion subset with the same output contract

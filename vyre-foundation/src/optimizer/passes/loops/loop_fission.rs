@@ -41,6 +41,7 @@
 //!   relative ordering with the surrounding work cannot be split, so
 //!   any presence in the body blocks fission.
 
+use super::{collect_touched_buffers, collect_var_reads, rename_var_in_expr};
 use crate::ir::{Expr, Ident, Node, Program};
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 use crate::visit::node_map;
@@ -242,140 +243,13 @@ fn try_partition(body: &[Node], loop_var: &Ident) -> Option<(Vec<Node>, Vec<Node
     for split in 1..body.len() {
         let prefix = &body[..split];
         let suffix = &body[split..];
-        if buffers_disjoint(prefix, suffix) && !suffix_reads_prefix_names(prefix, suffix, loop_var)
+        if super::buffers_disjoint_with(prefix, suffix, collect_touched_buffers)
+            && !suffix_reads_prefix_names(prefix, suffix, loop_var)
         {
             return Some((prefix.to_vec(), suffix.to_vec()));
         }
     }
     None
-}
-
-fn buffers_disjoint(a: &[Node], b: &[Node]) -> bool {
-    let mut a_buffers: FxHashSet<Ident> = FxHashSet::default();
-    let mut b_buffers: FxHashSet<Ident> = FxHashSet::default();
-    collect_touched_buffers(a, &mut a_buffers);
-    collect_touched_buffers(b, &mut b_buffers);
-    a_buffers.is_disjoint(&b_buffers)
-}
-
-fn collect_touched_buffers(nodes: &[Node], out: &mut FxHashSet<Ident>) {
-    for node in nodes {
-        match node {
-            Node::Store {
-                buffer,
-                index,
-                value,
-            } => {
-                out.insert(buffer.clone());
-                collect_buffers_in_expr(index, out);
-                collect_buffers_in_expr(value, out);
-            }
-            Node::Let { value, .. } | Node::Assign { value, .. } => {
-                collect_buffers_in_expr(value, out);
-            }
-            Node::If {
-                cond,
-                then,
-                otherwise,
-            } => {
-                collect_buffers_in_expr(cond, out);
-                collect_touched_buffers(then, out);
-                collect_touched_buffers(otherwise, out);
-            }
-            Node::Loop { from, to, body, .. } => {
-                collect_buffers_in_expr(from, out);
-                collect_buffers_in_expr(to, out);
-                collect_touched_buffers(body, out);
-            }
-            Node::Block(body) => collect_touched_buffers(body, out),
-            Node::Region { body, .. } => collect_touched_buffers(body, out),
-            Node::Trap { address, .. } => collect_buffers_in_expr(address, out),
-            Node::AllReduce { buffer, .. } | Node::Broadcast { buffer, .. } => {
-                out.insert(buffer.clone());
-            }
-            Node::AllGather { input, output, .. } | Node::ReduceScatter { input, output, .. } => {
-                out.insert(input.clone());
-                out.insert(output.clone());
-            }
-            Node::Barrier { .. }
-            | Node::Return
-            | Node::IndirectDispatch { .. }
-            | Node::AsyncLoad { .. }
-            | Node::AsyncStore { .. }
-            | Node::AsyncWait { .. }
-            | Node::Resume { .. }
-            | Node::Opaque(_) => {}
-        }
-    }
-}
-
-fn collect_buffers_in_expr(expr: &Expr, out: &mut FxHashSet<Ident>) {
-    match expr {
-        Expr::Load { buffer, index } => {
-            out.insert(buffer.clone());
-            collect_buffers_in_expr(index, out);
-        }
-        Expr::BufLen { buffer } | Expr::BufferRef { buffer } => {
-            out.insert(buffer.clone());
-        }
-        Expr::Atomic {
-            buffer,
-            index,
-            expected,
-            value,
-            ..
-        } => {
-            out.insert(buffer.clone());
-            collect_buffers_in_expr(index, out);
-            if let Some(e) = expected.as_deref() {
-                collect_buffers_in_expr(e, out);
-            }
-            collect_buffers_in_expr(value, out);
-        }
-        Expr::BinOp { left, right, .. } => {
-            collect_buffers_in_expr(left, out);
-            collect_buffers_in_expr(right, out);
-        }
-        Expr::UnOp { operand, .. } => collect_buffers_in_expr(operand, out),
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            collect_buffers_in_expr(cond, out);
-            collect_buffers_in_expr(true_val, out);
-            collect_buffers_in_expr(false_val, out);
-        }
-        Expr::Cast { value, .. } | Expr::SubgroupReduce { value, .. } => {
-            collect_buffers_in_expr(value, out);
-        }
-        Expr::Fma { a, b, c } => {
-            collect_buffers_in_expr(a, out);
-            collect_buffers_in_expr(b, out);
-            collect_buffers_in_expr(c, out);
-        }
-        Expr::Call { args, .. } => {
-            for arg in args {
-                collect_buffers_in_expr(arg, out);
-            }
-        }
-        Expr::SubgroupBallot { cond } => collect_buffers_in_expr(cond, out),
-        Expr::SubgroupShuffle { value, lane } => {
-            collect_buffers_in_expr(value, out);
-            collect_buffers_in_expr(lane, out);
-        }
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::Var(_)
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize
-        | Expr::Opaque(_) => {}
-    }
 }
 
 /// True iff any name introduced by `prefix` (via `Let`) is read in
@@ -414,102 +288,6 @@ fn collect_let_names(nodes: &[Node], out: &mut FxHashSet<Ident>) {
             Node::Region { body, .. } => collect_let_names(body, out),
             _ => {}
         }
-    }
-}
-
-fn collect_var_reads(nodes: &[Node], out: &mut FxHashSet<Ident>) {
-    for node in nodes {
-        match node {
-            Node::Let { value, .. } | Node::Assign { value, .. } => {
-                collect_var_reads_in_expr(value, out);
-            }
-            Node::Store { index, value, .. } => {
-                collect_var_reads_in_expr(index, out);
-                collect_var_reads_in_expr(value, out);
-            }
-            Node::If {
-                cond,
-                then,
-                otherwise,
-            } => {
-                collect_var_reads_in_expr(cond, out);
-                collect_var_reads(then, out);
-                collect_var_reads(otherwise, out);
-            }
-            Node::Loop { from, to, body, .. } => {
-                collect_var_reads_in_expr(from, out);
-                collect_var_reads_in_expr(to, out);
-                collect_var_reads(body, out);
-            }
-            Node::Block(body) => collect_var_reads(body, out),
-            Node::Region { body, .. } => collect_var_reads(body, out),
-            _ => {}
-        }
-    }
-}
-
-fn collect_var_reads_in_expr(expr: &Expr, out: &mut FxHashSet<Ident>) {
-    match expr {
-        Expr::Var(name) => {
-            out.insert(name.clone());
-        }
-        Expr::Load { index, .. } => collect_var_reads_in_expr(index, out),
-        Expr::BinOp { left, right, .. } => {
-            collect_var_reads_in_expr(left, out);
-            collect_var_reads_in_expr(right, out);
-        }
-        Expr::UnOp { operand, .. } => collect_var_reads_in_expr(operand, out),
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            collect_var_reads_in_expr(cond, out);
-            collect_var_reads_in_expr(true_val, out);
-            collect_var_reads_in_expr(false_val, out);
-        }
-        Expr::Cast { value, .. } | Expr::SubgroupReduce { value, .. } => {
-            collect_var_reads_in_expr(value, out);
-        }
-        Expr::Fma { a, b, c } => {
-            collect_var_reads_in_expr(a, out);
-            collect_var_reads_in_expr(b, out);
-            collect_var_reads_in_expr(c, out);
-        }
-        Expr::Call { args, .. } => {
-            for arg in args {
-                collect_var_reads_in_expr(arg, out);
-            }
-        }
-        Expr::Atomic {
-            index,
-            expected,
-            value,
-            ..
-        } => {
-            collect_var_reads_in_expr(index, out);
-            if let Some(e) = expected.as_deref() {
-                collect_var_reads_in_expr(e, out);
-            }
-            collect_var_reads_in_expr(value, out);
-        }
-        Expr::SubgroupBallot { cond } => collect_var_reads_in_expr(cond, out),
-        Expr::SubgroupShuffle { value, lane } => {
-            collect_var_reads_in_expr(value, out);
-            collect_var_reads_in_expr(lane, out);
-        }
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::BufferRef { .. }
-        | Expr::BufLen { .. }
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize
-        | Expr::Opaque(_) => {}
     }
 }
 
@@ -586,77 +364,6 @@ fn rename_var_in_node(node: Node, from: &Ident, to: &Ident) -> Node {
                 ),
             }
         }
-        other => other,
-    }
-}
-
-fn rename_var_in_expr(expr: Expr, from: &Ident, to: &Ident) -> Expr {
-    match expr {
-        Expr::Var(name) if name.as_str() == from.as_str() => Expr::Var(to.clone()),
-        Expr::Load { buffer, index } => Expr::Load {
-            buffer,
-            index: Box::new(rename_var_in_expr(*index, from, to)),
-        },
-        Expr::BinOp { op, left, right } => Expr::BinOp {
-            op,
-            left: Box::new(rename_var_in_expr(*left, from, to)),
-            right: Box::new(rename_var_in_expr(*right, from, to)),
-        },
-        Expr::UnOp { op, operand } => Expr::UnOp {
-            op,
-            operand: Box::new(rename_var_in_expr(*operand, from, to)),
-        },
-        Expr::Call { op_id, args } => Expr::Call {
-            op_id,
-            args: args
-                .into_iter()
-                .map(|a| rename_var_in_expr(a, from, to))
-                .collect(),
-        },
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => Expr::Select {
-            cond: Box::new(rename_var_in_expr(*cond, from, to)),
-            true_val: Box::new(rename_var_in_expr(*true_val, from, to)),
-            false_val: Box::new(rename_var_in_expr(*false_val, from, to)),
-        },
-        Expr::Cast { target, value } => Expr::Cast {
-            target,
-            value: Box::new(rename_var_in_expr(*value, from, to)),
-        },
-        Expr::Fma { a, b, c } => Expr::Fma {
-            a: Box::new(rename_var_in_expr(*a, from, to)),
-            b: Box::new(rename_var_in_expr(*b, from, to)),
-            c: Box::new(rename_var_in_expr(*c, from, to)),
-        },
-        Expr::Atomic {
-            op,
-            buffer,
-            index,
-            expected,
-            value,
-            ordering,
-        } => Expr::Atomic {
-            op,
-            buffer,
-            index: Box::new(rename_var_in_expr(*index, from, to)),
-            expected: expected.map(|e| Box::new(rename_var_in_expr(*e, from, to))),
-            value: Box::new(rename_var_in_expr(*value, from, to)),
-            ordering,
-        },
-        Expr::SubgroupBallot { cond } => Expr::SubgroupBallot {
-            cond: Box::new(rename_var_in_expr(*cond, from, to)),
-        },
-        Expr::SubgroupShuffle { value, lane } => Expr::SubgroupShuffle {
-            value: Box::new(rename_var_in_expr(*value, from, to)),
-            lane: Box::new(rename_var_in_expr(*lane, from, to)),
-        },
-        Expr::SubgroupReduce { op, value } => Expr::SubgroupReduce {
-            op,
-            value: Box::new(rename_var_in_expr(*value, from, to)),
-        },
         other => other,
     }
 }

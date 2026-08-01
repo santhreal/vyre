@@ -21,7 +21,7 @@
 //!
 //! ## Lowering shape
 //!
-//! Composes [`flows_to`] (one BFS-step) + [`bitset_or_into`] (acc
+//! Composes [`flows_to`](crate::security::flows_to::flows_to) (one BFS-step) + [`bitset_or_into`] (acc
 //! merge) + [`bitset_and`] (intersect with opposite frontier) +
 //! [`bitset_or_into`] (final OR into output). Caller drives the
 //! one-step `flows_to` to fixpoint via the dispatcher's
@@ -173,7 +173,7 @@ pub fn try_aliases_dataflow(
     // gid lives past the warp boundary). Per-arm composition via
     // a flat name-dedup `merge_programs` skipped this and was the
     // headline-blocker on every aliases-using rule.
-    fuse_programs(&[
+    let fused = fuse_programs(&[
         seed_x,
         seed_y,
         clear_hop_x,
@@ -186,7 +186,20 @@ pub fn try_aliases_dataflow(
         intersect_y,
         union_x,
         union_y,
-    ])
+    ])?;
+    let buffers = fused
+        .buffers()
+        .iter()
+        .cloned()
+        .map(|mut buffer| {
+            if buffer.name() == out_buf {
+                buffer.is_output = true;
+                buffer.pipeline_live_out = true;
+            }
+            buffer
+        })
+        .collect();
+    Ok(fused.with_rewritten_buffers(buffers))
 }
 
 /// CPU oracle. Mirrors the GPU semantic over a host-side dataflow
@@ -252,7 +265,17 @@ fn witness_inputs() -> Vec<Vec<u8>> {
     witness_program()
         .buffers()
         .iter()
-        .filter(|decl| !decl.is_output() && decl.access() != BufferAccess::Workgroup)
+        // The interpreter keys on `is_backend_allocated_output`, which is broader
+        // than `is_output`: it also covers a WriteOnly buffer and a live-out
+        // ReadWrite one. Filtering on `is_output` here would put a value in this
+        // witness for a buffer the interpreter allocates itself, shifting every
+        // later input by one. See `vyre_reference::is_reference_input`, which is
+        // the owner of this rule; vyre-reference is only a dev-dependency here,
+        // so this restates it. BACKLOG.md R78 moves the predicate somewhere both
+        // crates can reach.
+        .filter(|decl| {
+            decl.access() != BufferAccess::Workgroup && !decl.is_backend_allocated_output()
+        })
         .map(|decl| vyre_primitives::wire::pack_u32_slice(&witness_words(decl.name(), false)))
         .collect()
 }
@@ -386,5 +409,20 @@ mod tests {
             "duplicate non-Workgroup bindings in fused aliases_dataflow program: {:?}",
             bindings
         );
+    }
+
+    /// The fused dataflow graph exposes only its final alias bitset as the
+    /// unambiguous downstream composition output.
+    #[test]
+    fn fused_program_marks_only_final_alias_bitset_as_output() {
+        let program = witness_program();
+        let outputs = program
+            .buffers()
+            .iter()
+            .filter(|buffer| buffer.is_output())
+            .map(|buffer| buffer.name())
+            .collect::<Vec<_>>();
+
+        assert_eq!(outputs, vec!["out"]);
     }
 }

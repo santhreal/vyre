@@ -5,7 +5,8 @@ const LICENSES: &str =
     include_str!("../../../docs/optimization/PUBLIC_RELEASE_LICENSE_MANIFEST.toml");
 const NOTICES: &str =
     include_str!("../../../docs/optimization/THIRD_PARTY_NOTICE_ATTRIBUTION.toml");
-const PROCESS: &str = include_str!("../../../docs/optimization/LICENSE_COMPLIANCE_PROCESS_MAP.toml");
+const PROCESS: &str =
+    include_str!("../../../docs/optimization/LICENSE_COMPLIANCE_PROCESS_MAP.toml");
 const METADATA: &str =
     include_str!("../../../docs/optimization/PACKAGE_METADATA_PUBLICATION_POLICY.toml");
 const COVERAGE: &str =
@@ -20,7 +21,10 @@ fn license_ip_sources_are_registered() {
         "CARGO_MANIFEST_LICENSE_FIELDS",
         "OSI_OPEN_SOURCE_DEFINITION",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 
@@ -38,7 +42,10 @@ fn public_license_manifest_records_cargo_spdx_license_files_and_private_boundary
         "vyre-public-root",
         "vyre-tool-subcrate",
     ] {
-        assert!(LICENSES.contains(required), "public license manifest must include {required}");
+        assert!(
+            LICENSES.contains(required),
+            "public license manifest must include {required}"
+        );
     }
 }
 

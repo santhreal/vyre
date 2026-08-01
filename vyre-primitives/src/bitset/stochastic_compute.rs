@@ -29,27 +29,15 @@ pub fn stochastic_and_mul(a: &str, b: &str, out: &str, n_words: u32) -> Program 
     binary_word_program(OP_ID, a, b, out, n_words, BitwiseBinaryOp::And)
 }
 
-/// CPU reference for stochastic multiplication over packed bitstreams.
-#[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref(a: &[u32], b: &[u32]) -> Vec<u32> {
-    let mut out = Vec::new();
-    match try_cpu_ref_into(a, b, &mut out) {
-        Ok(()) => out,
-        // A parity oracle that returns empty on failure makes the GPU-vs-CPU
-        // assertion pass on empty==empty, silently masking a divergence
-        // (Law 10 / Law 6). Fail loud; callers use try_cpu_ref_into.
-        Err(error) => panic!("vyre-primitives stochastic bitstream cpu_ref failed: {error}"),
-    }
-}
+super::define_cpu_ref!(a, b, "vyre-primitives stochastic bitstream cpu_ref failed");
 
-/// CPU reference into caller-owned storage.
 #[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref_into(a: &[u32], b: &[u32], out: &mut Vec<u32>) {
-    if let Err(error) = try_cpu_ref_into(a, b, out) {
-        panic!("vyre-primitives stochastic bitstream cpu_ref_into failed: {error}");
-    }
-}
+super::define_cpu_ref_into!(
+    a,
+    b,
+    "vyre-primitives stochastic bitstream cpu_ref_into failed"
+);
 
 /// Fallible CPU reference into caller-owned storage.
 #[cfg(any(test, feature = "cpu-parity"))]

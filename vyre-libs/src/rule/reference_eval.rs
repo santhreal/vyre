@@ -88,7 +88,7 @@ pub fn evaluate_formula<C: RuleEvaluationContext + ?Sized>(formula: &RuleFormula
 /// extension that caches its own compiled regex.
 ///
 /// `Opaque` extension conditions delegate via
-/// [`RuleConditionExt::evaluate_opaque`]; the trait passes a
+/// [`RuleConditionExt::evaluate_opaque`](vyre_foundation::extension::RuleConditionExt::evaluate_opaque); the trait passes a
 /// `&dyn Any` reference so extensions can downcast to whatever
 /// context type they require. The [`RuleEvaluationContext`] is
 /// passed via the `Any` payload by reference so an extension that

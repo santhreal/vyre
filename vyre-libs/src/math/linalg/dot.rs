@@ -115,6 +115,8 @@ crate::builder::impl_cat_a_builder_options!(Dot);
 /// Buffers:
 /// - `lhs` (u32, read-only, n elems)
 /// - `rhs` (u32, read-only, n elems)
+/// - `dot_scratch` (u32, workgroup-shared, 256 elems) holds the per-lane
+///   partial sums that the workgroup tree reduces
 /// - `out` (u32, output, 1 elem)
 ///
 /// Workgroup size `[256, 1, 1]` by default: each lane accumulates a

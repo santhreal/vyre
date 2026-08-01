@@ -173,31 +173,16 @@ impl OpEntry {
 
     /// Allowed output drift in ULPs for f32-producing backends.
     ///
-    /// `0` means byte-identity is required. Non-zero tolerances are used only
-    /// for ops whose contract already permits backend-defined transcendental
-    /// drift OR whose lowered IR contains f32 mul+add chains that the WGSL
-    /// implementation is allowed to fuse into a single FMA (one rounding
-    /// instead of two). Catalog wrappers like
-    /// `vyre-libs::catalog::math::<name>::consumer_a` are mapped to the
-    /// underlying primitive id so they inherit the primitive's tolerance
-    /// without a hand-maintained per-wrapper row (Q5 in
-    /// `docs/optimization/ROADMAP.md`).
+    /// `0` means byte identity is required. Non-zero tolerances are used only
+    /// for operations whose numerical contract permits the declared drift.
     #[must_use]
     pub fn tolerance(&self) -> u32 {
         Self::tolerance_for_id(self.id)
     }
 
-    /// Resolve the ULP tolerance for an op id, normalising catalog wrapper
-    /// ids through their underlying primitive path first.
-    ///
-    /// Public for cross-crate consumers (e.g. the conformance harness)
-    /// that want to consult the tolerance contract without holding a
-    /// concrete `OpEntry`.
+    /// Resolve the ULP tolerance for a registered operation id.
     #[must_use]
     pub fn tolerance_for_id(id: &str) -> u32 {
-        if let Some(path) = catalog_primitive_path(id) {
-            return primitive_tolerance_for_path(path);
-        }
         explicit_tolerance_for_id(id)
     }
 }
@@ -215,6 +200,10 @@ fn explicit_tolerance_for_id(id: &str) -> u32 {
         "vyre-libs::nn::rms_norm" => 2,
         "vyre-libs::nn::rms_norm_linear" => 2,
         "vyre-libs::math::fft::fft_convolve_circular_complex" => 4,
+        // Strassen's seven-product reconstruction contains cancellation-heavy
+        // add/sub chains. Composing fractional upstream values exposed 24 ULP
+        // of WGSL FMA drift on the fourth output lane.
+        "vyre-libs::math::linalg::matmul_strassen_2x2" => 32,
         "vyre-libs::optim::newton_schulz_5step" => 64,
         // `decay*ema + (1-decay)*theta`  -  straight mul+add chain,
         // one lane drifts 1 ULP from CPU's serial mul+add+add to
@@ -230,19 +219,6 @@ fn explicit_tolerance_for_id(id: &str) -> u32 {
         "vyre-primitives::math::newton_schulz_poly5_f32" => 32,
         _ => 0,
     }
-}
-
-fn primitive_tolerance_for_path(path: &str) -> u32 {
-    match path {
-        "math::newton_schulz_poly5_f32" => 32,
-        _ => 0,
-    }
-}
-
-fn catalog_primitive_path(id: &str) -> Option<&str> {
-    let rest = id.strip_prefix("vyre-libs::catalog::")?;
-    rest.strip_suffix("::consumer_a")
-        .or_else(|| rest.strip_suffix("::consumer_b"))
 }
 
 inventory::collect!(OpEntry);
@@ -386,55 +362,7 @@ macro_rules! vyre_op {
 
 #[cfg(test)]
 mod tests {
-    use super::{catalog_primitive_path, OpEntry};
-
-    #[test]
-    fn catalog_primitive_path_strips_consumer_a() {
-        // Q5: catalog wrapper consumer_a/b ids canonicalize to their
-        // wrapped primitive id so tolerance() does not depend on a
-        // hand-maintained per-wrapper row.
-        assert_eq!(
-            catalog_primitive_path("vyre-libs::catalog::math::newton_schulz_poly5_f32::consumer_a"),
-            Some("math::newton_schulz_poly5_f32"),
-        );
-    }
-
-    #[test]
-    fn catalog_primitive_path_strips_consumer_b() {
-        assert_eq!(
-            catalog_primitive_path("vyre-libs::catalog::math::newton_schulz_poly5_f32::consumer_b"),
-            Some("math::newton_schulz_poly5_f32"),
-        );
-    }
-
-    #[test]
-    fn catalog_primitive_path_rejects_non_catalog_ids() {
-        assert_eq!(catalog_primitive_path("vyre-libs::nn::softmax"), None);
-        assert_eq!(
-            catalog_primitive_path("vyre-primitives::hash::fnv1a64"),
-            None
-        );
-    }
-
-    #[test]
-    fn tolerance_for_id_inherits_from_primitive_through_catalog_wrapper() {
-        // The proving test for Q5: catalog consumer_a and consumer_b
-        // return the same ULP tolerance as their underlying primitive,
-        // without anyone hand-adding a wrapper row.
-        let primitive = OpEntry::tolerance_for_id("vyre-primitives::math::newton_schulz_poly5_f32");
-        let consumer_a = OpEntry::tolerance_for_id(
-            "vyre-libs::catalog::math::newton_schulz_poly5_f32::consumer_a",
-        );
-        let consumer_b = OpEntry::tolerance_for_id(
-            "vyre-libs::catalog::math::newton_schulz_poly5_f32::consumer_b",
-        );
-        assert_eq!(consumer_a, primitive);
-        assert_eq!(consumer_b, primitive);
-        assert!(
-            primitive > 0,
-            "primitive needs a non-zero tolerance for this test to be meaningful"
-        );
-    }
+    use super::OpEntry;
 
     #[test]
     fn tolerance_defaults_to_zero_byte_identity() {
@@ -444,20 +372,21 @@ mod tests {
             OpEntry::tolerance_for_id("vyre-libs::foo::bar::baz_unknown_op_id"),
             0
         );
-        // Adversarial: a catalog-shaped id whose primitive is unknown
-        // must also default to byte identity, not silently leak a
-        // tolerance from another op.
-        assert_eq!(
-            OpEntry::tolerance_for_id(
-                "vyre-libs::catalog::imaginary::path_that_does_not_exist::consumer_a"
-            ),
-            0
-        );
     }
 
     #[test]
     fn muoneq_r_random_stress_tolerance_covers_fma_contraction() {
         assert_eq!(OpEntry::tolerance_for_id("vyre-libs::optim::muoneq_r"), 8);
+    }
+
+    /// Fractional upstream values must retain enough budget for Strassen's
+    /// cancellation-heavy seven-product reconstruction.
+    #[test]
+    fn strassen_composition_tolerance_covers_fma_cancellation() {
+        assert_eq!(
+            OpEntry::tolerance_for_id("vyre-libs::math::linalg::matmul_strassen_2x2"),
+            32
+        );
     }
 
     #[test]

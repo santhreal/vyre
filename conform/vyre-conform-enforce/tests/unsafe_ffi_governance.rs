@@ -12,7 +12,10 @@ fn unsafe_ffi_primary_sources_are_registered() {
         "RUST_UNSAFE_CODE_GUIDELINES",
         "RUST_RFC_2945_C_UNWIND",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 

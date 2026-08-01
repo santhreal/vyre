@@ -42,4 +42,3 @@ fn prove_refuses_certificate_when_backend_cannot_dispatch() {
 }
 
 // Drives `cargo run -p vyre-conform-runner --features gpu -- prove`; GPU
-

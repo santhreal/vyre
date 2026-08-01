@@ -280,6 +280,18 @@ pub fn dispatch_program_timed(
     })
 }
 
+fn optional_resident_upload<T>(result: Result<T, BackendError>) -> Result<Option<T>, BenchError> {
+    match result {
+        Ok(resident) => Ok(Some(resident)),
+        Err(BackendError::UnsupportedFeature { name, .. })
+            if name == "resident buffer allocation" =>
+        {
+            Ok(None)
+        }
+        Err(error) => Err(BenchError::BackendFailed(error.to_string())),
+    }
+}
+
 impl ResidentInputSet {
     /// Upload every benchmark input as a resident resource.
     ///
@@ -291,15 +303,7 @@ impl ResidentInputSet {
         inputs: &[Vec<u8>],
         cleanup_label: &'static str,
     ) -> Result<Option<Self>, BenchError> {
-        match Self::upload(ctx, inputs, cleanup_label) {
-            Ok(resident) => Ok(Some(resident)),
-            Err(BackendError::UnsupportedFeature { name, .. })
-                if name == "resident buffer allocation" =>
-            {
-                Ok(None)
-            }
-            Err(error) => Err(BenchError::BackendFailed(error.to_string())),
-        }
+        optional_resident_upload(Self::upload(ctx, inputs, cleanup_label))
     }
 
     /// Upload benchmark inputs and append zero-filled resident output buffers.
@@ -314,15 +318,12 @@ impl ResidentInputSet {
         output_sizes: &[usize],
         cleanup_label: &'static str,
     ) -> Result<Option<Self>, BenchError> {
-        match Self::upload_with_zeroed_outputs(ctx, inputs, output_sizes, cleanup_label) {
-            Ok(resident) => Ok(Some(resident)),
-            Err(BackendError::UnsupportedFeature { name, .. })
-                if name == "resident buffer allocation" =>
-            {
-                Ok(None)
-            }
-            Err(error) => Err(BenchError::BackendFailed(error.to_string())),
-        }
+        optional_resident_upload(Self::upload_with_zeroed_outputs(
+            ctx,
+            inputs,
+            output_sizes,
+            cleanup_label,
+        ))
     }
 
     /// Upload host inputs plus zero-filled outputs in the program's bound-buffer order.
@@ -338,15 +339,7 @@ impl ResidentInputSet {
         cleanup_label: &'static str,
     ) -> Result<Option<Self>, BenchError> {
         let payloads = program_order_resident_payloads(program, inputs, cleanup_label)?;
-        match Self::upload_payloads(ctx, &payloads, cleanup_label) {
-            Ok(resident) => Ok(Some(resident)),
-            Err(BackendError::UnsupportedFeature { name, .. })
-                if name == "resident buffer allocation" =>
-            {
-                Ok(None)
-            }
-            Err(error) => Err(BenchError::BackendFailed(error.to_string())),
-        }
+        optional_resident_upload(Self::upload_payloads(ctx, &payloads, cleanup_label))
     }
 
     /// Dispatch against the uploaded resident resources.
@@ -494,15 +487,7 @@ impl ResidentInputPool {
         set_count: usize,
         cleanup_label: &'static str,
     ) -> Result<Option<Self>, BenchError> {
-        match Self::upload(ctx, inputs, set_count, cleanup_label) {
-            Ok(pool) => Ok(Some(pool)),
-            Err(BackendError::UnsupportedFeature { name, .. })
-                if name == "resident buffer allocation" =>
-            {
-                Ok(None)
-            }
-            Err(error) => Err(BenchError::BackendFailed(error.to_string())),
-        }
+        optional_resident_upload(Self::upload(ctx, inputs, set_count, cleanup_label))
     }
 
     /// Upload `set_count` copies of input resources plus zero-filled output resources.
@@ -513,16 +498,13 @@ impl ResidentInputPool {
         set_count: usize,
         cleanup_label: &'static str,
     ) -> Result<Option<Self>, BenchError> {
-        match Self::upload_with_zeroed_outputs(ctx, inputs, output_sizes, set_count, cleanup_label)
-        {
-            Ok(pool) => Ok(Some(pool)),
-            Err(BackendError::UnsupportedFeature { name, .. })
-                if name == "resident buffer allocation" =>
-            {
-                Ok(None)
-            }
-            Err(error) => Err(BenchError::BackendFailed(error.to_string())),
-        }
+        optional_resident_upload(Self::upload_with_zeroed_outputs(
+            ctx,
+            inputs,
+            output_sizes,
+            set_count,
+            cleanup_label,
+        ))
     }
 
     /// Upload `set_count` copies of host inputs plus zero-filled outputs in program binding order.
@@ -534,15 +516,12 @@ impl ResidentInputPool {
         cleanup_label: &'static str,
     ) -> Result<Option<Self>, BenchError> {
         let payloads = program_order_resident_payloads(program, inputs, cleanup_label)?;
-        match Self::upload_payloads(ctx, &payloads, set_count, cleanup_label) {
-            Ok(pool) => Ok(Some(pool)),
-            Err(BackendError::UnsupportedFeature { name, .. })
-                if name == "resident buffer allocation" =>
-            {
-                Ok(None)
-            }
-            Err(error) => Err(BenchError::BackendFailed(error.to_string())),
-        }
+        optional_resident_upload(Self::upload_payloads(
+            ctx,
+            &payloads,
+            set_count,
+            cleanup_label,
+        ))
     }
 
     /// Return the next resident input set, re-uploading when the pool wraps.
@@ -1100,7 +1079,11 @@ mod tests {
 
         // The old inputs-only path (`upload_optional`) under-provisions by exactly
         // the output count -- this is the bug that fails dispatch closed.
-        assert_eq!(inputs.len(), 2, "inputs-only would supply only keys + queries");
+        assert_eq!(
+            inputs.len(),
+            2,
+            "inputs-only would supply only keys + queries"
+        );
         assert!(
             inputs.len() < required_handles,
             "inputs-only ({}) under-provisions the {required_handles} required handles",

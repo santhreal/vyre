@@ -187,4 +187,3 @@ fn materialized_output_cache_hit_preserves_existing_output_slots_until_reservati
     assert_eq!(replayed[0].capacity(), first_capacity);
     assert_eq!(replayed[1].capacity(), second_capacity);
 }
-

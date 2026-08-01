@@ -361,6 +361,10 @@ pub(crate) fn pack_u32(words: &[u32]) -> Vec<u8> {
     vyre_primitives::wire::pack_u32_slice(words)
 }
 
+pub(crate) fn packed_u32_input_with_output(words: &[u32]) -> Vec<Vec<Vec<u8>>> {
+    vec![vec![pack_u32(words), vec![0u8; words.len() * 4]]]
+}
+
 pub(crate) fn pack_f32(values: &[f32]) -> Vec<u8> {
     vyre_primitives::wire::pack_f32_slice(values)
 }

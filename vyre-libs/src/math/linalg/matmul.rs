@@ -91,6 +91,7 @@ impl Matmul {
         let body = matmul_body(
             self.a.name_str(),
             self.b.name_str(),
+            None,
             self.out.name_str(),
             k,
             n,
@@ -222,10 +223,10 @@ impl MatmulBias {
             });
         }
 
-        let body = matmul_bias_body(
+        let body = matmul_body(
             self.a.name_str(),
             self.b.name_str(),
-            self.bias.name_str(),
+            Some(self.bias.name_str()),
             self.out.name_str(),
             k,
             n,
@@ -319,8 +320,9 @@ pub fn matmul_bias(a: &str, b: &str, bias: &str, out: &str, m: u32, k: u32, n: u
     })
 }
 
-fn matmul_body(a: &str, b: &str, out: &str, k: u32, n: u32) -> Vec<Node> {
-    // One invocation computes one row-major output slot. Keeping the
+fn matmul_body(a: &str, b: &str, bias: Option<&str>, out: &str, k: u32, n: u32) -> Vec<Node> {
+    // One invocation computes one row-major output slot. Keeping the kernel
+    // 1-D lets each backend derive dispatch geometry from the output length.
     // kernel 1-D makes dispatch geometry backend-neutral: concrete drivers
     // and the reference interpreter can derive the grid from output
     // length without separately knowing matrix rows/cols.
@@ -365,58 +367,10 @@ fn matmul_body(a: &str, b: &str, out: &str, k: u32, n: u32) -> Vec<Node> {
                 Node::Store {
                     buffer: out.into(),
                     index: idx,
-                    value: Expr::var("acc"),
-                },
-            ],
-        ),
-    ]
-}
-
-fn matmul_bias_body(a: &str, b: &str, bias: &str, out: &str, k: u32, n: u32) -> Vec<Node> {
-    // One invocation computes one row-major output slot; see
-    // `matmul_body` for the dispatch-geometry rationale.
-    let idx = Expr::var("idx");
-    let row = Expr::var("row");
-    let col = Expr::var("col");
-    vec![
-        Node::let_bind("idx", Expr::InvocationId { axis: 0 }),
-        Node::let_bind("row", Expr::div(idx.clone(), Expr::u32(n))),
-        Node::let_bind("col", Expr::rem(idx.clone(), Expr::u32(n))),
-        Node::if_then(
-            Expr::lt(idx.clone(), Expr::buf_len(out)),
-            vec![
-                Node::let_bind("acc", Expr::u32(0)),
-                Node::loop_for(
-                    "kk",
-                    Expr::u32(0),
-                    Expr::u32(k),
-                    vec![Node::assign(
-                        "acc",
-                        Expr::add(
-                            Expr::var("acc"),
-                            Expr::mul(
-                                Expr::load(
-                                    a,
-                                    Expr::add(
-                                        Expr::mul(row.clone(), Expr::u32(k)),
-                                        Expr::var("kk"),
-                                    ),
-                                ),
-                                Expr::load(
-                                    b,
-                                    Expr::add(
-                                        Expr::mul(Expr::var("kk"), Expr::u32(n)),
-                                        col.clone(),
-                                    ),
-                                ),
-                            ),
-                        ),
-                    )],
-                ),
-                Node::Store {
-                    buffer: out.into(),
-                    index: idx,
-                    value: Expr::add(Expr::var("acc"), Expr::load(bias, col)),
+                    value: bias.map_or_else(
+                        || Expr::var("acc"),
+                        |bias| Expr::add(Expr::var("acc"), Expr::load(bias, col)),
+                    ),
                 },
             ],
         ),

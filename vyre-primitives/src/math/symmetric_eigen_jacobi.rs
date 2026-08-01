@@ -337,14 +337,20 @@ pub fn jacobi_eigen_body(a: &str, eigenvectors: &str, eigenvalues: &str, n: u32)
                 vec![
                     Node::let_bind(
                         "jac_sv",
-                        Expr::load(eigenvectors, idx(Expr::var("jac_si"), n, Expr::var("jac_sk"))),
+                        Expr::load(
+                            eigenvectors,
+                            idx(Expr::var("jac_si"), n, Expr::var("jac_sk")),
+                        ),
                     ),
                     // A component at or below the threshold is numerical noise and
                     // must not decide the sign of the whole column.
                     Node::let_bind(
                         "jac_first",
                         Expr::and(
-                            Expr::gt(Expr::abs(Expr::var("jac_sv")), Expr::f32(EIGENVECTOR_SIGN_EPSILON)),
+                            Expr::gt(
+                                Expr::abs(Expr::var("jac_sv")),
+                                Expr::f32(EIGENVECTOR_SIGN_EPSILON),
+                            ),
                             Expr::eq(Expr::var("jac_sign_found"), Expr::u32(0)),
                         ),
                     ),
@@ -378,7 +384,10 @@ pub fn jacobi_eigen_body(a: &str, eigenvectors: &str, eigenvalues: &str, n: u32)
                     eigenvectors,
                     idx(Expr::var("jac_sj"), n, Expr::var("jac_sk")),
                     Expr::mul(
-                        Expr::load(eigenvectors, idx(Expr::var("jac_sj"), n, Expr::var("jac_sk"))),
+                        Expr::load(
+                            eigenvectors,
+                            idx(Expr::var("jac_sj"), n, Expr::var("jac_sk")),
+                        ),
                         Expr::var("jac_sign"),
                     ),
                 )],

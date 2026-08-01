@@ -54,7 +54,9 @@ pub mod vyre_foundation::algebra::composition
 pub const vyre_foundation::algebra::composition::SELF_EXCLUSIVE_REGION_SUFFIX: &str
 pub fn vyre_foundation::algebra::composition::duplicate_self_exclusive_regions(nodes: &[vyre_foundation::ir::Node]) -> alloc::vec::Vec<alloc::string::String>
 pub fn vyre_foundation::algebra::composition::mark_self_exclusive_region(generator: &str) -> alloc::string::String
+pub fn vyre_foundation::algebra::composition::reparent_program_children(program: &vyre_foundation::ir::Program, parent_op_id: &str) -> alloc::vec::Vec<vyre_foundation::ir::Node>
 pub fn vyre_foundation::algebra::composition::self_exclusive_region_key(generator: &str) -> core::option::Option<&str>
+pub fn vyre_foundation::algebra::composition::tag_program(parent_op_id: &str, program: vyre_foundation::ir::Program) -> vyre_foundation::ir::Program
 pub mod vyre_foundation::algebraic_law_registry
 pub use vyre_foundation::algebraic_law_registry::AlgebraicLaw
 #[non_exhaustive] pub struct vyre_foundation::algebraic_law_registry::AlgebraicLawRegistration
@@ -410,9 +412,12 @@ pub mod vyre_foundation::composition
 pub const vyre_foundation::composition::SELF_EXCLUSIVE_REGION_SUFFIX: &str
 pub fn vyre_foundation::composition::duplicate_self_exclusive_regions(nodes: &[vyre_foundation::ir::Node]) -> alloc::vec::Vec<alloc::string::String>
 pub fn vyre_foundation::composition::mark_self_exclusive_region(generator: &str) -> alloc::string::String
+pub fn vyre_foundation::composition::reparent_program_children(program: &vyre_foundation::ir::Program, parent_op_id: &str) -> alloc::vec::Vec<vyre_foundation::ir::Node>
 pub fn vyre_foundation::composition::self_exclusive_region_key(generator: &str) -> core::option::Option<&str>
+pub fn vyre_foundation::composition::tag_program(parent_op_id: &str, program: vyre_foundation::ir::Program) -> vyre_foundation::ir::Program
 pub mod vyre_foundation::cpu_op
 pub use vyre_foundation::cpu_op::CpuFn
+pub static vyre_foundation::cpu_op::SENTINEL_CPU_REF: vyre_spec::intrinsic_descriptor::CpuFn
 pub trait vyre_foundation::cpu_op::CategoryAOp
 pub fn vyre_foundation::cpu_op::CategoryAOp::program() -> vyre_foundation::ir::Program
 pub trait vyre_foundation::cpu_op::CpuOp
@@ -2260,6 +2265,7 @@ pub mod vyre_foundation::execution_plan::fusion
 pub vyre_foundation::execution_plan::fusion::FusionError::Aliasing(vyre_foundation::execution_plan::fusion::FusionAliasingError)
 pub vyre_foundation::execution_plan::fusion::FusionError::OverDispatch(vyre_foundation::execution_plan::fusion::FusionOverDispatchError)
 pub vyre_foundation::execution_plan::fusion::FusionError::SelfAliasing(vyre_foundation::execution_plan::fusion::FusionSelfAliasingError)
+pub vyre_foundation::execution_plan::fusion::FusionError::WorkgroupGeometry(vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError)
 impl core::clone::Clone for vyre_foundation::execution_plan::fusion::FusionError
 pub fn vyre_foundation::execution_plan::fusion::FusionError::clone(&self) -> vyre_foundation::execution_plan::fusion::FusionError
 impl core::cmp::Eq for vyre_foundation::execution_plan::fusion::FusionError
@@ -2469,6 +2475,61 @@ impl<T> tracing::instrument::Instrument for vyre_foundation::execution_plan::fus
 impl<T> tracing::instrument::WithSubscriber for vyre_foundation::execution_plan::fusion::FusionSelfAliasingError
 impl<T> typenum::type_operators::Same for vyre_foundation::execution_plan::fusion::FusionSelfAliasingError
 pub type vyre_foundation::execution_plan::fusion::FusionSelfAliasingError::Output = T
+pub struct vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError
+pub vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::arm: usize
+pub vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::arm_workgroup: [u32; 3]
+pub vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::fix: &'static str
+pub vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::fused_workgroup: [u32; 3]
+pub vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::reason: &'static str
+impl core::clone::Clone for vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError
+pub fn vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::clone(&self) -> vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError
+impl core::cmp::Eq for vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError
+impl core::cmp::PartialEq for vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError
+pub fn vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::eq(&self, other: &vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError) -> bool
+impl core::fmt::Debug for vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError
+pub fn vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError
+pub fn vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError
+impl core::marker::Freeze for vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError
+impl core::marker::Send for vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError
+impl core::marker::Sync for vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError
+impl core::marker::Unpin for vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError
+impl core::marker::UnsafeUnpin for vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError where U: core::convert::From<T>
+pub fn vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError where U: core::convert::Into<T>
+pub type vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::Error = core::convert::Infallible
+pub fn vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError where U: core::convert::TryFrom<T>
+pub type vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError where T: core::clone::Clone
+pub type vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::Owned = T
+pub fn vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::to_owned(&self) -> T
+impl<T> alloc::string::ToString for vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError where T: core::fmt::Display + ?core::marker::Sized
+pub fn vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::to_string(&self) -> alloc::string::String
+impl<T> core::any::Any for vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError where T: ?core::marker::Sized
+pub fn vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError where T: ?core::marker::Sized
+pub fn vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError where T: core::clone::Clone
+pub unsafe fn vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError
+pub fn vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError
+impl<T> typenum::type_operators::Same for vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError
+pub type vyre_foundation::execution_plan::fusion::FusionWorkgroupGeometryError::Output = T
 pub fn vyre_foundation::execution_plan::fusion::fuse_programs(programs: &[vyre_foundation::ir::Program]) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::execution_plan::fusion::FusionError>
 pub fn vyre_foundation::execution_plan::fusion::fuse_programs_vec(programs: alloc::vec::Vec<vyre_foundation::ir::Program>) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::execution_plan::fusion::FusionError>
 pub fn vyre_foundation::execution_plan::fusion::merge_programs_shared(programs: &[vyre_foundation::ir::Program]) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::execution_plan::fusion::FusionError>
@@ -4549,6 +4610,8 @@ impl<T> typenum::type_operators::Same for vyre_foundation::analysis::graph_view:
 pub type vyre_foundation::analysis::graph_view::NodeGraph::Output = T
 pub fn vyre_foundation::graph_view::from_graph(graph: vyre_foundation::analysis::graph_view::NodeGraph) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::analysis::graph_view::GraphValidateError>
 pub fn vyre_foundation::graph_view::to_graph(program: &vyre_foundation::ir::Program) -> vyre_foundation::analysis::graph_view::NodeGraph
+pub mod vyre_foundation::hashing
+pub fn vyre_foundation::hashing::update_length_delimited_field(hasher: &mut blake3::Hasher, label: &[u8], value: &[u8])
 pub mod vyre_foundation::ir
 pub use vyre_foundation::ir::AtomicOp
 pub use vyre_foundation::ir::BinOp
@@ -6538,7 +6601,9 @@ pub vyre_foundation::ir::model::program::ShapePredicate::Not(alloc::boxed::Box<v
 pub vyre_foundation::ir::model::program::ShapePredicate::Or(alloc::boxed::Box<vyre_foundation::ir::ShapePredicate>, alloc::boxed::Box<vyre_foundation::ir::ShapePredicate>)
 impl vyre_foundation::ir::ShapePredicate
 pub fn vyre_foundation::ir::ShapePredicate::describe(&self) -> alloc::string::String
+pub fn vyre_foundation::ir::ShapePredicate::evaluate(&self, count: u32) -> bool
 pub fn vyre_foundation::ir::ShapePredicate::holds(&self, count: u32) -> bool
+pub fn vyre_foundation::ir::ShapePredicate::proves_non_empty(&self) -> bool
 impl core::clone::Clone for vyre_foundation::ir::ShapePredicate
 pub fn vyre_foundation::ir::ShapePredicate::clone(&self) -> vyre_foundation::ir::ShapePredicate
 impl core::cmp::Eq for vyre_foundation::ir::ShapePredicate
@@ -6605,6 +6670,7 @@ pub fn vyre_foundation::ir::BufferDecl::access(&self) -> vyre_spec::buffer_acces
 pub fn vyre_foundation::ir::BufferDecl::binding(&self) -> u32
 pub fn vyre_foundation::ir::BufferDecl::count(&self) -> u32
 pub fn vyre_foundation::ir::BufferDecl::element(&self) -> vyre_spec::data_type::DataType
+pub fn vyre_foundation::ir::BufferDecl::has_static_element_count(&self) -> bool
 pub fn vyre_foundation::ir::BufferDecl::hints(&self) -> vyre_foundation::ir::MemoryHints
 pub fn vyre_foundation::ir::BufferDecl::is_backend_allocated_output(&self) -> bool
 pub fn vyre_foundation::ir::BufferDecl::is_output(&self) -> bool
@@ -6616,6 +6682,7 @@ pub fn vyre_foundation::ir::BufferDecl::output(name: &str, binding: u32, element
 pub fn vyre_foundation::ir::BufferDecl::output_byte_range(&self) -> core::option::Option<core::ops::range::Range<usize>>
 pub fn vyre_foundation::ir::BufferDecl::read(name: &str, binding: u32, element: vyre_spec::data_type::DataType) -> Self
 pub fn vyre_foundation::ir::BufferDecl::read_write(name: &str, binding: u32, element: vyre_spec::data_type::DataType) -> Self
+pub fn vyre_foundation::ir::BufferDecl::require_static_readback_size(&self) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_foundation::ir::BufferDecl::shape_predicate(&self) -> core::option::Option<&vyre_foundation::ir::ShapePredicate>
 pub fn vyre_foundation::ir::BufferDecl::static_byte_len(&self) -> core::result::Result<core::option::Option<usize>, alloc::string::String>
 pub fn vyre_foundation::ir::BufferDecl::storage(name: &str, binding: u32, access: vyre_spec::buffer_access::BufferAccess, element: vyre_spec::data_type::DataType) -> Self
@@ -6800,6 +6867,8 @@ pub fn vyre_foundation::ir::Program::from_text(input: &str) -> core::result::Res
 pub fn vyre_foundation::ir::Program::to_text(&self) -> core::result::Result<alloc::string::String, vyre_foundation::serial::text::TextParseError>
 impl vyre_foundation::ir::Program
 pub fn vyre_foundation::ir::Program::stats(&self) -> &vyre_foundation::ir::ProgramStats
+impl vyre_foundation::ir::Program
+pub fn vyre_foundation::ir::Program::try_normalized_cache_digest(&self) -> core::result::Result<[u8; 32], alloc::string::String>
 impl core::clone::Clone for vyre_foundation::ir::Program
 pub fn vyre_foundation::ir::Program::clone(&self) -> Self
 impl core::cmp::Eq for vyre_foundation::ir::Program
@@ -6996,6 +7065,7 @@ pub const vyre_foundation::ir::model::program::NODE_KIND_RESUME: u32
 pub const vyre_foundation::ir::model::program::NODE_KIND_RETURN: u32
 pub const vyre_foundation::ir::model::program::NODE_KIND_STORE: u32
 pub const vyre_foundation::ir::model::program::NODE_KIND_TRAP: u32
+pub const vyre_foundation::ir::model::program::NORMALIZED_PROGRAM_CACHE_DIGEST_VERSION: &str
 pub mod vyre_foundation::ir::model::types
 pub use vyre_foundation::ir::model::types::AtomicOp
 pub use vyre_foundation::ir::model::types::BinOp
@@ -7762,7 +7832,9 @@ pub vyre_foundation::ir::ShapePredicate::Not(alloc::boxed::Box<vyre_foundation::
 pub vyre_foundation::ir::ShapePredicate::Or(alloc::boxed::Box<vyre_foundation::ir::ShapePredicate>, alloc::boxed::Box<vyre_foundation::ir::ShapePredicate>)
 impl vyre_foundation::ir::ShapePredicate
 pub fn vyre_foundation::ir::ShapePredicate::describe(&self) -> alloc::string::String
+pub fn vyre_foundation::ir::ShapePredicate::evaluate(&self, count: u32) -> bool
 pub fn vyre_foundation::ir::ShapePredicate::holds(&self, count: u32) -> bool
+pub fn vyre_foundation::ir::ShapePredicate::proves_non_empty(&self) -> bool
 impl core::clone::Clone for vyre_foundation::ir::ShapePredicate
 pub fn vyre_foundation::ir::ShapePredicate::clone(&self) -> vyre_foundation::ir::ShapePredicate
 impl core::cmp::Eq for vyre_foundation::ir::ShapePredicate
@@ -7960,6 +8032,7 @@ pub fn vyre_foundation::ir::BufferDecl::access(&self) -> vyre_spec::buffer_acces
 pub fn vyre_foundation::ir::BufferDecl::binding(&self) -> u32
 pub fn vyre_foundation::ir::BufferDecl::count(&self) -> u32
 pub fn vyre_foundation::ir::BufferDecl::element(&self) -> vyre_spec::data_type::DataType
+pub fn vyre_foundation::ir::BufferDecl::has_static_element_count(&self) -> bool
 pub fn vyre_foundation::ir::BufferDecl::hints(&self) -> vyre_foundation::ir::MemoryHints
 pub fn vyre_foundation::ir::BufferDecl::is_backend_allocated_output(&self) -> bool
 pub fn vyre_foundation::ir::BufferDecl::is_output(&self) -> bool
@@ -7971,6 +8044,7 @@ pub fn vyre_foundation::ir::BufferDecl::output(name: &str, binding: u32, element
 pub fn vyre_foundation::ir::BufferDecl::output_byte_range(&self) -> core::option::Option<core::ops::range::Range<usize>>
 pub fn vyre_foundation::ir::BufferDecl::read(name: &str, binding: u32, element: vyre_spec::data_type::DataType) -> Self
 pub fn vyre_foundation::ir::BufferDecl::read_write(name: &str, binding: u32, element: vyre_spec::data_type::DataType) -> Self
+pub fn vyre_foundation::ir::BufferDecl::require_static_readback_size(&self) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_foundation::ir::BufferDecl::shape_predicate(&self) -> core::option::Option<&vyre_foundation::ir::ShapePredicate>
 pub fn vyre_foundation::ir::BufferDecl::static_byte_len(&self) -> core::result::Result<core::option::Option<usize>, alloc::string::String>
 pub fn vyre_foundation::ir::BufferDecl::storage(name: &str, binding: u32, access: vyre_spec::buffer_access::BufferAccess, element: vyre_spec::data_type::DataType) -> Self
@@ -8517,6 +8591,8 @@ pub fn vyre_foundation::ir::Program::from_text(input: &str) -> core::result::Res
 pub fn vyre_foundation::ir::Program::to_text(&self) -> core::result::Result<alloc::string::String, vyre_foundation::serial::text::TextParseError>
 impl vyre_foundation::ir::Program
 pub fn vyre_foundation::ir::Program::stats(&self) -> &vyre_foundation::ir::ProgramStats
+impl vyre_foundation::ir::Program
+pub fn vyre_foundation::ir::Program::try_normalized_cache_digest(&self) -> core::result::Result<[u8; 32], alloc::string::String>
 impl core::clone::Clone for vyre_foundation::ir::Program
 pub fn vyre_foundation::ir::Program::clone(&self) -> Self
 impl core::cmp::Eq for vyre_foundation::ir::Program
@@ -8810,6 +8886,7 @@ pub type vyre_foundation::ir::VarId::Output = T
 pub const vyre_foundation::ir::DEFAULT_MAX_CALL_DEPTH: usize
 pub const vyre_foundation::ir::DEFAULT_MAX_NESTING_DEPTH: usize
 pub const vyre_foundation::ir::DEFAULT_MAX_NODE_COUNT: usize
+pub const vyre_foundation::ir::NORMALIZED_PROGRAM_CACHE_DIGEST_VERSION: &str
 pub trait vyre_foundation::ir::ExprNode: core::fmt::Debug + core::marker::Send + core::marker::Sync + 'static
 pub fn vyre_foundation::ir::ExprNode::as_any(&self) -> &dyn core::any::Any
 pub fn vyre_foundation::ir::ExprNode::cse_safe(&self) -> bool
@@ -21103,6 +21180,7 @@ pub fn vyre_foundation::program_caps::scan(program: &vyre_foundation::ir::Progra
 pub mod vyre_foundation::runtime
 pub mod vyre_foundation::runtime::cpu_op
 pub use vyre_foundation::runtime::cpu_op::CpuFn
+pub static vyre_foundation::runtime::cpu_op::SENTINEL_CPU_REF: vyre_spec::intrinsic_descriptor::CpuFn
 pub trait vyre_foundation::runtime::cpu_op::CategoryAOp
 pub fn vyre_foundation::runtime::cpu_op::CategoryAOp::program() -> vyre_foundation::ir::Program
 pub trait vyre_foundation::runtime::cpu_op::CpuOp
@@ -23704,6 +23782,7 @@ pub fn vyre_foundation::serial::wire::encode::to_wire_with_buffer_order_into(pro
 pub mod vyre_foundation::serial::wire::framing
 pub mod vyre_foundation::serial::wire::framing::magic
 pub const vyre_foundation::serial::wire::framing::magic::MAGIC: &[u8; 4]
+pub const vyre_foundation::serial::wire::framing::magic::MAX_SHAPE_PREDICATE_DEPTH: usize
 pub const vyre_foundation::serial::wire::framing::magic::MIN_SUPPORTED_WIRE_FORMAT_VERSION: u16
 pub const vyre_foundation::serial::wire::framing::magic::WIRE_FORMAT_VERSION: u16
 pub fn vyre_foundation::serial::wire::framing::magic::wire_format_version_is_supported(version: u16) -> bool
@@ -23716,6 +23795,7 @@ pub fn vyre_foundation::serial::wire::framing::put_u32::put_u32(out: &mut alloc:
 pub mod vyre_foundation::serial::wire::framing::put_u8
 pub fn vyre_foundation::serial::wire::framing::put_u8::put_u8(out: &mut alloc::vec::Vec<u8>, value: u8)
 pub const vyre_foundation::serial::wire::framing::MAGIC: &[u8; 4]
+pub const vyre_foundation::serial::wire::framing::MAX_SHAPE_PREDICATE_DEPTH: usize
 pub const vyre_foundation::serial::wire::framing::MIN_SUPPORTED_WIRE_FORMAT_VERSION: u16
 pub const vyre_foundation::serial::wire::framing::WIRE_FORMAT_VERSION: u16
 pub fn vyre_foundation::serial::wire::framing::put_len_u32(out: &mut alloc::vec::Vec<u8>, value: usize, label: &str) -> core::result::Result<(), vyre_foundation::serial::wire::encode::error::WireEncodeErr>
@@ -26977,6 +27057,55 @@ pub fn vyre_foundation::vast::walk_preorder_indices(node_bytes: &[u8], node_coun
 pub type vyre_foundation::vast::VastEditDigest = [u8; 32]
 pub mod vyre_foundation::visit
 pub mod vyre_foundation::visit::expr
+pub enum vyre_foundation::visit::expr::ExprBufferAccess
+pub vyre_foundation::visit::expr::ExprBufferAccess::Atomic
+pub vyre_foundation::visit::expr::ExprBufferAccess::Load
+impl core::clone::Clone for vyre_foundation::visit::expr::ExprBufferAccess
+pub fn vyre_foundation::visit::expr::ExprBufferAccess::clone(&self) -> vyre_foundation::visit::expr::ExprBufferAccess
+impl core::cmp::Eq for vyre_foundation::visit::expr::ExprBufferAccess
+impl core::cmp::PartialEq for vyre_foundation::visit::expr::ExprBufferAccess
+pub fn vyre_foundation::visit::expr::ExprBufferAccess::eq(&self, other: &vyre_foundation::visit::expr::ExprBufferAccess) -> bool
+impl core::fmt::Debug for vyre_foundation::visit::expr::ExprBufferAccess
+pub fn vyre_foundation::visit::expr::ExprBufferAccess::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for vyre_foundation::visit::expr::ExprBufferAccess
+impl core::marker::StructuralPartialEq for vyre_foundation::visit::expr::ExprBufferAccess
+impl core::marker::Freeze for vyre_foundation::visit::expr::ExprBufferAccess
+impl core::marker::Send for vyre_foundation::visit::expr::ExprBufferAccess
+impl core::marker::Sync for vyre_foundation::visit::expr::ExprBufferAccess
+impl core::marker::Unpin for vyre_foundation::visit::expr::ExprBufferAccess
+impl core::marker::UnsafeUnpin for vyre_foundation::visit::expr::ExprBufferAccess
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::visit::expr::ExprBufferAccess
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::visit::expr::ExprBufferAccess
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::visit::expr::ExprBufferAccess where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::visit::expr::ExprBufferAccess::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::visit::expr::ExprBufferAccess where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::visit::expr::ExprBufferAccess::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::visit::expr::ExprBufferAccess where U: core::convert::From<T>
+pub fn vyre_foundation::visit::expr::ExprBufferAccess::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::visit::expr::ExprBufferAccess where U: core::convert::Into<T>
+pub type vyre_foundation::visit::expr::ExprBufferAccess::Error = core::convert::Infallible
+pub fn vyre_foundation::visit::expr::ExprBufferAccess::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::visit::expr::ExprBufferAccess where U: core::convert::TryFrom<T>
+pub type vyre_foundation::visit::expr::ExprBufferAccess::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::visit::expr::ExprBufferAccess::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::visit::expr::ExprBufferAccess where T: core::clone::Clone
+pub type vyre_foundation::visit::expr::ExprBufferAccess::Owned = T
+pub fn vyre_foundation::visit::expr::ExprBufferAccess::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::visit::expr::ExprBufferAccess::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::visit::expr::ExprBufferAccess where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::visit::expr::ExprBufferAccess::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::visit::expr::ExprBufferAccess where T: ?core::marker::Sized
+pub fn vyre_foundation::visit::expr::ExprBufferAccess::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::visit::expr::ExprBufferAccess where T: ?core::marker::Sized
+pub fn vyre_foundation::visit::expr::ExprBufferAccess::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::visit::expr::ExprBufferAccess where T: core::clone::Clone
+pub unsafe fn vyre_foundation::visit::expr::ExprBufferAccess::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::visit::expr::ExprBufferAccess
+pub fn vyre_foundation::visit::expr::ExprBufferAccess::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_foundation::visit::expr::ExprBufferAccess
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::visit::expr::ExprBufferAccess
+impl<T> typenum::type_operators::Same for vyre_foundation::visit::expr::ExprBufferAccess
+pub type vyre_foundation::visit::expr::ExprBufferAccess::Output = T
 pub trait vyre_foundation::visit::expr::ExprVisitor
 pub type vyre_foundation::visit::expr::ExprVisitor::Break
 pub fn vyre_foundation::visit::expr::ExprVisitor::visit_atomic(&mut self, _expr: &vyre_foundation::ir::Expr, _op: &vyre_spec::atomic_op::AtomicOp, _buffer: &vyre_foundation::ir::Ident, _index: &vyre_foundation::ir::Expr, _expected: core::option::Option<&vyre_foundation::ir::Expr>, _value: &vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<Self::Break>
@@ -27006,6 +27135,7 @@ pub fn vyre_foundation::visit::expr::ExprVisitor::visit_var(&mut self, _expr: &v
 pub fn vyre_foundation::visit::expr::ExprVisitor::visit_workgroup_id(&mut self, _expr: &vyre_foundation::ir::Expr, _axis: u32) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::expr::ExprVisitor::walk_children_default(&mut self, expr: &vyre_foundation::ir::Expr, order: vyre_foundation::visit::VisitOrder) -> core::ops::control_flow::ControlFlow<Self::Break> where Self: core::marker::Sized
 pub fn vyre_foundation::visit::expr::visit_expr<V: vyre_foundation::visit::expr::ExprVisitor>(visitor: &mut V, expr: &vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<<V as vyre_foundation::visit::expr::ExprVisitor>::Break>
+pub fn vyre_foundation::visit::expr::visit_expr_buffer_accesses(expr: &vyre_foundation::ir::Expr, visitor: impl core::ops::function::FnMut(vyre_foundation::visit::expr::ExprBufferAccess, &vyre_foundation::ir::Ident))
 pub fn vyre_foundation::visit::expr::visit_postorder<V: vyre_foundation::visit::expr::ExprVisitor>(visitor: &mut V, expr: &vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<<V as vyre_foundation::visit::expr::ExprVisitor>::Break>
 pub fn vyre_foundation::visit::expr::visit_preorder<V: vyre_foundation::visit::expr::ExprVisitor>(visitor: &mut V, expr: &vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<<V as vyre_foundation::visit::expr::ExprVisitor>::Break>
 pub fn vyre_foundation::visit::expr::walk_expr_children_default<V: vyre_foundation::visit::expr::ExprVisitor>(visitor: &mut V, expr: &vyre_foundation::ir::Expr, order: vyre_foundation::visit::VisitOrder) -> core::ops::control_flow::ControlFlow<<V as vyre_foundation::visit::expr::ExprVisitor>::Break>
@@ -27043,6 +27173,55 @@ pub fn vyre_foundation::visit::traits::visit_node<V: vyre_foundation::visit::tra
 pub fn vyre_foundation::visit::traits::visit_node_postorder<V: vyre_foundation::visit::traits::NodeVisitor>(visitor: &mut V, node: &vyre_foundation::ir::Node) -> core::ops::control_flow::ControlFlow<<V as vyre_foundation::visit::traits::NodeVisitor>::Break>
 pub fn vyre_foundation::visit::traits::visit_node_preorder<V: vyre_foundation::visit::traits::NodeVisitor>(visitor: &mut V, node: &vyre_foundation::ir::Node) -> core::ops::control_flow::ControlFlow<<V as vyre_foundation::visit::traits::NodeVisitor>::Break>
 pub fn vyre_foundation::visit::traits::walk_node_children_default<V: vyre_foundation::visit::traits::NodeVisitor>(visitor: &mut V, node: &vyre_foundation::ir::Node, order: vyre_foundation::visit::VisitOrder) -> core::ops::control_flow::ControlFlow<<V as vyre_foundation::visit::traits::NodeVisitor>::Break>
+pub enum vyre_foundation::visit::ExprBufferAccess
+pub vyre_foundation::visit::ExprBufferAccess::Atomic
+pub vyre_foundation::visit::ExprBufferAccess::Load
+impl core::clone::Clone for vyre_foundation::visit::expr::ExprBufferAccess
+pub fn vyre_foundation::visit::expr::ExprBufferAccess::clone(&self) -> vyre_foundation::visit::expr::ExprBufferAccess
+impl core::cmp::Eq for vyre_foundation::visit::expr::ExprBufferAccess
+impl core::cmp::PartialEq for vyre_foundation::visit::expr::ExprBufferAccess
+pub fn vyre_foundation::visit::expr::ExprBufferAccess::eq(&self, other: &vyre_foundation::visit::expr::ExprBufferAccess) -> bool
+impl core::fmt::Debug for vyre_foundation::visit::expr::ExprBufferAccess
+pub fn vyre_foundation::visit::expr::ExprBufferAccess::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for vyre_foundation::visit::expr::ExprBufferAccess
+impl core::marker::StructuralPartialEq for vyre_foundation::visit::expr::ExprBufferAccess
+impl core::marker::Freeze for vyre_foundation::visit::expr::ExprBufferAccess
+impl core::marker::Send for vyre_foundation::visit::expr::ExprBufferAccess
+impl core::marker::Sync for vyre_foundation::visit::expr::ExprBufferAccess
+impl core::marker::Unpin for vyre_foundation::visit::expr::ExprBufferAccess
+impl core::marker::UnsafeUnpin for vyre_foundation::visit::expr::ExprBufferAccess
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_foundation::visit::expr::ExprBufferAccess
+impl core::panic::unwind_safe::UnwindSafe for vyre_foundation::visit::expr::ExprBufferAccess
+impl<Q, K> equivalent::Equivalent<K> for vyre_foundation::visit::expr::ExprBufferAccess where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::visit::expr::ExprBufferAccess::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_foundation::visit::expr::ExprBufferAccess where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_foundation::visit::expr::ExprBufferAccess::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_foundation::visit::expr::ExprBufferAccess where U: core::convert::From<T>
+pub fn vyre_foundation::visit::expr::ExprBufferAccess::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_foundation::visit::expr::ExprBufferAccess where U: core::convert::Into<T>
+pub type vyre_foundation::visit::expr::ExprBufferAccess::Error = core::convert::Infallible
+pub fn vyre_foundation::visit::expr::ExprBufferAccess::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_foundation::visit::expr::ExprBufferAccess where U: core::convert::TryFrom<T>
+pub type vyre_foundation::visit::expr::ExprBufferAccess::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_foundation::visit::expr::ExprBufferAccess::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_foundation::visit::expr::ExprBufferAccess where T: core::clone::Clone
+pub type vyre_foundation::visit::expr::ExprBufferAccess::Owned = T
+pub fn vyre_foundation::visit::expr::ExprBufferAccess::clone_into(&self, target: &mut T)
+pub fn vyre_foundation::visit::expr::ExprBufferAccess::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_foundation::visit::expr::ExprBufferAccess where T: 'static + ?core::marker::Sized
+pub fn vyre_foundation::visit::expr::ExprBufferAccess::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_foundation::visit::expr::ExprBufferAccess where T: ?core::marker::Sized
+pub fn vyre_foundation::visit::expr::ExprBufferAccess::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_foundation::visit::expr::ExprBufferAccess where T: ?core::marker::Sized
+pub fn vyre_foundation::visit::expr::ExprBufferAccess::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_foundation::visit::expr::ExprBufferAccess where T: core::clone::Clone
+pub unsafe fn vyre_foundation::visit::expr::ExprBufferAccess::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_foundation::visit::expr::ExprBufferAccess
+pub fn vyre_foundation::visit::expr::ExprBufferAccess::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_foundation::visit::expr::ExprBufferAccess
+impl<T> tracing::instrument::WithSubscriber for vyre_foundation::visit::expr::ExprBufferAccess
+impl<T> typenum::type_operators::Same for vyre_foundation::visit::expr::ExprBufferAccess
+pub type vyre_foundation::visit::expr::ExprBufferAccess::Output = T
 pub enum vyre_foundation::visit::VisitOrder
 pub vyre_foundation::visit::VisitOrder::Postorder
 pub vyre_foundation::visit::VisitOrder::Preorder
@@ -27146,6 +27325,7 @@ pub fn vyre_foundation::visit::NodeVisitor::visit_store(&mut self, node: &vyre_f
 pub fn vyre_foundation::visit::NodeVisitor::visit_trap(&mut self, node: &vyre_foundation::ir::Node, address: &vyre_foundation::ir::Expr, tag: &vyre_foundation::ir::Ident) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::NodeVisitor::walk_children_default(&mut self, node: &vyre_foundation::ir::Node, order: vyre_foundation::visit::VisitOrder) -> core::ops::control_flow::ControlFlow<Self::Break> where Self: core::marker::Sized
 pub fn vyre_foundation::visit::visit_expr<V: vyre_foundation::visit::expr::ExprVisitor>(visitor: &mut V, expr: &vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<<V as vyre_foundation::visit::expr::ExprVisitor>::Break>
+pub fn vyre_foundation::visit::visit_expr_buffer_accesses(expr: &vyre_foundation::ir::Expr, visitor: impl core::ops::function::FnMut(vyre_foundation::visit::expr::ExprBufferAccess, &vyre_foundation::ir::Ident))
 pub fn vyre_foundation::visit::visit_node<V: vyre_foundation::visit::traits::NodeVisitor>(visitor: &mut V, node: &vyre_foundation::ir::Node) -> core::ops::control_flow::ControlFlow<<V as vyre_foundation::visit::traits::NodeVisitor>::Break>
 pub fn vyre_foundation::visit::visit_node_postorder<V: vyre_foundation::visit::traits::NodeVisitor>(visitor: &mut V, node: &vyre_foundation::ir::Node) -> core::ops::control_flow::ControlFlow<<V as vyre_foundation::visit::traits::NodeVisitor>::Break>
 pub fn vyre_foundation::visit::visit_node_preorder<V: vyre_foundation::visit::traits::NodeVisitor>(visitor: &mut V, node: &vyre_foundation::ir::Node) -> core::ops::control_flow::ControlFlow<<V as vyre_foundation::visit::traits::NodeVisitor>::Break>

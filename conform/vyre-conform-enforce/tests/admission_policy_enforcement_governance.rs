@@ -8,8 +8,9 @@ const PARITY: &str =
 const EXCEPTIONS: &str =
     include_str!("../../../docs/optimization/ADMISSION_EXCEPTION_BREAKGLASS_POLICY.toml");
 const AUDIT: &str = include_str!("../../../docs/optimization/ADMISSION_AUDIT_EVIDENCE_POLICY.toml");
-const COVERAGE: &str =
-    include_str!("../../../docs/optimization/END_TO_END_ADMISSION_POLICY_ENFORCEMENT_TRANCHE_COVERAGE.toml");
+const COVERAGE: &str = include_str!(
+    "../../../docs/optimization/END_TO_END_ADMISSION_POLICY_ENFORCEMENT_TRANCHE_COVERAGE.toml"
+);
 
 #[test]
 fn admission_policy_enforcement_sources_are_registered() {
@@ -21,12 +22,16 @@ fn admission_policy_enforcement_sources_are_registered() {
         "OPA_GATEKEEPER",
         "KYVERNO_VALIDATE_RULES",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 
 #[test]
-fn kubernetes_admission_policy_records_phases_validation_mutation_failure_match_authority_and_gate_effects() {
+fn kubernetes_admission_policy_records_phases_validation_mutation_failure_match_authority_and_gate_effects(
+) {
     for required in [
         "enforcement_id",
         "target_surface",
@@ -48,7 +53,8 @@ fn kubernetes_admission_policy_records_phases_validation_mutation_failure_match_
 }
 
 #[test]
-fn policy_engine_parity_matrix_records_decision_modes_parameters_audit_negative_cases_portability_dedup_and_gate_effects() {
+fn policy_engine_parity_matrix_records_decision_modes_parameters_audit_negative_cases_portability_dedup_and_gate_effects(
+) {
     for required in [
         "engine_id",
         "policy_surface",
@@ -70,7 +76,8 @@ fn policy_engine_parity_matrix_records_decision_modes_parameters_audit_negative_
 }
 
 #[test]
-fn admission_exception_policy_records_triggers_scope_authorization_expiry_audit_remediation_privacy_and_gate_effects() {
+fn admission_exception_policy_records_triggers_scope_authorization_expiry_audit_remediation_privacy_and_gate_effects(
+) {
     for required in [
         "exception_id",
         "trigger_policy",
@@ -92,7 +99,8 @@ fn admission_exception_policy_records_triggers_scope_authorization_expiry_audit_
 }
 
 #[test]
-fn admission_audit_policy_records_capture_correlation_metrics_retention_redaction_release_health_and_operator_results() {
+fn admission_audit_policy_records_capture_correlation_metrics_retention_redaction_release_health_and_operator_results(
+) {
     for required in [
         "audit_id",
         "event_surface",
@@ -114,7 +122,8 @@ fn admission_audit_policy_records_capture_correlation_metrics_retention_redactio
 }
 
 #[test]
-fn admission_policy_coverage_reuses_plan_policy_deployment_capacity_readiness_publication_and_dedup_authorities() {
+fn admission_policy_coverage_reuses_plan_policy_deployment_capacity_readiness_publication_and_dedup_authorities(
+) {
     for required in [
         "VX-1341..VX-1360",
         "kubernetes_admission_policy_enforcement",

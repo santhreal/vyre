@@ -18,6 +18,26 @@ pub fn checked_add_u64_lazy<E>(lhs: u64, rhs: u64, error: impl FnOnce() -> E) ->
     lhs.checked_add(rhs).ok_or_else(error)
 }
 
+pub(crate) fn sum_optional_timing(
+    accumulator: Option<u64>,
+    next: Option<u64>,
+    field: &str,
+    scope: &str,
+    split_unit: &str,
+) -> Result<Option<u64>, BackendError> {
+    match (accumulator, next) {
+        (Some(left), Some(right)) => {
+            checked_add_u64_lazy(left, right, || BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: {scope} {field} overflowed u64 nanoseconds. Split telemetry windows or report {split_unit} timing instead of silently clamping."
+                ),
+            })
+            .map(Some)
+        }
+        _ => Ok(None),
+    }
+}
+
 /// Multiply two `u64` values without wraparound.
 pub fn checked_mul_u64_value<E>(lhs: u64, rhs: u64, error: E) -> Result<u64, E> {
     lhs.checked_mul(rhs).ok_or(error)
@@ -382,33 +402,43 @@ pub fn checked_atomic_add_u64_with_order<E>(
     )
 }
 
-/// Add `value` to a `u64` counter with overflow checking and a pre-CAS next-value guard.
-///
-/// # Errors
-///
-/// Returns `E` from `overflow` when the addition would overflow, or from
-/// `validate_next` when the computed next value violates a caller invariant.
-pub fn checked_atomic_add_u64_guarded_with_order<E>(
-    counter: &AtomicU64,
-    value: u64,
-    load_order: Ordering,
-    success_order: Ordering,
-    failure_order: Ordering,
-    overflow: impl Fn(u64, u64) -> E,
-    mut validate_next: impl FnMut(u64) -> Result<(), E>,
-) -> Result<(), E> {
-    let mut observed = counter.load(load_order);
-    loop {
-        let next = observed
-            .checked_add(value)
-            .ok_or_else(|| overflow(observed, value))?;
-        validate_next(next)?;
-        match counter.compare_exchange_weak(observed, next, success_order, failure_order) {
-            Ok(_) => return Ok(()),
-            Err(actual) => observed = actual,
+macro_rules! define_checked_atomic_add_guarded {
+    ($name:ident, $atomic:ty, $value:ty) => {
+        #[doc = concat!(
+                                    "Add a `",
+                                    stringify!($value),
+                                    "` value with overflow checking and a pre-CAS next-value guard."
+                                )]
+        ///
+        /// # Errors
+        ///
+        /// Returns `E` from `overflow` when the addition would overflow, or from
+        /// `validate_next` when the computed next value violates a caller invariant.
+        pub fn $name<E>(
+            counter: &$atomic,
+            value: $value,
+            load_order: Ordering,
+            success_order: Ordering,
+            failure_order: Ordering,
+            overflow: impl Fn($value, $value) -> E,
+            mut validate_next: impl FnMut($value) -> Result<(), E>,
+        ) -> Result<(), E> {
+            let mut observed = counter.load(load_order);
+            loop {
+                let next = observed
+                    .checked_add(value)
+                    .ok_or_else(|| overflow(observed, value))?;
+                validate_next(next)?;
+                match counter.compare_exchange_weak(observed, next, success_order, failure_order) {
+                    Ok(_) => return Ok(()),
+                    Err(actual) => observed = actual,
+                }
+            }
         }
-    }
+    };
 }
+
+define_checked_atomic_add_guarded!(checked_atomic_add_u64_guarded_with_order, AtomicU64, u64);
 
 /// Add `value` to a `usize` counter without allowing wraparound.
 ///
@@ -454,34 +484,11 @@ pub fn checked_atomic_add_usize_with_order<E>(
     )
 }
 
-/// Add `value` to a `usize` counter with overflow checking and a pre-CAS next-value guard.
-///
-/// # Errors
-///
-/// Returns `E` from `overflow` when the addition would overflow, or from
-/// `validate_next` when the computed next value violates a caller invariant.
-
-pub fn checked_atomic_add_usize_guarded_with_order<E>(
-    counter: &AtomicUsize,
-    value: usize,
-    load_order: Ordering,
-    success_order: Ordering,
-    failure_order: Ordering,
-    overflow: impl Fn(usize, usize) -> E,
-    mut validate_next: impl FnMut(usize) -> Result<(), E>,
-) -> Result<(), E> {
-    let mut observed = counter.load(load_order);
-    loop {
-        let next = observed
-            .checked_add(value)
-            .ok_or_else(|| overflow(observed, value))?;
-        validate_next(next)?;
-        match counter.compare_exchange_weak(observed, next, success_order, failure_order) {
-            Ok(_) => return Ok(()),
-            Err(actual) => observed = actual,
-        }
-    }
-}
+define_checked_atomic_add_guarded!(
+    checked_atomic_add_usize_guarded_with_order,
+    AtomicUsize,
+    usize
+);
 
 /// Subtract `value` from a `u64` counter without allowing underflow.
 ///
@@ -503,33 +510,43 @@ pub fn checked_atomic_sub_u64(
     )
 }
 
-/// Subtract `value` from a `u64` counter with caller-selected atomic orderings.
-///
-/// # Errors
-///
-/// Returns `E` from `underflow` when the subtraction would underflow.
-pub fn checked_atomic_sub_u64_with_order<E>(
-    counter: &AtomicU64,
-    value: u64,
-    load_order: Ordering,
-    success_order: Ordering,
-    failure_order: Ordering,
-    underflow: impl Fn(u64, u64) -> E,
-) -> Result<(), E> {
-    if value == 0 {
-        return Ok(());
-    }
-    let mut observed = counter.load(load_order);
-    loop {
-        let next = observed
-            .checked_sub(value)
-            .ok_or_else(|| underflow(observed, value))?;
-        match counter.compare_exchange_weak(observed, next, success_order, failure_order) {
-            Ok(_) => return Ok(()),
-            Err(actual) => observed = actual,
+macro_rules! define_checked_atomic_sub {
+    ($name:ident, $atomic:ty, $value:ty) => {
+        #[doc = concat!(
+                                            "Subtract from a `",
+                                            stringify!($value),
+                                            "` atomic counter with caller-selected orderings."
+                                        )]
+        ///
+        /// # Errors
+        ///
+        /// Returns `E` from `underflow` when subtraction would underflow.
+        pub fn $name<E>(
+            counter: &$atomic,
+            value: $value,
+            load_order: Ordering,
+            success_order: Ordering,
+            failure_order: Ordering,
+            underflow: impl Fn($value, $value) -> E,
+        ) -> Result<(), E> {
+            if value == 0 {
+                return Ok(());
+            }
+            let mut observed = counter.load(load_order);
+            loop {
+                let next = observed
+                    .checked_sub(value)
+                    .ok_or_else(|| underflow(observed, value))?;
+                match counter.compare_exchange_weak(observed, next, success_order, failure_order) {
+                    Ok(_) => return Ok(()),
+                    Err(actual) => observed = actual,
+                }
+            }
         }
-    }
+    };
 }
+
+define_checked_atomic_sub!(checked_atomic_sub_u64_with_order, AtomicU64, u64);
 
 /// Subtract `value` from a `usize` counter without allowing underflow.
 ///
@@ -551,86 +568,43 @@ pub fn checked_atomic_sub_usize(
     )
 }
 
-/// Subtract `value` from a `usize` counter with caller-selected atomic orderings.
-///
-/// # Errors
-///
-/// Returns `E` from `underflow` when the subtraction would underflow.
-pub fn checked_atomic_sub_usize_with_order<E>(
-    counter: &AtomicUsize,
-    value: usize,
-    load_order: Ordering,
-    success_order: Ordering,
-    failure_order: Ordering,
-    underflow: impl Fn(usize, usize) -> E,
-) -> Result<(), E> {
-    if value == 0 {
-        return Ok(());
-    }
-    let mut observed = counter.load(load_order);
-    loop {
-        let next = observed
-            .checked_sub(value)
-            .ok_or_else(|| underflow(observed, value))?;
-        match counter.compare_exchange_weak(observed, next, success_order, failure_order) {
-            Ok(_) => return Ok(()),
-            Err(actual) => observed = actual,
-        }
-    }
-}
+define_checked_atomic_sub!(checked_atomic_sub_usize_with_order, AtomicUsize, usize);
 
-/// Apply a checked update to a `u64` atomic counter with caller-selected
-/// orderings.
-///
-/// Returns the value observed before the successful publish. `update` receives
-/// each observed value and must return the next value to publish. `on_retry`
-/// runs after a failed CAS and may abort the update by returning `Err`.
-pub fn checked_atomic_update_u64_with_order<E>(
-    counter: &AtomicU64,
-    load_order: Ordering,
-    success_order: Ordering,
-    failure_order: Ordering,
-    mut update: impl FnMut(u64) -> Result<u64, E>,
-    mut on_retry: impl FnMut(u64, u64) -> Result<(), E>,
-) -> Result<u64, E> {
-    let mut observed = counter.load(load_order);
-    loop {
-        let next = update(observed)?;
-        match counter.compare_exchange_weak(observed, next, success_order, failure_order) {
-            Ok(previous) => return Ok(previous),
-            Err(actual) => {
-                on_retry(observed, actual)?;
-                observed = actual;
+macro_rules! define_checked_atomic_update {
+    ($name:ident, $atomic:ty, $value:ty) => {
+        #[doc = concat!(
+                                            "Apply a checked update to a `",
+                                            stringify!($value),
+                                            "` atomic counter with caller-selected orderings."
+                                        )]
+        ///
+        /// Returns the value observed before the successful publish. `update`
+        /// computes the next value, and `on_retry` may abort a failed CAS retry.
+        pub fn $name<E>(
+            counter: &$atomic,
+            load_order: Ordering,
+            success_order: Ordering,
+            failure_order: Ordering,
+            mut update: impl FnMut($value) -> Result<$value, E>,
+            mut on_retry: impl FnMut($value, $value) -> Result<(), E>,
+        ) -> Result<$value, E> {
+            let mut observed = counter.load(load_order);
+            loop {
+                let next = update(observed)?;
+                match counter.compare_exchange_weak(observed, next, success_order, failure_order) {
+                    Ok(previous) => return Ok(previous),
+                    Err(actual) => {
+                        on_retry(observed, actual)?;
+                        observed = actual;
+                    }
+                }
             }
         }
-    }
+    };
 }
 
-/// Apply a checked update to a `u32` atomic counter with caller-selected
-/// orderings.
-///
-/// Returns the value observed before the successful publish. This keeps
-/// bounded sequence allocators from copying CAS retry loops into consumers.
-pub fn checked_atomic_update_u32_with_order<E>(
-    counter: &AtomicU32,
-    load_order: Ordering,
-    success_order: Ordering,
-    failure_order: Ordering,
-    mut update: impl FnMut(u32) -> Result<u32, E>,
-    mut on_retry: impl FnMut(u32, u32) -> Result<(), E>,
-) -> Result<u32, E> {
-    let mut observed = counter.load(load_order);
-    loop {
-        let next = update(observed)?;
-        match counter.compare_exchange_weak(observed, next, success_order, failure_order) {
-            Ok(previous) => return Ok(previous),
-            Err(actual) => {
-                on_retry(observed, actual)?;
-                observed = actual;
-            }
-        }
-    }
-}
+define_checked_atomic_update!(checked_atomic_update_u64_with_order, AtomicU64, u64);
+define_checked_atomic_update!(checked_atomic_update_u32_with_order, AtomicU32, u32);
 
 #[cfg(test)]
 mod checked_atomic_update_with_order_tests {
@@ -818,51 +792,41 @@ mod pinning_atomic_add_usize_with_order_tests {
     }
 }
 
-/// Increment a `u64` atomic counter, pinning it at `u64::MAX` instead of wrapping.
-///
-/// Returns `true` when the counter was incremented and `false` when it was
-/// already pinned. `on_pinned` is called exactly once on the pinned path.
-pub fn pinning_atomic_increment_u64(
-    counter: &AtomicU64,
-    success_order: Ordering,
-    failure_order: Ordering,
-    on_pinned: impl FnOnce(),
-) -> bool {
-    let mut current = counter.load(failure_order);
-    loop {
-        let Some(next) = current.checked_add(1) else {
-            on_pinned();
-            return false;
-        };
-        match counter.compare_exchange_weak(current, next, success_order, failure_order) {
-            Ok(_) => return true,
-            Err(observed) => current = observed,
+macro_rules! define_pinning_atomic_increment {
+    ($name:ident, $atomic:ty, $value:ty) => {
+        #[doc = concat!(
+                                                            "Increment a `",
+                                                            stringify!($value),
+                                                            "` atomic counter, pinning it at `",
+                                                            stringify!($value),
+                                                            "::MAX` instead of wrapping."
+                                                        )]
+        ///
+        /// Returns `true` when the counter was incremented and `false` when it was
+        /// already pinned. `on_pinned` is called exactly once on the pinned path.
+        pub fn $name(
+            counter: &$atomic,
+            success_order: Ordering,
+            failure_order: Ordering,
+            on_pinned: impl FnOnce(),
+        ) -> bool {
+            let mut current = counter.load(failure_order);
+            loop {
+                let Some(next) = current.checked_add(1) else {
+                    on_pinned();
+                    return false;
+                };
+                match counter.compare_exchange_weak(current, next, success_order, failure_order) {
+                    Ok(_) => return true,
+                    Err(observed) => current = observed,
+                }
+            }
         }
-    }
+    };
 }
 
-/// Increment a `u32` atomic counter, pinning it at `u32::MAX` instead of wrapping.
-///
-/// Returns `true` when the counter was incremented and `false` when it was
-/// already pinned. `on_pinned` is called exactly once on the pinned path.
-pub fn pinning_atomic_increment_u32(
-    counter: &AtomicU32,
-    success_order: Ordering,
-    failure_order: Ordering,
-    on_pinned: impl FnOnce(),
-) -> bool {
-    let mut current = counter.load(failure_order);
-    loop {
-        let Some(next) = current.checked_add(1) else {
-            on_pinned();
-            return false;
-        };
-        match counter.compare_exchange_weak(current, next, success_order, failure_order) {
-            Ok(_) => return true,
-            Err(observed) => current = observed,
-        }
-    }
-}
+define_pinning_atomic_increment!(pinning_atomic_increment_u64, AtomicU64, u64);
+define_pinning_atomic_increment!(pinning_atomic_increment_u32, AtomicU32, u32);
 
 /// Allocate the current `u64` atomic sequence value and publish the next value.
 ///

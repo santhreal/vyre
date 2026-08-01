@@ -17,7 +17,7 @@
 //! - `bhattacharyya_coefficient`  -  `Σ sqrt(p · q)`, the inner
 //!   product on the spherical statistical manifold. Distance is
 //!   `2 · arccos(coeff)` host-side.
-//! - [`crate::math::info_geometry::amari_alpha_step_cpu`]  -  host-side α-connection interpolation,
+//! - `amari_alpha_step_cpu` (requires the `cpu-parity` feature)  -  host-side α-connection interpolation,
 //!   useful for distribution-aware loss design.
 //!
 //! # Why this primitive is dual-use

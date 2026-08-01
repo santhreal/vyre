@@ -12,7 +12,7 @@
 //! value. The primitive had NO IR-execution parity coverage (only f64 `*_cpu` tests), so this is the
 //! FIRST faithful run of the projection kernel and it exercises the signed regime.
 //!
-//! BIT-EXACT: pure integer arithmetic, so the oracle replicates the kernel exactly 
+//! BIT-EXACT: pure integer arithmetic, so the oracle replicates the kernel exactly
 //! `fixed_mul(a,b) = ((a as i32 as i64 * b as i32 as i64) >> 16) as i32 as u32`, accumulated with
 //! wrapping u32 add. Any divergence is a real IR/dispatch defect, not a rounding artifact.
 #![cfg(feature = "math")]

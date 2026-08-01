@@ -15,6 +15,7 @@ fi
 scripts/check_test_coverage_per_crate.sh
 bash scripts/check_roadmap_status_split.sh
 bash scripts/check_docs_index.sh
+bash scripts/check_evidence_paths.sh
 
 echo "Running reference oracle edge contracts..."
 CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-1}" "$CARGO_RUNNER" test -q -p vyre-reference --test oracle_program_edges

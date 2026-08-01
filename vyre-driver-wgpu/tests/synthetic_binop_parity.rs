@@ -17,48 +17,15 @@
 //! asserts byte-for-byte against the Rust std reference, which IS the oracle
 //! contract (`saturating_add`, `abs_diff`, `rotate_left`, widening `mulhi`).
 
+mod binop_parity_support;
 mod common;
-use common::u32_bytes;
 
-use vyre_driver::{DispatchConfig, VyreBackend};
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use binop_parity_support::program;
 use vyre_driver_wgpu::WgpuBackend;
+use vyre_foundation::ir::{Expr, Program};
 
-fn program(n: u32, build: fn(Expr, Expr) -> Expr) -> Program {
-    let mut body = Vec::new();
-    for i in 0..n {
-        body.push(Node::store(
-            "out",
-            Expr::u32(i),
-            build(Expr::load("a", Expr::u32(i)), Expr::load("b", Expr::u32(i))),
-        ));
-    }
-    Program::wrapped(
-        vec![
-            BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(n),
-            BufferDecl::storage("a", 1, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-            BufferDecl::storage("b", 2, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-        ],
-        [1, 1, 1],
-        body,
-    )
-}
-
-fn dispatch(backend: &WgpuBackend, program: &Program, ps: &[(u32, u32)]) -> Vec<u32> {
-    let a = u32_bytes(&ps.iter().map(|&(a, _)| a).collect::<Vec<_>>());
-    let b = u32_bytes(&ps.iter().map(|&(_, b)| b).collect::<Vec<_>>());
-    let out_init = u32_bytes(&vec![0u32; ps.len()]);
-    let outputs = backend
-        .dispatch_borrowed(
-            program,
-            &[out_init.as_slice(), a.as_slice(), b.as_slice()],
-            &DispatchConfig::default(),
-        )
-        .expect("Fix: WGPU must dispatch the synthetic-binop parity contract.");
-    outputs[0]
-        .chunks_exact(4)
-        .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-        .collect()
+fn dispatch(backend: &WgpuBackend, program: &Program, pairs: &[(u32, u32)]) -> Vec<u32> {
+    binop_parity_support::dispatch(backend, program, pairs, "synthetic-binop parity contract")
 }
 
 /// Dispatch `build` on `pairs` and assert byte-for-byte against `reference`.
@@ -109,7 +76,13 @@ fn mulhi_matches_widening_high_word_on_gpu() {
 #[test]
 fn abs_diff_matches_unsigned_absolute_difference_on_gpu() {
     let backend = WgpuBackend::acquire().expect("Fix: synthetic-binop parity needs a live GPU.");
-    check(&backend, Expr::abs_diff, u32::abs_diff, &extremes(), "abs_diff");
+    check(
+        &backend,
+        Expr::abs_diff,
+        u32::abs_diff,
+        &extremes(),
+        "abs_diff",
+    );
     assert_eq!(u32::abs_diff(0, u32::MAX), u32::MAX);
     assert_eq!(u32::abs_diff(100, 50), 50);
 }
@@ -147,8 +120,19 @@ fn saturating_mul_clamps_to_max_on_gpu() {
     let backend = WgpuBackend::acquire().expect("Fix: synthetic-binop parity needs a live GPU.");
     // Add multiplicative-overflow pairs on top of the shared extremes.
     let mut pairs = extremes();
-    pairs.extend_from_slice(&[(0x1_0000, 0x1_0000), (0x8000, 0x2_0000), (1000, 1000), (3, 4)]);
-    check(&backend, Expr::saturating_mul, u32::saturating_mul, &pairs, "saturating_mul");
+    pairs.extend_from_slice(&[
+        (0x1_0000, 0x1_0000),
+        (0x8000, 0x2_0000),
+        (1000, 1000),
+        (3, 4),
+    ]);
+    check(
+        &backend,
+        Expr::saturating_mul,
+        u32::saturating_mul,
+        &pairs,
+        "saturating_mul",
+    );
     assert_eq!(u32::saturating_mul(0x1_0000, 0x1_0000), u32::MAX); // 2^32 overflows
     assert_eq!(u32::saturating_mul(1000, 1000), 1_000_000);
 }
@@ -173,7 +157,13 @@ fn rotate_pairs() -> Vec<(u32, u32)> {
 fn rotate_left_matches_barrel_rotate_on_gpu() {
     let backend = WgpuBackend::acquire().expect("Fix: synthetic-binop parity needs a live GPU.");
     let reference = |a: u32, b: u32| a.rotate_left(b & 31);
-    check(&backend, Expr::rotate_left, reference, &rotate_pairs(), "rotate_left");
+    check(
+        &backend,
+        Expr::rotate_left,
+        reference,
+        &rotate_pairs(),
+        "rotate_left",
+    );
     // 1<<32 rotate == identity (mask), 0x80000000 rotl 1 == 1 (wrap).
     assert_eq!(reference(1, 32), 1);
     assert_eq!(reference(0x8000_0000, 1), 1);
@@ -184,7 +174,13 @@ fn rotate_left_matches_barrel_rotate_on_gpu() {
 fn rotate_right_matches_barrel_rotate_on_gpu() {
     let backend = WgpuBackend::acquire().expect("Fix: synthetic-binop parity needs a live GPU.");
     let reference = |a: u32, b: u32| a.rotate_right(b & 31);
-    check(&backend, Expr::rotate_right, reference, &rotate_pairs(), "rotate_right");
+    check(
+        &backend,
+        Expr::rotate_right,
+        reference,
+        &rotate_pairs(),
+        "rotate_right",
+    );
     assert_eq!(reference(1, 1), 0x8000_0000);
     assert_eq!(reference(1, 32), 1);
     assert_eq!(reference(0xDEAD_BEEF, 4), 0xFDEA_DBEE);

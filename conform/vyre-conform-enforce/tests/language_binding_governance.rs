@@ -3,12 +3,9 @@
 const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
 const SURFACES: &str =
     include_str!("../../../docs/optimization/LANGUAGE_BINDING_SURFACE_MATRIX.toml");
-const C_ABI: &str =
-    include_str!("../../../docs/optimization/C_ABI_HEADER_LIBRARY_POLICY.toml");
-const PYTHON: &str =
-    include_str!("../../../docs/optimization/PYTHON_WHEEL_BINDING_POLICY.toml");
-const NODE_WASM: &str =
-    include_str!("../../../docs/optimization/NODE_WASM_BINDING_POLICY.toml");
+const C_ABI: &str = include_str!("../../../docs/optimization/C_ABI_HEADER_LIBRARY_POLICY.toml");
+const PYTHON: &str = include_str!("../../../docs/optimization/PYTHON_WHEEL_BINDING_POLICY.toml");
+const NODE_WASM: &str = include_str!("../../../docs/optimization/NODE_WASM_BINDING_POLICY.toml");
 const COVERAGE: &str =
     include_str!("../../../docs/optimization/END_TO_END_LANGUAGE_BINDING_TRANCHE_COVERAGE.toml");
 
@@ -25,12 +22,16 @@ fn language_binding_sources_are_registered() {
         "WEBASSEMBLY_CORE_SPEC",
         "WEBASSEMBLY_COMPONENT_MODEL",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 
 #[test]
-fn language_binding_surface_matrix_keeps_binding_products_crate_boundaries_packaging_semver_verification_and_private_boundaries_distinct() {
+fn language_binding_surface_matrix_keeps_binding_products_crate_boundaries_packaging_semver_verification_and_private_boundaries_distinct(
+) {
     for required in [
         "binding_id",
         "language_surface",
@@ -54,7 +55,8 @@ fn language_binding_surface_matrix_keeps_binding_products_crate_boundaries_packa
 }
 
 #[test]
-fn c_abi_policy_records_crate_types_symbols_headers_layout_ownership_errors_unwinding_and_versioning() {
+fn c_abi_policy_records_crate_types_symbols_headers_layout_ownership_errors_unwinding_and_versioning(
+) {
     for required in [
         "c_api_id",
         "crate_type_policy",
@@ -76,7 +78,8 @@ fn c_abi_policy_records_crate_types_symbols_headers_layout_ownership_errors_unwi
 }
 
 #[test]
-fn python_wheel_policy_records_pyo3_maturin_wheel_tags_metadata_api_mapping_import_tests_integrity_and_private_boundaries() {
+fn python_wheel_policy_records_pyo3_maturin_wheel_tags_metadata_api_mapping_import_tests_integrity_and_private_boundaries(
+) {
     for required in [
         "wheel_id",
         "module_policy",
@@ -98,7 +101,8 @@ fn python_wheel_policy_records_pyo3_maturin_wheel_tags_metadata_api_mapping_impo
 }
 
 #[test]
-fn node_wasm_policy_records_node_api_npm_wasm_component_host_capability_api_mapping_verification_and_boundaries() {
+fn node_wasm_policy_records_node_api_npm_wasm_component_host_capability_api_mapping_verification_and_boundaries(
+) {
     for required in [
         "binding_id",
         "runtime_surface",

@@ -646,67 +646,51 @@ pub fn checked_dim_product_u32(dims: [u32; 3]) -> Option<u32> {
     u32::try_from(checked_dim_product_u64(dims)?).ok()
 }
 
-/// Align `value` upward to `alignment`, after applying `min_value`.
-///
-/// # Errors
-/// Returns [`BackendError::InvalidProgram`] when `alignment` is zero or the
-/// padded value would overflow `u64`.
-pub fn align_up_u64(
-    value: u64,
-    alignment: u64,
-    min_value: u64,
-    label: &str,
-    backend: &str,
-) -> Result<u64, BackendError> {
-    if alignment == 0 {
-        return Err(BackendError::InvalidProgram {
-            fix: format!("Fix: {backend} {label} alignment must be non-zero before padding."),
-        });
-    }
-    let normalized = value.max(min_value);
-    let remainder = normalized % alignment;
-    if remainder == 0 {
-        return Ok(normalized);
-    }
-    normalized
-        .checked_add(alignment - remainder)
-        .ok_or_else(|| BackendError::InvalidProgram {
-            fix: format!(
-                "Fix: {backend} {label} overflows u64 while padding to {alignment}-byte alignment; split the workload before crossing the host/device boundary."
-            ),
-        })
+macro_rules! define_align_up {
+    ($name:ident, $ty:ty) => {
+        #[doc = concat!(
+            "Align a `",
+            stringify!($ty),
+            "` value upward after applying a minimum."
+        )]
+        ///
+        /// # Errors
+        ///
+        /// Returns [`BackendError::InvalidProgram`] when `alignment` is zero or
+        /// the padded value would overflow.
+        pub fn $name(
+            value: $ty,
+            alignment: $ty,
+            min_value: $ty,
+            label: &str,
+            backend: &str,
+        ) -> Result<$ty, BackendError> {
+            if alignment == 0 {
+                return Err(BackendError::InvalidProgram {
+                    fix: format!(
+                        "Fix: {backend} {label} alignment must be non-zero before padding."
+                    ),
+                });
+            }
+            let normalized = value.max(min_value);
+            let remainder = normalized % alignment;
+            if remainder == 0 {
+                return Ok(normalized);
+            }
+            normalized.checked_add(alignment - remainder).ok_or_else(|| {
+                BackendError::InvalidProgram {
+                    fix: format!(
+                        "Fix: {backend} {label} overflows {} while padding to {alignment}-byte alignment; split the workload before crossing the host/device boundary.",
+                        stringify!($ty)
+                    ),
+                }
+            })
+        }
+    };
 }
 
-/// Align `value` upward to `alignment`, after applying `min_value`.
-///
-/// # Errors
-/// Returns [`BackendError::InvalidProgram`] when `alignment` is zero or the
-/// padded value would overflow `usize`.
-pub fn align_up_usize(
-    value: usize,
-    alignment: usize,
-    min_value: usize,
-    label: &str,
-    backend: &str,
-) -> Result<usize, BackendError> {
-    if alignment == 0 {
-        return Err(BackendError::InvalidProgram {
-            fix: format!("Fix: {backend} {label} alignment must be non-zero before padding."),
-        });
-    }
-    let normalized = value.max(min_value);
-    let remainder = normalized % alignment;
-    if remainder == 0 {
-        return Ok(normalized);
-    }
-    normalized
-        .checked_add(alignment - remainder)
-        .ok_or_else(|| BackendError::InvalidProgram {
-            fix: format!(
-                "Fix: {backend} {label} overflows usize while padding to {alignment}-byte alignment; split the workload before crossing the host/device boundary."
-            ),
-        })
-}
+define_align_up!(align_up_u64, u64);
+define_align_up!(align_up_usize, usize);
 
 #[cfg(test)]
 mod tests {

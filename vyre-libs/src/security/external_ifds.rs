@@ -15,11 +15,11 @@ use external_dataflow_engine::{
 use vyre_foundation::ir::Program;
 
 use crate::{
-    dataflow::{DynamicPrimitiveSoundness, Soundness},
     security::facts::{
         AnalysisFact, AnalysisFactError, AnalysisFactTable, AnalysisSourceSpan, FactId, FactKind,
         FindingProofBundle, SourceToSinkFindingRequest,
     },
+    DynamicPrimitiveSoundness, Soundness,
 };
 
 /// Backend id used when Vyre security routes taint through external IFDS.
@@ -270,7 +270,9 @@ pub enum SecurityWitnessPathError {
     #[error("rule_id is blank. Fix: attach stable rule ids to external witness paths.")]
     EmptyRuleId,
     /// The external engine extracted an empty path.
-    #[error("External witness path is empty. Fix: only attach successful non-empty extracted paths.")]
+    #[error(
+        "External witness path is empty. Fix: only attach successful non-empty extracted paths."
+    )]
     EmptyExtractedPath,
     /// Edge-kind count did not match path hops.
     #[error("edge kind count {edge_kinds} does not match path hop count {hops}. Fix: provide one edge kind per witness transition.")]
@@ -452,11 +454,12 @@ fn fact_node_id(
     role: &'static str,
     node_count: u32,
 ) -> Result<u32, ExternalIfdsSecurityRouteError> {
-    let node_id =
-        u32::try_from(fact.subject).map_err(|_| ExternalIfdsSecurityRouteError::NodeIdOverflow {
+    let node_id = u32::try_from(fact.subject).map_err(|_| {
+        ExternalIfdsSecurityRouteError::NodeIdOverflow {
             role,
             subject: fact.subject,
-        })?;
+        }
+    })?;
     if node_id >= node_count {
         return Err(ExternalIfdsSecurityRouteError::NodeOutOfDomain {
             role,

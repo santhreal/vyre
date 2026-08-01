@@ -1,4 +1,4 @@
-//! `cargo_full run --bin xtask -- abstraction-gate`  -  mandatory building-block enforcement.
+//! `cargo xtask abstraction-gate`  -  mandatory building-block enforcement.
 //!
 //! This is the fast local/CI gate that keeps the abstraction thesis
 //! mechanical. It verifies that named composition edges point at

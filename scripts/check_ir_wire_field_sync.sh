@@ -30,7 +30,14 @@ transient_fields=(
   hash
   validation_set
   structural_validated
+  # Runtime validation-cache state, same class as structural_validated above:
+  # AtomicU64/AtomicU8, reset by invalidate_caches_for, rebuilt field-by-field by
+  # Clone, and read by no encoder. Serializing either would put mutable local state
+  # into the wire identity, which is the defect the digest work just removed.
+  structural_validation_fingerprint
+  mutation_provenance
   fingerprint
+  normalized_cache_digest
   output_buffer_index
   has_indirect_dispatch
   stats

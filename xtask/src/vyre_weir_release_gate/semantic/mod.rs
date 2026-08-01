@@ -20,11 +20,12 @@ mod wgpu_fallback;
 
 use std::path::Path;
 
-use super::types::Requirement;
+use super::types::{GateMode, Requirement};
 
 pub(super) fn run_semantic_requirement_checks(
     requirement: &Requirement,
     base_dir: &Path,
+    mode: GateMode,
     failures: &mut Vec<String>,
 ) {
     match requirement.id.as_str() {
@@ -42,7 +43,9 @@ pub(super) fn run_semantic_requirement_checks(
         "docs-evidence-linked" => docs_evidence_linked::check(requirement, base_dir, failures),
         "egraph-saturation" => optimization_integration::check(requirement, base_dir, failures),
         "exhaustive-verification" => test_architecture::check(requirement, base_dir, failures),
-        "final-completion-audit" => final_completion_audit::check(requirement, base_dir, failures),
+        "final-completion-audit" => {
+            final_completion_audit::check(requirement, base_dir, mode, failures)
+        }
         "megakernel-default" => megakernel_default::check(requirement, base_dir, failures),
         "modular-test-architecture" => test_architecture::check(requirement, base_dir, failures),
         "optimization-benchmark-proof" => {

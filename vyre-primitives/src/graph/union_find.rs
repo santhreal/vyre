@@ -113,7 +113,7 @@ pub fn find_root_body(
 /// The retry loop is the canonical lock-free union: every iteration RE-FINDS
 /// both roots from the *original* endpoints, then points the higher-index root
 /// at the lower via a single `CAS(parent[high], high, low)`. Re-finding both
-/// each pass, rather than caching one root and patching it after a lost CAS 
+/// each pass, rather than caching one root and patching it after a lost CAS
 /// is what makes it converge: a lost CAS (another lane moved `parent[high]`)
 /// simply retries against freshly observed roots, and because ordered selection
 /// only ever lowers a root, the pair reaches its shared minimum within

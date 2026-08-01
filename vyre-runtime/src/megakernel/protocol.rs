@@ -103,6 +103,7 @@ pub const MAX_ENCODED_DEBUG_RECORDS: u32 = 1_048_576;
 
 mod codec;
 
+pub(crate) use codec::read_word;
 pub use codec::{
     control_byte_len, count_done_ring_slots, debug_log_byte_len, encode_control,
     encode_empty_debug_log, encode_empty_ring, read_debug_log, read_debug_log_into,
@@ -112,7 +113,6 @@ pub use codec::{
     try_encode_empty_ring_into, try_read_debug_log, try_read_debug_log_into, try_read_done_count,
     try_read_epoch, try_read_metrics, try_read_metrics_into, try_read_observable,
 };
-pub(crate) use codec::read_word;
 
 /// Encode a single ring-buffer slot for a load-miss request.
 ///

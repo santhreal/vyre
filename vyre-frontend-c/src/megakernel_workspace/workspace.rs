@@ -1,4 +1,4 @@
-//! [`CFrontendWorkspaceManifest`]  -  resident manifest header that the C
+//! [`CFrontendWorkspaceManifest`](crate::megakernel_workspace::CFrontendWorkspaceManifest)  -  resident manifest header that the C
 //! frontend megakernel reads/writes through the workspace buffer.
 
 use vyre_foundation::ir::{BufferDecl, DataType};

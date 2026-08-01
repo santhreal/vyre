@@ -1,24 +1,43 @@
-//! Synthetic CUDA device capability profiles for offline planning.
+//! A FIXED synthetic device envelope for context-free estimator tests.
 //!
-//! These profiles are not a substitute for live CUDA probing. They give
-//! planner, autotune, occupancy, and megakernel-cache tests one source of
-//! truth for architecture envelopes that must be exercised without opening
-//! a CUDA context.
+//! This is a test fixture, not a description of any real GPU. It exists so
+//! occupancy, autotune, planner, and megakernel-cache arithmetic can be exercised
+//! without opening a CUDA context, and its values are held CONSTANT on purpose:
+//! tests that pin `2048 / 256 = 8` are checking the estimator's division, not a
+//! hardware fact, and they must not churn when the hardware under the desk
+//! changes.
+//!
+//! Its numbers are deliberately NOT this machine's. Several of them differ from
+//! the local RTX 5090, measured with `cuDeviceGetAttribute`: this envelope says
+//! 2048 threads per SM where the device reports 1536, 256 KiB of shared memory
+//! per SM where the device reports 100 KiB, and 128 KiB of shared memory per
+//! block where the device reports 48 KiB (with an opt-in maximum of 99 KiB, so
+//! the envelope's figure is unreachable at any setting). Every one of those
+//! OVERSTATES the hardware, so an occupancy figure derived from this fixture is
+//! optimistic.
+//!
+//! Therefore: NEVER derive a real-hardware decision from this. No shipping path
+//! may read it, and none does; probe [`crate::device::CudaDeviceCaps`] from a live
+//! context instead. Treating a fixed fixture as a hardware source of truth is how
+//! a number that reads as measured turns out not to be.
 
 use crate::device::CudaDeviceCaps;
 
-/// Default synthetic VRAM for the local Blackwell release-path profile.
-pub const BLACKWELL_SM120_DEFAULT_MEMORY_BYTES: u64 = 32 * 1024 * 1024 * 1024;
+/// Default synthetic VRAM for the fixed envelope.
+pub const SYNTHETIC_SM120_DEFAULT_MEMORY_BYTES: u64 = 32 * 1024 * 1024 * 1024;
 
-/// Construct a synthetic Blackwell SM_120 capability envelope.
+/// Construct the fixed synthetic SM_120 envelope.
 ///
-/// The caller supplies total memory so tests can exercise both high-VRAM
-/// release-path planning and low-VRAM pressure behavior without duplicating
-/// the rest of the device envelope.
+/// The caller supplies total memory so tests can exercise both high-VRAM planning
+/// and low-VRAM pressure behavior without duplicating the rest of the envelope.
+/// The remaining fields are fixed; see the module doc for why they are not this
+/// machine's values and must not be used as if they were.
 #[must_use]
-pub fn blackwell_sm120_caps(total_memory: u64) -> CudaDeviceCaps {
+pub fn synthetic_sm120_envelope(total_memory: u64) -> CudaDeviceCaps {
     CudaDeviceCaps {
-        name: "NVIDIA GeForce RTX 5090".to_string(),
+        // Deliberately not a real product name: this envelope is a fixture and
+        // must not be mistaken for a probe of the local device.
+        name: "synthetic sm_120 envelope (test fixture, not real hardware)".to_string(),
         ordinal: 0,
         compute_capability: (12, 0),
         total_memory,
@@ -39,22 +58,28 @@ pub fn blackwell_sm120_caps(total_memory: u64) -> CudaDeviceCaps {
         max_registers_per_block: 65_536,
         max_registers_per_sm: 65_536,
         max_threads_per_sm: 2048,
+        // Fixed like the rest of the envelope, and chosen so the cooperative
+        // block-cap clamp is exercised without a CUDA context: at width 32 the
+        // thread budget alone would allow 2048/32 = 64 blocks per SM and this
+        // holds it to 24. Real devices report the cap through
+        // CU_DEVICE_ATTRIBUTE_MAX_BLOCKS_PER_MULTIPROCESSOR; this is not a probe.
+        max_blocks_per_sm: 24,
     }
 }
 
-/// Construct the canonical synthetic Blackwell SM_120 release-path profile.
+/// Construct the canonical fixed synthetic SM_120 envelope.
 #[must_use]
-pub fn blackwell_sm120_caps_default() -> CudaDeviceCaps {
-    blackwell_sm120_caps(BLACKWELL_SM120_DEFAULT_MEMORY_BYTES)
+pub fn synthetic_sm120_envelope_default() -> CudaDeviceCaps {
+    synthetic_sm120_envelope(SYNTHETIC_SM120_DEFAULT_MEMORY_BYTES)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{blackwell_sm120_caps, blackwell_sm120_caps_default};
+    use super::{synthetic_sm120_envelope, synthetic_sm120_envelope_default};
 
     #[test]
-    fn blackwell_profile_preserves_release_path_architecture_fields() {
-        let caps = blackwell_sm120_caps_default();
+    fn synthetic_envelope_preserves_architecture_fields() {
+        let caps = synthetic_sm120_envelope_default();
 
         assert_eq!(caps.compute_capability, (12, 0));
         assert_eq!(caps.warp_size, 32);
@@ -67,8 +92,8 @@ mod tests {
     }
 
     #[test]
-    fn blackwell_profile_peak_compute_matches_scheduler_issue_model() {
-        let caps = blackwell_sm120_caps_default();
+    fn synthetic_envelope_peak_compute_matches_scheduler_issue_model() {
+        let caps = synthetic_sm120_envelope_default();
         // SM_count × 4 warp schedulers × warp_size × core_clock_hz.
         let expected = 170u64 * 4 * 32 * 2_410_000 * 1_000;
         assert_eq!(
@@ -76,19 +101,20 @@ mod tests {
             expected,
             "peak compute must follow the universal 4-scheduler issue model exactly"
         );
-        // Sanity: a Blackwell RTX 5090's peak int32 throughput is tens of TOPS
-        // (≈52 TOPS here), consistent with its ~105 TFLOP32 FMA figure.
+        // Sanity bound on the envelope's own arithmetic (about 52 TOPS at these
+        // fixed clocks), not a claim about any real part.
         let tops = caps.peak_compute_ops_per_sec() as f64 / 1e12;
         assert!(
             (40.0..80.0).contains(&tops),
-            "peak int throughput {tops:.1} TOPS is outside the sane Blackwell range"
+            "peak int throughput {tops:.1} TOPS is outside the range this envelope's fixed clocks \
+             and SM count can produce"
         );
     }
 
     #[test]
-    fn blackwell_profile_keeps_memory_pressure_parametric() {
-        let low_vram = blackwell_sm120_caps(512 * 1024 * 1024);
-        let high_vram = blackwell_sm120_caps_default();
+    fn synthetic_envelope_keeps_memory_pressure_parametric() {
+        let low_vram = synthetic_sm120_envelope(512 * 1024 * 1024);
+        let high_vram = synthetic_sm120_envelope_default();
 
         assert_eq!(low_vram.total_memory, 512 * 1024 * 1024);
         assert_eq!(high_vram.total_memory, 32 * 1024 * 1024 * 1024);

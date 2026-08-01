@@ -244,11 +244,11 @@ fn gen_descriptor(seed: u64) -> KernelDescriptor {
                     let hi = produced[(rng.next() as usize) % produced.len()];
                     let body_idx = child_bodies.len() as u32;
                     child_bodies.push(gen_tiny_body(
-                    &mut rng,
-                    &literals,
-                    bindings.len(),
-                    &mut next_id,
-                ));
+                        &mut rng,
+                        &literals,
+                        bindings.len(),
+                        &mut next_id,
+                    ));
                     ops.push(KernelOp {
                         kind: KernelOpKind::StructuredForLoop {
                             loop_var: std::sync::Arc::from("i"),

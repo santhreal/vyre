@@ -275,10 +275,17 @@ fn macro_expansion_flush_uses_resident_dispatch_scratch() {
             "macro expansion flush must not rebuild dispatch allocation pattern `{forbidden}`"
         );
     }
+    // The staging helpers size and reserve the scratch buffers in place; the
+    // flush then writes through `pack_u32_words_into` and the scratch's own
+    // `write_zero_bytes`. Nothing here may hand back a freshly allocated Vec.
     assert!(
-        gpu_buffers.contains("bytes_to_u32_word_bytes_into")
-            && gpu_buffers.contains("pad_u32_byte_buffer_into"),
-        "macro expansion GPU buffer helpers must expose in-place packers"
+        gpu_buffers.contains("fn checked_staging_word_bytes(")
+            && gpu_buffers.contains("fn reserve_staging_bytes("),
+        "macro expansion GPU buffer helpers must expose in-place staging sizing and reservation"
+    );
+    assert!(
+        flush.contains("pack_u32_words_into(") && flush.contains("write_zero_bytes("),
+        "macro expansion flush must fill caller-owned scratch in place"
     );
     assert!(
         !gpu_buffers.contains("fn bytes_to_u32_word_bytes(")

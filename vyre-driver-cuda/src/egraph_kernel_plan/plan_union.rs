@@ -15,10 +15,9 @@ use super::{
 /// Generate the concrete PTX kernel that compares packed e-graph rows inside
 /// one signature bucket wave and emits exact e-class equivalences.
 ///
-/// The kernel expects the packed columns produced by
-/// [`GpuEGraphDeviceImage`], the bucket table produced by
-/// [`pack_cuda_egraph_signature_bucket_device_image`], and the output buffers
-/// sized by [`plan_cuda_egraph_structural_equivalence_output`].
+/// The kernel expects the packed columns produced by `GpuEGraphDeviceImage`,
+/// the bucket table produced by `pack_cuda_egraph_signature_bucket_device_image`,
+/// and the output buffers sized by `plan_cuda_egraph_structural_equivalence_output`.
 pub fn plan_cuda_egraph_union_compaction(
     equivalences: &[Equivalence],
     config: CudaEGraphKernelLaunchConfig,

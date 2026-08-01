@@ -246,4 +246,3 @@ fn generated_cuda_int4_release_parity_sweeps_boundary_shapes() {
         }
     }
 }
-

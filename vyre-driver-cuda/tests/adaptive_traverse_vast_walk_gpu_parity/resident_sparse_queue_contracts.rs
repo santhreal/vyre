@@ -192,4 +192,3 @@ fn cuda_resident_adaptive_sparse_queue_word_prefix_handles_large_frontier() {
         .free(&dispatcher)
         .expect("resident adaptive graph free");
 }
-

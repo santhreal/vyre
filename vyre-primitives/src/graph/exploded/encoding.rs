@@ -53,7 +53,7 @@ pub fn fits(proc_id: u32, block_id: u32, fact_id: u32) -> bool {
     proc_id <= MAX_PROC_ID && block_id <= MAX_BLOCK_ID && fact_id <= MAX_FACT_ID
 }
 /// Convert a dense `(proc, block, fact)` index  -  the space
-/// [`build_cpu_reference`] operates in  -  into the packed
+/// `build_cpu_reference` (requires the `cpu-parity` feature) operates in  -  into the packed
 /// [`encode_node`] form for reporting or cross-subsystem handoff.
 #[must_use]
 pub fn dense_to_encoded(dense: u32, blocks_per_proc: u32, facts_per_proc: u32) -> Option<u32> {

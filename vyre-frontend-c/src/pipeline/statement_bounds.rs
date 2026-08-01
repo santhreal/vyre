@@ -1,10 +1,26 @@
 use vyre::ir::Expr;
 use vyre::{DispatchConfig, VyreBackend};
-use vyre_libs::parsing::c::parse::structure_statement::c11_statement_bounds;
+use vyre_libs::parsing::c::parse::structure_statement::{
+    c11_statement_bounds, C11_STATEMENT_BOUNDS_SCRATCH,
+};
 
 use super::backend_select::dispatch_borrowed_stage_cached_into;
-use super::buffers::{mark_program_outputs, read_u32_at};
+use super::buffers::{mark_program_outputs, read_u32_at, suppress_readwrite_readback};
 use super::{stage_pipeline_cache_key, validate_internal_stage, MAX_STMT_THREADS, MAX_TOK_SCAN};
+
+/// Buffer slots `c11_statement_bounds` declares: `out_statements`, `out_counts`,
+/// and the primitive's kernel-internal scratch buffer.
+///
+/// This is a SLOT count, not a result count. There are still only TWO results.
+/// The third slot is [`C11_STATEMENT_BOUNDS_SCRATCH`], kernel-internal working
+/// memory whose contents are an implementation detail: it is marked an allocated
+/// output only because the dispatch layer demands one input Value per non-output
+/// declared buffer and the host has nothing to put in it, and its readback is
+/// suppressed because nothing here reads it. Never read `outputs[2]`.
+///
+/// The scratch buffer is declared last, so `outputs[0]` is still the statement
+/// span stream and `outputs[1]` is still the count.
+const C11_STATEMENT_BOUNDS_OUTPUTS: usize = 3;
 
 #[derive(Default)]
 pub(crate) struct StatementBoundsScratch {
@@ -68,7 +84,17 @@ pub(crate) fn dispatch_c11_statement_bounds_bytes_into(
                 "out_statements",
                 "out_counts",
             );
-            let stmt_prog = mark_program_outputs(stmt_prog, &["out_statements", "out_counts"]);
+            // The scratch buffer is kernel-internal, so it is marked as an
+            // allocated output rather than supplied as an input: the dispatch
+            // layer requires one input Value per non-output declared buffer,
+            // and the host has nothing to put in it. Its readback is then
+            // suppressed because nothing downstream reads it, which keeps a
+            // token-sized buffer off the device-to-host path every dispatch.
+            let stmt_prog = mark_program_outputs(
+                stmt_prog,
+                &["out_statements", "out_counts", C11_STATEMENT_BOUNDS_SCRATCH],
+            );
+            let stmt_prog = suppress_readwrite_readback(stmt_prog, &[C11_STATEMENT_BOUNDS_SCRATCH]);
             validate_internal_stage(&stmt_prog, "c11_statement_bounds")?;
             Ok(stmt_prog)
         },
@@ -77,9 +103,13 @@ pub(crate) fn dispatch_c11_statement_bounds_bytes_into(
         &mut scratch.outputs,
     )
     .map_err(|e| format!("{label} dispatch failed: {e}"))?;
-    if scratch.outputs.len() != 2 {
+    // Three outputs: statements, counts, and the primitive's internal
+    // next-boundary scratch. The scratch buffer is declared last precisely so
+    // these two indices stay put; assert the exact count so a reordering that
+    // silently shifted them would fail here instead of misreading spans.
+    if scratch.outputs.len() != C11_STATEMENT_BOUNDS_OUTPUTS {
         return Err(format!(
-            "{label}: expected exactly statement and count outputs, got {}. Fix: backend must return the declared c11_statement_bounds ABI outputs and no extras.",
+            "{label}: expected exactly statement, count and scratch outputs ({C11_STATEMENT_BOUNDS_OUTPUTS}), got {}. Fix: backend must return the declared c11_statement_bounds ABI outputs and no extras.",
             scratch.outputs.len()
         ));
     }

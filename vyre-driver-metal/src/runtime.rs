@@ -18,7 +18,8 @@ use vyre_driver::{
     dispatch_element_count_for_program, enforce_actual_output_budget,
     infer_dispatch_grid_for_count, output_binding_layouts, BindingPlan, BindingRole,
     CompiledPipeline, DeviceProfile, DeviceTimingQuality, DispatchConfig, OutputBindingLayout,
-    OutputBuffers, PipelineCacheSnapshot, Resource, TimedDispatchResult, VyreBackend,
+    OutputBuffers, PipelineCacheSnapshot, ResidentHandle, ResidentOwner, Resource,
+    TimedDispatchResult, VyreBackend,
 };
 use vyre_foundation::ir::{OpId, Program};
 
@@ -29,6 +30,13 @@ pub struct MetalBackend {
     device: Device,
     queue: metal::CommandQueue,
     resident_buffers: MetalResidentBufferTable,
+    /// Identity of this instance's resident-buffer namespace.
+    ///
+    /// `next_resident` restarts at 1 in every fresh backend, so a bare id is
+    /// only meaningful next to the owner that minted it. Carrying the owner in
+    /// the handle makes a stale handle a refusal instead of a silent hit on an
+    /// unrelated buffer of the same id.
+    resident_owner: ResidentOwner,
     next_resident: AtomicU64,
     pipeline_cache: Mutex<BTreeMap<[u8; 32], MetalCompiledPipeline>>,
     metrics: MetalMetricCounters,
@@ -288,10 +296,11 @@ pub fn metal_resident_scan_resource_table(
     if entries.is_empty() {
         return Err(MetalResidentScanResourceError::EmptyTable);
     }
-    let entry_count =
-        u32::try_from(entries.len()).map_err(|_| MetalResidentScanResourceError::EntryCountOverflow {
+    let entry_count = u32::try_from(entries.len()).map_err(|_| {
+        MetalResidentScanResourceError::EntryCountOverflow {
             entry_count: entries.len(),
-        })?;
+        }
+    })?;
 
     let mut table_ids = BTreeSet::new();
     let mut verifier_ids = BTreeSet::new();
@@ -302,9 +311,11 @@ pub fn metal_resident_scan_resource_table(
     for (entry_index, entry) in entries.iter().copied().enumerate() {
         validate_metal_resident_scan_resource_entry(entry_index, entry, expected_lifetime)?;
         if !argument_buffer_entries.insert(entry.argument_buffer_entry) {
-            return Err(MetalResidentScanResourceError::DuplicateArgumentBufferEntry {
-                argument_buffer_entry: entry.argument_buffer_entry,
-            });
+            return Err(
+                MetalResidentScanResourceError::DuplicateArgumentBufferEntry {
+                    argument_buffer_entry: entry.argument_buffer_entry,
+                },
+            );
         }
         table_ids.insert(entry.table_id);
         verifier_ids.insert(entry.verifier_id);
@@ -405,6 +416,7 @@ impl MetalBackend {
             device,
             queue,
             resident_buffers: Arc::new(Mutex::new(BTreeMap::new())),
+            resident_owner: ResidentOwner::new()?,
             next_resident: AtomicU64::new(1),
             pipeline_cache: Mutex::new(BTreeMap::new()),
             metrics: Arc::new(MetalMetrics::default()),
@@ -711,7 +723,7 @@ impl MetalBackend {
     fn lock_resident_buffers(
         &self,
         operation: &'static str,
-    ) -> Result<MutexGuard<'_, BTreeMap<u64, MetalResidentBuffer>>, BackendError> {
+    ) -> Result<MutexGuard<'_, BTreeMap<ResidentHandle, MetalResidentBuffer>>, BackendError> {
         lock_resident_buffer_table(&self.resident_buffers, operation)
     }
 
@@ -732,7 +744,7 @@ impl MetalBackend {
         &self,
         resource: &Resource,
         operation: &'static str,
-    ) -> Result<(u64, MetalResidentBuffer), BackendError> {
+    ) -> Result<(ResidentHandle, MetalResidentBuffer), BackendError> {
         let Resource::Resident(id) = resource else {
             return Err(BackendError::InvalidProgram {
                 fix: format!(
@@ -740,6 +752,7 @@ impl MetalBackend {
                 ),
             });
         };
+        self.resident_owner.resolve(*id, operation)?;
         let table = self.lock_resident_buffers(operation)?;
         let resident = table.get(id).cloned().ok_or_else(|| BackendError::InvalidProgram {
             fix: format!(
@@ -754,7 +767,12 @@ impl MetalBackend {
         binding_plan: &BindingPlan,
         resources: &'a [Resource],
     ) -> Result<Vec<ResolvedMetalResource<'a>>, BackendError> {
-        resolve_resident_resources_from_table(&self.resident_buffers, binding_plan, resources)
+        resolve_resident_resources_from_table(
+            self.resident_owner,
+            &self.resident_buffers,
+            binding_plan,
+            resources,
+        )
     }
 }
 
@@ -920,7 +938,9 @@ impl VyreBackend for MetalBackend {
 
     fn allocate_resident(&self, byte_len: usize) -> Result<Resource, BackendError> {
         let buffer = new_zero_buffer(&self.device, byte_len)?;
-        let id = next_resident_id(&self.next_resident)?;
+        let id = self
+            .resident_owner
+            .handle(next_resident_id(&self.next_resident)?);
         let mut table = self.lock_resident_buffers("resident allocation")?;
         if table
             .insert(id, MetalResidentBuffer { buffer, byte_len })
@@ -1095,6 +1115,8 @@ impl VyreBackend for MetalBackend {
                     ranges.len()
                 ),
             })?;
+        // Keyed by local id to match the fusion plan. Every entry below is
+        // owner-checked first, so local ids are exact keys within this batch.
         let mut buffers = BTreeMap::new();
         for &(resource, byte_offset, byte_len) in ranges {
             let (id, resident) =
@@ -1111,9 +1133,9 @@ impl VyreBackend for MetalBackend {
                     "Fix: Metal resident ranged batch download offset {byte_offset} for handle {id} cannot fit u64 transfer fusion coordinates: {error}. Split the readback range."
                 ),
             })?;
-            buffers.entry(id).or_insert(resident.buffer);
+            buffers.entry(id.id()).or_insert(resident.buffer);
             copies.push(ResidentTransferInterval {
-                handle_id: id,
+                handle_id: id.id(),
                 src,
                 byte_len,
             });
@@ -1166,6 +1188,7 @@ impl VyreBackend for MetalBackend {
                 fix: "Fix: Metal resident free expected a handle returned by allocate_resident, but received a borrowed host buffer.".to_string(),
             });
         };
+        self.resident_owner.resolve(id, "resident free")?;
         let mut table = self.lock_resident_buffers("resident free")?;
         table.remove(&id).ok_or_else(|| BackendError::InvalidProgram {
             fix: format!(
@@ -1377,12 +1400,13 @@ impl VyreBackend for MetalBackend {
             device: self.device.clone(),
             queue: self.queue.clone(),
             resident_buffers: Arc::clone(&self.resident_buffers),
+            resident_owner: self.resident_owner,
             metrics: Arc::clone(&self.metrics),
         })))
     }
 }
 
-type MetalResidentBufferTable = Arc<Mutex<BTreeMap<u64, MetalResidentBuffer>>>;
+type MetalResidentBufferTable = Arc<Mutex<BTreeMap<ResidentHandle, MetalResidentBuffer>>>;
 type MetalMetricCounters = Arc<MetalMetrics>;
 
 #[derive(Default)]
@@ -1435,6 +1459,8 @@ struct MetalPersistentPipeline {
     device: Device,
     queue: metal::CommandQueue,
     resident_buffers: MetalResidentBufferTable,
+    /// Owner of the resident table shared with the backend that compiled this.
+    resident_owner: ResidentOwner,
     metrics: MetalMetricCounters,
 }
 
@@ -1545,8 +1571,12 @@ impl CompiledPipeline for MetalPersistentPipeline {
             "Metal compiled resident dispatch",
         )?;
         let base_plan = BindingPlan::build(&self.program)?;
-        let resolved =
-            resolve_resident_resources_from_table(&self.resident_buffers, &base_plan, inputs)?;
+        let resolved = resolve_resident_resources_from_table(
+            self.resident_owner,
+            &self.resident_buffers,
+            &base_plan,
+            inputs,
+        )?;
         let input_lengths = resident_input_lengths(&base_plan, &resolved)?;
         let binding_plan = BindingPlan::from_input_lengths(&self.program, &input_lengths)?;
         let output_layouts = output_binding_layouts(&self.program)?;
@@ -1608,8 +1638,12 @@ impl CompiledPipeline for MetalPersistentPipeline {
         )?;
         let base_plan = BindingPlan::build(&self.program)?;
         let output_resources = resident_output_resources(&base_plan, inputs)?;
-        let resolved =
-            resolve_resident_resources_from_table(&self.resident_buffers, &base_plan, inputs)?;
+        let resolved = resolve_resident_resources_from_table(
+            self.resident_owner,
+            &self.resident_buffers,
+            &base_plan,
+            inputs,
+        )?;
         let input_lengths = resident_input_lengths(&base_plan, &resolved)?;
         let binding_plan = BindingPlan::from_input_lengths(&self.program, &input_lengths)?;
         let output_layouts = output_binding_layouts(&self.program)?;
@@ -1641,7 +1675,7 @@ impl CompiledPipeline for MetalPersistentPipeline {
 fn lock_resident_buffer_table<'a>(
     resident_buffers: &'a MetalResidentBufferTable,
     operation: &'static str,
-) -> Result<MutexGuard<'a, BTreeMap<u64, MetalResidentBuffer>>, BackendError> {
+) -> Result<MutexGuard<'a, BTreeMap<ResidentHandle, MetalResidentBuffer>>, BackendError> {
     resident_buffers
         .lock()
         .map_err(|error| BackendError::InvalidProgram {
@@ -1652,6 +1686,7 @@ fn lock_resident_buffer_table<'a>(
 }
 
 fn resolve_resident_resources_from_table<'a>(
+    resident_owner: ResidentOwner,
     resident_buffers: &MetalResidentBufferTable,
     binding_plan: &BindingPlan,
     resources: &'a [Resource],
@@ -1698,6 +1733,7 @@ fn resolve_resident_resources_from_table<'a>(
         match resource {
             Resource::Borrowed(bytes) => resolved.push(ResolvedMetalResource::Borrowed(bytes)),
             Resource::Resident(id) => {
+                resident_owner.resolve(*id, "resident dispatch resource resolution")?;
                 let resident = table.get(id).cloned().ok_or_else(|| {
                     BackendError::InvalidProgram {
                         fix: format!(
@@ -1789,7 +1825,8 @@ fn resident_output_resources(
 enum ResolvedMetalResource<'a> {
     Borrowed(&'a [u8]),
     Resident {
-        id: u64,
+        /// Owner-carrying handle, kept so diagnostics never name a bare id.
+        id: ResidentHandle,
         buffer: Buffer,
         byte_len: usize,
     },
@@ -1959,7 +1996,10 @@ fn plan_buffers(
                 (buffer, metal_physical_buffer_len(byte_len), bytes.len())
             }
             BindingRole::Shared | BindingRole::Persistent => {
-                unreachable!("BindingRole {:?} is filtered above the plan match", binding.role)
+                unreachable!(
+                    "BindingRole {:?} is filtered above the plan match",
+                    binding.role
+                )
             }
         };
         buffers.push(PlannedBuffer {
@@ -2092,7 +2132,10 @@ fn plan_resident_buffers(
                 )
             }
             BindingRole::Shared | BindingRole::Persistent => {
-                unreachable!("BindingRole {:?} is filtered above the plan match", binding.role)
+                unreachable!(
+                    "BindingRole {:?} is filtered above the plan match",
+                    binding.role
+                )
             }
         };
         buffers.push(PlannedBuffer {
@@ -2439,7 +2482,7 @@ fn validate_metal_dispatch_config(
 }
 
 fn validate_resident_range(
-    handle_id: u64,
+    handle_id: ResidentHandle,
     allocation_len: usize,
     byte_offset: usize,
     byte_len: usize,

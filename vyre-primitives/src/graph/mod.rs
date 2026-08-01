@@ -30,6 +30,29 @@ pub(crate) fn checked_csr_offset_count(node_count: u32, op_name: &str) -> Result
     })
 }
 
+pub(crate) fn u32_slice_fingerprint(values: &[u32]) -> u64 {
+    padded_u32_slice_fingerprint(values, values.len())
+}
+
+pub(crate) fn padded_u32_slice_fingerprint(values: &[u32], padded_words: usize) -> u64 {
+    const FNV_OFFSET: u64 = 0xcbf29ce484222325;
+    const FNV_PRIME: u64 = 0x100000001b3;
+
+    let mut hash = FNV_OFFSET;
+    for byte in (padded_words as u64).to_le_bytes() {
+        hash ^= u64::from(byte);
+        hash = hash.wrapping_mul(FNV_PRIME);
+    }
+    for index in 0..padded_words {
+        let value = values.get(index).copied().unwrap_or(0);
+        for byte in value.to_le_bytes() {
+            hash ^= u64::from(byte);
+            hash = hash.wrapping_mul(FNV_PRIME);
+        }
+    }
+    hash
+}
+
 /// One BFS step that accumulates into frontier_out and reports changes.
 pub mod csr_forward_or_changed;
 /// One BFS frontier step over ProgramGraph CSR.

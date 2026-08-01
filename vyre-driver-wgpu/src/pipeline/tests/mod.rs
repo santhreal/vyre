@@ -7,10 +7,10 @@ use vyre_driver::validation::LaunchGeometryLimits;
 use vyre_foundation::execution_plan::{self, ReadbackStrategy};
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, MemoryKind, Node, Program};
 
-#[path = "layout_config_contracts.rs"]
-mod layout_config_contracts;
 #[path = "bind_group_cache_contracts.rs"]
 mod bind_group_cache_contracts;
+#[path = "layout_config_contracts.rs"]
+mod layout_config_contracts;
 #[path = "readback_ring_contracts.rs"]
 mod readback_ring_contracts;
 #[path = "trap_output_contracts.rs"]

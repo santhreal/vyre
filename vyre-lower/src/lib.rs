@@ -118,10 +118,8 @@ pub fn full_report(desc: &KernelDescriptor) -> FullReport {
             false,
         )
     };
-    let fix_text = build_full_report_fix_text(
-        &verify_input,
-        optimization_ran.then_some(&verify_output),
-    );
+    let fix_text =
+        build_full_report_fix_text(&verify_input, optimization_ran.then_some(&verify_output));
     FullReport {
         descriptor_id,
         summary,
@@ -279,11 +277,7 @@ fn build_full_report_fix_text(
     messages.join(" ")
 }
 
-fn push_verify_fix_text(
-    stage: &str,
-    result: &verify::VerifyResult,
-    messages: &mut Vec<String>,
-) {
+fn push_verify_fix_text(stage: &str, result: &verify::VerifyResult, messages: &mut Vec<String>) {
     if let Err(errs) = result {
         if errs.is_empty() {
             messages.push(format!(
@@ -307,21 +301,20 @@ impl std::fmt::Display for FullReport {
 pub use verify::{verify, VerifyError, VerifyErrorKind, VerifyResult};
 
 pub use descriptor::{
-    BindingLayout, BindingSlot, BindingVisibility, DescriptorIntent, DescriptorIntentError,
-    DescriptorIntentEvidence, DescriptorIntentKind, DescriptorIntentSet,
-    DescriptorIntentStrategy, Dispatch, IntentAnnotatedDescriptor, KernelBody,
-    KernelDescriptor, KernelOp, KernelOpKind, LiteralValue, MatrixMmaElement,
-    MatrixMmaLayout, MatrixMmaShape, MemoryClass, OpaqueExprData, OpaqueNodeData,
-    scan_construct_intent_mapping, ScanConstructIntentClass, ScanConstructIntentMapping,
-    DESCRIPTOR_INTENT_SCHEMA_VERSION, SCAN_CONSTRUCT_INTENT_MAPPINGS, TRAP_SIDECAR_NAME,
-    TRAP_SIDECAR_WORDS,
+    scan_construct_intent_mapping, BindingLayout, BindingSlot, BindingVisibility, DescriptorIntent,
+    DescriptorIntentError, DescriptorIntentEvidence, DescriptorIntentKind, DescriptorIntentSet,
+    DescriptorIntentStrategy, Dispatch, IntentAnnotatedDescriptor, KernelBody, KernelDescriptor,
+    KernelOp, KernelOpKind, LiteralValue, MatrixMmaElement, MatrixMmaLayout, MatrixMmaShape,
+    MemoryClass, OpaqueExprData, OpaqueNodeData, ScanConstructIntentClass,
+    ScanConstructIntentMapping, DESCRIPTOR_INTENT_SCHEMA_VERSION, SCAN_CONSTRUCT_INTENT_MAPPINGS,
+    TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS,
 };
 pub use error::LowerError;
+pub use lower::lower;
+pub use pre_emit::{lower_for_emit, prepare_program_for_emit, LoweredKernel, PreEmitError};
 /// Re-exported so consumers matching/constructing `KernelOpKind::SubgroupReduce`
 /// can name the reduction operator without depending on `vyre-foundation`.
 pub use vyre_foundation::ir::SubgroupReduceOp;
-pub use lower::lower;
-pub use pre_emit::{lower_for_emit, prepare_program_for_emit, LoweredKernel, PreEmitError};
 
 #[cfg(test)]
 mod verify_then_optimize_tests {

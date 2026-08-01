@@ -7,7 +7,7 @@ use super::reference::{
 use super::*;
 use crate::parsing::c::lex::tokens::*;
 
-use crate::scan::dispatch_io::pack_u32_slice as pack_u32;
+use vyre_primitives::wire::pack_u32_slice as pack_u32;
 
 const WITNESS_TOKEN_COUNT: u32 = 14;
 

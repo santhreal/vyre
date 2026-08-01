@@ -78,7 +78,7 @@
 //!
 //! # CPU reference
 //!
-//! [`crate::math::scallop_join::cpu_ref`] performs the same fixpoint iteration on host arrays and
+//! `cpu_ref` (requires the `cpu-parity` feature) performs the same fixpoint iteration on host arrays and
 //! is the parity oracle for every GPU dispatch.
 
 use std::sync::Arc;

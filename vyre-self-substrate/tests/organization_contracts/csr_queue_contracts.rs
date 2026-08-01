@@ -78,4 +78,3 @@ fn csr_frontier_queue_resident_graph_upload_uses_primitive_layout_contract() {
         "resident CSR queue graph upload must not recompute primitive frontier width, edge count, or edge padding"
     );
 }
-

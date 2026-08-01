@@ -13,6 +13,7 @@
 
 pub mod access_kind;
 pub mod alias_facts;
+pub mod alias_import;
 pub mod bank_conflict;
 pub mod candidate_plan;
 pub mod coalesce;
@@ -24,15 +25,50 @@ pub mod layout_aos_to_soa;
 pub(crate) mod load_counts;
 pub mod op_histogram;
 pub mod reaching_def_facts;
+pub mod reaching_def_import;
 pub mod shared_mem_promote;
 pub mod texture_promote;
 pub mod value_range;
 pub mod vec_pack;
-pub mod alias_import;
-pub mod reaching_def_import;
 pub mod workgroup_uniform;
 
-use crate::KernelOpKind;
+use crate::operand_semantics::operand_is_result_reference;
+use crate::{KernelBody, KernelOp, KernelOpKind};
+use rustc_hash::FxHashMap;
+
+pub(crate) type ProducerMap<'a> = FxHashMap<u32, &'a KernelOp>;
+
+pub(crate) fn producer_map(body: &KernelBody) -> ProducerMap<'_> {
+    let mut producers = FxHashMap::with_capacity_and_hasher(body.ops.len(), Default::default());
+    for op in &body.ops {
+        for result in op.result_ids() {
+            producers.insert(result, op);
+        }
+    }
+    producers
+}
+
+pub(crate) fn body_result_ids(body: &KernelBody) -> rustc_hash::FxHashSet<u32> {
+    let mut results = rustc_hash::FxHashSet::default();
+    for op in &body.ops {
+        results.extend(op.result_ids());
+    }
+    for child in &body.child_bodies {
+        results.extend(body_result_ids(child));
+    }
+    results
+}
+
+pub(crate) fn body_refs_only(body: &KernelBody, produced: &rustc_hash::FxHashSet<u32>) -> bool {
+    body.ops.iter().all(|op| {
+        op.operands.iter().enumerate().all(|(position, operand)| {
+            !operand_is_result_reference(&op.kind, position) || produced.contains(operand)
+        })
+    }) && body
+        .child_bodies
+        .iter()
+        .all(|child| body_refs_only(child, produced))
+}
 
 /// Child-body indices referenced by a structured control-flow op's operands.
 ///

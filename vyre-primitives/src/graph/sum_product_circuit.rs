@@ -590,10 +590,11 @@ pub fn try_sum_product_evaluate_cpu_into_with_scratch(
         topo_order,
     )?;
     scratch.values.clear();
-    resize_sum_product_cpu_vec(
+    crate::graph::scratch::resize_graph_vec(
         &mut scratch.values,
         kinds.len(),
         0.0,
+        "sum-product circuit CPU oracle",
         "sum_product_evaluate CPU scratch",
     )?;
     for &node in topo_order {
@@ -704,26 +705,6 @@ fn validate_sum_product_evaluate_inputs(
             }
         }
     }
-    Ok(())
-}
-
-#[cfg(any(test, feature = "cpu-parity"))]
-
-fn resize_sum_product_cpu_vec<T: Clone>(
-    out: &mut Vec<T>,
-    len: usize,
-    value: T,
-    context: &str,
-) -> Result<(), String> {
-    if len > out.len() {
-        crate::graph::scratch::reserve_graph_items(
-            out,
-            len - out.len(),
-            "sum-product circuit CPU oracle",
-            context,
-        )?;
-    }
-    out.resize(len, value);
     Ok(())
 }
 
@@ -1258,29 +1239,6 @@ mod tests {
                 && !builder_source.contains(concat!("panic", "!("))
                 && !builder_source.contains(".unwrap_or_else("),
             "Fix: sum_product_evaluate must support zero-edge leaf circuits and avoid production panics."
-        );
-    }
-
-    #[test]
-    fn sum_product_cpu_source_uses_checked_reusable_output() {
-        let source = include_str!("sum_product_circuit.rs");
-        let cpu_source = source
-            .split("/// CPU reference:")
-            .nth(1)
-            .expect("Fix: sum-product CPU source must be present")
-            .split("#[cfg(feature = \"inventory-registry\")]")
-            .next()
-            .expect("Fix: sum-product CPU source must precede registry entry");
-
-        assert!(
-            cpu_source.contains("try_sum_product_evaluate_cpu_into")
-                && cpu_source.contains("resize_sum_product_cpu_vec")
-                && cpu_source.contains("crate::graph::scratch::reserve_graph_items")
-                && !cpu_source.contains("fn reserve_sum_product_cpu_vec")
-                && !cpu_source.contains("vec![0.0; n_nodes]")
-                && !cpu_source.contains("Vec::with_capacity")
-                && !cpu_source.contains(".reserve("),
-            "Fix: sum-product CPU oracle must use checked caller-owned output storage."
         );
     }
 }

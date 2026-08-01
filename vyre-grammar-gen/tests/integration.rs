@@ -2,21 +2,16 @@
 
 use vyre_grammar_gen::{
     build_c11_lexer_dfa, build_c11_lexer_dfa_for_host,
+    c11_lexer::{
+        TOK_COMMA, TOK_COMMENT, TOK_IDENTIFIER, TOK_INT, TOK_INTEGER, TOK_LBRACE, TOK_LPAREN,
+        TOK_RBRACE, TOK_RETURN, TOK_RPAREN, TOK_SEMICOLON, TOK_STAR, TOK_STRUCT, TOK_WHITESPACE,
+    },
     chunk_lexer_cpu::count_chunked_valid_tokens,
-    decode_dfa_from_bytes, decode_lr_from_bytes,
-    kinds_blake3,
-    lex_c11_max_munch_kinds,
-    preprocess_c_host,
-    validate_lr_table,
+    decode_dfa_from_bytes, decode_lr_from_bytes, kinds_blake3, lex_c11_max_munch_kinds,
+    lr::Action,
+    preprocess_c_host, validate_lr_table,
     wire::{BlobKind, PackedBlob},
     LrBuilder,
-    lr::Action,
-    c11_lexer::{
-        TOK_IDENTIFIER, TOK_INTEGER, TOK_WHITESPACE, TOK_COMMENT,
-        TOK_INT, TOK_RETURN, TOK_STRUCT,
-        TOK_LPAREN, TOK_RPAREN, TOK_SEMICOLON, TOK_LBRACE, TOK_RBRACE,
-        TOK_COMMA, TOK_STAR,
-    },
 };
 
 // ---------------------------------------------------------------------------
@@ -51,16 +46,25 @@ fn pipeline_comment_is_stripped_by_preprocessor_not_lexer() {
     // After preprocessing, block comment should be gone
     assert!(!preprocessed.contains("this is a comment"));
     let kinds = lex_c11_max_munch_kinds(preprocessed.as_bytes()).expect("lex");
-    assert!(!kinds.contains(&TOK_COMMENT), "preprocessor should have removed the comment");
+    assert!(
+        !kinds.contains(&TOK_COMMENT),
+        "preprocessor should have removed the comment"
+    );
 }
 
 #[test]
 fn pipeline_macro_expansion_feeds_lexer() {
     let src = "#define LIMIT 100\nint arr[LIMIT];\n";
     let preprocessed = preprocess_c_host(src);
-    assert!(preprocessed.contains("100"), "macro must be expanded before lex");
+    assert!(
+        preprocessed.contains("100"),
+        "macro must be expanded before lex"
+    );
     let kinds = lex_c11_max_munch_kinds(preprocessed.as_bytes()).expect("lex");
-    assert!(kinds.contains(&TOK_INTEGER), "expanded macro value must lex as integer");
+    assert!(
+        kinds.contains(&TOK_INTEGER),
+        "expanded macro value must lex as integer"
+    );
 }
 
 #[test]
@@ -171,13 +175,8 @@ fn chunked_lexer_on_simple_c_source() {
 fn chunked_lexer_mismatched_transitions_returns_zero() {
     // If transitions.len() != num_states * num_classes, function must return 0 safely
     let count = count_chunked_valid_tokens(
-        &[0u32; 3],   // wrong size
-        &[0u32; 2],
-        b"abc",
-        3,
-        2,
-        64,
-        4, // 2 * 4 = 8 expected, got 3
+        &[0u32; 3], // wrong size
+        &[0u32; 2], b"abc", 3, 2, 64, 4, // 2 * 4 = 8 expected, got 3
     );
     assert_eq!(count, 0, "mismatched table must yield 0");
 }
@@ -264,11 +263,17 @@ fn e2e_lex_function_declaration() {
     use vyre_grammar_gen::c11_lexer::{TOK_STATIC, TOK_UNSIGNED};
     assert!(kinds.contains(&TOK_STATIC), "must see static: {kinds:?}");
     assert!(kinds.contains(&TOK_INT), "must see int: {kinds:?}");
-    assert!(kinds.contains(&TOK_IDENTIFIER), "must see identifier: {kinds:?}");
+    assert!(
+        kinds.contains(&TOK_IDENTIFIER),
+        "must see identifier: {kinds:?}"
+    );
     assert!(kinds.contains(&TOK_LPAREN), "must see (: {kinds:?}");
     assert!(kinds.contains(&TOK_STAR), "must see *: {kinds:?}");
     assert!(kinds.contains(&TOK_COMMA), "must see ,: {kinds:?}");
-    assert!(kinds.contains(&TOK_UNSIGNED), "must see unsigned: {kinds:?}");
+    assert!(
+        kinds.contains(&TOK_UNSIGNED),
+        "must see unsigned: {kinds:?}"
+    );
     assert!(kinds.contains(&TOK_RPAREN), "must see ): {kinds:?}");
     assert!(kinds.contains(&TOK_SEMICOLON), "must see ;: {kinds:?}");
 }

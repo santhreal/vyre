@@ -266,5 +266,3 @@ fn wgpu_resident_fused_batch_materialization_reserves_before_clearing_output() {
         "Fix: WGPU fused resident output materialization must reserve before clearing caller-owned output so allocation failure cannot clobber existing bytes."
     );
 }
-
-

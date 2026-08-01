@@ -184,21 +184,7 @@ impl BatchedPathReconstructDispatchPlan {
 }
 
 fn path_reconstruct_u32_slice_fingerprint(values: &[u32]) -> u64 {
-    const FNV_OFFSET: u64 = 0xcbf29ce484222325;
-    const FNV_PRIME: u64 = 0x100000001b3;
-
-    let mut hash = FNV_OFFSET;
-    for byte in (values.len() as u64).to_le_bytes() {
-        hash ^= u64::from(byte);
-        hash = hash.wrapping_mul(FNV_PRIME);
-    }
-    for value in values {
-        for byte in value.to_le_bytes() {
-            hash ^= u64::from(byte);
-            hash = hash.wrapping_mul(FNV_PRIME);
-        }
-    }
-    hash
+    super::u32_slice_fingerprint(values)
 }
 
 /// Build the IR `Program` for path reconstruction.

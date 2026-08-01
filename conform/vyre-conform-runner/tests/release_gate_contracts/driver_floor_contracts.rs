@@ -40,5 +40,3 @@ fn cuda_parity_gate_documents_int4_gpu_parity_coverage() {
         "Fix: cuda-release-gate.json must name int4_quantized_gpu_parity as a gpu_parity integration test."
     );
 }
-
-

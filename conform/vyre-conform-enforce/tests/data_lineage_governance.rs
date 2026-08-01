@@ -1,8 +1,7 @@
 //! Data lineage governance test suite.
 
 const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
-const MANIFEST: &str =
-    include_str!("../../../docs/optimization/DATASET_PUBLICATION_MANIFEST.toml");
+const MANIFEST: &str = include_str!("../../../docs/optimization/DATASET_PUBLICATION_MANIFEST.toml");
 const COVERAGE: &str =
     include_str!("../../../docs/optimization/DATA_LINEAGE_GOVERNANCE_TRANCHE_COVERAGE.toml");
 
@@ -14,7 +13,10 @@ fn data_lineage_primary_sources_are_registered() {
         "NIST_PRIVACY_FRAMEWORK",
         "NIST_SP_800_53",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 

@@ -23,13 +23,7 @@ const FALSIFICATION_REQUIREMENTS: &[FalsificationRequirement] = &[
     FalsificationRequirement {
         field: "dataset",
         markers: &[
-            "corpus",
-            "dataset",
-            "fixture",
-            "graph",
-            "haystack",
-            "rule set",
-            "workload",
+            "corpus", "dataset", "fixture", "graph", "haystack", "rule set", "workload",
         ],
     },
     FalsificationRequirement {

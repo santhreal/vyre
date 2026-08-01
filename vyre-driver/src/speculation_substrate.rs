@@ -9,8 +9,8 @@
 //!
 //! This module owns the pure *decision*: given the speculative variant's
 //! observed cost vs the baseline (recorded by I3 [`crate::autotune_store`]),
-//! return [`SpeculationVerdict::Adopt`] (replace baseline with speculative
-//! in the cache) or [`SpeculationVerdict::Reject`] (drop speculative,
+//! return [`crate::speculation_substrate::SpeculationVerdict::Adopt`] (replace baseline with speculative
+//! in the cache) or [`crate::speculation_substrate::SpeculationVerdict::Reject`] (drop speculative,
 //! stop racing). Pure arithmetic; no I/O, no allocation.
 //!
 //! The runtime side (compiling both variants on a side pipeline cache

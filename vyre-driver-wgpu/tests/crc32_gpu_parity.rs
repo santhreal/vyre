@@ -37,7 +37,12 @@ fn gpu_crc32(backend: &WgpuBackend, bytes: &[u8]) -> u32 {
             &DispatchConfig::default(),
         )
         .expect("Fix: WGPU must dispatch the CRC-32 nested-loop program.");
-    assert_eq!(outputs.len(), 1, "crc32_program exposes one output (out); got {}", outputs.len());
+    assert_eq!(
+        outputs.len(),
+        1,
+        "crc32_program exposes one output (out); got {}",
+        outputs.len()
+    );
     let words: Vec<u32> = outputs[0]
         .chunks_exact(4)
         .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
@@ -61,7 +66,11 @@ fn check(backend: &WgpuBackend, bytes: &[u8], label: &str) {
 fn crc32_abc_matches_reference_on_gpu() {
     let backend = WgpuBackend::acquire().expect("Fix: CRC-32 GPU parity requires a live GPU.");
     // Drift-guard the reference against the standard zlib/IEEE CRC-32 of "abc".
-    assert_eq!(crc32(b"abc"), 0x3524_41c2, "CRC-32 reference drifted for \"abc\"");
+    assert_eq!(
+        crc32(b"abc"),
+        0x3524_41c2,
+        "CRC-32 reference drifted for \"abc\""
+    );
     check(&backend, b"abc", "\"abc\"");
 }
 
@@ -75,7 +84,11 @@ fn crc32_varied_inputs_match_reference_on_gpu() {
     let long: [u8; 64] = std::array::from_fn(|i| (i as u8).wrapping_mul(31).wrapping_add(7));
     check(&backend, &long, "a 64-byte block");
     // The classic "123456789" CRC-32 check value (0xCBF43926) (a well-known KAT).
-    assert_eq!(crc32(b"123456789"), 0xCBF4_3926, "CRC-32 reference drifted for the check string");
+    assert_eq!(
+        crc32(b"123456789"),
+        0xCBF4_3926,
+        "CRC-32 reference drifted for the check string"
+    );
     check(&backend, b"123456789", "the CRC-32 check string");
 }
 
@@ -84,7 +97,10 @@ fn crc32_distinguishes_inputs_on_gpu() {
     let backend = WgpuBackend::acquire().expect("Fix: CRC-32 GPU parity requires a live GPU.");
     let a = gpu_crc32(&backend, b"crc-input-0");
     let b = gpu_crc32(&backend, b"crc-input-1");
-    assert_ne!(a, b, "CRC-32 must distinguish one-byte-different inputs on the GPU");
+    assert_ne!(
+        a, b,
+        "CRC-32 must distinguish one-byte-different inputs on the GPU"
+    );
     assert_eq!(a, crc32(b"crc-input-0"));
     assert_eq!(b, crc32(b"crc-input-1"));
 }

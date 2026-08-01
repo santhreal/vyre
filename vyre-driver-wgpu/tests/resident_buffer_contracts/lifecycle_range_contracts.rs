@@ -103,5 +103,3 @@ fn wgpu_backend_invalid_single_range_download_preserves_caller_output() {
         .free_resident(resource)
         .expect("resident buffer must free cleanly after rejected range download");
 }
-
-

@@ -231,4 +231,3 @@ fn clamped_dynamic_byte_loads_atomic_or_pack_invocation_indexed_lanes_from_u8_in
         "buf_len-clamped byte variables must preserve invocation-indexed U8 lanes before byte compaction."
     );
 }
-

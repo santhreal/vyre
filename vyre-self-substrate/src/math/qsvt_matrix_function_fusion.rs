@@ -273,7 +273,7 @@ pub fn transport_residual_fixed_via_with_scratch_into(
         n,
         chebyshev_order,
     );
-    // Real-backend dispatch-input contract: one input per INPUT-CONSUMING buffer in buffer order 
+    // Real-backend dispatch-input contract: one input per INPUT-CONSUMING buffer in buffer order
     // the 3 RO inputs + `chebyshev_filter`'s plain-ReadWrite `output` (3, n words) and `scratch`
     // (4, 2n double-words), each needing a zero-filled slot the kernel writes. Passing only the 3 RO
     // buffers fails the backend's strict `validate_input_lengths` count.

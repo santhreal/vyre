@@ -407,16 +407,43 @@ impl CudaBackend {
                     &mut params_ref,
                     &mut kernel_args,
                 )?;
-                for _ in 0..step.prepared.fixpoint_iterations {
-                    self.launch_prevalidated_function(
-                        resolved.func,
-                        &mut kernel_args,
-                        &step.prepared.launch,
-                        stream.raw(),
-                        false,
-                        step.prepared.cooperative,
-                    )?;
-                }
+                // Take this step's grid-barrier counter for its launches and
+                // release it once they complete. Per step rather than per
+                // sequence: two steps that share a module would otherwise
+                // deadlock this thread against its own gate.
+                let grid_barrier = self.lease_grid_barrier(
+                    step.program,
+                    &step.prepared,
+                    &step.ptx_src,
+                    step.module_key,
+                )?;
+                // `launch_then_release` runs the launches and ends the lease in
+                // the one safe order: the release synchronizes the stream before
+                // freeing the gate, so a launch failure cannot leave a grid
+                // spinning while the next sequence resets the counter under it.
+                grid_barrier.launch_then_release(
+                    stream.raw(),
+                    "resident sequence grid-sync launch",
+                    |grid_barrier| {
+                        for _ in 0..step.prepared.fixpoint_iterations {
+                            // SAFETY: the sequence stream is live for these
+                            // launches and the memset is enqueued ahead of each
+                            // launch on it.
+                            unsafe {
+                                grid_barrier.enqueue_reset(stream.raw())?;
+                            }
+                            self.launch_prevalidated_function(
+                                resolved.func,
+                                &mut kernel_args,
+                                &step.prepared.launch,
+                                stream.raw(),
+                                false,
+                                step.prepared.cooperative,
+                            )?;
+                        }
+                        Ok(())
+                    },
+                )?;
                 Ok(())
             };
 
@@ -454,7 +481,7 @@ impl CudaBackend {
                         BackendError::InvalidProgram {
                         fix: format!(
                             "Fix: CUDA resident sequence compact readback for handle {} overflows usize at offset {} len {}.",
-                            handle.id, readback.device_offset, readback.byte_len
+                            handle.handle, readback.device_offset, readback.byte_len
                         ),
                     }
                     },
@@ -462,7 +489,7 @@ impl CudaBackend {
                         BackendError::InvalidProgram {
                         fix: format!(
                             "Fix: CUDA resident sequence compact readback for handle {} requested bytes [{}..{}) but buffer has {} bytes.",
-                            handle.id, readback.device_offset, end, buffer.byte_len
+                            handle.handle, readback.device_offset, end, buffer.byte_len
                         ),
                     }
                     },
@@ -477,7 +504,7 @@ impl CudaBackend {
                             BackendError::InvalidProgram {
                             fix: format!(
                                 "Fix: CUDA resident sequence compact readback device offset {} does not fit CUdeviceptr arithmetic for handle {}.",
-                                readback.device_offset, handle.id
+                                readback.device_offset, handle.handle
                             ),
                         }
                         },
@@ -485,14 +512,14 @@ impl CudaBackend {
                             BackendError::InvalidProgram {
                             fix: format!(
                                 "Fix: CUDA resident sequence compact readback pointer arithmetic overflowed for handle {} at offset {}.",
-                                handle.id, readback.device_offset
+                                handle.handle, readback.device_offset
                             ),
                         }
                         },
                     )?
                 };
                 let copy = ResidentReadbackCopy {
-                    handle_id: handle.id,
+                    handle_id: handle.handle.id(),
                     src,
                     byte_len: readback.byte_len,
                 };

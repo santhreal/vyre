@@ -1,6 +1,6 @@
 //! Stream-ordered device allocation via the CUDA driver's own memory pool.
 //!
-//! The synchronous [`DeviceAllocationPool`](super::allocations::DeviceAllocationPool)
+//! The synchronous `DeviceAllocationPool`
 //! bucket-recycles raw `cuMemAlloc_v2` blocks behind a host-side free list: every
 //! acquire/release is a *host* operation that must be ordered by hand against the
 //! stream that actually consumes the memory. This module binds the device's
@@ -19,7 +19,7 @@
 //! This is a self-contained, hardware-tested allocator surface. It is **not** wired
 //! into the current hot dispatch path, and that is a deliberate, measured decision
 //! rather than a pending TODO: on the warm steady state the
-//! [`DeviceAllocationPool`](super::allocations::DeviceAllocationPool) free list
+//! `DeviceAllocationPool` free list
 //! serves an acquire from a lock-free `ArrayQueue::pop` and a release from a
 //! `queue.push`: **zero** CUDA driver calls per dispatch, and the release is
 //! already correctly stream-ordered because the owning `CudaPendingDispatch` holds
@@ -265,7 +265,7 @@ mod tests {
     use std::ffi::c_void;
 
     /// Hardware evidence on the live GPU that the stream-ordered pool hands back
-    /// (a) *usable* device memory, proven by a memset-then-readback roundtrip 
+    /// (a) *usable* device memory, proven by a memset-then-readback roundtrip
     /// and (b) memory it *reuses* across a free/realloc cycle, proven by the
     /// pool's reserved-bytes staying flat while a same-size block is freed and
     /// re-allocated. Both are the raison d'être of the stream-ordered pool over a
@@ -403,7 +403,9 @@ mod tests {
         let pb = pool.alloc_async(B, stream.raw()).expect("alloc B");
         let pc = pool.alloc_async(C, stream.raw()).expect("alloc C");
         stream.synchronize().expect("sync after three allocs");
-        let used_all = pool.used_bytes().expect("used bytes with three live blocks");
+        let used_all = pool
+            .used_bytes()
+            .expect("used bytes with three live blocks");
         assert!(
             used_all >= (A + B + C) as u64,
             "used-bytes ({used_all}) must account all three live blocks (>= {} B)",

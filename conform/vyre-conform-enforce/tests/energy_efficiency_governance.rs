@@ -23,12 +23,16 @@ fn energy_efficiency_sources_are_registered() {
         "KEPLER_ENERGY_EXPORTER",
         "OPENTELEMETRY_HARDWARE_SEMCONV",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 
 #[test]
-fn power_thermal_telemetry_records_sensors_units_windows_attribution_throttle_thermal_and_exports() {
+fn power_thermal_telemetry_records_sensors_units_windows_attribution_throttle_thermal_and_exports()
+{
     for required in [
         "telemetry_id",
         "measurement_surface",
@@ -45,12 +49,16 @@ fn power_thermal_telemetry_records_sensors_units_windows_attribution_throttle_th
         "cpu-rapl-energy-telemetry",
         "container-pod-energy-attribution",
     ] {
-        assert!(TELEMETRY.contains(required), "power telemetry contract must include {required}");
+        assert!(
+            TELEMETRY.contains(required),
+            "power telemetry contract must include {required}"
+        );
     }
 }
 
 #[test]
-fn energy_efficiency_regression_records_functional_units_baselines_energy_metrics_throttle_stats_and_gate_effects() {
+fn energy_efficiency_regression_records_functional_units_baselines_energy_metrics_throttle_stats_and_gate_effects(
+) {
     for required in [
         "efficiency_gate_id",
         "workload_surface",
@@ -67,12 +75,16 @@ fn energy_efficiency_regression_records_functional_units_baselines_energy_metric
         "cpu-reference-joules-per-scan-regression",
         "operator-load-energy-regression",
     ] {
-        assert!(REGRESSION.contains(required), "energy regression policy must include {required}");
+        assert!(
+            REGRESSION.contains(required),
+            "energy regression policy must include {required}"
+        );
     }
 }
 
 #[test]
-fn carbon_cost_accounting_records_boundary_functional_unit_energy_carbon_embodied_cost_claim_and_reporting_policies() {
+fn carbon_cost_accounting_records_boundary_functional_unit_energy_carbon_embodied_cost_claim_and_reporting_policies(
+) {
     for required in [
         "accounting_id",
         "boundary_policy",
@@ -89,12 +101,16 @@ fn carbon_cost_accounting_records_boundary_functional_unit_energy_carbon_embodie
         "operator-release-energy-cost-accounting",
         "benchmark-perf-per-cost-class-accounting",
     ] {
-        assert!(ACCOUNTING.contains(required), "carbon cost accounting policy must include {required}");
+        assert!(
+            ACCOUNTING.contains(required),
+            "carbon cost accounting policy must include {required}"
+        );
     }
 }
 
 #[test]
-fn power_cap_throttle_response_records_triggers_classification_actions_profiles_profiler_contention_rollout_and_runbook_links() {
+fn power_cap_throttle_response_records_triggers_classification_actions_profiles_profiler_contention_rollout_and_runbook_links(
+) {
     for required in [
         "response_id",
         "trigger_policy",
@@ -111,12 +127,16 @@ fn power_cap_throttle_response_records_triggers_classification_actions_profiles_
         "cpu-powercap-constraint-response",
         "collector-efficiency-overhead-response",
     ] {
-        assert!(RESPONSE.contains(required), "power cap response policy must include {required}");
+        assert!(
+            RESPONSE.contains(required),
+            "power cap response policy must include {required}"
+        );
     }
 }
 
 #[test]
-fn energy_efficiency_coverage_reuses_metrics_profiling_capacity_experiment_rollout_slo_runbook_and_publication_authorities() {
+fn energy_efficiency_coverage_reuses_metrics_profiling_capacity_experiment_rollout_slo_runbook_and_publication_authorities(
+) {
     for required in [
         "VX-1401..VX-1420",
         "power_thermal_telemetry_contracts",
@@ -133,6 +153,9 @@ fn energy_efficiency_coverage_reuses_metrics_profiling_capacity_experiment_rollo
         "dedup_seam",
         "proof_gate",
     ] {
-        assert!(COVERAGE.contains(required), "energy efficiency coverage must include {required}");
+        assert!(
+            COVERAGE.contains(required),
+            "energy efficiency coverage must include {required}"
+        );
     }
 }

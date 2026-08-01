@@ -189,15 +189,24 @@ mod tests {
         assert_eq!(SubgroupReduceOp::Mul.reduce_u32(lanes), 60);
         assert_eq!(SubgroupReduceOp::Min.reduce_u32(lanes), 1);
         assert_eq!(SubgroupReduceOp::Max.reduce_u32(lanes), 5);
-        assert_eq!(SubgroupReduceOp::And.reduce_u32([0b1100u32, 0b1010]), 0b1000);
+        assert_eq!(
+            SubgroupReduceOp::And.reduce_u32([0b1100u32, 0b1010]),
+            0b1000
+        );
         assert_eq!(SubgroupReduceOp::Or.reduce_u32([0b1100u32, 0b1010]), 0b1110);
-        assert_eq!(SubgroupReduceOp::Xor.reduce_u32([0b1100u32, 0b1010]), 0b0110);
+        assert_eq!(
+            SubgroupReduceOp::Xor.reduce_u32([0b1100u32, 0b1010]),
+            0b0110
+        );
     }
 
     #[test]
     fn reduce_u32_add_wraps_like_the_isa() {
         assert_eq!(SubgroupReduceOp::Add.reduce_u32([u32::MAX, 1]), 0);
-        assert_eq!(SubgroupReduceOp::Mul.reduce_u32([u32::MAX, 2]), u32::MAX - 1);
+        assert_eq!(
+            SubgroupReduceOp::Mul.reduce_u32([u32::MAX, 2]),
+            u32::MAX - 1
+        );
     }
 
     #[test]
@@ -213,8 +222,11 @@ mod tests {
     fn f32_reduce_helpers_match_op_and_reject_bitwise() {
         let lanes = [3.0f32, 1.0, 4.0];
         let fold = |op: SubgroupReduceOp| {
-            op.f32_identity()
-                .map(|id| lanes.iter().fold(id, |acc, &l| op.combine_f32(acc, l).unwrap()))
+            op.f32_identity().map(|id| {
+                lanes
+                    .iter()
+                    .fold(id, |acc, &l| op.combine_f32(acc, l).unwrap())
+            })
         };
         assert_eq!(fold(SubgroupReduceOp::Add), Some(8.0));
         assert_eq!(fold(SubgroupReduceOp::Mul), Some(12.0));

@@ -144,4 +144,3 @@ fn structural_equivalence_launch_artifact_sizes_worst_case_output() {
     assert_eq!(artifact.output.output_counter_bytes, 8);
     assert_eq!(artifact.pair_waves.len(), 2);
 }
-

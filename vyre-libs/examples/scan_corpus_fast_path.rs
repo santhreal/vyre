@@ -106,7 +106,7 @@ fn main() {
 /// Coalesce a sequence of byte buffers ("files") into one contiguous haystack plus
 /// the `region_starts` array (region `i` spans `region_starts[i]..region_starts[i+1]`,
 /// the last to `haystack.len()`; the first start is always `0`). This is the
-/// consumer's in-memory "assemble a corpus" step, done inline (not a public API 
+/// consumer's in-memory "assemble a corpus" step, done inline (not a public API
 /// the by-region scans just want the two arrays).
 fn coalesce_regions(files: &[Vec<u8>]) -> (Vec<u8>, Vec<u32>) {
     let mut haystack = Vec::new();

@@ -62,7 +62,7 @@ pub use regex_accelerator::{
     RegexAcceleratorMatchSchema, RegexAcceleratorStreamMode,
     REGEX_ACCELERATOR_EVIDENCE_SCHEMA_VERSION,
 };
-pub use resource::Resource;
+pub use resource::{ResidentHandle, ResidentOwner, Resource};
 pub use typed_dispatch::TypedDispatchExt;
 pub use vyre_backend::{
     ResidentDispatchStep, ResidentReadRange, ResidentSequenceTiming, VyreBackend,

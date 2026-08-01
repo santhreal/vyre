@@ -24,6 +24,7 @@
 
 use std::sync::Arc;
 
+use super::expr_no_atomic;
 use vyre_foundation::ir::{Expr, Node, Program};
 
 /// Apply dead-branch elimination. Returns a new Program with every
@@ -171,36 +172,6 @@ fn from_to_structurally_equal(from: &Expr, to: &Expr) -> bool {
         (Expr::WorkgroupId { axis: a }, Expr::WorkgroupId { axis: b }) => a == b,
         (Expr::LocalId { axis: a }, Expr::LocalId { axis: b }) => a == b,
         _ => false,
-    }
-}
-
-/// True iff `expr` contains no `Expr::Atomic` anywhere in its tree.
-/// Loads are considered pure for drop purposes (they have no
-/// observable effect  -  reading memory we never use is a no-op).
-fn expr_no_atomic(expr: &Expr) -> bool {
-    match expr {
-        Expr::Atomic { .. } => false,
-        Expr::BinOp { left, right, .. } => expr_no_atomic(left) && expr_no_atomic(right),
-        Expr::UnOp { operand, .. } => expr_no_atomic(operand),
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => expr_no_atomic(cond) && expr_no_atomic(true_val) && expr_no_atomic(false_val),
-        Expr::Fma { a, b, c } => expr_no_atomic(a) && expr_no_atomic(b) && expr_no_atomic(c),
-        Expr::Load { index, .. } => expr_no_atomic(index),
-        Expr::Cast { value, .. } => expr_no_atomic(value),
-        Expr::Call { args, .. } => args.iter().all(expr_no_atomic),
-        Expr::SubgroupBallot { cond } => expr_no_atomic(cond),
-        Expr::SubgroupShuffle { value, lane } => expr_no_atomic(value) && expr_no_atomic(lane),
-        Expr::SubgroupReduce { value, .. } => expr_no_atomic(value),
-        // `Opaque` extension nodes may carry arbitrary side effects
-        // (the trait object can do anything). Treat as observable so
-        // the surrounding If/Loop drop never elides their evaluation.
-        Expr::Opaque(_) => false,
-        // Leaf/pure variants (literals, Var, BufLen, IDs, subgroup
-        // size/local-id). None of these have observable side effects.
-        _ => true,
     }
 }
 

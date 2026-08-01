@@ -258,7 +258,7 @@ pub fn optimize(program: Program) -> Result<Program, vyre_foundation::optimizer:
 /// Device-aware public optimizer entry point.
 ///
 /// Runs adapter-shaped workgroup autotuning from a neutral
-/// [`DeviceProfile`] before the canonical pre-lowering optimization
+/// [`vyre_driver::DeviceProfile`] before the canonical pre-lowering optimization
 /// pipeline. Consumers with a live backend should prefer
 /// [`optimize_for_backend`]; consumers with a saved device signature
 /// can call this directly.
@@ -412,9 +412,7 @@ mod optimize_cache {
         // in a recovered daemon with no operator-visible signal. Recovery
         // preserves cache correctness; if the state were corrupt, Put would
         // have been the corrupt write and the subsequent Get would simply miss.
-        let cache = cache()
-            .lock()
-            .unwrap_or_else(|e| e.into_inner());
+        let cache = cache().lock().unwrap_or_else(|e| e.into_inner());
         cache.host.get(key)
     }
 
@@ -422,23 +420,17 @@ mod optimize_cache {
         // Same recovery rationale as get(): silently skipping the write on
         // poison caused every subsequent call to pay the full optimization
         // cost forever. Recovering the guard lets us still store the result.
-        let mut cache = cache()
-            .lock()
-            .unwrap_or_else(|e| e.into_inner());
+        let mut cache = cache().lock().unwrap_or_else(|e| e.into_inner());
         cache.host.put(key, program);
     }
 
     pub(super) fn get_device(key: &[u8; 32]) -> Option<Program> {
-        let cache = cache()
-            .lock()
-            .unwrap_or_else(|e| e.into_inner());
+        let cache = cache().lock().unwrap_or_else(|e| e.into_inner());
         cache.device.get(key)
     }
 
     pub(super) fn put_device(key: [u8; 32], program: &Program) {
-        let mut cache = cache()
-            .lock()
-            .unwrap_or_else(|e| e.into_inner());
+        let mut cache = cache().lock().unwrap_or_else(|e| e.into_inner());
         cache.device.put(key, program);
     }
 
@@ -456,7 +448,11 @@ mod optimize_cache {
 
     #[cfg(test)]
     pub(super) fn len_device() -> usize {
-        cache().lock().unwrap_or_else(|e| e.into_inner()).device.len()
+        cache()
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .device
+            .len()
     }
 
     /// Single process-wide serialization guard shared by EVERY cache test,
@@ -626,8 +622,8 @@ mod optimize_tests {
         );
 
         // Cache hit for a surviving entry must return the correct program.
-        let cached = optimize_cache::get(&last_key)
-            .expect("Fix: surviving cache entry must be retrievable");
+        let cached =
+            optimize_cache::get(&last_key).expect("Fix: surviving cache entry must be retrievable");
         assert!(
             entry_stores_literal(&cached, OPTIMIZE_CACHE_CAPACITY as u32),
             "cached surviving program must store the correct literal {OPTIMIZE_CACHE_CAPACITY}: {:?}",

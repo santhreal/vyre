@@ -12,7 +12,7 @@
 //! window's byte budget stays ≤ u32, but the corpus as a whole is unbounded, and
 //! host RSS is bounded by one window, not the corpus.
 //!
-//! [`plan_corpus_windows`] is the pure host-side planner (total coverage, no gap or
+//! `plan_corpus_windows` is the pure host-side planner (total coverage, no gap or
 //! overlap, monotone offsets, stable global ids, fail-closed on an unscannable
 //! file); [`scan_paged_fused`] drives one resident fused session across the plan
 //! (tables uploaded once) and globalizes each window's presence rows and positioned
@@ -45,12 +45,12 @@ pub(crate) struct CorpusWindow {
     /// Global file indices covered by this window, `[start, end)`. `start` is also
     /// the window's `global_region_base` (region id == original file index).
     pub(crate) file_range: Range<usize>,
-    /// Global byte offset of this window's first byte within the whole corpus 
+    /// Global byte offset of this window's first byte within the whole corpus
     /// added to a window-local match `start`/`end` to globalize it.
     pub(crate) byte_offset: u64,
     /// Total bytes in this window (== the window's haystack length). Never exceeds
     /// the budget unless the window holds a single over-budget file (then it is
-    /// exactly that file's length, and [`plan_corpus_windows`] flags it).
+    /// exactly that file's length, and `plan_corpus_windows` flags it).
     pub(crate) byte_len: usize,
     /// The `region_base` argument for the fused scan of this window: the global
     /// region id of `file_range.start`, so per-region presence rows and region
@@ -447,7 +447,7 @@ fn plan_paged(
 ///
 /// # Errors
 /// Returns [`vyre::BackendError`] on any window's dispatch/readback failure, if the
-/// plan is invalid (see [`plan_corpus_windows`], surfaced as a backend error), or
+/// plan is invalid (see `plan_corpus_windows`, surfaced as a backend error), or
 /// if the file count exceeds the u32 region ABI.
 pub fn scan_paged_fused(
     matcher: &GpuLiteralSet,
@@ -523,7 +523,7 @@ pub fn scan_paged_fused(
 
 /// Timed twin of [`scan_paged_fused`]: identical result plus an aggregated
 /// [`PagedScanTiming`] over the per-window dispatches (W3-3 attribution on the
-/// paging path). It differs from the untimed driver in exactly one call 
+/// paging path). It differs from the untimed driver in exactly one call
 /// `scan_into_timed` instead of `scan_into`: and reuses the same shared
 /// `stage_window` / `globalize_window` / `finish_result` helpers, so the paged
 /// result is byte-identical to the untimed driver (ONE PLACE). The device-time
@@ -674,7 +674,7 @@ pub fn scan_sharded_fused(
 }
 
 /// Per-shard-timed twin of [`scan_sharded_fused`]: identical result plus a
-/// [`ShardedScanTiming`] breaking wall/device time and byte-work down PER DEVICE 
+/// [`ShardedScanTiming`] breaking wall/device time and byte-work down PER DEVICE
 /// the `per-shard-active-ns` signal the W3-5 `load_balance_policy` uses to reweight
 /// the next batch. A run under equal round-robin whose shard timings are skewed is
 /// the evidence that the devices differ in throughput; feed proportional `weights`
@@ -1096,7 +1096,7 @@ const PAGED_PIPELINE_DEPTH: usize = 2;
 /// Asynchronous twin of [`scan_paged_fused`]: pipelines the windows so each
 /// window's host staging + upload overlaps the previous window's device execution,
 /// keeping [`PAGED_PIPELINE_DEPTH`] dispatches in flight. It uses the BORROWED async
-/// fused dispatch (the tables re-upload per window, amortized over a large window 
+/// fused dispatch (the tables re-upload per window, amortized over a large window
 /// rather than staying resident), which is the trade the overlap buys. The
 /// boundary handling (`L-1` overlap, dummy overlap region, start-based dedup) is the
 /// SAME shared globalization as the sync driver, so the result is identical.
@@ -1704,7 +1704,7 @@ mod tests {
     }
 
     /// The load-bearing correctness proof: a paged fused scan of a multi-window
-    /// corpus, including a `secret` literal that STRADDLES a window boundary 
+    /// corpus, including a `secret` literal that STRADDLES a window boundary
     /// produces EXACTLY the same per-region presence and (globalized) positioned
     /// matches as a single-shot fused scan of the concatenated corpus (Law 10, no
     /// boundary miss, no overlap over-fire, no double count). Runs on the real GPU;
@@ -2323,7 +2323,7 @@ mod tests {
     }
 
     /// A pattern database STRIPED across shards (disjoint rule subsets) produces the
-    /// exact same global match set as scanning one matcher built over every rule 
+    /// exact same global match set as scanning one matcher built over every rule
     /// the `pattern-database-replicated-shards` parity policy. Exercised with a
     /// 1-device and a 2-device set, plus the fail-closed malformed-shard-map path.
     /// Runs on the real GPU; skips cleanly with none.

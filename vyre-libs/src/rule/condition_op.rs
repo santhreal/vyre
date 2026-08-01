@@ -45,6 +45,22 @@ pub fn condition_program(op_id: &'static str, compute: fn() -> Expr) -> Program 
     )
 }
 
+macro_rules! impl_literal_program {
+    ($literal:ty, $op_id:expr, $value:expr) => {
+        impl $literal {
+            /// Build the canonical IR program.
+            #[must_use]
+            pub fn program() -> vyre_foundation::ir::Program {
+                $crate::rule::condition_op::condition_program($op_id, || {
+                    vyre_foundation::ir::Expr::u32($value)
+                })
+            }
+        }
+    };
+}
+
+pub(crate) use impl_literal_program;
+
 /// Read the pattern state argument.
 #[must_use]
 pub fn pattern_state() -> Expr {

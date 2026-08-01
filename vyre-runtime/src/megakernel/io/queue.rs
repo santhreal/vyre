@@ -87,30 +87,15 @@ impl MegakernelIoQueue {
         byte_count: u32,
         tag: u32,
     ) -> Result<(), PipelineError> {
-        if queue_slot >= self.slot_count {
-            return Err(PipelineError::QueueFull {
-                queue: "submission",
-                fix: "io_queue slot exceeds MegakernelIoQueue::slot_count; enlarge the queue or publish into a valid slot id",
-            });
-        }
-        let current_status = self.read_word(queue_slot, io_word::STATUS)?;
-        if current_status != slot::EMPTY {
-            return Err(PipelineError::QueueFull {
-                queue: "submission",
-                fix: "io_queue slot still in flight; wait for the GPU to recycle it before publishing again",
-            });
-        }
-        self.write_word_unfenced(queue_slot, io_word::OP_TYPE, io_op::READ)?;
-        self.write_word_unfenced(queue_slot, io_word::SRC_HANDLE, 0)?;
-        self.write_word_unfenced(queue_slot, io_word::DST_HANDLE, mapped_slot)?;
-        self.write_word_unfenced(queue_slot, io_word::OFFSET_LO, 0)?;
-        self.write_word_unfenced(queue_slot, io_word::OFFSET_HI, 0)?;
-        self.write_word_unfenced(queue_slot, io_word::BYTE_COUNT, byte_count)?;
-        self.write_word_unfenced(queue_slot, io_word::TAG, tag)?;
-        fence(Ordering::Release);
-        self.write_word_unfenced(queue_slot, io_word::STATUS, slot::PUBLISHED)?;
-        fence(Ordering::Release);
-        Ok(())
+        self.publish_dma_read(
+            queue_slot,
+            0,
+            mapped_slot,
+            byte_count,
+            tag,
+            "io_queue slot exceeds MegakernelIoQueue::slot_count; enlarge the queue or publish into a valid slot id",
+            "io_queue slot still in flight; wait for the GPU to recycle it before publishing again",
+        )
     }
 
     /// Submit a DMA-read request to the IO queue.
@@ -131,17 +116,38 @@ impl MegakernelIoQueue {
         byte_count: u32,
         tag: u32,
     ) -> Result<(), PipelineError> {
+        self.publish_dma_read(
+            queue_slot,
+            src_handle,
+            dst_handle,
+            byte_count,
+            tag,
+            "io_queue slot exceeds MegakernelIoQueue::slot_count; enlarge the queue or submit into a valid slot id",
+            "io_queue slot still in flight; wait for completion before submitting a new request",
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn publish_dma_read(
+        &mut self,
+        queue_slot: u32,
+        src_handle: u32,
+        dst_handle: u32,
+        byte_count: u32,
+        tag: u32,
+        out_of_bounds_fix: &'static str,
+        in_flight_fix: &'static str,
+    ) -> Result<(), PipelineError> {
         if queue_slot >= self.slot_count {
             return Err(PipelineError::QueueFull {
                 queue: "submission",
-                fix: "io_queue slot exceeds MegakernelIoQueue::slot_count; enlarge the queue or submit into a valid slot id",
+                fix: out_of_bounds_fix,
             });
         }
-        let current_status = self.read_word(queue_slot, io_word::STATUS)?;
-        if current_status != slot::EMPTY {
+        if self.read_word(queue_slot, io_word::STATUS)? != slot::EMPTY {
             return Err(PipelineError::QueueFull {
                 queue: "submission",
-                fix: "io_queue slot still in flight; wait for completion before submitting a new request",
+                fix: in_flight_fix,
             });
         }
         self.write_word_unfenced(queue_slot, io_word::OP_TYPE, io_op::READ)?;

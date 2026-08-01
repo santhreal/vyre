@@ -228,7 +228,10 @@ impl MixedWorkProtocolEvidence {
     /// Return true when scan, graph, parser, and flow classes are all present.
     #[must_use]
     pub const fn covers_scan_graph_parser_flow(self) -> bool {
-        self.scan_units != 0 && self.graph_units != 0 && self.parser_units != 0 && self.flow_units != 0
+        self.scan_units != 0
+            && self.graph_units != 0
+            && self.parser_units != 0
+            && self.flow_units != 0
     }
 
     /// Return true when evidence is complete enough for release benches.
@@ -247,10 +250,14 @@ impl MixedWorkProtocolEvidence {
 #[non_exhaustive]
 pub enum MixedWorkProtocolError {
     /// The plan has no resident work.
-    #[error("mixed-work plan is empty. Fix: publish at least one resident work unit before scheduling.")]
+    #[error(
+        "mixed-work plan is empty. Fix: publish at least one resident work unit before scheduling."
+    )]
     EmptyPlan,
     /// The total drain budget is zero.
-    #[error("mixed-work drain watchdog budget is zero. Fix: provide a positive resident drain budget.")]
+    #[error(
+        "mixed-work drain watchdog budget is zero. Fix: provide a positive resident drain budget."
+    )]
     ZeroDrainWatchdogBudget,
     /// A unit has no watchdog budget.
     #[error("mixed-work unit {sequence} has zero watchdog budget. Fix: assign a positive per-unit watchdog budget.")]
@@ -283,13 +290,17 @@ pub enum MixedWorkProtocolError {
         unit_type: &'static str,
     },
     /// Unit count cannot fit the evidence ABI.
-    #[error("mixed-work unit count {unit_count} overflows u32 evidence. Fix: shard the resident batch.")]
+    #[error(
+        "mixed-work unit count {unit_count} overflows u32 evidence. Fix: shard the resident batch."
+    )]
     UnitCountOverflow {
         /// Unit count that exceeded the evidence ABI.
         unit_count: usize,
     },
     /// Class-specific count cannot fit the evidence ABI.
-    #[error("mixed-work {queue_class} unit count overflowed u32 evidence. Fix: shard that queue class.")]
+    #[error(
+        "mixed-work {queue_class} unit count overflowed u32 evidence. Fix: shard that queue class."
+    )]
     ClassCountOverflow {
         /// Queue class whose count overflowed.
         queue_class: &'static str,
@@ -417,12 +428,27 @@ const fn unit_type_matches_queue(
         (MixedWorkQueueClass::Scan, MixedWorkUnitType::ScanChunk)
             | (MixedWorkQueueClass::Scan, MixedWorkUnitType::ScanVerifier)
             | (MixedWorkQueueClass::Graph, MixedWorkUnitType::GraphFrontier)
-            | (MixedWorkQueueClass::Graph, MixedWorkUnitType::GraphCompaction)
+            | (
+                MixedWorkQueueClass::Graph,
+                MixedWorkUnitType::GraphCompaction
+            )
             | (MixedWorkQueueClass::Parser, MixedWorkUnitType::ParserShard)
-            | (MixedWorkQueueClass::Parser, MixedWorkUnitType::ParserChangedRange)
-            | (MixedWorkQueueClass::Flow, MixedWorkUnitType::FlowRelationDelta)
-            | (MixedWorkQueueClass::Flow, MixedWorkUnitType::FlowFixpointStep)
-            | (MixedWorkQueueClass::Control, MixedWorkUnitType::DrainSentinel)
+            | (
+                MixedWorkQueueClass::Parser,
+                MixedWorkUnitType::ParserChangedRange
+            )
+            | (
+                MixedWorkQueueClass::Flow,
+                MixedWorkUnitType::FlowRelationDelta
+            )
+            | (
+                MixedWorkQueueClass::Flow,
+                MixedWorkUnitType::FlowFixpointStep
+            )
+            | (
+                MixedWorkQueueClass::Control,
+                MixedWorkUnitType::DrainSentinel
+            )
     )
 }
 
@@ -437,11 +463,12 @@ fn bump_class_count(
         MixedWorkQueueClass::Flow => 3,
         MixedWorkQueueClass::Control => 4,
     };
-    counts[index] = counts[index]
-        .checked_add(1)
-        .ok_or(MixedWorkProtocolError::ClassCountOverflow {
-            queue_class: queue_class.as_str(),
-        })?;
+    counts[index] =
+        counts[index]
+            .checked_add(1)
+            .ok_or(MixedWorkProtocolError::ClassCountOverflow {
+                queue_class: queue_class.as_str(),
+            })?;
     Ok(())
 }
 
@@ -467,8 +494,8 @@ fn fnv_mix(mut digest: u64, value: u64) -> u64 {
 mod tests {
     use super::{
         mixed_work_protocol_evidence, validate_mixed_work_protocol, MixedWorkProtocolError,
-        MixedWorkProtocolPlan, MixedWorkQueueClass, MixedWorkUnit, MixedWorkUnitType,
-        OutputSlabId, ResidentArtifactId, MIXED_WORK_PROTOCOL_SCHEMA_VERSION,
+        MixedWorkProtocolPlan, MixedWorkQueueClass, MixedWorkUnit, MixedWorkUnitType, OutputSlabId,
+        ResidentArtifactId, MIXED_WORK_PROTOCOL_SCHEMA_VERSION,
     };
 
     fn unit(
@@ -491,10 +518,26 @@ mod tests {
     fn mixed_scan_graph_parser_flow_work_emits_deterministic_bounded_drain_evidence() {
         let units = [
             unit(1, MixedWorkQueueClass::Scan, MixedWorkUnitType::ScanChunk),
-            unit(2, MixedWorkQueueClass::Graph, MixedWorkUnitType::GraphFrontier),
-            unit(3, MixedWorkQueueClass::Parser, MixedWorkUnitType::ParserShard),
-            unit(4, MixedWorkQueueClass::Flow, MixedWorkUnitType::FlowRelationDelta),
-            unit(5, MixedWorkQueueClass::Control, MixedWorkUnitType::DrainSentinel),
+            unit(
+                2,
+                MixedWorkQueueClass::Graph,
+                MixedWorkUnitType::GraphFrontier,
+            ),
+            unit(
+                3,
+                MixedWorkQueueClass::Parser,
+                MixedWorkUnitType::ParserShard,
+            ),
+            unit(
+                4,
+                MixedWorkQueueClass::Flow,
+                MixedWorkUnitType::FlowRelationDelta,
+            ),
+            unit(
+                5,
+                MixedWorkQueueClass::Control,
+                MixedWorkUnitType::DrainSentinel,
+            ),
         ];
         let plan = MixedWorkProtocolPlan::new(&units, 64);
 
@@ -561,7 +604,11 @@ mod tests {
     fn drain_budget_must_bound_all_units() {
         let units = [
             unit(1, MixedWorkQueueClass::Scan, MixedWorkUnitType::ScanChunk),
-            unit(2, MixedWorkQueueClass::Flow, MixedWorkUnitType::FlowRelationDelta),
+            unit(
+                2,
+                MixedWorkQueueClass::Flow,
+                MixedWorkUnitType::FlowRelationDelta,
+            ),
         ];
         let plan = MixedWorkProtocolPlan::new(&units, 19);
 

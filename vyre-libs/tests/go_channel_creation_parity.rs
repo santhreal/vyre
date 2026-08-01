@@ -60,14 +60,23 @@ fn run(
         ],
     )
     .expect("go_extract_channel_creations must execute under reference_eval");
-    (unpack(&outputs[0].to_bytes()), unpack(&outputs[1].to_bytes()))
+    (
+        unpack(&outputs[0].to_bytes()),
+        unpack(&outputs[1].to_bytes()),
+    )
 }
 
 #[test]
 fn make_chan_is_recorded_as_a_channel_creation_span() {
     // `make(chan int)`: make(0,4) ((4,1) chan(5,4) int(10,3) )(13,1).
     let source = b"make(chan int)";
-    let tok_types = [TOK_IDENTIFIER, TOK_LPAREN, TOK_IDENTIFIER, TOK_IDENTIFIER, TOK_LPAREN];
+    let tok_types = [
+        TOK_IDENTIFIER,
+        TOK_LPAREN,
+        TOK_IDENTIFIER,
+        TOK_IDENTIFIER,
+        TOK_LPAREN,
+    ];
     let tok_starts = [0u32, 4, 5, 10, 13];
     let tok_lens = [4u32, 1, 4, 3, 1];
 

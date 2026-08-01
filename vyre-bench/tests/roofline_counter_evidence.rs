@@ -1,7 +1,6 @@
 //! Roofline counter evidence test suite.
 
-const ROOFLINE: &str =
-    include_str!("../../docs/optimization/ROOFLINE_COUNTER_EVIDENCE.toml");
+const ROOFLINE: &str = include_str!("../../docs/optimization/ROOFLINE_COUNTER_EVIDENCE.toml");
 
 #[test]
 fn roofline_counter_evidence_records_intensity_counters_bounds_and_route_explanations() {

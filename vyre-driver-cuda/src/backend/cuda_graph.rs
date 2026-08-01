@@ -80,22 +80,12 @@ fn cuda_graph_usize_to_u64(value: usize, label: &'static str) -> Result<u64, Bac
     CUDA_NUMERIC.usize_to_u64(value, label)
 }
 
-fn cuda_graph_sample_input<'a>(
-    sample_inputs: &'a [&[u8]],
-    input_index: usize,
-    binding_name: &str,
-    context: &'static str,
-) -> Result<&'a [u8], BackendError> {
-    sample_inputs
-        .get(input_index)
-        .copied()
-        .ok_or_else(|| BackendError::InvalidProgram {
-            fix: format!(
-                "Fix: CUDA graph capture {context} expected sample input index {input_index} for `{binding_name}` but only {} sample input(s) were supplied. Rebuild the binding plan or validate graph sample inputs before recording.",
-                sample_inputs.len()
-            ),
-        })
-}
+super::define_required_input!(
+    cuda_graph_sample_input,
+    "CUDA graph capture",
+    "sample input",
+    "Rebuild the binding plan or validate graph sample inputs before recording."
+);
 
 /// CUDA driver constant: stream-capture-mode thread-local. Only the calling
 /// thread's cuda calls are forbidden during capture (alloc-class operations
@@ -948,9 +938,9 @@ impl CudaBackend {
         sample_inputs: &[&[u8]],
         config: &DispatchConfig,
     ) -> Result<CachedCudaGraph, BackendError> {
-        if config.cooperative {
+        if config.cooperative || vyre_driver::grid_sync::contains_grid_sync(program) {
             return Err(BackendError::UnsupportedFeature {
-                name: "cuda_graph_cooperative_capture (regular CUDA graph capture records cuLaunchKernel, not cuLaunchCooperativeKernel)"
+                name: "cuda_graph_cooperative_capture (regular CUDA graph capture records cuLaunchKernel, not cuLaunchCooperativeKernel, so a grid-sync kernel would replay non-cooperatively and without the per-launch _vyre_grid_barrier reset)"
                     .to_string(),
                 backend: crate::CUDA_BACKEND_ID.to_string(),
             });

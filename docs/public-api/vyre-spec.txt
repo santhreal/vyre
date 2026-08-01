@@ -1,5 +1,6 @@
 pub const ALL: [Self; 7] = [
 pub const EXTENSION_RANGE_MASK: u32 = 0x8000_0000;
+pub const WORLD: Self = Self(0);
 pub const fn as_str(self) -> &'static str {
 pub const fn as_u32(self) -> u32 {
 pub const fn bit_width(&self) -> Option<usize> {
@@ -12,8 +13,8 @@ pub const fn element_size(&self) -> Option<usize> {
 pub const fn from_name(name: &str) -> Self {
 pub const fn from_u32(value: u32) -> Option<Self> {
 pub const fn hardware(&self) -> &'static str {
-pub const fn identity(self) -> u32 {
 pub const fn id(&self) -> &'static str {
+pub const fn identity(self) -> u32 {
 pub const fn is_bitwise(self) -> bool {
 pub const fn is_extension(self) -> bool {
 pub const fn is_float_family(&self) -> bool {
@@ -29,7 +30,6 @@ pub const fn none() -> Self {
 pub const fn ordinal(&self) -> u8 {
 pub const fn size_bytes(&self) -> Option<usize> {
 pub const fn with_contract(
-pub const WORLD: Self = Self(0);
 pub enum AlgebraicLaw {
 pub enum AtomicOp {
 pub enum BinOp {
@@ -78,8 +78,8 @@ pub fn iter() -> impl Iterator<Item = Self> {
 pub fn law_catalog() -> &'static [&'static str] {
 pub fn min_input_bytes(&self) -> usize {
 pub fn missing_backends<'a>(
-pub fn named(id: impl Into<BackendId>, name: impl Into<Arc<str>>) -> Self {
 pub fn name(&self) -> &str {
+pub fn named(id: impl Into<BackendId>, name: impl Into<Arc<str>>) -> Self {
 pub fn new(backend: impl Into<BackendId>, name: &'static str) -> Self {
 pub fn new(id: impl Into<BackendId>) -> Self {
 pub fn new(name: impl Into<Arc<str>>) -> Self {
@@ -145,9 +145,9 @@ pub struct IntrinsicLowering {
 pub struct IntrinsicTable {
 pub struct Invariant {
 pub struct KatVector {
-pub struct OperationContract {
 pub struct OpMetadata {
 pub struct OpSignature {
+pub struct OperationContract {
 pub struct SignatureParam {
 pub struct TestDescriptor {
 pub struct TypeId(pub u32);

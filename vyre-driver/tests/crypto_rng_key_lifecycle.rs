@@ -1,7 +1,6 @@
 //! Crypto rng key lifecycle test suite.
 
-const LIFECYCLE: &str =
-    include_str!("../../docs/optimization/CRYPTO_RNG_KEY_LIFECYCLE.toml");
+const LIFECYCLE: &str = include_str!("../../docs/optimization/CRYPTO_RNG_KEY_LIFECYCLE.toml");
 
 #[test]
 fn crypto_rng_key_lifecycle_records_algorithm_strength_rng_nonce_rotation_and_destruction() {

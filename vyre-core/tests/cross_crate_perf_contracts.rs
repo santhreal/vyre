@@ -41,9 +41,8 @@ fn vyrec_links_gpu_backends_for_frontend_dispatch() {
 #[test]
 fn frontend_c_backend_acquisition_fails_loudly_without_cpu_fallback() {
     let root = vyre_workspace_root();
-    let backend_acquire = read(
-        root.join("vyre-frontend-c/src/pipeline/backend_select/backend_acquire.rs"),
-    );
+    let backend_acquire =
+        read(root.join("vyre-frontend-c/src/pipeline/backend_select/backend_acquire.rs"));
     assert!(
         backend_acquire.contains("CUDA-first acquisition failed")
             && backend_acquire.contains("secondary WGPU GPU backend acquisition failed"),
@@ -60,9 +59,7 @@ fn frontend_c_backend_acquisition_fails_loudly_without_cpu_fallback() {
 #[test]
 fn frontend_c_sparse_lexer_keeps_fused_megakernel_path() {
     let root = vyre_workspace_root();
-    let sparse_lexer = read(root.join(
-        "vyre-frontend-c/src/pipeline/sparse_lexer_megakernel.rs",
-    ));
+    let sparse_lexer = read(root.join("vyre-frontend-c/src/pipeline/sparse_lexer_megakernel.rs"));
     assert!(
         sparse_lexer.contains("fuse_programs(&[sparse, scan, compact])"),
         "Fix: sparse lexer must keep sparse+scan+compact fused before dispatch; separate dispatches regress frontend throughput."
@@ -77,4 +74,3 @@ fn read(path: impl AsRef<Path>) -> String {
         )
     })
 }
-

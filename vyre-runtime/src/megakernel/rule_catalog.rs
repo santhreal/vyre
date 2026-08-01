@@ -430,9 +430,7 @@ pub fn pack_rule_catalog_into(
                 class_map_base,
                 num_classes,
             };
-            scratch
-                .unique_storage
-                .insert(storage_fingerprint, layout);
+            scratch.unique_storage.insert(storage_fingerprint, layout);
             layout
         };
         scratch.rule_meta[meta_index] = RuleMeta {
@@ -546,7 +544,7 @@ pub fn compress_dense_transitions_into(
 /// Pack a byte-class-compressed `state_count * num_classes` transition table
 /// (from [`compress_dense_transitions_into`]) into u16 targets stored two per
 /// u32 word: the LOW half holds the even flat index, the HIGH half the odd
-/// index. Halves the device transition footprint and bytes-per-transaction 
+/// index. Halves the device transition footprint and bytes-per-transaction
 /// the lever the large-catalog-scale L1 working-set analysis identified as the one that
 /// directly narrows each transition read (`docs/GPU_OOM_SEGMENTATION.md`; row
 /// deduplication was measured and refuted there).
@@ -722,7 +720,12 @@ mod tests {
     /// Resolve the next state the COMPRESSED packed catalog yields for
     /// `(rule, state, byte)`: mirrors the GPU kernel's index math exactly so
     /// the parity tests can prove byte-for-byte equivalence to the dense table.
-    fn packed_next_state(packed: &PackedRuleCatalog, meta_index: usize, state: u32, byte: u8) -> u32 {
+    fn packed_next_state(
+        packed: &PackedRuleCatalog,
+        meta_index: usize,
+        state: u32,
+        byte: u8,
+    ) -> u32 {
         let meta = packed.rule_meta[meta_index];
         let class = packed.class_maps[meta.class_map_base as usize + byte as usize];
         let idx = meta.transition_base as usize
@@ -749,7 +752,10 @@ mod tests {
             packed.rule_meta[0].class_map_base,
             packed.rule_meta[1].class_map_base
         );
-        assert_eq!(packed.rule_meta[0].num_classes, packed.rule_meta[1].num_classes);
+        assert_eq!(
+            packed.rule_meta[0].num_classes,
+            packed.rule_meta[1].num_classes
+        );
         // An all-zero 1-state DFA collapses to a SINGLE byte class (every byte
         // self-loops to state 0), so its compressed row is exactly one word, not
         // 256. transition_base points just past the 1-word inert row.
@@ -825,10 +831,14 @@ mod tests {
 
         assert!(packed.rejected_rules.is_empty());
         // Both rules must share storage.
-        assert_eq!(packed.rule_meta[0].transition_base, packed.rule_meta[1].transition_base,
-            "Fix: duplicate DFAs must share transition storage");
-        assert_eq!(packed.rule_meta[0].accept_base, packed.rule_meta[1].accept_base,
-            "Fix: duplicate DFAs must share accept storage");
+        assert_eq!(
+            packed.rule_meta[0].transition_base, packed.rule_meta[1].transition_base,
+            "Fix: duplicate DFAs must share transition storage"
+        );
+        assert_eq!(
+            packed.rule_meta[0].accept_base, packed.rule_meta[1].accept_base,
+            "Fix: duplicate DFAs must share accept storage"
+        );
 
         // Critical: verify BOTH meta indices yield the correct DFA output for
         // every (state, byte), structural field sharing is necessary but not

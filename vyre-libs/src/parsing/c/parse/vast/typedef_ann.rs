@@ -30,10 +30,10 @@ pub use annotate::{
 };
 pub use annotation_helpers::c11_precompute_vast_decl_prefix_starts;
 pub use decl_contexts::c11_precompute_vast_decl_contexts;
+pub use global_fast::c11_annotate_global_typedef_names_fast;
 pub use precomputed_visible_type::{
     c11_precompute_vast_visible_type, c11_precompute_vast_visible_type_packed_haystack,
 };
-pub use global_fast::c11_annotate_global_typedef_names_fast;
 pub use prehash::{c11_prehash_vast_identifiers, c11_prehash_vast_identifiers_packed_haystack};
 pub use scopes::{c11_precompute_vast_scopes, c11_precompute_vast_scopes_uses_global_stack};
 pub use symbol_links::c11_link_vast_typedef_symbols;

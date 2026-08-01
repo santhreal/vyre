@@ -1,4 +1,4 @@
-//! `cargo_full run --bin xtask -- catalog`  -  generate subsystem-by-subsystem markdown
+//! `cargo xtask catalog`  -  generate subsystem-by-subsystem markdown
 //! tables of every registered op with its tier, exemption status,
 //! fixpoint contract, and declared witness presence.
 //!
@@ -46,9 +46,53 @@ pub(crate) fn run(args: &[String]) {
     }
 }
 
+/// Resolve `docs/catalog` from the repository root.
+///
+/// The root is found by walking up from the current directory, then from the
+/// directory this binary was compiled in, looking for a workspace manifest
+/// that sits beside a `docs` directory. Reading `CARGO_MANIFEST_DIR` from the
+/// environment at run time is wrong here: the variable is set by `cargo run`
+/// and unset when the built binary is invoked directly, so the old default of
+/// `.` silently produced `./../docs/catalog` and reported every catalog file
+/// as missing. A path this command both writes and diffs has to fail loudly
+/// when it cannot be located rather than confidently check the wrong place.
 fn default_out_dir() -> PathBuf {
-    let manifest = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".to_string());
-    PathBuf::from(manifest).join("../docs/catalog")
+    let mut starts = Vec::new();
+    if let Ok(cwd) = std::env::current_dir() {
+        starts.push(cwd);
+    }
+    starts.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")));
+
+    for start in &starts {
+        if let Some(root) = find_workspace_root(start) {
+            return root.join("docs/catalog");
+        }
+    }
+
+    eprintln!(
+        "Fix: cannot find the vyre repository root from {}. Run this command from inside a checkout, or pass `--out <dir>` with the catalog directory.",
+        starts
+            .iter()
+            .map(|path| path.display().to_string())
+            .collect::<Vec<_>>()
+            .join(" or ")
+    );
+    std::process::exit(1);
+}
+
+/// Walk up from `start` to the first directory holding a workspace manifest
+/// next to a `docs` directory.
+fn find_workspace_root(start: &Path) -> Option<PathBuf> {
+    for candidate in start.ancestors() {
+        let manifest = candidate.join("Cargo.toml");
+        if !candidate.join("docs").is_dir() || !manifest.is_file() {
+            continue;
+        }
+        if read_text_bounded(&manifest).is_ok_and(|text| text.contains("[workspace]")) {
+            return Some(candidate.to_path_buf());
+        }
+    }
+    None
 }
 
 struct OpRow {
@@ -188,6 +232,13 @@ fn emit_to_disk(catalog: &BTreeMap<String, Vec<OpRow>>, out_dir: &std::path::Pat
         eprintln!("Fix: failed to write {}: {error}", index_path.display());
         std::process::exit(1);
     });
+    for orphan in stale_catalog_files(catalog, out_dir) {
+        fs::remove_file(&orphan).unwrap_or_else(|error| {
+            eprintln!("Fix: failed to remove stale {}: {error}", orphan.display());
+            std::process::exit(1);
+        });
+        println!("removed stale catalog {}", orphan.display());
+    }
     println!(
         "wrote {} subsystem catalogs to {}",
         catalog.len(),
@@ -216,6 +267,12 @@ fn check_against_disk(catalog: &BTreeMap<String, Vec<OpRow>>, out_dir: &std::pat
         )),
         Err(_) => drift.push(format!("{} missing on disk", index_path.display())),
     }
+    for orphan in stale_catalog_files(catalog, out_dir) {
+        drift.push(format!(
+            "{} is on disk but no subsystem registers it",
+            orphan.display()
+        ));
+    }
     if drift.is_empty() {
         println!(
             "catalog matches live inventory ({} subsystems)",
@@ -231,6 +288,32 @@ fn check_against_disk(catalog: &BTreeMap<String, Vec<OpRow>>, out_dir: &std::pat
         );
         std::process::exit(1);
     }
+}
+
+/// Catalog files on disk that the live inventory no longer produces.
+///
+/// A subsystem that loses its last op, or whose ops move to a different
+/// subsystem, leaves its page behind. Without this the page keeps advertising
+/// op ids that no longer resolve, and `--check` still reports a match, so the
+/// stale page is invisible to every gate that trusts the check.
+fn stale_catalog_files(catalog: &BTreeMap<String, Vec<OpRow>>, out_dir: &Path) -> Vec<PathBuf> {
+    let Ok(entries) = fs::read_dir(out_dir) else {
+        return Vec::new();
+    };
+    let mut stale: Vec<PathBuf> = entries
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| path.extension().is_some_and(|ext| ext == "md"))
+        .filter(
+            |path| match path.file_stem().and_then(|stem| stem.to_str()) {
+                Some("README") => false,
+                Some(stem) => !catalog.contains_key(stem),
+                None => false,
+            },
+        )
+        .collect();
+    stale.sort();
+    stale
 }
 
 fn render_index(catalog: &BTreeMap<String, Vec<OpRow>>) -> String {

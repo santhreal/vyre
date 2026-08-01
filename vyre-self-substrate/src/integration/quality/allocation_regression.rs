@@ -1,4 +1,5 @@
 //! Hot-loop allocation regression validation.
+use crate::integration::require_text_evidence;
 
 /// One hot-loop allocation sample.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -178,91 +179,87 @@ pub fn validate_allocation_regression_artifacts(
         return Err(AllocationRegressionError::EmptySamples);
     }
     for artifact in cuda_benchmark_artifacts {
-        for (evidence, needle) in [
-            ("CUDA backend benchmark", "\"selected_backend\": \"cuda\""),
-            ("RTX benchmark hardware", "NVIDIA GeForce RTX 5090"),
-            ("allocation byte metrics", "\"alloc_bytes\""),
-            ("allocation count metrics", "\"alloc_count\""),
-            ("benchmark samples", "\"samples\""),
-            ("passing benchmark status", "\"status\": \"pass\""),
-            ("source fingerprint", "\"source_fingerprint\""),
-        ] {
-            artifact_contains(artifact, evidence, needle)?;
-        }
+        require_text_evidence(
+            artifact,
+            &[
+                ("CUDA backend benchmark", "\"selected_backend\": \"cuda\""),
+                ("RTX benchmark hardware", "NVIDIA GeForce RTX 5090"),
+                ("allocation byte metrics", "\"alloc_bytes\""),
+                ("allocation count metrics", "\"alloc_count\""),
+                ("benchmark samples", "\"samples\""),
+                ("passing benchmark status", "\"status\": \"pass\""),
+                ("source fingerprint", "\"source_fingerprint\""),
+            ],
+            |evidence| AllocationRegressionError::ArtifactMissingEvidence { evidence },
+        )?;
     }
 
-    for (evidence, needle) in [
-        (
-            "resident CSR queue API test",
-            "cuda_resident_csr_queue_api_reuses_graph_and_scratch",
-        ),
-        ("caller-owned scratch", "ResidentCsrQueueScratch::default"),
-        ("caller-owned output capacity", "Vec::with_capacity"),
-        (
-            "output capacity preserved",
-            "preserve caller-owned output capacity",
-        ),
-        ("scratch resident slot reuse", "resident_query_slots"),
-        (
-            "frontier payload capacity reuse",
-            "frontier_payload_capacity",
-        ),
-        ("compact readback assertion", "compact readback"),
-        (
-            "graph resident reuse assertion",
-            "keep CSR graph state resident",
-        ),
-    ] {
-        artifact_contains(cuda_csr_source, evidence, needle)?;
-    }
+    require_text_evidence(
+        cuda_csr_source,
+        &[
+            (
+                "resident CSR queue API test",
+                "cuda_resident_csr_queue_api_reuses_graph_and_scratch",
+            ),
+            ("caller-owned scratch", "ResidentCsrQueueScratch::default"),
+            ("caller-owned output capacity", "Vec::with_capacity"),
+            (
+                "output capacity preserved",
+                "preserve caller-owned output capacity",
+            ),
+            ("scratch resident slot reuse", "resident_query_slots"),
+            (
+                "frontier payload capacity reuse",
+                "frontier_payload_capacity",
+            ),
+            ("compact readback assertion", "compact readback"),
+            (
+                "graph resident reuse assertion",
+                "keep CSR graph state resident",
+            ),
+        ],
+        |evidence| AllocationRegressionError::ArtifactMissingEvidence { evidence },
+    )?;
 
-    for (evidence, needle) in [
-        (
-            "rule catalog scratch test",
-            "pack_rule_catalog_into_reuses_caller_storage",
-        ),
-        ("rule meta pointer stability", "rule_meta.as_ptr()"),
-        ("transition pointer stability", "transitions.as_ptr()"),
-        ("accept pointer stability", "accept.as_ptr()"),
-        ("rejection pointer stability", "rejected_rules.as_ptr()"),
-        ("repeated packing success", "repeated packing must succeed"),
-    ] {
-        artifact_contains(runtime_scratch_source, evidence, needle)?;
-    }
+    require_text_evidence(
+        runtime_scratch_source,
+        &[
+            (
+                "rule catalog scratch test",
+                "pack_rule_catalog_into_reuses_caller_storage",
+            ),
+            ("rule meta pointer stability", "rule_meta.as_ptr()"),
+            ("transition pointer stability", "transitions.as_ptr()"),
+            ("accept pointer stability", "accept.as_ptr()"),
+            ("rejection pointer stability", "rejected_rules.as_ptr()"),
+            ("repeated packing success", "repeated packing must succeed"),
+        ],
+        |evidence| AllocationRegressionError::ArtifactMissingEvidence { evidence },
+    )?;
 
-    for (evidence, needle) in [
-        (
-            "allocation bounds test module",
-            "Unbounded allocation rejection",
-        ),
-        ("overflow rejected before allocation", "before allocation"),
-        (
-            "debug log overflow rejection",
-            "try_encode_empty_debug_log_rejects_overflowing_record_capacity",
-        ),
-        (
-            "queue overflow rejection",
-            "u32::MAX io queue must be rejected before allocation",
-        ),
-    ] {
-        artifact_contains(allocation_bounds_source, evidence, needle)?;
-    }
+    require_text_evidence(
+        allocation_bounds_source,
+        &[
+            (
+                "allocation bounds test module",
+                "Unbounded allocation rejection",
+            ),
+            ("overflow rejected before allocation", "before allocation"),
+            (
+                "debug log overflow rejection",
+                "try_encode_empty_debug_log_rejects_overflowing_record_capacity",
+            ),
+            (
+                "queue overflow rejection",
+                "u32::MAX io queue must be rejected before allocation",
+            ),
+        ],
+        |evidence| AllocationRegressionError::ArtifactMissingEvidence { evidence },
+    )?;
 
     Ok(AllocationRegressionArtifactProof {
         cuda_artifact_count: cuda_benchmark_artifacts.len(),
     })
-}
-
-fn artifact_contains(
-    artifact: &str,
-    evidence: &'static str,
-    needle: &str,
-) -> Result<(), AllocationRegressionError> {
-    if artifact.contains(needle) {
-        Ok(())
-    } else {
-        Err(AllocationRegressionError::ArtifactMissingEvidence { evidence })
-    }
 }
 
 #[cfg(test)]

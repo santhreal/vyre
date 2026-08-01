@@ -3,8 +3,7 @@
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use crate::hardware::pack_u32;
-use crate::hardware::MAP_WORKGROUP;
+use crate::hardware::{packed_u32_input_with_output, MAP_WORKGROUP};
 
 /// Build a Program whose per-lane output is the sum of all active subgroup
 /// lanes.
@@ -71,9 +70,7 @@ fn cpu_ref(values: &[u32]) -> Vec<u8> {
 }
 
 fn test_inputs() -> Vec<Vec<Vec<u8>>> {
-    let values = vec![1u32, 2, 3, 4];
-    let len = values.len() * 4;
-    vec![vec![pack_u32(&values), vec![0u8; len]]]
+    packed_u32_input_with_output(&[1, 2, 3, 4])
 }
 
 fn expected_output() -> Vec<Vec<Vec<u8>>> {
@@ -100,7 +97,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::hardware::{lcg_u32, run_program};
+    use crate::hardware::{lcg_u32, pack_u32, run_program};
 
     fn assert_case(values: &[u32]) {
         let n = values.len() as u32;
@@ -112,14 +109,17 @@ mod tests {
         assert_eq!(outputs, vec![cpu_ref(values)]);
     }
 
+    /// This boundary test proves a one-lane subgroup broadcasts its only value unchanged.
     #[test]
     fn one_element() {
         assert_case(&[42]);
     }
+    /// This overflow-edge test preserves wrapping subgroup addition for the maximum u32 value.
     #[test]
     fn max_value() {
         assert_case(&[u32::MAX]);
     }
+    /// This deterministic multi-subgroup test locks out cross-subgroup accumulation.
     #[test]
     fn random_sixty_four() {
         assert_case(&lcg_u32(0xC100_0033, 64));

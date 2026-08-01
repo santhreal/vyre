@@ -3,6 +3,9 @@ use crate::api::case::BenchError;
 pub(crate) use vyre_primitives::wire::pack_f32_slice as f32_bytes;
 
 pub(crate) use vyre_primitives::wire::pack_u32_slice as u32_bytes;
+pub(crate) fn u32_input_bytes<const N: usize>(inputs: [&[u32]; N]) -> Vec<Vec<u8>> {
+    inputs.into_iter().map(u32_bytes).collect()
+}
 
 pub(crate) fn decode_u64_words(bytes: &[u8], context: &str) -> Result<Vec<u64>, BenchError> {
     if bytes.len() % 8 != 0 {

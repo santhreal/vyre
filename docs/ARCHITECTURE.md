@@ -38,7 +38,7 @@ by composing another registered op, the resulting Region populates
   carries the chain through to readback via a side-channel
   `flat_node_index → region_path` map on the Program.
 - Backends emit the region path as shader comments: WGSL via
-  `// vyre-region: …`, SPIR-V via `OpLine`, photonic via tracing.
+  `// vyre-region: …`, SPIR-V via `OpLine`.
 - `cargo xtask print-composition <op_id>` walks the chain and prints
   the decomposition tree from public surface down to hardware
   intrinsic leaves.
@@ -234,12 +234,20 @@ Every commit to main must keep these scripts green:
 
 The full table lives in `vyre-core::ir::validate::V_CODES`. Every variant includes `Fix:`-prefixed remediation prose in the error message and a structured variant for machine readers.
 
-## Wire format (VIR0)
+## Wire format
 
-- Magic: `VIR0` (4 bytes).
-- Version: 1 (u8). Bumps require a migration step in `vyre-core::dialect::migration`.
-- Encoded data: `Program` metadata header + `Node`/`Expr` tree with one-byte discriminant tags.
-- Extension extensibility: `Expr::Opaque`/`Node::Opaque` encode as `(extension_id: u32, bytes: &[u8])`. The decoder uses the extension-id inventory to resolve the payload. Unknown IDs return a typed error whose message names the ID so the consumer can install an extension crate and re-decode.
+- Magic: `VYRE` (4 bytes).
+- Version: `5` (`u16`, little-endian). Bumps require a migration step in
+  `vyre-foundation::wire`.
+- Flags: `4` (`u16`, little-endian).
+- Digest: 32 bytes, BLAKE3 over the body that follows the header.
+- Encoded body: `Program` metadata followed by the `Node`/`Expr` tree with
+  one-byte discriminant tags.
+- Extension extensibility: `Expr::Opaque`/`Node::Opaque` encode as
+  `(extension_id: u32, bytes: &[u8])`. The decoder uses the extension-id
+  inventory to resolve the payload. An unknown id returns a typed error whose
+  message names the id, so you can install the extension crate and decode
+  again.
 
 Full spec: [`wire-format.md`](wire-format.md).
 
@@ -249,7 +257,58 @@ Detailed in [`memory-model.md`](memory-model.md). One-line summary: **invocation
 
 ## Targets
 
-Detailed in [`targets.md`](targets.md). Current dispatch-capable path:
-`wgpu` (Vulkan / DX12 / Metal / WebGPU via naga). Other backend crates
-must state whether they are dispatch-capable, emission-only, or
-registry-contract targets.
+Detailed in [`targets.md`](targets.md). Two backends dispatch today: `cuda`
+(the release path, verified on NVIDIA hardware) and `wgpu` (portable, via
+Vulkan, DX12, Metal, or WebGPU through naga). Every other backend crate states
+whether it is dispatch-capable, emission-only, or a registry-contract target.
+To see which backends are linked into your build, call
+`vyre::backend::registered_backends()`.
+
+## Ownership boundaries
+
+The layering above is one-way. Domain logic builds `Program` values, foundation
+crates preserve canonical identity, lowering converts programs into
+backend-neutral descriptors, emitters produce target artifacts, and drivers
+execute against concrete devices. Nothing flows back up.
+
+- `vyre-core` exposes the public facade and the stable composition contracts.
+- `vyre-foundation` owns canonical IR storage, wire bytes, fingerprints,
+  validation metadata, optimization facts, and scheduler contracts.
+- `vyre-lower` owns backend-neutral lowering from `Program` to descriptors.
+- `vyre-emit-*` crates own target artifact generation and target capability
+  diagnostics.
+- `vyre-driver` owns backend-neutral lifecycle, binding, specialization,
+  residency, graph capture, validation, and evidence schemas.
+- Backend crates own target-specific device acquisition, pipeline caching,
+  dispatch, resident resources, synchronization, and metrics.
+- `vyre-runtime` owns persistent megakernel protocol semantics. Drivers adapt
+  buffers and launches, but they do not duplicate runtime protocol decoding.
+
+## Modularity rules
+
+- One primitive, one schema, one parser, one planner, one constant source.
+- Public APIs are facades. Implementation ownership lives in the narrowest
+  crate that can serve every caller.
+- A compatibility alias must have a canonical owner, a canonical path, and a
+  removal condition, all recorded in one registry.
+- Cross-backend behavior passes through the shared ABI, binding, result
+  compaction, validation, capability, and evidence schemas.
+
+## Evidence rules
+
+- Every user-visible claim needs a command, an artifact, a fixture, or a
+  byte-level assertion.
+- Every backend optimization either preserves output bytes or emits a
+  structured unsupported diagnostic before launch.
+- Every performance claim needs source fingerprints, backend ids, device
+  signatures, command provenance, active GPU time where available, transfer
+  bytes, and output digests.
+- Every research primitive needs a production consumer, or an explicit feature
+  boundary enforced by a gate.
+
+## Failure rules
+
+- Fail closed at boundaries.
+- An error message names the contract that was violated and the path to fix it.
+- No hidden fallback may change backend choice, output bytes, resource
+  ownership, or evidence status without showing up in the result schema.

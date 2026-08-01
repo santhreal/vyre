@@ -5,7 +5,7 @@ in vyre-core. Codes are **append-only**: renames are semver-major events
 handled as migrations in `vyre-core::dialect::migration`. Every new code
 must appear here with a description and a `Fix:` template before it ships.
 
-Every message emitted through [`Diagnostic`](../vyre-core/src/diagnostics.rs)
+Every message emitted through [`Diagnostic`](../vyre-foundation/src/lib.rs)
 carries one of these codes. Tooling (LSP clients, CI annotators, editor
 extensions) keys rules off the code, not the prose; prose is free to drift
 across versions as long as the code stays stable.
@@ -20,20 +20,20 @@ across versions as long as the code stays stable.
 | `B-*`  | error    | Backend dispatch / capability errors        |
 | `C-*`  | error    | Conformance verdict failures                |
 
-## V###  -  Validation codes
+## Validation codes (`V###`)
 
 Emitted by `validate_program` when an IR invariant fails. Fields in every
 message are prefixed `Fix:` per the frozen contract.
 
 | Code | Invariant | Fix template |
 |------|-----------|--------------|
-| `V008` | Duplicate local binding (shadowing) | Choose a unique local name; shadowing is not allowed. |
+| `V008` | Duplicate local binding (shadowing) | Choose a unique local name, or pass `ValidationOptions::with_shadowing(true)` to allow nested shadowing. |
 | `V009` | Atomic on non-writable buffer | Declare the buffer with `BufferAccess::ReadWrite`. |
 | `V010` | Barrier reached by only part of a workgroup (divergent barrier) | Move the barrier to uniform control flow. |
-| `V011` | Assignment to loop variable | Loop variables are immutable  -  rename. |
+| `V011` | Assignment to loop variable | Loop variables are immutable, so rename instead. |
 | `V012` | Unsupported cast between two DataTypes | Use a supported casts.md conversion or rewrite the expression before validation. |
 | `V013` | Bytes load/store on buffer without `bytes_extraction = true` | Use a typed buffer (U32/I32/F32/…), or declare the buffer with `.with_bytes_extraction(true)` when the op is a bytes-extraction op like `decode.base64`. |
-| `V014` | Atomic on buffer with non-u32 element type | Atomics only support U32 elements  -  retype the buffer. |
+| `V014` | Atomic on buffer with non-u32 element type | Atomics only support U32 elements, so retype the buffer. |
 | `V015` | Loop bound expression has wrong type (expected `u32`) | Ensure `from` and `to` are U32. |
 | `V016` | Unknown op id in `Expr::Call` | Use a registered op id or add the op to core::ops::*. |
 | `V017` | Call depth exceeds `DEFAULT_MAX_CALL_DEPTH` | Reduce call nesting or eliminate mutually recursive operations. |
@@ -65,12 +65,13 @@ message are prefixed `Fix:` per the frozen contract.
 | `V052` | Call passes a reference to an undeclared buffer | Declare the buffer in `Program::buffers`. |
 | `V053` | Value passed for a `buffer<T>` parameter | Pass `Expr::buffer_ref(name)` naming the buffer the op should read. |
 | `V054` | Referenced buffer's element type does not match the signature | Pass a buffer whose element type matches `buffer<T>`, or change the op signature. |
+| `V055` | Synchronizing loop exit is unordered against the back edge | Put an unconditional barrier after the early exit, as the final node in the loop body. |
 
-Codes `V024`, `V026`, `V037`-`V040`, `V048`-`V050`, and any codes `>V054`
+Codes `V024`, `V026`, `V037`-`V040`, `V048`-`V050`, and any codes `>V055`
 are reserved slots. Allocate through this registry before emitting a new
 diagnostic.
 
-## E-*  -  General errors
+## General errors (`E-*`)
 
 | Code | Description | Fix template |
 |------|-------------|--------------|
@@ -78,19 +79,19 @@ diagnostic.
 | `E-IR-002` | Buffer zero-count with non-empty shape payload | Reject the non-canonical Program bytes. |
 | `E-IR-003` | Diagnostic catalog carries a code not listed in `docs/error-codes.md` | Add the code to the registry before shipping. |
 
-## W-*  -  Warnings
+## Warnings (`W-*`)
 
 | Code | Description | Fix template |
 |------|-------------|--------------|
 | `W-DEPREC-001` | Deprecated op id in use | Migrate to the replacement op listed in the deprecation registry. |
 
-## B-*  -  Backend codes
+## Backend codes (`B-*`)
 
 | Code | Description | Fix template |
 |------|-------------|--------------|
 | `B-CAP-001` | Backend does not support this op's capability class | Pick a backend that supports this op's capabilities, or use a different op. |
 | `B-CAP-002` | Backend factory refused to construct (no GPU adapter, missing driver) | Fix the adapter issue per the error's `Fix:` prose, or skip this backend. |
-| `B-CAP-003` | Unsupported feature (e.g. dispatch on the photonic contract target) | Use a backend whose `supports_dispatch` returns true. |
+| `B-CAP-003` | Unsupported feature, for example a dispatch request on an emission-only target | Use a backend whose `supports_dispatch` returns true. |
 
 ## Backend ErrorCode stable ids
 
@@ -104,7 +105,7 @@ diagnostic.
 | `InvalidProgram` | 1006 | The submitted program violates backend constraints or the portable program contract. |
 | `Unknown` | 1999 | Legacy or unclassified backend failure produced without a more specific machine-readable code. |
 
-## P-*  -  Pipeline codes (`vyre-runtime::PipelineError`)
+## Pipeline codes (`P-*`, `vyre-runtime::PipelineError`)
 
 | Code | Variant | Description | Fix template |
 |------|---------|-------------|--------------|
@@ -114,7 +115,7 @@ diagnostic.
 | `P-URING-004` | `NvmePassthroughDisabled` | `submit_nvme_passthrough` was called without the `uring-cmd-nvme` feature. | Add `features = ["uring-cmd-nvme"]` to `vyre-runtime` in your `Cargo.toml`; requires Linux 6.0+. |
 | `P-BACKEND-001` | `Backend(msg)` | A backend error bubbled up from `Megakernel::bootstrap` or `Megakernel::dispatch`. | Inspect the wrapped message; usually a validation error on the IR or an OOM during pipeline creation. |
 
-## C-*  -  Conformance codes
+## Conformance codes (`C-*`)
 
 | Code | Description | Fix template |
 |------|-------------|--------------|

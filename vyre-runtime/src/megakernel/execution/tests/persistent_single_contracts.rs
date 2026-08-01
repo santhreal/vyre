@@ -8,7 +8,7 @@ fn persistent_handle_dispatch_never_reenters_host_byte_path() {
         .expect("Fix: persistent-handle backend must bootstrap");
 
     let output = kernel
-        .dispatch_persistent_handles_observed(MegakernelResidentHandles::new(11, 12, 13, 14))
+        .dispatch_persistent_handles_observed(test_resident_handles(11, 12, 13, 14))
         .expect("Fix: persistent-handle dispatch must call the compiled pipeline handle API");
 
     assert_eq!(output.buffers, vec![vec![1, 2, 3, 4]]);
@@ -45,10 +45,7 @@ fn persistent_handle_dispatch_into_reuses_caller_output_storage() {
     let first_slot = outputs[0].as_ptr() as usize;
 
     let stats = kernel
-        .dispatch_persistent_handles_into(
-            MegakernelResidentHandles::new(11, 12, 13, 14),
-            &mut outputs,
-        )
+        .dispatch_persistent_handles_into(test_resident_handles(11, 12, 13, 14), &mut outputs)
         .expect("Fix: persistent-handle dispatch_into must call the compiled pipeline handle API");
 
     assert_eq!(outputs, vec![vec![1, 2, 3, 4]]);
@@ -71,7 +68,7 @@ fn persistent_handle_observed_preallocates_abi_output_shell() {
         .expect("Fix: persistent-handle backend must bootstrap");
 
     let observed = kernel
-        .dispatch_persistent_handles_observed(MegakernelResidentHandles::new(11, 12, 13, 14))
+        .dispatch_persistent_handles_observed(test_resident_handles(11, 12, 13, 14))
         .expect(
             "Fix: observed persistent-handle dispatch must call the compiled pipeline handle API",
         );
@@ -84,4 +81,3 @@ fn persistent_handle_observed_preallocates_abi_output_shell() {
     assert_eq!(observed.stats.output_bytes, 4);
     assert_eq!(observed.stats.output_buffers, 1);
 }
-

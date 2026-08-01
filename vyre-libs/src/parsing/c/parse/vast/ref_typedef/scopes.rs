@@ -110,13 +110,18 @@ pub(super) fn enclosing_for_control_lparen(vast_nodes: &[u32], node_idx: usize) 
     None
 }
 
-pub(super) fn matching_raw_rparen(vast_nodes: &[u32], lparen_idx: usize) -> Option<usize> {
+fn matching_raw_delimiter(
+    vast_nodes: &[u32],
+    open_idx: usize,
+    open_kind: u32,
+    close_kind: u32,
+) -> Option<usize> {
     let node_count = vast_nodes.len() / VAST_NODE_STRIDE_U32 as usize;
     let mut depth = 1u32;
-    for scan_idx in (lparen_idx + 1)..node_count {
+    for scan_idx in (open_idx + 1)..node_count {
         match kind_at(vast_nodes, scan_idx) {
-            TOK_LPAREN => depth = depth.saturating_add(1),
-            TOK_RPAREN => {
+            kind if kind == open_kind => depth = depth.saturating_add(1),
+            kind if kind == close_kind => {
                 if depth == 1 {
                     return Some(scan_idx);
                 }
@@ -128,22 +133,12 @@ pub(super) fn matching_raw_rparen(vast_nodes: &[u32], lparen_idx: usize) -> Opti
     None
 }
 
+pub(super) fn matching_raw_rparen(vast_nodes: &[u32], lparen_idx: usize) -> Option<usize> {
+    matching_raw_delimiter(vast_nodes, lparen_idx, TOK_LPAREN, TOK_RPAREN)
+}
+
 pub(super) fn matching_raw_rbrace(vast_nodes: &[u32], lbrace_idx: usize) -> Option<usize> {
-    let node_count = vast_nodes.len() / VAST_NODE_STRIDE_U32 as usize;
-    let mut depth = 1u32;
-    for scan_idx in (lbrace_idx + 1)..node_count {
-        match kind_at(vast_nodes, scan_idx) {
-            TOK_LBRACE => depth = depth.saturating_add(1),
-            TOK_RBRACE => {
-                if depth == 1 {
-                    return Some(scan_idx);
-                }
-                depth = depth.saturating_sub(1);
-            }
-            _ => {}
-        }
-    }
-    None
+    matching_raw_delimiter(vast_nodes, lbrace_idx, TOK_LBRACE, TOK_RBRACE)
 }
 
 pub(super) fn c99_for_init_statement_assign(

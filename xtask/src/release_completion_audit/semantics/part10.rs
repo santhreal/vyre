@@ -316,7 +316,14 @@ fn inspect_release_workload_matrix_semantics(
         blockers.push(format!("{evidence}: missing workload families array"));
         return;
     };
-    inspect_duplicate_workload_family_ids(evidence, value, blockers);
+    crate::benchmark_evidence_semantics::inspect_duplicate_object_rows(
+        evidence,
+        value,
+        "families",
+        "id",
+        "workload family ids",
+        blockers,
+    );
     let mut required_family_count = 0usize;
     let mut covered_family_count = 0usize;
     let mut matched_release_cases = BTreeSet::new();
@@ -572,22 +579,6 @@ fn inspect_declared_workload_matrix_count(
     }
 }
 
-fn inspect_duplicate_workload_family_ids(
-    evidence: &str,
-    value: &serde_json::Value,
-    blockers: &mut Vec<String>,
-) {
-    let duplicates =
-        crate::benchmark_evidence_semantics::duplicate_nonblank_object_array_field_values(
-            value, "families", "id",
-        );
-    if !duplicates.is_empty() {
-        let duplicates = duplicates.into_iter().collect::<Vec<_>>().join(", ");
-        blockers.push(format!(
-            "{evidence}: duplicate workload family ids: {duplicates}"
-        ));
-    }
-}
 
 fn inspect_duplicate_array_values(
     evidence: &str,

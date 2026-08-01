@@ -10,15 +10,17 @@ Vyre is a Rust GPU compute stack for workloads that usually get pulled back to
 the CPU: parsing, graph traversal, fixed-point dataflow, and rule-based
 reasoning workloads.
 
-The core IR, contracts, CPU reference path, CUDA path, WGPU path, PTX emitter,
-conformance system, and shared primitives are active. Some frontends and future
-backends remain beta or planned. That status split is intentionally explicit so
-contributors can decide what to use in production today.
+The core IR, contracts, CPU reference path, CUDA path, WGPU path, Metal path,
+PTX emitter, conformance system, and shared primitives are active. Some
+frontends remain beta. That status split is deliberately explicit, so you can
+decide what to depend on today.
 
-For `0.7.0`, the release semantic unit is `vyre::Program`: programs are built as
-IR, validated against frozen specs, checked through the CPU reference oracle, and
-then parity-checked against GPU backends. CUDA is the release path on NVIDIA
-systems; WGPU is the portable GPU fallback.
+For `0.7.0`, the unit of release is `vyre::Program`. A program is built as IR,
+validated against frozen specs, checked against the CPU reference interpreter,
+and then compared against GPU backends for agreement. CUDA is the release path
+on NVIDIA systems. WGPU is the portable GPU path. Metal is the native Apple
+path, and its device-level evidence is produced only on a host that has a Metal
+device.
 
 ## Production Surface
 
@@ -174,51 +176,72 @@ real workloads, and docs that make rough edges visible instead of hiding them.
 
 ## The vyre crates
 
+The workspace has 36 crates. 26 of them are published on crates.io and are the
+surface you can depend on. The other 10 are internal to the repository and are
+marked `publish = false`, so they exist only for development and CI.
+
+One naming detail to know before you read the table: the directory `vyre-core/`
+builds the package named `vyre`. There is no crate called `vyre-core` on
+crates.io. When a path in this repository says `vyre-core`, the crate it produces
+is `vyre`.
+
+### Published crates
+
 | Crate | Status | Purpose |
 |-------|--------|---------|
-| `vyre` | active | Public facade over IR construction, lowering, and backend traits |
-| `vyre-core` | active | Core user-facing crate published as `vyre` |
-| `vyre-foundation` | active | IR, serialization, validation, transforms, optimizer substrate |
-| `vyre-spec` | active/frozen | Data contracts, stable tags, schema types, operation metadata |
-| `vyre-reference` | active | Pure-Rust CPU oracle used by parity and conformance tests |
+| `vyre` | active | Public facade over IR construction, lowering, and backend traits. Built from `vyre-core/` |
+| `vyre-foundation` | active | IR storage, serialization, validation, transforms, optimizer substrate |
+| `vyre-spec` | active, frozen surface | Data contracts, stable tags, schema types, operation metadata |
+| `vyre-reference` | active | Pure-Rust CPU interpreter used as the correctness oracle |
 | `vyre-driver` | active | Backend traits, registry, routing, lifecycle, diagnostics |
-| `vyre-driver-cuda` | active/release path | CUDA backend for NVIDIA systems |
-| `vyre-driver-wgpu` | active/fallback path | Portable GPU backend through WGPU |
+| `vyre-driver-cuda` | active, release path | CUDA backend for NVIDIA systems |
+| `vyre-driver-wgpu` | active, portable path | Portable GPU backend through WGPU |
+| `vyre-driver-metal` | active on Apple targets | Native Metal backend. Registers a backend on macOS and iOS; on other targets it compiles and `acquire()` returns an unsupported error |
 | `vyre-driver-spirv` | active | SPIR-V backend surface for Vulkan-style runners |
 | `vyre-driver-reference` | active | Thin backend wrapper around the reference interpreter |
 | `vyre-intrinsics` | active | Hardware-mapped intrinsic operation contracts |
 | `vyre-primitives` | active | Shared graph, text, hash, reduce, matching, math, parsing, fixpoint, and NN substrate |
 | `vyre-libs` | active | Higher-level IR compositions built from intrinsics and primitives |
 | `vyre-self-substrate` | active | Vyre using its own primitives for scheduling, graph, optimization, and coverage work |
-| `vyre-runtime` | active/experimental | Persistent megakernel runtime and Linux `io_uring`/streaming integration |
+| `vyre-runtime` | active, experimental | Persistent megakernel runtime and Linux `io_uring` streaming integration |
 | `vyre-aot` | active | Ahead-of-time packaging and artifact support |
 | `vyre-harness` | active | Runtime harness utilities |
 | `vyre-macros` | active | Proc-macros for pass and registration ergonomics |
 | `vyre-lower` | active | Lowering helpers shared by emitter crates |
-| `vyre-emit-ptx` | active/CUDA-focused | PTX emitter and NVRTC-backed validation tests |
-| `vyre-emit-naga` | active | Naga/WGSL-oriented emitter path |
+| `vyre-emit-ptx` | active, CUDA-focused | PTX emitter and NVRTC-backed validation tests |
+| `vyre-emit-naga` | active | Naga and WGSL oriented emitter path |
 | `vyre-emit-spirv` | active | SPIR-V emitter path |
-| `vyre-frontend-c` | beta | C frontend pipeline; useful for development, not clang parity |
-| `vyre-frontend-rust` | beta | Rust frontend pipeline experiments |
-| `vyre-bench` | active | Benchmark harnesses and workload evidence |
+| `vyre-emit-metal` | active | Metal Shading Language emitter, reached through the Naga path |
+| `vyre-grammar-gen` | active | Grammar generation support for the parsing primitives |
 | `vyre-lints` | active | Project lint and policy checks |
 | `vyre-debug` | active | Debugging and inspection helpers |
+
+### Repository-internal crates
+
+These are `publish = false`. They are not on crates.io and carry no API
+stability promise:
+
+| Crate | Status | Purpose |
+|-------|--------|---------|
+| `vyre-bench` | active | Benchmark harnesses and workload evidence |
+| `vyre-frontend-c` | beta | C frontend pipeline. Useful for development, not clang parity |
+| `vyre-frontend-rust` | beta | Rust frontend pipeline experiments |
+| `vyre-test-support` | active | Shared test fixtures and helpers |
 | `vyre-conform-spec` | active | Conformance specification crate |
 | `vyre-conform-generate` | active | Conformance case generation |
 | `vyre-conform-enforce` | active | Conformance enforcement gates |
 | `vyre-conform-runner` | active | Backend conformance runner |
-| `vyre-test-harness` | active | Test harness support used by conformance crates |
+| `vyre-test-harness` | active | Test harness support used by the conformance crates |
 | `xtask` | active | Workspace task runner for release, audit, and policy checks |
 
-Planned but not yet shipped as first-class workspace crates: native Metal,
-DXIL/DirectX, and WebGPU packaging. They are roadmap targets and not support
-claims until backend code, parity evidence, and CI gates exist in the
-repository.
+`vyre-frontend-c` and `vyre-frontend-rust` are marked beta because parser and
+type-frontend parity is still maturing. The `conform` crates and
+`vyre-test-harness` are not release gates yet, because their backpressure and
+corpus coverage are incomplete.
 
-`vyre-frontend-c` and `vyre-frontend-rust` are intentionally beta because
-parser and type-front end parity is still maturing. `conform` and
-`vyre-test-harness` backpressure and corpus coverage are the primary reason they
-are not release gates.
+DXIL and DirectX backends and WebGPU packaging are roadmap targets. No backend
+code, parity evidence, or CI gate for them exists in this repository, so treat
+them as intentions rather than support claims.
 
 ## `0.7.0` Release Execution Contract
 
@@ -319,27 +342,34 @@ Every significant surface in vyre has a canonical doc. When onboarding:
 
 ## Quickstart
 
+Add the IR crate and the CPU reference interpreter. Add a driver crate only for
+the GPU you actually target:
+
 ```sh
-cargo add vyre vyre-reference vyre-driver-cuda vyre-driver-wgpu
+cargo add vyre vyre-reference
+cargo add vyre-driver-cuda   # NVIDIA
+cargo add vyre-driver-wgpu   # portable GPU fallback
 ```
 
-Build a program, serialize it to text, and run the reference interpreter:
+### Build a program
+
+A program is a `vyre::ir::Program`. It holds three things: the buffers it reads
+and writes, the number of threads per workgroup, and a body of IR nodes. This
+program computes an element-wise XOR of two `u32` buffers.
 
 ```rust
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_reference::{run, value::Value};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Construct an IR program that XORs two u32 buffers element-wise.
-    let program = Program::wrapped(
+fn xor_program(len: u32) -> Program {
+    Program::wrapped(
         vec![
-            BufferDecl::read("a", 0, DataType::U32),
-            BufferDecl::read("b", 1, DataType::U32),
-            BufferDecl::read_write("out", 2, DataType::U32),
+            BufferDecl::read("a", 0, DataType::U32).with_count(len),
+            BufferDecl::read("b", 1, DataType::U32).with_count(len),
+            BufferDecl::output("out", 2, DataType::U32).with_count(len),
         ],
-        [1, 1, 1],
+        [64, 1, 1],
         vec![
-            Node::let_bind("idx", Expr::u32(0)),
+            Node::let_bind("idx", Expr::gid_x()),
             Node::store(
                 "out",
                 Expr::var("idx"),
@@ -349,80 +379,129 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ),
             ),
         ],
-    );
-
-    println!("{}", program.to_text()?);
-
-    let inputs = &[
-        Value::Bytes(vec![0xAA, 0x00, 0x00, 0x00].into()),
-        Value::Bytes(vec![0x55, 0x00, 0x00, 0x00].into()),
-        Value::Bytes(vec![0x00; 4].into()),
-    ];
-    let outputs = run(&program, inputs)?;
-    println!("output: {:?}", outputs);
-    Ok(())
+    )
 }
 ```
 
-Run the same program on a GPU through an explicit backend. CUDA is the `0.7.0` release fast path on NVIDIA systems; WGPU remains the portable fallback:
+Five details in that snippet decide how the program runs.
+
+`BufferDecl::read` declares a buffer the kernel only reads. You supply its
+contents at dispatch time.
+
+`BufferDecl::output` declares a buffer the backend allocates for you and returns
+after the dispatch. You do not pass it in as an input. Use this rather than
+`BufferDecl::read_write` when the buffer is a pure result.
+
+The second argument to both is the binding: the small integer the generated
+kernel uses to locate that buffer. Bindings start at 0 and must be distinct.
+
+`.with_count(len)` records how many elements the buffer holds. Set it whenever
+you know the length. Backends use it to size the launch grid and to size the
+output allocation. Backends do not all infer a missing count the same way, so an
+explicit count is the portable choice.
+
+`[64, 1, 1]` is the workgroup size, meaning the number of threads in one
+workgroup. The number of workgroups is inferred from the element count, so 256
+elements at a workgroup size of 64 becomes 4 workgroups of 64 threads.
+`Expr::gid_x()` reads the global thread index on the x axis, which gives each
+thread one element.
+
+### Run it on the CPU reference
+
+`vyre-reference` is the interpreter that defines correct behavior for a program.
+Every GPU backend is checked against it. Run your program here first: if the
+reference and a backend disagree, the backend is wrong.
 
 ```rust
-use vyre::VyreBackend;
-use vyre_driver_cuda::CudaBackend;
+use vyre_reference::{reference_eval, value::Value};
 
-fn dispatch_cuda(program: &vyre::ir::Program) -> Result<(), Box<dyn std::error::Error>> {
-    let backend = CudaBackend::acquire().map_err(|error| {
-        std::io::Error::other(format!(
-            "CUDA backend acquisition failed. Fix: inspect nvidia-smi, CUDA driver setup, and device capability reporting; do not treat this as a CPU fallback: {error}"
-        ))
-    })?;
-    let inputs: Vec<Vec<u8>> = vec![
-        vec![0xAA, 0x00, 0x00, 0x00],
-        vec![0x55, 0x00, 0x00, 0x00],
-        vec![0x00; 4],
-    ];
-    let outputs = backend
-        .dispatch(program, &inputs, &Default::default())
-        .map_err(|error| {
-            std::io::Error::other(format!(
-                "CUDA dispatch failed. Fix: inspect PTX lowering, launch bounds, and backend/device configuration: {error}"
-            ))
-        })?;
-    println!("output: {:?}", outputs);
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let len = 256u32;
+    let program = xor_program(len);
+
+    let a: Vec<u8> = (0..len).flat_map(|i| (0xF0 + i).to_le_bytes()).collect();
+    let b: Vec<u8> = (0..len).flat_map(|_| 0x0Fu32.to_le_bytes()).collect();
+
+    // One `Value` per buffer you supply. `out` is backend-allocated, so it is
+    // not in this list.
+    let outputs = reference_eval(&program, &[Value::Bytes(a.into()), Value::Bytes(b.into())])?;
+
+    let Value::Bytes(bytes) = &outputs[0] else {
+        return Err("expected a byte buffer".into());
+    };
+    let words: Vec<u32> = bytes
+        .chunks_exact(4)
+        .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
+        .collect();
+
+    assert_eq!(&words[..4], &[0xFF, 0xFE, 0xFD, 0xFC]);
     Ok(())
 }
 ```
 
-Use `vyre-driver-wgpu` when CUDA is not the target backend:
+`reference_eval` returns one `Value` per returned buffer, in declaration order.
+A buffer is returned when the backend allocates it, which is what
+`BufferDecl::output` requests.
+
+### Run it on a GPU
+
+A backend is acquired once and then dispatched against many times. Acquisition
+failure means the device or driver is not usable. Treat it as a configuration
+error to fix, not a reason to fall back to the CPU.
 
 ```rust
-use vyre::VyreBackend;
-use vyre_driver_wgpu::WgpuBackend;
+use vyre::{DispatchConfig, VyreBackend};
 
-fn dispatch_wgpu(program: &vyre::ir::Program) -> Result<(), Box<dyn std::error::Error>> {
-    let backend = pollster::block_on(WgpuBackend::acquire()).map_err(|error| {
-        std::io::Error::other(format!(
-            "WGPU backend acquisition failed. Fix: inspect adapter enumeration and driver setup; do not treat this as a CPU fallback: {error}"
-        ))
-    })?;
-    let inputs: &[&[u8]] = &[
-        &[0xAA, 0x00, 0x00, 0x00],
-        &[0x55, 0x00, 0x00, 0x00],
-        &[0x00; 4],
-    ];
-    let outputs = backend
-        .dispatch_borrowed(program, inputs, &Default::default())
-        .map_err(|error| {
-            std::io::Error::other(format!(
-                "WGPU dispatch failed. Fix: inspect backend/device configuration: {error}"
-            ))
-        })?;
-    println!("output: {:?}", outputs);
-    Ok(())
+fn run_cuda(
+    program: &vyre::ir::Program,
+    inputs: &[Vec<u8>],
+) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    let backend = vyre_driver_cuda::CudaBackend::acquire()?;
+    let mut outputs = backend.dispatch(program, inputs, &DispatchConfig::default())?;
+    Ok(outputs.remove(0))
 }
 ```
 
-The wire format provides lossless binary transport: `program.to_wire()` serializes, `Program::from_wire()` reconstructs, and round-trip equality is invariant I4. The former general-purpose bytecode VM and NFA-scan micro-interpreter are absent from the `0.7.0` release line: every detection primitive (string scanning, taint flow, AST motif, decode chain, binary structural, neural suspicion filter, exploit-graph reconstruction, …) composes from vyre ops. No legacy host micro-interpreter remains in core; the resident megakernel is the GPU execution path. A downstream detection engine can compose scan, taint, decode, parse, fixpoint, graph, and neural stages in vyre IR. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for architecture, [docs/wire-format.md](docs/wire-format.md) for the wire format, and [docs/inventory-contract.md](docs/inventory-contract.md) for the extension model.
+`dispatch` takes one input buffer per buffer you supply, in binding order, and
+returns one `Vec<u8>` per backend-allocated output. For the XOR program that is
+two inputs in and one output back, matching the reference call above.
+
+`vyre-driver-wgpu` has the same shape. `WgpuBackend::acquire()` is synchronous,
+so it needs no async runtime, and `dispatch_borrowed` avoids copying inputs you
+already hold:
+
+```rust
+use vyre::{DispatchConfig, VyreBackend};
+
+fn run_wgpu(
+    program: &vyre::ir::Program,
+    inputs: &[&[u8]],
+) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    let backend = vyre_driver_wgpu::WgpuBackend::acquire()?;
+    let mut outputs = backend.dispatch_borrowed(program, inputs, &DispatchConfig::default())?;
+    Ok(outputs.remove(0))
+}
+```
+
+Both backends produce the same 256 words as the reference run for the program
+above.
+
+### Move a program between processes
+
+`Program` has a binary wire format. `to_wire` serializes and `from_wire`
+reconstructs, and any program that passes validation survives the round trip
+unchanged:
+
+```rust
+let wire = program.to_wire()?;
+assert_eq!(Program::from_wire(&wire)?, program);
+```
+
+This is how a program crosses a process or machine boundary: build the program in
+one place and execute it in another. See
+[docs/wire-format.md](docs/wire-format.md) for the byte layout and the round-trip
+invariant, [ARCHITECTURE.md](ARCHITECTURE.md) for the crate layering, and
+[docs/inventory-contract.md](docs/inventory-contract.md) for how to add an op.
 
 ## Standard library
 
@@ -489,6 +568,23 @@ or, when it becomes shared substrate, under `vyre-primitives/src/<domain>/`.
 It introduces no backend-specific lowering and no hidden interpreter. The
 filesystem is still the registry boundary: one domain, one responsibility,
 and no central hand-edited list.
+
+When a Cat A builder returns a registered primitive program, wrap it with
+`vyre_foundation::composition::tag_program`. The parent region names the Cat A
+operation. Primitive regions keep their generator ids and record the parent in
+`source_region`. The helper also preserves the original entry operation,
+workgroup geometry, buffer declarations, and self-composition policy.
+Do not rebuild the `Program` just to change its public operation id.
+
+Primitive reuse is established by real parent-child composition edges.
+Synthetic `consumer_a` or `consumer_b` registrations do not count as callers
+and must not be added to satisfy primitive coverage.
+
+The LEGO audit requires a Tier 3 operation with at least 20 IR nodes to place
+at least 25% of those nodes under registered child regions. A domain-owned
+operation may instead appear in the audit's reviewed pure-IR leaf set when no
+lower registered composition unit exists. A leaf still uses only
+backend-neutral IR. It does not gain Category C lowering or host evaluation.
 
 **Category B: Forbidden CPU coupling.** Cat B is the immune system's reject list. No general runtime interpretation engine, stack-machine evaluator, or host-dispatch substitute may exist in vyre. The `nfa_scan` micro-interpreter is absent from the `0.7.0` release line: those scans are expressed as composed ops in vyre IR and lower to GPU. Any construct that forces the host CPU to step into the execution loop of a GPU program is a Category B violation and is rewritten or deleted.
 
@@ -582,11 +678,11 @@ it truer.
 ## Links
 
 - [Architecture](docs/ARCHITECTURE.md): workspace layout, frozen contracts, CI laws
-- [Wire format](docs/wire-format.md): VIR0 binary serialization spec
+- [Wire format](docs/wire-format.md): the `VYRE` binary serialization spec
 - [Inventory contract](docs/inventory-contract.md): link-time registration and extension rules
 - [Semver policy](docs/semver-policy.md): normative version contract
 - [Error codes](docs/error-codes.md): canonical registry of stable diagnostic codes
-- [Vision](VISION.md): the missing abstraction stack, After Effects architecture, network effects
+- [Vision](docs/VISION.md): the missing abstraction stack, After Effects architecture, network effects
 - [Thesis](docs/THESIS.md): technical axioms and where vyre beats existing options
 - [crates.io/crates/vyre](https://crates.io/crates/vyre)
 - [github.com/santhreal/vyre](https://github.com/santhreal/vyre)

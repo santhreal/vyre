@@ -56,6 +56,60 @@ pub(super) fn token_is_ident(tok_types: &str, idx: Expr) -> Expr {
     token_type_eq(tok_types, idx, TOK_IDENTIFIER)
 }
 
+/// Go keywords that can immediately precede a receive expression.
+///
+/// A `<-ch` in expression position follows one of these, an operator, or an
+/// opening delimiter. It never follows a plain identifier, because
+/// `identifier <- value` is a SEND. Distinguishing the two is what these
+/// spellings are for: `return <-ch` must read as a receive, while `out <- 1`
+/// must read as a send, and both are `IDENTIFIER ARROW ...` to the lexer,
+/// which does not classify keywords.
+///
+/// One owner for the list so the send matcher (which must skip these) and the
+/// receive matcher (which must allow them) cannot disagree about which
+/// spellings are keywords.
+pub(super) const RECEIVE_LEADING_KEYWORDS: &[&[u8]] =
+    &[b"return", b"case", b"go", b"defer", b"range"];
+
+/// Test whether a token is one of [`RECEIVE_LEADING_KEYWORDS`].
+pub(super) fn token_is_receive_leading_keyword(
+    haystack: &str,
+    tok_types: &str,
+    tok_starts: &str,
+    tok_lens: &str,
+    idx: Expr,
+) -> Expr {
+    RECEIVE_LEADING_KEYWORDS
+        .iter()
+        .map(|keyword| {
+            token_is_keyword(
+                haystack,
+                tok_types,
+                tok_starts,
+                tok_lens,
+                idx.clone(),
+                keyword,
+            )
+        })
+        .fold(Expr::bool(false), Expr::or)
+}
+
+/// Test whether a token is the `chan` type keyword.
+///
+/// `chan` is lexed as an ordinary identifier, so the channel TYPES `<-chan T`
+/// and `chan<- T` are indistinguishable from the channel OPERATIONS `<-ch` and
+/// `ch <- v` on token kinds alone. Both matchers consult this to tell a type
+/// from an operation.
+pub(super) fn token_is_chan_keyword(
+    haystack: &str,
+    tok_types: &str,
+    tok_starts: &str,
+    tok_lens: &str,
+    idx: Expr,
+) -> Expr {
+    token_is_keyword(haystack, tok_types, tok_starts, tok_lens, idx, b"chan")
+}
+
 /// Test whether an identifier token matches a keyword spelling.
 pub(super) fn token_is_keyword(
     haystack: &str,

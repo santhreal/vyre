@@ -3,7 +3,7 @@
 //! delegate to `c_lower_ast_to_pg_semantic_graph_impl`, differing ONLY in the
 //! `resolve_control_edges` flag (semantic_resolution_nodes vs unresolved_control_edge_slots).
 //! Their documented contract: identical output when the token stream has NO control-flow
-//! target constructs (goto/switch/case/default). We pin that with a control-flow-free VAST 
+//! target constructs (goto/switch/case/default). We pin that with a control-flow-free VAST
 //! the two builders' three output buffers (plain PG nodes, semantic PG nodes, PG edges) must be
 //! byte-identical through `reference_eval`, AND non-trivial (real PG rows + structural edges).
 //!

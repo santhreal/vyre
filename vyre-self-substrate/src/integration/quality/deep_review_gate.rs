@@ -193,12 +193,12 @@ pub fn validate_deep_review_hygiene_artifacts(
         ("hygiene schema", "\"schema_version\": 1"),
         ("hygiene blockers inventory", "\"blockers\""),
         ("hygiene findings inventory", "\"findings\""),
-        ("Vyre root coverage", "/matching/vyre"),
+        ("Vyre root coverage", "\".\","),
         (
             "dataflow workspace root coverage",
-            concat!("/libs/dataflow/", "we", "ir"),
+            concat!("../../../../libs/dataflow/", "we", "ir"),
         ),
-        ("Vyrec root coverage", "/tools/vyrec"),
+        ("Vyrec root coverage", "../../../../tools/vyrec"),
         ("CUDA driver surface", "\"cuda_driver_crate\": true"),
         ("WGPU driver surface", "\"wgpu_driver_crate\": true"),
         ("dataflow crate surface", "\"dataflow_crate\": true"),
@@ -415,8 +415,7 @@ mod tests {
         // JSON so this substrate source stays free of downstream names. The
         // fixture carries every release-surface flag except the dataflow-crate
         // one, so the first failing evidence check is the dataflow crate surface.
-        let hygiene_matrix =
-            include_str!("fixtures/hygiene-matrix-missing-dataflow-crate.json");
+        let hygiene_matrix = include_str!("fixtures/hygiene-matrix-missing-dataflow-crate.json");
         let proof = "# Release hygiene proof no-stubs-scan.json no-hidden-fallback-scan.json resource-bound-scan.json error-surface-scan.json cargo-wrapper-scan.json audit-location-scan.json public-doc-scan.json test-hygiene-scan.json branch-protection controls";
         let scan = r#"{"schema_version":1,"scan":"audit-location","findings":[],"blockers":[]}"#;
         let docs = r#"{"schema_version":1,"scan":"public-docs","findings":[],"blockers":[]}"#;

@@ -13,8 +13,8 @@
 use vyre_foundation::ir::DataType;
 use vyre_lower::verify::{verify, VerifyErrorKind};
 use vyre_lower::{
-    BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor, KernelOp,
-    KernelOpKind, LiteralValue, MemoryClass,
+    BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
+    KernelOp, KernelOpKind, LiteralValue, MemoryClass,
 };
 
 fn bindings() -> BindingLayout {

@@ -37,7 +37,16 @@ fn u32_bytes(words: &[u32]) -> Vec<u8> {
 /// u16 max), 0x8000 (i16 MIN), 0xFFFFFFFF (all ones), 0, 127, 128, 255.
 fn inputs() -> Vec<u32> {
     vec![
-        300, 0x0001_2345, 200, 0x0000_FFFF, 0x0000_8000, 0xFFFF_FFFF, 0, 127, 128, 255,
+        300,
+        0x0001_2345,
+        200,
+        0x0000_FFFF,
+        0x0000_8000,
+        0xFFFF_FFFF,
+        0,
+        127,
+        128,
+        255,
     ]
 }
 

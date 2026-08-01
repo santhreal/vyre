@@ -1,5 +1,6 @@
 use super::substitution::{body_writes_loop_var, substitute_node, substitute_nodes};
 use crate::ir::{Expr, Node, Program};
+use crate::optimizer::rewrite::rewrite_node_slices;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 use smallvec::SmallVec;
 use std::borrow::Cow;
@@ -46,22 +47,7 @@ impl LoopUnroll {
 }
 
 fn rewrite_nodes(nodes: &[Node]) -> Cow<'_, [Node]> {
-    let mut rewritten: Option<Vec<Node>> = None;
-    for (index, node) in nodes.iter().enumerate() {
-        match rewrite_node(node) {
-            Cow::Borrowed(_) if rewritten.is_none() => {}
-            Cow::Borrowed(borrowed) => {
-                if let Some(out) = rewritten.as_mut() {
-                    out.extend_from_slice(borrowed);
-                }
-            }
-            Cow::Owned(owned) => {
-                let out = rewritten.get_or_insert_with(|| nodes[..index].to_vec());
-                out.extend(owned);
-            }
-        }
-    }
-    rewritten.map_or(Cow::Borrowed(nodes), Cow::Owned)
+    rewrite_node_slices(nodes, rewrite_node)
 }
 
 fn rewrite_node(node: &Node) -> Cow<'_, [Node]> {
@@ -273,65 +259,9 @@ fn expr_unroll_cost(expr: &Expr) -> u32 {
     stack.push(expr);
     while let Some(expr) = stack.pop() {
         cost = cost.saturating_add(1);
-        push_expr_children(expr, &mut stack);
+        crate::optimizer::rewrite::push_expr_children(expr, &mut stack);
     }
     cost
-}
-
-fn push_expr_children<'a>(expr: &'a Expr, stack: &mut SmallVec<[&'a Expr; 16]>) {
-    match expr {
-        Expr::Load { index, .. } | Expr::UnOp { operand: index, .. } => stack.push(index),
-        Expr::BinOp { left, right, .. } => {
-            stack.push(left);
-            stack.push(right);
-        }
-        Expr::Call { args, .. } => stack.extend(args),
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            stack.push(cond);
-            stack.push(true_val);
-            stack.push(false_val);
-        }
-        Expr::Cast { value, .. } | Expr::SubgroupReduce { value, .. } => stack.push(value),
-        Expr::Fma { a, b, c } => {
-            stack.push(a);
-            stack.push(b);
-            stack.push(c);
-        }
-        Expr::Atomic {
-            index,
-            expected,
-            value,
-            ..
-        } => {
-            stack.push(index);
-            if let Some(expected) = expected {
-                stack.push(expected);
-            }
-            stack.push(value);
-        }
-        Expr::SubgroupBallot { cond } => stack.push(cond),
-        Expr::SubgroupShuffle { value, lane } => {
-            stack.push(value);
-            stack.push(lane);
-        }
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::Var(_)
-        | Expr::BufferRef { .. }
-        | Expr::BufLen { .. }
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize
-        | Expr::Opaque(_) => {}
-    }
 }
 
 #[cfg(test)]

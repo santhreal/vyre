@@ -2,7 +2,7 @@
 //! Command-line scaffolder for new operations.
 //!
 //! Usage:
-//!   `cargo_full run -p vyre --bin vyre_new_op -- new-op <id> --archetype <archetype> [--display-name <text>] [--summary <text>] [--category <A|C>]`
+//!   `cargo run -p vyre --bin vyre_new_op -- new-op <id> --archetype <archetype> [--display-name <text>] [--summary <text>] [--category <A|C>]`
 
 mod allowed_archetypes;
 mod generate_mod_rs;

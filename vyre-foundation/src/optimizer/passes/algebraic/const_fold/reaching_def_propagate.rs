@@ -237,81 +237,16 @@ fn substitute_node(node: Node, propagations: &FxHashMap<String, Expr>, changed: 
 }
 
 fn substitute_expr(expr: Expr, propagations: &FxHashMap<String, Expr>, changed: &mut bool) -> Expr {
-    match expr {
-        Expr::Var(ref name) => {
-            if let Some(literal) = propagations.get(name.as_str()) {
-                *changed = true;
-                literal.clone()
-            } else {
-                expr
-            }
-        }
-        Expr::Load { buffer, index } => Expr::Load {
-            buffer,
-            index: Box::new(substitute_expr(*index, propagations, changed)),
-        },
-        Expr::BinOp { op, left, right } => Expr::BinOp {
-            op,
-            left: Box::new(substitute_expr(*left, propagations, changed)),
-            right: Box::new(substitute_expr(*right, propagations, changed)),
-        },
-        Expr::UnOp { op, operand } => Expr::UnOp {
-            op,
-            operand: Box::new(substitute_expr(*operand, propagations, changed)),
-        },
-        Expr::Call { op_id, args } => Expr::Call {
-            op_id,
-            args: args
-                .into_iter()
-                .map(|a| substitute_expr(a, propagations, changed))
-                .collect(),
-        },
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => Expr::Select {
-            cond: Box::new(substitute_expr(*cond, propagations, changed)),
-            true_val: Box::new(substitute_expr(*true_val, propagations, changed)),
-            false_val: Box::new(substitute_expr(*false_val, propagations, changed)),
-        },
-        Expr::Cast { target, value } => Expr::Cast {
-            target,
-            value: Box::new(substitute_expr(*value, propagations, changed)),
-        },
-        Expr::Fma { a, b, c } => Expr::Fma {
-            a: Box::new(substitute_expr(*a, propagations, changed)),
-            b: Box::new(substitute_expr(*b, propagations, changed)),
-            c: Box::new(substitute_expr(*c, propagations, changed)),
-        },
-        Expr::Atomic {
-            op,
-            buffer,
-            index,
-            expected,
-            value,
-            ordering,
-        } => Expr::Atomic {
-            op,
-            buffer,
-            index: Box::new(substitute_expr(*index, propagations, changed)),
-            expected: expected.map(|e| Box::new(substitute_expr(*e, propagations, changed))),
-            value: Box::new(substitute_expr(*value, propagations, changed)),
-            ordering,
-        },
-        Expr::SubgroupBallot { cond } => Expr::SubgroupBallot {
-            cond: Box::new(substitute_expr(*cond, propagations, changed)),
-        },
-        Expr::SubgroupShuffle { value, lane } => Expr::SubgroupShuffle {
-            value: Box::new(substitute_expr(*value, propagations, changed)),
-            lane: Box::new(substitute_expr(*lane, propagations, changed)),
-        },
-        Expr::SubgroupReduce { op, value } => Expr::SubgroupReduce {
-            op,
-            value: Box::new(substitute_expr(*value, propagations, changed)),
-        },
-        other => other,
-    }
+    crate::optimizer::rewrite::rewrite_expr(&expr, &mut |candidate| {
+        let Expr::Var(name) = candidate else {
+            return None;
+        };
+        propagations.get(name.as_str()).map(|literal| {
+            *changed = true;
+            literal.clone()
+        })
+    })
+    .into_owned()
 }
 
 // Override `collect_propagatable_lets` to fetch literal values

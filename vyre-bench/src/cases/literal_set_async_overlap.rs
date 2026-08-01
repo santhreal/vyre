@@ -11,7 +11,7 @@
 //! sequentially (submit → await → submit → await) and overlapped (submit A →
 //! submit B → await A → await B) over a consumer-shaped corpus and reports the
 //! overlap factor plus the timed kernel-vs-staging split, and it VERIFIES that
-//! the overlapped matches are byte-identical to the sequential ones (Law 10 
+//! the overlapped matches are byte-identical to the sequential ones (Law 10
 //! overlap changes no result bit).
 
 use std::time::Instant;
@@ -134,13 +134,7 @@ fn clamp_ns(duration: std::time::Duration) -> u64 {
 /// `sequential / async`, scaled by 1000 so it survives the integer metric
 /// channel (1000 = parity, >1000 = the overlap is faster). Guards a zero async
 /// wall (returns 0, an obviously-degenerate value the report surfaces).
-fn overlap_factor_x1000(sequential_wall_ns: u64, async_wall_ns: u64) -> u64 {
-    if async_wall_ns == 0 {
-        return 0;
-    }
-    (u128::from(sequential_wall_ns) * 1000 / u128::from(async_wall_ns)).min(u128::from(u64::MAX))
-        as u64
-}
+use super::scaled_ratio_x1000 as overlap_factor_x1000;
 
 fn encode_batch_outputs(matches: &[Match]) -> [Vec<u8>; 2] {
     let count = u32::try_from(matches.len()).unwrap_or(u32::MAX);
@@ -396,7 +390,7 @@ mod tests {
 
     /// The pipeline's CORRECTNESS property, runnable without a GPU: on the
     /// serialized `CpuRefBackend`, the overlapped two-batch matches must equal
-    /// the sequential ones for BOTH batches (the degraded path changes no bits 
+    /// the sequential ones for BOTH batches (the degraded path changes no bits
     /// Law 10). This is the pipeline property this bench exists to prove; the
     /// separate question of `scan_into` vs the engine's own `reference_scan`
     /// AC-walk is out of scope here (that CPU-reference parity is covered by the

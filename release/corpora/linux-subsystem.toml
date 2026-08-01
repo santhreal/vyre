@@ -1,4 +1,4 @@
-# Frozen Linux subsystem corpus for Vyre 0.4.1 C parser release proof.
+# Frozen Linux subsystem corpus for the Vyre 0.7.0 C parser release proof.
 schema_version = 1
 name = "linux-lib"
 description = "Linux kernel lib subsystem: broad C utility code without driver-specific extension bias."

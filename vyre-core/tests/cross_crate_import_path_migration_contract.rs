@@ -12,7 +12,10 @@ fn workspace_root() -> &'static Path {
 fn read_doc(rel: &str) -> String {
     let path = workspace_root().join(rel);
     fs::read_to_string(&path).unwrap_or_else(|error| {
-        panic!("Fix: import-path migration test could not read {}: {error}", path.display())
+        panic!(
+            "Fix: import-path migration test could not read {}: {error}",
+            path.display()
+        )
     })
 }
 

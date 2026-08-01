@@ -844,18 +844,14 @@ mod tests {
         // This simulates a sector fault / partial crash zeroing a live slot.
         let slot1_offset = HEADER_BYTES + RECORD_BYTES; // slot 0 is at HEADER_BYTES; slot 1 follows
         {
-            let mut f = std::fs::OpenOptions::new()
-                .write(true)
-                .open(&path)
-                .unwrap();
+            let mut f = std::fs::OpenOptions::new().write(true).open(&path).unwrap();
             f.seek(SeekFrom::Start(slot1_offset)).unwrap();
             f.write_all(&[0u8; RECORD_BYTES as usize]).unwrap();
             f.sync_all().unwrap();
         }
 
         // Re-open the log to pick up the zeroed slot.
-        let mut log2 = RingLog::open(&path, 4)
-            .expect("Fix: reopen after zeroing must succeed");
+        let mut log2 = RingLog::open(&path, 4).expect("Fix: reopen after zeroing must succeed");
 
         // Replay must not return Err (the zero-magic skip is graceful).
         let records = log2
@@ -871,7 +867,13 @@ mod tests {
             records.iter().map(|r| r.slot_idx).collect::<Vec<_>>()
         );
         // Record 10 must come before record 30 in publish order.
-        assert_eq!(records[0].slot_idx, 10, "Fix: first replayed record must be slot_idx=10");
-        assert_eq!(records[1].slot_idx, 30, "Fix: second replayed record must be slot_idx=30");
+        assert_eq!(
+            records[0].slot_idx, 10,
+            "Fix: first replayed record must be slot_idx=10"
+        );
+        assert_eq!(
+            records[1].slot_idx, 30,
+            "Fix: second replayed record must be slot_idx=30"
+        );
     }
 }

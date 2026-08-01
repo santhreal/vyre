@@ -1,17 +1,17 @@
 //! CUDA e-graph device-image upload planning tests.
 
-#[path = "egraph_device_image_upload/upload_layout_contracts.rs"]
-mod upload_layout_contracts;
+#[path = "egraph_device_image_upload/canonical_rewrite_contracts.rs"]
+mod canonical_rewrite_contracts;
+#[path = "egraph_device_image_upload/fixed_point_contracts.rs"]
+mod fixed_point_contracts;
 #[path = "egraph_device_image_upload/source_snapshot_contracts.rs"]
 mod source_snapshot_contracts;
 #[path = "egraph_device_image_upload/structural_equivalence_contracts.rs"]
 mod structural_equivalence_contracts;
 #[path = "egraph_device_image_upload/union_compaction_contracts.rs"]
 mod union_compaction_contracts;
-#[path = "egraph_device_image_upload/canonical_rewrite_contracts.rs"]
-mod canonical_rewrite_contracts;
-#[path = "egraph_device_image_upload/fixed_point_contracts.rs"]
-mod fixed_point_contracts;
+#[path = "egraph_device_image_upload/upload_layout_contracts.rs"]
+mod upload_layout_contracts;
 
 use vyre_driver_cuda::{
     pack_cuda_egraph_canonical_rewrite_device_image, plan_cuda_egraph_device_upload,
@@ -43,7 +43,6 @@ fn expected_column_snapshot_bytes(layout: CudaEGraphDeviceByteLayout) -> usize {
     .sum()
 }
 
-
 fn assert_span_matches_foundation(
     cuda: CudaEGraphDeviceByteSpan,
     foundation: vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceSpan,
@@ -51,7 +50,6 @@ fn assert_span_matches_foundation(
     assert_eq!(cuda.offset(), foundation.offset() * 4);
     assert_eq!(cuda.byte_len(), foundation.len() * 4);
 }
-
 
 fn next_u32(seed: &mut u64) -> u32 {
     *seed = seed
@@ -137,7 +135,6 @@ fn assert_wave_coverage(plan: &CudaEGraphUnionCompactionPlan, max_items_per_wave
     assert_eq!(rewrite_items, plan.canonical_rewrites.len() as u64);
     assert_eq!(plan.total_items, union_items + rewrite_items);
 }
-
 
 fn read_u32_span(bytes: &[u8], span: CudaEGraphDeviceByteSpan, count: usize) -> Vec<u32> {
     (0..count)

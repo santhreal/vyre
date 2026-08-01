@@ -31,7 +31,7 @@ pub(crate) const RESEARCH_AUDIT_SOURCE_DIGEST_PREFIX: &str = model::SOURCE_DIGES
 pub(crate) const RESEARCH_AUDIT_REQUIRED_SCALAR_FIELDS: &[&str] = &[
     "schema_version",
     "generator_command",
-    "plan_path",
+    "expected_plan_path",
     "command_matrix_path",
     "source_digest",
 ];
@@ -74,10 +74,15 @@ pub(crate) fn research_audit_generator_command(output: &Path) -> String {
     if output == Path::new(RESEARCH_AUDIT_ARTIFACT) {
         RESEARCH_AUDIT_DEFAULT_GENERATOR_COMMAND.to_string()
     } else {
-        format!("{RESEARCH_AUDIT_COMMAND_PREFIX} --output {}", output.display())
+        format!(
+            "{RESEARCH_AUDIT_COMMAND_PREFIX} --output {}",
+            output.display()
+        )
     }
 }
 
+use crate::research_key::backtick_research_keys;
+use crate::research_plan_coverage::{research_plan_coverage_findings, ResearchPlanCoverageRow};
 use collectors::{
     collect_archive_replay_findings, collect_baseline_gaps, collect_blockers, collect_claim_drift,
     collect_loc_hotspots, collect_megakernel_protocol_boundary_findings,
@@ -85,11 +90,9 @@ use collectors::{
     collect_vx_linkage,
 };
 use innovation::collect_innovation_coverage;
-use crate::research_key::backtick_research_keys;
-use crate::research_plan_coverage::{research_plan_coverage_findings, ResearchPlanCoverageRow};
 use model::{
-    source_digest, ResearchAuditReport, SourceLedgerFinding, COMMAND_MATRIX_PATH, MIN_PLAN_ROWS,
-    PLAN_PATH, RAW_COUNTER_FAMILIES,
+    source_digest, ResearchAuditReport, ResearchPlanCoverageFinding, SourceLedgerFinding,
+    COMMAND_MATRIX_PATH, MIN_PLAN_ROWS, PLAN_PATH, RAW_COUNTER_FAMILIES,
 };
 use parse::{parse_defined_research_keys, parse_vx_rows};
 use script_policy::collect_script_policy_findings;
@@ -161,7 +164,7 @@ fn parse_args(args: &[String]) -> Result<Config, String> {
 
 fn print_usage() {
     eprintln!(
-        "USAGE:\n  cargo_full run -p xtask --bin xtask -- research-audit [--output PATH]\n\n\
+        "USAGE:\n  cargo xtask research-audit [--output PATH]\n\n\
          Writes a local research-grounding artifact for VX rows, source hotspots,\n\
          competitor baselines, duplicate-risk VX linkage, stale-doc markers, and\n\
          public repository boundary plus archive-audit replay checks."
@@ -195,8 +198,7 @@ fn build_report(root: &Path, generator_command: String) -> Result<ResearchAuditR
     let high_risk_vx_linkage = collect_vx_linkage(&command_matrix, &plan);
     let stale_doc_markers = collect_stale_doc_markers(root);
     let repo_boundary_findings = collect_repo_boundary_findings(root);
-    let megakernel_protocol_boundary_findings =
-        collect_megakernel_protocol_boundary_findings(root);
+    let megakernel_protocol_boundary_findings = collect_megakernel_protocol_boundary_findings(root);
     let script_policy_findings = collect_script_policy_findings(root);
     let rust_toml_loader_findings = collect_rust_toml_loader_findings(root);
     let source_ledger_findings =
@@ -206,8 +208,8 @@ fn build_report(root: &Path, generator_command: String) -> Result<ResearchAuditR
     let research_plan_coverage_findings =
         research_plan_coverage_findings(PLAN_PATH, &coverage_rows(&rows))
             .into_iter()
-            .map(|finding| SourceLedgerFinding {
-                path: finding.path,
+            .map(|finding| ResearchPlanCoverageFinding {
+                expected_path: finding.path,
                 key: finding.key,
                 text: finding.text,
                 policy: finding.policy,
@@ -317,21 +319,8 @@ fn read_required(root: &Path, rel_path: &str) -> Result<String, String> {
 }
 
 fn write_report(path: &Path, report: &ResearchAuditReport) {
-    if let Some(parent) = path.parent() {
-        if let Err(error) = fs::create_dir_all(parent) {
-            eprintln!("research-audit: failed to create `{}`: {error}", parent.display());
-            std::process::exit(1);
-        }
-    }
-    let json = match serde_json::to_string_pretty(report) {
-        Ok(json) => json,
-        Err(error) => {
-            eprintln!("research-audit: failed to serialize report: {error}");
-            std::process::exit(1);
-        }
-    };
-    if let Err(error) = fs::write(path, format!("{json}\n")) {
-        eprintln!("research-audit: failed to write `{}`: {error}", path.display());
+    if let Err(error) = crate::json_output::write_pretty_json(path, report) {
+        eprintln!("research-audit: {error}");
         std::process::exit(1);
     }
 }

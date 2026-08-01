@@ -3,8 +3,8 @@ use crate::benchmark_evidence_semantics::{
     backend_suite_inventory_issues, backend_suite_matrix_coverage_issues,
     backend_suite_parity_issues, describe_backend_suite_inventory_issue,
     describe_backend_suite_matrix_coverage_issue,
-    expected_backend_for_suite_evidence, BackendSuiteArtifactStatusIssue, BackendSuiteBackendIssue,
-    BackendSuiteParityIssue,
+    expected_backend_for_suite_evidence, report_status_for_path, BackendSuiteArtifactStatusIssue,
+    BackendSuiteBackendIssue, BackendSuiteParityIssue,
 };
 
 pub(crate) fn check_backend_suite_report(
@@ -592,19 +592,6 @@ fn check_backend_suite_status_source_fingerprint_shape(
     );
 }
 
-fn report_status_for_path<'a>(
-    suite_report: &'a serde_json::Value,
-    artifact: &str,
-) -> Option<&'a serde_json::Value> {
-    suite_report
-        .get("artifact_statuses")
-        .and_then(serde_json::Value::as_array)
-        .and_then(|statuses| {
-            statuses.iter().find(|status| {
-                status.get("path").and_then(serde_json::Value::as_str) == Some(artifact)
-            })
-        })
-}
 
 fn check_backend_suite_artifact_status(
     requirement: &Requirement,
@@ -1784,7 +1771,7 @@ pub(crate) fn check_markdown_evidence_ready(
     ] {
         for line in text.lines() {
             let lowered = line.to_ascii_lowercase();
-            if markdown_line_is_release_rule_text(&lowered) {
+            if crate::release_completion_audit::markdown_line_is_release_rule_text(&lowered) {
                 continue;
             }
             if lowered.contains(marker) {

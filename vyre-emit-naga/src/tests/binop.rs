@@ -202,9 +202,10 @@ fn select_with_u64_arms_emits_without_coerce_passthrough_panic() {
         },
     };
 
-    let module = emit(&desc)
-        .expect("Select with u64-typed arms must emit without error; \
-                 coerce_value_to_type must recognise u64_ty as ScalarKind::Uint");
+    let module = emit(&desc).expect(
+        "Select with u64-typed arms must emit without error; \
+                 coerce_value_to_type must recognise u64_ty as ScalarKind::Uint",
+    );
 
     // Verify both wide literals appear in the expression arena, proves the
     // u64 emit path ran end-to-end and was not short-circuited.

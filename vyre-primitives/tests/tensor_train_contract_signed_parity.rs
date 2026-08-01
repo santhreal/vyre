@@ -11,7 +11,7 @@
 //! existing IR run of this kernel (`fusion_pressure_via`) uses UNIT (1.0) cores exclusively, so the
 //! signed regime was never exercised; this test drives the primitive directly with signed data.
 //!
-//! BIT-EXACT: pure integer arithmetic, so the oracle replicates the kernel exactly 
+//! BIT-EXACT: pure integer arithmetic, so the oracle replicates the kernel exactly
 //! `fixed_mul(a,b) = ((a as i32 as i64 * b as i32 as i64) >> 16) as i32 as u32`, accumulated with
 //! wrapping u32 add. Any divergence is a real IR/dispatch defect, not a rounding artifact.
 #![cfg(feature = "math")]

@@ -312,7 +312,7 @@ fn every_registered_primitive_output_is_invariant_under_grid_overfire() {
 /// The GPU makes NO ordering guarantee for NON-atomic stores: if two lanes plain-
 /// `store` the same slot, the winner is driver-defined and varies run to run. The
 /// single-threaded reference resolves that race DETERMINISTICALLY (last stepped lane
-/// wins), so the output looks stable here while it is nondeterministic on hardware 
+/// wins), so the output looks stable here while it is nondeterministic on hardware
 /// a hazard the three grid gates CANNOT see (they compare same-order runs). This gate
 /// runs each fixture once forward and once with `reference_eval_lane_reversed` (step
 /// order reversed) and asserts identical output: a race-free primitive (disjoint

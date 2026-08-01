@@ -1,15 +1,15 @@
-//! `cargo_full run --bin xtask -- check-cat-a`  -  one-shot gate that runs every
+//! `cargo xtask check-cat-a`  -  one-shot gate that runs every
 //! pre-merge CI step a Cat-A author cares about:
 //!
-//! 1. `cargo_full check --workspace --all-features --all-targets`
-//! 2. `cargo_full clippy --workspace --all-features --all-targets -- -D warnings`
-//! 3. `cargo_full test -p vyre-libs --all-features`
-//! 4. `cargo_full test -p vyre-foundation --all-features` (region-inline + wire)
-//! 5. `cargo_full test -p vyre-reference --all-features` (assign + lifetime)
+//! 1. `cargo check --workspace --all-features --all-targets`
+//! 2. `cargo clippy --workspace --all-features --all-targets -- -D warnings`
+//! 3. `cargo test -p vyre-libs --all-features`
+//! 4. `cargo test -p vyre-foundation --all-features` (region-inline + wire)
+//! 5. `cargo test -p vyre-reference --all-features` (assign + lifetime)
 //! 6. `scripts/check_parity_testing_not_leaked.sh`
 //! 7. `scripts/check_op_names.sh`
-//! 8. `cargo_full run -p xtask --bin xtask -- platform-boundary`
-//! 9. `cargo_full doc --workspace --all-features --no-deps`
+//! 8. `cargo xtask platform-boundary`
+//! 9. `cargo doc --workspace --all-features --no-deps`
 //!
 //! Exits non-zero on the first failure; prints a pass summary on
 //! success. Designed to be the single command a Cat-A author runs
@@ -19,7 +19,7 @@ use std::path::PathBuf;
 use std::process::{Command, ExitStatus};
 
 fn repo_root() -> PathBuf {
-    // xtask binary is invoked via `cargo_full run --bin xtask --`, whose CWD is the
+    // xtask binary is invoked via `cargo xtask`, whose CWD is the
     // workspace root  -  use that directly.
     std::env::current_dir()
         .expect("Fix: xtask must run in a cwd; restore this invariant before continuing.")

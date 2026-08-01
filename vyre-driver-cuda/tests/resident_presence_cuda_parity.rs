@@ -26,7 +26,14 @@ use vyre_libs::scan::GpuLiteralSet;
 
 // pattern_id order: key=0 token=1 secret=2 AKIA=3 ghp_=4 sk_live_=5 password=6 api=7
 const LITERALS: &[&[u8]] = &[
-    b"key", b"token", b"secret", b"AKIA", b"ghp_", b"sk_live_", b"password", b"api",
+    b"key",
+    b"token",
+    b"secret",
+    b"AKIA",
+    b"ghp_",
+    b"sk_live_",
+    b"password",
+    b"api",
 ];
 
 /// Three coalesced "files" with KNOWN hit sets (keyhog's phase-1 layout): a
@@ -115,7 +122,14 @@ fn resident_region_presence_matches_borrowed_and_planted_hits_on_cuda() {
     let mut scratch = Vec::new();
     for iter in 0..4 {
         session
-            .scan_into(&backend, &haystack, &region_starts, 0, &mut out, &mut scratch)
+            .scan_into(
+                &backend,
+                &haystack,
+                &region_starts,
+                0,
+                &mut out,
+                &mut scratch,
+            )
             .expect("resident CUDA region-presence scan");
         assert_eq!(
             out, borrowed,

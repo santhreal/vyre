@@ -82,7 +82,7 @@ pub(crate) fn cast_value(target: &DataType, value: &Value) -> Result<Value, vyre
         // the backends (PTX `cvt.s64.s32`, naga sign-replicate) and Rust `as`:
         // a signed `i32` SIGN-extends (`-1i32 -> 0xFFFF_FFFF_FFFF_FFFF`), an
         // unsigned/bool source zero-extends. `try_as_u64`'s `u64::try_from`
-        // would instead REJECT negative `i32`: diverging from every backend 
+        // would instead REJECT negative `i32`: diverging from every backend
         // so the signed case is handled explicitly here before delegating the
         // rest. Adding `I64` here also removes it from the `_ => to_bytes()`
         // catch-all, which silently produced a 4-byte payload with no extension.

@@ -323,9 +323,7 @@ impl MegakernelRuntimeEvidence {
         if total == 0 {
             return 0;
         }
-        let bps = u128::from(self.host_copy_avoided_bytes)
-            .saturating_mul(10_000)
-            / total;
+        let bps = u128::from(self.host_copy_avoided_bytes).saturating_mul(10_000) / total;
         bps.min(10_000) as u16
     }
 }

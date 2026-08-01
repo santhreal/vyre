@@ -252,16 +252,10 @@ inventory::submit! {
     }
 }
 
-use crate::scan::dispatch_io::pack_u32_slice as pack_u32;
+use vyre_primitives::wire::pack_u32_slice as pack_u32;
 
 fn lexer_bounded_identifier_inputs() -> Vec<Vec<Vec<u8>>> {
-    vec![vec![
-        vec![b'a'; 4_096 * 4],
-        vec![0u8; 4_096 * 4],
-        vec![0u8; 4_096 * 4],
-        vec![0u8; 4_096 * 4],
-        vec![0u8; 4],
-    ]]
+    super::identifier_fixture_inputs(4_096)
 }
 
 fn lexer_bounded_identifier_expected() -> Vec<Vec<Vec<u8>>> {

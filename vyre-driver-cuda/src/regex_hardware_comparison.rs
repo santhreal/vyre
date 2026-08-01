@@ -60,14 +60,12 @@ pub fn cuda_regex_hardware_comparison_evidence(
 ) -> Result<CudaRegexHardwareComparisonEvidence, BackendError> {
     if baseline_id.is_empty() {
         return Err(BackendError::InvalidProgram {
-            fix: "Fix: CUDA regex hardware-comparison baseline_id must be non-empty."
-                .to_string(),
+            fix: "Fix: CUDA regex hardware-comparison baseline_id must be non-empty.".to_string(),
         });
     }
     if software_path.is_empty() {
         return Err(BackendError::InvalidProgram {
-            fix: "Fix: CUDA regex hardware-comparison software_path must be non-empty."
-                .to_string(),
+            fix: "Fix: CUDA regex hardware-comparison software_path must be non-empty.".to_string(),
         });
     }
     if compiled_scan_artifact_id.is_empty() {
@@ -114,9 +112,7 @@ pub fn cuda_regex_software_fallback_comparison_evidence(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_driver::backend::{
-        RegexAcceleratorMatchSchema, RegexAcceleratorStreamMode,
-    };
+    use vyre_driver::backend::{RegexAcceleratorMatchSchema, RegexAcceleratorStreamMode};
 
     #[test]
     fn cuda_software_fallback_records_unsupported_hardware_fields() {
@@ -125,12 +121,18 @@ mod tests {
             "cuda-software-regex",
             "cuda-module-cache:scan:v1",
         )
-        .expect("Fix: CUDA regex software fallback evidence should build");
+        .expect("Fix: CUDA regex comparison evidence should build");
 
-        assert_eq!(evidence.schema_version, CUDA_REGEX_HARDWARE_COMPARISON_SCHEMA_VERSION);
+        assert_eq!(
+            evidence.schema_version,
+            CUDA_REGEX_HARDWARE_COMPARISON_SCHEMA_VERSION
+        );
         assert_eq!(evidence.baseline_id, "rxp-like-baseline");
         assert_eq!(evidence.software_path, "cuda-software-regex");
-        assert_eq!(evidence.compiled_scan_artifact_id, "cuda-module-cache:scan:v1");
+        assert_eq!(
+            evidence.compiled_scan_artifact_id,
+            "cuda-module-cache:scan:v1"
+        );
         assert!(!evidence.hardware_available);
         assert!(!evidence.accelerator.supported);
         assert_eq!(evidence.accelerator.backend, CUDA_BACKEND_ID);

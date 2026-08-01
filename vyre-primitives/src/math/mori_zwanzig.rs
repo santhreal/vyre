@@ -43,10 +43,7 @@
 //! semiring_gemm) so that region-chain audits show the M-Z projection
 //! intent at the call site.
 
-use std::sync::Arc;
-
-use vyre_foundation::ir::model::expr::Ident;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{DataType, Program};
 
 /// Op id.
 pub const OP_ID: &str = "vyre-primitives::math::mori_zwanzig_project_step";
@@ -77,44 +74,13 @@ pub fn try_mz_project_step(
     }
     let matrix_cells = checked_mz_cells(n)?;
 
-    let t = Expr::InvocationId { axis: 0 };
-    let body = vec![Node::if_then(
-        Expr::lt(t.clone(), Expr::u32(n)),
-        vec![
-            Node::let_bind("acc", Expr::u32(0)),
-            Node::let_bind("row_base", Expr::mul(t.clone(), Expr::u32(n))),
-            Node::loop_for(
-                "j",
-                Expr::u32(0),
-                Expr::u32(n),
-                vec![Node::assign(
-                    "acc",
-                    Expr::add(
-                        Expr::var("acc"),
-                        crate::fixed_mul_16_16_expr(
-                            Expr::load(p_matrix, Expr::add(Expr::var("row_base"), Expr::var("j"))),
-                            Expr::load(f_vec, Expr::var("j")),
-                        ),
-                    ),
-                )],
-            ),
-            Node::store(out, t, Expr::var("acc")),
-        ],
-    )];
-
-    Ok(Program::wrapped(
-        vec![
-            BufferDecl::storage(p_matrix, 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(matrix_cells),
-            BufferDecl::storage(f_vec, 1, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-            BufferDecl::storage(out, 2, BufferAccess::ReadWrite, DataType::U32).with_count(n),
-        ],
-        [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+    Ok(crate::fixed_u32_matmul::fixed_u32_matvec_program(
+        OP_ID,
+        p_matrix,
+        f_vec,
+        out,
+        n,
+        matrix_cells,
     ))
 }
 

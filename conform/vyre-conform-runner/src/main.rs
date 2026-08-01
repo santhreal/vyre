@@ -384,7 +384,8 @@ fn dispatch_capable_backends() -> Vec<&'static vyre::BackendRegistration> {
 fn force_link_backend_inventory() {
     #[cfg(feature = "gpu")]
     {
-        let metal_acquire: fn() -> Result<Box<dyn VyreBackend>, vyre_driver::backend::BackendError> =
+        let metal_acquire: fn()
+            -> Result<Box<dyn VyreBackend>, vyre_driver::backend::BackendError> =
             vyre_driver_metal::acquire;
         std::hint::black_box(metal_acquire);
     }
@@ -1509,7 +1510,11 @@ mod tests {
     }
 
     fn assert_hex64(value: &str) {
-        assert_eq!(value.len(), 64, "Fix: replay fingerprints must be BLAKE3 hex.");
+        assert_eq!(
+            value.len(),
+            64,
+            "Fix: replay fingerprints must be BLAKE3 hex."
+        );
         assert!(
             value.bytes().all(|byte| byte.is_ascii_hexdigit()),
             "Fix: replay fingerprints must contain only hex characters."

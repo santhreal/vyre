@@ -133,4 +133,3 @@ fn cuda_resident_adaptive_sparse_dense_keeps_selector_on_device_dense_branch() {
         .free(&dispatcher)
         .expect("resident adaptive graph free");
 }
-

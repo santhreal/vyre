@@ -61,4 +61,3 @@ fn generated_resident_cast_matrix_matches_reference_on_live_cuda() {
         "Fix: resident cast generated matrix must compare every output lane."
     );
 }
-

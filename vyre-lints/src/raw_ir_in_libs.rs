@@ -197,4 +197,3 @@ impl<'ast> Visit<'ast> for LegoBlockVisitor {
         // false positives on type-paths used in turbofish or trait calls.
     }
 }
-

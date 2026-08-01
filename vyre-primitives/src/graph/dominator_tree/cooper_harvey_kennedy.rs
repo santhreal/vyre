@@ -1,7 +1,7 @@
 /// Cooper–Harvey–Kennedy iterative immediate dominators (bitset formulation).
 ///
 /// Implements the classical dataflow algorithm using dense bitsets so the
-/// result is exact and comparable to [`lengauer_tarjan_idoms`].  Memory is
+/// result is exact and comparable to `lengauer_tarjan_idoms`.  Memory is
 /// `O(n²/32)` - acceptable for the `#[cfg(test)]` differential oracle.
 #[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]

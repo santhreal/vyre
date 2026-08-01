@@ -7,12 +7,17 @@ use crate::numeric::WGPU_NUMERIC;
 use crate::pipeline::{DispatchItem, OutputLayout, WgpuPipeline};
 use smallvec::SmallVec;
 use std::sync::mpsc::Receiver;
-use vyre_driver::{BackendError, DispatchConfig, Resource};
+use vyre_driver::{BackendError, DispatchConfig, ResidentHandle, Resource};
 
+/// Per-dispatch view of one bound resource.
+///
+/// The resident arm keeps the full [`ResidentHandle`], owner included, so a
+/// foreign handle is refused where it is resolved rather than silently
+/// matching an unrelated live buffer with the same id.
 #[derive(Clone, Copy)]
 pub(crate) enum CompoundResource<'a> {
     Borrowed(&'a [u8]),
-    Resident(u64),
+    Resident(ResidentHandle),
 }
 
 impl<'a> From<&'a Resource> for CompoundResource<'a> {
@@ -166,7 +171,8 @@ impl WgpuPipeline {
             },
         )?;
 
-        let readback_size = WGPU_NUMERIC.usize_to_u64(self.output.copy_size, "compound readback bytes")?;
+        let readback_size =
+            WGPU_NUMERIC.usize_to_u64(self.output.copy_size, "compound readback bytes")?;
         let readback_usage = wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ;
         let readback_buffer = self
             .staging_pool
@@ -196,7 +202,7 @@ impl WgpuPipeline {
 
     fn handles_from_resident_resource(
         &self,
-        id: u64,
+        id: ResidentHandle,
     ) -> Result<(Vec<GpuBufferHandle>, Vec<GpuBufferHandle>), BackendError> {
         let input_count = self
             .buffer_bindings
@@ -208,11 +214,12 @@ impl WgpuPipeline {
                 "Resident Resource can bind exactly one non-output buffer, but this pipeline declares {input_count}. Fix: call dispatch_persistent with the full input handle list for multi-input resident dispatch."
             )));
         }
-        let input = GpuBufferHandle::from_resident_id(id).ok_or_else(|| {
-            BackendError::new(format!(
-                "Resident Resource id {id} is not live in the wgpu resident registry. Fix: keep the GpuBufferHandle alive until compound dispatch completes."
-            ))
-        })?;
+        let input = GpuBufferHandle::from_resident_handle(id, "WGPU compound resident dispatch")?
+            .ok_or_else(|| {
+                BackendError::new(format!(
+                    "Resident Resource {id} is not live in the wgpu resident registry. Fix: keep the GpuBufferHandle alive until compound dispatch completes."
+                ))
+            })?;
         let mut outputs = Vec::new();
         reserve_vec_to_capacity(
             &mut outputs,

@@ -461,7 +461,7 @@ pub struct ScanAllTimed {
 /// prefilter tables into backend resources ONCE, then re-dispatches the
 /// `(pattern_id, start, end)` match scan across a corpus re-uploading only the
 /// per-file haystack (and resetting the 4-byte match counter), the position-scan
-/// sibling of [`ResidentPresencePipeline`], eliminating the multi-MiB per-scan
+/// sibling of [`ResidentPresencePipeline`](crate::scan::resident_presence::ResidentPresencePipeline), eliminating the multi-MiB per-scan
 /// table re-upload the borrowed [`GpuLiteralSet::scan_into`] path repeats on every
 /// file.
 ///
@@ -613,7 +613,7 @@ impl ResidentLiteralScan {
     /// [`Self::scan_into`] returning the backend-owned dispatch timing
     /// ([`vyre_driver::TimedDispatchResult`]) so a consumer can attribute the
     /// resident scan's GPU-kernel time separately from host staging/readback
-    /// matching [`ResidentPresencePipeline::scan_into_timed`].
+    /// matching [`ResidentPresencePipeline::scan_into_timed`](crate::scan::resident_presence::ResidentPresencePipeline::scan_into_timed).
     ///
     /// # Errors
     /// See [`Self::scan_into`].
@@ -723,7 +723,7 @@ impl ResidentLiteralScan {
 /// ([`GpuLiteralSet::scan_presence_and_positions_by_region`]).
 ///
 /// Construct with [`GpuLiteralSet::prepare_resident_fused_scan`]. It is the
-/// fusion of [`ResidentPresencePipeline`] (the per-region presence bitmap +
+/// fusion of [`ResidentPresencePipeline`](crate::scan::resident_presence::ResidentPresencePipeline) (the per-region presence bitmap +
 /// region controls) and [`ResidentLiteralScan`] (the positioned match output):
 /// one all-resident dispatch of the fused program produces BOTH the per-region
 /// presence bitmap AND the `(pattern_id, start, end)` triples, uploading the
@@ -1536,7 +1536,7 @@ impl GpuLiteralSet {
     /// GPU scan dispatch.
     ///
     /// # Errors
-    /// Returns [\`vyre::BackendError\`] if dispatch or readback fails.
+    /// Returns `vyre::BackendError` if dispatch or readback fails.
     pub fn scan<B: VyreBackend + ?Sized>(
         &self,
         backend: &B,
@@ -3513,11 +3513,18 @@ impl GpuLiteralSet {
         Ok(patterns)
     }
 
-    fn pattern_fingerprint(&self) -> u64 {
-        // Same owner as `GpuLiteralSet::cache_key` (engine.rs) over the same
-        // slices, one hash impl, no drift. The case-insensitive flag is folded
-        // in because a ci and a non-ci matcher share identical pattern bytes but
-        // build DIFFERENT prefilter masks; without it their cached tables collide.
+    /// The one identity hash for a compiled literal set.
+    ///
+    /// `GpuLiteralSet::cache_key` renders this value; it does not recompute it.
+    /// There used to be a second copy of this expression in `engine.rs` kept in
+    /// step by a test, and a third hand-rolled copy in
+    /// `tests/cross_layer_parity.rs` that had already drifted: it omitted the
+    /// case-insensitive word and so computed a different digest than the code
+    /// it was pinning.
+    pub(crate) fn pattern_fingerprint(&self) -> u64 {
+        // The case-insensitive flag is folded in because a ci and a non-ci
+        // matcher share identical pattern bytes but build DIFFERENT prefilter
+        // masks; without it their cached tables collide.
         let case_word = [u32::from(self.case_insensitive)];
         crate::scan::engine::fnv1a64_word_slices([
             self.pattern_offsets.as_slice(),
@@ -5269,15 +5276,50 @@ mod compile_tests {
         assert_eq!(zeroed_presence_bytes(0).expect("zero words").len(), 0);
     }
 
+    /// `cache_key` is `pattern_fingerprint` rendered, nothing more.
+    ///
+    /// `cache_key` now calls the fingerprint rather than recomputing it, so
+    /// this asserts the rendering (prefix and zero-padded lower-hex width)
+    /// rather than guarding a duplicate expression. The width matters: a
+    /// fingerprint with leading zero nibbles must still produce a 16-digit
+    /// key, or two distinct pattern sets could round to the same filename.
     #[test]
-    fn pattern_fingerprint_shares_one_owner_with_cache_key() {
-        // Dedup lock: `pattern_fingerprint` and `GpuLiteralSet::cache_key` must
-        // hash the SAME three slices through the SAME `fnv1a64_word_slices`
-        // owner, so the identity hash cannot drift between the two call sites.
+    fn cache_key_is_the_pattern_fingerprint_rendered() {
         use crate::scan::engine::MatchScan;
         let engine = GpuLiteralSet::compile(&[b"AKIA".as_slice(), b"ghp_".as_slice()]);
-        let fp = engine.pattern_fingerprint();
-        assert_eq!(format!("lit-{fp:016x}"), MatchScan::cache_key(&engine));
+        let key = MatchScan::cache_key(&engine);
+        assert_eq!(format!("lit-{:016x}", engine.pattern_fingerprint()), key);
+        assert_eq!(
+            key.len(),
+            "lit-".len() + 16,
+            "key must be zero-padded to 16 hex digits: {key}"
+        );
+        assert!(key
+            .trim_start_matches("lit-")
+            .chars()
+            .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()));
+    }
+
+    /// The case-insensitive flag is part of the identity.
+    ///
+    /// A ci and a non-ci matcher over identical pattern bytes build DIFFERENT
+    /// prefilter masks, so sharing a cache key would let one load the other's
+    /// tables. A hand-rolled copy of this hash in `tests/cross_layer_parity.rs`
+    /// had dropped this word, which is how the drift was found.
+    #[test]
+    fn case_insensitivity_changes_the_fingerprint_and_the_cache_key() {
+        use crate::scan::engine::MatchScan;
+        let sensitive = GpuLiteralSet::compile(&[b"AKIA".as_slice()]);
+        let insensitive = GpuLiteralSet::compile_case_insensitive(&[b"AKIA".as_slice()]);
+        assert_ne!(
+            sensitive.pattern_fingerprint(),
+            insensitive.pattern_fingerprint(),
+            "a ci matcher must not share an identity with its case-sensitive twin"
+        );
+        assert_ne!(
+            MatchScan::cache_key(&sensitive),
+            MatchScan::cache_key(&insensitive)
+        );
     }
 }
 
@@ -5336,6 +5378,7 @@ mod resident_match_tests {
     }
 
     struct MockResidentMatchBackend {
+        owner: vyre_driver::ResidentOwner,
         next_id: AtomicU64,
         /// (handle_id, byte_len) for every allocate_resident call, in order.
         allocations: Mutex<Vec<(u64, usize)>>,
@@ -5352,6 +5395,8 @@ mod resident_match_tests {
     impl MockResidentMatchBackend {
         fn new(outputs: Vec<Vec<u8>>) -> Self {
             Self {
+                owner: vyre_driver::ResidentOwner::new()
+                    .expect("Fix: resident owner minting must succeed in tests"),
                 next_id: AtomicU64::new(1),
                 allocations: Mutex::new(Vec::new()),
                 full_uploads: AtomicUsize::new(0),
@@ -5384,7 +5429,7 @@ mod resident_match_tests {
                 .lock()
                 .expect("mock allocations mutex")
                 .push((handle, byte_len));
-            Ok(Resource::Resident(handle))
+            Ok(Resource::Resident(self.owner.handle(handle)))
         }
 
         fn upload_resident(
@@ -5686,6 +5731,7 @@ mod resident_fused_tests {
     }
 
     struct MockResidentFusedBackend {
+        owner: vyre_driver::ResidentOwner,
         next_id: AtomicU64,
         allocations: Mutex<Vec<(u64, usize)>>,
         full_uploads: AtomicUsize,
@@ -5696,6 +5742,8 @@ mod resident_fused_tests {
     impl MockResidentFusedBackend {
         fn new(outputs: Vec<Vec<u8>>) -> Self {
             Self {
+                owner: vyre_driver::ResidentOwner::new()
+                    .expect("Fix: resident owner minting must succeed in tests"),
                 next_id: AtomicU64::new(1),
                 allocations: Mutex::new(Vec::new()),
                 full_uploads: AtomicUsize::new(0),
@@ -5727,7 +5775,7 @@ mod resident_fused_tests {
                 .lock()
                 .expect("mock allocations mutex")
                 .push((handle, byte_len));
-            Ok(Resource::Resident(handle))
+            Ok(Resource::Resident(self.owner.handle(handle)))
         }
 
         fn upload_resident(

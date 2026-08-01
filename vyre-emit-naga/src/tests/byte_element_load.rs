@@ -385,7 +385,10 @@ fn byte_extract_loads_and_stores_emit_valid_wgsl() {
     let mut validator = Validator::new(ValidationFlags::all(), Capabilities::all());
     let cases = [
         ("u8 load", byte_load_desc(DataType::U8)),
-        ("i8 load (arithmetic >>24 sign-extend)", byte_load_desc(DataType::I8)),
+        (
+            "i8 load (arithmetic >>24 sign-extend)",
+            byte_load_desc(DataType::I8),
+        ),
         ("u32 load", byte_load_desc(DataType::U32)),
         ("u8 store", byte_store_desc(DataType::U8)),
         ("i8 store", byte_store_desc(DataType::I8)),

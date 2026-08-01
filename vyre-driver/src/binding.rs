@@ -2,7 +2,7 @@
 
 use smallvec::SmallVec;
 use std::sync::Arc;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, MemoryKind, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, MemoryKind, Program};
 
 use crate::BackendError;
 
@@ -359,7 +359,9 @@ impl BindingPlan {
             let element_count = if buffer.count() == 0 {
                 input_index
                     .and_then(|index| input_lens.get(index))
-                    .and_then(|byte_len| dynamic_element_count_from_bytes(buffer, byte_len))
+                    .and_then(|byte_len| {
+                        dynamic_element_count_from_bytes(&buffer.element, byte_len)
+                    })
                     .unwrap_or(0)
             } else {
                 buffer.count()
@@ -495,13 +497,27 @@ fn static_byte_len(buffer: &BufferDecl) -> Result<Option<usize>, BackendError> {
         })
 }
 
-fn dynamic_element_count_from_bytes(buffer: &BufferDecl, byte_len: usize) -> Option<u32> {
-    if let Some(bits) = buffer.element().bit_width() {
+/// Element count a runtime-sized buffer takes from the bytes the caller supplied.
+///
+/// A buffer declared without `.with_count(n)` has `count == 0`, which the IR
+/// defines as runtime-sized: its element count is whatever the caller passed for
+/// it on this dispatch. This function is the ONE rule for deriving that count,
+/// `byte_len` divided by the element width, sub-byte element types included.
+///
+/// The CPU reference, CUDA, and WGPU all size runtime-sized writable buffers
+/// through this rule, so a countless declaration reads back the same element
+/// count on every backend. A second copy of this arithmetic is how the three
+/// paths drifted into returning 4 words, 1 word, and 0 words for one program.
+///
+/// Returns `None` when the element type has no fixed width or the count does not
+/// fit `u32`.
+#[must_use]
+pub fn dynamic_element_count_from_bytes(element: &DataType, byte_len: usize) -> Option<u32> {
+    if let Some(bits) = element.bit_width() {
         let total_bits = byte_len.checked_mul(8)?;
         return u32::try_from(total_bits / bits).ok();
     }
-    buffer
-        .element()
+    element
         .size_bytes()
         .and_then(|element_size| byte_len.checked_div(element_size))
         .and_then(|count| u32::try_from(count).ok())

@@ -7,6 +7,9 @@ use crate::benchmark_evidence_semantics::{
     CudaTelemetryLabelIssue, LaunchPlanLabelIssue, SourceFingerprintFreshnessIssue,
     SourceFingerprintIssue,
 };
+use crate::benchmark_evidence_semantics::{
+    metrics_has_any, metrics_has_positive_any, metrics_has_zero_any,
+};
 
 pub(crate) fn check_benchmark_report_has_cases(
     requirement: &Requirement,
@@ -497,35 +500,6 @@ pub(crate) fn json_has_nonempty_string_any(value: &serde_json::Value, fields: &[
             .is_some_and(|text| !text.trim().is_empty())
     })
 }
-pub(crate) fn metrics_has_any(
-    metrics: Option<&serde_json::Map<String, serde_json::Value>>,
-    fields: &[&str],
-) -> bool {
-    metrics.is_some_and(|metrics| {
-        fields.iter().any(|field| {
-            metrics.get(*field).is_some_and(|value| {
-                metric_samples(Some(value)).is_some_and(|samples| samples > 0)
-                    || metric_p50(Some(value)).is_some_and(|sample| sample > 0.0)
-                    || value.as_u64().is_some()
-                    || value.as_f64().is_some_and(|number| number >= 0.0)
-            })
-        })
-    })
-}
-pub(crate) fn metrics_has_positive_any(
-    metrics: Option<&serde_json::Map<String, serde_json::Value>>,
-    fields: &[&str],
-) -> bool {
-    metrics.is_some_and(|metrics| {
-        fields.iter().any(|field| {
-            metrics.get(*field).is_some_and(|value| {
-                metric_p50(Some(value)).is_some_and(|sample| sample > 0.0)
-                    || value.as_u64().is_some_and(|number| number > 0)
-                    || value.as_f64().is_some_and(|number| number > 0.0)
-            })
-        })
-    })
-}
 
 const LAUNCH_COUNT_METRICS: &[&str] = &["kernel_launches", "launch_count", "launches"];
 const NON_DISPATCH_PROOF_CASE_IDS: &[&str] = &[
@@ -539,20 +513,6 @@ fn is_non_dispatch_proof_case(case_id: &str) -> bool {
     NON_DISPATCH_PROOF_CASE_IDS.contains(&case_id)
 }
 
-fn metrics_has_zero_any(
-    metrics: Option<&serde_json::Map<String, serde_json::Value>>,
-    fields: &[&str],
-) -> bool {
-    metrics.is_some_and(|metrics| {
-        fields.iter().any(|field| {
-            metrics.get(*field).is_some_and(|value| {
-                metric_p50(Some(value)).is_some_and(|sample| sample == 0.0)
-                    || value.as_u64() == Some(0)
-                    || value.as_f64().is_some_and(|number| number == 0.0)
-            })
-        })
-    })
-}
 
 fn check_launch_plan_label_matches_count(
     requirement: &Requirement,

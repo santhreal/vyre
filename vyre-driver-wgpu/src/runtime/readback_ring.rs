@@ -269,7 +269,7 @@ impl ReadbackRing {
     /// VYRE-WGPU-002: earlier code conflated `SLOT_READY` / `SLOT_ERROR` with a
     /// single misleading wrap-overflow message. We now name each
     /// state (but we DO NOT silently recycle an uncollected `SLOT_READY` slot).
-    /// Recycling would unmap and discard a completed-but-uncollected readback 
+    /// Recycling would unmap and discard a completed-but-uncollected readback
     /// a silent recall loss (Law 10). The caller MUST collect every readback
     /// before the ring wraps back to its slot; if it has not, we fail closed so
     /// the data loss is impossible to miss.
@@ -482,7 +482,7 @@ impl ReadbackRing {
     /// wrapping a slice (the wgpu copy API requires aligned buffer offsets).
     ///
     /// # Errors
-    /// Returns [\`BackendError\`] if encoder or queue submission fails.
+    /// Returns `BackendError` if encoder or queue submission fails.
     pub fn submit_readback(
         &self,
         device: &wgpu::Device,

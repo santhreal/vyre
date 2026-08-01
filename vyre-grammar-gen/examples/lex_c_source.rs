@@ -30,7 +30,10 @@ int never_compiled(void) { return 1; }
 "#;
 
 fn main() {
-    println!("the C11 lexer is built from {} patterns", C11_PATTERNS.len());
+    println!(
+        "the C11 lexer is built from {} patterns",
+        C11_PATTERNS.len()
+    );
 
     let preprocessed = preprocess_c_host(SOURCE);
     println!("--- preprocessed ---");

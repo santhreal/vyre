@@ -9,7 +9,7 @@ use crate::graph::program_graph::{ProgramGraphShape, BINDING_PRIMITIVE_START};
 
 /// Batched parallel expansion with one global convergence flag.
 ///
-/// Same frontier layout as [`csr_forward_or_changed_parallel_batch`], but every
+/// Same frontier layout as [`crate::graph::csr_forward_or_changed::csr_forward_or_changed_parallel_batch`], but every
 /// newly discovered bit ORs `changed[0]` instead of `changed[query]`. This is
 /// the hot-path convergence primitive for callers that only need to know
 /// whether the whole query batch changed.

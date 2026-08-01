@@ -173,9 +173,8 @@ fn artifact_semantic_blockers(
                 "external benchmark artifact `{artifact}` is not valid JSON: {error}"
             )),
         }
-        blockers.extend(crate::release_benchmarks::validate_frontier_leaderboard_artifact_bytes(
-            bytes,
-        ));
+        blockers
+            .extend(crate::release_benchmarks::validate_frontier_leaderboard_artifact_bytes(bytes));
         return blockers;
     }
     if is_release_benchmark_semantic_artifact(artifact) {
@@ -194,9 +193,11 @@ fn artifact_semantic_blockers(
             expected_generator_command,
             command_mode,
         ));
-        blockers.extend(crate::benchmark_evidence_semantics::benchmark_evidence_blocker_issues(
-            artifact, &value,
-        ));
+        blockers.extend(
+            crate::benchmark_evidence_semantics::benchmark_evidence_blocker_issues(
+                artifact, &value,
+            ),
+        );
         return blockers;
     }
     blockers
@@ -230,11 +231,13 @@ fn external_benchmark_artifact_freshness_blockers(
         ));
     }
     if artifact.ends_with("cuda-release-suite.json") {
-        blockers.extend(crate::benchmark_evidence_semantics::benchmark_schema_digest_chain_issues(
-            artifact,
-            value,
-            "backend-suite",
-        ));
+        blockers.extend(
+            crate::benchmark_evidence_semantics::benchmark_schema_digest_chain_issues(
+                artifact,
+                value,
+                "backend-suite",
+            ),
+        );
         let chain = value.get("schema_digest_chain");
         for field in ["source_digest", "command_digest", "hardware_digest"] {
             if chain
@@ -286,12 +289,8 @@ fn owner_lane_for_command(command_args: &[&str]) -> &'static str {
         "optimization-corpus" | "optimization-matrix" => "foundation_optimizer",
         "parser-coherence" => "parser_frontend",
         "weir-matrix" => "flow_weir",
-        "source-similar" | "whats-similar" | "lego-audit" | "research-audit" => {
-            "testing_evidence"
-        }
-        "hygiene-matrix" | "test-matrix" | "docs-matrix" | "release-evidence" => {
-            "testing_evidence"
-        }
+        "source-similar" | "whats-similar" | "lego-audit" | "research-audit" => "testing_evidence",
+        "hygiene-matrix" | "test-matrix" | "docs-matrix" | "release-evidence" => "testing_evidence",
         "acceleration-plan-gate" => "testing_evidence",
         "version-matrix" | "metadata-matrix" | "feature-matrix" => "coordination",
         _ => "coordination",

@@ -197,7 +197,7 @@ pub fn validate_release_gap_suite_artifact(
     artifact_contains(artifact, "gap suite marker", "\"suite\": \"gap\"")?;
     artifact_contains(artifact, "zero blockers", "\"blockers\": []")?;
     artifact_contains(artifact, "gap layer", "\"gap\"")?;
-    artifact_contains(artifact, "Vyre test paths", "/matching/vyre/")?;
+    artifact_contains(artifact, "Vyre test paths", "\"path\": \"vyre-")?;
     if artifact.contains("\"oversized\": true") {
         return Err(ReleaseGapFindingError::ArtifactMissingEvidence {
             evidence: "no oversized gap tests",
@@ -350,7 +350,7 @@ mod tests {
     #[test]
     fn gap_findings_accept_committed_gap_suite_artifact() {
         let proof = validate_release_gap_suite_artifact(include_str!(
-            "../../../../release/evidence/tests/gap-suite-platform.json"
+            "../../../../release/evidence/tests/gap-suite.json"
         ))
         .expect("Fix: committed gap suite artifact should pass");
 
@@ -392,7 +392,7 @@ mod tests {
           "dataflow_consumer_file_count": 1,
           "vyrec_file_count": 1,
           "blockers": [],
-          "path": "/matching/vyre/test.rs",
+          "path": "vyre-grammar-gen/tests/gap.rs",
           "layers": ["gap"],
           "has_test_entrypoint": true,
           "oversized": true,

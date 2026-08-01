@@ -31,8 +31,7 @@ use std::path::Path;
 const LINT_SOURCE_READ_CAP: usize = 64 * 1024 * 1024;
 
 pub(crate) fn read_source_bounded(path: &Path) -> Result<String> {
-    let mut file = std::fs::File::open(path)
-        .with_context(|| format!("open {}", path.display()))?;
+    let mut file = std::fs::File::open(path).with_context(|| format!("open {}", path.display()))?;
     let len = file
         .metadata()
         .with_context(|| format!("stat {}", path.display()))?

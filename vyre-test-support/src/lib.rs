@@ -44,14 +44,18 @@ use std::path::{Path, PathBuf};
 const MAX_SOURCE_FILE_BYTES: u64 = 4_194_304;
 
 /// Read one source file as text, bounded by [`MAX_SOURCE_FILE_BYTES`].
-fn read_source_file_bounded(path: &Path) -> std::io::Result<String> {
+pub(crate) fn read_source_file_bounded(path: &Path) -> std::io::Result<String> {
+    read_source_file_with_cap(path, MAX_SOURCE_FILE_BYTES)
+}
+
+fn read_source_file_with_cap(path: &Path, max_bytes: u64) -> std::io::Result<String> {
     let mut text = String::new();
     fs::File::open(path)?
-        .take(MAX_SOURCE_FILE_BYTES + 1)
+        .take(max_bytes.saturating_add(1))
         .read_to_string(&mut text)?;
-    if text.len() as u64 > MAX_SOURCE_FILE_BYTES {
+    if text.len() as u64 > max_bytes {
         return Err(std::io::Error::other(format!(
-            "{} exceeds the {MAX_SOURCE_FILE_BYTES} byte source read cap; truncating it \
+            "{} exceeds the {max_bytes} byte source read cap; truncating it \
              would silently drop builders from the closure enumeration. Fix: split the \
              file or raise MAX_SOURCE_FILE_BYTES deliberately.",
             path.display()
@@ -122,8 +126,9 @@ pub fn assert_registry_closure(manifest_dir: &str, waiver: &[&str], floor: usize
             continue;
         }
         corpus.push_str(
-            &read_source_file_bounded(path)
-                .unwrap_or_else(|e| panic!("{crate_name} test file {path:?} must be readable: {e}")),
+            &read_source_file_bounded(path).unwrap_or_else(|e| {
+                panic!("{crate_name} test file {path:?} must be readable: {e}")
+            }),
         );
         corpus.push('\n');
     }
@@ -141,9 +146,14 @@ pub fn assert_registry_closure(manifest_dir: &str, waiver: &[&str], floor: usize
     );
     let waiver_set: BTreeSet<String> = waiver.iter().map(|s| (*s).to_string()).collect();
 
-    let stale: BTreeSet<&String> = waiver_set.iter().filter(|w| !builders.contains(*w)).collect();
-    let now_covered: BTreeSet<&String> =
-        waiver_set.iter().filter(|w| !uncovered.contains(*w)).collect();
+    let stale: BTreeSet<&String> = waiver_set
+        .iter()
+        .filter(|w| !builders.contains(*w))
+        .collect();
+    let now_covered: BTreeSet<&String> = waiver_set
+        .iter()
+        .filter(|w| !uncovered.contains(*w))
+        .collect();
     let unwaived: BTreeSet<&String> = uncovered.difference(&waiver_set).collect();
 
     if !stale.is_empty() || !now_covered.is_empty() || !unwaived.is_empty() {
@@ -413,7 +423,10 @@ mod tests {
     #[test]
     fn word_boundary_matching() {
         assert!(corpus_contains_word("register(make_thing);", "make_thing"));
-        assert!(!corpus_contains_word("register(make_thing_ext);", "make_thing"));
+        assert!(!corpus_contains_word(
+            "register(make_thing_ext);",
+            "make_thing"
+        ));
         assert!(!corpus_contains_word("premake_thing", "make_thing"));
     }
 
@@ -423,5 +436,43 @@ mod tests {
         assert_eq!(blocks.len(), 1);
         assert!(blocks[0].contains("OpEntry"));
         assert!(blocks[0].ends_with('}'));
+    }
+
+    /// Source readers accept input exactly at the configured cap.
+    #[test]
+    fn bounded_source_reader_accepts_exact_cap() {
+        let dir = tempfile::tempdir().expect("Fix: source-reader fixture directory must exist");
+        let path = dir.path().join("source.rs");
+        fs::write(&path, "12345678").expect("Fix: source-reader fixture must be writable");
+
+        assert_eq!(
+            read_source_file_with_cap(&path, 8).expect("Fix: exact-cap input must be readable"),
+            "12345678"
+        );
+    }
+
+    /// Source readers reject oversized input rather than silently truncating coverage.
+    #[test]
+    fn bounded_source_reader_rejects_oversized_input() {
+        let dir = tempfile::tempdir().expect("Fix: source-reader fixture directory must exist");
+        let path = dir.path().join("source.rs");
+        fs::write(&path, "123456789").expect("Fix: source-reader fixture must be writable");
+
+        let error = read_source_file_with_cap(&path, 8)
+            .expect_err("oversized source evidence must fail closed");
+        assert_eq!(error.kind(), std::io::ErrorKind::Other);
+        assert!(error
+            .to_string()
+            .contains("exceeds the 8 byte source read cap"));
+    }
+
+    /// Missing source evidence preserves the filesystem error for the calling contract.
+    #[test]
+    fn bounded_source_reader_reports_missing_files() {
+        let dir = tempfile::tempdir().expect("Fix: source-reader fixture directory must exist");
+        let error = read_source_file_with_cap(&dir.path().join("missing.rs"), 8)
+            .expect_err("missing source evidence must fail");
+
+        assert_eq!(error.kind(), std::io::ErrorKind::NotFound);
     }
 }

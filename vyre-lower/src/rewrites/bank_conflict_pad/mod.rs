@@ -138,8 +138,7 @@ fn plan_body(
                 // stride muls; otherwise fail closed to the swizzle path. A
                 // per-body count here silently corrupts a child-body consumer of
                 // the stride literal.
-                let total_uses =
-                    tree_uses.get(&literal_result_id).copied().unwrap_or(0) as usize;
+                let total_uses = tree_uses.get(&literal_result_id).copied().unwrap_or(0) as usize;
                 if total_uses != target_mul_results.len() {
                     continue;
                 }
@@ -472,11 +471,7 @@ mod tests {
             .ops
             .push(op(KernelOpKind::StructuredBlock, vec![0], None));
         input.body.child_bodies = vec![KernelBody {
-            ops: vec![op(
-                KernelOpKind::BinOpKind(BinOp::Add),
-                vec![1, 1],
-                Some(4),
-            )],
+            ops: vec![op(KernelOpKind::BinOpKind(BinOp::Add), vec![1, 1], Some(4))],
             child_bodies: vec![],
             literals: vec![],
         }];

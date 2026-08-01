@@ -205,7 +205,7 @@ pub fn build_program_with_self_loading_miss_handler(
     }
 }
 
-/// Fallible variant of [`build_program_with_self_loading_miss_handler`].
+/// Fallible variant of `build_program_with_self_loading_miss_handler` (gated behind the `legacy-infallible` feature).
 pub fn try_build_program_with_self_loading_miss_handler(
     workgroup_size_x: u32,
     slot_count: u32,

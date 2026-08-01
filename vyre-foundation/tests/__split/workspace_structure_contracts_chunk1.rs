@@ -89,7 +89,6 @@ fn foundation_oversized_modules_are_baselined() {
         // Round 4 baselines (A11/A20/A27/A28/A30 + G1/G5 + loop_unroll).
         // Same S10 follow-up.
         "src/optimizer/passes/algebraic/const_fold/reaching_def_propagate.rs",
-        "src/optimizer/passes/loops/loop_unroll.rs",
         "src/optimizer/passes/loops/loop_lower_bound_normalize.rs",
         "src/optimizer/passes/loops/loop_fission.rs",
         "src/optimizer/passes/memory/dead_store_elim.rs",
@@ -110,11 +109,9 @@ fn foundation_oversized_modules_are_baselined() {
         // without splitting first.
         "src/serial/wire/decode/scan_database_budget.rs",
         "src/optimizer/passes/algebraic/canonicalize_engine.rs",
-        "src/execution_plan/fusion/alpha_rename.rs",
         "src/transform/compiler/dominator_tree.rs",
         "src/serial/wire/tags/data_type_tag.rs",
         "src/serial/wire/encode/scan_database_header.rs",
-        "src/optimizer/passes/cleanup/tail_duplication.rs",
         "src/validate/validate_tests.rs",
         "src/optimizer/pass_selection.rs",
         "src/lower/subgroup_lowering.rs",

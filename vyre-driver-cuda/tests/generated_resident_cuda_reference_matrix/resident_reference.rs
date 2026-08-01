@@ -47,4 +47,3 @@ pub(crate) fn resident_in_place_reference_outputs(
     let reference = reference_outputs(program, inputs, case_name);
     (resident_cuda, reference)
 }
-

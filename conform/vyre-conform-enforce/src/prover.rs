@@ -157,7 +157,10 @@ mod tests {
         let verdict = LawProver::verify_commutative(|a, b| a.wrapping_sub(b), &w);
         match verdict {
             LawVerdict::CommutativeFails { a, b, ab, ba } => {
-                assert_ne!(ab, ba, "counterexample must have ab != ba; got a={a} b={b} ab={ab} ba={ba}");
+                assert_ne!(
+                    ab, ba,
+                    "counterexample must have ab != ba; got a={a} b={b} ab={ab} ba={ba}"
+                );
                 assert_eq!(ab, a.wrapping_sub(b), "ab must equal f(a,b)");
                 assert_eq!(ba, b.wrapping_sub(a), "ba must equal f(b,a)");
             }

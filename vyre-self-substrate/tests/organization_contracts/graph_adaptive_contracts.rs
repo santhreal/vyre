@@ -144,4 +144,3 @@ fn adaptive_traverse_resident_upload_uses_primitive_layout_contract() {
         "adaptive resident upload must not own primitive edge-buffer padding policy"
     );
 }
-

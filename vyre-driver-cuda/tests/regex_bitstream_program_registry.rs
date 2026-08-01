@@ -31,7 +31,9 @@ fn regex_bitstream_program_registry_records_refusals_and_parity() {
     );
     assert_eq!(
         PROGRAMS
-            .matches("evidence_path = \"vyre-driver-cuda/tests/regex_bitstream_program_registry.rs\"")
+            .matches(
+                "evidence_path = \"vyre-driver-cuda/tests/regex_bitstream_program_registry.rs\""
+            )
             .count(),
         PROGRAMS.matches("[[program_class]]").count(),
         "Fix: every regex bitstream program row must point at this proof gate"

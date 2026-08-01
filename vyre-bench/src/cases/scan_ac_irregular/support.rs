@@ -90,25 +90,31 @@ pub(crate) fn encode_match_triples(matches: &[Match]) -> Vec<u8> {
 }
 
 pub(super) fn match_triples_output_bytes(max_matches: u32) -> Result<usize, BenchError> {
-    usize::try_from(max_matches)
-        .ok()
-        .and_then(|matches| matches.checked_mul(MATCH_TRIPLE_WORDS))
-        .and_then(|words| words.checked_mul(std::mem::size_of::<u32>()))
-        .ok_or_else(|| {
-            BenchError::EnvironmentInvalid(format!(
-                "irregular AC scan max_matches={max_matches} overflows resident output byte sizing. Fix: split the scan output into smaller shards."
-            ))
-        })
+    match_triples_bytes(max_matches, "max_matches", "resident output", "scan output")
 }
 
 pub(super) fn match_triples_readback_bytes(match_count: u32) -> Result<usize, BenchError> {
-    usize::try_from(match_count)
+    match_triples_bytes(
+        match_count,
+        "match_count",
+        "compact match readback",
+        "scan output",
+    )
+}
+
+fn match_triples_bytes(
+    count: u32,
+    count_label: &str,
+    purpose: &str,
+    fix_subject: &str,
+) -> Result<usize, BenchError> {
+    usize::try_from(count)
         .ok()
         .and_then(|matches| matches.checked_mul(MATCH_TRIPLE_WORDS))
         .and_then(|words| words.checked_mul(std::mem::size_of::<u32>()))
         .ok_or_else(|| {
             BenchError::EnvironmentInvalid(format!(
-                "irregular AC scan match_count={match_count} overflows compact match readback byte sizing. Fix: split the scan output into smaller shards."
+                "irregular AC scan {count_label}={count} overflows {purpose} byte sizing. Fix: split the {fix_subject} into smaller shards."
             ))
         })
 }

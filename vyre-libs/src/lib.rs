@@ -142,7 +142,9 @@ pub mod harness;
 #[cfg(any(
     feature = "math-linalg",
     feature = "math-scan",
-    feature = "math-broadcast"
+    feature = "math-broadcast",
+    feature = "math-algebra",
+    feature = "math-succinct"
 ))]
 pub mod math;
 
@@ -253,9 +255,26 @@ pub mod visual;
 /// not grow a parallel dataflow implementation tree.
 pub mod dataflow;
 
-mod primitive_catalog;
-
-pub use dataflow::{Soundness, SoundnessTagged};
+pub use borrowck::{analyze as analyze_borrow_facts, ConflictKind};
+#[cfg(feature = "c-parser")]
+pub(crate) use compiler::atomic_collect::atomic_collect_u32;
+#[cfg(any(
+    feature = "math-linalg",
+    feature = "math-scan",
+    feature = "math-broadcast"
+))]
+pub(crate) use math::elementwise::{f32_elementwise_mul, F32MulRhs};
+pub use dataflow::{
+    validate_dynamic_pipeline, DynamicPrimitiveSoundness, DynamicSoundnessViolation,
+    PrecisionContract, SharedFactHeader, SharedFactKind, Soundness, SoundnessTagged,
+};
+#[cfg(feature = "nn-linear-4bit")]
+pub(crate) use math::linalg::{
+    plan_matmul_kernel, F32MatmulMode, MatmulFallbackReason, MatmulKernelCapabilities,
+    MatmulKernelPath, MatmulKernelPlan, MatrixShape,
+};
+#[cfg(feature = "matching-substring")]
+pub(crate) use scan::substring::{substring_search_with_op_id, LEGACY_MATCHING_SUBSTRING_OP_ID};
 
 // vyre-libs::hardware removed (audit 2026-04-21 BLOCKER-1/6).
 // Canonical Cat-C intrinsics live exclusively in the `vyre-intrinsics`
@@ -291,12 +310,12 @@ pub use signatures::{
     F32_F32_F32_INPUTS, F32_F32_INPUTS, F32_INPUTS, F32_OUTPUTS, I32_OUTPUTS, U32_INPUTS,
     U32_OUTPUTS, U32_U32_INPUTS,
 };
+/// Making this crate's ops resolvable in the current process.
+pub mod dialect_init;
 /// Pre-sweep shader snapshot migration entries, collected via inventory.
 /// `pub(crate)` because the registry is an internal pre-sweep tool  -
 /// downstream dialects do not submit through this path.
 pub(crate) mod test_migration;
-/// Making this crate's ops resolvable in the current process.
-pub mod dialect_init;
 /// Test support components for vyre-libs.
 pub mod test_support;
 

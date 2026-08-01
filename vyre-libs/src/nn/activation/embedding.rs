@@ -22,7 +22,9 @@ pub fn embedding(embed_table: &str, tokens: &str, output: &str, n: u32, embed_di
         vec![
             BufferDecl::storage(embed_table, 0, BufferAccess::ReadOnly, DataType::F32),
             BufferDecl::storage(tokens, 1, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-            BufferDecl::output(output, 2, DataType::F32).with_count(total_out),
+            BufferDecl::output(output, 2, DataType::F32)
+                .with_count(total_out.max(1))
+                .with_output_byte_range(0..(total_out as usize).saturating_mul(4)),
         ],
         output,
         total_out,
@@ -105,7 +107,11 @@ mod tests {
             &[
                 Value::from(f32_bytes(&[1.0, 2.0, 3.0, 4.0])),
                 Value::from(u32_bytes(&[0, 0])),
-                Value::from(vec![0u8; 8]),
+                // Two tokens of two dimensions each: four f32, sixteen bytes.
+                // This read `8` (copied from the single-token test above) and
+                // went unnoticed because the interpreter used to discard the
+                // size of a legacy output initializer entirely.
+                Value::from(vec![0u8; 16]),
             ],
         )
         .expect("Fix: embedding zero token must execute");

@@ -82,7 +82,7 @@ pub fn sos_gram_construct(
     // `gram[t] = p_coeffs[monomial_pairs[t]]`, but `monomial_pairs[t]` is DATA and may
     // point OUTSIDE p_coeffs (nothing validates the pair indices are < coeff_count). The
     // CPU reference defaults to 0 for an out-of-range pair index
-    // (`p_coeffs.get(idx).unwrap_or(0)`), so the GPU MUST gate the inner load to match 
+    // (`p_coeffs.get(idx).unwrap_or(0)`), so the GPU MUST gate the inner load to match
     // otherwise it does an OOB read of p_coeffs (undefined/page-fault on real hardware)
     // AND diverges from the CPU ref on the OOB lane (the gather / bitset_test_bit class).
     let body = vec![Node::if_then(

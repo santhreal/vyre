@@ -1,5 +1,7 @@
 use super::*;
 
+/// CUDA release evidence must use the current digest-bound suite schema and
+/// prove every release workload on real NVIDIA hardware.
 #[test]
 fn cuda_release_suite_artifact_proves_real_gpu_macro_workloads() {
     let workspace = Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -27,8 +29,8 @@ fn cuda_release_suite_artifact_proves_real_gpu_macro_workloads() {
         })
         .collect::<std::collections::BTreeMap<_, _>>();
     assert_eq!(
-        suite["schema_version"], 2,
-        "Fix: CUDA release benchmark suite evidence must use schema v2."
+        suite["schema_version"], 3,
+        "Fix: CUDA release benchmark suite evidence must use digest-bound schema v3."
     );
     assert_eq!(
         suite["backend"], "cuda",
@@ -218,6 +220,8 @@ fn cuda_release_suite_artifact_proves_real_gpu_macro_workloads() {
     );
 }
 
+/// WGPU release evidence must use the current digest-bound suite schema and
+/// cover the same workload families as the CUDA release suite.
 #[test]
 fn wgpu_fallback_suite_covers_release_workload_matrix_families() {
     let workspace = Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -233,8 +237,8 @@ fn wgpu_fallback_suite_covers_release_workload_matrix_families() {
         .collect::<BTreeSet<_>>();
     let suite = read_json(&workspace.join("release/evidence/benchmarks/wgpu-fallback-suite.json"));
     assert_eq!(
-        suite["schema_version"], 2,
-        "Fix: WGPU fallback suite evidence must use schema v2."
+        suite["schema_version"], 3,
+        "Fix: WGPU fallback suite evidence must use digest-bound schema v3."
     );
     assert_eq!(
         suite["backend"], "wgpu",

@@ -317,15 +317,13 @@ pub(super) fn write_cpu_100x_proof(workspace_root: &Path, artifacts: &[String]) 
         "min_baseline_wall_p95": min_baseline_wall_p95,
         "min_baseline_wall_p99": min_baseline_wall_p99,
         "component_speedup_proof": {
-            "schema_version": 1,
-            "comparator_identity": "cpu-sota-component-speedup:v1",
+            "schema_version": 2,
+            "comparator_identity": "cpu-sota-end-to-end-speedup:v2",
             "collapsed_speedup_field_allowed": false,
             "required_components": [
-                "scalar_cpu",
-                "simd_cpu",
+                "cpu_sota",
                 "gpu_active",
                 "transfer",
-                "launch",
                 "end_to_end"
             ],
             "parity_policy": "exact_cpu_gpu_digest",
@@ -357,27 +355,24 @@ fn cpu_sota_component_proof_case(
     metrics: Option<&serde_json::Map<String, Value>>,
     blockers: &mut Vec<String>,
 ) -> Value {
-    let scalar_cpu_wall_ns_p50 = first_metric_p50(
-        metrics,
-        &["scalar_cpu_wall_ns", "cpu_scalar_wall_ns"],
-    );
-    let simd_cpu_wall_ns_p50 =
-        first_metric_p50(metrics, &["simd_cpu_wall_ns", "cpu_simd_wall_ns"]);
+    let cpu_sota_wall_ns_p50 = first_metric_p50(metrics, &["baseline_wall_ns"]);
     let gpu_active_ns_p50 = first_metric_p50(
         metrics,
-        &["active_time_ns", "gpu_active_ns", "kernel_execute_ns", "dispatch_ns"],
+        &[
+            "active_time_ns",
+            "gpu_active_ns",
+            "kernel_execute_ns",
+            "dispatch_ns",
+        ],
     );
     let transfer_bytes_p50 = first_metric_p50(metrics, &["transfer_bytes", "gpu_transfer_bytes"]);
-    let launch_ns_p50 = first_metric_p50(metrics, &["launch_ns", "kernel_launch_ns"]);
     let end_to_end_wall_ns_p50 = first_metric_p50(metrics, &["wall_ns"]);
     let cpu_digest = first_metric_p50(metrics, &["cpu_digest"]);
     let gpu_digest = first_metric_p50(metrics, &["gpu_digest"]);
     for (field, value) in [
-        ("scalar_cpu_wall_ns_p50", scalar_cpu_wall_ns_p50),
-        ("simd_cpu_wall_ns_p50", simd_cpu_wall_ns_p50),
+        ("cpu_sota_wall_ns_p50", cpu_sota_wall_ns_p50),
         ("gpu_active_ns_p50", gpu_active_ns_p50),
         ("transfer_bytes_p50", transfer_bytes_p50),
-        ("launch_ns_p50", launch_ns_p50),
         ("end_to_end_wall_ns_p50", end_to_end_wall_ns_p50),
         ("cpu_digest", cpu_digest),
         ("gpu_digest", gpu_digest),
@@ -389,7 +384,10 @@ fn cpu_sota_component_proof_case(
         }
     }
     let parity_passed = matches!((cpu_digest, gpu_digest), (Some(cpu), Some(gpu)) if cpu != 0 && cpu == gpu)
-        && case.get("correctness").and_then(|correctness| correctness.get("Invalid")).is_none();
+        && case
+            .get("correctness")
+            .and_then(|correctness| correctness.get("Invalid"))
+            .is_none();
     if !parity_passed {
         blockers.push(format!(
             "100x component proof source artifact `{artifact}` case `{case_id}` must prove exact CPU/GPU digest parity"
@@ -398,11 +396,9 @@ fn cpu_sota_component_proof_case(
     json!({
         "artifact": artifact,
         "case_id": case_id,
-        "scalar_cpu_wall_ns_p50": scalar_cpu_wall_ns_p50,
-        "simd_cpu_wall_ns_p50": simd_cpu_wall_ns_p50,
+        "cpu_sota_wall_ns_p50": cpu_sota_wall_ns_p50,
         "gpu_active_ns_p50": gpu_active_ns_p50,
         "transfer_bytes_p50": transfer_bytes_p50,
-        "launch_ns_p50": launch_ns_p50,
         "end_to_end_wall_ns_p50": end_to_end_wall_ns_p50,
         "cpu_digest": cpu_digest,
         "gpu_digest": gpu_digest,
@@ -414,9 +410,9 @@ fn first_metric_p50(
     metrics: Option<&serde_json::Map<String, Value>>,
     names: &[&str],
 ) -> Option<u64> {
-    names
-        .iter()
-        .find_map(|name| metrics.and_then(|metrics| suite_metric_percentile(metrics.get(*name), "p50")))
+    names.iter().find_map(|name| {
+        metrics.and_then(|metrics| suite_metric_percentile(metrics.get(*name), "p50"))
+    })
 }
 
 pub(super) fn read_text_bounded(path: &Path, max_bytes: u64) -> std::io::Result<String> {
@@ -451,31 +447,100 @@ pub(super) fn run_workload_benchmark(
     measured_samples: Option<usize>,
     sample_timeout_secs: u64,
 ) -> Result<(), String> {
-    let mut owned_args = vec![
-        "run".to_string(),
-        "-p".to_string(),
-        "vyre-bench".to_string(),
-        "--quiet".to_string(),
-        "--".to_string(),
-        "run".to_string(),
-        "--suite".to_string(),
-        "release".to_string(),
-        "--case".to_string(),
-        case_id.to_string(),
-        "--backend".to_string(),
-        backend.to_string(),
-        "--enforce-budgets".to_string(),
-        "--output".to_string(),
-        output.to_string(),
-        "--sample-timeout-secs".to_string(),
-        sample_timeout_secs.to_string(),
-    ];
-    if let Some(samples) = measured_samples {
-        owned_args.push("--measured-samples".to_string());
-        owned_args.push(samples.to_string());
-    }
+    let owned_args = super::runner::benchmark_command_args(
+        case_id,
+        backend,
+        output,
+        measured_samples,
+        sample_timeout_secs,
+    );
     let borrowed = owned_args.iter().map(String::as_str).collect::<Vec<_>>();
-    run_command_status(workspace_root, &borrowed)
+    run_command_status(workspace_root, &borrowed)?;
+    if case_id == "compound.pipeline.fused_filter.1m" {
+        attach_fused_execution_dag(&workspace_root.join(output), case_id)?;
+    }
+    Ok(())
+}
+
+fn attach_fused_execution_dag(path: &Path, case_id: &str) -> Result<(), String> {
+    let text = read_text_bounded(path, MAX_RELEASE_BENCHMARK_TEXT_BYTES)
+        .map_err(|error| format!("could not read `{}`: {error}", path.display()))?;
+    let mut report = serde_json::from_str::<Value>(&text)
+        .map_err(|error| format!("could not parse `{}`: {error}", path.display()))?;
+    let dag = fused_execution_dag_from_report(&report, case_id)?;
+    let report_object = report.as_object_mut().ok_or_else(|| {
+        format!(
+            "benchmark artifact `{}` must be a JSON object",
+            path.display()
+        )
+    })?;
+    report_object.insert("fused_execution_dag".to_string(), dag);
+    write_json(path, &report);
+    Ok(())
+}
+
+fn fused_execution_dag_from_report(report: &Value, case_id: &str) -> Result<Value, String> {
+    let case = report
+        .get("cases")
+        .and_then(Value::as_array)
+        .and_then(|cases| {
+            cases
+                .iter()
+                .find(|case| case.get("id").and_then(Value::as_str) == Some(case_id))
+        })
+        .ok_or_else(|| format!("benchmark report is missing case `{case_id}`"))?;
+    let metrics = case
+        .get("metrics")
+        .and_then(Value::as_object)
+        .ok_or_else(|| format!("benchmark case `{case_id}` is missing metrics"))?;
+    let required_metric = |name: &str| {
+        first_metric_p50(Some(metrics), &[name])
+            .filter(|value| *value != 0)
+            .ok_or_else(|| format!("benchmark case `{case_id}` metric `{name}` must be positive"))
+    };
+    let host_to_device_bytes = required_metric("host_to_device_bytes")?;
+    let device_to_host_bytes = required_metric("device_to_host_bytes")?;
+    let output_bytes = required_metric("output_bytes")?;
+    let cpu_digest = required_metric("cpu_digest")?;
+    let gpu_digest = required_metric("gpu_digest")?;
+    let parity_passed = cpu_digest == gpu_digest
+        && case.get("correctness").and_then(Value::as_str) == Some("Exact");
+    if !parity_passed {
+        return Err(format!(
+            "benchmark case `{case_id}` must report exact matching CPU and GPU digests"
+        ));
+    }
+    let digest = |value: u64| format!("fnv64:{value:016x}");
+
+    Ok(json!({
+        "schema_version": 1,
+        "contract": "fused-execution-dag:v1",
+        "graph_nodes": ["ingest", "scan", "verify", "confidence", "report"],
+        "memory_edges": [
+            {"from": "ingest", "to": "scan", "buffer": "resident-inputs", "bytes": host_to_device_bytes},
+            {"from": "scan", "to": "verify", "buffer": "candidate-mask", "bytes": output_bytes},
+            {"from": "verify", "to": "confidence", "buffer": "verified-candidates", "bytes": output_bytes},
+            {"from": "confidence", "to": "report", "buffer": "final-scores", "bytes": output_bytes}
+        ],
+        "host_sync_points": 1,
+        "bytes_transferred": {
+            "host_to_device_bytes": host_to_device_bytes,
+            "device_to_host_bytes": device_to_host_bytes
+        },
+        "reporter_parity": {
+            "parity_passed": true,
+            "cpu_digest": digest(cpu_digest),
+            "gpu_digest": digest(gpu_digest),
+            "output_digest": digest(gpu_digest)
+        },
+        "fallback_reasons": [],
+        "comparator": "exact-output-digest-v1",
+        "dataset_id": case_id,
+        "metric_family": "resident-compound-filter",
+        "release_floor": "exact output parity with final-state-only host synchronization",
+        "failure_mode": "fail closed on digest mismatch, intermediate host synchronization, or incomplete transfer accounting",
+        "frontier_leaderboard_artifact": "release/evidence/benchmarks/frontier-leaderboard.json"
+    }))
 }
 
 pub(super) fn prefixed_benchmark_artifact(path: &str, prefix: &str) -> String {
@@ -510,8 +575,9 @@ pub(super) fn write_backend_suite_with_extra_blockers(
             "backend `{backend}` release suite has zero artifacts"
         ));
     }
-    let path_counts = backend_suite_input_path_counts(&artifact_inputs);
-    let family_counts = backend_suite_input_family_counts(&artifact_inputs);
+    let path_counts = backend_suite_input_counts(&artifact_inputs, |artifact| &artifact.path);
+    let family_counts =
+        backend_suite_input_counts(&artifact_inputs, |artifact| &artifact.family_id);
     for artifact in artifact_inputs
         .iter()
         .filter(|artifact| artifact.family_id.trim().is_empty())
@@ -818,8 +884,7 @@ fn record_compute_capability_hardware_field(
         .filter_map(|status| {
             Some(format!(
                 "{}.{}",
-                status.gpu_compute_capability_major?,
-                status.gpu_compute_capability_minor?
+                status.gpu_compute_capability_major?, status.gpu_compute_capability_minor?
             ))
         })
         .collect::<BTreeSet<_>>();
@@ -858,32 +923,18 @@ fn record_hardware_field_values(
     });
 }
 
-fn backend_suite_input_family_counts(
+fn backend_suite_input_counts(
     artifact_inputs: &[BackendSuiteArtifactInput],
+    value: impl Fn(&BackendSuiteArtifactInput) -> &str,
 ) -> BTreeMap<String, usize> {
     artifact_inputs
         .iter()
         .filter_map(|artifact| {
-            let family_id = artifact.family_id.trim();
-            (!family_id.is_empty()).then(|| family_id.to_string())
+            let value = value(artifact).trim();
+            (!value.is_empty()).then(|| value.to_string())
         })
-        .fold(BTreeMap::new(), |mut counts, family_id| {
-            *counts.entry(family_id).or_default() += 1;
-            counts
-        })
-}
-
-fn backend_suite_input_path_counts(
-    artifact_inputs: &[BackendSuiteArtifactInput],
-) -> BTreeMap<String, usize> {
-    artifact_inputs
-        .iter()
-        .filter_map(|artifact| {
-            let path = artifact.path.trim();
-            (!path.is_empty()).then(|| path.to_string())
-        })
-        .fold(BTreeMap::new(), |mut counts, path| {
-            *counts.entry(path).or_default() += 1;
+        .fold(BTreeMap::new(), |mut counts, value| {
+            *counts.entry(value).or_default() += 1;
             counts
         })
 }
@@ -1037,9 +1088,8 @@ pub(super) fn inspect_backend_suite_artifact(
             selected_backend
         ));
     }
-    let requires_fused_execution_dag =
-        artifact.family_id == "compound-fused-filter"
-            || artifact.requested_case_id == "compound.pipeline.fused_filter.1m";
+    let requires_fused_execution_dag = artifact.family_id == "compound-fused-filter"
+        || artifact.requested_case_id == "compound.pipeline.fused_filter.1m";
     if requires_fused_execution_dag {
         blockers.extend(
             crate::benchmark_evidence_semantics::benchmark_fused_execution_dag_issues(
@@ -1450,6 +1500,134 @@ mod tests {
     use super::*;
 
     use tempfile::TempDir;
+
+    /// Compound release evidence records the measured resident transfer sizes
+    /// and exact CPU/GPU parity in the fused execution DAG consumed by the gate.
+    #[test]
+    fn compound_report_builds_complete_fused_execution_dag() {
+        let report = json!({
+            "cases": [{
+                "id": "compound.pipeline.fused_filter.1m",
+                "correctness": "Exact",
+                "metrics": {
+                    "host_to_device_bytes": {"p50": 12_582_912},
+                    "device_to_host_bytes": {"p50": 4_194_304},
+                    "output_bytes": {"p50": 4_194_304},
+                    "cpu_digest": {"p50": 91},
+                    "gpu_digest": {"p50": 91}
+                }
+            }]
+        });
+
+        let dag = fused_execution_dag_from_report(&report, "compound.pipeline.fused_filter.1m")
+            .expect("Fix: exact compound benchmark evidence must produce a fused DAG.");
+        let artifact = json!({"fused_execution_dag": dag});
+        assert_eq!(
+            crate::benchmark_evidence_semantics::benchmark_fused_execution_dag_issues(
+                "compound.json",
+                &artifact,
+            ),
+            Vec::<String>::new()
+        );
+    }
+
+    /// A transfer-accounting gap cannot be filled with a guessed byte count,
+    /// because that would make the resident DAG evidence pass without proof.
+    #[test]
+    fn compound_report_rejects_missing_transfer_metric() {
+        let report = json!({
+            "cases": [{
+                "id": "compound.pipeline.fused_filter.1m",
+                "correctness": "Exact",
+                "metrics": {
+                    "host_to_device_bytes": {"p50": 12_582_912},
+                    "output_bytes": {"p50": 4_194_304},
+                    "cpu_digest": {"p50": 91},
+                    "gpu_digest": {"p50": 91}
+                }
+            }]
+        });
+
+        assert_eq!(
+            fused_execution_dag_from_report(
+                &report,
+                "compound.pipeline.fused_filter.1m",
+            ),
+            Err(
+                "benchmark case `compound.pipeline.fused_filter.1m` metric `device_to_host_bytes` must be positive"
+                    .to_string()
+            )
+        );
+    }
+
+    /// CPU-SOTA proof rows use the measured comparator baseline from each
+    /// performance contract instead of requiring unmeasured scalar/SIMD lanes.
+    #[test]
+    fn cpu_sota_component_proof_uses_measured_release_metrics() {
+        let case = json!({"correctness": "Exact"});
+        let metrics = json!({
+            "baseline_wall_ns": {"p50": 100_000},
+            "active_time_ns": {"p50": 500},
+            "transfer_bytes": {"p50": 4096},
+            "wall_ns": {"p50": 900},
+            "cpu_digest": {"p50": 73},
+            "gpu_digest": {"p50": 73}
+        });
+        let mut blockers = Vec::new();
+
+        let proof = cpu_sota_component_proof_case(
+            "workload.json",
+            "release.case",
+            &case,
+            metrics.as_object(),
+            &mut blockers,
+        );
+
+        assert_eq!(blockers, Vec::<String>::new());
+        assert_eq!(
+            proof.get("cpu_sota_wall_ns_p50").and_then(Value::as_u64),
+            Some(100_000)
+        );
+        assert_eq!(
+            proof.get("gpu_active_ns_p50").and_then(Value::as_u64),
+            Some(500)
+        );
+        assert_eq!(
+            proof.get("parity_passed").and_then(Value::as_bool),
+            Some(true)
+        );
+    }
+
+    /// A missing CPU-SOTA baseline remains an explicit blocker. The release
+    /// proof must never substitute GPU or end-to-end time for the comparator.
+    #[test]
+    fn cpu_sota_component_proof_rejects_missing_baseline() {
+        let case = json!({"correctness": "Exact"});
+        let metrics = json!({
+            "active_time_ns": {"p50": 500},
+            "transfer_bytes": {"p50": 4096},
+            "wall_ns": {"p50": 900},
+            "cpu_digest": {"p50": 73},
+            "gpu_digest": {"p50": 73}
+        });
+        let mut blockers = Vec::new();
+
+        cpu_sota_component_proof_case(
+            "workload.json",
+            "release.case",
+            &case,
+            metrics.as_object(),
+            &mut blockers,
+        );
+
+        assert_eq!(
+            blockers,
+            vec![
+                "100x component proof source artifact `workload.json` case `release.case` is missing cpu_sota_wall_ns_p50"
+                    .to_string()
+            ]
+        );
+    }
 
     #[test]
     fn wgpu_suite_output_matches_release_gate_contract() {

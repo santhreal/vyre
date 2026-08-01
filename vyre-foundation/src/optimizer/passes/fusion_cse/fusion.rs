@@ -1,4 +1,5 @@
 use crate::ir::{Expr, Ident, Node, Program};
+use crate::optimizer::rewrite::push_expr_children;
 use crate::optimizer::{fingerprint_program, vyre_pass, PassAnalysis, PassResult};
 use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::SmallVec;
@@ -713,62 +714,6 @@ fn collect_expr_buffer_reads(expr: &Expr, reads: &mut FxHashSet<Ident>) {
             _ => {}
         }
         push_expr_children(expr, &mut stack);
-    }
-}
-
-fn push_expr_children<'a>(expr: &'a Expr, stack: &mut SmallVec<[&'a Expr; 16]>) {
-    match expr {
-        Expr::Load { index, .. } | Expr::UnOp { operand: index, .. } => stack.push(index),
-        Expr::BinOp { left, right, .. } => {
-            stack.push(left);
-            stack.push(right);
-        }
-        Expr::Call { args, .. } => stack.extend(args),
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            stack.push(cond);
-            stack.push(true_val);
-            stack.push(false_val);
-        }
-        Expr::Cast { value, .. } | Expr::SubgroupReduce { value, .. } => stack.push(value),
-        Expr::Fma { a, b, c } => {
-            stack.push(a);
-            stack.push(b);
-            stack.push(c);
-        }
-        Expr::Atomic {
-            index,
-            expected,
-            value,
-            ..
-        } => {
-            stack.push(index);
-            if let Some(expected) = expected {
-                stack.push(expected);
-            }
-            stack.push(value);
-        }
-        Expr::SubgroupBallot { cond } => stack.push(cond),
-        Expr::SubgroupShuffle { value, lane } => {
-            stack.push(value);
-            stack.push(lane);
-        }
-        Expr::Var(_)
-        | Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::BufferRef { .. }
-        | Expr::BufLen { .. }
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize
-        | Expr::Opaque(_) => {}
     }
 }
 

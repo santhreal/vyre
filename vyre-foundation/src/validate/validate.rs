@@ -529,6 +529,29 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
         self.alias_atomics
             .extend(accesses.atomic_buffers.iter().cloned());
     }
+    fn validate_async_transfer(
+        &mut self,
+        source: &Ident,
+        destination: &Ident,
+        tag: &Ident,
+    ) -> ControlFlow<Infallible> {
+        let depth = self.current_depth();
+        depth::check_limits(&mut self.limits, depth, &mut self.errors);
+        if tag.is_empty() {
+            self.errors.push(err(
+                "async stream tag is empty. Fix: use a stable non-empty tag to pair AsyncLoad and AsyncWait nodes."
+                    .to_string(),
+            ));
+        }
+
+        let mut accesses = NodeAccesses::default();
+        accesses.read_buffers.insert(source.clone());
+        accesses.read_buffers.insert(destination.clone());
+        self.report_alias_hazards(&accesses);
+        self.extend_alias(&accesses);
+
+        ControlFlow::Continue(())
+    }
 }
 
 /// Push the stack frames needed to process a nested node sequence.
@@ -553,6 +576,34 @@ fn push_nested_sequence<'p>(
         depth,
         nodes,
     });
+}
+
+macro_rules! async_transfer_visitors {
+    () => {
+        fn visit_async_load(
+            &mut self,
+            _node: &Node,
+            source: &Ident,
+            destination: &Ident,
+            _offset: &Expr,
+            _size: &Expr,
+            tag: &Ident,
+        ) -> ControlFlow<Self::Break> {
+            self.validate_async_transfer(source, destination, tag)
+        }
+
+        fn visit_async_store(
+            &mut self,
+            _node: &Node,
+            source: &Ident,
+            destination: &Ident,
+            _offset: &Expr,
+            _size: &Expr,
+            tag: &Ident,
+        ) -> ControlFlow<Self::Break> {
+            self.validate_async_transfer(source, destination, tag)
+        }
+    };
 }
 
 // ------------------------------------------------------------------
@@ -748,7 +799,7 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
         var: &Ident,
         from: &Expr,
         to: &Expr,
-        _body: &[Node],
+        body: &[Node],
     ) -> ControlFlow<Self::Break> {
         let depth = self.current_depth();
         depth::check_limits(&mut self.limits, depth, &mut self.errors);
@@ -769,6 +820,7 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
             }
         }
         shadowing::check_local(var, &self.scope, self.options, &mut self.errors);
+        barrier::check_loop_back_edge(body, &mut self.errors);
 
         let mut accesses = NodeAccesses::default();
         collect_expr_accesses(from, &mut accesses);
@@ -806,59 +858,7 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
         ControlFlow::Continue(())
     }
 
-    fn visit_async_load(
-        &mut self,
-        _node: &Node,
-        source: &Ident,
-        destination: &Ident,
-        _offset: &Expr,
-        _size: &Expr,
-        tag: &Ident,
-    ) -> ControlFlow<Self::Break> {
-        let depth = self.current_depth();
-        depth::check_limits(&mut self.limits, depth, &mut self.errors);
-        if tag.is_empty() {
-            self.errors.push(err(
-                "async stream tag is empty. Fix: use a stable non-empty tag to pair AsyncLoad and AsyncWait nodes."
-                    .to_string(),
-            ));
-        }
-
-        let mut accesses = NodeAccesses::default();
-        accesses.read_buffers.insert(source.clone());
-        accesses.read_buffers.insert(destination.clone());
-        self.report_alias_hazards(&accesses);
-        self.extend_alias(&accesses);
-
-        ControlFlow::Continue(())
-    }
-
-    fn visit_async_store(
-        &mut self,
-        _node: &Node,
-        source: &Ident,
-        destination: &Ident,
-        _offset: &Expr,
-        _size: &Expr,
-        tag: &Ident,
-    ) -> ControlFlow<Self::Break> {
-        let depth = self.current_depth();
-        depth::check_limits(&mut self.limits, depth, &mut self.errors);
-        if tag.is_empty() {
-            self.errors.push(err(
-                "async stream tag is empty. Fix: use a stable non-empty tag to pair AsyncLoad and AsyncWait nodes."
-                    .to_string(),
-            ));
-        }
-
-        let mut accesses = NodeAccesses::default();
-        accesses.read_buffers.insert(source.clone());
-        accesses.read_buffers.insert(destination.clone());
-        self.report_alias_hazards(&accesses);
-        self.extend_alias(&accesses);
-
-        ControlFlow::Continue(())
-    }
+    async_transfer_visitors!();
 
     fn visit_async_wait(&mut self, _node: &Node, tag: &Ident) -> ControlFlow<Self::Break> {
         let depth = self.current_depth();

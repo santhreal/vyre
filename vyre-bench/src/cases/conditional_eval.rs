@@ -12,7 +12,7 @@ use crate::api::case::{
     BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
     BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
 };
-use crate::api::metric::{BenchMetrics, MetricPoint};
+use crate::api::metric::BenchMetrics;
 use crate::api::resident::{
     dispatch_program_timed, input_bytes_total, transfer_accounting, u32_counter_reset_program,
     ResidentInputSet,
@@ -372,7 +372,8 @@ impl BenchCase for ConditionalEval {
                 bytes_read: Some(accounting.bytes_read),
                 bytes_written: Some(accounting.bytes_written),
                 bytes_touched: Some(accounting.bytes_touched),
-                custom: conditional_eval_metric_points(
+                custom: super::conditional_metric_points(
+                    "conditional_eval",
                     resident_used,
                     device_reset_sequence,
                     resident_reset_bytes,
@@ -567,27 +568,6 @@ fn dispatch_resident_conditional_sequence(
     })
 }
 
-fn conditional_eval_metric_points(
-    resident_used: bool,
-    device_reset_sequence: bool,
-    resident_reset_bytes: u64,
-) -> Vec<MetricPoint> {
-    vec![
-        MetricPoint {
-            name: "conditional_eval_resident_buffers".to_string(),
-            value: u64::from(resident_used),
-        },
-        MetricPoint {
-            name: "conditional_eval_device_reset_sequence".to_string(),
-            value: u64::from(device_reset_sequence),
-        },
-        MetricPoint {
-            name: "conditional_eval_resident_reset_bytes".to_string(),
-            value: resident_reset_bytes,
-        },
-    ]
-}
-
 fn mix32(mut value: u32) -> u32 {
     value ^= value >> 16;
     value = value.wrapping_mul(0x7FEB_352D);
@@ -604,6 +584,7 @@ inventory::submit! {
 mod tests {
     use super::*;
 
+    /// This contract test keeps resident output resources aligned with their sparse binding indices.
     #[test]
     fn resident_sequence_indices_keep_sparse_outputs_in_binding_order() {
         assert_eq!(
@@ -617,9 +598,10 @@ mod tests {
         assert_eq!(RESET_RESOURCE_INDICES, [FIRED_COUNT_RESOURCE_INDEX]);
     }
 
+    /// This regression test proves resident conditional evaluation reports device resets without host reset traffic.
     #[test]
     fn metric_points_expose_device_reset_and_zero_host_reset_bytes() {
-        let metrics = conditional_eval_metric_points(true, true, 0);
+        let metrics = crate::cases::conditional_metric_points("conditional_eval", true, true, 0);
 
         assert_eq!(
             metrics

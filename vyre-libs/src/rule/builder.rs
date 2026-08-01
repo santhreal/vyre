@@ -292,20 +292,20 @@ where
 /// `pattern_id` is out of range so the rule predicate stays defined.
 #[must_use]
 pub fn pattern_state(pattern_id: u32) -> Expr {
-    Expr::select(
-        Expr::lt(Expr::u32(pattern_id), Expr::buf_len("rule_bitmaps")),
-        Expr::load("rule_bitmaps", Expr::u32(pattern_id)),
-        Expr::u32(0),
-    )
+    pattern_buffer_value(pattern_id, "rule_bitmaps")
 }
 
 /// Safe load from the `rule_counts` buffer  -  returns 0 when
 /// `pattern_id` is out of range so the rule predicate stays defined.
 #[must_use]
 pub fn pattern_count(pattern_id: u32) -> Expr {
+    pattern_buffer_value(pattern_id, "rule_counts")
+}
+
+fn pattern_buffer_value(pattern_id: u32, buffer: &str) -> Expr {
     Expr::select(
-        Expr::lt(Expr::u32(pattern_id), Expr::buf_len("rule_counts")),
-        Expr::load("rule_counts", Expr::u32(pattern_id)),
+        Expr::lt(Expr::u32(pattern_id), Expr::buf_len(buffer)),
+        Expr::load(buffer, Expr::u32(pattern_id)),
         Expr::u32(0),
     )
 }

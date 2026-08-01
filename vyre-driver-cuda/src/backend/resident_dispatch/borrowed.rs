@@ -8,9 +8,12 @@ use vyre_foundation::ir::Program;
 use crate::backend::allocations::{DispatchAllocations, HostTransferAllocations};
 use crate::backend::dispatch::CudaBackend;
 use crate::backend::ordering::sort_unstable_by_key_if_needed;
-use crate::backend::resident::{CudaResidentBuffer, ResidentViewCache};
+use crate::backend::resident::{
+    resident_bindings_from_handles, CudaDispatchBinding, CudaResidentBuffer, ResidentViewCache,
+};
 use crate::backend::resident_dispatch::helpers::{
-    next_resident_handle, validate_dense_resident_input_indices, PreparedStep,
+    next_dispatch_binding, next_resident_handle, validate_dense_resident_input_indices,
+    PreparedStep,
 };
 use crate::backend::resident_dispatch_support::CudaResidentDispatchStep;
 use crate::backend::resident_upload_fusion::{
@@ -59,7 +62,7 @@ impl CudaBackend {
                     return Err(BackendError::InvalidProgram {
                         fix: format!(
                             "Fix: CUDA resident sequence binding `{}` expected at least {expected} bytes but handle {} has {} bytes.",
-                            binding.name, handle.id, resident.byte_len
+                            binding.name, handle.handle, resident.byte_len
                         ),
                     });
                 }
@@ -80,7 +83,7 @@ impl CudaBackend {
     pub(crate) fn dispatch_resident_via_borrowed_into(
         &self,
         program: &Program,
-        handles: &[CudaResidentBuffer],
+        bindings: &[CudaDispatchBinding<'_>],
         config: &DispatchConfig,
         outputs: &mut Vec<Vec<u8>>,
     ) -> Result<(), BackendError> {
@@ -94,7 +97,7 @@ impl CudaBackend {
         self.warmup()?;
         self.telemetry.record_resident_borrowed_fallback_dispatch();
         let plan = BindingPlan::build(program)?;
-        let required_handles = plan
+        let required_bindings = plan
             .bindings
             .len()
             .checked_sub(plan.shared_indices.len())
@@ -105,11 +108,11 @@ impl CudaBackend {
                     plan.shared_indices.len()
                 ),
             })?;
-        if handles.len() != required_handles {
+        if bindings.len() != required_bindings {
             return Err(BackendError::InvalidProgram {
                 fix: format!(
-                    "Fix: CUDA resident fallback expected {required_handles} resident buffer handle(s) but received {}.",
-                    handles.len()
+                    "Fix: CUDA resident fallback expected {required_bindings} bound resource(s) but received {}.",
+                    bindings.len()
                 ),
             });
         }
@@ -117,18 +120,30 @@ impl CudaBackend {
             reserved_vec(plan.input_indices.len(), "resident fallback input storage")?;
         let mut output_handles =
             reserved_vec(plan.output_indices.len(), "resident fallback output handle")?;
-        let mut next_handle = 0usize;
+        let mut next_binding = 0usize;
         for binding in &plan.bindings {
             if binding.role == BindingRole::Shared {
                 continue;
             }
-            let handle =
-                next_resident_handle(handles, &mut next_handle, "resident borrowed dispatch")?;
+            let source =
+                next_dispatch_binding(bindings, &mut next_binding, "resident borrowed dispatch")?;
             if let Some(input_index) = binding.input_index {
-                input_storage.push((input_index, self.download_resident(handle)?));
+                // This diagnostic fallback runs everything through the borrowed
+                // path, so a resident input is read back to host bytes here. A
+                // borrowed input is already host bytes and is copied because
+                // `dispatch_borrowed` wants one uniform slice list.
+                let bytes = match source {
+                    CudaDispatchBinding::Resident(handle) => self.download_resident(handle)?,
+                    CudaDispatchBinding::Borrowed(bytes) => bytes.to_vec(),
+                };
+                input_storage.push((input_index, bytes));
             }
             if let Some(output_index) = binding.output_index {
-                output_handles.push((output_index, handle));
+                // Only a resident output needs the result written back to the
+                // device; a borrowed output is returned to the caller by value.
+                if let CudaDispatchBinding::Resident(handle) = source {
+                    output_handles.push((output_index, handle));
+                }
             }
         }
         order_resident_fallback_inputs_by_logical_index(
@@ -171,11 +186,11 @@ impl CudaBackend {
     pub(crate) fn dispatch_resident_via_borrowed(
         &self,
         program: &Program,
-        handles: &[CudaResidentBuffer],
+        bindings: &[CudaDispatchBinding<'_>],
         config: &DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, BackendError> {
         let mut outputs = reserved_vec(0, "borrowed resident dispatch outputs")?;
-        self.dispatch_resident_via_borrowed_into(program, handles, config, &mut outputs)?;
+        self.dispatch_resident_via_borrowed_into(program, bindings, config, &mut outputs)?;
         Ok(outputs)
     }
 
@@ -241,7 +256,7 @@ impl CudaBackend {
                 return Err(BackendError::InvalidProgram {
                     fix: format!(
                         "Fix: CUDA resident sequence upload for handle {} expected {} bytes but received {}.",
-                        handle.id,
+                        handle.handle,
                         buffer.byte_len,
                         bytes.len()
                     ),
@@ -250,7 +265,7 @@ impl CudaBackend {
             push_resident_upload_copy(
                 &mut upload_copies,
                 &mut uploaded_bytes,
-                handle.id,
+                handle.handle.id(),
                 buffer.ptr,
                 bytes,
                 "sequence upload",
@@ -275,7 +290,9 @@ impl CudaBackend {
             target_indices.push(index);
             return Ok(());
         }
-        let prepared = self.prepare_resident_dispatch(step.program, step.handles, &step.config)?;
+        let step_bindings = resident_bindings_from_handles(step.handles)?;
+        let prepared =
+            self.prepare_resident_dispatch(step.program, &step_bindings, &step.config)?;
         let (ptx_src, ptx_source_key) =
             self.ptx_for_program_cached_with_key(step.program, &step.config)?;
         let module_key = self.module_cache_key_for_ptx_source_key(ptx_source_key)?;

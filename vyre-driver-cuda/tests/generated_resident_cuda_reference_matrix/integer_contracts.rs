@@ -111,4 +111,3 @@ fn generated_resident_i32_scalar_matrix_matches_reference_on_live_cuda() {
         "Fix: resident i32 scalar generated matrix must compare every output lane."
     );
 }
-

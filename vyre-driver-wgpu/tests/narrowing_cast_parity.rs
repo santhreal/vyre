@@ -19,15 +19,24 @@ mod common;
 use common::u32_bytes;
 
 use vyre_driver::{DispatchConfig, VyreBackend};
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver_wgpu::WgpuBackend;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Probe inputs (as u32 bit patterns) that exercise truncation and the signed
 /// boundary: 300 (low byte 44), 0x12345 (low half 0x2345), 200 (i8 -56), 0xFFFF
 /// (i16 -1 / u16 max), 0x8000 (i16 MIN), 0xFFFFFFFF (all ones), 0, 127, 128, 255.
 fn inputs() -> Vec<u32> {
     vec![
-        300, 0x0001_2345, 200, 0x0000_FFFF, 0x0000_8000, 0xFFFF_FFFF, 0, 127, 128, 255,
+        300,
+        0x0001_2345,
+        200,
+        0x0000_FFFF,
+        0x0000_8000,
+        0xFFFF_FFFF,
+        0,
+        127,
+        128,
+        255,
     ]
 }
 

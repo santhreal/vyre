@@ -1,8 +1,8 @@
-//! Program-level analysis built on the [`super::expr_arena`] hash-cons
+//! Program-level analysis built on the [`crate::optimizer::expr_arena`] hash-cons
 //! substrate. T020 SEED-2 first concrete consumer.
 //!
 //! Walks every `Expr` in a `Program` (root + every node's child Exprs)
-//! and interns each into a single shared [`ExprArena`]. Returns
+//! and interns each into a single shared [`crate::optimizer::expr_arena::ExprArena`]. Returns
 //! aggregate stats  -  total interned positions, distinct subexpression
 //! count, deduplication ratio, and a stable program-level fingerprint
 //! derived from the sorted multiset of root `ExprId`s.

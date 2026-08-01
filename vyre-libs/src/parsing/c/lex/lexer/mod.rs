@@ -28,6 +28,17 @@ pub use digraphs::c11_lex_digraphs;
 pub use single_pass::{c11_lex_regular_single_pass, c11_lex_single_pass};
 pub use sparse_compact::{c11_compact_sparse_tokens, c11_compact_sparse_tokens_output};
 
+fn identifier_fixture_inputs(capacity: usize) -> Vec<Vec<Vec<u8>>> {
+    let bytes = capacity * std::mem::size_of::<u32>();
+    vec![vec![
+        vec![b'a'; bytes],
+        vec![0u8; bytes],
+        vec![0u8; bytes],
+        vec![0u8; bytes],
+        vec![0u8; std::mem::size_of::<u32>()],
+    ]]
+}
+
 // Sibling re-exports keep each lexer submodule on one explicit helper surface.
 // If a helper stops being shared by multiple active lexer builders, move it
 // into the single module that owns it.

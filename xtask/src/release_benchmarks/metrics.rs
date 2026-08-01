@@ -1,25 +1,11 @@
-use std::fs;
 use std::path::Path;
 
 use serde::Serialize;
 use serde_json::Value;
 
 pub(super) fn write_json(path: &Path, value: &impl Serialize) {
-    if let Some(parent) = path.parent() {
-        if let Err(error) = fs::create_dir_all(parent) {
-            eprintln!("Fix: failed to create `{}`: {error}", parent.display());
-            std::process::exit(1);
-        }
-    }
-    let json = match serde_json::to_string_pretty(value) {
-        Ok(json) => json,
-        Err(error) => {
-            eprintln!("Fix: failed to serialize `{}`: {error}", path.display());
-            std::process::exit(1);
-        }
-    };
-    if let Err(error) = fs::write(path, format!("{json}\n")) {
-        eprintln!("Fix: failed to write `{}`: {error}", path.display());
+    if let Err(error) = crate::json_output::write_pretty_json(path, value) {
+        eprintln!("Fix: {error}");
         std::process::exit(1);
     }
 }

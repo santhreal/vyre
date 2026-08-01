@@ -183,10 +183,7 @@ fn emit_fuses_four_adjacent_load_constant_ops_to_ptx_vector_load() {
         0,
         "fused vector load must not leave scalar ld.global.u32 behind\n{s}"
     );
-    assert!(
-        s.contains("st.global.u32"),
-        "result store must remain\n{s}"
-    );
+    assert!(s.contains("st.global.u32"), "result store must remain\n{s}");
 }
 
 #[test]
@@ -265,41 +262,85 @@ fn vector_fusion_alignment_fallback_emits_diagnostic_comment() {
         body: KernelBody {
             ops: vec![
                 // tid = LocalInvocationId[0]
-                KernelOp { kind: KernelOpKind::LocalInvocationId, operands: vec![0], result: Some(0) },
+                KernelOp {
+                    kind: KernelOpKind::LocalInvocationId,
+                    operands: vec![0],
+                    result: Some(0),
+                },
                 // stride = 3  (not a power of 2 aligned multiplier)
-                KernelOp { kind: KernelOpKind::Literal, operands: vec![0], result: Some(1) },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(1),
+                },
                 // base = tid * 3
-                KernelOp { kind: KernelOpKind::BinOpKind(BinOp::Mul), operands: vec![0, 1], result: Some(2) },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Mul),
+                    operands: vec![0, 1],
+                    result: Some(2),
+                },
                 // inc1 = 1
-                KernelOp { kind: KernelOpKind::Literal, operands: vec![1], result: Some(3) },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![1],
+                    result: Some(3),
+                },
                 // base+1 = base + 1
-                KernelOp { kind: KernelOpKind::BinOpKind(BinOp::Add), operands: vec![2, 3], result: Some(4) },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Add),
+                    operands: vec![2, 3],
+                    result: Some(4),
+                },
                 // Four adjacent loads at base, base+1, base+2, base+3.
                 // Alignment of `tid * 3` mod 4 is unknown → fusion must be skipped.
-                KernelOp { kind: KernelOpKind::LoadGlobal, operands: vec![0, 2], result: Some(5) },
-                KernelOp { kind: KernelOpKind::LoadGlobal, operands: vec![0, 4], result: Some(6) },
+                KernelOp {
+                    kind: KernelOpKind::LoadGlobal,
+                    operands: vec![0, 2],
+                    result: Some(5),
+                },
+                KernelOp {
+                    kind: KernelOpKind::LoadGlobal,
+                    operands: vec![0, 4],
+                    result: Some(6),
+                },
                 // Store just one result to keep the kernel non-trivial.
-                KernelOp { kind: KernelOpKind::Literal, operands: vec![2], result: Some(7) },
-                KernelOp { kind: KernelOpKind::StoreGlobal, operands: vec![1, 7, 5], result: None },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![2],
+                    result: Some(7),
+                },
+                KernelOp {
+                    kind: KernelOpKind::StoreGlobal,
+                    operands: vec![1, 7, 5],
+                    result: None,
+                },
             ],
             child_bodies: vec![],
-            literals: vec![LiteralValue::U32(3), LiteralValue::U32(1), LiteralValue::U32(0)],
+            literals: vec![
+                LiteralValue::U32(3),
+                LiteralValue::U32(1),
+                LiteralValue::U32(0),
+            ],
         },
     };
     let s = emit(&desc).expect("Fix: unaligned adjacent load kernel must emit PTX without error.");
     // Must NOT fuse into a vector load (alignment unknown for tid*3).
     assert!(
-        !s.contains("ld.global.nc.v2.u32") && !s.contains("ld.global.nc.v4.u32")
-            && !s.contains("ld.global.v2.u32") && !s.contains("ld.global.v4.u32"),
+        !s.contains("ld.global.nc.v2.u32")
+            && !s.contains("ld.global.nc.v4.u32")
+            && !s.contains("ld.global.v2.u32")
+            && !s.contains("ld.global.v4.u32"),
         "Fix: loads at a non-provably-aligned base must NOT be fused into a vector load; \
-         got:\n{}", &s[..s.len().min(600)]
+         got:\n{}",
+        &s[..s.len().min(600)]
     );
     // Must emit the Law-10 diagnostic comment announcing the skipped fusion.
     assert!(
         s.contains("vyre: vector-fusion-skipped"),
         "Fix: when vector fusion is skipped due to unknown alignment, the emitter must \
          write a `// vyre: vector-fusion-skipped` comment in the PTX text so the operator \
-         can detect scalar fallback. Got PTX:\n{}", &s[..s.len().min(600)]
+         can detect scalar fallback. Got PTX:\n{}",
+        &s[..s.len().min(600)]
     );
 }
 
@@ -347,18 +388,66 @@ fn constant_binding_loads_fuse_to_plain_global_vector_load_never_nc() {
         body: KernelBody {
             // Four consecutive LoadConstant ops at indices 0, 1, 2, 3.
             ops: vec![
-                KernelOp { kind: KernelOpKind::Literal, operands: vec![0], result: Some(0) },
-                KernelOp { kind: KernelOpKind::Literal, operands: vec![1], result: Some(1) },
-                KernelOp { kind: KernelOpKind::Literal, operands: vec![2], result: Some(2) },
-                KernelOp { kind: KernelOpKind::Literal, operands: vec![3], result: Some(3) },
-                KernelOp { kind: KernelOpKind::LoadConstant, operands: vec![0, 0], result: Some(4) },
-                KernelOp { kind: KernelOpKind::LoadConstant, operands: vec![0, 1], result: Some(5) },
-                KernelOp { kind: KernelOpKind::LoadConstant, operands: vec![0, 2], result: Some(6) },
-                KernelOp { kind: KernelOpKind::LoadConstant, operands: vec![0, 3], result: Some(7) },
-                KernelOp { kind: KernelOpKind::StoreGlobal, operands: vec![1, 0, 4], result: None },
-                KernelOp { kind: KernelOpKind::StoreGlobal, operands: vec![1, 1, 5], result: None },
-                KernelOp { kind: KernelOpKind::StoreGlobal, operands: vec![1, 2, 6], result: None },
-                KernelOp { kind: KernelOpKind::StoreGlobal, operands: vec![1, 3, 7], result: None },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(0),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![1],
+                    result: Some(1),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![2],
+                    result: Some(2),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![3],
+                    result: Some(3),
+                },
+                KernelOp {
+                    kind: KernelOpKind::LoadConstant,
+                    operands: vec![0, 0],
+                    result: Some(4),
+                },
+                KernelOp {
+                    kind: KernelOpKind::LoadConstant,
+                    operands: vec![0, 1],
+                    result: Some(5),
+                },
+                KernelOp {
+                    kind: KernelOpKind::LoadConstant,
+                    operands: vec![0, 2],
+                    result: Some(6),
+                },
+                KernelOp {
+                    kind: KernelOpKind::LoadConstant,
+                    operands: vec![0, 3],
+                    result: Some(7),
+                },
+                KernelOp {
+                    kind: KernelOpKind::StoreGlobal,
+                    operands: vec![1, 0, 4],
+                    result: None,
+                },
+                KernelOp {
+                    kind: KernelOpKind::StoreGlobal,
+                    operands: vec![1, 1, 5],
+                    result: None,
+                },
+                KernelOp {
+                    kind: KernelOpKind::StoreGlobal,
+                    operands: vec![1, 2, 6],
+                    result: None,
+                },
+                KernelOp {
+                    kind: KernelOpKind::StoreGlobal,
+                    operands: vec![1, 3, 7],
+                    result: None,
+                },
             ],
             child_bodies: vec![],
             literals: vec![
@@ -395,4 +484,3 @@ fn constant_binding_loads_fuse_to_plain_global_vector_load_never_nc() {
         &s[..s.len().min(600)]
     );
 }
-

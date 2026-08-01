@@ -137,12 +137,10 @@ pub fn reduce_sum_u32_bytes(values: &[u8]) -> Vec<u8> {
 
 pub fn matmul_f32_bytes(a: &[u8], b: &[u8], m: usize, n: usize, k: usize) -> Vec<u8> {
     baseline_pool().install(|| {
-        let lhs = faer::Mat::<f32>::from_fn(m, k, |row, col| {
-            read_f32_word_or_zero(a, row * k + col)
-        });
-        let rhs = faer::Mat::<f32>::from_fn(k, n, |row, col| {
-            read_f32_word_or_zero(b, row * n + col)
-        });
+        let lhs =
+            faer::Mat::<f32>::from_fn(m, k, |row, col| read_f32_word_or_zero(a, row * k + col));
+        let rhs =
+            faer::Mat::<f32>::from_fn(k, n, |row, col| read_f32_word_or_zero(b, row * n + col));
         let mut dst = faer::Mat::<f32>::zeros(m, n);
         faer::linalg::matmul::matmul(
             dst.as_mut(),
@@ -227,7 +225,8 @@ pub fn histogram_u32_256_bytes(values: &[u8]) -> Vec<u8> {
             .map(|chunk_bytes| {
                 let mut local = Box::new([0u32; 256]);
                 for chunk in chunk_bytes.chunks_exact(4) {
-                    let value = u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]) as usize;
+                    let value =
+                        u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]) as usize;
                     local[value & 255] = local[value & 255].wrapping_add(1);
                 }
                 local

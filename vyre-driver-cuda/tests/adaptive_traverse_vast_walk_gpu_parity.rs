@@ -3,6 +3,8 @@
 
 #![cfg(test)]
 
+#[path = "adaptive_traverse_vast_walk_gpu_parity/auto_selector_contracts.rs"]
+mod auto_selector_contracts;
 mod common;
 #[path = "adaptive_traverse_vast_walk_gpu_parity/dense_sparse_contracts.rs"]
 mod dense_sparse_contracts;
@@ -10,12 +12,10 @@ mod dense_sparse_contracts;
 mod resident_sparse_dense_contracts;
 #[path = "adaptive_traverse_vast_walk_gpu_parity/resident_sparse_queue_contracts.rs"]
 mod resident_sparse_queue_contracts;
-#[path = "adaptive_traverse_vast_walk_gpu_parity/auto_selector_contracts.rs"]
-mod auto_selector_contracts;
 #[path = "adaptive_traverse_vast_walk_gpu_parity/vast_walk_contracts.rs"]
 mod vast_walk_contracts;
 
-use common::{bytes_u32, live_dispatcher, u32_bytes};
+use common::{bytes_u32, live_dispatcher, pack_nodes, u32_bytes};
 use vyre::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::vast::{walk_preorder_indices, VastNode, NODE_STRIDE_U32, SENTINEL};
@@ -59,14 +59,6 @@ fn run_dense_step(
     let mut out = bytes_u32(&outputs[0]);
     out.truncate(words as usize);
     out
-}
-
-fn pack_nodes(bits: &[u32], node_count: u32) -> Vec<u32> {
-    let mut buf = vec![0_u32; bitset_words(node_count) as usize];
-    for &bit in bits {
-        buf[bit as usize / 32] |= 1 << (bit % 32);
-    }
-    buf
 }
 
 fn build_dense_adj(edges: &[(u32, u32)], node_count: u32) -> Vec<u32> {
@@ -133,7 +125,6 @@ fn run_sparse_dense_step(
     out
 }
 
-
 fn pack_vast(nodes: &[VastNode]) -> (Vec<u8>, Vec<u32>) {
     let mut bytes = Vec::with_capacity(nodes.len() * NODE_STRIDE_U32 * 4);
     for n in nodes {
@@ -179,4 +170,3 @@ fn make_node(parent: u32, first_child: u32, next_sibling: u32) -> VastNode {
         reserved: 0,
     }
 }
-

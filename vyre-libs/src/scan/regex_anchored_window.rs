@@ -137,7 +137,7 @@ impl<'dfa> AnchoredWindowValidator<'dfa> {
     /// is `m - n + 1` overlapping partial hits for a single token. A credential
     /// scanner wants exactly one finding covering the whole token, so this
     /// collapses each pattern's accepts to the maximal `end` reachable from
-    /// `origin`. Because the walk is *seeded at* `origin`, the start is exact 
+    /// `origin`. Because the walk is *seeded at* `origin`, the start is exact
     /// there is no derive-`start`-from-a-fixed-length error (the flaw that makes
     /// the whole-buffer `bounded_ranges` `start = end - max_pattern_len` path
     /// unsound for variable lengths; see BACKLOG items 18/27).
@@ -161,7 +161,7 @@ impl<'dfa> AnchoredWindowValidator<'dfa> {
         let window = (self.dfa.max_pattern_len as usize).min(haystack.len() - origin_idx);
         let mut state = 0u32;
         // (pattern_id, longest end seen) for this origin. `step` increases
-        // monotonically so a later accept for the same pid is strictly longer 
+        // monotonically so a later accept for the same pid is strictly longer
         // overwrite the slot rather than keep the shorter earlier end.
         let mut longest: Vec<(u32, u32)> = Vec::new();
         for step in 0..window {
@@ -376,6 +376,7 @@ pub fn anchored_window_extract_program(
 #[cfg(all(test, feature = "matching-regex", feature = "matching-dfa"))]
 mod tests {
     use super::*;
+    use crate::scan::classic_ac::test_helpers::with_reference_dispatch_lanes;
     use crate::scan::regex_dfa::build_regex_dfa_pipeline;
 
     const MAX_MATCHES: u32 = 4096;
@@ -450,7 +451,7 @@ mod tests {
     /// anchored, non-vacuous match: whatever accept ends the compiled DFA
     /// carries, the validator surfaces them all, each starting exactly at the
     /// origin. We compute the expectation by walking the *same* DFA directly
-    /// (faithfulness), never by assuming a particular multi-length semantics 
+    /// (faithfulness), never by assuming a particular multi-length semantics
     /// vyre's AC-at-end DFA reports a bounded repetition at a single canonical
     /// length, not one match per length (recorded in BACKLOG for the regex-DFA
     /// owner). Asserting the direct-walk truth keeps this test correct
@@ -604,26 +605,6 @@ mod tests {
     /// defines for the same DFA, haystack and candidate origins. This proves the
     /// emitted kernel implements the anchored-window semantics, the same
     /// program dispatches on the GPU.
-    /// Rewrite `match_count` to `lanes` slots (one per reference-backend lane)
-    /// returning only its first word (the shared atomic counter). Minimal local
-    /// copy of the classic-AC test glue, inlined because that module is
-    /// `#[cfg(test)]`-private and reaching it would mean editing another agent's
-    /// in-flight `classic_ac.rs`.
-    fn with_reference_dispatch_lanes(program: Program, lanes: u32) -> Program {
-        let buffers = program
-            .buffers()
-            .iter()
-            .cloned()
-            .map(|buffer| {
-                if buffer.name() == "match_count" {
-                    buffer.with_count(lanes.max(1)).with_output_byte_range(0..4)
-                } else {
-                    buffer
-                }
-            })
-            .collect();
-        program.with_rewritten_buffers(buffers)
-    }
 
     /// Decode `(pattern_id, start, end)` triples from a `[match_count, matches]`
     /// reference-output pair (little-endian u32 words).

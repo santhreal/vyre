@@ -83,7 +83,7 @@ vyre-libs = { path = "../vyre-libs", features = ["matching", "parsing", "c-parse
 vyre = { path = "../vyre-core", default-features = false }
 # A handful of tests reach `vyre_primitives::wire::pack_u32_iter` directly (the
 # facade doesn't re-export the wire POD helpers). Also dropped in the 0.6.2 refactor.
-vyre-primitives = { path = "../vyre-primitives", default-features = false }
+vyre-primitives = { path = "../vyre-primitives", features = ["inventory-registry", "parsing", "hash"], default-features = false }
 # Cross-OS shader-VALIDITY coverage for the combined segmented megakernel: the
 # winning Vulkan/DX12 runs implicitly prove SPIR-V/HLSL validity, but macOS/Metal
 # is hardware-blocked, so the megakernel descriptor is lowered to MSL here (naga's
@@ -128,3 +128,14 @@ workspace = true
 [[bin]]
 name = "vyre-wgpu"
 path = "src/bin/vyre.rs"
+
+# `megakernel_rule_support` imports `vyre_runtime::megakernel::BatchRuleProgram`, gated
+# behind `megakernel-batch`. Registered with `required-features` so a package-scoped
+# `cargo test -p vyre-driver-wgpu --all-targets` cleanly SKIPS it instead of failing to
+# compile, and so it builds and runs whenever the feature is enabled. Gating the file with
+# `#![cfg]` instead would compile it to a vacuous "0 tests ... ok" and hide whether batch
+# rule support is covered at all.
+[[test]]
+name = "megakernel_rule_support"
+path = "tests/megakernel_rule_support.rs"
+required-features = ["megakernel-batch"]

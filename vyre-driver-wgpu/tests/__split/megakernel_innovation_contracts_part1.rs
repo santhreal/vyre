@@ -36,9 +36,31 @@ fn dispatch_wait_uses_adaptive_parking_not_fixed_sleep() {
         wait_src.contains("spin_loop"),
         "dispatch wait must use short CPU pause spins before parking"
     );
+    // The wait must never park past the deadline: it computes what is LEFT of
+    // the budget and hands that to the backoff, rather than parking for a
+    // fixed slice and overshooting.
+    //
+    // This used to require the literal token `saturating_sub`. The loop now
+    // uses `checked_sub` behind an `elapsed >= timeout` guard and reports an
+    // error if the subtraction would underflow, which is the same bound
+    // without the silent clamp a saturating subtract would perform (Law 10).
+    // Pinning the spelling made the stricter version look like a regression,
+    // so the assertion states the property instead.
+    let wait_loop = prod
+        .split("fn wait_for_persistent_dispatch")
+        .nth(1)
+        .unwrap_or(prod);
     assert!(
-        prod.contains("saturating_sub"),
-        "dispatch wait must saturate remaining timeout to avoid over-wait"
+        wait_loop.contains("checked_sub") || wait_loop.contains("saturating_sub"),
+        "dispatch wait must bound the remaining timeout rather than parking a fixed slice"
+    );
+    assert!(
+        wait_loop.contains("idle_for(remaining)"),
+        "dispatch wait must park for the REMAINING budget, not a constant"
+    );
+    assert!(
+        wait_loop.contains("elapsed >= timeout"),
+        "dispatch wait must return before parking once the budget is spent"
     );
 }
 
@@ -377,11 +399,23 @@ fn file_batch_refresh_is_telemetry_capable_and_prefix_bounded() {
         prod.contains("write_padded_prefix"),
         "FileBatch refresh must write logical prefixes into reused resident buffers"
     );
-    let prefix_writer = prod
-        .split("fn write_padded_prefix(")
+
+    // The prefix writer itself lives in `padded_upload.rs`; `batch.rs` keeps a
+    // thin shim that forwards to it. This test used to slice the shim's body
+    // out of batch.rs and look for the upload slice inside it, which stopped
+    // finding anything the moment the implementation was unified into one
+    // place. Read the real owner instead.
+    let upload = std::fs::read_to_string(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/src/padded_upload.rs"
+    ))
+    .expect("padded upload source must be readable");
+    let upload_prod = upload.split("#[cfg(test)]").next().unwrap_or(&upload);
+    let prefix_writer = upload_prod
+        .split("pub(crate) fn write_padded_prefix(")
         .nth(1)
-        .and_then(|tail| tail.split("fn padded_write_len").next())
-        .expect("write_padded_prefix body must be discoverable");
+        .and_then(|tail| tail.split("pub(crate) fn write_padded_and_zero_fill").next())
+        .expect("write_padded_prefix body must be discoverable in padded_upload.rs");
     assert!(
         prefix_writer.contains("&bytes[..aligned_len]"),
         "prefix writer must upload the logical aligned prefix"
@@ -389,6 +423,11 @@ fn file_batch_refresh_is_telemetry_capable_and_prefix_bounded() {
     assert!(
         !prefix_writer.contains("allocation_len"),
         "prefix writer must not zero-fill the full old allocation"
+    );
+    // And the shim in batch.rs must delegate rather than grow a second copy.
+    assert!(
+        prod.contains("crate::padded_upload::write_padded_prefix"),
+        "batch.rs must delegate to the one padded-prefix writer, not reimplement it"
     );
 }
 
@@ -410,9 +449,25 @@ fn batch_dispatcher_borrows_gpu_handles_for_persistent_launch() {
         dispatch_body.contains("dispatch_persistent_borrowed"),
         "batch megakernel dispatch must use the borrowed persistent path"
     );
+    // The point is that buffer HANDLES are borrowed into the launch bindings,
+    // not cloned. A blanket ban on `.clone()` anywhere in the body also
+    // outlawed `pipeline.clone()`, which clones an `Arc` into the pipeline
+    // cache and has nothing to do with buffer residency. Check the receivers
+    // instead, so the contract says what it means.
+    const CLONE_ALLOWED_ON: &[&str] = &["pipeline"];
+    let cloned_receivers: Vec<&str> = dispatch_body
+        .match_indices(".clone()")
+        .map(|(at, _)| {
+            let head = &dispatch_body[..at];
+            head.rsplit(|c: char| !(c.is_alphanumeric() || c == '_'))
+                .next()
+                .unwrap_or("")
+        })
+        .filter(|receiver| !CLONE_ALLOWED_ON.contains(receiver))
+        .collect();
     assert!(
-        !dispatch_body.contains(".clone()"),
-        "batch megakernel dispatch must not clone GpuBufferHandle values while assembling launch bindings"
+        cloned_receivers.is_empty(),
+        "batch megakernel dispatch must borrow GPU handles, but it clones {cloned_receivers:?}"
     );
 }
 

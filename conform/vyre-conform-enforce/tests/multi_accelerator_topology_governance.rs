@@ -1,11 +1,17 @@
 //! Multi accelerator topology governance test suite.
 
 const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
-const TOPOLOGY: &str = include_str!("../../../docs/optimization/MULTI_ACCELERATOR_TOPOLOGY_CAPABILITY_MATRIX.toml");
-const COLLECTIVE: &str = include_str!("../../../docs/optimization/PEER_TRANSFER_COLLECTIVE_POLICY.toml");
-const SHARDING: &str = include_str!("../../../docs/optimization/MULTI_GPU_SHARDING_AGGREGATION_PLAN.toml");
-const FALLBACK: &str = include_str!("../../../docs/optimization/MULTI_ACCELERATOR_FAILURE_FALLBACK_POLICY.toml");
-const COVERAGE: &str = include_str!("../../../docs/optimization/END_TO_END_MULTI_ACCELERATOR_TOPOLOGY_TRANCHE_COVERAGE.toml");
+const TOPOLOGY: &str =
+    include_str!("../../../docs/optimization/MULTI_ACCELERATOR_TOPOLOGY_CAPABILITY_MATRIX.toml");
+const COLLECTIVE: &str =
+    include_str!("../../../docs/optimization/PEER_TRANSFER_COLLECTIVE_POLICY.toml");
+const SHARDING: &str =
+    include_str!("../../../docs/optimization/MULTI_GPU_SHARDING_AGGREGATION_PLAN.toml");
+const FALLBACK: &str =
+    include_str!("../../../docs/optimization/MULTI_ACCELERATOR_FAILURE_FALLBACK_POLICY.toml");
+const COVERAGE: &str = include_str!(
+    "../../../docs/optimization/END_TO_END_MULTI_ACCELERATOR_TOPOLOGY_TRANCHE_COVERAGE.toml"
+);
 
 #[test]
 fn multi_accelerator_topology_sources_are_registered() {
@@ -17,7 +23,10 @@ fn multi_accelerator_topology_sources_are_registered() {
         "NVML_NVLINK_METHODS",
         "VULKAN_DEVICE_GROUPS",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 
@@ -36,12 +45,16 @@ fn topology_capability_matrix_records_device_pair_link_peer_copy_atomic_fallback
         "nvlink-health-and-bandwidth-class",
         "vulkan-device-group-topology",
     ] {
-        assert!(TOPOLOGY.contains(required), "multi accelerator topology matrix must include {required}");
+        assert!(
+            TOPOLOGY.contains(required),
+            "multi accelerator topology matrix must include {required}"
+        );
     }
 }
 
 #[test]
-fn peer_transfer_collective_policy_records_rank_mapping_transfer_collective_order_hang_prevention_and_equivalence() {
+fn peer_transfer_collective_policy_records_rank_mapping_transfer_collective_order_hang_prevention_and_equivalence(
+) {
     for required in [
         "collective_id",
         "data_surface",
@@ -55,12 +68,16 @@ fn peer_transfer_collective_policy_records_rank_mapping_transfer_collective_orde
         "distributed-rule-database-broadcast",
         "frontier-counter-reduce-scatter",
     ] {
-        assert!(COLLECTIVE.contains(required), "peer transfer collective policy must include {required}");
+        assert!(
+            COLLECTIVE.contains(required),
+            "peer transfer collective policy must include {required}"
+        );
     }
 }
 
 #[test]
-fn multi_gpu_sharding_plan_records_partition_halo_load_balance_aggregation_parity_and_scheduler_boundaries() {
+fn multi_gpu_sharding_plan_records_partition_halo_load_balance_aggregation_parity_and_scheduler_boundaries(
+) {
     for required in [
         "shard_id",
         "workload_surface",
@@ -74,12 +91,16 @@ fn multi_gpu_sharding_plan_records_partition_halo_load_balance_aggregation_parit
         "graph-frontier-device-shards",
         "pattern-database-replicated-shards",
     ] {
-        assert!(SHARDING.contains(required), "multi GPU sharding plan must include {required}");
+        assert!(
+            SHARDING.contains(required),
+            "multi GPU sharding plan must include {required}"
+        );
     }
 }
 
 #[test]
-fn failure_fallback_policy_records_detection_containment_fallback_output_integrity_operator_privacy_and_links() {
+fn failure_fallback_policy_records_detection_containment_fallback_output_integrity_operator_privacy_and_links(
+) {
     for required in [
         "failure_id",
         "failure_surface",
@@ -93,12 +114,16 @@ fn failure_fallback_policy_records_detection_containment_fallback_output_integri
         "collective-rank-mismatch-or-timeout",
         "accelerator-link-health-degradation",
     ] {
-        assert!(FALLBACK.contains(required), "multi accelerator failure fallback policy must include {required}");
+        assert!(
+            FALLBACK.contains(required),
+            "multi accelerator failure fallback policy must include {required}"
+        );
     }
 }
 
 #[test]
-fn multi_accelerator_coverage_reuses_placement_capacity_capability_stratification_partition_memory_visibility_output_cache_backpressure_watchdog_profile_statistics_release_and_publication_authorities() {
+fn multi_accelerator_coverage_reuses_placement_capacity_capability_stratification_partition_memory_visibility_output_cache_backpressure_watchdog_profile_statistics_release_and_publication_authorities(
+) {
     for required in [
         "VX-1481..VX-1500",
         "multi_accelerator_topology_capability_matrix",
@@ -124,6 +149,9 @@ fn multi_accelerator_coverage_reuses_placement_capacity_capability_stratificatio
         "dedup_seam",
         "proof_gate",
     ] {
-        assert!(COVERAGE.contains(required), "multi accelerator coverage must include {required}");
+        assert!(
+            COVERAGE.contains(required),
+            "multi accelerator coverage must include {required}"
+        );
     }
 }

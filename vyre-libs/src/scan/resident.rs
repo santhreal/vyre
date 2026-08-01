@@ -2,7 +2,7 @@
 //!
 //! # Why this exists
 //!
-//! [`RulePipeline::scan`](super::mega_scan::RulePipeline::scan) issues every
+//! [`RulePipeline::scan`](crate::scan::mega_scan::RulePipeline::scan) issues every
 //! dispatch through `dispatch_borrowed`, which re-creates GPU buffers and
 //! **re-uploads the lane-major NFA transition table on every call**. That table
 //! is `num_states × 256 × LANES_PER_SUBGROUP` u32s, tens of MiB for a large
@@ -19,7 +19,7 @@
 //! and the per-workgroup scan bound), dispatches against the resident tables, and
 //! decodes the hit buffer, the per-scan transfer drops from `O(tables + haystack)`
 //! to `O(haystack)`. This is the regex-path counterpart of
-//! [`GpuLiteralSet::prepare_scan_dispatch`](super::literal_set::GpuLiteralSet::prepare_scan_dispatch).
+//! [`GpuLiteralSet::prepare_scan_dispatch`](crate::scan::literal_set::GpuLiteralSet::prepare_scan_dispatch).
 //!
 //! The match wire format is byte-identical to [`RulePipeline::scan`] (slot 0 =
 //! atomic counter, then `(pattern_id, start, end)` triples), so a consumer can
@@ -31,7 +31,7 @@
 //! # Backend support
 //!
 //! Resident dispatch requires a backend that implements the resident half of
-//! the [`VyreBackend`] contract (`allocate_resident`, `upload_resident*`,
+//! the [`vyre_driver::VyreBackend`] contract (`allocate_resident`, `upload_resident*`,
 //! `dispatch_resident_timed`). The wgpu and CUDA backends do; the CPU reference
 //! does not. [`RulePipeline::prepare_resident`] returns the backend's
 //! `UnsupportedFeature` error **loudly**: the caller must handle it explicitly
@@ -100,7 +100,7 @@ impl RulePipeline {
     ///
     /// Returns [`BackendError`] when the backend does not support resident
     /// resources, or when allocation / upload of the resident tables fails. The
-    /// caller must handle this loudly (fail closed or a recorded fallback) 
+    /// caller must handle this loudly (fail closed or a recorded fallback)
     /// never degrade silently.
     pub fn prepare_resident(
         &self,
@@ -338,6 +338,7 @@ mod tests {
     /// where a live wgpu/CUDA backend is available. `VyreBackend` requires
     /// `Send + Sync`, so the counters use atomics/`Mutex`, not `RefCell`.
     struct MockResidentBackend {
+        owner: vyre_driver::ResidentOwner,
         next_id: AtomicU64,
         /// (handle_id, byte_len) for every allocate_resident call.
         allocations: Mutex<Vec<(u64, usize)>>,
@@ -352,6 +353,8 @@ mod tests {
     impl MockResidentBackend {
         fn new(hit_buffer: Vec<u8>) -> Self {
             Self {
+                owner: vyre_driver::ResidentOwner::new()
+                    .expect("Fix: resident owner minting must succeed in tests"),
                 next_id: AtomicU64::new(1),
                 allocations: Mutex::new(Vec::new()),
                 full_uploads: AtomicUsize::new(0),
@@ -383,7 +386,7 @@ mod tests {
                 .lock()
                 .expect("mock allocations mutex")
                 .push((handle, byte_len));
-            Ok(Resource::Resident(handle))
+            Ok(Resource::Resident(self.owner.handle(handle)))
         }
 
         fn upload_resident(&self, _resource: &Resource, _bytes: &[u8]) -> Result<(), BackendError> {
@@ -476,7 +479,7 @@ mod tests {
         // path's `Match` decode.
         assert_eq!(matches, vec![Match::new(0, 1, 3), Match::new(1, 5, 7)]);
         // No further full uploads after prepare; each scan does exactly four ranged
-        // uploads (haystack stage + counter reset + haystack_len + max_scan_bytes) 
+        // uploads (haystack stage + counter reset + haystack_len + max_scan_bytes)
         // the immutable tables never move again.
         assert_eq!(
             backend.full_uploads.load(Ordering::Relaxed),

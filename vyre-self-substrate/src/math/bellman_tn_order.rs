@@ -17,6 +17,7 @@ use crate::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
 };
 use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
+use vyre_primitives::fixpoint::persistent_fixpoint::PERSISTENT_FIXPOINT_WORKGROUP_SIZE;
 
 /// Canonical self-substrate op ID for the Bellman TN order.
 pub const OP_ID: &str = "vyre-libs::self_substrate::bellman_tn_order";
@@ -25,7 +26,7 @@ pub const OP_ID: &str = "vyre-libs::self_substrate::bellman_tn_order";
 #[derive(Debug, Default)]
 pub struct BellmanTnOrderGpuScratch {
     inputs: Vec<Vec<u8>>,
-    changed: [u32; 1],
+    changed: Vec<u32>,
 }
 
 /// Compile a Program that finds the optimal tensor-network contraction
@@ -207,7 +208,19 @@ pub fn bellman_tn_order_via_with_scratch_into(
         n_edges,
         max_iterations,
     );
-    scratch.changed[0] = 0;
+    // Size the convergence-flag upload from what the program DECLARES, never
+    // from an assumed single word. Above one workgroup width
+    // `bellman_shortest_path` routes to the grid fixpoint, which writes
+    // `changed[iteration]` and therefore declares one word per iteration; a
+    // hardcoded one-word upload would hand that form an under-sized binding.
+    let changed_words = program
+        .buffers()
+        .iter()
+        .find(|buffer| buffer.name() == "changed")
+        .map_or(1, vyre_foundation::ir::BufferDecl::count)
+        .max(1) as usize;
+    scratch.changed.clear();
+    scratch.changed.resize(changed_words, 0);
     ensure_input_slots(&mut scratch.inputs, 6);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], dist_init);
     write_u32_slice_le_bytes(&mut scratch.inputs[1], dist_init);
@@ -215,7 +228,13 @@ pub fn bellman_tn_order_via_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.inputs[3], src);
     write_u32_slice_le_bytes(&mut scratch.inputs[4], dst);
     write_u32_slice_le_bytes(&mut scratch.inputs[5], weight);
-    let grid_x = ceil_div_u32(n_edges, 256);
+    // Dispatch SPAN, not edge count. The relaxation needs a lane per EDGE but the
+    // fixpoint's compare-and-publish step needs a lane per NODE, and `vyre-driver`
+    // spans the largest declared non-shared binding for an atomic-carrying
+    // program. Sizing the grid off `n_edges` alone leaves every node past the
+    // launch width with no lane to publish it whenever `n_nodes` exceeds
+    // `n_edges`, silently freezing those distances at their seed values.
+    let grid_x = ceil_div_u32(n_nodes.max(n_edges), PERSISTENT_FIXPOINT_WORKGROUP_SIZE[0]);
     let outputs = dispatcher.dispatch(&program, &scratch.inputs, Some([grid_x, 1, 1]))?;
     if outputs.is_empty() {
         return Err(DispatchError::BackendError(format!(
@@ -250,7 +269,13 @@ mod tests {
             let dst = crate::hardware::dispatch_buffers::read_u32s(&inputs[4]);
             let weight = crate::hardware::dispatch_buffers::read_u32s(&inputs[5]);
             assert_eq!(dist, next_dist);
-            assert_eq!(changed, vec![0]);
+            // The invariant is a CLEARED flag buffer of whatever width the routed
+            // program declares, not a one-word buffer. Pinning `vec![0]` here would
+            // re-encode the assumption the grid route invalidates.
+            assert!(
+                !changed.is_empty() && changed.iter().all(|&word| word == 0),
+                "Fix: the consumer must upload a non-empty, fully cleared convergence-flag buffer, got {changed:?}."
+            );
             let (out, _) = cpu_ref(&src, &dst, &weight, &dist, dist.len() as u32, 10);
             Ok(vec![u32_slice_to_le_bytes(&out)])
         }
@@ -265,6 +290,103 @@ mod tests {
             "Must expose 6 buffers for Bellman-Ford"
         );
         assert!(p.buffers().iter().any(|b| b.name() == "dist"));
+    }
+
+    /// The consumer must upload a convergence-flag buffer as wide as the routed
+    /// program DECLARES, and must launch over the dispatch SPAN, not the edge count.
+    ///
+    /// 300 states and 4 transitions. `bellman_shortest_path` routes a span of 300
+    /// to the grid fixpoint, which writes `changed[iteration]` and so declares one
+    /// word per iteration. Two separate defects are locked out here.
+    ///
+    /// First, the old scratch was a fixed `[u32; 1]` and always uploaded one word,
+    /// which hands the grid form an under-sized binding: iteration 1's
+    /// `atomic_or(changed, 1, 1)` writes past the end of it.
+    ///
+    /// Second, the grid width was `ceil(n_edges / 256)`, which is 1 here, so states
+    /// 256..=299 would get no lane at all. Nothing would run their compare, so
+    /// their distances would stay frozen at `u32::MAX` no matter how many
+    /// iterations ran. The span is `max(n_nodes, n_edges)`, giving 2 workgroups.
+    #[test]
+    fn consumer_packs_declared_flag_width_and_launches_over_the_dispatch_span() {
+        use std::cell::RefCell;
+
+        struct CapturingDispatcher {
+            changed_words: RefCell<usize>,
+            grid: RefCell<Option<[u32; 3]>>,
+            n_nodes: usize,
+        }
+
+        impl OptimizerDispatcher for CapturingDispatcher {
+            fn dispatch(
+                &self,
+                _program: &Program,
+                inputs: &[Vec<u8>],
+                grid_override: Option<[u32; 3]>,
+            ) -> Result<Vec<Vec<u8>>, DispatchError> {
+                *self.changed_words.borrow_mut() =
+                    crate::hardware::dispatch_buffers::read_u32s(&inputs[2]).len();
+                *self.grid.borrow_mut() = grid_override;
+                Ok(vec![u32_slice_to_le_bytes(&vec![0_u32; self.n_nodes])])
+            }
+        }
+
+        let n_nodes = 300_u32;
+        let max_iterations = 4_u32;
+        let src = vec![0_u32, 1, 2, 3];
+        let dst = vec![1_u32, 2, 3, 299];
+        let weight = vec![1_u32, 1, 1, 1];
+        let mut dist_init = vec![u32::MAX; n_nodes as usize];
+        dist_init[0] = 0;
+
+        let declared = bellman_tn_order_program(
+            "src",
+            "dst",
+            "weight",
+            "dist",
+            "next_dist",
+            "changed",
+            n_nodes,
+            4,
+            max_iterations,
+        );
+        let declared_changed = declared
+            .buffers()
+            .iter()
+            .find(|buffer| buffer.name() == "changed")
+            .expect("Fix: the program must declare its convergence-flag buffer.")
+            .count();
+        assert_eq!(
+            declared_changed, max_iterations,
+            "Fix: a 300-state span must route to the grid fixpoint, which declares one flag word per iteration."
+        );
+
+        let dispatcher = CapturingDispatcher {
+            changed_words: RefCell::new(0),
+            grid: RefCell::new(None),
+            n_nodes: n_nodes as usize,
+        };
+        bellman_tn_order_via(
+            &dispatcher,
+            &src,
+            &dst,
+            &weight,
+            &dist_init,
+            n_nodes,
+            max_iterations,
+        )
+        .expect("Fix: the consumer must dispatch a 300-state ordering problem.");
+
+        assert_eq!(
+            *dispatcher.changed_words.borrow(),
+            declared_changed as usize,
+            "Fix: the uploaded convergence-flag buffer must be as wide as the program declares, or the grid form writes past its end."
+        );
+        assert_eq!(
+            *dispatcher.grid.borrow(),
+            Some([2, 1, 1]),
+            "Fix: the launch must span max(n_nodes, n_edges) = 300 over a 256-wide workgroup; sizing it off the 4 edges leaves states 256..=299 with no lane to publish them."
+        );
     }
 
     #[test]

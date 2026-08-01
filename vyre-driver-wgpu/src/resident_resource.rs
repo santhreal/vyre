@@ -21,7 +21,7 @@ pub(crate) fn allocate_resident(
             | wgpu::BufferUsages::COPY_DST
             | wgpu::BufferUsages::INDIRECT,
     )?;
-    let id = handle.id();
+    let id = handle.resident_handle()?;
     backend.resident_handles.insert(id, handle);
     Ok(vyre_driver::Resource::Resident(id))
 }
@@ -36,6 +36,7 @@ pub(crate) fn free_resident(
             "WGPU resident free received a borrowed resource. Fix: only free handles returned by allocate_resident.",
         ));
     };
+    crate::buffer::check_resident_owner(id, "WGPU resident free")?;
     backend.resident_handles.remove(&id).ok_or_else(|| {
         vyre_driver::BackendError::new(format!(
             "WGPU resident free received stale handle {id}. Fix: free each resident resource exactly once."

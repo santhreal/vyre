@@ -10,6 +10,8 @@ use vyre_foundation::validate::ValidationOptions;
 use super::dispatch::CudaBackend;
 use super::module_cache::PtxSourceCacheKey;
 use super::plan::CudaDispatchPlan;
+use super::resident::CudaDispatchBinding;
+use super::resident_dispatch::next_dispatch_binding;
 use crate::kernel_failure_diagnostics::{
     diagnose_cuda_kernel_launch_shape, CudaKernelDeviceEnvelope, CudaKernelLaunchEnvelope,
     CudaKernelLaunchShape,
@@ -19,6 +21,54 @@ use crate::occupancy::cooperative_thread_residency_block_limit;
 
 const CUDA_TRANSIENT_DISPATCH_BUDGET_NUMERATOR: u64 = 9;
 const CUDA_TRANSIENT_DISPATCH_BUDGET_DENOMINATOR: u64 = 10;
+
+/// Pick which of two value-equal programs the PTX cache key is derived from,
+/// preferring the one that still carries its memos.
+///
+/// `lower_subgroup_reductions` takes its program BY VALUE, so every caller
+/// hands it a `Program::clone`. That clone shares every `Arc` and so costs
+/// nothing in memory, but it deliberately resets `normalized_cache_digest`,
+/// `fingerprint` and `hash` to empty `OnceLock`s, because a memo copied onto a
+/// value that is about to be rewritten would be a stale digest, which is worse
+/// than a slow one. The consequence on this path is that the digest was
+/// recomputed from scratch on a throwaway value on EVERY dispatch, so the
+/// per-program memo could never be hit even once: measured at 79 ns per IR
+/// node, which is 92 percent of the PTX phase and the single largest host term
+/// on the encode path for programs of 12,000 nodes.
+///
+/// The lowering is a no-op for most programs, and when it is, it hands the
+/// input straight back rather than rebuilding it: of its three returns, two
+/// return the program untouched and only the third calls
+/// `with_rewritten_entry`. So `entry` pointer equality is a sound and O(1)
+/// witness that nothing was rewritten, and in that case `original` and
+/// `lowered` are the same program VALUE, differing only in which memos are
+/// warm. Deriving the key from `original` therefore produces byte-identical
+/// key input while letting the memo live as long as the caller's program.
+///
+/// Returning `original` when the entries are NOT pointer-equal would be a
+/// correctness bug, not a slow path: the key would describe the unlowered
+/// program while the emitted PTX came from the lowered one, so a program whose
+/// subgroup reductions lower differently under two adapters would serve the
+/// wrong cached PTX. The comparison is therefore the whole guard, and the
+/// fallback is the lowered program rather than a guess.
+///
+/// The opposite failure, a MISSED no-op returning `lowered` for a program that
+/// did not change, is silent in a nastier way: it simply restores the full
+/// per-node digest cost with every gate still green. That is why the companion
+/// test counts digest computations rather than timing them, and why the
+/// comparison covers every field the digest reads instead of `entry` alone.
+fn cache_identity_program<'a>(original: &'a Program, lowered: &'a Program) -> &'a Program {
+    if Arc::ptr_eq(&original.entry, &lowered.entry)
+        && Arc::ptr_eq(&original.buffers, &lowered.buffers)
+        && original.workgroup_size == lowered.workgroup_size
+        && original.non_composable_with_self == lowered.non_composable_with_self
+        && original.entry_op_id == lowered.entry_op_id
+    {
+        original
+    } else {
+        lowered
+    }
+}
 
 impl CudaBackend {
     /// Compute capability as (major, minor).
@@ -61,6 +111,15 @@ impl CudaBackend {
     #[must_use]
     pub fn max_grid_dim(&self) -> [u32; 3] {
         self.caps.max_grid_dim_u32()
+    }
+
+    /// Maximum threads resident on one streaming multiprocessor.
+    ///
+    /// Blocks per SM is `this / block threads` with an integral division, so a
+    /// width that does not divide it strands the remainder on every SM.
+    #[must_use]
+    pub fn max_threads_per_sm(&self) -> u32 {
+        self.caps.max_threads_per_sm_u32()
     }
 
     /// Shared memory available per CUDA thread block in bytes.
@@ -186,7 +245,7 @@ impl CudaBackend {
             &self.caps.to_adapter_caps(),
         );
         let key = self.ptx_source_cache.key_for_program(
-            &lowered_program,
+            cache_identity_program(program, &lowered_program),
             config,
             self.ptx_target_sm(),
             subgroup_size,
@@ -213,6 +272,7 @@ impl CudaBackend {
             max_threads_per_block: self.max_threads_per_block(),
             max_block_dim: self.max_block_dim(),
             max_grid_dim: self.max_grid_dim(),
+            max_threads_per_sm: self.caps.max_threads_per_sm_u32(),
         }
     }
 
@@ -326,6 +386,36 @@ impl CudaBackend {
         context: &'static str,
     ) -> Result<(), BackendError> {
         let required_bytes = cuda_transient_dispatch_required_bytes(prepared, inputs)?;
+        let budget_bytes = cuda_transient_dispatch_live_available_budget_bytes(
+            self.caps.total_memory,
+            cuda_live_free_memory_bytes()?,
+            self.resident_store.allocated_bytes(),
+            cuda_usize_bytes_to_u64(
+                self.transient_pool.allocated_bytes()?,
+                "transient pool allocated bytes",
+            )?,
+        );
+        let budget_bytes = self
+            .reclaim_cached_transient_allocations_when_over_budget(required_bytes, budget_bytes)?;
+        validate_cuda_transient_dispatch_budget(required_bytes, budget_bytes, context)
+    }
+
+    /// Preflight the transient device memory a mixed resident/borrowed
+    /// dispatch will stage.
+    ///
+    /// Only borrowed bindings allocate, so an all-resident dispatch returns
+    /// without querying the driver and keeps the resident hot path free of
+    /// added FFI.
+    pub(crate) fn validate_mixed_dispatch_staging_budget(
+        &self,
+        prepared: &CudaDispatchPlan,
+        bindings: &[CudaDispatchBinding<'_>],
+        context: &'static str,
+    ) -> Result<(), BackendError> {
+        let required_bytes = cuda_mixed_dispatch_staging_bytes(prepared, bindings)?;
+        if required_bytes == 0 {
+            return Ok(());
+        }
         let budget_bytes = cuda_transient_dispatch_live_available_budget_bytes(
             self.caps.total_memory,
             cuda_live_free_memory_bytes()?,
@@ -489,6 +579,46 @@ pub(crate) fn cuda_transient_dispatch_required_bytes(
     )
 }
 
+/// Transient device bytes a mixed dispatch stages for its borrowed bindings.
+///
+/// Resident bindings already own their device memory and contribute nothing,
+/// which is the whole point of leaving them resident.
+fn cuda_mixed_dispatch_staging_bytes(
+    prepared: &CudaDispatchPlan,
+    bindings: &[CudaDispatchBinding<'_>],
+) -> Result<u64, BackendError> {
+    let mut required_bytes = 0u64;
+    let mut next_binding = 0usize;
+    for binding in &prepared.bindings.bindings {
+        if binding.role == BindingRole::Shared {
+            continue;
+        }
+        let source = next_dispatch_binding(
+            bindings,
+            &mut next_binding,
+            "mixed dispatch memory preflight",
+        )?;
+        let CudaDispatchBinding::Borrowed(bytes) = source else {
+            continue;
+        };
+        let byte_len = match binding.input_index {
+            Some(_) => bytes.len(),
+            None => binding.static_byte_len.ok_or_else(|| BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: CUDA dispatch memory preflight needs a static byte length for borrowed output `{}`; set BufferDecl::with_count or output_byte_range before launch.",
+                    binding.name
+                ),
+            })?,
+        };
+        required_bytes = checked_dispatch_bytes_add(
+            required_bytes,
+            cuda_dispatch_allocation_bucket(byte_len, "CUDA mixed dispatch staging bytes")?,
+            "CUDA mixed dispatch staging bytes",
+        )?;
+    }
+    Ok(required_bytes)
+}
+
 pub(crate) fn validate_cuda_transient_dispatch_budget(
     required_bytes: u64,
     budget_bytes: u64,
@@ -554,6 +684,11 @@ mod tests {
         cuda_transient_dispatch_required_bytes, validate_cuda_transient_dispatch_budget,
     };
     use crate::backend::CudaDispatchPlan;
+    use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+    use vyre_foundation::lower::lower_subgroup_reductions;
+    use vyre_foundation::optimizer::ctx::AdapterCaps;
+
+    use super::cache_identity_program;
 
     fn plan(static_output_bytes: usize) -> CudaDispatchPlan {
         CudaDispatchPlan {
@@ -726,6 +861,271 @@ mod tests {
                 && !capabilities_source.contains("std::env::var(\"VYRE_CUDA_VALIDATE_DISPATCH\")")
                 && !capabilities_source.contains("var_os(\"VYRE_CUDA_VALIDATE_DISPATCH\")"),
             "Fix: CUDA dispatch validation must not be an opt-in release-path correctness gate."
+        );
+    }
+
+    /// Fixture whose region body the subgroup lowering pass rewrites.
+    ///
+    /// The pass only fires on a `Region` whose generator carries a canonical
+    /// `vyre-primitives::reduce::workgroup_*` prefix and whose body yields both
+    /// a scratch buffer and a reduction scope, so a plain program is a no-op
+    /// and cannot exercise the rewriting half of the discriminator.
+    fn lowering_program() -> Program {
+        Program::wrapped(
+            vec![BufferDecl::output("scratch", 0, DataType::U32).with_count(64)],
+            [64, 1, 1],
+            vec![Node::Region {
+                generator: "vyre-primitives::reduce::workgroup_sum_u32".into(),
+                source_region: None,
+                body: Arc::new(vec![Node::store("scratch", Expr::u32(0), Expr::u32(7))]),
+            }],
+        )
+    }
+
+    fn plain_program() -> Program {
+        Program::wrapped(
+            vec![BufferDecl::output("out", 0, DataType::U32).with_count(4)],
+            [64, 1, 1],
+            vec![Node::store("out", Expr::u32(0), Expr::u32(1))],
+        )
+    }
+
+    fn subgroup_caps() -> AdapterCaps {
+        AdapterCaps {
+            supports_subgroup_ops: true,
+            subgroup_size: 32,
+            ..AdapterCaps::default()
+        }
+    }
+
+    /// A no-op lowering MUST hand the key back the caller's own program, so the
+    /// digest memo lands on the long-lived value instead of on a clone that
+    /// dies at the end of the dispatch.
+    ///
+    /// This is the MISSED NO-OP guard. Before the fix the key was always
+    /// derived from the lowering pass's return value, and because
+    /// `Program::clone` starts every memo empty, the normalized digest was
+    /// recomputed from scratch on every dispatch forever: 79 ns per IR node,
+    /// 92 percent of the measured PTX phase, and the largest host term on the
+    /// encode path. If this regresses nothing fails and nothing is wrong, the
+    /// encode simply pays a full whole-program hash per dispatch again, which
+    /// is exactly why the assertion is pointer identity and not a duration.
+    #[test]
+    fn a_no_op_lowering_keys_from_the_callers_own_program() {
+        let program = plain_program();
+        let lowered = lower_subgroup_reductions(program.clone(), &subgroup_caps());
+
+        assert!(
+            Arc::ptr_eq(&program.entry, &lowered.entry),
+            "Fix: fixture must not be rewritten by subgroup lowering, or this \
+             test proves nothing about the no-op path."
+        );
+        assert!(
+            std::ptr::eq(cache_identity_program(&program, &lowered), &program),
+            "Fix: a no-op lowering must key from the caller's program so the \
+             normalized digest memo outlives the dispatch."
+        );
+    }
+
+    /// A REWRITING lowering MUST key from the lowered program, never the
+    /// caller's.
+    ///
+    /// This is the FALSE NO-OP guard and it is a correctness test, not a
+    /// performance one. Keying from the pre-lowering program while emitting PTX
+    /// from the post-lowering one would file that PTX under the unlowered
+    /// program's identity, so a later dispatch of the unlowered form would be
+    /// served PTX containing subgroup reductions it never asked for. That is a
+    /// wrong-kernel bug and it would not show up as a slowdown.
+    #[test]
+    fn a_rewriting_lowering_keys_from_the_lowered_program() {
+        let program = lowering_program();
+        let lowered = lower_subgroup_reductions(program.clone(), &subgroup_caps());
+
+        assert!(
+            !Arc::ptr_eq(&program.entry, &lowered.entry),
+            "Fix: fixture must actually be rewritten by subgroup lowering, or \
+             this test cannot see a false no-op."
+        );
+        assert!(
+            std::ptr::eq(cache_identity_program(&program, &lowered), &lowered),
+            "Fix: a rewriting lowering must key from the lowered program or the \
+             PTX cache files lowered PTX under the unlowered program's identity."
+        );
+    }
+
+    /// The two programs the no-op path treats as interchangeable MUST produce
+    /// byte-identical digests.
+    ///
+    /// Pointer identity is the mechanism, but this is the property that makes
+    /// substituting one for the other sound: the digest is a pure function of
+    /// the program value, so equal values give equal key input and the swap
+    /// cannot move a cache key. Asserting the exact 32 bytes rather than "the
+    /// keys agree" is what makes this fail if a future field is added to the
+    /// digest that `cache_identity_program` does not compare.
+    #[test]
+    fn the_no_op_substitution_does_not_move_the_digest() {
+        let program = plain_program();
+        let lowered = lower_subgroup_reductions(program.clone(), &subgroup_caps());
+
+        let from_original = vyre_driver::pipeline::try_normalized_program_cache_digest(&program)
+            .expect("Fix: fixture program must produce a normalized cache digest");
+        let from_lowered = vyre_driver::pipeline::try_normalized_program_cache_digest(&lowered)
+            .expect("Fix: lowered fixture must produce a normalized cache digest");
+
+        assert_eq!(
+            from_original, from_lowered,
+            "Fix: the no-op substitution changed the digest, so deriving the \
+             PTX key from the caller's program would move the cache key."
+        );
+    }
+
+    /// A rewritten program MUST NOT share the unlowered program's digest.
+    ///
+    /// The negative control for the test above. If lowering could produce a
+    /// program whose digest matched its input, the FALSE NO-OP guard would be
+    /// defending nothing, because keying from either program would be
+    /// indistinguishable and a real rewrite could be served the wrong PTX
+    /// without any assertion noticing.
+    #[test]
+    fn a_rewritten_program_gets_a_different_digest() {
+        let program = lowering_program();
+        let lowered = lower_subgroup_reductions(program.clone(), &subgroup_caps());
+
+        let from_original = vyre_driver::pipeline::try_normalized_program_cache_digest(&program)
+            .expect("Fix: fixture program must produce a normalized cache digest");
+        let from_lowered = vyre_driver::pipeline::try_normalized_program_cache_digest(&lowered)
+            .expect("Fix: lowered fixture must produce a normalized cache digest");
+
+        assert_ne!(
+            from_original, from_lowered,
+            "Fix: subgroup lowering rewrote the program without moving its \
+             digest, so the PTX cache cannot tell the two forms apart."
+        );
+    }
+
+    /// Every field the comparison reads MUST be able to veto the substitution
+    /// on its own.
+    ///
+    /// `cache_identity_program` returns the caller's program only when all five
+    /// compared fields agree. A future edit that drops one of them, or reorders
+    /// the `&&` chain into something short-circuiting incorrectly, would let a
+    /// genuinely different program pass as a no-op. Each case below differs
+    /// from the base in exactly ONE field, so a dropped comparison fails here
+    /// and names itself rather than surfacing as a wrong cached kernel.
+    #[test]
+    fn any_single_differing_field_vetoes_the_substitution() {
+        let base = plain_program();
+
+        let other_entry = Program::wrapped(
+            base.buffers.to_vec(),
+            base.workgroup_size,
+            vec![Node::store("out", Expr::u32(0), Expr::u32(2))],
+        );
+        assert!(
+            std::ptr::eq(cache_identity_program(&base, &other_entry), &other_entry),
+            "Fix: a different entry body must veto the no-op substitution."
+        );
+
+        let other_workgroup =
+            Program::wrapped(base.buffers.to_vec(), [32, 1, 1], base.entry.to_vec());
+        assert!(
+            std::ptr::eq(
+                cache_identity_program(&base, &other_workgroup),
+                &other_workgroup
+            ),
+            "Fix: a different workgroup size must veto the no-op substitution."
+        );
+
+        let other_buffers = Program::wrapped(
+            vec![BufferDecl::output("out", 1, DataType::U32).with_count(4)],
+            base.workgroup_size,
+            base.entry.to_vec(),
+        );
+        assert!(
+            std::ptr::eq(
+                cache_identity_program(&base, &other_buffers),
+                &other_buffers
+            ),
+            "Fix: a different buffer table must veto the no-op substitution."
+        );
+
+        let other_op_id = base.clone().with_entry_op_id("some::other::op");
+        assert!(
+            std::ptr::eq(cache_identity_program(&base, &other_op_id), &other_op_id),
+            "Fix: a different entry op id must veto the no-op substitution."
+        );
+    }
+
+    /// Negative control: each plausible simplification of
+    /// `cache_identity_program` MUST be visible to one of the gates above.
+    ///
+    /// A gate is worth nothing until it has been shown to fail on the exact
+    /// defect it exists to catch, and the three defects below are the ones a
+    /// future reader is most likely to introduce while "cleaning up" a
+    /// five-clause `&&`. Rather than patch production and leave the shared tree
+    /// broken for the length of a test run, each defect is reproduced here as a
+    /// local twin and checked against the SAME fixture pairs the gates use. If
+    /// a twin agreed with the correct implementation on those fixtures, the
+    /// corresponding gate would be blind and this test says so.
+    ///
+    /// Mapping, so a failure here names its own gate:
+    ///   always_original  ->  a_rewriting_lowering_keys_from_the_lowered_program
+    ///   always_lowered   ->  a_no_op_lowering_keys_from_the_callers_own_program
+    ///   entry_only       ->  any_single_differing_field_vetoes_the_substitution
+    #[test]
+    fn each_discriminator_defect_is_visible_to_one_gate() {
+        fn always_original<'a>(original: &'a Program, _lowered: &'a Program) -> &'a Program {
+            original
+        }
+        fn always_lowered<'a>(_original: &'a Program, lowered: &'a Program) -> &'a Program {
+            lowered
+        }
+        fn entry_only<'a>(original: &'a Program, lowered: &'a Program) -> &'a Program {
+            if Arc::ptr_eq(&original.entry, &lowered.entry) {
+                original
+            } else {
+                lowered
+            }
+        }
+
+        let rewriting = lowering_program();
+        let rewritten = lower_subgroup_reductions(rewriting.clone(), &subgroup_caps());
+        assert!(
+            std::ptr::eq(always_original(&rewriting, &rewritten), &rewriting)
+                && !std::ptr::eq(cache_identity_program(&rewriting, &rewritten), &rewriting),
+            "Fix: the rewriting fixture no longer separates a false no-op from \
+             correct behaviour, so the false-no-op gate is blind."
+        );
+
+        let plain = plain_program();
+        let unchanged = lower_subgroup_reductions(plain.clone(), &subgroup_caps());
+        assert!(
+            std::ptr::eq(always_lowered(&plain, &unchanged), &unchanged)
+                && std::ptr::eq(cache_identity_program(&plain, &unchanged), &plain),
+            "Fix: the no-op fixture no longer separates a missed no-op from \
+             correct behaviour, so the missed-no-op gate is blind."
+        );
+
+        let base = plain_program();
+        // `Program::clone` shares the entry `Arc`, which is exactly the state
+        // an entry-only comparison cannot distinguish: same entry pointer,
+        // different workgroup size.
+        let mut same_entry_other_workgroup = base.clone();
+        same_entry_other_workgroup.workgroup_size = [32, 1, 1];
+        assert!(
+            Arc::ptr_eq(&base.entry, &same_entry_other_workgroup.entry),
+            "Fix: this control needs two programs that SHARE an entry and differ \
+             elsewhere, or it cannot see an entry-only comparison."
+        );
+        assert!(
+            std::ptr::eq(entry_only(&base, &same_entry_other_workgroup), &base)
+                && std::ptr::eq(
+                    cache_identity_program(&base, &same_entry_other_workgroup),
+                    &same_entry_other_workgroup
+                ),
+            "Fix: an entry-only comparison is indistinguishable from the full \
+             one on this fixture, so dropping four field comparisons would pass \
+             every gate above."
         );
     }
 }

@@ -7,14 +7,19 @@ use std::path::{Path, PathBuf};
 use super::MAX_RELEASE_AUDIT_TEXT_BYTES;
 
 pub(crate) fn markdown_line_is_release_rule_text(lowered: &str) -> bool {
-    lowered.contains("no-stub")
-        || lowered.contains("no shipped source")
-        || lowered.contains("must not")
-        || lowered.contains("not only")
-        || lowered.contains("not optional")
-        || lowered.contains("not a ")
-        || lowered.contains("no todo")
-        || lowered.contains("todo/fixme")
+    crate::output_arg::contains_any(
+        lowered,
+        &[
+            "no-stub",
+            "no shipped source",
+            "must not",
+            "not only",
+            "not optional",
+            "not a ",
+            "no todo",
+            "todo/fixme",
+        ],
+    )
 }
 
 pub(crate) fn paths_equal(left: &Path, right: &Path) -> bool {
@@ -28,12 +33,7 @@ pub(crate) fn paths_equal(left: &Path, right: &Path) -> bool {
 }
 
 pub(crate) fn resolve_manifest_path(base_dir: &Path, path: &str) -> PathBuf {
-    let candidate = PathBuf::from(path);
-    if candidate.is_absolute() {
-        candidate
-    } else {
-        base_dir.join(candidate)
-    }
+    crate::output_arg::resolve_path(base_dir, path)
 }
 
 pub(crate) fn is_checklist_artifact(entry: &str) -> bool {
@@ -51,17 +51,7 @@ pub(crate) fn is_manifest_command_evidence(evidence: &str) -> bool {
 }
 
 pub(crate) fn resolve_checklist_artifact_path(base_dir: &Path, path: &str) -> PathBuf {
-    let candidate = PathBuf::from(path);
-    if candidate.is_absolute() {
-        return candidate;
-    }
-    if path.starts_with("release/") {
-        return base_dir
-            .parent()
-            .map(|workspace| workspace.join(candidate))
-            .unwrap_or_else(|| base_dir.join(path));
-    }
-    base_dir.join(candidate)
+    crate::output_arg::resolve_release_artifact_path(base_dir, path)
 }
 
 pub(crate) fn read_text_bounded(path: &Path) -> io::Result<String> {

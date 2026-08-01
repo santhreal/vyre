@@ -5,7 +5,7 @@
 //! OPPOSITE regime a consumer hits on a dense corpus (a config dump, a minified
 //! bundle, a secret-dense log): the kernel finds tens of thousands of matches, so
 //! the per-dispatch cost is dominated by writing every `(pattern_id, start, end)`
-//! triple to device memory, reading them back, and decoding them on the host 
+//! triple to device memory, reading them back, and decoding them on the host
 //! not by table upload. To isolate that, the corpus is scanned through a RESIDENT
 //! session (`prepare_resident_scan`), so the seven immutable tables upload ONCE
 //! and every timed dispatch re-stages only the haystack + a 4-byte counter reset;

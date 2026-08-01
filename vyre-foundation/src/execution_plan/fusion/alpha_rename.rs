@@ -266,88 +266,11 @@ impl<'a> ArmRenamer<'a> {
     }
 
     fn expr(&self, expr: &Expr) -> Expr {
-        match expr {
-            Expr::Var(name) => Expr::Var(self.ident(name)),
-            Expr::Load { buffer, index } => Expr::Load {
-                buffer: buffer.clone(),
-                index: Box::new(self.expr(index)),
-            },
-            Expr::BufLen { buffer } => Expr::BufLen {
-                buffer: buffer.clone(),
-            },
-            // Buffer names live in the program's buffer table, not the
-            // local variable scope alpha-renaming rewrites.
-            Expr::BufferRef { buffer } => Expr::BufferRef {
-                buffer: buffer.clone(),
-            },
-            Expr::BinOp { op, left, right } => Expr::BinOp {
-                op: *op,
-                left: Box::new(self.expr(left)),
-                right: Box::new(self.expr(right)),
-            },
-            Expr::UnOp { op, operand } => Expr::UnOp {
-                op: op.clone(),
-                operand: Box::new(self.expr(operand)),
-            },
-            Expr::Call { op_id, args } => Expr::Call {
-                op_id: op_id.clone(),
-                args: args.iter().map(|arg| self.expr(arg)).collect(),
-            },
-            Expr::Select {
-                cond,
-                true_val,
-                false_val,
-            } => Expr::Select {
-                cond: Box::new(self.expr(cond)),
-                true_val: Box::new(self.expr(true_val)),
-                false_val: Box::new(self.expr(false_val)),
-            },
-            Expr::Cast { target, value } => Expr::Cast {
-                target: target.clone(),
-                value: Box::new(self.expr(value)),
-            },
-            Expr::Fma { a, b, c } => Expr::Fma {
-                a: Box::new(self.expr(a)),
-                b: Box::new(self.expr(b)),
-                c: Box::new(self.expr(c)),
-            },
-            Expr::Atomic {
-                op,
-                buffer,
-                index,
-                expected,
-                value,
-                ordering,
-            } => Expr::Atomic {
-                op: *op,
-                buffer: buffer.clone(),
-                index: Box::new(self.expr(index)),
-                expected: expected.as_ref().map(|expr| Box::new(self.expr(expr))),
-                value: Box::new(self.expr(value)),
-                ordering: *ordering,
-            },
-            Expr::SubgroupBallot { cond } => Expr::SubgroupBallot {
-                cond: Box::new(self.expr(cond)),
-            },
-            Expr::SubgroupShuffle { value, lane } => Expr::SubgroupShuffle {
-                value: Box::new(self.expr(value)),
-                lane: Box::new(self.expr(lane)),
-            },
-            Expr::SubgroupReduce { op, value } => Expr::SubgroupReduce {
-                op: *op,
-                value: Box::new(self.expr(value)),
-            },
-            Expr::LitU32(_)
-            | Expr::LitI32(_)
-            | Expr::LitF32(_)
-            | Expr::LitBool(_)
-            | Expr::InvocationId { .. }
-            | Expr::WorkgroupId { .. }
-            | Expr::LocalId { .. }
-            | Expr::SubgroupLocalId
-            | Expr::SubgroupSize
-            | Expr::Opaque(_) => expr.clone(),
-        }
+        crate::optimizer::rewrite::rewrite_expr(expr, &mut |candidate| match candidate {
+            Expr::Var(name) => Some(Expr::Var(self.ident(name))),
+            _ => None,
+        })
+        .into_owned()
     }
 }
 

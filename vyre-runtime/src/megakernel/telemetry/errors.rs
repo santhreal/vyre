@@ -32,7 +32,9 @@ pub(super) fn launch_telemetry_failed(source: PipelineError) -> vyre_driver::Bac
     ))
 }
 
-pub(super) fn hot_opcode_count_overflow(source: impl core::fmt::Display) -> vyre_driver::BackendError {
+pub(super) fn hot_opcode_count_overflow(
+    source: impl core::fmt::Display,
+) -> vyre_driver::BackendError {
     vyre_driver::BackendError::new(format!(
         "megakernel hot opcode count cannot fit u32: {source}. Fix: cap metrics slots at the protocol boundary."
     ))
@@ -52,7 +54,9 @@ pub(super) fn hot_window_count_overflow() -> vyre_driver::BackendError {
     )
 }
 
-pub(super) fn hot_window_count_too_wide(source: impl core::fmt::Display) -> vyre_driver::BackendError {
+pub(super) fn hot_window_count_too_wide(
+    source: impl core::fmt::Display,
+) -> vyre_driver::BackendError {
     vyre_driver::BackendError::new(format!(
         "megakernel hot window count cannot fit u32: {source}. Fix: shard telemetry windows before launch recommendation."
     ))

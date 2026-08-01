@@ -37,16 +37,43 @@ const HS_FLOOR_GBPS: f64 = 1.5;
 /// `overlap = max_pattern_len` is genuinely exercised at window boundaries.
 fn catalog() -> Vec<&'static [u8]> {
     vec![
-        b"alpha", b"bravo", b"charlie", b"delta", b"echo", b"foxtrot", b"golf",
-        b"hotel", b"india", b"juliet", b"kilo", b"lima", b"mike", b"november",
-        b"oscar", b"papa", b"quebec", b"romeo", b"sierra", b"tango", b"uniform",
-        b"victor", b"whiskey", b"xray", b"yankee", b"zulu", b"AB", b"ABCDEFGH",
-        b"needle", b"haystack", b"0123456789", b"the-quick-brown-fox",
+        b"alpha",
+        b"bravo",
+        b"charlie",
+        b"delta",
+        b"echo",
+        b"foxtrot",
+        b"golf",
+        b"hotel",
+        b"india",
+        b"juliet",
+        b"kilo",
+        b"lima",
+        b"mike",
+        b"november",
+        b"oscar",
+        b"papa",
+        b"quebec",
+        b"romeo",
+        b"sierra",
+        b"tango",
+        b"uniform",
+        b"victor",
+        b"whiskey",
+        b"xray",
+        b"yankee",
+        b"zulu",
+        b"AB",
+        b"ABCDEFGH",
+        b"needle",
+        b"haystack",
+        b"0123456789",
+        b"the-quick-brown-fox",
     ]
 }
 
 /// Plant catalog patterns at a fixed spread of offsets, including offsets that
-/// straddle the 512 / 1024 / 4096 segment boundaries the geometry sweep uses 
+/// straddle the 512 / 1024 / 4096 segment boundaries the geometry sweep uses
 /// so warm-up + emit-guard ownership is tested at the seams. Offsets are
 /// geometry-invariant so the oracle ground truth is the same for every seg_len.
 fn build_haystack(patterns: &[&[u8]]) -> Vec<u8> {
@@ -209,9 +236,7 @@ fn combined_scan_conserves_every_match_and_beats_hyperscan() {
     // the fixed `overlap = max_pattern_len` (19 B here) per window dominates. The
     // boundary seeds (500/1020/4090/65530) straddle 512/1024/4096, all multiples
     // of 64/128/256, so every sub-512 geometry's seams are still covered.
-    let geometries = [
-        u32::MAX, 65_536u32, 16_384, 4_096, 1_024, 512, 256, 128, 64,
-    ];
+    let geometries = [u32::MAX, 65_536u32, 16_384, 4_096, 1_024, 512, 256, 128, 64];
 
     eprintln!(
         "8 MiB / {} patterns, combined-AC conservation + throughput (oracle has {} matches, Hyperscan {HS_FLOOR_GBPS} GB/s):",
@@ -315,9 +340,26 @@ fn combined_scan_conserves_every_match_and_beats_hyperscan() {
 /// oracle ground truth is stable across runs.
 fn large_catalog() -> Vec<Vec<u8>> {
     let prefixes: &[&[u8]] = &[
-        b"AKIA", b"ghp_", b"gho_", b"xoxb-", b"xoxp-", b"AIza", b"sk-", b"pk_",
-        b"rk_", b"glpat-", b"ya29.", b"ASIA", b"SG.", b"shpat_", b"AccountKey=",
-        b"eyJ", b"-----BEGIN", b"npm_", b"dop_v1_", b"sk_live_",
+        b"AKIA",
+        b"ghp_",
+        b"gho_",
+        b"xoxb-",
+        b"xoxp-",
+        b"AIza",
+        b"sk-",
+        b"pk_",
+        b"rk_",
+        b"glpat-",
+        b"ya29.",
+        b"ASIA",
+        b"SG.",
+        b"shpat_",
+        b"AccountKey=",
+        b"eyJ",
+        b"-----BEGIN",
+        b"npm_",
+        b"dop_v1_",
+        b"sk_live_",
     ];
     let body: &[u8] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
     let mut out: Vec<Vec<u8>> = Vec::with_capacity(2048);
@@ -432,7 +474,12 @@ fn combined_scan_beats_hyperscan_at_keyhog_catalog_scale() {
         };
         eprintln!(
             "  {:>9}  {:>8}  {:>8}  {:>8.3}  {:>5.2}x  {:>15}",
-            r.seg_len, r.found.len(), r.dropped, r.gbps, r.gbps / HS_FLOOR_GBPS, status,
+            r.seg_len,
+            r.found.len(),
+            r.dropped,
+            r.gbps,
+            r.gbps / HS_FLOOR_GBPS,
+            status,
         );
         results.push(r);
     }
@@ -444,14 +491,19 @@ fn combined_scan_beats_hyperscan_at_keyhog_catalog_scale() {
             continue;
         }
         assert_eq!(
-            r.found, oracle,
+            r.found,
+            oracle,
             "seg_len={} diverged from the oracle at keyhog scale (found {}, oracle {}, dropped {})",
             r.seg_len,
             r.found.len(),
             oracle.len(),
             r.dropped
         );
-        assert_eq!(r.dropped, 0, "seg_len={} dropped {} hits", r.seg_len, r.dropped);
+        assert_eq!(
+            r.dropped, 0,
+            "seg_len={} dropped {} hits",
+            r.seg_len, r.dropped
+        );
     }
 
     let best_ok_gbps = results
@@ -578,7 +630,7 @@ fn u16_transitions_are_lossless_and_measured_vs_u32_at_keyhog_scale() {
 /// PROFILE-FIRST measurement for the megakernel's open optimization lane
 /// (`docs/GPU_OOM_SEGMENTATION.md`: the throughput degradation at catalog scale
 /// is an L1 working-set / memory-transaction effect, NOT L2 capacity). Two
-/// candidate levers narrow each transition read: (1) **row deduplication** 
+/// candidate levers narrow each transition read: (1) **row deduplication**
 /// merge identical compressed transition rows behind a `state → row`
 /// indirection, shrinking the count of DISTINCT physical rows a warp's 32 lanes
 /// touch; (2) **u16 targets**: halve every transition word when
@@ -837,7 +889,10 @@ fn warp_state_scatter_bounds_the_relabeling_lever_at_keyhog_scale() {
     // --- Pinned regression facts (deterministic catalog + buffers) ---
     assert_eq!(dense_visited, 14, "high-entropy state-visit set drifted");
     assert_eq!(dense_hot90, 7, "high-entropy hot-state (90%) count drifted");
-    assert_eq!(sparse_visited, 13_199, "sparse buffer must exercise every state");
+    assert_eq!(
+        sparse_visited, 13_199,
+        "sparse buffer must exercise every state"
+    );
     assert_eq!(sparse_hot90, 7_512, "sparse hot-state (90%) count drifted");
     assert!(
         (12.5..13.0).contains(&sparse_ed),
@@ -963,15 +1018,15 @@ fn calibrate_seg_len_lands_on_a_fast_conserving_geometry_on_this_device() {
     let summary = dispatcher
         .dispatch_into(&batch, &mut hits)
         .expect("dispatch at the calibrated geometry must succeed");
-    let found: BTreeSet<(u32, u32)> = hits
-        .iter()
-        .map(|h| (h.rule_idx, h.match_offset))
-        .collect();
+    let found: BTreeSet<(u32, u32)> = hits.iter().map(|h| (h.rule_idx, h.match_offset)).collect();
     assert_eq!(
         found, oracle,
         "the calibrated geometry must reproduce the classic_ac_scan oracle exactly"
     );
-    assert_eq!(summary.dropped_hits, 0, "calibrated dispatch must drop nothing");
+    assert_eq!(
+        summary.dropped_hits, 0,
+        "calibrated dispatch must drop nothing"
+    );
 
     // And it must beat Hyperscan, calibration off the whole-file floor is the
     // whole point. (Device-robust: we assert the HS floor, not an exact seg_len.)
@@ -1075,16 +1130,17 @@ fn calibrate_seg_len_holds_at_keyhog_catalog_scale() {
     let summary = dispatcher
         .dispatch_into(&batch, &mut hits)
         .expect("dispatch at the calibrated geometry must succeed");
-    let found: BTreeSet<(u32, u32)> = hits
-        .iter()
-        .map(|h| (h.rule_idx, h.match_offset))
-        .collect();
+    let found: BTreeSet<(u32, u32)> = hits.iter().map(|h| (h.rule_idx, h.match_offset)).collect();
     assert_eq!(
-        found, oracle,
+        found,
+        oracle,
         "the calibrated keyhog-scale geometry must conserve every one of the {} oracle matches",
         oracle.len()
     );
-    assert_eq!(summary.dropped_hits, 0, "calibrated dispatch must drop nothing at scale");
+    assert_eq!(
+        summary.dropped_hits, 0,
+        "calibrated dispatch must drop nothing at scale"
+    );
 
     let chosen_gbps = FILE_LEN as f64 / chosen_m.wall_time.as_secs_f64() / 1e9;
     assert!(

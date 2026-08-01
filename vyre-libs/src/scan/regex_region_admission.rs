@@ -87,64 +87,20 @@ pub fn regex_admission_by_region_reference(
     presence
 }
 
-/// Build the regex-DFA per-region admission GPU program.
-///
-/// One invocation per haystack byte `i`: binary-search `region_starts` for the
-/// region owning `i + region_base`, replay the anchored DFA forward over
-/// `[i, min(i + max_pattern_len, haystack_len))`, and `atomic_or` each accepted
-/// pattern's bit into that region's presence row. Idempotent bit sets need no
-/// per-hit counter, so this stays occupancy-cheap (unlike the refuted fused
-/// triple path). Output is the `region_count * presence_words` bitmap.
-#[allow(clippy::too_many_arguments)]
-#[must_use]
-pub fn regex_admission_by_region_program(
+pub(crate) fn anchored_region_walk_body(
     haystack: &str,
     transitions: &str,
     output_offsets: &str,
-    output_records: &str,
     region_starts: &str,
     region_base: &str,
     haystack_len: &str,
-    presence: &str,
-    state_count: u32,
-    output_records_len: u32,
-    region_count: u32,
     presence_words: u32,
     max_pattern_len: u32,
     log2_max_regions: u32,
-) -> Program {
+    emit_loop: Node,
+) -> Vec<Node> {
     let max_pattern_len = max_pattern_len.max(1);
     let (load_step_byte, step_byte) = load_packed_byte(haystack, Expr::var("step"));
-
-    // Per accepted pattern at the current DFA state: set its presence bit in the
-    // owning region's row. `rs_base = region * presence_words`.
-    let emit_loop = Node::loop_for(
-        "out_idx",
-        Expr::var("out_begin"),
-        Expr::var("out_end"),
-        vec![
-            Node::let_bind(
-                "pattern_id",
-                Expr::load(output_records, Expr::var("out_idx")),
-            ),
-            Node::let_bind(
-                "_vyre_presence_prev",
-                Expr::atomic_or(
-                    presence,
-                    Expr::add(
-                        Expr::var("rs_base"),
-                        Expr::shr(Expr::var("pattern_id"), Expr::u32(5)),
-                    ),
-                    Expr::shl(
-                        Expr::u32(1),
-                        Expr::bitand(Expr::var("pattern_id"), Expr::u32(31)),
-                    ),
-                ),
-            ),
-        ],
-    );
-
-    // Forward anchored DFA replay from origin `i`, emitting presence at each step.
     let walk_step = vec![
         load_step_byte,
         Node::assign(
@@ -161,10 +117,8 @@ pub fn regex_admission_by_region_program(
         ),
         emit_loop,
     ];
-
-    // region = largest r with region_starts[r] <= (i + region_base); fixed-
-    // iteration binary search (rs_lo converges to the owning region).
     let mut per_position = vec![
+        Node::let_bind("origin", Expr::var("i")),
         Node::let_bind(
             "rs_pos",
             Expr::add(Expr::var("i"), Expr::load(region_base, Expr::u32(0))),
@@ -220,47 +174,140 @@ pub fn regex_admission_by_region_program(
         ),
         Node::let_bind("state", Expr::u32(0)),
     ];
-    // Forward window bound = min(i + max_pattern_len, haystack_len).
     let uncapped_end = Expr::add(Expr::var("i"), Expr::u32(max_pattern_len));
-    let window_end = Expr::select(
-        Expr::lt(uncapped_end.clone(), Expr::load(haystack_len, Expr::u32(0))),
-        uncapped_end,
-        Expr::load(haystack_len, Expr::u32(0)),
-    );
-    per_position.push(Node::let_bind("win_end", window_end));
+    per_position.push(Node::let_bind(
+        "win_end",
+        Expr::select(
+            Expr::lt(uncapped_end.clone(), Expr::load(haystack_len, Expr::u32(0))),
+            uncapped_end,
+            Expr::load(haystack_len, Expr::u32(0)),
+        ),
+    ));
     per_position.push(Node::loop_for(
         "step",
         Expr::var("i"),
         Expr::var("win_end"),
         walk_step,
     ));
-
-    let walk_body = vec![
+    vec![
         Node::let_bind("i", Expr::InvocationId { axis: 0 }),
         Node::if_then(
             Expr::lt(Expr::var("i"), Expr::load(haystack_len, Expr::u32(0))),
             per_position,
         ),
-    ];
+    ]
+}
 
-    Program::wrapped(
+pub(crate) fn regex_region_scan_common_buffers(
+    haystack: &str,
+    transitions: &str,
+    output_offsets: &str,
+    output_records: &str,
+    region_starts: &str,
+    region_base: &str,
+    state_count: u32,
+    output_records_len: u32,
+    region_count: u32,
+) -> Vec<BufferDecl> {
+    let mut buffers = super::classic_ac::classic_ac_dfa_buffer_decls(
+        haystack,
+        transitions,
+        output_offsets,
+        state_count,
+    );
+    buffers.extend([
+        BufferDecl::storage(output_records, 3, BufferAccess::ReadOnly, DataType::U32)
+            .with_count(output_records_len),
+        BufferDecl::storage(region_starts, 4, BufferAccess::ReadOnly, DataType::U32)
+            .with_count(region_count.max(1)),
+        BufferDecl::storage(region_base, 5, BufferAccess::ReadOnly, DataType::U32).with_count(1),
+    ]);
+    buffers
+}
+
+/// Build the regex-DFA per-region admission GPU program.
+///
+/// One invocation per haystack byte `i`: binary-search `region_starts` for the
+/// region owning `i + region_base`, replay the anchored DFA forward over
+/// `[i, min(i + max_pattern_len, haystack_len))`, and `atomic_or` each accepted
+/// pattern's bit into that region's presence row. Idempotent bit sets need no
+/// per-hit counter, so this stays occupancy-cheap (unlike the refuted fused
+/// triple path). Output is the `region_count * presence_words` bitmap.
+#[allow(clippy::too_many_arguments)]
+#[must_use]
+pub fn regex_admission_by_region_program(
+    haystack: &str,
+    transitions: &str,
+    output_offsets: &str,
+    output_records: &str,
+    region_starts: &str,
+    region_base: &str,
+    haystack_len: &str,
+    presence: &str,
+    state_count: u32,
+    output_records_len: u32,
+    region_count: u32,
+    presence_words: u32,
+    max_pattern_len: u32,
+    log2_max_regions: u32,
+) -> Program {
+    let emit_loop = Node::loop_for(
+        "out_idx",
+        Expr::var("out_begin"),
+        Expr::var("out_end"),
         vec![
-            BufferDecl::storage(haystack, 0, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(transitions, 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(state_count.saturating_mul(256)),
-            BufferDecl::storage(output_offsets, 2, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(state_count.saturating_add(1)),
-            BufferDecl::storage(output_records, 3, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(output_records_len),
-            BufferDecl::storage(region_starts, 4, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(region_count.max(1)),
-            BufferDecl::storage(region_base, 5, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(1),
-            BufferDecl::storage(haystack_len, 6, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(1),
-            BufferDecl::read_write(presence, 7, DataType::U32)
-                .with_count(region_count.max(1).saturating_mul(presence_words)),
+            Node::let_bind(
+                "pattern_id",
+                Expr::load(output_records, Expr::var("out_idx")),
+            ),
+            Node::let_bind(
+                "_vyre_presence_prev",
+                Expr::atomic_or(
+                    presence,
+                    Expr::add(
+                        Expr::var("rs_base"),
+                        Expr::shr(Expr::var("pattern_id"), Expr::u32(5)),
+                    ),
+                    Expr::shl(
+                        Expr::u32(1),
+                        Expr::bitand(Expr::var("pattern_id"), Expr::u32(31)),
+                    ),
+                ),
+            ),
         ],
+    );
+    let walk_body = anchored_region_walk_body(
+        haystack,
+        transitions,
+        output_offsets,
+        region_starts,
+        region_base,
+        haystack_len,
+        presence_words,
+        max_pattern_len,
+        log2_max_regions,
+        emit_loop,
+    );
+    let mut buffers = regex_region_scan_common_buffers(
+        haystack,
+        transitions,
+        output_offsets,
+        output_records,
+        region_starts,
+        region_base,
+        state_count,
+        output_records_len,
+        region_count,
+    );
+    buffers.push(
+        BufferDecl::storage(haystack_len, 6, BufferAccess::ReadOnly, DataType::U32).with_count(1),
+    );
+    buffers.push(
+        BufferDecl::read_write(presence, 7, DataType::U32)
+            .with_count(region_count.max(1).saturating_mul(presence_words)),
+    );
+    Program::wrapped(
+        buffers,
         [128, 1, 1],
         vec![wrap_anonymous(
             "vyre-libs::matching::regex_admission_by_region",

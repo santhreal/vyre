@@ -40,7 +40,11 @@ pub(crate) fn write_padded_prefix(
 
     let mut tail = [0u8; 4];
     tail[..tail_len].copy_from_slice(&bytes[aligned_len..]);
-    queue.write_buffer(buffer, WGPU_NUMERIC.usize_to_u64(aligned_len, tail_offset_label)?, &tail);
+    queue.write_buffer(
+        buffer,
+        WGPU_NUMERIC.usize_to_u64(aligned_len, tail_offset_label)?,
+        &tail,
+    );
     Ok(aligned_len + 4)
 }
 

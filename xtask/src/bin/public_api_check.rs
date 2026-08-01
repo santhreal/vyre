@@ -1,7 +1,7 @@
-//! Run `cargo_full public-api` against facade crates and diff the result
+//! Run `cargo public-api` against facade crates and diff the result
 //! against each facade's committed `PUBLIC_API.md`.
 //!
-//! Run via `cargo_full run -p xtask --bin public_api_check`. The binary
+//! Run via `cargo xtaskbin public_api_check`. The binary
 //! exits non-zero when any facade's public-API surface drifts from its
 //! frozen snapshot, which is the publish-floor invariant.
 

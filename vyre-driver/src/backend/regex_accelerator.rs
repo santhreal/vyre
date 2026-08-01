@@ -263,9 +263,18 @@ mod tests {
         }
         let evidence = capability.evidence(0);
         assert!(!evidence.supported);
-        assert_eq!(evidence.unsupported_reason, "backend has no RXP-like regex accelerator");
-        assert_eq!(evidence.stream_mode, RegexAcceleratorStreamMode::Unavailable);
-        assert_eq!(evidence.match_schema, RegexAcceleratorMatchSchema::Unavailable);
+        assert_eq!(
+            evidence.unsupported_reason,
+            "backend has no RXP-like regex accelerator"
+        );
+        assert_eq!(
+            evidence.stream_mode,
+            RegexAcceleratorStreamMode::Unavailable
+        );
+        assert_eq!(
+            evidence.match_schema,
+            RegexAcceleratorMatchSchema::Unavailable
+        );
         assert!(evidence.match_parity_required);
         assert!(evidence.is_complete());
     }

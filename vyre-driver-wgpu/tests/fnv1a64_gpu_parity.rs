@@ -40,7 +40,12 @@ fn gpu_fnv1a64(backend: &WgpuBackend, bytes: &[u8]) -> u64 {
             &DispatchConfig::default(),
         )
         .expect("Fix: WGPU must dispatch the FNV-1a64 u32-pair-carry loop program.");
-    assert_eq!(outputs.len(), 1, "fnv1a64_program exposes one output (out); got {}", outputs.len());
+    assert_eq!(
+        outputs.len(),
+        1,
+        "fnv1a64_program exposes one output (out); got {}",
+        outputs.len()
+    );
     let words: Vec<u32> = outputs[0]
         .chunks_exact(4)
         .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
@@ -92,7 +97,10 @@ fn fnv1a64_high_word_is_exercised_on_gpu() {
     let backend = WgpuBackend::acquire().expect("Fix: FNV-64 GPU parity requires a live GPU.");
     let a = gpu_fnv1a64(&backend, b"carry-word-0");
     let b = gpu_fnv1a64(&backend, b"carry-word-1");
-    assert_ne!(a, b, "FNV-64 must distinguish one-byte-different inputs on the GPU");
+    assert_ne!(
+        a, b,
+        "FNV-64 must distinguish one-byte-different inputs on the GPU"
+    );
     assert_ne!(
         (a >> 32) as u32,
         (fnv1a64(b"") >> 32) as u32,

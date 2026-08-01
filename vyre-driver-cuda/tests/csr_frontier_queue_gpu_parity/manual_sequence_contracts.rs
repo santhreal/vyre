@@ -299,4 +299,3 @@ fn cuda_resident_parallel_frontier_queue_scans_large_sparse_bitset() {
             .expect("Fix: resident parallel queue traversal cleanup failed.");
     }
 }
-

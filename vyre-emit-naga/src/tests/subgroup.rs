@@ -24,7 +24,9 @@ fn first_subgroup_collective_op(block: &naga::Block) -> Option<naga::SubgroupOpe
         }
         Statement::Loop {
             body, continuing, ..
-        } => first_subgroup_collective_op(body).or_else(|| first_subgroup_collective_op(continuing)),
+        } => {
+            first_subgroup_collective_op(body).or_else(|| first_subgroup_collective_op(continuing))
+        }
         _ => None,
     })
 }
@@ -57,7 +59,9 @@ fn subgroup_add_emits_collective_operation() {
                     result: Some(0),
                 },
                 KernelOp {
-                    kind: KernelOpKind::SubgroupReduce { op: vyre_lower::SubgroupReduceOp::Add },
+                    kind: KernelOpKind::SubgroupReduce {
+                        op: vyre_lower::SubgroupReduceOp::Add,
+                    },
                     operands: vec![0],
                     result: Some(1),
                 },

@@ -3,79 +3,11 @@ pub(crate) fn check_hygiene_release_surface_coverage(
     matrix: &serde_json::Value,
     failures: &mut Vec<String>,
 ) {
-    let Some(coverage) = matrix.get("release_surface_coverage") else {
-        failures.push(format!(
-            "requirement `{requirement_id}` hygiene matrix is missing release_surface_coverage"
-        ));
-        return;
-    };
-    for field in [
-        "vyre_workspace",
-        "cuda_driver_crate",
-        "wgpu_driver_crate",
-        "dataflow_crate",
-        "vyrec_tool",
-        "surgec_tool",
-        "surgec_grammar_gen",
-        "release_scripts",
-        "github_workflows",
-        "branch_protection_controls",
-    ] {
-        if coverage.get(field).and_then(serde_json::Value::as_bool) != Some(true) {
-            failures.push(format!(
-                "requirement `{requirement_id}` hygiene release_surface_coverage.{field} must be true"
-            ));
-        }
-    }
-    for (field, required) in [
-        (
-            "resource_bound_patterns",
-            &[
-                "std_thread_sleep",
-                "thread_sleep",
-                "tokio_sleep",
-                "unbounded_read",
-            ][..],
-        ),
-        (
-            "hidden_fallback_patterns",
-            &[
-                "silent_gpu_skip",
-                "silent_gpu_skipped",
-                "gpu_unavailable_skip",
-                "cfg_not_gpu",
-                "cpu_fallback",
-                "software_fallback",
-                "fallback_dispatch",
-                "falling_back_to_cpu",
-                "fallback_to_cpu",
-                "synthetic_gpu_timing",
-                "fake_gpu_timing_formula",
-            ][..],
-        ),
-        (
-            "release_tooling_patterns",
-            &[
-                "raw_workspace_cargo",
-                "invalid_cargo_full_xtask",
-                "heredoc",
-                "missing_cargo_wrapper",
-            ][..],
-        ),
-    ] {
-        let values = coverage.get(field).and_then(serde_json::Value::as_array);
-        for required_value in required {
-            if !values.is_some_and(|values| {
-                values
-                    .iter()
-                    .any(|value| value.as_str() == Some(*required_value))
-            }) {
-                failures.push(format!(
-                    "requirement `{requirement_id}` hygiene release_surface_coverage.{field} is missing `{required_value}`"
-                ));
-            }
-        }
-    }
+    crate::benchmark_evidence_semantics::inspect_hygiene_release_surface_coverage(
+        &format!("requirement `{requirement_id}` hygiene"),
+        matrix,
+        failures,
+    );
 }
 pub(crate) fn check_release_surface_coverage(
     requirement: &Requirement,
@@ -250,7 +182,6 @@ const REQUIRED_GENERATORS: &[(&str, &[&str])] = &[
             "vyre-frontend-c-contracts.json",
             "vyrec-cli-contracts.json",
             "external-dataflow-contracts.json",
-            "compiler-consumer-contracts.json",
             "compiler-consumer-grammar-gen-contracts.json",
         ],
     ),

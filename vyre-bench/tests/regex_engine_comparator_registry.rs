@@ -62,7 +62,9 @@ fn regex_engine_comparator_registry_requires_parity_limits_and_timing() {
         "Fix: every regex comparator row must require output parity"
     );
     assert_eq!(
-        REGISTRY.matches("corpus_digest = \"registered:regex-comparator-core\"").count(),
+        REGISTRY
+            .matches("corpus_digest = \"registered:regex-comparator-core\"")
+            .count(),
         engine_rows,
         "Fix: every regex comparator row must use the registered comparator corpus digest"
     );

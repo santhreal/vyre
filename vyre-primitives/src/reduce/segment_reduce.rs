@@ -79,14 +79,9 @@ pub fn segment_reduce_sum(
 #[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn cpu_ref(input: &[u32], segment_offsets: &[u32]) -> Vec<u32> {
-    let mut out = Vec::new();
-    match try_cpu_ref_into(input, segment_offsets, &mut out) {
-        Ok(()) => out,
-        // A parity oracle that returns empty on failure makes the GPU-vs-CPU
-        // assertion pass on empty==empty, silently masking a divergence
-        // (Law 10 / Law 6). Fail loud; callers use try_cpu_ref_into.
-        Err(error) => panic!("vyre-primitives segment_reduce_sum CPU reference failed: {error}"),
-    }
+    super::collect_cpu_reference("segment_reduce_sum", |out| {
+        try_cpu_ref_into(input, segment_offsets, out)
+    })
 }
 
 /// CPU reference using a caller-owned output buffer.

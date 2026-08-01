@@ -25,9 +25,8 @@
 
 use super::report::{BankAccessSite, BankConflictKind, BankConflictReport};
 use super::DEFAULT_BANK_COUNT;
-use crate::analyses::{child_body_operands, AccessKind};
+use crate::analyses::{child_body_operands, producer_map, AccessKind, ProducerMap};
 use crate::{KernelBody, KernelDescriptor, KernelOpKind, LiteralValue, MemoryClass};
-use rustc_hash::FxHashMap;
 use vyre_foundation::ir::BinOp;
 
 /// Run bank-conflict analysis using the default 32-bank layout.
@@ -111,18 +110,6 @@ fn walk_body(
             conflict,
         });
     }
-}
-
-type ProducerMap<'a> = FxHashMap<u32, &'a crate::KernelOp>;
-
-fn producer_map(body: &KernelBody) -> ProducerMap<'_> {
-    let mut producers = FxHashMap::with_capacity_and_hasher(body.ops.len(), Default::default());
-    for op in &body.ops {
-        for result in op.result_ids() {
-            producers.insert(result, op);
-        }
-    }
-    producers
 }
 
 fn classify_index(

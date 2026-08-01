@@ -229,10 +229,15 @@ fn push_call(op_id: &str, args: usize, values: &mut Vec<Expr>) -> Result<()> {
     Ok(())
 }
 
+fn pop_ternary(values: &mut Vec<Expr>, labels: [&str; 3]) -> Result<[Expr; 3]> {
+    let third = values.pop().ok_or_else(|| missing(labels[2]))?;
+    let second = values.pop().ok_or_else(|| missing(labels[1]))?;
+    let first = values.pop().ok_or_else(|| missing(labels[0]))?;
+    Ok([first, second, third])
+}
+
 fn push_fma(values: &mut Vec<Expr>) -> Result<()> {
-    let c = values.pop().ok_or_else(|| missing("fma operand c"))?;
-    let b = values.pop().ok_or_else(|| missing("fma operand b"))?;
-    let a = values.pop().ok_or_else(|| missing("fma operand a"))?;
+    let [a, b, c] = pop_ternary(values, ["fma operand a", "fma operand b", "fma operand c"])?;
     values.push(Expr::Fma {
         a: Box::new(a),
         b: Box::new(b),
@@ -242,9 +247,14 @@ fn push_fma(values: &mut Vec<Expr>) -> Result<()> {
 }
 
 fn push_select(values: &mut Vec<Expr>) -> Result<()> {
-    let false_val = values.pop().ok_or_else(|| missing("select false branch"))?;
-    let true_val = values.pop().ok_or_else(|| missing("select true branch"))?;
-    let cond = values.pop().ok_or_else(|| missing("select condition"))?;
+    let [cond, true_val, false_val] = pop_ternary(
+        values,
+        [
+            "select condition",
+            "select true branch",
+            "select false branch",
+        ],
+    )?;
     values.push(Expr::Select {
         cond: Box::new(cond),
         true_val: Box::new(true_val),

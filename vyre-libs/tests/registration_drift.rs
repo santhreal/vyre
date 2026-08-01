@@ -44,6 +44,39 @@ const EXEMPT_OP_IDS: &[(&str, &str)] = &[
         "mem.zerocopy_map",
         "Memory lifecycle op  -  covered by runtime memory tests, not the fixture harness.",
     ),
+    // The five per-row phases of typedef annotation. Each is a composite CALLEE:
+    // it takes the VAST node table and the source haystack as buffer-reference
+    // arguments and the row index as a scalar, so it has no standalone dispatch
+    // shape  -  its own buffer declarations are sized for one row purely so the
+    // registry can validate it, and inlining retargets every access onto the
+    // caller's buffers. A fixture harness dispatches an op on its own, which for
+    // these would measure the placeholder shape rather than any real work.
+    //
+    // They are executed, with real expected values, through their caller:
+    // `vyre-libs::parsing::c11_annotate_typedef_names` submits an OpEntry whose
+    // expected output comes from `reference_c11_annotate_typedef_names`, and the
+    // calls inline away before lowering, so that one fixture runs all five
+    // phases. See vyre-libs/src/parsing/c/parse/vast/typedef_ann/row_phases.rs.
+    (
+        "vyre-libs::parsing::c11_typedef_scope_open_for_row",
+        "Composite callee of c11_annotate_typedef_names  -  no standalone dispatch shape; executed through that op's harness fixture.",
+    ),
+    (
+        "vyre-libs::parsing::c11_typedef_visible_name_for_row",
+        "Composite callee of c11_annotate_typedef_names  -  no standalone dispatch shape; executed through that op's harness fixture.",
+    ),
+    (
+        "vyre-libs::parsing::c11_typedef_visible_name_for_row_packed_haystack",
+        "Composite callee of c11_annotate_typedef_names  -  no standalone dispatch shape; executed through that op's harness fixture.",
+    ),
+    (
+        "vyre-libs::parsing::c11_typedef_decl_kind_for_row",
+        "Composite callee of c11_annotate_typedef_names  -  no standalone dispatch shape; executed through that op's harness fixture.",
+    ),
+    (
+        "vyre-libs::parsing::c11_typedef_decl_kind_for_row_packed_haystack",
+        "Composite callee of c11_annotate_typedef_names  -  no standalone dispatch shape; executed through that op's harness fixture.",
+    ),
 ];
 
 #[test]

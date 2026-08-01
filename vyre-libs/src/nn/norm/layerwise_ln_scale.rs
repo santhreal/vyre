@@ -2,7 +2,7 @@
 //!
 //! Category A  -  element-wise mul by per-dim learnable scale.
 
-use crate::math::elementwise::{f32_elementwise_mul, F32MulRhs};
+use crate::{f32_elementwise_mul, F32MulRhs};
 use vyre::ir::Program;
 
 const OP_ID: &str = "vyre-libs::nn::layerwise_ln_scale";

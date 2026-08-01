@@ -38,11 +38,11 @@ fn run_ir(payloads: &[u32], flags: &[u32], offsets: &[u32]) -> (Vec<u32>, u32) {
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
-            pack(payloads),                        // payloads (0, RO)
-            pack(flags),                           // flags (1, RO)
-            pack(offsets),                         // offsets (2, RO)
-            pack(&vec![0u32; count as usize]),     // compacted (3, RW)
-            pack(&[0u32]),                         // live_count (4, RW)
+            pack(payloads),                    // payloads (0, RO)
+            pack(flags),                       // flags (1, RO)
+            pack(offsets),                     // offsets (2, RO)
+            pack(&vec![0u32; count as usize]), // compacted (3, RW)
+            pack(&[0u32]),                     // live_count (4, RW)
         ],
     )
     .expect("stream_compact reference evaluation must succeed");

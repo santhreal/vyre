@@ -39,7 +39,9 @@ fn wgsl_scan_uniformity_certificates_gate_subgroup_call_sites() {
     }
     assert_eq!(
         CERTIFICATES
-            .matches("evidence_path = \"vyre-driver-wgpu/tests/wgsl_scan_uniformity_certificates.rs\"")
+            .matches(
+                "evidence_path = \"vyre-driver-wgpu/tests/wgsl_scan_uniformity_certificates.rs\""
+            )
             .count(),
         CERTIFICATES.matches("[[certificate]]").count()
             + CERTIFICATES.matches("[[rejection]]").count(),

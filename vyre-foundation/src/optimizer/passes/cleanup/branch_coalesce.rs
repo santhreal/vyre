@@ -47,6 +47,7 @@
 //!     impure constructs.
 
 use crate::ir::{Expr, Node, Program};
+use crate::optimizer::passes::expr_is_observably_free_with;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 use crate::visit::node_map;
 
@@ -159,7 +160,9 @@ fn coalesce_if(node: Node, changed: &mut bool) -> Node {
             otherwise,
         };
     }
-    if !is_pure_bool_expr(&outer_cond) || !is_pure_bool_expr(&inner_cond) {
+    if !expr_is_observably_free_with(&outer_cond, true, true)
+        || !expr_is_observably_free_with(&inner_cond, true, true)
+    {
         return Node::If {
             cond: outer_cond,
             then: vec![Node::If {
@@ -208,53 +211,8 @@ fn is_coalesceable_if(node: &Node) -> bool {
     if !inner_otherwise.is_empty() {
         return false;
     }
-    is_pure_bool_expr(outer_cond) && is_pure_bool_expr(inner_cond)
-}
-
-/// True iff `expr` produces a boolean value via pure operations only.
-/// Loads, atomics, calls, and opaque extensions are rejected  -  their
-/// repeated or reordered evaluation could change observable behavior.
-fn is_pure_bool_expr(expr: &Expr) -> bool {
-    match expr {
-        Expr::BinOp { left, right, .. } => is_pure_bool_expr(left) && is_pure_bool_expr(right),
-        Expr::UnOp { operand, .. } => is_pure_bool_expr(operand),
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => is_pure_bool_expr(cond) && is_pure_bool_expr(true_val) && is_pure_bool_expr(false_val),
-        Expr::Cast { value, .. } => is_pure_bool_expr(value),
-        // Builtins are pure and observably free.
-        Expr::LitBool(_)
-        | Expr::Var(_)
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize
-        // Literals other than bool are fine as operands of pure binops
-        // (e.g. `i < n` where `n` is a u32 literal).
-        | Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        // BufLen returns the bound buffer's length  -  a dispatch-time
-        // constant, no observable side effect; conjoining `i < buf_len`
-        // with a sibling predicate is safe.
-        | Expr::BufferRef { .. }
-        | Expr::BufLen { .. } => true,
-        // Fma is fused-multiply-add  -  pure arithmetic when its operands
-        // are pure. Reject when any operand is impure.
-        Expr::Fma { a, b, c } => is_pure_bool_expr(a) && is_pure_bool_expr(b) && is_pure_bool_expr(c),
-        // Anything that reads memory or invokes side effects is
-        // rejected to keep ordering observable.
-        Expr::Load { .. }
-        | Expr::Atomic { .. }
-        | Expr::Call { .. }
-        | Expr::Opaque(_)
-        | Expr::SubgroupBallot { .. }
-        | Expr::SubgroupShuffle { .. }
-        | Expr::SubgroupReduce { .. } => false,
-    }
+    expr_is_observably_free_with(outer_cond, true, true)
+        && expr_is_observably_free_with(inner_cond, true, true)
 }
 
 #[cfg(test)]

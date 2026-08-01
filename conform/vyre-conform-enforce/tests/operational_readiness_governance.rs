@@ -1,16 +1,16 @@
 //! Operational readiness governance test suite.
 
 const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
-const SLO: &str =
-    include_str!("../../../docs/optimization/SERVICE_LEVEL_OBJECTIVE_POLICY.toml");
+const SLO: &str = include_str!("../../../docs/optimization/SERVICE_LEVEL_OBJECTIVE_POLICY.toml");
 const ALERTS: &str =
     include_str!("../../../docs/optimization/ALERT_ROUTING_ESCALATION_POLICY.toml");
 const RUNBOOKS: &str =
     include_str!("../../../docs/optimization/OPERATOR_RUNBOOK_ROLLBACK_POLICY.toml");
 const INCIDENTS: &str =
     include_str!("../../../docs/optimization/INCIDENT_RETROSPECTIVE_EVIDENCE_POLICY.toml");
-const COVERAGE: &str =
-    include_str!("../../../docs/optimization/END_TO_END_OPERATIONAL_READINESS_TRANCHE_COVERAGE.toml");
+const COVERAGE: &str = include_str!(
+    "../../../docs/optimization/END_TO_END_OPERATIONAL_READINESS_TRANCHE_COVERAGE.toml"
+);
 
 #[test]
 fn operational_readiness_sources_are_registered() {
@@ -22,12 +22,16 @@ fn operational_readiness_sources_are_registered() {
         "PROMETHEUS_ALERTMANAGER",
         "OPENTELEMETRY_LOGS",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 
 #[test]
-fn service_level_objective_policy_records_sli_objective_windows_error_budgets_recording_rules_and_gate_effects() {
+fn service_level_objective_policy_records_sli_objective_windows_error_budgets_recording_rules_and_gate_effects(
+) {
     for required in [
         "slo_id",
         "service_surface",
@@ -49,7 +53,8 @@ fn service_level_objective_policy_records_sli_objective_windows_error_budgets_re
 }
 
 #[test]
-fn alert_routing_policy_records_expr_duration_labels_annotations_routes_dedup_inhibition_and_runbook_links() {
+fn alert_routing_policy_records_expr_duration_labels_annotations_routes_dedup_inhibition_and_runbook_links(
+) {
     for required in [
         "alert_id",
         "signal_source",
@@ -72,7 +77,8 @@ fn alert_routing_policy_records_expr_duration_labels_annotations_routes_dedup_in
 }
 
 #[test]
-fn runbook_rollback_policy_records_triggers_actions_rollback_verification_evidence_privacy_owner_routes_and_gate_effects() {
+fn runbook_rollback_policy_records_triggers_actions_rollback_verification_evidence_privacy_owner_routes_and_gate_effects(
+) {
     for required in [
         "runbook_id",
         "trigger_policy",
@@ -95,7 +101,8 @@ fn runbook_rollback_policy_records_triggers_actions_rollback_verification_eviden
 }
 
 #[test]
-fn incident_retrospective_policy_records_timelines_slo_impact_alert_correlation_runbook_actions_remediation_publication_and_feedback() {
+fn incident_retrospective_policy_records_timelines_slo_impact_alert_correlation_runbook_actions_remediation_publication_and_feedback(
+) {
     for required in [
         "incident_id",
         "incident_class",
@@ -117,7 +124,8 @@ fn incident_retrospective_policy_records_timelines_slo_impact_alert_correlation_
 }
 
 #[test]
-fn operational_readiness_coverage_reuses_telemetry_release_health_deployment_intake_and_publication_authorities() {
+fn operational_readiness_coverage_reuses_telemetry_release_health_deployment_intake_and_publication_authorities(
+) {
     for required in [
         "VX-1241..VX-1260",
         "service_level_objective_policy",

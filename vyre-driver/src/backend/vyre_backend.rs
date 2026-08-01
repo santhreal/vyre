@@ -486,9 +486,27 @@ pub trait VyreBackend: private::Sealed + Send + Sync {
             let mut config = DispatchConfig::default();
             config.grid_override = step.grid_override;
             let timed = self.dispatch_resident_timed(step.program, step.resources, &config)?;
-            device_ns = sum_optional_timing(device_ns, timed.device_ns, "device timing")?;
-            enqueue_ns = sum_optional_timing(enqueue_ns, timed.enqueue_ns, "enqueue timing")?;
-            wait_ns = sum_optional_timing(wait_ns, timed.wait_ns, "wait timing")?;
+            device_ns = crate::accounting::sum_optional_timing(
+                device_ns,
+                timed.device_ns,
+                "device timing",
+                "resident sequence",
+                "per-step",
+            )?;
+            enqueue_ns = crate::accounting::sum_optional_timing(
+                enqueue_ns,
+                timed.enqueue_ns,
+                "enqueue timing",
+                "resident sequence",
+                "per-step",
+            )?;
+            wait_ns = crate::accounting::sum_optional_timing(
+                wait_ns,
+                timed.wait_ns,
+                "wait timing",
+                "resident sequence",
+                "per-step",
+            )?;
         }
         let ranges = read_ranges
             .iter()
@@ -779,7 +797,7 @@ pub trait VyreBackend: private::Sealed + Send + Sync {
     /// natively and must route to the resident-fixpoint or host-split path.
     /// Orchestrators call this to choose the native route only when it fits,
     /// avoiding a wasted allocate/upload that would otherwise end in
-    /// [`crate::ErrorCode::CooperativeResidencyExceeded`].
+    /// [`crate::backend::ErrorCode::CooperativeResidencyExceeded`].
     ///
     /// Default: `Ok(false)` (no native cooperative launch). Backends that lower
     /// grid sync override this with the real residency check. Returns `Ok(false)`
@@ -1136,23 +1154,6 @@ fn elapsed_resident_sequence_wall_ns(started: std::time::Instant) -> Result<u64,
     })
 }
 
-fn sum_optional_timing(
-    accumulator: Option<u64>,
-    next: Option<u64>,
-    field: &'static str,
-) -> Result<Option<u64>, BackendError> {
-    match (accumulator, next) {
-        (Some(left), Some(right)) => Ok(Some(left.checked_add(right).ok_or_else(|| {
-            BackendError::InvalidProgram {
-                fix: format!(
-                    "Fix: resident sequence {field} overflowed u64 nanoseconds. Split telemetry windows or report per-step timing instead of silently clamping."
-                ),
-            }
-        })?)),
-        _ => Ok(None),
-    }
-}
-
 #[cfg(test)]
 
 mod tests {
@@ -1226,11 +1227,11 @@ mod tests {
         ) -> Result<(), BackendError> {
             assert_eq!(ranges.len(), outputs.len());
             for ((resource, offset, len), output) in ranges.iter().zip(outputs.iter_mut()) {
-                let Resource::Resident(id) = resource else {
+                let Resource::Resident(handle) = resource else {
                     panic!("Fix: default timed resident sequence test expects resident resources.");
                 };
                 output.clear();
-                output.extend_from_slice(&id.to_le_bytes());
+                output.extend_from_slice(&handle.id().to_le_bytes());
                 output.extend_from_slice(&(*offset as u64).to_le_bytes());
                 output.extend_from_slice(&(*len as u64).to_le_bytes());
             }
@@ -1270,8 +1271,9 @@ mod tests {
             dispatches: AtomicUsize::new(0),
         };
         let program = Program::empty();
-        let first_resources = [Resource::Resident(11)];
-        let second_resources = [Resource::Resident(22)];
+        let owner = crate::ResidentOwner::new().expect("Fix: owner ids must be available");
+        let first_resources = [Resource::Resident(owner.handle(11))];
+        let second_resources = [Resource::Resident(owner.handle(22))];
         let steps = [
             ResidentDispatchStep {
                 program: &program,
@@ -1286,7 +1288,7 @@ mod tests {
                 workgroup_override: None,
             },
         ];
-        let read_resource = Resource::Resident(33);
+        let read_resource = Resource::Resident(owner.handle(33));
         let reads = [ResidentReadRange {
             resource: &read_resource,
             byte_offset: 4,

@@ -11,7 +11,9 @@ use super::divergence::{
     has_divergent_invocation_gated_store, has_launch_geometry_dependent_write,
 };
 use super::helpers::{fallback_composition_key, upgrade_buffer_access};
-use super::{FusionError, FusionOverDispatchError, FusionSelfAliasingError};
+use super::{
+    FusionError, FusionOverDispatchError, FusionSelfAliasingError, FusionWorkgroupGeometryError,
+};
 
 /// Combine `programs` into one fused [`Program`]. Returns the input verbatim
 /// for 0 or 1 program; multi-program runs go through the full hazard tracker.
@@ -69,7 +71,7 @@ pub(crate) enum ArmNamespace {
     /// (`let __cmp_N = load(__quant_flag_…)`) and consumed in another arm
     /// (`Var(__cmp_N)`) must keep ONE consistent name and live in ONE shared
     /// scope, or the consumer references an undeclared variable. Shared arms
-    /// are therefore spliced flat, no per-arm rename, no per-arm `Block` 
+    /// are therefore spliced flat, no per-arm rename, no per-arm `Block`
     /// preserving decl→use linkage across the merge boundary.
     Shared,
 }
@@ -272,6 +274,8 @@ fn fuse_programs_multi_with(
         max_arm_threads = max_arm_threads.max(arm_threads);
     }
 
+    reject_workgroup_geometry_change(programs, fused_workgroup)?;
+
     let combined_entry = flatten_arm_entries(
         arm_entries,
         &barrier_after_arm,
@@ -280,11 +284,22 @@ fn fuse_programs_multi_with(
         namespace,
     );
     reject_overdispatch(fused_workgroup, max_arm_threads)?;
-    Ok(Program::wrapped(
-        merged_buffers,
-        fused_workgroup,
-        combined_entry,
-    ))
+
+    // `Program::wrapped` builds a fresh program, which resets the metadata
+    // flags. `non_composable_with_self` describes the fused body just as much
+    // as it described the arm it came from: the fused program now CONTAINS
+    // that body, so fusing it again with another copy of the same arm carries
+    // the identical hazard. Carrying the OR forward is what lets
+    // `reject_non_composable_self_fusion` see it on a second round.
+    //
+    // `entry_op_id` is deliberately left cleared. It names one certified
+    // operation, and a program built from several arms is not that operation
+    // even when every arm happens to share an id.
+    let non_composable = programs.iter().any(Program::is_non_composable_with_self);
+    Ok(
+        Program::wrapped(merged_buffers, fused_workgroup, combined_entry)
+            .with_non_composable_with_self(non_composable),
+    )
 }
 
 fn classify_and_merge_arm_buffers(
@@ -350,6 +365,66 @@ fn reject_non_composable_self_fusion(programs: &[Program]) -> Result<(), FusionE
         }
     }
     Ok(())
+}
+
+/// Refuse to widen the workgroup of an arm that reasons about its own.
+///
+/// The fused geometry is the axis-wise maximum over the arms. For an arm whose
+/// invocations are independent that is only a launch-size change. For an arm
+/// that synchronizes its workgroup or keeps state in workgroup memory it is a
+/// semantic change: the arm guards its body for its own width, so under a wider
+/// workgroup the extra invocations skip the guarded body and never reach the
+/// barrier the working invocations wait on. A workgroup barrier that is not
+/// reached by every invocation in the workgroup is undefined, and in practice
+/// the result is intermittently wrong rather than reliably wrong.
+///
+/// Failing closed is the only correct answer here. Fusion cannot rewrite the
+/// arm for the wider geometry, and quietly emitting the racy kernel gives the
+/// caller a program that passes most of the time.
+fn reject_workgroup_geometry_change(
+    programs: &[Program],
+    fused_workgroup: [u32; 3],
+) -> Result<(), FusionError> {
+    for (arm, prog) in programs.iter().enumerate() {
+        let arm_workgroup = prog.workgroup_size();
+        if arm_workgroup == fused_workgroup {
+            continue;
+        }
+        let uses_workgroup_memory = prog
+            .buffers()
+            .iter()
+            .any(|buf| buf.access() == BufferAccess::Workgroup);
+        let synchronizes = has_barrier(prog.entry());
+        let reason = match (uses_workgroup_memory, synchronizes) {
+            (true, true) => "keeps state in workgroup memory and synchronizes its workgroup",
+            (true, false) => "keeps state in workgroup memory sized for its own workgroup",
+            (false, true) => "synchronizes its workgroup with a barrier",
+            (false, false) => continue,
+        };
+        return Err(FusionError::WorkgroupGeometry(
+            FusionWorkgroupGeometryError {
+                arm,
+                arm_workgroup,
+                fused_workgroup,
+                reason,
+                fix: "dispatch this arm separately, or rebuild it for the wider workgroup before fusing",
+            },
+        ));
+    }
+    Ok(())
+}
+
+/// Is there a barrier anywhere in this node sequence?
+fn has_barrier(nodes: &[Node]) -> bool {
+    nodes.iter().any(|node| match node {
+        Node::Barrier { .. } => true,
+        Node::Region { body, .. } => has_barrier(body),
+        Node::Block(body) | Node::Loop { body, .. } => has_barrier(body),
+        Node::If {
+            then, otherwise, ..
+        } => has_barrier(then) || has_barrier(otherwise),
+        _ => false,
+    })
 }
 
 fn flatten_arm_entries(

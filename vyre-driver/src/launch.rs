@@ -383,6 +383,7 @@ fn select_natural_launch_workgroup(
     limits: LaunchGeometryLimits,
     measurements: Option<&BTreeMap<[u32; 3], u64>>,
 ) -> Option<[u32; 3]> {
+    let peak_resident = peak_resident_threads_per_compute_unit(declared[0], limits);
     let mut samples = Vec::with_capacity(WORKGROUP_CANDIDATES.len() + 1);
     for candidate_x in WORKGROUP_CANDIDATES
         .iter()
@@ -397,9 +398,13 @@ fn select_natural_launch_workgroup(
             continue;
         }
         let workgroup_size = [candidate_x, 1, 1];
-        let elapsed_ns = measurements
-            .and_then(|measured| measured.get(&workgroup_size).copied())
-            .unwrap_or_else(|| estimate_cold_start_latency_ns(element_count, candidate_x));
+        let elapsed_ns = match measurements.and_then(|measured| measured.get(&workgroup_size)) {
+            Some(&measured_ns) => measured_ns,
+            None if cold_start_admits_width(candidate_x, limits, peak_resident) => {
+                estimate_cold_start_latency_ns(element_count, candidate_x)
+            }
+            None => continue,
+        };
         samples.push(TuningMeasurement {
             workgroup_size,
             elapsed_ns,
@@ -443,6 +448,7 @@ struct NaturalLaunchCacheKey {
     max_threads_per_block: u32,
     max_block_dim: [u32; 3],
     max_grid_dim: [u32; 3],
+    max_threads_per_sm: u32,
 }
 
 impl NaturalLaunchCacheKey {
@@ -459,12 +465,16 @@ impl NaturalLaunchCacheKey {
             max_threads_per_block: limits.max_threads_per_block,
             max_block_dim: limits.max_block_dim,
             max_grid_dim: limits.max_grid_dim,
+            max_threads_per_sm: limits.max_threads_per_sm,
         }
     }
 
     fn persistent_key(self) -> String {
         let mut hasher = blake3::Hasher::new();
-        hasher.update(b"vyre-natural-launch-feedback-v1\0");
+        // v2 adds the per-compute-unit thread budget. It selects the width, so
+        // a v1 entry may record a choice made without it and must not be read
+        // back as if it had been.
+        hasher.update(b"vyre-natural-launch-feedback-v2\0");
         hasher.update(&self.fingerprint);
         for axis in self.declared {
             hasher.update(&axis.to_le_bytes());
@@ -477,9 +487,10 @@ impl NaturalLaunchCacheKey {
         for axis in self.max_grid_dim {
             hasher.update(&axis.to_le_bytes());
         }
+        hasher.update(&self.max_threads_per_sm.to_le_bytes());
         let digest = hasher.finalize();
         let mut key = String::with_capacity(74);
-        key.push_str("launch-v1-");
+        key.push_str("launch-v2-");
         crate::pipeline::hashing::push_lower_hex(digest.as_bytes(), &mut key);
         key
     }
@@ -494,9 +505,7 @@ struct NaturalLaunchEntry {
 
 fn natural_launch_cache_get(key: NaturalLaunchCacheKey) -> Option<[u32; 3]> {
     let cache = NATURAL_LAUNCH_CACHE.get_or_init(|| Mutex::new(BTreeMap::new()));
-    let guard = cache
-        .lock()
-        .unwrap_or_else(|poison| poison.into_inner());
+    let guard = cache.lock().unwrap_or_else(|poison| poison.into_inner());
     guard.get(&key).map(|entry| entry.selected)
 }
 
@@ -504,17 +513,13 @@ fn natural_launch_cache_measurements(
     key: NaturalLaunchCacheKey,
 ) -> Option<BTreeMap<[u32; 3], u64>> {
     let cache = NATURAL_LAUNCH_CACHE.get_or_init(|| Mutex::new(BTreeMap::new()));
-    let guard = cache
-        .lock()
-        .unwrap_or_else(|poison| poison.into_inner());
+    let guard = cache.lock().unwrap_or_else(|poison| poison.into_inner());
     guard.get(&key).map(|entry| entry.measurements.clone())
 }
 
 fn natural_launch_cache_set(key: NaturalLaunchCacheKey, value: NaturalLaunchEntry) {
     let cache = NATURAL_LAUNCH_CACHE.get_or_init(|| Mutex::new(BTreeMap::new()));
-    let mut guard = cache
-        .lock()
-        .unwrap_or_else(|poison| poison.into_inner());
+    let mut guard = cache.lock().unwrap_or_else(|poison| poison.into_inner());
     if guard.len() >= MAX_NATURAL_LAUNCH_CACHE_ENTRIES && !guard.contains_key(&key) {
         if let Some(oldest) = guard.keys().next().copied() {
             guard.remove(&oldest);
@@ -578,7 +583,7 @@ fn natural_launch_persistent_cache_path(limits: LaunchGeometryLimits) -> PathBuf
 
 fn natural_launch_persistent_adapter_key(limits: LaunchGeometryLimits) -> String {
     let mut hasher = blake3::Hasher::new();
-    hasher.update(b"vyre-natural-launch-adapter-v1\0");
+    hasher.update(b"vyre-natural-launch-adapter-v2\0");
     hasher.update(limits.backend.as_bytes());
     hasher.update(&limits.max_threads_per_block.to_le_bytes());
     for axis in limits.max_block_dim {
@@ -587,9 +592,10 @@ fn natural_launch_persistent_adapter_key(limits: LaunchGeometryLimits) -> String
     for axis in limits.max_grid_dim {
         hasher.update(&axis.to_le_bytes());
     }
+    hasher.update(&limits.max_threads_per_sm.to_le_bytes());
     let digest = hasher.finalize();
     let mut key = String::with_capacity(92);
-    key.push_str("natural-launch-feedback-v1-");
+    key.push_str("natural-launch-feedback-v2-");
     crate::pipeline::hashing::push_lower_hex(digest.as_bytes(), &mut key);
     key
 }
@@ -623,6 +629,63 @@ fn candidate_x_fits_limits(candidate_x: u32, limits: LaunchGeometryLimits) -> bo
     candidate_x != 0
         && candidate_x <= limits.max_threads_per_block
         && candidate_x <= limits.max_block_dim[0]
+}
+
+/// Highest resident thread count per compute unit that any admissible width
+/// reaches on this device.
+///
+/// `None` when the backend reports no per-unit thread budget. That is the
+/// inert case: no width is preferred over another on residency grounds and
+/// cold start selects exactly what it selected before residency entered this
+/// decision.
+fn peak_resident_threads_per_compute_unit(
+    declared_x: u32,
+    limits: LaunchGeometryLimits,
+) -> Option<u32> {
+    WORKGROUP_CANDIDATES
+        .iter()
+        .copied()
+        .chain(std::iter::once(declared_x))
+        .filter(|&candidate_x| candidate_x_fits_limits(candidate_x, limits))
+        .filter_map(|candidate_x| limits.resident_threads_per_compute_unit(candidate_x))
+        .max()
+}
+
+/// Whether cold start may propose `candidate_x` with no measurement behind it.
+///
+/// Residency ranks ahead of the latency estimate because the estimate cannot
+/// see occupancy at all: it counts workgroups and idle tail lanes, so it always
+/// favours the widest candidate and the tail penalty vanishes entirely when the
+/// element count is a multiple of that width. Resident threads per unit is
+/// `(max_threads_per_sm / width) * width` with an integral division, so against
+/// a 1536-thread unit a 1024-wide group hosts one block and strands 512 slots,
+/// while 32 through 512 all host enough blocks to fill all 1536. Only widths
+/// tying for the peak survive here; the latency estimate then breaks that tie,
+/// and it breaks it toward the widest survivor.
+///
+/// Ranking widest-first is also what keeps the thread-only residency model
+/// sound. It ignores the device-reported cap on blocks per unit, so it
+/// overstates residency at the narrow end: measured on an RTX 5090, whose cap
+/// is 24, a 32-wide group gets 24 blocks and 768 resident threads where this
+/// model predicts 48 and 1536, a factor of two. Selecting the widest survivor
+/// never reaches that regime, and on this device the pick lands at 512 with 3
+/// blocks per SM, well clear of the cap. A future tie-break toward narrower
+/// widths would need the block cap as a second input.
+///
+/// This gate applies to cold start only. A width carrying a real measurement
+/// bypasses it entirely, so measured feedback can still choose a width cold
+/// start would never propose.
+fn cold_start_admits_width(
+    candidate_x: u32,
+    limits: LaunchGeometryLimits,
+    peak_resident: Option<u32>,
+) -> bool {
+    let Some(peak_resident) = peak_resident else {
+        return true;
+    };
+    limits
+        .resident_threads_per_compute_unit(candidate_x)
+        .is_none_or(|resident| resident >= peak_resident)
 }
 
 fn estimate_cold_start_latency_ns(element_count: u32, candidate_x: u32) -> u64 {
@@ -692,6 +755,7 @@ mod tests {
             max_threads_per_block: 1024,
             max_block_dim: [1024, 1024, 64],
             max_grid_dim: [u32::MAX, u32::MAX, u32::MAX],
+            max_threads_per_sm: 1536,
         };
         let mut plan = LaunchPlan {
             param_words: Vec::with_capacity(8),
@@ -731,6 +795,7 @@ mod tests {
             max_threads_per_block: 1024,
             max_block_dim: [1024, 1024, 64],
             max_grid_dim: [u32::MAX, u32::MAX, u32::MAX],
+            max_threads_per_sm: 1536,
         };
         let mut plan = LaunchPlan::new();
 
@@ -743,8 +808,17 @@ mod tests {
         )
         .expect("Fix: safe 1D storage launch should accept natural-gradient cold start");
 
-        assert_eq!(plan.workgroup, [1024, 1, 1]);
-        assert_eq!(plan.grid, [4, 1, 1]);
+        assert_eq!(
+            plan.workgroup,
+            [512, 1, 1],
+            "Fix: cold start must pick the widest width that keeps every resident thread slot usable. Was [1024,1,1], which is 1536/1024 = 1 block per SM and 512 stranded slots on every SM."
+        );
+        assert_eq!(
+            limits.resident_threads_per_compute_unit(plan.workgroup[0]),
+            Some(1536),
+            "Fix: the chosen width must strand no per-SM thread slot when a candidate dividing 1536 evenly exists."
+        );
+        assert_eq!(plan.grid, [8, 1, 1]);
         assert_eq!(plan.element_count, 4096);
     }
 
@@ -783,6 +857,7 @@ mod tests {
             max_threads_per_block: 1024,
             max_block_dim: [1024, 1024, 64],
             max_grid_dim: [u32::MAX, u32::MAX, u32::MAX],
+            max_threads_per_sm: 1536,
         };
 
         assert_eq!(
@@ -814,6 +889,7 @@ mod tests {
             max_threads_per_block: 1024,
             max_block_dim: [1024, 1024, 64],
             max_grid_dim: [u32::MAX, u32::MAX, u32::MAX],
+            max_threads_per_sm: 1536,
         };
         let key = NaturalLaunchCacheKey::new(&program, [32, 1, 1], 8192, limits);
         natural_launch_cache_remove(key);
@@ -826,8 +902,8 @@ mod tests {
                 limits,
                 Some(&path),
             ),
-            Some([1024, 1, 1]),
-            "Fix: baseline heuristic should pick the occupancy-efficient cold-start shape."
+            Some([512, 1, 1]),
+            "Fix: this pins the cold-start selector's output, not a required constant. It was [1024,1,1] under a heuristic with no occupancy term at all, so the old message's claim of an occupancy-efficient shape described the opposite of what it selected."
         );
         assert!(
             record_launch_measurement_for_mode_with_store(
@@ -870,6 +946,7 @@ mod tests {
             max_threads_per_block: 1024,
             max_block_dim: [1024, 1024, 64],
             max_grid_dim: [u32::MAX, u32::MAX, u32::MAX],
+            max_threads_per_sm: 1536,
         };
         let key = NaturalLaunchCacheKey::new(&program, [32, 1, 1], 16_384, limits);
         natural_launch_cache_remove(key);
@@ -917,6 +994,7 @@ mod tests {
             max_threads_per_block: 1024,
             max_block_dim: [1024, 1024, 64],
             max_grid_dim: [u32::MAX, u32::MAX, u32::MAX],
+            max_threads_per_sm: 1536,
         };
         let mut config = DispatchConfig::default();
         config.workgroup_override = Some([256, 1, 1]);
@@ -964,6 +1042,7 @@ mod tests {
             max_threads_per_block: 1024,
             max_block_dim: [1024, 1024, 64],
             max_grid_dim: [u32::MAX, u32::MAX, u32::MAX],
+            max_threads_per_sm: 0,
         };
         let key = NaturalLaunchCacheKey::new(&program, [32, 1, 1], 2048, limits);
         natural_launch_cache_remove(key);
@@ -1029,6 +1108,7 @@ mod tests {
             max_threads_per_block: 1024,
             max_block_dim: [1024, 1024, 64],
             max_grid_dim: [u32::MAX, u32::MAX, u32::MAX],
+            max_threads_per_sm: 0,
         };
         let key = NaturalLaunchCacheKey::new(&program, [32, 1, 1], 4096, limits);
         natural_launch_cache_remove(key);
@@ -1087,6 +1167,315 @@ mod tests {
             measurements.get(&[128, 1, 1]),
             Some(&50),
             "Fix: second measurement (workgroup=[128,1,1], 50ns) must be present in history"
+        );
+    }
+
+    /// Streaming multiprocessors on the RTX 5090 this defect was measured on.
+    const RTX_5090_SM_COUNT: u32 = 170;
+
+    /// Launch limits shaped like that RTX 5090: 1024 threads per block and a
+    /// 1536-thread per-SM residency budget, which 1024 does not divide.
+    fn blackwell_5090_limits() -> LaunchGeometryLimits {
+        LaunchGeometryLimits {
+            backend: "blackwell-5090-test",
+            max_threads_per_block: 1024,
+            max_block_dim: [1024, 1024, 64],
+            max_grid_dim: [u32::MAX, u32::MAX, u32::MAX],
+            max_threads_per_sm: 1536,
+        }
+    }
+
+    /// A 1-D storage-only program the natural-gradient resolver treats as
+    /// tunable: no `LocalId`/`WorkgroupId` arithmetic, no workgroup scratch,
+    /// and composable with itself, so none of the early-out gates fire.
+    ///
+    /// Each caller passes a distinct output name because the resolver memoizes
+    /// on the program fingerprint.
+    fn tunable_1d_program(output: &'static str, element_count: u32, declared: [u32; 3]) -> Program {
+        Program::wrapped(
+            vec![BufferDecl::output(output, 0, DataType::U32).with_count(element_count)],
+            declared,
+            vec![],
+        )
+    }
+
+    /// Cold start must never choose a width that strands per-SM thread slots
+    /// while a width dividing the budget evenly is available.
+    ///
+    /// Blocks per SM is an integral division, so on a 1536-thread SM a
+    /// 1024-wide group hosts exactly one block and leaves 512 of every SM's
+    /// 1536 slots unusable, a third of the device idle by arithmetic. Every
+    /// candidate from 32 to 512 divides 1536 exactly. The element counts below
+    /// span both sides of the old estimate's blind spot: multiples of 1024,
+    /// where its idle-lane penalty vanishes and the widest candidate won
+    /// outright, and counts with a tail.
+    #[test]
+    fn cold_start_never_strands_resident_thread_slots_when_an_even_divisor_exists() {
+        let limits = blackwell_5090_limits();
+        for (output, element_count) in [
+            ("out_no_strand_1k", 1024u32),
+            ("out_no_strand_4k", 4096),
+            ("out_no_strand_64k", 65_536),
+            ("out_no_strand_tail", 4097),
+            ("out_no_strand_100k", 100_000),
+        ] {
+            let program = tunable_1d_program(output, element_count, [32, 1, 1]);
+            let resolved = resolve_launch_workgroup_for_mode(
+                &program,
+                &DispatchConfig::default(),
+                limits,
+                element_count,
+                Mode::NaturalGradient,
+            );
+            let resident = limits.resident_threads_per_compute_unit(resolved[0]);
+            assert_eq!(
+                resident,
+                Some(1536),
+                "Fix: cold start chose {resolved:?} for {element_count} elements, leaving {} of every SM's 1536 thread slots unusable. Prefer a width that divides the per-SM budget evenly.",
+                1536 - resident.unwrap_or(1536)
+            );
+        }
+    }
+
+    /// The fix is a residency rule, not a hardcoded rejection of 1024.
+    ///
+    /// On a device whose per-SM budget is 2048 threads, 1024 hosts two whole
+    /// blocks and reaches every slot, so it ties with every narrower candidate
+    /// on residency and the latency estimate breaks the tie toward the widest.
+    /// A fix that simply banned 1024 would fail here.
+    #[test]
+    fn cold_start_still_admits_1024_where_the_per_sm_budget_divides_evenly() {
+        let limits = LaunchGeometryLimits {
+            backend: "even-divisor-test",
+            max_threads_per_block: 1024,
+            max_block_dim: [1024, 1024, 64],
+            max_grid_dim: [u32::MAX, u32::MAX, u32::MAX],
+            max_threads_per_sm: 2048,
+        };
+        let program = tunable_1d_program("out_even_divisor", 65_536, [32, 1, 1]);
+
+        assert_eq!(
+            limits.resident_threads_per_compute_unit(1024),
+            Some(2048),
+            "Fix: 1024 must reach every thread slot on a 2048-thread SM, otherwise this test's premise is wrong."
+        );
+        assert_eq!(
+            resolve_launch_workgroup_for_mode(
+                &program,
+                &DispatchConfig::default(),
+                limits,
+                65_536,
+                Mode::NaturalGradient,
+            ),
+            [1024, 1, 1],
+            "Fix: residency-aware cold start must stay a residency rule. A width that strands nothing has to remain selectable on every device."
+        );
+    }
+
+    /// A backend reporting no per-SM thread budget keeps its previous cold
+    /// start bit for bit.
+    ///
+    /// WebGPU exposes no such number, so wgpu reports `max_threads_per_sm: 0`.
+    /// Zero must make the residency preference inert rather than derive an
+    /// opinion from a budget the backend never supplied: every candidate stays
+    /// eligible and the latency estimate alone decides, which is [1024,1,1] for
+    /// each count below. Multiples of 1024 are the interesting ones, because
+    /// that is where the estimate's idle-lane penalty vanishes entirely. If
+    /// someone later makes 0 mean "guess a budget", this fails loudly.
+    #[test]
+    fn unreported_per_sm_budget_leaves_cold_start_byte_identical() {
+        let limits = LaunchGeometryLimits {
+            backend: "unreported-residency-test",
+            max_threads_per_block: 1024,
+            max_block_dim: [1024, 1024, 64],
+            max_grid_dim: [u32::MAX, u32::MAX, u32::MAX],
+            max_threads_per_sm: 0,
+        };
+        assert_eq!(
+            limits.resident_threads_per_compute_unit(1024),
+            None,
+            "Fix: an unreported per-SM budget must answer `unknown`, never a guessed number."
+        );
+
+        for (output, element_count) in [
+            ("out_inert_1k", 1024u32),
+            ("out_inert_4k", 4096),
+            ("out_inert_64k", 65_536),
+            ("out_inert_1000", 1_000),
+            ("out_inert_4097", 4097),
+            ("out_inert_100k", 100_000),
+        ] {
+            let program = tunable_1d_program(output, element_count, [32, 1, 1]);
+            assert_eq!(
+                resolve_launch_workgroup_for_mode(
+                    &program,
+                    &DispatchConfig::default(),
+                    limits,
+                    element_count,
+                    Mode::NaturalGradient,
+                ),
+                [1024, 1, 1],
+                "Fix: residency-aware cold start must be inert for a backend that reports no per-SM budget. {element_count} elements resolved differently than they did before residency entered this decision."
+            );
+        }
+    }
+
+    /// Both explicit geometry pins outrank residency-aware cold start.
+    ///
+    /// `workgroup_override` is authoritative and `grid_override` returns the
+    /// declared shape, because a caller that pinned its geometry is telling the
+    /// driver the shape is load bearing. `exatok` sets both, which is why this
+    /// defect never reached it.
+    #[test]
+    fn explicit_geometry_pins_outrank_residency_aware_cold_start() {
+        let limits = blackwell_5090_limits();
+        let declared = [256, 1, 1];
+        let program = tunable_1d_program("out_pinned_geometry", 262_144, declared);
+
+        let mut pinned_workgroup = DispatchConfig::default();
+        pinned_workgroup.workgroup_override = Some([64, 1, 1]);
+        assert_eq!(
+            resolve_launch_workgroup_for_mode(
+                &program,
+                &pinned_workgroup,
+                limits,
+                262_144,
+                Mode::NaturalGradient,
+            ),
+            [64, 1, 1],
+            "Fix: an explicit workgroup override stays authoritative even when residency prefers another width."
+        );
+
+        let mut pinned_grid = DispatchConfig::default();
+        pinned_grid.grid_override = Some([1024, 1, 1]);
+        assert_eq!(
+            resolve_launch_workgroup_for_mode(
+                &program,
+                &pinned_grid,
+                limits,
+                262_144,
+                Mode::NaturalGradient,
+            ),
+            declared,
+            "Fix: an explicit grid override must keep the declared workgroup, since the caller sized the grid against it."
+        );
+    }
+
+    /// The cooperative residency bound follows the width the tuner RESOLVES,
+    /// never the width the program DECLARES.
+    ///
+    /// This is the test whose failure exposed the defect and it must stay. A
+    /// preflight boundary written against a declared 256 expected the flip at
+    /// 1021 blocks (1020 = 6 blocks/SM x 170 SMs is the last grid that fits)
+    /// and observed it at 681, because the tuner had silently resolved 1024:
+    /// 681 x 256 = 174,336 lanes, exactly one lane past 170 x 1024 = 174,080.
+    /// Earlier over-residency tests missed this because 1024 blocks of 256
+    /// exceeds the ceiling under BOTH widths, so they were green for the wrong
+    /// reason. Past the ceiling a grid-sync program stops fitting one
+    /// cooperative launch and takes the host split route, so a width choice
+    /// turns one launch into many.
+    #[test]
+    fn cooperative_lane_ceiling_follows_the_resolved_width_not_the_declared_one() {
+        let limits = blackwell_5090_limits();
+        let declared = [256, 1, 1];
+        let program = tunable_1d_program("out_resolved_ceiling", 262_144, declared);
+        let lane_ceiling = |width: u32| -> u64 {
+            u64::from(
+                limits
+                    .resident_threads_per_compute_unit(width)
+                    .expect("Fix: this device model reports a per-SM thread budget"),
+            ) * u64::from(RTX_5090_SM_COUNT)
+        };
+
+        let resolved = resolve_launch_workgroup_for_mode(
+            &program,
+            &DispatchConfig::default(),
+            limits,
+            262_144,
+            Mode::NaturalGradient,
+        );
+        assert_ne!(
+            resolved, declared,
+            "Fix: this program is tunable, so a bound taken from the declared width would bound a width nothing launches."
+        );
+        assert_eq!(
+            lane_ceiling(1024),
+            174_080,
+            "Fix: 1024 wide is 1 block/SM x 170 SMs x 1024 lanes. This is the ceiling the defect produced."
+        );
+        assert_eq!(
+            lane_ceiling(resolved[0]),
+            261_120,
+            "Fix: the resolved width must reach the device's full cooperative capacity, 1536 resident threads x 170 SMs. Seeing 174,080 here means the tuner resolved 1024 again."
+        );
+
+        let mut pinned = DispatchConfig::default();
+        pinned.workgroup_override = Some(declared);
+        assert_eq!(
+            resolve_launch_workgroup_for_mode(
+                &program,
+                &pinned,
+                limits,
+                262_144,
+                Mode::NaturalGradient,
+            ),
+            declared,
+            "Fix: a pinned width must resolve to itself so the declared and resolved bounds coincide."
+        );
+        assert_eq!(lane_ceiling(declared[0]), 261_120);
+    }
+
+    /// Measured feedback still outranks the residency preference.
+    ///
+    /// The residency rule governs the choice made with no measurements. Once a
+    /// real timing says 1024 is faster for a given program, the tuner must be
+    /// free to take it even though cold start would never have proposed it.
+    #[test]
+    fn measured_feedback_can_still_select_a_width_cold_start_would_reject() {
+        let dir =
+            tempfile::tempdir().expect("Fix: measured feedback test needs an isolated tuner cache");
+        let path = dir.path().join("residency-feedback.toml");
+        let limits = blackwell_5090_limits();
+        let declared = [32, 1, 1];
+        let program = tunable_1d_program("out_measured_beats_residency", 65_536, declared);
+        let key = NaturalLaunchCacheKey::new(&program, declared, 65_536, limits);
+        natural_launch_cache_remove(key);
+
+        assert_eq!(
+            natural_gradient_cold_start_workgroup_with_store(
+                &program,
+                declared,
+                65_536,
+                limits,
+                Some(&path),
+            ),
+            Some([512, 1, 1]),
+            "Fix: with no measurements the residency preference decides."
+        );
+        natural_launch_cache_remove(key);
+        assert!(
+            record_launch_measurement_for_mode_with_store(
+                &program,
+                &DispatchConfig::default(),
+                limits,
+                65_536,
+                [1024, 1, 1],
+                1,
+                Mode::NaturalGradient,
+                Some(&path),
+            ),
+            "Fix: a real timing for a residency-poor width must still be accepted."
+        );
+        assert_eq!(
+            natural_gradient_cold_start_workgroup_with_store(
+                &program,
+                declared,
+                65_536,
+                limits,
+                Some(&path),
+            ),
+            Some([1024, 1, 1]),
+            "Fix: residency governs the cold start only. Measured feedback must remain able to choose a width cold start would never propose."
         );
     }
 }

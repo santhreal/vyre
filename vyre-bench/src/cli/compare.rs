@@ -1,7 +1,7 @@
+use super::cli_report_io::read_report_bounded;
 use crate::report::json::ReportSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use super::cli_report_io::read_report_bounded;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub(super) struct ComparisonArtifact {

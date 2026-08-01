@@ -15,7 +15,10 @@ fn injection_encoding_primary_sources_are_registered() {
         "UNICODE_TR36",
         "UNICODE_UTS39",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 

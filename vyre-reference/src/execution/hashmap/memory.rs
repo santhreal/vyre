@@ -93,17 +93,21 @@ fn zero_existing_workgroup(
     Ok(true)
 }
 
-fn workgroup_byte_len(decl: &BufferDecl) -> Result<usize, Error> {
+pub(crate) fn declared_byte_len(decl: &BufferDecl, unsized_context: &str) -> Result<usize, Error> {
     match decl.static_byte_len() {
         Ok(Some(byte_len)) => Ok(byte_len),
         Ok(None) if decl.count() == 0 => Ok(0),
         Ok(None) => Err(Error::interp(format!(
-            "workgroup buffer `{}` has unsized element type {}. Fix: use a fixed-width workgroup element type.",
+            "{unsized_context} buffer `{}` has unsized element type {}. Fix: use a fixed-width buffer element type.",
             decl.name(),
             decl.element()
         ))),
         Err(error) => Err(Error::interp(error)),
     }
+}
+
+fn workgroup_byte_len(decl: &BufferDecl) -> Result<usize, Error> {
+    declared_byte_len(decl, "workgroup")
 }
 
 pub(crate) fn resolve_buffer<'a>(

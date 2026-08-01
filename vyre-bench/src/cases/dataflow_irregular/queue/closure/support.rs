@@ -1,5 +1,5 @@
 use crate::api::case::BenchError;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::Program;
 
 use super::QUEUE_CLOSURE_WORKGROUP_SIZE;
 use crate::cases::dataflow_irregular::fixture::{
@@ -19,42 +19,16 @@ pub(in crate::cases::dataflow_irregular) fn ifds_queue_closure_inputs(
     fixture: &IfdsSkewedFixture,
     queue_capacity: u32,
 ) -> Result<Vec<Vec<u8>>, BenchError> {
-    if u64::from(queue_capacity) < fixture.stats.active_sources {
-        return Err(BenchError::EnvironmentInvalid(format!(
-            "IFDS queue closure requires queue_capacity >= active_sources, got capacity={queue_capacity} active_sources={}. Fix: size ping-pong queues for the seed frontier.",
-            fixture.stats.active_sources
-        )));
-    }
-    let seed_queue_len = u32::try_from(fixture.stats.active_sources).map_err(|_| {
-        BenchError::EnvironmentInvalid(format!(
-            "IFDS queue closure active source count {} exceeds u32 indexing. Fix: split the seed queue.",
-            fixture.stats.active_sources
-        ))
-    })?;
-    let queue_bytes = (queue_capacity as usize)
-        .checked_mul(std::mem::size_of::<u32>())
-        .ok_or_else(|| {
-            BenchError::EnvironmentInvalid(format!(
-                "IFDS queue closure queue_capacity={queue_capacity} overflows host buffer sizing. Fix: split the frontier queue."
-            ))
-        })?;
-    let seed = vyre_primitives::wire::pack_u32_slice(&fixture.frontier_in);
-    let seed_queue =
-        materialize_ifds_active_queue(fixture, seed_queue_len as usize, "IFDS queue closure seed")?;
-
-    Ok(vec![
-        seed.clone(),
-        vyre_primitives::wire::pack_u32_slice(&seed_queue),
-        vyre_primitives::wire::pack_u32_slice(&[seed_queue_len]),
-        vec![0_u8; queue_bytes],
-        vyre_primitives::wire::pack_u32_slice(&[0]),
-        vec![0_u8; queue_bytes],
-        vyre_primitives::wire::pack_u32_slice(&[0]),
-        vyre_primitives::wire::pack_u32_slice(&fixture.edge_offsets),
-        vyre_primitives::wire::pack_u32_slice(&fixture.edge_targets),
-        vyre_primitives::wire::pack_u32_slice(&fixture.edge_kind_mask),
-        seed,
-    ])
+    crate::cases::queue_stage::build_queue_closure_inputs(
+        &fixture.frontier_in,
+        &fixture.edge_offsets,
+        &fixture.edge_targets,
+        &fixture.edge_kind_mask,
+        fixture.stats.active_sources,
+        queue_capacity,
+        "IFDS",
+        |capacity| materialize_ifds_active_queue(fixture, capacity, "IFDS queue closure seed"),
+    )
 }
 
 pub(in crate::cases::dataflow_irregular) fn ifds_queue_closure_reset_program(
@@ -62,59 +36,11 @@ pub(in crate::cases::dataflow_irregular) fn ifds_queue_closure_reset_program(
     seed_queue_len: u32,
     queue_capacity: u32,
 ) -> Program {
-    let idx = Expr::InvocationId { axis: 0 };
-    Program::wrapped(
-        vec![
-            BufferDecl::storage("frontier_seed", 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(frontier_words.max(1)),
-            BufferDecl::storage("seed_queue", 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(seed_queue_len.max(1)),
-            BufferDecl::storage("seed_len", 2, BufferAccess::ReadOnly, DataType::U32).with_count(1),
-            BufferDecl::storage("active_queue", 3, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(queue_capacity.max(1)),
-            BufferDecl::storage("accumulator", 4, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(frontier_words.max(1)),
-            BufferDecl::storage("queue_a_len", 5, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(1),
-            BufferDecl::storage("queue_b_len", 6, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(1),
-        ],
+    crate::cases::queue_stage::build_queue_closure_reset_program(
+        frontier_words,
+        seed_queue_len,
+        queue_capacity,
         QUEUE_CLOSURE_WORKGROUP_SIZE,
-        vec![
-            Node::if_then(
-                Expr::lt(idx.clone(), Expr::u32(frontier_words)),
-                vec![Node::store(
-                    "accumulator",
-                    idx.clone(),
-                    Expr::load("frontier_seed", idx.clone()),
-                )],
-            ),
-            Node::if_then(
-                Expr::and(
-                    Expr::lt(idx.clone(), Expr::u32(queue_capacity)),
-                    Expr::and(
-                        Expr::lt(idx.clone(), Expr::u32(seed_queue_len)),
-                        Expr::lt(idx.clone(), Expr::load("seed_len", Expr::u32(0))),
-                    ),
-                ),
-                vec![Node::store(
-                    "active_queue",
-                    idx.clone(),
-                    Expr::load("seed_queue", idx.clone()),
-                )],
-            ),
-            Node::if_then(
-                Expr::eq(idx, Expr::u32(0)),
-                vec![
-                    Node::store(
-                        "queue_a_len",
-                        Expr::u32(0),
-                        Expr::load("seed_len", Expr::u32(0)),
-                    ),
-                    Node::store("queue_b_len", Expr::u32(0), Expr::u32(0)),
-                ],
-            ),
-        ],
     )
 }
 

@@ -88,7 +88,7 @@ fn program_presence(literals: &[Vec<u8>], haystack: &[u8], region_starts: &[u32]
     ];
     // Force the interpreter's grid to cover one invocation per haystack BYTE.
     // Buffer-shape inference alone under-covers a byte-scan program (the haystack
-    // is packed 4 bytes/u32), silently skipping high positions and under-firing 
+    // is packed 4 bytes/u32), silently skipping high positions and under-firing
     // proven a reference-interpreter artifact, not a kernel bug, by the GPU gate
     // (`literal_set_presence_by_region_gpu_ground_truth`) passing the same fixtures.
     let out =

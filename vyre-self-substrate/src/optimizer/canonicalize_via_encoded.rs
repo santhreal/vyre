@@ -11,11 +11,7 @@
 //! swap. The decoder walks the IR in lockstep with the encoder and
 //! applies the swap when reconstructing each BinOp. No host-reference escape.
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-use crate::dispatch_buffers::{
-    decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
-};
+use vyre_foundation::ir::{Expr, Node, Program};
 
 use super::dispatcher::{DispatchError, OptimizerDispatcher};
 use super::encode::EncodeError;
@@ -76,39 +72,16 @@ fn run_canonicalize_kernel_with_scratch_into(
     scratch: &mut CanonicalizeKernelScratch,
     swap_mask: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    let n = arena.expr_count;
-    let analysis = build_canonicalize_program(n);
-    let words = n as usize;
-    let output_bytes = words
-        .checked_mul(std::mem::size_of::<u32>())
-        .ok_or_else(|| {
-            DispatchError::BadInputs(format!(
-                "Fix: canonicalize output byte count overflows usize for expr_count={n}."
-            ))
-        })?;
-
-    ensure_input_slots(&mut scratch.inputs, 5);
-    write_u32_slice_le_bytes(&mut scratch.inputs[0], &arena.kinds);
-    write_u32_slice_le_bytes(&mut scratch.inputs[1], &arena.arg0);
-    write_u32_slice_le_bytes(&mut scratch.inputs[2], &arena.arg1);
-    write_u32_slice_le_bytes(&mut scratch.inputs[3], &arena.arg2);
-    write_zero_bytes(&mut scratch.inputs[4], output_bytes);
-
-    // Parallel kernel: workgroup_size=[256,1,1], one thread per Expr
-    // via gid_x(). Compute the grid to cover expr_count threads.
-    let grid_x = (n + WORKGROUP_X - 1) / WORKGROUP_X;
-    let outputs = dispatcher.dispatch(&analysis, &scratch.inputs, Some([grid_x, 1, 1]))?;
-    if outputs.len() != 1 {
-        return Err(DispatchError::BackendError(format!(
-            "Fix: canonicalize dispatch expected exactly one swap_mask output, got {}.",
-            outputs.len()
-        )));
-    }
-    decode_u32_output_exact(&outputs[0], words, "canonicalize swap_mask", swap_mask)
+    super::run_encoded_analysis_kernel(
+        arena,
+        dispatcher,
+        &mut scratch.inputs,
+        swap_mask,
+        build_canonicalize_program,
+        "canonicalize",
+        "swap_mask",
+    )
 }
-
-/// Workgroup size used by the parallel canonicalize kernel.
-const WORKGROUP_X: u32 = 256;
 
 /// Build the canonicalize analysis Program. Reads arena cols, writes
 /// `swap_mask[i] = 1` for any BIN_OP whose left operand is a literal
@@ -116,32 +89,7 @@ const WORKGROUP_X: u32 = 256;
 /// `gid_x()`; the orchestrator dispatches `ceil(expr_count / 256)`
 /// workgroups to cover the input.
 pub fn build_canonicalize_program(expr_count: u32) -> Program {
-    let buffers = vec![
-        BufferDecl::storage("arena_kinds", 0, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(expr_count.max(1)),
-        BufferDecl::storage("arena_arg0", 1, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(expr_count.max(1)),
-        BufferDecl::storage("arena_arg1", 2, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(expr_count.max(1)),
-        BufferDecl::storage("arena_arg2", 3, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(expr_count.max(1)),
-        BufferDecl::storage("swap_mask", 4, BufferAccess::ReadWrite, DataType::U32)
-            .with_count(expr_count.max(1)),
-    ];
-
-    // Parallel body: bind `i = gid_x()`, bound-check against
-    // expr_count, then run the per-Expr logic. Each lane handles one
-    // Expr id independently  -  no inter-lane dependencies for
-    // canonicalize.
-    let body = vec![
-        Node::let_bind("i", Expr::gid_x()),
-        Node::if_then(
-            Expr::lt(Expr::var("i"), Expr::u32(expr_count)),
-            per_expr_body(),
-        ),
-    ];
-
-    Program::wrapped(buffers, [WORKGROUP_X, 1, 1], body)
+    super::build_encoded_analysis_program(expr_count, "swap_mask", per_expr_body())
 }
 
 fn per_expr_body() -> Vec<Node> {
@@ -273,85 +221,20 @@ fn rewrite_program_with_swap_mask(program: Program, swap_mask: &[u32]) -> Progra
 }
 
 fn rewrite_expr(expr: &Expr, swap_mask: &[u32], counter: &mut u32) -> Expr {
-    match expr {
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::Var(_)
-        | Expr::BufLen { .. }
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize => {
-            *counter += 1;
-            expr.clone()
-        }
-        Expr::Load { buffer, index } => {
-            let new_index = rewrite_expr(index, swap_mask, counter);
-            *counter += 1;
-            Expr::Load {
-                buffer: buffer.clone(),
-                index: Box::new(new_index),
-            }
-        }
-        Expr::BinOp { op, left, right } => {
-            let new_left = rewrite_expr(left, swap_mask, counter);
-            let new_right = rewrite_expr(right, swap_mask, counter);
-            let id = *counter;
-            *counter += 1;
-            if swap_mask.get(id as usize).copied().unwrap_or(0) == 1 {
-                // Swap: literal goes right.
+    super::rewrite_walk::rewrite_simple_expr_postorder(expr, counter, &mut |rewritten, id| {
+        match rewritten {
+            Expr::BinOp { op, left, right }
+                if swap_mask.get(id as usize).copied().unwrap_or(0) == 1 =>
+            {
                 Expr::BinOp {
-                    op: *op,
-                    left: Box::new(new_right),
-                    right: Box::new(new_left),
-                }
-            } else {
-                Expr::BinOp {
-                    op: *op,
-                    left: Box::new(new_left),
-                    right: Box::new(new_right),
+                    op,
+                    left: right,
+                    right: left,
                 }
             }
+            other => other,
         }
-        Expr::UnOp { op, operand } => {
-            let new_operand = rewrite_expr(operand, swap_mask, counter);
-            *counter += 1;
-            Expr::UnOp {
-                op: op.clone(),
-                operand: Box::new(new_operand),
-            }
-        }
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            let new_cond = rewrite_expr(cond, swap_mask, counter);
-            let new_true = rewrite_expr(true_val, swap_mask, counter);
-            let new_false = rewrite_expr(false_val, swap_mask, counter);
-            *counter += 1;
-            Expr::Select {
-                cond: Box::new(new_cond),
-                true_val: Box::new(new_true),
-                false_val: Box::new(new_false),
-            }
-        }
-        Expr::Fma { a, b, c } => {
-            let na = rewrite_expr(a, swap_mask, counter);
-            let nb = rewrite_expr(b, swap_mask, counter);
-            let nc = rewrite_expr(c, swap_mask, counter);
-            *counter += 1;
-            Expr::Fma {
-                a: Box::new(na),
-                b: Box::new(nb),
-                c: Box::new(nc),
-            }
-        }
-        _ => expr.clone(),
-    }
+    })
 }
 
 #[cfg(test)]

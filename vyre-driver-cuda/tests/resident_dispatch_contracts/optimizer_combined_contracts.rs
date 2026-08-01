@@ -264,4 +264,3 @@ fn optimizer_combined_upload_sequence_read_ranges_compacts_d2h_bytes() {
         .free_resident(output)
         .expect("Fix: compact path output free failed.");
 }
-

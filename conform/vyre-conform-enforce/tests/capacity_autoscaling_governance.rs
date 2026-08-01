@@ -6,9 +6,11 @@ const CAPACITY: &str =
     include_str!("../../../docs/optimization/RESOURCE_RIGHTSIZING_CAPACITY_POLICY.toml");
 const PLACEMENT: &str =
     include_str!("../../../docs/optimization/SCHEDULING_PLACEMENT_TOPOLOGY_POLICY.toml");
-const GPU: &str = include_str!("../../../docs/optimization/GPU_DEVICE_CAPACITY_PLACEMENT_POLICY.toml");
-const COVERAGE: &str =
-    include_str!("../../../docs/optimization/END_TO_END_CAPACITY_AUTOSCALING_TRANCHE_COVERAGE.toml");
+const GPU: &str =
+    include_str!("../../../docs/optimization/GPU_DEVICE_CAPACITY_PLACEMENT_POLICY.toml");
+const COVERAGE: &str = include_str!(
+    "../../../docs/optimization/END_TO_END_CAPACITY_AUTOSCALING_TRANCHE_COVERAGE.toml"
+);
 
 #[test]
 fn capacity_autoscaling_sources_are_registered() {
@@ -23,12 +25,16 @@ fn capacity_autoscaling_sources_are_registered() {
         "KUBERNETES_DEVICE_PLUGINS",
         "NVIDIA_K8S_DEVICE_PLUGIN",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 
 #[test]
-fn workload_autoscaling_policy_records_signals_bounds_behavior_freshness_pause_rollout_and_gate_effects() {
+fn workload_autoscaling_policy_records_signals_bounds_behavior_freshness_pause_rollout_and_gate_effects(
+) {
     for required in [
         "autoscale_id",
         "workload_surface",
@@ -50,7 +56,8 @@ fn workload_autoscaling_policy_records_signals_bounds_behavior_freshness_pause_r
 }
 
 #[test]
-fn resource_rightsizing_policy_records_requests_limits_usage_rightsizing_quotas_saturation_cost_capacity_and_gates() {
+fn resource_rightsizing_policy_records_requests_limits_usage_rightsizing_quotas_saturation_cost_capacity_and_gates(
+) {
     for required in [
         "capacity_id",
         "workload_surface",
@@ -72,7 +79,8 @@ fn resource_rightsizing_policy_records_requests_limits_usage_rightsizing_quotas_
 }
 
 #[test]
-fn scheduling_placement_policy_records_node_assignment_topology_taints_priority_rollout_privacy_and_gates() {
+fn scheduling_placement_policy_records_node_assignment_topology_taints_priority_rollout_privacy_and_gates(
+) {
     for required in [
         "placement_id",
         "workload_surface",
@@ -94,7 +102,8 @@ fn scheduling_placement_policy_records_node_assignment_topology_taints_priority_
 }
 
 #[test]
-fn gpu_device_capacity_policy_records_plugin_resources_placement_sharing_runtime_capacity_and_gate_effects() {
+fn gpu_device_capacity_policy_records_plugin_resources_placement_sharing_runtime_capacity_and_gate_effects(
+) {
     for required in [
         "gpu_id",
         "device_surface",
@@ -116,7 +125,8 @@ fn gpu_device_capacity_policy_records_plugin_resources_placement_sharing_runtime
 }
 
 #[test]
-fn capacity_autoscaling_coverage_reuses_resource_deployment_readiness_failure_publication_and_dedup_authorities() {
+fn capacity_autoscaling_coverage_reuses_resource_deployment_readiness_failure_publication_and_dedup_authorities(
+) {
     for required in [
         "VX-1321..VX-1340",
         "workload_autoscaling_policy",

@@ -139,7 +139,9 @@ pub(crate) fn validate_duplicate_family_report_artifact(
     let value = match serde_json::from_slice::<serde_json::Value>(bytes) {
         Ok(value) => value,
         Err(error) => {
-            return vec![format!("duplicate family artifact is not valid JSON: {error}")];
+            return vec![format!(
+                "duplicate family artifact is not valid JSON: {error}"
+            )];
         }
     };
     if value.get("schema_version").and_then(|raw| raw.as_u64())
@@ -149,9 +151,7 @@ pub(crate) fn validate_duplicate_family_report_artifact(
             "duplicate family artifact must use schema_version={DUPLICATE_FAMILY_SCHEMA_VERSION}"
         ));
     }
-    if value
-        .get("generator_command")
-        .and_then(|raw| raw.as_str())
+    if value.get("generator_command").and_then(|raw| raw.as_str())
         != Some(expected_generator_command)
     {
         blockers.push(
@@ -218,7 +218,8 @@ pub(crate) fn duplicate_family_id(detector: &str, left: &str, right: &str) -> St
     } else {
         (right, left)
     };
-    let material = format!("duplicate-family:v1\ndetector={detector}\nleft={first}\nright={second}\n");
+    let material =
+        format!("duplicate-family:v1\ndetector={detector}\nleft={first}\nright={second}\n");
     format!("duplicate-family:v1:{}", sha256_hex(material.as_bytes()))
 }
 
@@ -439,11 +440,8 @@ mod tests {
 
     #[test]
     fn registered_op_duplicate_subject_uses_shared_owner_and_fingerprint() {
-        let subject = registered_op_duplicate_subject(
-            "vyre-libs::scan::literal_set",
-            &[1, 2, 3, 4],
-            17,
-        );
+        let subject =
+            registered_op_duplicate_subject("vyre-libs::scan::literal_set", &[1, 2, 3, 4], 17);
 
         assert_eq!(subject.owner_lane, "scan_automata");
         assert_eq!(subject.tokens, Some(17));
@@ -453,7 +451,6 @@ mod tests {
             .as_deref()
             .is_some_and(|value| value.starts_with("registered-op-ir-fingerprint:v1:")));
     }
-
 
     #[test]
     fn duplicate_family_report_counts_families() {

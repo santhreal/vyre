@@ -1,5 +1,6 @@
 //! Shared PTX vector memory fusion chain detector.
 
+use crate::emitter::schedule::{is_schedulable_pure_op, is_scheduling_fence};
 use crate::index_facts::IndexFacts;
 use rustc_hash::FxHashMap;
 use vyre_foundation::ir::DataType;
@@ -146,46 +147,4 @@ fn walk(
     for child in &body.child_bodies {
         walk(child, binding_by_slot, kind, candidates);
     }
-}
-
-fn is_scheduling_fence(op: &KernelOp) -> bool {
-    matches!(
-        op.kind,
-        KernelOpKind::StoreGlobal
-            | KernelOpKind::StoreShared
-            | KernelOpKind::Atomic { .. }
-            | KernelOpKind::Barrier { .. }
-            | KernelOpKind::Return
-            | KernelOpKind::Region { .. }
-            | KernelOpKind::StructuredBlock
-            | KernelOpKind::StructuredIfThen
-            | KernelOpKind::StructuredIfThenElse
-            | KernelOpKind::StructuredForLoop { .. }
-            | KernelOpKind::AsyncLoad { .. }
-            | KernelOpKind::AsyncStore { .. }
-            | KernelOpKind::AsyncWait { .. }
-            | KernelOpKind::Trap { .. }
-    )
-}
-
-fn is_schedulable_pure_op(op: &KernelOp) -> bool {
-    matches!(
-        op.kind,
-        KernelOpKind::Literal
-            | KernelOpKind::LocalInvocationId
-            | KernelOpKind::GlobalInvocationId
-            | KernelOpKind::WorkgroupId
-            | KernelOpKind::BinOpKind(_)
-            | KernelOpKind::UnOpKind(_)
-            | KernelOpKind::Fma
-            | KernelOpKind::MatrixMma { .. }
-            | KernelOpKind::Cast { .. }
-            | KernelOpKind::Select
-            | KernelOpKind::BufferLength
-            | KernelOpKind::SubgroupLocalId
-            | KernelOpKind::SubgroupSize
-            | KernelOpKind::SubgroupBallot
-            | KernelOpKind::SubgroupShuffle
-            | KernelOpKind::SubgroupReduce { .. }
-    ) && op.result.is_some()
 }

@@ -19,6 +19,96 @@ pub(crate) fn checked_cells(label: &'static str, rows: u32, cols: u32) -> Result
         )
     })
 }
+pub(crate) fn fixed_u32_matvec_program(
+    op_id: &'static str,
+    matrix: &str,
+    vector: &str,
+    out: &str,
+    n: u32,
+    matrix_cells: u32,
+) -> Program {
+    let row = Expr::InvocationId { axis: 0 };
+    let body = vec![Node::if_then(
+        Expr::lt(row.clone(), Expr::u32(n)),
+        vec![
+            Node::let_bind("acc", Expr::u32(0)),
+            Node::let_bind("row_base", Expr::mul(row.clone(), Expr::u32(n))),
+            Node::loop_for(
+                "j",
+                Expr::u32(0),
+                Expr::u32(n),
+                vec![Node::assign(
+                    "acc",
+                    Expr::add(
+                        Expr::var("acc"),
+                        crate::fixed_mul_16_16_expr(
+                            Expr::load(matrix, Expr::add(Expr::var("row_base"), Expr::var("j"))),
+                            Expr::load(vector, Expr::var("j")),
+                        ),
+                    ),
+                )],
+            ),
+            Node::store(out, row, Expr::var("acc")),
+        ],
+    )];
+    Program::wrapped(
+        vec![
+            BufferDecl::storage(matrix, 0, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(matrix_cells),
+            BufferDecl::storage(vector, 1, BufferAccess::ReadOnly, DataType::U32).with_count(n),
+            BufferDecl::storage(out, 2, BufferAccess::ReadWrite, DataType::U32).with_count(n),
+        ],
+        [256, 1, 1],
+        vec![Node::Region {
+            generator: Ident::from(op_id),
+            source_region: None,
+            body: Arc::new(body),
+        }],
+    )
+}
+
+pub(crate) struct FixedMatmulContext {
+    pub op_id: &'static str,
+    pub operation: &'static str,
+    pub lhs_label: &'static str,
+    pub rhs_label: &'static str,
+    pub out_label: &'static str,
+    pub dimensions: [&'static str; 3],
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn try_fixed_u32_matmul(
+    lhs: &str,
+    rhs: &str,
+    out: &str,
+    rows: u32,
+    shared: u32,
+    cols: u32,
+    context: &FixedMatmulContext,
+) -> Result<Program, String> {
+    if rows == 0 || shared == 0 || cols == 0 {
+        let [rows_name, shared_name, cols_name] = context.dimensions;
+        return Err(format!(
+            "Fix: {} requires {rows_name}, {shared_name}, {cols_name} > 0, got {rows_name}={rows}, {shared_name}={shared}, {cols_name}={cols}.",
+            context.operation
+        ));
+    }
+    let lhs_cells = checked_cells(context.lhs_label, rows, shared)?;
+    let rhs_cells = checked_cells(context.rhs_label, shared, cols)?;
+    let out_cells = checked_cells(context.out_label, rows, cols)?;
+    Ok(fixed_u32_matmul_program(
+        context.op_id,
+        lhs,
+        rhs,
+        out,
+        rows,
+        shared,
+        cols,
+        lhs_cells,
+        rhs_cells,
+        out_cells,
+    ))
+}
 
 /// Build a customizable u32 matrix contraction.
 ///

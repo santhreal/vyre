@@ -14,7 +14,10 @@ fn performance_primary_sources_are_registered() {
         "ROOFLINE_MODEL",
         "NSIGHT_COMPUTE_ROOFLINE",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 

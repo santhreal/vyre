@@ -5,12 +5,12 @@
 
 mod common;
 use common::decode_u32_words;
+use common::go::{pack_source, run, tokenize, zeroed_u32_words};
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use tree_sitter::Parser;
 use vyre::ir::Expr;
-use vyre_libs::parsing::go::lex::go_lexer;
 use vyre_libs::parsing::go::parse::ast_ops::{
     go_extract_channel_receives, go_extract_channel_sends, go_extract_defer_calls,
     go_extract_goroutine_calls,
@@ -36,53 +36,10 @@ fn fixtures_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/go")
 }
 
-fn pack_source(source: &str) -> Vec<u8> {
-    source
-        .as_bytes()
-        .iter()
-        .flat_map(|byte| u32::from(*byte).to_le_bytes())
-        .collect()
-}
-
-fn zeroed_u32_words(words: usize) -> Vec<u8> {
-    vec![0u8; words * 4]
-}
-
-fn run(program: &vyre::Program, inputs: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
-    vyre_reference::reference_eval(
-        program,
-        &inputs.into_iter().map(Value::from).collect::<Vec<_>>(),
-    )
-    .expect("reference execution must succeed")
-    .into_iter()
-    .map(|value| value.to_bytes())
-    .collect()
-}
-
 fn gpu_counts(source: &str) -> Counts {
-    let haystack_words = source.len().max(1);
-    let lexer = go_lexer(
-        "haystack",
-        "out_tok_types",
-        "out_tok_starts",
-        "out_tok_lens",
-        "out_counts",
-        haystack_words as u32,
-    );
-    let lexer_outputs = run(
-        &lexer,
-        vec![
-            pack_source(source),
-            zeroed_u32_words(haystack_words),
-            zeroed_u32_words(haystack_words),
-            zeroed_u32_words(haystack_words),
-            zeroed_u32_words(1),
-        ],
-    );
-    let tok_types = lexer_outputs[0].clone();
-    let tok_starts = lexer_outputs[1].clone();
-    let tok_lens = lexer_outputs[2].clone();
-    let tok_count = decode_u32_words(&lexer_outputs[3])[0] as usize;
+    let tokens = tokenize(source);
+    let (tok_types, tok_starts, tok_lens, tok_count) =
+        (tokens.types, tokens.starts, tokens.lens, tokens.count);
     assert!(tok_count > 0, "lexer must emit at least one token");
 
     let packages_and_imports = go_extract_packages_and_imports(
@@ -156,6 +113,7 @@ fn gpu_counts(source: &str) -> Counts {
         "tok_types",
         "tok_starts",
         "tok_lens",
+        "haystack",
         Expr::u32(tok_count as u32),
         "out_ops",
         "out_counts",
@@ -166,6 +124,7 @@ fn gpu_counts(source: &str) -> Counts {
             tok_types.clone(),
             tok_starts.clone(),
             tok_lens.clone(),
+            pack_source(source),
             zeroed_u32_words(tok_count.saturating_mul(GO_SPAN_RECORD_WORDS as usize)),
             zeroed_u32_words(1),
         ],
@@ -175,6 +134,7 @@ fn gpu_counts(source: &str) -> Counts {
         "tok_types",
         "tok_starts",
         "tok_lens",
+        "haystack",
         Expr::u32(tok_count as u32),
         "out_ops",
         "out_counts",
@@ -185,6 +145,7 @@ fn gpu_counts(source: &str) -> Counts {
             tok_types.clone(),
             tok_starts.clone(),
             tok_lens.clone(),
+            pack_source(source),
             zeroed_u32_words(tok_count.saturating_mul(GO_SPAN_RECORD_WORDS as usize)),
             zeroed_u32_words(1),
         ],
@@ -275,12 +236,82 @@ fn fixture_files() -> Vec<PathBuf> {
     files
 }
 
+/// Every fixture's token stream is strictly increasing in source position.
+///
+/// This is the property the Go frontend silently lacked. The lexer used to
+/// allocate slots with `atomicAdd`, so tokens came back in arrival order, and
+/// every extractor that reads `tok_types[t + 1]` as "the next token in the
+/// source" was pattern-matching over a shuffled stream. Nothing checked
+/// ordering, so the only symptom was wrong counts in the parity test below,
+/// which reads like a fixture problem rather than a tokenizer problem.
+///
+/// Strictly increasing, not merely non-decreasing: two tokens cannot start at
+/// the same byte, so a repeat means one source position emitted twice.
+#[test]
+fn every_fixture_tokenizes_in_strictly_increasing_source_order() {
+    for path in fixture_files() {
+        let source = fs::read_to_string(&path).expect("fixture source");
+        let tokens = tokenize(&source);
+        let (tok_starts, tok_count) = (tokens.starts, tokens.count);
+        let starts = decode_u32_words(&tok_starts);
+        assert!(tok_count > 0, "{}: no tokens", path.display());
+
+        for index in 1..tok_count {
+            assert!(
+                starts[index] > starts[index - 1],
+                "{}: token {index} starts at {} but token {} starts at {}; the stream is not in \
+                 source order",
+                path.display(),
+                starts[index],
+                index - 1,
+                starts[index - 1]
+            );
+        }
+        assert!(
+            (starts[tok_count - 1] as usize) < source.len(),
+            "{}: the last token starts past the end of the source",
+            path.display()
+        );
+    }
+}
+
+/// The first token of every fixture is the `package` keyword's identifier.
+///
+/// A cheap, very direct check that source order actually holds at the front of
+/// the stream. Under the old atomic compaction the first slot held whichever
+/// lane won the counter, which in practice was punctuation from the middle of
+/// the file even though every fixture begins `package <name>`.
+#[test]
+fn the_first_token_of_every_fixture_is_the_package_keyword() {
+    for path in fixture_files() {
+        let source = fs::read_to_string(&path).expect("fixture source");
+        let tokens = tokenize(&source);
+        let (tok_types, tok_starts, tok_lens, tok_count) =
+            (tokens.types, tokens.starts, tokens.lens, tokens.count);
+        assert!(tok_count > 0, "{}: no tokens", path.display());
+
+        let start = decode_u32_words(&tok_starts)[0] as usize;
+        let len = decode_u32_words(&tok_lens)[0] as usize;
+        let kind = decode_u32_words(&tok_types)[0];
+        assert_eq!(
+            &source[start..start + len],
+            "package",
+            "{}: the first token must be the package keyword, got type {kind} at byte {start}",
+            path.display()
+        );
+    }
+}
+
 #[test]
 fn go_frontend_corpus_meets_parse_success_and_count_parity() {
     let files = fixture_files();
     assert!(!files.is_empty(), "Go fixture corpus must not be empty");
 
+    // Collect every mismatch before failing. Asserting inside the loop stopped
+    // at the first file, which hid that the whole corpus was affected and made
+    // the defect look fixture-specific.
     let mut successes = 0usize;
+    let mut drift = Vec::new();
     for path in &files {
         let source = fs::read_to_string(path).expect("fixture source");
         let gpu = gpu_counts(&source);
@@ -288,8 +319,20 @@ fn go_frontend_corpus_meets_parse_success_and_count_parity() {
         if gpu.packages > 0 && gpu.decls > 0 {
             successes += 1;
         }
-        assert_eq!(gpu, reference, "count drift for {}", path.display());
+        if gpu != reference {
+            drift.push(format!(
+                "  {}:\n    gpu       {gpu:?}\n    reference {reference:?}",
+                path.display()
+            ));
+        }
     }
+    assert!(
+        drift.is_empty(),
+        "count drift against tree-sitter in {} of {} fixtures:\n{}",
+        drift.len(),
+        files.len(),
+        drift.join("\n")
+    );
 
     let success_rate = (successes as f64 / files.len() as f64) * 100.0;
     assert!(

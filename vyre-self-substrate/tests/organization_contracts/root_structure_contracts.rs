@@ -60,4 +60,3 @@ fn every_domain_module_is_declared_by_its_domain_mod_file() {
         }
     }
 }
-

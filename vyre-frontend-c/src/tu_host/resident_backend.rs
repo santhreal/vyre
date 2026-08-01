@@ -15,7 +15,7 @@ impl gpu_pipeline::GpuDispatcher for CachedResidentDispatcher<'_> {
         inputs: &[Vec<u8>],
     ) -> Result<Vec<Vec<u8>>, String> {
         let refs: Vec<&[u8]> = inputs.iter().map(Vec::as_slice).collect();
-        self.dispatch_refs(program, &refs)
+        self.dispatch_borrowed(program, &refs)
     }
 
     fn dispatch_borrowed(
@@ -39,16 +39,6 @@ impl gpu_pipeline::GpuDispatcher for CachedResidentDispatcher<'_> {
 }
 
 impl CachedResidentDispatcher<'_> {
-    fn dispatch_refs(
-        &self,
-        program: &vyre::ir::Program,
-        inputs: &[&[u8]],
-    ) -> Result<Vec<Vec<u8>>, String> {
-        let mut outputs = Vec::new();
-        self.dispatch_refs_into(program, inputs, &mut outputs)?;
-        Ok(outputs)
-    }
-
     fn dispatch_refs_into(
         &self,
         program: &vyre::ir::Program,

@@ -38,6 +38,115 @@ impl BodyCtx<'_> {
         Ok(())
     }
 
+    /// True when `id` was proven grid-uniform.
+    ///
+    /// An unknown id answers `false`. The set only ever records positive
+    /// proofs, so "absent" means "not proven" and every caller stays
+    /// conservative.
+    pub(super) fn is_uniform(&self, id: u32) -> bool {
+        self.uniform_results.contains(&id)
+    }
+
+    fn operands_uniform(&self, operands: &[u32]) -> bool {
+        operands.iter().all(|id| self.is_uniform(*id))
+    }
+
+    /// Record whether this op's result is identical in every invocation of the
+    /// grid.
+    ///
+    /// Called for every op as it is emitted. The descriptor is SSA-ordered, so
+    /// each operand is already classified when its consumer arrives.
+    ///
+    /// Only [`Self::emit_return`] consumes this, and it needs a proof rather
+    /// than a guess, so every unlisted op kind is treated as varying. Being
+    /// wrong in the permissive direction here produces a divergent branch and a
+    /// hung kernel; being wrong in the conservative direction produces a
+    /// compile-time refusal, so the default is deliberately `false`.
+    pub(super) fn record_uniformity(&mut self, op: &KernelOp) {
+        let Some(result) = op.result else {
+            return;
+        };
+        let uniform = match &op.kind {
+            // Compile-time constants and per-launch invariants. `BufferLength`
+            // and `SubgroupSize` are fixed for the whole dispatch.
+            KernelOpKind::Literal | KernelOpKind::BufferLength | KernelOpKind::SubgroupSize => true,
+            // Pure value computation: uniform exactly when every input is.
+            // `operands` for these kinds are all result ids.
+            KernelOpKind::Copy
+            | KernelOpKind::Cast { .. }
+            | KernelOpKind::UnOpKind(_)
+            | KernelOpKind::BinOpKind(_)
+            | KernelOpKind::Fma
+            | KernelOpKind::Select => self.operands_uniform(&op.operands),
+            // Global and constant memory is one address space for the entire
+            // grid, so every invocation reading a grid-uniform address observes
+            // the same value. Operand 0 is an inline binding slot, not a result
+            // id, so only the index (operand 1) is classified.
+            //
+            // This inherits the IR's requirement that a value steering control
+            // flow is not concurrently written without synchronization, which is
+            // the same requirement that makes the source-level conditional
+            // meaningful at all; a grid barrier before the read is what
+            // establishes it in practice.
+            //
+            // `LoadShared` is deliberately absent: shared memory is per-CTA, so
+            // equal addresses in different CTAs are different storage and the
+            // value is not grid-uniform.
+            KernelOpKind::LoadGlobal | KernelOpKind::LoadConstant => op
+                .operands
+                .get(1)
+                .is_some_and(|index| self.is_uniform(*index)),
+            // Everything else is unproven, which includes every invocation id
+            // (`LocalInvocationId`, `GlobalInvocationId`, `SubgroupLocalId`),
+            // `WorkgroupId` (uniform within a CTA but NOT across the grid, and a
+            // whole CTA leaving early strands the others at a grid barrier),
+            // every subgroup op, `LoadShared`, and `Atomic` (which returns the
+            // pre-op value and so differs between the invocations that race).
+            _ => false,
+        };
+        if uniform {
+            self.uniform_results.insert(result);
+        }
+    }
+
+    /// Lower `Node::Return` to a branch to the kernel's single exit label.
+    ///
+    /// `finish_with_return` emits `$L_exit:` followed by `ret;` once at the end
+    /// of the kernel, and `Trap` already branches there, so the target and the
+    /// precedent both exist.
+    ///
+    /// REFUSES when control flow reached this point through a condition that was
+    /// not proven grid-uniform. Emitting the branch then would let some
+    /// invocations leave while others continue, and any later `bar.sync` or
+    /// cooperative grid barrier would wait forever on invocations that already
+    /// returned. A compile-time refusal is loud and findable; a hang is neither.
+    ///
+    /// It must also never silently skip the op. This arm previously emitted
+    /// nothing at all, which made every nested `Return` in the tree a no-op:
+    /// programs kept running past their exit, which cost work without changing
+    /// answers and so stayed invisible to every correctness test.
+    pub(super) fn emit_return(&mut self) -> Result<(), EmitError> {
+        if self.nonuniform_cond_depth > 0 {
+            return Err(EmitError::InvalidDescriptor(
+                "Node::Return under a condition that is not provably uniform across the grid \
+                 cannot be lowered to PTX. A Return becomes `bra $L_exit`, so if only some \
+                 invocations take it, the ones that left can never reach a later `bar.sync` or \
+                 cooperative grid barrier and the ones that stayed block on them forever. This \
+                 emitter proves uniformity only for values built from literals, buffer lengths, \
+                 the subgroup size, and loads from global or constant memory at a uniform index; \
+                 anything derived from an invocation id, a workgroup id, a subgroup op, shared \
+                 memory, or an atomic's returned value is treated as varying. Fix: gate the exit \
+                 on a grid-uniform value (the established shape is a flag word written with \
+                 `atomic_or` and read back after a barrier, as \
+                 vyre_primitives::fixpoint::persistent_fixpoint::persistent_fixpoint_grid does), \
+                 or express the per-invocation case as a guarded body instead of an early return."
+                    .to_string(),
+            ));
+        }
+        let _ = writeln!(self.text, "    bra $L_exit;");
+        Ok(())
+    }
+
     pub(super) fn emit_structured_if_then(
         &mut self,
         body: &KernelBody,
@@ -63,7 +172,15 @@ impl BodyCtx<'_> {
         let end_label = self.alloc_label("if_end");
         let _ = writeln!(self.text, "    @!{branch_pred} bra {end_label};");
         if let Some(child) = body.child_bodies.get(body_id as usize) {
-            self.emit_body(child)?;
+            let divergent = !self.is_uniform(cond_id);
+            if divergent {
+                self.nonuniform_cond_depth = self.nonuniform_cond_depth.saturating_add(1);
+            }
+            let emitted = self.emit_body(child);
+            if divergent {
+                self.nonuniform_cond_depth = self.nonuniform_cond_depth.saturating_sub(1);
+            }
+            emitted?;
         }
         let _ = writeln!(self.text, "{end_label}:");
         Ok(())
@@ -105,14 +222,25 @@ impl BodyCtx<'_> {
         let else_label = self.alloc_label("if_else");
         let end_label = self.alloc_label("if_end");
         let _ = writeln!(self.text, "    @!{branch_pred} bra {else_label};");
-        if let Some(child) = body.child_bodies.get(then_id as usize) {
-            self.emit_body(child)?;
+        let divergent = !self.is_uniform(cond_id);
+        if divergent {
+            self.nonuniform_cond_depth = self.nonuniform_cond_depth.saturating_add(1);
         }
-        let _ = writeln!(self.text, "    bra {end_label};");
-        let _ = writeln!(self.text, "{else_label}:");
-        if let Some(child) = body.child_bodies.get(else_id as usize) {
-            self.emit_body(child)?;
+        let arms = (|| -> Result<(), EmitError> {
+            if let Some(child) = body.child_bodies.get(then_id as usize) {
+                self.emit_body(child)?;
+            }
+            let _ = writeln!(self.text, "    bra {end_label};");
+            let _ = writeln!(self.text, "{else_label}:");
+            if let Some(child) = body.child_bodies.get(else_id as usize) {
+                self.emit_body(child)?;
+            }
+            Ok(())
+        })();
+        if divergent {
+            self.nonuniform_cond_depth = self.nonuniform_cond_depth.saturating_sub(1);
         }
+        arms?;
         let _ = writeln!(self.text, "{end_label}:");
         Ok(())
     }
@@ -175,7 +303,20 @@ impl BodyCtx<'_> {
         let _ = writeln!(self.text, "    @{cond_reg} bra {exit};");
         self.loop_indices.insert(loop_var.into(), var_reg);
         if let Some(child) = body.child_bodies.get(body_id as usize) {
-            self.emit_body(child)?;
+            // A trip count built from non-uniform bounds diverges: invocations
+            // leave the loop on different iterations, so a `Return` in the body
+            // is reached by only some of them even with no conditional in sight.
+            let divergent = !(self.is_uniform(lo_id) && self.is_uniform(hi_id));
+            if divergent {
+                self.nonuniform_cond_depth = self.nonuniform_cond_depth.saturating_add(1);
+            }
+            self.grid_sync_loop_depth = self.grid_sync_loop_depth.saturating_add(1);
+            let emitted = self.emit_body(child);
+            self.grid_sync_loop_depth = self.grid_sync_loop_depth.saturating_sub(1);
+            if divergent {
+                self.nonuniform_cond_depth = self.nonuniform_cond_depth.saturating_sub(1);
+            }
+            emitted?;
         }
         self.loop_indices.remove(loop_var);
         let _ = writeln!(self.text, "    add.u32    {var_reg}, {var_reg}, {one_reg};");

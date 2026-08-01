@@ -1,4 +1,6 @@
 //! Test: dataflow-analysis loop rewrites.
+mod dataflow_loop_support;
+use dataflow_loop_support::store_body;
 use vyre_foundation::ir::DataType;
 use vyre_lower::{
     analyses::{
@@ -78,18 +80,6 @@ fn literals() -> Vec<LiteralValue> {
         LiteralValue::U32(13),
         LiteralValue::U32(17),
     ]
-}
-
-fn store_body(index: u32, value: u32) -> KernelBody {
-    KernelBody {
-        ops: vec![KernelOp {
-            kind: KernelOpKind::StoreGlobal,
-            operands: vec![0, index, value],
-            result: None,
-        }],
-        child_bodies: vec![],
-        literals: vec![],
-    }
 }
 
 fn alias_and_reaching() -> (AliasFactSet, ReachingDefFactSet) {

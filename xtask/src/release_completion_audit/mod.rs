@@ -61,6 +61,7 @@ pub(crate) const MAX_RELEASE_AUDIT_TEXT_BYTES: u64 = 16_777_216;
 mod config;
 mod paths;
 mod semantics;
+pub(crate) use paths::markdown_line_is_release_rule_text;
 
 use config::{parse_args, release_checklist};
 use paths::{

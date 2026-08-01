@@ -289,31 +289,25 @@ pub(super) fn prepare_skewed_csr_queue_materialize_step(
 pub(super) fn graph_queue_materialize_sequence_fingerprint(
     prepared: &GraphCsrSkewedQueuePrepared,
 ) -> [u8; 32] {
-    let mut hasher = blake3::Hasher::new();
-    hasher.update(b"vyre-bench:primitives.graph.csr_skewed_queue_materialize.sequence:v2");
-    for fingerprint in [
-        prepared.reset_program.fingerprint(),
-        prepared.queue_program.fingerprint(),
-        prepared.traverse_program.fingerprint(),
-    ] {
-        hasher.update(&fingerprint);
-    }
-    if let Some(program) = prepared.high_traverse_program.as_ref() {
-        hasher.update(&program.fingerprint());
-    }
-    for value in QUEUE_RESET_GRID
-        .into_iter()
-        .chain(prepared.queue_program.workgroup_size())
-        .chain(prepared.traverse_grid)
-        .chain(prepared.high_traverse_grid)
-        .chain([
+    crate::cases::queue_stage::queue_materialize_sequence_fingerprint(
+        b"vyre-bench:primitives.graph.csr_skewed_queue_materialize.sequence:v2",
+        [
+            &prepared.reset_program,
+            &prepared.queue_program,
+            &prepared.traverse_program,
+        ],
+        prepared.high_traverse_program.as_ref(),
+        [
+            QUEUE_RESET_GRID,
+            prepared.queue_program.workgroup_size(),
+            prepared.traverse_grid,
+            prepared.high_traverse_grid,
+        ],
+        &[
             prepared.high_degree_queue_capacity,
             u32::from(prepared.split_high_degree_traverse),
-        ])
-    {
-        hasher.update(&value.to_le_bytes());
-    }
-    *hasher.finalize().as_bytes()
+        ],
+    )
 }
 
 struct GraphQueueTraversePlan {

@@ -338,6 +338,13 @@ pub use flows_to_with_sanitizer::flows_to_with_sanitizer;
 // Gated off with `external_ifds` above (incomplete integration; missing the
 // `external_dataflow_engine` crate). Restore to `#[cfg(feature = "security")]`
 // once that crate is wired into the workspace.
+#[cfg(feature = "external_ifds_engine")]
+pub use external_ifds::{
+    route_security_taint_through_external_ifds, security_witness_path_from_external_path,
+    ExternalIfdsSecurityBuffers, ExternalIfdsSecurityDispatch, ExternalIfdsSecurityRouteError,
+    SecurityFindingWitnessPath, SecurityWitnessPathError, SecurityWitnessStatement,
+    EXTERNAL_IFDS_SECURITY_BACKEND_ID,
+};
 pub use format_string_check::format_string_check;
 pub use integer_overflow_arith::integer_overflow_arith;
 pub use label_by_family::label_by_family;
@@ -368,13 +375,6 @@ pub use taint_flow::taint_flow;
 pub use taint_kill::taint_kill;
 pub use taint_pollution::taint_pollution;
 pub use unchecked_return::unchecked_return;
-#[cfg(feature = "external_ifds_engine")]
-pub use external_ifds::{
-    route_security_taint_through_external_ifds, security_witness_path_from_external_path,
-    ExternalIfdsSecurityBuffers, ExternalIfdsSecurityDispatch, ExternalIfdsSecurityRouteError,
-    SecurityFindingWitnessPath, SecurityWitnessPathError, SecurityWitnessStatement,
-    EXTERNAL_IFDS_SECURITY_BACKEND_ID,
-};
 pub use xss_escape::xss_escape;
 
 /// Validate that a security composition's input shape + buffer names

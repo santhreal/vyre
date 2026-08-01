@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
-use super::{ClassifiedTokens, DirectivePayload};
+use super::{trim_ascii, ClassifiedTokens, DirectivePayload};
 
 /// Include acceleration reason.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -138,19 +138,5 @@ fn file_include_guard(payloads: &[DirectivePayload]) -> Option<&[u8]> {
 }
 
 fn directive_row_bytes(classified: &ClassifiedTokens, idx: usize) -> Option<&[u8]> {
-    let start = *classified.tok_starts.get(idx)? as usize;
-    let len = *classified.tok_lens.get(idx)? as usize;
-    classified.source.get(start..start.checked_add(len)?)
-}
-
-fn trim_ascii(bytes: &[u8]) -> &[u8] {
-    let mut start = 0_usize;
-    let mut end = bytes.len();
-    while start < end && bytes[start].is_ascii_whitespace() {
-        start += 1;
-    }
-    while end > start && bytes[end - 1].is_ascii_whitespace() {
-        end -= 1;
-    }
-    &bytes[start..end]
+    super::classified_token_bytes_opt(classified, idx)
 }

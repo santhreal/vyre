@@ -341,9 +341,11 @@ fn uniformly_high_degree_sparse_queue_step_keeps_global_strided_consumer() {
     assert_eq!(dispatcher.last_step_handles().len(), 3);
     assert_eq!(
         dispatcher.last_step_grids()[2],
-        Some(vyre_primitives::graph::csr_queue_strided::csr_queue_strided_forward_dispatch_grid(
-            queue_slots
-        )),
+        Some(
+            vyre_primitives::graph::csr_queue_strided::csr_queue_strided_forward_dispatch_grid(
+                queue_slots
+            )
+        ),
         "uniformly high-degree sparse queue traversal should keep the single row-strided consumer"
     );
 }

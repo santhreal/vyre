@@ -23,13 +23,7 @@ pub(super) fn regular_parallel_byte_at(haystack: &str, haystack_len: u32, index:
 }
 
 fn regular_parallel_space_expr(value: Expr) -> Expr {
-    Expr::or(
-        byte_eq(value.clone(), b' '),
-        Expr::or(
-            byte_eq(value.clone(), b'\n'),
-            Expr::or(byte_eq(value.clone(), b'\r'), byte_eq(value, b'\t')),
-        ),
-    )
+    crate::parsing::core::ascii_whitespace_expr(value)
 }
 
 fn regular_parallel_operator_tail_expr(haystack: &str, haystack_len: u32, index: Expr) -> Expr {

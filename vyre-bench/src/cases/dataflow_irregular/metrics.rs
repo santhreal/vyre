@@ -2,6 +2,29 @@ use crate::api::metric::MetricPoint;
 
 use super::IfdsSkewedStats;
 
+fn push_metric(metrics: &mut Vec<MetricPoint>, name: &str, value: u64) {
+    metrics.push(MetricPoint {
+        name: name.to_string(),
+        value,
+    });
+}
+
+fn push_speedup_metric(
+    metrics: &mut Vec<MetricPoint>,
+    name: &str,
+    baseline_wall_ns: u64,
+    wall_ns: u64,
+) {
+    if wall_ns > 0 {
+        push_metric(
+            metrics,
+            name,
+            (u128::from(baseline_wall_ns) * 1000 / u128::from(wall_ns)).min(u128::from(u64::MAX))
+                as u64,
+        );
+    }
+}
+
 pub(super) fn ifds_skewed_metric_points(
     stats: IfdsSkewedStats,
     baseline_wall_ns: u64,
@@ -10,21 +33,22 @@ pub(super) fn ifds_skewed_metric_points(
     workgroup_size_x: u32,
 ) -> Vec<MetricPoint> {
     let mut metrics = ifds_skewed_baseline_metric_points(stats);
-    metrics.push(MetricPoint {
-        name: "dataflow_ifds_skewed_resident_buffers".to_string(),
-        value: u64::from(resident_used),
-    });
-    metrics.push(MetricPoint {
-        name: "dataflow_ifds_skewed_workgroup_size_x".to_string(),
-        value: u64::from(workgroup_size_x),
-    });
-    if wall_ns > 0 {
-        metrics.push(MetricPoint {
-            name: "dataflow_ifds_skewed_speedup_x1000".to_string(),
-            value: (u128::from(baseline_wall_ns) * 1000 / u128::from(wall_ns))
-                .min(u128::from(u64::MAX)) as u64,
-        });
-    }
+    push_metric(
+        &mut metrics,
+        "dataflow_ifds_skewed_resident_buffers",
+        u64::from(resident_used),
+    );
+    push_metric(
+        &mut metrics,
+        "dataflow_ifds_skewed_workgroup_size_x",
+        u64::from(workgroup_size_x),
+    );
+    push_speedup_metric(
+        &mut metrics,
+        "dataflow_ifds_skewed_speedup_x1000",
+        baseline_wall_ns,
+        wall_ns,
+    );
     metrics
 }
 
@@ -86,60 +110,70 @@ pub(super) fn ifds_queue_metric_points(
     reset_grid_lanes: u32,
 ) -> Vec<MetricPoint> {
     let mut metrics = ifds_queue_baseline_metric_points(stats, queue_capacity);
-    metrics.push(MetricPoint {
-        name: "dataflow_ifds_queue_resident_buffers".to_string(),
-        value: u64::from(resident_used),
-    });
-    metrics.push(MetricPoint {
-        name: "dataflow_ifds_queue_workgroup_size_x".to_string(),
-        value: u64::from(workgroup_size_x),
-    });
-    metrics.push(MetricPoint {
-        name: "dataflow_ifds_queue_parallel_materializer".to_string(),
-        value: u64::from(parallel_materializer),
-    });
-    metrics.push(MetricPoint {
-        name: "dataflow_ifds_queue_row_strided_traverse".to_string(),
-        value: u64::from(row_strided_traverse),
-    });
-    metrics.push(MetricPoint {
-        name: "dataflow_ifds_queue_split_high_degree".to_string(),
-        value: u64::from(split_high_degree_traverse),
-    });
-    metrics.push(MetricPoint {
-        name: "dataflow_ifds_queue_high_degree_threshold".to_string(),
-        value: u64::from(high_degree_threshold),
-    });
-    metrics.push(MetricPoint {
-        name: "dataflow_ifds_queue_fused_frontier_clear".to_string(),
-        value: u64::from(fused_frontier_clear),
-    });
-    metrics.push(MetricPoint {
-        name: "dataflow_ifds_queue_reset_grid_lanes".to_string(),
-        value: u64::from(reset_grid_lanes),
-    });
-    metrics.push(MetricPoint {
-        name: "dataflow_ifds_queue_high_degree_capacity".to_string(),
-        value: u64::from(high_degree_queue_capacity),
-    });
-    metrics.push(MetricPoint {
-        name: "dataflow_ifds_queue_traverse_logical_lanes".to_string(),
-        value: traverse_logical_lanes,
-    });
+    push_metric(
+        &mut metrics,
+        "dataflow_ifds_queue_resident_buffers",
+        u64::from(resident_used),
+    );
+    push_metric(
+        &mut metrics,
+        "dataflow_ifds_queue_workgroup_size_x",
+        u64::from(workgroup_size_x),
+    );
+    push_metric(
+        &mut metrics,
+        "dataflow_ifds_queue_parallel_materializer",
+        u64::from(parallel_materializer),
+    );
+    push_metric(
+        &mut metrics,
+        "dataflow_ifds_queue_row_strided_traverse",
+        u64::from(row_strided_traverse),
+    );
+    push_metric(
+        &mut metrics,
+        "dataflow_ifds_queue_split_high_degree",
+        u64::from(split_high_degree_traverse),
+    );
+    push_metric(
+        &mut metrics,
+        "dataflow_ifds_queue_high_degree_threshold",
+        u64::from(high_degree_threshold),
+    );
+    push_metric(
+        &mut metrics,
+        "dataflow_ifds_queue_fused_frontier_clear",
+        u64::from(fused_frontier_clear),
+    );
+    push_metric(
+        &mut metrics,
+        "dataflow_ifds_queue_reset_grid_lanes",
+        u64::from(reset_grid_lanes),
+    );
+    push_metric(
+        &mut metrics,
+        "dataflow_ifds_queue_high_degree_capacity",
+        u64::from(high_degree_queue_capacity),
+    );
+    push_metric(
+        &mut metrics,
+        "dataflow_ifds_queue_traverse_logical_lanes",
+        traverse_logical_lanes,
+    );
     if traverse_logical_lanes > 0 {
-        metrics.push(MetricPoint {
-            name: "dataflow_ifds_queue_traverse_lane_reduction_x1000".to_string(),
-            value: (u128::from(stats.nodes) * 1000 / u128::from(traverse_logical_lanes))
+        push_metric(
+            &mut metrics,
+            "dataflow_ifds_queue_traverse_lane_reduction_x1000",
+            (u128::from(stats.nodes) * 1000 / u128::from(traverse_logical_lanes))
                 .min(u128::from(u64::MAX)) as u64,
-        });
+        );
     }
-    if wall_ns > 0 {
-        metrics.push(MetricPoint {
-            name: "dataflow_ifds_queue_speedup_x1000".to_string(),
-            value: (u128::from(baseline_wall_ns) * 1000 / u128::from(wall_ns))
-                .min(u128::from(u64::MAX)) as u64,
-        });
-    }
+    push_speedup_metric(
+        &mut metrics,
+        "dataflow_ifds_queue_speedup_x1000",
+        baseline_wall_ns,
+        wall_ns,
+    );
     metrics
 }
 
@@ -148,16 +182,18 @@ pub(super) fn ifds_queue_baseline_metric_points(
     queue_capacity: u32,
 ) -> Vec<MetricPoint> {
     let mut metrics = ifds_skewed_baseline_metric_points(stats);
-    metrics.push(MetricPoint {
-        name: "dataflow_ifds_queue_capacity".to_string(),
-        value: u64::from(queue_capacity),
-    });
+    push_metric(
+        &mut metrics,
+        "dataflow_ifds_queue_capacity",
+        u64::from(queue_capacity),
+    );
     if queue_capacity > 0 {
-        metrics.push(MetricPoint {
-            name: "dataflow_ifds_queue_lane_reduction_x1000".to_string(),
-            value: (u128::from(stats.nodes) * 1000 / u128::from(queue_capacity))
-                .min(u128::from(u64::MAX)) as u64,
-        });
+        push_metric(
+            &mut metrics,
+            "dataflow_ifds_queue_lane_reduction_x1000",
+            (u128::from(stats.nodes) * 1000 / u128::from(queue_capacity)).min(u128::from(u64::MAX))
+                as u64,
+        );
     }
     metrics
 }
@@ -183,29 +219,32 @@ pub(super) fn ifds_closure_metric_points(
         dispatch_iterations,
         max_iterations,
     );
-    metrics.push(MetricPoint {
-        name: "dataflow_ifds_closure_resident_buffers".to_string(),
-        value: u64::from(resident_used),
-    });
-    metrics.push(MetricPoint {
-        name: "dataflow_ifds_closure_resident_reset_bytes".to_string(),
-        value: resident_reset_bytes,
-    });
-    metrics.push(MetricPoint {
-        name: "dataflow_ifds_closure_device_reset_sequence".to_string(),
-        value: u64::from(device_reset_sequence),
-    });
-    metrics.push(MetricPoint {
-        name: "dataflow_ifds_closure_workgroup_size_x".to_string(),
-        value: u64::from(workgroup_size_x),
-    });
-    if wall_ns > 0 {
-        metrics.push(MetricPoint {
-            name: "dataflow_ifds_closure_speedup_x1000".to_string(),
-            value: (u128::from(baseline_wall_ns) * 1000 / u128::from(wall_ns))
-                .min(u128::from(u64::MAX)) as u64,
-        });
-    }
+    push_metric(
+        &mut metrics,
+        "dataflow_ifds_closure_resident_buffers",
+        u64::from(resident_used),
+    );
+    push_metric(
+        &mut metrics,
+        "dataflow_ifds_closure_resident_reset_bytes",
+        resident_reset_bytes,
+    );
+    push_metric(
+        &mut metrics,
+        "dataflow_ifds_closure_device_reset_sequence",
+        u64::from(device_reset_sequence),
+    );
+    push_metric(
+        &mut metrics,
+        "dataflow_ifds_closure_workgroup_size_x",
+        u64::from(workgroup_size_x),
+    );
+    push_speedup_metric(
+        &mut metrics,
+        "dataflow_ifds_closure_speedup_x1000",
+        baseline_wall_ns,
+        wall_ns,
+    );
     metrics
 }
 

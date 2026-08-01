@@ -1,3 +1,4 @@
+use crate::pipeline::wgpu_launch_limits;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use vyre_driver::validation::LaunchGeometryLimits;
@@ -228,25 +229,7 @@ impl WgpuBackend {
         inputs: &[&[u8]],
         config: &vyre_driver::DispatchConfig,
     ) -> Result<WgpuPendingDispatch, vyre_driver::BackendError> {
-        let started = Instant::now();
-        self.enforce_config_caps(config)?;
-        self.validate_with_cache(program)?;
-        if vyre_driver::grid_sync::contains_grid_sync(program)
-            && !vyre_driver::VyreBackend::supports_grid_sync(self)
-        {
-            return Ok(WgpuPendingDispatch {
-                kind: WgpuPendingKind::Ready(
-                    vyre_driver::grid_sync::dispatch_with_grid_sync_split(
-                        self, program, inputs, config,
-                    )?,
-                ),
-                started,
-                timeout: config.timeout,
-                prefetch: None,
-                launch_feedback: None,
-            });
-        }
-        self.dispatch_borrowed_async_validated(program, inputs, config, started, false)
+        self.dispatch_borrowed_async_mode(program, inputs, config, false)
     }
 
     pub(crate) fn dispatch_borrowed_async_timed(
@@ -254,6 +237,16 @@ impl WgpuBackend {
         program: &Program,
         inputs: &[&[u8]],
         config: &vyre_driver::DispatchConfig,
+    ) -> Result<WgpuPendingDispatch, vyre_driver::BackendError> {
+        self.dispatch_borrowed_async_mode(program, inputs, config, true)
+    }
+
+    fn dispatch_borrowed_async_mode(
+        &self,
+        program: &Program,
+        inputs: &[&[u8]],
+        config: &vyre_driver::DispatchConfig,
+        capture_timing: bool,
     ) -> Result<WgpuPendingDispatch, vyre_driver::BackendError> {
         let started = Instant::now();
         self.enforce_config_caps(config)?;
@@ -273,7 +266,7 @@ impl WgpuBackend {
                 launch_feedback: None,
             });
         }
-        self.dispatch_borrowed_async_validated(program, inputs, config, started, true)
+        self.dispatch_borrowed_async_validated(program, inputs, config, started, capture_timing)
     }
 
     fn dispatch_borrowed_async_validated(
@@ -368,20 +361,6 @@ fn wgpu_launch_feedback(
         element_count,
         workgroup: pipeline.workgroup_shape,
     })
-}
-
-fn wgpu_launch_limits(device: &wgpu::Device) -> LaunchGeometryLimits {
-    let limits = device.limits();
-    LaunchGeometryLimits {
-        backend: "wgpu",
-        max_threads_per_block: limits.max_compute_invocations_per_workgroup,
-        max_block_dim: [
-            limits.max_compute_workgroup_size_x,
-            limits.max_compute_workgroup_size_y,
-            limits.max_compute_workgroup_size_z,
-        ],
-        max_grid_dim: [limits.max_compute_workgroups_per_dimension; 3],
-    }
 }
 
 struct PipelinePrefetch {

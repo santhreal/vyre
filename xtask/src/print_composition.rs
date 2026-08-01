@@ -1,4 +1,4 @@
-//! `cargo_full run --bin xtask -- print-composition <op_id>`  -  walk an op's Program
+//! `cargo xtask print-composition <op_id>`  -  walk an op's Program
 //! body and print its Region decomposition chain.
 //!
 //! Spec: `docs/region-chain.md` (Phase J).

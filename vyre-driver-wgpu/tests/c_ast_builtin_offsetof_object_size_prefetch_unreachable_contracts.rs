@@ -12,8 +12,8 @@
 mod c_ast_gpu_parity_support;
 
 use c_ast_gpu_parity_support::{
-    assert_full_pipeline_parity, build_fixture, row_indices, run_gpu_pg_lower, word_at, Fixture,
-    FixtureToken, VAST_STRIDE_U32,
+    assert_full_pipeline_parity, build_fixture, fixture_builtin_unreachable, row_indices,
+    run_gpu_pg_lower, word_at, Fixture, FixtureToken, VAST_STRIDE_U32,
 };
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::lower::reference_ast_to_pg_nodes;
@@ -134,22 +134,6 @@ fn fixture_builtin_prefetch() -> Fixture {
         FixtureToken::new("0", TOK_INTEGER),
         FixtureToken::new(",", TOK_COMMA),
         FixtureToken::new("3", TOK_INTEGER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-    ])
-}
-
-/// void f() { __builtin_unreachable(); }
-fn fixture_builtin_unreachable() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("__builtin_unreachable", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
         FixtureToken::new(")", TOK_RPAREN),
         FixtureToken::new(";", TOK_SEMICOLON),
         FixtureToken::new("}", TOK_RBRACE),

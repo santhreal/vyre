@@ -2,23 +2,17 @@
 
 use vyre_grammar_gen::{
     build_c11_lexer_dfa, build_c11_lexer_dfa_for_host,
-    decode_dfa_from_bytes, decode_lr_from_bytes,
-    kinds_blake3,
-    lex_c11_max_munch_kinds,
-    preprocess_c_host,
-    validate_lr_table,
+    c11_lexer::{
+        C11_PATTERNS, TOK_AND, TOK_ARROW, TOK_COLON, TOK_COMMA, TOK_COMMENT, TOK_DEC, TOK_DOT,
+        TOK_ELLIPSIS, TOK_EQ, TOK_IDENTIFIER, TOK_IF, TOK_INC, TOK_INT, TOK_INTEGER, TOK_LBRACE,
+        TOK_LPAREN, TOK_NE, TOK_OR, TOK_QUESTION, TOK_RBRACE, TOK_RETURN, TOK_RPAREN,
+        TOK_SEMICOLON, TOK_STRUCT, TOK_WHITESPACE,
+    },
+    decode_dfa_from_bytes, decode_lr_from_bytes, kinds_blake3, lex_c11_max_munch_kinds,
+    lr::{Action, Production},
+    preprocess_c_host, validate_lr_table,
     wire::{BlobKind, PackedBlob, MAGIC, VERSION},
     DfaBuilder, LrBuilder,
-    c11_lexer::{
-        TOK_IDENTIFIER, TOK_INTEGER, TOK_WHITESPACE, TOK_COMMENT,
-        TOK_IF, TOK_INT, TOK_RETURN, TOK_STRUCT,
-        TOK_LPAREN, TOK_RPAREN, TOK_SEMICOLON, TOK_LBRACE, TOK_RBRACE,
-        TOK_EQ, TOK_NE,
-        TOK_AND, TOK_OR, TOK_INC, TOK_DEC, TOK_COMMA, TOK_ELLIPSIS,
-        TOK_ARROW, TOK_DOT, TOK_COLON, TOK_QUESTION,
-        C11_PATTERNS,
-    },
-    lr::{Action, Production},
 };
 
 // ---------------------------------------------------------------------------
@@ -142,10 +136,7 @@ fn lr_action_shift_zero() {
 
 #[test]
 fn lr_action_reduce_roundtrip() {
-    assert_eq!(
-        Action::unpack(Action::Reduce(7).pack()),
-        Action::Reduce(7)
-    );
+    assert_eq!(Action::unpack(Action::Reduce(7).pack()), Action::Reduce(7));
 }
 
 #[test]
@@ -162,7 +153,10 @@ fn lr_action_error_roundtrip() {
 fn lr_action_max_payload() {
     // The max payload for shift/reduce is 0x0FFF_FFFF
     let big = 0x0FFF_FFFFu32;
-    assert_eq!(Action::unpack(Action::Shift(big).pack()), Action::Shift(big));
+    assert_eq!(
+        Action::unpack(Action::Shift(big).pack()),
+        Action::Shift(big)
+    );
     assert_eq!(
         Action::unpack(Action::Reduce(big).pack()),
         Action::Reduce(big)
@@ -295,14 +289,18 @@ fn blob_kind_lr_tables_discriminant() {
 
 #[test]
 fn packed_blob_dfa_has_correct_magic() {
-    let dfa = DfaBuilder::new(2, 4).build().expect("empty pattern set must succeed");
+    let dfa = DfaBuilder::new(2, 4)
+        .build()
+        .expect("empty pattern set must succeed");
     let blob = PackedBlob::from_dfa(&dfa);
     assert_eq!(&blob.bytes[0..4], b"SGGC");
 }
 
 #[test]
 fn packed_blob_dfa_has_correct_version() {
-    let dfa = DfaBuilder::new(2, 4).build().expect("empty pattern set must succeed");
+    let dfa = DfaBuilder::new(2, 4)
+        .build()
+        .expect("empty pattern set must succeed");
     let blob = PackedBlob::from_dfa(&dfa);
     let ver = u16::from_le_bytes([blob.bytes[4], blob.bytes[5]]);
     assert_eq!(ver, 1);
@@ -310,7 +308,9 @@ fn packed_blob_dfa_has_correct_version() {
 
 #[test]
 fn packed_blob_dfa_has_correct_kind_byte() {
-    let dfa = DfaBuilder::new(2, 4).build().expect("empty pattern set must succeed");
+    let dfa = DfaBuilder::new(2, 4)
+        .build()
+        .expect("empty pattern set must succeed");
     let blob = PackedBlob::from_dfa(&dfa);
     let kind = u16::from_le_bytes([blob.bytes[6], blob.bytes[7]]);
     assert_eq!(kind, 0); // LexerDfa
@@ -318,7 +318,9 @@ fn packed_blob_dfa_has_correct_kind_byte() {
 
 #[test]
 fn packed_blob_dfa_kind_field_matches() {
-    let dfa = DfaBuilder::new(2, 4).build().expect("empty pattern set must succeed");
+    let dfa = DfaBuilder::new(2, 4)
+        .build()
+        .expect("empty pattern set must succeed");
     let blob = PackedBlob::from_dfa(&dfa);
     assert_eq!(blob.kind, BlobKind::LexerDfa);
 }
@@ -338,7 +340,9 @@ fn packed_blob_lr_kind_field_matches() {
 
 #[test]
 fn decode_dfa_roundtrips_zero_transitions() {
-    let dfa = DfaBuilder::new(1, 1).build().expect("empty pattern set must succeed");
+    let dfa = DfaBuilder::new(1, 1)
+        .build()
+        .expect("empty pattern set must succeed");
     let blob = PackedBlob::from_dfa(&dfa);
     let got = decode_dfa_from_bytes(&blob.bytes).expect("decode");
     assert_eq!(got.num_states, 1);
@@ -364,13 +368,21 @@ fn decode_lr_roundtrips_minimal() {
 #[test]
 fn c11_lexer_dfa_has_multiple_states() {
     let dfa = build_c11_lexer_dfa();
-    assert!(dfa.num_states > 1, "C11 DFA must have >1 states, got {}", dfa.num_states);
+    assert!(
+        dfa.num_states > 1,
+        "C11 DFA must have >1 states, got {}",
+        dfa.num_states
+    );
 }
 
 #[test]
 fn c11_lexer_dfa_for_host_has_multiple_states() {
     let dfa = build_c11_lexer_dfa_for_host();
-    assert!(dfa.num_states > 1, "host DFA must have >1 states, got {}", dfa.num_states);
+    assert!(
+        dfa.num_states > 1,
+        "host DFA must have >1 states, got {}",
+        dfa.num_states
+    );
 }
 
 #[test]

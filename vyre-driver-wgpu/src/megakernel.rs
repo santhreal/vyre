@@ -47,12 +47,12 @@ pub use batch::{
 pub use dispatch_plan::BatchDispatchPlan;
 #[cfg(feature = "megakernel-batch")]
 pub use dispatcher::{
-    BatchDispatchConfig, BatchDispatchReport, BatchDispatchSummary, BatchDispatchTelemetry,
-    BatchDispatcher, BatchHitWriter, CombinedDispatchSummary, CombinedDispatcher,
-    SegLenCalibration, SegLenMeasurement, TransitionWidth, DEFAULT_SEG_LEN_CANDIDATES,
-    WgpuScanBatchSegmentationError, WgpuScanBatchSegmentationEvidence,
-    WgpuScanBatchSegmentationRequest, WGPU_SCAN_BATCH_SEGMENTATION_SCHEMA_VERSION,
-    wgpu_scan_batch_segmentation_evidence,
+    wgpu_scan_batch_segmentation_evidence, BatchDispatchConfig, BatchDispatchReport,
+    BatchDispatchSummary, BatchDispatchTelemetry, BatchDispatcher, BatchHitWriter,
+    CombinedDispatchSummary, CombinedDispatcher, SegLenCalibration, SegLenMeasurement,
+    TransitionWidth, WgpuScanBatchSegmentationError, WgpuScanBatchSegmentationEvidence,
+    WgpuScanBatchSegmentationRequest, DEFAULT_SEG_LEN_CANDIDATES,
+    WGPU_SCAN_BATCH_SEGMENTATION_SCHEMA_VERSION,
 };
 
 thread_local! {
@@ -449,7 +449,8 @@ impl<'a> WgpuMegakernelDispatcher<'a> {
                 redundancy.total_redundant_ops,
                 "megakernel redundant operation count",
             )?,
-            published_items: WGPU_NUMERIC.usize_to_u64(item_count, "megakernel published item count")?,
+            published_items: WGPU_NUMERIC
+                .usize_to_u64(item_count, "megakernel published item count")?,
             lineage_items: if track_lineage {
                 WGPU_NUMERIC.usize_to_u64(item_count, "megakernel lineage item count")?
             } else {
@@ -779,13 +780,14 @@ fn occupancy_proxy_bps(
 }
 
 fn density_bps(numerator: u64, denominator: u64) -> u16 {
-    crate::numeric::WGPU_NUMERIC.ratio_basis_points_u64_wide(
-        numerator,
-        denominator.max(1),
-        0,
-        "megakernel occupancy density",
-    )
-    .min(10_000) as u16
+    crate::numeric::WGPU_NUMERIC
+        .ratio_basis_points_u64_wide(
+            numerator,
+            denominator.max(1),
+            0,
+            "megakernel occupancy density",
+        )
+        .min(10_000) as u16
 }
 
 fn ensure_empty_io_queue_bytes(bytes: &mut Vec<u8>) -> Result<(), BackendError> {
@@ -831,7 +833,8 @@ fn ensure_empty_debug_log_bytes(bytes: &mut Vec<u8>) -> Result<(), BackendError>
     let record_capacity = Megakernel::debug_record_capacity();
     let expected = Megakernel::debug_log_byte_len(record_capacity).ok_or_else(|| {
         BackendError::new(
-            "megakernel debug-log byte length overflowed usize. Fix: reduce debug record capacity.".to_string(),
+            "megakernel debug-log byte length overflowed usize. Fix: reduce debug record capacity."
+                .to_string(),
         )
     })?;
     if bytes.len() != expected {
@@ -1155,11 +1158,13 @@ mod tests {
 
     #[test]
     fn resident_input_upload_plan_covers_every_abi_slot_in_order() {
+        let owner = vyre_driver::ResidentOwner::new()
+            .expect("Fix: resident owner minting must succeed in tests");
         let resources = vec![
-            Resource::Resident(10),
-            Resource::Resident(11),
-            Resource::Resident(12),
-            Resource::Resident(13),
+            Resource::Resident(owner.handle(10)),
+            Resource::Resident(owner.handle(11)),
+            Resource::Resident(owner.handle(12)),
+            Resource::Resident(owner.handle(13)),
         ];
         let inputs: [&[u8]; 4] = [
             &b"control"[..],
@@ -1186,7 +1191,12 @@ mod tests {
 
     #[test]
     fn resident_input_upload_plan_rejects_abi_slot_mismatch() {
-        let resources = vec![Resource::Resident(10), Resource::Resident(11)];
+        let owner = vyre_driver::ResidentOwner::new()
+            .expect("Fix: resident owner minting must succeed in tests");
+        let resources = vec![
+            Resource::Resident(owner.handle(10)),
+            Resource::Resident(owner.handle(11)),
+        ];
         let inputs: [&[u8]; 4] = [&b"control"[..], &b"ring"[..], &b"debug"[..], &b"io"[..]];
 
         let error = resident_input_upload_plan(&resources, &inputs)
@@ -1242,9 +1252,10 @@ mod tests {
 
     struct FakeCudaResidentBackend {
         version: &'static str,
+        owner: vyre_driver::ResidentOwner,
         next: std::sync::atomic::AtomicU64,
-        uploads: std::sync::Mutex<Vec<(u64, usize)>>,
-        frees: std::sync::Mutex<Vec<u64>>,
+        uploads: std::sync::Mutex<Vec<(vyre_driver::ResidentHandle, usize)>>,
+        frees: std::sync::Mutex<Vec<vyre_driver::ResidentHandle>>,
         supported_ops: std::collections::HashSet<vyre_foundation::ir::OpId>,
     }
 
@@ -1256,6 +1267,8 @@ mod tests {
         fn with_version(version: &'static str) -> Self {
             Self {
                 version,
+                owner: vyre_driver::ResidentOwner::new()
+                    .expect("Fix: resident owner minting must succeed in tests"),
                 next: std::sync::atomic::AtomicU64::new(100),
                 uploads: std::sync::Mutex::new(Vec::new()),
                 frees: std::sync::Mutex::new(Vec::new()),
@@ -1291,9 +1304,9 @@ mod tests {
         }
 
         fn allocate_resident(&self, _byte_len: usize) -> Result<Resource, BackendError> {
-            Ok(Resource::Resident(
+            Ok(Resource::Resident(self.owner.handle(
                 self.next.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
-            ))
+            )))
         }
 
         fn upload_resident_many(&self, uploads: &[(&Resource, &[u8])]) -> Result<(), BackendError> {
@@ -1456,22 +1469,23 @@ mod tests {
             first_resources, second_resources,
             "Fix: identical megakernel resident input shapes must reuse resident resources."
         );
+        let slot = |id: u64, byte_len: usize| (backend.owner.handle(id), byte_len);
         assert_eq!(
             first_uploads,
-            vec![(100, 4), (101, 8), (102, 12), (103, 16)],
+            vec![slot(100, 4), slot(101, 8), slot(102, 12), slot(103, 16)],
             "Fix: first resident publication must upload every megakernel ABI input slot."
         );
         assert_eq!(
             all_uploads,
             vec![
-                (100, 4),
-                (101, 8),
-                (102, 12),
-                (103, 16),
-                (100, 4),
-                (101, 8),
-                (102, 12),
-                (103, 16)
+                slot(100, 4),
+                slot(101, 8),
+                slot(102, 12),
+                slot(103, 16),
+                slot(100, 4),
+                slot(101, 8),
+                slot(102, 12),
+                slot(103, 16)
             ],
             "Fix: cache-hit resident publication must refresh all four volatile ABI input slots."
         );

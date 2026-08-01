@@ -6,9 +6,7 @@
 //! naga backend (and the wgpu/Vulkan/WebGPU shaders it targets);
 //! equivalent patterns for CUDA live in `vyre-emit-ptx::patterns`.
 
-pub mod bind_group_reuse;
 pub mod pipeline_prewarm;
-pub mod push_constant_inline;
 pub mod vec_pack;
 
 use serde::{Deserialize, Serialize};
@@ -17,15 +15,12 @@ use vyre_lower::KernelDescriptor;
 /// Unified naga-side pattern audit. Runs every shipped naga pattern
 /// against the descriptor and bundles the reports. Mirror of
 /// `vyre_emit_ptx::patterns::audit` and `vyre_lower::audit::audit`,
-/// but for naga-specific patterns (vec packing, push constants,
-/// pipeline prewarm; bind group reuse is multi-descriptor and not
-/// included here).
+/// but for naga-specific patterns (vec packing, pipeline prewarm).
 #[must_use]
 pub fn audit(desc: &KernelDescriptor) -> NagaAuditReport {
     NagaAuditReport {
         kernel_id: desc.id.clone(),
         vec_pack: vec_pack::analysis::analyze(desc),
-        push_constant: push_constant_inline::analyze(desc),
         prewarm: pipeline_prewarm::analyze(desc),
     }
 }
@@ -49,7 +44,6 @@ pub fn audit_optimized(desc: &KernelDescriptor) -> NagaAuditReport {
 pub struct NagaAuditReport {
     pub kernel_id: String,
     pub vec_pack: vec_pack::plan::PackingPlan,
-    pub push_constant: push_constant_inline::PushConstantPlan,
     pub prewarm: pipeline_prewarm::PrewarmHint,
 }
 
@@ -57,9 +51,7 @@ impl NagaAuditReport {
     /// Sum of actionable findings across the per-kernel patterns.
     /// Pre-warm contributes 1 if recommended.
     pub fn total_candidates(&self) -> usize {
-        self.vec_pack.groups.len()
-            + self.push_constant.candidates.len()
-            + (self.prewarm.should_prewarm as usize)
+        self.vec_pack.groups.len() + (self.prewarm.should_prewarm as usize)
     }
 
     pub fn has_any(&self) -> bool {
@@ -74,10 +66,9 @@ impl NagaAuditReport {
             self.kernel_id.as_str()
         };
         format!(
-            "{id} (naga): {} candidates ({} vec_pack, {} push_constant, prewarm={})",
+            "{id} (naga): {} candidates ({} vec_pack, prewarm={})",
             self.total_candidates(),
             self.vec_pack.groups.len(),
-            self.push_constant.candidates.len(),
             self.prewarm.should_prewarm,
         )
     }
@@ -96,12 +87,6 @@ impl NagaAuditReport {
                 kernel_id: String::new(),
                 groups: vec![],
             },
-            push_constant: push_constant_inline::PushConstantPlan {
-                kernel_id: String::new(),
-                candidates: vec![],
-                total_bytes: 0,
-                budget_bytes: 0,
-            },
             prewarm: pipeline_prewarm::PrewarmHint {
                 kernel_id: String::new(),
                 should_prewarm: false,
@@ -117,13 +102,6 @@ impl NagaAuditReport {
     /// suite?" rollups.
     pub fn merge(&mut self, other: NagaAuditReport) {
         self.vec_pack.groups.extend(other.vec_pack.groups);
-        self.push_constant
-            .candidates
-            .extend(other.push_constant.candidates);
-        self.push_constant.total_bytes = self
-            .push_constant
-            .total_bytes
-            .saturating_add(other.push_constant.total_bytes);
         self.prewarm.should_prewarm |= other.prewarm.should_prewarm;
     }
 }
@@ -292,8 +270,8 @@ mod audit_tests {
         let report = audit(&desc);
         assert_eq!(report.kernel_id, "k");
         // 3-op, 1-binding kernel sits below every naga pattern threshold
-        // (vec_pack needs Load/Store fusion groups, push_constant needs
-        // element_count=Some(1), prewarm needs ops≥50 or bindings≥4).
+        // (vec_pack needs Load/Store fusion groups, prewarm needs
+        // ops >= 50 or bindings >= 4).
         // The contract this test enforces is "audit returns cleanly on
         // a real kernel without panicking", not a non-zero candidate count.
         assert_eq!(report.total_candidates(), 0);

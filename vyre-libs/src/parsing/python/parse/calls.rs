@@ -1,5 +1,6 @@
 use super::{
-    find_matching_delimiter, load_u32, search_next_token, search_next_token_into, search_prev_token,
+    find_matching_delimiter, load_u32, search_next_token, search_next_token_into,
+    search_prev_token, store_words, write_words,
 };
 use crate::parsing::composition::child_phase;
 use crate::parsing::python::lex::{
@@ -10,20 +11,6 @@ use crate::parsing::python::{
 };
 use crate::region::wrap_anonymous;
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-fn store_words(buffer: &str, base_var: &str, words: &[Expr]) -> Vec<Node> {
-    words
-        .iter()
-        .enumerate()
-        .map(|(idx, value)| {
-            Node::store(
-                buffer,
-                Expr::add(Expr::var(base_var), Expr::u32(idx as u32)),
-                value.clone(),
-            )
-        })
-        .collect()
-}
 
 /// Extract Python call sites plus top-level keyword arguments.
 #[must_use]
@@ -361,13 +348,6 @@ fn call_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
         vec![0u8; 16 * KWARG_RECORD_WORDS as usize * 4],
         vec![0u8; 4],
     ]]
-}
-
-fn write_words(dst: &mut [u8], words: &[u32]) {
-    for (idx, word) in words.iter().enumerate() {
-        let base = idx * 4;
-        dst[base..base + 4].copy_from_slice(&word.to_le_bytes());
-    }
 }
 
 fn call_fixture_expected() -> Vec<Vec<Vec<u8>>> {

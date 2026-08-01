@@ -10,6 +10,7 @@ mod backend_matrix;
 mod bench_crossback;
 mod bench_release;
 mod benchmark_evidence_semantics;
+mod binary;
 mod c_parser_bench;
 mod c_parser_corpus;
 mod catalog;
@@ -17,6 +18,7 @@ mod check_cat_a;
 mod check_tier_deps;
 mod command_matrix;
 mod compile;
+mod conformance_evidence_semantics;
 mod conformance_matrix;
 mod dedup_report;
 mod dep_drift;
@@ -27,18 +29,22 @@ mod hash;
 mod heuristic_audit;
 mod hot_path_scan;
 mod hygiene_matrix;
+mod implementation_family;
 mod innovation_falsification;
+mod json_output;
 mod launch_contract;
 mod launch_state;
 mod lego_audit;
 mod lego_quick;
 mod lint_shape_tests;
-mod markdown_table;
 mod list_ops;
+mod manifest_walk;
+mod markdown_table;
 mod metadata_matrix;
 mod op_matrix;
 mod optimization_corpus;
 mod optimization_matrix;
+mod output_arg;
 mod ownership;
 mod package_readiness;
 mod parser_coherence;
@@ -48,13 +54,7 @@ mod print_composition;
 mod quick;
 mod quick_cache;
 mod recursion_gate;
-mod repo_boundary;
-mod research_basis;
-mod research_key;
-mod research_plan_coverage;
-mod research_source_ledger;
-mod research_audit;
-mod rules_as_data;
+mod release_backend_rows;
 mod release_benchmarks;
 mod release_completion_audit;
 mod release_conformance;
@@ -62,11 +62,20 @@ mod release_evidence;
 mod release_gate;
 mod release_train;
 mod release_workload_matrix;
+mod repo_boundary;
+mod research_audit;
+mod research_basis;
+mod research_key;
+mod research_plan_coverage;
+mod research_source_ledger;
+mod rules_as_data;
 mod shrink;
 mod source_similar;
 mod test_matrix;
+mod text_markers;
 mod toml_config;
 mod trace_f32;
+mod use_paths;
 mod verify_rewrite_proofs;
 mod version_matrix;
 mod vx_plan_table;
@@ -119,13 +128,13 @@ fn print_help() {
            release-conformance [--backend all] Generate real backend conformance artifacts\n\
            release-completion-audit [--output PATH]  Generate final prompt-to-artifact audit evidence\n\
            release-evidence                    Generate cheap structural release evidence artifacts\n\
-           vyre-release-gate              Enforce Vyre release evidence manifest closure\n\
-           vyre-weir-release-gate         Compatibility alias for vyre-release-gate\n\
+           vyre-release-gate [--prepublish] [--manifest PATH]  Enforce final or prepublication evidence closure\n\
+           vyre-weir-release-gate [--prepublish] [--manifest PATH]  Compatibility alias for vyre-release-gate\n\
            recursion-gate [--strict]           Enforce recursion thesis (every Tier-2.5 primitive has a vyre-self consumer)\n\
            research-audit [--output PATH]      Generate research-grounding audit evidence for the VX plan\n\
            heuristic-audit [--strict]          Surface hand-rolled heuristics that should be self-consumer calls\n\
            hygiene-matrix [--output PATH]      Scan Vyre/Weir source hygiene release blockers\n\
-           lego-audit [--report-only] [--duplicate-report-json PATH] Deeper LEGO-block enforcement (no-reinvention, depth-of-composition, primitive coverage, chain coverage)\n\
+           lego-audit [--report-only|--with-repo|--write-baseline] [--duplicate-report-json PATH] Deeper LEGO-block enforcement and composition baseline management\n\
            lego-quick [--all] [--source-similar] Fast pre-commit gate plus optional source-dedup scan\n\
            whats-similar (--op-id <id>|--all) [--duplicate-report-json PATH] Pre-write/all-pairs duplicate query by IR shape\n\
            source-similar [--root PATH] [--check] [--include-untracked] [--duplicate-report-json PATH] Repo-wide Rust source duplicate scanner\n\

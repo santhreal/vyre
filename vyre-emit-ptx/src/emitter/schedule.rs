@@ -7,7 +7,7 @@ pub(super) fn is_latency_load(op: &KernelOp) -> bool {
     ) && op.result.is_some()
 }
 
-pub(super) fn is_scheduling_fence(op: &KernelOp) -> bool {
+pub(crate) fn is_scheduling_fence(op: &KernelOp) -> bool {
     matches!(
         op.kind,
         KernelOpKind::StoreGlobal
@@ -27,7 +27,7 @@ pub(super) fn is_scheduling_fence(op: &KernelOp) -> bool {
     )
 }
 
-pub(super) fn is_schedulable_pure_op(op: &KernelOp) -> bool {
+pub(crate) fn is_schedulable_pure_op(op: &KernelOp) -> bool {
     matches!(
         op.kind,
         KernelOpKind::Literal

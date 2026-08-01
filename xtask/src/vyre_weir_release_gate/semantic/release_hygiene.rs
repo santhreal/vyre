@@ -40,20 +40,18 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
     }
     check_hygiene_release_surface_coverage("release-hygiene", &matrix, failures);
     for required_root in [
-        "libs/performance/matching/vyre",
-        "libs/dataflow/weir",
-        "tools/vyrec",
-        crate::release_train::compiler_consumer_relative_path(),
-        "libs/performance/matching/vyre/vyre-grammar-gen",
+        ".",
+        "../../../../libs/dataflow/weir",
+        "../../../../tools/vyrec",
+        "vyre-grammar-gen",
     ] {
         if !matrix
             .get("scanned_roots")
             .and_then(serde_json::Value::as_array)
             .is_some_and(|roots| {
-                roots.iter().any(|root| {
-                    root.as_str()
-                        .is_some_and(|root| root.contains(required_root))
-                })
+                roots
+                    .iter()
+                    .any(|root| root.as_str() == Some(required_root))
             })
         {
             failures.push(format!(

@@ -206,8 +206,8 @@ mod tests {
             non_empty_copy_count: 1,
             bytes: 4,
         };
-        let cardinality = validate_fused_resident_readbacks(&bad_cardinality, 1, "test")
-            .unwrap_err();
+        let cardinality =
+            validate_fused_resident_readbacks(&bad_cardinality, 1, "test").unwrap_err();
         assert_eq!(
             cardinality.to_string().contains("view count"),
             true,

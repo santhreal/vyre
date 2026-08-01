@@ -5,18 +5,16 @@ fn prove_emits_signed_certificate_on_gpu_build() {
     let out = tempfile::NamedTempFile::new().expect("tempfile");
     let selected_backend = selected_backend_override();
     let mut command = Command::new("cargo");
-    command
-        .env("VYRE_CONFORM_PROOF_WORKERS", "16")
-        .args([
-            "run",
-            "-p",
-            "vyre-conform-runner",
-            "--features",
-            "gpu",
-            "--quiet",
-            "--",
-            "prove",
-        ]);
+    command.env("VYRE_CONFORM_PROOF_WORKERS", "16").args([
+        "run",
+        "-p",
+        "vyre-conform-runner",
+        "--features",
+        "gpu",
+        "--quiet",
+        "--",
+        "prove",
+    ]);
     if let Some(backend) = selected_backend.as_deref() {
         command.args(["--backend", backend]);
     }
@@ -192,9 +190,7 @@ fn prove_emits_signed_cuda_release_certificate_on_gpu_build() {
             "--backend",
         ])
         .arg(&selected_backend)
-        .args([
-            "--out",
-        ])
+        .args(["--out"])
         .arg(out.path())
         .output()
         .expect("Fix: cargo must be available in PATH");
@@ -245,4 +241,3 @@ fn prove_emits_signed_cuda_release_certificate_on_gpu_build() {
     );
     verify_certificate_signature(&parsed);
 }
-

@@ -23,6 +23,7 @@ use super::memory_address::{
 use crate::operand_semantics::{
     operand_is_result_reference, remap_body_result_ids as remap_body_ids,
 };
+use crate::rewrites::literal_pool_splice::LiteralPoolSplice;
 use crate::{BindingVisibility, KernelBody, KernelDescriptor, KernelOp, KernelOpKind};
 
 /// Returns an iterator over the operand positions that carry child-body
@@ -109,7 +110,7 @@ fn licm_with_optional_dataflow_facts(
     // `loop_carry_smoke::region_body_let_bind_with_inner_loop_increment_then_store`
     // where a hoisted U32(1) literal in the outer-if body collided with
     // a Bool(true) literal hoisted in a nested if's body.
-    let mut next_free_id = max_result_id(&out.body)
+    let mut next_free_id = super::max_result_id_in_subtree(&out.body)
         .map(|m| m.wrapping_add(1))
         .unwrap_or(0);
     out.body = licm_body(
@@ -120,22 +121,6 @@ fn licm_with_optional_dataflow_facts(
         reaching_defs,
     );
     out
-}
-
-fn max_result_id(body: &KernelBody) -> Option<u32> {
-    let mut max: Option<u32> = None;
-    fn walk(b: &KernelBody, max: &mut Option<u32>) {
-        for op in &b.ops {
-            for r in op.result_ids() {
-                *max = Some(max.map_or(r, |m| m.max(r)));
-            }
-        }
-        for child in &b.child_bodies {
-            walk(child, max);
-        }
-    }
-    walk(body, &mut max);
-    max
 }
 
 fn licm_body(
@@ -183,39 +168,21 @@ fn licm_body(
                             }
                         }
 
-                        // 2. Merge literals referenced by hoisted ops
-                        //    into the parent literal pool and build a
-                        //    child-index → parent-index map.
-                        let mut lit_map = BTreeMap::<u32, u32>::new();
+                        // 2. Relocate the literals referenced by hoisted ops
+                        //    out of the loop body's pool namespace and into
+                        //    the parent's. `LiteralPoolSplice` is the shared
+                        //    primitive for this; its module docs explain why
+                        //    relocation and pool maintenance must not be two
+                        //    steps a caller can do one of. It also preserves
+                        //    the behaviour this site had to fix once already:
+                        //    a hoisted Literal whose source slot is missing is
+                        //    left untouched rather than pointed at a slot that
+                        //    was never populated, which produced
+                        //    `LiteralPoolOutOfRange` at descriptor verify time.
+                        let mut splice = LiteralPoolSplice::new(&child.literals, &mut new_literals);
                         let mut renumbered_hoisted = Vec::with_capacity(hoisted.len());
-                        for mut h_op in hoisted {
-                            if matches!(h_op.kind, KernelOpKind::Literal) {
-                                if let Some(&old_idx) = h_op.operands.first() {
-                                    // Soundness: skip the rewrite when
-                                    // the source literal is missing.
-                                    // Previously the captured `idx` was
-                                    // committed to `lit_map` even when
-                                    // the conditional `push` was a no-op,
-                                    // so the rewritten Literal op pointed
-                                    // at a pool slot that was never
-                                    // populated → `LiteralPoolOutOfRange`
-                                    // at descriptor verify time.
-                                    if let Some(val) = child.literals.get(old_idx as usize) {
-                                        let new_idx =
-                                            *lit_map.entry(old_idx).or_insert_with(|| {
-                                                let idx = new_literals.len() as u32;
-                                                new_literals.push(val.clone());
-                                                idx
-                                            });
-                                        h_op.operands[0] = new_idx;
-                                    }
-                                    // When the source literal is missing
-                                    // we leave the operand alone  -  the
-                                    // op was already invalid in the
-                                    // source body; LICM does not have to
-                                    // fabricate a slot for it.
-                                }
-                            }
+                        for h_op in hoisted {
+                            let mut h_op = splice.relocate(h_op);
                             // Rewrite result-id refs inside the hoisted op.
                             h_op.operands = h_op
                                 .operands

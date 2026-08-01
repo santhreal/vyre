@@ -79,7 +79,8 @@ pub mod resident_graph_session;
 /// Compact result readback planning.
 pub mod result_compaction;
 mod stream;
-/// Synthetic CUDA device profiles for offline release-path planning.
+/// A fixed synthetic device envelope for context-free estimator tests. Not a
+/// probe, and not this machine's values: never derive a hardware decision from it.
 pub mod synthetic_device_caps;
 /// CUDA execution planning for unified token/fact graph frontier waves.
 pub mod token_fact_frontier_execution;
@@ -487,26 +488,6 @@ impl CudaBackendRegistration {
         Ok(())
     }
 
-    /// Reject `MemoryOrdering::GridSync` on the ahead-of-time compiled-pipeline
-    /// path. Native cooperative grid-sync is delivered through the *dispatch*
-    /// path (`dispatch_borrowed` → host dispatch), which zeroes the module-scope
-    /// `_vyre_grid_barrier` counter before each cooperative launch. The compiled
-    /// pipeline does not reset that counter between launches, so a fixpoint or
-    /// reused compiled cooperative grid-sync pipeline would observe a stale
-    /// barrier count and release a later launch's first barrier early. Until the
-    /// compiled-pipeline path resets the counter, refuse it loudly rather than
-    /// emit a pipeline that could silently desynchronize.
-    fn reject_grid_sync_in_aot_compile(&self, program: &Program) -> Result<(), BackendError> {
-        if vyre_driver::grid_sync::contains_grid_sync(program) {
-            return Err(BackendError::UnsupportedFeature {
-                name: "cuda_native_grid_sync_lowering in AOT compile_native (cooperative grid-sync is supported via dispatch, not the compiled pipeline, which does not reset the per-launch _vyre_grid_barrier counter)"
-                    .to_string(),
-                backend: CUDA_BACKEND_ID.to_string(),
-            });
-        }
-        Ok(())
-    }
-
     fn validate_program_for_dispatch(&self, program: &Program) -> Result<(), BackendError> {
         let required = vyre_foundation::program_caps::scan(program);
         vyre_foundation::program_caps::check_backend_capabilities(
@@ -616,7 +597,7 @@ impl VyreBackend for CudaBackendRegistration {
     fn allocate_resident(&self, byte_len: usize) -> Result<Resource, BackendError> {
         self.inner
             .allocate_resident(byte_len)
-            .map(|handle| Resource::Resident(handle.id))
+            .map(|handle| Resource::Resident(handle.handle))
     }
 
     fn allocate_device_buffer(
@@ -941,7 +922,6 @@ impl VyreBackend for CudaBackendRegistration {
         config: &DispatchConfig,
     ) -> Result<Option<Arc<dyn vyre_driver::CompiledPipeline>>, BackendError> {
         self.validate_program_for_dispatch(program)?;
-        self.reject_grid_sync_in_aot_compile(program)?;
         self.inner.compile_native(program, config).map(Some)
     }
 
@@ -951,7 +931,6 @@ impl VyreBackend for CudaBackendRegistration {
         config: &DispatchConfig,
     ) -> Result<Option<Arc<dyn vyre_driver::CompiledPipeline>>, BackendError> {
         self.validate_program_for_dispatch(program.as_ref())?;
-        self.reject_grid_sync_in_aot_compile(program.as_ref())?;
         self.inner.compile_native_shared(program, config).map(Some)
     }
 

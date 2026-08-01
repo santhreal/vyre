@@ -52,6 +52,12 @@ impl<'a> BodyCtx<'a> {
             slot_to_binding,
             full_workgroup_entry,
             grid_barrier_index: 0,
+            grid_sync_loop_depth: 0,
+            uniform_results: FxHashSet::with_capacity_and_hasher(
+                op_capacity / 4,
+                Default::default(),
+            ),
+            nonuniform_cond_depth: 0,
         };
         this.emit_thread_geometry();
         this

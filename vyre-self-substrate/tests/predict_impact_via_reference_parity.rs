@@ -8,7 +8,7 @@
 //! transitive `reachability_closure` → host impact-mask projection across multiple dispatches. This is the
 //! FIRST-EVER execution of the full change-impact pipelines through a boundary that models the real backend.
 //!
-//! Contract (audited CLEAN): each `_via` runs the same stages as its importable reference 
+//! Contract (audited CLEAN): each `_via` runs the same stages as its importable reference
 //!   predict_impact_via = do_intervention_delete_incoming (surgery) → reachability_closure → impact mask;
 //!   predict_impact_observation_form_via = the Rule-2 observation-exchange surgery → closure → mask.
 //! All stages are u32 bitset / adjacency operations (no floats), so the produced n-word impact mask must

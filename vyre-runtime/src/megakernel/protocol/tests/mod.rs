@@ -268,7 +268,8 @@ fn read_epoch_on_truncated_control_returns_err_not_zero() {
     // succeeding with a stale zero.
     let msg = err.to_string();
     assert!(
-        msg.contains("control") && (msg.contains("missing") || msg.contains("mismatch") || msg.contains("bytes")),
+        msg.contains("control")
+            && (msg.contains("missing") || msg.contains("mismatch") || msg.contains("bytes")),
         "Fix: error must describe the control-buffer defect, got: {msg}"
     );
     // read_epoch returns the same 0 it always did, but the infallible path
@@ -318,8 +319,8 @@ fn read_observable_on_truncated_control_returns_err_not_zero() {
 /// proving try_read_epoch is not just always-Err.
 #[test]
 fn try_read_epoch_parses_real_epoch_from_well_formed_control() {
-    let control = try_encode_control(false, 1, 0)
-        .expect("Fix: well-formed control encode must succeed");
+    let control =
+        try_encode_control(false, 1, 0).expect("Fix: well-formed control encode must succeed");
     // Fresh kernel: epoch starts at 0.
     let epoch = try_read_epoch(&control)
         .expect("Fix: try_read_epoch must succeed on a well-formed control buffer");
@@ -328,11 +329,13 @@ fn try_read_epoch_parses_real_epoch_from_well_formed_control() {
     // Inject a non-zero epoch word to prove the decoder reads the right offset.
     let epoch_word_idx = super::control::EPOCH as usize;
     let mut patched = control.clone();
-    patched[epoch_word_idx * 4..epoch_word_idx * 4 + 4]
-        .copy_from_slice(&42_u32.to_le_bytes());
+    patched[epoch_word_idx * 4..epoch_word_idx * 4 + 4].copy_from_slice(&42_u32.to_le_bytes());
     let patched_epoch = try_read_epoch(&patched)
         .expect("Fix: try_read_epoch must succeed on a patched well-formed buffer");
-    assert_eq!(patched_epoch, 42, "Fix: patched epoch must be the injected value 42");
+    assert_eq!(
+        patched_epoch, 42,
+        "Fix: patched epoch must be the injected value 42"
+    );
 }
 
 /// Misaligned control buffers (not a multiple of 4 bytes) must be an Err,
@@ -340,8 +343,8 @@ fn try_read_epoch_parses_real_epoch_from_well_formed_control() {
 #[test]
 fn read_epoch_on_misaligned_control_returns_err() {
     // Take a valid control buffer and add one byte to make it misaligned.
-    let control = try_encode_control(false, 1, 0)
-        .expect("Fix: well-formed control encode must succeed");
+    let control =
+        try_encode_control(false, 1, 0).expect("Fix: well-formed control encode must succeed");
     let mut misaligned = control.clone();
     misaligned.push(0xAB);
     let err = try_read_epoch(&misaligned)

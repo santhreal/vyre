@@ -1,4 +1,5 @@
 use crate::api::case::BenchError;
+use crate::cases::skewed_graph::{mix32, skewed_degree as shared_skewed_degree, skewed_target};
 use vyre_primitives::bitset::frontier::materialize_frontier_queue_exact_count_into;
 use vyre_primitives::predicate::edge_kind;
 
@@ -128,49 +129,11 @@ pub(super) fn ifds_skewed_inputs(fixture: &IfdsSkewedFixture) -> Vec<Vec<u8>> {
     inputs
 }
 
-pub(super) fn ifds_queue_inputs(
-    fixture: &IfdsSkewedFixture,
-    queue_capacity: u32,
-    high_degree_queue_capacity: u32,
-) -> Result<Vec<Vec<u8>>, BenchError> {
-    if u64::from(queue_capacity) < fixture.stats.active_sources {
-        return Err(BenchError::EnvironmentInvalid(format!(
-            "IFDS queue fixture requires queue_capacity >= active_sources, got capacity={queue_capacity} active_sources={}. Fix: size the sparse frontier queue from fixture stats.",
-            fixture.stats.active_sources
-        )));
-    }
-    if high_degree_queue_capacity > queue_capacity {
-        return Err(BenchError::EnvironmentInvalid(format!(
-            "IFDS split queue fixture requires high_degree_queue_capacity <= queue_capacity, got high_degree_queue_capacity={high_degree_queue_capacity} queue_capacity={queue_capacity}. Fix: derive high-degree capacity from active sources."
-        )));
-    }
-    let queue_bytes = (queue_capacity as usize)
-        .checked_mul(std::mem::size_of::<u32>())
-        .ok_or_else(|| {
-            BenchError::EnvironmentInvalid(format!(
-                "IFDS queue fixture queue_capacity={queue_capacity} overflows host buffer sizing. Fix: split the frontier queue."
-            ))
-        })?;
-    let high_queue_bytes = (high_degree_queue_capacity as usize)
-        .checked_mul(std::mem::size_of::<u32>())
-        .ok_or_else(|| {
-            BenchError::EnvironmentInvalid(format!(
-                "IFDS high_degree_queue_capacity={high_degree_queue_capacity} overflows host buffer sizing. Fix: split the high-degree queue."
-            ))
-        })?;
-
-    Ok(vec![
-        vyre_primitives::wire::pack_u32_slice(&fixture.frontier_in),
-        vec![0_u8; queue_bytes],
-        vyre_primitives::wire::pack_u32_slice(&[0]),
-        vyre_primitives::wire::pack_u32_slice(&fixture.edge_offsets),
-        vyre_primitives::wire::pack_u32_slice(&fixture.edge_targets),
-        vyre_primitives::wire::pack_u32_slice(&fixture.edge_kind_mask),
-        vyre_primitives::wire::pack_u32_slice(&fixture.frontier_out_seed),
-        vec![0_u8; high_queue_bytes],
-        vyre_primitives::wire::pack_u32_slice(&[0]),
-    ])
-}
+crate::cases::queue_stage::define_queue_input_builder!(
+    pub(super) ifds_queue_inputs,
+    IfdsSkewedFixture,
+    "IFDS queue fixture"
+);
 
 pub(super) fn ifds_active_high_degree_sources(
     fixture: &IfdsSkewedFixture,
@@ -355,13 +318,13 @@ pub(super) fn ifds_skewed_launch_wave_iterations(
 }
 
 fn ifds_graph_inputs(fixture: &IfdsSkewedFixture) -> Vec<Vec<u8>> {
-    vec![
-        vyre_primitives::wire::pack_u32_slice(&fixture.nodes),
-        vyre_primitives::wire::pack_u32_slice(&fixture.edge_offsets),
-        vyre_primitives::wire::pack_u32_slice(&fixture.edge_targets),
-        vyre_primitives::wire::pack_u32_slice(&fixture.edge_kind_mask),
-        vyre_primitives::wire::pack_u32_slice(&fixture.node_tags),
-    ]
+    crate::cases::byte_pack::u32_input_bytes([
+        &fixture.nodes,
+        &fixture.edge_offsets,
+        &fixture.edge_targets,
+        &fixture.edge_kind_mask,
+        &fixture.node_tags,
+    ])
 }
 
 fn expand_one_launch_wave(
@@ -399,29 +362,7 @@ fn expand_one_launch_wave(
 }
 
 fn skewed_degree(src: u32) -> u32 {
-    if src % 4096 == 0 {
-        UGLY_HUB_DEGREE
-    } else if src % 257 == 0 {
-        24
-    } else if src % 31 == 0 {
-        8
-    } else if src % 7 == 0 {
-        3
-    } else {
-        1
-    }
-}
-
-fn skewed_target(node_count: u32, src: u32, edge: u32) -> u32 {
-    let mask = node_count - 1;
-    match edge & 7 {
-        0 => src.wrapping_add((edge + 1).wrapping_mul(17)) & mask,
-        1 => src.wrapping_sub((edge + 3).wrapping_mul(11)) & mask,
-        _ => {
-            let salt = edge.wrapping_mul(0x9E37_79B9).rotate_left((edge & 15) + 1);
-            mix32(src ^ salt ^ src.rotate_left(edge & 15)) & mask
-        }
-    }
+    shared_skewed_degree(src, UGLY_HUB_DEGREE)
 }
 
 fn ifds_edge_kind(src: u32, edge: u32) -> u32 {
@@ -457,12 +398,4 @@ fn ifds_node_tag(src: u32) -> u32 {
 
 fn source_is_active(src: u32) -> bool {
     src % 97 == 0 || src % 4096 == 0 || (mix32(src ^ 0xD1B5_4A32) & 0x3FF) == 0
-}
-
-fn mix32(mut value: u32) -> u32 {
-    value ^= value >> 16;
-    value = value.wrapping_mul(0x7FEB_352D);
-    value ^= value >> 15;
-    value = value.wrapping_mul(0x846C_A68B);
-    value ^ (value >> 16)
 }

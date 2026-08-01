@@ -2,18 +2,17 @@
 
 #![cfg(test)]
 
-
-mod common;
-#[path = "csr_frontier_queue_gpu_parity/manual_sequence_contracts.rs"]
-mod manual_sequence_contracts;
-#[path = "csr_frontier_queue_gpu_parity/delta_contracts.rs"]
-mod delta_contracts;
-#[path = "csr_frontier_queue_gpu_parity/resident_graph_contracts.rs"]
-mod resident_graph_contracts;
 #[path = "csr_frontier_queue_gpu_parity/batch_contracts.rs"]
 mod batch_contracts;
+mod common;
+#[path = "csr_frontier_queue_gpu_parity/delta_contracts.rs"]
+mod delta_contracts;
+#[path = "csr_frontier_queue_gpu_parity/manual_sequence_contracts.rs"]
+mod manual_sequence_contracts;
+#[path = "csr_frontier_queue_gpu_parity/resident_graph_contracts.rs"]
+mod resident_graph_contracts;
 
-use common::{bytes_u32, live_backend, u32_bytes};
+use common::{bytes_u32, live_backend, pack_nodes, u32_bytes};
 use vyre_driver_cuda::CudaOptimizerDispatcher;
 use vyre_primitives::bitset::bitset_words;
 use vyre_primitives::graph::csr_frontier_queue::{
@@ -35,14 +34,6 @@ use vyre_self_substrate::csr_frontier_queue_resident::{
 use vyre_self_substrate::optimizer::dispatcher::{
     OptimizerDispatcher, ResidentDispatchStep, ResidentReadRange,
 };
-
-fn pack_nodes(bits: &[u32], node_count: u32) -> Vec<u32> {
-    let mut out = vec![0u32; bitset_words(node_count) as usize];
-    for &bit in bits {
-        out[bit as usize / 32] |= 1u32 << (bit % 32);
-    }
-    out
-}
 
 fn skewed_high_degree_graph(node_count: u32) -> (Vec<u32>, Vec<u32>, Vec<u32>) {
     assert!(
@@ -67,4 +58,3 @@ fn skewed_high_degree_graph(node_count: u32) -> (Vec<u32>, Vec<u32>, Vec<u32>) {
     }
     (edge_offsets, edge_targets, edge_kind_mask)
 }
-

@@ -102,7 +102,11 @@ impl MegakernelWorkspaceAdapter for MockWorkspaceAdapter {
         BufferDecl::output(MOCK_WORKSPACE_BUFFER, 15, DataType::U32).with_count(4)
     }
     fn bootstrap_nodes(&self) -> Vec<Node> {
-        vec![Node::store(MOCK_WORKSPACE_BUFFER, Expr::u32(0), Expr::u32(0))]
+        vec![Node::store(
+            MOCK_WORKSPACE_BUFFER,
+            Expr::u32(0),
+            Expr::u32(0),
+        )]
     }
 }
 
@@ -116,7 +120,11 @@ fn sharded_with_workspace_adapter_splices_adapter_buffer_into_ir() {
 
     assert_nontrivial_megakernel(&with_adapter);
 
-    let has_workspace = |p: &Program| p.buffers().iter().any(|b| &*b.name == MOCK_WORKSPACE_BUFFER);
+    let has_workspace = |p: &Program| {
+        p.buffers()
+            .iter()
+            .any(|b| &*b.name == MOCK_WORKSPACE_BUFFER)
+    };
     assert!(
         has_workspace(&with_adapter),
         "the workspace-adapter builder must insert the adapter's buffer_decl ({MOCK_WORKSPACE_BUFFER}) \

@@ -140,4 +140,3 @@ fn persistent_bfs_dispatch_paths_use_primitive_layout_contract() {
         "resident persistent BFS batch wrapper must reuse primitive-narrowed frontier word count and shared resident readback dispatch, reading frontier_out + per-query changed + per-query converged"
     );
 }
-

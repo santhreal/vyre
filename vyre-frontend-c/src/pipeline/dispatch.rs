@@ -168,7 +168,14 @@ fn c11_dual_bracket_match(
     )
 }
 
-fn forward_match_open(
+#[derive(Clone, Copy)]
+enum DelimiterSearch {
+    Forward,
+    Backward,
+}
+
+#[allow(clippy::too_many_arguments)]
+fn match_delimiter(
     tok_types: &str,
     pairs: &str,
     i: Expr,
@@ -176,33 +183,58 @@ fn forward_match_open(
     open_tok: u32,
     close_tok: u32,
     label: &str,
+    search: DelimiterSearch,
 ) -> Node {
-    let depth = format!("{label}_forward_depth");
-    let found = format!("{label}_forward_found");
-    let j = format!("{label}_forward_j");
-    let tok = format!("{label}_forward_tok");
+    let direction = match search {
+        DelimiterSearch::Forward => "forward",
+        DelimiterSearch::Backward => "backward",
+    };
+    let depth = format!("{label}_{direction}_depth");
+    let found = format!("{label}_{direction}_found");
+    let scan = format!("{label}_{direction}_scan");
+    let j = format!("{label}_{direction}_j");
+    let tok = format!("{label}_{direction}_tok");
+    let (trigger_tok, nested_tok, matching_tok, start, end, position) = match search {
+        DelimiterSearch::Forward => (
+            open_tok,
+            open_tok,
+            close_tok,
+            Expr::add(i.clone(), Expr::u32(1)),
+            Expr::u32(n),
+            Expr::var(&scan),
+        ),
+        DelimiterSearch::Backward => (
+            close_tok,
+            close_tok,
+            open_tok,
+            Expr::u32(0),
+            i.clone(),
+            Expr::sub(Expr::sub(i.clone(), Expr::u32(1)), Expr::var(&scan)),
+        ),
+    };
     Node::if_then(
-        Expr::eq(Expr::var("tok"), Expr::u32(open_tok)),
+        Expr::eq(Expr::var("tok"), Expr::u32(trigger_tok)),
         vec![
             Node::let_bind(&depth, Expr::u32(1)),
             Node::let_bind(&found, Expr::u32(0)),
             Node::loop_for(
-                &j,
-                Expr::add(i.clone(), Expr::u32(1)),
-                Expr::u32(n),
+                &scan,
+                start,
+                end,
                 vec![Node::if_then(
                     Expr::eq(Expr::var(&found), Expr::u32(0)),
                     vec![
+                        Node::let_bind(&j, position),
                         Node::let_bind(&tok, Expr::load(tok_types, Expr::var(&j))),
                         Node::if_then(
-                            Expr::eq(Expr::var(&tok), Expr::u32(open_tok)),
+                            Expr::eq(Expr::var(&tok), Expr::u32(nested_tok)),
                             vec![Node::assign(
                                 &depth,
                                 Expr::add(Expr::var(&depth), Expr::u32(1)),
                             )],
                         ),
                         Node::if_then(
-                            Expr::eq(Expr::var(&tok), Expr::u32(close_tok)),
+                            Expr::eq(Expr::var(&tok), Expr::u32(matching_tok)),
                             vec![
                                 Node::assign(&depth, Expr::sub(Expr::var(&depth), Expr::u32(1))),
                                 Node::if_then(
@@ -221,6 +253,27 @@ fn forward_match_open(
     )
 }
 
+fn forward_match_open(
+    tok_types: &str,
+    pairs: &str,
+    i: Expr,
+    n: u32,
+    open_tok: u32,
+    close_tok: u32,
+    label: &str,
+) -> Node {
+    match_delimiter(
+        tok_types,
+        pairs,
+        i,
+        n,
+        open_tok,
+        close_tok,
+        label,
+        DelimiterSearch::Forward,
+    )
+}
+
 fn backward_match_close(
     tok_types: &str,
     pairs: &str,
@@ -229,52 +282,15 @@ fn backward_match_close(
     close_tok: u32,
     label: &str,
 ) -> Node {
-    let depth = format!("{label}_backward_depth");
-    let found = format!("{label}_backward_found");
-    let k = format!("{label}_backward_k");
-    let j = format!("{label}_backward_j");
-    let tok = format!("{label}_backward_tok");
-    Node::if_then(
-        Expr::eq(Expr::var("tok"), Expr::u32(close_tok)),
-        vec![
-            Node::let_bind(&depth, Expr::u32(1)),
-            Node::let_bind(&found, Expr::u32(0)),
-            Node::loop_for(
-                &k,
-                Expr::u32(0),
-                i.clone(),
-                vec![Node::if_then(
-                    Expr::eq(Expr::var(&found), Expr::u32(0)),
-                    vec![
-                        Node::let_bind(
-                            &j,
-                            Expr::sub(Expr::sub(i.clone(), Expr::u32(1)), Expr::var(&k)),
-                        ),
-                        Node::let_bind(&tok, Expr::load(tok_types, Expr::var(&j))),
-                        Node::if_then(
-                            Expr::eq(Expr::var(&tok), Expr::u32(close_tok)),
-                            vec![Node::assign(
-                                &depth,
-                                Expr::add(Expr::var(&depth), Expr::u32(1)),
-                            )],
-                        ),
-                        Node::if_then(
-                            Expr::eq(Expr::var(&tok), Expr::u32(open_tok)),
-                            vec![
-                                Node::assign(&depth, Expr::sub(Expr::var(&depth), Expr::u32(1))),
-                                Node::if_then(
-                                    Expr::eq(Expr::var(&depth), Expr::u32(0)),
-                                    vec![
-                                        Node::store(pairs, i.clone(), Expr::var(&j)),
-                                        Node::assign(&found, Expr::u32(1)),
-                                    ],
-                                ),
-                            ],
-                        ),
-                    ],
-                )],
-            ),
-        ],
+    match_delimiter(
+        tok_types,
+        pairs,
+        i,
+        0,
+        open_tok,
+        close_tok,
+        label,
+        DelimiterSearch::Backward,
     )
 }
 

@@ -166,11 +166,11 @@ impl BodyCtx<'_> {
                 Ok((out, ty))
             }
             BinOp::Div if ty == PtxType::U32 || ty == PtxType::Bool => {
-                let out = self.emit_total_u32_div(left, right);
+                let out = self.emit_total_u32_binary(left, right, u32::MAX, "u32_div_done", "div");
                 Ok((out, PtxType::U32))
             }
             BinOp::Mod if ty == PtxType::U32 || ty == PtxType::Bool => {
-                let out = self.emit_total_u32_mod(left, right);
+                let out = self.emit_total_u32_binary(left, right, 0, "u32_mod_done", "rem");
                 Ok((out, PtxType::U32))
             }
             BinOp::Div if ty == PtxType::I32 => {
@@ -361,63 +361,54 @@ impl BodyCtx<'_> {
         None
     }
 
-    fn emit_total_u32_div(&mut self, left: Reg, right: Reg) -> Reg {
+    fn emit_total_u32_binary(
+        &mut self,
+        left: Reg,
+        right: Reg,
+        zero_divisor_result: u32,
+        done_label: &str,
+        mnemonic: &str,
+    ) -> Reg {
         let out = self.alloc(PtxType::U32);
         let pred = self.alloc(PtxType::Bool);
-        let done = self.alloc_label("u32_div_done");
-        let _ = writeln!(self.text, "    mov.u32    {out}, 0xffffffff;");
+        let done = self.alloc_label(done_label);
+        let _ = writeln!(self.text, "    mov.u32    {out}, {zero_divisor_result};");
         let _ = writeln!(self.text, "    setp.eq.u32    {pred}, {right}, 0;");
         let _ = writeln!(self.text, "    @{pred} bra {done};");
-        let _ = writeln!(self.text, "    div.u32    {out}, {left}, {right};");
-        let _ = writeln!(self.text, "{done}:");
-        out
-    }
-
-    fn emit_total_u32_mod(&mut self, left: Reg, right: Reg) -> Reg {
-        let out = self.alloc(PtxType::U32);
-        let pred = self.alloc(PtxType::Bool);
-        let done = self.alloc_label("u32_mod_done");
-        let _ = writeln!(self.text, "    mov.u32    {out}, 0;");
-        let _ = writeln!(self.text, "    setp.eq.u32    {pred}, {right}, 0;");
-        let _ = writeln!(self.text, "    @{pred} bra {done};");
-        let _ = writeln!(self.text, "    rem.u32    {out}, {left}, {right};");
+        let _ = writeln!(self.text, "    {mnemonic}.u32    {out}, {left}, {right};");
         let _ = writeln!(self.text, "{done}:");
         out
     }
 
     fn emit_total_i32_div(&mut self, left: Reg, right: Reg) -> Reg {
-        let out = self.alloc(PtxType::I32);
-        let zero = self.alloc(PtxType::Bool);
-        let min = self.alloc(PtxType::Bool);
-        let neg_one = self.alloc(PtxType::Bool);
-        let overflow = self.alloc(PtxType::Bool);
-        let overflow_label = self.alloc_label("i32_div_min_overflow");
-        let done = self.alloc_label("i32_div_done");
-        let _ = writeln!(self.text, "    mov.s32    {out}, 0;");
-        let _ = writeln!(self.text, "    setp.eq.s32    {zero}, {right}, 0;");
-        let _ = writeln!(self.text, "    @{zero} bra {done};");
-        let _ = writeln!(self.text, "    setp.eq.u32    {min}, {left}, 0x80000000;");
-        let _ = writeln!(
-            self.text,
-            "    setp.eq.u32    {neg_one}, {right}, 0xffffffff;"
-        );
-        let _ = writeln!(self.text, "    and.pred    {overflow}, {min}, {neg_one};");
-        let _ = writeln!(self.text, "    @{overflow} bra {overflow_label};");
-        let _ = writeln!(self.text, "    div.s32    {out}, {left}, {right};");
-        let _ = writeln!(self.text, "    bra {done};");
-        let _ = writeln!(self.text, "{overflow_label}:");
-        let _ = writeln!(self.text, "    mov.u32    {out}, 0x80000000;");
-        let _ = writeln!(self.text, "{done}:");
-        out
+        self.emit_total_i32_binary(
+            left,
+            right,
+            "div",
+            "i32_div_done",
+            Some(("i32_div_min_overflow", 0x8000_0000)),
+        )
     }
 
     fn emit_total_i32_mod(&mut self, left: Reg, right: Reg) -> Reg {
+        self.emit_total_i32_binary(left, right, "rem", "i32_mod_done", None)
+    }
+
+    fn emit_total_i32_binary(
+        &mut self,
+        left: Reg,
+        right: Reg,
+        mnemonic: &str,
+        done_label: &str,
+        overflow_case: Option<(&str, u32)>,
+    ) -> Reg {
         let out = self.alloc(PtxType::I32);
         let zero = self.alloc(PtxType::Bool);
         let min = self.alloc(PtxType::Bool);
         let neg_one = self.alloc(PtxType::Bool);
         let overflow = self.alloc(PtxType::Bool);
-        let done = self.alloc_label("i32_mod_done");
+        let done = self.alloc_label(done_label);
+        let overflow_label = overflow_case.map(|(label, value)| (self.alloc_label(label), value));
         let _ = writeln!(self.text, "    mov.s32    {out}, 0;");
         let _ = writeln!(self.text, "    setp.eq.s32    {zero}, {right}, 0;");
         let _ = writeln!(self.text, "    @{zero} bra {done};");
@@ -427,8 +418,17 @@ impl BodyCtx<'_> {
             "    setp.eq.u32    {neg_one}, {right}, 0xffffffff;"
         );
         let _ = writeln!(self.text, "    and.pred    {overflow}, {min}, {neg_one};");
-        let _ = writeln!(self.text, "    @{overflow} bra {done};");
-        let _ = writeln!(self.text, "    rem.s32    {out}, {left}, {right};");
+        if let Some((label, _)) = &overflow_label {
+            let _ = writeln!(self.text, "    @{overflow} bra {label};");
+        } else {
+            let _ = writeln!(self.text, "    @{overflow} bra {done};");
+        }
+        let _ = writeln!(self.text, "    {mnemonic}.s32    {out}, {left}, {right};");
+        if let Some((label, value)) = overflow_label {
+            let _ = writeln!(self.text, "    bra {done};");
+            let _ = writeln!(self.text, "{label}:");
+            let _ = writeln!(self.text, "    mov.u32    {out}, 0x{value:08x};");
+        }
         let _ = writeln!(self.text, "{done}:");
         out
     }

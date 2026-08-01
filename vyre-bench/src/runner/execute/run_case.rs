@@ -8,9 +8,7 @@ use std::time::Instant;
 use crate::api::case::{BenchContext, Correctness, PerformanceContract, PerformanceEvaluation};
 use crate::api::metric::{digest64_buffers, MetricStats};
 use crate::api::suite::SuiteKind;
-use crate::report::json::{
-    benchmark_device_signature, benchmark_held_out_corpus_id, CaseReport,
-};
+use crate::report::json::{benchmark_device_signature, benchmark_held_out_corpus_id, CaseReport};
 
 use super::collect::collect_samples;
 use super::stats::{compute_stats, percentile};
@@ -125,7 +123,7 @@ pub(super) fn run_case(
         }
 
         // B-4: Ensure we got enough samples before timing out
-            let actual_samples = samples.get("wall_ns").map(|v| v.len()).unwrap_or(0);
+        let actual_samples = samples.get("wall_ns").map(|v| v.len()).unwrap_or(0);
         if actual_samples < 30 && std::env::var("VYRE_ALLOW_FEW_SAMPLES").is_err() {
             let requirements = case.requirements();
             let case_id = meta.id.0;
@@ -138,7 +136,9 @@ pub(super) fn run_case(
                 workload_class: format!("{:?}", meta.workload),
                 tags: meta.tags,
                 backend_id: Some(ctx.preferred_backend.id().to_string()),
-                device_signature: Some(benchmark_device_signature(ctx.preferred_backend.device_profile())),
+                device_signature: Some(benchmark_device_signature(
+                    ctx.preferred_backend.device_profile(),
+                )),
                 held_out_corpus_id: Some(benchmark_held_out_corpus_id(&workload_fingerprint)),
                 needs_gpu: requirements.needs_gpu,
                 min_vram_bytes: requirements.min_vram_bytes,
@@ -276,15 +276,13 @@ pub(super) fn run_case(
             status = "unstable".to_string(); // Variance > 5%
         }
     }
-    if metrics
-        .get("thermal_unstable")
-        .is_some_and(|stats| stats.max > 0)
-    {
+    let requirements = case.requirements();
+    if thermal_status_applies(&metrics, requirements.needs_gpu) {
         status = "thermal_unstable".to_string();
     }
 
     let wall_ns = metrics.get("wall_ns").map(|s| s.mean);
-    let requirements = case.requirements();
+
     let optimization_passes_applied =
         infer_optimization_passes_applied(&metrics, ctx.preferred_backend.id());
     let case_id = meta.id.0;
@@ -297,7 +295,9 @@ pub(super) fn run_case(
         workload_class: format!("{:?}", meta.workload),
         tags: meta.tags,
         backend_id: Some(ctx.preferred_backend.id().to_string()),
-        device_signature: Some(benchmark_device_signature(ctx.preferred_backend.device_profile())),
+        device_signature: Some(benchmark_device_signature(
+            ctx.preferred_backend.device_profile(),
+        )),
         held_out_corpus_id: Some(benchmark_held_out_corpus_id(&workload_fingerprint)),
         needs_gpu: requirements.needs_gpu,
         min_vram_bytes: requirements.min_vram_bytes,
@@ -312,6 +312,16 @@ pub(super) fn run_case(
         optimization_passes_applied,
         artifacts: vec![],
     })
+}
+
+fn thermal_status_applies(
+    metrics: &BTreeMap<String, MetricStats>,
+    workload_needs_gpu: bool,
+) -> bool {
+    workload_needs_gpu
+        && metrics
+            .get("thermal_unstable")
+            .is_some_and(|stats| stats.max > 0)
 }
 
 fn normalize_benchmark_evidence_metrics(
@@ -367,7 +377,10 @@ fn sum_metric_stats(left: &MetricStats, right: &MetricStats) -> MetricStats {
         p9999: left.p9999.saturating_add(right.p9999),
         max: left.max.saturating_add(right.max),
         mean: left.mean + right.mean,
-        stddev: (left.stddev.mul_add(left.stddev, right.stddev * right.stddev)).sqrt(),
+        stddev: (left
+            .stddev
+            .mul_add(left.stddev, right.stddev * right.stddev))
+        .sqrt(),
         samples: left.samples.min(right.samples),
         determinism_cv: None,
     }
@@ -802,5 +815,31 @@ mod tests {
             device_to_host.p50, 4,
             "Fix: logical output-byte fallback must remain for backends without transfer telemetry."
         );
+    }
+
+    /// CPU-only optimizer benchmarks ignore idle GPU clocks even under a CUDA release run.
+    #[test]
+    fn cpu_only_workloads_ignore_gpu_thermal_status() {
+        let metrics = BTreeMap::from([("thermal_unstable".to_string(), stats(1))]);
+
+        assert!(!thermal_status_applies(&metrics, false));
+    }
+
+    /// GPU workloads retain the fail-closed thermal stability gate.
+    #[test]
+    fn gpu_workloads_preserve_thermal_status() {
+        let metrics = BTreeMap::from([("thermal_unstable".to_string(), stats(1))]);
+
+        assert!(thermal_status_applies(&metrics, true));
+    }
+
+    /// Stable or absent GPU telemetry never produces a thermal failure.
+    #[test]
+    fn stable_and_absent_gpu_telemetry_passes() {
+        assert!(!thermal_status_applies(&BTreeMap::new(), true));
+        assert!(!thermal_status_applies(
+            &BTreeMap::from([("thermal_unstable".to_string(), stats(0))]),
+            true,
+        ));
     }
 }

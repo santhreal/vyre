@@ -79,46 +79,45 @@ fn deterministic_signing_key() -> SigningKey {
 /// Ed25519 verifying key (hex) for the deterministic signing key.
 const VERIFYING_KEY_HEX: &str = "7d6cdd2bb962491984ea484fe095a24719aac478eae2cf943af71c9941f99d83";
 
-// Pinned bundle hashes and signatures below moved in 0.7.0 and the wire lengths
-// did not. `WIRE_FORMAT_VERSION` went 4 to 5 for the `Expr::BufferRef` tag, and
-// that version is a fixed-width header field, so every serialized program's
-// bytes changed in place. The lengths staying identical is the check that the
-// change was the header field and not a body-layout change.
+// Pinned bundle hashes, lengths, and signatures below moved for wire revision 6.
+// Revision 6 appends the `linear_type`, `bytes_extraction`, and `shape_predicate`
+// tags to every buffer declaration. Each canonical bundle has one buffer, so
+// its wire body grows by exactly three bytes.
 
 // --- trivial const ---
 const TRIVIAL_CONST_BUNDLE_BLAKE3: &str =
-    "6e5706282fc848f2c113988b3c19d0895f1261acb0746fe82ca9580fed097f52";
-const TRIVIAL_CONST_WIRE_LEN: usize = 194;
+    "22325167b0cb84193a1d5cfe581e9e2f95fd5721a5cf3f4fd2fdd80d49dcf062";
+const TRIVIAL_CONST_WIRE_LEN: usize = 197;
 const TRIVIAL_CONST_SIG_HEX: &str =
-    "fed1660c51b6a83e660b8e0f460cc63d9a3ebdfc98863a15f81ce2273ec644bff405153c9cb362ae0538e190226fed0cb2758fb4af6554b2b6b0d7df58d3b70a";
+    "cc136e575ff68a9352f81842a6de41c635ae323ea38dd243deb1faecfacecc09c2a90e57c1a14950a05b06e39b7dba547c6fb09cabc2d9953daa7e060209240c";
 
 // --- 1-op add ---
 const ONE_OP_ADD_BUNDLE_BLAKE3: &str =
-    "6a262a2d08e4d96cab82ee7b74c999a8332522ab86e7eb12223baf5c717a7741";
-const ONE_OP_ADD_WIRE_LEN: usize = 201;
+    "c202412743128a5f2b944de76a272503b4244e3b009b440613e74cef56cd22ed";
+const ONE_OP_ADD_WIRE_LEN: usize = 204;
 const ONE_OP_ADD_SIG_HEX: &str =
-    "a159f418c4a61bf2978eadc576d9784fc8f9d499877770e404ad3148583e4757592eac91dd5e50ea077b6efdb1e8746c483ba3ab03ec31e25de180e22b52740d";
+    "f74016145b3aad28d4f4573b6ec450f32e94ba0d297051194f8309b95479d766e8eb7876366a4be9e500c121559229f0b5c4e35a19d11a1cfc5dbc0bfa056a0c";
 
 // --- loop-add ---
 const LOOP_ADD_BUNDLE_BLAKE3: &str =
-    "16c8865a770d9087fe16581c46bdda1a205a519095342b017dd6205c32d26b58";
-const LOOP_ADD_WIRE_LEN: usize = 254;
+    "42042606253dd42ac84317e40997166aa3fb704c4a05ead4cce851f312ee6b4e";
+const LOOP_ADD_WIRE_LEN: usize = 257;
 const LOOP_ADD_SIG_HEX: &str =
-    "ef8c673bcbf2af99d8d560140225e018847b407d744a6b4c70d6c5826070fe57aa646c29329dbad79881b64bee4f24202d68f1d43f069a8017539a086cf81d0b";
+    "1c7d5cfc8f754bdc8df0455eaeb3c95ea0fd489c95ebc591cefd3e778993c8754483e9f08ba93126de7e1f2d154e8dc26d61743f0f67664221313e2939c71105";
 
 // --- composed nested ---
 const COMPOSED_NESTED_BUNDLE_BLAKE3: &str =
-    "bf285b0187bd169feff9a1ac71e320a7e4cca65e1fbb7a58ca89480420984274";
-const COMPOSED_NESTED_WIRE_LEN: usize = 197;
+    "17fe6fe62d2b37144bf29d8994412572e7b7a6dbf0f93c137b89dc413b496983";
+const COMPOSED_NESTED_WIRE_LEN: usize = 200;
 const COMPOSED_NESTED_SIG_HEX: &str =
-    "d573f23d3c74cdebcc0e1eb996962191b6c576b0d1f76bca11487ff72de15dfbf47bce087078a9f72f4569e8f05ad7668a9390a23879513b29aac2dd2e3e1d0c";
+    "5a997330ac378014280d147456ee3fa2a90b789ea295d44bf601854655c8aba5c3c92d04274b6409508af7c58a468cb257b6447a78dfc2b14df80654a7a08705";
 
 // --- region-chain with intrinsic + dialect op ---
 const REGION_CHAIN_BUNDLE_BLAKE3: &str =
-    "6dba5e0db7baa0d8c512c401f63b5536d844d0757510531b5e214660a09575d0";
-const REGION_CHAIN_WIRE_LEN: usize = 321;
+    "984aec1c4b0ffb081687e23fad358cc2f3645f85c5e85d7c0f9cbe1d113e6b49";
+const REGION_CHAIN_WIRE_LEN: usize = 324;
 const REGION_CHAIN_SIG_HEX: &str =
-    "85ed83cb200ad77f1e088801b0e3e21d41c08030f10772fa3e4fe46f20da4bbf74f6662757a87b8725fe4f61fba35520889f0073c539df783f17f789148aa602";
+    "dc62c8f2c8f51cdad309aa73a43c395a3fca353ac962a82dc641d02c9ee42af68d56cd7c98f4de704a94e05f276351dbadeb0eadafa2d38baeb1d31561059d09";
 
 // ---------------------------------------------------------------------------
 // Sign a bundle cert with the deterministic key.

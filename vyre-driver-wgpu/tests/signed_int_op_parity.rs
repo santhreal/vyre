@@ -13,8 +13,8 @@ mod common;
 use common::u32_bytes;
 
 use vyre_driver::{DispatchConfig, VyreBackend};
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver_wgpu::WgpuBackend;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Operand pairs spanning sign combinations, including the extremes.
 fn pairs() -> Vec<(i32, i32)> {

@@ -42,12 +42,12 @@ fn fnv1a64_shaped_count_program() -> Program {
     let outer = Node::Region {
         generator: Ident::from("vyre-primitives::test::fnv_shape_mid"),
         source_region: Some(GeneratorRef {
-            name: "vyre-libs::catalog::test::fnv_shape_outer".to_string(),
+            name: "vyre-libs::test::fnv_shape_outer".to_string(),
         }),
         body: Arc::new(vec![mid]),
     };
     let body = Node::Region {
-        generator: Ident::from("vyre-libs::catalog::test::fnv_shape_outer"),
+        generator: Ident::from("vyre-libs::test::fnv_shape_outer"),
         source_region: None,
         body: Arc::new(vec![outer]),
     };

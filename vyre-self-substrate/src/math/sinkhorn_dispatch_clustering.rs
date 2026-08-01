@@ -493,7 +493,7 @@ pub fn sinkhorn_clustering_via_with_scratch_into(
     write_zero_bytes(&mut scratch.inputs[4], byte_count(m as usize, "u")?);
     write_zero_bytes(&mut scratch.inputs[5], byte_count(n as usize, "v")?);
     let outputs = dispatcher.dispatch(&program, &scratch.inputs[..6], Some([1, 1, 1]))?;
-    // Real-backend output contract: the backend returns every WRITABLE buffer in binding order 
+    // Real-backend output contract: the backend returns every WRITABLE buffer in binding order
     // the two plain-RW dual-scaling buffers `u` (4) and `v` (5, both role InputOutput → outputs 0,1)
     // then the `out_assignments` output (6 → output 2). The assignment vector is therefore the THIRD
     // output, not the first (the old program-ignoring mock faked a single-output return, hiding this).

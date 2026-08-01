@@ -293,8 +293,8 @@ impl WgpuPipeline {
                         output.name
                     ))
                 })?;
-                let output_bytes_u64 =
-                    WGPU_NUMERIC.usize_to_u64(output_bytes, "persistent output allocation bytes")?;
+                let output_bytes_u64 = WGPU_NUMERIC
+                    .usize_to_u64(output_bytes, "persistent output allocation bytes")?;
                 let handle = self
                     .persistent_pool
                     .acquire(output_bytes_u64, usage_for_binding(info)?)?;

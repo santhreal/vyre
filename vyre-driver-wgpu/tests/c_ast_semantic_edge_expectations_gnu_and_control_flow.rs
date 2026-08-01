@@ -16,9 +16,9 @@
 mod c_ast_gpu_parity_support;
 
 use c_ast_gpu_parity_support::{
-    assert_full_pipeline_parity, build_fixture, row_indices,
-    run_gpu_semantic_pg_lower as run_gpu_semantic_lower, word_at, Fixture, FixtureToken,
-    VAST_STRIDE_U32,
+    assert_full_pipeline_parity, assert_semantic_node, build_fixture, fixture_builtin_unreachable,
+    row_indices, run_gpu_semantic_pg_lower as run_gpu_semantic_lower, word_at, Fixture,
+    FixtureToken, VAST_STRIDE_U32,
 };
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::lower::{
@@ -59,16 +59,6 @@ fn semantic_edge_word(edges: &[u8], node_idx: usize, edge_slot: usize, field: us
 
 fn vast_word(rows: &[u8], idx: usize, field: usize) -> u32 {
     word_at(rows, idx * VAST_STRIDE_U32 + field)
-}
-
-fn assert_semantic_node(nodes: &[u8], idx: usize, kind: u32, category: u32, role: u32) {
-    assert_eq!(semantic_node_word(nodes, idx, 0), kind, "kind[{idx}]");
-    assert_eq!(
-        semantic_node_word(nodes, idx, 6),
-        category,
-        "category[{idx}]"
-    );
-    assert_eq!(semantic_node_word(nodes, idx, 7), role, "role[{idx}]");
 }
 
 fn assert_semantic_edge(
@@ -165,22 +155,6 @@ fn fixture_nested_switch_in_loop() -> Fixture {
         FixtureToken::new(";", TOK_SEMICOLON),
         FixtureToken::new("}", TOK_RBRACE),
         FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new("}", TOK_RBRACE),
-    ])
-}
-
-/// void f() { __builtin_unreachable(); }
-fn fixture_unreachable_stmt() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_VOID),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("__builtin_unreachable", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
         FixtureToken::new("}", TOK_RBRACE),
     ])
 }
@@ -342,7 +316,7 @@ fn gpu_nested_switch_in_loop_edges_resolve() {
 
 #[test]
 fn gpu_unreachable_stmt_has_unreachable_role() {
-    let fix = fixture_unreachable_stmt();
+    let fix = fixture_builtin_unreachable();
     assert_full_pipeline_parity(&fix, "builtin_unreachable_semantic_role");
     let typed = classify(&fix);
     let (gpu_nodes, _gpu_edges) = run_gpu_semantic_lower(&typed);

@@ -35,6 +35,7 @@
 //! this file as text sees a whole name, so the owner needs no path exemption
 //! and no scanner needs to know it exists.
 
+use crate::read_source_file_bounded;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -126,7 +127,7 @@ pub fn assert_source_does_not_name_downstream_consumers(scan: ConsumerBoundarySc
 
     let mut violations = Vec::new();
     for source_file in source_files {
-        let contents = fs::read_to_string(&source_file).unwrap_or_else(|error| {
+        let contents = read_source_file_bounded(&source_file).unwrap_or_else(|error| {
             panic!(
                 "failed to read {} source file {}: {error}",
                 scan.crate_label,
@@ -257,8 +258,7 @@ mod tests {
             .skipping_directories(&["archive"]);
         assert_source_does_not_name_downstream_consumers(scan.clone());
 
-        let unskipped =
-            ConsumerBoundaryScan::for_crate("temp-crate", tree.path.to_str().unwrap());
+        let unskipped = ConsumerBoundaryScan::for_crate("temp-crate", tree.path.to_str().unwrap());
         let failure = std::panic::catch_unwind(move || {
             assert_source_does_not_name_downstream_consumers(unskipped);
         })
@@ -284,10 +284,16 @@ mod tests {
         let tree = TempTree::new("all-violations");
         let src = tree.path.join("src");
         fs::create_dir_all(&src).expect("temp tree must be creatable");
-        fs::write(src.join("a.rs"), format!("// {}\n", FORBIDDEN_CONSUMER_NAMES[0]))
-            .expect("temp file must be writable");
-        fs::write(src.join("b.rs"), format!("// {}\n", FORBIDDEN_CONSUMER_NAMES[1]))
-            .expect("temp file must be writable");
+        fs::write(
+            src.join("a.rs"),
+            format!("// {}\n", FORBIDDEN_CONSUMER_NAMES[0]),
+        )
+        .expect("temp file must be writable");
+        fs::write(
+            src.join("b.rs"),
+            format!("// {}\n", FORBIDDEN_CONSUMER_NAMES[1]),
+        )
+        .expect("temp file must be writable");
 
         let scan = ConsumerBoundaryScan::for_crate("temp-crate", tree.path.to_str().unwrap());
         let failure = std::panic::catch_unwind(move || {
@@ -428,9 +434,7 @@ mod tests {
                         .and_then(|argument| argument.strip_suffix('"'))
                 })
                 .collect();
-            if FORBIDDEN_CONSUMER_NAMES.contains(&joined.as_str())
-                && !found.contains(&joined)
-            {
+            if FORBIDDEN_CONSUMER_NAMES.contains(&joined.as_str()) && !found.contains(&joined) {
                 found.push(joined);
             }
         }

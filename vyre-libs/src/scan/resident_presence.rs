@@ -2,7 +2,7 @@
 //!
 //! # Why this exists
 //!
-//! [`GpuLiteralSet::scan_presence_by_region`](super::literal_set::GpuLiteralSet::scan_presence_by_region)
+//! [`GpuLiteralSet::scan_presence_by_region`](crate::scan::literal_set::GpuLiteralSet::scan_presence_by_region)
 //! and its async sibling issue every dispatch through `dispatch_borrowed`, which
 //! re-encodes and **re-uploads seven immutable tables on every call**: the DFA
 //! transition / output-offset / output-record tables, the per-pattern length
@@ -22,9 +22,9 @@
 //! resident tables, and reads back the per-region presence bitmap, the per-scan
 //! transfer drops from `O(tables + haystack)` to `O(haystack + region rows)`.
 //! This is the region-presence counterpart of
-//! [`RulePipeline::prepare_resident`](super::mega_scan::RulePipeline::prepare_resident)
-//! (the regex/NFA mega-scan path) and of
-//! [`GpuLiteralSet::prepare_presence_by_region_dispatch`](super::literal_set::GpuLiteralSet::prepare_presence_by_region_dispatch)
+//! `ResidentRulePipeline::prepare_resident` (requires the `matching-nfa` feature,
+//! the regex/NFA mega-scan path) and of
+//! [`GpuLiteralSet::prepare_presence_by_region_dispatch`](crate::scan::literal_set::GpuLiteralSet::prepare_presence_by_region_dispatch)
 //! (the backend-neutral single-shot prepared payload).
 //!
 //! The decoded bitmap is byte-identical to
@@ -48,7 +48,7 @@
 //! # Backend support
 //!
 //! Resident dispatch requires a backend that implements the resident half of the
-//! [`VyreBackend`] contract (`allocate_resident`, `upload_resident*`,
+//! [`vyre_driver::VyreBackend`] contract (`allocate_resident`, `upload_resident*`,
 //! `dispatch_resident_timed`). The wgpu and CUDA backends do; the CPU reference
 //! does not. [`GpuLiteralSet::prepare_resident_presence`] surfaces the backend's
 //! `UnsupportedFeature` error **loudly**: the caller must handle it explicitly
@@ -514,6 +514,7 @@ mod tests {
     /// suite where a live wgpu backend is available. `VyreBackend` requires
     /// `Send + Sync`, so the counters use atomics / `Mutex`.
     struct MockResidentBackend {
+        owner: vyre_driver::ResidentOwner,
         next_id: AtomicU64,
         /// (handle_id, byte_len) for every allocate_resident call.
         allocations: Mutex<Vec<(u64, usize)>>,
@@ -530,6 +531,8 @@ mod tests {
     impl MockResidentBackend {
         fn new(presence_buffer: Vec<u8>) -> Self {
             Self {
+                owner: vyre_driver::ResidentOwner::new()
+                    .expect("Fix: resident owner minting must succeed in tests"),
                 next_id: AtomicU64::new(1),
                 allocations: Mutex::new(Vec::new()),
                 full_uploads: AtomicUsize::new(0),
@@ -562,7 +565,7 @@ mod tests {
                 .lock()
                 .expect("mock allocations mutex")
                 .push((handle, byte_len));
-            Ok(Resource::Resident(handle))
+            Ok(Resource::Resident(self.owner.handle(handle)))
         }
 
         fn upload_resident(&self, _resource: &Resource, _bytes: &[u8]) -> Result<(), BackendError> {

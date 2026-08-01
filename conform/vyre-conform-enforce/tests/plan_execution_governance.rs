@@ -5,8 +5,9 @@ const DAG: &str = include_str!("../../../docs/optimization/PLAN_EXECUTION_DAG.to
 const AUTHORITY: &str = include_str!("../../../docs/optimization/PLAN_ARTIFACT_AUTHORITY_MAP.toml");
 const ATTESTATION: &str =
     include_str!("../../../docs/optimization/PLAN_COMPLETION_ATTESTATION_BUNDLE.toml");
-const COVERAGE: &str =
-    include_str!("../../../docs/optimization/END_TO_END_EXECUTION_GOVERNANCE_TRANCHE_COVERAGE.toml");
+const COVERAGE: &str = include_str!(
+    "../../../docs/optimization/END_TO_END_EXECUTION_GOVERNANCE_TRANCHE_COVERAGE.toml"
+);
 
 #[test]
 fn execution_governance_sources_are_registered() {
@@ -17,7 +18,10 @@ fn execution_governance_sources_are_registered() {
         "NIST_OSCAL",
         "OPENSSF_GUAC",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 
@@ -37,7 +41,10 @@ fn execution_dag_records_dependencies_authority_gates_and_publication() {
         "artifact-authority-and-dedup-map",
         "completion-attestation-bundle",
     ] {
-        assert!(DAG.contains(required), "execution DAG must include {required}");
+        assert!(
+            DAG.contains(required),
+            "execution DAG must include {required}"
+        );
     }
 }
 

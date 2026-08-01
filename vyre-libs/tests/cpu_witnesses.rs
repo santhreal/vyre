@@ -166,8 +166,12 @@ fn silu_cpu_witness_is_pinned() {
 
 #[test]
 fn substring_cpu_witness_is_pinned() {
+    // The harness OpEntry is registered under the canonical `scan` op id.
+    // `vyre-libs::matching::substring_search` is the deprecated alias, which
+    // relabels the same program and has no entry of its own; the relabel is
+    // proved in vyre-libs/tests/substring_op_id_compatibility.rs.
     assert_entry_matches_pinned_witness(
-        "vyre-libs::matching::substring_search",
+        "vyre-libs::scan::substring_search",
         vec![
             vec![vec![
                 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00,

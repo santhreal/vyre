@@ -1,15 +1,17 @@
 //! Network security governance test suite.
 
 const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
-const REDACTION: &str =
-    include_str!("../../../docs/optimization/NETWORK_EVIDENCE_REDACTION.toml");
+const REDACTION: &str = include_str!("../../../docs/optimization/NETWORK_EVIDENCE_REDACTION.toml");
 const COVERAGE: &str =
     include_str!("../../../docs/optimization/NETWORK_SECURITY_GOVERNANCE_TRANCHE_COVERAGE.toml");
 
 #[test]
 fn network_security_primary_sources_are_registered() {
     for key in ["WHATWG_URL", "RFC_9110_HTTP", "OWASP_SSRF", "RFC_1035_DNS"] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 

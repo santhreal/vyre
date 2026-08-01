@@ -54,4 +54,3 @@ fn cuda_bitand_self_collapses_via_cse() {
         );
     }
 }
-

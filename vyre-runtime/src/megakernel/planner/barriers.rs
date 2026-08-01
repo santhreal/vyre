@@ -429,7 +429,10 @@ mod tests {
 
         let (rewritten, report) = elide_value_flow_barriers(program);
 
-        assert_eq!(report.removed, 3, "all three disjoint-arm barriers must be elided");
+        assert_eq!(
+            report.removed, 3,
+            "all three disjoint-arm barriers must be elided"
+        );
         assert_eq!(barrier_count(rewritten.entry()), 0);
         // All four independent store arms must survive the rewrite (no arm dropped
         // while elliding barriers, regardless of how `Program::wrapped` nests them).

@@ -68,9 +68,10 @@ pub(super) fn record_readback_copies(
             Ok(ring)
         };
         for (output_idx, output) in request.output_bindings.iter().enumerate() {
-            let readback_size = WGPU_NUMERIC.usize_to_u64(output.layout.copy_size, "output readback copy size")?;
-            let readback_offset =
-                WGPU_NUMERIC.usize_to_u64(output.layout.copy_offset, "output readback copy offset")?;
+            let readback_size =
+                WGPU_NUMERIC.usize_to_u64(output.layout.copy_size, "output readback copy size")?;
+            let readback_offset = WGPU_NUMERIC
+                .usize_to_u64(output.layout.copy_offset, "output readback copy offset")?;
             let output_buffer = gpu_idx_by_binding
                 .get(output.binding)
                 .and_then(|idx| gpu_buffers.get(idx))
@@ -108,9 +109,10 @@ pub(super) fn record_readback_copies(
         }
     } else {
         for (output_idx, output) in request.output_bindings.iter().enumerate() {
-            let readback_size = WGPU_NUMERIC.usize_to_u64(output.layout.copy_size, "output readback copy size")?;
-            let readback_offset =
-                WGPU_NUMERIC.usize_to_u64(output.layout.copy_offset, "output readback copy offset")?;
+            let readback_size =
+                WGPU_NUMERIC.usize_to_u64(output.layout.copy_size, "output readback copy size")?;
+            let readback_offset = WGPU_NUMERIC
+                .usize_to_u64(output.layout.copy_offset, "output readback copy offset")?;
             let output_buffer = gpu_idx_by_binding
                 .get(output.binding)
                 .and_then(|idx| gpu_buffers.get(idx))

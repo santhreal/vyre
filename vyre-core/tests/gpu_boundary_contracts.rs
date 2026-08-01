@@ -27,8 +27,7 @@ const VYRE_WORKSPACE_CRATES: &[&str] = &[
 ///
 /// These are only reachable from a monorepo checkout. A standalone clone of
 /// vyre skips them loudly rather than failing on a missing path.
-const REQUIRED_ADJACENT_SOURCE_ROOTS: &[(&str, &str)] =
-    &[("compiler-cli", "tools/vyrec/src")];
+const REQUIRED_ADJACENT_SOURCE_ROOTS: &[(&str, &str)] = &[("compiler-cli", "tools/vyrec/src")];
 
 const FORBIDDEN_CPU_CALLS: &[&str] = &[
     "cpu_ref(",
@@ -176,9 +175,7 @@ fn source_roots(workspace_root: &Path) -> Vec<(String, PathBuf)> {
 
 fn adjacent_dataflow_source_roots() -> Vec<(String, PathBuf)> {
     let dataflow_root = dataflow_root().unwrap_or_else(|| {
-        panic!(
-            "required adjacent dataflow source root is missing under the resolved monorepo root"
-        )
+        panic!("required adjacent dataflow source root is missing under the resolved monorepo root")
     });
 
     let mut roots = Vec::new();

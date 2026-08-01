@@ -52,30 +52,28 @@ struct AssertCollector {
     asserts: Vec<(String, Vec<Expr>)>,
 }
 
-impl<'ast> Visit<'ast> for AssertCollector {
-    fn visit_expr_macro(&mut self, node: &'ast syn::ExprMacro) {
-        if let Some(ident) = node.mac.path.get_ident() {
+impl AssertCollector {
+    fn record_assert_macro(&mut self, node: &syn::Macro) {
+        if let Some(ident) = node.path.get_ident() {
             let name = ident.to_string();
             if name.starts_with("assert") {
                 let parser = syn::punctuated::Punctuated::<Expr, syn::Token![,]>::parse_terminated;
-                if let Ok(args) = parser.parse2(node.mac.tokens.clone()) {
+                if let Ok(args) = parser.parse2(node.tokens.clone()) {
                     self.asserts.push((name, args.into_iter().collect()));
                 }
             }
         }
+    }
+}
+
+impl<'ast> Visit<'ast> for AssertCollector {
+    fn visit_expr_macro(&mut self, node: &'ast syn::ExprMacro) {
+        self.record_assert_macro(&node.mac);
         syn::visit::visit_expr_macro(self, node);
     }
 
     fn visit_stmt_macro(&mut self, node: &'ast syn::StmtMacro) {
-        if let Some(ident) = node.mac.path.get_ident() {
-            let name = ident.to_string();
-            if name.starts_with("assert") {
-                let parser = syn::punctuated::Punctuated::<Expr, syn::Token![,]>::parse_terminated;
-                if let Ok(args) = parser.parse2(node.mac.tokens.clone()) {
-                    self.asserts.push((name, args.into_iter().collect()));
-                }
-            }
-        }
+        self.record_assert_macro(&node.mac);
         syn::visit::visit_stmt_macro(self, node);
     }
 }

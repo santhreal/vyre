@@ -37,8 +37,8 @@ fn try_into_batch_well_formed_window_returns_all_items() {
         0,
         SlotOpcode::Builtin(BuiltinOpcode::Nop),
         99,
-        vec![vec![1u32], vec![2u32]],   // 2 required
-        vec![vec![3u32]],               // 1 lookahead
+        vec![vec![1u32], vec![2u32]], // 2 required
+        vec![vec![3u32]],             // 1 lookahead
     );
     let batch = window
         .try_into_batch()

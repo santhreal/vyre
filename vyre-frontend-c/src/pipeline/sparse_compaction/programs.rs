@@ -256,10 +256,7 @@ pub(in crate::pipeline) fn pass_c_rescan_compact_sparse_tokens_with_capacity(
                     ],
                 ),
                 Node::if_then(
-                    Expr::eq(
-                        global,
-                        Expr::u32(n.saturating_sub(1)),
-                    ),
+                    Expr::eq(global, Expr::u32(n.saturating_sub(1))),
                     vec![Node::store(out_counts, Expr::u32(0), Expr::var("rank"))],
                 ),
             ],

@@ -754,7 +754,7 @@ mod tests {
         // The exhaustive-match change lists pure ops explicitly as no-effect
         // (replacing the optimistic `_ => {}` wildcard); this pins that contract
         // so a future op that wrongly clears the cache (blocking a sound
-        // forward), or worse, a memory-writer silently treated as no-effect 
+        // forward), or worse, a memory-writer silently treated as no-effect
         // is caught.
         let desc = KernelDescriptor {
             id: "pure_between_store_load".into(),

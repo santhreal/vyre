@@ -223,7 +223,13 @@ pub fn try_matroid_exchange_bfs_step_cpu_into(
     }
 
     out.clear();
-    resize_matroid_cpu_vec(out, n, 0u32, "matroid_exchange_bfs_step CPU output")?;
+    crate::graph::scratch::resize_graph_vec(
+        out,
+        n,
+        0u32,
+        "matroid exchange BFS CPU oracle",
+        "matroid_exchange_bfs_step CPU output",
+    )?;
     let mut any = false;
     for j in 0..n {
         if visited[j] != 0 {
@@ -240,25 +246,6 @@ pub fn try_matroid_exchange_bfs_step_cpu_into(
         }
     }
     Ok(any)
-}
-
-#[cfg(any(test, feature = "cpu-parity"))]
-fn resize_matroid_cpu_vec<T: Clone>(
-    out: &mut Vec<T>,
-    len: usize,
-    value: T,
-    context: &str,
-) -> Result<(), String> {
-    if len > out.len() {
-        crate::graph::scratch::reserve_graph_items(
-            out,
-            len - out.len(),
-            "matroid exchange BFS CPU oracle",
-            context,
-        )?;
-    }
-    out.resize(len, value);
-    Ok(())
 }
 
 #[cfg(test)]
@@ -426,28 +413,6 @@ mod tests {
                 && !builder_source.contains(concat!("panic", "!("))
                 && !builder_source.contains(".unwrap_or_else("),
             "Fix: matroid_exchange_bfs_step must expose checked release API and avoid production panics."
-        );
-    }
-
-    #[test]
-    fn matroid_cpu_source_uses_fallible_reusable_frontier() {
-        let source = include_str!("matroid.rs");
-        let cpu_source = source
-            .split("/// CPU reference for one BFS layer.")
-            .nth(1)
-            .expect("Fix: matroid CPU source must be present")
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: matroid CPU source must precede tests");
-
-        assert!(
-            cpu_source.contains("try_matroid_exchange_bfs_step_cpu_into")
-                && cpu_source.contains("crate::graph::scratch::reserve_graph_items")
-                && !cpu_source.contains("fn reserve_matroid_cpu_vec")
-                && !cpu_source.contains("vec![0u32; n]")
-                && !cpu_source.contains("Vec::with_capacity")
-                && !cpu_source.contains(".reserve("),
-            "Fix: matroid CPU oracle must use fallible caller-owned frontier storage."
         );
     }
 }

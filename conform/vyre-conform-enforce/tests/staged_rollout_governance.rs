@@ -22,12 +22,16 @@ fn staged_rollout_sources_are_registered() {
         "ARGO_ROLLOUTS_CANARY",
         "ARGO_ROLLOUTS_BLUEGREEN",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 
 #[test]
-fn release_rollout_strategy_records_phases_artifact_identity_promotion_abort_observation_owner_and_publication_boundary() {
+fn release_rollout_strategy_records_phases_artifact_identity_promotion_abort_observation_owner_and_publication_boundary(
+) {
     for required in [
         "strategy_id",
         "deployment_surface",
@@ -49,7 +53,8 @@ fn release_rollout_strategy_records_phases_artifact_identity_promotion_abort_obs
 }
 
 #[test]
-fn kubernetes_helm_upgrade_policy_records_rolling_update_progress_deadline_upgrade_rollback_history_waits_and_anti_rollback() {
+fn kubernetes_helm_upgrade_policy_records_rolling_update_progress_deadline_upgrade_rollback_history_waits_and_anti_rollback(
+) {
     for required in [
         "upgrade_id",
         "surface_policy",
@@ -71,7 +76,8 @@ fn kubernetes_helm_upgrade_policy_records_rolling_update_progress_deadline_upgra
 }
 
 #[test]
-fn progressive_delivery_policy_records_canary_bluegreen_traffic_analysis_promotion_abort_services_scale_and_routes() {
+fn progressive_delivery_policy_records_canary_bluegreen_traffic_analysis_promotion_abort_services_scale_and_routes(
+) {
     for required in [
         "delivery_id",
         "strategy",
@@ -93,7 +99,8 @@ fn progressive_delivery_policy_records_canary_bluegreen_traffic_analysis_promoti
 }
 
 #[test]
-fn rollback_forward_fix_decision_policy_records_triggers_inputs_rollback_forward_pause_verification_privacy_and_gate_effects() {
+fn rollback_forward_fix_decision_policy_records_triggers_inputs_rollback_forward_pause_verification_privacy_and_gate_effects(
+) {
     for required in [
         "decision_id",
         "trigger_policy",
@@ -115,7 +122,8 @@ fn rollback_forward_fix_decision_policy_records_triggers_inputs_rollback_forward
 }
 
 #[test]
-fn staged_rollout_coverage_reuses_deployment_artifact_readiness_release_health_publication_and_decision_authorities() {
+fn staged_rollout_coverage_reuses_deployment_artifact_readiness_release_health_publication_and_decision_authorities(
+) {
     for required in [
         "VX-1261..VX-1280",
         "release_rollout_strategy_policy",

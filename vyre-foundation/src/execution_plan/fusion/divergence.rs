@@ -3,6 +3,7 @@
 use rustc_hash::FxHashSet;
 
 use crate::ir::{Expr, Ident, Node};
+use crate::optimizer::rewrite::expr_contains_atomic;
 
 pub(super) fn has_divergent_invocation_gated_store(
     node: &Node,
@@ -11,7 +12,7 @@ pub(super) fn has_divergent_invocation_gated_store(
     match node {
         Node::Store { .. } => inside_invocation_gate,
         Node::Let { value, .. } | Node::Assign { value, .. } => {
-            inside_invocation_gate && expr_writes_atomic(value)
+            inside_invocation_gate && expr_contains_atomic(value)
         }
         Node::If {
             cond,
@@ -70,7 +71,7 @@ fn node_has_launch_geometry_dependent_write(
 ) -> bool {
     match node {
         Node::Let { name, value } | Node::Assign { name, value } => {
-            let writes_atomic = expr_writes_atomic(value);
+            let writes_atomic = expr_contains_atomic(value);
             let depends_on_launch = expr_depends_on_launch_geometry(value, launch_vars);
             if depends_on_launch {
                 launch_vars.insert(name.clone());
@@ -261,50 +262,6 @@ fn expr_depends_on_launch_geometry(expr: &Expr, launch_vars: &FxHashSet<Ident>) 
         | Expr::LitI32(_)
         | Expr::LitF32(_)
         | Expr::LitBool(_)
-        | Expr::BufferRef { .. }
-        | Expr::BufLen { .. }
-        | Expr::Opaque(_) => false,
-    }
-}
-
-/// `true` when `expr` is an atomic operation (which writes memory).
-/// Used by the divergent-gate detector to pick up `Let { value:
-/// Atomic { ... } }` / `Assign { value: Atomic { ... } }` patterns  -
-/// the canonical `lower_call_to` `atomic_or` shape.
-pub(super) fn expr_writes_atomic(expr: &Expr) -> bool {
-    match expr {
-        Expr::Atomic { .. } => true,
-        Expr::BinOp { left, right, .. } => expr_writes_atomic(left) || expr_writes_atomic(right),
-        Expr::UnOp { operand, .. } => expr_writes_atomic(operand),
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            expr_writes_atomic(cond)
-                || expr_writes_atomic(true_val)
-                || expr_writes_atomic(false_val)
-        }
-        Expr::Cast { value, .. } | Expr::SubgroupReduce { value, .. } => expr_writes_atomic(value),
-        Expr::Fma { a, b, c } => {
-            expr_writes_atomic(a) || expr_writes_atomic(b) || expr_writes_atomic(c)
-        }
-        Expr::Load { index, .. } => expr_writes_atomic(index),
-        Expr::Call { args, .. } => args.iter().any(expr_writes_atomic),
-        Expr::SubgroupBallot { cond } => expr_writes_atomic(cond),
-        Expr::SubgroupShuffle { value, lane } => {
-            expr_writes_atomic(value) || expr_writes_atomic(lane)
-        }
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::Var(_)
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize
         | Expr::BufferRef { .. }
         | Expr::BufLen { .. }
         | Expr::Opaque(_) => false,

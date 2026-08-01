@@ -581,7 +581,7 @@ impl CombinedBatch {
     ///
     /// `seg_len = u32::MAX` is one segment per file: a single serial DFA walk
     /// with NO intra-file parallelism. It is correctness-equivalent to the
-    /// pre-segmentation path but leaves the device almost entirely idle 
+    /// pre-segmentation path but leaves the device almost entirely idle
     /// ~0.01x Hyperscan on an 8 MiB input on the reference RTX 5090. It is a
     /// correctness floor, never a performance default; passing it (or any
     /// coarse `seg_len`) silently lands the caller on the slow path.
@@ -652,12 +652,7 @@ impl CombinedBatch {
         transition_width: TransitionWidth,
     ) -> Result<Self, PipelineError> {
         validate_hit_capacity(hit_capacity)?;
-        validate_combined_automaton(
-            transitions,
-            output_offsets,
-            output_records,
-            state_count,
-        )?;
+        validate_combined_automaton(transitions, output_offsets, output_records, state_count)?;
         if seg_len == 0 {
             return Err(PipelineError::QueueFull {
                 queue: "submission",
@@ -731,8 +726,12 @@ impl CombinedBatch {
             GpuBufferHandle::upload(device, queue, bytemuck::cast_slice(&class_map), usage)?;
         let segments =
             GpuBufferHandle::upload(device, queue, bytemuck::cast_slice(&segment_words), usage)?;
-        let queue_state =
-            GpuBufferHandle::upload(device, queue, bytemuck::cast_slice(&queue_state_words), usage)?;
+        let queue_state = GpuBufferHandle::upload(
+            device,
+            queue,
+            bytemuck::cast_slice(&queue_state_words),
+            usage,
+        )?;
         let hit_ring_bytes = hit_ring_byte_len(hit_capacity)?;
         let hit_ring = GpuBufferHandle::alloc(device, hit_ring_bytes, usage)?;
 
@@ -1561,9 +1560,8 @@ mod tests {
         // emit-guard: warm-up bytes (`byte_pos < emit_start`) must advance state
         // but NEVER emit. dfa_sync_distance of a 1-state DFA is 0, so overlap=8 is
         // amply sound here.
-        let backend = crate::WgpuBackend::new().expect(
-            "Fix: live WGPU backend required for the segmentation GPU-parity contract.",
-        );
+        let backend = crate::WgpuBackend::new()
+            .expect("Fix: live WGPU backend required for the segmentation GPU-parity contract.");
         let content: Vec<u8> = (0..600u32).map(|i| (i % 251) as u8).collect();
         let files = vec![BatchFile::new(7, 0, content)];
         let mut batch = FileBatch::upload(backend.device_queue(), &files, 1, 2048)
@@ -1578,20 +1576,29 @@ mod tests {
         };
         let mut dispatcher = crate::megakernel::BatchDispatcher::new(backend, config)
             .expect("Fix: live batch dispatcher must compile");
-        let rules = vec![
-            vyre_runtime::megakernel::BatchRuleProgram::new(0, vec![0; 256], vec![1], 1)
-                .expect("Fix: accept-every rule must be valid"),
-        ];
+        let rules =
+            vec![
+                vyre_runtime::megakernel::BatchRuleProgram::new(0, vec![0; 256], vec![1], 1)
+                    .expect("Fix: accept-every rule must be valid"),
+            ];
 
         // Whole-file scan (one segment per file): expect one hit per byte offset.
-        assert_eq!(batch.queue_len(), 1, "default geometry is one work item (1 file × 1 rule)");
+        assert_eq!(
+            batch.queue_len(),
+            1,
+            "default geometry is one work item (1 file × 1 rule)"
+        );
         let mut whole = Vec::new();
         dispatcher
             .dispatch_into(&batch, &rules, &mut whole)
             .expect("Fix: whole-file dispatch must succeed");
         let whole_set: std::collections::BTreeSet<(u32, u32)> =
             whole.iter().map(|h| (h.rule_idx, h.match_offset)).collect();
-        assert_eq!(whole_set.len(), 600, "accept-every rule hits every one of 600 offsets");
+        assert_eq!(
+            whole_set.len(),
+            600,
+            "accept-every rule hits every one of 600 offsets"
+        );
         assert_eq!(*whole_set.iter().next().unwrap(), (0, 0));
         assert_eq!(*whole_set.iter().next_back().unwrap(), (0, 599));
 
@@ -1608,8 +1615,10 @@ mod tests {
         dispatcher
             .dispatch_into(&batch, &rules, &mut segmented)
             .expect("Fix: segmented dispatch must succeed");
-        let segmented_set: std::collections::BTreeSet<(u32, u32)> =
-            segmented.iter().map(|h| (h.rule_idx, h.match_offset)).collect();
+        let segmented_set: std::collections::BTreeSet<(u32, u32)> = segmented
+            .iter()
+            .map(|h| (h.rule_idx, h.match_offset))
+            .collect();
 
         assert_eq!(
             segmented_set, whole_set,

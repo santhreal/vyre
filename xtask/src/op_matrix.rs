@@ -1,4 +1,4 @@
-//! `cargo_full run --bin xtask -- op-matrix`  -  generate and check the canonical op matrix.
+//! `cargo xtask op-matrix`  -  generate and check the canonical op matrix.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
@@ -11,6 +11,97 @@ use vyre_harness::{classify_op_id, OpTier};
 const DEFAULT_MATRIX_PATH: &str = "docs/optimization/OP_MATRIX.toml";
 const MAX_OP_MATRIX_TEXT_BYTES: u64 = 4_194_304;
 
+const SCAN_CONSTRUCT_MATRIX: &str = r#"# Manual scan construct tier data owned by VX-621/VX-622. Generated `[[op]]`
+# rows below remain generator-owned.
+scan_construct_tier_values = [
+  "supported",
+  "rejected",
+  "approximated",
+  "accelerator-only",
+  "verifier-required",
+]
+
+scan_construct_route_values = [
+  "native",
+  "unsupported",
+  "prefilter",
+  "verifier",
+  "external-accelerator",
+  "host-reference",
+]
+
+[[scan_construct]]
+id = "regular_exact_core"
+tier = "supported"
+dialect_class = "regular"
+constructs = ["literal", "concatenation", "alternation", "bounded_repeat"]
+diagnostic_code = "VYRE_SCAN_OK_EXACT_CORE"
+user_diagnostic = "Exact regular constructs are eligible for native CPU and accelerator routes when backend capability checks pass."
+approximation_policy = "exact"
+verifier_required = false
+accelerator_only = false
+backend_routes = { cpu_ref = "native", cuda = "native", wgpu = "native", metal = "native", hyperscan = "native", vectorscan = "native", rust_regex = "native", dpu = "unsupported", fpga = "unsupported" }
+proof_gates = ["conform/vyre-conform-enforce/tests/op_matrix_truth.rs", "vyre-libs/tests/scan_conformance_matrix.rs"]
+bench_targets = []
+
+[[scan_construct]]
+id = "unsupported_backtracking_constructs"
+tier = "rejected"
+dialect_class = "pcre-compatible"
+constructs = ["backreference", "conditional_reference", "recursion", "subroutine_call"]
+diagnostic_code = "VYRE_SCAN_UNSUPPORTED_BACKTRACKING_CONSTRUCT"
+user_diagnostic = "Backtracking-only constructs are rejected unless a future verifier route has exact bounded semantics for the requested dialect."
+approximation_policy = "none"
+verifier_required = false
+accelerator_only = false
+backend_routes = { cpu_ref = "unsupported", cuda = "unsupported", wgpu = "unsupported", metal = "unsupported", hyperscan = "unsupported", vectorscan = "unsupported", rust_regex = "unsupported", dpu = "unsupported", fpga = "unsupported" }
+proof_gates = ["conform/vyre-conform-enforce/tests/op_matrix_truth.rs", "vyre-libs/tests/scan_conformance_matrix.rs"]
+bench_targets = []
+
+[[scan_construct]]
+id = "lookaround_prefilter_constructs"
+tier = "approximated"
+dialect_class = "pcre-compatible"
+constructs = ["positive_lookahead", "negative_lookahead", "fixed_width_lookbehind", "negative_lookbehind"]
+diagnostic_code = "VYRE_SCAN_APPROXIMATED_LOOKAROUND_REQUIRES_VERIFIER"
+user_diagnostic = "Lookaround constructs can only enter an approximate prefilter route when final match offsets are proven by a verifier."
+approximation_policy = "broader-prefilter-plus-verifier"
+verifier_required = true
+accelerator_only = false
+backend_routes = { cpu_ref = "host-reference", cuda = "prefilter", wgpu = "prefilter", metal = "prefilter", hyperscan = "prefilter", vectorscan = "prefilter", rust_regex = "unsupported", dpu = "unsupported", fpga = "prefilter" }
+proof_gates = ["conform/vyre-conform-enforce/tests/op_matrix_truth.rs", "vyre-libs/tests/scan_conformance_matrix.rs"]
+bench_targets = []
+
+[[scan_construct]]
+id = "hardware_rule_database_constructs"
+tier = "accelerator-only"
+dialect_class = "external-rule-database"
+constructs = ["bluefield_rule_set", "rof2_rule_database", "fpga_rule_image", "rxp_job"]
+diagnostic_code = "VYRE_SCAN_ACCELERATOR_RULE_DATABASE_REQUIRED"
+user_diagnostic = "External hardware rule databases are accelerator-only artifacts and must name the compiled rule digest before dispatch."
+approximation_policy = "hardware-rule-database"
+verifier_required = false
+accelerator_only = true
+backend_routes = { cpu_ref = "unsupported", cuda = "unsupported", wgpu = "unsupported", metal = "unsupported", hyperscan = "unsupported", vectorscan = "unsupported", rust_regex = "unsupported", dpu = "external-accelerator", fpga = "external-accelerator" }
+proof_gates = ["conform/vyre-conform-enforce/tests/op_matrix_truth.rs", "vyre-libs/tests/scan_conformance_matrix.rs"]
+bench_targets = []
+
+[[scan_construct]]
+id = "capture_extraction_constructs"
+tier = "verifier-required"
+dialect_class = "capture"
+constructs = ["capture_group", "named_capture", "submatch_offsets", "repeated_capture"]
+diagnostic_code = "VYRE_SCAN_CAPTURE_EXTRACTION_REQUIRES_VERIFIER"
+user_diagnostic = "Capture extraction routes must preserve submatch spans through verifier output even when the accelerator only reports whole-match offsets."
+approximation_policy = "whole-match-accelerator-plus-capture-verifier"
+verifier_required = true
+accelerator_only = false
+backend_routes = { cpu_ref = "native", cuda = "verifier", wgpu = "verifier", metal = "verifier", hyperscan = "verifier", vectorscan = "verifier", rust_regex = "native", dpu = "unsupported", fpga = "verifier" }
+proof_gates = ["conform/vyre-conform-enforce/tests/op_matrix_truth.rs", "vyre-libs/tests/scan_conformance_matrix.rs"]
+bench_targets = []
+
+"#;
+
 #[derive(Clone)]
 struct OpRecord {
     family: String,
@@ -19,6 +110,7 @@ struct OpRecord {
     ops: Vec<String>,
     registry_sources: Vec<String>,
     duplicate_ok: bool,
+    inlined_callee: bool,
     reference: &'static str,
     foundation_ir: &'static str,
     cuda: &'static str,
@@ -139,6 +231,7 @@ fn manual_records() -> Vec<OpRecord> {
                 "constant_division".to_string(),
             ],
             registry_sources: vec!["manual.foundation_ir".to_string()],
+            inlined_callee: false,
             duplicate_ok: false,
             reference: "not_applicable",
             foundation_ir: "supported",
@@ -149,7 +242,7 @@ fn manual_records() -> Vec<OpRecord> {
                 "Backend rows are not applicable because the original IR should be rewritten before lowering."
                     .to_string(),
             tests: vec![
-                "vyre-foundation/src/optimizer/passes/algebraic/strength_reduce/tests.rs"
+                "vyre-foundation/src/optimizer/passes/algebraic/strength_reduce/tests/mod.rs"
                     .to_string(),
             ],
             bench_targets: vec!["integer_arithmetic_micro".to_string()],
@@ -160,6 +253,7 @@ fn manual_records() -> Vec<OpRecord> {
             owners: vec!["vyre-bench/src/cases/elementwise.rs".to_string()],
             ops: vec!["f32_add".to_string()],
             registry_sources: vec!["manual.bench".to_string()],
+            inlined_callee: false,
             duplicate_ok: false,
             reference: "supported",
             foundation_ir: "supported",
@@ -177,6 +271,7 @@ fn manual_records() -> Vec<OpRecord> {
 
 fn registered_records() -> Result<Vec<OpRecord>, String> {
     let mut ids = BTreeMap::<String, BTreeSet<String>>::new();
+    let mut inlined_callees = BTreeSet::new();
 
     for entry in vyre_intrinsics::harness::all_entries() {
         push_registered(&mut ids, entry.id, "vyre-intrinsics::harness")?;
@@ -190,10 +285,18 @@ fn registered_records() -> Result<Vec<OpRecord>, String> {
     for registration in inventory::iter::<vyre_driver::OpDefRegistration> {
         let def = (registration.op)();
         push_registered(&mut ids, def.id, "vyre-driver::registry")?;
+        if def.category == vyre_driver::Category::Composite {
+            inlined_callees.insert(def.id);
+        }
     }
 
     ids.into_iter()
-        .map(|(id, sources)| record_for_registered_id(&id, sources))
+        .map(|(id, sources)| {
+            let inlined_callee = inlined_callees.contains(id.as_str())
+                && sources.len() == 1
+                && sources.contains("vyre-driver::registry");
+            record_for_registered_id(&id, sources, inlined_callee)
+        })
         .collect()
 }
 
@@ -212,7 +315,11 @@ fn push_registered(
     Ok(())
 }
 
-fn record_for_registered_id(id: &str, sources: BTreeSet<String>) -> Result<OpRecord, String> {
+fn record_for_registered_id(
+    id: &str,
+    sources: BTreeSet<String>,
+    inlined_callee: bool,
+) -> Result<OpRecord, String> {
     let tier = classify_op_id(id);
     if tier == OpTier::Unknown {
         return Err(format!(
@@ -231,6 +338,7 @@ fn record_for_registered_id(id: &str, sources: BTreeSet<String>) -> Result<OpRec
         owners: owner_paths(id, tier),
         ops: vec![id.to_string()],
         duplicate_ok: sources.len() > 1,
+        inlined_callee,
         registry_sources: sources.into_iter().collect(),
         reference: "supported",
         foundation_ir: "supported",
@@ -270,21 +378,17 @@ fn owner_paths(id: &str, tier: OpTier) -> Vec<String> {
             vec![format!("vyre-primitives/src/{domain}")]
         }
         OpTier::Libs => {
-            if id.starts_with("vyre-libs::catalog::") {
-                vec!["vyre-libs/src/primitive_catalog.rs".to_string()]
-            } else {
-                let domain = id
-                    .strip_prefix("vyre-libs::")
-                    .and_then(|rest| rest.split("::").next())
-                    .unwrap_or("unknown");
-                let owner = match domain {
-                    "optim" => "vyre-libs/src/nn/optim".to_string(),
-                    "quant" => "vyre-libs/src/nn/quant".to_string(),
-                    "substrate" => "vyre-libs/src/substrate_catalog.rs".to_string(),
-                    _ => format!("vyre-libs/src/{domain}"),
-                };
-                vec![owner]
-            }
+            let domain = id
+                .strip_prefix("vyre-libs::")
+                .and_then(|rest| rest.split("::").next())
+                .unwrap_or("unknown");
+            let owner = match domain {
+                "optim" => "vyre-libs/src/nn/optim".to_string(),
+                "quant" => "vyre-libs/src/nn/quant".to_string(),
+                "substrate" => "vyre-libs/src/substrate_catalog.rs".to_string(),
+                _ => format!("vyre-libs/src/{domain}"),
+            };
+            vec![owner]
         }
         OpTier::Runtime => {
             if id.starts_with("core.") {
@@ -323,9 +427,6 @@ fn release_notes(id: &str, tier: OpTier) -> String {
         }
         OpTier::Primitive => {
             "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace.".to_string()
-        }
-        OpTier::Libs if id.starts_with("vyre-libs::catalog::") => {
-            "Source-backed Tier 3 wrapper row; wrapper id is distinct from the primitive id and is checked by op_matrix_truth.".to_string()
         }
         OpTier::Libs => {
             "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace.".to_string()
@@ -412,6 +513,7 @@ fn render_matrix(records: &[OpRecord]) -> String {
     out.push_str("  \"supported\",\n  \"experimental\",\n  \"not_applicable\",\n  \"blocked_release\",\n]\n\n");
     out.push_str("tier_values = [\n");
     out.push_str("  \"foundation_ir\",\n  \"intrinsic\",\n  \"primitive\",\n  \"libs\",\n  \"runtime\",\n  \"external\",\n]\n\n");
+    out.push_str(SCAN_CONSTRUCT_MATRIX);
 
     for record in records {
         out.push_str("[[op]]\n");
@@ -420,6 +522,9 @@ fn render_matrix(records: &[OpRecord]) -> String {
         push_array(&mut out, "owners", &record.owners);
         push_array(&mut out, "ops", &record.ops);
         push_array(&mut out, "registry_sources", &record.registry_sources);
+        if record.inlined_callee {
+            out.push_str("inlined_callee = true\n");
+        }
         if record.duplicate_ok {
             out.push_str("duplicate_ok = true\n");
         }

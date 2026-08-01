@@ -121,9 +121,7 @@ fn assert_conformance_artifact_has_no_failures(json: &Value, label: &str) {
                     "Fix: `{label}` diff summary must include non-empty `{field}`."
                 );
             }
-            summary["op_id"]
-                .as_str()
-                .expect("Fix: checked above")
+            summary["op_id"].as_str().expect("Fix: checked above")
         })
         .collect::<BTreeSet<_>>();
     assert_eq!(
@@ -473,12 +471,12 @@ fn concrete_driver_crates() -> Vec<String> {
 
 #[path = "release_gate_contracts/artifact_catalog_contracts.rs"]
 mod artifact_catalog_contracts;
-#[path = "release_gate_contracts/driver_floor_contracts.rs"]
-mod driver_floor_contracts;
-#[path = "release_gate_contracts/ci_script_contracts.rs"]
-mod ci_script_contracts;
 #[path = "release_gate_contracts/backend_acquisition_contracts.rs"]
 mod backend_acquisition_contracts;
+#[path = "release_gate_contracts/ci_script_contracts.rs"]
+mod ci_script_contracts;
+#[path = "release_gate_contracts/driver_floor_contracts.rs"]
+mod driver_floor_contracts;
 #[path = "release_gate_contracts/planner_contracts.rs"]
 mod planner_contracts;
 #[path = "release_gate_contracts/static_scan_contracts.rs"]

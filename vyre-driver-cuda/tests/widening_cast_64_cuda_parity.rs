@@ -99,7 +99,18 @@ fn run(backend: &CudaBackend, src_ty: DataType, target64: DataType, words: &[u32
 
 /// Bit patterns spanning the sign boundary and the extremes.
 fn signed_inputs() -> Vec<i32> {
-    vec![-7, 7, -1, 0, 1, i32::MIN, i32::MAX, -128, 0x4000_0000, -0x4000_0000]
+    vec![
+        -7,
+        7,
+        -1,
+        0,
+        1,
+        i32::MIN,
+        i32::MAX,
+        -128,
+        0x4000_0000,
+        -0x4000_0000,
+    ]
 }
 
 #[test]
@@ -180,14 +191,17 @@ fn u32_to_u64_zero_extends_high_word_on_cuda() {
 
 #[test]
 fn u32_to_i64_zero_extends_into_signed_target_on_cuda() {
-    // An UNSIGNED source widened into a SIGNED 64-bit target ZERO-extends 
+    // An UNSIGNED source widened into a SIGNED 64-bit target ZERO-extends
     // `0xFFFF_FFFFu32 as i64 == 0x0000_0000_FFFF_FFFF` (4294967295), not -1. The
     // PTX route reaches I64 via `from_dtype(I64) -> U64`, so this must select the
     // `cvt.u64.u32` zero-extend arm off the SOURCE, not the I64 target name.
     let backend = live_backend();
     let words: Vec<u32> = vec![0xFFFF_FFFF, 0x8000_0000, 7, 0, 0x7FFF_FFFF];
     let gpu = run(&backend, DataType::U32, DataType::I64, &words);
-    let expected: Vec<u64> = words.iter().map(|&w| (u64::from(w) as i64) as u64).collect();
+    let expected: Vec<u64> = words
+        .iter()
+        .map(|&w| (u64::from(w) as i64) as u64)
+        .collect();
     assert_eq!(
         expected[0], 0x0000_0000_FFFF_FFFF,
         "reference u32->i64 zero-extension drifted (0xFFFFFFFF must be +4294967295, not -1)"

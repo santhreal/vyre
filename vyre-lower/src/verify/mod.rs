@@ -41,6 +41,22 @@ use crate::{KernelBody, KernelDescriptor, KernelOpKind};
 /// every violation found, not just the first.
 pub type VerifyResult = Result<(), Vec<VerifyError>>;
 
+/// Format the first descriptor verification errors for backend diagnostics.
+#[must_use]
+pub fn format_verify_errors(errors: &[VerifyError]) -> String {
+    let mut out = String::new();
+    for (index, error) in errors.iter().take(4).enumerate() {
+        if index != 0 {
+            out.push_str("; ");
+        }
+        out.push_str(&format!("{error:?}"));
+    }
+    if errors.len() > 4 {
+        out.push_str("; ...");
+    }
+    out
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct VerifyError {
     pub body_path: Vec<usize>,
@@ -361,16 +377,7 @@ fn verify_body(
 }
 
 fn collect_body_results(body: &KernelBody) -> FxHashSet<u32> {
-    let mut results = FxHashSet::default();
-    for op in &body.ops {
-        for result in op.result_ids() {
-            results.insert(result);
-        }
-    }
-    for child in &body.child_bodies {
-        results.extend(collect_body_results(child));
-    }
-    results
+    crate::analyses::body_result_ids(body)
 }
 
 fn child_body_operands(op: &crate::KernelOp) -> impl Iterator<Item = u32> + '_ {
@@ -429,7 +436,9 @@ pub fn classify_operand(kind: &KernelOpKind, pos: usize) -> OperandClass {
                 OperandClass::ResultRef
             }
         }
-        SubgroupBallot | SubgroupShuffle | SubgroupBroadcast | SubgroupReduce { .. } => OperandClass::ResultRef,
+        SubgroupBallot | SubgroupShuffle | SubgroupBroadcast | SubgroupReduce { .. } => {
+            OperandClass::ResultRef
+        }
         StructuredIfThen => {
             if pos == 0 {
                 OperandClass::ResultRef

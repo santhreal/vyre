@@ -11,8 +11,11 @@ shipping superficial patches.
 
 Start with [`START_HERE.md`](START_HERE.md). Use
 [`LEGACY_DOCS.md`](LEGACY_DOCS.md) when you find an older plan or audit.
-The executable backlog lives in [`ROADMAP.md`](ROADMAP.md), and active work
-claims live in [`CLAIMS.toml`](CLAIMS.toml).
+The executable backlog lives in `ROADMAP.md` and the patch contract in
+`AGENT_CONTRACT.md`, both in this directory. Neither is linked here because both
+are maintainer working documents excluded from the repository, so they are present
+for a maintainer and absent from a clone; the precedence list below names them for
+the record. Active work claims live in [`CLAIMS.toml`](CLAIMS.toml).
 
 ## Precedence
 
@@ -122,6 +125,48 @@ Op-specific files belong by tier:
 - backend lowering: owning driver crate only
 - runtime scheduling/protocol: `vyre-runtime`
 
+## Deduplication audit workflow
+
+Run all three audits before introducing an operation or extracting a reusable
+primitive:
+
+```bash
+./cargo_full run --bin xtask -- whats-similar --all
+./cargo_full run --bin xtask -- source-similar --check
+./cargo_full run --bin xtask -- lego-audit --with-repo
+```
+
+`whats-similar` compares registered programs by IR shape. Operations routed
+through one canonical builder belong to one implementation family, including
+the atomic reduction family. Similar members of that family are evidence of
+centralization, not duplicate implementations.
+
+`source-similar` parses Rust with `syn` and compares top-level functions and
+methods instead of whole files. It normalizes local binding names and literals
+while retaining called functions, types, constants, and other semantic
+identifiers. This catches renamed copies without grouping unrelated parser
+generators that happen to share control-flow scaffolding.
+
+The strict gate scans shipped source by default. Pass `--include-tests` when
+auditing integration-test helpers and independent parity oracles. Test-only
+duplicates remain visible without forcing backend test crates into production
+dependency relationships.
+
+`lego-audit` treats registered child regions as composition evidence. A Tier 3
+operation with at least 20 nodes must place at least 25% of those nodes under a
+registered child, unless the audit classifies it as a reviewed pure-IR leaf.
+The two-caller primitive promotion rule is an adoption advisory. It counts real
+operation-to-primitive edges only. Synthetic catalog wrappers, generated
+aliases, and fixture consumers are hard failures and never satisfy coverage.
+
+The trend check reads `audits/lego-composition.tsv` from the previous tag. If
+that tag predates the baseline, it uses the checked-in bootstrap baseline.
+Create or refresh the bootstrap after reviewing composition changes:
+
+```bash
+./cargo_full run --bin xtask -- lego-audit --write-baseline
+```
+
 ## Benchmark doctrine
 
 Vyre benchmarks measure active backend execution separately from wall time.
@@ -134,6 +179,87 @@ credible public implementation is available.
 
 The target table lives in `BENCH_TARGETS.toml`; individual benchmark files must
 not carry private target logic that disagrees with it.
+
+## Measuring launch geometry
+
+Read the planned geometry back at runtime. Never cite the workgroup constant
+in the source as evidence of what ran:
+
+```text
+declared in the builder : [256, 1, 1]
+actually launched       : [1024, 1, 1] x 170
+```
+
+The planner re-plans geometry, so a declared workgroup size is an input to
+that decision and not a record of it. Any occupancy, residency, or width
+claim derived from reading a constant is unfounded, including one about a
+kernel whose declared width looks safe.
+
+Two consequences follow. A width-specific measurement must read the planned
+geometry back from the launch. And the cooperative residency ceiling (1020
+blocks at width 256 against 170 at width 1024 on a 170 SM part) binds only
+where a GridSync barrier exists, so you must not apply it to an ordinary
+dispatch.
+
+On a part with 1536 threads per SM, 1024 is the only common width at or below
+1024 that does not divide that figure, so it alone truncates to one block per
+SM. Widths 512 and 768 both reach full residency. A 1024 wide cooperative
+kernel therefore has a free 33 percent of thread residency available to it,
+which is a recovery rather than a tradeoff.
+
+## Workgroup scratch is a launch ceiling
+
+Size workgroup scratch against the static shared memory limit, not against
+what the device reports as available. A fixed lane count multiplied by a
+runtime extent grows without bound:
+
+```text
+vyre_libs::nn::attention::mla::mla_decode, 64 lanes fixed
+  q_scratch  = 64 * head_dim  f32
+  score_tile = 64 * 64        f32
+  o_acc      = 64 * head_dim  f32
+  bytes      = (128 * head_dim + 4096) * 4
+
+head_dim =  32 -> 32 KiB, loads and matches the CPU reference
+head_dim =  64 -> 48 KiB, exactly the cap, loads and matches
+head_dim =  96 -> 64 KiB, refused before load
+head_dim = 128 -> 80 KiB, refused before load
+```
+
+Crossing the limit refuses rather than corrupting, so you never receive a
+wrong answer from this path. The refusal names the measured bytes, the cap,
+and the buffers that produced the figure:
+
+```text
+CUDA workgroup scratch for this program is 81920 bytes, over the device
+per-workgroup static shared memory limit of 49152 bytes. Contributing
+buffers: `q_scratch` 32768 bytes, `score_tile` 16384 bytes, `o_acc` 32768
+bytes. Fix: reduce the workgroup buffer element counts, narrow the workgroup
+width they are sized against, or move the scratch to a storage buffer.
+```
+
+That check runs at dispatch in `vyre-driver-cuda`, before PTX emit. It is a
+pre-check and not a translation of the load error. A genuine ISA problem
+still reports `CUDA_ERROR_INVALID_PTX`, which stays correct and useful for
+the cases it actually describes.
+
+The limit is `CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK`, the static
+allocation ceiling. Do not size against the per-SM figure: a part reporting
+128 KiB per SM still refuses a 64 KiB static request from one workgroup.
+
+The boundary is the scratch size and not the module size. head_dim 96 emits a
+smaller PTX module than head_dim 128 and is refused just the same, while
+head_dim 64 lands exactly on the cap and loads, so there is no off-by-one in
+the admission check.
+
+MLA softmax also needs a positive `ulp_budget`. Under `DispatchConfig::default()`
+the PTX emitter refuses to lower `Exp` at all, with a message naming the unset
+budget and the fix. That refusal is deliberate: choosing an accuracy budget on
+your behalf would be a silent numerical downgrade. Set one before you conclude
+anything about scratch.
+
+`vyre-driver-cuda/tests/mla_decode_shared_memory_scaling.rs` holds these
+measurements.
 
 ## Boundary enforcement
 

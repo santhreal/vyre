@@ -76,4 +76,3 @@ fn generated_resident_bool_select_matrix_matches_reference_on_live_cuda() {
         "Fix: resident Bool select generated matrix must compare every output lane."
     );
 }
-

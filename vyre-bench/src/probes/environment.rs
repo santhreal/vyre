@@ -249,14 +249,8 @@ fn parse_nvidia_smi_header_value(text: &str, label: &str) -> Option<String> {
 }
 
 fn parse_nvidia_smi_device(line: &str) -> Option<GpuDeviceInfo> {
-    let mut fields = line.split(',').map(str::trim);
-    let name = fields.next()?.to_string();
-    let driver_version = fields.next()?.to_string();
-    let memory_total_mib = fields.next().and_then(|value| value.parse::<u64>().ok());
-    let compute_capability = fields.next().and_then(parse_compute_capability);
-    if name.is_empty() {
-        return None;
-    }
+    let (name, driver_version, memory_total_mib, compute_capability) =
+        parse_nvidia_smi_device_fields(line)?;
     Some(GpuDeviceInfo {
         name,
         driver_version,
@@ -265,8 +259,19 @@ fn parse_nvidia_smi_device(line: &str) -> Option<GpuDeviceInfo> {
         compute_capability_minor: compute_capability.map(|(_major, minor)| minor),
     })
 }
+/// Parse one CSV row from the canonical `nvidia-smi` device query.
+pub fn parse_nvidia_smi_device_fields(
+    line: &str,
+) -> Option<(String, String, Option<u64>, Option<(u32, u32)>)> {
+    let mut fields = line.split(',').map(str::trim);
+    let name = fields.next()?.to_string();
+    let driver_version = fields.next()?.to_string();
+    let memory_total_mib = fields.next().and_then(|value| value.parse::<u64>().ok());
+    let compute_capability = fields.next().and_then(parse_compute_capability);
+    (!name.is_empty()).then_some((name, driver_version, memory_total_mib, compute_capability))
+}
 
-fn parse_compute_capability(value: &str) -> Option<(u32, u32)> {
+pub fn parse_compute_capability(value: &str) -> Option<(u32, u32)> {
     let value = value.trim();
     if value.is_empty() {
         return None;

@@ -236,7 +236,8 @@ impl DialectRegistry {
     fn extern_defs() -> Vec<OpDef> {
         let dialect_count = inventory::iter::<ExternDialect>().count();
         let mut dialects = Vec::new();
-        let _ = vyre_foundation::allocation::try_reserve_vec_to_capacity(&mut dialects, dialect_count);
+        let _ =
+            vyre_foundation::allocation::try_reserve_vec_to_capacity(&mut dialects, dialect_count);
         dialects.extend(inventory::iter::<ExternDialect>);
         dialects.sort_by_key(|dialect| dialect.name);
 
@@ -257,8 +258,10 @@ impl DialectRegistry {
         }
 
         let mut known = FxHashSet::default();
-        let _ =
-            vyre_foundation::allocation::try_reserve_hash_set_to_capacity(&mut known, dialects.len());
+        let _ = vyre_foundation::allocation::try_reserve_hash_set_to_capacity(
+            &mut known,
+            dialects.len(),
+        );
         known.extend(dialects.into_iter().map(|dialect| dialect.name));
 
         let mut defs = Vec::new();

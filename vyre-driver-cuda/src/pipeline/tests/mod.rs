@@ -11,7 +11,7 @@ use vyre_driver::replace_output_buffers_preserving_slots;
 use vyre_driver::LaunchPlan;
 
 use crate::backend::CudaDispatchPlan;
-use crate::synthetic_device_caps::blackwell_sm120_caps;
+use crate::synthetic_device_caps::synthetic_sm120_envelope;
 
 use super::{
     add_shape_bytes, cuda_compiled_pipeline_identity_key, cuda_graph_lane_count_for_batch,
@@ -81,4 +81,3 @@ fn generated_pipeline_identity_launch(seed: u32) -> LaunchPlan {
         max_binding_alignment: std::mem::size_of::<u64>(),
     }
 }
-

@@ -16,7 +16,10 @@ fn read_repo_file(relative: &str) -> String {
 }
 
 fn assert_contains(haystack: &str, needle: &str) {
-    assert!(haystack.contains(needle), "missing required governance token: {needle}");
+    assert!(
+        haystack.contains(needle),
+        "missing required governance token: {needle}"
+    );
 }
 
 #[test]
@@ -125,4 +128,3 @@ fn fact_index_evidence_records_reuse_truth_and_publication_boundary() {
         assert_contains(&evidence, token);
     }
 }
-

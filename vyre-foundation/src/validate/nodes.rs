@@ -281,6 +281,7 @@ fn validate_node_inner(
                 }
             }
             shadowing::check_local(var, scope, options, &mut report.errors);
+            barrier::check_loop_back_edge(body, &mut report.errors);
             // The loop body is divergent only when its parent already is
             // OR when either bound varies across the workgroup. Uniform
             // bounds keep every invocation in lockstep  -  same iteration
@@ -561,7 +562,7 @@ pub(crate) fn restore_scope(scope: &mut FxHashMap<Ident, Binding>, mut scope_log
 ///
 /// A buffer element's signedness is observed only on LOAD (sign- vs zero-extend
 /// on use); a STORE writes the raw little-endian word, so storing a U32-typed
-/// value into an I32 buffer (or the 64-bit pair) is a bit-exact reinterpret 
+/// value into an I32 buffer (or the 64-bit pair) is a bit-exact reinterpret
 /// exactly `i32_slot = u32_val as i32` in Rust. This is load-bearing because the
 /// typechecker types Mod/bitwise/shift results as U32 regardless of operand
 /// signedness (Add/Sub/Mul/Div preserve the operand type via Frame::Bin), so a

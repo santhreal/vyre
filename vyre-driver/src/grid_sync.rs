@@ -34,11 +34,11 @@
 //!
 //! ## Device-resident variant
 //!
-//! [`dispatch_with_grid_sync_split_into`] round-trips every live buffer
+//! [`crate::grid_sync::dispatch_with_grid_sync_split_into`] round-trips every live buffer
 //! host↔device between each segment and on every fixpoint pass. For a fused
 //! multi-rule program whose shared output accumulator is hundreds of MiB and
 //! which splits into hundreds of segments, that transfer, not launch
-//! latency, dominates wall time. [`dispatch_resident_grid_sync_fixpoint_into`]
+//! latency, dominates wall time. [`crate::grid_sync::dispatch_resident_grid_sync_fixpoint_into`]
 //! is the device-resident counterpart: it uploads inputs into backend-resident
 //! resources once, keeps them bound across every segment and fixpoint pass (so
 //! the accumulator threads in place on-device, since resident dispatch never
@@ -625,12 +625,8 @@ fn plan_host_grid_sync_segments(
     let mut planned = Vec::new();
     reserve_grid_sync_vec(&mut planned, split.len(), "grid-sync planned host segments")?;
     for (segment_idx, segment) in split.into_iter().enumerate() {
-        let rewritten = rewrite_segment_buffers_for_host_split(
-            program,
-            &segment,
-            segment_idx,
-            &first_writer,
-        )?;
+        let rewritten =
+            rewrite_segment_buffers_for_host_split(program, &segment, segment_idx, &first_writer)?;
         let input_names = segment_input_names(&rewritten)?;
         let output_names = segment_output_names(&rewritten)?;
         planned.push(PlannedGridSyncSegment {
@@ -923,61 +919,12 @@ fn collect_segment_expr_targets(
     reads: &mut HashSet<Ident>,
     writes: &mut HashSet<Ident>,
 ) {
-    match expr {
-        Expr::Load { buffer, index } => {
-            reads.insert(Ident::from(buffer));
-            collect_segment_expr_targets(index, reads, writes);
+    vyre_foundation::visit::visit_expr_buffer_accesses(expr, |access, buffer| {
+        reads.insert(buffer.clone());
+        if access == vyre_foundation::visit::ExprBufferAccess::Atomic {
+            writes.insert(buffer.clone());
         }
-        Expr::Atomic {
-            buffer,
-            index,
-            expected,
-            value,
-            ..
-        } => {
-            let name = Ident::from(buffer);
-            reads.insert(name.clone());
-            writes.insert(name);
-            collect_segment_expr_targets(index, reads, writes);
-            if let Some(expected) = expected {
-                collect_segment_expr_targets(expected, reads, writes);
-            }
-            collect_segment_expr_targets(value, reads, writes);
-        }
-        Expr::BinOp { left, right, .. } => {
-            collect_segment_expr_targets(left, reads, writes);
-            collect_segment_expr_targets(right, reads, writes);
-        }
-        Expr::UnOp { operand, .. } | Expr::Cast { value: operand, .. } => {
-            collect_segment_expr_targets(operand, reads, writes);
-        }
-        Expr::Fma { a, b, c } => {
-            collect_segment_expr_targets(a, reads, writes);
-            collect_segment_expr_targets(b, reads, writes);
-            collect_segment_expr_targets(c, reads, writes);
-        }
-        Expr::Call { args, .. } => {
-            for arg in args {
-                collect_segment_expr_targets(arg, reads, writes);
-            }
-        }
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            collect_segment_expr_targets(cond, reads, writes);
-            collect_segment_expr_targets(true_val, reads, writes);
-            collect_segment_expr_targets(false_val, reads, writes);
-        }
-        Expr::SubgroupBallot { cond } => collect_segment_expr_targets(cond, reads, writes),
-        Expr::SubgroupShuffle { value, lane } => {
-            collect_segment_expr_targets(value, reads, writes);
-            collect_segment_expr_targets(lane, reads, writes);
-        }
-        Expr::SubgroupReduce { value, .. } => collect_segment_expr_targets(value, reads, writes),
-        _ => {}
-    }
+    });
 }
 
 /// Universal dispatch helper that satisfies `Node::Barrier { ordering:
@@ -1081,9 +1028,27 @@ pub fn dispatch_resident_with_grid_sync_split_timed(
         if segment_idx + 1 == segments.len() {
             final_outputs = timed.outputs;
         }
-        device_ns = sum_optional_timing(device_ns, timed.device_ns, "device timing")?;
-        enqueue_ns = sum_optional_timing(enqueue_ns, timed.enqueue_ns, "enqueue timing")?;
-        wait_ns = sum_optional_timing(wait_ns, timed.wait_ns, "wait timing")?;
+        device_ns = crate::accounting::sum_optional_timing(
+            device_ns,
+            timed.device_ns,
+            "device timing",
+            "grid-sync segmented",
+            "per-segment",
+        )?;
+        enqueue_ns = crate::accounting::sum_optional_timing(
+            enqueue_ns,
+            timed.enqueue_ns,
+            "enqueue timing",
+            "grid-sync segmented",
+            "per-segment",
+        )?;
+        wait_ns = crate::accounting::sum_optional_timing(
+            wait_ns,
+            timed.wait_ns,
+            "wait timing",
+            "grid-sync segmented",
+            "per-segment",
+        )?;
     }
     Ok(TimedDispatchResult {
         outputs: final_outputs,
@@ -1102,21 +1067,50 @@ fn elapsed_wall_ns(started: std::time::Instant) -> Result<u64, BackendError> {
     })
 }
 
-fn sum_optional_timing(
-    accumulator: Option<u64>,
-    next: Option<u64>,
-    field: &'static str,
-) -> Result<Option<u64>, BackendError> {
-    match (accumulator, next) {
-        (Some(left), Some(right)) => Ok(Some(left.checked_add(right).ok_or_else(|| {
-            BackendError::InvalidProgram {
+fn seed_backend_allocated_segment_inputs<'a>(
+    program: &Program,
+    segments: &[PlannedGridSyncSegment],
+    current_inputs: &mut HashMap<Ident, GridSyncInput<'a>>,
+) -> Result<(), BackendError> {
+    for name in segments
+        .iter()
+        .flat_map(|segment| segment.input_names.iter())
+    {
+        if current_inputs.contains_key(name) {
+            continue;
+        }
+        let Some(buffer) = program.buffer(name.as_str()) else {
+            return Err(BackendError::InvalidProgram {
                 fix: format!(
-                    "Fix: grid-sync segmented {field} overflowed u64 nanoseconds. Split telemetry windows or report per-segment timing instead of silently clamping."
+                    "Fix: grid-sync segment references undeclared input `{name}`. Rebuild the split from a Program whose buffer table covers every expression dependency."
                 ),
-            }
-        })?)),
-        _ => Ok(None),
+            });
+        };
+        if !buffer.is_backend_allocated_output() {
+            continue;
+        }
+        let static_len = buffer
+            .static_byte_len()
+            .map_err(|error| BackendError::InvalidProgram {
+                fix: format!("Fix: cannot seed grid-sync output `{name}`: {error}"),
+            })?;
+        let byte_len = static_len
+            .or_else(|| buffer.output_byte_range().map(|range| range.end))
+            .ok_or_else(|| BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: grid-sync output `{name}` is read-modify-written before its first split output but has no static byte size. Declare a count or output byte range."
+                ),
+            })?;
+        let mut zeroed = Vec::new();
+        reserve_grid_sync_vec(
+            &mut zeroed,
+            byte_len,
+            "grid-sync backend-allocated output seed",
+        )?;
+        zeroed.resize(byte_len, 0);
+        current_inputs.insert(name.clone(), GridSyncInput::Owned(zeroed));
     }
+    Ok(())
 }
 
 /// Variant of [`dispatch_with_grid_sync_split`] that writes final outputs into
@@ -1178,6 +1172,7 @@ where
     for (name, bytes) in initial_input_names.into_iter().zip(inputs.iter().copied()) {
         current_inputs.insert(name, GridSyncInput::Borrowed(bytes));
     }
+    seed_backend_allocated_segment_inputs(program, &segments, &mut current_inputs)?;
     let mut segment_outputs = Vec::new();
     reserve_grid_sync_vec(
         &mut segment_outputs,
@@ -1189,7 +1184,7 @@ where
     // Honor the program's fixpoint contract across the split. The
     // non-split dispatch path (`dispatch_borrowed`) re-runs the WHOLE
     // program `fixpoint_iterations` times with persistent ReadWrite
-    // buffers, so a program authored as a fixpoint closure converges 
+    // buffers, so a program authored as a fixpoint closure converges
     // a multi-hop reachability/dataflow closure is exactly this shape: a
     // `seed (acc |= source) → hop (acc' = step(acc)) → merge (acc |= acc')`
     // body whose accumulator grows by ONE dataflow hop per whole-program
@@ -1207,10 +1202,8 @@ where
     // A flow that needs k hops through k-1 intermediate variables (the
     // dominant launch-rule shape: `q = src; sink(q)`) silently returned an
     // empty frontier under the old single-pass split (recall=0).
-    let iterations = crate::fixpoint_iterations::resolve_fixpoint_iterations(
-        config,
-        "grid-sync split",
-    )?;
+    let iterations =
+        crate::fixpoint_iterations::resolve_fixpoint_iterations(config, "grid-sync split")?;
     let mut segment_config = config.clone();
     segment_config.fixpoint_iterations = Some(1);
 
@@ -1399,7 +1392,7 @@ pub fn dispatch_resident_grid_sync_fixpoint_into(
     result.and(free_result)
 }
 
-/// Resident resources backing one [`dispatch_resident_grid_sync_fixpoint_into`]
+/// Resident resources backing one [`crate::grid_sync::dispatch_resident_grid_sync_fixpoint_into`]
 /// call: the binding-ordered slice every segment dispatches against, plus a
 /// name → (handle, byte-len) map for output readback.
 struct ResidentProgramResources {
@@ -1423,7 +1416,11 @@ fn allocate_resident_program_resources(
 ) -> Result<ResidentProgramResources, BackendError> {
     let plan = BindingPlan::from_borrowed_inputs(program, inputs)?;
     let mut ordered = Vec::new();
-    reserve_grid_sync_vec(&mut ordered, plan.bindings.len(), "resident grid-sync resources")?;
+    reserve_grid_sync_vec(
+        &mut ordered,
+        plan.bindings.len(),
+        "resident grid-sync resources",
+    )?;
     let mut by_name = HashMap::new();
     reserve_grid_sync_hash_map(
         &mut by_name,
@@ -1469,10 +1466,7 @@ fn allocate_resident_program_resources(
 
 /// Byte length to allocate for a binding's resident resource: the caller input
 /// slice length for input-consuming bindings, else the buffer's static size.
-fn resident_binding_byte_len(
-    binding: &Binding,
-    inputs: &[&[u8]],
-) -> Result<usize, BackendError> {
+fn resident_binding_byte_len(binding: &Binding, inputs: &[&[u8]]) -> Result<usize, BackendError> {
     if let Some(index) = binding.input_index {
         if let Some(bytes) = inputs.get(index) {
             return Ok(bytes.len());
@@ -1512,8 +1506,10 @@ fn run_resident_grid_sync_fixpoint(
     config: &DispatchConfig,
     outputs: &mut OutputBuffers,
 ) -> Result<(), BackendError> {
-    let iterations =
-        crate::fixpoint_iterations::resolve_fixpoint_iterations(config, "resident grid-sync split")?;
+    let iterations = crate::fixpoint_iterations::resolve_fixpoint_iterations(
+        config,
+        "resident grid-sync split",
+    )?;
     let repeat_count = u32::try_from(iterations).map_err(|error| BackendError::InvalidProgram {
         fix: format!(
             "Fix: resident grid-sync fixpoint iteration count {iterations} does not fit u32: {error}."
@@ -1540,7 +1536,11 @@ fn run_resident_grid_sync_fixpoint(
     // shape is byte-identical to the host-split path.
     let output_names = original_output_names(program)?;
     let mut read_ranges = Vec::new();
-    reserve_grid_sync_vec(&mut read_ranges, output_names.len(), "resident grid-sync read ranges")?;
+    reserve_grid_sync_vec(
+        &mut read_ranges,
+        output_names.len(),
+        "resident grid-sync read ranges",
+    )?;
     for name in &output_names {
         let (resource, byte_len) =
             resident.by_name.get(name).ok_or_else(|| BackendError::InvalidProgram {
@@ -2285,6 +2285,49 @@ mod tests {
         );
     }
 
+    /// A backend-allocated atomic output starts from zero even when split
+    /// liveness rewrites its first writer as a read-write segment input.
+    #[test]
+    fn split_seeds_first_atomic_output_without_caller_bytes() {
+        let program = Program::wrapped(
+            vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+            [1, 1, 1],
+            vec![
+                Node::let_bind(
+                    "prior",
+                    Expr::atomic_add("out", Expr::u32(0), Expr::u32(1)),
+                ),
+                Node::barrier_with_ordering(MemoryOrdering::GridSync),
+                Node::Return,
+            ],
+        );
+        let dispatch = |segment: &Program,
+                        inputs: &[&[u8]],
+                        _grid: Option<[u32; 3]>,
+                        outputs: &mut Vec<Vec<u8>>|
+         -> Result<(), String> {
+            outputs.clear();
+            if !segment_output_names(segment)
+                .map_err(|error| error.to_string())?
+                .is_empty()
+            {
+                assert_eq!(inputs, &[&[0, 0, 0, 0][..]]);
+                outputs.push(1_u32.to_le_bytes().to_vec());
+            }
+            Ok(())
+        };
+
+        let outputs = dispatch_with_grid_sync_split_via(
+            &program,
+            &[],
+            &DispatchConfig::default(),
+            &dispatch,
+        )
+        .expect("backend-allocated atomic output must receive its zero seed");
+
+        assert_eq!(outputs, vec![1_u32.to_le_bytes().to_vec()]);
+    }
+
     #[test]
     fn split_via_closure_entry_matches_backend_entry_on_the_same_grid_sync_program() {
         // The `&dyn VyreBackend` entry and the closure entry both delegate to
@@ -2341,9 +2384,8 @@ mod tests {
                 .dispatch_borrowed_into(program, inputs, &segment_config, outputs)
                 .map_err(|error| error.to_string())
         };
-        let via_outputs =
-            dispatch_with_grid_sync_split_via(&program, &inputs, &config, &dispatch)
-                .expect("closure split dispatch");
+        let via_outputs = dispatch_with_grid_sync_split_via(&program, &inputs, &config, &dispatch)
+            .expect("closure split dispatch");
 
         assert_eq!(
             via_outputs, backend_outputs,
@@ -2755,11 +2797,7 @@ mod tests {
             "two segments, single fixpoint pass"
         );
         assert_eq!(outputs.len(), 1);
-        assert_eq!(
-            outputs[0].len(),
-            16,
-            "output buffer is 4 × u32 = 16 bytes"
-        );
+        assert_eq!(outputs[0].len(), 16, "output buffer is 4 × u32 = 16 bytes");
         assert_eq!(
             outputs[0][0], 0xAA,
             "segment 0's slot (element 0) must survive the final segment's write"
@@ -2902,6 +2940,7 @@ mod tests {
 
     struct ResidentReuseBackend {
         calls: AtomicUsize,
+        owner: crate::ResidentOwner,
     }
 
     impl crate::backend::private::Sealed for ResidentReuseBackend {}
@@ -2936,8 +2975,21 @@ mod tests {
             resources: &[Resource],
             _config: &DispatchConfig,
         ) -> Result<TimedDispatchResult, BackendError> {
-            assert!(
-                matches!(resources, [Resource::Resident(11), Resource::Resident(22)]),
+            let bound: Vec<u64> = resources
+                .iter()
+                .map(|resource| match resource {
+                    Resource::Resident(handle) => self
+                        .owner
+                        .resolve(*handle, "grid-sync resident reuse test backend")
+                        .expect("Fix: test backend must only receive its own resident handles"),
+                    Resource::Borrowed(_) => panic!(
+                        "Fix: resident grid-sync split must bind device handles, not host bytes."
+                    ),
+                })
+                .collect();
+            assert_eq!(
+                bound,
+                vec![11, 22],
                 "Fix: resident grid-sync split must keep the original device handles bound across every segment."
             );
             let call = self.calls.fetch_add(1, Ordering::SeqCst);
@@ -2964,14 +3016,19 @@ mod tests {
                 region("c", vec![Node::Return]),
             ],
         );
+        let owner = crate::ResidentOwner::new().expect("Fix: owner ids must be available");
         let backend = ResidentReuseBackend {
             calls: AtomicUsize::new(0),
+            owner,
         };
 
         let timed = dispatch_resident_with_grid_sync_split_timed(
             &backend,
             &program,
-            &[Resource::Resident(11), Resource::Resident(22)],
+            &[
+                Resource::Resident(owner.handle(11)),
+                Resource::Resident(owner.handle(22)),
+            ],
             &DispatchConfig::default(),
         )
         .expect("Fix: resident grid-sync split should run each segment on the same device handles");
@@ -2989,6 +3046,7 @@ mod tests {
     /// `allocate_resident` fills fresh buffers with 0xFF so a test can prove the
     /// zero-init upload actually ran.
     struct ResidentDeviceBackend {
+        owner: crate::ResidentOwner,
         next_id: std::sync::atomic::AtomicU64,
         buffers: std::sync::Mutex<HashMap<u64, Vec<u8>>>,
         freed: std::sync::Mutex<Vec<u64>>,
@@ -2998,6 +3056,7 @@ mod tests {
     impl ResidentDeviceBackend {
         fn new() -> Self {
             Self {
+                owner: crate::ResidentOwner::new().expect("Fix: owner ids must be available"),
                 next_id: std::sync::atomic::AtomicU64::new(1),
                 buffers: std::sync::Mutex::new(HashMap::new()),
                 freed: std::sync::Mutex::new(Vec::new()),
@@ -3005,11 +3064,16 @@ mod tests {
             }
         }
 
-        fn resident_id(resource: &Resource) -> u64 {
+        fn resident_id(&self, resource: &Resource) -> u64 {
             match resource {
-                Resource::Resident(id) => *id,
+                Resource::Resident(handle) => self
+                    .owner
+                    .resolve(*handle, "grid-sync resident fixpoint test backend")
+                    .expect("Fix: test backend must only receive its own resident handles"),
                 Resource::Borrowed(_) => {
-                    panic!("Fix: resident grid-sync fixpoint must bind Resident handles, not Borrowed")
+                    panic!(
+                        "Fix: resident grid-sync fixpoint must bind Resident handles, not Borrowed"
+                    )
                 }
             }
         }
@@ -3045,12 +3109,15 @@ mod tests {
             let id = self.next_id.fetch_add(1, Ordering::SeqCst);
             // Fresh device memory is garbage (0xFF here) so the zero-init upload
             // path is actually exercised by the test assertions.
-            self.buffers.lock().unwrap().insert(id, vec![0xFFu8; byte_len]);
-            Ok(Resource::Resident(id))
+            self.buffers
+                .lock()
+                .unwrap()
+                .insert(id, vec![0xFFu8; byte_len]);
+            Ok(Resource::Resident(self.owner.handle(id)))
         }
 
         fn upload_resident(&self, resource: &Resource, bytes: &[u8]) -> Result<(), BackendError> {
-            let id = Self::resident_id(resource);
+            let id = self.resident_id(resource);
             let mut buffers = self.buffers.lock().unwrap();
             let buf = buffers.get_mut(&id).expect("resident handle exists");
             assert!(
@@ -3070,7 +3137,7 @@ mod tests {
             byte_len: usize,
             output: &mut Vec<u8>,
         ) -> Result<(), BackendError> {
-            let id = Self::resident_id(resource);
+            let id = self.resident_id(resource);
             let buffers = self.buffers.lock().unwrap();
             let buf = buffers.get(&id).expect("resident handle exists");
             output.clear();
@@ -3079,7 +3146,7 @@ mod tests {
         }
 
         fn free_resident(&self, resource: Resource) -> Result<(), BackendError> {
-            let id = Self::resident_id(&resource);
+            let id = self.resident_id(&resource);
             self.buffers.lock().unwrap().remove(&id);
             self.freed.lock().unwrap().push(id);
             Ok(())
@@ -3107,7 +3174,7 @@ mod tests {
                 pos += 1;
             }
             let out_slot = out_slot.expect("program declares `out`");
-            let id = Self::resident_id(&resources[out_slot]);
+            let id = self.resident_id(&resources[out_slot]);
             let mut buffers = self.buffers.lock().unwrap();
             let buf = buffers.get_mut(&id).expect("resident `out` handle exists");
 
@@ -3125,7 +3192,9 @@ mod tests {
                         }
                         Node::Region { body, .. } => apply(body, state),
                         Node::Block(body) => apply(body, state),
-                        Node::If { then, otherwise, .. } => {
+                        Node::If {
+                            then, otherwise, ..
+                        } => {
                             apply(then, state);
                             apply(otherwise, state);
                         }
@@ -3190,7 +3259,10 @@ mod tests {
         // 0xFF garbage `allocate_resident` seeded  -  the output buffer was
         // zeroed before dispatch.
         assert_eq!(outputs[0][4], 0x00, "untouched slot 1 was zero-initialized");
-        assert_eq!(outputs[0][12], 0x00, "untouched slot 3 was zero-initialized");
+        assert_eq!(
+            outputs[0][12], 0x00,
+            "untouched slot 3 was zero-initialized"
+        );
         // Every resident resource is freed exactly once.
         assert_eq!(
             backend.freed.lock().unwrap().len(),
@@ -3222,14 +3294,8 @@ mod tests {
         let mut config = DispatchConfig::default();
         config.fixpoint_iterations = Some(3);
         let mut outputs = vec![Vec::new()];
-        dispatch_resident_grid_sync_fixpoint_into(
-            &backend,
-            &program,
-            &[],
-            &config,
-            &mut outputs,
-        )
-        .expect("resident grid-sync fixpoint dispatch");
+        dispatch_resident_grid_sync_fixpoint_into(&backend, &program, &[], &config, &mut outputs)
+            .expect("resident grid-sync fixpoint dispatch");
         assert_eq!(
             backend.dispatches.load(Ordering::SeqCst),
             6,

@@ -253,7 +253,8 @@ fn buffer_argument_retargets_the_load_and_preserves_the_index() {
     let inlined = inline_calls_with_resolver(&caller, resolver).expect("inline");
 
     let loads = loads(&inlined);
-    let data_loads: Vec<&(String, String)> = loads.iter().filter(|(buf, _)| buf == "data").collect();
+    let data_loads: Vec<&(String, String)> =
+        loads.iter().filter(|(buf, _)| buf == "data").collect();
     assert_eq!(
         data_loads.len(),
         1,
@@ -421,9 +422,7 @@ fn a_buffer_reference_outside_a_call_argument_is_rejected() {
     );
     let report = vyre_foundation::validate::validate(&program);
     assert!(
-        report
-            .iter()
-            .any(|e| e.to_string().contains("V051")),
+        report.iter().any(|e| e.to_string().contains("V051")),
         "storing a buffer reference must raise V051, got {:?}",
         report
     );

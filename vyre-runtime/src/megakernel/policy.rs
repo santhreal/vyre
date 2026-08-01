@@ -867,8 +867,9 @@ impl MegakernelLaunchPolicy {
             MegakernelDispatchTopology::Empty => MegakernelGraphBlasSwitchClass::Empty,
             MegakernelDispatchTopology::SparseFrontier => MegakernelGraphBlasSwitchClass::Sparse,
             MegakernelDispatchTopology::HybridFrontier => MegakernelGraphBlasSwitchClass::Hybrid,
-            MegakernelDispatchTopology::DenseFrontier
-            | MegakernelDispatchTopology::FusedDense => MegakernelGraphBlasSwitchClass::Dense,
+            MegakernelDispatchTopology::DenseFrontier | MegakernelDispatchTopology::FusedDense => {
+                MegakernelGraphBlasSwitchClass::Dense
+            }
             MegakernelDispatchTopology::MemoryConstrained => {
                 MegakernelGraphBlasSwitchClass::MemoryConstrained
             }

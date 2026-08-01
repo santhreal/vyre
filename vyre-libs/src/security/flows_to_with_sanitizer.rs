@@ -300,7 +300,10 @@ mod tests {
             one_step.external_fact_kind,
             crate::dataflow::SharedFactKind::Taint
         );
-        assert_eq!(one_step.external_role, "external.flow.one_step.sanitizer_gated");
+        assert_eq!(
+            one_step.external_role,
+            "external.flow.one_step.sanitizer_gated"
+        );
 
         assert_eq!(fixpoint.mode.label(), "fixpoint_converged");
         assert_eq!(fixpoint.op_id, FIXPOINT_OP_ID);

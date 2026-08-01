@@ -56,6 +56,7 @@ fn wgpu_compile_config_receives_natural_gradient_workgroup_before_lowering() {
         max_threads_per_block: 1024,
         max_block_dim: [1024, 1024, 64],
         max_grid_dim: [u32::MAX, u32::MAX, u32::MAX],
+        max_threads_per_sm: 0,
     };
 
     let effective = super::wgpu_effective_dispatch_config_for_limits(
@@ -69,7 +70,7 @@ fn wgpu_compile_config_receives_natural_gradient_workgroup_before_lowering() {
     assert_eq!(
         effective.workgroup_override,
         Some([1024, 1, 1]),
-        "Fix: WGPU lowering config must include the natural-gradient workgroup so WGSL @workgroup_size and dispatch metadata agree."
+        "Fix: WGPU lowering config must include the natural-gradient workgroup so WGSL @workgroup_size and dispatch metadata agree. WebGPU reports no per-compute-unit thread budget (max_threads_per_sm 0), so residency-aware cold start is inert here and this width is unchanged by it."
     );
 }
 
@@ -88,6 +89,7 @@ fn wgpu_natural_gradient_compile_config_preserves_semantic_safety_gates() {
         max_threads_per_block: 1024,
         max_block_dim: [1024, 1024, 64],
         max_grid_dim: [u32::MAX, u32::MAX, u32::MAX],
+        max_threads_per_sm: 0,
     };
     let mut explicit = DispatchConfig::default();
     explicit.workgroup_override = Some([256, 1, 1]);

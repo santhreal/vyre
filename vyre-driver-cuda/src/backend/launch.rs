@@ -349,14 +349,32 @@ impl CudaBackend {
 
     /// Whether a native cooperative grid-sync launch of `program` with these
     /// `inputs`/`config` fits the device's cooperative thread residency (every
-    /// block co-resident). This is the cheap preflight the orchestrator uses to
-    /// route native-vs-resident: it builds only the binding/launch plan (no
-    /// device allocation, no module load) and compares the grid block count to
-    /// the cooperative thread-residency bound. The stricter per-kernel occupancy
-    /// bound is still enforced at launch via
-    /// [`Self::validate_cooperative_function_residency`]; a grid that clears this
+    /// block co-resident).
+    ///
+    /// This is the cheap preflight: it builds only the binding/launch plan (no
+    /// device allocation, no module load) and compares the grid block count to the
+    /// cooperative thread-residency bound. It is not advisory. The driver's own
+    /// route decision in
+    /// [`CudaBackend::grid_sync_program_needs_host_split`](crate::CudaBackend)
+    /// calls exactly this function, so a caller that preflights gets the SAME
+    /// verdict the driver will act on.
+    ///
+    /// That sharing is deliberate and load-bearing. This predicate previously
+    /// carried its OWN copy of the residency arithmetic beside
+    /// [`Self::cooperative_residency_admits`], which meant an advertised preflight
+    /// and the route it predicted could drift apart: the copies already disagreed
+    /// on a workgroup whose thread count does not fit `u32` (one returned
+    /// `Ok(false)`, the other an error). A preflight that can disagree with the
+    /// decision it predicts is worse than no preflight, because a caller routes on
+    /// it and then fails anyway. There is now one implementation.
+    ///
+    /// The stricter per-kernel occupancy bound is deliberately NOT part of this:
+    /// it needs the compiled module's register and shared-memory usage, which
+    /// costs a module load, so it stays at launch in
+    /// [`Self::validate_cooperative_function_residency`]. A grid that clears this
     /// preflight but not occupancy surfaces `CooperativeResidencyExceeded` at
-    /// launch and the orchestrator falls back then.
+    /// launch, and that late refusal is the accepted cost of keeping the preflight
+    /// free of a compile.
     pub(crate) fn cooperative_grid_sync_launch_fits(
         &self,
         program: &Program,
@@ -368,14 +386,7 @@ impl CudaBackend {
         }
         let bindings = BindingPlan::from_borrowed_inputs(program, inputs)?;
         let launch = self.prepare_launch_plan(program, &bindings, config)?;
-        let total_blocks = launch_axis_product("grid", launch.grid)?;
-        let threads_per_block = launch_axis_product("workgroup", launch.workgroup)?;
-        let Ok(threads_per_block) = u32::try_from(threads_per_block) else {
-            return Ok(false);
-        };
-        let resident_block_limit =
-            cooperative_thread_residency_block_limit(&self.caps, threads_per_block);
-        Ok(resident_block_limit > 0 && total_blocks <= resident_block_limit)
+        self.cooperative_residency_admits(&launch)
     }
 
     fn cooperative_residency_diagnostic(&self, launch: &LaunchPlan) -> String {

@@ -289,4 +289,3 @@ fn egraph_structural_equivalence_kernel_fails_closed_on_output_overflow() {
          re-plan with a larger max_equivalences; got: {msg}"
     );
 }
-

@@ -5,6 +5,10 @@ use std::fs;
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 
+use crate::release_backend_rows::{
+    count_non_runtime_supported_release_backend_rows, count_runtime_dialect_contract_rows,
+    RUNTIME_DIALECT_CONTRACT_OPS,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use vyre_driver::backend::{backend_dispatches, registered_backends_by_precedence_slice};
@@ -27,13 +31,6 @@ const INT4_CONFORMANCE_OPS: &[&str] = &[
     "vyre-libs::quant::int4_batched_matvec_f32_scaled",
     "vyre-libs::quant::int4_batched_matmul_f32_scaled",
     "vyre-libs::quant::int4_batched_matmul_top1_f32_scaled",
-];
-const RUNTIME_DIALECT_CONTRACT_OPS: &[&str] = &[
-    "core.indirect_dispatch",
-    "io.dma_from_nvme",
-    "io.write_back_to_nvme",
-    "mem.unmap",
-    "mem.zerocopy_map",
 ];
 const REPORTED_CONFORMANCE_CASE_CLASSES: &[&str] = &[
     "positive",
@@ -160,12 +157,8 @@ const REQUIRED_SCAN_CONFORMANCE_ENGINES: &[&str] = &[
     "hyperscan",
     "vectorscan",
 ];
-const ALLOWED_SCAN_ENGINE_SUPPORT: &[&str] = &[
-    "supported",
-    "unsupported",
-    "not_applicable",
-    "experimental",
-];
+const ALLOWED_SCAN_ENGINE_SUPPORT: &[&str] =
+    &["supported", "unsupported", "not_applicable", "experimental"];
 
 pub(crate) fn run(args: &[String]) {
     let (output, check) = match parse_args(args) {
@@ -463,57 +456,17 @@ pub(crate) fn run(args: &[String]) {
         return;
     }
 
-    let json = match serde_json::to_string_pretty(&matrix) {
-        Ok(json) => json,
-        Err(error) => {
-            eprintln!("Fix: failed to serialize conformance matrix: {error}");
-            std::process::exit(1);
-        }
-    };
     if let Some(parent) = output.parent() {
         if let Err(error) = fs::create_dir_all(parent) {
             eprintln!("Fix: failed to create `{}`: {error}", parent.display());
             std::process::exit(1);
         }
     }
-    if let Err(error) = fs::write(&output, format!("{json}\n")) {
-        eprintln!("Fix: failed to write `{}`: {error}", output.display());
-        std::process::exit(1);
-    }
+    crate::output_arg::write_json(&output, &matrix);
     println!("conformance-matrix: wrote {}", output.display());
     if !matrix.blockers.is_empty() {
         std::process::exit(1);
     }
-}
-
-fn count_runtime_dialect_contract_rows(rows: &[String]) -> usize {
-    rows.iter()
-        .filter(|row| {
-            let Some((op, backend, status)) = parse_release_backend_row(row) else {
-                return false;
-            };
-            RUNTIME_DIALECT_CONTRACT_OPS.contains(&op)
-                && ((backend == "reference" && status == "not_applicable")
-                    || (matches!(backend, "cuda" | "wgpu") && status == "experimental"))
-        })
-        .count()
-}
-
-fn count_non_runtime_supported_release_backend_rows(rows: &[String]) -> usize {
-    rows.iter()
-        .filter(|row| {
-            let Some((op, _backend, status)) = parse_release_backend_row(row) else {
-                return false;
-            };
-            !RUNTIME_DIALECT_CONTRACT_OPS.contains(&op) && status == "supported"
-        })
-        .count()
-}
-
-fn parse_release_backend_row(row: &str) -> Option<(&str, &str, &str)> {
-    let (prefix, status) = row.rsplit_once(':')?;
-    let (op, backend) = prefix.rsplit_once(':')?;
-    Some((op, backend, status))
 }
 
 pub(crate) struct OpMatrixCatalog {
@@ -695,10 +648,8 @@ fn release_backend_case_row(
     let positive = spec.status == "supported"
         && entry.is_some_and(|entry| entry.has_test_inputs && entry.has_expected_output);
     let byte_output = entry.is_some_and(|entry| entry.has_expected_output);
-    let unsupported_diagnostic = spec.status != "supported"
-        || spec
-            .test_case_classes
-            .contains("unsupported_diagnostic");
+    let unsupported_diagnostic =
+        spec.status != "supported" || spec.test_case_classes.contains("unsupported_diagnostic");
     let class_sources = [
         (
             "positive",
@@ -799,37 +750,18 @@ fn classify_conformance_case_classes(
         let path = vyre_root.join(test_path);
         let text = read_text_bounded(&path).unwrap_or_default();
         let lowered = format!("{test_path}\n{text}").to_ascii_lowercase();
-        if lowered.contains("err")
-            || lowered.contains("error")
-            || lowered.contains("reject")
-            || lowered.contains("invalid")
-            || lowered.contains("unsupported")
-            || lowered.contains("fail")
-        {
-            classes.insert("negative");
-        }
-        if lowered.contains("boundary")
-            || lowered.contains("overflow")
-            || lowered.contains("underflow")
-            || lowered.contains("zero")
-            || lowered.contains("empty")
-            || lowered.contains("limit")
-            || lowered.contains("cap")
-            || lowered.contains("max")
-            || lowered.contains("min")
-        {
-            classes.insert("boundary");
-        }
-        if lowered.contains("adversarial")
-            || lowered.contains("hostile")
-            || lowered.contains("malformed")
-            || lowered.contains("fuzz")
-        {
-            classes.insert("adversarial");
-        }
-        if lowered.contains("unsupported") || lowered.contains("not_applicable") {
-            classes.insert("unsupported_diagnostic");
-        }
+        classes.extend(crate::text_markers::classify_text(
+            &lowered,
+            &[
+                ("negative", crate::text_markers::NEGATIVE_MARKERS),
+                ("boundary", crate::text_markers::BOUNDARY_MARKERS),
+                (
+                    "adversarial",
+                    &["adversarial", "hostile", "malformed", "fuzz"],
+                ),
+                ("unsupported_diagnostic", &["unsupported", "not_applicable"]),
+            ],
+        ));
     }
     classes
 }
@@ -906,8 +838,9 @@ fn read_scan_conformance_matrix(
             findings.push(ScanConformanceFinding {
                 semantics: semantics.clone(),
                 engine: None,
-                issue: "missing evidence_path. Fix: point at the conformance test source for this row."
-                    .to_string(),
+                issue:
+                    "missing evidence_path. Fix: point at the conformance test source for this row."
+                        .to_string(),
             });
         } else if !vyre_root.join(evidence_path).is_file() {
             findings.push(ScanConformanceFinding {
@@ -982,9 +915,7 @@ fn read_scan_conformance_matrix(
 }
 
 fn is_even_hex(value: &str) -> bool {
-    !value.is_empty()
-        && value.len() % 2 == 0
-        && value.bytes().all(|byte| byte.is_ascii_hexdigit())
+    !value.is_empty() && value.len() % 2 == 0 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
 }
 
 fn inspect_ci_conformance_gates(vyre_root: &Path) -> Vec<CiConformanceGate> {
@@ -1494,7 +1425,7 @@ fn parse_args(args: &[String]) -> Result<(PathBuf, bool), String> {
             }
             "--help" | "-h" => {
                 println!(
-                    "USAGE:\n  cargo_full run --bin xtask -- conformance-matrix [--check] [--output PATH]\n\n\
+                    "USAGE:\n  cargo xtask conformance-matrix [--check] [--output PATH]\n\n\
                      Writes or checks registered-op and release-backend conformance coverage evidence."
                 );
                 std::process::exit(0);
@@ -1605,10 +1536,7 @@ mod tests {
         let row = &rows[0];
 
         assert_all_case_classes_reported(row);
-        assert_eq!(
-            row.required_case_classes,
-            vec!["unsupported_diagnostic"]
-        );
+        assert_eq!(row.required_case_classes, vec!["unsupported_diagnostic"]);
         assert!(row.missing_required_case_classes.is_empty());
         assert!(row.blockers.is_empty());
         assert!(!evidence(row, "positive").covered);

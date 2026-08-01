@@ -17,25 +17,87 @@
 // tests now assert their presence as structural smoke tests. Byte-level
 // oracle checks live in `tests/cat_a_conform.rs`.
 
+/// Split a program's buffers into the caller-visible bindings and the
+/// workgroup-local scratch the kernel allocates for itself.
+///
+/// A raw `buffers().len()` conflates the two, and several of these contracts
+/// were written before their builder reduced through workgroup memory. When
+/// `layer_norm` gained three scratch tiles, a count of 2 became a count of 5
+/// and the assertion read as "the surface changed" when the surface had not
+/// moved at all. Splitting the two makes the contract say what it means: the
+/// caller still binds exactly these buffers, and the scratch is an
+/// implementation detail whose names are pinned separately.
+fn split_buffers(program: &vyre::ir::Program) -> (Vec<String>, Vec<String>) {
+    let mut bindings = Vec::new();
+    let mut scratch = Vec::new();
+    for buffer in program.buffers() {
+        if buffer.kind() == vyre::ir::MemoryKind::Shared {
+            scratch.push(buffer.name().to_string());
+        } else {
+            bindings.push(buffer.name().to_string());
+        }
+    }
+    (bindings, scratch)
+}
+
 #[test]
 fn contract_nn_softmax_exists() {
     use vyre_libs::nn::softmax;
     let p = softmax("x", "y", 64);
-    assert_eq!(p.buffers().len(), 4);
+    let (bindings, scratch) = split_buffers(&p);
+    assert_eq!(bindings, vec!["x", "y"]);
+    assert_eq!(scratch, vec!["softmax_scratch", "softmax_max"]);
 }
 
 #[test]
 fn contract_nn_layer_norm_exists() {
     use vyre_libs::nn::layer_norm;
     let p = layer_norm("x", "out", 64, 1e-5);
-    assert_eq!(p.buffers().len(), 2);
+    // Two caller bindings, unchanged. The three scratch tiles are the
+    // workgroup reduction that computes mean and variance in one pass.
+    let (bindings, scratch) = split_buffers(&p);
+    assert_eq!(bindings, vec!["x", "out"]);
+    assert_eq!(
+        scratch,
+        vec!["ln_sum_scratch", "ln_sq_scratch", "ln_stats"],
+        "layer_norm reduces through workgroup memory; these are its scratch tiles"
+    );
 }
 
 #[test]
 fn contract_nn_attention_exists() {
     use vyre_libs::nn::attention;
+    // s = 64 is above the direct-unroll threshold, so this builds the tiled
+    // kernel. See `contract_nn_attention_small_shapes_unroll_directly` for the
+    // other side of that branch.
     let p = attention("q", "k", "v", "out", 64, 8);
-    assert_eq!(p.buffers().len(), 4);
+    let (bindings, scratch) = split_buffers(&p);
+    assert_eq!(bindings, vec!["q", "k", "v", "out"]);
+    assert_eq!(scratch, vec!["attention_scratch"]);
+}
+
+/// Small attention shapes take the fully unrolled path and allocate no scratch.
+///
+/// `attention` branches on shape: at `s <= 8 && d <= 16` it emits straight-line
+/// code with no workgroup reduction, so it has four buffers and a `[1, 1, 1]`
+/// workgroup. That branch was invisible to these contracts, which is how
+/// `attention_default_is_query_row_parallel` came to assert the tiled
+/// workgroup size against a shape that never reaches the tiled kernel.
+#[test]
+fn contract_nn_attention_small_shapes_unroll_directly() {
+    use vyre_libs::nn::attention;
+    let p = attention("q", "k", "v", "out", 8, 4);
+    let (bindings, scratch) = split_buffers(&p);
+    assert_eq!(bindings, vec!["q", "k", "v", "out"]);
+    assert!(
+        scratch.is_empty(),
+        "the unrolled path performs no workgroup reduction, so it needs no scratch: {scratch:?}"
+    );
+    assert_eq!(
+        p.workgroup_size(),
+        [1, 1, 1],
+        "straight-line code runs one invocation, not a cooperative tile"
+    );
 }
 
 #[test]
@@ -161,7 +223,15 @@ fn contract_substring_real_byte_compare() {
 fn contract_math_matmul_tiled_exists() {
     use vyre_libs::math::matmul_tiled;
     let p = matmul_tiled("a", "b", "c", 64, 64, 64, 16);
-    assert_eq!(p.buffers().len(), 3);
+    // Three caller bindings, unchanged, plus the two cooperative tiles the
+    // kernel stages `a` and `b` through. The old count of 3 predated tiling.
+    let (bindings, scratch) = split_buffers(&p);
+    assert_eq!(bindings, vec!["a", "b", "c"]);
+    assert_eq!(
+        scratch.len(),
+        2,
+        "matmul_tiled stages one workgroup tile per input: {scratch:?}"
+    );
     // matmul_tiled flattens the 2D workgroup into a 1D dispatch so that
     // InvocationId { axis: 0 } is a unique linear index.
     assert_eq!(p.workgroup_size(), [256, 1, 1]);

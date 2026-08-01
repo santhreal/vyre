@@ -61,7 +61,7 @@ fn cuda_pipeline_dynamic_dispatch_reuses_existing_output_slots() {
 
 #[test]
 fn cuda_graph_lane_planner_scales_past_legacy_four_lane_cap() {
-    let caps = blackwell_sm120_caps(32 * 1024 * 1024 * 1024);
+    let caps = synthetic_sm120_envelope(32 * 1024 * 1024 * 1024);
     let plan = single_input_output_plan(1024);
     let input = vec![7_u8; 1024];
     let row = [input.as_slice()];
@@ -76,7 +76,7 @@ fn cuda_graph_lane_planner_scales_past_legacy_four_lane_cap() {
 
 #[test]
 fn cuda_graph_lane_planner_caps_large_graphs_by_vram_budget() {
-    let caps = blackwell_sm120_caps(512 * 1024 * 1024);
+    let caps = synthetic_sm120_envelope(512 * 1024 * 1024);
     let plan = single_input_output_plan(64 * 1024 * 1024);
     let input = vec![1_u8; 64 * 1024 * 1024];
     let row = [input.as_slice()];
@@ -321,4 +321,3 @@ fn compiled_cuda_graph_batched_replay_uses_checked_batch_lane_and_output_slots()
         "Fix: launched CUDA graph lanes must be fenced through finish_cuda_graph_replay_into even when caller output-slot lookup fails."
     );
 }
-

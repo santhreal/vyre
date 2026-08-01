@@ -100,7 +100,6 @@ fn inspect_release_evidence_run_semantics(
                 "vyre-frontend-c-contracts.json",
                 "vyrec-cli-contracts.json",
                 "external-dataflow-contracts.json",
-                "compiler-consumer-contracts.json",
                 "compiler-consumer-grammar-gen-contracts.json",
             ],
         ),

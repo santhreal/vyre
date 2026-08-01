@@ -196,26 +196,26 @@ pub(crate) fn decode_classified(
     ))
 }
 
-pub(crate) fn read_u64(bytes: &[u8], cursor: &mut usize) -> Result<u64, DecodeError> {
-    let end = cursor.checked_add(8).ok_or(DecodeError::Truncated)?;
+pub(crate) fn read_array<const WIDTH: usize>(
+    bytes: &[u8],
+    cursor: &mut usize,
+) -> Result<[u8; WIDTH], DecodeError> {
+    let end = cursor.checked_add(WIDTH).ok_or(DecodeError::Truncated)?;
     if end > bytes.len() {
         return Err(DecodeError::Truncated);
     }
-    let mut buf = [0u8; 8];
-    buf.copy_from_slice(&bytes[*cursor..end]);
+    let mut value = [0_u8; WIDTH];
+    value.copy_from_slice(&bytes[*cursor..end]);
     *cursor = end;
-    Ok(u64::from_le_bytes(buf))
+    Ok(value)
+}
+
+pub(crate) fn read_u64(bytes: &[u8], cursor: &mut usize) -> Result<u64, DecodeError> {
+    Ok(u64::from_le_bytes(read_array(bytes, cursor)?))
 }
 
 pub(crate) fn read_hash128(bytes: &[u8], cursor: &mut usize) -> Result<[u8; 16], DecodeError> {
-    let end = cursor.checked_add(16).ok_or(DecodeError::Truncated)?;
-    if end > bytes.len() {
-        return Err(DecodeError::Truncated);
-    }
-    let mut out = [0u8; 16];
-    out.copy_from_slice(&bytes[*cursor..end]);
-    *cursor = end;
-    Ok(out)
+    read_array(bytes, cursor)
 }
 
 pub(crate) fn read_u32_vec(bytes: &[u8], cursor: &mut usize) -> Result<Vec<u32>, DecodeError> {

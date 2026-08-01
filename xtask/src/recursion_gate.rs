@@ -1,11 +1,11 @@
 //! `recursion-gate`  -  enforce the recursion thesis at build time.
 //!
 //! Walks every Tier-2.5 primitive shipped under
-//! `vyre-primitives/src/<domain>/` and verifies that >= 1 load-bearing
-//! Vyre-owned consumer surface imports the primitive: the current
-//! `vyre-self-substrate/src` crate, legacy self-substrate surfaces, the
-//! primitive catalog, or the future standalone substrate crate. Build fails
-//! if any non-allowlisted primitive has zero self-consumers.
+//! `vyre-primitives/src/<domain>/` and verifies that at least one
+//! load-bearing Vyre-owned consumer surface imports the primitive. Current
+//! consumer surfaces include `vyre-self-substrate`, legacy self-substrate
+//! modules, and the standalone substrate crate. Build fails if any
+//! non-allowlisted primitive has zero self-consumers.
 //!
 //! See `docs/RECURSION_THESIS.md` for the architectural thesis.
 
@@ -23,8 +23,6 @@ const SELF_SUBSTRATE_SRC: &str = "vyre-self-substrate/src";
 /// Legacy home  -  kept readable so older consumers that still re-export
 /// through vyre-libs surface as imports too.
 const LEGACY_SUBSTRATE_SRC: &str = "vyre-libs/src/self_substrate";
-/// Catalog surface generated from registered primitive ops.
-const PRIMITIVE_CATALOG_SRC: &str = "vyre-libs/src/primitive_catalog.rs";
 /// Standalone substrate crate home. Keeps the gate working if some
 /// self-consumers move out of vyre-driver.
 const FUTURE_SUBSTRATE_SRC: &str = "vyre-substrate/src";
@@ -261,7 +259,6 @@ pub(crate) fn run(args: &[String]) {
     let substrate_surfaces: Vec<PathBuf> = [
         SELF_SUBSTRATE_SRC,
         LEGACY_SUBSTRATE_SRC,
-        PRIMITIVE_CATALOG_SRC,
         FUTURE_SUBSTRATE_SRC,
     ]
     .iter()

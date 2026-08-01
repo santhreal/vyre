@@ -86,10 +86,9 @@ fn compute_live_mask_with_scratch_into(
 
     // Build the DCE analysis Program for this exact graph shape. Buffer
     // names + binding indices match the persistent BFS layout, including the
-    // converged word, but the DCE variant exposes only the final changed flag
-    // instead of large-graph active scratch.
+    // converged word.
     let shape = ProgramGraphShape::new(encoded.node_count, encoded.edge_count);
-    let analysis = build_dce_bfs_program(shape, n.max(1));
+    let program = build_dce_bfs_program(shape, n.max(1));
 
     let words = bitset_words(n) as usize;
     scratch.seed.clear();
@@ -116,7 +115,27 @@ fn compute_live_mask_with_scratch_into(
     write_zero_bytes(&mut scratch.inputs[7], std::mem::size_of::<u32>());
     write_zero_bytes(&mut scratch.inputs[8], std::mem::size_of::<u32>());
 
-    let outputs = dispatcher.dispatch(&analysis, &scratch.inputs, None)?;
+    // ONE dispatch, PINNED TO ONE WORKGROUP. Both halves are load-bearing.
+    //
+    // One dispatch, because the kernel's persistent loop runs the traversal to a
+    // fixpoint internally. Converting this to host-repeated grid-synced wave
+    // batches was measured on an RTX 5090 at 4 to 6 times the wall time and about
+    // 232 times the launches for a deep chain, and it bounded an IR size that a
+    // bounded `Node::loop_for` already bounds.
+    //
+    // One workgroup, because the early exit is NOT sound across workgroups, and
+    // the sibling caller already knew it: `pipeline_resident.rs` pins the same
+    // program with `dce_grid_x = 1` and says why. This call passing `None` was the
+    // real defect, and it is subtler than a lost clear. Coverage across workgroups
+    // is redundant, since workgroup 0's strided lanes visit every source, but
+    // DISCOVERY ATTRIBUTION IS EXCLUSIVE: growth is detected by whether this lane's
+    // `atomic_or` actually flipped the bit, so when a duplicate group wins the flip
+    // the essential group never sets `changed` for that discovery. It can then read
+    // 0, record a fixpoint that has not been reached, and stop relaxing while a
+    // newly discovered node's own edges are still unexpanded. Since only workgroup
+    // 0 covers the whole node range, nobody else expands them, and DCE deletes live
+    // code against a truncated closure.
+    let outputs = dispatcher.dispatch(&program, &scratch.inputs, Some([1, 1, 1]))?;
     if outputs.len() != 3 {
         return Err(DispatchError::BackendError(format!(
             "Fix: persistent_bfs dispatch expected exactly 3 outputs (frontier_out, changed, converged), got {}.",

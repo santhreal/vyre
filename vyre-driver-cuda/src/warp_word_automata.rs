@@ -324,10 +324,12 @@ pub fn plan_cuda_warp_word_automata_layout(
         });
     }
     if request.shared_memory_bytes > request.max_shared_memory_bytes {
-        return Err(CudaWarpWordAutomataLayoutError::SharedMemoryBudgetExceeded {
-            shared_memory_bytes: request.shared_memory_bytes,
-            max_shared_memory_bytes: request.max_shared_memory_bytes,
-        });
+        return Err(
+            CudaWarpWordAutomataLayoutError::SharedMemoryBudgetExceeded {
+                shared_memory_bytes: request.shared_memory_bytes,
+                max_shared_memory_bytes: request.max_shared_memory_bytes,
+            },
+        );
     }
     if request.bit_parallel_throughput_bytes_per_second == 0 {
         return Err(CudaWarpWordAutomataLayoutError::ZeroThroughput {
@@ -401,10 +403,8 @@ pub fn plan_cuda_warp_word_automata_layout(
         shared_memory_bytes: request.shared_memory_bytes,
         max_shared_memory_bytes: request.max_shared_memory_bytes,
         occupancy_proxy_bps,
-        bit_parallel_throughput_bytes_per_second: request
-            .bit_parallel_throughput_bytes_per_second,
-        table_driven_throughput_bytes_per_second: request
-            .table_driven_throughput_bytes_per_second,
+        bit_parallel_throughput_bytes_per_second: request.bit_parallel_throughput_bytes_per_second,
+        table_driven_throughput_bytes_per_second: request.table_driven_throughput_bytes_per_second,
         throughput_speedup_bps,
         match_digest: request.bit_parallel_match_digest,
         match_parity: true,
@@ -448,14 +448,8 @@ fn cuda_warp_word_automata_layout_digest(evidence: CudaWarpWordAutomataLayoutEvi
     digest = mix_warp_word_layout_digest(digest, u64::from(evidence.shared_memory_bytes));
     digest = mix_warp_word_layout_digest(digest, u64::from(evidence.max_shared_memory_bytes));
     digest = mix_warp_word_layout_digest(digest, u64::from(evidence.occupancy_proxy_bps));
-    digest = mix_warp_word_layout_digest(
-        digest,
-        evidence.bit_parallel_throughput_bytes_per_second,
-    );
-    digest = mix_warp_word_layout_digest(
-        digest,
-        evidence.table_driven_throughput_bytes_per_second,
-    );
+    digest = mix_warp_word_layout_digest(digest, evidence.bit_parallel_throughput_bytes_per_second);
+    digest = mix_warp_word_layout_digest(digest, evidence.table_driven_throughput_bytes_per_second);
     digest = mix_warp_word_layout_digest(digest, evidence.throughput_speedup_bps);
     mix_warp_word_layout_digest(digest, evidence.match_digest)
 }

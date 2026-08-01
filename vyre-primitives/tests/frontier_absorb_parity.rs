@@ -24,7 +24,7 @@ use vyre_reference::value::Value;
 /// Read a returned output buffer BY NAME rather than by fixed position. These builders
 /// return several writable buffers (visited/next_wave/added_counts); locating each via
 /// the interpreter's own `output_index` keeps the asserts correct even if the buffer
-/// binding order changes or a fused intermediate is later inserted ahead of them 
+/// binding order changes or a fused intermediate is later inserted ahead of them
 /// the drift class that bit the multi-block prefix-scan harness.
 fn out_by_name(program: &Program, outputs: &[Value], name: &str) -> Vec<u32> {
     let index = vyre_reference::output_index(program, name)

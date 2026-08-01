@@ -24,6 +24,33 @@ use vyre_primitives::{
     math::tensor_scc::cpu_ref as tensor_scc_cpu_ref,
 };
 
+macro_rules! define_csr_queue_reference {
+    () => {
+        /// Checked CPU queue-driven CSR expansion reference.
+        #[cfg(any(test, feature = "cpu-parity"))]
+        #[allow(clippy::too_many_arguments)]
+        pub fn reference_try_csr_queue_forward_traverse(
+            active_queue: &[u32],
+            queue_len: u32,
+            edge_offsets: &[u32],
+            edge_targets: &[u32],
+            edge_kind_mask: &[u32],
+            node_count: u32,
+            allow_mask: u32,
+        ) -> Result<Vec<u32>, String> {
+            try_csr_queue_forward_traverse_cpu(
+                active_queue,
+                queue_len,
+                edge_offsets,
+                edge_targets,
+                edge_kind_mask,
+                node_count,
+                allow_mask,
+            )
+        }
+    };
+}
+
 /// Validate a CSR shape using the primitive's dominance-frontier contract.
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn reference_validate_csr_shape(
@@ -218,28 +245,8 @@ pub fn reference_csr_queue_forward_traverse(
     .unwrap_or_else(|err| panic!("structural CSR queue traversal reference rejected input. {err}"))
 }
 
-/// Checked CPU queue-driven CSR expansion reference.
 #[cfg(any(test, feature = "cpu-parity"))]
-#[allow(clippy::too_many_arguments)]
-pub fn reference_try_csr_queue_forward_traverse(
-    active_queue: &[u32],
-    queue_len: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    node_count: u32,
-    allow_mask: u32,
-) -> Result<Vec<u32>, String> {
-    try_csr_queue_forward_traverse_cpu(
-        active_queue,
-        queue_len,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        node_count,
-        allow_mask,
-    )
-}
+define_csr_queue_reference!();
 
 /// CPU batched path-reconstruction reference.
 #[cfg(any(test, feature = "cpu-parity"))]

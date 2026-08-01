@@ -13,10 +13,19 @@
 
 use vyre_foundation::ir::{DataType, Program};
 
-use crate::fixed_u32_matmul::{checked_cells, fixed_u32_matmul_program};
+use crate::fixed_u32_matmul::{try_fixed_u32_matmul, FixedMatmulContext};
 
 /// Op id.
 pub const OP_ID: &str = "vyre-primitives::graph::monoidal_compose";
+
+const MATMUL_CONTEXT: FixedMatmulContext = FixedMatmulContext {
+    op_id: OP_ID,
+    operation: "monoidal_compose",
+    lhs_label: "monoidal_compose f input",
+    rhs_label: "monoidal_compose g input",
+    out_label: "monoidal_compose output",
+    dimensions: ["a", "b", "c"],
+};
 
 /// Sequential composition step. Same shape as
 /// [`crate::math::tensor_network::tn_pair_contract`]; ships under graph
@@ -38,18 +47,7 @@ pub fn try_monoidal_compose(
     b: u32,
     c: u32,
 ) -> Result<Program, String> {
-    if a == 0 || b == 0 || c == 0 {
-        return Err(format!(
-            "Fix: monoidal_compose requires a, b, c > 0, got a={a}, b={b}, c={c}."
-        ));
-    }
-
-    let f_cells = checked_cells("monoidal_compose f input", a, b)?;
-    let g_cells = checked_cells("monoidal_compose g input", b, c)?;
-    let cells = checked_cells("monoidal_compose output", a, c)?;
-    Ok(fixed_u32_matmul_program(
-        OP_ID, f, g, out, a, b, c, f_cells, g_cells, cells,
-    ))
+    try_fixed_u32_matmul(f, g, out, a, b, c, &MATMUL_CONTEXT)
 }
 
 /// CPU reference.

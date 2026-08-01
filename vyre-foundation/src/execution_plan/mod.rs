@@ -320,18 +320,27 @@ fn memory_plan(program: &Program, adapter_caps: &AdapterCaps) -> Result<MemoryPl
             })?;
         }
         let output_range = buffer.output_byte_range();
+        // A backend-allocated output is one the executor WRITES and hands back
+        // without ever receiving host bytes for it, so a missing static count
+        // leaves nothing to size the allocation or the readback from.
+        //
+        // The rule lives on `BufferDecl` so this planner, the CPU reference, and
+        // the device drivers all refuse the same set with the same message.
+        // Checking the narrower `is_output` here was the drift that let a
+        // countless `WriteOnly` read back zero bytes under an `Ok`, while the
+        // identical omission on `BufferDecl::output` was refused.
+        buffer.require_static_readback_size().map_err(|message| {
+            PlanError::NonCanonicalProgram {
+                source: crate::error::Error::WireFormatValidation {
+                    message: format!(
+                        "canonical execution plan rejected buffer `{}`: {message}",
+                        buffer.name()
+                    ),
+                },
+            }
+        })?;
         if buffer.is_output() {
             let full_size = size.unwrap_or(0);
-            if full_size == 0 {
-                return Err(PlanError::NonCanonicalProgram {
-                    source: crate::error::Error::WireFormatValidation {
-                        message: format!(
-                            "canonical execution plan requires static output buffer `{}` size. Fix: set BufferDecl::output(...).with_count(n) before planning.",
-                            buffer.name()
-                        ),
-                    },
-                });
-            }
             let visible = if let Some(range) = output_range.clone() {
                 if range.start > range.end || range.end as u64 > full_size {
                     return Err(PlanError::InvalidOutputRange {

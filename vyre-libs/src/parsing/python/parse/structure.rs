@@ -1,6 +1,6 @@
 use super::{
     find_matching_delimiter, find_matching_delimiter_into, load_u32, search_next_token,
-    search_next_token_into, search_prev_token,
+    search_next_token_into, search_prev_token, store_words, write_words,
 };
 use crate::parsing::composition::child_phase;
 use crate::parsing::python::lex::{
@@ -12,20 +12,6 @@ use crate::parsing::python::{
 };
 use crate::region::wrap_anonymous;
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-fn store_record_words(out_buffer: &str, base_var: &str, values: &[Expr]) -> Vec<Node> {
-    values
-        .iter()
-        .enumerate()
-        .map(|(idx, value)| {
-            Node::store(
-                out_buffer,
-                Expr::add(Expr::var(base_var), Expr::u32(idx as u32)),
-                value.clone(),
-            )
-        })
-        .collect()
-}
 
 /// Extract `def`, `async def`, and `class` declarations.
 #[must_use]
@@ -173,7 +159,7 @@ pub fn python312_extract_structure(
             ),
         ]
         .into_iter()
-        .chain(store_record_words(
+        .chain(store_words(
             out_records,
             "slot",
             &[
@@ -341,7 +327,7 @@ pub fn python312_extract_imports(
             ),
         ]
         .into_iter()
-        .chain(store_record_words(
+        .chain(store_words(
             out_records,
             "slot",
             &[
@@ -534,7 +520,7 @@ pub fn python312_extract_with_blocks(
             ),
         ]
         .into_iter()
-        .chain(store_record_words(
+        .chain(store_words(
             out_records,
             "slot",
             &[
@@ -626,13 +612,6 @@ fn pack_sparse_tokens(tokens: &[(usize, u32, u32)]) -> (Vec<u8>, Vec<u8>, Vec<u8
         tok_lens[base..base + 4].copy_from_slice(&len.to_le_bytes());
     }
     (tok_types, tok_starts, tok_lens)
-}
-
-fn write_words(dst: &mut [u8], words: &[u32]) {
-    for (idx, word) in words.iter().enumerate() {
-        let base = idx * 4;
-        dst[base..base + 4].copy_from_slice(&word.to_le_bytes());
-    }
 }
 
 fn structure_fixture_inputs() -> Vec<Vec<Vec<u8>>> {

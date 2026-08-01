@@ -1,4 +1,44 @@
 #![allow(clippy::unnecessary_cast, clippy::needless_range_loop)]
+fn conditional_metric_points(
+    prefix: &str,
+    resident_used: bool,
+    device_reset_sequence: bool,
+    resident_reset_bytes: u64,
+) -> Vec<crate::api::metric::MetricPoint> {
+    [
+        ("resident_buffers", u64::from(resident_used)),
+        ("device_reset_sequence", u64::from(device_reset_sequence)),
+        ("resident_reset_bytes", resident_reset_bytes),
+    ]
+    .into_iter()
+    .map(|(suffix, value)| crate::api::metric::MetricPoint {
+        name: format!("{prefix}_{suffix}"),
+        value,
+    })
+    .collect()
+}
+
+fn scaled_ratio_x1000(numerator: u64, denominator: u64) -> u64 {
+    if denominator == 0 {
+        return 0;
+    }
+    (u128::from(numerator) * 1000 / u128::from(denominator)).min(u128::from(u64::MAX)) as u64
+}
+fn generated_u32_triplet(
+    count: u32,
+    mut generate: impl FnMut(u32) -> (u32, u32, u32),
+) -> (Vec<u32>, Vec<u32>, Vec<u32>) {
+    let mut first = Vec::with_capacity(count as usize);
+    let mut second = Vec::with_capacity(count as usize);
+    let mut third = Vec::with_capacity(count as usize);
+    for index in 0..count {
+        let (a, b, c) = generate(index);
+        first.push(a);
+        second.push(b);
+        third.push(c);
+    }
+    (first, second, third)
+}
 pub mod adaptive_routing;
 pub mod adversarial;
 pub mod alias_aware_optimizations;
@@ -45,10 +85,12 @@ pub mod regex_bt;
 pub mod release_workloads;
 pub mod rust_frontend;
 pub mod scan_ac_irregular;
+pub(crate) mod skewed_graph;
 pub mod stencil;
 pub mod synthetic;
 pub mod transpose;
 // External dataflow baselines live behind an opt-in feature so vyre-bench's
+pub(crate) mod queue_stage;
 // default surface stays platform-only.
 #[cfg(feature = "external-baselines")]
 pub mod dataflow_baseline;

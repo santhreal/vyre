@@ -169,6 +169,26 @@ pub(crate) fn run_gpu_scoped_typedef_annotation(source: &[u8], raw_vast: &[u8]) 
     outputs[0].clone()
 }
 
+/// Annotate a fixture's VAST on the GPU the way the oracle does it.
+///
+/// Callers of this helper compare the result byte-for-byte against
+/// `reference_c11_annotate_typedef_names`, so it has to dispatch the
+/// SCOPE-AWARE annotator. It used to call the global-fast path, which resolves
+/// a name by testing its hash against the set of file-scope typedefs and has
+/// no scope model at all. That path cannot represent shadowing in either
+/// direction, and both directions showed up as parity failures:
+///
+///   - `{ float T; } T y;` reported no visible typedef at `T y`, because the
+///     inner `float T` removed the name even after its block closed;
+///   - `__auto_type T = 1; T *p;` reported `p` as a declarator, because the
+///     name was still in the global set even though it was shadowed.
+///
+/// Neither is a bug in the fast path. It is documented as an approximation and
+/// it is the right kernel when a translation unit has no shadowing. It was
+/// simply the wrong kernel to hold to the exact oracle's answer. Tests that
+/// want the fast path call `run_gpu_fast_typedef_annotation` directly, and
+/// `fast_typedef_annotation_contracts.rs` pins what it does and does not
+/// promise.
 pub(crate) fn run_gpu_typedef_annotation(fix: &Fixture, raw_vast: &[u8]) -> Vec<u8> {
-    run_gpu_fast_typedef_annotation(fix.source.as_bytes(), raw_vast)
+    run_gpu_scoped_typedef_annotation(fix.source.as_bytes(), raw_vast)
 }

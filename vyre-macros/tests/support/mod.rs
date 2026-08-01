@@ -239,7 +239,10 @@ pub mod ir_inner {
                 /// Mirror of the real `vyre_foundation::ir::Node::trap(address, tag)`
                 /// constructor the `vyre_ast_registry!` decoder cascade emits for
                 /// each not-yet-wired ALU opcode branch.
-                pub fn trap(address: super::expr::Expr, tag: impl Into<super::expr::Ident>) -> Self {
+                pub fn trap(
+                    address: super::expr::Expr,
+                    tag: impl Into<super::expr::Ident>,
+                ) -> Self {
                     Self::Trap {
                         address,
                         tag: tag.into(),

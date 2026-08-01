@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use vyre_driver::autotune_store::{AutotuneKey, AutotuneRecord, AutotuneStore};
 use vyre_driver::specialization::{SpecCacheKey, SpecMap};
 use vyre_driver_cuda::occupancy::{pick_workgroup_size_for_occupancy, KernelResourceUsage};
-use vyre_driver_cuda::synthetic_device_caps::blackwell_sm120_caps_default;
+use vyre_driver_cuda::synthetic_device_caps::synthetic_sm120_envelope_default;
 
 fn remove_file_if_exists(path: &PathBuf) {
     match std::fs::remove_file(path) {
@@ -22,7 +22,7 @@ fn remove_file_if_exists(path: &PathBuf) {
 
 #[test]
 fn i4_pick_persists_through_i3_store_round_trip() {
-    let caps = blackwell_sm120_caps_default();
+    let caps = synthetic_sm120_envelope_default();
     // ptxas would report a kernel's regs/thread; here a moderately
     // pressured kernel (32 regs/thread, no shared)  -  at 256 threads
     // that fits 8 blocks/SM, full occupancy.
@@ -76,7 +76,7 @@ fn i4_pick_persists_through_i3_store_round_trip() {
 
 #[test]
 fn i4_picker_resolves_distinct_kernels_to_distinct_workgroup_sizes() {
-    let caps = blackwell_sm120_caps_default();
+    let caps = synthetic_sm120_envelope_default();
     // Heavy register pressure forces a smaller block to fit per-SM
     // register cap.
     let heavy = KernelResourceUsage {

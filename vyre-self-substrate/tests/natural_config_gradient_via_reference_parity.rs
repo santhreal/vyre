@@ -7,12 +7,12 @@
 //! the two constituent kernels are each parity-covered in isolation (softmax normalization by
 //! `softmax_pick_config_via_reference_parity`, the 16.16 Fisher matvec by
 //! `natural_gradient_via_reference_parity`), but the COMPOSITION, where dispatch 1's normalized
-//! probabilities feed as the gradient input of dispatch 2, both through the same faithful boundary 
+//! probabilities feed as the gradient input of dispatch 2, both through the same faithful boundary
 //! was exercised ONLY by the consumer's own in-file `DifferentiableDispatcher` mock (which ignores the
 //! IR and hand-computes each stage). This is the FIRST-EVER execution of the full
 //! softmax→Fisher-matvec chain through a boundary that models the real backend.
 //!
-//! Contract (audited CLEAN): the composite runs two dispatches on one dispatcher 
+//! Contract (audited CLEAN): the composite runs two dispatches on one dispatcher
 //!   (1) `softmax_step`:  pre_exp RO + out RW  = 2 IC, decode outputs[0] → `probabilities`;
 //!   (2) `natural_gradient_block_apply`:  M_inv_sqrt RO + grad(=probabilities) RO + out RW = 3 IC,
 //!       decode outputs[0] → the natural gradient.
@@ -26,17 +26,12 @@
 use vyre_self_substrate::math::differentiable_autotune::natural_config_gradient_magnitude_pre_exp_fixed_via;
 
 mod common;
-use common::fixed_mul as fixed_mul_16_16;
-use common::ReferenceEvalDispatcher;
+use common::{
+    fixed_matvec, fixed_mul as fixed_mul_16_16, signed_fixed_17 as signed_fisher,
+    xorshift32 as xorshift, ReferenceEvalDispatcher,
+};
 
 const FIXED_ONE: u32 = 1 << 16;
-
-fn xorshift(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
-}
 
 /// Exact replica of the softmax_step IR: normalized 16.16 probabilities.
 fn softmax_fixed(pre_exp: &[u32]) -> Vec<u32> {
@@ -47,17 +42,8 @@ fn softmax_fixed(pre_exp: &[u32]) -> Vec<u32> {
 
 /// Exact composite oracle: softmax normalize, then a 16.16 Fisher matvec over the probabilities.
 fn natural_config_gradient(pre_exp: &[u32], m_inv_sqrt: &[u32]) -> Vec<u32> {
-    let prob = softmax_fixed(pre_exp);
-    let n = pre_exp.len();
-    (0..n)
-        .map(|t| {
-            let mut acc = 0u32;
-            for j in 0..n {
-                acc = acc.wrapping_add(fixed_mul_16_16(m_inv_sqrt[t * n + j], prob[j]));
-            }
-            acc
-        })
-        .collect()
+    let probabilities = softmax_fixed(pre_exp);
+    fixed_matvec(m_inv_sqrt, &probabilities, probabilities.len())
 }
 
 #[test]
@@ -106,20 +92,6 @@ fn natural_config_gradient_via_matches_exact_composite_oracle() {
         off_diagonal_mixing > 200,
         "composite sweep must exercise multi-candidate Fisher coupling, got {off_diagonal_mixing}"
     );
-}
-
-/// A signed 16.16 Fisher-block entry in roughly `[-2.0, 2.0)`: a 17-bit magnitude, optionally
-/// negated. An inverse-Fisher square root is symmetric PSD, but its OFF-DIAGONAL entries are freely
-/// negative (only the diagonal of a PSD matrix must be non-negative), so a faithful autotune Fisher
-/// block routinely carries negative coupling (the operand class the old unsigned multiply corrupted).
-fn signed_fisher(state: &mut u32) -> u32 {
-    let magnitude = (xorshift(state) & 0x0001_FFFF) as i32; // [0.0, 2.0) in 16.16
-    let signed = if xorshift(state) & 1 == 0 {
-        magnitude
-    } else {
-        -magnitude
-    };
-    signed as u32
 }
 
 fn to_fixed(v: f64) -> u32 {

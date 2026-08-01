@@ -35,7 +35,7 @@ inventory::submit! {
     }
 }
 
-use crate::scan::dispatch_io::pack_u32_slice as pack_u32;
+use vyre_primitives::wire::pack_u32_slice as pack_u32;
 
 fn function_extract_inputs() -> Vec<Vec<Vec<u8>>> {
     vec![vec![

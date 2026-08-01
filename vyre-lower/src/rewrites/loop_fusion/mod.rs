@@ -1,7 +1,9 @@
 //! Conservative loop fusion for adjacent disjoint-write loops.
 
 use super::dataflow_facts::resolve_reaching_def_id as resolve;
+use super::write_targets_are_independent;
 use crate::descriptor::Name;
+use crate::rewrites::literal_pool_splice::LiteralPoolSplice;
 use crate::{KernelBody, KernelDescriptor, KernelOp, KernelOpKind};
 
 /// Fuse adjacent `StructuredForLoop`s with identical bounds and
@@ -108,7 +110,38 @@ fn try_fuse_pair(
     }
     let fused_body_index = body.child_bodies.len() as u32;
     let mut fused_child = left_child;
-    fused_child.ops.extend(right_child.ops);
+    // `right_child`'s ops index into ITS OWN literal pool, and that pool does
+    // not survive the fusion  -  only `fused_child`'s (left's) pool does.
+    // Relocate the ops so their pool operands point at equivalent entries in
+    // the surviving pool instead of at whatever left's pool happens to hold at
+    // the same index.
+    //
+    // Latent rather than live at the moment: `simple_disjoint_write_bodies`
+    // admits only a body whose single op is a `StoreGlobal`/`StoreShared`, and
+    // a store carries no literal-pool operand, so today there is nothing to
+    // remap and no pool entry to copy. It is written through the splice anyway
+    // so that relaxing that gate to admit a compute prologue, the obvious next
+    // extension, cannot silently begin resolving right's pool indices against
+    // left's pool. That failure mode does not trip `verify` whenever the index
+    // happens to be in range; it just emits the wrong constant.
+    //
+    // DO NOT "simplify" this back to `fused_child.ops.extend(right_ops)` on the
+    // grounds that the splice currently remaps nothing. The routing IS what
+    // makes widening the legality gate safe, and whoever adds a compute
+    // prologue will be thinking about aliasing, not about literal pools.
+    let KernelBody {
+        ops: right_ops,
+        literals: right_literals,
+        child_bodies: right_children,
+    } = right_child;
+    debug_assert!(
+        right_children.is_empty(),
+        "fusion legality requires childless bodies, so no child-body index \
+         operand can need rebasing here"
+    );
+    let mut splice = LiteralPoolSplice::new(&right_literals, &mut fused_child.literals);
+    let relocated = splice.relocate_all(right_ops);
+    fused_child.ops.extend(relocated);
     body.child_bodies.push(fused_child);
     let mut fused = left.clone();
     fused.operands[2] = fused_body_index;
@@ -162,15 +195,6 @@ fn single_write_target(
         )),
         _ => None,
     }
-}
-
-fn write_targets_are_independent(
-    left: (u8, u32, u32),
-    right: (u8, u32, u32),
-    alias_facts: Option<&crate::analyses::alias_facts::AliasFactSet>,
-) -> bool {
-    left.0 != right.0
-        || alias_facts.is_some_and(|facts| facts.proves_no_alias(left.1, left.2, right.1, right.2))
 }
 
 #[cfg(test)]

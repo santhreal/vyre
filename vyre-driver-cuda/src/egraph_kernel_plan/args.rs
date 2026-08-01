@@ -26,32 +26,43 @@ pub(super) struct EGraphStructuralKernelArgs {
     pub(super) pair_count: u64,
 }
 
-impl EGraphStructuralKernelArgs {
-    pub(super) fn write_kernel_args_into(
-        &mut self,
-        args: &mut SmallVec<[*mut std::ffi::c_void; 8]>,
-    ) -> Result<(), BackendError> {
-        reserve_egraph_kernel_args(
-            args,
-            CUDA_EGRAPH_STRUCTURAL_EQUIVALENCE_KERNEL_PARAM_COUNT,
-            "structural-equivalence",
-        )?;
-        args.push(&mut self.row_eclass_ids_ptr as *mut _ as *mut std::ffi::c_void);
-        args.push(&mut self.row_language_op_ids_ptr as *mut _ as *mut std::ffi::c_void);
-        args.push(&mut self.row_children_offsets_ptr as *mut _ as *mut std::ffi::c_void);
-        args.push(&mut self.row_children_lens_ptr as *mut _ as *mut std::ffi::c_void);
-        args.push(&mut self.row_signatures_ptr as *mut _ as *mut std::ffi::c_void);
-        args.push(&mut self.children_ptr as *mut _ as *mut std::ffi::c_void);
-        args.push(&mut self.bucket_words_ptr as *mut _ as *mut std::ffi::c_void);
-        args.push(&mut self.bucket_rows_ptr as *mut _ as *mut std::ffi::c_void);
-        args.push(&mut self.output_pairs_ptr as *mut _ as *mut std::ffi::c_void);
-        args.push(&mut self.output_count_ptr as *mut _ as *mut std::ffi::c_void);
-        args.push(&mut self.bucket_index as *mut _ as *mut std::ffi::c_void);
-        args.push(&mut self.first_pair as *mut _ as *mut std::ffi::c_void);
-        args.push(&mut self.pair_count as *mut _ as *mut std::ffi::c_void);
-        Ok(())
-    }
+macro_rules! impl_kernel_args {
+    ($type:ty, $count:expr, $context:literal, [$($field:ident),+ $(,)?]) => {
+        impl $type {
+            pub(super) fn write_kernel_args_into(
+                &mut self,
+                args: &mut SmallVec<[*mut std::ffi::c_void; 8]>,
+            ) -> Result<(), BackendError> {
+                reserve_egraph_kernel_args(args, $count, $context)?;
+                $(
+                    args.push(&mut self.$field as *mut _ as *mut std::ffi::c_void);
+                )+
+                Ok(())
+            }
+        }
+    };
 }
+
+impl_kernel_args!(
+    EGraphStructuralKernelArgs,
+    CUDA_EGRAPH_STRUCTURAL_EQUIVALENCE_KERNEL_PARAM_COUNT,
+    "structural-equivalence",
+    [
+        row_eclass_ids_ptr,
+        row_language_op_ids_ptr,
+        row_children_offsets_ptr,
+        row_children_lens_ptr,
+        row_signatures_ptr,
+        children_ptr,
+        bucket_words_ptr,
+        bucket_rows_ptr,
+        output_pairs_ptr,
+        output_count_ptr,
+        bucket_index,
+        first_pair,
+        pair_count,
+    ]
+);
 
 pub(super) struct EGraphCanonicalRewriteKernelArgs {
     pub(super) row_eclass_ids_ptr: u64,
@@ -63,26 +74,20 @@ pub(super) struct EGraphCanonicalRewriteKernelArgs {
     pub(super) first_item: u64,
 }
 
-impl EGraphCanonicalRewriteKernelArgs {
-    pub(super) fn write_kernel_args_into(
-        &mut self,
-        args: &mut SmallVec<[*mut std::ffi::c_void; 8]>,
-    ) -> Result<(), BackendError> {
-        reserve_egraph_kernel_args(
-            args,
-            CUDA_EGRAPH_CANONICAL_REWRITE_KERNEL_PARAM_COUNT,
-            "canonical-rewrite",
-        )?;
-        args.push(&mut self.row_eclass_ids_ptr as *mut _ as *mut std::ffi::c_void);
-        args.push(&mut self.children_ptr as *mut _ as *mut std::ffi::c_void);
-        args.push(&mut self.rewrite_words_ptr as *mut _ as *mut std::ffi::c_void);
-        args.push(&mut self.rewrite_count as *mut _ as *mut std::ffi::c_void);
-        args.push(&mut self.row_count as *mut _ as *mut std::ffi::c_void);
-        args.push(&mut self.child_count as *mut _ as *mut std::ffi::c_void);
-        args.push(&mut self.first_item as *mut _ as *mut std::ffi::c_void);
-        Ok(())
-    }
-}
+impl_kernel_args!(
+    EGraphCanonicalRewriteKernelArgs,
+    CUDA_EGRAPH_CANONICAL_REWRITE_KERNEL_PARAM_COUNT,
+    "canonical-rewrite",
+    [
+        row_eclass_ids_ptr,
+        children_ptr,
+        rewrite_words_ptr,
+        rewrite_count,
+        row_count,
+        child_count,
+        first_item,
+    ]
+);
 
 pub(super) struct EGraphSignatureRefreshKernelArgs {
     pub(super) row_language_op_ids_ptr: u64,
@@ -94,26 +99,20 @@ pub(super) struct EGraphSignatureRefreshKernelArgs {
     pub(super) first_row: u64,
 }
 
-impl EGraphSignatureRefreshKernelArgs {
-    pub(super) fn write_kernel_args_into(
-        &mut self,
-        args: &mut SmallVec<[*mut std::ffi::c_void; 8]>,
-    ) -> Result<(), BackendError> {
-        reserve_egraph_kernel_args(
-            args,
-            CUDA_EGRAPH_SIGNATURE_REFRESH_KERNEL_PARAM_COUNT,
-            "signature-refresh",
-        )?;
-        args.push(&mut self.row_language_op_ids_ptr as *mut _ as *mut std::ffi::c_void);
-        args.push(&mut self.row_children_offsets_ptr as *mut _ as *mut std::ffi::c_void);
-        args.push(&mut self.row_children_lens_ptr as *mut _ as *mut std::ffi::c_void);
-        args.push(&mut self.row_signatures_ptr as *mut _ as *mut std::ffi::c_void);
-        args.push(&mut self.children_ptr as *mut _ as *mut std::ffi::c_void);
-        args.push(&mut self.row_count as *mut _ as *mut std::ffi::c_void);
-        args.push(&mut self.first_row as *mut _ as *mut std::ffi::c_void);
-        Ok(())
-    }
-}
+impl_kernel_args!(
+    EGraphSignatureRefreshKernelArgs,
+    CUDA_EGRAPH_SIGNATURE_REFRESH_KERNEL_PARAM_COUNT,
+    "signature-refresh",
+    [
+        row_language_op_ids_ptr,
+        row_children_offsets_ptr,
+        row_children_lens_ptr,
+        row_signatures_ptr,
+        children_ptr,
+        row_count,
+        first_row,
+    ]
+);
 
 fn reserve_egraph_kernel_args(
     args: &mut SmallVec<[*mut std::ffi::c_void; 8]>,

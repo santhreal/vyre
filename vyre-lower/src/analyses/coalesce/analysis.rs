@@ -19,9 +19,8 @@
 //! as `Scattered`, which is the rewrite-safe direction.
 
 use super::report::{AccessPattern, AccessSite, CoalescenceReport};
-use crate::analyses::{child_body_operands, AccessKind};
+use crate::analyses::{child_body_operands, producer_map, AccessKind, ProducerMap};
 use crate::{KernelBody, KernelDescriptor, KernelOpKind, LiteralValue};
-use rustc_hash::FxHashMap;
 use vyre_foundation::ir::BinOp;
 
 /// Run coalescence analysis on a kernel.
@@ -76,18 +75,6 @@ fn walk_body(body: &KernelBody, sites: &mut Vec<AccessSite>, op_index_offset: us
             pattern,
         });
     }
-}
-
-type ProducerMap<'a> = FxHashMap<u32, &'a crate::KernelOp>;
-
-fn producer_map(body: &KernelBody) -> ProducerMap<'_> {
-    let mut producers = FxHashMap::with_capacity_and_hasher(body.ops.len(), Default::default());
-    for op in &body.ops {
-        for result in op.result_ids() {
-            producers.insert(result, op);
-        }
-    }
-    producers
 }
 
 /// Classify an index expression by its access pattern across threads.

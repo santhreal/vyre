@@ -269,4 +269,3 @@ fn exploded_wrapper_uses_primitive_input_layout_contract() {
         "exploded IFDS wrapper must not own primitive count narrowing, layout validation, or input-buffer padding"
     );
 }
-

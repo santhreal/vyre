@@ -1,6 +1,6 @@
 //! Cross-backend comparison harness (C-B12).
 //!
-//! `cargo_full run --bin xtask -- bench-crossback [program_name]`
+//! `cargo xtask bench-crossback [program_name]`
 //!
 //! Dispatches a built-in Program through every registered backend
 //! and emits a markdown comparison table. Complements the

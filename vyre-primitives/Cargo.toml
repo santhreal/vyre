@@ -522,3 +522,7 @@ required-features = ["hash"]
 name = "sweep_reduce_scalar_volume_oracle_matrix"
 path = "tests/sweep_reduce_scalar_volume_oracle_matrix.rs"
 required-features = ["reduce", "cpu-parity"]
+[[test]]
+name = "persistent_fixpoint_grid_contracts"
+path = "tests/persistent_fixpoint_grid_contracts.rs"
+required-features = ["fixpoint", "cpu-parity"]

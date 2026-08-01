@@ -244,7 +244,6 @@ pub(super) fn parse_expr_mul(tokens: &[ExprTok], idx: &mut usize, active: bool) 
     }
 }
 
-
 pub(super) fn parse_expr_unary(tokens: &[ExprTok], idx: &mut usize, active: bool) -> i128 {
     match tokens.get(*idx) {
         Some(ExprTok::Not) => {

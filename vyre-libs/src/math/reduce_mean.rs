@@ -35,17 +35,7 @@ pub fn try_reduce_mean(input: &str, output: &str, n: u32) -> Result<Program, &'s
 }
 
 fn reduce_mean_invalid_program(input: &str, output: &str) -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::F32).with_count(1),
-            BufferDecl::output(output, 1, DataType::F32).with_count(1),
-        ],
-        [1, 1, 1],
-        vec![wrap_anonymous(
-            OP_ID,
-            vec![Node::trap(Expr::u32(0), EMPTY_REDUCTION_FIX)],
-        )],
-    )
+    super::invalid_f32_reduction_program(OP_ID, input, output, EMPTY_REDUCTION_FIX)
 }
 
 fn reduce_mean_tiled_program(input: &str, output: &str, n: u32) -> Program {

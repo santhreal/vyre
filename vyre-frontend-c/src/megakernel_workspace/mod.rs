@@ -7,7 +7,7 @@
 //!
 //! Module ownership:
 //!  - `mod.rs`: constants + enums + handler + `manifest_word` + workspace limits/region types
-//!  - `workspace.rs`: [`CFrontendWorkspaceManifest`] + impl
+//!  - `workspace.rs`: [`CFrontendWorkspaceManifest`](crate::megakernel_workspace::CFrontendWorkspaceManifest) + impl
 //!  - `nodes.rs`: builder functions emitting `Node` graphs
 //!  - `error.rs`: error enum + phase-transition validators
 

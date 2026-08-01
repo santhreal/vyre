@@ -118,7 +118,11 @@ fn region_presence_8mib_dispatch_attribution_cuda() {
     let borrowed_bitmap = matcher
         .scan_presence_by_region(&backend, &haystack, &region_starts)
         .expect("borrowed CUDA presence-by-region scan");
-    assert_eq!(borrowed_bitmap.len(), words, "one region → one presence row");
+    assert_eq!(
+        borrowed_bitmap.len(),
+        words,
+        "one region → one presence row"
+    );
     let hits = popcount(&borrowed_bitmap);
     assert!(
         hits >= 1,
@@ -158,7 +162,14 @@ fn region_presence_8mib_dispatch_attribution_cuda() {
     for _ in 0..ITERS + 1 {
         let t = Instant::now();
         let timed = session
-            .scan_into_timed(&backend, &haystack, &region_starts, 0, &mut out, &mut scratch)
+            .scan_into_timed(
+                &backend,
+                &haystack,
+                &region_starts,
+                0,
+                &mut out,
+                &mut scratch,
+            )
             .expect("resident timed scan");
         let call_ms = t.elapsed().as_secs_f64() * 1e3;
         assert_eq!(out, borrowed_bitmap, "resident bitmap must equal borrowed");
@@ -201,7 +212,11 @@ fn region_presence_8mib_dispatch_attribution_cuda() {
         eprintln!(
             "VERDICT: HS phase-1 ~3.5 ms. Kernel floor = {res_kernel_med:.3} ms. \
              Phase-1 win in vyre is {} (kernel {} 3.5 ms).",
-            if res_kernel_med < 3.5 { "POSSIBLE" } else { "NOT possible without a kernel rewrite" },
+            if res_kernel_med < 3.5 {
+                "POSSIBLE"
+            } else {
+                "NOT possible without a kernel rewrite"
+            },
             if res_kernel_med < 3.5 { "<" } else { ">=" },
         );
     } else {

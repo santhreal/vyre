@@ -1,4 +1,4 @@
-//! End-to-end parity for `graph::path_reconstruct::reconstruct_path_via`: the parent-pointer path walk 
+//! End-to-end parity for `graph::path_reconstruct::reconstruct_path_via`: the parent-pointer path walk
 //! through the shared faithful [`common::ReferenceEvalDispatcher`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):

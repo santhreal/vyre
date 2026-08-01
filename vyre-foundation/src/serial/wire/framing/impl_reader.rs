@@ -1,6 +1,5 @@
 use super::{
-    wire_format_version_is_supported, MAGIC, MIN_SUPPORTED_WIRE_FORMAT_VERSION,
-    WIRE_FORMAT_VERSION,
+    wire_format_version_is_supported, MAGIC, MIN_SUPPORTED_WIRE_FORMAT_VERSION, WIRE_FORMAT_VERSION,
 };
 use crate::serial::wire::{Reader, MAX_STRING_LEN};
 

@@ -46,19 +46,11 @@ impl CudaBackend {
         ),
         BackendError,
     > {
-        let kernel = cuda_egraph_structural_equivalence_kernel_ptx(self.ptx_target_sm()).map_err(
-            |error| BackendError::InvalidProgram {
-                fix: error.to_string(),
-            },
-        )?;
-        let module_key = self.module_cache_key_for_raw_ptx_artifact(&kernel.source)?;
-        let function = self.module_for_ptx_with_key(&kernel.source, module_key)?;
-        if function.is_null() {
-            return Err(BackendError::InvalidProgram {
-                fix: "Fix: CUDA e-graph structural-equivalence kernel loaded but resolved a null `main` function. Inspect generated PTX entry metadata before launch.".to_string(),
-            });
-        }
-        Ok((kernel, function))
+        self.warm_egraph_kernel_with_key(
+            cuda_egraph_structural_equivalence_kernel_ptx,
+            |kernel| kernel.source.as_str(),
+            "Fix: CUDA e-graph structural-equivalence kernel loaded but resolved a null `main` function. Inspect generated PTX entry metadata before launch.",
+        )
     }
 
     /// Launch the structural e-graph equivalence kernel over a resident packed

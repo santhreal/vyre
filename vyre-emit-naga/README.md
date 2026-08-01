@@ -68,15 +68,17 @@ assert_eq!(module.entry_points[0].name, "main");
 
 - `vec_pack`: adjacent scalar load/store fusion candidates for
   vec2/vec3/vec4 lowering.
-- `push_constant_inline`: small uniform candidates for push-constant
-  promotion (avoids a uniform binding).
-- `bind_group_reuse`: multi-kernel bind-group sharing.
 - `pipeline_prewarm`: pipeline cache hints.
 
 Run `patterns::audit(&desc)` for a unified `NagaAuditReport` covering
 all per-kernel patterns. Run `patterns::audit_optimized(&desc)` to
 audit the post-`run_all` form: answers "what naga-specific
 optimizations remain after the standard rewrite pipeline?".
+
+These are diagnostic: they report candidates and do not transform the
+emitted module. Bind-group reuse is NOT here; it ships as a real
+optimization in `vyre-driver-wgpu` (`buffer::BindGroupCache`), keyed on
+layout identity plus the concrete buffer handles bound to it.
 
 These complement the substrate-neutral analyses in
 `vyre_lower::analyses` (coalesce, bank conflict, etc.): each layer

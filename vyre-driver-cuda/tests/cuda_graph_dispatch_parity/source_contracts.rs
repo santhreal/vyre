@@ -34,4 +34,3 @@ fn cuda_graph_param_initialization_sync_is_telemetry_visible() {
         "Fix: CUDA graph parameter initialization must record its stream synchronization in telemetry."
     );
 }
-

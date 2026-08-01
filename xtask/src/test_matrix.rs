@@ -2,8 +2,9 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
-use std::io::{self, Read};
+use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
 
 use serde::{Deserialize, Serialize};
 use walkdir::WalkDir;
@@ -290,8 +291,7 @@ const REQUIRED_REGEX_ADVERSARIAL_ROLES: &[&str] = &[
     "resource_budget",
 ];
 
-const REGEX_ADVERSARIAL_CLASS_CATALOG: &str =
-    "docs/optimization/REGEX_ADVERSARIAL_CLASSES.toml";
+const REGEX_ADVERSARIAL_CLASS_CATALOG: &str = "docs/optimization/REGEX_ADVERSARIAL_CLASSES.toml";
 
 const REQUIRED_RISK_DIMENSIONS: &[&str] = &[
     "op",
@@ -475,23 +475,14 @@ pub(crate) fn run(args: &[String]) {
         regex_adversarial_findings,
         blockers,
     };
-    let json = match serde_json::to_string_pretty(&matrix) {
-        Ok(json) => json,
-        Err(error) => {
-            eprintln!("Fix: failed to serialize test matrix: {error}");
-            std::process::exit(1);
-        }
-    };
+
     if let Some(parent) = output.parent() {
         if let Err(error) = fs::create_dir_all(parent) {
             eprintln!("Fix: failed to create `{}`: {error}", parent.display());
             std::process::exit(1);
         }
     }
-    if let Err(error) = fs::write(&output, format!("{json}\n")) {
-        eprintln!("Fix: failed to write `{}`: {error}", output.display());
-        std::process::exit(1);
-    }
+    crate::output_arg::write_json(&output, &matrix);
     write_sibling_artifacts(&output, &matrix, &file_records);
     println!("test-matrix: wrote {}", output.display());
     if !matrix.blockers.is_empty() {
@@ -801,8 +792,9 @@ fn regex_adversarial_coverages(
             findings.push(RegexAdversarialFinding {
                 class_id: case.class_id.clone(),
                 role: Some(case.role.clone()),
-                issue: "missing evidence_path. Fix: point at the test file carrying this class/role."
-                    .to_string(),
+                issue:
+                    "missing evidence_path. Fix: point at the test file carrying this class/role."
+                        .to_string(),
             });
             continue;
         }
@@ -820,8 +812,9 @@ fn regex_adversarial_coverages(
             findings.push(RegexAdversarialFinding {
                 class_id: case.class_id.clone(),
                 role: Some(case.role.clone()),
-                issue: "duplicate class/role row. Fix: keep one canonical row per regex class role."
-                    .to_string(),
+                issue:
+                    "duplicate class/role row. Fix: keep one canonical row per regex class role."
+                        .to_string(),
             });
         }
         roles_by_class
@@ -1224,17 +1217,7 @@ fn risk_family_weight(dimension: &str, family: &str) -> u8 {
 }
 
 fn write_json(path: &Path, value: &impl Serialize) {
-    let json = match serde_json::to_string_pretty(value) {
-        Ok(json) => json,
-        Err(error) => {
-            eprintln!("Fix: failed to serialize `{}`: {error}", path.display());
-            std::process::exit(1);
-        }
-    };
-    if let Err(error) = fs::write(path, format!("{json}\n")) {
-        eprintln!("Fix: failed to write `{}`: {error}", path.display());
-        std::process::exit(1);
-    }
+    crate::output_arg::write_json(path, value);
 }
 
 fn collect_modular_dirs(
@@ -1261,6 +1244,7 @@ fn scan_tests(
     file_records: &mut Vec<TestFileRecord>,
     blockers: &mut Vec<String>,
 ) {
+    let mut rust_paths = Vec::new();
     for entry in WalkDir::new(root).into_iter().filter_entry(|entry| {
         let name = entry.file_name().to_string_lossy();
         !matches!(
@@ -1282,11 +1266,25 @@ fn scan_tests(
             }
         };
         let path = entry.path();
-        if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
+        if path.extension().and_then(|ext| ext.to_str()) == Some("rs") {
+            rust_paths.push(path.to_path_buf());
+        }
+    }
+
+    let ignored_paths = match git_ignored_paths(root, &rust_paths) {
+        Ok(paths) => paths,
+        Err(error) => {
+            blockers.push(error);
+            BTreeSet::new()
+        }
+    };
+
+    for path in rust_paths {
+        if ignored_paths.contains(&path) {
             continue;
         }
         let path_string = path.display().to_string();
-        let text = match read_text_bounded(path) {
+        let text = match read_text_bounded(&path) {
             Ok(text) => text,
             Err(error) => {
                 blockers.push(format!(
@@ -1343,6 +1341,64 @@ fn scan_tests(
             weir_flow_families: risk_families.weir_flow_families,
         });
     }
+}
+
+fn git_ignored_paths(root: &Path, paths: &[PathBuf]) -> Result<BTreeSet<PathBuf>, String> {
+    if paths.is_empty() {
+        return Ok(BTreeSet::new());
+    }
+
+    let mut child = Command::new("git")
+        .arg("-C")
+        .arg(root)
+        .args(["check-ignore", "--stdin"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|error| {
+            format!(
+                "failed to start git ignore check for test evidence root `{}`: {error}",
+                root.display()
+            )
+        })?;
+    {
+        let stdin = child
+            .stdin
+            .as_mut()
+            .ok_or_else(|| "git ignore check did not expose stdin".to_string())?;
+        for path in paths {
+            let candidate = path.strip_prefix(root).unwrap_or(path);
+            writeln!(stdin, "{}", candidate.display()).map_err(|error| {
+                format!(
+                    "failed to send `{}` to git ignore check: {error}",
+                    path.display()
+                )
+            })?;
+        }
+    }
+    let output = child.wait_with_output().map_err(|error| {
+        format!(
+            "failed to finish git ignore check for test evidence root `{}`: {error}",
+            root.display()
+        )
+    })?;
+    match output.status.code() {
+        Some(0 | 1) => {}
+        status => {
+            return Err(format!(
+                "git ignore check failed for test evidence root `{}` with status {status:?}: {}",
+                root.display(),
+                String::from_utf8_lossy(&output.stderr).trim()
+            ));
+        }
+    }
+
+    Ok(String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .filter(|path| !path.is_empty())
+        .map(|path| root.join(path))
+        .collect())
 }
 
 fn classify_test_file_kind(path: &str, text: &str) -> TestFileKind {
@@ -1438,100 +1494,59 @@ fn assertion_count(text: &str) -> usize {
 }
 
 fn classify_file_layers(path: &str, text: &str) -> BTreeSet<&'static str> {
-    let mut layers = BTreeSet::new();
-    let lowered = text.to_ascii_lowercase();
+    let lowered = lower_path_text(path, text);
+    let mut layers = crate::text_markers::classify_text(
+        &lowered,
+        &[
+            (
+                "benchmark",
+                &["/benches/", "bench", "perf", "criterion_group!", "#[bench]"],
+            ),
+            ("property", &["property", "proptest"]),
+            (
+                "adversarial",
+                &["adversarial", "malformed", "hostile", "fail closed"],
+            ),
+            ("corpus", &["corpus", "linux", "linux subsystem"]),
+            (
+                "conformance",
+                &["conform", "parity", "cross_backend", "frontend api handoff"],
+            ),
+            ("gap", &["gap", "blocker", "missing source"]),
+            ("fuzz", &["fuzz", "hostile_arg"]),
+        ],
+    );
     layers.insert("unit");
     if path.contains("/tests/") {
         layers.insert("integration");
-    }
-    if path.contains("/benches/")
-        || path.contains("bench")
-        || path.contains("perf")
-        || lowered.contains("criterion_group!")
-        || lowered.contains("#[bench]")
-        || lowered.contains("benchmark")
-    {
-        layers.insert("benchmark");
-    }
-    if path.contains("property") || path.contains("proptest") || lowered.contains("proptest!") {
-        layers.insert("property");
-    }
-    if path.contains("adversarial")
-        || path.contains("malformed")
-        || path.contains("hostile")
-        || lowered.contains("hostile")
-        || lowered.contains("malformed")
-        || lowered.contains("fail closed")
-    {
-        layers.insert("adversarial");
-    }
-    if path.contains("corpus")
-        || path.contains("linux")
-        || lowered.contains("corpus")
-        || lowered.contains("linux subsystem")
-    {
-        layers.insert("corpus");
-    }
-    if path.contains("conform")
-        || path.contains("parity")
-        || path.contains("cross_backend")
-        || lowered.contains("conformance")
-        || lowered.contains("parity")
-        || lowered.contains("frontend api handoff")
-    {
-        layers.insert("conformance");
-    }
-    if path.contains("gap")
-        || path.contains("blocker")
-        || lowered.contains("gap contract")
-        || lowered.contains("missing source")
-    {
-        layers.insert("gap");
-    }
-    if path.contains("fuzz") || lowered.contains("fuzz") || lowered.contains("hostile_arg") {
-        layers.insert("fuzz");
     }
     layers
 }
 
 fn classify_case_roles(path: &str, text: &str, layers: &BTreeSet<&'static str>) -> Vec<String> {
-    let mut roles = BTreeSet::new();
     let lowered = lower_path_text(path, text);
-    if text.contains("assert!(")
-        || text.contains("assert_eq!(")
-        || text.contains("assert_ne!(")
-        || lowered.contains(" ok")
-        || lowered.contains("success")
-        || lowered.contains("valid")
-        || lowered.contains("accept")
-        || lowered.contains("parity")
-        || lowered.contains("golden")
-    {
-        roles.insert("positive");
-    }
-    if lowered.contains("err")
-        || lowered.contains("error")
-        || lowered.contains("reject")
-        || lowered.contains("invalid")
-        || lowered.contains("unsupported")
-        || lowered.contains("fail")
-        || lowered.contains("panic")
-        || lowered.contains("malformed")
-    {
-        roles.insert("negative");
-    }
-    if lowered.contains("boundary")
-        || lowered.contains("overflow")
-        || lowered.contains("underflow")
-        || lowered.contains("zero")
-        || lowered.contains("empty")
-        || lowered.contains("max")
-        || lowered.contains("min")
-        || lowered.contains("limit")
-        || lowered.contains("cap")
-    {
-        roles.insert("boundary");
-    }
+    let mut roles = crate::text_markers::classify_text(
+        &lowered,
+        &[
+            (
+                "positive",
+                &[
+                    "assert!(",
+                    "assert_eq!(",
+                    "assert_ne!(",
+                    " ok",
+                    "success",
+                    "valid",
+                    "accept",
+                    "parity",
+                    "golden",
+                ],
+            ),
+            ("negative", crate::text_markers::NEGATIVE_MARKERS),
+            ("boundary", crate::text_markers::BOUNDARY_MARKERS),
+            ("e2e", &["/tests/e2e/", "e2e", "end_to_end", "end-to-end"]),
+        ],
+    );
     for layer_role in [
         "adversarial",
         "property",
@@ -1542,16 +1557,6 @@ fn classify_case_roles(path: &str, text: &str, layers: &BTreeSet<&'static str>) 
         if layers.contains(layer_role) {
             roles.insert(layer_role);
         }
-    }
-    if path.contains("/tests/e2e/")
-        || path.contains("e2e")
-        || path.contains("end_to_end")
-        || path.contains("end-to-end")
-        || lowered.contains("end_to_end")
-        || lowered.contains("end-to-end")
-        || lowered.contains("e2e")
-    {
-        roles.insert("e2e");
     }
     if roles.is_empty() {
         roles.insert("uncategorized");
@@ -1626,20 +1631,19 @@ fn classify_op_families(lowered: &str) -> Vec<String> {
 }
 
 fn classify_backend_families(lowered: &str) -> Vec<String> {
-    let mut families = BTreeSet::new();
-    push_family(&mut families, lowered, &["cuda", "ptx"], "cuda_ptx");
-    push_family(&mut families, lowered, &["metal", "msl"], "metal");
-    push_family(&mut families, lowered, &["wgpu", "wgsl"], "wgpu");
-    push_family(&mut families, lowered, &["spirv", "spv"], "spirv");
-    push_family(&mut families, lowered, &["naga"], "naga");
-    push_family(
-        &mut families,
+    let mut families = crate::text_markers::classify_text(
         lowered,
-        &["cpu", "reference", "oracle", "host"],
-        "cpu_oracle",
+        &[
+            ("cuda_ptx", &["cuda", "ptx"]),
+            ("metal", &["metal", "msl"]),
+            ("wgpu", &["wgpu", "wgsl"]),
+            ("spirv", &["spirv", "spv"]),
+            ("naga", &["naga"]),
+            ("cpu_oracle", &["cpu", "reference", "oracle", "host"]),
+            ("resident", &["resident"]),
+            ("direct", &["direct"]),
+        ],
     );
-    push_family(&mut families, lowered, &["resident"], "resident");
-    push_family(&mut families, lowered, &["direct"], "direct");
     if families.is_empty() {
         families.insert("backend_agnostic");
     }
@@ -1734,25 +1738,19 @@ fn classify_error_path_families(lowered: &str) -> Vec<String> {
 }
 
 fn classify_corpus_families(lowered: &str) -> Vec<String> {
-    let mut families = BTreeSet::new();
-    push_family(&mut families, lowered, &["linux"], "linux");
-    push_family(&mut families, lowered, &["r2", "radare"], "r2");
-    push_family(&mut families, lowered, &["csmith"], "csmith");
-    push_family(&mut families, lowered, &["fixture", "fixtures"], "fixture");
-    push_family(
-        &mut families,
+    let mut families = crate::text_markers::classify_text(
         lowered,
-        &["generated", "generator"],
-        "generated",
-    );
-    push_family(&mut families, lowered, &["release"], "release");
-    push_family(&mut families, lowered, &["fuzz"], "fuzz");
-    push_family(&mut families, lowered, &["golden"], "golden");
-    push_family(
-        &mut families,
-        lowered,
-        &["differential", "parity"],
-        "differential",
+        &[
+            ("linux", &["linux"]),
+            ("r2", &["r2", "radare"]),
+            ("csmith", &["csmith"]),
+            ("fixture", &["fixture", "fixtures"]),
+            ("generated", &["generated", "generator"]),
+            ("release", &["release"]),
+            ("fuzz", &["fuzz"]),
+            ("golden", &["golden"]),
+            ("differential", &["differential", "parity"]),
+        ],
     );
     if families.is_empty() {
         families.insert("unit_fixture");
@@ -1814,28 +1812,12 @@ fn push_family(
 }
 
 fn parse_output(args: &[String]) -> Result<PathBuf, String> {
-    let mut output = None;
-    let mut index = 2;
-    while index < args.len() {
-        match args[index].as_str() {
-            "--output" => {
-                let Some(path) = args.get(index + 1) else {
-                    return Err("Fix: --output requires a path.".to_string());
-                };
-                output = Some(PathBuf::from(path));
-                index += 2;
-            }
-            "--help" | "-h" => {
-                println!(
-                    "USAGE:\n  cargo_full run --bin xtask -- test-matrix [--output PATH]\n\n\
-                     Writes Vyre/Weir test architecture evidence."
-                );
-                std::process::exit(0);
-            }
-            other => return Err(format!("Fix: unknown test-matrix option `{other}`.")),
-        }
-    }
-    Ok(output.unwrap_or_else(default_output))
+    crate::output_arg::parse_output_arg(
+        args,
+        "test-matrix",
+        "Writes Vyre/Weir test architecture evidence.",
+        default_output,
+    )
 }
 
 fn default_output() -> PathBuf {
@@ -2070,5 +2052,66 @@ mod tests {
             }),
             "Fix: Weir flow families must receive high risk weight."
         );
+    }
+
+    /// Generated ignored tests must not become release evidence that other checkouts cannot read.
+    #[test]
+    fn gitignored_test_files_are_excluded_from_release_evidence() {
+        let repo = tempfile::tempdir().expect("Fix: temporary git repository must be creatable");
+        fs::write(repo.path().join(".gitignore"), "generated.rs\n")
+            .expect("Fix: ignore fixture must be writable");
+        fs::write(
+            repo.path().join("generated.rs"),
+            "#[test] fn generated() {}",
+        )
+        .expect("Fix: ignored test fixture must be writable");
+        fs::write(
+            repo.path().join("committed.rs"),
+            "#[test] fn committed() {}",
+        )
+        .expect("Fix: visible test fixture must be writable");
+        let init = Command::new("git")
+            .args(["init", "--quiet"])
+            .arg(repo.path())
+            .status()
+            .expect("Fix: git must initialize the release-evidence fixture");
+        assert!(init.success(), "git init failed with {init}");
+
+        let generated = repo.path().join("generated.rs");
+        let committed = repo.path().join("committed.rs");
+        let ignored = git_ignored_paths(repo.path(), &[generated.clone(), committed.clone()])
+            .expect("Fix: git ignore classification must succeed");
+
+        assert_eq!(ignored, BTreeSet::from([generated]));
+        assert!(!ignored.contains(&committed));
+    }
+
+    /// A tracked file remains verifiable even when a later ignore pattern matches its name.
+    #[test]
+    fn tracked_test_files_remain_release_evidence_when_ignore_patterns_match() {
+        let repo = tempfile::tempdir().expect("Fix: temporary git repository must be creatable");
+        let init = Command::new("git")
+            .args(["init", "--quiet"])
+            .arg(repo.path())
+            .status()
+            .expect("Fix: git must initialize the release-evidence fixture");
+        assert!(init.success(), "git init failed with {init}");
+        fs::write(repo.path().join(".gitignore"), "tracked.rs\n")
+            .expect("Fix: ignore fixture must be writable");
+        let tracked = repo.path().join("tracked.rs");
+        fs::write(&tracked, "#[test] fn tracked() {}")
+            .expect("Fix: tracked test fixture must be writable");
+        let add = Command::new("git")
+            .arg("-C")
+            .arg(repo.path())
+            .args(["add", "-f", "tracked.rs"])
+            .status()
+            .expect("Fix: tracked fixture must enter the index");
+        assert!(add.success(), "git add failed with {add}");
+
+        let ignored = git_ignored_paths(repo.path(), std::slice::from_ref(&tracked))
+            .expect("Fix: index-aware git ignore classification must succeed");
+
+        assert!(ignored.is_empty(), "tracked files must remain visible");
     }
 }

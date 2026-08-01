@@ -283,6 +283,162 @@ pub fn cpu_vs_backend(entry: &OpEntry, backend: &dyn VyreBackend) -> LensOutcome
     LensOutcome::Pass { cases: cases.len() }
 }
 
+struct IterativeLensSetup {
+    program: Program,
+    config: DispatchConfig,
+    cases: Vec<Vec<Vec<u8>>>,
+}
+
+fn prepare_iterative_lens(
+    entry: &OpEntry,
+    backend: &dyn VyreBackend,
+    lens_name: &str,
+) -> Result<IterativeLensSetup, LensOutcome> {
+    let Some(test_inputs) = entry.test_inputs else {
+        return Err(LensOutcome::Fail {
+            case_index: 0,
+            detail: format!(
+                "{}: no test_inputs - {lens_name} lens has nothing to run. Fix: register a fixture.",
+                entry.id
+            ),
+        });
+    };
+    let program = (entry.build)();
+    let required = program_caps::scan(&program);
+    if let Err(missing) = program_caps::check_backend_capabilities(
+        backend.id(),
+        backend.supports_subgroup_ops(),
+        backend.supports_f16(),
+        backend.supports_bf16(),
+        backend.supports_indirect_dispatch(),
+        true,
+        backend.supports_distributed_collectives(),
+        backend.max_workgroup_size(),
+        &required,
+    ) {
+        return Err(LensOutcome::Fail {
+            case_index: 0,
+            detail: format!(
+                "{}: missing backend capability: {missing}. Fix: wire the capability or the op.",
+                entry.id
+            ),
+        });
+    }
+    let config = dispatch_config_for(&program).map_err(|detail| LensOutcome::Fail {
+        case_index: 0,
+        detail,
+    })?;
+    let cases = test_inputs();
+    if cases.is_empty() {
+        return Err(LensOutcome::Fail {
+            case_index: 0,
+            detail: format!(
+                "{}: empty test_inputs fixture. Fix: {lens_name} parity requires at least one initial state.",
+                entry.id
+            ),
+        });
+    }
+    Ok(IterativeLensSetup {
+        program,
+        config,
+        cases,
+    })
+}
+
+fn compare_iterative_lens_cases(
+    setup: &IterativeLensSetup,
+    backend: &dyn VyreBackend,
+    loop_name: &str,
+    max_iterations: u32,
+    mut run_cpu_loop: impl FnMut(&[Vec<u8>]) -> Result<Vec<Vec<u8>>, LoopError>,
+    mut run_backend_loop: impl FnMut(&[Vec<u8>]) -> Result<Vec<Vec<u8>>, LoopError>,
+) -> LensOutcome {
+    for (index, inputs) in setup.cases.iter().enumerate() {
+        let cpu_final = match run_cpu_loop(inputs) {
+            Ok(outputs) => outputs,
+            Err(LoopError::Reference(error)) => {
+                return LensOutcome::Fail {
+                    case_index: index,
+                    detail: format!("CPU reference failed inside {loop_name} loop: {error}"),
+                };
+            }
+            Err(LoopError::DidNotConverge) => {
+                return LensOutcome::Fail {
+                    case_index: index,
+                    detail: format!(
+                        "CPU reference did not converge in {max_iterations} iterations. Fix: raise the contract max_iterations or shrink the fixture."
+                    ),
+                };
+            }
+            Err(LoopError::Backend(error)) => {
+                return LensOutcome::Fail {
+                    case_index: index,
+                    detail: format!("backend failed inside {loop_name} loop: {error}"),
+                };
+            }
+        };
+        let gpu_final = match run_backend_loop(inputs) {
+            Ok(outputs) => outputs,
+            Err(LoopError::Reference(error)) => {
+                return LensOutcome::Fail {
+                    case_index: index,
+                    detail: format!("CPU reference failed inside {loop_name} loop: {error}"),
+                };
+            }
+            Err(LoopError::DidNotConverge) => {
+                return LensOutcome::Fail {
+                    case_index: index,
+                    detail: format!(
+                        "backend `{}` did not converge in {max_iterations} iterations.",
+                        backend.id()
+                    ),
+                };
+            }
+            Err(LoopError::Backend(error)) => {
+                return LensOutcome::Fail {
+                    case_index: index,
+                    detail: format!(
+                        "backend `{}` {loop_name} dispatch failed: {error}",
+                        backend.id()
+                    ),
+                };
+            }
+        };
+        let cpu_outputs = match project_output_buffers(&setup.program, &cpu_final) {
+            Ok(outputs) => outputs,
+            Err(detail) => {
+                return LensOutcome::Fail {
+                    case_index: index,
+                    detail: format!("CPU reference {detail}"),
+                };
+            }
+        };
+        let gpu_outputs = match project_output_buffers(&setup.program, &gpu_final) {
+            Ok(outputs) => outputs,
+            Err(detail) => {
+                return LensOutcome::Fail {
+                    case_index: index,
+                    detail: format!("backend `{}` {detail}", backend.id()),
+                };
+            }
+        };
+        if let BufferParity::Mismatch(detail) =
+            compare_output_buffers(&setup.program, &cpu_outputs, &gpu_outputs)
+        {
+            return LensOutcome::Fail {
+                case_index: index,
+                detail: format!(
+                    "backend `{}` final state diverged from CPU reference after {loop_name} loop: {detail}",
+                    backend.id()
+                ),
+            };
+        }
+    }
+    LensOutcome::Pass {
+        cases: setup.cases.len(),
+    }
+}
+
 /// Fixpoint lens: dispatch the op repeatedly until its convergence flag
 /// clears, then compare the final state to the CPU reference.
 ///
@@ -298,48 +454,11 @@ pub fn fixpoint(entry: &OpEntry, backend: &dyn VyreBackend) -> LensOutcome {
             detail: format!("{}: no FixpointContract registered for this op. Fix: register a contract or use the cpu_vs_backend lens.", entry.id),
         };
     };
-    let Some(test_inputs) = entry.test_inputs else {
-        return LensOutcome::Fail {
-            case_index: 0,
-            detail: format!(
-                "{}: no test_inputs  -  fixpoint lens has nothing to run. Fix: register a fixture.",
-                entry.id
-            ),
-        };
+    let setup = match prepare_iterative_lens(entry, backend, "fixpoint") {
+        Ok(setup) => setup,
+        Err(outcome) => return outcome,
     };
-
-    let program = (entry.build)();
-    let required = program_caps::scan(&program);
-    if let Err(missing) = program_caps::check_backend_capabilities(
-        backend.id(),
-        backend.supports_subgroup_ops(),
-        backend.supports_f16(),
-        backend.supports_bf16(),
-        backend.supports_indirect_dispatch(),
-        true,
-        backend.supports_distributed_collectives(),
-        backend.max_workgroup_size(),
-        &required,
-    ) {
-        return LensOutcome::Fail {
-            case_index: 0,
-            detail: format!(
-                "{}: missing backend capability: {missing}. Fix: wire the capability or the op.",
-                entry.id
-            ),
-        };
-    }
-    let config = match dispatch_config_for(&program) {
-        Ok(config) => config,
-        Err(detail) => {
-            return LensOutcome::Fail {
-                case_index: 0,
-                detail,
-            };
-        }
-    };
-
-    let Some(flag_index) = index_of_buffer(&program, contract.converged_flag_buffer) else {
+    let Some(flag_index) = index_of_buffer(&setup.program, contract.converged_flag_buffer) else {
         return LensOutcome::Fail {
             case_index: 0,
             detail: format!(
@@ -348,110 +467,29 @@ pub fn fixpoint(entry: &OpEntry, backend: &dyn VyreBackend) -> LensOutcome {
             ),
         };
     };
-
-    let cases = test_inputs();
-    if cases.is_empty() {
-        return LensOutcome::Fail {
-            case_index: 0,
-            detail: format!(
-                "{}: empty test_inputs fixture. Fix: fixpoint parity requires at least one initial state.",
-                entry.id
-            ),
-        };
-    }
-    for (index, inputs) in cases.iter().enumerate() {
-        let cpu_final = match cpu_fixpoint(&program, inputs, flag_index, contract) {
-            Ok(outputs) => outputs,
-            Err(LoopError::Reference(error)) => {
-                return LensOutcome::Fail {
-                    case_index: index,
-                    detail: format!("CPU reference failed inside fixpoint loop: {error}"),
-                };
-            }
-            Err(LoopError::DidNotConverge) => {
-                return LensOutcome::Fail {
-                    case_index: index,
-                    detail: format!(
-                        "CPU reference did not converge in {} iterations. \
-                         Fix: raise the FixpointContract max_iterations or shrink the fixture.",
-                        contract.max_iterations
-                    ),
-                };
-            }
-            Err(LoopError::Backend(error)) => {
-                return LensOutcome::Fail {
-                    case_index: index,
-                    detail: format!("backend failed inside fixpoint loop: {error}"),
-                };
-            }
-        };
-        let gpu_final = match gpu_fixpoint(backend, &program, inputs, flag_index, contract, &config)
-        {
-            Ok(outputs) => outputs,
-            Err(LoopError::Reference(error)) => {
-                return LensOutcome::Fail {
-                    case_index: index,
-                    detail: format!("CPU reference failed inside fixpoint loop: {error}"),
-                };
-            }
-            Err(LoopError::DidNotConverge) => {
-                return LensOutcome::Fail {
-                    case_index: index,
-                    detail: format!(
-                        "backend `{}` did not converge in {} iterations.",
-                        backend.id(),
-                        contract.max_iterations
-                    ),
-                };
-            }
-            Err(LoopError::Backend(error)) => {
-                return LensOutcome::Fail {
-                    case_index: index,
-                    detail: format!(
-                        "backend `{}` fixpoint dispatch failed: {error}",
-                        backend.id()
-                    ),
-                };
-            }
-        };
-        let cpu_outputs = match project_output_buffers(&program, &cpu_final) {
-            Ok(outputs) => outputs,
-            Err(detail) => {
-                return LensOutcome::Fail {
-                    case_index: index,
-                    detail: format!("CPU reference {detail}"),
-                };
-            }
-        };
-        let gpu_outputs = match project_output_buffers(&program, &gpu_final) {
-            Ok(outputs) => outputs,
-            Err(detail) => {
-                return LensOutcome::Fail {
-                    case_index: index,
-                    detail: format!("backend `{}` {detail}", backend.id()),
-                };
-            }
-        };
-        if let BufferParity::Mismatch(detail) =
-            compare_output_buffers(&program, &cpu_outputs, &gpu_outputs)
-        {
-            return LensOutcome::Fail {
-                case_index: index,
-                detail: format!(
-                    "backend `{}` final state diverged from CPU reference after fixpoint loop: {detail}",
-                    backend.id()
-                ),
-            };
-        }
-    }
-
-    LensOutcome::Pass { cases: cases.len() }
+    compare_iterative_lens_cases(
+        &setup,
+        backend,
+        "fixpoint",
+        contract.max_iterations,
+        |inputs| cpu_fixpoint(&setup.program, inputs, flag_index, contract),
+        |inputs| {
+            gpu_fixpoint(
+                backend,
+                &setup.program,
+                inputs,
+                flag_index,
+                contract,
+                &setup.config,
+            )
+        },
+    )
 }
 
 /// Convergence lens: dispatch the op repeatedly until the RW state
 /// stabilises, then compare the final state to the CPU reference.
 ///
-/// Used for ops that register a [`ConvergenceContract`] (e.g. security
+/// Used for ops that register a [`vyre_harness::ConvergenceContract`] (e.g. security
 /// graph-traversal steps whose Program performs ONE transfer step).
 /// The lens infers the `current` (RO input) and `next` (RW output)
 /// buffers, copies `next` → `current` between iterations, and stops
@@ -461,194 +499,68 @@ pub fn convergence(entry: &OpEntry, backend: &dyn VyreBackend) -> LensOutcome {
         return LensOutcome::Fail {
             case_index: 0,
             detail: format!(
-                "{}: no ConvergenceContract registered for this op. \
-                 Fix: register a contract or use the cpu_vs_backend lens.",
+                "{}: no ConvergenceContract registered for this op. Fix: register a contract or use the cpu_vs_backend lens.",
                 entry.id
             ),
         };
     };
-    let Some(test_inputs) = entry.test_inputs else {
+    let setup = match prepare_iterative_lens(entry, backend, "convergence") {
+        Ok(setup) => setup,
+        Err(outcome) => return outcome,
+    };
+    let Ok((current_name, next_name, _words)) = infer_fixpoint_buffers(&setup.program) else {
         return LensOutcome::Fail {
             case_index: 0,
             detail: format!(
-                "{}: no test_inputs  -  convergence lens has nothing to run. Fix: register a fixture.",
+                "{}: could not infer fixpoint current/next buffers from program layout. Fix: ensure one RO buffer matches the last RW buffer in count.",
                 entry.id
             ),
         };
     };
-
-    let program = (entry.build)();
-    let required = program_caps::scan(&program);
-    if let Err(missing) = program_caps::check_backend_capabilities(
-        backend.id(),
-        backend.supports_subgroup_ops(),
-        backend.supports_f16(),
-        backend.supports_bf16(),
-        backend.supports_indirect_dispatch(),
-        true,
-        backend.supports_distributed_collectives(),
-        backend.max_workgroup_size(),
-        &required,
-    ) {
+    let Some(current_idx) = index_of_buffer(&setup.program, current_name) else {
         return LensOutcome::Fail {
             case_index: 0,
             detail: format!(
-                "{}: missing backend capability: {missing}. Fix: wire the capability or the op.",
-                entry.id
-            ),
-        };
-    }
-    let config = match dispatch_config_for(&program) {
-        Ok(config) => config,
-        Err(detail) => {
-            return LensOutcome::Fail {
-                case_index: 0,
-                detail,
-            };
-        }
-    };
-
-    let Ok((current_name, next_name, _words)) = infer_fixpoint_buffers(&program) else {
-        return LensOutcome::Fail {
-            case_index: 0,
-            detail: format!(
-                "{}: could not infer fixpoint current/next buffers from program layout. \
-                 Fix: ensure one RO buffer matches the last RW buffer in count.",
+                "{}: inferred current buffer '{current_name}' is absent from the program buffer table. Fix: keep fixpoint inference and buffer declarations in the same program contract.",
                 entry.id
             ),
         };
     };
-    let Some(current_idx) = index_of_buffer(&program, current_name) else {
+    let Some(next_idx) = index_of_buffer(&setup.program, next_name) else {
         return LensOutcome::Fail {
             case_index: 0,
             detail: format!(
-                "{}: inferred current buffer '{current_name}' is absent from the program buffer table. \
-                 Fix: keep fixpoint inference and buffer declarations in the same program contract.",
+                "{}: inferred next buffer '{next_name}' is absent from the program buffer table. Fix: keep fixpoint inference and buffer declarations in the same program contract.",
                 entry.id
             ),
         };
     };
-    let Some(next_idx) = index_of_buffer(&program, next_name) else {
-        return LensOutcome::Fail {
-            case_index: 0,
-            detail: format!(
-                "{}: inferred next buffer '{next_name}' is absent from the program buffer table. \
-                 Fix: keep fixpoint inference and buffer declarations in the same program contract.",
-                entry.id
-            ),
-        };
-    };
-
-    let cases = test_inputs();
-    if cases.is_empty() {
-        return LensOutcome::Fail {
-            case_index: 0,
-            detail: format!(
-                "{}: empty test_inputs fixture. Fix: convergence parity requires at least one initial state.",
-                entry.id
-            ),
-        };
-    }
-    for (index, inputs) in cases.iter().enumerate() {
-        let cpu_final = match cpu_convergence(
-            &program,
-            inputs,
-            contract.max_iterations,
-            current_idx,
-            next_idx,
-        ) {
-            Ok(outputs) => outputs,
-            Err(LoopError::Reference(error)) => {
-                return LensOutcome::Fail {
-                    case_index: index,
-                    detail: format!("CPU reference failed inside convergence loop: {error}"),
-                };
-            }
-            Err(LoopError::DidNotConverge) => {
-                return LensOutcome::Fail {
-                    case_index: index,
-                    detail: format!(
-                        "CPU reference did not converge in {} iterations. \
-                         Fix: raise the ConvergenceContract max_iterations or shrink the fixture.",
-                        contract.max_iterations
-                    ),
-                };
-            }
-            Err(LoopError::Backend(error)) => {
-                return LensOutcome::Fail {
-                    case_index: index,
-                    detail: format!("backend failed inside convergence loop: {error}"),
-                };
-            }
-        };
-        let gpu_final = match gpu_convergence(
-            backend,
-            &program,
-            inputs,
-            contract.max_iterations,
-            current_idx,
-            next_idx,
-            &config,
-        ) {
-            Ok(outputs) => outputs,
-            Err(LoopError::Reference(error)) => {
-                return LensOutcome::Fail {
-                    case_index: index,
-                    detail: format!("CPU reference failed inside convergence loop: {error}"),
-                };
-            }
-            Err(LoopError::DidNotConverge) => {
-                return LensOutcome::Fail {
-                    case_index: index,
-                    detail: format!(
-                        "backend `{}` did not converge in {} iterations.",
-                        backend.id(),
-                        contract.max_iterations
-                    ),
-                };
-            }
-            Err(LoopError::Backend(error)) => {
-                return LensOutcome::Fail {
-                    case_index: index,
-                    detail: format!(
-                        "backend `{}` convergence dispatch failed: {error}",
-                        backend.id()
-                    ),
-                };
-            }
-        };
-        let cpu_outputs = match project_output_buffers(&program, &cpu_final) {
-            Ok(outputs) => outputs,
-            Err(detail) => {
-                return LensOutcome::Fail {
-                    case_index: index,
-                    detail: format!("CPU reference {detail}"),
-                };
-            }
-        };
-        let gpu_outputs = match project_output_buffers(&program, &gpu_final) {
-            Ok(outputs) => outputs,
-            Err(detail) => {
-                return LensOutcome::Fail {
-                    case_index: index,
-                    detail: format!("backend `{}` {detail}", backend.id()),
-                };
-            }
-        };
-        if let BufferParity::Mismatch(detail) =
-            compare_output_buffers(&program, &cpu_outputs, &gpu_outputs)
-        {
-            return LensOutcome::Fail {
-                case_index: index,
-                detail: format!(
-                    "backend `{}` final state diverged from CPU reference after convergence loop: {detail}",
-                    backend.id()
-                ),
-            };
-        }
-    }
-
-    LensOutcome::Pass { cases: cases.len() }
+    compare_iterative_lens_cases(
+        &setup,
+        backend,
+        "convergence",
+        contract.max_iterations,
+        |inputs| {
+            cpu_convergence(
+                &setup.program,
+                inputs,
+                contract.max_iterations,
+                current_idx,
+                next_idx,
+            )
+        },
+        |inputs| {
+            gpu_convergence(
+                backend,
+                &setup.program,
+                inputs,
+                contract.max_iterations,
+                current_idx,
+                next_idx,
+                &setup.config,
+            )
+        },
+    )
 }
 
 fn infer_fixpoint_buffers(program: &Program) -> Result<(&str, &str, u32), String> {
@@ -693,7 +605,9 @@ fn infer_fixpoint_buffers(program: &Program) -> Result<(&str, &str, u32), String
     Ok((current, next, current_count))
 }
 
-fn fixpoint_current_score(current: &str, next: &str) -> u8 {
+/// Rank a candidate current buffer against the selected fixpoint next buffer.
+#[must_use]
+pub fn fixpoint_current_score(current: &str, next: &str) -> u8 {
     if let Some(expected) = next.strip_suffix("out").map(|prefix| format!("{prefix}in")) {
         if current == expected {
             return 0;
@@ -1073,7 +987,10 @@ mod convergence_tests {
         let cpu = project_output_buffers(&program, &full_state).expect("Fix: projection");
         let gpu = project_output_buffers(&program, &full_state).expect("Fix: projection");
         assert!(
-            matches!(compare_output_buffers(&program, &cpu, &gpu), BufferParity::Ok),
+            matches!(
+                compare_output_buffers(&program, &cpu, &gpu),
+                BufferParity::Ok
+            ),
             "projected identical outputs must compare equal"
         );
     }

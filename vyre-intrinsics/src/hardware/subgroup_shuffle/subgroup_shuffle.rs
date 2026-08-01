@@ -50,17 +50,15 @@ fn cpu_ref(values: &[u32], lanes: &[u32]) -> Vec<u8> {
     for (i, lane) in lanes.iter().take(n).enumerate() {
         let subgroup_start = (i / SUBGROUP_WIDTH) * SUBGROUP_WIDTH;
         let src = subgroup_start + (*lane as usize);
-        out.push(
-            values.get(src).copied().unwrap_or_else(|| {
-                panic!(
-                    "Fix: subgroup_shuffle cpu_ref OOB: lane {lane} in subgroup_start \
+        out.push(values.get(src).copied().unwrap_or_else(|| {
+            panic!(
+                "Fix: subgroup_shuffle cpu_ref OOB: lane {lane} in subgroup_start \
                      {subgroup_start} resolves to src index {src} which exceeds values \
                      len {}; the GPU oracle cannot produce a meaningful reference value \
                      for an out-of-bounds lane index",
-                    values.len()
-                )
-            }),
-        );
+                values.len()
+            )
+        }));
     }
     pack_u32(&out)
 }
@@ -134,9 +132,7 @@ mod tests {
         // must panic loudly rather than silently substituting 0.
         let values = vec![10u32, 20u32, 30u32, 40u32];
         let lanes = vec![32u32]; // OOB: lane 32 >= SUBGROUP_WIDTH(32)
-        let result = std::panic::catch_unwind(|| {
-            cpu_ref(&values, &lanes)
-        });
+        let result = std::panic::catch_unwind(|| cpu_ref(&values, &lanes));
         let err = result.expect_err("expected cpu_ref to panic on OOB lane index");
         let msg = err
             .downcast_ref::<String>()

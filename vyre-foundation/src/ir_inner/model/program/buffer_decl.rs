@@ -136,6 +136,32 @@ impl ShapePredicate {
         }
     }
 
+    /// Evaluate the predicate against a concrete count.
+    #[must_use]
+    pub fn evaluate(&self, count: u32) -> bool {
+        self.holds(count)
+    }
+
+    /// Whether this predicate proves that the count cannot be zero.
+    #[must_use]
+    pub fn proves_non_empty(&self) -> bool {
+        match self {
+            Self::AtLeast(n) | Self::Exactly(n) => *n > 0,
+            Self::ModEquals { modulus, remainder } => {
+                *modulus != 0 && *remainder < *modulus && *remainder > 0
+            }
+            Self::AffineRange {
+                offset, min, max, ..
+            } => {
+                let zero_value = i128::from(*offset);
+                zero_value < i128::from(*min) || zero_value > i128::from(*max)
+            }
+            Self::And(left, right) => left.proves_non_empty() || right.proves_non_empty(),
+            Self::Or(left, right) => left.proves_non_empty() && right.proves_non_empty(),
+            _ => false,
+        }
+    }
+
     /// Human-readable form for error messages.
     #[must_use]
     pub fn describe(&self) -> String {
@@ -488,6 +514,35 @@ impl BufferDecl {
         self.count
     }
 
+    /// Whether [`Self::count`] is a static array length that reaches generated
+    /// backend code, rather than a runtime-sized binding length.
+    ///
+    /// This mirrors, arm for arm, the `MemoryClass::Shared` and
+    /// `MemoryClass::Scratch` cases of `vyre_lower::lower::memory_class`, which
+    /// is the single Program-to-descriptor boundary every emitter reads. Those
+    /// two classes are the ones whose `element_count` becomes a fixed-length
+    /// array in emitted code (`.shared` byte length in PTX,
+    /// `array<T, N>` in WGSL); every other class emits a runtime-sized array
+    /// and ignores the count.
+    ///
+    /// `Persistent` is excluded because it is rejected before classification.
+    ///
+    /// Compiled-pipeline cache identity uses this to decide whether `count`
+    /// belongs in the cache key: including it for a runtime-sized storage
+    /// buffer would recompile the shader on every buffer resize, and omitting
+    /// it for a workgroup buffer would let two different shared-memory array
+    /// lengths share one cache entry.
+    #[must_use]
+    #[inline]
+    pub fn has_static_element_count(&self) -> bool {
+        match (self.kind, &self.access) {
+            (MemoryKind::Persistent, _) => false,
+            (MemoryKind::Shared, _) | (_, BufferAccess::Workgroup) => true,
+            (MemoryKind::Local, _) => true,
+            _ => false,
+        }
+    }
+
     /// Static packed byte length for fixed-size buffers.
     ///
     /// Returns `Ok(None)` for runtime-sized buffer declarations (`count == 0`)
@@ -545,6 +600,67 @@ impl BufferDecl {
         self.is_output()
             || matches!(self.access, BufferAccess::WriteOnly)
             || (self.is_pipeline_live_out() && matches!(self.access, BufferAccess::ReadWrite))
+    }
+
+    /// Refuse this buffer when it is backend-allocated and has no static size.
+    ///
+    /// A buffer selected by [`Self::is_backend_allocated_output`] never receives
+    /// host bytes, so `count == 0` leaves an executor nothing to size its
+    /// allocation or its readback from. Every execution path calls this rather
+    /// than re-deriving the condition, so the reference interpreter refuses
+    /// exactly what the device backends refuse. An oracle that accepts what its
+    /// targets reject certifies programs that cannot run.
+    ///
+    /// A writable buffer that is NOT backend-allocated (a plain `ReadWrite`) is
+    /// deliberately accepted: it consumes one host input slot, so its element
+    /// count is inferable from the bytes the caller supplies and is resolved per
+    /// dispatch.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use vyre::ir::{BufferDecl, DataType};
+    ///
+    /// // No count and backend-allocated: refused, and the message names the remedy.
+    /// let error = BufferDecl::output("out", 0, DataType::U32)
+    ///     .require_static_readback_size()
+    ///     .expect_err("a countless output has no readback size");
+    /// assert!(error.contains(".with_count(n)"));
+    ///
+    /// // A count makes it well-formed.
+    /// assert!(BufferDecl::output("out", 0, DataType::U32)
+    ///     .with_count(4)
+    ///     .require_static_readback_size()
+    ///     .is_ok());
+    ///
+    /// // A plain read_write takes its size from the caller's bytes, so it is fine.
+    /// assert!(BufferDecl::read_write("rw", 1, DataType::U32)
+    ///     .require_static_readback_size()
+    ///     .is_ok());
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns the operator-facing message when this buffer is backend-allocated
+    /// and its readback size cannot be determined. A `count` of zero means
+    /// "runtime-sized" rather than "zero elements", since `count` defaults to
+    /// zero and so cannot represent a declared empty buffer. An explicit
+    /// `output_byte_range` states the readback size directly, so it satisfies
+    /// this check on its own: that is how a legitimately EMPTY output declares
+    /// itself, with `.with_output_byte_range(0..0)`. Without that escape an
+    /// empty-input program is indistinguishable from a mis-declared one, and the
+    /// only way to pass is to inflate the count to a nonzero value the buffer
+    /// does not have.
+    #[inline]
+    pub fn require_static_readback_size(&self) -> Result<(), String> {
+        if self.is_backend_allocated_output() && self.count == 0 && self.output_byte_range.is_none()
+        {
+            return Err(format!(
+                "backend-allocated output buffer `{}` has no static element count and no output byte range, so its readback size is unknown. Fix: declare it with .with_count(n), or with .with_output_byte_range(0..0) if it is genuinely empty.",
+                self.name()
+            ));
+        }
+        Ok(())
     }
 
     /// Byte range the consumer needs from this output buffer, if declared.

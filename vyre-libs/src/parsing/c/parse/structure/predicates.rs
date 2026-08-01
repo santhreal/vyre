@@ -1,4 +1,5 @@
 use super::*;
+use crate::parsing::c::parse::{merged_token_ranges, token_range_expr};
 
 pub(super) fn expr_is_any(token: Expr, candidates: &[u32]) -> Expr {
     let ranges = merged_token_ranges(candidates);
@@ -10,32 +11,6 @@ pub(super) fn expr_is_any(token: Expr, candidates: &[u32]) -> Expr {
         token_range_expr(&token, first_lo, first_hi),
         |acc, (lo, hi)| Expr::or(acc, token_range_expr(&token, lo, hi)),
     )
-}
-
-pub(super) fn token_range_expr(token: &Expr, lo: u32, hi: u32) -> Expr {
-    if lo == hi {
-        Expr::eq(token.clone(), Expr::u32(lo))
-    } else {
-        Expr::and(
-            Expr::ge(token.clone(), Expr::u32(lo)),
-            Expr::le(token.clone(), Expr::u32(hi)),
-        )
-    }
-}
-
-pub(super) fn merged_token_ranges(candidates: &[u32]) -> Vec<(u32, u32)> {
-    let mut values = candidates.to_vec();
-    values.sort_unstable();
-    values.dedup();
-
-    let mut ranges: Vec<(u32, u32)> = Vec::new();
-    for value in values {
-        match ranges.last_mut() {
-            Some((_, hi)) if hi.checked_add(1) == Some(value) => *hi = value,
-            _ => ranges.push((value, value)),
-        }
-    }
-    ranges
 }
 
 pub(super) fn function_prefix_token(token: Expr) -> Expr {

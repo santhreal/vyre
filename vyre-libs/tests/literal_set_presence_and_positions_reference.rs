@@ -4,7 +4,7 @@
 //!
 //! The fold's correctness claim is "recall-identical by construction": one
 //! suffix3-gated walk that emits BOTH the per-region presence bitmap AND the match
-//! triples must produce EXACTLY what the two separate programs produce 
+//! triples must produce EXACTLY what the two separate programs produce
 //! `scan_presence_by_region` for the bitmap and the suffix3 prefilter (positions)
 //! program for the triples. This test proves that empirically across thousands of
 //! random (literal set, multi-region haystack) cases: for each case it
@@ -71,7 +71,7 @@ fn random_haystack(rng: &mut Lcg) -> Vec<u8> {
 
 /// 1..=4 ascending region starts, always beginning at 0 (the kernel binary-search
 /// lower bound). Both the fused and the separate presence-by-region programs use
-/// END-position attribution, so the differential holds for ANY ascending split 
+/// END-position attribution, so the differential holds for ANY ascending split
 /// no separator bytes needed to make the two AGREE with each other.
 fn random_region_starts(rng: &mut Lcg, haystack_len: usize) -> Vec<u32> {
     let region_count = 1 + rng.below(4); // 1..=4 regions

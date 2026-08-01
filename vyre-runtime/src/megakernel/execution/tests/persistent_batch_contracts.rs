@@ -10,8 +10,8 @@ fn persistent_handle_many_dispatch_uses_backend_batch_contract_once() {
 
     let output = kernel
         .dispatch_persistent_handles_many_observed(&[
-            MegakernelResidentHandles::new(21, 22, 23, 24),
-            MegakernelResidentHandles::new(31, 32, 33, 34),
+            test_resident_handles(21, 22, 23, 24),
+            test_resident_handles(31, 32, 33, 34),
         ])
         .expect("Fix: batched persistent-handle dispatch must use the compiled pipeline batch API");
 
@@ -56,8 +56,8 @@ fn persistent_handle_many_into_reuses_nested_output_storage() {
     let stats = kernel
         .dispatch_persistent_handles_many_into(
             &[
-                MegakernelResidentHandles::new(21, 22, 23, 24),
-                MegakernelResidentHandles::new(31, 32, 33, 34),
+                test_resident_handles(21, 22, 23, 24),
+                test_resident_handles(31, 32, 33, 34),
             ],
             &mut batches,
         )
@@ -87,8 +87,8 @@ fn persistent_handle_many_scratch_reuses_resource_rows_and_outputs() {
     let first_stats = kernel
         .dispatch_persistent_handles_many_with_scratch(
             &[
-                MegakernelResidentHandles::new(21, 22, 23, 24),
-                MegakernelResidentHandles::new(31, 32, 33, 34),
+                test_resident_handles(21, 22, 23, 24),
+                test_resident_handles(31, 32, 33, 34),
             ],
             &mut scratch,
         )
@@ -104,8 +104,8 @@ fn persistent_handle_many_scratch_reuses_resource_rows_and_outputs() {
     let second_stats = kernel
         .dispatch_persistent_handles_many_with_scratch(
             &[
-                MegakernelResidentHandles::new(41, 42, 43, 44),
-                MegakernelResidentHandles::new(51, 52, 53, 54),
+                test_resident_handles(41, 42, 43, 44),
+                test_resident_handles(51, 52, 53, 54),
             ],
             &mut scratch,
         )
@@ -206,4 +206,3 @@ fn with_capacity_returns_result_and_preallocates_correct_shape() {
         "Fix: pre-pushed output slots must be empty Vecs, not garbage"
     );
 }
-

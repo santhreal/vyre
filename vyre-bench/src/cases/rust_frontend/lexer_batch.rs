@@ -1,3 +1,4 @@
+use super::rust_source_words;
 use crate::api::case::{
     BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
     BenchRun, Correctness, DeterminismClass, PreparedCase, WorkloadClass,
@@ -370,17 +371,6 @@ fn rust_lexer_batch_baseline_outputs(
         ],
         total_tokens,
     ))
-}
-
-fn rust_source_words(source: &[u8]) -> Vec<u32> {
-    let mut words = source
-        .iter()
-        .map(|byte| u32::from(*byte))
-        .collect::<Vec<_>>();
-    if words.is_empty() {
-        words.push(0);
-    }
-    words
 }
 
 fn u32s_to_bytes(words: &[u32]) -> Vec<u8> {

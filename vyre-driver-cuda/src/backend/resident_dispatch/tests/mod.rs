@@ -35,6 +35,7 @@ mod tests {
     };
     use crate::backend::output_range::CudaOutputReadback;
     use crate::backend::resident::CudaResidentBuffer;
+    use vyre_driver::ResidentOwner;
 
     #[test]
     fn resident_fallback_fill_payload_preserves_last_good_bytes_when_reservation_fails() {
@@ -182,15 +183,13 @@ mod tests {
             true,
             "Fix: duplicate resident input indexes must fail before borrowed fallback can alias a logical input slot: {duplicate}"
         );
-        let sparse =
-            validate_dense_resident_input_indices([0, 2, 3], 3, "test input").unwrap_err();
+        let sparse = validate_dense_resident_input_indices([0, 2, 3], 3, "test input").unwrap_err();
         assert_eq!(
             sparse.to_string().contains("dense"),
             true,
             "Fix: sparse resident input indexes must fail before borrowed fallback can skip a logical input slot: {sparse}"
         );
-        let truncated =
-            validate_dense_resident_input_indices([0, 1], 3, "test input").unwrap_err();
+        let truncated = validate_dense_resident_input_indices([0, 1], 3, "test input").unwrap_err();
         assert_eq!(
             truncated.to_string().contains("expected 3"),
             true,
@@ -224,12 +223,13 @@ mod tests {
 
     #[test]
     fn resident_sequence_fills_coalesce_duplicates_and_skip_full_upload_overwrites() {
+        let owner = ResidentOwner::new().expect("Fix: owner ids must be available");
         let first = CudaResidentBuffer {
-            id: 1,
+            handle: owner.handle(1),
             byte_len: 16,
         };
         let second = CudaResidentBuffer {
-            id: 2,
+            handle: owner.handle(2),
             byte_len: 16,
         };
         let upload = [0xFE_u8; 16];
@@ -249,8 +249,12 @@ mod tests {
 
     #[test]
     fn resident_sequence_fills_handle_dense_duplicate_streams_without_changing_order() {
+        let owner = ResidentOwner::new().expect("Fix: owner ids must be available");
         let handles: Vec<_> = (0..256)
-            .map(|id| CudaResidentBuffer { id, byte_len: 1 })
+            .map(|id| CudaResidentBuffer {
+                handle: owner.handle(id),
+                byte_len: 1,
+            })
             .collect();
         let mut fills = Vec::new();
         for round in 0..8_u8 {
@@ -261,7 +265,7 @@ mod tests {
         let uploads: Vec<_> = handles
             .iter()
             .copied()
-            .filter(|handle| handle.id % 2 == 0)
+            .filter(|handle| handle.handle.id() % 2 == 0)
             .map(|handle| (handle, upload.as_slice()))
             .collect();
 
@@ -275,13 +279,13 @@ mod tests {
         );
         for (position, (handle, value)) in effective.iter().copied().enumerate() {
             assert_eq!(
-                handle.id % 2,
+                handle.handle.id() % 2,
                 1,
                 "Fix: uploaded resident handle {} must not retain a redundant fill.",
-                handle.id
+                handle.handle
             );
             assert_eq!(
-                handle.id as usize,
+                handle.handle.id() as usize,
                 position * 2 + 1,
                 "Fix: first-seen fill order must be stable after duplicate coalescing."
             );

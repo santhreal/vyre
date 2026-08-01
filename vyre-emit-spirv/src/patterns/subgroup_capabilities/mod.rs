@@ -138,7 +138,9 @@ mod tests {
         });
         desc.body.literals.push(LiteralValue::U32(5));
         desc.body.ops.push(KernelOp {
-            kind: KernelOpKind::SubgroupReduce { op: vyre_lower::SubgroupReduceOp::Add },
+            kind: KernelOpKind::SubgroupReduce {
+                op: vyre_lower::SubgroupReduceOp::Add,
+            },
             operands: vec![0],
             result: Some(1),
         });
@@ -216,7 +218,9 @@ mod tests {
             result: Some(2),
         });
         desc.body.ops.push(KernelOp {
-            kind: KernelOpKind::SubgroupReduce { op: vyre_lower::SubgroupReduceOp::Add },
+            kind: KernelOpKind::SubgroupReduce {
+                op: vyre_lower::SubgroupReduceOp::Add,
+            },
             operands: vec![2],
             result: Some(3),
         });

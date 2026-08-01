@@ -17,10 +17,19 @@
 
 use vyre_foundation::ir::{DataType, Program};
 
-use crate::fixed_u32_matmul::{checked_cells, fixed_u32_matmul_program};
+use crate::fixed_u32_matmul::{try_fixed_u32_matmul, FixedMatmulContext};
 
 /// Op id.
 pub const OP_ID: &str = "vyre-primitives::math::tensor_network_pair_contract";
+
+const MATMUL_CONTEXT: FixedMatmulContext = FixedMatmulContext {
+    op_id: OP_ID,
+    operation: "tn_pair_contract",
+    lhs_label: "tn_pair_contract a input",
+    rhs_label: "tn_pair_contract b input",
+    out_label: "tn_pair_contract output",
+    dimensions: ["m", "k", "n"],
+};
 
 /// Pairwise tensor contraction: contract `A[m × k]` with `B[k × n]`
 /// over the shared index `k`. Result `C[m × n]`. Special case of
@@ -43,18 +52,7 @@ pub fn try_tn_pair_contract(
     k: u32,
     n: u32,
 ) -> Result<Program, String> {
-    if m == 0 || k == 0 || n == 0 {
-        return Err(format!(
-            "Fix: tn_pair_contract requires m, k, n > 0, got m={m}, k={k}, n={n}."
-        ));
-    }
-
-    let a_cells = checked_cells("tn_pair_contract a input", m, k)?;
-    let b_cells = checked_cells("tn_pair_contract b input", k, n)?;
-    let c_cells = checked_cells("tn_pair_contract output", m, n)?;
-    Ok(fixed_u32_matmul_program(
-        OP_ID, a, b, c, m, k, n, a_cells, b_cells, c_cells,
-    ))
+    try_fixed_u32_matmul(a, b, c, m, k, n, &MATMUL_CONTEXT)
 }
 
 /// CPU reference: f64.
@@ -94,46 +92,15 @@ pub fn try_tn_pair_contract_cpu_into(
     n: u32,
     c: &mut Vec<f64>,
 ) -> Result<(), String> {
-    let m = m as usize;
-    let k = k as usize;
-    let n = n as usize;
-    m.checked_mul(k).ok_or_else(|| {
-        format!(
-            "tn_pair_contract CPU oracle A shape {m}x{k} overflows indexing. Fix: shard the tensor before parity evaluation."
-        )
-    })?;
-    k.checked_mul(n).ok_or_else(|| {
-        format!(
-            "tn_pair_contract CPU oracle B shape {k}x{n} overflows indexing. Fix: shard the tensor before parity evaluation."
-        )
-    })?;
-    let cells = m.checked_mul(n).ok_or_else(|| {
-        format!(
-            "tn_pair_contract CPU oracle output shape {m}x{n} overflows indexing. Fix: shard the tensor before parity evaluation."
-        )
-    })?;
-    if cells > c.capacity() {
-        crate::graph::scratch::reserve_graph_items(
-            c,
-            cells - c.len(),
-            "tensor-network CPU oracle",
-            "tn_pair_contract output",
-        )?;
-    }
-    c.clear();
-    c.resize(cells, 0.0);
-    for i in 0..m {
-        for j in 0..n {
-            let mut acc = 0.0;
-            for kk in 0..k {
-                let a_value = a.get(i * k + kk).copied().unwrap_or(0.0);
-                let b_value = b.get(kk * n + j).copied().unwrap_or(0.0);
-                acc += a_value * b_value;
-            }
-            c[i * n + j] = acc;
-        }
-    }
-    Ok(())
+    crate::math::cpu_matrix::try_f64_matmul_into(
+        a,
+        b,
+        m,
+        k,
+        n,
+        c,
+        crate::math::cpu_matrix::MatmulContext::TENSOR_CONTRACT,
+    )
 }
 
 /// CPU helper: greedy contraction-order picker. Given a list of tensor

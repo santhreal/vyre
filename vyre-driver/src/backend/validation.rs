@@ -2,6 +2,7 @@
 
 use super::capability::Backend;
 use std::sync::Arc;
+pub use vyre_foundation::ir::model::node::node_op_id;
 use vyre_foundation::ir::model::node::Node;
 use vyre_foundation::ir::{OpId, Program, ValidationError};
 
@@ -114,38 +115,4 @@ fn validate_node(
         _ => {}
     }
     Ok(())
-}
-
-/// Return the stable operation id for legacy statement nodes.
-#[must_use]
-pub fn node_op_id(node: &Node) -> &'static str {
-    match node {
-        Node::Let { .. } => "vyre.node.let",
-        Node::Assign { .. } => "vyre.node.assign",
-        Node::Store { .. } => "vyre.node.store",
-        Node::If { .. } => "vyre.node.if",
-        Node::Loop { .. } => "vyre.node.loop",
-        Node::Return => "vyre.node.return",
-        Node::Block(_) => "vyre.node.block",
-        Node::Barrier { .. } => "vyre.node.barrier",
-        Node::IndirectDispatch { .. } => "vyre.node.indirect_dispatch",
-        Node::AsyncLoad { .. } => "vyre.node.async_load",
-        Node::AsyncWait { .. } => "vyre.node.async_wait",
-        Node::Trap { .. } => "vyre.node.trap",
-        Node::Resume { .. } => "vyre.node.resume",
-        Node::AllReduce { .. } => "vyre.node.all_reduce",
-        Node::AllGather { .. } => "vyre.node.all_gather",
-        Node::ReduceScatter { .. } => "vyre.node.reduce_scatter",
-        Node::Broadcast { .. } => "vyre.node.broadcast",
-        // Region is a debug wrapper produced by vyre-libs Cat-A
-        // compositions. Every backend must accept it  -  either by
-        // lowering its body transparently or via the region_inline
-        // optimizer pass. Treat it as a structural node
-        // with no capability requirement.
-        Node::Region { .. } => "vyre.node.region",
-        Node::Opaque(extension) => extension.extension_kind(),
-        // Non-exhaustive safety net: future Node variants added in
-        // vyre-foundation must receive a dedicated op id before release.
-        _ => "vyre.node.unknown",
-    }
 }

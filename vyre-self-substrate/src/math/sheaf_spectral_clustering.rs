@@ -432,7 +432,7 @@ mod tests {
             inputs: &[Vec<u8>],
             grid_override: Option<[u32; 3]>,
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            // Real-backend input contract: one input per input-consuming buffer in buffer order 
+            // Real-backend input contract: one input per input-consuming buffer in buffer order
             // restriction_diag RO (0), v RW (1, zero slot), lambda RW (2, zero slot), one_fp RO (3).
             // Compute the SAME closed-form diagonal eigenpair the real kernel does. (max r,
             // e_argmax) (so this double stays truthful to the IR under test (Law 6)).

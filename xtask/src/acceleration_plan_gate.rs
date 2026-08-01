@@ -17,9 +17,7 @@ use crate::hash::sha256_hex;
 use crate::innovation_falsification::missing_frontier_falsification_fields;
 use crate::research_basis::external_research_basis_entries;
 use crate::research_key::{backtick_research_keys, is_research_key};
-use crate::research_plan_coverage::{
-    research_plan_coverage_findings, ResearchPlanCoverageRow,
-};
+use crate::research_plan_coverage::{research_plan_coverage_findings, ResearchPlanCoverageRow};
 use crate::research_source_ledger::{
     read_research_source_ledger, research_source_urls_by_key, unknown_research_source_vx_rows,
     ResearchSourceLedger,
@@ -227,7 +225,9 @@ pub(crate) fn run(args: &[String]) {
         &vyre_root.join("docs/optimization/HOT_PATHS.toml"),
         &mut failures,
     );
-    failures.extend(crate::rules_as_data::validate_rules_as_data_manifest(&vyre_root));
+    failures.extend(crate::rules_as_data::validate_rules_as_data_manifest(
+        &vyre_root,
+    ));
     validate_compat_alias_audit(&vyre_root, &mut failures);
     validate_no_parallel_active_plan_files(&vyre_root, &mut failures);
     if failures.is_empty() {
@@ -263,7 +263,7 @@ fn parse_args(args: &[String]) -> Result<GateConfig, String> {
     let vyre_root = default_vyre_root();
     if args.iter().any(|arg| arg == "--help" || arg == "-h") {
         return Err(
-            "USAGE:\n  cargo_full run --bin xtask -- acceleration-plan-gate [--plan PATH] [--progress-json PATH]"
+            "USAGE:\n  cargo xtask acceleration-plan-gate [--plan PATH] [--progress-json PATH]"
                 .to_string(),
         );
     }
@@ -429,13 +429,16 @@ fn validate_plan_axes_have_lanes(
     };
     let lane_classifications =
         match crate::ownership::parse_ownership_lane_classifications(&ownership_text) {
-        Ok(lanes) => lanes,
-        Err(error) => {
-            failures.push(format!("plan axis audit ownership parse failed: {error}"));
-            return;
-        }
-    };
-    let lanes = lane_classifications.keys().cloned().collect::<BTreeSet<_>>();
+            Ok(lanes) => lanes,
+            Err(error) => {
+                failures.push(format!("plan axis audit ownership parse failed: {error}"));
+                return;
+            }
+        };
+    let lanes = lane_classifications
+        .keys()
+        .cloned()
+        .collect::<BTreeSet<_>>();
     validate_supporting_ownership_lanes(ownership_path, &lane_classifications, failures);
     let mut missing = BTreeSet::new();
     for row in rows {
@@ -1008,8 +1011,7 @@ fn validate_innovation_candidate(row: &PlanRow, failures: &mut Vec<String>) {
             row.line
         ));
     }
-    let missing_falsification =
-        missing_frontier_falsification_fields(&row.id, &comparison_text);
+    let missing_falsification = missing_frontier_falsification_fields(&row.id, &comparison_text);
     if !missing_falsification.is_empty() {
         failures.push(format!(
             "line {}: frontier innovation candidate must name falsification fields: {}",
@@ -1057,7 +1059,11 @@ fn validate_dedup_seam_uniqueness(
     seen: &mut BTreeMap<String, usize>,
     failures: &mut Vec<String>,
 ) {
-    let normalized = row.dedup_seam.split_whitespace().collect::<Vec<_>>().join(" ");
+    let normalized = row
+        .dedup_seam
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
     if let Some(first_line) = seen.insert(normalized.clone(), row.line) {
         failures.push(format!(
             "line {}: dedup seam `{normalized}` duplicates line {first_line}; each VX row needs a distinct ownership seam",
@@ -1229,20 +1235,16 @@ pub(crate) fn validate_plan_progress_artifact_bytes(bytes: &[u8]) -> Vec<String>
         }
     }
     let rows = value.get("rows").and_then(|raw| raw.as_array());
-    let rows_len = rows
-        .map(|rows| rows.len() as u64);
+    let rows_len = rows.map(|rows| rows.len() as u64);
     if rows_len != row_count {
         blockers.push("plan progress row_count must match rows length".to_string());
     }
     if research_grounded_row_count.is_none() {
-        blockers.push(
-            "plan progress artifact must contain research_grounded_row_count".to_string(),
-        );
+        blockers
+            .push("plan progress artifact must contain research_grounded_row_count".to_string());
     }
     if research_grounded_row_count != row_count {
-        blockers.push(
-            "plan progress research_grounded_row_count must match row_count".to_string(),
-        );
+        blockers.push("plan progress research_grounded_row_count must match row_count".to_string());
     }
     if let Some(rows) = rows {
         for (index, row) in rows.iter().enumerate() {
@@ -1284,9 +1286,7 @@ pub(crate) fn validate_plan_progress_artifact_bytes(bytes: &[u8]) -> Vec<String>
         .get("duplicate_dedup_seams")
         .and_then(|raw| raw.as_array());
     if duplicate_dedup_seam_count.is_none() {
-        blockers.push(
-            "plan progress artifact must contain duplicate_dedup_seam_count".to_string(),
-        );
+        blockers.push("plan progress artifact must contain duplicate_dedup_seam_count".to_string());
     }
     if duplicate_dedup_seams.is_none() {
         blockers.push("plan progress duplicate_dedup_seams must be an array".to_string());
@@ -1335,9 +1335,8 @@ pub(crate) fn validate_plan_progress_artifact_bytes(bytes: &[u8]) -> Vec<String>
         .get("duplicate_evidence_paths")
         .and_then(|raw| raw.as_array());
     if duplicate_evidence_path_count.is_none() {
-        blockers.push(
-            "plan progress artifact must contain duplicate_evidence_path_count".to_string(),
-        );
+        blockers
+            .push("plan progress artifact must contain duplicate_evidence_path_count".to_string());
     }
     if duplicate_evidence_paths.is_none() {
         blockers.push("plan progress duplicate_evidence_paths must be an array".to_string());
@@ -1435,14 +1434,16 @@ fn dedup_seam_count(report: &PlanGateReport) -> usize {
 fn duplicate_dedup_seams(report: &PlanGateReport) -> Vec<DuplicateDedupSeam> {
     let mut counts = BTreeMap::<String, usize>::new();
     for row in &report.rows {
-        let normalized = row.dedup_seam.split_whitespace().collect::<Vec<_>>().join(" ");
+        let normalized = row
+            .dedup_seam
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ");
         *counts.entry(normalized).or_insert(0) += 1;
     }
     counts
         .into_iter()
-        .filter_map(|(seam, count)| {
-            (count > 1).then_some(DuplicateDedupSeam { seam, count })
-        })
+        .filter_map(|(seam, count)| (count > 1).then_some(DuplicateDedupSeam { seam, count }))
         .collect()
 }
 
@@ -1453,9 +1454,7 @@ fn duplicate_evidence_paths(report: &PlanGateReport) -> Vec<DuplicateEvidencePat
     }
     counts
         .into_iter()
-        .filter_map(|(path, count)| {
-            (count > 1).then_some(DuplicateEvidencePath { path, count })
-        })
+        .filter_map(|(path, count)| (count > 1).then_some(DuplicateEvidencePath { path, count }))
         .collect()
 }
 
@@ -1705,7 +1704,10 @@ mod tests {
             plan_progress_freshness_fingerprint(&progress.source_fingerprint)
         );
         assert_eq!(progress.row_count, fixture_plan_row_count());
-        assert_eq!(progress.research_grounded_row_count, fixture_plan_row_count());
+        assert_eq!(
+            progress.research_grounded_row_count,
+            fixture_plan_row_count()
+        );
         assert_eq!(progress.dedup_seam_count, fixture_plan_row_count());
         assert_eq!(
             progress.duplicate_dedup_seam_count,
@@ -1725,11 +1727,7 @@ mod tests {
             .iter()
             .all(|duplicate| duplicate.count >= 2 && !duplicate.path.is_empty()));
         assert_eq!(
-            progress
-                .axis_row_counts
-                .values()
-                .copied()
-                .sum::<usize>(),
+            progress.axis_row_counts.values().copied().sum::<usize>(),
             fixture_plan_row_count()
         );
         assert_eq!(
@@ -1945,12 +1943,8 @@ mod tests {
         // passed a plan with no unknown key at all while claiming to reject one.
         let axis = REQUIRED_AXES[0];
         let text = plan.replacen(
-            &format!(
-                "| VX-001 | {axis} | `Cargo.toml` is rooted local evidence | `MLIR_PASS` |"
-            ),
-            &format!(
-                "| VX-001 | {axis} | `Cargo.toml` is rooted local evidence | `UNKNOWN_KEY` |"
-            ),
+            &format!("| VX-001 | {axis} | `Cargo.toml` is rooted local evidence | `MLIR_PASS` |"),
+            &format!("| VX-001 | {axis} | `Cargo.toml` is rooted local evidence | `UNKNOWN_KEY` |"),
             1,
         );
         assert!(

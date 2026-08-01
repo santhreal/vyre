@@ -243,6 +243,43 @@ impl ExprVisitor for LocalSlots {
     type Break = Infallible;
 }
 
+fn visit_async_extent(
+    slots: &mut LocalSlots,
+    offset: &Expr,
+    size: &Expr,
+) -> ControlFlow<Infallible> {
+    visit_preorder(slots, offset)?;
+    visit_preorder(slots, size)
+}
+
+macro_rules! async_extent_visitors {
+    () => {
+        fn visit_async_load(
+            &mut self,
+            _: &Node,
+            _: &vyre::ir::Ident,
+            _: &vyre::ir::Ident,
+            offset: &Expr,
+            size: &Expr,
+            _: &vyre::ir::Ident,
+        ) -> ControlFlow<Self::Break> {
+            visit_async_extent(self, offset, size)
+        }
+
+        fn visit_async_store(
+            &mut self,
+            _: &Node,
+            _: &vyre::ir::Ident,
+            _: &vyre::ir::Ident,
+            offset: &Expr,
+            size: &Expr,
+            _: &vyre::ir::Ident,
+        ) -> ControlFlow<Self::Break> {
+            visit_async_extent(self, offset, size)
+        }
+    };
+}
+
 impl NodeVisitor for LocalSlots {
     type Break = Infallible;
 
@@ -308,31 +345,7 @@ impl NodeVisitor for LocalSlots {
         Continue(())
     }
 
-    fn visit_async_load(
-        &mut self,
-        _: &Node,
-        _: &vyre::ir::Ident,
-        _: &vyre::ir::Ident,
-        offset: &Expr,
-        size: &Expr,
-        _: &vyre::ir::Ident,
-    ) -> ControlFlow<Self::Break> {
-        visit_preorder(self, offset)?;
-        visit_preorder(self, size)
-    }
-
-    fn visit_async_store(
-        &mut self,
-        _: &Node,
-        _: &vyre::ir::Ident,
-        _: &vyre::ir::Ident,
-        offset: &Expr,
-        size: &Expr,
-        _: &vyre::ir::Ident,
-    ) -> ControlFlow<Self::Break> {
-        visit_preorder(self, offset)?;
-        visit_preorder(self, size)
-    }
+    async_extent_visitors!();
 
     fn visit_async_wait(&mut self, _: &Node, _: &vyre::ir::Ident) -> ControlFlow<Self::Break> {
         Continue(())

@@ -89,5 +89,3 @@ fn cuda_sub_add_cancel_left_via_cse() {
         );
     }
 }
-
-

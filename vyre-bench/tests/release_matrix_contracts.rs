@@ -8,9 +8,7 @@ use std::path::Path;
 
 use serde_json::Value;
 use vyre_bench::api::case::{BaselineClass, WorkloadClass};
-use vyre_bench::report::json::{
-    REQUIRED_BENCHMARK_CASE_FIELDS, REQUIRED_BENCHMARK_METRIC_FIELDS,
-};
+use vyre_bench::report::json::{REQUIRED_BENCHMARK_CASE_FIELDS, REQUIRED_BENCHMARK_METRIC_FIELDS};
 
 #[path = "release_matrix_contracts/command_contracts.rs"]
 mod command_contracts;
@@ -83,13 +81,11 @@ fn release_matrix_advertises_required_benchmark_evidence_schema() {
         "Fix: release matrix must version the benchmark evidence schema."
     );
     assert_eq!(
-        matrix.required_benchmark_case_fields,
-        REQUIRED_BENCHMARK_CASE_FIELDS,
+        matrix.required_benchmark_case_fields, REQUIRED_BENCHMARK_CASE_FIELDS,
         "Fix: release matrix required case fields must share the report validation constants."
     );
     assert_eq!(
-        matrix.required_benchmark_metric_fields,
-        REQUIRED_BENCHMARK_METRIC_FIELDS,
+        matrix.required_benchmark_metric_fields, REQUIRED_BENCHMARK_METRIC_FIELDS,
         "Fix: release matrix required metric fields must share the report validation constants."
     );
 }

@@ -51,16 +51,14 @@ pub fn failure_trace_wgsl(
 /// Returns `Err` on any I/O or parse failure so the caller can surface the
 /// problem. Never silently returns a partial or empty result, the complete
 /// log is required for accurate trace data.
-pub fn load_bind_result_log(
-    path: &str,
-) -> Result<Vec<BindResultEntry>, BindResultLogError> {
+pub fn load_bind_result_log(path: &str) -> Result<Vec<BindResultEntry>, BindResultLogError> {
     let file = File::open(path).map_err(BindResultLogError::Open)?;
     let reader = BufReader::new(file);
     let mut entries = Vec::new();
     for (line_no, raw) in reader.lines().enumerate() {
         let line = raw.map_err(BindResultLogError::Read)?;
-        let entry: BindResultEntry = serde_json::from_str(&line)
-            .map_err(|e| BindResultLogError::Parse(line_no + 1, e))?;
+        let entry: BindResultEntry =
+            serde_json::from_str(&line).map_err(|e| BindResultLogError::Parse(line_no + 1, e))?;
         entries.push(entry);
     }
     Ok(entries)

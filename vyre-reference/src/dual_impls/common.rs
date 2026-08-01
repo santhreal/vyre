@@ -3,6 +3,23 @@
 use std::{error::Error, fmt};
 
 use crate::workgroup::Memory;
+
+pub(crate) fn read_two_words(input: &[u8]) -> Option<(u32, u32)> {
+    (input.len() >= 8).then(|| {
+        (
+            u32::from_le_bytes([input[0], input[1], input[2], input[3]]),
+            u32::from_le_bytes([input[4], input[5], input[6], input[7]]),
+        )
+    })
+}
+
+#[must_use]
+pub(crate) fn binary_direct(input: &[u8], op: impl FnOnce(u32, u32) -> u32) -> Vec<u8> {
+    let Some((left, right)) = read_two_words(input) else {
+        return vec![0; 4];
+    };
+    op(left, right).to_le_bytes().to_vec()
+}
 use vyre_primitives::CombineOp;
 
 /// Error returned by canonical primitive reference evaluation.

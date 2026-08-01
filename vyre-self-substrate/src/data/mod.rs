@@ -14,3 +14,17 @@ pub mod reduction_metrics;
 pub mod scallop_provenance;
 pub mod scallop_provenance_wide;
 pub mod vsa_fingerprint;
+
+pub(crate) fn decode_first_output(
+    outputs: &[Vec<u8>],
+    words: usize,
+    context: &'static str,
+    out: &mut Vec<u32>,
+) -> Result<(), crate::optimizer::dispatcher::DispatchError> {
+    if outputs.is_empty() {
+        return Err(crate::optimizer::dispatcher::DispatchError::BackendError(
+            format!("Fix: {context} expected at least one output buffer, got 0."),
+        ));
+    }
+    crate::dispatch_buffers::decode_u32_output_exact(&outputs[0], words, context, out)
+}

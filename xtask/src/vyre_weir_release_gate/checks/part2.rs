@@ -2,146 +2,13 @@ pub(crate) fn check_optimization_analysis_fixture_manifest(
     value: &serde_json::Value,
     failures: &mut Vec<String>,
 ) {
-    let missing_required = value
-        .get("missing_required_families")
-        .and_then(serde_json::Value::as_array)
-        .map_or(usize::MAX, Vec::len);
-    if missing_required != 0 {
-        failures.push(format!(
-            "requirement `optimization-corpus-4096` analysis fixture manifest has {missing_required} missing required family/families"
-        ));
-    }
-    let total_fixture_cases = value
-        .get("total_fixture_cases")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(0);
-    let total_triggered_cases = value
-        .get("total_triggered_cases")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(0);
-    if total_fixture_cases < 512 || total_triggered_cases != total_fixture_cases {
-        failures.push(format!(
-            "requirement `optimization-corpus-4096` analysis fixture manifest has total_fixture_cases={total_fixture_cases}, total_triggered_cases={total_triggered_cases}; needs 512 fully-triggered A13-A16 cases"
-        ));
-    }
-    let families = value
-        .get("families")
-        .and_then(serde_json::Value::as_array)
-        .cloned()
-        .unwrap_or_default();
-    check_duplicate_analysis_fixture_family_rows(value, failures);
-    for required in [
-        "A13-coalesce-fixture",
-        "A14-shared-mem-promote-fixture",
-        "A15-bank-conflict-fixture",
-        "A16-vec-pack-fixture",
-    ] {
-        let Some(family) = families.iter().find(|family| {
-            family.get("family").and_then(serde_json::Value::as_str) == Some(required)
-        }) else {
-            failures.push(format!(
-                "requirement `optimization-corpus-4096` analysis fixture manifest is missing `{required}`"
-            ));
-            continue;
-        };
-        let cases = family
-            .get("cases")
-            .and_then(serde_json::Value::as_u64)
-            .unwrap_or(0);
-        let triggered = family
-            .get("triggered_cases")
-            .and_then(serde_json::Value::as_u64)
-            .unwrap_or(0);
-        let analysis_sites = family
-            .get("analysis_sites")
-            .and_then(serde_json::Value::as_u64)
-            .unwrap_or(0);
-        if cases < 128 || triggered != cases || analysis_sites < cases {
-            failures.push(format!(
-                "requirement `optimization-corpus-4096` analysis fixture `{required}` has cases={cases}, triggered_cases={triggered}, analysis_sites={analysis_sites}; needs at least 128 cases, every case triggered, and at least one analysis site per case"
-            ));
-        }
-        match required {
-            "A13-coalesce-fixture" => {
-                for field in [
-                    "coalesced_unit_stride_sites",
-                    "strided_sites",
-                    "broadcast_sites",
-                ] {
-                    if family
-                        .get(field)
-                        .and_then(serde_json::Value::as_u64)
-                        .unwrap_or(0)
-                        == 0
-                    {
-                        failures.push(format!(
-                            "requirement `optimization-corpus-4096` A13 analysis fixture has zero `{field}`"
-                        ));
-                    }
-                }
-            }
-            "A14-shared-mem-promote-fixture" => {
-                for field in ["shared_mem_candidates", "shared_mem_tile_bytes"] {
-                    if family
-                        .get(field)
-                        .and_then(serde_json::Value::as_u64)
-                        .unwrap_or(0)
-                        == 0
-                    {
-                        failures.push(format!(
-                            "requirement `optimization-corpus-4096` A14 analysis fixture has zero `{field}`"
-                        ));
-                    }
-                }
-            }
-            "A15-bank-conflict-fixture" => {
-                for field in ["bank_conflict_sites", "bank_conflict_critical_sites"] {
-                    if family
-                        .get(field)
-                        .and_then(serde_json::Value::as_u64)
-                        .unwrap_or(0)
-                        == 0
-                    {
-                        failures.push(format!(
-                            "requirement `optimization-corpus-4096` A15 analysis fixture has zero `{field}`"
-                        ));
-                    }
-                }
-            }
-            "A16-vec-pack-fixture" => {
-                for field in ["vec_pack_chains", "vec_pack_ops_eliminated"] {
-                    if family
-                        .get(field)
-                        .and_then(serde_json::Value::as_u64)
-                        .unwrap_or(0)
-                        == 0
-                    {
-                        failures.push(format!(
-                            "requirement `optimization-corpus-4096` A16 analysis fixture has zero `{field}`"
-                        ));
-                    }
-                }
-            }
-            _ => {}
-        }
-    }
+    crate::benchmark_evidence_semantics::inspect_optimization_analysis_fixture(
+        "requirement `optimization-corpus-4096` analysis fixture manifest",
+        value,
+        failures,
+    );
 }
 
-fn check_duplicate_analysis_fixture_family_rows(
-    value: &serde_json::Value,
-    failures: &mut Vec<String>,
-) {
-    let duplicates =
-        crate::benchmark_evidence_semantics::duplicate_nonblank_object_array_field_values(
-            value, "families", "family",
-        );
-    if !duplicates.is_empty() {
-        let duplicates = duplicates.into_iter().collect::<Vec<_>>().join(", ");
-        failures.push(format!(
-            "requirement `optimization-corpus-4096` analysis fixture manifest has duplicate family rows: {duplicates}"
-        ));
-    }
-}
 
 pub(crate) fn first_json_evidence(
     requirement: &Requirement,
@@ -241,7 +108,16 @@ pub(crate) fn check_workload_matrix_artifact_coverage(
         ));
         return;
     };
-    check_duplicate_workload_family_ids(requirement, matrix, failures);
+    check_duplicate_object_rows(
+        matrix,
+        "families",
+        "id",
+        &format!(
+            "requirement `{}` workload matrix has duplicate family ids",
+            requirement.id
+        ),
+        failures,
+    );
 
     let mut required_family_count = 0usize;
     let mut covered_family_count = 0usize;
@@ -561,23 +437,6 @@ fn check_declared_workload_matrix_count(
     }
 }
 
-fn check_duplicate_workload_family_ids(
-    requirement: &Requirement,
-    matrix: &serde_json::Value,
-    failures: &mut Vec<String>,
-) {
-    let duplicates =
-        crate::benchmark_evidence_semantics::duplicate_nonblank_object_array_field_values(
-            matrix, "families", "id",
-        );
-    if !duplicates.is_empty() {
-        let duplicates = duplicates.into_iter().collect::<Vec<_>>().join(", ");
-        failures.push(format!(
-            "requirement `{}` workload matrix has duplicate family ids: {duplicates}",
-            requirement.id
-        ));
-    }
-}
 
 #[cfg(test)]
 mod part2_tests {
@@ -747,7 +606,7 @@ mod part2_tests {
         assert!(
             failures
                 .iter()
-                .any(|failure| failure.contains("duplicate family rows: A13-coalesce-fixture")),
+                .any(|failure| failure.contains("duplicate analysis fixture family rows: A13-coalesce-fixture")),
             "Fix: release gate must reject duplicate analysis fixture family rows before totals can prove A13-A16 coverage; failures={failures:?}"
         );
     }

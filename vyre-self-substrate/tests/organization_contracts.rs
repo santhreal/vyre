@@ -1,19 +1,19 @@
-#[path = "organization_contracts/root_structure_contracts.rs"]
-mod root_structure_contracts;
-#[path = "organization_contracts/graph_module_contracts.rs"]
-mod graph_module_contracts;
 #[path = "organization_contracts/csr_queue_contracts.rs"]
 mod csr_queue_contracts;
-#[path = "organization_contracts/persistent_bfs_contracts.rs"]
-mod persistent_bfs_contracts;
-#[path = "organization_contracts/graph_primitive_contracts.rs"]
-mod graph_primitive_contracts;
-#[path = "organization_contracts/graph_adaptive_contracts.rs"]
-mod graph_adaptive_contracts;
 #[path = "organization_contracts/domain_core_contracts.rs"]
 mod domain_core_contracts;
 #[path = "organization_contracts/domain_release_contracts.rs"]
 mod domain_release_contracts;
+#[path = "organization_contracts/graph_adaptive_contracts.rs"]
+mod graph_adaptive_contracts;
+#[path = "organization_contracts/graph_module_contracts.rs"]
+mod graph_module_contracts;
+#[path = "organization_contracts/graph_primitive_contracts.rs"]
+mod graph_primitive_contracts;
+#[path = "organization_contracts/persistent_bfs_contracts.rs"]
+mod persistent_bfs_contracts;
+#[path = "organization_contracts/root_structure_contracts.rs"]
+mod root_structure_contracts;
 
 // Organization contracts for the self-substrate crate.
 
@@ -214,7 +214,6 @@ const DOMAIN_MODULES: &[(&str, &[&str])] = &[
     ("telemetry", TELEMETRY_MODULES),
 ];
 
-
 fn read_graph_wrapper_source(wrapper_path: &Path) -> String {
     let actual_wrapper_path = if wrapper_path.exists() {
         wrapper_path.to_path_buf()
@@ -268,4 +267,3 @@ fn read_graph_wrapper_source(wrapper_path: &Path) -> String {
     }
     source
 }
-

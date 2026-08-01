@@ -57,7 +57,7 @@ fn add_sub_cancel_body(mut body: KernelBody) -> KernelBody {
             BinOp::Add => {
                 // Add(Sub(x, Lit(a)), Lit(a)) → x
                 if let Some(a_outer) = index.u32_lit(&body, rhs) {
-                    if let Some((x, a_inner)) = inner_with_rhs_lit(&body, &index, lhs, BinOp::Sub) {
+                    if let Some((x, a_inner)) = inner_with_lit(&body, &index, lhs, BinOp::Sub, 1) {
                         if a_inner == a_outer {
                             rewrites.push((idx, x));
                             continue;
@@ -66,7 +66,7 @@ fn add_sub_cancel_body(mut body: KernelBody) -> KernelBody {
                 }
                 // Add(Lit(a), Sub(x, Lit(a))) → x  (commuted)
                 if let Some(a_outer) = index.u32_lit(&body, lhs) {
-                    if let Some((x, a_inner)) = inner_with_rhs_lit(&body, &index, rhs, BinOp::Sub) {
+                    if let Some((x, a_inner)) = inner_with_lit(&body, &index, rhs, BinOp::Sub, 1) {
                         if a_inner == a_outer {
                             rewrites.push((idx, x));
                         }
@@ -76,13 +76,13 @@ fn add_sub_cancel_body(mut body: KernelBody) -> KernelBody {
             BinOp::Sub => {
                 // Sub(Add(x, Lit(a)), Lit(a)) → x
                 if let Some(a_outer) = index.u32_lit(&body, rhs) {
-                    if let Some((x, a_inner)) = inner_with_rhs_lit(&body, &index, lhs, BinOp::Add) {
+                    if let Some((x, a_inner)) = inner_with_lit(&body, &index, lhs, BinOp::Add, 1) {
                         if a_inner == a_outer {
                             rewrites.push((idx, x));
                         }
                     }
                     // Also: Sub(Add(Lit(a), x), Lit(a)) → x  -  Add is commutative.
-                    if let Some((x, a_inner)) = inner_with_lhs_lit(&body, &index, lhs, BinOp::Add) {
+                    if let Some((x, a_inner)) = inner_with_lit(&body, &index, lhs, BinOp::Add, 0) {
                         if a_inner == a_outer {
                             rewrites.push((idx, x));
                         }
@@ -118,48 +118,23 @@ fn add_sub_cancel_body(mut body: KernelBody) -> KernelBody {
     body
 }
 
-fn inner_with_rhs_lit(
+fn inner_with_lit(
     body: &KernelBody,
     index: &BodyIndex,
     result_id: u32,
     inner_op: BinOp,
+    literal_operand: usize,
 ) -> Option<(u32, u32)> {
     let producer = index.producer(body, result_id)?;
-    if !matches!(producer.kind, KernelOpKind::BinOpKind(b) if b == inner_op) {
+    if !matches!(producer.kind, KernelOpKind::BinOpKind(op) if op == inner_op)
+        || producer.operands.len() != 2
+        || !index.has_single_consumer(result_id)
+    {
         return None;
     }
-    if producer.operands.len() != 2 {
-        return None;
-    }
-    if !index.has_single_consumer(result_id) {
-        return None;
-    }
-    let lhs = producer.operands[0];
-    let rhs = producer.operands[1];
-    let c = index.u32_lit(body, rhs)?;
-    Some((lhs, c))
-}
-
-fn inner_with_lhs_lit(
-    body: &KernelBody,
-    index: &BodyIndex,
-    result_id: u32,
-    inner_op: BinOp,
-) -> Option<(u32, u32)> {
-    let producer = index.producer(body, result_id)?;
-    if !matches!(producer.kind, KernelOpKind::BinOpKind(b) if b == inner_op) {
-        return None;
-    }
-    if producer.operands.len() != 2 {
-        return None;
-    }
-    if !index.has_single_consumer(result_id) {
-        return None;
-    }
-    let lhs = producer.operands[0];
-    let rhs = producer.operands[1];
-    let c = index.u32_lit(body, lhs)?;
-    Some((rhs, c))
+    let value_operand = 1 - literal_operand;
+    let literal = index.u32_lit(body, producer.operands[literal_operand])?;
+    Some((producer.operands[value_operand], literal))
 }
 
 #[cfg(test)]

@@ -218,7 +218,8 @@ pub(crate) fn run(args: &[String]) {
             wgpu_suite_failures,
         );
     }
-    let wrote_optimization_manifest = should_write_optimization_manifest(&config, workload_failures.is_empty());
+    let wrote_optimization_manifest =
+        should_write_optimization_manifest(&config, workload_failures.is_empty());
     if wrote_optimization_manifest {
         run_named_benchmark_if_needed(
             &workspace_root,

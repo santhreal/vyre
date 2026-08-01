@@ -22,14 +22,10 @@ pub fn bitset_popcount(input: &str, count_words: &str, words: u32) -> Program {
 #[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn cpu_ref(input: &[u32]) -> Vec<u32> {
-    let mut out = Vec::new();
-    match try_cpu_ref_into(input, &mut out) {
-        Ok(()) => out,
-        // A parity oracle that returns empty on failure makes the GPU-vs-CPU
-        // assertion pass on empty==empty, silently masking a divergence
-        // (Law 10 / Law 6). Fail loud; callers use try_cpu_ref_into.
-        Err(error) => panic!("vyre-primitives bitset_popcount cpu_ref failed: {error}"),
-    }
+    super::build_cpu_ref(
+        |out| try_cpu_ref_into(input, out),
+        "vyre-primitives bitset_popcount cpu_ref failed",
+    )
 }
 
 /// CPU reference into caller-owned storage.

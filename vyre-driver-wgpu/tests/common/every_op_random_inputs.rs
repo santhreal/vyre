@@ -52,8 +52,7 @@ pub(crate) fn randomize_buffer(op_id: &str, program: &Program, buffer_idx: usize
         "vyre-libs::parsing::c_keyword" | "vyre-libs::parsing::c_keyword_packed_haystack" => {
             buffer_idx == 4 || buffer_idx == 5
         }
-        "vyre-libs::catalog::reduce::segment_reduce_sum::consumer_a"
-        | "vyre-libs::catalog::reduce::segment_reduce_sum::consumer_b" => buffer_idx == 0,
+        "vyre-primitives::reduce::segment_reduce_sum" => buffer_idx == 0,
         "vyre-libs::parsing::bracket_match"
         | "vyre-libs::parsing::ast_shunting_yard"
         | "vyre-libs::parsing::ast_shunting_yard::statement_pass" => false,

@@ -96,5 +96,3 @@ fn cuda_zero_shl_collapses_to_zero() {
         );
     }
 }
-
-

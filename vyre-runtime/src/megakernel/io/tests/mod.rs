@@ -1,11 +1,11 @@
 use super::super::protocol::slot;
+use super::helpers::try_queue_word_index;
 use super::{
     claim_io_requests_into, complete_io_request, complete_io_requests_batch, encode_empty_io_queue,
     io_completion_poll_body, io_op, io_status, io_word, poll_io_requests,
     try_claim_io_requests_into, try_encode_empty_io_queue_into, try_poll_io_requests_into,
     MegakernelIoQueue, IO_SLOT_COUNT, IO_SLOT_WORDS,
 };
-use super::helpers::try_queue_word_index;
 use crate::PipelineError;
 
 #[test]
@@ -474,7 +474,9 @@ fn queue_word_index_with_max_word_returns_structured_error() {
     //
     // For the cross-platform invariant we test the checked overflow path directly:
     // slot_idx chosen so slot * IO_SLOT_WORDS overflows usize:
-    let overflow_slot = usize::MAX.wrapping_div(IO_SLOT_WORDS as usize).wrapping_add(1);
+    let overflow_slot = usize::MAX
+        .wrapping_div(IO_SLOT_WORDS as usize)
+        .wrapping_add(1);
     if let Ok(slot_as_u32) = u32::try_from(overflow_slot) {
         // This slot value overflows the multiplication on any platform where
         // overflow_slot * IO_SLOT_WORDS wraps.
@@ -485,11 +487,15 @@ fn queue_word_index_with_max_word_returns_structured_error() {
             match err {
                 PipelineError::Backend(msg) => {
                     assert!(
-                        msg.contains("shard") || msg.contains("overflow") || msg.contains("cannot fit"),
+                        msg.contains("shard")
+                            || msg.contains("overflow")
+                            || msg.contains("cannot fit"),
                         "overflow error must be actionable, got: {msg}"
                     );
                 }
-                other => panic!("expected PipelineError::Backend for index overflow, got {other:?}"),
+                other => {
+                    panic!("expected PipelineError::Backend for index overflow, got {other:?}")
+                }
             }
         }
         // If it succeeded, the platform can represent the value (that's also correct).

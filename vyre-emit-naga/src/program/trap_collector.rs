@@ -25,6 +25,34 @@ impl TrapTagCollector {
     }
 }
 
+macro_rules! ignore_async_transfer_visitors {
+    () => {
+        fn visit_async_load(
+            &mut self,
+            _: &Node,
+            _: &vyre_foundation::ir::Ident,
+            _: &vyre_foundation::ir::Ident,
+            _: &Expr,
+            _: &Expr,
+            _: &vyre_foundation::ir::Ident,
+        ) -> ControlFlow<()> {
+            Continue(())
+        }
+
+        fn visit_async_store(
+            &mut self,
+            _: &Node,
+            _: &vyre_foundation::ir::Ident,
+            _: &vyre_foundation::ir::Ident,
+            _: &Expr,
+            _: &Expr,
+            _: &vyre_foundation::ir::Ident,
+        ) -> ControlFlow<()> {
+            Continue(())
+        }
+    };
+}
+
 impl NodeVisitor for TrapTagCollector {
     type Break = ();
 
@@ -75,29 +103,7 @@ impl NodeVisitor for TrapTagCollector {
         Continue(())
     }
 
-    fn visit_async_load(
-        &mut self,
-        _: &Node,
-        _: &vyre_foundation::ir::Ident,
-        _: &vyre_foundation::ir::Ident,
-        _: &Expr,
-        _: &Expr,
-        _: &vyre_foundation::ir::Ident,
-    ) -> ControlFlow<()> {
-        Continue(())
-    }
-
-    fn visit_async_store(
-        &mut self,
-        _: &Node,
-        _: &vyre_foundation::ir::Ident,
-        _: &vyre_foundation::ir::Ident,
-        _: &Expr,
-        _: &Expr,
-        _: &vyre_foundation::ir::Ident,
-    ) -> ControlFlow<()> {
-        Continue(())
-    }
+    ignore_async_transfer_visitors!();
 
     fn visit_async_wait(&mut self, _: &Node, _: &vyre_foundation::ir::Ident) -> ControlFlow<()> {
         Continue(())

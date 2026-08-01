@@ -11,7 +11,7 @@
 //! corrupting every reverse-diffusion step, the single most common ML use of this primitive. This
 //! locks the corrected SIGNED multiply at the score_denoise consumer.
 //!
-//! BIT-EXACT: the kernel is pure integer arithmetic, so the oracle replicates it exactly 
+//! BIT-EXACT: the kernel is pure integer arithmetic, so the oracle replicates it exactly
 //! `fixed_mul(a,b) = ((a as i32 as i64 * b as i32 as i64) >> 16) as i32 as u32` summed with
 //! `wrapping_add`. Any divergence is a real IR/dispatch defect, not a rounding artifact.
 #![cfg(feature = "math")]

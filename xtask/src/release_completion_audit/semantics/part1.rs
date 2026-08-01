@@ -89,7 +89,7 @@ fn inspect_json_evidence(evidence: &str, path: &Path, blockers: &mut Vec<String>
             ));
         }
         check_case_backend_matches_selected_backend(evidence, &value, blockers);
-        inspect_contract_baselines_apply_to_backend(evidence, &value, blockers);
+        inspect_contract_baselines(evidence, None, &value, blockers);
         check_cuda_telemetry_labels_match_counters(evidence, &value, blockers);
         if value.get("cases").is_some()
             || value

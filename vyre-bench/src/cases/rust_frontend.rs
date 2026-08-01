@@ -8,6 +8,17 @@ use vyre_frontend_rust::pipeline::{RustPipeline, RustPipelineConfig};
 mod lexer;
 mod lexer_batch;
 
+fn rust_source_words(source: &[u8]) -> Vec<u32> {
+    let mut words = source
+        .iter()
+        .map(|byte| u32::from(*byte))
+        .collect::<Vec<_>>();
+    if words.is_empty() {
+        words.push(0);
+    }
+    words
+}
+
 pub struct RustRangeLoopPipeline;
 
 const LANE_COUNT: usize = 1 << 16;

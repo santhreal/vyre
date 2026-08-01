@@ -37,8 +37,8 @@
 //!   inside a loop is by definition loop-carrying and cannot be hoisted.
 //! - Skips Lets whose value expression contains `Expr::Load`, `Expr::Atomic`,
 //!   `Expr::Call`, `Expr::Opaque`, or `Expr::BufLen`  -  these can be
-//!   side-effecting or order-sensitive. `expr_is_pure_constant_in_loop`
-//!   below names every variant explicitly.
+//!   side-effecting or order-sensitive. The shared re-execution safety
+//!   predicate classifies every expression variant explicitly.
 //! - Skips Lets whose value references the loop var, any other Let
 //!   shadowed inside the body that is itself loop-carrying, or any
 //!   `Node::Assign` target in the body.
@@ -53,9 +53,12 @@
 //!   pass invocation through the recursion.
 
 use crate::ir::{Expr, Ident, Node, Program};
+use crate::optimizer::passes::expr_is_observably_free_for_reexecution;
+use crate::optimizer::rewrite::push_expr_children;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 use crate::visit::bound_names::count_bound_names;
 use rustc_hash::{FxHashMap, FxHashSet};
+use smallvec::SmallVec;
 
 /// Hoist loop-invariant `Node::Let` bindings out of `Node::Loop`
 /// bodies whenever they have no observable side effect and reference
@@ -206,7 +209,7 @@ fn split_invariant_lets(
                 if !name_reassigned_in_loop
                     && !any_dependency_mutated
                     && name_unique_in_enclosing
-                    && expr_is_observably_free(&value)
+                    && expr_is_observably_free_for_reexecution(&value, false)
                 {
                     *changed = true;
                     // The hoisted Let no longer counts as
@@ -224,31 +227,38 @@ fn split_invariant_lets(
     (hoisted, kept)
 }
 
-/// Walk `nodes` collecting every name that appears as the target of
-/// `Node::Assign` or `Node::Let` (i.e. anything potentially mutated
-/// inside the loop body, including freshly-bound names that we then
-/// reassign elsewhere).
-fn collect_assigned_and_let_bound_names(nodes: &[Node], out: &mut FxHashSet<Ident>) {
+fn collect_mutated_names(nodes: &[Node], out: &mut FxHashSet<Ident>, include_let_bindings: bool) {
     for node in nodes {
         match node {
-            Node::Let { name, .. } | Node::Assign { name, .. } => {
+            Node::Assign { name, .. } => {
+                out.insert(name.clone());
+            }
+            Node::Let { name, .. } if include_let_bindings => {
                 out.insert(name.clone());
             }
             Node::If {
                 then, otherwise, ..
             } => {
-                collect_assigned_and_let_bound_names(then, out);
-                collect_assigned_and_let_bound_names(otherwise, out);
+                collect_mutated_names(then, out, include_let_bindings);
+                collect_mutated_names(otherwise, out, include_let_bindings);
             }
             Node::Loop { body, .. } | Node::Block(body) => {
-                collect_assigned_and_let_bound_names(body, out);
+                collect_mutated_names(body, out, include_let_bindings);
             }
             Node::Region { body, .. } => {
-                collect_assigned_and_let_bound_names(body, out);
+                collect_mutated_names(body, out, include_let_bindings);
             }
             _ => {}
         }
     }
+}
+
+/// Walk `nodes` collecting every name that appears as the target of
+/// `Node::Assign` or `Node::Let` (i.e. anything potentially mutated
+/// inside the loop body, including freshly-bound names that we then
+/// reassign elsewhere).
+fn collect_assigned_and_let_bound_names(nodes: &[Node], out: &mut FxHashSet<Ident>) {
+    collect_mutated_names(nodes, out, true);
 }
 
 /// Walk `nodes` collecting only true mutation targets. A `Let` inside a loop
@@ -256,26 +266,24 @@ fn collect_assigned_and_let_bound_names(nodes: &[Node], out: &mut FxHashSet<Iden
 /// `let emit = 0; if (...) { emit = 1; }` is a per-iteration reset, not an
 /// invariant outer binding.
 fn collect_assigned_names(nodes: &[Node], out: &mut FxHashSet<Ident>) {
-    for node in nodes {
-        match node {
-            Node::Assign { name, .. } => {
-                out.insert(name.clone());
+    collect_mutated_names(nodes, out, false);
+}
+
+fn expr_references_mutated_name(
+    expr: &Expr,
+    mutated: &FxHashSet<Ident>,
+    ignore: Option<&Ident>,
+) -> bool {
+    let mut stack = SmallVec::<[&Expr; 16]>::from_slice(&[expr]);
+    while let Some(candidate) = stack.pop() {
+        if let Expr::Var(name) = candidate {
+            if ignore != Some(name) && mutated.contains(name) {
+                return true;
             }
-            Node::If {
-                then, otherwise, ..
-            } => {
-                collect_assigned_names(then, out);
-                collect_assigned_names(otherwise, out);
-            }
-            Node::Loop { body, .. } | Node::Block(body) => {
-                collect_assigned_names(body, out);
-            }
-            Node::Region { body, .. } => {
-                collect_assigned_names(body, out);
-            }
-            _ => {}
         }
+        push_expr_children(candidate, &mut stack);
     }
+    false
 }
 
 /// True iff `expr` references at least one name in `mutated`.
@@ -284,172 +292,11 @@ fn collect_assigned_names(nodes: &[Node], out: &mut FxHashSet<Ident>) {
 /// depend on any in-loop name OTHER than its own bound name" without
 /// cloning `mutated` per Let.
 fn expr_references_any_except(expr: &Expr, mutated: &FxHashSet<Ident>, ignore: &Ident) -> bool {
-    match expr {
-        Expr::Var(name) => name != ignore && mutated.contains(name),
-        Expr::Load { index, .. } => expr_references_any_except(index, mutated, ignore),
-        Expr::BinOp { left, right, .. } => {
-            expr_references_any_except(left, mutated, ignore)
-                || expr_references_any_except(right, mutated, ignore)
-        }
-        Expr::UnOp { operand, .. } | Expr::Cast { value: operand, .. } => {
-            expr_references_any_except(operand, mutated, ignore)
-        }
-        Expr::Fma { a, b, c } => {
-            expr_references_any_except(a, mutated, ignore)
-                || expr_references_any_except(b, mutated, ignore)
-                || expr_references_any_except(c, mutated, ignore)
-        }
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            expr_references_any_except(cond, mutated, ignore)
-                || expr_references_any_except(true_val, mutated, ignore)
-                || expr_references_any_except(false_val, mutated, ignore)
-        }
-        Expr::Call { args, .. } => args
-            .iter()
-            .any(|a| expr_references_any_except(a, mutated, ignore)),
-        Expr::Atomic {
-            index,
-            expected,
-            value,
-            ..
-        } => {
-            expr_references_any_except(index, mutated, ignore)
-                || expected
-                    .as_deref()
-                    .is_some_and(|e| expr_references_any_except(e, mutated, ignore))
-                || expr_references_any_except(value, mutated, ignore)
-        }
-        Expr::SubgroupReduce { value, .. } => expr_references_any_except(value, mutated, ignore),
-        Expr::SubgroupShuffle { value, lane } => {
-            expr_references_any_except(value, mutated, ignore)
-                || expr_references_any_except(lane, mutated, ignore)
-        }
-        Expr::SubgroupBallot { cond } => expr_references_any_except(cond, mutated, ignore),
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::BufferRef { .. }
-        | Expr::BufLen { .. }
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize
-        | Expr::Opaque(_) => false,
-    }
+    expr_references_mutated_name(expr, mutated, Some(ignore))
 }
 
 fn expr_references_any(expr: &Expr, mutated: &FxHashSet<Ident>) -> bool {
-    match expr {
-        Expr::Var(name) => mutated.contains(name),
-        Expr::Load { index, .. } => expr_references_any(index, mutated),
-        Expr::BinOp { left, right, .. } => {
-            expr_references_any(left, mutated) || expr_references_any(right, mutated)
-        }
-        Expr::UnOp { operand, .. } | Expr::Cast { value: operand, .. } => {
-            expr_references_any(operand, mutated)
-        }
-        Expr::Fma { a, b, c } => {
-            expr_references_any(a, mutated)
-                || expr_references_any(b, mutated)
-                || expr_references_any(c, mutated)
-        }
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            expr_references_any(cond, mutated)
-                || expr_references_any(true_val, mutated)
-                || expr_references_any(false_val, mutated)
-        }
-        Expr::Call { args, .. } => args.iter().any(|a| expr_references_any(a, mutated)),
-        Expr::Atomic {
-            index,
-            expected,
-            value,
-            ..
-        } => {
-            expr_references_any(index, mutated)
-                || expected
-                    .as_deref()
-                    .is_some_and(|e| expr_references_any(e, mutated))
-                || expr_references_any(value, mutated)
-        }
-        Expr::SubgroupReduce { value, .. } => expr_references_any(value, mutated),
-        Expr::SubgroupShuffle { value, lane } => {
-            expr_references_any(value, mutated) || expr_references_any(lane, mutated)
-        }
-        Expr::SubgroupBallot { cond } => expr_references_any(cond, mutated),
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::BufferRef { .. }
-        | Expr::BufLen { .. }
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize
-        | Expr::Opaque(_) => false,
-    }
-}
-
-/// True iff `expr` evaluates to the same value on every iteration AND
-/// produces no observable side effect when evaluated more or fewer
-/// times. Loads, Atomics, Calls, Opaque, `BufLen`, and Subgroup ops are
-/// rejected  -  relaxed memory ordering or per-invocation lane state
-/// could make repeated evaluation observably different from single
-/// evaluation when the loop is hoisted to outer scope.
-fn expr_is_observably_free(expr: &Expr) -> bool {
-    match expr {
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::Var(_)
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. } => true,
-        Expr::BinOp { left, right, .. } => {
-            expr_is_observably_free(left) && expr_is_observably_free(right)
-        }
-        Expr::UnOp { operand, .. } | Expr::Cast { value: operand, .. } => {
-            expr_is_observably_free(operand)
-        }
-        Expr::Fma { a, b, c } => {
-            expr_is_observably_free(a) && expr_is_observably_free(b) && expr_is_observably_free(c)
-        }
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            expr_is_observably_free(cond)
-                && expr_is_observably_free(true_val)
-                && expr_is_observably_free(false_val)
-        }
-        // Anything that could carry a side effect or depend on lane
-        // state must stay inside the loop where its execution count
-        // is known.
-        Expr::Load { .. }
-        | Expr::BufferRef { .. }
-        | Expr::BufLen { .. }
-        | Expr::Atomic { .. }
-        | Expr::Call { .. }
-        | Expr::Opaque(_)
-        | Expr::SubgroupShuffle { .. }
-        | Expr::SubgroupReduce { .. }
-        | Expr::SubgroupBallot { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize => false,
-    }
+    expr_references_mutated_name(expr, mutated, None)
 }
 
 /// Cheap matcher used by `analyze`: walks `node` looking for any
@@ -473,7 +320,7 @@ fn has_hoistable_let_in_any_loop(node: &Node) -> bool {
                     // without rebuilding the set.
                     if !assigned.contains(name)
                         && !expr_references_any_except(value, &mutated, name)
-                        && expr_is_observably_free(value)
+                        && expr_is_observably_free_for_reexecution(value, false)
                     {
                         return true;
                     }
@@ -539,7 +386,7 @@ mod tests {
         // The invariance helpers must report a mutated var referenced ANYWHERE
         // in the expression, including a `SubgroupShuffle`'s lane operand. The
         // hoist gate also independently refuses any shuffle today (via
-        // `expr_is_observably_free`), so a dropped lane is currently masked; this
+        // `expr_is_observably_free_for_reexecution`), so a dropped lane is currently masked; this
         // guards the helpers' own completeness so a future uniform-shuffle hoist
         // cannot silently treat a lane-dependent value as loop-invariant.
         let mut mutated: FxHashSet<Ident> = FxHashSet::default();

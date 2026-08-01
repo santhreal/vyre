@@ -65,11 +65,13 @@ fn reserve_optimizer_vec<T>(
 /// every subsequent call.
 pub struct CudaOptimizerDispatcher<'a> {
     backend: &'a CudaBackend,
-    /// `id → byte_len` for resident handles we've allocated. The
-    /// CUDA-side `CudaResidentBuffer` handle bundles `id + byte_len`;
-    /// when a caller hands us back just an `id`, we look up the
-    /// `byte_len` here to reconstruct it.
-    sizes: RefCell<FxHashMap<u64, usize>>,
+    /// `local id -> owned handle` for resident buffers we allocated.
+    ///
+    /// The `OptimizerDispatcher` contract passes bare `u64` ids across its
+    /// boundary, so the real owner-qualified handle is retained here and
+    /// looked up again on the way back in. A handle is never rebuilt from a
+    /// bare id: that is the fabrication this table exists to prevent.
+    sizes: RefCell<FxHashMap<u64, CudaResidentBuffer>>,
     /// Per-`byte_len` free list. `free_resident` pushes onto the list
     /// instead of calling the backend; `alloc_resident` pops first
     /// before falling back to a real allocation.
@@ -118,13 +120,12 @@ impl<'a> CudaOptimizerDispatcher<'a> {
 
     fn resolve(&self, id: u64) -> Result<CudaResidentBuffer, DispatchError> {
         let sizes = self.sizes.borrow();
-        let byte_len = sizes.get(&id).copied().ok_or_else(|| {
+        sizes.get(&id).copied().ok_or_else(|| {
             DispatchError::Rejected(format!(
                 "Fix: CUDA optimizer dispatcher received unknown resident handle id {id}; \
                  every id must come from this dispatcher's `alloc_resident`."
             ))
-        })?;
-        Ok(CudaResidentBuffer { id, byte_len })
+        })
     }
 
     fn resolve_many(&self, ids: &[u64]) -> Result<Vec<CudaResidentBuffer>, DispatchError> {
@@ -248,7 +249,7 @@ impl<'a> CudaOptimizerDispatcher<'a> {
         let mut sizes = self.sizes.borrow_mut();
         for (_byte_len, handles) in pool.drain() {
             for handle in handles {
-                sizes.remove(&handle.id);
+                sizes.remove(&handle.handle.id());
                 let _ = self.backend.free_resident(handle);
             }
         }
@@ -260,7 +261,7 @@ impl<'a> CudaOptimizerDispatcher<'a> {
         let mut sizes = self.sizes.borrow_mut();
         for (_key, entry) in cache.drain() {
             for handle in entry.handles {
-                sizes.remove(&handle.id);
+                sizes.remove(&handle.handle.id());
                 let _ = self.backend.free_resident(handle);
             }
         }
@@ -367,7 +368,7 @@ impl<'a> CudaOptimizerDispatcher<'a> {
         }
         let mut sizes = self.sizes.borrow_mut();
         for handle in entry.handles {
-            sizes.remove(&handle.id);
+            sizes.remove(&handle.handle.id());
             self.backend
                 .free_resident(handle)
                 .map_err(|e| DispatchError::BackendError(e.to_string()))?;
@@ -676,16 +677,16 @@ impl<'a> OptimizerDispatcher for CudaOptimizerDispatcher<'a> {
                         )
                     })?;
                 }
-                self.sizes.borrow_mut().insert(handle.id, handle.byte_len);
-                return Ok(handle.id);
+                self.sizes.borrow_mut().insert(handle.handle.id(), handle);
+                return Ok(handle.handle.id());
             }
         }
         let handle = self
             .backend
             .allocate_resident(byte_len)
             .map_err(|e| DispatchError::BackendError(e.to_string()))?;
-        self.sizes.borrow_mut().insert(handle.id, handle.byte_len);
-        Ok(handle.id)
+        self.sizes.borrow_mut().insert(handle.handle.id(), handle);
+        Ok(handle.handle.id())
     }
 
     fn upload_resident(&self, id: u64, bytes: &[u8]) -> Result<(), DispatchError> {
@@ -716,7 +717,7 @@ impl<'a> OptimizerDispatcher for CudaOptimizerDispatcher<'a> {
                 "optimizer cached static handles",
             )?;
             for handle in &entry.handles {
-                handles.push(handle.id);
+                handles.push(handle.handle.id());
             }
             return Ok(ResidentStaticBufferSet {
                 handles,

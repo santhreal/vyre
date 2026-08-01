@@ -45,8 +45,7 @@ fn collect_script_policy_findings_in(
             path: rel.clone(),
             line,
             text: compact_line("duplicate shell TOML parser body"),
-            policy:
-                "use scripts/lib/toml_reader.sh as the only shell TOML parser body".to_string(),
+            policy: "use scripts/lib/toml_reader.sh as the only shell TOML parser body".to_string(),
         });
     }
     for (line_index, line) in text.lines().enumerate() {

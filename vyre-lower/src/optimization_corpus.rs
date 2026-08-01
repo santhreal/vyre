@@ -163,32 +163,32 @@ pub fn validate_release_corpus(cases: &[OptimizationCorpusCase]) -> Optimization
                     dataflow_analysis_cases += 1;
                     let alias_facts = release_alias_facts();
                     let reaching_defs = release_reaching_defs(&case.family);
-                    let (optimized, dataflow_stats) = if case.family == "external-dataflow-loop-fission"
-                    {
-                        (
-                            crate::rewrites::loop_fission_with_dataflow_facts(
+                    let (optimized, dataflow_stats) =
+                        if case.family == "external-dataflow-loop-fission" {
+                            (
+                                crate::rewrites::loop_fission_with_dataflow_facts(
+                                    &case.descriptor,
+                                    &alias_facts,
+                                    &reaching_defs,
+                                ),
+                                crate::rewrites::OptimizationStats {
+                                    ops_before: case.descriptor.body.ops.len(),
+                                    ops_after: case.descriptor.body.ops.len(),
+                                    bindings_before: case.descriptor.bindings.slots.len(),
+                                    bindings_after: case.descriptor.bindings.slots.len(),
+                                    literals_before: case.descriptor.body.literals.len(),
+                                    literals_after: case.descriptor.body.literals.len(),
+                                    iterations: 1,
+                                    converged: true,
+                                },
+                            )
+                        } else {
+                            crate::rewrites::run_all_with_dataflow_stats(
                                 &case.descriptor,
                                 &alias_facts,
                                 &reaching_defs,
-                            ),
-                            crate::rewrites::OptimizationStats {
-                                ops_before: case.descriptor.body.ops.len(),
-                                ops_after: case.descriptor.body.ops.len(),
-                                bindings_before: case.descriptor.bindings.slots.len(),
-                                bindings_after: case.descriptor.bindings.slots.len(),
-                                literals_before: case.descriptor.body.literals.len(),
-                                literals_after: case.descriptor.body.literals.len(),
-                                iterations: 1,
-                                converged: true,
-                            },
-                        )
-                    } else {
-                        crate::rewrites::run_all_with_dataflow_stats(
-                            &case.descriptor,
-                            &alias_facts,
-                            &reaching_defs,
-                        )
-                    };
+                            )
+                        };
                     if !dataflow_case_fired(&case.family, &case.descriptor, &optimized) {
                         blockers.push(format!(
                             "case `{}` did not fire under Dataflow-aware optimization",

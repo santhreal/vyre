@@ -775,3 +775,30 @@ let bad_ir = Expr::call("op", vec![Expr::buffer_ref("values")]);
 // (pass the u32 buffer the signature declares)
 let good_ir = Expr::call("op", vec![Expr::buffer_ref("indices")]);
 ```
+
+## V055  -  synchronizing loop exit is unordered against the back edge
+
+**Description**: a loop body contains a barrier and can return after its last unconditional barrier. Other invocations can start the next iteration while a sibling is still leaving the current iteration.
+
+**Common Cause**: an early-exit condition appears after the loop's synchronization point.
+
+**Recommended Fix**: put an unconditional barrier after the early exit, as the final node in the loop body.
+
+### Example
+
+```rust
+// Bad input
+// (Causes V055)
+let bad_body = vec![
+    Node::barrier(MemoryOrdering::SeqCst),
+    Node::if_then(done, vec![Node::return_()]),
+];
+
+// Corrected input
+// (order every exit against the next iteration)
+let good_body = vec![
+    Node::barrier(MemoryOrdering::SeqCst),
+    Node::if_then(done, vec![Node::return_()]),
+    Node::barrier(MemoryOrdering::SeqCst),
+];
+```

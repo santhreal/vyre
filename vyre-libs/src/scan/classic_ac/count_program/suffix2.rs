@@ -1,7 +1,6 @@
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre::ir::{BufferAccess, BufferDecl, DataType, Program};
 
 use crate::region::wrap_anonymous;
-use crate::scan::builders::load_packed_byte_expr;
 use crate::scan::dfa::CompiledDfa;
 
 use super::count_scan_nodes;
@@ -29,16 +28,6 @@ pub fn classic_ac_bounded_count_suffix2_prefilter_program(
     state_count: u32,
     max_pattern_len: u32,
 ) -> Program {
-    let i = Expr::var("i");
-    let candidate_byte = load_packed_byte_expr(haystack, i.clone());
-    // saturating_sub matches the suffix3 count/ranges builders. Reached only in the
-    // `i != 0` branch, so numerically identical to sub on every dispatched lane.
-    let previous_byte =
-        load_packed_byte_expr(haystack, Expr::saturating_sub(i.clone(), Expr::u32(1)));
-    let suffix2_index = Expr::bitor(
-        Expr::shl(Expr::var("previous_byte"), Expr::u32(8)),
-        Expr::var("candidate_byte"),
-    );
     let scan_nodes = count_scan_nodes(
         haystack,
         transitions,
@@ -46,89 +35,28 @@ pub fn classic_ac_bounded_count_suffix2_prefilter_program(
         match_count,
         max_pattern_len,
     );
-
-    let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::load(haystack_len, Expr::u32(0))),
-            vec![
-                Node::let_bind("candidate_byte", candidate_byte),
-                Node::let_bind(
-                    "candidate_word",
-                    Expr::load(
-                        candidate_end_mask,
-                        Expr::shr(Expr::var("candidate_byte"), Expr::u32(5)),
-                    ),
-                ),
-                Node::let_bind(
-                    "candidate_bit",
-                    Expr::shl(
-                        Expr::u32(1),
-                        Expr::bitand(Expr::var("candidate_byte"), Expr::u32(31)),
-                    ),
-                ),
-                Node::if_then(
-                    Expr::ne(
-                        Expr::bitand(Expr::var("candidate_word"), Expr::var("candidate_bit")),
-                        Expr::u32(0),
-                    ),
-                    vec![Node::if_then_else(
-                        Expr::eq(i.clone(), Expr::u32(0)),
-                        scan_nodes.clone(),
-                        vec![
-                            Node::let_bind("previous_byte", previous_byte),
-                            Node::let_bind("suffix2_index", suffix2_index),
-                            Node::let_bind(
-                                "suffix2_word",
-                                Expr::load(
-                                    candidate_suffix2_mask,
-                                    Expr::shr(Expr::var("suffix2_index"), Expr::u32(5)),
-                                ),
-                            ),
-                            Node::let_bind(
-                                "suffix2_bit",
-                                Expr::shl(
-                                    Expr::u32(1),
-                                    Expr::bitand(Expr::var("suffix2_index"), Expr::u32(31)),
-                                ),
-                            ),
-                            Node::if_then(
-                                Expr::ne(
-                                    Expr::bitand(
-                                        Expr::var("suffix2_word"),
-                                        Expr::var("suffix2_bit"),
-                                    ),
-                                    Expr::u32(0),
-                                ),
-                                scan_nodes,
-                            ),
-                        ],
-                    )],
-                ),
-            ],
-        ),
-    ];
-
+    let body = super::count_suffix2_prefilter_body(
+        haystack,
+        candidate_end_mask,
+        candidate_suffix2_mask,
+        haystack_len,
+        scan_nodes.clone(),
+        scan_nodes,
+    );
+    let mut buffers = super::count_suffix2_prefilter_buffers(
+        haystack,
+        transitions,
+        output_offsets,
+        candidate_end_mask,
+        candidate_suffix2_mask,
+        state_count,
+    );
+    buffers.push(
+        BufferDecl::storage(haystack_len, 5, BufferAccess::ReadOnly, DataType::U32).with_count(1),
+    );
+    buffers.push(BufferDecl::read_write(match_count, 6, DataType::U32).with_count(1));
     Program::wrapped(
-        vec![
-            BufferDecl::storage(haystack, 0, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(transitions, 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(state_count.saturating_mul(256)),
-            BufferDecl::storage(output_offsets, 2, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(state_count.saturating_add(1)),
-            BufferDecl::storage(candidate_end_mask, 3, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(8),
-            BufferDecl::storage(
-                candidate_suffix2_mask,
-                4,
-                BufferAccess::ReadOnly,
-                DataType::U32,
-            )
-            .with_count(CLASSIC_AC_SUFFIX2_MASK_WORDS as u32),
-            BufferDecl::storage(haystack_len, 5, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(1),
-            BufferDecl::read_write(match_count, 6, DataType::U32).with_count(1),
-        ],
+        buffers,
         [128, 1, 1],
         vec![wrap_anonymous(
             "vyre-libs::matching::classic_ac_bounded_count_suffix2_prefilter",

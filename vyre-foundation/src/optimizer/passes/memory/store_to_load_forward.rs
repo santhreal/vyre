@@ -37,16 +37,17 @@
 //!   same predicate `dead_store_elim` uses (`node_observes_buffer`).
 //! - The forwarded `v` is `Expr::clone()`d into the Let. If `v` itself
 //!   is observably side-effecting (e.g. contains an Atomic), forwarding
-//!   would duplicate the side effect  -  `value_is_observably_free`
+//!   would duplicate the side effect. The shared re-execution safety predicate
 //!   rejects that case.
 //! - `v` is re-evaluated at the LOAD position, so every input it reads must
-//!   be invariant across the gap. `value_is_observably_free` already excludes
+//!   be invariant across the gap. The safety predicate already excludes
 //!   buffer loads, leaving scalar variables; if one of `v`'s free variables is
 //!   reassigned by an intervening `Node::Assign` (vyre scalars are mutable),
 //!   the forwarded expression would observe the new value, not the stored one.
 //!   `find_forwarding_store` rejects that case (`node_reassigns_any_var`).
 
 use crate::ir::{Expr, Ident, Node, Program};
+use crate::optimizer::passes::expr_is_observably_free_for_reexecution;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 use crate::visit::node_map;
 use rustc_hash::FxHashSet;
@@ -139,7 +140,7 @@ fn forward_in_body(body: Vec<Node>, changed: &mut bool) -> Vec<Node> {
             out.push(Node::Let { name, value });
             continue;
         };
-        if !value_is_observably_free(&forwarded_value) {
+        if !expr_is_observably_free_for_reexecution(&forwarded_value, true) {
             out.push(Node::Let { name, value });
             continue;
         }
@@ -168,7 +169,7 @@ fn find_forwarding_store(prev_siblings: &[Node], buffer: &Ident, index: &Expr) -
                 // The bytes are forwardable, but `value` is cloned to the
                 // LOAD position and re-evaluated there -- so every input it
                 // reads must be invariant across the gap. Loads/atomics/calls
-                // are already rejected by `value_is_observably_free`, leaving
+                // are already rejected by `expr_is_observably_free_for_reexecution`, leaving
                 // scalar variables as the only mutable input. vyre scalars are
                 // reassignable via `Node::Assign` (only loop vars are
                 // immutable), so if one of `value`'s free variables is
@@ -200,7 +201,7 @@ fn find_forwarding_store(prev_siblings: &[Node], buffer: &Ident, index: &Expr) -
 }
 
 /// Collect every `Expr::Var` name in `value`. By the time forwarding is
-/// considered, `value` has passed [`value_is_observably_free`], so it contains
+/// considered, `value` has passed [`expr_is_observably_free_for_reexecution`], so it contains
 /// no `Load`/`Atomic`/`Call`/subgroup ops -- its only runtime-mutable inputs
 /// are these scalar variables (literals and invocation/workgroup/local ids are
 /// invariant within an invocation's straight-line execution).
@@ -230,7 +231,7 @@ fn collect_value_vars(value: &Expr, out: &mut FxHashSet<Ident>) {
             collect_value_vars(true_val, out);
             collect_value_vars(false_val, out);
         }
-        // Leaves with no variable, plus the kinds `value_is_observably_free`
+        // Leaves with no variable, plus the kinds `expr_is_observably_free_for_reexecution`
         // already rejected (Load/Atomic/Call/BufLen/subgroup/Opaque) which
         // never reach a forwarded value.
         _ => {}
@@ -327,117 +328,7 @@ fn node_blocks_forwarding(node: &Node, buffer: &Ident) -> bool {
 }
 
 fn expr_touches_buffer(expr: &Expr, buffer: &Ident) -> bool {
-    match expr {
-        Expr::Load {
-            buffer: other,
-            index,
-        } => other == buffer || expr_touches_buffer(index, buffer),
-        Expr::BufLen { buffer: other } => other == buffer,
-        // A callee handed this buffer may read or write it, so passing
-        // it counts as touching it.
-        Expr::BufferRef { buffer: other } => other == buffer,
-        Expr::Atomic {
-            buffer: other,
-            index,
-            expected,
-            value,
-            ..
-        } => {
-            other == buffer
-                || expr_touches_buffer(index, buffer)
-                || expected
-                    .as_deref()
-                    .is_some_and(|e| expr_touches_buffer(e, buffer))
-                || expr_touches_buffer(value, buffer)
-        }
-        Expr::BinOp { left, right, .. } => {
-            expr_touches_buffer(left, buffer) || expr_touches_buffer(right, buffer)
-        }
-        Expr::UnOp { operand, .. } | Expr::Cast { value: operand, .. } => {
-            expr_touches_buffer(operand, buffer)
-        }
-        Expr::Fma { a, b, c } => {
-            expr_touches_buffer(a, buffer)
-                || expr_touches_buffer(b, buffer)
-                || expr_touches_buffer(c, buffer)
-        }
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            expr_touches_buffer(cond, buffer)
-                || expr_touches_buffer(true_val, buffer)
-                || expr_touches_buffer(false_val, buffer)
-        }
-        Expr::Call { args, .. } => args.iter().any(|a| expr_touches_buffer(a, buffer)),
-        Expr::SubgroupReduce { value, .. } => expr_touches_buffer(value, buffer),
-        Expr::SubgroupShuffle { value, lane } => {
-            // The lane index may itself touch `buffer` (e.g. an atomic RMW or a
-            // load used as a gather index); a write there invalidates a
-            // forwarded value just as a top-level access would, so descend into
-            // the lane as well as the shuffled value.
-            expr_touches_buffer(value, buffer) || expr_touches_buffer(lane, buffer)
-        }
-        Expr::SubgroupBallot { cond } => expr_touches_buffer(cond, buffer),
-        Expr::Opaque(_) => true,
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::Var(_)
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize => false,
-    }
-}
-
-/// True iff `value` is safe to clone into the forwarded Let  -  no
-/// embedded Atomic, Call, Opaque, or Load whose ordering could matter.
-fn value_is_observably_free(value: &Expr) -> bool {
-    match value {
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::Var(_)
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize => true,
-        Expr::BinOp { left, right, .. } => {
-            value_is_observably_free(left) && value_is_observably_free(right)
-        }
-        Expr::UnOp { operand, .. } | Expr::Cast { value: operand, .. } => {
-            value_is_observably_free(operand)
-        }
-        Expr::Fma { a, b, c } => {
-            value_is_observably_free(a)
-                && value_is_observably_free(b)
-                && value_is_observably_free(c)
-        }
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            value_is_observably_free(cond)
-                && value_is_observably_free(true_val)
-                && value_is_observably_free(false_val)
-        }
-        Expr::Load { .. }
-        | Expr::BufferRef { .. }
-        | Expr::BufLen { .. }
-        | Expr::Atomic { .. }
-        | Expr::Call { .. }
-        | Expr::Opaque(_)
-        | Expr::SubgroupShuffle { .. }
-        | Expr::SubgroupReduce { .. }
-        | Expr::SubgroupBallot { .. } => false,
-    }
+    super::expr_touches_buffer(expr, buffer, false)
 }
 
 fn has_forwardable_pair(node: &Node) -> bool {
@@ -464,7 +355,7 @@ fn body_has_forwardable_pair(body: &[Node]) -> bool {
         };
         if find_forwarding_store(&body[..idx], buffer, index)
             .as_ref()
-            .is_some_and(value_is_observably_free)
+            .is_some_and(|value| expr_is_observably_free_for_reexecution(value, true))
         {
             return true;
         }

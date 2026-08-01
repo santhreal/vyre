@@ -85,13 +85,15 @@ impl GpuDispatchGraph {
 
         // V7-PERF-021: Zero-copy graph execution (I.14).
         // Convert GpuResources to substrate-neutral Resources for the pipeline engine.
-        // Resident handles are identified by their process-stable id.
+        // Resident handles carry their owning namespace, not a bare id.
         let mut internal_requests: SmallVec<[(&WgpuPipeline, CompoundResource<'_>); 8]> =
             SmallVec::with_capacity(self.ops.len());
         for op in &self.ops {
             let res = match &op.input {
                 GpuResource::Borrowed(bytes) => CompoundResource::Borrowed(bytes),
-                GpuResource::Resident(handle) => CompoundResource::Resident(handle.id()),
+                GpuResource::Resident(handle) => {
+                    CompoundResource::Resident(handle.resident_handle()?)
+                }
             };
             internal_requests.push((&op.pipeline, res));
         }

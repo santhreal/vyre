@@ -130,5 +130,3 @@ fn cuda_double_abs_does_not_collapse_to_inner() {
         );
     }
 }
-
-

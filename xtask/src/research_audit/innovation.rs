@@ -88,7 +88,10 @@ fn gpu_claim_policy(text: &str, workload_family: &str) -> &'static str {
         || text.contains("wgpu")
         || text.contains("metal")
         || text.contains("accelerator");
-    let sensitive_family = matches!(workload_family, "scan" | "parser" | "flow-security" | "graph");
+    let sensitive_family = matches!(
+        workload_family,
+        "scan" | "parser" | "flow-security" | "graph"
+    );
     if gpu_claim && sensitive_family {
         "requires-partition-transfer-baseline"
     } else {
@@ -97,13 +100,18 @@ fn gpu_claim_policy(text: &str, workload_family: &str) -> &'static str {
 }
 
 fn has_gpu_partition_rationale(text: &str) -> bool {
-    text.contains("partition")
-        || text.contains("cpu/gpu")
-        || text.contains("routing")
-        || text.contains("classifier")
-        || text.contains("selected")
-        || text.contains("rejected")
-        || text.contains("fallback")
+    crate::output_arg::contains_any(
+        text,
+        &[
+            "partition",
+            "cpu/gpu",
+            "routing",
+            "classifier",
+            "selected",
+            "rejected",
+            "fallback",
+        ],
+    )
 }
 
 fn has_transfer_accounting(text: &str) -> bool {
@@ -139,7 +147,8 @@ fn owner_lane(axis: &str) -> String {
         "benchmark".to_string()
     } else if axis.contains("product") {
         "product".to_string()
-    } else if axis.contains("evidence") || axis.contains("testing") || axis.contains("coordination") {
+    } else if axis.contains("evidence") || axis.contains("testing") || axis.contains("coordination")
+    {
         "evidence".to_string()
     } else {
         axis.to_string()
@@ -195,7 +204,8 @@ fn workload_family(axis: &str) -> &'static str {
         "benchmark"
     } else if axis.contains("product") {
         "product"
-    } else if axis.contains("evidence") || axis.contains("testing") || axis.contains("coordination") {
+    } else if axis.contains("evidence") || axis.contains("testing") || axis.contains("coordination")
+    {
         "evidence"
     } else {
         "unknown"
@@ -230,7 +240,10 @@ fn negative_case_family(text: &str) -> &'static str {
         "negative-twin-or-parity"
     } else if text.contains("digest") || text.contains("witness") {
         "correctness-digest-or-witness"
-    } else if NEGATIVE_CASE_MARKERS.iter().any(|marker| text.contains(*marker)) {
+    } else if NEGATIVE_CASE_MARKERS
+        .iter()
+        .any(|marker| text.contains(*marker))
+    {
         "negative-marker"
     } else {
         "missing"

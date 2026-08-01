@@ -1,13 +1,12 @@
 //! Crate metadata release evidence for Vyre and Weir.
 
 use std::fs;
-use std::io::{self, Read};
+use std::io;
 use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
 use crate::release_train;
-use walkdir::WalkDir;
 
 #[derive(Debug, Serialize)]
 struct MetadataMatrix {
@@ -61,42 +60,42 @@ const MAX_README_BYTES: u64 = 2_097_152;
 
 fn required_release_surfaces() -> Vec<RequiredReleaseSurface> {
     vec![
-    RequiredReleaseSurface {
-        name: "vyre",
-        expected_version: release_train::vyre_version(),
-        release_kind: Some("publishable-crate"),
-        release_surface: "vyre-engine",
-    },
-    RequiredReleaseSurface {
-        name: "vyre-driver-cuda",
-        expected_version: release_train::vyre_version(),
-        release_kind: Some("publishable-crate"),
-        release_surface: "cuda-backend",
-    },
-    RequiredReleaseSurface {
-        name: "vyre-driver-wgpu",
-        expected_version: release_train::vyre_version(),
-        release_kind: Some("publishable-crate"),
-        release_surface: "wgpu-backend",
-    },
-    RequiredReleaseSurface {
-        name: release_train::weir_package_name(),
-        expected_version: release_train::weir_version(),
-        release_kind: Some("publishable-crate"),
-        release_surface: "dataflow-analysis",
-    },
-    RequiredReleaseSurface {
-        name: "vyrec",
-        expected_version: release_train::vyrec_version(),
-        release_kind: Some("non-publishable-release-surface"),
-        release_surface: "parser-cli",
-    },
-    RequiredReleaseSurface {
-        name: "vyre-frontend-c",
-        expected_version: release_train::vyre_frontend_c_version(),
-        release_kind: Some("non-publishable-release-surface"),
-        release_surface: "c-frontend",
-    },
+        RequiredReleaseSurface {
+            name: "vyre",
+            expected_version: release_train::vyre_version(),
+            release_kind: Some("publishable-crate"),
+            release_surface: "vyre-engine",
+        },
+        RequiredReleaseSurface {
+            name: "vyre-driver-cuda",
+            expected_version: release_train::vyre_version(),
+            release_kind: Some("publishable-crate"),
+            release_surface: "cuda-backend",
+        },
+        RequiredReleaseSurface {
+            name: "vyre-driver-wgpu",
+            expected_version: release_train::vyre_version(),
+            release_kind: Some("publishable-crate"),
+            release_surface: "wgpu-backend",
+        },
+        RequiredReleaseSurface {
+            name: release_train::weir_package_name(),
+            expected_version: release_train::weir_version(),
+            release_kind: Some("publishable-crate"),
+            release_surface: "dataflow-analysis",
+        },
+        RequiredReleaseSurface {
+            name: "vyrec",
+            expected_version: release_train::vyrec_version(),
+            release_kind: Some("non-publishable-release-surface"),
+            release_surface: "parser-cli",
+        },
+        RequiredReleaseSurface {
+            name: "vyre-frontend-c",
+            expected_version: release_train::vyre_frontend_c_version(),
+            release_kind: Some("non-publishable-release-surface"),
+            release_surface: "c-frontend",
+        },
     ]
 }
 
@@ -208,23 +207,14 @@ pub(crate) fn run(args: &[String]) {
         packages,
         blockers,
     };
-    let json = match serde_json::to_string_pretty(&matrix) {
-        Ok(json) => json,
-        Err(error) => {
-            eprintln!("Fix: failed to serialize metadata matrix: {error}");
-            std::process::exit(1);
-        }
-    };
+
     if let Some(parent) = output.parent() {
         if let Err(error) = fs::create_dir_all(parent) {
             eprintln!("Fix: failed to create `{}`: {error}", parent.display());
             std::process::exit(1);
         }
     }
-    if let Err(error) = fs::write(&output, format!("{json}\n")) {
-        eprintln!("Fix: failed to write `{}`: {error}", output.display());
-        std::process::exit(1);
-    }
+    crate::output_arg::write_json(&output, &matrix);
     println!("metadata-matrix: wrote {}", output.display());
     if !matrix.blockers.is_empty() {
         std::process::exit(1);
@@ -235,8 +225,12 @@ fn root_patch_section_count(manifests: &[PathBuf]) -> (usize, Vec<String>) {
     let mut blockers = Vec::new();
     let count = manifests
         .iter()
-        .map(
-            |manifest| match read_text_bounded(manifest, MAX_MANIFEST_BYTES) {
+        .map(|manifest| {
+            match crate::output_arg::read_text_bounded(
+                manifest,
+                MAX_MANIFEST_BYTES,
+                "release metadata",
+            ) {
                 Ok(text) => text
                     .lines()
                     .filter(|line| line.trim() == "[patch.crates-io]")
@@ -248,8 +242,8 @@ fn root_patch_section_count(manifests: &[PathBuf]) -> (usize, Vec<String>) {
                     ));
                     0
                 }
-            },
-        )
+            }
+        })
         .sum();
     (count, blockers)
 }
@@ -260,47 +254,18 @@ fn collect_packages(
     packages: &mut Vec<PackageMetadata>,
     blockers: &mut Vec<String>,
 ) {
-    for entry in WalkDir::new(root).into_iter().filter_entry(|entry| {
-        let name = entry.file_name().to_string_lossy();
-        !matches!(
-            name.as_ref(),
-            "target"
-                | "target-codex"
-                | "target_tests"
-                | ".git"
-                | ".cargo-target"
-                | "release"
-                | "examples"
-        )
-    }) {
-        let entry = match entry {
-            Ok(entry) => entry,
-            Err(error) => {
-                blockers.push(format!(
-                    "failed to walk metadata root `{}`: {error}",
-                    error
-                        .path()
-                        .map(|path| path.display().to_string())
-                        .unwrap_or_else(|| root.display().to_string())
-                ));
-                continue;
-            }
-        };
-        let path = entry.path();
-        if path.file_name().and_then(|name| name.to_str()) != Some("Cargo.toml") {
-            continue;
-        }
-        match parse_package(path, workspace_package) {
-            Ok(Some(package)) => packages.push(package),
-            Ok(None) => {}
-            Err(error) => blockers.push(error),
-        }
-    }
+    crate::manifest_walk::collect_manifests(root, "metadata", packages, blockers, |path| {
+        parse_package(path, workspace_package)
+    });
 }
 
 fn load_workspace_package(root: &Path, blockers: &mut Vec<String>) -> Option<toml::value::Table> {
     let manifest = root.join("Cargo.toml");
-    let text = match read_text_bounded(&manifest, MAX_MANIFEST_BYTES) {
+    let text = match crate::output_arg::read_text_bounded(
+        &manifest,
+        MAX_MANIFEST_BYTES,
+        "release metadata",
+    ) {
         Ok(text) => text,
         Err(error) => {
             blockers.push(format!(
@@ -331,7 +296,8 @@ fn parse_package(
     path: &Path,
     workspace_package: Option<&toml::value::Table>,
 ) -> Result<Option<PackageMetadata>, String> {
-    let text = read_text_bounded(path, MAX_MANIFEST_BYTES).map_err(|error| {
+    let text = crate::output_arg::read_text_bounded(path, MAX_MANIFEST_BYTES, "release metadata")
+        .map_err(|error| {
         format!(
             "failed to read package manifest `{}`: {error}",
             path.display()
@@ -418,7 +384,11 @@ fn parse_package(
         if !readme_path.exists() {
             blockers.push(format!("readme `{readme}` does not exist"));
         } else {
-            match read_text_bounded(&readme_path, MAX_README_BYTES) {
+            match crate::output_arg::read_text_bounded(
+                &readme_path,
+                MAX_README_BYTES,
+                "release metadata",
+            ) {
                 Ok(text) if text.trim().is_empty() => {
                     blockers.push(format!("readme `{readme}` is empty"));
                 }
@@ -506,43 +476,45 @@ fn package_examples(manifest: &Path, package_name: &str, readme: Option<&str>) -
         )),
     }
     example_files.sort();
-    let has_runnable_example =
-        example_files
-            .iter()
-            .any(|path| match read_text_bounded(path, MAX_README_BYTES) {
-                Ok(text) => text.contains("fn main(") || text.contains("fn main ()"),
-                Err(error) => {
-                    blockers.push(format!(
-                        "example `{}` is unreadable: {error}",
-                        path.display()
-                    ));
-                    false
-                }
-            });
+    let has_runnable_example = example_files.iter().any(|path| {
+        match crate::output_arg::read_text_bounded(path, MAX_README_BYTES, "release metadata") {
+            Ok(text) => text.contains("fn main(") || text.contains("fn main ()"),
+            Err(error) => {
+                blockers.push(format!(
+                    "example `{}` is unreadable: {error}",
+                    path.display()
+                ));
+                false
+            }
+        }
+    });
     let crate_name = package_name.replace('-', "_");
-    let has_api_referencing_example =
-        example_files
-            .iter()
-            .any(|path| match read_text_bounded(path, MAX_README_BYTES) {
-                Ok(text) => {
-                    path.file_stem()
-                        .and_then(|stem| stem.to_str())
-                        .is_some_and(|stem| stem.contains(&crate_name))
-                        || text.contains(&crate_name)
-                        || text.contains("::")
-                        || text.contains("Command::new")
-                }
-                Err(error) => {
-                    blockers.push(format!(
-                        "example `{}` is unreadable: {error}",
-                        path.display()
-                    ));
-                    false
-                }
-            });
+    let has_api_referencing_example = example_files.iter().any(|path| {
+        match crate::output_arg::read_text_bounded(path, MAX_README_BYTES, "release metadata") {
+            Ok(text) => {
+                path.file_stem()
+                    .and_then(|stem| stem.to_str())
+                    .is_some_and(|stem| stem.contains(&crate_name))
+                    || text.contains(&crate_name)
+                    || text.contains("::")
+                    || text.contains("Command::new")
+            }
+            Err(error) => {
+                blockers.push(format!(
+                    "example `{}` is unreadable: {error}",
+                    path.display()
+                ));
+                false
+            }
+        }
+    });
     let readme_example_count = readme
-        .map(
-            |readme| match read_text_bounded(&root.join(readme), MAX_README_BYTES) {
+        .map(|readme| {
+            match crate::output_arg::read_text_bounded(
+                &root.join(readme),
+                MAX_README_BYTES,
+                "release metadata",
+            ) {
                 Ok(text) => {
                     text.matches("```rust").count()
                         + text.matches("```toml").count()
@@ -555,8 +527,8 @@ fn package_examples(manifest: &Path, package_name: &str, readme: Option<&str>) -
                     ));
                     0
                 }
-            },
-        )
+            }
+        })
         .unwrap_or(0);
     PackageExamples {
         example_files: example_files
@@ -693,45 +665,13 @@ fn expected_version(name: &str, release_group: &str, release_kind: &str) -> Opti
     release_train::release_group_version(release_group)
 }
 
-fn read_text_bounded(path: &Path, max_bytes: u64) -> io::Result<String> {
-    let mut reader = fs::File::open(path)?.take(max_bytes.saturating_add(1));
-    let mut text = String::new();
-    reader.read_to_string(&mut text)?;
-    if text.len() as u64 > max_bytes {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            format!(
-                "{} exceeds {max_bytes} byte release metadata read cap",
-                path.display()
-            ),
-        ));
-    }
-    Ok(text)
-}
-
 fn parse_output(args: &[String]) -> Result<PathBuf, String> {
-    let mut output = None;
-    let mut index = 2;
-    while index < args.len() {
-        match args[index].as_str() {
-            "--output" => {
-                let Some(path) = args.get(index + 1) else {
-                    return Err("Fix: --output requires a path.".to_string());
-                };
-                output = Some(PathBuf::from(path));
-                index += 2;
-            }
-            "--help" | "-h" => {
-                println!(
-                    "USAGE:\n  cargo_full run --bin xtask -- metadata-matrix [--output PATH]\n\n\
-                     Writes Vyre/Weir crate metadata evidence."
-                );
-                std::process::exit(0);
-            }
-            other => return Err(format!("Fix: unknown metadata-matrix option `{other}`.")),
-        }
-    }
-    Ok(output.unwrap_or_else(default_output))
+    crate::output_arg::parse_output_arg(
+        args,
+        "metadata-matrix",
+        "Writes Vyre/Weir crate metadata evidence.",
+        default_output,
+    )
 }
 
 fn default_output() -> PathBuf {

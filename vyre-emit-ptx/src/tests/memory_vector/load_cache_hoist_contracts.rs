@@ -271,4 +271,3 @@ fn emit_keeps_read_write_loads_on_coherent_global_path() {
         "Fix: ReadWrite bindings must not use the non-coherent read-only cache path.\n{s}"
     );
 }
-

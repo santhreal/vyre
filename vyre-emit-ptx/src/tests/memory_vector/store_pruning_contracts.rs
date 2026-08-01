@@ -143,4 +143,3 @@ fn vector_store_pruning_keeps_parent_index_used_by_child_body() {
         "child-read parent literals must remain emitted even when vector-store fusion consumes adjacent stores:\n{s}"
     );
 }
-

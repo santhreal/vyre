@@ -129,17 +129,21 @@ base `Expr`/`Node` variant directly (e.g. `Expr::popcount`), not by
 calling into the intrinsic crate. This keeps the dependency graph one-
 directional and the two crates independently testable.
 
-## Region chain  -  mandatory at every tier
+## Region chain ownership
 
-Every op at every tier wraps its body in
-`Node::Region { generator, source_region, body }`. When an op is
-constructed by composing another registered op's builder, the outer
-op's `source_region` points back via `GeneratorRef`. See
-`docs/region-chain.md`.
+Every operation wraps its body in
+`Node::Region { generator, source_region, body }`. When a Cat-A operation
+returns a Program built by a registered primitive, call
+`vyre_foundation::composition::tag_program(parent_id, primitive_program)`.
+The outer region keeps the Cat-A generator. Each child keeps its primitive
+generator and receives a `source_region` that names the Cat-A parent.
 
-`cargo xtask print-composition <op_id>` walks the Region tree from a
-registered op down to its leaves  -  the audit tool that makes
-the chain visible.
+`cargo_full run --bin xtask -- print-composition <op_id>` displays this chain.
+`lego-audit` counts the child edge as primitive reuse.
+
+Primitive promotion requires real composition edges from product operations.
+Generated aliases, fixture wrappers, and `consumer_a` or `consumer_b` entries
+do not satisfy the two-caller rule and must not enter the operation matrix.
 
 ## What dissolves / what stays
 
@@ -166,6 +170,10 @@ the chain visible.
   review. Prefer lifting the shared primitive into Tier 2 or 1.
 - **Tier-3 depends on a Tier-4 community pack**: banned. Community
   packs sit on top of the core Vyre stack, not vice versa.
+- **Synthetic primitive consumers**: registering duplicate fixture wrappers
+  to make a primitive appear reused is banned. Conformance executes the
+  primitive registry directly. Promotion evidence comes from real
+  `source_region` composition edges.
 - **Same op registered at two tiers** (e.g. both
   `vyre-intrinsics::hardware::X` AND `vyre-libs::math::X` both active
   in the inventory): banned. Each op has exactly one home. The

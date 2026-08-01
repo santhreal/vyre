@@ -7,10 +7,40 @@
 use serde::Deserialize;
 use std::fs;
 use std::path::Path;
+use std::sync::LazyLock;
 
 use crate::DeviceProfile;
 
 const MAX_DEVICE_SIGNATURE_TOML_BYTES: u64 = 256 * 1024;
+
+/// Process-wide memo of the compiled-in signature table.
+///
+/// Backend projections derive a [`DeviceProfile`] on every dispatch, and each
+/// derivation used to reparse this TOML. The input is a `&'static str` fixed
+/// at compile time, so one parse per process is all the information there is.
+///
+/// A parse FAILURE is memoized too, and that is deliberate: the input cannot
+/// change while the process runs, so a retry would reparse the same constant
+/// and fail the same way. Do not "fix" this into a retry.
+static BUILTIN_SIGNATURE_TABLE: LazyLock<Result<DeviceSignatureTable, String>> =
+    LazyLock::new(|| {
+        #[cfg(test)]
+        BUILTIN_SIGNATURE_TABLE_PARSES.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let mut signatures = vec![DeviceSignature::from_toml_str(
+            DeviceSignature::BUILTIN_BLACKWELL_120,
+        )?];
+        signatures.sort_unstable_by(|left, right| left.id.cmp(&right.id));
+        Ok(DeviceSignatureTable { signatures })
+    });
+
+/// Counts how many times the memoized parse actually ran.
+///
+/// This exists so the memo can be pinned by an INVARIANT (the table is built
+/// once no matter how many callers ask for it) rather than by a timing
+/// assertion, which would be flaky on a contended box.
+#[cfg(test)]
+static BUILTIN_SIGNATURE_TABLE_PARSES: std::sync::atomic::AtomicUsize =
+    std::sync::atomic::AtomicUsize::new(0);
 
 /// One parsed device signature record.
 #[derive(Clone, Debug, Deserialize, PartialEq)]
@@ -169,14 +199,31 @@ impl DeviceSignature {
 impl DeviceSignatureTable {
     /// Load the signatures compiled into this crate.
     ///
-    /// This is the no-filesystem fallback used by backend projections before
-    /// external Tier-B directories are available.
+    /// This reads NO files. It parses the [`DeviceSignature::BUILTIN_BLACKWELL_120`]
+    /// string that `include_str!` baked into the binary, sorts by id, and
+    /// wraps. [`Self::load_dir`] is the filesystem path; this is the
+    /// no-filesystem fallback used by backend projections before external
+    /// Tier-B directories are available.
+    ///
+    /// The parse is memoized process-wide, because it is a pure function of
+    /// compile-time constants and backend projections call it on every
+    /// dispatch. Prefer [`Self::builtins_ref`] on a hot path: this clones the
+    /// memoized table so callers that need an owned value keep working.
+    ///
+    /// # Errors
+    ///
+    /// Returns an actionable error when the compiled-in signature is invalid.
     pub fn builtins() -> Result<Self, String> {
-        let mut signatures = vec![DeviceSignature::from_toml_str(
-            DeviceSignature::BUILTIN_BLACKWELL_120,
-        )?];
-        signatures.sort_unstable_by(|left, right| left.id.cmp(&right.id));
-        Ok(Self { signatures })
+        Self::builtins_ref().cloned()
+    }
+
+    /// Borrow the process-wide memoized builtin signature table.
+    ///
+    /// # Errors
+    ///
+    /// Returns an actionable error when the compiled-in signature is invalid.
+    pub fn builtins_ref() -> Result<&'static Self, String> {
+        BUILTIN_SIGNATURE_TABLE.as_ref().map_err(Clone::clone)
     }
 
     /// Load every `*.toml` signature file in `dir`.
@@ -454,5 +501,47 @@ bank_width_bytes = 4
         );
         assert_eq!(profile.ideal_workgroup_tile, signature.ideal_workgroup_tile);
         assert_eq!(profile.shared_memory_bank_count, signature.bank_count);
+    }
+
+    /// The builtin table is parsed ONCE per process, no matter how many
+    /// callers ask for it.
+    ///
+    /// Backend projections call `builtins()` on every dispatch (twice, in the
+    /// CUDA case: once deriving validation capabilities and once deriving
+    /// adapter caps), so a reparse here is a per-dispatch TOML parse on the
+    /// hot path. This pins the invariant rather than a duration, because a
+    /// timing assertion would be flaky on a contended box and would not
+    /// actually say what we mean.
+    ///
+    /// The count is asserted as exactly one rather than "unchanged" so the
+    /// test is independent of whichever test in this binary ran first.
+    #[test]
+    fn builtin_signature_table_is_parsed_once_per_process() {
+        use std::sync::atomic::Ordering;
+
+        let first = DeviceSignatureTable::builtins().expect("Fix: builtin signatures must load");
+        for _ in 0..1_000 {
+            let repeated =
+                DeviceSignatureTable::builtins().expect("Fix: builtin signatures must load");
+            assert_eq!(
+                repeated, first,
+                "Fix: the memoized builtin table must return the same signatures on every call."
+            );
+        }
+        for _ in 0..1_000 {
+            let borrowed = DeviceSignatureTable::builtins_ref()
+                .expect("Fix: builtin signatures must load by reference");
+            assert_eq!(
+                *borrowed, first,
+                "Fix: builtins_ref must borrow the same table that builtins clones."
+            );
+        }
+
+        assert_eq!(
+            super::BUILTIN_SIGNATURE_TABLE_PARSES.load(Ordering::Relaxed),
+            1,
+            "Fix: the compiled-in device signature TOML must be parsed exactly once per process. \
+             2001 calls produced a different parse count, so the memo was bypassed or reset."
+        );
     }
 }

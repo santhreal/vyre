@@ -21,24 +21,21 @@ pub(crate) enum PtxType {
 
 impl PtxType {
     pub(crate) fn ptx_type_str(self) -> &'static str {
-        match self {
-            Self::B16 => "b16",
-            Self::U32 => "u32",
-            Self::I32 => "s32",
-            Self::F32 => "f32",
-            Self::Bool => "pred",
-            Self::U64 => "u64",
-        }
+        self.descriptor().0
     }
 
     pub(crate) fn reg_prefix(self) -> &'static str {
+        self.descriptor().1
+    }
+
+    fn descriptor(self) -> (&'static str, &'static str) {
         match self {
-            Self::B16 => "h",
-            Self::U32 => "r",
-            Self::I32 => "s",
-            Self::F32 => "f",
-            Self::Bool => "p",
-            Self::U64 => "rd",
+            Self::B16 => ("b16", "h"),
+            Self::U32 => ("u32", "r"),
+            Self::I32 => ("s32", "s"),
+            Self::F32 => ("f32", "f"),
+            Self::Bool => ("pred", "p"),
+            Self::U64 => ("u64", "rd"),
         }
     }
 

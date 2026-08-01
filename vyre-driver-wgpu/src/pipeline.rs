@@ -173,7 +173,7 @@ fn wgpu_launch_element_count_for_tuning(program: &Program) -> Result<u32, Backen
     })
 }
 
-fn wgpu_launch_limits(device: &wgpu::Device) -> LaunchGeometryLimits {
+pub(crate) fn wgpu_launch_limits(device: &wgpu::Device) -> LaunchGeometryLimits {
     let limits = device.limits();
     LaunchGeometryLimits {
         backend: "wgpu",
@@ -184,6 +184,10 @@ fn wgpu_launch_limits(device: &wgpu::Device) -> LaunchGeometryLimits {
             limits.max_compute_workgroup_size_z,
         ],
         max_grid_dim: [limits.max_compute_workgroups_per_dimension; 3],
+        // WebGPU exposes no per-compute-unit thread budget, so wgpu reports
+        // none. Zero keeps residency-aware launch decisions inert here rather
+        // than deriving one from a number this API never supplies.
+        max_threads_per_sm: 0,
     }
 }
 
@@ -402,19 +406,21 @@ impl WgpuPipeline {
             } else {
                 vyre_driver::program_walks::output_binding_layouts(program)?.into()
             };
-        let (output, output_word_count) = output_bindings.first().map_or(
-            (
-                OutputLayout {
-                    full_size: 0,
-                    read_size: 0,
-                    copy_offset: 0,
-                    copy_size: 0,
-                    trim_start: 0,
-                },
-                0,
-            ),
-            |primary_output| (primary_output.layout, primary_output.word_count),
+        let output = output_bindings.first().map_or(
+            OutputLayout {
+                full_size: 0,
+                read_size: 0,
+                copy_offset: 0,
+                copy_size: 0,
+                trim_start: 0,
+            },
+            |primary_output| primary_output.layout,
         );
+        let output_word_count = output_bindings
+            .iter()
+            .map(|binding| binding.word_count)
+            .max()
+            .unwrap_or(0);
         // Preserve the original workgroup shape. Without program-level
         // logical extents, dispatch paths can only derive a safe default grid
         // for 1D kernels; 2D/3D kernels must provide `grid_override`.

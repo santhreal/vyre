@@ -110,7 +110,7 @@ fn resident_scan_reports_achieved_bandwidth_within_device_peak() {
     );
     // Achieved read bandwidth must be a real, positive figure. It can legitimately
     // exceed the DRAM peak when the haystack is served from L2 (then the kernel is
-    // L2-bound, a valid roofline verdict), so the sanity ceiling allows for L2 
+    // L2-bound, a valid roofline verdict), so the sanity ceiling allows for L2
     // a value far beyond even L2 bandwidth (here: >8x DRAM peak) means the timing
     // or byte accounting is wrong, not a real measurement.
     assert!(achieved_gbps > 0, "achieved bandwidth must be positive");

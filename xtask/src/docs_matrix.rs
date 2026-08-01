@@ -147,7 +147,7 @@ const REQUIRED_DOCS: &[RequiredDoc] = &[
         topics: &[
             "vyre",
             "gpu",
-            "bytecode",
+            "wire",
             "condition",
             "cuda",
             "wgpu",
@@ -184,7 +184,7 @@ const REQUIRED_DOCS: &[RequiredDoc] = &[
     },
     RequiredDoc {
         id: "vyre-optimization",
-        relative: "docs/optimization/AGENT_CONTRACT.md",
+        relative: "docs/optimization/README.md",
         topics: &["optimization", "gpu", "pass", "evidence"],
     },
     RequiredDoc {
@@ -532,23 +532,14 @@ pub(crate) fn run(args: &[String]) {
         scan_positioning_findings,
         blockers,
     };
-    let json = match serde_json::to_string_pretty(&matrix) {
-        Ok(json) => json,
-        Err(error) => {
-            eprintln!("Fix: failed to serialize docs matrix: {error}");
-            std::process::exit(1);
-        }
-    };
+
     if let Some(parent) = output.parent() {
         if let Err(error) = fs::create_dir_all(parent) {
             eprintln!("Fix: failed to create `{}`: {error}", parent.display());
             std::process::exit(1);
         }
     }
-    if let Err(error) = fs::write(&output, format!("{json}\n")) {
-        eprintln!("Fix: failed to write `{}`: {error}", output.display());
-        std::process::exit(1);
-    }
+    crate::output_arg::write_json(&output, &matrix);
     write_sibling_docs(&output, &matrix);
     println!("docs-matrix: wrote {}", output.display());
     if !matrix.blockers.is_empty() {
@@ -897,20 +888,25 @@ fn missing_required_topics<'a>(lowered_doc: &str, topics: &'a [&'a str]) -> Vec<
 }
 
 fn doc_line_is_release_rule_text(lowered: &str) -> bool {
-    lowered.contains("no-stub")
-        || lowered.contains("zero-stub")
-        || lowered.contains("no stubs")
-        || lowered.contains("no shipped source")
-        || lowered.contains("final review finds no")
-        || lowered.contains("must not")
-        || lowered.contains("not only")
-        || lowered.contains("not optional")
-        || lowered.contains("not a ")
-        || lowered.contains("no todo")
-        || lowered.contains("todo/fixme")
-        || lowered.contains("stub functions with")
-        || lowered.contains("forbidden patterns")
-        || lowered.contains("stubs, hidden fallbacks")
+    crate::output_arg::contains_any(
+        lowered,
+        &[
+            "no-stub",
+            "zero-stub",
+            "no stubs",
+            "no shipped source",
+            "final review finds no",
+            "must not",
+            "not only",
+            "not optional",
+            "not a ",
+            "no todo",
+            "todo/fixme",
+            "stub functions with",
+            "forbidden patterns",
+            "stubs, hidden fallbacks",
+        ],
+    )
 }
 
 fn write_sibling_docs(output: &Path, matrix: &DocsMatrix) {
@@ -1252,7 +1248,7 @@ fn write_vyre_readme_contract(parent: &Path) {
         "gpu",
         "cuda",
         "wgpu",
-        "bytecode",
+        "wire",
         "condition",
         "vyre::program",
         "release/evidence",
@@ -1301,17 +1297,7 @@ fn write_vyre_readme_contract(parent: &Path) {
 }
 
 fn write_json(path: &Path, value: &impl Serialize) {
-    let json = match serde_json::to_string_pretty(value) {
-        Ok(json) => json,
-        Err(error) => {
-            eprintln!("Fix: failed to serialize `{}`: {error}", path.display());
-            std::process::exit(1);
-        }
-    };
-    if let Err(error) = fs::write(path, format!("{json}\n")) {
-        eprintln!("Fix: failed to write `{}`: {error}", path.display());
-        std::process::exit(1);
-    }
+    crate::output_arg::write_json(path, value);
 }
 
 fn write_markdown(path: &Path, text: &str) {
@@ -1322,28 +1308,12 @@ fn write_markdown(path: &Path, text: &str) {
 }
 
 fn parse_output(args: &[String]) -> Result<PathBuf, String> {
-    let mut output = None;
-    let mut index = 2;
-    while index < args.len() {
-        match args[index].as_str() {
-            "--output" => {
-                let Some(path) = args.get(index + 1) else {
-                    return Err("Fix: --output requires a path.".to_string());
-                };
-                output = Some(PathBuf::from(path));
-                index += 2;
-            }
-            "--help" | "-h" => {
-                println!(
-                    "USAGE:\n  cargo_full run --bin xtask -- docs-matrix [--output PATH]\n\n\
-                     Writes release documentation evidence matrix."
-                );
-                std::process::exit(0);
-            }
-            other => return Err(format!("Fix: unknown docs-matrix option `{other}`.")),
-        }
-    }
-    Ok(output.unwrap_or_else(default_output))
+    crate::output_arg::parse_output_arg(
+        args,
+        "docs-matrix",
+        "Writes release documentation evidence matrix.",
+        default_output,
+    )
 }
 
 fn default_output() -> PathBuf {
@@ -1494,7 +1464,8 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         std::fs::create_dir_all(tmp.path().join("docs/optimization")).unwrap();
         std::fs::write(
-            tmp.path().join("docs/optimization/ALL_AXES_ACCELERATION_PLAN.md"),
+            tmp.path()
+                .join("docs/optimization/ALL_AXES_ACCELERATION_PLAN.md"),
             "| VX-001 | canonical |\n",
         )
         .unwrap();
@@ -1510,5 +1481,42 @@ mod tests {
         assert_eq!(findings[0].path, "docs/optimization/OLD_PLAN.md");
         assert_eq!(findings[0].line, 1);
         assert_eq!(findings[0].marker, "VX-999");
+    }
+
+    /// Public release evidence must cite the tracked optimization contract, not private agent state.
+    #[test]
+    fn optimization_release_doc_is_the_tracked_readme() {
+        let optimization = REQUIRED_DOCS
+            .iter()
+            .find(|document| document.id == "vyre-optimization")
+            .expect("Fix: optimization documentation must remain a required release surface");
+
+        assert_eq!(optimization.relative, "docs/optimization/README.md");
+        assert_ne!(
+            optimization.relative, "docs/optimization/AGENT_CONTRACT.md",
+            "private maintainer state cannot satisfy public release documentation"
+        );
+    }
+
+    /// The release matrix must enforce current wire terminology rather than the retired VM surface.
+    #[test]
+    fn readme_release_topics_use_wire_not_bytecode() {
+        let readme = REQUIRED_DOCS
+            .iter()
+            .find(|document| document.id == "vyre-readme")
+            .expect("Fix: the README must remain a required release surface");
+
+        assert!(readme.topics.contains(&"wire"));
+        assert!(
+            !readme.topics.contains(&"bytecode"),
+            "the retired bytecode surface cannot be revived by release evidence"
+        );
+        let contract_tokens = ["wire", "condition", "vyre::program"];
+        assert!(
+            contract_tokens
+                .iter()
+                .all(|token| !token.eq_ignore_ascii_case("bytecode")),
+            "README contract tokens must not restore the retired bytecode surface"
+        );
     }
 }

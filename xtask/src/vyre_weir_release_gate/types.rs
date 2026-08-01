@@ -2,6 +2,12 @@ use serde::Deserialize;
 
 pub(super) const MAX_RELEASE_GATE_TEXT_BYTES: u64 = 16_777_216;
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum GateMode {
+    Final,
+    Prepublish,
+}
+
 #[derive(Debug, Deserialize)]
 pub(super) struct EvidenceManifest {
     pub(super) schema_version: u32,

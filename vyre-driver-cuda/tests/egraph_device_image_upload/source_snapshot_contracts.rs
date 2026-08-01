@@ -137,4 +137,3 @@ fn egraph_u32_scratch_upload_uses_zero_staging_byte_view_on_little_endian_hosts(
         "Fix: CUDA e-graph u32 scratch metadata upload must avoid host byte staging on little-endian hosts while preserving empty-buffer zero initialization."
     );
 }
-

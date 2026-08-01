@@ -10,14 +10,14 @@
 //! operational-intensity measurement (`ops / bytes`) for the roofline without
 //! Nsight-Compute; the SASS-level dynamic count remains the ncu refinement.
 //!
-//! Counting is a no-op unless a [`count_ops`] scope is active on the current thread, so
+//! Counting is a no-op unless a [`crate::execution::op_count::count_ops`] scope is active on the current thread, so
 //! ordinary reference evaluation (the vast majority of interpreter use, all in tests)
 //! pays only one thread-local read per arithmetic op and no allocation.
 
 use std::cell::Cell;
 
 thread_local! {
-    /// `Some(n)` while a [`count_ops`] scope is active on this thread; `None` otherwise.
+    /// `Some(n)` while a `count_ops` scope is active on this thread; `None` otherwise.
     static OP_COUNTER: Cell<Option<u64>> = const { Cell::new(None) };
 }
 

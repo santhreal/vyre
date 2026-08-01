@@ -6,7 +6,7 @@ use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node,
 
 use crate::math::dot_partial::{dot_partial, OP_ID as DOT_PARTIAL_OP_ID};
 use crate::nn::attention_stability::{
-    bounded_exp_arg, bounded_score, finite_or, flush_tiny, positive_denominator,
+    bounded_exp_arg, bounded_score, direct_score_expr, finite_or, flush_tiny, positive_denominator,
 };
 
 /// Stable op id for the max-score pass.
@@ -15,20 +15,6 @@ pub const ATTENTION_MAX_PASS_OP_ID: &str = "vyre-primitives::nn::attention_max_p
 pub const ATTENTION_SUM_PASS_OP_ID: &str = "vyre-primitives::nn::attention_sum_pass";
 /// Stable op id for the weighted-value write pass.
 pub const ATTENTION_WRITE_PASS_OP_ID: &str = "vyre-primitives::nn::attention_write_pass";
-
-fn direct_score_expr(q: &str, k: &str, row: u32, col: u32, d: u32, scale_expr: Expr) -> Expr {
-    let mut dot = Expr::f32(0.0);
-    for k_idx in 0..d {
-        dot = Expr::add(
-            dot,
-            Expr::mul(
-                Expr::load(q, Expr::u32(row * d + k_idx)),
-                Expr::load(k, Expr::u32(col * d + k_idx)),
-            ),
-        );
-    }
-    bounded_score(Expr::mul(dot, scale_expr))
-}
 
 /// Emit the attention max-reduction pass for one query row `i`.
 #[must_use]

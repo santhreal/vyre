@@ -231,7 +231,11 @@ fn inspect_cpu_100x_benchmark_semantics(
         blockers.push(format!("{evidence}: missing cases array"));
         return;
     };
-    inspect_cpu_100x_aggregate_case_counts(evidence, value, blockers);
+    crate::benchmark_evidence_semantics::inspect_cpu_sota_100x_case_count_consistency(
+        &format!("{evidence}:"),
+        value,
+        blockers,
+    );
     inspect_required_cpu_100x_cases(evidence, value, cases, blockers);
     for case in cases {
         inspect_cpu_100x_case(evidence, value, case, blockers);
@@ -438,32 +442,6 @@ fn cpu_100x_workspace_root(path: &std::path::Path) -> Option<&std::path::Path> {
     })
 }
 
-fn inspect_cpu_100x_aggregate_case_counts(
-    evidence: &str,
-    value: &serde_json::Value,
-    blockers: &mut Vec<String>,
-) {
-    let (derived_contract_cases, derived_passing_cases) =
-        crate::benchmark_evidence_semantics::cpu_sota_100x_case_counts(value);
-    let declared_contract_cases = value
-        .get("cpu_sota_100x_contract_case_count")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(0);
-    if declared_contract_cases != derived_contract_cases {
-        blockers.push(format!(
-            "{evidence}: cpu_sota_100x_contract_case_count={declared_contract_cases}, but cases prove {derived_contract_cases}"
-        ));
-    }
-    let declared_passing_cases = value
-        .get("cpu_sota_100x_passing_case_count")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(0);
-    if declared_passing_cases != derived_passing_cases {
-        blockers.push(format!(
-            "{evidence}: cpu_sota_100x_passing_case_count={declared_passing_cases}, but cases prove {derived_passing_cases}"
-        ));
-    }
-}
 
 #[cfg(test)]
 mod part13_tests {
@@ -770,7 +748,11 @@ mod part13_tests {
         });
         let mut blockers = Vec::new();
 
-        inspect_cpu_100x_aggregate_case_counts("cpu-only-100x-proof.json", &proof, &mut blockers);
+        crate::benchmark_evidence_semantics::inspect_cpu_sota_100x_case_count_consistency(
+            "cpu-only-100x-proof.json:",
+            &proof,
+            &mut blockers,
+        );
 
         assert!(
             blockers.iter().any(|blocker| blocker.contains(

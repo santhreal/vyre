@@ -38,7 +38,7 @@ impl ExplodedIfdsCpuScratch {
 /// Returns `(row_ptr, col_idx)` in the **dense** index space
 /// `idx(p, b, f) = p * blocks * facts + b * facts + f`. This is
 /// the space every traversal kernel operates in  -  packing via
-/// [`encode_node`] is only used at the I/O boundary when the
+/// [`crate::graph::exploded::encode_node`] is only used at the I/O boundary when the
 /// caller needs to report results as `(proc, block, fact)`
 /// triples. The two spaces coincide only in the degenerate case
 /// `blocks_per_proc == 1 << BLOCK_BITS` and `facts_per_proc == 1 << FACT_BITS`;

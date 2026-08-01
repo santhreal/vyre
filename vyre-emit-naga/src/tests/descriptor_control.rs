@@ -132,8 +132,9 @@ fn u64_carry_sensitive_binops_fail_closed_not_silently_componentwise() {
         BinOp::Gt,
         BinOp::Eq,
     ] {
-        let err = emit(&u64_binop_desc(binop))
-            .expect_err(&format!("{binop:?} on vec2<u32>-backed u64 must fail closed"));
+        let err = emit(&u64_binop_desc(binop)).expect_err(&format!(
+            "{binop:?} on vec2<u32>-backed u64 must fail closed"
+        ));
         let msg = format!("{err:?}");
         assert!(
             msg.contains("is not lowered") && msg.contains("carry"),
@@ -185,9 +186,11 @@ fn u64_bitwise_binops_emit_valid_componentwise_wgsl() {
             BinOp::BitXor => naga::BinaryOperator::ExclusiveOr,
             _ => unreachable!(),
         };
-        let has_op = entry.function.expressions.iter().any(|(_, e)| {
-            matches!(e, naga::Expression::Binary { op, .. } if *op == expected)
-        });
+        let has_op = entry
+            .function
+            .expressions
+            .iter()
+            .any(|(_, e)| matches!(e, naga::Expression::Binary { op, .. } if *op == expected));
         assert!(
             has_op,
             "{binop:?}: expected a Binary {expected:?} over the vec2<u32> backing"
@@ -378,9 +381,20 @@ fn signed_division_still_emits_single_divide() {
         .expressions;
     let divides = arena
         .iter()
-        .filter(|(_, e)| matches!(e, naga::Expression::Binary { op: naga::BinaryOperator::Divide, .. }))
+        .filter(|(_, e)| {
+            matches!(
+                e,
+                naga::Expression::Binary {
+                    op: naga::BinaryOperator::Divide,
+                    ..
+                }
+            )
+        })
         .count();
-    assert_eq!(divides, 1, "signed Div must emit exactly one naga Divide, found {divides}");
+    assert_eq!(
+        divides, 1,
+        "signed Div must emit exactly one naga Divide, found {divides}"
+    );
 }
 
 /// Load a U64 (vec2<u32>), cast to `target`, store to an `out_elem` buffer.
@@ -443,15 +457,17 @@ fn u64_to_u32_narrowing_cast_extracts_low_word_and_validates() {
     // Regression: a plain `As` on the vec2<u32> backing produced InvalidStoreTypes
     // (invalid WGSL). The fix takes the low word (lane 0), truncation matching
     // PTX cvt.u32.u64 and the reference's low-word narrowing.
-    let module = emit(&u64_narrow_cast_desc(DataType::U32, DataType::U32))
-        .expect("u64->u32 cast must emit");
+    let module =
+        emit(&u64_narrow_cast_desc(DataType::U32, DataType::U32)).expect("u64->u32 cast must emit");
     Validator::new(ValidationFlags::all(), Capabilities::all())
         .validate(&module)
         .unwrap_or_else(|e| panic!("u64->u32 cast: INVALID WGSL: {e:?}"));
     let entry = module.entry_points.first().expect("entry point");
-    let has_low_lane = entry.function.expressions.iter().any(|(_, e)| {
-        matches!(e, naga::Expression::AccessIndex { index: 0, .. })
-    });
+    let has_low_lane = entry
+        .function
+        .expressions
+        .iter()
+        .any(|(_, e)| matches!(e, naga::Expression::AccessIndex { index: 0, .. }));
     assert!(
         has_low_lane,
         "u64->u32 must extract the low word via AccessIndex(index: 0)"
@@ -461,8 +477,8 @@ fn u64_to_u32_narrowing_cast_extracts_low_word_and_validates() {
 #[test]
 fn u64_to_i32_narrowing_cast_validates() {
     use naga::valid::{Capabilities, ValidationFlags, Validator};
-    let module = emit(&u64_narrow_cast_desc(DataType::I32, DataType::I32))
-        .expect("u64->i32 cast must emit");
+    let module =
+        emit(&u64_narrow_cast_desc(DataType::I32, DataType::I32)).expect("u64->i32 cast must emit");
     Validator::new(ValidationFlags::all(), Capabilities::all())
         .validate(&module)
         .unwrap_or_else(|e| panic!("u64->i32 cast: INVALID WGSL: {e:?}"));
@@ -532,12 +548,17 @@ fn f32_to_u32_cast_emits_saturating_guard_and_validates() {
     // + ConvertFToU, which pins overflow to the largest *f32-representable* value
     // (4294967040, not u32::MAX) and leaves NaN SPIR-V-undefined. The emitter
     // rewrites it to `select((x==x), select((x>=2^32), u32::MAX, As(x)), 0u)`.
-    let module = emit(&f32_to_int_cast_desc(DataType::U32, DataType::U32))
-        .expect("f32->u32 cast must emit");
+    let module =
+        emit(&f32_to_int_cast_desc(DataType::U32, DataType::U32)).expect("f32->u32 cast must emit");
     Validator::new(ValidationFlags::all(), Capabilities::all())
         .validate(&module)
         .unwrap_or_else(|e| panic!("f32->u32 saturating cast: INVALID WGSL: {e:?}"));
-    let arena = &module.entry_points.first().expect("entry point").function.expressions;
+    let arena = &module
+        .entry_points
+        .first()
+        .expect("entry point")
+        .function
+        .expressions;
     let select_count = arena
         .iter()
         .filter(|(_, e)| matches!(e, naga::Expression::Select { .. }))
@@ -546,9 +567,9 @@ fn f32_to_u32_cast_emits_saturating_guard_and_validates() {
         select_count >= 2,
         "saturating f32->u32 must emit the nested NaN+overflow Selects, found {select_count}"
     );
-    let has_u32_max = arena.iter().any(|(_, e)| {
-        matches!(e, naga::Expression::Literal(naga::Literal::U32(u)) if *u == u32::MAX)
-    });
+    let has_u32_max = arena.iter().any(
+        |(_, e)| matches!(e, naga::Expression::Literal(naga::Literal::U32(u)) if *u == u32::MAX),
+    );
     assert!(
         has_u32_max,
         "saturating f32->u32 must materialize the u32::MAX overflow sentinel"
@@ -573,12 +594,17 @@ fn f32_to_u32_cast_emits_saturating_guard_and_validates() {
 #[test]
 fn f32_to_i32_cast_emits_saturating_guard_and_validates() {
     use naga::valid::{Capabilities, ValidationFlags, Validator};
-    let module = emit(&f32_to_int_cast_desc(DataType::I32, DataType::I32))
-        .expect("f32->i32 cast must emit");
+    let module =
+        emit(&f32_to_int_cast_desc(DataType::I32, DataType::I32)).expect("f32->i32 cast must emit");
     Validator::new(ValidationFlags::all(), Capabilities::all())
         .validate(&module)
         .unwrap_or_else(|e| panic!("f32->i32 saturating cast: INVALID WGSL: {e:?}"));
-    let arena = &module.entry_points.first().expect("entry point").function.expressions;
+    let arena = &module
+        .entry_points
+        .first()
+        .expect("entry point")
+        .function
+        .expressions;
     let select_count = arena
         .iter()
         .filter(|(_, e)| matches!(e, naga::Expression::Select { .. }))
@@ -587,9 +613,9 @@ fn f32_to_i32_cast_emits_saturating_guard_and_validates() {
         select_count >= 2,
         "saturating f32->i32 must emit the nested NaN+overflow Selects, found {select_count}"
     );
-    let has_i32_max = arena.iter().any(|(_, e)| {
-        matches!(e, naga::Expression::Literal(naga::Literal::I32(v)) if *v == i32::MAX)
-    });
+    let has_i32_max = arena.iter().any(
+        |(_, e)| matches!(e, naga::Expression::Literal(naga::Literal::I32(v)) if *v == i32::MAX),
+    );
     assert!(
         has_i32_max,
         "saturating f32->i32 must materialize the i32::MAX overflow sentinel"
@@ -649,8 +675,8 @@ fn u64_to_f32_cast_reconstructs_full_value_and_validates() {
     use naga::valid::{Capabilities, ValidationFlags, Validator};
     // u64->f32 must use BOTH words (low | high<<32) then convert, not just the
     // low word (so a ShiftLeft (the high<<32) and a float As must be present).
-    let module = emit(&u64_narrow_cast_desc(DataType::F32, DataType::F32))
-        .expect("u64->f32 cast must emit");
+    let module =
+        emit(&u64_narrow_cast_desc(DataType::F32, DataType::F32)).expect("u64->f32 cast must emit");
     Validator::new(ValidationFlags::all(), Capabilities::all())
         .validate(&module)
         .unwrap_or_else(|e| panic!("u64->f32 cast: INVALID WGSL: {e:?}"));
@@ -717,8 +743,12 @@ fn u64_to_bool_cast_uses_both_words_and_validates() {
 fn unsigned_narrowing_cast_masks_to_width_and_validates() {
     use naga::valid::{Capabilities, ValidationFlags, Validator};
     for (target, mask) in [(DataType::U8, 0xFFu32), (DataType::U16, 0xFFFFu32)] {
-        let module = emit(&wide_cast_desc(DataType::U32, target.clone(), DataType::U32))
-            .unwrap_or_else(|e| panic!("u32->{target:?} cast must emit: {e}"));
+        let module = emit(&wide_cast_desc(
+            DataType::U32,
+            target.clone(),
+            DataType::U32,
+        ))
+        .unwrap_or_else(|e| panic!("u32->{target:?} cast must emit: {e}"));
         Validator::new(ValidationFlags::all(), Capabilities::all())
             .validate(&module)
             .unwrap_or_else(|e| panic!("u32->{target:?} narrowing cast: INVALID WGSL: {e:?}"));
@@ -728,9 +758,9 @@ fn unsigned_narrowing_cast_masks_to_width_and_validates() {
             .expect("entry point")
             .function
             .expressions;
-        let has_mask_literal = arena.iter().any(|(_, e)| {
-            matches!(e, naga::Expression::Literal(naga::Literal::U32(m)) if *m == mask)
-        });
+        let has_mask_literal = arena.iter().any(
+            |(_, e)| matches!(e, naga::Expression::Literal(naga::Literal::U32(m)) if *m == mask),
+        );
         assert!(
             has_mask_literal,
             "u32->{target:?} must materialize the 0x{mask:X} width mask"
@@ -753,8 +783,12 @@ fn unsigned_narrowing_cast_masks_to_width_and_validates() {
 fn signed_narrowing_cast_sign_extends_and_validates() {
     use naga::valid::{Capabilities, ValidationFlags, Validator};
     for (target, shift) in [(DataType::I8, 24u32), (DataType::I16, 16u32)] {
-        let module = emit(&wide_cast_desc(DataType::U32, target.clone(), DataType::I32))
-            .unwrap_or_else(|e| panic!("u32->{target:?} cast must emit: {e}"));
+        let module = emit(&wide_cast_desc(
+            DataType::U32,
+            target.clone(),
+            DataType::I32,
+        ))
+        .unwrap_or_else(|e| panic!("u32->{target:?} cast must emit: {e}"));
         Validator::new(ValidationFlags::all(), Capabilities::all())
             .validate(&module)
             .unwrap_or_else(|e| panic!("u32->{target:?} narrowing cast: INVALID WGSL: {e:?}"));
@@ -764,13 +798,17 @@ fn signed_narrowing_cast_sign_extends_and_validates() {
             .expect("entry point")
             .function
             .expressions;
-        let has_shift_literal = arena.iter().any(|(_, e)| {
-            matches!(e, naga::Expression::Literal(naga::Literal::U32(s)) if *s == shift)
-        });
+        let has_shift_literal = arena.iter().any(
+            |(_, e)| matches!(e, naga::Expression::Literal(naga::Literal::U32(s)) if *s == shift),
+        );
         assert!(
             has_shift_literal,
             "i{} narrowing must materialize the shift amount {shift}",
-            if matches!(target, DataType::I8) { 8 } else { 16 }
+            if matches!(target, DataType::I8) {
+                8
+            } else {
+                16
+            }
         );
         let shift_left = arena.iter().any(|(_, e)| {
             matches!(e, naga::Expression::Binary { op, .. } if *op == naga::BinaryOperator::ShiftLeft)
@@ -1139,15 +1177,18 @@ fn unsigned_div_by_zero_is_guarded_to_oracle_max() {
         .unwrap_or_else(|e| panic!("guarded u32 Div: INVALID WGSL: {e:?}"));
     let entry = module.entry_points.first().expect("entry point");
     let arena = &entry.function.expressions;
-    let has_max_sentinel = arena.iter().any(|(_, e)| {
-        matches!(e, naga::Expression::Literal(naga::Literal::U32(v)) if *v == u32::MAX)
-    });
+    let has_max_sentinel = arena.iter().any(
+        |(_, e)| matches!(e, naga::Expression::Literal(naga::Literal::U32(v)) if *v == u32::MAX),
+    );
     assert!(
         has_max_sentinel,
         "Div-by-zero guard must materialize the u32::MAX oracle sentinel"
     );
     let select_over_zero_check = arena.iter().any(|(_, e)| {
-        if let naga::Expression::Select { condition, accept, .. } = e {
+        if let naga::Expression::Select {
+            condition, accept, ..
+        } = e
+        {
             let cond_is_eq_zero = matches!(
                 arena.try_get(*condition),
                 Ok(naga::Expression::Binary {
@@ -1871,4 +1912,66 @@ fn opaque_u64_literal_above_u32_max_emits_as_u64() {
         "vyre.literal.u64 must emit Literal::U64({value}) in the expression arena; \
          got a u32 narrowing or missing literal instead"
     );
+}
+
+/// Pins the emitted address space for both read-only binding classes.
+///
+/// This exists because a `patterns::push_constant_inline` module was removed
+/// from this crate after an audit found its premise was already false: it
+/// scored `MemoryClass::Constant` bindings as push-constant promotion
+/// candidates on the stated grounds that doing so "avoids a uniform binding"
+/// and that push-constant reads beat "uniform buffer reads". The naga emitter
+/// emits no uniform buffer for either read-only class, so there was no uniform
+/// read to avoid and the predicate could only ever have been acted on
+/// incorrectly.
+///
+/// Without this test that fact is invisible, and `address_space` in
+/// `emitter/setup.rs` even invites the change ("When the lowering grows a
+/// packed-vec4 uniform variant, swap this arm back to `AddressSpace::Uniform`").
+/// Whoever takes that invitation changes the emitted shader text for every
+/// `Uniform` and `Constant` binding in the workspace, and this test is what
+/// tells them so at that moment rather than downstream.
+#[test]
+fn uniform_and_constant_bindings_both_emit_read_only_storage_not_uniform() {
+    for (class, label) in [
+        (MemoryClass::Uniform, "Uniform"),
+        (MemoryClass::Constant, "Constant"),
+    ] {
+        let desc = KernelDescriptor {
+            id: "address_space".into(),
+            bindings: BindingLayout {
+                slots: vec![BindingSlot {
+                    slot: 0,
+                    element_type: DataType::U32,
+                    element_count: Some(1),
+                    memory_class: class,
+                    visibility: BindingVisibility::ReadOnly,
+                    name: "params".into(),
+                }],
+            },
+            dispatch: Dispatch::new(64, 1, 1),
+            body: KernelBody {
+                ops: vec![],
+                child_bodies: vec![],
+                literals: vec![],
+            },
+        };
+
+        let module = crate::emit(&desc).expect("Fix: single-binding descriptor must emit");
+        let spaces: Vec<naga::AddressSpace> = module
+            .global_variables
+            .iter()
+            .map(|(_, var)| var.space)
+            .collect();
+
+        assert_eq!(
+            spaces,
+            vec![naga::AddressSpace::Storage {
+                access: naga::StorageAccess::LOAD
+            }],
+            "MemoryClass::{label} must emit exactly one read-only storage global. \
+             Neither read-only class emits AddressSpace::Uniform, so no push-constant \
+             promotion can claim to be replacing a uniform buffer read."
+        );
+    }
 }

@@ -198,6 +198,37 @@ impl IfdsCsrRuleColumns {
     }
 }
 
+fn prepare_ifds_rule_columns(
+    columns: &mut [&mut Vec<u32>],
+    rule_count: usize,
+    context: &str,
+) -> Result<(), String> {
+    for column in columns {
+        column.clear();
+        crate::graph::scratch::reserve_graph_items(
+            column,
+            rule_count,
+            "exploded IFDS primitive",
+            context,
+        )?;
+    }
+    Ok(())
+}
+fn split_ifds_rules_into<const WIDTH: usize, Rule: Copy>(
+    rules: &[Rule],
+    mut columns: [&mut Vec<u32>; WIDTH],
+    fields: impl Fn(Rule) -> [u32; WIDTH],
+    context: &str,
+) -> Result<(), String> {
+    prepare_ifds_rule_columns(&mut columns, rules.len(), context)?;
+    for &rule in rules {
+        for (column, value) in columns.iter_mut().zip(fields(rule)) {
+            column.push(value);
+        }
+    }
+    Ok(())
+}
+
 /// Split IFDS triple rules into primitive-owned structure-of-arrays columns.
 ///
 /// This keeps the rule-column layout beside the dispatch plan so wrappers do
@@ -214,33 +245,12 @@ pub fn split_ifds_rule_triples_into(
     third: &mut Vec<u32>,
     context: &str,
 ) -> Result<(), String> {
-    first.clear();
-    second.clear();
-    third.clear();
-    crate::graph::scratch::reserve_graph_items(
-        first,
-        triples.len(),
-        "exploded IFDS primitive",
+    split_ifds_rules_into(
+        triples,
+        [first, second, third],
+        |(a, b, c)| [a, b, c],
         context,
-    )?;
-    crate::graph::scratch::reserve_graph_items(
-        second,
-        triples.len(),
-        "exploded IFDS primitive",
-        context,
-    )?;
-    crate::graph::scratch::reserve_graph_items(
-        third,
-        triples.len(),
-        "exploded IFDS primitive",
-        context,
-    )?;
-    for &(a, b, c) in triples {
-        first.push(a);
-        second.push(b);
-        third.push(c);
-    }
-    Ok(())
+    )
 }
 
 /// Split IFDS quadruple rules into primitive-owned structure-of-arrays columns.
@@ -257,39 +267,10 @@ pub fn split_ifds_rule_quads_into(
     fourth: &mut Vec<u32>,
     context: &str,
 ) -> Result<(), String> {
-    first.clear();
-    second.clear();
-    third.clear();
-    fourth.clear();
-    crate::graph::scratch::reserve_graph_items(
-        first,
-        quads.len(),
-        "exploded IFDS primitive",
+    split_ifds_rules_into(
+        quads,
+        [first, second, third, fourth],
+        |(a, b, c, d)| [a, b, c, d],
         context,
-    )?;
-    crate::graph::scratch::reserve_graph_items(
-        second,
-        quads.len(),
-        "exploded IFDS primitive",
-        context,
-    )?;
-    crate::graph::scratch::reserve_graph_items(
-        third,
-        quads.len(),
-        "exploded IFDS primitive",
-        context,
-    )?;
-    crate::graph::scratch::reserve_graph_items(
-        fourth,
-        quads.len(),
-        "exploded IFDS primitive",
-        context,
-    )?;
-    for &(a, b, c, d) in quads {
-        first.push(a);
-        second.push(b);
-        third.push(c);
-        fourth.push(d);
-    }
-    Ok(())
+    )
 }

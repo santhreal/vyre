@@ -62,6 +62,8 @@ pub use automata_worklist::{
     AutomataWorklistRecommendation, AutomataWorklistRequest,
     AUTOMATA_WORKLIST_EVIDENCE_SCHEMA_VERSION,
 };
+#[cfg(any(test, feature = "legacy-infallible"))]
+pub use builder::build_program_with_self_loading_miss_handler;
 pub use builder::{
     build_program, build_program_jit, build_program_jit_slots, build_program_priority,
     build_program_priority_slots, build_program_sharded, build_program_sharded_no_io,
@@ -72,8 +74,6 @@ pub use builder::{
     persistent_body_priority, persistent_body_priority_slots,
     try_build_program_with_self_loading_miss_handler,
 };
-#[cfg(any(test, feature = "legacy-infallible"))]
-pub use builder::build_program_with_self_loading_miss_handler;
 pub use descriptor::{
     BatchDescriptor, BuiltinOpcode, PackedOpDescriptor, SlotDescriptor, SlotOpcode, WindowClass,
     WindowDescriptor,
@@ -97,15 +97,15 @@ pub use planner::{
 };
 pub use planner::{
     build_scallop_lineage_with_program_and_scratch, default_worker_groups_from_limits,
-    dispatch_grid_for, padded_slot_count, plan_compact_fusion_into,
-    select_fused_subset, select_fused_subset_compact, select_fused_subset_compact_into,
-    select_fused_subset_into, select_fused_subset_with_rate, select_optimal_fused_subset,
-    try_detect_cross_arm_redundancy, try_prune_redundant_work_items_into,
-    try_prune_redundant_work_items_with_scratch_into, worker_workgroup_size,
-    CompactFusionPlanningScratch, CrossArmRedundancy, FusionSelectionScratch, MegakernelCaps,
-    MegakernelConfig, MegakernelGridLimits, MegakernelGridPlan, MegakernelGridRequest,
-    MegakernelLaunchGeometry, MegakernelReport, MegakernelSizingPolicy, MegakernelTelemetry,
-    MegakernelWorkItem, MegakernelWorkloadHints, RedundantWorkItemPruneScratch,
+    dispatch_grid_for, padded_slot_count, plan_compact_fusion_into, select_fused_subset,
+    select_fused_subset_compact, select_fused_subset_compact_into, select_fused_subset_into,
+    select_fused_subset_with_rate, select_optimal_fused_subset, try_detect_cross_arm_redundancy,
+    try_prune_redundant_work_items_into, try_prune_redundant_work_items_with_scratch_into,
+    worker_workgroup_size, CompactFusionPlanningScratch, CrossArmRedundancy,
+    FusionSelectionScratch, MegakernelCaps, MegakernelConfig, MegakernelGridLimits,
+    MegakernelGridPlan, MegakernelGridRequest, MegakernelLaunchGeometry, MegakernelReport,
+    MegakernelSizingPolicy, MegakernelTelemetry, MegakernelWorkItem, MegakernelWorkloadHints,
+    RedundantWorkItemPruneScratch,
 };
 #[cfg(any(test, feature = "legacy-infallible"))]
 pub use planner::{prune_redundant_work_items_into, prune_redundant_work_items_with_scratch_into};
@@ -117,8 +117,9 @@ pub use policy::{
     MegakernelLaunchCacheStats, MegakernelLaunchPolicy, MegakernelLaunchRecommendation,
     MegakernelLaunchRequest, MegakernelPromotionEvidence, MegakernelPromotionRoute,
     MegakernelQueuePressure, MegakernelTopologyEvidence, PriorityDrainReason,
-    PriorityDrainRecommendation, PriorityRequeueAccounting, HOT_WINDOW_PROMOTION_EVIDENCE_SCHEMA_VERSION,
-    PRIORITY_COUNTER_DRAIN_FIX, PRIORITY_COUNTER_DRAIN_HEADROOM, TOPOLOGY_EVIDENCE_SCHEMA_VERSION,
+    PriorityDrainRecommendation, PriorityRequeueAccounting,
+    HOT_WINDOW_PROMOTION_EVIDENCE_SCHEMA_VERSION, PRIORITY_COUNTER_DRAIN_FIX,
+    PRIORITY_COUNTER_DRAIN_HEADROOM, TOPOLOGY_EVIDENCE_SCHEMA_VERSION,
 };
 pub use protocol::{
     control, control_byte_len, count_done_ring_slots, debug, debug_log_byte_len, encode_control,
@@ -132,11 +133,6 @@ pub use protocol::{
 };
 pub use protocol_api::RingSlotTransition;
 pub use readback::{MegakernelReadback, MegakernelReadbackCounters};
-pub use telemetry::{
-    MegakernelRuntimeEvidence, RuntimeEvidenceMetricCoverage, RuntimeEvidenceMetricFamily,
-    TelemetryDecodeCapacityEvidence, TelemetryDecodeScratch, RUNTIME_IO_EVIDENCE_SCHEMA_VERSION,
-    TELEMETRY_DECODE_CAPACITY_SCHEMA_VERSION,
-};
 pub use recovery::{
     backend_error_indicates_device_loss, MegakernelRecoveryDecision, MegakernelRecoveryPolicy,
 };
@@ -153,6 +149,11 @@ pub use task::{TaskPriority, TaskQueueSnapshot, TaskState, TaskWorkItem};
 pub use telemetry::{
     ControlSnapshot, CountMinSketch, MegakernelRuntimeCounters, RingOccupancy, RingSlotSnapshot,
     RingStatus, RingTelemetry, SketchTelemetry, WindowTelemetry,
+};
+pub use telemetry::{
+    MegakernelRuntimeEvidence, RuntimeEvidenceMetricCoverage, RuntimeEvidenceMetricFamily,
+    TelemetryDecodeCapacityEvidence, TelemetryDecodeScratch, RUNTIME_IO_EVIDENCE_SCHEMA_VERSION,
+    TELEMETRY_DECODE_CAPACITY_SCHEMA_VERSION,
 };
 pub use workspace_adapter::MegakernelWorkspaceAdapter;
 pub use workspace_layout::{

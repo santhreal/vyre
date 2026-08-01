@@ -188,18 +188,11 @@ pub fn try_sinkhorn_iter_cpu_into(
     Ok(())
 }
 
-#[cfg(any(test, feature = "cpu-parity"))]
-fn reserve_sinkhorn_tmp(out: &mut Vec<f64>, len: usize, name: &str) -> Result<(), String> {
-    if len > out.capacity() {
-        crate::graph::scratch::reserve_graph_items(
-            out,
-            len - out.len(),
-            "Sinkhorn CPU oracle",
-            name,
-        )?;
-    }
-    Ok(())
-}
+crate::graph::scratch::define_reserve_graph_capacity!(
+    reserve_sinkhorn_tmp,
+    f64,
+    "Sinkhorn CPU oracle"
+);
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {

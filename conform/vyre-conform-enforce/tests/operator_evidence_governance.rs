@@ -14,7 +14,10 @@ fn operator_evidence_primary_sources_are_in_the_research_ledger() {
         "W3C_TRACE_CONTEXT",
         "OPENMETRICS_PROMETHEUS",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 

@@ -81,14 +81,63 @@ fn regex_class_compiles_to_nfa() {
     assert_eq!(compiled.plan.accept_states.len(), 1);
 }
 
+/// Text anchors compile, and the anchor reaches the plan as a flag.
+///
+/// This test used to assert the opposite: that `^foo` was rejected with
+/// `RegexCompileError::Unsupported`. Anchors are supported now. The compiler
+/// records `^` and `$` per accept state and the NFA scan program guards the
+/// accept on `start == 0` / `cursor + 1 == haystack_len`, so accepting the
+/// pattern is a capability, not a silent widening of `^foo` into `foo`.
+///
+/// The distinction is the whole point of the assertions below. Compiling
+/// without error while dropping the anchor would match `xfoo`, which is worse
+/// than the old refusal, so the flag is checked rather than just the `Ok`.
 #[cfg(feature = "matching-regex")]
 #[test]
-fn regex_anchor_rejected() {
-    let err = vyre_libs::scan::compile_regex_set(&["^foo"]).unwrap_err();
-    assert!(matches!(
-        err,
-        vyre_libs::scan::RegexCompileError::Unsupported { .. }
-    ));
+fn regex_start_anchor_compiles_and_is_recorded_on_the_accept_state() {
+    let compiled = vyre_libs::scan::compile_regex_set(&["^foo"]).expect("^foo must compile");
+    assert_eq!(
+        compiled.plan.accept_start_anchored,
+        vec![true],
+        "the start anchor must survive into the plan, not be dropped"
+    );
+    assert_eq!(
+        compiled.plan.accept_end_anchored,
+        vec![false],
+        "^foo is not end-anchored"
+    );
+}
+
+/// An unanchored pattern carries no anchor flag.
+///
+/// The negative twin. Without it, a compiler that marked every accept state
+/// anchored would pass the test above while refusing to match anything that
+/// does not start at offset zero.
+#[cfg(feature = "matching-regex")]
+#[test]
+fn an_unanchored_pattern_records_no_anchor() {
+    let compiled = vyre_libs::scan::compile_regex_set(&["foo"]).expect("foo must compile");
+    assert_eq!(compiled.plan.accept_start_anchored, vec![false]);
+    assert_eq!(compiled.plan.accept_end_anchored, vec![false]);
+}
+
+/// Anchors are tracked per accept state, not per pattern set.
+///
+/// A set mixing anchored and unanchored patterns is the case where a
+/// whole-set flag would be wrong for at least one member.
+#[cfg(feature = "matching-regex")]
+#[test]
+fn anchors_are_tracked_per_pattern_within_one_set() {
+    let compiled = vyre_libs::scan::compile_regex_set(&["foo", "^bar", "baz$", "^qux$"])
+        .expect("a mixed anchored set must compile");
+    assert_eq!(
+        compiled.plan.accept_start_anchored,
+        vec![false, true, false, true]
+    );
+    assert_eq!(
+        compiled.plan.accept_end_anchored,
+        vec![false, false, true, true]
+    );
 }
 
 #[test]
@@ -111,29 +160,70 @@ fn match_engine_cache_key_changes_with_patterns() {
     assert_ne!(MatchScan::cache_key(&a), MatchScan::cache_key(&b));
 }
 
+/// The cache key is the same string in every process, for the same patterns.
+///
+/// This locks the on-disk cache contract: a key produced by one run must name
+/// the file a later run looks for. What it is really guarding against is a
+/// move to a randomized hasher (`std::DefaultHasher` seeds SipHash per
+/// process), which would silently invalidate every user's cache on every run
+/// while every single-process test still passed.
+///
+/// It used to assert against a hand-rolled FNV-1a over the pattern tables,
+/// a third copy of an encoding that already lived in two places. That copy had
+/// drifted: it omitted the case-insensitive word the real hash folds in, so it
+/// computed a digest the code never produces and the test sat red. The
+/// encoding now has one owner (`GpuLiteralSet::pattern_fingerprint`), and this
+/// test asserts the PROPERTIES a cache key must have rather than restating how
+/// it is built.
 #[test]
 fn cache_key_is_deterministic_constant() {
-    // Locks the on-disk wire contract: the cache_key for a known
-    // pattern set MUST equal the same FNV-1a digest every time, in
-    // every process. Catches accidental moves to a randomized hash
-    // (e.g. std::DefaultHasher) that would silently invalidate every
-    // user's cache between runs.
     use vyre_libs::scan::{GpuLiteralSet, MatchScan};
-    let engine = GpuLiteralSet::compile(&[b"AKIA".as_slice(), b"ghp_".as_slice()]);
-    let key = MatchScan::cache_key(&engine);
-    // Compute the same FNV-1a manually to assert the value is stable.
-    let mut buf = Vec::new();
-    for w in &engine.pattern_offsets {
-        buf.extend_from_slice(&w.to_le_bytes());
+
+    let patterns: &[&[u8]] = &[b"AKIA".as_slice(), b"ghp_".as_slice()];
+    let key = MatchScan::cache_key(&GpuLiteralSet::compile(patterns));
+
+    // Recompiling the same patterns, in the same order, reproduces the key.
+    // A per-process seed would break here.
+    for attempt in 0..4 {
+        assert_eq!(
+            MatchScan::cache_key(&GpuLiteralSet::compile(patterns)),
+            key,
+            "attempt {attempt}: the cache key must not vary between compiles"
+        );
     }
-    for w in &engine.pattern_lengths {
-        buf.extend_from_slice(&w.to_le_bytes());
-    }
-    for w in &engine.pattern_bytes {
-        buf.extend_from_slice(&w.to_le_bytes());
-    }
-    let expected = format!("lit-{:016x}", vyre_primitives::hash::fnv1a::fnv1a64(&buf));
-    assert_eq!(key, expected);
+
+    // The shape is a filename component: a fixed prefix and 16 lower-hex
+    // digits, zero-padded, so a small digest cannot produce a shorter name
+    // that another digest could also produce.
+    let digits = key
+        .strip_prefix("lit-")
+        .unwrap_or_else(|| panic!("a literal-set key is prefixed lit-, got {key}"));
+    assert_eq!(
+        digits.len(),
+        16,
+        "key must be zero-padded to 16 digits: {key}"
+    );
+    assert!(
+        digits
+            .chars()
+            .all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c)),
+        "key digits must be lower-case hex: {key}"
+    );
+
+    // Distinct inputs take distinct keys, including the case-insensitivity
+    // flag: a ci matcher builds different prefilter masks from the same
+    // bytes, so sharing a key would let it load the wrong cached tables.
+    let reordered: &[&[u8]] = &[b"ghp_".as_slice(), b"AKIA".as_slice()];
+    assert_ne!(
+        MatchScan::cache_key(&GpuLiteralSet::compile(reordered)),
+        key,
+        "pattern order is part of the identity"
+    );
+    assert_ne!(
+        MatchScan::cache_key(&GpuLiteralSet::compile_case_insensitive(patterns)),
+        key,
+        "case-insensitivity is part of the identity"
+    );
 }
 
 #[test]

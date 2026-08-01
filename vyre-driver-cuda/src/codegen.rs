@@ -69,9 +69,10 @@ pub fn program_to_ptx_for_sm_and_subgroup(
             ulp_budget: config.ulp_budget.map(u32::from),
             // CUDA lowers GridSync to a native cooperative grid barrier. This is
             // safe because every grid-sync program CUDA emits PTX for is launched
-            // cooperatively: the dispatch path forces `cuLaunchCooperativeKernel`
-            // and zeroes the barrier counter per launch, while the AOT
-            // compile_native path rejects grid-sync before reaching codegen.
+            // cooperatively: every prepare entrypoint forces
+            // `cuLaunchCooperativeKernel` for a program that still carries
+            // GridSync, and every launch site zeroes the module-scope
+            // `_vyre_grid_barrier` counter on the launch stream first.
             cooperative_grid_sync: true,
         },
     )

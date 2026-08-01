@@ -109,8 +109,8 @@ fn gpu_compress(backend: &WgpuBackend, input: &[u8]) -> [u32; 8] {
 }
 
 fn run_case(input: &[u8], label: &str) {
-    let backend = WgpuBackend::acquire()
-        .expect("Fix: BLAKE3 GPU parity requires a live GPU backend.");
+    let backend =
+        WgpuBackend::acquire().expect("Fix: BLAKE3 GPU parity requires a live GPU backend.");
     let gpu = gpu_compress(&backend, input);
     let expected = reference_hash_words(input);
     assert_ne!(expected, [0u32; 8], "blake3 reference produced all zeros");
@@ -140,9 +140,12 @@ fn blake3_full_64_byte_block_matches_crate_on_gpu() {
 
 #[test]
 fn blake3_gpu_is_deterministic_across_runs() {
-    let backend = WgpuBackend::acquire()
-        .expect("Fix: BLAKE3 GPU parity requires a live GPU backend.");
+    let backend =
+        WgpuBackend::acquire().expect("Fix: BLAKE3 GPU parity requires a live GPU backend.");
     let a = gpu_compress(&backend, b"abc");
     let b = gpu_compress(&backend, b"abc");
-    assert_eq!(a, b, "BLAKE3 GPU compression of 'abc' must be deterministic");
+    assert_eq!(
+        a, b,
+        "BLAKE3 GPU compression of 'abc' must be deterministic"
+    );
 }

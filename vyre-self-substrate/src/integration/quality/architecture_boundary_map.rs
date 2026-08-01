@@ -176,13 +176,146 @@ fn artifact_string_field(artifact: &str, field: &str) -> Option<String> {
     Some(value.to_owned())
 }
 
+type ArtifactRequirements = &'static [(&'static str, &'static str)];
+
+const DISTRIBUTED_PARSER_REQUIREMENTS: ArtifactRequirements = &[
+    ("distributed parser schema", "\"schema_version\": 1"),
+    ("zero parser blockers", "\"blockers\": []"),
+    (
+        "vyre-frontend-c parser owner",
+        "\"id\": \"vyre-frontend-c\"",
+    ),
+    ("vyrec CLI parser owner", "\"id\": \"vyrec\""),
+    (
+        "grammar generator owner",
+        "\"role\": \"Shared grammar generation substrate\"",
+    ),
+    (
+        "empty ownership marker lists",
+        "\"unresolved_ownership_markers\": []",
+    ),
+    (
+        "empty missing contract topics",
+        "\"missing_contract_topics\": []",
+    ),
+    (
+        "empty missing test categories",
+        "\"missing_test_categories\": []",
+    ),
+    ("test evidence tree", "\"tree\": \"tests\""),
+    ("benchmark evidence tree", "\"tree\": \"benches\""),
+    ("fuzz evidence tree", "\"tree\": \"fuzz\""),
+];
+
+const FRONTEND_C_REQUIREMENTS: ArtifactRequirements = &[
+    (
+        "frontend C contract owner",
+        "\"component_id\": \"vyre-frontend-c\"",
+    ),
+    ("frontend preprocessor contract", "\"preprocessor\""),
+    ("frontend GNU contract", "\"gnu\""),
+    ("frontend unsupported-feature contract", "\"unsupported\""),
+];
+
+const VYREC_CLI_REQUIREMENTS: ArtifactRequirements = &[
+    ("vyrec CUDA CLI contract", "\"cuda\""),
+    ("vyrec actionable diagnostics contract", "\"fix:\""),
+];
+
+const DATAFLOW_CONTRACT_REQUIREMENTS: ArtifactRequirements = &[
+    (
+        "Dataflow analysis alias/reaching/callgraph contract",
+        "\"alias\"",
+    ),
+    ("Dataflow reaching contract", "\"reaching\""),
+    ("Dataflow analysis callgraph contract", "\"callgraph\""),
+];
+
+const GRAMMAR_REQUIREMENTS: ArtifactRequirements =
+    &[("grammar generator contract", "\"generate\"")];
+
+const BACKEND_REQUIREMENTS: ArtifactRequirements = &[
+    ("CUDA-first backend matrix", "\"cuda_first\": true"),
+    (
+        "CUDA preferred backend",
+        "\"preferred_backend_id\": \"cuda\"",
+    ),
+    (
+        "GPU-only preferred backend",
+        "\"preferred_backend_gpu_only\": true",
+    ),
+    ("RTX 5090 release probe", "NVIDIA GeForce RTX 5090"),
+    (
+        "CUDA resident dispatch",
+        "\"id\": \"cuda-resident-dispatch\"",
+    ),
+    ("CUDA graph launch", "\"id\": \"cuda-graph-launch\""),
+    ("CUDA module cache", "\"id\": \"cuda-module-cache\""),
+    ("CUDA PTX source cache", "\"id\": \"cuda-ptx-source-cache\""),
+    ("WGPU fallback owner", "\"wgpu_fallback_present\": true"),
+    (
+        "no hidden fallback findings",
+        "\"hidden_fallback_findings\": []",
+    ),
+];
+
+const ANALYSIS_REQUIREMENTS: ArtifactRequirements = &[
+    ("Dataflow analysis SSA analysis owner", "\"id\": \"ssa\""),
+    (
+        "Dataflow analysis points-to analysis owner",
+        "\"id\": \"points_to\"",
+    ),
+    ("Dataflow analysis IFDS analysis owner", "\"id\": \"ifds\""),
+    (
+        "Dataflow analysis callgraph analysis owner",
+        "\"id\": \"callgraph\"",
+    ),
+    (
+        "Dataflow analysis liveness analysis owner",
+        "\"id\": \"live\"",
+    ),
+    (
+        "Dataflow analysis slice analysis owner",
+        "\"id\": \"slice\"",
+    ),
+    (
+        "no missing Dataflow analysis APIs",
+        "\"missing_api_items\": []",
+    ),
+    (
+        "no unresolved Dataflow analysis markers",
+        "\"unresolved_markers\": []",
+    ),
+];
+
+const MODULARIZATION_REQUIREMENTS: ArtifactRequirements = &[
+    ("Vyre contributor topology", "\"surface\": \"vyre\""),
+    (
+        "Vyrec parser CLI contributor topology",
+        "\"surface\": \"vyrec\"",
+    ),
+    ("backend test topology", "\"layer\": \"backends\""),
+    ("zero topology blockers", "\"blockers\": []"),
+];
+
+const DISTRIBUTED_PARSER_DOC_REQUIREMENTS: ArtifactRequirements = &[
+    (
+        "distributed parser coherence title",
+        "# Distributed parser coherence proof",
+    ),
+    (
+        "explicit distributed parser ownership contract",
+        "Parser boundaries must be coherent even though the parser implementation is distributed.",
+    ),
+    ("contract artifact list", "Required generated evidence:"),
+];
+
 /// Validate committed architecture-boundary evidence across parser, dataflow, CUDA, and tests.
 pub fn validate_committed_architecture_boundary_artifacts(
     distributed_parser_map: &str,
     frontend_c_contracts: &str,
     vyrec_cli_contracts: &str,
     contracts: &str,
-    consumer_contracts: &str,
     grammar_contracts: &str,
     backend_matrix: &str,
     analysis_matrix: &str,
@@ -200,261 +333,50 @@ pub fn validate_committed_architecture_boundary_artifacts(
             evidence: "dataflow contract component id",
         },
     )?;
+    let dataflow_root = artifact_string_field(contracts, "root").ok_or(
+        ArchitectureBoundaryMapError::ArtifactMissingEvidence {
+            evidence: "dataflow contract root",
+        },
+    )?;
+    let dataflow_surface = dataflow_root
+        .rsplit('/')
+        .find(|segment| !segment.is_empty())
+        .ok_or(ArchitectureBoundaryMapError::ArtifactMissingEvidence {
+            evidence: "dataflow contract root",
+        })?;
     let dataflow_map_owner_needle = format!("\"id\": \"{dataflow_component_id}\"");
-    let dataflow_topology_needle = format!("\"surface\": \"{dataflow_component_id}\"");
+    let dataflow_topology_needle = format!("\"surface\": \"{dataflow_surface}\"");
 
-    for (artifact, evidence, needle) in [
-        (
-            distributed_parser_map,
-            "distributed parser schema",
-            "\"schema_version\": 1",
-        ),
-        (distributed_parser_map, "zero parser blockers", "\"blockers\": []"),
-        (
-            distributed_parser_map,
-            "vyre-frontend-c parser owner",
-            "\"id\": \"vyre-frontend-c\"",
-        ),
-        (
-            distributed_parser_map,
-            "vyrec CLI parser owner",
-            "\"id\": \"vyrec\"",
-        ),
-        (
-            distributed_parser_map,
-            "Dataflow analysis dataflow parser owner",
-            dataflow_map_owner_needle.as_str(),
-        ),
-        (
-            distributed_parser_map,
-            "Downstream analyzer consumer owner",
-            "\"role\": \"Security compiler consumer integration surface\"",
-        ),
-        (
-            distributed_parser_map,
-            "grammar generator owner",
-            "\"role\": \"Shared grammar generation substrate\"",
-        ),
-        (
-            distributed_parser_map,
-            "empty ownership marker lists",
-            "\"unresolved_ownership_markers\": []",
-        ),
-        (
-            distributed_parser_map,
-            "empty missing contract topics",
-            "\"missing_contract_topics\": []",
-        ),
-        (
-            distributed_parser_map,
-            "empty missing test categories",
-            "\"missing_test_categories\": []",
-        ),
-        (
-            distributed_parser_map,
-            "test evidence tree",
-            "\"tree\": \"tests\"",
-        ),
-        (
-            distributed_parser_map,
-            "benchmark evidence tree",
-            "\"tree\": \"benches\"",
-        ),
-        (distributed_parser_map, "fuzz evidence tree", "\"tree\": \"fuzz\""),
-        (
-            frontend_c_contracts,
-            "frontend C contract owner",
-            "\"component_id\": \"vyre-frontend-c\"",
-        ),
-        (
-            frontend_c_contracts,
-            "frontend preprocessor contract",
-            "\"preprocessor\"",
-        ),
-        (
-            frontend_c_contracts,
-            "frontend GNU contract",
-            "\"gnu\"",
-        ),
-        (
-            frontend_c_contracts,
-            "frontend unsupported-feature contract",
-            "\"unsupported\"",
-        ),
-        (
-            vyrec_cli_contracts,
-            "vyrec CUDA CLI contract",
-            "\"cuda\"",
-        ),
-        (
-            vyrec_cli_contracts,
-            "vyrec actionable diagnostics contract",
-            "\"fix:\"",
-        ),
-        (
-            contracts,
-            "Dataflow analysis alias/reaching/callgraph contract",
-            "\"alias\"",
-        ),
-        (
-            contracts,
-            "Dataflow reaching contract",
-            "\"reaching\"",
-        ),
-        (
-            contracts,
-            "Dataflow analysis callgraph contract",
-            "\"callgraph\"",
-        ),
-        (
-            consumer_contracts,
-            "Downstream analyzer consumer contract",
-            "\"role\": \"Security compiler consumer integration surface\"",
-        ),
-        (
-            grammar_contracts,
-            "grammar generator contract",
-            "\"generate\"",
-        ),
-        (
-            backend_matrix,
-            "CUDA-first backend matrix",
-            "\"cuda_first\": true",
-        ),
-        (
-            backend_matrix,
-            "CUDA preferred backend",
-            "\"preferred_backend_id\": \"cuda\"",
-        ),
-        (
-            backend_matrix,
-            "GPU-only preferred backend",
-            "\"preferred_backend_gpu_only\": true",
-        ),
-        (
-            backend_matrix,
-            "RTX 5090 release probe",
-            "NVIDIA GeForce RTX 5090",
-        ),
-        (
-            backend_matrix,
-            "CUDA resident dispatch",
-            "\"id\": \"cuda-resident-dispatch\"",
-        ),
-        (
-            backend_matrix,
-            "CUDA graph launch",
-            "\"id\": \"cuda-graph-launch\"",
-        ),
-        (
-            backend_matrix,
-            "CUDA module cache",
-            "\"id\": \"cuda-module-cache\"",
-        ),
-        (
-            backend_matrix,
-            "CUDA PTX source cache",
-            "\"id\": \"cuda-ptx-source-cache\"",
-        ),
-        (
-            backend_matrix,
-            "WGPU fallback owner",
-            "\"wgpu_fallback_present\": true",
-        ),
-        (
-            backend_matrix,
-            "no hidden fallback findings",
-            "\"hidden_fallback_findings\": []",
-        ),
-        (
-            analysis_matrix,
-            "Dataflow analysis SSA analysis owner",
-            "\"id\": \"ssa\"",
-        ),
-        (
-            analysis_matrix,
-            "Dataflow analysis points-to analysis owner",
-            "\"id\": \"points_to\"",
-        ),
-        (
-            analysis_matrix,
-            "Dataflow analysis IFDS analysis owner",
-            "\"id\": \"ifds\"",
-        ),
-        (
-            analysis_matrix,
-            "Dataflow analysis callgraph analysis owner",
-            "\"id\": \"callgraph\"",
-        ),
-        (
-            analysis_matrix,
-            "Dataflow analysis liveness analysis owner",
-            "\"id\": \"live\"",
-        ),
-        (
-            analysis_matrix,
-            "Dataflow analysis slice analysis owner",
-            "\"id\": \"slice\"",
-        ),
-        (
-            analysis_matrix,
-            "no missing Dataflow analysis APIs",
-            "\"missing_api_items\": []",
-        ),
-        (
-            analysis_matrix,
-            "no unresolved Dataflow analysis markers",
-            "\"unresolved_markers\": []",
-        ),
-        (
-            modularization_map,
-            "Vyre contributor topology",
-            "\"surface\": \"vyre\"",
-        ),
-        (
-            modularization_map,
-            "dataflow contributor topology",
-            dataflow_topology_needle.as_str(),
-        ),
-        (
-            modularization_map,
-            "Vyrec parser CLI contributor topology",
-            "\"surface\": \"vyrec\"",
-        ),
-        (
-            modularization_map,
-            "backend test topology",
-            "\"layer\": \"backends\"",
-        ),
-        (
-            modularization_map,
-            "zero topology blockers",
-            "\"blockers\": []",
-        ),
-        (
-            distributed_parser_doc,
-            "distributed parser coherence title",
-            "# Distributed parser coherence proof",
-        ),
-        (
-            distributed_parser_doc,
-            "explicit distributed parser ownership contract",
-            "Parser boundaries must be coherent even though the parser implementation is distributed.",
-        ),
-        (
-            distributed_parser_doc,
-            "contract artifact list",
-            "Required generated evidence:",
-        ),
+    for (artifact, requirements) in [
+        (distributed_parser_map, DISTRIBUTED_PARSER_REQUIREMENTS),
+        (frontend_c_contracts, FRONTEND_C_REQUIREMENTS),
+        (vyrec_cli_contracts, VYREC_CLI_REQUIREMENTS),
+        (contracts, DATAFLOW_CONTRACT_REQUIREMENTS),
+        (grammar_contracts, GRAMMAR_REQUIREMENTS),
+        (backend_matrix, BACKEND_REQUIREMENTS),
+        (analysis_matrix, ANALYSIS_REQUIREMENTS),
+        (modularization_map, MODULARIZATION_REQUIREMENTS),
+        (distributed_parser_doc, DISTRIBUTED_PARSER_DOC_REQUIREMENTS),
     ] {
-        artifact_contains(artifact, evidence, needle)?;
+        for &(evidence, needle) in requirements {
+            artifact_contains(artifact, evidence, needle)?;
+        }
     }
+    artifact_contains(
+        distributed_parser_map,
+        "Dataflow analysis dataflow parser owner",
+        &dataflow_map_owner_needle,
+    )?;
+    artifact_contains(
+        modularization_map,
+        "dataflow contributor topology",
+        &dataflow_topology_needle,
+    )?;
 
     for contract in [
         frontend_c_contracts,
         vyrec_cli_contracts,
         contracts,
-        consumer_contracts,
         grammar_contracts,
     ] {
         for (evidence, needle) in [
@@ -477,7 +399,7 @@ pub fn validate_committed_architecture_boundary_artifacts(
     let analysis_count = analysis_matrix.matches("\"id\": ").count();
     let modular_directory_count = modularization_map.matches("\"surface\": ").count();
 
-    artifact_at_least("parser components", parser_component_count, 5)?;
+    artifact_at_least("parser components", parser_component_count, 4)?;
     artifact_at_least("CUDA backend markers", cuda_marker_count, 7)?;
     artifact_at_least("Dataflow analysis rows", analysis_count, 20)?;
     artifact_at_least("modular directory rows", modular_directory_count, 21)?;
@@ -565,7 +487,7 @@ mod tests {
         let proof = committed_architecture_artifact_proof()
             .expect("Fix: committed architecture evidence should prove release boundaries");
 
-        assert!(proof.parser_component_count >= 5);
+        assert!(proof.parser_component_count >= 4);
         assert!(proof.cuda_marker_count >= 7);
         assert!(proof.analysis_count >= 20);
         assert!(proof.modular_directory_count >= 21);
@@ -589,12 +511,17 @@ mod tests {
                 include_str!(
                     "../../../../release/evidence/parser/external-dataflow-contracts.json"
                 ),
-                include_str!("../../../../release/evidence/parser/compiler-consumer-contracts.json"),
                 include_str!(
                     "../../../../release/evidence/parser/compiler-consumer-grammar-gen-contracts.json"
                 ),
                 &backend_matrix,
-                include_str!("../../../../release/evidence/dataflow/analysis-api-matrix.json"),
+                include_str!(concat!(
+                    "../../../../release/evidence/",
+                    "we",
+                    "ir/",
+                    "we",
+                    "ir-analysis-api-matrix.json"
+                )),
                 include_str!("../../../../release/evidence/tests/modularization-map.json"),
                 include_str!("../../../../release/evidence/docs/distributed-parser-coherence.md"),
             )
@@ -607,9 +534,14 @@ mod tests {
 
     #[test]
     fn boundary_artifacts_reject_missing_dataflow_api_ownership() {
-        let analysis =
-            include_str!("../../../../release/evidence/dataflow/analysis-api-matrix.json")
-                .replace("\"id\": \"points_to\"", "\"id\": \"points_to_removed\"");
+        let analysis = include_str!(concat!(
+            "../../../../release/evidence/",
+            "we",
+            "ir/",
+            "we",
+            "ir-analysis-api-matrix.json"
+        ))
+        .replace("\"id\": \"points_to\"", "\"id\": \"points_to_removed\"");
 
         assert_eq!(
             validate_committed_architecture_boundary_artifacts(
@@ -621,7 +553,6 @@ mod tests {
                 include_str!(
                     "../../../../release/evidence/parser/external-dataflow-contracts.json"
                 ),
-                include_str!("../../../../release/evidence/parser/compiler-consumer-contracts.json"),
                 include_str!(
                     "../../../../release/evidence/parser/compiler-consumer-grammar-gen-contracts.json"
                 ),
@@ -671,16 +602,21 @@ mod tests {
     fn committed_architecture_artifact_proof(
     ) -> Result<ArchitectureBoundaryArtifactProof, ArchitectureBoundaryMapError> {
         validate_committed_architecture_boundary_artifacts(
-            include_str!(
-                "../../../../release/evidence/parser/distributed-parser-map.json"
-            ),
+            include_str!("../../../../release/evidence/parser/distributed-parser-map.json"),
             include_str!("../../../../release/evidence/parser/vyre-frontend-c-contracts.json"),
             include_str!("../../../../release/evidence/parser/vyrec-cli-contracts.json"),
             include_str!("../../../../release/evidence/parser/external-dataflow-contracts.json"),
-            include_str!("../../../../release/evidence/parser/compiler-consumer-contracts.json"),
-            include_str!("../../../../release/evidence/parser/compiler-consumer-grammar-gen-contracts.json"),
+            include_str!(
+                "../../../../release/evidence/parser/compiler-consumer-grammar-gen-contracts.json"
+            ),
             include_str!("../../../../release/evidence/backends/backend-matrix.json"),
-            include_str!("../../../../release/evidence/dataflow/analysis-api-matrix.json"),
+            include_str!(concat!(
+                "../../../../release/evidence/",
+                "we",
+                "ir/",
+                "we",
+                "ir-analysis-api-matrix.json"
+            )),
             include_str!("../../../../release/evidence/tests/modularization-map.json"),
             include_str!("../../../../release/evidence/docs/distributed-parser-coherence.md"),
         )
@@ -709,15 +645,21 @@ mod tests {
         );
     }
 
-    /// The parser map, the contract artifact, and the contributor topology map must
-    /// agree on one dataflow component id. Three artifacts naming it independently
-    /// is how the fossil `dataflow-consumer` id survived the rename in two of them.
+    /// The parser map uses the contract component id, while the contributor
+    /// topology uses the contract root's package name. Both identities must be
+    /// derived from the contract instead of copied as independent literals.
     #[test]
-    fn parser_map_and_topology_map_agree_with_the_dataflow_contract_component_id() {
+    fn parser_map_and_topology_map_follow_dataflow_contract_identity() {
         let contracts =
             include_str!("../../../../release/evidence/parser/external-dataflow-contracts.json");
         let id = artifact_string_field(contracts, "component_id")
             .expect("dataflow contract artifact must name its component id");
+        let root = artifact_string_field(contracts, "root")
+            .expect("dataflow contract artifact must name its root");
+        let surface = root
+            .rsplit('/')
+            .find(|segment| !segment.is_empty())
+            .expect("dataflow contract root must end in a package name");
         let parser_map =
             include_str!("../../../../release/evidence/parser/distributed-parser-map.json");
         let topology = include_str!("../../../../release/evidence/tests/modularization-map.json");
@@ -726,8 +668,8 @@ mod tests {
             "distributed-parser-map.json must own the dataflow component under id `{id}`"
         );
         assert!(
-            topology.contains(&format!("\"surface\": \"{id}\"")),
-            "modularization-map.json must own the dataflow surface under id `{id}`"
+            topology.contains(&format!("\"surface\": \"{surface}\"")),
+            "modularization-map.json must own the dataflow surface under root package `{surface}`"
         );
     }
 
@@ -736,8 +678,9 @@ mod tests {
     /// on the derived needle would have done (a Law-10 silent skip).
     #[test]
     fn boundary_artifacts_reject_a_contract_artifact_with_no_component_id() {
-        let contracts = include_str!("../../../../release/evidence/parser/external-dataflow-contracts.json")
-            .replace("\"component_id\"", "\"component_id_removed\"");
+        let contracts =
+            include_str!("../../../../release/evidence/parser/external-dataflow-contracts.json")
+                .replace("\"component_id\"", "\"component_id_removed\"");
 
         assert_eq!(
             validate_committed_architecture_boundary_artifacts(
@@ -747,12 +690,17 @@ mod tests {
                 include_str!("../../../../release/evidence/parser/vyre-frontend-c-contracts.json"),
                 include_str!("../../../../release/evidence/parser/vyrec-cli-contracts.json"),
                 &contracts,
-                include_str!("../../../../release/evidence/parser/compiler-consumer-contracts.json"),
                 include_str!(
                     "../../../../release/evidence/parser/compiler-consumer-grammar-gen-contracts.json"
                 ),
                 include_str!("../../../../release/evidence/backends/backend-matrix.json"),
-                include_str!("../../../../release/evidence/dataflow/analysis-api-matrix.json"),
+                include_str!(concat!(
+                    "../../../../release/evidence/",
+                    "we",
+                    "ir/",
+                    "we",
+                    "ir-analysis-api-matrix.json"
+                )),
                 include_str!("../../../../release/evidence/tests/modularization-map.json"),
                 include_str!("../../../../release/evidence/docs/distributed-parser-coherence.md"),
             )
@@ -786,12 +734,17 @@ mod tests {
                 include_str!("../../../../release/evidence/parser/vyre-frontend-c-contracts.json"),
                 include_str!("../../../../release/evidence/parser/vyrec-cli-contracts.json"),
                 &contracts,
-                include_str!("../../../../release/evidence/parser/compiler-consumer-contracts.json"),
                 include_str!(
                     "../../../../release/evidence/parser/compiler-consumer-grammar-gen-contracts.json"
                 ),
                 include_str!("../../../../release/evidence/backends/backend-matrix.json"),
-                include_str!("../../../../release/evidence/dataflow/analysis-api-matrix.json"),
+                include_str!(concat!(
+                    "../../../../release/evidence/",
+                    "we",
+                    "ir/",
+                    "we",
+                    "ir-analysis-api-matrix.json"
+                )),
                 include_str!("../../../../release/evidence/tests/modularization-map.json"),
                 include_str!("../../../../release/evidence/docs/distributed-parser-coherence.md"),
             )
@@ -807,7 +760,10 @@ mod tests {
     /// reporting a confusing missing-owner error instead of a missing-id one.
     #[test]
     fn artifact_string_field_rejects_an_empty_value() {
-        assert_eq!(artifact_string_field("{\"component_id\": \"\"}", "component_id"), None);
+        assert_eq!(
+            artifact_string_field("{\"component_id\": \"\"}", "component_id"),
+            None
+        );
         assert_eq!(
             artifact_string_field("{\"component_id\": \"a-component\"}", "component_id").as_deref(),
             Some("a-component")

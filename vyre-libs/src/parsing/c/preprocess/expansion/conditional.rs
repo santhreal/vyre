@@ -395,7 +395,7 @@ fn write_u32_at(dst: &mut [u8], idx: usize, value: u32) {
     dst[base..base + 4].copy_from_slice(&value.to_le_bytes());
 }
 
-use crate::scan::dispatch_io::pack_u32_slice as pack_u32_words;
+use vyre_primitives::wire::pack_u32_slice as pack_u32_words;
 
 fn dynamic_macro_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
     let macro_token = 777u32;

@@ -7,6 +7,27 @@ use crate::ir_inner::model::node::Node;
 
 use super::{BufferDecl, Program};
 
+macro_rules! define_raw_program_constructor {
+    () => {
+        /// Create a program that preserves raw top-level entry nodes.
+        ///
+        /// Use [`Program::wrapped`] for runnable programs. This raw constructor
+        /// remains available for wire decoding and negative validation tests.
+        #[deprecated(
+            note = "Program::new preserves raw top-level entry nodes. Use Program::wrapped for runnable programs; reserve Program::new for wire decode and negative tests."
+        )]
+        #[must_use]
+        #[inline]
+        pub fn new(
+            buffers: Vec<BufferDecl>,
+            workgroup_size: [u32; 3],
+            entry: Vec<Node>,
+        ) -> Self {
+            Self::new_raw(buffers, workgroup_size, entry)
+        }
+    };
+}
+
 impl Program {
     /// Synthetic generator id used when callers submit a raw top-level body
     /// instead of an explicit `Node::Region`.
@@ -38,43 +59,21 @@ impl Program {
     /// assert_eq!(program.buffers().len(), 1);
     /// assert!(matches!(program.entry(), [Node::Region { .. }]));
     /// ```
+    ///
+    /// This constructs a NEW program. Do not use it to rebuild an existing one:
+    /// it starts the metadata from scratch, so `entry_op_id` and
+    /// `non_composable_with_self` are silently lost, and it deep-clones the
+    /// buffer table and re-interns every name. To change part of a program, use
+    /// [`Self::with_rewritten_buffers`], [`Self::with_rewritten_entry`],
+    /// [`Self::with_rewritten_wrapped_entry`], or [`Self::map_entry`], all of
+    /// which preserve the rest.
     #[must_use]
     #[inline]
     pub fn wrapped(buffers: Vec<BufferDecl>, workgroup_size: [u32; 3], entry: Vec<Node>) -> Self {
         Self::new_raw(buffers, workgroup_size, Self::wrap_entry(entry))
     }
 
-    /// Create a complete program from buffer declarations, workgroup size, and
-    /// entry-point nodes.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use vyre::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
-    ///
-    /// let program = Program::wrapped(
-    ///     vec![BufferDecl::storage(
-    ///         "output",
-    ///         0,
-    ///         BufferAccess::ReadWrite,
-    ///         DataType::U32,
-    ///     )],
-    ///     [64, 1, 1],
-    ///     Vec::new(),
-    /// );
-    ///
-    /// assert_eq!(program.workgroup_size(), [64, 1, 1]);
-    /// assert_eq!(program.buffers().len(), 1);
-    /// assert!(matches!(program.entry(), [Node::Region { .. }]));
-    /// ```
-    #[deprecated(
-        note = "Program::new preserves raw top-level entry nodes. Use Program::wrapped for runnable programs; reserve Program::new for wire decode and negative tests."
-    )]
-    #[must_use]
-    #[inline]
-    pub fn new(buffers: Vec<BufferDecl>, workgroup_size: [u32; 3], entry: Vec<Node>) -> Self {
-        Self::new_raw(buffers, workgroup_size, entry)
-    }
+    define_raw_program_constructor!();
 
     #[must_use]
     #[inline]
@@ -109,6 +108,7 @@ impl Program {
             structural_validation_fingerprint: std::sync::atomic::AtomicU64::new(0),
             mutation_provenance: std::sync::atomic::AtomicU8::new(0),
             fingerprint: OnceLock::new(),
+            normalized_cache_digest: OnceLock::new(),
             output_buffer_index: OnceLock::new(),
             has_indirect_dispatch: OnceLock::new(),
             stats: OnceLock::new(),
@@ -161,6 +161,7 @@ impl Program {
             structural_validation_fingerprint: std::sync::atomic::AtomicU64::new(0),
             mutation_provenance: std::sync::atomic::AtomicU8::new(0),
             fingerprint: OnceLock::new(),
+            normalized_cache_digest: OnceLock::new(),
             output_buffer_index: OnceLock::new(),
             has_indirect_dispatch: OnceLock::new(),
             stats: OnceLock::new(),
@@ -173,23 +174,7 @@ impl Program {
     #[must_use]
     #[inline]
     pub fn with_rewritten_entry(&self, entry: Vec<Node>) -> Self {
-        Self {
-            entry_op_id: self.entry_op_id.clone(),
-            buffers: Arc::clone(&self.buffers),
-            buffer_index: Arc::clone(&self.buffer_index),
-            workgroup_size: self.workgroup_size,
-            entry: Arc::new(entry),
-            hash: OnceLock::new(),
-            validation_set: OnceLock::new(),
-            structural_validated: std::sync::atomic::AtomicBool::new(false),
-            structural_validation_fingerprint: std::sync::atomic::AtomicU64::new(0),
-            mutation_provenance: std::sync::atomic::AtomicU8::new(0),
-            fingerprint: OnceLock::new(),
-            output_buffer_index: OnceLock::new(),
-            has_indirect_dispatch: OnceLock::new(),
-            stats: OnceLock::new(),
-            non_composable_with_self: self.non_composable_with_self,
-        }
+        self.with_rewritten_workgroup_size_and_entry(self.workgroup_size, entry)
     }
 
     /// Clone this program with replacement buffer declarations while
@@ -210,6 +195,7 @@ impl Program {
             structural_validation_fingerprint: std::sync::atomic::AtomicU64::new(0),
             mutation_provenance: std::sync::atomic::AtomicU8::new(0),
             fingerprint: OnceLock::new(),
+            normalized_cache_digest: OnceLock::new(),
             output_buffer_index: OnceLock::new(),
             has_indirect_dispatch: OnceLock::new(),
             stats: OnceLock::new(),
@@ -238,6 +224,7 @@ impl Program {
             structural_validation_fingerprint: std::sync::atomic::AtomicU64::new(0),
             mutation_provenance: std::sync::atomic::AtomicU8::new(0),
             fingerprint: OnceLock::new(),
+            normalized_cache_digest: OnceLock::new(),
             output_buffer_index: OnceLock::new(),
             has_indirect_dispatch: OnceLock::new(),
             stats: OnceLock::new(),

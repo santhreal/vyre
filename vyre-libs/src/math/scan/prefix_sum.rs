@@ -34,14 +34,13 @@ pub fn scan_prefix_sum(input: &str, output: &str, n: u32) -> Program {
 }
 
 fn wrap_large_scan_program(program: Program) -> Program {
-    Program::wrapped(
-        program.buffers().to_vec(),
-        program.workgroup_size(),
-        vec![crate::region::wrap_anonymous(
-            OP_ID,
-            program.entry().to_vec(),
-        )],
-    )
+    // Only the entry changes, so rebuild only the entry. `Program::wrapped`
+    // would deep-clone the buffer table and reset the metadata flags.
+    let tagged = vec![crate::region::wrap_anonymous(
+        OP_ID,
+        program.entry().to_vec(),
+    )];
+    program.with_rewritten_wrapped_entry(tagged)
 }
 
 inventory::submit! {

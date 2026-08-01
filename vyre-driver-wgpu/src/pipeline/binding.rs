@@ -87,7 +87,8 @@ pub(crate) fn validate_handle(
                     info.name
                 ))
             })?;
-        let required_bytes_u64 = WGPU_NUMERIC.usize_to_u64(required_bytes, "required binding bytes")?;
+        let required_bytes_u64 =
+            WGPU_NUMERIC.usize_to_u64(required_bytes, "required binding bytes")?;
         if handle.allocation_len() < required_bytes_u64 {
             return Err(BackendError::new(format!(
                 "{mode} handle for binding {} (`{}`) has {} bytes but requires {required_bytes}. Fix: allocate a larger GPU buffer.",

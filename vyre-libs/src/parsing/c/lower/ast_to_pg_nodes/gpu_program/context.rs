@@ -22,12 +22,7 @@ pub(super) fn assign_related_kind_if_valid(
     ));
 }
 
-pub(super) fn valid_node_ref_expr(idx: Expr, num_nodes: &Expr) -> Expr {
-    Expr::and(
-        Expr::ne(idx.clone(), Expr::u32(u32::MAX)),
-        Expr::lt(idx, num_nodes.clone()),
-    )
-}
+pub(super) use crate::parsing::c::lower::valid_node_index_expr as valid_node_ref_expr;
 
 pub(super) fn semantic_context_bind_nodes() -> Vec<Node> {
     vec![

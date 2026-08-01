@@ -1,4 +1,4 @@
-//! `cargo_full run --bin xtask -- trace-f32 <op_id>`  -  run an op's registered fixture on the
+//! `cargo xtask trace-f32 <op_id>`  -  run an op's registered fixture on the
 //! pure-Rust reference interpreter and dump output bytes as the exact
 //! `Vec<Vec<Vec<u8>>>` literal that paste into `OpEntry::expected_output`.
 //!

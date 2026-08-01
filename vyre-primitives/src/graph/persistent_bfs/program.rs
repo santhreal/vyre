@@ -31,7 +31,7 @@ pub const fn bitset_words(node_count: u32) -> u32 {
 /// fixpoint (a step added nothing) before the `max_iters` budget was exhausted,
 /// and `0` if the loop ran all `max_iters` steps while still growing (a partial
 /// closure) or `max_iters == 0`. It is the device counterpart of the CPU
-/// reference [`super::cpu_ref::PersistentBfsConvergence::converged`] and lets a
+/// reference `PersistentBfsConvergence::converged` (requires the `cpu-parity` feature) and lets a
 /// host caller reject an under-approximated frontier loudly instead of silently
 /// trusting a closure the kernel never drove to a fixpoint.
 #[must_use]
@@ -211,10 +211,7 @@ fn persistent_bfs_single_workgroup(
     let remaining = max_iters.saturating_sub(unroll_count);
     if remaining > 0 {
         let mut loop_body = vec![Node::if_then(
-            Expr::ne(
-                Expr::load("wg_active", Expr::u32(0)),
-                Expr::u32(0),
-            ),
+            Expr::ne(Expr::load("wg_active", Expr::u32(0)), Expr::u32(0)),
             vec![
                 Node::let_bind("local_changed", Expr::u32(0)),
                 Node::if_then(

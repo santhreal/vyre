@@ -74,26 +74,17 @@ fn num_nodes() -> Expr {
 /// `with_haystack` controls whether the haystack and its length are declared.
 /// The scope walk reads neither, and declaring parameters it never uses would
 /// force every caller to pass two dead arguments.
-fn phase_program(
-    op_id: &str,
-    with_haystack: bool,
-    out_name: &str,
-    mut body: Vec<Node>,
-) -> Program {
-    let mut buffers = vec![BufferDecl::storage(
-        NODES,
-        0,
-        BufferAccess::ReadOnly,
-        DataType::U32,
-    )
-    .with_count(PHASE_DECL_ROWS.saturating_mul(VAST_NODE_STRIDE_U32))];
+fn phase_program(op_id: &str, with_haystack: bool, out_name: &str, mut body: Vec<Node>) -> Program {
+    let mut buffers = vec![
+        BufferDecl::storage(NODES, 0, BufferAccess::ReadOnly, DataType::U32)
+            .with_count(PHASE_DECL_ROWS.saturating_mul(VAST_NODE_STRIDE_U32)),
+    ];
     let out_binding = if with_haystack {
         buffers.push(
             BufferDecl::storage(HAYSTACK, 1, BufferAccess::ReadOnly, DataType::U32).with_count(1),
         );
-        buffers.push(
-            BufferDecl::storage(ROW, 2, BufferAccess::ReadOnly, DataType::U32).with_count(1),
-        );
+        buffers
+            .push(BufferDecl::storage(ROW, 2, BufferAccess::ReadOnly, DataType::U32).with_count(1));
         buffers.push(
             BufferDecl::storage(HAYSTACK_LEN, 3, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(1),
@@ -103,9 +94,8 @@ fn phase_program(
         );
         5
     } else {
-        buffers.push(
-            BufferDecl::storage(ROW, 1, BufferAccess::ReadOnly, DataType::U32).with_count(1),
-        );
+        buffers
+            .push(BufferDecl::storage(ROW, 1, BufferAccess::ReadOnly, DataType::U32).with_count(1));
         2
     };
     buffers.push(BufferDecl::output(RESULT, out_binding, DataType::U32).with_count(1));

@@ -1,7 +1,7 @@
 //! Soundness regime markers for dataflow primitives.
 //!
 //! Rules with zero-FP precision contracts MUST only compose primitives
-//! whose marker is [`Soundness::Exact`], or [`Soundness::MayOver`]
+//! whose marker is [`crate::soundness::Soundness::Exact`], or [`crate::soundness::Soundness::MayOver`]
 //! primitives gated by an explicit sanitizer filter downstream.
 //!
 //! Lives in `vyre-foundation` because soundness is a primitive lattice

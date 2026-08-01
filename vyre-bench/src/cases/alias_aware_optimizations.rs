@@ -528,71 +528,63 @@ fn final_store_value(desc: &KernelDescriptor) -> u64 {
         .unwrap_or(u32::MAX) as u64
 }
 
-fn dse_descriptor() -> KernelDescriptor {
+fn alias_descriptor(id: &'static str, mut operations: Vec<KernelOp>) -> KernelDescriptor {
+    let mut ops = vec![
+        KernelOp {
+            kind: KernelOpKind::GlobalInvocationId,
+            operands: vec![0],
+            result: Some(0),
+        },
+        KernelOp {
+            kind: KernelOpKind::LocalInvocationId,
+            operands: vec![0],
+            result: Some(1),
+        },
+        literal_op(0, 2),
+        literal_op(1, 3),
+    ];
+    ops.append(&mut operations);
     KernelDescriptor {
-        id: "alias_dse".into(),
+        id: id.into(),
         bindings: rw_binding_layout(),
         dispatch: Dispatch::new(1, 1, 1),
         body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::GlobalInvocationId,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LocalInvocationId,
-                    operands: vec![0],
-                    result: Some(1),
-                },
-                literal_op(0, 2),
-                literal_op(1, 3),
-                store_op(0, 0, 2),
-                KernelOp {
-                    kind: KernelOpKind::LoadGlobal,
-                    operands: vec![1, 1],
-                    result: Some(4),
-                },
-                store_op(0, 0, 3),
-            ],
+            ops,
             child_bodies: vec![],
             literals: vec![LiteralValue::U32(7), LiteralValue::U32(9)],
         },
     }
 }
 
+fn dse_descriptor() -> KernelDescriptor {
+    alias_descriptor(
+        "alias_dse",
+        vec![
+            store_op(0, 0, 2),
+            KernelOp {
+                kind: KernelOpKind::LoadGlobal,
+                operands: vec![1, 1],
+                result: Some(4),
+            },
+            store_op(0, 0, 3),
+        ],
+    )
+}
+
 fn stlf_descriptor() -> KernelDescriptor {
-    KernelDescriptor {
-        id: "alias_stlf".into(),
-        bindings: rw_binding_layout(),
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::GlobalInvocationId,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LocalInvocationId,
-                    operands: vec![0],
-                    result: Some(1),
-                },
-                literal_op(0, 2),
-                literal_op(1, 3),
-                store_op(0, 0, 2),
-                store_op(0, 1, 3),
-                KernelOp {
-                    kind: KernelOpKind::LoadGlobal,
-                    operands: vec![0, 0],
-                    result: Some(4),
-                },
-                store_op(0, 0, 4),
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(7), LiteralValue::U32(9)],
-        },
-    }
+    alias_descriptor(
+        "alias_stlf",
+        vec![
+            store_op(0, 0, 2),
+            store_op(0, 1, 3),
+            KernelOp {
+                kind: KernelOpKind::LoadGlobal,
+                operands: vec![0, 0],
+                result: Some(4),
+            },
+            store_op(0, 0, 4),
+        ],
+    )
 }
 
 fn licm_descriptor() -> KernelDescriptor {

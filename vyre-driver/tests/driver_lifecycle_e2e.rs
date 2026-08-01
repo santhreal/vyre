@@ -55,6 +55,10 @@ fn launch_limits(backend: &dyn VyreBackend) -> LaunchGeometryLimits {
             backend.max_compute_workgroups_per_dimension(),
             backend.max_compute_workgroups_per_dimension(),
         ],
+        // The backend trait exposes no per-compute-unit thread budget, so this
+        // lifecycle harness reports none and residency-aware launch decisions
+        // stay inert.
+        max_threads_per_sm: 0,
     }
 }
 

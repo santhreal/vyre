@@ -11,6 +11,7 @@ use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre::{DispatchConfig, VyreBackend};
 use vyre_driver::PendingDispatch;
 use vyre_driver_wgpu::WgpuBackend;
+use vyre_emit_naga::program::emit_module;
 
 const LIVE_GPU_REQUIRED: &str =
     "WgpuBackend acquisition failed on a machine that must have a GPU. \
@@ -44,6 +45,20 @@ pub(crate) use vyre_primitives::wire::decode_u32_le_bytes_all as decode_u32_word
 
 /// Alias used by C parser integration tests.
 pub(crate) use vyre_primitives::wire::decode_u32_le_bytes_all as words_from_bytes;
+
+/// Lower a test program with the canonical unit workgroup, validate it, and return WGSL.
+pub(crate) fn emit_validated_wgsl(program: &Program) -> String {
+    let module = emit_module(program, &DispatchConfig::default(), [1, 1, 1])
+        .expect("Fix: test program must lower to a valid Naga module.");
+    let info = naga::valid::Validator::new(
+        naga::valid::ValidationFlags::all(),
+        naga::valid::Capabilities::all(),
+    )
+    .validate(&module)
+    .expect("Fix: lowered test program must pass Naga validation.");
+    naga::back::wgsl::write_string(&module, &info, naga::back::wgsl::WriterFlags::empty())
+        .expect("Fix: validated test module must serialize to WGSL.")
+}
 
 pub(crate) fn add_one_program(words: u32) -> Program {
     let idx = Expr::gid_x();

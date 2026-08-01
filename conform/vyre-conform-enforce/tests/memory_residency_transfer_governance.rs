@@ -2,10 +2,15 @@
 
 const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
 const TIERS: &str = include_str!("../../../docs/optimization/MEMORY_RESIDENCY_TIER_CONTRACTS.toml");
-const STAGING: &str = include_str!("../../../docs/optimization/PINNED_STAGING_TRANSFER_POLICY.toml");
-const PRESSURE: &str = include_str!("../../../docs/optimization/MEMORY_PRESSURE_OVERSUBSCRIPTION_RESPONSE.toml");
-const OVERLAP: &str = include_str!("../../../docs/optimization/TRANSFER_OVERLAP_PIPELINE_EVIDENCE.toml");
-const COVERAGE: &str = include_str!("../../../docs/optimization/END_TO_END_MEMORY_RESIDENCY_TRANSFER_TRANCHE_COVERAGE.toml");
+const STAGING: &str =
+    include_str!("../../../docs/optimization/PINNED_STAGING_TRANSFER_POLICY.toml");
+const PRESSURE: &str =
+    include_str!("../../../docs/optimization/MEMORY_PRESSURE_OVERSUBSCRIPTION_RESPONSE.toml");
+const OVERLAP: &str =
+    include_str!("../../../docs/optimization/TRANSFER_OVERLAP_PIPELINE_EVIDENCE.toml");
+const COVERAGE: &str = include_str!(
+    "../../../docs/optimization/END_TO_END_MEMORY_RESIDENCY_TRANSFER_TRANCHE_COVERAGE.toml"
+);
 
 #[test]
 fn memory_residency_transfer_sources_are_registered() {
@@ -16,7 +21,10 @@ fn memory_residency_transfer_sources_are_registered() {
         "WEBGPU_BUFFER_MAPPING",
         "METAL_RESOURCE_STORAGE_MODES",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 
@@ -38,7 +46,10 @@ fn memory_residency_tiers_record_backend_policy_access_coherency_fault_pressure_
         "webgpu-staging-map-tier",
         "metal-storage-mode-tier",
     ] {
-        assert!(TIERS.contains(required), "memory residency tier contract must include {required}");
+        assert!(
+            TIERS.contains(required),
+            "memory residency tier contract must include {required}"
+        );
     }
 }
 
@@ -58,12 +69,16 @@ fn pinned_staging_policy_records_pinning_alignment_zero_copy_overlap_budget_and_
         "output-readback-pinned-download",
         "webgpu-metal-staging-upload",
     ] {
-        assert!(STAGING.contains(required), "pinned staging transfer policy must include {required}");
+        assert!(
+            STAGING.contains(required),
+            "pinned staging transfer policy must include {required}"
+        );
     }
 }
 
 #[test]
-fn memory_pressure_response_records_measurement_admission_migration_fallback_operator_privacy_and_diagnostics() {
+fn memory_pressure_response_records_measurement_admission_migration_fallback_operator_privacy_and_diagnostics(
+) {
     for required in [
         "pressure_id",
         "pressure_surface",
@@ -77,7 +92,10 @@ fn memory_pressure_response_records_measurement_admission_migration_fallback_ope
         "vulkan-pageable-device-local-pressure",
         "staging-pool-pressure",
     ] {
-        assert!(PRESSURE.contains(required), "memory pressure response must include {required}");
+        assert!(
+            PRESSURE.contains(required),
+            "memory pressure response must include {required}"
+        );
     }
 }
 
@@ -96,12 +114,16 @@ fn transfer_overlap_evidence_records_windows_counters_correctness_failures_and_a
         "managed-prefetch-compute-overlap",
         "device-output-readback-overlap",
     ] {
-        assert!(OVERLAP.contains(required), "transfer overlap evidence must include {required}");
+        assert!(
+            OVERLAP.contains(required),
+            "transfer overlap evidence must include {required}"
+        );
     }
 }
 
 #[test]
-fn memory_residency_transfer_coverage_reuses_ingress_pool_budget_backpressure_capability_lifetime_visibility_output_profile_statistics_and_publication_authorities() {
+fn memory_residency_transfer_coverage_reuses_ingress_pool_budget_backpressure_capability_lifetime_visibility_output_profile_statistics_and_publication_authorities(
+) {
     for required in [
         "VX-1461..VX-1480",
         "memory_residency_tier_contracts",
@@ -124,6 +146,9 @@ fn memory_residency_transfer_coverage_reuses_ingress_pool_budget_backpressure_ca
         "dedup_seam",
         "proof_gate",
     ] {
-        assert!(COVERAGE.contains(required), "memory residency transfer coverage must include {required}");
+        assert!(
+            COVERAGE.contains(required),
+            "memory residency transfer coverage must include {required}"
+        );
     }
 }

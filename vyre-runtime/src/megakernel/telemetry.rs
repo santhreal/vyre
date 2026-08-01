@@ -4,9 +4,7 @@
 //! `read_done_count`, `read_epoch`, and `read_metrics`. This module adds a
 //! single structured snapshot surface useful for wrappers like VyreOffload.
 
-use super::protocol::{
-    control, read_word, slot, ARG0_WORD, OPCODE_WORD, STATUS_WORD, TENANT_WORD,
-};
+use super::protocol::{control, read_word, slot, ARG0_WORD, OPCODE_WORD, STATUS_WORD, TENANT_WORD};
 use super::scaling::{
     MegakernelLaunchPolicy, MegakernelLaunchRecommendation, MegakernelLaunchRequest,
     PriorityRequeueAccounting,
@@ -16,9 +14,9 @@ use super::staging_reserve::{
 };
 use crate::PipelineError;
 
+mod errors;
 mod sketch;
 mod types;
-mod errors;
 pub use sketch::{CountMinSketch, SketchTelemetry, SketchTelemetryScratch};
 use types::WindowAccumulator;
 pub use types::{
@@ -33,15 +31,15 @@ const SLOT_WORDS_USIZE: usize = 16;
 
 fn try_read_slot_chunk_word(slot_bytes: &[u8], word_idx: u32) -> Result<u32, PipelineError> {
     let word_idx = telemetry_u32_to_usize(word_idx, "slot word index")?;
-    let off = word_idx.checked_mul(4).ok_or_else(|| {
-        errors::slot_word_offset_overflow()
-    })?;
-    let end = off.checked_add(4).ok_or_else(|| {
-        errors::slot_word_end_overflow()
-    })?;
-    let bytes = slot_bytes.get(off..end).ok_or_else(|| {
-        errors::missing_slot_word(word_idx, slot_bytes.len())
-    })?;
+    let off = word_idx
+        .checked_mul(4)
+        .ok_or_else(|| errors::slot_word_offset_overflow())?;
+    let end = off
+        .checked_add(4)
+        .ok_or_else(|| errors::slot_word_end_overflow())?;
+    let bytes = slot_bytes
+        .get(off..end)
+        .ok_or_else(|| errors::missing_slot_word(word_idx, slot_bytes.len()))?;
     Ok(u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]))
 }
 
@@ -51,12 +49,25 @@ fn is_sorted_unique_u32(values: &[u32]) -> bool {
 
 impl ControlSnapshot {
     /// Decode a structured control-buffer view.
+    ///
+    /// # Panics
+    ///
+    /// If the control buffer is missing any fixed control word.
+    ///
+    /// This used to answer `Self::default()` on a decode failure, which hands
+    /// the caller a snapshot reading zero done-count, zero epoch and no
+    /// metrics and is indistinguishable from a healthy idle kernel. That is
+    /// the silent fallback [`Self::decode_into`] already refuses to make, and
+    /// the two shims must not disagree about what a bad buffer means. Callers
+    /// that can handle the error use [`Self::try_decode`].
     #[must_use]
     #[cfg(any(test, feature = "legacy-infallible"))]
     pub fn decode(control_bytes: &[u8]) -> Self {
         match Self::try_decode(control_bytes) {
             Ok(snapshot) => snapshot,
-            Err(_) => Self::default(),
+            Err(error) => {
+                panic!("vyre-runtime telemetry control-buffer decode failed: {error}")
+            }
         }
     }
 
@@ -665,13 +676,11 @@ impl RingTelemetry {
             let demand = window
                 .required_slots
                 .checked_add(window.lookahead_slots)
-                .ok_or_else(|| {
-                    errors::route_window_demand_overflow()
-                })?;
+                .ok_or_else(|| errors::route_window_demand_overflow())?;
             if demand >= 4 {
-                hot_window_count = hot_window_count.checked_add(1).ok_or_else(|| {
-                    errors::hot_window_count_overflow()
-                })?;
+                hot_window_count = hot_window_count
+                    .checked_add(1)
+                    .ok_or_else(|| errors::hot_window_count_overflow())?;
             }
         }
         request.hot_window_count = hot_window_count
@@ -749,9 +758,8 @@ fn validate_telemetry_buffers(
 }
 
 fn validate_control_snapshot(control_bytes: &[u8]) -> Result<(), PipelineError> {
-    let min_control = super::protocol::control_byte_len(0).ok_or_else(|| {
-        errors::control_length_overflow()
-    })?;
+    let min_control =
+        super::protocol::control_byte_len(0).ok_or_else(|| errors::control_length_overflow())?;
     if control_bytes.len() < min_control || control_bytes.len() % 4 != 0 {
         return Err(errors::bad_control_snapshot(
             control_bytes.len(),
@@ -762,9 +770,9 @@ fn validate_control_snapshot(control_bytes: &[u8]) -> Result<(), PipelineError> 
 }
 
 fn slot_byte_len() -> Result<usize, PipelineError> {
-    SLOT_WORDS_USIZE.checked_mul(4).ok_or_else(|| {
-        errors::slot_byte_width_overflow()
-    })
+    SLOT_WORDS_USIZE
+        .checked_mul(4)
+        .ok_or_else(|| errors::slot_byte_width_overflow())
 }
 
 fn telemetry_u32_to_usize(value: u32, label: &'static str) -> Result<usize, PipelineError> {
@@ -776,9 +784,9 @@ fn control_word_index(word: u32) -> Result<usize, PipelineError> {
 }
 
 fn control_offset_index(base: u32, offset: u32) -> Result<usize, PipelineError> {
-    let word = base.checked_add(offset).ok_or_else(|| {
-        errors::control_word_offset_overflow()
-    })?;
+    let word = base
+        .checked_add(offset)
+        .ok_or_else(|| errors::control_word_offset_overflow())?;
     control_word_index(word)
 }
 
@@ -788,9 +796,8 @@ fn try_sum_u32_as_u64(
     fix: &'static str,
 ) -> Result<u64, PipelineError> {
     counters.iter().try_fold(0u64, |acc, &count| {
-        acc.checked_add(u64::from(count)).ok_or_else(|| {
-            errors::counter_sum_overflow(label, fix)
-        })
+        acc.checked_add(u64::from(count))
+            .ok_or_else(|| errors::counter_sum_overflow(label, fix))
     })
 }
 
@@ -806,9 +813,8 @@ fn try_fairness_skew(counters: &[u32]) -> Result<u32, PipelineError> {
     if min_nonzero == u32::MAX {
         Ok(0)
     } else {
-        max.checked_sub(min_nonzero).ok_or_else(|| {
-            errors::fairness_skew_invalid(max, min_nonzero)
-        })
+        max.checked_sub(min_nonzero)
+            .ok_or_else(|| errors::fairness_skew_invalid(max, min_nonzero))
     }
 }
 

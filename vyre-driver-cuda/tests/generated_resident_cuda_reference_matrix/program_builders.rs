@@ -307,4 +307,3 @@ pub(crate) fn resident_fma_program() -> Program {
         )],
     )
 }
-

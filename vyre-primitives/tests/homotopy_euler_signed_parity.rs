@@ -12,7 +12,7 @@
 //! homotopy path on GPU, so a sign bug here mis-schedules real kernels. The primitive had NO
 //! IR-execution parity coverage; this is the first faithful signed run.
 //!
-//! BIT-EXACT: pure integer arithmetic 
+//! BIT-EXACT: pure integer arithmetic
 //! `fixed_mul(a,b) = ((a as i32 as i64 * b as i32 as i64) >> 16) as i32 as u32`, then `wrapping_add`.
 #![cfg(feature = "opt")]
 

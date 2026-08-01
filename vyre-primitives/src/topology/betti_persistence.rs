@@ -2,7 +2,7 @@
 //! 1-skeleton (P-PRIM-4).
 //!
 //! Given a row-major n×n edge mask (0/1) produced by
-//! [`crate::topology::vietoris_rips::vietoris_rips_edge_filter_cpu`], compute
+//! `vietoris_rips_edge_filter_cpu` (requires the `cpu-parity` feature), compute
 //! the first Betti number `b1`: the rank of `H_1(K)` where `K` is
 //! the 1-skeleton of the Rips complex.
 //!

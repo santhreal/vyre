@@ -6,8 +6,7 @@ const SCHEMA_GOVERNANCE: &str =
 const PRECEDENCE: &str =
     include_str!("../../../docs/optimization/CONFIG_PRECEDENCE_AND_TIERING.toml");
 const API: &str = include_str!("../../../docs/optimization/API_COMPATIBILITY_GOVERNANCE.toml");
-const CRATES: &str =
-    include_str!("../../../docs/optimization/CRATE_BOUNDARY_FEATURE_MATRIX.toml");
+const CRATES: &str = include_str!("../../../docs/optimization/CRATE_BOUNDARY_FEATURE_MATRIX.toml");
 const COVERAGE: &str =
     include_str!("../../../docs/optimization/CONFIG_API_GOVERNANCE_TRANCHE_COVERAGE.toml");
 
@@ -19,7 +18,10 @@ fn config_api_primary_sources_are_registered() {
         "SEMVER_2_0",
         "RUST_API_GUIDELINES",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 

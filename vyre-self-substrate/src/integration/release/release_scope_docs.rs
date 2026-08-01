@@ -153,6 +153,61 @@ pub fn validate_release_scope_docs(
     })
 }
 
+type ArtifactRequirements = &'static [(&'static str, &'static str)];
+
+const VYRE_README_REQUIREMENTS: ArtifactRequirements = &[
+    ("stable Vyre README proof", "# Vyre README proof"),
+    ("Vyre CUDA/WGPU release path", "CUDA-first/WGPU-fallback"),
+    (
+        "Vyre evidence-backed claims",
+        "concrete release evidence artifacts",
+    ),
+];
+
+const DATAFLOW_README_REQUIREMENTS: ArtifactRequirements = &[
+    (
+        "stable Dataflow consumer README proof",
+        "# Dataflow consumer README proof",
+    ),
+    ("Dataflow consumer 0.1.0 API surface", "0.1.0"),
+    (
+        "standalone Dataflow consumer APIs",
+        "standalone Dataflow consumer APIs",
+    ),
+];
+
+const PARSER_DOC_REQUIREMENTS: ArtifactRequirements = &[
+    ("parser documentation proof", "# Parser documentation proof"),
+    (
+        "parser object/VAST/semantic boundary",
+        "parsing, object emission, VAST, semantic graph, and future compiler lowering",
+    ),
+    ("not full C compiler claim", "not a full C compiler claim"),
+    (
+        "unsupported feature handling",
+        "unsupported-feature handling",
+    ),
+    (
+        "distributed parser artifacts",
+        "release/evidence/parser/distributed-parser-map.json",
+    ),
+];
+
+const C_PARSER_LINUX_REQUIREMENTS: ArtifactRequirements = &[
+    ("Linux C parser proof", "# C parser Linux subsystem proof"),
+    ("semantic graph evidence", "semantic graph"),
+    ("zero failed files", "failed files must be zero"),
+    ("full corpus floor", "250"),
+];
+
+const RELEASE_NOTES_REQUIREMENTS: ArtifactRequirements = &[
+    ("release notes evidence title", "# Release notes evidence"),
+    ("Vyre release train", "vyre-driver-cuda@0.7.0"),
+    ("Vyrec release surface", "vyrec"),
+    ("Weir release version", "`weir` is present at `0.1.0`"),
+    ("completion audit precondition", "completion audit"),
+];
+
 /// Validate committed release documentation artifacts for honest scope boundaries.
 pub fn validate_committed_release_scope_artifacts(
     vyre_readme_proof: &str,
@@ -161,97 +216,16 @@ pub fn validate_committed_release_scope_artifacts(
     c_parser_linux_proof: &str,
     release_notes: &str,
 ) -> Result<ReleaseScopeArtifactProof, ReleaseScopeDocError> {
-    for (artifact, evidence, needle) in [
-        (
-            vyre_readme_proof,
-            "stable Vyre README proof",
-            "# Vyre README proof",
-        ),
-        (
-            vyre_readme_proof,
-            "Vyre CUDA/WGPU release path",
-            "CUDA-first/WGPU-fallback",
-        ),
-        (
-            vyre_readme_proof,
-            "Vyre evidence-backed claims",
-            "concrete release evidence artifacts",
-        ),
-        (
-            readme_proof,
-            "stable Dataflow consumer README proof",
-            "# Dataflow consumer README proof",
-        ),
-        (readme_proof, "Dataflow consumer 0.1.0 API surface", "0.1.0"),
-        (
-            readme_proof,
-            "standalone Dataflow consumer APIs",
-            "standalone Dataflow consumer APIs",
-        ),
-        (
-            parser_doc_proof,
-            "parser documentation proof",
-            "# Parser documentation proof",
-        ),
-        (
-            parser_doc_proof,
-            "parser object/VAST/semantic boundary",
-            "parsing, object emission, VAST, semantic graph, and future compiler lowering",
-        ),
-        (
-            parser_doc_proof,
-            "not full C compiler claim",
-            "not a full C compiler claim",
-        ),
-        (
-            parser_doc_proof,
-            "unsupported feature handling",
-            "unsupported-feature handling",
-        ),
-        (
-            parser_doc_proof,
-            "distributed parser artifacts",
-            "release/evidence/parser/distributed-parser-map.json",
-        ),
-        (
-            c_parser_linux_proof,
-            "Linux C parser proof",
-            "# C parser Linux subsystem proof",
-        ),
-        (
-            c_parser_linux_proof,
-            "semantic graph evidence",
-            "semantic graph",
-        ),
-        (
-            c_parser_linux_proof,
-            "zero failed files",
-            "failed files must be zero",
-        ),
-        (c_parser_linux_proof, "full corpus floor", "250"),
-        (
-            release_notes,
-            "release notes evidence title",
-            "# Release notes evidence",
-        ),
-        (
-            release_notes,
-            "Vyre release train",
-            "vyre-driver-cuda@0.4.2",
-        ),
-        (release_notes, "Vyrec release surface", "vyrec"),
-        (
-            release_notes,
-            "Dataflow consumer release version",
-            "`dataflow-consumer` is present at `0.1.0",
-        ),
-        (
-            release_notes,
-            "completion audit precondition",
-            "completion audit",
-        ),
+    for (artifact, requirements) in [
+        (vyre_readme_proof, VYRE_README_REQUIREMENTS),
+        (readme_proof, DATAFLOW_README_REQUIREMENTS),
+        (parser_doc_proof, PARSER_DOC_REQUIREMENTS),
+        (c_parser_linux_proof, C_PARSER_LINUX_REQUIREMENTS),
+        (release_notes, RELEASE_NOTES_REQUIREMENTS),
     ] {
-        artifact_contains(artifact, evidence, needle)?;
+        for &(evidence, needle) in requirements {
+            artifact_contains(artifact, evidence, needle)?;
+        }
     }
 
     Ok(ReleaseScopeArtifactProof { artifact_count: 5 })

@@ -2,10 +2,14 @@
 
 use crate::backend::DispatchConfig;
 use vyre_foundation::ir::Program;
-use vyre_foundation::serial::wire::{append_data_type_fingerprint, append_node_list_fingerprint};
 use vyre_spec::BackendId;
 
 /// Return the normalized program digest used by backend pipeline caches.
+///
+/// Thin forwarder: the digest and its per-`Program` memo are owned by
+/// [`vyre_foundation::ir::Program::try_normalized_cache_digest`], so the
+/// algorithm has exactly one implementation and is computed at most once per
+/// program value instead of once per dispatch.
 ///
 /// # Errors
 ///
@@ -13,45 +17,7 @@ use vyre_spec::BackendId;
 /// serialized into stable cache identity. Dispatch admission should surface the
 /// error rather than panic or generate a lossy cache key.
 pub fn try_normalized_program_cache_digest(program: &Program) -> Result<[u8; 32], String> {
-    thread_local! {
-        static SCRATCH: std::cell::RefCell<Vec<u8>> = std::cell::RefCell::new(Vec::with_capacity(1024));
-    }
-    SCRATCH.with(|cell| {
-        let mut scratch = cell.borrow_mut();
-        scratch.clear();
-        scratch.extend_from_slice(b"vyre-pipeline-cache-norm-v2\0wg\0");
-        for axis in program.workgroup_size() {
-            scratch.extend_from_slice(&axis.to_le_bytes());
-        }
-        scratch.extend_from_slice(b"\0op\0");
-        match program.entry_op_id() {
-            Some(op) => scratch.extend_from_slice(op.as_bytes()),
-            None => scratch.extend_from_slice(b"<anon>"),
-        }
-        scratch.extend_from_slice(b"\0v\0");
-        scratch.push(u8::from(program.is_structurally_validated()));
-        scratch.extend_from_slice(b"\0bufs\0");
-        for buffer in program.buffers().iter() {
-            scratch.extend_from_slice(buffer.name().as_bytes());
-            scratch.push(0);
-            scratch.push(buffer.kind() as u8);
-            scratch.push(buffer.access() as u8);
-            append_data_type_fingerprint(&mut scratch, &buffer.element()).map_err(|message| {
-                format!(
-                    "failed to fingerprint pipeline-cache buffer data type `{}`: {message}. Fix: validate and normalize the Program before computing a compiled-pipeline cache key; invalid IR must not enter cache identity.",
-                    buffer.name()
-                )
-            })?;
-            scratch.push(0);
-        }
-        scratch.extend_from_slice(b"\0body\0");
-        append_node_list_fingerprint(&mut scratch, program.entry()).map_err(|message| {
-            format!(
-                "failed to fingerprint pipeline-cache Program body: {message}. Fix: validate and normalize the Program before computing a compiled-pipeline cache key; invalid IR must not enter cache identity."
-            )
-        })?;
-        Ok(*blake3::hash(&scratch).as_bytes())
-    })
+    program.try_normalized_cache_digest()
 }
 
 /// Return the normalized program digest used by backend pipeline caches.

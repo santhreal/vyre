@@ -5,11 +5,11 @@
 //! loop, and accumulates directly. This eliminates the 8× memory expansion
 //! of a separate unpack dispatch.
 
-use crate::math::linalg::{
+use crate::region::wrap_anonymous;
+use crate::{
     plan_matmul_kernel, F32MatmulMode, MatmulFallbackReason, MatmulKernelCapabilities,
     MatmulKernelPath, MatmulKernelPlan, MatrixShape,
 };
-use crate::region::wrap_anonymous;
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_spec::{QuantizationScale, QuantizationZeroPoint};
 

@@ -15,7 +15,9 @@ pub(crate) fn validate_research_audit_artifact_bytes(
     let value = match serde_json::from_slice::<serde_json::Value>(bytes) {
         Ok(value) => value,
         Err(error) => {
-            return vec![format!("research audit artifact is not valid JSON: {error}")];
+            return vec![format!(
+                "research audit artifact is not valid JSON: {error}"
+            )];
         }
     };
     if value.get("schema_version").and_then(|raw| raw.as_u64()) != Some(SCHEMA_VERSION.into()) {
@@ -23,9 +25,7 @@ pub(crate) fn validate_research_audit_artifact_bytes(
             "research audit artifact must use schema_version={SCHEMA_VERSION}"
         ));
     }
-    if value
-        .get("generator_command")
-        .and_then(|raw| raw.as_str())
+    if value.get("generator_command").and_then(|raw| raw.as_str())
         != Some(expected_generator_command)
     {
         blockers.push(
@@ -38,9 +38,9 @@ pub(crate) fn validate_research_audit_artifact_bytes(
             blockers.push(format!("research audit artifact `{field}` is missing"));
         }
     }
-    if value.get("plan_path").and_then(|raw| raw.as_str()) != Some(PLAN_PATH) {
+    if value.get("expected_plan_path").and_then(|raw| raw.as_str()) != Some(PLAN_PATH) {
         blockers.push(format!(
-            "research audit artifact plan_path must be `{PLAN_PATH}`"
+            "research audit artifact expected_plan_path must be `{PLAN_PATH}`"
         ));
     }
     if value
@@ -85,10 +85,15 @@ pub(crate) fn validate_research_audit_artifact_bytes(
     }
     for field in RESEARCH_AUDIT_REQUIRED_ARRAY_FIELDS {
         if !value.get(*field).is_some_and(|raw| raw.is_array()) {
-            blockers.push(format!("research audit artifact `{field}` must be an array"));
+            blockers.push(format!(
+                "research audit artifact `{field}` must be an array"
+            ));
         }
     }
-    match value.get("raw_counter_families").and_then(|raw| raw.as_array()) {
+    match value
+        .get("raw_counter_families")
+        .and_then(|raw| raw.as_array())
+    {
         Some(families) => {
             for required in RAW_COUNTER_FAMILIES {
                 let present = families
@@ -387,9 +392,9 @@ mod tests {
     ) -> String {
         format!(
             r#"{{
-  "schema_version": 6,
+  "schema_version": 7,
   "generator_command": "{RESEARCH_AUDIT_DEFAULT_GENERATOR_COMMAND}",
-  "plan_path": "docs/optimization/ALL_AXES_ACCELERATION_PLAN.md",
+  "expected_plan_path": "docs/optimization/ALL_AXES_ACCELERATION_PLAN.md",
   "command_matrix_path": "docs/optimization/XTASK_COMMAND_MATRIX.md",
   "plan_row_count": 480,
   "minimum_plan_row_count": 480,
@@ -510,8 +515,12 @@ mod tests {
     }
   ]"#;
         let raw_counter_families = complete_raw_counter_families_json();
-        let artifact =
-            artifact_fixture_with_source_ledger(&raw_counter_families, "[]", "[]", source_ledger_findings);
+        let artifact = artifact_fixture_with_source_ledger(
+            &raw_counter_families,
+            "[]",
+            "[]",
+            source_ledger_findings,
+        );
 
         let blockers = validate_research_audit_artifact_bytes(
             artifact.as_bytes(),
@@ -557,9 +566,9 @@ mod tests {
         let raw_counter_families = complete_raw_counter_families_json();
         let artifact = format!(
             r#"{{
-  "schema_version": 6,
+  "schema_version": 7,
   "generator_command": "{RESEARCH_AUDIT_DEFAULT_GENERATOR_COMMAND}",
-  "plan_path": "docs/optimization/ALL_AXES_ACCELERATION_PLAN.md",
+  "expected_plan_path": "docs/optimization/ALL_AXES_ACCELERATION_PLAN.md",
   "command_matrix_path": "docs/optimization/XTASK_COMMAND_MATRIX.md",
   "plan_row_count": 480,
   "minimum_plan_row_count": 480,
@@ -609,9 +618,9 @@ mod tests {
         let raw_counter_families = complete_raw_counter_families_json();
         let artifact = format!(
             r#"{{
-  "schema_version": 6,
+  "schema_version": 7,
   "generator_command": "{RESEARCH_AUDIT_DEFAULT_GENERATOR_COMMAND}",
-  "plan_path": "docs/optimization/ALL_AXES_ACCELERATION_PLAN.md",
+  "expected_plan_path": "docs/optimization/ALL_AXES_ACCELERATION_PLAN.md",
   "command_matrix_path": "docs/optimization/XTASK_COMMAND_MATRIX.md",
   "plan_row_count": 480,
   "minimum_plan_row_count": 480,
@@ -664,9 +673,9 @@ mod tests {
         let raw_counter_families = complete_raw_counter_families_json();
         let artifact = format!(
             r#"{{
-  "schema_version": 6,
+  "schema_version": 7,
   "generator_command": "{RESEARCH_AUDIT_DEFAULT_GENERATOR_COMMAND}",
-  "plan_path": "docs/optimization/ALL_AXES_ACCELERATION_PLAN.md",
+  "expected_plan_path": "docs/optimization/ALL_AXES_ACCELERATION_PLAN.md",
   "command_matrix_path": "docs/optimization/XTASK_COMMAND_MATRIX.md",
   "plan_row_count": 480,
   "minimum_plan_row_count": 480,
@@ -716,9 +725,9 @@ mod tests {
         let raw_counter_families = complete_raw_counter_families_json();
         let artifact = format!(
             r#"{{
-  "schema_version": 6,
+  "schema_version": 7,
   "generator_command": "{RESEARCH_AUDIT_DEFAULT_GENERATOR_COMMAND}",
-  "plan_path": "docs/optimization/ALL_AXES_ACCELERATION_PLAN.md",
+  "expected_plan_path": "docs/optimization/ALL_AXES_ACCELERATION_PLAN.md",
   "command_matrix_path": "docs/optimization/XTASK_COMMAND_MATRIX.md",
   "plan_row_count": 480,
   "minimum_plan_row_count": 480,
@@ -768,7 +777,7 @@ mod tests {
         let raw_counter_families = complete_raw_counter_families_json();
         let artifact = format!(
             r#"{{
-  "schema_version": 6,
+  "schema_version": 7,
   "generator_command": "xtask research-audit --output release/evidence/optimization/research-audit.json",
   "plan_row_count": 480,
   "axis_count": 0,
@@ -802,11 +811,13 @@ mod tests {
 
         assert!(blockers
             .iter()
-            .any(|blocker| blocker.contains("plan_path")));
+            .any(|blocker| blocker.contains("expected_plan_path")));
         assert!(blockers
             .iter()
             .any(|blocker| blocker.contains("command_matrix_path")));
-        assert!(blockers.iter().any(|blocker| blocker.contains("axis_count")));
+        assert!(blockers
+            .iter()
+            .any(|blocker| blocker.contains("axis_count")));
         assert!(blockers
             .iter()
             .any(|blocker| blocker.contains("defined_research_key_count")));

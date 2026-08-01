@@ -158,8 +158,7 @@ mod tests {
         // stored at position 0 in the compiled kinds vector.
         let (expected_kind, _) = C11_PATTERNS[0];
         assert_eq!(
-            c.kinds[0],
-            expected_kind,
+            c.kinds[0], expected_kind,
             "Fix: compiled kinds[0] must match C11_PATTERNS[0] token id ({expected_kind}), \
              got {}. A pattern was dropped or reordered.",
             c.kinds[0]

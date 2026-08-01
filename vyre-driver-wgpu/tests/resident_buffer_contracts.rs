@@ -59,11 +59,11 @@ fn backend() -> WgpuBackend {
     )
 }
 
-#[path = "resident_buffer_contracts/source_shape_contracts.rs"]
-mod source_shape_contracts;
 #[path = "resident_buffer_contracts/lifecycle_range_contracts.rs"]
 mod lifecycle_range_contracts;
 #[path = "resident_buffer_contracts/ranged_batch_contracts.rs"]
 mod ranged_batch_contracts;
+#[path = "resident_buffer_contracts/source_shape_contracts.rs"]
+mod source_shape_contracts;
 #[path = "resident_buffer_contracts/validation_atomicity_contracts.rs"]
 mod validation_atomicity_contracts;

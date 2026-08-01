@@ -6,7 +6,7 @@
 //! are spelled as `concat!` pairs.
 
 use vyre_test_support::consumer_boundary::{
-    ConsumerBoundaryScan, assert_source_does_not_name_downstream_consumers,
+    assert_source_does_not_name_downstream_consumers, ConsumerBoundaryScan,
 };
 
 /// vyre-libs is a substrate-neutral primitive library: no source file may name a

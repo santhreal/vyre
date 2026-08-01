@@ -9,6 +9,7 @@ use crate::api::resident::{
     dispatch_program_timed, input_bytes_total, transfer_accounting, ResidentInputSet,
 };
 use crate::api::suite::SuiteKind;
+use crate::cases::skewed_graph::sparse_queue_capacity;
 use vyre_foundation::ir::Program;
 use vyre_primitives::graph::csr_frontier_queue::csr_queue_forward_traverse;
 use vyre_primitives::graph::csr_queue_strided::{
@@ -65,17 +66,11 @@ pub(super) struct DataflowIfdsSkewedActiveQueuePrepared {
 }
 
 pub(super) fn ifds_sparse_queue_capacity(active_sources: u64) -> Result<u32, BenchError> {
-    if active_sources == 0 {
-        return Err(BenchError::EnvironmentInvalid(
-            "IFDS queue benchmark requires at least one active source. Fix: seed the frontier before queue sizing."
-                .to_string(),
-        ));
-    }
-    u32::try_from(active_sources).map_err(|_| {
-        BenchError::EnvironmentInvalid(format!(
-            "IFDS queue active source count {active_sources} exceeds u32 indexing. Fix: split the frontier."
-        ))
-    })
+    sparse_queue_capacity(
+        active_sources,
+        "IFDS queue benchmark requires at least one active source. Fix: seed the frontier before queue sizing.",
+        "IFDS queue",
+    )
 }
 
 pub(super) struct IfdsQueueTraversePlan {

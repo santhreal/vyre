@@ -158,6 +158,38 @@ Each adversarial test file should include:
 - Falsifiable - removing or dumbing implementation must turn test red
 - Documentation - each test explains what vulnerability it prevents
 
+### Evidence class, when you mutation-test a suite
+
+Mutation testing asks a different question depending on what you mutate, and the
+two questions are easy to confuse. Read this before you report a mutation score.
+
+Mutating your own test file, or a constant pinned inside a test, proves two
+things: your assertions fire, and your pins are load-bearing. That is worth
+knowing. It does not prove your suite would catch a regression in shipped code,
+because no shipped code changed.
+
+Mutating production source proves the thing you actually care about: a real
+defect in the code a user runs turns your suite red.
+
+So rank the evidence by what was mutated, not by how the result was formatted:
+
+1. A caught production-source mutation, with the failing assertion's `left` and
+   `right` values printed by the harness.
+2. A caught production-source mutation, reported without operands.
+3. A caught mutation of a test file or a pinned constant, however cleanly the
+   operands are printed.
+
+A well-formatted result from category 3 reads as stronger than it is. When you
+report a mutation score, name which category each mutation belongs to. If every
+mutation you ran was in category 3, say so in the same sentence as the score.
+
+Two failure modes to record against yourself rather than hide:
+
+- A mutation that survives. The line it changed is not covered by any assertion.
+- A line whose deletion changes nothing, not the pass/fail result and not the
+   output. That line is verifying nothing, and finding one in your own suite is
+   a result worth keeping.
+
 ### Test Organization
 - Group related tests in modules with clear section headers
 - Use descriptive test names that explain the adversarial scenario

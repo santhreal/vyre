@@ -163,7 +163,16 @@ fn u32_oversized_shift_left_masks_amount_on_cuda() {
     // 1<<33 -> 2, 1<<63 -> 0x80000000.
     assert_eq!(
         expected,
-        vec![1, 0x8000_0000, 1, 2, 0xFF0, 0xFFFF_FFFF, 0x8000_0000, 0xEADB_EEF0],
+        vec![
+            1,
+            0x8000_0000,
+            1,
+            2,
+            0xFF0,
+            0xFFFF_FFFF,
+            0x8000_0000,
+            0xEADB_EEF0
+        ],
         "reference u32 oversized shift-left contract drifted"
     );
     assert_eq!(

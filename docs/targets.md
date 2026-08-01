@@ -1,18 +1,35 @@
 # vyre Targets
 
-A **target** is a substrate that can execute vyre IR. Each target lives in its own crate, implements the `VyreBackend` trait, and registers with the global backend registry via `inventory::submit!`.
+A target is a substrate that can execute vyre IR. Each target lives in its own
+crate, implements the `VyreBackend` trait, and registers with the global backend
+registry through `inventory::submit!`.
+
+You can list what is registered in your build:
+
+```rust
+let ids: Vec<&str> = vyre::backend::registered_backends()
+    .iter()
+    .map(|b| b.id)
+    .collect();
+```
+
+A backend only appears in that list if its crate is linked into your binary.
+Linking `vyre-driver-cuda` and `vyre-driver-wgpu` on a Linux host with an NVIDIA
+GPU gives `["cuda", "wgpu"]`.
 
 ## Target matrix
 
 | Target | Crate | Status | Execution path |
 |--------|-------|--------|----------------|
-| `wgpu` | `vyre-wgpu` | Primary, production | vyre IR → naga Module → wgpu → Vulkan / DX12 / Metal / WebGPU |
-| `spirv` | `backends/spirv` | Emission/validation target | vyre IR → naga Module → `naga::back::spv` → Vulkan direct |
-| `photonic` | `backends/photonic` | Contract-check target, no dispatch | registers, `supports_dispatch = false`, listed by `registered_backends()` |
-| `cuda` | `backends/cuda` | Registered backend work only if the crate is present in the workspace build | vyre IR → PTX emitter → CUDA Driver API |
-| `metal` | `vyre-driver-metal` | Native Apple runtime backend; registers only on Apple targets and never fabricates a backend on non-Apple builds | vyre IR → `vyre-lower` → `vyre-emit-metal` → MSL → Metal.framework |
-| `native_module` | `vyre-emit-metal` | Artifact emission implemented; runtime dispatch requires the native `metal` backend crate | vyre IR → `vyre-lower` → `vyre-emit-naga` → `naga::back::msl` → structured Metal artifact |
-| `cpu` | `vyre-reference` | Oracle | Pure-Rust structural interpreter  -  the conformance reference, not a production target |
+| `cuda` | `vyre-driver-cuda` | Release path on NVIDIA systems | vyre IR → `vyre-emit-ptx` → PTX → CUDA Driver API |
+| `wgpu` | `vyre-driver-wgpu` | Portable path | vyre IR → `vyre-emit-naga` → naga Module → wgpu → Vulkan, DX12, Metal, WebGPU |
+| `metal` | `vyre-driver-metal` | Native Apple runtime backend. Registers only on Apple targets, and never fabricates a backend on non-Apple builds | vyre IR → `vyre-lower` → `vyre-emit-metal` → MSL → Metal.framework |
+| `spirv` | `vyre-driver-spirv` | Emission and validation target | vyre IR → naga Module → `naga::back::spv` → Vulkan direct |
+| `native_module` | `vyre-emit-metal` | Artifact emission only. Runtime dispatch needs `vyre-driver-metal` | vyre IR → `vyre-lower` → `vyre-emit-naga` → `naga::back::msl` → structured Metal artifact |
+| `cpu` | `vyre-reference` | Oracle, not a production target | Pure-Rust structural interpreter, the conformance reference |
+
+There is no `backends/` directory and no `vyre-wgpu` crate. The driver crates
+are top-level workspace members named `vyre-driver-*`.
 
 ## Capabilities
 
@@ -48,49 +65,62 @@ inventory::submit! {
 }
 ```
 
-`vyre::registered_backends()` returns the id list; `vyre::backend(id)` constructs an instance. No manual global registration, no init function. Link the crate; the backend is visible.
+`vyre::backend::registered_backends()` returns the registration list, and
+`vyre::backend::acquire(id)` constructs an instance. Both live in the
+`vyre::backend` module, not at the crate root. There is no manual global
+registration and no init function: link the crate and the backend is visible.
 
-## The photonic forcing function
+Asking for a backend whose crate is not linked is an error, not a silent
+fallback:
 
-`backends/photonic/` is intentionally minimal. It registers, reports
-`supports_dispatch = false`, and every conform cycle confirms it's
-listed in `registered_backends()`.
+```text
+backend `photonic` is not linked into this binary. Fix: link the concrete
+driver crate that registers this backend or choose one of the registered
+backend ids.
+```
 
-The contract-check target exists so that **every IR extension, every new
-op, every new wire-format field must compile photonic without changes**.
-A CI test asserts this. If adding `Node::Speculate` breaks photonic, the
-IR extension story is broken  -  merge blocked.
+## The IR extension forcing function
+
+Adding an IR node, an op, or a wire-format field must not require editing any
+existing backend. That property is what keeps the substrate list open. The way
+to check it is to add the construct and confirm the other driver crates still
+compile untouched.
+
+A non-dispatching contract-check backend used to exist to enforce this
+mechanically. It is gone. No such crate is in the workspace today, so treat this
+as a review obligation rather than an automated gate.
 
 ## Adapter selection (wgpu target)
 
 The `wgpu` backend exposes:
 
-- `enumerate_adapters()`  -  returns every adapter the wgpu instance can see.
-- `AdapterCriteria`  -  policy struct (vendor preference, discrete-vs-integrated, required limits, required features).
-- `select_adapter(criteria)`  -  chooses one adapter.
-- `init_device_for_adapter(adapter)`  -  produces a `Device + Queue` pair.
-- `VYRE_ADAPTER_INDEX` env var  -  manual override for diagnostics.
+- `enumerate_adapters()` returns every adapter the wgpu instance can see.
+- `AdapterCriteria` is the policy struct: vendor preference, discrete versus
+  integrated, required limits, required features.
+- `select_adapter(criteria)` chooses one adapter.
+- `init_device_for_adapter(adapter)` produces a `Device` and `Queue` pair.
+- `VYRE_ADAPTER_INDEX` is an environment variable that overrides selection
+  manually, for diagnostics.
 
-The default dispatch path uses a cached singleton adapter chosen by `AdapterCriteria::default()`. Multi-GPU frontends construct their own adapter list and dispatch per adapter.
+The default dispatch path uses a cached singleton adapter chosen by
+`AdapterCriteria::default()`. A multi-GPU frontend builds its own adapter list
+and dispatches per adapter.
 
-## Target cross-matrix (what the conform gate runs)
+## Target coverage
 
-```
-             wgpu   spirv emission   photonic registry   cpu (reference)
-primitive       ✓          ✓                ✓*              ✓
-hash            ✓          ✓                ✓*              ✓
-decode          ✓          ✓                ✓*              ✓
-graph           ✓          ✓                ✓*              ✓
-…
-* Photonic is the forcing function, not a real execution target.
-  "✓" means "compiles, registers, passes the cert check that it can
-  see the op declared" - not that it executes on hardware.
-```
+Coverage is not maintained by hand in this file, because a hand-written matrix
+goes stale the moment an op lands. Two generated sources hold the real answer:
 
-Every op added to `vyre-core` must enter this matrix. The
-dialect-coverage CI script (`scripts/check_dialect_coverage.sh`) blocks
-merges that declare ops without at least one concrete target lowering
-(`primary_text | primary_binary | secondary_text | metal_ir`).
+- `docs/generated/OP_INVENTORY.md` lists every registered op.
+- `cargo run -p xtask --bin xtask -- conformance-matrix` reports per-engine
+  support. The engines it requires a verdict for are `cpu_ref`, `cuda`, `wgpu`,
+  `metal`, `rust_regex`, `hyperscan`, and `vectorscan`, defined in
+  `xtask/src/conformance_matrix.rs`. An engine with no device on the host records
+  `unsupported` rather than being dropped from the report.
+
+Every op added to `vyre` must enter that matrix. `scripts/check_dialect_coverage.sh`
+blocks a merge that declares an op without at least one concrete target lowering
+(`primary_text`, `primary_binary`, `secondary_text`, or `metal_ir`).
 
 ## Adding a new target
 

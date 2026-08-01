@@ -312,9 +312,14 @@ fn cuda_module_keying_reuses_ptx_source_digest_instead_of_rehashing_full_ptx() {
     );
     assert_eq!(
         egraph
-            .matches("module_cache_key_for_raw_ptx_artifact(&kernel.source)")
+            .matches("module_cache_key_for_raw_ptx_artifact(source(&kernel))")
             .count(),
+        1,
+        "Fix: the shared e-graph warm helper must compute each standalone kernel's raw-artifact key exactly once."
+    );
+    assert_eq!(
+        egraph.matches("self.warm_egraph_kernel_with_key(").count(),
         3,
-        "Fix: each standalone e-graph CUDA kernel should compute its raw-artifact module key once in its warm-and-key helper, not again in the run path."
+        "Fix: all standalone e-graph kernel families must delegate raw-artifact keying to the shared warm helper."
     );
 }

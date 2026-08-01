@@ -8,7 +8,7 @@
 //! the same faithful boundary across three chained dispatches, was not. This is the FIRST-EVER execution
 //! of the full compress pipeline through a boundary that models the real backend.
 //!
-//! Contract (audited CLEAN): `fmm_compress_pairwise_via` runs three dispatches on one dispatcher 
+//! Contract (audited CLEAN): `fmm_compress_pairwise_via` runs three dispatches on one dispatcher
 //!   (1) `aggregate_to_cells_via` (P2M): scores RO + cell_assignment RO + moments RW = 3 IC → cell_moments;
 //!   (2) `translate_to_targets_via` (M2L): cell_moments RO + cell_distances RO + cell_local RW = 3 IC;
 //!   (3) `evaluate_at_regions_via` (L2P): cell_local RO + cell_assignment RO + region_out RW = 3 IC → out.

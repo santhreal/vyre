@@ -52,10 +52,12 @@ The CPU-reference oracle. Every op declares its CPU semantics
 here; the conform suite measures every backend's output against
 this.
 
-### `composition.rs`
-Region-chain composition helpers. Wraps op bodies in
-`Node::Region { source_region, body }` so provenance survives
-inlining.
+### `algebra/composition.rs`
+This module owns region-chain composition metadata. `tag_program` wraps an
+existing `Program` under a parent operation without rebuilding its buffer
+table or losing `entry_op_id`, launch geometry, or self-composition metadata.
+`reparent_program_children` preserves primitive generator ids and records the
+Cat-A parent in each child `source_region`.
 
 ### `memory_model.rs`
 `MemoryOrdering`, `MemoryKind`, `MemoryHints`. The frozen memory

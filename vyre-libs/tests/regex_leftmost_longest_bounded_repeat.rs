@@ -146,7 +146,7 @@ fn two_variable_tokens_each_collapse_at_their_own_origin() {
 fn open_ended_repeat_window_is_documented_limitation() {
     // Open-ended repeats (`+`, `*`, `{n,}`, i.e. `max = None`) have NO finite
     // maximum length, so the windowed-replay architecture (which caps each
-    // origin's walk at `max_pattern_len`) fundamentally cannot cover them 
+    // origin's walk at `max_pattern_len`) fundamentally cannot cover them
     // `build_repetition` records only the MIN length for the open case. This
     // test PINS that limitation so a future open-ended fix (route unbounded
     // repeats through the uncapped single-pass path, or reject them at

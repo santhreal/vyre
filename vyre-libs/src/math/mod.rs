@@ -61,6 +61,27 @@ pub mod wrapping_neg;
 
 pub(crate) mod elementwise;
 
+fn invalid_f32_reduction_program(
+    op_id: &'static str,
+    input: &str,
+    output: &str,
+    fix: &'static str,
+) -> vyre::ir::Program {
+    use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+
+    Program::wrapped(
+        vec![
+            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::F32).with_count(1),
+            BufferDecl::output(output, 1, DataType::F32).with_count(1),
+        ],
+        [1, 1, 1],
+        vec![crate::region::wrap_anonymous(
+            op_id,
+            vec![Node::trap(Expr::u32(0), fix)],
+        )],
+    )
+}
+
 pub use atomic::{
     atomic_add_u32, atomic_and_u32, atomic_compare_exchange_u32, atomic_exchange_u32,
     atomic_max_u32, atomic_min_u32, atomic_or_u32, atomic_xor_u32,

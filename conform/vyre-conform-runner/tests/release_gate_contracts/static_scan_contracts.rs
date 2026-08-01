@@ -49,4 +49,3 @@ fn conformance_runner_wrong_output_pairs_have_replay_capsules_contract() {
         "Fix: every BufferParity mismatch path must attach a replay capsule instead of returning only prose."
     );
 }
-

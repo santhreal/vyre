@@ -7,8 +7,7 @@ const DOCS: &str =
     include_str!("../../../docs/optimization/DOCS_RS_RUSTDOC_PUBLICATION_POLICY.toml");
 const CONSUMER: &str =
     include_str!("../../../docs/optimization/CONSUMER_INSTALL_COMPATIBILITY_MATRIX.toml");
-const COMPAT: &str =
-    include_str!("../../../docs/optimization/PUBLIC_API_SEMVER_MSRV_POLICY.toml");
+const COMPAT: &str = include_str!("../../../docs/optimization/PUBLIC_API_SEMVER_MSRV_POLICY.toml");
 const COVERAGE: &str = include_str!(
     "../../../docs/optimization/END_TO_END_PACKAGE_REGISTRY_CONSUMER_TRANCHE_COVERAGE.toml"
 );
@@ -24,12 +23,16 @@ fn package_registry_consumer_sources_are_registered_and_existing_semver_api_keys
         "SEMVER_2_0",
         "RUST_API_GUIDELINES",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 
 #[test]
-fn crates_io_registry_publication_policy_records_permanence_owners_yanking_package_contents_and_boundaries() {
+fn crates_io_registry_publication_policy_records_permanence_owners_yanking_package_contents_and_boundaries(
+) {
     for required in [
         "registry_surface",
         "crate_name_policy",
@@ -50,7 +53,8 @@ fn crates_io_registry_publication_policy_records_permanence_owners_yanking_packa
 }
 
 #[test]
-fn docs_rs_rustdoc_publication_policy_records_readme_metadata_features_targets_rustdoc_and_private_boundaries() {
+fn docs_rs_rustdoc_publication_policy_records_readme_metadata_features_targets_rustdoc_and_private_boundaries(
+) {
     for required in [
         "docs_surface",
         "readme_policy",
@@ -93,7 +97,8 @@ fn consumer_install_matrix_covers_cli_library_and_subcrate_consumption_modes() {
 }
 
 #[test]
-fn public_api_semver_msrv_policy_links_api_snapshots_migrations_docs_consumers_and_publication_gates() {
+fn public_api_semver_msrv_policy_links_api_snapshots_migrations_docs_consumers_and_publication_gates(
+) {
     for required in [
         "compat_surface",
         "api_snapshot_policy",

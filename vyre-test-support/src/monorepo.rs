@@ -214,7 +214,11 @@ mod tests {
                 root.join(DATAFLOW_RELATIVE),
                 "dataflow_root() must be {DATAFLOW_RELATIVE} under the resolved monorepo root"
             );
-            assert!(dataflow.is_dir(), "{} must be a directory", dataflow.display());
+            assert!(
+                dataflow.is_dir(),
+                "{} must be a directory",
+                dataflow.display()
+            );
         }
     }
 

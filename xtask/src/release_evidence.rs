@@ -14,23 +14,22 @@ mod evidence_index;
 mod expected_artifacts;
 
 use crate::artifact_paths::{
-    PLAN_PROGRESS_ARTIFACT, RESEARCH_AUDIT_ARTIFACT,
     LEGO_AUDIT_DUPLICATES_ARTIFACT, REGISTERED_OP_DUPLICATES_ARTIFACT,
     SOURCE_SIMILAR_DUPLICATES_ARTIFACT,
 };
 use artifact_status::{
     artifact_blocker_suffix, generator_command, inspect_expected_artifacts,
-    inspect_expected_artifacts_with_mode,
-    release_artifact_status_has_failure, ReleaseEvidenceArtifactStatus,
+    inspect_expected_artifacts_with_mode, release_artifact_status_has_failure,
+    ReleaseEvidenceArtifactStatus,
 };
+use evidence_index::{build_evidence_index, ReleaseEvidenceIndex};
+pub(crate) use expected_artifacts::expected_artifacts_for_command;
 use expected_artifacts::{
     build_expected_artifact_registry, write_expected_artifact_registry,
     ReleaseExpectedArtifactCommand, ReleaseExpectedArtifactRegistry,
     COMMAND_MODE_EXTERNAL_ARTIFACTS_ONLY, COMMAND_MODE_SPAWNED, EXPECTED_ARTIFACT_REGISTRY,
     RELEASE_EVIDENCE_GENERATOR_COMMAND, RELEASE_EVIDENCE_RUN_ARTIFACT,
 };
-use evidence_index::{build_evidence_index, ReleaseEvidenceIndex};
-pub(crate) use expected_artifacts::expected_artifacts_for_command;
 
 const RELEASE_EVIDENCE_RUN_SCHEMA_VERSION: u32 = 4;
 
@@ -65,16 +64,6 @@ const COMMANDS: &[EvidenceCommand] = &[
         "--report-only",
         "--duplicate-report-json",
         LEGO_AUDIT_DUPLICATES_ARTIFACT,
-    ]),
-    EvidenceCommand::required(&[
-        "acceleration-plan-gate",
-        "--progress-json",
-        PLAN_PROGRESS_ARTIFACT,
-    ]),
-    EvidenceCommand::required(&[
-        "research-audit",
-        "--output",
-        RESEARCH_AUDIT_ARTIFACT,
     ]),
 ];
 
@@ -164,8 +153,12 @@ pub(crate) fn run(_args: &[String]) {
         } else {
             COMMAND_MODE_EXTERNAL_ARTIFACTS_ONLY
         };
-        let artifact_statuses =
-            inspect_expected_artifacts_with_mode(&workspace_root, command.args, expected, command_mode);
+        let artifact_statuses = inspect_expected_artifacts_with_mode(
+            &workspace_root,
+            command.args,
+            expected,
+            command_mode,
+        );
         let status_text = command_status_text(status.as_ref());
         let exit_code = status
             .as_ref()
@@ -270,7 +263,9 @@ fn write_release_evidence_run(
     let report_only_command_count = commands.len().saturating_sub(required_command_count);
     let successful_commands = commands
         .iter()
-        .filter(|command| command.status == "success" || command.status == "external-artifacts-only")
+        .filter(|command| {
+            command.status == "success" || command.status == "external-artifacts-only"
+        })
         .count();
     let expected_artifact_registry = build_expected_artifact_registry(
         commands
@@ -336,20 +331,7 @@ fn write_release_evidence_run(
         blockers: combined_blockers,
         reports: reports.to_vec(),
     };
-    let json = match serde_json::to_string_pretty(&run) {
-        Ok(json) => json,
-        Err(error) => {
-            eprintln!("release-evidence: failed to serialize run evidence: {error}");
-            std::process::exit(1);
-        }
-    };
-    if let Err(error) = fs::write(&output, format!("{json}\n")) {
-        eprintln!(
-            "release-evidence: failed to write `{}`: {error}",
-            output.display()
-        );
-        std::process::exit(1);
-    }
+    crate::output_arg::write_json(&output, &run);
     final_artifact_failures
 }
 
@@ -365,6 +347,7 @@ fn registry_command_mode(status: &str) -> &'static str {
 mod tests {
     use super::expected_artifacts::expected_artifact_registry_blockers;
     use super::*;
+    use crate::artifact_paths::PLAN_PROGRESS_ARTIFACT;
 
     #[test]
     fn artifact_status_records_generator_owner_and_fingerprints() {
@@ -396,6 +379,8 @@ mod tests {
         assert!(status.blockers.is_empty(), "{:?}", status.blockers);
     }
 
+    /// The orchestrator must preserve every public-boundary failure reported
+    /// for generated evidence instead of treating readable JSON as sufficient.
     #[test]
     fn artifact_status_rejects_public_boundary_leaks() {
         let tmp = tempfile::tempdir().unwrap();
@@ -422,7 +407,7 @@ mod tests {
             .any(|blocker| blocker.contains("private Santh path")));
         assert!(blockers
             .iter()
-            .any(|blocker| blocker.contains("non-Vyre public repository")));
+            .any(|blocker| blocker.contains("outside the release train")));
         assert!(blockers
             .iter()
             .any(|blocker| blocker.contains("credential-looking")));
@@ -480,7 +465,10 @@ mod tests {
             expected_artifacts(&["acceleration-plan-gate"]),
         );
 
-        assert_eq!(expected_artifacts(&["acceleration-plan-gate"]), &[PLAN_PROGRESS_ARTIFACT]);
+        assert_eq!(
+            expected_artifacts(&["acceleration-plan-gate"]),
+            &[PLAN_PROGRESS_ARTIFACT]
+        );
         assert_eq!(statuses.len(), 1);
         let status = &statuses[0];
         assert_eq!(status.owner_lane, "testing_evidence");
@@ -747,9 +735,7 @@ mod tests {
         assert!(blockers
             .iter()
             .any(|blocker| blocker.contains("command_count")));
-        assert!(blockers
-            .iter()
-            .any(|blocker| blocker.contains("required")));
+        assert!(blockers.iter().any(|blocker| blocker.contains("required")));
         assert!(blockers
             .iter()
             .any(|blocker| blocker.contains("artifact_contracts")));

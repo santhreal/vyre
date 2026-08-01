@@ -206,80 +206,20 @@ impl CanonicalCtx {
     }
 
     fn canonicalize_expr(&mut self, expr: &Expr) -> Expr {
-        match expr {
-            Expr::BinOp { op, left, right } => {
-                let mut left = self.canonicalize_expr(left);
-                let mut right = self.canonicalize_expr(right);
-                if should_swap_operands(*op, &left, &right, &mut self.left_key, &mut self.right_key)
-                {
-                    std::mem::swap(&mut left, &mut right);
-                }
-                Expr::BinOp {
-                    op: *op,
-                    left: Box::new(left),
-                    right: Box::new(right),
-                }
+        crate::optimizer::rewrite::rewrite_expr(expr, &mut |candidate| {
+            let Expr::BinOp { op, left, right } = candidate else {
+                return None;
+            };
+            if !should_swap_operands(*op, left, right, &mut self.left_key, &mut self.right_key) {
+                return None;
             }
-            Expr::UnOp { op, operand } => Expr::UnOp {
-                op: op.clone(),
-                operand: Box::new(self.canonicalize_expr(operand)),
-            },
-            Expr::Load { buffer, index } => Expr::Load {
-                buffer: buffer.clone(),
-                index: Box::new(self.canonicalize_expr(index)),
-            },
-            Expr::Call { op_id, args } => Expr::Call {
-                op_id: op_id.clone(),
-                args: args.iter().map(|arg| self.canonicalize_expr(arg)).collect(),
-            },
-            Expr::Select {
-                cond,
-                true_val,
-                false_val,
-            } => Expr::Select {
-                cond: Box::new(self.canonicalize_expr(cond)),
-                true_val: Box::new(self.canonicalize_expr(true_val)),
-                false_val: Box::new(self.canonicalize_expr(false_val)),
-            },
-            Expr::Cast { target, value } => Expr::Cast {
-                target: target.clone(),
-                value: Box::new(self.canonicalize_expr(value)),
-            },
-            Expr::Fma { a, b, c } => Expr::Fma {
-                a: Box::new(self.canonicalize_expr(a)),
-                b: Box::new(self.canonicalize_expr(b)),
-                c: Box::new(self.canonicalize_expr(c)),
-            },
-            Expr::Atomic {
-                op,
-                buffer,
-                index,
-                expected,
-                value,
-                ordering,
-            } => Expr::Atomic {
+            Some(Expr::BinOp {
                 op: *op,
-                buffer: buffer.clone(),
-                index: Box::new(self.canonicalize_expr(index)),
-                expected: expected
-                    .as_ref()
-                    .map(|expr| Box::new(self.canonicalize_expr(expr))),
-                value: Box::new(self.canonicalize_expr(value)),
-                ordering: *ordering,
-            },
-            Expr::SubgroupBallot { cond } => Expr::SubgroupBallot {
-                cond: Box::new(self.canonicalize_expr(cond)),
-            },
-            Expr::SubgroupShuffle { value, lane } => Expr::SubgroupShuffle {
-                value: Box::new(self.canonicalize_expr(value)),
-                lane: Box::new(self.canonicalize_expr(lane)),
-            },
-            Expr::SubgroupReduce { op, value } => Expr::SubgroupReduce {
-                op: *op,
-                value: Box::new(self.canonicalize_expr(value)),
-            },
-            other => other.clone(),
-        }
+                left: Box::new((**right).clone()),
+                right: Box::new((**left).clone()),
+            })
+        })
+        .into_owned()
     }
 }
 

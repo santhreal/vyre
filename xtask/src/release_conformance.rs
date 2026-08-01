@@ -6,17 +6,14 @@ use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+use crate::release_backend_rows::{
+    count_non_runtime_supported_release_backend_rows, count_runtime_dialect_contract_rows,
+    RUNTIME_DIALECT_CONTRACT_OPS,
+};
 use serde::{Deserialize, Serialize};
 
 const MIN_RELEASE_OP_PAIRS: usize = 49;
 const MAX_RELEASE_CONFORMANCE_TEXT_BYTES: u64 = 8_388_608;
-const RUNTIME_DIALECT_CONTRACT_OPS: &[&str] = &[
-    "core.indirect_dispatch",
-    "io.dma_from_nvme",
-    "io.write_back_to_nvme",
-    "mem.unmap",
-    "mem.zerocopy_map",
-];
 
 #[derive(Debug, Deserialize, Serialize)]
 struct PairResult {
@@ -289,8 +286,7 @@ fn run_backend_conformance(
         ));
     }
     let diff_summaries = backend_diff_summaries(&pairs);
-    let diff_summary_errors =
-        validate_backend_diff_summaries(backend_id, &pairs, &diff_summaries);
+    let diff_summary_errors = validate_backend_diff_summaries(backend_id, &pairs, &diff_summaries);
     for error in &diff_summary_errors {
         blockers.push(error.clone());
     }
@@ -335,36 +331,6 @@ fn run_backend_conformance(
     }
 }
 
-fn count_runtime_dialect_contract_rows(rows: &[String]) -> usize {
-    rows.iter()
-        .filter(|row| {
-            let Some((op, backend, status)) = parse_release_backend_row(row) else {
-                return false;
-            };
-            RUNTIME_DIALECT_CONTRACT_OPS.contains(&op)
-                && ((backend == "reference" && status == "not_applicable")
-                    || (matches!(backend, "cuda" | "wgpu") && status == "experimental"))
-        })
-        .count()
-}
-
-fn count_non_runtime_supported_release_backend_rows(rows: &[String]) -> usize {
-    rows.iter()
-        .filter(|row| {
-            let Some((op, _backend, status)) = parse_release_backend_row(row) else {
-                return false;
-            };
-            !RUNTIME_DIALECT_CONTRACT_OPS.contains(&op) && status == "supported"
-        })
-        .count()
-}
-
-fn parse_release_backend_row(row: &str) -> Option<(&str, &str, &str)> {
-    let (prefix, status) = row.rsplit_once(':')?;
-    let (op, backend) = prefix.rsplit_once(':')?;
-    Some((op, backend, status))
-}
-
 // `OpMatrixCatalog` and its reader live in `conformance_matrix`. This module
 // used to carry a second copy that drifted: the catalog gained an
 // `inlined_callee` opt-out there and kept requiring those ops here, so the
@@ -378,14 +344,7 @@ struct ParsedPairs {
 }
 
 fn cargo_runner(workspace_root: &Path) -> PathBuf {
-    if let Some(runner) = std::env::var_os("VYRE_CARGO_RUNNER") {
-        return PathBuf::from(runner);
-    }
-    let local = workspace_root.join("cargo_full");
-    if local.is_file() {
-        return local;
-    }
-    PathBuf::from("cargo_full")
+    crate::output_arg::cargo_runner(workspace_root)
 }
 
 fn parse_pairs(stdout: &[u8]) -> Result<ParsedPairs, String> {
@@ -612,7 +571,9 @@ fn validate_backend_diff_summaries(
     }
     for summary in summaries {
         if summary.op_id.trim().is_empty() {
-            errors.push(format!("{backend_id} conformance diff summary has empty op_id"));
+            errors.push(format!(
+                "{backend_id} conformance diff summary has empty op_id"
+            ));
         }
         if summary.backend_id != backend_id {
             errors.push(format!(
@@ -670,10 +631,7 @@ fn write_release_log(workspace_root: &Path, requested_backends: &[String], failu
         "wgpu-conformance.json",
         "reference-conformance.json",
     ];
-    if requested_backends
-        .iter()
-        .any(|backend| backend == "metal")
-    {
+    if requested_backends.iter().any(|backend| backend == "metal") {
         required_artifacts.push("metal-conformance.json");
     }
     let artifact_statuses = required_artifacts
@@ -741,7 +699,10 @@ fn parse_args(args: &[String]) -> Result<Config, String> {
         match args[index].as_str() {
             "--backend" => {
                 let Some(value) = args.get(index + 1) else {
-                    return Err("Fix: --backend requires cuda, wgpu, metal, cpu-ref, reference, or all.".to_string());
+                    return Err(
+                        "Fix: --backend requires cuda, wgpu, metal, cpu-ref, reference, or all."
+                            .to_string(),
+                    );
                 };
                 backends = if value == "all" {
                     vec![
@@ -764,7 +725,7 @@ fn parse_args(args: &[String]) -> Result<Config, String> {
             }
             "--help" | "-h" => {
                 println!(
-                    "USAGE:\n  cargo_full run --bin xtask -- release-conformance [--backend all|cuda|wgpu|metal|cpu-ref]\n\n\
+                    "USAGE:\n  cargo xtask release-conformance [--backend all|cuda|wgpu|metal|cpu-ref]\n\n\
                      Runs real vyre-conform dispatch for release conformance artifacts."
                 );
                 std::process::exit(0);
@@ -895,7 +856,9 @@ mod tests {
             "Fix: validation must reject cross-backend mislabeled diff summaries; errors={errors:?}"
         );
         assert!(
-            errors.iter().any(|error| error.contains("empty input_digest")),
+            errors
+                .iter()
+                .any(|error| error.contains("empty input_digest")),
             "Fix: validation must reject summaries without input_digest; errors={errors:?}"
         );
         assert!(

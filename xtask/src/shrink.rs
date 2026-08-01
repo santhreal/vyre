@@ -1,6 +1,6 @@
 //! Automated Delta-Debugging tool for Vyre IR.
 //!
-//! Exposes a `cargo_full run --bin xtask -- shrink [file.vir] [oracle.sh]` command that iteratively
+//! Exposes a `cargo xtask shrink [file.vir] [oracle.sh]` command that iteratively
 //! applies structural passes (DeadNodeElimination, ArgFolding, ShortCircuit) to
 //! reduce a crashing or misbehaving trace down to a highly constrained minimal reproducer.
 

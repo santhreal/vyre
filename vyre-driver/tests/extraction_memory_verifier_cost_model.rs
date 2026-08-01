@@ -1,6 +1,7 @@
 //! Extraction memory verifier cost model test suite.
 
-const COST_MODEL: &str = include_str!("../../docs/optimization/EXTRACTION_MEMORY_VERIFIER_COST_MODEL.toml");
+const COST_MODEL: &str =
+    include_str!("../../docs/optimization/EXTRACTION_MEMORY_VERIFIER_COST_MODEL.toml");
 
 #[test]
 fn extraction_cost_model_records_memory_and_verifier_terms() {

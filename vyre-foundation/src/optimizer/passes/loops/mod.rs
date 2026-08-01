@@ -45,3 +45,164 @@ pub mod loop_unroll;
 /// elision via the structural loop range).
 pub mod loop_var_range_fold;
 mod substitution;
+
+fn collect_vars_in_expr(expr: &crate::ir::Expr, out: &mut rustc_hash::FxHashSet<crate::ir::Ident>) {
+    let mut stack = smallvec::SmallVec::<[&crate::ir::Expr; 16]>::new();
+    stack.push(expr);
+    while let Some(candidate) = stack.pop() {
+        if let crate::ir::Expr::Var(name) = candidate {
+            out.insert(name.clone());
+        }
+        crate::optimizer::rewrite::push_expr_children(candidate, &mut stack);
+    }
+}
+
+fn collect_var_reads(nodes: &[crate::ir::Node], out: &mut rustc_hash::FxHashSet<crate::ir::Ident>) {
+    for node in nodes {
+        match node {
+            crate::ir::Node::Let { value, .. } | crate::ir::Node::Assign { value, .. } => {
+                collect_vars_in_expr(value, out);
+            }
+            crate::ir::Node::Store { index, value, .. } => {
+                collect_vars_in_expr(index, out);
+                collect_vars_in_expr(value, out);
+            }
+            crate::ir::Node::If {
+                cond,
+                then,
+                otherwise,
+            } => {
+                collect_vars_in_expr(cond, out);
+                collect_var_reads(then, out);
+                collect_var_reads(otherwise, out);
+            }
+            crate::ir::Node::Loop { from, to, body, .. } => {
+                collect_vars_in_expr(from, out);
+                collect_vars_in_expr(to, out);
+                collect_var_reads(body, out);
+            }
+            crate::ir::Node::Block(body) => collect_var_reads(body, out),
+            crate::ir::Node::Region { body, .. } => collect_var_reads(body, out),
+            _ => {}
+        }
+    }
+}
+
+fn collect_buffers_in_expr(
+    expr: &crate::ir::Expr,
+    out: &mut rustc_hash::FxHashSet<crate::ir::Ident>,
+) {
+    let mut stack = smallvec::SmallVec::<[&crate::ir::Expr; 16]>::new();
+    stack.push(expr);
+    while let Some(candidate) = stack.pop() {
+        match candidate {
+            crate::ir::Expr::Load { buffer, .. }
+            | crate::ir::Expr::BufLen { buffer }
+            | crate::ir::Expr::BufferRef { buffer }
+            | crate::ir::Expr::Atomic { buffer, .. } => {
+                out.insert(buffer.clone());
+            }
+            _ => {}
+        }
+        crate::optimizer::rewrite::push_expr_children(candidate, &mut stack);
+    }
+}
+
+fn collect_touched_buffers(
+    nodes: &[crate::ir::Node],
+    out: &mut rustc_hash::FxHashSet<crate::ir::Ident>,
+) {
+    for node in nodes {
+        match node {
+            crate::ir::Node::Store {
+                buffer,
+                index,
+                value,
+            } => {
+                out.insert(buffer.clone());
+                collect_buffers_in_expr(index, out);
+                collect_buffers_in_expr(value, out);
+            }
+            crate::ir::Node::Let { value, .. } | crate::ir::Node::Assign { value, .. } => {
+                collect_buffers_in_expr(value, out);
+            }
+            crate::ir::Node::If {
+                cond,
+                then,
+                otherwise,
+            } => {
+                collect_buffers_in_expr(cond, out);
+                collect_touched_buffers(then, out);
+                collect_touched_buffers(otherwise, out);
+            }
+            crate::ir::Node::Loop { from, to, body, .. } => {
+                collect_buffers_in_expr(from, out);
+                collect_buffers_in_expr(to, out);
+                collect_touched_buffers(body, out);
+            }
+            crate::ir::Node::Block(body) => collect_touched_buffers(body, out),
+            crate::ir::Node::Region { body, .. } => collect_touched_buffers(body, out),
+            crate::ir::Node::AsyncLoad {
+                source,
+                destination,
+                offset,
+                size,
+                ..
+            }
+            | crate::ir::Node::AsyncStore {
+                source,
+                destination,
+                offset,
+                size,
+                ..
+            } => {
+                out.insert(source.clone());
+                out.insert(destination.clone());
+                collect_buffers_in_expr(offset, out);
+                collect_buffers_in_expr(size, out);
+            }
+            crate::ir::Node::IndirectDispatch { count_buffer, .. } => {
+                out.insert(count_buffer.clone());
+            }
+            crate::ir::Node::Trap { address, .. } => collect_buffers_in_expr(address, out),
+            crate::ir::Node::AllReduce { buffer, .. }
+            | crate::ir::Node::Broadcast { buffer, .. } => {
+                out.insert(buffer.clone());
+            }
+            crate::ir::Node::AllGather { input, output, .. }
+            | crate::ir::Node::ReduceScatter { input, output, .. } => {
+                out.insert(input.clone());
+                out.insert(output.clone());
+            }
+            crate::ir::Node::Barrier { .. }
+            | crate::ir::Node::Return
+            | crate::ir::Node::AsyncWait { .. }
+            | crate::ir::Node::Resume { .. }
+            | crate::ir::Node::Opaque(_) => {}
+        }
+    }
+}
+
+fn buffers_disjoint_with(
+    first: &[crate::ir::Node],
+    second: &[crate::ir::Node],
+    collect: fn(&[crate::ir::Node], &mut rustc_hash::FxHashSet<crate::ir::Ident>),
+) -> bool {
+    let mut first_buffers = rustc_hash::FxHashSet::default();
+    let mut second_buffers = rustc_hash::FxHashSet::default();
+    collect(first, &mut first_buffers);
+    collect(second, &mut second_buffers);
+    first_buffers.is_disjoint(&second_buffers)
+}
+
+fn rename_var_in_expr(
+    expr: crate::ir::Expr,
+    from: &crate::ir::Ident,
+    to: &crate::ir::Ident,
+) -> crate::ir::Expr {
+    crate::optimizer::rewrite::rewrite_expr(&expr, &mut |candidate| match candidate {
+        crate::ir::Expr::Var(name) if name == from => Some(crate::ir::Expr::Var(to.clone())),
+        _ => None,
+    })
+    .into_owned()
+}

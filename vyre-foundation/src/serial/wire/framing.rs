@@ -12,8 +12,8 @@ pub(crate) use super::tags::{FLAG_COMPRESSED, FLAG_OPAQUE_ENDIAN_FIXED, FLAG_SEA
 /// `Fix:` error rather than an opaque downstream parse failure
 /// (audit L.1.47).
 pub use magic::{
-    wire_format_version_is_supported, MAGIC, MIN_SUPPORTED_WIRE_FORMAT_VERSION,
-    WIRE_FORMAT_VERSION,
+    wire_format_version_is_supported, MAGIC, MAX_SHAPE_PREDICATE_DEPTH,
+    MIN_SUPPORTED_WIRE_FORMAT_VERSION, WIRE_FORMAT_VERSION,
 };
 
 /// Append a checked sequence length to the wire buffer.

@@ -25,4 +25,4 @@ mod timed;
 mod tests;
 
 pub(crate) use crate::backend::resident_dispatch_support::CudaResidentDispatch;
-pub(crate) use helpers::next_resident_handle;
+pub(crate) use helpers::next_dispatch_binding;

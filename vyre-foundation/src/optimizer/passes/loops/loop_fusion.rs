@@ -53,6 +53,7 @@
 //!   interleaving silently changes the observed values. Assign-free bodies (the
 //!   common map/transform loops) take the fast path and are unaffected.
 
+use super::{collect_touched_buffers, collect_var_reads, rename_var_in_expr};
 use crate::ir::{Expr, Ident, Node, Program};
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 use crate::visit::node_map;
@@ -140,7 +141,7 @@ fn fuse_in_body(body: Vec<Node>, changed: &mut bool) -> Vec<Node> {
         };
         if !bounds_match(&from_a, &to_a, &from_b, &to_b)
             || var_a == var_b
-            || !buffers_disjoint(&body_a, &body_b)
+            || !super::buffers_disjoint_with(&body_a, &body_b, collect_touched_buffers)
             || has_unsummarisable_effect(&body_a)
             || has_unsummarisable_effect(&body_b)
             || body_a_let_names_collide_with_b(&body_a, &body_b, &var_b)
@@ -199,160 +200,6 @@ fn bounds_match(from_a: &Expr, to_a: &Expr, from_b: &Expr, to_b: &Expr) -> bool 
         )
     ) && from_a == from_b
         && to_a == to_b
-}
-
-fn buffers_disjoint(body_a: &[Node], body_b: &[Node]) -> bool {
-    let mut a_buffers: FxHashSet<Ident> = FxHashSet::default();
-    let mut b_buffers: FxHashSet<Ident> = FxHashSet::default();
-    collect_touched_buffers(body_a, &mut a_buffers);
-    collect_touched_buffers(body_b, &mut b_buffers);
-    a_buffers.is_disjoint(&b_buffers)
-}
-
-fn collect_touched_buffers(nodes: &[Node], out: &mut FxHashSet<Ident>) {
-    for node in nodes {
-        match node {
-            Node::Store {
-                buffer,
-                index,
-                value,
-            } => {
-                out.insert(buffer.clone());
-                collect_buffers_in_expr(index, out);
-                collect_buffers_in_expr(value, out);
-            }
-            Node::Let { value, .. } | Node::Assign { value, .. } => {
-                collect_buffers_in_expr(value, out);
-            }
-            Node::If {
-                cond,
-                then,
-                otherwise,
-            } => {
-                collect_buffers_in_expr(cond, out);
-                collect_touched_buffers(then, out);
-                collect_touched_buffers(otherwise, out);
-            }
-            Node::Loop { from, to, body, .. } => {
-                collect_buffers_in_expr(from, out);
-                collect_buffers_in_expr(to, out);
-                collect_touched_buffers(body, out);
-            }
-            Node::Block(body) => collect_touched_buffers(body, out),
-            Node::Region { body, .. } => collect_touched_buffers(body, out),
-            Node::AsyncLoad {
-                source,
-                destination,
-                offset,
-                size,
-                ..
-            }
-            | Node::AsyncStore {
-                source,
-                destination,
-                offset,
-                size,
-                ..
-            } => {
-                out.insert(source.clone());
-                out.insert(destination.clone());
-                collect_buffers_in_expr(offset, out);
-                collect_buffers_in_expr(size, out);
-            }
-            Node::IndirectDispatch { count_buffer, .. } => {
-                out.insert(count_buffer.clone());
-            }
-            Node::Trap { address, .. } => collect_buffers_in_expr(address, out),
-            Node::AllReduce { buffer, .. } | Node::Broadcast { buffer, .. } => {
-                out.insert(buffer.clone());
-            }
-            Node::AllGather { input, output, .. } | Node::ReduceScatter { input, output, .. } => {
-                out.insert(input.clone());
-                out.insert(output.clone());
-            }
-            Node::Barrier { .. }
-            | Node::Return
-            | Node::Resume { .. }
-            | Node::Opaque(_)
-            | Node::AsyncWait { .. } => {}
-        }
-    }
-}
-
-fn collect_buffers_in_expr(expr: &Expr, out: &mut FxHashSet<Ident>) {
-    match expr {
-        Expr::Load { buffer, index } => {
-            out.insert(buffer.clone());
-            collect_buffers_in_expr(index, out);
-        }
-        Expr::BufLen { buffer } | Expr::BufferRef { buffer } => {
-            out.insert(buffer.clone());
-        }
-        Expr::Atomic {
-            buffer,
-            index,
-            expected,
-            value,
-            ..
-        } => {
-            out.insert(buffer.clone());
-            collect_buffers_in_expr(index, out);
-            if let Some(e) = expected.as_deref() {
-                collect_buffers_in_expr(e, out);
-            }
-            collect_buffers_in_expr(value, out);
-        }
-        Expr::BinOp { left, right, .. } => {
-            collect_buffers_in_expr(left, out);
-            collect_buffers_in_expr(right, out);
-        }
-        Expr::UnOp { operand, .. } | Expr::Cast { value: operand, .. } => {
-            collect_buffers_in_expr(operand, out);
-        }
-        Expr::Fma { a, b, c } => {
-            collect_buffers_in_expr(a, out);
-            collect_buffers_in_expr(b, out);
-            collect_buffers_in_expr(c, out);
-        }
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            collect_buffers_in_expr(cond, out);
-            collect_buffers_in_expr(true_val, out);
-            collect_buffers_in_expr(false_val, out);
-        }
-        Expr::Call { args, .. } => {
-            for a in args {
-                collect_buffers_in_expr(a, out);
-            }
-        }
-        Expr::SubgroupReduce { value, .. } => {
-            collect_buffers_in_expr(value, out);
-        }
-        Expr::SubgroupShuffle { value, lane } => {
-            // The lane operand selects which subgroup lane's `value` to read and
-            // may itself load from a buffer (a gather/permute index); descend
-            // into it so that buffer joins the touched set. Dropping it would
-            // let fusion reorder a hidden lane-index load past a sibling loop's
-            // writes to the same buffer.
-            collect_buffers_in_expr(value, out);
-            collect_buffers_in_expr(lane, out);
-        }
-        Expr::SubgroupBallot { cond } => collect_buffers_in_expr(cond, out),
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::Var(_)
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize
-        | Expr::Opaque(_) => {}
-    }
 }
 
 /// True iff `nodes` contains an operation whose memory effect cannot be
@@ -535,112 +382,6 @@ fn collect_let_names(nodes: &[Node], out: &mut FxHashSet<Ident>) {
     }
 }
 
-fn collect_var_reads(nodes: &[Node], out: &mut FxHashSet<Ident>) {
-    for node in nodes {
-        match node {
-            Node::Let { value, .. } | Node::Assign { value, .. } => {
-                collect_vars_in_expr(value, out);
-            }
-            Node::Store { index, value, .. } => {
-                collect_vars_in_expr(index, out);
-                collect_vars_in_expr(value, out);
-            }
-            Node::If {
-                cond,
-                then,
-                otherwise,
-            } => {
-                collect_vars_in_expr(cond, out);
-                collect_var_reads(then, out);
-                collect_var_reads(otherwise, out);
-            }
-            Node::Loop { from, to, body, .. } => {
-                collect_vars_in_expr(from, out);
-                collect_vars_in_expr(to, out);
-                collect_var_reads(body, out);
-            }
-            Node::Block(body) => collect_var_reads(body, out),
-            Node::Region { body, .. } => collect_var_reads(body, out),
-            _ => {}
-        }
-    }
-}
-
-fn collect_vars_in_expr(expr: &Expr, out: &mut FxHashSet<Ident>) {
-    match expr {
-        Expr::Var(name) => {
-            out.insert(name.clone());
-        }
-        Expr::Load { index, .. } => collect_vars_in_expr(index, out),
-        Expr::BinOp { left, right, .. } => {
-            collect_vars_in_expr(left, out);
-            collect_vars_in_expr(right, out);
-        }
-        Expr::UnOp { operand, .. } | Expr::Cast { value: operand, .. } => {
-            collect_vars_in_expr(operand, out);
-        }
-        Expr::Fma { a, b, c } => {
-            collect_vars_in_expr(a, out);
-            collect_vars_in_expr(b, out);
-            collect_vars_in_expr(c, out);
-        }
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            collect_vars_in_expr(cond, out);
-            collect_vars_in_expr(true_val, out);
-            collect_vars_in_expr(false_val, out);
-        }
-        Expr::Atomic {
-            index,
-            expected,
-            value,
-            ..
-        } => {
-            collect_vars_in_expr(index, out);
-            // The compare-exchange `expected` operand is a read just like
-            // `index`/`value`; a scalar referenced there is a real cross-loop
-            // dependency. Dropping it let `fusion_has_scalar_dependency` fuse
-            // across a CAS whose `expected` reads a scalar the sibling loop
-            // mutates (see loop_fusion_atomic_expected_scalar_dependency).
-            if let Some(expected) = expected.as_deref() {
-                collect_vars_in_expr(expected, out);
-            }
-            collect_vars_in_expr(value, out);
-        }
-        Expr::Call { args, .. } => {
-            for a in args {
-                collect_vars_in_expr(a, out);
-            }
-        }
-        Expr::SubgroupReduce { value, .. } => collect_vars_in_expr(value, out),
-        Expr::SubgroupShuffle { value, lane } => {
-            // The lane index is a read just like the shuffled value; a scalar
-            // referenced there is a real cross-loop dependency, so descend.
-            collect_vars_in_expr(value, out);
-            collect_vars_in_expr(lane, out);
-        }
-        Expr::SubgroupBallot { cond } => collect_vars_in_expr(cond, out),
-        // Exhaustive leaf set (no `_` catch-all): a future operand-bearing Expr
-        // variant must be wired in explicitly, not silently dropped from the
-        // cross-loop dependency analysis.
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::BufferRef { .. }
-        | Expr::BufLen { .. }
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize
-        | Expr::Opaque(_) => {}
-    }
-}
-
 fn rename_var_in_node(node: Node, from: &Ident, to: &Ident) -> Node {
     match node {
         Node::Let { name, value } => Node::Let {
@@ -714,78 +455,6 @@ fn rename_var_in_node(node: Node, from: &Ident, to: &Ident) -> Node {
     }
 }
 
-fn rename_var_in_expr(expr: Expr, from: &Ident, to: &Ident) -> Expr {
-    match expr {
-        Expr::Var(name) if name == *from => Expr::Var(to.clone()),
-        Expr::Var(name) => Expr::Var(name),
-        Expr::Load { buffer, index } => Expr::Load {
-            buffer,
-            index: Box::new(rename_var_in_expr(*index, from, to)),
-        },
-        Expr::BinOp { op, left, right } => Expr::BinOp {
-            op,
-            left: Box::new(rename_var_in_expr(*left, from, to)),
-            right: Box::new(rename_var_in_expr(*right, from, to)),
-        },
-        Expr::UnOp { op, operand } => Expr::UnOp {
-            op,
-            operand: Box::new(rename_var_in_expr(*operand, from, to)),
-        },
-        Expr::Cast { target, value } => Expr::Cast {
-            target,
-            value: Box::new(rename_var_in_expr(*value, from, to)),
-        },
-        Expr::Fma { a, b, c } => Expr::Fma {
-            a: Box::new(rename_var_in_expr(*a, from, to)),
-            b: Box::new(rename_var_in_expr(*b, from, to)),
-            c: Box::new(rename_var_in_expr(*c, from, to)),
-        },
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => Expr::Select {
-            cond: Box::new(rename_var_in_expr(*cond, from, to)),
-            true_val: Box::new(rename_var_in_expr(*true_val, from, to)),
-            false_val: Box::new(rename_var_in_expr(*false_val, from, to)),
-        },
-        Expr::Call { op_id, args } => Expr::Call {
-            op_id,
-            args: args
-                .into_iter()
-                .map(|a| rename_var_in_expr(a, from, to))
-                .collect(),
-        },
-        Expr::Atomic {
-            op,
-            buffer,
-            index,
-            expected,
-            value,
-            ordering,
-        } => Expr::Atomic {
-            op,
-            buffer,
-            index: Box::new(rename_var_in_expr(*index, from, to)),
-            expected: expected.map(|e| Box::new(rename_var_in_expr(*e, from, to))),
-            value: Box::new(rename_var_in_expr(*value, from, to)),
-            ordering,
-        },
-        Expr::SubgroupShuffle { value, lane } => Expr::SubgroupShuffle {
-            value: Box::new(rename_var_in_expr(*value, from, to)),
-            lane: Box::new(rename_var_in_expr(*lane, from, to)),
-        },
-        Expr::SubgroupReduce { op, value } => Expr::SubgroupReduce {
-            op,
-            value: Box::new(rename_var_in_expr(*value, from, to)),
-        },
-        Expr::SubgroupBallot { cond } => Expr::SubgroupBallot {
-            cond: Box::new(rename_var_in_expr(*cond, from, to)),
-        },
-        other => other,
-    }
-}
-
 fn has_fusable_pair(node: &Node) -> bool {
     let body: &[Node] = match node {
         Node::If {
@@ -819,7 +488,7 @@ fn body_has_fusable_pair(body: &[Node]) -> bool {
         {
             if bounds_match(from_a, to_a, from_b, to_b)
                 && var_a != var_b
-                && buffers_disjoint(body_a, body_b)
+                && super::buffers_disjoint_with(body_a, body_b, collect_touched_buffers)
                 && !has_unsummarisable_effect(body_a)
                 && !has_unsummarisable_effect(body_b)
                 && !body_a_let_names_collide_with_b(body_a, body_b, var_b)

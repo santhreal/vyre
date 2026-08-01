@@ -4,12 +4,7 @@ pub(super) fn expr_is_kind(kind: Expr, expected: u32) -> Expr {
     Expr::eq(kind, Expr::u32(expected))
 }
 
-pub(super) fn valid_node_idx(idx: Expr, num_nodes: &Expr) -> Expr {
-    Expr::and(
-        Expr::ne(idx.clone(), Expr::u32(u32::MAX)),
-        Expr::lt(idx, num_nodes.clone()),
-    )
-}
+pub(super) use crate::parsing::c::lower::valid_node_index_expr as valid_node_idx;
 
 pub(super) fn common_parent_walk_bound(num_nodes: &Expr) -> Expr {
     Expr::select(

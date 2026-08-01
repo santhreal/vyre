@@ -1,6 +1,7 @@
 //! Wgpu subgroup capability diagnostics test suite.
 
-const DIAGNOSTICS: &str = include_str!("../../docs/optimization/WGPU_SUBGROUP_CAPABILITY_DIAGNOSTICS.toml");
+const DIAGNOSTICS: &str =
+    include_str!("../../docs/optimization/WGPU_SUBGROUP_CAPABILITY_DIAGNOSTICS.toml");
 
 #[test]
 fn wgpu_subgroup_diagnostics_fail_before_shader_submission() {

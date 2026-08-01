@@ -196,46 +196,15 @@ pub fn try_randomized_projection_step_cpu_into(
     l: u32,
     y: &mut Vec<f64>,
 ) -> Result<(), String> {
-    let m = m as usize;
-    let n = n as usize;
-    let l = l as usize;
-    m.checked_mul(n).ok_or_else(|| {
-        format!(
-            "randomized_projection_step CPU oracle A shape {m}x{n} overflows indexing. Fix: shard the randomized SVD matrix before parity evaluation."
-        )
-    })?;
-    n.checked_mul(l).ok_or_else(|| {
-        format!(
-            "randomized_projection_step CPU oracle omega shape {n}x{l} overflows indexing. Fix: shard the randomized SVD matrix before parity evaluation."
-        )
-    })?;
-    let out_cells = m.checked_mul(l).ok_or_else(|| {
-        format!(
-            "randomized_projection_step CPU oracle output shape {m}x{l} overflows indexing. Fix: shard the randomized SVD matrix before parity evaluation."
-        )
-    })?;
-    if out_cells > y.capacity() {
-        crate::graph::scratch::reserve_graph_items(
-            y,
-            out_cells - y.len(),
-            "randomized SVD CPU oracle",
-            "randomized_projection_step output",
-        )?;
-    }
-    y.clear();
-    y.resize(out_cells, 0.0);
-    for i in 0..m {
-        for j in 0..l {
-            let mut acc = 0.0;
-            for k in 0..n {
-                let a_value = a.get(i * n + k).copied().unwrap_or(0.0);
-                let omega_value = omega.get(k * l + j).copied().unwrap_or(0.0);
-                acc += a_value * omega_value;
-            }
-            y[i * l + j] = acc;
-        }
-    }
-    Ok(())
+    crate::math::cpu_matrix::try_f64_matmul_into(
+        a,
+        omega,
+        m,
+        n,
+        l,
+        y,
+        crate::math::cpu_matrix::MatmulContext::RANDOMIZED_PROJECTION,
+    )
 }
 
 /// Modified Gram-Schmidt orthonormalization (CPU-only convenience for

@@ -14,9 +14,7 @@ use serde::Serialize;
 use crate::api::case::{BaselineClass, BenchCase, PerformanceContract};
 use crate::api::suite::SuiteKind;
 use crate::registry::BenchRegistry;
-use crate::report::json::{
-    REQUIRED_BENCHMARK_CASE_FIELDS, REQUIRED_BENCHMARK_METRIC_FIELDS,
-};
+use crate::report::json::{REQUIRED_BENCHMARK_CASE_FIELDS, REQUIRED_BENCHMARK_METRIC_FIELDS};
 
 const REQUIRED_CLOSED_FAMILIES: usize = 12;
 const MIN_CPU_SOTA_100X_FAMILIES: usize = 10;

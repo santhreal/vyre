@@ -13,5 +13,8 @@ keywords = ["vyre", "testing", "harness", "coverage", "registry"]
 categories = ["development-tools::testing"]
 publish = false
 
+[dev-dependencies]
+tempfile.workspace = true
+
 [lints]
 workspace = true

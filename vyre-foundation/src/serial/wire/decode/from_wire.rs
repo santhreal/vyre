@@ -1,9 +1,10 @@
 mod payload;
-use crate::ir_inner::model::program::{MemoryHints, MemoryKind};
+use crate::ir_inner::model::program::{LinearType, MemoryHints, MemoryKind, ShapePredicate};
 use crate::ir_inner::model::types::{BufferAccess, DataType};
 use crate::serial::wire::decode::reject_reserved_extension_id;
 use crate::serial::wire::framing::{
-    FLAG_COMPRESSED, FLAG_OPAQUE_ENDIAN_FIXED, FLAG_SEALED, MAGIC, WIRE_FORMAT_VERSION,
+    FLAG_COMPRESSED, FLAG_OPAQUE_ENDIAN_FIXED, FLAG_SEALED, MAGIC, MAX_SHAPE_PREDICATE_DEPTH,
+    WIRE_FORMAT_VERSION,
 };
 use crate::serial::wire::tags::access_from_tag::access_from_tag;
 use crate::serial::wire::{
@@ -129,7 +130,7 @@ pub fn from_wire(bytes: &[u8]) -> Result<Program, String> {
         pos: 0,
         depth: 0,
     };
-    let (entry_op_id, workgroup_size, mut metadata) = read_nodes(&mut reader)?;
+    let (entry_op_id, workgroup_size, mut metadata) = read_nodes(&mut reader, version)?;
     read_memory_regions(&mut reader, &mut metadata)?;
     let output_set = read_output_set(&mut reader, &metadata)?;
     if reader.pos != reader.bytes.len() {
@@ -159,13 +160,8 @@ pub fn from_wire(bytes: &[u8]) -> Result<Program, String> {
             output_byte_range: buffer.output_byte_range,
             hints: buffer.hints,
             bytes_extraction: buffer.bytes_extraction,
-            // Wire v1 carries no linear_type tag, so decoded buffers default
-            // to Unrestricted. New wire versions must map their own tag before
-            // constructing BufferDecl.
-            linear_type: crate::ir_inner::model::program::LinearType::default(),
-            // Wire v1 carries no shape predicates; decoded historical blobs
-            // have no static shape refinement.
-            shape_predicate: None,
+            linear_type: buffer.linear_type,
+            shape_predicate: buffer.shape_predicate,
         });
     }
     let program = Program::new_raw(buffers, workgroup_size, metadata.entry)
@@ -199,6 +195,8 @@ pub(crate) struct DecodedBuffer {
     pub(crate) output_byte_range: Option<Range<usize>>,
     pub(crate) hints: MemoryHints,
     pub(crate) bytes_extraction: bool,
+    pub(crate) linear_type: LinearType,
+    pub(crate) shape_predicate: Option<ShapePredicate>,
 }
 
 fn read_output_set(
@@ -210,6 +208,7 @@ fn read_output_set(
 
 fn read_nodes(
     reader: &mut Reader<'_>,
+    version: u16,
 ) -> Result<(Option<String>, [u32; 3], DecodedMetadata), String> {
     let count = reader.leb_len(MAX_NODES, "node count")?;
     if count == 0 {
@@ -224,7 +223,7 @@ fn read_nodes(
     if !operands.is_empty() {
         return Err("InvalidDiscriminant: metadata node has operands. Fix: reserialize with Program::to_wire().".to_string());
     }
-    let (entry_op_id, workgroup_size, mut metadata) = read_metadata(payload)?;
+    let (entry_op_id, workgroup_size, mut metadata) = read_metadata(payload, version)?;
     reserve_decoded_vec_capacity(&mut metadata.entry, count - 1, "decoded entry nodes")?;
     for node_index in 1..count {
         let (op_id, payload, operands) = read_node_record(reader, node_index)?;
@@ -287,7 +286,10 @@ fn read_node_record<'a>(
     Ok((op_id, payload, operands))
 }
 
-fn read_metadata(payload: &[u8]) -> Result<(Option<String>, [u32; 3], DecodedMetadata), String> {
+fn read_metadata(
+    payload: &[u8],
+    version: u16,
+) -> Result<(Option<String>, [u32; 3], DecodedMetadata), String> {
     let mut reader = Reader {
         bytes: payload,
         pos: 0,
@@ -354,6 +356,33 @@ fn read_metadata(payload: &[u8]) -> Result<(Option<String>, [u32; 3], DecodedMet
             }
         };
         let hints = read_hints(&mut reader)?;
+        // Rev 6 records linear_type, bytes_extraction and shape_predicate.
+        // Payloads older than rev 6 never wrote them, so reading them there
+        // would consume bytes belonging to the next buffer. Gating on the
+        // version is what keeps rev-4 and rev-5 blobs loadable, and the
+        // trailing-byte check at the end of this function is what proves the
+        // gate consumed exactly what the producer wrote: an off-by-one either
+        // way fails loudly instead of yielding a plausible wrong buffer.
+        //
+        // The defaults below are faithful to what old bytes SAY, not a repair.
+        // A pre-rev-6 blob written from a program that carried a linear type
+        // lost it at encode time and it is unrecoverable here.
+        let (linear_type, bytes_extraction, shape_predicate) = if version >= 6 {
+            let linear_type = linear_type_from_tag(reader.u8()?)?;
+            let bytes_extraction = match reader.u8()? {
+                0 => false,
+                1 => true,
+                value => {
+                    return Err(format!(
+                        "InvalidDiscriminant: field bytes_extraction has value {value}. Fix: reserialize with Program::to_wire()."
+                    ));
+                }
+            };
+            let shape_predicate = read_shape_predicate(&mut reader, 0)?;
+            (linear_type, bytes_extraction, shape_predicate)
+        } else {
+            (LinearType::default(), false, None)
+        };
         buffers.push(DecodedBuffer {
             name,
             binding,
@@ -365,7 +394,9 @@ fn read_metadata(payload: &[u8]) -> Result<(Option<String>, [u32; 3], DecodedMet
             pipeline_live_out,
             output_byte_range,
             hints,
-            bytes_extraction: false,
+            bytes_extraction,
+            linear_type,
+            shape_predicate,
         });
     }
     if reader.pos != reader.bytes.len() {
@@ -380,6 +411,103 @@ fn read_metadata(payload: &[u8]) -> Result<(Option<String>, [u32; 3], DecodedMet
             non_composable_with_self,
         },
     ))
+}
+
+/// Decode a [`LinearType`] wire tag.
+///
+/// Unknown tags are REJECTED rather than defaulted. Defaulting here would turn
+/// a payload this decoder does not understand into a program with a weaker
+/// linear discipline than its author declared, which is a validation verdict
+/// changing silently under deserialization.
+fn linear_type_from_tag(tag: u8) -> Result<LinearType, String> {
+    match tag {
+        0 => Ok(LinearType::Linear),
+        1 => Ok(LinearType::Affine),
+        2 => Ok(LinearType::Relevant),
+        3 => Ok(LinearType::Unrestricted),
+        value => Err(format!(
+            "InvalidDiscriminant: field linear_type has tag {value}. Fix: reserialize with Program::to_wire()."
+        )),
+    }
+}
+
+/// Decode an optional [`ShapePredicate`]; tag `0` means `None`.
+///
+/// `depth` is bounded by [`MAX_SHAPE_PREDICATE_DEPTH`], the same constant the
+/// encoder checks, because `And` / `Or` / `Not` are recursive and this runs on
+/// untrusted bytes. Without the bound a hostile blob nests them until the
+/// decoder stack overflows.
+fn read_shape_predicate(
+    reader: &mut Reader<'_>,
+    depth: usize,
+) -> Result<Option<ShapePredicate>, String> {
+    let tag = reader.u8()?;
+    if tag == 0 {
+        return Ok(None);
+    }
+    if depth >= MAX_SHAPE_PREDICATE_DEPTH {
+        return Err(format!(
+            "Fix: shape predicate exceeds maximum nesting depth {MAX_SHAPE_PREDICATE_DEPTH}; reject this untrusted blob or flatten the And/Or/Not tree."
+        ));
+    }
+    let predicate = match tag {
+        1 => ShapePredicate::AtLeast(reader.u32()?),
+        2 => ShapePredicate::AtMost(reader.u32()?),
+        3 => ShapePredicate::Exactly(reader.u32()?),
+        4 => ShapePredicate::MultipleOf(reader.u32()?),
+        5 => {
+            let modulus = reader.u32()?;
+            let remainder = reader.u32()?;
+            ShapePredicate::ModEquals { modulus, remainder }
+        }
+        6 => {
+            let scale = read_i64(reader)?;
+            let offset = read_i64(reader)?;
+            let min = read_i64(reader)?;
+            let max = read_i64(reader)?;
+            ShapePredicate::AffineRange {
+                scale,
+                offset,
+                min,
+                max,
+            }
+        }
+        7 => {
+            let left = read_nested_shape_predicate(reader, depth)?;
+            let right = read_nested_shape_predicate(reader, depth)?;
+            ShapePredicate::And(Box::new(left), Box::new(right))
+        }
+        8 => {
+            let left = read_nested_shape_predicate(reader, depth)?;
+            let right = read_nested_shape_predicate(reader, depth)?;
+            ShapePredicate::Or(Box::new(left), Box::new(right))
+        }
+        9 => ShapePredicate::Not(Box::new(read_nested_shape_predicate(reader, depth)?)),
+        value => {
+            return Err(format!(
+                "InvalidDiscriminant: field shape_predicate has tag {value}. Fix: reserialize with Program::to_wire()."
+            ));
+        }
+    };
+    Ok(Some(predicate))
+}
+
+/// Read an operand of `And` / `Or` / `Not`, which must be present.
+///
+/// A nested `None` tag would decode into a connective with a missing operand,
+/// so it is rejected rather than silently dropping the connective.
+fn read_nested_shape_predicate(
+    reader: &mut Reader<'_>,
+    depth: usize,
+) -> Result<ShapePredicate, String> {
+    read_shape_predicate(reader, depth + 1)?.ok_or_else(|| {
+        "InvalidDiscriminant: shape predicate connective has an absent operand. Fix: reserialize with Program::to_wire().".to_string()
+    })
+}
+
+/// Read an `i64` written as its little-endian two's-complement bit pattern.
+fn read_i64(reader: &mut Reader<'_>) -> Result<i64, String> {
+    Ok(i64::from_le_bytes(reader.leb_u64()?.to_le_bytes()))
 }
 
 fn read_memory_regions(

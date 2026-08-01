@@ -119,3 +119,128 @@ fn nested_barrier_kernel_keeps_lanes_live_and_predicates_global_store() {
         "nested barrier body must still lower to a CTA barrier:\n{ptx}"
     );
 }
+/// Emit options with native cooperative grid-sync lowering enabled, matching what
+/// `vyre-driver-cuda/src/codegen.rs:75` passes unconditionally.
+fn cooperative_options() -> PtxEmitOptions {
+    PtxEmitOptions {
+        target: ComputeCapability::SM_70,
+        subgroup_size: 32,
+        ulp_budget: None,
+        cooperative_grid_sync: true,
+    }
+}
+
+/// A `GridSync` barrier nested in a loop body, plus a bare one at top level for
+/// the control case. `lo = 0`, `hi = 4`, body index 0.
+fn grid_sync_in_loop_kernel() -> KernelDescriptor {
+    KernelDescriptor {
+        id: "grid_sync_in_loop".into(),
+        bindings: BindingLayout { slots: vec![] },
+        dispatch: Dispatch::new(256, 1, 1),
+        body: KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(0),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![1],
+                    result: Some(1),
+                },
+                KernelOp {
+                    kind: KernelOpKind::StructuredForLoop {
+                        loop_var: "iter".into(),
+                    },
+                    operands: vec![0, 1, 0],
+                    result: None,
+                },
+            ],
+            child_bodies: vec![KernelBody {
+                ops: vec![KernelOp {
+                    kind: KernelOpKind::Barrier {
+                        ordering: MemoryOrdering::GridSync,
+                    },
+                    operands: vec![],
+                    result: None,
+                }],
+                child_bodies: vec![],
+                literals: vec![],
+            }],
+            literals: vec![LiteralValue::U32(0), LiteralValue::U32(4)],
+        },
+    }
+}
+
+/// A `GridSync` barrier inside a loop body MUST be refused, because the
+/// monotonic-counter lowering cannot express a per-iteration barrier.
+///
+/// The defect this locks out is silent and survives every other check. The
+/// release target is computed at EMIT time as `(barrier_index + 1) * gridSize`
+/// and baked into the instruction stream, but a loop emits its body ONCE and
+/// branches back. So on iteration 0 the counter climbs to `gridSize` and the
+/// barrier releases correctly, and on every later iteration the counter is
+/// ALREADY at or past that fixed target before any CTA arrives, the
+/// `setp.lt.u32` guard is false immediately, and the spin never waits. The
+/// barrier degrades into a no-op with no error, no diagnostic, and a barrier
+/// still visibly present in both the IR and the PTX.
+///
+/// Nothing else in the stack catches this: `vyre_driver::grid_sync` deliberately
+/// recurses into `Node::Loop { body }` when detecting barriers, so the IR is
+/// accepted and routed to native lowering. This emitter refusal is the only
+/// enforcement.
+#[test]
+fn grid_sync_barrier_inside_a_loop_is_refused_not_silently_degraded() {
+    match emit_with_options(&grid_sync_in_loop_kernel(), cooperative_options()) {
+        Err(EmitError::InvalidDescriptor(message)) => {
+            assert!(
+                message.contains("inside a loop body"),
+                "Fix: the refusal must name loop nesting as the cause; got: {message}"
+            );
+            assert!(
+                message.contains("no-op"),
+                "Fix: the refusal must say the barrier would degrade to a no-op, since that \
+                 silent degradation is the whole reason it is refused; got: {message}"
+            );
+            assert!(
+                message.contains("unroll"),
+                "Fix: the refusal must name the unroll remedy that persistent_fixpoint_grid \
+                 uses; got: {message}"
+            );
+        }
+        Ok(ptx) => panic!(
+            "Fix: emitter accepted a GridSync barrier inside a loop. Every iteration after the \
+             first would run unsynchronized because the release target is a compile-time \
+             constant. PTX:\n{ptx}"
+        ),
+        Err(other) => {
+            panic!("Fix: GridSync-in-loop must be an actionable InvalidDescriptor, not {other:?}.")
+        }
+    }
+}
+
+/// The control case: a top-level `GridSync` barrier still lowers. This keeps the
+/// loop refusal from being implemented as a blanket rejection, which would break
+/// `persistent_fixpoint_grid`'s unrolled waves and every cooperative dispatch.
+#[test]
+fn top_level_grid_sync_barrier_still_lowers_to_the_cooperative_counter_barrier() {
+    let ptx = emit_with_options(
+        &barrier_kernel(MemoryOrdering::GridSync),
+        cooperative_options(),
+    )
+    .expect("Fix: a top-level GridSync barrier must lower under cooperative_grid_sync");
+
+    assert!(
+        ptx.contains("atom.global.add.u32"),
+        "Fix: the cooperative barrier must record arrival with a global atomic add; PTX:\n{ptx}"
+    );
+    assert!(
+        ptx.contains("ld.volatile.global.u32"),
+        "Fix: the cooperative barrier must spin on a volatile load; PTX:\n{ptx}"
+    );
+    assert!(
+        ptx.contains(".global .align 4 .u32 _vyre_grid_barrier[1];"),
+        "Fix: the module-scope arrival counter must be declared; PTX:\n{ptx}"
+    );
+}

@@ -1,4 +1,4 @@
-//! `cargo_full run --bin xtask -- list-ops`  -  walk the central op registries and print
+//! `cargo xtask list-ops`  -  walk the central op registries and print
 //! the complete catalog grouped by tier.
 //!
 //! Walks: `vyre-libs`, `vyre-intrinsics`, and `vyre-primitives` (Tier 2.5,

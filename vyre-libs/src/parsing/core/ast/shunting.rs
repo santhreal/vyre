@@ -14,7 +14,7 @@ const STATEMENT_PASS_OP_ID: &str = "vyre-libs::parsing::ast_shunting_yard::state
 const MAX_TOK_SCAN: u32 = 65_536;
 const STACK_SLOTS_PER_STATEMENT: u32 = 64;
 
-use crate::scan::dispatch_io::pack_u32_slice as pack_u32;
+use vyre_primitives::wire::pack_u32_slice as pack_u32;
 
 /// Data-parallel shunting-yard AST builder.
 ///

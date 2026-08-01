@@ -40,7 +40,12 @@ fn gpu_fnv1a32(backend: &WgpuBackend, bytes: &[u8]) -> u32 {
             &DispatchConfig::default(),
         )
         .expect("Fix: WGPU must dispatch the FNV-1a32 loop program.");
-    assert_eq!(outputs.len(), 1, "fnv1a32_program exposes one output (out); got {}", outputs.len());
+    assert_eq!(
+        outputs.len(),
+        1,
+        "fnv1a32_program exposes one output (out); got {}",
+        outputs.len()
+    );
     let words: Vec<u32> = outputs[0]
         .chunks_exact(4)
         .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
@@ -64,7 +69,11 @@ fn check(backend: &WgpuBackend, bytes: &[u8], label: &str) {
 fn fnv1a32_abc_matches_reference_on_gpu() {
     let backend = WgpuBackend::acquire().expect("Fix: FNV GPU parity requires a live GPU.");
     // Drift-guard the reference against the published FNV-1a 32 vector for "abc".
-    assert_eq!(fnv1a32(b"abc"), 0x1a47_e90b, "FNV-1a32 reference drifted for \"abc\"");
+    assert_eq!(
+        fnv1a32(b"abc"),
+        0x1a47_e90b,
+        "FNV-1a32 reference drifted for \"abc\""
+    );
     check(&backend, b"abc", "\"abc\"");
 }
 
@@ -87,7 +96,10 @@ fn fnv1a32_distinguishes_inputs_on_gpu() {
     let backend = WgpuBackend::acquire().expect("Fix: FNV GPU parity requires a live GPU.");
     let a = gpu_fnv1a32(&backend, b"hash-me-0");
     let b = gpu_fnv1a32(&backend, b"hash-me-1");
-    assert_ne!(a, b, "FNV must distinguish one-byte-different inputs on the GPU");
+    assert_ne!(
+        a, b,
+        "FNV must distinguish one-byte-different inputs on the GPU"
+    );
     assert_eq!(a, fnv1a32(b"hash-me-0"));
     assert_eq!(b, fnv1a32(b"hash-me-1"));
 }

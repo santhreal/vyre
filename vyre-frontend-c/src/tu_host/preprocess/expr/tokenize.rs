@@ -1,3 +1,4 @@
+use super::super::parse_macro_args;
 use super::*;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum ExprTok {
@@ -110,7 +111,7 @@ pub(super) fn tokenize_preproc_expr_inner(
                 while call_start < bytes.len() && bytes[call_start].is_ascii_whitespace() {
                     call_start += 1;
                 }
-                let Some((args, end)) = parse_expr_macro_args(expr, call_start) else {
+                let Some((args, end)) = parse_macro_args(expr, call_start) else {
                     out.push(ExprTok::Num(0));
                     continue;
                 };
@@ -143,7 +144,7 @@ pub(super) fn tokenize_preproc_expr_inner(
                     while call_start < bytes.len() && bytes[call_start].is_ascii_whitespace() {
                         call_start += 1;
                     }
-                    let Some((mut args, end)) = parse_expr_macro_args(expr, call_start) else {
+                    let Some((mut args, end)) = parse_macro_args(expr, call_start) else {
                         out.push(ExprTok::Num(0));
                         continue;
                     };
@@ -306,50 +307,6 @@ fn is_plain_identifier(bytes: &[u8]) -> bool {
         return false;
     };
     is_ident_start(first) && rest.iter().copied().all(is_ident_continue)
-}
-
-pub(super) fn parse_expr_macro_args(src: &str, open_idx: usize) -> Option<(Vec<String>, usize)> {
-    let bytes = src.as_bytes();
-    if bytes.get(open_idx).copied() != Some(b'(') {
-        return None;
-    }
-    let mut args = Vec::new();
-    let mut depth = 0u32;
-    let mut start = open_idx + 1;
-    let mut i = open_idx + 1;
-    while i < bytes.len() {
-        match bytes[i] {
-            b'\'' | b'"' => {
-                let quote = bytes[i];
-                i += 1;
-                while i < bytes.len() {
-                    if bytes[i] == b'\\' {
-                        i = i.saturating_add(2);
-                        continue;
-                    }
-                    if bytes[i] == quote {
-                        i += 1;
-                        break;
-                    }
-                    i += 1;
-                }
-                continue;
-            }
-            b'(' => depth = depth.saturating_add(1),
-            b')' if depth == 0 => {
-                args.push(src[start..i].trim().to_string());
-                return Some((args, i + 1));
-            }
-            b')' => depth = depth.saturating_sub(1),
-            b',' if depth == 0 => {
-                args.push(src[start..i].trim().to_string());
-                start = i + 1;
-            }
-            _ => {}
-        }
-        i += 1;
-    }
-    None
 }
 
 /// Substitute macro arguments into a function-like macro body.

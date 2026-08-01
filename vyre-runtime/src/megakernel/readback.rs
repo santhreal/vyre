@@ -192,7 +192,6 @@ impl MegakernelReadback {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -212,8 +211,12 @@ mod tests {
     #[test]
     fn drain_outputs_into_retains_reusable_output_slots() {
         let mut outputs = valid_outputs(4);
-        let [control_len, ring_len, debug_len, io_len] =
-            [outputs[0].len(), outputs[1].len(), outputs[2].len(), outputs[3].len()];
+        let [control_len, ring_len, debug_len, io_len] = [
+            outputs[0].len(),
+            outputs[1].len(),
+            outputs[2].len(),
+            outputs[3].len(),
+        ];
         let mut readback = MegakernelReadback::default();
 
         MegakernelReadback::drain_outputs_into(&mut outputs, 4, &mut readback)
@@ -278,7 +281,10 @@ mod tests {
         // we verify the arithmetic contract directly:
         let half = usize::MAX / 2;
         let overflow = half.checked_add(half + 2); // half + half + 2 > usize::MAX
-        assert!(overflow.is_none(), "arithmetic precondition: these values must overflow");
+        assert!(
+            overflow.is_none(),
+            "arithmetic precondition: these values must overflow"
+        );
         // The counters() implementation uses checked_add for the same values,
         // so a readback with those exact buffer sizes would return Err rather
         // than usize::MAX. We cannot construct such a readback in this test

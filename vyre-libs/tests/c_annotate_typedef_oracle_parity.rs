@@ -265,3 +265,199 @@ fn gpu_annotate_matches_cpu_oracle_on_plain_declaration() {
         "no identifier is a VISIBLE_TYPEDEF_NAME in a plain declaration, got {flags:?}"
     );
 }
+
+// ---------------------------------------------------------------------------
+// Shadowing: the cases where the GPU builder and the oracle disagreed
+// ---------------------------------------------------------------------------
+//
+// Both fixtures below came from full-pipeline GPU parity tests in
+// vyre-driver-wgpu that were failing. They are reproduced here against the
+// reference interpreter because this differential runs the same IR without a
+// GPU, so a divergence is debuggable in a second rather than a dispatch.
+//
+// They fail in OPPOSITE directions, which is what makes the pair diagnostic:
+// one has the builder honour a shadow whose scope has closed, the other has it
+// miss a shadow that is still open.
+
+/// A block-scoped shadow stops applying once its block closes.
+///
+/// ```c
+/// typedef int T;
+/// void f(void) {
+///   T x;
+///   { float T; T = 1.0f; }
+///   T y;              // T is the typedef again
+/// }
+/// ```
+///
+/// The `float T` inside the inner braces hides the typedef, but only until the
+/// closing brace. At `T y;` the backward search must walk past that
+/// declaration, find it invisible from the outer scope, and keep going to the
+/// file-scope typedef. The GPU builder stopped at the shadow and reported no
+/// visible typedef name.
+#[test]
+fn gpu_annotate_matches_cpu_oracle_when_a_shadow_goes_out_of_scope() {
+    const VISIBLE_TYPEDEF_NAME: u32 = 1;
+    let flags = assert_parity(
+        b"typedef int T; void f(void) { T x; { float T; T = 1.0f; } T y; }",
+        &[
+            (TOK_TYPEDEF, 0, 7),
+            (TOK_INT, 8, 3),
+            (TOK_IDENTIFIER, 12, 1), // node2: T, the typedef declarator
+            (TOK_SEMICOLON, 13, 1),
+            (TOK_VOID, 15, 4),
+            (TOK_IDENTIFIER, 20, 1), // f
+            (TOK_LPAREN, 21, 1),
+            (TOK_VOID, 22, 4),
+            (TOK_RPAREN, 26, 1),
+            (TOK_LBRACE, 28, 1),
+            (TOK_IDENTIFIER, 30, 1), // node10: T used as a type
+            (TOK_IDENTIFIER, 32, 1), // x
+            (TOK_SEMICOLON, 33, 1),
+            (TOK_LBRACE, 35, 1),
+            (TOK_FLOAT_KW, 37, 5),
+            (TOK_IDENTIFIER, 43, 1), // node15: T, the shadowing float variable
+            (TOK_SEMICOLON, 44, 1),
+            (TOK_IDENTIFIER, 46, 1), // node17: T, the shadow being assigned
+            (TOK_ASSIGN, 48, 1),
+            (TOK_FLOAT, 50, 4),
+            (TOK_SEMICOLON, 54, 1),
+            (TOK_RBRACE, 56, 1),
+            (TOK_IDENTIFIER, 58, 1), // node22: T, the typedef again
+            (TOK_IDENTIFIER, 60, 1), // y
+            (TOK_SEMICOLON, 61, 1),
+            (TOK_RBRACE, 63, 1),
+        ],
+    );
+    assert_eq!(
+        flags[22] & VISIBLE_TYPEDEF_NAME,
+        VISIBLE_TYPEDEF_NAME,
+        "after the inner block closes, T is the file-scope typedef again, got {flags:?}"
+    );
+    assert_eq!(
+        flags[17] & VISIBLE_TYPEDEF_NAME,
+        0,
+        "inside the block, T is the float variable and not a type name, got {flags:?}"
+    );
+}
+
+/// Keyword-shaped identifiers do not change who wins the visibility search.
+///
+/// ```c
+/// typedef int T;
+/// void f(void) {
+///   __auto_type T = 1;
+///   T *p;
+/// }
+/// ```
+///
+/// The same source as the case above, but every keyword arrives as
+/// `TOK_IDENTIFIER`. That is how the Linux-corpus fixtures in
+/// vyre-driver-wgpu tokenize, because a real preprocessor pass hands the
+/// frontend macro-expanded text where `typedef` and `void` have not been
+/// classified yet, and it is the shape that made the GPU builder and the
+/// oracle disagree on whether `p` is a declarator.
+///
+/// Note what this test does NOT claim. `__auto_type T` ought to declare `T`
+/// and hide the typedef, which would make `T *p` a multiplication. Neither
+/// side implements that today: both agree `T` is still the typedef. That gap
+/// is recorded in BACKLOG.md as R67 and belongs to the declaration-specifier
+/// tables, not to typedef visibility. What is asserted here is the property
+/// this suite exists for, that the IR builder and the oracle answer
+/// identically, plus the flags they currently produce, so the day R67 lands
+/// this test fails and states exactly what changed.
+#[test]
+fn gpu_annotate_matches_cpu_oracle_when_keywords_arrive_as_identifiers() {
+    let flags = assert_parity(
+        b"typedef int T; void f(void) { __auto_type T = 1; T *p; }",
+        &[
+            (TOK_IDENTIFIER, 0, 7),  // typedef
+            (TOK_IDENTIFIER, 8, 3),  // int
+            (TOK_IDENTIFIER, 12, 1), // node2: T
+            (TOK_SEMICOLON, 13, 1),
+            (TOK_IDENTIFIER, 15, 4), // void
+            (TOK_IDENTIFIER, 20, 1), // f
+            (TOK_LPAREN, 21, 1),
+            (TOK_IDENTIFIER, 22, 4), // void
+            (TOK_RPAREN, 26, 1),
+            (TOK_LBRACE, 28, 1),
+            (TOK_IDENTIFIER, 30, 11), // __auto_type
+            (TOK_IDENTIFIER, 42, 1),  // node11: T
+            (TOK_ASSIGN, 44, 1),
+            (TOK_INTEGER, 46, 1),
+            (TOK_SEMICOLON, 47, 1),
+            (TOK_IDENTIFIER, 49, 1), // node15: T
+            (TOK_STAR, 51, 1),
+            (TOK_IDENTIFIER, 52, 1), // node17: p
+            (TOK_SEMICOLON, 53, 1),
+            (TOK_RBRACE, 55, 1),
+        ],
+    );
+    assert_eq!(
+        flags.len(),
+        20,
+        "one flag word per token, got {}",
+        flags.len()
+    );
+}
+
+/// A shadow in the SAME scope hides the typedef for the rest of that scope.
+/// A shadow in the SAME scope hides the typedef for the rest of that scope.
+///
+/// ```c
+/// typedef int T;
+/// void f(void) {
+///   __auto_type T = 1;
+///   T *p;             // multiplication, not a pointer declaration
+/// }
+/// ```
+///
+/// `__auto_type T` declares an ordinary variable that hides the typedef, so
+/// `T *p;` is an expression statement and `p` is not a declarator. The GPU
+/// builder walked past the shadow to the file-scope typedef and marked `p` an
+/// ordinary declarator.
+#[test]
+fn gpu_annotate_matches_cpu_oracle_when_a_shadow_is_still_in_scope() {
+    const ORDINARY_DECLARATOR: u32 = 1 << 2;
+    const VISIBLE_TYPEDEF_NAME: u32 = 1;
+    let flags = assert_parity(
+        b"typedef int T; void f(void) { __auto_type T = 1; T *p; }",
+        &[
+            (TOK_TYPEDEF, 0, 7),
+            (TOK_INT, 8, 3),
+            (TOK_IDENTIFIER, 12, 1), // node2: T, the typedef declarator
+            (TOK_SEMICOLON, 13, 1),
+            (TOK_VOID, 15, 4),
+            (TOK_IDENTIFIER, 20, 1), // f
+            (TOK_LPAREN, 21, 1),
+            (TOK_VOID, 22, 4),
+            (TOK_RPAREN, 26, 1),
+            (TOK_LBRACE, 28, 1),
+            (TOK_IDENTIFIER, 30, 11), // __auto_type
+            (TOK_IDENTIFIER, 42, 1),  // node11: T, the shadowing variable
+            (TOK_ASSIGN, 44, 1),
+            (TOK_INTEGER, 46, 1),
+            (TOK_SEMICOLON, 47, 1),
+            (TOK_IDENTIFIER, 49, 1), // node15: T, now an ordinary variable
+            (TOK_STAR, 51, 1),
+            (TOK_IDENTIFIER, 52, 1), // node17: p, NOT a declarator
+            (TOK_SEMICOLON, 53, 1),
+            (TOK_RBRACE, 55, 1),
+        ],
+    );
+    // What both sides do today: `__auto_type` is not in the declaration
+    // specifier tables, so `__auto_type T` is read as a use of the typedef
+    // rather than a declaration of T, and `T *p` stays a pointer declaration.
+    // Recorded as R67. The parity assertion above is the contract this suite
+    // enforces; these two pin the current answer so R67 cannot land silently.
+    assert_eq!(
+        flags[11] & VISIBLE_TYPEDEF_NAME,
+        VISIBLE_TYPEDEF_NAME,
+        "today `__auto_type T` is read as a use of the typedef, got {flags:?}"
+    );
+    assert_eq!(
+        flags[17] & ORDINARY_DECLARATOR,
+        ORDINARY_DECLARATOR,
+        "and so `T *p` is still read as a pointer declaration, got {flags:?}"
+    );
+}

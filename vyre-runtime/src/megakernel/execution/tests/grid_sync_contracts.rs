@@ -21,5 +21,3 @@ fn borrowed_dispatch_uses_grid_sync_splitter_when_backend_lacks_native_barrier()
         .clone();
     assert_eq!(segment_lengths, vec![0, 1, 1]);
 }
-
-

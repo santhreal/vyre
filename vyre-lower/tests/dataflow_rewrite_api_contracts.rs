@@ -1,6 +1,6 @@
 use vyre_lower::analyses::alias_facts::AliasFactSet;
-use vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet;
 use vyre_lower::analyses::alias_import::AliasFactSet as ExternalAliasFactSet;
+use vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet;
 use vyre_lower::analyses::reaching_def_import::ReachingDefFactSet as ExternalReachingDefFactSet;
 use vyre_lower::rewrites::{
     dead_store_with_alias_facts, dead_store_with_dataflow_analysis_facts,

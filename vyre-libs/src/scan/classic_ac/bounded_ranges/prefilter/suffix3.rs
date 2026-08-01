@@ -1,11 +1,11 @@
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
 
 use crate::region::wrap_anonymous;
-use crate::scan::builders::load_packed_byte_expr;
 use crate::scan::dfa::CompiledDfa;
 
 use super::super::super::count_program::{
-    suffix3_bloom_bit_index_expr, CLASSIC_AC_SUFFIX2_MASK_WORDS, CLASSIC_AC_SUFFIX3_BLOOM_WORDS,
+    count_suffix2_prefilter_body, suffix3_prefilter_match_nodes, CLASSIC_AC_SUFFIX2_MASK_WORDS,
+    CLASSIC_AC_SUFFIX3_BLOOM_WORDS,
 };
 use super::super::{
     bounded_ranges_presence_and_positions_by_region_nodes, bounded_ranges_presence_by_region_nodes,
@@ -26,124 +26,72 @@ fn suffix3_prefilter_body(
     candidate_suffix3_bloom: &str,
     replay_nodes: Vec<Node>,
 ) -> Vec<Node> {
-    let i = Expr::var("i");
-    let candidate_byte = load_packed_byte_expr(haystack, i.clone());
-    let previous_byte =
-        load_packed_byte_expr(haystack, Expr::saturating_sub(i.clone(), Expr::u32(1)));
-    let previous2_byte =
-        load_packed_byte_expr(haystack, Expr::saturating_sub(i.clone(), Expr::u32(2)));
-    let suffix2_index = Expr::bitor(
-        Expr::shl(Expr::var("previous_byte"), Expr::u32(8)),
-        Expr::var("candidate_byte"),
-    );
-    let suffix3_index = Expr::bitor(
-        Expr::bitor(
-            Expr::shl(Expr::var("previous2_byte"), Expr::u32(16)),
-            Expr::shl(Expr::var("previous_byte"), Expr::u32(8)),
-        ),
-        Expr::var("candidate_byte"),
-    );
-    let suffix3_bit_index = suffix3_bloom_bit_index_expr(Expr::var("suffix3_index"));
+    let suffix3_match_nodes =
+        suffix3_prefilter_match_nodes(haystack, candidate_suffix3_bloom, replay_nodes.clone());
+    count_suffix2_prefilter_body(
+        haystack,
+        candidate_end_mask,
+        candidate_suffix2_mask,
+        haystack_len,
+        replay_nodes,
+        suffix3_match_nodes,
+    )
+}
 
-    vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::load(haystack_len, Expr::u32(0))),
-            vec![
-                Node::let_bind("candidate_byte", candidate_byte),
-                Node::let_bind(
-                    "candidate_word",
-                    Expr::load(
-                        candidate_end_mask,
-                        Expr::shr(Expr::var("candidate_byte"), Expr::u32(5)),
-                    ),
-                ),
-                Node::let_bind(
-                    "candidate_bit",
-                    Expr::shl(
-                        Expr::u32(1),
-                        Expr::bitand(Expr::var("candidate_byte"), Expr::u32(31)),
-                    ),
-                ),
-                Node::if_then(
-                    Expr::ne(
-                        Expr::bitand(Expr::var("candidate_word"), Expr::var("candidate_bit")),
-                        Expr::u32(0),
-                    ),
-                    vec![Node::if_then_else(
-                        Expr::eq(i.clone(), Expr::u32(0)),
-                        replay_nodes.clone(),
-                        vec![
-                            Node::let_bind("previous_byte", previous_byte),
-                            Node::let_bind("suffix2_index", suffix2_index),
-                            Node::let_bind(
-                                "suffix2_word",
-                                Expr::load(
-                                    candidate_suffix2_mask,
-                                    Expr::shr(Expr::var("suffix2_index"), Expr::u32(5)),
-                                ),
-                            ),
-                            Node::let_bind(
-                                "suffix2_bit",
-                                Expr::shl(
-                                    Expr::u32(1),
-                                    Expr::bitand(Expr::var("suffix2_index"), Expr::u32(31)),
-                                ),
-                            ),
-                            Node::if_then(
-                                Expr::ne(
-                                    Expr::bitand(
-                                        Expr::var("suffix2_word"),
-                                        Expr::var("suffix2_bit"),
-                                    ),
-                                    Expr::u32(0),
-                                ),
-                                vec![Node::if_then_else(
-                                    Expr::eq(i.clone(), Expr::u32(1)),
-                                    replay_nodes.clone(),
-                                    vec![
-                                        Node::let_bind("previous2_byte", previous2_byte),
-                                        Node::let_bind("suffix3_index", suffix3_index),
-                                        Node::let_bind("suffix3_bit_index", suffix3_bit_index),
-                                        Node::let_bind(
-                                            "suffix3_word",
-                                            Expr::load(
-                                                candidate_suffix3_bloom,
-                                                Expr::shr(
-                                                    Expr::var("suffix3_bit_index"),
-                                                    Expr::u32(5),
-                                                ),
-                                            ),
-                                        ),
-                                        Node::let_bind(
-                                            "suffix3_bit",
-                                            Expr::shl(
-                                                Expr::u32(1),
-                                                Expr::bitand(
-                                                    Expr::var("suffix3_bit_index"),
-                                                    Expr::u32(31),
-                                                ),
-                                            ),
-                                        ),
-                                        Node::if_then(
-                                            Expr::ne(
-                                                Expr::bitand(
-                                                    Expr::var("suffix3_word"),
-                                                    Expr::var("suffix3_bit"),
-                                                ),
-                                                Expr::u32(0),
-                                            ),
-                                            replay_nodes,
-                                        ),
-                                    ],
-                                )],
-                            ),
-                        ],
-                    )],
-                ),
-            ],
-        ),
-    ]
+#[allow(clippy::too_many_arguments)]
+fn suffix3_prefilter_program(
+    names: [&str; 9],
+    state_count: u32,
+    output_records_len: u32,
+    pattern_count: u32,
+    result: BufferDecl,
+    trailing_output: Option<BufferDecl>,
+    generator: &'static str,
+    replay_nodes: Vec<Node>,
+) -> Program {
+    let [haystack, transitions, output_offsets, output_records, pattern_lengths, haystack_len, candidate_end_mask, candidate_suffix2_mask, candidate_suffix3_bloom] =
+        names;
+    let body = suffix3_prefilter_body(
+        haystack,
+        haystack_len,
+        candidate_end_mask,
+        candidate_suffix2_mask,
+        candidate_suffix3_bloom,
+        replay_nodes,
+    );
+    let mut buffers = super::super::super::classic_ac_dfa_buffer_decls(
+        haystack,
+        transitions,
+        output_offsets,
+        state_count,
+    );
+    buffers.reserve(7 + usize::from(trailing_output.is_some()));
+    buffers.extend([
+        BufferDecl::storage(output_records, 3, BufferAccess::ReadOnly, DataType::U32)
+            .with_count(output_records_len),
+        BufferDecl::storage(pattern_lengths, 4, BufferAccess::ReadOnly, DataType::U32)
+            .with_count(pattern_count),
+        BufferDecl::storage(haystack_len, 5, BufferAccess::ReadOnly, DataType::U32).with_count(1),
+        result,
+        BufferDecl::storage(candidate_end_mask, 7, BufferAccess::ReadOnly, DataType::U32)
+            .with_count(8),
+        BufferDecl::storage(
+            candidate_suffix2_mask,
+            8,
+            BufferAccess::ReadOnly,
+            DataType::U32,
+        )
+        .with_count(CLASSIC_AC_SUFFIX2_MASK_WORDS as u32),
+        BufferDecl::storage(
+            candidate_suffix3_bloom,
+            9,
+            BufferAccess::ReadOnly,
+            DataType::U32,
+        )
+        .with_count(CLASSIC_AC_SUFFIX3_BLOOM_WORDS as u32),
+    ]);
+    buffers.extend(trailing_output);
+    Program::wrapped(buffers, [128, 1, 1], vec![wrap_anonymous(generator, body)])
 }
 
 /// Build a bounded-window AC ranges program with byte, suffix2, and suffix3
@@ -212,64 +160,38 @@ pub fn classic_ac_bounded_ranges_suffix3_prefilter_program_ext(
     max_pattern_len: u32,
     use_subgroup_coalesce: bool,
 ) -> Program {
-    let scan_nodes = bounded_ranges_scan_nodes(
-        haystack,
-        transitions,
-        output_offsets,
-        output_records,
-        pattern_lengths,
-        match_count,
-        matches,
-        max_pattern_len,
-        use_subgroup_coalesce,
-    );
-    let body = suffix3_prefilter_body(
-        haystack,
-        haystack_len,
-        candidate_end_mask,
-        candidate_suffix2_mask,
-        candidate_suffix3_bloom,
-        scan_nodes,
-    );
-
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(haystack, 0, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(transitions, 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(state_count.saturating_mul(256)),
-            BufferDecl::storage(output_offsets, 2, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(state_count.saturating_add(1)),
-            BufferDecl::storage(output_records, 3, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(output_records_len),
-            BufferDecl::storage(pattern_lengths, 4, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(pattern_count),
-            BufferDecl::storage(haystack_len, 5, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(1),
-            BufferDecl::read_write(match_count, 6, DataType::U32).with_count(1),
-            BufferDecl::storage(candidate_end_mask, 7, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(8),
-            BufferDecl::storage(
-                candidate_suffix2_mask,
-                8,
-                BufferAccess::ReadOnly,
-                DataType::U32,
-            )
-            .with_count(CLASSIC_AC_SUFFIX2_MASK_WORDS as u32),
-            BufferDecl::storage(
-                candidate_suffix3_bloom,
-                9,
-                BufferAccess::ReadOnly,
-                DataType::U32,
-            )
-            .with_count(CLASSIC_AC_SUFFIX3_BLOOM_WORDS as u32),
+    suffix3_prefilter_program(
+        [
+            haystack,
+            transitions,
+            output_offsets,
+            output_records,
+            pattern_lengths,
+            haystack_len,
+            candidate_end_mask,
+            candidate_suffix2_mask,
+            candidate_suffix3_bloom,
+        ],
+        state_count,
+        output_records_len,
+        pattern_count,
+        BufferDecl::read_write(match_count, 6, DataType::U32).with_count(1),
+        Some(
             BufferDecl::output(matches, 10, DataType::U32)
                 .with_count(max_matches.saturating_mul(3)),
-        ],
-        [128, 1, 1],
-        vec![wrap_anonymous(
-            "vyre-libs::matching::classic_ac_bounded_ranges_suffix3_prefilter",
-            body,
-        )],
+        ),
+        "vyre-libs::matching::classic_ac_bounded_ranges_suffix3_prefilter",
+        bounded_ranges_scan_nodes(
+            haystack,
+            transitions,
+            output_offsets,
+            output_records,
+            pattern_lengths,
+            match_count,
+            matches,
+            max_pattern_len,
+            use_subgroup_coalesce,
+        ),
     )
 }
 
@@ -305,60 +227,33 @@ pub fn classic_ac_bounded_ranges_suffix3_presence_program_ext(
     pattern_count: u32,
     max_pattern_len: u32,
 ) -> Program {
-    let presence_words = presence_bitmap_words(pattern_count);
-    let replay_nodes = bounded_ranges_presence_nodes(
-        haystack,
-        transitions,
-        output_offsets,
-        output_records,
-        presence,
-        max_pattern_len,
-    );
-    let body = suffix3_prefilter_body(
-        haystack,
-        haystack_len,
-        candidate_end_mask,
-        candidate_suffix2_mask,
-        candidate_suffix3_bloom,
-        replay_nodes,
-    );
-
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(haystack, 0, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(transitions, 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(state_count.saturating_mul(256)),
-            BufferDecl::storage(output_offsets, 2, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(state_count.saturating_add(1)),
-            BufferDecl::storage(output_records, 3, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(output_records_len),
-            BufferDecl::storage(pattern_lengths, 4, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(pattern_count),
-            BufferDecl::storage(haystack_len, 5, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(1),
-            BufferDecl::read_write(presence, 6, DataType::U32).with_count(presence_words),
-            BufferDecl::storage(candidate_end_mask, 7, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(8),
-            BufferDecl::storage(
-                candidate_suffix2_mask,
-                8,
-                BufferAccess::ReadOnly,
-                DataType::U32,
-            )
-            .with_count(CLASSIC_AC_SUFFIX2_MASK_WORDS as u32),
-            BufferDecl::storage(
-                candidate_suffix3_bloom,
-                9,
-                BufferAccess::ReadOnly,
-                DataType::U32,
-            )
-            .with_count(CLASSIC_AC_SUFFIX3_BLOOM_WORDS as u32),
+    suffix3_prefilter_program(
+        [
+            haystack,
+            transitions,
+            output_offsets,
+            output_records,
+            pattern_lengths,
+            haystack_len,
+            candidate_end_mask,
+            candidate_suffix2_mask,
+            candidate_suffix3_bloom,
         ],
-        [128, 1, 1],
-        vec![wrap_anonymous(
-            "vyre-libs::matching::classic_ac_bounded_ranges_suffix3_presence",
-            body,
-        )],
+        state_count,
+        output_records_len,
+        pattern_count,
+        BufferDecl::read_write(presence, 6, DataType::U32)
+            .with_count(presence_bitmap_words(pattern_count)),
+        None,
+        "vyre-libs::matching::classic_ac_bounded_ranges_suffix3_presence",
+        bounded_ranges_presence_nodes(
+            haystack,
+            transitions,
+            output_offsets,
+            output_records,
+            presence,
+            max_pattern_len,
+        ),
     )
 }
 
@@ -438,12 +333,13 @@ fn presence_by_region_base_buffer_decls(
     pattern_count: u32,
     total_presence_words: u32,
 ) -> Vec<BufferDecl> {
-    vec![
-        BufferDecl::storage(haystack, 0, BufferAccess::ReadOnly, DataType::U32),
-        BufferDecl::storage(transitions, 1, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(state_count.saturating_mul(256)),
-        BufferDecl::storage(output_offsets, 2, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(state_count.saturating_add(1)),
+    let mut buffers = super::super::super::classic_ac_dfa_buffer_decls(
+        haystack,
+        transitions,
+        output_offsets,
+        state_count,
+    );
+    buffers.extend([
         BufferDecl::storage(output_records, 3, BufferAccess::ReadOnly, DataType::U32)
             .with_count(output_records_len),
         BufferDecl::storage(pattern_lengths, 4, BufferAccess::ReadOnly, DataType::U32)
@@ -466,14 +362,10 @@ fn presence_by_region_base_buffer_decls(
             DataType::U32,
         )
         .with_count(CLASSIC_AC_SUFFIX3_BLOOM_WORDS as u32),
-        // Region start offsets (ascending, region_starts[0] == 0). Dynamic length:
-        // the kernel reads region_count via buf_len(region_starts).
         BufferDecl::storage(region_starts, 10, BufferAccess::ReadOnly, DataType::U32),
-        // Shard base offset (1 u32) added to each local candidate position so a
-        // sharded dispatch attributes against the whole-batch region table (0 for
-        // the single-dispatch path).
         BufferDecl::storage(region_base, 11, BufferAccess::ReadOnly, DataType::U32).with_count(1),
-    ]
+    ]);
+    buffers
 }
 
 /// Region-attributed variant of [`classic_ac_bounded_ranges_suffix3_presence_program_ext`]:

@@ -1,15 +1,14 @@
 //! Integration test for the CUDA backend.
 
-
-mod common;
 #[path = "resident_dispatch_contracts/basic_resident_contracts.rs"]
 mod basic_resident_contracts;
-#[path = "resident_dispatch_contracts/sequence_readback_contracts.rs"]
-mod sequence_readback_contracts;
-#[path = "resident_dispatch_contracts/repeated_sequence_contracts.rs"]
-mod repeated_sequence_contracts;
+mod common;
 #[path = "resident_dispatch_contracts/optimizer_combined_contracts.rs"]
 mod optimizer_combined_contracts;
+#[path = "resident_dispatch_contracts/repeated_sequence_contracts.rs"]
+mod repeated_sequence_contracts;
+#[path = "resident_dispatch_contracts/sequence_readback_contracts.rs"]
+mod sequence_readback_contracts;
 #[path = "resident_dispatch_contracts/source_accounting_contracts.rs"]
 mod source_accounting_contracts;
 

@@ -1,4 +1,4 @@
-//! N3  -  `cargo_full run --bin xtask -- verify-rewrite-proofs`.
+//! N3  -  `cargo xtask verify-rewrite-proofs`.
 //!
 //! Walks `vyre_foundation::optimizer::rewrite_proof_registry::shipped_obligations`,
 //! emits each as SMT-LIB v2, and runs `z3 -smt2` on the script. Reports

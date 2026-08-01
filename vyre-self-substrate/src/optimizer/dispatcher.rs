@@ -850,12 +850,15 @@ pub mod oracle {
                 "changed" => changed_words_for(decl.count(), &convergence)?,
                 "converged" => vec![u32::from(convergence.converged)],
                 other => {
-                    return Err(DispatchError::Rejected(format!(concat!(
-                        "Fix: persistent_bfs oracle has no value for declared output ",
-                        "buffer `{other}`. Teach the oracle to produce it or stop ",
-                        "declaring it; returning a short output list would silently ",
-                        "shift every later output index."
-                    ), other = other)))
+                    return Err(DispatchError::Rejected(format!(
+                        concat!(
+                            "Fix: persistent_bfs oracle has no value for declared output ",
+                            "buffer `{other}`. Teach the oracle to produce it or stop ",
+                            "declaring it; returning a short output list would silently ",
+                            "shift every later output index."
+                        ),
+                        other = other
+                    )))
                 }
             };
             outputs.push(u32_buffer_to_bytes(&words));
@@ -888,12 +891,15 @@ pub mod oracle {
         match count {
             1 => Ok(vec![per_iteration]),
             2 => Ok(vec![per_iteration, convergence.changed]),
-            other => Err(DispatchError::Rejected(format!(concat!(
-                "Fix: persistent_bfs oracle understands a `changed` buffer of 1 ",
-                "element (per-iteration) or 2 (per-iteration plus sticky), not ",
-                "{other}. Declare one of those or teach the oracle what the extra ",
-                "slots mean."
-            ), other = other))),
+            other => Err(DispatchError::Rejected(format!(
+                concat!(
+                    "Fix: persistent_bfs oracle understands a `changed` buffer of 1 ",
+                    "element (per-iteration) or 2 (per-iteration plus sticky), not ",
+                    "{other}. Declare one of those or teach the oracle what the extra ",
+                    "slots mean."
+                ),
+                other = other
+            ))),
         }
     }
 

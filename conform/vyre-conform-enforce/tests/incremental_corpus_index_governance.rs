@@ -16,14 +16,22 @@ fn read_repo_file(relative: &str) -> String {
 }
 
 fn assert_contains(haystack: &str, needle: &str) {
-    assert!(haystack.contains(needle), "missing required governance token: {needle}");
+    assert!(
+        haystack.contains(needle),
+        "missing required governance token: {needle}"
+    );
 }
 
 #[test]
 fn incremental_corpus_index_sources_are_registered() {
     let ledger = read_repo_file("docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
 
-    for key in ["LINUX_INOTIFY", "LINUX_FANOTIFY", "SQLITE_WAL", "BLAKE3_SPEC"] {
+    for key in [
+        "LINUX_INOTIFY",
+        "LINUX_FANOTIFY",
+        "SQLITE_WAL",
+        "BLAKE3_SPEC",
+    ] {
         assert_contains(&ledger, key);
     }
 }
@@ -79,7 +87,8 @@ fn content_identity_index_separates_reuse_from_authentication_and_parser_caches(
 
 #[test]
 fn invalidation_evidence_requires_truth_gates_and_repair_metrics() {
-    let evidence = read_repo_file("docs/optimization/INCREMENTAL_RESCAN_INVALIDATION_EVIDENCE.toml");
+    let evidence =
+        read_repo_file("docs/optimization/INCREMENTAL_RESCAN_INVALIDATION_EVIDENCE.toml");
 
     for token in [
         "positive",
@@ -93,4 +102,3 @@ fn invalidation_evidence_requires_truth_gates_and_repair_metrics() {
         assert_contains(&evidence, token);
     }
 }
-

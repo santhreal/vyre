@@ -31,6 +31,80 @@ pub mod memory;
 pub mod specialization;
 pub mod sync;
 
+pub(crate) fn expr_is_observably_free(expr: &crate::ir::Expr) -> bool {
+    expr_is_observably_free_with(expr, true, false)
+}
+
+pub(crate) fn expr_is_observably_free_for_reexecution(
+    expr: &crate::ir::Expr,
+    allow_subgroup_identity: bool,
+) -> bool {
+    expr_is_observably_free_with(expr, false, allow_subgroup_identity)
+}
+
+pub(crate) fn expr_is_observably_free_with(
+    expr: &crate::ir::Expr,
+    allow_buffer_metadata: bool,
+    allow_subgroup_identity: bool,
+) -> bool {
+    use crate::ir::Expr;
+    match expr {
+        Expr::Load { .. }
+        | Expr::Atomic { .. }
+        | Expr::Call { .. }
+        | Expr::Opaque(_)
+        | Expr::SubgroupBallot { .. }
+        | Expr::SubgroupShuffle { .. }
+        | Expr::SubgroupReduce { .. } => false,
+        Expr::SubgroupLocalId | Expr::SubgroupSize => allow_subgroup_identity,
+        Expr::BufferRef { .. } | Expr::BufLen { .. } => allow_buffer_metadata,
+        Expr::LitU32(_)
+        | Expr::LitI32(_)
+        | Expr::LitF32(_)
+        | Expr::LitBool(_)
+        | Expr::Var(_)
+        | Expr::InvocationId { .. }
+        | Expr::WorkgroupId { .. }
+        | Expr::LocalId { .. } => true,
+        Expr::BinOp { left, right, .. } => {
+            expr_is_observably_free_with(left, allow_buffer_metadata, allow_subgroup_identity)
+                && expr_is_observably_free_with(
+                    right,
+                    allow_buffer_metadata,
+                    allow_subgroup_identity,
+                )
+        }
+        Expr::UnOp { operand, .. } => {
+            expr_is_observably_free_with(operand, allow_buffer_metadata, allow_subgroup_identity)
+        }
+        Expr::Select {
+            cond,
+            true_val,
+            false_val,
+        } => {
+            expr_is_observably_free_with(cond, allow_buffer_metadata, allow_subgroup_identity)
+                && expr_is_observably_free_with(
+                    true_val,
+                    allow_buffer_metadata,
+                    allow_subgroup_identity,
+                )
+                && expr_is_observably_free_with(
+                    false_val,
+                    allow_buffer_metadata,
+                    allow_subgroup_identity,
+                )
+        }
+        Expr::Cast { value, .. } => {
+            expr_is_observably_free_with(value, allow_buffer_metadata, allow_subgroup_identity)
+        }
+        Expr::Fma { a, b, c } => {
+            expr_is_observably_free_with(a, allow_buffer_metadata, allow_subgroup_identity)
+                && expr_is_observably_free_with(b, allow_buffer_metadata, allow_subgroup_identity)
+                && expr_is_observably_free_with(c, allow_buffer_metadata, allow_subgroup_identity)
+        }
+    }
+}
+
 // ---- Back-compat re-exports (historical `passes::<pass_name>` path) -----
 //
 // Public re-exports keep downstream pass tests and tools on the stable

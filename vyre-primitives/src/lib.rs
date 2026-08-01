@@ -97,6 +97,23 @@ pub(crate) fn invalid_output_program(
     )
 }
 
+#[cfg(feature = "vyre-foundation")]
+pub(crate) fn demote_intermediate_outputs(program: Program, final_output: &str) -> Program {
+    let buffers = program
+        .buffers()
+        .iter()
+        .map(|buffer| {
+            let mut buffer = buffer.clone();
+            if buffer.name() != final_output && buffer.is_output() {
+                buffer.is_output = false;
+                buffer.pipeline_live_out = true;
+            }
+            buffer
+        })
+        .collect();
+    program.with_rewritten_buffers(buffers)
+}
+
 /// Return `(left * right) >> 16` for unsigned 16.16 fixed-point lanes without
 /// losing the high half of the product to 32-bit overflow.
 #[cfg(any(feature = "graph", feature = "math", feature = "geom", feature = "opt"))]
@@ -355,53 +372,4 @@ pub mod prelude {
         pack_u32_slice_min_words_into, pack_u64_slice, pack_u64_slice_into, read_f32_le_word,
         read_u32_le_word, unpack_f32_slice, unpack_f32_slice_into, unpack_u32_slice_into,
     };
-}
-
-#[cfg(feature = "predicate")]
-pub(crate) mod program_region {
-    use std::sync::Arc;
-
-    use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
-    use vyre_foundation::ir::{Node, Program};
-
-    pub(crate) fn tag_program(parent_op_id: &str, program: Program) -> Program {
-        Program::wrapped(
-            program.buffers().to_vec(),
-            program.workgroup_size(),
-            vec![Node::Region {
-                generator: Ident::from(parent_op_id),
-                source_region: None,
-                body: Arc::new(reparent_program_children(&program, parent_op_id)),
-            }],
-        )
-    }
-
-    fn reparent_program_children(program: &Program, parent_op_id: &str) -> Vec<Node> {
-        let parent = GeneratorRef {
-            name: parent_op_id.to_string(),
-        };
-        program
-            .entry()
-            .iter()
-            .cloned()
-            .map(|node| reparent_entry_node(node, &parent))
-            .collect()
-    }
-
-    fn reparent_entry_node(node: Node, parent: &GeneratorRef) -> Node {
-        match node {
-            Node::Region {
-                generator, body, ..
-            } => Node::Region {
-                generator,
-                source_region: Some(parent.clone()),
-                body,
-            },
-            other => Node::Region {
-                generator: Ident::from(Program::ROOT_REGION_GENERATOR),
-                source_region: Some(parent.clone()),
-                body: Arc::new(vec![other]),
-            },
-        }
-    }
 }

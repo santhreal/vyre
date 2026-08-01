@@ -76,51 +76,11 @@ pub(super) fn scan_ac_bounded_ranges_metric_points(
         "scan_ac_irregular_bounded_ranges_suffix3_prefilter",
         1,
     ));
-    metrics.push(metric(
-        "scan_ac_irregular_candidate_end_bytes",
-        u64::from(stats.candidate_end_bytes),
-    ));
-    metrics.push(metric(
-        "scan_ac_irregular_candidate_end_lanes",
-        u64::from(stats.candidate_end_lanes),
-    ));
-    metrics.push(metric(
-        "scan_ac_irregular_candidate_suffix2_lanes",
-        u64::from(stats.candidate_suffix2_lanes),
-    ));
-    metrics.push(metric(
-        "scan_ac_irregular_candidate_suffix3_lanes",
-        u64::from(stats.candidate_suffix3_lanes),
-    ));
-    if stats.haystack_bytes > 0 {
-        metrics.push(metric(
-            "scan_ac_irregular_bounded_ranges_prefilter_skipped_lanes_x1000",
-            (u128::from(
-                stats
-                    .haystack_bytes
-                    .saturating_sub(stats.candidate_suffix3_lanes),
-            ) * 1000
-                / u128::from(stats.haystack_bytes)) as u64,
-        ));
-        metrics.push(metric(
-            "scan_ac_irregular_suffix2_extra_skipped_lanes_x1000",
-            (u128::from(
-                stats
-                    .candidate_end_lanes
-                    .saturating_sub(stats.candidate_suffix2_lanes),
-            ) * 1000
-                / u128::from(stats.haystack_bytes)) as u64,
-        ));
-        metrics.push(metric(
-            "scan_ac_irregular_suffix3_extra_skipped_lanes_x1000",
-            (u128::from(
-                stats
-                    .candidate_suffix2_lanes
-                    .saturating_sub(stats.candidate_suffix3_lanes),
-            ) * 1000
-                / u128::from(stats.haystack_bytes)) as u64,
-        ));
-    }
+    append_candidate_prefilter_metrics(
+        &mut metrics,
+        stats,
+        "scan_ac_irregular_bounded_ranges_prefilter_skipped_lanes_x1000",
+    );
     metrics
 }
 
@@ -144,52 +104,66 @@ pub(super) fn scan_ac_count_metric_points(
     metrics.push(metric("scan_ac_irregular_count_only", 1));
     metrics.push(metric("scan_ac_irregular_count_prefilter", 1));
     metrics.push(metric("scan_ac_irregular_count_readback_bytes", 4));
-    metrics.push(metric(
-        "scan_ac_irregular_candidate_end_bytes",
-        u64::from(stats.candidate_end_bytes),
-    ));
-    metrics.push(metric(
-        "scan_ac_irregular_candidate_end_lanes",
-        u64::from(stats.candidate_end_lanes),
-    ));
-    metrics.push(metric(
-        "scan_ac_irregular_candidate_suffix2_lanes",
-        u64::from(stats.candidate_suffix2_lanes),
-    ));
-    metrics.push(metric(
-        "scan_ac_irregular_candidate_suffix3_lanes",
-        u64::from(stats.candidate_suffix3_lanes),
-    ));
-    if stats.haystack_bytes > 0 {
-        metrics.push(metric(
-            "scan_ac_irregular_count_prefilter_skipped_lanes_x1000",
-            (u128::from(
-                stats
-                    .haystack_bytes
-                    .saturating_sub(stats.candidate_suffix3_lanes),
-            ) * 1000
-                / u128::from(stats.haystack_bytes)) as u64,
-        ));
-        metrics.push(metric(
+    append_candidate_prefilter_metrics(
+        &mut metrics,
+        stats,
+        "scan_ac_irregular_count_prefilter_skipped_lanes_x1000",
+    );
+    metrics
+}
+
+fn append_candidate_prefilter_metrics(
+    metrics: &mut Vec<MetricPoint>,
+    stats: ScanAcStats,
+    skipped_lanes_metric: &str,
+) {
+    for (name, value) in [
+        (
+            "scan_ac_irregular_candidate_end_bytes",
+            stats.candidate_end_bytes,
+        ),
+        (
+            "scan_ac_irregular_candidate_end_lanes",
+            stats.candidate_end_lanes,
+        ),
+        (
+            "scan_ac_irregular_candidate_suffix2_lanes",
+            stats.candidate_suffix2_lanes,
+        ),
+        (
+            "scan_ac_irregular_candidate_suffix3_lanes",
+            stats.candidate_suffix3_lanes,
+        ),
+    ] {
+        metrics.push(metric(name, u64::from(value)));
+    }
+    if stats.haystack_bytes == 0 {
+        return;
+    }
+    let denominator = u128::from(stats.haystack_bytes);
+    for (name, before, after) in [
+        (
+            skipped_lanes_metric,
+            stats.haystack_bytes,
+            stats.candidate_suffix3_lanes,
+        ),
+        (
             "scan_ac_irregular_suffix2_extra_skipped_lanes_x1000",
-            (u128::from(
-                stats
-                    .candidate_end_lanes
-                    .saturating_sub(stats.candidate_suffix2_lanes),
-            ) * 1000
-                / u128::from(stats.haystack_bytes)) as u64,
-        ));
-        metrics.push(metric(
+            stats.candidate_end_lanes,
+            stats.candidate_suffix2_lanes,
+        ),
+        (
             "scan_ac_irregular_suffix3_extra_skipped_lanes_x1000",
-            (u128::from(
-                stats
-                    .candidate_suffix2_lanes
-                    .saturating_sub(stats.candidate_suffix3_lanes),
-            ) * 1000
-                / u128::from(stats.haystack_bytes)) as u64,
+            stats.candidate_suffix2_lanes,
+            stats.candidate_suffix3_lanes,
+        ),
+    ] {
+        let skipped = before.saturating_sub(after);
+        metrics.push(metric(
+            name,
+            (u128::from(skipped) * 1000 / denominator) as u64,
         ));
     }
-    metrics
 }
 
 pub(super) fn scan_ac_baseline_metric_points(stats: ScanAcStats) -> Vec<MetricPoint> {

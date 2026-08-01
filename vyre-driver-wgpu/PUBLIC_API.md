@@ -238,11 +238,13 @@ pub fn vyre_driver_wgpu::buffer::GpuBufferHandle::buffer(&self) -> &wgpu::api::b
 pub fn vyre_driver_wgpu::buffer::GpuBufferHandle::buffer_arc(&self) -> alloc::sync::Arc<wgpu::api::buffer::Buffer>
 pub fn vyre_driver_wgpu::buffer::GpuBufferHandle::byte_len(&self) -> u64
 pub fn vyre_driver_wgpu::buffer::GpuBufferHandle::element_count(&self) -> usize
+pub fn vyre_driver_wgpu::buffer::GpuBufferHandle::from_resident_handle(handle: vyre_driver::backend::resource::ResidentHandle, context: &str) -> core::result::Result<core::option::Option<Self>, vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_wgpu::buffer::GpuBufferHandle::from_resident_id(id: u64) -> core::option::Option<Self>
 pub fn vyre_driver_wgpu::buffer::GpuBufferHandle::id(&self) -> u64
 pub fn vyre_driver_wgpu::buffer::GpuBufferHandle::readback(&self, device: &wgpu::api::device::Device, queue: &wgpu::api::queue::Queue, out: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_wgpu::buffer::GpuBufferHandle::readback_prefix(&self, device: &wgpu::api::device::Device, queue: &wgpu::api::queue::Queue, len: u64, out: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_wgpu::buffer::GpuBufferHandle::readback_range(&self, device: &wgpu::api::device::Device, queue: &wgpu::api::queue::Queue, byte_offset: u64, len: u64, out: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::buffer::GpuBufferHandle::resident_handle(&self) -> core::result::Result<vyre_driver::backend::resource::ResidentHandle, vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_wgpu::buffer::GpuBufferHandle::upload(device: &wgpu::api::device::Device, queue: &wgpu::api::queue::Queue, bytes: &[u8], usage: wgpu_types::BufferUsages) -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_wgpu::buffer::GpuBufferHandle::usage(&self) -> wgpu_types::BufferUsages
 impl core::clone::Clone for vyre_driver_wgpu::buffer::GpuBufferHandle

@@ -785,31 +785,10 @@ fn rewrite_program_with_folded_values(
     foldable: &[u32],
     value: &[u32],
 ) -> Program {
-    // Rebuild the entry tree, walking Exprs in the same post-order
-    // the encoder used. Each Expr we encounter consumes one slot of
-    // the arena (and any children it has). If the Expr is foldable,
-    // replace it with a LitU32(value).
-    let body: Vec<Node> = match program.entry() {
-        [Node::Region { body, .. }] => body.as_ref().clone(),
-        entry => entry.to_vec(),
-    };
-
     let mut counter = 0u32;
-    let rebuilt = rewrite_scope(&body, arena, foldable, value, &mut counter);
-
-    let new_entry = match program.entry() {
-        [Node::Region {
-            generator,
-            source_region,
-            ..
-        }] => vec![Node::Region {
-            generator: generator.clone(),
-            source_region: source_region.clone(),
-            body: Arc::new(rebuilt),
-        }],
-        _ => rebuilt,
-    };
-    program.with_rewritten_entry(new_entry)
+    super::rewrite_program_entry(&program, |body| {
+        rewrite_scope(body, arena, foldable, value, &mut counter)
+    })
 }
 
 fn rewrite_scope(
@@ -1079,8 +1058,8 @@ mod tests {
                 // Derive the expected expr_count from the arena_kinds buffer
                 // (input slot 0, one u32 per expr).
                 let expected_expr_count = (inputs[0].len() / 4) as u32;
-                let expected_grid_x = (expected_expr_count + super::WORKGROUP_X - 1)
-                    / super::WORKGROUP_X;
+                let expected_grid_x =
+                    (expected_expr_count + super::WORKGROUP_X - 1) / super::WORKGROUP_X;
                 assert_eq!(
                     grid[0],
                     expected_grid_x,
@@ -1258,11 +1237,13 @@ mod tests {
         assert_eq!(foldable.len(), n as usize);
         // For n=257 and WORKGROUP_X=256: ceil(257/256) = 2.
         let expected_grid_x = (n + WORKGROUP_X - 1) / WORKGROUP_X;
-        assert_eq!(expected_grid_x, 2, "sanity: expected_grid_x for 257 exprs must be 2");
+        assert_eq!(
+            expected_grid_x, 2,
+            "sanity: expected_grid_x for 257 exprs must be 2"
+        );
         for (dispatch_idx, &gx) in dispatcher.grid_x_values.borrow().iter().enumerate() {
             assert_eq!(
-                gx,
-                expected_grid_x,
+                gx, expected_grid_x,
                 "dispatch {dispatch_idx}: grid_x must be {expected_grid_x} for expr_count={n}; \
                  the prior ConstFoldDispatcher asserted Some([1,1,1]) and only worked by \
                  accident for 1-expr arenas"

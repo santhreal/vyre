@@ -268,15 +268,18 @@ mod tests {
                 indices[collide] = 0;
                 sort_unstable_if_needed(&mut indices);
                 let verdict = classify_dense_permutation(&indices, len);
-                let distinct: std::collections::BTreeSet<usize> =
-                    indices.iter().copied().collect();
-                let reference_is_dense =
-                    distinct.len() == len && indices.len() == len && *distinct.iter().max().unwrap_or(&0) < len.max(1);
+                let distinct: std::collections::BTreeSet<usize> = indices.iter().copied().collect();
+                let reference_is_dense = distinct.len() == len
+                    && indices.len() == len
+                    && *distinct.iter().max().unwrap_or(&0) < len.max(1);
                 if collide == 0 {
                     // collide==0 leaves the map unchanged: still dense.
                     assert_eq!(verdict, Ok(()));
                 } else {
-                    assert!(verdict.is_err(), "len={len} collide={collide} must be a defect");
+                    assert!(
+                        verdict.is_err(),
+                        "len={len} collide={collide} must be a defect"
+                    );
                     assert!(!reference_is_dense || verdict.is_ok());
                     assert!(matches!(
                         verdict,

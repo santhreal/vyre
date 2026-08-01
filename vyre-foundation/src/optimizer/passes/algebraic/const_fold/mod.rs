@@ -53,13 +53,7 @@ impl ConstFold {
     /// expression tree to fold.
     #[must_use]
     fn analyze_impl(program: &Program) -> PassAnalysis {
-        if !program
-            .stats()
-            .has_any_node_kind(crate::ir::stats::NODE_KIND_EXPRESSION_BEARING_MASK)
-        {
-            return PassAnalysis::SKIP;
-        }
-        PassAnalysis::RUN
+        super::expression_bearing_analysis(program)
     }
 
     /// Fold literal-only expressions.

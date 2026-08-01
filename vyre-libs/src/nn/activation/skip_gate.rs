@@ -63,7 +63,9 @@ pub fn skip_gate(gate: &str, branch: &str, skip: &str, output: &str, n: u32) -> 
             BufferDecl::storage(gate, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
             BufferDecl::storage(branch, 1, BufferAccess::ReadOnly, DataType::F32).with_count(n),
             BufferDecl::storage(skip, 2, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::output(output, 3, DataType::F32).with_count(n),
+            BufferDecl::output(output, 3, DataType::F32)
+                .with_count(n.max(1))
+                .with_output_byte_range(0..(n as usize).saturating_mul(4)),
         ],
         [64, 1, 1],
         vec![wrap_anonymous(OP_ID, body)],

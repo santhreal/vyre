@@ -369,48 +369,7 @@ fn expr_visit_check(expr: &Expr, name: &Ident, reads_name: &mut bool) -> bool {
 }
 
 fn substitute_var(expr: Expr, from: &Ident, to: &Ident) -> Expr {
-    match expr {
-        Expr::Var(ref n) if n == from => Expr::Var(to.clone()),
-        Expr::Load { buffer, index } => Expr::Load {
-            buffer,
-            index: Box::new(substitute_var(*index, from, to)),
-        },
-        Expr::BinOp { op, left, right } => Expr::BinOp {
-            op,
-            left: Box::new(substitute_var(*left, from, to)),
-            right: Box::new(substitute_var(*right, from, to)),
-        },
-        Expr::UnOp { op, operand } => Expr::UnOp {
-            op,
-            operand: Box::new(substitute_var(*operand, from, to)),
-        },
-        Expr::Call { op_id, args } => Expr::Call {
-            op_id,
-            args: args
-                .into_iter()
-                .map(|a| substitute_var(a, from, to))
-                .collect(),
-        },
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => Expr::Select {
-            cond: Box::new(substitute_var(*cond, from, to)),
-            true_val: Box::new(substitute_var(*true_val, from, to)),
-            false_val: Box::new(substitute_var(*false_val, from, to)),
-        },
-        Expr::Cast { target, value } => Expr::Cast {
-            target,
-            value: Box::new(substitute_var(*value, from, to)),
-        },
-        Expr::Fma { a, b, c } => Expr::Fma {
-            a: Box::new(substitute_var(*a, from, to)),
-            b: Box::new(substitute_var(*b, from, to)),
-            c: Box::new(substitute_var(*c, from, to)),
-        },
-        other => other,
-    }
+    super::rename_var_in_expr(expr, from, to)
 }
 
 fn node_has_pipelinable_loop(node: &Node, facts: &ProgramFacts) -> bool {

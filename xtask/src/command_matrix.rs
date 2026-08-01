@@ -1,4 +1,4 @@
-//! `cargo_full run --bin xtask -- command-matrix` - xtask command ownership matrix.
+//! `cargo xtask command-matrix` - xtask command ownership matrix.
 //!
 //! This matrix is the VX-003 answer to xtask bloat: every command has an
 //! owner lane, source LOC, proof kind, primary release evidence artifact,
@@ -27,8 +27,7 @@ const ARTIFACT_PATHS_SOURCE: &str = "xtask/src/artifact_paths.rs";
 const BENCH_TARGETS_DATA_SOURCE: &str = "docs/optimization/BENCH_TARGETS.toml";
 const BENCHMARK_EVIDENCE_SEMANTICS_SOURCE: &str = "xtask/src/benchmark_evidence_semantics.rs";
 const EXPECTED_ARTIFACTS_SOURCE: &str = "xtask/src/release_evidence/expected_artifacts.rs";
-const COMPETITOR_ISSUE_LEDGER_DATA_SOURCE: &str =
-    "docs/optimization/COMPETITOR_ISSUE_LEDGER.toml";
+const COMPETITOR_ISSUE_LEDGER_DATA_SOURCE: &str = "docs/optimization/COMPETITOR_ISSUE_LEDGER.toml";
 const ARCHIVE_REPLAY_AUDITS_DATA_SOURCE: &str = "docs/optimization/ARCHIVE_REPLAY_AUDITS.toml";
 const FRONTIER_LEADERBOARD_BASELINES_DATA_SOURCE: &str =
     "docs/optimization/FRONTIER_LEADERBOARD_BASELINES.toml";
@@ -761,8 +760,12 @@ fn shared_sources_for_command(command: &str) -> &'static [&'static str] {
 }
 
 fn collect_rust_sources_recursive(dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), String> {
-    let mut entries = fs::read_dir(dir)
-        .map_err(|error| format!("could not read module directory `{}`: {error}", dir.display()))?;
+    let mut entries = fs::read_dir(dir).map_err(|error| {
+        format!(
+            "could not read module directory `{}`: {error}",
+            dir.display()
+        )
+    })?;
     let mut entries = entries
         .by_ref()
         .collect::<Result<Vec<_>, _>>()
@@ -1163,7 +1166,7 @@ fn parse_mode(args: &[String]) -> Result<Mode, String> {
 
 fn print_usage() {
     eprintln!(
-        "USAGE:\n  cargo_full run -p xtask --bin xtask -- command-matrix [--output PATH] [--check]\n\n\
+        "USAGE:\n  cargo xtask command-matrix [--output PATH] [--check]\n\n\
          Generates the canonical xtask command matrix with owner lane, source-file count, submodule-aware LOC, proof kind, primary evidence artifact, duplicate-risk score, source digest, and source-count provenance."
     );
 }
@@ -1507,9 +1510,9 @@ mod tests {
         assert!(failures
             .iter()
             .any(|failure| failure.contains("release/evidence/benchmarks/")));
-        assert!(failures.iter().any(|failure| failure.contains(
-            "docs/optimization/FRONTIER_LEADERBOARD_BASELINES.toml"
-        )));
+        assert!(failures.iter().any(
+            |failure| failure.contains("docs/optimization/FRONTIER_LEADERBOARD_BASELINES.toml")
+        ));
         assert!(failures
             .iter()
             .any(|failure| failure.contains("xtask/src/research_key.rs")));
@@ -1528,7 +1531,7 @@ mod tests {
             source_file_count: 1,
             source_loc: 400,
             duplicate_risk_score: 34,
-                ..CommandMatrixRow::default()
+            ..CommandMatrixRow::default()
         }];
 
         let rendered = render_markdown(&rows);
@@ -1580,8 +1583,8 @@ mod tests {
                 shared_sources: Vec::new(),
                 owner_lane: "coordination".to_string(),
                 proof_kind: "dedup-gate".to_string(),
-                primary_evidence_artifact:
-                    "release/evidence/dedup/registered-op-duplicates.json".to_string(),
+                primary_evidence_artifact: "release/evidence/dedup/registered-op-duplicates.json"
+                    .to_string(),
                 source_file_count: 1,
                 source_loc: 777,
                 duplicate_risk_score: 37,
@@ -1594,8 +1597,8 @@ mod tests {
                 shared_sources: vec![OWNERSHIP_SOURCE.to_string()],
                 owner_lane: "coordination".to_string(),
                 proof_kind: "dedup-gate".to_string(),
-                primary_evidence_artifact:
-                    "release/evidence/dedup/source-similar-duplicates.json".to_string(),
+                primary_evidence_artifact: "release/evidence/dedup/source-similar-duplicates.json"
+                    .to_string(),
                 source_file_count: 1,
                 source_loc: 1379,
                 duplicate_risk_score: 43,
@@ -1616,7 +1619,7 @@ mod tests {
             source_file_count: 1,
             source_loc: 1351,
             duplicate_risk_score: 43,
-                ..CommandMatrixRow::default()
+            ..CommandMatrixRow::default()
         }];
 
         let failures = missing_required_duplicate_report_artifacts(&missing);
@@ -1644,7 +1647,7 @@ mod tests {
             source_file_count: 1,
             source_loc: 881,
             duplicate_risk_score: 43,
-                ..CommandMatrixRow::default()
+            ..CommandMatrixRow::default()
         }];
 
         let failures = mismatched_primary_evidence_artifacts(&rows);
@@ -1667,7 +1670,7 @@ mod tests {
             source_file_count: 1,
             source_loc: 1351,
             duplicate_risk_score: 43,
-                ..CommandMatrixRow::default()
+            ..CommandMatrixRow::default()
         }];
 
         let failures = missing_high_risk_vx_links(&rows, "# Plan\n");
@@ -1691,7 +1694,7 @@ mod tests {
             source_file_count: 1,
             source_loc: 1351,
             duplicate_risk_score: 43,
-                ..CommandMatrixRow::default()
+            ..CommandMatrixRow::default()
         }];
         let plan =
             "| VX-114 | testing_evidence | `xtask/src/lego_audit.rs` owns dedup evidence. |\n";

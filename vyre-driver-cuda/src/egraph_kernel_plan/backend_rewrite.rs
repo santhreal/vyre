@@ -21,6 +21,28 @@ use super::{
 };
 
 impl CudaBackend {
+    pub(super) fn warm_egraph_kernel_with_key<Kernel, BuildError>(
+        &self,
+        build: impl FnOnce(u32) -> Result<Kernel, BuildError>,
+        source: impl for<'a> Fn(&'a Kernel) -> &'a str,
+        null_function_fix: &'static str,
+    ) -> Result<(Kernel, cudarc::driver::sys::CUfunction), BackendError>
+    where
+        BuildError: std::fmt::Display,
+    {
+        let kernel = build(self.ptx_target_sm()).map_err(|error| BackendError::InvalidProgram {
+            fix: error.to_string(),
+        })?;
+        let module_key = self.module_cache_key_for_raw_ptx_artifact(source(&kernel))?;
+        let function = self.module_for_ptx_with_key(source(&kernel), module_key)?;
+        if function.is_null() {
+            return Err(BackendError::InvalidProgram {
+                fix: null_function_fix.to_string(),
+            });
+        }
+        Ok((kernel, function))
+    }
+
     /// Generate and warm-load the canonical e-graph rewrite kernel through the
     /// CUDA module cache.
     ///
@@ -44,20 +66,11 @@ impl CudaBackend {
         ),
         BackendError,
     > {
-        let kernel =
-            cuda_egraph_canonical_rewrite_kernel_ptx(self.ptx_target_sm()).map_err(|error| {
-                BackendError::InvalidProgram {
-                    fix: error.to_string(),
-                }
-            })?;
-        let module_key = self.module_cache_key_for_raw_ptx_artifact(&kernel.source)?;
-        let function = self.module_for_ptx_with_key(&kernel.source, module_key)?;
-        if function.is_null() {
-            return Err(BackendError::InvalidProgram {
-                fix: "Fix: CUDA e-graph canonical-rewrite kernel loaded but resolved a null `main` function. Inspect generated PTX entry metadata before launch.".to_string(),
-            });
-        }
-        Ok((kernel, function))
+        self.warm_egraph_kernel_with_key(
+            cuda_egraph_canonical_rewrite_kernel_ptx,
+            |kernel| kernel.source.as_str(),
+            "Fix: CUDA e-graph canonical-rewrite kernel loaded but resolved a null `main` function. Inspect generated PTX entry metadata before launch.",
+        )
     }
 
     /// Apply canonical e-class rewrites directly to a resident packed e-graph
@@ -176,20 +189,11 @@ impl CudaBackend {
         ),
         BackendError,
     > {
-        let kernel =
-            cuda_egraph_signature_refresh_kernel_ptx(self.ptx_target_sm()).map_err(|error| {
-                BackendError::InvalidProgram {
-                    fix: error.to_string(),
-                }
-            })?;
-        let module_key = self.module_cache_key_for_raw_ptx_artifact(&kernel.source)?;
-        let function = self.module_for_ptx_with_key(&kernel.source, module_key)?;
-        if function.is_null() {
-            return Err(BackendError::InvalidProgram {
-                fix: "Fix: CUDA e-graph row-signature refresh kernel loaded but resolved a null `main` function. Inspect generated PTX entry metadata before launch.".to_string(),
-            });
-        }
-        Ok((kernel, function))
+        self.warm_egraph_kernel_with_key(
+            cuda_egraph_signature_refresh_kernel_ptx,
+            |kernel| kernel.source.as_str(),
+            "Fix: CUDA e-graph row-signature refresh kernel loaded but resolved a null `main` function. Inspect generated PTX entry metadata before launch.",
+        )
     }
 
     /// Refresh resident e-graph row signatures on CUDA after canonical rewrites.

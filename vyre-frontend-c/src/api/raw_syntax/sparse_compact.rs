@@ -54,6 +54,14 @@ fn compact_sparse_tokens_ordered_gpu_with_scratch(
     cleanup.push(sparse_lens);
     let num_blocks = count.div_ceil(BLOCK_LANES).max(1);
     config.label = Some("vyre-frontend-c raw-byte sparse block totals".to_string());
+    // The block-total stage runs one BLOCK_LANES-lane workgroup per block, but
+    // its only sized buffer is `block_totals` (num_blocks words) and its input
+    // is a resident device blob whose length the grid inference cannot see. Left
+    // to infer, it launches ceil(num_blocks / BLOCK_LANES) = 1 workgroup, block 0
+    // is the only block that computes a total, and every later block scans as 0.
+    // State the real grid instead.
+    let previous_grid_override = config.grid_override;
+    config.grid_override = Some([num_blocks, 1, 1]);
     let totals = crate::pipeline::dispatch_resident_stage_cached(
         backend,
         crate::pipeline::stage_pipeline_cache_key(
@@ -74,6 +82,7 @@ fn compact_sparse_tokens_ordered_gpu_with_scratch(
         config,
     )
     .map_err(|e| format!("raw-byte sparse block-total dispatch failed: {e}"))?;
+    config.grid_override = previous_grid_override;
     if totals.len() != 1 {
         let actual = totals.len();
         let _ = crate::pipeline::free_resident_blobs(backend, totals);
@@ -186,6 +195,11 @@ fn compact_sparse_token_types_ordered_gpu_with_scratch(
     cleanup.push(sparse_types);
     let num_blocks = count.div_ceil(BLOCK_LANES).max(1);
     config.label = Some("vyre-frontend-c raw-byte sparse type block totals".to_string());
+    // Same grid statement as the token-triplet path above: `block_totals` is the
+    // only sized buffer, so inference would launch one workgroup and leave every
+    // block above 0 with a zero total.
+    let previous_grid_override = config.grid_override;
+    config.grid_override = Some([num_blocks, 1, 1]);
     let totals = crate::pipeline::dispatch_resident_stage_cached(
         backend,
         crate::pipeline::stage_pipeline_cache_key(
@@ -206,6 +220,7 @@ fn compact_sparse_token_types_ordered_gpu_with_scratch(
         config,
     )
     .map_err(|e| format!("raw-byte sparse type block-total dispatch failed: {e}"))?;
+    config.grid_override = previous_grid_override;
     if totals.len() != 1 {
         let actual = totals.len();
         let _ = crate::pipeline::free_resident_blobs(backend, totals);

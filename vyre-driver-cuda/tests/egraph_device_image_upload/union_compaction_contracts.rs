@@ -235,4 +235,3 @@ fn egraph_union_compaction_plan_handles_generated_adversarial_batches() {
         assert_wave_coverage(&plan, max_items_per_wave);
     }
 }
-

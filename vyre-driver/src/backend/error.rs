@@ -118,7 +118,7 @@ pub enum BackendError {
     /// backends. A 2.0 rename to
     /// `KernelCompileFailed` is tracked in the semver-policy doc.
     #[error(
-        "kernel-source compile failed on backend `{backend}`: {compiler_message}.          Fix: validate the vyre IR before lowering and check the lowered kernel source for type errors."
+        "kernel-source compile failed on backend `{backend}`: {compiler_message} Fix: validate the vyre IR before lowering and check the lowered kernel source for type errors."
     )]
     KernelCompileFailed {
         /// Backend identifier.
@@ -129,7 +129,7 @@ pub enum BackendError {
 
     /// Command dispatch or GPU queue submission failed.
     #[error(
-        "dispatch failed (code {code:?}): {message}.          Fix: verify adapter limits, buffer sizes, and GPU queue health before retrying."
+        "dispatch failed (code {code:?}): {message}. Fix: inspect the backend error code and queue state, reduce dispatch pressure, or reacquire the backend before retrying."
     )]
     DispatchFailed {
         /// Optional backend-specific numeric error code.
@@ -150,7 +150,7 @@ pub enum BackendError {
     /// barrier. The orchestrator must fall back (loudly) to a recall-identical
     /// non-cooperative path rather than launch a kernel that would deadlock.
     #[error(
-        "cooperative grid-sync launch needs {grid_blocks} co-resident block(s) but the device can fit at most {resident_limit}.          Fix: route this dispatch to the resident-fixpoint or host-split grid-sync path, reduce the grid/workgroup size, or lower kernel register/shared-memory pressure. Detail: {detail}"
+        "cooperative grid-sync launch needs {grid_blocks} co-resident block(s) but the device can fit at most {resident_limit}. Fix: route this dispatch to the resident-fixpoint or host-split grid-sync path, reduce the grid/workgroup size, or lower kernel register/shared-memory pressure. Detail: {detail}"
     )]
     CooperativeResidencyExceeded {
         /// Blocks the launch geometry requires.

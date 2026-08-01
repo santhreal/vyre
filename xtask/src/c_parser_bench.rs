@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
+use crate::binary::{find_subslice as find_magic, read_u32_le as read_u32};
 use serde::Serialize;
 use walkdir::WalkDir;
 
@@ -71,7 +72,7 @@ impl CParserBenchBackend {
     }
 }
 
-fn define_actions(macros: &[(String, Option<String>)]) -> Vec<CliMacroAction> {
+pub(crate) fn define_actions(macros: &[(String, Option<String>)]) -> Vec<CliMacroAction> {
     macros
         .iter()
         .map(|(name, value)| CliMacroAction::Define {
@@ -1313,19 +1314,6 @@ fn parse_lex_section_token_count(payload: &[u8]) -> Option<u32> {
     read_u32(payload, &mut cursor)
 }
 
-fn find_magic(haystack: &[u8], needle: &[u8]) -> Option<usize> {
-    haystack
-        .windows(needle.len())
-        .position(|window| window == needle)
-}
-
-fn read_u32(bytes: &[u8], cursor: &mut usize) -> Option<u32> {
-    let end = cursor.checked_add(4)?;
-    let raw: [u8; 4] = bytes.get(*cursor..end)?.try_into().ok()?;
-    *cursor = end;
-    Some(u32::from_le_bytes(raw))
-}
-
 fn temp_parse_object_path(source: &Path) -> PathBuf {
     let pid = std::process::id();
     let sequence = TEMP_PARSE_COUNTER.fetch_add(1, Ordering::Relaxed);
@@ -1593,7 +1581,7 @@ fn parse_args(args: &[String]) -> Result<Config, String> {
             }
             "--help" | "-h" => {
                 return Err(
-                    "USAGE:\n  cargo_full run --bin xtask -- c-parser-bench --corpus DIR [--output PATH] [--limit N] [--warmups N] [--max-batch-bytes N] [--per-file] [--require-release-evidence] [--mode syntax|parser] [--order vyre-first|tree-sitter-first|both] [--backend preferred|cuda|wgpu]\n\n\
+                    "USAGE:\n  cargo xtask c-parser-bench --corpus DIR [--output PATH] [--limit N] [--warmups N] [--max-batch-bytes N] [--per-file] [--require-release-evidence] [--mode syntax|parser] [--order vyre-first|tree-sitter-first|both] [--backend preferred|cuda|wgpu]\n\n\
                      Batches every .c file into one corpus parse through vyre and tree-sitter-c, then writes cold/hot/order-aware speed evidence JSON. Use --mode syntax for raw-byte syntax throughput or --mode parser for the full GPU object parser/sema pipeline. Parser mode accepts repeated -I/--include and -D/--define options."
                         .to_string(),
                 );
@@ -1661,12 +1649,7 @@ fn parse_args(args: &[String]) -> Result<Config, String> {
     })
 }
 
-fn parse_define(value: &str) -> (String, Option<String>) {
-    match value.split_once('=') {
-        Some((name, body)) => (name.to_string(), Some(body.to_string())),
-        None => (value.to_string(), None),
-    }
-}
+use crate::output_arg::parse_define;
 
 fn default_corpus() -> PathBuf {
     PathBuf::from("/media/mukund-thiru/SanthData/Santh/corpus/repos/linux/lib")

@@ -194,7 +194,7 @@ pub(crate) fn emit_naga_module_for_descriptor(
     if let Err(errors) = vyre_lower::verify::verify(descriptor) {
         return Err(LoweringError::invalid(format!(
             "KernelDescriptor verification failed after wgpu workgroup selection: {}. Fix: keep DispatchConfig.workgroup_override within descriptor limits.",
-            format_descriptor_verify_errors(&errors)
+            vyre_lower::verify::format_verify_errors(&errors)
         )));
     }
     vyre_emit_naga::emit(descriptor).map_err(|error| {
@@ -391,20 +391,6 @@ fn static_workgroups(
     let total_threads =
         workgroup_size[0].max(1) * workgroup_size[1].max(1) * workgroup_size[2].max(1);
     [output_words.div_ceil(total_threads).max(1), 1, 1]
-}
-
-fn format_descriptor_verify_errors(errors: &[vyre_lower::VerifyError]) -> String {
-    let mut out = String::new();
-    for (index, error) in errors.iter().take(4).enumerate() {
-        if index != 0 {
-            out.push_str("; ");
-        }
-        out.push_str(&format!("{error:?}"));
-    }
-    if errors.len() > 4 {
-        out.push_str("; ...");
-    }
-    out
 }
 
 #[cfg(test)]

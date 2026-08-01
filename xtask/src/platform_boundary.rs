@@ -32,7 +32,7 @@ struct Finding {
 pub(crate) fn run(args: &[String]) {
     if args.iter().any(|arg| arg == "--help" || arg == "-h") {
         println!(
-            "USAGE:\n  cargo_full run --bin xtask -- platform-boundary\n\n\
+            "USAGE:\n  cargo xtask platform-boundary\n\n\
              Scans platform crate Rust comments and Markdown for downstream consumer names."
         );
         return;

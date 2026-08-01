@@ -308,4 +308,3 @@ fn compiled_pipeline_mixed_batched_materialized_cache_launches_only_misses() {
         "Fix: mixed materialized/miss compiled batches must report only launched graph lanes."
     );
 }
-

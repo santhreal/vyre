@@ -1118,7 +1118,8 @@ mod tests {
     #[test]
     fn literal_microbench_metric_fanout_covers_scan_and_count_cases() {
         let matches = sample_matches();
-        let metadata = literal_microbench_stratification(b"abcdefghijklmnopqrstuvwxyz", &matches, 1);
+        let metadata =
+            literal_microbench_stratification(b"abcdefghijklmnopqrstuvwxyz", &matches, 1);
         let mut metrics = Vec::new();
 
         extend_literal_stratification_metrics(&mut metrics, "literal_set_irregular", metadata);
@@ -1149,7 +1150,8 @@ mod tests {
     #[test]
     fn literal_microbench_stratification_rejects_missing_digest() {
         let matches = sample_matches();
-        let mut metadata = literal_microbench_stratification(b"abcdefghijklmnopqrstuvwxyz", &matches, 1);
+        let mut metadata =
+            literal_microbench_stratification(b"abcdefghijklmnopqrstuvwxyz", &matches, 1);
         metadata.match_digest = 0;
 
         let error = validate_literal_microbench_stratification(&metadata).unwrap_err();

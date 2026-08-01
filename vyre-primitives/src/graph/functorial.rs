@@ -125,31 +125,18 @@ pub fn try_functor_apply_cpu_into(
     out: &mut Vec<u32>,
 ) -> Result<(), String> {
     out.clear();
-    resize_functor_cpu_vec(out, target_size as usize, 0u32, "functor_apply CPU output")?;
+    crate::graph::scratch::resize_graph_vec(
+        out,
+        target_size as usize,
+        0u32,
+        "functorial migration CPU oracle",
+        "functor_apply CPU output",
+    )?;
     for (&src, &dst) in source_row.iter().zip(mapping.iter()) {
         if let Some(slot) = out.get_mut(dst as usize) {
             *slot = src;
         }
     }
-    Ok(())
-}
-
-#[cfg(any(test, feature = "cpu-parity"))]
-fn resize_functor_cpu_vec<T: Clone>(
-    out: &mut Vec<T>,
-    len: usize,
-    value: T,
-    context: &str,
-) -> Result<(), String> {
-    if len > out.len() {
-        crate::graph::scratch::reserve_graph_items(
-            out,
-            len - out.len(),
-            "functorial migration CPU oracle",
-            context,
-        )?;
-    }
-    out.resize(len, value);
     Ok(())
 }
 
@@ -273,28 +260,5 @@ mod tests {
     fn zero_n_cols_traps() {
         let p = functor_apply("s", "m", "t", 0);
         assert!(p.stats().trap());
-    }
-
-    #[test]
-    fn functor_cpu_source_uses_fallible_reusable_target_row() {
-        let source = include_str!("functorial.rs");
-        let cpu_source = source
-            .split("/// CPU reference.")
-            .nth(1)
-            .expect("Fix: functor CPU source must be present")
-            .split("#[cfg(feature = \"inventory-registry\")]")
-            .next()
-            .expect("Fix: functor CPU source must precede registry entry");
-
-        assert!(
-            cpu_source.contains("try_functor_apply_cpu_into")
-                && cpu_source.contains("resize_functor_cpu_vec")
-                && cpu_source.contains("crate::graph::scratch::reserve_graph_items")
-                && !cpu_source.contains("fn reserve_functor_cpu_vec")
-                && !cpu_source.contains("vec![0u32; target_size as usize]")
-                && !cpu_source.contains("Vec::with_capacity")
-                && !cpu_source.contains(".reserve("),
-            "Fix: functor CPU oracle must use fallible caller-owned target storage."
-        );
     }
 }

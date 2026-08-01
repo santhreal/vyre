@@ -499,7 +499,16 @@ pub(crate) fn check_backend_conformance_report(
             requirement.id
         ));
     }
-    check_duplicate_backend_conformance_pair_op_ids(requirement, suffix, &report, failures);
+    check_duplicate_object_rows(
+        &report,
+        "pairs",
+        "op_id",
+        &format!(
+            "requirement `{}` backend conformance `{suffix}` has duplicate pair op_id rows",
+            requirement.id
+        ),
+        failures,
+    );
     if let (Some(expected), Some(pairs)) = (
         expected_backend,
         report.get("pairs").and_then(serde_json::Value::as_array),
@@ -521,24 +530,6 @@ pub(crate) fn check_backend_conformance_report(
     }
 }
 
-fn check_duplicate_backend_conformance_pair_op_ids(
-    requirement: &Requirement,
-    suffix: &str,
-    report: &serde_json::Value,
-    failures: &mut Vec<String>,
-) {
-    let duplicates =
-        crate::benchmark_evidence_semantics::duplicate_nonblank_object_array_field_values(
-            report, "pairs", "op_id",
-        );
-    if !duplicates.is_empty() {
-        let duplicates = duplicates.into_iter().collect::<Vec<_>>().join(", ");
-        failures.push(format!(
-            "requirement `{}` backend conformance `{suffix}` has duplicate pair op_id rows: {duplicates}",
-            requirement.id
-        ));
-    }
-}
 
 #[cfg(test)]
 mod part5_tests {

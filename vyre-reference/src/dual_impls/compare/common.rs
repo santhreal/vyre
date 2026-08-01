@@ -1,5 +1,7 @@
 //! Shared compare dual-reference machinery.
 
+use crate::dual_impls::common::read_two_words;
+
 #[must_use]
 pub(crate) fn binary_direct_predicate(input: &[u8], op: impl FnOnce(u32, u32) -> bool) -> Vec<u8> {
     let Some((left, right)) = read_two_words(input) else {
@@ -29,15 +31,6 @@ pub(crate) fn lt_bytes(input: &[u8]) -> Vec<u8> {
         }
     }
     bool_word(false)
-}
-
-fn read_two_words(input: &[u8]) -> Option<(u32, u32)> {
-    (input.len() >= 8).then(|| {
-        (
-            u32::from_le_bytes([input[0], input[1], input[2], input[3]]),
-            u32::from_le_bytes([input[4], input[5], input[6], input[7]]),
-        )
-    })
 }
 
 fn bool_word(value: bool) -> Vec<u8> {

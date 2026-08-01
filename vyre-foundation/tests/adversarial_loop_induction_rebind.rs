@@ -28,7 +28,9 @@ fn count_ifs(nodes: &[Node]) -> usize {
     let mut n = 0;
     for node in nodes {
         match node {
-            Node::If { then, otherwise, .. } => {
+            Node::If {
+                then, otherwise, ..
+            } => {
                 n += 1;
                 n += count_ifs(then);
                 n += count_ifs(otherwise);
@@ -164,15 +166,15 @@ fn unroll_skips_when_induction_written() {
         "unroll must not expand a loop whose body writes the induction var"
     );
     // Stronger: the Loop node must still exist (not be replaced by 3 stores).
-    let still_has_loop = entry_body(&result.program)
-        .iter()
-        .any(|n| matches!(n, Node::Loop { .. }) || {
+    let still_has_loop = entry_body(&result.program).iter().any(|n| {
+        matches!(n, Node::Loop { .. }) || {
             if let Node::Block(b) = n {
                 b.iter().any(|c| matches!(c, Node::Loop { .. }))
             } else {
                 false
             }
-        });
+        }
+    });
     assert!(
         still_has_loop
             || entry_body(&result.program)

@@ -32,11 +32,43 @@ use vyre_primitives::graph::program_graph::{
 /// Canonical op id for the optimizer's DCE program.
 pub const OP_ID: &str = "vyre-self-substrate::optimizer::dce_program";
 
-/// Workgroup size  -  each BFS step's per-thread parallelism is
-/// bounded by this. Single-workgroup design keeps cross-workgroup
-/// sync simple (workgroup-scope barrier inside the persistent loop)
-/// and avoids the changed-flag race that multi-workgroup would
-/// introduce.
+/// Workgroup size for the DCE BFS kernels.
+///
+/// THIS PROGRAM MUST BE DISPATCHED AS EXACTLY ONE WORKGROUP. Every caller pins it:
+/// `pipeline_resident.rs` with `dce_grid_x = 1`, `dce_via_encoded.rs` with
+/// `Some([1, 1, 1])`. That is not a tuning choice, it is the condition under which
+/// the early exit is correct, and this comment exists because the reasoning has
+/// misled three separate attempts at this file.
+///
+/// One workgroup suffices, because WORKGROUP 0'S LANES ALONE VISIT EVERY SOURCE:
+/// the step strides `src = gid_x() + stride * DCE_WORKGROUP_X` for
+/// `stride_count = ceil(node_count / DCE_WORKGROUP_X)` iterations, so lanes
+/// `0..DCE_WORKGROUP_X` cover the whole node range by themselves. Verified on
+/// device, not assumed: a 2000-node chain pinned to one workgroup reaches all 2000.
+///
+/// More than one workgroup is UNSOUND, and the reason is not the obvious one. The
+/// obvious reading is a lost clear: one lane zeroes `changed[0]` with a plain
+/// workgroup-scoped store while another group's `atomic_or` is in flight. That
+/// alone would be harmless here, because extra groups are pure duplicates of
+/// workgroup 0 and losing a duplicate's flag costs nothing. Acting on that reading
+/// produced a measured 4-6x pessimization for a defect that was not the live one.
+///
+/// The live one is EXCLUSIVE DISCOVERY ATTRIBUTION. Growth is detected by whether
+/// THIS lane's `atomic_or` actually flipped the bit (`old & dst_bit == 0`), and
+/// exactly one lane in the grid wins any given flip. So when a duplicate group wins
+/// it, workgroup 0 sees `old` with the bit already set, never raises
+/// `local_changed`, and never sets `changed[0]` for a discovery that really
+/// happened. Workgroup 0 can then read 0, record a fixpoint it has not reached, and
+/// stop relaxing with the newly discovered node's own edges unexpanded. No other
+/// group covers the whole node range, so nobody expands them, and the closure is
+/// silently truncated. Coverage being redundant does NOT rescue this: coverage is
+/// redundant while attribution is exclusive, because a bit is flipped once.
+///
+/// Note that the flip test is also what makes the traversal efficient, so this is
+/// not a wart to remove. Pinning the grid is the fix, and it is the same fix the
+/// tree already applies to scalar reductions that initialize their own output
+/// (`reduction_metrics.rs`), for the same reason: some programs cannot be split
+/// across unsynchronized workgroups.
 const DCE_WORKGROUP_X: u32 = 1024;
 
 /// Parallel BFS step with per-thread strided loop. Thread
@@ -174,6 +206,15 @@ fn parallel_csr_step_per_thread_masked(node_count: u32, allow_mask: u32) -> Vec<
 /// in that the edge-follow check is `(kind_mask & allow_mask) != 0`
 /// instead of `kind_mask != 0`. Use this when porting
 /// `vyre_primitives::graph::persistent_bfs::cpu_ref` to GPU dispatch.
+///
+/// DISPATCH THIS AS EXACTLY ONE WORKGROUP, the same requirement
+/// `build_dce_bfs_program` carries, because it is the same kernel with a
+/// different edge filter. See `DCE_WORKGROUP_X`: growth is attributed to the
+/// single lane whose `atomic_or` flipped the bit, so across workgroups a
+/// duplicate group can win a discovery and leave the group that covers the whole
+/// node range reading `changed == 0`, which reports a fixpoint it never reached
+/// and truncates the closure. One workgroup's strided lanes already visit every
+/// source, so pinning costs no coverage.
 #[must_use]
 pub fn build_persistent_bfs_program(
     shape: ProgramGraphShape,
@@ -256,9 +297,43 @@ fn build_persistent_bfs_program_internal(
         ),
         Node::barrier(),
         Node::let_bind("local_changed", Expr::u32(0)),
+        // The `converged` gate is what makes the early exit CHEAP, and it is not
+        // redundant with the `Node::Return` below.
+        //
+        // Read this before changing either one. `Return` nested inside a
+        // `Node::Loop` USED to be emitted as nothing by vyre-emit-ptx, and an
+        // earlier version of this comment said so. That is no longer true: the
+        // emitter now lowers a nested `Return` to a real `bra $L_exit`, so the exit
+        // is live on device and not only in the reference interpreter. Two
+        // consequences, and both matter here.
+        //
+        // First, the gate stays. It gates the WORK, which the `Return` does not:
+        // once the fixpoint is recorded, every later iteration skips the edge walk
+        // entirely. Measured on an RTX 5090 before the gate existed: a 2000-node
+        // star that reaches its fixpoint in 2 iterations cost 2450 ms at a 2000
+        // budget against 13 ms at an 8 budget, 183x, because one lane re-walked the
+        // hub's 1999 edges 2000 times. The answer was right every time, which is why
+        // nothing caught it. That cost is a property of the WALK, so it returns if
+        // the gate is removed, whatever `Return` lowers to.
+        //
+        // Second, a live exit needs ordering. An invocation that returns after the
+        // body's last barrier leaves while its siblings take the back edge and write,
+        // so the exit and the next iteration's writes are unordered (V055). The
+        // unconditional barrier appended as the LAST node of this body is what orders
+        // them; see the comment on that push.
+        //
+        // The read is deliberately racy and MUST stay benign. `converged` is written
+        // by lane 0 with no fence before this read, so a lane may see a stale 0 and
+        // do one more pass; that pass adds no bit, because growth is monotone and
+        // the fixpoint was already reached. What must NEVER happen is a barrier
+        // inside this gate: the barriers stay unconditional at iteration-body level,
+        // so a lane reading a stale flag cannot desynchronize the workgroup.
         Node::if_then(
-            Expr::lt(t.clone(), Expr::u32(shape.node_count)),
-            parallel_csr_step_per_thread_masked(shape.node_count, allow_mask),
+            Expr::eq(Expr::load("converged", Expr::u32(0)), Expr::u32(0)),
+            vec![Node::if_then(
+                Expr::lt(t.clone(), Expr::u32(shape.node_count)),
+                parallel_csr_step_per_thread_masked(shape.node_count, allow_mask),
+            )],
         ),
         // OR local_changed into the per-iter early-exit flag.
         Node::if_then(
@@ -297,6 +372,21 @@ fn build_persistent_bfs_program_internal(
             Node::Return,
         ],
     ));
+    // Order the early exit against the back edge. Without this the body's last
+    // synchronizing node is the barrier above, the `Return` sits after it, and one
+    // invocation can take the back edge and write while a sibling has not yet
+    // reached the exit; the sibling then leaves and freezes the data it owns
+    // partway through. Nothing hangs, because a barrier does not count invocations
+    // that already returned, so this costs ANSWERS and not liveness, and one
+    // workgroup is enough to hit it. That is what V055 refuses.
+    //
+    // Safe here, and the reason is uniformity: the exit condition reads
+    // `changed[0]`, which the barrier above settles, so every lane sees the same
+    // value and they leave together or none of them leaves. This barrier is
+    // therefore reached by all lanes or by none, never by a subset, so it cannot
+    // deadlock. It must stay at body level and unconditional for exactly the reason
+    // the `converged` gate must not contain one.
+    iter_body.push(Node::barrier());
 
     let entry: Vec<Node> = vec![
         // Seed frontier_out <- frontier_in.
@@ -314,6 +404,16 @@ fn build_persistent_bfs_program_internal(
             Expr::eq(t.clone(), Expr::u32(0)),
             vec![Node::store("converged", Expr::u32(0), Expr::u32(0))],
         ),
+        // Workgroup-scoped, deliberately, and NOT an oversight. The seeding lanes
+        // are gated `t < words` and therefore all live in workgroup 0, which is
+        // also the only workgroup the answer depends on: see `DCE_WORKGROUP_X` for
+        // why every other workgroup is a pure duplicate. A non-zero workgroup that
+        // enters the traversal reading an unseeded `frontier_out` expands nothing
+        // and loses nothing, because it owns no unique work. Escalating this to
+        // `MemoryOrdering::GridSync` would order that harmless case at the price of
+        // forcing a cooperative launch on every dispatch above one workgroup, which
+        // is a real constraint on launch geometry and portability. Measured on an
+        // RTX 5090, that fence bought no closure this form does not already reach.
         Node::barrier(),
         // Persistent loop with early-exit.
         Node::loop_for("iter", Expr::u32(0), Expr::u32(max_iters.max(1)), iter_body),
@@ -358,13 +458,15 @@ fn build_persistent_bfs_program_internal(
     );
     buffers.push(BufferDecl::workgroup("wg_scratch", 256, DataType::U32));
 
-    // Workgroup size [1024, 1, 1]  -  RTX 5090's max threads-per-block.
-    // Packs every BFS step across 1024 threads per workgroup so a
-    // 1001-node DAG fits in a single workgroup; 32-node SIMT loops
-    // amortise atomic_or hits on the global `changed` word.
+    // The emitted width MUST be `DCE_WORKGROUP_X`, not a literal that merely
+    // matches it today. The stride in `parallel_csr_step_per_thread_masked` is
+    // built from that same const, and the redundancy invariant holds only while
+    // the two agree. Raise the const alone and the stride starts skipping whole
+    // lane ranges (`src = gid + stride * 2048` from 1024 lanes never visits
+    // 1024..2047) and the traversal silently returns a truncated closure.
     Program::wrapped(
         buffers,
-        [1024, 1, 1],
+        [DCE_WORKGROUP_X, 1, 1],
         vec![Node::Region {
             generator: Ident::from(OP_ID),
             source_region: None,

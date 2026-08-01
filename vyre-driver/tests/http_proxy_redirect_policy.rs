@@ -1,7 +1,6 @@
 //! Http proxy redirect policy test suite.
 
-const HTTP_POLICY: &str =
-    include_str!("../../docs/optimization/HTTP_PROXY_REDIRECT_POLICY.toml");
+const HTTP_POLICY: &str = include_str!("../../docs/optimization/HTTP_PROXY_REDIRECT_POLICY.toml");
 
 #[test]
 fn http_proxy_redirect_policy_records_method_header_redirect_proxy_tls_and_response_limits() {

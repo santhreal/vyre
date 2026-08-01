@@ -14,7 +14,7 @@ use vyre_driver::accounting::{
     checked_atomic_add_usize_with_order, checked_atomic_next_u64_with_order,
     checked_atomic_sub_usize_with_order,
 };
-use vyre_driver::BackendError;
+use vyre_driver::{BackendError, ResidentHandle, ResidentOwner};
 
 use super::accounting::checked_sub_u64;
 use super::allocations::{alloc_cuda_ptr, free_cuda_ptr};
@@ -50,34 +50,74 @@ pub(crate) struct ResidentBufferView {
 }
 
 /// Stable CUDA-resident buffer handle owned by [`crate::backend::CudaBackend`].
+///
+/// The handle names its owning backend instance, so presenting it to a
+/// different instance is refused at the API boundary instead of resolving
+/// against that instance's unrelated buffer of the same local id.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CudaResidentBuffer {
-    /// Opaque backend-local handle id.
-    pub id: u64,
+    /// Owner-qualified handle for this buffer.
+    pub handle: ResidentHandle,
     /// Buffer size in bytes.
     pub byte_len: usize,
+}
+
+/// One resolved binding for a CUDA resident dispatch.
+///
+/// Residency is chosen per binding, never per dispatch: a large immutable
+/// table stays [`CudaDispatchBinding::Resident`] across many calls while the
+/// small per-call buffers beside it arrive as
+/// [`CudaDispatchBinding::Borrowed`] and are staged into the transient pool
+/// for that one dispatch. Forcing every binding resident just because one of
+/// them is would trade a saved upload for allocate/upload/free churn on all
+/// the others.
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum CudaDispatchBinding<'a> {
+    /// Backend-resident buffer bound by handle. The caller uploaded it once
+    /// and this dispatch neither stages nor frees it.
+    Resident(CudaResidentBuffer),
+    /// Host bytes staged into a transient device allocation for this dispatch
+    /// only, exactly as a fully borrowed dispatch stages its inputs.
+    Borrowed(&'a [u8]),
+}
+
+impl CudaDispatchBinding<'_> {
+    /// Resident handle behind this binding, or `None` when it is staged from
+    /// host bytes and therefore has no device identity that outlives the call.
+    pub(crate) fn resident(self) -> Option<CudaResidentBuffer> {
+        match self {
+            Self::Resident(handle) => Some(handle),
+            Self::Borrowed(_) => None,
+        }
+    }
 }
 
 pub(crate) type ResidentViewCache = SmallVec<[(CudaResidentBuffer, ResidentBufferView); 8]>;
 
 #[derive(Debug)]
 pub(crate) struct CudaResidentStore {
-    buffers: DashMap<u64, ResidentBuffer, BuildHasherDefault<FxHasher>>,
-    inflight: Arc<DashMap<u64, AtomicUsize, BuildHasherDefault<FxHasher>>>,
+    /// Identity of the backend instance that owns every handle in this store.
+    ///
+    /// Local ids restart at 1 per instance, so the owner is what makes a
+    /// handle meaningful outside the instance that minted it.
+    owner: ResidentOwner,
+    buffers: DashMap<ResidentHandle, ResidentBuffer, BuildHasherDefault<FxHasher>>,
+    inflight: Arc<DashMap<ResidentHandle, AtomicUsize, BuildHasherDefault<FxHasher>>>,
     next_id: AtomicU64,
     resident_bytes: AtomicU64,
 }
 
 impl CudaResidentStore {
-    pub(crate) fn new() -> Self {
-        Self {
+    pub(crate) fn new() -> Result<Self, BackendError> {
+        Ok(Self {
+            owner: ResidentOwner::new()?,
             buffers: DashMap::with_hasher(BuildHasherDefault::<FxHasher>::default()),
             inflight: Arc::new(DashMap::with_hasher(
                 BuildHasherDefault::<FxHasher>::default(),
             )),
             next_id: AtomicU64::new(1),
             resident_bytes: AtomicU64::new(0),
-        }
+        })
     }
 
     pub(crate) fn clear(&self) -> Result<(), BackendError> {
@@ -122,7 +162,7 @@ impl CudaResidentStore {
                 return Err(error);
             }
         };
-        let id = match allocate_resident_handle_id(&self.next_id) {
+        let local_id = match allocate_resident_handle_id(&self.next_id) {
             Ok(id) => id,
             Err(error) => {
                 free_cuda_ptr(ptr);
@@ -134,41 +174,56 @@ impl CudaResidentStore {
                 return Err(error);
             }
         };
-        self.buffers.insert(id, ResidentBuffer { ptr, byte_len });
-        Ok(CudaResidentBuffer { id, byte_len })
+        let handle = self.owner.handle(local_id);
+        self.buffers
+            .insert(handle, ResidentBuffer { ptr, byte_len });
+        Ok(CudaResidentBuffer { handle, byte_len })
     }
 
     pub(crate) fn free(&self, handle: CudaResidentBuffer) -> Result<(), BackendError> {
-        let in_use = self.inflight_for(handle.id);
+        self.check_owner(handle.handle, "resident free")?;
+        let in_use = self.inflight_for(handle.handle);
         if in_use != 0 {
             return Err(BackendError::InvalidProgram {
                 fix: format!(
                     "Fix: CUDA resident buffer handle {} is bound to {in_use} in-flight dispatch(es); wait for the pending dispatch before freeing it.",
-                    handle.id
+                    handle.handle
                 ),
             });
         }
         let (_, removed) =
             self.buffers
-                .remove(&handle.id)
+                .remove(&handle.handle)
                 .ok_or_else(|| BackendError::InvalidProgram {
                     fix: format!(
                         "Fix: CUDA resident buffer handle {} is not owned by this backend.",
-                        handle.id
+                        handle.handle
                     ),
                 })?;
         let removed_bytes =
             u64::try_from(removed.byte_len).map_err(|_| BackendError::InvalidProgram {
                 fix: format!(
                     "Fix: CUDA resident buffer handle {} has {} bytes, which does not fit u64 accounting on this target; recreate the backend and shard resident buffers.",
-                    handle.id, removed.byte_len
+                    handle.handle, removed.byte_len
                 ),
             })?;
         if release_resident_budget(&self.resident_bytes, removed_bytes).is_err() {
             self.rebuild_resident_byte_accounting()?;
         }
-        self.inflight.remove(&handle.id);
+        self.inflight.remove(&handle.handle);
         Ok(())
+    }
+
+    /// Refuse a handle this instance did not mint.
+    ///
+    /// Keying the buffer table by the owner-qualified handle already makes a
+    /// foreign handle miss every lookup, so this exists to name the actual
+    /// cause: "unknown or already freed handle" and "handle belonging to a
+    /// different backend instance" need different repairs, and silently
+    /// reporting the first for the second is how a stale handle survives
+    /// review.
+    fn check_owner(&self, handle: ResidentHandle, context: &str) -> Result<(), BackendError> {
+        self.owner.resolve(handle, context).map(drop)
     }
 
     pub(crate) fn allocated_bytes(&self) -> u64 {
@@ -179,20 +234,21 @@ impl CudaResidentStore {
         &self,
         handle: CudaResidentBuffer,
     ) -> Result<ResidentBufferView, BackendError> {
-        let buffer = self
-            .buffers
-            .get(&handle.id)
-            .ok_or_else(|| BackendError::InvalidProgram {
-                fix: format!(
-                    "Fix: CUDA resident buffer handle {} is not owned by this backend.",
-                    handle.id
-                ),
-            })?;
+        self.check_owner(handle.handle, "resident buffer view")?;
+        let buffer =
+            self.buffers
+                .get(&handle.handle)
+                .ok_or_else(|| BackendError::InvalidProgram {
+                    fix: format!(
+                        "Fix: CUDA resident buffer handle {} is not owned by this backend.",
+                        handle.handle
+                    ),
+                })?;
         if buffer.byte_len != handle.byte_len {
             return Err(BackendError::InvalidProgram {
                 fix: format!(
                     "Fix: CUDA resident buffer handle {} byte length drifted from {} to {}.",
-                    handle.id, handle.byte_len, buffer.byte_len
+                    handle.handle, handle.byte_len, buffer.byte_len
                 ),
             });
         }
@@ -209,14 +265,14 @@ impl CudaResidentStore {
         context: &'static str,
     ) -> Result<ResidentBufferView, BackendError> {
         for &(cached_handle, cached_view) in cache.iter() {
-            if cached_handle.id != handle.id {
+            if cached_handle.handle != handle.handle {
                 continue;
             }
             if cached_handle.byte_len != handle.byte_len {
                 return Err(BackendError::InvalidProgram {
                     fix: format!(
                         "Fix: CUDA {context} received resident handle {} with inconsistent byte lengths {} and {}; rebuild the resident handle list from the backend store before dispatch.",
-                        handle.id, cached_handle.byte_len, handle.byte_len
+                        handle.handle, cached_handle.byte_len, handle.byte_len
                     ),
                 });
             }
@@ -245,22 +301,22 @@ impl CudaResidentStore {
             "resident in-flight guard ids",
         )?;
         if handles.len() <= 8 {
-            let mut seen = SmallVec::<[(u64, usize); 8]>::new();
+            let mut seen = SmallVec::<[(ResidentHandle, usize); 8]>::new();
             'mark_small: for handle in handles {
-                for (seen_id, seen_byte_len) in &seen {
-                    if *seen_id == handle.id {
+                for (seen_handle, seen_byte_len) in &seen {
+                    if *seen_handle == handle.handle {
                         if *seen_byte_len != handle.byte_len {
                             return Err(BackendError::InvalidProgram {
                                 fix: format!(
                                     "Fix: CUDA resident buffer handle {} byte length drifted from {} to {} during in-flight marking.",
-                                    handle.id, seen_byte_len, handle.byte_len
+                                    handle.handle, seen_byte_len, handle.byte_len
                                 ),
                             });
                         }
                         continue 'mark_small;
                     }
                 }
-                seen.push((handle.id, handle.byte_len));
+                seen.push((handle.handle, handle.byte_len));
                 self.mark_unique_inflight_handle(*handle, &mut guard)?;
             }
             return Ok(guard);
@@ -269,18 +325,18 @@ impl CudaResidentStore {
         let mut seen = FxHashMap::default();
         reserve_hash_map(&mut seen, handles.len(), "resident duplicate check")?;
         for handle in handles {
-            if let Some(&seen_byte_len) = seen.get(&handle.id) {
+            if let Some(&seen_byte_len) = seen.get(&handle.handle) {
                 if seen_byte_len != handle.byte_len {
                     return Err(BackendError::InvalidProgram {
                         fix: format!(
                             "Fix: CUDA resident buffer handle {} byte length drifted from {} to {} during in-flight marking.",
-                            handle.id, seen_byte_len, handle.byte_len
+                            handle.handle, seen_byte_len, handle.byte_len
                         ),
                     });
                 }
                 continue;
             }
-            seen.insert(handle.id, handle.byte_len);
+            seen.insert(handle.handle, handle.byte_len);
             self.mark_unique_inflight_handle(*handle, &mut guard)?;
         }
         Ok(guard)
@@ -294,7 +350,7 @@ impl CudaResidentStore {
         self.view(handle)?;
         let counter = self
             .inflight
-            .entry(handle.id)
+            .entry(handle.handle)
             .or_insert_with(|| AtomicUsize::new(0));
         checked_atomic_add_usize_with_order(
             &*counter,
@@ -306,12 +362,12 @@ impl CudaResidentStore {
                 BackendError::InvalidProgram {
             fix: format!(
                 "Fix: CUDA resident in-flight reference count overflowed for handle {id} at {value}; wait for pending dispatches before rebinding this resident buffer.",
-                id = handle.id
+                id = handle.handle
             ),
             }
             },
         )?;
-        guard.ids.push(handle.id);
+        guard.ids.push(handle.handle);
         Ok(())
     }
 
@@ -327,33 +383,68 @@ impl CudaResidentStore {
         Ok(handles)
     }
 
+    /// Resolve a dispatch resource list into per-binding sources, keeping
+    /// resident and borrowed entries side by side in caller order.
+    pub(crate) fn bindings_from_resources<'a>(
+        &self,
+        resources: &'a [vyre_driver::Resource],
+    ) -> Result<SmallVec<[CudaDispatchBinding<'a>; 8]>, BackendError> {
+        let mut bindings = SmallVec::new();
+        reserve_smallvec(&mut bindings, resources.len(), "resident dispatch bindings")?;
+        for resource in resources {
+            bindings.push(self.binding_from_resource(resource)?);
+        }
+        Ok(bindings)
+    }
+
+    /// Resolve one dispatch resource into its binding source.
+    ///
+    /// A [`vyre_driver::Resource::Borrowed`] is not an error here: the resident
+    /// dispatch stages it per call. Only lookups that must name device memory
+    /// that outlives the call (upload, download, free) go through
+    /// [`CudaResidentStore::handle_from_resource`].
+    pub(crate) fn binding_from_resource<'a>(
+        &self,
+        resource: &'a vyre_driver::Resource,
+    ) -> Result<CudaDispatchBinding<'a>, BackendError> {
+        match resource {
+            vyre_driver::Resource::Resident(_) => Ok(CudaDispatchBinding::Resident(
+                self.handle_from_resource(resource)?,
+            )),
+            vyre_driver::Resource::Borrowed(bytes) => {
+                Ok(CudaDispatchBinding::Borrowed(bytes.as_slice()))
+            }
+        }
+    }
+
     pub(crate) fn handle_from_resource(
         &self,
         resource: &vyre_driver::Resource,
     ) -> Result<CudaResidentBuffer, BackendError> {
         match resource {
-            vyre_driver::Resource::Resident(id) => {
+            vyre_driver::Resource::Resident(handle) => {
+                self.check_owner(*handle, "resident handle lookup")?;
                 let buffer = self
                     .buffers
-                    .get(id)
+                    .get(handle)
                     .ok_or_else(|| BackendError::InvalidProgram {
                         fix: format!(
-                            "Fix: CUDA compiled resident dispatch received unknown resident handle {id}."
+                            "Fix: CUDA compiled resident dispatch received unknown resident handle {handle}; it was never allocated on this backend or has already been freed."
                         ),
                     })?;
                 Ok(CudaResidentBuffer {
-                    id: *id,
+                    handle: *handle,
                     byte_len: buffer.byte_len,
                 })
             }
-            vyre_driver::Resource::Borrowed(_) => Err(BackendError::UnsupportedFeature {
-                name: "cuda_compiled_persistent_borrowed_resource".to_string(),
-                backend: crate::CUDA_BACKEND_ID.to_string(),
+            vyre_driver::Resource::Borrowed(_) => Err(BackendError::InvalidProgram {
+                fix: "Fix: CUDA resident upload, download, and free name device memory that outlives the call, so they need a Resource::Resident handle; a Resource::Borrowed value has no device identity. Pass a borrowed buffer straight to the dispatch instead, which stages it per call alongside the resident bindings."
+                    .to_string(),
             }),
         }
     }
 
-    fn inflight_for(&self, id: u64) -> usize {
+    fn inflight_for(&self, id: ResidentHandle) -> usize {
         match self.inflight.get(&id) {
             Some(count) => count.load(Ordering::Acquire),
             None => 0,
@@ -398,6 +489,19 @@ impl CudaResidentStore {
         }
         Ok(total)
     }
+}
+
+/// Lift an all-resident handle list into dispatch bindings.
+///
+/// Used by call sites that already resolved resident handles for their own
+/// bookkeeping and still need to drive the mixed dispatch core.
+pub(crate) fn resident_bindings_from_handles(
+    handles: &[CudaResidentBuffer],
+) -> Result<SmallVec<[CudaDispatchBinding<'static>; 8]>, BackendError> {
+    let mut bindings = SmallVec::new();
+    reserve_smallvec(&mut bindings, handles.len(), "resident dispatch bindings")?;
+    bindings.extend(handles.iter().copied().map(CudaDispatchBinding::Resident));
+    Ok(bindings)
 }
 
 fn allocate_resident_handle_id(next_id: &AtomicU64) -> Result<u64, BackendError> {
@@ -582,9 +686,10 @@ mod tests {
 
     #[test]
     fn resident_view_cache_reuses_validated_handle_metadata_and_rejects_drift() {
-        let store = CudaResidentStore::new();
+        let store = CudaResidentStore::new().expect("Fix: owner ids must be available");
+        let owned = store.owner.handle(7);
         store.buffers.insert(
-            7,
+            owned,
             ResidentBuffer {
                 ptr: 0x1000,
                 byte_len: 64,
@@ -592,7 +697,7 @@ mod tests {
         );
         let mut cache = ResidentViewCache::new();
         let handle = CudaResidentBuffer {
-            id: 7,
+            handle: owned,
             byte_len: 64,
         };
 
@@ -605,7 +710,7 @@ mod tests {
         let drifted = store
             .view_cached(
                 CudaResidentBuffer {
-                    id: 7,
+                    handle: owned,
                     byte_len: 32,
                 },
                 &mut cache,
@@ -625,8 +730,8 @@ mod tests {
 /// Reference-count guard for resident buffers currently bound to async work.
 #[derive(Debug)]
 pub(crate) struct ResidentUseGuard {
-    inflight: Arc<DashMap<u64, AtomicUsize, BuildHasherDefault<FxHasher>>>,
-    ids: SmallVec<[u64; 8]>,
+    inflight: Arc<DashMap<ResidentHandle, AtomicUsize, BuildHasherDefault<FxHasher>>>,
+    ids: SmallVec<[ResidentHandle; 8]>,
 }
 
 impl Drop for ResidentUseGuard {

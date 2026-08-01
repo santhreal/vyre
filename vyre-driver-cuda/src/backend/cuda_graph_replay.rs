@@ -1177,10 +1177,9 @@ mod source_contract_tests {
             .nth(1)
             .expect("Fix: timed inner replay function must exist in cuda_graph_replay.rs");
         // The function ends at Ok(Some(device_ns)) (extract that slice).
-        let timed_inner_body = timed_inner
-            .split("Ok(Some(device_ns))")
-            .next()
-            .expect("Fix: timed CUDA graph replay must return Ok(Some(device_ns)) on an actual dispatch.");
+        let timed_inner_body = timed_inner.split("Ok(Some(device_ns))").next().expect(
+            "Fix: timed CUDA graph replay must return Ok(Some(device_ns)) on an actual dispatch.",
+        );
         assert!(
             !timed_inner_body.contains("Ok(0)"),
             "Fix: timed CUDA graph replay must not return Ok(0); use Ok(None) for cache hits \
@@ -1236,7 +1235,8 @@ mod source_contract_tests {
         );
         // The single speculative poll plus blocking synchronize must both be present.
         assert!(
-            sync_fn.contains("query_raw_stream_ready(") && sync_fn.contains("synchronize_raw_stream("),
+            sync_fn.contains("query_raw_stream_ready(")
+                && sync_fn.contains("synchronize_raw_stream("),
             "Fix: CUDA graph replay stream sync must retain one speculative poll \
              (query_raw_stream_ready) followed by a blocking synchronize_raw_stream \
              when not immediately ready."

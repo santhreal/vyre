@@ -12,9 +12,10 @@
 //! where the IR came from.
 
 use std::sync::Arc;
-use vyre::ir::{Node, Program};
-use vyre_foundation::composition::mark_self_exclusive_region;
+use vyre::ir::Node;
 use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
+
+pub use vyre_foundation::composition::{reparent_program_children, tag_program};
 
 /// Wrap a list of Nodes into a single `Node::Region`.
 ///
@@ -47,67 +48,4 @@ pub fn wrap_anonymous(generator: &str, body: Vec<Node>) -> Node {
 #[must_use]
 pub fn wrap_child(generator: &str, parent: GeneratorRef, body: Vec<Node>) -> Node {
     wrap(generator, body, Some(parent))
-}
-
-/// Clone the entry regions from `program` and mark them as children of
-/// `parent_op_id` without changing their generator names.
-///
-/// Primitive builders already stamp their own `Node::Region.generator`.
-/// Tier-3 wrappers use this helper when composing those Programs so
-/// `print-composition` still shows the primitive generator while audits
-/// can count the region body as parent-owned composition.
-#[must_use]
-pub fn reparent_program_children(program: &Program, parent_op_id: &str) -> Vec<Node> {
-    let parent = GeneratorRef {
-        name: parent_op_id.to_string(),
-    };
-    program
-        .entry()
-        .iter()
-        .cloned()
-        .map(|node| reparent_entry_node(node, &parent))
-        .collect()
-}
-
-/// Wrap an already-built primitive [`Program`] under a parent op id.
-///
-/// This preserves the primitive child regions for composition tracing while
-/// giving the higher-level library op its own stable generator boundary.
-#[must_use]
-pub fn tag_program(parent_op_id: &str, program: Program) -> Program {
-    let generator = if program.is_non_composable_with_self() {
-        mark_self_exclusive_region(parent_op_id)
-    } else {
-        parent_op_id.to_string()
-    };
-    Program::wrapped(
-        program.buffers().to_vec(),
-        program.workgroup_size(),
-        vec![wrap_anonymous(
-            &generator,
-            reparent_program_children(&program, parent_op_id),
-        )],
-    )
-    .with_non_composable_with_self(program.is_non_composable_with_self())
-}
-
-fn reparent_entry_node(node: Node, parent: &GeneratorRef) -> Node {
-    match node {
-        Node::Region {
-            generator, body, ..
-        } => Node::Region {
-            generator: if generator.as_ref() == Program::ROOT_REGION_GENERATOR {
-                Ident::from(format!("inline::{}", parent.name))
-            } else {
-                generator
-            },
-            source_region: Some(parent.clone()),
-            body,
-        },
-        other => wrap(
-            &format!("inline::{}", parent.name),
-            vec![other],
-            Some(parent.clone()),
-        ),
-    }
 }

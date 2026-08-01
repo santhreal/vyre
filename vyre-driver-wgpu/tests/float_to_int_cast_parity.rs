@@ -24,8 +24,8 @@ mod common;
 use common::u32_bytes;
 
 use vyre_driver::{DispatchConfig, VyreBackend};
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver_wgpu::WgpuBackend;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// The probe inputs: normal, out-of-range, and the IEEE specials.
 fn cast_inputs() -> Vec<f32> {
@@ -88,15 +88,12 @@ fn run_cast_inputs(backend: &WgpuBackend, target: DataType, inputs: &[f32]) -> V
 
 #[test]
 fn f32_to_u32_cast_saturates_like_reference_including_nan() {
-    let backend = WgpuBackend::acquire()
-        .expect("Fix: float→int cast parity requires a live GPU backend.");
+    let backend =
+        WgpuBackend::acquire().expect("Fix: float→int cast parity requires a live GPU backend.");
     let gpu = run_cast(&backend, DataType::U32);
 
     // Reference oracle = Rust saturating `as` (f32 widened to f64, then `as u32`).
-    let expected: Vec<u32> = cast_inputs()
-        .iter()
-        .map(|&f| f64::from(f) as u32)
-        .collect();
+    let expected: Vec<u32> = cast_inputs().iter().map(|&f| f64::from(f) as u32).collect();
 
     // Pin the contract literally so a silent reference change can't hide a drift:
     // [42, 0(neg→0), MAX(overflow), 0(neg overflow→0), MAX(+∞), 0(−∞→0), 0(NaN)].
@@ -123,13 +120,14 @@ fn computed_f32_overflow_casts_saturate_like_reference() {
     // float can't silently skip the guard back onto the diverging bare `As`.
     // fma(1e20, 1e20, 0) overflows: +inf in f32 on the GPU, 1e40 in the f64
     // reference; both saturate through the cast to the integer max.
-    let backend = WgpuBackend::acquire()
-        .expect("Fix: float→int cast parity requires a live GPU backend.");
+    let backend =
+        WgpuBackend::acquire().expect("Fix: float→int cast parity requires a live GPU backend.");
 
     let program = |target: DataType| {
         Program::wrapped(
             vec![
-                BufferDecl::storage("out", 0, BufferAccess::ReadWrite, target.clone()).with_count(1),
+                BufferDecl::storage("out", 0, BufferAccess::ReadWrite, target.clone())
+                    .with_count(1),
                 BufferDecl::storage("a", 1, BufferAccess::ReadOnly, DataType::F32).with_count(1),
                 BufferDecl::storage("b", 2, BufferAccess::ReadOnly, DataType::F32).with_count(1),
             ],
@@ -182,15 +180,12 @@ fn computed_f32_overflow_casts_saturate_like_reference() {
 
 #[test]
 fn f32_to_i32_cast_saturates_like_reference_including_nan() {
-    let backend = WgpuBackend::acquire()
-        .expect("Fix: float→int cast parity requires a live GPU backend.");
+    let backend =
+        WgpuBackend::acquire().expect("Fix: float→int cast parity requires a live GPU backend.");
     let gpu_bits = run_cast(&backend, DataType::I32);
     let gpu: Vec<i32> = gpu_bits.iter().map(|&w| w as i32).collect();
 
-    let expected: Vec<i32> = cast_inputs()
-        .iter()
-        .map(|&f| f64::from(f) as i32)
-        .collect();
+    let expected: Vec<i32> = cast_inputs().iter().map(|&f| f64::from(f) as i32).collect();
 
     // [42, -5, MAX(overflow), MIN(neg overflow), MAX(+∞), MIN(−∞), 0(NaN)].
     assert_eq!(
@@ -216,8 +211,8 @@ fn f32_to_int_cast_threshold_boundaries_match_reference() {
     // the threshold must land precisely or an in-range value wrongly saturates
     // (or an overflow wrongly converts). Negative boundaries confirm the FClamp
     // low bound (i32::MIN is exactly f32-representable) still matches.
-    let backend = WgpuBackend::acquire()
-        .expect("Fix: float→int cast parity requires a live GPU backend.");
+    let backend =
+        WgpuBackend::acquire().expect("Fix: float→int cast parity requires a live GPU backend.");
 
     // i32 boundaries.
     //   2147483520 = 0x4EFFFFFF f32 = largest f32 <= i32::MAX (in range, exact).

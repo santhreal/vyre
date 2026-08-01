@@ -195,9 +195,10 @@ impl BodyBuilder<'_> {
         let value_id = *op.operands.first().ok_or_else(|| {
             EmitError::InvalidDescriptor("SubgroupBroadcast missing value".into())
         })?;
-        let lane_id = *op.operands.get(1).ok_or_else(|| {
-            EmitError::InvalidDescriptor("SubgroupBroadcast missing lane".into())
-        })?;
+        let lane_id = *op
+            .operands
+            .get(1)
+            .ok_or_else(|| EmitError::InvalidDescriptor("SubgroupBroadcast missing lane".into()))?;
         let argument = self.values.get(&value_id).copied().ok_or_else(|| {
             EmitError::InvalidDescriptor(format!(
                 "SubgroupBroadcast value id {value_id} not yet emitted"

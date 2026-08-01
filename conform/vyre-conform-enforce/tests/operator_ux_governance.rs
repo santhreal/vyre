@@ -6,8 +6,7 @@ const ERRORS: &str =
     include_str!("../../../docs/optimization/STRUCTURED_ERROR_PROBLEM_DETAILS.toml");
 const EXIT_STREAM: &str =
     include_str!("../../../docs/optimization/EXIT_CODE_AND_STREAM_POLICY.toml");
-const COHERENCE: &str =
-    include_str!("../../../docs/optimization/DOCS_HELP_EXAMPLE_COHERENCE.toml");
+const COHERENCE: &str = include_str!("../../../docs/optimization/DOCS_HELP_EXAMPLE_COHERENCE.toml");
 const COVERAGE: &str =
     include_str!("../../../docs/optimization/OPERATOR_UX_GOVERNANCE_TRANCHE_COVERAGE.toml");
 
@@ -19,7 +18,10 @@ fn operator_ux_primary_sources_are_registered() {
         "GNU_CLI_STANDARDS",
         "POSIX_UTILITY_CONVENTIONS",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 
@@ -36,7 +38,10 @@ fn cli_surface_contract_records_command_options_help_config_env_and_machine_mode
         "tty_policy",
         "machine_output_policy",
     ] {
-        assert!(CLI.contains(required), "CLI surface contract must include {required}");
+        assert!(
+            CLI.contains(required),
+            "CLI surface contract must include {required}"
+        );
     }
 }
 

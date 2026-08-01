@@ -116,7 +116,10 @@ pub fn reference_expand_preprocessor_macros(source: &str) -> String {
     }
 
     if !conditionals.is_empty() {
-        panic!("unterminated conditional: {} unclosed #if/#ifdef/#ifndef block(s)", conditionals.len());
+        panic!(
+            "unterminated conditional: {} unclosed #if/#ifdef/#ifndef block(s)",
+            conditionals.len()
+        );
     }
 
     out

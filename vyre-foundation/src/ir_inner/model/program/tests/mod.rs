@@ -1,9 +1,15 @@
 mod buffer_validation_contracts;
+mod cache_digest_contracts;
 mod call_collection_contracts;
 mod equality_fingerprint_contracts;
 mod validation_cache_contracts;
 
 use std::sync::Arc;
+
+thread_local! {
+    pub(super) static DIGEST_COMPUTATIONS: std::cell::Cell<usize> =
+        const { std::cell::Cell::new(0) };
+}
 
 use super::Program;
 use crate::error::Error;

@@ -15,7 +15,10 @@ fn filesystem_archive_primary_sources_are_registered() {
         "SEI_CERT_FIO45_C",
         "PKWARE_APPNOTE",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 

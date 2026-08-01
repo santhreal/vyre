@@ -44,28 +44,29 @@ pub(super) fn build_sema_scope(
     packed_haystack: bool,
     readback: bool,
 ) -> Result<SemaScopeResult, String> {
-    SEMA_SCOPE_SCRATCH.with(|scratch| {
-        let mut scratch = scratch.try_borrow_mut().map_err(|_| {
-            "semantic scope dispatch scratch was re-entered on the same thread. Fix: call semantic scope construction from a non-nested parser context or add explicit caller-owned scratch.".to_string()
-        })?;
-        build_sema_scope_with_scratch(
-            backend,
-            path,
-            _tok_types,
-            tok_starts,
-            tok_lens,
-            _source,
-            tok_types_bytes,
-            starts,
-            lens,
-            haystack,
-            haystack_len,
-            nt,
-            packed_haystack,
-            readback,
-            &mut scratch,
-        )
-    })
+    super::with_thread_local_scratch(
+        &SEMA_SCOPE_SCRATCH,
+        "semantic scope dispatch scratch was re-entered on the same thread. Fix: call semantic scope construction from a non-nested parser context or add explicit caller-owned scratch.",
+        |scratch| {
+            build_sema_scope_with_scratch(
+                backend,
+                path,
+                _tok_types,
+                tok_starts,
+                tok_lens,
+                _source,
+                tok_types_bytes,
+                starts,
+                lens,
+                haystack,
+                haystack_len,
+                nt,
+                packed_haystack,
+                readback,
+                scratch,
+            )
+        },
+    )
 }
 
 #[allow(clippy::too_many_arguments)]

@@ -40,8 +40,9 @@ fn tracked_paths(root: &Path) -> BTreeSet<String> {
             panic!(
                 "failed to run `git ls-files` in {}: {error}\n\
                  Fix: run this suite inside the vyre git work tree; it verifies what a \
-                 clean clone contains and cannot do that without git."
-            , root.display())
+                 clean clone contains and cannot do that without git.",
+                root.display()
+            )
         });
     assert!(
         output.status.success(),
@@ -63,13 +64,15 @@ fn tracked_paths(root: &Path) -> BTreeSet<String> {
     tracked
 }
 
-/// Every `*.rs` file under the workspace, skipping build output and vendored trees.
+/// Every present `*.rs` file tracked by git, skipping build output, vendored
+/// trees, and worktree deletions that a clean checkout no longer scans.
 fn rust_sources(root: &Path, tracked: &BTreeSet<String>) -> Vec<PathBuf> {
     tracked
         .iter()
         .filter(|path| path.ends_with(".rs"))
         .filter(|path| !path.starts_with("vendor/"))
         .map(|path| root.join(path))
+        .filter(|path| path.is_file())
         .collect()
 }
 
@@ -161,7 +164,9 @@ fn embedded_paths(source: &str) -> Vec<String> {
             }
         }
         // Skip whole string literals, including raw strings.
-        if bytes[i] == b'"' || (bytes[i] == b'r' && i + 1 < bytes.len() && matches!(bytes[i + 1], b'"' | b'#')) {
+        if bytes[i] == b'"'
+            || (bytes[i] == b'r' && i + 1 < bytes.len() && matches!(bytes[i + 1], b'"' | b'#'))
+        {
             let starts_ident = i > 0 && is_ident(bytes[i - 1]);
             if !starts_ident {
                 if let Some((_, next)) = read_string(bytes, i) {
@@ -236,7 +241,9 @@ fn every_compile_time_embedded_file_is_tracked_by_git() {
     for source in rust_sources(&root, &tracked) {
         let text = std::fs::read_to_string(&source)
             .unwrap_or_else(|error| panic!("failed to read {}: {error}", source.display()));
-        let source_dir = source.parent().expect("a source file has a parent directory");
+        let source_dir = source
+            .parent()
+            .expect("a source file has a parent directory");
         let source_rel = normalize(&source)
             .strip_prefix(&root_prefix)
             .expect("source lives under the repo root")
@@ -284,7 +291,9 @@ fn the_private_acceleration_plan_is_never_embedded_at_compile_time() {
     for source in rust_sources(&root, &tracked) {
         let text = std::fs::read_to_string(&source)
             .unwrap_or_else(|error| panic!("failed to read {}: {error}", source.display()));
-        let source_dir = source.parent().expect("a source file has a parent directory");
+        let source_dir = source
+            .parent()
+            .expect("a source file has a parent directory");
         let source_rel = normalize(&source)
             .strip_prefix(&root_prefix)
             .expect("source lives under the repo root")

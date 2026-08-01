@@ -28,12 +28,7 @@ use vyre_reference::value::Value;
 const SOURCE: &[u8] = b"int x=42;";
 
 fn expanded_haystack(source: &[u8]) -> Vec<u8> {
-    bytes(
-        &source
-            .iter()
-            .map(|b| u32::from(*b))
-            .collect::<Vec<_>>(),
-    )
+    bytes(&source.iter().map(|b| u32::from(*b)).collect::<Vec<_>>())
 }
 
 fn packed_haystack(source: &[u8]) -> Vec<u8> {

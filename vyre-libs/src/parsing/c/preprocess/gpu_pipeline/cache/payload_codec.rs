@@ -1,7 +1,7 @@
 use super::super::DirectivePayload;
 use super::classified_codec::{
-    checked_encoded_add, decode_len, encode_len_u64, encoded_bytes_len, read_hash128, read_u64,
-    reserve_decode_vec_capacity, DecodeError,
+    checked_encoded_add, decode_len, encode_len_u64, encoded_bytes_len, read_array, read_hash128,
+    read_u64, reserve_decode_vec_capacity, DecodeError,
 };
 use super::payload_keys::{PayloadsCacheKey, PAYLOADS_DISK_MAGIC};
 
@@ -25,14 +25,7 @@ pub(crate) fn read_bytes(bytes: &[u8], cursor: &mut usize) -> Result<Vec<u8>, De
 }
 
 pub(crate) fn read_u32(bytes: &[u8], cursor: &mut usize) -> Result<u32, DecodeError> {
-    let end = cursor.checked_add(4).ok_or(DecodeError::Truncated)?;
-    if end > bytes.len() {
-        return Err(DecodeError::Truncated);
-    }
-    let mut buf = [0u8; 4];
-    buf.copy_from_slice(&bytes[*cursor..end]);
-    *cursor = end;
-    Ok(u32::from_le_bytes(buf))
+    Ok(u32::from_le_bytes(read_array(bytes, cursor)?))
 }
 
 pub(crate) fn encode_payload(out: &mut Vec<u8>, payload: &DirectivePayload) -> Result<(), String> {

@@ -144,4 +144,3 @@ fn recovery_retry_preserves_caller_output_slots() {
     assert_eq!(outputs.as_ptr() as usize, outputs_addr);
     assert_eq!(outputs[0].as_ptr() as usize, slot_addr);
 }
-

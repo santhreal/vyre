@@ -112,7 +112,7 @@ impl CompiledPipeline for PersistentHandlePipeline {
         let handles: Vec<u64> = inputs
             .iter()
             .map(|resource| match resource {
-                Resource::Resident(handle) => *handle,
+                Resource::Resident(handle) => handle.id(),
                 Resource::Borrowed(_) => 0,
             })
             .collect();
@@ -137,7 +137,7 @@ impl CompiledPipeline for PersistentHandlePipeline {
         let handles: Vec<u64> = inputs
             .iter()
             .map(|resource| match resource {
-                Resource::Resident(handle) => *handle,
+                Resource::Resident(handle) => handle.id(),
                 Resource::Borrowed(_) => 0,
             })
             .collect();
@@ -170,7 +170,7 @@ impl CompiledPipeline for PersistentHandlePipeline {
             let handles: Vec<u64> = inputs
                 .iter()
                 .map(|resource| match resource {
-                    Resource::Resident(handle) => *handle,
+                    Resource::Resident(handle) => handle.id(),
                     Resource::Borrowed(_) => 0,
                 })
                 .collect();
@@ -203,7 +203,7 @@ impl CompiledPipeline for PersistentHandlePipeline {
             let handles: Vec<u64> = inputs
                 .iter()
                 .map(|resource| match resource {
-                    Resource::Resident(handle) => *handle,
+                    Resource::Resident(handle) => handle.id(),
                     Resource::Borrowed(_) => 0,
                 })
                 .collect();
@@ -241,7 +241,7 @@ impl CompiledPipeline for PersistentHandlePipeline {
         }
         for (index, (inputs, row)) in rows.iter().zip(outputs.iter_mut()).enumerate() {
             let handles = std::array::from_fn(|index| match &inputs[index] {
-                Resource::Resident(handle) => *handle,
+                Resource::Resident(handle) => handle.id(),
                 Resource::Borrowed(_) => 0,
             });
             self.calls
@@ -394,6 +394,25 @@ impl CompiledPipeline for RecoveringPipeline {
     }
 }
 
+/// Build megakernel ABI handles in one fresh resident namespace.
+///
+/// Tests assert on local ids, so every handle in a set must share an owner:
+/// a set spanning two owners is exactly what dispatch now refuses.
+fn test_resident_handles(
+    control: u64,
+    ring: u64,
+    debug_log: u64,
+    io_queue: u64,
+) -> MegakernelResidentHandles {
+    let owner = vyre_driver::ResidentOwner::new()
+        .expect("Fix: resident owner minting must succeed in tests");
+    MegakernelResidentHandles::new(
+        owner.handle(control),
+        owner.handle(ring),
+        owner.handle(debug_log),
+        owner.handle(io_queue),
+    )
+}
 fn grid_sync_program() -> Program {
     let base = super::super::builder::build_program_sharded_slots(1, 1, &[]);
     base.with_rewritten_entry(vec![Node::Region {
@@ -414,10 +433,10 @@ fn grid_sync_program() -> Program {
 
 #[path = "grid_sync_contracts.rs"]
 mod grid_sync_contracts;
-#[path = "persistent_single_contracts.rs"]
-mod persistent_single_contracts;
 #[path = "persistent_batch_contracts.rs"]
 mod persistent_batch_contracts;
+#[path = "persistent_single_contracts.rs"]
+mod persistent_single_contracts;
 #[path = "readback_contracts.rs"]
 mod readback_contracts;
 #[path = "recovery_contracts.rs"]

@@ -19,11 +19,7 @@ pub(super) fn collect_source_ledger_findings(
     let ledger = match read_research_source_ledger(root) {
         Ok(ledger) => ledger,
         Err(error) => {
-            findings.push(finding(
-                "<ledger>",
-                error,
-                "research-source-ledger-toml",
-            ));
+            findings.push(finding("<ledger>", error, "research-source-ledger-toml"));
             return findings;
         }
     };
@@ -210,58 +206,40 @@ fn source_impact_markers(row: &VxRow) -> BTreeSet<&'static str> {
     )
     .to_ascii_lowercase();
     let proof_gate = row.proof_gate.to_ascii_lowercase();
-    let mut markers = BTreeSet::new();
-    if impact_text.contains("artifact") || impact_text.contains("release/evidence/") {
-        markers.insert("artifact");
-    }
-    if impact_text.contains("bench") || impact_text.contains("benchmark") {
-        markers.insert("benchmark");
-    }
-    if impact_text.contains("test")
-        || impact_text.contains("fixture")
-        || impact_text.contains("corpus")
-        || impact_text.contains("fuzz")
-    {
-        markers.insert("test");
-    }
-    if impact_text.contains("comparator")
-        || impact_text.contains("baseline")
-        || impact_text.contains("differential")
-        || impact_text.contains("parity")
-    {
-        markers.insert("comparator");
-    }
-    if impact_text.contains("evidence")
-        || impact_text.contains("source_digest")
-        || impact_text.contains("schema")
-        || impact_text.contains("report")
-    {
-        markers.insert("evidence");
-    }
-    if impact_text.contains("validator")
-        || impact_text.contains("validate")
-        || impact_text.contains("semantic validation")
-    {
-        markers.insert("validator");
-    }
-    if impact_text.contains("stale-source")
-        || impact_text.contains("stale source")
-        || impact_text.contains("source_tree_fingerprint")
-        || impact_text.contains("freshness")
-    {
-        markers.insert("stale-source");
-    }
+    let mut markers = crate::text_markers::classify_text(
+        &impact_text,
+        &[
+            ("artifact", &["artifact", "release/evidence/"]),
+            ("benchmark", &["bench", "benchmark"]),
+            ("test", &["test", "fixture", "corpus", "fuzz"]),
+            (
+                "comparator",
+                &["comparator", "baseline", "differential", "parity"],
+            ),
+            (
+                "evidence",
+                &["evidence", "source_digest", "schema", "report"],
+            ),
+            (
+                "validator",
+                &["validator", "validate", "semantic validation"],
+            ),
+            (
+                "stale-source",
+                &[
+                    "stale-source",
+                    "stale source",
+                    "source_tree_fingerprint",
+                    "freshness",
+                ],
+            ),
+        ],
+    );
     if proof_gate.contains("gate")
-        && [
-            "reject",
-            "assert",
-            "block",
-            "validate",
-            "fail",
-            "enforce",
-        ]
-        .iter()
-        .any(|verb| proof_gate.contains(verb))
+        && crate::text_markers::contains_any(
+            &proof_gate,
+            &["reject", "assert", "block", "validate", "fail", "enforce"],
+        )
     {
         markers.insert("gate");
     }

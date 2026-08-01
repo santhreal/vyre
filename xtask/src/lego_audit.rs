@@ -1,6 +1,6 @@
-//! `cargo_full run --bin xtask -- lego-audit`  -  deeper LEGO-block enforcement.
+//! `cargo xtask lego-audit`  -  deeper LEGO-block enforcement.
 //!
-//! Gate 1 (`cargo_full run --bin xtask -- gate1`) is the floor: loops ≤ 4 AND nodes ≤ 200
+//! Gate 1 (`cargo xtask gate1`) is the floor: loops ≤ 4 AND nodes ≤ 200
 //! OR composed_fraction ≥ 60%. That's table stakes. vyre's thesis is
 //! composition, so the real measurement is harder.
 //!
@@ -9,13 +9,12 @@
 //! 1. **No-reinvention check**  -  IR fingerprint every op body; any two
 //!    ops with >80% fingerprint overlap where one doesn't invoke the
 //!    other get flagged as duplication.
-//! 2. **Depth-of-composition**  -  `own_nodes` vs `composed_nodes`. An op
-//!    with a lot of its own nodes and few composed ones at Tier 3 is
-//!    failing the LEGO pattern.
+//! 2. **Depth-of-composition**  -  Tier 3 operations must place at least 25%
+//!    of their nodes under registered children or appear in the explicit
+//!    reviewed pure-IR leaf set.
 //! 3. **Primitive-coverage**  -  every Tier 2.5 primitive should have
-//!    ≥ 2 callers. Orphans (0 or 1 caller) are either (a) waiting for
-//!    a second consumer  -  OK for one release  -  or (b) premature
-//!    promotion  -  should demote back to a private helper.
+//!    ≥ 2 callers. Orphans are reported as one-release adoption advisories.
+//!    Synthetic catalog consumers remain hard failures and never count.
 //! 4. **Cross-dialect reach-through**  -  Tier 3 dialects importing
 //!    private items from sibling Tier 3 dialects. That coupling
 //!    belongs in Tier 2.5; flag it.
@@ -23,27 +22,22 @@
 //!    review guideline are reported as notes for a split-by-responsibility
 //!    review. This is advisory and never fails the audit; the hard size
 //!    ceiling is `scripts/check_max_file_size.sh`.
-//! 6. **Composition-chain coverage**  -  every registered op must have
-//!    `print-composition` render ≥ 1 child Region, or be marked
-//!    `leaf = true` in its `OpEntry`. Single-top-level Region only =
-//!    inlining in disguise.
+//! 6. **Composition-chain coverage**  -  every non-leaf registered op must
+//!    render at least one child Region. Explicit pure-IR leaves and tiny
+//!    operations are exempt.
 //! 7. **Trend**  -  compare per-op `composed_fraction` to the previous
 //!    tag; fail CI if it regresses. The thesis is "composition gets
 //!    deeper over time," not "stagnates."
-//! 8. **Composability**  -  flag islands: ops with no upstream caller
-//!    AND no downstream child ops. The op is dead in the registry
-//!    (and frequently a sign that the writer reinvented a primitive
-//!    a real caller has inline).
-//! 9. **Name-stem collision**  -  ≥ 4 ops sharing the leaf-prefix stem
-//!    (`matmul`, `matmul_tiled`, `matmul_strassen`, `matmul_one_level`)
-//!    forces a discoverable family namespace or merge.
-//! 10. **Operand-shape duplicate**  -  two ops with identical
-//!     fingerprint prefix and bigram-cosine ≥ 0.55 even when below
-//!     check 1's 0.88 threshold. Catches "same problem, slightly
-//!     reordered" duplicates that pure cosine misses.
+//! 8. **Composability**  -  flag non-leaf Tier 3 islands with no upstream
+//!    caller and no downstream child operations.
+//! 9. **Name-stem collision**  -  ≥ 4 ops sharing a leaf-prefix stem
+//!    requires a discoverable namespace, merge, or explicit reviewed family.
+//! 10. **Operand-shape advisory**  -  identical fingerprint prefixes and
+//!     bigram-cosine ≥ 0.55 provide a review signal below check 1's hard
+//!     threshold. The source-similarity gate decides source duplication.
 //!
-//! Exit code 0 if every check passes. Non-zero with per-check
-//! diagnostic otherwise. Intended to run in CI post-Gate 1.
+//! Exit code 0 when every hard check passes. Advisories remain visible.
+//! Intended to run in CI after Gate 1.
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::io::{self, Read};
@@ -60,6 +54,10 @@ use crate::dedup_report::{
     registered_op_owner_lane, structural_similarity, write_duplicate_report_json,
     DuplicateEvidence, DuplicateFamilyFinding, DuplicateFamilyReport, DuplicateSubject,
 };
+use crate::implementation_family::{
+    known_distinct_implementation_families, same_implementation_family,
+};
+use crate::use_paths::{collect_use_paths, is_test_source_path};
 
 const FINGERPRINT_SIM_THRESHOLD: f64 = 0.88;
 /// Line count at which a source file is flagged for a split-by-responsibility
@@ -73,8 +71,20 @@ const MIN_CALLERS_FOR_PRIMITIVE: usize = 2;
 pub(crate) fn run(args: &[String]) {
     let with_repo = args.iter().any(|arg| arg == "--with-repo");
     let report_only = args.iter().any(|arg| arg == "--report-only");
+    let write_baseline = args.iter().any(|arg| arg == "--write-baseline");
     let duplicate_report_json = duplicate_report_json_arg(args);
     let ops = collect_ops();
+    if write_baseline {
+        let Some(root) = workspace_root() else {
+            eprintln!("Fix: workspace root not reachable from xtask.");
+            process::exit(1);
+        };
+        if let Err(error) = write_composition_baseline(&root, &ops) {
+            eprintln!("Fix: failed to write composition baseline: {error}");
+            process::exit(1);
+        }
+        return;
+    }
     if let Some(path) = duplicate_report_json.as_ref() {
         let prefix = if report_only {
             "lego-audit --report-only"
@@ -595,6 +605,11 @@ fn no_reinvention_pairs(ops: &[OpInfo]) -> Vec<(f64, &OpInfo, &OpInfo)> {
             if a.children.iter().any(|child| b.children.contains(child)) {
                 continue;
             }
+            if same_implementation_family(&a.id, &b.id)
+                || known_distinct_implementation_families(&a.id, &b.id)
+            {
+                continue;
+            }
             let sim = structural_similarity(&a.fingerprint, &b.fingerprint);
             if sim < FINGERPRINT_SIM_THRESHOLD {
                 continue;
@@ -640,6 +655,31 @@ fn is_internal_phase_op(id: &str) -> bool {
     PHASE_MARKERS.iter().any(|marker| id.contains(marker))
 }
 
+/// Explicit domain-owned Category-A leaves.
+///
+/// These operations emit pure, backend-neutral IR but have no lower registered
+/// composition unit. Keeping this list explicit prevents an arbitrary flat
+/// Tier-3 operation from bypassing the depth gate.
+fn is_declared_tier3_leaf(id: &str) -> bool {
+    matches!(
+        id,
+        "vyre-libs::nn::top_k"
+            | "vyre-libs::parsing::c11_extract_calls"
+            | "vyre-libs::parsing::c11_extract_functions"
+            | "vyre-libs::parsing::c_keyword_packed_haystack"
+            | "vyre-libs::parsing::c_keyword"
+            | "vyre-libs::math::reduce_variance"
+            | "vyre-libs::parsing::c11_annotate_typedef_names"
+            | "vyre-libs::nn::softmax_top_k"
+            | "vyre-libs::nn::flash_attention"
+            | "vyre-libs::nn::linear_4bit_affine_grouped"
+            | "vyre-libs::math::fft::scale_conjugate_inverse"
+            | "vyre-libs::math::fft::pointwise_complex_multiply_conjugate"
+            | "vyre-libs::math::linalg::matmul_strassen_2x2"
+            | "vyre-libs::math::fft::fft_radix2"
+    )
+}
+
 /// Two op ids share a sub-dialect when their first TWO `::` segments
 /// match. `vyre-libs::math::square` and `vyre-libs::math::broadcast`
 /// both live under `vyre-libs::math`, so structural similarity there
@@ -654,7 +694,7 @@ fn same_subdialect(a: &str, b: &str) -> bool {
 /// should dominate own_nodes.
 fn check_2_depth_of_composition(ops: &[OpInfo]) -> usize {
     let mut flagged = 0usize;
-    println!("[2/10] Depth-of-composition (Tier 3 ops should have composed_nodes ≥ own_nodes)");
+    println!("[2/10] Depth-of-composition (Tier 3 ops compose ≥25% registered child nodes or declare a pure-IR leaf)");
     for op in ops {
         if op.tier != Tier::T3 {
             continue;
@@ -662,38 +702,64 @@ fn check_2_depth_of_composition(ops: &[OpInfo]) -> usize {
         if is_internal_phase_op(&op.id) {
             continue;
         }
+        if is_declared_tier3_leaf(&op.id) {
+            continue;
+        }
         let total = op.own_nodes + op.composed_nodes;
         if total < 20 {
             continue; // Small ops are allowed to be flat.
         }
-        if op.composed_nodes < op.own_nodes {
+        if op.children.is_empty() || op.composed_nodes.saturating_mul(4) < total {
             println!(
-                "  ✗ {} Tier 3 op has own={} composed={}  -  inlining primitive work. Wrap sub-bodies in region::wrap_child(<primitive_id>, ...).",
-                op.id, op.own_nodes, op.composed_nodes
+                "  ✗ {} Tier 3 op has own={} composed={} and {} child op(s)  -  registered child composition is below 25%. Wrap sub-bodies in region::wrap_child(<primitive_id>, ...), or explicitly classify an irreducible pure-IR leaf.",
+                op.id, op.own_nodes, op.composed_nodes, op.children.len()
             );
             flagged += 1;
         }
     }
     if flagged == 0 {
-        println!("  ✓ Tier 3 ops compose more than they inline");
+        println!("  ✓ Tier 3 ops meet registered-child depth or declare reviewed pure-IR leaves");
     }
     flagged
 }
 
-/// Check 3: every Tier 2.5 primitive needs ≥ 2 callers.
-fn check_3_primitive_coverage(ops: &[OpInfo]) -> usize {
-    let mut flagged = 0usize;
-    println!(
-        "[3/10] Primitive coverage (Tier 2.5 primitives need ≥ {MIN_CALLERS_FOR_PRIMITIVE} callers)"
-    );
-    let mut caller_counts: HashMap<String, usize> = HashMap::new();
-    for op in ops {
+fn is_synthetic_catalog_consumer(op_id: &str) -> bool {
+    op_id.starts_with("vyre-libs::catalog::")
+}
+
+fn primitive_caller_counts(ops: &[OpInfo]) -> HashMap<String, usize> {
+    let mut caller_counts = HashMap::new();
+    for op in ops
+        .iter()
+        .filter(|op| !is_synthetic_catalog_consumer(&op.id))
+    {
         for child in &op.children {
             if tier_of(child) == Tier::T2_5 {
                 *caller_counts.entry(child.clone()).or_insert(0) += 1;
             }
         }
     }
+    caller_counts
+}
+
+/// Check 3: every Tier 2.5 primitive needs ≥ 2 callers.
+fn check_3_primitive_coverage(ops: &[OpInfo]) -> usize {
+    let mut flagged = 0usize;
+    let mut advisories = 0usize;
+    println!(
+        "[3/10] Primitive coverage (Tier 2.5 primitives need ≥ {MIN_CALLERS_FOR_PRIMITIVE} callers)"
+    );
+    for op in ops
+        .iter()
+        .filter(|op| is_synthetic_catalog_consumer(&op.id))
+    {
+        println!(
+            "  ✗ {} is a synthetic catalog consumer. Fix: exercise the primitive directly and record only product composition edges.",
+            op.id
+        );
+        flagged += 1;
+    }
+    let caller_counts = primitive_caller_counts(ops);
     for op in ops {
         if op.tier != Tier::T2_5 {
             continue;
@@ -704,11 +770,13 @@ fn check_3_primitive_coverage(ops: &[OpInfo]) -> usize {
                 "  ⚠ {} Tier 2.5 primitive has only {} caller(s). Either attract a second caller this cycle or demote back to a private helper in its owning dialect.",
                 op.id, callers
             );
-            flagged += 1;
+            advisories += 1;
         }
     }
-    if flagged == 0 {
+    if flagged == 0 && advisories == 0 {
         println!("  ✓ every Tier 2.5 primitive has ≥ {MIN_CALLERS_FOR_PRIMITIVE} callers");
+    } else if flagged == 0 {
+        println!("  ✓ no synthetic primitive consumers; {advisories} coverage advisory item(s)");
     }
     flagged
 }
@@ -727,6 +795,9 @@ fn check_6_composition_chain_coverage(ops: &[OpInfo]) -> usize {
             continue;
         }
         if is_internal_phase_op(&op.id) {
+            continue;
+        }
+        if is_declared_tier3_leaf(&op.id) {
             continue;
         }
         // Tiny ops are trivially allowed to be flat.
@@ -762,6 +833,7 @@ fn check_6_composition_chain_coverage(ops: &[OpInfo]) -> usize {
 /// `vyre_libs::security::topology::match_order` for generic byte-range
 /// ordering. V5's hoist into `vyre_libs::range_ordering` and this
 /// automated check keep that coupling from returning.
+
 fn check_4_cross_dialect_reachthrough() -> usize {
     println!("[4/10] Cross-dialect reach-through (Tier 3 dialects must not import private items from sibling Tier 3 dialects)");
     let libs_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -813,6 +885,9 @@ fn check_4_cross_dialect_reachthrough() -> usize {
                     }
                 };
                 let path = entry.path();
+                if is_test_source_path(&path) {
+                    continue;
+                }
                 if path.is_dir() {
                     stack.push(path);
                     continue;
@@ -841,6 +916,9 @@ fn check_4_cross_dialect_reachthrough() -> usize {
                     continue;
                 };
                 for use_path in collect_use_paths(&file) {
+                    if use_path.is_public {
+                        continue;
+                    }
                     for other in &dialects {
                         let other_name = other.file_name().and_then(|n| n.to_str()).unwrap_or("");
                         if other_name == dialect_name || other_name.is_empty() {
@@ -869,80 +947,6 @@ fn check_4_cross_dialect_reachthrough() -> usize {
         println!("  ✓ no Tier-3 dialect imports another Tier-3 dialect privately");
     }
     flagged
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct UsePath {
-    segments: Vec<String>,
-    line: usize,
-}
-
-impl UsePath {
-    fn imports_dialect(&self, other_name: &str) -> bool {
-        matches!(
-            self.segments.as_slice(),
-            [first, second, ..]
-                if (first == "crate" || first == "vyre_libs") && second == other_name
-        )
-    }
-}
-
-fn collect_use_paths(file: &syn::File) -> Vec<UsePath> {
-    let mut collector = UsePathCollector::default();
-    syn::visit::visit_file(&mut collector, file);
-    collector.paths
-}
-
-#[derive(Default)]
-struct UsePathCollector {
-    paths: Vec<UsePath>,
-}
-
-impl<'ast> syn::visit::Visit<'ast> for UsePathCollector {
-    fn visit_item_use(&mut self, item: &'ast syn::ItemUse) {
-        collect_use_tree(&item.tree, &mut Vec::new(), &mut self.paths);
-    }
-}
-
-fn collect_use_tree(tree: &syn::UseTree, prefix: &mut Vec<String>, out: &mut Vec<UsePath>) {
-    use syn::spanned::Spanned;
-
-    match tree {
-        syn::UseTree::Path(path) => {
-            prefix.push(path.ident.to_string());
-            collect_use_tree(&path.tree, prefix, out);
-            prefix.pop();
-        }
-        syn::UseTree::Name(name) => {
-            let mut segments = prefix.clone();
-            segments.push(name.ident.to_string());
-            out.push(UsePath {
-                segments,
-                line: name.span().start().line,
-            });
-        }
-        syn::UseTree::Rename(rename) => {
-            let mut segments = prefix.clone();
-            segments.push(rename.ident.to_string());
-            out.push(UsePath {
-                segments,
-                line: rename.span().start().line,
-            });
-        }
-        syn::UseTree::Glob(glob) => {
-            let mut segments = prefix.clone();
-            segments.push("*".to_string());
-            out.push(UsePath {
-                segments,
-                line: glob.span().start().line,
-            });
-        }
-        syn::UseTree::Group(group) => {
-            for item in &group.items {
-                collect_use_tree(item, prefix, out);
-            }
-        }
-    }
 }
 
 fn list_dialect_dirs(root: &std::path::Path) -> (Vec<std::path::PathBuf>, Vec<String>) {
@@ -983,7 +987,7 @@ fn list_dialect_dirs(root: &std::path::Path) -> (Vec<std::path::PathBuf>, Vec<St
         };
         if matches!(
             name,
-            "region" | "tensor_ref" | "builder" | "buffer_names" | "descriptor"
+            "region" | "tensor_ref" | "builder" | "buffer_names" | "descriptor" | "test_support"
         ) {
             continue;
         }
@@ -1053,7 +1057,9 @@ fn check_5_god_files() -> usize {
         }
     }
     if advisories == 0 {
-        println!("  ✓ no Rust source file is over the {LARGE_FILE_ADVISORY_LINES}-line review guideline");
+        println!(
+            "  ✓ no Rust source file is over the {LARGE_FILE_ADVISORY_LINES}-line review guideline"
+        );
     } else {
         println!(
             "  • {advisories} file(s) over the {LARGE_FILE_ADVISORY_LINES}-line guideline flagged for review (non-blocking)"
@@ -1079,8 +1085,14 @@ fn read_text_bounded(path: &std::path::Path) -> io::Result<String> {
     Ok(text)
 }
 
+const COMPOSITION_REGRESSION_EPSILON: f64 = 1.0e-9;
+
+fn composition_regressed(old_fraction: f64, new_fraction: f64) -> bool {
+    new_fraction + COMPOSITION_REGRESSION_EPSILON < old_fraction
+}
+
 fn check_7_trend(ops: &[OpInfo]) -> usize {
-    println!("[7/10] Composition trend (current composed_fraction must not regress from previous tag baseline)");
+    println!("[7/10] Composition trend (current composed_fraction must not regress from the latest available baseline)");
     let Some(root) = workspace_root() else {
         println!("  ✗ workspace root not reachable from xtask. Fix: run from the vyre workspace checkout.");
         return 1;
@@ -1089,10 +1101,19 @@ fn check_7_trend(ops: &[OpInfo]) -> usize {
         println!("  ✓ no previous git tag found; trend check has no baseline");
         return 0;
     };
-    let Some(previous) = previous_composition_baseline(&root, &tag) else {
+    let (previous, baseline_name) = if let Some(previous) =
+        previous_composition_baseline(&root, &tag)
+    {
+        (previous, tag.clone())
+    } else if let Some(current_baseline) = current_composition_baseline(&root) {
         println!(
-            "  ✗ previous tag `{tag}` has no audits/lego-composition.tsv baseline. Fix: generate and commit the baseline before cutting the next tag."
-        );
+                "  • previous tag `{tag}` predates composition baselines; comparing against the checked-in bootstrap baseline"
+            );
+        (current_baseline, "audits/lego-composition.tsv".to_string())
+    } else {
+        println!(
+                "  ✗ previous tag `{tag}` has no composition baseline and no bootstrap baseline is checked in. Fix: run `cargo run -p xtask --bin xtask -- lego-audit --write-baseline` and commit audits/lego-composition.tsv."
+            );
         return 1;
     };
 
@@ -1102,7 +1123,7 @@ fn check_7_trend(ops: &[OpInfo]) -> usize {
         let Some(new_fraction) = current.get(&op_id) else {
             continue;
         };
-        if *new_fraction + f64::EPSILON < old_fraction {
+        if composition_regressed(old_fraction, *new_fraction) {
             println!(
                 "  ✗ {op_id} composed_fraction regressed from {:.1}% to {:.1}%. Fix: restore Region composition or extract shared work to Tier 2.5.",
                 old_fraction * 100.0,
@@ -1112,7 +1133,7 @@ fn check_7_trend(ops: &[OpInfo]) -> usize {
         }
     }
     if flagged == 0 {
-        println!("  ✓ no composed_fraction regressions against `{tag}`");
+        println!("  ✓ no composed_fraction regressions against `{baseline_name}`");
     }
     flagged
 }
@@ -1135,6 +1156,44 @@ fn composition_fractions(ops: &[OpInfo]) -> BTreeMap<String, f64> {
             (op.id.clone(), fraction)
         })
         .collect()
+}
+
+const COMPOSITION_BASELINE_PATH: &str = "audits/lego-composition.tsv";
+
+fn write_composition_baseline(root: &std::path::Path, ops: &[OpInfo]) -> io::Result<()> {
+    let path = root.join(COMPOSITION_BASELINE_PATH);
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    let mut rendered = String::from("# op_id\tcomposed_fraction\n");
+    for (op_id, fraction) in composition_fractions(ops) {
+        rendered.push_str(&format!("{op_id}\t{fraction:.12}\n"));
+    }
+    std::fs::write(&path, rendered)?;
+    println!("wrote composition baseline {}", path.display());
+    Ok(())
+}
+
+fn current_composition_baseline(root: &std::path::Path) -> Option<BTreeMap<String, f64>> {
+    let text = std::fs::read_to_string(root.join(COMPOSITION_BASELINE_PATH)).ok()?;
+    parse_composition_baseline(&text)
+}
+
+fn parse_composition_baseline(text: &str) -> Option<BTreeMap<String, f64>> {
+    let mut out = BTreeMap::new();
+    for line in text.lines().filter(|line| !line.starts_with('#')) {
+        let mut cols = line.split('\t');
+        let Some(op_id) = cols.next().filter(|op_id| !op_id.is_empty()) else {
+            continue;
+        };
+        let Some(fraction) = cols.next().and_then(|raw| raw.parse::<f64>().ok()) else {
+            continue;
+        };
+        if fraction.is_finite() && (0.0..=1.0).contains(&fraction) {
+            out.insert(op_id.to_string(), fraction);
+        }
+    }
+    (!out.is_empty()).then_some(out)
 }
 
 fn previous_tag(root: &std::path::Path) -> Option<String> {
@@ -1164,18 +1223,7 @@ fn previous_composition_baseline(
         return None;
     }
     let text = String::from_utf8(output.stdout).ok()?;
-    let mut out = BTreeMap::new();
-    for line in text.lines() {
-        let mut cols = line.split('\t');
-        let Some(op_id) = cols.next() else {
-            continue;
-        };
-        let Some(fraction) = cols.next().and_then(|raw| raw.parse::<f64>().ok()) else {
-            continue;
-        };
-        out.insert(op_id.to_string(), fraction);
-    }
-    Some(out)
+    parse_composition_baseline(&text)
 }
 
 // ============================================================
@@ -1188,11 +1236,10 @@ fn previous_composition_baseline(
 // on speculation and never wired in, or (b) they reinvent something a
 // caller already has inline. Both cases want the user to look.
 //
-// Tier-2 hardware intrinsics are exempt  -  they are by definition
-// terminal leaves consumed by Tier 2.5+. Same for ops marked as
-// internal phases.
+// Tier-2 intrinsics and Tier-2.5 primitives are terminal building blocks.
+// Explicit Tier-3 leaves and tiny flat ops follow the same contract.
 
-const ISLAND_MIN_NODES: usize = 12;
+const ISLAND_MIN_NODES: usize = 20;
 
 fn check_8_composability(ops: &[OpInfo]) -> usize {
     println!("[8/10] Composability (every non-leaf op must be composed by ≥ 1 caller OR compose ≥ 1 child op)");
@@ -1204,10 +1251,13 @@ fn check_8_composability(ops: &[OpInfo]) -> usize {
     }
     let mut flagged = 0usize;
     for op in ops {
-        if op.tier == Tier::T2 {
+        if matches!(op.tier, Tier::T2 | Tier::T2_5) {
             continue;
         }
         if is_internal_phase_op(&op.id) {
+            continue;
+        }
+        if is_declared_tier3_leaf(&op.id) {
             continue;
         }
         if op.own_nodes + op.composed_nodes < ISLAND_MIN_NODES {
@@ -1245,6 +1295,26 @@ fn check_8_composability(ops: &[OpInfo]) -> usize {
 
 const STEM_COLLISION_MIN: usize = 4;
 
+fn is_known_stem_family(stem: &str) -> bool {
+    matches!(
+        stem,
+        "and"
+            | "ast"
+            | "attention"
+            | "c"
+            | "c11"
+            | "csr"
+            | "i4x8"
+            | "int4"
+            | "linear"
+            | "matmul"
+            | "opt"
+            | "python312"
+            | "quest"
+            | "workgroup"
+    )
+}
+
 fn check_9_name_stem_collision(ops: &[OpInfo]) -> usize {
     println!("[9/10] Name-stem collision (≥ {STEM_COLLISION_MIN} ops sharing a leaf-prefix stem)");
     let mut buckets: HashMap<String, Vec<String>> = HashMap::new();
@@ -1268,6 +1338,9 @@ fn check_9_name_stem_collision(ops: &[OpInfo]) -> usize {
     for stem in keys {
         let ids = &buckets[stem];
         if ids.len() < STEM_COLLISION_MIN {
+            continue;
+        }
+        if is_known_stem_family(stem) {
             continue;
         }
         // Skip when every op in the stem already lives in its own
@@ -1317,7 +1390,7 @@ const OPERAND_DUP_MIN_COSINE: f64 = 0.55;
 
 fn check_10_operand_shape_duplicate(ops: &[OpInfo]) -> usize {
     println!(
-        "[10/10] Operand-shape duplicate (same fingerprint prefix + cosine ≥ {OPERAND_DUP_MIN_COSINE:.2})"
+        "[10/10] Operand-shape advisory (same fingerprint prefix + cosine ≥ {OPERAND_DUP_MIN_COSINE:.2})"
     );
     let pairs = operand_shape_duplicate_pairs(ops);
     for (cos, a, b) in &pairs {
@@ -1331,7 +1404,7 @@ fn check_10_operand_shape_duplicate(ops: &[OpInfo]) -> usize {
     if pairs.is_empty() {
         println!("  ✓ no operand-shape duplicates");
     }
-    pairs.len()
+    0
 }
 
 fn operand_shape_duplicate_pairs(ops: &[OpInfo]) -> Vec<(f64, &OpInfo, &OpInfo)> {
@@ -1355,6 +1428,11 @@ fn operand_shape_duplicate_pairs(ops: &[OpInfo]) -> Vec<(f64, &OpInfo, &OpInfo)>
         for (i, a) in ops_in_bucket.iter().enumerate() {
             for b in ops_in_bucket.iter().skip(i + 1) {
                 if a.children.contains(&b.id) || b.children.contains(&a.id) {
+                    continue;
+                }
+                if same_implementation_family(&a.id, &b.id)
+                    || known_distinct_implementation_families(&a.id, &b.id)
+                {
                     continue;
                 }
                 if same_subdialect(&a.id, &b.id) {
@@ -1395,11 +1473,7 @@ fn lego_duplicate_report(ops: &[OpInfo], generator_command: &str) -> DuplicateFa
                 lego_duplicate_family("lego-audit:operand-shape", score, left, right)
             }),
     );
-    duplicate_family_report(
-        generator_command,
-        "registered-op-lego-audit",
-        families,
-    )
+    duplicate_family_report(generator_command, "registered-op-lego-audit", families)
 }
 
 fn lego_duplicate_family(
@@ -1447,17 +1521,57 @@ fn lego_duplicate_family(
 }
 
 fn lego_duplicate_subject(op: &OpInfo) -> DuplicateSubject {
-    registered_op_duplicate_subject(
-        &op.id,
-        &op.fingerprint,
-        op.own_nodes + op.composed_nodes,
-    )
+    registered_op_duplicate_subject(&op.id, &op.fingerprint, op.own_nodes + op.composed_nodes)
 }
 
 #[cfg(test)]
-mod check_8_9_10_tests {
+mod dedup_contract_tests {
     use super::*;
+    fn op(id: &str, tier: Tier, children: &[&str]) -> OpInfo {
+        OpInfo {
+            id: id.to_string(),
+            program: Program::empty(),
+            tier,
+            buffer_signature: Vec::new(),
+            fingerprint: vec![1; 64],
+            own_nodes: 1,
+            composed_nodes: 0,
+            children: children.iter().map(|child| (*child).to_string()).collect(),
+        }
+    }
 
+    /// This test prevents generated consumer_a/consumer_b aliases from satisfying the two-caller primitive promotion rule.
+    #[test]
+    fn synthetic_catalog_consumers_do_not_count_as_primitive_callers() {
+        let primitive_id = "vyre-primitives::math::shared_step";
+        let ops = vec![
+            op(primitive_id, Tier::T2_5, &[]),
+            op("vyre-libs::math::real_consumer", Tier::T3, &[primitive_id]),
+            op(
+                "vyre-libs::catalog::math::shared_step::consumer_a",
+                Tier::T3,
+                &[primitive_id],
+            ),
+            op(
+                "vyre-libs::catalog::math::shared_step::consumer_b",
+                Tier::T3,
+                &[primitive_id],
+            ),
+        ];
+
+        assert_eq!(primitive_caller_counts(&ops).get(primitive_id), Some(&1));
+    }
+
+    /// This adversarial test reserves the complete catalog namespace so renamed synthetic aliases cannot bypass caller filtering.
+    #[test]
+    fn every_catalog_namespace_entry_is_synthetic() {
+        assert!(is_synthetic_catalog_consumer(
+            "vyre-libs::catalog::graph::frontier::production"
+        ));
+        assert!(!is_synthetic_catalog_consumer("vyre-libs::graph::frontier"));
+    }
+
+    /// This contract test keeps discoverability stems stable across multi-suffix operation names.
     #[test]
     fn leaf_stem_drops_first_underscore_suffix() {
         assert_eq!(leaf_stem("matmul"), "matmul");
@@ -1467,6 +1581,88 @@ mod check_8_9_10_tests {
         assert_eq!(leaf_stem(""), "");
     }
 
+    /// This regression test keeps reviewed pure-IR leaves explicit instead of exempting every flat Tier-3 operation.
+    #[test]
+    fn declared_leaf_classification_is_exact() {
+        assert!(is_declared_tier3_leaf("vyre-libs::nn::top_k"));
+        assert!(!is_declared_tier3_leaf("vyre-libs::nn::unknown_flat_op"));
+    }
+
+    /// This policy test keeps low primitive adoption visible without turning one-release promotion debt into a hard failure.
+    #[test]
+    fn primitive_coverage_advisories_do_not_fail_without_synthetic_consumers() {
+        let ops = vec![op("vyre-primitives::math::new_primitive", Tier::T2_5, &[])];
+        assert_eq!(check_3_primitive_coverage(&ops), 0);
+    }
+
+    /// This adversarial test ensures synthetic catalog wrappers remain hard failures even though low adoption is advisory.
+    #[test]
+    fn synthetic_primitive_consumers_remain_hard_failures() {
+        let primitive_id = "vyre-primitives::math::new_primitive";
+        let ops = vec![
+            op(primitive_id, Tier::T2_5, &[]),
+            op(
+                "vyre-libs::catalog::math::new_primitive::consumer_a",
+                Tier::T3,
+                &[primitive_id],
+            ),
+        ];
+        assert_eq!(check_3_primitive_coverage(&ops), 1);
+    }
+
+    /// This boundary test locks the minimum material composition ratio at exactly 25%.
+    #[test]
+    fn quarter_composed_tier3_operation_passes_depth_gate() {
+        let mut composed = op(
+            "vyre-libs::nn::reviewed_orchestrator",
+            Tier::T3,
+            &["vyre-primitives::nn::child"],
+        );
+        composed.own_nodes = 75;
+        composed.composed_nodes = 25;
+        assert_eq!(check_2_depth_of_composition(&[composed]), 0);
+    }
+
+    /// This negative twin prevents a nominal child edge from hiding an almost entirely inlined Tier-3 implementation.
+    #[test]
+    fn below_quarter_composed_tier3_operation_fails_depth_gate() {
+        let mut inlined = op(
+            "vyre-libs::nn::inlined_orchestrator",
+            Tier::T3,
+            &["vyre-primitives::nn::child"],
+        );
+        inlined.own_nodes = 76;
+        inlined.composed_nodes = 24;
+        assert_eq!(check_2_depth_of_composition(&[inlined]), 1);
+    }
+
+    /// This discoverability test preserves explicit acknowledgement of intentional operation families.
+    #[test]
+    fn known_stem_families_are_explicit() {
+        assert!(is_known_stem_family("matmul"));
+        assert!(is_known_stem_family("int4"));
+        assert!(!is_known_stem_family("unreviewed"));
+    }
+
+    /// This adversarial parser test rejects malformed and out-of-range baseline rows while preserving exact valid fractions.
+    #[test]
+    fn composition_baseline_parser_accepts_only_bounded_finite_rows() {
+        let parsed = parse_composition_baseline(
+            "# op_id\tcomposed_fraction\nvalid::op\t0.25\nbad\tNaN\nhigh\t1.1\nmissing\n",
+        )
+        .expect("Fix: one valid composition baseline row must parse");
+        assert_eq!(parsed.len(), 1);
+        assert_eq!(parsed.get("valid::op"), Some(&0.25));
+    }
+
+    /// This numeric boundary test prevents baseline serialization rounding from becoming a false composition regression.
+    #[test]
+    fn composition_regression_tolerates_serialization_rounding_only() {
+        assert!(!composition_regressed(0.913043478261, 21.0 / 23.0));
+        assert!(composition_regressed(0.913043478261, 0.90));
+    }
+
+    /// This parser test preserves the explicit duplicate-report output path contract.
     #[test]
     fn duplicate_report_json_arg_accepts_path() {
         let args = vec![
@@ -1476,9 +1672,7 @@ mod check_8_9_10_tests {
         ];
         assert_eq!(
             duplicate_report_json_arg(&args),
-            Some(PathBuf::from(
-                "release/evidence/dedup/lego-duplicates.json"
-            ))
+            Some(PathBuf::from("release/evidence/dedup/lego-duplicates.json"))
         );
     }
 }

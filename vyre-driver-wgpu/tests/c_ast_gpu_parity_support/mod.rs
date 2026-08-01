@@ -9,8 +9,9 @@ use vyre::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_libs::parsing::c::lex::tokens::{
     TOK_ASSIGN, TOK_COLON, TOK_COMMA, TOK_IDENTIFIER, TOK_LBRACE, TOK_LBRACKET, TOK_LPAREN,
-    TOK_RBRACE, TOK_RBRACKET, TOK_RPAREN, TOK_SEMICOLON, TOK_TYPEDEF,
+    TOK_RBRACE, TOK_RBRACKET, TOK_RPAREN, TOK_SEMICOLON, TOK_TYPEDEF, TOK_VOID,
 };
+use vyre_libs::parsing::c::lower::C_AST_PG_SEMANTIC_NODE_STRIDE_U32;
 use vyre_libs::parsing::c::lower::{
     c_lower_ast_to_pg_nodes, c_lower_ast_to_pg_semantic_graph, reference_ast_to_pg_nodes,
 };
@@ -40,6 +41,22 @@ pub(crate) use gpu_pipeline_support::*;
 pub(crate) use row_buffer_support::*;
 pub(crate) use typedef_gpu_support::*;
 
+/// Build the shared `void f() { __builtin_unreachable(); }` parser fixture.
+pub(crate) fn fixture_builtin_unreachable() -> Fixture {
+    build_fixture(&[
+        FixtureToken::new("void", TOK_VOID),
+        FixtureToken::new("f", TOK_IDENTIFIER),
+        FixtureToken::new("(", TOK_LPAREN),
+        FixtureToken::new(")", TOK_RPAREN),
+        FixtureToken::new("{", TOK_LBRACE),
+        FixtureToken::new("__builtin_unreachable", TOK_IDENTIFIER),
+        FixtureToken::new("(", TOK_LPAREN),
+        FixtureToken::new(")", TOK_RPAREN),
+        FixtureToken::new(";", TOK_SEMICOLON),
+        FixtureToken::new("}", TOK_RBRACE),
+    ])
+}
+
 fn bytes(words: &[u32]) -> Vec<u8> {
     vyre_primitives::wire::pack_u32_slice(words)
 }
@@ -51,6 +68,24 @@ pub(crate) fn word_at(buf: &[u8], word: usize) -> u32 {
 
 pub(crate) fn node_count_from_vast(buf: &[u8]) -> u32 {
     u32::try_from(buf.len() / VAST_STRIDE_BYTES).unwrap_or_default()
+}
+
+pub(crate) fn assert_semantic_node(
+    nodes: &[u8],
+    index: usize,
+    kind: u32,
+    category: u32,
+    role: u32,
+) {
+    let field = |offset| {
+        word_at(
+            nodes,
+            index * C_AST_PG_SEMANTIC_NODE_STRIDE_U32 as usize + offset,
+        )
+    };
+    assert_eq!(field(0), kind, "kind[{index}]");
+    assert_eq!(field(6), category, "category[{index}]");
+    assert_eq!(field(7), role, "role[{index}]");
 }
 
 fn haystack_words(bytes: &[u8]) -> Vec<u8> {

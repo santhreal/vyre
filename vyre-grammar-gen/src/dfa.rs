@@ -136,12 +136,7 @@ impl DfaBuilder {
     /// Returns an error when `next_state` exceeds [`u16::MAX`]. The packed
     /// 16-bit transition encoding cannot represent more than 65535 states;
     /// callers must keep DFA state counts within that range.
-    pub fn continue_to(
-        &mut self,
-        state: u32,
-        class: u32,
-        next_state: u32,
-    ) -> Result<(), String> {
+    pub fn continue_to(&mut self, state: u32, class: u32, next_state: u32) -> Result<(), String> {
         let next_state_u16 = u16::try_from(next_state).map_err(|_| {
             format!(
                 "Fix: DFA next_state {next_state} exceeds u16::MAX ({}). \

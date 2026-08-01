@@ -6,19 +6,19 @@ mod common;
 mod case_defs;
 #[path = "generated_resident_cuda_reference_matrix/case_tables.rs"]
 mod case_tables;
+#[path = "generated_resident_cuda_reference_matrix/generated_f32.rs"]
+mod generated_f32;
 #[path = "generated_resident_cuda_reference_matrix/program_builders.rs"]
 mod program_builders;
 #[path = "generated_resident_cuda_reference_matrix/resident_reference.rs"]
 mod resident_reference;
-#[path = "generated_resident_cuda_reference_matrix/generated_f32.rs"]
-mod generated_f32;
 
+#[path = "generated_resident_cuda_reference_matrix/atomic_cast_contracts.rs"]
+mod atomic_cast_contracts;
 #[path = "generated_resident_cuda_reference_matrix/bool_contracts.rs"]
 mod bool_contracts;
 #[path = "generated_resident_cuda_reference_matrix/f32_contracts.rs"]
 mod f32_contracts;
-#[path = "generated_resident_cuda_reference_matrix/atomic_cast_contracts.rs"]
-mod atomic_cast_contracts;
 #[path = "generated_resident_cuda_reference_matrix/integer_contracts.rs"]
 mod integer_contracts;
 #[path = "generated_resident_cuda_reference_matrix/memory_contracts.rs"]

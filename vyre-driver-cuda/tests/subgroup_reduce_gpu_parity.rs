@@ -133,7 +133,7 @@ fn cuda_subgroup_mul_f32_broadcasts_full_product_to_every_lane() {
     // f32 product goes through the SAME shfl.idx XOR butterfly as the integer
     // product, but with a `mul.f32` combine (bitcast through b32 around the
     // shuffle). All factors are exact dyadic f32 values placed at scattered
-    // lanes, so the product (2*3*0.5*4 = 12.0) is exact and order-independent 
+    // lanes, so the product (2*3*0.5*4 = 12.0) is exact and order-independent
     // a reduce-to-lane-0 path would leave most lanes at the 1.0 fill.
     let mut input = vec![1.0_f32; LANES as usize];
     for (slot, factor) in [2.0_f32, 3.0, 0.5, 4.0].into_iter().enumerate() {

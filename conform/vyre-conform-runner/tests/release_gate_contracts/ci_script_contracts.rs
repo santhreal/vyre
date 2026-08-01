@@ -223,4 +223,3 @@ fn release_shell_scripts_use_shared_cargo_runner_selection() {
         );
     }
 }
-

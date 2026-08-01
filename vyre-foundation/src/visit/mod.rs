@@ -40,7 +40,8 @@ pub enum VisitOrder {
 }
 
 pub use expr::{
-    visit_expr, visit_postorder, visit_preorder, walk_expr_children_default, ExprVisitor,
+    visit_expr, visit_expr_buffer_accesses, visit_postorder, visit_preorder,
+    walk_expr_children_default, ExprBufferAccess, ExprVisitor,
 };
 pub use traits::{
     visit_node, visit_node_postorder, visit_node_preorder, walk_node_children_default, Evaluatable,

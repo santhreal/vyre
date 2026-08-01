@@ -1,9 +1,7 @@
 use super::*;
 
-/// Wrap the buf_len writer body in three nested Region nodes to mirror
-/// the shape `primitive_catalog::primitive_program` builds for
-/// `catalog::hash::fnv1a64::consumer_a/b`. If `arrayLength` works on
-/// the flat program but not on the deeply-wrapped one, the bug is in
+/// Wrap the buf_len writer body in three nested Region nodes. If `arrayLength`
+/// works on the flat program but not on the deeply wrapped one, the bug is in
 /// region inlining or pre-lowering rather than in the wgpu binding.
 fn deep_region_wrapped_buf_len_program() -> Program {
     let inner = vec![Node::if_then(
@@ -18,12 +16,12 @@ fn deep_region_wrapped_buf_len_program() -> Program {
     let outer = Node::Region {
         generator: Ident::from("vyre-primitives::test::buf_len_mid"),
         source_region: Some(GeneratorRef {
-            name: "vyre-libs::catalog::test::buf_len_outer".to_string(),
+            name: "vyre-libs::test::buf_len_outer".to_string(),
         }),
         body: Arc::new(vec![mid]),
     };
     let body = Node::Region {
-        generator: Ident::from("vyre-libs::catalog::test::buf_len_outer"),
+        generator: Ident::from("vyre-libs::test::buf_len_outer"),
         source_region: None,
         body: Arc::new(vec![outer]),
     };

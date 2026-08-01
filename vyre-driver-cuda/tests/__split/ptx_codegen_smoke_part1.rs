@@ -287,7 +287,7 @@ fn ptx_guards_unsigned_div_and_mod_by_zero() {
             "div",
             Expr::div(Expr::load("a", Expr::u32(0)), Expr::load("b", Expr::u32(0))),
             "div.u32",
-            "0xffffffff",
+            "4294967295",
         ),
         (
             "mod",

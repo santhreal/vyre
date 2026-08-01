@@ -2,7 +2,7 @@
 
 All notable changes to vyre are documented here. Follows Keep a Changelog.
 
-## [0.7.0]  -  2026-07-25
+## [0.7.0]  -  2026-07-30
 
 One release. The work that had been staged as 0.6.6 is folded in here: it could not
 ship as a patch, because making its release gate pass required canonicalizing
@@ -11,6 +11,60 @@ a published op.
 
 The only source edit an upgrade requires is the dataflow-import rename. See the
 migration table under "Removed".
+
+### Fixed: fusing a narrow synchronizing arm produced an intermittently wrong kernel (`vyre-foundation`)
+
+`fuse_programs` set the fused workgroup size to the axis-wise maximum over the
+arms and fused anyway. For an arm whose invocations are independent that is only
+a launch-size change. For an arm that synchronizes its workgroup or keeps state
+in workgroup memory it changes the meaning of the arm: such an arm guards its
+body for its own width, so under a wider workgroup the invocations with no work
+skip the guarded body and never reach the barrier the working invocations wait
+on. A workgroup barrier that is not reached by every invocation in the workgroup
+is undefined.
+
+Piping `sinkhorn_scale::consumer_b` (workgroup 256) into `scan_prefix_sum` at
+n=4 (workgroup 4, two workgroup buffers, five barriers) produced a kernel that
+returned the wrong final lane on 49 dispatches out of 500 of the same input:
+the prefix sums came back as `[4, 7, 17, 8]` instead of `[4, 7, 17, 19]`. Being
+intermittent, it read as flakiness rather than as unsound fusion.
+
+`fuse_programs` now refuses such a batch with the new
+`FusionError::WorkgroupGeometry`, naming the arm, both geometries, and what in
+the arm makes the widening unsafe. Arms whose invocations are independent are
+still widened, and arms that already agree on their workgroup still fuse even
+when both synchronize. If you hit the refusal, dispatch that arm separately.
+
+A fused program also keeps `non_composable_with_self` as the OR over its arms.
+It used to be reset to `false`, so a second round of fusion could place two
+copies of a scratch-carrying body in one kernel. The same loss is fixed in the
+decode-scan fusion pass, the streaming decode adapter, and the two scan
+programs that tag themselves with a region: all of them rebuilt through
+`Program::wrapped`, which constructs a NEW program and so starts the metadata
+fresh. Use `with_rewritten_buffers`, `with_rewritten_entry`,
+`with_rewritten_wrapped_entry` or `map_entry` to change part of a program.
+
+`vyre-foundation/tests/fusion_workgroup_geometry.rs` and
+`vyre-foundation/tests/fusion_composability_metadata.rs` pin both.
+
+### Fixed: the raw-byte C syntax parser under-counted tokens (`vyre-frontend-c`)
+
+Any source above two 1024-token blocks reported a token count that was too low,
+with no error. 4096, 8192 and 66560 semicolons all reported 2048 tokens; 2049
+reported 1025.
+
+Sparse token compaction runs a block-total stage, one 1024-lane workgroup per
+block, that writes each block's token count to `block_totals[block]`. That
+stage's only sized buffer is `block_totals`, one word per block, and its input
+arrives as a resident device blob whose length the dispatch grid inference cannot
+read. Inference therefore chose `ceil(num_blocks / 1024)`, which is one workgroup
+for every source under a million tokens. Block 0 computed its total and every
+later block kept the zero it was allocated with, so the scanned prefix that ranks
+tokens in the compact stage collapsed to `block_totals[0]`.
+
+Both block-total dispatches now state their grid instead of leaving it to be
+inferred. `vyre-frontend-c/tests/raw_syntax_multi_block_token_counts.rs` pins the
+exact count at each block boundary.
 
 ### Fixed: three rewrite passes reused result ids across bodies (`vyre-lower`)
 
@@ -433,6 +487,549 @@ downstream-consumer naming boundary and each carried its own exemption list, so
 - Planning, status, audit, and agent-handoff documents were being staged out of
   subdirectories that the root-only ignore patterns did not cover, including a 625KB
   backlog and a 909KB operator plan. The patterns now apply at every depth.
+
+### Changed: composition provenance and deduplication audits use canonical ownership
+
+Cat-A wrappers now use the foundation-owned `tag_program` operation. The helper
+preserves the primitive program metadata, keeps primitive generator ids as
+children, and records the Cat-A operation as their parent. INT4 quantization
+wrappers and predicate builders use this single path.
+
+The generated `vyre-libs::catalog::*::consumer_a` and `consumer_b` registrations
+have been removed. Primitive coverage now counts real composition callers only.
+The operation matrix contains 371 tracked rows: 206 library rows, 149 primitive
+rows, 9 intrinsic rows, 5 runtime rows, and 2 foundation IR rows.
+
+The similarity audits now classify operations by canonical implementation
+family. Source similarity parses Rust functions and methods with `syn`,
+normalizes local bindings, and retains semantic identifiers such as called
+operations, types, and constants.
+
+### Fixed: the PTX cache key recomputed the program digest on every dispatch (`vyre-driver-cuda`)
+
+`ptx_for_program_cached_with_key` derived its cache key from
+`lower_subgroup_reductions(program.clone(), caps)`. The normalized program
+digest that feeds that key is memoized on the program VALUE, and that value was
+created and dropped inside a single dispatch, so the memo's only writer was a
+temporary and the memo could never be read. A memo whose only writer is a
+temporary is a memo that cannot ever be read.
+
+Neither piece was wrong on its own, which is why reading either one could not
+find this. `Program::clone` forwards all six memos correctly, and the digest
+itself is a sound pure function of the program. The defect lived in the LIFETIME
+of the value the key was derived from: a caller's program stayed permanently
+cold because nothing ever computed its digest, so every dispatch cloned a cold
+program, computed the digest on the clone, and dropped it.
+
+The key is now derived from the caller's own program when the subgroup lowering
+pass is a no-op, which is the ordinary case. The pass is already fully
+copy-on-write internally: of its three returns, two hand the input straight back
+and only the third rebuilds the entry. Pointer equality on the shared `Arc`
+fields is therefore an O(1) witness that nothing was rewritten, and in that case
+the two programs are the same value differing only in which memos are warm, so
+the key receives byte-identical input. A program the pass does rewrite is still
+keyed on its lowered form, because keying it on the unlowered digest would file
+lowered PTX under the unlowered program's identity and serve a later dispatch a
+kernel containing subgroup reductions it never requested.
+
+Measured on an RTX 5090 with the `exatok` encode profile, 45 warm encodes per
+corpus shape over 19 distinct program shapes. The digest walk cost 79.0 ns per
+IR node (R-squared 0.907) and was 91.8 percent of the host PTX phase, making it
+the largest single host term on the encode path. Digest computations per encode
+fell from 6 to 0 on the `cjk` and `code` shapes, 4 to 0 on `prose`, and 3 to 0
+on `short_pretokens`. The residual per-node rate in that phase fell from 83.1 to
+4.0 ns per node, a factor of 21. Programs reach 12,410 IR nodes and 3.9 MB of
+PTX for one dispatch, so the cost of getting the memo lifetime wrong grew with
+the workload.
+
+Host allocations per dispatch fell about 16-fold on the `short_pretokens`
+fixture, from roughly 1,600 calls to roughly 100, deterministic across five
+consecutive runs. That is a counted, load-independent instrument separate from
+the phase probe and it corroborates the same change. Token ids are unaffected:
+the cache key receives identical bytes, and `exatok` parity, determinism, device
+parity and specials exactness gates all pass unchanged.
+
+### Fixed: the parallel DCE fixpoint exited a synchronizing loop unordered (`vyre-self-substrate`)
+
+The device DCE program's iteration body ended with an unconditional barrier and
+then an early exit: once a step added no bit, lane 0 recorded convergence and the
+invocation returned. That exit sat AFTER the body's last synchronizing node, so
+one invocation could take the back edge and write while a sibling had not yet
+reached the exit, and the sibling then left the kernel while the rest kept
+iterating, freezing the data it owned partway through. Nothing hangs, because a
+barrier does not count invocations that already returned, so the cost is
+ANSWERS rather than liveness and a single workgroup is enough to hit it.
+
+The shape was always there. It was not a hazard until now because a `Return`
+nested inside a loop used to be emitted as nothing by `vyre-emit-ptx`, and the
+program carried an explicit correctness argument resting on that: on device the
+loop ran its full iteration budget and a `converged` gate, not the `Return`, was
+what made the early exit real. Lowering a nested `Return` to a real branch turned
+that documented no-op into a live exit and made the argument false at the moment
+it landed, which is what surfaced the program to the V055 back-edge validator.
+
+The body now ends with an unconditional barrier AFTER the exit branch. That is
+safe here for a specific reason worth keeping: the exit condition reads a value
+the preceding barrier settles, so it is workgroup-uniform, every lane sees the
+same value, and the trailing barrier is reached by all lanes or by none, never by
+a subset. It stays at body level, since a barrier inside the convergence gate
+would desynchronize a workgroup whose lanes are allowed to read that flag stale.
+Cost is one extra barrier per non-converged iteration against a body that already
+costs two (INFERRED from the emitted node sequence, not timed).
+
+The stale emitter claim in that program's comment is corrected in place, because
+the file records that this reasoning had already misled three separate attempts,
+and a wrong mechanical note in the one comment written to prevent a fourth is how
+the fourth happens. V055 was not weakened. It still refuses any exit after a
+loop's last barrier, including provably uniform ones like this; teaching it to
+prove uniformity is real analysis and is deferred, with this program as the
+motivating example.
+
+Two suites now hold this shut, both host-only and GPU-free. In
+`vyre-self-substrate`, `dce_program_back_edge_contract` asserts the built program
+VALIDATES, which is the property that survives any future change to how a
+`Return` lowers, and four of its tests mutate the real program to require the
+refusal back: trailing barrier removed, barrier moved inside the convergence gate
+(the plausible wrong fix), exit moved past the barrier with the barrier count
+unchanged, and an unconditional exit after the barrier. That last one recorded a
+correction: the rule refuses a provably UNIFORM exit too, so its reach is any
+exit textually after the last barrier, not only a lane-dependent one (OBSERVED,
+from the test failing against the opposite expectation).
+
+In `vyre-primitives`, `loop_back_edge_audit` asks the question directly instead
+of waiting for a downstream symptom, since all four instances of this shape found
+so far were found because something else went red. It builds every shipped
+program whose file contains both a loop and a barrier and validates it on the
+host: thirteen programs at five iteration budgets each, all clean, so there is no
+fifth instance among them (a measured absence over that set, not a proof about
+the crate). Exactly four of the thirteen put a barrier inside a loop body and are
+governed by the rule at all. Two of those four end in an unconditional barrier
+and are exit-proof, meaning an exit added later stays ordered; the two density
+variants are merely exit-free, legal because they hold no exit. That gap is
+recorded rather than closed: an exit added there is refused loudly at validation,
+and closing it would cost a real barrier per iteration in a program with no
+defect to justify it.
+
+### Fixed: cold-start launch width stranded a third of every SM (`vyre-driver`)
+
+Blocks per compute unit is an integral division: a unit hosts whole workgroups
+only. On an RTX 5090 the per-SM budget is 1536 threads, so a 1024-wide group
+hosts exactly ONE block and 512 of every SM's 1536 thread slots are unreachable
+for the life of the launch. The cold-start estimator had no occupancy term. It
+scored candidates on tail waste and per-group overhead alone, which made 1024
+the outright winner for any element count that is a multiple of 1024, precisely
+where its idle-lane penalty vanishes. Every unmeasured tunable 1-D dispatch on
+this class of device therefore launched at two thirds occupancy by arithmetic,
+before any kernel ran.
+
+The cooperative consequence is larger than the occupancy one. A grid-sync
+program fits a single cooperative launch only while its grid stays inside the
+device's resident-thread ceiling, and that ceiling is a function of the width
+the tuner RESOLVES, not the width the program declares: 170 SMs x 1024 resident
+threads is 174,080 lanes at width 1024, against 170 x 1536 = 261,120 at any
+width dividing 1536 evenly. The bad width cut the cooperative ceiling by a third
+and pushed programs that should have run as one launch onto the host split
+route, turning one dispatch into many on a workload whose measured cost is
+already dominated by host-side launch preparation.
+
+Cold start now prefers the candidate maximizing resident threads per compute
+unit, breaking ties toward the wider group. On this device that selects 512: 3
+blocks per SM, 1536 resident threads, zero stranded slots, and the full 261,120
+lane ceiling. `VyreGridSyncAot` confirmed the selection against the hardware
+with `cuOccupancyMaxActiveBlocksPerMultiprocessor` on a real emitted kernel
+rather than by arithmetic.
+
+This is a residency rule and not a rule against 1024. Where the per-SM budget
+divides evenly by 1024, such as a 2048-thread SM, 1024 strands nothing, ties on
+residency, and the latency estimate still selects it.
+
+Three protections are pinned by test. Callers that pin geometry are unaffected:
+`workgroup_override` and `grid_override` keep their existing precedence, which
+is why `exatok`, which sets both, never saw this. Measured feedback still
+outranks the preference, so a real timing can select a width cold start would
+never propose. And a backend that reports no per-SM budget stays byte-identical
+to previous behavior: `LaunchGeometryLimits::max_threads_per_sm` of `0` means
+unreported, the residency methods answer `None` rather than a guessed `0`, and
+the candidate filter is inert, so wgpu selects exactly what it selected before.
+
+The residency division now has one definition in the workspace,
+`vyre_driver::validation::blocks_per_compute_unit`, which CUDA's cooperative
+preflight in `vyre-driver-cuda/src/occupancy.rs` also routes through. Two copies
+of this arithmetic had already drifted apart once. The shared function models
+the thread ceiling only and documents that a caller answering "does this
+DECLARED width fit" must additionally clamp by the device-reported block cap
+(`CU_DEVICE_ATTRIBUTE_MAX_BLOCKS_PER_MULTIPROCESSOR`, 24 on this device): at
+width 32 the thread arithmetic predicts 48 blocks and 1536 resident threads
+where the hardware delivers 24 and 768. Selecting the widest survivor never
+reaches that regime, and the 512 this now picks sits at 3 blocks per SM, well
+clear of the cap.
+
+BREAKING: `vyre_driver::validation::LaunchGeometryLimits` gains a public
+`max_threads_per_sm: u32` field. The struct is not `#[non_exhaustive]`, so every
+struct-literal construction site must add it. Use `0` for a backend that does
+not report a per-SM thread budget, which preserves prior behavior exactly.
+
+### Fixed: cooperative preflight admitted grids the driver refuses (`vyre-driver-cuda`)
+
+Two independent per-SM ceilings govern cooperative residency and
+`cooperative_thread_residency_block_limit` respected only one. It derived
+admissible blocks from the per-SM THREAD budget, `max_threads_per_sm /
+workgroup`, while hardware separately caps BLOCKS per SM. At narrow widths the
+block cap binds first: on an RTX 5090 reporting 24 blocks per SM, width 32 was
+admitted at 1536/32 = 48 blocks per SM and 8160 blocks device-wide against a real
+24 and 4080. The preflight answered "fits" and `cuLaunchCooperativeKernel` then
+refused the launch, which is exactly the predicate-versus-driver disagreement
+that giving the residency division one definition was meant to eliminate. It is
+reachable rather than theoretical, because grid-sync programs are exempt from
+launch-width tuning, so a declared 32 survives to launch.
+
+The limit now clamps by a probed `CU_DEVICE_ATTRIBUTE_MAX_BLOCKS_PER_MULTIPROCESSOR`.
+Widths of 64 and up are unchanged on this device: 1536/64 = 24 is exactly the
+cap, which makes 64 the narrowest width still reaching full occupancy and leaves
+it no margin. A driver that does not report the attribute stores `0`, which reads
+as unreported and applies no clamp, so behavior there is byte-identical to
+before. A negative value is treated as unreported too, rather than cast into a
+cap near four billion that would clamp nothing.
+
+Measured, not calculated: per-width occupancy came from
+`cuOccupancyMaxActiveBlocksPerMultiprocessor` on a real emitted vyre kernel at
+each candidate width (10 registers per thread, zero static shared memory, element
+count a multiple of every width so tail waste could not skew it). The table and
+its method are recorded in the `vyre-driver-cuda::occupancy` module documentation
+so the next reader finds measurements instead of re-deriving arithmetic: width 32
+gives 24 blocks per SM and 768 resident threads, widths 64 through 512 all reach
+1536, and width 1024 gives 1 block and 1024.
+
+### Changed: the cooperative grid-barrier release order is now unrepresentable to get wrong (`vyre-driver-cuda`)
+
+Four launch sites hand-wrote the same sequence: run the launches in a closure,
+release the lease, then propagate the launch error. The order is load-bearing and
+the reason is not local. `GridBarrierGuard` frees the gate on drop, including on
+unwind, so the gate can never be permanently stranded; the hazard is the
+opposite. Releasing through `Drop` instead of through the release path frees the
+gate while SKIPPING both the stream synchronize and the arrival audit. The next
+sequence then acquires the gate and zeroes `_vyre_grid_barrier` underneath a grid
+that may still be running, whose remaining barriers wait for a release target
+that can no longer be reached. That is a hang rather than an error, it reproduces
+only under cooperative launch, and the edits that cause it (hoisting `launched?`
+above the release, or deleting the closure so `?` returns directly) both compile
+and keep every non-cooperative test green.
+
+`GridBarrierLease::launch_then_release` now owns that order. It consumes the
+lease, so a call site cannot skip the release, and it captures the launch
+closure's error rather than letting it escape, so no error path can bypass the
+synchronize. `release_after_launch` is private to the module, so an open-coded
+release will not compile from another module. The release delegates to a small
+ordering function whose synchronize and audit steps are closures, which lets unit
+tests assert the gate is still HELD while the synchronize runs and freed only
+after the release returns, pinning the ordering rather than the end state.
+
+### Changed: the synthetic device profile no longer claims to be real hardware (`vyre-driver-cuda`)
+
+`blackwell_sm120_caps()` named "NVIDIA GeForce RTX 5090" and its module
+documentation called it a source of truth, while five of its fields disagreed
+with that machine and the three substantial ones all OVERSTATED it: 2048 threads
+per SM against a measured 1536, 256 KiB of shared memory per SM against 100 KiB,
+and 128 KiB per block against 48 KiB, the last being unreachable even with the
+99 KiB opt-in maximum. Every occupancy figure derived from it was therefore
+optimistic, and a number that reads as measured and is not is the defect class
+that also produced a test pinning a stale cooperative ceiling.
+
+The values are unchanged, deliberately. The roughly twenty tests that use it are
+correct arithmetic against a fixed envelope, and an estimator test needs a fixed
+envelope rather than a true one: a test pinning `2048 / 256 = 8` checks division,
+not any GPU, and rewriting those to chase real hardware would churn them again on
+the next device. So the fix is the name and the claims. It is now
+`synthetic_sm120_envelope`, its documentation states plainly that it is a test
+fixture whose values are not this machine's, names the specific divergences, and
+forbids deriving a hardware decision from it. Verified that no shipping path
+consumes it: every caller in the workspace is inside `#[cfg(test)]` or under
+`tests/`. It also gains a blocks-per-SM value, chosen so the cooperative clamp
+above is exercised without a CUDA context.
+
+BREAKING: `blackwell_sm120_caps`, `blackwell_sm120_caps_default` and
+`BLACKWELL_SM120_DEFAULT_MEMORY_BYTES` are renamed to `synthetic_sm120_envelope`,
+`synthetic_sm120_envelope_default` and `SYNTHETIC_SM120_DEFAULT_MEMORY_BYTES`.
+`CudaDeviceCaps` gains a public `max_blocks_per_sm: i32` field; the struct is not
+`#[non_exhaustive]`, so struct-literal construction sites must add it, and `0`
+means unreported.
+
+### Fixed: `Node::Return` was silently discarded instead of emitted or refused (`vyre-emit-ptx`)
+
+The PTX emitter handled `Node::Return` with a comment and no instruction.
+`finish_with_return` writes the single trailing `$L_exit:` / `ret;` at the end of
+the kernel, so a `Return` nested in an `If` or a loop emitted NOTHING and fell
+through, and the program kept running past its own exit. The branch target
+already existed and `Trap` already branched to it, so this was a missing match
+arm rather than a missing mechanism.
+
+A dropped control-flow node is a correctness defect, not a performance one. It
+happened to be survivable wherever the work after the exit was idempotent, which
+is why every correctness test in the tree passed while it was broken: the answers
+were right and only the work was wrong. A consumer whose loop body is NOT
+idempotent after its exit condition got a wrong answer from an exit the emitter
+quietly deleted, with nothing reporting it.
+
+A `Return` now lowers to `bra $L_exit`, and the emitter REFUSES the cases it
+cannot honor instead of dropping them. This half matters more than the branch. A
+`Return` taken by only SOME invocations lets those invocations leave while the
+rest continue, and the ones that left can never arrive at a later `bar.sync` or
+cooperative grid barrier, so the ones that stayed block forever. Trading an
+invisible slowdown for an invisible hang would not have been a fix, so the
+emitter proves the exit is uniform across the grid or refuses at compile time,
+naming the reason and the fix.
+
+Uniformity is proven, never assumed: values built from literals, buffer lengths,
+the subgroup size, and loads from global or constant memory at a uniform index
+qualify. Anything derived from an invocation id, a workgroup id (uniform within a
+CTA but not across the grid, and a whole CTA leaving early strands the others),
+a subgroup op, shared memory, or an atomic's returned value does not. A loop whose
+bounds are not uniform also counts as divergent, because invocations then leave it
+on different iterations even with no conditional present. Unproven is treated as
+varying, so the failure direction is a build error rather than a hang.
+
+`vyre-emit-ptx/tests/nested_return_branch.rs` pins both halves, including a
+control proving the asserted branch comes from the `Return` and not from the
+entry's predicated element-count guard, which also branches to `$L_exit`.
+
+### Added: `persistent_fixpoint_grid`, a grid-correct convergence loop (`vyre-primitives`)
+
+`fixpoint::persistent_fixpoint` drives convergence from an in-kernel
+`Node::Loop`. Lane 0 clears the single shared `changed` word once per
+iteration, ordered only by a `MemoryOrdering::SeqCst` barrier, which is
+workgroup scope, while every lane in every workgroup sets that same word with
+`atomic_or`, and each workgroup gates its own `Node::Return` on it.
+
+Above one workgroup nothing orders one group's clear against another group's
+set. The severe face is a lost set: the clear erases a flag another group had
+already raised, that group reads 0, returns early, and leaves its slice of the
+state unconverged with no error. For a caller whose convergence means "no work
+remains" that is a wrong answer, not merely wasted work. The mild face is a
+false verdict: a downstream GPU tokenizer measured correct state and a correct
+two-pass convergence with `changed` still reporting non-zero against a
+fifteen-pass budget, which is indistinguishable from a real cap-out.
+
+At ONE workgroup the same code is ordered and does not lose a set: the
+sequence is clear, barrier, sets, barrier, barrier, read, so the conflicting
+accesses to `changed[0]` are never concurrent and a CTA-scope fence is
+sufficient. An intermediate revision of this entry claimed the clear made the
+builder unsound at one workgroup as well, and that was wrong; it is corrected
+here because a consumer selects this builder for its single-group path and the
+claim would have implied a live exactness defect there.
+
+`fixpoint::persistent_fixpoint_grid` takes the same positional parameters,
+buffer names, bindings, and workgroup size, so selecting between the two is a
+`match` on group count. It replaces the in-kernel loop with `max_iterations`
+top-level waves separated by `MemoryOrdering::GridSync` barriers, the shape
+`persistent_bfs_grid_sync_parallel` already uses for the same reason. Each wave
+is five nodes: the caller's transfer body, a grid fence, the per-word compare
+and ping-pong, a grid fence, and `if changed[i] == 0 { Return }`.
+
+The early exit survives the grid barrier protocol because it is collective.
+`changed` carries one word per iteration and is NEVER cleared, so a set cannot
+be lost, and the word is read only after a grid fence, so every group computes
+the same verdict and the whole grid leaves together or none of it does. Do not
+collapse the per-iteration word back to one cleared word; that reintroduces the
+race and turns the return into a stranding hazard in a single edit.
+
+One ABI difference: `changed` is `max_iterations` words wide instead of 1 and
+the caller must supply it zero-filled. In exchange the array decodes the pass
+count exactly. `changed[i] == 1` iff wave `i` changed the state and the kernel
+leaves at the first zero, so iterations entered is the index of the first zero
+plus one, or `max_iterations` when no word is zero.
+
+`persistent_fixpoint_grid` also carries a cooperative-residency ceiling that
+`persistent_fixpoint` does not, because a `GridSync` lowers to a native
+cooperative launch that needs every block co-resident. A dispatch path that
+cannot provide it must refuse, naming the block count and the device limit;
+`VyreBackend::cooperative_grid_sync_fits` is the preflight and
+`VyreBackend::allows_host_grid_sync_split` says whether the kernel-split
+fallback is permitted at all. A silent reroute there is a correctness failure.
+
+`persistent_fixpoint` is unchanged: its emitted IR, signature, and first-zero-read
+pass semantics all stay as they were, because downstream pass-count bounds are
+denominated in them. Its module doc claimed convergence required `changed` to
+read zero on two consecutive iterations, which the code never did; that text was
+corrected to describe the first-zero-read exit it actually implements. The shared
+`[256, 1, 1]` geometry both builders emit is now the exported
+`PERSISTENT_FIXPOINT_WORKGROUP_SIZE`, so a caller derives its routing threshold
+from the declared geometry instead of a literal.
+
+`vyre-primitives/tests/persistent_fixpoint_grid_contracts.rs` pins all of it,
+including a differential test that runs both builders through the reference
+interpreter across four transfer bodies and every budget, and a probe that steps
+the workgroups back to front: the grid builder returns the same state and the
+same verdict in either order, while `persistent_fixpoint` at two workgroups
+reports `changed == 1` forward and `changed == 0` reversed for the same input,
+which is the race made deterministic.
+
+The same-location property is pinned structurally by
+`the_grid_builder_never_writes_changed_with_a_plain_store`, which asserts at
+four budgets that no `Node::Store` targets `changed` and that each wave `i`
+atomic-ors exactly word `i`, so the zero count means "all atomic" rather than
+"nothing written". It has to be a structural assertion on the emitted IR
+because the reference interpreter does not model L1 against L2 and cannot
+reproduce the hardware race, so a reintroduced clear would keep every
+value-level test green. The same test asserts that `persistent_fixpoint` still
+shows exactly its one plain clear, which proves the probe detects a plain
+store when one is present instead of matching nothing.
+
+The collective exit is honored on PTX, which was NOT true when this primitive
+was written. The emitter used to discard a nested `Node::Return`, so every
+emitted wave ran regardless of how early the grid converged; that is fixed in
+this same release (see the `vyre-emit-ptx` entry above) and a three-wave build
+now emits three unpredicated `bra $L_exit` instructions, one per wave. The
+`changed` decoding is unaffected either way, because a skipped wave and a wave
+that changed nothing both leave their word at 0.
+
+The exit saves LAUNCHES only under a native cooperative launch, which bounds
+that guarantee. `GridSync` lowers either to a cooperative grid barrier or to a
+kernel split, and under the split each wave is its own launch, so a
+`Node::Return` in segment N returns from that launch alone and cannot stop the
+host issuing segment N+1 (`vyre-driver/src/grid_sync.rs` dispatches every
+segment in order). A run converging at wave 2 of a 16-wave budget still issues
+all `2 * max_iterations + 1` segments. The ANSWER is unaffected on that path,
+since a converged wave recomputes the same `next`, sets no flag word, and
+copies idempotently, so only the saved work disappears and a device-side pass
+counter reads the full budget instead of the convergence depth, which looks
+like a cap-out and is not one. A downstream caller measured exactly that with
+byte-correct state and a correct `[1, 0, 0, ...]` flag buffer. Read convergence
+depth from `changed`, which is authoritative on both paths, never from a pass
+or launch count. Pinned by
+`the_split_path_launches_every_wave_because_return_is_per_segment`, which
+asserts the segment count and that the exits are spread across segments rather
+than concentrated in one that could short-circuit the host loop.
+
+A budget sweep from 2 to 256 confirmed that the IR, the pre-lowering optimizer,
+and the emitted PTX each preserve exactly one exit per wave at every budget, so
+no stage drops the exit at any particular wave count.
+
+This primitive also satisfies the emitter's new uniformity requirement by
+construction: `changed[i]` is read from global memory at a literal index, which
+is grid-uniform, and it is read after a grid fence, so every invocation computes
+the same verdict. An exit gated on anything per-invocation is refused at compile
+time rather than silently dropped.
+
+Both builders now document a caller requirement that was previously implicit:
+the transfer body must write EVERY word `w < words` of `next` on every
+iteration. Violating it is a wrong-answer defect that reports success, so
+nothing in the run looks wrong. The compare-and-copy step writes
+`current[w] = next[w]` for every `w`, not only the words the body touched, so
+a word the body never wrote overwrites `current[w]` with a stale `next`; the
+buffers then agree everywhere and the loop exits converged on corrupted state.
+Pinned by `a_transfer_body_that_skips_words_silently_corrupts_them`, which
+asserts the exact bytes both ways: state `[9, 0, 0, 0]` from seed
+`[9, 9, 9, 9]`, with `changed` reading `[1, 0, 0, 0]`, a converged verdict.
+The docs first claimed this shape would fail to converge instead; the test
+falsified that and both doc blocks were corrected to the measured behavior.
+
+### Changed: `persistent_fixpoint` clears its flag atomically (`vyre-primitives`)
+
+That clear was a plain non-atomic `Node::store` to a word every other write
+reaches through `atomic_or`. It was correct, because the barriers around it
+ordered the clear against the sets, but only for that reason, and the
+dependency is invisible at the call site: weaken or move one of those barriers
+and the program breaks without anything correctness-shaped being edited. This
+primitive already has a failure mode that reports converged while being wrong,
+so a write whose safety rests on an unstated ordering assumption is a poor
+thing to leave in it.
+
+The clear is now `Expr::atomic_exchange` writing 0 to the same location, so
+every write to `changed` in both builders is an atomic. In the emitted PTX the
+clear is an `atom.global.exch` instead of a plain `st.global.u32` against an
+`atom.global.or.b32` at the same address. Cost is one lane one operation per
+iteration. Values and pass counts are unchanged, which the existing
+convergence-equivalence and both-builders differential tests confirm, so
+callers denominated in this builder's pass counts are unaffected.
+
+This does NOT make the builder multi-workgroup safe. The race is about barrier
+SCOPE, not atomicity; above one workgroup use `persistent_fixpoint_grid`. The
+property is pinned by `neither_builder_writes_changed_with_a_plain_store`,
+which asserts no `Node::Store` targets `changed` in either builder and then
+points the same predicate at `next`, which IS written by plain stores, so a
+matcher that silently stopped matching could not make the test pass.
+
+### Added: `FRONTIER_TO_QUEUE_WORKGROUP_LANES` (`vyre-primitives`)
+
+`graph::csr_frontier_queue::frontier_to_queue` builds a deliberately
+single-workgroup scan, so its declared workgroup size, the stride its lanes walk
+`node_count` with, and the lane gate confining the scan to the first workgroup
+must agree. They were separate literals, which is the shape that lets a fixed
+workgroup declaration drift away from its lane gate and produce silent duplicate
+coverage above one workgroup. They are now one exported constant.
+
+### Fixed: a writable buffer declared without a count was mis-sized, and the CPU oracle accepted programs every real target rejected (`vyre-foundation`, `vyre-driver`, `vyre-driver-wgpu`)
+
+A writable `BufferDecl` declared without `.with_count(n)` produced either a
+zero-length buffer or a correctly sized buffer with a zeroed tail on the WGPU
+backend, while CUDA and the CPU reference both sized it from the declared byte
+range. `dynamic_element_count_from_bytes` and `output_binding_layout_parts` are
+now exported from `vyre-driver` so the WGPU backend derives the element count by
+that same shared rule instead of its own.
+
+The worse half was a certification hole. A buffer the backend allocates itself
+(`BufferDecl::output`, any `WriteOnly`, or a `pipeline_live_out` ReadWrite)
+declared without `.with_count(n)` has no host bytes to take its size from, so
+nothing can size it and the only correct answer is refusal. The CPU reference
+instead answered a countless `BufferDecl::output` with `Some([])` while CUDA and
+WGPU both refused it, and answered a countless `WriteOnly` with `Some([])` while
+CUDA refused, so a program could pass the oracle and then be rejected by every
+real target. `BufferDecl::require_static_readback_size` is now the single
+refusal, called from both the execution planner and `vyre-reference`, so the
+oracle refuses exactly what the backends refuse. It is driven by
+`is_backend_allocated_output()` rather than the narrower `is_output()`, which is
+what brings `WriteOnly` and `pipeline_live_out` under the same rule.
+
+Reference, CUDA and WGPU now return byte-identical output for a countless
+ReadWrite at every length from 1 to 4096, and all three refuse the
+un-inferable forms naming `.with_count(n)`.
+
+### Fixed: the CPU reference sentinel could fail open and return an empty result as success (`vyre-foundation`)
+
+`is_cpu_reference_sentinel` identifies an op whose CPU lowering is only the
+structured-reference sentinel, and that comparison sits in front of a refusal.
+It compared function addresses, and a function's address is not a unique
+identity: with more than one codegen unit the compiler may materialize a second
+copy or a local thunk, so `fn_addr_eq` compares two different addresses for the
+same function and answers `false`. The dispatcher then stopped refusing and
+INVOKED the sentinel, which clears the output and returns `Ok(())`, handing the
+caller an empty byte vector that looks like a successful CPU reference result.
+
+The identity is now the exported `SENTINEL_CPU_REF` static, which holds a single
+pointer resolved once, so a producer that stores it and a consumer that compares
+against it compare the same bits by construction.
+
+Two of this release's fixes share one shape, and it is worth naming as a class:
+a refusal degrading into an empty output returned as success. The
+countless-buffer defect above did it three ways (an empty readback, a zeroed
+tail, and a reference oracle answering `Some([])`), and the sentinel did it by
+invoking the very lowering it was meant to refuse. This class survives a test
+suite because the call reports `Ok` and the output has a plausible shape, so
+only an assertion on exact bytes catches it while a shape-only or `is_empty`
+check passes happily. A refusal that stops refusing does not throw, it succeeds,
+so a refusal path is covered only when the test asserts the refusal AND its text,
+never merely that the call returned, with a counted control beside it so a
+blanket rejection cannot pass as a fix either.
+
+Asserting a zero length is NOT sufficient, which is the trap in the obvious
+reading: a legitimately empty result is indistinguishable from this bug in
+isolation. Only a contrast discriminates, the same declaration returning 0 bytes
+for an empty seed and exactly 256 for a 256-byte seed, asserted together.
+
+### Added: `FusionWorkgroupGeometryError` (`vyre-foundation`)
+
+A fused launch takes the axis-wise maximum of its arms' workgroup sizes. That is
+harmless for an arm whose invocations are independent, and unsafe for an arm that
+synchronizes its workgroup or keeps state in workgroup memory: an arm written for
+4 invocations guards its body so the other 252 skip it, which makes the workgroup
+barrier non-uniform, and its workgroup buffers are sized for the narrow geometry.
+The observed symptom was an inclusive prefix scan built for 4 elements, fused
+behind a 256-wide elementwise arm, returning the wrong last lane on roughly one
+dispatch in ten.
+
+Fusion now refuses that pairing with a typed error naming the arm index, the
+geometry it was built for, the geometry the fused program would run it under,
+what makes the widening unsafe, and the fix.
 
 ## [0.6.5]  -  2026-07-13
 

@@ -348,6 +348,18 @@ fn copy_raw_bytes_into_vec(
     Ok(())
 }
 
+fn take_cached_allocation<T: Copy>(
+    free: &DashMap<usize, ArrayQueue<T>, BuildHasherDefault<FxHasher>>,
+    cached_bytes: &AtomicUsize,
+    bucket: usize,
+    context: &'static str,
+) -> Option<T> {
+    let queue = free.get(&bucket)?;
+    let allocation = queue.pop()?;
+    subtract_cached_bytes_or_repair(cached_bytes, bucket, context);
+    Some(allocation)
+}
+
 #[derive(Debug)]
 pub(crate) struct PinnedHostAllocationPool {
     free: DashMap<usize, ArrayQueue<usize>, BuildHasherDefault<FxHasher>>,
@@ -402,18 +414,12 @@ impl PinnedHostAllocationPool {
     }
 
     fn take_cached(&self, bucket: usize) -> Result<Option<usize>, BackendError> {
-        let Some(queue) = self.free.get(&bucket) else {
-            return Ok(None);
-        };
-        let Some(ptr) = queue.pop() else {
-            return Ok(None);
-        };
-        subtract_cached_bytes_or_repair(
+        Ok(take_cached_allocation(
+            &self.free,
             &self.cached_bytes,
             bucket,
             "CUDA pinned-host allocation-pool cached bytes",
-        );
-        Ok(Some(ptr))
+        ))
     }
 
     pub(crate) fn release(&self, allocation: PinnedHostAllocation) {
@@ -959,18 +965,12 @@ impl DeviceAllocationPool {
     }
 
     fn take_cached(&self, bucket: usize) -> Result<Option<u64>, BackendError> {
-        let Some(queue) = self.free.get(&bucket) else {
-            return Ok(None);
-        };
-        let Some(ptr) = queue.pop() else {
-            return Ok(None);
-        };
-        subtract_cached_bytes_or_repair(
+        Ok(take_cached_allocation(
+            &self.free,
             &self.cached_bytes,
             bucket,
             "CUDA allocation-pool cached device bytes",
-        );
-        Ok(Some(ptr))
+        ))
     }
 
     pub(crate) fn release(&self, allocation: DeviceAllocation) {

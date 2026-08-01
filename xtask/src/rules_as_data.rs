@@ -196,7 +196,10 @@ fn validate_entry(
         findings.push(finding(
             &entry.path,
             key,
-            format!("data file does not contain schema token `{}`", entry.schema_token),
+            format!(
+                "data file does not contain schema token `{}`",
+                entry.schema_token
+            ),
             "rules-as-data-schema-token-present",
         ));
     }
@@ -211,7 +214,10 @@ fn validate_entry(
         findings.push(finding(
             RULES_AS_DATA_MANIFEST_PATH,
             key,
-            format!("owner_lane `{}` is not declared in {OWNERSHIP_PATH}", entry.owner_lane),
+            format!(
+                "owner_lane `{}` is not declared in {OWNERSHIP_PATH}",
+                entry.owner_lane
+            ),
             "rules-as-data-owner-lane-declared",
         ));
     }
@@ -219,7 +225,10 @@ fn validate_entry(
         findings.push(finding(
             RULES_AS_DATA_MANIFEST_PATH,
             key,
-            format!("{} does not list `{}` as a shared source", COMMAND_MATRIX_PATH, entry.path),
+            format!(
+                "{} does not list `{}` as a shared source",
+                COMMAND_MATRIX_PATH, entry.path
+            ),
             "rules-as-data-command-matrix-source",
         ));
     }

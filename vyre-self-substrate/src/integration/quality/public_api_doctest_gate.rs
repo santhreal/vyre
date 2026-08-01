@@ -1,4 +1,5 @@
 //! Public API doctest drift validation.
+use crate::integration::require_text_evidence;
 
 /// One public documentation example.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -203,82 +204,92 @@ pub fn validate_public_api_docs_artifacts(
     vyre_readme_proof: &str,
     readme_proof: &str,
 ) -> Result<PublicApiDocsArtifactProof, PublicApiDoctestError> {
-    for (evidence, needle) in [
-        ("Vyre README exists", "\"exists\": true"),
-        ("Vyre no missing tokens", "\"missing_tokens\": []"),
-        ("Vyre zero blockers", "\"blockers\": []"),
-        // Derived from the crate version, which is the workspace version and therefore the
-        // release train's vyre version. The literal was pinned at 0.6.3 and would have had
-        // to be edited by hand on every release.
-        ("Vyre version token", version_token().as_str()),
-        ("Vyre crate token", "\"vyre\""),
-        ("CUDA token", "\"cuda\""),
-        ("WGPU token", "\"wgpu\""),
-        ("public Program token", "\"vyre::program\""),
-        ("cargo add vyre token", "\"cargo add vyre\""),
-        ("release evidence token", "\"release/evidence\""),
-    ] {
-        artifact_contains(vyre_readme_contracts, evidence, needle)?;
-    }
-    for (evidence, needle) in [
-        ("Dataflow consumer README exists", "\"exists\": true"),
-        (
-            "Dataflow consumer no missing tokens",
-            "\"missing_tokens\": []",
-        ),
-        ("Dataflow consumer zero blockers", "\"blockers\": []"),
-        ("Dataflow consumer version token", "\"0.1.0\""),
-        ("dataflow token", "\"dataflow\""),
-        ("SSA token", "\"ssa\""),
-        ("IFDS token", "\"ifds\""),
-        ("points-to token", "\"points-to\""),
-        ("serde evidence token", "\"serde_evidence\""),
-        (
-            "cargo add dataflow consumer token",
-            "\"cargo add dataflow-consumer\"",
-        ),
-    ] {
-        artifact_contains(readme_contracts, evidence, needle)?;
-    }
-    for (evidence, needle) in [
-        ("docs matrix schema", "\"schema_version\": 5"),
-        ("docs matrix blockers inventory", "\"blockers\""),
-        (
-            "curated proof docs preserved",
-            "\"curated_proof_docs_preserved\"",
-        ),
-        ("docs list", "\"docs\""),
-    ] {
-        artifact_contains(docs_matrix, evidence, needle)?;
-    }
-    for (evidence, needle) in [
-        ("Vyre README proof title", "# Vyre README proof"),
-        ("Vyre CUDA-first contract", "CUDA-first/WGPU-fallback"),
-        (
-            "Vyre evidence contract",
-            "concrete release evidence artifacts",
-        ),
-        ("Vyre example-block contract", "at least one example block"),
-    ] {
-        artifact_contains(vyre_readme_proof, evidence, needle)?;
-    }
-    for (evidence, needle) in [
-        (
-            "Dataflow consumer README proof title",
-            "# Dataflow consumer README proof",
-        ),
-        ("Dataflow consumer API surface contract", "0.1.0"),
-        (
-            "Dataflow consumer standalone API contract",
-            "standalone Dataflow consumer APIs",
-        ),
-        (
-            "Dataflow consumer serde evidence contract",
-            "serde_evidence",
-        ),
-    ] {
-        artifact_contains(readme_proof, evidence, needle)?;
-    }
+    require_text_evidence(
+        vyre_readme_contracts,
+        &[
+            ("Vyre README exists", "\"exists\": true"),
+            ("Vyre no missing tokens", "\"missing_tokens\": []"),
+            ("Vyre zero blockers", "\"blockers\": []"),
+            // Derived from the crate version, which is the workspace version and therefore the
+            // release train's vyre version. The literal was pinned at 0.6.3 and would have had
+            // to be edited by hand on every release.
+            ("Vyre version token", version_token().as_str()),
+            ("Vyre crate token", "\"vyre\""),
+            ("CUDA token", "\"cuda\""),
+            ("WGPU token", "\"wgpu\""),
+            ("public Program token", "\"vyre::program\""),
+            ("cargo add vyre token", "\"cargo add vyre\""),
+            ("release evidence token", "\"release/evidence\""),
+        ],
+        |evidence| PublicApiDoctestError::ArtifactMissingEvidence { evidence },
+    )?;
+    require_text_evidence(
+        readme_contracts,
+        &[
+            ("Dataflow consumer README exists", "\"exists\": true"),
+            (
+                "Dataflow consumer no missing tokens",
+                "\"missing_tokens\": []",
+            ),
+            ("Dataflow consumer zero blockers", "\"blockers\": []"),
+            ("Dataflow consumer version token", "\"0.1.0\""),
+            ("dataflow token", "\"dataflow\""),
+            ("SSA token", "\"ssa\""),
+            ("IFDS token", "\"ifds\""),
+            ("points-to token", "\"points-to\""),
+            ("serde evidence token", "\"serde_evidence\""),
+            (
+                "cargo add dataflow consumer token",
+                "\"cargo add dataflow-consumer\"",
+            ),
+        ],
+        |evidence| PublicApiDoctestError::ArtifactMissingEvidence { evidence },
+    )?;
+    require_text_evidence(
+        docs_matrix,
+        &[
+            ("docs matrix schema", "\"schema_version\": 5"),
+            ("docs matrix blockers inventory", "\"blockers\""),
+            (
+                "curated proof docs preserved",
+                "\"curated_proof_docs_preserved\"",
+            ),
+            ("docs list", "\"docs\""),
+        ],
+        |evidence| PublicApiDoctestError::ArtifactMissingEvidence { evidence },
+    )?;
+    require_text_evidence(
+        vyre_readme_proof,
+        &[
+            ("Vyre README proof title", "# Vyre README proof"),
+            ("Vyre CUDA-first contract", "CUDA-first/WGPU-fallback"),
+            (
+                "Vyre evidence contract",
+                "concrete release evidence artifacts",
+            ),
+            ("Vyre example-block contract", "at least one example block"),
+        ],
+        |evidence| PublicApiDoctestError::ArtifactMissingEvidence { evidence },
+    )?;
+    require_text_evidence(
+        readme_proof,
+        &[
+            (
+                "Dataflow consumer README proof title",
+                "# Dataflow consumer README proof",
+            ),
+            ("Dataflow consumer API surface contract", "0.1.0"),
+            (
+                "Dataflow consumer standalone API contract",
+                "standalone Dataflow consumer APIs",
+            ),
+            (
+                "Dataflow consumer serde evidence contract",
+                "serde_evidence",
+            ),
+        ],
+        |evidence| PublicApiDoctestError::ArtifactMissingEvidence { evidence },
+    )?;
 
     let vyre_example_count = artifact_number_field(vyre_readme_contracts, "example_count")?;
     let dataflow_example_count = artifact_number_field(readme_contracts, "example_count")?;
@@ -289,18 +300,6 @@ pub fn validate_public_api_docs_artifacts(
         vyre_example_count,
         dataflow_example_count,
     })
-}
-
-fn artifact_contains(
-    artifact: &str,
-    evidence: &'static str,
-    needle: &str,
-) -> Result<(), PublicApiDoctestError> {
-    if artifact.contains(needle) {
-        Ok(())
-    } else {
-        Err(PublicApiDoctestError::ArtifactMissingEvidence { evidence })
-    }
 }
 
 fn artifact_at_least(

@@ -15,18 +15,19 @@ mod semantic;
 mod types;
 
 use checks::check_markdown_evidence_path_ready;
-use paths::{manifest_path_from_args, read_text_bounded, resolve_manifest_path};
+use paths::{options_from_args, read_text_bounded, resolve_manifest_path};
 use semantic::run_semantic_requirement_checks;
-use types::EvidenceManifest;
+use types::{EvidenceManifest, GateMode};
 
 pub(crate) fn run(args: &[String]) {
-    let manifest_path = match manifest_path_from_args(args) {
-        Ok(path) => path,
+    let options = match options_from_args(args) {
+        Ok(options) => options,
         Err(message) => {
             eprintln!("{message}");
             std::process::exit(2);
         }
     };
+    let manifest_path = options.manifest_path;
 
     let manifest_text = match read_text_bounded(&manifest_path) {
         Ok(text) => text,
@@ -172,7 +173,7 @@ pub(crate) fn run(args: &[String]) {
                     )),
                 }
             }
-            run_semantic_requirement_checks(requirement, &base_dir, &mut failures);
+            run_semantic_requirement_checks(requirement, &base_dir, options.mode, &mut failures);
         }
     }
 
@@ -206,8 +207,12 @@ pub(crate) fn run(args: &[String]) {
     }
 
     if failures.is_empty() {
+        let scope = match options.mode {
+            GateMode::Final => "final launch",
+            GateMode::Prepublish => "prepublication",
+        };
         println!(
-            "vyre-release-gate: {} requirement(s) closed for Vyre {} / Weir {}",
+            "vyre-release-gate: {} requirement(s) closed for Vyre {} / Weir {} ({scope})",
             manifest.requirements.len(),
             manifest.release.vyre,
             manifest.release.weir

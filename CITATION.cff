@@ -6,7 +6,7 @@ authors:
   - family-names: 'Project'
     given-names: 'Santh'
 version: '0.7.0'
-date-released: '2026-07-25'
+date-released: '2026-07-30'
 license: 'MIT OR Apache-2.0'
 repository-code: 'https://github.com/santhreal/vyre'
 url: 'https://github.com/santhreal/vyre'

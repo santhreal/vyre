@@ -2,17 +2,10 @@
 //! Volume testing.volume - do NOT weaken to shape-only asserts.
 #![forbid(unsafe_code)]
 #![cfg(all(feature = "graph", feature = "cpu-parity"))]
+mod graph_sweep_support;
+use graph_sweep_support::{bitset_words, next_u32};
 
 use vyre_primitives::graph::scc_decompose;
-
-fn bitset_words(node_count: u32) -> usize {
-    vyre_primitives::bitset::bitset_words(node_count) as usize
-}
-
-fn next_u32(rng: &mut u64) -> u32 {
-    *rng = rng.wrapping_mul(6364136223846793005).wrapping_add(1);
-    (*rng >> 32) as u32
-}
 
 fn generated_scc_case(seed: u64) -> (u32, Vec<u32>, Vec<u32>, Vec<u32>, u32) {
     let mut rng = seed;

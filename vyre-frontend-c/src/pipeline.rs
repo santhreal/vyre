@@ -2,9 +2,11 @@
 //!
 //! This file wires stage modules and exposes public entry points. Stage duties live in one-purpose files under `pipeline/`.
 
+use std::cell::RefCell;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
+use std::thread::LocalKey;
 
 use vyre::ir::{Expr, Program};
 use vyre::{DispatchConfig, VyreBackend};
@@ -69,6 +71,19 @@ mod syntax_parse;
 mod token_materialize;
 mod translation_unit;
 mod vast_pg;
+
+fn with_thread_local_scratch<T, R>(
+    scratch: &'static LocalKey<RefCell<T>>,
+    reentry_error: &str,
+    use_scratch: impl FnOnce(&mut T) -> Result<R, String>,
+) -> Result<R, String> {
+    scratch.with(|scratch| {
+        let mut scratch = scratch
+            .try_borrow_mut()
+            .map_err(|_| reentry_error.to_string())?;
+        use_scratch(&mut scratch)
+    })
+}
 
 pub use parse_entry::{
     parse_c11_source, parse_c11_translation_unit, parse_c11_translation_unit_bytes,

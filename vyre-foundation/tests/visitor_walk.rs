@@ -8,6 +8,7 @@ use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::transform::visit::{
     collect_call_op_ids, referenced_buffers, walk_exprs, walk_nodes,
 };
+use vyre_foundation::visit::{visit_expr_buffer_accesses, ExprBufferAccess};
 
 fn sample_program() -> Program {
     Program::wrapped(
@@ -192,4 +193,45 @@ fn walk_nodes_visits_loop_body() {
         }
     });
     assert!(saw_barrier, "walk_nodes must descend into Loop body");
+}
+
+/// Buffer liveness consumers must retain declarations referenced only through
+/// length queries or whole-buffer call arguments.
+#[test]
+fn direct_buffer_accesses_include_metadata_and_whole_buffer_references() {
+    let expr = Expr::call(
+        "consume",
+        vec![
+            Expr::load("loaded", Expr::u32(0)),
+            Expr::buf_len("sized"),
+            Expr::buffer_ref("whole"),
+        ],
+    );
+    let mut accesses = Vec::new();
+
+    visit_expr_buffer_accesses(&expr, |access, buffer| {
+        accesses.push((access, buffer.to_string()));
+    });
+
+    assert_eq!(
+        accesses,
+        vec![
+            (ExprBufferAccess::Load, "loaded".to_string()),
+            (ExprBufferAccess::Load, "sized".to_string()),
+            (ExprBufferAccess::Load, "whole".to_string()),
+        ]
+    );
+}
+
+/// Expressions without a buffer dependency must not invent liveness edges.
+#[test]
+fn direct_buffer_accesses_ignore_scalar_only_expressions() {
+    let expr = Expr::add(Expr::u32(1), Expr::u32(2));
+    let mut accesses = Vec::new();
+
+    visit_expr_buffer_accesses(&expr, |access, buffer| {
+        accesses.push((access, buffer.to_string()));
+    });
+
+    assert!(accesses.is_empty());
 }

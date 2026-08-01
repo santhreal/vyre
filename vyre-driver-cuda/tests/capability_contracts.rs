@@ -2,7 +2,7 @@
 
 use vyre_driver::aot::emit_aot_target;
 use vyre_driver::pipeline::PipelineFeatureFlags;
-use vyre_driver::{BackendError, DispatchConfig};
+use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::{cuda_factory, CudaBackend, CudaDeviceCaps, CudaMegakernelDeviceKey};
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, MemoryOrdering, Node, Program};
 
@@ -247,8 +247,22 @@ fn preferred_dispatch_backend_is_cuda_not_cpu_or_wgpu_fallback() {
     );
 }
 
+/// The trait-level dispatch entry must refuse a missing native grid barrier.
+///
+/// This test used to also claim it proved the CUDA backend never hides GridSync
+/// behind a host-orchestrated split, by asserting `src/lib.rs` contains no
+/// `dispatch_with_grid_sync_split(` call. It never did contain one: the split
+/// routing lives in `src/backend/host_dispatch.rs`, so that half was green from the
+/// day it was written while the silent split it forbade ran on two dispatch entry
+/// points one file over. A guard aimed at a file the behavior cannot appear in
+/// proves nothing and reads as coverage, which is worse than no guard.
+///
+/// The real routing file is now checked by
+/// `grid_sync_split_policy_contracts::no_dispatch_entry_point_reroutes_a_missing_native_barrier_into_a_split`
+/// and `::every_split_call_site_is_reached_through_the_residency_predicate`. What
+/// remains here is the part that IS about `lib.rs`: the trait-level refusal.
 #[test]
-fn direct_cuda_backend_rejects_grid_sync_split_orchestration_internally() {
+fn trait_level_cuda_dispatch_refuses_grid_sync_without_native_lowering() {
     let source = include_str!("../src/lib.rs");
 
     assert!(
@@ -259,12 +273,31 @@ fn direct_cuda_backend_rejects_grid_sync_split_orchestration_internally() {
     assert!(
         !source.contains("dispatch_with_grid_sync_split(")
             && !source.contains("dispatch_with_grid_sync_split_timed("),
-        "Fix: direct CUDA backend must not hide GridSync behind host-orchestrated split dispatch; split routing must be explicit above CUDA."
+        "Fix: the trait impl in lib.rs must not route GridSync into a host split itself; the \
+         residency-driven split belongs to the inherent dispatch path in host_dispatch.rs, where \
+         it is gated on the preflight and preceded by the missing-barrier refusal."
     );
 }
 
+/// `compile_native` must ACCEPT `MemoryOrdering::GridSync`.
+///
+/// This test replaces one that pinned the opposite. The refusal was correct
+/// while only the borrowed-host launch route zeroed the module-scope
+/// `_vyre_grid_barrier` arrival counter: a compiled pipeline also reaches the
+/// resident launch routes through its persistent-handle entry points, and those
+/// routes did not zero the counter at all, so a reused compiled grid-sync
+/// pipeline could release a later launch's first barrier early and return wrong
+/// numbers with no error at all. Every launch route zeroes the counter now, so a
+/// refusal here is a regression that denies consumers the compiled path for the
+/// program class that gains most from planning once.
+///
+/// Scope: this asserts the capability decision only. That a compiled grid-sync
+/// pipeline actually synchronizes across reuse, across batch elements, on the
+/// resident route, and under concurrent dispatch is gated by
+/// `tests/compiled_grid_sync_pipeline_contracts.rs`, which checks absolute
+/// cross-block output values.
 #[test]
-fn cuda_native_compilation_rejects_grid_sync_before_ptx_emission() {
+fn cuda_native_compilation_accepts_grid_sync_with_native_cooperative_lowering() {
     let backend = cuda_factory()
         .expect("Fix: CUDA backend factory must succeed on the GPU-required test host.");
     let program = Program::wrapped(
@@ -278,24 +311,25 @@ fn cuda_native_compilation_rejects_grid_sync_before_ptx_emission() {
         ],
     );
 
-    match backend.compile_native(&program, &DispatchConfig::default()) {
-        Err(BackendError::UnsupportedFeature { name, backend }) => {
-            assert_eq!(
-                backend, "cuda",
-                "Fix: GridSync compile rejection must identify the CUDA backend."
-            );
-            assert!(
-                name.contains("cuda_native_grid_sync_lowering"),
-                "Fix: GridSync compile rejection must surface the missing native CUDA lowering, got: {name}"
-            );
-        }
-        Ok(_) => panic!(
-            "Fix: CUDA native compilation must not accept GridSync until native cooperative-grid barrier lowering exists."
-        ),
-        Err(other) => panic!(
-            "Fix: CUDA native compilation must reject GridSync as UnsupportedFeature before PTX emission, not {other:?}."
-        ),
-    }
+    let compiled = backend
+        .compile_native(&program, &DispatchConfig::default())
+        .unwrap_or_else(|error| {
+            panic!(
+                "Fix: CUDA compile_native must accept MemoryOrdering::GridSync now that every \
+                 launch route zeroes the module-scope _vyre_grid_barrier counter before each \
+                 cooperative launch. Got: {error}"
+            )
+        })
+        .expect(
+            "Fix: CUDA compile_native must return a real compiled pipeline for a grid-sync \
+             program, not None. None silently routes the caller back to per-dispatch planning \
+             instead of the compiled path it asked for.",
+        );
+    assert!(
+        compiled.id().contains("cuda"),
+        "Fix: the compiled grid-sync pipeline id must identify the CUDA backend, got `{}`.",
+        compiled.id()
+    );
 }
 
 #[test]

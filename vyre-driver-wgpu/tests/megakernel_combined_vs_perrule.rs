@@ -17,10 +17,12 @@
 //! Run: cargo test -p vyre-driver-wgpu --features megakernel-batch,wgpu \
 //!        --test megakernel_combined_vs_perrule -- --ignored --nocapture
 #![cfg(feature = "megakernel-batch")]
+mod megakernel_rule_support;
 
 use std::collections::BTreeSet;
 use std::time::Duration;
 
+use megakernel_rule_support::byte_finder_rule;
 use vyre_driver_wgpu::megakernel::{
     BatchDispatchConfig, BatchDispatcher, BatchFile, CombinedBatch, CombinedDispatcher, FileBatch,
     HitRecord,
@@ -37,14 +39,6 @@ const FILLER: u8 = 0x00;
 /// matches are the deliberately planted ones.
 fn catalog_bytes() -> Vec<u8> {
     (0..N_PATTERNS).map(|i| 0x80u8 + i as u8).collect()
-}
-
-/// 2-state unanchored DFA accepting at every `byte` occurrence.
-fn byte_finder_rule(rule_idx: u32, byte: u8) -> BatchRuleProgram {
-    let mut t = vec![0u32; 2 * 256];
-    t[byte as usize] = 1;
-    t[256 + byte as usize] = 1;
-    BatchRuleProgram::new(rule_idx, t, vec![0u32, 1u32], 2).expect("valid 2-state DFA")
 }
 
 /// One distinct planted offset per (byte, j): a uniform spread across the file,
@@ -157,7 +151,9 @@ fn combined_beats_per_rule_on_a_many_pattern_catalog() {
             let mut batch =
                 FileBatch::upload(backend.device_queue(), &files, N_PATTERNS, hit_capacity)
                     .expect("upload");
-            batch.set_segmentation(seg_len, 8).expect("set_segmentation");
+            batch
+                .set_segmentation(seg_len, 8)
+                .expect("set_segmentation");
             let mut hits: Vec<HitRecord> = Vec::new();
             let _ = dispatcher.dispatch_into(&batch, &rules, &mut hits);
             let mut best = Duration::from_secs(3600);

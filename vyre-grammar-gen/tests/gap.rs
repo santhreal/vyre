@@ -2,22 +2,17 @@
 //! future change must be deliberate.
 
 use vyre_grammar_gen::{
-    decode_dfa_from_bytes, decode_lr_from_bytes,
-    lex_c11_max_munch_kinds,
+    c11_lexer::{
+        TOK_ALIGNAS, TOK_ALIGNOF, TOK_ATOMIC, TOK_BOOL, TOK_BUILTIN_CONSTANT_P, TOK_COMMENT,
+        TOK_COMPLEX, TOK_GENERIC, TOK_GNU_ASM, TOK_GNU_ATTRIBUTE, TOK_GNU_EXTENSION,
+        TOK_GNU_TYPEOF, TOK_HASH, TOK_IDENTIFIER, TOK_IMAGINARY, TOK_INC, TOK_INTEGER,
+        TOK_NORETURN, TOK_PLUS, TOK_PREPROC, TOK_STATIC_ASSERT, TOK_THREAD_LOCAL, TOK_WHITESPACE,
+    },
+    decode_dfa_from_bytes, decode_lr_from_bytes, lex_c11_max_munch_kinds,
+    lr::Action,
     preprocess_c_host,
     wire::{PackedBlob, WireError},
     LrBuilder,
-    lr::Action,
-    c11_lexer::{
-        TOK_IDENTIFIER, TOK_WHITESPACE, TOK_COMMENT,
-        TOK_INTEGER, TOK_PREPROC, TOK_HASH,
-        TOK_ALIGNAS, TOK_ALIGNOF, TOK_ATOMIC,
-        TOK_BOOL, TOK_COMPLEX, TOK_GENERIC,
-        TOK_IMAGINARY, TOK_NORETURN, TOK_STATIC_ASSERT, TOK_THREAD_LOCAL,
-        TOK_GNU_ASM, TOK_GNU_ATTRIBUTE, TOK_GNU_TYPEOF, TOK_GNU_EXTENSION,
-        TOK_BUILTIN_CONSTANT_P,
-        TOK_INC, TOK_PLUS,
-    },
 };
 
 // ---------------------------------------------------------------------------
@@ -56,7 +51,10 @@ fn wire_version_2_is_unsupported() {
 #[test]
 fn magic_constant_is_pinned() {
     use vyre_grammar_gen::wire::MAGIC;
-    assert_eq!(MAGIC, *b"SGGC", "MAGIC changed - GPU consumers must be updated");
+    assert_eq!(
+        MAGIC, *b"SGGC",
+        "MAGIC changed - GPU consumers must be updated"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -66,13 +64,21 @@ fn magic_constant_is_pinned() {
 #[test]
 fn blob_kind_lexer_dfa_discriminant_pinned() {
     use vyre_grammar_gen::wire::BlobKind;
-    assert_eq!(BlobKind::LexerDfa as u16, 0, "LexerDfa discriminant changed");
+    assert_eq!(
+        BlobKind::LexerDfa as u16,
+        0,
+        "LexerDfa discriminant changed"
+    );
 }
 
 #[test]
 fn blob_kind_lr_tables_discriminant_pinned() {
     use vyre_grammar_gen::wire::BlobKind;
-    assert_eq!(BlobKind::LrTables as u16, 1, "LrTables discriminant changed");
+    assert_eq!(
+        BlobKind::LrTables as u16,
+        1,
+        "LrTables discriminant changed"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -231,7 +237,10 @@ fn gnu_extension_token_id_pinned() {
 
 #[test]
 fn builtin_constant_p_token_id_pinned() {
-    assert_eq!(TOK_BUILTIN_CONSTANT_P, 150, "TOK_BUILTIN_CONSTANT_P id changed");
+    assert_eq!(
+        TOK_BUILTIN_CONSTANT_P, 150,
+        "TOK_BUILTIN_CONSTANT_P id changed"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -280,8 +289,8 @@ fn lr_blob_with_odd_production_words_is_rejected() {
     // action: 1 word, goto: 1 word = 2 words = 8 bytes; add 1 extra u32 = odd residual
     let mut payload = Vec::<u8>::new();
     payload.extend_from_slice(&Action::Error.pack().to_le_bytes()); // action[0,0]
-    payload.extend_from_slice(&u32::MAX.to_le_bytes());             // goto[0,0]
-    payload.extend_from_slice(&0u32.to_le_bytes());                 // 1 extra word = odd residual
+    payload.extend_from_slice(&u32::MAX.to_le_bytes()); // goto[0,0]
+    payload.extend_from_slice(&0u32.to_le_bytes()); // 1 extra word = odd residual
 
     // Compute checksum
     let digest = blake3::hash(&payload);
@@ -314,7 +323,10 @@ fn lr_blob_with_odd_production_words_is_rejected() {
 fn if_nonzero_block_is_not_stripped() {
     let src = "#if 1\nkept\n#endif\n";
     let out = preprocess_c_host(src);
-    assert!(out.contains("kept"), "#if 1 block must be preserved: {out:?}");
+    assert!(
+        out.contains("kept"),
+        "#if 1 block must be preserved: {out:?}"
+    );
 }
 
 // ---------------------------------------------------------------------------

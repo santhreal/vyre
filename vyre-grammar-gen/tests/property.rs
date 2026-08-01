@@ -3,12 +3,12 @@
 use proptest::prelude::*;
 use vyre_grammar_gen::{
     decode_dfa_from_bytes, decode_lr_from_bytes,
+    dfa::{Action as DfaAction, Transition},
     kinds_blake3,
-    wire::{PackedBlob, WireError},
-    DfaBuilder, LrBuilder,
     lr::Action,
     validate_lr_table,
-    dfa::{Transition, Action as DfaAction},
+    wire::{PackedBlob, WireError},
+    DfaBuilder, LrBuilder,
 };
 
 // ---------------------------------------------------------------------------

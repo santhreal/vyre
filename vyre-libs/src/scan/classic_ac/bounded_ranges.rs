@@ -39,7 +39,7 @@ pub use prefilter::{
 /// [`pack_haystack_u32`](crate::scan::dispatch_io::pack_haystack_u32):
 /// each invocation `i` corresponds to byte position `i` of the
 /// **unpacked** haystack, but loads from the packed u32 buffer via
-/// [`load_packed_byte`].
+/// [`load_packed_byte_expr`](crate::scan::builders::load_packed_byte_expr).
 ///
 /// Buffer layout (bindings 0..7):
 ///

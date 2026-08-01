@@ -36,7 +36,7 @@ use vyre_foundation::match_result::Match;
 use vyre_primitives::matching::CompiledDfa;
 
 use crate::region::wrap_anonymous;
-use crate::scan::builders::{append_match, load_packed_byte};
+use crate::scan::builders::append_match;
 use crate::scan::regex_anchored_window::AnchoredWindowValidator;
 use crate::scan::regex_region_admission::{regex_admission_presence_words, region_of};
 
@@ -149,11 +149,6 @@ pub fn fused_region_evidence_program(
     max_pattern_len: u32,
     log2_max_regions: u32,
 ) -> Program {
-    let max_pattern_len = max_pattern_len.max(1);
-    let (load_step_byte, step_byte) = load_packed_byte(haystack, Expr::var("step"));
-
-    // For each pattern id the current DFA state accepts: presence bit (always),
-    // a position triple (if position_mask), an admission bit (if admission_mask).
     let presence_word = Expr::add(
         Expr::var("rs_base"),
         Expr::shr(Expr::var("pattern_id"), Expr::u32(5)),
@@ -175,7 +170,6 @@ pub fn fused_region_evidence_program(
                 "_vyre_presence_prev",
                 Expr::atomic_or(presence, presence_word.clone(), presence_bit.clone()),
             ),
-            // Positions for the designated subset.
             Node::if_then(
                 Expr::ne(
                     Expr::load(position_mask, Expr::var("pattern_id")),
@@ -189,7 +183,6 @@ pub fn fused_region_evidence_program(
                     Expr::add(Expr::var("step"), Expr::u32(1)),
                 )],
             ),
-            // Admission bits for the designated subset.
             Node::if_then(
                 Expr::ne(
                     Expr::load(admission_mask, Expr::var("pattern_id")),
@@ -197,142 +190,58 @@ pub fn fused_region_evidence_program(
                 ),
                 vec![Node::let_bind(
                     "_vyre_admission_prev",
-                    Expr::atomic_or(admission, presence_word.clone(), presence_bit.clone()),
+                    Expr::atomic_or(admission, presence_word, presence_bit),
                 )],
             ),
         ],
     );
-
-    let walk_step = vec![
-        load_step_byte,
-        Node::assign(
-            "state",
-            Expr::load(
-                transitions,
-                Expr::add(Expr::mul(Expr::var("state"), Expr::u32(256)), step_byte),
-            ),
-        ),
-        Node::let_bind("out_begin", Expr::load(output_offsets, Expr::var("state"))),
-        Node::let_bind(
-            "out_end",
-            Expr::load(output_offsets, Expr::add(Expr::var("state"), Expr::u32(1))),
-        ),
+    let walk_body = super::regex_region_admission::anchored_region_walk_body(
+        haystack,
+        transitions,
+        output_offsets,
+        region_starts,
+        region_base,
+        haystack_len,
+        presence_words,
+        max_pattern_len,
+        log2_max_regions,
         emit_loop,
-    ];
-
-    // region binary search (rs_lo converges to owning region), then rs_base.
-    let mut per_position = vec![
-        Node::let_bind("origin", Expr::var("i")),
-        Node::let_bind(
-            "rs_pos",
-            Expr::add(Expr::var("i"), Expr::load(region_base, Expr::u32(0))),
-        ),
-        Node::let_bind("rs_lo", Expr::u32(0)),
-        Node::let_bind(
-            "rs_hi",
-            Expr::sub(Expr::buf_len(region_starts), Expr::u32(1)),
-        ),
-        Node::loop_for(
-            "rs_step",
-            Expr::u32(0),
-            Expr::u32(log2_max_regions.max(1)),
-            vec![
-                Node::let_bind(
-                    "rs_mid",
-                    Expr::div(
-                        Expr::add(
-                            Expr::add(Expr::var("rs_lo"), Expr::var("rs_hi")),
-                            Expr::u32(1),
-                        ),
-                        Expr::u32(2),
-                    ),
-                ),
-                Node::let_bind(
-                    "rs_cond",
-                    Expr::le(
-                        Expr::load(region_starts, Expr::var("rs_mid")),
-                        Expr::var("rs_pos"),
-                    ),
-                ),
-                Node::assign(
-                    "rs_lo",
-                    Expr::select(
-                        Expr::var("rs_cond"),
-                        Expr::var("rs_mid"),
-                        Expr::var("rs_lo"),
-                    ),
-                ),
-                Node::assign(
-                    "rs_hi",
-                    Expr::select(
-                        Expr::var("rs_cond"),
-                        Expr::var("rs_hi"),
-                        Expr::sub(Expr::var("rs_mid"), Expr::u32(1)),
-                    ),
-                ),
-            ],
-        ),
-        Node::let_bind(
-            "rs_base",
-            Expr::mul(Expr::var("rs_lo"), Expr::u32(presence_words)),
-        ),
-        Node::let_bind("state", Expr::u32(0)),
-    ];
-    let uncapped_end = Expr::add(Expr::var("i"), Expr::u32(max_pattern_len));
-    let window_end = Expr::select(
-        Expr::lt(uncapped_end.clone(), Expr::load(haystack_len, Expr::u32(0))),
-        uncapped_end,
-        Expr::load(haystack_len, Expr::u32(0)),
     );
-    per_position.push(Node::let_bind("win_end", window_end));
-    per_position.push(Node::loop_for(
-        "step",
-        Expr::var("i"),
-        Expr::var("win_end"),
-        walk_step,
-    ));
-
-    let walk_body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(Expr::var("i"), Expr::load(haystack_len, Expr::u32(0))),
-            per_position,
-        ),
-    ];
-
+    let mut buffers = super::regex_region_admission::regex_region_scan_common_buffers(
+        haystack,
+        transitions,
+        output_offsets,
+        output_records,
+        region_starts,
+        region_base,
+        state_count,
+        output_records_len,
+        region_count,
+    );
+    buffers.extend([
+        BufferDecl::storage(position_mask, 6, BufferAccess::ReadOnly, DataType::U32)
+            .with_count(pattern_count.max(1)),
+        BufferDecl::storage(admission_mask, 7, BufferAccess::ReadOnly, DataType::U32)
+            .with_count(pattern_count.max(1)),
+        BufferDecl::storage(haystack_len, 8, BufferAccess::ReadOnly, DataType::U32).with_count(1),
+    ]);
     let region_bitmap_len = region_count.max(1).saturating_mul(presence_words);
+    buffers.extend([
+        BufferDecl::read_write(presence, FUSED_EVIDENCE_PRESENCE_BINDING, DataType::U32)
+            .with_count(region_bitmap_len),
+        BufferDecl::read_write(
+            match_count,
+            FUSED_EVIDENCE_MATCH_COUNT_BINDING,
+            DataType::U32,
+        )
+        .with_count(1),
+        BufferDecl::output(matches, FUSED_EVIDENCE_MATCHES_BINDING, DataType::U32)
+            .with_count(max_matches.saturating_mul(3)),
+        BufferDecl::read_write(admission, FUSED_EVIDENCE_ADMISSION_BINDING, DataType::U32)
+            .with_count(region_bitmap_len),
+    ]);
     Program::wrapped(
-        vec![
-            BufferDecl::storage(haystack, 0, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(transitions, 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(state_count.saturating_mul(256)),
-            BufferDecl::storage(output_offsets, 2, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(state_count.saturating_add(1)),
-            BufferDecl::storage(output_records, 3, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(output_records_len),
-            BufferDecl::storage(region_starts, 4, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(region_count.max(1)),
-            BufferDecl::storage(region_base, 5, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(1),
-            BufferDecl::storage(position_mask, 6, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(pattern_count.max(1)),
-            BufferDecl::storage(admission_mask, 7, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(pattern_count.max(1)),
-            BufferDecl::storage(haystack_len, 8, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(1),
-            BufferDecl::read_write(presence, FUSED_EVIDENCE_PRESENCE_BINDING, DataType::U32)
-                .with_count(region_bitmap_len),
-            BufferDecl::read_write(
-                match_count,
-                FUSED_EVIDENCE_MATCH_COUNT_BINDING,
-                DataType::U32,
-            )
-            .with_count(1),
-            BufferDecl::output(matches, FUSED_EVIDENCE_MATCHES_BINDING, DataType::U32)
-                .with_count(max_matches.saturating_mul(3)),
-            BufferDecl::read_write(admission, FUSED_EVIDENCE_ADMISSION_BINDING, DataType::U32)
-                .with_count(region_bitmap_len),
-        ],
+        buffers,
         [128, 1, 1],
         vec![wrap_anonymous(
             "vyre-libs::matching::fused_region_evidence",

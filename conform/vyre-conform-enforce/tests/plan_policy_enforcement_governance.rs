@@ -18,7 +18,10 @@ fn policy_enforcement_sources_are_registered_without_duplicating_existing_schema
         "JSON_SCHEMA_2020_12",
         "SOUFFLE_CC",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 
@@ -38,7 +41,10 @@ fn policy_rules_encode_completion_publication_dedup_and_dag_denials() {
         "deny-duplicate-authority-registries",
         "deny-unsequenced-plan-node",
     ] {
-        assert!(POLICY.contains(required), "policy rule registry must include {required}");
+        assert!(
+            POLICY.contains(required),
+            "policy rule registry must include {required}"
+        );
     }
 }
 
@@ -83,7 +89,10 @@ fn graph_queries_find_unowned_completion_private_and_stale_evidence_failures() {
         "find-private-boundary-leaks",
         "find-stale-dependent-artifacts",
     ] {
-        assert!(QUERIES.contains(required), "graph query audit registry must include {required}");
+        assert!(
+            QUERIES.contains(required),
+            "graph query audit registry must include {required}"
+        );
     }
 }
 

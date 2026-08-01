@@ -183,13 +183,13 @@ pub fn run(program: Program) -> Program {
         })
         .collect();
 
-    // VYRE_IR_HOTSPOTS audit: avoid the deep-clone of the entry
-    // Vec<Node>. When the Arc is unique (the common case  -  we own
-    // the only reference after `run()` returns) `try_unwrap` hands
-    // back the Vec<Node> directly. Only fall back to cloning when
-    // another Arc is still outstanding.
-    let entry = std::sync::Arc::try_unwrap(program.entry).unwrap_or_else(|arc| (*arc).clone());
-    Program::wrapped(new_buffers, program.workgroup_size, entry)
+    // Only the buffer table changes here, so replace only the buffer table.
+    // Going through `Program::wrapped` instead built a fresh program, which
+    // resets `entry_op_id` and `non_composable_with_self`: a self-exclusive
+    // body came out of this pass looking safe to duplicate. It also deep-cloned
+    // the buffer table and re-interned every name, which is what the
+    // hand-rolled `Arc::try_unwrap` here was working around.
+    program.with_rewritten_buffers(new_buffers)
 }
 
 /// Count decode-handoff candidate buffers in `program`  -  the

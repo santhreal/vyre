@@ -88,9 +88,9 @@ fn slot_may_be_written(body: &KernelBody, slot: u32) -> bool {
         | KernelOpKind::StoreShared
         | KernelOpKind::Atomic { .. }
         | KernelOpKind::AsyncStore { .. } => op.operands.first().copied() == Some(slot),
-        KernelOpKind::Call { .. }
-        | KernelOpKind::OpaqueExpr(..)
-        | KernelOpKind::OpaqueNode(..) => true,
+        KernelOpKind::Call { .. } | KernelOpKind::OpaqueExpr(..) | KernelOpKind::OpaqueNode(..) => {
+            true
+        }
         _ => false,
     }) || body
         .child_bodies
@@ -102,8 +102,8 @@ fn slot_may_be_written(body: &KernelBody, slot: u32) -> bool {
 mod tests {
     use super::*;
     use crate::{
-        BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelOp, LiteralValue,
-        OpaqueNodeData,
+        BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelOp,
+        LiteralValue, OpaqueNodeData,
     };
     use vyre_foundation::ir::DataType;
 
@@ -217,7 +217,7 @@ mod tests {
         // An OpaqueNode is a backend-defined escape hatch with no addressable
         // slot operand: it may write ANY global buffer, including this
         // read-only-DECLARED candidate. The pass cannot prove the slot stays
-        // read-only, so it must fail closed and NOT promote it to Constant 
+        // read-only, so it must fail closed and NOT promote it to Constant
         // promoting would let a backend serve stale constant-cached data after
         // the opaque op writes the buffer.
         let input = kernel(

@@ -688,13 +688,7 @@ pub fn build_canonical_delta_compact_program(expr_count: u32) -> Program {
 /// correlate node walk order with arena expr ids. The two functions
 /// must produce identical results for the let-level case; use this
 /// entry point when you have a dense `canonical` slice.
-pub fn apply_cse_canonicals(
-    program: &Program,
-    arena: &ExprArenaEncoding,
-    canonical: &[u32],
-) -> Program {
-    apply_cse_let_dedupe_with_lookup(program, arena, canonical)
-}
+pub use apply_cse_let_dedupe as apply_cse_canonicals;
 
 /// Apply a let-level CSE rewrite: when an entire `Node::Let { name,
 /// value: V }` has a value-Expr structurally equivalent to an earlier
@@ -843,8 +837,6 @@ impl<C: CanonicalLookup + ?Sized> LetDedupeWalker<'_, C> {
         rewritten
     }
 }
-
-
 
 #[cfg(test)]
 
@@ -1146,11 +1138,7 @@ mod tests {
         assert_eq!(entry_nodes.len(), 2, "program must still have 2 nodes");
         match &entry_nodes[1] {
             Node::Let { name, value } => {
-                assert_eq!(
-                    name.as_ref(),
-                    "b",
-                    "second let must remain named 'b'"
-                );
+                assert_eq!(name.as_ref(), "b", "second let must remain named 'b'");
                 assert_eq!(
                     value,
                     &Expr::Var(Ident::new(std::sync::Arc::from("a"))),

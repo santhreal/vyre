@@ -271,4 +271,3 @@ fn egraph_fixed_point_signature_readback_after_max_rounds_reads_only_signatures(
         .free_resident(resident.handle())
         .expect("Fix: CUDA e-graph resident image free failed.");
 }
-

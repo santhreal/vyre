@@ -31,7 +31,13 @@ fn inspect_optimization_family_manifest_semantics(
             "{evidence}: missing_required_families reports {missing_required} missing required optimization family/families"
         ));
     }
-    inspect_duplicate_optimization_family_rows(evidence, value, blockers);
+    crate::benchmark_evidence_semantics::append_duplicate_object_row_finding(
+        value,
+        "families",
+        "family",
+        &format!("{evidence}: duplicate optimization family rows"),
+        blockers,
+    );
     for family in families {
         let name = family
             .get("family")
@@ -79,22 +85,6 @@ fn inspect_optimization_family_manifest_semantics(
     }
 }
 
-fn inspect_duplicate_optimization_family_rows(
-    evidence: &str,
-    value: &serde_json::Value,
-    blockers: &mut Vec<String>,
-) {
-    let duplicates =
-        crate::benchmark_evidence_semantics::duplicate_nonblank_object_array_field_values(
-            value, "families", "family",
-        );
-    if !duplicates.is_empty() {
-        let duplicates = duplicates.into_iter().collect::<Vec<_>>().join(", ");
-        blockers.push(format!(
-            "{evidence}: duplicate optimization family rows: {duplicates}"
-        ));
-    }
-}
 
 fn inspect_optimization_case_manifest_semantics(
     evidence: &str,
@@ -160,7 +150,14 @@ fn inspect_optimization_case_manifest_semantics(
             entries.len()
         ));
     }
-    inspect_duplicate_optimization_case_entry_ids(evidence, value, blockers);
+    crate::benchmark_evidence_semantics::inspect_duplicate_object_rows(
+        evidence,
+        value,
+        "entries",
+        "id",
+        "optimization case entry ids",
+        blockers,
+    );
     for field in [
         "cases_with_child_bodies",
         "cases_with_bindings",
@@ -206,22 +203,6 @@ fn inspect_optimization_case_manifest_semantics(
     }
 }
 
-fn inspect_duplicate_optimization_case_entry_ids(
-    evidence: &str,
-    value: &serde_json::Value,
-    blockers: &mut Vec<String>,
-) {
-    let duplicates =
-        crate::benchmark_evidence_semantics::duplicate_nonblank_object_array_field_values(
-            value, "entries", "id",
-        );
-    if !duplicates.is_empty() {
-        let duplicates = duplicates.into_iter().collect::<Vec<_>>().join(", ");
-        blockers.push(format!(
-            "{evidence}: duplicate optimization case entry ids: {duplicates}"
-        ));
-    }
-}
 
 fn is_test_suite_evidence(evidence: &str) -> bool {
     [

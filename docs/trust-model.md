@@ -2,7 +2,7 @@
 
 vyre is built on a strict trust model: the value of the conformance system comes from the fact that no one party can game the verdict. This document describes who is trusted with what.
 
-See also: [CONTRIBUTING.md](CONTRIBUTING.md), [STABILITY.md](STABILITY.md), [ARCHITECTURE.md](ARCHITECTURE.md).
+See also: [CONTRIBUTING.md](../CONTRIBUTING.md), [semver-policy.md](semver-policy.md), [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ---
 

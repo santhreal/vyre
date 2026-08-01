@@ -505,7 +505,7 @@ mod tests {
                         Some(bracket_match_dispatch_grid(kinds.len() as u32, depth_words as u32)),
                         "Fix: bracket_pairs_via must dispatch the primitive with enough workgroups for its selected bracket matcher."
                     );
-                    // Model the real backend: return ALL writable buffers in binding order 
+                    // Model the real backend: return ALL writable buffers in binding order
                     // [stack(1, InputOutput), match_pairs(2, output)]. The consumer must decode the
                     // pairs from outputs[1], not outputs[0] (the stack scratch).
                     Ok(vec![

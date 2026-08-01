@@ -97,6 +97,7 @@ pub mod ir {
     };
     pub use crate::ir_inner::model::program::{
         BufferDecl, CacheLocality, LinearType, MemoryHints, MemoryKind, Program, ShapePredicate,
+        NORMALIZED_PROGRAM_CACHE_DIGEST_VERSION,
     };
     /// Per-Node-variant bit-position constants for `ProgramStats::node_kinds_present`.
     /// Compose with `ProgramStats::has_any_node_kind` for O(1) `analyze_impl` gates.
@@ -211,6 +212,8 @@ pub use runtime::perf;
 
 /// Host-side IR engine helpers (prefix arrays, token filters).
 pub mod engine;
+/// Deterministic field framing for content-addressed hashes.
+pub mod hashing;
 /// Legacy lower helpers (transition surface pending driver-tier extraction).
 pub mod lower;
 /// Pass-orchestration optimizer framework.

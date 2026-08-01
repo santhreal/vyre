@@ -19,7 +19,7 @@ use crate::builder::{check_tensors, BuildOptions};
 use crate::region::{wrap, wrap_child};
 use crate::tensor_ref::{TensorRef, TensorRefError};
 use vyre_primitives::nn::attention_stability::{
-    bounded_exp_arg, bounded_score, flush_tiny, positive_denominator,
+    bounded_exp_arg, bounded_score, direct_score_expr, flush_tiny, positive_denominator,
 };
 
 const OP_ID: &str = "vyre-libs::nn::attention";
@@ -57,20 +57,6 @@ fn attention_score_nodes(q: &str, k: &str, d: u32, scale_expr: Expr) -> Vec<Node
             bounded_score(Expr::mul(Expr::var("dot_val"), scale_expr)),
         ),
     ]
-}
-
-fn direct_score_expr(q: &str, k: &str, row: u32, col: u32, d: u32, scale_expr: Expr) -> Expr {
-    let mut dot = Expr::f32(0.0);
-    for k_idx in 0..d {
-        dot = Expr::add(
-            dot,
-            Expr::mul(
-                Expr::load(q, Expr::u32(row * d + k_idx)),
-                Expr::load(k, Expr::u32(col * d + k_idx)),
-            ),
-        );
-    }
-    bounded_score(Expr::mul(dot, scale_expr))
 }
 
 pub(crate) fn direct_attention_program(

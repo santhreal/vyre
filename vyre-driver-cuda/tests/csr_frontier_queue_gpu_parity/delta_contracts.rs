@@ -358,4 +358,3 @@ fn cuda_resident_strided_queue_delta_matches_cpu_on_skewed_rows_and_pressure() {
         }
     }
 }
-

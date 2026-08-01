@@ -1,5 +1,5 @@
 use crate::PipelineError;
-use vyre_driver::backend::{OutputBuffers, Resource};
+use vyre_driver::backend::{OutputBuffers, ResidentHandle, Resource};
 
 /// Per-dispatch host-side runtime instrumentation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -201,13 +201,13 @@ impl MegakernelResidentBatchScratch {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MegakernelResidentHandles {
     /// Resident control-buffer handle.
-    pub control: u64,
+    pub control: ResidentHandle,
     /// Resident ring-buffer handle.
-    pub ring: u64,
+    pub ring: ResidentHandle,
     /// Resident debug-log buffer handle.
-    pub debug_log: u64,
+    pub debug_log: ResidentHandle,
     /// Resident IO-queue buffer handle.
-    pub io_queue: u64,
+    pub io_queue: ResidentHandle,
 }
 
 impl MegakernelResidentHandles {
@@ -215,8 +215,17 @@ impl MegakernelResidentHandles {
     pub const ABI_RESOURCE_COUNT: usize = 4;
 
     /// Construct resident handles in megakernel ABI binding order.
+    ///
+    /// Each handle names the backend instance that allocated it, so a set
+    /// held across backend instances is refused at dispatch rather than
+    /// resolved against whatever that instance has under the same local ids.
     #[must_use]
-    pub const fn new(control: u64, ring: u64, debug_log: u64, io_queue: u64) -> Self {
+    pub const fn new(
+        control: ResidentHandle,
+        ring: ResidentHandle,
+        debug_log: ResidentHandle,
+        io_queue: ResidentHandle,
+    ) -> Self {
         Self {
             control,
             ring,

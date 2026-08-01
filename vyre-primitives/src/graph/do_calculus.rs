@@ -435,7 +435,7 @@ fn checked_square_cells(n: u32, op_id: &'static str) -> Result<u32, String> {
 }
 
 /// Emit a Program for do-calculus **Rule 3 subgraph extraction**: the GPU/IR
-/// counterpart of [`do_rule3_subgraph_cpu`]. Restricts the `n × n` adjacency
+/// counterpart of `do_rule3_subgraph_cpu` (requires the `cpu-parity` feature). Restricts the `n × n` adjacency
 /// matrix to the nodes whose `keep_mask` bit is set, laying the result out as a
 /// dense `k × k` block (`k = popcount(keep_mask)`), and emits the
 /// kept-index → original-index map plus the scalar `k`.

@@ -150,8 +150,10 @@ fn dispatch_probe_wgsl(
     output_words: u32,
 ) -> Result<Vec<u8>, vyre_driver::BackendError> {
     let (device, queue) = &**device_queue;
-    let input_size = WGPU_NUMERIC.usize_to_u64(input.len().max(F32_BYTES), "parity probe input size")?;
-    let output_size_u64 = WGPU_NUMERIC.usize_to_u64(output_size.max(F32_BYTES), "parity probe output size")?;
+    let input_size =
+        WGPU_NUMERIC.usize_to_u64(input.len().max(F32_BYTES), "parity probe input size")?;
+    let output_size_u64 =
+        WGPU_NUMERIC.usize_to_u64(output_size.max(F32_BYTES), "parity probe output size")?;
     let input_buffer = device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("vyre parity probe input"),
         size: input_size,

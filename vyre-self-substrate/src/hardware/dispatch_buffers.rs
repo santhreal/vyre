@@ -57,10 +57,7 @@ pub(crate) fn checked_product_count(
 /// Dispatcher input-buffer encoding now matches every other GPU upload
 /// path's throughput floor instead of running its own scalar `extend`
 /// loop.
-#[must_use]
-pub(crate) fn u32_slice_to_le_bytes(values: &[u32]) -> Vec<u8> {
-    vyre_primitives::wire::pack_u32_slice(values)
-}
+pub(crate) use vyre_primitives::wire::pack_u32_slice as u32_slice_to_le_bytes;
 
 /// Ensure a dispatcher input-vector shell has exactly `count` reusable slots.
 ///

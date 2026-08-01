@@ -1,5 +1,8 @@
 use crate::api::case::BenchError;
 use crate::api::suite::SuiteKind;
+use crate::cases::skewed_graph::{
+    mix32, skewed_degree as shared_skewed_degree, skewed_target, sparse_queue_capacity,
+};
 use vyre_primitives::bitset::frontier::materialize_frontier_queue_exact_count_into;
 
 pub(super) const CSR_NODE_COUNT: u32 = 1_048_576;
@@ -119,73 +122,30 @@ pub(super) fn build_skewed_csr_fixture(node_count: u32) -> Result<SkewedCsrFixtu
 }
 
 pub(super) fn skewed_csr_inputs(fixture: &SkewedCsrFixture) -> Vec<Vec<u8>> {
-    vec![
-        vyre_primitives::wire::pack_u32_slice(&fixture.nodes),
-        vyre_primitives::wire::pack_u32_slice(&fixture.edge_offsets),
-        vyre_primitives::wire::pack_u32_slice(&fixture.edge_targets),
-        vyre_primitives::wire::pack_u32_slice(&fixture.edge_kind_mask),
-        vyre_primitives::wire::pack_u32_slice(&fixture.node_tags),
-        vyre_primitives::wire::pack_u32_slice(&fixture.frontier_in),
-        vyre_primitives::wire::pack_u32_slice(&fixture.frontier_out_seed),
-    ]
+    crate::cases::byte_pack::u32_input_bytes([
+        &fixture.nodes,
+        &fixture.edge_offsets,
+        &fixture.edge_targets,
+        &fixture.edge_kind_mask,
+        &fixture.node_tags,
+        &fixture.frontier_in,
+        &fixture.frontier_out_seed,
+    ])
 }
 
 pub(super) fn skewed_csr_queue_capacity(active_sources: u64) -> Result<u32, BenchError> {
-    if active_sources == 0 {
-        return Err(BenchError::EnvironmentInvalid(
-            "skewed CSR queue benchmark requires at least one active source. Fix: seed the frontier before queue sizing."
-                .to_string(),
-        ));
-    }
-    u32::try_from(active_sources).map_err(|_| {
-        BenchError::EnvironmentInvalid(format!(
-            "skewed CSR active source count {active_sources} exceeds u32 indexing. Fix: split the frontier."
-        ))
-    })
+    sparse_queue_capacity(
+        active_sources,
+        "skewed CSR queue benchmark requires at least one active source. Fix: seed the frontier before queue sizing.",
+        "skewed CSR",
+    )
 }
 
-pub(super) fn skewed_csr_queue_inputs(
-    fixture: &SkewedCsrFixture,
-    queue_capacity: u32,
-    high_degree_queue_capacity: u32,
-) -> Result<Vec<Vec<u8>>, BenchError> {
-    if u64::from(queue_capacity) < fixture.stats.active_sources {
-        return Err(BenchError::EnvironmentInvalid(format!(
-            "skewed CSR queue inputs require queue_capacity >= active_sources, got queue_capacity={queue_capacity} active_sources={}. Fix: size the queue from the packed frontier popcount.",
-            fixture.stats.active_sources
-        )));
-    }
-    if high_degree_queue_capacity > queue_capacity {
-        return Err(BenchError::EnvironmentInvalid(format!(
-            "skewed CSR split queue inputs require high_degree_queue_capacity <= queue_capacity, got high_degree_queue_capacity={high_degree_queue_capacity} queue_capacity={queue_capacity}. Fix: derive high-degree capacity from active sources."
-        )));
-    }
-    let queue_bytes = (queue_capacity as usize)
-        .checked_mul(std::mem::size_of::<u32>())
-        .ok_or_else(|| {
-            BenchError::EnvironmentInvalid(format!(
-                "skewed CSR queue_capacity={queue_capacity} overflows host buffer sizing. Fix: split the frontier queue."
-            ))
-        })?;
-    let high_queue_bytes = (high_degree_queue_capacity as usize)
-        .checked_mul(std::mem::size_of::<u32>())
-        .ok_or_else(|| {
-            BenchError::EnvironmentInvalid(format!(
-                "skewed CSR high_degree_queue_capacity={high_degree_queue_capacity} overflows host buffer sizing. Fix: split the high-degree queue."
-            ))
-        })?;
-    Ok(vec![
-        vyre_primitives::wire::pack_u32_slice(&fixture.frontier_in),
-        vec![0_u8; queue_bytes],
-        vyre_primitives::wire::pack_u32_slice(&[0]),
-        vyre_primitives::wire::pack_u32_slice(&fixture.edge_offsets),
-        vyre_primitives::wire::pack_u32_slice(&fixture.edge_targets),
-        vyre_primitives::wire::pack_u32_slice(&fixture.edge_kind_mask),
-        vyre_primitives::wire::pack_u32_slice(&fixture.frontier_out_seed),
-        vec![0_u8; high_queue_bytes],
-        vyre_primitives::wire::pack_u32_slice(&[0]),
-    ])
-}
+crate::cases::queue_stage::define_queue_input_builder!(
+    pub(super) skewed_csr_queue_inputs,
+    SkewedCsrFixture,
+    "skewed CSR queue inputs"
+);
 
 pub(super) fn skewed_csr_active_high_degree_sources(
     fixture: &SkewedCsrFixture,
@@ -249,45 +209,18 @@ pub(super) fn skewed_csr_queue_closure_inputs(
     fixture: &SkewedCsrFixture,
     queue_capacity: u32,
 ) -> Result<Vec<Vec<u8>>, BenchError> {
-    if u64::from(queue_capacity) < fixture.stats.active_sources {
-        return Err(BenchError::EnvironmentInvalid(format!(
-            "skewed CSR queue closure requires queue_capacity >= active_sources, got capacity={queue_capacity} active_sources={}. Fix: size ping-pong queues for the seed frontier.",
-            fixture.stats.active_sources
-        )));
-    }
-    let seed_queue_len = u32::try_from(fixture.stats.active_sources).map_err(|_| {
-        BenchError::EnvironmentInvalid(format!(
-            "skewed CSR queue closure active source count {} exceeds u32 indexing. Fix: split the seed queue.",
-            fixture.stats.active_sources
-        ))
-    })?;
-    let queue_bytes = (queue_capacity as usize)
-        .checked_mul(std::mem::size_of::<u32>())
-        .ok_or_else(|| {
-            BenchError::EnvironmentInvalid(format!(
-                "skewed CSR queue closure queue_capacity={queue_capacity} overflows host buffer sizing. Fix: split the frontier queue."
-            ))
-        })?;
-    let seed_frontier = vyre_primitives::wire::pack_u32_slice(&fixture.frontier_in);
-    let seed_queue = materialize_skewed_csr_active_queue(
-        fixture,
-        seed_queue_len as usize,
-        "skewed CSR queue closure seed",
-    )?;
-
-    Ok(vec![
-        seed_frontier.clone(),
-        vyre_primitives::wire::pack_u32_slice(&seed_queue),
-        vyre_primitives::wire::pack_u32_slice(&[seed_queue_len]),
-        vec![0_u8; queue_bytes],
-        vyre_primitives::wire::pack_u32_slice(&[0]),
-        vec![0_u8; queue_bytes],
-        vyre_primitives::wire::pack_u32_slice(&[0]),
-        vyre_primitives::wire::pack_u32_slice(&fixture.edge_offsets),
-        vyre_primitives::wire::pack_u32_slice(&fixture.edge_targets),
-        vyre_primitives::wire::pack_u32_slice(&fixture.edge_kind_mask),
-        seed_frontier,
-    ])
+    crate::cases::queue_stage::build_queue_closure_inputs(
+        &fixture.frontier_in,
+        &fixture.edge_offsets,
+        &fixture.edge_targets,
+        &fixture.edge_kind_mask,
+        fixture.stats.active_sources,
+        queue_capacity,
+        "skewed CSR",
+        |capacity| {
+            materialize_skewed_csr_active_queue(fixture, capacity, "skewed CSR queue closure seed")
+        },
+    )
 }
 
 pub(super) fn skewed_csr_cpu_oracle(fixture: &SkewedCsrFixture) -> SkewedCsrOracle {
@@ -391,29 +324,7 @@ pub(super) fn skewed_csr_queue_closure_oracle(
 }
 
 fn skewed_degree(src: u32) -> u32 {
-    if src % 4096 == 0 {
-        UGLY_HUB_DEGREE
-    } else if src % 257 == 0 {
-        24
-    } else if src % 31 == 0 {
-        8
-    } else if src % 7 == 0 {
-        3
-    } else {
-        1
-    }
-}
-
-fn skewed_target(node_count: u32, src: u32, edge: u32) -> u32 {
-    let mask = node_count - 1;
-    match edge & 7 {
-        0 => src.wrapping_add((edge + 1).wrapping_mul(17)) & mask,
-        1 => src.wrapping_sub((edge + 3).wrapping_mul(11)) & mask,
-        _ => {
-            let salt = edge.wrapping_mul(0x9E37_79B9).rotate_left((edge & 15) + 1);
-            mix32(src ^ salt ^ src.rotate_left(edge & 15)) & mask
-        }
-    }
+    shared_skewed_degree(src, UGLY_HUB_DEGREE)
 }
 
 fn skewed_edge_kind(src: u32, edge: u32) -> u32 {
@@ -431,12 +342,4 @@ fn skewed_node_tag(src: u32) -> u32 {
 
 fn source_is_active(src: u32) -> bool {
     src % 97 == 0 || src % 4096 == 0 || (mix32(src ^ 0xD1B5_4A32) & 0x3FF) == 0
-}
-
-fn mix32(mut value: u32) -> u32 {
-    value ^= value >> 16;
-    value = value.wrapping_mul(0x7FEB_352D);
-    value ^= value >> 15;
-    value = value.wrapping_mul(0x846C_A68B);
-    value ^ (value >> 16)
 }

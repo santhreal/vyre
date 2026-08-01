@@ -15,6 +15,32 @@ const OUTPUT_PROJECTION_OP_ID: &str = "vyre-libs::nn::mlp_4x_leaky_sq::output_pr
 
 /// Build MLP with fused leaky_relu_sq activation (F32).
 ///
+/// This is a cooperative SINGLE-WORKGROUP kernel. Both projections walk their
+/// extent in fixed [`MLP_WORKGROUP`]-wide strides off the GLOBAL invocation id,
+/// so the work is confined to the first workgroup and every lane at or above
+/// that width retires without touching memory. Coverage stays complete for any
+/// `model_dim` and `hidden_dim`, because the strided walk runs
+/// `ceil(extent / MLP_WORKGROUP)` iterations.
+///
+/// The gate is load-bearing and its absence is a silent wrong answer, not a
+/// crash. The span is not the caller's to choose: `HIDDEN_SCRATCH` is a
+/// workgroup binding, which makes the program shared, and a shared program is
+/// dispatched across the WIDEST NON-SHARED binding (`vyre-driver`
+/// `dispatch_element_count_for_program`). That widest binding is `w1` at
+/// `model_dim * hidden_dim`, never the `model_dim` the body walks, so any
+/// realistic weight matrix already yields a many-workgroup grid.
+///
+/// Ungated, group `g` would index `(chunk + g) * MLP_WORKGROUP + local`, a
+/// window shifted up by `g * MLP_WORKGROUP`. It would never write
+/// `HIDDEN_SCRATCH[0 .. g * MLP_WORKGROUP)` in its own private copy of that
+/// workgroup buffer, then read the full hidden range anyway and, for
+/// `model_dim` above the width, overwrite the correct output group 0 had
+/// already stored.
+///
+/// Note the resulting ceiling: this kernel uses at most `MLP_WORKGROUP` lanes
+/// however large the input or the device. Prefer a grid-scaled projection when
+/// the dimensions are large enough to want every SM.
+///
 /// # Errors
 /// Returns `Err` if any dimension is zero.
 pub fn mlp_4x_leaky_sq(
@@ -33,18 +59,40 @@ pub fn mlp_4x_leaky_sq(
     let parent = GeneratorRef {
         name: OP_ID.to_string(),
     };
+    // Confine the strided walk to the first workgroup. `lane` is the GLOBAL
+    // invocation id, so without this gate group `g` covers a window shifted up
+    // by `g * MLP_WORKGROUP`, missing the low end of its own workgroup-private
+    // `HIDDEN_SCRATCH` while still storing to `output`.
+    //
+    // `Node::barrier()` stays OUTSIDE the gate on purpose, and the obvious
+    // tidy-up of folding it inside is wrong. A workgroup barrier must be
+    // reached workgroup-uniformly. Here the bound EQUALS the declared workgroup
+    // width, so the predicate is uniform per group (group 0 all-true, every
+    // other group all-false) and the barrier is safe where it sits. Move it
+    // inside the gate and you make arrival conditional, which is barrier
+    // divergence and undefined behaviour on real hardware.
+    //
+    // `Expr::is_first_workgroup()` (`WorkgroupId == 0`) expresses the same
+    // predicate without depending on the bound matching the width, and is what
+    // `reduce::atomic_scalar` uses. Prefer it if this width ever changes.
     let body = vec![
         Node::let_bind("lane", Expr::InvocationId { axis: 0 }),
-        wrap_child(
-            HIDDEN_PROJECTION_OP_ID,
-            parent.clone(),
-            hidden_projection_body(x, w1, b1, model_dim, hidden_dim),
+        Node::if_then(
+            Expr::lt(Expr::var("lane"), Expr::u32(MLP_WORKGROUP)),
+            vec![wrap_child(
+                HIDDEN_PROJECTION_OP_ID,
+                parent.clone(),
+                hidden_projection_body(x, w1, b1, model_dim, hidden_dim),
+            )],
         ),
         Node::barrier(),
-        wrap_child(
-            OUTPUT_PROJECTION_OP_ID,
-            parent,
-            output_projection_body(w2, b2, output, model_dim, hidden_dim),
+        Node::if_then(
+            Expr::lt(Expr::var("lane"), Expr::u32(MLP_WORKGROUP)),
+            vec![wrap_child(
+                OUTPUT_PROJECTION_OP_ID,
+                parent,
+                output_projection_body(w2, b2, output, model_dim, hidden_dim),
+            )],
         ),
     ];
 

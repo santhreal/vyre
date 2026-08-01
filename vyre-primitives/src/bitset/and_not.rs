@@ -22,27 +22,15 @@ pub fn bitset_and_not(lhs: &str, rhs: &str, out: &str, words: u32) -> Program {
     binary_word_program(OP_ID, lhs, rhs, out, words, BitwiseBinaryOp::AndNot)
 }
 
-/// CPU reference: `out[i] = lhs[i] & !rhs[i]` per word.
-#[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref(lhs: &[u32], rhs: &[u32]) -> Vec<u32> {
-    let mut out = Vec::new();
-    match try_cpu_ref_into(lhs, rhs, &mut out) {
-        Ok(()) => out,
-        // A parity oracle that returns empty on failure makes the GPU-vs-CPU
-        // assertion pass on empty==empty, silently masking a divergence
-        // (Law 10 / Law 6). Fail loud; callers use try_cpu_ref_into.
-        Err(error) => panic!("vyre-primitives bitset_and_not cpu_ref failed: {error}"),
-    }
-}
+super::define_cpu_ref!(lhs, rhs, "vyre-primitives bitset_and_not cpu_ref failed");
 
-/// CPU reference into caller-owned storage.
 #[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref_into(lhs: &[u32], rhs: &[u32], out: &mut Vec<u32>) {
-    if let Err(error) = try_cpu_ref_into(lhs, rhs, out) {
-        panic!("vyre-primitives bitset_and_not cpu_ref_into failed: {error}");
-    }
-}
+super::define_cpu_ref_into!(
+    lhs,
+    rhs,
+    "vyre-primitives bitset_and_not cpu_ref_into failed"
+);
 
 /// Fallible CPU reference into caller-owned storage.
 #[cfg(any(test, feature = "cpu-parity"))]

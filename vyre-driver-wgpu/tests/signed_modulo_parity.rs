@@ -16,11 +16,20 @@ mod common;
 use common::u32_bytes;
 
 use vyre_driver::{DispatchConfig, VyreBackend};
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver_wgpu::WgpuBackend;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 fn pairs() -> Vec<(i32, i32)> {
-    vec![(-7, 3), (7, 3), (-8, 3), (100, 7), (-100, 7), (-1, 2), (5, -3), (-2147483648, 3)]
+    vec![
+        (-7, 3),
+        (7, 3),
+        (-8, 3),
+        (100, 7),
+        (-100, 7),
+        (-1, 2),
+        (5, -3),
+        (-2147483648, 3),
+    ]
 }
 
 /// `out[i] = a[i] % b[i]`: all I32 buffers; the rem is i32 % i32 (signed).

@@ -18,7 +18,7 @@ pub use vyre_primitives::decode::ziftsieve::{
 
 use crate::decode::buffers::{scoped_decode_input_buffer, scoped_decode_output_buffer};
 #[cfg(test)]
-use crate::scan::dispatch_io::pack_u32_slice as pack_words;
+use vyre_primitives::wire::pack_u32_slice as pack_words;
 
 const OP_ID: &str = "vyre-libs::decode::ziftsieve";
 const FAMILY_PREFIX: &str = "decode_ziftsieve";

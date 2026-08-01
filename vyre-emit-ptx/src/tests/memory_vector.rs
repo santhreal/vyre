@@ -342,11 +342,11 @@ fn dynamic_misaligned_gather_to_vector_store_kernel() -> KernelDescriptor {
     )
 }
 
-#[path = "memory_vector/load_vector_contracts.rs"]
-mod load_vector_contracts;
 #[path = "memory_vector/load_cache_hoist_contracts.rs"]
 mod load_cache_hoist_contracts;
-#[path = "memory_vector/store_vector_contracts.rs"]
-mod store_vector_contracts;
+#[path = "memory_vector/load_vector_contracts.rs"]
+mod load_vector_contracts;
 #[path = "memory_vector/store_pruning_contracts.rs"]
 mod store_pruning_contracts;
+#[path = "memory_vector/store_vector_contracts.rs"]
+mod store_vector_contracts;

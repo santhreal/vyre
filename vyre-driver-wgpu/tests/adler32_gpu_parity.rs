@@ -36,7 +36,12 @@ fn gpu_adler32(backend: &WgpuBackend, bytes: &[u8]) -> u32 {
             &DispatchConfig::default(),
         )
         .expect("Fix: WGPU must dispatch the Adler-32 dual-accumulator loop program.");
-    assert_eq!(outputs.len(), 1, "adler32_program exposes one output (out); got {}", outputs.len());
+    assert_eq!(
+        outputs.len(),
+        1,
+        "adler32_program exposes one output (out); got {}",
+        outputs.len()
+    );
     let words: Vec<u32> = outputs[0]
         .chunks_exact(4)
         .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
@@ -60,7 +65,11 @@ fn check(backend: &WgpuBackend, bytes: &[u8], label: &str) {
 fn adler32_abc_matches_reference_on_gpu() {
     let backend = WgpuBackend::acquire().expect("Fix: Adler-32 GPU parity requires a live GPU.");
     // Drift-guard against the standard zlib Adler-32 of "abc".
-    assert_eq!(adler32(b"abc"), 0x024d_0127, "Adler-32 reference drifted for \"abc\"");
+    assert_eq!(
+        adler32(b"abc"),
+        0x024d_0127,
+        "Adler-32 reference drifted for \"abc\""
+    );
     check(&backend, b"abc", "\"abc\"");
 }
 
@@ -75,7 +84,11 @@ fn adler32_varied_inputs_match_reference_on_gpu() {
     let long: [u8; 64] = std::array::from_fn(|i| (i as u8).wrapping_mul(31).wrapping_add(7));
     check(&backend, &long, "a 64-byte block");
     // Wikipedia's canonical Adler-32 example: "Wikipedia" -> 0x11E60398.
-    assert_eq!(adler32(b"Wikipedia"), 0x11E6_0398, "Adler-32 reference drifted for \"Wikipedia\"");
+    assert_eq!(
+        adler32(b"Wikipedia"),
+        0x11E6_0398,
+        "Adler-32 reference drifted for \"Wikipedia\""
+    );
     check(&backend, b"Wikipedia", "\"Wikipedia\"");
 }
 
@@ -86,8 +99,15 @@ fn adler32_high_half_is_exercised_on_gpu() {
     let backend = WgpuBackend::acquire().expect("Fix: Adler-32 GPU parity requires a live GPU.");
     let a = gpu_adler32(&backend, b"adler-in-0");
     let b = gpu_adler32(&backend, b"adler-in-1");
-    assert_ne!(a, b, "Adler-32 must distinguish one-byte-different inputs on the GPU");
-    assert_ne!(a >> 16, 0, "the `b` accumulator (high half) must be non-zero for a real input");
+    assert_ne!(
+        a, b,
+        "Adler-32 must distinguish one-byte-different inputs on the GPU"
+    );
+    assert_ne!(
+        a >> 16,
+        0,
+        "the `b` accumulator (high half) must be non-zero for a real input"
+    );
     assert_eq!(a, adler32(b"adler-in-0"));
     assert_eq!(b, adler32(b"adler-in-1"));
 }

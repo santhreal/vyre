@@ -133,8 +133,8 @@ fn precompute_scopes(vast: &[u32], n: u32) -> Vec<u32> {
         &program,
         vec![
             bytes(vast),
-            vec![0u8; vast.len() * 4],            // out_scoped (n * stride words)
-            vec![0u8; n.max(1) as usize * 4],     // __vast_scope_stack scratch (n words)
+            vec![0u8; vast.len() * 4], // out_scoped (n * stride words)
+            vec![0u8; n.max(1) as usize * 4], // __vast_scope_stack scratch (n words)
         ],
     )
 }
@@ -147,7 +147,8 @@ const VAST_DECL_CONTEXT_PREFIX_START_FIELD: usize = 0;
 
 /// Run `c11_precompute_vast_decl_contexts` and return the decl-context table.
 fn precompute_decl_contexts(vast: &[u32], n: u32) -> Vec<u32> {
-    let program = c11_precompute_vast_decl_contexts("vast_nodes", Expr::u32(n), "out_decl_contexts");
+    let program =
+        c11_precompute_vast_decl_contexts("vast_nodes", Expr::u32(n), "out_decl_contexts");
     eval_words(
         &program,
         vec![
@@ -402,7 +403,11 @@ fn precomputed_context_classification_matches_reference() {
             Expr::u32(n),
             "typed",
         ),
-        vec![bytes(&vast), bytes(&decl_contexts), vec![0u8; vast.len() * 4]],
+        vec![
+            bytes(&vast),
+            bytes(&decl_contexts),
+            vec![0u8; vast.len() * 4],
+        ],
     );
     assert_eq!(
         variant, reference,
@@ -431,7 +436,11 @@ fn annotated_classify_precomputed_context_degrades_to_plain_on_unannotated_input
             Expr::u32(n),
             "typed",
         ),
-        vec![bytes(&vast), bytes(&decl_contexts), vec![0u8; vast.len() * 4]],
+        vec![
+            bytes(&vast),
+            bytes(&decl_contexts),
+            vec![0u8; vast.len() * 4],
+        ],
     );
     let annotated = eval_words(
         &c11_classify_annotated_vast_node_kinds_precomputed_context(
@@ -440,7 +449,11 @@ fn annotated_classify_precomputed_context_degrades_to_plain_on_unannotated_input
             Expr::u32(n),
             "typed",
         ),
-        vec![bytes(&vast), bytes(&decl_contexts), vec![0u8; vast.len() * 4]],
+        vec![
+            bytes(&vast),
+            bytes(&decl_contexts),
+            vec![0u8; vast.len() * 4],
+        ],
     );
     assert_eq!(
         annotated, plain,
@@ -538,7 +551,8 @@ fn typedef_symbol_link_chains_repeated_identifiers_by_hash() {
         assert_eq!(linked[base + 5], start, "start preserved at row {idx}");
         assert_eq!(linked[base + 6], len, "len preserved at row {idx}");
         assert_eq!(
-            linked[base + VAST_TYPEDEF_SYMBOL_FIELD], h,
+            linked[base + VAST_TYPEDEF_SYMBOL_FIELD],
+            h,
             "symbol hash preserved at row {idx}"
         );
     }

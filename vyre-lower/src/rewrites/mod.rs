@@ -36,6 +36,27 @@
 
 use std::hash::{Hash, Hasher};
 
+fn max_result_id_in_subtree(body: &crate::descriptor::KernelBody) -> Option<u32> {
+    let mut maximum = None;
+    let mut stack = vec![body];
+    while let Some(candidate) = stack.pop() {
+        for result in candidate.ops.iter().flat_map(|op| op.result_ids()) {
+            maximum = Some(maximum.map_or(result, |current: u32| current.max(result)));
+        }
+        stack.extend(&candidate.child_bodies);
+    }
+    maximum
+}
+
+fn write_targets_are_independent(
+    left: (u8, u32, u32),
+    right: (u8, u32, u32),
+    alias_facts: Option<&crate::analyses::alias_facts::AliasFactSet>,
+) -> bool {
+    left.0 != right.0
+        || alias_facts.is_some_and(|facts| facts.proves_no_alias(left.1, left.2, right.1, right.2))
+}
+
 pub mod add_sub_cancel;
 pub mod aos_to_soa_promote;
 mod arithmetic_combine;
@@ -74,6 +95,7 @@ pub mod emit_order;
 pub mod identity_elim;
 pub mod licm;
 mod literal;
+mod literal_pool_splice;
 pub mod load_forwarding;
 pub mod loop_fission;
 pub mod loop_fusion;

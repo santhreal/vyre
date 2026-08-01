@@ -163,9 +163,7 @@ pub fn compare_static_analysis_reachability_fixpoints(
         ));
     }
     if max_iters == 0 {
-        return Err(
-            "Fix: static-analysis fixpoint comparison requires max_iters > 0.".to_string(),
-        );
+        return Err("Fix: static-analysis fixpoint comparison requires max_iters > 0.".to_string());
     }
     let normalized = normalize_bool_matrix(adj);
     let csr = dense_bool_to_csr(&normalized, n_us);
@@ -418,8 +416,7 @@ fn checked_dense_node_count(n: u32) -> Result<usize, String> {
             "Fix: static-analysis fixpoint comparison requires at least one node.".to_string(),
         );
     }
-    usize::try_from(n)
-        .map_err(|_| format!("Fix: node count {n} does not fit host indexing."))
+    usize::try_from(n).map_err(|_| format!("Fix: node count {n} does not fit host indexing."))
 }
 
 fn checked_dense_cells(n_us: usize) -> Result<usize, String> {
@@ -456,9 +453,8 @@ fn vyre_semiring_reachability_report(
     let mut next = Vec::new();
     reachability_closure_into(adj, n, max_iters, &mut reachability, &mut next);
     let active_time_ns = started.elapsed().as_nanos().max(1);
-    let cells = u64::try_from(adj.len()).map_err(|_| {
-        "Fix: adjacency length does not fit telemetry byte accounting.".to_string()
-    })?;
+    let cells = u64::try_from(adj.len())
+        .map_err(|_| "Fix: adjacency length does not fit telemetry byte accounting.".to_string())?;
     let active = u64::try_from(reachability.iter().filter(|value| **value != 0).count())
         .map_err(|_| "Fix: reachability count does not fit telemetry.".to_string())?;
     let iterations = max_iters;
@@ -547,8 +543,9 @@ fn graphblas_sparse_reachability_report(
         }
     }
     let mut iterations = 0u32;
-    let mut frontier_visits = u64::try_from(frontier.iter().filter(|value| **value != 0).count())
-        .map_err(|_| "Fix: frontier count does not fit telemetry.".to_string())?;
+    let mut frontier_visits =
+        u64::try_from(frontier.iter().filter(|value| **value != 0).count())
+            .map_err(|_| "Fix: frontier count does not fit telemetry.".to_string())?;
     let mut edge_visits = 0u64;
     while iterations < max_iters {
         let mut next_frontier = vec![0; cells];
@@ -1401,7 +1398,10 @@ mod tests {
             report.vyre_semiring.telemetry.engine_id,
             "vyre.semiring.bool_or.dense"
         );
-        assert_eq!(report.external_frontier.telemetry.engine_id, "external.csr.frontier");
+        assert_eq!(
+            report.external_frontier.telemetry.engine_id,
+            "external.csr.frontier"
+        );
         assert_eq!(
             report.graphblas_sparse.telemetry.engine_id,
             "graphblas.sparse.bool_mxm"

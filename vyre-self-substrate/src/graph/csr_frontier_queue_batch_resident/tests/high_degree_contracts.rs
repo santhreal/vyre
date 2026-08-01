@@ -39,7 +39,9 @@ fn skewed_high_degree_batch_queries_use_bounded_split_queue() {
         u32::MAX,
         &mut outputs,
     )
-    .expect("Fix: recording dispatcher should complete skewed high-degree resident CSR queue batch");
+    .expect(
+        "Fix: recording dispatcher should complete skewed high-degree resident CSR queue batch",
+    );
 
     assert_eq!(
         scratch
@@ -166,7 +168,9 @@ fn uniformly_high_degree_batch_queries_use_row_strided_traverse_grid() {
         u32::MAX,
         &mut outputs,
     )
-    .expect("Fix: recording dispatcher should complete uniformly high-degree resident CSR queue batch");
+    .expect(
+        "Fix: recording dispatcher should complete uniformly high-degree resident CSR queue batch",
+    );
 
     assert_eq!(
         scratch

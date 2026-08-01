@@ -104,106 +104,106 @@ fn rewrite_body(
         let mut replacements = BTreeMap::<usize, (u32, u32)>::new();
         let mut first_replaced_op = usize::MAX;
 
-    for candidate in candidates {
-        let Some(source_binding) = bindings
-            .iter()
-            .find(|binding| binding.slot == candidate.source_slot)
-        else {
-            continue;
-        };
-        if source_binding.element_type != DataType::U32 {
-            continue;
-        }
-        let shared_slot = *next_slot;
-        *next_slot = next_slot.saturating_add(1);
-        shared_slots.push(BindingSlot {
-            slot: shared_slot,
-            element_type: source_binding.element_type.clone(),
-            element_count: Some(workgroup_x),
-            memory_class: MemoryClass::Shared,
-            visibility: BindingVisibility::ReadWrite,
-            name: format!("{}_shared_tile", source_binding.name),
-        });
-
-        let local_id = allocator.push_result(&mut prefix, KernelOpKind::LocalInvocationId, vec![0]);
-        let offset_id = match candidate.index_kind {
-            TileIndexKind::LocalX => {
-                allocator.push_literal(&mut prefix, &mut body.literals, LiteralValue::U32(0))
+        for candidate in candidates {
+            let Some(source_binding) = bindings
+                .iter()
+                .find(|binding| binding.slot == candidate.source_slot)
+            else {
+                continue;
+            };
+            if source_binding.element_type != DataType::U32 {
+                continue;
             }
-            TileIndexKind::GlobalX => {
-                let workgroup_id =
-                    allocator.push_result(&mut prefix, KernelOpKind::WorkgroupId, vec![0]);
-                let tile_bytes = allocator.push_literal(
-                    &mut prefix,
-                    &mut body.literals,
-                    LiteralValue::U32(workgroup_x * 4),
-                );
-                allocator.push_result(
-                    &mut prefix,
-                    KernelOpKind::BinOpKind(BinOp::Mul),
-                    vec![workgroup_id, tile_bytes],
-                )
-            }
-        };
-        let size_id = allocator.push_literal(
-            &mut prefix,
-            &mut body.literals,
-            LiteralValue::U32(workgroup_x * 4),
-        );
-        prefix.push(KernelOp {
-            kind: KernelOpKind::AsyncLoad {
-                tag: Arc::from(format!(
-                    "__shared_tile_slot{}_to{}",
-                    candidate.source_slot, shared_slot
-                )),
-            },
-            operands: vec![candidate.source_slot, shared_slot, offset_id, size_id],
-            result: None,
-        });
-        waits.push(KernelOp {
-            kind: KernelOpKind::AsyncWait {
-                tag: Arc::from(format!(
-                    "__shared_tile_slot{}_to{}",
-                    candidate.source_slot, shared_slot
-                )),
-            },
-            operands: vec![],
-            result: None,
-        });
-        waits.push(KernelOp {
-            kind: KernelOpKind::Barrier {
-                ordering: MemoryOrdering::Acquire,
-            },
-            operands: vec![],
-            result: None,
-        });
-        for op_index in candidate.op_indices {
-            first_replaced_op = first_replaced_op.min(op_index);
-            replacements.insert(op_index, (shared_slot, local_id));
-        }
-        changed = true;
-    }
+            let shared_slot = *next_slot;
+            *next_slot = next_slot.saturating_add(1);
+            shared_slots.push(BindingSlot {
+                slot: shared_slot,
+                element_type: source_binding.element_type.clone(),
+                element_count: Some(workgroup_x),
+                memory_class: MemoryClass::Shared,
+                visibility: BindingVisibility::ReadWrite,
+                name: format!("{}_shared_tile", source_binding.name),
+            });
 
-    if changed {
-        for (op_index, (shared_slot, local_id)) in replacements {
-            if let Some(op) = body.ops.get_mut(op_index) {
-                op.kind = KernelOpKind::LoadShared;
-                op.operands = vec![shared_slot, local_id];
+            let local_id =
+                allocator.push_result(&mut prefix, KernelOpKind::LocalInvocationId, vec![0]);
+            let offset_id = match candidate.index_kind {
+                TileIndexKind::LocalX => {
+                    allocator.push_literal(&mut prefix, &mut body.literals, LiteralValue::U32(0))
+                }
+                TileIndexKind::GlobalX => {
+                    let workgroup_id =
+                        allocator.push_result(&mut prefix, KernelOpKind::WorkgroupId, vec![0]);
+                    let tile_bytes = allocator.push_literal(
+                        &mut prefix,
+                        &mut body.literals,
+                        LiteralValue::U32(workgroup_x * 4),
+                    );
+                    allocator.push_result(
+                        &mut prefix,
+                        KernelOpKind::BinOpKind(BinOp::Mul),
+                        vec![workgroup_id, tile_bytes],
+                    )
+                }
+            };
+            let size_id = allocator.push_literal(
+                &mut prefix,
+                &mut body.literals,
+                LiteralValue::U32(workgroup_x * 4),
+            );
+            prefix.push(KernelOp {
+                kind: KernelOpKind::AsyncLoad {
+                    tag: Arc::from(format!(
+                        "__shared_tile_slot{}_to{}",
+                        candidate.source_slot, shared_slot
+                    )),
+                },
+                operands: vec![candidate.source_slot, shared_slot, offset_id, size_id],
+                result: None,
+            });
+            waits.push(KernelOp {
+                kind: KernelOpKind::AsyncWait {
+                    tag: Arc::from(format!(
+                        "__shared_tile_slot{}_to{}",
+                        candidate.source_slot, shared_slot
+                    )),
+                },
+                operands: vec![],
+                result: None,
+            });
+            waits.push(KernelOp {
+                kind: KernelOpKind::Barrier {
+                    ordering: MemoryOrdering::Acquire,
+                },
+                operands: vec![],
+                result: None,
+            });
+            for op_index in candidate.op_indices {
+                first_replaced_op = first_replaced_op.min(op_index);
+                replacements.insert(op_index, (shared_slot, local_id));
             }
+            changed = true;
         }
-        let old_ops = std::mem::take(&mut body.ops);
-        let overlap_count = old_ops
-            .iter()
-            .take(first_replaced_op)
-            .take_while(|op| can_overlap_before_async_wait(&op.kind))
-            .count();
-        let mut old_ops = old_ops.into_iter();
-        prefix.extend(old_ops.by_ref().take(overlap_count));
-        prefix.extend(waits);
-        prefix.extend(old_ops);
-        body.ops = prefix;
-    }
 
+        if changed {
+            for (op_index, (shared_slot, local_id)) in replacements {
+                if let Some(op) = body.ops.get_mut(op_index) {
+                    op.kind = KernelOpKind::LoadShared;
+                    op.operands = vec![shared_slot, local_id];
+                }
+            }
+            let old_ops = std::mem::take(&mut body.ops);
+            let overlap_count = old_ops
+                .iter()
+                .take(first_replaced_op)
+                .take_while(|op| can_overlap_before_async_wait(&op.kind))
+                .count();
+            let mut old_ops = old_ops.into_iter();
+            prefix.extend(old_ops.by_ref().take(overlap_count));
+            prefix.extend(waits);
+            prefix.extend(old_ops);
+            body.ops = prefix;
+        }
     }
 
     // Recurse, but uniformity is preserved ONLY through unconditional grouping

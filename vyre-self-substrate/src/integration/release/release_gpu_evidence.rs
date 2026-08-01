@@ -299,7 +299,7 @@ pub fn validate_release_cuda_suite_artifacts(
         (
             backend_matrix,
             "backend matrix schema",
-            "\"schema_version\": 2",
+            "\"schema_version\": 3",
         ),
         (backend_matrix, "CUDA-first flag", "\"cuda_first\": true"),
         (
@@ -347,7 +347,7 @@ pub fn validate_release_cuda_suite_artifacts(
             "CUDA graph launch marker",
             "\"id\": \"cuda-graph-launch\"",
         ),
-        (cuda_suite, "CUDA suite schema", "\"schema_version\": 2"),
+        (cuda_suite, "CUDA suite schema", "\"schema_version\": 3"),
         (cuda_suite, "CUDA suite backend", "\"backend\": \"cuda\""),
         (cuda_suite, "CUDA family count", "\"family_count\": 16"),
         (
@@ -560,7 +560,7 @@ mod tests {
         let err = validate_release_cuda_suite_artifacts(
             include_str!("../../../../release/evidence/backends/backend-matrix.json"),
             r#"{
-              "schema_version": 2,
+              "schema_version": 3,
               "backend": "cuda",
               "family_count": 1,
               "gpu_model": "NVIDIA GeForce RTX 5090",

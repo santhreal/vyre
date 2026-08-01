@@ -154,4 +154,3 @@ pub(crate) fn atomic_min(buffer: &str, index: Expr, value: Expr) -> Expr {
 pub(crate) fn atomic_max(buffer: &str, index: Expr, value: Expr) -> Expr {
     Expr::atomic_max(buffer, index, value)
 }
-

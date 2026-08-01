@@ -1,7 +1,6 @@
 //! Scan graph update classifier registry test suite.
 
-const CLASSIFIER: &str =
-    include_str!("../../docs/optimization/SCAN_GRAPH_UPDATE_CLASSIFIER.toml");
+const CLASSIFIER: &str = include_str!("../../docs/optimization/SCAN_GRAPH_UPDATE_CLASSIFIER.toml");
 
 const REQUIRED_EDITS: &[&str] = &[
     "pattern_digest_same",
@@ -39,7 +38,9 @@ fn scan_graph_update_classifier_registry_distinguishes_replay_update_and_recaptu
     }
     assert_eq!(
         CLASSIFIER
-            .matches("evidence_path = \"vyre-driver/tests/scan_graph_update_classifier_registry.rs\"")
+            .matches(
+                "evidence_path = \"vyre-driver/tests/scan_graph_update_classifier_registry.rs\""
+            )
             .count(),
         CLASSIFIER.matches("[[edit]]").count(),
         "Fix: every scan graph update row must point at this proof gate"

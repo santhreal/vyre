@@ -295,18 +295,13 @@ fn adaptive_routing_program() -> Program {
 }
 
 fn adaptive_routing_inputs() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    let mut signals = Vec::with_capacity(ITEM_COUNT as usize);
-    let mut histories = Vec::with_capacity(ITEM_COUNT as usize);
-    let mut thresholds = Vec::with_capacity(ITEM_COUNT as usize);
-    for index in 0..ITEM_COUNT {
-        let signal = mix32(index ^ 0x4D59_5DF4);
-        let history = mix32(index.wrapping_mul(31).wrapping_add(0xA5A5_5A5A));
-        let threshold = 320 + (mix32(index ^ 0x517C_C1B7) & 511);
-        signals.push(signal);
-        histories.push(history);
-        thresholds.push(threshold);
-    }
-    (signals, histories, thresholds)
+    super::generated_u32_triplet(ITEM_COUNT, |index| {
+        (
+            mix32(index ^ 0x4D59_5DF4),
+            mix32(index.wrapping_mul(31).wrapping_add(0xA5A5_5A5A)),
+            320 + (mix32(index ^ 0x517C_C1B7) & 511),
+        )
+    })
 }
 
 fn adaptive_routing_cpu_oracle(signals: &[u32], histories: &[u32], thresholds: &[u32]) -> Vec<u32> {

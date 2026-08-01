@@ -4,7 +4,7 @@ use std::sync::Arc;
 use rustc_hash::FxHashSet;
 use smallvec::SmallVec;
 use vyre_driver::binding::BindingRole;
-use vyre_driver::{BackendError, DispatchConfig};
+use vyre_driver::{BackendError, DispatchConfig, ResidentHandle};
 use vyre_foundation::ir::Program;
 
 use crate::backend::allocations::{DispatchAllocations, HostTransferAllocations};
@@ -133,7 +133,7 @@ impl CudaBackend {
             )?
         };
         let seen_outputs_small = total_output_entries <= 8 && total_output_entries != 0;
-        let mut seen_output_handles_small = SmallVec::<[u64; 8]>::new();
+        let mut seen_output_handles_small = SmallVec::<[ResidentHandle; 8]>::new();
         reserve_smallvec(
             &mut seen_output_handles_small,
             total_output_entries.min(8),
@@ -188,7 +188,7 @@ impl CudaBackend {
                         return Err(BackendError::InvalidProgram {
                             fix: format!(
                                 "Fix: CUDA resident batch dispatch item {batch_index} binding `{}` expected at least {expected} bytes but handle {} has {} bytes.",
-                                binding.name, handle.id, resident.byte_len
+                                binding.name, handle.handle, resident.byte_len
                             ),
                         });
                     }
@@ -252,25 +252,25 @@ impl CudaBackend {
             for (_, handle, readback) in output_handles_by_index {
                 if !seen_outputs_small {
                     if let Some(seen_output_handles) = seen_output_handles.as_mut() {
-                        if !seen_output_handles.insert(handle.id) {
+                        if !seen_output_handles.insert(handle.handle) {
                             return Err(BackendError::InvalidProgram {
                                 fix: format!(
                                     "Fix: CUDA resident batch dispatch cannot reuse output handle {} across submitted items; allocate one output resident buffer tuple per in-flight batch item so batched readback observes every result instead of the final overwrite.",
-                                    handle.id
+                                    handle.handle
                                 ),
                             });
                         }
                     }
                 } else {
-                    if seen_output_handles_small.contains(&handle.id) {
+                    if seen_output_handles_small.contains(&handle.handle) {
                         return Err(BackendError::InvalidProgram {
                             fix: format!(
                                 "Fix: CUDA resident batch dispatch cannot reuse output handle {} across submitted items; allocate one output resident buffer tuple per in-flight batch item so batched readback observes every result instead of the final overwrite.",
-                                handle.id
+                                handle.handle
                             ),
                         });
                     }
-                    seen_output_handles_small.push(handle.id);
+                    seen_output_handles_small.push(handle.handle);
                 }
                 output_handles.push(handle);
                 output_readbacks.push(readback);
@@ -315,21 +315,40 @@ impl CudaBackend {
         let pending = (|| {
             enqueue_optional_resident_h2d_copy(param_upload, stream_raw)?;
 
+            // One lease covers every batch element: they all enqueue on this one
+            // stream, so stream order already separates their barrier counts.
+            let grid_barrier = self.lease_grid_barrier(program, prepared, ptx_src, module_key)?;
             let mut kernel_args = SmallVec::<[*mut c_void; 8]>::new();
-            for launch_ptrs in launch_ptrs_by_batch.iter_mut() {
-                let mut params_ref = params_ptr;
-                Self::kernel_args_into(launch_ptrs, &mut params_ref, &mut kernel_args)?;
-                for _ in 0..prepared.fixpoint_iterations {
-                    self.launch_prevalidated_function(
-                        func,
-                        &mut kernel_args,
-                        &prepared.launch,
-                        stream_raw,
-                        false,
-                        prepared.cooperative,
-                    )?;
-                }
-            }
+            // `launch_then_release` runs the launches and ends the lease in the
+            // one safe order: the release synchronizes the stream before freeing
+            // the gate, so a launch failure cannot leave a grid spinning while the
+            // next sequence resets the counter underneath it.
+            grid_barrier.launch_then_release(
+                stream_raw,
+                "resident batch grid-sync launch",
+                |grid_barrier| {
+                    for launch_ptrs in launch_ptrs_by_batch.iter_mut() {
+                        let mut params_ref = params_ptr;
+                        Self::kernel_args_into(launch_ptrs, &mut params_ref, &mut kernel_args)?;
+                        for _ in 0..prepared.fixpoint_iterations {
+                            // SAFETY: stream_raw is the live batch stream and
+                            // outlives the memset enqueued ahead of each launch.
+                            unsafe {
+                                grid_barrier.enqueue_reset(stream_raw)?;
+                            }
+                            self.launch_prevalidated_function(
+                                func,
+                                &mut kernel_args,
+                                &prepared.launch,
+                                stream_raw,
+                                false,
+                                prepared.cooperative,
+                            )?;
+                        }
+                    }
+                    Ok(())
+                },
+            )?;
 
             let event = self.launch_resources.acquire_event()?;
             if let Err(error) = event.record(stream_raw) {

@@ -1,4 +1,4 @@
-//! `cargo_full run --bin xtask -- dep-drift`  -  verify workspace-managed dependency pins stay aligned.
+//! `cargo xtask dep-drift`  -  verify workspace-managed dependency pins stay aligned.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;

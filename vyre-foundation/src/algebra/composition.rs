@@ -5,7 +5,10 @@
 //! contract in the region generator string so both validation and
 //! optimization passes can enforce it without needing a new IR field.
 
-use crate::ir::Node;
+use std::sync::Arc;
+
+use crate::ir::model::expr::{GeneratorRef, Ident};
+use crate::ir::{Node, Program};
 use rustc_hash::FxHashMap;
 
 /// Generator suffix marking a region as non-composable with itself.
@@ -15,6 +18,64 @@ pub const SELF_EXCLUSIVE_REGION_SUFFIX: &str = "#self-exclusive";
 #[must_use]
 pub fn mark_self_exclusive_region(generator: &str) -> String {
     format!("{generator}{SELF_EXCLUSIVE_REGION_SUFFIX}")
+}
+/// Clone a program's entry regions and attach them to a composing parent.
+#[must_use]
+pub fn reparent_program_children(program: &Program, parent_op_id: &str) -> Vec<Node> {
+    let parent = GeneratorRef {
+        name: parent_op_id.to_string(),
+    };
+    program
+        .entry()
+        .iter()
+        .cloned()
+        .map(|node| reparent_entry_node(node, &parent))
+        .collect()
+}
+
+/// Wrap an existing program under one canonical parent composition boundary.
+#[must_use]
+pub fn tag_program(parent_op_id: &str, program: Program) -> Program {
+    let generator = if program.is_non_composable_with_self() {
+        mark_self_exclusive_region(parent_op_id)
+    } else {
+        parent_op_id.to_string()
+    };
+    let parent = GeneratorRef {
+        name: parent_op_id.to_string(),
+    };
+    program.map_entry(|entry| {
+        let children = entry
+            .into_iter()
+            .map(|node| reparent_entry_node(node, &parent))
+            .collect();
+        vec![Node::Region {
+            generator: Ident::from(generator),
+            source_region: None,
+            body: Arc::new(children),
+        }]
+    })
+}
+
+fn reparent_entry_node(node: Node, parent: &GeneratorRef) -> Node {
+    match node {
+        Node::Region {
+            generator, body, ..
+        } => Node::Region {
+            generator: if generator.as_ref() == Program::ROOT_REGION_GENERATOR {
+                Ident::from(format!("inline::{}", parent.name))
+            } else {
+                generator
+            },
+            source_region: Some(parent.clone()),
+            body,
+        },
+        other => Node::Region {
+            generator: Ident::from(format!("inline::{}", parent.name)),
+            source_region: Some(parent.clone()),
+            body: Arc::new(vec![other]),
+        },
+    }
 }
 
 /// Return the base generator id when this region is self-exclusive.

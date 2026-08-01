@@ -17,6 +17,46 @@ pub(crate) fn fixed_mul(a: u32, b: u32) -> u32 {
     ((i64::from(a as i32) * i64::from(b as i32)) >> 16) as i32 as u32
 }
 
+/// Multiply a square 16.16 matrix by a 16.16 vector with wrapping accumulation.
+pub(crate) fn fixed_matvec(matrix: &[u32], vector: &[u32], n: usize) -> Vec<u32> {
+    (0..n)
+        .map(|row| {
+            let mut acc = 0u32;
+            for column in 0..n {
+                acc = acc.wrapping_add(fixed_mul(matrix[row * n + column], vector[column]));
+            }
+            acc
+        })
+        .collect()
+}
+
+/// Advance the deterministic xorshift32 generator used by parity sweeps.
+pub(crate) fn xorshift32(state: &mut u32) -> u32 {
+    *state ^= *state << 13;
+    *state ^= *state >> 17;
+    *state ^= *state << 5;
+    *state
+}
+
+fn signed_fixed_with_mask(state: &mut u32, magnitude_mask: u32) -> u32 {
+    let magnitude = (xorshift32(state) & magnitude_mask) as i32;
+    if xorshift32(state) & 1 == 0 {
+        magnitude as u32
+    } else {
+        (-magnitude) as u32
+    }
+}
+
+/// Generate a signed 16.16 sample in approximately `[-8, 8)`.
+pub(crate) fn signed_fixed_19(state: &mut u32) -> u32 {
+    signed_fixed_with_mask(state, 0x0007_FFFF)
+}
+
+/// Generate a signed 16.16 sample in approximately `[-2, 2)`.
+pub(crate) fn signed_fixed_17(state: &mut u32) -> u32 {
+    signed_fixed_with_mask(state, 0x0001_FFFF)
+}
+
 /// SIGNED integer division by a KNOWN-POSITIVE divisor (truncating toward zero), IDENTICAL to the IR's
 /// [`vyre_primitives::fixed_sdiv_by_positive_expr`]. Mirrors the fixed weighted-Jacobi `delta` divide,
 /// whose numerator is negative whenever the residual is negative.
@@ -42,7 +82,7 @@ use vyre_self_substrate::optimizer::dispatcher::{DispatchError, OptimizerDispatc
 /// consumer that passes here also runs correctly on hardware. The canonical mapping lives in
 /// `vyre-driver`'s `role_for_buffer` / [`vyre_foundation::ir::BufferDecl::is_backend_allocated_output`]:
 /// a buffer is BACKEND-ALLOCATED (the backend creates it, no dispatch input) ONLY when it is
-/// `is_output` / `WriteOnly` / `pipeline_live_out&&ReadWrite`; EVERY other non-workgroup buffer 
+/// `is_output` / `WriteOnly` / `pipeline_live_out&&ReadWrite`; EVERY other non-workgroup buffer
 /// `ReadOnly` (role `Input`), plain `ReadWrite` (role `InputOutput`, whose zero/initial contents the
 /// caller supplies), and `Uniform`: CONSUMES one dispatch input, in buffer order. The real backend
 /// validates this strictly (`inputs.len() == input_indices.len()`), so a consumer must pass one

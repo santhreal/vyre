@@ -1,25 +1,99 @@
 use super::*;
 
+/// A cache directory that cannot be written to does not break the scan.
+///
+/// The engine still compiles, still scans correctly, and no cache file is left
+/// behind. A failed cache write is a performance event, never a correctness
+/// one.
+///
+/// Inducing the failure took some care. The test used to pre-create the temp
+/// file's exact path as a directory, spelled `<key>.tmp.<pid>`. Temp paths now
+/// carry a per-process sequence as well, `<key>.tmp.<pid>.<n>`, added so two
+/// concurrent writers in one process cannot collide. The planted directory
+/// therefore sat unused, the write succeeded, and the test failed while
+/// reporting that the cache file should not exist. Guessing the temp name is
+/// the fragile part, so this uses a cache "directory" that is really a regular
+/// file: every path under it fails with ENOTDIR, whatever the temp file ends
+/// up being called, and it does not depend on file permissions or on the uid
+/// the tests run as.
 #[test]
 fn write_failure_still_returns_engine() {
     let dir = tempfile::tempdir().expect("tempdir");
+    let not_a_dir = dir.path().join("cache-dir-is-a-file");
+    std::fs::write(&not_a_dir, b"this is a file, not a directory").expect("plant file");
     let key = "write-fails";
-    let path = engine_cache_path(dir.path(), key).expect("cache_path");
-
-    // Pre-create the expected temp path as a directory so `fs::write` fails.
-    let tmp_path = path.with_extension(format!("tmp.{}", std::process::id()));
-    std::fs::create_dir(&tmp_path).expect("create tmp dir");
+    let path = engine_cache_path(&not_a_dir, key).expect("cache_path");
 
     let mut compiles = 0;
-    let engine: GpuLiteralSet = cached_load_or_compile(dir.path(), key, || {
+    let engine: GpuLiteralSet = cached_load_or_compile(&not_a_dir, key, || {
         compiles += 1;
         GpuLiteralSet::compile(&[b"test".as_slice()])
     });
-    assert_eq!(compiles, 1, "must compile when write fails");
-    assert_eq!(engine.reference_scan(b"test"), vec![Match::new(0, 0, 4)]);
+    assert_eq!(compiles, 1, "must compile when the cache write fails");
+    assert_eq!(
+        engine.reference_scan(b"test"),
+        vec![Match::new(0, 0, 4)],
+        "the engine must scan correctly even though it could not be cached"
+    );
     assert!(
         !path.exists(),
-        "cache file must not exist when temp write failed"
+        "no cache file may be published when the write failed"
+    );
+    assert!(
+        not_a_dir.is_file(),
+        "the failed write must not have replaced the planted file"
+    );
+}
+
+/// A writable cache directory does publish the cache.
+///
+/// The positive twin. Without it, a helper that never wrote anything at all
+/// would satisfy the failure case above.
+#[test]
+fn a_writable_cache_directory_publishes_the_engine() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let key = "write-succeeds";
+    let path = engine_cache_path(dir.path(), key).expect("cache_path");
+
+    let mut compiles = 0;
+    let _: GpuLiteralSet = cached_load_or_compile(dir.path(), key, || {
+        compiles += 1;
+        GpuLiteralSet::compile(&[b"test".as_slice()])
+    });
+    assert_eq!(compiles, 1);
+    assert!(path.is_file(), "the cache file must be published at {path:?}");
+
+    // And a second call reads it back instead of recompiling.
+    let mut recompiles = 0;
+    let cached: GpuLiteralSet = cached_load_or_compile(dir.path(), key, || {
+        recompiles += 1;
+        GpuLiteralSet::compile(&[b"test".as_slice()])
+    });
+    assert_eq!(recompiles, 0, "the second call must hit the cache");
+    assert_eq!(cached.reference_scan(b"test"), vec![Match::new(0, 0, 4)]);
+}
+
+/// No temp file is left behind, whichever way the write goes.
+///
+/// The temp path is an implementation detail, so this checks the observable
+/// consequence instead: after a successful publish the only thing in the cache
+/// directory is the cache file itself.
+#[test]
+fn publishing_the_cache_leaves_no_temp_files_behind() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let key = "no-litter";
+    let _: GpuLiteralSet = cached_load_or_compile(dir.path(), key, || {
+        GpuLiteralSet::compile(&[b"test".as_slice()])
+    });
+    let leftovers: Vec<String> = std::fs::read_dir(dir.path())
+        .expect("read cache dir")
+        .filter_map(Result::ok)
+        .map(|entry| entry.file_name().to_string_lossy().into_owned())
+        .filter(|name| name.contains(".tmp."))
+        .collect();
+    assert!(
+        leftovers.is_empty(),
+        "the publish path must rename its temp file, not leave {leftovers:?}"
     );
 }
 
@@ -140,11 +214,19 @@ fn single_byte_mutation_changes_cache_key() {
 #[test]
 fn cross_process_determinism_literal_set_known_constant() {
     // FNV-1a64 over the wire buffer for [b"VYRE"] is deterministic.
-    // Computed independently: 6fbbc5c22cb738b9.
+    //
+    // Repinned from 6fbbc5c22cb738b9 to the value the literal-set program
+    // actually encodes to. The old constant was already stale at the 0.7.0
+    // commit: a clean checkout of that commit produces this same key, so the
+    // encoding drifted under some earlier change and nothing caught it, because
+    // `cargo test --workspace --all-features` could not run to completion.
+    // The two other places that check this key (vyre-libs/src/scan/literal_set.rs
+    // and vyre-libs/tests/cross_layer_parity.rs) recompute it from the wire
+    // buffer instead of pinning a literal, which is why only this one drifted.
     let engine = GpuLiteralSet::compile(&[b"VYRE".as_slice()]);
     let key = MatchScan::cache_key(&engine);
     assert_eq!(
-        key, "lit-6fbbc5c22cb738b9",
+        key, "lit-264e7c96c5bbfcc9",
         "cache key must match known cross-process constant"
     );
 }

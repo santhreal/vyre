@@ -1,11 +1,16 @@
 //! Host locality affinity governance test suite.
 
 const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
-const CONTRACTS: &str = include_str!("../../../docs/optimization/HOST_LOCALITY_AFFINITY_CONTRACTS.toml");
-const MATRIX: &str = include_str!("../../../docs/optimization/CPU_GPU_TOPOLOGY_AFFINITY_MATRIX.toml");
+const CONTRACTS: &str =
+    include_str!("../../../docs/optimization/HOST_LOCALITY_AFFINITY_CONTRACTS.toml");
+const MATRIX: &str =
+    include_str!("../../../docs/optimization/CPU_GPU_TOPOLOGY_AFFINITY_MATRIX.toml");
 const NUMA: &str = include_str!("../../../docs/optimization/NUMA_MEMORY_PLACEMENT_POLICY.toml");
-const EVIDENCE: &str = include_str!("../../../docs/optimization/LOCALITY_REGRESSION_EVIDENCE_POLICY.toml");
-const COVERAGE: &str = include_str!("../../../docs/optimization/END_TO_END_HOST_LOCALITY_AFFINITY_TRANCHE_COVERAGE.toml");
+const EVIDENCE: &str =
+    include_str!("../../../docs/optimization/LOCALITY_REGRESSION_EVIDENCE_POLICY.toml");
+const COVERAGE: &str = include_str!(
+    "../../../docs/optimization/END_TO_END_HOST_LOCALITY_AFFINITY_TRANCHE_COVERAGE.toml"
+);
 
 #[test]
 fn host_locality_affinity_sources_are_registered() {
@@ -18,12 +23,16 @@ fn host_locality_affinity_sources_are_registered() {
         "NVML_CPU_MEMORY_AFFINITY",
         "HWLOC_TOPOLOGY_API",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 
 #[test]
-fn host_locality_contracts_record_cpu_memory_device_cpuset_migration_fallback_and_authority_links() {
+fn host_locality_contracts_record_cpu_memory_device_cpuset_migration_fallback_and_authority_links()
+{
     for required in [
         "contract_id",
         "host_surface",
@@ -37,7 +46,10 @@ fn host_locality_contracts_record_cpu_memory_device_cpuset_migration_fallback_an
         "pinned-staging-worker-locality",
         "io-parser-scan-thread-locality",
     ] {
-        assert!(CONTRACTS.contains(required), "host locality contracts must include {required}");
+        assert!(
+            CONTRACTS.contains(required),
+            "host locality contracts must include {required}"
+        );
     }
 }
 
@@ -56,12 +68,16 @@ fn cpu_gpu_topology_matrix_records_cpu_memory_io_kubernetes_sharing_privacy_and_
         "storage-device-ingress-locality",
         "cpu-reference-route-locality",
     ] {
-        assert!(MATRIX.contains(required), "CPU/GPU topology affinity matrix must include {required}");
+        assert!(
+            MATRIX.contains(required),
+            "CPU/GPU topology affinity matrix must include {required}"
+        );
     }
 }
 
 #[test]
-fn numa_memory_placement_policy_records_policy_mode_node_selection_first_touch_migration_claim_scope_and_failure() {
+fn numa_memory_placement_policy_records_policy_mode_node_selection_first_touch_migration_claim_scope_and_failure(
+) {
     for required in [
         "placement_id",
         "allocation_surface",
@@ -75,12 +91,16 @@ fn numa_memory_placement_policy_records_policy_mode_node_selection_first_touch_m
         "mmap-corpus-numa-placement",
         "operator-container-numa-alignment",
     ] {
-        assert!(NUMA.contains(required), "NUMA memory placement policy must include {required}");
+        assert!(
+            NUMA.contains(required),
+            "NUMA memory placement policy must include {required}"
+        );
     }
 }
 
 #[test]
-fn locality_regression_evidence_records_baseline_candidate_metrics_counters_correctness_and_decisions() {
+fn locality_regression_evidence_records_baseline_candidate_metrics_counters_correctness_and_decisions(
+) {
     for required in [
         "evidence_id",
         "comparison_surface",
@@ -94,12 +114,16 @@ fn locality_regression_evidence_records_baseline_candidate_metrics_counters_corr
         "pinned-staging-numa-regression",
         "cpu-reference-locality-regression",
     ] {
-        assert!(EVIDENCE.contains(required), "locality regression evidence policy must include {required}");
+        assert!(
+            EVIDENCE.contains(required),
+            "locality regression evidence policy must include {required}"
+        );
     }
 }
 
 #[test]
-fn host_locality_coverage_reuses_placement_gpu_topology_memory_transfer_corpus_partition_stratification_budget_profile_statistics_output_and_publication_authorities() {
+fn host_locality_coverage_reuses_placement_gpu_topology_memory_transfer_corpus_partition_stratification_budget_profile_statistics_output_and_publication_authorities(
+) {
     for required in [
         "VX-1501..VX-1520",
         "host_locality_affinity_contracts",
@@ -127,6 +151,9 @@ fn host_locality_coverage_reuses_placement_gpu_topology_memory_transfer_corpus_p
         "dedup_seam",
         "proof_gate",
     ] {
-        assert!(COVERAGE.contains(required), "host locality coverage must include {required}");
+        assert!(
+            COVERAGE.contains(required),
+            "host locality coverage must include {required}"
+        );
     }
 }

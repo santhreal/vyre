@@ -4,6 +4,7 @@
 //! module owns the trait entrypoints that turn caller inputs into persistent
 //! GPU handles, execute the compiled compute pipeline, and read back outputs.
 
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use smallvec::SmallVec;
@@ -288,7 +289,7 @@ impl CompiledPipeline for WgpuPipeline {
                 bind_group_cache: Some(self.bind_group_cache.as_ref()),
                 buffer_bindings: &self.buffer_bindings,
                 inputs,
-                output_bindings: &self.output_bindings,
+                output_bindings: Arc::clone(&self.output_bindings),
                 trap_tags: &self.trap_tags,
                 workgroup_count,
                 indirect: self.indirect.as_ref(),
@@ -299,6 +300,10 @@ impl CompiledPipeline for WgpuPipeline {
                 },
                 iterations,
                 timestamp_profile: true,
+                inferred_grid_shape: config
+                    .grid_override
+                    .is_none()
+                    .then_some(self.workgroup_shape),
             },
         )?;
         let enqueue_ns = checked_elapsed_ns(enqueue_started, "WGPU compiled timed enqueue")?;

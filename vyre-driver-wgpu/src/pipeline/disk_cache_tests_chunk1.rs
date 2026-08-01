@@ -389,3 +389,146 @@ fn early_pipeline_cache_key_preserves_runtime_storage_lengths() {
         "Fix: in-memory compiled-pipeline artifacts carry binding and output metadata, so shape-distinct Programs must not share an early cache key."
     );
 }
+
+/// Wire a Program to a disk cache key exactly as `load_or_compile_disk_wgsl`
+/// does: normalized digest, then `wgsl_cache_key`.
+fn disk_cache_key_for(program: &vyre_foundation::ir::Program) -> [u8; 32] {
+    let norm_digest = vyre_driver::pipeline::try_normalized_program_cache_digest(program)
+        .expect("Fix: fixture Program must produce a normalized cache digest");
+    wgsl_cache_key(
+        &norm_digest,
+        "Vulkan:00000000:00000000:test:driver",
+        &DispatchConfig::default(),
+    )
+}
+
+/// Two Programs whose buffers differ only by swapped binding slots must not
+/// share a WGSL disk cache key.
+///
+/// This is the defect this test exists to lock out, and the wgpu key is where it
+/// was FATAL rather than merely wasteful. `wgsl_cache_key` mixes exactly one
+/// program-derived input, the normalized digest, so unlike the CUDA PTX key it
+/// has no second lane that could discriminate these two programs incidentally.
+/// Before the digest keyed `binding`, these two programs produced the same key,
+/// so the cache returned the shader compiled with the other bind-group layout
+/// and every dispatch wrote its results into the wrong buffer, silently and
+/// with no error anywhere.
+#[test]
+fn wgsl_disk_cache_key_separates_swapped_buffer_bindings() {
+    let entry = vec![
+        vyre_foundation::ir::Node::store(
+            "a",
+            vyre_foundation::ir::Expr::u32(0),
+            vyre_foundation::ir::Expr::u32(1),
+        ),
+        vyre_foundation::ir::Node::store(
+            "b",
+            vyre_foundation::ir::Expr::u32(0),
+            vyre_foundation::ir::Expr::u32(2),
+        ),
+    ];
+    let straight = Program::wrapped(
+        vec![
+            vyre_foundation::ir::BufferDecl::output("a", 0, vyre_foundation::ir::DataType::U32)
+                .with_count(64),
+            vyre_foundation::ir::BufferDecl::output("b", 1, vyre_foundation::ir::DataType::U32)
+                .with_count(64),
+        ],
+        [64, 1, 1],
+        entry.clone(),
+    );
+    let swapped = Program::wrapped(
+        vec![
+            vyre_foundation::ir::BufferDecl::output("a", 1, vyre_foundation::ir::DataType::U32)
+                .with_count(64),
+            vyre_foundation::ir::BufferDecl::output("b", 0, vyre_foundation::ir::DataType::U32)
+                .with_count(64),
+        ],
+        [64, 1, 1],
+        entry,
+    );
+
+    assert_ne!(
+        disk_cache_key_for(&straight),
+        disk_cache_key_for(&swapped),
+        "Fix: binding slots reach the generated WGSL bind-group layout, so two binding \
+         layouts must not share one disk cache entry; sharing one serves a shader that \
+         writes into the wrong buffer."
+    );
+}
+
+/// Two Programs differing only in a workgroup array LENGTH must not share a
+/// WGSL disk cache key.
+///
+/// `MemoryKind::Shared` is the one memory class whose `element_count` the naga
+/// emitter bakes into shader text, as `var<workgroup> tile: array<u32, N>`.
+/// Sharing a cache entry across two values of N returns a shader whose workgroup
+/// array is the wrong size, so indexing runs past it.
+#[test]
+fn wgsl_disk_cache_key_separates_workgroup_array_lengths() {
+    let build = |shared_len: u32| {
+        Program::wrapped(
+            vec![
+                vyre_foundation::ir::BufferDecl::output(
+                    "out",
+                    0,
+                    vyre_foundation::ir::DataType::U32,
+                )
+                .with_count(64),
+                vyre_foundation::ir::BufferDecl::workgroup(
+                    "tile",
+                    shared_len,
+                    vyre_foundation::ir::DataType::U32,
+                ),
+            ],
+            [64, 1, 1],
+            vec![vyre_foundation::ir::Node::store(
+                "out",
+                vyre_foundation::ir::Expr::u32(0),
+                vyre_foundation::ir::Expr::u32(1),
+            )],
+        )
+    };
+
+    assert_ne!(
+        disk_cache_key_for(&build(64)),
+        disk_cache_key_for(&build(128)),
+        "Fix: a workgroup array length is baked into WGSL text, so two lengths must not \
+         share one disk cache entry."
+    );
+}
+
+/// Resizing a RUNTIME storage buffer must NOT change the WGSL disk cache key.
+///
+/// The incidental-protection twin of the two tests above, and the reason the
+/// digest keys `count` conditionally instead of always. Storage lengths are
+/// erased in WGSL (`ArraySize::Dynamic`), so a key that changed on resize would
+/// force a full naga recompile for every new input size, which costs far more
+/// than the dispatch it precedes. Together with the tests above this pins the
+/// key to discriminate exactly what reaches shader text and nothing more.
+#[test]
+fn wgsl_disk_cache_key_survives_runtime_storage_resize() {
+    let build = |count: u32| {
+        Program::wrapped(
+            vec![vyre_foundation::ir::BufferDecl::output(
+                "out",
+                0,
+                vyre_foundation::ir::DataType::U32,
+            )
+            .with_count(count)],
+            [64, 1, 1],
+            vec![vyre_foundation::ir::Node::store(
+                "out",
+                vyre_foundation::ir::Expr::u32(0),
+                vyre_foundation::ir::Expr::u32(1),
+            )],
+        )
+    };
+
+    assert_eq!(
+        disk_cache_key_for(&build(1024)),
+        disk_cache_key_for(&build(1_048_576)),
+        "Fix: runtime storage lengths are erased in WGSL, so a resize must reuse the \
+         cached shader instead of forcing a naga recompile."
+    );
+}

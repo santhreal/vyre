@@ -1,11 +1,9 @@
 //! Crate feature release evidence for Vyre and Weir.
 
 use std::fs;
-use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 
 use serde::Serialize;
-use walkdir::WalkDir;
 
 #[derive(Debug, Serialize)]
 struct FeatureMatrix {
@@ -32,7 +30,7 @@ struct PackageFeatures {
 const MAX_MANIFEST_BYTES: u64 = 1_048_576;
 const REQUIRED_RELEASE_PACKAGES: &[&str] = &[
     "vyre",
-    "weir",
+    crate::release_train::weir_package_name(),
     "vyrec",
     "vyre-driver-cuda",
     "vyre-driver-wgpu",
@@ -135,7 +133,7 @@ pub(crate) fn run(args: &[String]) {
                 "vyre-driver-wgpu is missing explicit `wgpu` fallback release feature".to_string(),
             );
         }
-        if package.name == "weir" {
+        if package.name == crate::release_train::weir_package_name() {
             for required in ["default", "serde"] {
                 if !package.features.iter().any(|feature| feature == required) {
                     blockers.push(format!(
@@ -152,23 +150,14 @@ pub(crate) fn run(args: &[String]) {
         packages,
         blockers,
     };
-    let json = match serde_json::to_string_pretty(&matrix) {
-        Ok(json) => json,
-        Err(error) => {
-            eprintln!("Fix: failed to serialize feature matrix: {error}");
-            std::process::exit(1);
-        }
-    };
+
     if let Some(parent) = output.parent() {
         if let Err(error) = fs::create_dir_all(parent) {
             eprintln!("Fix: failed to create `{}`: {error}", parent.display());
             std::process::exit(1);
         }
     }
-    if let Err(error) = fs::write(&output, format!("{json}\n")) {
-        eprintln!("Fix: failed to write `{}`: {error}", output.display());
-        std::process::exit(1);
-    }
+    crate::output_arg::write_json(&output, &matrix);
     println!("feature-matrix: wrote {}", output.display());
     if !matrix.blockers.is_empty() {
         std::process::exit(1);
@@ -176,51 +165,23 @@ pub(crate) fn run(args: &[String]) {
 }
 
 fn collect_features(root: &Path, packages: &mut Vec<PackageFeatures>, blockers: &mut Vec<String>) {
-    for entry in WalkDir::new(root).into_iter().filter_entry(|entry| {
-        let name = entry.file_name().to_string_lossy();
-        !matches!(
-            name.as_ref(),
-            "target"
-                | "target-codex"
-                | "target_tests"
-                | ".git"
-                | ".cargo-target"
-                | "release"
-                | "examples"
-        )
-    }) {
-        let entry = match entry {
-            Ok(entry) => entry,
-            Err(error) => {
-                blockers.push(format!(
-                    "failed to walk feature matrix root `{}`: {error}",
-                    error
-                        .path()
-                        .map(|path| path.display().to_string())
-                        .unwrap_or_else(|| root.display().to_string())
-                ));
-                continue;
-            }
-        };
-        let path = entry.path();
-        if path.file_name().and_then(|name| name.to_str()) != Some("Cargo.toml") {
-            continue;
-        }
-        match parse_features(path) {
-            Ok(Some(package)) => packages.push(package),
-            Ok(None) => {}
-            Err(error) => blockers.push(error),
-        }
-    }
+    crate::manifest_walk::collect_manifests(
+        root,
+        "feature matrix",
+        packages,
+        blockers,
+        parse_features,
+    );
 }
 
 fn parse_features(path: &Path) -> Result<Option<PackageFeatures>, String> {
-    let text = read_text_bounded(path, MAX_MANIFEST_BYTES).map_err(|error| {
-        format!(
-            "failed to read feature manifest `{}`: {error}",
-            path.display()
-        )
-    })?;
+    let text = crate::output_arg::read_text_bounded(path, MAX_MANIFEST_BYTES, "release feature")
+        .map_err(|error| {
+            format!(
+                "failed to read feature manifest `{}`: {error}",
+                path.display()
+            )
+        })?;
     let value = toml::from_str::<toml::Value>(&text).map_err(|error| {
         format!(
             "failed to parse feature manifest `{}`: {error}",
@@ -296,22 +257,6 @@ fn parse_features(path: &Path) -> Result<Option<PackageFeatures>, String> {
         unresolved_feature_members,
         release_policy,
     }))
-}
-
-fn read_text_bounded(path: &Path, max_bytes: u64) -> io::Result<String> {
-    let mut reader = fs::File::open(path)?.take(max_bytes.saturating_add(1));
-    let mut text = String::new();
-    reader.read_to_string(&mut text)?;
-    if text.len() as u64 > max_bytes {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            format!(
-                "{} exceeds {max_bytes} byte release feature read cap",
-                path.display()
-            ),
-        ));
-    }
-    Ok(text)
 }
 
 fn dependency_names(value: &toml::Value) -> Vec<String> {
@@ -417,28 +362,12 @@ fn release_policy(name: &str) -> &'static str {
 }
 
 fn parse_output(args: &[String]) -> Result<PathBuf, String> {
-    let mut output = None;
-    let mut index = 2;
-    while index < args.len() {
-        match args[index].as_str() {
-            "--output" => {
-                let Some(path) = args.get(index + 1) else {
-                    return Err("Fix: --output requires a path.".to_string());
-                };
-                output = Some(PathBuf::from(path));
-                index += 2;
-            }
-            "--help" | "-h" => {
-                println!(
-                    "USAGE:\n  cargo_full run --bin xtask -- feature-matrix [--output PATH]\n\n\
-                     Writes Vyre/Weir crate feature evidence."
-                );
-                std::process::exit(0);
-            }
-            other => return Err(format!("Fix: unknown feature-matrix option `{other}`.")),
-        }
-    }
-    Ok(output.unwrap_or_else(default_output))
+    crate::output_arg::parse_output_arg(
+        args,
+        "feature-matrix",
+        "Writes Vyre/Weir crate feature evidence.",
+        default_output,
+    )
 }
 
 fn default_output() -> PathBuf {
@@ -446,4 +375,16 @@ fn default_output() -> PathBuf {
         .parent()
         .map(|path| path.join("release/evidence/metadata/feature-matrix.json"))
         .unwrap_or_else(|| PathBuf::from("release/evidence/metadata/feature-matrix.json"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::REQUIRED_RELEASE_PACKAGES;
+
+    /// Feature evidence follows the publishable Weir package name owned by release-train data.
+    #[test]
+    fn required_packages_use_publishable_weir_identity() {
+        assert!(REQUIRED_RELEASE_PACKAGES.contains(&crate::release_train::weir_package_name()));
+        assert!(!REQUIRED_RELEASE_PACKAGES.contains(&"weir"));
+    }
 }

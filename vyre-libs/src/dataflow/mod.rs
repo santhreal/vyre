@@ -268,10 +268,15 @@ mod tests {
 
     #[test]
     fn external_witness_fact_header_is_exact() {
-        let header =
-            SharedFactHeader::new("external-dataflow", SharedFactKind::Witness, 13, 21, Soundness::Exact)
-                .with_object(34)
-                .with_aux(55);
+        let header = SharedFactHeader::new(
+            "external-dataflow",
+            SharedFactKind::Witness,
+            13,
+            21,
+            Soundness::Exact,
+        )
+        .with_object(34)
+        .with_aux(55);
 
         assert_eq!(
             header.wire_header(),

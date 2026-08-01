@@ -254,23 +254,14 @@ pub(crate) fn run(args: &[String]) {
         release_note_token_findings,
         blockers,
     };
-    let json = match serde_json::to_string_pretty(&matrix) {
-        Ok(json) => json,
-        Err(error) => {
-            eprintln!("Fix: failed to serialize version matrix: {error}");
-            std::process::exit(1);
-        }
-    };
+
     if let Some(parent) = output.parent() {
         if let Err(error) = fs::create_dir_all(parent) {
             eprintln!("Fix: failed to create `{}`: {error}", parent.display());
             std::process::exit(1);
         }
     }
-    if let Err(error) = fs::write(&output, format!("{json}\n")) {
-        eprintln!("Fix: failed to write `{}`: {error}", output.display());
-        std::process::exit(1);
-    }
+    crate::output_arg::write_json(&output, &matrix);
     write_release_tag_plan(&output, &matrix);
     println!("version-matrix: wrote {}", output.display());
     if !matrix.blockers.is_empty() {
@@ -315,18 +306,8 @@ fn write_release_tag_plan(output: &Path, matrix: &VersionMatrix) {
         version_matrix_blocker_count: matrix.blockers.len(),
         blockers: matrix.blockers.clone(),
     };
-    let json = match serde_json::to_string_pretty(&plan) {
-        Ok(json) => json,
-        Err(error) => {
-            eprintln!("Fix: failed to serialize release tag plan: {error}");
-            std::process::exit(1);
-        }
-    };
     let path = parent.join("release-tag-plan.json");
-    if let Err(error) = fs::write(&path, format!("{json}\n")) {
-        eprintln!("Fix: failed to write `{}`: {error}", path.display());
-        std::process::exit(1);
-    }
+    crate::output_arg::write_json(&path, &plan);
 }
 
 fn scan_bare_release_tags(
@@ -879,28 +860,12 @@ fn collect_one_version(
 }
 
 fn parse_output(args: &[String]) -> Result<PathBuf, String> {
-    let mut output = None;
-    let mut index = 2;
-    while index < args.len() {
-        match args[index].as_str() {
-            "--output" => {
-                let Some(path) = args.get(index + 1) else {
-                    return Err("Fix: --output requires a path.".to_string());
-                };
-                output = Some(PathBuf::from(path));
-                index += 2;
-            }
-            "--help" | "-h" => {
-                println!(
-                    "USAGE:\n  cargo_full run --bin xtask -- version-matrix [--output PATH]\n\n\
-                     Writes release version evidence for the Vyre/Weir release story."
-                );
-                std::process::exit(0);
-            }
-            other => return Err(format!("Fix: unknown version-matrix option `{other}`.")),
-        }
-    }
-    Ok(output.unwrap_or_else(default_output))
+    crate::output_arg::parse_output_arg(
+        args,
+        "version-matrix",
+        "Writes release version evidence for the Vyre/Weir release story.",
+        default_output,
+    )
 }
 
 fn default_output() -> PathBuf {

@@ -56,11 +56,9 @@ fn carrier_summary_total_ops_observed_matches_descriptor_op_count() {
     // in the descriptor (ops_iter visits all bodies depth-first).
     let exact_total = count_total_ops(&desc.body);
     assert_eq!(
-        summary.total_ops_observed,
-        exact_total,
+        summary.total_ops_observed, exact_total,
         "total_ops_observed {} != recursive body op count {}",
-        summary.total_ops_observed,
-        exact_total
+        summary.total_ops_observed, exact_total
     );
 }
 

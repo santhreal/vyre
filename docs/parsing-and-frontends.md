@@ -212,7 +212,10 @@ whatever the catalog and `vyre-libs` register  -  not a second shadow IR.
 ## Execution plan and current code status
 
 - **Single roadmap** (phases, testing bar, innovation backlog):
-  [`PARSING_EXECUTION_PLAN.md`](PARSING_EXECUTION_PLAN.md).
+  `PARSING_EXECUTION_PLAN.md` in this directory. It is not linked because it is a
+  maintainer working document excluded from the repository, so it is present for a
+  maintainer and absent from a clone. Nothing in the design contract below depends
+  on reading it; it sequences the work, it does not define the interface.
 - **`PackedAst` / VAST** in this file is a **design** contract. A shared
   Rust `PackedAst` / `VastHeader` type must land in source before this
   document can be treated as the default handoff contract.

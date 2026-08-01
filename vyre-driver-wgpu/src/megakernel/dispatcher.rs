@@ -5,8 +5,8 @@ use super::batch::{
     FILE_METADATA_WORDS, HIT_RECORD_WORDS, QUEUE_STATE_WORDS,
 };
 use super::dispatch_plan::{BatchDispatchPlan, BatchDispatchPlanCache, BatchDispatchPlanLookup};
-use super::segmentation::SEGMENT_WORDS;
 use super::pipeline_cache::{BatchPipelineCache, BatchPipelineShape};
+use super::segmentation::SEGMENT_WORDS;
 use crate::buffer::GpuBufferHandle;
 use crate::{pipeline::WgpuPipeline, WgpuBackend};
 use std::sync::Arc;
@@ -243,10 +243,8 @@ pub fn wgpu_scan_batch_segmentation_evidence(
         });
     }
 
-    let command_encoder_count = div_ceil_u32(
-        request.chunk_count,
-        request.max_chunks_per_command_encoder,
-    );
+    let command_encoder_count =
+        div_ceil_u32(request.chunk_count, request.max_chunks_per_command_encoder);
     let bind_group_count = request
         .bind_group_reuse_count
         .checked_add(request.bind_group_create_count)
@@ -267,9 +265,8 @@ pub fn wgpu_scan_batch_segmentation_evidence(
         .upload_copy_count
         .checked_add(request.readback_copy_count)
         .ok_or(WgpuScanBatchSegmentationError::CopyCountOverflow)?;
-    let bind_group_reuse_bps =
-        ((u64::from(request.bind_group_reuse_count) * 10_000) / u64::from(command_encoder_count))
-            as u16;
+    let bind_group_reuse_bps = ((u64::from(request.bind_group_reuse_count) * 10_000)
+        / u64::from(command_encoder_count)) as u16;
 
     Ok(WgpuScanBatchSegmentationEvidence {
         schema_version: WGPU_SCAN_BATCH_SEGMENTATION_SCHEMA_VERSION,
@@ -497,11 +494,9 @@ impl BatchDispatchConfig {
 }
 
 fn batch_fixed_resident_overhead_bytes() -> u64 {
-    dispatcher_usize_to_u64(QUEUE_STATE_WORDS, "queue-state word count")
-        .saturating_mul(dispatcher_usize_to_u64(
-            std::mem::size_of::<u32>(),
-            "u32 byte width",
-        ))
+    dispatcher_usize_to_u64(QUEUE_STATE_WORDS, "queue-state word count").saturating_mul(
+        dispatcher_usize_to_u64(std::mem::size_of::<u32>(), "u32 byte width"),
+    )
 }
 
 /// Widen a megakernel ABI constant to `u64`, failing closed on an out-of-range value.
@@ -542,7 +537,7 @@ where
     match value.try_into() {
         Ok(v) => v,
         Err(error) => {
-            // Fail closed: a constant that cannot fit u32 is a shader miscompile 
+            // Fail closed: a constant that cannot fit u32 is a shader miscompile
             // u32::MAX embedded as a WGSL literal would corrupt ABI offsets in the
             // generated GPU program. Surface the label and value loudly (Law 10).
             panic!(
@@ -1274,13 +1269,14 @@ fn occupancy_proxy_bps(items_processed: u32, worker_groups: u32, workgroup_size_
     let lanes = u64::from(worker_groups.max(1))
         .checked_mul(u64::from(workgroup_size_x.max(1)))
         .unwrap_or(u64::MAX);
-    crate::numeric::WGPU_NUMERIC.ratio_basis_points_u64_wide(
-        u64::from(items_processed),
-        lanes.max(1),
-        0,
-        "batch occupancy proxy",
-    )
-    .min(10_000) as u16
+    crate::numeric::WGPU_NUMERIC
+        .ratio_basis_points_u64_wide(
+            u64::from(items_processed),
+            lanes.max(1),
+            0,
+            "batch occupancy proxy",
+        )
+        .min(10_000) as u16
 }
 
 fn validate_u32_readback_words(bytes: &[u8], label: &'static str) -> Result<usize, PipelineError> {
@@ -1387,10 +1383,7 @@ fn build_batch_program(
         // the kernel: safe because the drain loop is the only top-level statement
         // (no post-loop finalization to skip) and `execute_batch_claim_body`
         // contains no workgroup barrier (no divergence deadlock).
-        Node::if_then(
-            Expr::ge(Expr::var("claim"), queue_len),
-            vec![Node::Return],
-        ),
+        Node::if_then(Expr::ge(Expr::var("claim"), queue_len), vec![Node::Return]),
     ];
     loop_body.extend(execute_batch_claim_body(hit_writer));
 
@@ -1401,29 +1394,48 @@ fn build_batch_program(
     )
 }
 
-fn batch_program_buffers(hit_capacity: u32) -> Vec<BufferDecl> {
+#[derive(Clone, Copy)]
+enum BatchAutomatonLayout {
+    PerRule,
+    Combined,
+}
+
+fn batch_program_buffers_for_layout(
+    hit_capacity: u32,
+    layout: BatchAutomatonLayout,
+) -> Vec<BufferDecl> {
     let hit_ring_words = hit_capacity.saturating_mul(4);
-    vec![
+    let mut buffers = vec![
         BufferDecl::storage("file_offsets", 0, BufferAccess::ReadOnly, DataType::U32),
         BufferDecl::storage("file_metadata", 1, BufferAccess::ReadOnly, DataType::U32),
-        BufferDecl::storage("class_maps", 2, BufferAccess::ReadOnly, DataType::U32),
-        BufferDecl::storage("haystack", 3, BufferAccess::ReadOnly, DataType::U32),
-        BufferDecl::storage("rule_meta", 4, BufferAccess::ReadOnly, DataType::U32),
-        BufferDecl::storage("transitions", 5, BufferAccess::ReadOnly, DataType::U32),
-        BufferDecl::storage("accept", 6, BufferAccess::ReadOnly, DataType::U32),
+    ];
+    match layout {
+        BatchAutomatonLayout::PerRule => buffers.extend([
+            BufferDecl::storage("class_maps", 2, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage("haystack", 3, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage("rule_meta", 4, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage("transitions", 5, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage("accept", 6, BufferAccess::ReadOnly, DataType::U32),
+        ]),
+        BatchAutomatonLayout::Combined => buffers.extend([
+            BufferDecl::storage("haystack", 2, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage("transitions", 3, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage("output_offsets", 4, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage("output_records", 5, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage("class_maps", 6, BufferAccess::ReadOnly, DataType::U32),
+        ]),
+    }
+    buffers.extend([
         BufferDecl::storage("queue_state", 7, BufferAccess::ReadWrite, DataType::U32).with_count(
             dispatcher_abi_u32(QUEUE_STATE_WORDS, "queue-state word count"),
         ),
         BufferDecl::output("hit_ring", 8, DataType::U32).with_count(hit_ring_words),
-        // Flat segment table (`segment_count * SEGMENT_WORDS` u32s). Declared
-        // LAST among the read-only inputs so it occupies the final positional
-        // input slot (the persistent pipeline binds non-output buffers to
-        // `inputs[]` in declaration order (see `dispatch_persistent_borrowed`)).
-        // The kernel reads row `seg_idx = claim / rule_count` to derive the
-        // window; the host sizes the queue from the same table so a claim never
-        // indexes past it.
         BufferDecl::storage("segments", 9, BufferAccess::ReadOnly, DataType::U32),
-    ]
+    ]);
+    buffers
+}
+fn batch_program_buffers(hit_capacity: u32) -> Vec<BufferDecl> {
+    batch_program_buffers_for_layout(hit_capacity, BatchAutomatonLayout::PerRule)
 }
 
 // ─── Combined-AC segmented megakernel ──────────────────────────────────────
@@ -1450,30 +1462,7 @@ fn batch_program_buffers(hit_capacity: u32) -> Vec<BufferDecl> {
 /// drops the rule dimension. `segments` stays last so it occupies the final
 /// positional input slot, exactly as the per-rule path requires.
 fn combined_batch_program_buffers(hit_capacity: u32) -> Vec<BufferDecl> {
-    let hit_ring_words = hit_capacity.saturating_mul(4);
-    vec![
-        BufferDecl::storage("file_offsets", 0, BufferAccess::ReadOnly, DataType::U32),
-        BufferDecl::storage("file_metadata", 1, BufferAccess::ReadOnly, DataType::U32),
-        BufferDecl::storage("haystack", 2, BufferAccess::ReadOnly, DataType::U32),
-        // Combined Aho-Corasick automaton, flattened + byte-class compressed:
-        //   transitions:    state_count * num_classes  (compressed next-state)
-        //   output_offsets: state_count + 1            (CSR row pointers)
-        //   output_records: output_records_len         (flat pattern_id payload)
-        //   class_maps:     256                        (byte -> class column id)
-        // The kernel folds each byte through `class_maps` then indexes the
-        // compressed `state * num_classes + class` row. LOSSLESS (every byte in
-        // a class shares its dense column), shrinking the transition table from
-        // `state_count * 256` to `state_count * num_classes`.
-        BufferDecl::storage("transitions", 3, BufferAccess::ReadOnly, DataType::U32),
-        BufferDecl::storage("output_offsets", 4, BufferAccess::ReadOnly, DataType::U32),
-        BufferDecl::storage("output_records", 5, BufferAccess::ReadOnly, DataType::U32),
-        BufferDecl::storage("class_maps", 6, BufferAccess::ReadOnly, DataType::U32),
-        BufferDecl::storage("queue_state", 7, BufferAccess::ReadWrite, DataType::U32).with_count(
-            dispatcher_abi_u32(QUEUE_STATE_WORDS, "queue-state word count"),
-        ),
-        BufferDecl::output("hit_ring", 8, DataType::U32).with_count(hit_ring_words),
-        BufferDecl::storage("segments", 9, BufferAccess::ReadOnly, DataType::U32),
-    ]
+    batch_program_buffers_for_layout(hit_capacity, BatchAutomatonLayout::Combined)
 }
 
 /// Width of each combined-AC transition target in the device transition table.
@@ -1527,10 +1516,7 @@ pub(crate) fn build_combined_batch_program(
                 Expr::u32(1),
             ),
         ),
-        Node::if_then(
-            Expr::ge(Expr::var("claim"), queue_len),
-            vec![Node::Return],
-        ),
+        Node::if_then(Expr::ge(Expr::var("claim"), queue_len), vec![Node::Return]),
     ];
     loop_body.extend(execute_combined_claim_body(num_classes, transition_width));
 
@@ -1541,21 +1527,17 @@ pub(crate) fn build_combined_batch_program(
     )
 }
 
-/// Decode one combined-AC claim into its file window and scan it.
-///
-/// `queue_len = segment_count`, so the claim IS the segment index directly (no
-/// `/ rule_count`: there is no rule dimension). The segment row layout
-/// `[file_idx, scan_start, emit_start, emit_end]` and the absolute-bounds
-/// arithmetic are identical to [`execute_batch_claim_body`].
-fn execute_combined_claim_body(num_classes: u32, transition_width: TransitionWidth) -> Vec<Node> {
+fn segment_window_nodes(segment_index: Expr) -> Vec<Node> {
     vec![
-        // claim == seg_idx (one work item per segment).
-        Node::let_bind("seg_idx", Expr::var("claim")),
+        Node::let_bind("seg_idx", segment_index),
         Node::let_bind(
             "seg_base",
             Expr::mul(
                 Expr::var("seg_idx"),
-                Expr::u32(dispatcher_abi_u32(SEGMENT_WORDS, "segment table word count")),
+                Expr::u32(dispatcher_abi_u32(
+                    SEGMENT_WORDS,
+                    "segment table word count",
+                )),
             ),
         ),
         Node::let_bind("file_idx", Expr::load("segments", Expr::var("seg_base"))),
@@ -1604,19 +1586,37 @@ fn execute_combined_claim_body(num_classes: u32, transition_width: TransitionWid
             "emit_end",
             Expr::add(Expr::var("file_start"), Expr::var("emit_end_rel")),
         ),
-        Node::Block(combined_dfa_byte_scanner(num_classes, transition_width)),
-        Node::let_bind(
-            "done_prev",
-            Expr::atomic_add(
-                "queue_state",
-                Expr::u32(dispatcher_abi_u32(
-                    queue_state_word::DONE_COUNT,
-                    "queue-state done-count word",
-                )),
-                Expr::u32(1),
-            ),
-        ),
     ]
+}
+
+fn complete_claim_node() -> Node {
+    Node::let_bind(
+        "done_prev",
+        Expr::atomic_add(
+            "queue_state",
+            Expr::u32(dispatcher_abi_u32(
+                queue_state_word::DONE_COUNT,
+                "queue-state done-count word",
+            )),
+            Expr::u32(1),
+        ),
+    )
+}
+
+/// Decode one combined-AC claim into its file window and scan it.
+///
+/// `queue_len = segment_count`, so the claim IS the segment index directly (no
+/// `/ rule_count`: there is no rule dimension). The segment row layout
+/// `[file_idx, scan_start, emit_start, emit_end]` and the absolute-bounds
+/// arithmetic are identical to [`execute_batch_claim_body`].
+fn execute_combined_claim_body(num_classes: u32, transition_width: TransitionWidth) -> Vec<Node> {
+    let mut body = segment_window_nodes(Expr::var("claim"));
+    body.push(Node::Block(combined_dfa_byte_scanner(
+        num_classes,
+        transition_width,
+    )));
+    body.push(complete_claim_node());
+    body
 }
 
 /// Combined Aho-Corasick window scan with per-state multi-emit.
@@ -1752,85 +1752,22 @@ fn combined_transition_read(num_classes: u32, transition_width: TransitionWidth)
 }
 
 fn execute_batch_claim_body(hit_writer: BatchHitWriter) -> Vec<Node> {
-    vec![
-        Node::let_bind(
-            "rule_count",
-            atomic_load_relaxed(
-                "queue_state",
-                Expr::u32(dispatcher_abi_u32(
-                    queue_state_word::RULE_COUNT,
-                    "queue-state rule-count word",
-                )),
-            ),
-        ),
-        // A claim decodes to `(seg_idx, rule_idx)`. `seg_idx` indexes the flat
-        // `segments` table; each 4-word row is `[file_idx, scan_start, emit_start,
-        // emit_end]` with FILE-RELATIVE offsets (see `segmentation::Segment`). The
-        // dense default (one segment per file, `seg_len = u32::MAX`) makes the row
-        // `[file_idx, 0, 0, file_len]`, so the window is the whole file and this
-        // path is byte-for-byte the legacy `file_idx = claim / rule_count` scan.
-        Node::let_bind(
-            "seg_idx",
-            Expr::div(Expr::var("claim"), Expr::var("rule_count")),
-        ),
+    let rule_count = atomic_load_relaxed(
+        "queue_state",
+        Expr::u32(dispatcher_abi_u32(
+            queue_state_word::RULE_COUNT,
+            "queue-state rule-count word",
+        )),
+    );
+    let mut body = vec![Node::let_bind("rule_count", rule_count)];
+    body.extend(segment_window_nodes(Expr::div(
+        Expr::var("claim"),
+        Expr::var("rule_count"),
+    )));
+    body.extend([
         Node::let_bind(
             "rule_idx",
             Expr::rem(Expr::var("claim"), Expr::var("rule_count")),
-        ),
-        Node::let_bind(
-            "seg_base",
-            Expr::mul(
-                Expr::var("seg_idx"),
-                Expr::u32(dispatcher_abi_u32(SEGMENT_WORDS, "segment table word count")),
-            ),
-        ),
-        Node::let_bind("file_idx", Expr::load("segments", Expr::var("seg_base"))),
-        Node::let_bind(
-            "scan_start_rel",
-            Expr::load("segments", Expr::add(Expr::var("seg_base"), Expr::u32(1))),
-        ),
-        Node::let_bind(
-            "emit_start_rel",
-            Expr::load("segments", Expr::add(Expr::var("seg_base"), Expr::u32(2))),
-        ),
-        Node::let_bind(
-            "emit_end_rel",
-            Expr::load("segments", Expr::add(Expr::var("seg_base"), Expr::u32(3))),
-        ),
-        Node::let_bind(
-            "metadata_base",
-            Expr::mul(
-                Expr::var("file_idx"),
-                Expr::u32(dispatcher_abi_u32(
-                    FILE_METADATA_WORDS,
-                    "file metadata word count",
-                )),
-            ),
-        ),
-        Node::let_bind(
-            "layer_idx",
-            Expr::load(
-                "file_metadata",
-                Expr::add(Expr::var("metadata_base"), Expr::u32(3)),
-            ),
-        ),
-        Node::let_bind(
-            "file_start",
-            Expr::load("file_offsets", Expr::var("file_idx")),
-        ),
-        // Absolute (packed-haystack) window bounds: file base + file-relative
-        // segment offsets. `scan_start <= emit_start < emit_end` by construction.
-        Node::let_bind(
-            "scan_start",
-            Expr::add(Expr::var("file_start"), Expr::var("scan_start_rel")),
-        ),
-        Node::let_bind(
-            "emit_start",
-            Expr::add(Expr::var("file_start"), Expr::var("emit_start_rel")),
-        ),
-        Node::let_bind(
-            "emit_end",
-            Expr::add(Expr::var("file_start"), Expr::var("emit_end_rel")),
         ),
         Node::let_bind(
             "rule_base",
@@ -1850,8 +1787,6 @@ fn execute_batch_claim_body(hit_writer: BatchHitWriter) -> Vec<Node> {
             "accept_base",
             Expr::load("rule_meta", Expr::add(Expr::var("rule_base"), Expr::u32(1))),
         ),
-        // Byte-class compression metadata (rule_meta words 3 and 4): the
-        // per-rule 256-entry byte->class map base and the compressed row width.
         Node::let_bind(
             "class_map_base",
             Expr::load("rule_meta", Expr::add(Expr::var("rule_base"), Expr::u32(3))),
@@ -1860,21 +1795,10 @@ fn execute_batch_claim_body(hit_writer: BatchHitWriter) -> Vec<Node> {
             "num_classes",
             Expr::load("rule_meta", Expr::add(Expr::var("rule_base"), Expr::u32(4))),
         ),
-        // Delegate core evaluation to Tier-2 LEGO Primitive
         Node::Block(dfa_byte_scanner(hit_writer)),
-        // Mark work completion
-        Node::let_bind(
-            "done_prev",
-            Expr::atomic_add(
-                "queue_state",
-                Expr::u32(dispatcher_abi_u32(
-                    queue_state_word::DONE_COUNT,
-                    "queue-state done-count word",
-                )),
-                Expr::u32(1),
-            ),
-        ),
-    ]
+        complete_claim_node(),
+    ]);
+    body
 }
 
 fn dfa_byte_scanner(hit_writer: BatchHitWriter) -> Vec<Node> {
@@ -2119,12 +2043,9 @@ impl CombinedDispatcher {
                         .to_string(),
                 )
             })?;
-        batch.hit_ring().readback_prefix(
-            device,
-            queue,
-            hit_readback_bytes,
-            &mut self.hit_bytes,
-        )?;
+        batch
+            .hit_ring()
+            .readback_prefix(device, queue, hit_readback_bytes, &mut self.hit_bytes)?;
         decode_hits_from_readback_into(&self.hit_bytes, hit_count, hits)?;
 
         Ok(CombinedDispatchSummary {
@@ -2456,7 +2377,12 @@ fn decode_hits_from_readback_into(
 mod tests {
     use super::*;
 
-    fn measurement(seg_len: u32, micros: u64, dropped_hits: u32, complete: bool) -> SegLenMeasurement {
+    fn measurement(
+        seg_len: u32,
+        micros: u64,
+        dropped_hits: u32,
+        complete: bool,
+    ) -> SegLenMeasurement {
         SegLenMeasurement {
             seg_len,
             wall_time: Duration::from_micros(micros),
@@ -2475,7 +2401,7 @@ mod tests {
         let measurements = vec![
             measurement(512, 900, 0, true),
             measurement(256, 700, 0, true),
-            measurement(128, 400, 0, true), // fastest complete
+            measurement(128, 400, 0, true),  // fastest complete
             measurement(64, 300, 12, false), // faster wall, but dropped 12 ⇒ excluded
         ];
         assert_eq!(
@@ -2489,10 +2415,7 @@ mod tests {
     /// an unsound/incomplete geometry as if it were a valid pick.
     #[test]
     fn calibration_fails_closed_when_every_geometry_is_incomplete() {
-        let measurements = vec![
-            measurement(128, 0, 5, false),
-            measurement(64, 0, 9, false),
-        ];
+        let measurements = vec![measurement(128, 0, 5, false), measurement(64, 0, 9, false)];
         let err = select_fastest_complete(&measurements)
             .expect_err("no complete geometry must error, not silently pick one");
         assert!(
@@ -2637,7 +2560,9 @@ mod tests {
         for width in [TransitionWidth::Bits32, TransitionWidth::Bits16] {
             let program = build_combined_batch_program(64, 1024, 40, width);
             let lowered = vyre_lower::lower_for_emit(&program).unwrap_or_else(|e| {
-                panic!("Fix: combined megakernel ({width:?}) must lower to a KernelDescriptor: {e:?}")
+                panic!(
+                    "Fix: combined megakernel ({width:?}) must lower to a KernelDescriptor: {e:?}"
+                )
             });
 
             // The full combined program (not a stripped kernel) must reach the
@@ -2711,12 +2636,18 @@ mod tests {
         assert_eq!(split_hit_overflow(254, 1_000), (254, 0));
         // Exactly full: readable == capacity, nothing dropped.
         assert_eq!(split_hit_overflow(1_000, 1_000), (1_000, 0));
-        // Overflow: readable clamps to capacity, the rest are reported dropped 
+        // Overflow: readable clamps to capacity, the rest are reported dropped
         // the recall-critical signal the old `.min()` clamp threw away.
         assert_eq!(split_hit_overflow(1_001, 1_000), (1_000, 1));
-        assert_eq!(split_hit_overflow(1_500_000, 1_000_000), (1_000_000, 500_000));
+        assert_eq!(
+            split_hit_overflow(1_500_000, 1_000_000),
+            (1_000_000, 500_000)
+        );
         // Saturated raw head (kernel produced u32::MAX-worth of matches).
-        assert_eq!(split_hit_overflow(u32::MAX, 1_000), (1_000, u32::MAX - 1_000));
+        assert_eq!(
+            split_hit_overflow(u32::MAX, 1_000),
+            (1_000, u32::MAX - 1_000)
+        );
     }
 
     #[test]
@@ -2927,8 +2858,9 @@ mod tests {
             5
         ];
 
-        let err = decode_hits_from_readback_into(&bytes, 2, &mut hits)
-            .expect_err("Fix: an under-provisioned hit ring must fail closed, never silently drop hits");
+        let err = decode_hits_from_readback_into(&bytes, 2, &mut hits).expect_err(
+            "Fix: an under-provisioned hit ring must fail closed, never silently drop hits",
+        );
         let PipelineError::Backend(message) = err else {
             panic!("Fix: under-provisioned hit ring must surface a Backend error, got {err:?}");
         };
@@ -2972,7 +2904,11 @@ mod tests {
 
         let hits = decode_hits_from_readback(&bytes, 2)
             .expect("Fix: an over-provisioned hit ring must decode the realized hit_count");
-        assert_eq!(hits.len(), 2, "must decode exactly hit_count, not the ring capacity");
+        assert_eq!(
+            hits.len(),
+            2,
+            "must decode exactly hit_count, not the ring capacity"
+        );
         assert_eq!(hits[1].match_offset, 100);
     }
 
@@ -3056,11 +2992,10 @@ mod scan_batch_segmentation_tests {
 
     #[test]
     fn segmentation_evidence_records_command_copy_bind_group_counts_and_match_digest() {
-        let evidence =
-            wgpu_scan_batch_segmentation_evidence(WgpuScanBatchSegmentationRequest::new(
-                10, 4, 2, 1, 10, 3, 0x1234, 0x1234,
-            ))
-            .expect("Fix: valid WGPU scan segmentation evidence should be accepted");
+        let evidence = wgpu_scan_batch_segmentation_evidence(
+            WgpuScanBatchSegmentationRequest::new(10, 4, 2, 1, 10, 3, 0x1234, 0x1234),
+        )
+        .expect("Fix: valid WGPU scan segmentation evidence should be accepted");
 
         assert_eq!(
             evidence.schema_version,
@@ -3144,12 +3079,10 @@ mod scan_batch_segmentation_tests {
 
 #[cfg(test)]
 mod abi_conversion_contracts {
-    use super::{dispatcher_abi_u32, dispatcher_usize_to_u64};
-    use super::{
-        FILE_METADATA_WORDS, HIT_RECORD_WORDS, QUEUE_STATE_WORDS,
-    };
-    use super::super::segmentation::SEGMENT_WORDS;
     use super::super::batch::queue_state_word;
+    use super::super::segmentation::SEGMENT_WORDS;
+    use super::{dispatcher_abi_u32, dispatcher_usize_to_u64};
+    use super::{FILE_METADATA_WORDS, HIT_RECORD_WORDS, QUEUE_STATE_WORDS};
     use vyre_runtime::megakernel::rule_catalog::RULE_META_WORDS;
 
     /// All ABI word-count constants that are embedded as u32 literals in the
@@ -3167,11 +3100,13 @@ mod abi_conversion_contracts {
         let head_word = dispatcher_abi_u32(queue_state_word::HEAD, "head word");
         let rule_count_word = dispatcher_abi_u32(queue_state_word::RULE_COUNT, "rule-count word");
         let hit_head_word = dispatcher_abi_u32(queue_state_word::HIT_HEAD, "hit-head word");
-        let hit_capacity_word = dispatcher_abi_u32(queue_state_word::HIT_CAPACITY, "hit-capacity word");
+        let hit_capacity_word =
+            dispatcher_abi_u32(queue_state_word::HIT_CAPACITY, "hit-capacity word");
         let done_count_word = dispatcher_abi_u32(queue_state_word::DONE_COUNT, "done-count word");
         let queue_state_words_val = dispatcher_abi_u32(QUEUE_STATE_WORDS, "queue-state word count");
         let segment_words_val = dispatcher_abi_u32(SEGMENT_WORDS, "segment table word count");
-        let file_meta_words_val = dispatcher_abi_u32(FILE_METADATA_WORDS, "file metadata word count");
+        let file_meta_words_val =
+            dispatcher_abi_u32(FILE_METADATA_WORDS, "file metadata word count");
         let rule_meta_words_val = dispatcher_abi_u32(RULE_META_WORDS, "rule metadata word count");
 
         // Assert concrete values, the ABI is contractual; changing these

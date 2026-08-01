@@ -312,4 +312,3 @@ fn compiled_resource_output_dispatch_reuses_static_launch_params() {
     VyreBackend::free_resident(backend.as_ref(), output)
         .expect("Fix: CUDA trait resident output free failed.");
 }
-

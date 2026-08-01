@@ -86,7 +86,7 @@ pub fn try_build_transition_table(patterns: &[&str]) -> Result<Vec<u32>, NfaComp
 ///
 /// # Panics
 ///
-/// Aborts when the plan or table allocation cannot be represented safely 
+/// Aborts when the plan or table allocation cannot be represented safely
 /// loudly, never an empty `Vec` (Law 10: an empty table is a scanner that
 /// silently matches nothing). Callers that must recover use
 /// [`try_build_transition_table_lane_major`].
@@ -141,7 +141,7 @@ pub fn try_build_transition_table_lane_major(
 ///
 /// # Panics
 ///
-/// Aborts when the plan or table allocation cannot be represented safely 
+/// Aborts when the plan or table allocation cannot be represented safely
 /// loudly, never an empty `Vec` (Law 10). Callers that must recover use
 /// [`try_build_epsilon_table`].
 #[must_use]

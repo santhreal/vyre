@@ -55,6 +55,7 @@
 //! caught at compile time. The fusion pass that would have produced a racy
 //! kernel returns `RefusalReason::EffectLatticeViolation` instead.
 
+use super::is_invocation_id_eq_constant;
 use crate::ir::{Expr, Node, Program};
 use crate::optimizer::RefusalReason;
 use vyre_spec::op_contract::SideEffectClass;
@@ -115,7 +116,7 @@ impl SyncScope {
 
 /// Lattice point representing the cumulative effect of one op or one program
 /// region. Composition uses [`compose`] which returns an
-/// [`Err(RefusalReason::EffectLatticeViolation)`] when the pair cannot fuse
+/// `Err(RefusalReason::EffectLatticeViolation)` when the pair cannot fuse
 /// safely.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
@@ -413,28 +414,6 @@ fn barrier_effect(ordering: crate::memory_model::MemoryOrdering) -> EffectLevel 
         // strongest available.
         _ => EffectLevel::Synchronized(SyncScope::Workgroup),
     }
-}
-
-fn is_invocation_id_eq_constant(cond: &Expr) -> bool {
-    use crate::ir::BinOp;
-    match cond {
-        Expr::BinOp {
-            op: BinOp::Eq | BinOp::Ne,
-            left,
-            right,
-        } => {
-            is_invocation_id_expr(left) && matches!(**right, Expr::LitU32(_))
-                || is_invocation_id_expr(right) && matches!(**left, Expr::LitU32(_))
-        }
-        _ => false,
-    }
-}
-
-fn is_invocation_id_expr(expr: &Expr) -> bool {
-    matches!(
-        expr,
-        Expr::InvocationId { .. } | Expr::LocalId { .. } | Expr::SubgroupLocalId
-    )
 }
 
 #[cfg(test)]

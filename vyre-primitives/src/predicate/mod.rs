@@ -194,7 +194,7 @@ macro_rules! define_tag_family_predicate {
             /// Build the canonical tag-family predicate program.
             #[must_use]
             pub fn $function(node_tags: &str, nodeset_out: &str, node_count: u32) -> Program {
-                crate::program_region::tag_program(
+                vyre_foundation::composition::tag_program(
                     OP_ID,
                     resolve_family(node_tags, nodeset_out, node_count, $family),
                 )

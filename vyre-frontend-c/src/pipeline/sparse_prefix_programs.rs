@@ -68,9 +68,7 @@ pub(super) fn prefix_scan_nonzero_workgroup(in_buf: &str, out_buf: &str, n: u32)
             Expr::load(&scratch_a, lane),
         )],
     ));
-    let output_bytes = usize::try_from(n)
-        .unwrap_or(usize::MAX)
-        .saturating_mul(4);
+    let output_bytes = usize::try_from(n).unwrap_or(usize::MAX).saturating_mul(4);
 
     Program::wrapped(
         vec![

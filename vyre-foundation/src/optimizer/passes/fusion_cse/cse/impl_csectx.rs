@@ -2,6 +2,7 @@
 use super::expr_key::ExprId;
 use super::{expr_has_effect, CseCtx, ScopeFrame, ScopedBinding};
 use crate::ir::{Expr, Ident, Node};
+use crate::optimizer::rewrite::{rewrite_binary, rewrite_fma, rewrite_select};
 use std::borrow::Cow;
 
 impl CseCtx {
@@ -376,63 +377,6 @@ impl CseCtx {
             Cow::Owned(Expr::var(existing.clone()))
         })
     }
-}
-
-#[inline]
-fn rewrite_binary<'a>(
-    original: &'a Expr,
-    op: crate::ir::BinOp,
-    left: Cow<'a, Expr>,
-    right: Cow<'a, Expr>,
-) -> Cow<'a, Expr> {
-    if matches!((&left, &right), (Cow::Borrowed(_), Cow::Borrowed(_))) {
-        return Cow::Borrowed(original);
-    }
-    Cow::Owned(Expr::BinOp {
-        op,
-        left: Box::new(left.into_owned()),
-        right: Box::new(right.into_owned()),
-    })
-}
-
-#[inline]
-fn rewrite_fma<'a>(
-    original: &'a Expr,
-    a: Cow<'a, Expr>,
-    b: Cow<'a, Expr>,
-    c: Cow<'a, Expr>,
-) -> Cow<'a, Expr> {
-    if matches!(
-        (&a, &b, &c),
-        (Cow::Borrowed(_), Cow::Borrowed(_), Cow::Borrowed(_))
-    ) {
-        return Cow::Borrowed(original);
-    }
-    Cow::Owned(Expr::Fma {
-        a: Box::new(a.into_owned()),
-        b: Box::new(b.into_owned()),
-        c: Box::new(c.into_owned()),
-    })
-}
-
-#[inline]
-fn rewrite_select<'a>(
-    original: &'a Expr,
-    cond: Cow<'a, Expr>,
-    true_val: Cow<'a, Expr>,
-    false_val: Cow<'a, Expr>,
-) -> Cow<'a, Expr> {
-    if matches!(
-        (&cond, &true_val, &false_val),
-        (Cow::Borrowed(_), Cow::Borrowed(_), Cow::Borrowed(_))
-    ) {
-        return Cow::Borrowed(original);
-    }
-    Cow::Owned(Expr::Select {
-        cond: Box::new(cond.into_owned()),
-        true_val: Box::new(true_val.into_owned()),
-        false_val: Box::new(false_val.into_owned()),
-    })
 }
 
 #[inline]

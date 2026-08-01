@@ -1,10 +1,10 @@
-// `cargo_full run --bin xtask -- lint-shape-tests`  -  detect tests with only shape-only assertions.
+// `cargo xtask lint-shape-tests`  -  detect tests with only shape-only assertions.
 //
 // Enforces AGENTS.md real-tests rule: a test must assert specific expected
 // values, not merely check that something parsed, succeeded, or is non-empty.
 //
-// Walks every `#[test]` / `#[tokio::test]` in vyre-* + surge/surgec +
-// libs/surge.  Flags as SHAPE any test whose `assert*!` calls are exclusively:
+// Walks every `#[test]` / `#[tokio::test]` in vyre-* workspace crates.
+// Flags as SHAPE any test whose `assert*!` calls are exclusively:
 //   - `assert!(result.is_ok())`
 //   - `assert!(result.is_err())`
 //   - `assert!(!findings.is_empty())`
@@ -40,9 +40,9 @@ use syn::spanned::Spanned;
 use syn::{Attribute, File, Item, ItemFn};
 
 use classify::classify_test;
-use proof::{plan_proof_shape_failures, release_evidence_shape_failures};
 #[cfg(test)]
 use proof::release_evidence_doc_shape_failures;
+use proof::{plan_proof_shape_failures, release_evidence_shape_failures};
 use report::write_report;
 
 const MAX_LINT_SHAPE_SOURCE_BYTES: u64 = 2_097_152;
@@ -132,21 +132,6 @@ pub(crate) fn run(args: &[String]) {
         let name_str = name.to_string_lossy();
         if name_str.starts_with("vyre-") && entry.path().is_dir() {
             walk_dir(&entry.path(), &name_str, &mut findings, &mut scan_errors);
-        }
-    }
-
-    // Additional out-of-workspace crates (optional - skip quietly if absent).
-    //
-    // These paths must stay in sync with `release_train::compiler_consumer_relative_path`,
-    // which is the single owner. This file cannot call it: `src/bin/lint_shape_tests.rs`
-    // pulls this module in with `include!`, so any `crate::` path fails to resolve in that
-    // binary's crate root.
-    for (path, name) in [
-        (repo_root.join("surge/surgec"), "surgec"),
-        (repo_root.join("surge"), "surge"),
-    ] {
-        if path.exists() {
-            walk_dir(&path, name, &mut findings, &mut scan_errors);
         }
     }
 

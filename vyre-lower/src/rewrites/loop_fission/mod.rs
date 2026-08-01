@@ -1,6 +1,7 @@
 //! Conservative loop fission for two independent disjoint stores.
 
 use super::dataflow_facts::resolve_reaching_def_id as resolve;
+use super::write_targets_are_independent;
 use crate::{KernelBody, KernelDescriptor, KernelOp, KernelOpKind};
 
 /// Split a loop containing exactly two independent disjoint writes into
@@ -133,15 +134,6 @@ fn write_target(
         }
         _ => None,
     }
-}
-
-fn write_targets_are_independent(
-    left: (u8, u32, u32),
-    right: (u8, u32, u32),
-    alias_facts: Option<&crate::analyses::alias_facts::AliasFactSet>,
-) -> bool {
-    left.0 != right.0
-        || alias_facts.is_some_and(|facts| facts.proves_no_alias(left.1, left.2, right.1, right.2))
 }
 
 #[cfg(test)]

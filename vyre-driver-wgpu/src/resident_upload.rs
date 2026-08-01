@@ -30,6 +30,7 @@ pub(crate) fn upload_resident_many(
                 "WGPU resident batch upload received a borrowed resource. Fix: allocate every resident buffer before calling upload_resident_many.",
             ));
         };
+        crate::buffer::check_resident_owner(*id, "WGPU resident batch upload")?;
         let handle = backend.resident_handles.get(id).ok_or_else(|| {
             vyre_driver::BackendError::new(format!(
                 "WGPU resident batch upload received stale handle {id}. Fix: keep every resource allocated until all resident uploads finish."
@@ -85,13 +86,15 @@ pub(crate) fn upload_resident_at_many(
                 "WGPU resident ranged batch upload received a borrowed resource. Fix: allocate every resident buffer before calling upload_resident_at_many.",
             ));
         };
+        crate::buffer::check_resident_owner(*id, "WGPU resident ranged batch upload")?;
         require_copy_alignment(*id, dst_offset_bytes, bytes.len())?;
         let handle = backend.resident_handles.get(id).ok_or_else(|| {
             vyre_driver::BackendError::new(format!(
                 "WGPU resident ranged batch upload received stale handle {id}. Fix: keep every resource allocated until all resident uploads finish."
             ))
         })?;
-        let dst_offset = WGPU_NUMERIC.usize_to_u64(dst_offset_bytes, "resident ranged upload offset")?;
+        let dst_offset =
+            WGPU_NUMERIC.usize_to_u64(dst_offset_bytes, "resident ranged upload offset")?;
         let byte_len = WGPU_NUMERIC.usize_to_u64(bytes.len(), "resident ranged upload bytes")?;
         let end = dst_offset.checked_add(byte_len).ok_or_else(|| {
             vyre_driver::BackendError::new(format!(
@@ -117,7 +120,7 @@ pub(crate) fn upload_resident_at_many(
 }
 
 fn require_copy_alignment(
-    handle_id: u64,
+    handle_id: vyre_driver::ResidentHandle,
     dst_offset_bytes: usize,
     byte_len: usize,
 ) -> Result<(), vyre_driver::BackendError> {

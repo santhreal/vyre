@@ -22,6 +22,7 @@ use vyre_foundation::ir::Program;
 
 use super::staging_reserve::{reserve_smallvec, reserve_vec};
 use crate::backend::accounting::checked_sub_usize;
+use crate::backend::dispatch_phase_probe as probe;
 
 /// Soft cap on loaded CUDA modules. Eviction drops the cache to half-capacity.
 const MODULE_CACHE_SOFT_CAP: usize = 2048;
@@ -73,12 +74,13 @@ fn ptx_source_cache_key_from_program_identity(
     subgroup_size: u32,
     feature_flags: vyre_driver::pipeline::PipelineFeatureFlags,
 ) -> Result<PtxSourceCacheKey, BackendError> {
-    let normalized_digest = vyre_driver::pipeline::try_normalized_program_cache_digest(program)
-        .map_err(|error| {
-            BackendError::new(format!("CUDA PTX source cache digest failed: {error}"))
-        })?;
-    let vsa_bytes =
-        vsa_fingerprint_cache_bytes(vyre_driver::program_vsa_fingerprint_words(program));
+    let normalized_digest = probe::measure_nested(probe::Nested::PtxDigest, || {
+        vyre_driver::pipeline::try_normalized_program_cache_digest(program)
+    })
+    .map_err(|error| BackendError::new(format!("CUDA PTX source cache digest failed: {error}")))?;
+    let vsa_bytes = probe::measure_nested(probe::Nested::PtxVsa, || {
+        vsa_fingerprint_cache_bytes(vyre_driver::program_vsa_fingerprint_words(program))
+    });
     let dispatch_policy_digest = vyre_driver::pipeline::dispatch_policy_cache_digest(config);
     let feature_flag_bytes = feature_flags.bits().to_le_bytes();
     let key = domain_separated_exact_input_key(
@@ -921,6 +923,137 @@ mod tests {
                 && source.contains("child-captured-producer-liveness")
                 && source.contains("single-mad-dual-mul-liveness"),
             "Fix: CUDA PTX source cache keys must change when PTX lowering changes barrier/shared-memory entry behavior, full-workgroup store predication, parent-result liveness across child bodies, or MAD deferral liveness."
+        );
+    }
+
+    /// Wire a Program to a PTX source cache key with everything except the
+    /// Program held fixed.
+    fn ptx_key_for(program: &Program) -> PtxSourceCacheKey {
+        CudaPtxSourceCache::new()
+            .key_for_program(
+                program,
+                &vyre_driver::DispatchConfig::default(),
+                86,
+                32,
+                vyre_driver::pipeline::PipelineFeatureFlags::empty(),
+            )
+            .expect("Fix: fixture Program must produce a PTX source cache key")
+    }
+
+    /// Two Programs whose buffers differ only by swapped binding slots must not
+    /// share a PTX source cache key.
+    ///
+    /// The CUDA twin of the wgpu binding test. Note what this does NOT claim: the
+    /// PTX key mixes a VSA fingerprint lane beside the normalized digest, so this
+    /// property may hold through either lane. That is exactly why the assertion
+    /// is written against the composed KEY rather than against the digest: it is
+    /// the key that admits or serves a cached PTX artifact, so the observable
+    /// contract must hold no matter which lane currently carries it, including
+    /// after a future refactor drops one.
+    #[test]
+    fn ptx_source_cache_key_separates_swapped_buffer_bindings() {
+        use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node};
+
+        let entry = vec![
+            Node::store("a", Expr::u32(0), Expr::u32(1)),
+            Node::store("b", Expr::u32(0), Expr::u32(2)),
+        ];
+        let straight = Program::wrapped(
+            vec![
+                BufferDecl::output("a", 0, DataType::U32).with_count(64),
+                BufferDecl::output("b", 1, DataType::U32).with_count(64),
+            ],
+            [64, 1, 1],
+            entry.clone(),
+        );
+        let swapped = Program::wrapped(
+            vec![
+                BufferDecl::output("a", 1, DataType::U32).with_count(64),
+                BufferDecl::output("b", 0, DataType::U32).with_count(64),
+            ],
+            [64, 1, 1],
+            entry,
+        );
+
+        assert_ne!(
+            ptx_key_for(&straight),
+            ptx_key_for(&swapped),
+            "Fix: binding slots reach generated PTX parameter ordering, so two binding \
+             layouts must not share one PTX source cache entry."
+        );
+    }
+
+    /// Two Programs differing only in a shared-memory array LENGTH must not
+    /// share a PTX source cache key.
+    ///
+    /// PTX bakes a shared array's byte length into the `.shared` declaration, so
+    /// serving one length's PTX for the other gives a kernel whose shared
+    /// allocation is the wrong size.
+    #[test]
+    fn ptx_source_cache_key_separates_shared_memory_array_lengths() {
+        use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node};
+
+        let build = |shared_len: u32| {
+            Program::wrapped(
+                vec![
+                    BufferDecl::output("out", 0, DataType::U32).with_count(64),
+                    BufferDecl::workgroup("tile", shared_len, DataType::U32),
+                ],
+                [64, 1, 1],
+                vec![Node::store("out", Expr::u32(0), Expr::u32(1))],
+            )
+        };
+
+        assert_ne!(
+            ptx_key_for(&build(64)),
+            ptx_key_for(&build(128)),
+            "Fix: a shared-memory array length is baked into the PTX .shared declaration, \
+             so two lengths must not share one PTX source cache entry."
+        );
+    }
+
+    /// Resizing a runtime storage buffer MAY change the PTX source cache key,
+    /// and this test documents WHY the CUDA side is asymmetric with wgpu.
+    ///
+    /// The normalized digest erases runtime storage lengths, which is safe for
+    /// WGSL because the naga emitter turns every non-Shared buffer into
+    /// `ArraySize::Dynamic`. The PTX emitter is NOT so disciplined:
+    /// `emit_binding_len_or_max` bakes any memory class's count as an immediate
+    /// when an async copy is present. The VSA fingerprint lane in the PTX key is
+    /// what covers that gap. This test pins the lane's presence by asserting the
+    /// key still discriminates a resize even though the digest does not, so
+    /// removing the lane fails here instead of silently serving PTX with a
+    /// wrong baked length.
+    #[test]
+    fn ptx_source_cache_key_keeps_a_lane_that_sees_runtime_storage_resize() {
+        use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node};
+
+        let build = |count: u32| {
+            Program::wrapped(
+                vec![BufferDecl::output("out", 0, DataType::U32).with_count(count)],
+                [64, 1, 1],
+                vec![Node::store("out", Expr::u32(0), Expr::u32(1))],
+            )
+        };
+        let small = build(1024);
+        let large = build(1_048_576);
+
+        let small_digest = vyre_driver::pipeline::try_normalized_program_cache_digest(&small)
+            .expect("Fix: fixture Program must produce a normalized cache digest");
+        let large_digest = vyre_driver::pipeline::try_normalized_program_cache_digest(&large)
+            .expect("Fix: fixture Program must produce a normalized cache digest");
+        assert_eq!(
+            small_digest, large_digest,
+            "Fix: the normalized digest must erase runtime storage lengths; if this fails \
+             the wgpu disk cache recompiles a shader on every input resize."
+        );
+
+        assert_ne!(
+            ptx_key_for(&small),
+            ptx_key_for(&large),
+            "Fix: the PTX emitter can bake a storage buffer count as an immediate under an \
+             async copy, so the PTX source cache key must keep a lane that sees a resize \
+             even though the normalized digest deliberately does not."
         );
     }
 }

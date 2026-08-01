@@ -35,7 +35,8 @@ pub(crate) fn free_resident_blobs(
     backend: &dyn VyreBackend,
     blobs: impl IntoIterator<Item = ResidentBlob>,
 ) -> Result<(), vyre::BackendError> {
-    let mut seen: SmallVec<[u64; RESIDENT_STAGE_INLINE_BINDINGS]> = SmallVec::new();
+    let mut seen: SmallVec<[vyre_driver::ResidentHandle; RESIDENT_STAGE_INLINE_BINDINGS]> =
+        SmallVec::new();
     for blob in blobs {
         match blob.resource {
             Resource::Resident(id) if !seen.contains(&id) => {

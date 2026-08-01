@@ -91,7 +91,7 @@ fn check_two_batch_presence_reverse_await<B: vyre::VyreBackend + ?Sized>(backend
     );
 }
 
-/// A mixed pipeline: a presence scan and a position scan in flight together 
+/// A mixed pipeline: a presence scan and a position scan in flight together
 /// two different program shapes sharing the backend at once.
 fn check_mixed_pipeline<B: vyre::VyreBackend + ?Sized>(backend: &B) {
     let set = GpuLiteralSet::compile(LITERALS);

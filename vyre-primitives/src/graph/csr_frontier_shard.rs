@@ -95,7 +95,7 @@ pub fn merge_frontier_out(shards: &[Vec<u32>], words: usize) -> Result<Vec<u32>,
 /// `expand(shard_index, masked_frontier_in) -> frontier_out` runs one device's
 /// expansion; a caller with N real devices dispatches these concurrently (one thread
 /// per device, the pattern proven in `scan_sharded_core`). The result is identical to a
-/// single-device expansion of the whole `frontier_in`: proven by the parity tests 
+/// single-device expansion of the whole `frontier_in`: proven by the parity tests
 /// so device sharding never changes the reachable set.
 ///
 /// # Errors

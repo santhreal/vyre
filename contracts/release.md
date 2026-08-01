@@ -21,11 +21,35 @@ offense; if the test is wrong, write a BETTER one, not a smaller one.
 No `#[ignore]`, no `#[should_panic]` escape hatches except where the
 gap explicitly documents one.
 
+### Gap 1 is open, and the reason is not the transcendentals
+
+The GPU half of gap 1 asks for bitwise CPU/GPU agreement on `sin`, `cos`,
+`sqrt`, `exp` and `log`. Two things block it, and the second one is the
+surprise:
+
+1. WGSL does not require correctly-rounded transcendentals. It defers to the
+   hardware, which uses an approximation good to a few ulps, while
+   `ieee754::canonical_*` is `libm` and is correctly rounded.
+2. The obvious remedy, emitting a deterministic f32-only polynomial on both
+   sides so the two compute the same sequence, does not work either. The WGSL
+   backend contracts `a * b + c` into a fused multiply-add, and a polynomial is
+   a chain of multiply-adds. `f32_no_contraction_contract.rs` measures this on
+   the actual device: for `a = b = 1 + 2^-12` and `c = -1` it returns
+   `0x3a000400` where two separate roundings give `0x3a000000`.
+
+So closing gap 1 needs a strict-IEEE lowering mode that blocks contraction, and
+f32/u32 bitcast operations in the IR so an expansion can manipulate exponent
+fields at all. Both are tracked in `BACKLOG.md` as R65. Until they land, the
+enforced GPU contract is the bounded envelope in
+`vyre-driver-wgpu/tests/transcendentals_parity.rs`, which runs on every build.
+The five bitwise tests stay compiled and runnable with
+`cargo test -- --ignored` so the target cannot rot.
+
 ## The 12 gaps
 
 | # | Item | Test path | Pass criteria |
 |---|------|-----------|---------------|
-| 1 | Reference completeness (deterministic transcendentals) | `vyre-reference/tests/gap_transcendentals_parity.rs` + `vyre-driver-wgpu/tests/gap_transcendentals_parity.rs` | Reference oracle bytes == `ieee754::canonical_*` on 1000 proptest inputs; GPU bytes == CPU reference bytes for sin/cos/sqrt/exp/log (bitwise test requires `--features parity-testing`) |
+| 1 | Reference completeness (deterministic transcendentals) | `vyre-reference/tests/gap_transcendentals_parity.rs` + `vyre-driver-wgpu/tests/gap_transcendentals_parity.rs` + `vyre-driver-wgpu/tests/f32_no_contraction_contract.rs` | CPU half is enforced: reference oracle bytes == `ieee754::canonical_*` on 1000 proptest inputs. GPU half is OPEN and its five tests are `#[ignore]`d with a stated reason (see below) |
 | 3 | Device-loss recovery | `vyre-driver-wgpu/tests/gap_device_lost_recovery.rs` | After simulated `device_lost() == true`, `try_recover()` returns `Ok(())` AND a subsequent `dispatch` succeeds |
 | 4 | Pre-emption / deadline cancellation | `vyre-driver-wgpu/tests/gap_dispatch_preemption.rs` | Dispatch with `timeout = 100ms` on a 2-second program returns a cancellation error within 250ms, NOT 2s+100ms |
 | 5 | Determinism contract | `vyre-driver-wgpu/tests/gap_determinism_contract.rs` | `dispatch(p, inputs)` called twice on the same backend returns byte-identical outputs, 1000 proptest runs |

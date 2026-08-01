@@ -5,6 +5,7 @@ use std::sync::{Arc, Mutex};
 use smallvec::SmallVec;
 use vyre_driver::BackendError;
 
+use crate::allocation::padded_wgpu_u64;
 use crate::buffer::GpuBufferHandle;
 use crate::pipeline::binding::{clear_outputs_for_bound, validate_handle};
 use crate::pipeline::{BufferBindingInfo, WgpuPipeline};
@@ -196,6 +197,7 @@ impl WgpuPipeline {
                 let bind_size = padded_wgpu_u64(
                     handle.byte_len(),
                     "pre-recorded bind-group cache key byte length",
+                    "split the pre-recorded dispatch buffer",
                 )?;
                 handle_ids.push(bind_size);
             }
@@ -203,7 +205,11 @@ impl WgpuPipeline {
                 checked_bound.push((
                     info,
                     handle,
-                    padded_wgpu_u64(handle.byte_len(), "pre-recorded bind-group binding size")?,
+                    padded_wgpu_u64(
+                        handle.byte_len(),
+                        "pre-recorded bind-group binding size",
+                        "split the pre-recorded dispatch buffer",
+                    )?,
                 ));
             }
             let layout_id = Arc::as_ptr(layout).addr();
@@ -313,19 +319,6 @@ impl WgpuPipeline {
         let (input_handles, output_handles) = self.legacy_handles_from_inputs(inputs)?;
         self.prerecord_persistent_dispatch(&input_handles, &output_handles, None, workgroups)
     }
-}
-
-fn padded_wgpu_u64(size: u64, label: &'static str) -> Result<u64, BackendError> {
-    let normalized = size.max(4);
-    let remainder = normalized % 4;
-    if remainder == 0 {
-        return Ok(normalized);
-    }
-    normalized.checked_add(4 - remainder).ok_or_else(|| {
-        BackendError::new(format!(
-            "{label} overflows u64 while padding to WGPU's 4-byte buffer alignment. Fix: split the pre-recorded dispatch buffer."
-        ))
-    })
 }
 
 fn bind_handles<'a>(

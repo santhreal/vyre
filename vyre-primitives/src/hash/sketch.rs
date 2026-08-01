@@ -19,7 +19,7 @@
 //!
 //! - [`crate::hash::sketch::count_sketch_update`]  -  given an item and its hash + sign,
 //!   add to the sketch table. Single-lane stream model.
-//! - [`crate::hash::sketch::count_sketch_query_cpu`]  -  estimate frequency of an item by
+//! - `count_sketch_query_cpu` (requires the `cpu-parity` feature)  -  estimate frequency of an item by
 //!   reading hash·sign-indexed cells across `d` independent sketches
 //!   and taking the median of `sign * cell` reads.
 

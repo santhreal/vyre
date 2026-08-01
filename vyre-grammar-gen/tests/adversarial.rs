@@ -1,14 +1,11 @@
 //! Adversarial tests: hostile, malformed, boundary, and empty/oversized inputs.
 
 use vyre_grammar_gen::{
-    decode_dfa_from_bytes, decode_lr_from_bytes,
-    lex_c11_max_munch_kinds,
-    preprocess_c_host,
-    validate_lr_table,
-    wire::{PackedBlob, WireError, MAGIC},
-    DfaBuilder, LrBuilder,
+    decode_dfa_from_bytes, decode_lr_from_bytes, lex_c11_max_munch_kinds,
     lr::Action,
-    LexCpuError,
+    preprocess_c_host, validate_lr_table,
+    wire::{PackedBlob, WireError, MAGIC},
+    DfaBuilder, LexCpuError, LrBuilder,
 };
 
 // ---------------------------------------------------------------------------
@@ -24,7 +21,10 @@ fn decode_dfa_empty_input_is_too_short() {
 #[test]
 fn decode_dfa_23_bytes_is_too_short() {
     let err = decode_dfa_from_bytes(&[0u8; 23]).unwrap_err();
-    assert!(matches!(err, WireError::TooShort { need: 24, got: 23 }), "{err:?}");
+    assert!(
+        matches!(err, WireError::TooShort { need: 24, got: 23 }),
+        "{err:?}"
+    );
 }
 
 #[test]
@@ -38,7 +38,10 @@ fn decode_dfa_bad_magic_bytes() {
     let mut bytes = vec![0u8; 40];
     bytes[0..4].copy_from_slice(b"XXXX");
     let err = decode_dfa_from_bytes(&bytes).unwrap_err();
-    assert!(matches!(err, WireError::BadMagic(m) if &m == b"XXXX"), "{err:?}");
+    assert!(
+        matches!(err, WireError::BadMagic(m) if &m == b"XXXX"),
+        "{err:?}"
+    );
 }
 
 #[test]
@@ -75,7 +78,9 @@ fn decode_dfa_rejects_lr_blob_as_wrong_kind() {
 
 #[test]
 fn decode_lr_rejects_dfa_blob_as_wrong_kind() {
-    let dfa = DfaBuilder::new(2, 4).build().expect("empty pattern set must succeed");
+    let dfa = DfaBuilder::new(2, 4)
+        .build()
+        .expect("empty pattern set must succeed");
     let blob = PackedBlob::from_dfa(&dfa);
     let err = decode_lr_from_bytes(&blob.bytes).unwrap_err();
     assert!(
@@ -86,35 +91,35 @@ fn decode_lr_rejects_dfa_blob_as_wrong_kind() {
 
 #[test]
 fn decode_dfa_truncated_payload_is_payload_truncated() {
-    let dfa = DfaBuilder::new(2, 4).build().expect("empty pattern set must succeed");
+    let dfa = DfaBuilder::new(2, 4)
+        .build()
+        .expect("empty pattern set must succeed");
     let blob = PackedBlob::from_dfa(&dfa);
     // Truncate by removing the last 10 bytes
     let truncated = &blob.bytes[..blob.bytes.len().saturating_sub(10)];
     let err = decode_dfa_from_bytes(truncated).unwrap_err();
-    assert!(
-        matches!(err, WireError::PayloadTruncated { .. }),
-        "{err:?}"
-    );
+    assert!(matches!(err, WireError::PayloadTruncated { .. }), "{err:?}");
 }
 
 #[test]
 fn decode_dfa_checksum_mismatch_on_bit_flip() {
-    let dfa = DfaBuilder::new(2, 4).build().expect("empty pattern set must succeed");
+    let dfa = DfaBuilder::new(2, 4)
+        .build()
+        .expect("empty pattern set must succeed");
     let mut blob = PackedBlob::from_dfa(&dfa);
     // Flip a bit in the payload area (byte 25)
     if blob.bytes.len() > 25 {
         blob.bytes[25] ^= 0x01;
     }
     let err = decode_dfa_from_bytes(&blob.bytes).unwrap_err();
-    assert!(
-        matches!(err, WireError::ChecksumMismatch { .. }),
-        "{err:?}"
-    );
+    assert!(matches!(err, WireError::ChecksumMismatch { .. }), "{err:?}");
 }
 
 #[test]
 fn decode_dfa_checksum_mismatch_on_last_payload_byte_flip() {
-    let dfa = DfaBuilder::new(4, 8).build().expect("empty pattern set must succeed");
+    let dfa = DfaBuilder::new(4, 8)
+        .build()
+        .expect("empty pattern set must succeed");
     let mut blob = PackedBlob::from_dfa(&dfa);
     // Last payload byte is at index len - 17
     let flip_idx = blob.bytes.len() - 17;
@@ -187,23 +192,26 @@ fn lex_empty_input_returns_empty() {
 #[test]
 fn lex_null_byte_is_error() {
     let err = lex_c11_max_munch_kinds(b"\x00").unwrap_err();
-    assert!(matches!(err, LexCpuError::NoTokenAt { offset: 0 }), "{err:?}");
+    assert!(
+        matches!(err, LexCpuError::NoTokenAt { offset: 0 }),
+        "{err:?}"
+    );
 }
 
 #[test]
 fn lex_lone_backslash_is_error() {
     let err = lex_c11_max_munch_kinds(b"\\").unwrap_err();
-    assert!(
-        matches!(err, LexCpuError::NoTokenAt { .. }),
-        "{err:?}"
-    );
+    assert!(matches!(err, LexCpuError::NoTokenAt { .. }), "{err:?}");
 }
 
 #[test]
 fn lex_high_byte_is_error() {
     // 0xFF is not a valid C token start
     let err = lex_c11_max_munch_kinds(&[0xFFu8]).unwrap_err();
-    assert!(matches!(err, LexCpuError::NoTokenAt { offset: 0 }), "{err:?}");
+    assert!(
+        matches!(err, LexCpuError::NoTokenAt { offset: 0 }),
+        "{err:?}"
+    );
 }
 
 #[test]
@@ -221,7 +229,10 @@ fn lex_mid_string_error_offset_is_nonzero() {
 fn lex_at_sign_is_error() {
     // '@' is not a C token
     let err = lex_c11_max_munch_kinds(b"@").unwrap_err();
-    assert!(matches!(err, LexCpuError::NoTokenAt { offset: 0 }), "{err:?}");
+    assert!(
+        matches!(err, LexCpuError::NoTokenAt { offset: 0 }),
+        "{err:?}"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -261,7 +272,10 @@ fn preprocess_deeply_nested_if_zero() {
 fn preprocess_macro_not_expanded_in_string_literal() {
     let src = "#define MAX 99\nchar s[] = \"MAX\";\n";
     let out = preprocess_c_host(src);
-    assert!(out.contains("\"MAX\""), "macro must not expand inside string: {out:?}");
+    assert!(
+        out.contains("\"MAX\""),
+        "macro must not expand inside string: {out:?}"
+    );
 }
 
 #[test]
@@ -279,7 +293,10 @@ fn preprocess_backslash_crlf_is_spliced() {
     // line splice removes the \\\r\n and joins lines
     assert!(out.contains("a"), "got: {out:?}");
     assert!(out.contains("b"), "got: {out:?}");
-    assert!(!out.contains('\n') || out.trim() != "a\nb", "should be spliced: {out:?}");
+    assert!(
+        !out.contains('\n') || out.trim() != "a\nb",
+        "should be spliced: {out:?}"
+    );
 }
 
 #[test]
@@ -288,7 +305,10 @@ fn preprocess_function_like_macro_is_not_expanded() {
     let src = "#define FOO(x) x+1\nFOO(5)\n";
     let out = preprocess_c_host(src);
     // FOO(5) is not expanded (function-like macros are unsupported by design)
-    assert!(out.contains("FOO"), "function-like macro must not be expanded: {out:?}");
+    assert!(
+        out.contains("FOO"),
+        "function-like macro must not be expanded: {out:?}"
+    );
 }
 
 // ---------------------------------------------------------------------------

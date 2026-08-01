@@ -7,7 +7,7 @@ use crate::api::case::{
 use crate::api::metric::BenchMetrics;
 use crate::api::resident::{input_bytes_total, ResidentInputSet};
 use crate::cases::queue_closure_profile::validate_queue_closure_wave_profile;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::Program;
 use vyre_primitives::graph::csr_frontier_queue::frontier_queue_len_init;
 use vyre_primitives::graph::csr_queue_delta::{
     csr_queue_delta_enqueue, csr_queue_delta_strided_dispatch_grid,
@@ -318,59 +318,11 @@ fn graph_queue_closure_reset_program(
     seed_queue_len: u32,
     queue_capacity: u32,
 ) -> Program {
-    let idx = Expr::InvocationId { axis: 0 };
-    Program::wrapped(
-        vec![
-            BufferDecl::storage("frontier_seed", 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(frontier_words.max(1)),
-            BufferDecl::storage("seed_queue", 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(seed_queue_len.max(1)),
-            BufferDecl::storage("seed_len", 2, BufferAccess::ReadOnly, DataType::U32).with_count(1),
-            BufferDecl::storage("active_queue", 3, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(queue_capacity.max(1)),
-            BufferDecl::storage("accumulator", 4, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(frontier_words.max(1)),
-            BufferDecl::storage("queue_a_len", 5, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(1),
-            BufferDecl::storage("queue_b_len", 6, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(1),
-        ],
+    crate::cases::queue_stage::build_queue_closure_reset_program(
+        frontier_words,
+        seed_queue_len,
+        queue_capacity,
         GRAPH_QUEUE_CLOSURE_WORKGROUP_SIZE,
-        vec![
-            Node::if_then(
-                Expr::lt(idx.clone(), Expr::u32(frontier_words)),
-                vec![Node::store(
-                    "accumulator",
-                    idx.clone(),
-                    Expr::load("frontier_seed", idx.clone()),
-                )],
-            ),
-            Node::if_then(
-                Expr::and(
-                    Expr::lt(idx.clone(), Expr::u32(queue_capacity)),
-                    Expr::and(
-                        Expr::lt(idx.clone(), Expr::u32(seed_queue_len)),
-                        Expr::lt(idx.clone(), Expr::load("seed_len", Expr::u32(0))),
-                    ),
-                ),
-                vec![Node::store(
-                    "active_queue",
-                    idx.clone(),
-                    Expr::load("seed_queue", idx.clone()),
-                )],
-            ),
-            Node::if_then(
-                Expr::eq(idx, Expr::u32(0)),
-                vec![
-                    Node::store(
-                        "queue_a_len",
-                        Expr::u32(0),
-                        Expr::load("seed_len", Expr::u32(0)),
-                    ),
-                    Node::store("queue_b_len", Expr::u32(0), Expr::u32(0)),
-                ],
-            ),
-        ],
     )
 }
 

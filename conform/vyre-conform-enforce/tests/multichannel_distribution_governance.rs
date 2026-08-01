@@ -7,8 +7,7 @@ const OCI: &str =
     include_str!("../../../docs/optimization/OCI_CONTAINER_IMAGE_PUBLICATION_POLICY.toml");
 const HOMEBREW: &str =
     include_str!("../../../docs/optimization/HOMEBREW_TAP_BOTTLE_PUBLICATION_POLICY.toml");
-const BINARIES: &str =
-    include_str!("../../../docs/optimization/BINARY_ASSET_PLATFORM_MATRIX.toml");
+const BINARIES: &str = include_str!("../../../docs/optimization/BINARY_ASSET_PLATFORM_MATRIX.toml");
 const COVERAGE: &str = include_str!(
     "../../../docs/optimization/END_TO_END_MULTICHANNEL_DISTRIBUTION_TRANCHE_COVERAGE.toml"
 );
@@ -23,12 +22,16 @@ fn multichannel_distribution_sources_are_registered() {
         "HOMEBREW_BOTTLES",
         "HOMEBREW_SHA256_POLICY",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 
 #[test]
-fn multichannel_surface_matrix_keeps_channels_install_commands_verification_release_authority_and_private_boundaries_distinct() {
+fn multichannel_surface_matrix_keeps_channels_install_commands_verification_release_authority_and_private_boundaries_distinct(
+) {
     for required in [
         "channel_id",
         "distribution_surface",
@@ -51,7 +54,8 @@ fn multichannel_surface_matrix_keeps_channels_install_commands_verification_rele
 }
 
 #[test]
-fn oci_container_policy_records_registry_manifest_platform_layers_annotations_tags_digest_pulls_sboms_and_boundaries() {
+fn oci_container_policy_records_registry_manifest_platform_layers_annotations_tags_digest_pulls_sboms_and_boundaries(
+) {
     for required in [
         "image_id",
         "registry_policy",
@@ -74,7 +78,8 @@ fn oci_container_policy_records_registry_manifest_platform_layers_annotations_ta
 }
 
 #[test]
-fn homebrew_policy_records_formula_source_license_dependencies_tests_bottles_sha256_tap_boundaries() {
+fn homebrew_policy_records_formula_source_license_dependencies_tests_bottles_sha256_tap_boundaries()
+{
     for required in [
         "formula_id",
         "formula_policy",
@@ -96,7 +101,8 @@ fn homebrew_policy_records_formula_source_license_dependencies_tests_bottles_sha
 }
 
 #[test]
-fn binary_asset_matrix_records_platform_archives_entrypoints_ancillary_assets_checksums_signatures_docs_parity_and_boundaries() {
+fn binary_asset_matrix_records_platform_archives_entrypoints_ancillary_assets_checksums_signatures_docs_parity_and_boundaries(
+) {
     for required in [
         "asset_id",
         "platform_triple",
@@ -121,7 +127,8 @@ fn binary_asset_matrix_records_platform_archives_entrypoints_ancillary_assets_ch
 }
 
 #[test]
-fn multichannel_distribution_coverage_reuses_cargo_integrity_verification_final_gate_and_publication_boundaries() {
+fn multichannel_distribution_coverage_reuses_cargo_integrity_verification_final_gate_and_publication_boundaries(
+) {
     for required in [
         "VX-1181..VX-1200",
         "multichannel_distribution_surface_matrix",

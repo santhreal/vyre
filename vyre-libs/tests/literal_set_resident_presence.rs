@@ -7,7 +7,7 @@
 //! across a corpus transferring only the per-file haystack and a presence-prefix
 //! reset. This test pins, on REAL GPU hardware (wgpu, the RTX 5090 here), that the
 //! resident bitmap is byte-identical to the borrowed `scan_presence_by_region`
-//! across repeated scans AND carries the exact planted per-region hit sets 
+//! across repeated scans AND carries the exact planted per-region hit sets
 //! the resident table-residency optimization must not change a single result bit
 //! (Law 10). Skips cleanly with no GPU.
 //!

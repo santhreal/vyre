@@ -67,10 +67,9 @@ mod tests {
     #[test]
     fn c_pipeline_stage_surface_is_consumer_neutral() {
         let local = [concat!("vy", "rec"), concat!("vyre-frontend", "-c")];
-        for forbidden in
-            vyre_test_support::consumer_boundary::FORBIDDEN_CONSUMER_NAMES
-                .iter()
-                .chain(local.iter())
+        for forbidden in vyre_test_support::consumer_boundary::FORBIDDEN_CONSUMER_NAMES
+            .iter()
+            .chain(local.iter())
         {
             assert!(
                 !SOURCE.to_ascii_lowercase().contains(*forbidden),

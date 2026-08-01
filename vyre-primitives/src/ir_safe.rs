@@ -2,7 +2,7 @@
 //!
 //! These encode the two bounds-safety idioms the GPU↔CPU parity audit turned on,
 //! so the SAFE form has exactly ONE home and cannot drift. Both guard the same
-//! hazard: a data-derived index that, unmasked/unclamped, reads past a buffer end 
+//! hazard: a data-derived index that, unmasked/unclamped, reads past a buffer end
 //! a raw OOB read that the reference interpreter silently zero-fills but a real GPU
 //! (CUDA does no bounds-checking) faults or corrupts memory on. `base64::clamp_lookup`
 //! once forgot the table mask (a real OOB bug fixed this cycle), which a canonical

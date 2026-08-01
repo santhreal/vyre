@@ -1,28 +1,6 @@
 use super::*;
 pub(super) fn sparse_string_literal_end(source: &[u8], start: usize) -> Option<usize> {
-    let mut cursor = start + 1;
-    let mut escaped = false;
-    while let Some(byte) = source.get(cursor).copied() {
-        if escaped {
-            escaped = false;
-            cursor += 1;
-            continue;
-        }
-        if byte == b'\\' {
-            escaped = true;
-            cursor += 1;
-            continue;
-        }
-        if byte == b'"' {
-            let end = cursor + 1;
-            return (end - start <= CUDA_SPARSE_LEX_MAX_TOKEN_SCAN).then_some(end);
-        }
-        if matches!(byte, b'\n' | b'\r') {
-            return None;
-        }
-        cursor += 1;
-    }
-    None
+    sparse_quoted_literal_end(source, start, b'"')
 }
 
 pub(super) fn sparse_char_literal_end(source: &[u8], start: usize) -> Option<usize> {
@@ -57,6 +35,10 @@ pub(super) fn sparse_prefixed_char_literal_end(source: &[u8], start: usize) -> O
 }
 
 fn sparse_char_literal_body_end(source: &[u8], start: usize) -> Option<usize> {
+    sparse_quoted_literal_end(source, start, b'\'')
+}
+
+fn sparse_quoted_literal_end(source: &[u8], start: usize, delimiter: u8) -> Option<usize> {
     let mut cursor = start + 1;
     let mut escaped = false;
     while let Some(byte) = source.get(cursor).copied() {
@@ -70,7 +52,7 @@ fn sparse_char_literal_body_end(source: &[u8], start: usize) -> Option<usize> {
             cursor += 1;
             continue;
         }
-        if byte == b'\'' {
+        if byte == delimiter {
             let end = cursor + 1;
             return (end - start <= CUDA_SPARSE_LEX_MAX_TOKEN_SCAN).then_some(end);
         }

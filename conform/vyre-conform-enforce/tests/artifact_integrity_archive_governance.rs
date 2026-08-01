@@ -7,8 +7,7 @@ const VERIFY: &str =
     include_str!("../../../docs/optimization/CONSUMER_ARTIFACT_VERIFICATION_PROTOCOL.toml");
 const ROLLBACK: &str =
     include_str!("../../../docs/optimization/RELEASE_METADATA_ANTI_ROLLBACK_POLICY.toml");
-const ARCHIVE: &str =
-    include_str!("../../../docs/optimization/SOURCE_ARCHIVE_DURABILITY_MAP.toml");
+const ARCHIVE: &str = include_str!("../../../docs/optimization/SOURCE_ARCHIVE_DURABILITY_MAP.toml");
 const COVERAGE: &str = include_str!(
     "../../../docs/optimization/END_TO_END_ARTIFACT_INTEGRITY_ARCHIVE_TRANCHE_COVERAGE.toml"
 );
@@ -23,12 +22,16 @@ fn artifact_integrity_archive_sources_are_registered() {
         "TUF_SPECIFICATION",
         "SOFTWARE_HERITAGE_DEPOSIT",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 
 #[test]
-fn release_artifact_integrity_index_records_immutable_identities_digests_signatures_attestations_sboms_and_boundaries() {
+fn release_artifact_integrity_index_records_immutable_identities_digests_signatures_attestations_sboms_and_boundaries(
+) {
     for required in [
         "artifact_id",
         "artifact_surface",
@@ -53,7 +56,8 @@ fn release_artifact_integrity_index_records_immutable_identities_digests_signatu
 }
 
 #[test]
-fn consumer_artifact_verification_protocol_records_trust_roots_fetch_digest_signature_source_failure_and_offline_policies() {
+fn consumer_artifact_verification_protocol_records_trust_roots_fetch_digest_signature_source_failure_and_offline_policies(
+) {
     for required in [
         "verifier_id",
         "consumer_surface",
@@ -76,7 +80,8 @@ fn consumer_artifact_verification_protocol_records_trust_roots_fetch_digest_sign
 }
 
 #[test]
-fn release_metadata_anti_rollback_policy_records_tuf_style_threshold_expiration_rollback_freeze_and_mirror_controls() {
+fn release_metadata_anti_rollback_policy_records_tuf_style_threshold_expiration_rollback_freeze_and_mirror_controls(
+) {
     for required in [
         "metadata_id",
         "root_trust_policy",
@@ -98,7 +103,8 @@ fn release_metadata_anti_rollback_policy_records_tuf_style_threshold_expiration_
 }
 
 #[test]
-fn source_archive_durability_map_links_public_source_tags_crate_archives_swhids_checksums_retention_and_private_exclusion() {
+fn source_archive_durability_map_links_public_source_tags_crate_archives_swhids_checksums_retention_and_private_exclusion(
+) {
     for required in [
         "archive_id",
         "source_surface",
@@ -121,7 +127,8 @@ fn source_archive_durability_map_links_public_source_tags_crate_archives_swhids_
 }
 
 #[test]
-fn artifact_integrity_archive_coverage_reuses_existing_provenance_attestation_release_gate_and_publication_boundaries() {
+fn artifact_integrity_archive_coverage_reuses_existing_provenance_attestation_release_gate_and_publication_boundaries(
+) {
     for required in [
         "VX-1161..VX-1180",
         "release_artifact_integrity_index",

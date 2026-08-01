@@ -118,7 +118,9 @@ mod tests {
     /// Everything that is not a VX row id is rejected.
     #[test]
     fn vx_row_ids_reject_malformed_input() {
-        for id in ["", "VX-", "VX-1", "VX-12", "vx-001", "VX-00a", "VX 001", "001"] {
+        for id in [
+            "", "VX-", "VX-1", "VX-12", "vx-001", "VX-00a", "VX 001", "001",
+        ] {
             assert!(
                 !is_vx_row_id(id),
                 "Fix: `{id}` is not a well-formed VX plan-row id."
@@ -128,7 +130,8 @@ mod tests {
 
     #[test]
     fn raw_vx_plan_rows_preserve_line_and_cells() {
-        let plan = "\n| VX-001 | coordination | local | `MLIR_PASS` | Fix: x | Proof gate. | seam |\n";
+        let plan =
+            "\n| VX-001 | coordination | local | `MLIR_PASS` | Fix: x | Proof gate. | seam |\n";
 
         let table = parse_raw_vx_plan_table(plan);
 

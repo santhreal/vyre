@@ -195,6 +195,66 @@ pub(super) fn binary_token_body(
     ]
 }
 
+fn operator_sweep_body(
+    scratch_op_stack: &str,
+    out_ast_nodes: &str,
+    out_ast_count: &str,
+    scratch_val_stack: &str,
+    val_stack_base: Expr,
+    op_stack_base: Expr,
+    done_name: &str,
+    stop_at_lparen: bool,
+) -> Vec<Node> {
+    let mut pop_body = vec![
+        Node::assign("o_sp", Expr::sub(Expr::var("o_sp"), Expr::u32(1))),
+        Node::let_bind(
+            "top_op",
+            Expr::load(
+                scratch_op_stack,
+                Expr::add(op_stack_base, Expr::var("o_sp")),
+            ),
+        ),
+        Node::let_bind("top_ast_opcode", ast_opcode(Expr::var("top_op"))),
+    ];
+    if stop_at_lparen {
+        pop_body.push(Node::if_then(
+            Expr::eq(Expr::var("top_op"), Expr::u32(TOK_LPAREN)),
+            vec![Node::assign(done_name, Expr::u32(1))],
+        ));
+    }
+    pop_body.push(Node::if_then(
+        Expr::and(
+            Expr::ne(Expr::var("top_op"), Expr::u32(TOK_LPAREN)),
+            Expr::ge(Expr::var("v_sp"), Expr::u32(2)),
+        ),
+        reduce_loaded_operator(
+            out_ast_nodes,
+            out_ast_count,
+            scratch_val_stack,
+            val_stack_base,
+            Expr::var("top_ast_opcode"),
+        ),
+    ));
+    vec![
+        Node::let_bind(done_name, Expr::u32(0)),
+        Node::loop_for(
+            "pop",
+            Expr::u32(0),
+            Expr::u32(STACK_SLOTS_PER_STATEMENT),
+            vec![Node::if_then(
+                Expr::eq(Expr::var(done_name), Expr::u32(0)),
+                vec![
+                    Node::if_then(
+                        Expr::eq(Expr::var("o_sp"), Expr::u32(0)),
+                        vec![Node::assign(done_name, Expr::u32(1))],
+                    ),
+                    Node::if_then(Expr::ne(Expr::var("o_sp"), Expr::u32(0)), pop_body),
+                ],
+            )],
+        ),
+    ]
+}
+
 pub(super) fn rparen_body(
     scratch_op_stack: &str,
     out_ast_nodes: &str,
@@ -203,54 +263,16 @@ pub(super) fn rparen_body(
     val_stack_base: Expr,
     op_stack_base: Expr,
 ) -> Vec<Node> {
-    vec![
-        Node::let_bind("done_rp", Expr::u32(0)),
-        Node::loop_for(
-            "pop",
-            Expr::u32(0),
-            Expr::u32(STACK_SLOTS_PER_STATEMENT),
-            vec![Node::if_then(
-                Expr::eq(Expr::var("done_rp"), Expr::u32(0)),
-                vec![
-                    Node::if_then(
-                        Expr::eq(Expr::var("o_sp"), Expr::u32(0)),
-                        vec![Node::assign("done_rp", Expr::u32(1))],
-                    ),
-                    Node::if_then(Expr::ne(Expr::var("o_sp"), Expr::u32(0)), {
-                        let mut body = vec![
-                            Node::assign("o_sp", Expr::sub(Expr::var("o_sp"), Expr::u32(1))),
-                            Node::let_bind(
-                                "top_op",
-                                Expr::load(
-                                    scratch_op_stack,
-                                    Expr::add(op_stack_base.clone(), Expr::var("o_sp")),
-                                ),
-                            ),
-                            Node::let_bind("top_ast_opcode", ast_opcode(Expr::var("top_op"))),
-                            Node::if_then(
-                                Expr::eq(Expr::var("top_op"), Expr::u32(TOK_LPAREN)),
-                                vec![Node::assign("done_rp", Expr::u32(1))],
-                            ),
-                        ];
-                        body.push(Node::if_then(
-                            Expr::and(
-                                Expr::ne(Expr::var("top_op"), Expr::u32(TOK_LPAREN)),
-                                Expr::ge(Expr::var("v_sp"), Expr::u32(2)),
-                            ),
-                            reduce_loaded_operator(
-                                out_ast_nodes,
-                                out_ast_count,
-                                scratch_val_stack,
-                                val_stack_base.clone(),
-                                Expr::var("top_ast_opcode"),
-                            ),
-                        ));
-                        body
-                    }),
-                ],
-            )],
-        ),
-    ]
+    operator_sweep_body(
+        scratch_op_stack,
+        out_ast_nodes,
+        out_ast_count,
+        scratch_val_stack,
+        val_stack_base,
+        op_stack_base,
+        "done_rp",
+        true,
+    )
 }
 
 pub(super) fn final_sweep_body(
@@ -261,48 +283,14 @@ pub(super) fn final_sweep_body(
     val_stack_base: Expr,
     op_stack_base: Expr,
 ) -> Vec<Node> {
-    vec![
-        Node::let_bind("done_fs", Expr::u32(0)),
-        Node::loop_for(
-            "pop",
-            Expr::u32(0),
-            Expr::u32(STACK_SLOTS_PER_STATEMENT),
-            vec![Node::if_then(
-                Expr::eq(Expr::var("done_fs"), Expr::u32(0)),
-                vec![
-                    Node::if_then(
-                        Expr::eq(Expr::var("o_sp"), Expr::u32(0)),
-                        vec![Node::assign("done_fs", Expr::u32(1))],
-                    ),
-                    Node::if_then(Expr::ne(Expr::var("o_sp"), Expr::u32(0)), {
-                        let mut body = vec![
-                            Node::assign("o_sp", Expr::sub(Expr::var("o_sp"), Expr::u32(1))),
-                            Node::let_bind(
-                                "top_op",
-                                Expr::load(
-                                    scratch_op_stack,
-                                    Expr::add(op_stack_base, Expr::var("o_sp")),
-                                ),
-                            ),
-                            Node::let_bind("top_ast_opcode", ast_opcode(Expr::var("top_op"))),
-                        ];
-                        body.push(Node::if_then(
-                            Expr::and(
-                                Expr::ne(Expr::var("top_op"), Expr::u32(TOK_LPAREN)),
-                                Expr::ge(Expr::var("v_sp"), Expr::u32(2)),
-                            ),
-                            reduce_loaded_operator(
-                                out_ast_nodes,
-                                out_ast_count,
-                                scratch_val_stack,
-                                val_stack_base,
-                                Expr::var("top_ast_opcode"),
-                            ),
-                        ));
-                        body
-                    }),
-                ],
-            )],
-        ),
-    ]
+    operator_sweep_body(
+        scratch_op_stack,
+        out_ast_nodes,
+        out_ast_count,
+        scratch_val_stack,
+        val_stack_base,
+        op_stack_base,
+        "done_fs",
+        false,
+    )
 }

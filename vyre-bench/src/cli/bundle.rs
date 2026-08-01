@@ -1,8 +1,11 @@
+use super::cli_compare::{
+    build_comparison_artifact, parse_comparison_artifact, validate_comparison_expectations,
+    ComparisonArtifact, ComparisonCase,
+};
+use super::cli_report_io::{parse_report, read_report_bounded, validate_report_expectations};
 use crate::report::json::ReportSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use super::cli_compare::{build_comparison_artifact, parse_comparison_artifact, validate_comparison_expectations, ComparisonArtifact, ComparisonCase};
-use super::cli_report_io::{parse_report, read_report_bounded, validate_report_expectations};
 
 pub(super) const BENCHMARK_BUNDLE_SCHEMA: &str = "vyre-bench.bundle.v1";
 pub(super) const MAC_BENCHMARK_BUNDLE_CASE_ID: &str = "foundation.elementwise.add.1m";

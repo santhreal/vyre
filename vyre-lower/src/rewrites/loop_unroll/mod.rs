@@ -13,9 +13,11 @@
 //!   `child_bodies` table, and result ids are freshened across the
 //!   whole duplicated subtree.
 
+use crate::analyses::body_refs_only;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::operand_semantics::operand_is_result_reference;
+use crate::rewrites::literal_pool_splice::LiteralPoolSplice;
 use crate::{KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue};
 
 pub const MAX_UNROLL_COUNT: u32 = 4;
@@ -26,7 +28,7 @@ pub fn loop_unroll(desc: &KernelDescriptor) -> KernelDescriptor {
     // One id counter for the whole descriptor, seeded past every result
     // id in the entire tree. See `unroll_body` for why a per-body seed is
     // not enough.
-    let mut next_id: u32 = max_result_id_in_subtree(&out.body)
+    let mut next_id: u32 = super::max_result_id_in_subtree(&out.body)
         .map(|max| max + 1)
         .unwrap_or(0);
     out.body = unroll_body(&out.body, &mut next_id);
@@ -124,56 +126,43 @@ fn unroll_body(body: &KernelBody, next_id: &mut u32) -> KernelBody {
                     KernelOpKind::StructuredForLoop { loop_var } => Some(loop_var.clone()),
                     _ => None,
                 };
-                // Build a per-iteration literal-pool map: child's
-                // pool index → parent's pool index after merging.
-                // Two child Literal ops referencing the same child
-                // pool slot share a parent pool slot (de-duplicated).
                 for iter in 0..count {
                     let iter_value = lo.wrapping_add(iter);
                     let (renumbered, new_next) = renumber_body(&child, *next_id);
                     *next_id = new_next;
                     let child_offset = new_children.len() as u32;
                     new_children.extend(renumbered.child_bodies);
-                    let mut pool_map: FxHashMap<u32, u32> = FxHashMap::default();
-                    let child_literals = child.literals.clone();
-                    // Allocate one parent literal-pool slot per
-                    // unrolled iteration to hold this iteration's
-                    // index value, used to substitute LoopIndex
-                    // reads with literal loads.
+                    // Allocate one parent literal-pool slot per unrolled
+                    // iteration to hold this iteration's index value, used to
+                    // substitute LoopIndex reads with literal loads. Allocated
+                    // before the splice so the resulting pool layout is
+                    // identical to when the remapping was open-coded here.
                     let iter_lit_pool_idx = new_literals.len() as u32;
                     new_literals.push(LiteralValue::U32(iter_value));
+                    // Move this iteration's ops out of the child's literal-pool
+                    // namespace into the parent's. One splice per iteration, so
+                    // each unrolled copy gets its own destination slots rather
+                    // than aliasing another iteration's.
+                    let mut splice = LiteralPoolSplice::new(&child.literals, &mut new_literals);
+                    let relocated =
+                        splice.relocate_all(renumbered.ops.into_iter().map(|mut op| {
+                            remap_top_level_child_body_operands(&mut op, child_offset);
+                            op
+                        }));
                     let unroll_loop_var = unroll_loop_var.clone();
-                    new_ops.extend(renumbered.ops.into_iter().map(|mut op| {
-                        remap_top_level_child_body_operands(&mut op, child_offset);
-                        if matches!(op.kind, KernelOpKind::Literal) {
-                            if let Some(child_idx) = op.operands.first().copied() {
-                                let parent_idx = *pool_map.entry(child_idx).or_insert_with(|| {
-                                    let next_pool = new_literals.len() as u32;
-                                    if let Some(value) =
-                                        child_literals.get(child_idx as usize).cloned()
-                                    {
-                                        new_literals.push(value);
-                                        next_pool
-                                    } else {
-                                        // Unreachable when `literal_pool_refs_valid`
-                                        // admits the child; preserve the operand
-                                        // if another mutator violates the invariant
-                                        // between admission and rewrite.
-                                        child_idx
-                                    }
-                                });
-                                if !op.operands.is_empty() {
-                                    op.operands[0] = parent_idx;
-                                }
-                            }
-                        } else if let KernelOpKind::LoopIndex { loop_var } = &op.kind {
+                    new_ops.extend(relocated.into_iter().map(|mut op| {
+                        if let KernelOpKind::LoopIndex { loop_var } = &op.kind {
                             if unroll_loop_var.as_ref().is_some_and(|v| v == loop_var) {
-                                // Replace this iteration's LoopIndex
-                                // op with a Literal op carrying the
-                                // current iteration value. Result id
-                                // and operand-ref shape are preserved
-                                // so downstream ops referencing the
+                                // Replace this iteration's LoopIndex op with a
+                                // Literal op carrying the current iteration
+                                // value. Result id and operand-ref shape are
+                                // preserved so downstream ops referencing the
                                 // LoopIndex's result keep working.
+                                //
+                                // Done AFTER the splice on purpose: the operand
+                                // written here is already a parent pool index
+                                // and must not be mapped through the child's
+                                // pool a second time.
                                 op.kind = KernelOpKind::Literal;
                                 op.operands = vec![iter_lit_pool_idx];
                             }
@@ -198,27 +187,6 @@ fn unroll_body(body: &KernelBody, next_id: &mut u32) -> KernelBody {
         child_bodies: final_children,
         literals: new_literals,
     }
-}
-
-/// Walk the entire body subtree (ops + child_bodies recursively) and
-/// return the maximum result-id found, or `None` if there are no
-/// result-producing ops. Matches the traversal depth of
-/// `collect_result_renames` so the `next_id` seed never misses an id
-/// that `renumber_body` will encounter.
-fn max_result_id_in_subtree(body: &KernelBody) -> Option<u32> {
-    let mut max: Option<u32> = None;
-    fn walk(b: &KernelBody, max: &mut Option<u32>) {
-        for op in &b.ops {
-            for r in op.result_ids() {
-                *max = Some(max.map_or(r, |m: u32| m.max(r)));
-            }
-        }
-        for child in &b.child_bodies {
-            walk(child, max);
-        }
-    }
-    walk(body, &mut max);
-    max
 }
 
 fn literal_pool_refs_valid(body: &KernelBody) -> bool {
@@ -262,25 +230,6 @@ fn collect_produced_ids_inclusive(body: &KernelBody, out: &mut FxHashSet<u32>) {
     for c in &body.child_bodies {
         collect_produced_ids_inclusive(c, out);
     }
-}
-
-fn body_refs_only(body: &KernelBody, produced: &FxHashSet<u32>) -> bool {
-    for op in &body.ops {
-        for (pos, &operand) in op.operands.iter().enumerate() {
-            if !operand_is_result_reference(&op.kind, pos) {
-                continue;
-            }
-            if !produced.contains(&operand) {
-                return false;
-            }
-        }
-    }
-    for c in &body.child_bodies {
-        if !body_refs_only(c, produced) {
-            return false;
-        }
-    }
-    true
 }
 
 /// Renumber every result-id in `body` starting at `next_id`. Operand

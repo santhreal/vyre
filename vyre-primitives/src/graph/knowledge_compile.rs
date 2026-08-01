@@ -359,10 +359,11 @@ pub fn try_ddnnf_evaluate_cpu_into_with_scratch(
     validate_ddnnf_evaluate_inputs(nodes, node_var, children, var_assignments, topo_order)?;
     let n_nodes = nodes.len();
     scratch.values.clear();
-    resize_ddnnf_cpu_vec(
+    crate::graph::scratch::resize_graph_vec(
         &mut scratch.values,
         n_nodes,
         0u32,
+        "d-DNNF CPU oracle",
         "ddnnf_evaluate CPU scratch",
     )?;
     for &node in topo_order {
@@ -489,26 +490,6 @@ fn validate_ddnnf_evaluate_inputs(
             _ => {}
         }
     }
-    Ok(())
-}
-
-#[cfg(any(test, feature = "cpu-parity"))]
-
-fn resize_ddnnf_cpu_vec<T: Clone>(
-    out: &mut Vec<T>,
-    len: usize,
-    value: T,
-    context: &str,
-) -> Result<(), String> {
-    if len > out.len() {
-        crate::graph::scratch::reserve_graph_items(
-            out,
-            len - out.len(),
-            "d-DNNF CPU oracle",
-            context,
-        )?;
-    }
-    out.resize(len, value);
     Ok(())
 }
 
@@ -899,29 +880,6 @@ mod tests {
                 && !builder_source.contains(concat!("panic", "!("))
                 && !builder_source.contains(".unwrap_or_else("),
             "Fix: ddnnf_evaluate must expose a checked release API and avoid production panics."
-        );
-    }
-
-    #[test]
-    fn ddnnf_cpu_source_uses_fallible_reusable_output() {
-        let source = include_str!("knowledge_compile.rs");
-        let cpu_source = source
-            .split("/// CPU helper:")
-            .nth(1)
-            .expect("Fix: d-DNNF CPU source must be present")
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: d-DNNF CPU source must precede tests");
-
-        assert!(
-            cpu_source.contains("try_ddnnf_evaluate_cpu_into")
-                && cpu_source.contains("resize_ddnnf_cpu_vec")
-                && cpu_source.contains("crate::graph::scratch::reserve_graph_items")
-                && !cpu_source.contains("fn reserve_ddnnf_cpu_vec")
-                && !cpu_source.contains("vec![0u32; n_nodes]")
-                && !cpu_source.contains("Vec::with_capacity")
-                && !cpu_source.contains(".reserve("),
-            "Fix: d-DNNF CPU oracle must use fallible caller-owned output storage."
         );
     }
 }

@@ -62,7 +62,7 @@ impl Segment {
 
     /// The device-ABI words for this segment, in the exact order the kernel
     /// decodes them from `segments[seg_idx * SEGMENT_WORDS ..]`:
-    /// `[file_idx, scan_start, emit_start, emit_end]` (offsets file-relative 
+    /// `[file_idx, scan_start, emit_start, emit_end]` (offsets file-relative
     /// the kernel adds `file_offsets[file_idx]` to reach the packed haystack).
     #[must_use]
     pub const fn abi_words(&self) -> [u32; SEGMENT_WORDS] {
@@ -262,7 +262,11 @@ pub fn dfa_sync_class(transitions: &[u32], state_count: u32) -> SyncClass {
         // A malformed out-of-range target would index out of bounds on-device;
         // clamp into range so the analysis stays total (it can only make the
         // bound LARGER / more conservative, never spuriously "synchronized").
-        if t < n { t } else { 0 }
+        if t < n {
+            t
+        } else {
+            0
+        }
     };
 
     // States reachable from the start (the only states a real scan can be in,
@@ -282,7 +286,13 @@ pub fn dfa_sync_class(transitions: &[u32], state_count: u32) -> SyncClass {
     }
 
     // Canonical unordered off-diagonal pair key (lo < hi).
-    let key = |a: usize, b: usize| -> (usize, usize) { if a < b { (a, b) } else { (b, a) } };
+    let key = |a: usize, b: usize| -> (usize, usize) {
+        if a < b {
+            (a, b)
+        } else {
+            (b, a)
+        }
+    };
 
     // BFS the product automaton from every reachable seed {0, q}, collecting the
     // reachable OFF-DIAGONAL pairs and their off-diagonal successor edges. A
@@ -396,7 +406,7 @@ pub fn dfa_sync_class(transitions: &[u32], state_count: u32) -> SyncClass {
 
 /// The minimum warm-up `overlap` that keeps intra-file segmentation EXACT for an
 /// entire rule catalog: the maximum [`dfa_sync_distance`] over every rule.
-/// Returns `None` when ANY rule has infinite memory (an unbounded-gap pattern) 
+/// Returns `None` when ANY rule has infinite memory (an unbounded-gap pattern)
 /// the catalog cannot be soundly segmented at a shorter window than the whole
 /// file, so the caller MUST fall back to one segment per file (and should log
 /// which rule forced it; that is a recall-preserving slow path, not a silent
@@ -1029,7 +1039,8 @@ mod tests {
         for seg in plan_segments(&[text.len() as u32], seg_len, overlap) {
             let mut state = 0u32;
             for i in seg.scan_start..seg.emit_end {
-                state = dfa.transitions[(state as usize) * DFA_BYTE_COLUMNS + text[i as usize] as usize];
+                state = dfa.transitions
+                    [(state as usize) * DFA_BYTE_COLUMNS + text[i as usize] as usize];
                 // The loop bound already enforces `i < emit_end`; the window owns
                 // a match ending at byte index `i` iff `i >= emit_start`. Bytes in
                 // the `[scan_start, emit_start)` warm-up prefix advance state but
@@ -1059,9 +1070,18 @@ mod tests {
         // regression in classic_ac_scan). In "ushers" (u0 s1 h2 e3 r4 s5),
         // classic_ac_scan reports the END byte index: "she"(pid1) and "he"(pid0)
         // both end at e=index 3; "hers"(pid3) ends at the final s=index 5.
-        assert!(linear.contains(&(1, 3)), "linear must contain she@3: {linear:?}");
-        assert!(linear.contains(&(0, 3)), "linear must contain he@3: {linear:?}");
-        assert!(linear.contains(&(3, 5)), "linear must contain hers@5: {linear:?}");
+        assert!(
+            linear.contains(&(1, 3)),
+            "linear must contain she@3: {linear:?}"
+        );
+        assert!(
+            linear.contains(&(0, 3)),
+            "linear must contain he@3: {linear:?}"
+        );
+        assert!(
+            linear.contains(&(3, 5)),
+            "linear must contain hers@5: {linear:?}"
+        );
         // Every small segment width must reproduce the linear set exactly.
         for seg_len in 1u32..=8 {
             let segmented = combined_segmented_scan(&ac, text, seg_len, overlap);

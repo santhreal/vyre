@@ -9,7 +9,7 @@
 //! the FIRST-EVER execution of the full circuit→conformal chain through a boundary that models the real
 //! backend.
 //!
-//! Contract (audited CLEAN): two dispatches on one dispatcher 
+//! Contract (audited CLEAN): two dispatches on one dispatcher
 //!   (1) `sum_product_evaluate_leveled`: depths RO + kinds/offsets/counts RO + children/weights RO +
 //!       leaf_values RO + out RW = 8 IC (depths is the host-assigned per-node topological depth driving
 //!       the depth-wave harness); decode outputs[0] → per-node values; the point estimate is the LAST

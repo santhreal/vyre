@@ -116,4 +116,3 @@ fn wgpu_backend_ranged_batch_download_fuses_overlapping_same_handle_ranges() {
         .free_resident(resident)
         .expect("fused resident readback buffer must free cleanly");
 }
-

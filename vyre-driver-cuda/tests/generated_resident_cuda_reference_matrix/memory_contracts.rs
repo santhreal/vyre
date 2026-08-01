@@ -66,4 +66,3 @@ fn generated_resident_memory_permutation_matrix_matches_reference_on_live_cuda()
         "Fix: resident memory generated matrix must compare every output lane."
     );
 }
-

@@ -1,7 +1,6 @@
 //! Command execution boundary test suite.
 
-const COMMANDS: &str =
-    include_str!("../../docs/optimization/COMMAND_EXECUTION_BOUNDARY.toml");
+const COMMANDS: &str = include_str!("../../docs/optimization/COMMAND_EXECUTION_BOUNDARY.toml");
 
 #[test]
 fn command_execution_boundary_records_shell_argv_env_cwd_stdin_and_diagnostics() {

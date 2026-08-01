@@ -180,13 +180,7 @@ inventory::submit! {
 }
 
 fn single_pass_inputs() -> Vec<Vec<Vec<u8>>> {
-    vec![vec![
-        vec![b'a'; 64 * 4],
-        vec![0u8; 64 * 4],
-        vec![0u8; 64 * 4],
-        vec![0u8; 64 * 4],
-        vec![0u8; 4],
-    ]]
+    super::identifier_fixture_inputs(64)
 }
 
 fn single_pass_expected() -> Vec<Vec<Vec<u8>>> {

@@ -71,6 +71,7 @@ fn cuda_graph_rejects_input_shape_mismatch() {
 fn cuda_graph_replay_uses_cached_telemetry_totals_without_per_replay_scans() {
     let replay_source = include_str!("../../src/backend/cuda_graph_replay.rs");
     let graph_source = include_str!("../../src/backend/cuda_graph.rs");
+    let backend_source = include_str!("../../src/backend/mod.rs");
 
     assert!(
         graph_source.contains("replay_input_bytes")
@@ -101,11 +102,12 @@ fn cuda_graph_replay_uses_cached_telemetry_totals_without_per_replay_scans() {
         "Fix: CUDA graph capture readback planning must use the shared checked program-buffer lookup instead of directly indexing program buffers."
     );
     assert!(
-        graph_source.contains("fn cuda_graph_sample_input")
-            && graph_source.contains(".get(input_index)")
-            && graph_source.contains(".copied()")
-            && graph_source.contains("expected sample input index {input_index}")
+        graph_source.contains("super::define_required_input!(")
+            && graph_source.contains("cuda_graph_sample_input,")
+            && backend_source.contains(".get(input_index)")
+            && backend_source.contains(".copied()")
+            && backend_source.contains("expected {input_kind} index {input_index}")
             && !graph_source.contains("sample_inputs[input_index]"),
-        "Fix: CUDA graph capture must turn stale binding sample-input indexes into BackendError instead of directly indexing borrowed sample input slices."
+        "Fix: CUDA graph capture must use the shared checked-input helper so stale binding indexes become BackendError instead of direct slice indexing."
     );
 }

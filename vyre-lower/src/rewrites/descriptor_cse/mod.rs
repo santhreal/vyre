@@ -105,7 +105,7 @@ fn protected_result_ids(
 }
 
 fn external_refs_for_child(parent: &KernelBody, child: &KernelBody) -> FxHashSet<u32> {
-    let child_results = collect_results(child);
+    let child_results = crate::analyses::body_result_ids(child);
     let mut refs = FxHashSet::default();
     for op in &parent.ops {
         for (pos, operand) in op.operands.iter().enumerate() {
@@ -115,19 +115,6 @@ fn external_refs_for_child(parent: &KernelBody, child: &KernelBody) -> FxHashSet
         }
     }
     refs
-}
-
-fn collect_results(body: &KernelBody) -> FxHashSet<u32> {
-    let mut results = FxHashSet::default();
-    for op in &body.ops {
-        for result in op.result_ids() {
-            results.insert(result);
-        }
-    }
-    for child in &body.child_bodies {
-        results.extend(collect_results(child));
-    }
-    results
 }
 
 fn collect_result_refs(body: &KernelBody) -> FxHashSet<u32> {

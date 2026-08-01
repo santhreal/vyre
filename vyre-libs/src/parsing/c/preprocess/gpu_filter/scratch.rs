@@ -8,6 +8,21 @@ pub(super) fn write_zero_bytes(
     write_fill_bytes(out, byte_len, 0, context)
 }
 
+pub(super) fn prepare_filter_scratch(
+    zero_words: &mut Vec<u8>,
+    compact: &mut super::compact::CommentCompactScratch,
+    n_bucket: u32,
+    byte_buf_pad: usize,
+    overflow_context: &str,
+    zero_context: &str,
+) -> Result<(), String> {
+    let word_bytes = (n_bucket as usize).checked_mul(4).ok_or_else(|| {
+        format!("{overflow_context} scratch byte size overflowed usize. Fix: reduce batch size.")
+    })?;
+    write_zero_bytes(zero_words, word_bytes, zero_context)?;
+    compact.prepare(byte_buf_pad)
+}
+
 pub(super) fn write_fill_bytes(
     out: &mut Vec<u8>,
     byte_len: usize,

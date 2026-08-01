@@ -114,4 +114,3 @@ fn cuda_dispatch_matches_packed_int4_batched_scaled_matvec_oracle() {
         );
     }
 }
-

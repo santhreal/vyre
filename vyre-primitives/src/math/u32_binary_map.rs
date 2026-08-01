@@ -5,6 +5,44 @@ use std::sync::Arc;
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
+fn u32_two_input_map_program<F>(
+    op_id: &'static str,
+    lhs: &str,
+    rhs: &str,
+    out: &str,
+    count: u32,
+    rhs_count: u32,
+    rhs_index: impl FnOnce(&Expr) -> Expr,
+    op: F,
+) -> Program
+where
+    F: Fn(Expr, Expr) -> Expr,
+{
+    let lane = Expr::InvocationId { axis: 0 };
+    let value = op(
+        Expr::load(lhs, lane.clone()),
+        Expr::load(rhs, rhs_index(&lane)),
+    );
+    let body = vec![Node::if_then(
+        Expr::lt(lane.clone(), Expr::u32(count)),
+        vec![Node::store(out, lane, value)],
+    )];
+    Program::wrapped(
+        vec![
+            BufferDecl::storage(lhs, 0, BufferAccess::ReadOnly, DataType::U32).with_count(count),
+            BufferDecl::storage(rhs, 1, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(rhs_count),
+            BufferDecl::storage(out, 2, BufferAccess::ReadWrite, DataType::U32).with_count(count),
+        ],
+        [256, 1, 1],
+        vec![Node::Region {
+            generator: Ident::from(op_id),
+            source_region: None,
+            body: Arc::new(body),
+        }],
+    )
+}
+
 /// Build `out[i] = op(lhs[i], rhs[i])` for `count` u32 lanes.
 #[must_use]
 pub(crate) fn u32_binary_map_program<F>(
@@ -18,26 +56,7 @@ pub(crate) fn u32_binary_map_program<F>(
 where
     F: Fn(Expr, Expr) -> Expr,
 {
-    let t = Expr::InvocationId { axis: 0 };
-    let value = op(Expr::load(lhs, t.clone()), Expr::load(rhs, t.clone()));
-    let body = vec![Node::if_then(
-        Expr::lt(t.clone(), Expr::u32(count)),
-        vec![Node::store(out, t, value)],
-    )];
-
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(lhs, 0, BufferAccess::ReadOnly, DataType::U32).with_count(count),
-            BufferDecl::storage(rhs, 1, BufferAccess::ReadOnly, DataType::U32).with_count(count),
-            BufferDecl::storage(out, 2, BufferAccess::ReadWrite, DataType::U32).with_count(count),
-        ],
-        [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(op_id),
-            source_region: None,
-            body: Arc::new(body),
-        }],
-    )
+    u32_two_input_map_program(op_id, lhs, rhs, out, count, count, Clone::clone, op)
 }
 
 /// Build `out[i] = op(vector[i], scalar[0])` for `count` u32 lanes.
@@ -53,29 +72,7 @@ pub(crate) fn u32_vector_scalar_map_program<F>(
 where
     F: Fn(Expr, Expr) -> Expr,
 {
-    let t = Expr::InvocationId { axis: 0 };
-    let value = op(
-        Expr::load(vector, t.clone()),
-        Expr::load(scalar, Expr::u32(0)),
-    );
-    let body = vec![Node::if_then(
-        Expr::lt(t.clone(), Expr::u32(count)),
-        vec![Node::store(out, t, value)],
-    )];
-
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(vector, 0, BufferAccess::ReadOnly, DataType::U32).with_count(count),
-            BufferDecl::storage(scalar, 1, BufferAccess::ReadOnly, DataType::U32).with_count(1),
-            BufferDecl::storage(out, 2, BufferAccess::ReadWrite, DataType::U32).with_count(count),
-        ],
-        [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(op_id),
-            source_region: None,
-            body: Arc::new(body),
-        }],
-    )
+    u32_two_input_map_program(op_id, vector, scalar, out, count, 1, |_| Expr::u32(0), op)
 }
 
 #[cfg(test)]

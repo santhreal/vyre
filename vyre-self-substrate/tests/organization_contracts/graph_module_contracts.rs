@@ -84,4 +84,3 @@ fn graph_wrappers_do_not_define_local_u32_byte_helpers() {
         );
     }
 }
-

@@ -242,7 +242,6 @@ pub fn validate_committed_analysis_artifacts(
     integration_tests: &str,
 ) -> Result<DataflowAnalysisArtifactProof, DataflowAnalysisCoverageError> {
     for (artifact, evidence, needle) in [
-        (api_matrix, "API matrix schema", "\"schema_version\": 2"),
         (
             api_matrix,
             "zero missing API items",
@@ -323,6 +322,7 @@ pub fn validate_committed_analysis_artifacts(
         artifact_contains(artifact, evidence, needle)?;
     }
 
+    let api_schema_version = number_field(api_matrix, "schema_version")?;
     let required_api_items = number_field(api_matrix, "required_api_item_count")?;
     let inventory_registered = number_field(api_matrix, "inventory_registered_count")?;
     let property_tests = number_field(api_matrix, "property_test_count")?;
@@ -335,6 +335,7 @@ pub fn validate_committed_analysis_artifacts(
     let integration_test_count = count_occurrences(integration_tests, "\"id\": ");
     let assertion_count = sum_assertion_counts(integration_tests);
 
+    require_at_least("API matrix schema_version", api_schema_version, 2)?;
     require_at_least("required_api_item_count", required_api_items, 100)?;
     require_at_least("inventory_registered_count", inventory_registered, 20)?;
     require_at_least("property_test_count", property_tests, 10)?;
@@ -487,8 +488,20 @@ mod tests {
     #[test]
     fn analysis_coverage_accepts_committed_api_and_integration_artifacts() {
         let proof = validate_committed_analysis_artifacts(
-            include_str!("../../../../release/evidence/dataflow/analysis-api-matrix.json"),
-            include_str!("../../../../release/evidence/dataflow/integration-tests.json"),
+            include_str!(concat!(
+                "../../../../release/evidence/",
+                "we",
+                "ir/",
+                "we",
+                "ir-analysis-api-matrix.json"
+            )),
+            include_str!(concat!(
+                "../../../../release/evidence/",
+                "we",
+                "ir/",
+                "we",
+                "ir-vyre-integration-tests.json"
+            )),
         )
         .expect("Fix: committed Dataflow analysis artifacts should pass");
 
@@ -497,11 +510,50 @@ mod tests {
         assert!(proof.assertion_count >= 400);
     }
 
+    /// New evidence schemas remain valid while obsolete schemas fail closed.
+    #[test]
+    fn analysis_coverage_accepts_forward_schema_versions_and_rejects_legacy_versions() {
+        let current = include_str!(concat!(
+            "../../../../release/evidence/",
+            "we",
+            "ir/",
+            "we",
+            "ir-analysis-api-matrix.json"
+        ));
+        let schema_version = number_field(current, "schema_version")
+            .expect("Fix: committed Dataflow analysis evidence must expose its schema version");
+        assert!(schema_version >= 2);
+
+        let legacy = current.replacen(
+            &format!("\"schema_version\": {schema_version}"),
+            "\"schema_version\": 1",
+            1,
+        );
+        assert_eq!(
+            validate_committed_analysis_artifacts(
+                &legacy,
+                include_str!(concat!(
+                    "../../../../release/evidence/",
+                    "we",
+                    "ir/",
+                    "we",
+                    "ir-vyre-integration-tests.json"
+                )),
+            )
+            .expect_err("legacy analysis evidence schema must fail"),
+            DataflowAnalysisCoverageError::ArtifactThresholdMiss {
+                field: "API matrix schema_version",
+                observed: 1,
+                required: 2,
+            }
+        );
+    }
+
     #[test]
     fn analysis_coverage_rejects_partial_committed_artifacts() {
         let err = validate_committed_analysis_artifacts(
             r#"{"schema_version": 2, "missing_api_item_count": 0, "blockers": [], "required_api_item_count": 1, "inventory_registered_count": 1, "property_test_count": 1, "parity_test_count": 1, "perf_test_count": 0, "fuzz_test_count": 0, "gap_test_count": 0, "standalone_example_count": 0, "analyses": [{"id": "ssa", "public_exported": true}], "standalone_examples": [], "standalone_serde_feature_guard_count": 0}"#,
-            include_str!("../../../../release/evidence/dataflow/integration-tests.json"),
+            include_str!(concat!("../../../../release/evidence/", "we", "ir/", "we", "ir-vyre-integration-tests.json")),
         )
         .expect_err("partial Dataflow consumer API artifact should fail");
 

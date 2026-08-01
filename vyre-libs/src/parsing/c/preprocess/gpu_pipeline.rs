@@ -95,6 +95,24 @@ mod token_provenance;
 mod tokenization;
 #[path = "gpu_pipeline/types.rs"]
 mod types;
+fn trim_ascii(bytes: &[u8]) -> &[u8] {
+    let mut start = 0_usize;
+    let mut end = bytes.len();
+    while start < end && bytes[start].is_ascii_whitespace() {
+        start += 1;
+    }
+    while end > start && bytes[end - 1].is_ascii_whitespace() {
+        end -= 1;
+    }
+    &bytes[start..end]
+}
+
+fn classified_token_bytes_opt(classified: &ClassifiedTokens, idx: usize) -> Option<&[u8]> {
+    let start = *classified.tok_starts.get(idx)? as usize;
+    let len = *classified.tok_lens.get(idx)? as usize;
+    classified.source.get(start..start.checked_add(len)?)
+}
+
 pub use buffers::bucket_pow2;
 pub use conditional_events::{ConditionalEvent, ConditionalEventKind, ConditionalEventResidency};
 pub use directives::{gpu_extract_directive_payloads, DirectivePayload};

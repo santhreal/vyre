@@ -10,7 +10,10 @@ you're trying to do, not by filename.
 - [THESIS.md](THESIS.md)  -  what vyre is, why, and the long-term bet.
 - [ARCHITECTURE.md](ARCHITECTURE.md)  -  the 5-tier layer model
   (foundation → intrinsics → primitives → libs → community packs).
-- [ROADMAP.md](ROADMAP.md)  -  forward-looking milestones.
+- Forward-looking milestones live in a maintainer roadmap file that is excluded
+  from the repository and does not ship. The published planning surface is
+  [`../audits/RELEASE_GATE.md`](../audits/RELEASE_GATE.md), the release gate and
+  execution backlog.
 - [library-tiers.md](library-tiers.md)  -  tier boundaries between
   `vyre-foundation`, `vyre-intrinsics`, `vyre-primitives`, `vyre-libs`.
 - [vyre-libs-features.md](vyre-libs-features.md)  -  feature matrix and
@@ -46,7 +49,7 @@ you're trying to do, not by filename.
 - [error-codes.md](error-codes.md)  -  stable error-code table.
 - [observability.md](observability.md)  -  tracing + metrics contract.
 - [semver-policy.md](semver-policy.md)  -  when breaking changes land.
-- [BENCHMARKS.md](BENCHMARKS.md)  -  reproducible benchmark recipes.
+- [testing/vyre-bench.md](testing/vyre-bench.md)  -  the benchmark harness and how to run it.
 - [threat-model.md](threat-model.md)  -  what vyre defends against.
 
 ## Integration
@@ -63,8 +66,13 @@ you're trying to do, not by filename.
 
 - [`../audits/RELEASE_GATE.md`](../audits/RELEASE_GATE.md)  -  active
   release gate and execution backlog.
-- [COMPILER_E2E_PLAN.md](COMPILER_E2E_PLAN.md) / [COMPILER_PRODUCT_BOUNDARY_PLAN.md](COMPILER_PRODUCT_BOUNDARY_PLAN.md)  -  compiler-side plans.
-- [V7_RELEASE_PLAN.md](V7_RELEASE_PLAN.md) / [V7_AGENT_A_PLAN.md](V7_AGENT_A_PLAN.md)  -  superseded release-gate plans retained for history.
+- Completed compiler-side plans and superseded release-gate plans are retained in
+  the maintainer's working copy and excluded from publication, so they are named
+  rather than linked: `archive/COMPILER_E2E_PLAN.md`,
+  `archive/COMPILER_PRODUCT_BOUNDARY_PLAN.md`, `archive/V7_RELEASE_PLAN.md`,
+  `archive/V7_AGENT_A_PLAN.md`. See
+  [archive/README.md](archive/README.md) for the full split between archived
+  documents you can open and ones you cannot.
 
 ## `frozen-traits/`
 

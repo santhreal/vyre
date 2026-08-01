@@ -30,27 +30,28 @@ pub(super) fn classify_typedef_vast(
     cfg: &mut DispatchConfig,
     log: &mut impl FnMut(&str),
 ) -> Result<Vec<u8>, String> {
-    TYPEDEF_CLASSIFY_SCRATCH.with(|scratch| {
-        let mut scratch = scratch.try_borrow_mut().map_err(|_| {
-            "VAST typedef/classify dispatch scratch was re-entered on the same thread. Fix: call typedef classification from a non-nested parser context or add explicit caller-owned scratch.".to_string()
-        })?;
-        classify_typedef_vast_with_scratch(
-            backend,
-            path,
-            scoped_vast_blob,
-            decl_context_blob,
-            haystack,
-            haystack_len,
-            vast_count,
-            packed_haystack,
-            readback_terminal_outputs,
-            has_typedef_keyword,
-            global_typedef_hashes,
-            cfg,
-            log,
-            &mut scratch,
-        )
-    })
+    super::super::with_thread_local_scratch(
+        &TYPEDEF_CLASSIFY_SCRATCH,
+        "VAST typedef/classify dispatch scratch was re-entered on the same thread. Fix: call typedef classification from a non-nested parser context or add explicit caller-owned scratch.",
+        |scratch| {
+            classify_typedef_vast_with_scratch(
+                backend,
+                path,
+                scoped_vast_blob,
+                decl_context_blob,
+                haystack,
+                haystack_len,
+                vast_count,
+                packed_haystack,
+                readback_terminal_outputs,
+                has_typedef_keyword,
+                global_typedef_hashes,
+                cfg,
+                log,
+                scratch,
+            )
+        },
+    )
 }
 
 fn classify_typedef_vast_with_scratch(

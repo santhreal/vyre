@@ -1144,9 +1144,8 @@ pub(super) fn write_optimization_benchmark_manifest(workspace_root: &Path, backe
         .filter(|value| !value.trim().is_empty())
         .is_none()
     {
-        blockers.push(
-            "optimization benchmark manifest environment is missing cpu_model".to_string(),
-        );
+        blockers
+            .push("optimization benchmark manifest environment is missing cpu_model".to_string());
     }
     let passed = cases.iter().filter(|case| case.status == "pass").count();
     let failed = cases.len().saturating_sub(passed);

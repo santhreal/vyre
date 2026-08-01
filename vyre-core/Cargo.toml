@@ -10,7 +10,7 @@ repository.workspace = true
 homepage.workspace = true
 documentation = "https://docs.rs/vyre"
 readme = "README.md"
-keywords = ["gpu", "ir", "compute", "wgsl", "conformance"]
+keywords = ["gpu", "gpgpu", "cuda", "wgsl", "spir-v"]
 categories = ["algorithms", "compilers", "hardware-support"]
 exclude = ["**/SKILL.md"]
 

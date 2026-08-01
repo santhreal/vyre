@@ -13,7 +13,8 @@ use vyre_driver::{
 };
 
 use crate::backend::cuda_graph_replay::{CudaGraphReplayInputState, CudaGraphReplayStats};
-use crate::backend::resident_dispatch::{next_resident_handle, CudaResidentDispatch};
+use crate::backend::resident::CudaDispatchBinding;
+use crate::backend::resident_dispatch::{next_dispatch_binding, CudaResidentDispatch};
 use crate::backend::staging_reserve::{reserve_smallvec, reserved_vec, resize_vec_slots};
 use crate::backend::CachedCudaGraph;
 use crate::numeric::CUDA_NUMERIC;
@@ -411,10 +412,10 @@ impl CompiledPipeline for CudaCompiledPipeline {
 
         let started = std::time::Instant::now();
         let enqueue_started = std::time::Instant::now();
-        let handles = self.backend.resident_handles_from_resources(inputs)?;
+        let bindings = self.backend.resident_bindings_from_resources(inputs)?;
         let dispatch = self.backend.dispatch_resident_async_concrete_with_ptx_key(
             &self.program,
-            &handles,
+            &bindings,
             config,
             &self.ptx_src,
             self.module_key,
@@ -454,13 +455,13 @@ impl CompiledPipeline for CudaCompiledPipeline {
     ) -> Result<(), BackendError> {
         let _profiler_range =
             crate::profiler::cuda_profiler_range(crate::profiler::CUDA_PIPELINE_DISPATCH_RANGE);
-        let handles = self.backend.resident_handles_from_resources(inputs)?;
+        let bindings = self.backend.resident_bindings_from_resources(inputs)?;
         if dispatch_configs_share_launch_shape(&self.compiled_config, config)
             && !crate::instrumentation::cuda_resident_borrowed_fallback_enabled()
         {
             let dispatch = self.backend.dispatch_resident_async_concrete_with_ptx_key(
                 &self.program,
-                &handles,
+                &bindings,
                 config,
                 &self.ptx_src,
                 self.module_key,
@@ -475,7 +476,7 @@ impl CompiledPipeline for CudaCompiledPipeline {
         }
         self.backend.dispatch_resident_outputs_with_ptx_key_into(
             &self.program,
-            &handles,
+            &bindings,
             config,
             &self.ptx_src,
             self.module_key,
@@ -549,7 +550,7 @@ impl CompiledPipeline for CudaCompiledPipeline {
     ) -> Result<Vec<Resource>, BackendError> {
         let _profiler_range =
             crate::profiler::cuda_profiler_range(crate::profiler::CUDA_PIPELINE_DISPATCH_RANGE);
-        let handles = self.backend.resident_handles_from_resources(inputs)?;
+        let bindings = self.backend.resident_bindings_from_resources(inputs)?;
         let borrowed_fallback = crate::instrumentation::cuda_resident_borrowed_fallback_enabled();
         let same_shape = dispatch_configs_share_launch_shape(&self.compiled_config, config);
         let prepared_storage;
@@ -561,7 +562,7 @@ impl CompiledPipeline for CudaCompiledPipeline {
         } else {
             prepared_storage =
                 self.backend
-                    .prepare_resident_dispatch(&self.program, &handles, config)?;
+                    .prepare_resident_dispatch(&self.program, &bindings, config)?;
             (&prepared_storage, None)
         };
         let mut output_handles = SmallVec::<[crate::backend::CudaResidentBuffer; 8]>::new();
@@ -570,28 +571,40 @@ impl CompiledPipeline for CudaCompiledPipeline {
             prepared.output_binding_indices.len(),
             "compiled resident resource output handle",
         )?;
-        let mut next_handle = 0usize;
+        let mut next_binding = 0usize;
         for binding in &prepared.bindings.bindings {
             if binding.role == BindingRole::Shared {
                 continue;
             }
-            let handle = next_resident_handle(
-                &handles,
-                &mut next_handle,
+            let source = next_dispatch_binding(
+                &bindings,
+                &mut next_binding,
                 "compiled resident resource output routing",
             )?;
             if binding.output_index.is_some() {
+                // This entry point hands back a Resource::Resident per output,
+                // naming device memory that outlives the call. A borrowed
+                // output is staged from the transient pool and recycled when
+                // the dispatch ends, so there is no lasting id to return.
+                let CudaDispatchBinding::Resident(handle) = source else {
+                    return Err(BackendError::InvalidProgram {
+                        fix: format!(
+                            "Fix: CUDA compiled resident resource output `{}` was given a borrowed resource, but this entry point returns Resource::Resident outputs that outlive the dispatch. Bind a resident buffer for that output, or use a dispatch entry point that returns output bytes.",
+                            binding.name
+                        ),
+                    });
+                };
                 output_handles.push(handle);
             }
         }
         if borrowed_fallback {
             self.backend
-                .dispatch_resident_via_borrowed(&self.program, &handles, config)?;
+                .dispatch_resident_via_borrowed(&self.program, &bindings, config)?;
         } else {
             self.backend
                 .dispatch_resident_async_concrete_with_ptx_key(
                     &self.program,
-                    &handles,
+                    &bindings,
                     config,
                     &self.ptx_src,
                     self.module_key,
@@ -605,7 +618,7 @@ impl CompiledPipeline for CudaCompiledPipeline {
         }
         let mut resources = reserved_vec(output_handles.len(), "resource output")?;
         for handle in output_handles {
-            resources.push(Resource::Resident(handle.id));
+            resources.push(Resource::Resident(handle.handle));
         }
         Ok(resources)
     }
@@ -665,12 +678,13 @@ impl CudaCompiledPipeline {
             "dynamic resident dispatch",
         )?;
         for handles in resident_batches {
+            let batch_bindings = crate::backend::resident_bindings_from_handles(handles)?;
             let prepared =
                 self.backend
-                    .prepare_resident_dispatch(&self.program, handles, config)?;
+                    .prepare_resident_dispatch(&self.program, &batch_bindings, config)?;
             dispatches.push(self.backend.dispatch_resident_async_concrete_with_ptx_key(
                 &self.program,
-                handles,
+                &batch_bindings,
                 config,
                 &self.ptx_src,
                 self.module_key,
@@ -683,7 +697,8 @@ impl CudaCompiledPipeline {
 
         resize_vec_slots(outputs, dispatches.len(), "dynamic resident output")?;
         for (dispatch, item_outputs) in dispatches.into_iter().zip(outputs.iter_mut()) {
-            let output_handles = dispatch.output_handles;
+            let output_handles =
+                dispatch.resident_output_handles("dynamic persistent batch readback")?;
             let output_readbacks = dispatch.output_readbacks;
             dispatch.pending.await_timed_result()?;
             self.backend.download_resident_readbacks_many_into(

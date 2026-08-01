@@ -12,7 +12,9 @@
 
 use std::collections::BTreeMap;
 
-use external_dataflow_engine::ifds_gpu::{ifds_gpu_step, IfdsShape, OP_ID as EXTERNAL_IFDS_GPU_OP_ID};
+use external_dataflow_engine::ifds_gpu::{
+    ifds_gpu_step, IfdsShape, OP_ID as EXTERNAL_IFDS_GPU_OP_ID,
+};
 use external_dataflow_engine::reachability_witness::{ExtractedPath, ExtractedStatement};
 use vyre_libs::security::facts::{
     FindingProofBundle, FindingProofStep, SourceToSinkFindingRequest,
@@ -20,9 +22,9 @@ use vyre_libs::security::facts::{
 use vyre_libs::{
     dataflow::{DynamicPrimitiveSoundness, PrecisionContract, Soundness},
     security::{
-        route_security_taint_through_external_ifds, security_witness_path_from_external_path, AnalysisFact,
-        AnalysisFactTable, AnalysisSourceSpan, FactId, FactKind, ExternalIfdsSecurityBuffers,
-        EXTERNAL_IFDS_SECURITY_BACKEND_ID,
+        route_security_taint_through_external_ifds, security_witness_path_from_external_path,
+        AnalysisFact, AnalysisFactTable, AnalysisSourceSpan, ExternalIfdsSecurityBuffers, FactId,
+        FactKind, EXTERNAL_IFDS_SECURITY_BACKEND_ID,
     },
 };
 use vyre_primitives::predicate::edge_kind;
@@ -75,7 +77,10 @@ fn source_to_sink_query_dispatches_through_external_ifds_and_returns_witness_see
     assert_eq!(dispatch.witness_seeds[0].sink_file, "src/security.c");
     assert_eq!(dispatch.witness_seeds[0].sink_node, 3);
     assert_eq!(dispatch.primitive_soundness.len(), 1);
-    assert_eq!(dispatch.primitive_soundness[0].op_id, EXTERNAL_IFDS_GPU_OP_ID);
+    assert_eq!(
+        dispatch.primitive_soundness[0].op_id,
+        EXTERNAL_IFDS_GPU_OP_ID
+    );
     assert_eq!(dispatch.primitive_soundness[0].soundness, Soundness::Exact);
 
     let routed = dispatch

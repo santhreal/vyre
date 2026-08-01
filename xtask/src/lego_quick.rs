@@ -1,4 +1,4 @@
-//! `cargo_full run --bin xtask -- lego-quick`  -  fast pre-commit gate.
+//! `cargo xtask lego-quick`  -  fast pre-commit gate.
 //!
 //! Runs the file-only subset of `lego-audit` against the staged diff
 //! only. Target wall-clock ≤ 2s on a 10-file diff so it can sit in
@@ -30,6 +30,7 @@
 //! finding prints `file:line | category | message | fix:` so writers can
 //! act on it without re-reading docs.
 
+use crate::use_paths::{collect_use_paths, is_test_source_path};
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::process::{self, Command};
@@ -86,8 +87,9 @@ pub(crate) fn run(args: &[String]) {
     // `large-file` findings are advisory: they flag a split-by-responsibility
     // review, they do not fail the gate. Everything else is a hard law.
     let sort_key = |f: &Finding| (f.file.clone(), f.line, f.category.clone());
-    let (mut advisories, mut blockers): (Vec<Finding>, Vec<Finding>) =
-        findings.into_iter().partition(|f| f.category == "large-file");
+    let (mut advisories, mut blockers): (Vec<Finding>, Vec<Finding>) = findings
+        .into_iter()
+        .partition(|f| f.category == "large-file");
     advisories.sort_by(|a, b| sort_key(a).cmp(&sort_key(b)));
     blockers.sort_by(|a, b| sort_key(a).cmp(&sort_key(b)));
 
@@ -281,6 +283,9 @@ fn check_cross_dialect(root: &Path, files: &[PathBuf]) -> Vec<Finding> {
 
     let mut out = Vec::new();
     for path in files {
+        if is_test_source_path(path) {
+            continue;
+        }
         let path_str = path.to_string_lossy();
         let Some(idx) = path_str.find("vyre-libs/src/") else {
             continue;
@@ -306,6 +311,9 @@ fn check_cross_dialect(root: &Path, files: &[PathBuf]) -> Vec<Finding> {
             continue;
         };
         for use_path in collect_use_paths(&file) {
+            if use_path.is_public {
+                continue;
+            }
             for other in &dialects {
                 if other == this_dialect {
                     continue;
@@ -366,6 +374,7 @@ fn check_source_similarity(root: &Path) -> Vec<Finding> {
         0.97,
         512 * 1024,
         false,
+        false,
     ) {
         Ok(report) => report,
         Err(error) => {
@@ -411,79 +420,6 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
         ));
     }
     Ok(text)
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct UsePath {
-    segments: Vec<String>,
-    line: usize,
-}
-
-impl UsePath {
-    fn imports_dialect(&self, other_name: &str) -> bool {
-        matches!(
-            self.segments.as_slice(),
-            [first, second, ..]
-                if (first == "crate" || first == "vyre_libs") && second == other_name
-        )
-    }
-}
-
-fn collect_use_paths(file: &syn::File) -> Vec<UsePath> {
-    let mut collector = UsePathCollector::default();
-    syn::visit::visit_file(&mut collector, file);
-    collector.paths
-}
-
-#[derive(Default)]
-struct UsePathCollector {
-    paths: Vec<UsePath>,
-}
-
-impl<'ast> syn::visit::Visit<'ast> for UsePathCollector {
-    fn visit_item_use(&mut self, item: &'ast syn::ItemUse) {
-        collect_use_tree(&item.tree, &mut Vec::new(), &mut self.paths);
-    }
-}
-
-fn collect_use_tree(tree: &syn::UseTree, prefix: &mut Vec<String>, out: &mut Vec<UsePath>) {
-    use syn::spanned::Spanned;
-    match tree {
-        syn::UseTree::Path(path) => {
-            prefix.push(path.ident.to_string());
-            collect_use_tree(&path.tree, prefix, out);
-            prefix.pop();
-        }
-        syn::UseTree::Name(name) => {
-            let mut segments = prefix.clone();
-            segments.push(name.ident.to_string());
-            out.push(UsePath {
-                segments,
-                line: name.span().start().line,
-            });
-        }
-        syn::UseTree::Rename(rename) => {
-            let mut segments = prefix.clone();
-            segments.push(rename.ident.to_string());
-            out.push(UsePath {
-                segments,
-                line: rename.span().start().line,
-            });
-        }
-        syn::UseTree::Glob(glob) => {
-            let mut segments = prefix.clone();
-            segments.push("*".to_string());
-            out.push(UsePath {
-                segments,
-                line: glob.span().start().line,
-            });
-        }
-        syn::UseTree::Group(group) => {
-            for item in &group.items {
-                collect_use_tree(item, prefix, out);
-            }
-        }
-    }
 }
 
 #[cfg(test)]

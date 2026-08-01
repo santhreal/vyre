@@ -1,142 +1,283 @@
 # vyre Wire Format (VIR0)
 
-> ⚠️ **Staleness warning (V7-CORR-001)**: the tag tables and the
-> magic/version constants below predate the current encoder in
-> `vyre-foundation/src/serial/wire/`. Where this doc and the code
-> disagree, **the code is the truth**:
->
-> - Magic + version: `vyre-foundation::serial::wire::framing`  - 
->   current magic is `b"VYRE"`, version is the `WIRE_FORMAT_VERSION`
->   u16 constant.
-> - Expr tags: `serial::wire::tags::{expr_tag, expr_from_tag}`.
-> - Node tags: `serial::wire::tags::{node_tag, node_from_tag}`.
-> - Encode path: `serial/wire/encode/`.
-> - Decode path: `serial/wire/decode/`.
->
-> A full doc rewrite driven from the live tag tables is tracked in
-> `audits/V7_STATUS.md` under V7-CORR-001/002/003.
+This document specifies the binary serialization of a `vyre::ir::Program`. The
+format is called VIR0. `Program::to_wire` produces it and `Program::from_wire`
+consumes it.
 
-This document specifies the binary serialization of a vyre `Program`  -  the "VIR0" format.
+Every constant and tag below is taken from the encoder in
+`vyre-foundation/src/serial/wire/`. If you change a tag there, change it here in
+the same commit.
 
 ## Design axioms
 
-1. **Deterministic.** Two encoders on the same program produce byte-identical output. Critical for content-addressed caching and cross-machine certificate comparison.
-2. **Extensible.** Downstream crates can add new IR constructs without editing `vyre-core`. The format encodes extensions as `(extension_id: u32, payload: Vec<u8>)` pairs that unknown decoders preserve and report.
-3. **Versioned.** Every encoded program carries a format version. Migrations land in `vyre-core::dialect::migration`.
-4. **Round-trip complete.** Every program that passes `validate_program` round-trips through `to_wire → from_wire` byte-identically.
+1. **Deterministic.** Two encoders on the same program produce byte-identical
+   output. This is what makes content-addressed caching and cross-machine
+   certificate comparison possible.
+2. **Extensible.** Downstream crates can add IR constructs without editing
+   `vyre`. Extensions encode as a kind string plus an opaque payload, and a
+   decoder that does not know the kind preserves and reports it.
+3. **Versioned.** Every encoded program carries a format version, so a decoder
+   can tell you that a payload is newer than it understands instead of failing
+   with an arbitrary parse error.
+4. **Round-trip complete.** Every program that passes `validate_program`
+   survives `to_wire` then `from_wire` unchanged.
 
 ## Byte layout
 
-```
-+---------+---------+--------+-----------------------+-----------+--------------+
-| "VIR0"  | version | flags  | metadata header       | node tree | expr arena   |
-| 4 bytes |  u8     |  u16   | variable              | variable  | variable     |
-+---------+---------+--------+-----------------------+-----------+--------------+
-```
-
-### Header
+A VIR0 blob is a fixed 40-byte header followed by the body:
 
 ```
-magic:          'V' 'I' 'R' '0'     (4 bytes)
-version:        u8                  (currently 1)
-flags:          u16 little-endian
-metadata_len:   u32 little-endian
-metadata:       metadata_len bytes
+offset  size  field
+0       4     magic, the ASCII bytes "VYRE"
+4       2     format version, u16 little-endian
+6       2     flags, u16 little-endian
+8       32    BLAKE3 digest of the body
+40      ...   body
+```
+
+The magic is `b"VYRE"`, not `VIR0`. VIR0 is the name of the format; the four
+bytes on the wire spell `VYRE`. The constants live in
+`vyre-foundation/src/serial/wire/framing/magic.rs`:
+
+| Constant | Value | Meaning |
+|---|---|---|
+| `MAGIC` | `b"VYRE"` | Envelope tag |
+| `WIRE_FORMAT_VERSION` | `5` | Version this encoder writes |
+| `MIN_SUPPORTED_WIRE_FORMAT_VERSION` | `4` | Oldest version this decoder reads |
+
+`wire_format_version_is_supported(v)` is the single place the accepted range is
+decided. It returns true for `4..=5`.
+
+Version history, from the same file: rev 5 adds expression tag 22
+(`Expr::BufferRef`). Rev 4 preserves program-level composition-safety flags in
+metadata, so parser and stateful kernels do not become fusible after a round
+trip. Rev 3 introduces structured version-mismatch errors and a reserved
+dialect-manifest section after the header. Rev 2 was never released, so versions
+go 1 to 3 directly.
+
+### Flags
+
+The flag word is a bitset defined in `vyre-foundation/src/serial/wire/tags.rs`:
+
+| Bit | Value | Name | Meaning |
+|---|---|---|---|
+| 0 | `1` | `FLAG_COMPRESSED` | Payload is compressed |
+| 1 | `2` | `FLAG_SEALED` | Payload is sealed |
+| 2 | `4` | `FLAG_OPAQUE_ENDIAN_FIXED` | Every opaque payload is endian-fixed |
+
+`to_wire` currently writes exactly `FLAG_OPAQUE_ENDIAN_FIXED`, so the flag word
+on a freshly encoded program is `4`.
+
+### Digest
+
+Bytes 8 through 39 are `blake3::hash(body)`, where `body` is everything from
+offset 40 to the end. The digest covers the body only, not the header, so it does
+not depend on itself.
+
+### Body
+
+The body is three sections in this order, written by
+`vyre-foundation/src/serial/wire/encode/to_wire.rs`:
+
+1. The nodes section, which carries the program metadata header, the buffer
+   table, and the node tree.
+2. The memory-regions section, derived from the buffer table.
+3. The output set.
+
+The nodes section opens with the metadata header, which begins with the
+length-prefixed string `vyre.program.metadata`.
+
+You can confirm the whole layout on any program:
+
+```rust
+let wire = program.to_wire()?;
+assert_eq!(&wire[0..4], b"VYRE");
+assert_eq!(u16::from_le_bytes([wire[4], wire[5]]), 5);
+assert_eq!(u16::from_le_bytes([wire[6], wire[7]]), 4);
+assert_eq!(&wire[8..40], blake3::hash(&wire[40..]).as_bytes());
 ```
 
 ### Metadata header
 
 The metadata header encodes program-level facts:
 
-- `entry_op_id`: `Option<String>`  -  the op this program implements, if any.
+- `entry_op_id`: `Option<String>`, the op this program implements, if any.
 - `workgroup_size`: `[u32; 3]`.
-- `buffers`: `Vec<BufferDecl>`  -  each with name, binding, access, element type, count, output flag, optional output byte range, memory hints.
-- `metadata`: a `String → Bytes` map for arbitrary attached data (provenance, hashes, certs).
+- `buffers`: `Vec<BufferDecl>`, each with name, binding, access, element type,
+  count, output flag, optional output byte range, and memory hints.
+- `metadata`: a string-to-bytes map for attached data such as provenance,
+  hashes, and certificates.
 
-Each field uses a one-byte discriminant followed by its payload. A discriminant in the `[0x00, 0x7F]` range is a core variant; `[0x80, 0xFF]` is an extension variant.
+Each field uses a one-byte discriminant followed by its payload. A discriminant
+in `0x00..=0x7F` is a core variant. `0x80..=0xFF` is an extension variant.
 
-## Expr / Node tree
+## Expr and Node tree
 
-Nodes are serialized depth-first. Each `Node` / `Expr` begins with a one-byte tag:
+Nodes are serialized depth-first. Every `Node` and every `Expr` begins with a
+one-byte tag. Tags in `0x00..=0x7F` are core variants; `0x80` is the extension
+escape.
+
+The tag values are not in alphabetical or definition order, because tags are
+append-only: a variant added later takes the next free number rather than
+shifting its neighbours. Read the tables, do not guess.
 
 ### Expr tags
 
-```
-0x00  LitU32          u32 value
-0x01  LitI32          i32 value
-0x02  LitF32          f32 value (IEEE 754 little-endian)
-0x03  LitBool         u8 (0 | 1)
-0x04  Var             Ident
-0x05  Load            Ident buffer, Expr index
-0x06  BufLen          Ident buffer
-0x07  InvocationId    u8 axis
-0x08  WorkgroupId     u8 axis
-0x09  LocalId         u8 axis
-0x0A  BinOp           u8 op, Expr left, Expr right
-0x0B  UnOp            u8 op, Expr operand
-0x0C  Call            Ident op_id, u32 argc, Expr*argc
-0x0D  Select          Expr cond, Expr true_val, Expr false_val
-0x0E  Cast            DataType target, Expr value
-0x0F  Fma             Expr a, Expr b, Expr c
-0x10  Atomic          u8 op, Ident buffer, Expr index,
-                      u8 has_expected, [Expr expected], Expr value
-0x80  Opaque          u32 extension_id, u32 payload_len, bytes
-```
+Source: `vyre-foundation/src/serial/wire/encode/put_expr.rs`.
 
-Tags in `[0x11, 0x7F]` are reserved unallocated core slots.
+| Tag | Variant | Payload |
+|---:|---|---|
+| 0 | `LitU32` | `u32` value |
+| 1 | `LitI32` | `i32` value, written as its little-endian `u32` bits |
+| 2 | `LitBool` | `u8`, 0 or 1 |
+| 3 | `Var` | string name |
+| 4 | `Load` | string buffer, `Expr` index |
+| 5 | `BufLen` | string buffer |
+| 6 | `InvocationId` | `u8` axis |
+| 7 | `WorkgroupId` | `u8` axis |
+| 8 | `LocalId` | `u8` axis |
+| 9 | `BinOp` | `u8` op tag, `Expr` left, `Expr` right |
+| 10 | `UnOp` | `u8` op tag, `Expr` operand |
+| 11 | `Call` | string op_id, `u32` argc, then argc `Expr` values |
+| 12 | `Select` | `Expr` cond, `Expr` if_true, `Expr` if_false |
+| 13 | `Cast` | `DataType` target, `Expr` value |
+| 14 | `Atomic` | `u8` op tag, string buffer, `Expr` index, `u8` has_expected, optional `Expr` expected, `Expr` value, ordering |
+| 15 | `LitF32` | `u32`, the canonicalized IEEE 754 bit pattern |
+| 16 | `Fma` | `Expr` a, `Expr` b, `Expr` c |
+| 17 | `SubgroupReduce` | `u8` op tag, `Expr` value |
+| 18 | `SubgroupShuffle` | `Expr` value, `Expr` lane |
+| 19 | `SubgroupBallot` | `Expr` cond |
+| 20 | `SubgroupLocalId` | none |
+| 21 | `SubgroupSize` | none |
+| 22 | `BufferRef` | string buffer. Added in format version 5 |
+| `0x80` | `Opaque` | string extension kind, length-prefixed payload |
+
+Two details are easy to get wrong. `LitF32` is tag 15, not tag 2, because the
+float literal was added after the integer and boolean literals. `Atomic` is tag
+14 and `Fma` is tag 16, so they are not adjacent to the arithmetic tags.
+
+Tags 23 through `0x7F` are unallocated core slots.
+
+In `BinOp`, `UnOp`, and `Atomic`, an op tag byte of `0x80` means the operator
+itself is an extension, and a `u32` extension id follows.
+
+The `Opaque` payload carries a **string** extension kind, not a `u32`
+extension id.
 
 ### Node tags
 
-```
-0x00  Let             Ident name, Expr value
-0x01  Assign          Ident name, Expr value
-0x02  Store           Ident buffer, Expr index, Expr value
-0x03  If              Expr cond, NodeList then, NodeList otherwise
-0x04  For             Ident name, Expr start, Expr end, NodeList body
-0x05  Loop            NodeList body
-0x06  Block           NodeList body
-0x07  Barrier
-0x08  Return
-0x09  IndirectDispatch   Ident buffer, Expr workgroups_offset_bytes
-0x0A  AsyncLoad       (see async extension)
-0x0B  AsyncWait       (see async extension)
-0x80  Opaque          u32 extension_id, u32 payload_len, bytes
-```
+Source: `vyre-foundation/src/serial/wire/encode/put_node.rs`.
 
-### BinOp / UnOp / AtomicOp sub-tags
+| Tag | Variant | Payload |
+|---:|---|---|
+| 0 | `Let` | string name, `Expr` value |
+| 1 | `Assign` | string name, `Expr` value |
+| 2 | `Store` | string buffer, `Expr` index, `Expr` value |
+| 3 | `If` | `Expr` cond, node list then, node list otherwise |
+| 4 | `Loop` | string var, `Expr` from, `Expr` to, node list body |
+| 5 | `Return` | none |
+| 6 | `Block` | node list |
+| 7 | `Barrier` | `u8` ordering tag |
+| 8 | `IndirectDispatch` | string count_buffer, `u32` count_offset little-endian |
+| 9 | `AsyncLoad` | string source, string destination, `Expr` offset, and the remaining async fields |
+| 10 | `AsyncWait` | string tag |
+| 11 | `Region` | string generator, `u8` has_source_region, optional string region name, node list body |
+| 12 | `AsyncStore` | string source, string destination, `Expr` offset, and the remaining async fields |
+| 13 | `Trap` | `Expr` address, string tag |
+| 14 | `Resume` | string tag |
+| 15 | `AllReduce` | string buffer, `u8` op tag, `u32` group |
+| 16 | `AllGather` | string input, string output, `u32` group |
+| 17 | `ReduceScatter` | string input, string output, `u8` op tag, `u32` group |
+| 18 | `Broadcast` | string buffer, `u32` root, `u32` group |
+| `0x80` | `Opaque` | string extension kind, length-prefixed payload |
 
-Each u8 sub-tag encodes the operator variant. The table is append-only: new variants use the next free code. Adding a variant bumps the format version and requires a migration.
+There is no `For` node. Counted iteration is `Node::Loop { var, from, to, body }`,
+which is tag 4. `Return` is tag 5, not tag 8.
 
-BinOp tags (authoritative source: `serial/wire/tags/bin_op_tag.rs`):
+`Node::forever` is a constructor, not an encoded variant. It builds a
+`Node::Loop` whose bound is `u32::MAX`, so it serializes as tag 4 like any other
+loop.
+
+### Operator sub-tags
+
+`BinOp`, `UnOp`, and `AtomicOp` each encode as one `u8`. These tables are
+append-only: a new variant takes the next free code, and adding one bumps the
+format version. Source for all three: `serial/wire/tags/op_tag_decode.rs`.
+
+`AtomicOp`:
+
+| Tag | Variant | | Tag | Variant |
+|---:|---|---|---:|---|
+| `0x01` | `Add` | | `0x07` | `Exchange` |
+| `0x02` | `Or` | | `0x08` | `CompareExchange` |
+| `0x03` | `And` | | `0x09` | `CompareExchangeWeak` |
+| `0x04` | `Xor` | | `0x0A` | `FetchNand` |
+| `0x05` | `Min` | | `0x0B` | `LruUpdate` |
+| `0x06` | `Max` | | | |
+
+`UnOp`:
+
+| Tag | Variant | | Tag | Variant |
+|---:|---|---|---:|---|
+| `0x01` | `Negate` | | `0x13` | `IsFinite` |
+| `0x02` | `BitNot` | | `0x14` | `Exp` |
+| `0x03` | `LogicalNot` | | `0x15` | `Log` |
+| `0x04` | `Popcount` | | `0x16` | `Log2` |
+| `0x05` | `Clz` | | `0x17` | `Exp2` |
+| `0x06` | `Ctz` | | `0x18` | `Tan` |
+| `0x07` | `ReverseBits` | | `0x19` | `Acos` |
+| `0x08` | `Cos` | | `0x1A` | `Asin` |
+| `0x09` | `Sin` | | `0x1B` | `Atan` |
+| `0x0A` | `Abs` | | `0x1C` | `Tanh` |
+| `0x0B` | `Sqrt` | | `0x1D` | `Sinh` |
+| `0x0C` | `Floor` | | `0x1E` | `Cosh` |
+| `0x0D` | `Ceil` | | `0x1F` | `InverseSqrt` |
+| `0x0E` | `Round` | | `0x20` | `Unpack4Low` |
+| `0x0F` | `Trunc` | | `0x21` | `Unpack4High` |
+| `0x10` | `Sign` | | `0x22` | `Unpack8Low` |
+| `0x11` | `IsNan` | | `0x23` | `Unpack8High` |
+| `0x12` | `IsInf` | | `0x24` | `Reciprocal` |
+
+`BinOp`:
 
 | Range | Variants |
 |-------|----------|
-| `0x01`–`0x05` | Add, Sub, Mul, Div, Mod |
-| `0x06`–`0x0A` | BitAnd, BitOr, BitXor, Shl, Shr |
-| `0x0B`–`0x12` | Eq, Ne, Lt, Gt, Le, Ge, And, Or |
-| `0x13`–`0x18` | AbsDiff, Min, Max, SaturatingAdd/Sub/Mul |
-| `0x19`–`0x1C` | Shuffle, Ballot, WaveReduce, WaveBroadcast |
-| `0x1D`–`0x20` | RotateLeft, RotateRight, WrappingAdd, WrappingSub |
-| `0x21` | **MulHigh**  -  upper 32 bits of widening u32×u32 multiply (Granlund-Montgomery) |
+| `0x01`-`0x05` | `Add`, `Sub`, `Mul`, `Div`, `Mod` |
+| `0x06`-`0x0A` | `BitAnd`, `BitOr`, `BitXor`, `Shl`, `Shr` |
+| `0x0B`-`0x12` | `Eq`, `Ne`, `Lt`, `Gt`, `Le`, `Ge`, `And`, `Or` |
+| `0x13`-`0x18` | `AbsDiff`, `Min`, `Max`, `SaturatingAdd`, `SaturatingSub`, `SaturatingMul` |
+| `0x19`-`0x1C` | `Shuffle`, `Ballot`, `WaveReduce`, `WaveBroadcast` |
+| `0x1D`-`0x20` | `RotateLeft`, `RotateRight`, `WrappingAdd`, `WrappingSub` |
+| `0x21` | `MulHigh`, the upper 32 bits of a widening `u32` multiply |
 
 ## DataType encoding
 
-```
-0x00  U32
-0x01  I32
-0x02  F32
-0x03  Bool
-0x04  Bytes
-0x05  U64
-0x06  F16
-0x07  BF16
-0x08  F64
-0x09  Vec2U32
-0x0A  Vec4U32
-0x0B  Array        u32 length, DataType element
-0x0C  Tensor
-0x80  Opaque       u32 extension_id, u32 payload_len, bytes
-```
+Source: `vyre-foundation/src/serial/wire/tags/data_type_tag.rs`. Note that
+`DataType` tags start at `0x01`, not `0x00`.
+
+| Tag | Type | | Tag | Type |
+|---:|---|---|---:|---|
+| `0x01` | `U32` | | `0x11` | `I16` |
+| `0x02` | `I32` | | `0x12` | `I64` |
+| `0x03` | `U64` | | `0x13` | `Handle` |
+| `0x04` | `Vec2U32` | | `0x14` | `Vec` |
+| `0x05` | `Vec4U32` | | `0x15` | `TensorShaped` |
+| `0x06` | `Bool` | | `0x16` | `SparseCsr` |
+| `0x07` | `Bytes` | | `0x17` | `SparseCoo` |
+| `0x08` | `Array` | | `0x18` | `SparseBsr` |
+| `0x09` | `F16` | | `0x19` | `F8E4M3` |
+| `0x0A` | `BF16` | | `0x1A` | `F8E5M2` |
+| `0x0B` | `F32` | | `0x1B` | `I4` |
+| `0x0C` | `F64` | | `0x1C` | `FP4` |
+| `0x0D` | `Tensor` | | `0x1D` | `NF4` |
+| `0x0E` | `U8` | | `0x1E` | `DeviceMesh` |
+| `0x0F` | `U16` | | `0x1F` | `Quantized` |
+| `0x10` | `I8` | | `0x80` | `Opaque` |
+
+`Array` (tag `0x08`) is followed by its `element_size` as a little-endian `u32`.
+The composite types (`Vec`, `TensorShaped`, the sparse layouts, `DeviceMesh`,
+`Quantized`) carry further payload; see `put_data_type` for the exact shape of
+each. `Opaque` (tag `0x80`) is followed by a `u32` extension id.
 
 ## Ident encoding
 

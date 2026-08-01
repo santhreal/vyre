@@ -40,7 +40,10 @@ pub(crate) fn dispatch_gpu_program(
     }
 }
 
-pub(crate) fn primary_output_with_optional_empty_scratch(outputs: Vec<Vec<u8>>, context: &str) -> Vec<u8> {
+pub(crate) fn primary_output_with_optional_empty_scratch(
+    outputs: Vec<Vec<u8>>,
+    context: &str,
+) -> Vec<u8> {
     assert!(
         !outputs.is_empty(),
         "{context}: expected at least one primary GPU output"

@@ -4,7 +4,7 @@ use super::program_helpers::{
     combine_keep_mask_program, singleton_u32_read_buffer, source_byte_load_or_zero,
     source_bytes_input_buffer, u32_rw_buffer, wrap_gpu_filter_program,
 };
-use super::scratch::write_zero_bytes;
+use super::scratch::{prepare_filter_scratch, write_zero_bytes};
 use super::FilteredBytes;
 use crate::parsing::c::preprocess::gpu_pipeline::GpuDispatcher;
 use vyre::ir::{Expr, Node, Program};
@@ -26,19 +26,6 @@ impl SpliceOnlyScratch {
             std::mem::size_of::<u32>(),
             "line-splice comment preflight zero words",
         )
-    }
-
-    fn prepare(&mut self, n_bucket: u32, byte_buf_pad: usize) -> Result<(), String> {
-        let word_bytes = (n_bucket as usize).checked_mul(4).ok_or_else(|| {
-            "line-splice-only scratch byte size overflowed usize. Fix: reduce batch size."
-                .to_string()
-        })?;
-        write_zero_bytes(
-            &mut self.zero_words,
-            word_bytes,
-            "line-splice-only zero words",
-        )?;
-        self.compact.prepare(byte_buf_pad)
     }
 }
 
@@ -86,7 +73,14 @@ pub(super) fn gpu_filter_line_splices(
     scratch: &mut SpliceOnlyScratch,
     scan_scratch: &mut PrefixScanScratch,
 ) -> Result<FilteredBytes, String> {
-    scratch.prepare(n_bucket, byte_buf_pad)?;
+    prepare_filter_scratch(
+        &mut scratch.zero_words,
+        &mut scratch.compact,
+        n_bucket,
+        byte_buf_pad,
+        "line-splice-only",
+        "line-splice-only zero words",
+    )?;
 
     let splice_prog = line_splice_classify_u8(n_bucket);
     dispatcher

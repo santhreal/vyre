@@ -15,7 +15,25 @@ pub(super) fn run_named_benchmark(
     measured_samples: Option<usize>,
     sample_timeout_secs: u64,
 ) {
-    let mut owned_args = vec![
+    let owned_args = benchmark_command_args(
+        case_id,
+        backend,
+        output,
+        measured_samples,
+        sample_timeout_secs,
+    );
+    let borrowed = owned_args.iter().map(String::as_str).collect::<Vec<_>>();
+    run_command(workspace_root, &borrowed);
+}
+
+pub(super) fn benchmark_command_args(
+    case_id: &str,
+    backend: &str,
+    output: &str,
+    measured_samples: Option<usize>,
+    sample_timeout_secs: u64,
+) -> Vec<String> {
+    let mut args = vec![
         "run".to_string(),
         "-p".to_string(),
         "vyre-bench".to_string(),
@@ -35,11 +53,10 @@ pub(super) fn run_named_benchmark(
         sample_timeout_secs.to_string(),
     ];
     if let Some(samples) = measured_samples {
-        owned_args.push("--measured-samples".to_string());
-        owned_args.push(samples.to_string());
+        args.push("--measured-samples".to_string());
+        args.push(samples.to_string());
     }
-    let borrowed = owned_args.iter().map(String::as_str).collect::<Vec<_>>();
-    run_command(workspace_root, &borrowed);
+    args
 }
 
 pub(super) fn run_named_benchmark_if_needed(
@@ -175,7 +192,14 @@ fn benchmark_artifact_report_shape_is_reusable(
             return false;
         }
     }
-    let _ = family_id;
+    if (family_id == "compound-fused-filter" || case_id == "compound.pipeline.fused_filter.1m")
+        && !crate::benchmark_evidence_semantics::benchmark_fused_execution_dag_issues(
+            case_id, report,
+        )
+        .is_empty()
+    {
+        return false;
+    }
     true
 }
 
@@ -291,6 +315,31 @@ mod tests {
     use super::*;
 
     use tempfile::TempDir;
+
+    /// Reuse must not bypass release-only evidence enrichment. The previous
+    /// predicate accepted a valid timing report that lacked the fused DAG, so
+    /// `--reuse-existing` could never repair the gated artifact.
+    #[test]
+    fn compound_reuse_rejects_artifact_without_fused_execution_dag() {
+        let report = serde_json::json!({
+            "selected_backend": "cuda",
+            "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+            "cases": [{
+                "id": "compound.pipeline.fused_filter.1m",
+                "backend_id": "cuda",
+                "status": "pass",
+                "metrics": reusable_timing_metrics()
+            }]
+        });
+
+        assert!(!benchmark_artifact_report_shape_is_reusable(
+            &report,
+            "cuda",
+            "compound-fused-filter",
+            "compound.pipeline.fused_filter.1m",
+            None,
+        ));
+    }
 
     #[test]
     fn wgpu_reuse_accepts_matching_passed_artifact() {

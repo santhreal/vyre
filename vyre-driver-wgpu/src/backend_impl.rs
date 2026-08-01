@@ -75,7 +75,7 @@ impl WgpuBackend {
             .map_err(|error| {
                 let report = crate::runtime::device::adapter_probe_report();
                 vyre_driver::BackendError::new(format!(
-                    "no compatible GPU adapter found. Probed adapters: [{}].                  Missing features / limits: [{}]. Underlying error: {error}.                  Fix: install a compatible GPU driver and ensure a wgpu-supported backend                  (Vulkan, Metal, DX12) is available.",
+                    "no compatible GPU adapter found. Probed adapters: [{}]. Missing features / limits: [{}]. Underlying error: {error}. Fix: install a compatible GPU driver and ensure a wgpu-supported backend (Vulkan, Metal, DX12) is available.",
                     report.probed.join(", "),
                     if report.missing.is_empty() {
                         "none".to_string()
@@ -501,7 +501,7 @@ impl WgpuBackend {
             let elapsed = started.elapsed();
             if elapsed > deadline {
                 return Err(vyre_driver::BackendError::new(format!(
-                    "batch dispatch cancelled before GPU submission: took {elapsed:?}, budget {deadline:?}.                      Fix: raise DispatchConfig.timeout or split the program into smaller chunks."
+                    "batch dispatch cancelled before GPU submission: took {elapsed:?}, budget {deadline:?}. Fix: raise DispatchConfig.timeout or split the program into smaller chunks."
                 )));
             }
         }
@@ -565,7 +565,7 @@ impl WgpuBackend {
                     let elapsed = started.elapsed();
                     if elapsed > deadline {
                         return Err(vyre_driver::BackendError::new(format!(
-                            "batch dispatch exceeded configured timeout: took {elapsed:?}, budget {deadline:?}.                              Fix: raise DispatchConfig.timeout or split the program into smaller chunks."
+                            "batch dispatch exceeded configured timeout: took {elapsed:?}, budget {deadline:?}. Fix: raise DispatchConfig.timeout or split the program into smaller chunks."
                         )));
                     }
                 }
@@ -628,7 +628,7 @@ impl WgpuBackend {
                             let elapsed = started.elapsed();
                             if elapsed > deadline {
                                 return Err(vyre_driver::BackendError::new(format!(
-                                    "batch dispatch exceeded configured timeout: took {elapsed:?}, budget {deadline:?}.                                      Fix: raise DispatchConfig.timeout or split the program into smaller chunks."
+                                    "batch dispatch exceeded configured timeout: took {elapsed:?}, budget {deadline:?}. Fix: raise DispatchConfig.timeout or split the program into smaller chunks."
                                 )));
                             }
                         }
@@ -1086,7 +1086,9 @@ impl vyre_driver::VyreBackend for WgpuBackend {
                         buffer.backend_id()
                     ))
                 })?;
-            resources.push(vyre_driver::Resource::Resident(wgpu_buf.handle().id()));
+            resources.push(vyre_driver::Resource::Resident(
+                wgpu_buf.handle().resident_handle()?,
+            ));
         }
         for buffer in outputs.iter() {
             let backend_id = buffer.backend_id().to_string();
@@ -1098,7 +1100,9 @@ impl vyre_driver::VyreBackend for WgpuBackend {
                         "Fix: dispatch_with_device_buffers expected WgpuDeviceBuffer outputs but got buffer owned by `{backend_id}`."
                     ))
                 })?;
-            resources.push(vyre_driver::Resource::Resident(wgpu_buf.handle().id()));
+            resources.push(vyre_driver::Resource::Resident(
+                wgpu_buf.handle().resident_handle()?,
+            ));
         }
 
         let pipeline = self

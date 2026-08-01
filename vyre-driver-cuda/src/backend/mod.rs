@@ -24,6 +24,8 @@ pub(crate) mod cuda_graph_replay;
 /// `cuLaunchCooperativeKernel` when the caller opts in via
 /// `DispatchConfig::cooperative`.
 pub mod dispatch;
+/// Per-dispatch host and device phase attribution for the timed dispatch path.
+pub(crate) mod dispatch_phase_probe;
 /// Host-borrowed buffer dispatch path.
 pub(crate) mod host_dispatch;
 /// Checked CUDA host-memory registration boundary.
@@ -61,10 +63,52 @@ pub mod stream_ordered_pool;
 /// Atomic CUDA runtime telemetry counters.
 pub(crate) mod telemetry;
 
+fn required_input<'a>(
+    inputs: &'a [&[u8]],
+    input_index: usize,
+    binding_name: &str,
+    context: &'static str,
+    prefix: &str,
+    input_kind: &str,
+    fix: &str,
+) -> Result<&'a [u8], vyre_driver::BackendError> {
+    inputs
+        .get(input_index)
+        .copied()
+        .ok_or_else(|| vyre_driver::BackendError::InvalidProgram {
+            fix: format!(
+                "Fix: {prefix} {context} expected {input_kind} index {input_index} for `{binding_name}` but only {} {input_kind}(s) were supplied. {fix}",
+                inputs.len()
+            ),
+        })
+}
+
+macro_rules! define_required_input {
+    ($name:ident, $prefix:literal, $input_kind:literal, $fix:literal) => {
+        fn $name<'a>(
+            inputs: &'a [&[u8]],
+            input_index: usize,
+            binding_name: &str,
+            context: &'static str,
+        ) -> Result<&'a [u8], vyre_driver::BackendError> {
+            super::required_input(
+                inputs,
+                input_index,
+                binding_name,
+                context,
+                $prefix,
+                $input_kind,
+                $fix,
+            )
+        }
+    };
+}
+pub(crate) use define_required_input;
+
 pub(crate) use allocations::*;
 pub(crate) use module_cache::ModuleCacheKey;
 pub(crate) use plan::CudaDispatchPlan;
-pub(crate) use resident::ResidentUseGuard;
+pub(crate) use resident::{resident_bindings_from_handles, ResidentUseGuard};
 pub(crate) use resident_dispatch_support::CudaResidentDispatchStep;
 // Public surface  -  these names appear on the crate root.
 pub use cuda_graph::CachedCudaGraph;

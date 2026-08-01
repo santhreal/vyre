@@ -7,6 +7,49 @@ pub(crate) const fn ceil_div_u32(value: u32, divisor: u32) -> u32 {
     full + tail
 }
 
+fn workgroup_lineage_loop(
+    iteration_var: &'static str,
+    chunk_var: &'static str,
+    changed: &str,
+    max_iterations: u32,
+    cell_chunks: u32,
+    lane: Expr,
+    transfer_body: Vec<Node>,
+    compare_body: Vec<Node>,
+) -> Vec<Node> {
+    vec![Node::loop_for(
+        iteration_var,
+        Expr::u32(0),
+        Expr::u32(max_iterations),
+        vec![
+            Node::if_then(
+                Expr::eq(lane, Expr::u32(0)),
+                vec![Node::store(changed, Expr::u32(0), Expr::u32(0))],
+            ),
+            workgroup_barrier(),
+            Node::loop_for(
+                chunk_var,
+                Expr::u32(0),
+                Expr::u32(cell_chunks),
+                transfer_body,
+            ),
+            workgroup_barrier(),
+            Node::loop_for(
+                chunk_var,
+                Expr::u32(0),
+                Expr::u32(cell_chunks),
+                compare_body,
+            ),
+            workgroup_barrier(),
+            Node::if_then(
+                Expr::eq(Expr::load(changed, Expr::u32(0)), Expr::u32(0)),
+                vec![Node::Return],
+            ),
+            workgroup_barrier(),
+        ],
+    )]
+}
+
 pub(crate) fn single_word_lineage_body(
     state: &str,
     next: &str,
@@ -23,39 +66,16 @@ pub(crate) fn single_word_lineage_body(
         Expr::mul(Expr::var("__sj_chunk"), Expr::u32(lanes)),
         lane.clone(),
     );
-    let transfer_body = single_word_transfer_body(state, next, join_rules, n, cells, cell.clone());
-    let compare_body = single_word_compare_body(state, next, changed, cells, cell);
-
-    vec![Node::loop_for(
+    workgroup_lineage_loop(
         "__sj_iter",
-        Expr::u32(0),
-        Expr::u32(max_iterations),
-        vec![
-            Node::if_then(
-                Expr::eq(lane.clone(), Expr::u32(0)),
-                vec![Node::store(changed, Expr::u32(0), Expr::u32(0))],
-            ),
-            workgroup_barrier(),
-            Node::loop_for(
-                "__sj_chunk",
-                Expr::u32(0),
-                Expr::u32(cell_chunks),
-                transfer_body,
-            ),
-            workgroup_barrier(),
-            Node::loop_for(
-                "__sj_chunk",
-                Expr::u32(0),
-                Expr::u32(cell_chunks),
-                compare_body,
-            ),
-            workgroup_barrier(),
-            Node::if_then(
-                Expr::eq(Expr::load(changed, Expr::u32(0)), Expr::u32(0)),
-                vec![Node::Return],
-            ),
-        ],
-    )]
+        "__sj_chunk",
+        changed,
+        max_iterations,
+        cell_chunks,
+        lane,
+        single_word_transfer_body(state, next, join_rules, n, cells, cell.clone()),
+        single_word_compare_body(state, next, changed, cells, cell),
+    )
 }
 
 pub(crate) fn single_word_lineage_grid_sync_body(
@@ -219,39 +239,16 @@ pub(crate) fn wide_lineage_body(
         Expr::mul(Expr::var("__sjw_chunk"), Expr::u32(lanes)),
         lane.clone(),
     );
-    let transfer_body = wide_transfer_body(state, next, join_rules, n, w, cells, cell.clone());
-    let compare_body = wide_compare_body(state, next, changed, w, cells, cell);
-
-    vec![Node::loop_for(
+    workgroup_lineage_loop(
         "__sjw_iter",
-        Expr::u32(0),
-        Expr::u32(max_iterations),
-        vec![
-            Node::if_then(
-                Expr::eq(lane.clone(), Expr::u32(0)),
-                vec![Node::store(changed, Expr::u32(0), Expr::u32(0))],
-            ),
-            workgroup_barrier(),
-            Node::loop_for(
-                "__sjw_chunk",
-                Expr::u32(0),
-                Expr::u32(cell_chunks),
-                transfer_body,
-            ),
-            workgroup_barrier(),
-            Node::loop_for(
-                "__sjw_chunk",
-                Expr::u32(0),
-                Expr::u32(cell_chunks),
-                compare_body,
-            ),
-            workgroup_barrier(),
-            Node::if_then(
-                Expr::eq(Expr::load(changed, Expr::u32(0)), Expr::u32(0)),
-                vec![Node::Return],
-            ),
-        ],
-    )]
+        "__sjw_chunk",
+        changed,
+        max_iterations,
+        cell_chunks,
+        lane,
+        wide_transfer_body(state, next, join_rules, n, w, cells, cell.clone()),
+        wide_compare_body(state, next, changed, w, cells, cell),
+    )
 }
 
 fn wide_transfer_body(

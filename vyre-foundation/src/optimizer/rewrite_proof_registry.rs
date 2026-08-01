@@ -2,7 +2,7 @@
 //!
 //! `rewrite_proof` provides the SMT-LIB v2 emitter; this module is the
 //! library of *concrete* obligations, one (or more) per shipped
-//! rewrite. CI calls [`shipped_obligations`], emits each to SMT2, and
+//! rewrite. CI calls [`crate::optimizer::rewrite_proof_registry::shipped_obligations`], emits each to SMT2, and
 //! runs z3/cvc5 to confirm `unsat` (proving the rewrite is correct).
 //!
 //! ## Coverage strategy

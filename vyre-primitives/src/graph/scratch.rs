@@ -25,6 +25,28 @@ pub(crate) fn reserve_graph_items<T>(
     })
 }
 
+pub(crate) fn reserve_graph_capacity<T>(
+    buffer: &mut Vec<T>,
+    len: usize,
+    owner: &str,
+    context: &str,
+) -> Result<(), String> {
+    if len > buffer.capacity() {
+        reserve_graph_items(buffer, len - buffer.len(), owner, context)?;
+    }
+    Ok(())
+}
+
+macro_rules! define_reserve_graph_capacity {
+    ($name:ident, $item:ty, $owner:literal) => {
+        #[cfg(any(test, feature = "cpu-parity"))]
+        fn $name(out: &mut Vec<$item>, len: usize, name: &str) -> Result<(), String> {
+            crate::graph::scratch::reserve_graph_capacity(out, len, $owner, name)
+        }
+    };
+}
+pub(crate) use define_reserve_graph_capacity;
+
 /// Reserve graph scratch and map the shared diagnostic into a domain-specific
 /// error type.
 ///
@@ -39,6 +61,20 @@ pub(crate) fn reserve_graph_items_with<T, E>(
     map: impl FnOnce(String) -> E,
 ) -> Result<(), E> {
     reserve_graph_items(buffer, additional, owner, context).map_err(map)
+}
+
+pub(crate) fn resize_graph_vec<T: Clone>(
+    buffer: &mut Vec<T>,
+    len: usize,
+    value: T,
+    owner: &str,
+    context: &str,
+) -> Result<(), String> {
+    if len > buffer.len() {
+        reserve_graph_items(buffer, len - buffer.len(), owner, context)?;
+    }
+    buffer.resize(len, value);
+    Ok(())
 }
 
 #[cfg(test)]

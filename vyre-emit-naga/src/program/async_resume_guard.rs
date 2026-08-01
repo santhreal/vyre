@@ -17,8 +17,8 @@
 use std::ops::ControlFlow::{self, Break, Continue};
 
 use vyre_foundation::ir::model::expr::GeneratorRef;
-use vyre_foundation::ir::{Expr, Ident, NodeExtension, Program};
 use vyre_foundation::ir::Node;
+use vyre_foundation::ir::{Expr, Ident, NodeExtension, Program};
 use vyre_foundation::visit::{visit_node_preorder, NodeVisitor};
 
 /// Breaks the preorder walk with the offending node's kind token the moment an
@@ -47,7 +47,13 @@ impl NodeVisitor for AsyncResumeRejector {
         Continue(())
     }
 
-    fn visit_if(&mut self, _: &Node, _: &Expr, _: &[Node], _: &[Node]) -> ControlFlow<&'static str> {
+    fn visit_if(
+        &mut self,
+        _: &Node,
+        _: &Expr,
+        _: &[Node],
+        _: &[Node],
+    ) -> ControlFlow<&'static str> {
         Continue(())
     }
 
@@ -62,7 +68,12 @@ impl NodeVisitor for AsyncResumeRejector {
         Continue(())
     }
 
-    fn visit_indirect_dispatch(&mut self, _: &Node, _: &Ident, _: u64) -> ControlFlow<&'static str> {
+    fn visit_indirect_dispatch(
+        &mut self,
+        _: &Node,
+        _: &Ident,
+        _: u64,
+    ) -> ControlFlow<&'static str> {
         Continue(())
     }
 
@@ -124,11 +135,7 @@ impl NodeVisitor for AsyncResumeRejector {
         Continue(())
     }
 
-    fn visit_opaque_node(
-        &mut self,
-        _: &Node,
-        _: &dyn NodeExtension,
-    ) -> ControlFlow<&'static str> {
+    fn visit_opaque_node(&mut self, _: &Node, _: &dyn NodeExtension) -> ControlFlow<&'static str> {
         Continue(())
     }
 }

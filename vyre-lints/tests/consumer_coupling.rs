@@ -123,8 +123,11 @@ fn release_runbook_exemption_does_not_leak_to_neighbouring_docs() {
     fs::create_dir_all(&guide).expect("create docs/guide");
 
     for name in ["ARCHITECTURE.md", "RELEASING_GUIDE.md", "PRE_RELEASE.md"] {
-        fs::write(docs.join(name), "The scheduler owns weir-dataflow phases.\n")
-            .expect("write fixture");
+        fs::write(
+            docs.join(name),
+            "The scheduler owns weir-dataflow phases.\n",
+        )
+        .expect("write fixture");
     }
     fs::write(
         guide.join("release-notes.md"),
@@ -162,7 +165,9 @@ fn release_runbook_exemption_does_not_leak_to_neighbouring_docs() {
 #[test]
 fn release_runbook_exemption_never_covers_rust_source() {
     let dir = tempfile::tempdir().expect("tempdir");
-    let src = dir.path().join("vyre-self-substrate/src/integration/release");
+    let src = dir
+        .path()
+        .join("vyre-self-substrate/src/integration/release");
     fs::create_dir_all(&src).expect("create src");
     fs::write(
         src.join("launch.rs"),

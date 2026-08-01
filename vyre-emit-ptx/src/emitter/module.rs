@@ -17,9 +17,9 @@ use crate::{EmitError, PtxEmitOptions};
 /// `requires_full_workgroup_entry`, so detection here and the all-lanes-live
 /// entry stay in lockstep.
 fn descriptor_has_grid_sync_barrier(desc: &KernelDescriptor) -> bool {
-    desc.ops_iter().any(|op| {
-        matches!(op.kind, KernelOpKind::Barrier { ordering } if ordering.requires_grid_sync())
-    })
+    desc.ops_iter().any(
+        |op| matches!(op.kind, KernelOpKind::Barrier { ordering } if ordering.requires_grid_sync()),
+    )
 }
 
 pub(super) struct ModuleBuilder {

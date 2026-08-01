@@ -8,6 +8,44 @@ use crate::PipelineError;
 use super::protocol::{self, DebugRecord};
 use super::Megakernel;
 
+macro_rules! protocol_counter_readers {
+    () => {
+        /// Strictly decode the kernel's `done_count` from a control buffer.
+        ///
+        /// # Errors
+        ///
+        /// Returns [`PipelineError`] when the control buffer is malformed or too
+        /// short to contain the done counter.
+        pub fn try_read_done_count(control_bytes: &[u8]) -> Result<u32, PipelineError> {
+            map_protocol_counter(protocol::try_read_done_count(control_bytes))
+        }
+
+        /// Strictly read the epoch counter from a control buffer.
+        ///
+        /// # Errors
+        ///
+        /// Returns [`PipelineError`] when the control buffer is malformed or too
+        /// short to contain the epoch counter.
+        pub fn try_read_epoch(control_bytes: &[u8]) -> Result<u32, PipelineError> {
+            map_protocol_counter(protocol::try_read_epoch(control_bytes))
+        }
+    };
+}
+
+macro_rules! empty_protocol_encoder_into {
+    ($name:ident, $capacity:ident, $encoder:path, $doc:literal) => {
+        #[doc = $doc]
+        ///
+        /// # Errors
+        ///
+        /// Returns [`PipelineError::QueueFull`] when the requested capacity
+        /// cannot fit in process address space.
+        pub fn $name($capacity: u32, dst: &mut Vec<u8>) -> Result<(), PipelineError> {
+            $encoder($capacity, dst).map_err(protocol_error)
+        }
+    };
+}
+
 impl Megakernel {
     /// Byte length of a control buffer for `observable_slots`.
     #[must_use]
@@ -97,18 +135,12 @@ impl Megakernel {
         Self::encode_empty_ring(slot_count)
     }
 
-    /// Fallible ring-buffer encoder into caller-owned storage.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`PipelineError::QueueFull`] when `slot_count * SLOT_WORDS * 4`
-    /// overflows.
-    pub fn try_encode_empty_ring_into(
-        slot_count: u32,
-        dst: &mut Vec<u8>,
-    ) -> Result<(), PipelineError> {
-        protocol::try_encode_empty_ring_into(slot_count, dst).map_err(protocol_error)
-    }
+    empty_protocol_encoder_into!(
+        try_encode_empty_ring_into,
+        slot_count,
+        protocol::try_encode_empty_ring_into,
+        "Fallible ring-buffer encoder into caller-owned storage."
+    );
 
     /// Encode an empty PRINTF channel buffer.
     ///
@@ -128,17 +160,12 @@ impl Megakernel {
         Self::encode_empty_debug_log(record_capacity)
     }
 
-    /// Fallible debug-log encoder into caller-owned storage.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`PipelineError::QueueFull`] when the record capacity overflows.
-    pub fn try_encode_empty_debug_log_into(
-        record_capacity: u32,
-        dst: &mut Vec<u8>,
-    ) -> Result<(), PipelineError> {
-        protocol::try_encode_empty_debug_log_into(record_capacity, dst).map_err(protocol_error)
-    }
+    empty_protocol_encoder_into!(
+        try_encode_empty_debug_log_into,
+        record_capacity,
+        protocol::try_encode_empty_debug_log_into,
+        "Fallible debug-log encoder into caller-owned storage."
+    );
 
     /// Decode the kernel's `done_count` from a control buffer.
     #[must_use]
@@ -146,15 +173,7 @@ impl Megakernel {
         protocol::read_done_count(control_bytes)
     }
 
-    /// Strictly decode the kernel's `done_count` from a control buffer.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`PipelineError`] when the control buffer is malformed or too
-    /// short to contain the done counter.
-    pub fn try_read_done_count(control_bytes: &[u8]) -> Result<u32, PipelineError> {
-        protocol::try_read_done_count(control_bytes).map_err(protocol_error)
-    }
+    protocol_counter_readers!();
 
     /// Strictly count DONE slots in a ring-buffer readback.
     ///
@@ -211,16 +230,6 @@ impl Megakernel {
         protocol::read_epoch(control_bytes)
     }
 
-    /// Strictly read the epoch counter from a control buffer.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`PipelineError`] when the control buffer is malformed or too
-    /// short to contain the epoch counter.
-    pub fn try_read_epoch(control_bytes: &[u8]) -> Result<u32, PipelineError> {
-        protocol::try_read_epoch(control_bytes).map_err(protocol_error)
-    }
-
     /// Read an observable result word from a control buffer.
     /// Opcodes like `LOAD_U32`, `COMPARE_SWAP`, and `BATCH_FENCE`
     /// write results here.
@@ -274,6 +283,12 @@ impl Megakernel {
     ) -> Result<(), PipelineError> {
         protocol::try_read_metrics_into(control_bytes, out).map_err(protocol_error)
     }
+}
+
+fn map_protocol_counter(
+    result: Result<u32, super::protocol::ProtocolError>,
+) -> Result<u32, PipelineError> {
+    result.map_err(protocol_error)
 }
 
 fn protocol_error(error: protocol::ProtocolError) -> PipelineError {

@@ -7,8 +7,12 @@ use crate::probes::environment::EnvironmentData;
 
 pub const REQUIRED_BENCHMARK_CASE_FIELDS: &[&str] =
     &["backend_id", "device_signature", "held_out_corpus_id"];
-pub const REQUIRED_BENCHMARK_METRIC_FIELDS: &[&str] =
-    &["cpu_digest", "gpu_digest", "active_time_ns", "transfer_bytes"];
+pub const REQUIRED_BENCHMARK_METRIC_FIELDS: &[&str] = &[
+    "cpu_digest",
+    "gpu_digest",
+    "active_time_ns",
+    "transfer_bytes",
+];
 pub const REQUIRED_SCAN_BENCHMARK_METRIC_FIELDS: &[&str] = &[
     "scan_compile_time_ns",
     "scan_database_bytes",
@@ -146,7 +150,11 @@ pub fn benchmark_device_signature(profile: vyre_driver::DeviceProfile) -> String
     let mut hasher = blake3::Hasher::new();
     hasher.update(b"vyre-bench.device-profile.v1");
     update_signature_str(&mut hasher, "backend", profile.backend);
-    update_signature_str(&mut hasher, "timing_quality", profile.timing_quality.as_str());
+    update_signature_str(
+        &mut hasher,
+        "timing_quality",
+        profile.timing_quality.as_str(),
+    );
     update_signature_bool(
         &mut hasher,
         "supports_subgroup_ops",
@@ -191,7 +199,11 @@ pub fn benchmark_device_signature(profile: vyre_driver::DeviceProfile) -> String
         profile.has_subgroup_shuffle,
     );
     update_signature_bool(&mut hasher, "has_shared_memory", profile.has_shared_memory);
-    update_signature_u32(&mut hasher, "max_native_int_width", profile.max_native_int_width);
+    update_signature_u32(
+        &mut hasher,
+        "max_native_int_width",
+        profile.max_native_int_width,
+    );
     for (axis, value) in profile.max_workgroup_size.iter().enumerate() {
         update_signature_u32(&mut hasher, &format!("max_workgroup_size.{axis}"), *value);
     }
@@ -212,7 +224,11 @@ pub fn benchmark_device_signature(profile: vyre_driver::DeviceProfile) -> String
     );
     update_signature_u32(&mut hasher, "subgroup_size", profile.subgroup_size);
     update_signature_u32(&mut hasher, "compute_units", profile.compute_units);
-    update_signature_u32(&mut hasher, "regs_per_thread_max", profile.regs_per_thread_max);
+    update_signature_u32(
+        &mut hasher,
+        "regs_per_thread_max",
+        profile.regs_per_thread_max,
+    );
     update_signature_u32(&mut hasher, "l1_cache_bytes", profile.l1_cache_bytes);
     update_signature_u32(&mut hasher, "l2_cache_bytes", profile.l2_cache_bytes);
     update_signature_u32(&mut hasher, "mem_bw_gbps", profile.mem_bw_gbps);
@@ -226,7 +242,11 @@ pub fn benchmark_device_signature(profile: vyre_driver::DeviceProfile) -> String
         "supports_hardware_counters",
         profile.supports_hardware_counters,
     );
-    update_signature_u32(&mut hasher, "ideal_unroll_depth", profile.ideal_unroll_depth);
+    update_signature_u32(
+        &mut hasher,
+        "ideal_unroll_depth",
+        profile.ideal_unroll_depth,
+    );
     update_signature_u32(
         &mut hasher,
         "ideal_vector_pack_bits",
@@ -745,8 +765,7 @@ mod tests {
 
     #[test]
     fn benchmark_device_signature_changes_with_profile_facts() {
-        let baseline =
-            benchmark_device_signature(vyre_driver::DeviceProfile::conservative("test"));
+        let baseline = benchmark_device_signature(vyre_driver::DeviceProfile::conservative("test"));
         let mut tensor = vyre_driver::DeviceProfile::conservative("test");
         tensor.supports_tensor_cores = true;
         assert_ne!(

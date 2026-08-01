@@ -5,8 +5,7 @@
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use crate::hardware::pack_u32;
-use crate::hardware::MAP_WORKGROUP;
+use crate::hardware::{pack_u32, packed_u32_input_with_output, MAP_WORKGROUP};
 
 /// Build a Program that collects the per-lane boolean predicate into a u32
 /// bitmask broadcast to every lane.
@@ -60,9 +59,7 @@ fn cpu_ref(cond: &[u32]) -> Vec<u8> {
 }
 
 fn test_inputs() -> Vec<Vec<Vec<u8>>> {
-    let cond = vec![0u32, 1, 0, 1];
-    let len = cond.len() * 4;
-    vec![vec![pack_u32(&cond), vec![0u8; len]]]
+    packed_u32_input_with_output(&[0, 1, 0, 1])
 }
 
 fn expected_output() -> Vec<Vec<Vec<u8>>> {

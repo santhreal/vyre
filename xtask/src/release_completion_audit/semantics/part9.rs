@@ -3,7 +3,7 @@ use crate::benchmark_evidence_semantics::{
     backend_suite_inventory_issues, backend_suite_matrix_coverage_issues,
     backend_suite_parity_issues, describe_backend_suite_inventory_issue,
     describe_backend_suite_matrix_coverage_issue,
-    expected_backend_for_suite_evidence, source_fingerprint_issues,
+    expected_backend_for_suite_evidence, report_status_for_path, source_fingerprint_issues,
     BackendSuiteArtifactStatusIssue, BackendSuiteBackendIssue, BackendSuiteParityIssue,
     SourceFingerprintIssue,
 };
@@ -492,7 +492,7 @@ fn inspect_backend_suite_status_artifact_consistency(
                 }
             }
         }
-        inspect_suite_artifact_contract_baselines(evidence, artifact, &artifact_report, blockers);
+        inspect_contract_baselines(evidence, Some(artifact), &artifact_report, blockers);
         if let Some(source_fingerprint) = artifact_report
             .get("source_fingerprint")
             .and_then(serde_json::Value::as_str)
@@ -524,29 +524,6 @@ fn inspect_backend_suite_status_artifact_consistency(
     }
 }
 
-fn inspect_suite_artifact_contract_baselines(
-    evidence: &str,
-    artifact: &str,
-    artifact_report: &serde_json::Value,
-    blockers: &mut Vec<String>,
-) {
-    for issue in crate::benchmark_evidence_semantics::contract_backend_issues(artifact_report) {
-        match issue {
-            crate::benchmark_evidence_semantics::ContractBackendIssue::MissingBaselines {
-                case_id,
-                backend_id,
-            } => blockers.push(format!(
-                "{evidence}: suite artifact `{artifact}` case `{case_id}` backend `{backend_id}` has a performance contract with no baselines"
-            )),
-            crate::benchmark_evidence_semantics::ContractBackendIssue::NoApplicableBaseline {
-                case_id,
-                backend_id,
-            } => blockers.push(format!(
-                "{evidence}: suite artifact `{artifact}` case `{case_id}` backend `{backend_id}` has no applicable performance contract baseline"
-            )),
-        }
-    }
-}
 
 fn backend_suite_workspace_root(path: &Path) -> Option<&Path> {
     Some(path.parent()?.parent()?.parent()?.parent()?)
@@ -561,19 +538,6 @@ fn resolve_suite_artifact_path(workspace_root: &Path, artifact: &str) -> PathBuf
     }
 }
 
-fn report_status_for_path<'a>(
-    suite: &'a serde_json::Value,
-    artifact: &str,
-) -> Option<&'a serde_json::Value> {
-    suite
-        .get("artifact_statuses")
-        .and_then(serde_json::Value::as_array)
-        .and_then(|statuses| {
-            statuses.iter().find(|status| {
-                status.get("path").and_then(serde_json::Value::as_str) == Some(artifact)
-            })
-        })
-}
 
 fn inspect_backend_suite_artifact_status(
     evidence: &str,

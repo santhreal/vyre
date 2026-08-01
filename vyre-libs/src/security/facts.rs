@@ -9,8 +9,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
+use vyre_foundation::hashing::update_length_delimited_field as hash_field;
 
-use crate::dataflow::{
+use crate::{
     validate_dynamic_pipeline, DynamicPrimitiveSoundness, DynamicSoundnessViolation,
     PrecisionContract, SharedFactHeader, SharedFactKind, Soundness,
 };
@@ -831,13 +832,6 @@ fn payload_digest(payload: &BTreeMap<String, String>, reason: &str) -> [u8; 32] 
     }
     hash_field(&mut hasher, b"reason", reason.as_bytes());
     *hasher.finalize().as_bytes()
-}
-
-fn hash_field(hasher: &mut blake3::Hasher, label: &[u8], value: &[u8]) {
-    hasher.update(&(label.len() as u64).to_le_bytes());
-    hasher.update(label);
-    hasher.update(&(value.len() as u64).to_le_bytes());
-    hasher.update(value);
 }
 
 #[cfg(test)]

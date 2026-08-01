@@ -20,7 +20,10 @@ fn final_completion_primary_sources_are_registered() {
         "OPENSSF_SECURITY_INSIGHTS",
         "GITHUB_ACTIONS_WORKFLOW",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 
@@ -36,7 +39,10 @@ fn final_release_gate_manifest_records_gate_artifacts_boundaries_and_completion_
         "public_vyre_policy",
         "completion_blocker_if_missing",
     ] {
-        assert!(GATES.contains(required), "final release gate manifest must include {required}");
+        assert!(
+            GATES.contains(required),
+            "final release gate manifest must include {required}"
+        );
     }
 }
 

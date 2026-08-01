@@ -97,6 +97,18 @@ fn pack_le_wire_words_into<T: LeWireWord>(values: &[T], out: &mut Vec<u8>) {
     append_le_wire_words(values, out);
 }
 
+fn try_pack_le_wire_words_into<T: LeWireWord>(
+    values: &[T],
+    out: &mut Vec<u8>,
+    item_label: &str,
+    output_label: &str,
+) -> Result<(), String> {
+    let byte_len = checked_byte_len(values.len(), T::WIDTH, item_label)?;
+    reserve_exact_len(out, byte_len, output_label)?;
+    pack_le_wire_words_into(values, out);
+    Ok(())
+}
+
 /// Decode `count` little-endian `T` values from the front of `src` into `out`,
 /// reusing `out`'s existing allocation. `out` is cleared first.
 ///
@@ -178,7 +190,7 @@ pub fn pack_u32_slice(words: &[u32]) -> Vec<u8> {
 /// uploaded as if complete.
 pub fn pack_u32_slice_into(words: &[u32], out: &mut Vec<u8>) {
     if let Err(error) = try_pack_u32_slice_into(words, out) {
-        // Returning empty bytes would upload an EMPTY input buffer to the GPU 
+        // Returning empty bytes would upload an EMPTY input buffer to the GPU
         // the kernel then scans nothing and silently reports a clean result
         // (Law 10). Fail loud; callers use try_pack_u32_slice_into.
         panic!("vyre-primitives u32 wire pack failed: {error}");
@@ -187,16 +199,7 @@ pub fn pack_u32_slice_into(words: &[u32], out: &mut Vec<u8>) {
 
 /// Fallible `u32` little-endian pack into caller-owned byte storage.
 pub fn try_pack_u32_slice_into(words: &[u32], out: &mut Vec<u8>) -> Result<(), String> {
-    let byte_len = checked_byte_len(words.len(), 4, "u32 byte pack word")?;
-    reserve_exact_len(out, byte_len, "u32 byte pack output")?;
-    out.clear();
-    #[cfg(target_endian = "little")]
-    out.extend_from_slice(bytemuck::cast_slice(words));
-    #[cfg(target_endian = "big")]
-    for word in words {
-        out.extend_from_slice(&word.to_le_bytes());
-    }
-    Ok(())
+    try_pack_le_wire_words_into(words, out, "u32 byte pack word", "u32 byte pack output")
 }
 
 /// Pack `&[u32]` into `out` as little-endian bytes, padded to at least
@@ -349,16 +352,7 @@ pub fn pack_f32_slice_into(values: &[f32], out: &mut Vec<u8>) {
 
 /// Fallible `f32` little-endian pack into caller-owned byte storage.
 pub fn try_pack_f32_slice_into(values: &[f32], out: &mut Vec<u8>) -> Result<(), String> {
-    let byte_len = checked_byte_len(values.len(), 4, "f32 byte pack value")?;
-    reserve_exact_len(out, byte_len, "f32 byte pack output")?;
-    out.clear();
-    #[cfg(target_endian = "little")]
-    out.extend_from_slice(bytemuck::cast_slice(values));
-    #[cfg(target_endian = "big")]
-    for value in values {
-        out.extend_from_slice(&value.to_le_bytes());
-    }
-    Ok(())
+    try_pack_le_wire_words_into(values, out, "f32 byte pack value", "f32 byte pack output")
 }
 
 #[cfg(test)]
@@ -608,6 +602,21 @@ pub fn pack_u16_slice_into(values: &[u16], out: &mut Vec<u8>) {
     pack_le_wire_words_into(values, out);
 }
 
+fn pack_le_wire_words_owned<T: LeWireWord>(values: &[T]) -> Vec<u8> {
+    #[cfg(target_endian = "little")]
+    {
+        bytemuck::cast_slice::<T, u8>(values).to_vec()
+    }
+    #[cfg(target_endian = "big")]
+    {
+        let mut out = Vec::with_capacity(values.len().saturating_mul(T::WIDTH));
+        for &value in values {
+            value.push_le_bytes(&mut out);
+        }
+        out
+    }
+}
+
 /// Pack a `&[u32]` into a freshly-allocated `Vec<u8>` through the
 /// direct owned fast path.
 ///
@@ -620,36 +629,14 @@ pub fn pack_u16_slice_into(values: &[u16], out: &mut Vec<u8>) {
 /// a pre-reserved Vec so the wire format stays bit-identical.
 #[must_use]
 pub fn pack_u32_slice_into_uninit(words: &[u32]) -> Vec<u8> {
-    #[cfg(target_endian = "little")]
-    {
-        bytemuck::cast_slice::<u32, u8>(words).to_vec()
-    }
-    #[cfg(target_endian = "big")]
-    {
-        let mut out: Vec<u8> = Vec::with_capacity(words.len().saturating_mul(4));
-        for word in words {
-            out.extend_from_slice(&word.to_le_bytes());
-        }
-        out
-    }
+    pack_le_wire_words_owned(words)
 }
 
 /// Pack a `&[f32]` into a freshly-allocated `Vec<u8>` without zero-fill.
 /// Same shape as [`pack_u32_slice_into_uninit`] for the f32 wire path.
 #[must_use]
 pub fn pack_f32_slice_into_uninit(values: &[f32]) -> Vec<u8> {
-    #[cfg(target_endian = "little")]
-    {
-        bytemuck::cast_slice::<f32, u8>(values).to_vec()
-    }
-    #[cfg(target_endian = "big")]
-    {
-        let mut out: Vec<u8> = Vec::with_capacity(values.len().saturating_mul(4));
-        for value in values {
-            out.extend_from_slice(&value.to_le_bytes());
-        }
-        out
-    }
+    pack_le_wire_words_owned(values)
 }
 
 /// Append raw bytes onto `out` as one `u32` per byte (low 8 bits, zero

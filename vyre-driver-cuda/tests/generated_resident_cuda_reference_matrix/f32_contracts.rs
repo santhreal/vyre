@@ -172,4 +172,3 @@ fn generated_resident_f32_fma_matrix_matches_reference_on_live_cuda() {
         "Fix: resident FMA generated matrix must compare every output lane."
     );
 }
-

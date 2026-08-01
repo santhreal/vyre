@@ -547,31 +547,17 @@ fn require_len(name: &str, got: usize, need: usize) -> Result<(), String> {
     }
 }
 
-#[cfg(any(test, feature = "cpu-parity"))]
-fn reserve_u32(out: &mut Vec<u32>, len: usize, name: &str) -> Result<(), String> {
-    if len > out.capacity() {
-        crate::graph::scratch::reserve_graph_items(
-            out,
-            len - out.len(),
-            "matroid intersection CPU oracle",
-            name,
-        )?;
-    }
-    Ok(())
-}
+crate::graph::scratch::define_reserve_graph_capacity!(
+    reserve_u32,
+    u32,
+    "matroid intersection CPU oracle"
+);
 
-#[cfg(any(test, feature = "cpu-parity"))]
-fn reserve_usize(out: &mut Vec<usize>, len: usize, name: &str) -> Result<(), String> {
-    if len > out.capacity() {
-        crate::graph::scratch::reserve_graph_items(
-            out,
-            len - out.len(),
-            "matroid intersection CPU oracle",
-            name,
-        )?;
-    }
-    Ok(())
-}
+crate::graph::scratch::define_reserve_graph_capacity!(
+    reserve_usize,
+    usize,
+    "matroid intersection CPU oracle"
+);
 
 #[cfg(test)]
 mod tests {

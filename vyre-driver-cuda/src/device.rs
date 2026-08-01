@@ -92,6 +92,17 @@ pub struct CudaDeviceCaps {
     /// concurrent blocks per SM before register or shared-memory limits
     /// kick in.
     pub max_threads_per_sm: i32,
+    /// Maximum thread blocks resident on a streaming multiprocessor, or 0 when
+    /// the driver did not report the attribute.
+    ///
+    /// A SECOND residency ceiling, independent of the thread budget: this device
+    /// reports 24, so at workgroup 32 the thread budget would allow 1536/32 = 48
+    /// blocks and the hardware holds 24. Cooperative launches need every block
+    /// co-resident, so admitting a grid on the thread ceiling alone over-admits
+    /// at narrow widths and the driver refuses the launch. 0 means unreported and
+    /// applies no cap, which keeps behavior identical on a driver that cannot
+    /// answer.
+    pub max_blocks_per_sm: i32,
 }
 
 /// Centralized live CUDA device acquisition result.
@@ -325,6 +336,14 @@ impl CudaDeviceCaps {
             "max_threads_per_sm",
             CUdevice_attribute::CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_MULTIPROCESSOR,
         )?;
+        // Tolerated rather than required: an older driver that cannot answer
+        // leaves this 0, which applies no cap and preserves the thread-only
+        // behavior instead of failing device acquisition over a refinement.
+        let max_blocks_per_sm = attr(
+            "max_blocks_per_sm",
+            CUdevice_attribute::CU_DEVICE_ATTRIBUTE_MAX_BLOCKS_PER_MULTIPROCESSOR,
+        )
+        .unwrap_or(0);
 
         let caps = Self {
             name,
@@ -357,6 +376,7 @@ impl CudaDeviceCaps {
             max_registers_per_block,
             max_registers_per_sm,
             max_threads_per_sm,
+            max_blocks_per_sm,
         };
         caps.validate_required_attributes()?;
         Ok(caps)
@@ -466,6 +486,19 @@ impl CudaDeviceCaps {
         self.required_u32_capability("max_threads_per_sm", self.max_threads_per_sm)
     }
 
+    /// Blocks resident per streaming multiprocessor, when the driver reports it.
+    ///
+    /// `None` means unreported, which callers must read as "no cap known" rather
+    /// than as zero blocks. Deliberately not routed through
+    /// `required_u32_capability`: unlike the other capabilities this one is a
+    /// refinement, and a driver that omits it must still be usable.
+    #[must_use]
+    pub fn max_blocks_per_sm_u32(&self) -> Option<u32> {
+        u32::try_from(self.max_blocks_per_sm)
+            .ok()
+            .filter(|blocks| *blocks > 0)
+    }
+
     /// Number of streaming multiprocessors as an unsigned runtime-planning value.
     #[must_use]
     pub fn multi_processor_count_u32(&self) -> u32 {
@@ -503,7 +536,7 @@ impl CudaDeviceCaps {
         self.required_u32_capability("core_clock_rate_khz", self.core_clock_rate_khz)
     }
 
-    /// Approximate peak integer/instruction throughput in operations per second 
+    /// Approximate peak integer/instruction throughput in operations per second
     /// the COMPUTE ceiling of the roofline (the memory ceiling is
     /// [`memory_bandwidth_gbps`](Self::memory_bandwidth_gbps)).
     ///
@@ -654,11 +687,11 @@ impl CudaDeviceCaps {
 #[cfg(test)]
 
 mod tests {
-    use crate::synthetic_device_caps::blackwell_sm120_caps_default;
+    use crate::synthetic_device_caps::synthetic_sm120_envelope_default;
 
     #[test]
     fn cuda_profile_applies_builtin_sm_signature() {
-        let profile = blackwell_sm120_caps_default().to_device_profile();
+        let profile = synthetic_sm120_envelope_default().to_device_profile();
         let table =
             vyre_driver::DeviceSignatureTable::builtins().expect("Fix: builtin signatures load");
         let signature = table
@@ -677,7 +710,7 @@ mod tests {
 
     #[test]
     fn cuda_profile_preserves_probed_compute_units_without_builtin_signature() {
-        let mut caps = blackwell_sm120_caps_default();
+        let mut caps = synthetic_sm120_envelope_default();
         caps.compute_capability = (99, 0);
         caps.multi_processor_count = 13;
 

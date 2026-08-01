@@ -15,7 +15,7 @@
 //!    the buffer-inferred grid UNDER-fires and silently drops the high-index edges, the hole
 //!    `reference_eval_with_dispatch`'s `min_dispatch_elements` floor closes. Passing
 //!    `edge_count` as the floor fires every edge lane.
-//! 2. RE-DISPATCH TO A FIXPOINT: the reference arena executor models GPU parallelism 
+//! 2. RE-DISPATCH TO A FIXPOINT: the reference arena executor models GPU parallelism
 //!    each invocation reads the parent buffer as of the dispatch START (snapshot), only the
 //!    atomic RMW (CAS / path-halving `min`) is live. So a SINGLE dispatch of a parallel
 //!    union-find does NOT close a general graph: concurrent unions race and only partially
@@ -58,7 +58,7 @@ fn find(parent: &[u32], mut node: u32, node_count: u32) -> u32 {
 }
 
 /// Independent oracle: component representative = minimum node index reachable through the
-/// undirected edge set. Built by a plain iterate-to-stable relaxation over the edge list 
+/// undirected edge set. Built by a plain iterate-to-stable relaxation over the edge list
 /// a wholly different structure from the on-device path-halving CAS union.
 fn component_min(node_count: u32, edge_a: &[u32], edge_b: &[u32]) -> Vec<u32> {
     let mut rep: Vec<u32> = (0..node_count).collect();

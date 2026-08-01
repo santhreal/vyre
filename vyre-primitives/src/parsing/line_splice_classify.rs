@@ -20,7 +20,7 @@
 //! Inputs:
 //!   - `bytes_in`  -  compatibility [`line_splice_classify`] expects packed
 //!     little-endian `DataType::U32` words, four source bytes per word.
-//!     [`line_splice_classify_u8`] expects a runtime-sized `DataType::U8`
+//!     [`crate::parsing::line_splice_classify::line_splice_classify_u8`] expects a runtime-sized `DataType::U8`
 //!     source-byte buffer.
 //!
 //! Outputs:

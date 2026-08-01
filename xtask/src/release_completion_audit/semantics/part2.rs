@@ -348,25 +348,16 @@ fn inspect_backend_conformance_semantics(
     {
         blockers.push(format!("{evidence}: duplicate_op_ids must be empty"));
     }
-    inspect_duplicate_backend_conformance_pair_op_ids(evidence, value, blockers);
+    crate::benchmark_evidence_semantics::inspect_duplicate_object_rows(
+        evidence,
+        value,
+        "pairs",
+        "op_id",
+        "backend conformance pair op_id rows",
+        blockers,
+    );
 }
 
-fn inspect_duplicate_backend_conformance_pair_op_ids(
-    evidence: &str,
-    value: &serde_json::Value,
-    blockers: &mut Vec<String>,
-) {
-    let duplicates =
-        crate::benchmark_evidence_semantics::duplicate_nonblank_object_array_field_values(
-            value, "pairs", "op_id",
-        );
-    if !duplicates.is_empty() {
-        let duplicates = duplicates.into_iter().collect::<Vec<_>>().join(", ");
-        blockers.push(format!(
-            "{evidence}: duplicate backend conformance pair op_id rows: {duplicates}"
-        ));
-    }
-}
 
 #[cfg(test)]
 mod part2_tests {

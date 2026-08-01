@@ -12,6 +12,7 @@ use std::path::Path;
 use std::process::Command;
 
 use serde::{Deserialize, Serialize};
+use vyre_foundation::hashing::update_length_delimited_field as update_hash_field;
 use vyre_foundation::ir::Program;
 use vyre_foundation::serial::wire::encode::PROGRAM_WIRE_DIGEST_VERSION;
 
@@ -22,10 +23,14 @@ use crate::pipeline::{
 };
 
 /// Version label for the normalized Program digest used by compiled-pipeline
-/// caches. The byte contract currently lives in `pipeline::hashing`; evidence
-/// records the same label in its digest ledger so cache identity and replay
-/// evidence cannot silently drift.
-pub const NORMALIZED_PROGRAM_DIGEST_VERSION: &str = "vyre-pipeline-cache-norm-v2";
+/// caches.
+///
+/// Aliased to the constant the digest algorithm itself uses as its domain
+/// separator, so the label cannot describe an algorithm the digest no longer
+/// implements. It was hand-mirrored before, which is exactly the silent drift
+/// this ledger exists to prevent.
+pub const NORMALIZED_PROGRAM_DIGEST_VERSION: &str =
+    vyre_foundation::ir::NORMALIZED_PROGRAM_CACHE_DIGEST_VERSION;
 
 /// Version label for commit/dirty-state source fingerprints.
 pub const SOURCE_FINGERPRINT_VERSION: &str = "vyre-source-fingerprint-v1";
@@ -325,13 +330,6 @@ fn read_source_fingerprint_file_bounded(path: &Path) -> std::io::Result<Option<V
         }
         bytes.extend_from_slice(&chunk[..read as usize]);
     }
-}
-
-fn update_hash_field(hasher: &mut blake3::Hasher, label: &[u8], value: &[u8]) {
-    hasher.update(&(label.len() as u64).to_le_bytes());
-    hasher.update(label);
-    hasher.update(&(value.len() as u64).to_le_bytes());
-    hasher.update(value);
 }
 
 fn digest_to_hex(digest: [u8; 32]) -> String {

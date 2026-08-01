@@ -1,12 +1,14 @@
 //! Regression tests for type and buffer-lowering follow-up findings.
+mod common;
 
+use common::emit_validated_wgsl as emit_wgsl;
 use vyre_driver::DispatchConfig;
 use vyre_emit_naga::program::emit_module;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, MemoryKind, Node, Program};
 
 const TEST_WORKGROUP_SIZE: [u32; 3] = [1, 1, 1];
 
-/// Emit `program` to a naga module and assert it passes naga's full validator 
+/// Emit `program` to a naga module and assert it passes naga's full validator
 /// the same validation the wgpu backend runs before dispatch.
 fn emit_validated_module(program: &Program) -> naga::Module {
     let module = emit_module(program, &DispatchConfig::default(), TEST_WORKGROUP_SIZE)
@@ -18,19 +20,6 @@ fn emit_validated_module(program: &Program) -> naga::Module {
     .validate(&module)
     .expect("Fix: lowered test module must validate.");
     module
-}
-
-fn emit_wgsl(program: &Program) -> String {
-    let module = emit_module(program, &DispatchConfig::default(), TEST_WORKGROUP_SIZE)
-        .expect("Fix: test program must lower to valid Naga.");
-    let info = naga::valid::Validator::new(
-        naga::valid::ValidationFlags::all(),
-        naga::valid::Capabilities::all(),
-    )
-    .validate(&module)
-    .expect("Fix: lowered test module must validate.");
-    naga::back::wgsl::write_string(&module, &info, naga::back::wgsl::WriterFlags::empty())
-        .expect("Fix: lowered test module must serialize to WGSL.")
 }
 
 /// `negate(u32)` must lower to a wrapping `0u - v` SUBTRACT, never `Unary(Negate)`

@@ -1,4 +1,4 @@
-//! `cargo_full run --bin xtask -- release-gate`  -  pre-publish sanity checks.
+//! `cargo_full run -p xtask --bin xtask -- release-gate`  -  pre-publish sanity checks.
 //!
 //! Run before `cargo_full publish`. Verifies the fields that tend to rot
 //! silently between releases:
@@ -7,15 +7,15 @@
 //! - every crate's `version` matches the workspace version token
 //! - every crate's `rust-version` matches the workspace baseline
 //! - the workspace `Cargo.lock` has no uncommitted changes
-//! - `cargo_full run --bin xtask -- catalog --check` would pass (catalog matches live
+//! - `cargo_full run -p xtask --bin xtask -- catalog --check` would pass (catalog matches live
 //!   inventory)
-//! - `cargo_full run --bin xtask -- gate1` would pass (Gate 1 complexity budget)
-//! - `cargo_full run --bin xtask -- abstraction-gate` would pass (registered composition boundaries)
-//! - `cargo_full run --bin xtask -- dep-drift` would pass (workspace-managed dependency
+//! - `cargo_full run -p xtask --bin xtask -- gate1` would pass (Gate 1 complexity budget)
+//! - `cargo_full run -p xtask --bin xtask -- abstraction-gate` would pass (registered composition boundaries)
+//! - `cargo_full run -p xtask --bin xtask -- dep-drift` would pass (workspace-managed dependency
 //!   pins stay aligned across sibling manifests)
-//! - `cargo_full run --bin xtask -- platform-boundary` would pass (platform docs/comments
+//! - `cargo_full run -p xtask --bin xtask -- platform-boundary` would pass (platform docs/comments
 //!   remain consumer-neutral)
-//! - `cargo_full run --bin xtask -- vyre-release-gate` would pass (Vyre/Weir
+//! - `cargo_full run -p xtask --bin xtask -- vyre-release-gate` would pass (Vyre/Weir
 //!   release evidence manifest is closed)
 //!
 //! This is not a substitute for `cargo_full publish --dry-run`; it catches

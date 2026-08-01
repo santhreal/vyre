@@ -1,4 +1,4 @@
-use super::MacroDef;
+use super::{trim_ascii, MacroDef};
 use rustc_hash::FxHashMap as HashMap;
 
 pub(super) fn fast_kernel_config_if_truth(
@@ -229,18 +229,6 @@ fn macro_body_truth(body: &[u8]) -> bool {
         return true;
     }
     body != b"0"
-}
-
-fn trim_ascii(bytes: &[u8]) -> &[u8] {
-    let mut start = 0_usize;
-    let mut end = bytes.len();
-    while start < end && bytes[start].is_ascii_whitespace() {
-        start += 1;
-    }
-    while end > start && bytes[end - 1].is_ascii_whitespace() {
-        end -= 1;
-    }
-    &bytes[start..end]
 }
 
 fn is_identifier(bytes: &[u8]) -> bool {

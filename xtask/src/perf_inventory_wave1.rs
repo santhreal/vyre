@@ -1,4 +1,4 @@
-//! `cargo_full xtask perf-inventory-wave1`  -  run Phase 1 wave 1.1 contract tests
+//! `cargo xtask perf-inventory-wave1` runs Phase 1 wave 1.1 contract tests
 //! for [`audits/WAVE_EXECUTION.md`](../audits/WAVE_EXECUTION.md).
 
 use std::path::PathBuf;

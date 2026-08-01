@@ -8,6 +8,29 @@ use crate::ir_inner::model::program::Program;
 use rustc_hash::FxHashSet;
 use std::sync::{Arc, LazyLock};
 
+fn is_invocation_id_eq_constant(cond: &crate::ir::Expr) -> bool {
+    use crate::ir::{BinOp, Expr};
+    match cond {
+        Expr::BinOp {
+            op: BinOp::Eq | BinOp::Ne,
+            left,
+            right,
+        } => {
+            is_invocation_id_expr(left) && matches!(**right, Expr::LitU32(_))
+                || is_invocation_id_expr(right) && matches!(**left, Expr::LitU32(_))
+        }
+        _ => false,
+    }
+}
+
+fn is_invocation_id_expr(expr: &crate::ir::Expr) -> bool {
+    use crate::ir::Expr;
+    matches!(
+        expr,
+        Expr::InvocationId { .. } | Expr::LocalId { .. } | Expr::SubgroupLocalId
+    )
+}
+
 /// Cost certificates for cost-monotone-down pass enforcement.
 /// `CostCertificate::for_program` reads cached `ProgramStats`; the optimizer
 /// post-condition gate compares pre/post and refuses cost-up rewrites that
@@ -102,7 +125,7 @@ pub mod pre_lowering;
 /// lookup or O(K) over the answer instead of paying a fresh tree
 /// walk per query.
 pub mod program_soa;
-mod rewrite;
+pub(crate) mod rewrite;
 /// SMT-LIB proof obligations for proof-carrying rewrites.
 pub mod rewrite_proof;
 /// N3  -  registry of shipped rewrite proof obligations consumed by the
@@ -478,7 +501,7 @@ pub trait ProgramPass: private::Sealed + Send + Sync {
     /// Refusal-aware transform. Default delegates to [`ProgramPass::transform`] and wraps the result
     /// in `Ok`. Passes that want to refuse a rewrite (cost certificate predicts cost up,
     /// effect lattice forbids the fusion, etc.) override this and return
-    /// [`Err(RefusalReason)`]. The scheduler treats refusals as a no-op rewrite plus a
+    /// `Err(RefusalReason)`. The scheduler treats refusals as a no-op rewrite plus a
     /// telemetry record naming the reason  -  never silently miscompiles.
     ///
     /// # Errors

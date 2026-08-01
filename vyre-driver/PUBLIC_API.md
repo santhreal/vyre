@@ -690,6 +690,7 @@ impl<T> tracing::instrument::WithSubscriber for vyre_driver::autotune_store::Aut
 impl<T> typenum::type_operators::Same for vyre_driver::autotune_store::AutotuneStore
 pub type vyre_driver::autotune_store::AutotuneStore::Output = T
 pub mod vyre_driver::backend
+pub use vyre_driver::backend::node_op_id
 pub mod vyre_driver::backend::lowering
 pub trait vyre_driver::backend::lowering::LowerableOp: core::marker::Send + core::marker::Sync + 'static
 pub fn vyre_driver::backend::lowering::LowerableOp::lower_binary(&self, ctx: &mut (), program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<(), alloc::string::String>
@@ -697,9 +698,9 @@ pub fn vyre_driver::backend::lowering::LowerableOp::lower_expression(&self, ctx:
 pub trait vyre_driver::backend::lowering::TargetGenCtx
 pub fn vyre_driver::backend::lowering::TargetGenCtx::register_expression(&mut self, format: &str) -> core::result::Result<(), ()>
 pub mod vyre_driver::backend::validation
+pub use vyre_driver::backend::validation::node_op_id
 pub fn vyre_driver::backend::validation::default_supported_ops() -> &'static std::collections::hash::set::HashSet<vyre_foundation::ir_inner::model::node_kind::OpId>
 pub fn vyre_driver::backend::validation::default_supported_ops_with_trap() -> &'static std::collections::hash::set::HashSet<vyre_foundation::ir_inner::model::node_kind::OpId>
-pub fn vyre_driver::backend::validation::node_op_id(node: &vyre_foundation::ir_inner::model::generated::Node) -> &'static str
 pub fn vyre_driver::backend::validation::validate_program(program: &vyre_foundation::ir_inner::model::program::core::Program, backend: &dyn vyre_driver::backend::Backend) -> core::result::Result<(), vyre_foundation::validate::validation_error::ValidationError>
 #[non_exhaustive] pub enum vyre_driver::backend::BackendError
 pub vyre_driver::backend::BackendError::CooperativeResidencyExceeded
@@ -1006,7 +1007,7 @@ impl<T> typenum::type_operators::Same for vyre_driver::backend::RegexAccelerator
 pub type vyre_driver::backend::RegexAcceleratorStreamMode::Output = T
 pub enum vyre_driver::backend::Resource
 pub vyre_driver::backend::Resource::Borrowed(alloc::vec::Vec<u8>)
-pub vyre_driver::backend::Resource::Resident(u64)
+pub vyre_driver::backend::Resource::Resident(vyre_driver::ResidentHandle)
 impl core::clone::Clone for vyre_driver::Resource
 pub fn vyre_driver::Resource::clone(&self) -> vyre_driver::Resource
 impl core::cmp::Eq for vyre_driver::Resource
@@ -1014,6 +1015,8 @@ impl core::cmp::PartialEq for vyre_driver::Resource
 pub fn vyre_driver::Resource::eq(&self, other: &vyre_driver::Resource) -> bool
 impl core::convert::From<alloc::vec::Vec<u8>> for vyre_driver::Resource
 pub fn vyre_driver::Resource::from(bytes: alloc::vec::Vec<u8>) -> Self
+impl core::convert::From<vyre_driver::ResidentHandle> for vyre_driver::Resource
+pub fn vyre_driver::Resource::from(handle: vyre_driver::ResidentHandle) -> Self
 impl core::default::Default for vyre_driver::Resource
 pub fn vyre_driver::Resource::default() -> Self
 impl core::fmt::Debug for vyre_driver::Resource
@@ -1567,6 +1570,124 @@ impl<T> tracing::instrument::Instrument for vyre_driver::ResidentDispatchStep<'a
 impl<T> tracing::instrument::WithSubscriber for vyre_driver::ResidentDispatchStep<'a>
 impl<T> typenum::type_operators::Same for vyre_driver::ResidentDispatchStep<'a>
 pub type vyre_driver::ResidentDispatchStep<'a>::Output = T
+pub struct vyre_driver::backend::ResidentHandle
+impl vyre_driver::ResidentHandle
+pub fn vyre_driver::ResidentHandle::id(self) -> u64
+pub fn vyre_driver::ResidentHandle::owner(self) -> vyre_driver::ResidentOwner
+impl core::clone::Clone for vyre_driver::ResidentHandle
+pub fn vyre_driver::ResidentHandle::clone(&self) -> vyre_driver::ResidentHandle
+impl core::cmp::Eq for vyre_driver::ResidentHandle
+impl core::cmp::PartialEq for vyre_driver::ResidentHandle
+pub fn vyre_driver::ResidentHandle::eq(&self, other: &vyre_driver::ResidentHandle) -> bool
+impl core::convert::From<vyre_driver::ResidentHandle> for vyre_driver::Resource
+pub fn vyre_driver::Resource::from(handle: vyre_driver::ResidentHandle) -> Self
+impl core::fmt::Debug for vyre_driver::ResidentHandle
+pub fn vyre_driver::ResidentHandle::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for vyre_driver::ResidentHandle
+pub fn vyre_driver::ResidentHandle::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_driver::ResidentHandle
+pub fn vyre_driver::ResidentHandle::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_driver::ResidentHandle
+impl core::marker::StructuralPartialEq for vyre_driver::ResidentHandle
+impl core::marker::Freeze for vyre_driver::ResidentHandle
+impl core::marker::Send for vyre_driver::ResidentHandle
+impl core::marker::Sync for vyre_driver::ResidentHandle
+impl core::marker::Unpin for vyre_driver::ResidentHandle
+impl core::marker::UnsafeUnpin for vyre_driver::ResidentHandle
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::ResidentHandle
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::ResidentHandle
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::ResidentHandle where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::ResidentHandle::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::ResidentHandle where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::ResidentHandle::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::ResidentHandle where U: core::convert::From<T>
+pub fn vyre_driver::ResidentHandle::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::ResidentHandle where U: core::convert::Into<T>
+pub type vyre_driver::ResidentHandle::Error = core::convert::Infallible
+pub fn vyre_driver::ResidentHandle::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::ResidentHandle where U: core::convert::TryFrom<T>
+pub type vyre_driver::ResidentHandle::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::ResidentHandle::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::ResidentHandle where T: core::clone::Clone
+pub type vyre_driver::ResidentHandle::Owned = T
+pub fn vyre_driver::ResidentHandle::clone_into(&self, target: &mut T)
+pub fn vyre_driver::ResidentHandle::to_owned(&self) -> T
+impl<T> alloc::string::ToString for vyre_driver::ResidentHandle where T: core::fmt::Display + ?core::marker::Sized
+pub fn vyre_driver::ResidentHandle::to_string(&self) -> alloc::string::String
+impl<T> core::any::Any for vyre_driver::ResidentHandle where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::ResidentHandle::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::ResidentHandle where T: ?core::marker::Sized
+pub fn vyre_driver::ResidentHandle::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::ResidentHandle where T: ?core::marker::Sized
+pub fn vyre_driver::ResidentHandle::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::ResidentHandle where T: core::clone::Clone
+pub unsafe fn vyre_driver::ResidentHandle::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::ResidentHandle
+pub fn vyre_driver::ResidentHandle::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_driver::ResidentHandle
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::ResidentHandle
+impl<T> typenum::type_operators::Same for vyre_driver::ResidentHandle
+pub type vyre_driver::ResidentHandle::Output = T
+pub struct vyre_driver::backend::ResidentOwner(_)
+impl vyre_driver::ResidentOwner
+pub fn vyre_driver::ResidentOwner::get(self) -> u64
+pub fn vyre_driver::ResidentOwner::handle(self, id: u64) -> vyre_driver::ResidentHandle
+pub fn vyre_driver::ResidentOwner::new() -> core::result::Result<Self, vyre_driver::BackendError>
+pub fn vyre_driver::ResidentOwner::resolve(self, handle: vyre_driver::ResidentHandle, context: &str) -> core::result::Result<u64, vyre_driver::BackendError>
+impl core::clone::Clone for vyre_driver::ResidentOwner
+pub fn vyre_driver::ResidentOwner::clone(&self) -> vyre_driver::ResidentOwner
+impl core::cmp::Eq for vyre_driver::ResidentOwner
+impl core::cmp::Ord for vyre_driver::ResidentOwner
+pub fn vyre_driver::ResidentOwner::cmp(&self, other: &vyre_driver::ResidentOwner) -> core::cmp::Ordering
+impl core::cmp::PartialEq for vyre_driver::ResidentOwner
+pub fn vyre_driver::ResidentOwner::eq(&self, other: &vyre_driver::ResidentOwner) -> bool
+impl core::cmp::PartialOrd for vyre_driver::ResidentOwner
+pub fn vyre_driver::ResidentOwner::partial_cmp(&self, other: &vyre_driver::ResidentOwner) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for vyre_driver::ResidentOwner
+pub fn vyre_driver::ResidentOwner::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_driver::ResidentOwner
+pub fn vyre_driver::ResidentOwner::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_driver::ResidentOwner
+impl core::marker::StructuralPartialEq for vyre_driver::ResidentOwner
+impl core::marker::Freeze for vyre_driver::ResidentOwner
+impl core::marker::Send for vyre_driver::ResidentOwner
+impl core::marker::Sync for vyre_driver::ResidentOwner
+impl core::marker::Unpin for vyre_driver::ResidentOwner
+impl core::marker::UnsafeUnpin for vyre_driver::ResidentOwner
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::ResidentOwner
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::ResidentOwner
+impl<Q, K> equivalent::Comparable<K> for vyre_driver::ResidentOwner where Q: core::cmp::Ord + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::ResidentOwner::compare(&self, key: &K) -> core::cmp::Ordering
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::ResidentOwner where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::ResidentOwner::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::ResidentOwner where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::ResidentOwner::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::ResidentOwner where U: core::convert::From<T>
+pub fn vyre_driver::ResidentOwner::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::ResidentOwner where U: core::convert::Into<T>
+pub type vyre_driver::ResidentOwner::Error = core::convert::Infallible
+pub fn vyre_driver::ResidentOwner::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::ResidentOwner where U: core::convert::TryFrom<T>
+pub type vyre_driver::ResidentOwner::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::ResidentOwner::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::ResidentOwner where T: core::clone::Clone
+pub type vyre_driver::ResidentOwner::Owned = T
+pub fn vyre_driver::ResidentOwner::clone_into(&self, target: &mut T)
+pub fn vyre_driver::ResidentOwner::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::ResidentOwner where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::ResidentOwner::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::ResidentOwner where T: ?core::marker::Sized
+pub fn vyre_driver::ResidentOwner::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::ResidentOwner where T: ?core::marker::Sized
+pub fn vyre_driver::ResidentOwner::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::ResidentOwner where T: core::clone::Clone
+pub unsafe fn vyre_driver::ResidentOwner::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::ResidentOwner
+pub fn vyre_driver::ResidentOwner::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_driver::ResidentOwner
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::ResidentOwner
+impl<T> typenum::type_operators::Same for vyre_driver::ResidentOwner
+pub type vyre_driver::ResidentOwner::Output = T
 pub struct vyre_driver::backend::ResidentReadRange<'a>
 pub vyre_driver::backend::ResidentReadRange::byte_len: usize
 pub vyre_driver::backend::ResidentReadRange::byte_offset: usize
@@ -1833,7 +1954,6 @@ pub fn vyre_driver::backend::default_supported_ops() -> &'static std::collection
 pub fn vyre_driver::backend::default_supported_ops_with_trap() -> &'static std::collections::hash::set::HashSet<vyre_foundation::ir_inner::model::node_kind::OpId>
 pub fn vyre_driver::backend::dialect_and_language_supported_ops() -> &'static std::collections::hash::set::HashSet<vyre_foundation::ir_inner::model::node_kind::OpId>
 pub fn vyre_driver::backend::dialect_only_supported_ops() -> &'static std::collections::hash::set::HashSet<vyre_foundation::ir_inner::model::node_kind::OpId>
-pub fn vyre_driver::backend::node_op_id(node: &vyre_foundation::ir_inner::model::generated::Node) -> &'static str
 pub fn vyre_driver::backend::registered_backends() -> &'static [&'static vyre_driver::BackendRegistration]
 pub fn vyre_driver::backend::registered_backends_by_precedence() -> alloc::vec::Vec<&'static vyre_driver::BackendRegistration>
 pub fn vyre_driver::backend::registered_backends_by_precedence_slice() -> &'static [&'static vyre_driver::BackendRegistration]
@@ -2590,6 +2710,7 @@ impl<T> tracing::instrument::WithSubscriber for vyre_driver::binding::BindingSet
 impl<T> typenum::type_operators::Same for vyre_driver::binding::BindingSetFingerprint
 pub type vyre_driver::binding::BindingSetFingerprint::Output = T
 pub fn vyre_driver::binding::binding_plans_share_layout(a: &vyre_driver::binding::BindingPlan, b: &vyre_driver::binding::BindingPlan) -> bool
+pub fn vyre_driver::binding::dynamic_element_count_from_bytes(element: &vyre_spec::data_type::DataType, byte_len: usize) -> core::option::Option<u32>
 pub mod vyre_driver::bindless_policy
 pub enum vyre_driver::bindless_policy::BindlessDecision
 pub vyre_driver::bindless_policy::BindlessDecision::Bindless
@@ -3807,6 +3928,7 @@ impl vyre_driver::device_signature::DeviceSignatureTable
 pub fn vyre_driver::device_signature::DeviceSignatureTable::apply_device_name_to_profile(&self, device_name: &str, profile: vyre_driver::device_profile::DeviceProfile) -> vyre_driver::device_profile::DeviceProfile
 pub fn vyre_driver::device_signature::DeviceSignatureTable::apply_generation_to_profile(&self, generation: u32, profile: vyre_driver::device_profile::DeviceProfile) -> vyre_driver::device_profile::DeviceProfile
 pub fn vyre_driver::device_signature::DeviceSignatureTable::builtins() -> core::result::Result<Self, alloc::string::String>
+pub fn vyre_driver::device_signature::DeviceSignatureTable::builtins_ref() -> core::result::Result<&'static Self, alloc::string::String>
 pub fn vyre_driver::device_signature::DeviceSignatureTable::find_architecture_generation(&self, generation: u32) -> core::option::Option<&vyre_driver::device_signature::DeviceSignature>
 pub fn vyre_driver::device_signature::DeviceSignatureTable::find_device_name(&self, device_name: &str) -> core::option::Option<&vyre_driver::device_signature::DeviceSignature>
 pub fn vyre_driver::device_signature::DeviceSignatureTable::get(&self, id: &str) -> core::option::Option<&vyre_driver::device_signature::DeviceSignature>
@@ -9233,6 +9355,7 @@ pub fn vyre_driver::program_walks::find_indirect_dispatch(program: &vyre_foundat
 pub fn vyre_driver::program_walks::infer_dispatch_grid(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[alloc::vec::Vec<u8>], config: &vyre_driver::DispatchConfig) -> core::result::Result<[u32; 3], vyre_driver::BackendError>
 pub fn vyre_driver::program_walks::infer_dispatch_grid_for_count(element_count: u32, workgroup: [u32; 3]) -> core::result::Result<[u32; 3], vyre_driver::BackendError>
 pub fn vyre_driver::program_walks::output_binding_layout(output: &vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl) -> core::result::Result<vyre_driver::OutputBindingLayout, vyre_driver::BackendError>
+pub fn vyre_driver::program_walks::output_binding_layout_parts(binding: u32, name: &alloc::sync::Arc<str>, element: &vyre_spec::data_type::DataType, count: u32, output_byte_range: core::option::Option<core::ops::range::Range<usize>>) -> core::result::Result<vyre_driver::OutputBindingLayout, vyre_driver::BackendError>
 pub fn vyre_driver::program_walks::output_binding_layouts(program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<alloc::vec::Vec<vyre_driver::OutputBindingLayout>, vyre_driver::BackendError>
 pub fn vyre_driver::program_walks::output_binding_layouts_into(program: &vyre_foundation::ir_inner::model::program::core::Program, outputs: &mut alloc::vec::Vec<vyre_driver::OutputBindingLayout>) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::program_walks::output_layout_from_program(program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<vyre_driver::OutputLayout, vyre_driver::BackendError>
@@ -14053,6 +14176,10 @@ pub vyre_driver::validation::LaunchGeometryLimits::backend: &'static str
 pub vyre_driver::validation::LaunchGeometryLimits::max_block_dim: [u32; 3]
 pub vyre_driver::validation::LaunchGeometryLimits::max_grid_dim: [u32; 3]
 pub vyre_driver::validation::LaunchGeometryLimits::max_threads_per_block: u32
+pub vyre_driver::validation::LaunchGeometryLimits::max_threads_per_sm: u32
+impl vyre_driver::validation::LaunchGeometryLimits
+pub fn vyre_driver::validation::LaunchGeometryLimits::blocks_per_compute_unit(&self, workgroup_threads: u32) -> core::option::Option<u32>
+pub fn vyre_driver::validation::LaunchGeometryLimits::resident_threads_per_compute_unit(&self, workgroup_threads: u32) -> core::option::Option<u32>
 impl core::clone::Clone for vyre_driver::validation::LaunchGeometryLimits
 pub fn vyre_driver::validation::LaunchGeometryLimits::clone(&self) -> vyre_driver::validation::LaunchGeometryLimits
 impl core::cmp::Eq for vyre_driver::validation::LaunchGeometryLimits
@@ -14200,6 +14327,8 @@ pub type vyre_driver::validation::ValidationCache::Output = T
 pub const vyre_driver::validation::DEFAULT_VALIDATION_HASH_ENTRIES: usize
 pub const vyre_driver::validation::DEFAULT_VALIDATION_VSA_ENTRIES: usize
 pub const vyre_driver::validation::DEFAULT_VALIDATION_VSA_SHARDS: usize
+pub fn vyre_driver::validation::blocks_per_compute_unit(max_threads_per_unit: u32, workgroup_threads: u32) -> u32
+pub fn vyre_driver::validation::resident_threads_per_compute_unit(max_threads_per_unit: u32, workgroup_threads: u32) -> u32
 pub fn vyre_driver::validation::validate_launch_geometry(workgroup: [u32; 3], grid: [u32; 3], limits: vyre_driver::validation::LaunchGeometryLimits) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::validation::validate_program_contract(program: &vyre_foundation::ir_inner::model::program::core::Program, validation_options: vyre_foundation::validate::options::ValidationOptions<'_>, supported_ops: &std::collections::hash::set::HashSet<vyre_foundation::ir_inner::model::node_kind::OpId>, caps: vyre_driver::validation::ProgramValidationCaps) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::validation::validate_program_for_backend(backend: &dyn vyre_driver::VyreBackend, program: &vyre_foundation::ir_inner::model::program::core::Program, config: &vyre_driver::DispatchConfig) -> core::result::Result<(), vyre_driver::BackendError>
@@ -14667,7 +14796,7 @@ impl<T> typenum::type_operators::Same for vyre_driver::residency::ResidentGraphR
 pub type vyre_driver::residency::ResidentGraphReuseTelemetryError::Output = T
 pub enum vyre_driver::Resource
 pub vyre_driver::Resource::Borrowed(alloc::vec::Vec<u8>)
-pub vyre_driver::Resource::Resident(u64)
+pub vyre_driver::Resource::Resident(vyre_driver::ResidentHandle)
 impl core::clone::Clone for vyre_driver::Resource
 pub fn vyre_driver::Resource::clone(&self) -> vyre_driver::Resource
 impl core::cmp::Eq for vyre_driver::Resource
@@ -14675,6 +14804,8 @@ impl core::cmp::PartialEq for vyre_driver::Resource
 pub fn vyre_driver::Resource::eq(&self, other: &vyre_driver::Resource) -> bool
 impl core::convert::From<alloc::vec::Vec<u8>> for vyre_driver::Resource
 pub fn vyre_driver::Resource::from(bytes: alloc::vec::Vec<u8>) -> Self
+impl core::convert::From<vyre_driver::ResidentHandle> for vyre_driver::Resource
+pub fn vyre_driver::Resource::from(handle: vyre_driver::ResidentHandle) -> Self
 impl core::default::Default for vyre_driver::Resource
 pub fn vyre_driver::Resource::default() -> Self
 impl core::fmt::Debug for vyre_driver::Resource
@@ -15669,6 +15800,7 @@ impl vyre_driver::device_signature::DeviceSignatureTable
 pub fn vyre_driver::device_signature::DeviceSignatureTable::apply_device_name_to_profile(&self, device_name: &str, profile: vyre_driver::device_profile::DeviceProfile) -> vyre_driver::device_profile::DeviceProfile
 pub fn vyre_driver::device_signature::DeviceSignatureTable::apply_generation_to_profile(&self, generation: u32, profile: vyre_driver::device_profile::DeviceProfile) -> vyre_driver::device_profile::DeviceProfile
 pub fn vyre_driver::device_signature::DeviceSignatureTable::builtins() -> core::result::Result<Self, alloc::string::String>
+pub fn vyre_driver::device_signature::DeviceSignatureTable::builtins_ref() -> core::result::Result<&'static Self, alloc::string::String>
 pub fn vyre_driver::device_signature::DeviceSignatureTable::find_architecture_generation(&self, generation: u32) -> core::option::Option<&vyre_driver::device_signature::DeviceSignature>
 pub fn vyre_driver::device_signature::DeviceSignatureTable::find_device_name(&self, device_name: &str) -> core::option::Option<&vyre_driver::device_signature::DeviceSignature>
 pub fn vyre_driver::device_signature::DeviceSignatureTable::get(&self, id: &str) -> core::option::Option<&vyre_driver::device_signature::DeviceSignature>
@@ -17258,6 +17390,124 @@ impl<T> tracing::instrument::Instrument for vyre_driver::residency::ResidentGrap
 impl<T> tracing::instrument::WithSubscriber for vyre_driver::residency::ResidentGraphReuseTelemetry
 impl<T> typenum::type_operators::Same for vyre_driver::residency::ResidentGraphReuseTelemetry
 pub type vyre_driver::residency::ResidentGraphReuseTelemetry::Output = T
+pub struct vyre_driver::ResidentHandle
+impl vyre_driver::ResidentHandle
+pub fn vyre_driver::ResidentHandle::id(self) -> u64
+pub fn vyre_driver::ResidentHandle::owner(self) -> vyre_driver::ResidentOwner
+impl core::clone::Clone for vyre_driver::ResidentHandle
+pub fn vyre_driver::ResidentHandle::clone(&self) -> vyre_driver::ResidentHandle
+impl core::cmp::Eq for vyre_driver::ResidentHandle
+impl core::cmp::PartialEq for vyre_driver::ResidentHandle
+pub fn vyre_driver::ResidentHandle::eq(&self, other: &vyre_driver::ResidentHandle) -> bool
+impl core::convert::From<vyre_driver::ResidentHandle> for vyre_driver::Resource
+pub fn vyre_driver::Resource::from(handle: vyre_driver::ResidentHandle) -> Self
+impl core::fmt::Debug for vyre_driver::ResidentHandle
+pub fn vyre_driver::ResidentHandle::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for vyre_driver::ResidentHandle
+pub fn vyre_driver::ResidentHandle::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_driver::ResidentHandle
+pub fn vyre_driver::ResidentHandle::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_driver::ResidentHandle
+impl core::marker::StructuralPartialEq for vyre_driver::ResidentHandle
+impl core::marker::Freeze for vyre_driver::ResidentHandle
+impl core::marker::Send for vyre_driver::ResidentHandle
+impl core::marker::Sync for vyre_driver::ResidentHandle
+impl core::marker::Unpin for vyre_driver::ResidentHandle
+impl core::marker::UnsafeUnpin for vyre_driver::ResidentHandle
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::ResidentHandle
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::ResidentHandle
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::ResidentHandle where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::ResidentHandle::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::ResidentHandle where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::ResidentHandle::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::ResidentHandle where U: core::convert::From<T>
+pub fn vyre_driver::ResidentHandle::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::ResidentHandle where U: core::convert::Into<T>
+pub type vyre_driver::ResidentHandle::Error = core::convert::Infallible
+pub fn vyre_driver::ResidentHandle::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::ResidentHandle where U: core::convert::TryFrom<T>
+pub type vyre_driver::ResidentHandle::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::ResidentHandle::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::ResidentHandle where T: core::clone::Clone
+pub type vyre_driver::ResidentHandle::Owned = T
+pub fn vyre_driver::ResidentHandle::clone_into(&self, target: &mut T)
+pub fn vyre_driver::ResidentHandle::to_owned(&self) -> T
+impl<T> alloc::string::ToString for vyre_driver::ResidentHandle where T: core::fmt::Display + ?core::marker::Sized
+pub fn vyre_driver::ResidentHandle::to_string(&self) -> alloc::string::String
+impl<T> core::any::Any for vyre_driver::ResidentHandle where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::ResidentHandle::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::ResidentHandle where T: ?core::marker::Sized
+pub fn vyre_driver::ResidentHandle::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::ResidentHandle where T: ?core::marker::Sized
+pub fn vyre_driver::ResidentHandle::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::ResidentHandle where T: core::clone::Clone
+pub unsafe fn vyre_driver::ResidentHandle::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::ResidentHandle
+pub fn vyre_driver::ResidentHandle::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_driver::ResidentHandle
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::ResidentHandle
+impl<T> typenum::type_operators::Same for vyre_driver::ResidentHandle
+pub type vyre_driver::ResidentHandle::Output = T
+pub struct vyre_driver::ResidentOwner(_)
+impl vyre_driver::ResidentOwner
+pub fn vyre_driver::ResidentOwner::get(self) -> u64
+pub fn vyre_driver::ResidentOwner::handle(self, id: u64) -> vyre_driver::ResidentHandle
+pub fn vyre_driver::ResidentOwner::new() -> core::result::Result<Self, vyre_driver::BackendError>
+pub fn vyre_driver::ResidentOwner::resolve(self, handle: vyre_driver::ResidentHandle, context: &str) -> core::result::Result<u64, vyre_driver::BackendError>
+impl core::clone::Clone for vyre_driver::ResidentOwner
+pub fn vyre_driver::ResidentOwner::clone(&self) -> vyre_driver::ResidentOwner
+impl core::cmp::Eq for vyre_driver::ResidentOwner
+impl core::cmp::Ord for vyre_driver::ResidentOwner
+pub fn vyre_driver::ResidentOwner::cmp(&self, other: &vyre_driver::ResidentOwner) -> core::cmp::Ordering
+impl core::cmp::PartialEq for vyre_driver::ResidentOwner
+pub fn vyre_driver::ResidentOwner::eq(&self, other: &vyre_driver::ResidentOwner) -> bool
+impl core::cmp::PartialOrd for vyre_driver::ResidentOwner
+pub fn vyre_driver::ResidentOwner::partial_cmp(&self, other: &vyre_driver::ResidentOwner) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for vyre_driver::ResidentOwner
+pub fn vyre_driver::ResidentOwner::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for vyre_driver::ResidentOwner
+pub fn vyre_driver::ResidentOwner::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for vyre_driver::ResidentOwner
+impl core::marker::StructuralPartialEq for vyre_driver::ResidentOwner
+impl core::marker::Freeze for vyre_driver::ResidentOwner
+impl core::marker::Send for vyre_driver::ResidentOwner
+impl core::marker::Sync for vyre_driver::ResidentOwner
+impl core::marker::Unpin for vyre_driver::ResidentOwner
+impl core::marker::UnsafeUnpin for vyre_driver::ResidentOwner
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::ResidentOwner
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::ResidentOwner
+impl<Q, K> equivalent::Comparable<K> for vyre_driver::ResidentOwner where Q: core::cmp::Ord + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::ResidentOwner::compare(&self, key: &K) -> core::cmp::Ordering
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::ResidentOwner where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::ResidentOwner::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::ResidentOwner where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::ResidentOwner::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::ResidentOwner where U: core::convert::From<T>
+pub fn vyre_driver::ResidentOwner::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::ResidentOwner where U: core::convert::Into<T>
+pub type vyre_driver::ResidentOwner::Error = core::convert::Infallible
+pub fn vyre_driver::ResidentOwner::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::ResidentOwner where U: core::convert::TryFrom<T>
+pub type vyre_driver::ResidentOwner::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::ResidentOwner::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::ResidentOwner where T: core::clone::Clone
+pub type vyre_driver::ResidentOwner::Owned = T
+pub fn vyre_driver::ResidentOwner::clone_into(&self, target: &mut T)
+pub fn vyre_driver::ResidentOwner::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::ResidentOwner where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::ResidentOwner::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::ResidentOwner where T: ?core::marker::Sized
+pub fn vyre_driver::ResidentOwner::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::ResidentOwner where T: ?core::marker::Sized
+pub fn vyre_driver::ResidentOwner::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::ResidentOwner where T: core::clone::Clone
+pub unsafe fn vyre_driver::ResidentOwner::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::ResidentOwner
+pub fn vyre_driver::ResidentOwner::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_driver::ResidentOwner
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::ResidentOwner
+impl<T> typenum::type_operators::Same for vyre_driver::ResidentOwner
+pub type vyre_driver::ResidentOwner::Output = T
 pub struct vyre_driver::ResidentReadRange<'a>
 pub vyre_driver::ResidentReadRange::byte_len: usize
 pub vyre_driver::ResidentReadRange::byte_offset: usize
@@ -17970,6 +18220,7 @@ pub fn vyre_driver::dispatch_configs_share_launch_shape(compiled: &vyre_driver::
 pub fn vyre_driver::dispatch_element_count(bindings: &[vyre_driver::binding::Binding]) -> u32
 pub fn vyre_driver::dispatch_element_count_for_program(program: &vyre_foundation::ir_inner::model::program::core::Program, bindings: &[vyre_driver::binding::Binding]) -> u32
 pub fn vyre_driver::dispatch_param_words_into(bindings: &[vyre_driver::binding::Binding], element_count: u32, words: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_driver::dynamic_element_count_from_bytes(element: &vyre_spec::data_type::DataType, byte_len: usize) -> core::option::Option<u32>
 pub fn vyre_driver::element_size_bytes(data_type: &vyre_spec::data_type::DataType) -> core::result::Result<usize, vyre_driver::BackendError>
 pub fn vyre_driver::emit_aot_target(target: &str, program: &vyre_foundation::ir_inner::model::program::core::Program, config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<u8>, vyre_driver::BackendError>
 pub fn vyre_driver::enforce_actual_output_budget(config: &vyre_driver::DispatchConfig, outputs: &[alloc::vec::Vec<u8>]) -> core::result::Result<(), vyre_driver::BackendError>
@@ -17981,6 +18232,7 @@ pub fn vyre_driver::hex_short(bytes: &[u8; 32]) -> alloc::string::String
 pub fn vyre_driver::infer_dispatch_grid(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[alloc::vec::Vec<u8>], config: &vyre_driver::DispatchConfig) -> core::result::Result<[u32; 3], vyre_driver::BackendError>
 pub fn vyre_driver::infer_dispatch_grid_for_count(element_count: u32, workgroup: [u32; 3]) -> core::result::Result<[u32; 3], vyre_driver::BackendError>
 pub fn vyre_driver::output_binding_layout(output: &vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl) -> core::result::Result<vyre_driver::OutputBindingLayout, vyre_driver::BackendError>
+pub fn vyre_driver::output_binding_layout_parts(binding: u32, name: &alloc::sync::Arc<str>, element: &vyre_spec::data_type::DataType, count: u32, output_byte_range: core::option::Option<core::ops::range::Range<usize>>) -> core::result::Result<vyre_driver::OutputBindingLayout, vyre_driver::BackendError>
 pub fn vyre_driver::output_binding_layouts(program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<alloc::vec::Vec<vyre_driver::OutputBindingLayout>, vyre_driver::BackendError>
 pub fn vyre_driver::output_layout_from_program(program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<vyre_driver::OutputLayout, vyre_driver::BackendError>
 pub fn vyre_driver::program_vsa_fingerprint(program: &vyre_foundation::ir_inner::model::program::core::Program) -> alloc::vec::Vec<u32>

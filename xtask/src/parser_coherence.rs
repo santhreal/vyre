@@ -17,7 +17,8 @@ struct ParserCoherence {
 struct ParserComponent {
     id: &'static str,
     role: &'static str,
-    path: String,
+    #[serde(flatten)]
+    location: ArtifactLocation,
     exists: bool,
     required_files: Vec<ComponentFile>,
     required_terms: Vec<&'static str>,
@@ -32,10 +33,43 @@ struct ParserComponent {
 
 #[derive(Debug, Clone, Serialize)]
 struct ComponentFile {
-    path: String,
+    #[serde(flatten)]
+    location: ArtifactLocation,
     exists: bool,
     read_error: Option<String>,
     source_bytes: usize,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct ArtifactLocation {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    expected_path: Option<String>,
+}
+
+impl ArtifactLocation {
+    fn classify(path: &Path, exists: bool) -> Self {
+        let rendered = path.display().to_string();
+        if exists {
+            Self {
+                path: Some(rendered),
+                expected_path: None,
+            }
+        } else {
+            Self {
+                path: None,
+                expected_path: Some(rendered),
+            }
+        }
+    }
+
+    fn display(&self) -> &str {
+        self.path
+            .as_deref()
+            .or(self.expected_path.as_deref())
+            .expect("ArtifactLocation always owns one rendered path")
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -59,7 +93,8 @@ struct ComponentContract {
 #[derive(Debug, Clone, Serialize)]
 struct ComponentEvidenceTree {
     tree: &'static str,
-    path: String,
+    #[serde(flatten)]
+    location: ArtifactLocation,
     exists: bool,
     source_bytes: usize,
     unreadable_file_count: usize,
@@ -124,19 +159,6 @@ const COMPONENTS: &[(&str, &str, &str, &[&str], &[&str], &[&str], &[&str])] = &[
         &["parser", "dataflow", "alias", "reaching", "callgraph"],
         REQUIRED_PARSER_TEST_CATEGORIES,
     ),
-    // Component ids are neutral capability names; the `path` stays the real checkout
-    // location, which release-hygiene separately requires in its scanned roots. The
-    // contract artifact filename derives from the id, so renaming the id here is what
-    // keeps `compiler-consumer-contracts.json` matching every expected-artifact list.
-    (
-        "compiler-consumer",
-        "Security compiler consumer integration surface",
-        crate::release_train::compiler_consumer_relative_path(),
-        &["Cargo.toml", "src/lib.rs", "README.md"],
-        &["surge", "compile"],
-        &["consumer", "surge", "parser", "condition"],
-        REQUIRED_PARSER_TEST_CATEGORIES,
-    ),
     (
         "compiler-consumer-grammar-gen",
         "Shared grammar generation substrate",
@@ -150,10 +172,9 @@ const COMPONENTS: &[(&str, &str, &str, &[&str], &[&str], &[&str], &[&str])] = &[
 
 /// Ids of every parser-ownership component, in declaration order.
 ///
-/// The single owner of the component-id list. `release_completion_audit` kept its own copy
-/// that still named the compiler consumer `surgec` and `surgec-grammar-gen`, so once the ids
-/// became neutral capability names the audit reported two components as permanently missing
-/// from a matrix that in fact contained both.
+/// Release completion and artifact registries derive their component lists
+/// from this function so a removed or renamed surface cannot remain required
+/// by a second hardcoded inventory.
 pub(crate) fn component_ids() -> Vec<&'static str> {
     COMPONENTS.iter().map(|component| component.0).collect()
 }
@@ -258,7 +279,7 @@ pub(crate) fn run(args: &[String]) {
                     ));
                 }
                 ComponentFile {
-                    path: file_path.display().to_string(),
+                    location: ArtifactLocation::classify(&file_path, exists),
                     exists,
                     read_error,
                     source_bytes: text.len(),
@@ -324,7 +345,7 @@ pub(crate) fn run(args: &[String]) {
                 }
                 ComponentEvidenceTree {
                     tree,
-                    path: tree_path.display().to_string(),
+                    location: ArtifactLocation::classify(&tree_path, exists),
                     exists,
                     source_bytes,
                     unreadable_file_count,
@@ -345,7 +366,7 @@ pub(crate) fn run(args: &[String]) {
         components.push(ParserComponent {
             id,
             role,
-            path: path.display().to_string(),
+            location: ArtifactLocation::classify(&path, exists),
             exists,
             required_files,
             required_terms: required_terms.to_vec(),
@@ -363,23 +384,14 @@ pub(crate) fn run(args: &[String]) {
         components,
         blockers,
     };
-    let json = match serde_json::to_string_pretty(&matrix) {
-        Ok(json) => json,
-        Err(error) => {
-            eprintln!("Fix: failed to serialize parser coherence matrix: {error}");
-            std::process::exit(1);
-        }
-    };
+
     if let Some(parent) = output.parent() {
         if let Err(error) = fs::create_dir_all(parent) {
             eprintln!("Fix: failed to create `{}`: {error}", parent.display());
             std::process::exit(1);
         }
     }
-    if let Err(error) = fs::write(&output, format!("{json}\n")) {
-        eprintln!("Fix: failed to write `{}`: {error}", output.display());
-        std::process::exit(1);
-    }
+    crate::output_arg::write_json(&output, &matrix);
     write_sibling_contracts(&output, &matrix);
     println!("parser-coherence: wrote {}", output.display());
     if !matrix.blockers.is_empty() {
@@ -403,20 +415,23 @@ fn write_sibling_contracts(output: &Path, matrix: &ParserCoherence) {
             .map(|file| {
                 format!(
                     "parser component `{}` is missing required file {}",
-                    component.id, file.path
+                    component.id,
+                    file.location.display()
                 )
             })
             .chain((!component.exists).then(|| {
                 format!(
                     "parser component `{}` is missing at {}",
-                    component.id, component.path
+                    component.id,
+                    component.location.display()
                 )
             }))
             .chain(component.required_files.iter().filter(|file| file.source_bytes == 0).map(
                 |file| {
                     format!(
                         "parser component `{}` required file {} is empty",
-                        component.id, file.path
+                        component.id,
+                        file.location.display()
                     )
                 },
             ))
@@ -442,7 +457,9 @@ fn write_sibling_contracts(output: &Path, matrix: &ParserCoherence) {
                 |tree| {
                     format!(
                         "parser component `{}` is missing required `{}` evidence tree {}",
-                        component.id, tree.tree, tree.path
+                        component.id,
+                        tree.tree,
+                        tree.location.display()
                     )
                 },
             ))
@@ -450,7 +467,10 @@ fn write_sibling_contracts(output: &Path, matrix: &ParserCoherence) {
                 |tree| {
                     format!(
                         "parser component `{}` required `{}` evidence tree {} has {} unreadable source file(s)",
-                        component.id, tree.tree, tree.path, tree.unreadable_file_count
+                        component.id,
+                        tree.tree,
+                        tree.location.display(),
+                        tree.unreadable_file_count
                     )
                 },
             ))
@@ -458,7 +478,9 @@ fn write_sibling_contracts(output: &Path, matrix: &ParserCoherence) {
                 |tree| {
                     format!(
                         "parser component `{}` required `{}` evidence tree {} is empty",
-                        component.id, tree.tree, tree.path
+                        component.id,
+                        tree.tree,
+                        tree.location.display()
                     )
                 },
             ))
@@ -475,7 +497,7 @@ fn write_sibling_contracts(output: &Path, matrix: &ParserCoherence) {
                 schema_version: 1,
                 component_id: component.id.to_string(),
                 role: component.role.to_string(),
-                root: component.path.clone(),
+                root: component.location.display().to_string(),
                 required_files: component.required_files.clone(),
                 required_terms: component.required_terms.clone(),
                 missing_terms: component.missing_terms.clone(),
@@ -527,17 +549,7 @@ pub(crate) fn component_contract_artifacts() -> Vec<String> {
 }
 
 fn write_json(path: &Path, value: &impl Serialize) {
-    let json = match serde_json::to_string_pretty(value) {
-        Ok(json) => json,
-        Err(error) => {
-            eprintln!("Fix: failed to serialize `{}`: {error}", path.display());
-            std::process::exit(1);
-        }
-    };
-    if let Err(error) = fs::write(path, format!("{json}\n")) {
-        eprintln!("Fix: failed to write `{}`: {error}", path.display());
-        std::process::exit(1);
-    }
+    crate::output_arg::write_json(path, value);
 }
 
 fn append_component_test_text(root: &Path, output: &mut String) -> usize {
@@ -617,28 +629,12 @@ fn append_tree_text(root: &Path, output: &mut String) -> usize {
 }
 
 fn parse_output(args: &[String]) -> Result<PathBuf, String> {
-    let mut output = None;
-    let mut index = 2;
-    while index < args.len() {
-        match args[index].as_str() {
-            "--output" => {
-                let Some(path) = args.get(index + 1) else {
-                    return Err("Fix: --output requires a path.".to_string());
-                };
-                output = Some(PathBuf::from(path));
-                index += 2;
-            }
-            "--help" | "-h" => {
-                println!(
-                    "USAGE:\n  cargo_full run --bin xtask -- parser-coherence [--output PATH]\n\n\
-                     Writes distributed C parser ownership evidence."
-                );
-                std::process::exit(0);
-            }
-            other => return Err(format!("Fix: unknown parser-coherence option `{other}`.")),
-        }
-    }
-    Ok(output.unwrap_or_else(default_output))
+    crate::output_arg::parse_output_arg(
+        args,
+        "parser-coherence",
+        "Writes distributed C parser ownership evidence.",
+        default_output,
+    )
 }
 
 fn default_output() -> PathBuf {
@@ -739,6 +735,26 @@ mod tests {
         }
     }
 
+    /// The parser release inventory contains only components owned by this
+    /// release train. A removed sibling consumer must not keep publication
+    /// blocked through a synthetic parser contract.
+    #[test]
+    fn release_parser_components_match_live_owned_surfaces() {
+        assert_eq!(
+            component_ids(),
+            vec![
+                "vyre-frontend-c",
+                "vyrec",
+                "external-dataflow",
+                "compiler-consumer-grammar-gen",
+            ]
+        );
+        assert_eq!(
+            component_id_for_contract_artifact("compiler-consumer-contracts.json"),
+            None
+        );
+    }
+
     /// An artifact no component owns resolves to nothing rather than to a
     /// plausible-looking id derived from its name.
     #[test]
@@ -773,5 +789,35 @@ mod tests {
                 .contains(&"external-dataflow-contracts.json".to_string()),
             "Fix: the dataflow component must own `external-dataflow-contracts.json`."
         );
+    }
+
+    /// Missing prerequisites remain explicit without masquerading as live path citations.
+    #[test]
+    fn missing_artifact_locations_serialize_as_expected_paths() {
+        let location = ArtifactLocation::classify(Path::new("/missing/compiler/Cargo.toml"), false);
+        let value = serde_json::to_value(location)
+            .expect("Fix: an expected parser component path must serialize");
+
+        assert_eq!(value.get("path"), None);
+        assert_eq!(
+            value
+                .get("expected_path")
+                .and_then(serde_json::Value::as_str),
+            Some("/missing/compiler/Cargo.toml")
+        );
+    }
+
+    /// Existing evidence remains a live `path` citation that the filesystem gate verifies.
+    #[test]
+    fn existing_artifact_locations_serialize_as_live_paths() {
+        let location = ArtifactLocation::classify(Path::new("/present/parser/src/lib.rs"), true);
+        let value = serde_json::to_value(location)
+            .expect("Fix: a live parser component path must serialize");
+
+        assert_eq!(
+            value.get("path").and_then(serde_json::Value::as_str),
+            Some("/present/parser/src/lib.rs")
+        );
+        assert_eq!(value.get("expected_path"), None);
     }
 }

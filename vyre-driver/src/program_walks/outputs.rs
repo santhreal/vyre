@@ -1,5 +1,6 @@
 //! Output-buffer readback layout and budget checks.
 
+use std::ops::Range;
 use std::sync::Arc;
 
 use vyre_foundation::ir::{BufferDecl, DataType, Program};
@@ -129,28 +130,54 @@ pub fn output_binding_layouts_into(
 ///
 /// Returns when counts, element size, or declared byte range are inconsistent.
 pub fn output_binding_layout(output: &BufferDecl) -> Result<OutputBindingLayout, BackendError> {
-    let count = usize::try_from(output.count()).map_err(|_| {
+    output_binding_layout_parts(
+        output.binding(),
+        &output.name,
+        &output.element,
+        output.count(),
+        output.output_byte_range(),
+    )
+}
+
+/// Readback layout for one writable binding, with every input supplied directly.
+///
+/// [`output_binding_layout`] reads these five values off a [`BufferDecl`]. A
+/// backend that resolves a runtime-sized writable buffer (one declared without
+/// `.with_count(n)`, so `count == 0`) from the caller's input bytes calls this
+/// instead and passes the resolved element count, so allocation size, copy size,
+/// and trim offsets all come from this one routine rather than from a second,
+/// drifting copy of the same arithmetic.
+///
+/// # Errors
+///
+/// Returns when counts, element size, or the declared byte range are inconsistent.
+pub fn output_binding_layout_parts(
+    binding: u32,
+    name: &Arc<str>,
+    element: &DataType,
+    count: u32,
+    output_byte_range: Option<Range<usize>>,
+) -> Result<OutputBindingLayout, BackendError> {
+    let count = usize::try_from(count).map_err(|_| {
         BackendError::new(
             "program output element count exceeds usize. Fix: split the dispatch into smaller output buffers.",
         )
     })?;
-    output.element.validate_layout().map_err(|error| {
+    element.validate_layout().map_err(|error| {
         BackendError::new(format!(
-            "program output `{}` has malformed data-type layout metadata: {error}",
-            output.name()
+            "program output `{name}` has malformed data-type layout metadata: {error}"
         ))
     })?;
-    let full_size = output.element.packed_size_bytes(count).map_err(|error| {
+    let full_size = element.packed_size_bytes(count).map_err(|error| {
         BackendError::new(format!(
-            "program output `{}` byte size could not be computed: {error}",
-            output.name()
+            "program output `{name}` byte size could not be computed: {error}"
         ))
     })?.ok_or_else(|| {
         BackendError::new(
             "program output element type has no fixed packed byte size. Fix: validate the Program and flatten variable-size outputs before backend pipeline compilation.",
         )
     })?;
-    let layout = output_layout(output, full_size)?;
+    let layout = output_layout(output_byte_range, full_size)?;
     let word_count = full_size
         .checked_add(3)
         .and_then(|n| n.checked_div(4))
@@ -161,15 +188,18 @@ pub fn output_binding_layout(output: &BufferDecl) -> Result<OutputBindingLayout,
         })?
         .max(1);
     Ok(OutputBindingLayout {
-        binding: output.binding(),
-        name: Arc::clone(&output.name),
+        binding,
+        name: Arc::clone(name),
         layout,
         word_count,
     })
 }
 
-fn output_layout(output: &BufferDecl, full_size: usize) -> Result<OutputLayout, BackendError> {
-    let range = output.output_byte_range().unwrap_or(0..full_size);
+fn output_layout(
+    output_byte_range: Option<Range<usize>>,
+    full_size: usize,
+) -> Result<OutputLayout, BackendError> {
+    let range = output_byte_range.unwrap_or(0..full_size);
     if range.start > range.end || range.end > full_size {
         return Err(BackendError::new(format!(
             "output byte range {:?} is outside output buffer size {full_size}. Fix: declare a range within the output buffer.",

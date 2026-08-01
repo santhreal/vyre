@@ -79,7 +79,9 @@ fn run_cold_then_warm<B: VyreBackend + ?Sized>(
     // dispatch) is attributable, and sum them for the total cold wall.
     let compile_start = Instant::now();
     let engine = GpuLiteralSet::try_compile(PATTERNS).map_err(|error| {
-        vyre::BackendError::new(format!("cold-start fixture failed to compile literal set: {error}"))
+        vyre::BackendError::new(format!(
+            "cold-start fixture failed to compile literal set: {error}"
+        ))
     })?;
     let compile_ns = clamp_ns(compile_start.elapsed());
 
@@ -224,15 +226,22 @@ impl BenchCase for LiteralSetColdStart {
         ctx: &mut BenchContext,
         prepared: &mut PreparedCase,
     ) -> Result<BenchRun, BenchError> {
-        let prepared = prepared.downcast_ref::<ColdStartPrepared>().ok_or_else(|| {
-            BenchError::ExecutionFailed("prepared cold-start payload had the wrong type".to_string())
-        })?;
+        let prepared = prepared
+            .downcast_ref::<ColdStartPrepared>()
+            .ok_or_else(|| {
+                BenchError::ExecutionFailed(
+                    "prepared cold-start payload had the wrong type".to_string(),
+                )
+            })?;
 
-        let measurement =
-            run_cold_then_warm(ctx.preferred_backend.as_ref(), &prepared.corpus, prepared.max_matches)
-                .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
+        let measurement = run_cold_then_warm(
+            ctx.preferred_backend.as_ref(),
+            &prepared.corpus,
+            prepared.max_matches,
+        )
+        .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
 
-        // The warm re-dispatch must reproduce the cold scan bit-for-bit (Law 10 
+        // The warm re-dispatch must reproduce the cold scan bit-for-bit (Law 10
         // warming caches changes no result), fail the case loudly if not.
         if measurement.warm_matches != measurement.cold_matches {
             return Err(BenchError::CorrectnessViolation(
@@ -271,9 +280,7 @@ impl BenchCase for LiteralSetColdStart {
             custom.push(metric("cold_start_warm_device_ns", device_ns));
             // First-touch upload/host cost of the cold shot = cold wall not spent in
             // the matcher build nor a warm device dispatch.
-            let first_touch_ns = measurement
-                .first_scan_ns
-                .saturating_sub(device_ns);
+            let first_touch_ns = measurement.first_scan_ns.saturating_sub(device_ns);
             custom.push(metric("cold_start_first_touch_host_ns", first_touch_ns));
         }
 

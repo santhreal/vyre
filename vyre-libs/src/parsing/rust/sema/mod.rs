@@ -1027,7 +1027,7 @@ fn escapes_offset(
 /// Returns [`RustSemaError::MultipleMutableBorrows`] (E0499) or
 /// [`RustSemaError::MutableAndSharedBorrow`] (E0502) on a detected conflict.
 pub fn check_conflicts(module: &Module, resolution: &Resolution) -> Result<(), RustSemaError> {
-    use crate::borrowck::{analyze, ConflictKind};
+    use crate::{analyze_borrow_facts as analyze, ConflictKind};
 
     let def_to_id: HashMap<u32, BindingId> = resolution
         .bindings

@@ -104,11 +104,7 @@ impl ScalarLiteral {
     /// Return true for numeric zero. Bool is deliberately excluded.
     #[must_use]
     pub fn is_numeric_zero(self) -> bool {
-        match self {
-            Self::U32(0) | Self::I32(0) => true,
-            Self::F32(value) => value.to_bits() == 0.0f32.to_bits(),
-            _ => false,
-        }
+        self.is_numeric_value(0, 0, 0.0)
     }
 
     /// Return true for *integer* zero only (u32 0 or i32 0).
@@ -139,10 +135,15 @@ impl ScalarLiteral {
     /// Return true for numeric one. Bool is deliberately excluded.
     #[must_use]
     pub fn is_numeric_one(self) -> bool {
+        self.is_numeric_value(1, 1, 1.0)
+    }
+
+    fn is_numeric_value(self, unsigned: u32, signed: i32, float: f32) -> bool {
         match self {
-            Self::U32(1) | Self::I32(1) => true,
-            Self::F32(value) => value.to_bits() == 1.0f32.to_bits(),
-            _ => false,
+            Self::U32(value) => value == unsigned,
+            Self::I32(value) => value == signed,
+            Self::F32(value) => value.to_bits() == float.to_bits(),
+            Self::Bool(_) => false,
         }
     }
 

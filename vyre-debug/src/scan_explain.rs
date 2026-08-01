@@ -87,7 +87,11 @@ impl ScanExplainReport {
             && !self.pattern_set_id.trim().is_empty()
             && !self.extracted_factors.is_empty()
             && !self.selected_engines.is_empty()
-            && !self.route_evidence.literal_selectivity_basis.trim().is_empty()
+            && !self
+                .route_evidence
+                .literal_selectivity_basis
+                .trim()
+                .is_empty()
             && !self.baseline_id.trim().is_empty()
             && !self.artifact_links.is_empty()
             && self.table_bytes > 0
@@ -151,8 +155,7 @@ pub fn scan_explain_report(
     }
 
     let selected_engines = selected_engines_from_intents(&descriptor.intents)?;
-    let verifier_fragments =
-        verifier_fragments_from_sources(&descriptor.intents, scan_database)?;
+    let verifier_fragments = verifier_fragments_from_sources(&descriptor.intents, scan_database)?;
     let rejected_engines = rejected_engines_from_unsupported_features(scan_database);
     let streaming_state_bytes =
         streaming_state_bytes_from_sources(&descriptor.intents, scan_database);
@@ -391,13 +394,13 @@ mod tests {
     use super::*;
     use vyre_foundation::ir::DataType;
     use vyre_foundation::serial::wire::encode::{
-        ScanDatabaseCompatibilityRecord, ScanDatabaseMode,
-        ScanDatabaseReaderCompatibility, ScanDatabaseSectionHeader,
+        ScanDatabaseCompatibilityRecord, ScanDatabaseMode, ScanDatabaseReaderCompatibility,
+        ScanDatabaseSectionHeader,
     };
     use vyre_lower::{
-        BindingLayout, BindingSlot, BindingVisibility, DescriptorIntent,
-        DescriptorIntentKind, DescriptorIntentSet, Dispatch, KernelBody,
-        KernelDescriptor, KernelOp, KernelOpKind, LiteralValue, MemoryClass,
+        BindingLayout, BindingSlot, BindingVisibility, DescriptorIntent, DescriptorIntentKind,
+        DescriptorIntentSet, Dispatch, KernelBody, KernelDescriptor, KernelOp, KernelOpKind,
+        LiteralValue, MemoryClass,
     };
 
     fn descriptor(intents: DescriptorIntentSet) -> IntentAnnotatedDescriptor {

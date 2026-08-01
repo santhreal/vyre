@@ -4,7 +4,34 @@ Closes #31 A.7 testing program direction.
 
 ## The bar
 
-**Happy path is not the testing bar.** Unit tests prove oracle-backed behavior on representative and boundary inputs; adversarial, gap, property, fuzz, and conform work carry most of the safety budget. See fleet [`STANDARD.md`](../../../../../STANDARD.md) (Test Contract, Agent Work) and [`coordination/PUSH_TEMPLATE.md`](../../../../../coordination/PUSH_TEMPLATE.md).
+**Happy path is not the testing bar.** Unit tests prove oracle-backed behavior on
+representative and boundary inputs; adversarial, gap, property, fuzz, and conform
+work carry most of the safety budget.
+
+This program implements one non-negotiable axiom, stated here in full so that no
+reader depends on a document outside this repository: **if all tests pass, there
+must be no known micro issue in scope.** Not "no bugs", not "happy path works".
+No doc lie, no weak assertion, no missing contract, no gate that checks the wrong
+thing, no correct-but-substandard shortcut sitting in the open. Passing tests are
+not comfort, they are a claim that no known debt remains at this bar, so if you
+can name a flaw while CI is green then the suite is lying and the suite is what
+you repair first. Three corollaries are the ones that bite:
+
+- Discovery turns something red. A review or audit that names a flaw adds or
+  tightens a test or gate that fails until the flaw is fixed. Never "we will test
+  later".
+- A test that cannot fail on a bar miss is a suite defect, not coverage. Rewrite
+  it or delete it. It does not count.
+- Green CI with a known open flaw is invalid. Fix the code, add the failing test,
+  or lower the written bar in public. Never silence the signal.
+
+Volume is not excellence: a million weak tests do not satisfy the axiom, and one
+falsifiable test per micro class does. Large-scale execution (proptest, fuzz,
+conform) serves the axiom rather than replacing it.
+
+Push reporting for multi-crate waves uses an internal maintainer template that is
+not part of this repository and has no bearing on an external contribution.
+Nothing in this program depends on it.
 
 vyre + consumer measure themselves against four testing programs:
 

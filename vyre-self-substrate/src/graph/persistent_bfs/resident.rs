@@ -117,8 +117,11 @@ pub fn bfs_expand_resident_graph_with_scratch_into(
     }
     let frontier_bytes =
         u32_word_bytes(plan.frontier_words(), "bfs_expand_resident_graph frontier")?;
-    let frontier_handles =
-        ensure_resident_query_handles(dispatcher, scratch, &[frontier_bytes, frontier_bytes, 4, 4])?;
+    let frontier_handles = ensure_resident_query_handles(
+        dispatcher,
+        scratch,
+        &[frontier_bytes, frontier_bytes, 4, 4],
+    )?;
     write_u32_slice_le_bytes(&mut scratch.frontier_in_bytes, frontier_in);
 
     let uploads = [(frontier_handles[0], scratch.frontier_in_bytes.as_slice())];
@@ -256,7 +259,12 @@ pub fn bfs_expand_resident_graph_batch_with_scratch_into(
     let frontier_handles = ensure_resident_query_handles(
         dispatcher,
         scratch,
-        &[frontier_bytes, frontier_bytes, changed_bytes, converged_bytes],
+        &[
+            frontier_bytes,
+            frontier_bytes,
+            changed_bytes,
+            converged_bytes,
+        ],
     )?;
     write_u32_slice_le_bytes(&mut scratch.frontier_in_bytes, frontier_inputs);
 

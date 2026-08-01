@@ -56,4 +56,3 @@ fn egraph_kernel_args_into_reuses_capacity_and_preserves_abi_order() {
         &mut rewrite.first_item as *mut _ as *mut std::ffi::c_void
     );
 }
-

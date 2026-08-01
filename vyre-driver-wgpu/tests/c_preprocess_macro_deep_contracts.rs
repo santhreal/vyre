@@ -18,7 +18,9 @@
 #![allow(clippy::erasing_op)]
 #![allow(deprecated)]
 
+mod c_token_support;
 mod common;
+use c_token_support::{assemble, assert_pg_row, find_row_for_lexeme, row_typed_kind, Assembled};
 use common::{decode_u32_words, u32_bytes};
 use std::sync::OnceLock;
 
@@ -26,7 +28,6 @@ use c_grammar_gen::lex_c11_max_munch_kinds;
 use vyre::ir::Expr;
 use vyre::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_libs::parsing::c::lex::keyword::reference_c_keyword_types;
 use vyre_libs::parsing::c::lex::lexer::c11_lexer;
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::lower::{c_lower_ast_to_pg_nodes, reference_ast_to_pg_nodes};
@@ -193,47 +194,6 @@ fn run_conditional_mask_with_directives(
 const VAST_STRIDE_U32: usize = 10;
 const PG_STRIDE_U32: usize = 6;
 
-struct Assembled {
-    source: String,
-    #[allow(dead_code)]
-    raw_kinds: Vec<u32>,
-    tok_types: Vec<u32>,
-    tok_starts: Vec<u32>,
-    tok_lens: Vec<u32>,
-}
-
-fn assemble(lexemes: &[(&str, u32)]) -> Assembled {
-    let mut source = String::new();
-    let mut tok_starts = Vec::new();
-    let mut tok_lens = Vec::new();
-    let mut raw_kinds = Vec::new();
-
-    for (lex, kind) in lexemes {
-        if *kind == TOK_WHITESPACE || *kind == TOK_COMMENT {
-            source.push_str(lex);
-            continue;
-        }
-        if !source.is_empty() && !source.ends_with('\n') {
-            source.push(' ');
-        }
-        tok_starts.push(source.len() as u32);
-        source.push_str(lex);
-        tok_lens.push(lex.len() as u32);
-        raw_kinds.push(*kind);
-    }
-
-    let tok_types =
-        reference_c_keyword_types(&raw_kinds, &tok_starts, &tok_lens, source.as_bytes());
-
-    Assembled {
-        source,
-        raw_kinds,
-        tok_types,
-        tok_starts,
-        tok_lens,
-    }
-}
-
 fn word_at(buf: &[u8], word: usize) -> u32 {
     let offset = word * 4;
     u32::from_le_bytes(buf[offset..offset + 4].try_into().unwrap())
@@ -241,23 +201,6 @@ fn word_at(buf: &[u8], word: usize) -> u32 {
 
 fn node_count_from_vast(vast: &[u8]) -> u32 {
     u32::try_from(vast.len() / (VAST_STRIDE_U32 * 4)).unwrap_or_default()
-}
-
-fn row_typed_kind(typed_vast: &[u8], idx: usize) -> u32 {
-    word_at(typed_vast, idx * VAST_STRIDE_U32)
-}
-
-fn find_row_for_lexeme(assembled: &Assembled, needle: &str) -> usize {
-    assembled
-        .tok_starts
-        .iter()
-        .zip(&assembled.tok_lens)
-        .position(|(start, len)| {
-            let s = *start as usize;
-            let e = s.saturating_add(*len as usize);
-            assembled.source.as_bytes().get(s..e) == Some(needle.as_bytes())
-        })
-        .unwrap_or_else(|| panic!("lexeme {needle:?} not found in fixture"))
 }
 
 fn run_reference_pg_lower(typed_vast: &[u8]) -> Vec<u8> {
@@ -301,21 +244,6 @@ fn run_cpu_pipeline(assembled: &Assembled) -> PipelineOut {
         expr_shape,
         pg,
     }
-}
-
-fn assert_pg_row(assembled: &Assembled, pg: &[u8], typed: &[u8], idx: usize, kind: u32) {
-    assert_eq!(row_typed_kind(typed, idx), kind, "typed kind at {idx}");
-    assert_eq!(word_at(pg, idx * PG_STRIDE_U32), kind, "PG kind at {idx}");
-    assert_eq!(
-        word_at(pg, idx * PG_STRIDE_U32 + 1),
-        assembled.tok_starts[idx],
-        "PG span_start at {idx}"
-    );
-    assert_eq!(
-        word_at(pg, idx * PG_STRIDE_U32 + 2),
-        assembled.tok_starts[idx] + assembled.tok_lens[idx],
-        "PG span_end at {idx}"
-    );
 }
 
 fn assert_shape_none(expr_shape: &[u8], idx: usize) {

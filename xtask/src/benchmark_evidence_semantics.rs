@@ -1,6 +1,4 @@
 use std::collections::{BTreeMap, BTreeSet};
-use std::fs;
-use std::io::{self, Read};
 use std::path::{Component, Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 
@@ -11,6 +9,206 @@ static CURRENT_SOURCE_TREE_FINGERPRINTS: OnceLock<Mutex<BTreeMap<PathBuf, String
     OnceLock::new();
 const MAX_BENCHMARK_EVIDENCE_SEMANTIC_TEXT_BYTES: u64 = 16_777_216;
 const BENCHMARK_SCHEMA_DIGEST_CHAIN_PREFIX: &str = "benchmark-schema-digest-chain:v1:";
+
+pub(crate) fn inspect_hygiene_release_surface_coverage(
+    context: &str,
+    matrix: &Value,
+    failures: &mut Vec<String>,
+) {
+    let Some(coverage) = matrix.get("release_surface_coverage") else {
+        failures.push(format!("{context}: missing release_surface_coverage"));
+        return;
+    };
+    for field in [
+        "vyre_workspace",
+        "cuda_driver_crate",
+        "wgpu_driver_crate",
+        "dataflow_crate",
+        "vyrec_tool",
+        "surgec_grammar_gen",
+        "release_scripts",
+        "github_workflows",
+        "branch_protection_controls",
+    ] {
+        if coverage.get(field).and_then(Value::as_bool) != Some(true) {
+            failures.push(format!(
+                "{context}: release_surface_coverage.{field} must be true"
+            ));
+        }
+    }
+    for (field, required) in [
+        (
+            "resource_bound_patterns",
+            &[
+                "std_thread_sleep",
+                "thread_sleep",
+                "tokio_sleep",
+                "unbounded_read",
+            ][..],
+        ),
+        (
+            "hidden_fallback_patterns",
+            &[
+                "silent_gpu_skip",
+                "silent_gpu_skipped",
+                "gpu_unavailable_skip",
+                "cfg_not_gpu",
+                "cpu_fallback",
+                "software_fallback",
+                "fallback_dispatch",
+                "falling_back_to_cpu",
+                "fallback_to_cpu",
+                "synthetic_gpu_timing",
+                "fake_gpu_timing_formula",
+            ][..],
+        ),
+        (
+            "release_tooling_patterns",
+            &[
+                "raw_workspace_cargo",
+                "invalid_cargo_full_xtask",
+                "heredoc",
+                "missing_cargo_wrapper",
+            ][..],
+        ),
+    ] {
+        let values = coverage.get(field).and_then(Value::as_array);
+        for required_value in required {
+            if !values.is_some_and(|values| {
+                values
+                    .iter()
+                    .any(|value| value.as_str() == Some(*required_value))
+            }) {
+                failures.push(format!(
+                    "{context}: release_surface_coverage.{field} is missing `{required_value}`"
+                ));
+            }
+        }
+    }
+}
+pub(crate) fn inspect_optimization_analysis_fixture(
+    context: &str,
+    value: &Value,
+    failures: &mut Vec<String>,
+) {
+    let missing_required = value
+        .get("missing_required_families")
+        .and_then(Value::as_array)
+        .map_or(usize::MAX, Vec::len);
+    if missing_required != 0 {
+        failures.push(format!(
+            "{context}: missing_required_families has {missing_required} entrie(s), expected zero"
+        ));
+    }
+    let total_fixture_cases = value
+        .get("total_fixture_cases")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    let total_triggered_cases = value
+        .get("total_triggered_cases")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    if total_fixture_cases < 512 || total_triggered_cases != total_fixture_cases {
+        failures.push(format!(
+            "{context}: total_fixture_cases={total_fixture_cases}, total_triggered_cases={total_triggered_cases}; needs 512 fully-triggered A13-A16 cases"
+        ));
+    }
+    let Some(families) = value.get("families").and_then(Value::as_array) else {
+        failures.push(format!("{context}: missing families array"));
+        return;
+    };
+    inspect_duplicate_object_rows(
+        context,
+        value,
+        "families",
+        "family",
+        "analysis fixture family rows",
+        failures,
+    );
+    for (required, family_label, required_fields) in [
+        (
+            "A13-coalesce-fixture",
+            "A13",
+            &[
+                "coalesced_unit_stride_sites",
+                "strided_sites",
+                "broadcast_sites",
+            ][..],
+        ),
+        (
+            "A14-shared-mem-promote-fixture",
+            "A14",
+            &["shared_mem_candidates", "shared_mem_tile_bytes"][..],
+        ),
+        (
+            "A15-bank-conflict-fixture",
+            "A15",
+            &["bank_conflict_sites", "bank_conflict_critical_sites"][..],
+        ),
+        (
+            "A16-vec-pack-fixture",
+            "A16",
+            &["vec_pack_chains", "vec_pack_ops_eliminated"][..],
+        ),
+    ] {
+        let Some(family) = families
+            .iter()
+            .find(|family| family.get("family").and_then(Value::as_str) == Some(required))
+        else {
+            failures.push(format!(
+                "{context}: missing analysis fixture family `{required}`"
+            ));
+            continue;
+        };
+        let cases = family.get("cases").and_then(Value::as_u64).unwrap_or(0);
+        let triggered = family
+            .get("triggered_cases")
+            .and_then(Value::as_u64)
+            .unwrap_or(0);
+        let analysis_sites = family
+            .get("analysis_sites")
+            .and_then(Value::as_u64)
+            .unwrap_or(0);
+        if cases < 128 || triggered != cases || analysis_sites < cases {
+            failures.push(format!(
+                "{context}: analysis fixture `{required}` has cases={cases}, triggered_cases={triggered}, analysis_sites={analysis_sites}; needs at least 128 cases, every case triggered, and at least one analysis site per case"
+            ));
+        }
+        for field in required_fields {
+            if family.get(field).and_then(Value::as_u64).unwrap_or(0) == 0 {
+                failures.push(format!(
+                    "{context}: {family_label} fixture has zero `{field}`"
+                ));
+            }
+        }
+    }
+}
+
+pub(crate) fn report_status_for_path<'a>(suite: &'a Value, artifact: &str) -> Option<&'a Value> {
+    suite
+        .get("artifact_statuses")
+        .and_then(Value::as_array)
+        .and_then(|statuses| {
+            statuses
+                .iter()
+                .find(|status| status.get("path").and_then(Value::as_str) == Some(artifact))
+        })
+}
+
+pub(crate) fn inspect_duplicate_object_rows(
+    evidence: &str,
+    value: &Value,
+    array_field: &str,
+    value_field: &str,
+    label: &str,
+    blockers: &mut Vec<String>,
+) {
+    let duplicates = duplicate_nonblank_object_array_field_values(value, array_field, value_field);
+    if !duplicates.is_empty() {
+        let duplicates = duplicates.into_iter().collect::<Vec<_>>().join(", ");
+        blockers.push(format!("{evidence}: duplicate {label}: {duplicates}"));
+    }
+}
 
 pub(crate) fn benchmark_schema_digest_chain_value(
     artifact_kind: &str,
@@ -80,10 +278,7 @@ pub(crate) fn benchmark_schema_digest_chain_issues(
         .get("schema_version")
         .and_then(Value::as_u64)
         .unwrap_or(0);
-    if chain
-        .get("artifact_schema_version")
-        .and_then(Value::as_u64)
-        != Some(artifact_schema_version)
+    if chain.get("artifact_schema_version").and_then(Value::as_u64) != Some(artifact_schema_version)
     {
         issues.push(format!(
             "{evidence}: schema_digest_chain.artifact_schema_version must match artifact schema_version={artifact_schema_version}"
@@ -575,6 +770,22 @@ pub(crate) fn duplicate_nonblank_object_array_field_values(
         })
 }
 
+pub(crate) fn append_duplicate_object_row_finding(
+    value: &Value,
+    array_field: &str,
+    object_field: &str,
+    context: &str,
+    findings: &mut Vec<String>,
+) {
+    let duplicates = duplicate_nonblank_object_array_field_values(value, array_field, object_field);
+    if !duplicates.is_empty() {
+        findings.push(format!(
+            "{context}: {}",
+            duplicates.into_iter().collect::<Vec<_>>().join(", ")
+        ));
+    }
+}
+
 pub(crate) fn cuda_release_axes_source_artifact_issues(
     workspace_root: &Path,
     axes: &Value,
@@ -594,7 +805,13 @@ pub(crate) fn cuda_release_axes_source_artifact_issues(
             )),
         }
     }
-    let source_artifacts = release_axes_source_artifacts(axes, &mut issues);
+    let source_artifacts = artifact_string_set(
+        axes,
+        "source_artifacts",
+        "source_artifacts",
+        "source_artifacts array is missing",
+        &mut issues,
+    );
     if source_artifacts.len() < 12 {
         issues.push(format!(
             "source_artifacts has {} CUDA workload artifact(s), needs at least 12",
@@ -602,7 +819,13 @@ pub(crate) fn cuda_release_axes_source_artifact_issues(
         ));
     }
 
-    let suite_artifacts = cuda_suite_artifact_paths(cuda_suite, &mut issues);
+    let suite_artifacts = artifact_string_set(
+        cuda_suite,
+        "artifacts",
+        "cuda-release-suite artifacts",
+        "cuda-release-suite artifacts array is missing",
+        &mut issues,
+    );
     if suite_artifacts.is_empty() {
         issues.push("cuda-release-suite artifacts are empty or missing".to_string());
     }
@@ -630,16 +853,19 @@ pub(crate) fn cuda_release_axes_source_artifact_issues(
             continue;
         }
         let artifact_path = resolve_benchmark_artifact_path(workspace_root, &artifact);
-        let text =
-            match read_text_bounded(&artifact_path, MAX_BENCHMARK_EVIDENCE_SEMANTIC_TEXT_BYTES) {
-                Ok(text) => text,
-                Err(error) => {
-                    issues.push(format!(
-                        "source_artifact `{artifact}` is unreadable: {error}"
-                    ));
-                    continue;
-                }
-            };
+        let text = match crate::output_arg::read_text_bounded(
+            &artifact_path,
+            MAX_BENCHMARK_EVIDENCE_SEMANTIC_TEXT_BYTES,
+            "evidence",
+        ) {
+            Ok(text) => text,
+            Err(error) => {
+                issues.push(format!(
+                    "source_artifact `{artifact}` is unreadable: {error}"
+                ));
+                continue;
+            }
+        };
         let report = match serde_json::from_str::<Value>(&text) {
             Ok(report) => report,
             Err(error) => {
@@ -686,16 +912,19 @@ pub(crate) fn cpu_sota_100x_source_artifact_issues(
             continue;
         }
         let artifact_path = resolve_benchmark_artifact_path(workspace_root, &artifact);
-        let text =
-            match read_text_bounded(&artifact_path, MAX_BENCHMARK_EVIDENCE_SEMANTIC_TEXT_BYTES) {
-                Ok(text) => text,
-                Err(error) => {
-                    issues.push(format!(
-                        "source_artifact `{artifact}` is unreadable: {error}"
-                    ));
-                    continue;
-                }
-            };
+        let text = match crate::output_arg::read_text_bounded(
+            &artifact_path,
+            MAX_BENCHMARK_EVIDENCE_SEMANTIC_TEXT_BYTES,
+            "evidence",
+        ) {
+            Ok(text) => text,
+            Err(error) => {
+                issues.push(format!(
+                    "source_artifact `{artifact}` is unreadable: {error}"
+                ));
+                continue;
+            }
+        };
         let report = match serde_json::from_str::<Value>(&text) {
             Ok(report) => report,
             Err(error) => {
@@ -1197,20 +1426,18 @@ fn inspect_release_axis_source_artifact_freshness(
     }
 }
 
-fn release_axes_source_artifacts(axes: &Value, issues: &mut Vec<String>) -> BTreeSet<String> {
-    let Some(items) = axes.get("source_artifacts").and_then(Value::as_array) else {
-        issues.push("source_artifacts array is missing".to_string());
+fn artifact_string_set(
+    value: &Value,
+    array_field: &str,
+    label: &str,
+    missing_message: &str,
+    issues: &mut Vec<String>,
+) -> BTreeSet<String> {
+    let Some(items) = value.get(array_field).and_then(Value::as_array) else {
+        issues.push(missing_message.to_string());
         return BTreeSet::new();
     };
-    collect_nonblank_string_set("source_artifacts", items, issues)
-}
-
-fn cuda_suite_artifact_paths(cuda_suite: &Value, issues: &mut Vec<String>) -> BTreeSet<String> {
-    let Some(items) = cuda_suite.get("artifacts").and_then(Value::as_array) else {
-        issues.push("cuda-release-suite artifacts array is missing".to_string());
-        return BTreeSet::new();
-    };
-    collect_nonblank_string_set("cuda-release-suite artifacts", items, issues)
+    collect_nonblank_string_set(label, items, issues)
 }
 
 fn collect_nonblank_string_set(
@@ -1238,22 +1465,6 @@ fn resolve_benchmark_artifact_path(workspace_root: &Path, artifact: &str) -> Pat
     } else {
         workspace_root.join(candidate)
     }
-}
-
-fn read_text_bounded(path: &Path, max_bytes: u64) -> io::Result<String> {
-    let mut reader = fs::File::open(path)?.take(max_bytes.saturating_add(1));
-    let mut text = String::new();
-    reader.read_to_string(&mut text)?;
-    if text.len() as u64 > max_bytes {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            format!(
-                "{} exceeds {max_bytes} byte evidence read cap",
-                path.display()
-            ),
-        ));
-    }
-    Ok(text)
 }
 
 pub(crate) fn benchmark_report_summary_case_evidence_mismatch(report: &Value) -> Option<String> {
@@ -2269,6 +2480,25 @@ pub(crate) fn cpu_sota_100x_case_counts(artifact_report: &Value) -> (u64, u64) {
         })
 }
 
+pub(crate) fn inspect_cpu_sota_100x_case_count_consistency(
+    context: &str,
+    report: &Value,
+    findings: &mut Vec<String>,
+) {
+    let (derived_contract_cases, derived_passing_cases) = cpu_sota_100x_case_counts(report);
+    for (field, derived) in [
+        ("cpu_sota_100x_contract_case_count", derived_contract_cases),
+        ("cpu_sota_100x_passing_case_count", derived_passing_cases),
+    ] {
+        let declared = report.get(field).and_then(Value::as_u64).unwrap_or(0);
+        if declared != derived {
+            findings.push(format!(
+                "{context} {field}={declared}, but cases prove {derived}"
+            ));
+        }
+    }
+}
+
 pub(crate) fn benchmark_case_proves_cpu_sota_100x(case: &Value, backend_id: Option<&str>) -> bool {
     benchmark_case_has_cpu_sota_contract(case, backend_id, 100.0)
         && benchmark_case_passes_summary_evidence(case)
@@ -2312,6 +2542,82 @@ fn metric_p50_f64(metric: Option<&Value>) -> Option<f64> {
         .or_else(|| metric.as_u64().map(|value| value as f64))
 }
 
+pub(crate) fn metrics_has_zero_any(
+    metrics: Option<&serde_json::Map<String, Value>>,
+    fields: &[&str],
+) -> bool {
+    metrics.is_some_and(|metrics| {
+        fields.iter().any(|field| {
+            metrics
+                .get(*field)
+                .is_some_and(|value| metric_p50_f64(Some(value)) == Some(0.0))
+        })
+    })
+}
+
+pub(crate) fn metrics_has_any(
+    metrics: Option<&serde_json::Map<String, Value>>,
+    fields: &[&str],
+) -> bool {
+    metrics.is_some_and(|metrics| {
+        fields.iter().any(|field| {
+            metrics.get(*field).is_some_and(|value| {
+                value
+                    .get("samples")
+                    .and_then(Value::as_u64)
+                    .is_some_and(|samples| samples > 0)
+                    || metric_p50_f64(Some(value)).is_some_and(|sample| sample > 0.0)
+                    || value.as_u64().is_some()
+                    || value.as_f64().is_some_and(|number| number >= 0.0)
+            })
+        })
+    })
+}
+
+pub(crate) fn benchmark_before_after_semantic_win(
+    case_id: &str,
+    metrics: Option<&serde_json::Map<String, Value>>,
+) -> bool {
+    let Some(metrics) = metrics else {
+        return false;
+    };
+    match case_id {
+        "lower.rewrites.impact.corpus" => {
+            metric_p50_f64(metrics.get("lower_ops_eliminated")).is_some_and(|value| value > 0.0)
+                || metric_p50_f64(metrics.get("lower_optimized_issue_score"))
+                    .zip(metric_p50_f64(metrics.get("lower_baseline_issue_score")))
+                    .is_some_and(|(optimized, baseline)| optimized < baseline)
+        }
+        "foundation.optimizer.impact" => metric_p50_f64(metrics.get("optimizer_nodes_eliminated"))
+            .is_some_and(|value| value > 0.0),
+        "lower.egraph_saturation" => {
+            metric_p50_f64(metrics.get("egraph_applied_rewrites")).is_some_and(|value| value > 0.0)
+                && metric_p50_f64(metrics.get("egraph_output_ops"))
+                    .zip(metric_p50_f64(metrics.get("egraph_baseline_ops_after")))
+                    .is_some_and(|(output, baseline)| output < baseline)
+        }
+        "lower.alias_aware_optimizations" => {
+            metric_p50_f64(metrics.get("alias_pass_wins")).is_some_and(|value| value >= 5.0)
+        }
+        _ => false,
+    }
+}
+
+pub(crate) fn metrics_has_positive_any(
+    metrics: Option<&serde_json::Map<String, Value>>,
+    fields: &[&str],
+) -> bool {
+    metrics.is_some_and(|metrics| {
+        fields.iter().any(|field| {
+            metrics.get(*field).is_some_and(|value| {
+                metric_p50_f64(Some(value)).is_some_and(|sample| sample > 0.0)
+                    || value.as_u64().is_some_and(|number| number > 0)
+                    || value.as_f64().is_some_and(|number| number > 0.0)
+            })
+        })
+    })
+}
+
 pub(crate) fn benchmark_case_has_cpu_sota_contract(
     case: &Value,
     backend_id: Option<&str>,
@@ -2352,8 +2658,8 @@ pub(crate) fn backend_suite_inventory_issues(suite: &Value) -> Vec<BackendSuiteI
     let artifact_count = suite_array_len(suite, "artifacts");
     let status_count = suite_array_len(suite, "artifact_statuses");
     let artifact_counts = suite_artifact_path_counts(suite);
-    let status_counts = suite_status_path_counts(suite);
-    let status_family_counts = suite_status_family_counts(suite);
+    let status_counts = suite_status_counts(suite, "path");
+    let status_family_counts = suite_status_counts(suite, "family_id");
     let artifact_paths = artifact_counts.keys().cloned().collect::<BTreeSet<_>>();
     let status_paths = status_counts.keys().cloned().collect::<BTreeSet<_>>();
     let mut issues = Vec::new();
@@ -2418,7 +2724,7 @@ pub(crate) fn backend_suite_matrix_coverage_issues(
         .filter_map(|family| family.get("id").and_then(non_empty_str))
         .map(str::to_string)
         .collect::<BTreeSet<_>>();
-    let suite_family_ids = suite_status_family_counts(suite)
+    let suite_family_ids = suite_status_counts(suite, "family_id")
         .into_keys()
         .collect::<BTreeSet<_>>();
     let mut issues = Vec::new();
@@ -2928,17 +3234,7 @@ fn metric_value_any(metrics: Option<&Map<String, Value>>, fields: &[&str]) -> Op
 }
 
 fn metric_value(metric: &Value) -> Option<f64> {
-    metric
-        .get("p50")
-        .and_then(Value::as_f64)
-        .or_else(|| {
-            metric
-                .get("p50")
-                .and_then(Value::as_u64)
-                .map(|value| value as f64)
-        })
-        .or_else(|| metric.as_f64())
-        .or_else(|| metric.as_u64().map(|value| value as f64))
+    metric_p50_f64(Some(metric))
 }
 
 fn optimization_passes_contain(case: &Value, expected: &str) -> bool {
@@ -3038,28 +3334,15 @@ fn suite_artifact_path_counts(suite: &Value) -> BTreeMap<String, usize> {
         })
 }
 
-fn suite_status_path_counts(suite: &Value) -> BTreeMap<String, usize> {
+fn suite_status_counts(suite: &Value, field: &str) -> BTreeMap<String, usize> {
     suite
         .get("artifact_statuses")
         .and_then(Value::as_array)
         .into_iter()
         .flatten()
-        .filter_map(|status| status.get("path").and_then(non_empty_str))
-        .fold(BTreeMap::new(), |mut counts, path| {
-            *counts.entry(path.to_string()).or_default() += 1;
-            counts
-        })
-}
-
-fn suite_status_family_counts(suite: &Value) -> BTreeMap<String, usize> {
-    suite
-        .get("artifact_statuses")
-        .and_then(Value::as_array)
-        .into_iter()
-        .flatten()
-        .filter_map(|status| status.get("family_id").and_then(non_empty_str))
-        .fold(BTreeMap::new(), |mut counts, family_id| {
-            *counts.entry(family_id.to_string()).or_default() += 1;
+        .filter_map(|status| status.get(field).and_then(non_empty_str))
+        .fold(BTreeMap::new(), |mut counts, value| {
+            *counts.entry(value.to_string()).or_default() += 1;
             counts
         })
 }
@@ -3067,7 +3350,7 @@ fn suite_status_family_counts(suite: &Value) -> BTreeMap<String, usize> {
 fn suite_all_artifact_paths(suite: &Value) -> BTreeSet<String> {
     suite_artifact_path_counts(suite)
         .into_keys()
-        .chain(suite_status_path_counts(suite).into_keys())
+        .chain(suite_status_counts(suite, "path").into_keys())
         .collect()
 }
 

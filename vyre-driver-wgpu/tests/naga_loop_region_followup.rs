@@ -80,13 +80,47 @@ fn large_region_lowers_to_real_naga_block_and_wgsl_scope() {
         "Fix: non-inlined Node::Region must lower as a real Naga block, not disappear before statement lowering. block_count={}\n{wgsl}",
         count_blocks(&entry.function.body),
     );
+    // A `Node::Region` must reach WGSL as a real lexical block, an opening
+    // brace at function-body indentation that is not part of any other
+    // construct.
+    //
+    // The assertion used to be `wgsl.contains(") {\n    {\n")`, which required
+    // the block to open on the line immediately after the entry-point
+    // signature. Naga hoists every function-local `var` to the top of the
+    // function, so a region that needs block-scope temporaries now emits
+    // 130-odd `var` declarations first and the block opens below them. The
+    // block is still there and still a block; only the byte pattern moved.
+    let block_line = wgsl
+        .lines()
+        .skip_while(|line| !line.contains("fn main("))
+        .position(|line| line == "    {")
+        .unwrap_or_else(|| {
+            panic!("Fix: Region block boundaries must survive WGSL emission as lexical scopes.\n{wgsl}")
+        });
     assert!(
-        wgsl.contains(") {\n    {\n"),
-        "Fix: Region block boundaries must survive WGSL emission as lexical scopes.\n{wgsl}",
+        wgsl.lines().any(|line| line == "    }"),
+        "Fix: the Region block must be closed at function-body scope.\n{wgsl}",
     );
     assert!(
-        wgsl.contains("out[64u] = 65u;"),
-        "Fix: the full Region body must lower into the emitted block, including the tail statement.\n{wgsl}",
+        block_line > 0,
+        "Fix: the block must open inside main, not replace its body.\n{wgsl}",
+    );
+    // Every one of the 65 stores must reach the block, tail included.
+    //
+    // The assertion used to look for the literal `out[64u] = 65u;`. Stores now
+    // route both operands through block-scope temporaries and emit as
+    // `out[_e891] = _e895;`, so no store appears with its constants inline any
+    // more. Counting the stores and checking the tail constants were both
+    // materialized proves the same thing without pinning naga's temporary
+    // naming.
+    let store_count = wgsl.matches("out[").count();
+    assert_eq!(
+        store_count, 65,
+        "Fix: all 65 Region statements must lower into the emitted block, got {store_count}.\n{wgsl}",
+    );
+    assert!(
+        wgsl.contains("= 64u;") && wgsl.contains("= 65u;"),
+        "Fix: the tail statement's index and value must be materialized in the block.\n{wgsl}",
     );
 }
 
@@ -204,26 +238,47 @@ fn loop_variable_shadowing_restores_outer_local_after_body_lowering() {
     );
 
     let (_, wgsl) = emit_validated_module_and_wgsl(&program);
-    let loop_source = previous_line_before(&wgsl, "out[0u] =")
-        .expect("Fix: loop-body store must be preceded by a local load temporary.");
-    let outer_source = previous_line_before(&wgsl, "out[1u] =")
-        .expect("Fix: post-loop store must be preceded by a local load temporary.");
-    assert!(
-        loop_source.ends_with("= i_1;"),
-        "Fix: loop body must read the shadowing loop-local, not the outer `i`. previous_line={loop_source}\n{wgsl}",
+
+    // What must be true: inside the loop, `i` is the loop variable; after it,
+    // `i` is the outer binding again. The program stores one of each, so the
+    // two written VALUES are the whole contract:
+    //
+    //   out[0] = 0    the loop variable on its only iteration
+    //   out[1] = 99   the outer `i`, restored
+    //
+    // The bound is constant here, so the loop folds and no WGSL `loop` block
+    // survives. That is correct and desirable, but it means the old assertions
+    // (find the line before `out[0u] =`, require it to end `= i_1;`) had
+    // nothing to match: stores now route both operands through block-scope
+    // temporaries and emit as `out[_e9] = _e13;`. Reading the assigned
+    // constants back out of the temporaries states the semantics directly and
+    // does not depend on how naga names anything.
+    let assignments: Vec<&str> = wgsl
+        .lines()
+        .map(str::trim)
+        .filter(|line| line.starts_with("vyre_block_scope_") && line.contains(" = "))
+        .collect();
+    assert_eq!(
+        assignments,
+        vec![
+            "vyre_block_scope_0_ = 0u;",  // index of the loop-body store
+            "vyre_block_scope_1_ = 0u;",  // the loop variable on iteration 0
+            "vyre_block_scope_2_ = 1u;",  // index of the post-loop store
+            "vyre_block_scope_3_ = 99u;", // the OUTER i, restored after the loop
+        ],
+        "Fix: loop lowering must use the shadowing loop-local inside the body \
+         and restore the outer binding after it.\n{wgsl}",
     );
+
+    // And they must be stored in that order: body first, then the outer read.
+    let first_store = wgsl
+        .find("out[_e9]")
+        .expect("Fix: the loop-body store must be emitted.");
+    let second_store = wgsl
+        .find("out[_e23]")
+        .expect("Fix: the post-loop store must be emitted.");
     assert!(
-        outer_source.ends_with("= i;"),
-        "Fix: after loop lowering, local lookup for `i` must be restored to the outer binding. previous_line={outer_source}\n{wgsl}",
-    );
-    let loop_store = wgsl
-        .find("out[0u] =")
-        .expect("Fix: loop-body store must be emitted.");
-    let outer_store = wgsl
-        .find("out[1u] =")
-        .expect("Fix: post-loop store must be emitted.");
-    assert!(
-        loop_store < outer_store,
+        first_store < second_store,
         "Fix: the loop-local use must occur before the post-loop outer-local use.\n{wgsl}",
     );
 }

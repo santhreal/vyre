@@ -338,13 +338,14 @@ impl VulkanDevice {
         };
 
         // From here both `fence` and `command_buffer` must be released on any error path.
-        let cleanup = |device: &ash::Device, pool: vk::CommandPool, f: vk::Fence, cb: vk::CommandBuffer| {
-            // SAFETY: fence and cb were created/allocated successfully and are owned here.
-            unsafe {
-                device.destroy_fence(f, None);
-                device.free_command_buffers(pool, &[cb]);
-            }
-        };
+        let cleanup =
+            |device: &ash::Device, pool: vk::CommandPool, f: vk::Fence, cb: vk::CommandBuffer| {
+                // SAFETY: fence and cb were created/allocated successfully and are owned here.
+                unsafe {
+                    device.destroy_fence(f, None);
+                    device.free_command_buffers(pool, &[cb]);
+                }
+            };
 
         let submit_info = vk::SubmitInfo {
             command_buffer_count: 1,
@@ -858,7 +859,11 @@ mod tests {
                 BufferDecl::output("out", 1, DataType::U32), // count=0: runtime-sized
             ],
             [64, 1, 1],
-            vec![Node::store("out", Expr::gid_x(), Expr::load("input", Expr::gid_x()))],
+            vec![Node::store(
+                "out",
+                Expr::gid_x(),
+                Expr::load("input", Expr::gid_x()),
+            )],
         );
         let grid = infer_grid(&program, [64, 1, 1])
             .expect("Fix: infer_grid must succeed when input count is non-zero");
@@ -879,7 +884,11 @@ mod tests {
                 BufferDecl::output("out", 1, DataType::U32), // count=0
             ],
             [64, 1, 1],
-            vec![Node::store("out", Expr::gid_x(), Expr::load("input", Expr::gid_x()))],
+            vec![Node::store(
+                "out",
+                Expr::gid_x(),
+                Expr::load("input", Expr::gid_x()),
+            )],
         );
         let result = infer_grid(&program, [64, 1, 1]);
         assert!(
@@ -897,14 +906,11 @@ mod tests {
     #[test]
     fn test_infer_grid_static_output_count_unchanged() {
         let program = Program::wrapped(
-            vec![
-                BufferDecl::output("out", 0, DataType::U32).with_count(256),
-            ],
+            vec![BufferDecl::output("out", 0, DataType::U32).with_count(256)],
             [64, 1, 1],
             vec![Node::store("out", Expr::gid_x(), Expr::u32(0))],
         );
-        let grid = infer_grid(&program, [64, 1, 1])
-            .expect("Fix: static output count must succeed");
+        let grid = infer_grid(&program, [64, 1, 1]).expect("Fix: static output count must succeed");
         assert_eq!(
             grid[0],
             4, // ceil(256/64) = 4

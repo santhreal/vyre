@@ -50,6 +50,9 @@ pub enum FusionError {
     /// more than the shared scheduling policy allows. Caller should fall back
     /// to per-arm dispatch or split the batch.
     OverDispatch(FusionOverDispatchError),
+    /// An arm whose correctness depends on its own workgroup geometry was
+    /// asked to run under the widened fused geometry.
+    WorkgroupGeometry(FusionWorkgroupGeometryError),
 }
 
 impl std::fmt::Display for FusionError {
@@ -58,7 +61,45 @@ impl std::fmt::Display for FusionError {
             FusionError::SelfAliasing(e) => write!(f, "{e}"),
             FusionError::Aliasing(e) => write!(f, "{e}"),
             FusionError::OverDispatch(e) => write!(f, "{e}"),
+            FusionError::WorkgroupGeometry(e) => write!(f, "{e}"),
         }
+    }
+}
+
+/// An arm that reasons about its own workgroup cannot run under a wider one.
+///
+/// The fused launch takes the axis-wise maximum of the arms' workgroup sizes,
+/// which is harmless for an arm whose invocations are independent. It is not
+/// harmless for an arm that synchronizes its workgroup or keeps state in
+/// workgroup memory: a workgroup barrier has to be reached by every invocation
+/// in the workgroup, and an arm written for 4 invocations guards its body so
+/// that the other 252 skip it. The barrier is then non-uniform, which is
+/// undefined, and the workgroup buffers are sized for the narrow geometry.
+///
+/// The observed symptom was an inclusive prefix scan built for 4 elements,
+/// fused behind a 256-wide elementwise arm, returning the wrong last lane on
+/// roughly one dispatch in ten.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FusionWorkgroupGeometryError {
+    /// Index of the arm whose geometry would change.
+    pub arm: usize,
+    /// The workgroup size that arm was built for.
+    pub arm_workgroup: [u32; 3],
+    /// The workgroup size the fused program would run it under.
+    pub fused_workgroup: [u32; 3],
+    /// What in the arm makes the widening unsafe.
+    pub reason: &'static str,
+    /// Actionable fix hint.
+    pub fix: &'static str,
+}
+
+impl std::fmt::Display for FusionWorkgroupGeometryError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "fusion would run arm {} under workgroup {:?} instead of the {:?} it was built for, and that arm {}. Fix: {}",
+            self.arm, self.fused_workgroup, self.arm_workgroup, self.reason, self.fix
+        )
     }
 }
 

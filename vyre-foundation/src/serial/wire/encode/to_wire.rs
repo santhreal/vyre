@@ -1,15 +1,19 @@
 //! Program encoder for the stable `VYRE` wire format.
 
 use super::put_node;
-use crate::ir_inner::model::program::{BufferDecl, CacheLocality, MemoryKind};
+use crate::ir_inner::model::program::{
+    BufferDecl, CacheLocality, LinearType, MemoryKind, ShapePredicate,
+};
 use crate::ir_inner::model::types::{BufferAccess, DataType};
 use crate::perf::PerfScope;
 use crate::serial::wire::encode::WireEncodeErr;
 use crate::serial::wire::framing::{
-    put_string, put_u32, put_u8, FLAG_OPAQUE_ENDIAN_FIXED, MAGIC, WIRE_FORMAT_VERSION,
+    put_string, put_u32, put_u8, FLAG_OPAQUE_ENDIAN_FIXED, MAGIC, MAX_SHAPE_PREDICATE_DEPTH,
+    WIRE_FORMAT_VERSION,
 };
 use crate::serial::wire::tags::access_tag::access_tag;
 use crate::serial::wire::Program;
+use crate::serial::{put_leb_u32, put_leb_u64};
 
 const METADATA_OP_ID: &str = "vyre.program.metadata";
 
@@ -380,6 +384,124 @@ fn put_metadata_payload(
             None => put_u8(out, 0),
         }
         put_hints_payload(out, buffer.hints());
+        // Rev 6. Before rev 6 these three fields were absent from the
+        // encoding entirely, so `from_wire` reconstructed them from defaults
+        // and a round trip silently changed the program: losing
+        // `bytes_extraction` flips a V013 validation verdict. They also sit in
+        // the canonical bytes that `Program::fingerprint` hashes, so their
+        // absence made two materially different programs share a cache
+        // identity. Emitted last in the record so rev-4 and rev-5 payloads
+        // remain decodable by skipping them.
+        put_u8(out, linear_type_tag(buffer.linear_type()));
+        put_u8(out, u8::from(buffer.bytes_extraction));
+        put_shape_predicate(out, buffer.shape_predicate(), 0)?;
+    }
+    Ok(())
+}
+
+/// Stable wire tag for a [`LinearType`].
+///
+/// Exhaustive on purpose. `LinearType` is `#[non_exhaustive]` to outside
+/// crates, but this match lives in the defining crate, so adding a variant
+/// FAILS TO COMPILE here instead of silently encoding as some default. A
+/// discipline that encodes as the wrong variant is a validation verdict
+/// changing under serialization.
+///
+/// SHARED BY TWO KEYS ON PURPOSE, and that sharing is the point. This encodes
+/// `linear_type` for the wire payload (hence for `Program::fingerprint`) and
+/// `buffer_decl_canonical_key` in `ir_inner::model::program::meta` calls the
+/// SAME function for program equality. Both keys are derived over the same
+/// struct, so giving them one encoder means a new `LinearType` variant breaks
+/// one build site and fixes both keys at once. The alternative, a second
+/// private copy of this match, is exactly how `binding` went missing from the
+/// PTX digest while remaining present in the code generator.
+pub(crate) const fn linear_type_tag(value: LinearType) -> u8 {
+    match value {
+        LinearType::Linear => 0,
+        LinearType::Affine => 1,
+        LinearType::Relevant => 2,
+        LinearType::Unrestricted => 3,
+    }
+}
+
+/// Encode an optional [`ShapePredicate`], tag `0` for `None`.
+///
+/// `And`, `Or` and `Not` are recursive, so `depth` is checked against
+/// [`MAX_SHAPE_PREDICATE_DEPTH`] before descending. The decoder enforces the
+/// same bound from the same constant, so a predicate this encoder accepts is
+/// one that decoder can read back.
+///
+/// Exhaustive for the same reason as [`linear_type_tag`]: a new predicate
+/// variant must not silently encode as something else.
+///
+/// Shared with `buffer_decl_canonical_key` for the same reason as
+/// [`linear_type_tag`]. Program equality and the wire fingerprint MUST agree on
+/// what a shape refinement is, because both are used to decide whether two
+/// programs are interchangeable, and `shape_predicate` decides a validation
+/// verdict through `validate::shape_predicate::check_shape_predicates`.
+pub(crate) fn put_shape_predicate(
+    out: &mut Vec<u8>,
+    predicate: Option<&ShapePredicate>,
+    depth: usize,
+) -> Result<(), WireEncodeErr> {
+    let Some(predicate) = predicate else {
+        put_u8(out, 0);
+        return Ok(());
+    };
+    if depth >= MAX_SHAPE_PREDICATE_DEPTH {
+        return Err(WireEncodeErr::static_msg(
+            "Fix: shape predicate nests deeper than the wire limit; flatten the And/Or/Not tree.",
+        ));
+    }
+    match predicate {
+        ShapePredicate::AtLeast(count) => {
+            put_u8(out, 1);
+            put_u32(out, *count);
+        }
+        ShapePredicate::AtMost(count) => {
+            put_u8(out, 2);
+            put_u32(out, *count);
+        }
+        ShapePredicate::Exactly(count) => {
+            put_u8(out, 3);
+            put_u32(out, *count);
+        }
+        ShapePredicate::MultipleOf(count) => {
+            put_u8(out, 4);
+            put_u32(out, *count);
+        }
+        ShapePredicate::ModEquals { modulus, remainder } => {
+            put_u8(out, 5);
+            put_u32(out, *modulus);
+            put_u32(out, *remainder);
+        }
+        ShapePredicate::AffineRange {
+            scale,
+            offset,
+            min,
+            max,
+        } => {
+            put_u8(out, 6);
+            // Two's-complement bit pattern via to_le_bytes, so the round trip
+            // is exact for negative coefficients without a sign-loss cast.
+            for value in [*scale, *offset, *min, *max] {
+                put_leb_u64(out, u64::from_le_bytes(value.to_le_bytes()));
+            }
+        }
+        ShapePredicate::And(left, right) => {
+            put_u8(out, 7);
+            put_shape_predicate(out, Some(left), depth + 1)?;
+            put_shape_predicate(out, Some(right), depth + 1)?;
+        }
+        ShapePredicate::Or(left, right) => {
+            put_u8(out, 8);
+            put_shape_predicate(out, Some(left), depth + 1)?;
+            put_shape_predicate(out, Some(right), depth + 1)?;
+        }
+        ShapePredicate::Not(inner) => {
+            put_u8(out, 9);
+            put_shape_predicate(out, Some(inner), depth + 1)?;
+        }
     }
     Ok(())
 }
@@ -625,24 +747,6 @@ fn put_leb_str(out: &mut Vec<u8>, value: &str) -> Result<(), WireEncodeErr> {
     );
     out.extend_from_slice(value.as_bytes());
     Ok(())
-}
-
-fn put_leb_u32(out: &mut Vec<u8>, value: u32) {
-    put_leb_u64(out, u64::from(value));
-}
-
-fn put_leb_u64(out: &mut Vec<u8>, mut value: u64) {
-    loop {
-        let mut byte = (value & 0x7F) as u8;
-        value >>= 7;
-        if value != 0 {
-            byte |= 0x80;
-        }
-        out.push(byte);
-        if value == 0 {
-            break;
-        }
-    }
 }
 
 #[cfg(test)]

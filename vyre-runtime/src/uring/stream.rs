@@ -47,6 +47,19 @@ pub struct GpuMappedBuffer<'a> {
 unsafe impl Send for GpuMappedBuffer<'_> {}
 unsafe impl Sync for GpuMappedBuffer<'_> {}
 
+macro_rules! define_mapped_owner_constructor {
+    ($name:ident, $ptr:ident, $doc:expr) => {
+        #[doc = $doc]
+        pub unsafe fn $name<O: ?Sized>(_owner: &'a mut O, $ptr: *mut u8, len: usize) -> Self {
+            Self {
+                ptr: $ptr,
+                len,
+                _owner: PhantomData,
+            }
+        }
+    };
+}
+
 impl<'a> GpuMappedBuffer<'a> {
     /// Construct from a borrowed host-visible byte slice.
     ///
@@ -65,31 +78,19 @@ impl<'a> GpuMappedBuffer<'a> {
         }
     }
 
-    /// Construct from a raw pointer + explicit owner anchor.
-    ///
-    /// This is for GPU APIs that hand back a raw mapped pointer plus an
-    /// owning handle rather than a Rust slice. The borrow on `owner`
-    /// forces the mapped region to outlive every derived
-    /// [`AsyncUringStream`].
-    ///
-    /// # Safety
-    ///
-    /// The caller asserts:
-    /// - `ptr` points into a GPU allocation owned by `owner`.
-    /// - The mapped region is `len` bytes long and host-visible.
-    /// - No other code reads or writes through `ptr` while the
-    ///   returned handle is alive.
-    pub unsafe fn from_host_visible_owner<O: ?Sized>(
-        _owner: &'a mut O,
-        ptr: *mut u8,
-        len: usize,
-    ) -> Self {
-        Self {
-            ptr,
-            len,
-            _owner: PhantomData,
-        }
-    }
+    define_mapped_owner_constructor!(
+        from_host_visible_owner,
+        ptr,
+        concat!(
+            "Construct from a raw pointer plus an explicit owner anchor.\n\n",
+            "The borrow on `owner` forces the mapped region to outlive every derived ",
+            "[`AsyncUringStream`].\n\n",
+            "# Safety\n\n",
+            "The caller must ensure that `ptr` names a `len`-byte host-visible GPU ",
+            "allocation owned by `owner`, and that no other code accesses the region ",
+            "while the returned handle is alive."
+        )
+    );
 
     /// Duplicate the mapped-buffer handle for the same underlying region.
     ///
@@ -169,34 +170,17 @@ impl<'a> GpuMappedBuffer<'a> {
         unsafe { core::slice::from_raw_parts_mut(self.ptr, self.len) }
     }
 
-    /// Construct from a PCIe peer-memory pointer
-    /// GPUDirect Storage).
-    ///
-    /// When paired with [`crate::PipelineError::NvmePassthroughDisabled`]
-    /// via the `uring-cmd-nvme` feature, this lets NVMe DMA writes
-    /// land directly in VRAM without crossing the host PCIe bridge.
-    ///
-    /// # Safety
-    ///
-    /// The caller asserts:
-    /// - `peer_ptr` points at a region returned by `nvidia_p2p_get_pages`
-    ///   (Linux nvidia-fs) or `cuMemAlloc` + `cuPointerSetAttribute`
-    ///   `CU_POINTER_ATTRIBUTE_SYNC_MEMOPS`.
-    /// - The GPU allocation outlives the returned handle.
-    /// - The io_uring kernel and NVMe driver both have DMA-mapping
-    ///   capability (verified at runtime by checking
-    ///   `/proc/driver/nvidia-fs/stats`).
-    pub unsafe fn from_bar1_peer_with_owner<O: ?Sized>(
-        _owner: &'a mut O,
-        peer_ptr: *mut u8,
-        len: usize,
-    ) -> Self {
-        Self {
-            ptr: peer_ptr,
-            len,
-            _owner: PhantomData,
-        }
-    }
+    define_mapped_owner_constructor!(
+        from_bar1_peer_with_owner,
+        peer_ptr,
+        concat!(
+            "Construct from a PCIe peer-memory pointer for direct storage DMA.\n\n",
+            "# Safety\n\n",
+            "The caller must ensure that `peer_ptr` names a GPU allocation suitable ",
+            "for peer DMA, that the allocation outlives the handle, and that the ",
+            "io_uring kernel and storage driver both support DMA mapping."
+        )
+    );
 }
 
 /// Streaming reader that pushes chunked reads into an io_uring SQ and

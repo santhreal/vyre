@@ -28,3 +28,15 @@ pub mod segment_reduce;
 pub mod sum;
 pub mod workgroup_any;
 pub mod workgroup_tree;
+
+#[cfg(any(test, feature = "cpu-parity"))]
+fn collect_cpu_reference<T>(
+    operation: &str,
+    fill: impl FnOnce(&mut Vec<T>) -> Result<(), String>,
+) -> Vec<T> {
+    let mut out = Vec::new();
+    fill(&mut out).unwrap_or_else(|error| {
+        panic!("vyre-primitives {operation} CPU reference failed: {error}")
+    });
+    out
+}

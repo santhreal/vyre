@@ -305,6 +305,77 @@ pub struct LaunchGeometryLimits {
     pub max_block_dim: [u32; 3],
     /// Maximum workgroup count per grid dimension.
     pub max_grid_dim: [u32; 3],
+    /// Maximum threads the device keeps resident on one compute unit (a CUDA
+    /// streaming multiprocessor, a Metal threadgroup-hosting core, and so on),
+    /// or `0` when the backend does not probe this number.
+    ///
+    /// This is the budget that decides how many whole workgroups fit on one
+    /// unit, and the division is integral: a workgroup width that does not
+    /// divide it strands the remainder on every unit for the launch's whole
+    /// lifetime. Backends that leave this `0` opt out of every residency-aware
+    /// decision rather than receiving one derived from a guessed budget.
+    pub max_threads_per_sm: u32,
+}
+
+impl LaunchGeometryLimits {
+    /// Whole workgroups of `workgroup_threads` that stay resident on one
+    /// compute unit, or `None` when this backend reports no per-unit budget.
+    #[must_use]
+    pub fn blocks_per_compute_unit(&self, workgroup_threads: u32) -> Option<u32> {
+        (self.max_threads_per_sm != 0 && workgroup_threads != 0)
+            .then(|| blocks_per_compute_unit(self.max_threads_per_sm, workgroup_threads))
+    }
+
+    /// Threads that stay resident on one compute unit at `workgroup_threads`
+    /// wide, or `None` when this backend reports no per-unit budget.
+    #[must_use]
+    pub fn resident_threads_per_compute_unit(&self, workgroup_threads: u32) -> Option<u32> {
+        (self.max_threads_per_sm != 0 && workgroup_threads != 0)
+            .then(|| resident_threads_per_compute_unit(self.max_threads_per_sm, workgroup_threads))
+    }
+}
+
+/// Whole workgroups of `workgroup_threads` that fit one compute unit's thread
+/// budget.
+///
+/// This is the single definition of the residency division in the workspace.
+/// CUDA's cooperative launch preflight and cold-start launch-width selection
+/// both route through it, because two independent copies of this arithmetic
+/// had already drifted apart once. The division is integral by hardware: a
+/// unit hosts whole workgroups only.
+///
+/// Threads are the only ceiling modelled here. Hardware also caps blocks per
+/// unit independently (CUDA reports it as
+/// `CU_DEVICE_ATTRIBUTE_MAX_BLOCKS_PER_MULTIPROCESSOR`), so at narrow widths
+/// the real block count is lower than this returns and the shortfall can be
+/// large: where the device caps blocks at 24, a 32-wide group against a
+/// 1536-thread budget measures 24 blocks and 768 resident threads, half what
+/// this function's 48 blocks and 1536 threads predict. A caller that ranks
+/// widths from widest downward never reaches that regime. A caller that
+/// answers "does this declared width fit", such as a cooperative launch
+/// preflight, does, and must clamp by the device-reported block cap before
+/// admitting a grid.
+#[must_use]
+pub fn blocks_per_compute_unit(max_threads_per_unit: u32, workgroup_threads: u32) -> u32 {
+    if workgroup_threads == 0 {
+        return 0;
+    }
+    max_threads_per_unit / workgroup_threads
+}
+
+/// Threads resident on one compute unit at `workgroup_threads` wide, under the
+/// per-unit thread budget alone.
+///
+/// Equal to `blocks_per_compute_unit(..) * workgroup_threads`, so it is at most
+/// `max_threads_per_unit` and falls short of it by exactly the slots the
+/// integral division strands. A width of 1024 against a 1536-thread budget
+/// resolves to one block and 1024 resident threads, leaving 512 slots per unit
+/// unusable for the launch's duration. The block-count caveat on
+/// [`blocks_per_compute_unit`] applies here too.
+#[must_use]
+pub fn resident_threads_per_compute_unit(max_threads_per_unit: u32, workgroup_threads: u32) -> u32 {
+    blocks_per_compute_unit(max_threads_per_unit, workgroup_threads)
+        .saturating_mul(workgroup_threads)
 }
 
 /// Validate workgroup and grid dimensions against backend launch limits.
@@ -486,5 +557,58 @@ mod tests {
             cache.vsa_hashes.len() <= 2,
             "Fix: bounded VSA cache must not grow past max entries"
         );
+    }
+
+    /// The residency division is integral and both of its edges are pinned,
+    /// because this arithmetic now has exactly one definition and CUDA's
+    /// cooperative launch preflight reads it.
+    ///
+    /// A zero width has no meaningful block count and yields zero rather than
+    /// dividing. A width wider than the whole per-unit budget hosts no block at
+    /// all, so it also yields zero: that is a launch the caller must reject,
+    /// not one silently rounded up to a single block. Both match what
+    /// `cooperative_thread_residency_block_limit` did before the arithmetic
+    /// moved here, and a factoring that quietly changed either edge would be
+    /// worse than the duplicate it replaced.
+    #[test]
+    fn residency_division_is_integral_at_both_edges() {
+        assert_eq!(blocks_per_compute_unit(1536, 0), 0);
+        assert_eq!(resident_threads_per_compute_unit(1536, 0), 0);
+        assert_eq!(blocks_per_compute_unit(1536, 2048), 0);
+        assert_eq!(resident_threads_per_compute_unit(1536, 2048), 0);
+        assert_eq!(blocks_per_compute_unit(0, 256), 0);
+        assert_eq!(resident_threads_per_compute_unit(0, 256), 0);
+
+        assert_eq!(blocks_per_compute_unit(1536, 1024), 1);
+        assert_eq!(
+            resident_threads_per_compute_unit(1536, 1024),
+            1024,
+            "Fix: 1024 wide against a 1536-thread unit strands 512 slots. The truncation is the whole point of pinning this."
+        );
+        assert_eq!(blocks_per_compute_unit(1536, 256), 6);
+        assert_eq!(resident_threads_per_compute_unit(1536, 256), 1536);
+    }
+
+    /// A backend that reports no per-unit thread budget answers `unknown`, so
+    /// no residency-aware decision can be derived from a number it never gave.
+    #[test]
+    fn unreported_per_unit_budget_answers_unknown_rather_than_zero() {
+        let reported = LaunchGeometryLimits {
+            backend: "reported",
+            max_threads_per_block: 1024,
+            max_block_dim: [1024, 1024, 64],
+            max_grid_dim: [u32::MAX, u32::MAX, u32::MAX],
+            max_threads_per_sm: 1536,
+        };
+        let unreported = LaunchGeometryLimits {
+            max_threads_per_sm: 0,
+            ..reported
+        };
+
+        assert_eq!(reported.blocks_per_compute_unit(256), Some(6));
+        assert_eq!(reported.resident_threads_per_compute_unit(256), Some(1536));
+        assert_eq!(reported.blocks_per_compute_unit(0), None);
+        assert_eq!(unreported.blocks_per_compute_unit(256), None);
+        assert_eq!(unreported.resident_threads_per_compute_unit(256), None);
     }
 }

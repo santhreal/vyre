@@ -45,13 +45,14 @@ pub(crate) fn program_for_interpreter(program: &Program) -> Result<Cow<'_, Progr
     } else {
         Cow::Borrowed(program)
     };
-    let collectives_lowered = match vyre_foundation::transform::collectives::lower_single_rank_collectives(
-        normalized.as_ref(),
-    ) {
-        Ok(Some(lowered)) => Cow::Owned(lowered),
-        Ok(None) => normalized,
-        Err(error) => return Err(vyre::Error::interp(error.to_string())),
-    };
+    let collectives_lowered =
+        match vyre_foundation::transform::collectives::lower_single_rank_collectives(
+            normalized.as_ref(),
+        ) {
+            Ok(Some(lowered)) => Cow::Owned(lowered),
+            Ok(None) => normalized,
+            Err(error) => return Err(vyre::Error::interp(error.to_string())),
+        };
     // A composite op IS its IR body, so run the body. Only intrinsics reach
     // `eval_call`, and those are the only ops that register a CPU function.
     // Skipping this made every composite call fall through to the empty
@@ -66,7 +67,7 @@ pub(crate) fn program_for_interpreter(program: &Program) -> Result<Cow<'_, Progr
 /// predicate `reference_eval` uses to collect the buffers it returns, and
 /// [`output_index`] locates a named output by that predicate. Re-exported so test
 /// harnesses never hand-roll (and drift from) the selection.
-pub use hashmap::{is_reference_output, output_index};
+pub use hashmap::{is_reference_input, is_reference_output, output_index};
 
 /// Execute a vyre IR program on the pure Rust reference interpreter.
 ///
@@ -190,13 +191,7 @@ pub fn reference_eval_with_grid(
     grid: [u32; 3],
 ) -> Result<Vec<Value>, vyre::Error> {
     let program = program_for_interpreter(program)?;
-    hashmap::run_hashmap_reference(
-        &program,
-        inputs,
-        0,
-        hashmap::LaneOrder::Forward,
-        Some(grid),
-    )
+    hashmap::run_hashmap_reference(&program, inputs, 0, hashmap::LaneOrder::Forward, Some(grid))
 }
 
 /// Execute a program with the workgroup/invocation STEP ORDER reversed.

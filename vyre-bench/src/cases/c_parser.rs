@@ -21,7 +21,10 @@ const MAX_C_PARSER_OBJECT_BYTES: u64 = 64 * 1024 * 1024;
 
 fn read_c_parser_object_bounded(path: &std::path::Path) -> Result<Vec<u8>, BenchError> {
     let mut reader = std::fs::File::open(path).map_err(|error| {
-        BenchError::ExecutionFailed(format!("read C parser object `{}`: {error}", path.display()))
+        BenchError::ExecutionFailed(format!(
+            "read C parser object `{}`: {error}",
+            path.display()
+        ))
     })?;
     let mut bytes = Vec::new();
     let mut total = 0u64;

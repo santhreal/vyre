@@ -336,7 +336,7 @@ impl CudaBackend {
                 return Err(BackendError::InvalidProgram {
                     fix: format!(
                         "Fix: CUDA resident upload for handle {} expected {} bytes but received {}.",
-                        handle.id,
+                        handle.handle,
                         buffer.byte_len,
                         bytes.len()
                     ),
@@ -345,7 +345,7 @@ impl CudaBackend {
             push_resident_upload_copy(
                 &mut copies,
                 &mut uploaded_bytes,
-                handle.id,
+                handle.handle.id(),
                 buffer.ptr,
                 bytes,
                 "upload",
@@ -396,7 +396,7 @@ impl CudaBackend {
                 "resident full-readback view cache",
             )?;
             copies.push(ResidentReadbackCopy {
-                handle_id: handle.id,
+                handle_id: handle.handle.id(),
                 src: if buffer.byte_len == 0 { 0 } else { buffer.ptr },
                 byte_len: buffer.byte_len,
             });
@@ -484,7 +484,7 @@ impl CudaBackend {
                     BackendError::InvalidProgram {
                     fix: format!(
                         "Fix: CUDA resident ranged batch download for handle {} overflows usize at offset {byte_offset} len {byte_len}.",
-                        handle.id
+                        handle.handle
                     ),
                 }
                 },
@@ -492,7 +492,7 @@ impl CudaBackend {
                     BackendError::InvalidProgram {
                     fix: format!(
                         "Fix: CUDA resident ranged batch download for handle {} requested bytes [{byte_offset}..{end}) but buffer has {} bytes.",
-                        handle.id, buffer.byte_len
+                        handle.handle, buffer.byte_len
                     ),
                 }
                 },
@@ -507,7 +507,7 @@ impl CudaBackend {
                         BackendError::InvalidProgram {
                         fix: format!(
                             "Fix: CUDA resident ranged batch download byte offset {byte_offset} does not fit CUdeviceptr arithmetic for handle {}.",
-                            handle.id
+                            handle.handle
                         ),
                     }
                     },
@@ -515,14 +515,14 @@ impl CudaBackend {
                         BackendError::InvalidProgram {
                         fix: format!(
                             "Fix: CUDA resident ranged batch download pointer arithmetic overflowed for handle {} at offset {byte_offset}.",
-                            handle.id
+                            handle.handle
                         ),
                     }
                     },
                 )?
             };
             copies.push(ResidentReadbackCopy {
-                handle_id: handle.id,
+                handle_id: handle.handle.id(),
                 src,
                 byte_len,
             });
@@ -611,7 +611,7 @@ impl CudaBackend {
                     BackendError::InvalidProgram {
                     fix: format!(
                         "Fix: CUDA resident readback for handle {} overflows usize at offset {} len {}.",
-                        handle.id, readback.device_offset, readback.byte_len
+                        handle.handle, readback.device_offset, readback.byte_len
                     ),
                 }
                 },
@@ -619,7 +619,7 @@ impl CudaBackend {
                     BackendError::InvalidProgram {
                     fix: format!(
                         "Fix: CUDA resident readback for handle {} requested bytes [{}..{}) but buffer has {} bytes.",
-                        handle.id, readback.device_offset, end, buffer.byte_len
+                        handle.handle, readback.device_offset, end, buffer.byte_len
                     ),
                 }
                 },
@@ -634,7 +634,7 @@ impl CudaBackend {
                         BackendError::InvalidProgram {
                         fix: format!(
                             "Fix: CUDA resident readback device offset {} does not fit CUdeviceptr arithmetic for handle {}.",
-                            readback.device_offset, handle.id
+                            readback.device_offset, handle.handle
                         ),
                     }
                     },
@@ -642,14 +642,14 @@ impl CudaBackend {
                         BackendError::InvalidProgram {
                         fix: format!(
                             "Fix: CUDA resident readback pointer arithmetic overflowed for handle {} at offset {}.",
-                            handle.id, readback.device_offset
+                            handle.handle, readback.device_offset
                         ),
                     }
                     },
                 )?
             };
             copies.push(ResidentReadbackCopy {
-                handle_id: handle.id,
+                handle_id: handle.handle.id(),
                 src,
                 byte_len: readback.byte_len,
             });
@@ -869,7 +869,7 @@ impl CudaBackend {
                         BackendError::InvalidProgram {
                         fix: format!(
                             "Fix: CUDA resident batch readback for handle {} overflows usize at offset {} len {}.",
-                            handle.id, readback.device_offset, readback.byte_len
+                            handle.handle, readback.device_offset, readback.byte_len
                         ),
                     }
                     },
@@ -877,7 +877,7 @@ impl CudaBackend {
                         BackendError::InvalidProgram {
                         fix: format!(
                             "Fix: CUDA resident batch readback for handle {} requested bytes [{}..{}) but buffer has {} bytes.",
-                            handle.id, readback.device_offset, end, buffer.byte_len
+                            handle.handle, readback.device_offset, end, buffer.byte_len
                         ),
                     }
                     },
@@ -892,7 +892,7 @@ impl CudaBackend {
                             BackendError::InvalidProgram {
                             fix: format!(
                                 "Fix: CUDA resident batch readback device offset {} does not fit CUdeviceptr arithmetic for handle {}.",
-                                readback.device_offset, handle.id
+                                readback.device_offset, handle.handle
                             ),
                         }
                         },
@@ -900,14 +900,14 @@ impl CudaBackend {
                             BackendError::InvalidProgram {
                             fix: format!(
                                 "Fix: CUDA resident batch readback pointer arithmetic overflowed for handle {} at offset {}.",
-                                handle.id, readback.device_offset
+                                handle.handle, readback.device_offset
                             ),
                         }
                         },
                     )?
                 };
                 copies.push(ResidentReadbackCopy {
-                    handle_id: handle.id,
+                    handle_id: handle.handle.id(),
                     src,
                     byte_len: readback.byte_len,
                 });
@@ -966,7 +966,7 @@ impl CudaBackend {
             push_resident_upload_copy(
                 &mut copies,
                 &mut uploaded_bytes,
-                handle.id,
+                handle.handle.id(),
                 dst_ptr,
                 bytes,
                 "offset upload",
@@ -1278,20 +1278,14 @@ mod async_upload_tests {
             "Fix: CUDA resident readback staging must leak pinned host transfers when D2H completion is unproven."
         );
 
-        let Some(upload) = source
-            .split("fn copy_resident_uploads")
-            .nth(1)
-        else {
+        let Some(upload) = source.split("fn copy_resident_uploads").nth(1) else {
             assert!(
                 false,
                 "Fix: CUDA resident upload staging helper must exist."
             );
             return;
         };
-        let Some(upload) = upload
-            .split("/// Async H2D copy")
-            .next()
-        else {
+        let Some(upload) = upload.split("/// Async H2D copy").next() else {
             assert!(
                 false,
                 "Fix: resident upload staging must precede async upload API."
@@ -1310,9 +1304,7 @@ mod async_upload_tests {
     #[test]
     fn synchronize_uploads_releases_stream_only_after_successful_sync() {
         let source = include_str!("resident_io.rs");
-        let Some(synchronize_uploads) = source
-            .split("pub fn synchronize_uploads(&self)")
-            .nth(1)
+        let Some(synchronize_uploads) = source.split("pub fn synchronize_uploads(&self)").nth(1)
         else {
             assert!(
                 false,
@@ -1320,10 +1312,7 @@ mod async_upload_tests {
             );
             return;
         };
-        let Some(synchronize_uploads) = synchronize_uploads
-            .split("}\n}")
-            .next()
-        else {
+        let Some(synchronize_uploads) = synchronize_uploads.split("}\n}").next() else {
             assert!(
                 false,
                 "Fix: synchronize_uploads must end inside the resident I/O impl."
@@ -1402,7 +1391,7 @@ fn checked_resident_dst(
             BackendError::InvalidProgram {
             fix: format!(
                 "Fix: CUDA resident upload at offset {dst_offset_bytes} for handle {} would overflow usize.",
-                handle.id
+                handle.handle
             ),
         }
         },
@@ -1410,7 +1399,7 @@ fn checked_resident_dst(
             BackendError::InvalidProgram {
             fix: format!(
                 "Fix: CUDA resident upload for handle {} writes [{dst_offset_bytes}..{end}) but buffer is only {buffer_len} bytes; resize the resident slot or trim the source slice.",
-                handle.id
+                handle.handle
             ),
         }
         },
@@ -1422,7 +1411,7 @@ fn checked_resident_dst(
             BackendError::InvalidProgram {
             fix: format!(
                 "Fix: CUDA resident upload offset {dst_offset_bytes} does not fit CUdeviceptr arithmetic for handle {}.",
-                handle.id
+                handle.handle
             ),
         }
         },
@@ -1430,7 +1419,7 @@ fn checked_resident_dst(
             BackendError::InvalidProgram {
             fix: format!(
                 "Fix: CUDA resident upload pointer arithmetic overflowed for handle {} at offset {dst_offset_bytes}.",
-                handle.id
+                handle.handle
             ),
         }
         },

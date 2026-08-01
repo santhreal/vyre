@@ -192,6 +192,26 @@ fn run_entry_diff(entry: &'static vyre_libs::harness::OpEntry) {
         );
     }
 }
+fn primitive_entry_by_id(op_id: &str) -> &'static vyre_primitives::harness::OpEntry {
+    vyre_primitives::harness::all_entries()
+        .find(|entry| entry.id == op_id)
+        .expect("Fix: expected primitive OpEntry to be registered")
+}
+
+fn run_primitive_entry_diff(entry: &'static vyre_primitives::harness::OpEntry) {
+    let program = (entry.build)();
+    let input_cases = entry
+        .test_inputs
+        .expect("Fix: primitive regression entry must provide test_inputs")();
+    for inputs in input_cases {
+        assert_diff(
+            entry.id,
+            effective_tolerance(entry.id, &program),
+            &program,
+            inputs,
+        );
+    }
+}
 
 fn missing_capability_reason(program: &vyre::ir::Program) -> Option<String> {
     let required = vyre_foundation::program_caps::scan(program);
@@ -227,24 +247,21 @@ fn diff_flash_attention_regression() {
 }
 
 #[test]
-fn diff_catalog_ast_cse_structural_hash_regression() {
-    run_entry_diff(entry_by_id(
-        "vyre-libs::catalog::parsing::ast_cse_structural_hash::consumer_a",
-    ));
-    run_entry_diff(entry_by_id(
-        "vyre-libs::catalog::parsing::ast_cse_structural_hash::consumer_b",
+fn diff_ast_cse_structural_hash_primitive_regression() {
+    run_primitive_entry_diff(primitive_entry_by_id(
+        "vyre-primitives::parsing::ast_cse_structural_hash",
     ));
 }
 
 #[test]
-fn diff_catalog_fnv1a64_regression() {
-    run_entry_diff(entry_by_id("vyre-libs::catalog::hash::fnv1a64::consumer_a"));
+fn diff_fnv1a64_primitive_regression() {
+    run_primitive_entry_diff(primitive_entry_by_id("vyre-primitives::hash::fnv1a64"));
 }
 
 #[test]
-fn diff_fnv1a64_then_catalog_fnv1a64_regression() {
+fn diff_fnv1a64_then_primitive_fnv1a64_regression() {
     run_entry_diff(entry_by_id("vyre-libs::hash::fnv1a64"));
-    run_entry_diff(entry_by_id("vyre-libs::catalog::hash::fnv1a64::consumer_a"));
+    run_primitive_entry_diff(primitive_entry_by_id("vyre-primitives::hash::fnv1a64"));
 }
 
 /// FINDING-GPU-7 regression. `substring_search` (binding 0 haystack, 1 needle,

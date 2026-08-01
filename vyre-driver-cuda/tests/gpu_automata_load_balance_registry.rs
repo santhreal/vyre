@@ -1,7 +1,6 @@
 //! Gpu automata load balance registry test suite.
 
-const REGISTRY: &str =
-    include_str!("../../docs/optimization/GPU_AUTOMATA_LOAD_BALANCE.toml");
+const REGISTRY: &str = include_str!("../../docs/optimization/GPU_AUTOMATA_LOAD_BALANCE.toml");
 
 #[test]
 fn gpu_automata_load_balance_registry_records_required_fields() {
@@ -41,7 +40,9 @@ fn gpu_automata_load_balance_registry_requires_parity_and_spill_evidence() {
     }
     assert_eq!(
         REGISTRY
-            .matches("evidence_path = \"vyre-driver-cuda/tests/gpu_automata_load_balance_registry.rs\"")
+            .matches(
+                "evidence_path = \"vyre-driver-cuda/tests/gpu_automata_load_balance_registry.rs\""
+            )
             .count(),
         REGISTRY.matches("[[case]]").count(),
         "Fix: every GPU automata load-balance row must point at this proof gate"

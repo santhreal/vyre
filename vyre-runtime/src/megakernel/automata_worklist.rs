@@ -286,7 +286,10 @@ mod tests {
         assert_eq!(task.param, 17);
         assert_eq!(task.continuation_pc, 4096);
         assert_eq!(task.continuation_data, 17);
-        assert_eq!(task.flags & TASK_FLAG_REQUEUE_REQUESTED, TASK_FLAG_REQUEUE_REQUESTED);
+        assert_eq!(
+            task.flags & TASK_FLAG_REQUEUE_REQUESTED,
+            TASK_FLAG_REQUEUE_REQUESTED
+        );
     }
 
     #[test]
@@ -309,7 +312,10 @@ mod tests {
             recommendation.state_visit_budget,
             u64::from(policy.nonblocking_depth_threshold * policy.state_visit_budget_multiplier)
         );
-        assert_eq!(evidence.schema_version, AUTOMATA_WORKLIST_EVIDENCE_SCHEMA_VERSION);
+        assert_eq!(
+            evidence.schema_version,
+            AUTOMATA_WORKLIST_EVIDENCE_SCHEMA_VERSION
+        );
         assert_eq!(evidence.selected_mode, AutomataWorklistMode::NonBlocking);
         assert_eq!(evidence.worklist_depth, policy.nonblocking_depth_threshold);
         assert_eq!(evidence.state_visit_count, 2048);

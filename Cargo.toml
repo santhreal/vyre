@@ -55,6 +55,7 @@ exclude = [
     "examples/external_ir_extension",
     "examples/libs-template",
     "examples/public_facade_smoke",
+    "examples/wgpu_readwrite_count_repro",
     "vyre-foundation/fuzz",
 ]
 

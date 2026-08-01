@@ -9,9 +9,9 @@ pub(crate) use crate::artifact_paths::RESEARCH_AUDIT_ARTIFACT;
 pub(super) const PLAN_PATH: &str = "docs/optimization/ALL_AXES_ACCELERATION_PLAN.md";
 pub(super) const COMMAND_MATRIX_PATH: &str = "docs/optimization/XTASK_COMMAND_MATRIX.md";
 pub(super) const LEGACY_DOCS_PATH: &str = "docs/optimization/LEGACY_DOCS.md";
-pub(super) const SCHEMA_VERSION: u32 = 6;
-pub(super) const SOURCE_DIGEST_PREFIX: &str = "research-audit-source:v6:";
-const SOURCE_DIGEST_MATERIAL_LABEL: &str = "research-audit:v6";
+pub(super) const SCHEMA_VERSION: u32 = 7;
+pub(super) const SOURCE_DIGEST_PREFIX: &str = "research-audit-source:v7:";
+const SOURCE_DIGEST_MATERIAL_LABEL: &str = "research-audit:v7";
 pub(super) const MIN_PLAN_ROWS: usize = crate::vx_plan_table::VX_PLAN_MIN_ROWS;
 pub(super) const MAX_FINDINGS: usize = 100;
 pub(super) const MAX_HOTSPOTS: usize = 40;
@@ -79,6 +79,7 @@ pub(super) const NEGATIVE_CASE_MARKERS: &[&str] = &[
 pub(super) struct ResearchAuditReport {
     pub(super) schema_version: u32,
     pub(super) generator_command: String,
+    #[serde(rename = "expected_plan_path")]
     pub(super) plan_path: &'static str,
     pub(super) command_matrix_path: &'static str,
     pub(super) plan_row_count: usize,
@@ -99,7 +100,7 @@ pub(super) struct ResearchAuditReport {
     pub(super) rust_toml_loader_findings: Vec<RustTomlLoaderFinding>,
     pub(super) source_ledger_findings: Vec<SourceLedgerFinding>,
     pub(super) competitor_issue_findings: Vec<SourceLedgerFinding>,
-    pub(super) research_plan_coverage_findings: Vec<SourceLedgerFinding>,
+    pub(super) research_plan_coverage_findings: Vec<ResearchPlanCoverageFinding>,
     pub(super) archive_replay_findings: Vec<ArchiveReplayFinding>,
     pub(super) rules_as_data_findings: Vec<SourceLedgerFinding>,
     pub(super) blockers: Vec<String>,
@@ -160,6 +161,7 @@ pub(super) struct VxLinkageFinding {
 
 #[derive(Debug, Clone, Serialize)]
 pub(super) struct DocMarkerFinding {
+    #[serde(rename = "expected_path")]
     pub(super) path: String,
     pub(super) line: usize,
     pub(super) marker: String,
@@ -193,6 +195,14 @@ pub(super) struct RustTomlLoaderFinding {
 #[derive(Debug, Clone, Serialize)]
 pub(super) struct SourceLedgerFinding {
     pub(super) path: String,
+    pub(super) key: String,
+    pub(super) text: String,
+    pub(super) policy: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub(super) struct ResearchPlanCoverageFinding {
+    pub(super) expected_path: String,
     pub(super) key: String,
     pub(super) text: String,
     pub(super) policy: String,
@@ -271,14 +281,8 @@ pub(super) fn source_digest(
         "research_plan_coverage_finding_count",
         research_plan_coverage_finding_count,
     );
-    counts.insert(
-        "archive_replay_finding_count",
-        archive_replay_finding_count,
-    );
-    counts.insert(
-        "rules_as_data_finding_count",
-        rules_as_data_finding_count,
-    );
+    counts.insert("archive_replay_finding_count", archive_replay_finding_count);
+    counts.insert("rules_as_data_finding_count", rules_as_data_finding_count);
     let material = format!(
         "{SOURCE_DIGEST_MATERIAL_LABEL}\nplan={}\ncommand_matrix={}\ncounts={counts:?}\nfinding_material={}\n",
         sha256_hex(plan.as_bytes()),
@@ -286,4 +290,49 @@ pub(super) fn source_digest(
         sha256_hex(finding_material.as_bytes())
     );
     format!("{SOURCE_DIGEST_PREFIX}{}", sha256_hex(material.as_bytes()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{DocMarkerFinding, ResearchPlanCoverageFinding};
+
+    /// Local-only stale document locations serialize as expectations, not public evidence paths.
+    #[test]
+    fn stale_doc_markers_use_expected_paths() {
+        let value = serde_json::to_value(DocMarkerFinding {
+            path: "docs/local-plan.md".to_string(),
+            line: 7,
+            marker: "worklist".to_string(),
+            text: "local worklist".to_string(),
+        })
+        .expect("Fix: stale document finding must serialize");
+
+        assert_eq!(
+            value
+                .get("expected_path")
+                .and_then(serde_json::Value::as_str),
+            Some("docs/local-plan.md")
+        );
+        assert!(value.get("path").is_none());
+    }
+
+    /// Local plan coverage findings cannot masquerade as reproducible public path citations.
+    #[test]
+    fn research_plan_findings_use_expected_paths() {
+        let value = serde_json::to_value(ResearchPlanCoverageFinding {
+            expected_path: "docs/local-plan.md".to_string(),
+            key: "VX-001".to_string(),
+            text: "missing evidence".to_string(),
+            policy: "coverage".to_string(),
+        })
+        .expect("Fix: plan coverage finding must serialize");
+
+        assert_eq!(
+            value
+                .get("expected_path")
+                .and_then(serde_json::Value::as_str),
+            Some("docs/local-plan.md")
+        );
+        assert!(value.get("path").is_none());
+    }
 }

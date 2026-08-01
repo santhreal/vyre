@@ -534,8 +534,7 @@ fn run_dce_resident(
             "Fix: DCE resident static upload surfaced a non-dispatch pipeline error.".to_string(),
         ),
     })?;
-    let dce_mutable_payloads: [&[u8]; 3] =
-        [&frontier_out_bytes, &changed_bytes, &converged_bytes];
+    let dce_mutable_payloads: [&[u8]; 3] = [&frontier_out_bytes, &changed_bytes, &converged_bytes];
     let dce_mutable_handles = alloc_many_d(dispatcher, &dce_mutable_payloads)?;
     let nodes_h = dce_static.handles[0];
     let edge_offsets_h = dce_static.handles[1];
@@ -618,8 +617,9 @@ fn run_dce_resident(
     // reads the same `converged` word the direct path does, so neither can silently
     // skip the check the other performs.
     let converged_flag = converged.first().copied().unwrap_or_default();
-    validate_persistent_bfs_converged_flag(converged_flag)
-        .map_err(|reason| DispatchError::BackendError(format!("Fix: pipeline_resident DCE {reason}")))?;
+    validate_persistent_bfs_converged_flag(converged_flag).map_err(|reason| {
+        DispatchError::BackendError(format!("Fix: pipeline_resident DCE {reason}"))
+    })?;
     if converged_flag != 1 {
         return Err(DispatchError::BackendError(format!(
             "Fix: pipeline_resident DCE liveness closure did not converge within its {} \

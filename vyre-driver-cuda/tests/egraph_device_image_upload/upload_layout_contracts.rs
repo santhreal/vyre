@@ -198,4 +198,3 @@ fn egraph_device_image_upload_round_trips_through_cuda_resident_memory() {
         .free_resident(resident.handle())
         .expect("Fix: CUDA e-graph resident image free failed.");
 }
-

@@ -45,11 +45,13 @@ that requires a major bump.
 
 ## Crates currently in publish scope
 
-The static table below records release intent only. Current pass/fail
+The static table below records release intent only. Current prepublication
 status comes from `release/evidence/metadata/metadata-matrix.json`,
 `release/evidence/docs/crate-metadata-proof.md`, and
-`cargo_full run --bin xtask -- vyre-release-gate`; do not treat this
-document as a substitute for those generated artifacts.
+`cargo_full run --bin xtask -- vyre-release-gate --prepublish`. Final launch
+still requires `vyre-release-gate` without that flag after all approved outward
+actions complete. Do not treat this document as a substitute for generated
+artifacts.
 
 | Crate | Release group | Publish target | Evidence source |
 | --- | --- | --- | --- |

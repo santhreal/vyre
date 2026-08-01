@@ -52,7 +52,7 @@ pub fn emit_module_with_features(
     // miscompiles AND emits successfully: an `Fma` node with non-f32 operands
     // lowers to integer `a*b+c`, not fused-multiply-add (a Law-10 silent
     // miscompile). `lower_for_emit` runs dead-code elimination, so an unused
-    // such node is stripped before any descriptor-level check could see it 
+    // such node is stripped before any descriptor-level check could see it
     // the original Program node tree is the only stage that observes it. We
     // deliberately do NOT run full `vyre_foundation::validate` here: every
     // other validation rule corresponds to a program that either emits
@@ -98,7 +98,7 @@ pub fn emit_module_with_features(
     if let Err(errors) = vyre_lower::verify::verify(&lowered.descriptor) {
         return Err(LoweringError::invalid(format!(
             "KernelDescriptor verification failed after Naga Program compatibility workgroup override: {}. Fix: keep the requested workgroup size valid before emission.",
-            format_verify_errors(&errors)
+            vyre_lower::verify::format_verify_errors(&errors)
         )));
     }
     crate::emit(&lowered.descriptor).map_err(|error| {
@@ -208,20 +208,6 @@ fn trap_sidecar_binding(program: &Program) -> Result<u32, LoweringError> {
         }
     }
     Ok(next)
-}
-
-fn format_verify_errors(errors: &[vyre_lower::verify::VerifyError]) -> String {
-    let mut out = String::new();
-    for (index, error) in errors.iter().take(4).enumerate() {
-        if index != 0 {
-            out.push_str("; ");
-        }
-        out.push_str(&format!("{error:?}"));
-    }
-    if errors.len() > 4 {
-        out.push_str("; ...");
-    }
-    out
 }
 
 /// Render program-validation errors using their `Display` form (the

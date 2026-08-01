@@ -224,8 +224,7 @@ impl BenchCase for QuantizedLinear4BitAffineGrouped {
         );
         let cpu_digest = digest64(&prepared.baseline_output);
         let gpu_digest = outputs.first().map_or(0, |output| digest64(output));
-        let tolerance_abs_e9 =
-            (prepared.evidence.output_drift_abs_tolerance * 1.0e9) as u64;
+        let tolerance_abs_e9 = (prepared.evidence.output_drift_abs_tolerance * 1.0e9) as u64;
         let release_evidence = ReleaseMathNnKernelEvidence {
             case_id: "nn.linear_4bit_affine_grouped.1m",
             cpu_digest,

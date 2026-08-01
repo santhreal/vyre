@@ -48,6 +48,14 @@ pub const FRONTIER_WORD_BLOCK_OFFSETS_IN_PLACE_OP_ID: &str =
 /// Canonical op id for packed-frontier scatter with precomputed block offsets.
 pub const FRONTIER_WORD_BLOCK_OFFSETS_TO_QUEUE_PARALLEL_OP_ID: &str =
     "vyre-primitives::graph::frontier_word_block_offsets_to_queue_parallel";
+/// Workgroup lanes used by the single-workgroup [`frontier_to_queue`] scan.
+///
+/// This is ONE constant on purpose. It drives the declared workgroup size, the
+/// stride of the cooperative scan, and the lane gate that confines the scan to
+/// the first workgroup. Splitting it into three literals is what lets a fixed
+/// workgroup declaration drift away from a lane gate, which is the shape that
+/// produces silent duplicate coverage.
+pub const FRONTIER_TO_QUEUE_WORKGROUP_LANES: u32 = 256;
 /// Workgroup lanes used by the deterministic packed-frontier scan path.
 pub const FRONTIER_WORD_SCAN_BLOCK_LANES: u32 = 1024;
 /// Canonical op id for device-side queue length initialization.
@@ -137,11 +145,35 @@ pub fn frontier_queue_len_init(queue_len: &str) -> Program {
 
 /// Build a GPU program that appends every active frontier node to a queue.
 ///
-/// This is intentionally a single-workgroup cooperative scan: lane 0 clears
-/// `queue_len`, a workgroup barrier orders that clear, then all lanes walk
-/// `node_count` in 256-wide strides. Sparse queue traversal is selected only
-/// for low-density frontiers, so avoiding a separate queue-length init launch
-/// is more valuable than spreading this scan across every SM.
+/// This is a single-workgroup cooperative scan: lane 0 clears `queue_len`, a
+/// workgroup barrier orders that clear, then the lanes of that one workgroup
+/// walk `node_count` in [`FRONTIER_TO_QUEUE_WORKGROUP_LANES`]-wide strides.
+/// Sparse queue traversal is selected only for low-density frontiers, so
+/// avoiding a separate queue-length init launch is more valuable than spreading
+/// this scan across every SM. Use [`frontier_to_queue_parallel`] when the
+/// frontier is large enough to want every SM.
+///
+/// Single-workgroup is enforced STRUCTURALLY, not assumed. Every lane whose
+/// global id is at or above the workgroup width retires without touching
+/// memory, so the program computes the same queue for any dispatch span the
+/// driver picks. That gate is load-bearing twice over, and both failures are
+/// silent wrong answers rather than crashes:
+///
+/// 1. Duplicate coverage. `q_src` is `q_iter * WIDTH + q_lane` over a GLOBAL
+///    `q_lane`, so at `G` workgroups the lanes of group `g` re-derive `q_src`
+///    values group 0 already covered at a higher `q_iter`. Every active node at
+///    or above the workgroup width would be appended once per covering group and
+///    `queue_len` inflated by the same factor.
+/// 2. Lost clear. Lane 0's clear of `queue_len` is a PLAIN store ordered only by
+///    a WORKGROUP-scope barrier. Nothing orders it against another group's
+///    `atomic_add`, so a second group's increment could land before the clear
+///    and be erased.
+///
+/// The span is not the caller's to choose: this program contains an atomic, and
+/// once a program contains any atomic the driver widens the dispatch to the
+/// largest non-shared binding, which here is `active_queue` at `queue_capacity`.
+/// A capacity that merely matches the node count therefore already produces a
+/// multi-workgroup grid.
 #[must_use]
 pub fn frontier_to_queue(
     frontier_in: &str,
@@ -162,7 +194,8 @@ pub fn frontier_to_queue(
     }
     let lane = Expr::InvocationId { axis: 0 };
     let words = bitset_words(node_count);
-    let scan_iters = node_count.div_ceil(256).max(1);
+    let lanes = FRONTIER_TO_QUEUE_WORKGROUP_LANES;
+    let scan_iters = node_count.div_ceil(lanes).max(1);
     let body = vec![
         Node::let_bind("q_lane", lane.clone()),
         Node::if_then(
@@ -170,56 +203,65 @@ pub fn frontier_to_queue(
             vec![Node::store(queue_len, Expr::u32(0), Expr::u32(0))],
         ),
         Node::barrier_with_ordering(MemoryOrdering::SeqCst),
-        Node::loop_for(
-            "q_iter",
-            Expr::u32(0),
-            Expr::u32(scan_iters),
-            vec![
-                Node::let_bind(
-                    "q_src",
-                    Expr::add(
-                        Expr::mul(Expr::var("q_iter"), Expr::u32(256)),
-                        Expr::var("q_lane"),
+        // Only the lanes of the FIRST workgroup scan. Beyond that width the
+        // strided walk below would re-cover source nodes group 0 already
+        // covered, double-appending them and inflating `queue_len`.
+        Node::if_then(
+            Expr::lt(Expr::var("q_lane"), Expr::u32(lanes)),
+            vec![Node::loop_for(
+                "q_iter",
+                Expr::u32(0),
+                Expr::u32(scan_iters),
+                vec![
+                    Node::let_bind(
+                        "q_src",
+                        Expr::add(
+                            Expr::mul(Expr::var("q_iter"), Expr::u32(lanes)),
+                            Expr::var("q_lane"),
+                        ),
                     ),
-                ),
-                Node::if_then(
-                    Expr::lt(Expr::var("q_src"), Expr::u32(node_count)),
-                    vec![
-                        Node::let_bind("q_word_idx", Expr::shr(Expr::var("q_src"), Expr::u32(5))),
-                        Node::let_bind(
-                            "q_bit_mask",
-                            Expr::shl(
-                                Expr::u32(1),
-                                Expr::bitand(Expr::var("q_src"), Expr::u32(31)),
+                    Node::if_then(
+                        Expr::lt(Expr::var("q_src"), Expr::u32(node_count)),
+                        vec![
+                            Node::let_bind(
+                                "q_word_idx",
+                                Expr::shr(Expr::var("q_src"), Expr::u32(5)),
                             ),
-                        ),
-                        Node::let_bind(
-                            "q_src_word",
-                            Expr::load(frontier_in, Expr::var("q_word_idx")),
-                        ),
-                        Node::if_then(
-                            Expr::ne(
-                                Expr::bitand(Expr::var("q_src_word"), Expr::var("q_bit_mask")),
-                                Expr::u32(0),
+                            Node::let_bind(
+                                "q_bit_mask",
+                                Expr::shl(
+                                    Expr::u32(1),
+                                    Expr::bitand(Expr::var("q_src"), Expr::u32(31)),
+                                ),
                             ),
-                            vec![
-                                Node::let_bind(
-                                    "q_slot",
-                                    Expr::atomic_add(queue_len, Expr::u32(0), Expr::u32(1)),
+                            Node::let_bind(
+                                "q_src_word",
+                                Expr::load(frontier_in, Expr::var("q_word_idx")),
+                            ),
+                            Node::if_then(
+                                Expr::ne(
+                                    Expr::bitand(Expr::var("q_src_word"), Expr::var("q_bit_mask")),
+                                    Expr::u32(0),
                                 ),
-                                Node::if_then(
-                                    Expr::lt(Expr::var("q_slot"), Expr::u32(queue_capacity)),
-                                    vec![Node::store(
-                                        active_queue,
-                                        Expr::var("q_slot"),
-                                        Expr::var("q_src"),
-                                    )],
-                                ),
-                            ],
-                        ),
-                    ],
-                ),
-            ],
+                                vec![
+                                    Node::let_bind(
+                                        "q_slot",
+                                        Expr::atomic_add(queue_len, Expr::u32(0), Expr::u32(1)),
+                                    ),
+                                    Node::if_then(
+                                        Expr::lt(Expr::var("q_slot"), Expr::u32(queue_capacity)),
+                                        vec![Node::store(
+                                            active_queue,
+                                            Expr::var("q_slot"),
+                                            Expr::var("q_src"),
+                                        )],
+                                    ),
+                                ],
+                            ),
+                        ],
+                    ),
+                ],
+            )],
         ),
     ];
     Program::wrapped(
@@ -230,7 +272,7 @@ pub fn frontier_to_queue(
                 .with_count(queue_capacity),
             BufferDecl::storage(queue_len, 2, BufferAccess::ReadWrite, DataType::U32).with_count(1),
         ],
-        [256, 1, 1],
+        [lanes, 1, 1],
         vec![Node::Region {
             generator: Ident::from(FRONTIER_TO_QUEUE_OP_ID),
             source_region: None,

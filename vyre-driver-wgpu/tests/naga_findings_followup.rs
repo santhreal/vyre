@@ -1,23 +1,13 @@
 //! Regression tests for the post-audit Naga lowering follow-up.
 
+mod common;
+
+use common::emit_validated_wgsl as emit_wgsl;
 use vyre_driver::DispatchConfig;
 use vyre_emit_naga::program::emit_module;
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
 const TEST_WORKGROUP_SIZE: [u32; 3] = [1, 1, 1];
-
-fn emit_wgsl(program: &Program) -> String {
-    let module = emit_module(program, &DispatchConfig::default(), TEST_WORKGROUP_SIZE)
-        .expect("Fix: test program must lower to a valid Naga module.");
-    let info = naga::valid::Validator::new(
-        naga::valid::ValidationFlags::all(),
-        naga::valid::Capabilities::all(),
-    )
-    .validate(&module)
-    .expect("Fix: test program must validate after lowering.");
-    naga::back::wgsl::write_string(&module, &info, naga::back::wgsl::WriterFlags::empty())
-        .expect("Fix: lowered module must serialize to WGSL.")
-}
 
 #[test]
 fn integer_if_conditions_are_coerced_to_bool() {

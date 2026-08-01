@@ -371,47 +371,40 @@ pub(super) fn safe_source_byte_expr(source_layout: DirectiveSourceLayout, addr: 
     )
 }
 
-pub(super) fn horizontal_ws_flag(byte: Expr) -> Expr {
-    Expr::select(
+fn whitespace_flag(byte: Expr, include_line_endings: bool) -> Expr {
+    let horizontal = Expr::or(
         Expr::or(
-            Expr::or(
-                Expr::eq(byte.clone(), Expr::u32(b' ' as u32)),
-                Expr::eq(byte.clone(), Expr::u32(b'\t' as u32)),
-            ),
-            Expr::or(
-                Expr::eq(byte.clone(), Expr::u32(0x0B)),
-                Expr::eq(byte, Expr::u32(0x0C)),
-            ),
+            Expr::eq(byte.clone(), Expr::u32(b' ' as u32)),
+            Expr::eq(byte.clone(), Expr::u32(b'\t' as u32)),
         ),
-        Expr::u32(1),
-        Expr::u32(0),
-    )
+        Expr::or(
+            Expr::eq(byte.clone(), Expr::u32(0x0B)),
+            Expr::eq(byte.clone(), Expr::u32(0x0C)),
+        ),
+    );
+    let condition = if include_line_endings {
+        Expr::or(
+            horizontal,
+            Expr::or(
+                Expr::eq(byte.clone(), Expr::u32(b'\n' as u32)),
+                Expr::eq(byte, Expr::u32(b'\r' as u32)),
+            ),
+        )
+    } else {
+        horizontal
+    };
+    Expr::select(condition, Expr::u32(1), Expr::u32(0))
+}
+
+pub(super) fn horizontal_ws_flag(byte: Expr) -> Expr {
+    whitespace_flag(byte, false)
 }
 
 pub(super) fn trailing_ws_flag(byte: Expr) -> Expr {
-    Expr::select(
-        Expr::or(
-            Expr::or(
-                Expr::or(
-                    Expr::eq(byte.clone(), Expr::u32(b' ' as u32)),
-                    Expr::eq(byte.clone(), Expr::u32(b'\t' as u32)),
-                ),
-                Expr::or(
-                    Expr::eq(byte.clone(), Expr::u32(b'\n' as u32)),
-                    Expr::eq(byte.clone(), Expr::u32(b'\r' as u32)),
-                ),
-            ),
-            Expr::or(
-                Expr::eq(byte.clone(), Expr::u32(0x0B)),
-                Expr::eq(byte, Expr::u32(0x0C)),
-            ),
-        ),
-        Expr::u32(1),
-        Expr::u32(0),
-    )
+    whitespace_flag(byte, true)
 }
 
-pub(super) fn c_ident_continue_flag(byte: Expr) -> Expr {
+fn c_ident_start_condition(byte: &Expr) -> Expr {
     let is_lower = Expr::and(
         Expr::ge(byte.clone(), Expr::u32(b'a' as u32)),
         Expr::le(byte.clone(), Expr::u32(b'z' as u32)),
@@ -420,33 +413,24 @@ pub(super) fn c_ident_continue_flag(byte: Expr) -> Expr {
         Expr::ge(byte.clone(), Expr::u32(b'A' as u32)),
         Expr::le(byte.clone(), Expr::u32(b'Z' as u32)),
     );
+    let is_under = Expr::eq(byte.clone(), Expr::u32(b'_' as u32));
+    Expr::or(Expr::or(is_lower, is_upper), is_under)
+}
+
+pub(super) fn c_ident_continue_flag(byte: Expr) -> Expr {
     let is_digit = Expr::and(
         Expr::ge(byte.clone(), Expr::u32(b'0' as u32)),
         Expr::le(byte.clone(), Expr::u32(b'9' as u32)),
     );
-    let is_under = Expr::eq(byte, Expr::u32(b'_' as u32));
     Expr::select(
-        Expr::or(Expr::or(is_lower, is_upper), Expr::or(is_digit, is_under)),
+        Expr::or(c_ident_start_condition(&byte), is_digit),
         Expr::u32(1),
         Expr::u32(0),
     )
 }
 
 pub(super) fn c_ident_start_flag(byte: Expr) -> Expr {
-    let is_lower = Expr::and(
-        Expr::ge(byte.clone(), Expr::u32(b'a' as u32)),
-        Expr::le(byte.clone(), Expr::u32(b'z' as u32)),
-    );
-    let is_upper = Expr::and(
-        Expr::ge(byte.clone(), Expr::u32(b'A' as u32)),
-        Expr::le(byte.clone(), Expr::u32(b'Z' as u32)),
-    );
-    let is_under = Expr::eq(byte, Expr::u32(b'_' as u32));
-    Expr::select(
-        Expr::or(Expr::or(is_lower, is_upper), is_under),
-        Expr::u32(1),
-        Expr::u32(0),
-    )
+    Expr::select(c_ident_start_condition(&byte), Expr::u32(1), Expr::u32(0))
 }
 
 pub(super) fn hash_offset_expr(prefix: &str, max_ws_prefix: u32) -> Expr {

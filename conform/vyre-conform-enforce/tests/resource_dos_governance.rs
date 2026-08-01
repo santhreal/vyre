@@ -15,7 +15,10 @@ fn resource_dos_primary_sources_are_registered() {
         "OWASP_DOS",
         "NIST_SP_800_190",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 

@@ -4,13 +4,13 @@ use std::cmp::{Ordering as CmpOrdering, Reverse};
 use std::collections::BinaryHeap;
 use std::hash::{Hash, Hasher};
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex, MutexGuard, OnceLock, Weak};
+use std::sync::{Arc, LazyLock, Mutex, MutexGuard, OnceLock, Weak};
 use std::time::Instant;
 
 use dashmap::DashMap;
 use rustc_hash::{FxHashMap, FxHasher};
 use smallvec::SmallVec;
-use vyre_driver::BackendError;
+use vyre_driver::{BackendError, ResidentHandle, ResidentOwner};
 
 use super::pool::PoolReturn;
 
@@ -20,6 +20,40 @@ const STAGING_BUFFER_POOL_CLASS_CAP: usize = 16;
 
 fn resident_buffers() -> &'static DashMap<u64, Weak<GpuBufferInner>> {
     RESIDENT_BUFFERS.get_or_init(DashMap::new)
+}
+
+/// Identity of the WGPU driver's resident-buffer namespace.
+///
+/// `NEXT_BUFFER_ID` and `RESIDENT_BUFFERS` are process-wide rather than per
+/// backend instance, so every live WGPU resident buffer shares one namespace
+/// and therefore one owner. Minting the owner here, next to the registry it
+/// describes, keeps that structural: a WGPU resident handle stays valid for as
+/// long as its buffer lives, and a handle minted by any other driver is
+/// refused instead of being resolved against an unrelated buffer of the same
+/// id.
+static RESIDENT_OWNER: LazyLock<Result<ResidentOwner, BackendError>> =
+    LazyLock::new(ResidentOwner::new);
+
+/// Owner of every WGPU resident handle in this process.
+fn resident_owner() -> Result<ResidentOwner, BackendError> {
+    match &*RESIDENT_OWNER {
+        Ok(owner) => Ok(*owner),
+        Err(error) => Err(BackendError::new(format!(
+            "WGPU resident buffers have no namespace identity: {error} Fix: reduce the number of backend instances created in this process."
+        ))),
+    }
+}
+
+/// Refuse a resident handle minted outside the WGPU resident namespace.
+///
+/// Resolving one anyway would look up a foreign id in this driver's registry,
+/// where the same number names an unrelated live buffer.
+pub(crate) fn check_resident_owner(
+    handle: ResidentHandle,
+    context: &str,
+) -> Result<(), BackendError> {
+    resident_owner()?.resolve(handle, context)?;
+    Ok(())
 }
 
 fn pointer_identity_key<T>(ptr: *const T) -> u64 {
@@ -526,6 +560,33 @@ impl GpuBufferHandle {
         }
     }
 
+    /// Resident handle naming this buffer, owner included.
+    ///
+    /// # Errors
+    ///
+    /// Returns a backend error when this process could not mint an identity
+    /// for the WGPU resident namespace.
+    pub fn resident_handle(&self) -> Result<ResidentHandle, BackendError> {
+        Ok(resident_owner()?.handle(self.inner.id))
+    }
+
+    /// Resolve a resident handle back into a live GPU handle.
+    ///
+    /// `Ok(None)` means the handle named a WGPU buffer that is no longer live.
+    ///
+    /// # Errors
+    ///
+    /// Returns a backend error when `handle` was minted by a different backend
+    /// instance, which is refused rather than resolved: its id would name an
+    /// unrelated buffer here.
+    pub fn from_resident_handle(
+        handle: ResidentHandle,
+        context: &str,
+    ) -> Result<Option<Self>, BackendError> {
+        let id = resident_owner()?.resolve(handle, context)?;
+        Ok(Self::from_resident_id(id))
+    }
+
     /// Underlying `wgpu::Buffer`.
     #[must_use]
     pub fn buffer(&self) -> &wgpu::Buffer {
@@ -1029,13 +1090,9 @@ mod tests {
         // used to route through the slow per-write StagingBelt.
         for &len in &[1usize, 3, 4, 5, 257, (1 << 20) + 3] {
             let contents: Vec<u8> = (0..len).map(|i| (i % 251) as u8).collect();
-            let handle = GpuBufferHandle::upload(
-                device,
-                queue,
-                &contents,
-                wgpu::BufferUsages::COPY_SRC,
-            )
-            .expect("Fix: mapped upload should succeed at every size");
+            let handle =
+                GpuBufferHandle::upload(device, queue, &contents, wgpu::BufferUsages::COPY_SRC)
+                    .expect("Fix: mapped upload should succeed at every size");
             let mut out = Vec::new();
             handle
                 .readback(device, queue, &mut out)
@@ -1063,6 +1120,31 @@ mod tests {
         // A slice smaller than the data must fail closed, never truncate.
         let mut too_small = [0u8; 2];
         assert!(crate::padded_upload::write_padded_into_mapped(&mut too_small, &bytes).is_err());
+    }
+
+    #[test]
+    fn foreign_resident_handle_is_refused_not_resolved() {
+        // A handle minted outside the WGPU namespace carries an id that is
+        // perfectly valid here, so resolving it by bare id would hand back an
+        // unrelated live buffer. The boundary must refuse instead.
+        let foreign = ResidentOwner::new().expect("Fix: owner ids must be available");
+        let native = resident_owner().expect("Fix: WGPU resident owner must be available");
+        assert_ne!(foreign, native);
+
+        let error = GpuBufferHandle::from_resident_handle(foreign.handle(1), "refusal test")
+            .expect_err("Fix: a foreign resident handle must never resolve to a WGPU buffer");
+        let BackendError::InvalidProgram { fix } = error else {
+            panic!("Fix: foreign resident handle refusal must be BackendError::InvalidProgram");
+        };
+        assert!(
+            fix.contains("owned by backend instance") && fix.contains("Fix: "),
+            "Fix: refusal must name the owning instance and carry actionable text, got {fix}"
+        );
+
+        assert!(
+            check_resident_owner(native.handle(u64::MAX), "refusal test").is_ok(),
+            "Fix: a handle from this namespace must pass the owner check even when its buffer is gone"
+        );
     }
 
     #[test]
@@ -1179,6 +1261,107 @@ mod tests {
         assert!(
             inner.lru.len() <= inner.entries.len().saturating_mul(4).max(8),
             "Fix: bind-group LRU heap must compact stale entries to cache-capacity scale"
+        );
+    }
+
+    /// Pins that bind-group reuse is keyed on the concrete buffers bound, not
+    /// on the binding layout alone, and counts the creations it saves.
+    ///
+    /// This exists because a `patterns::bind_group_reuse` module in
+    /// vyre-emit-naga was removed after an audit found it grouped
+    /// `KernelDescriptor`s for bind-group sharing by hashing only their
+    /// binding LAYOUT (slot, dtype, count, memory class, visibility). A
+    /// `wgpu::BindGroup` binds a layout PLUS concrete resources, so that rule
+    /// declares two dispatches reading different buffers to be shareable.
+    /// Acting on it would bind the wrong buffer and silently compute on stale
+    /// data. This cache is the correct implementation and the only one that
+    /// ships; the assertion below is the difference between the two rules.
+    ///
+    /// The counts are the contention-proof evidence that reuse actually fires:
+    /// six lookups over two distinct buffers must create exactly two bind
+    /// groups and reuse four. A layout-only key would create ONE and wrongly
+    /// share it across both buffers, which `misses == 2` rejects. Dropping the
+    /// buffer identity from the key regresses to exactly that bug.
+    #[test]
+    fn bind_group_reuse_keys_on_buffer_identity_not_layout_alone() {
+        let arc = crate::runtime::cached_device()
+            .expect("Fix: GPU device is required for bind-group identity test");
+        let (device, queue) = &*arc;
+
+        let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("vyre bind-group identity test layout"),
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::COMPUTE,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Storage { read_only: true },
+                    has_dynamic_offset: false,
+                    min_binding_size: wgpu::BufferSize::new(4),
+                },
+                count: None,
+            }],
+        });
+
+        // Two DISTINCT buffers of identical size and usage. Same layout, same
+        // byte length: a layout-only reuse rule cannot tell them apart.
+        let buffer_a =
+            GpuBufferHandle::upload(device, queue, &[1u8; 4], wgpu::BufferUsages::STORAGE)
+                .expect("Fix: upload of buffer a must succeed");
+        let buffer_b =
+            GpuBufferHandle::upload(device, queue, &[2u8; 4], wgpu::BufferUsages::STORAGE)
+                .expect("Fix: upload of buffer b must succeed");
+
+        let cache = BindGroupCache::new();
+        let layout_id = 1usize;
+        let mut created = 0usize;
+
+        // A repeated-dispatch sequence: three dispatches against buffer a,
+        // then three against buffer b, all through one layout.
+        for handle in [
+            &buffer_a, &buffer_a, &buffer_a, &buffer_b, &buffer_b, &buffer_b,
+        ] {
+            let slice = std::slice::from_ref(handle);
+            cache.get_or_create(layout_id, slice, || {
+                created += 1;
+                device.create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("vyre bind-group identity test bind group"),
+                    layout: &layout,
+                    entries: &[wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: handle.buffer().as_entire_binding(),
+                    }],
+                })
+            });
+        }
+
+        let stats = cache.stats();
+        assert_eq!(
+            created, 2,
+            "six lookups over two distinct buffers must construct exactly two bind groups"
+        );
+        assert_eq!(
+            stats.misses, 2,
+            "each distinct buffer must miss exactly once. A layout-only key would \
+             report 1 miss and share one bind group across both buffers, binding the \
+             wrong resource on every dispatch against the second buffer."
+        );
+        assert_eq!(
+            stats.hits, 4,
+            "the two repeats of each buffer must reuse the cached bind group"
+        );
+        assert_eq!(stats.entries, 2, "one cached entry per distinct buffer");
+
+        // The same buffer through the same layout must resolve to the very same
+        // instance, which is what makes the four hits above a real saving.
+        let first = cache.get_or_create(layout_id, std::slice::from_ref(&buffer_a), || {
+            panic!("Fix: buffer a is already cached and must not be rebuilt")
+        });
+        let again = cache.get_or_create(layout_id, std::slice::from_ref(&buffer_a), || {
+            panic!("Fix: buffer a is already cached and must not be rebuilt")
+        });
+        assert!(
+            Arc::ptr_eq(&first, &again),
+            "repeated lookups for one buffer must hand back one bind-group instance"
         );
     }
 }

@@ -365,23 +365,14 @@ pub(crate) fn run(args: &[String]) {
         integration_markers,
         blockers,
     };
-    let json = match serde_json::to_string_pretty(&matrix) {
-        Ok(json) => json,
-        Err(error) => {
-            eprintln!("Fix: failed to serialize optimization matrix: {error}");
-            std::process::exit(1);
-        }
-    };
+
     if let Some(parent) = output.parent() {
         if let Err(error) = fs::create_dir_all(parent) {
             eprintln!("Fix: failed to create `{}`: {error}", parent.display());
             std::process::exit(1);
         }
     }
-    if let Err(error) = fs::write(&output, format!("{json}\n")) {
-        eprintln!("Fix: failed to write `{}`: {error}", output.display());
-        std::process::exit(1);
-    }
+    crate::output_arg::write_json(&output, &matrix);
     if let Err(error) = write_derived_evidence(&output, &matrix) {
         eprintln!("Fix: failed to write derived optimization evidence: {error}");
         std::process::exit(1);
@@ -551,9 +542,9 @@ fn write_marker_evidence(
         markers,
         blockers,
     };
-    let json = serde_json::to_string_pretty(&evidence).map_err(|error| error.to_string())?;
-    fs::write(dir.join(file_name), format!("{json}\n"))
-        .map_err(|error| format!("{}: {error}", dir.join(file_name).display()))
+    let path = dir.join(file_name);
+    crate::output_arg::write_json(&path, &evidence);
+    Ok(())
 }
 
 fn collect_fixture_requirements(
@@ -749,32 +740,12 @@ fn requirement_scope_text(path: &Path, root_text: &str) -> io::Result<String> {
 }
 
 fn parse_output(args: &[String]) -> Result<PathBuf, String> {
-    let mut output = None;
-    let mut index = 2;
-    while index < args.len() {
-        match args[index].as_str() {
-            "--output" => {
-                let Some(path) = args.get(index + 1) else {
-                    return Err("Fix: --output requires a path.".to_string());
-                };
-                output = Some(PathBuf::from(path));
-                index += 2;
-            }
-            "--help" | "-h" => {
-                println!(
-                    "USAGE:\n  cargo_full run --bin xtask -- optimization-matrix [--output PATH]\n\n\
-                     Writes optimization integration evidence for release pass families."
-                );
-                std::process::exit(0);
-            }
-            other => {
-                return Err(format!(
-                    "Fix: unknown optimization-matrix option `{other}`."
-                ))
-            }
-        }
-    }
-    Ok(output.unwrap_or_else(default_output))
+    crate::output_arg::parse_output_arg(
+        args,
+        "optimization-matrix",
+        "Writes optimization integration evidence for release pass families.",
+        default_output,
+    )
 }
 
 fn default_output() -> PathBuf {

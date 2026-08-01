@@ -44,7 +44,8 @@
 //! Capability bits are NOT compared  -  passes are allowed to add OR remove
 //! capability requirements; cost-direction is orthogonal.
 
-use crate::ir::{Expr, Node, Program};
+use super::is_invocation_id_eq_constant;
+use crate::ir::{Node, Program};
 use crate::optimizer::AdapterCaps;
 
 /// A frozen snapshot of the cost dimensions tracked by the optimizer's
@@ -232,37 +233,6 @@ fn count_divergent_patterns(node: &Node, score: &mut u64) {
         }
         false
     });
-}
-
-/// Recognize the `invocation_id == K` divergence shape in either operand
-/// orientation. Both `Eq` and `Ne` are explicitly covered  -  `Ne` is the
-/// inverted form (`if invocation_id != K { ... }` divides the warp the same
-/// way) and is counted. Any other comparison is NOT counted (those land in
-/// the broader `control_flow_count` dimension).
-fn is_invocation_id_eq_constant(cond: &Expr) -> bool {
-    use crate::ir::BinOp;
-    match cond {
-        Expr::BinOp {
-            op: BinOp::Eq | BinOp::Ne,
-            left,
-            right,
-        } => {
-            is_invocation_id_expr(left) && matches!(**right, Expr::LitU32(_))
-                || is_invocation_id_expr(right) && matches!(**left, Expr::LitU32(_))
-        }
-        _ => false,
-    }
-}
-
-/// True when `expr` is one of the workgroup-relative thread identifiers used
-/// for divergent gating: global invocation id (any axis), local id, or
-/// subgroup local id. Workgroup id is NOT counted  -  it gates entire
-/// workgroups, not threads within a warp.
-fn is_invocation_id_expr(expr: &Expr) -> bool {
-    matches!(
-        expr,
-        Expr::InvocationId { .. } | Expr::LocalId { .. } | Expr::SubgroupLocalId
-    )
 }
 
 #[cfg(test)]

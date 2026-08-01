@@ -72,4 +72,3 @@ fn materialized_input_key_changes_on_4096_single_byte_mutations() {
         );
     }
 }
-

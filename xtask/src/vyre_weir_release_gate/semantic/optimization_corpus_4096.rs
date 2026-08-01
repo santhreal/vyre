@@ -123,7 +123,13 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
                 "requirement `optimization-corpus-4096` family manifest reports {missing_required} missing required optimization family/families"
             ));
         }
-        check_duplicate_optimization_family_rows(&family_manifest, failures);
+        check_duplicate_rows(
+            &family_manifest,
+            "families",
+            "family",
+            "family manifest has duplicate family rows",
+            failures,
+        );
         for required in [
             "algebraic",
             "predicate",
@@ -221,7 +227,13 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
                 entries.len()
             ));
         }
-        check_duplicate_optimization_case_entry_ids(&case_manifest, failures);
+        check_duplicate_rows(
+            &case_manifest,
+            "entries",
+            "id",
+            "case manifest has duplicate entry ids",
+            failures,
+        );
         for field in [
             "cases_with_child_bodies",
             "cases_with_bindings",
@@ -264,29 +276,19 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
     }
 }
 
-fn check_duplicate_optimization_case_entry_ids(
-    case_manifest: &serde_json::Value,
-    failures: &mut Vec<String>,
-) {
-    let duplicates = duplicate_nonblank_object_array_field_values(case_manifest, "entries", "id");
-    if !duplicates.is_empty() {
-        let duplicates = duplicates.into_iter().collect::<Vec<_>>().join(", ");
-        failures.push(format!(
-            "requirement `optimization-corpus-4096` case manifest has duplicate entry ids: {duplicates}"
-        ));
-    }
-}
-
-fn check_duplicate_optimization_family_rows(
-    family_manifest: &serde_json::Value,
+fn check_duplicate_rows(
+    manifest: &serde_json::Value,
+    array_field: &str,
+    value_field: &str,
+    label: &str,
     failures: &mut Vec<String>,
 ) {
     let duplicates =
-        duplicate_nonblank_object_array_field_values(family_manifest, "families", "family");
+        duplicate_nonblank_object_array_field_values(manifest, array_field, value_field);
     if !duplicates.is_empty() {
         let duplicates = duplicates.into_iter().collect::<Vec<_>>().join(", ");
         failures.push(format!(
-            "requirement `optimization-corpus-4096` family manifest has duplicate family rows: {duplicates}"
+            "requirement `optimization-corpus-4096` {label}: {duplicates}"
         ));
     }
 }

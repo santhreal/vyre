@@ -191,7 +191,7 @@ fn compiled_pipeline_persistent_handle_into_default_reuses_output_slots() {
         ) -> Result<OutputBuffers, BackendError> {
             let bytes = match inputs.first() {
                 Some(Resource::Borrowed(bytes)) => bytes.clone(),
-                Some(Resource::Resident(id)) => id.to_le_bytes().to_vec(),
+                Some(Resource::Resident(handle)) => handle.id().to_le_bytes().to_vec(),
                 None => Vec::new(),
             };
             self.calls.lock().unwrap().push(bytes.clone());

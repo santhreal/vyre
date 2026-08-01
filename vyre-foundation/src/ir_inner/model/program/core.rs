@@ -69,6 +69,12 @@ pub struct Program {
     pub(crate) structural_validation_fingerprint: AtomicU64,
     pub(crate) mutation_provenance: AtomicU8,
     pub(crate) fingerprint: OnceLock<[u8; 32]>,
+    /// Memoized normalized compiled-pipeline cache digest.
+    ///
+    /// Same shape and lifecycle as `fingerprint`: a pure function of the
+    /// program value, so it lives on the value and is keyed by nothing, which
+    /// is why it structurally cannot serve another program's digest.
+    pub(crate) normalized_cache_digest: OnceLock<[u8; 32]>,
     // VYRE_IR_HOTSPOTS HIGH (core.rs:100-117): both caches were
     // plain values, so `Program::clone` copied the whole Vec / whole
     // ProgramStats by value. Wrapping them in Arc turns the clone
@@ -118,6 +124,7 @@ impl Clone for Program {
             ),
             mutation_provenance: AtomicU8::new(self.mutation_provenance.load(Ordering::Acquire)),
             fingerprint: OnceLock::new(),
+            normalized_cache_digest: OnceLock::new(),
             output_buffer_index: OnceLock::new(),
             has_indirect_dispatch: OnceLock::new(),
             stats: OnceLock::new(),
@@ -133,6 +140,9 @@ impl Clone for Program {
         }
         if let Some(fingerprint) = self.fingerprint.get() {
             let _ = cloned.fingerprint.set(*fingerprint);
+        }
+        if let Some(normalized_cache_digest) = self.normalized_cache_digest.get() {
+            let _ = cloned.normalized_cache_digest.set(*normalized_cache_digest);
         }
         if let Some(output_buffer_index) = self.output_buffer_index.get() {
             // Arc::clone = refcount bump, no Vec<u32> copy.

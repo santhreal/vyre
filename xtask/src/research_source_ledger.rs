@@ -152,11 +152,11 @@ fn validate_research_source_ledger_schema(ledger: &ResearchSourceLedger) -> Resu
     Ok(())
 }
 
-fn validate_competitor_issue_ledger_schema(
-    ledger: &CompetitorIssueLedger,
-) -> Result<(), String> {
+fn validate_competitor_issue_ledger_schema(ledger: &CompetitorIssueLedger) -> Result<(), String> {
     let Some(schema) = ledger.schema.as_ref() else {
-        return Err(format!("{COMPETITOR_ISSUE_LEDGER_PATH} is missing [schema]"));
+        return Err(format!(
+            "{COMPETITOR_ISSUE_LEDGER_PATH} is missing [schema]"
+        ));
     };
     if schema.version != Some(COMPETITOR_ISSUE_LEDGER_SCHEMA_VERSION) {
         return Err(format!(
@@ -168,7 +168,8 @@ fn validate_competitor_issue_ledger_schema(
             "{COMPETITOR_ISSUE_LEDGER_PATH} schema.ledger must be `{COMPETITOR_ISSUE_LEDGER_ID}`"
         ));
     }
-    let recorded_on = required_competitor_schema_field(schema.recorded_on.as_deref(), "recorded_on")?;
+    let recorded_on =
+        required_competitor_schema_field(schema.recorded_on.as_deref(), "recorded_on")?;
     if !date_yyyy_mm_dd(recorded_on) {
         return Err(format!(
             "{COMPETITOR_ISSUE_LEDGER_PATH} schema.recorded_on `{recorded_on}` must use YYYY-MM-DD"
@@ -246,7 +247,8 @@ fn validate_research_source_ledger_rows(ledger: &ResearchSourceLedger) -> Result
                 "{RESEARCH_SOURCE_LEDGER_PATH} source[{index}] key `{key}` cannot mark preprint sources release_floor_eligible"
             ));
         }
-        let artifact_url = required_source_field(source.artifact_url.as_deref(), index, "artifact_url")?;
+        let artifact_url =
+            required_source_field(source.artifact_url.as_deref(), index, "artifact_url")?;
         let normalized_artifact_url = normalize_research_source_url(artifact_url);
         if !normalized_artifact_url.starts_with("https://") {
             return Err(format!(
@@ -277,18 +279,14 @@ fn validate_research_source_ledger_rows(ledger: &ResearchSourceLedger) -> Result
                 ));
             }
         }
-        let digest_material = required_source_field(
-            source.digest_material.as_deref(),
-            index,
-            "digest_material",
-        )?;
+        let digest_material =
+            required_source_field(source.digest_material.as_deref(), index, "digest_material")?;
         if !digest_material.contains(key)
             || (!digest_material.contains(url) && !digest_material.contains(&normalized_url))
             || !digest_material.contains(reproducibility_class)
             || !digest_material.contains(artifact_state)
-            || !digest_material.contains(&format!(
-                "release_floor_eligible={release_floor_eligible}"
-            ))
+            || !digest_material
+                .contains(&format!("release_floor_eligible={release_floor_eligible}"))
             || (!digest_material.contains(artifact_url)
                 && !digest_material.contains(&normalized_artifact_url))
         {
@@ -466,18 +464,27 @@ fn allowed_competitor_issue_status(value: &str) -> bool {
     matches!(value, "closed" | "documentation" | "open" | "reproduced")
 }
 
-
-fn required_source_field<'a>(
+fn required_indexed_field<'a>(
     raw: Option<&'a str>,
     index: usize,
     field: &str,
+    path: &str,
+    item: &str,
 ) -> Result<&'a str, String> {
     raw.map(str::trim)
         .filter(|value| !value.is_empty())
-        .ok_or_else(|| {
-            format!("{RESEARCH_SOURCE_LEDGER_PATH} source[{index}] is missing {field}")
-        })
+        .ok_or_else(|| format!("{path} {item}[{index}] is missing {field}"))
 }
+
+macro_rules! define_required_indexed_field {
+    ($name:ident, $path:expr, $item:literal) => {
+        fn $name<'a>(raw: Option<&'a str>, index: usize, field: &str) -> Result<&'a str, String> {
+            required_indexed_field(raw, index, field, $path, $item)
+        }
+    };
+}
+
+define_required_indexed_field!(required_source_field, RESEARCH_SOURCE_LEDGER_PATH, "source");
 
 fn required_schema_field<'a>(raw: Option<&'a str>, field: &str) -> Result<&'a str, String> {
     raw.map(str::trim)
@@ -489,29 +496,18 @@ fn required_competitor_schema_field<'a>(
     raw: Option<&'a str>,
     field: &str,
 ) -> Result<&'a str, String> {
-    raw.map(str::trim).filter(|value| !value.is_empty()).ok_or_else(|| {
-        format!("{COMPETITOR_ISSUE_LEDGER_PATH} schema is missing {field}")
-    })
-}
-
-fn required_competitor_issue_field<'a>(
-    raw: Option<&'a str>,
-    index: usize,
-    field: &str,
-) -> Result<&'a str, String> {
     raw.map(str::trim)
         .filter(|value| !value.is_empty())
-        .ok_or_else(|| {
-            format!("{COMPETITOR_ISSUE_LEDGER_PATH} issue[{index}] is missing {field}")
-        })
+        .ok_or_else(|| format!("{COMPETITOR_ISSUE_LEDGER_PATH} schema is missing {field}"))
 }
 
-fn validate_vx_row_id(
-    path: &str,
-    index: usize,
-    owner: &str,
-    vx_row: &str,
-) -> Result<(), String> {
+define_required_indexed_field!(
+    required_competitor_issue_field,
+    COMPETITOR_ISSUE_LEDGER_PATH,
+    "issue"
+);
+
+fn validate_vx_row_id(path: &str, index: usize, owner: &str, vx_row: &str) -> Result<(), String> {
     let vx_row = vx_row.trim();
     if vx_row.is_empty() {
         return Err(format!(
@@ -553,9 +549,7 @@ pub(crate) fn research_source_urls_by_key(
         .collect()
 }
 
-pub(crate) fn competitor_issue_source_keys(
-    ledger: &CompetitorIssueLedger,
-) -> BTreeSet<String> {
+pub(crate) fn competitor_issue_source_keys(ledger: &CompetitorIssueLedger) -> BTreeSet<String> {
     ledger
         .issues
         .as_deref()

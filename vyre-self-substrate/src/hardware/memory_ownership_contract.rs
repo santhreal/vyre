@@ -194,6 +194,98 @@ pub fn validate_memory_ownership_contract(
     })
 }
 
+const MEMORY_ARTIFACT_REQUIREMENTS: &[(usize, &str, &str)] = &[
+    (0, "driver DeviceBuffer contract", "DeviceBuffer"),
+    (0, "driver HostShimBuffer contract", "HostShimBuffer"),
+    (0, "driver output buffer contract", "OutputBuffers"),
+    (
+        0,
+        "driver output-slot preservation export",
+        "replace_output_buffers_preserving_slots",
+    ),
+    (
+        1,
+        "caller-owned output buffer alias",
+        "pub type OutputBuffers = Vec<Vec<u8>>",
+    ),
+    (
+        1,
+        "output-slot reuse function",
+        "replace_output_buffers_preserving_slots_with_memory_stats",
+    ),
+    (1, "reused output-slot accounting", "reused_slots"),
+    (1, "moved output-slot accounting", "moved_slots"),
+    (1, "retained capacity accounting", "retained_capacity_bytes"),
+    (
+        2,
+        "CUDA resident buffer handle",
+        "pub struct CudaResidentBuffer",
+    ),
+    (2, "CUDA resident store owner", "struct CudaResidentStore"),
+    (
+        2,
+        "resident byte budget reservation",
+        "reserve_resident_budget",
+    ),
+    (2, "resident inflight guard", "mark_inflight"),
+    (
+        2,
+        "resident unknown-handle diagnostic",
+        "not owned by this backend",
+    ),
+    (3, "CUDA resident allocation API", "allocate_resident"),
+    (3, "batched resident upload API", "upload_resident_many"),
+    (
+        3,
+        "caller-owned resident download API",
+        "download_resident_into",
+    ),
+    (
+        3,
+        "batched sparse readback API",
+        "download_resident_readbacks_many",
+    ),
+    (
+        3,
+        "resident readback byte accounting",
+        "record_device_to_host_readback",
+    ),
+    (4, "pinned host staging pool", "PinnedHostAllocationPool"),
+    (4, "bounded pinned staging cache", "max_cached_bytes"),
+    (4, "caller-owned copy into Vec", "copy_raw_bytes_into_vec"),
+    (5, "CUDA-first backend matrix", "\"cuda_first\": true"),
+    (
+        5,
+        "CUDA preferred backend",
+        "\"preferred_backend_id\": \"cuda\"",
+    ),
+    (5, "CUDA resident IO marker", "\"id\": \"cuda-resident-io\""),
+    (
+        5,
+        "CUDA resident dispatch marker",
+        "\"id\": \"cuda-resident-dispatch\"",
+    ),
+    (5, "no missing backend tokens", "\"missing_tokens\": []"),
+    (
+        5,
+        "no unresolved backend markers",
+        "\"unresolved_markers\": []",
+    ),
+    (6, "CUDA release suite backend", "\"backend\": \"cuda\""),
+    (
+        6,
+        "RTX 5090 release suite hardware",
+        "NVIDIA GeForce RTX 5090",
+    ),
+    (
+        6,
+        "CUDA selected benchmark backend",
+        "\"selected_backend\": \"cuda\"",
+    ),
+    (6, "CUDA release suite zero blockers", "\"blockers\": []"),
+    (6, "CUDA 100x contract", "\"cpu_sota_100x_required\": true"),
+];
+
 /// Validate committed source and CUDA evidence for host/device memory ownership.
 pub fn validate_memory_ownership_artifacts(
     backend_contract_source: &str,
@@ -204,174 +296,17 @@ pub fn validate_memory_ownership_artifacts(
     backend_matrix: &str,
     cuda_release_suite: &str,
 ) -> Result<MemoryOwnershipArtifactProof, MemoryOwnershipError> {
-    for (artifact, evidence, needle) in [
-        (
-            backend_contract_source,
-            "driver DeviceBuffer contract",
-            "DeviceBuffer",
-        ),
-        (
-            backend_contract_source,
-            "driver HostShimBuffer contract",
-            "HostShimBuffer",
-        ),
-        (
-            backend_contract_source,
-            "driver output buffer contract",
-            "OutputBuffers",
-        ),
-        (
-            backend_contract_source,
-            "driver output-slot preservation export",
-            "replace_output_buffers_preserving_slots",
-        ),
-        (
-            dispatch_result_source,
-            "caller-owned output buffer alias",
-            "pub type OutputBuffers = Vec<Vec<u8>>",
-        ),
-        (
-            dispatch_result_source,
-            "output-slot reuse function",
-            "replace_output_buffers_preserving_slots_with_memory_stats",
-        ),
-        (
-            dispatch_result_source,
-            "reused output-slot accounting",
-            "reused_slots",
-        ),
-        (
-            dispatch_result_source,
-            "moved output-slot accounting",
-            "moved_slots",
-        ),
-        (
-            dispatch_result_source,
-            "retained capacity accounting",
-            "retained_capacity_bytes",
-        ),
-        (
-            cuda_resident_source,
-            "CUDA resident buffer handle",
-            "pub struct CudaResidentBuffer",
-        ),
-        (
-            cuda_resident_source,
-            "CUDA resident store owner",
-            "struct CudaResidentStore",
-        ),
-        (
-            cuda_resident_source,
-            "resident byte budget reservation",
-            "reserve_resident_budget",
-        ),
-        (
-            cuda_resident_source,
-            "resident inflight guard",
-            "mark_inflight",
-        ),
-        (
-            cuda_resident_source,
-            "resident unknown-handle diagnostic",
-            "not owned by this backend",
-        ),
-        (
-            cuda_resident_io_source,
-            "CUDA resident allocation API",
-            "allocate_resident",
-        ),
-        (
-            cuda_resident_io_source,
-            "batched resident upload API",
-            "upload_resident_many",
-        ),
-        (
-            cuda_resident_io_source,
-            "caller-owned resident download API",
-            "download_resident_into",
-        ),
-        (
-            cuda_resident_io_source,
-            "batched sparse readback API",
-            "download_resident_readbacks_many",
-        ),
-        (
-            cuda_resident_io_source,
-            "resident readback byte accounting",
-            "record_device_to_host_readback",
-        ),
-        (
-            cuda_allocations_source,
-            "pinned host staging pool",
-            "PinnedHostAllocationPool",
-        ),
-        (
-            cuda_allocations_source,
-            "bounded pinned staging cache",
-            "max_cached_bytes",
-        ),
-        (
-            cuda_allocations_source,
-            "caller-owned copy into Vec",
-            "copy_raw_bytes_into_vec",
-        ),
-        (
-            backend_matrix,
-            "CUDA-first backend matrix",
-            "\"cuda_first\": true",
-        ),
-        (
-            backend_matrix,
-            "CUDA preferred backend",
-            "\"preferred_backend_id\": \"cuda\"",
-        ),
-        (
-            backend_matrix,
-            "CUDA resident IO marker",
-            "\"id\": \"cuda-resident-io\"",
-        ),
-        (
-            backend_matrix,
-            "CUDA resident dispatch marker",
-            "\"id\": \"cuda-resident-dispatch\"",
-        ),
-        (
-            backend_matrix,
-            "no missing backend tokens",
-            "\"missing_tokens\": []",
-        ),
-        (
-            backend_matrix,
-            "no unresolved backend markers",
-            "\"unresolved_markers\": []",
-        ),
-        (
-            cuda_release_suite,
-            "CUDA release suite backend",
-            "\"backend\": \"cuda\"",
-        ),
-        (
-            cuda_release_suite,
-            "RTX 5090 release suite hardware",
-            "NVIDIA GeForce RTX 5090",
-        ),
-        (
-            cuda_release_suite,
-            "CUDA selected benchmark backend",
-            "\"selected_backend\": \"cuda\"",
-        ),
-        (
-            cuda_release_suite,
-            "CUDA release suite zero blockers",
-            "\"blockers\": []",
-        ),
-        (
-            cuda_release_suite,
-            "CUDA 100x contract",
-            "\"cpu_sota_100x_required\": true",
-        ),
-    ] {
-        artifact_contains(artifact, evidence, needle)?;
+    let artifacts = [
+        backend_contract_source,
+        dispatch_result_source,
+        cuda_resident_source,
+        cuda_resident_io_source,
+        cuda_allocations_source,
+        backend_matrix,
+        cuda_release_suite,
+    ];
+    for &(artifact_index, evidence, needle) in MEMORY_ARTIFACT_REQUIREMENTS {
+        artifact_contains(artifacts[artifact_index], evidence, needle)?;
     }
 
     let output_reuse_token_count = dispatch_result_source

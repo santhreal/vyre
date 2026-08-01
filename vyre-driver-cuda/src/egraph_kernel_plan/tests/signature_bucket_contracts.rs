@@ -161,4 +161,3 @@ fn signature_pair_decoder_rejects_malformed_bucket_row_ranges() {
         }
     );
 }
-

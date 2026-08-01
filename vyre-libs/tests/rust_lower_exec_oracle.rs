@@ -15,11 +15,12 @@ mod support;
 
 use support::{
     ast_interp, gen_for_program, gen_inputs, gen_program, gen_while_program, ir_exec,
-    ir_exec_batched, rustc_run,
+    ir_exec_batched, rustc_available, rustc_run,
 };
 
 #[test]
 fn lowered_while_matches_ast_and_rustc() {
+    let rustc = rustc_available();
     let mut checked = 0;
     for seed in 0..400u64 {
         let (src, nparams) = gen_while_program(seed);
@@ -30,24 +31,25 @@ fn lowered_while_matches_ast_and_rustc() {
             ir, ast,
             "while: lowered IR diverged from AST interp:\n  {src}\n  inputs {inputs:?}"
         );
-        if seed < 60 {
-            if let Some(rustc) = rustc_run(&src, &inputs) {
-                assert_eq!(
-                    ir, rustc,
-                    "while: lowered IR diverged from rustc:\n  {src}\n  inputs {inputs:?}"
-                );
-                checked += 1;
-            }
+        if rustc && seed < 60 {
+            assert_eq!(
+                ir,
+                rustc_run(&src, &inputs),
+                "while: lowered IR diverged from rustc:\n  {src}\n  inputs {inputs:?}"
+            );
+            checked += 1;
         }
     }
     assert!(
-        checked >= 30,
-        "expected most while programs to compile+run under rustc, got {checked}"
+        !rustc || checked == 60,
+        "with a rustc on PATH every one of the 60 rustc-checked while seeds \
+         must be compared, got {checked}"
     );
 }
 
 #[test]
 fn lowered_for_range_matches_ast_and_rustc() {
+    let rustc = rustc_available();
     let mut checked = 0;
     for seed in 0..400u64 {
         let (src, nparams) = gen_for_program(seed);
@@ -58,19 +60,19 @@ fn lowered_for_range_matches_ast_and_rustc() {
             ir, ast,
             "for-range: lowered IR diverged from AST interp:\n  {src}\n  inputs {inputs:?}"
         );
-        if seed < 80 {
-            if let Some(rustc) = rustc_run(&src, &inputs) {
-                assert_eq!(
-                    ir, rustc,
-                    "for-range: lowered IR diverged from rustc:\n  {src}\n  inputs {inputs:?}"
-                );
-                checked += 1;
-            }
+        if rustc && seed < 80 {
+            assert_eq!(
+                ir,
+                rustc_run(&src, &inputs),
+                "for-range: lowered IR diverged from rustc:\n  {src}\n  inputs {inputs:?}"
+            );
+            checked += 1;
         }
     }
     assert!(
-        checked >= 50,
-        "expected most for-range programs to compile+run under rustc, got {checked}"
+        !rustc || checked == 80,
+        "with a rustc on PATH every one of the 80 rustc-checked for-range \
+         seeds must be compared, got {checked}"
     );
 }
 
@@ -199,13 +201,15 @@ fn f(a: i32, n: i32) -> i32 {
 
 #[test]
 fn lowered_ir_matches_rustc_execution() {
+    if !rustc_available() {
+        eprintln!("SKIP lowered_ir_matches_rustc_execution: no rustc on PATH");
+        return;
+    }
     let mut checked = 0;
     for seed in 0..80u64 {
         let (src, nparams) = gen_program(seed);
         let inputs = gen_inputs(seed.wrapping_mul(13).wrapping_add(1), nparams);
-        let Some(expected) = rustc_run(&src, &inputs) else {
-            continue;
-        };
+        let expected = rustc_run(&src, &inputs);
         let got = ir_exec(&src, &inputs);
         assert_eq!(
             got, expected,
@@ -214,7 +218,7 @@ fn lowered_ir_matches_rustc_execution() {
         checked += 1;
     }
     assert!(
-        checked >= 40,
-        "expected most generated programs to compile+run under rustc, got {checked}"
+        checked == 80,
+        "every generated seed must be compared against rustc, got {checked}"
     );
 }

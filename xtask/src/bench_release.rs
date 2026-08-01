@@ -1,6 +1,6 @@
 //! R1  -  single release-bench surface.
 //!
-//! `cargo_full run --bin xtask -- bench-release` runs the canonical cold + warm + scale
+//! `cargo xtask bench-release` runs the canonical cold + warm + scale
 //! + correctness sweep and prints **one number per axis** as the final
 //! output. Designed to be pasted into release notes / marketing without
 //! editing  -  every line is `axis_name=value units`.
@@ -8,9 +8,9 @@
 //! This is intentionally a thin coordinator. The actual measurement is
 //! delegated to existing benches and probes (criterion harnesses in
 //! `vyre-bench`, GPU dispatch latency probes in `vyre-driver-wgpu`,
-//! ULP differential in `vyre-harness`). The xtask's value is collapsing
-//! N marketing surfaces into one canonical entry point so v0.4.1 release
-//! numbers are reproducible by anyone running one command.
+//! ULP differential in `vyre-harness`). This xtask collapses the measurement
+//! surfaces into one canonical entry point, so the active Vyre release numbers
+//! are reproducible by anyone running one command.
 //!
 //! Substrate-attribution per-axis (which optimization fired and saved
 //! how much) lives behind `VYRE_TRACE=1` and the substrate audit log
@@ -40,7 +40,10 @@ const MAX_BENCH_RELEASE_REPORT_BYTES: u64 = 16_777_216;
 
 pub(crate) fn run(args: &[String]) {
     let started = Instant::now();
-    eprintln!("vyre xtask bench-release  -  canonical v0.4.1 release axes");
+    eprintln!(
+        "vyre xtask bench-release  -  canonical v{} release axes",
+        crate::release_train::vyre_version()
+    );
     eprintln!("  source: release benchmark evidence artifacts");
     eprintln!();
 
@@ -65,7 +68,7 @@ pub(crate) fn run(args: &[String]) {
     eprintln!();
     eprintln!("==> bench-release complete in {elapsed:.2?}");
     eprintln!();
-    report.print_release_notes_block();
+    report.print_release_notes_block(crate::release_train::vyre_version());
 }
 
 struct ReleaseReport {
@@ -77,8 +80,8 @@ struct ReleaseReport {
 }
 
 impl ReleaseReport {
-    fn print_release_notes_block(&self) {
-        println!("# vyre v0.4.1  -  bench-release axes");
+    fn print_release_notes_block(&self, vyre_version: &str) {
+        println!("# vyre v{vyre_version}  -  bench-release axes");
         println!();
         println!("{AXIS_WARM_US_PER_FILE}={} us", self.warm_us_per_file);
         println!(
@@ -114,9 +117,10 @@ fn parse_evidence_dir(args: &[String]) -> Result<PathBuf, String> {
             }
             "--help" | "-h" => {
                 println!(
-                    "USAGE:\n  cargo_full run --bin xtask -- bench-release [--evidence-dir PATH]\n\n\
-                     Reads release benchmark evidence and prints the canonical v0.4.1 axes.\n\
-                     Generate evidence first with `cargo_full run --bin xtask -- release-benchmarks --backend cuda`."
+                    "USAGE:\n  cargo xtask bench-release [--evidence-dir PATH]\n\n\
+                     Reads release benchmark evidence and prints the canonical v{} axes.\n\
+                     Generate evidence first with `cargo_full run --bin xtask -- release-benchmarks --backend cuda`.",
+                    crate::release_train::vyre_version()
                 );
                 std::process::exit(0);
             }

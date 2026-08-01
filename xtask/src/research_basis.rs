@@ -41,7 +41,9 @@ pub(crate) fn external_research_basis_entries(
         }
         let url = normalize_research_source_url(&cells[1]);
         if url.is_empty() {
-            failures.push(format!("external research basis key `{key}` is missing source URL"));
+            failures.push(format!(
+                "external research basis key `{key}` is missing source URL"
+            ));
         }
         if entries.insert(key.clone(), url).is_some() {
             failures.push(format!("external research basis key `{key}` is duplicated"));

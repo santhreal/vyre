@@ -10,8 +10,10 @@
 //!    proven range is `[0, n-1]` collapses to true at this layer instead
 //!    of leaving a runtime compare-and-branch in the kernel.
 
+use crate::analyses::body_refs_only;
 use crate::analyses::value_range::{analyze_body, IntRange};
 use crate::operand_semantics::operand_is_result_reference;
+use crate::rewrites::literal_pool_splice::LiteralPoolSplice;
 use crate::{KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue};
 use rustc_hash::FxHashMap;
 use vyre_foundation::ir::BinOp;
@@ -45,8 +47,17 @@ fn collapse_body(mut body: KernelBody) -> KernelBody {
     // (loop-bound clamps, BitAnd masks, LICM-hoisted Mul ops) flow into
     // structured branch decisions here without needing the comparison
     // operands themselves to be Literal at the IR layer.
+    //
+    // Ranges are read through `get_at` at the comparison's own op index, not
+    // through `get`. A guard operand that snapshots a carrier slot which a
+    // nested body writes is known BEFORE that construct and unknown after
+    // it, and only the position-sensitive form can tell the two apart. The
+    // plain `get` form here would collapse a guard on a variable that a
+    // previous branch already reassigned. Failing closed is mandatory: an
+    // uncollapsed branch costs a runtime compare, a wrongly collapsed one
+    // changes what the kernel computes.
     let ranges = analyze_body(&body);
-    for op in &body.ops {
+    for (op_index, op) in body.ops.iter().enumerate() {
         let Some(rid) = op.result else {
             continue;
         };
@@ -59,8 +70,8 @@ fn collapse_body(mut body: KernelBody) -> KernelBody {
         if op.operands.len() < 2 {
             continue;
         }
-        let lhs = ranges.get(op.operands[0]);
-        let rhs = ranges.get(op.operands[1]);
+        let lhs = ranges.get_at(op.operands[0], op_index);
+        let rhs = ranges.get_at(op.operands[1], op_index);
         let (Some(l), Some(r)) = (lhs, rhs) else {
             continue;
         };
@@ -78,6 +89,10 @@ fn collapse_body(mut body: KernelBody) -> KernelBody {
     let original_children = std::mem::take(&mut body.child_bodies);
     let mut new_ops: Vec<KernelOp> = Vec::with_capacity(body.ops.len());
     let mut new_children = original_children.clone();
+    // Inlining an arm moves its ops into THIS body, so its `Literal` ops
+    // stop indexing their own pool and start indexing ours. The pool grows
+    // as arms are absorbed; see `literal_pool_splice`.
+    let mut new_literals = body.literals.clone();
     let old_ops = std::mem::take(&mut body.ops);
 
     for op in old_ops {
@@ -94,6 +109,7 @@ fn collapse_body(mut body: KernelBody) -> KernelBody {
                                         body_id as usize,
                                         &mut new_ops,
                                         &mut new_children,
+                                        &mut new_literals,
                                     );
                                     continue;
                                 }
@@ -137,6 +153,7 @@ fn collapse_body(mut body: KernelBody) -> KernelBody {
                                     pick_id as usize,
                                     &mut new_ops,
                                     &mut new_children,
+                                    &mut new_literals,
                                 );
                                 empty_child_body(&mut new_children, drop_id as usize);
                                 continue;
@@ -170,6 +187,7 @@ fn collapse_body(mut body: KernelBody) -> KernelBody {
 
     body.ops = new_ops;
     body.child_bodies = new_children;
+    body.literals = new_literals;
     body
 }
 
@@ -181,19 +199,42 @@ fn collapse_body(mut body: KernelBody) -> KernelBody {
 /// result id the inlined copy now defines in the parent, which `verify` reports
 /// as `ResultIdReusedAcrossBodies` and the PTX emitter resolves to whichever
 /// producer it walked last.
-fn inline_child_body(slot: usize, ops: &mut Vec<KernelOp>, children: &mut Vec<KernelBody>) {
+///
+/// Three namespaces change meaning when ops cross a body boundary, and all
+/// three have to be re-pointed here:
+///
+/// 1. **Child-body indices** on nested control flow, rebased by `child_base`.
+/// 2. **Literal-pool indices**, merged into `literals` via
+///    [`LiteralPoolSplice`]. Missing this produced
+///    `LiteralPoolOutOfRange { pool_idx: 2, pool_size: 2 }` on any arm whose
+///    own pool outgrew its parent's  -  the arm's `Literal` ops kept indices
+///    valid only in the pool they left behind.
+/// 3. **Result ids** need no remap: `can_collapse_safely` has already proven
+///    the arm's produced ids are disjoint from the parent's.
+fn inline_child_body(
+    slot: usize,
+    ops: &mut Vec<KernelOp>,
+    children: &mut Vec<KernelBody>,
+    literals: &mut Vec<LiteralValue>,
+) {
     let Some(child) = children.get(slot).cloned() else {
         return;
     };
+    // Collapse the arm first: a nested collapse inside it may itself have
+    // absorbed a grandchild's literals, so the pool we splice from is the
+    // COLLAPSED arm's pool, not the original child's.
     let inlined = collapse_body(child);
     let child_base = children.len() as u32;
-    children.extend(inlined.child_bodies);
-    ops.extend(
+    let mut splice = LiteralPoolSplice::new(&inlined.literals, literals);
+    let relocated = splice.relocate_all(
         inlined
             .ops
-            .into_iter()
+            .iter()
+            .cloned()
             .map(|op| rebase_child_body_refs(op, child_base)),
     );
+    children.extend(inlined.child_bodies);
+    ops.extend(relocated);
     empty_child_body(children, slot);
 }
 
@@ -266,25 +307,6 @@ fn collect_produced_ids_inclusive(body: &KernelBody, out: &mut rustc_hash::FxHas
     for child in &body.child_bodies {
         collect_produced_ids_inclusive(child, out);
     }
-}
-
-fn body_refs_only(body: &KernelBody, produced: &rustc_hash::FxHashSet<u32>) -> bool {
-    for op in &body.ops {
-        for (pos, &operand) in op.operands.iter().enumerate() {
-            if !operand_is_result_reference(&op.kind, pos) {
-                continue;
-            }
-            if !produced.contains(&operand) {
-                return false;
-            }
-        }
-    }
-    for child in &body.child_bodies {
-        if !body_refs_only(child, produced) {
-            return false;
-        }
-    }
-    true
 }
 
 /// Try to derive a constant verdict for `op(l, r)` purely from the

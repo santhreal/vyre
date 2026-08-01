@@ -50,12 +50,110 @@ fn run_emit_reference(
         .collect()
 }
 
+/// A hit that does not fit is dropped, counted, and nothing is corrupted.
+///
+/// Two hits into a one-slot buffer. The first is written, the second is
+/// refused, and the refusal is recorded rather than swallowed.
+///
+/// The cursor is the number of hits STORED, not the number attempted. That
+/// distinction is the whole contract: a consumer reads `out_hits[0..cursor]`,
+/// so a cursor of 2 over a buffer holding one hit would send it into
+/// uninitialized words. This test used to assert 2 and was wrong about which
+/// quantity the cursor carries; the attempted total is still recoverable as
+/// `cursor + overflow`, which the next test states directly.
 #[test]
 fn overflow_records_drop_not_ub() {
     let outputs = run_emit_reference(&[7, 9], &[101, 103], &[5, 9], &[2, 4], 1);
-    assert_eq!(unpack_words(&outputs[0]), vec![7, 101, 5, 2]);
-    assert_eq!(unpack_words(&outputs[1]), vec![2]);
-    assert_eq!(unpack_words(&outputs[2]), vec![1]);
+    assert_eq!(
+        unpack_words(&outputs[0]),
+        vec![7, 101, 5, 2],
+        "the first hit must be written whole, all four fields"
+    );
+    assert_eq!(
+        unpack_words(&outputs[1]),
+        vec![1],
+        "the cursor must be the count of hits actually stored"
+    );
+    assert_eq!(
+        unpack_words(&outputs[2]),
+        vec![1],
+        "the hit that did not fit must be counted, not silently dropped"
+    );
+}
+
+/// Stored plus dropped equals attempted, at every capacity.
+///
+/// The conservation law that makes a truncated hit buffer safe to act on: no
+/// hit is ever unaccounted for, so a caller can tell the difference between
+/// "nothing matched" and "the buffer was too small".
+#[test]
+fn stored_plus_overflowed_accounts_for_every_hit() {
+    let rule_ids = [7u32, 9, 11, 13, 15];
+    let file_ids = [101u32, 103, 107, 109, 113];
+    let starts = [5u32, 9, 13, 17, 21];
+    let lens = [2u32, 4, 6, 8, 10];
+
+    for capacity in 1..=6u32 {
+        let outputs = run_emit_reference(&rule_ids, &file_ids, &starts, &lens, capacity);
+        let stored = unpack_words(&outputs[1])[0];
+        let overflow = unpack_words(&outputs[2])[0];
+        assert_eq!(
+            stored,
+            capacity.min(rule_ids.len() as u32),
+            "capacity {capacity}: the cursor must saturate at the buffer size"
+        );
+        assert_eq!(
+            stored + overflow,
+            rule_ids.len() as u32,
+            "capacity {capacity}: stored {stored} plus dropped {overflow} must \
+             account for all {} hits",
+            rule_ids.len()
+        );
+    }
+}
+
+/// Every stored hit is a whole hit, never a partial record.
+///
+/// A four-word record written by a lane that then hits the capacity check
+/// halfway would leave a torn hit behind. This walks the stored prefix and
+/// checks each record against its source tuple.
+#[test]
+fn every_stored_hit_is_complete_and_in_lane_order() {
+    let rule_ids = [7u32, 9, 11, 13];
+    let file_ids = [101u32, 103, 107, 109];
+    let starts = [5u32, 9, 13, 17];
+    let lens = [2u32, 4, 6, 8];
+
+    let outputs = run_emit_reference(&rule_ids, &file_ids, &starts, &lens, 3);
+    let stored = unpack_words(&outputs[1])[0] as usize;
+    let hits = unpack_words(&outputs[0]);
+    assert_eq!(stored, 3);
+    for lane in 0..stored {
+        assert_eq!(
+            &hits[lane * 4..lane * 4 + 4],
+            &[rule_ids[lane], file_ids[lane], starts[lane], lens[lane]],
+            "stored hit {lane} must match its source tuple exactly"
+        );
+    }
+}
+
+/// A buffer large enough for every hit reports no overflow at all.
+///
+/// The negative twin. Without it, a kernel that always reported overflow would
+/// still satisfy the conservation law above whenever it also under-stored.
+#[test]
+fn a_sufficient_buffer_reports_no_overflow() {
+    let outputs = run_emit_reference(&[7, 9], &[101, 103], &[5, 9], &[2, 4], 8);
+    assert_eq!(
+        unpack_words(&outputs[1]),
+        vec![2],
+        "both hits must be stored"
+    );
+    assert_eq!(
+        unpack_words(&outputs[2]),
+        vec![0],
+        "nothing was dropped, so the overflow counter must stay clear"
+    );
 }
 
 type HitTuple = (u32, u32, u32, u32);

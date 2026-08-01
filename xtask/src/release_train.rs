@@ -50,18 +50,6 @@ pub(crate) fn weir_version() -> &'static str {
     data().versions.weir.as_str()
 }
 
-/// Checkout path of the security compiler consumer, relative to the Santh root.
-///
-/// The product lives at `surge/surgec`, not `libs/surge/surgec`. Eight xtask sites
-/// hardcoded the extra `libs/` prefix, so every gate that resolved the path reported the
-/// tree as absent. `distributed-parser-coherence` alone raised 51 blockers claiming
-/// `src/lib.rs does not exist` and `evidence tree tests does not exist` for a crate that
-/// has 229 test files, 5 benches, and 2 fuzz targets on disk. Keep this the single owner
-/// and do not re-inline the literal.
-pub(crate) const fn compiler_consumer_relative_path() -> &'static str {
-    "surge/surgec"
-}
-
 /// The crates.io package name of the dataflow-analysis product in the release train.
 ///
 /// The product, its repository, and its release tags are all named `weir`, but the
@@ -113,7 +101,10 @@ pub(crate) fn tag_story_fields() -> [(&'static str, &'static str); 6] {
     [
         ("vyre_rc_tag", vyre_rc_tag()),
         ("weir_rc_tag", weir_rc_tag()),
-        ("combined_release_train_rc_tag", combined_release_train_rc_tag()),
+        (
+            "combined_release_train_rc_tag",
+            combined_release_train_rc_tag(),
+        ),
         ("vyre_tag", vyre_tag()),
         ("weir_tag", weir_tag()),
         ("combined_release_train_tag", combined_release_train_tag()),
@@ -135,7 +126,10 @@ pub(crate) fn rc_to_final_tags() -> [(&'static str, &'static str); 3] {
     [
         (vyre_rc_tag(), vyre_tag()),
         (weir_rc_tag(), weir_tag()),
-        (combined_release_train_rc_tag(), combined_release_train_tag()),
+        (
+            combined_release_train_rc_tag(),
+            combined_release_train_tag(),
+        ),
     ]
 }
 

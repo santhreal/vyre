@@ -20,6 +20,7 @@ use vyre_foundation::ir::{Expr, Ident, Node, Program};
 
 use super::cse_via_encoded::CanonicalLookup;
 use super::expr_arena::ExprArenaEncoding;
+use super::expr_no_atomic;
 
 /// Apply same-scope expression CSE. For each scope, identifies
 /// non-trivial top-level Exprs whose canonical id is shared and
@@ -328,28 +329,4 @@ fn is_hoist_worthy(expr: &Expr) -> bool {
             | Expr::SubgroupLocalId
             | Expr::SubgroupSize
     )
-}
-
-/// True iff `expr` contains no `Expr::Atomic` anywhere  -  hoisting
-/// past an atomic op would change observable order.
-fn expr_no_atomic(expr: &Expr) -> bool {
-    match expr {
-        Expr::Atomic { .. } => false,
-        Expr::BinOp { left, right, .. } => expr_no_atomic(left) && expr_no_atomic(right),
-        Expr::UnOp { operand, .. } => expr_no_atomic(operand),
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => expr_no_atomic(cond) && expr_no_atomic(true_val) && expr_no_atomic(false_val),
-        Expr::Fma { a, b, c } => expr_no_atomic(a) && expr_no_atomic(b) && expr_no_atomic(c),
-        Expr::Load { index, .. } => expr_no_atomic(index),
-        Expr::Cast { value, .. } => expr_no_atomic(value),
-        Expr::Call { args, .. } => args.iter().all(expr_no_atomic),
-        Expr::SubgroupBallot { cond } => expr_no_atomic(cond),
-        Expr::SubgroupShuffle { value, lane } => expr_no_atomic(value) && expr_no_atomic(lane),
-        Expr::SubgroupReduce { value, .. } => expr_no_atomic(value),
-        Expr::Opaque(_) => false,
-        _ => true,
-    }
 }

@@ -203,26 +203,38 @@ fn call_reached_message(op_id: &str) -> String {
 }
 
 fn opaque_node_message(extension_kind: &str, payload_len: usize) -> String {
-    let mut message: String = Default::default();
-    message.push_str("opaque node `");
-    message.push_str(extension_kind);
-    message.push_str("` with ");
-    let _ = write!(&mut message, "{payload_len}");
-    message.push_str(
+    payload_message(
+        "opaque node `",
+        extension_kind,
+        payload_len,
+        "` with ",
         " payload bytes has no descriptor Naga lowering. Fix: lower this extension into concrete KernelDescriptor ops before descriptor emission.",
-    );
-    message
+    )
 }
 
 fn wide_literal_payload_message(extension_kind: &str, payload_len: usize) -> String {
-    let mut message: String = Default::default();
-    message.push_str("wide-literal opaque `");
-    message.push_str(extension_kind);
-    message.push_str("` carries ");
-    let _ = write!(&mut message, "{payload_len}");
-    message.push_str(
+    payload_message(
+        "wide-literal opaque `",
+        extension_kind,
+        payload_len,
+        "` carries ",
         " payload bytes, expected 8. Fix: encode literals through Expr::u64/i64/f64 builders.",
-    );
+    )
+}
+
+fn payload_message(
+    prefix: &str,
+    extension_kind: &str,
+    payload_len: usize,
+    count_prefix: &str,
+    suffix: &str,
+) -> String {
+    let mut message = String::new();
+    message.push_str(prefix);
+    message.push_str(extension_kind);
+    message.push_str(count_prefix);
+    let _ = write!(&mut message, "{payload_len}");
+    message.push_str(suffix);
     message
 }
 
@@ -1434,8 +1446,7 @@ impl BodyBuilder<'_> {
                 left: left_eff,
                 right: product,
             })
-        } else if let Some(value) =
-            self.emit_synthetic_binop(effective_binop, left_eff, right_eff)
+        } else if let Some(value) = self.emit_synthetic_binop(effective_binop, left_eff, right_eff)
         {
             value
         } else if let Some(fun) = binary_math_function(effective_binop) {

@@ -5,7 +5,6 @@
 //! - Protocol encode/decode rejects short buffers
 //! - Async worker dispatch is observable
 #![cfg(feature = "legacy-infallible")]
-
 #![allow(clippy::field_reassign_with_default)]
 
 use vyre_driver_wgpu::{megakernel::WgpuMegakernelDispatcher, WgpuBackend};
@@ -209,21 +208,71 @@ fn priority_accounting_is_observable_from_requeue_occupancy() {
     assert_eq!(accounting.max_priority_age, 0);
 }
 
+/// A control buffer that stops inside the metrics window is REJECTED.
+///
+/// The buffer below carries five metrics words and then ends, so the epoch and
+/// every later fixed word are missing. There is no honest snapshot to build
+/// from it: the fixed words are not optional, and a partial read would report
+/// epoch zero and done-count zero, which reads exactly like a healthy idle
+/// kernel.
+///
+/// This test previously expected the decoder to truncate and hand back the
+/// five metrics it could see. It passed against a decoder that tolerated short
+/// buffers, and it kept passing after the decoder was tightened only because
+/// the legacy `decode` shim swallowed the error and returned a default
+/// snapshot, so the assertion moved from "truncated correctly" to "zero
+/// metrics" without anybody noticing. Both halves are now pinned: the fallible
+/// path reports an error, and the legacy shim refuses rather than inventing a
+/// reading.
 #[test]
-fn control_snapshot_gracefully_truncates_metrics_at_short_buffer() {
+fn control_snapshot_rejects_a_buffer_that_ends_inside_the_metrics_window() {
     let mut buf = vec![0u8; ((control::METRICS_BASE + 5) as usize) * 4];
     for i in 0..5 {
         let off = ((control::METRICS_BASE + i) as usize) * 4;
         buf[off..off + 4].copy_from_slice(&(100 + i).to_le_bytes());
     }
-    let snapshot = ControlSnapshot::decode(&buf);
+    let error = ControlSnapshot::try_decode(&buf)
+        .expect_err("a buffer missing the epoch word is not a decodable snapshot");
+    let message = error.to_string();
+    assert!(
+        message.contains("control"),
+        "the error must say which buffer was short, got: {message}"
+    );
+}
+
+/// The infallible shim panics rather than reporting a zeroed snapshot.
+///
+/// `ControlSnapshot::decode` exists for legacy callers that cannot handle an
+/// error. Returning `Self::default()` would be worse than panicking: a
+/// snapshot of all zeros is a valid-looking reading, so an operator would see
+/// a quiet, healthy kernel instead of a broken control buffer.
+#[test]
+#[should_panic(expected = "control-buffer decode failed")]
+fn the_infallible_control_snapshot_shim_refuses_a_short_buffer() {
+    let buf = vec![0u8; ((control::METRICS_BASE + 5) as usize) * 4];
+    let _ = ControlSnapshot::decode(&buf);
+}
+
+/// A complete control buffer still decodes every non-zero metric.
+///
+/// The positive twin, so the rejection above cannot be satisfied by a decoder
+/// that rejects everything.
+#[test]
+fn a_complete_control_buffer_decodes_its_metrics() {
+    let mut control = Megakernel::encode_control(false, 1, 4).unwrap();
+    for i in 0..5u32 {
+        let off = ((control::METRICS_BASE + i) as usize) * 4;
+        control[off..off + 4].copy_from_slice(&(100 + i).to_le_bytes());
+    }
+    let snapshot = ControlSnapshot::decode(&control);
+    assert!(snapshot.metrics.contains(&(0, 100)));
+    assert!(snapshot.metrics.contains(&(4, 104)));
     assert_eq!(
         snapshot.metrics.len(),
         5,
-        "metrics must stop at buffer end without panic"
+        "exactly the five non-zero counters, got {:?}",
+        snapshot.metrics
     );
-    assert!(snapshot.metrics.contains(&(0, 100)));
-    assert!(snapshot.metrics.contains(&(4, 104)));
 }
 
 #[test]

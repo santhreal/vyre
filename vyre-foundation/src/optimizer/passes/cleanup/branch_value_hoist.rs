@@ -33,7 +33,8 @@
 //! row implements the structural prefix slice that is provably correct
 //! without needing the alias substrate.
 
-use crate::ir::{Expr, Node, Program};
+use crate::ir::{Node, Program};
+use crate::optimizer::passes::expr_is_observably_free;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 use crate::visit::node_map;
 
@@ -166,53 +167,6 @@ fn is_hoistable_let_pair(a: &Node, b: &Node) -> bool {
             },
         ) => name_a == name_b && value_a == value_b && expr_is_observably_free(value_a),
         _ => false,
-    }
-}
-
-/// True iff `expr` cannot observe or mutate program-visible state.
-///
-/// Hoisting an observable expression across a branch boundary would
-/// duplicate the observation in the unconditional path, so the gate is
-/// strict: any read from memory, any atomic, any opaque or extension
-/// call, any lane-correlated subgroup intrinsic blocks the hoist.
-fn expr_is_observably_free(expr: &Expr) -> bool {
-    match expr {
-        Expr::Load { .. }
-        | Expr::Atomic { .. }
-        | Expr::Call { .. }
-        | Expr::Opaque(_)
-        | Expr::SubgroupBallot { .. }
-        | Expr::SubgroupShuffle { .. }
-        | Expr::SubgroupReduce { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize => false,
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::Var(_)
-        | Expr::BufferRef { .. }
-        | Expr::BufLen { .. }
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. } => true,
-        Expr::BinOp { left, right, .. } => {
-            expr_is_observably_free(left) && expr_is_observably_free(right)
-        }
-        Expr::UnOp { operand, .. } => expr_is_observably_free(operand),
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            expr_is_observably_free(cond)
-                && expr_is_observably_free(true_val)
-                && expr_is_observably_free(false_val)
-        }
-        Expr::Cast { value, .. } => expr_is_observably_free(value),
-        Expr::Fma { a, b, c } => {
-            expr_is_observably_free(a) && expr_is_observably_free(b) && expr_is_observably_free(c)
-        }
     }
 }
 

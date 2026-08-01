@@ -27,7 +27,7 @@ const FAMILY_PREFIX: &str = "decode_inflate";
 const INFLATED_LEN_BUFFER: &str = "__vyre_decode_inflate_inflated_len";
 const DEFAULT_DECODE_SCAN_TILE: u32 = 64;
 
-use crate::scan::dispatch_io::pack_u32_slice as pack_words;
+use vyre_primitives::wire::pack_u32_slice as pack_words;
 
 /// Build a Program that inflates a single DEFLATE stored block from `input`
 /// into `output`.

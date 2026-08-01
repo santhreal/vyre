@@ -4,7 +4,8 @@
 
 use std::sync::Arc;
 
-use vyre::ir::{Expr, Program};
+use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre::memory_model::MemoryOrdering;
 use vyre::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_reference::value::Value;
@@ -15,6 +16,15 @@ pub(crate) const GENERATED_LANE_COUNT: usize = 512;
 
 /// Default generated-matrix workgroup width for live CUDA/reference differential tests.
 pub(crate) const GENERATED_WORKGROUP_SIZE_X: u32 = 128;
+
+/// Pack node ids into canonical little-endian frontier words.
+pub(crate) fn pack_nodes(nodes: &[u32], node_count: u32) -> Vec<u32> {
+    let mut words = vec![0; node_count.div_ceil(32).max(1) as usize];
+    for &node in nodes {
+        words[node as usize / 32] |= 1 << (node % 32);
+    }
+    words
+}
 
 /// Concatenate the split CUDA resident-dispatch implementation for source contracts.
 pub(crate) fn resident_dispatch_source() -> String {
@@ -639,4 +649,127 @@ pub(crate) fn ordered_f32_bits(value: f32) -> u32 {
     } else {
         !bits
     }
+}
+
+/// Workgroup width of [`cross_block_grid_sync_program`]. Lane count divided by
+/// this is the block count, which is what makes the cross-block read in segment
+/// 1 actually cross a block boundary.
+pub(crate) const CROSS_BLOCK_GRID_SYNC_WORKGROUP: u32 = 256;
+
+/// Pre-barrier accumulate iterations charged per block index in
+/// [`cross_block_grid_sync_program`]. Block `b` runs `b * DELAY` dependent
+/// read-modify-write iterations before the barrier, so block 0 runs none and the
+/// last block runs the most.
+///
+/// This asymmetry is the entire detection mechanism, so it is not a tuning knob
+/// to trim. A cooperative launch guarantees every block is co-resident, which
+/// means all blocks START together: with uniform pre-barrier work every block
+/// reaches the barrier within a few hundred nanoseconds of the others, and the
+/// two `bar.sync` plus one global atomic on the barrier path already cost more
+/// than that. A missing barrier is then invisible, because the value a block
+/// would read has already landed by the time it can read it. That was measured,
+/// not assumed: with uniform pre-barrier work this fixture passed with the
+/// counter reset removed entirely, at 8 blocks and again at 512.
+pub(crate) const CROSS_BLOCK_GRID_SYNC_DELAY_PER_BLOCK: u32 = 2;
+
+/// Program whose correct answer requires a whole-grid barrier to actually block.
+///
+/// Shape, with `b = gid / workgroup` as the block index:
+///   segment 0: `scratch[gid] += 1`, repeated `b * DELAY` times
+///   barrier:   `MemoryOrdering::GridSync`
+///   segment 1: `out[gid] = scratch[n - 1] + input[gid]`
+///
+/// Two properties make this a real detector rather than a race that usually
+/// resolves benignly.
+///
+/// The accumulation is LOAD-BEARING: `scratch[n - 1]`'s accumulated value is
+/// exactly what segment 1 reads, so the loop cannot be dropped as dead work and
+/// its result is what the assertion checks. A fixture that overwrote the
+/// accumulated slot with a constant afterwards would let an optimizer delete the
+/// loop and silently lose all detection power.
+///
+/// The work is ASYMMETRIC and inverted against block scheduling order: the slot
+/// every block reads belongs to the LAST lane, whose block does the MOST
+/// pre-barrier work. Block 0 does none, so it reaches the read first needing a
+/// value only the slowest block can produce. Without a barrier it observes that
+/// slot mid-accumulation and the output is below the correct value.
+///
+/// Pair it with [`cross_block_grid_sync_inputs`] and
+/// [`cross_block_grid_sync_expected`], which fix the one correct answer.
+pub(crate) fn cross_block_grid_sync_program(n: u32) -> Program {
+    assert!(
+        n >= 2 * CROSS_BLOCK_GRID_SYNC_WORKGROUP && n % CROSS_BLOCK_GRID_SYNC_WORKGROUP == 0,
+        "Fix: the cross-block grid-sync fixture needs a whole number of blocks and at least two \
+         of them; got {n} lanes at workgroup {CROSS_BLOCK_GRID_SYNC_WORKGROUP}."
+    );
+    // Iterations for this lane: (gid / workgroup) * DELAY.
+    let iterations = Expr::mul(
+        Expr::div(Expr::gid_x(), Expr::u32(CROSS_BLOCK_GRID_SYNC_WORKGROUP)),
+        Expr::u32(CROSS_BLOCK_GRID_SYNC_DELAY_PER_BLOCK),
+    );
+    Program::wrapped(
+        vec![
+            BufferDecl::read("input", 0, DataType::U32).with_count(n),
+            BufferDecl::read_write("scratch", 1, DataType::U32).with_count(n),
+            BufferDecl::output("out", 2, DataType::U32).with_count(n),
+        ],
+        [CROSS_BLOCK_GRID_SYNC_WORKGROUP, 1, 1],
+        vec![
+            // segment 0: block-proportional dependent accumulate into this lane's
+            // own slot. Later blocks take strictly longer to reach the barrier.
+            Node::loop_for(
+                "grid_sync_delay",
+                Expr::u32(0),
+                iterations,
+                vec![Node::store(
+                    "scratch",
+                    Expr::gid_x(),
+                    Expr::add(Expr::load("scratch", Expr::gid_x()), Expr::u32(1)),
+                )],
+            ),
+            // whole-grid barrier: the LAST block's accumulation must be complete
+            // and visible to every block, including the ones that finished first.
+            Node::barrier_with_ordering(MemoryOrdering::GridSync),
+            // segment 1: out[gid] = scratch[n - 1] + input[gid]
+            Node::store(
+                "out",
+                Expr::gid_x(),
+                Expr::add(
+                    Expr::load("scratch", Expr::u32(n - 1)),
+                    Expr::load("input", Expr::gid_x()),
+                ),
+            ),
+        ],
+    )
+}
+
+/// Inputs for [`cross_block_grid_sync_program`]: `input[gid] == gid`, and
+/// `scratch` seeded to the same values so the accumulate has a known base.
+///
+/// `scratch` is read_write, so every launch MUST re-upload it. A launch that
+/// inherited the previous launch's `scratch` would read an already-accumulated
+/// `scratch[n - 1]` and pass even with no barrier at all, which would hide the
+/// whole defect class this fixture exists to catch.
+pub(crate) fn cross_block_grid_sync_inputs(n: u32) -> Vec<Vec<u8>> {
+    let lanes: Vec<u32> = (0..n).collect();
+    let input = u32_bytes(&lanes);
+    let scratch = input.clone();
+    vec![input, scratch]
+}
+
+/// The only correct `out` buffer for [`cross_block_grid_sync_program`] driven by
+/// [`cross_block_grid_sync_inputs`].
+///
+/// The last lane accumulates up from `n - 1` by one per iteration over
+/// `(blocks - 1) * DELAY` iterations, so after the barrier every lane reads
+/// `scratch[n - 1] == (n - 1) + (blocks - 1) * DELAY` and stores that plus its
+/// own `input[gid] == gid`.
+///
+/// A lane BELOW its expected value read `scratch[n - 1]` while the last block was
+/// still accumulating, which is the precise signature of a grid barrier that did
+/// not block. The shortfall says how far behind that block still was.
+pub(crate) fn cross_block_grid_sync_expected(n: u32) -> Vec<u32> {
+    let blocks = n / CROSS_BLOCK_GRID_SYNC_WORKGROUP;
+    let last_slot = (n - 1) + (blocks - 1) * CROSS_BLOCK_GRID_SYNC_DELAY_PER_BLOCK;
+    (0..n).map(|gid| last_slot + gid).collect()
 }

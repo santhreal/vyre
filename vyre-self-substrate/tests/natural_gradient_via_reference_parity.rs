@@ -21,29 +21,10 @@
 use vyre_self_substrate::math::natural_gradient_autotuner::precondition_autotune_gradient_fixed_via;
 
 mod common;
-use common::fixed_mul as fixed_mul_16_16;
-use common::ReferenceEvalDispatcher;
-
-/// Exact u32 16.16 matvec oracle mirroring `natural_gradient_block_apply`: per output row `i`,
-/// `acc = 0; for j: acc = acc.wrapping_add(fixed_mul_16_16(M[i*n+j], grad[j]))`.
-fn natural_gradient_fixed(m_inv_sqrt: &[u32], grad: &[u32], n: usize) -> Vec<u32> {
-    (0..n)
-        .map(|i| {
-            let mut acc = 0u32;
-            for j in 0..n {
-                acc = acc.wrapping_add(fixed_mul_16_16(m_inv_sqrt[i * n + j], grad[j]));
-            }
-            acc
-        })
-        .collect()
-}
-
-fn xorshift(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
-}
+use common::{
+    fixed_matvec as natural_gradient_fixed, signed_fixed_19 as signed_fixed,
+    xorshift32 as xorshift, ReferenceEvalDispatcher,
+};
 
 #[test]
 fn precondition_autotune_gradient_fixed_via_matches_exact_fixed_point_matvec() {
@@ -77,18 +58,6 @@ fn precondition_autotune_gradient_fixed_via_matches_exact_fixed_point_matvec() {
         moved_cases > 380,
         "only {moved_cases}/400 preconditions were non-zero, the matvec is not being exercised"
     );
-}
-
-/// A signed 16.16 value in roughly `[-8.0, 8.0)`: a 19-bit magnitude, optionally negated (top bit
-/// set on the negative half (the operand class the old UNSIGNED high-word multiply corrupted)).
-fn signed_fixed(state: &mut u32) -> u32 {
-    let magnitude = (xorshift(state) & 0x0007_FFFF) as i32; // [0.0, 8.0) in 16.16
-    let signed = if xorshift(state) & 1 == 0 {
-        magnitude
-    } else {
-        -magnitude
-    };
-    signed as u32
 }
 
 fn to_fixed(v: f64) -> u32 {

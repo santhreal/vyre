@@ -4,9 +4,10 @@ use std::path::Path;
 
 use super::model::{
     ArchiveReplayFinding, BaselineGap, ClaimDriftFinding, DocMarkerFinding, InnovationCoverage,
-    LocHotspot, RepoBoundaryFinding, RustTomlLoaderFinding, ScriptPolicyFinding,
-    SourceLedgerFinding, VxLinkageFinding, VxRow, BASELINE_MARKERS, CLAIM_MARKERS,
-    COMMAND_MATRIX_PATH, LEGACY_DOCS_PATH, MAX_FINDINGS, MAX_HOTSPOTS, MIN_PLAN_ROWS, PLAN_PATH,
+    LocHotspot, RepoBoundaryFinding, ResearchPlanCoverageFinding, RustTomlLoaderFinding,
+    ScriptPolicyFinding, SourceLedgerFinding, VxLinkageFinding, VxRow, BASELINE_MARKERS,
+    CLAIM_MARKERS, COMMAND_MATRIX_PATH, LEGACY_DOCS_PATH, MAX_FINDINGS, MAX_HOTSPOTS,
+    MIN_PLAN_ROWS, PLAN_PATH,
 };
 use crate::markdown_table::{markdown_cells, trim_code_ticks};
 use crate::repo_boundary;
@@ -331,7 +332,7 @@ pub(super) fn collect_blockers(
     rust_toml_loader_findings: &[RustTomlLoaderFinding],
     source_ledger_findings: &[SourceLedgerFinding],
     competitor_issue_findings: &[SourceLedgerFinding],
-    research_plan_coverage_findings: &[SourceLedgerFinding],
+    research_plan_coverage_findings: &[ResearchPlanCoverageFinding],
     archive_replay_findings: &[ArchiveReplayFinding],
     rules_as_data_findings: &[SourceLedgerFinding],
     baseline_gaps: &[BaselineGap],
@@ -345,20 +346,28 @@ pub(super) fn collect_blockers(
         ));
     }
     if !rows.iter().any(|row| row.id == "VX-300") {
-        blockers.push(format!("{PLAN_PATH} is missing VX-300 research audit coverage"));
+        blockers.push(format!(
+            "{PLAN_PATH} is missing VX-300 research audit coverage"
+        ));
     }
     if !rows.iter().any(|row| row.id == "VX-360") {
-        blockers.push(format!("{PLAN_PATH} is missing VX-360 plan quality coverage"));
+        blockers.push(format!(
+            "{PLAN_PATH} is missing VX-360 plan quality coverage"
+        ));
     }
     if !rows.iter().any(|row| row.id == "VX-420") {
-        blockers.push(format!("{PLAN_PATH} is missing VX-420 frontier leaderboard coverage"));
+        blockers.push(format!(
+            "{PLAN_PATH} is missing VX-420 frontier leaderboard coverage"
+        ));
     }
     if defined_research_keys.is_empty() {
         blockers.push(format!("{PLAN_PATH} defines no external research keys"));
     }
     for used in used_research_keys {
         if !defined_research_keys.contains(used) {
-            blockers.push(format!("research key `{used}` is used by a VX row but not defined"));
+            blockers.push(format!(
+                "research key `{used}` is used by a VX row but not defined"
+            ));
         }
     }
     for finding in high_risk_vx_linkage {
@@ -463,7 +472,10 @@ fn collect_loc_hotspots_in(root: &Path, dir: &Path, hotspots: &mut Vec<LocHotspo
             if let Ok(source) = fs::read_to_string(&path) {
                 let loc = source.lines().count();
                 if loc >= 500 {
-                    hotspots.push(LocHotspot { path: rel_path, loc });
+                    hotspots.push(LocHotspot {
+                        path: rel_path,
+                        loc,
+                    });
                 }
             }
         }
@@ -506,10 +518,7 @@ fn collect_markdown_claims(root: &Path, path: &Path, findings: &mut Vec<ClaimDri
         if lower.contains("release/evidence") || lower.contains("artifact") {
             continue;
         }
-        if let Some(marker) = CLAIM_MARKERS
-            .iter()
-            .find(|marker| lower.contains(*marker))
-        {
+        if let Some(marker) = CLAIM_MARKERS.iter().find(|marker| lower.contains(*marker)) {
             findings.push(ClaimDriftFinding {
                 path: rel.clone(),
                 line: line_index + 1,
@@ -527,7 +536,8 @@ fn collect_stale_doc_markers_in(root: &Path, path: &Path, findings: &mut Vec<Doc
         return;
     }
     let rel = rel_path(root, path);
-    if skip_path(&rel) || rel == PLAN_PATH || rel == LEGACY_DOCS_PATH || rel == COMMAND_MATRIX_PATH {
+    if skip_path(&rel) || rel == PLAN_PATH || rel == LEGACY_DOCS_PATH || rel == COMMAND_MATRIX_PATH
+    {
         return;
     }
     let Ok(metadata) = fs::metadata(path) else {
@@ -651,8 +661,7 @@ fn collect_rust_toml_loader_findings_in(
                 path: rel.clone(),
                 line: line_index + 1,
                 text: compact_line(line),
-                policy:
-                    "use xtask/src/toml_config.rs for embedded TOML parsing".to_string(),
+                policy: "use xtask/src/toml_config.rs for embedded TOML parsing".to_string(),
             });
             return;
         }
@@ -685,9 +694,7 @@ fn collect_megakernel_protocol_boundary_findings_in(
         }
         return;
     }
-    if path.extension().and_then(|ext| ext.to_str()) != Some("rs")
-        || !rel.contains("megakernel")
-    {
+    if path.extension().and_then(|ext| ext.to_str()) != Some("rs") || !rel.contains("megakernel") {
         return;
     }
     let Ok(text) = fs::read_to_string(path) else {
@@ -804,8 +811,7 @@ fn data() {
 
     #[test]
     fn driver_megakernel_protocol_import_is_a_boundary_finding() {
-        let dir =
-            tempfile::tempdir().expect("Fix: create megakernel protocol boundary fixture.");
+        let dir = tempfile::tempdir().expect("Fix: create megakernel protocol boundary fixture.");
         let src = dir.path().join("vyre-driver-wgpu/src");
         std::fs::create_dir_all(&src).expect("Fix: create driver fixture directory.");
         std::fs::write(

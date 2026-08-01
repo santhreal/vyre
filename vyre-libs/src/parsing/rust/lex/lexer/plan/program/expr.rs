@@ -70,13 +70,7 @@ pub(super) fn byte_eq(value: Expr, byte: u8) -> Expr {
 }
 
 pub(super) fn is_ascii_whitespace(value: Expr) -> Expr {
-    Expr::or(
-        byte_eq(value.clone(), b' '),
-        Expr::or(
-            byte_eq(value.clone(), b'\n'),
-            Expr::or(byte_eq(value.clone(), b'\r'), byte_eq(value, b'\t')),
-        ),
-    )
+    crate::parsing::core::ascii_whitespace_expr(value)
 }
 
 pub(super) fn is_digit(value: Expr) -> Expr {

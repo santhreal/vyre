@@ -390,8 +390,5 @@ fn is_vector_load_op(kind: &KernelOpKind) -> bool {
     //
     // `LoadShared` stays excluded: shared loads lower via `slot_to_shared_symbol`
     // (a distinct address-operand path) rather than `emit_global_address_operand`.
-    matches!(
-        kind,
-        KernelOpKind::LoadGlobal | KernelOpKind::LoadConstant
-    )
+    matches!(kind, KernelOpKind::LoadGlobal | KernelOpKind::LoadConstant)
 }

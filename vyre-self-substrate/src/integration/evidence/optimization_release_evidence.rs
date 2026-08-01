@@ -120,7 +120,7 @@ pub fn validate_optimization_release_evidence(
         ("corpus required minimum", "\"required_min_cases\": 4096"),
         ("corpus generated case total", "\"generated_cases\": 12288"),
         ("corpus verified case total", "\"verified_cases\": 12288"),
-        ("corpus optimized case total", "\"optimized_cases\": 10386"),
+        ("corpus optimized case total", "\"optimized_cases\": 10642"),
         (
             "Dataflow analysis corpus coverage",
             "\"dataflow_analysis_cases\": 1024",
@@ -145,7 +145,7 @@ pub fn validate_optimization_release_evidence(
         ),
         (
             "corpus contract optimized case total",
-            "\"optimized_cases\": 10386",
+            "\"optimized_cases\": 10642",
         ),
     ] {
         artifact_contains(corpus_contracts, evidence, needle)?;

@@ -14,7 +14,7 @@
 //!   `trans[src * 256 * LANES + byte * LANES + lane]` is the u32 of
 //!   destination bits that lane `lane` is responsible for, reached
 //!   from state `src` on byte `byte`. Lane-major layout is required
-//!   by [`subgroup_nfa::nfa_step`]; the composition must not diverge
+//!   by [`vyre_primitives::nfa::subgroup_nfa::nfa_step`]; the composition must not diverge
 //!   from the primitive's contract (VYRE_MEM_LAYOUT CRITICAL-2).
 //! - `nfa_epsilon` (ReadOnly, u32): lane-major
 //!   `[num_states × LANES_PER_SUBGROUP]`. All zero for literal-only

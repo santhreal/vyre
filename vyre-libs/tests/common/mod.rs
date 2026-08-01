@@ -7,3 +7,6 @@ pub(crate) use vyre_primitives::wire::decode_u32_le_bytes_all as decode_u32_word
 pub(crate) use vyre_primitives::wire::pack_u32_slice as bytes_from_words;
 
 pub(crate) use vyre_primitives::wire::decode_u32_le_bytes_all as words_from_bytes;
+
+#[cfg(feature = "go-parser")]
+pub(crate) mod go;

@@ -32,7 +32,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::dataflow::{SharedFactHeader, SharedFactKind, Soundness};
+use crate::{SharedFactHeader, SharedFactKind, Soundness};
 
 /// A program point id (interned from a rustc point atom).
 pub type Point = u32;

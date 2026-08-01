@@ -223,7 +223,7 @@ pub fn validate_c_dialect_matrix(
 pub fn validate_c_dialect_target_manifest(
     manifest: &str,
 ) -> Result<CDialectTargetManifestProof, CDialectMatrixError> {
-    for (evidence, needle) in [
+    let required_evidence = [
         ("schema", "schema = \"vyrec.parity.target.v1\""),
         ("Linux lib/math target id", "id = \"linux-lib-math-v6.8\""),
         (
@@ -259,8 +259,10 @@ pub fn validate_c_dialect_target_manifest(
         ("semantic analysis proof category", "semantic_analysis = ["),
         ("ABI layout proof category", "abi_layout = ["),
         ("performance proof category", "performance = ["),
-    ] {
-        manifest_contains(manifest, evidence, needle)?;
+    ];
+    if let Some(evidence) = super::super::first_missing_text_evidence(manifest, &required_evidence)
+    {
+        return Err(CDialectMatrixError::ManifestMissingEvidence { evidence });
     }
 
     let source_count = manifest.matches("lib/math/").filter(|_| true).count();
@@ -273,18 +275,6 @@ pub fn validate_c_dialect_target_manifest(
     }
 
     Ok(CDialectTargetManifestProof { source_count })
-}
-
-fn manifest_contains(
-    manifest: &str,
-    evidence: &'static str,
-    needle: &str,
-) -> Result<(), CDialectMatrixError> {
-    if manifest.contains(needle) {
-        Ok(())
-    } else {
-        Err(CDialectMatrixError::ManifestMissingEvidence { evidence })
-    }
 }
 
 #[cfg(test)]

@@ -14,7 +14,7 @@
 //! HISTORY (now GREEN, this was the proof obligation for the drain fix):
 //! the original kernel used a FIXED `claim_budget = ceil(queue_len / total_workers)`
 //! loop that assumed every requested lane ran and completed its budget. When fewer
-//! lanes were resident than `total_workers`, the queue was never fully claimed 
+//! lanes were resident than `total_workers`, the queue was never fully claimed
 //! work-items left UNCLAIMED with `found < expected`, `dropped_hits == 0`: a SILENT
 //! recall loss (measured: seg_len=1024, worker_groups=1024 → 64/128 markers). The
 //! fix DRAINS the queue: `build_batch_program` now emits `Node::forever([ claim =
@@ -27,10 +27,12 @@
 //! Run: cargo test -p vyre-driver-wgpu --features megakernel-batch,wgpu \
 //!        --test megakernel_segmentation_conservation_and_throughput -- --ignored --nocapture
 #![cfg(feature = "megakernel-batch")]
+mod megakernel_rule_support;
 
 use std::collections::BTreeSet;
 use std::time::Duration;
 
+use megakernel_rule_support::byte_finder_rule;
 use vyre_driver_wgpu::megakernel::{
     BatchDispatchConfig, BatchDispatcher, BatchFile, FileBatch, HitRecord,
 };
@@ -41,14 +43,6 @@ const FILE_LEN: usize = 8 * 1024 * 1024; // 8 MiB
 const N_RULES: u32 = 8; // small realistic catalog; rule 0 is the only emitter
 const MARKER: u8 = 0xA0;
 const HS_FLOOR_GBPS: f64 = 1.5;
-
-/// 2-state unanchored DFA accepting at every `byte` occurrence (sync distance 1).
-fn byte_finder_rule(rule_idx: u32, byte: u8) -> BatchRuleProgram {
-    let mut t = vec![0u32; 2 * 256];
-    t[byte as usize] = 1;
-    t[256 + byte as usize] = 1;
-    BatchRuleProgram::new(rule_idx, t, vec![0u32, 1u32], 2).expect("valid 2-state DFA")
-}
 
 /// Marker offsets, fixed across every geometry so `expected` is geometry-invariant:
 /// a uniform 64 KiB spread plus offsets that straddle common segment boundaries
@@ -93,8 +87,8 @@ fn run_geometry(
     };
     let mut dispatcher = BatchDispatcher::new(backend.clone(), config).expect("dispatcher");
     let files = vec![BatchFile::new(0xBEEF, 0, bytes.to_vec())];
-    let mut batch = FileBatch::upload(backend.device_queue(), &files, N_RULES, hit_capacity)
-        .expect("upload");
+    let mut batch =
+        FileBatch::upload(backend.device_queue(), &files, N_RULES, hit_capacity).expect("upload");
     batch
         .set_segmentation(seg_len, 8) // overlap 8 >> the 2-state DFA sync distance (1)
         .expect("set_segmentation");
@@ -113,7 +107,11 @@ fn run_geometry(
             Ok(r) => {
                 best = best.min(r.wall_time);
                 // distinct file-relative offsets for the emitting rule (rule 0)
-                found = hits.iter().map(|h| h.match_offset).collect::<BTreeSet<_>>().len();
+                found = hits
+                    .iter()
+                    .map(|h| h.match_offset)
+                    .collect::<BTreeSet<_>>()
+                    .len();
                 dropped = r.dropped_hits;
             }
             // Fail-closed under-claim: the kernel could not cover the queue with
@@ -122,7 +120,9 @@ fn run_geometry(
                 under_claimed = true;
                 break;
             }
-            Err(e) => panic!("unexpected dispatch error at seg_len={seg_len} wgroups={worker_groups}: {e}"),
+            Err(e) => panic!(
+                "unexpected dispatch error at seg_len={seg_len} wgroups={worker_groups}: {e}"
+            ),
         }
     }
     GeomResult {
@@ -222,7 +222,11 @@ fn segmentation_conserves_every_match_and_beats_hyperscan() {
         .fold(0.0f64, f64::max);
     eprintln!(
         "best conserving throughput: {best_ok_gbps:.3} GB/s ⇒ GPU {} Hyperscan",
-        if best_ok_gbps > HS_FLOOR_GBPS { "BEATS" } else { "does NOT beat" }
+        if best_ok_gbps > HS_FLOOR_GBPS {
+            "BEATS"
+        } else {
+            "does NOT beat"
+        }
     );
 
     assert!(

@@ -839,49 +839,37 @@ fn validate_manifest_path(command: ReleaseValidationCommand) -> Result<(), Strin
 }
 
 fn validate_test_target(command: ReleaseValidationCommand) -> Result<(), String> {
-    let tokens = command.command.split_whitespace().collect::<Vec<_>>();
-    for (index, token) in tokens.iter().enumerate() {
-        if *token != "--test" {
-            continue;
-        }
-        let Some(test_name) = tokens.get(index + 1) else {
-            return Err(format!(
-                "release validation command `{}` has --test without a value. Fix: name the integration test target explicitly.",
-                command.id
-            ));
-        };
-        let root = source_root_for_command(command)?;
-        let test_path = root.join("tests").join(format!("{test_name}.rs"));
-        if !test_path.is_file() {
-            return Err(format!(
-                "release validation command `{}` references missing integration test `{test_name}` at {}. Fix: update the --test target before trusting this release gate.",
-                command.id,
-                test_path.display()
-            ));
-        }
-    }
-    Ok(())
+    validate_named_target(command, "--test", "tests", "integration test")
 }
 
 fn validate_bench_target(command: ReleaseValidationCommand) -> Result<(), String> {
+    validate_named_target(command, "--bench", "benches", "benchmark")
+}
+
+fn validate_named_target(
+    command: ReleaseValidationCommand,
+    flag: &str,
+    directory: &str,
+    target_kind: &str,
+) -> Result<(), String> {
     let tokens = command.command.split_whitespace().collect::<Vec<_>>();
     for (index, token) in tokens.iter().enumerate() {
-        if *token != "--bench" {
+        if *token != flag {
             continue;
         }
-        let Some(bench_name) = tokens.get(index + 1) else {
+        let Some(target_name) = tokens.get(index + 1) else {
             return Err(format!(
-                "release validation command `{}` has --bench without a value. Fix: name the benchmark target explicitly.",
+                "release validation command `{}` has {flag} without a value. Fix: name the {target_kind} target explicitly.",
                 command.id
             ));
         };
         let root = source_root_for_command(command)?;
-        let bench_path = root.join("benches").join(format!("{bench_name}.rs"));
-        if !bench_path.is_file() {
+        let target_path = root.join(directory).join(format!("{target_name}.rs"));
+        if !target_path.is_file() {
             return Err(format!(
-                "release validation command `{}` references missing benchmark `{bench_name}` at {}. Fix: update the --bench target before trusting this release gate.",
+                "release validation command `{}` references missing {target_kind} `{target_name}` at {}. Fix: update the {flag} target before trusting this release gate.",
                 command.id,
-                bench_path.display()
+                target_path.display()
             ));
         }
     }

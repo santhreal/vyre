@@ -393,11 +393,23 @@ fn converged_changed_flag_matches_sticky_oracle_on_generated_chains() {
         }
         for max_iters in [0_u32, 1, 2, node_count, node_count.saturating_add(2)] {
             let (sticky_frontier, sticky_changed) = try_cpu_ref(
-                node_count, &offsets, &targets, &masks, &seed, 0xFFFF_FFFF, max_iters,
+                node_count,
+                &offsets,
+                &targets,
+                &masks,
+                &seed,
+                0xFFFF_FFFF,
+                max_iters,
             )
             .expect("Fix: generated valid chain must run under the sticky oracle.");
             let (converged_frontier, outcome) = try_cpu_ref_converged(
-                node_count, &offsets, &targets, &masks, &seed, 0xFFFF_FFFF, max_iters,
+                node_count,
+                &offsets,
+                &targets,
+                &masks,
+                &seed,
+                0xFFFF_FFFF,
+                max_iters,
             )
             .expect("Fix: generated valid chain must run under the convergence oracle.");
             assert_eq!(

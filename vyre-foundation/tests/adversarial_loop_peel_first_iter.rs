@@ -26,7 +26,9 @@ fn store_pairs(nodes: &[Node]) -> Vec<(Expr, Expr)> {
             Node::Store { index, value, .. } => out.push(((*index).clone(), (*value).clone())),
             Node::Block(b) => out.extend(store_pairs(b)),
             Node::Region { body, .. } => out.extend(store_pairs(body)),
-            Node::If { then, otherwise, .. } => {
+            Node::If {
+                then, otherwise, ..
+            } => {
                 out.extend(store_pairs(then));
                 out.extend(store_pairs(otherwise));
             }
@@ -258,7 +260,10 @@ fn peel_skips_guard_on_nonzero_literal() {
         to: Expr::u32(4),
         body: vec![guard, Node::store("buf", Expr::var("i"), Expr::u32(2))],
     }]));
-    assert!(!result.changed, "first-iter guard must be Eq(i, 0), not Eq(i, 1)");
+    assert!(
+        !result.changed,
+        "first-iter guard must be Eq(i, 0), not Eq(i, 1)"
+    );
 }
 
 #[test]

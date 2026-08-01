@@ -13,7 +13,7 @@ use crate::graph::program_graph::ProgramGraphShape;
 
 /// Parallel in-place expansion program for production fixed-point drivers.
 ///
-/// Unlike [`csr_forward_or_changed`], this variant gives each source node its
+/// Unlike [`crate::graph::csr_forward_or_changed::csr_forward_or_changed`], this variant gives each source node its
 /// own invocation instead of walking the whole CSR from one lane. The pass is
 /// monotone: each dispatch may observe only the frontier bits visible at that
 /// point in the dispatch, but every newly discovered destination is ORed into

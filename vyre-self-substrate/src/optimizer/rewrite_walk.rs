@@ -32,6 +32,60 @@ where
     program.with_rewritten_entry(new_entry)
 }
 
+pub(super) fn rewrite_simple_expr_postorder<F>(
+    expr: &Expr,
+    counter: &mut u32,
+    transform: &mut F,
+) -> Expr
+where
+    F: FnMut(Expr, u32) -> Expr,
+{
+    let rebuilt = match expr {
+        Expr::LitU32(_)
+        | Expr::LitI32(_)
+        | Expr::LitF32(_)
+        | Expr::LitBool(_)
+        | Expr::Var(_)
+        | Expr::BufLen { .. }
+        | Expr::InvocationId { .. }
+        | Expr::WorkgroupId { .. }
+        | Expr::LocalId { .. }
+        | Expr::SubgroupLocalId
+        | Expr::SubgroupSize => expr.clone(),
+        Expr::Load { buffer, index } => Expr::Load {
+            buffer: buffer.clone(),
+            index: Box::new(rewrite_simple_expr_postorder(index, counter, transform)),
+        },
+        Expr::BinOp { op, left, right } => Expr::BinOp {
+            op: *op,
+            left: Box::new(rewrite_simple_expr_postorder(left, counter, transform)),
+            right: Box::new(rewrite_simple_expr_postorder(right, counter, transform)),
+        },
+        Expr::UnOp { op, operand } => Expr::UnOp {
+            op: op.clone(),
+            operand: Box::new(rewrite_simple_expr_postorder(operand, counter, transform)),
+        },
+        Expr::Select {
+            cond,
+            true_val,
+            false_val,
+        } => Expr::Select {
+            cond: Box::new(rewrite_simple_expr_postorder(cond, counter, transform)),
+            true_val: Box::new(rewrite_simple_expr_postorder(true_val, counter, transform)),
+            false_val: Box::new(rewrite_simple_expr_postorder(false_val, counter, transform)),
+        },
+        Expr::Fma { a, b, c } => Expr::Fma {
+            a: Box::new(rewrite_simple_expr_postorder(a, counter, transform)),
+            b: Box::new(rewrite_simple_expr_postorder(b, counter, transform)),
+            c: Box::new(rewrite_simple_expr_postorder(c, counter, transform)),
+        },
+        _ => return expr.clone(),
+    };
+    let id = *counter;
+    *counter += 1;
+    transform(rebuilt, id)
+}
+
 fn rewrite_scope<F>(body: &[Node], rewrite_expr: &mut F, counter: &mut u32) -> Vec<Node>
 where
     F: FnMut(&Expr, &mut u32) -> Expr,

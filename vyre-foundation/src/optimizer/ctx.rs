@@ -83,12 +83,18 @@ pub struct AdapterCaps {
 
 impl Default for AdapterCaps {
     fn default() -> Self {
+        Self::baseline("unknown", [256, 256, 64])
+    }
+}
+
+impl AdapterCaps {
+    const fn baseline(backend: &'static str, max_workgroup_size: [u32; 3]) -> Self {
         Self {
-            backend: "unknown",
+            backend,
             supports_subgroup_ops: false,
             supports_indirect_dispatch: false,
             supports_specialization_constants: false,
-            max_workgroup_size: [256, 256, 64],
+            max_workgroup_size,
             max_invocations_per_workgroup: 256,
             max_shared_memory_bytes: 16 * 1024,
             max_storage_buffer_binding_size: 128 * 1024 * 1024,
@@ -105,36 +111,13 @@ impl Default for AdapterCaps {
             shared_memory_bank_width_bytes: 0,
         }
     }
-}
-
-impl AdapterCaps {
     /// Conservative profile: "assume nothing advanced".
     ///
     /// A pass scheduled against this profile must take the
     /// fallback path for every optional feature.
     #[must_use]
     pub const fn conservative() -> Self {
-        Self {
-            backend: "conservative",
-            supports_subgroup_ops: false,
-            supports_indirect_dispatch: false,
-            supports_specialization_constants: false,
-            max_workgroup_size: [256, 1, 1],
-            max_invocations_per_workgroup: 256,
-            max_shared_memory_bytes: 16 * 1024,
-            max_storage_buffer_binding_size: 128 * 1024 * 1024,
-            subgroup_size: 0,
-            compute_units: 0,
-            regs_per_thread_max: 0,
-            l1_cache_bytes: 0,
-            l2_cache_bytes: 0,
-            mem_bw_gbps: 0,
-            ideal_unroll_depth: 0,
-            ideal_vector_pack_bits: 0,
-            ideal_workgroup_tile: [0, 0, 0],
-            shared_memory_bank_count: 0,
-            shared_memory_bank_width_bytes: 0,
-        }
+        Self::baseline("conservative", [256, 1, 1])
     }
 
     /// High-end profile used by tests and synthetic planners.

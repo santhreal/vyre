@@ -6,8 +6,9 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
+use crate::binary::{find_subslice as find_magic, read_u32_le as read_u32};
 use serde::Serialize;
-use vyre_frontend_c::api::{compile, CliMacroAction, VyreCompileOptions};
+use vyre_frontend_c::api::{compile, VyreCompileOptions};
 use vyre_frontend_c::object_format::{SectionTag, VYRECOB2_MAGIC};
 
 use vyre_driver_cuda as _;
@@ -438,14 +439,10 @@ pub(crate) fn run(args: &[String]) {
     }
 }
 
-fn define_actions(macros: &[(String, Option<String>)]) -> Vec<CliMacroAction> {
-    macros
-        .iter()
-        .map(|(name, value)| CliMacroAction::Define {
-            name: name.clone(),
-            value: value.clone(),
-        })
-        .collect()
+fn define_actions(
+    macros: &[(String, Option<String>)],
+) -> Vec<vyre_frontend_c::api::CliMacroAction> {
+    crate::c_parser_bench::define_actions(macros)
 }
 
 fn remove_temp_object(object: &Path, cleanup_failures: &mut Vec<String>) {
@@ -769,19 +766,6 @@ fn inspect_object_sections(object: &[u8]) -> ObjectSectionSummary {
     summary
 }
 
-fn find_magic(haystack: &[u8], needle: &[u8]) -> Option<usize> {
-    haystack
-        .windows(needle.len())
-        .position(|window| window == needle)
-}
-
-fn read_u32(bytes: &[u8], cursor: &mut usize) -> Option<u32> {
-    let end = cursor.checked_add(4)?;
-    let raw: [u8; 4] = bytes.get(*cursor..end)?.try_into().ok()?;
-    *cursor = end;
-    Some(u32::from_le_bytes(raw))
-}
-
 fn mib_rate_x1000(bytes: u64, wall_ns: u128) -> u128 {
     rate_x1000(u128::from(bytes), wall_ns) / 1_048_576
 }
@@ -831,7 +815,7 @@ fn parse_args(args: &[String]) -> Result<Config, String> {
             }
             "--help" | "-h" => {
                 println!(
-                    "USAGE:\n  cargo_full run --bin xtask -- c-parser-corpus [--corpus DIR] [--output PATH] [-I DIR] [-D NAME[=VALUE]]\n\n\
+                    "USAGE:\n  cargo xtask c-parser-corpus [--corpus DIR] [--output PATH] [-I DIR] [-D NAME[=VALUE]]\n\n\
                      Compiles every .c file under a Linux subsystem directory through vyre-frontend-c and writes release evidence JSON. If --corpus is omitted, VYRE_LINUX_SUBSYSTEM_CORPUS and standard local Linux checkout locations are probed."
                 );
                 std::process::exit(0);
@@ -882,12 +866,7 @@ fn default_corpus() -> Option<PathBuf> {
     None
 }
 
-fn parse_define(value: &str) -> (String, Option<String>) {
-    match value.split_once('=') {
-        Some((name, body)) => (name.to_string(), Some(body.to_string())),
-        None => (value.to_string(), None),
-    }
-}
+use crate::output_arg::parse_define;
 
 fn render_macros(macros: &[(String, Option<String>)]) -> Vec<String> {
     macros

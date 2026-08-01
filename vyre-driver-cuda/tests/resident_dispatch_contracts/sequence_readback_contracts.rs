@@ -379,4 +379,3 @@ fn backend_repeated_sequence_read_ranges_runs_without_expanded_host_window() {
     VyreBackend::free_resident(&backend, output)
         .expect("Fix: CUDA repeated sequence resident output free failed.");
 }
-

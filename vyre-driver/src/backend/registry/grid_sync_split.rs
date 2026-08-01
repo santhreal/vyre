@@ -657,7 +657,7 @@ mod tests {
                         "resident upload forwarding test expected resident handles.",
                     ));
                 };
-                captured.push((*handle, offset, bytes.len()));
+                captured.push((handle.id(), offset, bytes.len()));
             }
             Ok(())
         }
@@ -672,8 +672,9 @@ mod tests {
             inner: Arc::clone(&probe),
         }));
 
+        let owner = crate::ResidentOwner::new().expect("Fix: owner ids must be available");
         backend
-            .upload_resident_at_many(&[(&Resource::Resident(7), 12, &[1, 2, 3])])
+            .upload_resident_at_many(&[(&Resource::Resident(owner.handle(7)), 12, &[1, 2, 3])])
             .expect("Fix: grid-sync split wrapper must forward resident ranged uploads");
 
         assert_eq!(
@@ -742,7 +743,8 @@ mod tests {
             inner: Arc::clone(&probe),
         }));
         let program = Program::wrapped(Vec::new(), [1, 1, 1], Vec::new());
-        let resources = [Resource::Resident(9)];
+        let owner = crate::ResidentOwner::new().expect("Fix: owner ids must be available");
+        let resources = [Resource::Resident(owner.handle(9))];
         let prefix_steps = [ResidentDispatchStep {
             program: &program,
             resources: &resources,

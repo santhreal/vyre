@@ -19,7 +19,10 @@ fn formal_correctness_primary_sources_are_registered() {
         "CSMITH",
         "C_REDUCE",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 

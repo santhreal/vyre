@@ -233,10 +233,13 @@ fn zero_sized_buffer_load_returns_zero() {
     );
 }
 
+/// Proves that an explicitly empty readback range remains writable without allocating bytes.
 #[test]
 fn zero_sized_buffer_store_is_noop() {
     let program = Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32).with_count(0)],
+        vec![
+            BufferDecl::output("out", 0, DataType::U32).with_output_byte_range(0..0),
+        ],
         [1, 1, 1],
         vec![Node::store(
             "out",
@@ -244,8 +247,8 @@ fn zero_sized_buffer_store_is_noop() {
             Expr::u32(0xDEAD_BEEF),
         )],
     );
-    let outputs = reference_eval(&program, &[Value::from(vec![])])
-        .expect("Fix: zero-sized buffer store must not panic");
+    let outputs = reference_eval(&program, &[])
+        .expect("Fix: an explicitly empty output range must accept a no-op store");
     assert_eq!(
         outputs.len(),
         1,

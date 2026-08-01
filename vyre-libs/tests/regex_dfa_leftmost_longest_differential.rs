@@ -59,17 +59,9 @@ fn fixed_repeat_token_patterns_report_exact_leftmost_longest_ends() {
         ("sk-[A-Za-z0-9]{6}", b"key=sk-Ab3Cd9", &[13]),
         // Prefix chars ALSO appear in the body (the g/h/p overlap regression): the
         // `_` terminator means the prefix can only anchor once -> exactly one end.
-        (
-            "ghp_[A-Za-z0-9]{6}",
-            b"= ghp_ghp123 ",
-            &[12],
-        ),
+        ("ghp_[A-Za-z0-9]{6}", b"= ghp_ghp123 ", &[12]),
         // Two non-overlapping occurrences -> two ends.
-        (
-            "AKIA[A-Z0-9]{4}",
-            b"AKIAWXYZ and AKIA1234!",
-            &[8, 21],
-        ),
+        ("AKIA[A-Z0-9]{4}", b"AKIAWXYZ and AKIA1234!", &[8, 21]),
         // Body one char too short -> the `{n}` never completes -> no match.
         ("ghp_[A-Za-z0-9]{5}", b"ghp_aB3d ", &[]),
         // Non-class byte inside the body window -> no match.

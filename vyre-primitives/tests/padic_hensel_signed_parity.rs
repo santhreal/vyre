@@ -16,7 +16,7 @@
 //! agree, so this bit-exact test is the correct contract for what the primitive actually implements.
 //! (The doc/impl framing mismatch is tracked separately in BACKLOG `PADIC-doc-claims-modular-impl-is-real-fixed`.)
 //!
-//! BIT-EXACT: pure integer arithmetic 
+//! BIT-EXACT: pure integer arithmetic
 //! `fixed_mul(a,b) = ((a as i32 as i64 * b as i32 as i64) >> 16) as i32 as u32`, then `wrapping_sub`.
 #![cfg(feature = "math")]
 

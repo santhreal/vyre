@@ -52,6 +52,7 @@
 //! variant lands beside the downstream alias pass.
 
 use crate::ir::{BufferAccess, Expr, Ident, Node, Program};
+use crate::optimizer::passes::expr_is_observably_free;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 use crate::visit::bound_names::count_bound_names;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -261,50 +262,7 @@ fn is_hoistable_load_pair(a: &Node, b: &Node, read_only: &FxHashSet<Ident>) -> b
     if name_a != name_b || value_a != value_b {
         return false;
     }
-    matches!(value_a, Expr::Load { buffer, index } if read_only.contains(buffer) && index_is_observably_free(index))
-}
-
-fn index_is_observably_free(expr: &Expr) -> bool {
-    match expr {
-        Expr::Load { .. }
-        | Expr::Atomic { .. }
-        | Expr::Call { .. }
-        | Expr::Opaque(_)
-        | Expr::SubgroupBallot { .. }
-        | Expr::SubgroupShuffle { .. }
-        | Expr::SubgroupReduce { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize => false,
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::Var(_)
-        | Expr::BufferRef { .. }
-        | Expr::BufLen { .. }
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. } => true,
-        Expr::BinOp { left, right, .. } => {
-            index_is_observably_free(left) && index_is_observably_free(right)
-        }
-        Expr::UnOp { operand, .. } => index_is_observably_free(operand),
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            index_is_observably_free(cond)
-                && index_is_observably_free(true_val)
-                && index_is_observably_free(false_val)
-        }
-        Expr::Cast { value, .. } => index_is_observably_free(value),
-        Expr::Fma { a, b, c } => {
-            index_is_observably_free(a)
-                && index_is_observably_free(b)
-                && index_is_observably_free(c)
-        }
-    }
+    matches!(value_a, Expr::Load { buffer, index } if read_only.contains(buffer) && expr_is_observably_free(index))
 }
 
 fn has_candidate(node: &Node, read_only: &FxHashSet<crate::ir::Ident>) -> bool {

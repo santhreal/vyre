@@ -37,9 +37,8 @@ pub use naga_trace::{
     failure_trace, failure_trace_wgsl, load_bind_result_log, BindResultLogError, FailureTrace,
 };
 pub use scan_explain::{
-    scan_explain_report, ScanExplainEngine, ScanExplainError,
-    ScanExplainExactnessClass, ScanExplainFactor, ScanExplainRejectedEngine,
-    ScanExplainReport, ScanExplainRouteEvidence, ScanExplainVerifierFragment, ScanFactorRole,
-    SCAN_EXPLAIN_REPORT_SCHEMA_VERSION,
+    scan_explain_report, ScanExplainEngine, ScanExplainError, ScanExplainExactnessClass,
+    ScanExplainFactor, ScanExplainRejectedEngine, ScanExplainReport, ScanExplainRouteEvidence,
+    ScanExplainVerifierFragment, ScanFactorRole, SCAN_EXPLAIN_REPORT_SCHEMA_VERSION,
 };
 pub use wgsl::{dump_wgsl, dump_wgsl_with_lines, WgslDump};

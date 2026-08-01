@@ -10,9 +10,9 @@
 //! // let words: Vec<u32> = SpirvBackend::emit_spv(&module).unwrap();
 //! ```
 //!
-//! The crate registers a `BackendRegistration` named `"spirv"` via inventory
-//! so `vyre::registered_backends()` enumerates it alongside other
-//! `photonic`.
+//! The crate registers a `BackendRegistration` named `"spirv"` via inventory, so
+//! `vyre::backend::registered_backends()` enumerates it alongside every other
+//! linked backend.
 
 // Vulkan driver bindings (`ash::vk::*`) are inherently unsafe FFI;
 // every call site is the boundary between safe vyre code and the Vulkan

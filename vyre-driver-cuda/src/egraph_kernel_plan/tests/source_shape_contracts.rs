@@ -240,9 +240,9 @@ fn structural_equivalence_readback_skips_bucket_metadata() {
 }
 
 #[test]
-fn egraph_warm_helpers_reuse_resolved_cuda_function_for_launch() {
+fn egraph_warm_helpers_centralize_cuda_function_resolution() {
     let source = planner_production_source();
-    let warm_lookup = concat!("module_for_ptx", "_with_key(&kernel.source, module_key)");
+    let warm_lookup = concat!("module_for_ptx", "_with_key(source(&kernel), module_key)");
     let stale_inner_lookup = concat!("module_for_ptx", "_with_key(ptx_src, module_key)");
     let stale_inner_param = concat!(
         "ptx_src: &str,",
@@ -251,17 +251,21 @@ fn egraph_warm_helpers_reuse_resolved_cuda_function_for_launch() {
 
     assert_eq!(
         source.matches(warm_lookup).count(),
-        3,
-        "Fix: each e-graph warm helper should resolve its CUDA function exactly once."
+        1,
+        "Fix: the shared e-graph warm helper must own the single CUDA function resolution path."
     );
-    assert!(
-        source.matches("Ok((kernel, function))").count() >= 3
-            && source.matches("cudarc::driver::sys::CUfunction").count() >= 6,
-        "Fix: e-graph warm helpers must return the resolved CUfunction to run-inner launch paths."
+    assert_eq!(
+        source.matches("self.warm_egraph_kernel_with_key(").count(),
+        3,
+        "Fix: all three e-graph kernel families must delegate warm resolution to the shared helper."
+    );
+    assert_eq!(
+        source.matches("Ok((kernel, function))").count(),
+        1,
+        "Fix: only the shared warm helper should assemble the resolved kernel/function pair."
     );
     assert!(
         !source.contains(stale_inner_lookup) && !source.contains(&stale_inner_param),
         "Fix: e-graph run-inner paths must not repeat module-cache lookups after warm resolution."
     );
 }
-

@@ -6,6 +6,7 @@
 use vyre::ir::{BufferAccess, Program};
 use vyre::VyreBackend;
 use vyre_reference::value::Value;
+use vyre_test_harness::lens::fixpoint_current_score;
 
 use crate::dispatch_grid;
 
@@ -246,25 +247,6 @@ fn infer_fixpoint_buffers(program: &Program) -> Result<(&str, &str, u32), Conver
     }
 
     Ok((current, next, current_count))
-}
-
-fn fixpoint_current_score(current: &str, next: &str) -> u8 {
-    if let Some(expected) = next.strip_suffix("out").map(|prefix| format!("{prefix}in")) {
-        if current == expected {
-            return 0;
-        }
-    }
-    let expected_current = next.replace("next", "current");
-    if expected_current != next && current == expected_current {
-        return 0;
-    }
-    if current.contains("current") || current.contains("frontier") || current.ends_with("in") {
-        return 1;
-    }
-    if current.contains("tag") || current.contains("kind") || current.contains("offset") {
-        return 8;
-    }
-    4
 }
 
 fn merge_rw(state: &mut [Vec<u8>], outputs: &[Vec<u8>], program: &Program) {

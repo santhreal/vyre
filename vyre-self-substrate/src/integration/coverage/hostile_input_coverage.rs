@@ -184,12 +184,10 @@ pub fn validate_hostile_input_artifacts(
     for (evidence, needle) in [
         ("adversarial suite marker", "\"suite\": \"adversarial\""),
         ("zero blockers", "\"blockers\": []"),
-        ("Vyre adversarial root", "/matching/vyre/"),
         (
-            "Dataflow consumer adversarial coverage",
-            "\"dataflow_consumer_file_count\": 43",
+            "Vyre adversarial root",
+            "\"path\": \"vyre-frontend-c/tests/",
         ),
-        ("Vyrec adversarial coverage", "\"vyrec_file_count\": 4"),
         (
             "hostile parser stream tests",
             "c_parser_hostile_malformed_stream_contracts",
@@ -269,6 +267,15 @@ pub fn validate_hostile_input_artifacts(
 
     let adversarial_file_count = artifact_number_field(adversarial_suite, "file_count")?;
     artifact_at_least("adversarial file_count", adversarial_file_count, 100)?;
+    let dataflow_consumer_file_count =
+        artifact_number_field(adversarial_suite, "dataflow_consumer_file_count")?;
+    artifact_at_least(
+        "Dataflow consumer adversarial file_count",
+        dataflow_consumer_file_count,
+        43,
+    )?;
+    let vyrec_file_count = artifact_number_field(adversarial_suite, "vyrec_file_count")?;
+    artifact_at_least("Vyrec adversarial file_count", vyrec_file_count, 4)?;
     let test_entrypoints = adversarial_suite
         .matches("\"has_test_entrypoint\": true")
         .count() as u64;
@@ -406,6 +413,29 @@ mod tests {
             err,
             HostileInputCoverageError::ArtifactMissingEvidence {
                 evidence: "recursive macro adversary",
+            }
+        );
+    }
+
+    /// Locks the minimum coverage floor without rejecting evidence when the corpus grows.
+    #[test]
+    fn dataflow_adversarial_coverage_uses_a_minimum_not_an_exact_snapshot() {
+        let grown = artifact_number_field(
+            r#"{"dataflow_consumer_file_count": 49}"#,
+            "dataflow_consumer_file_count",
+        )
+        .expect("Fix: a growing adversarial count must remain parseable");
+        assert_eq!(grown, 49);
+        artifact_at_least("Dataflow consumer adversarial file_count", grown, 43)
+            .expect("Fix: evidence above the coverage floor must pass");
+
+        assert_eq!(
+            artifact_at_least("Dataflow consumer adversarial file_count", 42, 43)
+                .expect_err("evidence below the coverage floor must fail"),
+            HostileInputCoverageError::ArtifactThresholdMiss {
+                field: "Dataflow consumer adversarial file_count",
+                observed: 42,
+                required: 43,
             }
         );
     }

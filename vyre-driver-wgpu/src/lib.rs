@@ -101,9 +101,14 @@ pub struct WgpuBackend {
             BuildHasherDefault<rustc_hash::FxHasher>,
         >,
     >,
+    /// Live resident buffers this backend instance is keeping alive.
+    ///
+    /// The WGPU resident namespace itself is process-wide (see
+    /// `buffer::handle`), so a handle stays resolvable for as long as its
+    /// buffer lives; this table is the strong reference that decides that.
     pub(crate) resident_handles: Arc<
         dashmap::DashMap<
-            u64,
+            vyre_driver::ResidentHandle,
             crate::buffer::GpuBufferHandle,
             BuildHasherDefault<rustc_hash::FxHasher>,
         >,

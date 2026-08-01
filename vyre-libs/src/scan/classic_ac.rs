@@ -25,7 +25,7 @@ mod count_program;
 
 #[cfg(test)]
 #[path = "classic_ac/test_helpers.rs"]
-mod test_helpers;
+pub(crate) mod test_helpers;
 
 #[cfg(any(test, feature = "cpu-parity"))]
 pub use bounded_ranges::classic_ac_bounded_ranges_scan;
@@ -52,7 +52,7 @@ pub use bounded_ranges::{
     try_build_ac_bounded_ranges_suffix3_presence_program,
 };
 
-pub(crate) use count_program::ascii_case_variants;
+pub(crate) use count_program::{ascii_case_variants, classic_ac_dfa_buffer_decls};
 pub use count_program::{
     build_ac_bounded_count_prefilter_program, build_ac_bounded_count_program,
     build_ac_bounded_count_suffix2_prefilter_program,

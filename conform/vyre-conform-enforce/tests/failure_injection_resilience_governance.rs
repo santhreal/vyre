@@ -8,8 +8,9 @@ const NETWORK_IO: &str =
     include_str!("../../../docs/optimization/NETWORK_IO_FAULT_INJECTION_POLICY.toml");
 const STRESS: &str =
     include_str!("../../../docs/optimization/STRESS_RESOURCE_SATURATION_EXPERIMENT_POLICY.toml");
-const COVERAGE: &str =
-    include_str!("../../../docs/optimization/END_TO_END_FAILURE_INJECTION_RESILIENCE_TRANCHE_COVERAGE.toml");
+const COVERAGE: &str = include_str!(
+    "../../../docs/optimization/END_TO_END_FAILURE_INJECTION_RESILIENCE_TRANCHE_COVERAGE.toml"
+);
 
 #[test]
 fn failure_injection_resilience_sources_are_registered() {
@@ -21,12 +22,16 @@ fn failure_injection_resilience_sources_are_registered() {
         "KUBERNETES_DISRUPTIONS",
         "KUBERNETES_PDB",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 
 #[test]
-fn chaos_scope_policy_records_target_blast_radius_preconditions_aborts_observation_owner_and_publication_boundary() {
+fn chaos_scope_policy_records_target_blast_radius_preconditions_aborts_observation_owner_and_publication_boundary(
+) {
     for required in [
         "experiment_id",
         "fault_family",
@@ -48,7 +53,8 @@ fn chaos_scope_policy_records_target_blast_radius_preconditions_aborts_observati
 }
 
 #[test]
-fn pod_node_disruption_policy_records_fault_actions_targets_budgets_probes_recovery_runbooks_gate_effects_and_evidence() {
+fn pod_node_disruption_policy_records_fault_actions_targets_budgets_probes_recovery_runbooks_gate_effects_and_evidence(
+) {
     for required in [
         "disruption_id",
         "fault_action_policy",
@@ -70,7 +76,8 @@ fn pod_node_disruption_policy_records_fault_actions_targets_budgets_probes_recov
 }
 
 #[test]
-fn network_io_fault_policy_records_injection_selectors_expected_behavior_timeouts_integrity_observation_and_gate_effects() {
+fn network_io_fault_policy_records_injection_selectors_expected_behavior_timeouts_integrity_observation_and_gate_effects(
+) {
     for required in [
         "fault_id",
         "fault_surface",
@@ -92,7 +99,8 @@ fn network_io_fault_policy_records_injection_selectors_expected_behavior_timeout
 }
 
 #[test]
-fn stress_policy_records_surfaces_injection_resource_budgets_backpressure_shedding_fairness_observation_and_gate_effects() {
+fn stress_policy_records_surfaces_injection_resource_budgets_backpressure_shedding_fairness_observation_and_gate_effects(
+) {
     for required in [
         "stress_id",
         "stress_surface",
@@ -114,7 +122,8 @@ fn stress_policy_records_surfaces_injection_resource_budgets_backpressure_sheddi
 }
 
 #[test]
-fn failure_injection_coverage_reuses_readiness_recovery_rollout_resource_publication_and_dedup_authorities() {
+fn failure_injection_coverage_reuses_readiness_recovery_rollout_resource_publication_and_dedup_authorities(
+) {
     for required in [
         "VX-1301..VX-1320",
         "chaos_experiment_scope_policy",

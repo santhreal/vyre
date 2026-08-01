@@ -114,9 +114,10 @@ fn promote_to_workgroup(program: Program, handoff_buf: &str, count: u32) -> Prog
         .cloned()
         .collect();
     new_buffers.push(BufferDecl::workgroup(handoff_buf, count, DataType::U32));
-    // Avoid a full `Vec<Node>` deep-clone when we own the Arc.
-    let entry = std::sync::Arc::try_unwrap(program.entry).unwrap_or_else(|arc| (*arc).clone());
-    Program::wrapped(new_buffers, program.workgroup_size, entry)
+    // Only the buffer table changes here, so replace only the buffer table.
+    // `Program::wrapped` would build a fresh program, resetting `entry_op_id`
+    // and `non_composable_with_self`, and would deep-clone the entry as well.
+    program.with_rewritten_buffers(new_buffers)
 }
 
 /// How many bytes of DRAM traffic one dispatch saves by fusing a

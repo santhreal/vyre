@@ -230,7 +230,7 @@ pub fn validate_test_taxonomy_suite_artifacts(
         )?;
         suite_contains(suite, artifact, "zero blockers", "\"blockers\": []")?;
         suite_contains(suite, artifact, "files list", "\"files\"")?;
-        suite_contains(suite, artifact, "Vyre test root", "/matching/vyre/")?;
+        suite_contains(suite, artifact, "Vyre test root", "\"path\": \"vyre-")?;
         suite_contains(suite, artifact, "assertion counters", "\"assertion_count\"")?;
 
         let file_count = suite_number_field(suite, artifact, "file_count")?;

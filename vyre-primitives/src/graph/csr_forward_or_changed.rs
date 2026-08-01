@@ -8,8 +8,6 @@ mod body;
 mod cpu_ref;
 #[path = "csr_forward_or_changed/dispatch_plan.rs"]
 mod dispatch_plan;
-#[path = "csr_forward_or_changed/hash.rs"]
-mod hash;
 #[path = "csr_forward_or_changed/launch_plan.rs"]
 mod launch_plan;
 #[path = "csr_forward_or_changed/layout.rs"]

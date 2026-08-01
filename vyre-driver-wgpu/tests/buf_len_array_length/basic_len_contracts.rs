@@ -180,4 +180,3 @@ fn byte_loads_pack_adjacent_lanes_from_dynamic_u8_input() {
         "four adjacent U8 loads must preserve byte-addressed lanes before byte compaction."
     );
 }
-

@@ -104,9 +104,9 @@ fn u32_bytes(values: &[u32]) -> Vec<u8> {
 mod basic_len_contracts;
 #[path = "buf_len_array_length/dynamic_pack_contracts.rs"]
 mod dynamic_pack_contracts;
-#[path = "buf_len_array_length/scatter_contracts.rs"]
-mod scatter_contracts;
-#[path = "buf_len_array_length/region_loop_contracts.rs"]
-mod region_loop_contracts;
 #[path = "buf_len_array_length/fnv_loop_contracts.rs"]
 mod fnv_loop_contracts;
+#[path = "buf_len_array_length/region_loop_contracts.rs"]
+mod region_loop_contracts;
+#[path = "buf_len_array_length/scatter_contracts.rs"]
+mod scatter_contracts;

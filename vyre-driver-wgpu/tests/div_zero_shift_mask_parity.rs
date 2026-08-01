@@ -19,53 +19,24 @@
 //! proof the 5090 returns `u32::MAX`. These tests dispatch all three on real
 //! hardware and assert byte-for-byte against the oracle contract.
 //!
-//! (Signed `i32 / 0` and `i32::MIN / -1` are rejected upstream as undefined 
+//! (Signed `i32 / 0` and `i32::MIN / -1` are rejected upstream as undefined
 //! `div_i32`/`rem_i32` return an error, so they are not emittable and not
 //! tested here; only the unsigned, total cases reach the GPU.)
 
+mod binop_parity_support;
 mod common;
-use common::u32_bytes;
 
-use vyre_driver::{DispatchConfig, VyreBackend};
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use binop_parity_support::program;
 use vyre_driver_wgpu::WgpuBackend;
+use vyre_foundation::ir::{Expr, Program};
 
-/// `out[i] = op(a[i], b[i])` over all-U32 buffers, `op` built from two loads.
-fn program(n: u32, build: fn(Expr, Expr) -> Expr) -> Program {
-    let mut body = Vec::new();
-    for i in 0..n {
-        body.push(Node::store(
-            "out",
-            Expr::u32(i),
-            build(Expr::load("a", Expr::u32(i)), Expr::load("b", Expr::u32(i))),
-        ));
-    }
-    Program::wrapped(
-        vec![
-            BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(n),
-            BufferDecl::storage("a", 1, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-            BufferDecl::storage("b", 2, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-        ],
-        [1, 1, 1],
-        body,
+fn dispatch(backend: &WgpuBackend, program: &Program, pairs: &[(u32, u32)]) -> Vec<u32> {
+    binop_parity_support::dispatch(
+        backend,
+        program,
+        pairs,
+        "div-zero / shift-mask parity contract",
     )
-}
-
-fn dispatch(backend: &WgpuBackend, program: &Program, ps: &[(u32, u32)]) -> Vec<u32> {
-    let a = u32_bytes(&ps.iter().map(|&(a, _)| a).collect::<Vec<_>>());
-    let b = u32_bytes(&ps.iter().map(|&(_, b)| b).collect::<Vec<_>>());
-    let out_init = u32_bytes(&vec![0u32; ps.len()]);
-    let outputs = backend
-        .dispatch_borrowed(
-            program,
-            &[out_init.as_slice(), a.as_slice(), b.as_slice()],
-            &DispatchConfig::default(),
-        )
-        .expect("Fix: WGPU must dispatch the div-zero / shift-mask parity contract.");
-    outputs[0]
-        .chunks_exact(4)
-        .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-        .collect()
 }
 
 /// Divisor cases including the zero-divisor sentinels and normal control values.
@@ -155,7 +126,16 @@ fn u32_oversized_shift_left_masks_amount_on_gpu() {
     // 0xFFFFFFFF (NOT 0), 1<<33 -> 2, 1<<63 -> 0x80000000.
     assert_eq!(
         expected,
-        vec![1, 0x8000_0000, 1, 2, 0xFF0, 0xFFFF_FFFF, 0x8000_0000, 0xEADB_EEF0],
+        vec![
+            1,
+            0x8000_0000,
+            1,
+            2,
+            0xFF0,
+            0xFFFF_FFFF,
+            0x8000_0000,
+            0xEADB_EEF0
+        ],
         "reference u32 oversized shift-left contract drifted"
     );
     assert_eq!(

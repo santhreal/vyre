@@ -11,10 +11,10 @@ use crate::runner::{execute_suite, RunConfig};
 
 #[path = "cli/bundle.rs"]
 mod cli_bundle;
-#[path = "cli/dashboard.rs"]
-mod cli_dashboard;
 #[path = "cli/compare.rs"]
 mod cli_compare;
+#[path = "cli/dashboard.rs"]
+mod cli_dashboard;
 #[path = "cli/registry.rs"]
 mod cli_registry;
 #[path = "cli/report_io.rs"]
@@ -25,12 +25,12 @@ mod cli_run;
 use cli_bundle::validate_benchmark_bundle;
 #[cfg(test)]
 use cli_bundle::*;
+#[cfg(test)]
+use cli_compare::{build_comparison_artifact, write_comparison_artifact};
+use cli_compare::{compare_reports, load_comparison_artifact, validate_comparison_expectations};
 use cli_dashboard::generate_dashboard;
 #[cfg(test)]
 use cli_dashboard::{generate_index_html, generate_scorecard_md};
-use cli_compare::{compare_reports, load_comparison_artifact, validate_comparison_expectations};
-#[cfg(test)]
-use cli_compare::{build_comparison_artifact, write_comparison_artifact};
 use cli_registry::{explain_case, list_cases};
 use cli_report_io::{load_report, validate_report_expectations};
 use cli_run::{execute_run_matrix, write_run_reports};
@@ -287,7 +287,6 @@ where
     }
     Ok(())
 }
-
 
 #[cfg(test)]
 mod tests {

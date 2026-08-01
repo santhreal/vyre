@@ -40,11 +40,25 @@ fn gpu_struct_tag_node_has_aggregate_decl_role() {
     let typed = classify(&fix);
     let (gpu_nodes, _gpu_edges) = run_gpu_semantic_lower(&typed);
 
+    // The fixture contains TWO struct tags, not one:
+    //
+    //   struct S { int x; };            the definition
+    //   void (*fp)(struct S *);         an elaborated type reference
+    //
+    // Both classify as `C_AST_KIND_STRUCT_DECL`, which is what a struct-tag
+    // node is in this AST: the kind marks the tag, and the role is what says
+    // how it is being used. The guard here asserted 1 and so failed on the
+    // parameter's tag, hiding the fact that the role assertion below was only
+    // ever checking the definition. It now covers both.
+    //
+    // Whether the elaborated reference should carry ROLE_AGGREGATE_DECL rather
+    // than a reference role is a real open question, recorded in BACKLOG.md as
+    // R69. Until it is settled this pins what the classifier actually does.
     let struct_idxs = row_indices(&typed, C_AST_KIND_STRUCT_DECL);
     assert_eq!(
         struct_idxs.len(),
-        1,
-        "fixture must classify exactly one struct declaration"
+        2,
+        "the fixture has a struct definition and a struct tag in a parameter type"
     );
 
     for &idx in &struct_idxs {

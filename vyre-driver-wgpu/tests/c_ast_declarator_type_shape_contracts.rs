@@ -31,7 +31,46 @@ fn paired(len: usize, pairs: &[(usize, usize)]) -> Vec<u32> {
     out
 }
 
-fn run_extract_functions(tok_types: &[u32], paren_pairs: &[u32], brace_pairs: &[u32]) -> Vec<u32> {
+/// Decode records from a SPARSE record array.
+///
+/// `c11_extract_functions` and `c11_extract_calls` do not compact. Each matching
+/// token `t` writes its record at slot `t * record_words` and every unoccupied
+/// slot is zeroed, so `out_counts[0]` is the array CAPACITY
+/// (`num_tokens * record_words`), not a match count. Compaction is a separate
+/// downstream stage (`compact_sparse_record_stream` in `vyre-frontend-c`), which
+/// is why these tests decode by walking slots and skipping the empty ones, the
+/// same way `vyre-libs/tests/c11_function_extractor_contracts.rs` does.
+///
+/// An all-zero record is unambiguously an empty slot for both record kinds: a
+/// function record needs a return-type prefix so its name is never token 0 and
+/// its body end is never 0, and a call record carries a non-zero span.
+fn decode_records(records: &[u32], capacity: u32, record_words: usize) -> Vec<Vec<u32>> {
+    let slots = capacity as usize / record_words;
+    (0..slots)
+        .map(|slot| records[slot * record_words..(slot + 1) * record_words].to_vec())
+        .filter(|record| record.iter().any(|&word| word != 0))
+        .collect()
+}
+
+/// Assert the sparse capacity the extractor reports, then decode.
+///
+/// Reading the capacity as though it were a match count is exactly the mistake
+/// this file used to make, so the contract is asserted here rather than assumed.
+fn decoded_records(out: &(Vec<u32>, u32), tok_count: usize, record_words: usize) -> Vec<Vec<u32>> {
+    let (records, capacity) = out;
+    assert_eq!(
+        *capacity as usize,
+        tok_count * record_words,
+        "sparse extractors report the array capacity in out_counts[0], not a match count"
+    );
+    decode_records(records, *capacity, record_words)
+}
+
+fn run_extract_functions(
+    tok_types: &[u32],
+    paren_pairs: &[u32],
+    brace_pairs: &[u32],
+) -> (Vec<u32>, u32) {
     let program = c11_extract_functions(
         "tok_types",
         "paren_pairs",
@@ -50,12 +89,14 @@ fn run_extract_functions(tok_types: &[u32], paren_pairs: &[u32], brace_pairs: &[
         vec![tok_bytes, paren_bytes, brace_bytes, count_bytes],
     );
     assert_eq!(outputs.len(), 2);
-    let mut words = bytes_to_words(&outputs[0]);
-    words.push(bytes_to_words(&outputs[1])[0]);
-    words
+    (bytes_to_words(&outputs[0]), bytes_to_words(&outputs[1])[0])
 }
 
-fn run_extract_calls(tok_types: &[u32], paren_pairs: &[u32], function_records: &[u32]) -> Vec<u32> {
+fn run_extract_calls(
+    tok_types: &[u32],
+    paren_pairs: &[u32],
+    function_records: &[u32],
+) -> (Vec<u32>, u32) {
     let program = c11_extract_calls(
         "tok_types",
         "paren_pairs",
@@ -75,9 +116,7 @@ fn run_extract_calls(tok_types: &[u32], paren_pairs: &[u32], function_records: &
         vec![tok_bytes, paren_bytes, function_bytes, count_bytes],
     );
     assert_eq!(outputs.len(), 2);
-    let mut words = bytes_to_words(&outputs[0]);
-    words.push(bytes_to_words(&outputs[1])[0]);
-    words
+    (bytes_to_words(&outputs[0]), bytes_to_words(&outputs[1])[0])
 }
 
 #[test]
@@ -96,10 +135,11 @@ fn typedef_return_function_definition_is_a_function_record() {
 
     let out = run_extract_functions(&tok_types, &paren_pairs, &brace_pairs);
 
-    assert_eq!(out.last().copied(), Some(3), "one 3-word function record");
+    let records = decoded_records(&out, tok_types.len(), 3);
+
     assert_eq!(
-        &out[..3],
-        &[1, 5, 6],
+        records,
+        vec![vec![1, 5, 6]],
         "`typedef_name f(void) {{}}` must record f and its body span"
     );
 }
@@ -121,10 +161,11 @@ fn tagged_return_function_definition_is_a_function_record() {
 
     let out = run_extract_functions(&tok_types, &paren_pairs, &brace_pairs);
 
-    assert_eq!(out.last().copied(), Some(3), "one 3-word function record");
+    let records = decoded_records(&out, tok_types.len(), 3);
+
     assert_eq!(
-        &out[..3],
-        &[2, 6, 7],
+        records,
+        vec![vec![2, 6, 7]],
         "`struct tag f(void) {{}}` must record f and its body span"
     );
 }
@@ -147,10 +188,11 @@ fn parenthesized_function_declarator_definition_is_a_function_record() {
 
     let out = run_extract_functions(&tok_types, &paren_pairs, &brace_pairs);
 
-    assert_eq!(out.last().copied(), Some(3), "one 3-word function record");
+    let records = decoded_records(&out, tok_types.len(), 3);
+
     assert_eq!(
-        &out[..3],
-        &[2, 7, 8],
+        records,
+        vec![vec![2, 7, 8]],
         "`int (f)(void) {{}}` must record f and its body span"
     );
 }
@@ -172,8 +214,8 @@ fn function_pointer_declarator_is_not_a_pointer_call() {
     let out = run_extract_calls(&tok_types, &paren_pairs, &[0, 0, 0]);
 
     assert_eq!(
-        out.last().copied(),
-        Some(0),
+        decoded_records(&out, tok_types.len(), 4),
+        Vec::<Vec<u32>>::new(),
         "`int (*fp)(int);` must not emit a pointer-call record"
     );
 }
@@ -198,8 +240,8 @@ fn abstract_function_pointer_parameter_is_not_a_pointer_call() {
     let out = run_extract_calls(&tok_types, &paren_pairs, &[0, 0, 0]);
 
     assert_eq!(
-        out.last().copied(),
-        Some(0),
+        decoded_records(&out, tok_types.len(), 4),
+        Vec::<Vec<u32>>::new(),
         "`void f(int (*)(int));` must not emit a pointer-call record"
     );
 }
@@ -219,16 +261,20 @@ fn parenthesized_pointer_call_still_emits_call_record() {
     let paren_pairs = paired(tok_types.len(), &[(0, 3), (4, 6)]);
     let out = run_extract_calls(&tok_types, &paren_pairs, &[0, 0, 0]);
 
-    assert_eq!(out.last().copied(), Some(4), "one 4-word call record");
     assert_eq!(
-        &out[..4],
-        &[SENTINEL, 2, 4, 6],
+        decoded_records(&out, tok_types.len(), 4),
+        vec![vec![SENTINEL, 2, 4, 6]],
         "`(*fp)(arg);` must keep emitting a pointer-call record"
     );
 }
 
+/// Two calls in a row must both survive the pre-loop sparse zeroing.
+///
+/// The extractor zeroes every slot before the match loop and then writes each
+/// match at `t * 4`. If the zeroing raced the writes, or if two lanes computed
+/// the same slot, one of these records would come back all-zero and decode away.
 #[test]
-fn consecutive_direct_calls_are_compacted_without_sparse_zero_clobber() {
+fn consecutive_direct_calls_each_keep_their_own_sparse_slot() {
     let tok_types = [
         TOK_IDENTIFIER,
         TOK_LPAREN,
@@ -242,18 +288,15 @@ fn consecutive_direct_calls_are_compacted_without_sparse_zero_clobber() {
     let paren_pairs = paired(tok_types.len(), &[(1, 2), (5, 6)]);
     let out = run_extract_calls(&tok_types, &paren_pairs, &[SENTINEL, 0, 0]);
 
-    assert_eq!(out.last().copied(), Some(8), "two compact 4-word records");
-    let mut records = out[..8]
-        .chunks_exact(4)
-        .map(|record| [record[0], record[1], record[2], record[3]])
-        .collect::<Vec<_>>();
+    let mut records = decoded_records(&out, tok_types.len(), 4);
     records.sort_by_key(|record| record[1]);
+
     assert_eq!(
         records
             .iter()
-            .map(|record| &record[1..])
+            .map(|record| record[1..].to_vec())
             .collect::<Vec<_>>(),
-        vec![&[0, 1, 2][..], &[4, 5, 6][..]],
-        "compact call records must not be overwritten by obsolete sparse row clearing"
+        vec![vec![0, 1, 2], vec![4, 5, 6]],
+        "both call records must survive the pre-loop sparse row clearing"
     );
 }

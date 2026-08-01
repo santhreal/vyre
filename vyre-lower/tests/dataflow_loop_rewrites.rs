@@ -1,4 +1,6 @@
 //! Test: dataflow loop rewrites.
+mod dataflow_loop_support;
+use dataflow_loop_support::store_body;
 use vyre_foundation::ir::DataType;
 use vyre_lower::{
     analyses::{
@@ -89,18 +91,6 @@ fn loop_bounds_and_two_children(left: KernelBody, right: KernelBody) -> KernelDe
                 LiteralValue::U32(17),
             ],
         },
-    }
-}
-
-fn store_body(index: u32, value: u32) -> KernelBody {
-    KernelBody {
-        ops: vec![KernelOp {
-            kind: KernelOpKind::StoreGlobal,
-            operands: vec![0, index, value],
-            result: None,
-        }],
-        child_bodies: vec![],
-        literals: vec![],
     }
 }
 

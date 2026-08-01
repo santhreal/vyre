@@ -1,29 +1,35 @@
-# vyre-harness  -  architecture
+# vyre-harness architecture
 
-Test + bench harness shared across vyre crates. Owns
-`region::tag_program` (the conformance-region wrapper helper) and
-the canonical fixture corpora.
+`vyre-harness` provides the registry and conformance helpers shared by Vyre
+tests, benchmarks, and library operations. It re-exports the canonical region
+composition helpers from `vyre-foundation`.
 
 ## Modules
 
 ### `lib.rs`
-Public re-exports. The test corpora and helpers downstream crates
-need.
+
+This module defines the Cat-A registry and its deterministic fixtures. It also
+re-exports the region composition surface.
 
 ### `region.rs`
-`tag_program(op_id, program) → Program`  -  wraps a Program's entry
-in a `Node::Region { generator: op_id, source_region: ..., body }`
-so the conform runner knows which op produced which output.
+
+This module owns the convenience constructors `wrap`, `wrap_anonymous`, and
+`wrap_child`. It re-exports `tag_program` and `reparent_program_children` from
+`vyre_foundation::composition`.
+
+`tag_program(parent_id, program)` preserves the existing `Program` metadata.
+It wraps the entry in a parent region and keeps each primitive generator as a
+child whose `source_region` names the parent.
 
 ## Public types
 
-- **`region::tag_program`**  -  region-wrapping helper.
-- **(future)** `corpora::standard`  -  the standard fixture set
-  every bench/test consumes. Currently expected by per-pass
-  benches; lands as the surface stabilises.
+- `OpEntry` registers a runnable Cat-A operation and its fixtures.
+- `region::tag_program` exposes the foundation-owned composition operation.
+- `region::wrap_child` creates a named child composition edge.
 
 ## Integration points
 
-- Consumed by every `tests/` and `benches/` directory in vyre.
-- Used by the conform runner to wrap probe outputs in the
-  generator-tagged Region the certificate hash covers.
+- Library wrappers use `tag_program` when they return an existing primitive
+  program under a product-facing operation id.
+- The conform runner reads region generators when it builds certificate
+  evidence.

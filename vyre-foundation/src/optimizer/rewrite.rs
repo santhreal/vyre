@@ -4,6 +4,72 @@ use smallvec::SmallVec;
 use std::borrow::Cow;
 use std::sync::Arc;
 
+pub(crate) fn push_expr_children<'a>(expr: &'a Expr, stack: &mut SmallVec<[&'a Expr; 16]>) {
+    match expr {
+        Expr::Load { index, .. } | Expr::UnOp { operand: index, .. } => stack.push(index),
+        Expr::BinOp { left, right, .. } => {
+            stack.push(left);
+            stack.push(right);
+        }
+        Expr::Call { args, .. } => stack.extend(args),
+        Expr::Select {
+            cond,
+            true_val,
+            false_val,
+        } => {
+            stack.push(cond);
+            stack.push(true_val);
+            stack.push(false_val);
+        }
+        Expr::Cast { value, .. } | Expr::SubgroupReduce { value, .. } => stack.push(value),
+        Expr::Fma { a, b, c } => {
+            stack.push(a);
+            stack.push(b);
+            stack.push(c);
+        }
+        Expr::Atomic {
+            index,
+            expected,
+            value,
+            ..
+        } => {
+            stack.push(index);
+            if let Some(expected) = expected {
+                stack.push(expected);
+            }
+            stack.push(value);
+        }
+        Expr::SubgroupBallot { cond } => stack.push(cond),
+        Expr::SubgroupShuffle { value, lane } => {
+            stack.push(value);
+            stack.push(lane);
+        }
+        Expr::LitU32(_)
+        | Expr::LitI32(_)
+        | Expr::LitF32(_)
+        | Expr::LitBool(_)
+        | Expr::Var(_)
+        | Expr::BufferRef { .. }
+        | Expr::BufLen { .. }
+        | Expr::InvocationId { .. }
+        | Expr::WorkgroupId { .. }
+        | Expr::LocalId { .. }
+        | Expr::SubgroupLocalId
+        | Expr::SubgroupSize
+        | Expr::Opaque(_) => {}
+    }
+}
+pub(crate) fn expr_contains_atomic(expr: &Expr) -> bool {
+    let mut stack = SmallVec::<[&Expr; 16]>::from_slice(&[expr]);
+    while let Some(candidate) = stack.pop() {
+        if matches!(candidate, Expr::Atomic { .. }) {
+            return true;
+        }
+        push_expr_children(candidate, &mut stack);
+    }
+    false
+}
+
 /// Run an expression-rewrite closure over every node in \`program\`.
 pub(crate) fn rewrite_program(
     program: Program,
@@ -13,6 +79,28 @@ pub(crate) fn rewrite_program(
         Cow::Borrowed(_) => (program, false),
         Cow::Owned(entry) => (program.with_rewritten_entry(entry), true),
     }
+}
+
+pub(crate) fn rewrite_node_slices<'a>(
+    nodes: &'a [Node],
+    mut rewrite: impl FnMut(&'a Node) -> Cow<'a, [Node]>,
+) -> Cow<'a, [Node]> {
+    let mut rewritten: Option<Vec<Node>> = None;
+    for (index, node) in nodes.iter().enumerate() {
+        match rewrite(node) {
+            Cow::Borrowed(_) if rewritten.is_none() => {}
+            Cow::Borrowed(borrowed) => {
+                if let Some(out) = rewritten.as_mut() {
+                    out.extend_from_slice(borrowed);
+                }
+            }
+            Cow::Owned(owned) => {
+                let out = rewritten.get_or_insert_with(|| nodes[..index].to_vec());
+                out.extend(owned);
+            }
+        }
+    }
+    rewritten.map_or(Cow::Borrowed(nodes), Cow::Owned)
 }
 
 fn rewrite_nodes_cow<'a>(
@@ -456,7 +544,7 @@ fn pop_rewrite_result<'a>(
 }
 
 #[inline]
-fn rewrite_binary<'a>(
+pub(super) fn rewrite_binary<'a>(
     original: &'a Expr,
     op: BinOp,
     left: Cow<'a, Expr>,
@@ -473,43 +561,58 @@ fn rewrite_binary<'a>(
 }
 
 #[inline]
-fn rewrite_fma<'a>(
+fn rewrite_ternary<'a>(
+    original: &'a Expr,
+    first: Cow<'a, Expr>,
+    second: Cow<'a, Expr>,
+    third: Cow<'a, Expr>,
+    build: impl FnOnce(Expr, Expr, Expr) -> Expr,
+) -> Cow<'a, Expr> {
+    if matches!(
+        (&first, &second, &third),
+        (Cow::Borrowed(_), Cow::Borrowed(_), Cow::Borrowed(_))
+    ) {
+        return Cow::Borrowed(original);
+    }
+    Cow::Owned(build(
+        first.into_owned(),
+        second.into_owned(),
+        third.into_owned(),
+    ))
+}
+
+#[inline]
+pub(super) fn rewrite_fma<'a>(
     original: &'a Expr,
     a: Cow<'a, Expr>,
     b: Cow<'a, Expr>,
     c: Cow<'a, Expr>,
 ) -> Cow<'a, Expr> {
-    if matches!(
-        (&a, &b, &c),
-        (Cow::Borrowed(_), Cow::Borrowed(_), Cow::Borrowed(_))
-    ) {
-        return Cow::Borrowed(original);
-    }
-    Cow::Owned(Expr::Fma {
-        a: Box::new(a.into_owned()),
-        b: Box::new(b.into_owned()),
-        c: Box::new(c.into_owned()),
+    rewrite_ternary(original, a, b, c, |a, b, c| Expr::Fma {
+        a: Box::new(a),
+        b: Box::new(b),
+        c: Box::new(c),
     })
 }
 
 #[inline]
-fn rewrite_select<'a>(
+pub(super) fn rewrite_select<'a>(
     original: &'a Expr,
     cond: Cow<'a, Expr>,
     true_val: Cow<'a, Expr>,
     false_val: Cow<'a, Expr>,
 ) -> Cow<'a, Expr> {
-    if matches!(
-        (&cond, &true_val, &false_val),
-        (Cow::Borrowed(_), Cow::Borrowed(_), Cow::Borrowed(_))
-    ) {
-        return Cow::Borrowed(original);
-    }
-    Cow::Owned(Expr::Select {
-        cond: Box::new(cond.into_owned()),
-        true_val: Box::new(true_val.into_owned()),
-        false_val: Box::new(false_val.into_owned()),
-    })
+    rewrite_ternary(
+        original,
+        cond,
+        true_val,
+        false_val,
+        |cond, true_val, false_val| Expr::Select {
+            cond: Box::new(cond),
+            true_val: Box::new(true_val),
+            false_val: Box::new(false_val),
+        },
+    )
 }
 
 #[cfg(test)]

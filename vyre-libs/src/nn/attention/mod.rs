@@ -9,6 +9,7 @@ pub mod planner;
 pub mod qk_gain;
 pub mod quest;
 mod softmax;
+mod tiled_online_softmax;
 pub mod turboquant;
 
 pub use attention::{attention, attention_reference, try_attention_reference, Attention};

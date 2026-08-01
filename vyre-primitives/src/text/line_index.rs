@@ -86,7 +86,7 @@ fn try_line_index_with_source_type(
     }
 
     vyre_foundation::execution_plan::fusion::fuse_programs(&[flag_pass, scan_pass])
-        .map(|program| demote_intermediate_outputs(program, lines))
+        .map(|program| crate::demote_intermediate_outputs(program, lines))
         .map_err(|error| {
             format!(
                 "line_index fusion failed for n={n}: {error}. Fix: repair flag/scan fusion instead of falling back to a serial lane-0 loop."
@@ -181,22 +181,6 @@ fn line_start_flags_program(
             body: Arc::new(vec![Node::if_then(Expr::lt(t, Expr::u32(n)), lane_body)]),
         }],
     ))
-}
-
-fn demote_intermediate_outputs(program: Program, final_output: &str) -> Program {
-    let buffers = program
-        .buffers()
-        .iter()
-        .map(|buffer| {
-            let mut buffer = buffer.clone();
-            if buffer.name() != final_output && buffer.is_output() {
-                buffer.is_output = false;
-                buffer.pipeline_live_out = true;
-            }
-            buffer
-        })
-        .collect();
-    program.with_rewritten_buffers(buffers)
 }
 
 /// Reference oracle: same line-counting semantics as the GPU kernel.

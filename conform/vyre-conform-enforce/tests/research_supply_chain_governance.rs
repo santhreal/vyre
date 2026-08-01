@@ -5,10 +5,8 @@ const SOURCE_GATES: &str =
     include_str!("../../../docs/optimization/RESEARCH_SOURCE_INTEGRITY_GATES.toml");
 const SUPPLY_CHAIN: &str =
     include_str!("../../../docs/optimization/PUBLIC_RELEASE_SUPPLY_CHAIN_PROVENANCE.toml");
-const LINKAGE: &str =
-    include_str!("../../../docs/optimization/PLAN_RESEARCH_LINKAGE_AUDIT.toml");
-const SEAMS: &str =
-    include_str!("../../../docs/optimization/DEDUP_SEAM_COMPLETION_AUDIT.toml");
+const LINKAGE: &str = include_str!("../../../docs/optimization/PLAN_RESEARCH_LINKAGE_AUDIT.toml");
+const SEAMS: &str = include_str!("../../../docs/optimization/DEDUP_SEAM_COMPLETION_AUDIT.toml");
 
 #[test]
 fn research_source_ledger_contains_supply_chain_primary_sources() {

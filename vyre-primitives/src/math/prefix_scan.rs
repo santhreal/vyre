@@ -223,15 +223,14 @@ fn empty_large_scan_program(in_buf: &str, out_buf: &str, op_id: &'static str) ->
 }
 
 fn wrap_large_scan_program(program: Program, op_id: &'static str) -> Program {
-    Program::wrapped(
-        program.buffers().to_vec(),
-        program.workgroup_size(),
-        vec![Node::Region {
-            generator: Ident::from(op_id),
-            source_region: None,
-            body: Arc::new(program.entry().to_vec()),
-        }],
-    )
+    // Only the entry changes, so rebuild only the entry. `Program::wrapped`
+    // would deep-clone the buffer table and reset the metadata flags.
+    let tagged = vec![Node::Region {
+        generator: Ident::from(op_id),
+        source_region: None,
+        body: Arc::new(program.entry().to_vec()),
+    }];
+    program.with_rewritten_wrapped_entry(tagged)
 }
 
 /// CPU-reference prefix scan. Conformance tests verify the GPU

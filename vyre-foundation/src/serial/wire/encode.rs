@@ -3,7 +3,14 @@
 /// Version label for BLAKE3 digests computed from canonical VIR0 Program wire
 /// bytes. Evidence, cache, and replay surfaces import this label instead of
 /// inventing parallel Program digest version strings.
-pub const PROGRAM_WIRE_DIGEST_VERSION: &str = "vyre-program-wire-vir0-blake3-v1";
+///
+/// Bumped to v2 with wire rev 6. A version label names the RULE that produced
+/// the digest, and rev 6 changed that rule: the canonical bytes now include
+/// `linear_type`, `bytes_extraction`, and `shape_predicate`, so every
+/// `Program::fingerprint()` value moved. Leaving this at v1 would let one
+/// label cover two different digest rules, which is silent, and silent is
+/// worse than a loud mismatch.
+pub const PROGRAM_WIRE_DIGEST_VERSION: &str = "vyre-program-wire-vir0-blake3-v2";
 
 /// Encode a single [`crate::ir::Expr`] into its wire-format tag and payload.
 ///

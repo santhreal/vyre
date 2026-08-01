@@ -108,9 +108,13 @@ impl WgpuPipeline {
     ) -> Result<crate::buffer::GpuBufferHandle, BackendError> {
         match resource {
             vyre_driver::Resource::Resident(id) => {
-                let handle = crate::buffer::GpuBufferHandle::from_resident_id(*id).ok_or_else(|| {
+                let handle = crate::buffer::GpuBufferHandle::from_resident_handle(
+                    *id,
+                    "WGPU persistent resident dispatch",
+                )?
+                .ok_or_else(|| {
                     BackendError::new(format!(
-                        "resident buffer handle {id} for binding {} (`{}`) is not live. Fix: keep resident buffers alive until dispatch and never pass stale Resource::Resident ids.",
+                        "resident buffer handle {id} for binding {} (`{}`) is not live. Fix: keep resident buffers alive until dispatch and never pass stale Resource::Resident handles.",
                         info.binding, info.name
                     ))
                 })?;
@@ -119,7 +123,8 @@ impl WgpuPipeline {
             }
             vyre_driver::Resource::Borrowed(bytes) => {
                 let byte_len = self.persistent_resource_byte_len(info, Some(bytes.as_slice()))?;
-                let byte_len_u64 = WGPU_NUMERIC.usize_to_u64(byte_len, "persistent resource bytes")?;
+                let byte_len_u64 =
+                    WGPU_NUMERIC.usize_to_u64(byte_len, "persistent resource bytes")?;
                 let handle = self
                     .persistent_pool
                     .acquire(byte_len_u64, usage_for_binding(info)?)?;

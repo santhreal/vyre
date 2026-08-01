@@ -22,15 +22,11 @@
 //! Region with no scratch, eliminating one buffer + one dispatch
 //! per call.
 
-use std::sync::Arc;
-
-use vyre::ir::model::expr::Ident;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_primitives::graph::csr_forward_traverse::bitset_words;
-use vyre_primitives::graph::program_graph::{
-    ProgramGraphShape, NAME_EDGE_KIND_MASK, NAME_EDGE_OFFSETS, NAME_EDGE_TARGETS, NAME_NODES,
-    NAME_NODE_TAGS,
-};
+use vyre::ir::DataType;
+use vyre_foundation::execution_plan::fusion::fuse_programs;
+use vyre_primitives::bitset::and_not::bitset_and_not;
+use vyre_primitives::graph::csr_forward_traverse::{bitset_words, csr_forward_traverse};
+use vyre_primitives::graph::program_graph::ProgramGraphShape;
 use vyre_primitives::predicate::edge_kind;
 
 const OP_ID: &str = "vyre-libs::security::sanitized_by";
@@ -51,7 +47,7 @@ pub fn sanitized_by(
     frontier_in: &str,
     sanitizers_in: &str,
     frontier_out: &str,
-) -> Program {
+) -> vyre::ir::Program {
     crate::security::assert_security_inputs(
         OP_ID,
         shape.node_count,
@@ -62,143 +58,23 @@ pub fn sanitized_by(
         ],
     );
     let words = bitset_words(shape.node_count);
-    let clean_buf = format!("__sanitized_by_clean__{}", frontier_in);
-    let t = Expr::InvocationId { axis: 0 };
-    let clean_word = Expr::bitand(
-        Expr::load(frontier_in, Expr::var("word_idx")),
-        Expr::bitnot(Expr::load(sanitizers_in, Expr::var("word_idx"))),
+    let clean_buffer = format!("__sanitized_by_clean__{frontier_in}");
+    let clean = bitset_and_not(frontier_in, sanitizers_in, &clean_buffer, words);
+    let traverse = csr_forward_traverse(
+        shape,
+        &clean_buffer,
+        frontier_out,
+        crate::security::flows_to::FLOWS_TO_MASK,
     );
-    let mut body = vec![Node::if_then(
-        Expr::lt(t.clone(), Expr::u32(words)),
-        vec![
-            Node::let_bind("word_idx", t.clone()),
-            Node::store(&clean_buf, t.clone(), clean_word.clone()),
-        ],
-    )];
-    body.push(Node::if_then(
-        Expr::lt(t.clone(), Expr::u32(shape.node_count)),
-        vec![
-            Node::let_bind("src", t.clone()),
-            Node::let_bind("word_idx", Expr::shr(Expr::var("src"), Expr::u32(5))),
-            Node::let_bind(
-                "bit_mask",
-                Expr::shl(Expr::u32(1), Expr::bitand(Expr::var("src"), Expr::u32(31))),
-            ),
-            Node::let_bind("clean_word", clean_word),
-            Node::if_then(
-                Expr::ne(
-                    Expr::bitand(Expr::var("clean_word"), Expr::var("bit_mask")),
-                    Expr::u32(0),
-                ),
-                vec![
-                    Node::let_bind(
-                        "edge_start",
-                        Expr::load(NAME_EDGE_OFFSETS, Expr::var("src")),
-                    ),
-                    Node::let_bind(
-                        "edge_end",
-                        Expr::load(NAME_EDGE_OFFSETS, Expr::add(Expr::var("src"), Expr::u32(1))),
-                    ),
-                    Node::loop_for(
-                        "e",
-                        Expr::var("edge_start"),
-                        Expr::var("edge_end"),
-                        vec![
-                            Node::let_bind(
-                                "kind_mask",
-                                Expr::load(NAME_EDGE_KIND_MASK, Expr::var("e")),
-                            ),
-                            Node::if_then(
-                                Expr::ne(
-                                    Expr::bitand(
-                                        Expr::var("kind_mask"),
-                                        Expr::u32(crate::security::flows_to::FLOWS_TO_MASK),
-                                    ),
-                                    Expr::u32(0),
-                                ),
-                                vec![
-                                    Node::let_bind(
-                                        "dst",
-                                        Expr::load(NAME_EDGE_TARGETS, Expr::var("e")),
-                                    ),
-                                    Node::if_then(
-                                        Expr::lt(Expr::var("dst"), Expr::u32(shape.node_count)),
-                                        vec![
-                                            Node::let_bind(
-                                                "dst_word_idx",
-                                                Expr::shr(Expr::var("dst"), Expr::u32(5)),
-                                            ),
-                                            Node::let_bind(
-                                                "dst_bit",
-                                                Expr::shl(
-                                                    Expr::u32(1),
-                                                    Expr::bitand(Expr::var("dst"), Expr::u32(31)),
-                                                ),
-                                            ),
-                                            // Sanitizers absorb taint AT
-                                            // their boundary: the sanitizer
-                                            // node is marked when reached
-                                            // (so callers can see "taint
-                                            // arrived here"), but downstream
-                                            // propagation past it is cut by
-                                            // the `frontier_clean = fin \
-                                            // sanitizers` step earlier in
-                                            // the program. Don't double-
-                                            // gate at the dst  -  that would
-                                            // hide the sanitizer hit from
-                                            // the output frontier and break
-                                            // the witness fixture.
-                                            Node::let_bind(
-                                                "_prev",
-                                                Expr::atomic_or(
-                                                    frontier_out,
-                                                    Expr::var("dst_word_idx"),
-                                                    Expr::var("dst_bit"),
-                                                ),
-                                            ),
-                                        ],
-                                    ),
-                                ],
-                            ),
-                        ],
-                    ),
-                ],
-            ),
-        ],
-    ));
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(frontier_in, 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(words),
-            BufferDecl::storage(sanitizers_in, 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(words),
-            BufferDecl::storage(&clean_buf, 2, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(words),
-            BufferDecl::storage(NAME_NODES, 3, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(shape.node_count),
-            BufferDecl::storage(NAME_EDGE_OFFSETS, 4, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(shape.node_count.saturating_add(1)),
-            BufferDecl::storage(NAME_EDGE_TARGETS, 5, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(shape.edge_count.max(1)),
-            BufferDecl::storage(
-                NAME_EDGE_KIND_MASK,
-                6,
-                BufferAccess::ReadOnly,
-                DataType::U32,
-            )
-            .with_count(shape.edge_count.max(1)),
-            BufferDecl::storage(NAME_NODE_TAGS, 7, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(shape.node_count),
-            BufferDecl::storage(frontier_out, 8, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(words),
-        ],
-        [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
-    )
+    let fused = fuse_programs(&[clean, traverse]).unwrap_or_else(|error| {
+        crate::builder::invalid_output_program(
+            OP_ID,
+            frontier_out,
+            DataType::U32,
+            format!("Fix: sanitized_by composition failed: {error}"),
+        )
+    });
+    crate::region::tag_program(OP_ID, fused)
 }
 
 inventory::submit! {

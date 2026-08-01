@@ -56,9 +56,23 @@ fn math_dot_produces_valid_region_program() {
     let p = dot("x", "y", "out", 3).unwrap();
     assert_valid(&p);
     assert_wrapped_in_region(&p, "vyre-libs::math::dot");
-    assert_eq!(p.buffers().len(), 3);
-    assert_eq!(p.buffers()[0].access(), BufferAccess::ReadOnly);
-    assert_eq!(p.buffers()[2].access(), BufferAccess::ReadWrite);
+
+    // Four buffers, not three: `dot` reduces through a workgroup-local
+    // `dot_scratch` tile, so the scratch declaration sits between the inputs
+    // and the output. This assertion used to read `3` and index the output
+    // positionally at slot 2, which is now the scratch buffer. Look buffers up
+    // by name so a future scratch buffer cannot silently shift the roles.
+    assert_eq!(p.buffers().len(), 4);
+    let buffer = |name: &str| {
+        p.buffers()
+            .iter()
+            .find(|b| b.name() == name)
+            .unwrap_or_else(|| panic!("dot must declare a {name} buffer"))
+    };
+    assert_eq!(buffer("x").access(), BufferAccess::ReadOnly);
+    assert_eq!(buffer("y").access(), BufferAccess::ReadOnly);
+    assert_eq!(buffer("out").access(), BufferAccess::ReadWrite);
+    assert_eq!(buffer("dot_scratch").kind(), MemoryKind::Shared);
 }
 
 #[test]
@@ -102,7 +116,12 @@ fn nn_relu_produces_valid_program() {
 fn matching_substring_produces_valid_program() {
     let p = substring_search("haystack", "needle", "matches", 16, 5);
     assert_valid(&p);
-    assert_wrapped_in_region(&p, "vyre-libs::matching::substring_search");
+    // The canonical path is `vyre_libs::scan::substring_search`, which this
+    // file imports. `vyre_libs::matching::substring_search` is a deprecated
+    // alias that keeps the old op id for transition consumers; asserting the
+    // legacy id here made the canonical builder look like the alias.
+    // See vyre-libs/tests/substring_op_id_compatibility.rs for the full contract.
+    assert_wrapped_in_region(&p, "vyre-libs::scan::substring_search");
 }
 
 #[test]
@@ -139,11 +158,21 @@ fn region_bodies_are_nonempty() {
     };
     assert!(!body.is_empty(), "Region body must not be empty");
     // Also confirm every buffer uses a concrete kind.
+    //
+    // `Shared` belongs on this list: `dot` reduces through a workgroup-local
+    // scratch tile, and workgroup memory is as concrete a binding as storage
+    // memory. Omitting it made a legitimate reduction look like a placeholder.
+    // The kinds deliberately left out are the ones no Cat-A composition should
+    // declare directly: `Local` (per-invocation, not a binding), `Persistent`
+    // (SSD-backed, reached through AsyncLoad), and `Push` (constants).
     for buf in p.buffers() {
         assert!(
             matches!(
                 buf.kind(),
-                MemoryKind::Readonly | MemoryKind::Global | MemoryKind::Uniform
+                MemoryKind::Readonly
+                    | MemoryKind::Global
+                    | MemoryKind::Uniform
+                    | MemoryKind::Shared
             ),
             "buffer kind must be concrete: {:?}",
             buf.kind()

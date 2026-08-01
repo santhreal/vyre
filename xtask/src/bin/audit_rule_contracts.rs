@@ -1,7 +1,7 @@
 //! Audit `rules/launch/*.toml` rule contracts and report missing or
 //! malformed fields.
 //!
-//! Run via `cargo_full run -p xtask --bin audit_rule_contracts`. The binary
+//! Run via `cargo xtaskbin audit_rule_contracts`. The binary
 //! exits non-zero when any rule deviates from `rules/SCHEMA.md`.
 
 use std::fs;

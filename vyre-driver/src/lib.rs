@@ -205,12 +205,14 @@ pub use backend::{
     replace_output_buffers_preserving_slots, validate_buffer_ownership,
     validate_program_for_backend, BackendError, BackendRegistration, CompiledPipeline,
     DeviceBuffer, DispatchConfig, Executable, HostShimBuffer, Memory, MemoryRef, OutputBuffers,
-    PendingDispatch, ResidentDispatchStep, ResidentReadRange, ResidentSequenceTiming, Resource,
-    TimedDispatchResult, TypedDispatchExt, VyreBackend, DEVICE_BUFFER_FEATURE,
+    PendingDispatch, ResidentDispatchStep, ResidentHandle, ResidentOwner, ResidentReadRange,
+    ResidentSequenceTiming, Resource, TimedDispatchResult, TypedDispatchExt, VyreBackend,
+    DEVICE_BUFFER_FEATURE,
 };
 pub use binding::{
-    binding_plans_share_layout, BackendLayoutClass, BackendLayoutFingerprint, BackendLayoutSlot,
-    Binding, BindingPlan, BindingRole, BindingSetFingerprint,
+    binding_plans_share_layout, dynamic_element_count_from_bytes, BackendLayoutClass,
+    BackendLayoutFingerprint, BackendLayoutSlot, Binding, BindingPlan, BindingRole,
+    BindingSetFingerprint,
 };
 pub use device_extraction::{
     extract_best_for_device, extract_best_for_devices, DeviceExtraction, ExtractionDevice,
@@ -241,9 +243,10 @@ pub use program_walks::{
     coerce_to_pow2_with_tail_mask, dispatch_element_count, dispatch_element_count_for_program,
     dispatch_param_words_into, element_size_bytes, enforce_actual_output_budget,
     find_indirect_dispatch, infer_dispatch_grid, infer_dispatch_grid_for_count,
-    output_binding_layout, output_binding_layouts, output_layout_from_program,
-    try_coerce_to_pow2_with_tail_mask, try_dispatch_param_words, try_dispatch_param_words_into,
-    IndirectDispatch, OutputBindingLayout, OutputLayout, TailMaskPolicy,
+    output_binding_layout, output_binding_layout_parts, output_binding_layouts,
+    output_layout_from_program, try_coerce_to_pow2_with_tail_mask, try_dispatch_param_words,
+    try_dispatch_param_words_into, IndirectDispatch, OutputBindingLayout, OutputLayout,
+    TailMaskPolicy,
 };
 pub use registry::{
     default_validator, intern_string, AttrSchema, AttrType, Category, Chain, Dialect,

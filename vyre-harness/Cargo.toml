@@ -12,6 +12,7 @@ readme = "README.md"
 keywords = ["vyre", "gpu", "harness", "registry"]
 categories = ["development-tools::testing"]
 documentation = "https://docs.rs/vyre-harness"
+exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions"]
 
 [lints]
 workspace = true

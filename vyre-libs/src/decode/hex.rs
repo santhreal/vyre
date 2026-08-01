@@ -21,7 +21,7 @@ const FAMILY_PREFIX: &str = "decode_hex";
 /// Fixed buffer name carrying the ASCII hex decode lookup table.
 pub const HEX_DECODE_TABLE_BUFFER: &str = "__vyre_decode_hex_table";
 
-use crate::scan::dispatch_io::pack_u32_slice as pack_words;
+use vyre_primitives::wire::pack_u32_slice as pack_words;
 
 /// Build a Program that decodes ASCII hex bytes from `input` into `output`,
 /// storing one decoded byte per `u32` slot.

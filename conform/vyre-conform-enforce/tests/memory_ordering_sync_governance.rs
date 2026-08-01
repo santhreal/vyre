@@ -4,7 +4,8 @@ const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LE
 const ORDERING: &str =
     include_str!("../../../docs/optimization/MEMORY_ORDERING_ATOMIC_CONTRACTS.toml");
 const BARRIERS: &str = include_str!("../../../docs/optimization/GPU_BARRIER_SCOPE_MATRIX.toml");
-const VISIBILITY: &str = include_str!("../../../docs/optimization/HOST_DEVICE_VISIBILITY_POLICY.toml");
+const VISIBILITY: &str =
+    include_str!("../../../docs/optimization/HOST_DEVICE_VISIBILITY_POLICY.toml");
 const EVIDENCE: &str =
     include_str!("../../../docs/optimization/GPU_BARRIER_VERIFICATION_EVIDENCE.toml");
 const COVERAGE: &str = include_str!(
@@ -23,12 +24,16 @@ fn memory_ordering_sync_sources_are_registered() {
         "METAL_RESOURCE_SYNCHRONIZATION",
         "METAL_FENCE_SYNCHRONIZATION",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 
 #[test]
-fn memory_ordering_contracts_record_writer_reader_atomic_non_atomic_model_and_counterexample_policies() {
+fn memory_ordering_contracts_record_writer_reader_atomic_non_atomic_model_and_counterexample_policies(
+) {
     for required in [
         "contract_id",
         "shared_state",
@@ -44,12 +49,16 @@ fn memory_ordering_contracts_record_writer_reader_atomic_non_atomic_model_and_co
         "output-slab-readback-epoch",
         "autotune-cache-publication",
     ] {
-        assert!(ORDERING.contains(required), "memory ordering contract must include {required}");
+        assert!(
+            ORDERING.contains(required),
+            "memory ordering contract must include {required}"
+        );
     }
 }
 
 #[test]
-fn gpu_barrier_scope_matrix_records_backend_scope_storage_order_cross_workgroup_host_visibility_elision_and_capability() {
+fn gpu_barrier_scope_matrix_records_backend_scope_storage_order_cross_workgroup_host_visibility_elision_and_capability(
+) {
     for required in [
         "barrier_id",
         "backend_surface",
@@ -66,12 +75,16 @@ fn gpu_barrier_scope_matrix_records_backend_scope_storage_order_cross_workgroup_
         "vulkan-queue-pipeline-barrier",
         "metal-pass-fence-resource-synchronization",
     ] {
-        assert!(BARRIERS.contains(required), "GPU barrier scope matrix must include {required}");
+        assert!(
+            BARRIERS.contains(required),
+            "GPU barrier scope matrix must include {required}"
+        );
     }
 }
 
 #[test]
-fn host_device_visibility_policy_records_upload_readback_command_reuse_cache_stale_trace_and_gate_effects() {
+fn host_device_visibility_policy_records_upload_readback_command_reuse_cache_stale_trace_and_gate_effects(
+) {
     for required in [
         "visibility_id",
         "transfer_surface",
@@ -87,12 +100,16 @@ fn host_device_visibility_policy_records_upload_readback_command_reuse_cache_sta
         "device-output-host-readback-visibility",
         "multi-queue-command-reuse-visibility",
     ] {
-        assert!(VISIBILITY.contains(required), "host device visibility policy must include {required}");
+        assert!(
+            VISIBILITY.contains(required),
+            "host device visibility policy must include {required}"
+        );
     }
 }
 
 #[test]
-fn barrier_verification_evidence_records_hazards_producers_consumers_negative_cases_counterexamples_and_cross_backend_policy() {
+fn barrier_verification_evidence_records_hazards_producers_consumers_negative_cases_counterexamples_and_cross_backend_policy(
+) {
     for required in [
         "evidence_id",
         "barrier_contract",
@@ -108,12 +125,16 @@ fn barrier_verification_evidence_records_hazards_producers_consumers_negative_ca
         "global-output-readback-fence-proof",
         "atomic-rmw-consistency-proof",
     ] {
-        assert!(EVIDENCE.contains(required), "barrier verification evidence must include {required}");
+        assert!(
+            EVIDENCE.contains(required),
+            "barrier verification evidence must include {required}"
+        );
     }
 }
 
 #[test]
-fn memory_ordering_sync_coverage_reuses_formal_correctness_schedules_output_provenance_capabilities_telemetry_and_publication_authorities() {
+fn memory_ordering_sync_coverage_reuses_formal_correctness_schedules_output_provenance_capabilities_telemetry_and_publication_authorities(
+) {
     for required in [
         "VX-1421..VX-1440",
         "memory_ordering_atomic_contracts",
@@ -130,6 +151,9 @@ fn memory_ordering_sync_coverage_reuses_formal_correctness_schedules_output_prov
         "dedup_seam",
         "proof_gate",
     ] {
-        assert!(COVERAGE.contains(required), "memory ordering sync coverage must include {required}");
+        assert!(
+            COVERAGE.contains(required),
+            "memory ordering sync coverage must include {required}"
+        );
     }
 }

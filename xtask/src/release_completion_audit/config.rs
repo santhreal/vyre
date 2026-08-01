@@ -29,7 +29,7 @@ pub(crate) fn parse_args(args: &[String]) -> Result<Config, String> {
             }
             "--help" | "-h" => {
                 println!(
-                    "USAGE:\n  cargo_full run --bin xtask -- release-completion-audit [--manifest PATH] [--output PATH]\n\n\
+                    "USAGE:\n  cargo xtask release-completion-audit [--manifest PATH] [--output PATH]\n\n\
                      Writes final prompt-to-artifact release audit evidence."
                 );
                 std::process::exit(0);
@@ -218,14 +218,13 @@ pub(crate) fn release_checklist() -> Vec<ChecklistItem> {
         },
         ChecklistItem {
             requirement_id: "distributed-parser-coherence",
-            explicit_requirement: "vyre-frontend-c, tools/vyrec, Weir, and Surge/SurgeC parser ownership boundaries are coherent and documented.",
+            explicit_requirement: "vyre-frontend-c, tools/vyrec, Weir, and Vyre grammar-generation ownership boundaries are coherent and documented.",
             required_artifacts_or_commands: vec![
                 "cargo_full run --bin xtask -- parser-coherence --output release/evidence/parser/distributed-parser-map.json",
                 "release/evidence/parser/distributed-parser-map.json",
                 "release/evidence/parser/vyre-frontend-c-contracts.json",
                 "release/evidence/parser/vyrec-cli-contracts.json",
                 "release/evidence/parser/external-dataflow-contracts.json",
-                "release/evidence/parser/compiler-consumer-contracts.json",
                 "release/evidence/parser/compiler-consumer-grammar-gen-contracts.json",
                 "release/evidence/docs/distributed-parser-coherence.md",
             ],
@@ -332,6 +331,7 @@ pub(crate) fn release_checklist() -> Vec<ChecklistItem> {
                 "cargo_full run --bin xtask -- release-evidence",
                 "release/evidence/final/release-evidence-run.json",
                 "cargo_full run --bin xtask -- release-completion-audit --output release/evidence/final/completion-audit.json",
+                "cargo_full run --bin xtask -- vyre-release-gate --prepublish",
                 "cargo_full run --bin xtask -- vyre-release-gate",
                 "cargo_full run --bin xtask -- launch-state --output release/evidence/final/public-launch-state.json",
                 "release/evidence/final/completion-audit.json",

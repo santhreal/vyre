@@ -542,10 +542,7 @@ fn u32_cast_kernel(target: DataType) -> KernelDescriptor {
 /// silently diverging from Rust `as u8`, the V035 contract, and the oracle.
 #[test]
 fn u32_to_unsigned_narrow_emits_zero_extending_convert() {
-    for (target, instr) in [
-        (DataType::U8, "cvt.u32.u8"),
-        (DataType::U16, "cvt.u32.u16"),
-    ] {
+    for (target, instr) in [(DataType::U8, "cvt.u32.u8"), (DataType::U16, "cvt.u32.u16")] {
         let s = emit(&u32_cast_kernel(target.clone()))
             .unwrap_or_else(|e| panic!("u32 -> {target:?} must emit: {e}"));
         assert!(
@@ -560,10 +557,7 @@ fn u32_to_unsigned_narrow_emits_zero_extending_convert() {
 /// `cvt.s32.s16`), matching Rust `as i8/i16` and the reference oracle.
 #[test]
 fn u32_to_signed_narrow_emits_sign_extending_convert() {
-    for (target, instr) in [
-        (DataType::I8, "cvt.s32.s8"),
-        (DataType::I16, "cvt.s32.s16"),
-    ] {
+    for (target, instr) in [(DataType::I8, "cvt.s32.s8"), (DataType::I16, "cvt.s32.s16")] {
         let s = emit(&u32_cast_kernel(target.clone()))
             .unwrap_or_else(|e| panic!("u32 -> {target:?} must emit: {e}"));
         assert!(

@@ -29,7 +29,7 @@
 //!     splices but includes the row's terminating newline).
 //!   - `source`  -  original source bytes. [`gpu_directive_metadata`] keeps
 //!     the packed `U32` ABI used by standalone preprocess kernels;
-//!     [`gpu_directive_metadata_u8`] consumes one raw `U8` element per byte for
+//!     [`gpu_directive_metadata_u8`](crate::parsing::c::preprocess::gpu_directive_metadata::gpu_directive_metadata_u8) consumes one raw `U8` element per byte for
 //!     the resident preprocessing pipeline.
 //!
 //! Outputs:

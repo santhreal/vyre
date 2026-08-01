@@ -644,9 +644,7 @@ fn matching_call_close(classified: &ClassifiedTokens, open_idx: usize) -> Option
 }
 
 fn token_bytes(classified: &ClassifiedTokens, idx: usize) -> Option<&[u8]> {
-    let start = *classified.tok_starts.get(idx)? as usize;
-    let len = *classified.tok_lens.get(idx)? as usize;
-    classified.source.get(start..start.checked_add(len)?)
+    super::classified_token_bytes_opt(classified, idx)
 }
 
 #[cfg(test)]

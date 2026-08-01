@@ -33,3 +33,21 @@ pub mod output_set;
 /// tests  -  every consumer adopts it and its fixes propagate.
 pub mod envelope;
 pub use envelope::{EnvelopeError, WireReader, WireWriter};
+
+pub(crate) fn put_leb_u32(out: &mut Vec<u8>, value: u32) {
+    put_leb_u64(out, u64::from(value));
+}
+
+pub(crate) fn put_leb_u64(out: &mut Vec<u8>, mut value: u64) {
+    loop {
+        let mut byte = (value & 0x7f) as u8;
+        value >>= 7;
+        if value != 0 {
+            byte |= 0x80;
+        }
+        out.push(byte);
+        if value == 0 {
+            break;
+        }
+    }
+}

@@ -367,7 +367,7 @@ pub fn scale_cases() -> Vec<(String, Vec<Vec<u8>>, Vec<u8>, Vec<u32>)> {
         ));
     }
 
-    // 6. THOUSANDS of tiny regions: 4000 regions over 16 KiB (~4 bytes each) 
+    // 6. THOUSANDS of tiny regions: 4000 regions over 16 KiB (~4 bytes each)
     //    the max `ceil_log2(4000)=12` binary-search width, dense region boundaries
     //    so a match's region attribution is stressed at every boundary. keyhog's
     //    "tens of thousands of small files coalesced" shape. (Requires the grid-aware

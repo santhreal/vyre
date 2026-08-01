@@ -8,7 +8,7 @@
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
-use crate::dataflow::PrecisionContract;
+use crate::PrecisionContract;
 
 use super::facts::{
     finding_from_sanitized_source_to_sink_query, AnalysisFact, AnalysisFactError,

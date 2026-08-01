@@ -10,20 +10,18 @@ fn prove_merges_live_gpu_certificate_shards() {
 
     for (shard, path) in [("0/64", &shard_a), ("1/64", &shard_b)] {
         let mut command = Command::new("cargo");
-        command
-            .env("VYRE_CONFORM_PROOF_WORKERS", "16")
-            .args([
-                "run",
-                "-p",
-                "vyre-conform-runner",
-                "--features",
-                "gpu",
-                "--quiet",
-                "--",
-                "prove",
-                "--shard",
-                shard,
-            ]);
+        command.env("VYRE_CONFORM_PROOF_WORKERS", "16").args([
+            "run",
+            "-p",
+            "vyre-conform-runner",
+            "--features",
+            "gpu",
+            "--quiet",
+            "--",
+            "prove",
+            "--shard",
+            shard,
+        ]);
         if let Some(backend) = selected_backend.as_deref() {
             command.args(["--backend", backend]);
         }
@@ -193,4 +191,3 @@ fn plan_emits_deterministic_shard_manifest_without_dispatch() {
         "Fix: plan must name every op selected for this shard."
     );
 }
-

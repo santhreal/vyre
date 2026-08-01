@@ -1,26 +1,14 @@
 //! Property gates for `vyre_primitives::text::char_class::reference_char_class`.
 
 #![cfg(all(feature = "text", feature = "cpu-parity"))]
+mod text_char_class_support;
 
 use proptest::prelude::*;
+use text_char_class_support::run_packed_u8_program;
 use vyre_foundation::ir::DataType;
 use vyre_primitives::text::char_class::{
     build_char_class_table, char_class_u8, reference_char_class,
 };
-use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack_u32s, pack_u32_slice as pack_u32s};
-use vyre_reference::value::Value;
-
-fn run_packed_u8_program(source: &[u8], table: &[u32; 256]) -> Vec<u32> {
-    let program = char_class_u8("source", "classified", source.len() as u32);
-    let outputs = vyre_reference::reference_eval(
-        &program,
-        &[Value::from(source.to_vec()), Value::from(pack_u32s(table))],
-    )
-    .expect("Fix: packed-u8 char_class reference evaluation must succeed");
-    let mut classified = unpack_u32s(&outputs[0].to_bytes());
-    classified.truncate(source.len());
-    classified
-}
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(10_000))]

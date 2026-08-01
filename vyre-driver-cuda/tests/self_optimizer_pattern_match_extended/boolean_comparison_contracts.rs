@@ -196,4 +196,3 @@ fn cuda_lt_self_collapses_to_false_via_cse() {
         );
     }
 }
-

@@ -344,8 +344,7 @@ fn output_handles_are_dense_unique(items: &[MegakernelWorkItem]) -> bool {
             return false;
         };
         let word = offset / 64;
-        let bit = 1u64
-            << (offset % 64);
+        let bit = 1u64 << (offset % 64);
         if (seen[word] & bit) != 0 {
             return false;
         }

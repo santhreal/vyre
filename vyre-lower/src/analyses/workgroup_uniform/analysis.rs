@@ -2,8 +2,9 @@
 //! looking for any thread-id dependency.
 
 use super::report::{BranchSite, BranchUniformity, WorkgroupUniformReport};
-use crate::{KernelBody, KernelDescriptor, KernelOp, KernelOpKind};
-use rustc_hash::{FxHashMap, FxHashSet};
+use crate::analyses::{producer_map, ProducerMap};
+use crate::{KernelBody, KernelDescriptor, KernelOpKind};
+use rustc_hash::FxHashSet;
 
 #[must_use]
 pub fn analyze(desc: &KernelDescriptor) -> WorkgroupUniformReport {
@@ -48,18 +49,6 @@ fn walk_body(body: &KernelBody, branches: &mut Vec<BranchSite>, op_index_offset:
             _ => {}
         }
     }
-}
-
-type ProducerMap<'a> = FxHashMap<u32, &'a KernelOp>;
-
-fn producer_map(body: &KernelBody) -> ProducerMap<'_> {
-    let mut producers = FxHashMap::with_capacity_and_hasher(body.ops.len(), Default::default());
-    for op in &body.ops {
-        for result in op.result_ids() {
-            producers.insert(result, op);
-        }
-    }
-    producers
 }
 
 /// Classify a condition operand by tracing its dependency closure.

@@ -4,6 +4,9 @@ use crate::benchmark_evidence_semantics::{
     cuda_telemetry_label_issues, launch_plan_label_issues, BackendConsistencyIssue,
     CudaForbiddenTelemetryIssue, CudaTelemetryLabelIssue, LaunchPlanLabelIssue,
 };
+use crate::benchmark_evidence_semantics::{
+    metrics_has_any, metrics_has_positive_any, metrics_has_zero_any,
+};
 
 fn inspect_workload_benchmark_semantics(
     evidence: &str,
@@ -102,7 +105,7 @@ fn inspect_workload_benchmark_provenance(
 ) {
     inspect_benchmark_report_provenance(evidence, path, value, blockers);
     check_case_backend_matches_selected_backend(evidence, value, blockers);
-    inspect_contract_baselines_apply_to_backend(evidence, value, blockers);
+    inspect_contract_baselines(evidence, None, value, blockers);
     check_cuda_telemetry_labels_match_counters(evidence, value, blockers);
     check_cuda_forbidden_telemetry_is_zero(evidence, value, blockers);
     let Some(cases) = value.get("cases").and_then(serde_json::Value::as_array) else {
@@ -273,36 +276,7 @@ fn has_nonempty_string_any(value: &serde_json::Value, fields: &[&str]) -> bool {
     })
 }
 
-fn metrics_has_any(
-    metrics: Option<&serde_json::Map<String, serde_json::Value>>,
-    fields: &[&str],
-) -> bool {
-    metrics.is_some_and(|metrics| {
-        fields.iter().any(|field| {
-            metrics.get(*field).is_some_and(|value| {
-                metric_samples(Some(value)).is_some_and(|samples| samples > 0)
-                    || metric_p50(Some(value)).is_some_and(|sample| sample > 0.0)
-                    || value.as_u64().is_some()
-                    || value.as_f64().is_some_and(|number| number >= 0.0)
-            })
-        })
-    })
-}
 
-fn metrics_has_positive_any(
-    metrics: Option<&serde_json::Map<String, serde_json::Value>>,
-    fields: &[&str],
-) -> bool {
-    metrics.is_some_and(|metrics| {
-        fields.iter().any(|field| {
-            metrics.get(*field).is_some_and(|value| {
-                metric_p50(Some(value)).is_some_and(|sample| sample > 0.0)
-                    || value.as_u64().is_some_and(|number| number > 0)
-                    || value.as_f64().is_some_and(|number| number > 0.0)
-            })
-        })
-    })
-}
 
 const LAUNCH_COUNT_METRICS: &[&str] = &["kernel_launches", "launch_count", "launches"];
 const NON_DISPATCH_PROOF_CASE_IDS: &[&str] = &[
@@ -316,20 +290,6 @@ fn is_non_dispatch_proof_case(case_id: &str) -> bool {
     NON_DISPATCH_PROOF_CASE_IDS.contains(&case_id)
 }
 
-fn metrics_has_zero_any(
-    metrics: Option<&serde_json::Map<String, serde_json::Value>>,
-    fields: &[&str],
-) -> bool {
-    metrics.is_some_and(|metrics| {
-        fields.iter().any(|field| {
-            metrics.get(*field).is_some_and(|value| {
-                metric_p50(Some(value)).is_some_and(|sample| sample == 0.0)
-                    || value.as_u64() == Some(0)
-                    || value.as_f64().is_some_and(|number| number == 0.0)
-            })
-        })
-    })
-}
 
 fn check_launch_plan_label_matches_count(
     evidence: &str,
@@ -356,28 +316,6 @@ fn check_launch_plan_label_matches_count(
     }
 }
 
-fn inspect_contract_baselines_apply_to_backend(
-    evidence: &str,
-    value: &serde_json::Value,
-    blockers: &mut Vec<String>,
-) {
-    for issue in crate::benchmark_evidence_semantics::contract_backend_issues(value) {
-        match issue {
-            crate::benchmark_evidence_semantics::ContractBackendIssue::MissingBaselines {
-                case_id,
-                backend_id,
-            } => blockers.push(format!(
-                "{evidence}: case `{case_id}` backend `{backend_id}` has a performance contract with no baselines"
-            )),
-            crate::benchmark_evidence_semantics::ContractBackendIssue::NoApplicableBaseline {
-                case_id,
-                backend_id,
-            } => blockers.push(format!(
-                "{evidence}: case `{case_id}` backend `{backend_id}` has no applicable performance contract baseline"
-            )),
-        }
-    }
-}
 
 fn inspect_source_fingerprint_shape(
     evidence: &str,

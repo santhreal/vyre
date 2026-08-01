@@ -7,6 +7,16 @@
 pub mod ast_to_pg_nodes;
 mod semantic_edges;
 
+pub(crate) fn valid_node_index_expr(
+    idx: vyre::ir::Expr,
+    num_nodes: &vyre::ir::Expr,
+) -> vyre::ir::Expr {
+    vyre::ir::Expr::and(
+        vyre::ir::Expr::ne(idx.clone(), vyre::ir::Expr::u32(u32::MAX)),
+        vyre::ir::Expr::lt(idx, num_nodes.clone()),
+    )
+}
+
 #[allow(deprecated)]
 pub use ast_to_pg_nodes::{
     c_lower_ast_to_pg_nodes, c_lower_ast_to_pg_semantic_graph, PgReferenceDecodeError,

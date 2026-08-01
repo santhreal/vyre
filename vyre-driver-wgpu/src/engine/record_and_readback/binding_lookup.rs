@@ -40,19 +40,11 @@ impl BindingLookup {
         )?;
         self.entries.push((binding, value));
         if next_len > Self::INLINE_ENTRIES {
-            if let Some(index) = self.index.as_mut() {
+            if next_len == Self::INLINE_ENTRIES + 1 {
+                let index = self.index.get_or_insert_with(FxHashMap::default);
+                index.clear();
                 reserve_hash_map_to_capacity(
                     index,
-                    next_len,
-                    "record-and-readback binding lookup",
-                    "binding index entry",
-                    "split the bind-group binding set before dispatch",
-                )?;
-                index.insert(binding, value);
-            } else {
-                let mut index = FxHashMap::default();
-                reserve_hash_map_to_capacity(
-                    &mut index,
                     next_len,
                     "record-and-readback binding lookup",
                     "binding index entry",
@@ -61,7 +53,15 @@ impl BindingLookup {
                 for (existing_binding, existing_value) in self.entries.iter().copied() {
                     index.insert(existing_binding, existing_value);
                 }
-                self.index = Some(index);
+            } else if let Some(index) = self.index.as_mut() {
+                reserve_hash_map_to_capacity(
+                    index,
+                    next_len,
+                    "record-and-readback binding lookup",
+                    "binding index entry",
+                    "split the bind-group binding set before dispatch",
+                )?;
+                index.insert(binding, value);
             }
         }
         Ok(())
@@ -116,5 +116,28 @@ mod tests {
             "Fix: clear must retain the allocated hash table but not force small lookups through it."
         );
         assert_eq!(lookup.get(99), Some(7));
+    }
+
+    /// Reusing an allocated spill index must rebuild all inline entries when a
+    /// later dispatch crosses the inline capacity again.
+    #[test]
+    fn respill_after_clear_indexes_every_binding() {
+        let mut lookup = BindingLookup::new();
+        for binding in 0..(BindingLookup::INLINE_ENTRIES as u32 + 1) {
+            lookup
+                .push(binding, binding as usize)
+                .expect("initial binding lookup spill");
+        }
+        lookup.clear();
+
+        for binding in 32..(32 + BindingLookup::INLINE_ENTRIES as u32 + 1) {
+            lookup
+                .push(binding, binding as usize)
+                .expect("reused binding lookup spill");
+        }
+
+        for binding in 32..(32 + BindingLookup::INLINE_ENTRIES as u32 + 1) {
+            assert_eq!(lookup.get(binding), Some(binding as usize));
+        }
     }
 }

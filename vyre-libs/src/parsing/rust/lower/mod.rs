@@ -14,7 +14,7 @@
 //! are alpha-renamed to `v{binding_id}` so Rust's legal shadowing never trips
 //! Vyre's no-shadowing validator (V008). `if`/`else` whose arms both return is
 //! a terminal statement. Anything outside the wired subset returns a loud
-//! [`RustLowerError::Unsupported`] rather than miscompiling.
+//! [`RustLowerError::Unsupported`](crate::parsing::rust::lower::RustLowerError::Unsupported) rather than miscompiling.
 
 use std::collections::HashMap;
 

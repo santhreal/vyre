@@ -351,8 +351,8 @@ fn prometheus_capacity(
 ) -> usize {
     let substrate_capacity =
         checked_capacity_mul(substrate_calls, 96, "substrate call metrics").unwrap_or(usize::MAX);
-    let decision_capacity =
-        checked_capacity_mul(decision_buckets, 112, "decision bucket metrics").unwrap_or(usize::MAX);
+    let decision_capacity = checked_capacity_mul(decision_buckets, 112, "decision bucket metrics")
+        .unwrap_or(usize::MAX);
     let audit_capacity =
         checked_capacity_mul(audit_events, 128, "audit event metrics").unwrap_or(usize::MAX);
     checked_capacity_add(

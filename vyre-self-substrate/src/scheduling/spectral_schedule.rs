@@ -168,7 +168,7 @@ pub fn fusion_scores_fixed_via_with_scratch_into(
         n,
         k_steps,
     );
-    // Real-backend dispatch-input contract: one input per INPUT-CONSUMING buffer in buffer order 
+    // Real-backend dispatch-input contract: one input per INPUT-CONSUMING buffer in buffer order
     // `laplacian`/`signal`/`coeffs` RO (0-2) + the plain-ReadWrite `output` (3, n words) and `scratch`
     // (4, 2n double-words). The two RW buffers need zero-filled input slots (the kernel writes them);
     // passing only the 3 RO buffers fails the backend's strict `validate_input_lengths` count.

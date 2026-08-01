@@ -1498,9 +1498,7 @@ mod desc_helper_tests {
         let envelope = IntentAnnotatedDescriptor::try_new(d.clone(), intents.clone()).unwrap();
         let rewritten = d.with_id("k.rewritten");
 
-        let preserved = envelope
-            .preserve_intents_after_rewrite(rewritten)
-            .unwrap();
+        let preserved = envelope.preserve_intents_after_rewrite(rewritten).unwrap();
 
         assert_eq!(preserved.intents, intents);
         assert_eq!(preserved.descriptor.id, "k.rewritten");
@@ -1510,9 +1508,11 @@ mod desc_helper_tests {
     #[test]
     fn descriptor_intents_reject_invalid_references_and_payloads() {
         let d = build(vec![literal_op()], vec![]);
-        let missing_slot = DescriptorIntentSet::new(vec![
-            DescriptorIntent::new(DescriptorIntentKind::Verifier, 17).with_binding_slot(99),
-        ]);
+        let missing_slot = DescriptorIntentSet::new(vec![DescriptorIntent::new(
+            DescriptorIntentKind::Verifier,
+            17,
+        )
+        .with_binding_slot(99)]);
         assert_eq!(
             missing_slot.validate_for_descriptor(&d).unwrap_err(),
             DescriptorIntentError::UnknownBindingSlot {
@@ -1539,7 +1539,9 @@ mod desc_helper_tests {
         )
         .with_binding_slot(0)]);
         assert_eq!(
-            missing_stream_bytes.validate_for_descriptor(&d).unwrap_err(),
+            missing_stream_bytes
+                .validate_for_descriptor(&d)
+                .unwrap_err(),
             DescriptorIntentError::MissingStreamingStateBytes
         );
     }

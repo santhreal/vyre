@@ -91,5 +91,3 @@ fn readback_owned_into_uses_caller_storage() {
     assert_eq!(readback.debug_log_bytes, debug);
     assert_eq!(readback.io_queue_bytes, io_queue);
 }
-
-

@@ -15,6 +15,7 @@
 //! ```
 
 use crate::ir::{Expr, Ident, Node, Program};
+use crate::optimizer::rewrite::expr_contains_atomic;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 use smallvec::SmallVec;
 
@@ -77,50 +78,6 @@ fn node_has_atomic_condition(node: &Node) -> bool {
         Node::Loop { body, .. } | Node::Block(body) => body.iter().any(node_has_atomic_condition),
         Node::Region { body, .. } => body.iter().any(node_has_atomic_condition),
         _ => false,
-    }
-}
-
-fn expr_contains_atomic(expr: &Expr) -> bool {
-    match expr {
-        Expr::Atomic { .. } => true,
-        Expr::Load { index, .. } => expr_contains_atomic(index),
-        Expr::BinOp { left, right, .. } => {
-            expr_contains_atomic(left) || expr_contains_atomic(right)
-        }
-        Expr::UnOp { operand, .. } => expr_contains_atomic(operand),
-        Expr::Call { args, .. } => args.iter().any(expr_contains_atomic),
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            expr_contains_atomic(cond)
-                || expr_contains_atomic(true_val)
-                || expr_contains_atomic(false_val)
-        }
-        Expr::Cast { value, .. } | Expr::SubgroupReduce { value, .. } => {
-            expr_contains_atomic(value)
-        }
-        Expr::Fma { a, b, c } => {
-            expr_contains_atomic(a) || expr_contains_atomic(b) || expr_contains_atomic(c)
-        }
-        Expr::SubgroupBallot { cond } => expr_contains_atomic(cond),
-        Expr::SubgroupShuffle { value, lane } => {
-            expr_contains_atomic(value) || expr_contains_atomic(lane)
-        }
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::Var(_)
-        | Expr::BufferRef { .. }
-        | Expr::BufLen { .. }
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize
-        | Expr::Opaque(_) => false,
     }
 }
 

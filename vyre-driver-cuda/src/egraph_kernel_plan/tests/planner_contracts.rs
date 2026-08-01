@@ -155,4 +155,3 @@ fn structural_equivalence_planner_rejects_divergent_language_op_ids() {
     assert_eq!(plan.exact_pair_count, 0);
     assert_eq!(plan.rejected_candidate_pair_count, 0);
 }
-

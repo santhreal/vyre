@@ -31,7 +31,9 @@ where
     Program::wrapped(
         vec![
             BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::output(output, 1, DataType::F32).with_count(n),
+            BufferDecl::output(output, 1, DataType::F32)
+                .with_count(n.max(1))
+                .with_output_byte_range(0..(n as usize).saturating_mul(4)),
         ],
         [64, 1, 1],
         vec![wrap_anonymous(op_id, body)],

@@ -12,13 +12,6 @@ use vyre_primitives::math::quantized::i4x8_dot_f32_scaled as primitive_i4x8_dot_
 use vyre_primitives::math::quantized::i4x8_dot_i32 as primitive_i4x8_dot_i32;
 use vyre_primitives::math::quantized::i4x8_matvec_f32_scaled as primitive_i4x8_matvec_f32_scaled;
 
-#[cfg(test)]
-use vyre_primitives::math::quantized::{
-    I4_BATCHED_MATMUL_F32_SCALED_OP_ID, I4_BATCHED_MATMUL_TOP1_F32_SCALED_OP_ID,
-    I4_BATCHED_MATVEC_F32_SCALED_OP_ID, I4_DOT_F32_SCALED_OP_ID, I4_DOT_I32_OP_ID,
-    I4_MATVEC_F32_SCALED_OP_ID,
-};
-
 /// Stable spec-level extension name for packed INT4 dot products.
 pub const INT4_DOT_EXTENSION_NAME: &str = "quant.int4.dot";
 
@@ -88,7 +81,10 @@ pub fn int4_batched_matmul_top1_scaled_extension_id() -> vyre_spec::extension::E
 /// Build a packed signed INT4 dot-product Program.
 #[must_use]
 pub fn int4_dot_i32(lhs_packed: &str, rhs_packed: &str, out: &str, lane_count: u32) -> Program {
-    primitive_i4x8_dot_i32(lhs_packed, rhs_packed, out, lane_count)
+    crate::region::tag_program(
+        DOT_OP_ID,
+        primitive_i4x8_dot_i32(lhs_packed, rhs_packed, out, lane_count),
+    )
 }
 
 /// Build a fused packed signed INT4 dot-product Program with symmetric scales.
@@ -101,8 +97,11 @@ pub fn int4_dot_f32_scaled(
     out: &str,
     lane_count: u32,
 ) -> Program {
-    primitive_i4x8_dot_f32_scaled(
-        lhs_packed, rhs_packed, lhs_scale, rhs_scale, out, lane_count,
+    crate::region::tag_program(
+        DOT_SCALED_OP_ID,
+        primitive_i4x8_dot_f32_scaled(
+            lhs_packed, rhs_packed, lhs_scale, rhs_scale, out, lane_count,
+        ),
     )
 }
 
@@ -116,7 +115,10 @@ pub fn int4_matvec_f32_scaled(
     rows: u32,
     cols: u32,
 ) -> Program {
-    primitive_i4x8_matvec_f32_scaled(weights_packed, x, row_scales, out, rows, cols)
+    crate::region::tag_program(
+        MATVEC_SCALED_OP_ID,
+        primitive_i4x8_matvec_f32_scaled(weights_packed, x, row_scales, out, rows, cols),
+    )
 }
 
 /// Build a fused batched row-scaled packed signed INT4 matrix-vector Program.
@@ -130,14 +132,17 @@ pub fn int4_batched_matvec_f32_scaled(
     rows: u32,
     cols: u32,
 ) -> Program {
-    primitive_i4x8_batched_matvec_f32_scaled(
-        weights_packed,
-        x_batches,
-        row_scales,
-        out,
-        batch,
-        rows,
-        cols,
+    crate::region::tag_program(
+        BATCHED_MATVEC_SCALED_OP_ID,
+        primitive_i4x8_batched_matvec_f32_scaled(
+            weights_packed,
+            x_batches,
+            row_scales,
+            out,
+            batch,
+            rows,
+            cols,
+        ),
     )
 }
 
@@ -153,15 +158,18 @@ pub fn int4_batched_matmul_f32_scaled(
     rows: u32,
     cols: u32,
 ) -> Program {
-    primitive_i4x8_batched_matmul_f32_scaled(
-        weights_packed,
-        activation_batches_packed,
-        row_scales,
-        batch_scales,
-        out,
-        batch,
-        rows,
-        cols,
+    crate::region::tag_program(
+        BATCHED_MATMUL_SCALED_OP_ID,
+        primitive_i4x8_batched_matmul_f32_scaled(
+            weights_packed,
+            activation_batches_packed,
+            row_scales,
+            batch_scales,
+            out,
+            batch,
+            rows,
+            cols,
+        ),
     )
 }
 
@@ -177,15 +185,18 @@ pub fn int4_batched_matmul_top1_f32_scaled(
     rows: u32,
     cols: u32,
 ) -> Program {
-    primitive_i4x8_batched_matmul_top1_f32_scaled(
-        weights_packed,
-        activation_batches_packed,
-        row_scales,
-        batch_scales,
-        out,
-        batch,
-        rows,
-        cols,
+    crate::region::tag_program(
+        BATCHED_MATMUL_TOP1_SCALED_OP_ID,
+        primitive_i4x8_batched_matmul_top1_f32_scaled(
+            weights_packed,
+            activation_batches_packed,
+            row_scales,
+            batch_scales,
+            out,
+            batch,
+            rows,
+            cols,
+        ),
     )
 }
 
@@ -694,64 +705,6 @@ mod tests {
     }
 
     #[test]
-    fn wrapper_delegates_to_primitive_dot_region() {
-        let program = int4_dot_i32("lhs", "rhs", "out", 8);
-        let [vyre::ir::Node::Region { generator, .. }] = program.entry() else {
-            panic!("expected one primitive INT4 dot region");
-        };
-
-        assert_eq!(generator.as_str(), I4_DOT_I32_OP_ID);
-    }
-
-    #[test]
-    fn scaled_wrapper_delegates_to_primitive_dot_region() {
-        let program = int4_dot_f32_scaled("lhs", "rhs", "lhs_scale", "rhs_scale", "out", 8);
-        let [vyre::ir::Node::Region { generator, .. }] = program.entry() else {
-            panic!("expected one primitive scaled INT4 dot region");
-        };
-
-        assert_eq!(generator.as_str(), I4_DOT_F32_SCALED_OP_ID);
-    }
-
-    #[test]
-    fn batched_matmul_wrapper_delegates_to_primitive_region() {
-        let program = int4_batched_matmul_f32_scaled(
-            "weights",
-            "activations",
-            "row_scales",
-            "batch_scales",
-            "out",
-            2,
-            3,
-            9,
-        );
-        let [vyre::ir::Node::Region { generator, .. }] = program.entry() else {
-            panic!("expected one primitive packed-activation INT4 matmul region");
-        };
-
-        assert_eq!(generator.as_str(), I4_BATCHED_MATMUL_F32_SCALED_OP_ID);
-    }
-
-    #[test]
-    fn batched_matmul_top1_wrapper_delegates_to_primitive_region() {
-        let program = int4_batched_matmul_top1_f32_scaled(
-            "weights",
-            "activations",
-            "row_scales",
-            "batch_scales",
-            "out",
-            2,
-            3,
-            9,
-        );
-        let [vyre::ir::Node::Region { generator, .. }] = program.entry() else {
-            panic!("expected one primitive packed-activation INT4 top1 region");
-        };
-
-        assert_eq!(generator.as_str(), I4_BATCHED_MATMUL_TOP1_F32_SCALED_OP_ID);
-    }
-
-    #[test]
     fn batched_matmul_extension_id_matches_spec_name_contract() {
         assert_eq!(
             int4_batched_matmul_scaled_extension_id(),
@@ -769,26 +722,6 @@ mod tests {
                 INT4_BATCHED_MATMUL_TOP1_SCALED_EXTENSION_NAME
             )
         );
-    }
-
-    #[test]
-    fn matvec_wrapper_delegates_to_primitive_region() {
-        let program = int4_matvec_f32_scaled("weights", "x", "scales", "out", 2, 9);
-        let [vyre::ir::Node::Region { generator, .. }] = program.entry() else {
-            panic!("expected one primitive scaled INT4 matvec region");
-        };
-
-        assert_eq!(generator.as_str(), I4_MATVEC_F32_SCALED_OP_ID);
-    }
-
-    #[test]
-    fn batched_matvec_wrapper_delegates_to_primitive_region() {
-        let program = int4_batched_matvec_f32_scaled("weights", "x", "scales", "out", 2, 2, 9);
-        let [vyre::ir::Node::Region { generator, .. }] = program.entry() else {
-            panic!("expected one primitive batched scaled INT4 matvec region");
-        };
-
-        assert_eq!(generator.as_str(), I4_BATCHED_MATVEC_F32_SCALED_OP_ID);
     }
 
     #[test]

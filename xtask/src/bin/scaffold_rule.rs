@@ -1,6 +1,6 @@
 //! Scaffold a new vyre Tier-B rule TOML at `rules/<category>/<name>.toml`.
 //!
-//! Run via `cargo_full run -p xtask --bin scaffold_rule -- <category> <name>`.
+//! Run via `cargo xtaskbin scaffold_rule -- <category> <name>`.
 //! The binary writes a starter file that already conforms to
 //! `rules/SCHEMA.md` so the rule loader accepts it on first parse.
 

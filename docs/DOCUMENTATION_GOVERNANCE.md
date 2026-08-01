@@ -21,12 +21,14 @@ archives, generated docs, and internal notes disagree.
      trait gate.
 6. Other files under [`docs/`](.) are reference material. They must not
    override the files above.
-7. Files under [`.internals/`](../.internals/) are maintainer working
-   notes unless explicitly linked from a higher-precedence document.
-8. Files under [`.internals/archive/`](../.internals/archive/) and
-   [`.internals/audits/from-docs-audits/`](../.internals/audits/from-docs-audits/)
-   are historical imports. They preserve evidence and prior reasoning,
-   but they are not plans of record.
+7. Files under `.internals/` are maintainer working notes unless
+   explicitly linked from a higher-precedence document. That directory
+   is excluded from the repository and is deliberately not linked here:
+   it does not ship, so an external reader has nothing to open and
+   nothing in this ladder depends on reading it. Its contents are
+   whatever the maintainer is holding locally, currently signed
+   conformance certificates and skill material, and they never override
+   a published document.
 
 When two documents conflict, the higher item in this list wins. Fix the
 lower-precedence document by adding a supersession note or updating its

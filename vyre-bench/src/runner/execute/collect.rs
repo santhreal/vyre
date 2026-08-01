@@ -120,7 +120,11 @@ pub(super) fn collect_derived_metrics(
     let device_bytes = match (metrics.bytes_read, metrics.bytes_written) {
         (Some(r), Some(w)) => {
             let total = r.saturating_add(w);
-            if total > 0 { Some(total) } else { None }
+            if total > 0 {
+                Some(total)
+            } else {
+                None
+            }
         }
         (Some(r), None) if r > 0 => Some(r),
         (None, Some(w)) if w > 0 => Some(w),

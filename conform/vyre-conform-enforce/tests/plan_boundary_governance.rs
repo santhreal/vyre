@@ -4,16 +4,12 @@ const PANIC_REGISTRY: &str =
     include_str!("../../../docs/optimization/PRODUCTION_PANIC_FALLBACK_REGISTRY.toml");
 const API_SNAPSHOTS: &str =
     include_str!("../../../docs/optimization/PUBLIC_API_OWNERSHIP_SNAPSHOTS.toml");
-const ARTIFACTS: &str =
-    include_str!("../../../docs/optimization/RELEASE_ARTIFACT_PROVENANCE.toml");
-const SOURCE_IMPACT: &str =
-    include_str!("../../../docs/optimization/SOURCE_IMPACT_GRAPH.toml");
-const HELPER_INTAKE: &str =
-    include_str!("../../../docs/optimization/HELPER_INTAKE_RECORDS.toml");
+const ARTIFACTS: &str = include_str!("../../../docs/optimization/RELEASE_ARTIFACT_PROVENANCE.toml");
+const SOURCE_IMPACT: &str = include_str!("../../../docs/optimization/SOURCE_IMPACT_GRAPH.toml");
+const HELPER_INTAKE: &str = include_str!("../../../docs/optimization/HELPER_INTAKE_RECORDS.toml");
 const REPO_BOUNDARY: &str =
     include_str!("../../../docs/optimization/REPO_BOUNDARY_PUBLICATION_CHECKS.toml");
-const TRANCHE: &str =
-    include_str!("../../../docs/optimization/ACTIVE_PLAN_TRANCHE_COVERAGE.toml");
+const TRANCHE: &str = include_str!("../../../docs/optimization/ACTIVE_PLAN_TRANCHE_COVERAGE.toml");
 
 #[test]
 fn hygiene_registry_classifies_release_path_panics_and_fallbacks() {

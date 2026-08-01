@@ -44,4 +44,3 @@ fn release_scripts_make_sharded_conformance_certificate_load_bearing() {
         "Fix: final launch must make the merged sharded certificate load-bearing release evidence before publish."
     );
 }
-

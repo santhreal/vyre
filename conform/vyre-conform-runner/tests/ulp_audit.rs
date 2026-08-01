@@ -326,9 +326,7 @@ fn build_dispatch_backend() -> Box<dyn VyreBackend> {
         .iter()
         .find(|r| {
             vyre::backend::backend_dispatches(r.id)
-                && selected
-                    .as_deref()
-                    .map_or(true, |backend| r.id == backend)
+                && selected.as_deref().map_or(true, |backend| r.id == backend)
         })
         .expect(
             "Fix: a dispatch-capable backend must be registered for ULP audit. \
@@ -345,7 +343,8 @@ fn build_dispatch_backend() -> Box<dyn VyreBackend> {
 fn force_link_backend_inventory() {
     #[cfg(feature = "gpu")]
     {
-        let metal_acquire: fn() -> Result<Box<dyn VyreBackend>, vyre_driver::backend::BackendError> =
+        let metal_acquire: fn()
+            -> Result<Box<dyn VyreBackend>, vyre_driver::backend::BackendError> =
             vyre_driver_metal::acquire;
         std::hint::black_box(metal_acquire);
     }

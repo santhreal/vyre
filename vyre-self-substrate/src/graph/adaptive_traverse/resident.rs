@@ -1,6 +1,29 @@
 use crate::graph::resident_handles::free_unique_resident_handles;
 use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
 
+fn free_adaptive_graph<const N: usize>(
+    dispatcher: &dyn OptimizerDispatcher,
+    handles: &[u64; N],
+    label: &'static str,
+) -> Result<(), DispatchError> {
+    free_unique_resident_handles(dispatcher, handles, label)
+}
+
+macro_rules! impl_adaptive_graph_free {
+    ($graph:ty, $label:literal) => {
+        impl $graph {
+            /// Free graph-resident buffers.
+            ///
+            /// # Errors
+            ///
+            /// Returns the first backend free failure after attempting all handles.
+            pub fn free(self, dispatcher: &dyn OptimizerDispatcher) -> Result<(), DispatchError> {
+                free_adaptive_graph(dispatcher, &self.handles, $label)
+            }
+        }
+    };
+}
+
 /// Device-resident graph layouts for adaptive sparse/dense traversal.
 #[derive(Debug, Clone)]
 pub struct ResidentAdaptiveTraversalGraph {
@@ -24,6 +47,15 @@ pub struct ResidentAdaptiveSparseQueueGraph {
     pub(crate) layout_hash: u64,
     pub(crate) handles: [u64; 3],
 }
+
+impl_adaptive_graph_free!(
+    ResidentAdaptiveSparseQueueGraph,
+    "resident adaptive sparse-queue graph"
+);
+impl_adaptive_graph_free!(
+    ResidentAdaptiveTraversalGraph,
+    "resident adaptive traversal graph"
+);
 
 /// Device-resident Four-Russians dense traversal LUT for adaptive graph waves.
 #[derive(Debug, Clone)]
@@ -112,19 +144,6 @@ impl ResidentAdaptiveSparseQueueGraph {
     pub fn handles(&self) -> [u64; 3] {
         self.handles
     }
-
-    /// Free graph-resident CSR buffers.
-    ///
-    /// # Errors
-    ///
-    /// Returns the first backend free failure after attempting all handles.
-    pub fn free(self, dispatcher: &dyn OptimizerDispatcher) -> Result<(), DispatchError> {
-        free_unique_resident_handles(
-            dispatcher,
-            &self.handles,
-            "resident adaptive sparse-queue graph",
-        )
-    }
 }
 
 impl ResidentAdaptiveTraversalGraph {
@@ -169,18 +188,5 @@ impl ResidentAdaptiveTraversalGraph {
     #[must_use]
     pub fn handles(&self) -> [u64; 4] {
         self.handles
-    }
-
-    /// Free graph-resident buffers.
-    ///
-    /// # Errors
-    ///
-    /// Returns the first backend free failure after attempting all handles.
-    pub fn free(self, dispatcher: &dyn OptimizerDispatcher) -> Result<(), DispatchError> {
-        free_unique_resident_handles(
-            dispatcher,
-            &self.handles,
-            "resident adaptive traversal graph",
-        )
     }
 }

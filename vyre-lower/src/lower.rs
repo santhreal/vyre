@@ -37,6 +37,29 @@ pub(crate) const WORKGROUP_SLOT_BASE: u32 = 1 << 24;
 
 /// Lower a vyre Program to the substrate-neutral kernel descriptor.
 ///
+/// # The only Program-to-emitter boundary
+///
+/// This is the single place a `Program` becomes something an emitter can read.
+/// Every concrete backend consumes only the resulting [`KernelDescriptor`], and
+/// `vyre-driver-cuda/src/codegen/descriptor_gate.rs` plus
+/// `vyre-driver-wgpu/src/emit/descriptor_gate.rs` exist to keep it that way:
+/// backends may analyze or emit descriptors but must not host a parallel
+/// Program-to-descriptor lowering, because a second one would let a Program
+/// field reach generated code without passing through here.
+///
+/// That gate makes this function's reads an exhaustive statement of what
+/// generated code can depend on. It reads exactly SIX `BufferDecl` fields into
+/// the descriptor, and nothing else: `name`, `binding`, `access` (via
+/// `binding_visibility`), `kind` (via `memory_class`), `element`, and `count`
+/// (as `element_count`). Plus `Program::workgroup_size` and `Program::entry`.
+///
+/// Anything that keys generated code, most importantly compiled-pipeline cache
+/// identity in `Program::try_normalized_cache_digest`, should derive its input
+/// set from this list rather than sampling program fields and checking whether
+/// the output changed. Sampling is how the ungated `element_count` read in
+/// `vyre-emit-ptx`'s `async_copy.rs` was missed: a fixture without an async
+/// copy makes a storage buffer's `count` look irrelevant to emitted text.
+///
 /// # Errors
 ///
 /// Returns [`LowerError`] when the input references undeclared buffers,

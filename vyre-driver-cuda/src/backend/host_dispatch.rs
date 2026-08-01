@@ -1,12 +1,13 @@
 //! CUDA dispatch path for borrowed host buffers.
 
 use std::ffi::c_void;
+use std::fmt::Write as _;
 use std::sync::Arc;
 
 use cudarc::driver::sys::CUstream;
 use smallvec::SmallVec;
 use vyre_driver::accounting::checked_add_usize_lazy;
-use vyre_driver::binding::{BindingPlan, BindingRole};
+use vyre_driver::binding::BindingRole;
 use vyre_driver::transfer_accounting::TransferAccountingPolicy;
 use vyre_driver::{BackendError, DispatchConfig, OutputBuffers, PendingDispatch, VyreBackend};
 use vyre_foundation::ir::Program;
@@ -22,6 +23,14 @@ use super::module_cache::ModuleCacheKey;
 use super::output_range::cuda_output_readback_for_binding;
 use super::plan::CudaDispatchPlan;
 use super::staging_reserve::{reserve_smallvec, reserved_vec};
+
+/// Per-dispatch host-cost attribution instrument. Test-only: it exists to
+/// decompose the enqueue-bound dispatch profile this file sits at the centre
+/// of, and it needs `pub(crate)` reach into the plan, cache and launch-resource
+/// internals that an integration test cannot see.
+#[cfg(test)]
+#[path = "host_dispatch/host_cost_attribution.rs"]
+mod host_cost_attribution;
 
 #[derive(Clone, Copy)]
 struct HostUpload {
@@ -126,22 +135,12 @@ fn add_transfer_operation(total: &mut u64, label: &str) -> Result<(), BackendErr
     CUDA_HOST_TRANSFER_ACCOUNTING.add_operation(total, label)
 }
 
-fn host_dispatch_input<'a>(
-    inputs: &'a [&[u8]],
-    input_index: usize,
-    binding_name: &str,
-    context: &'static str,
-) -> Result<&'a [u8], BackendError> {
-    inputs
-        .get(input_index)
-        .copied()
-        .ok_or_else(|| BackendError::InvalidProgram {
-            fix: format!(
-                "Fix: CUDA host dispatch {context} expected input index {input_index} for `{binding_name}` but only {} input(s) were supplied. Rebuild the binding plan or validate inputs before launch.",
-                inputs.len()
-            ),
-        })
-}
+super::define_required_input!(
+    host_dispatch_input,
+    "CUDA host dispatch",
+    "input",
+    "Rebuild the binding plan or validate inputs before launch."
+);
 
 impl CudaBackend {
     fn dispatch_borrowed_with_grid_sync_split(
@@ -154,29 +153,69 @@ impl CudaBackend {
         vyre_driver::grid_sync::dispatch_with_grid_sync_split(&adapter, program, inputs, config)
     }
 
-    /// Whether a grid-sync `program` must be dispatched via the host-split path
-    /// (its barriers split into separate regular kernel launches) rather than a
-    /// single cooperative launch. True when either the device lacks native
-    /// grid-sync support, or the program's launch grid exceeds the device's
-    /// cooperative thread-residency limit: a cooperative launch needs every CTA
+    /// Whether a grid-sync `program` must run as a host-orchestrated kernel split
+    /// (its barriers split into separate regular launches) rather than a single
+    /// cooperative launch.
+    ///
+    /// True for exactly ONE reason: the program's launch grid exceeds the device's
+    /// cooperative thread-residency limit. A cooperative launch needs every CTA
     /// co-resident, so an over-residency grid would fail with
-    /// `CooperativeResidencyExceeded`. Host-split segments are regular launches
-    /// with no co-residency requirement, so they run at any grid size (e.g. the
-    /// recursive multi-block prefix scan whose pass-B grid can exceed the
-    /// cooperative residency limit). Caller has already confirmed
-    /// `contains_grid_sync(program)`.
+    /// `CooperativeResidencyExceeded`, while host-split segments are regular
+    /// launches with no co-residency requirement and run at any grid size (the
+    /// recursive multi-block prefix scan's pass-B grid is the live example).
+    ///
+    /// Missing native grid-sync support is NOT a reason: that case refuses. See
+    /// [`CudaBackend::require_native_grid_sync_lowering`]. Caller has already
+    /// confirmed `contains_grid_sync(program)`.
+    ///
+    /// This is the production caller of
+    /// [`CudaBackend::cooperative_grid_sync_launch_fits`], the predicate exposed to
+    /// orchestrators as `VyreBackend::cooperative_grid_sync_fits`. Routing through
+    /// it rather than recomputing residency here is what makes the advertised
+    /// preflight honest: an orchestrator that asks "does this fit?" gets the answer
+    /// the driver is about to act on, from the same code, with the same numbers. A
+    /// second copy of the arithmetic here is exactly how the two would drift.
     fn grid_sync_program_needs_host_split(
         &self,
         program: &Program,
         inputs: &[&[u8]],
         config: &DispatchConfig,
     ) -> Result<bool, BackendError> {
-        if !self.supports_grid_sync() {
-            return Ok(true);
+        self.require_native_grid_sync_lowering()?;
+        Ok(!self.cooperative_grid_sync_launch_fits(program, inputs, config)?)
+    }
+
+    /// Refuse a grid-sync program when the device has no native grid barrier.
+    ///
+    /// # The disagreement this closes
+    ///
+    /// `<CudaBackend as VyreBackend>::allows_host_grid_sync_split` returns
+    /// `false`, and its contract says CUDA surfaces missing native grid-barrier
+    /// lowering as an unsupported feature "instead of silently becoming a slower
+    /// multi-launch path". The driver's own dispatch did exactly that silent
+    /// reroute anyway: on a device without cooperative launch it split the
+    /// program behind the caller's back, which is the outcome the advertised
+    /// capability promises will not happen. `vyre-primitives`' persistent
+    /// fixpoint reads that capability to decide whether it has an escape hatch,
+    /// and calls a silent degrade there a correctness failure, not a performance
+    /// one, so the promise has to hold.
+    ///
+    /// Over-residency splitting is a different case and stays: the barrier IS
+    /// native, the grid simply does not fit, and that route is chosen from the
+    /// residency check rather than from a missing feature.
+    fn require_native_grid_sync_lowering(&self) -> Result<(), BackendError> {
+        if self.supports_grid_sync() {
+            return Ok(());
         }
-        let bindings = BindingPlan::from_borrowed_inputs(program, inputs)?;
-        let launch = self.prepare_launch_plan(program, &bindings, config)?;
-        Ok(!self.cooperative_residency_admits(&launch)?)
+        let (major, minor) = self.compute_capability();
+        Err(BackendError::UnsupportedFeature {
+            name: format!(
+                "cuda_native_grid_sync_lowering (compute_capability={major}.{minor}, hardware_cooperative_launch={}, lowers_grid_sync={}): this device cannot run a whole-grid barrier natively, and CUDA refuses to emulate one by silently splitting the program into host-orchestrated launches, because allows_host_grid_sync_split() advertises false and callers such as vyre-primitives' persistent fixpoint treat that as a guarantee. Run on a device with cooperative launch (compute capability 6.0 or later), restructure the program to use a workgroup-scoped barrier, or perform the split explicitly above the backend with vyre_driver::grid_sync::dispatch_with_grid_sync_split",
+                self.hardware_supports_grid_sync(),
+                self.lowers_grid_sync()
+            ),
+            backend: crate::CUDA_BACKEND_ID.to_string(),
+        })
     }
 
     /// Dispatch a vyre Program synchronously on this CUDA device with borrowed inputs.
@@ -223,9 +262,8 @@ impl CudaBackend {
                     fix: error.to_string(),
                 })?;
         let program = lowered_program.as_ref().unwrap_or(program);
-        if vyre_driver::grid_sync::contains_grid_sync(program) && !self.supports_grid_sync() {
-            let outputs = self.dispatch_borrowed_with_grid_sync_split(program, inputs, config)?;
-            return Ok(Box::new(CudaReadyPending { outputs }));
+        if vyre_driver::grid_sync::contains_grid_sync(program) {
+            self.require_native_grid_sync_lowering()?;
         }
         let trace = crate::instrumentation::cuda_stage_trace_enabled();
         let start = std::time::Instant::now();
@@ -596,52 +634,38 @@ impl CudaBackend {
             }
             let mut params_ref = params_buf_ptr;
             let mut kernel_args = Self::kernel_args(&mut ptr_values, &mut params_ref)?;
-            // A native grid-sync kernel reads/writes a module-scope arrival
-            // counter (`_vyre_grid_barrier`). Within one cooperative launch the
-            // in-kernel barriers drive it up to N*gridSize for N barriers, so it
-            // MUST start each launch at zero; a stale value would release the
-            // next launch's first barrier before every CTA arrives. Resolve the
-            // counter once, then zero it on the dispatch stream before each
-            // launch (the memset is stream-ordered ahead of the kernel).
-            let grid_barrier_counter = if prepared.cooperative
-                && vyre_driver::grid_sync::contains_grid_sync(program)
-            {
-                match self.grid_barrier_global_with_key(ptx_src, module_key)? {
-                    Some(global) => Some(global),
-                    None => {
-                        return Err(BackendError::InvalidProgram {
-                            fix:
-                                "Fix: CUDA cooperative grid-sync launch found no `_vyre_grid_barrier` counter in the loaded module although the program contains grid-sync barriers. Ensure the PTX emitter declares the module-scope counter for grid-sync kernels."
-                                    .to_string(),
-                        });
-                    }
-                }
-            } else {
-                None
-            };
-            for _ in 0..prepared.fixpoint_iterations {
-                if let Some((counter_ptr, counter_len)) = grid_barrier_counter {
-                    // SAFETY: counter_ptr/len come from cuModuleGetGlobal on the
-                    // loaded module; stream_raw is the dispatch stream; the
-                    // memset is enqueued before the launch on the same stream.
-                    unsafe {
-                        super::copy::memset_d8_async_checked(
-                            counter_ptr,
-                            0,
-                            counter_len,
+            // Take this module's grid-barrier counter for the whole launch
+            // sequence. The lease resolves the counter once and BLOCKS while a
+            // cooperative launch of the same module is still in flight; see
+            // `GridBarrierGate` for why concurrent sharing corrupts or hangs it.
+            let grid_barrier = self.lease_grid_barrier(program, prepared, ptx_src, module_key)?;
+            // `launch_then_release` runs the launches and ends the lease in the
+            // one safe order: the release synchronizes the stream before freeing
+            // the gate, so a launch failure cannot leave a grid spinning while the
+            // next sequence resets the counter underneath it.
+            grid_barrier.launch_then_release(
+                stream_raw,
+                "host dispatch grid-sync launch",
+                |grid_barrier| {
+                    for _ in 0..prepared.fixpoint_iterations {
+                        // SAFETY: stream_raw is this dispatch's stream and
+                        // outlives the enqueued memset, which is ordered ahead of
+                        // the launch.
+                        unsafe {
+                            grid_barrier.enqueue_reset(stream_raw)?;
+                        }
+                        self.launch_prevalidated_function(
+                            func,
+                            &mut kernel_args,
+                            &prepared.launch,
                             stream_raw,
+                            false,
+                            prepared.cooperative,
                         )?;
                     }
-                }
-                self.launch_prevalidated_function(
-                    func,
-                    &mut kernel_args,
-                    &prepared.launch,
-                    stream_raw,
-                    false,
-                    prepared.cooperative,
-                )?;
-            }
+                    Ok(())
+                },
+            )?;
             if trace {
                 tracing::debug!("[cuda-trace] +{}ms launch", start.elapsed().as_millis());
             }
@@ -868,6 +892,13 @@ impl CudaBackend {
         .map_err(|error| BackendError::InvalidProgram {
             fix: error.to_string(),
         })?;
+        // Refuse an oversized workgroup-scratch request BEFORE attempting
+        // PTX emit and module load. Without this the driver surfaces
+        // CUDA_ERROR_INVALID_PTX from cuModuleLoadData, which points at PTX
+        // ISA support and hides the real cause. This is a pre-check and NOT
+        // a remap of the load error: a genuine ISA failure must keep
+        // reporting CUDA_ERROR_INVALID_PTX.
+        check_workgroup_scratch_budget(program, self.max_shared_memory_per_block_bytes())?;
         if vyre_driver::grid_sync::contains_grid_sync(program) {
             let mut borrowed_inputs = SmallVec::<[&[u8]; 8]>::new();
             reserve_smallvec(
@@ -877,12 +908,89 @@ impl CudaBackend {
             )?;
             borrowed_inputs.extend(inputs.iter().map(Vec::as_slice));
             if self.grid_sync_program_needs_host_split(program, &borrowed_inputs, config)? {
-                return self
-                    .dispatch_borrowed_with_grid_sync_split(program, &borrowed_inputs, config);
+                return self.dispatch_borrowed_with_grid_sync_split(
+                    program,
+                    &borrowed_inputs,
+                    config,
+                );
             }
         }
         self.dispatch_async(program, inputs, config)?.await_result()
     }
+}
+
+/// Reject a program whose static workgroup scratch exceeds the device's
+/// per-workgroup shared memory limit.
+///
+/// The limit is `CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK`, the
+/// static allocation ceiling, which is smaller than the per-SM figure. A
+/// program that crosses it fails at `cuModuleLoadData` with a diagnostic
+/// that names PTX rather than shared memory, so the hunt starts in the
+/// wrong place. Naming the measured bytes, the cap, and the contributing
+/// buffers ends it immediately.
+///
+/// Buffers whose element type has no static width are skipped rather than
+/// guessed: understating scratch here would reintroduce the silent case
+/// this check exists to prevent, and such a buffer cannot be lowered to
+/// fixed-size shared storage anyway.
+///
+/// Do not "complete" this by estimating a width. The gate is ADDITIVE: the
+/// real module load still runs behind it, so a program whose scratch this
+/// undercounts degrades to the pre-existing `CUDA_ERROR_INVALID_PTX`
+/// message and never to silence. A miss here is bounded by the diagnostic
+/// it replaces, while a false reject from a guessed width would break
+/// working programs across the whole dispatch path.
+fn check_workgroup_scratch_budget(program: &Program, limit_bytes: u32) -> Result<(), BackendError> {
+    let mut total: u64 = 0;
+    let mut breakdown = String::new();
+    for buffer in program.buffers() {
+        if buffer.access() != vyre_foundation::ir::BufferAccess::Workgroup {
+            continue;
+        }
+        let Ok(Some(bytes)) = buffer.static_byte_len() else {
+            continue;
+        };
+        // Checked, not saturating: saturating to u64::MAX would happen to exceed
+        // the limit and error, but it reports a scratch total the program does not
+        // have, and the file's accounting contract forbids saturating arithmetic
+        // for exactly that reason.
+        total = vyre_driver::accounting::checked_add_u64_usize_offset_lazy(
+            total,
+            bytes,
+            || {
+                BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: CUDA workgroup buffer `{}` reports {bytes} bytes, which does not fit u64. Reduce its element count or move the scratch to a storage buffer.",
+                    buffer.name()
+                ),
+            }
+            },
+            || {
+                BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: CUDA workgroup scratch total overflowed u64 while adding `{}` at {bytes} bytes to a running total of {total} bytes. Reduce the workgroup buffer element counts or move the scratch to a storage buffer.",
+                    buffer.name()
+                ),
+            }
+            },
+        )?;
+        if !breakdown.is_empty() {
+            breakdown.push_str(", ");
+        }
+        let _ = write!(breakdown, "`{}` {bytes} bytes", buffer.name());
+    }
+    if total <= u64::from(limit_bytes) {
+        return Ok(());
+    }
+    Err(BackendError::InvalidProgram {
+        fix: format!(
+            "CUDA workgroup scratch for this program is {total} bytes, over the device \
+             per-workgroup static shared memory limit of {limit_bytes} bytes. \
+             Contributing buffers: {breakdown}. \
+             Fix: reduce the workgroup buffer element counts, narrow the workgroup width \
+             they are sized against, or move the scratch to a storage buffer."
+        ),
+    })
 }
 
 #[inline]

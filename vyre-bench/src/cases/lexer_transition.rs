@@ -173,7 +173,10 @@ impl BenchCase for LexerSmallStateTransition {
         let baseline_start = Instant::now();
         let baseline_tokens = sparse_reference_tokens(&prepared.source);
         black_box(baseline_tokens.len());
-        let baseline_wall_ns = baseline_start.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64;
+        let baseline_wall_ns = baseline_start
+            .elapsed()
+            .as_nanos()
+            .min(u128::from(u64::MAX)) as u64;
 
         let started = Instant::now();
         let transition_tokens = small_state_transition_tokens(&prepared.source);
@@ -245,8 +248,7 @@ fn lexer_transition_baseline(
     let stats = sparse_program.stats();
     let source_bytes = u32::try_from(source.len()).map_err(|_| {
         BenchError::EnvironmentInvalid(
-            "lexer transition source byte length exceeds u32. Fix: split the corpus."
-                .to_string(),
+            "lexer transition source byte length exceeds u32. Fix: split the corpus.".to_string(),
         )
     })?;
     let token_count = u32::try_from(sparse_tokens.len()).map_err(|_| {
@@ -546,12 +548,15 @@ fn lexer_transition_metric_points(
             "lexer_transition_schema_version",
             u64::from(baseline.schema_version),
         ),
-        metric("lexer_transition_source_bytes", u64::from(baseline.source_bytes)),
-        metric("lexer_transition_token_count", u64::from(baseline.token_count)),
         metric(
-            "lexer_transition_token_parity",
-            token_parity,
+            "lexer_transition_source_bytes",
+            u64::from(baseline.source_bytes),
         ),
+        metric(
+            "lexer_transition_token_count",
+            u64::from(baseline.token_count),
+        ),
+        metric("lexer_transition_token_parity", token_parity),
         metric(
             "lexer_transition_small_state_count",
             u64::from(baseline.small_state_state_count),
@@ -607,8 +612,8 @@ fn bytes_per_second(bytes: u64, wall_ns: u64) -> u64 {
     if wall_ns == 0 {
         return 0;
     }
-    ((u128::from(bytes) * 1_000_000_000_u128) / u128::from(wall_ns))
-        .min(u128::from(u64::MAX)) as u64
+    ((u128::from(bytes) * 1_000_000_000_u128) / u128::from(wall_ns)).min(u128::from(u64::MAX))
+        as u64
 }
 
 fn metric(name: &str, value: u64) -> MetricPoint {
@@ -654,12 +659,11 @@ mod tests {
             .iter()
             .any(|metric| metric.name == "lexer_transition_sparse_gpu_branch_proxy"));
         assert!(metrics.iter().any(|metric| {
-            metric.name == "lexer_transition_small_state_throughput_bytes_per_s"
-                && metric.value > 0
+            metric.name == "lexer_transition_small_state_throughput_bytes_per_s" && metric.value > 0
         }));
-        assert!(metrics.iter().any(|metric| {
-            metric.name == "lexer_transition_token_parity" && metric.value == 1
-        }));
+        assert!(metrics
+            .iter()
+            .any(|metric| { metric.name == "lexer_transition_token_parity" && metric.value == 1 }));
     }
 
     #[test]

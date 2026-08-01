@@ -125,4 +125,3 @@ fn cuda_bitxor_zero_collapses_to_left() {
         );
     }
 }
-

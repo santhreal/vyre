@@ -139,21 +139,27 @@ fn cuda_resident_launch_handle_cursors_return_typed_errors() {
     let compiled_dispatch_source = include_str!("../../src/pipeline/compiled_dispatch.rs");
 
     assert!(
-        source.contains("fn next_resident_handle(")
-            && source.contains("handles.get(handle_index).copied()")
-            && source.contains("ran out of resident buffer handles")
+        source.contains("macro_rules! define_next_descriptor_resource")
+            && source.contains("$items.get(index).copied()")
+            && source.contains("ran out of {} at descriptor slot {index}")
             && source.contains(".checked_add(1)")
-            && source.matches("next_resident_handle(").count() >= 5
-            && dispatch_source.contains("next_resident_handle(")
-            && compiled_dispatch_source.contains("next_resident_handle("),
-        "Fix: CUDA resident launch handle cursors must use one shared checked helper that returns BackendError on descriptor drift."
+            && source.contains("next_resident_handle,")
+            && source.contains("next_dispatch_binding,")
+            && source.matches("next_resident_handle(").count() >= 2
+            && source.matches("next_dispatch_binding(").count() >= 2
+            && dispatch_source.contains("next_dispatch_binding(")
+            && compiled_dispatch_source.contains("next_dispatch_binding("),
+        "Fix: CUDA resident launch cursors must use the shared checked resource helper and return BackendError on descriptor drift."
     );
     assert!(
         !source.contains("handles[next_handle]")
             && !source.contains("step.handles[next_handle]")
+            && !source.contains("bindings[next_binding]")
             && !dispatch_source.contains("handles[next_handle]")
-            && !compiled_dispatch_source.contains("handles[next_handle]"),
-        "Fix: CUDA resident launch paths must not directly index resident handle slices after cardinality validation."
+            && !dispatch_source.contains("bindings[next_binding]")
+            && !compiled_dispatch_source.contains("handles[next_handle]")
+            && !compiled_dispatch_source.contains("bindings[next_binding]"),
+        "Fix: CUDA resident launch paths must not directly index resident handle or binding slices after cardinality validation."
     );
     assert!(
         source.contains("fn validate_dense_resident_output_indices")
@@ -233,7 +239,9 @@ fn cuda_resident_sequence_launch_step_indexes_return_typed_errors() {
 fn cuda_dispatch_wrappers_build_borrowed_inputs_without_iterator_collect() {
     let registration_source = include_str!("../../src/lib.rs");
     let host_dispatch_source = include_str!("../../src/backend/host_dispatch.rs");
-    let resident_async_source = include_str!("../../src/backend/resident_dispatch/async_dispatch.rs");
+    let backend_source = include_str!("../../src/backend/mod.rs");
+    let resident_async_source =
+        include_str!("../../src/backend/resident_dispatch/async_dispatch.rs");
     let resident_batch_source = include_str!("../../src/backend/resident_dispatch/batch.rs");
     let output_range_source = include_str!("../../src/backend/output_range.rs");
     let compiled_dispatch_source = include_str!("../../src/pipeline/compiled_dispatch.rs");
@@ -266,12 +274,13 @@ fn cuda_dispatch_wrappers_build_borrowed_inputs_without_iterator_collect() {
         "Fix: CUDA host dispatch must not rescan staged uploads for telemetry before launch."
     );
     assert!(
-        host_dispatch_source.contains("fn host_dispatch_input")
-            && host_dispatch_source.contains(".get(input_index)")
-            && host_dispatch_source.contains(".copied()")
-            && host_dispatch_source.contains("expected input index {input_index}")
+        host_dispatch_source.contains("super::define_required_input!(")
+            && host_dispatch_source.contains("host_dispatch_input,")
+            && backend_source.contains(".get(input_index)")
+            && backend_source.contains(".copied()")
+            && backend_source.contains("expected {input_kind} index {input_index}")
             && !host_dispatch_source.contains("inputs[input_index]"),
-        "Fix: CUDA host dispatch must turn stale binding input indexes into BackendError instead of directly indexing borrowed input slices."
+        "Fix: CUDA host dispatch must use the shared checked-input helper so stale binding indexes become BackendError instead of direct slice indexing."
     );
     assert!(
         output_range_source.contains("fn cuda_output_readback_for_binding")

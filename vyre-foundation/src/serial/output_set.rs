@@ -6,6 +6,7 @@
 
 use crate::ir_inner::model::program::BufferDecl;
 use crate::ir_inner::model::types::BufferAccess;
+use crate::serial::{put_leb_u32, put_leb_u64};
 
 /// Ordered list of output (writable) buffer indices.
 ///
@@ -206,10 +207,6 @@ impl AsRef<[u32]> for OutputSet {
     }
 }
 
-fn put_leb_u32(out: &mut Vec<u8>, value: u32) {
-    put_leb_u64(out, u64::from(value));
-}
-
 fn leb_u64_len(mut value: u64) -> usize {
     let mut len = 1;
     while value >= 0x80 {
@@ -217,20 +214,6 @@ fn leb_u64_len(mut value: u64) -> usize {
         len += 1;
     }
     len
-}
-
-fn put_leb_u64(out: &mut Vec<u8>, mut value: u64) {
-    loop {
-        let mut byte = (value & 0x7F) as u8;
-        value >>= 7;
-        if value != 0 {
-            byte |= 0x80;
-        }
-        out.push(byte);
-        if value == 0 {
-            break;
-        }
-    }
 }
 
 #[cfg(test)]
@@ -278,7 +261,12 @@ mod tests {
                     pipeline_live_out: b.is_pipeline_live_out(),
                     output_byte_range: b.output_byte_range(),
                     hints: b.hints(),
-                    bytes_extraction: false,
+                    // Mirror the source BufferDecl rather than defaulting, so
+                    // this fixture keeps describing the buffer it was built
+                    // from as the decoded struct grows fields.
+                    bytes_extraction: b.bytes_extraction,
+                    linear_type: b.linear_type(),
+                    shape_predicate: b.shape_predicate().cloned(),
                 })
                 .collect(),
             ..Default::default()

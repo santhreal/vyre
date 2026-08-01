@@ -92,10 +92,7 @@ impl BodyBuilder<'_> {
                 // shifts (and signed-value rotates, whose synthetic lowering
                 // reuses this path) could not be emitted at all. Coerce ONLY the
                 // amount, ONLY to u32, and never touch the value's type.
-                if matches!(
-                    op,
-                    BinaryOperator::ShiftLeft | BinaryOperator::ShiftRight
-                ) {
+                if matches!(op, BinaryOperator::ShiftLeft | BinaryOperator::ShiftRight) {
                     if right_kind != Some(naga::ScalarKind::Uint) {
                         let new_right = self.coerce_value_to_type(right, self.types.u32_ty);
                         return Expression::Binary {

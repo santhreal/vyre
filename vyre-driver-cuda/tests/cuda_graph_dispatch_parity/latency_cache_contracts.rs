@@ -203,4 +203,3 @@ fn cuda_graph_timed_replay_uses_exact_materialized_cache_without_device_work() {
         "Fix: changed timed raw cudaGraph inputs must not be counted as a materialized-cache hit."
     );
 }
-

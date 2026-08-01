@@ -48,7 +48,7 @@
 //!     (a read-modify-write like `Store(b,0, Load(b,0)+5)` reads the
 //!     first store before overwriting it, so the first store is live).
 
-use crate::ir::{AtomicOp, Expr, Ident, Node, Program};
+use crate::ir::{Expr, Ident, Node, Program};
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 use crate::visit::node_map;
 
@@ -260,75 +260,7 @@ fn node_observes_buffer(node: &Node, buffer: &Ident) -> bool {
 /// True iff `expr` reads from `buffer` or invokes a side-effect that
 /// could observe its pre-store contents.
 fn expr_touches_buffer(expr: &Expr, buffer: &Ident) -> bool {
-    match expr {
-        Expr::Load {
-            buffer: other,
-            index,
-        } => other == buffer || expr_touches_buffer(index, buffer),
-        Expr::BufLen { buffer: other } => other == buffer,
-        // A callee handed this buffer may read or write it, so passing
-        // it counts as touching it.
-        Expr::BufferRef { buffer: other } => other == buffer,
-        Expr::Atomic {
-            buffer: other,
-            index,
-            expected,
-            value,
-            op,
-            ..
-        } => {
-            other == buffer
-                || expr_touches_buffer(index, buffer)
-                || matches!(
-                    op,
-                    AtomicOp::CompareExchange | AtomicOp::CompareExchangeWeak
-                )
-                || expected
-                    .as_deref()
-                    .is_some_and(|e| expr_touches_buffer(e, buffer))
-                || expr_touches_buffer(value, buffer)
-        }
-        Expr::BinOp { left, right, .. } => {
-            expr_touches_buffer(left, buffer) || expr_touches_buffer(right, buffer)
-        }
-        Expr::UnOp { operand, .. } | Expr::Cast { value: operand, .. } => {
-            expr_touches_buffer(operand, buffer)
-        }
-        Expr::Fma { a, b, c } => {
-            expr_touches_buffer(a, buffer)
-                || expr_touches_buffer(b, buffer)
-                || expr_touches_buffer(c, buffer)
-        }
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            expr_touches_buffer(cond, buffer)
-                || expr_touches_buffer(true_val, buffer)
-                || expr_touches_buffer(false_val, buffer)
-        }
-        Expr::Call { args, .. } => args.iter().any(|a| expr_touches_buffer(a, buffer)),
-        Expr::SubgroupReduce { value, .. } => expr_touches_buffer(value, buffer),
-        Expr::SubgroupShuffle { value, lane } => {
-            // The lane index may itself load from `buffer` (a gather/permute);
-            // a read there observes the prior store just as a top-level load
-            // would, so descend into the lane too.
-            expr_touches_buffer(value, buffer) || expr_touches_buffer(lane, buffer)
-        }
-        Expr::SubgroupBallot { cond } => expr_touches_buffer(cond, buffer),
-        Expr::Opaque(_) => true,
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::Var(_)
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize => false,
-    }
+    super::expr_touches_buffer(expr, buffer, true)
 }
 
 /// Cheap structural equality between two index expressions. Conservative:
@@ -372,7 +304,7 @@ fn contains_buffer_pair(body: &[Node]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node};
+    use crate::ir::{AtomicOp, BufferAccess, BufferDecl, DataType, Expr, Ident, Node};
 
     fn buf(name: &str) -> BufferDecl {
         BufferDecl::storage(name, 0, BufferAccess::ReadWrite, DataType::U32).with_count(4)

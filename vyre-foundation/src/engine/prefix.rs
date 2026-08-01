@@ -19,77 +19,50 @@ use crate::error::{Error, Result};
 /// overflow in newline prefix construction. Prevents OOM on the host.
 pub const MAX_PREFIX_INPUT_BYTES: usize = 64 * 1024 * 1024;
 
-/// Compute brace `{`/`}` depth at each byte offset.
-///
-/// `result[i]` = nesting depth BEFORE byte `i`.
-/// Already existed as `compute_file_brace_depths`  -  moved here for reuse.
-///
-/// # Errors
-///
-/// Returns `Error::Prefix` if the input exceeds `MAX_PREFIX_INPUT_BYTES`.
-///
-/// # Examples
-///
-/// ```
-/// use vyre_foundation::engine::prefix::brace_depth_prefix;
-///
-/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-/// let input = b"{a{b}c}";
-/// let depths = brace_depth_prefix(input)?;
-/// assert_eq!(depths, vec![0, 1, 1, 2, 2, 1, 1]);
-/// # Ok(())
-/// # }
-/// ```
-#[must_use]
-pub fn brace_depth_prefix(bytes: &[u8]) -> Result<Vec<u32>> {
-    validate_prefix_input(bytes.len())?;
-    let mut depths = Vec::with_capacity(bytes.len().max(1));
-    let mut depth = 0u32;
-    for &byte in bytes {
-        depths.push(depth);
-        match byte {
-            b'{' => depth = depth.saturating_add(1),
-            b'}' => depth = depth.saturating_sub(1),
-            _ => {}
+macro_rules! define_depth_prefix {
+    ($name:ident, $open:pat, $close:pat, $doc:literal) => {
+        #[doc = $doc]
+        ///
+        /// `result[i]` is the nesting depth before byte `i`.
+        ///
+        /// # Errors
+        ///
+        /// Returns [`Error::Prefix`] if the input exceeds
+        /// [`MAX_PREFIX_INPUT_BYTES`].
+        #[must_use]
+        pub fn $name(bytes: &[u8]) -> Result<Vec<u32>> {
+            depth_prefix(bytes, |byte| match byte {
+                $open => 1,
+                $close => -1,
+                _ => 0,
+            })
         }
-    }
-    if depths.is_empty() {
-        depths.push(0);
-    }
-    Ok(depths)
+    };
 }
 
-/// Compute combined brace `{`/`}` and paren `(`/`)` nesting depth at each byte offset.
-///
-/// `result[i]` = combined nesting depth BEFORE byte `i`.
-/// Replaces the O(n) `nested_depth()` shader function.
-///
-/// # Errors
-///
-/// Returns `Error::Prefix` if the input exceeds `MAX_PREFIX_INPUT_BYTES`.
-///
-/// # Examples
-///
-/// ```
-/// use vyre_foundation::engine::prefix::nested_depth_prefix;
-///
-/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-/// let input = b"f({x})";
-/// let depths = nested_depth_prefix(input)?;
-/// assert_eq!(depths, vec![0, 0, 1, 2, 2, 1]);
-/// # Ok(())
-/// # }
-/// ```
-#[must_use]
-pub fn nested_depth_prefix(bytes: &[u8]) -> Result<Vec<u32>> {
+define_depth_prefix!(
+    brace_depth_prefix,
+    b'{',
+    b'}',
+    "Compute brace `{`/`}` depth at each byte offset."
+);
+
+define_depth_prefix!(
+    nested_depth_prefix,
+    b'{' | b'(',
+    b'}' | b')',
+    "Compute combined brace and parenthesis nesting depth at each byte offset."
+);
+
+fn depth_prefix(bytes: &[u8], depth_delta: impl Fn(u8) -> i8) -> Result<Vec<u32>> {
     validate_prefix_input(bytes.len())?;
     let mut depths = Vec::with_capacity(bytes.len().max(1));
     let mut depth = 0u32;
     for &byte in bytes {
         depths.push(depth);
-        match byte {
-            b'{' | b'(' => depth = depth.saturating_add(1),
-            b'}' | b')' => depth = depth.saturating_sub(1),
+        match depth_delta(byte) {
+            1 => depth = depth.saturating_add(1),
+            -1 => depth = depth.saturating_sub(1),
             _ => {}
         }
     }

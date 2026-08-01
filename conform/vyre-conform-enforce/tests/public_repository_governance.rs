@@ -24,7 +24,10 @@ fn public_repository_sources_are_registered() {
         "GITHUB_REPOSITORY_TOPICS",
         "KEEP_A_CHANGELOG",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 
@@ -72,7 +75,8 @@ fn repository_rulesets_protect_main_release_tags_and_public_push_boundary() {
 }
 
 #[test]
-fn repository_security_disclosure_policy_links_security_md_supported_versions_advisories_and_redaction() {
+fn repository_security_disclosure_policy_links_security_md_supported_versions_advisories_and_redaction(
+) {
     for required in [
         "policy_id",
         "security_file_policy",
@@ -93,7 +97,8 @@ fn repository_security_disclosure_policy_links_security_md_supported_versions_ad
 }
 
 #[test]
-fn release_notes_changelog_governance_links_versions_tags_notes_changelog_advisories_and_artifacts() {
+fn release_notes_changelog_governance_links_versions_tags_notes_changelog_advisories_and_artifacts()
+{
     for required in [
         "release_record_id",
         "version_policy",
@@ -114,7 +119,8 @@ fn release_notes_changelog_governance_links_versions_tags_notes_changelog_adviso
 }
 
 #[test]
-fn public_repository_health_links_readme_topics_security_release_supply_chain_and_boundary_checks() {
+fn public_repository_health_links_readme_topics_security_release_supply_chain_and_boundary_checks()
+{
     for required in [
         "health_id",
         "readme_policy",

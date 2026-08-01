@@ -1,11 +1,16 @@
 //! Submission replay governance test suite.
 
 const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
-const TOPOLOGY: &str = include_str!("../../../docs/optimization/COMMAND_TOPOLOGY_STABILITY_CONTRACTS.toml");
-const CAPABILITY: &str = include_str!("../../../docs/optimization/BACKEND_COMMAND_REPLAY_CAPABILITY_MATRIX.toml");
-const DECISION: &str = include_str!("../../../docs/optimization/SUBMISSION_REPLAY_DECISION_POLICY.toml");
-const EVIDENCE: &str = include_str!("../../../docs/optimization/SUBMISSION_REPLAY_EVIDENCE_POLICY.toml");
-const COVERAGE: &str = include_str!("../../../docs/optimization/END_TO_END_SUBMISSION_REPLAY_TRANCHE_COVERAGE.toml");
+const TOPOLOGY: &str =
+    include_str!("../../../docs/optimization/COMMAND_TOPOLOGY_STABILITY_CONTRACTS.toml");
+const CAPABILITY: &str =
+    include_str!("../../../docs/optimization/BACKEND_COMMAND_REPLAY_CAPABILITY_MATRIX.toml");
+const DECISION: &str =
+    include_str!("../../../docs/optimization/SUBMISSION_REPLAY_DECISION_POLICY.toml");
+const EVIDENCE: &str =
+    include_str!("../../../docs/optimization/SUBMISSION_REPLAY_EVIDENCE_POLICY.toml");
+const COVERAGE: &str =
+    include_str!("../../../docs/optimization/END_TO_END_SUBMISSION_REPLAY_TRANCHE_COVERAGE.toml");
 
 #[test]
 fn submission_replay_sources_are_registered() {
@@ -16,12 +21,16 @@ fn submission_replay_sources_are_registered() {
         "WEBGPU_COMMAND_BUFFERS",
         "METAL_INDIRECT_COMMAND_BUFFERS",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 
 #[test]
-fn command_topology_stability_contracts_record_shape_resource_update_invalidation_sync_and_equivalence() {
+fn command_topology_stability_contracts_record_shape_resource_update_invalidation_sync_and_equivalence(
+) {
     for required in [
         "topology_id",
         "backend_surfaces",
@@ -36,12 +45,16 @@ fn command_topology_stability_contracts_record_shape_resource_update_invalidatio
         "multi-pass-output-readback-topology",
         "resident-hot-shape-command-topology",
     ] {
-        assert!(TOPOLOGY.contains(required), "command topology contract must include {required}");
+        assert!(
+            TOPOLOGY.contains(required),
+            "command topology contract must include {required}"
+        );
     }
 }
 
 #[test]
-fn backend_command_replay_capability_matrix_records_native_reuse_update_pending_dynamic_and_probe_policies() {
+fn backend_command_replay_capability_matrix_records_native_reuse_update_pending_dynamic_and_probe_policies(
+) {
     for required in [
         "backend_id",
         "replay_surface",
@@ -56,12 +69,16 @@ fn backend_command_replay_capability_matrix_records_native_reuse_update_pending_
         "webgpu-wgpu-command-template",
         "metal-indirect-command-buffer-replay",
     ] {
-        assert!(CAPABILITY.contains(required), "backend command replay capability matrix must include {required}");
+        assert!(
+            CAPABILITY.contains(required),
+            "backend command replay capability matrix must include {required}"
+        );
     }
 }
 
 #[test]
-fn submission_replay_decision_policy_records_inputs_amortization_boundaries_adoption_rejection_and_telemetry() {
+fn submission_replay_decision_policy_records_inputs_amortization_boundaries_adoption_rejection_and_telemetry(
+) {
     for required in [
         "decision_id",
         "candidate_surface",
@@ -78,12 +95,16 @@ fn submission_replay_decision_policy_records_inputs_amortization_boundaries_adop
         "shape-drift-recapture-or-reencode",
         "resident-persistent-kernel-wins",
     ] {
-        assert!(DECISION.contains(required), "submission replay decision policy must include {required}");
+        assert!(
+            DECISION.contains(required),
+            "submission replay decision policy must include {required}"
+        );
     }
 }
 
 #[test]
-fn submission_replay_evidence_policy_records_costs_correctness_invalidation_privacy_and_backend_records() {
+fn submission_replay_evidence_policy_records_costs_correctness_invalidation_privacy_and_backend_records(
+) {
     for required in [
         "evidence_id",
         "backend_surface",
@@ -99,12 +120,16 @@ fn submission_replay_evidence_policy_records_costs_correctness_invalidation_priv
         "webgpu-reencode-template-record",
         "vulkan-metal-reusable-command-record",
     ] {
-        assert!(EVIDENCE.contains(required), "submission replay evidence policy must include {required}");
+        assert!(
+            EVIDENCE.contains(required),
+            "submission replay evidence policy must include {required}"
+        );
     }
 }
 
 #[test]
-fn submission_replay_coverage_reuses_backend_native_sync_cache_profile_stats_output_runtime_and_publication_authorities() {
+fn submission_replay_coverage_reuses_backend_native_sync_cache_profile_stats_output_runtime_and_publication_authorities(
+) {
     for required in [
         "VX-1441..VX-1460",
         "command_topology_stability_contracts",
@@ -125,6 +150,9 @@ fn submission_replay_coverage_reuses_backend_native_sync_cache_profile_stats_out
         "dedup_seam",
         "proof_gate",
     ] {
-        assert!(COVERAGE.contains(required), "submission replay coverage must include {required}");
+        assert!(
+            COVERAGE.contains(required),
+            "submission replay coverage must include {required}"
+        );
     }
 }

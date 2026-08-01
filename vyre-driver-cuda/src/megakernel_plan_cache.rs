@@ -618,7 +618,7 @@ mod tests {
         CudaMegakernelGraphShape, CudaMegakernelScheduleSample, CudaMegakernelTopology,
         CudaMegakernelTopologyDecision,
     };
-    use crate::synthetic_device_caps::blackwell_sm120_caps_default;
+    use crate::synthetic_device_caps::synthetic_sm120_envelope_default;
 
     fn device() -> CudaMegakernelDeviceKey {
         CudaMegakernelDeviceKey {
@@ -680,7 +680,7 @@ mod tests {
     #[test]
     fn device_key_is_derived_from_cuda_caps() {
         assert_eq!(
-            CudaMegakernelDeviceKey::from(&blackwell_sm120_caps_default()),
+            CudaMegakernelDeviceKey::from(&synthetic_sm120_envelope_default()),
             device()
         );
     }

@@ -6,8 +6,8 @@ use std::path::{Path, PathBuf};
 use serde::Serialize;
 
 use crate::launch_contract::{required_external_actions, GIT_PUSH_ACTION, PUBLISH_ACTION};
-use crate::repo_boundary;
 use crate::release_train;
+use crate::repo_boundary;
 
 #[derive(Debug, Serialize)]
 struct LaunchState {
@@ -112,23 +112,13 @@ pub(crate) fn run(args: &[String]) {
             "not_complete_until_external_actions_are_approved_and_done"
         },
     };
-    let json = match serde_json::to_string_pretty(&state) {
-        Ok(json) => json,
-        Err(error) => {
-            eprintln!("Fix: failed to serialize launch state: {error}");
-            std::process::exit(1);
-        }
-    };
     if let Some(parent) = output.parent() {
         if let Err(error) = fs::create_dir_all(parent) {
             eprintln!("Fix: failed to create `{}`: {error}", parent.display());
             std::process::exit(1);
         }
     }
-    if let Err(error) = fs::write(&output, format!("{json}\n")) {
-        eprintln!("Fix: failed to write `{}`: {error}", output.display());
-        std::process::exit(1);
-    }
+    crate::output_arg::write_json(&output, &state);
     println!("launch-state: wrote {}", output.display());
     if !state.blockers.is_empty() {
         std::process::exit(1);
@@ -181,39 +171,22 @@ fn completion_marker_complete(path: &Path) -> bool {
             .and_then(serde_json::Value::as_array)
             .is_some_and(|actions| {
                 required_external_actions().iter().all(|required| {
-                        actions.iter().any(|action| {
-                            action.get("action").and_then(serde_json::Value::as_str)
-                                == Some(*required)
-                                && action.get("status").and_then(serde_json::Value::as_str)
-                                    == Some("complete")
-                        })
+                    actions.iter().any(|action| {
+                        action.get("action").and_then(serde_json::Value::as_str) == Some(*required)
+                            && action.get("status").and_then(serde_json::Value::as_str)
+                                == Some("complete")
                     })
                 })
+            })
 }
 
 fn parse_output(args: &[String]) -> Result<PathBuf, String> {
-    let mut output = None;
-    let mut index = 2;
-    while index < args.len() {
-        match args[index].as_str() {
-            "--output" => {
-                let Some(path) = args.get(index + 1) else {
-                    return Err("Fix: --output requires a path.".to_string());
-                };
-                output = Some(PathBuf::from(path));
-                index += 2;
-            }
-            "--help" | "-h" => {
-                println!(
-                    "USAGE:\n  cargo_full run --bin xtask -- launch-state [--output PATH]\n\n\
-                     Writes public launch completion evidence."
-                );
-                std::process::exit(0);
-            }
-            other => return Err(format!("Fix: unknown launch-state option `{other}`.")),
-        }
-    }
-    Ok(output.unwrap_or_else(default_output))
+    crate::output_arg::parse_output_arg(
+        args,
+        "launch-state",
+        "Writes public launch completion evidence.",
+        default_output,
+    )
 }
 
 fn default_output() -> PathBuf {

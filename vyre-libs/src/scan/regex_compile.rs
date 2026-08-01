@@ -607,7 +607,7 @@ pub fn compile_regex_set(patterns: &[&str]) -> Result<CompiledRegexSet, RegexCom
             {
                 Ok(h) => h,
                 Err(_unicode_err) => {
-                    // Both grammars rejected it. Classify a backreference 
+                    // Both grammars rejected it. Classify a backreference
                     // which `regex-syntax` never supports, as its DISTINCT
                     // unsupported construct instead of a generic parse error,
                     // so a consumer can route on the registry code. Everything
@@ -1681,7 +1681,7 @@ mod tests {
     }
 
     /// W8-2 (structured diagnostics quality): every capability refusal must carry
-    /// the `regex_compile:` owner prefix AND a `Fix:` clause naming the remedy 
+    /// the `regex_compile:` owner prefix AND a `Fix:` clause naming the remedy
     /// the engineering standard that error messages include context and the fix.
     /// The `variants` array below is enforced COMPLETE by the exhaustive match in
     /// `assert_covers_every_variant`: adding a `RegexCompileError` variant without

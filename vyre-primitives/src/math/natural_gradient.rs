@@ -33,10 +33,7 @@
 //! Self-consumer is weak; revisit when optimizer-aware dispatch
 //! scheduling appears.
 
-use std::sync::Arc;
-
-use vyre_foundation::ir::model::expr::Ident;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{DataType, Program};
 
 /// Op id.
 pub const OP_ID: &str = "vyre-primitives::math::natural_gradient_block_apply";
@@ -82,48 +79,13 @@ pub fn try_natural_gradient_block_apply(
         )
     })?;
 
-    let t = Expr::InvocationId { axis: 0 };
-
-    let body = vec![Node::if_then(
-        Expr::lt(t.clone(), Expr::u32(n)),
-        vec![
-            Node::let_bind("acc", Expr::u32(0)),
-            Node::let_bind("row_base", Expr::mul(t.clone(), Expr::u32(n))),
-            Node::loop_for(
-                "j",
-                Expr::u32(0),
-                Expr::u32(n),
-                vec![Node::assign(
-                    "acc",
-                    Expr::add(
-                        Expr::var("acc"),
-                        crate::fixed_mul_16_16_expr(
-                            Expr::load(
-                                m_inv_sqrt,
-                                Expr::add(Expr::var("row_base"), Expr::var("j")),
-                            ),
-                            Expr::load(grad, Expr::var("j")),
-                        ),
-                    ),
-                )],
-            ),
-            Node::store(grad_nat, t, Expr::var("acc")),
-        ],
-    )];
-
-    Ok(Program::wrapped(
-        vec![
-            BufferDecl::storage(m_inv_sqrt, 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(matrix_cells),
-            BufferDecl::storage(grad, 1, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-            BufferDecl::storage(grad_nat, 2, BufferAccess::ReadWrite, DataType::U32).with_count(n),
-        ],
-        [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+    Ok(crate::fixed_u32_matmul::fixed_u32_matvec_program(
+        OP_ID,
+        m_inv_sqrt,
+        grad,
+        grad_nat,
+        n,
+        matrix_cells,
     ))
 }
 

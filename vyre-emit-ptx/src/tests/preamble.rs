@@ -209,9 +209,9 @@ fn slot_offset_overflow_returns_invalid_binding_error() {
             "Fix: emit must return Err(InvalidBinding) for overflowing slot, \
              not Ok with wrapped address in PTX:\n{ptx}"
         ),
-        Err(other) => panic!(
-            "Fix: expected EmitError::InvalidBinding for overflowing slot, got: {other:?}"
-        ),
+        Err(other) => {
+            panic!("Fix: expected EmitError::InvalidBinding for overflowing slot, got: {other:?}")
+        }
     }
 }
 

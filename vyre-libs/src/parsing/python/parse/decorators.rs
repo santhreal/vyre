@@ -1,4 +1,6 @@
-use super::{find_matching_delimiter, load_u32, search_next_token, search_next_token_into};
+use super::{
+    find_matching_delimiter, load_u32, search_next_token, search_next_token_into, store_words,
+};
 use crate::parsing::composition::child_phase;
 use crate::parsing::python::lex::{
     TOK_ASYNC, TOK_AT, TOK_CLASS, TOK_DEF, TOK_DOT, TOK_IDENTIFIER, TOK_LPAREN, TOK_RPAREN,
@@ -6,20 +8,6 @@ use crate::parsing::python::lex::{
 use crate::parsing::python::{DECORATOR_RECORD_WORDS, INVALID_POS, MAX_DOTTED_SEGMENTS};
 use crate::region::wrap_anonymous;
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-fn store_words(buffer: &str, base_var: &str, words: &[Expr]) -> Vec<Node> {
-    words
-        .iter()
-        .enumerate()
-        .map(|(idx, value)| {
-            Node::store(
-                buffer,
-                Expr::add(Expr::var(base_var), Expr::u32(idx as u32)),
-                value.clone(),
-            )
-        })
-        .collect()
-}
 
 /// Extract decorator occurrences and their immediate target.
 #[must_use]

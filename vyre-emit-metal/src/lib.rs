@@ -27,8 +27,8 @@
 use std::collections::BTreeMap;
 
 use naga::back::msl::{BindTarget, EntryPointResources, Options, PipelineOptions};
-use naga::{AddressSpace, StorageAccess};
 use naga::valid::{Capabilities, ValidationFlags, Validator};
+use naga::{AddressSpace, StorageAccess};
 use thiserror::Error;
 use vyre_lower::{BindingSlot, KernelDescriptor, MemoryClass};
 
@@ -414,8 +414,7 @@ fn metal_entry_point_resource_map(
         // that includes STORE is mutable. Hardcoding `true` prevents Metal's
         // compiler from alias-analysing read-only inputs and can produce
         // undefined behaviour under strict Metal validation.
-        let is_read_only =
-            matches!(global.space, AddressSpace::Storage { access } if access == StorageAccess::LOAD);
+        let is_read_only = matches!(global.space, AddressSpace::Storage { access } if access == StorageAccess::LOAD);
         resources.resources.insert(
             binding,
             BindTarget {
@@ -919,8 +918,8 @@ mod tests {
                 literals: vec![LiteralValue::U32(0)],
             },
         };
-        let msl = emit(&desc)
-            .expect("Fix: read-only + read-write kernel must emit MSL without error.");
+        let msl =
+            emit(&desc).expect("Fix: read-only + read-write kernel must emit MSL without error.");
         // Naga's MSL backend emits a read-only storage buffer as a CONST
         // reference (`device <type> const& name`) and a read-write buffer as a
         // mutable reference (`device <type>& name`). The read-only "input"

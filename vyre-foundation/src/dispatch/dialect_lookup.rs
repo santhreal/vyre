@@ -145,8 +145,10 @@ impl LoweringTable {
     /// a production fallback path.
     #[must_use]
     pub fn empty() -> Self {
-        #[allow(deprecated)]
-        let cpu_ref = crate::cpu_op::structured_intrinsic_cpu;
+        // Read through the static, never by naming the function: see
+        // `cpu_op::SENTINEL_CPU_REF` for why the address of the function
+        // itself is not a reliable identity.
+        let cpu_ref = crate::cpu_op::SENTINEL_CPU_REF;
         Self {
             cpu_ref,
             primary_text: None,

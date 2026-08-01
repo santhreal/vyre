@@ -1,8 +1,8 @@
 //! Front-end-agnostic borrow-check engine.
 //!
 //! This module is the borrow checker's brain and its stable contract. The
-//! [`BorrowFacts`] IR is the neutral input that any front-end produces; the
-//! [`analyze`] engine consumes only that IR and never depends on a parser,
+//! [`BorrowFacts`](crate::borrowck::BorrowFacts) IR is the neutral input that any front-end produces; the
+//! [`analyze`](crate::borrowck::analyze) engine consumes only that IR and never depends on a parser,
 //! resolver, or rustc. That separation is what lets the borrow checker run on
 //! real repos today (a rustc adapter produces facts) and run standalone later
 //! (our own front-end produces the same facts) without the engine changing.
@@ -13,7 +13,7 @@
 //! fact schema is modeled on the Polonius input facts and is extended over time
 //! (regions, moves, ...) without breaking the engine's dependents.
 //!
-//! The CPU [`analyze`] engine is the reference; [`gpu::analyze_batched`]
+//! The CPU [`analyze`](crate::borrowck::analyze) engine is the reference; [`crate::borrowck::gpu::analyze_batched`]
 //! computes the identical verdict on a device, batched across all loans.
 
 pub mod gpu;
@@ -36,7 +36,7 @@ pub enum LoanKind {
 }
 
 /// Neutral borrow-check facts for one function: the stable contract between any
-/// front-end producer and the [`analyze`] engine.
+/// front-end producer and the [`analyze`](crate::borrowck::analyze) engine.
 ///
 /// Per-loan tables are parallel arrays indexed by [`Loan`]. The schema is
 /// deliberately small and append-only; new relations (regions, moves, place

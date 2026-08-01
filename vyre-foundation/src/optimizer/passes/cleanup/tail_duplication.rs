@@ -23,6 +23,7 @@
 use rustc_hash::FxHashSet;
 
 use crate::ir::{Expr, Ident, Node, Program};
+use crate::optimizer::passes::expr_is_observably_free;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 use crate::visit::bound_names::collect_bound_names;
 use crate::visit::node_map;
@@ -206,7 +207,7 @@ fn expr_reads_any(expr: &Expr, names: &FxHashSet<Ident>) -> bool {
 /// guarded If may exist precisely to avoid an out-of-bounds access.
 fn node_is_observably_free(node: &Node) -> bool {
     match node {
-        Node::Let { value, .. } => expr_is_pure(value),
+        Node::Let { value, .. } => expr_is_observably_free(value),
         Node::Block(body) => body.iter().all(node_is_observably_free),
         // Everything else has or may have side effects.
         Node::Store { .. }
@@ -227,54 +228,6 @@ fn node_is_observably_free(node: &Node) -> bool {
         | Node::Trap { .. }
         | Node::Resume { .. }
         | Node::Opaque(_) => false,
-    }
-}
-
-/// True iff `expr` evaluates without side effects, observable I/O, or
-/// uniform-control-flow obligations. The whitelist is intentional:
-/// any new Expr variant defaults to `false` until classified.
-fn expr_is_pure(expr: &Expr) -> bool {
-    match expr {
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::Var(_)
-        | Expr::BufferRef { .. }
-        | Expr::BufLen { .. }
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. } => true,
-        Expr::BinOp { left, right, .. } => expr_is_pure(left) && expr_is_pure(right),
-        Expr::UnOp { operand, .. } => expr_is_pure(operand),
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => expr_is_pure(cond) && expr_is_pure(true_val) && expr_is_pure(false_val),
-        Expr::Cast { value, .. } => expr_is_pure(value),
-        Expr::Fma { a, b, c } => expr_is_pure(a) && expr_is_pure(b) && expr_is_pure(c),
-        // Loads are reads from buffers  -  value-pure when in-bounds, but
-        // a guarded If may exist to avoid an OOB index, so hoisting
-        // changes observable behavior on GPUs.
-        Expr::Load { .. }
-        // Atomics RMW or fence; hoisting changes count or ordering.
-        | Expr::Atomic { .. }
-        // Calls are opaque to this pass.
-        | Expr::Call { .. }
-        // Subgroup ops require uniform control flow; hoisting out of a
-        // divergent If is the *opposite* of safe.
-        | Expr::SubgroupBallot { .. }
-        | Expr::SubgroupShuffle { .. }
-        | Expr::SubgroupReduce { .. }
-        // Lane-correlated builtins  -  value is always equal across
-        // hoisted/unhoisted positions, but downstream lane-uniform
-        // analyses treat hoisted Lets as uniform-by-construction. Keep
-        // these gated for parity with branch_value_hoist::expr_is_observably_free.
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize
-        // Opaque extensions  -  unknown semantics, refuse.
-        | Expr::Opaque(_) => false,
     }
 }
 

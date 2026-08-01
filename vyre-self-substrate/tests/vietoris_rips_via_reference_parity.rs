@@ -9,7 +9,7 @@
 //! in BACKLOG.md).
 //!
 //! This runs the real `vietoris_rips_edge_filter` Program through the shared `ReferenceEvalDispatcher`
-//! and asserts it EXACTLY (no tolerance) reproduces a u32 oracle. The mask is a pure comparison 
+//! and asserts it EXACTLY (no tolerance) reproduces a u32 oracle. The mask is a pure comparison
 //! the upper-triangle predicate `i < j` and the unsigned 16.16 threshold `dist <= epsilon`, with no
 //! arithmetic, so the u32 oracle mirrors the IR bit-for-bit and any divergence is a real defect.
 #![forbid(unsafe_code)]

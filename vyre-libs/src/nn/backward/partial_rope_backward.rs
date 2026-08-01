@@ -1,12 +1,19 @@
 //! Backward for `partial_rope`: rotate by negated angle.
 //!
 //! For pair (2k, 2k+1), forward was:
-//!   out[2k]   = x[2k]*cos - x[2k+1]*sin
-//!   out[2k+1] = x[2k]*sin + x[2k+1]*cos
+//!
+//! ```text
+//! out[2k]   = x[2k]*cos - x[2k+1]*sin
+//! out[2k+1] = x[2k]*sin + x[2k+1]*cos
+//! ```
 //!
 //! Backward (transpose of rotation matrix = rotation by -θ):
-//!   grad_x[2k]   = grad_out[2k]*cos  + grad_out[2k+1]*sin
-//!   grad_x[2k+1] = -grad_out[2k]*sin + grad_out[2k+1]*cos
+//!
+//! ```text
+//! grad_x[2k]   = grad_out[2k]*cos  + grad_out[2k+1]*sin
+//! grad_x[2k+1] = -grad_out[2k]*sin + grad_out[2k+1]*cos
+//! ```
+//!
 //! Dims beyond rope_dims: grad_x = grad_out (identity).
 
 use vyre::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};

@@ -300,18 +300,13 @@ fn compound_program() -> Program {
 }
 
 fn compound_inputs() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    let mut tokens = Vec::with_capacity(ITEM_COUNT as usize);
-    let mut scores = Vec::with_capacity(ITEM_COUNT as usize);
-    let mut states = Vec::with_capacity(ITEM_COUNT as usize);
-    for index in 0..ITEM_COUNT {
-        let token = mix32(index ^ 0xA5A5_5A5A);
-        let state = mix32(index.wrapping_mul(17).wrapping_add(0x9E37_79B9)) | 1;
-        let score = 440 + (mix32(index ^ 0x517C_C1B7) & 255);
-        tokens.push(token);
-        scores.push(score);
-        states.push(state);
-    }
-    (tokens, scores, states)
+    super::generated_u32_triplet(ITEM_COUNT, |index| {
+        (
+            mix32(index ^ 0xA5A5_5A5A),
+            440 + (mix32(index ^ 0x517C_C1B7) & 255),
+            mix32(index.wrapping_mul(17).wrapping_add(0x9E37_79B9)) | 1,
+        )
+    })
 }
 
 fn compound_cpu_oracle(tokens: &[u32], scores: &[u32], states: &[u32]) -> Vec<u32> {

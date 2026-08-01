@@ -8,6 +8,7 @@ const REPO_BOUNDARY_TOML: &str = include_str!("../../release/repo-boundary.toml"
 #[derive(Debug, Deserialize)]
 struct RepoBoundaryData {
     public_repository: String,
+    public_evidence_repositories: Vec<String>,
     private_repository: String,
     public_repository_field: String,
     legacy_public_repositories_field: String,
@@ -27,6 +28,13 @@ fn data() -> &'static RepoBoundaryData {
 
 pub(crate) fn vyre_public_repository() -> &'static str {
     data().public_repository.as_str()
+}
+
+fn is_public_evidence_repository(repo: &str) -> bool {
+    data()
+        .public_evidence_repositories
+        .iter()
+        .any(|candidate| candidate.eq_ignore_ascii_case(repo))
 }
 
 pub(crate) fn public_repository_field() -> &'static str {
@@ -59,9 +67,9 @@ pub(crate) fn repo_boundary_description() -> &'static str {
 pub(crate) fn has_single_public_repository(value: &serde_json::Value) -> bool {
     value.get(legacy_public_repositories_field()).is_none()
         && value
-        .get(public_repository_field())
-        .and_then(serde_json::Value::as_str)
-        == Some(vyre_public_repository())
+            .get(public_repository_field())
+            .and_then(serde_json::Value::as_str)
+            == Some(vyre_public_repository())
 }
 
 pub(crate) fn public_repository_field_is_singular(value: &serde_json::Value) -> bool {
@@ -118,9 +126,9 @@ fn inspect_public_artifact_text(
         ));
     }
     for repo in github_repo_refs(&lower) {
-        if repo != vyre_public_repository().to_ascii_lowercase() {
+        if !is_public_evidence_repository(&repo) {
             blockers.push(format!(
-                "{artifact}: public artifact names non-Vyre public repository `{repo}`"
+                "{artifact}: public artifact names repository outside the release train `{repo}`"
             ));
         }
     }
@@ -246,6 +254,8 @@ fn github_repo_refs(lower: &str) -> Vec<String> {
 mod tests {
     use super::public_artifact_boundary_blockers;
 
+    /// Plural ownership, private-tree citations, credentials, and visibility
+    /// mutation commands must all remain visible release blockers.
     #[test]
     fn public_artifact_boundary_rejects_plural_private_and_credentials() {
         let blockers = public_artifact_boundary_blockers(
@@ -260,7 +270,7 @@ mod tests {
             .any(|blocker| blocker.contains("private Santh path")));
         assert!(blockers
             .iter()
-            .any(|blocker| blocker.contains("non-Vyre public repository")));
+            .any(|blocker| blocker.contains("outside the release train")));
         assert!(blockers
             .iter()
             .any(|blocker| blocker.contains("credential-looking")));
@@ -270,5 +280,17 @@ mod tests {
         assert!(blockers
             .iter()
             .any(|blocker| blocker.contains("VYRE_RELEASE_REPOS")));
+    }
+
+    /// Public evidence may cite every repository that owns a package in the
+    /// release train, while launch-state ownership remains singular.
+    #[test]
+    fn public_artifact_boundary_accepts_weir_release_repository() {
+        let blockers = public_artifact_boundary_blockers(
+            "release/evidence/metadata/metadata-matrix.json",
+            br#"{"repository":"https://github.com/santhreal/weir"}"#,
+        );
+
+        assert_eq!(blockers, Vec::<String>::new());
     }
 }

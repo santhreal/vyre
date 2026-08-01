@@ -14,3 +14,30 @@ pub mod structure_statement;
 /// Token stream to packed VAST rows.
 pub mod vast;
 mod vast_kinds;
+
+pub(crate) fn token_range_expr(token: &vyre::ir::Expr, lo: u32, hi: u32) -> vyre::ir::Expr {
+    use vyre::ir::Expr;
+    if lo == hi {
+        Expr::eq(token.clone(), Expr::u32(lo))
+    } else {
+        Expr::and(
+            Expr::ge(token.clone(), Expr::u32(lo)),
+            Expr::le(token.clone(), Expr::u32(hi)),
+        )
+    }
+}
+
+pub(crate) fn merged_token_ranges(values: &[u32]) -> Vec<(u32, u32)> {
+    let mut sorted = values.to_vec();
+    sorted.sort_unstable();
+    sorted.dedup();
+
+    let mut ranges: Vec<(u32, u32)> = Vec::new();
+    for value in sorted {
+        match ranges.last_mut() {
+            Some((_, hi)) if hi.checked_add(1) == Some(value) => *hi = value,
+            _ => ranges.push((value, value)),
+        }
+    }
+    ranges
+}

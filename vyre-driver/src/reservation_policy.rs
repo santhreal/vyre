@@ -147,13 +147,8 @@ impl ReservationPolicy {
     where
         A: Array,
     {
-        crate::allocation::reserve_smallvec_to_capacity(
-            vec,
-            target_capacity,
-            self.context,
-            item,
-            self.fix,
-        )
+        let additional = target_capacity.saturating_sub(vec.len());
+        self.reserve_smallvec_additional(vec, additional, item)
     }
 
     /// Reserve `additional` more SmallVec elements without changing length.

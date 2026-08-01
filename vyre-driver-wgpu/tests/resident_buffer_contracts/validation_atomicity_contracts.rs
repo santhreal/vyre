@@ -217,4 +217,3 @@ fn wgpu_backend_ranged_batch_download_validates_before_any_readback() {
         .free_resident(second)
         .expect("second resident buffer must free cleanly");
 }
-

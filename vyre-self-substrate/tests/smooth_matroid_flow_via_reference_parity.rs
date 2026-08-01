@@ -1,5 +1,5 @@
 //! End-to-end parity for `math::amg_pass_solver::smooth_matroid_flow_fixed_via`: one full two-level
-//! algebraic-multigrid (AMG) V-cycle (pre-smooth → restrict → coarse-solve → prolong → post-smooth) 
+//! algebraic-multigrid (AMG) V-cycle (pre-smooth → restrict → coarse-solve → prolong → post-smooth)
 //! through the shared faithful [`common::ReferenceEvalDispatcher`].
 //!
 //! Closes the LAST mock-dispatcher-coherence gap in the SWEEP drain (see BACKLOG

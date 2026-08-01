@@ -4,12 +4,12 @@ use std::path::Path;
 use serde::Serialize;
 
 use crate::artifact_paths::{
-    FRONTIER_LEADERBOARD_ARTIFACT, PLAN_PROGRESS_ARTIFACT, RESEARCH_AUDIT_ARTIFACT,
-    LEGO_AUDIT_DUPLICATES_ARTIFACT, REGISTERED_OP_DUPLICATES_ARTIFACT,
-    SOURCE_SIMILAR_DUPLICATES_ARTIFACT,
+    FRONTIER_LEADERBOARD_ARTIFACT, LEGO_AUDIT_DUPLICATES_ARTIFACT, PLAN_PROGRESS_ARTIFACT,
+    REGISTERED_OP_DUPLICATES_ARTIFACT, RESEARCH_AUDIT_ARTIFACT, SOURCE_SIMILAR_DUPLICATES_ARTIFACT,
 };
 
-pub(crate) const EXPECTED_ARTIFACT_REGISTRY: &str = "release/evidence/final/expected-artifacts.json";
+pub(crate) const EXPECTED_ARTIFACT_REGISTRY: &str =
+    "release/evidence/final/expected-artifacts.json";
 const EXPECTED_ARTIFACT_REGISTRY_SCHEMA_VERSION: u32 = 2;
 pub(crate) const RELEASE_EVIDENCE_GENERATOR_COMMAND: &str = "xtask release-evidence";
 pub(crate) const RELEASE_EVIDENCE_RUN_ARTIFACT: &str =
@@ -111,7 +111,6 @@ pub(crate) fn expected_artifacts_for_command(command: &str) -> &'static [&'stati
             "release/evidence/parser/vyre-frontend-c-contracts.json",
             "release/evidence/parser/vyrec-cli-contracts.json",
             "release/evidence/parser/external-dataflow-contracts.json",
-            "release/evidence/parser/compiler-consumer-contracts.json",
             "release/evidence/parser/compiler-consumer-grammar-gen-contracts.json",
         ],
         "weir-matrix" => &[
@@ -234,10 +233,11 @@ fn artifact_contracts_for_command(
             schema_version: crate::release_benchmarks::FRONTIER_LEADERBOARD_SCHEMA_VERSION,
             semantic_validator: crate::release_benchmarks::FRONTIER_LEADERBOARD_SEMANTIC_VALIDATOR
                 .to_string(),
-            required_fields: crate::release_benchmarks::frontier_leaderboard_required_artifact_fields()
-                .iter()
-                .map(|field| (*field).to_string())
-                .collect(),
+            required_fields:
+                crate::release_benchmarks::frontier_leaderboard_required_artifact_fields()
+                    .iter()
+                    .map(|field| (*field).to_string())
+                    .collect(),
         });
     }
     contracts
@@ -280,20 +280,7 @@ pub(crate) fn write_expected_artifact_registry(
             std::process::exit(1);
         }
     }
-    let json = match serde_json::to_string_pretty(registry) {
-        Ok(json) => json,
-        Err(error) => {
-            eprintln!("release-evidence: failed to serialize expected artifact registry: {error}");
-            std::process::exit(1);
-        }
-    };
-    if let Err(error) = fs::write(&output, format!("{json}\n")) {
-        eprintln!(
-            "release-evidence: failed to write `{}`: {error}",
-            output.display()
-        );
-        std::process::exit(1);
-    }
+    crate::output_arg::write_json(&output, registry);
 }
 
 pub(crate) fn expected_artifact_registry_blockers(bytes: &[u8]) -> Vec<String> {
@@ -301,7 +288,9 @@ pub(crate) fn expected_artifact_registry_blockers(bytes: &[u8]) -> Vec<String> {
     let value = match serde_json::from_slice::<serde_json::Value>(bytes) {
         Ok(value) => value,
         Err(error) => {
-            return vec![format!("expected artifact registry is not valid JSON: {error}")];
+            return vec![format!(
+                "expected artifact registry is not valid JSON: {error}"
+            )];
         }
     };
     if value.get("schema_version").and_then(|raw| raw.as_u64())
@@ -345,7 +334,10 @@ pub(crate) fn expected_artifact_registry_blockers(bytes: &[u8]) -> Vec<String> {
                 "expected artifact registry command[{index}].command_mode must be `{COMMAND_MODE_SPAWNED}` or `{COMMAND_MODE_EXTERNAL_ARTIFACTS_ONLY}`"
             ));
         }
-        if !command.get("required").is_some_and(serde_json::Value::is_boolean) {
+        if !command
+            .get("required")
+            .is_some_and(serde_json::Value::is_boolean)
+        {
             blockers.push(format!(
                 "expected artifact registry command[{index}].required must be a boolean"
             ));
@@ -354,7 +346,9 @@ pub(crate) fn expected_artifact_registry_blockers(bytes: &[u8]) -> Vec<String> {
             .get("required")
             .and_then(serde_json::Value::as_bool)
             .unwrap_or(false);
-        let Some(artifacts) = command.get("expected_artifacts").and_then(|raw| raw.as_array())
+        let Some(artifacts) = command
+            .get("expected_artifacts")
+            .and_then(|raw| raw.as_array())
         else {
             blockers.push(format!(
                 "expected artifact registry command[{index}].expected_artifacts is missing"
@@ -519,7 +513,7 @@ fn is_research_audit_contract(contract: &serde_json::Value) -> bool {
             .is_some_and(|fields| {
                 crate::research_audit::research_audit_required_artifact_fields()
                     .iter()
-                .all(|required| fields.iter().any(|field| field.as_str() == Some(*required)))
+                    .all(|required| fields.iter().any(|field| field.as_str() == Some(*required)))
             })
 }
 
@@ -601,7 +595,9 @@ mod tests {
             .artifact_contracts
             .iter()
             .find(|contract| contract.artifact == FRONTIER_LEADERBOARD_ARTIFACT)
-            .expect("Fix: release-benchmarks must declare the frontier leaderboard semantic contract.");
+            .expect(
+                "Fix: release-benchmarks must declare the frontier leaderboard semantic contract.",
+            );
         assert_eq!(
             contract.schema_version,
             crate::release_benchmarks::FRONTIER_LEADERBOARD_SCHEMA_VERSION
@@ -610,10 +606,7 @@ mod tests {
             contract.generator_command,
             "xtask release-benchmarks --backend cuda"
         );
-        assert_eq!(
-            contract.command_mode,
-            COMMAND_MODE_EXTERNAL_ARTIFACTS_ONLY
-        );
+        assert_eq!(contract.command_mode, COMMAND_MODE_EXTERNAL_ARTIFACTS_ONLY);
         assert!(contract.command_required);
         assert_eq!(
             contract.semantic_validator,
@@ -623,10 +616,7 @@ mod tests {
             .required_fields
             .iter()
             .any(|field| field == "source_suite"));
-        assert!(contract
-            .required_fields
-            .iter()
-            .any(|field| field == "rows"));
+        assert!(contract.required_fields.iter().any(|field| field == "rows"));
     }
 
     #[test]
@@ -660,7 +650,7 @@ mod tests {
 
         assert!(blockers
             .iter()
-            .any(|blocker| blocker.contains("research-audit schema v6 semantic contract")));
+            .any(|blocker| blocker.contains("research-audit schema v7 semantic contract")));
     }
 
     #[test]

@@ -3,7 +3,7 @@
 //!
 //! The bandwidth axis alone (`scan_roofline_bandwidth_cuda`) places a kernel on the
 //! MEMORY ceiling. A roofline needs the second ceiling too: peak COMPUTE throughput.
-//! That is now honestly derivable from device caps 
+//! That is now honestly derivable from device caps
 //! `CudaDeviceCaps::peak_compute_ops_per_sec()` = `SM_count × 4 warp-schedulers ×
 //! warp_size × core_clock`, where "4 schedulers/SM" is a universal published NVIDIA
 //! constant (Volta→Blackwell), NOT a fabricated per-generation cores table. With both

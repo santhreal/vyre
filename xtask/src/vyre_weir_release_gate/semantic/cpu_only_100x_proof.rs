@@ -152,7 +152,11 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
                 "requirement `cpu-only-100x-proof` aggregate proof artifact contains {proof_contract_case_count} case(s) listed in cpu_sota_100x_contract_cases; needs at least 10"
             ));
         }
-        check_cpu_100x_aggregate_case_counts(&proof, failures);
+        crate::benchmark_evidence_semantics::inspect_cpu_sota_100x_case_count_consistency(
+            "requirement `cpu-only-100x-proof` aggregate proof",
+            &proof,
+            failures,
+        );
         let aggregate_contract_cases = proof
             .get("cpu_sota_100x_contract_case_count")
             .and_then(serde_json::Value::as_u64)
@@ -337,27 +341,13 @@ fn check_cpu_100x_source_artifact_counts(
     }
 }
 
+#[cfg(test)]
 fn check_cpu_100x_aggregate_case_counts(proof: &serde_json::Value, failures: &mut Vec<String>) {
-    let (derived_contract_cases, derived_passing_cases) =
-        crate::benchmark_evidence_semantics::cpu_sota_100x_case_counts(proof);
-    let aggregate_contract_cases = proof
-        .get("cpu_sota_100x_contract_case_count")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(0);
-    if aggregate_contract_cases != derived_contract_cases {
-        failures.push(format!(
-            "requirement `cpu-only-100x-proof` aggregate proof cpu_sota_100x_contract_case_count={aggregate_contract_cases}, but cases prove {derived_contract_cases}"
-        ));
-    }
-    let aggregate_passing_cases = proof
-        .get("cpu_sota_100x_passing_case_count")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(0);
-    if aggregate_passing_cases != derived_passing_cases {
-        failures.push(format!(
-            "requirement `cpu-only-100x-proof` aggregate proof cpu_sota_100x_passing_case_count={aggregate_passing_cases}, but cases prove {derived_passing_cases}"
-        ));
-    }
+    crate::benchmark_evidence_semantics::inspect_cpu_sota_100x_case_count_consistency(
+        "requirement `cpu-only-100x-proof` aggregate proof",
+        proof,
+        failures,
+    );
 }
 
 #[cfg(test)]

@@ -1,4 +1,4 @@
-//! `cargo_full run --bin xtask -- gate1`  -  Gate 1 complexity-budget enforcement.
+//! `cargo xtask gate1`  -  Gate 1 complexity-budget enforcement.
 //!
 //! Spec: `docs/primitives-tier.md` (the LEGO substrate enforcement loop).
 //!

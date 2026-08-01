@@ -1,5 +1,5 @@
-use crate::report::json::ReportSchema;
 use super::load_report;
+use crate::report::json::ReportSchema;
 
 pub(super) fn generate_dashboard(output_dir: impl AsRef<str>) -> anyhow::Result<()> {
     let output = std::path::Path::new(output_dir.as_ref());

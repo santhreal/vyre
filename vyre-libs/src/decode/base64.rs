@@ -32,7 +32,7 @@ const FAMILY_PREFIX: &str = "decode_base64";
 pub const BASE64_DECODE_TABLE_BUFFER: &str = "__vyre_decode_base64_table";
 const DECODED_LEN_BUFFER: &str = "__vyre_decode_base64_decoded_len";
 
-use crate::scan::dispatch_io::pack_u32_slice as pack_words;
+use vyre_primitives::wire::pack_u32_slice as pack_words;
 
 /// Build a Program that decodes base64-encoded ASCII bytes from `input` into
 /// `output`, storing one decoded byte per `u32` slot.

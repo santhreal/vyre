@@ -102,6 +102,7 @@ fn validate_launch_geometry_rejects_per_axis_block_overflow() {
             max_threads_per_block: 256,
             max_block_dim: [256, 256, 64],
             max_grid_dim: [1024, 1024, 1024],
+            max_threads_per_sm: 0,
         },
     )
     .expect_err("Fix: per-axis block overflow must fail even when total threads are legal.");
@@ -135,6 +136,7 @@ fn launch_plan_prepares_geometry_and_param_words_once() {
             max_threads_per_block: 256,
             max_block_dim: [256, 256, 64],
             max_grid_dim: [1024, 1024, 1024],
+            max_threads_per_sm: 0,
         },
     )
     .expect("Fix: shared launch plan must infer legal geometry.");
@@ -168,6 +170,7 @@ fn launch_plan_rejects_zero_grid_override_before_driver_entry() {
             max_threads_per_block: 256,
             max_block_dim: [256, 256, 64],
             max_grid_dim: [1024, 1024, 1024],
+            max_threads_per_sm: 0,
         },
     )
     .expect_err("Fix: shared launch preparation must reject zero grid overrides.");

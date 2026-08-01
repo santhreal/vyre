@@ -117,59 +117,12 @@ fn collect_buffer_targets_from_expr(
     loads: &mut FxHashSet<Ident>,
     atomics: &mut FxHashSet<Ident>,
 ) {
-    match expr {
-        Expr::Load { buffer, index } => {
-            loads.insert(Ident::from(buffer));
-            collect_buffer_targets_from_expr(index, loads, atomics);
+    crate::visit::visit_expr_buffer_accesses(expr, |access, buffer| match access {
+        crate::visit::ExprBufferAccess::Load => {
+            loads.insert(buffer.clone());
         }
-        Expr::Atomic {
-            buffer,
-            index,
-            expected,
-            value,
-            ..
-        } => {
-            atomics.insert(Ident::from(buffer));
-            collect_buffer_targets_from_expr(index, loads, atomics);
-            if let Some(expected) = expected {
-                collect_buffer_targets_from_expr(expected, loads, atomics);
-            }
-            collect_buffer_targets_from_expr(value, loads, atomics);
+        crate::visit::ExprBufferAccess::Atomic => {
+            atomics.insert(buffer.clone());
         }
-        Expr::BinOp { left, right, .. } => {
-            collect_buffer_targets_from_expr(left, loads, atomics);
-            collect_buffer_targets_from_expr(right, loads, atomics);
-        }
-        Expr::UnOp { operand, .. } | Expr::Cast { value: operand, .. } => {
-            collect_buffer_targets_from_expr(operand, loads, atomics);
-        }
-        Expr::Fma { a, b, c } => {
-            collect_buffer_targets_from_expr(a, loads, atomics);
-            collect_buffer_targets_from_expr(b, loads, atomics);
-            collect_buffer_targets_from_expr(c, loads, atomics);
-        }
-        Expr::Call { args, .. } => {
-            for arg in args {
-                collect_buffer_targets_from_expr(arg, loads, atomics);
-            }
-        }
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            collect_buffer_targets_from_expr(cond, loads, atomics);
-            collect_buffer_targets_from_expr(true_val, loads, atomics);
-            collect_buffer_targets_from_expr(false_val, loads, atomics);
-        }
-        Expr::SubgroupBallot { cond } => collect_buffer_targets_from_expr(cond, loads, atomics),
-        Expr::SubgroupShuffle { value, lane } => {
-            collect_buffer_targets_from_expr(value, loads, atomics);
-            collect_buffer_targets_from_expr(lane, loads, atomics);
-        }
-        Expr::SubgroupReduce { value, .. } => {
-            collect_buffer_targets_from_expr(value, loads, atomics)
-        }
-        _ => {}
-    }
+    });
 }

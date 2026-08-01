@@ -3,7 +3,7 @@ use super::*;
 use vyre::ir::DataType;
 use vyre_reference::value::Value;
 
-use crate::scan::dispatch_io::pack_u32_slice as pack_u32_words;
+use vyre_primitives::wire::pack_u32_slice as pack_u32_words;
 
 fn pack_source_bytes(source: &[u8]) -> Vec<u8> {
     let mut packed = Vec::with_capacity(source.len().div_ceil(4).max(1) * 4);

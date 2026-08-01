@@ -15,7 +15,10 @@ fn crypto_secret_primary_sources_are_registered() {
         "RFC_8446_TLS13",
         "OWASP_ASVS_CRYPTO",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 

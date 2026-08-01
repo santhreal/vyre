@@ -23,10 +23,10 @@
 
 use super::*;
 use crate::wire::pack_u32_slice;
+use vyre_driver::backend::VyreBackend;
 use vyre_driver::grid_sync::{
     contains_grid_sync, dispatch_with_grid_sync_split, dispatch_with_grid_sync_split_via,
 };
-use vyre_driver::backend::VyreBackend;
 use vyre_driver::DispatchConfig;
 use vyre_driver_reference::CpuRefBackend;
 use vyre_foundation::ir::{BufferAccess, Program};
@@ -99,7 +99,13 @@ fn run_device(
     let shape = ProgramGraphShape::new(node_count, edge_count.max(1));
     let program = persistent_bfs(shape, "frontier_in", "frontier_out", allow_mask, max_iters);
     let words = bitset_words(node_count) as usize;
-    let inputs = build_inputs(&program, edge_offsets, edge_targets, edge_kind_mask, frontier_in);
+    let inputs = build_inputs(
+        &program,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        frontier_in,
+    );
 
     let outputs: Vec<Vec<u8>> = if contains_grid_sync(&program) {
         let borrowed: Vec<&[u8]> = inputs.iter().map(Vec::as_slice).collect();
@@ -251,8 +257,8 @@ fn grid_sync_two_level(fanout: u32) -> (u32, Vec<u32>, Vec<u32>, Vec<u32>, Vec<u
     let leaf = node_count - 1;
     let mut targets: Vec<u32> = (1..=fanout).collect();
     targets.push(leaf); // node 1 -> leaf
-    // offsets: node 0 owns edges [0, fanout); node 1 owns edge [fanout, fanout+1);
-    // every later node has no outgoing edge.
+                        // offsets: node 0 owns edges [0, fanout); node 1 owns edge [fanout, fanout+1);
+                        // every later node has no outgoing edge.
     let mut offsets = vec![0u32, fanout];
     for _ in 2..=node_count {
         offsets.push(fanout + 1);
@@ -271,19 +277,40 @@ fn grid_sync_converged_word_matches_oracle_across_the_budget_boundary() {
     assert!(node_count > 256, "must exercise the grid-sync path");
 
     // max_iters below the diameter: still growing at the boundary, converged=false.
-    let (changed, converged) =
-        assert_device_matches_oracle(node_count, &offsets, &targets, &masks, &seed, 0xFFFF_FFFF, 1);
+    let (changed, converged) = assert_device_matches_oracle(
+        node_count,
+        &offsets,
+        &targets,
+        &masks,
+        &seed,
+        0xFFFF_FFFF,
+        1,
+    );
     assert_eq!((changed, converged), (1, false));
 
     // max_iters == diameter: the full set is reached on the last allowed step, so
     // there is no confirming step and converged stays false.
-    let (changed, converged) =
-        assert_device_matches_oracle(node_count, &offsets, &targets, &masks, &seed, 0xFFFF_FFFF, 2);
+    let (changed, converged) = assert_device_matches_oracle(
+        node_count,
+        &offsets,
+        &targets,
+        &masks,
+        &seed,
+        0xFFFF_FFFF,
+        2,
+    );
     assert_eq!((changed, converged), (1, false));
 
     // Above the diameter: the confirming no-change step lands, converged=true.
-    let (changed, converged) =
-        assert_device_matches_oracle(node_count, &offsets, &targets, &masks, &seed, 0xFFFF_FFFF, 3);
+    let (changed, converged) = assert_device_matches_oracle(
+        node_count,
+        &offsets,
+        &targets,
+        &masks,
+        &seed,
+        0xFFFF_FFFF,
+        3,
+    );
     assert_eq!((changed, converged), (1, true));
 }
 
@@ -318,22 +345,32 @@ fn grid_sync_converged_word_matches_oracle_through_the_closure_split_entry() {
     };
 
     for (max_iters, expect_converged) in [(1u32, 0u32), (2, 0), (3, 1)] {
-        let program =
-            persistent_bfs(shape, "frontier_in", "frontier_out", 0xFFFF_FFFF, max_iters);
+        let program = persistent_bfs(shape, "frontier_in", "frontier_out", 0xFFFF_FFFF, max_iters);
         assert!(
             contains_grid_sync(&program),
             "258-node persistent_bfs must be a grid-sync program"
         );
         let inputs = build_inputs(&program, &offsets, &targets, &masks, &seed);
         let borrowed: Vec<&[u8]> = inputs.iter().map(Vec::as_slice).collect();
-        let outputs =
-            dispatch_with_grid_sync_split_via(&program, &borrowed, &DispatchConfig::default(), &dispatch)
-                .expect("Fix: persistent_bfs closure-split dispatch must succeed on a valid graph.");
+        let outputs = dispatch_with_grid_sync_split_via(
+            &program,
+            &borrowed,
+            &DispatchConfig::default(),
+            &dispatch,
+        )
+        .expect("Fix: persistent_bfs closure-split dispatch must succeed on a valid graph.");
         let converged = read_named_output(&program, &outputs, "converged")[0];
 
-        let (_, oracle) =
-            try_cpu_ref_converged(node_count, &offsets, &targets, &masks, &seed, 0xFFFF_FFFF, max_iters)
-                .expect("Fix: CPU oracle must accept a valid graph.");
+        let (_, oracle) = try_cpu_ref_converged(
+            node_count,
+            &offsets,
+            &targets,
+            &masks,
+            &seed,
+            0xFFFF_FFFF,
+            max_iters,
+        )
+        .expect("Fix: CPU oracle must accept a valid graph.");
         assert_eq!(
             converged,
             expect_converged,
@@ -379,15 +416,22 @@ fn run_device_batch(
     );
     let words = bitset_words(node_count) as usize;
     let total_words = words * query_count.max(1) as usize;
-    let inputs = build_inputs(&program, edge_offsets, edge_targets, edge_kind_mask, frontier_in);
+    let inputs = build_inputs(
+        &program,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        frontier_in,
+    );
     let grid = persistent_bfs_batch_dispatch_grid(node_count, query_count);
 
     let outputs: Vec<Vec<u8>> = if contains_grid_sync(&program) {
         let borrowed: Vec<&[u8]> = inputs.iter().map(Vec::as_slice).collect();
         let mut config = DispatchConfig::default();
         config.dispatch_grid = Some(grid);
-        dispatch_with_grid_sync_split(&CpuRefBackend, &program, &borrowed, &config)
-            .expect("Fix: persistent_bfs_batch grid-sync split dispatch must succeed on a valid graph.")
+        dispatch_with_grid_sync_split(&CpuRefBackend, &program, &borrowed, &config).expect(
+            "Fix: persistent_bfs_batch grid-sync split dispatch must succeed on a valid graph.",
+        )
     } else {
         reference_eval_with_grid(
             &program,

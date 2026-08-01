@@ -387,19 +387,18 @@ impl PipelineCacheStore for InMemoryPipelineCache {
     }
 
     fn metrics(&self) -> PipelineCacheMetrics {
-        self.metrics
-            .snapshot(
-                cache_usize_to_u64(
-                    self.cached_bytes(),
-                    "retained byte snapshot",
-                    "shard cache metrics before snapshotting",
-                ),
-                cache_usize_to_u64(
-                    self.len(),
-                    "entry count snapshot",
-                    "shard cache metrics before snapshotting",
-                ),
-            )
+        self.metrics.snapshot(
+            cache_usize_to_u64(
+                self.cached_bytes(),
+                "retained byte snapshot",
+                "shard cache metrics before snapshotting",
+            ),
+            cache_usize_to_u64(
+                self.len(),
+                "entry count snapshot",
+                "shard cache metrics before snapshotting",
+            ),
+        )
     }
 }
 

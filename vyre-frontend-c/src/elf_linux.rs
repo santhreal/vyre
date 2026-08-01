@@ -39,49 +39,54 @@ pub fn emit_translation_unit_relocatable(
     }
 }
 
-fn emit_tu_x86_64(vyrecob2: &[u8], source_path: &Path) -> Result<Vec<u8>, String> {
-    let mut obj = Object::new(BinaryFormat::Elf, Architecture::X86_64, Endianness::Little);
+fn emit_text_relocatable(
+    architecture: Architecture,
+    code: &[u8],
+    alignment: u64,
+    symbol_name: &[u8],
+    scope: SymbolScope,
+    custom_section: Option<(Vec<u8>, &[u8])>,
+) -> Result<Vec<u8>, String> {
+    let mut obj = Object::new(BinaryFormat::Elf, architecture, Endianness::Little);
     let text = obj.section_id(StandardSection::Text);
-    let off = obj.append_section_data(text, &[0xC3], 1); // ret
+    let offset = obj.append_section_data(text, code, alignment);
     obj.add_symbol(Symbol {
-        name: b"vyre_tu_entry".to_vec(),
-        value: off,
-        size: 1,
+        name: symbol_name.to_vec(),
+        value: offset,
+        size: code.len() as u64,
         kind: SymbolKind::Text,
-        scope: SymbolScope::Compilation,
+        scope,
         weak: false,
         section: SymbolSection::Section(text),
         flags: SymbolFlags::None,
     });
+    if let Some((name, contents)) = custom_section {
+        let section = obj.add_section(Vec::new(), name, SectionKind::Data);
+        obj.append_section_data(section, contents, 1);
+    }
+    obj.write().map_err(|error| error.to_string())
+}
 
-    let sec_name = section_name_for_tu(source_path);
-    let vsec = obj.add_section(Vec::new(), sec_name, SectionKind::Data);
-    obj.append_section_data(vsec, vyrecob2, 1);
-
-    obj.write().map_err(|e| e.to_string())
+fn emit_tu_x86_64(vyrecob2: &[u8], source_path: &Path) -> Result<Vec<u8>, String> {
+    emit_text_relocatable(
+        Architecture::X86_64,
+        &[0xC3],
+        1,
+        b"vyre_tu_entry",
+        SymbolScope::Compilation,
+        Some((section_name_for_tu(source_path), vyrecob2)),
+    )
 }
 
 fn emit_tu_aarch64(vyrecob2: &[u8], source_path: &Path) -> Result<Vec<u8>, String> {
-    let mut obj = Object::new(BinaryFormat::Elf, Architecture::Aarch64, Endianness::Little);
-    let text = obj.section_id(StandardSection::Text);
-    // aarch64: `ret` = 0xd65f03c0
-    let off = obj.append_section_data(text, &[0xC0, 0x03, 0x5F, 0xD6], 4);
-    obj.add_symbol(Symbol {
-        name: b"vyre_tu_entry".to_vec(),
-        value: off,
-        size: 4,
-        kind: SymbolKind::Text,
-        scope: SymbolScope::Compilation,
-        weak: false,
-        section: SymbolSection::Section(text),
-        flags: SymbolFlags::None,
-    });
-
-    let sec_name = section_name_for_tu(source_path);
-    let vsec = obj.add_section(Vec::new(), sec_name, SectionKind::Data);
-    obj.append_section_data(vsec, vyrecob2, 1);
-
-    obj.write().map_err(|e| e.to_string())
+    emit_text_relocatable(
+        Architecture::Aarch64,
+        &[0xC0, 0x03, 0x5F, 0xD6],
+        4,
+        b"vyre_tu_entry",
+        SymbolScope::Compilation,
+        Some((section_name_for_tu(source_path), vyrecob2)),
+    )
 }
 
 /// Minimal relocatable object defining global `_start` as `exit(0)` for the host arch.
@@ -97,50 +102,32 @@ pub fn emit_link_startup_relocatable() -> Result<Vec<u8>, String> {
 
 /// Linux x86_64: `mov $60,%rax; xor %edi,%edi; syscall` (exit(0)).
 fn emit_start_x86_64() -> Result<Vec<u8>, String> {
-    let mut obj = Object::new(BinaryFormat::Elf, Architecture::X86_64, Endianness::Little);
-    let text = obj.section_id(StandardSection::Text);
-    // mov $60,%rax (7) + xor %edi,%edi (3) + syscall (2) = 12 bytes
-    let code: [u8; 12] = [
-        0x48, 0xc7, 0xc0, 0x3c, 0x00, 0x00, 0x00, 0x48, 0x31, 0xff, 0x0f, 0x05,
-    ];
-    let off = obj.append_section_data(text, &code, 1);
-    obj.add_symbol(Symbol {
-        name: b"_start".to_vec(),
-        value: off,
-        size: code.len() as u64,
-        kind: SymbolKind::Text,
-        scope: SymbolScope::Linkage,
-        weak: false,
-        section: SymbolSection::Section(text),
-        flags: SymbolFlags::None,
-    });
-    obj.write().map_err(|e| e.to_string())
+    emit_text_relocatable(
+        Architecture::X86_64,
+        &[
+            0x48, 0xc7, 0xc0, 0x3c, 0x00, 0x00, 0x00, 0x48, 0x31, 0xff, 0x0f, 0x05,
+        ],
+        1,
+        b"_start",
+        SymbolScope::Linkage,
+        None,
+    )
 }
 
 /// Linux aarch64: `mov x8, #93; mov x0, #0; svc #0` (exit(0)).
 fn emit_start_aarch64() -> Result<Vec<u8>, String> {
-    let mut obj = Object::new(BinaryFormat::Elf, Architecture::Aarch64, Endianness::Little);
-    let text = obj.section_id(StandardSection::Text);
-    // movz x8, #93  ->  d2801248 in standard encoding
-    // movz x0, #0   ->  d2800000
-    // svc #0        ->  d4000001
-    let code: [u8; 12] = [
-        0x48, 0x12, 0x80, 0xd2, // mov x8, #93
-        0x00, 0x00, 0x80, 0xd2, // mov x0, #0
-        0x01, 0x00, 0x00, 0xd4, // svc #0
-    ];
-    let off = obj.append_section_data(text, &code, 4);
-    obj.add_symbol(Symbol {
-        name: b"_start".to_vec(),
-        value: off,
-        size: code.len() as u64,
-        kind: SymbolKind::Text,
-        scope: SymbolScope::Linkage,
-        weak: false,
-        section: SymbolSection::Section(text),
-        flags: SymbolFlags::None,
-    });
-    obj.write().map_err(|e| e.to_string())
+    emit_text_relocatable(
+        Architecture::Aarch64,
+        &[
+            0x48, 0x12, 0x80, 0xd2, // mov x8, #93
+            0x00, 0x00, 0x80, 0xd2, // mov x0, #0
+            0x01, 0x00, 0x00, 0xd4, // svc #0
+        ],
+        4,
+        b"_start",
+        SymbolScope::Linkage,
+        None,
+    )
 }
 
 #[cfg(test)]

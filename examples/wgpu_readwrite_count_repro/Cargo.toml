@@ -1,0 +1,16 @@
+[package]
+name = "wgpu_readwrite_count_repro"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+# Path deps so the repro always exercises the tree it sits in, never a
+# published version. Three execution paths are needed because the finding is a
+# disagreement between them.
+vyre = { path = "../../vyre-core" }
+vyre-reference = { path = "../../vyre-reference" }
+vyre-driver-cuda = { path = "../../vyre-driver-cuda" }
+vyre-driver-wgpu = { path = "../../vyre-driver-wgpu" }
+
+[workspace]

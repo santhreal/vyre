@@ -1,4 +1,5 @@
 public_repository = "santhreal/vyre"
+public_evidence_repositories = ["santhreal/vyre", "santhreal/weir"]
 private_repository = "santhreal/Santh"
 public_repository_field = "public_repository"
 legacy_public_repositories_field = "repositories_public"

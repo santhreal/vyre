@@ -90,7 +90,7 @@ pub(super) fn parse_args(args: &[String]) -> Result<Config, String> {
             }
             "--help" | "-h" => {
                 println!(
-                    "USAGE:\n  cargo_full run --bin xtask -- release-benchmarks [--backend cuda] [--only FAMILY] [--measured-samples N] [--sample-timeout-secs N] [--include-wgpu-comparison] [--reuse-existing] [--refresh-suites-only] [--workload-suite-only]\n\n\
+                    "USAGE:\n  cargo_full run -p xtask --bin xtask -- release-benchmarks [--backend cuda] [--only FAMILY] [--measured-samples N] [--sample-timeout-secs N] [--include-wgpu-comparison] [--reuse-existing] [--refresh-suites-only] [--workload-suite-only]\n\n\
                      Generates CUDA-first release benchmark JSON artifacts from the release workload matrix. WGPU comparison evidence is opt-in so CUDA release validation time is not spent on non-release-path backends by default. --reuse-existing validates already-written artifacts and reruns only missing or invalid cases. --refresh-suites-only rewrites suite/proof summaries from existing artifact JSON without running benchmarks. --workload-suite-only runs workload artifacts and suite summaries without auxiliary optimization artifacts."
                 );
                 std::process::exit(0);

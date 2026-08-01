@@ -4,8 +4,33 @@
 //! Callers import the narrow module they need so region-chain audits can see
 //! which primitive owns the shared work.
 
+use std::sync::Arc;
+
+use vyre_foundation::ir::model::expr::Ident;
+use vyre_foundation::ir::{BufferDecl, Node, Program};
+
+use crate::fixpoint::persistent_fixpoint::PERSISTENT_FIXPOINT_WORKGROUP_SIZE;
+
+pub(crate) fn wrap_fixpoint_program(
+    op_id: &'static str,
+    inner: &Program,
+    buffers: Vec<BufferDecl>,
+) -> Program {
+    Program::wrapped(
+        buffers,
+        PERSISTENT_FIXPOINT_WORKGROUP_SIZE,
+        vec![Node::Region {
+            generator: Ident::from(op_id),
+            source_region: None,
+            body: Arc::new(inner.entry().to_vec()),
+        }],
+    )
+}
+
 /// 1D separable convolution (domain-neutral: blur, signal processing, audio).
 pub mod conv1d;
+#[cfg(any(test, feature = "cpu-parity"))]
+mod cpu_matrix;
 /// Shared dot-product partial accumulator.
 pub mod dot_partial;
 /// Value-set analysis interval arithmetic.

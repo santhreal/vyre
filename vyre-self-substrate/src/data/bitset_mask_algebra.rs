@@ -6,9 +6,9 @@
 //! programs that downstream users consume instead of re-implementing bit twiddles
 //! in each optimizer pass.
 
+use super::decode_first_output;
 use crate::dispatch_buffers::{
-    ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
-    write_zero_bytes,
+    ceil_div_u32, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
 use vyre_primitives::bitset::{
@@ -451,20 +451,6 @@ fn checked_words(len: usize, context: &'static str) -> Result<u32, DispatchError
             "Fix: {context} received {len} words, which exceeds the u32 GPU index space."
         ))
     })
-}
-
-fn decode_first_output(
-    outputs: &[Vec<u8>],
-    words: usize,
-    context: &'static str,
-    out: &mut Vec<u32>,
-) -> Result<(), DispatchError> {
-    if outputs.is_empty() {
-        return Err(DispatchError::BackendError(format!(
-            "Fix: {context} expected at least one output buffer, got 0."
-        )));
-    }
-    decode_u32_output_exact(&outputs[0], words, context, out)
 }
 
 fn decode_scalar_bool(outputs: &[Vec<u8>], context: &'static str) -> Result<bool, DispatchError> {

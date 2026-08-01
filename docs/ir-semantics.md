@@ -1,41 +1,41 @@
-# vyre IR  -  Statement semantics (0.4.1 frozen)
+# vyre IR statement semantics
 
-> ⚠️ **Staleness warning (V7-CORR-002/003)**: this doc names
-> `Node::Let`, `Node::Assign`, and `Node::forever` tag values that
-> do not match the live wire format in
-> `vyre-foundation/src/serial/wire/encode/put_node.rs` +
-> `impl_reader.rs`. The authoritative tags live there.
->
-> `Node::forever` is not a real variant; it is shorthand over
-> `Node::Loop { to: u32::MAX }`. Treat any mention here as referring
-> to that helper, not to an encoded `Node` variant.
->
-> The rewrite status is recorded in `audits/V7_STATUS.md` under
-> V7-CORR-002/003.
+This document specifies how each `Node` variant evaluates. It is the semantic
+contract; the byte encoding is a separate concern and lives in
+[wire-format.md](wire-format.md).
 
-This document is the canonical specification of every `Node` variant's
-evaluation semantics. Backends (reference, wgpu, spirv, photonic) MUST
-produce byte-identical output for every program whose execution
-schedule these rules cover. Any divergence is a conformance bug per
-the OCC registry (see `docs/occ.md`).
+Every backend must produce identical output for every program these rules cover:
+the CPU reference interpreter, CUDA, WGPU, Metal, and the SPIR-V surface. A
+divergence is a conformance bug, tracked through the OCC registry (see
+[occ.md](occ.md)).
 
-The rules below are frozen for the 0.6 series. Semver-major releases
-may extend the node set; no existing variant's semantics may change.
+These rules are frozen for the 0.6 and 0.7 series. A semver-major release may
+add node variants. No existing variant's semantics may change.
+
+One naming note before the rules. `Node::forever` is a constructor, not a node
+variant. It builds a `Node::Loop` whose upper bound is `u32::MAX`. Wherever this
+document says `forever`, the encoded node is an ordinary `Loop`.
 
 ## Variable lifecycle: `Let`, `Assign`, scope
 
-`Node::Let { name, value }` introduces a new binding in the current
-scope. The binding is live from the immediately-following statement
-until the enclosing scope exits. **Shadowing is disallowed**  -  a
-second `Let` with the same name anywhere in the visible scope chain
-(current or enclosing) is a `V008` validation error. Pick unique
-local names; the validator enforces this contract machine-checkably.
+`Node::Let { name, value }` introduces a new binding in the current scope. The
+binding is live from the immediately following statement until the enclosing
+scope exits.
 
-This rule is intentional: it keeps the statement-IR easy to reason
-about, eliminates a class of SSA-conversion edge cases, and matches
-WGSL's explicit no-shadowing discipline. Autodiff and canonical-form
-passes rely on it  -  any pass that wants to rename must produce
-globally unique names.
+Shadowing is rejected by default. A second `Let` with the same name anywhere in
+the visible scope chain, current or enclosing, is a `V008` validation error:
+
+```text
+V008: duplicate local binding `x` shadows an outer scope. Fix: choose a unique
+local name, or opt into nested shadowing with ValidationOptions::with_shadowing(true).
+```
+
+As the message says, this is a default and not a law. `ValidationOptions::with_shadowing(true)`
+accepts nested shadowing. Leave it off unless you have a reason: the default
+keeps statement IR easy to reason about, removes a class of SSA-conversion edge
+cases, and matches WGSL's explicit no-shadowing discipline. Autodiff and
+canonical-form passes rely on it, so a pass that renames must produce globally
+unique names.
 
 `Node::Assign { name, value }` mutates the most recent `Let` binding
 of `name` in scope. It is an error (surfaced by the validator) to
@@ -98,8 +98,8 @@ divergent barrier is `V010` (validation error).
 `Node::Loop { var, from, to, body }` evaluates `from` and `to` once
 at loop entry. The loop variable `var` is `from`, `from+1`, …,
 `to-1` (half-open). The body runs once per iteration in a fresh
-child scope; `Assign`s to the loop variable itself are `V011`
-(loop variables are immutable  -  rename).
+child scope. An `Assign` to the loop variable itself is `V011`,
+because loop variables are immutable; rename instead.
 
 `Node::forever(body)` is sugar for `Loop { var: "__forever__",
 from: 0, to: u32::MAX, body }`, chosen so existing passes process
@@ -108,7 +108,7 @@ it without a new variant.
 ## Region semantics recap
 
 `Node::Region { generator, source_region, body }` is a pure
-debug-wrapper. Evaluation is identical to `Node::Block(body)`  -  the
+debug wrapper. Evaluation is identical to `Node::Block(body)`. The
 two fields are informational only and do not affect semantics. The
 reference interpreter executes the body in the current scope; the
 wgpu/spirv backends lower the body in place; `region_inline`
@@ -126,6 +126,17 @@ contract as core nodes.
 
 ## Error codes introduced by this contract
 
-| Code | Rule | Fix template |
+| Code | Rule | Fix |
 | --- | --- | --- |
-| `V033` | `Assign` to a name not `Let`-bound in the enclosing scope chain | Add a `Node::Let { name, value }` before the first `Assign { name, … }` in this scope or an enclosing scope. |
+| `V008` | A `Let` name already bound in the visible scope chain | Choose a unique local name, or pass `ValidationOptions::with_shadowing(true)` if nested shadowing is intended |
+
+`Assign` to a name that was never `Let`-bound is also rejected, but the
+validator reports it without a `V` code:
+
+```text
+assignment to undeclared variable `x`. Fix: add `let x = ...;` before this assignment.
+```
+
+Do not confuse this with `V033`, which is unrelated: `V033` is emitted when
+expression nesting exceeds `DEFAULT_MAX_EXPR_DEPTH`. See
+[error-codes.md](error-codes.md) for the full code list.

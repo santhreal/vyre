@@ -494,6 +494,19 @@ pub(super) fn custom_metric_key(prefix: &'static str, name: &str) -> Option<&'st
 }
 
 pub(super) fn derived_metric_key(prefix: &'static str, name: &str) -> Option<&'static str> {
+    const DERIVED_NAMES: &[&str] = &[
+        "wall_gb_s_x1000",
+        "device_gb_s_x1000",
+        "gflops_x1000",
+        "roofline_mem_pct_x1000",
+    ];
+    DERIVED_NAMES
+        .contains(&name)
+        .then(|| metric_key(prefix, name))
+        .flatten()
+}
+
+pub(super) fn metric_key(prefix: &'static str, name: &str) -> Option<&'static str> {
     match (prefix, name) {
         ("", "wall_gb_s_x1000") => Some("wall_gb_s_x1000"),
         ("", "device_gb_s_x1000") => Some("device_gb_s_x1000"),
@@ -503,12 +516,6 @@ pub(super) fn derived_metric_key(prefix: &'static str, name: &str) -> Option<&'s
         ("baseline_", "device_gb_s_x1000") => Some("baseline_device_gb_s_x1000"),
         ("baseline_", "gflops_x1000") => Some("baseline_gflops_x1000"),
         ("baseline_", "roofline_mem_pct_x1000") => Some("baseline_roofline_mem_pct_x1000"),
-        _ => None,
-    }
-}
-
-pub(super) fn metric_key(prefix: &'static str, name: &'static str) -> Option<&'static str> {
-    match (prefix, name) {
         ("", "wall_ns") => Some("wall_ns"),
         ("", "cpu_ns") => Some("cpu_ns"),
         ("", "compile_ns") => Some("compile_ns"),
@@ -633,7 +640,12 @@ mod tests {
 
     #[test]
     fn custom_metric_key_keeps_benchmark_evidence_schema_metrics_visible() {
-        for name in ["cpu_digest", "gpu_digest", "active_time_ns", "transfer_bytes"] {
+        for name in [
+            "cpu_digest",
+            "gpu_digest",
+            "active_time_ns",
+            "transfer_bytes",
+        ] {
             assert_eq!(custom_metric_key("", name), Some(name));
         }
     }

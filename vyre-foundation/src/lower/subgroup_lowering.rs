@@ -7,6 +7,7 @@
 
 use crate::ir::{Expr, Node, Program, SubgroupReduceOp};
 use crate::optimizer::ctx::AdapterCaps;
+use crate::optimizer::rewrite::rewrite_node_slices;
 use std::borrow::Cow;
 use std::sync::Arc;
 
@@ -93,22 +94,7 @@ fn subgroup_reduce_lane_limit(subgroup_size: u32) -> u32 {
 }
 
 fn rewrite_nodes(nodes: &[Node], plan: SubgroupReductionPlan) -> Cow<'_, [Node]> {
-    let mut rewritten: Option<Vec<Node>> = None;
-    for (index, node) in nodes.iter().enumerate() {
-        match rewrite_node(node, plan) {
-            Cow::Borrowed(_) if rewritten.is_none() => {}
-            Cow::Borrowed(borrowed) => {
-                if let Some(out) = rewritten.as_mut() {
-                    out.extend_from_slice(borrowed);
-                }
-            }
-            Cow::Owned(owned) => {
-                let out = rewritten.get_or_insert_with(|| nodes[..index].to_vec());
-                out.extend(owned);
-            }
-        }
-    }
-    rewritten.map_or(Cow::Borrowed(nodes), Cow::Owned)
+    rewrite_node_slices(nodes, |node| rewrite_node(node, plan))
 }
 
 fn rewrite_node(node: &Node, plan: SubgroupReductionPlan) -> Cow<'_, [Node]> {

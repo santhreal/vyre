@@ -271,4 +271,3 @@ fn release_path_resident_dispatch_keeps_borrowed_fallback_counter_at_zero() {
         .free_resident(output)
         .expect("Fix: CUDA resident output free failed.");
 }
-

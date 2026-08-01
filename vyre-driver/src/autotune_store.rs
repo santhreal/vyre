@@ -1,7 +1,7 @@
 //! Persistent autotuning record store.
 //!
 //! ROADMAP I3. The in-process [`crate::tuner`] and the
-//! [`vyre-foundation`] autotune pass already pick a workgroup, unroll
+//! `vyre-foundation` autotune pass already pick a workgroup, unroll
 //! depth, and tile shape per program/adapter pair. Without persistence
 //! that decision is recomputed every cold start. This module gives
 //! every backend a small TOML-backed dictionary keyed by

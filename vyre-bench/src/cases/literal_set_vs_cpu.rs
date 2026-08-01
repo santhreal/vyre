@@ -85,13 +85,7 @@ fn build_aho_corasick() -> Result<AhoCorasick, BenchError> {
 fn aho_corasick_matches(aho: &AhoCorasick, haystack: &[u8]) -> Vec<Match> {
     let mut matches: Vec<Match> = aho
         .find_overlapping_iter(haystack)
-        .map(|hit| {
-            Match::new(
-                hit.pattern().as_u32(),
-                hit.start() as u32,
-                hit.end() as u32,
-            )
-        })
+        .map(|hit| Match::new(hit.pattern().as_u32(), hit.start() as u32, hit.end() as u32))
         .collect();
     matches.sort_unstable();
     matches
@@ -148,12 +142,7 @@ fn clamp_ns(duration: std::time::Duration) -> u64 {
 /// `aho / vyre`, scaled by 1000 so it survives the integer metric channel (1000 =
 /// parity, >1000 = the GPU is faster end-to-end, <1000 = the CPU wins). Guards a
 /// zero vyre wall (returns 0, an obviously-degenerate value the report surfaces).
-fn speedup_x1000(aho_wall_ns: u64, vyre_wall_ns: u64) -> u64 {
-    if vyre_wall_ns == 0 {
-        return 0;
-    }
-    (u128::from(aho_wall_ns) * 1000 / u128::from(vyre_wall_ns)).min(u128::from(u64::MAX)) as u64
-}
+use super::scaled_ratio_x1000 as speedup_x1000;
 
 fn encode_matches(matches: &[Match]) -> [Vec<u8>; 2] {
     let count = u32::try_from(matches.len()).unwrap_or(u32::MAX);
@@ -300,7 +289,7 @@ impl BenchCase for LiteralSetVsCpu {
         ];
         if let Some(device_ns) = measurement.vyre_device_ns {
             custom.push(metric("vs_cpu_vyre_device_ns", device_ns));
-            // Staging/readback = the GPU per-iteration wall not spent in the kernel 
+            // Staging/readback = the GPU per-iteration wall not spent in the kernel
             // the exact overhead the "end-to-end, staging included" claim turns on.
             let staging_ns = vyre_per_iter_ns.saturating_sub(device_ns);
             custom.push(metric("vs_cpu_vyre_staging_ns", staging_ns));

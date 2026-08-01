@@ -25,7 +25,10 @@ fn continuous_profiling_sources_are_registered() {
         "GRAFANA_PYROSCOPE",
         "PYROSCOPE_CLIENT_COLLECTION",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 
@@ -48,12 +51,16 @@ fn profiling_signal_contract_records_sample_mapping_symbolization_privacy_and_ga
         "bench-harness-stage-profile",
         "allocator-heap-pressure-profile",
     ] {
-        assert!(SIGNALS.contains(required), "profiling signal contract must include {required}");
+        assert!(
+            SIGNALS.contains(required),
+            "profiling signal contract must include {required}"
+        );
     }
 }
 
 #[test]
-fn profiling_collection_security_records_privileges_sampling_overhead_storage_redaction_and_failure_policy() {
+fn profiling_collection_security_records_privileges_sampling_overhead_storage_redaction_and_failure_policy(
+) {
     for required in [
         "collector_id",
         "collection_mode",
@@ -71,7 +78,10 @@ fn profiling_collection_security_records_privileges_sampling_overhead_storage_re
         "pyroscope-alloy-ebpf-profile-collector",
         "bench-harness-profile-capture",
     ] {
-        assert!(COLLECTION.contains(required), "profiling collection policy must include {required}");
+        assert!(
+            COLLECTION.contains(required),
+            "profiling collection policy must include {required}"
+        );
     }
 }
 
@@ -93,12 +103,16 @@ fn profile_correlation_records_trace_metric_build_identity_pprof_provenance_and_
         "METRICS_EXPOSITION_CONTRACTS.toml",
         "CROSS_SIGNAL_AUDIT_CORRELATION.toml",
     ] {
-        assert!(CORRELATION.contains(required), "profile correlation policy must include {required}");
+        assert!(
+            CORRELATION.contains(required),
+            "profile correlation policy must include {required}"
+        );
     }
 }
 
 #[test]
-fn regression_profile_triage_records_baseline_candidate_diff_attribution_rollout_and_gate_effects() {
+fn regression_profile_triage_records_baseline_candidate_diff_attribution_rollout_and_gate_effects()
+{
     for required in [
         "triage_id",
         "trigger_policy",
@@ -115,12 +129,16 @@ fn regression_profile_triage_records_baseline_candidate_diff_attribution_rollout
         "gpu-throughput-profile-triage",
         "allocation-regression-profile-triage",
     ] {
-        assert!(TRIAGE.contains(required), "profile triage policy must include {required}");
+        assert!(
+            TRIAGE.contains(required),
+            "profile triage policy must include {required}"
+        );
     }
 }
 
 #[test]
-fn continuous_profiling_coverage_reuses_existing_signal_readiness_capacity_rollout_and_publication_authorities() {
+fn continuous_profiling_coverage_reuses_existing_signal_readiness_capacity_rollout_and_publication_authorities(
+) {
     for required in [
         "VX-1361..VX-1380",
         "continuous_profiling_signal_contracts",
@@ -137,6 +155,9 @@ fn continuous_profiling_coverage_reuses_existing_signal_readiness_capacity_rollo
         "dedup_seam",
         "proof_gate",
     ] {
-        assert!(COVERAGE.contains(required), "continuous profiling coverage must include {required}");
+        assert!(
+            COVERAGE.contains(required),
+            "continuous profiling coverage must include {required}"
+        );
     }
 }

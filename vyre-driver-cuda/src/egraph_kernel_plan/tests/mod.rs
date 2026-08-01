@@ -87,4 +87,3 @@ fn view_for_image(image: &GpuEGraphDeviceImage) -> CudaEGraphDeviceKernelView {
     CudaEGraphDeviceKernelView::from_checked_parts(0x4000, plan.byte_len(), plan.byte_layout())
         .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - upload plan must resolve to a checked kernel view")
 }
-

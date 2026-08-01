@@ -83,7 +83,7 @@ fn parse_args(args: &[String]) -> Result<Config, String> {
             }
             "--help" | "-h" => {
                 println!(
-                    "USAGE:\n  cargo_full run --bin xtask -- release-workload-matrix [--output PATH] [--enforce]\n\n\
+                    "USAGE:\n  cargo xtask release-workload-matrix [--output PATH] [--enforce]\n\n\
                      Writes the release workload family matrix without running benchmark cases."
                 );
                 std::process::exit(0);
@@ -99,14 +99,7 @@ fn parse_args(args: &[String]) -> Result<Config, String> {
 }
 
 fn cargo_runner(workspace_root: &Path) -> PathBuf {
-    if let Some(runner) = std::env::var_os("VYRE_CARGO_RUNNER") {
-        return PathBuf::from(runner);
-    }
-    let local = workspace_root.join("cargo_full");
-    if local.is_file() {
-        return local;
-    }
-    PathBuf::from("cargo_full")
+    crate::output_arg::cargo_runner(workspace_root)
 }
 
 fn display_command(runner: &Path, args: &[String]) -> String {

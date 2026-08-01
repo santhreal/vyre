@@ -215,7 +215,10 @@ fn validate_frontier_baseline_catalog(
             ));
         }
         if baseline.match_terms.is_empty()
-            || baseline.match_terms.iter().any(|term| term.trim().is_empty())
+            || baseline
+                .match_terms
+                .iter()
+                .any(|term| term.trim().is_empty())
         {
             failures.push(format!(
                 "baselines[{index}].match_terms must contain non-empty terms"
@@ -246,11 +249,14 @@ pub(super) fn write_frontier_leaderboard(workspace_root: &Path) {
     let suite = match read_json(&suite_path) {
         Ok(value) => value,
         Err(error) => {
-            blockers.push(format!("frontier leaderboard source suite `{source_suite}` is unreadable: {error}"));
+            blockers.push(format!(
+                "frontier leaderboard source suite `{source_suite}` is unreadable: {error}"
+            ));
             Value::Null
         }
     };
-    let mut source_fingerprint = None::<String>;
+    let current_git = vyre_bench::probes::capture_git_info_at(workspace_root);
+    let source_fingerprint = Some(vyre_bench::probes::source_fingerprint(&current_git));
     let mut source_tree_fingerprint = None::<String>;
     let mut source_artifacts = Vec::new();
     let mut rows = Vec::new();
@@ -267,19 +273,15 @@ pub(super) fn write_frontier_leaderboard(workspace_root: &Path) {
     }
     for status in &statuses {
         remember_fingerprint(
-            &mut source_fingerprint,
-            status.get("source_fingerprint").and_then(nonblank_str),
-            "source_fingerprint",
-            &mut blockers,
-        );
-        remember_fingerprint(
             &mut source_tree_fingerprint,
             status.get("source_tree_fingerprint").and_then(nonblank_str),
             "source_tree_fingerprint",
             &mut blockers,
         );
         let Some(artifact) = status.get("path").and_then(nonblank_str) else {
-            blockers.push("frontier leaderboard source suite has artifact_status without path".to_string());
+            blockers.push(
+                "frontier leaderboard source suite has artifact_status without path".to_string(),
+            );
             continue;
         };
         source_artifacts.push(artifact.to_string());
@@ -293,12 +295,6 @@ pub(super) fn write_frontier_leaderboard(workspace_root: &Path) {
                 continue;
             }
         };
-        remember_fingerprint(
-            &mut source_fingerprint,
-            report.get("source_fingerprint").and_then(nonblank_str),
-            "source_fingerprint",
-            &mut blockers,
-        );
         remember_fingerprint(
             &mut source_tree_fingerprint,
             report.get("source_tree_fingerprint").and_then(nonblank_str),
@@ -369,7 +365,10 @@ pub(super) fn write_frontier_leaderboard(workspace_root: &Path) {
         rows,
         blockers,
     };
-    write_json(&workspace_root.join(FRONTIER_LEADERBOARD_ARTIFACT), &evidence);
+    write_json(
+        &workspace_root.join(FRONTIER_LEADERBOARD_ARTIFACT),
+        &evidence,
+    );
 }
 
 pub(crate) fn frontier_leaderboard_required_artifact_fields() -> Vec<&'static str> {
@@ -387,12 +386,16 @@ pub(crate) fn validate_frontier_leaderboard_artifact_bytes(bytes: &[u8]) -> Vec<
     let value = match serde_json::from_slice::<Value>(bytes) {
         Ok(value) => value,
         Err(error) => {
-            return vec![format!("frontier leaderboard artifact is not valid JSON: {error}")];
+            return vec![format!(
+                "frontier leaderboard artifact is not valid JSON: {error}"
+            )];
         }
     };
     for field in FRONTIER_LEADERBOARD_REQUIRED_FIELDS {
         if value.get(*field).is_none() {
-            blockers.push(format!("frontier leaderboard artifact `{field}` is missing"));
+            blockers.push(format!(
+                "frontier leaderboard artifact `{field}` is missing"
+            ));
         }
     }
     if value.get("schema_version").and_then(Value::as_u64)
@@ -409,8 +412,7 @@ pub(crate) fn validate_frontier_leaderboard_artifact_bytes(bytes: &[u8]) -> Vec<
         != Some("release/evidence/benchmarks/cuda-release-suite.json")
     {
         blockers.push(
-            "frontier leaderboard artifact source_suite must be the CUDA release suite"
-                .to_string(),
+            "frontier leaderboard artifact source_suite must be the CUDA release suite".to_string(),
         );
     }
     for field in ["source_fingerprint", "source_tree_fingerprint"] {
@@ -454,9 +456,7 @@ pub(crate) fn validate_frontier_leaderboard_artifact_bytes(bytes: &[u8]) -> Vec<
         None => blockers
             .push("frontier leaderboard artifact `source_artifacts` must be an array".to_string()),
     }
-    if value
-        .get("required_baseline_count")
-        .and_then(Value::as_u64)
+    if value.get("required_baseline_count").and_then(Value::as_u64)
         != Some(baseline_catalog.baselines.len() as u64)
     {
         blockers.push(format!(
@@ -476,8 +476,9 @@ pub(crate) fn validate_frontier_leaderboard_artifact_bytes(bytes: &[u8]) -> Vec<
             ));
             validate_frontier_baseline_evidence(&mut blockers, baseline_catalog, baselines);
         }
-        None => blockers
-            .push("frontier leaderboard artifact `baselines` must be an array".to_string()),
+        None => {
+            blockers.push("frontier leaderboard artifact `baselines` must be an array".to_string())
+        }
     }
     if value
         .get("missing_baselines")
@@ -492,10 +493,14 @@ pub(crate) fn validate_frontier_leaderboard_artifact_bytes(bytes: &[u8]) -> Vec<
             "frontier leaderboard artifact contains {} blocker(s)",
             blockers_value.len()
         )),
-        None => blockers.push("frontier leaderboard artifact `blockers` must be an array".to_string()),
+        None => {
+            blockers.push("frontier leaderboard artifact `blockers` must be an array".to_string())
+        }
     }
     match value.get("rows").and_then(Value::as_array) {
-        Some(rows) => validate_frontier_leaderboard_rows(&mut blockers, baseline_catalog, &value, rows),
+        Some(rows) => {
+            validate_frontier_leaderboard_rows(&mut blockers, baseline_catalog, &value, rows)
+        }
         None => blockers.push("frontier leaderboard artifact `rows` must be an array".to_string()),
     }
     blockers
@@ -521,11 +526,7 @@ fn validate_frontier_leaderboard_rows(
         .iter()
         .filter_map(|row| row.get("baseline_id").and_then(Value::as_str))
         .collect::<BTreeSet<_>>();
-    if value
-        .get("covered_baseline_count")
-        .and_then(Value::as_u64)
-        != Some(covered.len() as u64)
-    {
+    if value.get("covered_baseline_count").and_then(Value::as_u64) != Some(covered.len() as u64) {
         blockers.push(
             "frontier leaderboard artifact covered_baseline_count must match distinct row baseline ids"
                 .to_string(),
@@ -589,7 +590,11 @@ fn validate_frontier_leaderboard_rows(
             "memory_total_mib_p50",
             "transfer_bytes_p50",
         ] {
-            if !row.get(field).and_then(Value::as_u64).is_some_and(|raw| raw > 0) {
+            if !row
+                .get(field)
+                .and_then(Value::as_u64)
+                .is_some_and(|raw| raw > 0)
+            {
                 blockers.push(format!(
                     "frontier leaderboard artifact rows[{index}].{field} must be positive"
                 ));
@@ -620,10 +625,9 @@ fn validate_frontier_baseline_evidence(
     baselines: &[Value],
 ) {
     for expected in &baseline_catalog.baselines {
-        let Some(entry) = baselines
-            .iter()
-            .find(|baseline| baseline.get("id").and_then(Value::as_str) == Some(expected.id.as_str()))
-        else {
+        let Some(entry) = baselines.iter().find(|baseline| {
+            baseline.get("id").and_then(Value::as_str) == Some(expected.id.as_str())
+        }) else {
             blockers.push(format!(
                 "frontier leaderboard artifact baselines is missing catalog baseline `{}`",
                 expected.id
@@ -745,7 +749,11 @@ fn build_row(
         selected_plan_reason(case, baseline.id.as_str(), selected_backend.as_deref());
     let mut blockers = Vec::new();
     require_present(&mut blockers, corpus_digest.as_deref(), "corpus_digest");
-    require_present(&mut blockers, baseline_version.as_deref(), "baseline_version");
+    require_present(
+        &mut blockers,
+        baseline_version.as_deref(),
+        "baseline_version",
+    );
     require_present(&mut blockers, output_digest.as_deref(), "output_digest");
     require_positive(
         &mut blockers,
@@ -813,7 +821,12 @@ fn remember_fingerprint(
 
 fn case_search_text(family_id: &str, case_id: &str, case: &Value) -> String {
     let mut parts = vec![family_id.to_string(), case_id.to_string()];
-    for key in ["name", "owner_crate", "workload_class", "held_out_corpus_id"] {
+    for key in [
+        "name",
+        "owner_crate",
+        "workload_class",
+        "held_out_corpus_id",
+    ] {
         if let Some(value) = case.get(key).and_then(nonblank_str) {
             parts.push(value.to_string());
         }
@@ -895,13 +908,20 @@ fn validate_frontier_row_reason_quality(blockers: &mut Vec<String>, index: usize
         return;
     };
     let lower = reason.to_ascii_lowercase();
-    let baseline_id = row.get("baseline_id").and_then(nonblank_str).unwrap_or_default();
+    let baseline_id = row
+        .get("baseline_id")
+        .and_then(nonblank_str)
+        .unwrap_or_default();
     if !baseline_id.is_empty() && !reason.contains(baseline_id) {
         blockers.push(format!(
             "frontier leaderboard artifact rows[{index}].selected_plan_reason must name baseline_id `{baseline_id}`"
         ));
     }
-    for marker in ["selected_backend", "case status", "performance_contract_passed"] {
+    for marker in [
+        "selected_backend",
+        "case status",
+        "performance_contract_passed",
+    ] {
         if !lower.contains(marker) {
             blockers.push(format!(
                 "frontier leaderboard artifact rows[{index}].selected_plan_reason must include `{marker}`"
@@ -910,7 +930,11 @@ fn validate_frontier_row_reason_quality(blockers: &mut Vec<String>, index: usize
     }
 }
 
-fn validate_frontier_row_comparator_coverage(blockers: &mut Vec<String>, index: usize, row: &Value) {
+fn validate_frontier_row_comparator_coverage(
+    blockers: &mut Vec<String>,
+    index: usize,
+    row: &Value,
+) {
     let baseline_version = row
         .get("baseline_version")
         .and_then(nonblank_str)

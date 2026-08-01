@@ -5,7 +5,7 @@
 //!
 //! Why this exists beyond `optimizer_idempotence_proptest`: that harness's
 //! reference-parity check feeds programs whose only runtime value is `gid_x`,
-//! and it runs `reference_eval(.., &[Value::U32(0)])` on a single invocation 
+//! and it runs `reference_eval(.., &[Value::U32(0)])` on a single invocation
 //! so `gid_x` is pinned to `0`. A rewrite that is value-correct at `0` but wrong
 //! for other inputs slips through. That is exactly how the `(x << 16) << 16`
 //! shift-fusion miscompile evaded it: at `x == 0` the buggy `x << 31` and the

@@ -164,12 +164,23 @@ impl CalleeExpander<'_> {
     }
 
     #[inline]
+    fn ternary_operands(
+        &mut self,
+        first: &Expr,
+        second: &Expr,
+        third: &Expr,
+    ) -> Result<(Vec<Node>, [Expr; 3])> {
+        let (mut prefix, first) = self.expr(first)?;
+        let (second_prefix, second) = self.expr(second)?;
+        let (third_prefix, third) = self.expr(third)?;
+        prefix.extend(second_prefix);
+        prefix.extend(third_prefix);
+        Ok((prefix, [first, second, third]))
+    }
+
+    #[inline]
     pub(crate) fn fma(&mut self, a: &Expr, b: &Expr, c: &Expr) -> Result<(Vec<Node>, Expr)> {
-        let (mut prefix, a) = self.expr(a)?;
-        let (b_prefix, b) = self.expr(b)?;
-        let (c_prefix, c) = self.expr(c)?;
-        prefix.extend(b_prefix);
-        prefix.extend(c_prefix);
+        let (prefix, [a, b, c]) = self.ternary_operands(a, b, c)?;
         Ok((
             prefix,
             Expr::Fma {
@@ -187,11 +198,8 @@ impl CalleeExpander<'_> {
         true_val: &Expr,
         false_val: &Expr,
     ) -> Result<(Vec<Node>, Expr)> {
-        let (mut prefix, cond) = self.expr(cond)?;
-        let (true_prefix, true_val) = self.expr(true_val)?;
-        let (false_prefix, false_val) = self.expr(false_val)?;
-        prefix.extend(true_prefix);
-        prefix.extend(false_prefix);
+        let (prefix, [cond, true_val, false_val]) =
+            self.ternary_operands(cond, true_val, false_val)?;
         Ok((
             prefix,
             Expr::Select {

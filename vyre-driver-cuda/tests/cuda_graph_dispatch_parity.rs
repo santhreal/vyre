@@ -11,16 +11,15 @@
 //! 3. **Shape validation**  -  passing inputs of the wrong byte length
 //!    returns `BackendError::InvalidProgram` with a structured fix string.
 
-
 mod common;
-#[path = "cuda_graph_dispatch_parity/source_contracts.rs"]
-mod source_contracts;
-#[path = "cuda_graph_dispatch_parity/replay_parity_contracts.rs"]
-mod replay_parity_contracts;
-#[path = "cuda_graph_dispatch_parity/latency_cache_contracts.rs"]
-mod latency_cache_contracts;
 #[path = "cuda_graph_dispatch_parity/compiled_pipeline_contracts.rs"]
 mod compiled_pipeline_contracts;
+#[path = "cuda_graph_dispatch_parity/latency_cache_contracts.rs"]
+mod latency_cache_contracts;
+#[path = "cuda_graph_dispatch_parity/replay_parity_contracts.rs"]
+mod replay_parity_contracts;
+#[path = "cuda_graph_dispatch_parity/source_contracts.rs"]
+mod source_contracts;
 #[path = "cuda_graph_dispatch_parity/telemetry_shape_contracts.rs"]
 mod telemetry_shape_contracts;
 
@@ -64,4 +63,3 @@ fn bool_not_program() -> Program {
         )],
     )
 }
-

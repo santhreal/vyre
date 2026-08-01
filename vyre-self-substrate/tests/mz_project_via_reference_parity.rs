@@ -19,29 +19,10 @@
 use vyre_self_substrate::math::mori_zwanzig_region_coarsen::coarsen_region_state_fixed_via;
 
 mod common;
-use common::fixed_mul as fixed_mul_16_16;
-use common::ReferenceEvalDispatcher;
-
-/// Exact u32 16.16 matvec oracle mirroring the `mz_project_step` kernel: per output row `i`,
-/// `acc = 0; for j: acc = acc.wrapping_add(fixed_mul_16_16(P[i*n+j], f[j]))`.
-fn mz_project_fixed(p_matrix: &[u32], f_vec: &[u32], n: usize) -> Vec<u32> {
-    (0..n)
-        .map(|i| {
-            let mut acc = 0u32;
-            for j in 0..n {
-                acc = acc.wrapping_add(fixed_mul_16_16(p_matrix[i * n + j], f_vec[j]));
-            }
-            acc
-        })
-        .collect()
-}
-
-fn xorshift(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
-}
+use common::{
+    fixed_matvec as mz_project_fixed, signed_fixed_19 as signed_fixed, xorshift32 as xorshift,
+    ReferenceEvalDispatcher,
+};
 
 #[test]
 fn coarsen_region_state_fixed_via_matches_exact_fixed_point_matvec() {
@@ -52,7 +33,7 @@ fn coarsen_region_state_fixed_via_matches_exact_fixed_point_matvec() {
         let n = 1 + xorshift(&mut state) % 8; // 1..=8 resolved modes
         let cells = (n * n) as usize;
         // 16.16 values up to ~64.0 (20-bit magnitude): products stay well within u64, per-term
-        // results ~ up to 64*64 = 4096.0 (0x1000_0000), and n-term sums occasionally wrap u32 
+        // results ~ up to 64*64 = 4096.0 (0x1000_0000), and n-term sums occasionally wrap u32
         // which BOTH the IR and the oracle do identically, so exact equality still holds.
         let p_matrix: Vec<u32> = (0..cells)
             .map(|_| xorshift(&mut state) & 0x000F_FFFF)
@@ -75,20 +56,6 @@ fn coarsen_region_state_fixed_via_matches_exact_fixed_point_matvec() {
         moved_cases > 380,
         "only {moved_cases}/400 projections were non-zero, the matvec is not being exercised"
     );
-}
-
-/// A signed 16.16 value in roughly `[-8.0, 8.0)`: a 19-bit magnitude, optionally negated. The top
-/// bit is set for the negative half, so these are exactly the operands the OLD unsigned
-/// `fixed_mul_16_16_expr` (bits 16..48 of an UNSIGNED product) corrupted, a negative operand read
-/// as ~2^32 produced a garbage high word. The corrected SIGNED multiply is what this exercises.
-fn signed_fixed(state: &mut u32) -> u32 {
-    let magnitude = (xorshift(state) & 0x0007_FFFF) as i32; // [0.0, 8.0) in 16.16
-    let signed = if xorshift(state) & 1 == 0 {
-        magnitude
-    } else {
-        -magnitude
-    };
-    signed as u32
 }
 
 fn to_fixed(v: f64) -> u32 {

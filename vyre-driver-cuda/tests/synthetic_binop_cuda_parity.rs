@@ -122,7 +122,13 @@ fn mulhi_matches_widening_high_word_on_cuda() {
 #[test]
 fn abs_diff_matches_unsigned_absolute_difference_on_cuda() {
     let backend = live_backend();
-    check(&backend, Expr::abs_diff, u32::abs_diff, &extremes(), "abs_diff");
+    check(
+        &backend,
+        Expr::abs_diff,
+        u32::abs_diff,
+        &extremes(),
+        "abs_diff",
+    );
     assert_eq!(u32::abs_diff(0, u32::MAX), u32::MAX);
     assert_eq!(u32::abs_diff(100, 50), 50);
 }
@@ -159,8 +165,19 @@ fn saturating_sub_clamps_to_zero_on_cuda() {
 fn saturating_mul_clamps_to_max_on_cuda() {
     let backend = live_backend();
     let mut pairs = extremes();
-    pairs.extend_from_slice(&[(0x1_0000, 0x1_0000), (0x8000, 0x2_0000), (1000, 1000), (3, 4)]);
-    check(&backend, Expr::saturating_mul, u32::saturating_mul, &pairs, "saturating_mul");
+    pairs.extend_from_slice(&[
+        (0x1_0000, 0x1_0000),
+        (0x8000, 0x2_0000),
+        (1000, 1000),
+        (3, 4),
+    ]);
+    check(
+        &backend,
+        Expr::saturating_mul,
+        u32::saturating_mul,
+        &pairs,
+        "saturating_mul",
+    );
     assert_eq!(u32::saturating_mul(0x1_0000, 0x1_0000), u32::MAX); // 2^32 overflows
     assert_eq!(u32::saturating_mul(1000, 1000), 1_000_000);
 }
@@ -185,7 +202,13 @@ fn rotate_pairs() -> Vec<(u32, u32)> {
 fn rotate_left_matches_barrel_rotate_on_cuda() {
     let backend = live_backend();
     let reference = |a: u32, b: u32| a.rotate_left(b & 31);
-    check(&backend, Expr::rotate_left, reference, &rotate_pairs(), "rotate_left");
+    check(
+        &backend,
+        Expr::rotate_left,
+        reference,
+        &rotate_pairs(),
+        "rotate_left",
+    );
     assert_eq!(reference(1, 32), 1); // 1<<32 rotate == identity (mask)
     assert_eq!(reference(0x8000_0000, 1), 1); // wrap
     assert_eq!(reference(0xDEAD_BEEF, 4), 0xEADB_EEFD);
@@ -195,7 +218,13 @@ fn rotate_left_matches_barrel_rotate_on_cuda() {
 fn rotate_right_matches_barrel_rotate_on_cuda() {
     let backend = live_backend();
     let reference = |a: u32, b: u32| a.rotate_right(b & 31);
-    check(&backend, Expr::rotate_right, reference, &rotate_pairs(), "rotate_right");
+    check(
+        &backend,
+        Expr::rotate_right,
+        reference,
+        &rotate_pairs(),
+        "rotate_right",
+    );
     assert_eq!(reference(1, 1), 0x8000_0000);
     assert_eq!(reference(1, 32), 1);
     assert_eq!(reference(0xDEAD_BEEF, 4), 0xFDEA_DBEE);

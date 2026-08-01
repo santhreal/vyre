@@ -149,6 +149,23 @@ impl ExprVisitor for AtomicTargetScanner<'_> {
     }
 }
 
+macro_rules! visit_async_transfer {
+    ($method:ident) => {
+        fn $method(
+            &mut self,
+            _: &Node,
+            _: &vyre_foundation::ir::Ident,
+            _: &vyre_foundation::ir::Ident,
+            offset: &Expr,
+            size: &Expr,
+            _: &vyre_foundation::ir::Ident,
+        ) -> ControlFlow<Self::Break> {
+            visit_preorder(self, offset)?;
+            visit_preorder(self, size)
+        }
+    };
+}
+
 impl NodeVisitor for AtomicTargetScanner<'_> {
     type Break = LoweringError;
 
@@ -214,31 +231,8 @@ impl NodeVisitor for AtomicTargetScanner<'_> {
         Continue(())
     }
 
-    fn visit_async_load(
-        &mut self,
-        _: &Node,
-        _: &vyre_foundation::ir::Ident,
-        _: &vyre_foundation::ir::Ident,
-        offset: &Expr,
-        size: &Expr,
-        _: &vyre_foundation::ir::Ident,
-    ) -> ControlFlow<Self::Break> {
-        visit_preorder(self, offset)?;
-        visit_preorder(self, size)
-    }
-
-    fn visit_async_store(
-        &mut self,
-        _: &Node,
-        _: &vyre_foundation::ir::Ident,
-        _: &vyre_foundation::ir::Ident,
-        offset: &Expr,
-        size: &Expr,
-        _: &vyre_foundation::ir::Ident,
-    ) -> ControlFlow<Self::Break> {
-        visit_preorder(self, offset)?;
-        visit_preorder(self, size)
-    }
+    visit_async_transfer!(visit_async_load);
+    visit_async_transfer!(visit_async_store);
 
     fn visit_async_wait(
         &mut self,

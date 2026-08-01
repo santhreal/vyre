@@ -90,8 +90,7 @@ fn assert_spirv_structure(case: &EmitAdversarialCase, words: &[u32]) {
 #[test]
 fn hostile_success_corpus_emits_structured_spirv() {
     assert!(
-        emit_adversarial_corpus::required_backends()
-            .contains(&EmitAdversarialBackend::Spirv),
+        emit_adversarial_corpus::required_backends().contains(&EmitAdversarialBackend::Spirv),
         "Fix: shared emit adversarial corpus must register SPIR-V as a required consumer."
     );
 

@@ -206,14 +206,13 @@ fn kernel_family_surfaces_have_single_reexport_schedule_and_evidence_contracts()
             ));
         }
         if let Ok(schedule_text) = fs::read_to_string(root.join(&family.schedule_config)) {
-            let schedule: KernelFamilySchedule = toml::from_str(&schedule_text).unwrap_or_else(
-                |error| {
+            let schedule: KernelFamilySchedule =
+                toml::from_str(&schedule_text).unwrap_or_else(|error| {
                     panic!(
                         "Fix: schedule config `{}` must be valid TOML: {error}",
                         family.schedule_config
                     )
-                },
-            );
+                });
             if schedule.schema_version != 1 {
                 failures.push(format!(
                     "{} schedule schema_version must be 1",

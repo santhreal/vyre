@@ -154,4 +154,3 @@ fn analysis_substrate_lives_under_analysis_module() {
         );
     }
 }
-

@@ -1,6 +1,6 @@
 use super::binding_lookup::BindingLookup;
 use super::{GpuBuffers, RecordAndReadback};
-use crate::allocation::reserve_smallvec_to_capacity;
+use crate::allocation::{padded_wgpu_u64, reserve_smallvec_to_capacity};
 use smallvec::SmallVec;
 use std::sync::Arc;
 use vyre_driver::BackendError;
@@ -57,6 +57,7 @@ pub(super) fn build_bind_groups(
             buffer_ids.push(padded_wgpu_u64(
                 *logical_size_bytes,
                 "record-and-readback bind-group cache key byte length",
+                "split the dispatch buffer",
             )?);
             bound_indices.push(idx);
         }
@@ -87,6 +88,7 @@ pub(super) fn build_bind_groups(
             let bind_size = wgpu::BufferSize::new(padded_wgpu_u64(
                 *logical_size_bytes,
                 "record-and-readback bind-group binding size",
+                "split the dispatch buffer",
             )?);
             entries.push(wgpu::BindGroupEntry {
                 binding: *binding,
@@ -117,17 +119,4 @@ pub(super) fn build_bind_groups(
         bind_groups.push(bind_group);
     }
     Ok(bind_groups)
-}
-
-fn padded_wgpu_u64(size: u64, label: &'static str) -> Result<u64, BackendError> {
-    let normalized = size.max(4);
-    let remainder = normalized % 4;
-    if remainder == 0 {
-        return Ok(normalized);
-    }
-    normalized.checked_add(4 - remainder).ok_or_else(|| {
-        BackendError::new(format!(
-            "{label} overflows u64 while padding to WGPU's 4-byte buffer alignment. Fix: split the dispatch buffer."
-        ))
-    })
 }

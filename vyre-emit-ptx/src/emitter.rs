@@ -23,7 +23,7 @@ mod names;
 mod operands;
 mod results;
 mod scalar;
-mod schedule;
+pub(crate) mod schedule;
 mod sizing;
 mod vector;
 
@@ -103,6 +103,42 @@ struct BodyCtx<'a> {
     /// [`Self::emit_grid_sync_barrier`]); the indices must be assigned in
     /// emission order so every CTA agrees on each barrier's release target.
     grid_barrier_index: u32,
+    /// Nesting depth of enclosing `StructuredForLoop` bodies during emission.
+    ///
+    /// A `MemoryOrdering::GridSync` barrier is ONLY correct at a static position
+    /// that executes at most once per launch, because its release target is
+    /// computed at EMIT time from [`Self::grid_barrier_index`] and is therefore a
+    /// compile-time constant multiple of `gridSize`. A loop emits its body once
+    /// and branches back, so a barrier inside a loop would reuse one fixed
+    /// target across every iteration: after the first iteration the monotonic
+    /// counter is already at or past that target and the spin never waits, which
+    /// silently degrades a whole-grid barrier into a no-op. Tracked so
+    /// [`Self::emit_grid_sync_barrier`] can refuse instead.
+    grid_sync_loop_depth: u32,
+    /// Result ids whose value is provably identical in EVERY invocation of the
+    /// grid.
+    ///
+    /// Populated as ops are emitted, which is sound because the descriptor is
+    /// SSA-ordered: an operand is always recorded before any consumer reads it.
+    /// Absence means "not proven", never "proven varying", so every consumer
+    /// must treat a missing id as non-uniform.
+    ///
+    /// This exists for [`Self::emit_return`]. A `Return` lowers to a branch to
+    /// the single kernel exit, and a branch that only SOME invocations take is
+    /// only safe if no synchronization follows: the invocations that left can
+    /// never arrive at a later `bar.sync`, and the ones that stayed wait for
+    /// them forever. Grid uniformity (not merely per-CTA uniformity) is the
+    /// requirement, because a whole CTA leaving early strands the remaining
+    /// CTAs at a cooperative grid barrier just as surely.
+    uniform_results: FxHashSet<u32>,
+    /// Number of enclosing conditional bodies whose condition is NOT in
+    /// [`Self::uniform_results`].
+    ///
+    /// Nonzero means control flow reached this point through a branch that some
+    /// invocations may not have taken, so a `Return` here would be divergent.
+    /// Tracked so [`Self::emit_return`] can refuse instead of emitting a branch
+    /// that can hang the kernel.
+    nonuniform_cond_depth: u32,
 }
 
 impl BodyCtx<'_> {
@@ -196,14 +232,29 @@ impl BodyCtx<'_> {
     /// barriers are top-level (never under divergent control flow) and the
     /// full-workgroup entry keeps every lane live through the barrier.
     fn emit_grid_sync_barrier(&mut self) -> Result<(), EmitError> {
+        if self.grid_sync_loop_depth > 0 {
+            return Err(EmitError::InvalidDescriptor(
+                "MemoryOrdering::GridSync barrier inside a loop body cannot be lowered to the \
+                 monotonic-counter cooperative grid barrier: the release target is fixed at emit \
+                 time to (barrier_index + 1) * gridSize, but a loop emits its body ONCE, so every \
+                 iteration after the first finds the counter already at or past that target and \
+                 the barrier silently becomes a no-op, leaving the grid unsynchronized with no \
+                 error. Fix: unroll the loop so each GridSync barrier is a distinct top-level \
+                 barrier with its own release target (this is what \
+                 vyre_primitives::fixpoint::persistent_fixpoint::persistent_fixpoint_grid does, \
+                 emitting max_iterations top-level waves), or split the program at the barrier and \
+                 let the host loop re-launch each segment."
+                    .to_string(),
+            ));
+        }
         let index = self.grid_barrier_index;
-        self.grid_barrier_index = index
-            .checked_add(1)
-            .ok_or_else(|| EmitError::InvalidDescriptor("grid-sync barrier index overflow".into()))?;
+        self.grid_barrier_index = index.checked_add(1).ok_or_else(|| {
+            EmitError::InvalidDescriptor("grid-sync barrier index overflow".into())
+        })?;
         // Release target multiplier for this barrier: (index + 1).
-        let multiplier = index
-            .checked_add(1)
-            .ok_or_else(|| EmitError::InvalidDescriptor("grid-sync barrier target overflow".into()))?;
+        let multiplier = index.checked_add(1).ok_or_else(|| {
+            EmitError::InvalidDescriptor("grid-sync barrier target overflow".into())
+        })?;
 
         let sum = self.alloc(PtxType::U32);
         let tmp = self.alloc(PtxType::U32);
@@ -257,6 +308,10 @@ impl BodyCtx<'_> {
 
     fn emit_op(&mut self, body: &KernelBody, op: &KernelOp) -> Result<(), EmitError> {
         use KernelOpKind::*;
+        // Classify before emitting. Operands are already classified because the
+        // descriptor is SSA-ordered, and `emit_return` needs the enclosing
+        // conditions' verdicts to already be recorded.
+        self.record_uniformity(op);
         match &op.kind {
             Literal => {
                 let pool_idx = *op.operands.first().ok_or_else(|| {
@@ -424,7 +479,7 @@ impl BodyCtx<'_> {
                 self.bind_result(op, result)?;
             }
             Return => {
-                // Handled by finish_with_return; per-op Return is a no-op here.
+                self.emit_return()?;
             }
             Barrier { ordering } => {
                 if ordering.requires_grid_sync() {

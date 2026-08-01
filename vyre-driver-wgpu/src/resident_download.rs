@@ -19,6 +19,7 @@ pub(crate) fn download_resident(
             "WGPU resident download received a borrowed resource. Fix: allocate a resident buffer before calling download_resident_into.",
         ));
     };
+    crate::buffer::check_resident_owner(*id, "WGPU resident download")?;
     let handle = backend.resident_handles.get(id).ok_or_else(|| {
         vyre_driver::BackendError::new(format!(
             "WGPU resident download received stale handle {id}. Fix: keep the resource allocated until all resident readbacks finish."
@@ -51,6 +52,7 @@ pub(crate) fn download_resident_into(
             "WGPU resident download received a borrowed resource. Fix: allocate a resident buffer before calling download_resident_into.",
         ));
     };
+    crate::buffer::check_resident_owner(*id, "WGPU resident download")?;
     let handle = backend.resident_handles.get(id).ok_or_else(|| {
         vyre_driver::BackendError::new(format!(
             "WGPU resident download received stale handle {id}. Fix: keep the resource allocated until all resident readbacks finish."
@@ -90,6 +92,7 @@ pub(crate) fn download_resident_range_into(
             "WGPU resident ranged download received a borrowed resource. Fix: allocate a resident buffer before calling download_resident_range_into.",
         ));
     };
+    crate::buffer::check_resident_owner(*id, "WGPU resident ranged download")?;
     let handle = backend.resident_handles.get(id).ok_or_else(|| {
         vyre_driver::BackendError::new(format!(
             "WGPU resident ranged download received stale handle {id}. Fix: keep the resource allocated until all resident readbacks finish."
@@ -130,6 +133,8 @@ pub(crate) fn download_resident_ranges_into(
         )));
     }
     let mut copies = SmallVec::<[ResidentTransferInterval; 8]>::new();
+    // Local ids are exact keys here: every interval below is owner-checked
+    // first, so all of them live in this instance's resident namespace.
     let mut handles = SmallVec::<[(u64, GpuBufferHandle); 8]>::new();
     vyre_foundation::allocation::try_reserve_smallvec_to_capacity(&mut copies, ranges.len())
         .map_err(|source| {
@@ -151,13 +156,16 @@ pub(crate) fn download_resident_ranges_into(
                 "WGPU resident ranged batch download received a borrowed resource. Fix: allocate every resident buffer before calling download_resident_ranges_into.",
             ));
         };
+        crate::buffer::check_resident_owner(*id, "WGPU resident ranged batch download")?;
         let handle = backend.resident_handles.get(id).ok_or_else(|| {
             vyre_driver::BackendError::new(format!(
                 "WGPU resident ranged batch download received stale handle {id}. Fix: keep every resource allocated until all resident readbacks finish."
             ))
         })?;
-        let byte_offset_u64 = WGPU_NUMERIC.usize_to_u64(byte_offset, "resident ranged batch download offset")?;
-        let byte_len_u64 = WGPU_NUMERIC.usize_to_u64(byte_len, "resident ranged batch download length")?;
+        let byte_offset_u64 =
+            WGPU_NUMERIC.usize_to_u64(byte_offset, "resident ranged batch download offset")?;
+        let byte_len_u64 =
+            WGPU_NUMERIC.usize_to_u64(byte_len, "resident ranged batch download length")?;
         validate_resident_readback_range(
             *id,
             handle.allocation_len(),
@@ -165,9 +173,9 @@ pub(crate) fn download_resident_ranges_into(
             byte_len_u64,
             "ranged batch download",
         )?;
-        handles.push((*id, handle.clone()));
+        handles.push((id.id(), handle.clone()));
         copies.push(ResidentTransferInterval {
-            handle_id: *id,
+            handle_id: id.id(),
             src: byte_offset_u64,
             byte_len,
         });
@@ -198,7 +206,8 @@ pub(crate) fn download_resident_ranges_into(
                 ))
             })?;
         let handle = &handles[handle_index].1;
-        let byte_len = WGPU_NUMERIC.usize_to_u64(copy.byte_len, "resident fused ranged batch download length")?;
+        let byte_len = WGPU_NUMERIC
+            .usize_to_u64(copy.byte_len, "resident fused ranged batch download length")?;
         let mut fused_output = Vec::new();
         handle.readback_range_until(
             &device_queue.0,
@@ -263,7 +272,7 @@ fn reserve_fused_resident_view_outputs(
 }
 
 fn validate_resident_readback_range(
-    handle_id: u64,
+    handle_id: vyre_driver::ResidentHandle,
     allocation_len: u64,
     byte_offset: u64,
     byte_len: u64,

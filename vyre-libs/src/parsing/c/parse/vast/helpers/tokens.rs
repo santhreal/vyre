@@ -1,5 +1,6 @@
 use super::super::*;
 use crate::parsing::c::lex::tokens::*;
+use crate::parsing::c::parse::{merged_token_ranges, token_range_expr};
 use vyre::ir::Expr;
 
 pub(crate) fn is_open_token(token: Expr) -> Expr {
@@ -126,30 +127,4 @@ pub(crate) fn balanced_or(mut exprs: Vec<Expr>) -> Expr {
         Some(expr) => expr,
         None => Expr::bool(false),
     }
-}
-
-pub(crate) fn token_range_expr(token: &Expr, lo: u32, hi: u32) -> Expr {
-    if lo == hi {
-        Expr::eq(token.clone(), Expr::u32(lo))
-    } else {
-        Expr::and(
-            Expr::ge(token.clone(), Expr::u32(lo)),
-            Expr::le(token.clone(), Expr::u32(hi)),
-        )
-    }
-}
-
-pub(crate) fn merged_token_ranges(values: &[u32]) -> Vec<(u32, u32)> {
-    let mut sorted = values.to_vec();
-    sorted.sort_unstable();
-    sorted.dedup();
-
-    let mut ranges: Vec<(u32, u32)> = Vec::new();
-    for value in sorted {
-        match ranges.last_mut() {
-            Some((_, hi)) if hi.checked_add(1) == Some(value) => *hi = value,
-            _ => ranges.push((value, value)),
-        }
-    }
-    ranges
 }

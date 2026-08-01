@@ -23,8 +23,8 @@ mod common;
 use common::u32_bytes;
 
 use vyre_driver::{DispatchConfig, VyreBackend};
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver_wgpu::WgpuBackend;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// `out[i] = cast(target64, load(src, i))`: `src` is a 32-bit buffer (signed or
 /// unsigned per `src_ty`), `out` is the 64-bit `target64` buffer (`array<vec2<u32>>`).
@@ -73,7 +73,18 @@ fn run(backend: &WgpuBackend, src_ty: DataType, target64: DataType, words: &[u32
 
 /// Bit patterns spanning the sign boundary and the extremes.
 fn signed_inputs() -> Vec<i32> {
-    vec![-7, 7, -1, 0, 1, i32::MIN, i32::MAX, -128, 0x4000_0000, -0x4000_0000]
+    vec![
+        -7,
+        7,
+        -1,
+        0,
+        1,
+        i32::MIN,
+        i32::MAX,
+        -128,
+        0x4000_0000,
+        -0x4000_0000,
+    ]
 }
 
 #[test]

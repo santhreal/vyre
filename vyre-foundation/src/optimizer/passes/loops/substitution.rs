@@ -75,6 +75,38 @@ pub(super) fn expr_contains_opaque(expr: &Expr) -> bool {
     }
 }
 
+fn body_rebinds_var_with_nested_policy(
+    nodes: &[Node],
+    var: &Ident,
+    nested_same_name_rebinds: bool,
+) -> bool {
+    nodes.iter().any(|node| match node {
+        Node::Let { name, .. } | Node::Assign { name, .. } => name == var,
+        Node::If {
+            then, otherwise, ..
+        } => {
+            body_rebinds_var_with_nested_policy(then, var, nested_same_name_rebinds)
+                || body_rebinds_var_with_nested_policy(otherwise, var, nested_same_name_rebinds)
+        }
+        Node::Loop {
+            var: inner, body, ..
+        } => {
+            if inner == var {
+                nested_same_name_rebinds
+            } else {
+                body_rebinds_var_with_nested_policy(body, var, nested_same_name_rebinds)
+            }
+        }
+        Node::Block(body) => {
+            body_rebinds_var_with_nested_policy(body, var, nested_same_name_rebinds)
+        }
+        Node::Region { body, .. } => {
+            body_rebinds_var_with_nested_policy(body, var, nested_same_name_rebinds)
+        }
+        _ => false,
+    })
+}
+
 /// True iff any node in `nodes` rebinds `var`: a `Let` or `Assign` whose
 /// name equals `var`. This is the precondition guard for every loop pass that
 /// reasons about the induction variable: if the body rewrites `var`, then a
@@ -90,18 +122,7 @@ pub(super) fn expr_contains_opaque(expr: &Expr) -> bool {
 /// (which they do). `If` / `Block` / `Region` keep the surrounding context, so
 /// the walk descends through them.
 pub(super) fn body_writes_loop_var(nodes: &[Node], var: &Ident) -> bool {
-    nodes.iter().any(|node| match node {
-        Node::Let { name, .. } | Node::Assign { name, .. } => name == var,
-        Node::If {
-            then, otherwise, ..
-        } => body_writes_loop_var(then, var) || body_writes_loop_var(otherwise, var),
-        Node::Loop {
-            var: inner, body, ..
-        } => inner != var && body_writes_loop_var(body, var),
-        Node::Block(body) => body_writes_loop_var(body, var),
-        Node::Region { body, .. } => body_writes_loop_var(body, var),
-        _ => false,
-    })
+    body_rebinds_var_with_nested_policy(nodes, var, false)
 }
 
 /// Like [`body_writes_loop_var`] but *more* conservative about nested loops: a
@@ -117,18 +138,7 @@ pub(super) fn body_writes_loop_var(nodes: &[Node], var: &Ident) -> bool {
 /// ([`body_writes_loop_var`]: strip-mine, unroll) can safely skip the nested
 /// same-name loop because its writes are scoped to the inner binding.
 pub(super) fn body_rebinds_var(body: &[Node], var: &Ident) -> bool {
-    body.iter().any(|node| match node {
-        Node::Let { name, .. } | Node::Assign { name, .. } => name == var,
-        Node::Loop {
-            var: inner, body, ..
-        } => inner == var || body_rebinds_var(body, var),
-        Node::If {
-            then, otherwise, ..
-        } => body_rebinds_var(then, var) || body_rebinds_var(otherwise, var),
-        Node::Block(body) => body_rebinds_var(body, var),
-        Node::Region { body, .. } => body_rebinds_var(body, var),
-        _ => false,
-    })
+    body_rebinds_var_with_nested_policy(body, var, true)
 }
 
 // The guards above are covered by `tests/loop_induction_var_guards.rs`, which

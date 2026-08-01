@@ -1,4 +1,4 @@
-use crate::compiler::atomic_collect::atomic_collect_u32;
+use crate::atomic_collect_u32;
 use crate::parsing::c::lex::tokens::{
     TOK_COLON, TOK_GNU_ASM, TOK_GOTO, TOK_LPAREN, TOK_RPAREN, TOK_STRING, TOK_VOLATILE,
 };

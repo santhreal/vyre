@@ -9,7 +9,7 @@ use vyre_foundation::ir::Program;
 use crate::backend::allocations::HostTransferAllocations;
 use crate::backend::ordering::{classify_dense_permutation, DensePermutationDefect};
 use crate::backend::plan::CudaDispatchPlan;
-use crate::backend::resident::CudaResidentBuffer;
+use crate::backend::resident::{CudaDispatchBinding, CudaResidentBuffer};
 use crate::backend::resident_upload_fusion::ResidentUploadCopy;
 use crate::backend::staging_reserve::{
     reserve_hash_set, reserve_smallvec, reserve_vec, resize_vec_slots,
@@ -32,29 +32,55 @@ pub(crate) fn resident_required_handles(
         })
 }
 
-pub(crate) fn next_resident_handle(
-    handles: &[CudaResidentBuffer],
-    next_handle: &mut usize,
-    context: &'static str,
-) -> Result<CudaResidentBuffer, BackendError> {
-    let handle_index = *next_handle;
-    let Some(handle) = handles.get(handle_index).copied() else {
-        return Err(BackendError::InvalidProgram {
-            fix: format!(
-                "Fix: CUDA {context} ran out of resident buffer handles at descriptor slot {handle_index} after receiving {} handle(s). Validate resident handle count against the binding plan before launch.",
-                handles.len()
-            ),
-        });
+macro_rules! define_next_descriptor_resource {
+    ($name:ident, $resource:ty, $items:ident, $cursor:ident, $resource_name:literal, $rebuild:literal) => {
+        #[doc = concat!("Take the next ", $resource_name, " in descriptor order.")]
+        pub(crate) fn $name<'a>(
+            $items: &[$resource],
+            $cursor: &mut usize,
+            context: &'static str,
+        ) -> Result<$resource, BackendError> {
+            let index = *$cursor;
+            let Some(resource) = $items.get(index).copied() else {
+                return Err(BackendError::InvalidProgram {
+                    fix: format!(
+                        "Fix: CUDA {context} ran out of {} at descriptor slot {index} after receiving {} item(s). Validate the resource count against the binding plan before launch.",
+                        $resource_name,
+                        $items.len()
+                    ),
+                });
+            };
+            *$cursor = $cursor
+                .checked_add(1)
+                .ok_or_else(|| BackendError::InvalidProgram {
+                    fix: format!(
+                        "Fix: CUDA {context} {} cursor overflowed at descriptor slot {index}. {}",
+                        $resource_name,
+                        $rebuild
+                    ),
+                })?;
+            Ok(resource)
+        }
     };
-    *next_handle = next_handle
-        .checked_add(1)
-        .ok_or_else(|| BackendError::InvalidProgram {
-            fix: format!(
-                "Fix: CUDA {context} resident handle cursor overflowed at descriptor slot {handle_index}. Rebuild the resident binding plan before launch.",
-            ),
-        })?;
-    Ok(handle)
 }
+
+define_next_descriptor_resource!(
+    next_resident_handle,
+    CudaResidentBuffer,
+    handles,
+    next_handle,
+    "resident buffer handles",
+    "Rebuild the resident binding plan before launch."
+);
+
+define_next_descriptor_resource!(
+    next_dispatch_binding,
+    CudaDispatchBinding<'a>,
+    bindings,
+    next_binding,
+    "bound resources",
+    "Rebuild the resident binding plan before launch."
+);
 
 fn validate_dense_resident_indices<I>(
     indices: I,
@@ -242,7 +268,7 @@ pub(crate) fn prepare_resident_sequence_fills(
                 return Err(BackendError::InvalidProgram {
                     fix: format!(
                         "Fix: CUDA resident sequence fill index for handle {} pointed at stale effective fill slot {index} after {} slot(s) were prepared. Rebuild duplicate-fill coalescing before launching the resident sequence.",
-                        handle.id,
+                        handle.handle,
                         effective.len()
                     ),
                 });

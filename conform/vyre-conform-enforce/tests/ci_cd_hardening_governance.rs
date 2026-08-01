@@ -21,7 +21,10 @@ fn ci_cd_hardening_sources_are_registered() {
         "GITHUB_ARTIFACT_ATTESTATIONS",
         "GITHUB_ACTIONS_DEPENDENCY_CACHING",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 
@@ -47,7 +50,8 @@ fn workflow_permission_boundary_records_trust_token_oidc_secret_input_and_privat
 }
 
 #[test]
-fn actions_dependency_pinning_policy_requires_full_sha_review_updates_and_script_injection_controls() {
+fn actions_dependency_pinning_policy_requires_full_sha_review_updates_and_script_injection_controls(
+) {
     for required in [
         "dependency_class",
         "pinning_policy",

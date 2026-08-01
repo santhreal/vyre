@@ -7,8 +7,7 @@ const RESPONSE: &str =
     include_str!("../../../docs/optimization/PRIVATE_VULNERABILITY_RESPONSE_RUNBOOK.toml");
 const ESCALATION: &str =
     include_str!("../../../docs/optimization/MAINTAINER_OWNERSHIP_ESCALATION_MAP.toml");
-const FEEDBACK: &str =
-    include_str!("../../../docs/optimization/RELEASE_HEALTH_FEEDBACK_LOOP.toml");
+const FEEDBACK: &str = include_str!("../../../docs/optimization/RELEASE_HEALTH_FEEDBACK_LOOP.toml");
 const COVERAGE: &str = include_str!(
     "../../../docs/optimization/END_TO_END_PUBLIC_INTAKE_RESPONSE_TRANCHE_COVERAGE.toml"
 );
@@ -23,12 +22,16 @@ fn public_intake_response_sources_are_registered() {
         "GITHUB_PRIVATE_VULNERABILITY_REPORTING",
         "FIRST_PSIRT_SERVICES_FRAMEWORK",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 
 #[test]
-fn public_issue_support_intake_policy_records_forms_support_labels_security_misroutes_and_privacy_boundaries() {
+fn public_issue_support_intake_policy_records_forms_support_labels_security_misroutes_and_privacy_boundaries(
+) {
     for required in [
         "intake_id",
         "surface",
@@ -51,7 +54,8 @@ fn public_issue_support_intake_policy_records_forms_support_labels_security_misr
 }
 
 #[test]
-fn private_vulnerability_response_runbook_records_triage_advisory_incident_support_and_gate_effects() {
+fn private_vulnerability_response_runbook_records_triage_advisory_incident_support_and_gate_effects(
+) {
     for required in [
         "response_id",
         "intake_channel",
@@ -74,7 +78,8 @@ fn private_vulnerability_response_runbook_records_triage_advisory_incident_suppo
 }
 
 #[test]
-fn maintainer_ownership_escalation_map_links_labels_codeowners_security_managers_owner_lanes_and_boundaries() {
+fn maintainer_ownership_escalation_map_links_labels_codeowners_security_managers_owner_lanes_and_boundaries(
+) {
     for required in [
         "escalation_id",
         "intake_surface",
@@ -96,7 +101,8 @@ fn maintainer_ownership_escalation_map_links_labels_codeowners_security_managers
 }
 
 #[test]
-fn release_health_feedback_loop_maps_security_docs_perf_and_operator_signals_to_release_gate_effects() {
+fn release_health_feedback_loop_maps_security_docs_perf_and_operator_signals_to_release_gate_effects(
+) {
     for required in [
         "signal_id",
         "input_surface",
@@ -119,7 +125,8 @@ fn release_health_feedback_loop_maps_security_docs_perf_and_operator_signals_to_
 }
 
 #[test]
-fn public_intake_response_coverage_preserves_existing_security_release_and_repository_authorities() {
+fn public_intake_response_coverage_preserves_existing_security_release_and_repository_authorities()
+{
     for required in [
         "VX-1141..VX-1160",
         "public_issue_support_intake_policy",

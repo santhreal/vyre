@@ -1,5 +1,7 @@
 //! Adversarial oracle tests for `text::char_class` reference mapping.
+mod text_char_class_support;
 
+use text_char_class_support::run_packed_u8_program;
 use vyre_foundation::ir::DataType;
 use vyre_primitives::text::char_class::{char_class, char_class_u8, reference_char_class};
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack_u32s, pack_u32_slice as pack_u32s};
@@ -62,18 +64,6 @@ fn run_program(source: &[u8], table: &[u32; 256]) -> Vec<u32> {
     let out_bytes = outputs[0].to_bytes();
     let mut out_u32s = unpack_u32s(&out_bytes);
     out_u32s.truncate(n);
-    out_u32s
-}
-
-fn run_packed_u8_program(source: &[u8], table: &[u32; 256]) -> Vec<u32> {
-    let program = char_class_u8("source", "classified", source.len() as u32);
-    let outputs = vyre_reference::reference_eval(
-        &program,
-        &[Value::from(source.to_vec()), Value::from(pack_u32s(table))],
-    )
-    .expect("Fix: packed-u8 char_class reference evaluation must succeed");
-    let mut out_u32s = unpack_u32s(&outputs[0].to_bytes());
-    out_u32s.truncate(source.len());
     out_u32s
 }
 

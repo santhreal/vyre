@@ -430,23 +430,14 @@ pub(crate) fn run(args: &[String]) {
         backends,
         blockers,
     };
-    let json = match serde_json::to_string_pretty(&matrix) {
-        Ok(json) => json,
-        Err(error) => {
-            eprintln!("Fix: failed to serialize backend matrix: {error}");
-            std::process::exit(1);
-        }
-    };
+
     if let Some(parent) = output.parent() {
         if let Err(error) = fs::create_dir_all(parent) {
             eprintln!("Fix: failed to create `{}`: {error}", parent.display());
             std::process::exit(1);
         }
     }
-    if let Err(error) = fs::write(&output, format!("{json}\n")) {
-        eprintln!("Fix: failed to write `{}`: {error}", output.display());
-        std::process::exit(1);
-    }
+    crate::output_arg::write_json(&output, &matrix);
     println!("backend-matrix: wrote {}", output.display());
     if !matrix.blockers.is_empty() {
         std::process::exit(1);
@@ -568,10 +559,10 @@ fn collect_backend_capability_rows(
         probe_source: "nvidia-smi --query-gpu=memory.total".to_string(),
         probed_value: max_memory.map(|mib| format!("{mib} MiB")),
         supported: memory_supported,
-        unsupported_reason: (!memory_supported).then(|| {
-            "no live NVIDIA device reported >=16384 MiB memory".to_string()
-        }),
-        fix: "Fix: run release benchmark evidence on a CUDA GPU with at least 16 GiB VRAM.".to_string(),
+        unsupported_reason: (!memory_supported)
+            .then(|| "no live NVIDIA device reported >=16384 MiB memory".to_string()),
+        fix: "Fix: run release benchmark evidence on a CUDA GPU with at least 16 GiB VRAM."
+            .to_string(),
     });
 
     let warp_supported = gpu_probe.nvidia_smi_ok && cuda_sm.is_some();
@@ -584,7 +575,8 @@ fn collect_backend_capability_rows(
         unsupported_reason: (!warp_supported).then(|| {
             "CUDA warp-width contract is unavailable without a live NVIDIA GPU probe".to_string()
         }),
-        fix: "Fix: expose a live CUDA device before using warp-width-sensitive benchmark claims.".to_string(),
+        fix: "Fix: expose a live CUDA device before using warp-width-sensitive benchmark claims."
+            .to_string(),
     });
 
     rows.push(BackendCapabilityRow {
@@ -635,7 +627,10 @@ fn collect_backend_capability_rows(
     rows
 }
 
-fn registry_capability_row(backend_id: &str, backend: Option<&BackendEntry>) -> BackendCapabilityRow {
+fn registry_capability_row(
+    backend_id: &str,
+    backend: Option<&BackendEntry>,
+) -> BackendCapabilityRow {
     let supported = backend.is_some_and(|backend| backend.dispatches && backend.acquire_ok);
     BackendCapabilityRow {
         backend_id: backend_id.to_string(),
@@ -927,14 +922,8 @@ fn probe_nvidia_smi_device_details() -> Vec<GpuProbeDevice> {
 }
 
 fn parse_nvidia_smi_device_detail(line: &str) -> Option<GpuProbeDevice> {
-    let mut fields = line.split(',').map(str::trim);
-    let name = fields.next()?.to_string();
-    let driver_version = fields.next()?.to_string();
-    let memory_total_mib = fields.next().and_then(|value| value.parse::<u64>().ok());
-    let compute_capability = fields.next().and_then(parse_compute_capability);
-    if name.is_empty() {
-        return None;
-    }
+    let (name, driver_version, memory_total_mib, compute_capability) =
+        vyre_bench::probes::environment::parse_nvidia_smi_device_fields(line)?;
     Some(GpuProbeDevice {
         name,
         driver_version,
@@ -942,18 +931,6 @@ fn parse_nvidia_smi_device_detail(line: &str) -> Option<GpuProbeDevice> {
         compute_capability_major: compute_capability.map(|(major, _minor)| major),
         compute_capability_minor: compute_capability.map(|(_major, minor)| minor),
     })
-}
-
-fn parse_compute_capability(value: &str) -> Option<(u32, u32)> {
-    let value = value.trim();
-    if value.is_empty() {
-        return None;
-    }
-    if let Some((major, minor)) = value.split_once('.') {
-        Some((major.trim().parse().ok()?, minor.trim().parse().ok()?))
-    } else {
-        Some((value.parse().ok()?, 0))
-    }
 }
 
 fn parse_nvidia_smi_versions(text: &str) -> (Option<String>, Option<String>) {
@@ -983,28 +960,12 @@ fn parse_header_value(line: &str, label: &str) -> Option<String> {
 }
 
 fn parse_output(args: &[String]) -> Result<PathBuf, String> {
-    let mut output = None;
-    let mut index = 2;
-    while index < args.len() {
-        match args[index].as_str() {
-            "--output" => {
-                let Some(path) = args.get(index + 1) else {
-                    return Err("Fix: --output requires a path.".to_string());
-                };
-                output = Some(PathBuf::from(path));
-                index += 2;
-            }
-            "--help" | "-h" => {
-                println!(
-                    "USAGE:\n  cargo_full run --bin xtask -- backend-matrix [--output PATH]\n\n\
-                     Probes linked dispatch backends and writes CUDA-first/WGPU-fallback evidence JSON."
-                );
-                std::process::exit(0);
-            }
-            other => return Err(format!("Fix: unknown backend-matrix option `{other}`.")),
-        }
-    }
-    Ok(output.unwrap_or_else(default_output))
+    crate::output_arg::parse_output_arg(
+        args,
+        "backend-matrix",
+        "Probes linked dispatch backends and writes CUDA-first/WGPU-fallback evidence JSON.",
+        default_output,
+    )
 }
 
 fn default_output() -> PathBuf {

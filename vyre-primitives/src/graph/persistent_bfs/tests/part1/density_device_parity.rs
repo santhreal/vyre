@@ -91,7 +91,13 @@ fn run_device_density(
         max_iters,
     );
     let words = bitset_words(node_count) as usize;
-    let inputs = build_inputs(&program, edge_offsets, edge_targets, edge_kind_mask, frontier_in);
+    let inputs = build_inputs(
+        &program,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        frontier_in,
+    );
 
     let outputs: Vec<Vec<u8>> = if contains_grid_sync(&program) {
         let borrowed: Vec<&[u8]> = inputs.iter().map(Vec::as_slice).collect();
@@ -101,7 +107,9 @@ fn run_device_density(
             &borrowed,
             &DispatchConfig::default(),
         )
-        .expect("Fix: density persistent_bfs grid-sync split dispatch must succeed on a valid graph.")
+        .expect(
+            "Fix: density persistent_bfs grid-sync split dispatch must succeed on a valid graph.",
+        )
     } else {
         reference_eval(
             &program,
@@ -210,12 +218,14 @@ fn single_workgroup_density_matches_oracle_growing_then_flat_after_convergence()
 
     // Below the diameter: still growing at the budget boundary (both steps
     // unrolled), density = [2, 3].
-    let active = assert_device_density_matches_oracle(4, &offsets, &targets, &masks, &seed, 0xFFFF_FFFF, 2);
+    let active =
+        assert_device_density_matches_oracle(4, &offsets, &targets, &masks, &seed, 0xFFFF_FFFF, 2);
     assert_eq!(active, vec![2, 3]);
 
     // Above the diameter: growth then the flat converged tail, exercising both the
     // unrolled steps (0..4) and the trailing bounded loop (4..8).
-    let active = assert_device_density_matches_oracle(4, &offsets, &targets, &masks, &seed, 0xFFFF_FFFF, 8);
+    let active =
+        assert_device_density_matches_oracle(4, &offsets, &targets, &masks, &seed, 0xFFFF_FFFF, 8);
     assert_eq!(active, vec![2, 3, 4, 4, 4, 4, 4, 4]);
 }
 
@@ -240,16 +250,37 @@ fn grid_sync_density_matches_oracle_across_the_budget_boundary() {
     let (node_count, offsets, targets, masks, seed) = grid_sync_two_level(256);
     assert!(node_count > 256, "must exercise the grid-sync density path");
 
-    let active =
-        assert_device_density_matches_oracle(node_count, &offsets, &targets, &masks, &seed, 0xFFFF_FFFF, 1);
+    let active = assert_device_density_matches_oracle(
+        node_count,
+        &offsets,
+        &targets,
+        &masks,
+        &seed,
+        0xFFFF_FFFF,
+        1,
+    );
     assert_eq!(active, vec![257]);
 
-    let active =
-        assert_device_density_matches_oracle(node_count, &offsets, &targets, &masks, &seed, 0xFFFF_FFFF, 2);
+    let active = assert_device_density_matches_oracle(
+        node_count,
+        &offsets,
+        &targets,
+        &masks,
+        &seed,
+        0xFFFF_FFFF,
+        2,
+    );
     assert_eq!(active, vec![257, 258]);
 
-    let active =
-        assert_device_density_matches_oracle(node_count, &offsets, &targets, &masks, &seed, 0xFFFF_FFFF, 3);
+    let active = assert_device_density_matches_oracle(
+        node_count,
+        &offsets,
+        &targets,
+        &masks,
+        &seed,
+        0xFFFF_FFFF,
+        3,
+    );
     assert_eq!(active, vec![257, 258, 258]);
 }
 
@@ -279,7 +310,13 @@ fn run_device_batch_density(
         allow_mask,
         max_iters,
     );
-    let inputs = build_inputs(&program, edge_offsets, edge_targets, edge_kind_mask, frontier_in);
+    let inputs = build_inputs(
+        &program,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        frontier_in,
+    );
     let grid = persistent_bfs_batch_dispatch_grid(node_count, query_count);
 
     let outputs: Vec<Vec<u8>> = if contains_grid_sync(&program) {
@@ -298,7 +335,9 @@ fn run_device_batch_density(
                 .collect::<Vec<_>>(),
             grid,
         )
-        .expect("Fix: density persistent_bfs_batch reference dispatch must succeed on a valid graph.")
+        .expect(
+            "Fix: density persistent_bfs_batch reference dispatch must succeed on a valid graph.",
+        )
         .into_iter()
         .map(|value| value.to_bytes())
         .collect()
@@ -325,7 +364,11 @@ fn assert_batch_device_density_matches_oracle(
     let query_count = seeds.len() as u32;
     let mut frontier_in = Vec::with_capacity(words * seeds.len());
     for seed in seeds {
-        assert_eq!(seed.len(), words, "each batch seed must be one frontier bitset");
+        assert_eq!(
+            seed.len(),
+            words,
+            "each batch seed must be one frontier bitset"
+        );
         frontier_in.extend_from_slice(seed);
     }
     let device_density = run_device_batch_density(
@@ -371,8 +414,15 @@ fn batch_single_workgroup_density_matches_oracle_across_queries() {
     // sits flat at 4. If grid.y collapsed to 1, queries 1 and 2 would read zeros.
     let (offsets, targets, masks, _seed) = reverse_chain(4);
     let seeds = vec![vec![0b1000u32], vec![0b0010u32], vec![0b1111u32]];
-    let oracle =
-        assert_batch_device_density_matches_oracle(4, &offsets, &targets, &masks, &seeds, 0xFFFF_FFFF, 2);
+    let oracle = assert_batch_device_density_matches_oracle(
+        4,
+        &offsets,
+        &targets,
+        &masks,
+        &seeds,
+        0xFFFF_FFFF,
+        2,
+    );
     assert_eq!(oracle, vec![2, 3, 2, 2, 4, 4]);
 }
 
@@ -382,7 +432,10 @@ fn batch_grid_sync_density_matches_oracle_across_queries() {
     // Query 0 seeded at the root grows 257 then 258; query 1 seeded at the leaf is
     // an immediate fixpoint sitting flat at 1.
     let (node_count, offsets, targets, masks, root_seed) = grid_sync_two_level(256);
-    assert!(node_count > 256, "must exercise the grid-sync batch density path");
+    assert!(
+        node_count > 256,
+        "must exercise the grid-sync batch density path"
+    );
     let words = bitset_words(node_count) as usize;
     let leaf = node_count - 1;
     let mut leaf_seed = vec![0u32; words];

@@ -3,8 +3,7 @@
 const LEDGER: &str = include_str!("../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
 const SURFACES: &str =
     include_str!("../../../docs/optimization/OPERATOR_DEPLOYMENT_SURFACE_MATRIX.toml");
-const K8S: &str =
-    include_str!("../../../docs/optimization/KUBERNETES_HELM_DEPLOYMENT_POLICY.toml");
+const K8S: &str = include_str!("../../../docs/optimization/KUBERNETES_HELM_DEPLOYMENT_POLICY.toml");
 const SYSTEMD: &str =
     include_str!("../../../docs/optimization/SYSTEMD_SERVICE_HARDENING_POLICY.toml");
 const CONFIG: &str =
@@ -26,12 +25,16 @@ fn operator_deployment_sources_are_registered() {
         "SYSTEMD_EXEC",
         "SYSTEMD_RESOURCE_CONTROL",
     ] {
-        assert!(LEDGER.contains(key), "research source ledger must include {key}");
+        assert!(
+            LEDGER.contains(key),
+            "research source ledger must include {key}"
+        );
     }
 }
 
 #[test]
-fn operator_deployment_surface_matrix_keeps_runtime_targets_artifact_sources_config_identity_resources_security_and_telemetry_distinct() {
+fn operator_deployment_surface_matrix_keeps_runtime_targets_artifact_sources_config_identity_resources_security_and_telemetry_distinct(
+) {
     for required in [
         "deployment_id",
         "deployment_surface",
@@ -55,7 +58,8 @@ fn operator_deployment_surface_matrix_keeps_runtime_targets_artifact_sources_con
 }
 
 #[test]
-fn kubernetes_helm_policy_records_chart_image_pod_security_context_config_secret_resource_and_probe_controls() {
+fn kubernetes_helm_policy_records_chart_image_pod_security_context_config_secret_resource_and_probe_controls(
+) {
     for required in [
         "policy_id",
         "chart_policy",
@@ -77,7 +81,8 @@ fn kubernetes_helm_policy_records_chart_image_pod_security_context_config_secret
 }
 
 #[test]
-fn systemd_service_policy_records_service_exec_identity_filesystem_capability_network_resource_and_secret_hardening() {
+fn systemd_service_policy_records_service_exec_identity_filesystem_capability_network_resource_and_secret_hardening(
+) {
     for required in [
         "unit_id",
         "service_policy",
@@ -99,7 +104,8 @@ fn systemd_service_policy_records_service_exec_identity_filesystem_capability_ne
 }
 
 #[test]
-fn operator_runtime_config_policy_records_allowed_config_secret_resource_telemetry_gpu_validation_and_publication_boundaries() {
+fn operator_runtime_config_policy_records_allowed_config_secret_resource_telemetry_gpu_validation_and_publication_boundaries(
+) {
     for required in [
         "config_id",
         "surface",
@@ -121,7 +127,8 @@ fn operator_runtime_config_policy_records_allowed_config_secret_resource_telemet
 }
 
 #[test]
-fn operator_deployment_coverage_reuses_oci_resource_secret_network_telemetry_and_publication_authorities() {
+fn operator_deployment_coverage_reuses_oci_resource_secret_network_telemetry_and_publication_authorities(
+) {
     for required in [
         "VX-1221..VX-1240",
         "operator_deployment_surface_matrix",

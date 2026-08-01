@@ -93,11 +93,16 @@ mod tests {
         )
         .expect("Fix: anchor-DFA plan should build for literal anchor");
 
-        let evidence =
-            SpirvAnchorDfaOffloadEvidence::from_anchor_dfa_plan(&plan, 12, 12, true, "");
+        let evidence = SpirvAnchorDfaOffloadEvidence::from_anchor_dfa_plan(&plan, 12, 12, true, "");
 
-        assert_eq!(evidence.schema_version, SPIRV_ANCHOR_DFA_OFFLOAD_SCHEMA_VERSION);
-        assert_eq!(evidence.anchor_plan_schema_version, ANCHOR_DFA_PLAN_SCHEMA_VERSION);
+        assert_eq!(
+            evidence.schema_version,
+            SPIRV_ANCHOR_DFA_OFFLOAD_SCHEMA_VERSION
+        );
+        assert_eq!(
+            evidence.anchor_plan_schema_version,
+            ANCHOR_DFA_PLAN_SCHEMA_VERSION
+        );
         assert_eq!(evidence.anchor_count, 1);
         assert_eq!(evidence.dfa_state_budget, 128);
         assert_eq!(evidence.dfa_state_count, plan.dfa_state_count);

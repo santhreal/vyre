@@ -26,6 +26,100 @@ pub const Q4_K_BLOCK_SIZE: u32 = 32;
 /** Q4_K blocks per super-block. */
 pub const Q4_K_BLOCKS_PER_SUPER: u32 = 8;
 
+fn k_quant_unpack(
+    spec: KQuantLinearSpec,
+    packed: &str,
+    scales: &str,
+    mins: &str,
+    output: &str,
+    n: u32,
+) -> Result<Program, String> {
+    if n == 0 {
+        return Err(format!("Fix: {} n=0 is invalid", spec.unpack_op_id));
+    }
+    let n_blocks = n.div_ceil(spec.block_size);
+    let packed_count = n_blocks
+        .checked_mul(spec.words_per_block)
+        .ok_or_else(|| format!("Fix: {} packed word count overflows u32", spec.unpack_op_id))?;
+    let value_mask = (1_u32 << spec.bits_per_value) - 1;
+    let row = Expr::var("i");
+    let body = vec![
+        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
+        Node::if_then(
+            Expr::lt(row.clone(), Expr::u32(n)),
+            vec![
+                Node::let_bind(
+                    "block_idx",
+                    Expr::div(row.clone(), Expr::u32(spec.block_size)),
+                ),
+                Node::let_bind(
+                    "within_block",
+                    Expr::rem(row.clone(), Expr::u32(spec.block_size)),
+                ),
+                Node::let_bind(
+                    "byte_idx",
+                    Expr::div(Expr::var("within_block"), Expr::u32(spec.values_per_byte)),
+                ),
+                Node::let_bind(
+                    "value_shift",
+                    Expr::mul(
+                        Expr::rem(Expr::var("within_block"), Expr::u32(spec.values_per_byte)),
+                        Expr::u32(spec.bits_per_value),
+                    ),
+                ),
+                Node::let_bind(
+                    "word_idx",
+                    Expr::add(
+                        Expr::mul(Expr::var("block_idx"), Expr::u32(spec.words_per_block)),
+                        Expr::div(Expr::var("byte_idx"), Expr::u32(4)),
+                    ),
+                ),
+                Node::let_bind(
+                    "word_shift",
+                    Expr::mul(Expr::rem(Expr::var("byte_idx"), Expr::u32(4)), Expr::u32(8)),
+                ),
+                Node::let_bind("packed_word", Expr::load(packed, Expr::var("word_idx"))),
+                Node::let_bind(
+                    "quantized",
+                    Expr::bitand(
+                        Expr::shr(
+                            Expr::var("packed_word"),
+                            Expr::add(Expr::var("word_shift"), Expr::var("value_shift")),
+                        ),
+                        Expr::u32(value_mask),
+                    ),
+                ),
+                Node::let_bind("scale", Expr::load(scales, Expr::var("block_idx"))),
+                Node::let_bind("min", Expr::load(mins, Expr::var("block_idx"))),
+                Node::store(
+                    output,
+                    row,
+                    Expr::add(
+                        Expr::mul(
+                            Expr::cast(DataType::F32, Expr::var("quantized")),
+                            Expr::var("scale"),
+                        ),
+                        Expr::var("min"),
+                    ),
+                ),
+            ],
+        ),
+    ];
+    Ok(Program::wrapped(
+        vec![
+            BufferDecl::storage(packed, 0, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(packed_count),
+            BufferDecl::storage(scales, 1, BufferAccess::ReadOnly, DataType::F32)
+                .with_count(n_blocks),
+            BufferDecl::storage(mins, 2, BufferAccess::ReadOnly, DataType::F32)
+                .with_count(n_blocks),
+            BufferDecl::output(output, 3, DataType::F32).with_count(n),
+        ],
+        [256, 1, 1],
+        vec![wrap_anonymous(spec.unpack_op_id, body)],
+    ))
+}
+
 /// Dequantize Q4_K weights.
 ///
 /// Buffer layout (per super-block):
@@ -48,104 +142,7 @@ pub fn q4_k_unpack(
     output: &str,
     n: u32,
 ) -> Result<Program, String> {
-    if n == 0 {
-        return Err("Fix: q4_k_unpack n=0 is invalid".to_string());
-    }
-    let n_blocks = n.div_ceil(Q4_K_BLOCK_SIZE);
-
-    let i = Expr::var("i");
-    let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::u32(n)),
-            vec![
-                // block_idx = i / 32
-                Node::let_bind(
-                    "block_idx",
-                    Expr::div(i.clone(), Expr::u32(Q4_K_BLOCK_SIZE)),
-                ),
-                // within_block = i % 32
-                Node::let_bind(
-                    "within_block",
-                    Expr::rem(i.clone(), Expr::u32(Q4_K_BLOCK_SIZE)),
-                ),
-                // nibble_idx = within_block (each nibble is one weight)
-                // byte_idx = within_block / 2
-                // shift = (within_block % 2) * 4
-                Node::let_bind(
-                    "byte_idx",
-                    Expr::div(Expr::var("within_block"), Expr::u32(2)),
-                ),
-                Node::let_bind(
-                    "shift",
-                    Expr::mul(
-                        Expr::rem(Expr::var("within_block"), Expr::u32(2)),
-                        Expr::u32(4),
-                    ),
-                ),
-                // packed_word = packed[block_idx * 16 + byte_idx / 4]
-                // Actually: each block has 32 nibbles = 16 bytes = 4 u32 words
-                Node::let_bind(
-                    "word_idx",
-                    Expr::add(
-                        Expr::mul(Expr::var("block_idx"), Expr::u32(4)),
-                        Expr::div(Expr::var("byte_idx"), Expr::u32(4)),
-                    ),
-                ),
-                Node::let_bind(
-                    "word_shift",
-                    Expr::mul(Expr::rem(Expr::var("byte_idx"), Expr::u32(4)), Expr::u32(8)),
-                ),
-                Node::let_bind("packed_word", Expr::load(packed, Expr::var("word_idx"))),
-                // Extract the byte containing our nibble
-                Node::let_bind(
-                    "byte_val",
-                    Expr::bitand(
-                        Expr::shr(Expr::var("packed_word"), Expr::var("word_shift")),
-                        Expr::u32(0xFF),
-                    ),
-                ),
-                // Extract the nibble
-                Node::let_bind(
-                    "nibble",
-                    Expr::bitand(
-                        Expr::shr(Expr::var("byte_val"), Expr::var("shift")),
-                        Expr::u32(0xF),
-                    ),
-                ),
-                // dequant = (nibble * scale + min) where scale/min are per-block
-                Node::let_bind("scale", Expr::load(scales, Expr::var("block_idx"))),
-                Node::let_bind("min", Expr::load(mins, Expr::var("block_idx"))),
-                Node::Store {
-                    buffer: output.into(),
-                    index: i,
-                    value: Expr::add(
-                        Expr::mul(
-                            Expr::cast(DataType::F32, Expr::var("nibble")),
-                            Expr::var("scale"),
-                        ),
-                        Expr::var("min"),
-                    ),
-                },
-            ],
-        ),
-    ];
-
-    let packed_count = n_blocks * 4; // 4 u32 words per block
-
-    Ok(Program::wrapped(
-        vec![
-            BufferDecl::storage(packed, 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(packed_count),
-            BufferDecl::storage(scales, 1, BufferAccess::ReadOnly, DataType::F32)
-                .with_count(n_blocks),
-            BufferDecl::storage(mins, 2, BufferAccess::ReadOnly, DataType::F32)
-                .with_count(n_blocks),
-            BufferDecl::output(output, 3, DataType::F32).with_count(n),
-        ],
-        [256, 1, 1],
-        vec![wrap_anonymous("vyre-libs::quant::q4_k_unpack", body)],
-    ))
+    k_quant_unpack(Q4_K_LINEAR_SPEC, packed, scales, mins, output, n)
 }
 
 // ---------------------------------------------------------------------------
@@ -174,97 +171,164 @@ pub fn q2_k_unpack(
     output: &str,
     n: u32,
 ) -> Result<Program, String> {
-    if n == 0 {
-        return Err("Fix: q2_k_unpack n=0 is invalid".to_string());
-    }
-    let n_blocks = n.div_ceil(Q2_K_BLOCK_SIZE);
-
-    let i = Expr::var("i");
-    let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::u32(n)),
-            vec![
-                // block_idx = i / 16
-                Node::let_bind(
-                    "block_idx",
-                    Expr::div(i.clone(), Expr::u32(Q2_K_BLOCK_SIZE)),
-                ),
-                // within_block = i % 16
-                Node::let_bind(
-                    "within_block",
-                    Expr::rem(i.clone(), Expr::u32(Q2_K_BLOCK_SIZE)),
-                ),
-                // byte_idx = within_block / 4
-                // shift = (within_block % 4) * 2
-                Node::let_bind(
-                    "byte_idx",
-                    Expr::div(Expr::var("within_block"), Expr::u32(4)),
-                ),
-                Node::let_bind(
-                    "shift",
-                    Expr::mul(
-                        Expr::rem(Expr::var("within_block"), Expr::u32(4)),
-                        Expr::u32(2),
-                    ),
-                ),
-                // Each block has 16 weights = 4 bytes = 1 u32 word
-                Node::let_bind("word", Expr::load(packed, Expr::var("block_idx"))),
-                // Extract byte, then 2-bit value
-                Node::let_bind(
-                    "byte_val",
-                    Expr::bitand(
-                        Expr::shr(
-                            Expr::var("word"),
-                            Expr::mul(Expr::var("byte_idx"), Expr::u32(8)),
-                        ),
-                        Expr::u32(0xFF),
-                    ),
-                ),
-                Node::let_bind(
-                    "q2",
-                    Expr::bitand(
-                        Expr::shr(Expr::var("byte_val"), Expr::var("shift")),
-                        Expr::u32(0x3),
-                    ),
-                ),
-                // dequant = q2 * scale + min
-                Node::let_bind("scale", Expr::load(scales, Expr::var("block_idx"))),
-                Node::let_bind("min", Expr::load(mins, Expr::var("block_idx"))),
-                Node::Store {
-                    buffer: output.into(),
-                    index: i,
-                    value: Expr::add(
-                        Expr::mul(
-                            Expr::cast(DataType::F32, Expr::var("q2")),
-                            Expr::var("scale"),
-                        ),
-                        Expr::var("min"),
-                    ),
-                },
-            ],
-        ),
-    ];
-
-    Ok(Program::wrapped(
-        vec![
-            BufferDecl::storage(packed, 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(n_blocks),
-            BufferDecl::storage(scales, 1, BufferAccess::ReadOnly, DataType::F32)
-                .with_count(n_blocks),
-            BufferDecl::storage(mins, 2, BufferAccess::ReadOnly, DataType::F32)
-                .with_count(n_blocks),
-            BufferDecl::output(output, 3, DataType::F32).with_count(n),
-        ],
-        [256, 1, 1],
-        vec![wrap_anonymous("vyre-libs::quant::q2_k_unpack", body)],
-    ))
+    k_quant_unpack(Q2_K_LINEAR_SPEC, packed, scales, mins, output, n)
 }
 
 // ---------------------------------------------------------------------------
 // Fused dequant + matmul for Q4_K and Q2_K
 // These avoid materializing the full dequantized buffer.
 // ---------------------------------------------------------------------------
+
+#[derive(Clone, Copy)]
+struct KQuantLinearSpec {
+    op_id: &'static str,
+    unpack_op_id: &'static str,
+    block_size: u32,
+    values_per_byte: u32,
+    bits_per_value: u32,
+    words_per_block: u32,
+}
+
+const Q4_K_LINEAR_SPEC: KQuantLinearSpec = KQuantLinearSpec {
+    unpack_op_id: "vyre-libs::quant::q4_k_unpack",
+    op_id: "vyre-libs::quant::q4_k_linear",
+    block_size: Q4_K_BLOCK_SIZE,
+    values_per_byte: 2,
+    bits_per_value: 4,
+    words_per_block: 4,
+};
+const Q2_K_LINEAR_SPEC: KQuantLinearSpec = KQuantLinearSpec {
+    unpack_op_id: "vyre-libs::quant::q2_k_unpack",
+    op_id: "vyre-libs::quant::q2_k_linear",
+    block_size: Q2_K_BLOCK_SIZE,
+    values_per_byte: 4,
+    bits_per_value: 2,
+    words_per_block: 1,
+};
+
+#[allow(clippy::too_many_arguments)]
+fn k_quant_linear(
+    spec: KQuantLinearSpec,
+    x: &str,
+    w_packed: &str,
+    w_scales: &str,
+    w_mins: &str,
+    b: &str,
+    out: &str,
+    in_dim: u32,
+    out_dim: u32,
+) -> Result<Program, String> {
+    if in_dim == 0 || out_dim == 0 {
+        return Err(format!("Fix: {} all dims must be > 0", spec.op_id));
+    }
+    let weight_count = in_dim
+        .checked_mul(out_dim)
+        .ok_or_else(|| format!("Fix: {} dimensions overflow u32", spec.op_id))?;
+    let block_count = weight_count.div_ceil(spec.block_size);
+    let packed_word_count = block_count
+        .checked_mul(spec.words_per_block)
+        .ok_or_else(|| format!("Fix: {} packed word count overflows u32", spec.op_id))?;
+    let i = Expr::var("i");
+    let body = vec![
+        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
+        Node::if_then(
+            Expr::lt(i.clone(), Expr::u32(out_dim)),
+            vec![
+                Node::let_bind("acc", Expr::load(b, i.clone())),
+                Node::loop_for(
+                    "k",
+                    Expr::u32(0),
+                    Expr::u32(in_dim),
+                    vec![
+                        Node::let_bind(
+                            "linear_idx",
+                            Expr::add(Expr::mul(Expr::var("k"), Expr::u32(out_dim)), i.clone()),
+                        ),
+                        Node::let_bind(
+                            "block_idx",
+                            Expr::div(Expr::var("linear_idx"), Expr::u32(spec.block_size)),
+                        ),
+                        Node::let_bind(
+                            "within_block",
+                            Expr::rem(Expr::var("linear_idx"), Expr::u32(spec.block_size)),
+                        ),
+                        Node::let_bind(
+                            "byte_idx",
+                            Expr::div(Expr::var("within_block"), Expr::u32(spec.values_per_byte)),
+                        ),
+                        Node::let_bind(
+                            "value_shift",
+                            Expr::mul(
+                                Expr::rem(
+                                    Expr::var("within_block"),
+                                    Expr::u32(spec.values_per_byte),
+                                ),
+                                Expr::u32(spec.bits_per_value),
+                            ),
+                        ),
+                        Node::let_bind(
+                            "word_idx",
+                            Expr::add(
+                                Expr::mul(Expr::var("block_idx"), Expr::u32(spec.words_per_block)),
+                                Expr::div(Expr::var("byte_idx"), Expr::u32(4)),
+                            ),
+                        ),
+                        Node::let_bind(
+                            "word_shift",
+                            Expr::mul(Expr::rem(Expr::var("byte_idx"), Expr::u32(4)), Expr::u32(8)),
+                        ),
+                        Node::let_bind("packed_word", Expr::load(w_packed, Expr::var("word_idx"))),
+                        Node::let_bind(
+                            "quantized",
+                            Expr::bitand(
+                                Expr::shr(
+                                    Expr::var("packed_word"),
+                                    Expr::add(Expr::var("word_shift"), Expr::var("value_shift")),
+                                ),
+                                Expr::u32((1_u32 << spec.bits_per_value) - 1),
+                            ),
+                        ),
+                        Node::let_bind("scale", Expr::load(w_scales, Expr::var("block_idx"))),
+                        Node::let_bind("min", Expr::load(w_mins, Expr::var("block_idx"))),
+                        Node::let_bind(
+                            "weight",
+                            Expr::add(
+                                Expr::mul(
+                                    Expr::cast(DataType::F32, Expr::var("quantized")),
+                                    Expr::var("scale"),
+                                ),
+                                Expr::var("min"),
+                            ),
+                        ),
+                        Node::assign(
+                            "acc",
+                            Expr::add(
+                                Expr::var("acc"),
+                                Expr::mul(Expr::load(x, Expr::var("k")), Expr::var("weight")),
+                            ),
+                        ),
+                    ],
+                ),
+                Node::store(out, i, Expr::var("acc")),
+            ],
+        ),
+    ];
+    Ok(Program::wrapped(
+        vec![
+            BufferDecl::storage(x, 0, BufferAccess::ReadOnly, DataType::F32).with_count(in_dim),
+            BufferDecl::storage(w_packed, 1, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(packed_word_count),
+            BufferDecl::storage(w_scales, 2, BufferAccess::ReadOnly, DataType::F32)
+                .with_count(block_count),
+            BufferDecl::storage(w_mins, 3, BufferAccess::ReadOnly, DataType::F32)
+                .with_count(block_count),
+            BufferDecl::storage(b, 4, BufferAccess::ReadOnly, DataType::F32).with_count(out_dim),
+            BufferDecl::output(out, 5, DataType::F32).with_count(out_dim),
+        ],
+        [64, 1, 1],
+        vec![wrap_anonymous(spec.op_id, body)],
+    ))
+}
 
 /// Fused Q4_K dequant + linear: `out = x @ dequant(w_q4k) + b`
 ///
@@ -281,126 +345,17 @@ pub fn q4_k_linear(
     in_dim: u32,
     out_dim: u32,
 ) -> Result<Program, String> {
-    if in_dim == 0 || out_dim == 0 {
-        return Err("Fix: q4_k_linear all dims must be > 0".to_string());
-    }
-    let n_blocks = in_dim.div_ceil(Q4_K_BLOCK_SIZE);
-
-    let i = Expr::var("i");
-    let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::u32(out_dim)),
-            vec![
-                Node::let_bind("acc", Expr::load(b, i.clone())),
-                Node::loop_for(
-                    "k",
-                    Expr::u32(0),
-                    Expr::u32(in_dim),
-                    vec![
-                        // linear_idx = k * out_dim + i
-                        Node::let_bind(
-                            "linear_idx",
-                            Expr::add(Expr::mul(Expr::var("k"), Expr::u32(out_dim)), i.clone()),
-                        ),
-                        // block_idx = linear_idx / 32
-                        Node::let_bind(
-                            "block_idx",
-                            Expr::div(Expr::var("linear_idx"), Expr::u32(Q4_K_BLOCK_SIZE)),
-                        ),
-                        // within_block = linear_idx % 32
-                        Node::let_bind(
-                            "within_block",
-                            Expr::rem(Expr::var("linear_idx"), Expr::u32(Q4_K_BLOCK_SIZE)),
-                        ),
-                        // byte_idx = within_block / 2
-                        Node::let_bind(
-                            "byte_idx",
-                            Expr::div(Expr::var("within_block"), Expr::u32(2)),
-                        ),
-                        // shift = (within_block % 2) * 4
-                        Node::let_bind(
-                            "shift",
-                            Expr::mul(
-                                Expr::rem(Expr::var("within_block"), Expr::u32(2)),
-                                Expr::u32(4),
-                            ),
-                        ),
-                        // word_idx = block_idx * 4 + byte_idx / 4
-                        Node::let_bind(
-                            "word_idx",
-                            Expr::add(
-                                Expr::mul(Expr::var("block_idx"), Expr::u32(4)),
-                                Expr::div(Expr::var("byte_idx"), Expr::u32(4)),
-                            ),
-                        ),
-                        Node::let_bind(
-                            "word_shift",
-                            Expr::mul(Expr::rem(Expr::var("byte_idx"), Expr::u32(4)), Expr::u32(8)),
-                        ),
-                        Node::let_bind("packed_word", Expr::load(w_packed, Expr::var("word_idx"))),
-                        Node::let_bind(
-                            "byte_val",
-                            Expr::bitand(
-                                Expr::shr(Expr::var("packed_word"), Expr::var("word_shift")),
-                                Expr::u32(0xFF),
-                            ),
-                        ),
-                        Node::let_bind(
-                            "nibble",
-                            Expr::bitand(
-                                Expr::shr(Expr::var("byte_val"), Expr::var("shift")),
-                                Expr::u32(0xF),
-                            ),
-                        ),
-                        // scale/min for this block
-                        Node::let_bind("scale", Expr::load(w_scales, Expr::var("block_idx"))),
-                        Node::let_bind("min", Expr::load(w_mins, Expr::var("block_idx"))),
-                        // weight = nibble * scale + min
-                        Node::let_bind(
-                            "weight",
-                            Expr::add(
-                                Expr::mul(
-                                    Expr::cast(DataType::F32, Expr::var("nibble")),
-                                    Expr::var("scale"),
-                                ),
-                                Expr::var("min"),
-                            ),
-                        ),
-                        // acc += x[k] * weight
-                        Node::assign(
-                            "acc",
-                            Expr::add(
-                                Expr::var("acc"),
-                                Expr::mul(Expr::load(x, Expr::var("k")), Expr::var("weight")),
-                            ),
-                        ),
-                    ],
-                ),
-                Node::Store {
-                    buffer: out.into(),
-                    index: i,
-                    value: Expr::var("acc"),
-                },
-            ],
-        ),
-    ];
-
-    Ok(Program::wrapped(
-        vec![
-            BufferDecl::storage(x, 0, BufferAccess::ReadOnly, DataType::F32).with_count(in_dim),
-            BufferDecl::storage(w_packed, 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(n_blocks * 4),
-            BufferDecl::storage(w_scales, 2, BufferAccess::ReadOnly, DataType::F32)
-                .with_count(n_blocks),
-            BufferDecl::storage(w_mins, 3, BufferAccess::ReadOnly, DataType::F32)
-                .with_count(n_blocks),
-            BufferDecl::storage(b, 4, BufferAccess::ReadOnly, DataType::F32).with_count(out_dim),
-            BufferDecl::output(out, 5, DataType::F32).with_count(out_dim),
-        ],
-        [64, 1, 1],
-        vec![wrap_anonymous("vyre-libs::quant::q4_k_linear", body)],
-    ))
+    k_quant_linear(
+        Q4_K_LINEAR_SPEC,
+        x,
+        w_packed,
+        w_scales,
+        w_mins,
+        b,
+        out,
+        in_dim,
+        out_dim,
+    )
 }
 
 /// Fused Q2_K dequant + linear: `out = x @ dequant(w_q2k) + b`
@@ -414,112 +369,17 @@ pub fn q2_k_linear(
     in_dim: u32,
     out_dim: u32,
 ) -> Result<Program, String> {
-    if in_dim == 0 || out_dim == 0 {
-        return Err("Fix: q2_k_linear all dims must be > 0".to_string());
-    }
-    let n_blocks = in_dim
-        .checked_mul(out_dim)
-        .ok_or("overflow")?
-        .div_ceil(Q2_K_BLOCK_SIZE);
-
-    let i = Expr::var("i");
-    let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::u32(out_dim)),
-            vec![
-                Node::let_bind("acc", Expr::load(b, i.clone())),
-                Node::loop_for(
-                    "k",
-                    Expr::u32(0),
-                    Expr::u32(in_dim),
-                    vec![
-                        Node::let_bind(
-                            "linear_idx",
-                            Expr::add(Expr::mul(Expr::var("k"), Expr::u32(out_dim)), i.clone()),
-                        ),
-                        Node::let_bind(
-                            "block_idx",
-                            Expr::div(Expr::var("linear_idx"), Expr::u32(Q2_K_BLOCK_SIZE)),
-                        ),
-                        Node::let_bind(
-                            "within_block",
-                            Expr::rem(Expr::var("linear_idx"), Expr::u32(Q2_K_BLOCK_SIZE)),
-                        ),
-                        Node::let_bind(
-                            "byte_idx",
-                            Expr::div(Expr::var("within_block"), Expr::u32(4)),
-                        ),
-                        Node::let_bind(
-                            "shift",
-                            Expr::mul(
-                                Expr::rem(Expr::var("within_block"), Expr::u32(4)),
-                                Expr::u32(2),
-                            ),
-                        ),
-                        Node::let_bind("word", Expr::load(w_packed, Expr::var("block_idx"))),
-                        Node::let_bind(
-                            "byte_val",
-                            Expr::bitand(
-                                Expr::shr(
-                                    Expr::var("word"),
-                                    Expr::mul(Expr::var("byte_idx"), Expr::u32(8)),
-                                ),
-                                Expr::u32(0xFF),
-                            ),
-                        ),
-                        Node::let_bind(
-                            "q2",
-                            Expr::bitand(
-                                Expr::shr(Expr::var("byte_val"), Expr::var("shift")),
-                                Expr::u32(0x3),
-                            ),
-                        ),
-                        Node::let_bind("scale", Expr::load(w_scales, Expr::var("block_idx"))),
-                        Node::let_bind("min", Expr::load(w_mins, Expr::var("block_idx"))),
-                        Node::let_bind(
-                            "weight",
-                            Expr::add(
-                                Expr::mul(
-                                    Expr::cast(DataType::F32, Expr::var("q2")),
-                                    Expr::var("scale"),
-                                ),
-                                Expr::var("min"),
-                            ),
-                        ),
-                        Node::assign(
-                            "acc",
-                            Expr::add(
-                                Expr::var("acc"),
-                                Expr::mul(Expr::load(x, Expr::var("k")), Expr::var("weight")),
-                            ),
-                        ),
-                    ],
-                ),
-                Node::Store {
-                    buffer: out.into(),
-                    index: i,
-                    value: Expr::var("acc"),
-                },
-            ],
-        ),
-    ];
-
-    Ok(Program::wrapped(
-        vec![
-            BufferDecl::storage(x, 0, BufferAccess::ReadOnly, DataType::F32).with_count(in_dim),
-            BufferDecl::storage(w_packed, 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(n_blocks),
-            BufferDecl::storage(w_scales, 2, BufferAccess::ReadOnly, DataType::F32)
-                .with_count(n_blocks),
-            BufferDecl::storage(w_mins, 3, BufferAccess::ReadOnly, DataType::F32)
-                .with_count(n_blocks),
-            BufferDecl::storage(b, 4, BufferAccess::ReadOnly, DataType::F32).with_count(out_dim),
-            BufferDecl::output(out, 5, DataType::F32).with_count(out_dim),
-        ],
-        [64, 1, 1],
-        vec![wrap_anonymous("vyre-libs::quant::q2_k_linear", body)],
-    ))
+    k_quant_linear(
+        Q2_K_LINEAR_SPEC,
+        x,
+        w_packed,
+        w_scales,
+        w_mins,
+        b,
+        out,
+        in_dim,
+        out_dim,
+    )
 }
 
 #[cfg(test)]
@@ -586,25 +446,17 @@ mod tests {
         assert_eq!(out[3], 3.0);
     }
 
+    /// Proves Q4 linear sizes packed storage across every output column, not
+    /// only one input row, so accesses in later quantization blocks stay valid.
     #[test]
-    fn q4_k_linear_simple() {
-        // in_dim=2, out_dim=2
-        // weights = [[0,1],[2,3]] in row-major
-        // x = [1.0, 0.0], b = [0.0, 0.0]
-        // out[0] = 1*0 + 0*2 = 0
-        // out[1] = 1*1 + 0*3 = 1
-        let x = vec![1.0f32, 0.0];
-        let b = vec![0.0f32, 0.0];
-        // linear_idx 0: nibble=0, linear_idx 1: nibble=1
-        // linear_idx 2: nibble=2, linear_idx 3: nibble=3
-        // All in one block (4 < 32)
-        // byte 0 = 0x10 (nibble0=0, nibble1=1)
-        // byte 1 = 0x32 (nibble2=2, nibble3=3)
-        // Little-endian u32: bytes [0x10, 0x32, 0x00, 0x00] = 0x0000_3210
-        let packed = vec![0x0000_3210u32, 0, 0, 0];
-        let scales = vec![1.0f32];
-        let mins = vec![0.0f32];
-        let program = q4_k_linear("x", "packed", "scales", "mins", "b", "out", 2, 2).unwrap();
+    fn q4_k_linear_reads_blocks_created_by_output_dimension() {
+        let mut x = vec![0.0f32; 32];
+        x[31] = 1.0;
+        let b = vec![0.5f32, 1.5];
+        let packed = vec![0x1111_1111u32; 8];
+        let scales = vec![1.0f32, 2.0];
+        let mins = vec![0.0f32, 0.0];
+        let program = q4_k_linear("x", "packed", "scales", "mins", "b", "out", 32, 2).unwrap();
         let outputs = vyre_reference::reference_eval(
             &program,
             &[
@@ -616,9 +468,8 @@ mod tests {
                 Value::from(vec![0u8; 8]),
             ],
         )
-        .expect("Fix: q4_k_linear must execute");
+        .expect("Fix: q4_k_linear must read the second packed quantization block");
         let out = decode_f32(&outputs[0].to_bytes());
-        assert_eq!(out[0], 0.0);
-        assert_eq!(out[1], 1.0);
+        assert_eq!(out, vec![2.5, 3.5]);
     }
 }

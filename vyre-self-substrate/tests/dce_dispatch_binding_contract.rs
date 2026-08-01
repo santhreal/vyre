@@ -57,6 +57,7 @@ fn declared_input_slots(program: &Program) -> usize {
 #[derive(Default)]
 struct RecordingDispatcher {
     calls: RefCell<Vec<(usize, usize)>>,
+    grids: RefCell<Vec<Option<[u32; 3]>>>,
 }
 
 impl OptimizerDispatcher for RecordingDispatcher {
@@ -64,11 +65,12 @@ impl OptimizerDispatcher for RecordingDispatcher {
         &self,
         program: &Program,
         inputs: &[Vec<u8>],
-        _grid_override: Option<[u32; 3]>,
+        grid_override: Option<[u32; 3]>,
     ) -> Result<Vec<Vec<u8>>, DispatchError> {
         self.calls
             .borrow_mut()
             .push((inputs.len(), declared_input_slots(program)));
+        self.grids.borrow_mut().push(grid_override);
 
         // Echo the caller's own frontier_out slot back as the liveness set, then
         // report changed = 0 and converged = 1 so the pass does not refuse.
@@ -118,8 +120,11 @@ fn gpu_dce_fills_every_input_slot_its_analysis_program_declares() {
 #[test]
 fn the_dce_analysis_program_declares_nine_input_slots() {
     let dispatcher = RecordingDispatcher::default();
-    gpu_dce(wrapped(vec![Node::let_bind("a", Expr::u32(7))]), &dispatcher)
-        .expect("Fix: gpu_dce must complete against a converged recording dispatcher");
+    gpu_dce(
+        wrapped(vec![Node::let_bind("a", Expr::u32(7))]),
+        &dispatcher,
+    )
+    .expect("Fix: gpu_dce must complete against a converged recording dispatcher");
 
     let calls = dispatcher.calls.borrow();
     let (supplied, declared) = calls
@@ -133,4 +138,50 @@ fn the_dce_analysis_program_declares_nine_input_slots() {
          update this pin and the slot filler together."
     );
     assert_eq!(supplied, 9);
+}
+
+/// `gpu_dce` MUST pin its liveness analysis to exactly one workgroup.
+///
+/// This is a correctness contract, not a tuning preference, and it is invisible on
+/// any single-workgroup-sized input, which is why it needs a test that inspects the
+/// launch geometry directly rather than an output.
+///
+/// The analysis kernel detects growth by testing whether THIS lane's `atomic_or`
+/// flipped the target bit. Exactly one lane in the grid wins any given flip, so
+/// across several workgroups a duplicate group can win a discovery, leaving the one
+/// group that covers the whole node range with `changed == 0`. That group records a
+/// fixpoint it never reached and stops relaxing while the newly discovered node's
+/// own edges are unexpanded, and `gpu_dce` then deletes live code against the
+/// truncated closure. `pipeline_resident` pins the same program for the same reason.
+///
+/// A regression here reads as `None`, which is the whole grid, or as any `[x, _, _]`
+/// with `x > 1`. Both are rejected.
+#[test]
+fn gpu_dce_pins_its_analysis_to_a_single_workgroup() {
+    let dispatcher = RecordingDispatcher::default();
+    gpu_dce(
+        wrapped(vec![
+            Node::let_bind("a", Expr::u32(7)),
+            Node::let_bind("b", Expr::u32(9)),
+        ]),
+        &dispatcher,
+    )
+    .expect("Fix: gpu_dce must complete against a converged recording dispatcher");
+
+    let grids = dispatcher.grids.borrow();
+    assert!(
+        !grids.is_empty(),
+        "Fix: gpu_dce must dispatch its liveness analysis at least once."
+    );
+    for (index, grid) in grids.iter().enumerate() {
+        assert_eq!(
+            *grid,
+            Some([1, 1, 1]),
+            "Fix: gpu_dce dispatch {index} launched with grid {grid:?} instead of a single \
+             workgroup. The analysis kernel's early exit attributes each discovery to the one \
+             lane whose atomic_or flipped the bit, so splitting it across workgroups lets a \
+             duplicate group steal a discovery and strand the essential group at changed = 0. \
+             Pin it with Some([1, 1, 1]) in dce_via_encoded.rs."
+        );
+    }
 }

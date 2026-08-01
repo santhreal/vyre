@@ -126,7 +126,10 @@ fn promotion_evidence_reports_fused_window_lowerer_contract() {
     assert_eq!(evidence.hot_opcode_count, 0);
     assert_eq!(evidence.hot_opcode_threshold, policy.hot_opcode_threshold);
     assert_eq!(evidence.execution_mode, MegakernelExecutionMode::Jit);
-    assert_eq!(evidence.promotion_route, MegakernelPromotionRoute::WindowJit);
+    assert_eq!(
+        evidence.promotion_route,
+        MegakernelPromotionRoute::WindowJit
+    );
     assert!(evidence.promote_hot_windows);
     assert!(!evidence.promote_hot_opcodes);
     assert!(evidence.fused_descriptor_window_required);

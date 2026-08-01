@@ -398,9 +398,9 @@ mod tests {
         };
         assert!(per_rule.is_drain_incomplete());
         assert!(
-            per_rule.to_string().starts_with(
-                "megakernel drain incomplete: only 0 of 4 work-items were claimed"
-            ),
+            per_rule
+                .to_string()
+                .starts_with("megakernel drain incomplete: only 0 of 4 work-items were claimed"),
             "msg was: {}",
             per_rule
         );
