@@ -891,23 +891,14 @@ pub(crate) fn run(args: &[String]) {
         integration_tests,
         blockers,
     };
-    let json = match serde_json::to_string_pretty(&matrix) {
-        Ok(json) => json,
-        Err(error) => {
-            eprintln!("Fix: failed to serialize Weir matrix: {error}");
-            std::process::exit(1);
-        }
-    };
+
     if let Some(parent) = output.parent() {
         if let Err(error) = fs::create_dir_all(parent) {
             eprintln!("Fix: failed to create `{}`: {error}", parent.display());
             std::process::exit(1);
         }
     }
-    if let Err(error) = fs::write(&output, format!("{json}\n")) {
-        eprintln!("Fix: failed to write `{}`: {error}", output.display());
-        std::process::exit(1);
-    }
+    crate::output_arg::write_json(&output, &matrix);
     write_sibling_artifacts(&output, &matrix);
     println!("weir-matrix: wrote {}", output.display());
     if !matrix.blockers.is_empty() {
@@ -1357,7 +1348,10 @@ fn collect_fuzz_directory_digest(
 ) -> WeirFuzzDirectoryDigest {
     if !root.is_dir() {
         if missing_is_blocker {
-            blockers.push(format!("{label} directory is missing at {}", root.display()));
+            blockers.push(format!(
+                "{label} directory is missing at {}",
+                root.display()
+            ));
         }
         return WeirFuzzDirectoryDigest {
             exists: false,
@@ -1372,7 +1366,10 @@ fn collect_fuzz_directory_digest(
     let entries = match fs::read_dir(root) {
         Ok(entries) => entries,
         Err(error) => {
-            blockers.push(format!("{label} directory {} could not be read: {error}", root.display()));
+            blockers.push(format!(
+                "{label} directory {} could not be read: {error}",
+                root.display()
+            ));
             return WeirFuzzDirectoryDigest {
                 exists: true,
                 file_count: 0,
@@ -1404,7 +1401,10 @@ fn collect_fuzz_directory_digest(
         let metadata = match entry.metadata() {
             Ok(metadata) => metadata,
             Err(error) => {
-                blockers.push(format!("{label} file {} metadata failed: {error}", path.display()));
+                blockers.push(format!(
+                    "{label} file {} metadata failed: {error}",
+                    path.display()
+                ));
                 continue;
             }
         };
@@ -1419,7 +1419,10 @@ fn collect_fuzz_directory_digest(
         let bytes = match fs::read(&path) {
             Ok(bytes) => bytes,
             Err(error) => {
-                blockers.push(format!("{label} file {} could not be read: {error}", path.display()));
+                blockers.push(format!(
+                    "{label} file {} could not be read: {error}",
+                    path.display()
+                ));
                 continue;
             }
         };
@@ -1493,8 +1496,9 @@ fn collect_corpus_manifest(
                     .collect();
                 seed_count = value.get("seed_count").and_then(serde_json::Value::as_u64);
                 rng_seed = value.get("rng_seed").and_then(serde_json::Value::as_u64);
-                if let Some(categories) =
-                    value.get("categories").and_then(serde_json::Value::as_object)
+                if let Some(categories) = value
+                    .get("categories")
+                    .and_then(serde_json::Value::as_object)
                 {
                     category_ids = categories.keys().cloned().collect();
                     category_ids.sort();
@@ -1622,8 +1626,8 @@ fn declared_release_artifacts(readme: &str) -> Vec<WeirDeclaredReleaseArtifact> 
             let (source_fingerprint, freshness_fingerprint) =
                 declared_release_artifact_fingerprints(path);
             WeirDeclaredReleaseArtifact {
-            path,
-            documented: readme.contains(path),
+                path,
+                documented: readme.contains(path),
                 expected_generator: WEIR_MATRIX_GENERATOR_COMMAND,
                 owner_lane: WEIR_MATRIX_OWNER_LANE,
                 generator_command: WEIR_MATRIX_GENERATOR_COMMAND,
@@ -1781,7 +1785,7 @@ fn write_weir_readme_artifact(parent: &Path) {
     };
     let lowered = text.to_ascii_lowercase();
     let required_tokens = vec![
-        "0.1.0",
+        crate::release_train::weir_version(),
         "dataflow",
         "vyre",
         "ssa",
@@ -1849,42 +1853,16 @@ fn write_weir_readme_artifact(parent: &Path) {
 }
 
 fn write_json(path: &Path, value: &impl Serialize) {
-    let json = match serde_json::to_string_pretty(value) {
-        Ok(json) => json,
-        Err(error) => {
-            eprintln!("Fix: failed to serialize `{}`: {error}", path.display());
-            std::process::exit(1);
-        }
-    };
-    if let Err(error) = fs::write(path, format!("{json}\n")) {
-        eprintln!("Fix: failed to write `{}`: {error}", path.display());
-        std::process::exit(1);
-    }
+    crate::output_arg::write_json(path, value);
 }
 
 fn parse_output(args: &[String]) -> Result<PathBuf, String> {
-    let mut output = None;
-    let mut index = 2;
-    while index < args.len() {
-        match args[index].as_str() {
-            "--output" => {
-                let Some(path) = args.get(index + 1) else {
-                    return Err("Fix: --output requires a path.".to_string());
-                };
-                output = Some(PathBuf::from(path));
-                index += 2;
-            }
-            "--help" | "-h" => {
-                println!(
-                    "USAGE:\n  cargo_full run --bin xtask -- weir-matrix [--output PATH]\n\n\
-                     Writes Weir analysis API and integration evidence."
-                );
-                std::process::exit(0);
-            }
-            other => return Err(format!("Fix: unknown weir-matrix option `{other}`.")),
-        }
-    }
-    Ok(output.unwrap_or_else(default_output))
+    crate::output_arg::parse_output_arg(
+        args,
+        "weir-matrix",
+        "Writes Weir analysis API and integration evidence.",
+        default_output,
+    )
 }
 
 fn default_output() -> PathBuf {

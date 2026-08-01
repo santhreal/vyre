@@ -3,7 +3,7 @@
   "tests": [
     {
       "id": "adversarial_oracles",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_adversarial_oracles.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_adversarial_oracles.rs",
       "exists": true,
       "source_bytes": 3398,
       "has_test_entrypoint": true,
@@ -12,7 +12,7 @@
     },
     {
       "id": "anchor_bit_codegen",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_anchor_bit_codegen.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_anchor_bit_codegen.rs",
       "exists": true,
       "source_bytes": 5049,
       "has_test_entrypoint": true,
@@ -21,7 +21,7 @@
     },
     {
       "id": "cross_arm_raw_atomic",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_cross_arm_raw_atomic.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_cross_arm_raw_atomic.rs",
       "exists": true,
       "source_bytes": 6556,
       "has_test_entrypoint": true,
@@ -30,7 +30,7 @@
     },
     {
       "id": "construction_def_use",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_def_use.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_def_use.rs",
       "exists": true,
       "source_bytes": 2739,
       "has_test_entrypoint": true,
@@ -39,7 +39,7 @@
     },
     {
       "id": "construction_dominators",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_dominators_construction.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_dominators_construction.rs",
       "exists": true,
       "source_bytes": 2706,
       "has_test_entrypoint": true,
@@ -48,7 +48,7 @@
     },
     {
       "id": "construction_ifds",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_ifds_construction.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_ifds_construction.rs",
       "exists": true,
       "source_bytes": 2145,
       "has_test_entrypoint": true,
@@ -57,7 +57,7 @@
     },
     {
       "id": "construction_live",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_live_construction.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_live_construction.rs",
       "exists": true,
       "source_bytes": 1955,
       "has_test_entrypoint": true,
@@ -66,7 +66,7 @@
     },
     {
       "id": "construction_may_alias",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_may_alias_construction.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_may_alias_construction.rs",
       "exists": true,
       "source_bytes": 2323,
       "has_test_entrypoint": true,
@@ -75,7 +75,7 @@
     },
     {
       "id": "construction_reaching",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_reaching_construction.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_reaching_construction.rs",
       "exists": true,
       "source_bytes": 3801,
       "has_test_entrypoint": true,
@@ -84,7 +84,7 @@
     },
     {
       "id": "construction_range_check",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_range_check_construction.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_range_check_construction.rs",
       "exists": true,
       "source_bytes": 1586,
       "has_test_entrypoint": true,
@@ -93,7 +93,7 @@
     },
     {
       "id": "cross_language",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_cross_language.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_cross_language.rs",
       "exists": true,
       "source_bytes": 2319,
       "has_test_entrypoint": true,
@@ -102,7 +102,7 @@
     },
     {
       "id": "cross_primitive_composition",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_cross_primitive_composition.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_cross_primitive_composition.rs",
       "exists": true,
       "source_bytes": 3011,
       "has_test_entrypoint": true,
@@ -111,7 +111,7 @@
     },
     {
       "id": "escape_callgraph_range",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_escape_callgraph_range.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_escape_callgraph_range.rs",
       "exists": true,
       "source_bytes": 2738,
       "has_test_entrypoint": true,
@@ -120,7 +120,7 @@
     },
     {
       "id": "live_at_escapes",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_live_at_escapes.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_live_at_escapes.rs",
       "exists": true,
       "source_bytes": 1830,
       "has_test_entrypoint": true,
@@ -129,7 +129,7 @@
     },
     {
       "id": "must_init_scc_query",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_must_init_scc_query.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_must_init_scc_query.rs",
       "exists": true,
       "source_bytes": 2061,
       "has_test_entrypoint": true,
@@ -138,7 +138,7 @@
     },
     {
       "id": "parity_exact_primitives",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_parity_exact_primitives.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_parity_exact_primitives.rs",
       "exists": true,
       "source_bytes": 6720,
       "has_test_entrypoint": true,
@@ -147,7 +147,7 @@
     },
     {
       "id": "parity_dominators",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_parity_dominators.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_parity_dominators.rs",
       "exists": true,
       "source_bytes": 3427,
       "has_test_entrypoint": true,
@@ -156,7 +156,7 @@
     },
     {
       "id": "parity_inventory_sweep",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_parity_inventory_sweep.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_parity_inventory_sweep.rs",
       "exists": true,
       "source_bytes": 11670,
       "has_test_entrypoint": true,
@@ -165,7 +165,7 @@
     },
     {
       "id": "parity_may_alias",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_parity_may_alias.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_parity_may_alias.rs",
       "exists": true,
       "source_bytes": 2847,
       "has_test_entrypoint": true,
@@ -174,7 +174,7 @@
     },
     {
       "id": "reachability_witness",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_reachability_witness.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_reachability_witness.rs",
       "exists": true,
       "source_bytes": 3353,
       "has_test_entrypoint": true,
@@ -183,7 +183,7 @@
     },
     {
       "id": "slice_reaching_def_control_dep",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_slice_reaching_def_control_dep.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_slice_reaching_def_control_dep.rs",
       "exists": true,
       "source_bytes": 3313,
       "has_test_entrypoint": true,
@@ -192,7 +192,7 @@
     },
     {
       "id": "soundness_tags",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_soundness_tags.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_soundness_tags.rs",
       "exists": true,
       "source_bytes": 3721,
       "has_test_entrypoint": true,
@@ -201,7 +201,7 @@
     },
     {
       "id": "ssa_dominators",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_ssa_dominators.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_ssa_dominators.rs",
       "exists": true,
       "source_bytes": 2599,
       "has_test_entrypoint": true,
@@ -210,7 +210,7 @@
     },
     {
       "id": "value_set_post_dominates",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_value_set_post_dominates.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_value_set_post_dominates.rs",
       "exists": true,
       "source_bytes": 1900,
       "has_test_entrypoint": true,
@@ -219,7 +219,7 @@
     },
     {
       "id": "property_points_to",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_points_to.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_property_points_to.rs",
       "exists": true,
       "source_bytes": 1954,
       "has_test_entrypoint": true,
@@ -228,7 +228,7 @@
     },
     {
       "id": "property_may_alias",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_may_alias.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_property_may_alias.rs",
       "exists": true,
       "source_bytes": 1661,
       "has_test_entrypoint": true,
@@ -237,7 +237,7 @@
     },
     {
       "id": "property_ifds",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_ifds.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_property_ifds.rs",
       "exists": true,
       "source_bytes": 1901,
       "has_test_entrypoint": true,
@@ -246,7 +246,7 @@
     },
     {
       "id": "property_control_dependence",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_control_dependence.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_property_control_dependence.rs",
       "exists": true,
       "source_bytes": 2220,
       "has_test_entrypoint": true,
@@ -255,7 +255,7 @@
     },
     {
       "id": "property_cross_language",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_cross_language.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_property_cross_language.rs",
       "exists": true,
       "source_bytes": 2829,
       "has_test_entrypoint": true,
@@ -264,7 +264,7 @@
     },
     {
       "id": "property_def_use",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_def_use.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_property_def_use.rs",
       "exists": true,
       "source_bytes": 2961,
       "has_test_entrypoint": true,
@@ -273,7 +273,7 @@
     },
     {
       "id": "property_dominators",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_dominators.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_property_dominators.rs",
       "exists": true,
       "source_bytes": 2600,
       "has_test_entrypoint": true,
@@ -282,7 +282,7 @@
     },
     {
       "id": "property_range_check",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_range_check.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_property_range_check.rs",
       "exists": true,
       "source_bytes": 2574,
       "has_test_entrypoint": true,
@@ -291,7 +291,7 @@
     },
     {
       "id": "property_range_escape",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_range_escape.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_property_range_escape.rs",
       "exists": true,
       "source_bytes": 2503,
       "has_test_entrypoint": true,
@@ -300,7 +300,7 @@
     },
     {
       "id": "property_reachability_witness",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_reachability_witness.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_property_reachability_witness.rs",
       "exists": true,
       "source_bytes": 3765,
       "has_test_entrypoint": true,
@@ -309,7 +309,7 @@
     },
     {
       "id": "property_reaching_def_escapes",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_reaching_def_escapes.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_property_reaching_def_escapes.rs",
       "exists": true,
       "source_bytes": 2439,
       "has_test_entrypoint": true,
@@ -318,7 +318,7 @@
     },
     {
       "id": "property_slice",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_slice_construction.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_property_slice_construction.rs",
       "exists": true,
       "source_bytes": 2953,
       "has_test_entrypoint": true,
@@ -327,7 +327,7 @@
     },
     {
       "id": "property_ssa",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_ssa_dominators.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_property_ssa_dominators.rs",
       "exists": true,
       "source_bytes": 2235,
       "has_test_entrypoint": true,
@@ -336,7 +336,7 @@
     },
     {
       "id": "property_summary_callgraph",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_summary_callgraph.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_property_summary_callgraph.rs",
       "exists": true,
       "source_bytes": 2735,
       "has_test_entrypoint": true,
@@ -345,7 +345,7 @@
     },
     {
       "id": "property_value_set",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_value_set.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_property_value_set.rs",
       "exists": true,
       "source_bytes": 1993,
       "has_test_entrypoint": true,
@@ -354,7 +354,7 @@
     },
     {
       "id": "property_bitset_oracles",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_bitset_oracles.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_property_bitset_oracles.rs",
       "exists": true,
       "source_bytes": 2398,
       "has_test_entrypoint": true,
@@ -363,7 +363,7 @@
     },
     {
       "id": "fuzz_bitset_oracles",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_fuzz_bitset_oracles.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_fuzz_bitset_oracles.rs",
       "exists": true,
       "source_bytes": 1765,
       "has_test_entrypoint": true,
@@ -372,7 +372,7 @@
     },
     {
       "id": "gap_bitset_oracle_edges",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_gap_bitset_oracle_edges.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_gap_bitset_oracle_edges.rs",
       "exists": true,
       "source_bytes": 1267,
       "has_test_entrypoint": true,
@@ -381,7 +381,7 @@
     },
     {
       "id": "resolve_family_node39",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_resolve_family_node39.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_resolve_family_node39.rs",
       "exists": true,
       "source_bytes": 3505,
       "has_test_entrypoint": true,
@@ -390,7 +390,7 @@
     },
     {
       "id": "summary_loop_points",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_summary_loop_points.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_summary_loop_points.rs",
       "exists": true,
       "source_bytes": 2885,
       "has_test_entrypoint": true,
@@ -399,7 +399,7 @@
     },
     {
       "id": "three_arm_fusion",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_three_arm_fusion.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_three_arm_fusion.rs",
       "exists": true,
       "source_bytes": 9419,
       "has_test_entrypoint": true,
@@ -408,16 +408,16 @@
     },
     {
       "id": "perf_oracle",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_perf_oracle_throughput.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_perf_oracle_throughput.rs",
       "exists": true,
-      "source_bytes": 5137,
+      "source_bytes": 5819,
       "has_test_entrypoint": true,
       "assertion_count": 3,
       "unresolved_markers": []
     },
     {
       "id": "scale_oracle",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_scale_oracle_no_oom.rs",
+      "path": "../../../../libs/dataflow/weir/tests/df_scale_oracle_no_oom.rs",
       "exists": true,
       "source_bytes": 2785,
       "has_test_entrypoint": true,

@@ -22,7 +22,7 @@
     {
       "id": "VX475-BIND_GROUP_CACHE_CAP",
       "path": "vyre-driver-wgpu/src/buffer/handle.rs",
-      "line": 643,
+      "line": 704,
       "name": "BIND_GROUP_CACHE_CAP",
       "observed_value": "256",
       "unit": "bind group entries",

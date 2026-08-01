@@ -1,10 +1,10 @@
 {
   "schema_version": 2,
-  "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/README.md",
+  "path": "../../../../libs/dataflow/weir/README.md",
   "exists": true,
-  "source_bytes": 12324,
+  "source_bytes": 12418,
   "required_tokens": [
-    "0.1.0",
+    "0.1.1",
     "dataflow",
     "vyre",
     "ssa",

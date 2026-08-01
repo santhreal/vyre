@@ -10,19 +10,23 @@ Evidence sources:
 
 Required product versions:
 
-- Vyre release: `0.6.6`
+- Vyre release: `0.7.0`
 - Weir release: `0.1.0`
-- Required version-matrix packages: `vyre@0.6.6`, `vyre-driver-cuda@0.6.6`, `vyre-driver-wgpu@0.6.6`, `vyrec@0.1.0`, `vyre-frontend-c@0.6.6`, and `weir@0.1.0`; `missing_required_release_packages` must be empty.
+- Required version-matrix packages: `vyre@0.7.0`, `vyre-driver-cuda@0.7.0`, `vyre-driver-wgpu@0.7.0`, `vyrec@0.1.0`, `vyre-frontend-c@0.7.0`, and `weir@0.1.0`; `missing_required_release_packages` must be empty.
 - Workspace-inherited package versions count only when the matrix resolves them to the concrete release version; unresolved `package.version.workspace = true` entries are blockers, not acceptable evidence.
 
 Required product-scoped tags:
 
-- Vyre RC tag: `vyre-v0.6.6-rc.1`
-- Weir RC tag: `weir-v0.1.0-rc.1`
-- Combined release-train RC tag: `vyre-0.6.6-weir-0.1.0-rc.1`
-- Vyre tag: `vyre-v0.6.6`
-- Weir tag: `weir-v0.1.0`
-- Combined release-train tag: `vyre-0.6.6-weir-0.1.0`
+- Vyre RC tag: `vyre-v0.7.0-rc.1`
+- Weir RC tag: `weir-v0.1.1-rc.1`
+- Combined release-train RC tag: `vyre-0.7.0-weir-0.1.1-rc.1`
+- Vyre tag: `vyre-v0.7.0`
+- Weir tag: `weir-v0.1.1`
+- Combined release-train tag: `vyre-0.7.0-weir-0.1.1`
+
+Before requesting approval for publication or pushes, run
+`cargo_full run --bin xtask -- vyre-release-gate --prepublish`. This mode
+accepts only the three explicitly approval-gated outward actions as pending.
 
 Required pre-tag gates:
 
@@ -33,14 +37,14 @@ Required pre-tag gates:
 
 Release-note wording contract:
 
-- Release notes must name `vyre 0.6.6`.
-- Release notes must name `weir 0.1.0`.
-- Release notes must preserve the required package story: `vyre`, `vyrec`, and `vyre-frontend-c` ship on the `0.6.6` Vyre train, while `weir` ships as `0.1.0`.
-- Release notes must name `vyre-v0.6.6-rc.1`.
-- Release notes must name `weir-v0.1.0-rc.1`.
-- Release notes must name `vyre-0.6.6-weir-0.1.0-rc.1`.
-- Release notes must name `vyre-v0.6.6`.
-- Release notes must name `weir-v0.1.0`.
-- Release notes must name `vyre-0.6.6-weir-0.1.0`.
-- Release notes must not instruct maintainers to create or push a bare `v0.6.6` tag for this release train.
+- Release notes must name `vyre 0.7.0`.
+- Release notes must name `weir 0.1.1`.
+- Release notes must preserve the required package story: `vyre`, `vyrec`, and `vyre-frontend-c` ship on the `0.7.0` Vyre train, while `weirflow@0.1.1` ships on the Weir train.
+- Release notes must name `vyre-v0.7.0-rc.1`.
+- Release notes must name `weir-v0.1.1-rc.1`.
+- Release notes must name `vyre-0.7.0-weir-0.1.1-rc.1`.
+- Release notes must name `vyre-v0.7.0`.
+- Release notes must name `weir-v0.1.1`.
+- Release notes must name `vyre-0.7.0-weir-0.1.1`.
+- Release notes must not instruct maintainers to create or push a bare `v0.7.0` tag for this release train.
 - The version matrix scans release-note documents, the root release plan, Weir README, and `tools/vyrec` README for ambiguous bare tag commands.

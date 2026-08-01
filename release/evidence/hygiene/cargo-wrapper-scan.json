@@ -3,61 +3,43 @@
   "scan": "cargo-wrapper",
   "findings": [
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/corpus/validate.rs",
-      "line": 10,
+      "path": "vyre-driver-cuda/src/backend/host_dispatch/host_cost_attribution.rs",
+      "line": 77,
       "pattern": "raw_workspace_cargo",
-      "text": "//!   cargo run -p surgec --bin corpus-validate"
+      "text": "//! These are `#[ignore]`d so `cargo test -p vyre-driver-cuda --lib` stays fast."
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/corpus/validate.rs",
-      "line": 11,
+      "path": "vyre-driver-cuda/src/backend/host_dispatch/host_cost_attribution.rs",
+      "line": 80,
       "pattern": "raw_workspace_cargo",
-      "text": "//!   cargo run -p surgec --bin corpus-validate -- --manifest /path/to/manifest.toml"
+      "text": "//! cargo test -p vyre-driver-cuda --lib -- --ignored --nocapture host_cost"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/corpus/splits.rs",
-      "line": 8,
+      "path": "vyre-harness/src/fp_contract.rs",
+      "line": 32,
       "pattern": "raw_workspace_cargo",
-      "text": "//!   cargo run -p surgec --bin corpus-splits -- --write"
+      "text": "/// that contracts, so `cargo test --workspace --all-features`, which the release"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/corpus/splits.rs",
-      "line": 9,
-      "pattern": "raw_workspace_cargo",
-      "text": "//!   cargo run -p surgec --bin corpus-splits -- --check"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/fuzz/fuzz_targets/rule_compiler.rs",
-      "line": 11,
-      "pattern": "raw_workspace_cargo",
-      "text": "//! Run with: `cargo fuzz build rule_compiler`"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/surge/surgec/fuzz/fuzz_targets/scan_bytes.rs",
-      "line": 11,
-      "pattern": "raw_workspace_cargo",
-      "text": "//! Run with: cargo fuzz run scan_bytes"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/README.md",
+      "path": "../../../../libs/dataflow/weir/README.md",
       "line": 239,
       "pattern": "raw_workspace_cargo",
       "text": "cargo bench -p weir --bench primitive_micro"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/README.md",
+      "path": "../../../../libs/dataflow/weir/README.md",
       "line": 264,
       "pattern": "raw_workspace_cargo",
       "text": "cargo test --lib"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/README.md",
+      "path": "../../../../libs/dataflow/weir/README.md",
       "line": 267,
       "pattern": "raw_workspace_cargo",
       "text": "cargo test --lib && cargo test --doc && cargo test --examples"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/README.md",
+      "path": "../../../../libs/dataflow/weir/README.md",
       "line": 270,
       "pattern": "raw_workspace_cargo",
       "text": "cargo test --features cpu-parity"

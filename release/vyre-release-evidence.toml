@@ -3,7 +3,7 @@ release_contract_path = "../docs/RELEASE.md"
 
 [release]
 vyre = "0.7.0"
-weir = "0.1.0"
+weir = "0.1.1"
 
 [[requirements]]
 id = "version-story"
@@ -186,7 +186,7 @@ evidence = [
 
 [[requirements]]
 id = "distributed-parser-coherence"
-title = "vyre-frontend-c, vyrec, Weir, and Surge/SurgeC parser responsibilities are coherent"
+title = "vyre-frontend-c, vyrec, Weir, and Vyre grammar-generation parser responsibilities are coherent"
 status = "closed"
 minimum_evidence = 10
 evidence = [
@@ -195,7 +195,6 @@ evidence = [
   "evidence/parser/vyre-frontend-c-contracts.json",
   "evidence/parser/vyrec-cli-contracts.json",
   "evidence/parser/external-dataflow-contracts.json",
-  "evidence/parser/compiler-consumer-contracts.json",
   "evidence/parser/compiler-consumer-grammar-gen-contracts.json",
   "evidence/docs/distributed-parser-coherence.md",
   "evidence/docs/parser-doc-proof.md",
@@ -320,6 +319,7 @@ minimum_evidence = 10
 evidence = [
   "cargo_full run --bin xtask -- release-evidence",
   "cargo_full run --bin xtask -- release-completion-audit --output release/evidence/final/completion-audit.json",
+  "cargo_full run --bin xtask -- vyre-release-gate --prepublish",
   "cargo_full run --bin xtask -- vyre-release-gate",
   "cargo_full run --bin xtask -- launch-state --output release/evidence/final/public-launch-state.json",
   "evidence/final/release-evidence-run.json",

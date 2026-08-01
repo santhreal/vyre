@@ -2,7 +2,7 @@
   "schema_version": 1,
   "required_release_packages": [
     "vyre",
-    "weir",
+    "weirflow",
     "vyrec",
     "vyre-driver-cuda",
     "vyre-driver-wgpu",
@@ -12,7 +12,7 @@
   "packages": [
     {
       "name": "vyre",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-core/Cargo.toml",
+      "manifest": "vyre-core/Cargo.toml",
       "feature_count": 4,
       "has_default_feature": true,
       "default_feature_members": [],
@@ -28,7 +28,7 @@
     },
     {
       "name": "vyre-aot",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-aot/Cargo.toml",
+      "manifest": "vyre-aot/Cargo.toml",
       "feature_count": 2,
       "has_default_feature": true,
       "default_feature_members": [],
@@ -42,13 +42,12 @@
     },
     {
       "name": "vyre-bench",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/Cargo.toml",
-      "feature_count": 2,
+      "manifest": "vyre-bench/Cargo.toml",
+      "feature_count": 1,
       "has_default_feature": true,
       "default_feature_members": [],
       "features": [
-        "default",
-        "external-baselines"
+        "default"
       ],
       "malformed_features": [],
       "unresolved_feature_members": [],
@@ -56,7 +55,7 @@
     },
     {
       "name": "vyre-bench-competitors",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/competitors/Cargo.toml",
+      "manifest": "vyre-bench/competitors/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],
@@ -67,7 +66,7 @@
     },
     {
       "name": "vyre-conform-enforce",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-enforce/Cargo.toml",
+      "manifest": "conform/vyre-conform-enforce/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],
@@ -78,7 +77,7 @@
     },
     {
       "name": "vyre-conform-generate",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-generate/Cargo.toml",
+      "manifest": "conform/vyre-conform-generate/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],
@@ -89,7 +88,7 @@
     },
     {
       "name": "vyre-conform-runner",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-runner/Cargo.toml",
+      "manifest": "conform/vyre-conform-runner/Cargo.toml",
       "feature_count": 2,
       "has_default_feature": true,
       "default_feature_members": [
@@ -105,7 +104,7 @@
     },
     {
       "name": "vyre-conform-spec",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-spec/Cargo.toml",
+      "manifest": "conform/vyre-conform-spec/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],
@@ -116,7 +115,7 @@
     },
     {
       "name": "vyre-debug",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-debug/Cargo.toml",
+      "manifest": "vyre-debug/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],
@@ -127,7 +126,7 @@
     },
     {
       "name": "vyre-driver",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/Cargo.toml",
+      "manifest": "vyre-driver/Cargo.toml",
       "feature_count": 2,
       "has_default_feature": true,
       "default_feature_members": [],
@@ -141,7 +140,7 @@
     },
     {
       "name": "vyre-driver-cuda",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/Cargo.toml",
+      "manifest": "vyre-driver-cuda/Cargo.toml",
       "feature_count": 2,
       "has_default_feature": true,
       "default_feature_members": [],
@@ -155,7 +154,7 @@
     },
     {
       "name": "vyre-driver-metal",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-metal/Cargo.toml",
+      "manifest": "vyre-driver-metal/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],
@@ -166,7 +165,7 @@
     },
     {
       "name": "vyre-driver-reference",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-reference/Cargo.toml",
+      "manifest": "vyre-driver-reference/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],
@@ -177,7 +176,7 @@
     },
     {
       "name": "vyre-driver-spirv",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-spirv/Cargo.toml",
+      "manifest": "vyre-driver-spirv/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],
@@ -188,13 +187,14 @@
     },
     {
       "name": "vyre-driver-wgpu",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/Cargo.toml",
-      "feature_count": 12,
+      "manifest": "vyre-driver-wgpu/Cargo.toml",
+      "feature_count": 13,
       "has_default_feature": true,
       "default_feature_members": [],
       "features": [
         "c-parser",
         "default",
+        "legacy-infallible",
         "matching-dfa",
         "matching-nfa",
         "matching-substring",
@@ -212,7 +212,7 @@
     },
     {
       "name": "vyre-emit-metal",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-metal/Cargo.toml",
+      "manifest": "vyre-emit-metal/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],
@@ -223,7 +223,7 @@
     },
     {
       "name": "vyre-emit-naga",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-naga/Cargo.toml",
+      "manifest": "vyre-emit-naga/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],
@@ -234,7 +234,7 @@
     },
     {
       "name": "vyre-emit-ptx",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/Cargo.toml",
+      "manifest": "vyre-emit-ptx/Cargo.toml",
       "feature_count": 2,
       "has_default_feature": true,
       "default_feature_members": [],
@@ -248,7 +248,7 @@
     },
     {
       "name": "vyre-emit-spirv",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-spirv/Cargo.toml",
+      "manifest": "vyre-emit-spirv/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],
@@ -259,7 +259,7 @@
     },
     {
       "name": "vyre-foundation",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/Cargo.toml",
+      "manifest": "vyre-foundation/Cargo.toml",
       "feature_count": 2,
       "has_default_feature": true,
       "default_feature_members": [],
@@ -273,7 +273,7 @@
     },
     {
       "name": "vyre-foundation-fuzz",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/fuzz/Cargo.toml",
+      "manifest": "vyre-foundation/fuzz/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],
@@ -284,7 +284,7 @@
     },
     {
       "name": "vyre-frontend-c",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/Cargo.toml",
+      "manifest": "vyre-frontend-c/Cargo.toml",
       "feature_count": 3,
       "has_default_feature": true,
       "default_feature_members": [],
@@ -299,7 +299,7 @@
     },
     {
       "name": "vyre-frontend-rust",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-rust/Cargo.toml",
+      "manifest": "vyre-frontend-rust/Cargo.toml",
       "feature_count": 2,
       "has_default_feature": true,
       "default_feature_members": [],
@@ -313,7 +313,18 @@
     },
     {
       "name": "vyre-fuzz",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/fuzz/Cargo.toml",
+      "manifest": "fuzz/Cargo.toml",
+      "feature_count": 0,
+      "has_default_feature": false,
+      "default_feature_members": [],
+      "features": [],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-grammar-gen",
+      "manifest": "vyre-grammar-gen/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],
@@ -324,13 +335,12 @@
     },
     {
       "name": "vyre-harness",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-harness/Cargo.toml",
-      "feature_count": 2,
+      "manifest": "vyre-harness/Cargo.toml",
+      "feature_count": 1,
       "has_default_feature": true,
       "default_feature_members": [],
       "features": [
-        "default",
-        "strict-fp"
+        "default"
       ],
       "malformed_features": [],
       "unresolved_feature_members": [],
@@ -338,7 +348,7 @@
     },
     {
       "name": "vyre-intrinsics",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-intrinsics/Cargo.toml",
+      "manifest": "vyre-intrinsics/Cargo.toml",
       "feature_count": 4,
       "has_default_feature": true,
       "default_feature_members": [
@@ -357,7 +367,7 @@
     },
     {
       "name": "vyre-libs",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/Cargo.toml",
+      "manifest": "vyre-libs/Cargo.toml",
       "feature_count": 41,
       "has_default_feature": true,
       "default_feature_members": [
@@ -421,7 +431,7 @@
     },
     {
       "name": "vyre-lints",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lints/Cargo.toml",
+      "manifest": "vyre-lints/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],
@@ -432,7 +442,7 @@
     },
     {
       "name": "vyre-lower",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/Cargo.toml",
+      "manifest": "vyre-lower/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],
@@ -443,7 +453,7 @@
     },
     {
       "name": "vyre-macros",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-macros/Cargo.toml",
+      "manifest": "vyre-macros/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],
@@ -454,7 +464,7 @@
     },
     {
       "name": "vyre-primitives",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/Cargo.toml",
+      "manifest": "vyre-primitives/Cargo.toml",
       "feature_count": 29,
       "has_default_feature": true,
       "default_feature_members": [],
@@ -495,7 +505,7 @@
     },
     {
       "name": "vyre-reference",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/Cargo.toml",
+      "manifest": "vyre-reference/Cargo.toml",
       "feature_count": 2,
       "has_default_feature": true,
       "default_feature_members": [
@@ -511,7 +521,7 @@
     },
     {
       "name": "vyre-runtime",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/Cargo.toml",
+      "manifest": "vyre-runtime/Cargo.toml",
       "feature_count": 9,
       "has_default_feature": true,
       "default_feature_members": [],
@@ -532,7 +542,7 @@
     },
     {
       "name": "vyre-self-substrate",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/Cargo.toml",
+      "manifest": "vyre-self-substrate/Cargo.toml",
       "feature_count": 2,
       "has_default_feature": true,
       "default_feature_members": [],
@@ -546,7 +556,7 @@
     },
     {
       "name": "vyre-spec",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-spec/Cargo.toml",
+      "manifest": "vyre-spec/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],
@@ -557,21 +567,20 @@
     },
     {
       "name": "vyre-test-harness",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-test-harness/Cargo.toml",
-      "feature_count": 2,
+      "manifest": "conform/vyre-test-harness/Cargo.toml",
+      "feature_count": 1,
       "has_default_feature": true,
       "default_feature_members": [],
       "features": [
-        "default",
-        "strict-fp"
+        "default"
       ],
       "malformed_features": [],
       "unresolved_feature_members": [],
       "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
     },
     {
-      "name": "vyrec",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/Cargo.toml",
+      "name": "vyre-test-support",
+      "manifest": "vyre-test-support/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],
@@ -581,9 +590,31 @@
       "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
     },
     {
-      "name": "weir",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/Cargo.toml",
-      "feature_count": 7,
+      "name": "vyrec",
+      "manifest": "../../../../tools/vyrec/Cargo.toml",
+      "feature_count": 0,
+      "has_default_feature": false,
+      "default_feature_members": [],
+      "features": [],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "weir-fuzz",
+      "manifest": "../../../../libs/dataflow/weir/fuzz/Cargo.toml",
+      "feature_count": 0,
+      "has_default_feature": false,
+      "default_feature_members": [],
+      "features": [],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "weirflow",
+      "manifest": "../../../../libs/dataflow/weir/Cargo.toml",
+      "feature_count": 8,
       "has_default_feature": true,
       "default_feature_members": [
         "test-harness"
@@ -595,6 +626,7 @@
         "legacy-infallible",
         "serde",
         "simd-oracle",
+        "surge-frontend-tests",
         "test-harness"
       ],
       "malformed_features": [],
@@ -602,19 +634,8 @@
       "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
     },
     {
-      "name": "weir-fuzz",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/Cargo.toml",
-      "feature_count": 0,
-      "has_default_feature": false,
-      "default_feature_members": [],
-      "features": [],
-      "malformed_features": [],
-      "unresolved_feature_members": [],
-      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
-    },
-    {
       "name": "xtask",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/xtask/Cargo.toml",
+      "manifest": "xtask/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],

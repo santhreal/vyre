@@ -19,15 +19,15 @@
   "packages": [
     {
       "name": "vyre",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-core/Cargo.toml",
-      "version": "0.6.6",
+      "manifest": "vyre-core/Cargo.toml",
+      "version": "0.7.0",
       "description": "GPU compute intermediate representation with a standard operation library",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
       "repository": "https://github.com/santhreal/vyre",
       "example_count": 3,
       "example_files": [
-        "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-core/examples/vyre_core_release_surface.rs"
+        "vyre-core/examples/vyre_core_release_surface.rs"
       ],
       "readme_example_count": 2,
       "has_runnable_example": true,
@@ -36,21 +36,21 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-engine",
-      "expected_version": "0.6.6",
+      "expected_version": "0.7.0",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-aot",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-aot/Cargo.toml",
-      "version": "0.6.6",
+      "manifest": "vyre-aot/Cargo.toml",
+      "version": "0.7.0",
       "description": "Ahead-of-time compilation for vyre Programs: emits target-native bytes plus a self-contained launcher bundle suitable for embedded and competition-style code-budget-constrained submissions.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
       "repository": "https://github.com/santhreal/vyre",
       "example_count": 1,
       "example_files": [
-        "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-aot/examples/vyre_aot_release_surface.rs"
+        "vyre-aot/examples/vyre_aot_release_surface.rs"
       ],
       "readme_example_count": 0,
       "has_runnable_example": true,
@@ -59,14 +59,14 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.6.6",
+      "expected_version": "0.7.0",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-bench",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/Cargo.toml",
-      "version": "0.6.6",
+      "manifest": "vyre-bench/Cargo.toml",
+      "version": "0.7.0",
       "description": "Internal vyre benchmark + parity harness across the CUDA, wgpu, SPIR-V, and reference substrates. Not published to crates.io.",
       "license": "MIT OR Apache-2.0",
       "readme": null,
@@ -86,7 +86,7 @@
     },
     {
       "name": "vyre-bench-competitors",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/competitors/Cargo.toml",
+      "manifest": "vyre-bench/competitors/Cargo.toml",
       "version": "0.1.0",
       "description": null,
       "license": null,
@@ -107,8 +107,8 @@
     },
     {
       "name": "vyre-conform-enforce",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-enforce/Cargo.toml",
-      "version": "0.6.6",
+      "manifest": "conform/vyre-conform-enforce/Cargo.toml",
+      "version": "0.7.0",
       "description": "Algebraic-law prover for vyre ops over witness pairs.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -128,8 +128,8 @@
     },
     {
       "name": "vyre-conform-generate",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-generate/Cargo.toml",
-      "version": "0.6.6",
+      "manifest": "conform/vyre-conform-generate/Cargo.toml",
+      "version": "0.7.0",
       "description": "Counterexample shrinking + witness generation for vyre conformance testing.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -149,15 +149,15 @@
     },
     {
       "name": "vyre-conform-runner",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-runner/Cargo.toml",
-      "version": "0.6.6",
+      "manifest": "conform/vyre-conform-runner/Cargo.toml",
+      "version": "0.7.0",
       "description": "Conformance test runner for the vyre execution engine.",
       "license": "MIT OR Apache-2.0",
       "readme": null,
       "repository": "https://github.com/santhreal/vyre",
       "example_count": 1,
       "example_files": [
-        "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-runner/examples/vyre_conform_runner_release_surface.rs"
+        "conform/vyre-conform-runner/examples/vyre_conform_runner_release_surface.rs"
       ],
       "readme_example_count": 0,
       "has_runnable_example": true,
@@ -172,8 +172,8 @@
     },
     {
       "name": "vyre-conform-spec",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-spec/Cargo.toml",
-      "version": "0.6.6",
+      "manifest": "conform/vyre-conform-spec/Cargo.toml",
+      "version": "0.7.0",
       "description": "Witness sets and composition laws for vyre conformance testing.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -193,15 +193,15 @@
     },
     {
       "name": "vyre-debug",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-debug/Cargo.toml",
-      "version": "0.6.6",
+      "manifest": "vyre-debug/Cargo.toml",
+      "version": "0.7.0",
       "description": "Debugging CLI and inspection helpers for Vyre programs, lowering, and emitted shaders.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
       "repository": "https://github.com/santhreal/vyre",
       "example_count": 2,
       "example_files": [
-        "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-debug/examples/vyre_debug_release_surface.rs"
+        "vyre-debug/examples/vyre_debug_release_surface.rs"
       ],
       "readme_example_count": 1,
       "has_runnable_example": true,
@@ -210,21 +210,21 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.6.6",
+      "expected_version": "0.7.0",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-driver",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/Cargo.toml",
-      "version": "0.6.6",
+      "manifest": "vyre-driver/Cargo.toml",
+      "version": "0.7.0",
       "description": "Driver layer: registry, runtime, pipeline, routing, diagnostics. Substrate-agnostic backend machinery. Part of the vyre GPU compiler.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
       "repository": "https://github.com/santhreal/vyre",
       "example_count": 4,
       "example_files": [
-        "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/examples/vyre_driver_release_surface.rs"
+        "vyre-driver/examples/vyre_driver_release_surface.rs"
       ],
       "readme_example_count": 3,
       "has_runnable_example": true,
@@ -233,21 +233,21 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.6.6",
+      "expected_version": "0.7.0",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-driver-cuda",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/Cargo.toml",
-      "version": "0.6.6",
+      "manifest": "vyre-driver-cuda/Cargo.toml",
+      "version": "0.7.0",
       "description": "CUDA/PTX backend for vyre through the CUDA driver API.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
       "repository": "https://github.com/santhreal/vyre",
       "example_count": 2,
       "example_files": [
-        "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/examples/cuda_release_surface.rs"
+        "vyre-driver-cuda/examples/cuda_release_surface.rs"
       ],
       "readme_example_count": 1,
       "has_runnable_example": true,
@@ -256,21 +256,21 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "cuda-backend",
-      "expected_version": "0.6.6",
+      "expected_version": "0.7.0",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-driver-metal",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-metal/Cargo.toml",
-      "version": "0.6.6",
+      "manifest": "vyre-driver-metal/Cargo.toml",
+      "version": "0.7.0",
       "description": "Native Metal backend for vyre IR through Metal.framework.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
       "repository": "https://github.com/santhreal/vyre",
       "example_count": 1,
       "example_files": [
-        "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-metal/examples/metal_release_surface.rs"
+        "vyre-driver-metal/examples/metal_release_surface.rs"
       ],
       "readme_example_count": 0,
       "has_runnable_example": true,
@@ -279,21 +279,21 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.6.6",
+      "expected_version": "0.7.0",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-driver-reference",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-reference/Cargo.toml",
-      "version": "0.6.6",
+      "manifest": "vyre-driver-reference/Cargo.toml",
+      "version": "0.7.0",
       "description": "cpu-ref VyreBackend adapter over the pure Rust vyre-reference interpreter.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
       "repository": "https://github.com/santhreal/vyre",
       "example_count": 1,
       "example_files": [
-        "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-reference/examples/vyre_driver_reference_release_surface.rs"
+        "vyre-driver-reference/examples/vyre_driver_reference_release_surface.rs"
       ],
       "readme_example_count": 0,
       "has_runnable_example": true,
@@ -302,21 +302,21 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.6.6",
+      "expected_version": "0.7.0",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-driver-spirv",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-spirv/Cargo.toml",
-      "version": "0.6.6",
+      "manifest": "vyre-driver-spirv/Cargo.toml",
+      "version": "0.7.0",
       "description": "SPIR-V backend for vyre through naga's SPIR-V writer.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
       "repository": "https://github.com/santhreal/vyre",
       "example_count": 2,
       "example_files": [
-        "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-spirv/examples/vulkan_probe.rs"
+        "vyre-driver-spirv/examples/vulkan_probe.rs"
       ],
       "readme_example_count": 1,
       "has_runnable_example": true,
@@ -325,21 +325,21 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.6.6",
+      "expected_version": "0.7.0",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-driver-wgpu",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/Cargo.toml",
-      "version": "0.6.6",
+      "manifest": "vyre-driver-wgpu/Cargo.toml",
+      "version": "0.7.0",
       "description": "wgpu backend for vyre IR  -  implements VyreBackend, owns GPU runtime, buffer pool, pipeline cache",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
       "repository": "https://github.com/santhreal/vyre",
       "example_count": 2,
       "example_files": [
-        "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/examples/wgpu_release_surface.rs"
+        "vyre-driver-wgpu/examples/wgpu_release_surface.rs"
       ],
       "readme_example_count": 1,
       "has_runnable_example": true,
@@ -348,21 +348,21 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "wgpu-backend",
-      "expected_version": "0.6.6",
+      "expected_version": "0.7.0",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-emit-metal",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-metal/Cargo.toml",
-      "version": "0.6.6",
+      "manifest": "vyre-emit-metal/Cargo.toml",
+      "version": "0.7.0",
       "description": "Metal Shading Language artifact emitter for vyre KernelDescriptor. Routes through naga::Module to share substrate-neutral lowering.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
       "repository": "https://github.com/santhreal/vyre",
       "example_count": 1,
       "example_files": [
-        "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-metal/examples/vyre_emit_metal_release_surface.rs"
+        "vyre-emit-metal/examples/vyre_emit_metal_release_surface.rs"
       ],
       "readme_example_count": 0,
       "has_runnable_example": true,
@@ -371,21 +371,21 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.6.6",
+      "expected_version": "0.7.0",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-emit-naga",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-naga/Cargo.toml",
-      "version": "0.6.6",
+      "manifest": "vyre-emit-naga/Cargo.toml",
+      "version": "0.7.0",
       "description": "Naga IR emitter for vyre KernelDescriptor. Produces wgpu-compatible compute shaders.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
       "repository": "https://github.com/santhreal/vyre",
       "example_count": 2,
       "example_files": [
-        "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-naga/examples/vyre_emit_naga_release_surface.rs"
+        "vyre-emit-naga/examples/vyre_emit_naga_release_surface.rs"
       ],
       "readme_example_count": 1,
       "has_runnable_example": true,
@@ -394,21 +394,21 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.6.6",
+      "expected_version": "0.7.0",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-emit-ptx",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/Cargo.toml",
-      "version": "0.6.6",
+      "manifest": "vyre-emit-ptx/Cargo.toml",
+      "version": "0.7.0",
       "description": "PTX text emitter for vyre KernelDescriptor. Produces NVRTC-compatible CUDA assembly.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
       "repository": "https://github.com/santhreal/vyre",
       "example_count": 2,
       "example_files": [
-        "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/examples/vyre_emit_ptx_release_surface.rs"
+        "vyre-emit-ptx/examples/vyre_emit_ptx_release_surface.rs"
       ],
       "readme_example_count": 1,
       "has_runnable_example": true,
@@ -417,21 +417,21 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.6.6",
+      "expected_version": "0.7.0",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-emit-spirv",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-spirv/Cargo.toml",
-      "version": "0.6.6",
+      "manifest": "vyre-emit-spirv/Cargo.toml",
+      "version": "0.7.0",
       "description": "SPIR-V binary emitter for vyre KernelDescriptor. Routes through naga::Module → naga::back::spv to share substrate-neutral lowering with vyre-emit-naga.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
       "repository": "https://github.com/santhreal/vyre",
       "example_count": 2,
       "example_files": [
-        "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-spirv/examples/vyre_emit_spirv_release_surface.rs"
+        "vyre-emit-spirv/examples/vyre_emit_spirv_release_surface.rs"
       ],
       "readme_example_count": 1,
       "has_runnable_example": true,
@@ -440,21 +440,21 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.6.6",
+      "expected_version": "0.7.0",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-foundation",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/Cargo.toml",
-      "version": "0.6.6",
+      "manifest": "vyre-foundation/Cargo.toml",
+      "version": "0.7.0",
       "description": "Foundation layer: IR, type system, memory model, wire format. Zero application semantics. Part of the vyre GPU compiler.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
       "repository": "https://github.com/santhreal/vyre",
       "example_count": 2,
       "example_files": [
-        "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/examples/vyre_foundation_release_surface.rs"
+        "vyre-foundation/examples/vyre_foundation_release_surface.rs"
       ],
       "readme_example_count": 1,
       "has_runnable_example": true,
@@ -463,13 +463,13 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.6.6",
+      "expected_version": "0.7.0",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-foundation-fuzz",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/fuzz/Cargo.toml",
+      "manifest": "vyre-foundation/fuzz/Cargo.toml",
       "version": "0.0.0",
       "description": null,
       "license": null,
@@ -490,8 +490,8 @@
     },
     {
       "name": "vyre-frontend-c",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/Cargo.toml",
-      "version": "0.6.6",
+      "manifest": "vyre-frontend-c/Cargo.toml",
+      "version": "0.7.0",
       "description": "GPU-first C parser and compile-evidence driver built on vyre and vyre-libs: bounded TU preparation, lex, digraph rewrite, AST evidence, and supported IR composition.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -505,14 +505,14 @@
       "release_kind": "non-publishable-release-surface",
       "release_group": "vyre",
       "release_surface": "c-frontend",
-      "expected_version": "0.6.6",
+      "expected_version": "0.7.0",
       "publish_policy": "publish=false allowed for release-surface crates intentionally kept out of crates.io",
       "blockers": []
     },
     {
       "name": "vyre-frontend-rust",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-rust/Cargo.toml",
-      "version": "0.6.6",
+      "manifest": "vyre-frontend-rust/Cargo.toml",
+      "version": "0.7.0",
       "description": "GPU-first Rust parser and compile-evidence driver for Vyre.",
       "license": "MIT OR Apache-2.0",
       "readme": null,
@@ -532,7 +532,7 @@
     },
     {
       "name": "vyre-fuzz",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/fuzz/Cargo.toml",
+      "manifest": "fuzz/Cargo.toml",
       "version": "0.0.0",
       "description": null,
       "license": null,
@@ -553,16 +553,16 @@
     },
     {
       "name": "vyre-grammar-gen",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-grammar-gen/Cargo.toml",
-      "version": "0.6.6",
+      "manifest": "vyre-grammar-gen/Cargo.toml",
+      "version": "0.7.0",
       "description": "Host-side C11 grammar table generator for the vyre GPU C parser. Emits DFA lexer + LR(1) action/goto tables as binary blobs that vyre-libs::parsing loads as ReadOnly buffers.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
       "repository": "https://github.com/santhreal/vyre",
       "example_count": 4,
       "example_files": [
-        "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-grammar-gen/examples/lex_c_source.rs",
-        "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-grammar-gen/examples/pack_lexer_blob.rs"
+        "vyre-grammar-gen/examples/lex_c_source.rs",
+        "vyre-grammar-gen/examples/pack_lexer_blob.rs"
       ],
       "readme_example_count": 2,
       "has_runnable_example": true,
@@ -571,21 +571,21 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.6.6",
+      "expected_version": "0.7.0",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-harness",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-harness/Cargo.toml",
-      "version": "0.6.6",
+      "manifest": "vyre-harness/Cargo.toml",
+      "version": "0.7.0",
       "description": "Universal Cat-A op harness registry: OpEntry, ConvergenceContract, FixpointContract, UniversalDiffExemption  -  the registry types every vyre-built library publishes through.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
       "repository": "https://github.com/santhreal/vyre",
       "example_count": 1,
       "example_files": [
-        "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-harness/examples/vyre_harness_release_surface.rs"
+        "vyre-harness/examples/vyre_harness_release_surface.rs"
       ],
       "readme_example_count": 0,
       "has_runnable_example": true,
@@ -594,21 +594,21 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.6.6",
+      "expected_version": "0.7.0",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-intrinsics",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-intrinsics/Cargo.toml",
-      "version": "0.6.6",
+      "manifest": "vyre-intrinsics/Cargo.toml",
+      "version": "0.7.0",
       "description": "Cat-C hardware intrinsics for vyre  -  ops that require a dedicated Naga emitter arm and dedicated vyre-reference eval arm. Pure fn(...) -> Program builders over vyre::ir::* live in vyre-libs or user crates, not here.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
       "repository": "https://github.com/santhreal/vyre",
       "example_count": 5,
       "example_files": [
-        "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-intrinsics/examples/vyre_intrinsics_release_surface.rs"
+        "vyre-intrinsics/examples/vyre_intrinsics_release_surface.rs"
       ],
       "readme_example_count": 4,
       "has_runnable_example": true,
@@ -617,23 +617,23 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.6.6",
+      "expected_version": "0.7.0",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-libs",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/Cargo.toml",
-      "version": "0.6.6",
+      "manifest": "vyre-libs/Cargo.toml",
+      "version": "0.7.0",
       "description": "vyre Category A library ecosystem  -  pure-IR compositions over vyre-ops hardware primitives",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
       "repository": "https://github.com/santhreal/vyre",
       "example_count": 5,
       "example_files": [
-        "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/examples/check_select1.rs",
-        "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/examples/scan_corpus_fast_path.rs",
-        "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/examples/scan_paged_corpus.rs"
+        "vyre-libs/examples/check_select1.rs",
+        "vyre-libs/examples/scan_corpus_fast_path.rs",
+        "vyre-libs/examples/scan_paged_corpus.rs"
       ],
       "readme_example_count": 2,
       "has_runnable_example": true,
@@ -642,21 +642,21 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.6.6",
+      "expected_version": "0.7.0",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-lints",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lints/Cargo.toml",
-      "version": "0.6.6",
+      "manifest": "vyre-lints/Cargo.toml",
+      "version": "0.7.0",
       "description": "Lego-block enforcement lints for vyre. Forbids raw IR construction in dialect crates.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
       "repository": "https://github.com/santhreal/vyre",
       "example_count": 2,
       "example_files": [
-        "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lints/examples/vyre_lints_release_surface.rs"
+        "vyre-lints/examples/vyre_lints_release_surface.rs"
       ],
       "readme_example_count": 1,
       "has_runnable_example": true,
@@ -665,21 +665,21 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.6.6",
+      "expected_version": "0.7.0",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-lower",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/Cargo.toml",
-      "version": "0.6.6",
+      "manifest": "vyre-lower/Cargo.toml",
+      "version": "0.7.0",
       "description": "Substrate-neutral lowering: vyre Program → KernelDescriptor consumed by vyre-emit-* crates.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
       "repository": "https://github.com/santhreal/vyre",
       "example_count": 2,
       "example_files": [
-        "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/examples/optimize.rs"
+        "vyre-lower/examples/optimize.rs"
       ],
       "readme_example_count": 1,
       "has_runnable_example": true,
@@ -688,21 +688,21 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.6.6",
+      "expected_version": "0.7.0",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-macros",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-macros/Cargo.toml",
-      "version": "0.6.6",
+      "manifest": "vyre-macros/Cargo.toml",
+      "version": "0.7.0",
       "description": "Procedural macros for vyre compiler passes  -  #[vyre_pass], #[vyre_ast_registry]",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
       "repository": "https://github.com/santhreal/vyre",
       "example_count": 3,
       "example_files": [
-        "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-macros/examples/vyre_macros_release_surface.rs"
+        "vyre-macros/examples/vyre_macros_release_surface.rs"
       ],
       "readme_example_count": 2,
       "has_runnable_example": true,
@@ -711,23 +711,23 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.6.6",
+      "expected_version": "0.7.0",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-primitives",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/Cargo.toml",
-      "version": "0.6.6",
+      "manifest": "vyre-primitives/Cargo.toml",
+      "version": "0.7.0",
       "description": "Compositional primitives for vyre  -  marker types (always on) + Tier 2.5 LEGO substrate (feature-gated per domain).",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
       "repository": "https://github.com/santhreal/vyre",
       "example_count": 3,
       "example_files": [
-        "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/examples/dominator_tree_e2e.rs",
-        "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/examples/vyre_primitives_release_surface.rs",
-        "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/examples/wire_harness_smoke.rs"
+        "vyre-primitives/examples/dominator_tree_e2e.rs",
+        "vyre-primitives/examples/vyre_primitives_release_surface.rs",
+        "vyre-primitives/examples/wire_harness_smoke.rs"
       ],
       "readme_example_count": 0,
       "has_runnable_example": true,
@@ -736,21 +736,21 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.6.6",
+      "expected_version": "0.7.0",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-reference",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/Cargo.toml",
-      "version": "0.6.6",
+      "manifest": "vyre-reference/Cargo.toml",
+      "version": "0.7.0",
       "description": "Pure-Rust CPU reference interpreter for vyre IR; byte-identical oracle for backend conformance",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
       "repository": "https://github.com/santhreal/vyre",
       "example_count": 4,
       "example_files": [
-        "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/examples/vyre_reference_release_surface.rs"
+        "vyre-reference/examples/vyre_reference_release_surface.rs"
       ],
       "readme_example_count": 3,
       "has_runnable_example": true,
@@ -759,21 +759,21 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.6.6",
+      "expected_version": "0.7.0",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-runtime",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/Cargo.toml",
-      "version": "0.6.6",
+      "manifest": "vyre-runtime/Cargo.toml",
+      "version": "0.7.0",
       "description": "Persistent megakernel + io_uring zero-copy streaming runtime for vyre  -  GPU as VIR0 bytecode interpreter",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
       "repository": "https://github.com/santhreal/vyre",
       "example_count": 2,
       "example_files": [
-        "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/examples/vyre_runtime_release_surface.rs"
+        "vyre-runtime/examples/vyre_runtime_release_surface.rs"
       ],
       "readme_example_count": 1,
       "has_runnable_example": true,
@@ -782,21 +782,21 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.6.6",
+      "expected_version": "0.7.0",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-self-substrate",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/Cargo.toml",
-      "version": "0.6.6",
+      "manifest": "vyre-self-substrate/Cargo.toml",
+      "version": "0.7.0",
       "description": "Vyre self-substrate: vyre using its own primitives on its own scheduler problems. The recursion-thesis layer between vyre-primitives and vyre-driver.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
       "repository": "https://github.com/santhreal/vyre",
       "example_count": 1,
       "example_files": [
-        "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/examples/vyre_self_substrate_release_surface.rs"
+        "vyre-self-substrate/examples/vyre_self_substrate_release_surface.rs"
       ],
       "readme_example_count": 0,
       "has_runnable_example": true,
@@ -805,21 +805,21 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.6.6",
+      "expected_version": "0.7.0",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-spec",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-spec/Cargo.toml",
-      "version": "0.6.6",
+      "manifest": "vyre-spec/Cargo.toml",
+      "version": "0.7.0",
       "description": "Frozen data contracts for vyre  -  OpDef, AlgebraicLaw, Category, IntrinsicTable",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
       "repository": "https://github.com/santhreal/vyre",
       "example_count": 2,
       "example_files": [
-        "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-spec/examples/vyre_spec_release_surface.rs"
+        "vyre-spec/examples/vyre_spec_release_surface.rs"
       ],
       "readme_example_count": 1,
       "has_runnable_example": true,
@@ -828,21 +828,21 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.6.6",
+      "expected_version": "0.7.0",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-test-harness",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-test-harness/Cargo.toml",
-      "version": "0.6.6",
+      "manifest": "conform/vyre-test-harness/Cargo.toml",
+      "version": "0.7.0",
       "description": "Test harness for the vyre execution engine.",
       "license": "MIT OR Apache-2.0",
       "readme": null,
       "repository": "https://github.com/santhreal/vyre",
       "example_count": 1,
       "example_files": [
-        "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-test-harness/examples/vyre_test_harness_release_surface.rs"
+        "conform/vyre-test-harness/examples/vyre_test_harness_release_surface.rs"
       ],
       "readme_example_count": 0,
       "has_runnable_example": true,
@@ -857,8 +857,8 @@
     },
     {
       "name": "vyre-test-support",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-test-support/Cargo.toml",
-      "version": "0.6.6",
+      "manifest": "vyre-test-support/Cargo.toml",
+      "version": "0.7.0",
       "description": "Shared test-only harness helpers for the vyre workspace: the ONE canonical registry/coverage CLOSURE gate (source-enumerates `pub fn -> Program` builders and asserts each is registered, tested, or explicitly waived). Dev-dependency only; never a runtime dependency.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -878,7 +878,7 @@
     },
     {
       "name": "vyrec",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/Cargo.toml",
+      "manifest": "../../../../tools/vyrec/Cargo.toml",
       "version": "0.1.0",
       "description": "Beta GPU-first C compiler CLI built on vyre-frontend-c.",
       "license": "MIT OR Apache-2.0",
@@ -886,7 +886,7 @@
       "repository": "https://github.com/santhreal",
       "example_count": 2,
       "example_files": [
-        "/media/mukund-thiru/SanthData/Santh/tools/vyrec/examples/linux_subsystem_cli.rs"
+        "../../../../tools/vyrec/examples/linux_subsystem_cli.rs"
       ],
       "readme_example_count": 1,
       "has_runnable_example": true,
@@ -901,7 +901,7 @@
     },
     {
       "name": "weir-fuzz",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz/Cargo.toml",
+      "manifest": "../../../../libs/dataflow/weir/fuzz/Cargo.toml",
       "version": "0.0.0",
       "description": null,
       "license": null,
@@ -922,17 +922,17 @@
     },
     {
       "name": "weirflow",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/Cargo.toml",
-      "version": "0.1.0",
+      "manifest": "../../../../libs/dataflow/weir/Cargo.toml",
+      "version": "0.1.1",
       "description": "GPU-first dataflow analysis primitives for Vyre and Santh compiler pipelines.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
       "repository": "https://github.com/santhreal/weir",
       "example_count": 9,
       "example_files": [
-        "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/examples/ifds_to_witness.rs",
-        "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/examples/serde_evidence.rs",
-        "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/examples/witness_many.rs"
+        "../../../../libs/dataflow/weir/examples/ifds_to_witness.rs",
+        "../../../../libs/dataflow/weir/examples/serde_evidence.rs",
+        "../../../../libs/dataflow/weir/examples/witness_many.rs"
       ],
       "readme_example_count": 6,
       "has_runnable_example": true,
@@ -941,13 +941,13 @@
       "release_kind": "publishable-crate",
       "release_group": "weir",
       "release_surface": "dataflow-analysis",
-      "expected_version": "0.1.0",
+      "expected_version": "0.1.1",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "xtask",
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/xtask/Cargo.toml",
+      "manifest": "xtask/Cargo.toml",
       "version": "0.1.0",
       "description": "Build task runner for the vyre workspace.",
       "license": "MIT OR Apache-2.0",

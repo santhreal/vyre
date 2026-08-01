@@ -21,4 +21,4 @@ Release contract:
 - Weir evidence must include property, parity, adversarial, perf, fuzz, and gap test families.
 - `weir-analysis-api-matrix.json` must prove at least two standalone `examples/*.rs` programs outside tests so Weir is demonstrably usable as a normal library; each example must be non-empty, expose a runnable `fn main`, import or reference the `weir` crate, reference at least two dataflow API tokens, and report zero unresolved markers.
 - Standalone Weir examples must include default-feature `serde` evidence for release-facing witness and soundness API types, proving the crate can persist real Weir outputs without bespoke mirror structs; the matrix also rejects serde evidence examples that omit `required-features = ["serde"]` in `Cargo.toml`.
-- Weir README evidence must prove the standalone `weir 0.1.0` API story, relation to Vyre, soundness vocabulary, and user examples.
+- Weir README evidence must prove the standalone `weirflow 0.1.1` API story, relation to Vyre, soundness vocabulary, and user examples.
