@@ -243,7 +243,10 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
         ("vyre", &["cuda", "wgpu"][..]),
         ("vyre-driver-cuda", &["cuda"][..]),
         ("vyre-driver-wgpu", &["wgpu"][..]),
-        ("weir", &["default", "serde"][..]),
+        (
+            crate::release_train::weir_package_name(),
+            &["default", "serde"][..],
+        ),
     ] {
         let Some(entry) = feature_entries
             .iter()
@@ -373,5 +376,10 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
                 "requirement `crate-metadata` package readiness field `{field}` is empty"
             ));
         }
+    }
+    for issue in crate::package_readiness::package_content_evidence_issues(&package_readiness) {
+        failures.push(format!(
+            "requirement `crate-metadata` package readiness {issue}"
+        ));
     }
 }

@@ -1,9 +1,11 @@
 //! Pre-publish package graph evidence for the Vyre / Weir release train.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::ffi::OsString;
 use std::fs;
 use std::io::{self, Read};
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
+use std::process::Command;
 
 use serde::Serialize;
 
@@ -23,6 +25,7 @@ struct PackageReadiness {
     missing_metadata_packages: Vec<String>,
     extra_metadata_packages: Vec<String>,
     dependency_order_edges: Vec<DependencyEdge>,
+    package_content_checks: Vec<PackageContentCheck>,
     versioned_local_dependencies: Vec<VersionedLocalDependency>,
     blockers: Vec<String>,
 }
@@ -196,6 +199,19 @@ pub(crate) fn run(args: &[String]) {
         );
     }
 
+    let package_content_checks = publish_order
+        .iter()
+        .map(|step| audit_package_contents(&vyre_root, step))
+        .collect::<Vec<_>>();
+    for check in &package_content_checks {
+        blockers.extend(
+            check
+                .blockers
+                .iter()
+                .map(|blocker| format!("package `{}` archive: {blocker}", check.package)),
+        );
+    }
+
     dependency_order_edges.sort_by(|left, right| {
         left.package
             .cmp(&right.package)
@@ -260,6 +276,7 @@ pub(crate) fn run(args: &[String]) {
         extra_metadata_packages,
         dependency_order_edges,
         versioned_local_dependencies,
+        package_content_checks,
         blockers,
     };
     let json = match serde_json::to_string_pretty(&readiness) {
@@ -283,6 +300,294 @@ pub(crate) fn run(args: &[String]) {
     if !readiness.blockers.is_empty() {
         std::process::exit(1);
     }
+}
+
+fn audit_package_contents(root: &Path, step: &PublishStep) -> PackageContentCheck {
+    let cargo = std::env::var_os("CARGO").unwrap_or_else(|| OsString::from("cargo"));
+    let output = Command::new(cargo)
+        .current_dir(root)
+        .args([
+            "package",
+            "--list",
+            "--allow-dirty",
+            "--manifest-path",
+            step.manifest,
+        ])
+        .output();
+    match output {
+        Ok(output) if output.status.success() => {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            inspect_package_file_list(step, &stdout)
+        }
+        Ok(output) => {
+            let error = bounded_command_error(&output.stderr);
+            PackageContentCheck {
+                package: step.package.to_string(),
+                manifest: step.manifest.to_string(),
+                cargo_package_list_succeeded: false,
+                file_count: 0,
+                file_list_digest: String::new(),
+                example_count: 0,
+                rust_source_count: 0,
+                missing_required_files: Vec::new(),
+                forbidden_files: Vec::new(),
+                command_error: Some(error.clone()),
+                blockers: vec![format!("`cargo package --list` failed: {error}")],
+            }
+        }
+        Err(error) => PackageContentCheck {
+            package: step.package.to_string(),
+            manifest: step.manifest.to_string(),
+            cargo_package_list_succeeded: false,
+            file_count: 0,
+            file_list_digest: String::new(),
+            example_count: 0,
+            rust_source_count: 0,
+            missing_required_files: Vec::new(),
+            forbidden_files: Vec::new(),
+            command_error: Some(error.to_string()),
+            blockers: vec![format!("could not launch `cargo package --list`: {error}")],
+        },
+    }
+}
+
+fn inspect_package_file_list(step: &PublishStep, stdout: &str) -> PackageContentCheck {
+    const REQUIRED_FILES: &[&str] = &[
+        "Cargo.toml",
+        "Cargo.toml.orig",
+        "README.md",
+        "LICENSE-APACHE",
+        "LICENSE-MIT",
+    ];
+
+    let mut files = stdout
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(str::to_string)
+        .collect::<Vec<_>>();
+    files.sort();
+    files.dedup();
+
+    let file_set = files.iter().map(String::as_str).collect::<BTreeSet<_>>();
+    let missing_required_files = REQUIRED_FILES
+        .iter()
+        .filter(|required| !file_set.contains(**required))
+        .map(|required| (*required).to_string())
+        .collect::<Vec<_>>();
+    let forbidden_files = files
+        .iter()
+        .filter(|path| package_path_is_forbidden(path))
+        .cloned()
+        .collect::<Vec<_>>();
+    let example_count = files
+        .iter()
+        .filter(|path| path.starts_with("examples/") && path.ends_with(".rs"))
+        .count();
+    let rust_source_count = files
+        .iter()
+        .filter(|path| path.starts_with("src/") && path.ends_with(".rs"))
+        .count();
+    let mut blockers = Vec::new();
+    if files.is_empty() {
+        blockers.push("`cargo package --list` returned no files".to_string());
+    }
+    if !missing_required_files.is_empty() {
+        blockers.push(format!(
+            "missing required package files: {}",
+            missing_required_files.join(", ")
+        ));
+    }
+    if example_count == 0 {
+        blockers.push("contains no runnable `examples/*.rs` release surface".to_string());
+    }
+    if rust_source_count == 0 {
+        blockers.push("contains no Rust source under `src/`".to_string());
+    }
+    if !forbidden_files.is_empty() {
+        blockers.push(format!(
+            "contains internal or unsafe package paths: {}",
+            forbidden_files.join(", ")
+        ));
+    }
+    let canonical_file_list = files.join("\n");
+    PackageContentCheck {
+        package: step.package.to_string(),
+        manifest: step.manifest.to_string(),
+        cargo_package_list_succeeded: true,
+        file_count: files.len(),
+        file_list_digest: format!(
+            "blake3:{}",
+            blake3::hash(canonical_file_list.as_bytes()).to_hex()
+        ),
+        example_count,
+        rust_source_count,
+        missing_required_files,
+        forbidden_files,
+        command_error: None,
+        blockers,
+    }
+}
+
+fn package_path_is_forbidden(path: &str) -> bool {
+    const FORBIDDEN_FILE_NAMES: &[&str] = &[
+        "AGENTS.md",
+        "BACKLOG.md",
+        "CLAUDE.md",
+        "GEMINI.md",
+        "SKILL.md",
+    ];
+
+    let path = Path::new(path);
+    if path.is_absolute()
+        || path
+            .components()
+            .any(|component| matches!(component, Component::ParentDir | Component::RootDir))
+    {
+        return true;
+    }
+    path.components().any(|component| {
+        let Component::Normal(component) = component else {
+            return false;
+        };
+        let component = component.to_string_lossy();
+        FORBIDDEN_FILE_NAMES.contains(&component.as_ref())
+            || matches!(component.as_ref(), ".git" | "credentials" | "target")
+            || component == ".env"
+            || component.starts_with(".env.")
+    })
+}
+
+fn bounded_command_error(stderr: &[u8]) -> String {
+    const MAX_ERROR_BYTES: usize = 4_096;
+    let stderr = &stderr[..stderr.len().min(MAX_ERROR_BYTES)];
+    let message = String::from_utf8_lossy(stderr).trim().to_string();
+    if message.is_empty() {
+        "command exited unsuccessfully without a diagnostic".to_string()
+    } else {
+        message
+    }
+}
+
+pub(crate) fn package_content_evidence_issues(value: &serde_json::Value) -> Vec<String> {
+    let Some(publish_order) = value
+        .get("publish_order")
+        .and_then(serde_json::Value::as_array)
+    else {
+        return vec![
+            "publish_order must be an array before package contents can be proven".to_string(),
+        ];
+    };
+    let Some(content_checks) = value
+        .get("package_content_checks")
+        .and_then(serde_json::Value::as_array)
+    else {
+        return vec!["package_content_checks must be an array".to_string()];
+    };
+
+    let mut issues = Vec::new();
+    let mut expected = BTreeMap::<String, String>::new();
+    for entry in publish_order {
+        let Some(package) = entry.get("package").and_then(serde_json::Value::as_str) else {
+            issues.push("publish_order entry is missing package".to_string());
+            continue;
+        };
+        let Some(manifest) = entry.get("manifest").and_then(serde_json::Value::as_str) else {
+            issues.push(format!(
+                "publish_order package `{package}` is missing manifest"
+            ));
+            continue;
+        };
+        if expected
+            .insert(package.to_string(), manifest.to_string())
+            .is_some()
+        {
+            issues.push(format!(
+                "publish_order contains duplicate package `{package}`"
+            ));
+        }
+    }
+
+    let mut observed = BTreeMap::<String, &serde_json::Value>::new();
+    for check in content_checks {
+        let Some(package) = check.get("package").and_then(serde_json::Value::as_str) else {
+            issues.push("package_content_checks entry is missing package".to_string());
+            continue;
+        };
+        if observed.insert(package.to_string(), check).is_some() {
+            issues.push(format!(
+                "package_content_checks contains duplicate package `{package}`"
+            ));
+        }
+    }
+    for (package, manifest) in &expected {
+        let Some(check) = observed.get(package) else {
+            issues.push(format!(
+                "package_content_checks is missing publishable package `{package}`"
+            ));
+            continue;
+        };
+        if check.get("manifest").and_then(serde_json::Value::as_str) != Some(manifest.as_str()) {
+            issues.push(format!(
+                "package `{package}` content check manifest does not match `{manifest}`"
+            ));
+        }
+        if check
+            .get("cargo_package_list_succeeded")
+            .and_then(serde_json::Value::as_bool)
+            != Some(true)
+        {
+            issues.push(format!(
+                "package `{package}` did not pass `cargo package --list`"
+            ));
+        }
+        for field in ["file_count", "example_count", "rust_source_count"] {
+            if check
+                .get(field)
+                .and_then(serde_json::Value::as_u64)
+                .is_none_or(|count| count == 0)
+            {
+                issues.push(format!("package `{package}` has non-positive `{field}`"));
+            }
+        }
+        let valid_digest = check
+            .get("file_list_digest")
+            .and_then(serde_json::Value::as_str)
+            .and_then(|digest| digest.strip_prefix("blake3:"))
+            .is_some_and(|digest| {
+                digest.len() == 64 && digest.bytes().all(|byte| byte.is_ascii_hexdigit())
+            });
+        if !valid_digest {
+            issues.push(format!("package `{package}` has invalid file_list_digest"));
+        }
+        for field in ["missing_required_files", "forbidden_files", "blockers"] {
+            if check
+                .get(field)
+                .and_then(serde_json::Value::as_array)
+                .is_none_or(|entries| !entries.is_empty())
+            {
+                issues.push(format!(
+                    "package `{package}` content check field `{field}` must be an empty array"
+                ));
+            }
+        }
+        if check
+            .get("command_error")
+            .is_none_or(|error| !error.is_null())
+        {
+            issues.push(format!(
+                "package `{package}` content check command_error must be null"
+            ));
+        }
+    }
+    for package in observed.keys() {
+        if !expected.contains_key(package) {
+            issues.push(format!(
+                "package_content_checks contains non-publish-order package `{package}`"
+            ));
+        }
+    }
+    issues
 }
 
 fn metadata_publishable_packages(path: &Path, blockers: &mut Vec<String>) -> BTreeSet<String> {
@@ -586,3 +891,7 @@ fn default_output() -> PathBuf {
         .map(|path| path.join("release/evidence/package/publish-readiness.json"))
         .unwrap_or_else(|| PathBuf::from("release/evidence/package/publish-readiness.json"))
 }
+
+#[cfg(test)]
+#[path = "package_readiness/tests.rs"]
+mod tests;

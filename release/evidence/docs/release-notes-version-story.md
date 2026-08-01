@@ -11,8 +11,8 @@ Evidence sources:
 Required product versions:
 
 - Vyre release: `0.7.0`
-- Weir release: `0.1.0`
-- Required version-matrix packages: `vyre@0.7.0`, `vyre-driver-cuda@0.7.0`, `vyre-driver-wgpu@0.7.0`, `vyrec@0.1.0`, `vyre-frontend-c@0.7.0`, and `weir@0.1.0`; `missing_required_release_packages` must be empty.
+- Weir release: `0.1.1`
+- Required version-matrix packages: `vyre@0.7.0`, `vyre-driver-cuda@0.7.0`, `vyre-driver-wgpu@0.7.0`, `vyrec@0.1.0`, `vyre-frontend-c@0.7.0`, and `weirflow@0.1.1`; `missing_required_release_packages` must be empty.
 - Workspace-inherited package versions count only when the matrix resolves them to the concrete release version; unresolved `package.version.workspace = true` entries are blockers, not acceptable evidence.
 
 Required product-scoped tags:

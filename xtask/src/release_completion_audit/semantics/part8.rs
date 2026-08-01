@@ -250,6 +250,9 @@ fn inspect_package_readiness_semantics(
     {
         blockers.push(format!("{evidence}: versioned_local_dependencies is empty"));
     }
+    for issue in crate::package_readiness::package_content_evidence_issues(value) {
+        blockers.push(format!("{evidence}: {issue}"));
+    }
     let verify_passed = value
         .get("package_verify_passed")
         .and_then(serde_json::Value::as_array)
@@ -310,11 +313,7 @@ fn inspect_public_launch_state_semantics(
         .and_then(serde_json::Value::as_array)
         .cloned()
         .unwrap_or_default();
-    for required in [
-        "cargo_full publish approved crates in dependency order",
-        "make repositories public",
-        "git push release branch and tags",
-    ] {
+    for required in crate::launch_contract::required_external_actions() {
         let Some(action) = external_actions.iter().find(|action| {
             action.get("action").and_then(serde_json::Value::as_str) == Some(required)
         }) else {
@@ -476,6 +475,69 @@ fn release_evidence_workspace_root(path: &Path) -> Option<&Path> {
 #[cfg(test)]
 mod part8_tests {
     use super::*;
+
+    /// The completion audit must consume the same configured external-action
+    /// vocabulary that the launch-state generator emits.
+    #[test]
+    fn completion_audit_accepts_canonical_launch_actions() {
+        let external_actions = crate::launch_contract::required_external_actions()
+            .into_iter()
+            .map(|action| serde_json::json!({"action": action, "status": "complete"}))
+            .collect::<Vec<_>>();
+        let state = serde_json::json!({
+            "blockers": [],
+            "completion_status": "complete",
+            "external_actions": external_actions
+        });
+        let mut blockers = Vec::new();
+
+        inspect_public_launch_state_semantics(
+            "release/evidence/final/public-launch-state.json",
+            &state,
+            &mut blockers,
+        );
+
+        assert_eq!(blockers, Vec::<String>::new());
+    }
+
+    /// A legacy visibility action must not satisfy the configured repository
+    /// verification contract after the release boundary changes.
+    #[test]
+    fn completion_audit_rejects_legacy_launch_action_name() {
+        let state = serde_json::json!({
+            "blockers": [],
+            "completion_status": "complete",
+            "external_actions": [
+                {
+                    "action": crate::launch_contract::PUBLISH_ACTION,
+                    "status": "complete"
+                },
+                {
+                    "action": "make repositories public",
+                    "status": "complete"
+                },
+                {
+                    "action": crate::launch_contract::GIT_PUSH_ACTION,
+                    "status": "complete"
+                }
+            ]
+        });
+        let mut blockers = Vec::new();
+
+        inspect_public_launch_state_semantics(
+            "release/evidence/final/public-launch-state.json",
+            &state,
+            &mut blockers,
+        );
+
+        assert_eq!(
+            blockers,
+            vec![format!(
+                "release/evidence/final/public-launch-state.json: external action `{}` is missing",
+                crate::repo_boundary::verify_public_repo_action()
+            )]
+        );
+    }
 
     #[test]
     fn completion_audit_release_axes_counts_only_usable_source_artifacts() {

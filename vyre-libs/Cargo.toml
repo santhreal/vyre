@@ -12,6 +12,7 @@ readme = "README.md"
 keywords = ["gpu", "ml", "linear-algebra", "cryptography", "vyre"]
 categories = ["algorithms", "science"]
 documentation = "https://docs.rs/vyre-libs"
+exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
 
 [lib]
 path = "src/lib.rs"

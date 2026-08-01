@@ -12,6 +12,7 @@ readme = "README.md"
 keywords = ["gpu", "ir", "compiler", "wgsl", "vyre"]
 categories = ["algorithms", "compilers", "hardware-support"]
 documentation = "https://docs.rs/vyre-foundation"
+exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
 
 [package.metadata.docs.rs]
 all-features = true

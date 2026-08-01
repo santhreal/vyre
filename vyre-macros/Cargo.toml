@@ -12,6 +12,7 @@ readme = "README.md"
 keywords = ["gpu", "macro", "compiler", "ir", "vyre"]
 categories = ["development-tools::procedural-macro-helpers", "compilers"]
 documentation = "https://docs.rs/vyre-macros"
+exclude = ["**/SKILL.md"]
 
 [package.metadata.docs.rs]
 all-features = true

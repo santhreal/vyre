@@ -54,9 +54,13 @@ the tool prints:
 ./cargo_full run --bin xtask -- package-readiness
 ```
 
-The readiness report carries the publish order and the per-crate blockers. Do not
-publish workspace tooling crates (`xtask`, `vyre-bench`, `vyre-conform-*`) unless
-their manifests are deliberately changed to publishable.
+The readiness report carries the dependency-safe publish order and one
+`cargo package --list` content proof for every publishable crate. Each proof
+records a BLAKE3 file-list digest and rejects missing metadata, licenses,
+source, runnable examples, internal instruction files, secret configuration,
+path traversal, and build output. Do not publish workspace tooling crates
+(`xtask`, `vyre-bench`, `vyre-conform-*`) unless their manifests are
+deliberately changed to publishable.
 
 ## Pre-release checklist
 
@@ -73,8 +77,9 @@ their manifests are deliberately changed to publishable.
    cudaGraph replay.
 9. `CHANGELOG.md` has an entry for the new version.
 10. `CITATION.cff` version and release date match the tag.
-11. The full gate reports zero blockers:
-    `./cargo_full run --bin xtask -- vyre-release-gate`.
+11. The prepublication gate reports zero internal blockers while publication,
+    repository verification, and pushes remain approval-gated:
+    `./cargo_full run --bin xtask -- vyre-release-gate --prepublish`.
 
 Benchmark evidence is keyed to a source-tree fingerprint, so any source change
 after a benchmark run invalidates that run. Run the benchmarks last, after the
@@ -94,6 +99,15 @@ Wait for the index between crates. A dry run of a crate with internal
 dependencies only succeeds once those dependency versions are already in the
 registry, so a single up-front dry run of the whole workspace is not possible
 while crates.io still holds the previous release.
+
+After every approved external action is complete, regenerate
+`release/evidence/final/public-launch-state.json` and
+`release/evidence/final/completion-audit.json`. Then run the final gate without
+`--prepublish`. It must report zero blockers before you create release tags:
+
+```bash
+./cargo_full run --bin xtask -- vyre-release-gate
+```
 
 ## Tag
 

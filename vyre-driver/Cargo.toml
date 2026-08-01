@@ -12,6 +12,7 @@ readme = "README.md"
 keywords = ["gpu", "compiler", "runtime", "registry", "vyre"]
 categories = ["compilers", "hardware-support", "api-bindings"]
 documentation = "https://docs.rs/vyre-driver"
+exclude = ["**/SKILL.md"]
 
 [package.metadata.docs.rs]
 all-features = true

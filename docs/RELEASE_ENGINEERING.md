@@ -28,6 +28,11 @@ by the readiness report and must be checked with:
 cargo_full run --bin xtask -- package-readiness
 ```
 
+The report runs `cargo package --list` for every publish-order entry. It records
+the normalized file count and BLAKE3 digest, requires metadata, both licenses,
+Rust source, and a runnable example, and rejects internal instructions, secret
+configuration, path traversal, and build output.
+
 Publishing uses `cargo_full publish --dry-run --locked -p <crate>` and then
 `cargo_full publish --locked -p <crate>` for each publishable crate after the
 release evidence gate is closed.
@@ -89,16 +94,18 @@ top-level hardware provenance before benchmark freshness is accepted.
 ## Pre-flight checklist
 
 1. `cargo_full run --bin xtask -- release-evidence`  -  structural evidence batch.
-2. `cargo_full run --bin xtask -- release-completion-audit --output release/evidence/final/completion-audit.json`  -  prompt-to-artifact audit.
-3. `cargo_full run --bin xtask -- vyre-release-gate`  -  final hard gate.
-4. `cargo_full test --workspace --release --all-features`  -  full workspace tests.
-5. `cargo_full run -p vyre-bench --release -- run --backend cuda --suite release --measured-samples 30 --warmup-samples 3 --enforce-budgets`  -  CUDA release path.
-6. `cargo_full run -p vyre-bench --release -- run --backend wgpu --suite release --measured-samples 30 --warmup-samples 3 --enforce-budgets`  -  WGPU fallback path.
-7. Confirm `release/evidence/benchmarks/cpu-only-100x-proof.json` proves every required 100x release case (`release.condition_eval.1m`, `release.string_bitmap_scatter.1m`, `release.offset_count_aggregation.1m`, `release.entropy_window.1m`, `release.quantified_condition_loops.1m`, `release.alias_reaching_def.1m`, `release.ifds_witness.1m`, `release.c_ast_traversal.1m`, `release.megakernel_queue.1m`, `release.egraph_saturation.1m`, and `sparse.compaction.count.1m`) with 30+ CUDA and CPU baseline samples.
-8. `cargo_full run -p vyre-conform-runner --release --features gpu --bin vyre-conform -- dispatch --backend cuda --ops all`  -  CUDA conformance.
-9. `cargo_full run -p vyre-conform-runner --release --features gpu --bin vyre-conform -- dispatch --backend wgpu --ops all`  -  WGPU conformance.
-10. `cargo_full publish --dry-run --locked -p <each crate>` in order.
-11. Open the GitHub release with the evidence summary and conformance artifacts attached.
+2. `cargo_full run --bin xtask -- launch-state --output release/evidence/final/public-launch-state.json`  -  truthful external-action state.
+3. `cargo_full run --bin xtask -- release-completion-audit --output release/evidence/final/completion-audit.json`  -  prompt-to-artifact audit.
+4. `cargo_full run --bin xtask -- vyre-release-gate --prepublish`  -  internal readiness gate that permits only the three explicit approval-gated outward actions.
+5. `cargo_full test --workspace --release --all-features`  -  full workspace tests.
+6. `cargo_full run -p vyre-bench --release -- run --backend cuda --suite release --measured-samples 30 --warmup-samples 3 --enforce-budgets`  -  CUDA release path.
+7. `cargo_full run -p vyre-bench --release -- run --backend wgpu --suite release --measured-samples 30 --warmup-samples 3 --enforce-budgets`  -  WGPU fallback path.
+8. Confirm `release/evidence/benchmarks/cpu-only-100x-proof.json` proves every required 100x release case (`release.condition_eval.1m`, `release.string_bitmap_scatter.1m`, `release.offset_count_aggregation.1m`, `release.entropy_window.1m`, `release.quantified_condition_loops.1m`, `release.alias_reaching_def.1m`, `release.ifds_witness.1m`, `release.c_ast_traversal.1m`, `release.megakernel_queue.1m`, `release.egraph_saturation.1m`, and `sparse.compaction.count.1m`) with 30+ CUDA and CPU baseline samples.
+9. `cargo_full run -p vyre-conform-runner --release --features gpu --bin vyre-conform -- dispatch --backend cuda --ops all`  -  CUDA conformance.
+10. `cargo_full run -p vyre-conform-runner --release --features gpu --bin vyre-conform -- dispatch --backend wgpu --ops all`  -  WGPU conformance.
+11. `cargo_full publish --dry-run --locked -p <each crate>` in order.
+12. After approved publication, repository verification, and push actions, regenerate launch-state and completion-audit evidence and run `cargo_full run --bin xtask -- vyre-release-gate` as the final hard gate.
+13. Open the GitHub release with the evidence summary and conformance artifacts attached.
 
 ## Post-release
 
@@ -110,8 +117,11 @@ top-level hardware provenance before benchmark freshness is accepted.
 
 ## Open items
 
+- Prepublication cannot begin until `vyre-release-gate --prepublish` accepts
+  every internal requirement and reports only the three approval-gated outward
+  actions as pending.
 - Release cannot close until `release/evidence/final/completion-audit.json`
-  has zero blockers and `vyre-release-gate` accepts every manifest
+  has zero blockers and final-mode `vyre-release-gate` accepts every manifest
   requirement.
 - A verified downstream artifact must cite the exact evidence files it relied
   on, not only a green CI run.

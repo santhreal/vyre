@@ -12,6 +12,7 @@ readme = "README.md"
 keywords = ["gpu", "ir", "reference", "interpreter", "vyre"]
 categories = ["algorithms", "api-bindings"]
 documentation = "https://docs.rs/vyre-reference"
+exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
 
 [dependencies]
 rayon = { workspace = true }

@@ -12,6 +12,7 @@ readme = "README.md"
 keywords = ["gpu", "compute", "spirv", "vulkan", "vyre"]
 categories = ["hardware-support", "rendering::graphics-api"]
 documentation = "https://docs.rs/vyre-driver-spirv"
+exclude = ["**/SKILL.md"]
 
 [package.metadata.docs.rs]
 all-features = true

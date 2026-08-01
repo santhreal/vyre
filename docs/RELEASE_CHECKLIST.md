@@ -7,9 +7,10 @@ required workflow.
 ## Evidence gates
 
 - [ ] `cargo_full run --bin xtask -- release-evidence`
+- [ ] `cargo_full run --bin xtask -- launch-state --output release/evidence/final/public-launch-state.json`
 - [ ] `cargo_full run --bin xtask -- release-completion-audit --output release/evidence/final/completion-audit.json`
-- [ ] `cargo_full run --bin xtask -- vyre-release-gate`
-- [ ] `release/evidence/final/completion-audit.json` reports zero blockers.
+- [ ] `cargo_full run --bin xtask -- vyre-release-gate --prepublish`
+- [ ] `public-launch-state.json` reports `prepublish_release_ready` with exactly the publish, public-repository verification, and push actions blocked on user approval.
 - [ ] `release/vyre-release-evidence.toml` has every requirement covered by named artifacts.
 
 ## CUDA-first / WGPU fallback
@@ -57,10 +58,13 @@ required workflow.
 ## Publish and tags
 
 - [ ] Publish order matches the order `cargo_full run --bin xtask -- package-readiness` derives.
-- [ ] Every publishable crate dry-runs with `cargo_full publish --dry-run --locked -p <crate>`.
+- [ ] `package-readiness` contains one successful package-content check per publish-order entry, with no missing required files, forbidden files, command errors, or blockers.
+- [ ] Dry-run each crate with `cargo_full publish --dry-run --locked -p <crate>` immediately before its approved publication, after every earlier internal dependency is available in the registry.
 - [ ] Publish each crate with `cargo_full publish --locked -p <crate>` only after evidence gates close.
 - [ ] Cut the three release-candidate tags the release train names, in the order it lists them.
 - [ ] Cut the three final tags the release train names, after the gate is green and the crates are published.
+- [ ] Regenerate launch-state and completion-audit evidence after the approved external actions.
+- [ ] `cargo_full run --bin xtask -- vyre-release-gate` reports zero final-launch blockers before final tags.
 - [ ] GitHub release notes cite the generated evidence summary and conformance artifacts.
 
 ## Rollback

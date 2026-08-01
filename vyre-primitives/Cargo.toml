@@ -12,6 +12,7 @@ readme = "README.md"
 keywords = ["gpu", "ir", "primitive", "vyre", "lego"]
 categories = ["algorithms", "api-bindings"]
 documentation = "https://docs.rs/vyre-primitives"
+exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
 
 [features]
 # Default: marker-types only, zero IR-builder deps. Consumers that

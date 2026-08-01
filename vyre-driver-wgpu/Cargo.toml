@@ -12,6 +12,7 @@ readme = "README.md"
 keywords = ["gpu", "wgpu", "ir", "backend", "vyre"]
 categories = ["graphics", "rendering::graphics-api", "hardware-support"]
 documentation = "https://docs.rs/vyre-wgpu"
+exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
 
 [features]
 default = []

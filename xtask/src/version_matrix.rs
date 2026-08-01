@@ -92,7 +92,7 @@ struct ReleaseDocTagFinding {
 #[derive(Debug, Serialize)]
 struct ReleaseNoteTokenFinding {
     path: String,
-    missing: String,
+    issue: String,
 }
 
 pub(crate) fn run(args: &[String]) {
@@ -232,8 +232,8 @@ pub(crate) fn run(args: &[String]) {
     let release_note_token_findings = scan_release_note_tokens(&vyre_root);
     for finding in &release_note_token_findings {
         blockers.push(format!(
-            "{} is missing release-note version token `{}`",
-            finding.path, finding.missing
+            "{} has a release-note version issue: {}",
+            finding.path, finding.issue
         ));
     }
 
@@ -335,6 +335,8 @@ fn scan_bare_release_tags(
 ) -> (Vec<ReleaseDocTagFinding>, Vec<String>) {
     let mut findings = Vec::new();
     let mut blockers = Vec::new();
+    let bare_tag = format!("v{}", release_train::vyre_version());
+    let bare_rc_tag = format!("{bare_tag}-rc.1");
     for path in release_doc_paths(vyre_root, santh_root) {
         let text = match read_text_bounded(&path) {
             Ok(text) => text,
@@ -348,13 +350,7 @@ fn scan_bare_release_tags(
         };
         for (line_index, line) in text.lines().enumerate() {
             let trimmed = line.trim();
-            if trimmed.starts_with("git tag v0.4.2")
-                || trimmed.starts_with("git push origin v0.4.2")
-                || trimmed.starts_with("gh release create v0.4.2")
-                || trimmed.starts_with("git tag v0.4.2-rc.1")
-                || trimmed.starts_with("git push origin v0.4.2-rc.1")
-                || trimmed.starts_with("gh release create v0.4.2-rc.1")
-            {
+            if is_bare_release_tag_command(trimmed, &bare_tag, &bare_rc_tag) {
                 findings.push(ReleaseDocTagFinding {
                     path: path.display().to_string(),
                     line: line_index + 1,
@@ -364,6 +360,17 @@ fn scan_bare_release_tags(
         }
     }
     (findings, blockers)
+}
+
+fn is_bare_release_tag_command(line: &str, bare_tag: &str, bare_rc_tag: &str) -> bool {
+    let mut words = line.split_whitespace();
+    let tag = match (words.next(), words.next()) {
+        (Some("git"), Some("tag")) => words.next(),
+        (Some("git"), Some("push")) if words.next() == Some("origin") => words.next(),
+        (Some("gh"), Some("release")) if words.next() == Some("create") => words.next(),
+        _ => None,
+    };
+    tag.is_some_and(|tag| tag == bare_tag || tag == bare_rc_tag)
 }
 
 /// Release notes for the version currently declared in the release train.
@@ -393,7 +400,7 @@ fn scan_release_note_tokens(vyre_root: &Path) -> Vec<ReleaseNoteTokenFinding> {
             Err(error) => {
                 findings.push(ReleaseNoteTokenFinding {
                     path: path.display().to_string(),
-                    missing: format!("required release-note document unreadable: {error}"),
+                    issue: format!("required release-note document unreadable: {error}"),
                 });
                 continue;
             }
@@ -402,12 +409,108 @@ fn scan_release_note_tokens(vyre_root: &Path) -> Vec<ReleaseNoteTokenFinding> {
             if !text.contains(required) {
                 findings.push(ReleaseNoteTokenFinding {
                     path: path.display().to_string(),
-                    missing: required.to_string(),
+                    issue: format!("missing required token `{required}`"),
                 });
             }
         }
+        append_release_version_issues(&path, &text, &mut findings);
+    }
+    for path in [
+        vyre_root.join("release/evidence/docs/crate-metadata-proof.md"),
+        vyre_root.join("release/evidence/docs/weir-readme-proof.md"),
+    ] {
+        match read_text_bounded(&path) {
+            Ok(text) => append_release_version_issues(&path, &text, &mut findings),
+            Err(error) => findings.push(ReleaseNoteTokenFinding {
+                path: path.display().to_string(),
+                issue: format!("required release evidence document unreadable: {error}"),
+            }),
+        }
     }
     findings
+}
+
+fn append_release_version_issues(
+    path: &Path,
+    text: &str,
+    findings: &mut Vec<ReleaseNoteTokenFinding>,
+) {
+    for line in text.lines() {
+        for issue in release_note_version_issues(
+            line,
+            release_train::vyre_version(),
+            release_train::weir_version(),
+        ) {
+            findings.push(ReleaseNoteTokenFinding {
+                path: path.display().to_string(),
+                issue,
+            });
+        }
+    }
+}
+
+fn release_note_version_issues(line: &str, vyre_version: &str, weir_version: &str) -> Vec<String> {
+    const VYRE_DECLARATION: &str = "- Vyre release:";
+    const WEIR_DECLARATION: &str = "- Weir release:";
+    const PUBLISHABLE_WEIR_DECLARATION: &str = "- Publishable Weir crates must be version";
+    const WEIR_DOCS_DECLARATION: &str = "- Weir docs must state the";
+    const PACKAGE_DECLARATION: &str = "- Required version-matrix packages:";
+
+    let trimmed = line.trim();
+    let mut issues = Vec::new();
+    for (prefix, label, expected) in [
+        (VYRE_DECLARATION, "Vyre release", vyre_version),
+        (WEIR_DECLARATION, "Weir release", weir_version),
+        (
+            PUBLISHABLE_WEIR_DECLARATION,
+            "Publishable Weir version",
+            weir_version,
+        ),
+        (WEIR_DOCS_DECLARATION, "Weir docs API surface", weir_version),
+    ] {
+        let Some(rest) = trimmed.strip_prefix(prefix) else {
+            continue;
+        };
+        let Some((_, quoted)) = rest.split_once('`') else {
+            continue;
+        };
+        let Some((declared, _)) = quoted.split_once('`') else {
+            continue;
+        };
+        if declared != expected {
+            issues.push(format!("{label} has `{declared}`, expected `{expected}`"));
+        }
+    }
+
+    if !trimmed.starts_with(PACKAGE_DECLARATION) {
+        return issues;
+    }
+    for token in trimmed.split('`').skip(1).step_by(2) {
+        let Some((package, version)) = token.split_once('@') else {
+            continue;
+        };
+        let expected = match package {
+            "vyre" | "vyre-driver-cuda" | "vyre-driver-wgpu" | "vyre-frontend-c" => {
+                Some(vyre_version)
+            }
+            "weirflow" => Some(weir_version),
+            "weir" => {
+                issues.push(format!(
+                    "`{token}` uses retired package id `weir`; expected `weirflow@{weir_version}`"
+                ));
+                None
+            }
+            _ => None,
+        };
+        if let Some(expected) = expected {
+            if version != expected {
+                issues.push(format!(
+                    "`{package}` declares version `{version}`, expected `{expected}`"
+                ));
+            }
+        }
+    }
+    issues
 }
 
 fn release_doc_paths(vyre_root: &Path, santh_root: &Path) -> Vec<PathBuf> {
@@ -821,4 +924,118 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
         ));
     }
     Ok(text)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{is_bare_release_tag_command, release_note_version_issues};
+
+    /// The tag gate rejects every supported command form for the active bare final tag.
+    #[test]
+    fn bare_final_tag_commands_are_rejected() {
+        for command in [
+            "git tag v0.7.0",
+            "git push origin v0.7.0",
+            "gh release create v0.7.0",
+        ] {
+            assert!(is_bare_release_tag_command(
+                command,
+                "v0.7.0",
+                "v0.7.0-rc.1"
+            ));
+        }
+    }
+
+    /// The tag gate rejects every supported command form for the active bare RC tag.
+    #[test]
+    fn bare_rc_tag_commands_are_rejected() {
+        for command in [
+            "git tag v0.7.0-rc.1",
+            "git push origin v0.7.0-rc.1",
+            "gh release create v0.7.0-rc.1",
+        ] {
+            assert!(is_bare_release_tag_command(
+                command,
+                "v0.7.0",
+                "v0.7.0-rc.1"
+            ));
+        }
+    }
+
+    /// Product-scoped tags and older release commands do not trigger the current bare-tag gate.
+    #[test]
+    fn product_scoped_and_historical_tags_are_allowed() {
+        for command in [
+            "git tag vyre-v0.7.0",
+            "git push origin weir-v0.1.0",
+            "gh release create vyre-0.7.0-weir-0.1.0",
+            "git tag v0.6.0",
+        ] {
+            assert!(!is_bare_release_tag_command(
+                command,
+                "v0.7.0",
+                "v0.7.0-rc.1"
+            ));
+        }
+    }
+
+    /// Current release declarations and package tokens must remain contradiction-free.
+    #[test]
+    fn current_release_version_story_is_accepted() {
+        for line in [
+            "- Vyre release: `0.7.0`",
+            "- Weir release: `0.1.1`",
+            "- Required version-matrix packages: `vyre@0.7.0`, `vyre-driver-cuda@0.7.0`, `vyre-driver-wgpu@0.7.0`, `vyrec@0.1.0`, `vyre-frontend-c@0.7.0`, and `weirflow@0.1.1`.",
+            "- Publishable Weir crates must be version `0.1.1`.",
+            "- Weir docs must state the `0.1.1` API surface honestly.",
+        ] {
+            assert_eq!(
+                release_note_version_issues(line, "0.7.0", "0.1.1"),
+                Vec::<String>::new(),
+                "Fix: the active release story must not report a contradiction for `{line}`"
+            );
+        }
+    }
+
+    /// A stale Weir declaration must fail even when the document also contains every required current token elsewhere.
+    #[test]
+    fn stale_weir_release_declaration_is_rejected() {
+        assert_eq!(
+            release_note_version_issues("- Weir release: `0.1.0`", "0.7.0", "0.1.1"),
+            vec!["Weir release has `0.1.0`, expected `0.1.1`"],
+        );
+    }
+
+    /// Generated metadata and README proof declarations must use the current Weir train version.
+    #[test]
+    fn stale_weir_evidence_declarations_are_rejected() {
+        assert_eq!(
+            release_note_version_issues(
+                "- Publishable Weir crates must be version `0.1.0`.",
+                "0.7.0",
+                "0.1.1",
+            ),
+            vec!["Publishable Weir version has `0.1.0`, expected `0.1.1`"],
+        );
+        assert_eq!(
+            release_note_version_issues(
+                "- Weir docs must state the `0.1.0` API surface honestly.",
+                "0.7.0",
+                "0.1.1",
+            ),
+            vec!["Weir docs API surface has `0.1.0`, expected `0.1.1`"],
+        );
+    }
+    /// The retired `weir` package id must not satisfy the crates.io package story for `weirflow`.
+    #[test]
+    fn retired_weir_package_id_is_rejected() {
+        assert_eq!(
+            release_note_version_issues(
+                "- Required version-matrix packages: `vyre@0.7.0` and `weir@0.1.0`.",
+                "0.7.0",
+                "0.1.1",
+            ),
+            vec!["`weir@0.1.0` uses retired package id `weir`; expected `weirflow@0.1.1`"],
+        );
+    }
 }

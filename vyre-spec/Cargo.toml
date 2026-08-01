@@ -12,6 +12,7 @@ readme = "README.md"
 keywords = ["gpu", "ir", "specification", "wgsl", "vyre"]
 categories = ["algorithms", "api-bindings"]
 documentation = "https://docs.rs/vyre-spec"
+exclude = ["**/SKILL.md"]
 
 [dependencies]
 serde.workspace = true

@@ -12,6 +12,7 @@ documentation = "https://docs.rs/vyre"
 readme = "README.md"
 keywords = ["gpu", "ir", "compute", "wgsl", "conformance"]
 categories = ["algorithms", "compilers", "hardware-support"]
+exclude = ["**/SKILL.md"]
 
 [dependencies]
 vyre-driver.workspace = true
