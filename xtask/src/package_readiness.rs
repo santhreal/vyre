@@ -3,7 +3,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::OsString;
 use std::fs;
-use std::io::{self, Read};
 use std::path::{Component, Path, PathBuf};
 use std::process::Command;
 
@@ -77,57 +76,164 @@ struct VersionedLocalDependency {
     source: &'static str,
 }
 
+#[derive(Debug, Serialize)]
+struct PackageContentCheck {
+    package: String,
+    manifest: String,
+    cargo_package_list_succeeded: bool,
+    file_count: usize,
+    file_list_digest: String,
+    example_count: usize,
+    rust_source_count: usize,
+    missing_required_files: Vec<String>,
+    forbidden_files: Vec<String>,
+    command_error: Option<String>,
+    blockers: Vec<String>,
+}
+
 fn publish_order() -> Vec<PublishStep> {
     vec![
-    // First: no internal vyre dependencies, only third-party ones. It was dropped from
-    // the train after 0.6.2 and went stale on crates.io while every sibling advanced,
-    // which is why in-workspace consumers had to pin it path-only. A crate that is
-    // already public stays current with the train.
-    step(
-        "vyre-grammar-gen",
-        release_train::vyre_version(),
-        "vyre-grammar-gen/Cargo.toml",
-    ),
-    step("vyre-macros", release_train::vyre_version(), "vyre-macros/Cargo.toml"),
-    step("vyre-spec", release_train::vyre_version(), "vyre-spec/Cargo.toml"),
-    step("vyre-lints", release_train::vyre_version(), "vyre-lints/Cargo.toml"),
-    step("vyre-foundation", release_train::vyre_version(), "vyre-foundation/Cargo.toml"),
-    step("vyre-lower", release_train::vyre_version(), "vyre-lower/Cargo.toml"),
-    step("vyre-emit-ptx", release_train::vyre_version(), "vyre-emit-ptx/Cargo.toml"),
-    step("vyre-primitives", release_train::vyre_version(), "vyre-primitives/Cargo.toml"),
-    step("vyre-reference", release_train::vyre_version(), "vyre-reference/Cargo.toml"),
-    step(
-        "vyre-self-substrate",
-        release_train::vyre_version(),
-        "vyre-self-substrate/Cargo.toml",
-    ),
-    step("vyre-driver", release_train::vyre_version(), "vyre-driver/Cargo.toml"),
-    step("vyre-runtime", release_train::vyre_version(), "vyre-runtime/Cargo.toml"),
-    step("vyre-emit-naga", release_train::vyre_version(), "vyre-emit-naga/Cargo.toml"),
-    step("vyre-emit-metal", release_train::vyre_version(), "vyre-emit-metal/Cargo.toml"),
-    step("vyre-driver-cuda", release_train::vyre_version(), "vyre-driver-cuda/Cargo.toml"),
-    step("vyre-driver-wgpu", release_train::vyre_version(), "vyre-driver-wgpu/Cargo.toml"),
-    step("vyre-driver-metal", release_train::vyre_version(), "vyre-driver-metal/Cargo.toml"),
-    step("vyre-driver-spirv", release_train::vyre_version(), "vyre-driver-spirv/Cargo.toml"),
-    step(
-        "vyre-driver-reference",
-        release_train::vyre_version(),
-        "vyre-driver-reference/Cargo.toml",
-    ),
-    step("vyre", release_train::vyre_version(), "vyre-core/Cargo.toml"),
-    step("vyre-harness", release_train::vyre_version(), "vyre-harness/Cargo.toml"),
-    // The product and its tags are named `weir`; the publishable package is `weirflow`.
-    // See `release_train::weir_package_name` for why, and keep that the single owner.
-    step(
-        release_train::weir_package_name(),
-        release_train::weir_version(),
-        "../../../dataflow/weir/Cargo.toml",
-    ),
-    step("vyre-intrinsics", release_train::vyre_version(), "vyre-intrinsics/Cargo.toml"),
-    step("vyre-libs", release_train::vyre_version(), "vyre-libs/Cargo.toml"),
-    step("vyre-debug", release_train::vyre_version(), "vyre-debug/Cargo.toml"),
-    step("vyre-aot", release_train::vyre_version(), "vyre-aot/Cargo.toml"),
-    step("vyre-emit-spirv", release_train::vyre_version(), "vyre-emit-spirv/Cargo.toml"),
+        // First: no internal vyre dependencies, only third-party ones. It was dropped from
+        // the train after 0.6.2 and went stale on crates.io while every sibling advanced,
+        // which is why in-workspace consumers had to pin it path-only. A crate that is
+        // already public stays current with the train.
+        step(
+            "vyre-grammar-gen",
+            release_train::vyre_version(),
+            "vyre-grammar-gen/Cargo.toml",
+        ),
+        step(
+            "vyre-macros",
+            release_train::vyre_version(),
+            "vyre-macros/Cargo.toml",
+        ),
+        step(
+            "vyre-spec",
+            release_train::vyre_version(),
+            "vyre-spec/Cargo.toml",
+        ),
+        step(
+            "vyre-lints",
+            release_train::vyre_version(),
+            "vyre-lints/Cargo.toml",
+        ),
+        step(
+            "vyre-foundation",
+            release_train::vyre_version(),
+            "vyre-foundation/Cargo.toml",
+        ),
+        step(
+            "vyre-lower",
+            release_train::vyre_version(),
+            "vyre-lower/Cargo.toml",
+        ),
+        step(
+            "vyre-emit-ptx",
+            release_train::vyre_version(),
+            "vyre-emit-ptx/Cargo.toml",
+        ),
+        step(
+            "vyre-primitives",
+            release_train::vyre_version(),
+            "vyre-primitives/Cargo.toml",
+        ),
+        step(
+            "vyre-reference",
+            release_train::vyre_version(),
+            "vyre-reference/Cargo.toml",
+        ),
+        step(
+            "vyre-self-substrate",
+            release_train::vyre_version(),
+            "vyre-self-substrate/Cargo.toml",
+        ),
+        step(
+            "vyre-driver",
+            release_train::vyre_version(),
+            "vyre-driver/Cargo.toml",
+        ),
+        step(
+            "vyre-runtime",
+            release_train::vyre_version(),
+            "vyre-runtime/Cargo.toml",
+        ),
+        step(
+            "vyre-emit-naga",
+            release_train::vyre_version(),
+            "vyre-emit-naga/Cargo.toml",
+        ),
+        step(
+            "vyre-emit-metal",
+            release_train::vyre_version(),
+            "vyre-emit-metal/Cargo.toml",
+        ),
+        step(
+            "vyre-driver-cuda",
+            release_train::vyre_version(),
+            "vyre-driver-cuda/Cargo.toml",
+        ),
+        step(
+            "vyre-driver-wgpu",
+            release_train::vyre_version(),
+            "vyre-driver-wgpu/Cargo.toml",
+        ),
+        step(
+            "vyre-driver-metal",
+            release_train::vyre_version(),
+            "vyre-driver-metal/Cargo.toml",
+        ),
+        step(
+            "vyre-driver-spirv",
+            release_train::vyre_version(),
+            "vyre-driver-spirv/Cargo.toml",
+        ),
+        step(
+            "vyre-driver-reference",
+            release_train::vyre_version(),
+            "vyre-driver-reference/Cargo.toml",
+        ),
+        step(
+            "vyre",
+            release_train::vyre_version(),
+            "vyre-core/Cargo.toml",
+        ),
+        step(
+            "vyre-harness",
+            release_train::vyre_version(),
+            "vyre-harness/Cargo.toml",
+        ),
+        // The product and its tags are named `weir`; the publishable package is `weirflow`.
+        // See `release_train::weir_package_name` for why, and keep that the single owner.
+        step(
+            release_train::weir_package_name(),
+            release_train::weir_version(),
+            "../../../dataflow/weir/Cargo.toml",
+        ),
+        step(
+            "vyre-intrinsics",
+            release_train::vyre_version(),
+            "vyre-intrinsics/Cargo.toml",
+        ),
+        step(
+            "vyre-libs",
+            release_train::vyre_version(),
+            "vyre-libs/Cargo.toml",
+        ),
+        step(
+            "vyre-debug",
+            release_train::vyre_version(),
+            "vyre-debug/Cargo.toml",
+        ),
+        step(
+            "vyre-aot",
+            release_train::vyre_version(),
+            "vyre-aot/Cargo.toml",
+        ),
+        step(
+            "vyre-emit-spirv",
+            release_train::vyre_version(),
+            "vyre-emit-spirv/Cargo.toml",
+        ),
     ]
 }
 
@@ -279,23 +385,13 @@ pub(crate) fn run(args: &[String]) {
         package_content_checks,
         blockers,
     };
-    let json = match serde_json::to_string_pretty(&readiness) {
-        Ok(json) => json,
-        Err(error) => {
-            eprintln!("Fix: failed to serialize package readiness evidence: {error}");
-            std::process::exit(1);
-        }
-    };
     if let Some(parent) = output.parent() {
         if let Err(error) = fs::create_dir_all(parent) {
             eprintln!("Fix: failed to create `{}`: {error}", parent.display());
             std::process::exit(1);
         }
     }
-    if let Err(error) = fs::write(&output, format!("{json}\n")) {
-        eprintln!("Fix: failed to write `{}`: {error}", output.display());
-        std::process::exit(1);
-    }
+    crate::output_arg::write_json(&output, &readiness);
     println!("package-readiness: wrote {}", output.display());
     if !readiness.blockers.is_empty() {
         std::process::exit(1);
@@ -591,7 +687,7 @@ pub(crate) fn package_content_evidence_issues(value: &serde_json::Value) -> Vec<
 }
 
 fn metadata_publishable_packages(path: &Path, blockers: &mut Vec<String>) -> BTreeSet<String> {
-    let text = match read_text_bounded(path, MAX_JSON_BYTES) {
+    let text = match crate::output_arg::read_text_bounded(path, MAX_JSON_BYTES, "") {
         Ok(text) => text,
         Err(error) => {
             blockers.push(format!(
@@ -759,7 +855,8 @@ fn workspace_dependencies(
 fn workspace_root_for_manifest(manifest: &Path) -> Option<PathBuf> {
     for ancestor in manifest.ancestors().skip(1) {
         let candidate = ancestor.join("Cargo.toml");
-        let Ok(text) = read_text_bounded(&candidate, MAX_MANIFEST_BYTES) else {
+        let Ok(text) = crate::output_arg::read_text_bounded(&candidate, MAX_MANIFEST_BYTES, "")
+        else {
             continue;
         };
         let Ok(value) = toml::from_str::<toml::Value>(&text) else {
@@ -825,7 +922,7 @@ fn package_version(package: &toml::value::Table) -> Option<&str> {
 }
 
 fn read_manifest(path: &Path, blockers: &mut Vec<String>) -> Option<toml::Value> {
-    let text = match read_text_bounded(path, MAX_MANIFEST_BYTES) {
+    let text = match crate::output_arg::read_text_bounded(path, MAX_MANIFEST_BYTES, "") {
         Ok(text) => text,
         Err(error) => {
             blockers.push(format!(
@@ -847,42 +944,13 @@ fn read_manifest(path: &Path, blockers: &mut Vec<String>) -> Option<toml::Value>
     }
 }
 
-fn read_text_bounded(path: &Path, max_bytes: u64) -> io::Result<String> {
-    let mut reader = fs::File::open(path)?.take(max_bytes.saturating_add(1));
-    let mut text = String::new();
-    reader.read_to_string(&mut text)?;
-    if text.len() as u64 > max_bytes {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            format!("{} exceeds {max_bytes} byte read cap", path.display()),
-        ));
-    }
-    Ok(text)
-}
-
 fn parse_output(args: &[String]) -> Result<PathBuf, String> {
-    let mut output = None;
-    let mut index = 2;
-    while index < args.len() {
-        match args[index].as_str() {
-            "--output" => {
-                let Some(path) = args.get(index + 1) else {
-                    return Err("Fix: --output requires a path.".to_string());
-                };
-                output = Some(PathBuf::from(path));
-                index += 2;
-            }
-            "--help" | "-h" => {
-                println!(
-                    "USAGE:\n  cargo_full run --bin xtask -- package-readiness [--output PATH]\n\n\
-                     Writes pre-publish package-order evidence."
-                );
-                std::process::exit(0);
-            }
-            other => return Err(format!("Fix: unknown package-readiness option `{other}`.")),
-        }
-    }
-    Ok(output.unwrap_or_else(default_output))
+    crate::output_arg::parse_output_arg(
+        args,
+        "package-readiness",
+        "Writes pre-publish package-order evidence.",
+        default_output,
+    )
 }
 
 fn default_output() -> PathBuf {
@@ -893,5 +961,5 @@ fn default_output() -> PathBuf {
 }
 
 #[cfg(test)]
-#[path = "package_readiness/tests.rs"]
-mod tests;
+#[path = "package_readiness/archive_contracts.rs"]
+mod archive_contracts;

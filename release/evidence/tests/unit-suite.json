@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "suite": "unit",
-  "file_count": 3687,
-  "vyre_file_count": 3324,
+  "file_count": 3688,
+  "vyre_file_count": 3325,
   "dataflow_consumer_file_count": 347,
   "vyrec_file_count": 16,
   "files": [
@@ -111544,12 +111544,12 @@
         "gap",
         "unit"
       ],
-      "lines": 850,
+      "lines": 1006,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 3,
+      "assertion_count": 8,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [],
@@ -111562,13 +111562,16 @@
         "positive"
       ],
       "op_families": [
+        "driver_runtime",
         "flow",
         "nn_math",
         "parser_frontend",
         "scan_static"
       ],
       "backend_families": [
-        "direct"
+        "cuda_ptx",
+        "direct",
+        "wgpu"
       ],
       "feature_families": [
         "serde",
@@ -111581,6 +111584,7 @@
       ],
       "corpus_families": [
         "fuzz",
+        "generated",
         "release"
       ],
       "weir_flow_families": [
@@ -113532,6 +113536,53 @@
       ]
     },
     {
+      "path": "xtask/src/package_readiness/archive_contracts.rs",
+      "layers": [
+        "adversarial",
+        "benchmark",
+        "gap",
+        "unit"
+      ],
+      "lines": 235,
+      "dedicated_test_file": false,
+      "inline_test_module_file": true,
+      "line_threshold_exceeded": false,
+      "has_test_entrypoint": true,
+      "assertion_count": 28,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": [],
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive"
+      ],
+      "op_families": [
+        "nn_math"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "serde",
+        "soundness"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "malformed_input",
+        "missing_input"
+      ],
+      "corpus_families": [
+        "fixture",
+        "release"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
+    },
+    {
       "path": "xtask/src/weir_matrix.rs",
       "layers": [
         "adversarial",
@@ -114220,7 +114271,7 @@
         "gap",
         "unit"
       ],
-      "lines": 721,
+      "lines": 724,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,

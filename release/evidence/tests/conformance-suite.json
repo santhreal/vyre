@@ -31109,12 +31109,12 @@
         "gap",
         "unit"
       ],
-      "lines": 850,
+      "lines": 1006,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 3,
+      "assertion_count": 8,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [],
@@ -31127,13 +31127,16 @@
         "positive"
       ],
       "op_families": [
+        "driver_runtime",
         "flow",
         "nn_math",
         "parser_frontend",
         "scan_static"
       ],
       "backend_families": [
-        "direct"
+        "cuda_ptx",
+        "direct",
+        "wgpu"
       ],
       "feature_families": [
         "serde",
@@ -31146,6 +31149,7 @@
       ],
       "corpus_families": [
         "fuzz",
+        "generated",
         "release"
       ],
       "weir_flow_families": [

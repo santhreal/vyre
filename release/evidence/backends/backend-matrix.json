@@ -304,7 +304,7 @@
       "path": "vyre-driver-wgpu/src/runtime/readback_ring.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 36211,
+      "source_bytes": 36207,
       "implementation_tokens": [
         "ring",
         "readback"
