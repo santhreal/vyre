@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "suite": "conformance",
-  "file_count": 1192,
-  "vyre_file_count": 1101,
+  "file_count": 1193,
+  "vyre_file_count": 1102,
   "dataflow_consumer_file_count": 90,
   "vyrec_file_count": 1,
   "files": [
@@ -5114,6 +5114,54 @@
       ],
       "weir_flow_families": [
         "fixed_point"
+      ]
+    },
+    {
+      "path": "vyre-libs/tests/quantized_linear_affine_fma.rs",
+      "layers": [
+        "benchmark",
+        "conformance",
+        "integration",
+        "unit"
+      ],
+      "lines": 168,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
+      "has_test_entrypoint": true,
+      "assertion_count": 3,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "positive"
+      ],
+      "op_families": [
+        "lower_emit",
+        "nn_math",
+        "optimizer"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability",
+        "soundness"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "resource_budget"
+      ],
+      "corpus_families": [
+        "differential",
+        "fixture",
+        "release"
+      ],
+      "weir_flow_families": [
+        "non_weir"
       ]
     },
     {

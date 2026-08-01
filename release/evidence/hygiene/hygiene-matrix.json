@@ -6,7 +6,7 @@
     "../../../../tools/vyrec",
     "vyre-grammar-gen"
   ],
-  "scanned_files": 5306,
+  "scanned_files": 5307,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,

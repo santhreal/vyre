@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "suite": "unit",
-  "file_count": 3686,
-  "vyre_file_count": 3323,
+  "file_count": 3687,
+  "vyre_file_count": 3324,
   "dataflow_consumer_file_count": 347,
   "vyrec_file_count": 16,
   "files": [
@@ -15699,7 +15699,7 @@
         "benchmark",
         "unit"
       ],
-      "lines": 1292,
+      "lines": 1314,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -33360,6 +33360,54 @@
       ],
       "corpus_families": [
         "fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
+    },
+    {
+      "path": "vyre-libs/tests/quantized_linear_affine_fma.rs",
+      "layers": [
+        "benchmark",
+        "conformance",
+        "integration",
+        "unit"
+      ],
+      "lines": 168,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
+      "has_test_entrypoint": true,
+      "assertion_count": 3,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "positive"
+      ],
+      "op_families": [
+        "lower_emit",
+        "nn_math",
+        "optimizer"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability",
+        "soundness"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "resource_budget"
+      ],
+      "corpus_families": [
+        "differential",
+        "fixture",
+        "release"
       ],
       "weir_flow_families": [
         "non_weir"
