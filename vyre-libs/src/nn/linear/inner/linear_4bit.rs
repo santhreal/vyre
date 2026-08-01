@@ -346,9 +346,11 @@ pub fn linear_4bit(
 /// is u32 with values expected in `0..=15`, and both sidecar buffers are
 /// indexed as `group * out_dim + i`.
 ///
-/// For bounded group counts the emitted IR hoists scale/zero-point loads once
-/// per `(group, output)` and emits one tight `k` loop per group. This removes
-/// per-MAC group division and repeated sidecar loads on the inference path.
+/// For bounded group counts the emitted IR hoists and lane-predicates each
+/// scale/zero-point load, broadcasts the values once per `(group, output)`,
+/// and expresses dequantization plus accumulation as fused multiply-adds.
+/// This removes per-MAC group division, repeated sidecar loads, and redundant
+/// affine arithmetic from the inference path.
 ///
 /// # Errors
 /// Returns `Err` when dimensions are empty, `group_size == 0`,
@@ -416,12 +418,10 @@ pub fn linear_4bit_affine_grouped(
     let nibble = Expr::bitand(Expr::shr(Expr::var("packed_word"), shift), Expr::u32(0xF));
     let group = Expr::div(k.clone(), Expr::u32(group_size));
     let chunk_sidecar_idx = Expr::add(Expr::mul(group, Expr::u32(out_dim)), out_idx.clone());
-    let weight_f32 = Expr::mul(
-        Expr::sub(
-            Expr::cast(DataType::F32, nibble),
-            Expr::cast(DataType::F32, Expr::var("group_zero_point")),
-        ),
+    let weight_f32 = Expr::fma(
+        Expr::cast(DataType::F32, nibble),
         Expr::var("group_scale"),
+        Expr::var("group_zero_offset"),
     );
 
     let mut per_output = vec![Node::let_bind("local_acc", Expr::f32(0.0))];
@@ -443,17 +443,21 @@ pub fn linear_4bit_affine_grouped(
                         out_idx.clone(),
                     ),
                 ),
-                Node::let_bind("scale_lane", Expr::f32(0.0)),
-                Node::let_bind("zero_point_lane", Expr::u32(0)),
-                Node::if_then(
-                    Expr::eq(lane.clone(), Expr::u32(0)),
-                    vec![
-                        Node::assign("scale_lane", Expr::load(scale, Expr::var("sidecar_idx"))),
-                        Node::assign(
-                            "zero_point_lane",
-                            Expr::load(zero_point, Expr::var("sidecar_idx")),
-                        ),
-                    ],
+                Node::let_bind(
+                    "scale_lane",
+                    Expr::select(
+                        Expr::eq(lane.clone(), Expr::u32(0)),
+                        Expr::load(scale, Expr::var("sidecar_idx")),
+                        Expr::f32(0.0),
+                    ),
+                ),
+                Node::let_bind(
+                    "zero_point_lane",
+                    Expr::select(
+                        Expr::eq(lane.clone(), Expr::u32(0)),
+                        Expr::load(zero_point, Expr::var("sidecar_idx")),
+                        Expr::u32(0),
+                    ),
                 ),
                 Node::let_bind(
                     "group_scale",
@@ -462,6 +466,16 @@ pub fn linear_4bit_affine_grouped(
                 Node::let_bind(
                     "group_zero_point",
                     Expr::subgroup_shuffle(Expr::var("zero_point_lane"), Expr::u32(0)),
+                ),
+                Node::let_bind(
+                    "group_zero_offset",
+                    Expr::mul(
+                        Expr::f32(-1.0),
+                        Expr::mul(
+                            Expr::cast(DataType::F32, Expr::var("group_zero_point")),
+                            Expr::var("group_scale"),
+                        ),
+                    ),
                 ),
                 Node::loop_for(
                     "group_chunk",
@@ -493,16 +507,16 @@ pub fn linear_4bit_affine_grouped(
                                 ),
                             ),
                         ),
-                        Node::let_bind("packed_word_lane", Expr::u32(0)),
-                        Node::if_then(
-                            Expr::and(
-                                Expr::eq(lane_in_word.clone(), Expr::u32(0)),
-                                Expr::lt(word_leader_k.clone(), Expr::u32(in_dim)),
-                            ),
-                            vec![Node::assign(
-                                "packed_word_lane",
+                        Node::let_bind(
+                            "packed_word_lane",
+                            Expr::select(
+                                Expr::and(
+                                    Expr::eq(lane_in_word.clone(), Expr::u32(0)),
+                                    Expr::lt(word_leader_k.clone(), Expr::u32(in_dim)),
+                                ),
                                 Expr::load(w_packed, packed_idx.clone()),
-                            )],
+                                Expr::u32(0),
+                            ),
                         ),
                         Node::let_bind(
                             "packed_word",
@@ -512,9 +526,10 @@ pub fn linear_4bit_affine_grouped(
                             Expr::lt(k.clone(), Expr::u32(in_dim)),
                             vec![Node::assign(
                                 "local_acc",
-                                Expr::add(
+                                Expr::fma(
+                                    Expr::load(x, k.clone()),
+                                    weight_f32.clone(),
                                     Expr::var("local_acc"),
-                                    Expr::mul(Expr::load(x, k.clone()), weight_f32.clone()),
                                 ),
                             )],
                         ),
@@ -544,16 +559,16 @@ pub fn linear_4bit_affine_grouped(
                         word_leader_lane.clone(),
                     ),
                 ),
-                Node::let_bind("packed_word_lane", Expr::u32(0)),
-                Node::if_then(
-                    Expr::and(
-                        Expr::eq(lane_in_word.clone(), Expr::u32(0)),
-                        Expr::lt(word_leader_k.clone(), Expr::u32(in_dim)),
-                    ),
-                    vec![Node::assign(
-                        "packed_word_lane",
+                Node::let_bind(
+                    "packed_word_lane",
+                    Expr::select(
+                        Expr::and(
+                            Expr::eq(lane_in_word.clone(), Expr::u32(0)),
+                            Expr::lt(word_leader_k.clone(), Expr::u32(in_dim)),
+                        ),
                         Expr::load(w_packed, packed_idx),
-                    )],
+                        Expr::u32(0),
+                    ),
                 ),
                 Node::let_bind(
                     "packed_word",
@@ -565,14 +580,21 @@ pub fn linear_4bit_affine_grouped(
                     "group_zero_point",
                     Expr::load(zero_point, Expr::var("sidecar_idx")),
                 ),
+                Node::let_bind(
+                    "group_zero_offset",
+                    Expr::mul(
+                        Expr::f32(-1.0),
+                        Expr::mul(
+                            Expr::cast(DataType::F32, Expr::var("group_zero_point")),
+                            Expr::var("group_scale"),
+                        ),
+                    ),
+                ),
                 Node::if_then(
                     Expr::lt(k.clone(), Expr::u32(in_dim)),
                     vec![Node::assign(
                         "local_acc",
-                        Expr::add(
-                            Expr::var("local_acc"),
-                            Expr::mul(Expr::load(x, k.clone()), weight_f32),
-                        ),
+                        Expr::fma(Expr::load(x, k.clone()), weight_f32, Expr::var("local_acc")),
                     )],
                 ),
             ],

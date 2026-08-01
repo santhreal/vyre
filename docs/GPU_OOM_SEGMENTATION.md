@@ -388,21 +388,25 @@ The three suite-merge recorders (`record_{required,observed}_metric_percentile`)
 were audited for Law-10: both push a loud blocker on a missing metric, no silent
 default-to-zero. Publish remains user-gated.
 
-### RESOLVED (was a contention artifact, NOT a regression). INT4 100x
-A full `xtask release-benchmarks --backend cuda` run observed
-`nn.linear_4bit_affine_grouped.1m` at **96.55x** vs its `cpu_sota_100x` contract,
-while a heavy `cargo` build contended the host. A clean isolated re-measure on the
-idle host (`vyre-bench run --suite release --case nn.linear_4bit_affine_grouped.1m
---backend cuda --measured-samples 30`) gives **116.8x** (pass). GPU p50 6144 ns,
-CPU oracle p50 717312 ns. The kernel is fine; the dip was a measurement artifact:
-the GPU time is tiny (~6 µs), so host-side contention inflated the GPU-side
-measurement far more than the large (~717 µs) CPU oracle, depressing the ratio
-below 100x. (My earlier "contention inflates the ratio" reasoning was wrong, for
-a microsecond-scale GPU kernel, host contention inflates the *denominator* more.)
-Lesson: budget-margin perf cases must be measured on an idle host; a contended
-full-suite run is not authoritative for sub-10 µs GPU kernels. Kernel:
-`vyre-libs/src/nn/linear/inner/linear_4bit.rs` (256-wide grouped INT4, 32
-lanes/output, 8 outputs/workgroup).
+### RESOLVED: INT4 affine FMA restores the 100x margin
+
+The original grouped INT4 kernel passed isolated runs but left too little
+margin for a stable release proof. Before the arithmetic rewrite, five
+30-sample CUDA runs varied between 4096 ns and 6144 ns at p50. The slowest
+passing run measured 108.9x over the Rayon oracle, and earlier contended runs
+fell below the 100x contract.
+
+The grouped path now precomputes `-(zero_point * scale)` once per group and
+uses fused multiply-add expressions for dequantization and accumulation.
+Predicated lane-leader loads also keep every subgroup lane at the same
+reference-interpreter step before each shuffle. Five repeated 30-sample CUDA
+runs held GPU p50 at 4096 ns and measured 163.6x to 212.9x. The
+`quantized_linear_affine_fma` integration suite proves aligned groups,
+eight-value group boundaries, and negative dequantized weights against the
+scalar affine oracle.
+
+Kernel: `vyre-libs/src/nn/linear/inner/linear_4bit.rs` (256-wide grouped INT4,
+32 lanes/output, 8 outputs/workgroup).
 
 ---
 
