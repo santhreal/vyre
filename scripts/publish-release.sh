@@ -86,7 +86,7 @@ for entry in "${PUBLISH_ENTRIES[@]}"; do
         continue
     fi
     printf 'publishing %s %s from %s\n' "$package" "$version" "$manifest"
-    "$CARGO_RUNNER" publish --manifest-path "$manifest"
+    "$CARGO_RUNNER" publish --allow-dirty --manifest-path "$manifest"
     if [[ "${VYRE_RELEASE_SKIP_INDEX_WAIT:-}" != "1" ]]; then
         bash scripts/wait-crates-index.sh "$package" "$version"
     fi
